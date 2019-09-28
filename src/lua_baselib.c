@@ -182,6 +182,8 @@ static const struct {
 	{META_CAMERA,       "camera_t"},
 
 	{META_ACTION,       "action"},
+
+	{META_LUABANKS,     "luabanks[]"},
 	{NULL,              NULL}
 };
 
@@ -225,6 +227,18 @@ static int lib_isPlayerAdmin(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	lua_pushboolean(L, IsPlayerAdmin(player-players));
+	return 1;
+}
+
+static int lib_reserveLuabanks(lua_State *L)
+{
+	static boolean reserved = false;
+	if (!lua_lumploading)
+		return luaL_error(L, "luabanks[] cannot be reserved from within a hook or coroutine!");
+	if (reserved)
+		return luaL_error(L, "luabanks[] has already been reserved! Only one savedata-enabled mod at a time may use this feature.");
+	reserved = true;
+	LUA_PushUserdata(L, &luabanks, META_LUABANKS);
 	return 1;
 }
 
@@ -2736,6 +2750,7 @@ static luaL_Reg lib[] = {
 	{"chatprintf", lib_chatprintf},
 	{"userdataType", lib_userdataType},
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
+	{"reserveLuabanks", lib_reserveLuabanks},
 
 	// m_random
 	{"P_RandomFixed",lib_pRandomFixed},

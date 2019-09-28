@@ -72,10 +72,12 @@ typedef enum
 	MN_OP_P1MOUSE,
 	MN_OP_P1JOYSTICK,
 	MN_OP_JOYSTICKSET, // OP_JoystickSetDef shared with P2
+	MN_OP_P1CAMERA,
 
 	MN_OP_P2CONTROLS,
 	MN_OP_P2MOUSE,
 	MN_OP_P2JOYSTICK,
+	MN_OP_P2CAMERA,
 
 	MN_OP_VIDEO,
 	MN_OP_VIDEOMODE,
@@ -206,7 +208,6 @@ void M_QuitResponse(INT32 ch);
 // Determines whether to show a level in the list (platter version does not need to be exposed)
 boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 
-
 // flags for items in the menu
 // menu handle (what we do when key is pressed
 #define IT_TYPE             14     // (2+4+8)
@@ -242,6 +243,8 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_CV_NOPRINT     1536
 #define IT_CV_NOMOD       2048
 #define IT_CV_INVISSLIDER 2560
+#define IT_CV_INTEGERSTEP 4096			// if IT_CV_NORMAL and cvar is CV_FLOAT, modify it by 1 instead of 0.0625
+#define IT_CV_FLOATSLIDER	4608			// IT_CV_SLIDER, value modified by 0.0625 instead of 1 (for CV_FLOAT cvars)
 
 //call/submenu specific
 // There used to be a lot more here but ...
@@ -308,6 +311,10 @@ extern menu_t *currentMenu;
 
 extern menu_t MainDef;
 extern menu_t SP_LoadDef;
+
+// Call upon joystick hotplug
+void M_SetupJoystickMenu(INT32 choice);
+extern menu_t OP_JoystickSetDef;
 
 // Stuff for customizing the player select screen
 typedef struct
@@ -396,6 +403,9 @@ void Screenshot_option_Onchange(void);
 
 // Addons menu updating
 void Addons_option_Onchange(void);
+
+// Moviemode menu updating
+void Moviemode_option_Onchange(void);
 
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\

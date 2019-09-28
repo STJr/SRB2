@@ -123,6 +123,7 @@ extern void (*transcolfunc)(void);
 extern void (*shadecolfunc)(void);
 extern void (*spanfunc)(void);
 extern void (*basespanfunc)(void);
+extern void (*mmxspanfunc)(void);
 extern void (*splatfunc)(void);
 extern void (*transtransfunc)(void);
 extern void (*twosmultipatchfunc)(void);

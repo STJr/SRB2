@@ -1181,6 +1181,20 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				mapheaderinfo[num-1]->muspostbosspos = (UINT32)get_number(word2);
 			else if (fastcmp(word, "MUSICPOSTBOSSFADEIN"))
 				mapheaderinfo[num-1]->muspostbossfadein = (UINT32)get_number(word2);
+			else if (fastcmp(word, "FORCERESETMUSIC"))
+			{
+				// This is a weird one because "FALSE"/"NO" could either apply to "leave to default preference" (cv_resetmusic)
+				// or "force off". Let's assume it means "force off", and let an unspecified value mean "default preference"
+				if      (fastcmp(word2, "OFF") || word2[0] == 'F' || word2[0] == 'N')  i = 0;
+				else if (fastcmp(word2, "ON") || word2[0] == 'T' || word2[0] == 'Y')   i = 1;
+				else i = -1; // (fastcmp(word2, "DEFAULT"))
+
+				if (i >= -1 && i <= 1) // -1 to force off, 1 to force on, 0 to honor default.
+					// This behavior can be disabled with cv_resetmusicbyheader
+					mapheaderinfo[num-1]->musforcereset = (SINT8)i;
+				else
+					deh_warning("Level header %d: invalid forceresetmusic option %d", num, i);
+			}
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
@@ -2311,6 +2325,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss1Spikeballs},        "A_BOSS1SPIKEBALLS"},
 	{{A_Boss3TakeDamage},        "A_BOSS3TAKEDAMAGE"},
 	{{A_Boss3Path},              "A_BOSS3PATH"},
+	{{A_Boss3ShockThink},        "A_BOSS3SHOCKTHINK"},
 	{{A_LinedefExecute},         "A_LINEDEFEXECUTE"},
 	{{A_PlaySeeSound},           "A_PLAYSEESOUND"},
 	{{A_PlayAttackSound},        "A_PLAYATTACKSOUND"},
@@ -2417,6 +2432,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss5CheckFalling},      "A_BOSS5CHECKFALLING"},
 	{{A_Boss5PinchShot},         "A_BOSS5PINCHSHOT"},
 	{{A_Boss5MakeItRain},        "A_BOSS5MAKEITRAIN"},
+	{{A_Boss5MakeJunk},          "A_BOSS5MAKEJUNK"},
 	{{A_LookForBetter},          "A_LOOKFORBETTER"},
 	{{A_Boss5BombExplode},       "A_BOSS5BOMBEXPLODE"},
 	{{A_DustDevilThink},         "A_DUSTDEVILTHINK"},
@@ -2957,6 +2973,17 @@ static void readunlockable(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
+static const char NIGHTSGRADE_LIST[] = {
+	'F', // GRADE_F
+	'E', // GRADE_E
+	'D', // GRADE_D
+	'C', // GRADE_C
+	'B', // GRADE_B
+	'A', // GRADE_A
+	'S', // GRADE_S
+	'\0'
+};
+
 #define PARAMCHECK(n) do { if (!params[n]) { deh_warning("Too few parameters, need %d", n); return; }} while (0)
 static void readcondition(UINT8 set, UINT32 id, char *word2)
 {
@@ -3058,7 +3085,21 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		PARAMCHECK(2); // one optional one
 
 		ty = UC_NIGHTSSCORE + offset;
-		re = atoi(params[2 + !!(params[3])]);
+		i = (params[3] ? 3 : 2);
+		if (fastncmp("GRADE_",params[i],6))
+		{
+			char *p = params[i]+6;
+			for (re = 0; NIGHTSGRADE_LIST[re]; re++)
+				if (*p == NIGHTSGRADE_LIST[re])
+					break;
+			if (!NIGHTSGRADE_LIST[re])
+			{
+				deh_warning("Invalid NiGHTS grade %s\n", params[i]);
+				return;
+			}
+		}
+		else
+			re = atoi(params[i]);
 
 		// Convert to map number if it appears to be one
 		if (params[1][0] >= 'A' && params[1][0] <= 'Z')
@@ -4589,10 +4630,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SONIC3KBOSSEXPLOSION6",
 
 	"S_JETFUME1",
-	"S_JETFUME2",
 
 	// Boss 1
 	"S_EGGMOBILE_STND",
+	"S_EGGMOBILE_ROFL",
 	"S_EGGMOBILE_LATK1",
 	"S_EGGMOBILE_LATK2",
 	"S_EGGMOBILE_LATK3",
@@ -4602,7 +4643,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_LATK7",
 	"S_EGGMOBILE_LATK8",
 	"S_EGGMOBILE_LATK9",
-	"S_EGGMOBILE_LATK10",
 	"S_EGGMOBILE_RATK1",
 	"S_EGGMOBILE_RATK2",
 	"S_EGGMOBILE_RATK3",
@@ -4612,7 +4652,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_RATK7",
 	"S_EGGMOBILE_RATK8",
 	"S_EGGMOBILE_RATK9",
-	"S_EGGMOBILE_RATK10",
 	"S_EGGMOBILE_PANIC1",
 	"S_EGGMOBILE_PANIC2",
 	"S_EGGMOBILE_PANIC3",
@@ -4620,6 +4659,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_PANIC5",
 	"S_EGGMOBILE_PANIC6",
 	"S_EGGMOBILE_PANIC7",
+	"S_EGGMOBILE_PANIC8",
+	"S_EGGMOBILE_PANIC9",
+	"S_EGGMOBILE_PANIC10",
+	"S_EGGMOBILE_PANIC11",
+	"S_EGGMOBILE_PANIC12",
+	"S_EGGMOBILE_PANIC13",
+	"S_EGGMOBILE_PANIC14",
+	"S_EGGMOBILE_PANIC15",
 	"S_EGGMOBILE_PAIN",
 	"S_EGGMOBILE_PAIN2",
 	"S_EGGMOBILE_DIE1",
@@ -4630,6 +4677,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_FLEE2",
 	"S_EGGMOBILE_BALL",
 	"S_EGGMOBILE_TARGET",
+	"S_BOSSEGLZ1",
+	"S_BOSSEGLZ2",
 
 	// Boss 2
 	"S_EGGMOBILE2_STND",
@@ -4661,11 +4710,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Boss 3
 	"S_EGGMOBILE3_STND",
-	"S_EGGMOBILE3_LAUGH1",
-	"S_EGGMOBILE3_LAUGH2",
-	"S_EGGMOBILE3_LAUGH3",
-	"S_EGGMOBILE3_LAUGH4",
-	"S_EGGMOBILE3_LAUGH5",
+	"S_EGGMOBILE3_SHOCK",
 	"S_EGGMOBILE3_ATK1",
 	"S_EGGMOBILE3_ATK2",
 	"S_EGGMOBILE3_ATK3A",
@@ -4674,21 +4719,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE3_ATK3D",
 	"S_EGGMOBILE3_ATK4",
 	"S_EGGMOBILE3_ATK5",
-	"S_EGGMOBILE3_LAUGH6",
-	"S_EGGMOBILE3_LAUGH7",
-	"S_EGGMOBILE3_LAUGH8",
-	"S_EGGMOBILE3_LAUGH9",
-	"S_EGGMOBILE3_LAUGH10",
-	"S_EGGMOBILE3_LAUGH11",
-	"S_EGGMOBILE3_LAUGH12",
-	"S_EGGMOBILE3_LAUGH13",
-	"S_EGGMOBILE3_LAUGH14",
-	"S_EGGMOBILE3_LAUGH15",
-	"S_EGGMOBILE3_LAUGH16",
-	"S_EGGMOBILE3_LAUGH17",
-	"S_EGGMOBILE3_LAUGH18",
-	"S_EGGMOBILE3_LAUGH19",
-	"S_EGGMOBILE3_LAUGH20",
+	"S_EGGMOBILE3_ROFL",
 	"S_EGGMOBILE3_PAIN",
 	"S_EGGMOBILE3_PAIN2",
 	"S_EGGMOBILE3_DIE1",
@@ -4697,15 +4728,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE3_DIE4",
 	"S_EGGMOBILE3_FLEE1",
 	"S_EGGMOBILE3_FLEE2",
-
-	// Boss 3 Propeller
-	"S_PROPELLER1",
-	"S_PROPELLER2",
-	"S_PROPELLER3",
-	"S_PROPELLER4",
-	"S_PROPELLER5",
-	"S_PROPELLER6",
-	"S_PROPELLER7",
 
 	// Boss 3 pinch
 	"S_FAKEMOBILE_INIT",
@@ -4718,6 +4740,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FAKEMOBILE_ATK3D",
 	"S_FAKEMOBILE_DIE1",
 	"S_FAKEMOBILE_DIE2",
+
+	"S_BOSSSEBH1",
+	"S_BOSSSEBH2",
+
+	// Boss 3 Shockwave
+
+	"S_SHOCKWAVE1",
+	"S_SHOCKWAVE2",
 
 	// Boss 4
 	"S_EGGMOBILE4_STND",
@@ -4761,6 +4791,25 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGROBOJET",
 
 	// Boss 5
+	"S_FANG_SETUP",
+	"S_FANG_INTRO0",
+	"S_FANG_INTRO1",
+	"S_FANG_INTRO2",
+	"S_FANG_INTRO3",
+	"S_FANG_INTRO4",
+	"S_FANG_INTRO5",
+	"S_FANG_INTRO6",
+	"S_FANG_INTRO7",
+	"S_FANG_INTRO8",
+	"S_FANG_INTRO9",
+	"S_FANG_INTRO10",
+	"S_FANG_INTRO11",
+	"S_FANG_INTRO12",
+	"S_FANG_CLONE1",
+	"S_FANG_CLONE2",
+	"S_FANG_CLONE3",
+	"S_FANG_CLONE4",
+	"S_FANG_IDLE0",
 	"S_FANG_IDLE1",
 	"S_FANG_IDLE2",
 	"S_FANG_IDLE3",
@@ -4831,6 +4880,26 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FANG_FLEEBOUNCE1",
 	"S_FANG_FLEEBOUNCE2",
 	"S_FANG_KO",
+
+	"S_BROKENROBOTRANDOM",
+	"S_BROKENROBOTA",
+	"S_BROKENROBOTB",
+	"S_BROKENROBOTC",
+	"S_BROKENROBOTD",
+	"S_BROKENROBOTE",
+	"S_BROKENROBOTF",
+
+	"S_ALART1",
+	"S_ALART2",
+
+	"S_VWREF",
+	"S_VWREB",
+
+	"S_PROJECTORLIGHT1",
+	"S_PROJECTORLIGHT2",
+	"S_PROJECTORLIGHT3",
+	"S_PROJECTORLIGHT4",
+	"S_PROJECTORLIGHT5",
 
 	"S_FBOMB1",
 	"S_FBOMB2",
@@ -5122,16 +5191,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_MSSHIELD_F1",
 	"S_MSSHIELD_F2",
-	"S_MSSHIELD_F3",
-	"S_MSSHIELD_F4",
-	"S_MSSHIELD_F5",
-	"S_MSSHIELD_F6",
-	"S_MSSHIELD_F7",
-	"S_MSSHIELD_F8",
-	"S_MSSHIELD_F9",
-	"S_MSSHIELD_F10",
-	"S_MSSHIELD_F11",
-	"S_MSSHIELD_F12",
 
 	// Ring
 	"S_RING",
@@ -5565,20 +5624,23 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DRIPC1",
 	"S_DRIPC2",
 
-	// Coral 1
+	// Coral
 	"S_CORAL1",
-
-	// Coral 2
 	"S_CORAL2",
-
-	// Coral 3
 	"S_CORAL3",
+	"S_CORAL4",
+	"S_CORAL5",
 
 	// Blue Crystal
 	"S_BLUECRYSTAL1",
 
 	// Kelp,
 	"S_KELP",
+
+	// Animated algae
+	"S_ANIMALGAETOP1",
+	"S_ANIMALGAETOP2",
+	"S_ANIMALGAESEG",
 
 	// DSZ Stalagmites
 	"S_DSZSTALAGMITE",
@@ -5724,6 +5786,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTI7",
 	"S_CACTI8",
 	"S_CACTI9",
+	"S_CACTI10",
+	"S_CACTI11",
+	"S_CACTITINYSEG",
+	"S_CACTISMALLSEG",
 
 	// Warning signs sprites
 	"S_ARIDSIGN_CAUTION",
@@ -7215,6 +7281,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGTRAP",
 	"MT_BOSS3WAYPOINT",
 	"MT_BOSS9GATHERPOINT",
+	"MT_BOSSJUNK",
 
 	// Boss 1
 	"MT_EGGMOBILE",
@@ -7226,17 +7293,13 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Boss 2
 	"MT_EGGMOBILE2",
 	"MT_EGGMOBILE2_POGO",
-	"MT_BOSSTANK1",
-	"MT_BOSSTANK2",
-	"MT_BOSSSPIGOT",
 	"MT_GOOP",
 	"MT_GOOPTRAIL",
 
 	// Boss 3
 	"MT_EGGMOBILE3",
-	"MT_PROPELLER",
 	"MT_FAKEMOBILE",
-	"MT_SHOCK",
+	"MT_SHOCKWAVE",
 
 	// Boss 4
 	"MT_EGGMOBILE4",
@@ -7247,6 +7310,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Boss 5
 	"MT_FANG",
+	"MT_BROKENROBOT",
+	"MT_VWREF",
+	"MT_VWREB",
+	"MT_PROJECTORLIGHT",
 	"MT_FBOMB",
 	"MT_TNTDUST", // also used by barrel
 	"MT_FSGNA",
@@ -7445,11 +7512,15 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water
-	"MT_CORAL1", // Coral 1
-	"MT_CORAL2", // Coral 2
-	"MT_CORAL3", // Coral 3
+	"MT_CORAL1", // Coral
+	"MT_CORAL2",
+	"MT_CORAL3",
+	"MT_CORAL4",
+	"MT_CORAL5",
 	"MT_BLUECRYSTAL", // Blue Crystal
 	"MT_KELP", // Kelp
+	"MT_ANIMALGAETOP", // Animated algae top
+	"MT_ANIMALGAESEG", // Animated algae segment
 	"MT_DSZSTALAGMITE", // Deep Sea 1 Stalagmite
 	"MT_DSZ2STALAGMITE", // Deep Sea 2 Stalagmite
 	"MT_LIGHTBEAM", // DSZ Light beam
@@ -7509,6 +7580,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CACTI7",
 	"MT_CACTI8",
 	"MT_CACTI9",
+	"MT_CACTI10",
+	"MT_CACTI11",
+	"MT_CACTITINYSEG",
+	"MT_CACTISMALLSEG",
 	"MT_ARIDSIGN_CAUTION",
 	"MT_ARIDSIGN_CACTI",
 	"MT_ARIDSIGN_SHARPTURN",
@@ -8474,15 +8549,6 @@ struct {
 	{"LF2_NOVISITNEEDED",LF2_NOVISITNEEDED},
 	{"LF2_WIDEICON",LF2_WIDEICON},
 
-	// NiGHTS grades
-	{"GRADE_F",GRADE_F},
-	{"GRADE_E",GRADE_E},
-	{"GRADE_D",GRADE_D},
-	{"GRADE_C",GRADE_C},
-	{"GRADE_B",GRADE_B},
-	{"GRADE_A",GRADE_A},
-	{"GRADE_S",GRADE_S},
-
 	// Emeralds
 	{"EMERALD1",EMERALD1},
 	{"EMERALD2",EMERALD2},
@@ -9304,6 +9370,19 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return 0;
 	}
+	else if (fastncmp("GRADE_",word,6))
+	{
+		char *p = word+6;
+		for (i = 0; NIGHTSGRADE_LIST[i]; i++)
+			if (*p == NIGHTSGRADE_LIST[i])
+			{
+				free(word);
+				return i;
+			}
+		const_warning("NiGHTS grade",word);
+		free(word);
+		return 0;
+	}
 	for (i = 0; INT_CONST[i].n; i++)
 		if (fastcmp(word,INT_CONST[i].n)) {
 			free(word);
@@ -9750,6 +9829,18 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		if (mathlib) return luaL_error(L, "skincolor '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("GRADE_",word,6))
+	{
+		p = word+6;
+		for (i = 0; NIGHTSGRADE_LIST[i]; i++)
+			if (*p == NIGHTSGRADE_LIST[i])
+			{
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "NiGHTS grade '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("MN_",word,3)) {

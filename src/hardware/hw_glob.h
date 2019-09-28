@@ -102,6 +102,7 @@ void HWR_FreeColormaps(void);
 void HWR_FreeExtraSubsectors(void);
 
 void HWR_GetFlat(lumpnum_t flatlumpnum);
+void HWR_GetTextureFlat(INT32 texturenum);
 GLTexture_t *HWR_GetTexture(INT32 tex);
 void HWR_GetPatch(GLPatch_t *gpatch);
 void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap);
@@ -115,6 +116,8 @@ void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 // --------
 // hw_draw.c
 // --------
+extern lumpnum_t gr_patchflat;
+
 extern float gr_patch_scalex;
 extern float gr_patch_scaley;
 

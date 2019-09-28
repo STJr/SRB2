@@ -99,6 +99,8 @@ INT32 dc_numlights = 0, dc_maxlights, dc_texheight;
 INT32 ds_y, ds_x1, ds_x2;
 lighttable_t *ds_colormap;
 fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
+UINT16 ds_flatwidth, ds_flatheight;
+boolean ds_powersoftwo;
 
 UINT8 *ds_source; // start of a 64*64 tile image
 UINT8 *ds_transmap; // one of the translucency tables
@@ -557,9 +559,16 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 
 		// White!
 		if (skinnum == TC_BOSS)
-			dest_colormap[31] = 0;
+		{
+			for (i = 0; i < 16; i++)
+				dest_colormap[31-i] = i;
+		}
 		else if (skinnum == TC_METALSONIC)
-			dest_colormap[159] = 0;
+		{
+			for (i = 0; i < 6; i++)
+				dest_colormap[Color_Index[SKINCOLOR_BLUE-1][12-i]] = Color_Index[SKINCOLOR_BLUE-1][i];
+			dest_colormap[159] = dest_colormap[253] = dest_colormap[254] = 0;
+		}
 		return;
 	}
 	else if (color == SKINCOLOR_NONE)

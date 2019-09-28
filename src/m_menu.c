@@ -66,6 +66,13 @@
 // And just some randomness for the exits.
 #include "m_random.h"
 
+#if defined(HAVE_SDL)
+#include "SDL.h"
+#if SDL_VERSION_ATLEAST(2,0,0)
+#include "sdl/sdlmain.h" // JOYSTICK_HOTPLUG
+#endif
+#endif
+
 #ifdef PC_DOS
 #include <stdio.h> // for snprintf
 int	snprintf(char *str, size_t n, const char *fmt, ...);
@@ -118,7 +125,7 @@ const char *quitmsg[NUM_QUITMESSAGES];
 
 // Stuff for customizing the player select screen Tails 09-22-2003
 description_t description[MAXSKINS];
-INT16 char_on = -1, startchar = 1;
+INT16 char_on = -1, startchar = 0;
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
 
@@ -136,7 +143,7 @@ typedef enum
 levellist_mode_t levellistmode = LLM_CREATESERVER;
 UINT8 maplistoption = 0;
 
-static char joystickInfo[8][29];
+static char joystickInfo[MAX_JOYSTICKS+1][29];
 #ifndef NONET
 static UINT32 serverlistpage;
 #endif
@@ -265,6 +272,7 @@ static void M_ServerOptions(INT32 choice);
 #ifndef NONET
 static void M_StartServerMenu(INT32 choice);
 static void M_ConnectMenu(INT32 choice);
+static void M_ConnectMenuModChecks(INT32 choice);
 static void M_Refresh(INT32 choice);
 static void M_Connect(INT32 choice);
 static void M_ChooseRoom(INT32 choice);
@@ -275,9 +283,10 @@ menu_t MP_MainDef;
 // Split into multiple parts due to size
 // Controls
 menu_t OP_ChangeControlsDef;
-menu_t OP_MPControlsDef, OP_CameraControlsDef, OP_MiscControlsDef;
+menu_t OP_MPControlsDef, OP_MiscControlsDef;
 menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
+menu_t OP_CameraOptionsDef, OP_Camera2OptionsDef;
 static void M_VideoModeMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
@@ -308,7 +317,8 @@ static void M_Addons(INT32 choice);
 static void M_AddonsOptions(INT32 choice);
 static patch_t *addonsp[NUM_EXT+5];
 
-#define numaddonsshown 4
+#define addonmenusize 9 // number of items actually displayed in the addons menu view, formerly (2*numaddonsshown + 1)
+#define numaddonsshown 4 // number of items to each side of the currently selected item, unless at top/bottom ends of directory
 
 static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight, boolean allowlowercase);
 
@@ -885,12 +895,12 @@ static menuitem_t MP_SplitServerMenu[] =
 
 static menuitem_t MP_MainMenu[] =
 {
-	{IT_HEADER, NULL, "Host a game", NULL, 0},
-	{IT_STRING|IT_CALL,       NULL, "Internet/LAN...",       M_StartServerMenu,      12},
-	{IT_STRING|IT_CALL,       NULL, "Splitscreen...",        M_StartSplitServerMenu, 22},
-	{IT_HEADER, NULL, "Join a game", NULL, 40},
-	{IT_STRING|IT_CALL,       NULL, "Server browser...",     M_ConnectMenu,          52},
-	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv4 address:", M_HandleConnectIP,      62},
+	{IT_HEADER, NULL, "Join a game", NULL, 0},
+	{IT_STRING|IT_CALL,       NULL, "Server browser...",     M_ConnectMenuModChecks,          12},
+	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv4 address:", M_HandleConnectIP,      22},
+	{IT_HEADER, NULL, "Host a game", NULL, 54},
+	{IT_STRING|IT_CALL,       NULL, "Internet/LAN...",       M_StartServerMenu,      66},
+	{IT_STRING|IT_CALL,       NULL, "Splitscreen...",        M_StartSplitServerMenu, 76},
 	{IT_HEADER, NULL, "Player setup", NULL, 94},
 	{IT_STRING|IT_CALL,       NULL, "Player 1...",           M_SetupMultiPlayer,    106},
 	{IT_STRING|IT_CALL,       NULL, "Player 2... ",          M_SetupMultiPlayer2,   116},
@@ -949,7 +959,7 @@ enum
 
 static menuitem_t MP_RoomMenu[] =
 {
-	{IT_STRING | IT_CALL, NULL, "<Offline Mode>", M_ChooseRoom,   9},
+	{IT_STRING | IT_CALL, NULL, "<Unlisted Mode>", M_ChooseRoom,   9},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  18},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  27},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  36},
@@ -1003,13 +1013,11 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", &OP_MouseOptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Gamepad Options...", &OP_Joystick1Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 60},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 70},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_CameraOptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  100},
+	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  100},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  70},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  80},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1018,13 +1026,11 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Second Mouse Options...", &OP_Mouse2OptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Gamepad Options...", &OP_Joystick2Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 60},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 70},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_Camera2OptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  100},
+	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  100},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  70},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  80},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
@@ -1114,14 +1120,7 @@ static menuitem_t OP_Joystick2Menu[] =
 	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook2, 130},
 };
 
-static menuitem_t OP_JoystickSetMenu[] =
-{
-	{IT_CALL | IT_NOTHING, "None", NULL, M_AssignJoystick, '0'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '1'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '2'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '3'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '4'},
-};
+static menuitem_t OP_JoystickSetMenu[1+MAX_JOYSTICKS];
 
 static menuitem_t OP_MouseOptionsMenu[] =
 {
@@ -1151,6 +1150,34 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	                      NULL, "Mouse X Sensitivity",    &cv_mousesens2,       70},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens2,      80},
+};
+
+static menuitem_t OP_CameraOptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 40},
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
+	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 100},
+};
+
+static menuitem_t OP_Camera2OptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 40},
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
+	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 100},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -1325,6 +1352,12 @@ static menuitem_t OP_SoundOptionsMenu[] =
 #define OPENMPT_MENUOFFSET 0
 #endif
 
+#ifdef HAVE_MIXERX
+#define MIXERX_MENUOFFSET 81
+#else
+#define MIXERX_MENUOFFSET 0
+#endif
+
 static menuitem_t OP_SoundAdvancedMenu[] =
 {
 #ifdef HAVE_OPENMPT
@@ -1336,12 +1369,15 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 	{IT_HEADER, NULL, "MIDI Settings", NULL, OPENMPT_MENUOFFSET+10},
 	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+22},
 	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+34},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61}
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61},
 #endif
+
+	{IT_HEADER, NULL, "Miscellaneous", NULL, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+10},
+	{IT_STRING | IT_CVAR, NULL, "Let Levels Force Reset Music", &cv_resetmusicbyheader, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+22},
 };
 
 #undef OPENMPT_MENUOFFSET
-
+#undef MIXERX_MENUOFFSET
 #endif
 
 static menuitem_t OP_DataOptionsMenu[] =
@@ -1356,36 +1392,39 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "General", NULL, 0},
 	{IT_STRING|IT_CVAR, NULL, "Use color profile", &cv_screenshot_colorprofile,     6},
-	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_screenshot_option,          11},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 16},
 
-	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 30},
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,                36},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,                 41},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,              46},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           51},
+	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 16},
+	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_screenshot_option,          22},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 27},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,                42},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,                 47},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,              52},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           57},
 
-	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 60},
-	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                  66},
+	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 64},
+	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_movie_option,              70},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_movie_folder, 	  75},
+	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                 90},
 
-	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,               71},
-	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,              76},
+	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              95},
+	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,             100},
 
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,               71},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,                76},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,             81},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,          86},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              95},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,               100},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,            105},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,         110},
 };
 
 enum
 {
 	op_screenshot_colorprofile = 1,
-	op_screenshot_folder = 3,
-	op_screenshot_capture = 10,
-	op_screenshot_gif_start = 11,
-	op_screenshot_gif_end = 12,
-	op_screenshot_apng_start = 13,
-	op_screenshot_apng_end = 16,
+	op_screenshot_folder = 4,
+	op_movie_folder = 11,
+	op_screenshot_capture = 12,
+	op_screenshot_gif_start = 13,
+	op_screenshot_gif_end = 14,
+	op_screenshot_apng_start = 15,
+	op_screenshot_apng_end = 18,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
@@ -1880,6 +1919,13 @@ menu_t OP_JoystickSetDef =
 	0,
 	NULL
 };
+menu_t OP_CameraOptionsDef = DEFAULTMENUSTYLE(
+	MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1CAMERA << 12),
+	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 35, 30);
+menu_t OP_Camera2OptionsDef = DEFAULTMENUSTYLE(
+	MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),
+	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
+
 
 menu_t OP_VideoOptionsDef =
 {
@@ -2209,6 +2255,12 @@ void Addons_option_Onchange(void)
 {
 	OP_AddonsOptionsMenu[op_addons_folder].status =
 		(cv_addons_option.value == 3 ? IT_CVAR|IT_STRING|IT_CV_STRING : IT_DISABLED);
+}
+
+void Moviemode_option_Onchange(void)
+{
+	OP_ScreenshotOptionsMenu[op_movie_folder].status =
+		(cv_movie_option.value == 3 ? IT_CVAR|IT_STRING|IT_CV_STRING : IT_DISABLED);
 }
 
 // ==========================================================================
@@ -2749,13 +2801,27 @@ static void M_ChangeCvar(INT32 choice)
 	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_INVISSLIDER)
 	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_NOMOD))
 	{
-		CV_SetValue(cv,cv->value+(choice));
+		if (cv->flags & CV_FLOAT && (currentMenu->menuitems[itemOn].status & IT_CV_FLOATSLIDER) == IT_CV_FLOATSLIDER)
+		{
+			char s[20];
+			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
+			CV_Set(cv,s);
+		}
+		else
+			CV_SetValue(cv,cv->value+(choice));
 	}
 	else if (cv->flags & CV_FLOAT)
 	{
-		char s[20];
-		sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
-		CV_Set(cv,s);
+		if (currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP)
+		{
+			CV_SetValue(cv,FIXED_TO_FLOAT(cv->value)+(choice));
+		}
+		else
+		{
+			char s[20];
+			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
+			CV_Set(cv,s);
+		}
 	}
 	else
 		CV_AddValue(cv,choice);
@@ -3489,6 +3555,8 @@ void M_Ticker(void)
 //
 void M_Init(void)
 {
+	int i;
+
 	CV_RegisterVar(&cv_nextmap);
 	CV_RegisterVar(&cv_newgametype);
 	CV_RegisterVar(&cv_chooseskin);
@@ -3535,6 +3603,17 @@ void M_Init(void)
 	if (rendermode == render_opengl)
 		OP_ScreenshotOptionsMenu[op_screenshot_colorprofile].status = IT_GRAYEDOUT;
 #endif
+
+	/*
+	Well the menu sucks for forcing us to have an item set
+	at all if every item just calls the same function, and
+	nothing more. Now just automate the definition.
+	*/
+	for (i = 0; i <= MAX_JOYSTICKS; ++i)
+	{
+		OP_JoystickSetMenu[i].status = ( IT_NOTHING|IT_CALL );
+		OP_JoystickSetMenu[i].itemaction = M_AssignJoystick;
+	}
 
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
@@ -3643,7 +3722,12 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv, boolean ontop)
 
 	for (i = 0; cv->PossibleValue[i+1].strvalue; i++);
 
-	if ((range = atoi(cv->defaultvalue)) != cv->value)
+	if (cv->flags & CV_FLOAT)
+		range = (INT32)(atof(cv->defaultvalue)*FRACUNIT);
+	else
+		range = atoi(cv->defaultvalue);
+
+	if (range != cv->value)
 	{
 		range = ((range - cv->PossibleValue[0].value) * 100 /
 		 (cv->PossibleValue[i].value - cv->PossibleValue[0].value));
@@ -4517,6 +4601,9 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 		case LLM_CREATESERVER:
 			// Should the map be hidden?
 			if (mapheaderinfo[mapnum]->menuflags & LF2_HIDEINMENU)
+				return false;
+
+			if (G_IsSpecialStage(mapnum+1))
 				return false;
 
 			if (gt == GT_COOP && (mapheaderinfo[mapnum]->typeoflevel & TOL_COOP))
@@ -5617,7 +5704,7 @@ static boolean M_AddonsRefresh(void)
 		{
 			S_StartSound(NULL, sfx_lose);
 			if (refreshdirmenu & REFRESHDIR_MAX)
-				message = va("%c%s\x80\nMaximum number of add-ons reached.\nA file could not be loaded.\nIf you want to play with this add-on, restart the game to clear existing ones.\n\n(Press a key)\n", ('\x80' + (highlightflags>>V_CHARCOLORSHIFT)), refreshdirname);
+				message = va("%c%s\x80\nMaximum number of add-ons reached.\nA file could not be loaded.\nIf you wish to play with this add-on, restart the game to clear existing ones.\n\n(Press a key)\n", ('\x80' + (highlightflags>>V_CHARCOLORSHIFT)), refreshdirname);
 			else
 				message = va("%c%s\x80\nA file was not loaded.\nCheck the console log for more information.\n\n(Press a key)\n", ('\x80' + (highlightflags>>V_CHARCOLORSHIFT)), refreshdirname);
 		}
@@ -5643,7 +5730,8 @@ static boolean M_AddonsRefresh(void)
 static void M_DrawAddons(void)
 {
 	INT32 x, y;
-	ssize_t i, m;
+	size_t i, m;
+	size_t t, b; // top and bottom item #s to draw in directory
 	const UINT8 *flashcol = NULL;
 	UINT8 hilicol;
 
@@ -5686,52 +5774,63 @@ static void M_DrawAddons(void)
 
 	hilicol = 0; // white
 
+#define boxwidth (MAXSTRINGLENGTH*8+6)
+
+	// draw the file path and the top white + black lines of the box
 	V_DrawString(x-21, (y - 16) + (lsheadingheight - 12), highlightflags|V_ALLOWLOWERCASE, M_AddonsHeaderPath());
-	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 3), MAXSTRINGLENGTH*8+6, 1, hilicol);
-	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), MAXSTRINGLENGTH*8+6, 1, 30);
+	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 3), boxwidth, 1, hilicol);
+	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), boxwidth, 1, 30);
 
 	m = (BASEVIDHEIGHT - currentMenu->y + 2) - (y - 1);
 	// addons menu back color
-	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, m, 159);
+	V_DrawFill(x-21, y - 1, boxwidth, m, 159);
 
-	// scrollbar!
-	if (sizedirmenu <= (2*numaddonsshown + 1))
-		i = 0;
+	// The directory is too small for a scrollbar, so just draw a tall white line
+	if (sizedirmenu <= addonmenusize)
+	{
+		t = 0; // first item
+		b = sizedirmenu - 1; // last item
+		i = 0; // "scrollbar" at "top" position
+	}
 	else
 	{
-		ssize_t q = m;
-		m = ((2*numaddonsshown + 1) * m)/sizedirmenu;
+		size_t q = m;
+		m = (addonmenusize * m)/sizedirmenu; // height of scroll bar
 		if (dir_on[menudepthleft] <= numaddonsshown) // all the way up
-			i = 0;
-		else if (sizedirmenu <= (dir_on[menudepthleft] + numaddonsshown + 1)) // all the way down
-			i = q-m;
-		else
-			i = ((dir_on[menudepthleft] - numaddonsshown) * (q-m))/(sizedirmenu - (2*numaddonsshown + 1));
+		{
+			t = 0; // first item
+			b = addonmenusize - 1; //9th item
+			i = 0; // scrollbar at top position
+		}
+		else if (dir_on[menudepthleft] >= sizedirmenu - (numaddonsshown + 1)) // all the way down
+		{
+			t = sizedirmenu - addonmenusize; // # 9th last
+			b = sizedirmenu - 1; // last item
+			i = q-m; // scrollbar at bottom position
+		}
+		else // somewhere in the middle
+		{
+			t = dir_on[menudepthleft] - numaddonsshown; // 4 items above
+			b = dir_on[menudepthleft] + numaddonsshown; // 4 items below
+			i = (t * (q-m))/(sizedirmenu - addonmenusize); // calculate position of scrollbar
+		}
 	}
 
-	V_DrawFill(x + MAXSTRINGLENGTH*8+5 - 21, (y - 1) + i, 1, m, hilicol);
+	// draw the scrollbar!
+	V_DrawFill((x-21) + boxwidth-1, (y - 1) + i, 1, m, hilicol);
 
-	// get bottom...
-	m = dir_on[menudepthleft] + numaddonsshown + 1;
-	if (m > (ssize_t)sizedirmenu)
-		m = sizedirmenu;
+#undef boxwidth
 
-	// then compute top and adjust bottom if needed!
-	if (m < (2*numaddonsshown + 1))
-	{
-		m = min(sizedirmenu, 2*numaddonsshown + 1);
-		i = 0;
-	}
-	else
-		i = m - (2*numaddonsshown + 1);
-
-	if (i != 0)
+	// draw up arrow that bobs up and down
+	if (t != 0)
 		V_DrawString(19, y+4 - (skullAnimCounter/5), highlightflags, "\x1A");
 
+	// make the selection box flash yellow
 	if (skullAnimCounter < 4)
 		flashcol = V_GetStringColormap(highlightflags);
 
-	for (; i < m; i++)
+	// draw icons and item names
+	for (i = t; i <= b; i++)
 	{
 		UINT32 flags = V_ALLOWLOWERCASE;
 		if (y > BASEVIDHEIGHT) break;
@@ -5747,12 +5846,14 @@ static void M_DrawAddons(void)
 			else
 				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[(type & ~EXT_LOADED)]);
 
+			// draw selection box for the item currently selected
 			if ((size_t)i == dir_on[menudepthleft])
 			{
 				V_DrawFixedPatch((x-(16+4))<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, 0, addonsp[NUM_EXT+1], flashcol);
 				flags = V_ALLOWLOWERCASE|highlightflags;
 			}
 
+			// draw name of the item, use ... if too long
 #define charsonside 14
 			if (dirmenu[i][DIR_LEN] > (charsonside*2 + 3))
 				V_DrawString(x, y+4, flags, va("%.*s...%s", charsonside, dirmenu[i]+DIR_STRING, dirmenu[i]+DIR_STRING+dirmenu[i][DIR_LEN]-(charsonside+1)));
@@ -5764,9 +5865,11 @@ static void M_DrawAddons(void)
 		y += 16;
 	}
 
-	if (m != (ssize_t)sizedirmenu)
+	// draw down arrow that bobs down and up
+	if (b != sizedirmenu)
 		V_DrawString(19, y-12 + (skullAnimCounter/5), highlightflags, "\x1B");
 
+	// draw search box
 	y = BASEVIDHEIGHT - currentMenu->y + 1;
 
 	M_DrawTextBox(x - (21 + 5), y, MAXSTRINGLENGTH, 1);
@@ -5778,9 +5881,11 @@ static void M_DrawAddons(void)
 		V_DrawCharacter(x - 18 + V_StringWidth(menusearch+1, 0), y + 8,
 			'_' | 0x80, false);
 
+	// draw search icon
 	x -= (21 + 5 + 16);
 	V_DrawSmallScaledPatch(x, y + 4, (menusearch[0] ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+3]);
 
+	// draw save icon
 	x = BASEVIDWIDTH - x - 16;
 	V_DrawSmallScaledPatch(x, y + 4, ((!modifiedgame || savemoddata) ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+4]);
 
@@ -6903,6 +7008,7 @@ static void M_StartTutorial(INT32 choice)
 	tutorialmode = true; // turn on tutorial mode
 
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 	M_ClearMenus(true);
 	gamecomplete = false;
 	cursaveslot = 0;
@@ -7069,7 +7175,7 @@ static void M_DrawLoadGameData(void)
 			}
 		}
 
-		y -= 13;
+		y -= 4;
 
 		// character heads, lives, and continues
 		{
@@ -7078,7 +7184,7 @@ static void M_DrawLoadGameData(void)
 			patch_t *patch;
 			UINT8 *colormap = NULL;
 
-			INT32 tempx = (x+40)<<FRACBITS, tempy = y<<FRACBITS, flip = 0, calc;
+			INT32 tempx = (x+40)<<FRACBITS, flip = 0;
 
 			// botskin first
 			if (savegameinfo[savetodraw].botskin)
@@ -7093,13 +7199,13 @@ static void M_DrawLoadGameData(void)
 
 				V_DrawFixedPatch(
 					tempx + (18<<FRACBITS),
-					tempy -  (4<<FRACBITS),
+					y<<FRACBITS,
 					charbotskin->highresscale,
 					0, patch, colormap);
 
 				Z_Free(colormap);
 
-				tempx -= (15<<FRACBITS);
+				tempx -= (20<<FRACBITS);
 				flip = V_FLIP;
 			}
 skipbot:
@@ -7112,17 +7218,15 @@ skipbot:
 				goto skipsign;
 			sprframe = &sprdef->spriteframes[0];
 			patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
-			if ((calc = SHORT(patch->topoffset) - 42) > 0)
-				tempy += ((4+calc)<<FRACBITS);
 
 			V_DrawFixedPatch(
 				tempx,
-				tempy,
+				y<<FRACBITS,
 				charskin->highresscale,
 				flip, patch, colormap);
 
 skipsign:
-			y += 25;
+			y += 16;
 
 			tempx = x + 10;
 			if (savegameinfo[savetodraw].lives != INFLIVES
@@ -7311,7 +7415,29 @@ static void M_ReadSavegameInfo(UINT32 slot)
 
 	// File end marker check
 	CHECKPOS
-	if (READUINT8(save_p) != 0x1d) BADSAVE;
+	switch (READUINT8(save_p))
+	{
+		case 0xb7:
+			{
+				UINT8 i, banksinuse;
+				CHECKPOS
+				banksinuse = READUINT8(save_p);
+				CHECKPOS
+				if (banksinuse > NUM_LUABANKS)
+					BADSAVE
+				for (i = 0; i < banksinuse; i++)
+				{
+					(void)READINT32(save_p);
+					CHECKPOS
+				}
+				if (READUINT8(save_p) != 0x1d)
+					BADSAVE
+			}
+		case 0x1d:
+			break;
+		default:
+			BADSAVE
+	}
 
 	// done
 	Z_Free(savebuffer);
@@ -8497,8 +8623,8 @@ static void M_NightsAttack(INT32 choice)
 	M_PatchSkinNameTable();
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
-	M_SetupNextMenu(&SP_NightsAttackDef);
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
+	M_SetupNextMenu(&SP_NightsAttackDef);
 	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
 	else
@@ -8513,6 +8639,7 @@ static void M_ChooseNightsAttack(INT32 choice)
 	char nameofdemo[256];
 	(void)choice;
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_NIGHTS;
 
@@ -8537,6 +8664,7 @@ static void M_ChooseTimeAttack(INT32 choice)
 	char nameofdemo[256];
 	(void)choice;
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_RECORD;
 
@@ -8890,7 +9018,7 @@ static void M_DrawConnectMenu(void)
 	// Room name
 	if (ms_RoomId < 0)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
-		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Offline Mode>");
+		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Unlisted Mode>");
 	else
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
 		                         V_YELLOWMAP, room_list[menuRoomIndex].name);
@@ -9040,9 +9168,30 @@ static void M_ConnectMenu(INT32 choice)
 
 	// first page of servers
 	serverlistpage = 0;
-	M_SetupNextMenu(&MP_ConnectDef);
+	if (ms_RoomId < 0)
+	{
+		M_RoomMenu(0); // Select a room instead of staring at an empty list
+		// This prevents us from returning to the modified game alert.
+		currentMenu->prevMenu = &MP_MainDef;
+	}
+	else
+		M_SetupNextMenu(&MP_ConnectDef);
 	itemOn = 0;
 	M_Refresh(0);
+}
+
+static void M_ConnectMenuModChecks(INT32 choice)
+{
+	(void)choice;
+	// okay never mind we want to COMMUNICATE to the player pre-emptively instead of letting them try and then get confused when it doesn't work
+
+	if (modifiedgame)
+	{
+		M_StartMessage(M_GetText("Add-ons are currently loaded.\n\nYou will only be able to join a server if\nit has the same ones loaded in the same order, which may be unlikely.\n\nIf you wish to play on other servers,\nrestart the game to clear existing add-ons.\n\n(Press a key)\n"),M_ConnectMenu,MM_EVENTHANDLER);
+		return;
+	}
+
+	M_ConnectMenu(-1);
 }
 
 static UINT32 roomIds[NUM_LIST_ROOMS];
@@ -9099,7 +9248,16 @@ static void M_ChooseRoom(INT32 choice)
 	}
 
 	serverlistpage = 0;
-	M_SetupNextMenu(currentMenu->prevMenu);
+	/*
+	We were on the Multiplayer menu? That means that we must have been trying to
+	view the server browser, but we hadn't selected a room yet. So we need to go
+	to the browser next, not back there.
+	*/
+	if (currentMenu->prevMenu == &MP_MainDef)
+		M_SetupNextMenu(&MP_ConnectDef);
+	else
+		M_SetupNextMenu(currentMenu->prevMenu);
+
 	if (currentMenu == &MP_ConnectDef)
 		M_Refresh(0);
 }
@@ -9158,7 +9316,7 @@ static void M_DrawServerMenu(void)
 		M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true, false);
 		if (ms_RoomId < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
-			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Offline Mode>");
+			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Unlisted Mode>");
 		else
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, room_list[menuRoomIndex].name);
@@ -9265,7 +9423,7 @@ static void M_StartServerMenu(INT32 choice)
 // CONNECT VIA IP
 // ==============
 
-static char setupm_ip[16];
+static char setupm_ip[28];
 
 // Draw the funky Connect IP menu. Tails 11-19-2002
 // So much work for such a little thing!
@@ -9277,30 +9435,26 @@ static void M_DrawMPMainMenu(void)
 	// use generic drawer for cursor, items and title
 	M_DrawGenericMenu();
 
-#if MAXPLAYERS == 32
-	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+12,
-		((itemOn == 1) ? V_YELLOWMAP : 0), "(2-32 players)");
-#else
-Update the maxplayers label...
-#endif
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+66,
+		((itemOn == 4) ? V_YELLOWMAP : 0), va("(2-%d players)", MAXPLAYERS));
 
-	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+22,
-		((itemOn == 2) ? V_YELLOWMAP : 0), "(2 players)");
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+76,
+		((itemOn == 5) ? V_YELLOWMAP : 0), "(2 players)");
 
 	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+116,
 		((itemOn == 8) ? V_YELLOWMAP : 0), "(splitscreen)");
 
-	y += 62;
+	y += 22;
 
 	V_DrawFill(x+5, y+4+5, /*16*8 + 6,*/ BASEVIDWIDTH - 2*(x+5), 8+6, 159);
 
 	// draw name string
-	V_DrawString(x+8,y+12, V_MONOSPACE, setupm_ip);
+	V_DrawString(x+8,y+12, V_ALLOWLOWERCASE, setupm_ip);
 
 	// draw text cursor for name
-	if (itemOn == 5 //0
+	if (itemOn == 2 //0
 	    && skullAnimCounter < 4)   //blink cursor
-		V_DrawCharacter(x+8+V_StringWidth(setupm_ip, V_MONOSPACE),y+12,'_',false);
+		V_DrawCharacter(x+8+V_StringWidth(setupm_ip, V_ALLOWLOWERCASE),y+12,'_',false);
 }
 
 // Tails 11-19-2002
@@ -9371,10 +9525,11 @@ static void M_HandleConnectIP(INT32 choice)
 
 		default:
 			l = strlen(setupm_ip);
-			if (l >= 16-1)
+			if (l >= 28-1)
 				break;
 
-			if (choice == 46 || (choice >= 48 && choice <= 57)) // Rudimentary number and period enforcing
+			// Rudimentary number and period enforcing - also allows letters so hostnames can be used instead
+			if ((choice >= '-' && choice <= ':') || (choice >= 'A' && choice <= 'Z') || (choice >= 'a' && choice <= 'z'))
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_ip[l] = (char)choice;
@@ -9876,18 +10031,33 @@ static void M_ScreenshotOptions(INT32 choice)
 
 static void M_DrawJoystick(void)
 {
-	INT32 i;
+	INT32 i, compareval2, compareval;
 
 	// draw title (or big pic)
 	M_DrawMenuTitle();
 
-	for (i = 0; i <= 4; i++) // See MAX_JOYSTICKS
+	for (i = 0; i <= MAX_JOYSTICKS; i++) // See MAX_JOYSTICKS
 	{
 		M_DrawTextBox(OP_JoystickSetDef.x-8, OP_JoystickSetDef.y+LINEHEIGHT*i-12, 28, 1);
 		//M_DrawSaveLoadBorder(OP_JoystickSetDef.x+4, OP_JoystickSetDef.y+1+LINEHEIGHT*i);
 
-		if ((setupcontrols_secondaryplayer && (i == cv_usejoystick2.value))
-			|| (!setupcontrols_secondaryplayer && (i == cv_usejoystick.value)))
+#ifdef JOYSTICK_HOTPLUG
+		if (atoi(cv_usejoystick2.string) > I_NumJoys())
+			compareval2 = atoi(cv_usejoystick2.string);
+		else
+			compareval2 = cv_usejoystick2.value;
+
+		if (atoi(cv_usejoystick.string) > I_NumJoys())
+			compareval = atoi(cv_usejoystick.string);
+		else
+			compareval = cv_usejoystick.value;
+#else
+		compareval2 = cv_usejoystick2.value;
+		compareval = cv_usejoystick.value
+#endif
+
+		if ((setupcontrols_secondaryplayer && (i == compareval2))
+			|| (!setupcontrols_secondaryplayer && (i == compareval)))
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i-4,V_GREENMAP,joystickInfo[i]);
 		else
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i-4,0,joystickInfo[i]);
@@ -9900,7 +10070,7 @@ static void M_DrawJoystick(void)
 	}
 }
 
-static void M_SetupJoystickMenu(INT32 choice)
+void M_SetupJoystickMenu(INT32 choice)
 {
 	INT32 i = 0;
 	const char *joyNA = "Unavailable";
@@ -9909,12 +10079,27 @@ static void M_SetupJoystickMenu(INT32 choice)
 
 	strcpy(joystickInfo[i], "None");
 
-	for (i = 1; i < 8; i++)
+	for (i = 1; i <= MAX_JOYSTICKS; i++)
 	{
 		if (i <= n && (I_GetJoyName(i)) != NULL)
 			strncpy(joystickInfo[i], I_GetJoyName(i), 28);
 		else
 			strcpy(joystickInfo[i], joyNA);
+
+#ifdef JOYSTICK_HOTPLUG
+		// We use cv_usejoystick.string as the USER-SET var
+		// and cv_usejoystick.value as the INTERNAL var
+		//
+		// In practice, if cv_usejoystick.string == 0, this overrides
+		// cv_usejoystick.value and always disables
+		//
+		// Update cv_usejoystick.string here so that the user can
+		// properly change this value.
+		if (i == cv_usejoystick.value)
+			CV_SetValue(&cv_usejoystick, i);
+		if (i == cv_usejoystick2.value)
+			CV_SetValue(&cv_usejoystick2, i);
+#endif
 	}
 
 	M_SetupNextMenu(&OP_JoystickSetDef);
@@ -9944,10 +10129,76 @@ static void M_Setup2PJoystickMenu(INT32 choice)
 
 static void M_AssignJoystick(INT32 choice)
 {
+#ifdef JOYSTICK_HOTPLUG
+	INT32 oldchoice, oldstringchoice;
+	INT32 numjoys = I_NumJoys();
+
+	if (setupcontrols_secondaryplayer)
+	{
+		oldchoice = oldstringchoice = atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value;
+		CV_SetValue(&cv_usejoystick2, choice);
+
+		// Just in case last-minute changes were made to cv_usejoystick.value,
+		// update the string too
+		// But don't do this if we're intentionally setting higher than numjoys
+		if (choice <= numjoys)
+		{
+			CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
+
+			// reset this so the comparison is valid
+			if (oldchoice > numjoys)
+				oldchoice = cv_usejoystick2.value;
+
+			if (oldchoice != choice)
+			{
+				if (choice && oldstringchoice > numjoys) // if we did not select "None", we likely selected a used device
+					CV_SetValue(&cv_usejoystick2, (oldstringchoice > numjoys ? oldstringchoice : oldchoice));
+
+				if (oldstringchoice ==
+					(atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value))
+					M_StartMessage("This gamepad is used by another\n"
+					               "player. Reset the gamepad\n"
+					               "for that player first.\n\n"
+					               "(Press a key)\n", NULL, MM_NOTHING);
+			}
+		}
+	}
+	else
+	{
+		oldchoice = oldstringchoice = atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value;
+		CV_SetValue(&cv_usejoystick, choice);
+
+		// Just in case last-minute changes were made to cv_usejoystick.value,
+		// update the string too
+		// But don't do this if we're intentionally setting higher than numjoys
+		if (choice <= numjoys)
+		{
+			CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
+
+			// reset this so the comparison is valid
+			if (oldchoice > numjoys)
+				oldchoice = cv_usejoystick.value;
+
+			if (oldchoice != choice)
+			{
+				if (choice && oldstringchoice > numjoys) // if we did not select "None", we likely selected a used device
+					CV_SetValue(&cv_usejoystick, (oldstringchoice > numjoys ? oldstringchoice : oldchoice));
+
+				if (oldstringchoice ==
+					(atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value))
+					M_StartMessage("This gamepad is used by another\n"
+					               "player. Reset the gamepad\n"
+					               "for that player first.\n\n"
+					               "(Press a key)\n", NULL, MM_NOTHING);
+			}
+		}
+	}
+#else
 	if (setupcontrols_secondaryplayer)
 		CV_SetValue(&cv_usejoystick2, choice);
 	else
 		CV_SetValue(&cv_usejoystick, choice);
+#endif
 }
 
 // =============
