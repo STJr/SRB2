@@ -441,6 +441,7 @@ typedef struct player_s
 	INT32 starpostnum; // The number of the last starpost you hit
 	tic_t starposttime; // Your time when you hit the starpost
 	angle_t starpostangle; // Angle that the starpost is facing - you respawn facing this way
+	fixed_t starpostscale; // Scale of the player; if negative, player is gravflipped
 
 	/////////////////
 	// NiGHTS Stuff//

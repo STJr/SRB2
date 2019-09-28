@@ -262,7 +262,7 @@ void R_CacheRotSprite(spriteframe_t *sprframe, INT32 rot, UINT8 flip)
 		for (i = 0; i < size; i++)
 			rawsrc[i] = 0xFF00;
 
-		R_PatchToFlat(patch, rawsrc, (flip != 0x00));
+		R_PatchToFlat_16bpp(patch, rawsrc, (flip != 0x00));
 
 		// Don't cache angle = 0, that would be stoopid
 		for (angle = 1; angle < ROTANGLES; angle++)
@@ -322,7 +322,7 @@ void R_CacheRotSprite(spriteframe_t *sprframe, INT32 rot, UINT8 flip)
 			}
 
 			// make patch
-			newpatch = R_FlatToPatch(rawdst, newwidth, newheight, &size);
+			newpatch = R_FlatToPatch_16bpp(rawdst, newwidth, newheight, &size);
 			// This is BROKEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			newpatch->leftoffset = (newpatch->width / 2) - ((ox - patch->leftoffset) * ((flip != 0x00) ? -1 : 1));
 			newpatch->topoffset = (newpatch->height / 2) - (oy - patch->topoffset);
@@ -431,6 +431,19 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			// store sprite info in lookup tables
 			//FIXME : numspritelumps do not duplicate sprite replacements
 			W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
+#ifndef NO_PNG_LUMPS
+			{
+				patch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
+				size_t len = W_LumpLengthPwad(wadnum, l);
+				// lump is a png so convert it
+				if (R_IsLumpPNG((UINT8 *)png, len))
+				{
+					png = R_PNGToPatch((UINT8 *)png, len, NULL, true);
+					M_Memcpy(&patch, png, sizeof(INT16)*4);
+				}
+				Z_Free(png);
+			}
+#endif
 			spritecachedinfo[numspritelumps].width = SHORT(patch.width)<<FRACBITS;
 			spritecachedinfo[numspritelumps].offset = SHORT(patch.leftoffset)<<FRACBITS;
 			spritecachedinfo[numspritelumps].topoffset = SHORT(patch.topoffset)<<FRACBITS;
@@ -2747,7 +2760,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if (!skin)
 		return 0;
 
-	if ((unsigned)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
+	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
 		return 0;
 
 	while (!(skin->sprites[spr2].numframes)
@@ -2839,6 +2852,8 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->followitem = 0;
 
 	skin->highresscale = FRACUNIT;
+	skin->contspeed = 17;
+	skin->contangle = 0;
 
 	skin->availability = 0;
 
@@ -3105,6 +3120,8 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 	for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
 		R_AddSingleSpriteDef((spritename = spr2names[sprite2]), &skin->sprites[sprite2], wadnum, *lump, *lastlump);
 
+	if (skin->sprites[0].numframes == 0)
+		I_Error("R_LoadSkinSprites: no frames found for sprite SPR2_%s\n", spr2names[0]);
 }
 
 // returns whether found appropriate property
@@ -3143,6 +3160,8 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETINT(thrustfactor)
 	GETINT(accelstart)
 	GETINT(acceleration)
+	GETINT(contspeed)
+	GETINT(contangle)
 #undef GETINT
 
 #define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) skin->field = R_GetColorByName(value);

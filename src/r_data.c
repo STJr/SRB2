@@ -23,6 +23,7 @@
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
 #include "v_video.h" // pMasterPalette
+#include "byteptr.h"
 #include "dehacked.h"
 
 #ifdef _WIN32
@@ -38,6 +39,28 @@
 #define AVOID_ERRNO
 #else
 #include <errno.h>
+#endif
+
+#ifdef HAVE_PNG
+
+#ifndef _MSC_VER
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
+#endif
+
+#ifndef _LFS64_LARGEFILE
+#define _LFS64_LARGEFILE
+#endif
+
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 0
+#endif
+
+#include "png.h"
+#ifndef PNG_READ_SUPPORTED
+#undef HAVE_PNG
+#endif
 #endif
 
 //
@@ -98,12 +121,11 @@ INT32 numtextures = 0; // total number of textures found,
 // size of following tables
 
 texture_t **textures = NULL;
+textureflat_t *texflats = NULL;
 static UINT32 **texturecolumnofs; // column offset lookup table for each texture
 static UINT8 **texturecache; // graphics data for each generated full-size texture
 
-// texture width is a power of 2, so it can easily repeat along sidedefs using a simple mask
-INT32 *texturewidthmask;
-
+INT32 *texturewidth;
 fixed_t *textureheight; // needed for texture pegging
 
 INT32 *texturetranslation;
@@ -220,15 +242,121 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	}
 }
 
+UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
+{
+	RGBA_t output;
+	if (style == AST_TRANSLUCENT)
+	{
+		if (alpha == 0)
+			output.rgba = background.rgba;
+		else if (alpha == 0xFF)
+			output.rgba = foreground.rgba;
+		else if (alpha < 0xFF)
+		{
+			UINT8 beta = (0xFF - alpha);
+			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+		}
+		// write foreground pixel alpha
+		// if there's no pixel in here
+		if (!background.rgba)
+			output.s.alpha = foreground.s.alpha;
+		else
+			output.s.alpha = 0xFF;
+		return output.rgba;
+	}
+#define clamp(c) max(min(c, 0xFF), 0x00);
+	else
+	{
+		float falpha = ((float)alpha / 256.0f);
+		float fr = ((float)foreground.s.red * falpha);
+		float fg = ((float)foreground.s.green * falpha);
+		float fb = ((float)foreground.s.blue * falpha);
+		if (style == AST_ADD)
+		{
+			output.s.red = clamp((int)(background.s.red + fr));
+			output.s.green = clamp((int)(background.s.green + fg));
+			output.s.blue = clamp((int)(background.s.blue + fb));
+		}
+		else if (style == AST_SUBTRACT)
+		{
+			output.s.red = clamp((int)(background.s.red - fr));
+			output.s.green = clamp((int)(background.s.green - fg));
+			output.s.blue = clamp((int)(background.s.blue - fb));
+		}
+		else if (style == AST_REVERSESUBTRACT)
+		{
+			output.s.red = clamp((int)((-background.s.red) + fr));
+			output.s.green = clamp((int)((-background.s.green) + fg));
+			output.s.blue = clamp((int)((-background.s.blue) + fb));
+		}
+		else if (style == AST_MODULATE)
+		{
+			fr = ((float)foreground.s.red / 256.0f);
+			fg = ((float)foreground.s.green / 256.0f);
+			fb = ((float)foreground.s.blue / 256.0f);
+			output.s.red = clamp((int)(background.s.red * fr));
+			output.s.green = clamp((int)(background.s.green * fg));
+			output.s.blue = clamp((int)(background.s.blue * fb));
+		}
+		// just copy the pixel
+		else if (style == AST_COPY)
+			output.rgba = foreground.rgba;
+
+		output.s.alpha = 0xFF;
+		return output.rgba;
+	}
+#undef clamp
+	return 0;
+}
+
+UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+{
+	// Alpha style set to translucent?
+	if (style == AST_TRANSLUCENT)
+	{
+		// Is the alpha small enough for translucency?
+		if (alpha <= (10*255/11))
+		{
+			UINT8 *mytransmap;
+			// Is the patch way too translucent? Don't blend then.
+			if (alpha < 255/11)
+				return background;
+			// The equation's not exact but it works as intended. I'll call it a day for now.
+			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
+			if (background != 0xFF)
+				return *(mytransmap + (background<<8) + foreground);
+		}
+		else // just copy the pixel
+			return foreground;
+	}
+	// just copy the pixel
+	else if (style == AST_COPY)
+		return foreground;
+	// use ASTBlendPixel for all other blend modes
+	// and find the nearest colour in the palette
+	else if (style != AST_TRANSLUCENT)
+	{
+		RGBA_t texel;
+		RGBA_t bg = V_GetColor(background);
+		RGBA_t fg = V_GetColor(foreground);
+		texel.rgba = ASTBlendPixel(bg, fg, style, alpha);
+		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
+	}
+	// fallback if all above fails, somehow
+	// return the background pixel
+	return background;
+}
+
 //
-// R_DrawTransColumnInCache
+// R_DrawBlendColumnInCache
 // Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
 //
-static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -258,7 +386,8 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; source++, dest++)
-				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
+				if (*source != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -266,14 +395,13 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 }
 
 //
-// R_DrawTransColumnInCache
+// R_DrawBlendFlippedColumnInCache
 // Similar to the one above except that the column is inverted.
 //
-static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -302,7 +430,8 @@ static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; --source, dest++)
-				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
+				if (*source != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -315,7 +444,7 @@ static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache
 // Allocate space for full size texture, either single patch or 'composite'
 // Build the full textures from patches.
 // The texture caching system is a little more hungry of memory, but has
-// been simplified for the sake of highcolor, dynamic ligthing, & speed.
+// been simplified for the sake of highcolor (lol), dynamic ligthing, & speed.
 //
 // This is not optimised, but it's supposed to be executed only once
 // per level, when enough memory is available.
@@ -332,6 +461,10 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	column_t *patchcol;
 	UINT32 *colofs;
 
+	UINT16 wadnum;
+	lumpnum_t lumpnum;
+	size_t lumplength;
+
 	I_Assert(texnum <= (size_t)numtextures);
 	texture = textures[texnum];
 	I_Assert(texture != NULL);
@@ -346,7 +479,19 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	{
 		boolean holey = false;
 		patch = texture->patches;
-		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+
+		wadnum = patch->wad;
+		lumpnum = patch->lump;
+		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			goto multipatch;
+		}
+#endif
 
 		// Check the patch for holes.
 		if (texture->width > SHORT(realpatch->width) || texture->height > SHORT(realpatch->height))
@@ -376,7 +521,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		{
 			texture->holes = true;
 			texture->flip = patch->flip;
-			blocksize = W_LumpLengthPwad(patch->wad, patch->lump);
+			blocksize = lumplength;
 			block = Z_Calloc(blocksize, PU_STATIC, // will change tag at end of this function
 				&texturecache[texnum]);
 			M_Memcpy(block, realpatch, blocksize);
@@ -403,6 +548,9 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	}
 
 	// multi-patch textures (or 'composite')
+#ifndef NO_PNG_LUMPS
+	multipatch:
+#endif
 	texture->holes = false;
 	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
@@ -422,18 +570,20 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
 		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
-		if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
-		{
-			if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
-				continue;
-			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawTransFlippedColumnInCache : R_DrawTransColumnInCache;
-		}
+		if (patch->style != AST_COPY)
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawBlendFlippedColumnInCache : R_DrawBlendColumnInCache;
 		else
-		{
 			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawFlippedColumnInCache : R_DrawColumnInCache;
-		}
 
-		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+		wadnum = patch->wad;
+		lumpnum = patch->lump;
+		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+#endif
+
 		x1 = patch->originx;
 		width = SHORT(realpatch->width);
 		height = SHORT(realpatch->height);
@@ -509,10 +659,14 @@ void R_CheckTextureCache(INT32 tex)
 UINT8 *R_GetColumn(fixed_t tex, INT32 col)
 {
 	UINT8 *data;
+	INT32 width = texturewidth[tex];
 
-	col &= texturewidthmask[tex];
+	if (width & (width - 1))
+		col = (UINT32)col % width;
+	else
+		col &= (width - 1);
+
 	data = texturecache[tex];
-
 	if (!data)
 		data = R_GenerateTexture(tex);
 
@@ -550,7 +704,7 @@ void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *index);
 #define TX_END "TX_END"
 void R_LoadTextures(void)
 {
-	INT32 i, k, w;
+	INT32 i, w;
 	UINT16 j;
 	UINT16 texstart, texend, texturesLumpPos;
 	patch_t *patchlump;
@@ -567,6 +721,7 @@ void R_LoadTextures(void)
 		}
 		Z_Free(texturetranslation);
 		Z_Free(textures);
+		Z_Free(texflats);
 	}
 
 	// Load patches and textures.
@@ -627,15 +782,16 @@ void R_LoadTextures(void)
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
 	// There are actually 5 buffers allocated in one for convenience.
 	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
+	texflats = Z_Calloc((numtextures * sizeof(*texflats)), PU_STATIC, NULL);
 
 	// Allocate texture column offset table.
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
 	// Allocate texture referencing cache.
-	texturecache	 = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
-	// Allocate texture width mask table.
-	texturewidthmask = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
-	// Allocate texture height mask table.
-	textureheight	= (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
+	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
+	// Allocate texture width table.
+	texturewidth     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
+	// Allocate texture height table.
+	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
 	// Create translation table for global animation.
 	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
 
@@ -673,20 +829,39 @@ void R_LoadTextures(void)
 		// Work through each lump between the markers in the WAD.
 		for (j = 0; j < (texend - texstart); j++)
 		{
+			UINT16 wadnum = (UINT16)w;
+			lumpnum_t lumpnum = texstart + j;
+			size_t lumplength;
+
 			if (wadfiles[w]->type == RET_PK3)
 			{
-				if (W_IsLumpFolder((UINT16)w, texstart + j)) // Check if lump is a folder
+				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
 					continue; // If it is then SKIP IT
 			}
-			patchlump = W_CacheLumpNumPwad((UINT16)w, texstart + j, PU_CACHE);
+
+			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 
 			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
 			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
 
 			// Set texture properties.
-			M_Memcpy(texture->name, W_CheckNameForNumPwad((UINT16)w, texstart + j), sizeof(texture->name));
-			texture->width = SHORT(patchlump->width);
-			texture->height = SHORT(patchlump->height);
+			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+
+#ifndef NO_PNG_LUMPS
+			if (R_IsLumpPNG((UINT8 *)patchlump, lumplength))
+			{
+				INT16 width, height;
+				R_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
+				texture->width = width;
+				texture->height = height;
+			}
+			else
+#endif
+			{
+				texture->width = SHORT(patchlump->width);
+				texture->height = SHORT(patchlump->height);
+			}
 			texture->patchcount = 1;
 			texture->holes = false;
 			texture->flip = 0;
@@ -701,11 +876,7 @@ void R_LoadTextures(void)
 
 			Z_Unlock(patchlump);
 
-			k = 1;
-			while (k << 1 <= texture->width)
-				k <<= 1;
-
-			texturewidthmask[i] = k - 1;
+			texturewidth[i] = texture->width;
 			textureheight[i] = texture->height << FRACBITS;
 			i++;
 		}
@@ -848,8 +1019,16 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 				{
 					Z_Free(texturesToken);
 					texturesToken = M_GetToken(NULL);
-					if(stricmp(texturesToken, "TRANSLUCENT")==0)
+					if (stricmp(texturesToken, "TRANSLUCENT")==0)
 						style = AST_TRANSLUCENT;
+					else if (stricmp(texturesToken, "ADD")==0)
+						style = AST_ADD;
+					else if (stricmp(texturesToken, "SUBTRACT")==0)
+						style = AST_SUBTRACT;
+					else if (stricmp(texturesToken, "REVERSESUBTRACT")==0)
+						style = AST_REVERSESUBTRACT;
+					else if (stricmp(texturesToken, "MODULATE")==0)
+						style = AST_MODULATE;
 				}
 				else if (stricmp(texturesToken, "FLIPX")==0)
 					flip |= 1;
@@ -1097,7 +1276,7 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum)
 	texturesToken = M_GetToken(texturesText);
 	while (texturesToken != NULL)
 	{
-		if (stricmp(texturesToken, "WALLTEXTURE")==0)
+		if (stricmp(texturesToken, "WALLTEXTURE") == 0 || stricmp(texturesToken, "TEXTURE") == 0)
 		{
 			numTexturesInLump++;
 			Z_Free(texturesToken);
@@ -1105,7 +1284,7 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum)
 		}
 		else
 		{
-			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\", got \"%s\"",texturesToken);
+			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\" or \"TEXTURE\", got \"%s\"",texturesToken);
 		}
 		texturesToken = M_GetToken(NULL);
 	}
@@ -1146,21 +1325,21 @@ void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *texindex)
 	texturesToken = M_GetToken(texturesText);
 	while (texturesToken != NULL)
 	{
-		if (stricmp(texturesToken, "WALLTEXTURE")==0)
+		if (stricmp(texturesToken, "WALLTEXTURE") == 0 || stricmp(texturesToken, "TEXTURE") == 0)
 		{
 			Z_Free(texturesToken);
 			// Get the new texture
 			newTexture = R_ParseTexture(true);
 			// Store the new texture
 			textures[*texindex] = newTexture;
-			texturewidthmask[*texindex] = newTexture->width - 1;
+			texturewidth[*texindex] = newTexture->width;
 			textureheight[*texindex] = newTexture->height << FRACBITS;
 			// Increment i back in R_LoadTextures()
 			(*texindex)++;
 		}
 		else
 		{
-			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\", got \"%s\"",texturesToken);
+			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\" or \"TEXTURE\", got \"%s\"",texturesToken);
 		}
 		texturesToken = M_GetToken(NULL);
 	}
@@ -1265,6 +1444,41 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 			break;
 		}
 		lump = LUMPERROR;
+	}
+
+	// Detect textures
+	if (lump == LUMPERROR)
+	{
+		// Scan wad files backwards so patched textures take preference.
+		for (i = numwadfiles - 1; i >= 0; i--)
+		{
+			switch (wadfiles[i]->type)
+			{
+			case RET_WAD:
+				if ((start = W_CheckNumForNamePwad("TX_START", (UINT16)i, 0)) == INT16_MAX)
+					continue;
+				if ((end = W_CheckNumForNamePwad("TX_END", (UINT16)i, start)) == INT16_MAX)
+					continue;
+				break;
+			case RET_PK3:
+				if ((start = W_CheckNumForFolderStartPK3("Textures/", i, 0)) == INT16_MAX)
+					continue;
+				if ((end = W_CheckNumForFolderEndPK3("Textures/", i, start)) == INT16_MAX)
+					continue;
+				break;
+			default:
+				continue;
+			}
+
+			// Now find lump with specified name in that range.
+			lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
+			if (lump < end)
+			{
+				lump += (i<<16); // found it, in our constraints
+				break;
+			}
+			lump = LUMPERROR;
+		}
 	}
 
 	if (lump == LUMPERROR)
@@ -1615,7 +1829,6 @@ extracolormap_t *R_ColormapForName(char *name)
 //
 static double deltas[256][3], map[256][3];
 
-static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
 static int RoundUp(double number);
 
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
@@ -2027,7 +2240,7 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 
 // Thanks to quake2 source!
 // utils3/qdata/images.c
-static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
+UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
 {
 	int dr, dg, db;
 	int distortion, bestdistortion = 256 * 256 * 4, bestcolor = 0, i;
@@ -2307,8 +2520,6 @@ void R_PrecacheLevel(void)
 			"spritememory:  %s k\n", sizeu1(flatmemory>>10), sizeu2(texturememory>>10), sizeu3(spritememory>>10));
 }
 
-#ifdef ROTSPRITE
-// https://github.com/coelckers/prboom-plus/blob/master/prboom2/src/r_patch.c#L350
 boolean R_CheckIfPatch(lumpnum_t lump)
 {
 	size_t size;
@@ -2353,8 +2564,91 @@ boolean R_CheckIfPatch(lumpnum_t lump)
 	return result;
 }
 
-// https://github.com/Jimita/SRB2/blob/flats-png/src/r_data.c#L2157
-void R_PatchToFlat(patch_t *patch, UINT16 *raw, boolean flip)
+void R_PatchToFlat(patch_t *patch, UINT8 *flat)
+{
+	fixed_t col, ofs;
+	column_t *column;
+	UINT8 *desttop, *dest, *deststop;
+	UINT8 *source;
+
+	desttop = flat;
+	deststop = desttop + (SHORT(patch->width) * SHORT(patch->height));
+
+	for (col = 0; col < SHORT(patch->width); col++, desttop++)
+	{
+		INT32 topdelta, prevdelta = -1;
+		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col]));
+
+		while (column->topdelta != 0xff)
+		{
+			topdelta = column->topdelta;
+			if (topdelta <= prevdelta)
+				topdelta += prevdelta;
+			prevdelta = topdelta;
+
+			dest = desttop + (topdelta * SHORT(patch->width));
+			source = (UINT8 *)(column) + 3;
+			for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
+			{
+				*dest = source[ofs];
+				dest += SHORT(patch->width);
+			}
+			column = (column_t *)((UINT8 *)column + column->length + 4);
+		}
+	}
+}
+
+void R_TextureToFlat(size_t tex, UINT8 *flat)
+{
+	texture_t *texture = textures[tex];
+
+	fixed_t col, ofs;
+	column_t *column;
+	UINT8 *desttop, *dest, *deststop;
+	UINT8 *source;
+
+	desttop = flat;
+	deststop = desttop + (texture->width * texture->height);
+
+	for (col = 0; col < texture->width; col++, desttop++)
+	{
+		column = (column_t *)R_GetColumn(tex, col);
+		if (!texture->holes)
+		{
+			dest = desttop;
+			source = (UINT8 *)(column);
+			for (ofs = 0; dest < deststop && ofs < texture->height; ofs++)
+			{
+				if (source[ofs] != TRANSPARENTPIXEL)
+					*dest = source[ofs];
+				dest += texture->width;
+			}
+		}
+		else
+		{
+			INT32 topdelta, prevdelta = -1;
+			while (column->topdelta != 0xff)
+			{
+				topdelta = column->topdelta;
+				if (topdelta <= prevdelta)
+					topdelta += prevdelta;
+				prevdelta = topdelta;
+
+				dest = desttop + (topdelta * texture->width);
+				source = (UINT8 *)(column) + 3;
+				for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
+				{
+					if (source[ofs] != TRANSPARENTPIXEL)
+						*dest = source[ofs];
+					dest += texture->width;
+				}
+				column = (column_t *)((UINT8 *)column + column->length + 4);
+			}
+		}
+	}
+}
+
+void R_PatchToFlat_16bpp(patch_t *patch, UINT16 *raw, boolean flip)
 {
 	fixed_t col, ofs;
 	column_t *column;
@@ -2398,28 +2692,23 @@ void R_PatchToFlat(patch_t *patch, UINT16 *raw, boolean flip)
 	}
 }
 
-// https://github.com/Jimita/SRB2/blob/flats-png/src/r_data.c#L1970
-static UINT8 imgbuf[1<<26];
-patch_t *R_FlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
+static unsigned char imgbuf[1<<26];
+patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
 {
 	UINT32 x, y;
 	UINT8 *img;
 	UINT8 *imgptr = imgbuf;
 	UINT8 *colpointers, *startofspan;
 
-	#define WRITE8(buf, a) ({*buf = (a); buf++;})
-	#define WRITE16(buf, a) ({*buf = (a)&255; buf++; *buf = (a)>>8; buf++;})
-	#define WRITE32(buf, a) ({WRITE16(buf, (a)&65535); WRITE16(buf, (a)>>16);})
-
 	if (!raw)
 		return NULL;
 
 	// Write image size and offset
-	WRITE16(imgptr, width);
-	WRITE16(imgptr, height);
+	WRITEINT16(imgptr, width);
+	WRITEINT16(imgptr, height);
 	// no offsets
-	WRITE16(imgptr, 0);
-	WRITE16(imgptr, 0);
+	WRITEINT16(imgptr, 0);
+	WRITEINT16(imgptr, 0);
 
 	// Leave placeholder to column pointers
 	colpointers = imgptr;
@@ -2434,7 +2723,7 @@ patch_t *R_FlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
 
 		//printf("%d ", x);
 		// Write column pointer (@TODO may be wrong)
-		WRITE32(colpointers, imgptr - imgbuf);
+		WRITEINT32(colpointers, imgptr - imgbuf);
 
 		// Write pixels
 		for (y = 0; y < height; y++)
@@ -2447,7 +2736,7 @@ patch_t *R_FlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
 			if (!opaque)
 			{
 				if (startofspan)
-					WRITE8(imgptr, 0);
+					WRITEUINT8(imgptr, 0);
 				startofspan = NULL;
 				continue;
 			}
@@ -2459,15 +2748,15 @@ patch_t *R_FlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
 
 				// If we reached the span size limit, finish the previous span
 				if (startofspan)
-					WRITE8(imgptr, 0);
+					WRITEUINT8(imgptr, 0);
 
 				if (y > 254)
 				{
 					// Make sure we're aligned to 254
 					if (lastStartY < 254)
 					{
-						WRITE8(imgptr, 254);
-						WRITE8(imgptr, 0);
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
 						imgptr += 2;
 						lastStartY = 254;
 					}
@@ -2477,15 +2766,15 @@ patch_t *R_FlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
 
 					while (writeY > 254)
 					{
-						WRITE8(imgptr, 254);
-						WRITE8(imgptr, 0);
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
 						imgptr += 2;
 						writeY -= 254;
 					}
 				}
 
 				startofspan = imgptr;
-				WRITE8(imgptr, writeY);///@TODO calculate starting y pos
+				WRITEUINT8(imgptr, writeY);///@TODO calculate starting y pos
 				imgptr += 2;
 				spanSize = 0;
 
@@ -2493,24 +2782,421 @@ patch_t *R_FlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
 			}
 
 			// Write the pixel
-			WRITE8(imgptr, paletteIndex);
+			WRITEUINT8(imgptr, paletteIndex);
 			spanSize++;
 			startofspan[1] = spanSize;
 		}
 
 		if (startofspan)
-			WRITE8(imgptr, 0);
+			WRITEUINT8(imgptr, 0);
 
-		WRITE8(imgptr, 0xFF);
+		WRITEUINT8(imgptr, 0xFF);
 	}
 
-	#undef WRITE8
-	#undef WRITE16
-	#undef WRITE32
-
 	*size = imgptr-imgbuf;
-	img = malloc(*size);
+	img = Z_Malloc(*size, PU_STATIC, NULL);
 	memcpy(img, imgbuf, *size);
 	return (patch_t *)img;
 }
+
+#ifndef NO_PNG_LUMPS
+boolean R_IsLumpPNG(const UINT8 *d, size_t s)
+{
+	if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
+		return false;
+	// Check for PNG file signature using memcmp
+	// As it may be faster on CPUs with slow unaligned memory access
+	// Ref: http://www.libpng.org/pub/png/spec/1.2/PNG-Rationale.html#R.PNG-file-signature
+	return (memcmp(&d[0], "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", 8) == 0);
+}
+
+#ifdef HAVE_PNG
+
+#if PNG_LIBPNG_VER_DLLNUM < 14
+typedef PNG_CONST png_byte *png_const_bytep;
+#endif
+typedef struct {
+	png_const_bytep buffer;
+	png_uint_32 bufsize;
+	png_uint_32 current_pos;
+} png_io_t;
+
+static void PNG_IOReader(png_structp png_ptr, png_bytep data, png_size_t length)
+{
+	png_io_t *f = png_get_io_ptr(png_ptr);
+	if (length > (f->bufsize - f->current_pos))
+		png_error(png_ptr, "PNG_IOReader: buffer overrun");
+	memcpy(data, f->buffer + f->current_pos, length);
+	f->current_pos += length;
+}
+
+typedef struct
+{
+	char name[4];
+	void *data;
+	size_t size;
+} png_chunk_t;
+
+static png_byte *chunkname = NULL;
+static png_chunk_t chunk;
+
+static int PNG_ChunkReader(png_structp png_ptr, png_unknown_chunkp chonk)
+{
+	(void)png_ptr;
+	if (!memcmp(chonk->name, chunkname, 4))
+	{
+		memcpy(chunk.name, chonk->name, 4);
+		chunk.size = chonk->size;
+		chunk.data = Z_Malloc(chunk.size, PU_STATIC, NULL);
+		memcpy(chunk.data, chonk->data, chunk.size);
+		return 1;
+	}
+	return 0;
+}
+
+static void PNG_error(png_structp PNG, png_const_charp pngtext)
+{
+	CONS_Debug(DBG_RENDER, "libpng error at %p: %s", PNG, pngtext);
+	//I_Error("libpng error at %p: %s", PNG, pngtext);
+}
+
+static void PNG_warn(png_structp PNG, png_const_charp pngtext)
+{
+	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
+}
+
+static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+{
+	png_structp png_ptr;
+	png_infop png_info_ptr;
+	png_uint_32 width, height;
+	int bit_depth, color_type;
+	png_uint_32 y;
+#ifdef PNG_SETJMP_SUPPORTED
+#ifdef USE_FAR_KEYWORD
+	jmp_buf jmpbuf;
+#endif
+#endif
+
+	png_io_t png_io;
+	png_bytep *row_pointers;
+
+	png_byte grAb_chunk[5] = {'g', 'r', 'A', 'b', (png_byte)'\0'};
+	png_voidp *user_chunk_ptr;
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
+	if (!png_ptr)
+	{
+		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
+		return NULL;
+	}
+
+	png_info_ptr = png_create_info_struct(png_ptr);
+	if (!png_info_ptr)
+	{
+		CONS_Debug(DBG_RENDER, "PNG_Load: Error on allocate for libpng\n");
+		png_destroy_read_struct(&png_ptr, NULL, NULL);
+		return NULL;
+	}
+
+#ifdef USE_FAR_KEYWORD
+	if (setjmp(jmpbuf))
+#else
+	if (setjmp(png_jmpbuf(png_ptr)))
+#endif
+	{
+		//CONS_Debug(DBG_RENDER, "libpng load error on %s\n", filename);
+		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
+		return NULL;
+	}
+#ifdef USE_FAR_KEYWORD
+	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
+#endif
+
+	// set our own read_function
+	png_io.buffer = (png_const_bytep)png;
+	png_io.bufsize = size;
+	png_io.current_pos = 0;
+	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
+
+	memset(&chunk, 0x00, sizeof(png_chunk_t));
+	chunkname = grAb_chunk; // I want to read a grAb chunk
+
+	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
+	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
+	png_set_keep_unknown_chunks(png_ptr, 2, chunkname, 1);
+
+#ifdef PNG_SET_USER_LIMITS_SUPPORTED
+	png_set_user_limits(png_ptr, 2048, 2048);
+#endif
+
+	png_read_info(png_ptr, png_info_ptr);
+	png_get_IHDR(png_ptr, png_info_ptr, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
+
+	if (bit_depth == 16)
+		png_set_strip_16(png_ptr);
+
+	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+		png_set_gray_to_rgb(png_ptr);
+	else if (color_type == PNG_COLOR_TYPE_PALETTE)
+		png_set_palette_to_rgb(png_ptr);
+
+	if (png_get_valid(png_ptr, png_info_ptr, PNG_INFO_tRNS))
+		png_set_tRNS_to_alpha(png_ptr);
+	else if (color_type != PNG_COLOR_TYPE_RGB_ALPHA && color_type != PNG_COLOR_TYPE_GRAY_ALPHA)
+	{
+#if PNG_LIBPNG_VER < 10207
+		png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+#else
+		png_set_add_alpha(png_ptr, 0xFF, PNG_FILLER_AFTER);
+#endif
+	}
+
+	png_read_update_info(png_ptr, png_info_ptr);
+
+	// Read the image
+	row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * height);
+	for (y = 0; y < height; y++)
+		row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png_ptr, png_info_ptr));
+	png_read_image(png_ptr, row_pointers);
+
+	// Read grAB chunk
+	if ((topoffset || leftoffset) && (chunk.data != NULL))
+	{
+		INT32 *offsets = (INT32 *)chunk.data;
+		// read left offset
+		if (leftoffset != NULL)
+			*leftoffset = (INT16)BIGENDIAN_LONG(*offsets);
+		offsets++;
+		// read top offset
+		if (topoffset != NULL)
+			*topoffset = (INT16)BIGENDIAN_LONG(*offsets);
+	}
+
+	// bye
+	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
+	if (chunk.data)
+		Z_Free(chunk.data);
+
+	*w = (INT32)width;
+	*h = (INT32)height;
+	return row_pointers;
+}
+
+// Convert a PNG to a raw image.
+static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+{
+	UINT8 *flat;
+	png_uint_32 x, y;
+	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, size);
+	png_uint_32 width = *w, height = *h;
+
+	if (!row_pointers)
+		I_Error("PNG_RawConvert: conversion failed");
+
+	// Convert the image to 8bpp
+	flat = Z_Malloc(width * height, PU_LEVEL, NULL);
+	memset(flat, TRANSPARENTPIXEL, width * height);
+	for (y = 0; y < height; y++)
+	{
+		png_bytep row = row_pointers[y];
+		for (x = 0; x < width; x++)
+		{
+			png_bytep px = &(row[x * 4]);
+			if ((UINT8)px[3])
+				flat[((y * width) + x)] = NearestColor((UINT8)px[0], (UINT8)px[1], (UINT8)px[2]);
+		}
+	}
+	free(row_pointers);
+
+	return flat;
+}
+
+// Convert a PNG to a flat.
+UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size)
+{
+	return PNG_RawConvert(png, &levelflat->width, &levelflat->height, NULL, NULL, size);
+}
+
+// Convert a PNG to a patch.
+patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency)
+{
+	UINT16 width, height;
+	INT16 topoffset = 0, leftoffset = 0;
+	UINT8 *raw = PNG_RawConvert(png, &width, &height, &topoffset, &leftoffset, size);
+
+	UINT32 x, y;
+	UINT8 *img;
+	UINT8 *imgptr = imgbuf;
+	UINT8 *colpointers, *startofspan;
+
+	if (!raw)
+		I_Error("R_PNGToPatch: conversion failed");
+
+	// Write image size and offset
+	WRITEINT16(imgptr, width);
+	WRITEINT16(imgptr, height);
+	WRITEINT16(imgptr, leftoffset);
+	WRITEINT16(imgptr, topoffset);
+
+	// Leave placeholder to column pointers
+	colpointers = imgptr;
+	imgptr += width*4;
+
+	// Write columns
+	for (x = 0; x < width; x++)
+	{
+		int lastStartY = 0;
+		int spanSize = 0;
+		startofspan = NULL;
+
+		//printf("%d ", x);
+		// Write column pointer (@TODO may be wrong)
+		WRITEINT32(colpointers, imgptr - imgbuf);
+
+		// Write pixels
+		for (y = 0; y < height; y++)
+		{
+			UINT8 paletteIndex = raw[((y * width) + x)];
+			boolean opaque = transparency ? (paletteIndex != TRANSPARENTPIXEL) : true;
+
+			// End span if we have a transparent pixel
+			if (!opaque)
+			{
+				if (startofspan)
+					WRITEUINT8(imgptr, 0);
+				startofspan = NULL;
+				continue;
+			}
+
+			// Start new column if we need to
+			if (!startofspan || spanSize == 255)
+			{
+				int writeY = y;
+
+				// If we reached the span size limit, finish the previous span
+				if (startofspan)
+					WRITEUINT8(imgptr, 0);
+
+				if (y > 254)
+				{
+					// Make sure we're aligned to 254
+					if (lastStartY < 254)
+					{
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
+						imgptr += 2;
+						lastStartY = 254;
+					}
+
+					// Write stopgap empty spans if needed
+					writeY = y - lastStartY;
+
+					while (writeY > 254)
+					{
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
+						imgptr += 2;
+						writeY -= 254;
+					}
+				}
+
+				startofspan = imgptr;
+				WRITEUINT8(imgptr, writeY);///@TODO calculate starting y pos
+				imgptr += 2;
+				spanSize = 0;
+
+				lastStartY = y;
+			}
+
+			// Write the pixel
+			WRITEUINT8(imgptr, paletteIndex);
+			spanSize++;
+			startofspan[1] = spanSize;
+		}
+
+		if (startofspan)
+			WRITEUINT8(imgptr, 0);
+
+		WRITEUINT8(imgptr, 0xFF);
+	}
+
+	size = imgptr-imgbuf;
+	img = Z_Malloc(size, PU_STATIC, NULL);
+	memcpy(img, imgbuf, size);
+
+	Z_Free(raw);
+
+	if (destsize != NULL)
+		*destsize = size;
+	return (patch_t *)img;
+}
+
+boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
+{
+	png_structp png_ptr;
+	png_infop png_info_ptr;
+	png_uint_32 w, h;
+	int bit_depth, color_type;
+#ifdef PNG_SETJMP_SUPPORTED
+#ifdef USE_FAR_KEYWORD
+	jmp_buf jmpbuf;
+#endif
+#endif
+
+	png_io_t png_io;
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
+		PNG_error, PNG_warn);
+	if (!png_ptr)
+	{
+		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
+		return false;
+	}
+
+	png_info_ptr = png_create_info_struct(png_ptr);
+	if (!png_info_ptr)
+	{
+		CONS_Debug(DBG_RENDER, "PNG_Load: Error on allocate for libpng\n");
+		png_destroy_read_struct(&png_ptr, NULL, NULL);
+		return false;
+	}
+
+#ifdef USE_FAR_KEYWORD
+	if (setjmp(jmpbuf))
+#else
+	if (setjmp(png_jmpbuf(png_ptr)))
+#endif
+	{
+		//CONS_Debug(DBG_RENDER, "libpng load error on %s\n", filename);
+		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
+		return false;
+	}
+#ifdef USE_FAR_KEYWORD
+	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
+#endif
+
+	// set our own read_function
+	png_io.buffer = (png_bytep)png;
+	png_io.bufsize = size;
+	png_io.current_pos = 0;
+	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
+
+#ifdef PNG_SET_USER_LIMITS_SUPPORTED
+	png_set_user_limits(png_ptr, 2048, 2048);
+#endif
+
+	png_read_info(png_ptr, png_info_ptr);
+
+	png_get_IHDR(png_ptr, png_info_ptr, &w, &h, &bit_depth, &color_type,
+	 NULL, NULL, NULL);
+
+	// okay done. stop.
+	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
+
+	*width = (INT32)w;
+	*height = (INT32)h;
+	return true;
+}
+#endif
 #endif

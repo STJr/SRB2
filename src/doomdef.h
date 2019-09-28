@@ -508,6 +508,9 @@ INT32 I_GetKey(void);
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #endif
 
+// Max gamepad/joysticks that can be detected/used.
+#define MAX_JOYSTICKS 4
+
 // Floating point comparison epsilons from float.h
 #ifndef FLT_EPSILON
 #define FLT_EPSILON 1.1920928955078125e-7f
@@ -622,5 +625,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 #define ROTSPRITE
 #define ROTANGLES 24	// Needs to be a divisor of 360 (45, 60, 90, 120...)
 #define ROTANGDIFF (360 / ROTANGLES)
+
+#ifndef HAVE_PNG
+#define NO_PNG_LUMPS
+#endif
 
 #endif // __DOOMDEF__
