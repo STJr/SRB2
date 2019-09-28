@@ -9944,7 +9944,7 @@ static inline int lib_getenum(lua_State *L)
 		LUA_PushUserdata(L, &players[displayplayer], META_PLAYER);
 		return 1;
 	} else if (fastcmp(word,"secondarydisplayplayer")) { // local/display player 2, for splitscreen
-		if (!splitscreen || secondarydisplayplayer < 0 || consoleplayer >= MAXPLAYERS || !playeringame[secondarydisplayplayer])
+		if (!splitscreen || secondarydisplayplayer < 0 || !playeringame[secondarydisplayplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
 		return 1;
