@@ -267,32 +267,24 @@ void R_CacheRotSprite(spriteframe_t *sprframe, INT32 rot, UINT8 flip)
 		// Don't cache angle = 0, that would be stoopid
 		for (angle = 1; angle < ROTANGLES; angle++)
 		{
-			INT32 minx = 32767, maxx = -32767;
-			INT32 miny = 32767, maxy = -32767;
 			INT32 newwidth, newheight;
 
 			ca = cosang2rad[angle];
 			sa = sinang2rad[angle];
 
 			// Find the dimensions of the rotated patch.
-			// This is BROKEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			for (sy = 0; sy < height; sy++)
 			{
-				for (sx = 0; sx < width; sx++)
-				{
-					dx = FixedMul((sx-ox) << FRACBITS, ca) + FixedMul((sy-oy) << FRACBITS, sa) + (ox << FRACBITS);
-					dy = -FixedMul((sx-oy) << FRACBITS, sa) + FixedMul((sy-oy) << FRACBITS, ca) + (oy << FRACBITS);
-					dx >>= FRACBITS;
-					dy >>= FRACBITS;
-					if (dx < minx) minx = dx;
-					if (dx > maxx) maxx = dx;
-					if (dy < miny) miny = dy;
-					if (dy > maxy) maxy = dy;
-				}
+				INT32 w1 = abs(FixedMul(width << FRACBITS, ca) - FixedMul(height << FRACBITS, sa));
+				INT32 w2 = abs(FixedMul(-(width << FRACBITS), ca) - FixedMul(height << FRACBITS, sa));
+				INT32 h1 = abs(FixedMul(width << FRACBITS, sa) + FixedMul(height << FRACBITS, ca));
+				INT32 h2 = abs(FixedMul(-(width << FRACBITS), sa) + FixedMul(height << FRACBITS, ca));
+				w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
+				w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
+				h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
+				h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
+				newwidth = max(width, max(w1, w2));
+				newheight = max(height, max(h1, h2));
 			}
-
-			newwidth = (maxx - minx) * 1.5f;
-			newheight = (maxy - miny) * 1.5f;
 
 			nox = (newwidth / 2);
 			noy = (newheight / 2);
