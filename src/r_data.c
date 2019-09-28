@@ -23,6 +23,7 @@
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
 #include "v_video.h" // pMasterPalette
+#include "byteptr.h"
 #include "dehacked.h"
 
 #ifdef _WIN32
@@ -241,7 +242,7 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	}
 }
 
-RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
+UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
 	if (style == AST_TRANSLUCENT)
@@ -261,6 +262,9 @@ RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		// if there's no pixel in here
 		if (!background.rgba)
 			output.s.alpha = foreground.s.alpha;
+		else
+			output.s.alpha = 0xFF;
+		return output.rgba;
 	}
 #define clamp(c) max(min(c, 0xFF), 0x00);
 	else
@@ -298,30 +302,38 @@ RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		}
 		// just copy the pixel
 		else if (style == AST_COPY)
-			return background;
+			output.rgba = foreground.rgba;
+
+		output.s.alpha = 0xFF;
+		return output.rgba;
 	}
 #undef clamp
-	// unimplemented blend modes return the background pixel
-	output = background;
-	output.s.alpha = 0xFF;
-	return output;
+	return 0;
 }
 
 UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
 {
-	if ((style == AST_TRANSLUCENT) && (alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
+	// Alpha style set to translucent?
+	if (style == AST_TRANSLUCENT)
 	{
-		UINT8 *mytransmap;
-		if (alpha < 255/11) // Is the patch way too translucent? Don't render then.
-			return background;
-		// The equation's not exact but it works as intended. I'll call it a day for now.
-		mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
-		if (background != 0xFF)
-			return *(mytransmap + (background<<8) + foreground);
+		// Is the alpha small enough for translucency?
+		if (alpha <= (10*255/11))
+		{
+			UINT8 *mytransmap;
+			// Is the patch way too translucent? Don't blend then.
+			if (alpha < 255/11)
+				return background;
+			// The equation's not exact but it works as intended. I'll call it a day for now.
+			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
+			if (background != 0xFF)
+				return *(mytransmap + (background<<8) + foreground);
+		}
+		else // just copy the pixel
+			return foreground;
 	}
 	// just copy the pixel
 	else if (style == AST_COPY)
-		return background;
+		return foreground;
 	// use ASTBlendPixel for all other blend modes
 	// and find the nearest colour in the palette
 	else if (style != AST_TRANSLUCENT)
@@ -329,7 +341,7 @@ UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 al
 		RGBA_t texel;
 		RGBA_t bg = V_GetColor(background);
 		RGBA_t fg = V_GetColor(foreground);
-		texel = ASTBlendPixel(bg, fg, style, alpha);
+		texel.rgba = ASTBlendPixel(bg, fg, style, alpha);
 		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
 	}
 	// fallback if all above fails, somehow
@@ -374,7 +386,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; source++, dest++)
-				if (*dest != 0xFF)
+				if (*source != 0xFF)
 					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
@@ -383,7 +395,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 }
 
 //
-// R_DrawTransColumnInCache
+// R_DrawBlendFlippedColumnInCache
 // Similar to the one above except that the column is inverted.
 //
 static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
@@ -418,7 +430,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; --source, dest++)
-				if (*dest != 0xFF)
+				if (*source != 0xFF)
 					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
@@ -2819,18 +2831,14 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 	UINT8 *imgptr = imgbuf;
 	UINT8 *colpointers, *startofspan;
 
-	#define WRITE8(buf, a) ({*buf = (a); buf++;})
-	#define WRITE16(buf, a) ({*buf = (a)&255; buf++; *buf = (a)>>8; buf++;})
-	#define WRITE32(buf, a) ({WRITE16(buf, (a)&65535); WRITE16(buf, (a)>>16);})
-
 	if (!raw)
 		I_Error("R_PNGToPatch: conversion failed");
 
 	// Write image size and offset
-	WRITE16(imgptr, width);
-	WRITE16(imgptr, height);
-	WRITE16(imgptr, leftoffset);
-	WRITE16(imgptr, topoffset);
+	WRITEINT16(imgptr, width);
+	WRITEINT16(imgptr, height);
+	WRITEINT16(imgptr, leftoffset);
+	WRITEINT16(imgptr, topoffset);
 
 	// Leave placeholder to column pointers
 	colpointers = imgptr;
@@ -2845,7 +2853,7 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 
 		//printf("%d ", x);
 		// Write column pointer (@TODO may be wrong)
-		WRITE32(colpointers, imgptr - imgbuf);
+		WRITEINT32(colpointers, imgptr - imgbuf);
 
 		// Write pixels
 		for (y = 0; y < height; y++)
@@ -2857,7 +2865,7 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 			if (!opaque)
 			{
 				if (startofspan)
-					WRITE8(imgptr, 0);
+					WRITEUINT8(imgptr, 0);
 				startofspan = NULL;
 				continue;
 			}
@@ -2869,15 +2877,15 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 
 				// If we reached the span size limit, finish the previous span
 				if (startofspan)
-					WRITE8(imgptr, 0);
+					WRITEUINT8(imgptr, 0);
 
 				if (y > 254)
 				{
 					// Make sure we're aligned to 254
 					if (lastStartY < 254)
 					{
-						WRITE8(imgptr, 254);
-						WRITE8(imgptr, 0);
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
 						imgptr += 2;
 						lastStartY = 254;
 					}
@@ -2887,15 +2895,15 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 
 					while (writeY > 254)
 					{
-						WRITE8(imgptr, 254);
-						WRITE8(imgptr, 0);
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
 						imgptr += 2;
 						writeY -= 254;
 					}
 				}
 
 				startofspan = imgptr;
-				WRITE8(imgptr, writeY);///@TODO calculate starting y pos
+				WRITEUINT8(imgptr, writeY);///@TODO calculate starting y pos
 				imgptr += 2;
 				spanSize = 0;
 
@@ -2903,20 +2911,16 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 			}
 
 			// Write the pixel
-			WRITE8(imgptr, paletteIndex);
+			WRITEUINT8(imgptr, paletteIndex);
 			spanSize++;
 			startofspan[1] = spanSize;
 		}
 
 		if (startofspan)
-			WRITE8(imgptr, 0);
+			WRITEUINT8(imgptr, 0);
 
-		WRITE8(imgptr, 0xFF);
+		WRITEUINT8(imgptr, 0xFF);
 	}
-
-	#undef WRITE8
-	#undef WRITE16
-	#undef WRITE32
 
 	size = imgptr-imgbuf;
 	img = Z_Malloc(size, PU_STATIC, NULL);

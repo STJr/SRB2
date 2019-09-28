@@ -1701,13 +1701,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 			if (mariomode)
 				return;
+			if (special->state-states != S_EXTRALARGEBUBBLE)
+				return; // Don't grab the bubble during its spawn animation
 			else if (toucher->eflags & MFE_VERTICALFLIP)
 			{
-				if (special->z+special->height < toucher->z + toucher->height / 3
-				 || special->z+special->height > toucher->z + (toucher->height*2/3))
+				if (special->z+special->height < toucher->z
+					|| special->z+special->height > toucher->z + (toucher->height*2/3))
 					return; // Only go in the mouth
 			}
-			else if (special->z < toucher->z + toucher->height / 3
+			else if (special->z < toucher->z
 				|| special->z > toucher->z + (toucher->height*2/3))
 				return; // Only go in the mouth
 
@@ -3406,7 +3408,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		return false;
 
 	// Spectator handling
-	if (netgame)
+	if (multiplayer)
 	{
 		if (damagetype != DMG_SPECTATOR && target->player && target->player->spectator)
 			return false;
@@ -3580,7 +3582,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 			return true;
 #endif
-		else if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
+		else if (player->powers[pw_shield] || (player->bot && !ultimatemode))  //If One-Hit Shield
 		{
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);
 			damage = 0;

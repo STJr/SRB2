@@ -2325,6 +2325,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss1Spikeballs},        "A_BOSS1SPIKEBALLS"},
 	{{A_Boss3TakeDamage},        "A_BOSS3TAKEDAMAGE"},
 	{{A_Boss3Path},              "A_BOSS3PATH"},
+	{{A_Boss3ShockThink},        "A_BOSS3SHOCKTHINK"},
 	{{A_LinedefExecute},         "A_LINEDEFEXECUTE"},
 	{{A_PlaySeeSound},           "A_PLAYSEESOUND"},
 	{{A_PlayAttackSound},        "A_PLAYATTACKSOUND"},
@@ -2431,6 +2432,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss5CheckFalling},      "A_BOSS5CHECKFALLING"},
 	{{A_Boss5PinchShot},         "A_BOSS5PINCHSHOT"},
 	{{A_Boss5MakeItRain},        "A_BOSS5MAKEITRAIN"},
+	{{A_Boss5MakeJunk},          "A_BOSS5MAKEJUNK"},
 	{{A_LookForBetter},          "A_LOOKFORBETTER"},
 	{{A_Boss5BombExplode},       "A_BOSS5BOMBEXPLODE"},
 	{{A_DustDevilThink},         "A_DUSTDEVILTHINK"},
@@ -4742,6 +4744,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BOSSSEBH1",
 	"S_BOSSSEBH2",
 
+	// Boss 3 Shockwave
+
+	"S_SHOCKWAVE1",
+	"S_SHOCKWAVE2",
+
 	// Boss 4
 	"S_EGGMOBILE4_STND",
 	"S_EGGMOBILE4_LATK1",
@@ -4784,6 +4791,25 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGROBOJET",
 
 	// Boss 5
+	"S_FANG_SETUP",
+	"S_FANG_INTRO0",
+	"S_FANG_INTRO1",
+	"S_FANG_INTRO2",
+	"S_FANG_INTRO3",
+	"S_FANG_INTRO4",
+	"S_FANG_INTRO5",
+	"S_FANG_INTRO6",
+	"S_FANG_INTRO7",
+	"S_FANG_INTRO8",
+	"S_FANG_INTRO9",
+	"S_FANG_INTRO10",
+	"S_FANG_INTRO11",
+	"S_FANG_INTRO12",
+	"S_FANG_CLONE1",
+	"S_FANG_CLONE2",
+	"S_FANG_CLONE3",
+	"S_FANG_CLONE4",
+	"S_FANG_IDLE0",
 	"S_FANG_IDLE1",
 	"S_FANG_IDLE2",
 	"S_FANG_IDLE3",
@@ -4854,6 +4880,26 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FANG_FLEEBOUNCE1",
 	"S_FANG_FLEEBOUNCE2",
 	"S_FANG_KO",
+
+	"S_BROKENROBOTRANDOM",
+	"S_BROKENROBOTA",
+	"S_BROKENROBOTB",
+	"S_BROKENROBOTC",
+	"S_BROKENROBOTD",
+	"S_BROKENROBOTE",
+	"S_BROKENROBOTF",
+
+	"S_ALART1",
+	"S_ALART2",
+
+	"S_VWREF",
+	"S_VWREB",
+
+	"S_PROJECTORLIGHT1",
+	"S_PROJECTORLIGHT2",
+	"S_PROJECTORLIGHT3",
+	"S_PROJECTORLIGHT4",
+	"S_PROJECTORLIGHT5",
 
 	"S_FBOMB1",
 	"S_FBOMB2",
@@ -5578,20 +5624,23 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DRIPC1",
 	"S_DRIPC2",
 
-	// Coral 1
+	// Coral
 	"S_CORAL1",
-
-	// Coral 2
 	"S_CORAL2",
-
-	// Coral 3
 	"S_CORAL3",
+	"S_CORAL4",
+	"S_CORAL5",
 
 	// Blue Crystal
 	"S_BLUECRYSTAL1",
 
 	// Kelp,
 	"S_KELP",
+
+	// Animated algae
+	"S_ANIMALGAETOP1",
+	"S_ANIMALGAETOP2",
+	"S_ANIMALGAESEG",
 
 	// DSZ Stalagmites
 	"S_DSZSTALAGMITE",
@@ -5739,6 +5788,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTI9",
 	"S_CACTI10",
 	"S_CACTI11",
+	"S_CACTITINYSEG",
+	"S_CACTISMALLSEG",
 
 	// Warning signs sprites
 	"S_ARIDSIGN_CAUTION",
@@ -7248,7 +7299,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Boss 3
 	"MT_EGGMOBILE3",
 	"MT_FAKEMOBILE",
-	"MT_SHOCK",
+	"MT_SHOCKWAVE",
 
 	// Boss 4
 	"MT_EGGMOBILE4",
@@ -7259,6 +7310,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Boss 5
 	"MT_FANG",
+	"MT_BROKENROBOT",
+	"MT_VWREF",
+	"MT_VWREB",
+	"MT_PROJECTORLIGHT",
 	"MT_FBOMB",
 	"MT_TNTDUST", // also used by barrel
 	"MT_FSGNA",
@@ -7457,11 +7512,15 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water
-	"MT_CORAL1", // Coral 1
-	"MT_CORAL2", // Coral 2
-	"MT_CORAL3", // Coral 3
+	"MT_CORAL1", // Coral
+	"MT_CORAL2",
+	"MT_CORAL3",
+	"MT_CORAL4",
+	"MT_CORAL5",
 	"MT_BLUECRYSTAL", // Blue Crystal
 	"MT_KELP", // Kelp
+	"MT_ANIMALGAETOP", // Animated algae top
+	"MT_ANIMALGAESEG", // Animated algae segment
 	"MT_DSZSTALAGMITE", // Deep Sea 1 Stalagmite
 	"MT_DSZ2STALAGMITE", // Deep Sea 2 Stalagmite
 	"MT_LIGHTBEAM", // DSZ Light beam
@@ -7523,6 +7582,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CACTI9",
 	"MT_CACTI10",
 	"MT_CACTI11",
+	"MT_CACTITINYSEG",
+	"MT_CACTISMALLSEG",
 	"MT_ARIDSIGN_CAUTION",
 	"MT_ARIDSIGN_CACTI",
 	"MT_ARIDSIGN_SHARPTURN",
