@@ -266,6 +266,7 @@ typedef enum
 	sfx_bsnipe,
 	sfx_sprong,
 	sfx_lvfal1,
+	sfx_pscree,
 
 	// Menu, interface
 	sfx_chchng,

@@ -300,6 +300,8 @@ void A_LavafallRocks(mobj_t *actor);
 void A_LavafallLava(mobj_t *actor);
 void A_FallingLavaCheck(mobj_t *actor);
 void A_FireShrink(mobj_t *actor);
+void A_SpawnPterabytes(mobj_t *actor);
+void A_PterabyteHover(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -13784,6 +13786,8 @@ void A_LavafallRocks(mobj_t *actor)
 //
 void A_LavafallLava(mobj_t *actor)
 {
+	mobj_t *lavafall;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_LavafallLava", actor))
 		return;
@@ -13792,7 +13796,7 @@ void A_LavafallLava(mobj_t *actor)
 	if ((40 - actor->fuse) % (2*(actor->scale >> FRACBITS)))
 		return;
 
-	mobj_t *lavafall = P_SpawnMobjFromMobj(actor, 0, 0, -8*FRACUNIT, MT_LAVAFALL_LAVA);
+	lavafall = P_SpawnMobjFromMobj(actor, 0, 0, -8*FRACUNIT, MT_LAVAFALL_LAVA);
 	lavafall->momz = -P_MobjFlip(actor)*25*FRACUNIT;
 }
 
@@ -13838,4 +13842,74 @@ void A_FireShrink(mobj_t *actor)
 
 	actor->destscale = locvar1;
 	actor->scalespeed = FRACUNIT/locvar2;
+}
+
+// Function: A_SpawnPterabytes
+//
+// Description: Spawn Pterabytes around the actor in a circle.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_SpawnPterabytes(mobj_t *actor)
+{
+	mobj_t *waypoint, *ptera;
+	fixed_t c, s;
+	fixed_t rad = 280*FRACUNIT;
+	angle_t ang = 0;
+	angle_t interval, fa;
+	UINT8 amount = 1;
+	UINT8 i;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SpawnPterabytes", actor))
+		return;
+#endif
+
+	if (actor->spawnpoint)
+	{
+		amount = actor->spawnpoint->extrainfo + 1;
+		if (actor->spawnpoint->angle)
+			rad = actor->spawnpoint->angle*FRACUNIT;
+	}
+
+	interval = FixedAngle(FRACUNIT*360/amount);
+
+	for (i = 0; i < amount; i++)
+	{
+		fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+		c = FINECOSINE(fa);
+		s = FINESINE(fa);
+		waypoint = P_SpawnMobjFromMobj(actor, FixedMul(c, rad), FixedMul(s, rad), 0, MT_PTERABYTEWAYPOINT);
+		waypoint->angle = ang + ANGLE_90;
+		ptera = P_SpawnMobjFromMobj(waypoint, 0, 0, 0, MT_PTERABYTE);
+		ptera->angle = waypoint->angle;
+		P_SetTarget(&ptera->tracer, waypoint);
+		ptera->extravalue1 = 0;
+		ang += interval;
+	}
+}
+
+// Function: A_PterabyteHover
+//
+// Description: Hover in a circular fashion, bobbing up and down slightly.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_PterabyteHover(mobj_t *actor)
+{
+	angle_t ang, fa;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_PterabyteHover", actor))
+		return;
+#endif
+
+	P_InstaThrust(actor, actor->angle, actor->info->speed);
+	actor->angle += ANG1;
+	actor->extravalue1 = (actor->extravalue1 + 3) % 360;
+	ang = actor->extravalue1*ANG1;
+	fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+	actor->z += FINESINE(fa);
 }

@@ -2435,6 +2435,8 @@ static actionpointer_t actionpointers[] =
 	{{A_LavafallLava},           "A_LAVAFALLLAVA"},
 	{{A_FallingLavaCheck},       "A_FALLINGLAVACHECK"},
 	{{A_FireShrink},             "A_FIRESHRINK"},
+	{{A_SpawnPterabytes},        "A_SPAWNPTERABYTES"},
+	{{A_PterabyteHover},         "A_PTERABYTEHOVER"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -4581,6 +4583,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PYREFLY_FLY",
 	"S_PYREFIRE1",
 	"S_PYREFIRE2",
+
+	// Pterabyte
+	"S_PTERABYTESPAWNER",
+	"S_PTERABYTEWAYPOINT",
+	"S_PTERABYTE_FLY1",
+	"S_PTERABYTE_FLY2",
+	"S_PTERABYTE_FLY3",
+	"S_PTERABYTE_FLY4",
+	"S_PTERABYTE_SWOOPDOWN",
+	"S_PTERABYTE_SWOOPUP",
 
 	// Boss Explosion
 	"S_BOSSEXPLODE",
@@ -7232,6 +7244,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CANARIVORE_GAS", // Canarivore gas
 	"MT_PYREFLY", // Pyre Fly
 	"MT_PYREFLY_FIRE", // Pyre Fly fire
+	"MT_PTERABYTESPAWNER", // Pterabyte spawner
+	"MT_PTERABYTEWAYPOINT", // Pterabyte waypoint
+	"MT_PTERABYTE", // Pterabyte
 
 	// Generic Boss Items
 	"MT_BOSSEXPLODE",

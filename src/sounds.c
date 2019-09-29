@@ -200,6 +200,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"bsnipe", false, 200,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Home-run smash"},
   {"sprong", false, 112,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power spring"},
   {"lvfal1",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rumble"},
+  {"pscree", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "SCREE!"},
 
   // Menu, interface
   {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score"},

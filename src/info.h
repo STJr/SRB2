@@ -270,6 +270,8 @@ void A_LavafallRocks();
 void A_LavafallLava();
 void A_FallingLavaCheck();
 void A_FireShrink();
+void A_SpawnPterabytes();
+void A_PterabyteHover();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -319,6 +321,7 @@ typedef enum sprite
 	SPR_CANA, // Canarivore
 	SPR_CANG, // Canarivore gas
 	SPR_PYRE, // Pyre Fly
+	SPR_PTER, // Pterabyte
 
 	// Generic Boss Items
 	SPR_JETF, // Boss jet fumes
@@ -1334,6 +1337,16 @@ typedef enum state
 	S_PYREFLY_FLY,
 	S_PYREFIRE1,
 	S_PYREFIRE2,
+
+	// Pterabyte
+	S_PTERABYTESPAWNER,
+	S_PTERABYTEWAYPOINT,
+	S_PTERABYTE_FLY1,
+	S_PTERABYTE_FLY2,
+	S_PTERABYTE_FLY3,
+	S_PTERABYTE_FLY4,
+	S_PTERABYTE_SWOOPDOWN,
+	S_PTERABYTE_SWOOPUP,
 
 	// Boss Explosion
 	S_BOSSEXPLODE,
@@ -4007,6 +4020,9 @@ typedef enum mobj_type
 	MT_CANARIVORE_GAS, // Canarivore gas
 	MT_PYREFLY, // Pyre Fly
 	MT_PYREFLY_FIRE, // Pyre Fly fire
+	MT_PTERABYTESPAWNER, // Pterabyte spawner
+	MT_PTERABYTEWAYPOINT, // Pterabyte waypoint
+	MT_PTERABYTE, // Pterabyte
 
 	// Generic Boss Items
 	MT_BOSSEXPLODE,
