@@ -9107,6 +9107,12 @@ void P_MobjThinker(mobj_t *mobj)
 						if (!mobj->target)
 							break;
 
+						if (mobj->target->player->powers[pw_flashing])
+						{
+							P_SetTarget(&mobj->target, NULL);
+							break;
+						}
+
 						vdist = mobj->z - mobj->target->z - mobj->target->height;
 						if (vdist <= 0)
 						{
