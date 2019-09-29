@@ -948,17 +948,6 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 	if (player->powers[pw_carry] == CR_ROPEHANG)
 		P_SetTarget(&player->mo->tracer, NULL);
 
-	if (player->powers[pw_carry] == CR_ROLLOUT)
-	{
-		if (player->mo->tracer && !P_MobjWasRemoved(player->mo->tracer))
-		{
-			player->mo->tracer->flags |= MF_PUSHABLE;
-			P_SetTarget(&player->mo->tracer->target, NULL);
-		}
-		P_SetTarget(&player->mo->tracer, NULL);
-		player->powers[pw_carry] = CR_NONE;
-	}
-
 	{
 		angle_t ang;
 		fixed_t fallbackspeed;
@@ -1041,6 +1030,17 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 void P_ResetPlayer(player_t *player)
 {
 	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
+
+	if (player->powers[pw_carry] == CR_ROLLOUT)
+	{
+		if (player->mo->tracer && !P_MobjWasRemoved(player->mo->tracer))
+		{
+			player->mo->tracer->flags |= MF_PUSHABLE;
+			P_SetTarget(&player->mo->tracer->target, NULL);
+		}
+		P_SetTarget(&player->mo->tracer, NULL);
+		player->powers[pw_carry] = CR_NONE;
+	}
 
 	if (!(player->powers[pw_carry] == CR_NIGHTSMODE || player->powers[pw_carry] == CR_NIGHTSFALL || player->powers[pw_carry] == CR_BRAKGOOP || player->powers[pw_carry] == CR_MINECART))
 		player->powers[pw_carry] = CR_NONE;

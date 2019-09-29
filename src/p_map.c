@@ -975,6 +975,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
 				tmthing->player->powers[pw_carry] = CR_ROLLOUT;
 				P_SetTarget(&tmthing->tracer, thing);
+				P_SetObjectMomZ(thing, tmthing->momz, true);
 				return false;
 			}
 		}
