@@ -948,6 +948,17 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 	if (player->powers[pw_carry] == CR_ROPEHANG)
 		P_SetTarget(&player->mo->tracer, NULL);
 
+	if (player->powers[pw_carry] == CR_ROLLOUT)
+	{
+		if (player->mo->tracer && !P_MobjWasRemoved(player->mo->tracer))
+		{
+			player->mo->tracer->flags |= MF_PUSHABLE;
+			P_SetTarget(&player->mo->tracer->target, NULL);
+		}
+		P_SetTarget(&player->mo->tracer, NULL);
+		player->powers[pw_carry] = CR_NONE;
+	}
+
 	{
 		angle_t ang;
 		fixed_t fallbackspeed;
@@ -4292,12 +4303,22 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		{
 			player->mo->momz = 9*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
+			player->mo->tracer->flags |= MF_PUSHABLE;
+			P_SetTarget(&player->mo->tracer->target, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->powers[pw_carry] == CR_ROPEHANG)
 		{
 			player->mo->momz = 12*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
+			P_SetTarget(&player->mo->tracer, NULL);
+		}
+		else if (player->powers[pw_carry] == CR_ROLLOUT)
+		{
+			player->mo->momz = 9*FRACUNIT + player->mo->tracer->momz;
+			player->powers[pw_carry] = CR_NONE;
+			player->mo->tracer->flags |= MF_PUSHABLE;
+			P_SetTarget(&player->mo->tracer->target, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->mo->eflags & MFE_GOOWATER)
@@ -11121,6 +11142,8 @@ void P_PlayerThink(player_t *player)
 
 	// deez New User eXperiences.
 	{
+		angle_t diff = 0;
+		UINT8 factor;
 		// Directionchar!
 		// Camera angle stuff.
 		if (player->exiting // no control, no modification
@@ -11149,6 +11172,13 @@ void P_PlayerThink(player_t *player)
 				case CR_GENERIC:
 					player->drawangle = player->mo->tracer->angle;
 					break;
+				case CR_ROLLOUT:
+					if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
+					{ // inverse direction!
+						diff = ((player->mo->angle + R_PointToAngle2(0, 0, -cmd->forwardmove<<FRACBITS, cmd->sidemove<<FRACBITS)) - player->drawangle);
+						factor = 4;
+					}
+					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
 				case CR_ROPEHANG:
@@ -11169,9 +11199,6 @@ void P_PlayerThink(player_t *player)
 			;
 		else
 		{
-			angle_t diff;
-			UINT8 factor;
-
 			if (player->pflags & PF_SLIDING)
 			{
 #if 0 // fun hydrocity style horizontal spin
@@ -11207,15 +11234,15 @@ void P_PlayerThink(player_t *player)
 				diff = (player->mo->angle - player->drawangle);
 				factor = 8;
 			}
+		}
 
-			if (diff)
-			{
-				if (diff > ANGLE_180)
-					diff = InvAngle(InvAngle(diff)/factor);
-				else
-					diff /= factor;
-				player->drawangle += diff;
-			}
+		if (diff)
+		{
+			if (diff > ANGLE_180)
+				diff = InvAngle(InvAngle(diff)/factor);
+			else
+				diff /= factor;
+			player->drawangle += diff;
 		}
 
 		// Autobrake! check ST_drawInput if you modify this
@@ -11829,6 +11856,36 @@ void P_PlayerAfterThink(player_t *player)
 						}
 					}
 				}
+				break;
+			}
+			case CR_ROLLOUT:
+			{
+				mobj_t *mo = player->mo, *rock = player->mo->tracer;
+				UINT8 walktics = mo->state->tics - P_GetPlayerControlDirection(player);
+
+				if (!rock || P_MobjWasRemoved(rock))
+				{
+					P_SetTarget(&player->mo->tracer, NULL);
+					player->powers[pw_carry] = CR_NONE;
+					break;
+				}
+
+				if (player->cmd.forwardmove || player->cmd.sidemove)
+				{
+					rock->movedir = (player->cmd.angleturn << FRACBITS) + R_PointToAngle2(0, 0, player->cmd.forwardmove << FRACBITS, -player->cmd.sidemove << FRACBITS);
+					P_Thrust(rock, rock->movedir, rock->scale >> 1);
+				}
+
+				mo->momx = rock->momx;
+				mo->momy = rock->momy;
+				mo->momz = 0;
+
+				if (player->panim == PA_WALK && mo->tics > walktics)
+				{
+					mo->tics = walktics;
+				}
+
+				P_TeleportMove(player->mo, rock->x, rock->y, rock->z + rock->height);
 				break;
 			}
 			default:

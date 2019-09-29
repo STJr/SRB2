@@ -146,6 +146,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"WSPB", // Wall spike base
 	"STPT", // Starpost
 	"BMNE", // Big floating mine
+	"PUMI", // Rollout Rock
 
 	// Monitor Boxes
 	"MSTV", // MiSc TV sprites
@@ -2471,6 +2472,10 @@ state_t states[NUMSTATES] =
 	{SPR_LFAL, FF_FULLBRIGHT, 1, {A_FallingLavaCheck}, 0, 0, S_LAVAFALL_LAVA1}, // S_LAVAFALL_LAVA2
 	{SPR_LFAL, 2|FF_FULLBRIGHT|FF_ANIMATE, 9, {NULL}, 2, 3, S_NULL}, // S_LAVAFALL_LAVA3
 	{SPR_LFAL, 11|FF_ANIMATE|FF_RANDOMANIM, 12, {NULL}, 3, 3, S_LAVAFALLROCK}, // S_LAVAFALLROCK
+
+	// Rollout Rock
+	{SPR_NULL, 0, 1, {A_RolloutSpawn}, 256*FRACUNIT, MT_ROLLOUTROCK, S_ROLLOUTSPAWN}, // S_ROLLOUTSPAWN
+	{SPR_PUMI, 0, 1, {A_RolloutRock},    63*FRACUNIT/64,  6*FRACUNIT/10,  S_ROLLOUTROCK}, // S_ROLLOUTROCK
 
 	// RVZ scenery
 	{SPR_JPLA, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_BIGFERNLEAF
@@ -12723,6 +12728,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP,  // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_ROLLOUTSPAWN
+		1305,           // doomednum
+		S_ROLLOUTSPAWN, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		8*FRACUNIT,     // radius
+		8*FRACUNIT,     // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_SPAWNCEILING,  // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_ROLLOUTROCK
+		-1,             // doomednum
+		S_ROLLOUTROCK,  // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		32*FRACUNIT,    // speed
+		30*FRACUNIT,    // radius
+		60*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_PUSHABLE|MF_SOLID|MF_SLIDEME,  // flags
 		S_NULL          // raisestate
 	},
 

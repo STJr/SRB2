@@ -234,7 +234,8 @@ typedef enum
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,
 	CR_MACESPIN,
-	CR_MINECART
+	CR_MINECART,
+	CR_ROLLOUT
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)

@@ -270,6 +270,8 @@ void A_LavafallRocks();
 void A_LavafallLava();
 void A_FallingLavaCheck();
 void A_FireShrink();
+void A_RolloutSpawn();
+void A_RolloutRock();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -396,6 +398,7 @@ typedef enum sprite
 	SPR_WSPB, // Wall spike base
 	SPR_STPT, // Starpost
 	SPR_BMNE, // Big floating mine
+	SPR_PUMI, // Rollout Rock
 
 	// Monitor Boxes
 	SPR_MSTV, // MiSc TV sprites
@@ -2595,6 +2598,10 @@ typedef enum state
 	S_LAVAFALL_LAVA3,
 	S_LAVAFALLROCK,
 
+	// Rollout Rock
+	S_ROLLOUTSPAWN,
+	S_ROLLOUTROCK,
+
 	// RVZ scenery
 	S_BIGFERNLEAF,
 	S_BIGFERN1,
@@ -4346,6 +4353,9 @@ typedef enum mobj_type
 	MT_LAVAFALL,
 	MT_LAVAFALL_LAVA,
 	MT_LAVAFALLROCK,
+
+	MT_ROLLOUTSPAWN,
+	MT_ROLLOUTROCK,
 
 	MT_BIGFERNLEAF,
 	MT_BIGFERN,
