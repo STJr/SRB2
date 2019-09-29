@@ -13867,11 +13867,7 @@ void A_SpawnPterabytes(mobj_t *actor)
 #endif
 
 	if (actor->spawnpoint)
-	{
 		amount = actor->spawnpoint->extrainfo + 1;
-		if (actor->spawnpoint->angle)
-			rad = actor->spawnpoint->angle*FRACUNIT;
-	}
 
 	interval = FixedAngle(FRACUNIT*360/amount);
 
