@@ -1483,7 +1483,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (rollangle > 0)
 	{
 		if (!sprframe->rotsprite.cached[rot])
-			R_CacheRotSprite(thing->sprite, thing->frame, sprinfo, sprframe, rot, flip);
+			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
 		rollangle /= ROTANGDIFF;
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
@@ -3622,9 +3622,8 @@ next_token:
 #undef SYMBOLCONVERT
 
 // pain
-static spriteinfo_t *R_ParseSpriteInfoFrame(void)
+static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 {
-	spriteinfo_t *sprinfo;
 	char *sprinfoToken;
 	size_t sprinfoTokenLength;
 	char *frameChar;
@@ -3693,22 +3692,16 @@ static spriteinfo_t *R_ParseSpriteInfoFrame(void)
 		Z_Free(sprinfoToken);
 	}
 
-	// allocate a spriteinfo
-	sprinfo = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
-	sprinfo->available = true;
-
 	// set fields
 #ifdef ROTSPRITE
-	sprinfo->pivot[frameFrame].x = frameXPivot;
-	sprinfo->pivot[frameFrame].y = frameYPivot;
+	info->pivot[frameFrame].x = frameXPivot;
+	info->pivot[frameFrame].y = frameYPivot;
 #endif
-
-	// then return the spriteinfo
-	return sprinfo;
 }
 
 static void R_ParseSpriteInfo(boolean spr2)
 {
+	spriteinfo_t *info;
 	char *sprinfoToken;
 	size_t sprinfoTokenLength;
 	char newSpriteName[5]; // no longer dynamically allocated
@@ -3765,6 +3758,10 @@ static void R_ParseSpriteInfo(boolean spr2)
 		}
 	}
 
+	// allocate a spriteinfo
+	info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
+	info->available = true;
+
 	// Left Curly Brace
 	sprinfoToken = M_GetToken(NULL);
 	if (sprinfoToken == NULL)
@@ -3814,7 +3811,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 			}
 			else if (stricmp(sprinfoToken, "FRAME")==0)
 			{
-				spriteinfo_t *info = R_ParseSpriteInfoFrame();
+				R_ParseSpriteInfoFrame(info);
 				Z_Free(sprinfoToken);
 				if (spr2)
 				{
@@ -3829,7 +3826,6 @@ static void R_ParseSpriteInfo(boolean spr2)
 				}
 				else
 					M_Memcpy(&spriteinfo[sprnum], info, sizeof(spriteinfo_t));
-				Z_Free(info);
 			}
 			else
 			{
@@ -3848,6 +3844,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 		I_Error("Error parsing SPRTINFO lump: Expected \"{\" for sprite \"%s\", got \"%s\"",newSpriteName,sprinfoToken);
 	}
 	Z_Free(sprinfoToken);
+	Z_Free(info);
 }
 
 // This is all just copy-pasted from R_ParseTEXTURESLump
