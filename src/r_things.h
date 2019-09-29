@@ -53,7 +53,7 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 void R_AddSpriteDefs(UINT16 wadnum);
 
 #ifdef ROTSPRITE
-void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteframe_t *sprframe, INT32 rot, UINT8 flip);
+void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip);
 #endif
 
 //SoM: 6/5/2000: Light sprites correctly!
@@ -133,7 +133,9 @@ typedef struct
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 
-	spritedef_t sprites[NUMPLAYERSPRITES*2]; // contains super versions too
+	// contains super versions too
+	spritedef_t sprites[NUMPLAYERSPRITES*2];
+	spriteinfo_t sprinfo[NUMPLAYERSPRITES*2];
 
 	UINT8 availability; // lock?
 } skin_t;
@@ -237,6 +239,7 @@ UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
 void R_PatchSkins(UINT16 wadnum);
 void R_AddSkins(UINT16 wadnum);
+void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 
 UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
 

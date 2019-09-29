@@ -4008,7 +4008,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					}
 				}
 #endif
-				else if (fastcmp(word, "SPRITE"))
+				else if (fastcmp(word, "SPRITEINFO"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sprite(word2); // find a sprite by name
