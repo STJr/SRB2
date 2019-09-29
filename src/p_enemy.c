@@ -13957,8 +13957,6 @@ void A_RolloutRock(mobj_t *actor)
 	fixed_t pi = (22*FRACUNIT/7);
 	fixed_t circumference = FixedMul(2 * pi, actor->radius);
 	fixed_t oldspeed = P_AproxDistance(actor->momx, actor->momy), newspeed, topspeed = actor->info->speed;
-	mobj_t *target = actor->target;
-	player_t *player;
 	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
 
 	actor->friction = FRACUNIT;
