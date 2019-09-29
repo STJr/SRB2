@@ -9078,7 +9078,18 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 			case MT_PTERABYTE:
 				{
-					if (mobj->extravalue1 == 0) // Hovering
+					if (mobj->extravalue1 & 4) // Cooldown after grabbing
+					{
+						if (mobj->movefactor)
+							mobj->movefactor--;
+						else
+						{
+							P_SetTarget(&mobj->target, NULL);
+							mobj->extravalue1 &= 3;
+						}
+					}
+
+					if ((mobj->extravalue1 & 3) == 0) // Hovering
 					{
 						fixed_t vdist, hdist, time;
 						fixed_t hspeed = 3*mobj->info->speed;
@@ -9087,21 +9098,31 @@ void P_MobjThinker(mobj_t *mobj)
 						var1 = 1;
 						var2 = 0;
 						A_CapeChase(mobj);
+
+						if (mobj->target)
+							break; // Still carrying a player or in cooldown
+
 						P_LookForPlayers(mobj, true, false, 256*FRACUNIT);
 
 						if (!mobj->target)
 							break;
 
-						vdist = mobj->z - mobj->target->z;
+						vdist = mobj->z - mobj->target->z - mobj->target->height;
 						if (vdist <= 0)
+						{
+							P_SetTarget(&mobj->target, NULL);
 							break;
+						}
 
 						hdist = R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 						if (hdist > 450*FRACUNIT)
+						{
+							P_SetTarget(&mobj->target, NULL);
 							break;
+						}
 
 						P_SetMobjState(mobj, S_PTERABYTE_SWOOPDOWN);
-						mobj->extravalue1 = 1;
+						mobj->extravalue1++;
 						S_StartSound(mobj, mobj->info->attacksound);
 						time = FixedDiv(hdist, hspeed);
 						mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
@@ -9113,7 +9134,7 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->movecount = time >> FRACBITS;
 						mobj->reactiontime = mobj->movecount;
 					}
-					else if (mobj->extravalue1 == 1) // Swooping
+					else if ((mobj->extravalue1 & 3) == 1) // Swooping
 					{
 						mobj->reactiontime--;
 						mobj->momz += mobj->extravalue2;
@@ -9128,8 +9149,9 @@ void P_MobjThinker(mobj_t *mobj)
 						else if (mobj->state - states == S_PTERABYTE_SWOOPUP)
 						{
 							P_SetMobjState(mobj, S_PTERABYTE_FLY1);
-							mobj->extravalue1 = 2;
-							P_SetTarget(&mobj->target, NULL);
+							mobj->extravalue1++;
+							if (mobj->target && mobj->target->tracer != mobj)
+								P_SetTarget(&mobj->target, NULL); // Failed to grab the target
 							mobj->momx = mobj->momy = mobj->momz = 0;
 						}
 					}
@@ -9140,7 +9162,7 @@ void P_MobjThinker(mobj_t *mobj)
 						A_HomingChase(mobj);
 						if (P_AproxDistance(mobj->x - mobj->tracer->x, mobj->y - mobj->tracer->y) <= mobj->info->speed)
 						{
-							mobj->extravalue1 = 0;
+							mobj->extravalue1 -= 2;
 							mobj->momx = mobj->momy = mobj->momz = 0;
 						}
 					}

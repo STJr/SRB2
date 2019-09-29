@@ -490,6 +490,40 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 	}
 }
 
+static void P_DoPterabyteCarry(player_t *player, mobj_t *ptera)
+{
+	if (player->powers[pw_carry])
+		return;
+	if (ptera->extravalue1 != 1)
+		return; // Not swooping
+	if (ptera->target != player->mo)
+		return; // Not swooping for you!
+
+	if (player->spectator)
+		return;
+
+	if ((player->mo->eflags & MFE_VERTICALFLIP) != (ptera->eflags & MFE_VERTICALFLIP))
+		return; // Both should be in same gravity
+
+	if (ptera->eflags & MFE_VERTICALFLIP)
+	{
+		if (ptera->ceilingz - (ptera->z + ptera->height) < player->mo->height - FixedMul(2*FRACUNIT, player->mo->scale))
+			return;
+	}
+	else if (ptera->z - ptera->floorz < player->mo->height - FixedMul(2*FRACUNIT, player->mo->scale))
+		return; // No room to pick up this guy!
+
+	P_ResetPlayer(player);
+	P_SetTarget(&player->mo->tracer, ptera);
+	player->powers[pw_carry] = CR_PTERABYTE;
+	S_StartSound(player->mo, sfx_s3k4a);
+	P_UnsetThingPosition(player->mo);
+	player->mo->x = ptera->x;
+	player->mo->y = ptera->y;
+	P_SetThingPosition(player->mo);
+	ptera->movefactor = 3*TICRATE;
+}
+
 static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 {
 	INT32 p;
@@ -919,6 +953,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			|| (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)))
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 	}
+
+	if (thing->type == MT_PTERABYTE && tmthing->player)
+		P_DoPterabyteCarry(tmthing->player, thing);
 
 	if (thing->type == MT_VULTURE && tmthing->type == MT_VULTURE)
 	{

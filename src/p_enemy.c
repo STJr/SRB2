@@ -13878,6 +13878,7 @@ void A_SpawnPterabytes(mobj_t *actor)
 		s = FINESINE(fa);
 		waypoint = P_SpawnMobjFromMobj(actor, FixedMul(c, rad), FixedMul(s, rad), 0, MT_PTERABYTEWAYPOINT);
 		waypoint->angle = ang + ANGLE_90;
+		P_SetTarget(&waypoint->tracer, actor);
 		ptera = P_SpawnMobjFromMobj(waypoint, 0, 0, 0, MT_PTERABYTE);
 		ptera->angle = waypoint->angle;
 		P_SetTarget(&ptera->tracer, waypoint);

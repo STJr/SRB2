@@ -4279,6 +4279,9 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		if (player->mo->ceilingz-player->mo->floorz <= player->mo->height-1)
 			return;
 
+		if (player->powers[pw_carry] == CR_PTERABYTE)
+			return;
+
 		// Jump this high.
 		if (player->powers[pw_carry] == CR_PLAYER)
 		{
@@ -11518,6 +11521,36 @@ void P_PlayerThink(player_t *player)
 	}*/
 }
 
+// Checks if the mobj is above lava. Used by Pterabyte.
+static boolean P_MobjAboveLava(mobj_t *mobj)
+{
+	sector_t *sector = mobj->subsector->sector;
+
+	if (sector->ffloors)
+	{
+		ffloor_t *rover;
+
+		for (rover = sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || GETSECSPECIAL(rover->master->frontsector->special, 1) != 3)
+				continue;
+
+			if (mobj->eflags & MFE_VERTICALFLIP)
+			{
+				if (*rover->bottomheight <= mobj->ceilingz && *rover->bottomheight >= mobj->z)
+					return true;
+			}
+			else
+			{
+				if (*rover->topheight >= mobj->floorz && *rover->topheight <= mobj->z)
+					return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 //
 // P_PlayerAfterThink
 //
@@ -11829,6 +11862,60 @@ void P_PlayerAfterThink(player_t *player)
 						}
 					}
 				}
+				break;
+			}
+			case CR_PTERABYTE: // being carried by a Pterabyte
+			{
+				mobj_t *ptera = player->mo->tracer;
+				mobj_t *spawnpoint = ptera->tracer->tracer;
+				player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14 * FRACUNIT, 10 * FRACUNIT));
+
+				if (ptera->health <= 0)
+					goto dropoff;
+
+				if (P_MobjAboveLava(ptera))
+					goto dropoff;
+
+				if (player->mo->eflags & MFE_VERTICALFLIP)
+				{
+					if ((ptera->z + ptera->height + player->mo->height + FixedMul(FRACUNIT, player->mo->scale)) <= ptera->ceilingz
+						&& (ptera->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
+						player->mo->z = ptera->z + ptera->height + FixedMul(FRACUNIT, player->mo->scale);
+
+					if (ptera->ceilingz - ptera->z > spawnpoint->ceilingz - spawnpoint->z + 512*FRACUNIT)
+						goto dropoff;
+				}
+				else
+				{
+					if ((ptera->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale)) >= ptera->floorz
+						&& !(ptera->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
+						player->mo->z = ptera->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
+
+					if (ptera->z - ptera->floorz > spawnpoint->z - spawnpoint->floorz + 512 * FRACUNIT)
+						goto dropoff;
+				}
+
+				ptera->movefactor--;
+				if (!ptera->movefactor)
+					goto dropoff;
+
+				P_TryMove(player->mo, ptera->x, ptera->y, true);
+				player->mo->momx = ptera->momx;
+				player->mo->momy = ptera->momy;
+				player->mo->momz = ptera->momz;
+
+				if (P_AproxDistance(player->mo->x - ptera->x, player->mo->y - ptera->y) > player->mo->radius)
+					goto dropoff;
+
+				if (player->mo->state-states != S_PLAY_RIDE)
+					P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+				break;
+
+			dropoff:
+				player->powers[pw_carry] = CR_NONE;
+				P_SetTarget(&player->mo->tracer, NULL);
+				ptera->movefactor = TICRATE;
+				ptera->extravalue1 |= 4;
 				break;
 			}
 			default:
