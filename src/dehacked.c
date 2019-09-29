@@ -740,7 +740,7 @@ static void readlight(MYFILE *f, INT32 num)
 }
 #endif // HWRENDER
 
-static void readspriteframe(MYFILE *f, INT32 num, INT32 frame)
+static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word, *word2;
@@ -797,21 +797,14 @@ static void readspriteframe(MYFILE *f, INT32 num, INT32 frame)
 			strupr(word);
 			value = atoi(word2); // used for numerical settings
 
-			if (frame >= 64)
-			{
-				deh_warning("Sprite %d: invalid frame %d", num, frame);
-				break;
-			}
-
 #ifdef ROTSPRITE
 			if (fastcmp(word, "XPIVOT"))
-				spriteinfo[num].pivot[frame].x = value;
+				sprinfo->pivot[frame].x = value;
 			else if (fastcmp(word, "YPIVOT"))
-				spriteinfo[num].pivot[frame].y = value;
+				sprinfo->pivot[frame].y = value;
 #endif
 			else
 			{
-				//deh_warning("Sprite %d frame %d: unknown word '%s'", num, frame, word);
 				f->curpos = lastline;
 				break;
 			}
@@ -820,13 +813,19 @@ static void readspriteframe(MYFILE *f, INT32 num, INT32 frame)
 	Z_Free(s);
 }
 
-static void readspriteinfo(MYFILE *f, INT32 num)
+static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word, *word2;
 	char *tmp;
 	INT32 value;
 	char *lastline;
+	INT32 skinnumbers[MAXSKINS];
+	INT32 foundskins = 0;
+
+	// allocate a spriteinfo
+	spriteinfo_t *info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
+	info->available = true;
 
 	do
 	{
@@ -880,21 +879,90 @@ static void readspriteinfo(MYFILE *f, INT32 num)
 #ifdef HWRENDER
 			if (fastcmp(word, "LIGHTTYPE"))
 			{
-				INT32 oldvar;
-				for (oldvar = 0; t_lspr[num] != &lspr[oldvar]; oldvar++)
-					;
-				t_lspr[num] = &lspr[value];
+				if (sprite2)
+					deh_warning("Sprite2 %s: invalid word '%s'", spr2names[num], word);
+				else
+				{
+					INT32 oldvar;
+					for (oldvar = 0; t_lspr[num] != &lspr[oldvar]; oldvar++)
+						;
+					t_lspr[num] = &lspr[value];
+				}
 			}
 			else
 #endif
-			if (fastcmp(word, "FRAME"))
+			if (fastcmp(word, "SKIN"))
 			{
-				readspriteframe(f, num, R_Char2Frame(word2[0]));
-				spriteinfo[num].available = true;
+				INT32 skinnum = -1;
+				if (!sprite2)
+				{
+					deh_warning("Sprite %s: %s keyword found outside of SPRITE2INFO block, ignoring", spr2names[num], word);
+					continue;
+				}
+
+				// make lowercase
+				strlwr(word2);
+				skinnum = R_SkinAvailable(word2);
+				if (skinnum == -1)
+				{
+					deh_warning("Sprite2 %s: unknown skin %s", spr2names[num], word2);
+					break;
+				}
+
+				skinnumbers[foundskins] = skinnum;
+				foundskins++;
+			}
+			else if (fastcmp(word, "DEFAULT"))
+			{
+				if (!sprite2)
+				{
+					deh_warning("Sprite %s: %s keyword found outside of SPRITE2INFO block, ignoring", spr2names[num], word);
+					continue;
+				}
+				if (num < (INT32)free_spr2 && num >= (INT32)SPR2_FIRSTFREESLOT)
+					spr2defaults[num] = get_number(word2);
+				else
+				{
+					deh_warning("Sprite2 %s: out of range (%d - %d), ignoring", spr2names[num], SPR2_FIRSTFREESLOT, free_spr2-1);
+					continue;
+				}
+			}
+			else if (fastcmp(word, "FRAME"))
+			{
+				UINT8 frame = R_Char2Frame(word2[0]);
+				// frame number too high
+				if (frame >= 64)
+				{
+					if (sprite2)
+						deh_warning("Sprite2 %s: invalid frame %s", spr2names[num], word2);
+					else
+						deh_warning("Sprite %s: invalid frame %s", sprnames[num], word2);
+					break;
+				}
+
+				// read sprite frame and store it on the spriteinfo_t struct
+				readspriteframe(f, info, frame);
+				if (sprite2)
+				{
+					INT32 i;
+					if (!foundskins)
+					{
+						deh_warning("Sprite2 %s: no skins specified", spr2names[num]);
+						break;
+					}
+					for (i = 0; i < foundskins; i++)
+					{
+						skin_t *skin = &skins[skinnumbers[i]];
+						spriteinfo_t *sprinfo = skin->sprinfo;
+						M_Memcpy(&sprinfo[num], info, sizeof(spriteinfo_t));
+					}
+				}
+				else
+					M_Memcpy(&spriteinfo[num], info, sizeof(spriteinfo_t));
 			}
 			else
 			{
-				//deh_warning("Sprite %d: unknown word '%s'", num, word);
+				//deh_warning("Sprite %s: unknown word '%s'", sprnames[num], word);
 				f->curpos = lastline;
 				break;
 			}
@@ -902,6 +970,7 @@ static void readspriteinfo(MYFILE *f, INT32 num)
 	} while (!myfeof(f)); // finish when the line is empty
 
 	Z_Free(s);
+	Z_Free(info);
 }
 
 static void readsprite2(MYFILE *f, INT32 num)
@@ -4025,10 +4094,22 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sprite(word2); // find a sprite by name
 					if (i < NUMSPRITES && i > 0)
-						readspriteinfo(f, i);
+						readspriteinfo(f, i, false);
 					else
 					{
 						deh_warning("Sprite number %d out of range (0 - %d)", i, NUMSPRITES-1);
+						ignorelines(f);
+					}
+				}
+				else if (fastcmp(word, "SPRITE2INFO"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_sprite2(word2); // find a sprite by name
+					if (i < NUMPLAYERSPRITES && i >= 0)
+						readspriteinfo(f, i, true);
+					else
+					{
+						deh_warning("Sprite2 number %d out of range (0 - %d)", i, NUMPLAYERSPRITES-1);
 						ignorelines(f);
 					}
 				}

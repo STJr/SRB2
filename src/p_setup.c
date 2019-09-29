@@ -3471,13 +3471,7 @@ boolean P_AddWadFile(const char *wadfilename)
 	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
 
-	// load SPRTINFO lumps
-	for (i = 0; i < numlumps; i++, lumpinfo++)
-	{
-		name = lumpinfo->name;
-		if (!stricmp(name, "SPRTINFO"))
-			R_ParseSPRTINFOLump(wadnum, i);
-	}
+	R_LoadSpriteInfoLumps(wadnum, numlumps);
 
 	// reload status bar (warning should have valid player!)
 	if (gamestate == GS_LEVEL)

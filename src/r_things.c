@@ -737,8 +737,7 @@ static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL
 //
 void R_InitSprites(void)
 {
-	size_t i, j;
-	lumpinfo_t *lumpinfo;
+	size_t i;
 #ifdef ROTSPRITE
 	INT32 angle, realangle = 0;
 	float fa;
@@ -783,13 +782,7 @@ void R_InitSprites(void)
 	{
 		R_AddSkins((UINT16)i);
 		R_PatchSkins((UINT16)i);
-		// load SPRTINFO lumps
-		lumpinfo = wadfiles[i]->lumpinfo;
-		for (j = 0; j < wadfiles[i]->numlumps; j++, lumpinfo++)
-		{
-			if (!stricmp(lumpinfo->name, "SPRTINFO"))
-				R_ParseSPRTINFOLump(i, j);
-		}
+		R_LoadSpriteInfoLumps(i, wadfiles[i]->numlumps);
 	}
 	ST_ReloadSkinFaceGraphics();
 
@@ -3886,4 +3879,22 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum)
 	}
 	Z_Free(sprinfoToken);
 	Z_Free((void *)sprinfoText);
+}
+
+void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
+{
+	lumpinfo_t *lumpinfo = wadfiles[wadnum]->lumpinfo;
+	UINT16 i;
+	char *name;
+
+	for (i = 0; i < numlumps; i++, lumpinfo++)
+	{
+		name = lumpinfo->name;
+		// load SPRTINFO lumps
+		if (!stricmp(name, "SPRTINFO"))
+			R_ParseSPRTINFOLump(wadnum, i);
+		// load SPR_ lumps (as DEHACKED lump)
+		else if (!memcmp(name, "SPR_", 4))
+			DEH_LoadDehackedLumpPwad(wadnum, i, false);
+	}
 }
