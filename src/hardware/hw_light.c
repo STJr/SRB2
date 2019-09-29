@@ -258,6 +258,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_WSPB
 	&lspr[NOLIGHT],     // SPR_STPT
 	&lspr[NOLIGHT],     // SPR_BMNE
+	&lspr[NOLIGHT],     // SPR_PUMI
 
 	// Monitor Boxes
 	&lspr[NOLIGHT],     // SPR_MSTV

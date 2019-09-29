@@ -302,6 +302,8 @@ void A_FallingLavaCheck(mobj_t *actor);
 void A_FireShrink(mobj_t *actor);
 void A_SpawnPterabytes(mobj_t *actor);
 void A_PterabyteHover(mobj_t *actor);
+void A_RolloutSpawn(mobj_t *actor);
+void A_RolloutRock(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -13909,4 +13911,108 @@ void A_PterabyteHover(mobj_t *actor)
 	ang = actor->extravalue1*ANG1;
 	fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
 	actor->z += FINESINE(fa);
+}
+// Function: A_RolloutSpawn
+//
+// Description: Spawns a new Rollout Rock when the currently spawned rock is destroyed or moves far enough away.
+//
+// var1 = Distance currently spawned rock should travel before spawning a new one
+// var2 = Object type to spawn
+//
+void A_RolloutSpawn(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_RolloutSpawn", actor))
+		return;
+#endif
+
+	if (!(actor->target)
+		|| P_MobjWasRemoved(actor->target)
+		|| P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) > locvar1)
+	{
+		actor->target = P_SpawnMobj(actor->x, actor->y, actor->z, locvar2);
+	}
+}
+
+// Function: A_RolloutRock
+//
+// Description: Thinker for Rollout Rock.
+//
+// var1 = Drag
+// var2 = Vertical bobbing speed factor
+//
+void A_RolloutRock(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_RolloutRock", actor))
+		return;
+#endif
+
+	UINT8 maxframes = actor->info->reactiontime;
+	fixed_t pi = (22*FRACUNIT/7);
+	fixed_t circumference = FixedMul(2 * pi, actor->radius);
+	fixed_t oldspeed = P_AproxDistance(actor->momx, actor->momy), newspeed, topspeed = actor->info->speed;
+	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
+
+	actor->friction = FRACUNIT;
+
+	if (inwater)
+	{
+		fixed_t height;
+		if (actor->eflags & MFE_VERTICALFLIP)
+		{
+			height = actor->waterbottom + (actor->height>>2);
+			if (actor->z + actor->height > height)
+			{
+				actor->z = height;
+				actor->momz = 0;
+			}
+		}
+		else
+		{
+			height = actor->watertop - (actor->height>>2);
+			if (actor->z < height)
+			{
+				actor->z = height;
+				actor->momz = 0;
+			}
+		}
+		actor->momz += P_MobjFlip(actor) * FixedMul(locvar2, actor->scale);
+	}
+
+	if (oldspeed > topspeed)
+	{
+		actor->momx = FixedMul(FixedDiv(actor->momx, oldspeed), topspeed);
+		actor->momy = FixedMul(FixedDiv(actor->momy, oldspeed), topspeed);
+	}
+
+	actor->momx = FixedMul(actor->momx, locvar1);
+	actor->momy = FixedMul(actor->momy, locvar1);
+
+	newspeed = P_AproxDistance(actor->momx, actor->momy);
+
+	if (newspeed < actor->scale >> 1)
+	{
+		actor->momx = 0;
+		actor->momy = 0;
+	}
+	else if (newspeed > actor->scale)
+	{
+		actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy);
+		actor->movefactor += newspeed;
+		if (actor->movefactor > circumference / maxframes)
+		{
+			actor->reactiontime++;
+			actor->reactiontime %= maxframes;
+			actor->movefactor = 0;
+		}
+	}
+
+	actor->frame = actor->reactiontime % maxframes;
 }

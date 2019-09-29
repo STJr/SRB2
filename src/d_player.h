@@ -235,6 +235,7 @@ typedef enum
 	CR_ROPEHANG,
 	CR_MACESPIN,
 	CR_MINECART,
+	CR_ROLLOUT,
 	CR_PTERABYTE
 } carrytype_t; // pw_carry
 

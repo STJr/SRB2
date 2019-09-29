@@ -2437,6 +2437,8 @@ static actionpointer_t actionpointers[] =
 	{{A_FireShrink},             "A_FIRESHRINK"},
 	{{A_SpawnPterabytes},        "A_SPAWNPTERABYTES"},
 	{{A_PterabyteHover},         "A_PTERABYTEHOVER"},
+	{{A_RolloutSpawn},           "A_ROLLOUTSPAWN"},
+	{{A_RolloutRock},            "A_ROLLOUTROCK"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -5854,6 +5856,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LAVAFALL_LAVA3",
 	"S_LAVAFALLROCK",
 
+	// Rollout Rock
+	"S_ROLLOUTSPAWN",
+	"S_ROLLOUTROCK",
+
 	// RVZ scenery
 	"S_BIGFERNLEAF",
 	"S_BIGFERN1",
@@ -7587,6 +7593,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LAVAFALL_LAVA",
 	"MT_LAVAFALLROCK",
 
+	"MT_ROLLOUTSPAWN",
+	"MT_ROLLOUTROCK",
+
 	"MT_BIGFERNLEAF",
 	"MT_BIGFERN",
 	"MT_JUNGLEPALM",
@@ -8594,8 +8603,8 @@ struct {
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
 	{"CR_MINECART",CR_MINECART},
+	{"CR_ROLLOUT", CR_ROLLOUT},
 	{"CR_PTERABYTE",CR_PTERABYTE},
-
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon
 	{"RW_AUTO",RW_AUTO},
