@@ -746,9 +746,11 @@ static void readspriteframe(MYFILE *f, INT32 num, INT32 frame)
 	char *word, *word2;
 	char *tmp;
 	INT32 value;
+	char *lastline;
 
 	do
 	{
+		lastline = f->curpos;
 		if (myfgets(s, MAXLINELEN, f))
 		{
 			if (s[0] == '\n')
@@ -767,6 +769,8 @@ static void readspriteframe(MYFILE *f, INT32 num, INT32 frame)
 
 			// Set / reset word
 			word = s;
+			while ((*word == '\t') || (*word == ' '))
+				word++;
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
@@ -804,15 +808,15 @@ static void readspriteframe(MYFILE *f, INT32 num, INT32 frame)
 				spriteinfo[num].pivot[frame].x = value;
 			else if (fastcmp(word, "YPIVOT"))
 				spriteinfo[num].pivot[frame].y = value;
-			else
 #endif
-			if (fastcmp(word, "END"))
-				break;
 			else
-				deh_warning("Sprite %d frame %d: unknown word '%s'", num, frame, word);
+			{
+				//deh_warning("Sprite %d frame %d: unknown word '%s'", num, frame, word);
+				f->curpos = lastline;
+				break;
+			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
-
 	Z_Free(s);
 }
 
@@ -822,9 +826,11 @@ static void readspriteinfo(MYFILE *f, INT32 num)
 	char *word, *word2;
 	char *tmp;
 	INT32 value;
+	char *lastline;
 
 	do
 	{
+		lastline = f->curpos;
 		if (myfgets(s, MAXLINELEN, f))
 		{
 			if (s[0] == '\n')
@@ -843,6 +849,8 @@ static void readspriteinfo(MYFILE *f, INT32 num)
 
 			// Set / reset word
 			word = s;
+			while ((*word == '\t') || (*word == ' '))
+				word++;
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
@@ -885,7 +893,11 @@ static void readspriteinfo(MYFILE *f, INT32 num)
 				spriteinfo[num].available = true;
 			}
 			else
-				deh_warning("Sprite %d: unknown word '%s'", num, word);
+			{
+				//deh_warning("Sprite %d: unknown word '%s'", num, word);
+				f->curpos = lastline;
+				break;
+			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
@@ -4008,7 +4020,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					}
 				}
 #endif
-				else if (fastcmp(word, "SPRITEINFO"))
+				else if (fastcmp(word, "SPRITE") || fastcmp(word, "SPRITEINFO"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sprite(word2); // find a sprite by name
