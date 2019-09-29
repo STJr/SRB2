@@ -3728,7 +3728,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 	INT32 i;
 	INT32 skinnum = -1;
 
-	// Texture name
+	// Sprite name
 	sprinfoToken = M_GetToken(NULL);
 	if (sprinfoToken == NULL)
 	{
@@ -3737,7 +3737,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 	sprinfoTokenLength = strlen(sprinfoToken);
 	if (sprinfoTokenLength != 4)
 	{
-		I_Error("Error parsing SPRTINFO lump: Sprite name \"%s\" isn't 4 characters",sprinfoToken);
+		I_Error("Error parsing SPRTINFO lump: Sprite name \"%s\" isn't 4 characters long",sprinfoToken);
 	}
 	else
 	{
