@@ -492,7 +492,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 
 static void P_DoPterabyteCarry(player_t *player, mobj_t *ptera)
 {
-	if (player->powers[pw_carry])
+	if (player->powers[pw_carry] && players->powers[pw_carry] != CR_ROLLOUT)
 		return;
 	if (ptera->extravalue1 != 1)
 		return; // Not swooping
