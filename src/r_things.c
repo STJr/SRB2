@@ -248,7 +248,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		if (!R_CheckIfPatch(lump))
 			return;
 
-		patch = (patch_t *)W_CacheLumpNum(lump, PU_CACHE);
+		patch = (patch_t *)W_CachePatchNum(lump, PU_STATIC);
 		width = patch->width;
 		height = patch->height;
 
@@ -1733,7 +1733,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->patch = rotsprite;
 	else
 #endif
-		vis->patch = W_CacheLumpNum(sprframe->lumppat[rot], PU_CACHE);
+		vis->patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 
 //
 // determine the colormap (lightlevel & special effects)
@@ -1925,7 +1925,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
-	vis->patch = W_CacheLumpNum(sprframe->lumppat[0], PU_CACHE);
+	vis->patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)
