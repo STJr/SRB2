@@ -4140,7 +4140,7 @@ static void P_KillRingsInLava(mobj_t *mo)
 				topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
 				bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
 
-				if (mo->z <= topheight || mo->z + mo->height >= bottomheight) // if ring touches it, KILL IT
+				if (mo->z <= topheight && mo->z + mo->height >= bottomheight) // if ring touches it, KILL IT
 				{
 					P_KillMobj(mo, NULL, NULL, DMG_FIRE);
 					return;
