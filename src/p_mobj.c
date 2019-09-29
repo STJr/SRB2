@@ -4111,6 +4111,45 @@ void P_RainThinker(precipmobj_t *mobj)
 	P_SetPrecipMobjState(mobj, S_SPLASH1);
 }
 
+static void P_KillRingsInLava(mobj_t *mo)
+{
+	msecnode_t *node;
+	I_Assert(mo != NULL);
+	I_Assert(!P_MobjWasRemoved(mo));
+
+	// go through all sectors being touched by the ring
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		if (!node->m_sector)
+			break;
+
+		if (node->m_sector->ffloors)
+		{
+			ffloor_t *rover;
+			fixed_t topheight, bottomheight;
+
+			for (rover = node->m_sector->ffloors; rover; rover = rover->next) // go through all fofs in the sector
+			{
+				if (!(rover->flags & FF_EXISTS)) continue; // fof must be real
+
+				if (!(rover->flags & FF_SWIMMABLE // fof must be water
+					&& GETSECSPECIAL(rover->master->frontsector->special, 1) == 3)) // fof must be lava water
+					continue;
+
+				// find heights of FOF
+				topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
+				bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
+
+				if (mo->z <= topheight || mo->z + mo->height >= bottomheight) // if ring touches it, KILL IT
+				{
+					P_KillMobj(mo, NULL, NULL, DMG_FIRE);
+					return;
+				}
+			}
+		}
+	}
+}
+
 static void P_RingThinker(mobj_t *mobj)
 {
 	if (mobj->momx || mobj->momy)
@@ -8802,12 +8841,16 @@ void P_MobjThinker(mobj_t *mobj)
 				break;
 			case MT_RING:
 			case MT_COIN:
+			case MT_REDTEAMRING:
+			case MT_BLUETEAMRING:
+				P_KillRingsInLava(mobj);
+				if (P_MobjWasRemoved(mobj))
+					return;
+				/* FALLTHRU */
 			case MT_BLUESPHERE:
 			case MT_BOMBSPHERE:
 			case MT_NIGHTSCHIP:
 			case MT_NIGHTSSTAR:
-			case MT_REDTEAMRING:
-			case MT_BLUETEAMRING:
 				// No need to check water. Who cares?
 				P_RingThinker(mobj);
 				if (mobj->flags2 & MF2_NIGHTSPULL)
@@ -8818,6 +8861,10 @@ void P_MobjThinker(mobj_t *mobj)
 			// Flung items
 			case MT_FLINGRING:
 			case MT_FLINGCOIN:
+				P_KillRingsInLava(mobj);
+				if (P_MobjWasRemoved(mobj))
+					return;
+				/* FALLTHRU */
 			case MT_FLINGBLUESPHERE:
 			case MT_FLINGNIGHTSCHIP:
 				if (mobj->flags2 & MF2_NIGHTSPULL)
