@@ -9076,6 +9076,76 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					break;
 				}
+			case MT_PTERABYTE:
+				{
+					if (mobj->extravalue1 == 0) // Hovering
+					{
+						fixed_t vdist, hdist, time;
+						fixed_t hspeed = 3*mobj->info->speed;
+						angle_t fa;
+
+						var1 = 1;
+						var2 = 0;
+						A_CapeChase(mobj);
+						P_LookForPlayers(mobj, true, false, 256*FRACUNIT);
+
+						if (!mobj->target)
+							break;
+
+						vdist = mobj->z - mobj->target->z;
+						if (vdist <= 0)
+							break;
+
+						hdist = R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+						if (hdist > 450*FRACUNIT)
+							break;
+
+						P_SetMobjState(mobj, S_PTERABYTE_SWOOPDOWN);
+						mobj->extravalue1 = 1;
+						S_StartSound(mobj, mobj->info->attacksound);
+						time = FixedDiv(hdist, hspeed);
+						mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+						fa = (mobj->angle >> ANGLETOFINESHIFT) & FINEMASK;
+						mobj->momx = FixedMul(FINECOSINE(fa), hspeed);
+						mobj->momy = FixedMul(FINESINE(fa), hspeed);
+						mobj->momz = -2*FixedDiv(vdist, time);
+						mobj->extravalue2 = -FixedDiv(mobj->momz, time); //Z accel
+						mobj->movecount = time >> FRACBITS;
+						mobj->reactiontime = mobj->movecount;
+					}
+					else if (mobj->extravalue1 == 1) // Swooping
+					{
+						mobj->reactiontime--;
+						mobj->momz += mobj->extravalue2;
+						if (mobj->reactiontime)
+							break;
+
+						if (mobj->state - states == S_PTERABYTE_SWOOPDOWN)
+						{
+							P_SetMobjState(mobj, S_PTERABYTE_SWOOPUP);
+							mobj->reactiontime = mobj->movecount;
+						}
+						else if (mobj->state - states == S_PTERABYTE_SWOOPUP)
+						{
+							P_SetMobjState(mobj, S_PTERABYTE_FLY1);
+							mobj->extravalue1 = 2;
+							P_SetTarget(&mobj->target, NULL);
+							mobj->momx = mobj->momy = mobj->momz = 0;
+						}
+					}
+					else // Returning
+					{
+						var1 = 2*mobj->info->speed;
+						var2 = 1;
+						A_HomingChase(mobj);
+						if (P_AproxDistance(mobj->x - mobj->tracer->x, mobj->y - mobj->tracer->y) <= mobj->info->speed)
+						{
+							mobj->extravalue1 = 0;
+							mobj->momx = mobj->momy = mobj->momz = 0;
+						}
+					}
+					break;
+				}
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
