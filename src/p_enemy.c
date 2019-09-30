@@ -5177,20 +5177,28 @@ static mobj_t *minus;
 
 static boolean PIT_MinusCarry(mobj_t *thing)
 {
+	if (minus->tracer)
+		return true;
+
 	if (minus->type == thing->type)
 		return true;
 
-	if (!(thing->flags & MF_SHOOTABLE) || !(thing->flags & MF_ENEMY))
+	if (!(thing->flags & (MF_PUSHABLE|MF_ENEMY)))
 		return true;
 
-	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius * 3)
+	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius*3)
 		return true;
 
 	if (abs(thing->z - minus->z) > minus->height)
 		return true;
 
 	P_SetTarget(&minus->tracer, thing);
-	minus->tracer->flags &= ~MF_PUSHABLE;
+	P_SetTarget(&thing->tracer, minus);
+	if (thing->flags & MF_PUSHABLE)
+	{
+		minus->flags2 |= MF2_STRONGBOX;
+		thing->flags &= ~MF_PUSHABLE;
+	}
 
 	return true;
 }
@@ -5276,7 +5284,15 @@ void A_MinusDigging(mobj_t *actor)
 		if (P_TryMove(actor->tracer, actor->x, actor->y, false))
 			actor->tracer->z = mz;
 		else
+		{
+			if (actor->flags2 & MF2_STRONGBOX)
+			{
+				actor->flags2 &= ~MF2_STRONGBOX;
+				actor->tracer->flags |= MF_PUSHABLE;
+			}
+			P_SetTarget(&actor->tracer->tracer, NULL);
 			P_SetTarget(&actor->tracer, NULL);
+		}
 	}
 }
 
@@ -13096,6 +13112,13 @@ void A_TNTExplode(mobj_t *actor)
 	if (LUA_CallAction("A_TNTExplode", actor))
 		return;
 #endif
+
+	if (actor->tracer)
+	{
+		P_SetTarget(&actor->tracer->tracer, NULL);
+		P_SetTarget(&actor->tracer, NULL);
+	}
+
 	P_UnsetThingPosition(actor);
 	if (sector_list)
 	{
