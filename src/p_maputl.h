@@ -58,6 +58,7 @@ extern fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 #ifdef ESLOPE
 extern pslope_t *opentopslope, *openbottomslope;
 #endif
+extern ffloor_t *openfloorrover, *openceilingrover;
 
 void P_LineOpening(line_t *plinedef, mobj_t *mobj);
 

@@ -1127,14 +1127,15 @@ void LUA_Archive(void)
 		ArchiveExtVars(&players[i], "player");
 	}
 
-	for (i = 0; i < NUM_THINKERLISTS; i++)
-		for (th = thlist[i].next; th != &thlist[i]; th = th->next)
-			if (th->function.acp1 == (actionf_p1)P_MobjThinker)
-			{
-				// archive function will determine when to skip mobjs,
-				// and write mobjnum in otherwise.
-				ArchiveExtVars(th, "mobj");
-			}
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
+		// archive function will determine when to skip mobjs,
+		// and write mobjnum in otherwise.
+		ArchiveExtVars(th, "mobj");
+	}
 
 	WRITEUINT32(save_p, UINT32_MAX); // end of mobjs marker, replaces mobjnum.
 
@@ -1163,11 +1164,14 @@ void LUA_UnArchive(void)
 
 	do {
 		mobjnum = READUINT32(save_p); // read a mobjnum
-		for (i = 0; i < NUM_THINKERLISTS; i++)
-			for (th = thlist[i].next; th != &thlist[i]; th = th->next)
-				if (th->function.acp1 == (actionf_p1)P_MobjThinker
-				&& ((mobj_t *)th)->mobjnum == mobjnum) // find matching mobj
-				UnArchiveExtVars(th); // apply variables
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+			if (((mobj_t *)th)->mobjnum != mobjnum) // find matching mobj
+				continue;
+			UnArchiveExtVars(th); // apply variables
+		}
 	} while(mobjnum != UINT32_MAX); // repeat until end of mobjs marker.
 
 	LUAh_NetArchiveHook(NetUnArchive); // call the NetArchive hook in unarchive mode

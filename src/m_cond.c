@@ -240,7 +240,7 @@ UINT8 M_UpdateUnlockablesAndExtraEmblems(void)
 	if (cechoLines)
 	{
 		char slashed[1024] = "";
-		for (i = 0; (i < 21) && (i < 24 - cechoLines); ++i)
+		for (i = 0; (i < 19) && (i < 24 - cechoLines); ++i)
 			slashed[i] = '\\';
 		slashed[i] = 0;
 

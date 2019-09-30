@@ -32,7 +32,7 @@
 #endif
 
 #ifdef HAVE_MIXER
-#include "SDL_mixer.h"
+#include <SDL_mixer.h>
 /* This is the version number macro for the current SDL_mixer version: */
 #ifndef SDL_MIXER_COMPILEDVERSION
 #define SDL_MIXER_COMPILEDVERSION \
@@ -1386,8 +1386,8 @@ UINT32 I_GetSongLength(void)
 
 boolean I_SetSongLoopPoint(UINT32 looppoint)
 {
-        (void)looppoint;
-        return false;
+	(void)looppoint;
+	return false;
 }
 
 UINT32 I_GetSongLoopPoint(void)

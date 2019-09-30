@@ -25,8 +25,7 @@
 static int lib_iteratePlayers(lua_State *L)
 {
 	INT32 i = -1;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 	{
 		//return luaL_error(L, "Don't call players.iterate() directly, use it as 'for player in players.iterate do <block> end'.");
@@ -53,8 +52,7 @@ static int lib_getPlayer(lua_State *L)
 {
 	const char *field;
 	// i -> players[i]
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	if (lua_type(L, 2) == LUA_TNUMBER)
 	{
 		lua_Integer i = luaL_checkinteger(L, 2);
@@ -476,7 +474,12 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"followitem"))
 		plr->followitem = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"followmobj"))
-		P_SetTarget(&plr->followmobj, *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ)));
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->followmobj, mo);
+	}
 	else if (fastcmp(field,"actionspd"))
 		plr->actionspd = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"mindash"))
@@ -560,9 +563,19 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"old_angle_pos"))
 		plr->old_angle_pos = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"axis1"))
-		P_SetTarget(&plr->axis1, *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ)));
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->axis1, mo);
+	}
 	else if (fastcmp(field,"axis2"))
-		P_SetTarget(&plr->axis2, *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ)));
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->axis2, mo);
+	}
 	else if (fastcmp(field,"bumpertime"))
 		plr->bumpertime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"flyangle"))

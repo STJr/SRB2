@@ -274,10 +274,19 @@ static int mobj_get(lua_State *L)
 		// bprev -- same deal as sprev above, but for the blockmap.
 		return UNIMPLEMENTED;
 	case mobj_hnext:
+		if (mo->hnext && P_MobjWasRemoved(mo->hnext))
+		{ // don't put invalid mobj back into Lua.
+			P_SetTarget(&mo->hnext, NULL);
+			return 0;
+		}
 		LUA_PushUserdata(L, mo->hnext, META_MOBJ);
 		break;
 	case mobj_hprev:
-		// implimented differently from sprev and bprev because SSNTails.
+		if (mo->hprev && P_MobjWasRemoved(mo->hprev))
+		{ // don't put invalid mobj back into Lua.
+			P_SetTarget(&mo->hprev, NULL);
+			return 0;
+		}
 		LUA_PushUserdata(L, mo->hprev, META_MOBJ);
 		break;
 	case mobj_type:
@@ -795,7 +804,12 @@ static int mapthing_set(lua_State *L)
 	else if(fastcmp(field,"z"))
 		mt->z = (INT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"extrainfo"))
-		mt->extrainfo = (UINT8)luaL_checkinteger(L, 3);
+	{
+		INT32 extrainfo = luaL_checkinteger(L, 3);
+		if (extrainfo & ~15)
+			return luaL_error(L, "mapthing_t extrainfo set %d out of range (%d - %d)", extrainfo, 0, 15);
+		mt->extrainfo = (UINT8)extrainfo;
+	}
 	else if(fastcmp(field,"mobj"))
 		mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 	else
@@ -807,8 +821,7 @@ static int mapthing_set(lua_State *L)
 static int lib_iterateMapthings(lua_State *L)
 {
 	size_t i = 0;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call mapthings.iterate() directly, use it as 'for mapthing in mapthings.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -826,8 +839,7 @@ static int lib_iterateMapthings(lua_State *L)
 static int lib_getMapthing(lua_State *L)
 {
 	int field;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))

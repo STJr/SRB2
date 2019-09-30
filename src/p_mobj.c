@@ -716,6 +716,9 @@ void P_EmeraldManager(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo = (mobj_t *)think;
 
 		if (mo->type == MT_EMERALDSPAWN)
@@ -1781,7 +1784,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 							continue;
 					}
 
-					EV_CrumbleChain(node->m_sector, rover);
+					EV_CrumbleChain(NULL, rover); // node->m_sector
 
 					// Run a linedef executor??
 					if (rover->master->flags & ML_EFFECT5)
@@ -3044,7 +3047,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 				}
 			}
 
-			clipmomz = P_PlayerHitFloor(mo->player);
+			clipmomz = P_PlayerHitFloor(mo->player, true);
 
 			if (!(mo->player->pflags & PF_SPINNING) && mo->player->powers[pw_carry] != CR_NIGHTSMODE)
 				mo->player->pflags &= ~PF_STARTDASH;
@@ -3126,7 +3129,7 @@ nightsdone:
 						{
 							// DO THE MARIO!
 							if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
-								EV_CrumbleChain(node->m_sector, rover);
+								EV_CrumbleChain(NULL, rover); // node->m_sector
 							else // Question block!
 								EV_MarioBlock(rover, node->m_sector, mo);
 						}
@@ -3694,6 +3697,9 @@ void P_DestroyRobots(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo = (mobj_t *)think;
 		if (mo->health <= 0 || !(mo->flags & (MF_ENEMY|MF_BOSS)))
 			continue; // not a valid enemy
@@ -4230,12 +4236,7 @@ static void P_GenericBossThinker(mobj_t *mobj)
 	if (!mobj->target || !(mobj->target->flags & MF_SHOOTABLE))
 	{
 		if (mobj->health <= 0)
-		{
-			// look for a new target
-			if (P_BossTargetPlayer(mobj, false) && mobj->info->mass) // Bid farewell!
-				S_StartSound(mobj, mobj->info->mass);
 			return;
-		}
 
 		// look for a new target
 		if (P_BossTargetPlayer(mobj, false) && mobj->info->seesound)
@@ -4257,7 +4258,7 @@ static void P_GenericBossThinker(mobj_t *mobj)
 // AI for the first boss.
 static void P_Boss1Thinker(mobj_t *mobj)
 {
-	if (mobj->flags2 & MF2_FRET && (statenum_t)(mobj->state-states) == mobj->info->spawnstate) {
+	if (mobj->flags2 & MF2_FRET && mobj->state->nextstate == mobj->info->spawnstate && mobj->tics == 1) {
 		mobj->flags2 &= ~(MF2_FRET|MF2_SKULLFLY);
 		mobj->momx = mobj->momy = mobj->momz = 0;
 	}
@@ -4275,11 +4276,7 @@ static void P_Boss1Thinker(mobj_t *mobj)
 			return; // It's okay, then.
 
 		if (mobj->health <= 0)
-		{
-			if (P_BossTargetPlayer(mobj, false) && mobj->info->mass) // Bid farewell!
-				S_StartSound(mobj, mobj->info->mass);
 			return;
-		}
 
 		// look for a new target
 		if (P_BossTargetPlayer(mobj, false) && mobj->info->seesound)
@@ -4326,12 +4323,7 @@ static void P_Boss2Thinker(mobj_t *mobj)
 	if (mobj->health <= mobj->info->damage && (!mobj->target || !(mobj->target->flags & MF_SHOOTABLE)))
 	{
 		if (mobj->health <= 0)
-		{
-			// look for a new target
-			if (P_BossTargetPlayer(mobj, false) && mobj->info->mass) // Bid farewell!
-				S_StartSound(mobj, mobj->info->mass);
 			return;
-		}
 
 		// look for a new target
 		if (P_BossTargetPlayer(mobj, false) && mobj->info->seesound)
@@ -4426,6 +4418,9 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			// this can happen if the boss was hurt earlier than expected
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 				if (mo2->type != (mobjtype_t)mobj->info->mass)
 					continue;
@@ -4524,6 +4519,9 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			// the number
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 				if (mo2->type != MT_BOSS3WAYPOINT)
 					continue;
@@ -4662,7 +4660,7 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 	}
 
 	dz /= 9;
-	
+
 	while ((base = base->tracer)) // there are 10 per spoke, remember that
 	{
 		dx = (originx + P_ReturnThrustX(mobj, angle, (9*132)<<FRACBITS) - mobj->x)/9;
@@ -4832,8 +4830,8 @@ static void P_Boss4Thinker(mobj_t *mobj)
 				P_SetTarget(&seg->target, mobj);
 				for (i = 0; i < 9; i++)
 				{
-					seg->hnext = P_SpawnMobj(mobj->x, mobj->y, z, MT_EGGMOBILE4_MACE);
-					seg->hnext->hprev = seg;
+					P_SetTarget(&seg->hnext, P_SpawnMobj(mobj->x, mobj->y, z, MT_EGGMOBILE4_MACE));
+					P_SetTarget(&seg->hnext->hprev, seg);
 					seg = seg->hnext;
 				}
 			}
@@ -5224,6 +5222,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		INT32 i;
 		boolean foundgoop = false;
 		INT32 closestNum;
+		UINT8 extrainfo = (mobj->spawnpoint ? mobj->spawnpoint->extrainfo : 0);
 
 		// Looks for players in goop. If you find one, try to jump on him.
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -5245,18 +5244,27 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				// Find waypoint he is closest to
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					mo2 = (mobj_t *)th;
-					if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint)
-					{
-						dist = P_AproxDistance(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
 
-						if (closestNum == -1 || dist < closestdist)
-						{
-							closestNum = (mo2->spawnpoint->options & 7);
-							closestdist = dist;
-							foundgoop = true;
-						}
-					}
+					mo2 = (mobj_t *)th;
+					if (mo2->type != MT_BOSS3WAYPOINT)
+						continue;
+					if (!mo2->spawnpoint)
+						continue;
+					if (mo2->spawnpoint->extrainfo != extrainfo)
+						continue;
+					if (mobj->health <= mobj->info->damage && !(mo2->spawnpoint->options & 7))
+						continue; // don't jump to center
+
+					dist = P_AproxDistance(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
+
+					if (!(closestNum == -1 || dist < closestdist))
+						continue;
+
+					closestNum = (mo2->spawnpoint->options & 7);
+					closestdist = dist;
+					foundgoop = true;
 				}
 				waypointNum = closestNum;
 				break;
@@ -5265,16 +5273,13 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 		if (!foundgoop)
 		{
-			if (mobj->z > 1056*FRACUNIT)
-				waypointNum = 0;
-			else
+			// Don't jump to the center when health is low.
+			// Force the player to beat you with missiles.
+			if (mobj->z <= 1056*FRACUNIT || mobj->health <= mobj->info->damage)
 				waypointNum = 1 + P_RandomKey(4);
+			else
+				waypointNum = 0;
 		}
-
-		// Don't jump to the center when health is low.
-		// Force the player to beat you with missiles.
-		if (mobj->health <= mobj->info->damage && waypointNum == 0)
-			waypointNum = 1 + P_RandomKey(4);
 
 		if (mobj->tracer && mobj->tracer->type == MT_BOSS3WAYPOINT
 			&& mobj->tracer->spawnpoint && (mobj->tracer->spawnpoint->options & 7) == waypointNum)
@@ -5284,25 +5289,31 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			else
 				waypointNum--;
 
-			waypointNum %= 5;
-
-			if (waypointNum < 0)
-				waypointNum = 0;
+			if (mobj->health <= mobj->info->damage)
+				waypointNum = ((waypointNum + 3) % 4) + 1; // plus four to avoid modulo being negative, minus one to avoid waypoint #0
+			else
+				waypointNum = ((waypointNum + 5) % 5);
 		}
-
-		if (waypointNum == 0 && mobj->health <= mobj->info->damage)
-			waypointNum = 1 + (P_RandomFixed() & 1);
 
 		// scan the thinkers to find
 		// the waypoint to use
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			mo2 = (mobj_t *)th;
-			if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && (mo2->spawnpoint->options & 7) == waypointNum)
-			{
-				hitspot = mo2;
-				break;
-			}
+			if (mo2->type != MT_BOSS3WAYPOINT)
+				continue;
+			if (!mo2->spawnpoint)
+				continue;
+			if ((mo2->spawnpoint->options & 7) != waypointNum)
+				continue;
+			if (mo2->spawnpoint->extrainfo != extrainfo)
+				continue;
+
+			hitspot = mo2;
+			break;
 		}
 
 		if (hitspot == NULL)
@@ -5427,14 +5438,17 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		// Build a hoop linked list of 'em!
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			mo2 = (mobj_t *)th;
 			if (mo2->type == MT_BOSS9GATHERPOINT)
 			{
 				if (last)
-					last->hnext = mo2;
+					P_SetTarget(&last->hnext, mo2);
 				else
-					mobj->hnext = mo2;
-				mo2->hprev = last;
+					P_SetTarget(&mobj->hnext, mo2);
+				P_SetTarget(&mo2->hprev, last);
 				last = mo2;
 			}
 		}
@@ -6072,6 +6086,9 @@ mobj_t *P_GetClosestAxis(mobj_t *source)
 	// scan the thinkers to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == MT_AXIS)
@@ -6841,12 +6858,14 @@ static void P_RemoveOverlay(mobj_t *thing)
 {
 	mobj_t *mo;
 	for (mo = overlaycap; mo; mo = mo->hnext)
-		if (mo->hnext == thing)
-		{
-			P_SetTarget(&mo->hnext, thing->hnext);
-			P_SetTarget(&thing->hnext, NULL);
-			return;
-		}
+	{
+		if (mo->hnext != thing)
+			continue;
+
+		P_SetTarget(&mo->hnext, thing->hnext);
+		P_SetTarget(&thing->hnext, NULL);
+		return;
+	}
 }
 
 void A_BossDeath(mobj_t *mo);
@@ -6978,6 +6997,9 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags & MF_NOTHINK)
 		return;
 
+	if ((mobj->flags & MF_BOSS) && mobj->spawnpoint && (bossdisabled & (1<<mobj->spawnpoint->extrainfo)))
+		return;
+
 	// Remove dead target/tracer.
 	if (mobj->target && P_MobjWasRemoved(mobj->target))
 		P_SetTarget(&mobj->target, NULL);
@@ -7071,6 +7093,11 @@ void P_MobjThinker(mobj_t *mobj)
 
 		switch (mobj->type)
 		{
+			case MT_BOSSTANK1:
+			case MT_BOSSTANK2:
+			case MT_BOSSSPIGOT:
+				mobj->flags2 ^= MF2_DONTDRAW;
+				break;
 			case MT_MACEPOINT:
 			case MT_CHAINMACEPOINT:
 			case MT_SPRINGBALLPOINT:
@@ -7694,7 +7721,25 @@ void P_MobjThinker(mobj_t *mobj)
 				break;
 		}
 		if (mobj->flags2 & MF2_BOSSFLEE)
-			P_InstaThrust(mobj, mobj->angle, FixedMul(12*FRACUNIT, mobj->scale));
+		{
+			if (mobj->extravalue1)
+			{
+				if (!(--mobj->extravalue1))
+				{
+					if (mobj->target)
+					{
+						mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, P_AproxDistance(mobj->x-mobj->target->x,mobj->y-mobj->target->y)), mobj->scale<<1);
+						mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+					}
+					else
+						mobj->momz = 8*mobj->scale;
+				}
+				else
+					mobj->angle += mobj->movedir;
+			}
+			else if (mobj->target)
+				P_InstaThrust(mobj, mobj->angle, FixedMul(12*FRACUNIT, mobj->scale));
+		}
 	}
 	else if (mobj->health <= 0) // Dead things think differently than the living.
 		switch (mobj->type)
@@ -7806,8 +7851,8 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->x + (P_RandomRange(r, -r) << FRACBITS),
 						mobj->y + (P_RandomRange(r, -r) << FRACBITS),
 						mobj->z + (P_RandomKey(mobj->height >> FRACBITS) << FRACBITS),
-						MT_BOSSEXPLODE);
-					S_StartSound(explosion, sfx_cybdth);
+						MT_SONIC3KBOSSEXPLODE);
+					S_StartSound(explosion, sfx_s3kb4);
 				}
 				if (mobj->movedir == DMG_DROWNED)
 					P_SetObjectMomZ(mobj, -FRACUNIT / 2, true); // slower fall from drowning
@@ -8046,7 +8091,8 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->tracer->z += mobj->height;
 				}
 				break;
-			case MT_WAVINGFLAG:
+			case MT_WAVINGFLAG1:
+			case MT_WAVINGFLAG2:
 				{
 					fixed_t base = (leveltime<<(FRACBITS+1));
 					mobj_t *seg = mobj->tracer, *prev = mobj;
@@ -9649,15 +9695,14 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_BIGMINE:
 			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
 			break;
-		case MT_WAVINGFLAG:
+		case MT_WAVINGFLAG1:
+		case MT_WAVINGFLAG2:
 			{
 				mobj_t *prev = mobj, *cur;
 				UINT8 i;
-				mobj->destscale <<= 2;
-				P_SetScale(mobj, mobj->destscale);
 				for (i = 0; i <= 16; i++) // probably should be < but staying authentic to the Lua version
 				{
-					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_WAVINGFLAGSEG);
+					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, ((mobj->type == MT_WAVINGFLAG1) ? MT_WAVINGFLAGSEG1 : MT_WAVINGFLAGSEG2));;
 					P_SetTarget(&prev->tracer, cur);
 					cur->extravalue1 = i;
 					prev = cur;
@@ -9681,6 +9726,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_EGGROBO1:
 			mobj->movecount = P_RandomKey(13);
 			mobj->color = SKINCOLOR_RUBY + P_RandomKey(MAXSKINCOLORS - SKINCOLOR_RUBY);
+			break;
 		case MT_HIVEELEMENTAL:
 			mobj->extravalue1 = 5;
 			break;
@@ -9752,7 +9798,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			mobj->flags2 |= MF2_INVERTAIMABLE;
 			break;
 		case MT_MINECARTEND:
-			mobj->tracer = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID);
+			P_SetTarget(&mobj->tracer, P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID));
 			mobj->tracer->angle = mobj->angle + ANGLE_90;
 			break;
 		default:
@@ -9961,37 +10007,28 @@ void P_RemoveMobj(mobj_t *mobj)
 
 	P_SetTarget(&mobj->hnext, P_SetTarget(&mobj->hprev, NULL));
 
-	// free block
 	// DBG: set everything in mobj_t to 0xFF instead of leaving it. debug memory error.
-	if (mobj->flags & MF_NOTHINK && !mobj->thinker.next)
+#ifdef SCRAMBLE_REMOVED
+	// Invalidate mobj_t data to cause crashes if accessed!
+	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
+#endif
+
+	// free block
+	if (!mobj->thinker.next)
 	{ // Uh-oh, the mobj doesn't think, P_RemoveThinker would never go through!
+		INT32 prevreferences;
 		if (!mobj->thinker.references)
 		{
-#ifdef SCRAMBLE_REMOVED
-			// Invalidate mobj_t data to cause crashes if accessed!
-			memset(mobj, 0xff, sizeof(mobj_t));
-#endif
-			Z_Free(mobj); // No refrences? Can be removed immediately! :D
+			Z_Free(mobj); // No refrrences? Can be removed immediately! :D
+			return;
 		}
-		else
-		{ // Add thinker just to delay removing it until refrences are gone.
-			mobj->flags &= ~MF_NOTHINK;
-			P_AddThinker(THINK_MOBJ, (thinker_t *)mobj);
-#ifdef SCRAMBLE_REMOVED
-			// Invalidate mobj_t data to cause crashes if accessed!
-			memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
-#endif
-			P_RemoveThinker((thinker_t *)mobj);
-		}
+
+		prevreferences = mobj->thinker.references;
+		P_AddThinker(THINK_MOBJ, (thinker_t *)mobj);
+		mobj->thinker.references = prevreferences;
 	}
-	else
-	{
-#ifdef SCRAMBLE_REMOVED
-		// Invalidate mobj_t data to cause crashes if accessed!
-		memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
-#endif
-		P_RemoveThinker((thinker_t *)mobj);
-	}
+
+	P_RemoveThinker((thinker_t *)mobj);
 }
 
 // This does not need to be added to Lua.
@@ -10485,7 +10522,8 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	else
 		p->viewz = p->mo->z + p->viewheight;
 
-	P_SetPlayerMobjState(p->mo, S_PLAY_STND);
+	if (p->powers[pw_carry] != CR_NIGHTSMODE)
+		P_SetPlayerMobjState(p->mo, S_PLAY_STND);
 	p->pflags &= ~PF_SPINNING;
 
 	if (playernum == consoleplayer)
@@ -11083,6 +11121,13 @@ You should think about modifying the deathmatch starts to take full advantage of
 			skyboxcenterpnts[mthing->extrainfo] = mobj;
 		else
 			skyboxviewpnts[mthing->extrainfo] = mobj;
+		break;
+	case MT_EGGSTATUE:
+		if (tutorialmode != (mthing->options & MTF_OBJECTSPECIAL))
+		{
+			mobj->color = SKINCOLOR_GOLD;
+			mobj->colorized = true;
+		}
 		break;
 	case MT_EGGMOBILE3:
 		mobj->cusval = mthing->extrainfo;
@@ -11738,13 +11783,14 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
 		}
 		break;
-	case MT_CEZPOLE:
+	case MT_CEZPOLE1:
+	case MT_CEZPOLE2:
 		{ // Spawn the banner
 			angle_t mobjangle = FixedAngle(mthing->angle<<FRACBITS);
 			P_SpawnMobjFromMobj(mobj,
 				P_ReturnThrustX(mobj, mobjangle, 4<<FRACBITS),
 				P_ReturnThrustY(mobj, mobjangle, 4<<FRACBITS),
-				0, MT_CEZBANNER)->angle = mobjangle + ANGLE_90;
+				0, ((mobj->type == MT_CEZPOLE1) ? MT_CEZBANNER1 : MT_CEZBANNER2))->angle = mobjangle + ANGLE_90;
 		}
 			break;
 	case MT_HHZTREE_TOP:
@@ -11822,6 +11868,9 @@ ML_EFFECT5 : Don't stop thinking when too far away
 		// See if other starposts exist in this level that have the same value.
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			mo2 = (mobj_t *)th;
 
 			if (mo2 == mobj)
@@ -11965,6 +12014,15 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
 				mobj->angle += ANGLE_22h;
 
+			if (i == MT_YELLOWHORIZ || i == MT_REDHORIZ || i == MT_BLUEHORIZ)
+			{
+				if (mthing->options & MTF_OBJECTFLIP)
+					mobj->z -= 16*FRACUNIT;
+				else
+					mobj->z += 16*FRACUNIT;
+			}
+
+
 			if (mobj->flags & MF_NIGHTSITEM)
 			{
 				// Spawn already displayed
@@ -11992,6 +12050,9 @@ ML_EFFECT5 : Don't stop thinking when too far away
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
+			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
+				mobj->flags |= MF_NOGRAVITY;
+
 			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
 			{
 				// flag for strong/weak random boxes
@@ -12125,11 +12186,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			// Link all the sprites in the hoop together
 			if (nextmobj)
 			{
-				mobj->hprev = nextmobj;
-				mobj->hprev->hnext = mobj;
+				P_SetTarget(&mobj->hprev, nextmobj);
+				P_SetTarget(&mobj->hprev->hnext, mobj);
 			}
 			else
-				mobj->hprev = mobj->hnext = NULL;
+				P_SetTarget(&mobj->hprev, P_SetTarget(&mobj->hnext, NULL));
 
 			nextmobj = mobj;
 		}
@@ -12155,9 +12216,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			mobj->z -= mobj->height/2;
 
 			// Link all the collision sprites together.
-			mobj->hnext = NULL;
-			mobj->hprev = nextmobj;
-			mobj->hprev->hnext = mobj;
+			P_SetTarget(&mobj->hnext, NULL);
+			P_SetTarget(&mobj->hprev, nextmobj);
+			P_SetTarget(&mobj->hprev->hnext, mobj);
 
 			nextmobj = mobj;
 		}
@@ -12182,9 +12243,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			mobj->z -= mobj->height/2;
 
 			// Link all the collision sprites together.
-			mobj->hnext = NULL;
-			mobj->hprev = nextmobj;
-			mobj->hprev->hnext = mobj;
+			P_SetTarget(&mobj->hnext, NULL);
+			P_SetTarget(&mobj->hprev, nextmobj);
+			P_SetTarget(&mobj->hprev->hnext, mobj);
 
 			nextmobj = mobj;
 		}
@@ -12267,11 +12328,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			// Link all the sprites in the hoop together
 			if (nextmobj)
 			{
-				mobj->hprev = nextmobj;
-				mobj->hprev->hnext = mobj;
+				P_SetTarget(&mobj->hprev, nextmobj);
+				P_SetTarget(&mobj->hprev->hnext, mobj);
 			}
 			else
-				mobj->hprev = mobj->hnext = NULL;
+				P_SetTarget(&mobj->hprev, P_SetTarget(&mobj->hnext, NULL));
 
 			nextmobj = mobj;
 		}
@@ -12308,9 +12369,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 				mobj->z -= mobj->height/2;
 
 				// Link all the collision sprites together.
-				mobj->hnext = NULL;
-				mobj->hprev = nextmobj;
-				mobj->hprev->hnext = mobj;
+				P_SetTarget(&mobj->hnext, NULL);
+				P_SetTarget(&mobj->hprev, nextmobj);
+				P_SetTarget(&mobj->hprev->hnext, mobj);
 
 				nextmobj = mobj;
 			}
@@ -12335,28 +12396,33 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (nightsreplace)
 			ringthing = MT_NIGHTSSTAR;
 
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			z = (
+#ifdef ESLOPE
+				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+				sec->ceilingheight) - mobjinfo[ringthing].height;
+			if (mthing->options >> ZSHIFT)
+				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			}
+		else
+		{
+			z = (
+#ifdef ESLOPE
+				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+				sec->floorheight);
+			if (mthing->options >> ZSHIFT)
+				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+		}
+
 		for (r = 1; r <= 5; r++)
 		{
 			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				z = (
-#ifdef ESLOPE
-					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-					sec->ceilingheight) - mobjinfo[ringthing].height - dist*r;
-				if (mthing->options >> ZSHIFT)
-					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z -= dist;
 			else
-			{
-				z = (
-#ifdef ESLOPE
-					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-					sec->floorheight) + dist*r;
-				if (mthing->options >> ZSHIFT)
-					z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z += dist;
 
 			mobj = P_SpawnMobj(x, y, z, ringthing);
 
@@ -12390,31 +12456,36 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
 		fa = (closestangle >> ANGLETOFINESHIFT);
 
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			z = (
+#ifdef ESLOPE
+				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+				sec->ceilingheight) - mobjinfo[ringthing].height;
+			if (mthing->options >> ZSHIFT)
+				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			}
+		else
+		{
+			z = (
+#ifdef ESLOPE
+				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+				sec->floorheight);
+			if (mthing->options >> ZSHIFT)
+				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+		}
+
 		for (r = 1; r <= iterations; r++)
 		{
 			x += FixedMul(64*FRACUNIT, FINECOSINE(fa));
 			y += FixedMul(64*FRACUNIT, FINESINE(fa));
 
 			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				z = (
-#ifdef ESLOPE
-					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-					sec->ceilingheight) - mobjinfo[ringthing].height - 64*FRACUNIT*r;
-				if (mthing->options >> ZSHIFT)
-					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z -= 64*FRACUNIT;
 			else
-			{
-				z = (
-#ifdef ESLOPE
-					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-					sec->floorheight) + 64*FRACUNIT*r;
-				if (mthing->options >> ZSHIFT)
-					z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z += 64*FRACUNIT;
 
 			mobj = P_SpawnMobj(x, y, z, ringthing);
 

@@ -97,7 +97,7 @@ boolean runemeraldmanager = false;
 UINT16 emeraldspawndelay = 60*TICRATE;
 
 // menu demo things
-UINT8  numDemos      = 3;
+UINT8  numDemos      = 0;
 UINT32 demoDelayTime = 15*TICRATE;
 UINT32 demoIdleTime  = 3*TICRATE;
 
@@ -152,7 +152,7 @@ cutscene_t *cutscenes[128];
 textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
-boolean skipstats;
+UINT8 skipstats;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -416,49 +416,13 @@ consvar_t cv_spinaxis2 = {"joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL
 consvar_t cv_fireaxis2 = {"joyaxis2_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-#if MAXPLAYERS > 32
-#error "please update player_name table using the new value for MAXPLAYERS"
-#endif
-
 #ifdef SEENAMES
 player_t *seenplayer; // player we're aiming at right now
 #endif
 
-char player_names[MAXPLAYERS][MAXPLAYERNAME+1] =
-{
-	"Player 1",
-	"Player 2",
-	"Player 3",
-	"Player 4",
-	"Player 5",
-	"Player 6",
-	"Player 7",
-	"Player 8",
-	"Player 9",
-	"Player 10",
-	"Player 11",
-	"Player 12",
-	"Player 13",
-	"Player 14",
-	"Player 15",
-	"Player 16",
-	"Player 17",
-	"Player 18",
-	"Player 19",
-	"Player 20",
-	"Player 21",
-	"Player 22",
-	"Player 23",
-	"Player 24",
-	"Player 25",
-	"Player 26",
-	"Player 27",
-	"Player 28",
-	"Player 29",
-	"Player 30",
-	"Player 31",
-	"Player 32"
-};
+// now automatically allocated in D_RegisterClientCommands
+// so that it doesn't have to be updated depending on the value of MAXPLAYERS
+char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 
 INT16 rw_maximums[NUM_WEAPONS] =
 {
@@ -1842,7 +1806,7 @@ boolean G_Responder(event_t *ev)
 			return true;
 		}
 	}
-	else if (gamestate == GS_CREDITS)
+	else if (gamestate == GS_CREDITS || gamestate == GS_ENDING) // todo: keep ending here?
 	{
 		if (HU_Responder(ev))
 			return true; // chat ate the event
@@ -2030,6 +1994,12 @@ void G_Ticker(boolean run)
 		case GS_INTRO:
 			if (run)
 				F_IntroTicker();
+			break;
+
+		case GS_ENDING:
+			if (run)
+				F_EndingTicker();
+			HU_Ticker();
 			break;
 
 		case GS_CUTSCENE:
@@ -2567,6 +2537,9 @@ void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo)
 	// scan all thinkers
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (!(mo2->flags & MF_MISSILE))
@@ -2642,7 +2615,7 @@ void G_DoReborn(INT32 playernum)
 					//nextmapoverride = spstage_start;
 					nextmapoverride = gamemap;
 					countdown2 = TICRATE;
-					skipstats = true;
+					skipstats = 2;
 
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
@@ -2845,6 +2818,10 @@ void G_ExitLevel(void)
 
 		// Remove CEcho text on round end.
 		HU_ClearCEcho();
+	}
+	else if (gamestate == GS_ENDING)
+	{
+		F_StartCredits();
 	}
 	else if (gamestate == GS_CREDITS)
 	{
@@ -3113,7 +3090,7 @@ static void G_DoCompleted(void)
 		nextmap = cm;
 	}
 
-	if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1102-1)
+	if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1103-1)
 		I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
 
 	// wrap around in race
@@ -3167,7 +3144,7 @@ void G_AfterIntermission(void)
 {
 	HU_ClearCEcho();
 
-	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking) // Start a custom cutscene.
+	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
 	else
 	{
@@ -3279,6 +3256,11 @@ void G_EndGame(void)
 	// Only do evaluation and credits in coop games.
 	if (gametype == GT_COOP)
 	{
+		if (nextmap == 1103-1) // end game with ending
+		{
+			F_StartEnding();
+			return;
+		}
 		if (nextmap == 1102-1) // end game with credits
 		{
 			F_StartCredits();
@@ -3697,7 +3679,7 @@ void G_SaveGame(UINT32 slot)
 	backup = va("%s",savename);
 
 	// save during evaluation or credits? game's over, folks!
-	if (gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
+	if (gamestate == GS_ENDING || gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
 		gamecomplete = true;
 
 	gameaction = ga_nothing;
@@ -4363,7 +4345,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 		ghostext.flags = 0;
 	}
 
-	if (ghost->player && ghost->player->followmobj)
+	if (ghost->player && ghost->player->followmobj) // bloats tails runs but what can ya do
 	{
 		INT16 temp;
 
@@ -4466,12 +4448,13 @@ void G_ConsGhostTic(void)
 				mobj = NULL;
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
 					mobj = (mobj_t *)th;
 					if (mobj->type == (mobjtype_t)type && mobj->x == x && mobj->y == y && mobj->z == z)
 						break;
-					mobj = NULL; // wasn't this one, keep searching.
 				}
-				if (mobj && mobj->health != health) // Wasn't damaged?! This is desync! Fix it!
+				if (th != &thlist[THINK_MOBJ] && mobj->health != health) // Wasn't damaged?! This is desync! Fix it!
 				{
 					if (demosynced)
 						CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
@@ -4588,6 +4571,9 @@ void G_GhostTicker(void)
 				switch(g->color)
 				{
 				default:
+				case GHC_RETURNSKIN:
+					g->mo->skin = g->oldmo.skin;
+					// fallthru
 				case GHC_NORMAL: // Go back to skin color
 					g->mo->color = g->oldmo.color;
 					break;
@@ -4597,6 +4583,9 @@ void G_GhostTicker(void)
 					break;
 				case GHC_FIREFLOWER: // Fireflower
 					g->mo->color = SKINCOLOR_WHITE;
+					break;
+				case GHC_NIGHTSSKIN: // not actually a colour
+					g->mo->skin = &skins[DEFAULTNIGHTSSKIN];
 					break;
 				}
 			}
@@ -5860,13 +5849,16 @@ void G_DoPlayMetal(void)
 	// find metal sonic
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo = (mobj_t *)th;
 		if (mo->type != MT_METALSONIC_RACE)
 			continue;
 
 		break;
 	}
-	if (!mo)
+	if (th == &thlist[THINK_MOBJ])
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Failed to find bot entity.\n"));
 		Z_Free(metalbuffer);

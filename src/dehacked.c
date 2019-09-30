@@ -517,7 +517,9 @@ static void readfreeslots(MYFILE *f)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
+					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
+					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
@@ -1108,6 +1110,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				if      (fastcmp(word2, "TITLE"))      i = 1100;
 				else if (fastcmp(word2, "EVALUATION")) i = 1101;
 				else if (fastcmp(word2, "CREDITS"))    i = 1102;
+				else if (fastcmp(word2, "ENDING"))     i = 1103;
 				else
 				// Support using the actual map name,
 				// i.e., Nextlevel = AB, Nextlevel = FZ, etc.
@@ -1169,6 +1172,15 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "MUSICINTER"))
 				deh_strlcpy(mapheaderinfo[num-1]->musintername, word2,
 					sizeof(mapheaderinfo[num-1]->musintername), va("Level header %d: intermission music", num));
+			else if (fastcmp(word, "MUSICPOSTBOSS"))
+				deh_strlcpy(mapheaderinfo[num-1]->muspostbossname, word2,
+					sizeof(mapheaderinfo[num-1]->muspostbossname), va("Level header %d: post-boss music", num));
+			else if (fastcmp(word, "MUSICPOSTBOSSTRACK"))
+				mapheaderinfo[num-1]->muspostbosstrack = ((UINT16)i - 1);
+			else if (fastcmp(word, "MUSICPOSTBOSSPOS"))
+				mapheaderinfo[num-1]->muspostbosspos = (UINT32)get_number(word2);
+			else if (fastcmp(word, "MUSICPOSTBOSSFADEIN"))
+				mapheaderinfo[num-1]->muspostbossfadein = (UINT32)get_number(word2);
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
@@ -2418,6 +2430,7 @@ static actionpointer_t actionpointers[] =
 	{{A_SnapperThinker},         "A_SNAPPERTHINKER"},
 	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
 	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
+	{{A_ModuloToState},          "A_MODULOTOSTATE"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -4603,25 +4616,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_PANIC5",
 	"S_EGGMOBILE_PANIC6",
 	"S_EGGMOBILE_PANIC7",
-	"S_EGGMOBILE_PANIC8",
-	"S_EGGMOBILE_PANIC9",
-	"S_EGGMOBILE_PANIC10",
 	"S_EGGMOBILE_PAIN",
 	"S_EGGMOBILE_PAIN2",
 	"S_EGGMOBILE_DIE1",
 	"S_EGGMOBILE_DIE2",
 	"S_EGGMOBILE_DIE3",
 	"S_EGGMOBILE_DIE4",
-	"S_EGGMOBILE_DIE5",
-	"S_EGGMOBILE_DIE6",
-	"S_EGGMOBILE_DIE7",
-	"S_EGGMOBILE_DIE8",
-	"S_EGGMOBILE_DIE9",
-	"S_EGGMOBILE_DIE10",
-	"S_EGGMOBILE_DIE11",
-	"S_EGGMOBILE_DIE12",
-	"S_EGGMOBILE_DIE13",
-	"S_EGGMOBILE_DIE14",
 	"S_EGGMOBILE_FLEE1",
 	"S_EGGMOBILE_FLEE2",
 	"S_EGGMOBILE_BALL",
@@ -4642,16 +4642,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE2_DIE2",
 	"S_EGGMOBILE2_DIE3",
 	"S_EGGMOBILE2_DIE4",
-	"S_EGGMOBILE2_DIE5",
-	"S_EGGMOBILE2_DIE6",
-	"S_EGGMOBILE2_DIE7",
-	"S_EGGMOBILE2_DIE8",
-	"S_EGGMOBILE2_DIE9",
-	"S_EGGMOBILE2_DIE10",
-	"S_EGGMOBILE2_DIE11",
-	"S_EGGMOBILE2_DIE12",
-	"S_EGGMOBILE2_DIE13",
-	"S_EGGMOBILE2_DIE14",
 	"S_EGGMOBILE2_FLEE1",
 	"S_EGGMOBILE2_FLEE2",
 
@@ -4701,16 +4691,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE3_DIE2",
 	"S_EGGMOBILE3_DIE3",
 	"S_EGGMOBILE3_DIE4",
-	"S_EGGMOBILE3_DIE5",
-	"S_EGGMOBILE3_DIE6",
-	"S_EGGMOBILE3_DIE7",
-	"S_EGGMOBILE3_DIE8",
-	"S_EGGMOBILE3_DIE9",
-	"S_EGGMOBILE3_DIE10",
-	"S_EGGMOBILE3_DIE11",
-	"S_EGGMOBILE3_DIE12",
-	"S_EGGMOBILE3_DIE13",
-	"S_EGGMOBILE3_DIE14",
 	"S_EGGMOBILE3_FLEE1",
 	"S_EGGMOBILE3_FLEE2",
 
@@ -4757,16 +4737,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE4_DIE2",
 	"S_EGGMOBILE4_DIE3",
 	"S_EGGMOBILE4_DIE4",
-	"S_EGGMOBILE4_DIE5",
-	"S_EGGMOBILE4_DIE6",
-	"S_EGGMOBILE4_DIE7",
-	"S_EGGMOBILE4_DIE8",
-	"S_EGGMOBILE4_DIE9",
-	"S_EGGMOBILE4_DIE10",
-	"S_EGGMOBILE4_DIE11",
-	"S_EGGMOBILE4_DIE12",
-	"S_EGGMOBILE4_DIE13",
-	"S_EGGMOBILE4_DIE14",
 	"S_EGGMOBILE4_FLEE1",
 	"S_EGGMOBILE4_FLEE2",
 	"S_EGGMOBILE4_MACE",
@@ -4822,6 +4792,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FANG_FIRE3",
 	"S_FANG_FIRE4",
 	"S_FANG_FIREREPEAT",
+	"S_FANG_LOBSHOT0",
 	"S_FANG_LOBSHOT1",
 	"S_FANG_LOBSHOT2",
 	"S_FANG_WAIT1",
@@ -4838,6 +4809,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FANG_PINCHFALL2",
 	"S_FANG_PINCHSKID1",
 	"S_FANG_PINCHSKID2",
+	"S_FANG_PINCHLOBSHOT0",
 	"S_FANG_PINCHLOBSHOT1",
 	"S_FANG_PINCHLOBSHOT2",
 	"S_FANG_PINCHLOBSHOT3",
@@ -5143,8 +5115,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_METALSONIC_DEATH4",
 	"S_METALSONIC_FLEE1",
 	"S_METALSONIC_FLEE2",
-	"S_METALSONIC_FLEE3",
-	"S_METALSONIC_FLEE4",
 
 	"S_MSSHIELD_F1",
 	"S_MSSHIELD_F2",
@@ -5699,7 +5669,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_CEZFLOWER",
 	"S_CEZPOLE",
-	"S_CEZBANNER",
+	"S_CEZBANNER1",
+	"S_CEZBANNER2",
 	"S_PINETREE",
 	"S_CEZBUSH1",
 	"S_CEZBUSH2",
@@ -5708,7 +5679,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEHOLDER",
 	"S_FIRETORCH",
 	"S_WAVINGFLAG",
-	"S_WAVINGFLAGSEG",
+	"S_WAVINGFLAGSEG1",
+	"S_WAVINGFLAGSEG2",
 	"S_CRAWLASTATUE",
 	"S_FACESTABBERSTATUE",
 	"S_SUSPICIOUSFACESTABBERSTATUE_WAIT",
@@ -7131,19 +7103,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPRK1",
 	"S_SPRK2",
 	"S_SPRK3",
-	"S_SPRK4",
-	"S_SPRK5",
-	"S_SPRK6",
-	"S_SPRK7",
-	"S_SPRK8",
-	"S_SPRK9",
-	"S_SPRK10",
-	"S_SPRK11",
-	"S_SPRK12",
-	"S_SPRK13",
-	"S_SPRK14",
-	"S_SPRK15",
-	"S_SPRK16",
 
 	// Robot Explosion
 	"S_XPLD_FLICKY",
@@ -7514,8 +7473,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SMALLFIREBAR", // Small Firebar
 	"MT_BIGFIREBAR", // Big Firebar
 	"MT_CEZFLOWER", // Flower
-	"MT_CEZPOLE", // Pole
-	"MT_CEZBANNER", // Banner
+	"MT_CEZPOLE1", // Pole (with red banner)
+	"MT_CEZPOLE2", // Pole (with blue banner)
+	"MT_CEZBANNER1", // Banner (red)
+	"MT_CEZBANNER2", // Banner (blue)
 	"MT_PINETREE", // Pine Tree
 	"MT_CEZBUSH1", // Bush 1
 	"MT_CEZBUSH2", // Bush 2
@@ -7523,8 +7484,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CANDLEPRICKET", // Candle pricket
 	"MT_FLAMEHOLDER", // Flame holder
 	"MT_FIRETORCH", // Fire torch
-	"MT_WAVINGFLAG", // Waving flag
-	"MT_WAVINGFLAGSEG", // Waving flag segment
+	"MT_WAVINGFLAG1", // Waving flag (red)
+	"MT_WAVINGFLAG2", // Waving flag (blue)
+	"MT_WAVINGFLAGSEG1", // Waving flag segment (red)
+	"MT_WAVINGFLAGSEG2", // Waving flag segment (blue)
 	"MT_CRAWLASTATUE", // Crawla statue
 	"MT_FACESTABBERSTATUE", // Facestabber statue
 	"MT_SUSPICIOUSFACESTABBERSTATUE", // :eggthinking:
@@ -8687,6 +8650,23 @@ struct {
 	{"GT_HIDEANDSEEK",GT_HIDEANDSEEK},
 	{"GT_CTF",GT_CTF},
 
+	// Jingles (jingletype_t)
+	{"JT_NONE",JT_NONE},
+	{"JT_OTHER",JT_OTHER},
+	{"JT_MASTER",JT_MASTER},
+	{"JT_1UP",JT_1UP},
+	{"JT_SHOES",JT_SHOES},
+	{"JT_INV",JT_INV},
+	{"JT_MINV",JT_MINV},
+	{"JT_DROWN",JT_DROWN},
+	{"JT_SUPER",JT_SUPER},
+	{"JT_GOVER",JT_GOVER},
+	{"JT_NIGHTSTIMEOUT",JT_NIGHTSTIMEOUT},
+	{"JT_SSTIMEOUT",JT_SSTIMEOUT},
+	// {"JT_LCLEAR",JT_LCLEAR},
+	// {"JT_RACENT",JT_RACENT},
+	// {"JT_CONTSC",JT_CONTSC},
+
 	// Player state (playerstate_t)
 	{"PST_LIVE",PST_LIVE}, // Playing or camping.
 	{"PST_DEAD",PST_DEAD}, // Dead on the ground, view follows killer.
@@ -9493,6 +9473,7 @@ static inline int lib_freeslot(lua_State *L)
 				{
 					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
+					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");

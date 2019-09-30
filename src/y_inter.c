@@ -86,8 +86,8 @@ typedef union
 		INT32 passedx3;
 		INT32 passedx4;
 
-		y_bonus_t bonus;
-		patch_t *bonuspatch;
+		y_bonus_t bonuses[2];
+		patch_t *bonuspatches[2];
 
 		patch_t *pscore; // SCORE
 		UINT32 score; // fake score
@@ -326,34 +326,36 @@ void Y_IntermissionDrawer(void)
 		// draw the header
 		if (intertic <= 2*TICRATE)
 			animatetic = 0;
-		else if (!animatetic && data.spec.bonus.points == 0 && data.spec.passed3[0] != '\0')
+		else if (!animatetic && data.spec.bonuses[0].points == 0 && data.spec.bonuses[1].points == 0 && data.spec.passed3[0] != '\0')
 			animatetic = intertic + TICRATE;
 
 		if (animatetic && (tic_t)intertic >= animatetic)
 		{
 			const INT32 scradjust = (vid.width/vid.dupx)>>3; // 40 for BASEVIDWIDTH
 			INT32 animatetimer = (intertic - animatetic);
-			if (animatetimer <= 14)
+			if (animatetimer <= 16)
 			{
-				xoffset1 = -(animatetimer     * scradjust);
-				xoffset2 = -((animatetimer-2) * scradjust);
-				xoffset3 = -((animatetimer-4) * scradjust);
-				xoffset4 = -((animatetimer-6) * scradjust);
-				xoffset5 = -((animatetimer-8) * scradjust);
+				xoffset1 = -(animatetimer      * scradjust);
+				xoffset2 = -((animatetimer- 2) * scradjust);
+				xoffset3 = -((animatetimer- 4) * scradjust);
+				xoffset4 = -((animatetimer- 6) * scradjust);
+				xoffset5 = -((animatetimer- 8) * scradjust);
+				xoffset6 = -((animatetimer-10) * scradjust);
 				if (xoffset2 > 0) xoffset2 = 0;
 				if (xoffset3 > 0) xoffset3 = 0;
 				if (xoffset4 > 0) xoffset4 = 0;
 				if (xoffset5 > 0) xoffset5 = 0;
+				if (xoffset6 > 0) xoffset6 = 0;
 			}
-			else if (animatetimer < 32)
+			else if (animatetimer < 34)
 			{
 				drawsection = 1;
-				xoffset1 = (22-animatetimer) * scradjust;
-				xoffset2 = (24-animatetimer) * scradjust;
-				xoffset3 = (26-animatetimer) * scradjust;
-				xoffset4 = (28-animatetimer) * scradjust;
-				xoffset5 = (30-animatetimer) * scradjust;
-				xoffset6 = (32-animatetimer) * scradjust;
+				xoffset1 = (24-animatetimer) * scradjust;
+				xoffset2 = (26-animatetimer) * scradjust;
+				xoffset3 = (28-animatetimer) * scradjust;
+				xoffset4 = (30-animatetimer) * scradjust;
+				xoffset5 = (32-animatetimer) * scradjust;
+				xoffset6 = (34-animatetimer) * scradjust;
 				if (xoffset1 < 0) xoffset1 = 0;
 				if (xoffset2 < 0) xoffset2 = 0;
 				if (xoffset3 < 0) xoffset3 = 0;
@@ -370,9 +372,9 @@ void Y_IntermissionDrawer(void)
 
 		if (drawsection == 1)
 		{
-			const char *ringtext = "\x86" "50 RINGS, NO SHIELD";
-			const char *tut1text = "\x86" "PRESS " "\x82" "SPIN";
-			const char *tut2text = "\x86" "MID-" "\x82" "JUMP";
+			const char *ringtext = "\x82" "50 RINGS, NO SHIELD";
+			const char *tut1text = "\x82" "PRESS " "\x80" "SPIN";
+			const char *tut2text = "\x82" "MID-" "\x80" "JUMP";
 			ttheight = 16;
 			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
 			ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
@@ -389,6 +391,7 @@ void Y_IntermissionDrawer(void)
 		}
 		else
 		{
+			INT32 yoffset = 0;
 			if (data.spec.passed1[0] != '\0')
 			{
 				ttheight = 24;
@@ -402,22 +405,31 @@ void Y_IntermissionDrawer(void)
 				V_DrawLevelTitle(data.spec.passedx2 + xoffset1, ttheight, 0, data.spec.passed2);
 			}
 
-			V_DrawScaledPatch(152 + xoffset3, 108, 0, data.spec.bonuspatch);
-			V_DrawTallNum(BASEVIDWIDTH + xoffset3 - 68, 109, 0, data.spec.bonus.points);
-			V_DrawScaledPatch(152 + xoffset4, 124, 0, data.spec.pscore);
-			V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125, 0, data.spec.score);
+			V_DrawScaledPatch(152 + xoffset3, 108, 0, data.spec.bonuspatches[0]);
+			V_DrawTallNum(BASEVIDWIDTH + xoffset3 - 68, 109, 0, data.spec.bonuses[0].points);
+			if (data.spec.bonuses[1].display)
+			{
+				V_DrawScaledPatch(152 + xoffset4, 124, 0, data.spec.bonuspatches[1]);
+				V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125, 0, data.spec.bonuses[1].points);
+				yoffset = 16;
+				// hack; pass the buck along...
+				xoffset4 = xoffset5;
+				xoffset5 = xoffset6;
+			}
+			V_DrawScaledPatch(152 + xoffset4, 124+yoffset, 0, data.spec.pscore);
+			V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125+yoffset, 0, data.spec.score);
 
 			// Draw continues!
 			if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
 			{
 				UINT8 continues = data.spec.continues & 0x7F;
 
-				V_DrawScaledPatch(152 + xoffset5, 150, 0, data.spec.pcontinues);
+				V_DrawScaledPatch(152 + xoffset5, 150+yoffset, 0, data.spec.pcontinues);
 				for (i = 0; i < continues; ++i)
 				{
 					if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
 						break;
-					V_DrawContinueIcon(246 + xoffset5 - (i*12), 162, 0, *data.spec.playerchar, *data.spec.playercolor);
+					V_DrawContinueIcon(246 + xoffset5 - (i*12), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
 				}
 			}
 		}
@@ -904,7 +916,7 @@ void Y_Ticker(void)
 	{
 		INT32 i;
 		UINT32 oldscore = data.spec.score;
-		boolean skip = false, super = false;
+		boolean skip = false, super = false, anybonuses = false;
 
 		if (!intertic) // first time only
 		{
@@ -946,16 +958,26 @@ void Y_Ticker(void)
 			return;
 		}
 
-		// ring bonus counts down by 222 each tic
-		data.spec.bonus.points -= 222;
-		data.spec.score += 222;
-		if (data.spec.bonus.points < 0 || skip == true) // went too far
+		// bonuses count down by 222 each tic
+		for (i = 0; i < 2; ++i)
 		{
-			data.spec.score += data.spec.bonus.points;
-			data.spec.bonus.points = 0;
+			if (!data.spec.bonuses[i].points)
+				continue;
+
+			data.spec.bonuses[i].points -= 222;
+			data.spec.score += 222;
+			if (data.spec.bonuses[i].points < 0 || skip == true) // too far?
+			{
+				data.spec.score += data.spec.bonuses[i].points;
+				data.spec.bonuses[i].points = 0;
+			}
+			if (data.spec.score > MAXSCORE)
+				data.spec.score = MAXSCORE;
+			if (data.spec.bonuses[i].points > 0)
+				anybonuses = true;
 		}
 
-		if (!data.spec.bonus.points)
+		if (!anybonuses)
 		{
 			tallydonetic = intertic;
 			if (!((data.spec.continues & 0x80) || (super && ALL7EMERALDS(emeralds)))) // don't set endtic yet!
@@ -1301,7 +1323,9 @@ void Y_StartIntermission(void)
 			// give out ring bonuses
 			Y_AwardSpecialStageBonus();
 
-			data.spec.bonuspatch = W_CachePatchName(data.spec.bonus.patch, PU_STATIC);
+			for (i = 0; i < 2; ++i)
+				data.spec.bonuspatches[i] = W_CachePatchName(data.spec.bonuses[i].patch, PU_STATIC);
+
 			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_STATIC);
 			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_STATIC);
 
@@ -1831,7 +1855,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 	memset(bstruct, 0, sizeof(y_bonus_t));
 	strncpy(bstruct->patch, "YB_PERFE", sizeof(bstruct->patch));
 
-	if (data.coop.gotperfbonus == -1)
+	if (intertype != int_coop || data.coop.gotperfbonus == -1)
 	{
 		INT32 sharedringtotal = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -1840,15 +1864,33 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 			sharedringtotal += players[i].rings;
 		}
 		if (!sharedringtotal || nummaprings == -1 || sharedringtotal < nummaprings)
-			data.coop.gotperfbonus = 0;
+			bstruct->display = false;
 		else
-			data.coop.gotperfbonus = 1;
+		{
+			bstruct->display = true;
+			bstruct->points = 50000;
+		}
 	}
-	if (!data.coop.gotperfbonus)
+	if (intertype != int_coop)
 		return;
 
+	data.coop.gotperfbonus = (bstruct->display ? 1 : 0);
+}
+
+static void Y_SetSpecialRingBonus(player_t *player, y_bonus_t *bstruct)
+{
+	INT32 i, sharedringtotal = 0;
+
+	(void)player;
+	strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
 	bstruct->display = true;
-	bstruct->points = 50000;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i]) continue;
+		sharedringtotal += players[i].rings;
+	}
+	bstruct->points = max(0, (sharedringtotal) * 100);
 }
 
 // This list can be extended in the future with SOC/Lua, perhaps.
@@ -1953,23 +1995,33 @@ static void Y_AwardCoopBonuses(void)
 static void Y_AwardSpecialStageBonus(void)
 {
 	INT32 i, oldscore, ptlives;
-	y_bonus_t localbonus;
+	y_bonus_t localbonuses[2];
 
 	data.spec.score = players[consoleplayer].score;
-	memset(&data.spec.bonus, 0, sizeof(data.spec.bonus));
-	data.spec.bonuspatch = NULL;
+	memset(data.spec.bonuses, 0, sizeof(data.spec.bonuses));
+	memset(data.spec.bonuspatches, 0, sizeof(data.coop.bonuspatches));
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		oldscore = players[i].score;
 
 		if (!playeringame[i] || players[i].lives < 1) // not active or game over
-			Y_SetNullBonus(&players[i], &localbonus);
-		else if (maptol & TOL_NIGHTS) // Mare score instead of Rings
-			Y_SetNightsBonus(&players[i], &localbonus);
+		{
+			Y_SetNullBonus(&players[i], &localbonuses[0]);
+			Y_SetNullBonus(&players[i], &localbonuses[1]);
+		}
+		else if (maptol & TOL_NIGHTS) // NiGHTS bonus score instead of Rings
+		{
+			Y_SetNightsBonus(&players[i], &localbonuses[0]);
+			Y_SetNullBonus(&players[i], &localbonuses[1]);
+		}
 		else
-			Y_SetRingBonus(&players[i], &localbonus);
-		players[i].score += localbonus.points;
+		{
+			Y_SetSpecialRingBonus(&players[i], &localbonuses[0]);
+			Y_SetPerfectBonus(&players[i], &localbonuses[1]);
+		}
+		players[i].score += localbonuses[0].points;
+		players[i].score += localbonuses[1].points;
 		if (players[i].score > MAXSCORE)
 			players[i].score = MAXSCORE;
 
@@ -1982,7 +2034,7 @@ static void Y_AwardSpecialStageBonus(void)
 		if (i == consoleplayer)
 		{
 			data.spec.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
-			M_Memcpy(&data.spec.bonus, &localbonus, sizeof(data.spec.bonus));
+			M_Memcpy(&data.spec.bonuses, &localbonuses, sizeof(data.spec.bonuses));
 
 			// Continues related
 			data.spec.continues = min(players[i].continues, 8);
@@ -2057,7 +2109,8 @@ static void Y_UnloadData(void)
 			// unload the special stage patches
 			//UNLOAD(data.spec.cemerald);
 			//UNLOAD(data.spec.nowsuper);
-			UNLOAD(data.spec.bonuspatch);
+			UNLOAD(data.spec.bonuspatches[1]);
+			UNLOAD(data.spec.bonuspatches[0]);
 			UNLOAD(data.spec.pscore);
 			UNLOAD(data.spec.pcontinues);
 			break;

@@ -37,6 +37,7 @@ boolean LUA_CallAction(const char *action, mobj_t *actor);
 player_t *stplyr;
 INT32 var1;
 INT32 var2;
+INT32 modulothing;
 
 //
 // P_NewChaseDir related LUT.
@@ -294,6 +295,8 @@ void A_SnapperSpawn(mobj_t *actor);
 void A_SnapperThinker(mobj_t *actor);
 void A_SaloonDoorSpawn(mobj_t *actor);
 void A_MinecartSparkThink(mobj_t *actor);
+void A_ModuloToState(mobj_t *actor);
+
 //for p_enemy.c
 
 //
@@ -1391,7 +1394,7 @@ void A_StatueBurst(mobj_t *actor)
 		return;
 
 	new->angle = actor->angle;
-	new->target = actor->target;
+	P_SetTarget(&new->target, actor->target);
 	if (locvar2)
 		P_SetMobjState(new, (statenum_t)locvar2);
 	S_StartSound(new, new->info->attacksound);
@@ -2155,7 +2158,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		for (i = 0; (i < CSEGS); i++)
 		{
 			mobj_t *newchain = P_SpawnMobjFromMobj(actor, 0, 0, 0, actor->info->raisestate);
-			prevchain->target = newchain;
+			P_SetTarget(&prevchain->target, newchain);
 			prevchain = newchain;
 		}
 		actor->target->angle = R_PointToAngle2(actor->target->x, actor->target->y, crab->target->x, crab->target->y);
@@ -2999,6 +3002,8 @@ void A_Boss7FireMissiles(mobj_t *actor)
 // var2:
 //		0 - Boss 1 Left side
 //		1 - Boss 1 Right side
+//		2 - Triple laser
+//		>3 - Boss 1 Middle
 //
 void A_Boss1Laser(mobj_t *actor)
 {
@@ -3034,6 +3039,15 @@ void A_Boss1Laser(mobj_t *actor)
 			else
 				z = actor->z + FixedMul(56*FRACUNIT, actor->scale);
 			break;
+		case 2:
+			var2 = 3; // Fire middle laser
+			A_Boss1Laser(actor);
+			var2 = 0; // Fire left laser
+			A_Boss1Laser(actor);
+			var2 = 1; // Fire right laser
+			A_Boss1Laser(actor);
+			return;
+			break;
 		default:
 			x = actor->x;
 			y = actor->y;
@@ -3041,7 +3055,7 @@ void A_Boss1Laser(mobj_t *actor)
 			break;
 	}
 
-	if (!(actor->flags2 & MF2_FIRING))
+	if (!(actor->flags2 & MF2_FIRING) && actor->tics > 1)
 	{
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 		if (mobjinfo[locvar1].seesound)
@@ -3063,6 +3077,7 @@ void A_Boss1Laser(mobj_t *actor)
 		angle = FixedAngle(FixedDiv(actor->tics*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
 	else
 		angle = R_PointToAngle2(z + (mobjinfo[locvar1].height>>1), 0, actor->target->z, R_PointToDist2(x, y, actor->target->x, actor->target->y));
+
 	point = P_SpawnMobj(x, y, z, locvar1);
 	P_SetTarget(&point->target, actor);
 	point->angle = actor->angle;
@@ -3088,7 +3103,7 @@ void A_Boss1Laser(mobj_t *actor)
 	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1)
 	{
 		point = P_SpawnMobj(x, y, floorz+1, MT_EGGMOBILE_FIRE);
-		point->target = actor;
+		P_SetTarget(&point->target, actor);
 		point->destscale = 3*FRACUNIT;
 		point->scalespeed = FRACUNIT>>2;
 		point->fuse = TICRATE;
@@ -3334,7 +3349,7 @@ void A_BossZoom(mobj_t *actor)
 // var1:
 //		0 - Use movecount to spawn explosions evenly
 //		1 - Use P_Random to spawn explosions at complete random
-// var2 = Object to spawn. Default is MT_BOSSEXPLODE.
+// var2 = Object to spawn. Default is MT_SONIC3KBOSSEXPLODE.
 //
 void A_BossScream(mobj_t *actor)
 {
@@ -3366,7 +3381,7 @@ void A_BossScream(mobj_t *actor)
 
 	// Determine what mobj to spawn. If undefined or invalid, use MT_BOSSEXPLODE as default.
 	if (locvar2 <= 0 || locvar2 >= NUMMOBJTYPES)
-		explodetype = MT_BOSSEXPLODE;
+		explodetype = MT_SONIC3KBOSSEXPLODE; //MT_BOSSEXPLODE; -- piss to you, sonic 2
 	else
 		explodetype = (mobjtype_t)locvar2;
 
@@ -3488,9 +3503,11 @@ void A_1upThinker(mobj_t *actor)
 
 	if (closestplayer == -1 || skins[players[closestplayer].skin].sprites[SPR2_LIFE].numframes == 0)
 	{ // Closest player not found (no players in game?? may be empty dedicated server!), or does not have correct sprite.
-		if (actor->tracer) {
-			P_RemoveMobj(actor->tracer);
-			actor->tracer = NULL;
+		if (actor->tracer)
+		{
+			mobj_t *tracer = actor->tracer;
+			P_SetTarget(&actor->tracer, NULL);
+			P_RemoveMobj(tracer);
 		}
 		return;
 	}
@@ -3786,6 +3803,9 @@ void A_BossDeath(mobj_t *mo)
 	// if all bosses are dead
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 		if (mo2 != mo && (mo2->flags & MF_BOSS) && mo2->health > 0)
 			goto bossjustdie; // other boss not dead - just go straight to dying!
@@ -3807,6 +3827,24 @@ void A_BossDeath(mobj_t *mo)
 		EV_DoElevator(&junk, elevateUp, false);
 		junk.tag = LE_CAPSULE2;
 		EV_DoElevator(&junk, elevateHighest, false);
+
+		if (mapheaderinfo[gamemap-1]->muspostbossname[0] &&
+			S_MusicExists(mapheaderinfo[gamemap-1]->muspostbossname, !midi_disabled, !digital_disabled))
+		{
+			// Touching the egg trap button calls P_DoPlayerExit, which calls P_RestoreMusic.
+			// So just park ourselves in the mapmus variables.
+			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7);
+			strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
+			mapmusname[6] = 0;
+			mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
+			mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
+
+			// don't change if we're in another tune
+			// but in case we're in jingle, use our parked mapmus variables so the correct track restores
+			if (!changed)
+				S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, (1*MUSICRATE)+(MUSICRATE/2),
+					mapheaderinfo[gamemap-1]->muspostbossfadein);
+		}
 	}
 
 bossjustdie:
@@ -3873,6 +3911,8 @@ bossjustdie:
 		}
 		default: //eggmobiles
 		{
+			UINT8 extrainfo = (mo->spawnpoint ? mo->spawnpoint->extrainfo : 0);
+
 			// Stop exploding and prepare to run.
 			P_SetMobjState(mo, mo->info->xdeathstate);
 			if (P_MobjWasRemoved(mo))
@@ -3884,9 +3924,15 @@ bossjustdie:
 			// scan the thinkers to find the runaway point
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 
 				if (mo2->type != MT_BOSSFLYPOINT)
+					continue;
+
+				if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
 					continue;
 
 				// If this one's further then the last one, don't go for it.
@@ -3902,14 +3948,24 @@ bossjustdie:
 			mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
 			mo->flags |= MF_NOCLIPHEIGHT;
 
+			mo->movedir = 0;
+			mo->extravalue1 = 35;
+			mo->flags2 |= MF2_BOSSFLEE;
+			mo->momz = 2*mo->scale;
+
 			if (mo->target)
 			{
-				mo->angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
-				mo->flags2 |= MF2_BOSSFLEE;
-				mo->momz = FixedMul(FixedDiv(mo->target->z - mo->z, P_AproxDistance(mo->x-mo->target->x,mo->y-mo->target->y)), FixedMul(2*FRACUNIT, mo->scale));
+				angle_t diff = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y) - mo->angle;
+				if (diff)
+				{
+					if (diff > ANGLE_180)
+						diff = InvAngle(InvAngle(diff)/mo->extravalue1);
+					else
+						diff /= mo->extravalue1;
+					mo->movedir = diff;
+				}
 			}
-			else
-				mo->momz = FixedMul(2*FRACUNIT, mo->scale);
+
 			break;
 		}
 	}
@@ -4091,12 +4147,11 @@ void A_Invincibility(mobj_t *actor)
 
 	if (P_IsLocalPlayer(player) && !player->powers[pw_super])
 	{
-		S_StopMusic();
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
-		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
+		P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
 	}
 }
 
@@ -4130,10 +4185,7 @@ void A_SuperSneakers(mobj_t *actor)
 		if (S_SpeedMusic(0.0f) && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
 			S_SpeedMusic(1.4f);
 		else
-		{
-			S_StopMusic();
-			S_ChangeMusicInternal("_shoes", false);
-		}
+			P_PlayJingle(player, JT_SHOES);
 		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
 		S_StartCaption(sfx_None, -1, player->powers[pw_sneakers]);
 	}
@@ -4868,12 +4920,12 @@ void A_SignPlayer(mobj_t *actor)
 		of in the name. If you have a better idea, feel free
 		to let me know. ~toast 2016/07/20
 		*/
-		actor->frame += (15 - Color_Opposite[(Color_Opposite[(skin->prefoppositecolor - 1)*2] - 1)*2 + 1]);
+		actor->frame += (15 - Color_Opposite[Color_Opposite[skin->prefoppositecolor - 1][0] - 1][1]);
 	}
 	else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
 	{
-		actor->color = Color_Opposite[(actor->target->player->skincolor - 1)*2];
-		actor->frame += (15 - Color_Opposite[(actor->target->player->skincolor - 1)*2 + 1]);
+		actor->color = Color_Opposite[actor->target->player->skincolor - 1][0];
+		actor->frame += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
 	}
 
 	if (skin->sprites[SPR2_SIGN].numframes)
@@ -6153,6 +6205,9 @@ void A_RingExplode(mobj_t *actor)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2 == actor) // Don't explode yourself! Endless loop!
@@ -7279,7 +7334,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 	if (actor->info->missilestate) // spawn the pogo stick collision box
 	{
 		mobj_t *pogo = P_SpawnMobj(actor->x, actor->y, actor->z - mobjinfo[actor->info->missilestate].height, (mobjtype_t)actor->info->missilestate);
-		pogo->target = actor;
+		P_SetTarget(&pogo->target, actor);
 	}
 
 	actor->reactiontime = 1;
@@ -7851,6 +7906,9 @@ void A_Boss3Path(mobj_t *actor)
 			// the number
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 				if (mo2->type != MT_BOSS3WAYPOINT)
 					continue;
@@ -8243,6 +8301,9 @@ void A_FindTarget(mobj_t *actor)
 	// scan the thinkers
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)locvar1)
@@ -8305,6 +8366,9 @@ void A_FindTracer(mobj_t *actor)
 	// scan the thinkers
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)locvar1)
@@ -8889,6 +8953,9 @@ void A_RemoteAction(mobj_t *actor)
 		// scan the thinkers
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			mo2 = (mobj_t *)th;
 
 			if (mo2->type == (mobjtype_t)locvar1)
@@ -9152,6 +9219,9 @@ void A_SetObjectTypeState(mobj_t *actor)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)loc2lw)
@@ -9787,6 +9857,9 @@ void A_CheckThingCount(mobj_t *actor)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)loc1up)
@@ -11957,7 +12030,7 @@ void A_MineExplode(mobj_t *actor)
 	{
 #define dist 64
 		UINT8 i;
-		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_BOSSEXPLODE);
+		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_SONIC3KBOSSEXPLODE);
 		S_StartSound(actor, ((actor->eflags & MFE_UNDERWATER) ? sfx_s3k57 : sfx_s3k4e));
 		P_SpawnMobj(actor->x, actor->y, actor->z, type);
 		for (i = 0; i < 16; i++)
@@ -12290,6 +12363,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	//INT32 locvar2 = var2;
 	boolean avoidcenter;
 	UINT32 i;
+	UINT8 extrainfo = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Boss5FindWaypoint", actor))
 		return;
@@ -12299,16 +12373,34 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 
 	if (locvar1 == 2) // look for the boss waypoint
 	{
-		for (i = 0; i < nummapthings; i++)
+		thinker_t *th;
+		mobj_t *mo2;
+		P_SetTarget(&actor->tracer, NULL);
+		// Flee! Flee! Find a point to escape to! If none, just shoot upward!
+		// scan the thinkers to find the runaway point
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (!mapthings[i].mobj)
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
-			if (mapthings[i].mobj->type != MT_BOSSFLYPOINT)
+
+			mo2 = (mobj_t *)th;
+
+			if (mo2->type != MT_BOSSFLYPOINT)
 				continue;
-			P_SetTarget(&actor->tracer, mapthings[i].mobj);
-			break;
+
+			if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
+				continue;
+
+			// If this one's further then the last one, don't go for it.
+			if (actor->tracer &&
+				P_AproxDistance(P_AproxDistance(actor->x - mo2->x, actor->y - mo2->y), actor->z - mo2->z) >
+				P_AproxDistance(P_AproxDistance(actor->x - actor->tracer->x, actor->y - actor->tracer->y), actor->z - actor->tracer->z))
+					continue;
+
+			// Otherwise... Do!
+			P_SetTarget(&actor->tracer, mo2);
 		}
-		if (i == nummapthings)
+		if (!actor->tracer)
 			return; // no boss flypoints found
 	}
 	else if (locvar1 == 1) // always go to ambush-marked waypoint
@@ -12322,11 +12414,13 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 				continue;
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
-			if (mapthings[i].options & MTF_AMBUSH)
-			{
-				P_SetTarget(&actor->tracer, mapthings[i].mobj);
-				break;
-			}
+			if (mapthings[i].extrainfo != extrainfo)
+				continue;
+			if (!(mapthings[i].options & MTF_AMBUSH))
+				continue;
+
+			P_SetTarget(&actor->tracer, mapthings[i].mobj);
+			break;
 		}
 
 		if (i == nummapthings)
@@ -12349,6 +12443,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].extrainfo != extrainfo)
 				continue;
 			if (mapthings[i].options & MTF_AMBUSH)
 			{
@@ -12404,6 +12500,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].extrainfo != extrainfo)
 				continue;
 			if (mapthings[i].options & MTF_AMBUSH)
 			{
@@ -13077,9 +13175,10 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 		if (barrel->target == nearby)
 		{
 			mobj_t *tar = barrel->target; // temporarily store barrel's target
-			barrel->target = NULL;
+			P_SetTarget(&barrel->target, NULL);
 			P_DamageMobj(nearby, barrel, NULL, 1, 0);
-			barrel->target = tar;
+			if (!P_MobjWasRemoved(barrel))
+				P_SetTarget(&barrel->target, tar);
 		}
 		else
 		{
@@ -13590,7 +13689,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	door->extravalue2 = 0;
 
 	// Origin door
-	door->tracer = actor;
+	P_SetTarget(&door->tracer, actor);
 
 	//Back
 	door = P_SpawnMobj(x - c*d, y - s*d, z, MT_SALOONDOOR);
@@ -13603,7 +13702,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	door->extravalue2 = 0;
 
 	// Origin door
-	door->tracer = actor;
+	P_SetTarget(&door->tracer, actor);
 }
 
 // Function: A_MinecartSparkThink
@@ -13642,4 +13741,25 @@ void A_MinecartSparkThink(mobj_t *actor)
 		P_SetScale(trail, trail->scale/4);
 		trail->destscale = trail->scale;
 	}
+}
+
+// Function: A_ModuloToState
+//
+// Description: Modulo operation to state
+//
+// var1 = Modulo
+// var2 = State
+//
+void A_ModuloToState(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ModuloToState", actor))
+		return;
+#endif
+
+	if ((modulothing % locvar1 == 0))
+		P_SetMobjState(actor, (locvar2));
+	modulothing++;
 }

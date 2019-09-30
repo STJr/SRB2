@@ -352,77 +352,79 @@ const char *Color_Names[MAXSKINCOLORS + NUMSUPERCOLORS] =
 A word of warning: If the following array is non-symmetrical,
 A_SignPlayer's prefoppositecolor behaviour will break.
 */
-const UINT8 Color_Opposite[(MAXSKINCOLORS - 1)*2] =
+// [0] = opposite skin color,
+// [1] = shade index used by signpost, 0-15 (actual sprite frame is 15 minus this value)
+const UINT8 Color_Opposite[MAXSKINCOLORS - 1][2] =
 {
-	// SKINCOLOR_NONE,8,   	// SKINCOLOR_NONE
+	// {SKINCOLOR_NONE, 8}, // SKINCOLOR_NONE
 
 	// Greyscale ranges
-	SKINCOLOR_BLACK,5,		// SKINCOLOR_WHITE,
-	SKINCOLOR_JET,7,     	// SKINCOLOR_BONE,
-	SKINCOLOR_CARBON,7,     // SKINCOLOR_CLOUDY,
-	SKINCOLOR_AETHER,12,    // SKINCOLOR_GREY,
-	SKINCOLOR_SLATE,12,    	// SKINCOLOR_SILVER,
-	SKINCOLOR_CLOUDY,7,     // SKINCOLOR_CARBON,
-	SKINCOLOR_BONE,7,     	// SKINCOLOR_JET,
-	SKINCOLOR_WHITE,7,     	// SKINCOLOR_BLACK,
+	{SKINCOLOR_BLACK,   5}, // SKINCOLOR_WHITE,
+	{SKINCOLOR_JET,     7}, // SKINCOLOR_BONE,
+	{SKINCOLOR_CARBON,  7}, // SKINCOLOR_CLOUDY,
+	{SKINCOLOR_AETHER, 12}, // SKINCOLOR_GREY,
+	{SKINCOLOR_SLATE,  12}, // SKINCOLOR_SILVER,
+	{SKINCOLOR_CLOUDY,  7}, // SKINCOLOR_CARBON,
+	{SKINCOLOR_BONE,    7}, // SKINCOLOR_JET,
+	{SKINCOLOR_WHITE,   7}, // SKINCOLOR_BLACK,
 
 	// Desaturated
-	SKINCOLOR_GREY,15,		// SKINCOLOR_AETHER,
-	SKINCOLOR_SILVER,12,	// SKINCOLOR_SLATE,
-	SKINCOLOR_AZURE,9,		// SKINCOLOR_PINK,
-	SKINCOLOR_RUST,7,		// SKINCOLOR_YOGURT,
-	SKINCOLOR_TAN,2,		// SKINCOLOR_BROWN,
-	SKINCOLOR_BROWN,12,		// SKINCOLOR_TAN,
-	SKINCOLOR_MOSS,5,     	// SKINCOLOR_BEIGE,
-	SKINCOLOR_BEIGE,13,		// SKINCOLOR_MOSS,
-	SKINCOLOR_PINK,5,		// SKINCOLOR_AZURE,
-	SKINCOLOR_GOLD,4,		// SKINCOLOR_LAVENDER,
+	{SKINCOLOR_GREY,   15}, // SKINCOLOR_AETHER,
+	{SKINCOLOR_SILVER, 12}, // SKINCOLOR_SLATE,
+	{SKINCOLOR_AZURE,   9}, // SKINCOLOR_PINK,
+	{SKINCOLOR_RUST,    7}, // SKINCOLOR_YOGURT,
+	{SKINCOLOR_TAN,     2}, // SKINCOLOR_BROWN,
+	{SKINCOLOR_BROWN,  12}, // SKINCOLOR_TAN,
+	{SKINCOLOR_MOSS,    5}, // SKINCOLOR_BEIGE,
+	{SKINCOLOR_BEIGE,  13}, // SKINCOLOR_MOSS,
+	{SKINCOLOR_PINK,    5}, // SKINCOLOR_AZURE,
+	{SKINCOLOR_GOLD,    4}, // SKINCOLOR_LAVENDER,
 
 	// Viv's vivid colours (toast 21/07/17)
-	SKINCOLOR_EMERALD,10,	// SKINCOLOR_RUBY,
-	SKINCOLOR_FOREST,6,		// SKINCOLOR_SALMON,
-	SKINCOLOR_GREEN,10,		// SKINCOLOR_RED,
-	SKINCOLOR_ICY,10,		// SKINCOLOR_CRIMSON,
-	SKINCOLOR_PURPLE,8,		// SKINCOLOR_FLAME,
-	SKINCOLOR_TEAL,7,		// SKINCOLOR_PEACHY,
-	SKINCOLOR_WAVE,5,		// SKINCOLOR_QUAIL,
-	SKINCOLOR_SAPPHIRE,5,	// SKINCOLOR_SUNSET,
-	SKINCOLOR_CYAN,4,		// SKINCOLOR_APRICOT,
-	SKINCOLOR_BLUE,4,		// SKINCOLOR_ORANGE,
-	SKINCOLOR_YOGURT,8,		// SKINCOLOR_RUST,
-	SKINCOLOR_LAVENDER,10,	// SKINCOLOR_GOLD,
-	SKINCOLOR_SKY,8,		// SKINCOLOR_SANDY,
-	SKINCOLOR_CORNFLOWER,8,	// SKINCOLOR_YELLOW,
-	SKINCOLOR_DUSK,3,		// SKINCOLOR_OLIVE,
-	SKINCOLOR_MAGENTA,9,	// SKINCOLOR_LIME,
-	SKINCOLOR_COBALT,2,		// SKINCOLOR_PERIDOT,
-	SKINCOLOR_RED,6,		// SKINCOLOR_GREEN,
-	SKINCOLOR_SALMON,9,		// SKINCOLOR_FOREST,
-	SKINCOLOR_RUBY,4,     	// SKINCOLOR_EMERALD,
-	SKINCOLOR_VIOLET,5,		// SKINCOLOR_MINT,
-	SKINCOLOR_PLUM,6,		// SKINCOLOR_SEAFOAM,
-	SKINCOLOR_ROSY,7,		// SKINCOLOR_AQUA,
-	SKINCOLOR_PEACHY,7,		// SKINCOLOR_TEAL,
-	SKINCOLOR_QUAIL,5,		// SKINCOLOR_WAVE,
-	SKINCOLOR_APRICOT,6,	// SKINCOLOR_CYAN,
-	SKINCOLOR_SANDY,1,		// SKINCOLOR_SKY,
-	SKINCOLOR_NEON,4,		// SKINCOLOR_CERULEAN,
-	SKINCOLOR_CRIMSON,0,	// SKINCOLOR_ICY,
-	SKINCOLOR_SUNSET,5,     // SKINCOLOR_SAPPHIRE,
-	SKINCOLOR_YELLOW,4,		// SKINCOLOR_CORNFLOWER,
-	SKINCOLOR_ORANGE,5,     // SKINCOLOR_BLUE,
-	SKINCOLOR_PERIDOT,5,	// SKINCOLOR_COBALT,
-	SKINCOLOR_LILAC,4,		// SKINCOLOR_VAPOR,
-	SKINCOLOR_OLIVE,0,		// SKINCOLOR_DUSK,
-	SKINCOLOR_BUBBLEGUM,9,	// SKINCOLOR_PASTEL,
-	SKINCOLOR_FLAME,7,		// SKINCOLOR_PURPLE,
-	SKINCOLOR_PASTEL,8,		// SKINCOLOR_BUBBLEGUM,
-	SKINCOLOR_LIME,6,		// SKINCOLOR_MAGENTA,
-	SKINCOLOR_CERULEAN,2,	// SKINCOLOR_NEON,
-	SKINCOLOR_MINT,6,		// SKINCOLOR_VIOLET,
-	SKINCOLOR_VAPOR,4,		// SKINCOLOR_LILAC,
-	SKINCOLOR_MINT,7,		// SKINCOLOR_PLUM,
-	SKINCOLOR_AQUA,1		// SKINCOLOR_ROSY,
+	{SKINCOLOR_EMERALD,   10}, // SKINCOLOR_RUBY,
+	{SKINCOLOR_FOREST,     6}, // SKINCOLOR_SALMON,
+	{SKINCOLOR_GREEN,     10}, // SKINCOLOR_RED,
+	{SKINCOLOR_ICY,       10}, // SKINCOLOR_CRIMSON,
+	{SKINCOLOR_PURPLE,     8}, // SKINCOLOR_FLAME,
+	{SKINCOLOR_TEAL,       7}, // SKINCOLOR_PEACHY,
+	{SKINCOLOR_WAVE,       5}, // SKINCOLOR_QUAIL,
+	{SKINCOLOR_SAPPHIRE,   5}, // SKINCOLOR_SUNSET,
+	{SKINCOLOR_CYAN,       4}, // SKINCOLOR_APRICOT,
+	{SKINCOLOR_BLUE,       4}, // SKINCOLOR_ORANGE,
+	{SKINCOLOR_YOGURT,     8}, // SKINCOLOR_RUST,
+	{SKINCOLOR_LAVENDER,  10}, // SKINCOLOR_GOLD,
+	{SKINCOLOR_SKY,        8}, // SKINCOLOR_SANDY,
+	{SKINCOLOR_CORNFLOWER, 8}, // SKINCOLOR_YELLOW,
+	{SKINCOLOR_DUSK,       3}, // SKINCOLOR_OLIVE,
+	{SKINCOLOR_MAGENTA,    9}, // SKINCOLOR_LIME,
+	{SKINCOLOR_COBALT,     2}, // SKINCOLOR_PERIDOT,
+	{SKINCOLOR_RED,        6}, // SKINCOLOR_GREEN,
+	{SKINCOLOR_SALMON,     9}, // SKINCOLOR_FOREST,
+	{SKINCOLOR_RUBY,       4}, // SKINCOLOR_EMERALD,
+	{SKINCOLOR_VIOLET,     5}, // SKINCOLOR_MINT,
+	{SKINCOLOR_PLUM,       6}, // SKINCOLOR_SEAFOAM,
+	{SKINCOLOR_ROSY,       7}, // SKINCOLOR_AQUA,
+	{SKINCOLOR_PEACHY,     7}, // SKINCOLOR_TEAL,
+	{SKINCOLOR_QUAIL,      5}, // SKINCOLOR_WAVE,
+	{SKINCOLOR_APRICOT,    6}, // SKINCOLOR_CYAN,
+	{SKINCOLOR_SANDY,      1}, // SKINCOLOR_SKY,
+	{SKINCOLOR_NEON,       4}, // SKINCOLOR_CERULEAN,
+	{SKINCOLOR_CRIMSON,    0}, // SKINCOLOR_ICY,
+	{SKINCOLOR_SUNSET,     5}, // SKINCOLOR_SAPPHIRE,
+	{SKINCOLOR_YELLOW,     4}, // SKINCOLOR_CORNFLOWER,
+	{SKINCOLOR_ORANGE,     5}, // SKINCOLOR_BLUE,
+	{SKINCOLOR_PERIDOT,    5}, // SKINCOLOR_COBALT,
+	{SKINCOLOR_LILAC,      4}, // SKINCOLOR_VAPOR,
+	{SKINCOLOR_OLIVE,      0}, // SKINCOLOR_DUSK,
+	{SKINCOLOR_BUBBLEGUM,  9}, // SKINCOLOR_PASTEL,
+	{SKINCOLOR_FLAME,      7}, // SKINCOLOR_PURPLE,
+	{SKINCOLOR_PASTEL,     8}, // SKINCOLOR_BUBBLEGUM,
+	{SKINCOLOR_LIME,       6}, // SKINCOLOR_MAGENTA,
+	{SKINCOLOR_CERULEAN,   2}, // SKINCOLOR_NEON,
+	{SKINCOLOR_MINT,       6}, // SKINCOLOR_VIOLET,
+	{SKINCOLOR_VAPOR,      4}, // SKINCOLOR_LILAC,
+	{SKINCOLOR_MINT,       7}, // SKINCOLOR_PLUM,
+	{SKINCOLOR_AQUA,       1}  // SKINCOLOR_ROSY,
 };
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
@@ -521,33 +523,49 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 	INT32 i, starttranscolor, skinramplength;
 
 	// Handle a couple of simple special cases
-	if (skinnum == TC_BOSS
-		|| skinnum == TC_ALLWHITE
-		|| skinnum == TC_METALSONIC
-		|| skinnum == TC_BLINK
-		|| color == SKINCOLOR_NONE)
+	if (skinnum < TC_DEFAULT)
 	{
-		if (skinnum == TC_ALLWHITE)
-			memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8));
-		else if (skinnum == TC_BLINK && color != SKINCOLOR_NONE)
-			memset(dest_colormap, Color_Index[color-1][3], NUM_PALETTE_ENTRIES * sizeof(UINT8));
-		else
+		switch (skinnum)
 		{
-			for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
-				dest_colormap[i] = (UINT8)i;
+			case TC_ALLWHITE:
+				memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8));
+				return;
+			case TC_RAINBOW:
+				if (color >= MAXTRANSLATIONS)
+					I_Error("Invalid skin color #%hu.", (UINT16)color);
+				if (color != SKINCOLOR_NONE)
+				{
+					R_RainbowColormap(dest_colormap, color);
+					return;
+				}
+				break;
+			case TC_BLINK:
+				if (color >= MAXTRANSLATIONS)
+					I_Error("Invalid skin color #%hu.", (UINT16)color);
+				if (color != SKINCOLOR_NONE)
+				{
+					memset(dest_colormap, Color_Index[color-1][3], NUM_PALETTE_ENTRIES * sizeof(UINT8));
+					return;
+				}
+				break;
+			default:
+				break;
 		}
+
+		for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+			dest_colormap[i] = (UINT8)i;
 
 		// White!
 		if (skinnum == TC_BOSS)
 			dest_colormap[31] = 0;
 		else if (skinnum == TC_METALSONIC)
 			dest_colormap[159] = 0;
-
 		return;
 	}
-	else if (skinnum == TC_RAINBOW)
+	else if (color == SKINCOLOR_NONE)
 	{
-		R_RainbowColormap(dest_colormap, color);
+		for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+			dest_colormap[i] = (UINT8)i;
 		return;
 	}
 
@@ -555,6 +573,9 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		I_Error("Invalid skin color #%hu.", (UINT16)color);
 
 	starttranscolor = (skinnum != TC_DEFAULT) ? skins[skinnum].starttranscolor : DEFAULT_STARTTRANSCOLOR;
+
+	if (starttranscolor >= NUM_PALETTE_ENTRIES)
+		I_Error("Invalid startcolor #%d.", starttranscolor);
 
 	// Fill in the entries of the palette that are fixed
 	for (i = 0; i < starttranscolor; i++)
@@ -568,7 +589,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		skinramplength = 16;
 	}
 	else
-		skinramplength = i - NUM_PALETTE_ENTRIES;
+		skinramplength = i - NUM_PALETTE_ENTRIES; // shouldn't this be NUM_PALETTE_ENTRIES - starttranscolor?
 
 	// Build the translated ramp
 	for (i = 0; i < skinramplength; i++)
@@ -590,13 +611,16 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolors_t color, UINT8 flags)
 	INT32 skintableindex;
 
 	// Adjust if we want the default colormap
-	if (skinnum == TC_DEFAULT) skintableindex = DEFAULT_TT_CACHE_INDEX;
-	else if (skinnum == TC_BOSS) skintableindex = BOSS_TT_CACHE_INDEX;
-	else if (skinnum == TC_METALSONIC) skintableindex = METALSONIC_TT_CACHE_INDEX;
-	else if (skinnum == TC_ALLWHITE) skintableindex = ALLWHITE_TT_CACHE_INDEX;
-	else if (skinnum == TC_RAINBOW) skintableindex = RAINBOW_TT_CACHE_INDEX;
-	else if (skinnum == TC_BLINK) skintableindex = BLINK_TT_CACHE_INDEX;
-	else skintableindex = skinnum;
+	switch (skinnum)
+	{
+		case TC_DEFAULT:    skintableindex = DEFAULT_TT_CACHE_INDEX; break;
+		case TC_BOSS:       skintableindex = BOSS_TT_CACHE_INDEX; break;
+		case TC_METALSONIC: skintableindex = METALSONIC_TT_CACHE_INDEX; break;
+		case TC_ALLWHITE:   skintableindex = ALLWHITE_TT_CACHE_INDEX; break;
+		case TC_RAINBOW:    skintableindex = RAINBOW_TT_CACHE_INDEX; break;
+		case TC_BLINK:      skintableindex = BLINK_TT_CACHE_INDEX; break;
+		     default:       skintableindex = skinnum; break;
+	}
 
 	if (flags & GTC_CACHE)
 	{

@@ -292,6 +292,9 @@ menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
+#ifdef HAVE_MIXERX
+menu_t OP_SoundAdvancedDef;
+#endif
 
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
@@ -1302,14 +1305,41 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 73}, // 36
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 83}, // 41
 
-	{IT_HEADER, NULL, "Advanced", NULL, 103}, // 50
+	{IT_HEADER, NULL, "Accessibility", NULL, 103}, // 50
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
+	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 125}, // 62
 
-#ifdef HAVE_OPENMPT
-	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 133},
-	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 145}
+#ifdef HAVE_MIXERX
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 143},
 #endif
 };
+
+#ifdef HAVE_MIXERX
+
+#ifdef HAVE_OPENMPT
+#define OPENMPT_MENUOFFSET 32
+#else
+#define OPENMPT_MENUOFFSET 0
+#endif
+
+static menuitem_t OP_SoundAdvancedMenu[] =
+{
+#ifdef HAVE_OPENMPT
+	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 10},
+	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 22},
+#endif
+
+#ifdef HAVE_MIXERX
+	{IT_HEADER, NULL, "MIDI Settings", NULL, OPENMPT_MENUOFFSET+10},
+	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+22},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+34},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61}
+#endif
+};
+
+#undef OPENMPT_MENUOFFSET
+
+#endif
 
 static menuitem_t OP_DataOptionsMenu[] =
 {
@@ -1896,6 +1926,9 @@ menu_t OP_SoundOptionsDef =
 	0,
 	NULL
 };
+#ifdef HAVE_MIXERX
+menu_t OP_SoundAdvancedDef = DEFAULTMENUSTYLE(MN_OP_MAIN + (MN_OP_SOUND << 6), "M_SOUND", OP_SoundAdvancedMenu, &OP_SoundOptionsDef, 30, 30);
+#endif
 
 menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_SERVER << 6),
@@ -2288,21 +2321,24 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 	(void)retval;
 	(void)fromoldest;
 
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
+
 	if (menupres[menutype].bgcolor >= 0)
 	{
 		curbgcolor = menupres[menutype].bgcolor;
 		return true;
 	}
-	else if (menupres[menutype].bgname[0] && (!menupres[menutype].bghide || !titlemapinaction))
-	{
-		strncpy(curbgname, menupres[menutype].bgname, 8);
-		curbgxspeed = menupres[menutype].titlescrollxspeed != INT32_MAX ? menupres[menutype].titlescrollxspeed : titlescrollxspeed;
-		curbgyspeed = menupres[menutype].titlescrollyspeed != INT32_MAX ? menupres[menutype].titlescrollyspeed : titlescrollyspeed;
-		return true;
-	}
 	else if (menupres[menutype].bghide && titlemapinaction) // hide the background
 	{
 		curbghide = true;
+		return true;
+	}
+	else if (menupres[menutype].bgname[0])
+	{
+		strncpy(curbgname, menupres[menutype].bgname, 9);
+		curbgxspeed = menupres[menutype].titlescrollxspeed != INT32_MAX ? menupres[menutype].titlescrollxspeed : titlescrollxspeed;
+		curbgyspeed = menupres[menutype].titlescrollyspeed != INT32_MAX ? menupres[menutype].titlescrollyspeed : titlescrollyspeed;
 		return true;
 	}
 	else if (!level)
@@ -2313,7 +2349,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 			curbghide = true;
 		else
 		{
-			strncpy(curbgname, defaultname, 8);
+			strncpy(curbgname, defaultname, 9);
 			curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
 			curbgyspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollyspeed;
 		}
@@ -2327,6 +2363,9 @@ static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void
 
 	(void)retval;
 	(void)fromoldest;
+
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
 
 	if (menupres[menutype].musname[0])
 	{
@@ -2352,6 +2391,9 @@ static boolean MIT_SetCurFadeValue(UINT32 menutype, INT32 level, INT32 *retval, 
 	(void)retval;
 	(void)fromoldest;
 
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
+
 	if (menupres[menutype].fadestrength >= 0)
 	{
 		curfadevalue = (menupres[menutype].fadestrength % 32);
@@ -2367,6 +2409,9 @@ static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retv
 	(void)input;
 	(void)retval;
 	(void)fromoldest;
+
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
 
 	if (menupres[menutype].hidetitlepics >= 0)
 	{
@@ -2463,13 +2508,13 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	activeMenuId = newMenu ? newMenu->menuid : 0;
 
 	// Set defaults for presentation values
-	strncpy(curbgname, "TITLESKY", 8);
+	strncpy(curbgname, "TITLESKY", 9);
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
 	curbgxspeed = titlescrollxspeed;
 	curbgyspeed = titlescrollyspeed;
-	curbghide = true;
+	curbghide = (gamestate != GS_TIMEATTACK); // show in time attack, hide in other menus
 
 	// don't do the below during the in-game menus
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
@@ -2798,8 +2843,8 @@ boolean M_Responder(event_t *ev)
 	void (*routine)(INT32 choice); // for some casting problem
 
 	if (dedicated || (demoplayback && titledemo)
-	|| gamestate == GS_INTRO || gamestate == GS_CUTSCENE || gamestate == GS_GAMEEND
-	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
+	|| gamestate == GS_INTRO || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
+	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_GAMEEND)
 		return false;
 
 	if (noFurtherInput)
@@ -3499,6 +3544,7 @@ void M_InitCharacterTables(void)
 		strcpy(description[i].picname, "");
 		strcpy(description[i].skinname, "");
 		description[i].prev = description[i].next = 0;
+		description[i].pic = NULL;
 	}
 }
 
@@ -6934,8 +6980,8 @@ static void M_DrawLoadGameData(void)
 					col = 134;
 				else
 				{
-					col = (charskin->prefcolor - 1)*2;
-					col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
+					col = charskin->prefcolor - 1;
+					col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
 				}
 
 				V_DrawFill(x+6, y+64, 72, 50, col);
@@ -7545,8 +7591,19 @@ static void M_SetupChoosePlayer(INT32 choice)
 				if (i == char_on)
 					allowed = true;
 
-				if (description[i].picname[0] == '\0')
-					strncpy(description[i].picname, skins[skinnum].charsel, 8);
+				if (!(description[i].picname[0]))
+				{
+					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 2)
+					{
+						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+						spriteframe_t *sprframe = &sprdef->spriteframes[1];
+						description[i].pic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+					}
+					else
+						description[i].pic = W_CachePatchName("MISSING", PU_CACHE);
+				}
+				else
+					description[i].pic = W_CachePatchName(description[i].picname, PU_CACHE);
 			}
 			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 			Z_Free(name);
@@ -7700,7 +7757,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		// Draw prev character if it's visible and its number isn't greater than the current one or there's more than two
 		if (o < 32)
 		{
-			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
+			patch = description[prev].pic;
 			if (SHORT(patch->width) >= 256)
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 64 - 2*o);
 			else
@@ -7711,7 +7768,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		// Draw next character if it's visible and its number isn't less than the current one or there's more than two
 		if (o < 128) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
 		{
-			patch = W_CachePatchName(description[next].picname, PU_CACHE);
+			patch = description[next].pic;
 			if (SHORT(patch->width) >= 256)
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), 2*o);
 			else
@@ -7720,7 +7777,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 	}
 
-	patch = W_CachePatchName(description[i].picname, PU_CACHE);
+	patch = description[i].pic;
 	if (o >= 0 && o <= 32)
 	{
 		if (SHORT(patch->width) >= 256)
@@ -8112,9 +8169,16 @@ void M_DrawTimeAttackMenu(void)
 	V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 
 	// Character face!
-	if (W_CheckNumForName(skins[cv_chooseskin.value-1].charsel) != LUMPERROR)
 	{
-		PictureOfUrFace = W_CachePatchName(skins[cv_chooseskin.value-1].charsel, PU_CACHE);
+		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes >= 2)
+		{
+			spritedef_t *sprdef = &skins[cv_chooseskin.value-1].sprites[SPR2_XTRA];
+			spriteframe_t *sprframe = &sprdef->spriteframes[1];
+			PictureOfUrFace = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+		}
+		else
+			PictureOfUrFace = W_CachePatchName("MISSING", PU_CACHE);
+
 		if (PictureOfUrFace->width >= 256)
 			V_DrawTinyScaledPatch(224, 120, 0, PictureOfUrFace);
 		else
@@ -8234,6 +8298,7 @@ static void M_TimeAttack(INT32 choice)
 	M_PatchSkinNameTable();
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
+	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	M_SetupNextMenu(&SP_TimeAttackDef);
 	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
@@ -8415,6 +8480,7 @@ static void M_NightsAttack(INT32 choice)
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	M_SetupNextMenu(&SP_NightsAttackDef);
+	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
 	else

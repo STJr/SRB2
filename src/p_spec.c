@@ -2260,7 +2260,7 @@ void P_SwitchWeather(INT32 weathernum)
 		thinker_t *think;
 		precipmobj_t *precipmobj;
 
-		for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
+		for (think = thlist[THINK_PRECIP].next; think != &thlist[THINK_PRECIP]; think = think->next)
 		{
 			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
@@ -2276,7 +2276,7 @@ void P_SwitchWeather(INT32 weathernum)
 		precipmobj_t *precipmobj;
 		state_t *st;
 
-		for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
+		for (think = thlist[THINK_PRECIP].next; think != &thlist[THINK_PRECIP]; think = think->next)
 		{
 			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
@@ -3096,7 +3096,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 432: // Enable 2D Mode (Disable if noclimb)
-			if (mo->player)
+			if (mo && mo->player)
 			{
 				if (line->flags & ML_NOCLIMB)
 					mo->flags2 &= ~MF2_TWOD;
@@ -3122,7 +3122,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 434: // Custom Power
-			if (mo->player)
+			if (mo && mo->player)
 			{
 				mobj_t *dummy = P_SpawnMobj(mo->x, mo->y, mo->z, MT_NULL);
 
@@ -3205,7 +3205,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 437: // Disable Player Controls
-			if (mo->player)
+			if (mo && mo->player)
 			{
 				UINT16 fractime = (UINT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 				if (fractime < 1)
@@ -3553,6 +3553,29 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						((line->flags & ML_BLOCKMONSTERS) ? "yes" : "no"));
 			}
 			break;
+
+		case 449: // Enable bosses with parameter
+		{
+			INT32 bossid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
+			if (bossid & ~15) // if any bits other than first 16 are set
+			{
+				CONS_Alert(CONS_WARNING,
+					M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
+					line->tag);
+				break;
+			}
+			if (line->flags & ML_NOCLIMB)
+			{
+				bossdisabled |= (1<<bossid);
+				CONS_Debug(DBG_GAMELOGIC, "Line type 449 Executor: bossid disabled = %d", bossid);
+			}
+			else
+			{
+				bossdisabled &= ~(1<<bossid);
+				CONS_Debug(DBG_GAMELOGIC, "Line type 449 Executor: bossid enabled = %d", bossid);
+			}
+			break;
+		}
 
 		case 450: // Execute Linedef Executor - for recursion
 			P_LinedefExecute(line->tag, mo, NULL);
@@ -3918,6 +3941,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 460: // Award rings
+			{
+				INT16 rings = (sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				INT32 delay = (sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				if (mo && mo->player)
+				{
+					if (delay <= 0 || !(leveltime % delay))
+						P_GivePlayerRings(mo->player, rings);
+				}
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
@@ -3992,6 +4027,9 @@ void P_SetupSignExit(player_t *player)
 	// spin all signposts in the level then.
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		thing = (mobj_t *)think;
 		if (thing->type != MT_SIGN)
 			continue;
@@ -4017,19 +4055,17 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 {
 	thinker_t *think;
 	mobj_t *mo;
-	INT32 specialnum = 0;
+	INT32 specialnum = (flag == MT_REDFLAG) ? 3 : 4;
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo = (mobj_t *)think;
 
 		if (mo->type != flag)
 			continue;
-
-		if (mo->type == MT_REDFLAG)
-			specialnum = 3;
-		else if (mo->type == MT_BLUEFLAG)
-			specialnum = 4;
 
 		if (GETSECSPECIAL(mo->subsector->sector->special, 4) == specialnum)
 			return true;
@@ -4045,9 +4081,11 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 				if (GETSECSPECIAL(rover->master->frontsector->special, 4) != specialnum)
 					continue;
 
-				if (mo->z <= P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector)
-					&& mo->z >= P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
-					return true;
+				if (!(mo->z <= P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector)
+					&& mo->z >= P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector)))
+					continue;
+
+				return true;
 			}
 		}
 	}
@@ -4451,9 +4489,12 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			// The chimps are my friends.. heeheeheheehehee..... - LouisJM
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
 				mo2 = (mobj_t *)th;
-				if (mo2->type == MT_EGGTRAP)
-					P_KillMobj(mo2, NULL, player->mo, 0);
+				if (mo2->type != MT_EGGTRAP)
+					continue;
+				P_KillMobj(mo2, NULL, player->mo, 0);
 			}
 
 			// clear the special so you can't push the button twice.
@@ -4595,7 +4636,10 @@ DoneSection2:
 			if (player->bot)
 				break;
 			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
+			{
 				player->nightstime = 6; // Just let P_Ticker take care of the rest.
+				return;
+			}
 
 			// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
 			{
@@ -4618,7 +4662,7 @@ DoneSection2:
 						nextmapoverride = (INT16)(lines[lineindex].frontsector->floorheight>>FRACBITS);
 
 					if (lines[lineindex].flags & ML_NOCLIMB)
-						skipstats = true;
+						skipstats = 1;
 				}
 			}
 			break;
@@ -4754,14 +4798,20 @@ DoneSection2:
 				// to find the first waypoint
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 
-					if (mo2->type == MT_TUBEWAYPOINT && mo2->threshold == sequence
-						&& mo2->health == 0)
-					{
-						waypoint = mo2;
-						break;
-					}
+					if (mo2->type != MT_TUBEWAYPOINT)
+						continue;
+					if (mo2->threshold != sequence)
+						continue;
+					if (mo2->health != 0)
+						continue;
+
+					waypoint = mo2;
+					break;
 				}
 
 				if (!waypoint)
@@ -4830,15 +4880,20 @@ DoneSection2:
 				// to find the last waypoint
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 
-					if (mo2->type == MT_TUBEWAYPOINT && mo2->threshold == sequence)
-					{
-						if (!waypoint)
-							waypoint = mo2;
-						else if (mo2->health > waypoint->health)
-							waypoint = mo2;
-					}
+					if (mo2->type != MT_TUBEWAYPOINT)
+						continue;
+					if (mo2->threshold != sequence)
+						continue;
+
+					if (!waypoint)
+						waypoint = mo2;
+					else if (mo2->health > waypoint->health)
+						waypoint = mo2;
 				}
 
 				if (!waypoint)
@@ -4979,6 +5034,9 @@ DoneSection2:
 				// to find the first waypoint
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_TUBEWAYPOINT)
@@ -5014,6 +5072,9 @@ DoneSection2:
 				// Find waypoint before this one (waypointlow)
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_TUBEWAYPOINT)
@@ -5038,6 +5099,9 @@ DoneSection2:
 				// Find waypoint after this one (waypointhigh)
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_TUBEWAYPOINT)
@@ -6375,6 +6439,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	// but currently isn't.
 	(void)fromnetsave;
 
+	// yep, we do this here - "bossdisabled" is considered an apparatus of specials.
+	bossdisabled = 0;
+
 	// Init special SECTORs.
 	sector = sectors;
 	for (i = 0; i < numsectors; i++, sector++)
@@ -7262,6 +7329,24 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 430:
 			case 431:
 				break;
+
+			case 449: // Enable bosses with parameter
+			{
+				INT32 bossid = sides[*lines[i].sidenum].textureoffset>>FRACBITS;
+				if (bossid & ~15) // if any bits other than first 16 are set
+				{
+					CONS_Alert(CONS_WARNING,
+						M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
+						lines[i].tag);
+					break;
+				}
+				if (!(lines[i].flags & ML_NOCLIMB))
+				{
+					bossdisabled |= (1<<bossid); // gotta disable in the first place to enable
+					CONS_Debug(DBG_GAMELOGIC, "Line type 449 spawn effect: bossid disabled = %d", bossid);
+				}
+				break;
+			}
 
 			// 500 is used for a scroller
 			// 501 is used for a scroller

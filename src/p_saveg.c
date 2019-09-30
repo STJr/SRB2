@@ -2174,7 +2174,6 @@ static void P_NetArchiveThinkers(void)
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
 		UINT32 numsaved = 0;
-
 		// save off the current thinkers
 		for (th = thlist[i].next; th != &thlist[i]; th = th->next)
 		{
@@ -2405,12 +2404,12 @@ static void P_NetArchiveThinkers(void)
 			}
 #endif // ESLOPE
 #ifdef PARANOIA
-			else if (th->function.acv != P_RemoveThinkerDelayed) // wait garbage collection
+			else if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed) // wait garbage collection
 				I_Error("unknown thinker type %p", th->function.acp1);
 #endif
 		}
 
-		CONS_Debug(DBG_NETPLAY, "%u thinkers saved\n", numsaved);
+		CONS_Debug(DBG_NETPLAY, "%u thinkers saved in list %d\n", numsaved, i);
 
 		WRITEUINT8(save_p, tc_end);
 	}
@@ -2427,9 +2426,14 @@ mobj_t *P_FindNewPosition(UINT32 oldposition)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mobj = (mobj_t *)th;
-		if (mobj->mobjnum == oldposition)
-			return mobj;
+		if (mobj->mobjnum != oldposition)
+			continue;
+
+		return mobj;
 	}
 	CONS_Debug(DBG_GAMELOGIC, "mobj not found\n");
 	return NULL;
@@ -3404,7 +3408,7 @@ static void P_NetUnArchiveThinkers(void)
 	{
 		for (;;)
 		{
-			thinker_t* th;
+			thinker_t* th = NULL;
 			tclass = READUINT8(save_p);
 
 			if (tclass == tc_end)
@@ -3597,22 +3601,22 @@ static void P_NetUnArchiveThinkers(void)
 				P_AddThinker(i, th);
 		}
 
-		CONS_Debug(DBG_NETPLAY, "%u thinkers loaded\n", numloaded);
+		CONS_Debug(DBG_NETPLAY, "%u thinkers loaded in list %d\n", numloaded, i);
+	}
 
-		if (restoreNum)
+	if (restoreNum)
+	{
+		executor_t *delay = NULL;
+		UINT32 mobjnum;
+		for (currentthinker = thlist[i].next; currentthinker != &thlist[i];
+		currentthinker = currentthinker->next)
 		{
-			executor_t *delay = NULL;
-			UINT32 mobjnum;
-			for (currentthinker = thlist[i].next; currentthinker != &thlist[i];
-				currentthinker = currentthinker->next)
-			{
-				if (currentthinker->function.acp1 == (actionf_p1)T_ExecutorDelay)
-				{
-					delay = (void *)currentthinker;
-					if ((mobjnum = (UINT32)(size_t)delay->caller))
-						delay->caller = P_FindNewPosition(mobjnum);
-				}
-			}
+			if (currentthinker->function.acp1 != (actionf_p1)T_ExecutorDelay)
+				continue;
+			delay = (void *)currentthinker;
+			if (!(mobjnum = (UINT32)(size_t)delay->caller))
+				continue;
+			delay->caller = P_FindNewPosition(mobjnum);
 		}
 	}
 }
@@ -3723,6 +3727,9 @@ static inline void P_FinishMobjs(void)
 	for (currentthinker = thlist[THINK_MOBJ].next; currentthinker != &thlist[THINK_MOBJ];
 		currentthinker = currentthinker->next)
 	{
+		if (currentthinker->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mobj = (mobj_t *)currentthinker;
 		mobj->info = &mobjinfo[mobj->type];
 	}
@@ -3738,6 +3745,9 @@ static void P_RelinkPointers(void)
 	for (currentthinker = thlist[THINK_MOBJ].next; currentthinker != &thlist[THINK_MOBJ];
 		currentthinker = currentthinker->next)
 	{
+		if (currentthinker->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mobj = (mobj_t *)currentthinker;
 
 		if (mobj->type == MT_HOOP || mobj->type == MT_HOOPCOLLIDE || mobj->type == MT_HOOPCENTER)
@@ -3980,6 +3990,7 @@ static void P_NetArchiveMisc(void)
 	WRITEUINT32(save_p, leveltime);
 	WRITEUINT32(save_p, ssspheres);
 	WRITEINT16(save_p, lastmap);
+	WRITEUINT16(save_p, bossdisabled);
 
 	WRITEUINT16(save_p, emeralds);
 	WRITEUINT8(save_p, stagefailed);
@@ -3988,6 +3999,7 @@ static void P_NetArchiveMisc(void)
 	WRITEINT32(save_p, sstimer);
 	WRITEUINT32(save_p, bluescore);
 	WRITEUINT32(save_p, redscore);
+	WRITEINT32(save_p, modulothing);
 
 	WRITEINT16(save_p, autobalance);
 	WRITEINT16(save_p, teamscramble);
@@ -4057,6 +4069,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 	leveltime = READUINT32(save_p);
 	ssspheres = READUINT32(save_p);
 	lastmap = READINT16(save_p);
+	bossdisabled = READUINT16(save_p);
 
 	emeralds = READUINT16(save_p);
 	stagefailed = READUINT8(save_p);
@@ -4065,6 +4078,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 	sstimer = READINT32(save_p);
 	bluescore = READUINT32(save_p);
 	redscore = READUINT32(save_p);
+	modulothing = READINT32(save_p);
 
 	autobalance = READINT16(save_p);
 	teamscramble = READINT16(save_p);
@@ -4115,6 +4129,9 @@ void P_SaveNetGame(void)
 	// Assign the mobjnumber for pointer tracking
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mobj = (mobj_t *)th;
 		if (mobj->type == MT_HOOP || mobj->type == MT_HOOPCOLLIDE || mobj->type == MT_HOOPCENTER)
 			continue;

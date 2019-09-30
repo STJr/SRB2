@@ -173,15 +173,15 @@ static int lib_all7emeralds(lua_State *L)
 	return 1;
 }
 
-// Whee, special Lua-exclusive function for making use of Color_Opposite[] without needing *2 or +1
-// Returns both color and frame numbers!
+// Whee, special Lua-exclusive function for making use of Color_Opposite[]
+// Returns both color and signpost shade numbers!
 static int lib_coloropposite(lua_State *L)
 {
 	UINT8 colornum = (UINT8)luaL_checkinteger(L, 1);
-	if (colornum >= MAXSKINCOLORS)
-		return luaL_error(L, "skincolor %d out of range (0 - %d).", colornum, MAXSKINCOLORS-1);
-	lua_pushinteger(L, Color_Opposite[colornum*2]); // push color
-	lua_pushinteger(L, Color_Opposite[colornum*2+1]); // push frame
+	if (!colornum || colornum >= MAXSKINCOLORS)
+		return luaL_error(L, "skincolor %d out of range (1 - %d).", colornum, MAXSKINCOLORS-1);
+	lua_pushinteger(L, Color_Opposite[colornum-1][0]); // push color
+	lua_pushinteger(L, Color_Opposite[colornum-1][1]); // push sign shade index, 0-15
 	return 2;
 }
 

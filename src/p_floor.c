@@ -719,6 +719,8 @@ void T_ContinuousFalling(levelspecthink_t *faller)
 		}
 	}
 
+	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong
+
 	faller->sector->floorspeed = faller->speed*faller->direction;
 	faller->sector->ceilspeed = 42;
 	faller->sector->moved = true;
@@ -1975,22 +1977,27 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 	}
 	else // Not going anywhere, so look for players.
 	{
-		thinker_t *th;
-		mobj_t *mo;
-
 		if (!rover || (rover->flags & FF_EXISTS))
 		{
-			// scan the thinkers to find players!
-			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+			UINT8 i;
+			// scan the players to find victims!
+			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				mo = (mobj_t *)th;
-				if (mo->type == MT_PLAYER && mo->health && mo->player && !mo->player->spectator
-				    && mo->z <= thwomp->sector->ceilingheight
-					&& P_AproxDistance(thwompx - mo->x, thwompy - mo->y) <= 96*FRACUNIT)
-				{
-					thwomp->direction = -1;
-					break;
-				}
+				if (!playeringame[i])
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (!players[i].mo->health)
+					continue;
+				if (players[i].mo->z > thwomp->sector->ceilingheight)
+					continue;
+				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96 * FRACUNIT)
+					continue;
+
+				thwomp->direction = -1;
+				break;
 			}
 		}
 
@@ -3024,20 +3031,40 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 {
-	size_t i;
-	size_t leftmostvertex = 0, rightmostvertex = 0;
-	size_t topmostvertex = 0, bottommostvertex = 0;
-	fixed_t leftx, rightx;
-	fixed_t topy, bottomy;
-	fixed_t topz, bottomz;
-	fixed_t widthfactor = FRACUNIT, heightfactor = FRACUNIT;
-	fixed_t a, b, c;
-	mobjtype_t type = MT_ROCKCRUMBLE1;
-	fixed_t spacing = (32<<FRACBITS);
-	tic_t lifetime = 3*TICRATE;
-	INT16 flags = 0;
+	size_t i, leftmostvertex, rightmostvertex, topmostvertex, bottommostvertex;
+	fixed_t leftx, rightx, topy, bottomy, topz, bottomz, widthfactor, heightfactor, a, b, c, spacing;
+	mobjtype_t type;
+	tic_t lifetime;
+	INT16 flags;
 
-#define controlsec rover->master->frontsector
+	sector_t *controlsec = rover->master->frontsector;
+
+	if (sec == NULL)
+	{
+		if (controlsec->numattached)
+		{
+			for (i = 0; i < controlsec->numattached; i++)
+			{
+				sec = &sectors[controlsec->attached[i]];
+				if (!sec->ffloors)
+					continue;
+
+				for (rover = sec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master->frontsector == controlsec)
+						EV_CrumbleChain(sec, rover);
+				}
+			}
+		}
+		return;
+	}
+
+	leftmostvertex = rightmostvertex = topmostvertex = bottommostvertex = 0;
+	widthfactor = heightfactor = FRACUNIT;
+	spacing = (32<<FRACBITS);
+	type = MT_ROCKCRUMBLE1;
+	lifetime = 3*TICRATE;
+	flags = 0;
 
 	if (controlsec->tag != 0)
 	{

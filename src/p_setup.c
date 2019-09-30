@@ -102,6 +102,7 @@ line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
+UINT16 bossdisabled;
 boolean levelloading;
 UINT8 levelfadecol;
 
@@ -216,6 +217,10 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->muspos = 0;
 	mapheaderinfo[num]->musinterfadeout = 0;
 	mapheaderinfo[num]->musintername[0] = '\0';
+	mapheaderinfo[num]->muspostbossname[6] = 0;
+	mapheaderinfo[num]->muspostbosstrack = 0;
+	mapheaderinfo[num]->muspostbosspos = 0;
+	mapheaderinfo[num]->muspostbossfadein = 0;
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	mapheaderinfo[num]->weather = 0;
 	mapheaderinfo[num]->skynum = 1;
@@ -817,6 +822,9 @@ void P_ReloadRings(void)
 	// scan the thinkers to find rings/spheres/hoops to unset
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo = (mobj_t *)th;
 
 		if (mo->type == MT_HOOPCENTER)
@@ -856,12 +864,7 @@ void P_ReloadRings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings(mt,
-#ifdef MANIASPHERES
-				true);
-#else
-				!G_IsSpecialStage(gamemap)); // prevent flashing spheres in special stages
-#endif
+			P_SpawnHoopsAndRings(mt, true);
 		}
 	}
 	for (i = 0; i < numHoops; i++)
@@ -875,14 +878,12 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 	mobj_t *mo;
 	thinker_t *th;
 
-#ifndef MANIASPHERES
-	if (G_IsSpecialStage(gamemap)) // prevent flashing spheres in special stages
-		return;
-#endif
-
 	// scan the thinkers to find spheres to switch
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo = (mobj_t *)th;
 
 		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP
@@ -2171,6 +2172,7 @@ static void P_LevelInitStuff(void)
 
 	localaiming = 0;
 	localaiming2 = 0;
+	modulothing = 0;
 
 	// special stage tokens, emeralds, and ring total
 	tokenbits = 0;
@@ -2209,7 +2211,7 @@ static void P_LevelInitStuff(void)
 	ssspheres = timeinmap = 0;
 
 	// special stage
-	stagefailed = false;
+	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 
@@ -2284,7 +2286,6 @@ static void P_LevelInitStuff(void)
 void P_LoadThingsOnly(void)
 {
 	// Search through all the thinkers.
-	mobj_t *mo;
 	thinker_t *think;
 	INT32 i, viewid = -1, centerid = -1; // for skyboxes
 
@@ -2301,10 +2302,9 @@ void P_LoadThingsOnly(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		mo = (mobj_t *)think;
-
-		if (mo)
-			P_RemoveMobj(mo);
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+		P_RemoveMobj((mobj_t *)think);
 	}
 
 	P_LevelInitStuff();
@@ -2691,6 +2691,12 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		S_StartSound(NULL, sfx_s3kaf);
 
+		// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
+		if (cv_resetmusic.value ||
+			strnicmp(S_MusicName(),
+				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
+			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
+
 		F_WipeStartScreen();
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
 
@@ -2698,6 +2704,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
 		nowtime = lastwipetic;
+
 		// Hold on white for extra effect.
 		while (nowtime < endtime)
 		{
@@ -2716,12 +2723,13 @@ boolean P_SetupLevel(boolean skipprecip)
 	S_StopSounds();
 	S_ClearSfx();
 
-	if (!titlemapinaction)
-	{
-		// As oddly named as this is, this handles music only.
-		// We should be fine starting it here.
-		S_Start();
-	}
+	// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
+	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
+	if (!titlemapinaction && (cv_resetmusic.value ||
+		strnicmp(S_MusicName(),
+			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
+		S_FadeMusic(0, FixedMul(
+			FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
 
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
@@ -2761,6 +2769,11 @@ boolean P_SetupLevel(boolean skipprecip)
 			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
 			I_UpdateNoVsync();
 		}
+
+		// As oddly named as this is, this handles music only.
+		// We should be fine starting it here.
+		// Don't do this during titlemap, because the menu code handles music by itself.
+		S_Start();
 	}
 
 	levelfadecol = (ranspecialwipe) ? 0 : 31;
@@ -2864,7 +2877,10 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		// reset the player starts
 		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = NULL;
+			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+		for (i = 0; i < MAX_DM_STARTS; i++)
+			deathmatchstarts[i] = NULL;
 
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
@@ -2900,7 +2916,10 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		// reset the player starts
 		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = NULL;
+			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+		for (i = 0; i < MAX_DM_STARTS; i++)
+			deathmatchstarts[i] = NULL;
 
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
@@ -3116,7 +3135,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		R_PrecacheLevel();
 
 	nextmapoverride = 0;
-	skipstats = false;
+	skipstats = 0;
 
 	if (!(netgame || multiplayer) && (!modifiedgame || savemoddata))
 		mapvisited[gamemap-1] |= MV_VISITED;
@@ -3427,13 +3446,13 @@ boolean P_AddWadFile(const char *wadfilename)
 	ST_UnloadGraphics();
 	HU_LoadGraphics();
 	ST_LoadGraphics();
-	ST_ReloadSkinFaceGraphics();
 
 	//
 	// look for skins
 	//
 	R_AddSkins(wadnum); // faB: wadfile index in wadfiles[]
 	R_PatchSkins(wadnum); // toast: PATCH PATCH
+	ST_ReloadSkinFaceGraphics();
 
 	//
 	// search for maps

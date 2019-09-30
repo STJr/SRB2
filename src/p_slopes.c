@@ -716,9 +716,11 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 	vector3_t mom; // Ditto.
 
 	if (slope->flags & SL_NOPHYSICS) { // No physics, no need to make anything complicated.
-		if (P_MobjFlip(thing)*(thing->momz) < 0) { // falling, land on slope
-			thing->momz = -P_MobjFlip(thing);
+		if (P_MobjFlip(thing)*(thing->momz) < 0) // falling, land on slope
+		{
 			thing->standingslope = slope;
+			if (!thing->player || !(thing->player->pflags & PF_BOUNCING))
+				thing->momz = -P_MobjFlip(thing);
 		}
 		return;
 	}
@@ -732,9 +734,9 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 	if (P_MobjFlip(thing)*mom.z < 0) { // falling, land on slope
 		thing->momx = mom.x;
 		thing->momy = mom.y;
-		thing->momz = -P_MobjFlip(thing);
-
 		thing->standingslope = slope;
+		if (!thing->player || !(thing->player->pflags & PF_BOUNCING))
+			thing->momz = -P_MobjFlip(thing);
 	}
 }
 
