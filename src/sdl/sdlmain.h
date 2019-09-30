@@ -31,6 +31,9 @@ extern SDL_bool framebuffer;
 #define SDL2STUB() CONS_Printf("SDL2: stubbed: %s:%d\n", __func__, __LINE__)
 #endif
 
+// So m_menu knows whether to store cv_usejoystick value or string
+#define JOYSTICK_HOTPLUG
+
 /**	\brief	The JoyInfo_s struct
 
   info about joystick
@@ -66,6 +69,13 @@ extern SDLJoyInfo_t JoyInfo;
 /**	\brief SDL inof about joystick 2
 */
 extern SDLJoyInfo_t JoyInfo2;
+
+// So we can call this from i_video event loop
+void I_ShutdownJoystick(void);
+void I_ShutdownJoystick2(void);
+
+// Cheat to get the device index for a joystick handle
+INT32 I_GetJoystickDeviceIndex(SDL_Joystick *dev);
 
 void I_GetConsoleEvents(void);
 
