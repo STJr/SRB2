@@ -138,6 +138,7 @@ void A_SetReactionTime();
 void A_Boss1Spikeballs();
 void A_Boss3TakeDamage();
 void A_Boss3Path();
+void A_Boss3ShockThink();
 void A_LinedefExecute();
 void A_PlaySeeSound();
 void A_PlayAttackSound();
@@ -252,6 +253,7 @@ void A_Boss5CheckOnGround();
 void A_Boss5CheckFalling();
 void A_Boss5PinchShot();
 void A_Boss5MakeItRain();
+void A_Boss5MakeJunk();
 void A_LookForBetter();
 void A_Boss5BombExplode();
 void A_DustDevilThink();
@@ -331,6 +333,7 @@ typedef enum sprite
 	SPR_EGGO, // Boss 3
 	SPR_SEBH, // Boss 3 Junk
 	SPR_FAKE, // Boss 3 Fakemobile
+	SPR_SHCK, // Boss 3 Shockwave
 
 	// Boss 4 (Castle Eggman)
 	SPR_EGGP,
@@ -339,6 +342,10 @@ typedef enum sprite
 
 	// Boss 5 (Arid Canyon)
 	SPR_FANG, // replaces EGGQ
+	SPR_BRKN,
+	SPR_WHAT,
+	SPR_VWRE,
+	SPR_PROJ, // projector light
 	SPR_FBOM,
 	SPR_FSGN,
 	SPR_BARX, // bomb explosion (also used by barrel)
@@ -1453,6 +1460,10 @@ typedef enum state
 	S_BOSSSEBH1,
 	S_BOSSSEBH2,
 
+	// Boss 3 Shockwave
+	S_SHOCKWAVE1,
+	S_SHOCKWAVE2,
+
 	// Boss 4
 	S_EGGMOBILE4_STND,
 	S_EGGMOBILE4_LATK1,
@@ -1495,6 +1506,25 @@ typedef enum state
 	S_EGGROBOJET,
 
 	// Boss 5
+	S_FANG_SETUP,
+	S_FANG_INTRO0,
+	S_FANG_INTRO1,
+	S_FANG_INTRO2,
+	S_FANG_INTRO3,
+	S_FANG_INTRO4,
+	S_FANG_INTRO5,
+	S_FANG_INTRO6,
+	S_FANG_INTRO7,
+	S_FANG_INTRO8,
+	S_FANG_INTRO9,
+	S_FANG_INTRO10,
+	S_FANG_INTRO11,
+	S_FANG_INTRO12,
+	S_FANG_CLONE1,
+	S_FANG_CLONE2,
+	S_FANG_CLONE3,
+	S_FANG_CLONE4,
+	S_FANG_IDLE0,
 	S_FANG_IDLE1,
 	S_FANG_IDLE2,
 	S_FANG_IDLE3,
@@ -1565,6 +1595,26 @@ typedef enum state
 	S_FANG_FLEEBOUNCE1,
 	S_FANG_FLEEBOUNCE2,
 	S_FANG_KO,
+
+	S_BROKENROBOTRANDOM,
+	S_BROKENROBOTA,
+	S_BROKENROBOTB,
+	S_BROKENROBOTC,
+	S_BROKENROBOTD,
+	S_BROKENROBOTE,
+	S_BROKENROBOTF,
+
+	S_ALART1,
+	S_ALART2,
+
+	S_VWREF,
+	S_VWREB,
+
+	S_PROJECTORLIGHT1,
+	S_PROJECTORLIGHT2,
+	S_PROJECTORLIGHT3,
+	S_PROJECTORLIGHT4,
+	S_PROJECTORLIGHT5,
 
 	S_FBOMB1,
 	S_FBOMB2,
@@ -3986,7 +4036,7 @@ typedef enum mobj_type
 	// Boss 3
 	MT_EGGMOBILE3,
 	MT_FAKEMOBILE,
-	MT_SHOCK,
+	MT_SHOCKWAVE,
 
 	// Boss 4
 	MT_EGGMOBILE4,
@@ -3997,6 +4047,10 @@ typedef enum mobj_type
 
 	// Boss 5
 	MT_FANG,
+	MT_BROKENROBOT,
+	MT_VWREF,
+	MT_VWREB,
+	MT_PROJECTORLIGHT,
 	MT_FBOMB,
 	MT_TNTDUST, // also used by barrel
 	MT_FSGNA,
@@ -4195,7 +4249,7 @@ typedef enum mobj_type
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
-	MT_CORAL1, // Coral 
+	MT_CORAL1, // Coral
 	MT_CORAL2,
 	MT_CORAL3,
 	MT_CORAL4,

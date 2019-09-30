@@ -85,6 +85,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"EGGO", // Boss 3
 	"SEBH", // Boss 3 Junk
 	"FAKE", // Boss 3 Fakemobile
+	"SHCK", // Boss 3 Shockwave
 
 	// Boss 4 (Castle Eggman)
 	"EGGP",
@@ -93,6 +94,10 @@ char sprnames[NUMSPRITES + 1][5] =
 
 	// Boss 5 (Arid Canyon)
 	"FANG", // replaces EGGQ
+	"BRKN", // broken robot chunk
+	"WHAT", // alart
+	"VWRE",
+	"PROJ", // projector light
 	"FBOM",
 	"FSGN",
 	"BARX", // bomb explosion (also used by barrel)
@@ -1306,6 +1311,11 @@ state_t states[NUMSTATES] =
 	{SPR_SEBH, 0, 35, {NULL}, 0, 0, S_NULL}, // S_BOSSSEBH1
 	{SPR_SEBH, 1, 35, {NULL}, 0, 0, S_NULL}, // S_BOSSSEBH2
 
+	// Boss 3 Shockwave
+
+	{SPR_SHCK,   FF_FULLBRIGHT|FF_PAPERSPRITE|FF_ANIMATE, 8, {A_Boss3ShockThink}, 4, 2, S_SHOCKWAVE2}, // S_SHOCKWAVE1
+	{SPR_SHCK, 3|FF_FULLBRIGHT|FF_PAPERSPRITE|FF_ANIMATE, 8, {A_Boss3ShockThink}, 4, 2, S_SHOCKWAVE1}, // S_SHOCKWAVE2
+
 	// Boss 4
 	{SPR_EGGP, 0, -1, {NULL},           0,          0, S_NULL},              // S_EGGMOBILE4_STND
 	{SPR_EGGP, 1,  3, {NULL},           0,          0, S_EGGMOBILE4_LATK2},  // S_EGGMOBILE4_LATK1
@@ -1348,6 +1358,28 @@ state_t states[NUMSTATES] =
 	{SPR_EFIR, FF_FULLBRIGHT|2,          -1, {NULL}, 0, 0, S_NULL}, // S_EGGROBOJET
 
 	// Boss 5
+	{SPR_NULL, 0, 2, {A_CheckFlags2}, MF2_AMBUSH, S_FANG_IDLE0, S_FANG_INTRO0}, // S_FANG_SETUP
+
+	{SPR_NULL, 0, 2, {NULL}, 0, 0, S_FANG_INTRO1}, // S_FANG_INTRO0
+	{SPR_NULL, 0, 2, {A_Boss5MakeJunk}, -S_FANG_CLONE1, 0, S_FANG_INTRO2}, // S_FANG_INTRO1
+	{SPR_NULL, 0, 0, {A_Repeat}, 25, S_FANG_INTRO1, S_FANG_INTRO3}, // S_FANG_INTRO2
+	{SPR_NULL, 0, 0, {A_Boss5MakeJunk}, 0, 1, S_FANG_INTRO4}, // S_FANG_INTRO3
+	{SPR_FANG, 30, 1, {A_ZThrust}, 9, (1<<16)|1, S_FANG_INTRO5}, // S_FANG_INTRO4
+	{SPR_FANG, 27, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO6}, // S_FANG_INTRO5
+	{SPR_FANG, 28, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO7}, // S_FANG_INTRO6
+	{SPR_FANG, 29, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO8}, // S_FANG_INTRO7
+	{SPR_FANG, 30, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO5}, // S_FANG_INTRO8
+	{SPR_FANG, 23|FF_ANIMATE, 50, {NULL}, 1, 4, S_FANG_INTRO10}, // S_FANG_INTRO9
+	{SPR_FANG, 25, 5, {NULL}, 0, 0, S_FANG_INTRO11}, // S_FANG_INTRO10
+	{SPR_FANG, 26, 2, {A_Boss5MakeJunk}, S_BROKENROBOTD, 2, S_FANG_INTRO12}, // S_FANG_INTRO11
+	{SPR_FANG, 31|FF_ANIMATE, 50, {NULL}, 3, 4, S_FANG_IDLE1}, // S_FANG_INTRO12
+
+	{SPR_FANG, 11, 2, {A_Boss5MakeJunk}, 0, -1, S_FANG_CLONE2}, // S_FANG_CLONE1
+	{SPR_FANG, 11, 0, {A_Repeat}, 49, S_FANG_CLONE1, S_FANG_CLONE3}, // S_FANG_INTRO2
+	{SPR_FANG, 12, 0, {A_SetObjectFlags}, MF_NOGRAVITY, 1, S_FANG_CLONE4}, // S_FANG_CLONE3
+	{SPR_FANG, 12, 1, {A_Boss5CheckOnGround}, S_FANG_IDLE0, 0, S_FANG_CLONE4}, // S_FANG_CLONE4
+
+	{SPR_FANG, 0,  0, {A_SetObjectFlags}, MF_NOCLIPTHING, 1, S_FANG_IDLE1}, // S_FANG_IDLE0
 	{SPR_FANG, 2, 16, {A_Look}, 1, 0, S_FANG_IDLE2}, // S_FANG_IDLE1
 	{SPR_FANG, 3, 16, {A_Look}, 1, 0, S_FANG_IDLE3}, // S_FANG_IDLE2
 	{SPR_FANG, 3, 16, {A_Look}, 1, 0, S_FANG_IDLE4}, // S_FANG_IDLE3
@@ -1422,8 +1454,8 @@ state_t states[NUMSTATES] =
 	{SPR_FANG, 21, 0, {A_DoNPCPain},                    0, 0, S_FANG_DIE2}, // S_FANG_DIE1
 	{SPR_FANG, 21, 1, {A_Boss5CheckOnGround}, S_FANG_DIE3, 0, S_FANG_DIE2}, // S_FANG_DIE2
 
-	{SPR_FANG, 22,   0, {A_Scream}, 0, 0, S_FANG_DIE4}, // S_FANG_DIE3
-	{SPR_FANG, 22, 104, {NULL},     0, 0, S_FANG_DIE5}, // S_FANG_DIE4
+	{SPR_FANG, 22,  0, {A_Scream}, 0, 0, S_FANG_DIE4}, // S_FANG_DIE3
+	{SPR_FANG, 22, -1, {A_SetFuse}, 70, 0, S_FANG_DIE5}, // S_FANG_DIE4
 
 	{SPR_FANG, 11, 0, {A_PlaySound}, sfx_jump, 0, S_FANG_DIE6}, // S_FANG_DIE5
 	{SPR_FANG, 11, 1, {A_ZThrust}, 6, (1<<16)|1, S_FANG_DIE7}, // S_FANG_DIE6
@@ -1436,6 +1468,26 @@ state_t states[NUMSTATES] =
 	{SPR_FANG, 10, -1, {A_BossDeath}, 0, 0, S_NULL}, // S_FANG_FLEEBOUNCE2
 
 	{SPR_FANG, 17, 7*TICRATE, {NULL}, 0, 0, S_NULL}, // S_FANG_KO
+
+	{SPR_NULL, 0, -1, {A_RandomStateRange}, S_BROKENROBOTA, S_BROKENROBOTF, S_NULL}, // S_BROKENROBOTRANDOM
+	{SPR_BRKN,    FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 3, 4, S_NULL}, // S_BROKENROBOTA
+	{SPR_BRKN,  4|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 3, 4, S_NULL}, // S_BROKENROBOTB
+	{SPR_BRKN,  8|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 3, 4, S_NULL}, // S_BROKENROBOTC
+	{SPR_BRKN, 12|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 3, 4, S_NULL}, // S_BROKENROBOTD
+	{SPR_BRKN, 16|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 3, 4, S_NULL}, // S_BROKENROBOTE
+	{SPR_BRKN, 20|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 3, 4, S_NULL}, // S_BROKENROBOTF
+
+	{SPR_WHAT,   FF_ANIMATE|FF_FULLBRIGHT,  4, {NULL}, 1, 2, S_ALART2}, // S_ALART1
+	{SPR_WHAT, 2|FF_ANIMATE|FF_FULLBRIGHT, -1, {NULL}, 1, 2, S_NULL},   // S_ALART2
+
+	{SPR_VWRE,   FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_VWREF
+	{SPR_VWRE, 1|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_VWREB
+
+	{SPR_PROJ,   FF_TRANS20|FF_FULLBRIGHT,  4, {NULL}, 0, 0, S_PROJECTORLIGHT2}, // S_PROJECTORLIGHT1
+	{SPR_PROJ, 1|FF_TRANS40|FF_FULLBRIGHT,  1, {NULL}, 0, 0, S_PROJECTORLIGHT3}, // S_PROJECTORLIGHT2
+	{SPR_PROJ, 2|FF_TRANS20|FF_FULLBRIGHT,  1, {NULL}, 0, 0, S_PROJECTORLIGHT4}, // S_PROJECTORLIGHT3
+	{SPR_PROJ, 3|FF_TRANS40|FF_FULLBRIGHT,  2, {A_Repeat}, 39, S_PROJECTORLIGHT2, S_PROJECTORLIGHT5}, // S_PROJECTORLIGHT4
+	{SPR_PROJ, 4|FF_TRANS60|FF_FULLBRIGHT,  2, {NULL}, 0, 0, S_NULL}, // S_PROJECTORLIGHT5
 
 	{SPR_FBOM, 0, 1, {A_GhostMe}, 0, 0, S_FBOMB2}, // S_FBOMB1
 	{SPR_FBOM, 1, 1, {A_GhostMe}, 0, 0, S_FBOMB1}, // S_FBOMB2
@@ -1596,7 +1648,7 @@ state_t states[NUMSTATES] =
 	{SPR_FLME, FF_FULLBRIGHT|2, -1, {NULL}, 0, 0, S_CYBRAKDEMONFLAMESHOT_FLY3}, // S_CYBRAKDEMONFLAMESHOT_FLY3
 	{SPR_FLME, FF_FULLBRIGHT|2, 0, {A_SpawnObjectRelative}, 0, MT_CYBRAKDEMON_FLAMEREST, S_NULL}, // S_CYBRAKDEMONFLAMESHOT_DIE
 
-	{SPR_FLAM, FF_FULLBRIGHT, 0, {A_SetFuse}, 10*TICRATE, 0, S_FLAMEREST}, // S_CYBRAKDEMONFLAMEREST
+	{SPR_FLAM, FF_FULLBRIGHT, 1, {A_SetFuse}, 10*TICRATE, 0, S_FLAMEREST}, // S_CYBRAKDEMONFLAMEREST
 
 	{SPR_ELEC, 0 + FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_CYBRAKDEMONELECTRICBARRIER_INIT2}, // S_CYBRAKDEMONELECTRICBARRIER_INIT1
 	{SPR_ELEC, 0 + FF_FULLBRIGHT, 0, {A_RemoteAction}, -1, S_CYBRAKDEMON_INVINCIBLERIZE, S_CYBRAKDEMONELECTRICBARRIER_PLAYSOUND}, // S_CYBRAKDEMONELECTRICBARRIER_INIT2
@@ -3816,21 +3868,21 @@ state_t states[NUMSTATES] =
 	{SPR_NULL, 0, 1, {A_RockSpawn}, 0, 0, S_ROCKSPAWN}, // S_ROCKSPAWN
 
 	{SPR_ROIA, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEA
-	{SPR_ROIB, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEB
-	{SPR_ROIC, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEC
-	{SPR_ROID, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLED
-	{SPR_ROIE, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEE
-	{SPR_ROIF, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEF
-	{SPR_ROIG, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEG
-	{SPR_ROIH, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEH
-	{SPR_ROII, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEI
-	{SPR_ROIJ, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEJ
-	{SPR_ROIK, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEK
-	{SPR_ROIL, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEL
-	{SPR_ROIM, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEM
-	{SPR_ROIN, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEN
-	{SPR_ROIO, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEO
-	{SPR_ROIP, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEP
+	{SPR_ROIB, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEB
+	{SPR_ROIC, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEC
+	{SPR_ROID, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLED
+	{SPR_ROIE, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEE
+	{SPR_ROIF, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEF
+	{SPR_ROIG, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEG
+	{SPR_ROIH, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEH
+	{SPR_ROII, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEI
+	{SPR_ROIJ, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEJ
+	{SPR_ROIK, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEK
+	{SPR_ROIL, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEL
+	{SPR_ROIM, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEM
+	{SPR_ROIN, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEN
+	{SPR_ROIO, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEO
+	{SPR_ROIP, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 2, S_NULL}, // S_ROCKCRUMBLEP
 
 	{SPR_BRIC, FF_ANIMATE, -1, {A_DebrisRandom}, 7, 2, S_NULL}, // S_BRICKDEBRIS
 
@@ -5461,30 +5513,30 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL              // raisestate
 	},
 
-	{           // MT_SHOCK
+	{           // MT_SHOCKWAVE
 		-1,             // doomednum
-		S_THUNDERCOIN_SPARK, // spawnstate
+		S_SHOCKWAVE1,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_None,       // seesound
+		sfx_s3k5e,      // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		0,              // painchance
+		8*TICRATE,      // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
 		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		10*FRACUNIT,    // speed
-		16*FRACUNIT,    // radius
-		35*FRACUNIT,    // height
+		12*FRACUNIT,    // speed
+		48*FRACUNIT,    // radius
+		8*FRACUNIT,     // height
 		0,              // display offset
 		DMG_ELECTRIC|(sfx_buzz2<<8), // mass
-		20,             // damage
+		3,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		MF_NOBLOCKMAP|MF_MISSILE|MF_PAIN|MF_NOGRAVITY|MF_PAPERCOLLISION, // flags
 		S_NULL          // raisestate
 	},
 
@@ -5625,7 +5677,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_FANG
 		204,               // doomednum
-		S_FANG_IDLE1,      // spawnstate
+		S_FANG_SETUP,      // spawnstate
 		8,                 // spawnhealth
 		S_FANG_PATHINGSTART1, // seestate
 		sfx_None,          // seesound
@@ -5646,8 +5698,116 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,                 // mass
 		3,                 // damage
 		sfx_boingf,        // activesound
-		MF_SPECIAL|MF_BOSS|MF_SHOOTABLE|MF_GRENADEBOUNCE, // flags
+		MF_RUNSPAWNFUNC|MF_SPECIAL|MF_BOSS|MF_SHOOTABLE|MF_GRENADEBOUNCE|MF_NOCLIPTHING, // flags -- MF_NOCLIPTHING will be removed after intro event ends
 		S_NULL             // raisestate
+	},
+
+	{           // MT_BROKENROBOT
+		-1,             // doomednum
+		S_BROKENROBOTRANDOM, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_ambint,     // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		255,            // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		8*FRACUNIT,     // radius
+		16*FRACUNIT,    // height
+		0,              // display offset
+		1000,           // mass
+		0,              // damage
+		sfx_crumbl,     // activesound
+		MF_RUNSPAWNFUNC|MF_NOBLOCKMAP|MF_NOCLIPTHING|MF_SCENERY|MF_NOCLIPHEIGHT,  // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_VWREF
+		-1,             // doomednum
+		S_VWREF,         // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		3,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		42*FRACUNIT,    // radius
+		12*FRACUNIT,    // height
+		1,              // display offset
+		1000,           // mass
+		8,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_VWREB
+		-1,             // doomednum
+		S_VWREB,         // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		3,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		42*FRACUNIT,    // radius
+		12*FRACUNIT,    // height
+		-1,             // display offset
+		1000,           // mass
+		8,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_PROJECTORLIGHT
+		-1,             // doomednum
+		S_PROJECTORLIGHT1, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		3,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		42*FRACUNIT,    // radius
+		52*FRACUNIT,    // height
+		-1,             // display offset
+		1000,           // mass
+		8,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_SCENERY, // flags
+		S_NULL          // raisestate
 	},
 
 	{           // MT_FBOMB

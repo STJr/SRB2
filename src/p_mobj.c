@@ -4605,22 +4605,37 @@ static void P_Boss3Thinker(mobj_t *mobj)
 
 			if (!mobj->movefactor) // to firing mode
 			{
-				UINT8 i;
-				angle_t ang = 0;
+				UINT8 i, numtospawn = 24;
+				angle_t ang = 0, interval = FixedAngle((360 << FRACBITS) / numtospawn);
+				mobj_t *shock, *sfirst, *sprev = NULL;
 
 				mobj->movecount = mobj->health+1;
 				mobj->movefactor = -512*FRACUNIT;
 
 				// shock the water!
-				for (i = 0; i < 64; i++)
+				for (i = 0; i < numtospawn; i++)
 				{
-					mobj_t *shock = P_SpawnMobjFromMobj(mobj, 0, 0, 4*FRACUNIT, MT_SHOCK);
+					shock = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_SHOCKWAVE);
 					P_SetTarget(&shock->target, mobj);
-					P_InstaThrust(shock, ang, shock->info->speed);
-					P_CheckMissileSpawn(shock);
-					ang += (ANGLE_MAX/64);
+					shock->fuse = shock->info->painchance;
+
+					if (i % 2 == 0)
+					P_SetMobjState(shock, shock->state->nextstate);
+
+					if (!sprev)
+						sfirst = shock;
+					else
+					{
+						if (i == numtospawn - 1)
+							P_SetTarget(&shock->hnext, sfirst);
+						P_SetTarget(&sprev->hnext, shock);
+					}
+
+					P_Thrust(shock, ang, shock->info->speed);
+					ang += interval;
+					sprev = shock;
 				}
-				S_StartSound(mobj, sfx_fizzle);
+				S_StartSound(mobj, shock->info->seesound);
 
 				// look for a new target
 				P_BossTargetPlayer(mobj, false);
@@ -5063,6 +5078,24 @@ static void P_Boss5Thinker(mobj_t *mobj)
 {
 	if (!mobj->health)
 	{
+		if (mobj->fuse)
+		{
+			if (mobj->flags2 & MF2_SLIDEPUSH)
+			{
+				INT32 trans = 10-((10*mobj->fuse)/70);
+				if (trans > 9)
+					trans = 9;
+				if (trans < 0)
+					trans = 0;
+				mobj->frame = (mobj->frame & ~FF_TRANSMASK)|(trans<<FF_TRANSSHIFT);
+				if (!(mobj->fuse & 1))
+				{
+					mobj->colorized = !mobj->colorized;
+					mobj->frame ^= FF_FULLBRIGHT;
+				}
+			}
+			return;
+		}
 		if (mobj->state == &states[mobj->info->xdeathstate])
 			mobj->momz -= (2*FRACUNIT)/3;
 		else if (mobj->tracer && P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y) < 2*mobj->radius)
@@ -7311,7 +7344,8 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_FLAMEAURA_ORB:
 				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
-				mobj->angle = mobj->target->angle; // implicitly okay because of P_AddShield
+				if ((statenum_t)(mobj->state-states) < mobj->info->painstate)
+					mobj->angle = mobj->target->angle; // implicitly okay because of P_AddShield
 				if (mobj->tracer
 				/* && mobj->target -- the following is implicit by P_AddShield
 				&& mobj->target->player
@@ -7649,6 +7683,17 @@ void P_MobjThinker(mobj_t *mobj)
 				if (mobj->movedir)
 					mobj->angle += mobj->movedir;
 				break;
+			case MT_VWREF:
+			case MT_VWREB:
+				{
+					INT32 strength;
+					++mobj->movedir;
+					mobj->frame &= ~FF_TRANSMASK;
+					strength = min(mobj->fuse, mobj->movedir)*3;
+					if (strength < 10)
+						mobj->frame |= ((10-strength)<<(FF_TRANSSHIFT));
+				}
+				/* FALLTHRU */
 			default:
 				if (mobj->fuse)
 				{ // Scenery object fuse! Very basic!
@@ -9098,9 +9143,12 @@ void P_MobjThinker(mobj_t *mobj)
 	{
 		if (mobj->state->action.acp1 == (actionf_p1)A_Boss1Laser)
 		{
-			/*var1 = mobj->state->var1;
-			var2 = mobj->state->var2 & 65535;
-			mobj->state->action.acp1(mobj);*/
+			if (mobj->state->tics > 1)
+			{
+				var1 = mobj->state->var1;
+				var2 = mobj->state->var2 & 65535;
+				mobj->state->action.acp1(mobj);
+			}
 		}
 		else if (leveltime & 1) // Fire mode
 		{
@@ -9266,6 +9314,18 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					}
 					P_RemoveMobj(mobj);
 					return;
+				case MT_FANG:
+					if (mobj->flags2 & MF2_SLIDEPUSH)
+					{
+						var1 = 0;
+						var2 = 0;
+						A_BossDeath(mobj);
+						return;
+					}
+					P_SetMobjState(mobj, mobj->state->nextstate);
+					if (P_MobjWasRemoved(mobj))
+						return;
+					break;
 				case MT_METALSONIC_BATTLE:
 					break; // don't remove
 				case MT_SPIKE:
@@ -9864,7 +9924,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 	}
 
-	if (sc != -1)
+	if (sc != -1 && !(mobj->flags2 & MF2_SLIDEPUSH))
 	{
 		UINT8 i;
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -9876,6 +9936,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			{
 				mobj->color = SKINCOLOR_SILVER;
 				mobj->colorized = true;
+				mobj->flags2 |= MF2_SLIDEPUSH;
 				break;
 			}
 		}
@@ -11221,6 +11282,16 @@ You should think about modifying the deathmatch starts to take full advantage of
 			mobj->health = mthing->angle;
 		else
 			mobj->health = FixedMul(ss->sector->ceilingheight-ss->sector->floorheight, 3*(FRACUNIT/4))>>FRACBITS;
+		break;
+	case MT_FANG:
+	case MT_METALSONIC_RACE:
+	case MT_METALSONIC_BATTLE:
+		if (mthing->options & MTF_EXTRA)
+		{
+			mobj->color = SKINCOLOR_SILVER;
+			mobj->colorized = true;
+			mobj->flags2 |= MF2_SLIDEPUSH;
+		}
 		break;
 	case MT_BALLOON:
 		if (mthing->angle > 0)
