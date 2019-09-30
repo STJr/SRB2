@@ -637,7 +637,7 @@ static void F_IntroDrawScene(void)
 		}
 		else
 		{
-			menuanimtimer = animtimer; // Reusing this variable for the intro, better than changing the function around.
+			menuanimtimer = animtimer; // Reusing this variable for the intro to fix the scrolling sky, better than changing the function around.
 			F_SkyScroll(80*4, 0, "TITLESKY");
 			if (timetonext == 6)
 			{
