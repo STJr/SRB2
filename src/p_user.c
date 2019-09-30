@@ -3074,7 +3074,6 @@ static void P_DoClimbing(player_t *player)
 
 	glidesector = R_IsPointInSubsector(player->mo->x + platx, player->mo->y + platy);
 
-	if (!glidesector || glidesector->sector != player->mo->subsector->sector)
 	{
 		boolean floorclimb = false;
 		boolean thrust = false;
@@ -3458,9 +3457,13 @@ static void P_DoClimbing(player_t *player)
 		if (!floorclimb)
 		{
 			if (boostup)
+			{
 				P_SetObjectMomZ(player->mo, 2*FRACUNIT, true);
+				if (cmd->forwardmove)
+					P_SetObjectMomZ(player->mo, 2*player->mo->momz/3, false);
+			}
 			if (thrust)
-				P_InstaThrust(player->mo, player->mo->angle, FixedMul(4*FRACUNIT, player->mo->scale)); // Lil' boost up.
+				P_Thrust(player->mo, player->mo->angle, FixedMul(4*FRACUNIT, player->mo->scale)); // Lil' boost up.
 
 			player->climbing = 0;
 			player->pflags |= P_GetJumpFlags(player);
@@ -3473,12 +3476,6 @@ static void P_DoClimbing(player_t *player)
 			player->pflags |= P_GetJumpFlags(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
-	}
-	else
-	{
-		player->climbing = 0;
-		player->pflags |= P_GetJumpFlags(player);
-		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 	}
 
 	if (cmd->sidemove != 0 || cmd->forwardmove != 0)
@@ -3498,7 +3495,7 @@ static void P_DoClimbing(player_t *player)
 		player->pflags |= P_GetJumpFlags(player);
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		P_SetObjectMomZ(player->mo, 4*FRACUNIT, false);
-		P_InstaThrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
+		P_Thrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
 	}
 
 	if (!demoplayback || P_AnalogMove(player))
