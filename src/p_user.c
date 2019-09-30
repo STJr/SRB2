@@ -2257,8 +2257,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
 					S_StartSound(player->mo, sfx_s3k4c);
 					player->pflags |= PF_STASIS;
-					player->mo->momx = player->cmomx;
-					player->mo->momy = player->cmomy;
+					player->mo->momx = ((player->mo->momx - player->cmomx)/3) + player->cmomx;
+					player->mo->momy = ((player->mo->momy - player->cmomy)/3) + player->cmomy;
 				}
 			}
 			else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
@@ -3498,13 +3498,13 @@ static void P_DoClimbing(player_t *player)
 		P_Thrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
 	}
 
-	if (!demoplayback || P_AnalogMove(player))
+	/*if (!demoplayback || P_AnalogMove(player))
 	{
 		if (player == &players[consoleplayer])
 			localangle = player->mo->angle;
 		else if (player == &players[secondarydisplayplayer])
 			localangle2 = player->mo->angle;
-	}
+	}*/
 
 	if (player->climbing == 0)
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
@@ -4491,12 +4491,10 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 		{
 			case CA2_SPINDASH: // Spinning and Spindashing
 				 // Start revving
-				if ((cmd->buttons & BT_USE) && player->speed < FixedMul(5<<FRACBITS, player->mo->scale)
+				if ((cmd->buttons & BT_USE) && (player->speed < FixedMul(5<<FRACBITS, player->mo->scale) || player->mo->state - states == S_PLAY_GLIDE_LANDING)
 					&& !player->mo->momz && onground && !(player->pflags & (PF_USEDOWN|PF_SPINNING))
 						&& canstand)
 				{
-					if (player->mo->state - states == S_PLAY_GLIDE_LANDING) // dear lord this is a fuckin hack and a half
-						player->pflags &= ~PF_STASIS;
 					player->mo->momx = player->cmomx;
 					player->mo->momy = player->cmomy;
 					player->pflags |= (PF_USEDOWN|PF_STARTDASH|PF_SPINNING);
@@ -5144,10 +5142,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		// can't jump while in air, can't jump while jumping
 		if (onground || player->climbing || player->powers[pw_carry])
 		{
-			if (player->mo->state-states == S_PLAY_GLIDE_LANDING && ((~player->pflags) & PF_JUMPSTASIS))
-			{
-				player->pflags &= ~PF_STASIS;
-			}
 			P_DoJump(player, true);
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
@@ -5252,13 +5246,14 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					// Now Knuckles-type abilities are checked.
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
-						//INT32 glidespeed = player->actionspd;
+						INT32 glidespeed = player->actionspd;
 
 						player->pflags |= PF_GLIDING|PF_THOKKED;
 						player->glidetime = 0;
 
 						P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
-						//P_InstaThrust(player->mo, player->mo->angle, FixedMul(glidespeed, player->mo->scale));
+						if (player->speed < glidespeed)
+							P_Thrust(player->mo, player->mo->angle, glidespeed - player->speed);
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 					}
 					break;
@@ -7663,8 +7658,8 @@ static void P_SkidStuff(player_t *player)
 			P_ResetPlayer(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
 			player->pflags |= PF_STASIS;
-			player->mo->momx = player->cmomx;
-			player->mo->momy = player->cmomy;
+			player->mo->momx = ((player->mo->momx - player->cmomx)/3) + player->cmomx;
+			player->mo->momy = ((player->mo->momy - player->cmomy)/3) + player->cmomy;
 		}
 		// Didn't stop yet? Skid FOREVER!
 		else if (player->skidtime == 1)
@@ -7770,8 +7765,27 @@ static void P_MovePlayer(player_t *player)
 		if (!(player->powers[pw_nocontrol] & (1<<15)))
 			player->pflags |= PF_JUMPSTASIS;
 	}
-	else if (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
+	
+	if (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
+	{
 		player->pflags |= PF_STASIS;
+		if ((player->mo->tics + 1) % 3 == 0 && player->speed > 5*player->mo->scale)
+		{
+			mobj_t *particle = P_SpawnMobjFromMobj(player->mo, P_RandomRange(-player->mo->radius, player->mo->radius), P_RandomRange(-player->mo->radius, player->mo->radius), 0, MT_SPINDUST);
+			particle->tics = 10;
+
+			particle->destscale = (2*player->mo->scale)/3;
+			P_SetScale(particle, particle->destscale);
+			P_SetObjectMomZ(particle, FRACUNIT, false);
+
+			if (player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) // overrides fire version
+				P_SetMobjState(particle, S_SPINDUST_BUBBLE1);
+			else if (player->powers[pw_shield] == SH_ELEMENTAL)
+				P_SetMobjState(particle, S_SPINDUST_FIRE1);
+
+			S_StartSound(player->mo, sfx_s3k7e); // the proper "Knuckles eats dirt" sfx.
+		}
+	}
 
 	// note: don't unset stasis here
 
@@ -11284,8 +11298,7 @@ void P_PlayerThink(player_t *player)
 		|| player->powers[pw_carry] == CR_NIGHTSMODE)
 			;
 		else if (!(player->pflags & PF_DIRECTIONCHAR)
-		|| (player->climbing // stuff where the direction is forced at all times
-		/*|| (player->pflags & PF_GLIDING)*/)
+		|| (player->climbing) // stuff where the direction is forced at all times
 		|| (P_AnalogMove(player) || twodlevel || player->mo->flags2 & MF2_TWOD) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
 		|| G_RingSlingerGametype()) // no firing rings in directions your player isn't aiming
 			player->drawangle = player->mo->angle;
