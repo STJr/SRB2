@@ -2055,7 +2055,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				continue;
 			}
 
-			if (thing->player && (P_CheckSolidLava(thing, rover) || P_CanRunOnWater(thing->player, rover)))
+			if (thing->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(thing->player, rover)))
 				;
 			else if (thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE))
 				;
@@ -3587,9 +3587,6 @@ static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
 			continue;
 
 		if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 3)
-			continue;
-
-		if (!(rover->master->flags & ML_EFFECT3))
 			continue;
 
 		if (rover->master->flags & ML_BLOCKMONSTERS)

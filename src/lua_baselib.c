@@ -802,15 +802,12 @@ static int lib_pCheckDeathPitCollide(lua_State *L)
 
 static int lib_pCheckSolidLava(lua_State *L)
 {
-	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	ffloor_t *rover = *((ffloor_t **)luaL_checkudata(L, 2, META_FFLOOR));
 	//HUDSAFE
 	INLEVEL
-	if (!mo)
-		return LUA_ErrInvalid(L, "mobj_t");
 	if (!rover)
 		return LUA_ErrInvalid(L, "ffloor_t");
-	lua_pushboolean(L, P_CheckSolidLava(mo, rover));
+	lua_pushboolean(L, P_CheckSolidLava(rover));
 	return 1;
 }
 
