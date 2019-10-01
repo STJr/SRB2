@@ -23,6 +23,7 @@
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
 #include "v_video.h" // pMasterPalette
+#include "byteptr.h"
 #include "dehacked.h"
 
 #ifdef _WIN32
@@ -241,7 +242,7 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	}
 }
 
-RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
+UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
 	if (style == AST_TRANSLUCENT)
@@ -261,6 +262,9 @@ RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		// if there's no pixel in here
 		if (!background.rgba)
 			output.s.alpha = foreground.s.alpha;
+		else
+			output.s.alpha = 0xFF;
+		return output.rgba;
 	}
 #define clamp(c) max(min(c, 0xFF), 0x00);
 	else
@@ -298,30 +302,38 @@ RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		}
 		// just copy the pixel
 		else if (style == AST_COPY)
-			return background;
+			output.rgba = foreground.rgba;
+
+		output.s.alpha = 0xFF;
+		return output.rgba;
 	}
 #undef clamp
-	// unimplemented blend modes return the background pixel
-	output = background;
-	output.s.alpha = 0xFF;
-	return output;
+	return 0;
 }
 
 UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
 {
-	if ((style == AST_TRANSLUCENT) && (alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
+	// Alpha style set to translucent?
+	if (style == AST_TRANSLUCENT)
 	{
-		UINT8 *mytransmap;
-		if (alpha < 255/11) // Is the patch way too translucent? Don't render then.
-			return background;
-		// The equation's not exact but it works as intended. I'll call it a day for now.
-		mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
-		if (background != 0xFF)
-			return *(mytransmap + (background<<8) + foreground);
+		// Is the alpha small enough for translucency?
+		if (alpha <= (10*255/11))
+		{
+			UINT8 *mytransmap;
+			// Is the patch way too translucent? Don't blend then.
+			if (alpha < 255/11)
+				return background;
+			// The equation's not exact but it works as intended. I'll call it a day for now.
+			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
+			if (background != 0xFF)
+				return *(mytransmap + (background<<8) + foreground);
+		}
+		else // just copy the pixel
+			return foreground;
 	}
 	// just copy the pixel
 	else if (style == AST_COPY)
-		return background;
+		return foreground;
 	// use ASTBlendPixel for all other blend modes
 	// and find the nearest colour in the palette
 	else if (style != AST_TRANSLUCENT)
@@ -329,7 +341,7 @@ UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 al
 		RGBA_t texel;
 		RGBA_t bg = V_GetColor(background);
 		RGBA_t fg = V_GetColor(foreground);
-		texel = ASTBlendPixel(bg, fg, style, alpha);
+		texel.rgba = ASTBlendPixel(bg, fg, style, alpha);
 		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
 	}
 	// fallback if all above fails, somehow
@@ -374,7 +386,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; source++, dest++)
-				if (*dest != 0xFF)
+				if (*source != 0xFF)
 					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
@@ -383,7 +395,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 }
 
 //
-// R_DrawTransColumnInCache
+// R_DrawBlendFlippedColumnInCache
 // Similar to the one above except that the column is inverted.
 //
 static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
@@ -418,7 +430,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; --source, dest++)
-				if (*dest != 0xFF)
+				if (*source != 0xFF)
 					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
@@ -476,7 +488,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
 		{
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
 			goto multipatch;
 		}
 #endif
@@ -569,7 +581,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
 #endif
 
 		x1 = patch->originx;
@@ -2588,7 +2600,7 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat)
 }
 
 #ifndef NO_PNG_LUMPS
-boolean R_IsLumpPNG(UINT8 *d, size_t s)
+boolean R_IsLumpPNG(const UINT8 *d, size_t s)
 {
 	if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
 		return false;
@@ -2599,19 +2611,47 @@ boolean R_IsLumpPNG(UINT8 *d, size_t s)
 }
 
 #ifdef HAVE_PNG
+
+#if PNG_LIBPNG_VER_DLLNUM < 14
+typedef PNG_CONST png_byte *png_const_bytep;
+#endif
 typedef struct {
-	png_bytep buffer;
+	png_const_bytep buffer;
 	png_uint_32 bufsize;
 	png_uint_32 current_pos;
-} png_ioread;
+} png_io_t;
 
 static void PNG_IOReader(png_structp png_ptr, png_bytep data, png_size_t length)
 {
-	png_ioread *f = png_get_io_ptr(png_ptr);
+	png_io_t *f = png_get_io_ptr(png_ptr);
 	if (length > (f->bufsize - f->current_pos))
 		png_error(png_ptr, "PNG_IOReader: buffer overrun");
 	memcpy(data, f->buffer + f->current_pos, length);
 	f->current_pos += length;
+}
+
+typedef struct
+{
+	char name[4];
+	void *data;
+	size_t size;
+} png_chunk_t;
+
+static png_byte *chunkname = NULL;
+static png_chunk_t chunk;
+
+static int PNG_ChunkReader(png_structp png_ptr, png_unknown_chunkp chonk)
+{
+	(void)png_ptr;
+	if (!memcmp(chonk->name, chunkname, 4))
+	{
+		memcpy(chunk.name, chonk->name, 4);
+		chunk.size = chonk->size;
+		chunk.data = Z_Malloc(chunk.size, PU_STATIC, NULL);
+		memcpy(chunk.data, chonk->data, chunk.size);
+		return 1;
+	}
+	return 0;
 }
 
 static void PNG_error(png_structp PNG, png_const_charp pngtext)
@@ -2625,7 +2665,7 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
+static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -2638,11 +2678,13 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 #endif
 #endif
 
-	png_ioread png_io;
+	png_io_t png_io;
 	png_bytep *row_pointers;
 
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
-		PNG_error, PNG_warn);
+	png_byte grAb_chunk[5] = {'g', 'r', 'A', 'b', (png_byte)'\0'};
+	png_voidp *user_chunk_ptr;
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
 	{
 		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
@@ -2672,19 +2714,24 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 #endif
 
 	// set our own read_function
-	png_io.buffer = (png_bytep)png;
+	png_io.buffer = (png_const_bytep)png;
 	png_io.bufsize = size;
 	png_io.current_pos = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
+
+	memset(&chunk, 0x00, sizeof(png_chunk_t));
+	chunkname = grAb_chunk; // I want to read a grAb chunk
+
+	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
+	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
+	png_set_keep_unknown_chunks(png_ptr, 2, chunkname, 1);
 
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
 	png_set_user_limits(png_ptr, 2048, 2048);
 #endif
 
 	png_read_info(png_ptr, png_info_ptr);
-
-	png_get_IHDR(png_ptr, png_info_ptr, &width, &height, &bit_depth, &color_type,
-	 NULL, NULL, NULL);
+	png_get_IHDR(png_ptr, png_info_ptr, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
 
 	if (bit_depth == 16)
 		png_set_strip_16(png_ptr);
@@ -2712,7 +2759,24 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 	for (y = 0; y < height; y++)
 		row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png_ptr, png_info_ptr));
 	png_read_image(png_ptr, row_pointers);
+
+	// Read grAB chunk
+	if ((topoffset || leftoffset) && (chunk.data != NULL))
+	{
+		INT32 *offsets = (INT32 *)chunk.data;
+		// read left offset
+		if (leftoffset != NULL)
+			*leftoffset = (INT16)BIGENDIAN_LONG(*offsets);
+		offsets++;
+		// read top offset
+		if (topoffset != NULL)
+			*topoffset = (INT16)BIGENDIAN_LONG(*offsets);
+	}
+
+	// bye
 	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
+	if (chunk.data)
+		Z_Free(chunk.data);
 
 	*w = (INT32)width;
 	*h = (INT32)height;
@@ -2720,11 +2784,11 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 }
 
 // Convert a PNG to a raw image.
-static UINT8 *PNG_RawConvert(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
+static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	UINT8 *flat;
 	png_uint_32 x, y;
-	png_bytep *row_pointers = PNG_Read(png, w, h, size);
+	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, size);
 	png_uint_32 width = *w, height = *h;
 
 	if (!row_pointers)
@@ -2751,34 +2815,30 @@ static UINT8 *PNG_RawConvert(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 // Convert a PNG to a flat.
 UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size)
 {
-	return PNG_RawConvert(png, &levelflat->width, &levelflat->height, size);
+	return PNG_RawConvert(png, &levelflat->width, &levelflat->height, NULL, NULL, size);
 }
 
 // Convert a PNG to a patch.
 static unsigned char imgbuf[1<<26];
-patch_t *R_PNGToPatch(UINT8 *png, size_t size)
+patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency)
 {
 	UINT16 width, height;
-	UINT8 *raw = PNG_RawConvert(png, &width, &height, size);
+	INT16 topoffset = 0, leftoffset = 0;
+	UINT8 *raw = PNG_RawConvert(png, &width, &height, &topoffset, &leftoffset, size);
 
 	UINT32 x, y;
 	UINT8 *img;
 	UINT8 *imgptr = imgbuf;
 	UINT8 *colpointers, *startofspan;
 
-	#define WRITE8(buf, a) ({*buf = (a); buf++;})
-	#define WRITE16(buf, a) ({*buf = (a)&255; buf++; *buf = (a)>>8; buf++;})
-	#define WRITE32(buf, a) ({WRITE16(buf, (a)&65535); WRITE16(buf, (a)>>16);})
-
 	if (!raw)
 		I_Error("R_PNGToPatch: conversion failed");
 
 	// Write image size and offset
-	WRITE16(imgptr, width);
-	WRITE16(imgptr, height);
-	// no offsets
-	WRITE16(imgptr, 0);
-	WRITE16(imgptr, 0);
+	WRITEINT16(imgptr, width);
+	WRITEINT16(imgptr, height);
+	WRITEINT16(imgptr, leftoffset);
+	WRITEINT16(imgptr, topoffset);
 
 	// Leave placeholder to column pointers
 	colpointers = imgptr;
@@ -2793,12 +2853,22 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 
 		//printf("%d ", x);
 		// Write column pointer (@TODO may be wrong)
-		WRITE32(colpointers, imgptr - imgbuf);
+		WRITEINT32(colpointers, imgptr - imgbuf);
 
 		// Write pixels
 		for (y = 0; y < height; y++)
 		{
 			UINT8 paletteIndex = raw[((y * width) + x)];
+			boolean opaque = transparency ? (paletteIndex != TRANSPARENTPIXEL) : true;
+
+			// End span if we have a transparent pixel
+			if (!opaque)
+			{
+				if (startofspan)
+					WRITEUINT8(imgptr, 0);
+				startofspan = NULL;
+				continue;
+			}
 
 			// Start new column if we need to
 			if (!startofspan || spanSize == 255)
@@ -2807,15 +2877,15 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 
 				// If we reached the span size limit, finish the previous span
 				if (startofspan)
-					WRITE8(imgptr, 0);
+					WRITEUINT8(imgptr, 0);
 
 				if (y > 254)
 				{
 					// Make sure we're aligned to 254
 					if (lastStartY < 254)
 					{
-						WRITE8(imgptr, 254);
-						WRITE8(imgptr, 0);
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
 						imgptr += 2;
 						lastStartY = 254;
 					}
@@ -2825,15 +2895,15 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 
 					while (writeY > 254)
 					{
-						WRITE8(imgptr, 254);
-						WRITE8(imgptr, 0);
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
 						imgptr += 2;
 						writeY -= 254;
 					}
 				}
 
 				startofspan = imgptr;
-				WRITE8(imgptr, writeY);///@TODO calculate starting y pos
+				WRITEUINT8(imgptr, writeY);///@TODO calculate starting y pos
 				imgptr += 2;
 				spanSize = 0;
 
@@ -2841,27 +2911,25 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 			}
 
 			// Write the pixel
-			WRITE8(imgptr, paletteIndex);
+			WRITEUINT8(imgptr, paletteIndex);
 			spanSize++;
 			startofspan[1] = spanSize;
 		}
 
 		if (startofspan)
-			WRITE8(imgptr, 0);
+			WRITEUINT8(imgptr, 0);
 
-		WRITE8(imgptr, 0xFF);
+		WRITEUINT8(imgptr, 0xFF);
 	}
 
-	#undef WRITE8
-	#undef WRITE16
-	#undef WRITE32
-
 	size = imgptr-imgbuf;
-	img = malloc(size);
+	img = Z_Malloc(size, PU_STATIC, NULL);
 	memcpy(img, imgbuf, size);
 
 	Z_Free(raw);
 
+	if (destsize != NULL)
+		*destsize = size;
 	return (patch_t *)img;
 }
 
@@ -2877,7 +2945,7 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 #endif
 #endif
 
-	png_ioread png_io;
+	png_io_t png_io;
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
 		PNG_error, PNG_warn);

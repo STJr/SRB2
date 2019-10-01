@@ -25,7 +25,7 @@
 // Possible alpha types for a patch.
 enum patchalphastyle {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
 
-RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha);
+UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha);
 UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha);
 
 UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
@@ -165,10 +165,10 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat);
 void R_TextureToFlat(size_t tex, UINT8 *flat);
 
 #ifndef NO_PNG_LUMPS
-boolean R_IsLumpPNG(UINT8 *d, size_t s);
+boolean R_IsLumpPNG(const UINT8 *d, size_t s);
 
 UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size);
-patch_t *R_PNGToPatch(UINT8 *png, size_t size);
+patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency);
 boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
 #endif
 
