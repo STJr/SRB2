@@ -3573,6 +3573,67 @@ stairstep:
 		goto retry;
 }
 
+static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
+{
+	ffloor_t *rover;
+	fixed_t topheight, bottomheight;
+
+	for (rover = sec->ffloors; rover; rover = rover->next)
+	{
+		if (!(rover->flags & FF_EXISTS))
+			continue;
+
+		if (!(rover->flags & FF_SWIMMABLE))
+			continue;
+
+		if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 3)
+			continue;
+
+		if (!(rover->master->flags & ML_EFFECT3))
+			continue;
+
+		if (rover->master->flags & ML_BLOCKMONSTERS)
+			continue;
+
+		topheight =
+#ifdef ESLOPE
+			*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
+#endif
+			*rover->topheight;
+
+		if (mo->eflags & MFE_VERTICALFLIP)
+		{
+			if (topheight < mo->z - mo->height)
+				continue;
+		}
+		else
+		{
+			if (topheight < mo->z)
+				continue;
+		}
+
+		bottomheight =
+#ifdef ESLOPE
+			*rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) :
+#endif
+			*rover->bottomheight;
+
+		if (mo->eflags & MFE_VERTICALFLIP)
+		{
+			if (bottomheight > mo->z)
+				continue;
+		}
+		else
+		{
+			if (bottomheight > mo->z + mo->height)
+				continue;
+		}
+
+		P_DamageMobj(mo, NULL, NULL, 1, DMG_FIRE);
+		return;
+	}
+}
+
 //
 // P_SlideMove
 // The momx / momy move is bad, so try to slide
@@ -3732,6 +3793,12 @@ retry:
 		PT_ADDLINES, PTR_SlideTraverse);
 	P_PathTraverse(leadx, traily, leadx + mo->momx, traily + mo->momy,
 		PT_ADDLINES, PTR_SlideTraverse);
+
+	if (bestslideline && mo->player && bestslideline->sidenum[1] != 0xffff)
+	{
+		sector_t *sec = P_PointOnLineSide(mo->x, mo->y, bestslideline) ? bestslideline->frontsector : bestslideline->backsector;
+		P_CheckLavaWall(mo, sec);
+	}
 
 	// Some walls are bouncy even if you're not
 	if (bestslideline && bestslideline->flags & ML_BOUNCY)
