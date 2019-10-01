@@ -283,7 +283,9 @@ char sprnames[NUMSPRITES + 1][5] =
 	"XMS3", // Snowman
 	"XMS4", // Lamppost
 	"XMS5", // Hanging Star
+	"XMS6", // Mistletoe
 	"FHZI", // FHZ ice
+	"ROSY",
 
 	// Halloween Scenery
 	"PUMK", // Pumpkins
@@ -2552,6 +2554,7 @@ state_t states[NUMSTATES] =
 	{SPR_XMS4, 0, -1, {NULL}, 0, 0, S_NULL}, // S_LAMPPOST1
 	{SPR_XMS4, 1, -1, {NULL}, 0, 0, S_NULL}, // S_LAMPPOST2
 	{SPR_XMS5, 0, -1, {NULL}, 0, 0, S_NULL}, // S_HANGSTAR
+	{SPR_XMS6, 0, -1, {NULL}, 0, 0, S_NULL}, // S_MISTLETOE
 	// Xmas GFZ bushes
 	{SPR_BUS3, 1, -1, {NULL}, 0, 0, S_NULL}, // S_XMASBLUEBERRYBUSH
 	{SPR_BUS1, 1, -1, {NULL}, 0, 0, S_NULL}, // S_XMASBERRYBUSH
@@ -2559,6 +2562,16 @@ state_t states[NUMSTATES] =
 	// FHZ
 	{SPR_FHZI, 0, -1, {NULL}, 0, 0, S_NULL}, // S_FHZICE1
 	{SPR_FHZI, 1, -1, {NULL}, 0, 0, S_NULL}, // S_FHZICE2
+	{SPR_ROSY, 16, 8, {NULL}, 0, 0, S_ROSY_IDLE2}, // S_ROSY_IDLE1
+	{SPR_ROSY, 17, 4, {NULL}, 0, 0, S_ROSY_IDLE3}, // S_ROSY_IDLE2
+	{SPR_ROSY, 18, 8, {NULL}, 0, 0, S_ROSY_IDLE4}, // S_ROSY_IDLE3
+	{SPR_ROSY, 17, 4, {NULL}, 0, 0, S_ROSY_IDLE1}, // S_ROSY_IDLE4
+	{SPR_ROSY, 14, -1, {NULL}, 1, 0, S_NULL}, // S_ROSY_JUMP
+	{SPR_ROSY,  5, -1, {NULL}, 7, 0, S_NULL}, // S_ROSY_WALK
+	{SPR_ROSY, 19, -1, {NULL}, 0, 0, S_NULL}, // S_ROSY_HUG
+	{SPR_ROSY, 13, -1, {NULL}, 0, 0, S_NULL}, // S_ROSY_PAIN
+	{SPR_ROSY,  1|FF_ANIMATE, -1, {NULL}, 3, 16, S_NULL}, // S_ROSY_STND
+	{SPR_ROSY, 20|FF_ANIMATE, TICRATE, {NULL}, 3, 4, S_ROSY_WALK}, // S_ROSY_UNHAPPY
 
 	// Halloween Scenery
 	// Pumpkins
@@ -13445,6 +13458,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
+	{           // MT_MISTLETOE
+		2105,           // doomednum
+		S_MISTLETOE,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		52*FRACUNIT,    // radius
+		106*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SPAWNCEILING|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
 	{           // MT_XMASBLUEBERRYBUSH
 		1859,           // doomednum
 		S_XMASBLUEBERRYBUSH, // spawnstate
@@ -13577,6 +13617,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_ROSY
+		2104,           // doomednum
+		S_ROSY_IDLE1,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		48*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SCENERY|MF_ENEMY|MF_SLIDEME, // flags -- "enemy" may seem weird but it doesn't have any unintended consequences in context because no MF_SHOOTABLE|MF_SPECIAL
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CDLHRT
+		-1,             // doomednum
+		S_LHRT,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		4*FRACUNIT,     // speed
+		4*FRACUNIT,     // radius
+		4*FRACUNIT,     // height
+		1,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
