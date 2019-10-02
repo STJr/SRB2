@@ -5289,9 +5289,9 @@ static void M_DrawNightsAttackBackground(void)
 	INT32 fronttopwidth = SHORT(fronttopfg->width);
 
 	// bottom
-	patch_t *backbottomfg = W_CachePatchName("NTSATKB1", PU_CACHE);
+	//patch_t *backbottomfg = W_CachePatchName("NTSATKB1", PU_CACHE);
 	patch_t *frontbottomfg = W_CachePatchName("NTSATKB2", PU_CACHE);
-	INT32 backbottomwidth = SHORT(backbottomfg->width);
+	//INT32 backbottomwidth = SHORT(backbottomfg->width);
 	INT32 frontbottomwidth = SHORT(frontbottomfg->width);
 
 	// top border
@@ -5300,8 +5300,8 @@ static void M_DrawNightsAttackBackground(void)
 	INT32 topborderheight = SHORT(topborder->height);
 
 	// Snap patches to bottom
-	INT32 backbottomheight = SHORT(backbottomfg->height);
-	INT32 frontbottomheight = SHORT(frontbottomfg->height);
+	//INT32 backbottomheight = SHORT(backbottomfg->height);
+	//INT32 frontbottomheight = SHORT(frontbottomfg->height);
 
 	// only use one dup, to avoid stretching (har har)
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
@@ -5314,15 +5314,29 @@ static void M_DrawNightsAttackBackground(void)
 	y = snapy;
 
 	// back top foreground patch
-	x -= (ntsatkdrawtimer%backtopwidth);
+	x = -(ntsatkdrawtimer%backtopwidth);
+	x *= dupx;
 	V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, backtopfg, NULL);
+	for (i = 0; i < 3; i++)
+	{
+		x += (backtopwidth*dupx);
+		if (x < vid.width)
+			V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, backtopfg, NULL);
+	}
 
 	// front top foreground patch
-	x = ((fronttopwidth) - ((ntsatkdrawtimer*2)%backtopwidth));
+	x = -((ntsatkdrawtimer*2)%fronttopwidth);
+	x *= dupx;
 	V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, fronttopfg, NULL);
+	for (i = 0; i < 3; i++)
+	{
+		x += (fronttopwidth*dupx);
+		if (x < vid.width)
+			V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, fronttopfg, NULL);
+	}
 
 	// Snap patches to bottom
-	y = snapy;
+	/*y = snapy;
 	y += FixedInt(FixedMul((BASEVIDHEIGHT - backbottomheight)*FRACUNIT, dupy<<FRACBITS));
 
 	// back bottom foreground patch
@@ -5343,7 +5357,7 @@ static void M_DrawNightsAttackBackground(void)
 		x = ((i*frontbottomwidth) - ((ntsatkdrawtimer*2)%frontbottomwidth));
 		x *= dupx;
 		V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, frontbottomfg, NULL);
-	}
+	}*/
 
 	// draw borders
 	if (vid.height != BASEVIDHEIGHT * dupy)
