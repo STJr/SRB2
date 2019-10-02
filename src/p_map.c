@@ -962,7 +962,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			{
 				return true;
 			}
-			if ((thing->flags & MF_PUSHABLE) // carrying a player
+			if ((thing->flags & MF_PUSHABLE) // not carrying a player
 				&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
 				&& (P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < (thing->radius))
 				&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
