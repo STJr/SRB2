@@ -5186,9 +5186,6 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 }
 
 // new menus
-#define TILEX(w) max(FixedCeil(FixedDiv(vid.width, w * dupx)) >> FRACBITS, 1)+2
-#define TILEY(h) max(FixedCeil(FixedDiv(vid.height, h * dupy)) >> FRACBITS, 1)+2
-
 static void M_DrawRecordAttackForeground(void)
 {
 	patch_t *fg = W_CachePatchName("RECATKFG", PU_CACHE);
@@ -5226,164 +5223,89 @@ static void M_DrawRecordAttackForeground(void)
 }
 
 // NiGHTS Attack background.
-// The patch name is "NTSATKBG".
-
-static void M_DrawNightsAttackMountains(boolean border)
+static void M_DrawNightsAttackMountains(void)
 {
-	INT32 x, y = 0;
-	INT32 dupx = vid.dupx;
-	INT32 dupy = vid.dupy;
-	INT32 i;
-
-	patch_t *background;
-	INT32 bgwidth;
-
-	// scroll amount
 	static INT32 bgscrollx;
-
-	// only use one dup, to avoid stretching (har har)
-	dupx = dupy = (dupx < dupy ? dupx : dupy);
-
-	// draw borders
-	if (border)
-	{
-		INT32 scaled_height = BASEVIDHEIGHT * vid.dupy;
-		INT32 border_height = (vid.height - scaled_height) / 2;
-		// top border
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 158);
-		// bottom border
-		if (border_height > 0)
-			V_DrawFill(0, border_height + scaled_height, vid.width, border_height, V_NOSCALESTART|31);
-	}
-
-	// Cache and draw patch.
-	background = W_CachePatchName(curbgname, PU_CACHE);
-	bgwidth = SHORT(background->width);
-
-	y = (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
-	for (i = 0; i < (vid.width/bgwidth) + 1; i++)
-	{
-		x = ((i*(bgwidth*dupx)) + ((FixedInt(bgscrollx)%bgwidth)*dupx));
-		V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, background, NULL);
-	}
-
-	// scroll background to left
+	patch_t *background = W_CachePatchName(curbgname, PU_CACHE);
+	INT32 x = FixedInt(bgscrollx) % SHORT(background->width);
+	INT32 y = BASEVIDHEIGHT - SHORT(background->height)*2;
+	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
+	x += SHORT(background->width);
+	if (x < BASEVIDWIDTH)
+		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
+	V_DrawFill(0, y+50, vid.width, BASEVIDHEIGHT, V_SNAPTOLEFT|31);
 	bgscrollx -= (FRACUNIT/2);
 }
 
 // NiGHTS Attack foreground.
-// (Yeah, I know.)
-// Calls M_DrawNightsAttackMountains for the background.
-
 static void M_DrawNightsAttackBackground(void)
 {
-	INT32 x, y, snapy = 0;
-	INT32 dupx = vid.dupx;
-	INT32 dupy = vid.dupy;
-	INT32 i, j;
+	INT32 x, y = 0;
+	INT32 i;
 
 	// top
 	patch_t *backtopfg = W_CachePatchName("NTSATKT1", PU_CACHE);
 	patch_t *fronttopfg = W_CachePatchName("NTSATKT2", PU_CACHE);
 	INT32 backtopwidth = SHORT(backtopfg->width);
+	//INT32 backtopheight = SHORT(backtopfg->height);
 	INT32 fronttopwidth = SHORT(fronttopfg->width);
+	//INT32 fronttopheight = SHORT(fronttopfg->height);
 
 	// bottom
-	//patch_t *backbottomfg = W_CachePatchName("NTSATKB1", PU_CACHE);
+	patch_t *backbottomfg = W_CachePatchName("NTSATKB1", PU_CACHE);
 	patch_t *frontbottomfg = W_CachePatchName("NTSATKB2", PU_CACHE);
-	//INT32 backbottomwidth = SHORT(backbottomfg->width);
+	INT32 backbottomwidth = SHORT(backbottomfg->width);
+	INT32 backbottomheight = SHORT(backbottomfg->height);
 	INT32 frontbottomwidth = SHORT(frontbottomfg->width);
-
-	// top border
-	patch_t *topborder = W_CachePatchName("NTSATKBD", PU_CACHE);
-	INT32 topborderwidth = SHORT(topborder->width);
-	INT32 topborderheight = SHORT(topborder->height);
-
-	// Snap patches to bottom
-	//INT32 backbottomheight = SHORT(backbottomfg->height);
-	//INT32 frontbottomheight = SHORT(frontbottomfg->height);
-
-	// only use one dup, to avoid stretching (har har)
-	dupx = dupy = (dupx < dupy ? dupx : dupy);
+	INT32 frontbottomheight = SHORT(frontbottomfg->height);
 
 	// background
-	M_DrawNightsAttackMountains(false);
-
-	// Center patches vertically
-	snapy = (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
-	y = snapy;
+	M_DrawNightsAttackMountains();
 
 	// back top foreground patch
 	x = -(ntsatkdrawtimer%backtopwidth);
-	x *= dupx;
-	V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, backtopfg, NULL);
+	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, backtopfg);
 	for (i = 0; i < 3; i++)
 	{
-		x += (backtopwidth*dupx);
-		if (x < vid.width)
-			V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, backtopfg, NULL);
+		x += (backtopwidth);
+		if (x >= vid.width)
+			break;
+		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, backtopfg);
 	}
 
 	// front top foreground patch
 	x = -((ntsatkdrawtimer*2)%fronttopwidth);
-	x *= dupx;
-	V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, fronttopfg, NULL);
+	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, fronttopfg);
 	for (i = 0; i < 3; i++)
 	{
-		x += (fronttopwidth*dupx);
-		if (x < vid.width)
-			V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, fronttopfg, NULL);
+		x += (fronttopwidth);
+		if (x >= vid.width)
+			break;
+		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, fronttopfg);
 	}
-
-	// Snap patches to bottom
-	/*y = snapy;
-	y += FixedInt(FixedMul((BASEVIDHEIGHT - backbottomheight)*FRACUNIT, dupy<<FRACBITS));
 
 	// back bottom foreground patch
-	for (i = 0; i < TILEX(backbottomwidth) + 1; i++)
+	x = -(ntsatkdrawtimer%backbottomwidth);
+	y = BASEVIDHEIGHT - backbottomheight;
+	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, backbottomfg);
+	for (i = 0; i < 3; i++)
 	{
-		x = ((i*backbottomwidth) - (ntsatkdrawtimer%backbottomwidth));
-		x *= dupx;
-		V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, backbottomfg, NULL);
+		x += (backbottomwidth);
+		if (x >= vid.width)
+			break;
+		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, backbottomfg);
 	}
 
-	// Snap patches to bottom
-	y = snapy;
-	y += FixedInt(FixedMul((BASEVIDHEIGHT - frontbottomheight)*FRACUNIT, dupy<<FRACBITS));
-
 	// front bottom foreground patch
-	for (i = 0; i < TILEX(frontbottomwidth) + 1; i++)
+	x = -((ntsatkdrawtimer*2)%frontbottomwidth);
+	y = BASEVIDHEIGHT - frontbottomheight;
+	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, frontbottomfg);
+	for (i = 0; i < 3; i++)
 	{
-		x = ((i*frontbottomwidth) - ((ntsatkdrawtimer*2)%frontbottomwidth));
-		x *= dupx;
-		V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, frontbottomfg, NULL);
-	}*/
-
-	// draw borders
-	if (vid.height != BASEVIDHEIGHT * dupy)
-	{
-		INT32 scaled_height = BASEVIDHEIGHT * vid.dupy;
-		INT32 border_height = (vid.height - scaled_height) / 2;
-
-		if (border_height > 0)
-		{
-			// top border
-			INT16 yoffset = SHORT(topborder->topoffset);
-			y = border_height - ((topborderheight - yoffset) * dupy);
-			y += (yoffset * dupy);
-			for (i = 0; i < TILEY(border_height) + 1; i++)
-			{
-				for (j = 0; j < TILEX(topborderwidth); j++)
-				{
-					x = ((j*frontbottomwidth) - ((ntsatkdrawtimer*2)%frontbottomwidth));
-					x *= dupx;
-					V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, V_NOSCALESTART, topborder, NULL);
-				}
-				y -= (topborderheight * vid.dupy);
-			}
-			// bottom border
-			V_DrawFill(0, border_height + scaled_height, vid.width, border_height, V_NOSCALESTART|153);
-		}
+		x += (frontbottomwidth);
+		if (x >= vid.width)
+			break;
+		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, frontbottomfg);
 	}
 
 	// Increment timer.
@@ -5391,30 +5313,14 @@ static void M_DrawNightsAttackBackground(void)
 }
 
 // NiGHTS Attack floating Super Sonic.
-// Two frames of animation.
-
+static patch_t *ntssupersonic[2];
 static void M_DrawNightsAttackSuperSonic(void)
 {
-	const char *supersonic = "NTSSONC%d";
-	patch_t *supersonic_patch;
-	UINT8 *colormap = NULL;
-	UINT8 super_colour;
+	const UINT8 *colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_YELLOW, GTC_CACHE);
 	INT32 timer = (ntsatkdrawtimer/4) % 2;
-	angle_t fa;
-
-	super_colour = SKINCOLOR_SUPERGOLD1;
-	super_colour += abs( ( (signed)( (unsigned)ntsatkdrawtimer >> 1 ) % 9) - 4);
-	colormap = R_GetTranslationColormap(TC_DEFAULT, super_colour, GTC_CACHE);
-
-	fa = (FixedAngle(((ntsatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
-
-	// Cache and draw patch.
-	supersonic_patch = W_CachePatchName(va(supersonic, timer+1), PU_CACHE);
-	V_DrawFixedPatch(235<<FRACBITS, (120<<FRACBITS) - (8*FINESINE(fa)), FRACUNIT, 0, supersonic_patch, colormap);
+	angle_t fa = (FixedAngle(((ntsatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
+	V_DrawFixedPatch(235<<FRACBITS, (120<<FRACBITS) - (8*FINESINE(fa)), FRACUNIT, 0, ntssupersonic[timer], colormap);
 }
-
-#undef TILEX
-#undef TILEY
 
 static void M_DrawLevelPlatterMenu(void)
 {
@@ -5450,7 +5356,10 @@ static void M_DrawLevelPlatterMenu(void)
 		if (curbgcolor >= 0)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 		else if (!curbghide || !titlemapinaction)
-			M_DrawNightsAttackMountains(true);
+		{
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 158);
+			M_DrawNightsAttackMountains();
+		}
 		if (curfadevalue)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
@@ -5661,7 +5570,10 @@ static void M_DrawMessageMenu(void)
 		else if (!curbghide || !titlemapinaction)
 		{
 			if (levellistmode == LLM_NIGHTSATTACK)
-				M_DrawNightsAttackMountains(true);
+			{
+				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 158);
+				M_DrawNightsAttackMountains();
+			}
 			else
 			{
 				F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
@@ -9010,6 +8922,9 @@ static void M_NightsAttack(INT32 choice)
 	}
 	// This is really just to make sure Sonic is the played character, just in case
 	M_PatchSkinNameTable();
+
+	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_CACHE);
+	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_CACHE);
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
