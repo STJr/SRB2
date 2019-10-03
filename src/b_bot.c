@@ -24,12 +24,36 @@ static boolean lastForward = false;
 static boolean lastBlocked = false;
 static boolean blocked = false;
 
+static boolean jump_last = false;
+static boolean spin_last = false;
+static UINT8 anxiety = 0;
+static boolean panic = false;
+static UINT8 flymode = 0;
+static boolean spinmode = false;
+static boolean thinkfly = false;
+static mobj_t *overlay;
+
 static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
 	boolean forward=false, backward=false, left=false, right=false, jump=false, spin=false;
-	angle_t angle;
-	INT16 rangle;
-	fixed_t dist;
+	
+	player_t *player = sonic->player, *bot = tails->player;
+	ticcmd_t *pcmd = &player->cmd;
+	boolean water = tails->eflags & MFE_UNDERWATER;
+	boolean flip = P_MobjFlip(tails);
+	boolean _2d = (tails->flags2 & MF2_TWOD) || twodlevel;
+	fixed_t scale = tails->scale;
+	
+	fixed_t dist = P_AproxDistance(sonic->x - tails->x, sonic->y - tails->y);
+	fixed_t zdist = flip * (sonic->z - tails->z);
+	angle_t ang = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
+	fixed_t pmom = P_AproxDistance(sonic->momx, sonic->momy);
+	fixed_t bmom = P_AproxDistance(tails->momx, tails->momy);
+	fixed_t followmax = 128 * 8 *scale;
+	fixed_t followthres = 92 * scale;
+	fixed_t followmin = 32 * scale;
+	fixed_t comfortheight = 96 * scale;
+	fixed_t touchdist = 24 * scale;
 
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
@@ -58,46 +82,255 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		return;
 	}
 
-	// Gather data about the environment
-	dist = P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y);
-	if (tails->player->pflags & PF_STARTDASH)
-		angle = sonic->angle;
+	// Adapted from CobaltBW's tails_AI.wad
+	
+	// Check water
+	if (water)
+	{
+		followmin = 0;
+		followthres = 16*scale;
+		followmax >>= 1;
+		thinkfly = false;
+	}
+	
+	// Check anxiety
+	if (spinmode)
+	{
+		anxiety = 0;
+		panic = false;
+	}
+	else if (dist > followmax || zdist > comfortheight)
+	{
+		anxiety = min(anxiety + 2, 70);
+		if (anxiety >= 70)
+			panic = true;
+	}
 	else
-		angle = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
-
-	// Decide which direction to turn
-	angle = (tails->angle - angle);
-	if (angle < ANGLE_180) {
-		right = true; // We need to turn right
-		rangle = AngleFixed(angle)>>FRACBITS;
-	} else {
-		left = true; // We need to turn left
-		rangle = 360-(AngleFixed(angle)>>FRACBITS);
+	{
+		anxiety = max(anxiety - 1, 0);
+		panic = false;
 	}
-
-	// Decide to move forward if you're finished turning
-	if (abs(rangle) < 10) { // We're facing the right way?
-		left = right = false; // Stop turning
-		forward = true; // and walk forward instead.
+	
+	// Orientation
+	if ((bot->pflags & (PF_SPINNING|PF_STARTDASH)) || flymode == 2)
+	{
+		tails->angle = sonic->angle;
 	}
-	if (dist < (sonic->radius+tails->radius)*3) // We're close enough?
-		forward = false; // Stop walking.
-
-	// Decide when to jump
-	if (!(tails->player->pflags & (PF_JUMPED|PF_JUMPDOWN))) { // We're not jumping yet...
-		if (forward && lastForward && blocked && lastBlocked) // We've been stopped by a wall or something
-			jump = true; // Try to jump up
-	} else if ((tails->player->pflags & (PF_JUMPDOWN|PF_JUMPED)) == (PF_JUMPDOWN|PF_JUMPED)) { // When we're already jumping...
-		if (lastForward && blocked) // We're still stuck on something?
+	else
+	{
+		tails->angle = ang;
+	}
+	
+	// ********
+	// FLY MODE
+	// spinmode check
+	if (spinmode)
+		thinkfly = false;
+	else
+	{
+		// Activate co-op flight
+		if (thinkfly && player->pflags & PF_JUMPED)
+		{
+			if (!jump_last)
+			{
+				jump = true;
+				if (bot->pflags & PF_JUMPED)
+				{
+					flymode = 1;
+					thinkfly = false;
+				}
+			}
+		}
+		
+		// Check positioning
+		// Thinker for co-op flight
+		if (!(water || pmom || bmom)
+			&& (dist < touchdist)
+			&& !(pcmd->forwardmove || pcmd->sidemove || player->dashspeed)
+			&& P_IsObjectOnGround(sonic) && P_IsObjectOnGround(tails)
+			&& !(player->pflags & PF_STASIS))
+				thinkfly = true;
+		else
+			thinkfly = false;
+		
+		// Ready for takeoff
+		if (flymode == 1)
+		{
+			thinkfly = false;
+			if (zdist < -64*scale || (flip * tails->momz) > scale) // Make sure we're not too high up
+				spin = true;
+			else if (!jump_last)
+				jump = true;
+			
+			// Abort if the player moves away or spins
+			if (dist > followthres || player->dashspeed)
+				flymode = 0;
+			
+			// Set carried state
+			if (bot->pflags & PF_THOKKED && flymode == 1
+				&& !P_IsObjectOnGround(sonic)
+				&& dist < touchdist
+				&& zdist < 32*scale
+				&& flip * sonic->momz < 0)
+			{
+				P_SetTarget(&sonic->tracer, tails);
+				player->powers[pw_carry] = CR_PLAYER;
+				flymode = 2;
+				player->pflags &= ~PF_JUMPED;
+			}
+		}
+		// Read player inputs
+		else if (flymode == 2)
+		{
+			cmd->forwardmove = pcmd->forwardmove;
+			cmd->sidemove = pcmd->sidemove;
+			if (pcmd->buttons & BT_USE)
+			{
+				spin = true;
+				jump = false;
+			}
+			else if (!jump_last)
+				jump = true;
+			// End flymode
+			if (player->pflags & PF_JUMPED
+				|| player->powers[pw_carry] != CR_PLAYER
+				|| P_IsObjectOnGround(sonic))
+			{
+				player->powers[pw_carry] = CR_NONE;
+				P_SetTarget(&sonic->tracer, NULL);
+				flymode = 0;
+			}
+		}
+	}
+	
+	if (flymode && P_IsObjectOnGround(tails) && !(pcmd->buttons & BT_JUMP))
+		flymode = 0;
+	
+	// ********
+	// SPINNING
+	if (panic || flymode || !(player->pflags & PF_SPINNING) || (player->pflags & PF_JUMPED))
+		spinmode = false;
+	else
+	{
+		if (!_2d)
+		{
+			// Spindash
+			if (player->dashspeed)
+			{
+				if (dist < followthres && dist > touchdist) // Do positioning
+				{
+					tails->angle = ang;
+					cmd->forwardmove = 50;
+					spinmode = true;
+				}
+				else if (dist < touchdist && !bmom
+					&& (!(bot->pflags & PF_SPINNING) || (bot->dashspeed && bot->pflags & PF_SPINNING)))
+				{
+					tails->angle = sonic->angle;
+					spin = true;
+					spinmode = true;
+				}
+				else
+					spinmode = 0;
+			}
+			// Spin
+			else if (player->dashspeed == bot->dashspeed && player->pflags & PF_SPINNING)
+			{
+				if (bot->pflags & PF_SPINNING || !spin_last)
+				{
+					spin = true;
+					tails->angle = sonic->angle;
+					cmd->forwardmove = MAXPLMOVE;
+					spinmode = true;
+				}
+				else
+					spinmode = false;
+			}
+		}
+		// 2D mode
+		else
+		{
+			if ((player->dashspeed && !bmom) || (player->dashspeed == bot->dashspeed && player->pflags & PF_SPINNING))
+			{
+				spin = true;
+				spinmode = true;
+			}
+		}
+	}
+	
+	// ********
+	// FOLLOW
+	if (!(flymode || spinmode))
+	{
+		// Too far
+		if (panic || dist > followthres)
+		{
+			if (!_2d)
+				cmd->forwardmove = MAXPLMOVE;
+			else if (sonic->x > tails->x)
+				cmd->sidemove = MAXPLMOVE;
+			else
+				cmd->sidemove = -MAXPLMOVE;
+		}
+		// Within threshold
+		else if (!panic && dist > followmin && abs(zdist) < 192*scale)
+		{
+			if (!_2d)
+				cmd->forwardmove = FixedHypot(pcmd->forwardmove, pcmd->sidemove);
+			else
+				cmd->sidemove = pcmd->sidemove;
+		}
+		// Below min
+		else if (dist < followmin)
+		{
+			// Copy inputs
+			tails->angle = sonic->angle;
+			bot->drawangle = player->drawangle;
+			cmd->forwardmove = 8 * pcmd->forwardmove / 10;
+			cmd->sidemove = 8 * pcmd->sidemove / 10;
+		}
+	}
+	
+	// ********
+	// JUMP
+	if (!(flymode || spinmode))
+	{
+		// Flying catch-up
+		if (bot->pflags & PF_THOKKED)
+		{
+			cmd->forwardmove = min(50, dist/scale/8);
+			if (zdist < -64*scale)
+				spin = true;
+			else if (zdist > 0 && !jump_last)
+				jump = true;
+		}
+		
+		// Just landed
+		if (tails->eflags & MFE_JUSTHITFLOOR)
+			jump = false;
+		// Start jump
+		else if (!jump_last && !(bot->pflags & PF_JUMPED) && !(player->pflags & PF_SPINNING)
+			&& ((zdist > 32*scale && player->pflags & PF_JUMPED) // Following
+				|| (zdist > 64*scale && panic) // Vertical catch-up
+				|| (bmom < scale>>3 && dist > followthres && !(bot->powers[pw_carry])) // Stopped & not in carry state
+				|| (bot->pflags & PF_SPINNING && !(bot->pflags & PF_JUMPED)))) // Spinning
+					jump = true;
+		// Hold jump
+		else if (bot->pflags & PF_JUMPED && jump_last && tails->momz*flip > 0 && (zdist > 0 || panic))
 			jump = true;
-		if (sonic->floorz > tails->floorz) // He's still above us? Jump HIGHER, then!
+		// Start flying
+		else if (bot->pflags & PF_JUMPED && panic && !jump_last)
 			jump = true;
 	}
-
-	// Decide when to spin
-	if (sonic->player->pflags & PF_STARTDASH
-	&& (tails->player->pflags & PF_STARTDASH || (P_AproxDistance(tails->momx, tails->momy) < 2*FRACUNIT && !forward)))
-		spin = true;
+	
+	// ********
+	// HISTORY
+	jump_last = jump;
+	spin_last = spin;
+	
+	// ********
+	// Thinkfly overlay
+		// doing this later :P
 
 	// Turn the virtual keypresses into ticcmd_t.
 	B_KeysToTiccmd(tails, cmd, forward, backward, left, right, false, false, jump, spin);
@@ -188,6 +421,13 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 			cmd->sidemove -= MAXPLMOVE<<FRACBITS>>16;
 		if (straferight)
 			cmd->sidemove += MAXPLMOVE<<FRACBITS>>16;
+		
+		// cap inputs so the bot can't accelerate faster diagonally
+		angle_t angle = R_PointToAngle2(0, 0, cmd->sidemove << FRACBITS, cmd->forwardmove << FRACBITS);
+		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
+		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
+		cmd->forwardmove = max(min(cmd->forwardmove, maxforward), -maxforward);
+		cmd->sidemove = max(min(cmd->sidemove, maxside), -maxside);
 	}
 	if (jump)
 		cmd->buttons |= BT_JUMP;
