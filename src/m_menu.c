@@ -8098,7 +8098,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	patch_t *charfg = W_CachePatchName("CHARFG", PU_CACHE);
 	INT16 bgheight = SHORT(charbg->height);
 	INT16 fgheight = SHORT(charfg->height);
-	INT32 i;
+	INT16 bgwidth = SHORT(charbg->width);
+	INT16 fgwidth = SHORT(charfg->width);
+	INT32 y;
 
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
@@ -8131,31 +8133,22 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	charseltimer++;
 
 	// Background and borders
-	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, colormap[101]);
+	V_DrawFill(0, 0, bgwidth, vid.height, V_SNAPTOTOP|colormap[101]);
 	{
 		INT32 sw = (BASEVIDWIDTH * vid.dupx);
 		INT32 bw = (vid.width - sw) / 2;
 		col = colormap[106];
 		if (bw)
-		{
 			V_DrawFill(0, 0, bw, vid.height, V_NOSCALESTART|col);
-			V_DrawFill(bw+sw, 0, bw, vid.height, V_NOSCALESTART|col);
-		}
 	}
 
-	// Foreground
-	for (i = -12; i < (BASEVIDHEIGHT/bgheight) + 12; i++)
-	{
-		INT32 oy = (i*bgheight), y;
-		y = oy - (bgheight - (charseltimer%bgheight));
-		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, 0, charbg, colormap);
-	}
-	for (i = -12; i < (BASEVIDHEIGHT/fgheight) + 12; i++)
-	{
-		INT32 oy = (i*fgheight), y;
-		y = oy - (fgheight + (charseltimer%fgheight));
-		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, 0, charfg, colormap);
-	}
+	y = (charseltimer%32);
+	V_DrawMappedPatch(0, y-bgheight, V_SNAPTOTOP, charbg, colormap);
+	V_DrawMappedPatch(0, y, V_SNAPTOTOP, charbg, colormap);
+	V_DrawMappedPatch(0, y+bgheight, V_SNAPTOTOP, charbg, colormap);
+	V_DrawMappedPatch(0, -y, V_SNAPTOTOP, charfg, colormap);
+	V_DrawMappedPatch(0, -y+fgheight, V_SNAPTOTOP, charfg, colormap);
+	V_DrawFill(fgwidth, 0, vid.width, vid.height, V_SNAPTOTOP|colormap[106]);
 
 	// Character pictures
 	{
