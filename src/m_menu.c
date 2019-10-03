@@ -5226,14 +5226,20 @@ static void M_DrawRecordAttackForeground(void)
 static void M_DrawNightsAttackMountains(void)
 {
 	static INT32 bgscrollx;
+	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	patch_t *background = W_CachePatchName(curbgname, PU_CACHE);
 	INT32 x = FixedInt(bgscrollx) % SHORT(background->width);
 	INT32 y = BASEVIDHEIGHT - SHORT(background->height)*2;
+
+	if (vid.height != BASEVIDHEIGHT * dupz)
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 158);
+	V_DrawFill(0, y+50, vid.width, BASEVIDHEIGHT, V_SNAPTOLEFT|31);
+
 	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
 	x += SHORT(background->width);
 	if (x < BASEVIDWIDTH)
 		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
-	V_DrawFill(0, y+50, vid.width, BASEVIDHEIGHT, V_SNAPTOLEFT|31);
+
 	bgscrollx -= (FRACUNIT/2);
 }
 
@@ -5264,48 +5270,48 @@ static void M_DrawNightsAttackBackground(void)
 
 	// back top foreground patch
 	x = -(ntsatkdrawtimer%backtopwidth);
-	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, backtopfg);
+	V_DrawScaledPatch(x, y, V_SNAPTOTOP|V_SNAPTOLEFT, backtopfg);
 	for (i = 0; i < 3; i++)
 	{
 		x += (backtopwidth);
 		if (x >= vid.width)
 			break;
-		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, backtopfg);
+		V_DrawScaledPatch(x, y, V_SNAPTOTOP|V_SNAPTOLEFT, backtopfg);
 	}
 
 	// front top foreground patch
 	x = -((ntsatkdrawtimer*2)%fronttopwidth);
-	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, fronttopfg);
+	V_DrawScaledPatch(x, y, V_SNAPTOTOP|V_SNAPTOLEFT, fronttopfg);
 	for (i = 0; i < 3; i++)
 	{
 		x += (fronttopwidth);
 		if (x >= vid.width)
 			break;
-		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, fronttopfg);
+		V_DrawScaledPatch(x, y, V_SNAPTOTOP|V_SNAPTOLEFT, fronttopfg);
 	}
 
 	// back bottom foreground patch
 	x = -(ntsatkdrawtimer%backbottomwidth);
 	y = BASEVIDHEIGHT - backbottomheight;
-	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, backbottomfg);
+	V_DrawScaledPatch(x, y, V_SNAPTOBOTTOM|V_SNAPTOLEFT, backbottomfg);
 	for (i = 0; i < 3; i++)
 	{
 		x += (backbottomwidth);
 		if (x >= vid.width)
 			break;
-		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, backbottomfg);
+		V_DrawScaledPatch(x, y, V_SNAPTOBOTTOM|V_SNAPTOLEFT, backbottomfg);
 	}
 
 	// front bottom foreground patch
 	x = -((ntsatkdrawtimer*2)%frontbottomwidth);
 	y = BASEVIDHEIGHT - frontbottomheight;
-	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, frontbottomfg);
+	V_DrawScaledPatch(x, y, V_SNAPTOBOTTOM|V_SNAPTOLEFT, frontbottomfg);
 	for (i = 0; i < 3; i++)
 	{
 		x += (frontbottomwidth);
 		if (x >= vid.width)
 			break;
-		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, frontbottomfg);
+		V_DrawScaledPatch(x, y, V_SNAPTOBOTTOM|V_SNAPTOLEFT, frontbottomfg);
 	}
 
 	// Increment timer.
