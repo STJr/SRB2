@@ -223,11 +223,13 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 					cmd->forwardmove = 50;
 					spinmode = true;
 				}
-				else if (dist < touchdist && !bmom
-					&& (!(bot->pflags & PF_SPINNING) || (bot->dashspeed && bot->pflags & PF_SPINNING)))
+				else if (dist < touchdist)
 				{
-					cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
-					spin = true;
+					if (!bmom && (!(bot->pflags & PF_SPINNING) || (bot->dashspeed && bot->pflags & PF_SPINNING)))
+					{
+						cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
+						spin = true;
+					}
 					spinmode = true;
 				}
 				else
