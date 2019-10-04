@@ -114,11 +114,11 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 	// Orientation
 	if ((bot->pflags & (PF_SPINNING|PF_STARTDASH)) || flymode == 2)
 	{
-		tails->angle = sonic->angle;
+		cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
 	}
 	else
 	{
-		tails->angle = ang;
+		cmd->angleturn = (ang - tails->angle) >> FRACBITS;
 	}
 	
 	// ********
@@ -219,14 +219,14 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 			{
 				if (dist < followthres && dist > touchdist) // Do positioning
 				{
-					tails->angle = ang;
+					cmd->angleturn = (ang - tails->angle) >> FRACBITS;
 					cmd->forwardmove = 50;
 					spinmode = true;
 				}
 				else if (dist < touchdist && !bmom
 					&& (!(bot->pflags & PF_SPINNING) || (bot->dashspeed && bot->pflags & PF_SPINNING)))
 				{
-					tails->angle = sonic->angle;
+					cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
 					spin = true;
 					spinmode = true;
 				}
@@ -239,7 +239,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 				if (bot->pflags & PF_SPINNING || !spin_last)
 				{
 					spin = true;
-					tails->angle = sonic->angle;
+					cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
 					cmd->forwardmove = MAXPLMOVE;
 					spinmode = true;
 				}
@@ -284,7 +284,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		else if (dist < followmin)
 		{
 			// Copy inputs
-			tails->angle = sonic->angle;
+			cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
 			bot->drawangle = player->drawangle;
 			cmd->forwardmove = 8 * pcmd->forwardmove / 10;
 			cmd->sidemove = 8 * pcmd->sidemove / 10;
