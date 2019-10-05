@@ -8834,13 +8834,13 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_RING:
-			case MT_COIN:
 			case MT_REDTEAMRING:
 			case MT_BLUETEAMRING:
 				P_KillRingsInLava(mobj);
 				if (P_MobjWasRemoved(mobj))
 					return;
 				/* FALLTHRU */
+			case MT_COIN:
 			case MT_BLUESPHERE:
 			case MT_BOMBSPHERE:
 			case MT_NIGHTSCHIP:
@@ -8854,11 +8854,11 @@ void P_MobjThinker(mobj_t *mobj)
 				return;
 			// Flung items
 			case MT_FLINGRING:
-			case MT_FLINGCOIN:
 				P_KillRingsInLava(mobj);
 				if (P_MobjWasRemoved(mobj))
 					return;
 				/* FALLTHRU */
+			case MT_FLINGCOIN:
 			case MT_FLINGBLUESPHERE:
 			case MT_FLINGNIGHTSCHIP:
 				if (mobj->flags2 & MF2_NIGHTSPULL)
