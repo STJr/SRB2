@@ -11179,6 +11179,7 @@ void P_PlayerThink(player_t *player)
 					/* FALLTHRU */
 				case CR_MINECART:
 				case CR_GENERIC:
+				case CR_PTERABYTE:
 					player->drawangle = player->mo->tracer->angle;
 					break;
 				case CR_ROLLOUT:
@@ -11970,8 +11971,8 @@ void P_PlayerAfterThink(player_t *player)
 				if (P_AproxDistance(player->mo->x - ptera->x, player->mo->y - ptera->y) > player->mo->radius)
 					goto dropoff;
 
-				if (player->mo->state-states != S_PLAY_RIDE)
-					P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+				if (player->mo->state-states != S_PLAY_FALL)
+					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 				break;
 
 			dropoff:
