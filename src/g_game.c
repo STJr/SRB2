@@ -3361,6 +3361,11 @@ void G_LoadGameData(void)
 	if (M_CheckParm("-resetdata"))
 		return; // Don't load (essentially, reset).
 
+	if (M_CheckParm("-gamedata") && M_IsNextParm())
+	{
+		strlcpy(gamedatafilename, M_GetNextParm(), sizeof gamedatafilename);
+	}
+
 	length = FIL_ReadFile(va(pandf, srb2home, gamedatafilename), &savebuffer);
 	if (!length) // Aw, no game data. Their loss!
 		return;
