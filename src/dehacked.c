@@ -5861,7 +5861,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Saloon door
 	"S_SALOONDOOR",
-	"S_SALOONDOORTHINKER",
+	"S_SALOONDOORCENTER",
 
 	// Train cameo
 	"S_TRAINCAMEOSPAWNER_1",
@@ -7601,7 +7601,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MINECARTSIDEMARK",
 	"MT_MINECARTSPARK",
 	"MT_SALOONDOOR",
-	"MT_SALOONDOORTHINKER",
+	"MT_SALOONDOORCENTER",
 	"MT_TRAINCAMEOSPAWNER",
 	"MT_TRAINSEG",
 	"MT_TRAINDUSTSPAWNER",

@@ -13893,51 +13893,43 @@ void A_SnapperThinker(mobj_t *actor)
 //
 // Description: Spawns a saloon door.
 //
-// var1 = unused
-// var2 = unused
+// var1 = mobjtype for sides
+// var2 = distance sides should be placed apart
 //
 void A_SaloonDoorSpawn(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 	angle_t ang = actor->angle;
 	angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
-	fixed_t c = FINECOSINE(fa);
-	fixed_t s = FINESINE(fa);
-	INT32 d = 48;
-	fixed_t x = actor->x;
-	fixed_t y = actor->y;
-	fixed_t z = actor->z;
+	fixed_t c = FINECOSINE(fa)*locvar2;
+	fixed_t s = FINESINE(fa)*locvar2;
 	mobj_t *door;
+	mobjflag2_t ambush = (actor->flags & MF2_AMBUSH);
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SaloonDoorSpawn", actor))
 		return;
 #endif
 
-	//Front
-	door = P_SpawnMobj(x + c*d, y + s*d, z, MT_SALOONDOOR);
+	if (!locvar1)
+		return;
+
+	// One door...
+	if (!(door = P_SpawnMobjFromMobj(actor, c, s, 0, locvar1))) return;
 	door->angle = ang + ANGLE_180;
+	door->extravalue1 = AngleFixed(door->angle); // Origin angle
+	door->extravalue2 = 0; // Angular speed
+	P_SetTarget(&door->tracer, actor); // Origin door
+	door->flags2 |= ambush; // Can be opened by normal players?
 
-	// Origin angle
-	door->extravalue1 = AngleFixed(door->angle);
-
-	// Angular speed
-	door->extravalue2 = 0;
-
-	// Origin door
-	P_SetTarget(&door->tracer, actor);
-
-	//Back
-	door = P_SpawnMobj(x - c*d, y - s*d, z, MT_SALOONDOOR);
+	// ...two door!
+	if (!(door = P_SpawnMobjFromMobj(actor, -c, -s, 0, locvar1))) return;
 	door->angle = ang;
-
-	// Origin angle
-	door->extravalue1 = AngleFixed(door->angle);
-
-	// Angular speed
-	door->extravalue2 = 0;
-
-	// Origin door
-	P_SetTarget(&door->tracer, actor);
+	door->extravalue1 = AngleFixed(door->angle); // Origin angle
+	door->extravalue2 = 0; // Angular speed
+	P_SetTarget(&door->tracer, actor); // Origin door
+	door->flags2 |= ambush; // Can be opened by normal players?
 }
 
 // Function: A_MinecartSparkThink

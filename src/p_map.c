@@ -870,19 +870,27 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if (thing->type == MT_SALOONDOOR && tmthing->player)
+	if (thing->type == MT_SALOONDOOR)
 	{
-		if (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer) && tmthing->tracer->health)
+		if (tmthing->player)
 		{
-			fixed_t dx = tmthing->tracer->momx;
-			fixed_t dy = tmthing->tracer->momy;
-			fixed_t dm = min(FixedHypot(dx, dy), 16*FRACUNIT);
-			angle_t ang = R_PointToAngle2(0, 0, dx, dy) - thing->angle;
-			fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);
-			S_StartSound(tmthing, thing->info->activesound);
-			thing->extravalue2 += 2*FixedMul(s, dm)/3;
-			return true;
+			mobj_t *ref = (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)) ? tmthing->tracer : tmthing;
+			if ((thing->flags & MF2_AMBUSH) || ref != tmthing)
+			{
+				fixed_t dm = min(FixedHypot(ref->momx, ref->momy), 16*FRACUNIT);
+				angle_t ang = R_PointToAngle2(0, 0, ref->momx, ref->momy) - thing->angle;
+				fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);
+				S_StartSound(tmthing, thing->info->activesound);
+				thing->extravalue2 += 2*FixedMul(s, dm)/3;
+			}
 		}
+		return true;
+	}
+
+	if (thing->type == MT_SALOONDOORCENTER && tmthing->player)
+	{
+		if ((thing->flags & MF2_AMBUSH) || (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
+			return true;
 	}
 
 	if (thing->type == MT_TNTBARREL && tmthing->player)
