@@ -9096,13 +9096,11 @@ void P_MobjThinker(mobj_t *mobj)
 
 					if (hdist < 1000*FRACUNIT)
 					{
-						fixed_t dist = P_AproxDistance(hdist, mobj->target->z - mobj->z);
+						//Aim for player z position. If too close to floor/ceiling, aim just above/below them.
+						fixed_t destz = min(max(mobj->target->z, mobj->target->floorz + 70*FRACUNIT), mobj->target->ceilingz - 80*FRACUNIT - mobj->height);
+						fixed_t dist = P_AproxDistance(hdist, destz - mobj->z);
 						P_InstaThrust(mobj, R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y), 2*FRACUNIT);
-						//aim for player z position; if too close to floor, aim just above them
-						if (mobj->z - mobj->floorz >= 80*FRACUNIT)
-							mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, dist), 2*FRACUNIT);
-						else
-							mobj->momz = FixedMul(FixedDiv((mobj->target->z + 70*FRACUNIT) - mobj->z, dist), 2*FRACUNIT);
+						mobj->momz = FixedMul(FixedDiv(destz - mobj->z, dist), 2*FRACUNIT);
 					}
 					else
 					{
@@ -9155,7 +9153,7 @@ void P_MobjThinker(mobj_t *mobj)
 						}
 
 						vdist = mobj->z - mobj->target->z - mobj->target->height;
-						if (vdist <= 0)
+						if (P_MobjFlip(mobj)*vdist <= 0)
 						{
 							P_SetTarget(&mobj->target, NULL);
 							break;

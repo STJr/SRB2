@@ -13820,7 +13820,8 @@ void A_FallingLavaCheck(mobj_t *actor)
 	{
 		actor->flags = MF_NOGRAVITY|MF_NOCLIPTHING;
 		actor->momz = 0;
-		actor->z = actor->watertop;
+		if (actor->eflags & MFE_TOUCHWATER)
+			actor->z = (actor->eflags & MFE_VERTICALFLIP) ? actor->waterbottom : actor->watertop;
 		P_SetMobjState(actor, actor->info->deathstate);
 	}
 }
