@@ -3366,7 +3366,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + (height>>1) < topheight))
 			mobj->eflags |= MFE_UNDERWATER;
 
-		if (mobj->eflags & (MFE_TOUCHWATER|MFE_TOUCHLAVA))
+		if (mobj->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
 		{
 			if (GETSECSPECIAL(rover->master->frontsector->special, 1) == 3)
 				mobj->eflags |= MFE_TOUCHLAVA;
