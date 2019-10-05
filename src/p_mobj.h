@@ -242,6 +242,8 @@ typedef enum
 	// Compute and trigger on mobj angle relative to tracer
 	// See Linedef Exec 457 (Track mobj angle to point)
 	MFE_TRACERANGLE       = 1<<10,
+	// The mobj is touching a lava block
+	MFE_TOUCHLAVA         = 1<<11,
 	// free: to and including 1<<15
 } mobjeflag_t;
 

@@ -372,6 +372,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"RAIN", // Rain
 	"SNO1", // Snowflake
 	"SPLH", // Water Splish
+	"LSPL", // Lava Splish
 	"SPLA", // Water Splash
 	"SMOK",
 	"BUBL", // Bubble
@@ -3232,6 +3233,9 @@ state_t states[NUMSTATES] =
 	{SPR_SPLH, FF_TRANS50|6, 2, {NULL}, 0, 0, S_SPLISH8}, // S_SPLISH7
 	{SPR_SPLH, FF_TRANS50|7, 2, {NULL}, 0, 0, S_SPLISH9}, // S_SPLISH8
 	{SPR_SPLH, FF_TRANS50|8, 2, {NULL}, 0, 0, S_NULL},    // S_SPLISH9
+
+	// Lava splish
+	{SPR_LSPL, FF_ANIMATE, 16, {NULL}, 7, 2, S_NULL}, // S_LAVASPLISH
 
 	// Water Splash
 	{SPR_SPLA, FF_TRANS50  , 3, {NULL}, 0, 0, S_SPLASH2},    // S_SPLASH1
@@ -16799,6 +16803,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	{           // MT_SPLISH
 		-1,             // doomednum
 		S_SPLISH1,      // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		6*FRACUNIT,     // radius
+		1*FRACUNIT,     // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LAVASPLISH
+		-1,             // doomednum
+		S_LAVASPLISH,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound

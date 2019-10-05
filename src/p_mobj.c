@@ -3318,7 +3318,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 	mobj->watertop = mobj->waterbottom = mobj->z - 1000*FRACUNIT;
 
 	// Reset water state.
-	mobj->eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER|MFE_GOOWATER);
+	mobj->eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER|MFE_GOOWATER|MFE_TOUCHLAVA);
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
@@ -3359,16 +3359,18 @@ void P_MobjCheckWater(mobj_t *mobj)
 		// Just touching the water?
 		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - height < bottomheight)
 		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + height > topheight))
-		{
 			mobj->eflags |= MFE_TOUCHWATER;
-			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
-				mobj->eflags |= MFE_GOOWATER;
-		}
+
 		// Actually in the water?
 		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - (height>>1) > bottomheight)
 		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + (height>>1) < topheight))
-		{
 			mobj->eflags |= MFE_UNDERWATER;
+
+		if (mobj->eflags & (MFE_TOUCHWATER|MFE_TOUCHLAVA))
+		{
+			if (GETSECSPECIAL(rover->master->frontsector->special, 1) == 3)
+				mobj->eflags |= MFE_TOUCHLAVA;
+
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
 				mobj->eflags |= MFE_GOOWATER;
 		}
@@ -3446,14 +3448,15 @@ void P_MobjCheckWater(mobj_t *mobj)
 			{
 				// Spawn a splash
 				mobj_t *splish;
+				mobjtype_t splishtype = (mobj->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
 				if (mobj->eflags & MFE_VERTICALFLIP)
 				{
-					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->waterbottom-FixedMul(mobjinfo[MT_SPLISH].height, mobj->scale), MT_SPLISH);
+					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->waterbottom-FixedMul(mobjinfo[splishtype].height, mobj->scale), splishtype);
 					splish->flags2 |= MF2_OBJECTFLIP;
 					splish->eflags |= MFE_VERTICALFLIP;
 				}
 				else
-					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, MT_SPLISH);
+					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, splishtype);
 				splish->destscale = mobj->scale;
 				P_SetScale(splish, mobj->scale);
 			}
@@ -3481,14 +3484,15 @@ void P_MobjCheckWater(mobj_t *mobj)
 			{
 				// Spawn a splash
 				mobj_t *splish;
+				mobjtype_t splishtype = (mobj->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
 				if (mobj->eflags & MFE_VERTICALFLIP)
 				{
-					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->waterbottom-FixedMul(mobjinfo[MT_SPLISH].height, mobj->scale), MT_SPLISH);
+					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->waterbottom-FixedMul(mobjinfo[splishtype].height, mobj->scale), splishtype);
 					splish->flags2 |= MF2_OBJECTFLIP;
 					splish->eflags |= MFE_VERTICALFLIP;
 				}
 				else
-					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, MT_SPLISH);
+					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, splishtype);
 				splish->destscale = mobj->scale;
 				P_SetScale(splish, mobj->scale);
 			}
@@ -3504,6 +3508,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 			if (mobj->eflags & MFE_GOOWATER || wasingoo)
 				S_StartSound(mobj, sfx_ghit);
+			else if (mobj->eflags & MFE_TOUCHLAVA)
+				S_StartSound(mobj, sfx_splash);
 			else
 				S_StartSound(mobj, sfx_splish); // And make a sound!
 
