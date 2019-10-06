@@ -8331,7 +8331,18 @@ void M_DrawTimeAttackMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
 
-		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
+		y = 32+lsheadingheight;
+		V_DrawSmallScaledPatch(208, y, 0, PictureOfLevel);
+
+		if (itemOn == talevel)
+		{
+			/* Draw arrows !! */
+			y = y + 25 - 4;
+			V_DrawCharacter(208 - 10 - (skullAnimCounter/5), y,
+					'\x1C' | V_YELLOWMAP, false);
+			V_DrawCharacter(208 + 80 + 2 + (skullAnimCounter/5), y,
+					'\x1D' | V_YELLOWMAP, false);
+		}
 
 		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
 
