@@ -5359,11 +5359,6 @@ static boolean PIT_MinusCarry(mobj_t *thing)
 		return true;
 
 	P_SetTarget(&minus->tracer, thing);
-	if (thing->flags & MF_PUSHABLE)
-	{
-		minus->flags2 |= MF2_STRONGBOX;
-		thing->flags &= ~MF_PUSHABLE;
-	}
 
 	return true;
 }
@@ -5452,14 +5447,7 @@ void A_MinusDigging(mobj_t *actor)
 		if (P_TryMove(actor->tracer, actor->x, actor->y, false))
 			actor->tracer->z = mz;
 		else
-		{
-			if (actor->flags2 & MF2_STRONGBOX)
-			{
-				actor->flags2 &= ~MF2_STRONGBOX;
-				actor->tracer->flags |= MF_PUSHABLE;
-			}
 			P_SetTarget(&actor->tracer, NULL);
-		}
 	}
 }
 
