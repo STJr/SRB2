@@ -477,6 +477,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_RAIN
 	&lspr[NOLIGHT],     // SPR_SNO1
 	&lspr[NOLIGHT],     // SPR_SPLH
+	&lspr[NOLIGHT],     // SPR_LSPL
 	&lspr[NOLIGHT],     // SPR_SPLA
 	&lspr[NOLIGHT],     // SPR_SMOK
 	&lspr[NOLIGHT],     // SPR_BUBL

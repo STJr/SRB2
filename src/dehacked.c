@@ -6598,6 +6598,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPLISH8",
 	"S_SPLISH9",
 
+	// Lava splish
+	"S_LAVASPLISH",
+
 	// added water splash
 	"S_SPLASH1",
 	"S_SPLASH2",
@@ -7769,6 +7772,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RAIN", // Rain
 	"MT_SNOWFLAKE", // Snowflake
 	"MT_SPLISH", // Water splish!
+	"MT_LAVASPLISH", // Lava splish!
 	"MT_SMOKE",
 	"MT_SMALLBUBBLE", // small bubble
 	"MT_MEDIUMBUBBLE", // medium bubble

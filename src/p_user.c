@@ -7150,10 +7150,13 @@ static void P_NiGHTSMovement(player_t *player)
 		&& player->mo->z + player->mo->height - P_GetPlayerHeight(player) <= player->mo->waterbottom && player->mo->z + player->mo->height >= player->mo->waterbottom))
 	&& player->speed > 9000 && leveltime % (TICRATE/7) == 0 && !player->spectator)
 	{
+		mobjtype_t splishtype = (player->mo->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
 		mobj_t *water = P_SpawnMobj(player->mo->x, player->mo->y,
-			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[MT_SPLISH].height, player->mo->scale) : player->mo->watertop), MT_SPLISH);
+			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[splishtype].height, player->mo->scale) : player->mo->watertop), splishtype);
 		if (player->mo->eflags & MFE_GOOWATER)
 			S_StartSound(water, sfx_ghit);
+		else if (player->mo->eflags & MFE_TOUCHLAVA)
+			S_StartSound(water, sfx_splash);
 		else
 			S_StartSound(water, sfx_wslap);
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -7915,10 +7918,13 @@ static void P_MovePlayer(player_t *player)
 	&& (player->speed > runspd || (player->pflags & PF_STARTDASH))
 	&& leveltime % (TICRATE/7) == 0 && player->mo->momz == 0 && !(player->pflags & PF_SLIDING) && !player->spectator)
 	{
+		mobjtype_t splishtype = (player->mo->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
 		mobj_t *water = P_SpawnMobj(player->mo->x - P_ReturnThrustX(NULL, player->mo->angle, player->mo->radius), player->mo->y - P_ReturnThrustY(NULL, player->mo->angle, player->mo->radius),
-			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[MT_SPLISH].height, player->mo->scale) : player->mo->watertop), MT_SPLISH);
+			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[splishtype].height, player->mo->scale) : player->mo->watertop), splishtype);
 		if (player->mo->eflags & MFE_GOOWATER)
 			S_StartSound(water, sfx_ghit);
+		else if (player->mo->eflags & MFE_TOUCHLAVA)
+			S_StartSound(water, sfx_splash);
 		else
 			S_StartSound(water, sfx_wslap);
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -11173,6 +11179,7 @@ void P_PlayerThink(player_t *player)
 					/* FALLTHRU */
 				case CR_MINECART:
 				case CR_GENERIC:
+				case CR_PTERABYTE:
 					player->drawangle = player->mo->tracer->angle;
 					break;
 				case CR_ROLLOUT:
@@ -11964,8 +11971,8 @@ void P_PlayerAfterThink(player_t *player)
 				if (P_AproxDistance(player->mo->x - ptera->x, player->mo->y - ptera->y) > player->mo->radius)
 					goto dropoff;
 
-				if (player->mo->state-states != S_PLAY_RIDE)
-					P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+				if (player->mo->state-states != S_PLAY_FALL)
+					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 				break;
 
 			dropoff:

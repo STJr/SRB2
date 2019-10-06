@@ -12042,7 +12042,7 @@ void A_MineExplode(mobj_t *actor)
 #undef dist
 
 		if (actor->watertop != INT32_MAX)
-			P_SpawnMobj(actor->x, actor->y, actor->watertop, MT_SPLISH);
+			P_SpawnMobj(actor->x, actor->y, actor->watertop, (actor->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH);
 	}
 }
 
@@ -13820,7 +13820,8 @@ void A_FallingLavaCheck(mobj_t *actor)
 	{
 		actor->flags = MF_NOGRAVITY|MF_NOCLIPTHING;
 		actor->momz = 0;
-		actor->z = actor->watertop;
+		if (actor->eflags & MFE_TOUCHWATER)
+			actor->z = (actor->eflags & MFE_VERTICALFLIP) ? actor->waterbottom : actor->watertop;
 		P_SetMobjState(actor, actor->info->deathstate);
 	}
 }

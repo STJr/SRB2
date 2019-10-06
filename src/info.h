@@ -626,6 +626,7 @@ typedef enum sprite
 	SPR_RAIN, // Rain
 	SPR_SNO1, // Snowflake
 	SPR_SPLH, // Water Splish
+	SPR_LSPL, // Lava Splish
 	SPR_SPLA, // Water Splash
 	SPR_SMOK,
 	SPR_BUBL, // Bubble
@@ -3353,6 +3354,9 @@ typedef enum state
 	S_SPLISH8,
 	S_SPLISH9,
 
+	// Lava Splish
+	S_LAVASPLISH,
+
 	// added water splash
 	S_SPLASH1,
 	S_SPLASH2,
@@ -4546,6 +4550,7 @@ typedef enum mobj_type
 	MT_RAIN, // Rain
 	MT_SNOWFLAKE, // Snowflake
 	MT_SPLISH, // Water splish!
+	MT_LAVASPLISH, // Lava splish!
 	MT_SMOKE,
 	MT_SMALLBUBBLE, // small bubble
 	MT_MEDIUMBUBBLE, // medium bubble

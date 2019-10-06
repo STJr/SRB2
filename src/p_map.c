@@ -888,6 +888,15 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 #endif
 
+	if (tmthing->type == MT_LAVAFALL_LAVA && (thing->type == MT_RING || thing->type == MT_REDTEAMRING || thing->type == MT_BLUETEAMRING || thing->type == MT_FLINGRING))
+	{
+		//height check
+		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !(thing->health))
+			return true;
+
+		P_KillMobj(thing, tmthing, tmthing, DMG_FIRE);
+	}
+
 	if (tmthing->type == MT_MINECART)
 	{
 		//height check

@@ -3318,7 +3318,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 	mobj->watertop = mobj->waterbottom = mobj->z - 1000*FRACUNIT;
 
 	// Reset water state.
-	mobj->eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER|MFE_GOOWATER);
+	mobj->eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER|MFE_GOOWATER|MFE_TOUCHLAVA);
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
@@ -3359,16 +3359,18 @@ void P_MobjCheckWater(mobj_t *mobj)
 		// Just touching the water?
 		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - height < bottomheight)
 		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + height > topheight))
-		{
 			mobj->eflags |= MFE_TOUCHWATER;
-			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
-				mobj->eflags |= MFE_GOOWATER;
-		}
+
 		// Actually in the water?
 		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - (height>>1) > bottomheight)
 		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + (height>>1) < topheight))
-		{
 			mobj->eflags |= MFE_UNDERWATER;
+
+		if (mobj->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
+		{
+			if (GETSECSPECIAL(rover->master->frontsector->special, 1) == 3)
+				mobj->eflags |= MFE_TOUCHLAVA;
+
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
 				mobj->eflags |= MFE_GOOWATER;
 		}
@@ -3446,14 +3448,15 @@ void P_MobjCheckWater(mobj_t *mobj)
 			{
 				// Spawn a splash
 				mobj_t *splish;
+				mobjtype_t splishtype = (mobj->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
 				if (mobj->eflags & MFE_VERTICALFLIP)
 				{
-					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->waterbottom-FixedMul(mobjinfo[MT_SPLISH].height, mobj->scale), MT_SPLISH);
+					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->waterbottom-FixedMul(mobjinfo[splishtype].height, mobj->scale), splishtype);
 					splish->flags2 |= MF2_OBJECTFLIP;
 					splish->eflags |= MFE_VERTICALFLIP;
 				}
 				else
-					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, MT_SPLISH);
+					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, splishtype);
 				splish->destscale = mobj->scale;
 				P_SetScale(splish, mobj->scale);
 			}
@@ -3481,14 +3484,15 @@ void P_MobjCheckWater(mobj_t *mobj)
 			{
 				// Spawn a splash
 				mobj_t *splish;
+				mobjtype_t splishtype = (mobj->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
 				if (mobj->eflags & MFE_VERTICALFLIP)
 				{
-					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->waterbottom-FixedMul(mobjinfo[MT_SPLISH].height, mobj->scale), MT_SPLISH);
+					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->waterbottom-FixedMul(mobjinfo[splishtype].height, mobj->scale), splishtype);
 					splish->flags2 |= MF2_OBJECTFLIP;
 					splish->eflags |= MFE_VERTICALFLIP;
 				}
 				else
-					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, MT_SPLISH);
+					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, splishtype);
 				splish->destscale = mobj->scale;
 				P_SetScale(splish, mobj->scale);
 			}
@@ -3504,6 +3508,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 			if (mobj->eflags & MFE_GOOWATER || wasingoo)
 				S_StartSound(mobj, sfx_ghit);
+			else if (mobj->eflags & MFE_TOUCHLAVA)
+				S_StartSound(mobj, sfx_splash);
 			else
 				S_StartSound(mobj, sfx_splish); // And make a sound!
 
@@ -8828,13 +8834,13 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_RING:
-			case MT_COIN:
 			case MT_REDTEAMRING:
 			case MT_BLUETEAMRING:
 				P_KillRingsInLava(mobj);
 				if (P_MobjWasRemoved(mobj))
 					return;
 				/* FALLTHRU */
+			case MT_COIN:
 			case MT_BLUESPHERE:
 			case MT_BOMBSPHERE:
 			case MT_NIGHTSCHIP:
@@ -8848,11 +8854,11 @@ void P_MobjThinker(mobj_t *mobj)
 				return;
 			// Flung items
 			case MT_FLINGRING:
-			case MT_FLINGCOIN:
 				P_KillRingsInLava(mobj);
 				if (P_MobjWasRemoved(mobj))
 					return;
 				/* FALLTHRU */
+			case MT_FLINGCOIN:
 			case MT_FLINGBLUESPHERE:
 			case MT_FLINGNIGHTSCHIP:
 				if (mobj->flags2 & MF2_NIGHTSPULL)
@@ -9090,13 +9096,11 @@ void P_MobjThinker(mobj_t *mobj)
 
 					if (hdist < 1000*FRACUNIT)
 					{
-						fixed_t dist = P_AproxDistance(hdist, mobj->target->z - mobj->z);
+						//Aim for player z position. If too close to floor/ceiling, aim just above/below them.
+						fixed_t destz = min(max(mobj->target->z, mobj->target->floorz + 70*FRACUNIT), mobj->target->ceilingz - 80*FRACUNIT - mobj->height);
+						fixed_t dist = P_AproxDistance(hdist, destz - mobj->z);
 						P_InstaThrust(mobj, R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y), 2*FRACUNIT);
-						//aim for player z position; if too close to floor, aim just above them
-						if (mobj->z - mobj->floorz >= 80*FRACUNIT)
-							mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, dist), 2*FRACUNIT);
-						else
-							mobj->momz = FixedMul(FixedDiv((mobj->target->z + 70*FRACUNIT) - mobj->z, dist), 2*FRACUNIT);
+						mobj->momz = FixedMul(FixedDiv(destz - mobj->z, dist), 2*FRACUNIT);
 					}
 					else
 					{
@@ -9149,7 +9153,7 @@ void P_MobjThinker(mobj_t *mobj)
 						}
 
 						vdist = mobj->z - mobj->target->z - mobj->target->height;
-						if (vdist <= 0)
+						if (P_MobjFlip(mobj)*vdist <= 0)
 						{
 							P_SetTarget(&mobj->target, NULL);
 							break;
@@ -10045,19 +10049,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			P_SetTarget(&mobj->tracer, P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID));
 			mobj->tracer->angle = mobj->angle + ANGLE_90;
 			break;
-		case MT_BIGFERN:
-			{
-				UINT8 i;
-				for (i = 0; i < 8; i++)
-				{
-					UINT8 j = (i + 2) % 8;
-					fixed_t xoffs = (j % 4) ? FRACUNIT : 0;
-					fixed_t yoffs = (i % 4) ? FRACUNIT : 0;
-					mobj_t *leaf = P_SpawnMobjFromMobj(mobj, (j > 3) ? -xoffs : xoffs, (i > 3) ? -yoffs : yoffs, 0, MT_BIGFERNLEAF);
-					leaf->angle = (angle_t)i * ANGLE_45;
-				}
-				break;
-			}
 		case MT_TORCHFLOWER:
 			{
 				mobj_t *fire = P_SpawnMobjFromMobj(mobj, 0, 0, 46*FRACUNIT, MT_FLAME);
@@ -12097,6 +12088,21 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			S_StartSound(mobj, sfx_s3kd3l);
 		}
 		break;
+	case MT_BIGFERN:
+	{
+		angle_t angle = FixedAngle(mthing->angle << FRACBITS);
+		UINT8 i;
+		for (i = 0; i < 8; i++)
+		{
+			angle_t fa = (angle >> ANGLETOFINESHIFT) & FINEMASK;
+			fixed_t xoffs = FINECOSINE(fa);
+			fixed_t yoffs = FINESINE(fa);
+			mobj_t *leaf = P_SpawnMobjFromMobj(mobj, xoffs, yoffs, 0, MT_BIGFERNLEAF);
+			leaf->angle = angle;
+			angle += ANGLE_45;
+		}
+		break;
+	}
 	default:
 		break;
 	}
