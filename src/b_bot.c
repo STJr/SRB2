@@ -221,7 +221,12 @@ boolean B_CheckRespawn(player_t *player)
 		return false;
 
 	// Low ceiling, do not want!
-	if (sonic->ceilingz - sonic->z < (sonic->player->exiting ? 6 : 3)*sonic->height) // increased for new camera height
+	if (sonic->eflags & MFE_VERTICALFLIP)
+	{
+		if (sonic->z - sonic->floorz < (sonic->player->exiting ? 5 : 2)*sonic->height)
+			return false;
+	}
+	else if (sonic->ceilingz - sonic->z < (sonic->player->exiting ? 6 : 3)*sonic->height)
 		return false;
 
 	// If you're dead, wait a few seconds to respawn.
@@ -255,11 +260,11 @@ void B_RespawnBot(INT32 playernum)
 	y = sonic->y;
 	if (sonic->eflags & MFE_VERTICALFLIP) {
 		tails->eflags |= MFE_VERTICALFLIP;
-		z = sonic->z - FixedMul(512*FRACUNIT,sonic->scale);
+		z = sonic->z - (512*sonic->scale);
 		if (z < sonic->floorz)
 			z = sonic->floorz;
 	} else {
-		z = sonic->z + sonic->height + FixedMul(512*FRACUNIT,sonic->scale);
+		z = sonic->z + sonic->height + (512*sonic->scale);
 		if (z > sonic->ceilingz - sonic->height)
 			z = sonic->ceilingz - sonic->height;
 	}
