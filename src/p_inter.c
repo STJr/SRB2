@@ -2681,6 +2681,19 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				P_KillMobj(target->target, target, source, 0);
 			break;
 
+		case MT_MINUS:
+			if (target->tracer)
+			{
+				if (target->flags2 & MF2_STRONGBOX)
+				{
+					target->flags2 &= ~MF2_STRONGBOX;
+					target->tracer->flags |= MF_PUSHABLE;
+				}
+				P_SetTarget(&target->tracer->tracer, NULL);
+				P_SetTarget(&target->tracer, NULL);
+			}
+			break;
+
 		case MT_PLAYER:
 			{
 				target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)

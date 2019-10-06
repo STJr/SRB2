@@ -9915,6 +9915,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			}
 		case MT_TNTBARREL:
 			mobj->momx = 1; //stack hack
+			mobj->flags2 |= MF2_INVERTAIMABLE;
 			break;
 		case MT_MINECARTEND:
 			P_SetTarget(&mobj->tracer, P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID));

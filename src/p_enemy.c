@@ -5343,20 +5343,28 @@ static mobj_t *minus;
 
 static boolean PIT_MinusCarry(mobj_t *thing)
 {
+	if (minus->tracer)
+		return true;
+
 	if (minus->type == thing->type)
 		return true;
 
-	if (!(thing->flags & MF_SHOOTABLE) || !(thing->flags & MF_ENEMY))
+	if (!(thing->flags & (MF_PUSHABLE|MF_ENEMY)))
 		return true;
 
-	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius * 3)
+	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius*3)
 		return true;
 
 	if (abs(thing->z - minus->z) > minus->height)
 		return true;
 
 	P_SetTarget(&minus->tracer, thing);
-	minus->tracer->flags &= ~MF_PUSHABLE;
+	P_SetTarget(&thing->tracer, minus);
+	if (thing->flags & MF_PUSHABLE)
+	{
+		minus->flags2 |= MF2_STRONGBOX;
+		thing->flags &= ~MF_PUSHABLE;
+	}
 
 	return true;
 }
@@ -5442,7 +5450,15 @@ void A_MinusDigging(mobj_t *actor)
 		if (P_TryMove(actor->tracer, actor->x, actor->y, false))
 			actor->tracer->z = mz;
 		else
+		{
+			if (actor->flags2 & MF2_STRONGBOX)
+			{
+				actor->flags2 &= ~MF2_STRONGBOX;
+				actor->tracer->flags |= MF_PUSHABLE;
+			}
+			P_SetTarget(&actor->tracer->tracer, NULL);
 			P_SetTarget(&actor->tracer, NULL);
+		}
 	}
 }
 
@@ -13455,6 +13471,13 @@ void A_TNTExplode(mobj_t *actor)
 	if (LUA_CallAction("A_TNTExplode", actor))
 		return;
 #endif
+
+	if (actor->tracer)
+	{
+		P_SetTarget(&actor->tracer->tracer, NULL);
+		P_SetTarget(&actor->tracer, NULL);
+	}
+
 	P_UnsetThingPosition(actor);
 	if (sector_list)
 	{
@@ -13682,7 +13705,8 @@ static void P_SnapperLegPlace(mobj_t *mo)
 	fixed_t rad = mo->radius;
 	INT32 necklen = (32*(mo->info->reactiontime - mo->reactiontime))/mo->info->reactiontime; // Not in FU
 
-	P_TeleportMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, mo->z + ((mo->eflags & MFE_VERTICALFLIP) ? (((mo->height<<1)/3) - seg->height) : mo->height/3));
+	seg->z = mo->z + ((mo->eflags & MFE_VERTICALFLIP) ? (((mo->height<<1)/3) - seg->height) : mo->height/3);
+	P_TryMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, true);
 	seg->angle = a;
 
 	// Move as many legs as available.
@@ -13702,7 +13726,8 @@ static void P_SnapperLegPlace(mobj_t *mo)
 		{
 			x = c*o2 + s*o1;
 			y = s*o2 - c*o1;
-			P_TeleportMove(seg, mo->x + x, mo->y + y, mo->z + (((mo->eflags & MFE_VERTICALFLIP) ? (mo->height - seg->height) : 0)));
+			seg->z = mo->z + (((mo->eflags & MFE_VERTICALFLIP) ? (mo->height - seg->height) : 0));
+			P_TryMove(seg, mo->x + x, mo->y + y, true);
 			P_SetMobjState(seg, seg->info->raisestate);
 		}
 		else
