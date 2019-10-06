@@ -5486,7 +5486,7 @@ void A_MinusPopup(mobj_t *actor)
 	if (actor->tracer)
 		P_DamageMobj(actor->tracer, actor, actor, 1, 0);
 
-	actor->flags = (actor->flags &~ MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
+	actor->flags = (actor->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
 }
 
 // Function: A_MinusCheck

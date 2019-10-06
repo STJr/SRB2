@@ -8855,7 +8855,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 			continue;
 
 		if (mo->type == MT_MINUS && !(mo->flags & (MF_SPECIAL|MF_SHOOTABLE)))
-			mo->flags |= MF_SPECIAL|MF_SHOOTABLE;
+			mo->flags = (mo->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
 
 		if (mo->type == MT_EGGGUARD && mo->tracer) //nuke Egg Guard's shield!
 			P_KillMobj(mo->tracer, inflictor, source, DMG_NUKE);
