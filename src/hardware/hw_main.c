@@ -5711,6 +5711,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
+	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer)
+	{
+		// bodge support - not nearly as comprehensive as r_things.c, but better than nothing
+		if (thing->tracer->sprite == SPR_NULL || thing->tracer->flags2 & MF2_DONTDRAW)
+			return;
+	}
+
 	// store information in a vissprite
 	vis = HWR_NewVisSprite();
 	vis->x1 = x1;
@@ -5724,7 +5731,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->z2 = z2;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
-	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
+	if ((vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 	{
 		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
 			vis->colormap = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
