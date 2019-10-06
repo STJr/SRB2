@@ -1765,7 +1765,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_MINECARTSPAWNER:
-			if (!special->fuse || player->powers[pw_carry] != CR_MINECART)
+			if (!player->bot && (special->fuse < TICRATE || player->powers[pw_carry] != CR_MINECART))
 			{
 				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
 				P_SetTarget(&mcart->target, toucher);
@@ -1775,7 +1775,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_ResetPlayer(player);
 				player->pflags |= PF_JUMPDOWN;
 				player->powers[pw_carry] = CR_MINECART;
-				toucher->player->pflags &= ~PF_APPLYAUTOBRAKE;
+				player->pflags &= ~PF_APPLYAUTOBRAKE;
 				P_SetTarget(&toucher->tracer, mcart);
 				toucher->momx = toucher->momy = toucher->momz = 0;
 

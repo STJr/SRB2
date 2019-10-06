@@ -140,6 +140,9 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 
 void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward, boolean left, boolean right, boolean strafeleft, boolean straferight, boolean jump, boolean spin)
 {
+	// don't try to do stuff if your sonic is in a minecart or something
+	if (players[consoleplayer].powers[pw_carry])
+		return;
 	// Turn the virtual keypresses into ticcmd_t.
 	if (twodlevel || mo->flags2 & MF2_TWOD) {
 		if (players[consoleplayer].climbing
@@ -218,7 +221,7 @@ boolean B_CheckRespawn(player_t *player)
 		return false;
 
 	// Low ceiling, do not want!
-	if (sonic->ceilingz - sonic->z < 2*sonic->height)
+	if (sonic->ceilingz - sonic->z < (sonic->player->exiting ? 6 : 3)*sonic->height) // increased for new camera height
 		return false;
 
 	// If you're dead, wait a few seconds to respawn.
