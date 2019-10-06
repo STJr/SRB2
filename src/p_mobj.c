@@ -2381,21 +2381,41 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover)
 {
+	fixed_t topheight;
+
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	{
-		fixed_t topheight =
-	#ifdef ESLOPE
-			*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
-	#endif
-			*rover->topheight;
+	// not a lava block with solid planes
+	if (!(rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
+		&& !(rover->master->flags & ML_BLOCKMONSTERS)))
+		return false;
 
-		if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
-			&& !(rover->master->flags & ML_BLOCKMONSTERS)
-			&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > topheight - FixedMul(16*FRACUNIT, mo->scale)))
+	// is solid from the sides
+	if (rover->master->flags & ML_EFFECT3)
+		return true;
+
+	if (mo->eflags & MFE_VERTICALFLIP)
+	{
+		topheight =
+	#ifdef ESLOPE
+			*rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) :
+	#endif
+			*rover->bottomheight;
+
+		if (mo->z+mo->height-mo->momz < topheight + FixedMul(16*FRACUNIT, mo->scale))
 				return true;
+		return false;
 	}
+
+	topheight =
+	#ifdef ESLOPE
+		*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
+	#endif
+		*rover->topheight;
+
+	if (mo->z-mo->momz > topheight - FixedMul(16*FRACUNIT, mo->scale))
+		return true;
 
 	return false;
 }
@@ -2954,7 +2974,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 		}
 		// Get up if you fell.
 		if (mo->player->panim == PA_PAIN)
-			P_SetPlayerMobjState(mo, S_PLAY_STND);
+			P_SetPlayerMobjState(mo, S_PLAY_WALK);
 
 #ifdef ESLOPE
 		if (!mo->standingslope && (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope)) {
@@ -3760,7 +3780,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 
 	if (thiscam->momx || thiscam->momy)
 	{
-		if (!P_TryCameraMove(thiscam->x + thiscam->momx, thiscam->y + thiscam->momy, thiscam))
+		if (!P_TryCameraMove(thiscam->x + thiscam->momx, thiscam->y + thiscam->momy, thiscam)) // Thanks for the greatly improved camera, Lach -- Sev
 		{ // Never fails for 2D mode.
 			mobj_t dummy;
 			dummy.thinker.function.acp1 = (actionf_p1)P_MobjThinker;
@@ -3770,9 +3790,22 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			dummy.z = thiscam->z;
 			dummy.height = thiscam->height;
 			if (!resetcalled && !(player->pflags & PF_NOCLIP) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
+			{
 				P_ResetCamera(player, thiscam);
+				resetcalled = true;
+			}
 			else
+			{
+				fixed_t camspeed = P_AproxDistance(thiscam->momx, thiscam->momy);
+
 				P_SlideCameraMove(thiscam);
+
+				if (!resetcalled && P_AproxDistance(thiscam->momx, thiscam->momy) == camspeed)
+					{
+						P_ResetCamera(player, thiscam);
+						resetcalled = true;
+					}
+			}
 			if (resetcalled) // Okay this means the camera is fully reset.
 				return true;
 		}
@@ -3981,6 +4014,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
+#if 0 // i don't know why this is here, it's causing a few undesired state glitches, and disabling it doesn't appear to negatively affect the game, but i don't want it gone permanently just in case some obscure bug crops up
 		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // used for drilling
 			mobj->player->pflags &= ~PF_STARTJUMP;
 		mobj->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
@@ -3990,6 +4024,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 			mobj->player->powers[pw_tailsfly] = 0;
 			P_SetPlayerMobjState(mobj, S_PLAY_WALK);
 		}
+#endif
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
@@ -4570,22 +4605,37 @@ static void P_Boss3Thinker(mobj_t *mobj)
 
 			if (!mobj->movefactor) // to firing mode
 			{
-				UINT8 i;
-				angle_t ang = 0;
+				UINT8 i, numtospawn = 24;
+				angle_t ang = 0, interval = FixedAngle((360 << FRACBITS) / numtospawn);
+				mobj_t *shock, *sfirst, *sprev = NULL;
 
 				mobj->movecount = mobj->health+1;
 				mobj->movefactor = -512*FRACUNIT;
 
 				// shock the water!
-				for (i = 0; i < 64; i++)
+				for (i = 0; i < numtospawn; i++)
 				{
-					mobj_t *shock = P_SpawnMobjFromMobj(mobj, 0, 0, 4*FRACUNIT, MT_SHOCK);
+					shock = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_SHOCKWAVE);
 					P_SetTarget(&shock->target, mobj);
-					P_InstaThrust(shock, ang, shock->info->speed);
-					P_CheckMissileSpawn(shock);
-					ang += (ANGLE_MAX/64);
+					shock->fuse = shock->info->painchance;
+
+					if (i % 2 == 0)
+					P_SetMobjState(shock, shock->state->nextstate);
+
+					if (!sprev)
+						sfirst = shock;
+					else
+					{
+						if (i == numtospawn - 1)
+							P_SetTarget(&shock->hnext, sfirst);
+						P_SetTarget(&sprev->hnext, shock);
+					}
+
+					P_Thrust(shock, ang, shock->info->speed);
+					ang += interval;
+					sprev = shock;
 				}
-				S_StartSound(mobj, sfx_fizzle);
+				S_StartSound(mobj, shock->info->seesound);
 
 				// look for a new target
 				P_BossTargetPlayer(mobj, false);
@@ -5028,6 +5078,24 @@ static void P_Boss5Thinker(mobj_t *mobj)
 {
 	if (!mobj->health)
 	{
+		if (mobj->fuse)
+		{
+			if (mobj->flags2 & MF2_SLIDEPUSH)
+			{
+				INT32 trans = 10-((10*mobj->fuse)/70);
+				if (trans > 9)
+					trans = 9;
+				if (trans < 0)
+					trans = 0;
+				mobj->frame = (mobj->frame & ~FF_TRANSMASK)|(trans<<FF_TRANSSHIFT);
+				if (!(mobj->fuse & 1))
+				{
+					mobj->colorized = !mobj->colorized;
+					mobj->frame ^= FF_FULLBRIGHT;
+				}
+			}
+			return;
+		}
 		if (mobj->state == &states[mobj->info->xdeathstate])
 			mobj->momz -= (2*FRACUNIT)/3;
 		else if (mobj->tracer && P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y) < 2*mobj->radius)
@@ -7276,7 +7344,8 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_FLAMEAURA_ORB:
 				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
-				mobj->angle = mobj->target->angle; // implicitly okay because of P_AddShield
+				if ((statenum_t)(mobj->state-states) < mobj->info->painstate)
+					mobj->angle = mobj->target->angle; // implicitly okay because of P_AddShield
 				if (mobj->tracer
 				/* && mobj->target -- the following is implicit by P_AddShield
 				&& mobj->target->player
@@ -7614,6 +7683,17 @@ void P_MobjThinker(mobj_t *mobj)
 				if (mobj->movedir)
 					mobj->angle += mobj->movedir;
 				break;
+			case MT_VWREF:
+			case MT_VWREB:
+				{
+					INT32 strength;
+					++mobj->movedir;
+					mobj->frame &= ~FF_TRANSMASK;
+					strength = min(mobj->fuse, mobj->movedir)*3;
+					if (strength < 10)
+						mobj->frame |= ((10-strength)<<(FF_TRANSSHIFT));
+				}
+				/* FALLTHRU */
 			default:
 				if (mobj->fuse)
 				{ // Scenery object fuse! Very basic!
@@ -9063,9 +9143,12 @@ void P_MobjThinker(mobj_t *mobj)
 	{
 		if (mobj->state->action.acp1 == (actionf_p1)A_Boss1Laser)
 		{
-			/*var1 = mobj->state->var1;
-			var2 = mobj->state->var2 & 65535;
-			mobj->state->action.acp1(mobj);*/
+			if (mobj->state->tics > 1)
+			{
+				var1 = mobj->state->var1;
+				var2 = mobj->state->var2 & 65535;
+				mobj->state->action.acp1(mobj);
+			}
 		}
 		else if (leveltime & 1) // Fire mode
 		{
@@ -9231,6 +9314,18 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					}
 					P_RemoveMobj(mobj);
 					return;
+				case MT_FANG:
+					if (mobj->flags2 & MF2_SLIDEPUSH)
+					{
+						var1 = 0;
+						var2 = 0;
+						A_BossDeath(mobj);
+						return;
+					}
+					P_SetMobjState(mobj, mobj->state->nextstate);
+					if (P_MobjWasRemoved(mobj))
+						return;
+					break;
 				case MT_METALSONIC_BATTLE:
 					break; // don't remove
 				case MT_SPIKE:
@@ -9829,7 +9924,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 	}
 
-	if (sc != -1)
+	if (sc != -1 && !(mobj->flags2 & MF2_SLIDEPUSH))
 	{
 		UINT8 i;
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -9841,6 +9936,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			{
 				mobj->color = SKINCOLOR_SILVER;
 				mobj->colorized = true;
+				mobj->flags2 |= MF2_SLIDEPUSH;
 				break;
 			}
 		}
@@ -10412,7 +10508,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj_t *mobj;
 
 	if (p->playerstate == PST_REBORN)
-		G_PlayerReborn(playernum);
+		G_PlayerReborn(playernum, false);
 
 	// spawn as spectator determination
 	if (!G_GametypeHasSpectators())
@@ -10420,9 +10516,9 @@ void P_SpawnPlayer(INT32 playernum)
 		p->spectator = p->outofcoop =
 		(((multiplayer || netgame) && gametype == GT_COOP) // only question status in coop
 		&& ((leveltime > 0
-		&& ((G_IsSpecialStage(gamemap) && (maptol & TOL_NIGHTS)) // late join special stage
+		&& ((G_IsSpecialStage(gamemap)) // late join special stage
 		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->outofcoop)))) // late join or die in new coop
-		|| (((cv_cooplives.value == 1) || !P_GetLives(p)) && p->lives <= 0))); // game over and can't redistribute lives
+		|| (!P_GetLives(p) && p->lives <= 0))); // game over and can't redistribute lives
 	}
 	else
 	{
@@ -10489,7 +10585,6 @@ void P_SpawnPlayer(INT32 playernum)
 	P_SetupStateAnimation(mobj, mobj->state);
 
 	mobj->health = 1;
-	p->rings = p->spheres = 0;
 	p->playerstate = PST_LIVE;
 
 	p->bonustime = false;
@@ -11187,6 +11282,16 @@ You should think about modifying the deathmatch starts to take full advantage of
 			mobj->health = mthing->angle;
 		else
 			mobj->health = FixedMul(ss->sector->ceilingheight-ss->sector->floorheight, 3*(FRACUNIT/4))>>FRACBITS;
+		break;
+	case MT_FANG:
+	case MT_METALSONIC_RACE:
+	case MT_METALSONIC_BATTLE:
+		if (mthing->options & MTF_EXTRA)
+		{
+			mobj->color = SKINCOLOR_SILVER;
+			mobj->colorized = true;
+			mobj->flags2 |= MF2_SLIDEPUSH;
+		}
 		break;
 	case MT_BALLOON:
 		if (mthing->angle > 0)

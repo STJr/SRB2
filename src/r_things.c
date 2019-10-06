@@ -2524,7 +2524,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if (!skin)
 		return 0;
 
-	if ((unsigned)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
+	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
 		return 0;
 
 	while (!(skin->sprites[spr2].numframes)
@@ -2616,6 +2616,8 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->followitem = 0;
 
 	skin->highresscale = FRACUNIT;
+	skin->contspeed = 17;
+	skin->contangle = 0;
 
 	skin->availability = 0;
 
@@ -2882,6 +2884,8 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 	for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
 		R_AddSingleSpriteDef((spritename = spr2names[sprite2]), &skin->sprites[sprite2], wadnum, *lump, *lastlump);
 
+	if (skin->sprites[0].numframes == 0)
+		I_Error("R_LoadSkinSprites: no frames found for sprite SPR2_%s\n", spr2names[0]);
 }
 
 // returns whether found appropriate property
@@ -2920,6 +2924,8 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETINT(thrustfactor)
 	GETINT(accelstart)
 	GETINT(acceleration)
+	GETINT(contspeed)
+	GETINT(contangle)
 #undef GETINT
 
 #define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) skin->field = R_GetColorByName(value);

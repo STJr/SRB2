@@ -96,7 +96,6 @@ extern consvar_t cv_grcorrecttricks;
 extern consvar_t cv_grfovchange;
 extern consvar_t cv_grsolvetjoin;
 extern consvar_t cv_grspritebillboarding;
-extern consvar_t cv_grskydome;
 
 extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
 

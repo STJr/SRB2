@@ -172,6 +172,7 @@ static boolean retrying = false;
 UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
 
 UINT16 emeralds;
+INT32 luabanks[NUM_LUABANKS]; // yes, even in non HAVE_BLUA
 UINT32 token; // Number of tokens collected in a level
 UINT32 tokenlist; // List of tokens collected
 boolean gottoken; // Did you get a token? Used for end of act
@@ -215,7 +216,7 @@ UINT16 spacetimetics = 11*TICRATE + (TICRATE/2);
 UINT16 extralifetics = 4*TICRATE;
 UINT16 nightslinktics = 2*TICRATE;
 
-INT32 gameovertics = 15*TICRATE;
+INT32 gameovertics = 11*TICRATE;
 
 UINT8 ammoremovaltics = 2*TICRATE;
 
@@ -885,6 +886,7 @@ static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
+	boolean forcefullinput = false;
 	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
@@ -958,6 +960,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
+	if (twodlevel
+		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
+		|| (!demoplayback && (player->pflags & PF_SLIDING)))
+			forcefullinput = true;
 	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| (!demoplayback && (player->climbing
@@ -1171,11 +1177,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// No additional acceleration when moving forward/backward and strafing simultaneously.
 	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
-	// 9-18-2017: ALSO, only do this when using keys to move. Gamepad analog sticks get severely gimped by this
-	if (!forcestrafe && (((movefkey || movebkey) && side) || ((strafelkey || straferkey) && forward)))
+	if (!forcefullinput && forward && side)
 	{
-		forward = FixedMul(forward, 3*FRACUNIT/4);
-		side = FixedMul(side, 3*FRACUNIT/4);
+		angle_t angle = R_PointToAngle2(0, 0, side << FRACBITS, forward << FRACBITS);
+		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
+		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
+		forward = max(min(forward, maxforward), -maxforward);
+		side = max(min(side, maxside), -maxside);
 	}
 
 	//Silly hack to make 2d mode *somewhat* playable with no chasecam.
@@ -1211,6 +1219,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
+	boolean forcefullinput = false;
 	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
@@ -1282,6 +1291,10 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
+	if (twodlevel
+		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
+		|| (!demoplayback && (player->pflags & PF_SLIDING)))
+			forcefullinput = true;
 	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
@@ -1492,11 +1505,13 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	// No additional acceleration when moving forward/backward and strafing simultaneously.
 	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
-	// 9-18-2017: ALSO, only do this when using keys to move. Gamepad analog sticks get severely gimped by this
-	if (!forcestrafe && (((movefkey || movebkey) && side) || ((strafelkey || straferkey) && forward)))
+	if (!forcefullinput && forward && side)
 	{
-		forward = FixedMul(forward, 3*FRACUNIT/4);
-		side = FixedMul(side, 3*FRACUNIT/4);
+		angle_t angle = R_PointToAngle2(0, 0, side << FRACBITS, forward << FRACBITS);
+		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
+		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
+		forward = max(min(forward, maxforward), -maxforward);
+		side = max(min(side, maxside), -maxside);
 	}
 
 	//Silly hack to make 2d mode *somewhat* playable with no chasecam.
@@ -2099,7 +2114,7 @@ static inline void G_PlayerFinishLevel(INT32 player)
 // G_PlayerReborn
 // Called after a player dies. Almost everything is cleared and initialized.
 //
-void G_PlayerReborn(INT32 player)
+void G_PlayerReborn(INT32 player, boolean betweenmaps)
 {
 	player_t *p;
 	INT32 score;
@@ -2147,6 +2162,8 @@ void G_PlayerReborn(INT32 player)
 	boolean outofcoop;
 	INT16 bot;
 	SINT8 pity;
+	INT16 rings;
+	INT16 spheres;
 
 	score = players[player].score;
 	lives = players[player].lives;
@@ -2202,6 +2219,17 @@ void G_PlayerReborn(INT32 player)
 	bot = players[player].bot;
 	pity = players[player].pity;
 
+	if (betweenmaps || !G_IsSpecialStage(gamemap))
+	{
+		rings = (ultimatemode ? 0 : mapheaderinfo[gamemap-1]->startrings);
+		spheres = 0;
+	}
+	else
+	{
+		rings = players[player].rings;
+		spheres = players[player].spheres;
+	}
+
 	p = &players[player];
 	memset(p, 0, sizeof (*p));
 
@@ -2256,6 +2284,8 @@ void G_PlayerReborn(INT32 player)
 	if (bot)
 		p->bot = 1; // reset to AI-controlled
 	p->pity = pity;
+	p->rings = rings;
+	p->spheres = spheres;
 
 	// Don't do anything immediately
 	p->pflags |= PF_USEDOWN;
@@ -2263,11 +2293,32 @@ void G_PlayerReborn(INT32 player)
 	p->pflags |= PF_JUMPDOWN;
 
 	p->playerstate = PST_LIVE;
-	p->rings = p->spheres = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
 		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
+
+	// Check to make sure their color didn't change somehow...
+	if (G_GametypeHasTeams())
+	{
+		if (p->ctfteam == 1 && p->skincolor != skincolor_redteam)
+		{
+			if (p == &players[consoleplayer])
+				CV_SetValue(&cv_playercolor, skincolor_redteam);
+			else if (p == &players[secondarydisplayplayer])
+				CV_SetValue(&cv_playercolor2, skincolor_redteam);
+		}
+		else if (p->ctfteam == 2 && p->skincolor != skincolor_blueteam)
+		{
+			if (p == &players[consoleplayer])
+				CV_SetValue(&cv_playercolor, skincolor_blueteam);
+			else if (p == &players[secondarydisplayplayer])
+				CV_SetValue(&cv_playercolor2, skincolor_blueteam);
+		}
+	}
+
+	if (betweenmaps)
+		return;
 
 	if (p-players == consoleplayer)
 	{
@@ -2288,9 +2339,6 @@ void G_PlayerReborn(INT32 player)
 	if (gametype == GT_COOP)
 		P_FindEmerald(); // scan for emeralds to hunt for
 
-	// Reset Nights score and max link to 0 on death
-	p->marescore = p->maxlink = 0;
-
 	// If NiGHTS, find lowest mare to start with.
 	p->mare = P_FindLowestMare();
 
@@ -2298,27 +2346,6 @@ void G_PlayerReborn(INT32 player)
 
 	if (p->mare == 255)
 		p->mare = 0;
-
-	p->marelap = p->marebonuslap = 0;
-
-	// Check to make sure their color didn't change somehow...
-	if (G_GametypeHasTeams())
-	{
-		if (p->ctfteam == 1 && p->skincolor != skincolor_redteam)
-		{
-			if (p == &players[consoleplayer])
-				CV_SetValue(&cv_playercolor, skincolor_redteam);
-			else if (p == &players[secondarydisplayplayer])
-				CV_SetValue(&cv_playercolor2, skincolor_redteam);
-		}
-		else if (p->ctfteam == 2 && p->skincolor != skincolor_blueteam)
-		{
-			if (p == &players[consoleplayer])
-				CV_SetValue(&cv_playercolor, skincolor_blueteam);
-			else if (p == &players[secondarydisplayplayer])
-				CV_SetValue(&cv_playercolor2, skincolor_blueteam);
-		}
-	}
 }
 
 //
@@ -2373,8 +2400,6 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 		return;
 
 	P_SpawnPlayer(playernum);
-
-	players[playernum].rings = mapheaderinfo[gamemap-1]->startrings;
 
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
@@ -2598,7 +2623,7 @@ void G_DoReborn(INT32 playernum)
 
 	if (countdowntimeup || (!(netgame || multiplayer) && gametype == GT_COOP))
 		resetlevel = true;
-	else if (gametype == GT_COOP && (netgame || multiplayer))
+	else if (gametype == GT_COOP && (netgame || multiplayer) && !G_IsSpecialStage(gamemap))
 	{
 		boolean notgameover = true;
 
@@ -3788,7 +3813,29 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 
 		// File end marker check
 		CHECKPOS
-		if (READUINT8(save_p) != 0x1d) BADSAVE;
+		switch (READUINT8(save_p))
+		{
+			case 0xb7:
+				{
+					UINT8 i, banksinuse;
+					CHECKPOS
+					banksinuse = READUINT8(save_p);
+					CHECKPOS
+					if (banksinuse > NUM_LUABANKS)
+						BADSAVE
+					for (i = 0; i < banksinuse; i++)
+					{
+						(void)READINT32(save_p);
+						CHECKPOS
+					}
+					if (READUINT8(save_p) != 0x1d)
+						BADSAVE
+				}
+			case 0x1d:
+				break;
+			default:
+				BADSAVE
+		}
 
 		// done
 		saved = FIL_WriteFile(backup, savebuffer, length);

@@ -1686,13 +1686,145 @@ void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 #endif
 }
 
+// Verify versions for different archive
+// formats. checklist assumed to be valid.
+
+static int
+W_VerifyName (const char *name, lumpchecklist_t *checklist, boolean status)
+{
+	size_t j;
+	for (j = 0; checklist[j].len && checklist[j].name; ++j)
+	{
+		if (( strncmp(name, checklist[j].name,
+						checklist[j].len) != false ) == status)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+static int
+W_VerifyWAD (FILE *fp, lumpchecklist_t *checklist, boolean status)
+{
+	size_t i;
+
+	// assume wad file
+	wadinfo_t header;
+	filelump_t lumpinfo;
+
+	// read the header
+	if (fread(&header, 1, sizeof header, fp) == sizeof header
+			&& header.numlumps < INT16_MAX
+			&& strncmp(header.identification, "ZWAD", 4)
+			&& strncmp(header.identification, "IWAD", 4)
+			&& strncmp(header.identification, "PWAD", 4)
+			&& strncmp(header.identification, "SDLL", 4))
+	{
+		return true;
+	}
+
+	header.numlumps = LONG(header.numlumps);
+	header.infotableofs = LONG(header.infotableofs);
+
+	// let seek to the lumpinfo list
+	if (fseek(fp, header.infotableofs, SEEK_SET) == -1)
+		return true;
+
+	for (i = 0; i < header.numlumps; i++)
+	{
+		// fill in lumpinfo for this wad file directory
+		if (fread(&lumpinfo, sizeof (lumpinfo), 1 , fp) != 1)
+			return true;
+
+		lumpinfo.filepos = LONG(lumpinfo.filepos);
+		lumpinfo.size = LONG(lumpinfo.size);
+
+		if (lumpinfo.size == 0)
+			continue;
+
+		if (! W_VerifyName(lumpinfo.name, checklist, status))
+			return false;
+	}
+
+	return true;
+}
+
+static int
+W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
+{
+    zend_t zend;
+    zentry_t zentry;
+
+	UINT16 numlumps;
+	size_t i;
+
+	char pat_central[] = {0x50, 0x4b, 0x01, 0x02, 0x00};
+	char pat_end[] = {0x50, 0x4b, 0x05, 0x06, 0x00};
+
+	char lumpname[9];
+
+	// Haha the ResGetLumpsZip function doesn't
+	// check for file errors, so neither will I.
+
+	// Central directory bullshit
+
+	fseek(fp, 0, SEEK_END);
+	if (!ResFindSignature(fp, pat_end, max(0, ftell(fp) - (22 + 65536))))
+		return true;
+
+	fseek(fp, -4, SEEK_CUR);
+	if (fread(&zend, 1, sizeof zend, fp) < sizeof zend)
+		return true;
+
+	numlumps = zend.entries;
+
+	fseek(fp, zend.cdiroffset, SEEK_SET);
+	for (i = 0; i < numlumps; i++)
+	{
+		char* fullname;
+		char* trimname;
+		char* dotpos;
+
+		if (fread(&zentry, 1, sizeof(zentry_t), fp) < sizeof(zentry_t))
+			return true;
+		if (memcmp(zentry.signature, pat_central, 4))
+			return true;
+
+		fullname = malloc(zentry.namelen + 1);
+		if (fgets(fullname, zentry.namelen + 1, fp) != fullname)
+			return true;
+
+		// Strip away file address and extension for the 8char name.
+		if ((trimname = strrchr(fullname, '/')) != 0)
+			trimname++;
+		else
+			trimname = fullname; // Care taken for root files.
+
+		if (*trimname) // Ignore directories
+		{
+			if ((dotpos = strrchr(trimname, '.')) == 0)
+				dotpos = fullname + strlen(fullname); // Watch for files without extension.
+
+			memset(lumpname, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
+			strncpy(lumpname, trimname, min(8, dotpos - trimname));
+
+			if (! W_VerifyName(lumpname, checklist, status))
+				return false;
+		}
+
+		free(fullname);
+	}
+
+	return true;
+}
+
 // Note: This never opens lumps themselves and therefore doesn't have to
 // deal with compressed lumps.
 static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
 	boolean status)
 {
 	FILE *handle;
-	size_t i, j;
 	int goodfile = false;
 
 	if (!checklist)
@@ -1701,66 +1833,18 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
 	if ((handle = W_OpenWadFile(&filename, false)) == NULL)
 		return -1;
 
-	// detect wad file by the absence of the other supported extensions
-	if (stricmp(&filename[strlen(filename) - 4], ".soc")
-#ifdef HAVE_BLUA
-	&& stricmp(&filename[strlen(filename) - 4], ".lua")
-#endif
-	&& stricmp(&filename[strlen(filename) - 4], ".pk3"))
+	if (stricmp(&filename[strlen(filename) - 4], ".pk3") == 0)
+		goodfile = W_VerifyPK3(handle, checklist, status);
+	else
 	{
-		// assume wad file
-		wadinfo_t header;
-		filelump_t lumpinfo;
-
-		// read the header
-		if (fread(&header, 1, sizeof header, handle) == sizeof header
-			&& header.numlumps < INT16_MAX
-			&& strncmp(header.identification, "ZWAD", 4)
-			&& strncmp(header.identification, "IWAD", 4)
-			&& strncmp(header.identification, "PWAD", 4)
-			&& strncmp(header.identification, "SDLL", 4))
+		// detect wad file by the absence of the other supported extensions
+		if (stricmp(&filename[strlen(filename) - 4], ".soc")
+#ifdef HAVE_BLUA
+		&& stricmp(&filename[strlen(filename) - 4], ".lua")
+#endif
+		)
 		{
-			fclose(handle);
-			return true;
-		}
-
-		header.numlumps = LONG(header.numlumps);
-		header.infotableofs = LONG(header.infotableofs);
-
-		// let seek to the lumpinfo list
-		if (fseek(handle, header.infotableofs, SEEK_SET) == -1)
-		{
-			fclose(handle);
-			return false;
-		}
-
-		goodfile = true;
-		for (i = 0; i < header.numlumps; i++)
-		{
-			// fill in lumpinfo for this wad file directory
-			if (fread(&lumpinfo, sizeof (lumpinfo), 1 , handle) != 1)
-			{
-				fclose(handle);
-				return -1;
-			}
-
-			lumpinfo.filepos = LONG(lumpinfo.filepos);
-			lumpinfo.size = LONG(lumpinfo.size);
-
-			if (lumpinfo.size == 0)
-				continue;
-
-			for (j = 0; j < NUMSPRITES; j++)
-				if (sprnames[j] && !strncmp(lumpinfo.name, sprnames[j], 4)) // Sprites
-					continue;
-
-			goodfile = false;
-			for (j = 0; checklist[j].len && checklist[j].name && !goodfile; j++)
-				if ((strncmp(lumpinfo.name, checklist[j].name, checklist[j].len) != false) == status)
-					goodfile = true;
-
-			if (!goodfile)
-				break;
+			goodfile = W_VerifyWAD(handle, checklist, status);
 		}
 	}
 	fclose(handle);

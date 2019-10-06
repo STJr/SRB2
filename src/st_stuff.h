@@ -70,6 +70,7 @@ extern patch_t *sboperiod;
 extern patch_t *faceprefix[MAXSKINS]; // face status patches
 extern patch_t *superprefix[MAXSKINS]; // super face status patches
 extern patch_t *livesback;
+extern patch_t *stlivex;
 extern patch_t *ngradeletters[7];
 
 /** HUD location information (don't move this comment)
