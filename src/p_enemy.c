@@ -5359,7 +5359,6 @@ static boolean PIT_MinusCarry(mobj_t *thing)
 		return true;
 
 	P_SetTarget(&minus->tracer, thing);
-	P_SetTarget(&thing->tracer, minus);
 	if (thing->flags & MF_PUSHABLE)
 	{
 		minus->flags2 |= MF2_STRONGBOX;
@@ -5428,6 +5427,9 @@ void A_MinusDigging(mobj_t *actor)
 	A_Chase(actor);
 
 	// Carry over shit, maybe
+	if (P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		P_SetTarget(&actor->tracer, NULL);
+
 	if (!actor->tracer)
 	{
 		fixed_t radius = 3*actor->radius;
@@ -5456,7 +5458,6 @@ void A_MinusDigging(mobj_t *actor)
 				actor->flags2 &= ~MF2_STRONGBOX;
 				actor->tracer->flags |= MF_PUSHABLE;
 			}
-			P_SetTarget(&actor->tracer->tracer, NULL);
 			P_SetTarget(&actor->tracer, NULL);
 		}
 	}

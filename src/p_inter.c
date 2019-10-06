@@ -2689,7 +2689,6 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					target->flags2 &= ~MF2_STRONGBOX;
 					target->tracer->flags |= MF_PUSHABLE;
 				}
-				P_SetTarget(&target->tracer->tracer, NULL);
 				P_SetTarget(&target->tracer, NULL);
 			}
 			break;
