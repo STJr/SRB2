@@ -16,7 +16,7 @@ tic_t I_GetTime(void)
 	return 0;
 }
 
-int I_GetTimeMicros(void)
+fixed_t I_GetTimeFrac(void)
 {
 	return 0;
 }

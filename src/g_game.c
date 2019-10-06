@@ -46,6 +46,7 @@
 #include "b_bot.h"
 #include "m_cond.h" // condition sets
 #include "lua_script.h"
+#include "r_fps.h" // frame interpolation/uncapped
 
 #include "lua_hud.h"
 
@@ -2362,6 +2363,8 @@ void G_Ticker(boolean run)
 			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
+			R_UpdateViewInterpolation();
+
 			break;
 
 		case GS_INTERMISSION:
@@ -2414,7 +2417,12 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TITLESCREEN:
-			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
+			if (titlemapinaction)
+			{
+				P_Ticker(run);
+				R_UpdateViewInterpolation();
+				// then intentionally fall through
+			}
 			/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
 			F_MenuPresTicker(run);

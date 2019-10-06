@@ -185,7 +185,7 @@ static char returnWadPath[256];
 
 #include "../m_argv.h"
 
-#include "../m_menu.h"
+#include "../r_main.h" // Frame interpolation/uncapped
 
 #ifdef MAC_ALERT
 #include "macosx/mac_alert.h"
@@ -2144,17 +2144,27 @@ static Uint64 timer_frequency;
 
 static double tic_frequency;
 static Uint64 tic_epoch;
+static double elapsed_tics;
+
+static void UpdateElapsedTics(void)
+{
+	const Uint64 now = SDL_GetPerformanceCounter();
+
+	elapsed_tics += (now - tic_epoch) / tic_frequency;
+	tic_epoch = now; // moving epoch
+}
 
 tic_t I_GetTime(void)
 {
-	static double elapsed;
+	UpdateElapsedTics();
+	return (tic_t) floor(elapsed_tics);
+}
 
-	const Uint64 now = SDL_GetPerformanceCounter();
-
-	elapsed += (now - tic_epoch) / tic_frequency;
-	tic_epoch = now; // moving epoch
-
-	return (tic_t)elapsed;
+fixed_t I_GetTimeFrac(void)
+{
+	UpdateElapsedTics();
+	
+	return FLOAT_TO_FIXED((float) (elapsed_tics - floor(elapsed_tics)));
 }
 
 precise_t I_GetPreciseTime(void)
@@ -2182,6 +2192,7 @@ void I_StartupTimer(void)
 	tic_epoch       = SDL_GetPerformanceCounter();
 
 	tic_frequency   = timer_frequency / (double)NEWTICRATE;
+	elapsed_tics    = 0.0;
 }
 
 void I_Sleep(void)

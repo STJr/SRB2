@@ -35,6 +35,8 @@ extern fixed_t fovtan;
 
 extern size_t validcount, linecount, loopcount, framecount;
 
+extern fixed_t rendertimefrac;
+
 //
 // Lighting LUT.
 // Used for z-depth cuing per column/row,
@@ -113,6 +115,10 @@ extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_fov;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
+
+// Frame interpolation (uncapped framerate)
+extern tic_t prev_tics;
+extern consvar_t cv_frameinterpolation;
 
 // Called by startup code.
 void R_Init(void);
