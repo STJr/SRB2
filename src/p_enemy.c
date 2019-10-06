@@ -13668,8 +13668,6 @@ void A_KillSegments(mobj_t *actor)
 static void P_SnapperLegPlace(mobj_t *mo)
 {
 	mobj_t *seg = mo->tracer;
-	fixed_t x0 = mo->x;
-	fixed_t y0 = mo->y;
 	angle_t a = mo->angle;
 	angle_t fa = (a >> ANGLETOFINESHIFT) & FINEMASK;
 	fixed_t c = FINECOSINE(fa);
@@ -13684,7 +13682,7 @@ static void P_SnapperLegPlace(mobj_t *mo)
 	fixed_t rad = mo->radius;
 	INT32 necklen = (32*(mo->info->reactiontime - mo->reactiontime))/mo->info->reactiontime; // Not in FU
 
-	P_TeleportMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, mo->z + mo->height/3);
+	P_TeleportMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, mo->z + ((mo->eflags & MFE_VERTICALFLIP) ? (((mo->height<<1)/3) - seg->height) : mo->height/3));
 	seg->angle = a;
 
 	// Move as many legs as available.
@@ -13704,13 +13702,13 @@ static void P_SnapperLegPlace(mobj_t *mo)
 		{
 			x = c*o2 + s*o1;
 			y = s*o2 - c*o1;
-			P_TryMove(seg, x0 + x, y0 + y, true);
+			P_TeleportMove(seg, mo->x + x, mo->y + y, mo->z + (((mo->eflags & MFE_VERTICALFLIP) ? (mo->height - seg->height) : 0)));
 			P_SetMobjState(seg, seg->info->raisestate);
 		}
 		else
 			P_SetMobjState(seg, seg->info->spawnstate);
 
-		seg->angle = R_PointToAngle2(x0, y0, seg->x, seg->y);
+		seg->angle = R_PointToAngle2(mo->x, mo->y, seg->x, seg->y);
 
 		seg = seg->tracer;
 	} while (seg);
@@ -13738,14 +13736,14 @@ void A_SnapperSpawn(mobj_t *actor)
 #endif
 
 	// It spawns 1 head.
-	seg = P_SpawnMobj(actor->x, actor->y, actor->z, headtype);
+	seg = P_SpawnMobjFromMobj(actor, 0, 0, 0, headtype);
 	P_SetTarget(&ptr->tracer, seg);
 	ptr = seg;
 
 	// It spawns 4 legs which will be handled in the thinker function.
 	for (i = 1; i <= 4; i++)
 	{
-		seg = P_SpawnMobj(actor->x, actor->y, actor->z, legtype);
+		seg = P_SpawnMobjFromMobj(actor, 0, 0, 0, legtype);
 		P_SetTarget(&ptr->tracer, seg);
 		ptr = seg;
 
