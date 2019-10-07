@@ -976,7 +976,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
 				|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
 		{
-			thing->flags &= ~MF_PUSHABLE;
+			thing->flags &= ~MF_PUSHABLE; // prevent riding player from applying pushable movement logic
 			P_SetTarget(&thing->target, tmthing);
 			P_ResetPlayer(tmthing->player);
 			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
@@ -991,27 +991,27 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !thing->health)
 			return true;
 		
-		if (thing == tmthing->target)
+		if (thing == tmthing->target) // don't collide with rider
 			return true;
+
+		if (thing->flags & MF_SPRING) // bounce on springs
+		{
+			P_DoSpring(thing, tmthing);
+			return true;
+		}
+		else if (thing->flags & (MF_MONITOR|MF_SHOOTABLE) == (MF_MONITOR|MF_SHOOTABLE) && !(tmthing->flags & MF_PUSHABLE)) // pop monitors while carrying a player
+		{
+			P_KillMobj(thing, tmthing, tmthing->target, 0);
+			return true;
+		}
 		
-		if (thing->type == tmthing->type)
+		if (thing->type == tmthing->type) // bounce against other rollout rocks
 		{
 			fixed_t tempmomx = thing->momx, tempmomy = thing->momy;
 			thing->momx = tmthing->momx;
 			thing->momy = tmthing->momy;
 			tmthing->momx = tempmomx;
 			tmthing->momy = tempmomy;
-		}
-
-		if (thing->flags & MF_SPRING)
-		{
-			P_DoSpring(thing, tmthing);
-			return true;
-		}
-		else if (thing->flags & MF_MONITOR && thing->flags & MF_SHOOTABLE && !(tmthing->flags & MF_PUSHABLE)) // carrying a player
-		{
-			P_KillMobj(thing, tmthing, tmthing->target, 0);
-			return true;
 		}
 	}
 
