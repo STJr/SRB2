@@ -1036,7 +1036,7 @@ void P_ResetPlayer(player_t *player)
 		if (player->mo->tracer && !P_MobjWasRemoved(player->mo->tracer))
 		{
 			player->mo->tracer->flags |= MF_PUSHABLE;
-			P_SetTarget(&player->mo->tracer->target, NULL);
+			P_SetTarget(&player->mo->tracer->tracer, NULL);
 		}
 		P_SetTarget(&player->mo->tracer, NULL);
 		player->powers[pw_carry] = CR_NONE;
@@ -4321,7 +4321,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			player->mo->momz = 9*FRACUNIT + player->mo->tracer->momz;
 			player->powers[pw_carry] = CR_NONE;
 			player->mo->tracer->flags |= MF_PUSHABLE;
-			P_SetTarget(&player->mo->tracer->target, NULL);
+			P_SetTarget(&player->mo->tracer->tracer, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->mo->eflags & MFE_GOOWATER)
@@ -11919,6 +11919,11 @@ void P_PlayerAfterThink(player_t *player)
 				mo->momx = rock->momx;
 				mo->momy = rock->momy;
 				mo->momz = 0;
+				
+				if (player->panim == PA_IDLE && (mo->momx || mo->momy))
+				{
+					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+				}
 
 				if (player->panim == PA_WALK && mo->tics > walktics)
 				{

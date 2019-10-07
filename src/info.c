@@ -2487,7 +2487,7 @@ state_t states[NUMSTATES] =
 
 	// Rollout Rock
 	{SPR_NULL, 0, 1, {A_RolloutSpawn}, 256*FRACUNIT, MT_ROLLOUTROCK, S_ROLLOUTSPAWN}, // S_ROLLOUTSPAWN
-	{SPR_PUMI, 0, 1, {A_RolloutRock},    63*FRACUNIT/64,  6*FRACUNIT/10,  S_ROLLOUTROCK}, // S_ROLLOUTROCK
+	{SPR_PUMI, 0, 1, {A_RolloutRock},    63*FRACUNIT/64,  7*FRACUNIT/10,  S_ROLLOUTROCK}, // S_ROLLOUTROCK
 
 	// RVZ scenery
 	{SPR_JPLA, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_BIGFERNLEAF
@@ -12860,10 +12860,10 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		8,              // reactiontime (sets number of frames the rock cycles through)
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		0,              // painchance
+		12*TICRATE,     // painchance (sets how long an unridden rock should last before disappearing - set to 0 to disable)
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate

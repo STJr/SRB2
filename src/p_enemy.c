@@ -13935,6 +13935,14 @@ void A_RolloutSpawn(mobj_t *actor)
 		|| P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) > locvar1)
 	{
 		actor->target = P_SpawnMobj(actor->x, actor->y, actor->z, locvar2);
+		actor->target->flags2 |= (actor->flags2 & (MF2_AMBUSH | MF2_OBJECTFLIP)) | MF2_SLIDEPUSH;
+		actor->target->eflags |= (actor->eflags & MFE_VERTICALFLIP);
+		
+		if (actor->target->flags2 & MF2_AMBUSH)
+		{
+			actor->target->color = SKINCOLOR_SUPERRUST3;
+			actor->target->colorized = true;
+		}
 	}
 }
 
@@ -13955,59 +13963,45 @@ void A_RolloutRock(mobj_t *actor)
 		return;
 #endif
 
-	UINT8 maxframes = actor->info->reactiontime;
+	UINT8 maxframes = actor->info->reactiontime; // number of frames the mobj cycles through
 	fixed_t pi = (22*FRACUNIT/7);
-	fixed_t circumference = FixedMul(2 * pi, actor->radius);
-	fixed_t oldspeed = P_AproxDistance(actor->momx, actor->momy), newspeed, topspeed = actor->info->speed;
+	fixed_t circumference = FixedMul(2 * pi, actor->radius); // used to calculate when to change frame
+	fixed_t speed = P_AproxDistance(actor->momx, actor->momy), topspeed = FixedMul(actor->info->speed, actor->scale);
 	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
 
-	actor->friction = FRACUNIT;
+	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
 
-	if (inwater)
+	if (inwater && !(actor->flags2 & MF2_AMBUSH)) // buoyancy in water (or lava)
 	{
-		fixed_t height;
-		if (actor->eflags & MFE_VERTICALFLIP)
-		{
-			height = actor->waterbottom + (actor->height>>2);
-			if (actor->z + actor->height > height)
-			{
-				actor->z = height;
-				actor->momz = 0;
-			}
-		}
-		else
-		{
-			height = actor->watertop - (actor->height>>2);
-			if (actor->z < height)
-			{
-				actor->z = height;
-				actor->momz = 0;
-			}
-		}
+		actor->momz = FixedMul(actor->momz, locvar2);
 		actor->momz += P_MobjFlip(actor) * FixedMul(locvar2, actor->scale);
 	}
 
-	if (oldspeed > topspeed)
+	if (speed > topspeed) // cap speed
 	{
-		actor->momx = FixedMul(FixedDiv(actor->momx, oldspeed), topspeed);
-		actor->momy = FixedMul(FixedDiv(actor->momy, oldspeed), topspeed);
+		actor->momx = FixedMul(FixedDiv(actor->momx, speed), topspeed);
+		actor->momy = FixedMul(FixedDiv(actor->momy, speed), topspeed);
+	}
+	
+	if (P_IsObjectOnGround(actor) || inwater) // apply drag to speed (compensates for lack of friction but also works in liquids)
+	{
+		actor->momx = FixedMul(actor->momx, locvar1);
+		actor->momy = FixedMul(actor->momy, locvar1);
 	}
 
-	actor->momx = FixedMul(actor->momx, locvar1);
-	actor->momy = FixedMul(actor->momy, locvar1);
+	speed = P_AproxDistance(actor->momx, actor->momy); // recalculate speed for visual rolling
 
-	newspeed = P_AproxDistance(actor->momx, actor->momy);
-
-	if (newspeed < actor->scale >> 1)
+	if (speed < actor->scale >> 1) // stop moving if speed is insignificant
 	{
 		actor->momx = 0;
 		actor->momy = 0;
 	}
-	else if (newspeed > actor->scale)
+	else if (speed > actor->scale)
 	{
-		actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy);
-		actor->movefactor += newspeed;
-		if (actor->movefactor > circumference / maxframes)
+		actor->movecount = 1; // rock has moved; fuse should be set so we don't have a trillion rocks lying around
+		actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy); // set rock's angle to movement direction
+		actor->movefactor += speed;
+		if (actor->movefactor > circumference / maxframes) // if distance moved is enough to change frame, change it!
 		{
 			actor->reactiontime++;
 			actor->reactiontime %= maxframes;
@@ -14015,5 +14009,14 @@ void A_RolloutRock(mobj_t *actor)
 		}
 	}
 
-	actor->frame = actor->reactiontime % maxframes;
+	actor->frame = actor->reactiontime % maxframes; // set frame
+	
+	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
+		actor->fuse = 0;
+	else if (!actor->fuse && actor->movecount == 1) // otherwise if rock has moved, set its fuse
+		actor->fuse = actor->info->painchance;
+	
+	if (actor->fuse && actor->fuse < 2*TICRATE)
+		actor->flags2 ^= MF2_DONTDRAW;
+		
 }

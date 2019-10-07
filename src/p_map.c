@@ -963,57 +963,58 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 	}
 
-	if (thing->type == MT_ROLLOUTROCK)
+	if (thing->type == MT_ROLLOUTROCK && tmthing->player && tmthing->health)
 	{
-		if (tmthing->player)
+		if (tmthing->player->powers[pw_carry] == CR_ROLLOUT)
 		{
-			if (tmthing->player->powers[pw_carry] == CR_ROLLOUT)
-			{
-				return true;
-			}
-			if ((thing->flags & MF_PUSHABLE) // carrying a player
-				&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
-				&& (P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < (thing->radius))
-				&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
-				&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
-					|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
-			{
-				thing->flags &= ~MF_PUSHABLE;
-				P_SetTarget(&thing->target, tmthing);
-				P_ResetPlayer(tmthing->player);
-				P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
-				tmthing->player->powers[pw_carry] = CR_ROLLOUT;
-				P_SetTarget(&tmthing->tracer, thing);
-				P_SetObjectMomZ(thing, tmthing->momz, true);
-				return false;
-			}
+			return true;
 		}
-		else if (tmthing->type == thing->type)
+		if ((thing->flags & MF_PUSHABLE) // not carrying a player
+			&& (tmthing->player->powers[pw_carry] == CR_NONE) // player is not already riding something
+			&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
+			&& (P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < (thing->radius))
+			&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
+			&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
+				|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
 		{
-			if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height)
-				return true;
-
-			fixed_t tempmomx = thing->momx, tempmomy = thing->momy;
-			thing->momx = tmthing->momx;
-			thing->momy = tmthing->momy;
-			tmthing->momx = tempmomx;
-			tmthing->momy = tempmomy;
+			thing->flags &= ~MF_PUSHABLE; // prevent riding player from applying pushable movement logic
+			thing->flags2 &= ~MF2_DONTDRAW; // don't leave the rock invisible if it was flashing prior to boarding
+			P_SetTarget(&thing->tracer, tmthing);
+			P_ResetPlayer(tmthing->player);
+			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
+			tmthing->player->powers[pw_carry] = CR_ROLLOUT;
+			P_SetTarget(&tmthing->tracer, thing);
+			P_SetObjectMomZ(thing, tmthing->momz, true);
+			return true;
 		}
 	}
 	else if (tmthing->type == MT_ROLLOUTROCK)
 	{
 		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !thing->health)
 			return true;
+		
+		if (thing == tmthing->tracer) // don't collide with rider
+			return true;
 
-		if (thing->flags & MF_SPRING)
+		if (thing->flags & MF_SPRING) // bounce on springs
 		{
 			P_DoSpring(thing, tmthing);
 			return true;
 		}
-		else if (thing->flags & MF_MONITOR && thing->flags & MF_SHOOTABLE && !(tmthing->flags & MF_PUSHABLE)) // carrying a player
+		else if ((thing->flags & (MF_MONITOR|MF_SHOOTABLE)) == (MF_MONITOR|MF_SHOOTABLE) && !(tmthing->flags & MF_PUSHABLE)) // pop monitors while carrying a player
 		{
-			P_KillMobj(thing, tmthing, tmthing->target, 0);
+			P_KillMobj(thing, tmthing, tmthing->tracer, 0);
 			return true;
+		}
+		
+		if (thing->type == tmthing->type // bounce against other rollout rocks
+			&& (tmthing->momx || tmthing->momy || thing->momx || thing->momy))
+		{
+			fixed_t tempmomx = thing->momx, tempmomy = thing->momy;
+			thing->momx = tmthing->momx;
+			thing->momy = tmthing->momy;
+			tmthing->momx = tempmomx;
+			tmthing->momy = tempmomy;
 		}
 	}
 
@@ -1660,8 +1661,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if ((!tmthing->player) && (thing->player))
-		; // no solid thing should ever be able to step up onto a player
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM) && (thing->player))
+		; // springs and gas jets should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
