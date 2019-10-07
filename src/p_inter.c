@@ -1074,7 +1074,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->exiting)
 				return;
 
-			if (player->bumpertime < TICRATE/4)
+			if (player->bumpertime <= (TICRATE/2)-5)
 			{
 				S_StartSound(toucher, special->info->seesound);
 				if (player->powers[pw_carry] == CR_NIGHTSMODE)
