@@ -963,13 +963,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 	}
 
-	if (thing->type == MT_ROLLOUTROCK && tmthing->player)
+	if (thing->type == MT_ROLLOUTROCK && tmthing->player && tmthing->health)
 	{
 		if (tmthing->player->powers[pw_carry] == CR_ROLLOUT)
 		{
 			return true;
 		}
 		if ((thing->flags & MF_PUSHABLE) // not carrying a player
+			&& (tmthing->player->powers[pw_carry] == CR_NONE) // player is not already riding something
 			&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
 			&& (P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < (thing->radius))
 			&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
@@ -977,7 +978,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
 		{
 			thing->flags &= ~MF_PUSHABLE; // prevent riding player from applying pushable movement logic
-			P_SetTarget(&thing->target, tmthing);
+			P_SetTarget(&thing->tracer, tmthing);
 			P_ResetPlayer(tmthing->player);
 			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
 			tmthing->player->powers[pw_carry] = CR_ROLLOUT;
@@ -991,7 +992,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !thing->health)
 			return true;
 		
-		if (thing == tmthing->target) // don't collide with rider
+		if (thing == tmthing->tracer) // don't collide with rider
 			return true;
 
 		if (thing->flags & MF_SPRING) // bounce on springs
@@ -999,13 +1000,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_DoSpring(thing, tmthing);
 			return true;
 		}
-		else if (thing->flags & (MF_MONITOR|MF_SHOOTABLE) == (MF_MONITOR|MF_SHOOTABLE) && !(tmthing->flags & MF_PUSHABLE)) // pop monitors while carrying a player
+		else if ((thing->flags & (MF_MONITOR|MF_SHOOTABLE)) == (MF_MONITOR|MF_SHOOTABLE) && !(tmthing->flags & MF_PUSHABLE)) // pop monitors while carrying a player
 		{
-			P_KillMobj(thing, tmthing, tmthing->target, 0);
+			P_KillMobj(thing, tmthing, tmthing->tracer, 0);
 			return true;
 		}
 		
-		if (thing->type == tmthing->type) // bounce against other rollout rocks
+		if (thing->type == tmthing->type // bounce against other rollout rocks
+			&& (tmthing->momx || tmthing->momy || thing->momx || thing->momy))
 		{
 			fixed_t tempmomx = thing->momx, tempmomy = thing->momy;
 			thing->momx = tmthing->momx;
