@@ -4291,7 +4291,14 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			return;
 
 		if (player->powers[pw_carry] == CR_PTERABYTE)
+		{
+			S_StartSound(player->mo, sfx_s3kd7s);
+			player->mo->tracer->cusval += 10;
+			player->mo->tracer->watertop = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
+			player->mo->tracer->waterbottom = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
+			player->mo->tracer->cvmem = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
 			return;
+		}
 
 		// Jump this high.
 		if (player->powers[pw_carry] == CR_PLAYER)
@@ -11968,13 +11975,32 @@ void P_PlayerAfterThink(player_t *player)
 				if (!ptera->movefactor)
 					goto dropoff;
 
-				P_TryMove(player->mo, ptera->x, ptera->y, true);
+				if (ptera->cusval >= 50)
+				{
+					player->powers[pw_carry] = CR_NONE;
+					P_SetTarget(&player->mo->tracer, NULL);
+					P_KillMobj(ptera, player->mo, player->mo, 0);
+					player->mo->momz = 9*FRACUNIT;
+					player->pflags |= PF_APPLYAUTOBRAKE|PF_JUMPED|PF_THOKKED;
+					P_SetMobjState(player->mo, S_PLAY_ROLL);
+					break;
+				}
+
+				if (ptera->cusval)
+					ptera->cusval--;
+
+				P_TryMove(player->mo, ptera->x + ptera->watertop, ptera->y + ptera->waterbottom, true);
+				player->mo->z += ptera->cvmem;
 				player->mo->momx = ptera->momx;
 				player->mo->momy = ptera->momy;
 				player->mo->momz = ptera->momz;
 
-				if (P_AproxDistance(player->mo->x - ptera->x, player->mo->y - ptera->y) > player->mo->radius)
+				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > player->mo->radius)
 					goto dropoff;
+
+				ptera->watertop >>= 1;
+				ptera->waterbottom >>= 1;
+				ptera->cvmem >>= 1;
 
 				if (player->mo->state-states != S_PLAY_FALL)
 					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);

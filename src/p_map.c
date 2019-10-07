@@ -523,6 +523,7 @@ static void P_DoPterabyteCarry(player_t *player, mobj_t *ptera)
 	player->mo->y = ptera->y;
 	P_SetThingPosition(player->mo);
 	ptera->movefactor = 3*TICRATE;
+	ptera->watertop = ptera->waterbottom = ptera->cusval = 0;
 }
 
 static void P_DoTailsCarry(player_t *sonic, player_t *tails)
