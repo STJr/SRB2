@@ -985,7 +985,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				tmthing->player->powers[pw_carry] = CR_ROLLOUT;
 				P_SetTarget(&tmthing->tracer, thing);
 				P_SetObjectMomZ(thing, tmthing->momz, true);
-				return false;
+				return true;
 			}
 		}
 		else if (tmthing->type == thing->type)
@@ -1003,6 +1003,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	else if (tmthing->type == MT_ROLLOUTROCK)
 	{
 		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !thing->health)
+			return true;
+		
+		if (thing == tmthing->target)
 			return true;
 
 		if (thing->flags & MF_SPRING)
@@ -1660,8 +1663,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if ((!tmthing->player) && (thing->player))
-		; // no solid thing should ever be able to step up onto a player
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM) && (thing->player))
+		; // springs and gas jets should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
