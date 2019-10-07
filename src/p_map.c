@@ -963,41 +963,27 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 	}
 
-	if (thing->type == MT_ROLLOUTROCK)
+	if (thing->type == MT_ROLLOUTROCK && tmthing->player)
 	{
-		if (tmthing->player)
+		if (tmthing->player->powers[pw_carry] == CR_ROLLOUT)
 		{
-			if (tmthing->player->powers[pw_carry] == CR_ROLLOUT)
-			{
-				return true;
-			}
-			if ((thing->flags & MF_PUSHABLE) // not carrying a player
-				&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
-				&& (P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < (thing->radius))
-				&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
-				&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
-					|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
-			{
-				thing->flags &= ~MF_PUSHABLE;
-				P_SetTarget(&thing->target, tmthing);
-				P_ResetPlayer(tmthing->player);
-				P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
-				tmthing->player->powers[pw_carry] = CR_ROLLOUT;
-				P_SetTarget(&tmthing->tracer, thing);
-				P_SetObjectMomZ(thing, tmthing->momz, true);
-				return true;
-			}
+			return true;
 		}
-		else if (tmthing->type == thing->type)
+		if ((thing->flags & MF_PUSHABLE) // not carrying a player
+			&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
+			&& (P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < (thing->radius))
+			&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
+			&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
+				|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
 		{
-			if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height)
-				return true;
-
-			fixed_t tempmomx = thing->momx, tempmomy = thing->momy;
-			thing->momx = tmthing->momx;
-			thing->momy = tmthing->momy;
-			tmthing->momx = tempmomx;
-			tmthing->momy = tempmomy;
+			thing->flags &= ~MF_PUSHABLE;
+			P_SetTarget(&thing->target, tmthing);
+			P_ResetPlayer(tmthing->player);
+			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
+			tmthing->player->powers[pw_carry] = CR_ROLLOUT;
+			P_SetTarget(&tmthing->tracer, thing);
+			P_SetObjectMomZ(thing, tmthing->momz, true);
+			return true;
 		}
 	}
 	else if (tmthing->type == MT_ROLLOUTROCK)
@@ -1007,6 +993,15 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		
 		if (thing == tmthing->target)
 			return true;
+		
+		if (thing->type == tmthing->type)
+		{
+			fixed_t tempmomx = thing->momx, tempmomy = thing->momy;
+			thing->momx = tmthing->momx;
+			thing->momy = tmthing->momy;
+			tmthing->momx = tempmomx;
+			tmthing->momy = tempmomy;
+		}
 
 		if (thing->flags & MF_SPRING)
 		{
