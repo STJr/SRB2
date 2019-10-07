@@ -12860,10 +12860,10 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		8,              // reactiontime (sets number of frames the rock cycles through)
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		0,              // painchance
+		12*TICRATE,     // painchance (sets how long an unridden rock should last before disappearing - set to 0 to disable)
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate

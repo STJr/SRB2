@@ -978,6 +978,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
 		{
 			thing->flags &= ~MF_PUSHABLE; // prevent riding player from applying pushable movement logic
+			thing->flags2 &= ~MF2_DONTDRAW; // don't leave the rock invisible if it was flashing prior to boarding
 			P_SetTarget(&thing->tracer, tmthing);
 			P_ResetPlayer(tmthing->player);
 			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
