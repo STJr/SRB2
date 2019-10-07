@@ -12085,7 +12085,7 @@ ML_EFFECT5 : Don't stop thinking when too far away
 		if (mthing->options & MTF_AMBUSH)
 		{
 			mobj->extravalue2 = 2;
-			S_StartSound(mobj, sfx_s3kd3l);
+			S_StartSound(mobj, sfx_s3kc2l);
 		}
 		break;
 	case MT_BIGFERN:
