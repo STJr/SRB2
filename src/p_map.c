@@ -515,6 +515,7 @@ static void P_DoPterabyteCarry(player_t *player, mobj_t *ptera)
 
 	P_ResetPlayer(player);
 	P_SetTarget(&player->mo->tracer, ptera);
+	player->pflags &= ~PF_APPLYAUTOBRAKE;
 	player->powers[pw_carry] = CR_PTERABYTE;
 	S_StartSound(player->mo, sfx_s3k4a);
 	P_UnsetThingPosition(player->mo);
