@@ -1177,7 +1177,8 @@ state_t states[NUMSTATES] =
 	{SPR_CANG, 0|FF_TRANS90, 10,        {NULL},            0, 0,       S_NULL},            // S_CANARIVOREGAS_8
 
 	// Pyre Fly
-	{SPR_PYRE, FF_ANIMATE, 8, {NULL}, 4, 2, S_PYREFLY_FLY}, // S_PYREFLY_FLY
+	{SPR_PYRE, FF_ANIMATE, -1, {NULL}, 3, 2, S_NULL}, // S_PYREFLY_FLY
+	{SPR_PYRE, 4|FF_ANIMATE|FF_FULLBRIGHT, -1, {NULL}, 3, 2, S_NULL}, // S_PYREFLY_BURN
 	{SPR_FLAM, FF_FULLBRIGHT, 10, {NULL}, 0, 0, S_PYREFIRE2}, // S_PYREFIRE1
 	{SPR_FLAM, 1|FF_FULLBRIGHT, 10, {A_FireShrink}, 0, 16, S_NULL}, // S_PYREFIRE2
 
@@ -5041,7 +5042,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // painstate
 		0,              // painchance
 		sfx_None,       // painsound
-		S_NULL,         // meleestate
+		S_PYREFLY_BURN, // meleestate
 		S_NULL,         // missilestate
 		S_XPLD_FLICKY,  // deathstate
 		S_NULL,         // xdeathstate

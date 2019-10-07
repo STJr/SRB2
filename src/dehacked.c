@@ -4583,6 +4583,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Pyre Fly
 	"S_PYREFLY_FLY",
+	"S_PYREFLY_BURN",
 	"S_PYREFIRE1",
 	"S_PYREFIRE2",
 

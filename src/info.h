@@ -1339,6 +1339,7 @@ typedef enum state
 
 	// Pyre Fly
 	S_PYREFLY_FLY,
+	S_PYREFLY_BURN,
 	S_PYREFIRE1,
 	S_PYREFIRE2,
 

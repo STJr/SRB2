@@ -9081,7 +9081,6 @@ void P_MobjThinker(mobj_t *mobj)
 					else if (mobj->extravalue2 == 2)
 					{
 						INT32 fireradius = min(100 - mobj->fuse, 52);
-						mobj->frame |= FF_FULLBRIGHT;
 						P_PyreFlyBurn(mobj, P_RandomRange(0, fireradius)*FRACUNIT, 20, MT_FLAMEPARTICLE, 4*FRACUNIT);
 						P_PyreFlyBurn(mobj, fireradius*FRACUNIT, 40, MT_PYREFLY_FIRE, 0);
 					}
@@ -9456,6 +9455,7 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					mobj->extravalue2 = (mobj->extravalue2 + 1) % 3;
 					if (mobj->extravalue2 == 0)
 					{
+						P_SetMobjState(mobj, mobj->info->spawnstate);
 						mobj->fuse = 100;
 						S_StopSound(mobj);
 						S_StartSound(mobj, sfx_s3k8c);
@@ -9467,6 +9467,7 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					}
 					else
 					{
+						P_SetMobjState(mobj, mobj->info->meleestate);
 						mobj->fuse = 100;
 						S_StopSound(mobj);
 						S_StartSound(mobj, sfx_s3kc2l);
@@ -12084,6 +12085,7 @@ ML_EFFECT5 : Don't stop thinking when too far away
 		//start on fire if Ambush flag is set, otherwise behave normally
 		if (mthing->options & MTF_AMBUSH)
 		{
+			P_SetMobjState(mobj, mobj->info->meleestate);
 			mobj->extravalue2 = 2;
 			S_StartSound(mobj, sfx_s3kc2l);
 		}
