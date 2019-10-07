@@ -11919,6 +11919,11 @@ void P_PlayerAfterThink(player_t *player)
 				mo->momx = rock->momx;
 				mo->momy = rock->momy;
 				mo->momz = 0;
+				
+				if (player->panim == PA_IDLE && (mo->momx || mo->momy))
+				{
+					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+				}
 
 				if (player->panim == PA_WALK && mo->tics > walktics)
 				{

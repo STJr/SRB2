@@ -13958,36 +13958,18 @@ void A_RolloutRock(mobj_t *actor)
 	UINT8 maxframes = actor->info->reactiontime;
 	fixed_t pi = (22*FRACUNIT/7);
 	fixed_t circumference = FixedMul(2 * pi, actor->radius);
-	fixed_t oldspeed = P_AproxDistance(actor->momx, actor->momy), newspeed, topspeed = actor->info->speed;
+	fixed_t speed = P_AproxDistance(actor->momx, actor->momy), topspeed = actor->info->speed;
 	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
 
 	actor->friction = FRACUNIT;
 
 	if (inwater)
 	{
-		fixed_t height;
-		if (actor->eflags & MFE_VERTICALFLIP)
-		{
-			height = actor->waterbottom + (actor->height>>2);
-			if (actor->z + actor->height > height)
-			{
-				actor->z = height;
-				actor->momz = 0;
-			}
-		}
-		else
-		{
-			height = actor->watertop - (actor->height>>2);
-			if (actor->z < height)
-			{
-				actor->z = height;
-				actor->momz = 0;
-			}
-		}
+		actor->momz = FixedMul(actor->momz, locvar2);
 		actor->momz += P_MobjFlip(actor) * FixedMul(locvar2, actor->scale);
 	}
 
-	if (oldspeed > topspeed)
+	if (speed > topspeed)
 	{
 		actor->momx = FixedMul(FixedDiv(actor->momx, oldspeed), topspeed);
 		actor->momy = FixedMul(FixedDiv(actor->momy, oldspeed), topspeed);
@@ -13996,14 +13978,14 @@ void A_RolloutRock(mobj_t *actor)
 	actor->momx = FixedMul(actor->momx, locvar1);
 	actor->momy = FixedMul(actor->momy, locvar1);
 
-	newspeed = P_AproxDistance(actor->momx, actor->momy);
+	speed = P_AproxDistance(actor->momx, actor->momy);
 
-	if (newspeed < actor->scale >> 1)
+	if (speed < actor->scale >> 1)
 	{
 		actor->momx = 0;
 		actor->momy = 0;
 	}
-	else if (newspeed > actor->scale)
+	else if (speed > actor->scale)
 	{
 		actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy);
 		actor->movefactor += newspeed;
