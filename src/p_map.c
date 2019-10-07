@@ -1561,7 +1561,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if ((thing->flags & MF_SPRING || thing->type == MT_STEAM) && (thing->player))
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM) && (thing->player))
 		; // springs and gas jets should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
