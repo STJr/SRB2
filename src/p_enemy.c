@@ -13937,6 +13937,12 @@ void A_RolloutSpawn(mobj_t *actor)
 		actor->target = P_SpawnMobj(actor->x, actor->y, actor->z, locvar2);
 		actor->target->flags2 |= (actor->flags2 & (MF2_AMBUSH | MF2_OBJECTFLIP)) | MF2_SLIDEPUSH;
 		actor->target->eflags |= (actor->eflags & MFE_VERTICALFLIP);
+		
+		if (actor->target->flags2 & MF2_AMBUSH)
+		{
+			actor->target->color = SKINCOLOR_SUPERRUST3;
+			actor->target->colorized = true;
+		}
 	}
 }
 
