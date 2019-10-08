@@ -2371,3 +2371,13 @@ void M_SetupMemcpy(void)
 	M_Memcpy = cpu_cpy;
 #endif
 }
+
+/** Return the appropriate message for a file error or end of file.
+*/
+const char *M_FileError(FILE *fp)
+{
+	if (ferror(fp))
+		return strerror(errno);
+	else
+		return "end-of-file";
+}
