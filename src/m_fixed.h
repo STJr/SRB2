@@ -206,14 +206,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedDiv(fixed_t a, fixed_t b)
 */
 FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRem(fixed_t x, fixed_t y)
 {
-	const boolean n = x < 0;
-	x = abs(x);
-	while (x >= y)
-		x -= y;
-	if (n)
-		return -x;
-	else
-		return x;
+	return x % y;
 }
 
 /**	\brief	The FixedSqrt function
