@@ -16,6 +16,7 @@
 #include "doomdef.h"
 #include "command.h"
 #include "m_argv.h"
+#include "m_misc.h"
 
 /**	\brief number of arg
 */
