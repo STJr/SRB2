@@ -456,7 +456,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_PAIN|MF_SHOOTABLE)))
+	if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_PAIN|MF_SHOOTABLE)) || (thing->flags & MF_NOCLIPTHING))
 		return true;
 
 	// Don't collide with your buddies while NiGHTS-flying.
