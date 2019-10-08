@@ -138,6 +138,7 @@ void A_SetReactionTime();
 void A_Boss1Spikeballs();
 void A_Boss3TakeDamage();
 void A_Boss3Path();
+void A_Boss3ShockThink();
 void A_LinedefExecute();
 void A_PlaySeeSound();
 void A_PlayAttackSound();
@@ -252,6 +253,7 @@ void A_Boss5CheckOnGround();
 void A_Boss5CheckFalling();
 void A_Boss5PinchShot();
 void A_Boss5MakeItRain();
+void A_Boss5MakeJunk();
 void A_LookForBetter();
 void A_Boss5BombExplode();
 void A_DustDevilThink();
@@ -329,19 +331,19 @@ typedef enum sprite
 	SPR_JETF, // Boss jet fumes
 
 	// Boss 1 (Greenflower)
-	SPR_EGGM,
+	SPR_EGGM, // Boss 1
+	SPR_EGLZ, // Boss 1 Junk
 
 	// Boss 2 (Techno Hill)
 	SPR_EGGN, // Boss 2
-	SPR_TNKA, // Boss 2 Tank 1
-	SPR_TNKB, // Boss 2 Tank 2
-	SPR_SPNK, // Boss 2 Spigot
+	SPR_TANK, // Boss 2 Junk
 	SPR_GOOP, // Boss 2 Goop
 
 	// Boss 3 (Deep Sea)
 	SPR_EGGO, // Boss 3
-	SPR_PRPL, // Boss 3 Propeller
+	SPR_SEBH, // Boss 3 Junk
 	SPR_FAKE, // Boss 3 Fakemobile
+	SPR_SHCK, // Boss 3 Shockwave
 
 	// Boss 4 (Castle Eggman)
 	SPR_EGGP,
@@ -350,6 +352,10 @@ typedef enum sprite
 
 	// Boss 5 (Arid Canyon)
 	SPR_FANG, // replaces EGGQ
+	SPR_BRKN,
+	SPR_WHAT,
+	SPR_VWRE,
+	SPR_PROJ, // projector light
 	SPR_FBOM,
 	SPR_FSGN,
 	SPR_BARX, // bomb explosion (also used by barrel)
@@ -470,11 +476,11 @@ typedef enum sprite
 	SPR_GARG, // Deep Sea Gargoyle
 	SPR_SEWE, // Deep Sea Seaweed
 	SPR_DRIP, // Dripping water
-	SPR_CRL1, // Coral 1
-	SPR_CRL2, // Coral 2
-	SPR_CRL3, // Coral 3
+	SPR_CORL, // Coral
 	SPR_BCRY, // Blue Crystal
 	SPR_KELP, // Kelp
+	SPR_ALGA, // Animated algae top
+	SPR_ALGB, // Animated algae segment
 	SPR_DSTG, // DSZ Stalagmites
 	SPR_LIBE, // DSZ Light beam
 
@@ -504,7 +510,7 @@ typedef enum sprite
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
 	SPR_STBL, // Small tumbleweed
-	SPR_CACT, // Cacti sprites
+	SPR_CACT, // Cacti
 	SPR_WWSG, // Caution Sign
 	SPR_WWS2, // Cacti Sign
 	SPR_WWS3, // Sharp Turn Sign
@@ -849,9 +855,15 @@ typedef enum playersprite
 	SPR2_TALA,
 	SPR2_TALB,
 
+	SPR2_CNT1, // continue disappointment
+	SPR2_CNT2, // continue lift
+	SPR2_CNT3, // continue spin
+	SPR2_CNT4, // continue "soooooooniiic!" tugging
+
 	SPR2_SIGN, // end sign head
 	SPR2_LIFE, // life monitor icon
-	SPR2_XTRA, // stuff that isn't in-game - keep this last in the list
+
+	SPR2_XTRA, // stuff that isn't in-map - "would this ever need an md2 or variable length animation?"
 
 	SPR2_FIRSTFREESLOT,
 	SPR2_LASTFREESLOT = 0x7f,
@@ -1365,10 +1377,10 @@ typedef enum state
 	S_SONIC3KBOSSEXPLOSION6,
 
 	S_JETFUME1,
-	S_JETFUME2,
 
 	// Boss 1
 	S_EGGMOBILE_STND,
+	S_EGGMOBILE_ROFL,
 	S_EGGMOBILE_LATK1,
 	S_EGGMOBILE_LATK2,
 	S_EGGMOBILE_LATK3,
@@ -1378,7 +1390,6 @@ typedef enum state
 	S_EGGMOBILE_LATK7,
 	S_EGGMOBILE_LATK8,
 	S_EGGMOBILE_LATK9,
-	S_EGGMOBILE_LATK10,
 	S_EGGMOBILE_RATK1,
 	S_EGGMOBILE_RATK2,
 	S_EGGMOBILE_RATK3,
@@ -1388,7 +1399,6 @@ typedef enum state
 	S_EGGMOBILE_RATK7,
 	S_EGGMOBILE_RATK8,
 	S_EGGMOBILE_RATK9,
-	S_EGGMOBILE_RATK10,
 	S_EGGMOBILE_PANIC1,
 	S_EGGMOBILE_PANIC2,
 	S_EGGMOBILE_PANIC3,
@@ -1396,6 +1406,14 @@ typedef enum state
 	S_EGGMOBILE_PANIC5,
 	S_EGGMOBILE_PANIC6,
 	S_EGGMOBILE_PANIC7,
+	S_EGGMOBILE_PANIC8,
+	S_EGGMOBILE_PANIC9,
+	S_EGGMOBILE_PANIC10,
+	S_EGGMOBILE_PANIC11,
+	S_EGGMOBILE_PANIC12,
+	S_EGGMOBILE_PANIC13,
+	S_EGGMOBILE_PANIC14,
+	S_EGGMOBILE_PANIC15,
 	S_EGGMOBILE_PAIN,
 	S_EGGMOBILE_PAIN2,
 	S_EGGMOBILE_DIE1,
@@ -1406,6 +1424,9 @@ typedef enum state
 	S_EGGMOBILE_FLEE2,
 	S_EGGMOBILE_BALL,
 	S_EGGMOBILE_TARGET,
+
+	S_BOSSEGLZ1,
+	S_BOSSEGLZ2,
 
 	// Boss 2
 	S_EGGMOBILE2_STND,
@@ -1437,11 +1458,7 @@ typedef enum state
 
 	// Boss 3
 	S_EGGMOBILE3_STND,
-	S_EGGMOBILE3_LAUGH1,
-	S_EGGMOBILE3_LAUGH2,
-	S_EGGMOBILE3_LAUGH3,
-	S_EGGMOBILE3_LAUGH4,
-	S_EGGMOBILE3_LAUGH5,
+	S_EGGMOBILE3_SHOCK,
 	S_EGGMOBILE3_ATK1,
 	S_EGGMOBILE3_ATK2,
 	S_EGGMOBILE3_ATK3A,
@@ -1450,21 +1467,7 @@ typedef enum state
 	S_EGGMOBILE3_ATK3D,
 	S_EGGMOBILE3_ATK4,
 	S_EGGMOBILE3_ATK5,
-	S_EGGMOBILE3_LAUGH6,
-	S_EGGMOBILE3_LAUGH7,
-	S_EGGMOBILE3_LAUGH8,
-	S_EGGMOBILE3_LAUGH9,
-	S_EGGMOBILE3_LAUGH10,
-	S_EGGMOBILE3_LAUGH11,
-	S_EGGMOBILE3_LAUGH12,
-	S_EGGMOBILE3_LAUGH13,
-	S_EGGMOBILE3_LAUGH14,
-	S_EGGMOBILE3_LAUGH15,
-	S_EGGMOBILE3_LAUGH16,
-	S_EGGMOBILE3_LAUGH17,
-	S_EGGMOBILE3_LAUGH18,
-	S_EGGMOBILE3_LAUGH19,
-	S_EGGMOBILE3_LAUGH20,
+	S_EGGMOBILE3_ROFL,
 	S_EGGMOBILE3_PAIN,
 	S_EGGMOBILE3_PAIN2,
 	S_EGGMOBILE3_DIE1,
@@ -1473,15 +1476,6 @@ typedef enum state
 	S_EGGMOBILE3_DIE4,
 	S_EGGMOBILE3_FLEE1,
 	S_EGGMOBILE3_FLEE2,
-
-	// Boss 3 Propeller
-	S_PROPELLER1,
-	S_PROPELLER2,
-	S_PROPELLER3,
-	S_PROPELLER4,
-	S_PROPELLER5,
-	S_PROPELLER6,
-	S_PROPELLER7,
 
 	// Boss 3 Pinch
 	S_FAKEMOBILE_INIT,
@@ -1494,6 +1488,13 @@ typedef enum state
 	S_FAKEMOBILE_ATK3D,
 	S_FAKEMOBILE_DIE1,
 	S_FAKEMOBILE_DIE2,
+
+	S_BOSSSEBH1,
+	S_BOSSSEBH2,
+
+	// Boss 3 Shockwave
+	S_SHOCKWAVE1,
+	S_SHOCKWAVE2,
 
 	// Boss 4
 	S_EGGMOBILE4_STND,
@@ -1537,6 +1538,25 @@ typedef enum state
 	S_EGGROBOJET,
 
 	// Boss 5
+	S_FANG_SETUP,
+	S_FANG_INTRO0,
+	S_FANG_INTRO1,
+	S_FANG_INTRO2,
+	S_FANG_INTRO3,
+	S_FANG_INTRO4,
+	S_FANG_INTRO5,
+	S_FANG_INTRO6,
+	S_FANG_INTRO7,
+	S_FANG_INTRO8,
+	S_FANG_INTRO9,
+	S_FANG_INTRO10,
+	S_FANG_INTRO11,
+	S_FANG_INTRO12,
+	S_FANG_CLONE1,
+	S_FANG_CLONE2,
+	S_FANG_CLONE3,
+	S_FANG_CLONE4,
+	S_FANG_IDLE0,
 	S_FANG_IDLE1,
 	S_FANG_IDLE2,
 	S_FANG_IDLE3,
@@ -1607,6 +1627,26 @@ typedef enum state
 	S_FANG_FLEEBOUNCE1,
 	S_FANG_FLEEBOUNCE2,
 	S_FANG_KO,
+
+	S_BROKENROBOTRANDOM,
+	S_BROKENROBOTA,
+	S_BROKENROBOTB,
+	S_BROKENROBOTC,
+	S_BROKENROBOTD,
+	S_BROKENROBOTE,
+	S_BROKENROBOTF,
+
+	S_ALART1,
+	S_ALART2,
+
+	S_VWREF,
+	S_VWREB,
+
+	S_PROJECTORLIGHT1,
+	S_PROJECTORLIGHT2,
+	S_PROJECTORLIGHT3,
+	S_PROJECTORLIGHT4,
+	S_PROJECTORLIGHT5,
 
 	S_FBOMB1,
 	S_FBOMB2,
@@ -1898,16 +1938,6 @@ typedef enum state
 
 	S_MSSHIELD_F1,
 	S_MSSHIELD_F2,
-	S_MSSHIELD_F3,
-	S_MSSHIELD_F4,
-	S_MSSHIELD_F5,
-	S_MSSHIELD_F6,
-	S_MSSHIELD_F7,
-	S_MSSHIELD_F8,
-	S_MSSHIELD_F9,
-	S_MSSHIELD_F10,
-	S_MSSHIELD_F11,
-	S_MSSHIELD_F12,
 
 	// Ring
 	S_RING,
@@ -2341,20 +2371,23 @@ typedef enum state
 	S_DRIPC1,
 	S_DRIPC2,
 
-	// Coral 1
+	// Coral
 	S_CORAL1,
-
-	// Coral 2
 	S_CORAL2,
-
-	// Coral 3
 	S_CORAL3,
+	S_CORAL4,
+	S_CORAL5,
 
 	// Blue Crystal
 	S_BLUECRYSTAL1,
 
 	// Kelp,
 	S_KELP,
+
+	// Animated algae
+	S_ANIMALGAETOP1,
+	S_ANIMALGAETOP2,
+	S_ANIMALGAESEG,
 
 	// DSZ Stalagmites
 	S_DSZSTALAGMITE,
@@ -2490,7 +2523,7 @@ typedef enum state
 	S_LITTLETUMBLEWEED_ROLL7,
 	S_LITTLETUMBLEWEED_ROLL8,
 
-	// Cacti Sprites
+	// Cacti
 	S_CACTI1,
 	S_CACTI2,
 	S_CACTI3,
@@ -2500,8 +2533,12 @@ typedef enum state
 	S_CACTI7,
 	S_CACTI8,
 	S_CACTI9,
+	S_CACTI10,
+	S_CACTI11,
+	S_CACTITINYSEG,
+	S_CACTISMALLSEG,
 
-	// Warning signs sprites
+	// Warning signs
 	S_ARIDSIGN_CAUTION,
 	S_ARIDSIGN_CACTI,
 	S_ARIDSIGN_SHARPTURN,
@@ -4043,6 +4080,7 @@ typedef enum mobj_type
 	MT_EGGTRAP,
 	MT_BOSS3WAYPOINT,
 	MT_BOSS9GATHERPOINT,
+	MT_BOSSJUNK,
 
 	// Boss 1
 	MT_EGGMOBILE,
@@ -4054,17 +4092,13 @@ typedef enum mobj_type
 	// Boss 2
 	MT_EGGMOBILE2,
 	MT_EGGMOBILE2_POGO,
-	MT_BOSSTANK1,
-	MT_BOSSTANK2,
-	MT_BOSSSPIGOT,
 	MT_GOOP,
 	MT_GOOPTRAIL,
 
 	// Boss 3
 	MT_EGGMOBILE3,
-	MT_PROPELLER,
 	MT_FAKEMOBILE,
-	MT_SHOCK,
+	MT_SHOCKWAVE,
 
 	// Boss 4
 	MT_EGGMOBILE4,
@@ -4075,6 +4109,10 @@ typedef enum mobj_type
 
 	// Boss 5
 	MT_FANG,
+	MT_BROKENROBOT,
+	MT_VWREF,
+	MT_VWREB,
+	MT_PROJECTORLIGHT,
 	MT_FBOMB,
 	MT_TNTDUST, // also used by barrel
 	MT_FSGNA,
@@ -4273,11 +4311,15 @@ typedef enum mobj_type
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
-	MT_CORAL1, // Coral 1
-	MT_CORAL2, // Coral 2
-	MT_CORAL3, // Coral 3
+	MT_CORAL1, // Coral
+	MT_CORAL2,
+	MT_CORAL3,
+	MT_CORAL4,
+	MT_CORAL5,
 	MT_BLUECRYSTAL, // Blue Crystal
 	MT_KELP, // Kelp
+	MT_ANIMALGAETOP, // Animated algae top
+	MT_ANIMALGAESEG, // Animated algae segment
 	MT_DSZSTALAGMITE, // Deep Sea 1 Stalagmite
 	MT_DSZ2STALAGMITE, // Deep Sea 2 Stalagmite
 	MT_LIGHTBEAM, // DSZ Light beam
@@ -4328,15 +4370,19 @@ typedef enum mobj_type
 	// Arid Canyon Scenery
 	MT_BIGTUMBLEWEED,
 	MT_LITTLETUMBLEWEED,
-	MT_CACTI1,
-	MT_CACTI2,
-	MT_CACTI3,
-	MT_CACTI4,
-	MT_CACTI5, // Harmful Cactus 1
-	MT_CACTI6, // Harmful Cactus 2
-	MT_CACTI7, // Harmful Cactus 3
-	MT_CACTI8, // Harmful Cactus 4
-	MT_CACTI9, // Harmful Cactus 5
+	MT_CACTI1, // Tiny Red Flower Cactus
+	MT_CACTI2, // Small Red Flower Cactus
+	MT_CACTI3, // Tiny Blue Flower Cactus
+	MT_CACTI4, // Small Blue Flower Cactus
+	MT_CACTI5, // Prickly Pear
+	MT_CACTI6, // Barrel Cactus
+	MT_CACTI7, // Tall Barrel Cactus
+	MT_CACTI8, // Armed Cactus
+	MT_CACTI9, // Ball Cactus
+	MT_CACTI10, // Tiny Cactus
+	MT_CACTI11, // Small Cactus
+	MT_CACTITINYSEG, // Tiny Cactus Segment
+	MT_CACTISMALLSEG, // Small Cactus Segment
 	MT_ARIDSIGN_CAUTION, // Caution Sign
 	MT_ARIDSIGN_CACTI, // Cacti Sign
 	MT_ARIDSIGN_SHARPTURN, // Sharp Turn Sign

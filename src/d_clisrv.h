@@ -164,6 +164,9 @@ typedef struct
 	angle_t aiming;
 	INT32 currentweapon;
 	INT32 ringweapons;
+	UINT16 ammoremoval;
+	tic_t ammoremovaltimer;
+	INT32 ammoremovalweapon;
 	UINT16 powers[NUMPOWERS];
 
 	// Score is resynched in the confirm resync packet
@@ -225,6 +228,7 @@ typedef struct
 	INT32 starpostnum;
 	tic_t starposttime;
 	angle_t starpostangle;
+	fixed_t starpostscale;
 
 	INT32 maxlink;
 	fixed_t dashspeed;
@@ -441,6 +445,7 @@ extern INT32 mapchangepending;
 // Points inside doomcom
 extern doomdata_t *netbuffer;
 
+extern consvar_t cv_showjoinaddress;
 extern consvar_t cv_playbackspeed;
 
 #define BASEPACKETSIZE      offsetof(doomdata_t, u)

@@ -1438,6 +1438,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						players[i].starposty = player->mo->y>>FRACBITS;
 						players[i].starpostz = special->z>>FRACBITS;
 						players[i].starpostangle = special->angle;
+						players[i].starpostscale = player->mo->destscale;
+						if (special->flags2 & MF2_OBJECTFLIP)
+						{
+							players[i].starpostscale *= -1;
+							players[i].starpostz += special->height>>FRACBITS;
+						}
 						players[i].starpostnum = special->health;
 
 						if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
@@ -1454,6 +1460,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				player->starposty = toucher->y>>FRACBITS;
 				player->starpostz = special->z>>FRACBITS;
 				player->starpostangle = special->angle;
+				player->starpostscale = player->mo->destscale;
+				if (special->flags2 & MF2_OBJECTFLIP)
+				{
+					player->starpostscale *= -1;
+					player->starpostz += special->height>>FRACBITS;
+				}
 				player->starpostnum = special->health;
 				S_StartSound(toucher, special->info->painsound);
 			}
@@ -1594,6 +1606,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			// Buenos Dias Mandy
 			P_SetPlayerMobjState(toucher, S_PLAY_STUN);
 			player->pflags &= ~PF_APPLYAUTOBRAKE;
+			P_ResetPlayer(player);
 			player->drawangle = special->angle + ANGLE_180;
 			P_InstaThrust(toucher, special->angle, FixedMul(3*special->info->speed, special->scale/2));
 			toucher->z += P_MobjFlip(toucher);
@@ -1699,13 +1712,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 			if (mariomode)
 				return;
+			if (special->state-states != S_EXTRALARGEBUBBLE)
+				return; // Don't grab the bubble during its spawn animation
 			else if (toucher->eflags & MFE_VERTICALFLIP)
 			{
-				if (special->z+special->height < toucher->z + toucher->height / 3
-				 || special->z+special->height > toucher->z + (toucher->height*2/3))
+				if (special->z+special->height < toucher->z
+					|| special->z+special->height > toucher->z + (toucher->height*2/3))
 					return; // Only go in the mouth
 			}
-			else if (special->z < toucher->z + toucher->height / 3
+			else if (special->z < toucher->z
 				|| special->z > toucher->z + (toucher->height*2/3))
 				return; // Only go in the mouth
 
@@ -2480,8 +2495,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				else if (P_IsLocalPlayer(target->player))
 					gameovermus = true;
 
-				if (gameovermus)
-					P_PlayJingle(target->player, JT_GOVER); // Yousa dead now, Okieday? Tails 03-14-2000
+				if (gameovermus) // Yousa dead now, Okieday? Tails 03-14-2000
+					S_ChangeMusicEx("_gover", 0, 0, 0, (2*MUSICRATE) - (MUSICRATE/25), 0); // 1.96 seconds
+					//P_PlayJingle(target->player, JT_GOVER); // can't be used because incompatible with track fadeout
 
 				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
 				{
@@ -2605,6 +2621,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_EGGMOBILE3:
 			{
+				mobj_t *mo2;
 				thinker_t *th;
 				UINT32 i = 0; // to check how many clones we've removed
 
@@ -2625,6 +2642,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					mo->scalespeed = (mo->scale - mo->destscale)/(2*TICRATE);
 					mo->momz = mo->info->speed;
 					mo->angle = FixedAngle((P_RandomKey(36)*10)<<FRACBITS);
+
+					mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_BOSSJUNK);
+					mo2->angle = mo->angle;
+					P_SetMobjState(mo2, S_BOSSSEBH2);
+
 					if (++i == 2) // we've already removed 2 of these, let's stop now
 						break;
 					else
@@ -3397,7 +3419,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		return false;
 
 	// Spectator handling
-	if (netgame)
+	if (multiplayer)
 	{
 		if (damagetype != DMG_SPECTATOR && target->player && target->player->spectator)
 			return false;
@@ -3429,7 +3451,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return false;
 
 		// Make sure that boxes cannot be popped by enemies, red rings, etc.
-		if (target->flags & MF_MONITOR && ((!source || !source->player || source->player->bot) || (inflictor && !inflictor->player)))
+		if (target->flags & MF_MONITOR && ((!source || !source->player || source->player->bot)
+		|| (inflictor && inflictor->type >= MT_REDRING && inflictor->type <= MT_GRENADERING)))
 			return false;
 	}
 
@@ -3511,7 +3534,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return true;
 		}
 
-		if (G_IsSpecialStage(gamemap))
+		if (G_IsSpecialStage(gamemap) && !(damagetype & DMG_DEATHMASK))
 		{
 			P_SpecialStageDamage(player, inflictor, source);
 			return true;
@@ -3535,10 +3558,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		// Instant-Death
 		if (damagetype & DMG_DEATHMASK)
-		{
 			P_KillPlayer(player, source, damage);
-			player->rings = player->spheres = 0;
-		}
 		else if (metalrecording)
 		{
 			if (!inflictor)
@@ -3573,7 +3593,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 			return true;
 #endif
-		else if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
+		else if (player->powers[pw_shield] || (player->bot && !ultimatemode))  //If One-Hit Shield
 		{
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);
 			damage = 0;

@@ -188,18 +188,18 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// Boss 1, (Greenflower)
 	&lspr[NOLIGHT],     // SPR_EGGM
+	&lspr[NOLIGHT],     // SPR_EGLZ
 
 	// Boss 2, (Techno Hill)
 	&lspr[NOLIGHT],     // SPR_EGGN
-	&lspr[NOLIGHT],     // SPR_TNKA
-	&lspr[NOLIGHT],     // SPR_TNKB
-	&lspr[NOLIGHT],     // SPR_SPNK
+	&lspr[NOLIGHT],     // SPR_TANK
 	&lspr[NOLIGHT],     // SPR_GOOP
 
 	// Boss 3 (Deep Sea)
 	&lspr[NOLIGHT],     // SPR_EGGO
-	&lspr[NOLIGHT],     // SPR_PRPL
+	&lspr[NOLIGHT],     // SPR_SEBH
 	&lspr[NOLIGHT],     // SPR_FAKE
+	&lspr[NOLIGHT],     // SPR_SHCK
 
 	// Boss 4 (Castle Eggman)
 	&lspr[NOLIGHT],     // SPR_EGGP
@@ -207,11 +207,15 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_EGR1
 
 	// Boss 5 (Arid Canyon)
-	&lspr[NOLIGHT],     //SPR_FANG // replaces EGGQ
-	&lspr[NOLIGHT],     //SPR_FBOM
-	&lspr[NOLIGHT],     //SPR_FSGN
-	&lspr[REDBALL_L],   //SPR_BARX // bomb explosion (also used by barrel)
-	&lspr[NOLIGHT],     //SPR_BARD // bomb dust (also used by barrel)
+	&lspr[NOLIGHT],      // SPR_FANG // replaces EGGQ
+	&lspr[NOLIGHT],      // SPR_BRKN
+	&lspr[NOLIGHT],      // SPR_WHAT
+	&lspr[INVINCIBLE_L], // SPR_VWRE
+	&lspr[INVINCIBLE_L], // SPR_PROJ
+	&lspr[NOLIGHT],      // SPR_FBOM
+	&lspr[NOLIGHT],      // SPR_FSGN
+	&lspr[REDBALL_L],    // SPR_BARX // bomb explosion (also used by barrel)
+	&lspr[NOLIGHT],      // SPR_BARD // bomb dust (also used by barrel)
 
 	// Boss 6 (Red Volcano)
 	&lspr[NOLIGHT],     // SPR_EEGR
@@ -1234,9 +1238,11 @@ static void HWR_SetLight(void)
 		lightmappatch.height = 128;
 		lightmappatch.mipmap.width = 128;
 		lightmappatch.mipmap.height = 128;
+#ifdef GLIDE_API_COMPATIBILITY
 		lightmappatch.mipmap.grInfo.smallLodLog2 = GR_LOD_LOG2_128;
 		lightmappatch.mipmap.grInfo.largeLodLog2 = GR_LOD_LOG2_128;
 		lightmappatch.mipmap.grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+#endif
 		lightmappatch.mipmap.flags = 0; //TF_WRAPXY; // DEBUG: view the overdraw !
 	}
 	HWD.pfnSetTexture(&lightmappatch.mipmap);

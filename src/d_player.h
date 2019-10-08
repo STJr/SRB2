@@ -335,6 +335,10 @@ typedef struct player_s
 	INT32 currentweapon; // current weapon selected.
 	INT32 ringweapons; // weapons currently obtained.
 
+	UINT16 ammoremoval; // amount of ammo removed for the current weapon.
+	tic_t  ammoremovaltimer; // flashing counter for ammo used.
+	INT32  ammoremovalweapon; // weapon from which the ammo was removed.
+
 	// Power ups. invinc and invis are tic counters.
 	UINT16 powers[NUMPOWERS];
 
@@ -439,6 +443,7 @@ typedef struct player_s
 	INT32 starpostnum; // The number of the last starpost you hit
 	tic_t starposttime; // Your time when you hit the starpost
 	angle_t starpostangle; // Angle that the starpost is facing - you respawn facing this way
+	fixed_t starpostscale; // Scale of the player; if negative, player is gravflipped
 
 	/////////////////
 	// NiGHTS Stuff//

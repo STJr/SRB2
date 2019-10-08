@@ -506,6 +506,9 @@ INT32 I_GetKey(void);
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #endif
 
+// Max gamepad/joysticks that can be detected/used.
+#define MAX_JOYSTICKS 4
+
 // Floating point comparison epsilons from float.h
 #ifndef FLT_EPSILON
 #define FLT_EPSILON 1.1920928955078125e-7f
@@ -615,5 +618,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// \note	SRB2CB port.
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
+
+#ifndef HAVE_PNG
+#define NO_PNG_LUMPS
+#endif
 
 #endif // __DOOMDEF__

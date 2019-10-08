@@ -33,7 +33,7 @@
 void P_MixUp(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 			INT16 starpostx, INT16 starposty, INT16 starpostz,
 			INT32 starpostnum, tic_t starposttime, angle_t starpostangle,
-			INT32 flags2)
+			fixed_t starpostscale, angle_t drawangle, INT32 flags2)
 {
 	const INT32 takeflags2 = MF2_TWOD|MF2_OBJECTFLIP;
 
@@ -89,7 +89,10 @@ void P_MixUp(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 		thing->player->starpostz = starpostz;
 		thing->player->starposttime = starposttime;
 		thing->player->starpostangle = starpostangle;
+		thing->player->starpostscale = starpostscale;
 		thing->player->starpostnum = starpostnum;
+
+		thing->player->drawangle = drawangle;
 
 		// Reset map starposts for the player's new info.
 		P_ResetStarposts();

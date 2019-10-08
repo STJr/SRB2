@@ -51,6 +51,7 @@ extern tic_t levelstarttic;
 // for modding?
 extern INT16 prevmap, nextmap;
 extern INT32 gameovertics;
+extern UINT8 ammoremovaltics;
 extern tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 extern INT16 rw_maximums[NUM_WEAPONS];
 extern INT32 pausedelay;
@@ -99,7 +100,7 @@ extern INT32 localaiming, localaiming2; // should be an angle_t but signed
 //
 void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo);
 void G_DoReborn(INT32 playernum);
-void G_PlayerReborn(INT32 player);
+void G_PlayerReborn(INT32 player, boolean betweenmaps);
 void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer,
 	boolean skipprecutscene, boolean FLS);
 char *G_BuildMapTitle(INT32 mapnum);

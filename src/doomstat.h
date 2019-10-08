@@ -333,6 +333,8 @@ typedef struct
 	UINT32 muspostbosspos;      ///< Post-bossdeath position
 	UINT32 muspostbossfadein;   ///< Post-bossdeath fade-in milliseconds.
 
+	SINT8 musforcereset; ///< Force resetmusic (-1 for default; 0 for force off; 1 for force on)
+
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
 	UINT8 numCustomOptions;     ///< Internal. For Lua custom value support.
@@ -417,6 +419,10 @@ extern UINT16 emeralds;
 #define EMERALD6 32
 #define EMERALD7 64
 #define ALL7EMERALDS(v) ((v & (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7)) == (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7))
+
+// yes, even in non HAVE_BLUA
+#define NUM_LUABANKS 16 // please only make this number go up between versions, never down. you'll break saves otherwise. also, must fit in UINT8
+extern INT32 luabanks[NUM_LUABANKS];
 
 extern INT32 nummaprings; //keep track of spawned rings/coins
 
