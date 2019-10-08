@@ -628,7 +628,7 @@ static int power_get(lua_State *L)
 	UINT16 *powers = *((UINT16 **)luaL_checkudata(L, 1, META_POWERS));
 	powertype_t p = luaL_checkinteger(L, 2);
 	if (p >= NUMPOWERS)
-		return luaL_error(L, LUA_QL("powertype_t") " cannot be %u", p);
+		return luaL_error(L, LUA_QL("powertype_t") " cannot be %d", (INT16)p);
 	lua_pushinteger(L, powers[p]);
 	return 1;
 }
@@ -640,7 +640,7 @@ static int power_set(lua_State *L)
 	powertype_t p = luaL_checkinteger(L, 2);
 	UINT16 i = (UINT16)luaL_checkinteger(L, 3);
 	if (p >= NUMPOWERS)
-		return luaL_error(L, LUA_QL("powertype_t") " cannot be %u", p);
+		return luaL_error(L, LUA_QL("powertype_t") " cannot be %d", (INT16)p);
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
 	powers[p] = i;
