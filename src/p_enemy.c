@@ -14236,8 +14236,22 @@ void A_RolloutRock(mobj_t *actor)
 
 	if (inwater && !(actor->flags2 & MF2_AMBUSH)) // buoyancy in water (or lava)
 	{
+		UINT8 flip = P_MobjFlip(actor);
+		fixed_t prevmomz = actor->momz;
 		actor->momz = FixedMul(actor->momz, locvar2);
-		actor->momz += P_MobjFlip(actor) * FixedMul(locvar2, actor->scale);
+		actor->momz += flip * FixedMul(locvar2, actor->scale);
+		if (actor->threshold)
+			actor->threshold--;
+		if (flip*prevmomz < 0 && flip*actor->momz >= 0)
+		{
+			if (actor->eflags & MFE_UNDERWATER)
+				S_StartSound(actor, sfx_splash);
+			else if (!actor->threshold)
+			{
+				S_StartSound(actor, sfx_splish);
+				actor->threshold = max((topspeed - speed) >> FRACBITS, 0);
+			}
+		}
 	}
 
 	if (speed > topspeed) // cap speed
