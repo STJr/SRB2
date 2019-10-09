@@ -5842,35 +5842,28 @@ static void P_3dMovement(player_t *player)
 		else
 			topspeed = normalspd;
 	}
-	else if (player->powers[pw_super] || player->powers[pw_sneakers])
-	{
-		thrustfactor = player->thrustfactor*2;
-		acceleration = player->accelstart/2 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/2;
-
-		if (player->powers[pw_tailsfly])
-			topspeed = normalspd;
-		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
-		{
-			topspeed = normalspd;
-			acceleration = 2*acceleration/3;
-		}
-		else
-			topspeed = normalspd * 2;
-	}
 	else
 	{
-		thrustfactor = player->thrustfactor;
-		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
-
-		if (player->powers[pw_tailsfly])
-			topspeed = normalspd/2;
-		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
+		if (player->powers[pw_super] || player->powers[pw_sneakers])
 		{
-			topspeed = normalspd/2;
-			acceleration = 2*acceleration/3;
+			topspeed = 5 * normalspd / 3; // 1.67x
+			thrustfactor = player->thrustfactor*2;
+			acceleration = player->accelstart/2 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/2;
 		}
 		else
+		{
 			topspeed = normalspd;
+			thrustfactor = player->thrustfactor;
+			acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
+		}
+
+		if (player->powers[pw_tailsfly])
+			topspeed >>= 1;
+		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
+		{
+			topspeed >>= 1;
+			acceleration = 2*acceleration/3;
+		}
 	}
 
 	if (spin) // Prevent gaining speed whilst rolling!
