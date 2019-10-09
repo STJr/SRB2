@@ -2435,12 +2435,12 @@ void V_DrawSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
 	V_DrawSmallThinStringAtFixed((fixed_t)x, (fixed_t)y, option, string);
 }
 
-/*void V_DrawRightAlignedSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
+void V_DrawRightAlignedSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
 {
 	x <<= FRACBITS;
 	y <<= FRACBITS;
 	V_DrawRightAlignedSmallThinStringAtFixed((fixed_t)x, (fixed_t)y, option, string);
-}*/
+}
 
 // Draws a string at a fixed_t location.
 void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
