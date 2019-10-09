@@ -71,6 +71,9 @@ patch_t *lt_font[LT_FONTSIZE];
 patch_t *cred_font[CRED_FONTSIZE];
 patch_t *ttlnum[20]; // act numbers (0-19)
 
+// Character name font
+patch_t *chrn_font[CHRN_FONTSIZE];
+
 static player_t *plr;
 boolean chat_on; // entering a chat message?
 static char w_chat[HU_MAXMSGLEN];
@@ -244,6 +247,19 @@ void HU_LoadGraphics(void)
 	{
 		sprintf(buffer, "TTL%.2d", i);
 		ttlnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+	}
+
+	// cache the character name font for entire game execution
+	j = CHRN_FONTSTART;
+	for (i = 0; i < CHRN_FONTSIZE; i++)
+	{
+		sprintf(buffer, "CHFNT%.3d", j);
+		j++;
+
+		if (W_CheckNumForName(buffer) == LUMPERROR)
+			chrn_font[i] = NULL;
+		else
+			chrn_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
 	// cache the crosshairs, don't bother to know which one is being used,

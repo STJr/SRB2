@@ -2399,7 +2399,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 	}
 	else if (menupres[menutype].bgname[0])
 	{
-		strncpy(curbgname, menupres[menutype].bgname, 9);
+		strncpy(curbgname, menupres[menutype].bgname, 8);
 		curbgxspeed = menupres[menutype].titlescrollxspeed != INT32_MAX ? menupres[menutype].titlescrollxspeed : titlescrollxspeed;
 		curbgyspeed = menupres[menutype].titlescrollyspeed != INT32_MAX ? menupres[menutype].titlescrollyspeed : titlescrollyspeed;
 		return true;
@@ -2517,7 +2517,7 @@ void M_ChangeMenuMusic(const char *defaultmusname, boolean defaultmuslooping)
 
 void M_SetMenuCurBackground(const char *defaultname)
 {
-	char name[8];
+	char name[9];
 	strncpy(name, defaultname, 8);
 	M_IterateMenuTree(MIT_SetCurBackground, &name);
 }
@@ -8212,8 +8212,13 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 		// cur
 		x = ox - txsh;
-		if (curpatch)
-			V_DrawScaledPatch(x, y, 0, curpatch);
+		//if (curpatch)
+		//	V_DrawScaledPatch(x, y, 0, curpatch);
+
+		col = Color_Opposite[charskin->prefcolor - 1][0];
+
+		// Dummy string to be removed when finalized
+		V_DrawCharacterName(x, y, col, "Sonic\n&Tails");
 	}
 
 	// Alternative menu header

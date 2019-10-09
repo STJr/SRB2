@@ -2627,6 +2627,63 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 	}
 }
 
+// Draw a string using the chrn_font
+void V_DrawCharacterName(INT32 x, INT32 y, UINT8 color, const char *string)
+{
+	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
+	const char *ch = string;
+	INT32 spacewidth = 4;
+	const UINT8 *colormap = NULL;
+
+	dupx = dupy = 1;
+	scrwidth = vid.width/vid.dupx;
+	left = (scrwidth - BASEVIDWIDTH)/2;
+	scrwidth -= left;
+
+	if (!color)
+		colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_GREEN, 0);
+	else
+		colormap = R_GetTranslationColormap(TC_DEFAULT, color, 0);
+
+	for (;;ch++)
+	{
+		if (!*ch)
+			break;
+		if (*ch == '\n')
+		{
+			cx = x;
+			cy += 17*dupy;
+
+			continue;
+		}
+
+		c = *ch;
+		c = toupper(c);
+		c -= CHRN_FONTSTART;
+
+		// character does not exist or is a space
+		if (c < 0 || c >= CHRN_FONTSIZE || !chrn_font[c])
+		{
+			cx += spacewidth * dupx;
+			continue;
+		}
+
+		w = SHORT(chrn_font[c]->width) * dupx;
+
+		if (cx > scrwidth)
+			continue;
+		if (cx+left + w < 0) //left boundary check
+		{
+			cx += w;
+			continue;
+		}
+
+		V_DrawFixedPatch((cx)<<FRACBITS, cy<<FRACBITS, FRACUNIT, 0, chrn_font[c], colormap);
+
+		cx += w;
+	}
+}
+
 // Find string width from cred_font chars
 //
 INT32 V_CreditStringWidth(const char *string)
