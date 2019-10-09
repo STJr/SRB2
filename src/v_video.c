@@ -2885,6 +2885,12 @@ void V_DrawSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char
 	}
 }
 
+void V_DrawCenteredSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= V_SmallThinStringWidth(string, option)/4;
+	V_DrawSmallThinStringAtFixed(x, y, option, string);
+}
+
 void V_DrawRightAlignedSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 {
 	x -= V_SmallThinStringWidth(string, option)/2;
