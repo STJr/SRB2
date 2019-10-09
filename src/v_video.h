@@ -215,6 +215,7 @@ void V_DrawRightAlignedThinString(INT32 x, INT32 y, INT32 option, const char *st
 
 // draw a string using the tny_font, 0.5x scale
 void V_DrawSmallThinString(INT32 x, INT32 y, INT32 option, const char *string);
+void V_DrawCenteredSmallThinString(INT32 x, INT32 y, INT32 option, const char *string);
 void V_DrawRightAlignedSmallThinString(INT32 x, INT32 y, INT32 option, const char *string);
 
 // draw a string using the hu_font at fixed_t coordinates
