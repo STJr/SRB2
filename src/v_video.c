@@ -2435,6 +2435,13 @@ void V_DrawSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
 	V_DrawSmallThinStringAtFixed((fixed_t)x, (fixed_t)y, option, string);
 }
 
+/*void V_DrawRightAlignedSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
+{
+	x <<= FRACBITS;
+	y <<= FRACBITS;
+	V_DrawRightAlignedSmallThinStringAtFixed((fixed_t)x, (fixed_t)y, option, string);
+}*/
+
 // Draws a string at a fixed_t location.
 void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 {
@@ -2876,6 +2883,12 @@ void V_DrawSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char
 
 		cx += w;
 	}
+}
+
+void V_DrawRightAlignedSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= V_SmallThinStringWidth(string, option)/2;
+	V_DrawSmallThinStringAtFixed(x, y, option, string);
 }
 
 // Draws a tallnum.  Replaces two functions in y_inter and st_stuff
@@ -3433,6 +3446,15 @@ INT32 V_ThinStringWidth(const char *string, INT32 option)
 	}
 
 	return w;
+}
+
+//
+// Find string width from tny_font chars, 0.5x scale
+//
+INT32 V_SmallThinStringWidth(const char *string, INT32 option)
+{
+	INT32 w = V_ThinStringWidth(string, option)<<FRACBITS;
+	return w/2 + FRACUNIT; // +FRACUNIT because otherwise it's offset wrong.
 }
 
 boolean *heatshifter = NULL;
