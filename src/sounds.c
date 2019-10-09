@@ -506,7 +506,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k6d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3k6e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Mechanical damage"},
   {"s3k6f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"},
-  {"s3k70",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Burst"},
+  {"s3k70",   true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Burst"},
   {"s3k71",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Basic Shield"},
   {"s3k72",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Movement"},
   {"s3k73",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Warp"},

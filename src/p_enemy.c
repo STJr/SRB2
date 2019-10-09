@@ -8416,8 +8416,8 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 //
 // var1 = sound # to play
 // var2:
-//		0 = Play sound without an origin
-//		1 = Play sound using calling object as origin
+//		lower 16 bits = If 1, play sound using calling object as origin. If 0, play sound without an origin
+//		upper 16 bits = If 1, do not play sound during preticker.
 //
 void A_PlaySound(mobj_t *actor)
 {
@@ -8428,7 +8428,10 @@ void A_PlaySound(mobj_t *actor)
 		return;
 #endif
 
-	S_StartSound(locvar2 ? actor : NULL, locvar1);
+	if (leveltime < 2 && (locvar2 >> 16))
+		return;
+
+	S_StartSound((locvar2 & 65535) ? actor : NULL, locvar1);
 }
 
 // Function: A_FindTarget
