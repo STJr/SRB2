@@ -2631,7 +2631,7 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 // Note that the outline is a seperate font set
 void V_DrawNameTag(INT32 x, INT32 y, INT32 option, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
 {
-	INT32 w, w2, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
+	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
 	const char *ch = string;
 	INT32 spacewidth = 4;
 	INT32 lowercase = (option & V_ALLOWLOWERCASE);
@@ -2666,23 +2666,7 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, UINT8 *basecolormap, UINT8 *o
 			continue;
 		}
 
-		// Outline
-		w2 = SHORT(nto_font[c]->width) * dupx;
-
-		if (cx > scrwidth)
-			continue;
-		if (cx+left + w2 < 0) //left boundary check
-		{
-			cx += w2;
-			continue;
-		}
-
-		V_DrawFixedPatch((cx)<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, nto_font[c], outlinecolormap);
-
-		cx += w2;
-
-		// Base
-		w = SHORT(ntb_font[c]->width) * dupx;
+		w = (SHORT(nto_font[c]->width) + SHORT(ntb_font[c]->width)) * dupx;
 
 		if (cx > scrwidth)
 			continue;
@@ -2692,7 +2676,8 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, UINT8 *basecolormap, UINT8 *o
 			continue;
 		}
 
-		V_DrawFixedPatch((cx)<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, ntb_font[c], basecolormap);
+		V_DrawFixedPatch((cx)<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, nto_font[c], outlinecolormap);
+		V_DrawFixedPatch((cx+2)<<FRACBITS, (cy+2)<<FRACBITS, FRACUNIT, option, ntb_font[c], basecolormap);
 
 		cx += w;
 	}
