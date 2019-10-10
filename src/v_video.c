@@ -2627,23 +2627,20 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 	}
 }
 
-// Draw a string using the chrn_font
-void V_DrawCharacterName(INT32 x, INT32 y, UINT8 color, const char *string)
+// Draw a string using the nt_font
+// Note that the outline is a seperate font set
+void V_DrawNameTag(INT32 x, INT32 y, INT32 option, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
 {
-	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
+	INT32 w, w2, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
 	const char *ch = string;
 	INT32 spacewidth = 4;
-	const UINT8 *colormap = NULL;
+	INT32 lowercase = (option & V_ALLOWLOWERCASE);
+	option &= ~V_FLIP; // which is also shared with V_ALLOWLOWERCASE...
 
 	dupx = dupy = 1;
 	scrwidth = vid.width/vid.dupx;
 	left = (scrwidth - BASEVIDWIDTH)/2;
 	scrwidth -= left;
-
-	if (!color)
-		colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_GREEN, 0);
-	else
-		colormap = R_GetTranslationColormap(TC_DEFAULT, color, 0);
 
 	for (;;ch++)
 	{
@@ -2658,17 +2655,34 @@ void V_DrawCharacterName(INT32 x, INT32 y, UINT8 color, const char *string)
 		}
 
 		c = *ch;
-		c = toupper(c);
-		c -= CHRN_FONTSTART;
+		if (!lowercase)
+			c = toupper(c);
+		c -= NT_FONTSTART;
 
 		// character does not exist or is a space
-		if (c < 0 || c >= CHRN_FONTSIZE || !chrn_font[c])
+		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
 		{
 			cx += spacewidth * dupx;
 			continue;
 		}
 
-		w = SHORT(chrn_font[c]->width) * dupx;
+		// Outline
+		w2 = SHORT(nto_font[c]->width) * dupx;
+
+		if (cx > scrwidth)
+			continue;
+		if (cx+left + w2 < 0) //left boundary check
+		{
+			cx += w2;
+			continue;
+		}
+
+		V_DrawFixedPatch((cx)<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, nto_font[c], outlinecolormap);
+
+		cx += w2;
+
+		// Base
+		w = SHORT(ntb_font[c]->width) * dupx;
 
 		if (cx > scrwidth)
 			continue;
@@ -2678,7 +2692,7 @@ void V_DrawCharacterName(INT32 x, INT32 y, UINT8 color, const char *string)
 			continue;
 		}
 
-		V_DrawFixedPatch((cx)<<FRACBITS, cy<<FRACBITS, FRACUNIT, 0, chrn_font[c], colormap);
+		V_DrawFixedPatch((cx)<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, ntb_font[c], basecolormap);
 
 		cx += w;
 	}

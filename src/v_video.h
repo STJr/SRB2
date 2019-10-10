@@ -204,8 +204,8 @@ INT32 V_LevelActNumWidth(INT32 num); // act number width
 
 void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string);
 
-// Draw a string using the chrn_font
-void V_DrawCharacterName(INT32 x, INT32 y, UINT8 color, const char *string);
+// Draw a string using the nt_font
+void V_DrawNameTag(INT32 x, INT32 y, INT32 option, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string);
 
 INT32 V_CreditStringWidth(const char *string);
 

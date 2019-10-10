@@ -35,10 +35,11 @@
 #define CRED_FONTEND 'Z' // the last font character
 #define CRED_FONTSIZE (CRED_FONTEND - CRED_FONTSTART + 1)
 
-// Character name font
-#define CHRN_FONTSTART '!' // the first font character
-#define CHRN_FONTEND 'Z' // the last font character
-#define CHRN_FONTSIZE (CHRN_FONTEND - CHRN_FONTSTART + 1)
+// Name tag font
+// Used by base and outline font set
+#define NT_FONTSTART '!' // the first font character
+#define NT_FONTEND 'Z' // the last font character
+#define NT_FONTSIZE (NT_FONTEND - NT_FONTSTART + 1)
 
 #define HU_CROSSHAIRS 3 // maximum of 9 - see HU_Init();
 
@@ -82,7 +83,8 @@ extern patch_t *tallnum[10];
 extern patch_t *nightsnum[10];
 extern patch_t *lt_font[LT_FONTSIZE];
 extern patch_t *cred_font[CRED_FONTSIZE];
-extern patch_t *chrn_font[CHRN_FONTSIZE];
+extern patch_t *ntb_font[NT_FONTSIZE];
+extern patch_t *nto_font[NT_FONTSIZE];
 extern patch_t *ttlnum[20];
 extern patch_t *emeraldpics[3][8];
 extern patch_t *rflagico;

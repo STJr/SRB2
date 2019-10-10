@@ -7980,8 +7980,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 		return;
 	}
 
-	if (Playing() == false)
-		M_ChangeMenuMusic("_chsel", true);
+	M_ChangeMenuMusic("_chsel", true);
 
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
@@ -8215,10 +8214,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		//if (curpatch)
 		//	V_DrawScaledPatch(x, y, 0, curpatch);
 
-		col = Color_Opposite[charskin->prefcolor - 1][0];
-
 		// Dummy string to be removed when finalized
-		V_DrawCharacterName(x, y, col, "Sonic\n&Tails");
+		V_DrawNameTag(x, y, 0, R_GetTranslationColormap(skinnum, SKINCOLOR_BLUE, 0), R_GetTranslationColormap(skinnum, SKINCOLOR_YELLOW, 0), "Sonic\n&Tails.");
 	}
 
 	// Alternative menu header
