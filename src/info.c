@@ -263,7 +263,6 @@ char sprnames[NUMSPRITES + 1][5] =
 	"ADST", // Arid dust
 	"MCRT", // Minecart
 	"MCSP", // Minecart spark
-	"NON2", // Saloon door thinker
 	"SALD", // Saloon door
 	"TRAE", // Train cameo locomotive
 	"TRAI", // Train cameo wagon
@@ -2462,8 +2461,8 @@ state_t states[NUMSTATES] =
 	{SPR_MCSP, FF_FULLBRIGHT,                1, {A_MinecartSparkThink}, 0, 0, S_MINECARTSPARK},   // S_MINECARTSPARK
 
 	// Saloon door
-	{SPR_SALD, 0|FF_PAPERSPRITE, -1, {NULL},              0, 0, S_NULL}, // S_SALOONDOOR
-	{SPR_NON2, 0,                -1, {A_SaloonDoorSpawn}, 0, 0, S_NULL}, // S_SALONDOORTHINKER
+	{SPR_SALD, 0|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_SALOONDOOR
+	{SPR_NULL, 0, -1, {A_SaloonDoorSpawn}, MT_SALOONDOOR, 48, S_NULL}, // S_SALOONDOORCENTER
 
 	// Train cameo
 	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_TRAINCAMEOSPAWNER_2}, // S_TRAINCAMEOSPAWNER_1
@@ -4780,7 +4779,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SCENERY|MF_PAIN|MF_NOCLIPHEIGHT|MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
+		MF_SCENERY|MF_PAIN|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
 		S_SNAPPER_LEGRAISE // raisestate
 	},
 
@@ -4807,7 +4806,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_PAIN|MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
+		MF_PAIN|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -12199,7 +12198,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID|MF_SHOOTABLE|MF_ENEMY|MF_PUSHABLE, // flags
+		MF_SOLID|MF_SHOOTABLE|MF_PUSHABLE, // flags
 		S_NULL          // raisestate
 	},
 
@@ -12527,9 +12526,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{          // MT_SALOONDOORTHINKER
+	{          // MT_SALOONDOORCENTER
 		1221,           // doomednum
-		S_SALOONDOORTHINKER,   // spawnstate
+		S_SALOONDOORCENTER, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -12550,7 +12549,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOGRAVITY|MF_RUNSPAWNFUNC, // flags
+		MF_SOLID|MF_NOGRAVITY|MF_RUNSPAWNFUNC|MF_PAPERCOLLISION|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
 	},
 

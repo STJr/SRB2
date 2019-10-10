@@ -604,6 +604,34 @@ static void P_SlapStick(mobj_t *fang, mobj_t *pole)
 	P_SetTarget(&pole->tracer, NULL);
 }
 
+static void P_PlayerBarrelCollide(mobj_t *toucher, mobj_t *barrel)
+{
+	if (toucher->momz < 0)
+	{
+		if (toucher->z + toucher->momz > barrel->z + barrel->height)
+			return;
+	}
+	else
+	{
+		if (toucher->z > barrel->z + barrel->height)
+			return;
+	}
+
+	if (toucher->momz > 0)
+	{
+		if (toucher->z + toucher->height + toucher->momz < barrel->z)
+			return;
+	}
+	else
+	{
+		if (toucher->z + toucher->height < barrel->z)
+			return;
+	}
+
+	if (P_PlayerCanDamage(toucher->player, barrel))
+		P_DamageMobj(barrel, toucher, toucher, 1, 0);
+}
+
 //
 // PIT_CheckThing
 //
@@ -872,12 +900,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->type == MT_SALOONDOOR && tmthing->player)
 	{
-		if (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer) && tmthing->tracer->health)
+		mobj_t *ref = (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)) ? tmthing->tracer : tmthing;
+		if ((thing->flags & MF2_AMBUSH) || ref != tmthing)
 		{
-			fixed_t dx = tmthing->tracer->momx;
-			fixed_t dy = tmthing->tracer->momy;
-			fixed_t dm = min(FixedHypot(dx, dy), 16*FRACUNIT);
-			angle_t ang = R_PointToAngle2(0, 0, dx, dy) - thing->angle;
+			fixed_t dm = min(FixedHypot(ref->momx, ref->momy), 16*FRACUNIT);
+			angle_t ang = R_PointToAngle2(0, 0, ref->momx, ref->momy) - thing->angle;
 			fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);
 			S_StartSound(tmthing, thing->info->activesound);
 			thing->extravalue2 += 2*FixedMul(s, dm)/3;
@@ -885,40 +912,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if (thing->type == MT_TNTBARREL && tmthing->player)
+	if (thing->type == MT_SALOONDOORCENTER && tmthing->player)
 	{
-		if (tmthing->momz < 0)
-		{
-			if (tmthing->z + tmthing->momz > thing->z + thing->height)
-				return true;
-		}
-		else
-		{
-			if (tmthing->z > thing->z + thing->height)
-				return true;
-		}
-
-		if (tmthing->momz > 0)
-		{
-			if (tmthing->z + tmthing->height + tmthing->momz < thing->z)
-				return true;
-		}
-		else
-		{
-			if (tmthing->z + tmthing->height < thing->z)
-				return true;
-		}
-
-		if ((tmthing->player->pflags & (PF_SPINNING | PF_GLIDING))
-			|| ((tmthing->player->pflags & PF_JUMPED)
-				&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
-					|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
-			|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
-			|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
-				&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height / 2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
-			|| (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)))
-			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+		if ((thing->flags & MF2_AMBUSH) || (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
+			return true;
 	}
+
+	if (thing->type == MT_TNTBARREL && tmthing->player)
+		P_PlayerBarrelCollide(tmthing, thing);
 
 	if (thing->type == MT_VULTURE && tmthing->type == MT_VULTURE)
 	{
@@ -1560,8 +1561,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if ((!tmthing->player) && (thing->player))
-		; // no solid thing should ever be able to step up onto a player
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM) && (thing->player))
+		; // springs and gas jets should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID

@@ -8855,7 +8855,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 			continue;
 
 		if (mo->type == MT_MINUS && !(mo->flags & (MF_SPECIAL|MF_SHOOTABLE)))
-			mo->flags |= MF_SPECIAL|MF_SHOOTABLE;
+			mo->flags = (mo->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
 
 		if (mo->type == MT_EGGGUARD && mo->tracer) //nuke Egg Guard's shield!
 			P_KillMobj(mo->tracer, inflictor, source, DMG_NUKE);
@@ -10254,7 +10254,7 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 		ffloor_t *rover;
 		for (rover = sec->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS))
+			if (!(rover->flags & (FF_EXISTS|FF_BLOCKOTHERS)))
 				continue;
 
 			*nz = *rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;

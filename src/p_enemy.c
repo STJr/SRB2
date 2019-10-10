@@ -5343,20 +5343,22 @@ static mobj_t *minus;
 
 static boolean PIT_MinusCarry(mobj_t *thing)
 {
+	if (minus->tracer)
+		return true;
+
 	if (minus->type == thing->type)
 		return true;
 
-	if (!(thing->flags & MF_SHOOTABLE) || !(thing->flags & MF_ENEMY))
+	if (!(thing->flags & (MF_PUSHABLE|MF_ENEMY)))
 		return true;
 
-	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius * 3)
+	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius*3)
 		return true;
 
 	if (abs(thing->z - minus->z) > minus->height)
 		return true;
 
 	P_SetTarget(&minus->tracer, thing);
-	minus->tracer->flags &= ~MF_PUSHABLE;
 
 	return true;
 }
@@ -5420,6 +5422,9 @@ void A_MinusDigging(mobj_t *actor)
 	A_Chase(actor);
 
 	// Carry over shit, maybe
+	if (P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		P_SetTarget(&actor->tracer, NULL);
+
 	if (!actor->tracer)
 	{
 		fixed_t radius = 3*actor->radius;
@@ -5469,7 +5474,6 @@ void A_MinusPopup(mobj_t *actor)
 	else
 		actor->momz = 10*FRACUNIT;
 
-	actor->flags |= MF_SPECIAL|MF_SHOOTABLE;
 	S_StartSound(actor, sfx_s3k82);
 	for (i = 1; i <= num; i++)
 	{
@@ -5482,6 +5486,7 @@ void A_MinusPopup(mobj_t *actor)
 	if (actor->tracer)
 		P_DamageMobj(actor->tracer, actor, actor, 1, 0);
 
+	actor->flags = (actor->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
 }
 
 // Function: A_MinusCheck
@@ -13455,6 +13460,13 @@ void A_TNTExplode(mobj_t *actor)
 	if (LUA_CallAction("A_TNTExplode", actor))
 		return;
 #endif
+
+	if (actor->tracer)
+	{
+		P_SetTarget(&actor->tracer->tracer, NULL);
+		P_SetTarget(&actor->tracer, NULL);
+	}
+
 	P_UnsetThingPosition(actor);
 	if (sector_list)
 	{
@@ -13668,8 +13680,6 @@ void A_KillSegments(mobj_t *actor)
 static void P_SnapperLegPlace(mobj_t *mo)
 {
 	mobj_t *seg = mo->tracer;
-	fixed_t x0 = mo->x;
-	fixed_t y0 = mo->y;
 	angle_t a = mo->angle;
 	angle_t fa = (a >> ANGLETOFINESHIFT) & FINEMASK;
 	fixed_t c = FINECOSINE(fa);
@@ -13684,7 +13694,8 @@ static void P_SnapperLegPlace(mobj_t *mo)
 	fixed_t rad = mo->radius;
 	INT32 necklen = (32*(mo->info->reactiontime - mo->reactiontime))/mo->info->reactiontime; // Not in FU
 
-	P_TeleportMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, mo->z + mo->height/3);
+	seg->z = mo->z + ((mo->eflags & MFE_VERTICALFLIP) ? (((mo->height<<1)/3) - seg->height) : mo->height/3);
+	P_TryMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, true);
 	seg->angle = a;
 
 	// Move as many legs as available.
@@ -13704,13 +13715,14 @@ static void P_SnapperLegPlace(mobj_t *mo)
 		{
 			x = c*o2 + s*o1;
 			y = s*o2 - c*o1;
-			P_TryMove(seg, x0 + x, y0 + y, true);
+			seg->z = mo->z + (((mo->eflags & MFE_VERTICALFLIP) ? (mo->height - seg->height) : 0));
+			P_TryMove(seg, mo->x + x, mo->y + y, true);
 			P_SetMobjState(seg, seg->info->raisestate);
 		}
 		else
 			P_SetMobjState(seg, seg->info->spawnstate);
 
-		seg->angle = R_PointToAngle2(x0, y0, seg->x, seg->y);
+		seg->angle = R_PointToAngle2(mo->x, mo->y, seg->x, seg->y);
 
 		seg = seg->tracer;
 	} while (seg);
@@ -13738,14 +13750,14 @@ void A_SnapperSpawn(mobj_t *actor)
 #endif
 
 	// It spawns 1 head.
-	seg = P_SpawnMobj(actor->x, actor->y, actor->z, headtype);
+	seg = P_SpawnMobjFromMobj(actor, 0, 0, 0, headtype);
 	P_SetTarget(&ptr->tracer, seg);
 	ptr = seg;
 
 	// It spawns 4 legs which will be handled in the thinker function.
 	for (i = 1; i <= 4; i++)
 	{
-		seg = P_SpawnMobj(actor->x, actor->y, actor->z, legtype);
+		seg = P_SpawnMobjFromMobj(actor, 0, 0, 0, legtype);
 		P_SetTarget(&ptr->tracer, seg);
 		ptr = seg;
 
@@ -13893,51 +13905,43 @@ void A_SnapperThinker(mobj_t *actor)
 //
 // Description: Spawns a saloon door.
 //
-// var1 = unused
-// var2 = unused
+// var1 = mobjtype for sides
+// var2 = distance sides should be placed apart
 //
 void A_SaloonDoorSpawn(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 	angle_t ang = actor->angle;
 	angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
-	fixed_t c = FINECOSINE(fa);
-	fixed_t s = FINESINE(fa);
-	INT32 d = 48;
-	fixed_t x = actor->x;
-	fixed_t y = actor->y;
-	fixed_t z = actor->z;
+	fixed_t c = FINECOSINE(fa)*locvar2;
+	fixed_t s = FINESINE(fa)*locvar2;
 	mobj_t *door;
+	mobjflag2_t ambush = (actor->flags & MF2_AMBUSH);
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SaloonDoorSpawn", actor))
 		return;
 #endif
 
-	//Front
-	door = P_SpawnMobj(x + c*d, y + s*d, z, MT_SALOONDOOR);
+	if (!locvar1)
+		return;
+
+	// One door...
+	if (!(door = P_SpawnMobjFromMobj(actor, c, s, 0, locvar1))) return;
 	door->angle = ang + ANGLE_180;
+	door->extravalue1 = AngleFixed(door->angle); // Origin angle
+	door->extravalue2 = 0; // Angular speed
+	P_SetTarget(&door->tracer, actor); // Origin door
+	door->flags2 |= ambush; // Can be opened by normal players?
 
-	// Origin angle
-	door->extravalue1 = AngleFixed(door->angle);
-
-	// Angular speed
-	door->extravalue2 = 0;
-
-	// Origin door
-	P_SetTarget(&door->tracer, actor);
-
-	//Back
-	door = P_SpawnMobj(x - c*d, y - s*d, z, MT_SALOONDOOR);
+	// ...two door!
+	if (!(door = P_SpawnMobjFromMobj(actor, -c, -s, 0, locvar1))) return;
 	door->angle = ang;
-
-	// Origin angle
-	door->extravalue1 = AngleFixed(door->angle);
-
-	// Angular speed
-	door->extravalue2 = 0;
-
-	// Origin door
-	P_SetTarget(&door->tracer, actor);
+	door->extravalue1 = AngleFixed(door->angle); // Origin angle
+	door->extravalue2 = 0; // Angular speed
+	P_SetTarget(&door->tracer, actor); // Origin door
+	door->flags2 |= ambush; // Can be opened by normal players?
 }
 
 // Function: A_MinecartSparkThink
