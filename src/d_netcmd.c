@@ -1872,12 +1872,12 @@ static void Command_Map_f(void)
 		G_SetGameModified(false);
 	}
 
-	arg_gametype = COM_Argv(parm_gametype + 1);
-
 	// new gametype value
 	// use current one by default
 	if (parm_gametype)
 	{
+		arg_gametype = COM_Argv(parm_gametype + 1);
+
 		newgametype = G_GetGametypeByName(arg_gametype);
 
 		if (newgametype == -1) // reached end of the list with no match
