@@ -522,7 +522,6 @@ typedef enum sprite
 	SPR_ADST, // Arid dust
 	SPR_MCRT, // Minecart
 	SPR_MCSP, // Minecart spark
-	SPR_NON2, // Saloon door thinker
 	SPR_SALD, // Saloon door
 	SPR_TRAE, // Train cameo locomotive
 	SPR_TRAI, // Train cameo wagon
@@ -2608,7 +2607,7 @@ typedef enum state
 
 	// Saloon door
 	S_SALOONDOOR,
-	S_SALOONDOORTHINKER,
+	S_SALOONDOORCENTER,
 
 	// Train cameo
 	S_TRAINCAMEOSPAWNER_1,
@@ -4400,7 +4399,7 @@ typedef enum mobj_type
 	MT_MINECARTSIDEMARK,
 	MT_MINECARTSPARK,
 	MT_SALOONDOOR,
-	MT_SALOONDOORTHINKER,
+	MT_SALOONDOORCENTER,
 	MT_TRAINCAMEOSPAWNER,
 	MT_TRAINSEG,
 	MT_TRAINDUSTSPAWNER,
