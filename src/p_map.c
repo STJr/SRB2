@@ -208,7 +208,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			{
 				angle_t nightsangle = 0;
 
-				if (object->player->bumpertime >= TICRATE/4)
+				if (object->player->bumpertime > (TICRATE/2)-5)
 					return false;
 
 				if ((object->player->pflags & PF_TRANSFERTOCLOSEST) && object->player->axis1 && object->player->axis2)
