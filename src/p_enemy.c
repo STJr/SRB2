@@ -14237,6 +14237,9 @@ void A_RolloutRock(mobj_t *actor)
 	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
 
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
+	
+	if (actor->threshold)
+		actor->threshold--;
 
 	if (inwater && !(actor->flags2 & MF2_AMBUSH)) // buoyancy in water (or lava)
 	{
@@ -14244,8 +14247,6 @@ void A_RolloutRock(mobj_t *actor)
 		fixed_t prevmomz = actor->momz;
 		actor->momz = FixedMul(actor->momz, locvar2);
 		actor->momz += flip * FixedMul(locvar2, actor->scale);
-		if (actor->threshold)
-			actor->threshold--;
 		if (flip*prevmomz < 0 && flip*actor->momz >= 0 && !actor->threshold)
 		{
 			if (actor->eflags & MFE_UNDERWATER)
