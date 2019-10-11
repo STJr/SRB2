@@ -14246,15 +14246,13 @@ void A_RolloutRock(mobj_t *actor)
 		actor->momz += flip * FixedMul(locvar2, actor->scale);
 		if (actor->threshold)
 			actor->threshold--;
-		if (flip*prevmomz < 0 && flip*actor->momz >= 0)
+		if (flip*prevmomz < 0 && flip*actor->momz >= 0 && !actor->threshold)
 		{
 			if (actor->eflags & MFE_UNDERWATER)
 				S_StartSound(actor, sfx_splash);
 			else if (!actor->threshold)
-			{
 				S_StartSound(actor, sfx_splish);
-				actor->threshold = max((topspeed - speed) >> FRACBITS, 0);
-			}
+			actor->threshold = max((topspeed - speed) >> FRACBITS, 8);
 		}
 	}
 
