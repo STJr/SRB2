@@ -2260,7 +2260,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				else if (!player->skidtime)
 					player->pflags &= ~PF_GLIDING;
 			}
-			else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+			else if (player->charability2 == CA2_MELEE && ((player->panim == PA_ABILITY2) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 			{
 				if (player->mo->state-states != S_PLAY_MELEE_LANDING)
 				{
@@ -4674,8 +4674,9 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						if (player->speed < FixedMul(player->maxdash, player->mo->scale))
 #endif
 						{
-							player->drawangle = player->mo->angle;
-							P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));
+							if (player->panim == PA_IDLE)
+								player->drawangle = player->mo->angle;
+							P_InstaThrust(player->mo, player->drawangle, FixedMul(player->maxdash, player->mo->scale));
 						}
 						player->mo->momx += player->cmomx;
 						player->mo->momy += player->cmomy;
