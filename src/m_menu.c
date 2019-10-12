@@ -8419,7 +8419,6 @@ static void M_HandleTimeAttackLevelSelect(INT32 choice)
 		case KEY_DOWNARROW:
 			M_NextOpt();
 			break;
-
 		case KEY_UPARROW:
 			M_PrevOpt();
 			break;
@@ -8438,6 +8437,9 @@ static void M_HandleTimeAttackLevelSelect(INT32 choice)
 		case KEY_ESCAPE:
 			noFurtherInput = true;
 			M_GoBack(0);
+			return;
+
+		default:
 			return;
 	}
 	S_StartSound(NULL, sfx_menu1);
