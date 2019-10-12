@@ -450,12 +450,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					}
 				}
 				break;
+			case MT_PYREFLY:
+				if (special->extravalue2 == 2 && P_DamageMobj(player->mo, special, special, 1, DMG_FIRE))
+					return;
 			default:
 				break;
 		}
 
 		if (P_PlayerCanDamage(player, special)) // Do you possess the ability to subdue the object?
 		{
+			if (special->type == MT_PTERABYTE && special->target == player->mo && special->extravalue1 == 1)
+				return; // Can't hurt a Pterabyte if it's trying to pick you up
+
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
 			{
 				if (elementalpierce == 2)
@@ -477,7 +483,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_TwinSpinRejuvenate(player, player->thokitem);
 		}
 		else
+		{
+			if (special->type == MT_PTERABYTE && special->target == player->mo)
+				return; // Don't hurt the player you're trying to grab
+
 			P_DamageMobj(toucher, special, special, 1, 0);
+		}
 
 		return;
 	}

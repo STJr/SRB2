@@ -490,6 +490,42 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 	}
 }
 
+static void P_DoPterabyteCarry(player_t *player, mobj_t *ptera)
+{
+	if (player->powers[pw_carry] && players->powers[pw_carry] != CR_ROLLOUT)
+		return;
+	if (ptera->extravalue1 != 1)
+		return; // Not swooping
+	if (ptera->target != player->mo)
+		return; // Not swooping for you!
+
+	if (player->spectator)
+		return;
+
+	if ((player->mo->eflags & MFE_VERTICALFLIP) != (ptera->eflags & MFE_VERTICALFLIP))
+		return; // Both should be in same gravity
+
+	if (ptera->eflags & MFE_VERTICALFLIP)
+	{
+		if (ptera->ceilingz - (ptera->z + ptera->height) < player->mo->height - FixedMul(2*FRACUNIT, player->mo->scale))
+			return;
+	}
+	else if (ptera->z - ptera->floorz < player->mo->height - FixedMul(2*FRACUNIT, player->mo->scale))
+		return; // No room to pick up this guy!
+
+	P_ResetPlayer(player);
+	P_SetTarget(&player->mo->tracer, ptera);
+	player->pflags &= ~PF_APPLYAUTOBRAKE;
+	player->powers[pw_carry] = CR_PTERABYTE;
+	S_StartSound(player->mo, sfx_s3k4a);
+	P_UnsetThingPosition(player->mo);
+	player->mo->x = ptera->x;
+	player->mo->y = ptera->y;
+	P_SetThingPosition(player->mo);
+	ptera->movefactor = 3*TICRATE;
+	ptera->watertop = ptera->waterbottom = ptera->cusval = 0;
+}
+
 static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 {
 	INT32 p;
@@ -882,6 +918,15 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 #endif
 
+	if (tmthing->type == MT_LAVAFALL_LAVA && (thing->type == MT_RING || thing->type == MT_REDTEAMRING || thing->type == MT_BLUETEAMRING || thing->type == MT_FLINGRING))
+	{
+		//height check
+		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !(thing->health))
+			return true;
+
+		P_KillMobj(thing, tmthing, tmthing, DMG_FIRE);
+	}
+
 	if (tmthing->type == MT_MINECART)
 	{
 		//height check
@@ -917,6 +962,64 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if ((thing->flags & MF2_AMBUSH) || (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
 			return true;
 	}
+
+	if (thing->type == MT_ROLLOUTROCK && tmthing->player && tmthing->health)
+	{
+		if (tmthing->player->powers[pw_carry] == CR_ROLLOUT)
+		{
+			return true;
+		}
+		if ((thing->flags & MF_PUSHABLE) // not carrying a player
+			&& (tmthing->player->powers[pw_carry] == CR_NONE) // player is not already riding something
+			&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
+			&& (P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < (thing->radius))
+			&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
+			&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
+				|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
+		{
+			thing->flags &= ~MF_PUSHABLE; // prevent riding player from applying pushable movement logic
+			thing->flags2 &= ~MF2_DONTDRAW; // don't leave the rock invisible if it was flashing prior to boarding
+			P_SetTarget(&thing->tracer, tmthing);
+			P_ResetPlayer(tmthing->player);
+			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
+			tmthing->player->powers[pw_carry] = CR_ROLLOUT;
+			P_SetTarget(&tmthing->tracer, thing);
+			P_SetObjectMomZ(thing, tmthing->momz, true);
+			return true;
+		}
+	}
+	else if (tmthing->type == MT_ROLLOUTROCK)
+	{
+		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !thing->health)
+			return true;
+		
+		if (thing == tmthing->tracer) // don't collide with rider
+			return true;
+
+		if (thing->flags & MF_SPRING) // bounce on springs
+		{
+			P_DoSpring(thing, tmthing);
+			return true;
+		}
+		else if ((thing->flags & (MF_MONITOR|MF_SHOOTABLE)) == (MF_MONITOR|MF_SHOOTABLE) && !(tmthing->flags & MF_PUSHABLE)) // pop monitors while carrying a player
+		{
+			P_KillMobj(thing, tmthing, tmthing->tracer, 0);
+			return true;
+		}
+		
+		if (thing->type == tmthing->type // bounce against other rollout rocks
+			&& (tmthing->momx || tmthing->momy || thing->momx || thing->momy))
+		{
+			fixed_t tempmomx = thing->momx, tempmomy = thing->momy;
+			thing->momx = tmthing->momx;
+			thing->momy = tmthing->momy;
+			tmthing->momx = tempmomx;
+			tmthing->momy = tempmomy;
+		}
+	}
+
+	if (thing->type == MT_PTERABYTE && tmthing->player)
+		P_DoPterabyteCarry(tmthing->player, thing);
 
 	if (thing->type == MT_TNTBARREL && tmthing->player)
 		P_PlayerBarrelCollide(tmthing, thing);
@@ -1965,7 +2068,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				continue;
 			}
 
-			if (thing->player && (P_CheckSolidLava(thing, rover) || P_CanRunOnWater(thing->player, rover)))
+			if (thing->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(thing->player, rover)))
 				;
 			else if (thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE))
 				;
@@ -3480,6 +3583,64 @@ stairstep:
 		goto retry;
 }
 
+static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
+{
+	ffloor_t *rover;
+	fixed_t topheight, bottomheight;
+
+	for (rover = sec->ffloors; rover; rover = rover->next)
+	{
+		if (!(rover->flags & FF_EXISTS))
+			continue;
+
+		if (!(rover->flags & FF_SWIMMABLE))
+			continue;
+
+		if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 3)
+			continue;
+
+		if (rover->master->flags & ML_BLOCKMONSTERS)
+			continue;
+
+		topheight =
+#ifdef ESLOPE
+			*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
+#endif
+			*rover->topheight;
+
+		if (mo->eflags & MFE_VERTICALFLIP)
+		{
+			if (topheight < mo->z - mo->height)
+				continue;
+		}
+		else
+		{
+			if (topheight < mo->z)
+				continue;
+		}
+
+		bottomheight =
+#ifdef ESLOPE
+			*rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) :
+#endif
+			*rover->bottomheight;
+
+		if (mo->eflags & MFE_VERTICALFLIP)
+		{
+			if (bottomheight > mo->z)
+				continue;
+		}
+		else
+		{
+			if (bottomheight > mo->z + mo->height)
+				continue;
+		}
+
+		P_DamageMobj(mo, NULL, NULL, 1, DMG_FIRE);
+		return;
+	}
+}
+
 //
 // P_SlideMove
 // The momx / momy move is bad, so try to slide
@@ -3639,6 +3800,12 @@ retry:
 		PT_ADDLINES, PTR_SlideTraverse);
 	P_PathTraverse(leadx, traily, leadx + mo->momx, traily + mo->momy,
 		PT_ADDLINES, PTR_SlideTraverse);
+
+	if (bestslideline && mo->player && bestslideline->sidenum[1] != 0xffff)
+	{
+		sector_t *sec = P_PointOnLineSide(mo->x, mo->y, bestslideline) ? bestslideline->frontsector : bestslideline->backsector;
+		P_CheckLavaWall(mo, sec);
+	}
 
 	// Some walls are bouncy even if you're not
 	if (bestslideline && bestslideline->flags & ML_BOUNCY)

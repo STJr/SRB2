@@ -1031,6 +1031,17 @@ void P_ResetPlayer(player_t *player)
 {
 	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
 
+	if (player->powers[pw_carry] == CR_ROLLOUT)
+	{
+		if (player->mo->tracer && !P_MobjWasRemoved(player->mo->tracer))
+		{
+			player->mo->tracer->flags |= MF_PUSHABLE;
+			P_SetTarget(&player->mo->tracer->tracer, NULL);
+		}
+		P_SetTarget(&player->mo->tracer, NULL);
+		player->powers[pw_carry] = CR_NONE;
+	}
+
 	if (!(player->powers[pw_carry] == CR_NIGHTSMODE || player->powers[pw_carry] == CR_NIGHTSFALL || player->powers[pw_carry] == CR_BRAKGOOP || player->powers[pw_carry] == CR_MINECART))
 		player->powers[pw_carry] = CR_NONE;
 
@@ -3689,7 +3700,7 @@ static void P_DoTeeter(player_t *player)
 				bottomheight = *rover->bottomheight;
 #endif
 
-				if (P_CheckSolidLava(player->mo, rover))
+				if (P_CheckSolidLava(rover))
 					;
 				else if (!(rover->flags & FF_BLOCKPLAYER || rover->flags & FF_QUICKSAND))
 					continue; // intangible 3d floor
@@ -4311,6 +4322,16 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		if (player->mo->ceilingz-player->mo->floorz <= player->mo->height-1)
 			return;
 
+		if (player->powers[pw_carry] == CR_PTERABYTE)
+		{
+			S_StartSound(player->mo, sfx_s3kd7s);
+			player->mo->tracer->cusval += 10;
+			player->mo->tracer->watertop = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
+			player->mo->tracer->waterbottom = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
+			player->mo->tracer->cvmem = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
+			return;
+		}
+
 		// Jump this high.
 		if (player->powers[pw_carry] == CR_PLAYER)
 		{
@@ -4324,12 +4345,22 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		{
 			player->mo->momz = 9*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
+			player->mo->tracer->flags |= MF_PUSHABLE;
+			P_SetTarget(&player->mo->tracer->target, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->powers[pw_carry] == CR_ROPEHANG)
 		{
 			player->mo->momz = 12*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
+			P_SetTarget(&player->mo->tracer, NULL);
+		}
+		else if (player->powers[pw_carry] == CR_ROLLOUT)
+		{
+			player->mo->momz = 9*FRACUNIT + player->mo->tracer->momz;
+			player->powers[pw_carry] = CR_NONE;
+			player->mo->tracer->flags |= MF_PUSHABLE;
+			P_SetTarget(&player->mo->tracer->tracer, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->mo->eflags & MFE_GOOWATER)
@@ -7350,10 +7381,13 @@ static void P_NiGHTSMovement(player_t *player)
 		&& player->mo->z + player->mo->height - P_GetPlayerHeight(player) <= player->mo->waterbottom && player->mo->z + player->mo->height >= player->mo->waterbottom))
 	&& player->speed > 9000 && leveltime % (TICRATE/7) == 0 && !player->spectator)
 	{
+		mobjtype_t splishtype = (player->mo->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
 		mobj_t *water = P_SpawnMobj(player->mo->x, player->mo->y,
-			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[MT_SPLISH].height, player->mo->scale) : player->mo->watertop), MT_SPLISH);
+			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[splishtype].height, player->mo->scale) : player->mo->watertop), splishtype);
 		if (player->mo->eflags & MFE_GOOWATER)
 			S_StartSound(water, sfx_ghit);
+		else if (player->mo->eflags & MFE_TOUCHLAVA)
+			S_StartSound(water, sfx_splash);
 		else
 			S_StartSound(water, sfx_wslap);
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -8115,10 +8149,13 @@ static void P_MovePlayer(player_t *player)
 	&& (player->speed > runspd || (player->pflags & PF_STARTDASH))
 	&& leveltime % (TICRATE/7) == 0 && player->mo->momz == 0 && !(player->pflags & PF_SLIDING) && !player->spectator)
 	{
+		mobjtype_t splishtype = (player->mo->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
 		mobj_t *water = P_SpawnMobj(player->mo->x - P_ReturnThrustX(NULL, player->mo->angle, player->mo->radius), player->mo->y - P_ReturnThrustY(NULL, player->mo->angle, player->mo->radius),
-			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[MT_SPLISH].height, player->mo->scale) : player->mo->watertop), MT_SPLISH);
+			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[splishtype].height, player->mo->scale) : player->mo->watertop), splishtype);
 		if (player->mo->eflags & MFE_GOOWATER)
 			S_StartSound(water, sfx_ghit);
+		else if (player->mo->eflags & MFE_TOUCHLAVA)
+			S_StartSound(water, sfx_splash);
 		else
 			S_StartSound(water, sfx_wslap);
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -11240,6 +11277,8 @@ void P_PlayerThink(player_t *player)
 
 	// deez New User eXperiences.
 	{
+		angle_t diff = 0;
+		UINT8 factor;
 		// Directionchar!
 		// Camera angle stuff.
 		if (player->exiting // no control, no modification
@@ -11266,7 +11305,15 @@ void P_PlayerThink(player_t *player)
 					/* FALLTHRU */
 				case CR_MINECART:
 				case CR_GENERIC:
+				case CR_PTERABYTE:
 					player->drawangle = player->mo->tracer->angle;
+					break;
+				case CR_ROLLOUT:
+					if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
+					{ // inverse direction!
+						diff = ((player->mo->angle + R_PointToAngle2(0, 0, -cmd->forwardmove<<FRACBITS, cmd->sidemove<<FRACBITS)) - player->drawangle);
+						factor = 4;
+					}
 					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
@@ -11288,9 +11335,6 @@ void P_PlayerThink(player_t *player)
 			;
 		else
 		{
-			angle_t diff;
-			UINT8 factor;
-
 			if (player->pflags & PF_SLIDING)
 			{
 #if 0 // fun hydrocity style horizontal spin
@@ -11326,15 +11370,15 @@ void P_PlayerThink(player_t *player)
 				diff = (player->mo->angle - player->drawangle);
 				factor = 8;
 			}
+		}
 
-			if (diff)
-			{
-				if (diff > ANGLE_180)
-					diff = InvAngle(InvAngle(diff)/factor);
-				else
-					diff /= factor;
-				player->drawangle += diff;
-			}
+		if (diff)
+		{
+			if (diff > ANGLE_180)
+				diff = InvAngle(InvAngle(diff)/factor);
+			else
+				diff /= factor;
+			player->drawangle += diff;
 		}
 
 		// Autobrake! check ST_drawInput if you modify this
@@ -11653,6 +11697,36 @@ void P_PlayerThink(player_t *player)
 	}*/
 }
 
+// Checks if the mobj is above lava. Used by Pterabyte.
+static boolean P_MobjAboveLava(mobj_t *mobj)
+{
+	sector_t *sector = mobj->subsector->sector;
+
+	if (sector->ffloors)
+	{
+		ffloor_t *rover;
+
+		for (rover = sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || GETSECSPECIAL(rover->master->frontsector->special, 1) != 3)
+				continue;
+
+			if (mobj->eflags & MFE_VERTICALFLIP)
+			{
+				if (*rover->bottomheight <= mobj->ceilingz && *rover->bottomheight >= mobj->z)
+					return true;
+			}
+			else
+			{
+				if (*rover->topheight >= mobj->floorz && *rover->topheight <= mobj->z)
+					return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 //
 // P_PlayerAfterThink
 //
@@ -11966,6 +12040,114 @@ void P_PlayerAfterThink(player_t *player)
 						}
 					}
 				}
+				break;
+			}
+			case CR_ROLLOUT:
+			{
+				mobj_t *mo = player->mo, *rock = player->mo->tracer;
+				UINT8 walktics = mo->state->tics - P_GetPlayerControlDirection(player);
+
+				if (!rock || P_MobjWasRemoved(rock))
+				{
+					P_SetTarget(&player->mo->tracer, NULL);
+					player->powers[pw_carry] = CR_NONE;
+					break;
+				}
+
+				if (player->cmd.forwardmove || player->cmd.sidemove)
+				{
+					rock->movedir = (player->cmd.angleturn << FRACBITS) + R_PointToAngle2(0, 0, player->cmd.forwardmove << FRACBITS, -player->cmd.sidemove << FRACBITS);
+					P_Thrust(rock, rock->movedir, rock->scale >> 1);
+				}
+
+				mo->momx = rock->momx;
+				mo->momy = rock->momy;
+				mo->momz = 0;
+				
+				if (player->panim == PA_IDLE && (mo->momx || mo->momy))
+				{
+					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+				}
+
+				if (player->panim == PA_WALK && mo->tics > walktics)
+				{
+					mo->tics = walktics;
+				}
+
+				P_TeleportMove(player->mo, rock->x, rock->y, rock->z + rock->height);
+				break;
+			}
+			case CR_PTERABYTE: // being carried by a Pterabyte
+			{
+				mobj_t *ptera = player->mo->tracer;
+				mobj_t *spawnpoint = ptera->tracer->tracer;
+				player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14 * FRACUNIT, 10 * FRACUNIT));
+
+				if (ptera->health <= 0)
+					goto dropoff;
+
+				if (P_MobjAboveLava(ptera) && ptera->movefactor <= 3*TICRATE - 10)
+					goto dropoff;
+
+				if (player->mo->eflags & MFE_VERTICALFLIP)
+				{
+					if ((ptera->z + ptera->height + player->mo->height + FixedMul(FRACUNIT, player->mo->scale)) <= ptera->ceilingz
+						&& (ptera->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
+						player->mo->z = ptera->z + ptera->height + FixedMul(FRACUNIT, player->mo->scale);
+
+					if (ptera->ceilingz - ptera->z > spawnpoint->ceilingz - spawnpoint->z + 512*FRACUNIT && ptera->movefactor <= 3 * TICRATE - 10)
+						goto dropoff;
+				}
+				else
+				{
+					if ((ptera->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale)) >= ptera->floorz
+						&& !(ptera->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
+						player->mo->z = ptera->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
+
+					if (ptera->z - ptera->floorz > spawnpoint->z - spawnpoint->floorz + 512 * FRACUNIT && ptera->movefactor <= 3 * TICRATE - 10)
+						goto dropoff;
+				}
+
+				ptera->movefactor--;
+				if (!ptera->movefactor)
+					goto dropoff;
+
+				if (ptera->cusval >= 50)
+				{
+					player->powers[pw_carry] = CR_NONE;
+					P_SetTarget(&player->mo->tracer, NULL);
+					P_KillMobj(ptera, player->mo, player->mo, 0);
+					player->mo->momz = 9*FRACUNIT;
+					player->pflags |= PF_APPLYAUTOBRAKE|PF_JUMPED|PF_THOKKED;
+					P_SetMobjState(player->mo, S_PLAY_ROLL);
+					break;
+				}
+
+				if (ptera->cusval)
+					ptera->cusval--;
+
+				P_TryMove(player->mo, ptera->x + ptera->watertop, ptera->y + ptera->waterbottom, true);
+				player->mo->z += ptera->cvmem;
+				player->mo->momx = ptera->momx;
+				player->mo->momy = ptera->momy;
+				player->mo->momz = ptera->momz;
+
+				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > player->mo->radius)
+					goto dropoff;
+
+				ptera->watertop >>= 1;
+				ptera->waterbottom >>= 1;
+				ptera->cvmem >>= 1;
+
+				if (player->mo->state-states != S_PLAY_FALL)
+					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+				break;
+
+			dropoff:
+				player->powers[pw_carry] = CR_NONE;
+				P_SetTarget(&player->mo->tracer, NULL);
+				ptera->movefactor = TICRATE;
+				ptera->extravalue1 |= 4;
 				break;
 			}
 			default:

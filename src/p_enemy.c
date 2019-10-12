@@ -298,6 +298,14 @@ void A_SnapperThinker(mobj_t *actor);
 void A_SaloonDoorSpawn(mobj_t *actor);
 void A_MinecartSparkThink(mobj_t *actor);
 void A_ModuloToState(mobj_t *actor);
+void A_LavafallRocks(mobj_t *actor);
+void A_LavafallLava(mobj_t *actor);
+void A_FallingLavaCheck(mobj_t *actor);
+void A_FireShrink(mobj_t *actor);
+void A_SpawnPterabytes(mobj_t *actor);
+void A_PterabyteHover(mobj_t *actor);
+void A_RolloutSpawn(mobj_t *actor);
+void A_RolloutRock(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -8413,8 +8421,8 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 //
 // var1 = sound # to play
 // var2:
-//		0 = Play sound without an origin
-//		1 = Play sound using calling object as origin
+//		lower 16 bits = If 1, play sound using calling object as origin. If 0, play sound without an origin
+//		upper 16 bits = If 1, do not play sound during preticker.
 //
 void A_PlaySound(mobj_t *actor)
 {
@@ -8425,7 +8433,10 @@ void A_PlaySound(mobj_t *actor)
 		return;
 #endif
 
-	S_StartSound(locvar2 ? actor : NULL, locvar1);
+	if (leveltime < 2 && (locvar2 >> 16))
+		return;
+
+	S_StartSound((locvar2 & 65535) ? actor : NULL, locvar1);
 }
 
 // Function: A_FindTarget
@@ -12202,7 +12213,7 @@ void A_MineExplode(mobj_t *actor)
 #undef dist
 
 		if (actor->watertop != INT32_MAX)
-			P_SpawnMobj(actor->x, actor->y, actor->watertop, MT_SPLISH);
+			P_SpawnMobj(actor->x, actor->y, actor->watertop, (actor->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH);
 	}
 }
 
@@ -14001,4 +14012,291 @@ void A_ModuloToState(mobj_t *actor)
 	if ((modulothing % locvar1 == 0))
 		P_SetMobjState(actor, (locvar2));
 	modulothing++;
+}
+
+// Function: A_LavafallRocks
+//
+// Description: Spawn random rock particles.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_LavafallRocks(mobj_t *actor)
+{
+	UINT8 i;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_LavafallRocks", actor))
+		return;
+#endif
+
+	// Don't spawn rocks unless a player is relatively close by.
+	for (i = 0; i < MAXPLAYERS; ++i)
+		if (playeringame[i] && players[i].mo
+			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600 << FRACBITS))
+			break; // Stop looking.
+
+	if (i < MAXPLAYERS)
+	{
+		angle_t fa = (FixedAngle(P_RandomKey(360) << FRACBITS) >> ANGLETOFINESHIFT) & FINEMASK;
+		fixed_t offset = P_RandomRange(4, 12) << FRACBITS;
+		fixed_t xoffs = FixedMul(FINECOSINE(fa), actor->radius + offset);
+		fixed_t yoffs = FixedMul(FINESINE(fa), actor->radius + offset);
+		P_SpawnMobjFromMobj(actor, xoffs, yoffs, 0, MT_LAVAFALLROCK);
+	}
+}
+
+// Function: A_LavafallLava
+//
+// Description: Spawn lava from lavafall.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_LavafallLava(mobj_t *actor)
+{
+	mobj_t *lavafall;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_LavafallLava", actor))
+		return;
+#endif
+
+	if ((40 - actor->fuse) % (2*(actor->scale >> FRACBITS)))
+		return;
+
+	lavafall = P_SpawnMobjFromMobj(actor, 0, 0, -8*FRACUNIT, MT_LAVAFALL_LAVA);
+	lavafall->momz = -P_MobjFlip(actor)*25*FRACUNIT;
+}
+
+// Function: A_FallingLavaCheck
+//
+// Description: If actor hits the ground or a water surface, enter the death animation.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_FallingLavaCheck(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FallingLavaCheck", actor))
+		return;
+#endif
+
+	if (actor->eflags & MFE_TOUCHWATER || P_IsObjectOnGround(actor))
+	{
+		actor->flags = MF_NOGRAVITY|MF_NOCLIPTHING;
+		actor->momz = 0;
+		if (actor->eflags & MFE_TOUCHWATER)
+			actor->z = (actor->eflags & MFE_VERTICALFLIP) ? actor->waterbottom : actor->watertop;
+		P_SetMobjState(actor, actor->info->deathstate);
+	}
+}
+
+// Function: A_FireShrink
+//
+// Description: Shrink the actor down to the specified scale at the specified speed.
+//
+// var1 = Scale to shrink to
+// var2 = Shrinking speed
+//
+void A_FireShrink(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FireShrink", actor))
+		return;
+#endif
+
+	actor->destscale = locvar1;
+	actor->scalespeed = FRACUNIT/locvar2;
+}
+
+// Function: A_SpawnPterabytes
+//
+// Description: Spawn Pterabytes around the actor in a circle.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_SpawnPterabytes(mobj_t *actor)
+{
+	mobj_t *waypoint, *ptera;
+	fixed_t c, s;
+	fixed_t rad = 280*FRACUNIT;
+	angle_t ang = 0;
+	angle_t interval, fa;
+	UINT8 amount = 1;
+	UINT8 i;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SpawnPterabytes", actor))
+		return;
+#endif
+
+	if (actor->spawnpoint)
+		amount = actor->spawnpoint->extrainfo + 1;
+
+	interval = FixedAngle(FRACUNIT*360/amount);
+
+	for (i = 0; i < amount; i++)
+	{
+		fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+		c = FINECOSINE(fa);
+		s = FINESINE(fa);
+		waypoint = P_SpawnMobjFromMobj(actor, FixedMul(c, rad), FixedMul(s, rad), 0, MT_PTERABYTEWAYPOINT);
+		waypoint->angle = ang + ANGLE_90;
+		P_SetTarget(&waypoint->tracer, actor);
+		ptera = P_SpawnMobjFromMobj(waypoint, 0, 0, 0, MT_PTERABYTE);
+		ptera->angle = waypoint->angle;
+		P_SetTarget(&ptera->tracer, waypoint);
+		ptera->extravalue1 = 0;
+		ang += interval;
+	}
+}
+
+// Function: A_PterabyteHover
+//
+// Description: Hover in a circular fashion, bobbing up and down slightly.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_PterabyteHover(mobj_t *actor)
+{
+	angle_t ang, fa;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_PterabyteHover", actor))
+		return;
+#endif
+
+	P_InstaThrust(actor, actor->angle, actor->info->speed);
+	actor->angle += ANG1;
+	actor->extravalue1 = (actor->extravalue1 + 3) % 360;
+	ang = actor->extravalue1*ANG1;
+	fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+	actor->z += FINESINE(fa);
+}
+// Function: A_RolloutSpawn
+//
+// Description: Spawns a new Rollout Rock when the currently spawned rock is destroyed or moves far enough away.
+//
+// var1 = Distance currently spawned rock should travel before spawning a new one
+// var2 = Object type to spawn
+//
+void A_RolloutSpawn(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_RolloutSpawn", actor))
+		return;
+#endif
+
+	if (!(actor->target)
+		|| P_MobjWasRemoved(actor->target)
+		|| P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) > locvar1)
+	{
+		actor->target = P_SpawnMobj(actor->x, actor->y, actor->z, locvar2);
+		actor->target->flags2 |= (actor->flags2 & (MF2_AMBUSH | MF2_OBJECTFLIP)) | MF2_SLIDEPUSH;
+		actor->target->eflags |= (actor->eflags & MFE_VERTICALFLIP);
+		
+		if (actor->target->flags2 & MF2_AMBUSH)
+		{
+			actor->target->color = SKINCOLOR_SUPERRUST3;
+			actor->target->colorized = true;
+		}
+	}
+}
+
+// Function: A_RolloutRock
+//
+// Description: Thinker for Rollout Rock.
+//
+// var1 = Drag
+// var2 = Vertical bobbing speed factor
+//
+void A_RolloutRock(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_RolloutRock", actor))
+		return;
+#endif
+
+	UINT8 maxframes = actor->info->reactiontime; // number of frames the mobj cycles through
+	fixed_t pi = (22*FRACUNIT/7);
+	fixed_t circumference = FixedMul(2 * pi, actor->radius); // used to calculate when to change frame
+	fixed_t speed = P_AproxDistance(actor->momx, actor->momy), topspeed = FixedMul(actor->info->speed, actor->scale);
+	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
+
+	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
+	
+	if (actor->threshold)
+		actor->threshold--;
+
+	if (inwater && !(actor->flags2 & MF2_AMBUSH)) // buoyancy in water (or lava)
+	{
+		UINT8 flip = P_MobjFlip(actor);
+		fixed_t prevmomz = actor->momz;
+		actor->momz = FixedMul(actor->momz, locvar2);
+		actor->momz += flip * FixedMul(locvar2, actor->scale);
+		if (flip*prevmomz < 0 && flip*actor->momz >= 0 && !actor->threshold)
+		{
+			if (actor->eflags & MFE_UNDERWATER)
+				S_StartSound(actor, sfx_splash);
+			else if (!actor->threshold)
+				S_StartSound(actor, sfx_splish);
+			actor->threshold = max((topspeed - speed) >> FRACBITS, 8);
+		}
+	}
+
+	if (speed > topspeed) // cap speed
+	{
+		actor->momx = FixedMul(FixedDiv(actor->momx, speed), topspeed);
+		actor->momy = FixedMul(FixedDiv(actor->momy, speed), topspeed);
+	}
+	
+	if (P_IsObjectOnGround(actor) || inwater) // apply drag to speed (compensates for lack of friction but also works in liquids)
+	{
+		actor->momx = FixedMul(actor->momx, locvar1);
+		actor->momy = FixedMul(actor->momy, locvar1);
+	}
+
+	speed = P_AproxDistance(actor->momx, actor->momy); // recalculate speed for visual rolling
+
+	if (speed < actor->scale >> 1) // stop moving if speed is insignificant
+	{
+		actor->momx = 0;
+		actor->momy = 0;
+	}
+	else if (speed > actor->scale)
+	{
+		actor->movecount = 1; // rock has moved; fuse should be set so we don't have a trillion rocks lying around
+		actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy); // set rock's angle to movement direction
+		actor->movefactor += speed;
+		if (actor->movefactor > circumference / maxframes) // if distance moved is enough to change frame, change it!
+		{
+			actor->reactiontime++;
+			actor->reactiontime %= maxframes;
+			actor->movefactor = 0;
+		}
+	}
+
+	actor->frame = actor->reactiontime % maxframes; // set frame
+	
+	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
+		actor->fuse = 0;
+	else if (!actor->fuse && actor->movecount == 1) // otherwise if rock has moved, set its fuse
+		actor->fuse = actor->info->painchance;
+	
+	if (actor->fuse && actor->fuse < 2*TICRATE)
+		actor->flags2 ^= MF2_DONTDRAW;
+		
 }

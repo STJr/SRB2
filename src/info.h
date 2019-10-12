@@ -268,6 +268,14 @@ void A_SnapperThinker();
 void A_SaloonDoorSpawn();
 void A_MinecartSparkThink();
 void A_ModuloToState();
+void A_LavafallRocks();
+void A_LavafallLava();
+void A_FallingLavaCheck();
+void A_FireShrink();
+void A_SpawnPterabytes();
+void A_PterabyteHover();
+void A_RolloutSpawn();
+void A_RolloutRock();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -316,6 +324,8 @@ typedef enum sprite
 	SPR_UNID, // Unidus
 	SPR_CANA, // Canarivore
 	SPR_CANG, // Canarivore gas
+	SPR_PYRE, // Pyre Fly
+	SPR_PTER, // Pterabyte
 
 	// Generic Boss Items
 	SPR_JETF, // Boss jet fumes
@@ -397,6 +407,7 @@ typedef enum sprite
 	SPR_WSPB, // Wall spike base
 	SPR_STPT, // Starpost
 	SPR_BMNE, // Big floating mine
+	SPR_PUMI, // Rollout Rock
 
 	// Monitor Boxes
 	SPR_MSTV, // MiSc TV sprites
@@ -519,6 +530,10 @@ typedef enum sprite
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
 	SPR_DFLM, // Blade's flame
+	SPR_LFAL, // Lavafall
+	SPR_JPLA, // Jungle palm
+	SPR_TFLO, // Torch flower
+	SPR_WVIN, // Wall vines
 
 	// Dark City Scenery
 
@@ -618,6 +633,7 @@ typedef enum sprite
 	SPR_RAIN, // Rain
 	SPR_SNO1, // Snowflake
 	SPR_SPLH, // Water Splish
+	SPR_LSPL, // Lava Splish
 	SPR_SPLA, // Water Splash
 	SPR_SMOK,
 	SPR_BUBL, // Bubble
@@ -1333,6 +1349,22 @@ typedef enum state
 	S_CANARIVOREGAS_6,
 	S_CANARIVOREGAS_7,
 	S_CANARIVOREGAS_8,
+
+	// Pyre Fly
+	S_PYREFLY_FLY,
+	S_PYREFLY_BURN,
+	S_PYREFIRE1,
+	S_PYREFIRE2,
+
+	// Pterabyte
+	S_PTERABYTESPAWNER,
+	S_PTERABYTEWAYPOINT,
+	S_PTERABYTE_FLY1,
+	S_PTERABYTE_FLY2,
+	S_PTERABYTE_FLY3,
+	S_PTERABYTE_FLY4,
+	S_PTERABYTE_SWOOPDOWN,
+	S_PTERABYTE_SWOOPUP,
 
 	// Boss Explosion
 	S_BOSSEXPLODE,
@@ -2610,6 +2642,28 @@ typedef enum state
 	S_FLAMEJETFLAMEB2,
 	S_FLAMEJETFLAMEB3,
 
+	// Lavafall
+	S_LAVAFALL_DORMANT,
+	S_LAVAFALL_TELL,
+	S_LAVAFALL_SHOOT,
+	S_LAVAFALL_LAVA1,
+	S_LAVAFALL_LAVA2,
+	S_LAVAFALL_LAVA3,
+	S_LAVAFALLROCK,
+
+	// Rollout Rock
+	S_ROLLOUTSPAWN,
+	S_ROLLOUTROCK,
+
+	// RVZ scenery
+	S_BIGFERNLEAF,
+	S_BIGFERN1,
+	S_BIGFERN2,
+	S_JUNGLEPALM,
+	S_TORCHFLOWER,
+	S_WALLVINE_LONG,
+	S_WALLVINE_SHORT,
+
 	// Trapgoyles
 	S_TRAPGOYLE,
 	S_TRAPGOYLE_CHECK,
@@ -3350,6 +3404,9 @@ typedef enum state
 	S_SPLISH8,
 	S_SPLISH9,
 
+	// Lava Splish
+	S_LAVASPLISH,
+
 	// added water splash
 	S_SPLASH1,
 	S_SPLASH2,
@@ -4022,6 +4079,11 @@ typedef enum mobj_type
 	MT_UNIBALL, // Unidus Ball
 	MT_CANARIVORE, // Canarivore
 	MT_CANARIVORE_GAS, // Canarivore gas
+	MT_PYREFLY, // Pyre Fly
+	MT_PYREFLY_FIRE, // Pyre Fly fire
+	MT_PTERABYTESPAWNER, // Pterabyte spawner
+	MT_PTERABYTEWAYPOINT, // Pterabyte waypoint
+	MT_PTERABYTE, // Pterabyte
 
 	// Generic Boss Items
 	MT_BOSSEXPLODE,
@@ -4367,6 +4429,20 @@ typedef enum mobj_type
 
 	MT_FLAMEJETFLAMEB, // Blade's flame
 
+	MT_LAVAFALL,
+	MT_LAVAFALL_LAVA,
+	MT_LAVAFALLROCK,
+
+	MT_ROLLOUTSPAWN,
+	MT_ROLLOUTROCK,
+
+	MT_BIGFERNLEAF,
+	MT_BIGFERN,
+	MT_JUNGLEPALM,
+	MT_TORCHFLOWER,
+	MT_WALLVINE_LONG,
+	MT_WALLVINE_SHORT,
+
 	// Dark City Scenery
 
 	// Egg Rock Scenery
@@ -4536,6 +4612,7 @@ typedef enum mobj_type
 	MT_RAIN, // Rain
 	MT_SNOWFLAKE, // Snowflake
 	MT_SPLISH, // Water splish!
+	MT_LAVASPLISH, // Lava splish!
 	MT_SMOKE,
 	MT_SMALLBUBBLE, // small bubble
 	MT_MEDIUMBUBBLE, // medium bubble
