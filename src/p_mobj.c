@@ -1578,7 +1578,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 
 	// Goop has slower, reversed gravity
 	if (goopgravity)
-		gravityadd = -gravityadd/5;
+		gravityadd = -((gravityadd/5) + (gravityadd/8));
 
 	gravityadd = FixedMul(gravityadd, mo->scale);
 
@@ -3464,9 +3464,18 @@ void P_MobjCheckWater(mobj_t *mobj)
 			|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->ceilingz-mobj->waterbottom <= height>>1))
 			return;
 
-		if (!wasgroundpounding && (mobj->eflags & MFE_GOOWATER || wasingoo)) { // Decide what happens to your momentum when you enter/leave goopy water.
-			if (P_MobjFlip(mobj)*mobj->momz < 0) // You are entering the goo?
-				mobj->momz = FixedMul(mobj->momz, FixedDiv(2*FRACUNIT, 5*FRACUNIT)); // kill momentum significantly, to make the goo feel thick.
+		if (mobj->eflags & MFE_GOOWATER || wasingoo) { // Decide what happens to your momentum when you enter/leave goopy water.
+			if (P_MobjFlip(mobj)*mobj->momz > 0)
+			{
+				mobj->momz -= (mobj->momz/8); // cut momentum a little bit to prevent multiple bobs
+				//CONS_Printf("leaving\n");
+			}
+			else
+			{
+				if (!wasgroundpounding)
+					mobj->momz >>= 1; // kill momentum significantly, to make the goo feel thick.
+				//CONS_Printf("entering\n");
+			}
 		}
 		else if (wasinwater && P_MobjFlip(mobj)*mobj->momz > 0)
 			mobj->momz = FixedMul(mobj->momz, FixedDiv(780*FRACUNIT, 457*FRACUNIT)); // Give the mobj a little out-of-water boost.
