@@ -1224,7 +1224,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_HEADER, NULL, "Level", NULL, 155},
 	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        161},
 	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 166},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS mode Draw Dist.",    &cv_drawdist_nights, 171},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 171},
 
 	{IT_HEADER, NULL, "Diagnostic", NULL, 180},
 	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         186},

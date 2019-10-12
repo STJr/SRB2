@@ -1637,7 +1637,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	mobj_t *thing;
 	precipmobj_t *precipthing; // Tails 08-25-2002
 	INT32 lightnum;
-	fixed_t approx_dist, limit_dist;
+	fixed_t approx_dist, limit_dist, hoop_limit_dist;
 
 	if (rendermode != render_soft)
 		return;
@@ -1668,7 +1668,9 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 	// Handle all things in sector.
 	// If a limit exists, handle things a tiny bit different.
-	if ((limit_dist = (fixed_t)((maptol & TOL_NIGHTS) ? cv_drawdist_nights.value : cv_drawdist.value) << FRACBITS))
+	limit_dist = (fixed_t)(cv_drawdist.value) << FRACBITS;
+	hoop_limit_dist = (fixed_t)(cv_drawdist_nights.value) << FRACBITS;
+	if (limit_dist || hoop_limit_dist)
 	{
 		for (thing = sec->thinglist; thing; thing = thing->snext)
 		{
@@ -1677,8 +1679,16 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
-			if (approx_dist > limit_dist)
-				continue;
+			if (thing->sprite == SPR_HOOP)
+			{
+				if (hoop_limit_dist && approx_dist > hoop_limit_dist)
+					continue;
+			}
+			else
+			{
+				if (limit_dist && approx_dist > limit_dist)
+					continue;
+			}
 
 			R_ProjectSprite(thing);
 		}
