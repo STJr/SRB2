@@ -161,13 +161,14 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap);
 boolean R_CheckIfPatch(lumpnum_t lump);
 UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
 
-void R_PatchToFlat(patch_t *patch, UINT8 *flat);
 void R_TextureToFlat(size_t tex, UINT8 *flat);
+void R_PatchToFlat(patch_t *patch, UINT8 *flat);
+patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
 
 #ifndef NO_PNG_LUMPS
 boolean R_IsLumpPNG(const UINT8 *d, size_t s);
 
-UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size);
+UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size);
 patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency);
 boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
 #endif
