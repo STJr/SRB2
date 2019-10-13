@@ -878,10 +878,11 @@ boolean I_SetSongSpeed(float speed)
 #ifdef HAVE_OPENMPT
 	if (openmpt_mhandle)
 	{
+		char modspd[13];
+
 		if (speed > 4.0f)
 			speed = 4.0f; // Limit this to 4x to prevent crashing, stupid fix but... ~SteelT 27/9/19
 
-		char modspd[8];
 		sprintf(modspd, "%g", speed);
 		openmpt_module_ctl_set(openmpt_mhandle, "play.tempo_factor", modspd);
 		return true;
