@@ -12253,7 +12253,6 @@ void A_ConnectToGround(mobj_t *actor)
 	mobj_t *work;
 	fixed_t workz;
 	fixed_t workh;
-	SINT8 dir;
 	angle_t ang;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
@@ -12267,23 +12266,17 @@ void A_ConnectToGround(mobj_t *actor)
 		P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
 
 	if (actor->flags2 & MF2_OBJECTFLIP)
-	{
-		workz = actor->ceilingz - (actor->z + actor->height);
-		dir = -1;
-	}
+		workz = (actor->z + actor->height) - actor->ceilingz;
 	else
-	{
 		workz = actor->floorz - actor->z;
-		dir = 1;
-	}
 
 	if (locvar2)
 	{
 		workh = FixedMul(mobjinfo[locvar2].height, actor->scale);
 		if (actor->flags2 & MF2_OBJECTFLIP)
-			workz -= workh;
+			workz += workh;
 		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar2);
-		workz += dir*workh;
+		workz += workh;
 	}
 
 	if (!locvar1)
@@ -12293,17 +12286,17 @@ void A_ConnectToGround(mobj_t *actor)
 		return;
 
 	ang = actor->angle + ANGLE_45;
-	while (dir*workz < 0)
+	while (workz < 0)
 	{
 		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar1);
 		if (work)
 			work->angle = ang;
 		ang += ANGLE_90;
-		workz += dir*workh;
+		workz += workh;
 	}
 
 	if (workz != 0)
-		actor->z += workz;
+		actor->z += P_MobjFlip(actor)*workz;
 }
 
 // Function: A_SpawnParticleRelative
