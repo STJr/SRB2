@@ -1186,11 +1186,11 @@ static void SendNameAndColor(void)
 	&& !strcmp(cv_skin.string, skins[players[consoleplayer].skin].name))
 		return;
 
+	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
+
 	// We'll handle it later if we're not playing.
 	if (!Playing())
 		return;
-
-	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
 
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (!netgame)
@@ -1304,11 +1304,11 @@ static void SendNameAndColor2(void)
 			CV_StealthSet(&cv_playercolor2, cv_playercolor2.defaultvalue);
 	}
 
+	players[secondplaya].availabilities = R_GetSkinAvailabilities();
+
 	// We'll handle it later if we're not playing.
 	if (!Playing())
 		return;
-
-	players[secondplaya].availabilities = R_GetSkinAvailabilities();
 
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (botingame)
