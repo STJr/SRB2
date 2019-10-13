@@ -2135,7 +2135,7 @@ void I_StartupTimer(void)
 
 void I_Sleep(void)
 {
-	if (cv_sleep.value > 0)
+	if (cv_sleep.value != -1)
 		SDL_Delay(cv_sleep.value);
 }
 
