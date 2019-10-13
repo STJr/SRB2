@@ -898,7 +898,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	if (player->mo->target)
 	{
 		player->angle_pos = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
-		player->drawangle = player->mo->angle = player->angle_pos
+		player->drawangle = player->angle_pos
 			+ ((player->mo->target->flags2 & MF2_AMBUSH) ? // if axis is invert, take the opposite right angle
 				-ANGLE_90 : ANGLE_90); // flyangle is always 0 here, below is kept for posterity
 				/*(player->flyangle > 90 && player->flyangle < 270 ? ANGLE_90 : -ANGLE_90)
