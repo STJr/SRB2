@@ -1474,12 +1474,9 @@ static void ST_drawNightsRecords(void)
 
 			if (P_HasGrades(gamemap, stplyr->lastmare + 1))
 			{
-				if (aflag)
-					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag,
-										   ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
-				else
-					V_DrawScaledPatch(BASEVIDWIDTH/2 + 60, 160, 0,
-									  ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
+				UINT8 grade = P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare);
+				if (modeattacking || grade >= GRADE_A)
+					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag, ngradeletters[grade]);
 			}
 			break;
 		}
