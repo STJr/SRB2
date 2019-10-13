@@ -7667,7 +7667,8 @@ static void P_SkidStuff(player_t *player)
 		// Spawn a particle every 3 tics.
 		else if (!(player->skidtime % 3))
 		{
-			mobj_t *particle = P_SpawnMobjFromMobj(player->mo, P_RandomRange(-player->mo->radius, player->mo->radius), P_RandomRange(-player->mo->radius, player->mo->radius), 0, MT_SPINDUST);
+			fixed_t radius = player->mo->radius >> FRACBITS;
+			mobj_t *particle = P_SpawnMobjFromMobj(player->mo, P_RandomRange(-radius, radius) << FRACBITS, P_RandomRange(-radius, radius) << FRACBITS, 0, MT_SPINDUST);
 			particle->tics = 10;
 
 			particle->destscale = (2*player->mo->scale)/3;
@@ -7769,9 +7770,10 @@ static void P_MovePlayer(player_t *player)
 	if (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
 	{
 		player->pflags |= PF_STASIS;
-		if ((player->mo->tics + 1) % 3 == 0 && player->speed > 5*player->mo->scale)
+		if ((player->mo->tics + 1) % 3 == 0 && player->speed > 5*player->mo->scale) // Copy of the glide-slide dust effect, for consistency
 		{
-			mobj_t *particle = P_SpawnMobjFromMobj(player->mo, P_RandomRange(-player->mo->radius, player->mo->radius), P_RandomRange(-player->mo->radius, player->mo->radius), 0, MT_SPINDUST);
+			fixed_t radius = player->mo->radius >> FRACBITS;
+			mobj_t *particle = P_SpawnMobjFromMobj(player->mo, P_RandomRange(-radius, radius) << FRACBITS, P_RandomRange(-radius, radius) << FRACBITS, 0, MT_SPINDUST);
 			particle->tics = 10;
 
 			particle->destscale = (2*player->mo->scale)/3;
