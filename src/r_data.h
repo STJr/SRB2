@@ -159,8 +159,6 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap);
 #define R_PutRgbaRGBA(r, g, b, a) (R_PutRgbaRGB(r, g, b) + R_PutRgbaA(a))
 
 boolean R_CheckIfPatch(lumpnum_t lump);
-UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
-
 void R_TextureToFlat(size_t tex, UINT8 *flat);
 void R_PatchToFlat(patch_t *patch, UINT8 *flat);
 patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
