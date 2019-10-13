@@ -12292,9 +12292,6 @@ void A_ConnectToGround(mobj_t *actor)
 	if (!(workh = FixedMul(mobjinfo[locvar1].height, actor->scale)))
 		return;
 
-	if (actor->flags2 & MF2_OBJECTFLIP)
-		workz -= workh;
-
 	ang = actor->angle + ANGLE_45;
 	while (dir*workz < 0)
 	{
@@ -14204,7 +14201,7 @@ void A_RolloutSpawn(mobj_t *actor)
 		actor->target = P_SpawnMobj(actor->x, actor->y, actor->z, locvar2);
 		actor->target->flags2 |= (actor->flags2 & (MF2_AMBUSH | MF2_OBJECTFLIP)) | MF2_SLIDEPUSH;
 		actor->target->eflags |= (actor->eflags & MFE_VERTICALFLIP);
-		
+
 		if (actor->target->flags2 & MF2_AMBUSH)
 		{
 			actor->target->color = SKINCOLOR_SUPERRUST3;
@@ -14237,7 +14234,7 @@ void A_RolloutRock(mobj_t *actor)
 	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
 
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
-	
+
 	if (actor->threshold)
 		actor->threshold--;
 
@@ -14262,7 +14259,7 @@ void A_RolloutRock(mobj_t *actor)
 		actor->momx = FixedMul(FixedDiv(actor->momx, speed), topspeed);
 		actor->momy = FixedMul(FixedDiv(actor->momy, speed), topspeed);
 	}
-	
+
 	if (P_IsObjectOnGround(actor) || inwater) // apply drag to speed (compensates for lack of friction but also works in liquids)
 	{
 		actor->momx = FixedMul(actor->momx, locvar1);
@@ -14290,13 +14287,13 @@ void A_RolloutRock(mobj_t *actor)
 	}
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
-	
+
 	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
 		actor->fuse = 0;
 	else if (!actor->fuse && actor->movecount == 1) // otherwise if rock has moved, set its fuse
 		actor->fuse = actor->info->painchance;
-	
+
 	if (actor->fuse && actor->fuse < 2*TICRATE)
 		actor->flags2 ^= MF2_DONTDRAW;
-		
+
 }
