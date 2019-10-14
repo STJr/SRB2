@@ -3498,13 +3498,26 @@ static void P_DoClimbing(player_t *player)
 		P_Thrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
 	}
 
-	/*if (!demoplayback || P_AnalogMove(player))
+#define CLIMBCONEMAX FixedAngle(90*FRACUNIT)
+	if (!demoplayback || P_AnalogMove(player))
 	{
 		if (player == &players[consoleplayer])
-			localangle = player->mo->angle;
+		{
+			angle_t angdiff = localangle - player->mo->angle;
+			if (angdiff < ANGLE_180 && angdiff > CLIMBCONEMAX)
+				localangle = player->mo->angle + CLIMBCONEMAX;
+			else if (angdiff > ANGLE_180 && angdiff < InvAngle(CLIMBCONEMAX))
+				localangle = player->mo->angle - CLIMBCONEMAX;
+		}
 		else if (player == &players[secondarydisplayplayer])
-			localangle2 = player->mo->angle;
-	}*/
+		{
+			angle_t angdiff = localangle2 - player->mo->angle;
+			if (angdiff < ANGLE_180 && angdiff > CLIMBCONEMAX)
+				localangle2 = player->mo->angle + CLIMBCONEMAX;
+			else if (angdiff > ANGLE_180 && angdiff < InvAngle(CLIMBCONEMAX))
+				localangle2 = player->mo->angle - CLIMBCONEMAX;
+		}
+	}
 
 	if (player->climbing == 0)
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
