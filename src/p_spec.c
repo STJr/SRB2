@@ -2718,6 +2718,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
 					return;
 				}
+
 				if (line->tag != 0) // Do special stuff only if a non-zero linedef tag is set
 				{
 					if (line->flags & ML_EFFECT5) // Repeat Midtexture
@@ -2758,30 +2759,32 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							return;
 					}
 				}
-
-				if (line->flags & ML_NOCLIMB)
+				else
 				{
-					// play the sound from nowhere, but only if display player triggered it
-					if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
+					if (line->flags & ML_NOCLIMB)
+					{
+						// play the sound from nowhere, but only if display player triggered it
+						if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
+							S_StartSound(NULL, sfxnum);
+					}
+					else if (line->flags & ML_EFFECT4)
+					{
+						// play the sound from nowhere
 						S_StartSound(NULL, sfxnum);
-				}
-				else if (line->flags & ML_EFFECT4)
-				{
-					// play the sound from nowhere
-					S_StartSound(NULL, sfxnum);
-				}
-				else if (line->flags & ML_BLOCKMONSTERS)
-				{
-					// play the sound from calling sector's soundorg
-					if (callsec)
-						S_StartSound(&callsec->soundorg, sfxnum);
+					}
+					else if (line->flags & ML_BLOCKMONSTERS)
+					{
+						// play the sound from calling sector's soundorg
+						if (callsec)
+							S_StartSound(&callsec->soundorg, sfxnum);
+						else if (mo)
+							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+					}
 					else if (mo)
-						S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
-				}
-				else if (mo)
-				{
-					// play the sound from mobj that triggered it
-					S_StartSound(mo, sfxnum);
+					{
+						// play the sound from mobj that triggered it
+						S_StartSound(mo, sfxnum);
+					}
 				}
 			}
 			break;
