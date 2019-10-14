@@ -1230,7 +1230,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		else
 			range = 1;
 
-		scalestep = (yscale2 - yscale)/range;
+		scalestep = (yscale2 - yscale)/range ?: 1;
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -2796,9 +2796,9 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	}
 
 	if (P_IsLocalPlayer(player))
-		CONS_Alert(CONS_WARNING, M_GetText("Requested skin not found\n"));
+		CONS_Alert(CONS_WARNING, M_GetText("Requested skin %d not found\n"), skinnum);
 	else if(server || IsPlayerAdmin(consoleplayer))
-		CONS_Alert(CONS_WARNING, "Player %d (%s) skin not found\n", playernum, player_names[playernum]);
+		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
 	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
 }
 

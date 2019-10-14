@@ -363,7 +363,7 @@ consvar_t cv_runscripts = {"runscripts", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL
 consvar_t cv_pause = {"pausepermission", "Server", CV_NETVAR, pause_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_mute = {"mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_sleep = {"cpusleep", "-1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
+consvar_t cv_sleep = {"cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
 
 INT16 gametype = GT_COOP;
 boolean splitscreen = false;
@@ -1186,11 +1186,11 @@ static void SendNameAndColor(void)
 	&& !strcmp(cv_skin.string, skins[players[consoleplayer].skin].name))
 		return;
 
+	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
+
 	// We'll handle it later if we're not playing.
 	if (!Playing())
 		return;
-
-	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
 
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (!netgame)
@@ -1304,11 +1304,11 @@ static void SendNameAndColor2(void)
 			CV_StealthSet(&cv_playercolor2, cv_playercolor2.defaultvalue);
 	}
 
+	players[secondplaya].availabilities = R_GetSkinAvailabilities();
+
 	// We'll handle it later if we're not playing.
 	if (!Playing())
 		return;
-
-	players[secondplaya].availabilities = R_GetSkinAvailabilities();
 
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (botingame)

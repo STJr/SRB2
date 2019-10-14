@@ -12253,7 +12253,6 @@ void A_ConnectToGround(mobj_t *actor)
 	mobj_t *work;
 	fixed_t workz;
 	fixed_t workh;
-	SINT8 dir;
 	angle_t ang;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
@@ -12267,23 +12266,17 @@ void A_ConnectToGround(mobj_t *actor)
 		P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
 
 	if (actor->flags2 & MF2_OBJECTFLIP)
-	{
-		workz = actor->ceilingz - (actor->z + actor->height);
-		dir = -1;
-	}
+		workz = (actor->z + actor->height) - actor->ceilingz;
 	else
-	{
 		workz = actor->floorz - actor->z;
-		dir = 1;
-	}
 
 	if (locvar2)
 	{
 		workh = FixedMul(mobjinfo[locvar2].height, actor->scale);
 		if (actor->flags2 & MF2_OBJECTFLIP)
-			workz -= workh;
+			workz += workh;
 		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar2);
-		workz += dir*workh;
+		workz += workh;
 	}
 
 	if (!locvar1)
@@ -12292,21 +12285,18 @@ void A_ConnectToGround(mobj_t *actor)
 	if (!(workh = FixedMul(mobjinfo[locvar1].height, actor->scale)))
 		return;
 
-	if (actor->flags2 & MF2_OBJECTFLIP)
-		workz -= workh;
-
 	ang = actor->angle + ANGLE_45;
-	while (dir*workz < 0)
+	while (workz < 0)
 	{
 		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar1);
 		if (work)
 			work->angle = ang;
 		ang += ANGLE_90;
-		workz += dir*workh;
+		workz += workh;
 	}
 
 	if (workz != 0)
-		actor->z += workz;
+		actor->z += P_MobjFlip(actor)*workz;
 }
 
 // Function: A_SpawnParticleRelative
@@ -14204,7 +14194,7 @@ void A_RolloutSpawn(mobj_t *actor)
 		actor->target = P_SpawnMobj(actor->x, actor->y, actor->z, locvar2);
 		actor->target->flags2 |= (actor->flags2 & (MF2_AMBUSH | MF2_OBJECTFLIP)) | MF2_SLIDEPUSH;
 		actor->target->eflags |= (actor->eflags & MFE_VERTICALFLIP);
-		
+
 		if (actor->target->flags2 & MF2_AMBUSH)
 		{
 			actor->target->color = SKINCOLOR_SUPERRUST3;
@@ -14237,7 +14227,7 @@ void A_RolloutRock(mobj_t *actor)
 	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
 
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
-	
+
 	if (actor->threshold)
 		actor->threshold--;
 
@@ -14262,7 +14252,7 @@ void A_RolloutRock(mobj_t *actor)
 		actor->momx = FixedMul(FixedDiv(actor->momx, speed), topspeed);
 		actor->momy = FixedMul(FixedDiv(actor->momy, speed), topspeed);
 	}
-	
+
 	if (P_IsObjectOnGround(actor) || inwater) // apply drag to speed (compensates for lack of friction but also works in liquids)
 	{
 		actor->momx = FixedMul(actor->momx, locvar1);
@@ -14290,13 +14280,13 @@ void A_RolloutRock(mobj_t *actor)
 	}
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
-	
+
 	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
 		actor->fuse = 0;
 	else if (!actor->fuse && actor->movecount == 1) // otherwise if rock has moved, set its fuse
 		actor->fuse = actor->info->painchance;
-	
+
 	if (actor->fuse && actor->fuse < 2*TICRATE)
 		actor->flags2 ^= MF2_DONTDRAW;
-		
+
 }
