@@ -11379,9 +11379,6 @@ void P_PlayerThink(player_t *player)
 			;
 		else
 		{
-			angle_t diff;
-			UINT8 factor;
-
 			if (player->pflags & PF_GLIDING)
 			{
 				if (player->speed < player->mo->scale)
