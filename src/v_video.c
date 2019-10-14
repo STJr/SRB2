@@ -2666,7 +2666,7 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, UINT8 *basecolormap, UINT8 *o
 			continue;
 		}
 
-		w = (SHORT(nto_font[c]->width) + SHORT(ntb_font[c]->width)) * dupx;
+		w = SHORT(ntb_font[c]->width)+4 * dupx;
 
 		if (cx > scrwidth)
 			continue;
