@@ -322,12 +322,18 @@ typedef struct
 	boolean used;
 	char notes[441];
 	char picname[8];
-	char nametag[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
 	patch_t *charpic;
-	patch_t *namepic;
 	UINT8 prev;
 	UINT8 next;
+
+	// new character select
+	char displayname[SKINNAMESIZE+1];
+	UINT8 oppositecolor;
+	char nametag[8];
+	patch_t *namepic;
+	UINT8 tagtextcolor;
+	UINT8 tagoutlinecolor;
 } description_t;
 
 // level select platter

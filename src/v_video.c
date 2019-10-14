@@ -2630,18 +2630,32 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 
 // Draw a string using the nt_font
 // Note that the outline is a seperate font set
-void V_DrawNameTag(INT32 x, INT32 y, INT32 option, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
+static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
 {
-	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
+	fixed_t cx, cy, w;
+	INT32 c, dupx, dupy, scrwidth, left = 0;
 	const char *ch = string;
-	INT32 spacewidth = 4;
-	INT32 lowercase = (option & V_ALLOWLOWERCASE);
-	option &= ~V_FLIP; // which is also shared with V_ALLOWLOWERCASE...
 
-	dupx = dupy = 1;
-	scrwidth = vid.width/vid.dupx;
-	left = (scrwidth - BASEVIDWIDTH)/2;
-	scrwidth -= left;
+	if (option & V_CENTERNAMETAG)
+		x -= FixedInt(FixedMul((V_NameTagWidth(string)/2)*FRACUNIT, scale));
+	option &= ~V_CENTERNAMETAG; // which is also shared with V_ALLOWLOWERCASE...
+
+	cx = x<<FRACBITS;
+	cy = y<<FRACBITS;
+
+	if (option & V_NOSCALESTART)
+	{
+		dupx = vid.dupx;
+		dupy = vid.dupy;
+		scrwidth = vid.width;
+	}
+	else
+	{
+		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
+	}
 
 	for (;;ch++)
 	{
@@ -2649,39 +2663,166 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, UINT8 *basecolormap, UINT8 *o
 			break;
 		if (*ch == '\n')
 		{
-			cx = x;
-			cy += 17*dupy;
-
+			cx = x<<FRACBITS;
+			cy += FixedMul((21*dupy)*FRACUNIT, scale);
 			continue;
 		}
 
-		c = *ch;
-		if (!lowercase)
-			c = toupper(c);
+		c = toupper(*ch);
 		c -= NT_FONTSTART;
 
 		// character does not exist or is a space
 		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
 		{
-			cx += spacewidth * dupx;
+			cx += FixedMul((4 * dupx)*FRACUNIT, scale);
 			continue;
 		}
 
-		w = SHORT(ntb_font[c]->width)+4 * dupx;
+		w = FixedMul((SHORT(ntb_font[c]->width)+2 * dupx) * FRACUNIT, scale);
 
-		if (cx > scrwidth)
+		if (FixedInt(cx) > scrwidth)
 			continue;
-		if (cx+left + w < 0) //left boundary check
+		if (cx+(left*FRACUNIT) + w < 0) // left boundary check
 		{
 			cx += w;
 			continue;
 		}
 
-		V_DrawFixedPatch((cx)<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, nto_font[c], outlinecolormap);
-		V_DrawFixedPatch((cx+2)<<FRACBITS, (cy+2)<<FRACBITS, FRACUNIT, option, ntb_font[c], basecolormap);
+		V_DrawFixedPatch(cx, cy, scale, option, nto_font[c], outlinecolormap);
+		V_DrawFixedPatch(cx, cy, scale, option, ntb_font[c], basecolormap);
 
 		cx += w;
 	}
+}
+
+// Looks familiar.
+void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
+{
+	char *text = (char *)string;
+	char *first_token = text;
+	char *last_token = strchr(text, '\n');
+	const INT32 lbreakheight = 21;
+	INT32 lines;
+
+	if (option & V_CENTERNAMETAG)
+	{
+		lines = V_CountNameTagLines(string);
+		y -= FixedInt(FixedMul(((lbreakheight/2) * (lines-1))*FRACUNIT, scale));
+	}
+
+	// No line breaks?
+	// Draw entire string
+	if (!last_token)
+		V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, string);
+	// Split string by the line break character
+	else
+	{
+		char *string = NULL;
+		INT32 len;
+		while (true)
+		{
+			// There are still lines left to draw
+			if (last_token)
+			{
+				size_t shift = 0;
+				// Free this line
+				if (string)
+					Z_Free(string);
+				// Find string length, do a malloc...
+				len = (last_token-first_token)+1;
+				string = ZZ_Alloc(len);
+				// Copy the line
+				strncpy(string, first_token, len-1);
+				string[len-1] = '\0';
+				// Don't leave a line break character
+				// at the start of the string!
+				if ((strlen(string) >= 2) && (string[0] == '\n') && (string[1] != '\n'))
+					shift++;
+				// Then draw it
+				V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, string+shift);
+			}
+			// No line break character was found
+			else
+			{
+				// Don't leave a line break character
+				// at the start of the string!
+				if ((strlen(first_token) >= 2) && (first_token[0] == '\n') && (first_token[1] != '\n'))
+					first_token++;
+				// Then draw it
+				V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, first_token);
+				break;
+			}
+
+			// Next line
+			y += FixedInt(FixedMul(lbreakheight*FRACUNIT, scale));
+			if ((last_token-text)+1 >= strlen(text))
+				last_token = NULL;
+			else
+			{
+				first_token = last_token;
+				last_token = strchr(first_token+1, '\n');
+			}
+		}
+		// Free this line
+		if (string)
+			Z_Free(string);
+	}
+}
+
+// Count the amount of lines in name tag string
+INT32 V_CountNameTagLines(const char *string)
+{
+	INT32 lines = 1;
+	char *text = (char *)string;
+	char *first_token = text;
+	char *last_token = strchr(text, '\n');
+
+	// No line breaks?
+	if (!last_token)
+		return lines;
+	// Split string by the line break character
+	else
+	{
+		while (true)
+		{
+			if (last_token)
+				lines++;
+			// No line break character was found
+			else
+				break;
+
+			// Next line
+			if ((last_token-text)+1 >= strlen(text))
+				last_token = NULL;
+			else
+			{
+				first_token = last_token;
+				last_token = strchr(first_token+1, '\n');
+			}
+		}
+	}
+	return lines;
+}
+
+INT32 V_NameTagWidth(const char *string)
+{
+	INT32 c, w = 0;
+	size_t i;
+
+	// It's possible for string to be a null pointer
+	if (!string)
+		return 0;
+
+	for (i = 0; i < strlen(string); i++)
+	{
+		c = toupper(string[i]) - NT_FONTSTART;
+		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
+			w += 4;
+		else
+			w += SHORT(ntb_font[c]->width)+2;
+	}
+
+	return w;
 }
 
 // Find string width from cred_font chars

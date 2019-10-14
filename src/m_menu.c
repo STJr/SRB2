@@ -3637,10 +3637,13 @@ void M_InitCharacterTables(void)
 		description[i].used = false;
 		strcpy(description[i].notes, "???");
 		strcpy(description[i].picname, "");
+		strcpy(description[i].nametag, "");
 		strcpy(description[i].skinname, "");
+		strcpy(description[i].displayname, "");
 		description[i].prev = description[i].next = 0;
 		description[i].charpic = NULL;
 		description[i].namepic = NULL;
+		description[i].oppositecolor = description[i].tagtextcolor = description[i].tagoutlinecolor = 0;
 	}
 }
 
@@ -7942,19 +7945,11 @@ static void M_SetupChoosePlayer(INT32 choice)
 						description[i].namepic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 					}
 					else
-					{
-						// If no name tag patch was provided,
-						// the character select screen
-						// will simply not draw anything.
 						description[i].namepic = NULL;
-					}
 				}
-				else
+				else if (description[i].nametag[0])
 				{
 					const char *nametag = description[i].nametag;
-					// If no name tag patch was provided,
-					// the character select screen
-					// will simply not draw anything.
 					description[i].namepic = NULL;
 					if (W_LumpExists(nametag))
 						description[i].namepic = W_CachePatchName(nametag, PU_CACHE);
@@ -8129,7 +8124,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		charskin = &skins[skinnum];
 
 	// Use the opposite of the character's skincolor
-	col = Color_Opposite[charskin->prefcolor - 1][0];
+	col = description[char_on].oppositecolor;
+	if (!col)
+		col = Color_Opposite[charskin->prefcolor - 1][0];
 
 	// Make the translation colormap
 	colormap = R_GetTranslationColormap(skinnum, col, 0);
@@ -8180,43 +8177,136 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		INT32 ox, x, y;
 		INT32 oxsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(char_scroll, 128*FRACUNIT))), txsh;
 		patch_t *curpatch = NULL, *prevpatch = NULL, *nextpatch = NULL;
+		const char *curtext = NULL, *prevtext = NULL, *nexttext = NULL;
+		UINT8 curtextcolor = 0, prevtextcolor = 0, nexttextcolor = 0;
+		UINT8 curoutlinecolor = 0, prevoutlinecolor = 0, nextoutlinecolor = 0;
 
-		// Name tag patches
-		curpatch = description[char_on].namepic;
-		if (prev != -1) prevpatch = description[prev].namepic;
-		if (next != -1) nextpatch = description[next].namepic;
+		// Name tag
+		curtext = description[char_on].displayname;
+		curtextcolor = description[char_on].tagtextcolor;
+		curoutlinecolor = description[char_on].tagoutlinecolor;
+		if (curtext[0] == '\0')
+			curpatch = description[char_on].namepic;
+		if (skinnum != -1)
+		{
+			if (!curtextcolor)
+				curtextcolor = charskin->prefcolor;
+			if (!curoutlinecolor)
+				curoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
+		}
+
+		// previous character
+		if (prev != -1)
+		{
+			prevtext = description[prev].displayname;
+			prevtextcolor = description[prev].tagtextcolor;
+			prevoutlinecolor = description[prev].tagoutlinecolor;
+			if (prevtext[0] == '\0')
+				prevpatch = description[prev].namepic;
+			// Find skin number from description[]
+			skinnum = getskinfromdescription(prev);
+			if (skinnum != -1)
+			{
+				charskin = &skins[skinnum];
+				if (!prevtextcolor)
+					prevtextcolor = charskin->prefcolor;
+				if (!prevoutlinecolor)
+					prevoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
+			}
+		}
+
+		// next character
+		if (next != -1)
+		{
+			nexttext = description[next].displayname;
+			nexttextcolor = description[next].tagtextcolor;
+			nextoutlinecolor = description[next].tagoutlinecolor;
+			if (nexttext[0] == '\0')
+				nextpatch = description[next].namepic;
+			// Find skin number from description[]
+			skinnum = getskinfromdescription(next);
+			if (skinnum != -1)
+			{
+				charskin = &skins[skinnum];
+				if (!nexttextcolor)
+					nexttextcolor = charskin->prefcolor;
+				if (!nextoutlinecolor)
+					nextoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
+			}
+		}
 
 		txsh = oxsh;
 		ox = 8 + SHORT((description[char_on].charpic)->width)/2;
-		if (curpatch)
-			ox -= (SHORT(curpatch->width)/2);
 		y = my + 144;
 
 		if (char_scroll)
 		{
 			// prev
-			if (prevpatch && char_scroll < 0)
+			if ((prev != -1) && char_scroll < 0)
 			{
+				INT32 ox2 = ox;
+				if (prevpatch)
+					ox2 -= (SHORT(prevpatch->width)/2);
 				// Why does this work?
-				x = (ox - txsh) - BASEVIDWIDTH;
-				V_DrawScaledPatch(x, y, 0, prevpatch);
+				x = (ox2 - txsh) - BASEVIDWIDTH;
+				if (prevtext[0] != '\0')
+				{
+					skinnum = getskinfromdescription(prev);
+					V_DrawNameTag(
+						x, y, V_CENTERNAMETAG, FRACUNIT,
+						R_GetTranslationColormap(skinnum, prevtextcolor, 0),
+						R_GetTranslationColormap(skinnum, prevoutlinecolor, 0),
+						prevtext
+					);
+				}
+				else if (prevpatch)
+					V_DrawScaledPatch(x, y, 0, prevpatch);
 			}
 			// next
-			else if (nextpatch && char_scroll > 0)
+			else if ((next != -1) && char_scroll > 0)
 			{
-				x = (ox - txsh) + BASEVIDWIDTH;
+				INT32 ox2 = ox;
+				if (nextpatch)
+					ox2 -= (SHORT(nextpatch->width)/2);
+				x = (ox2 - txsh) + BASEVIDWIDTH;
 				if (x < BASEVIDWIDTH)
-					V_DrawScaledPatch(x, y, 0, nextpatch);
+				{
+					if (nexttext[0] != '\0')
+					{
+						skinnum = getskinfromdescription(next);
+						V_DrawNameTag(
+							x, y, V_CENTERNAMETAG, FRACUNIT,
+							R_GetTranslationColormap(skinnum, nexttextcolor, 0),
+							R_GetTranslationColormap(skinnum, nextoutlinecolor, 0),
+							nexttext
+						);
+					}
+					else if (nextpatch)
+						V_DrawScaledPatch(x, y, 0, nextpatch);
+				}
 			}
 		}
 
 		// cur
-		x = ox - txsh;
-		//if (curpatch)
-		//	V_DrawScaledPatch(x, y, 0, curpatch);
-
-		// Dummy string to be removed when finalized
-		V_DrawNameTag(x, y, 0, R_GetTranslationColormap(skinnum, SKINCOLOR_BLUE, 0), R_GetTranslationColormap(skinnum, SKINCOLOR_YELLOW, 0), "Sonic\n&Tails.");
+		skinnum = getskinfromdescription(next);
+		if (skinnum != -1)
+		{
+			INT32 ox2 = ox;
+			if (curpatch)
+				ox2 -= (SHORT(curpatch->width)/2);
+			x = ox2 - txsh;
+			if (curtext[0] != '\0')
+			{
+				V_DrawNameTag(
+					x, y, V_CENTERNAMETAG, FRACUNIT,
+					R_GetTranslationColormap(skinnum, curtextcolor, 0),
+					R_GetTranslationColormap(skinnum, curoutlinecolor, 0),
+					curtext
+				);
+			}
+			else if (curpatch)
+				V_DrawScaledPatch(x, y, 0, curpatch);
+		}
 	}
 
 	// Alternative menu header

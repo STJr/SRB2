@@ -112,6 +112,7 @@ extern RGBA_t *pMasterPalette;
 #define V_OFFSET             0x00400000 // account for offsets in patches
 #define V_ALLOWLOWERCASE     0x00800000 // (strings only) allow fonts that have lowercase letters to use them
 #define V_FLIP               0x00800000 // (patches only) Horizontal flip
+#define V_CENTERNAMETAG      0x00800000 // (nametag only) center nametag lines
 
 #define V_SNAPTOTOP          0x01000000 // for centering
 #define V_SNAPTOBOTTOM       0x02000000 // for centering
@@ -203,11 +204,12 @@ INT32 V_LevelNameHeight(const char *string);
 INT32 V_LevelActNumWidth(INT32 num); // act number width
 
 void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string);
+INT32 V_CreditStringWidth(const char *string);
 
 // Draw a string using the nt_font
-void V_DrawNameTag(INT32 x, INT32 y, INT32 option, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string);
-
-INT32 V_CreditStringWidth(const char *string);
+void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string);
+INT32 V_CountNameTagLines(const char *string);
+INT32 V_NameTagWidth(const char *string);
 
 // Find string width from hu_font chars
 INT32 V_StringWidth(const char *string, INT32 option);
