@@ -428,7 +428,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					  || special->state == &states[S_FANG_BOUNCE4]
 					  || special->state == &states[S_FANG_PINCHBOUNCE3]
 					  || special->state == &states[S_FANG_PINCHBOUNCE4])
-					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z - toucher->height/2)) > -(special->height/4))
+					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z - toucher->height/2)) > (special->height/4))
 					{
 						P_DamageMobj(toucher, special, special, 1, 0);
 						P_SetTarget(&special->tracer, toucher);
@@ -450,12 +450,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					}
 				}
 				break;
+			case MT_PYREFLY:
+				if (special->extravalue2 == 2 && P_DamageMobj(player->mo, special, special, 1, DMG_FIRE))
+					return;
 			default:
 				break;
 		}
 
 		if (P_PlayerCanDamage(player, special)) // Do you possess the ability to subdue the object?
 		{
+			if (special->type == MT_PTERABYTE && special->target == player->mo && special->extravalue1 == 1)
+				return; // Can't hurt a Pterabyte if it's trying to pick you up
+
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
 			{
 				if (elementalpierce == 2)
@@ -477,7 +483,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_TwinSpinRejuvenate(player, player->thokitem);
 		}
 		else
+		{
+			if (special->type == MT_PTERABYTE && special->target == player->mo)
+				return; // Don't hurt the player you're trying to grab
+
 			P_DamageMobj(toucher, special, special, 1, 0);
+		}
 
 		return;
 	}
@@ -1074,7 +1085,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->exiting)
 				return;
 
-			if (player->bumpertime < TICRATE/4)
+			if (player->bumpertime <= (TICRATE/2)-5)
 			{
 				S_StartSound(toucher, special->info->seesound);
 				if (player->powers[pw_carry] == CR_NIGHTSMODE)
@@ -1765,7 +1776,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_MINECARTSPAWNER:
-			if (!special->fuse || player->powers[pw_carry] != CR_MINECART)
+			if (!player->bot && (special->fuse < TICRATE || player->powers[pw_carry] != CR_MINECART))
 			{
 				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
 				P_SetTarget(&mcart->target, toucher);
@@ -1775,7 +1786,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_ResetPlayer(player);
 				player->pflags |= PF_JUMPDOWN;
 				player->powers[pw_carry] = CR_MINECART;
-				toucher->player->pflags &= ~PF_APPLYAUTOBRAKE;
+				player->pflags &= ~PF_APPLYAUTOBRAKE;
 				P_SetTarget(&toucher->tracer, mcart);
 				toucher->momx = toucher->momy = toucher->momz = 0;
 

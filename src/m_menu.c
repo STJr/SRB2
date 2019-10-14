@@ -256,6 +256,7 @@ menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
 // Single Player
 static void M_StartTutorial(INT32 choice);
 static void M_LoadGame(INT32 choice);
+static void M_HandleTimeAttackLevelSelect(INT32 choice);
 static void M_TimeAttackLevelSelect(INT32 choice);
 static void M_TimeAttack(INT32 choice);
 static void M_NightsAttackLevelSelect(INT32 choice);
@@ -752,7 +753,7 @@ static menuitem_t SP_TimeAttackLevelSelectMenu[] =
 // Single Player Time Attack
 static menuitem_t SP_TimeAttackMenu[] =
 {
-	{IT_STRING|IT_CALL,        NULL, "Level Select...", &M_TimeAttackLevelSelect,   52},
+	{IT_STRING|IT_KEYHANDLER,  NULL, "Level Select...", M_HandleTimeAttackLevelSelect,   52},
 	{IT_STRING|IT_CVAR,        NULL, "Character",       &cv_chooseskin,             62},
 
 	{IT_DISABLED,              NULL, "Guest Option...", &SP_GuestReplayDef, 100},
@@ -1233,7 +1234,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_HEADER, NULL, "Level", NULL, 155},
 	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        161},
 	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 166},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS mode Draw Dist.",    &cv_drawdist_nights, 171},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 171},
 
 	{IT_HEADER, NULL, "Diagnostic", NULL, 180},
 	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         186},
@@ -8645,7 +8646,18 @@ void M_DrawTimeAttackMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
 
-		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
+		y = 32+lsheadingheight;
+		V_DrawSmallScaledPatch(208, y, 0, PictureOfLevel);
+
+		if (itemOn == talevel)
+		{
+			/* Draw arrows !! */
+			y = y + 25 - 4;
+			V_DrawCharacter(208 - 10 - (skullAnimCounter/5), y,
+					'\x1C' | V_YELLOWMAP, false);
+			V_DrawCharacter(208 + 80 + 2 + (skullAnimCounter/5), y,
+					'\x1D' | V_YELLOWMAP, false);
+		}
 
 		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
 
@@ -8717,6 +8729,39 @@ void M_DrawTimeAttackMenu(void)
 	// Draw press ESC to exit string on main record attack menu
 	if (currentMenu == &SP_TimeAttackDef)
 		V_DrawString(104-72, 180, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
+}
+
+static void M_HandleTimeAttackLevelSelect(INT32 choice)
+{
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			M_NextOpt();
+			break;
+		case KEY_UPARROW:
+			M_PrevOpt();
+			break;
+
+		case KEY_LEFTARROW:
+			CV_AddValue(&cv_nextmap, -1);
+			break;
+		case KEY_RIGHTARROW:
+			CV_AddValue(&cv_nextmap, 1);
+			break;
+
+		case KEY_ENTER:
+			M_TimeAttackLevelSelect(0);
+			break;
+
+		case KEY_ESCAPE:
+			noFurtherInput = true;
+			M_GoBack(0);
+			return;
+
+		default:
+			return;
+	}
+	S_StartSound(NULL, sfx_menu1);
 }
 
 static void M_TimeAttackLevelSelect(INT32 choice)

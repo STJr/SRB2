@@ -2456,6 +2456,14 @@ static actionpointer_t actionpointers[] =
 	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
 	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
 	{{A_ModuloToState},          "A_MODULOTOSTATE"},
+	{{A_LavafallRocks},          "A_LAVAFALLROCKS"},
+	{{A_LavafallLava},           "A_LAVAFALLLAVA"},
+	{{A_FallingLavaCheck},       "A_FALLINGLAVACHECK"},
+	{{A_FireShrink},             "A_FIRESHRINK"},
+	{{A_SpawnPterabytes},        "A_SPAWNPTERABYTES"},
+	{{A_PterabyteHover},         "A_PTERABYTEHOVER"},
+	{{A_RolloutSpawn},           "A_ROLLOUTSPAWN"},
+	{{A_RolloutRock},            "A_ROLLOUTROCK"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -4627,6 +4635,22 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CANARIVOREGAS_7",
 	"S_CANARIVOREGAS_8",
 
+	// Pyre Fly
+	"S_PYREFLY_FLY",
+	"S_PYREFLY_BURN",
+	"S_PYREFIRE1",
+	"S_PYREFIRE2",
+
+	// Pterabyte
+	"S_PTERABYTESPAWNER",
+	"S_PTERABYTEWAYPOINT",
+	"S_PTERABYTE_FLY1",
+	"S_PTERABYTE_FLY2",
+	"S_PTERABYTE_FLY3",
+	"S_PTERABYTE_FLY4",
+	"S_PTERABYTE_SWOOPDOWN",
+	"S_PTERABYTE_SWOOPUP",
+
 	// Boss Explosion
 	"S_BOSSEXPLODE",
 
@@ -5870,7 +5894,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Saloon door
 	"S_SALOONDOOR",
-	"S_SALOONDOORTHINKER",
+	"S_SALOONDOORCENTER",
 
 	// Train cameo
 	"S_TRAINCAMEOSPAWNER_1",
@@ -5902,6 +5926,28 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEJETFLAMEB1",
 	"S_FLAMEJETFLAMEB2",
 	"S_FLAMEJETFLAMEB3",
+
+	// Lavafall
+	"S_LAVAFALL_DORMANT",
+	"S_LAVAFALL_TELL",
+	"S_LAVAFALL_SHOOT",
+	"S_LAVAFALL_LAVA1",
+	"S_LAVAFALL_LAVA2",
+	"S_LAVAFALL_LAVA3",
+	"S_LAVAFALLROCK",
+
+	// Rollout Rock
+	"S_ROLLOUTSPAWN",
+	"S_ROLLOUTROCK",
+
+	// RVZ scenery
+	"S_BIGFERNLEAF",
+	"S_BIGFERN1",
+	"S_BIGFERN2",
+	"S_JUNGLEPALM",
+	"S_TORCHFLOWER",
+	"S_WALLVINE_LONG",
+	"S_WALLVINE_SHORT",
 
 	// Trapgoyles
 	"S_TRAPGOYLE",
@@ -5954,6 +6000,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LAMPPOST1",  // normal
 	"S_LAMPPOST2",  // with snow
 	"S_HANGSTAR",
+	"S_MISTLETOE",
 	// Xmas GFZ bushes
 	"S_XMASBLUEBERRYBUSH",
 	"S_XMASBERRYBUSH",
@@ -5961,6 +6008,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// FHZ
 	"S_FHZICE1",
 	"S_FHZICE2",
+	"S_ROSY_IDLE1",
+	"S_ROSY_IDLE2",
+	"S_ROSY_IDLE3",
+	"S_ROSY_IDLE4",
+	"S_ROSY_JUMP",
+	"S_ROSY_WALK",
+	"S_ROSY_HUG",
+	"S_ROSY_PAIN",
+	"S_ROSY_STND",
+	"S_ROSY_UNHAPPY",
 
 	// Halloween Scenery
 	// Pumpkins
@@ -6632,6 +6689,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPLISH8",
 	"S_SPLISH9",
 
+	// Lava splish
+	"S_LAVASPLISH",
+
 	// added water splash
 	"S_SPLASH1",
 	"S_SPLASH2",
@@ -7282,6 +7342,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_UNIBALL", // Unidus Ball
 	"MT_CANARIVORE", // Canarivore
 	"MT_CANARIVORE_GAS", // Canarivore gas
+	"MT_PYREFLY", // Pyre Fly
+	"MT_PYREFLY_FIRE", // Pyre Fly fire
+	"MT_PTERABYTESPAWNER", // Pterabyte spawner
+	"MT_PTERABYTEWAYPOINT", // Pterabyte waypoint
+	"MT_PTERABYTE", // Pterabyte
 
 	// Generic Boss Items
 	"MT_BOSSEXPLODE",
@@ -7610,7 +7675,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MINECARTSIDEMARK",
 	"MT_MINECARTSPARK",
 	"MT_SALOONDOOR",
-	"MT_SALOONDOORTHINKER",
+	"MT_SALOONDOORCENTER",
 	"MT_TRAINCAMEOSPAWNER",
 	"MT_TRAINSEG",
 	"MT_TRAINDUSTSPAWNER",
@@ -7626,6 +7691,20 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_FJSPINAXISB", // Clockwise
 
 	"MT_FLAMEJETFLAMEB", // Blade's flame
+
+	"MT_LAVAFALL",
+	"MT_LAVAFALL_LAVA",
+	"MT_LAVAFALLROCK",
+
+	"MT_ROLLOUTSPAWN",
+	"MT_ROLLOUTROCK",
+
+	"MT_BIGFERNLEAF",
+	"MT_BIGFERN",
+	"MT_JUNGLEPALM",
+	"MT_TORCHFLOWER",
+	"MT_WALLVINE_LONG",
+	"MT_WALLVINE_SHORT",
 
 	// Dark City Scenery
 
@@ -7658,6 +7737,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LAMPPOST1",  // normal
 	"MT_LAMPPOST2",  // with snow
 	"MT_HANGSTAR",
+	"MT_MISTLETOE",
 	// Xmas GFZ bushes
 	"MT_XMASBLUEBERRYBUSH",
 	"MT_XMASBERRYBUSH",
@@ -7665,6 +7745,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// FHZ
 	"MT_FHZICE1",
 	"MT_FHZICE2",
+	"MT_ROSY",
+	"MT_CDLHRT",
 
 	// Halloween Scenery
 	// Pumpkins
@@ -7793,6 +7875,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RAIN", // Rain
 	"MT_SNOWFLAKE", // Snowflake
 	"MT_SPLISH", // Water splish!
+	"MT_LAVASPLISH", // Lava splish!
 	"MT_SMOKE",
 	"MT_SMALLBUBBLE", // small bubble
 	"MT_MEDIUMBUBBLE", // medium bubble
@@ -8618,6 +8701,8 @@ struct {
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
 	{"CR_MINECART",CR_MINECART},
+	{"CR_ROLLOUT", CR_ROLLOUT},
+	{"CR_PTERABYTE",CR_PTERABYTE},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon

@@ -180,6 +180,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_UNID
 	&lspr[NOLIGHT],     // SPR_CANA
 	&lspr[NOLIGHT],     // SPR_CANG
+	&lspr[NOLIGHT],     // SPR_PYRE
+	&lspr[NOLIGHT],     // SPR_PTER
 
 	// Generic Boos Items
 	&lspr[JETLIGHT_L],     // SPR_JETF // Boss jet fumes
@@ -260,6 +262,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_WSPB
 	&lspr[NOLIGHT],     // SPR_STPT
 	&lspr[NOLIGHT],     // SPR_BMNE
+	&lspr[NOLIGHT],     // SPR_PUMI
 
 	// Monitor Boxes
 	&lspr[NOLIGHT],     // SPR_MSTV
@@ -377,6 +380,10 @@ light_t *t_lspr[NUMSPRITES] =
 	// Red Volcano Scenery
 	&lspr[REDBALL_L],   // SPR_FLME
 	&lspr[REDBALL_L],   // SPR_DFLM
+	&lspr[NOLIGHT],     // SPR_LFAL
+	&lspr[NOLIGHT],     // SPR_JPLA
+	&lspr[NOLIGHT],     // SPR_TFLO
+	&lspr[NOLIGHT],     // SPR_WVIN
 
 	// Dark City Scenery
 
@@ -388,7 +395,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_XMS3
 	&lspr[NOLIGHT],     // SPR_XMS4
 	&lspr[NOLIGHT],     // SPR_XMS5
+	&lspr[NOLIGHT],     // SPR_XMS6
 	&lspr[NOLIGHT],     // SPR_FHZI
+	&lspr[NOLIGHT],     // SPR_ROSY
 
 	// Halloween Scenery
 	&lspr[RINGLIGHT_L], // SPR_PUMK
@@ -474,6 +483,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_RAIN
 	&lspr[NOLIGHT],     // SPR_SNO1
 	&lspr[NOLIGHT],     // SPR_SPLH
+	&lspr[NOLIGHT],     // SPR_LSPL
 	&lspr[NOLIGHT],     // SPR_SPLA
 	&lspr[NOLIGHT],     // SPR_SMOK
 	&lspr[NOLIGHT],     // SPR_BUBL

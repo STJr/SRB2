@@ -484,7 +484,7 @@ static inline void P_DoSpecialStageStuff(void)
 				countspheres += players[i].spheres;
 
 				// If in water, deplete timer 6x as fast.
-				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
+				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & SH_PROTECTWATER))
 					players[i].nightstime -= 5;
 				if (--players[i].nightstime > 6)
 				{
