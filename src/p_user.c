@@ -7663,6 +7663,7 @@ static void P_SkidStuff(player_t *player)
 		{
 			player->skidtime = 0;
 			player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
+			player->pflags |= PF_THOKKED; // nice try, speedrunners (but for real this is just behavior from S3K)
 			P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 		}
 		// Get up and brush yourself off, idiot.
@@ -7783,23 +7784,6 @@ static void P_MovePlayer(player_t *player)
 	if (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
 	{
 		player->pflags |= PF_STASIS;
-		if ((player->mo->tics + 1) % 3 == 0 && player->speed > 5*player->mo->scale) // Copy of the glide-slide dust effect, for consistency
-		{
-			fixed_t radius = player->mo->radius >> FRACBITS;
-			mobj_t *particle = P_SpawnMobjFromMobj(player->mo, P_RandomRange(-radius, radius) << FRACBITS, P_RandomRange(-radius, radius) << FRACBITS, 0, MT_SPINDUST);
-			particle->tics = 10;
-
-			particle->destscale = (2*player->mo->scale)/3;
-			P_SetScale(particle, particle->destscale);
-			P_SetObjectMomZ(particle, FRACUNIT, false);
-
-			if (player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) // overrides fire version
-				P_SetMobjState(particle, S_SPINDUST_BUBBLE1);
-			else if (player->powers[pw_shield] == SH_ELEMENTAL)
-				P_SetMobjState(particle, S_SPINDUST_FIRE1);
-
-			S_StartSound(player->mo, sfx_s3k7e); // the proper "Knuckles eats dirt" sfx.
-		}
 	}
 
 	// note: don't unset stasis here
