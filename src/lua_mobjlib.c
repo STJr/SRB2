@@ -160,6 +160,7 @@ static const char *const mobj_opt[] = {
 
 static int mobj_get(lua_State *L)
 {
+	INLEVEL
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	enum mobj_e field = Lua_optoption(L, 2, NULL, mobj_opt);
 	lua_settop(L, 2);
@@ -405,6 +406,7 @@ static int mobj_get(lua_State *L)
 #define NOSETPOS luaL_error(L, LUA_QL("mobj_t") " field " LUA_QS " should not be set directly. Use " LUA_QL("P_Move") ", " LUA_QL("P_TryMove") ", or " LUA_QL("P_TeleportMove") " instead.", mobj_opt[field])
 static int mobj_set(lua_State *L)
 {
+	INLEVEL
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	enum mobj_e field = Lua_optoption(L, 2, mobj_opt[0], mobj_opt);
 	lua_settop(L, 3);
