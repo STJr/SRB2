@@ -434,7 +434,8 @@ consvar_t cv_ghost_guest     = {"ghost_guest",     "Show", CV_SAVE, ghost2_cons_
 static CV_PossibleValue_t dummyteam_cons_t[] = {{0, "Spectator"}, {1, "Red"}, {2, "Blue"}, {0, NULL}};
 static CV_PossibleValue_t dummyscramble_cons_t[] = {{0, "Random"}, {1, "Points"}, {0, NULL}};
 static CV_PossibleValue_t ringlimit_cons_t[] = {{0, "MIN"}, {9999, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t liveslimit_cons_t[] = {{-1, "MIN"}, {99, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t liveslimit_cons_t[] = {{1, "MIN"}, {99, "MAX"}, {-1, "Infinite"}, {0, NULL}};
+static CV_PossibleValue_t contlimit_cons_t[] = {{0, "MIN"}, {99, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t dummymares_cons_t[] = {
 	{-1, "END"}, {0,"Overall"}, {1,"Mare 1"}, {2,"Mare 2"}, {3,"Mare 3"}, {4,"Mare 4"}, {5,"Mare 5"}, {6,"Mare 6"}, {7,"Mare 7"}, {8,"Mare 8"}, {0,NULL}
 };
@@ -443,7 +444,7 @@ static consvar_t cv_dummyteam = {"dummyteam", "Spectator", CV_HIDEN, dummyteam_c
 static consvar_t cv_dummyscramble = {"dummyscramble", "Random", CV_HIDEN, dummyscramble_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_dummyrings = {"dummyrings", "0", CV_HIDEN, ringlimit_cons_t,	NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_dummylives = {"dummylives", "0", CV_HIDEN, liveslimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_dummycontinues = {"dummycontinues", "0", CV_HIDEN, liveslimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t cv_dummycontinues = {"dummycontinues", "0", CV_HIDEN, contlimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_dummymares = {"dummymares", "Overall", CV_HIDEN|CV_CALL, dummymares_cons_t, Dummymares_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // ==========================================================================
@@ -6081,9 +6082,9 @@ static void M_PandorasBox(INT32 choice)
 	else
 		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
 	if (players[consoleplayer].lives == INFLIVES)
-		CV_StealthSetValue(&cv_dummylives, -1);
+		CV_StealthSet(&cv_dummylives, "Infinite");
 	else
-		CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
+		CV_StealthSetValue(&cv_dummylives, max(players[consoleplayer].lives, 1));
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
 	SR_PandorasBox[6].status = ((players[consoleplayer].charflags & SF_SUPER)
 #ifndef DEVELOP
