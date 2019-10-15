@@ -8725,6 +8725,7 @@ void M_DrawTimeAttackMenu(void)
 		patch_t *PictureOfLevel;
 		lumpnum_t lumpnum;
 		char beststr[40];
+		char reqscore[40], reqtime[40], reqrings[40];
 
 		M_DrawLevelPlatterHeader(32-lsheadingheight/2, cv_nextmap.string, true, false);
 
@@ -8749,43 +8750,26 @@ void M_DrawTimeAttackMenu(void)
 					'\x1D' | V_YELLOWMAP, false);
 		}
 
-		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
-
-		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->score)
-			sprintf(beststr, "(none)");
-		else
-			sprintf(beststr, "%u", mainrecords[cv_nextmap.value-1]->score);
-
-		V_DrawString(104-72, 48+lsheadingheight/2, V_YELLOWMAP, "SCORE:");
-		V_DrawRightAlignedString(104+72, 48+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
-
-		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->time)
-			sprintf(beststr, "(none)");
-		else
-			sprintf(beststr, "%i:%02i.%02i", G_TicsToMinutes(mainrecords[cv_nextmap.value-1]->time, true),
-			                                 G_TicsToSeconds(mainrecords[cv_nextmap.value-1]->time),
-			                                 G_TicsToCentiseconds(mainrecords[cv_nextmap.value-1]->time));
-
-		V_DrawString(104-72, 58+lsheadingheight/2, V_YELLOWMAP, "TIME:");
-		V_DrawRightAlignedString(104+72, 58+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
-
-		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->rings)
-			sprintf(beststr, "(none)");
-		else
-			sprintf(beststr, "%hu", mainrecords[cv_nextmap.value-1]->rings);
-
-		V_DrawString(104-72, 68+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
-		V_DrawRightAlignedString(104+72, 68+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
-
-		// Draw record emblems.
 		em = M_GetLevelEmblems(cv_nextmap.value);
+		// Draw record emblems.
 		while (em)
 		{
 			switch (em->type)
 			{
-				case ET_SCORE: yHeight = 48; break;
-				case ET_TIME:  yHeight = 58; break;
-				case ET_RINGS: yHeight = 68; break;
+				case ET_SCORE:
+					yHeight = 48;
+					sprintf(reqscore, "%u", em->var);
+					break;
+				case ET_TIME:
+					yHeight = 58;
+					sprintf(reqtime, "%i:%02i.%02i", G_TicsToMinutes((tic_t)em->var, true),
+										G_TicsToSeconds((tic_t)em->var),
+										G_TicsToCentiseconds((tic_t)em->var));
+					break;
+				case ET_RINGS:
+					yHeight = 68;
+					sprintf(reqrings, "%u", em->var);
+					break;
 				default:
 					goto skipThisOne;
 			}
@@ -8799,6 +8783,34 @@ void M_DrawTimeAttackMenu(void)
 			skipThisOne:
 			em = M_GetLevelEmblems(-1);
 		}
+
+		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
+
+		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->score)
+			sprintf(beststr, "(none)");
+		else
+			sprintf(beststr, "%u", mainrecords[cv_nextmap.value-1]->score);
+
+		V_DrawString(104-72, 48+lsheadingheight/2, V_YELLOWMAP, "SCORE:");
+		V_DrawRightAlignedString(104+72, 48+lsheadingheight/2, V_ALLOWLOWERCASE, va("%s%s", beststr,reqscore));
+
+		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->time)
+			sprintf(beststr, "(none)");
+		else
+			sprintf(beststr, "%i:%02i.%02i", G_TicsToMinutes(mainrecords[cv_nextmap.value-1]->time, true),
+			                                 G_TicsToSeconds(mainrecords[cv_nextmap.value-1]->time),
+			                                 G_TicsToCentiseconds(mainrecords[cv_nextmap.value-1]->time));
+
+		V_DrawString(104-72, 58+lsheadingheight/2, V_YELLOWMAP, "TIME:");
+		V_DrawRightAlignedString(104+72, 58+lsheadingheight/2, V_ALLOWLOWERCASE, va("%s%s", beststr,reqtime));
+
+		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->rings)
+			sprintf(beststr, "(none)");
+		else
+			sprintf(beststr, "%hu", mainrecords[cv_nextmap.value-1]->rings);
+
+		V_DrawString(104-72, 68+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
+		V_DrawRightAlignedString(104+72, 68+lsheadingheight/2, V_ALLOWLOWERCASE, va("%s%s", beststr,reqrings));
 	}
 
 	// ALWAYS DRAW level and skin even when not on this menu!
