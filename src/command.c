@@ -740,16 +740,20 @@ static void COM_Help_f(void)
 					CONS_Printf("  On or Off (Yes or No, 1 or 0)\n");
 				else
 				{
-					if (!stricmp(cvar->PossibleValue[0].strvalue, "MIN") && !stricmp(cvar->PossibleValue[1].strvalue, "MAX"))
+#define MINVAL 0
+#define MAXVAL 1
+					if (!stricmp(cvar->PossibleValue[MINVAL].strvalue, "MIN"))
 					{
 						if (floatmode)
-							CONS_Printf("  range from %f to %f\n", FIXED_TO_FLOAT(cvar->PossibleValue[0].value),
-								FIXED_TO_FLOAT(cvar->PossibleValue[1].value));
+							CONS_Printf("  range from %f to %f\n", FIXED_TO_FLOAT(cvar->PossibleValue[MINVAL].value),
+								FIXED_TO_FLOAT(cvar->PossibleValue[MAXVAL].value));
 						else
-							CONS_Printf("  range from %d to %d\n", cvar->PossibleValue[0].value,
-								cvar->PossibleValue[1].value);
-						i = 2;
+							CONS_Printf("  range from %d to %d\n", cvar->PossibleValue[MINVAL].value,
+								cvar->PossibleValue[MAXVAL].value);
+						i = MAXVAL+1;
 					}
+#undef MINVAL
+#undef MAXVAL
 
 					//CONS_Printf(M_GetText("  possible value : %s\n"), cvar->name);
 					while (cvar->PossibleValue[i].strvalue)
