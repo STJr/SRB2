@@ -2788,31 +2788,19 @@ static void M_ChangeCvar(INT32 choice)
 
 	choice = (choice<<1) - 1;
 
-	if (((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_SLIDER)
-	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_INVISSLIDER)
-	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_NOMOD))
+	if (cv->flags & CV_FLOAT)
 	{
-		if (cv->flags & CV_FLOAT && (currentMenu->menuitems[itemOn].status & IT_CV_FLOATSLIDER) == IT_CV_FLOATSLIDER)
+		if (((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_SLIDER)
+			||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_INVISSLIDER)
+			||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_NOMOD)
+			|| !(currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP))
 		{
 			char s[20];
 			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
 			CV_Set(cv,s);
 		}
 		else
-			CV_SetValue(cv,cv->value+(choice));
-	}
-	else if (cv->flags & CV_FLOAT)
-	{
-		if (currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP)
-		{
 			CV_SetValue(cv,FIXED_TO_FLOAT(cv->value)+(choice));
-		}
-		else
-		{
-			char s[20];
-			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
-			CV_Set(cv,s);
-		}
 	}
 	else
 		CV_AddValue(cv,choice);

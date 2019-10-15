@@ -1525,6 +1525,9 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 {
 	INT32 newvalue, max;
 
+	if (!increment)
+		return;
+
 	// count pointlimit better
 	if (var == &cv_pointlimit && (gametype == GT_MATCH))
 		increment *= 50;
@@ -1553,7 +1556,6 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 			// Special case for the nextmap variable, used only directly from the menu
 			INT32 oldvalue = var->value - 1, gt;
 			gt = cv_newgametype.value;
-			if (increment != 0) // Going up!
 			{
 				newvalue = var->value - 1;
 				do
@@ -1597,21 +1599,39 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 			{
 				INT32 currentindice = -1, newindice;
 				for (max = MAXVAL+1; var->PossibleValue[max].strvalue; max++)
-					if (var->PossibleValue[max].value == var->value)
-						currentindice = max;
-
-				if (currentindice == -1 && max != MAXVAL+1)
-					newindice = ((increment > 0) ? MAXVAL : max) + increment;
-				else
-					newindice = currentindice + increment;
-
-				if (newindice >= max || newindice <= MAXVAL)
 				{
-					newvalue = var->PossibleValue[((increment > 0) ? MINVAL : MAXVAL)].value;
-					CV_SetValue(var, newvalue);
+					if (var->PossibleValue[max].value == newvalue)
+					{
+						increment = 0;
+						currentindice = max;
+					}
+					else if (var->PossibleValue[max].value == var->value)
+						currentindice = max;
+				}
+
+				if (increment)
+				{
+					increment = (increment > 0) ? 1 : -1;
+					if (currentindice == -1 && max != MAXVAL+1)
+						newindice = ((increment > 0) ? MAXVAL : max) + increment;
+					else
+						newindice = currentindice + increment;
+
+					if (newindice >= max || newindice <= MAXVAL)
+					{
+						if (var == &cv_pointlimit && (gametype == GT_MATCH) && increment > 0)
+							CV_SetValue(var, 50);
+						else
+						{
+							newvalue = var->PossibleValue[((increment > 0) ? MINVAL : MAXVAL)].value;
+							CV_SetValue(var, newvalue);
+						}
+					}
+					else
+						CV_Set(var, var->PossibleValue[newindice].strvalue);
 				}
 				else
-					CV_Set(var, var->PossibleValue[newindice].strvalue);
+					CV_Set(var, var->PossibleValue[currentindice].strvalue);
 			}
 			else
 				CV_SetValue(var, newvalue);
