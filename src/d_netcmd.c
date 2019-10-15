@@ -65,7 +65,7 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum);
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum);
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum);
 static void Got_Pause(UINT8 **cp, INT32 playernum);
-static void Got_Suicide(UINT8 **cp, INT32 playernum);
+static void Got_Respawn(UINT8 **cp, INT32 playernum);
 static void Got_RandomSeed(UINT8 **cp, INT32 playernum);
 static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum);
 static void Got_Teamchange(UINT8 **cp, INT32 playernum);
@@ -117,7 +117,7 @@ static void Command_Addfile(void);
 static void Command_ListWADS_f(void);
 static void Command_RunSOC(void);
 static void Command_Pause(void);
-static void Command_Suicide(void);
+static void Command_Respawn(void);
 
 static void Command_Version_f(void);
 #ifdef UPDATE_ALERT
@@ -394,7 +394,7 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"REQADDFILE",
 	"DELFILE", // replace next time we add an XD
 	"SETMOTD",
-	"SUICIDE",
+	"RESPAWN",
 #ifdef HAVE_BLUA
 	"LUACMD",
 	"LUAVAR"
@@ -429,7 +429,7 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_ADDFILE, Got_Addfilecmd);
 	RegisterNetXCmd(XD_REQADDFILE, Got_RequestAddfilecmd);
 	RegisterNetXCmd(XD_PAUSE, Got_Pause);
-	RegisterNetXCmd(XD_SUICIDE, Got_Suicide);
+	RegisterNetXCmd(XD_RESPAWN, Got_Respawn);
 	RegisterNetXCmd(XD_RUNSOC, Got_RunSOCcmd);
 #ifdef HAVE_BLUA
 	RegisterNetXCmd(XD_LUACMD, Got_Luacmd);
@@ -464,7 +464,7 @@ void D_RegisterServerCommands(void)
 
 	COM_AddCommand("runsoc", Command_RunSOC);
 	COM_AddCommand("pause", Command_Pause);
-	COM_AddCommand("suicide", Command_Suicide);
+	COM_AddCommand("respawn", Command_Respawn);
 
 	COM_AddCommand("gametype", Command_ShowGametype_f);
 	COM_AddCommand("version", Command_Version_f);
@@ -2029,7 +2029,7 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 }
 
 // Command for stuck characters in netgames, griefing, etc.
-static void Command_Suicide(void)
+static void Command_Respawn(void)
 {
 	UINT8 buf[4];
 	UINT8 *cp = buf;
@@ -2055,17 +2055,17 @@ static void Command_Suicide(void)
 		return;
 	}
 
-	SendNetXCmd(XD_SUICIDE, &buf, 4);
+	SendNetXCmd(XD_RESPAWN, &buf, 4);
 }
 
-static void Got_Suicide(UINT8 **cp, INT32 playernum)
+static void Got_Respawn(UINT8 **cp, INT32 playernum)
 {
-	INT32 suicideplayer = READINT32(*cp);
+	INT32 respawnplayer = READINT32(*cp);
 
-	// You can't suicide someone else.  Nice try, there.
-	if (suicideplayer != playernum || (!G_PlatformGametype()))
+	// You can't respawn someone else.  Nice try, there.
+	if (respawnplayer != playernum || (!G_PlatformGametype()))
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command received from %s\n"), player_names[playernum]);
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal respawn command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
 			UINT8 buf[2];
@@ -2077,8 +2077,8 @@ static void Got_Suicide(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	if (players[suicideplayer].mo)
-		P_DamageMobj(players[suicideplayer].mo, NULL, NULL, 1, DMG_INSTAKILL);
+	if (players[respawnplayer].mo)
+		P_DamageMobj(players[respawnplayer].mo, NULL, NULL, 1, DMG_INSTAKILL);
 }
 
 /** Deals with an ::XD_RANDOMSEED message in a netgame.

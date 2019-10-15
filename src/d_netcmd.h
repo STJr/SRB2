@@ -136,7 +136,7 @@ typedef enum
 	XD_REQADDFILE,  // 17
 	XD_DELFILE,     // 18 - replace next time we add an XD
 	XD_SETMOTD,     // 19
-	XD_SUICIDE,     // 20
+	XD_RESPAWN,     // 20
 	XD_DEMOTED,     // 21
 #ifdef HAVE_BLUA
 	XD_LUACMD,      // 22
