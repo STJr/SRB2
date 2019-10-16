@@ -11158,7 +11158,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{            // MT_SMALLGRABCHAIN
-		-1,               // doomednum
+		1132,             // doomednum
 		S_SMALLGRABCHAIN, // spawnstate
 		1000,             // spawnhealth
 		S_NULL,           // seestate
@@ -11185,7 +11185,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{            // MT_BIGGRABCHAIN
-		-1,             // doomednum
+		1133,           // doomednum
 		S_BIGGRABCHAIN, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
