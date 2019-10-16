@@ -1074,7 +1074,7 @@ void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skin
 	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes >= 4)
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
-		spriteframe_t *sprframe = &sprdef->spriteframes[3];
+		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CONTINUE];
 		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 		const UINT8 *colormap = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
 

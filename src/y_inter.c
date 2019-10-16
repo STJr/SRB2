@@ -1047,6 +1047,9 @@ static void Y_UpdateRecordReplays(void)
 	if ((UINT16)(players[consoleplayer].rings) > mainrecords[gamemap-1]->rings)
 		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
 
+	if (data.coop.gotperfbonus)
+		mainrecords[gamemap-1]->gotperfect = true;
+
 	// Save demo!
 	bestdemo[255] = '\0';
 	lastdemo[255] = '\0';

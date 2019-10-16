@@ -753,8 +753,8 @@ static menuitem_t SP_TimeAttackLevelSelectMenu[] =
 // Single Player Time Attack
 static menuitem_t SP_TimeAttackMenu[] =
 {
-	{IT_STRING|IT_KEYHANDLER,  NULL, "Level Select...", M_HandleTimeAttackLevelSelect,   52},
-	{IT_STRING|IT_CVAR,        NULL, "Character",       &cv_chooseskin,             62},
+	{IT_STRING|IT_KEYHANDLER,  NULL, "Level Select...", M_HandleTimeAttackLevelSelect,   62},
+	{IT_STRING|IT_CVAR,        NULL, "Character",       &cv_chooseskin,             72},
 
 	{IT_DISABLED,              NULL, "Guest Option...", &SP_GuestReplayDef, 100},
 	{IT_DISABLED,              NULL, "Replay...",       &SP_ReplayDef,      110},
@@ -3906,7 +3906,7 @@ static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y)
 		lasttype = curtype;
 
 		if (emblem->collected)
-			V_DrawSmallMappedPatch(x, y, 0, W_CachePatchName(M_GetEmblemPatch(emblem), PU_CACHE),
+			V_DrawSmallMappedPatch(x, y, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_CACHE),
 			                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 		else
 			V_DrawSmallScaledPatch(x, y, 0, W_CachePatchName("NEEDIT", PU_CACHE));
@@ -4345,7 +4345,7 @@ static void M_DrawPauseMenu(void)
 				continue;
 
 			if (emblem->collected)
-				V_DrawSmallMappedPatch(40, 44 + (i*8), 0, W_CachePatchName(M_GetEmblemPatch(emblem), PU_CACHE),
+				V_DrawSmallMappedPatch(40, 44 + (i*8), 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_CACHE),
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 			else
 				V_DrawSmallScaledPatch(40, 44 + (i*8), 0, W_CachePatchName("NEEDIT", PU_CACHE));
@@ -6866,7 +6866,7 @@ static void M_DrawEmblemHints(void)
 		if (emblem->collected)
 		{
 			collected = V_GREENMAP;
-			V_DrawMappedPatch(12, 12+(28*j), 0, W_CachePatchName(M_GetEmblemPatch(emblem), PU_CACHE),
+			V_DrawMappedPatch(12, 12+(28*j), 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_CACHE),
 				R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 		}
 		else
@@ -8487,7 +8487,7 @@ static void M_DrawStatsMaps(int location)
 			exemblem = &extraemblems[i];
 
 			if (exemblem->collected)
-				V_DrawSmallMappedPatch(292, y, 0, W_CachePatchName(M_GetExtraEmblemPatch(exemblem), PU_CACHE),
+				V_DrawSmallMappedPatch(292, y, 0, W_CachePatchName(M_GetExtraEmblemPatch(exemblem, false), PU_CACHE),
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetExtraEmblemColor(exemblem), GTC_CACHE));
 			else
 				V_DrawSmallScaledPatch(292, y, 0, W_CachePatchName("NEEDIT", PU_CACHE));
@@ -8632,9 +8632,10 @@ static void M_HandleLevelStats(INT32 choice)
 // Drawing function for Time Attack
 void M_DrawTimeAttackMenu(void)
 {
-	INT32 i, x, y, cursory = 0;
+	INT32 i, x, y, empatx, empaty, cursory = 0;
 	UINT16 dispstatus;
 	patch_t *PictureOfUrFace;	// my WHAT
+	patch_t *empatch;
 
 	M_SetMenuCurBackground("RECATKBG");
 
@@ -8738,16 +8739,22 @@ void M_DrawTimeAttackMenu(void)
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
 
 		y = 32+lsheadingheight;
-		V_DrawSmallScaledPatch(208, y, 0, PictureOfLevel);
+		V_DrawSmallScaledPatch(216, y, 0, PictureOfLevel);
 
-		if (itemOn == talevel)
+
+		if (currentMenu == &SP_TimeAttackDef)
 		{
-			/* Draw arrows !! */
-			y = y + 25 - 4;
-			V_DrawCharacter(208 - 10 - (skullAnimCounter/5), y,
-					'\x1C' | V_YELLOWMAP, false);
-			V_DrawCharacter(208 + 80 + 2 + (skullAnimCounter/5), y,
-					'\x1D' | V_YELLOWMAP, false);
+			if (itemOn == talevel)
+			{
+				/* Draw arrows !! */
+				y = y + 25 - 4;
+				V_DrawCharacter(216 - 10 - (skullAnimCounter/5), y,
+						'\x1C' | V_YELLOWMAP, false);
+				V_DrawCharacter(216 + 80 + 2 + (skullAnimCounter/5), y,
+						'\x1D' | V_YELLOWMAP, false);
+			}
+			// Draw press ESC to exit string on main record attack menu
+			V_DrawString(104-72, 180, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
 		}
 
 		em = M_GetLevelEmblems(cv_nextmap.value);
@@ -8757,42 +8764,46 @@ void M_DrawTimeAttackMenu(void)
 			switch (em->type)
 			{
 				case ET_SCORE:
-					yHeight = 48;
-					sprintf(reqscore, "%u", em->var);
+					yHeight = 33;
+					sprintf(reqscore, "(%u)", em->var);
 					break;
 				case ET_TIME:
-					yHeight = 58;
-					sprintf(reqtime, "%i:%02i.%02i", G_TicsToMinutes((tic_t)em->var, true),
+					yHeight = 53;
+					sprintf(reqtime, "(%i:%02i.%02i)", G_TicsToMinutes((tic_t)em->var, true),
 										G_TicsToSeconds((tic_t)em->var),
 										G_TicsToCentiseconds((tic_t)em->var));
 					break;
 				case ET_RINGS:
-					yHeight = 68;
-					sprintf(reqrings, "%u", em->var);
+					yHeight = 73;
+					sprintf(reqrings, "(%u)", em->var);
 					break;
 				default:
 					goto skipThisOne;
 			}
 
+			empatch = W_CachePatchName(M_GetEmblemPatch(em, true), PU_CACHE);
+
+			empatx = SHORT(empatch->leftoffset)/2;
+			empaty = SHORT(empatch->topoffset)/2;
+
 			if (em->collected)
-				V_DrawSmallMappedPatch(104+76, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em), PU_CACHE),
+				V_DrawSmallMappedPatch(104+76+empatx, yHeight+lsheadingheight/2+empaty, 0, empatch,
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 			else
-				V_DrawSmallScaledPatch(104+76, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_CACHE));
+				V_DrawSmallScaledPatch(104+76, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDITL", PU_CACHE));
 
 			skipThisOne:
 			em = M_GetLevelEmblems(-1);
 		}
-
-		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
 
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->score)
 			sprintf(beststr, "(none)");
 		else
 			sprintf(beststr, "%u", mainrecords[cv_nextmap.value-1]->score);
 
-		V_DrawString(104-72, 48+lsheadingheight/2, V_YELLOWMAP, "SCORE:");
-		V_DrawRightAlignedString(104+72, 48+lsheadingheight/2, V_ALLOWLOWERCASE, va("%s%s", beststr,reqscore));
+		V_DrawString(104-72, 33+lsheadingheight/2, V_YELLOWMAP, "SCORE:");
+		V_DrawRightAlignedString(104+64, 33+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
+		V_DrawRightAlignedString(104+72, 43+lsheadingheight/2, V_ALLOWLOWERCASE, reqscore);
 
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->time)
 			sprintf(beststr, "(none)");
@@ -8801,16 +8812,23 @@ void M_DrawTimeAttackMenu(void)
 			                                 G_TicsToSeconds(mainrecords[cv_nextmap.value-1]->time),
 			                                 G_TicsToCentiseconds(mainrecords[cv_nextmap.value-1]->time));
 
-		V_DrawString(104-72, 58+lsheadingheight/2, V_YELLOWMAP, "TIME:");
-		V_DrawRightAlignedString(104+72, 58+lsheadingheight/2, V_ALLOWLOWERCASE, va("%s%s", beststr,reqtime));
+		V_DrawString(104-72, 53+lsheadingheight/2, V_YELLOWMAP, "TIME:");
+		V_DrawRightAlignedString(104+64, 53+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
+		V_DrawRightAlignedString(104+72, 63+lsheadingheight/2, V_ALLOWLOWERCASE, reqtime);
 
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->rings)
 			sprintf(beststr, "(none)");
 		else
 			sprintf(beststr, "%hu", mainrecords[cv_nextmap.value-1]->rings);
 
-		V_DrawString(104-72, 68+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
-		V_DrawRightAlignedString(104+72, 68+lsheadingheight/2, V_ALLOWLOWERCASE, va("%s%s", beststr,reqrings));
+		V_DrawString(104-72, 73+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
+
+		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->gotperfect)
+			V_DrawRightAlignedString(104+64, 73+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
+		else
+			V_DrawRightAlignedString(104+64, 73+lsheadingheight/2, V_ALLOWLOWERCASE|V_YELLOWMAP, beststr);
+
+		V_DrawRightAlignedString(104+72, 83+lsheadingheight/2, V_ALLOWLOWERCASE, reqrings);
 	}
 
 	// ALWAYS DRAW level and skin even when not on this menu!
@@ -8827,10 +8845,6 @@ void M_DrawTimeAttackMenu(void)
 		V_DrawString(x, y + SP_TimeAttackMenu[taplayer].alphaKey, V_TRANSLUCENT, SP_TimeAttackMenu[taplayer].text);
 		V_DrawString(BASEVIDWIDTH - x - V_StringWidth(ncv->string, 0), y + SP_TimeAttackMenu[taplayer].alphaKey, V_YELLOWMAP|V_TRANSLUCENT, ncv->string);
 	}
-
-	// Draw press ESC to exit string on main record attack menu
-	if (currentMenu == &SP_TimeAttackDef)
-		V_DrawString(104-72, 180, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
 }
 
 static void M_HandleTimeAttackLevelSelect(INT32 choice)
@@ -8985,8 +8999,6 @@ void M_DrawNightsAttackMenu(void)
 
 		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
 
-		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
-
 		// Super Sonic
 		M_DrawNightsAttackSuperSonic();
 		//if (P_HasGrades(cv_nextmap.value, 0))
@@ -9032,7 +9044,7 @@ void M_DrawNightsAttackMenu(void)
 				}
 
 				if (em->collected)
-					V_DrawSmallMappedPatch(104+38, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em), PU_CACHE),
+					V_DrawSmallMappedPatch(104+38, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em, false), PU_CACHE),
 																 R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 				else
 					V_DrawSmallScaledPatch(104+38, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_CACHE));
