@@ -136,7 +136,7 @@ typedef enum
 	XD_REQADDFILE,  // 17
 	XD_DELFILE,     // 18 - replace next time we add an XD
 	XD_SETMOTD,     // 19
-	XD_RESPAWN,     // 20
+	XD_SUICIDE,     // 20
 	XD_DEMOTED,     // 21
 #ifdef HAVE_BLUA
 	XD_LUACMD,      // 22
@@ -192,7 +192,7 @@ void D_RegisterServerCommands(void);
 void D_RegisterClientCommands(void);
 void D_SendPlayerConfig(void);
 void Command_ExitGame_f(void);
-//void Command_Retry_f(void);
+void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore
 void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean pultmode, boolean presetplayers, INT32 pdelay, boolean pskipprecutscene, boolean pfromlevelselect);
 boolean IsPlayerAdmin(INT32 playernum);
