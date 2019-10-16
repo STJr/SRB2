@@ -3841,7 +3841,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 
 			// Ignore tics from those not synched
-			if (resynch_inprogress[node])
+			if (resynch_inprogress[node] && nettics[node] == gametic)
 				break;
 
 			// To save bytes, only the low byte of tic numbers are sent
@@ -4699,7 +4699,7 @@ void TryRunTics(tic_t realtics)
 	if (player_joining)
 		return;
 
-	if (neededtic > gametic)
+	if (neededtic > gametic && !resynch_local_inprogress)
 	{
 		if (advancedemo)
 			D_StartTitle();
@@ -4853,8 +4853,13 @@ void NetUpdate(void)
 			for (i = 0; i < MAXNETNODES; ++i)
 				if (resynch_inprogress[i])
 				{
-					SV_SendResynch(i);
-					counts = -666;
+					if (!nodeingame[i] || nettics[i] == gametic)
+					{
+						SV_SendResynch(i);
+						counts = -666;
+					}
+					else
+						counts = 0; // Let the client catch up with the server
 				}
 
 			// Do not make tics while resynching
