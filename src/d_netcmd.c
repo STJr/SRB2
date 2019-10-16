@@ -454,7 +454,7 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("map", Command_Map_f);
 
 	COM_AddCommand("exitgame", Command_ExitGame_f);
-	COM_AddCommand("retry", Command_Retry_f);
+	//COM_AddCommand("retry", Command_Retry_f);
 	COM_AddCommand("exitlevel", Command_ExitLevel_f);
 	COM_AddCommand("showmap", Command_Showmap_f);
 	COM_AddCommand("mapmd5", Command_Mapmd5_f);
@@ -2034,8 +2034,6 @@ static void Command_Respawn(void)
 	UINT8 buf[4];
 	UINT8 *cp = buf;
 
-	WRITEINT32(cp, consoleplayer);
-
 	if (!(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
 	{
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
@@ -2048,13 +2046,22 @@ static void Command_Respawn(void)
 		return;
 	}
 
-	// Retry is quicker.  Probably should force people to use it.
+	// Retry is quicker.
 	if (!(netgame || multiplayer))
 	{
-		CONS_Printf(M_GetText("You can't use this in Single Player! Use \"retry\" instead.\n"));
+		if (!&players[consoleplayer] || players[consoleplayer].lives <= 1)
+			CONS_Printf(M_GetText("You can't use this without any lives remaining!\n"));
+		else if (G_IsSpecialStage(gamemap))
+			CONS_Printf(M_GetText("You can't retry special stages!\n"));
+		else
+		{
+			M_ClearMenus(true);
+			G_SetRetryFlag();
+		}
 		return;
 	}
 
+	WRITEINT32(cp, consoleplayer);
 	SendNetXCmd(XD_RESPAWN, &buf, 4);
 }
 
@@ -4119,6 +4126,8 @@ void Command_ExitGame_f(void)
 		D_StartTitle();
 }
 
+// see Command_Respawn()
+#if 0
 void Command_Retry_f(void)
 {
 	if (!(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
@@ -4135,6 +4144,7 @@ void Command_Retry_f(void)
 		G_SetRetryFlag();
 	}
 }
+#endif
 
 #ifdef NETGAME_DEVMODE
 // Allow the use of devmode in netgames.
