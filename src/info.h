@@ -865,7 +865,6 @@ typedef enum playersprite
 	SPR2_LIFE, // life monitor icon
 
 	SPR2_XTRA, // stuff that isn't in-map - "would this ever need an md2 or variable length animation?"
-	SPR2_NTAG, // Character name tag
 
 	SPR2_FIRSTFREESLOT,
 	SPR2_LASTFREESLOT = 0x7f,
@@ -877,7 +876,6 @@ typedef enum playersprite
 #define XTRA_CHARSEL    1                 // Character select picture
 #define XTRA_CONTINUE   2                 // Continue icon
 #define XTRA_ENDING     3                 // Ending finale patches
-#define XTRA_NAMETAG    6                 // Character select nametag
 
 typedef enum state
 {

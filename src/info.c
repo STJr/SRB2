@@ -599,7 +599,6 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"LIFE",
 
 	"XTRA",
-	"NTAG",
 };
 playersprite_t free_spr2 = SPR2_FIRSTFREESLOT;
 

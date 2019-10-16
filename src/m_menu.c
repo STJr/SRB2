@@ -7903,7 +7903,6 @@ static void M_SetupChoosePlayer(INT32 choice)
 	{
 		if (description[i].used) // If the character's disabled through SOC, there's nothing we can do for it.
 		{
-			char *botskin = strchr(description[i].skinname, '&');
 			name = strtok(Z_StrDup(description[i].skinname), "&");
 			skinnum = R_SkinAvailable(name);
 			if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
@@ -7935,18 +7934,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 				else
 					description[i].charpic = W_CachePatchName(description[i].picname, PU_CACHE);
 
-				if (!(description[i].nametag[0]) && (!botskin))
-				{
-					if (skins[skinnum].sprites[SPR2_NTAG].numframes >= 1)
-					{
-						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_NTAG];
-						spriteframe_t *sprframe = &sprdef->spriteframes[0];
-						description[i].namepic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
-					}
-					else
-						description[i].namepic = NULL;
-				}
-				else if (description[i].nametag[0])
+				if (description[i].nametag[0])
 				{
 					const char *nametag = description[i].nametag;
 					description[i].namepic = NULL;
