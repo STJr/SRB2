@@ -2062,7 +2062,7 @@ static void Got_Suicide(UINT8 **cp, INT32 playernum)
 	INT32 suicideplayer = READINT32(*cp);
 
 	// You can't suicide someone else.  Nice try, there.
-	if (respawnplayer != playernum || (!G_PlatformGametype()))
+	if (suicideplayer != playernum || (!G_PlatformGametype()))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command received from %s\n"), player_names[playernum]);
 		if (server)
