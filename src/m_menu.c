@@ -9054,6 +9054,10 @@ void M_DrawNightsAttackMenu(void)
 		}
 	}
 
+	// Draw press ESC to exit string on main nights attack menu
+	if (currentMenu == &SP_NightsAttackDef)
+		V_DrawString(104-72, 180, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
+
 	// ALWAYS DRAW level even when not on this menu!
 	if (currentMenu != &SP_NightsAttackDef)
 		V_DrawString(SP_NightsAttackDef.x, SP_NightsAttackDef.y + SP_TimeAttackMenu[nalevel].alphaKey, V_TRANSLUCENT, SP_NightsAttackMenu[nalevel].text);
