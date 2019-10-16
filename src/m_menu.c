@@ -7938,10 +7938,10 @@ static void M_SetupChoosePlayer(INT32 choice)
 
 				if (!(description[i].nametag[0]) && (!botskin))
 				{
-					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= XTRA_NAMETAG+1)
+					if (skins[skinnum].sprites[SPR2_NTAG].numframes >= 1)
 					{
-						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
-						spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_NAMETAG];
+						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_NTAG];
+						spriteframe_t *sprframe = &sprdef->spriteframes[0];
 						description[i].namepic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 					}
 					else

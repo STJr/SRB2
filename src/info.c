@@ -599,6 +599,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"LIFE",
 
 	"XTRA",
+	"NTAG",
 };
 playersprite_t free_spr2 = SPR2_FIRSTFREESLOT;
 
@@ -702,6 +703,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	0, // SPR2_LIFE,
 
 	0, // SPR2_XTRA (should never be referenced)
+	0, // SPR2_NTAG
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
