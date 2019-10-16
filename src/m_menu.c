@@ -4960,33 +4960,31 @@ static void M_HandleLevelPlatter(INT32 choice)
 			if (!(levellistmode == LLM_CREATESERVER && !lsrow))
 			{
 				ifselectvalnextmapnobrace(lscol)
-				lsoffs[0] = lsoffs[1] = 0;
-				S_StartSound(NULL,sfx_menu1);
-
-				if (gamestate == GS_TIMEATTACK)
-					M_SetupNextMenu(currentMenu->prevMenu);
-				else if (currentMenu == &MISC_ChangeLevelDef)
-				{
-					if (currentMenu->prevMenu && currentMenu->prevMenu != &MPauseDef)
+					lsoffs[0] = lsoffs[1] = 0;
+					S_StartSound(NULL,sfx_menu1);
+					if (gamestate == GS_TIMEATTACK)
 						M_SetupNextMenu(currentMenu->prevMenu);
+					else if (currentMenu == &MISC_ChangeLevelDef)
+					{
+						if (currentMenu->prevMenu && currentMenu->prevMenu != &MPauseDef)
+							M_SetupNextMenu(currentMenu->prevMenu);
+						else
+							M_ChangeLevel(0);
+						Z_Free(levelselect.rows);
+						levelselect.rows = NULL;
+					}
 					else
-						M_ChangeLevel(0);
-					Z_Free(levelselect.rows);
-					levelselect.rows = NULL;
+						M_LevelSelectWarp(0);
+					Nextmap_OnChange();
 				}
-				else
-					M_LevelSelectWarp(0);
-				Nextmap_OnChange();
+				else if (!lsoffs[0]) //  prevent sound spam
+				{
+					lsoffs[0] = -8;
+					S_StartSound(NULL,sfx_s3kb2);
+				}
+				break;
 			}
-		}
-			else if (!lsoffs[0])
-			{
-				lsoffs[0] = -8;
-				S_StartSound(NULL,sfx_s3kb2);
-			}
-			break;
 			/* FALLTHRU */
-
 		case KEY_RIGHTARROW:
 			if (levellistmode == LLM_CREATESERVER && !lsrow)
 			{
@@ -5048,6 +5046,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 		case KEY_ESCAPE:
 			exitmenu = true;
 			break;
+
 		default:
 			break;
 	}
