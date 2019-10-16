@@ -876,6 +876,7 @@ typedef enum playersprite
 #define XTRA_CHARSEL    1                 // Character select picture
 #define XTRA_CONTINUE   2                 // Continue icon
 #define XTRA_ENDING     3                 // Ending finale patches
+#define XTRA_NAMETAG    6                 // Character select nametag
 
 typedef enum state
 {
