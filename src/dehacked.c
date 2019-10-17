@@ -4440,6 +4440,21 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CRUSHCLAW_WAIT",
 	"S_CRUSHCHAIN",
 
+	// Banpyura
+	"S_BANPYURA_ROAM1",
+	"S_BANPYURA_ROAM2",
+	"S_BANPYURA_ROAM3",
+	"S_BANPYURA_ROAM4",
+	"S_BANPYURA_ROAMPAUSE",
+	"S_CDIAG1",
+	"S_CDIAG2",
+	"S_CDIAG3",
+	"S_CDIAG4",
+	"S_CDIAG5",
+	"S_CDIAG6",
+	"S_CDIAG7",
+	"S_CDIAG8",
+
 	// Jet Jaw
 	"S_JETJAW_ROAM1",
 	"S_JETJAW_ROAM2",
@@ -5906,6 +5921,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEJETFLAME1",
 	"S_FLAMEJETFLAME2",
 	"S_FLAMEJETFLAME3",
+	"S_FLAMEJETFLAME4",
+	"S_FLAMEJETFLAME5",
+	"S_FLAMEJETFLAME6",
+	"S_FLAMEJETFLAME7",
+	"S_FLAMEJETFLAME8",
+	"S_FLAMEJETFLAME9",
 
 	// Spinning flame jets
 	"S_FJSPINAXISA1", // Counter-clockwise
@@ -6659,6 +6680,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BHORIZ6",
 	"S_BHORIZ7",
 	"S_BHORIZ8",
+
+	"S_BOOSTERSOUND",
+	"S_YELLOWBOOSTERROLLER",
+	"S_YELLOWBOOSTERSEG_LEFT",
+	"S_YELLOWBOOSTERSEG_RIGHT",
+	"S_YELLOWBOOSTERSEG_FACE",
+	"S_REDBOOSTERROLLER",
+	"S_REDBOOSTERSEG_LEFT",
+	"S_REDBOOSTERSEG_RIGHT",
+	"S_REDBOOSTERSEG_FACE",
 
 	// Rain
 	"S_RAIN1",
@@ -7448,6 +7479,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_YELLOWHORIZ",
 	"MT_REDHORIZ",
 	"MT_BLUEHORIZ",
+
+	"MT_BOOSTERSEG",
+	"MT_BOOSTERROLLER",
+	"MT_YELLOWBOOSTER",
+	"MT_REDBOOSTER",
 
 	// Interactive Objects
 	"MT_BUBBLES", // Bubble source
@@ -8352,6 +8388,8 @@ static const char *const POWERS_LIST[] = {
 	"SPACETIME", // In space, no one can hear you spin!
 	"EXTRALIFE", // Extra Life timer
 	"PUSHING",
+	"JUSTSPRUNG",
+	"NOAUTOBRAKE",
 
 	"SUPER", // Are you super?
 	"GRAVITYBOOTS", // gravity boots
