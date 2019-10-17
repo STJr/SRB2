@@ -4174,26 +4174,11 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
 		{
+			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
+			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
 			// Thing must be on top of the floor to be affected...
-			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-			{
-				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
-					continue;
-			}
-			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-			{
-				if (!(player->mo->eflags & MFE_VERTICALFLIP)
-					|| player->mo->z + player->mo->height != bottomheight)
-					continue;
-			}
-			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-			{
-				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
-					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
-					continue;
-			}
+			if (!(floorallowed || ceilingallowed))
+				continue;
 		}
 		else
 		{
@@ -4234,26 +4219,11 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 			// Check the 3D floor's type...
 			if (rover->flags & FF_BLOCKPLAYER)
 			{
+				boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
+				boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
 				// Thing must be on top of the floor to be affected...
-				if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-					&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-				{
-					if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
-						continue;
-				}
-				else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-					&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-				{
-					if (!(player->mo->eflags & MFE_VERTICALFLIP)
-						|| player->mo->z + player->mo->height != bottomheight)
-						continue;
-				}
-				else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-				{
-					if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
-						|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
-						continue;
-				}
+				if (!(floorallowed || ceilingallowed))
+					continue;
 			}
 			else
 			{
@@ -4304,26 +4274,11 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
 		{
+			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == top));
+			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == bottom));
 			// Thing must be on top of the floor to be affected...
-			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-			{
-				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != top)
-					return false;
-			}
-			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-			{
-				if (!(mo->eflags & MFE_VERTICALFLIP)
-					|| mo->z + mo->height != bottom)
-					return false;
-			}
-			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-			{
-				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == bottom)
-					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == top)))
-					return false;
-			}
+			if (!(floorallowed || ceilingallowed))
+				continue;
 		}
 		else
 		{
@@ -4345,10 +4300,10 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 //
 static boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
 {
-	if (mo->eflags & MFE_VERTICALFLIP)
-		return (mo->z+mo->height == P_GetSpecialTopZ(mo, sec, sec) && sec->flags & SF_FLIPSPECIAL_CEILING);
-	else
-		return (mo->z == P_GetSpecialBottomZ(mo, sec, sec) && sec->flags & SF_FLIPSPECIAL_FLOOR);
+	boolean floorallowed = ((sec->flags & SF_FLIPSPECIAL_FLOOR) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == P_GetSpecialBottomZ(mo, sec, sec)));
+	boolean ceilingallowed = ((sec->flags & SF_FLIPSPECIAL_CEILING) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == P_GetSpecialTopZ(mo, sec, sec)));
+	// Thing must be on top of the floor to be affected...
+	return (floorallowed || ceilingallowed);
 }
 
 /** Applies a sector special to a player.
@@ -5312,26 +5267,11 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 		if (((rover->flags & FF_BLOCKPLAYER) && mo->player)
 			|| ((rover->flags & FF_BLOCKOTHERS) && !mo->player))
 		{
+			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == topheight));
+			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == bottomheight));
 			// Thing must be on top of the floor to be affected...
-			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-			{
-				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != topheight)
-					continue;
-			}
-			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-			{
-				if (!(mo->eflags & MFE_VERTICALFLIP)
-					|| mo->z + mo->height != bottomheight)
-					continue;
-			}
-			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-			{
-				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == bottomheight)
-					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == topheight)))
-					continue;
-			}
+			if (!(floorallowed || ceilingallowed))
+				continue;
 		}
 		else
 		{
@@ -5374,26 +5314,11 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
 		{
+			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
+			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
 			// Thing must be on top of the floor to be affected...
-			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-			{
-				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
-					continue;
-			}
-			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-			{
-				if (!(player->mo->eflags & MFE_VERTICALFLIP)
-					|| player->mo->z + player->mo->height != bottomheight)
-					continue;
-			}
-			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-			{
-				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
-					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
-					continue;
-			}
+			if (!(floorallowed || ceilingallowed))
+				continue;
 		}
 		else
 		{
@@ -5450,38 +5375,16 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 			}
 
 			if (!(po->flags & POF_TESTHEIGHT)) // Don't do height checking
-			{
-			}
+				;
 			else if (po->flags & POF_SOLID)
 			{
+				boolean floorallowed = ((polysec->flags & SF_FLIPSPECIAL_FLOOR) && ((polysec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == polysec->ceilingheight));
+				boolean ceilingallowed = ((polysec->flags & SF_FLIPSPECIAL_CEILING) && ((polysec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == polysec->floorheight));
 				// Thing must be on top of the floor to be affected...
-				if ((polysec->flags & SF_FLIPSPECIAL_FLOOR)
-					&& !(polysec->flags & SF_FLIPSPECIAL_CEILING))
+				if (!(floorallowed || ceilingallowed))
 				{
-					if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != polysec->ceilingheight)
-					{
-						po = (polyobj_t *)(po->link.next);
-						continue;
-					}
-				}
-				else if ((polysec->flags & SF_FLIPSPECIAL_CEILING)
-					&& !(polysec->flags & SF_FLIPSPECIAL_FLOOR))
-				{
-					if (!(player->mo->eflags & MFE_VERTICALFLIP)
-						|| player->mo->z + player->mo->height != polysec->floorheight)
-					{
-						po = (polyobj_t *)(po->link.next);
-						continue;
-					}
-				}
-				else if (polysec->flags & SF_FLIPSPECIAL_BOTH)
-				{
-					if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == polysec->floorheight)
-						|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == polysec->ceilingheight)))
-					{
-						po = (polyobj_t *)(po->link.next);
-						continue;
-					}
+					po = (polyobj_t *)(po->link.next);
+					continue;
 				}
 			}
 			else
@@ -5580,17 +5483,13 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 	f_affectpoint = P_GetSpecialBottomZ(player->mo, sector, sector);
 	c_affectpoint = P_GetSpecialTopZ(player->mo, sector, sector);
 
-	// Only go further if on the ground
-	if ((sector->flags & SF_FLIPSPECIAL_FLOOR) && !(sector->flags & SF_FLIPSPECIAL_CEILING) && player->mo->z != f_affectpoint)
-		return;
-
-	if ((sector->flags & SF_FLIPSPECIAL_CEILING) && !(sector->flags & SF_FLIPSPECIAL_FLOOR) && player->mo->z + player->mo->height != c_affectpoint)
-		return;
-
-	if ((sector->flags & SF_FLIPSPECIAL_BOTH)
-		&& player->mo->z != f_affectpoint
-		&& player->mo->z + player->mo->height != c_affectpoint)
-		return;
+	{
+		boolean floorallowed = ((sector->flags & SF_FLIPSPECIAL_FLOOR) && ((sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == f_affectpoint));
+		boolean ceilingallowed = ((sector->flags & SF_FLIPSPECIAL_CEILING) && ((sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == c_affectpoint));
+		// Thing must be on top of the floor to be affected...
+		if (!(floorallowed || ceilingallowed))
+			return;
+	}
 
 	P_ProcessSpecialSector(player, sector, NULL);
 }
@@ -6683,6 +6582,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 					if (lines[i].flags & ML_EFFECT3)
 						sectors[s].flags |= SF_TRIGGERSPECIAL_TOUCH;
+					if (lines[i].flags & ML_EFFECT2)
+						sectors[s].flags |= SF_TRIGGERSPECIAL_HEADBUMP;
+
+					if (lines[i].flags & ML_EFFECT1)
+						sectors[s].flags |= SF_INVERTPRECIP;
 
 					if (lines[i].frontsector && GETSECSPECIAL(lines[i].frontsector->special, 4) == 12)
 						sectors[s].camsec = sides[*lines[i].sidenum].sector-sectors;
@@ -7171,15 +7075,15 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 252: // Shatter block (breaks when touched)
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER;
+				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER;
 				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_SOLID|FF_SHATTERBOTTOM;
+					ffloorflags |= FF_BLOCKPLAYER|FF_SHATTERBOTTOM;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
 			case 253: // Translucent shatter block (see 76)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER|FF_TRANSLUCENT, secthinkers);
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER|FF_TRANSLUCENT, secthinkers);
 				break;
 
 			case 254: // Bustable block
