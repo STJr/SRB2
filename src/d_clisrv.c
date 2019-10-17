@@ -621,6 +621,10 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->friction = LONG(players[i].mo->friction);
 	rsp->movefactor = LONG(players[i].mo->movefactor);
 
+	rsp->sprite = (spritenum_t)LONG(players[i].mo->sprite);
+	rsp->frame = LONG(players[i].mo->frame);
+	rsp->sprite2 = players[i].mo->sprite2;
+	rsp->anim_duration = SHORT(players[i].mo->anim_duration);
 	rsp->tics = LONG(players[i].mo->tics);
 	rsp->statenum = (statenum_t)LONG(players[i].mo->state-states); // :(
 	rsp->eflags = (UINT16)SHORT(players[i].mo->eflags);
@@ -767,8 +771,17 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->momy = LONG(rsp->momy);
 	players[i].mo->momz = LONG(rsp->momz);
 	players[i].mo->movefactor = LONG(rsp->movefactor);
+
+	// Don't use P_SetMobjStateNF to restore state, write/read all the values manually!
+	// This should stop those stupid console errors, hopefully.
+	// -- Monster Iestyn
+	players[i].mo->sprite = (spritenum_t)LONG(rsp->sprite);
+	players[i].mo->frame = LONG(rsp->frame);
+	players[i].mo->sprite2 = rsp->sprite2;
+	players[i].mo->anim_duration = SHORT(rsp->anim_duration);
 	players[i].mo->tics = LONG(rsp->tics);
-	P_SetMobjStateNF(players[i].mo, LONG(rsp->statenum));
+	players[i].mo->state = states[LONG(rsp->statenum)];
+
 	players[i].mo->x = LONG(rsp->x);
 	players[i].mo->y = LONG(rsp->y);
 	players[i].mo->z = LONG(rsp->z);
