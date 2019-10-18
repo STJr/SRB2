@@ -4095,7 +4095,7 @@ typedef enum mobj_type
 	MT_CRUSHCLAW, // Big meaty claw
 	MT_CRUSHCHAIN, // Chain
 	MT_BANPYURA, // Banpyura
-	MT_BAMPSPRING, // Banpyura spring
+	MT_BANPSPRING, // Banpyura spring
 	MT_JETJAW, // Jet Jaw
 	MT_SNAILER, // Snailer
 	MT_VULTURE, // BASH

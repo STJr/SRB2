@@ -7343,6 +7343,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CRUSHSTACEAN", // Crushstacean
 	"MT_CRUSHCLAW", // Big meaty claw
 	"MT_CRUSHCHAIN", // Chain
+	"MT_BANPYURA", // Banpyura
+	"MT_BANPSPRING", // Banpyura spring
 	"MT_JETJAW", // Jet Jaw
 	"MT_SNAILER", // Snailer
 	"MT_VULTURE", // BASH

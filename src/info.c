@@ -4585,7 +4585,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_BAMPSPRING
+	{           // MT_BANPSPRING
 		-1,             // doomednum
 		S_CDIAG1,       // spawnstate
 		1,              // spawnhealth
