@@ -780,7 +780,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->sprite2 = rsp->sprite2;
 	players[i].mo->anim_duration = SHORT(rsp->anim_duration);
 	players[i].mo->tics = LONG(rsp->tics);
-	players[i].mo->state = states[LONG(rsp->statenum)];
+	players[i].mo->state = &states[LONG(rsp->statenum)];
 
 	players[i].mo->x = LONG(rsp->x);
 	players[i].mo->y = LONG(rsp->y);
