@@ -7089,7 +7089,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 254: // Bustable block
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP;
 				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_ONLYKNUX;
+					ffloorflags |= FF_STRONGBUST;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;

@@ -2456,39 +2456,42 @@ static void P_CheckBustableBlocks(player_t *player)
 
 				if ((rover->flags & FF_BUSTUP)/* && !rover->master->frontsector->crumblestate*/)
 				{
-					// If it's an FF_SPINBUST, you have to either be jumping, or coming down
-					// onto the top from a spin.
-					if (rover->flags & FF_SPINBUST && ((!(player->pflags & PF_JUMPED) && !(player->pflags & PF_SPINNING) && !(player->pflags & PF_BOUNCING)) || (player->pflags & PF_STARTDASH)))
+					// If it's an FF_SHATTER, you can break it just by touching it.
+					if (rover->flags & FF_SHATTER)
+						goto bust;
+
+					// If it's an FF_SPINBUST, you can break it if you are in your spinning frames
+					// (either from jumping or spindashing).
+					if (rover->flags & FF_SPINBUST
+						&& (((player->pflags & PF_SPINNING) && !(player->pflags & PF_STARTDASH))
+							|| (player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE))))
+						goto bust;
+
+					// You can always break it if you have CA_GLIDEANDCLIMB
+					// or if you are bouncing on it
+					// or you are using CA_TWINSPIN/CA2_MELEE.
+					if (player->charability == CA_GLIDEANDCLIMB
+						|| (player->pflags & PF_BOUNCING)
+						|| ((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
+						|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+						goto bust;
+
+					if (rover->flags & FF_STRONGBUST)
 						continue;
 
-					// if it's not an FF_SHATTER, you must be spinning (and not jumping)
-					// or be super
-					// or have CA_GLIDEANDCLIMB
-					// or be in dashmode with SF_DASHMODE
-					// or be using CA_TWINSPIN
-					// or be using CA2_MELEE
-					// or are drilling in NiGHTS
-					// or are recording for Metal Sonic
-					if (!(rover->flags & FF_SHATTER) && !(rover->flags & FF_SPINBUST)
-						&& !((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
+					// If it's not an FF_STRONGBUST, you can break if you are spinning (and not jumping)
+					// or you are super
+					// or you are in dashmode with SF_DASHMODE
+					// or you are drilling in NiGHTS
+					// or you are recording for Metal Sonic
+					if (!((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
 						&& !(player->powers[pw_super])
-						&& !(player->charability == CA_GLIDEANDCLIMB)
-						&& !(player->pflags & PF_BOUNCING)
 						&& !((player->charflags & SF_DASHMODE) && (player->dashmode >= 3*TICRATE))
-						&& !((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
-						&& !(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 						&& !(player->pflags & PF_DRILLING)
 						&& !metalrecording)
 						continue;
 
-					// Only players with CA_GLIDEANDCLIMB, or CA_TWINSPIN/CA2_MELEE users can break this rock...
-					if (!(rover->flags & FF_SHATTER) && (rover->flags & FF_ONLYKNUX)
-						&& !(player->charability == CA_GLIDEANDCLIMB
-						|| (player->pflags & PF_BOUNCING)
-						|| ((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
-						|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)))
-						continue;
-
+				bust:
 					topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 					bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 
