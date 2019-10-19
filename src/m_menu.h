@@ -104,6 +104,7 @@ typedef enum
 	MN_SR_LEVELSELECT,
 	MN_SR_UNLOCKCHECKLIST,
 	MN_SR_EMBLEMHINT,
+	MN_SR_PLAYER,
 
 	// Addons (Part of MISC, but let's make it our own)
 	MN_AD_MAIN,

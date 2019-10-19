@@ -7977,6 +7977,21 @@ static void M_SetupChoosePlayer(INT32 choice)
 
 	M_ChangeMenuMusic("_chsel", true);
 
+	/* the menus suck -James */
+	if (currentMenu == &SP_LoadDef)/* from save states */
+	{
+		SP_PlayerDef.menuid =
+			MN_SP_MAIN +
+			( MN_SP_LOAD   <<  6 ) +
+			( MN_SP_PLAYER << 12 );
+	}
+	else/* from Secret level select */
+	{
+		SP_PlayerDef.menuid =
+			MN_SR_MAIN +
+			( MN_SR_PLAYER <<  6 );
+	}
+
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
 	if (!allowed)
