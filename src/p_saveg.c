@@ -3612,21 +3612,21 @@ static void P_NetUnArchiveThinkers(void)
 		}
 
 		CONS_Debug(DBG_NETPLAY, "%u thinkers loaded in list %d\n", numloaded, i);
+	}
 
-		if (restoreNum)
+	if (restoreNum)
+	{
+		executor_t *delay = NULL;
+		UINT32 mobjnum;
+		for (currentthinker = thlist[THINK_MAIN].next; currentthinker != &thlist[THINK_MAIN];
+		currentthinker = currentthinker->next)
 		{
-			executor_t *delay = NULL;
-			UINT32 mobjnum;
-			for (currentthinker = thlist[i].next; currentthinker != &thlist[i];
-			currentthinker = currentthinker->next)
-			{
-				if (currentthinker->function.acp1 != (actionf_p1)T_ExecutorDelay)
-					continue;
-				delay = (void *)currentthinker;
-				if (!(mobjnum = (UINT32)(size_t)delay->caller))
-					continue;
-				delay->caller = P_FindNewPosition(mobjnum);
-			}
+			if (currentthinker->function.acp1 != (actionf_p1)T_ExecutorDelay)
+				continue;
+			delay = (void *)currentthinker;
+			if (!(mobjnum = (UINT32)(size_t)delay->caller))
+				continue;
+			delay->caller = P_FindNewPosition(mobjnum);
 		}
 	}
 }
