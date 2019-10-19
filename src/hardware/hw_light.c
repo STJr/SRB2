@@ -162,6 +162,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_TURR
 	&lspr[NOLIGHT],     // SPR_SHRP
 	&lspr[NOLIGHT],     // SPR_CRAB
+	&lspr[NOLIGHT],     // SPR_CR2B
+	&lspr[NOLIGHT],     // SPR_CSPR
 	&lspr[NOLIGHT],     // SPR_JJAW
 	&lspr[NOLIGHT],     // SPR_SNLR
 	&lspr[NOLIGHT],     // SPR_VLTR
@@ -478,6 +480,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SSWY
 	&lspr[NOLIGHT],     // SPR_SSWR
 	&lspr[NOLIGHT],     // SPR_SSWB
+	&lspr[NOLIGHT],     // SPR_BSTY
+	&lspr[NOLIGHT],     // SPR_BSTR
 
 	// Environmental Effects
 	&lspr[NOLIGHT],     // SPR_RAIN
