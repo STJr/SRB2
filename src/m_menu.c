@@ -9905,6 +9905,8 @@ static void M_ConnectIP(INT32 choice)
 		return;
 	}
 
+	M_ClearMenus(true);
+
 	COM_BufAddText(va("connect \"%s\"\n", setupm_ip));
 
 	// A little "please wait" message.
@@ -9936,7 +9938,6 @@ static void M_HandleConnectIP(INT32 choice)
 
 		case KEY_ENTER:
 			S_StartSound(NULL,sfx_menu1); // Tails
-			M_ClearMenus(true);
 			M_ConnectIP(1);
 			break;
 
