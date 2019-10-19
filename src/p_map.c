@@ -152,7 +152,9 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 	if (object->player)
 	{
-		if (object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
+		if (spring->info->painchance == 3)
+			;
+		else if (object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
 			strong = 1;
 		else if (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)
 			strong = 2;
@@ -410,7 +412,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			object->player->pflags |= P_GetJumpFlags(object->player);
 			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
-		else if ((spring->info->painchance == 2) || (pflags & PF_BOUNCING)) // Adding momentum only.
+		else if ((spring->info->painchance == 2) || ((spring->info->painchance != 3) && (pflags & PF_BOUNCING))) // Adding momentum only.
 		{
 			object->player->pflags |= (pflags &~ PF_STARTJUMP);
 			object->player->secondjump = secondjump;
