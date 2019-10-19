@@ -7712,7 +7712,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_YELLOWBOOSTER
-		2045,           // doomednum -- Matched to Glaber's resource, otherwise custom-built.
+		544,            // doomednum
 		S_INVISIBLE,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
@@ -7739,7 +7739,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_REDBOOSTER
-		2046,           // doomednum -- Matched to Glaber's resource, otherwise custom-built.
+		545,            // doomednum
 		S_INVISIBLE,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
