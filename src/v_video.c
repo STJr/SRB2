@@ -2698,16 +2698,16 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 // Looks familiar.
 void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
 {
-	char *text = (char *)string;
-	char *first_token = text;
+	const char *text = string;
+	const char *first_token = text;
 	char *last_token = strchr(text, '\n');
 	const INT32 lbreakheight = 21;
-	INT32 lines;
+	INT32 ntlines;
 
 	if (option & V_CENTERNAMETAG)
 	{
-		lines = V_CountNameTagLines(string);
-		y -= FixedInt(FixedMul(((lbreakheight/2) * (lines-1))*FRACUNIT, scale));
+		ntlines = V_CountNameTagLines(string);
+		y -= FixedInt(FixedMul(((lbreakheight/2) * (ntlines-1))*FRACUNIT, scale));
 	}
 
 	// No line breaks?
@@ -2717,7 +2717,7 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecol
 	// Split string by the line break character
 	else
 	{
-		char *string = NULL;
+		char *str = NULL;
 		INT32 len;
 		while (true)
 		{
@@ -2726,20 +2726,20 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecol
 			{
 				size_t shift = 0;
 				// Free this line
-				if (string)
-					Z_Free(string);
+				if (str)
+					Z_Free(str);
 				// Find string length, do a malloc...
 				len = (last_token-first_token)+1;
-				string = ZZ_Alloc(len);
+				str = ZZ_Alloc(len);
 				// Copy the line
-				strncpy(string, first_token, len-1);
-				string[len-1] = '\0';
+				strncpy(str, first_token, len-1);
+				str[len-1] = '\0';
 				// Don't leave a line break character
 				// at the start of the string!
-				if ((strlen(string) >= 2) && (string[0] == '\n') && (string[1] != '\n'))
+				if ((strlen(str) >= 2) && (string[0] == '\n') && (string[1] != '\n'))
 					shift++;
 				// Then draw it
-				V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, string+shift);
+				V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, str+shift);
 			}
 			// No line break character was found
 			else
@@ -2755,7 +2755,7 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecol
 
 			// Next line
 			y += FixedInt(FixedMul(lbreakheight*FRACUNIT, scale));
-			if ((last_token-text)+1 >= strlen(text))
+			if ((last_token-text)+1 >= (signed)strlen(text))
 				last_token = NULL;
 			else
 			{
@@ -2764,35 +2764,35 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecol
 			}
 		}
 		// Free this line
-		if (string)
-			Z_Free(string);
+		if (str)
+			Z_Free(str);
 	}
 }
 
 // Count the amount of lines in name tag string
 INT32 V_CountNameTagLines(const char *string)
 {
-	INT32 lines = 1;
-	char *text = (char *)string;
-	char *first_token = text;
+	INT32 ntlines = 1;
+	const char *text = string;
+	const char *first_token = text;
 	char *last_token = strchr(text, '\n');
 
 	// No line breaks?
 	if (!last_token)
-		return lines;
+		return ntlines;
 	// Split string by the line break character
 	else
 	{
 		while (true)
 		{
 			if (last_token)
-				lines++;
+				ntlines++;
 			// No line break character was found
 			else
 				break;
 
 			// Next line
-			if ((last_token-text)+1 >= strlen(text))
+			if ((last_token-text)+1 >= (signed)strlen(text))
 				last_token = NULL;
 			else
 			{
@@ -2801,7 +2801,7 @@ INT32 V_CountNameTagLines(const char *string)
 			}
 		}
 	}
-	return lines;
+	return ntlines;
 }
 
 INT32 V_NameTagWidth(const char *string)

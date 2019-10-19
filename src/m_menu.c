@@ -7894,7 +7894,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	UINT8 firstvalid = 255;
 	UINT8 lastvalid = 0;
 	boolean allowed = false;
-	char *name;
+	char *and;
 	(void)choice;
 
 	SP_PlayerMenu[0].status &= ~IT_DYBIGSPACE; // Correcting a hack that may be made below.
@@ -7903,8 +7903,21 @@ static void M_SetupChoosePlayer(INT32 choice)
 	{
 		if (description[i].used) // If the character's disabled through SOC, there's nothing we can do for it.
 		{
-			name = strtok(Z_StrDup(description[i].skinname), "&");
-			skinnum = R_SkinAvailable(name);
+			and = strchr(description[i].skinname, '&');
+			if (and)
+			{
+				char firstskin[SKINNAMESIZE+1];
+				strncpy(firstskin, description[i].skinname, (and - description[i].skinname));
+				firstskin[(and - description[i].skinname)] = '\0';
+				description[i].skinnum[0] = R_SkinAvailable(firstskin);
+				description[i].skinnum[1] = R_SkinAvailable(and+1);
+			}
+			else
+			{
+				description[i].skinnum[0] = R_SkinAvailable(description[i].skinname);
+				description[i].skinnum[1] = -1;
+			}
+			skinnum = description[i].skinnum[0];
 			if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
 			{
 				// Handling order.
@@ -7943,7 +7956,6 @@ static void M_SetupChoosePlayer(INT32 choice)
 				}
 			}
 			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
-			Z_Free(name);
 		}
 	}
 
@@ -8060,18 +8072,6 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 // Draw the choose player setup menu, had some fun with player anim
 //define CHOOSEPLAYER_DRAWHEADER
 
-static INT32 getskinfromdescription(INT32 desc)
-{
-	char *and = strchr(description[desc].skinname, '&');
-	if (and)
-	{
-		char firstskin[SKINNAMESIZE];
-		strncpy(firstskin, description[desc].skinname, and - (description[desc].skinname));
-		return R_SkinAvailable(firstskin);
-	}
-	return R_SkinAvailable(description[desc].skinname);
-}
-
 static void M_DrawSetupChoosePlayerMenu(void)
 {
 	const INT32 my = 16;
@@ -8088,7 +8088,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT16 fgheight = SHORT(charfg->height);
 	INT16 bgwidth = SHORT(charbg->width);
 	INT16 fgwidth = SHORT(charfg->width);
-	INT32 y;
+	INT32 x, y;
+	INT32 w = (vid.width/vid.dupx);
 
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
@@ -8106,9 +8107,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		prev = -1;
 
 	// Find skin number from description[]
-	skinnum = getskinfromdescription(char_on);
-	if (skinnum != -1)
-		charskin = &skins[skinnum];
+	skinnum = description[char_on].skinnum[0];
+	charskin = &skins[skinnum];
 
 	// Use the opposite of the character's skincolor
 	col = description[char_on].oppositecolor;
@@ -8116,7 +8116,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		col = Color_Opposite[charskin->prefcolor - 1][0];
 
 	// Make the translation colormap
-	colormap = R_GetTranslationColormap(skinnum, col, 0);
+	colormap = R_GetTranslationColormap(TC_DEFAULT, col, 0);
 
 	// Don't render the title map
 	hidetitlemap = true;
@@ -8142,8 +8142,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// Character pictures
 	{
-		INT32 x = 8;
-		INT32 y = (my+16) - FixedInt(char_scroll);
+		x = 8;
+		y = (my+16) - FixedInt(char_scroll);
 		V_DrawScaledPatch(x, y, 0, description[char_on].charpic);
 		if (prev != -1)
 			V_DrawScaledPatch(x, y - 144, 0, description[prev].charpic);
@@ -8153,16 +8153,15 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// Character description
 	{
-		INT32 x = 146;
-		INT32 y = my + 9;
 		INT32 flags = V_ALLOWLOWERCASE|V_RETURN8;
+		x = 146;
+		y = my + 9;
 		V_DrawString(x, y, flags, char_notes);
 	}
 
 	// Name tags
 	{
-		INT32 ox, x, y;
-		INT32 oxsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(char_scroll, 128*FRACUNIT))), txsh;
+		INT32 ox, oxsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(char_scroll, 128*FRACUNIT))), txsh;
 		patch_t *curpatch = NULL, *prevpatch = NULL, *nextpatch = NULL;
 		const char *curtext = NULL, *prevtext = NULL, *nexttext = NULL;
 		UINT8 curtextcolor = 0, prevtextcolor = 0, nexttextcolor = 0;
@@ -8174,75 +8173,60 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		curoutlinecolor = description[char_on].tagoutlinecolor;
 		if (curtext[0] == '\0')
 			curpatch = description[char_on].namepic;
-		if (skinnum != -1)
-		{
-			if (!curtextcolor)
-				curtextcolor = charskin->prefcolor;
-			if (!curoutlinecolor)
-				curoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
-		}
-
-		// previous character
-		if (prev != -1)
-		{
-			prevtext = description[prev].displayname;
-			prevtextcolor = description[prev].tagtextcolor;
-			prevoutlinecolor = description[prev].tagoutlinecolor;
-			if (prevtext[0] == '\0')
-				prevpatch = description[prev].namepic;
-			// Find skin number from description[]
-			skinnum = getskinfromdescription(prev);
-			if (skinnum != -1)
-			{
-				charskin = &skins[skinnum];
-				if (!prevtextcolor)
-					prevtextcolor = charskin->prefcolor;
-				if (!prevoutlinecolor)
-					prevoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
-			}
-		}
-
-		// next character
-		if (next != -1)
-		{
-			nexttext = description[next].displayname;
-			nexttextcolor = description[next].tagtextcolor;
-			nextoutlinecolor = description[next].tagoutlinecolor;
-			if (nexttext[0] == '\0')
-				nextpatch = description[next].namepic;
-			// Find skin number from description[]
-			skinnum = getskinfromdescription(next);
-			if (skinnum != -1)
-			{
-				charskin = &skins[skinnum];
-				if (!nexttextcolor)
-					nexttextcolor = charskin->prefcolor;
-				if (!nextoutlinecolor)
-					nextoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
-			}
-		}
+		if (!curtextcolor)
+			curtextcolor = charskin->prefcolor;
+		if (!curoutlinecolor)
+			curoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
 
 		txsh = oxsh;
 		ox = 8 + SHORT((description[char_on].charpic)->width)/2;
 		y = my + 144;
+
+		// cur
+		{
+			x = ox - txsh;
+			if (curpatch)
+				x -= (SHORT(curpatch->width)/2);
+
+			if (curtext[0] != '\0')
+			{
+				V_DrawNameTag(
+					x, y, V_CENTERNAMETAG, FRACUNIT,
+					R_GetTranslationColormap(TC_DEFAULT, curtextcolor, 0),
+					R_GetTranslationColormap(TC_DEFAULT, curoutlinecolor, 0),
+					curtext
+				);
+			}
+			else if (curpatch)
+				V_DrawScaledPatch(x, y, 0, curpatch);
+		}
 
 		if (char_scroll)
 		{
 			// prev
 			if ((prev != -1) && char_scroll < 0)
 			{
-				INT32 ox2 = ox;
+				prevtext = description[prev].displayname;
+				prevtextcolor = description[prev].tagtextcolor;
+				prevoutlinecolor = description[prev].tagoutlinecolor;
+				if (prevtext[0] == '\0')
+					prevpatch = description[prev].namepic;
+				charskin = &skins[description[prev].skinnum[0]];
+				if (!prevtextcolor)
+					prevtextcolor = charskin->prefcolor;
+				if (!prevoutlinecolor)
+					prevoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
+
+				x = (ox - txsh) - w;
 				if (prevpatch)
-					ox2 -= (SHORT(prevpatch->width)/2);
-				// Why does this work?
-				x = (ox2 - txsh) - BASEVIDWIDTH;
+					x -= (SHORT(prevpatch->width)/2);
+
 				if (prevtext[0] != '\0')
 				{
-					skinnum = getskinfromdescription(prev);
 					V_DrawNameTag(
 						x, y, V_CENTERNAMETAG, FRACUNIT,
-						R_GetTranslationColormap(skinnum, prevtextcolor, 0),
-						R_GetTranslationColormap(skinnum, prevoutlinecolor, 0),
+						R_GetTranslationColormap(TC_DEFAULT, prevtextcolor, 0),
+						R_GetTranslationColormap(TC_DEFAULT, prevoutlinecolor, 0),
 						prevtext
 					);
 				}
@@ -8252,47 +8236,33 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			// next
 			else if ((next != -1) && char_scroll > 0)
 			{
-				INT32 ox2 = ox;
-				if (nextpatch)
-					ox2 -= (SHORT(nextpatch->width)/2);
-				x = (ox2 - txsh) + BASEVIDWIDTH;
-				if (x < BASEVIDWIDTH)
-				{
-					if (nexttext[0] != '\0')
-					{
-						skinnum = getskinfromdescription(next);
-						V_DrawNameTag(
-							x, y, V_CENTERNAMETAG, FRACUNIT,
-							R_GetTranslationColormap(skinnum, nexttextcolor, 0),
-							R_GetTranslationColormap(skinnum, nextoutlinecolor, 0),
-							nexttext
-						);
-					}
-					else if (nextpatch)
-						V_DrawScaledPatch(x, y, 0, nextpatch);
-				}
-			}
-		}
+				nexttext = description[next].displayname;
+				nexttextcolor = description[next].tagtextcolor;
+				nextoutlinecolor = description[next].tagoutlinecolor;
+				if (nexttext[0] == '\0')
+					nextpatch = description[next].namepic;
+				charskin = &skins[description[next].skinnum[0]];
+				if (!nexttextcolor)
+					nexttextcolor = charskin->prefcolor;
+				if (!nextoutlinecolor)
+					nextoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
 
-		// cur
-		skinnum = getskinfromdescription(next);
-		if (skinnum != -1)
-		{
-			INT32 ox2 = ox;
-			if (curpatch)
-				ox2 -= (SHORT(curpatch->width)/2);
-			x = ox2 - txsh;
-			if (curtext[0] != '\0')
-			{
-				V_DrawNameTag(
-					x, y, V_CENTERNAMETAG, FRACUNIT,
-					R_GetTranslationColormap(skinnum, curtextcolor, 0),
-					R_GetTranslationColormap(skinnum, curoutlinecolor, 0),
-					curtext
-				);
+				x = (ox - txsh) + w;
+				if (nextpatch)
+					x -= (SHORT(nextpatch->width)/2);
+
+				if (nexttext[0] != '\0')
+				{
+					V_DrawNameTag(
+						x, y, V_CENTERNAMETAG, FRACUNIT,
+						R_GetTranslationColormap(TC_DEFAULT, nexttextcolor, 0),
+						R_GetTranslationColormap(TC_DEFAULT, nextoutlinecolor, 0),
+						nexttext
+					);
+				}
+				else if (nextpatch)
+					V_DrawScaledPatch(x, y, 0, nextpatch);
 			}
-			else if (curpatch)
-				V_DrawScaledPatch(x, y, 0, curpatch);
 		}
 	}
 
@@ -8312,8 +8282,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 // Chose the player you want to use Tails 03-02-2002
 static void M_ChoosePlayer(INT32 choice)
 {
-	char *skin1,*skin2;
-	INT32 skinnum;
 	boolean ultmode = (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
 
 	// skip this if forcecharacter or no characters available
@@ -8327,21 +8295,14 @@ static void M_ChoosePlayer(INT32 choice)
 	}
 	M_ClearMenus(true);
 
-	skin1 = strtok(description[choice].skinname, "&");
-	skin2 = strtok(NULL, "&");
-
-	if (skin2) {
+	if (description[choice].skinnum[1] != -1) {
 		// this character has a second skin
-		skinnum = R_SkinAvailable(skin1);
-		botskin = (UINT8)(R_SkinAvailable(skin2)+1);
 		botingame = true;
-
-		botcolor = skins[botskin-1].prefcolor;
-
-		// undo the strtok
-		description[choice].skinname[strlen(skin1)] = '&';
-	} else {
-		skinnum = R_SkinAvailable(description[choice].skinname);
+		botskin = (UINT8)(description[choice].skinnum[1]+1);
+		botcolor = skins[description[choice].skinnum[1]].prefcolor;
+	}
+	else
+	{
 		botingame = false;
 		botskin = 0;
 		botcolor = 0;
@@ -8353,7 +8314,7 @@ static void M_ChoosePlayer(INT32 choice)
 	//lastmapsaved = 0;
 	gamecomplete = false;
 
-	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), (UINT8)skinnum, false, fromlevelselect);
+	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), (UINT8)description[choice].skinnum[0], false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
 
 	if (levelselect.rows)

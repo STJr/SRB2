@@ -329,6 +329,7 @@ typedef struct
 
 	// new character select
 	char displayname[SKINNAMESIZE+1];
+	SINT8 skinnum[2];
 	UINT8 oppositecolor;
 	char nametag[8];
 	patch_t *namepic;
