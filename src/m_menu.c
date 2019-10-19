@@ -9820,6 +9820,12 @@ static void M_ServerOptions(INT32 choice)
 	}
 #endif
 
+	/* Disable fading because of different menu head. */
+	if (currentMenu == &OP_MainDef)/* from Options menu */
+		OP_ServerOptionsDef.menuid = MN_OP_MAIN + ( MN_OP_SERVER << 6 );
+	else/* from Multiplayer menu */
+		OP_ServerOptionsDef.menuid = MN_MP_MAIN + ( MN_MP_SERVER_OPTIONS << 6 );
+
 	OP_ServerOptionsDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&OP_ServerOptionsDef);
 }

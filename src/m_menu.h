@@ -63,6 +63,7 @@ typedef enum
 	MN_MP_CONNECT,
 	MN_MP_ROOM,
 	MN_MP_PLAYERSETUP, // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	MN_MP_SERVER_OPTIONS,
 
 	// Options
 	MN_OP_MAIN,
