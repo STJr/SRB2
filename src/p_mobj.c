@@ -7735,7 +7735,7 @@ void P_MobjThinker(mobj_t *mobj)
 						actualwork = work = FixedHypot(mobj->x-players[i].mo->x, mobj->y-players[i].mo->y);
 						if (player)
 						{
-							if (players[i].skin == 0 || players[i].skin == 3)
+							if (players[i].skin == 0 || players[i].skin == 5)
 								work = (2*work)/3;
 							if (work >= pdist)
 								continue;
@@ -7773,7 +7773,7 @@ void P_MobjThinker(mobj_t *mobj)
 						if (mobj->target != player->mo)
 							P_SetTarget(&mobj->target, player->mo);
 						targonground = (P_IsObjectOnGround(mobj->target) && (player->panim == PA_IDLE || player->panim == PA_WALK || player->panim == PA_RUN));
-						love = (player->skin == 0 || player->skin == 3);
+						love = (player->skin == 0 || player->skin == 5);
 
 						switch (stat)
 						{
@@ -10366,13 +10366,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_METALSONIC_BATTLE:
 		case MT_METALSONIC_RACE:
-			sc = 3;
+			sc = 5;
 			break;
 		case MT_FANG:
 			sc = 4;
 			break;
 		case MT_ROSY:
-			sc = 5;
+			sc = 3;
 			break;
 		case MT_CORK:
 			mobj->flags2 |= MF2_SUPERFIRE;
@@ -11560,7 +11560,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 	{
 		if (mariomode)
 			i = MT_TOAD; // don't remove on penalty of death
-		else if (!(netgame || multiplayer) && players[consoleplayer].skin == 5)
+		else if (!(netgame || multiplayer) && players[consoleplayer].skin == 3)
 			return; // no doubles
 	}
 
