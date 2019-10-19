@@ -9987,6 +9987,7 @@ static void M_HandleConnectIP(INT32 choice)
 
 	if (exitmenu)
 	{
+		currentMenu->lastOn = itemOn;
 		if (currentMenu->prevMenu)
 			M_SetupNextMenu (currentMenu->prevMenu);
 		else
