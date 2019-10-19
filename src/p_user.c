@@ -11342,7 +11342,7 @@ void P_PlayerThink(player_t *player)
 				if (player->mo->eflags & MFE_TOUCHWATER || player->powers[pw_flashing] > (flashingtics/4)*3)
 				{
 					diff = (player->mo->angle - player->drawangle);
-					factor = 32;
+					factor = 16;
 				}
 				else
 				{
@@ -11351,7 +11351,7 @@ void P_PlayerThink(player_t *player)
 				}
 #else
 				diff = (player->mo->angle - player->drawangle);
-				factor = 32;
+				factor = 16;
 #endif
 			}
 			else if (player->pflags & PF_STARTDASH)
