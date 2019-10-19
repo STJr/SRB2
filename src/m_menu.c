@@ -8267,7 +8267,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	}
 
 	// Alternative menu header
-#ifdef CHOOSEPLAYER_DRAWHEADER //
+#ifdef CHOOSEPLAYER_DRAWHEADER
 	{
 		patch_t *header = W_CachePatchName("M_PICKP", PU_CACHE);
 		INT32 xtitle = 146;

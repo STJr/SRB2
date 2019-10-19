@@ -24,8 +24,6 @@
 
 // Object place
 #include "m_cheat.h"
-boolean gameovermus;
-INT32 fadetogameovermus;
 
 tic_t leveltime;
 
