@@ -265,6 +265,10 @@ typedef struct
 	fixed_t friction;
 	fixed_t movefactor;
 
+	spritenum_t sprite;
+	UINT32 frame;
+	UINT8 sprite2;
+	UINT16 anim_duration;
 	INT32 tics;
 	statenum_t statenum;
 	UINT32 flags;
