@@ -3618,7 +3618,7 @@ static void P_NetUnArchiveThinkers(void)
 	{
 		executor_t *delay = NULL;
 		UINT32 mobjnum;
-		for (currentthinker = thlist[i].next; currentthinker != &thlist[i];
+		for (currentthinker = thlist[THINK_MAIN].next; currentthinker != &thlist[THINK_MAIN];
 		currentthinker = currentthinker->next)
 		{
 			if (currentthinker->function.acp1 != (actionf_p1)T_ExecutorDelay)
