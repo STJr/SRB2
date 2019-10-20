@@ -2462,7 +2462,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 	
 	if (raise->vars[9]) // Dynamically Sinking Platform^tm
 	{
-		tic_t shaketime = 10;
+#define shaketime 10
 		if (raise->vars[11] > shaketime) // State: moving
 		{
 			if (playeronme) // If player is standing on the platform, accelerate
@@ -2485,8 +2485,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 			if (playeronme || raise->vars[11])
 			{
 				active = true;
-				raise->vars[11]++;
-				if (raise->vars[11] > shaketime)
+				if (++raise->vars[11] > shaketime)
 				{
 					if (playeronme)
 						raise->vars[10] = FRACUNIT >> 5;
@@ -2494,9 +2493,14 @@ void T_RaiseSector(levelspecthink_t *raise)
 						raise->vars[10] = FRACUNIT << 1;
 				}
 				else
-					raise->vars[10] = 2*(shaketime/2 - raise->vars[11]) << FRACBITS;
+				{
+					raise->vars[10] = ((shaketime/2) - raise->vars[11]) << FRACBITS;
+					if (raise->vars[10] < -raise->vars[2]/2)
+						raise->vars[10] = -raise->vars[2]/2;
+				}
 			}
 		}
+#undef shaketime
 	}
 	else // Air bobbing platform (not a Dynamically Sinking Platform^tm)
 		active = playeronme;
@@ -2594,7 +2598,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 		else if (raise->vars[3] > origspeed)
 			raise->vars[3] = origspeed;
 	}
-	
+
 	raise->vars[3] += raise->vars[10];
 
 	res = T_MovePlane
