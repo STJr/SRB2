@@ -4546,12 +4546,10 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 			if (!(mapheaderinfo[mapnum]->typeoflevel & TOL_COOP))
 				return true;
 
-			if (mapvisited[mapnum]) // MV_MP
-				return true;
-
 			if (mapnum+1 == spstage_start)
 				return true;
 
+			return true;
 			/* FALLTHRU */
 		case LLM_RECORDATTACK:
 		case LLM_NIGHTSATTACK:
