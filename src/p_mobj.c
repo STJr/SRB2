@@ -1578,7 +1578,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 
 	// Goop has slower, reversed gravity
 	if (goopgravity)
-		gravityadd = -gravityadd/5;
+		gravityadd = -((gravityadd/5) + (gravityadd/8));
 
 	gravityadd = FixedMul(gravityadd, mo->scale);
 
@@ -2369,9 +2369,9 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 		return false;
 
 	if (((mo->z <= mo->subsector->sector->floorheight
-		&& !(mo->eflags & MFE_VERTICALFLIP) && (mo->subsector->sector->flags & SF_FLIPSPECIAL_FLOOR))
+		&& ((mo->subsector->sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & SF_FLIPSPECIAL_FLOOR))
 	|| (mo->z + mo->height >= mo->subsector->sector->ceilingheight
-		&& (mo->eflags & MFE_VERTICALFLIP) && (mo->subsector->sector->flags & SF_FLIPSPECIAL_CEILING)))
+		&& ((mo->subsector->sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & SF_FLIPSPECIAL_CEILING)))
 	&& (GETSECSPECIAL(mo->subsector->sector->special, 1) == 6
 	|| GETSECSPECIAL(mo->subsector->sector->special, 1) == 7))
 		return true;
@@ -3434,9 +3434,18 @@ void P_MobjCheckWater(mobj_t *mobj)
 			|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->ceilingz-mobj->waterbottom <= height>>1))
 			return;
 
-		if (!wasgroundpounding && (mobj->eflags & MFE_GOOWATER || wasingoo)) { // Decide what happens to your momentum when you enter/leave goopy water.
-			if (P_MobjFlip(mobj)*mobj->momz < 0) // You are entering the goo?
-				mobj->momz = FixedMul(mobj->momz, FixedDiv(2*FRACUNIT, 5*FRACUNIT)); // kill momentum significantly, to make the goo feel thick.
+		if (mobj->eflags & MFE_GOOWATER || wasingoo) { // Decide what happens to your momentum when you enter/leave goopy water.
+			if (P_MobjFlip(mobj)*mobj->momz > 0)
+			{
+				mobj->momz -= (mobj->momz/8); // cut momentum a little bit to prevent multiple bobs
+				//CONS_Printf("leaving\n");
+			}
+			else
+			{
+				if (!wasgroundpounding)
+					mobj->momz >>= 1; // kill momentum significantly, to make the goo feel thick.
+				//CONS_Printf("entering\n");
+			}
 		}
 		else if (wasinwater && P_MobjFlip(mobj)*mobj->momz > 0)
 			mobj->momz = FixedMul(mobj->momz, FixedDiv(780*FRACUNIT, 457*FRACUNIT)); // Give the mobj a little out-of-water boost.
@@ -7642,6 +7651,7 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_ROCKCRUMBLE16:
 			case MT_WOODDEBRIS:
 			case MT_BRICKDEBRIS:
+			case MT_BROKENROBOT:
 				if (mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)
 					&& mobj->state != &states[mobj->info->deathstate])
 				{
@@ -7705,6 +7715,237 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_FSGNA:
 				if (mobj->movedir)
 					mobj->angle += mobj->movedir;
+				break;
+			case MT_ROSY:
+				{
+					UINT8 i;
+					fixed_t pdist = 1700*mobj->scale, work, actualwork;
+					player_t *player = NULL;
+					statenum_t stat = (mobj->state-states);
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+						if (!players[i].mo)
+							continue;
+						if (players[i].bot)
+							continue;
+						if (!players[i].mo->health)
+							continue;
+						actualwork = work = FixedHypot(mobj->x-players[i].mo->x, mobj->y-players[i].mo->y);
+						if (player)
+						{
+							if (players[i].skin == 0 || players[i].skin == 3)
+								work = (2*work)/3;
+							if (work >= pdist)
+								continue;
+						}
+						pdist = actualwork;
+						player = &players[i];
+					}
+
+					if (stat == S_ROSY_JUMP || stat == S_ROSY_PAIN)
+					{
+						if (P_IsObjectOnGround(mobj))
+						{
+							mobj->momx = mobj->momy = 0;
+							if (player && mobj->cvmem < (-2*TICRATE))
+								stat = S_ROSY_UNHAPPY;
+							else
+								stat = S_ROSY_WALK;
+							P_SetMobjState(mobj, stat);
+						}
+						else if (P_MobjFlip(mobj)*mobj->momz < 0)
+							mobj->frame = mobj->state->frame+mobj->state->var1;
+					}
+
+					if (!player)
+					{
+						if ((stat < S_ROSY_IDLE1 || stat > S_ROSY_IDLE4) && stat != S_ROSY_JUMP)
+						{
+							mobj->momx = mobj->momy = 0;
+							P_SetMobjState(mobj, S_ROSY_IDLE1);
+						}
+					}
+					else
+					{
+						boolean dojump = false, targonground, love, makeheart = false;
+						if (mobj->target != player->mo)
+							P_SetTarget(&mobj->target, player->mo);
+						targonground = (P_IsObjectOnGround(mobj->target) && (player->panim == PA_IDLE || player->panim == PA_WALK || player->panim == PA_RUN));
+						love = (player->skin == 0 || player->skin == 3);
+
+						switch (stat)
+						{
+							case S_ROSY_IDLE1:
+							case S_ROSY_IDLE2:
+							case S_ROSY_IDLE3:
+							case S_ROSY_IDLE4:
+								dojump = true;
+								break;
+							case S_ROSY_JUMP:
+							case S_ROSY_PAIN:
+								// handled above
+								break;
+							case S_ROSY_WALK:
+								{
+									fixed_t x = mobj->x, y = mobj->y, z = mobj->z;
+									angle_t angletoplayer = R_PointToAngle2(x, y, mobj->target->x, mobj->target->y);
+									boolean allowed = P_TryMove(mobj, mobj->target->x, mobj->target->y, false);
+
+									P_UnsetThingPosition(mobj);
+									mobj->x = x;
+									mobj->y = y;
+									mobj->z = z;
+									P_SetThingPosition(mobj);
+
+									if (allowed)
+									{
+										fixed_t mom, max;
+										P_Thrust(mobj, angletoplayer, (3*FRACUNIT)>>1);
+										mom = FixedHypot(mobj->momx, mobj->momy);
+										max = pdist;
+										if ((--mobj->extravalue1) <= 0)
+										{
+											if (++mobj->frame > mobj->state->frame+mobj->state->var1)
+												mobj->frame = mobj->state->frame;
+											if (mom > 12*mobj->scale)
+												mobj->extravalue1 = 2;
+											else if (mom > 6*mobj->scale)
+												mobj->extravalue1 = 3;
+											else
+												mobj->extravalue1 = 4;
+										}
+										if (max < (mobj->radius + mobj->target->radius))
+										{
+											mobj->momx = mobj->target->player->cmomx;
+											mobj->momy = mobj->target->player->cmomy;
+											if ((mobj->cvmem > TICRATE && !player->exiting) || !targonground)
+												P_SetMobjState(mobj, (stat = S_ROSY_STND));
+											else
+											{
+												mobj->target->momx = mobj->momx;
+												mobj->target->momy = mobj->momy;
+												P_SetMobjState(mobj, (stat = S_ROSY_HUG));
+												S_StartSound(mobj, sfx_cdpcm6);
+												mobj->angle = angletoplayer;
+											}
+										}
+										else
+										{
+											max /= 3;
+											if (max > 30*mobj->scale)
+												max = 30*mobj->scale;
+											if (mom > max && max > mobj->scale)
+											{
+												max = FixedDiv(max, mom);
+												mobj->momx = FixedMul(mobj->momx, max);
+												mobj->momy = FixedMul(mobj->momy, max);
+											}
+											if (abs(mobj->momx) > mobj->scale || abs(mobj->momy) > mobj->scale)
+												mobj->angle = R_PointToAngle2(0, 0, mobj->momx, mobj->momy);
+										}
+									}
+									else
+										dojump = true;
+								}
+								break;
+							case S_ROSY_HUG:
+								if (targonground)
+								{
+									player->pflags |= PF_STASIS;
+									if (mobj->cvmem < 5*TICRATE)
+										mobj->cvmem++;
+									if (love && !(leveltime & 7))
+										makeheart = true;
+								}
+								else
+								{
+									if (mobj->cvmem < (love ? 5*TICRATE : 0))
+									{
+										P_SetMobjState(mobj, (stat = S_ROSY_PAIN));
+										S_StartSound(mobj, sfx_cdpcm7);
+									}
+									else
+										P_SetMobjState(mobj, (stat = S_ROSY_JUMP));
+									var1 = var2 = 0;
+									A_DoNPCPain(mobj);
+									mobj->cvmem -= TICRATE;
+								}
+								break;
+							case S_ROSY_STND:
+								if ((pdist > (mobj->radius + mobj->target->radius + 3*(mobj->scale + mobj->target->scale))))
+									P_SetMobjState(mobj, (stat = S_ROSY_WALK));
+								else if (!targonground)
+									;
+								else
+								{
+									if (love && !(leveltime & 15))
+										makeheart = true;
+									if (player->exiting || --mobj->cvmem < TICRATE)
+									{
+										P_SetMobjState(mobj, (stat = S_ROSY_HUG));
+										S_StartSound(mobj, sfx_cdpcm6);
+										mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+										mobj->target->momx = mobj->momx;
+										mobj->target->momy = mobj->momy;
+									}
+								}
+								break;
+							case S_ROSY_UNHAPPY:
+							default:
+								break;
+						}
+
+						if (stat == S_ROSY_HUG)
+						{
+							if (player->panim != PA_IDLE)
+								P_SetPlayerMobjState(mobj->target, S_PLAY_STND);
+							player->pflags |= PF_STASIS;
+						}
+
+						if (dojump)
+						{
+							P_SetMobjState(mobj, S_ROSY_JUMP);
+							mobj->z += P_MobjFlip(mobj);
+							mobj->momx = mobj->momy = 0;
+							P_SetObjectMomZ(mobj, 6<<FRACBITS, false);
+							S_StartSound(mobj, sfx_cdfm02);
+						}
+
+						if (makeheart)
+						{
+							mobj_t *cdlhrt = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_CDLHRT);
+							cdlhrt->destscale = (5*mobj->scale)>>4;
+							P_SetScale(cdlhrt, cdlhrt->destscale);
+							cdlhrt->fuse = (5*TICRATE)>>1;
+							cdlhrt->momz = mobj->scale;
+							P_SetTarget(&cdlhrt->target, mobj);
+							cdlhrt->extravalue1 = mobj->x;
+							cdlhrt->extravalue2 = mobj->y;
+						}
+					}
+				}
+				break;
+			case MT_CDLHRT:
+				{
+					if (mobj->cvmem < 24)
+						mobj->cvmem++;
+					mobj->movedir += ANG10;
+					P_UnsetThingPosition(mobj);
+					mobj->x = mobj->extravalue1 + P_ReturnThrustX(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
+					mobj->y = mobj->extravalue2 + P_ReturnThrustY(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
+					P_SetThingPosition(mobj);
+					if ((--mobj->fuse) < 6)
+					{
+						if (!mobj->fuse)
+						{
+							P_RemoveMobj(mobj);
+							return;
+						}
+						mobj->frame = (mobj->frame & ~FF_TRANSMASK)|((10-(mobj->fuse*2))<<(FF_TRANSSHIFT));
+					}
+				}
 				break;
 			case MT_VWREF:
 			case MT_VWREB:
@@ -10130,6 +10371,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_FANG:
 			sc = 4;
 			break;
+		case MT_ROSY:
+			sc = 5;
+			break;
 		case MT_CORK:
 			mobj->flags2 |= MF2_SUPERFIRE;
 			break;
@@ -10145,6 +10389,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			}
 		case MT_TNTBARREL:
 			mobj->momx = 1; //stack hack
+			mobj->flags2 |= MF2_INVERTAIMABLE;
 			break;
 		case MT_MINECARTEND:
 			P_SetTarget(&mobj->tracer, P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID));
@@ -10478,7 +10723,7 @@ void P_SpawnPrecipitation(void)
 		if (curWeather == PRECIP_SNOW)
 		{
 			// Not in a sector with visible sky -- exception for NiGHTS.
-			if (!(maptol & TOL_NIGHTS) && precipsector->sector->ceilingpic != skyflatnum)
+			if ((!(maptol & TOL_NIGHTS) && (precipsector->sector->ceilingpic != skyflatnum)) == !(precipsector->sector->flags & SF_INVERTPRECIP))
 				continue;
 
 			rainmo = P_SpawnSnowMobj(x, y, height, MT_SNOWFLAKE);
@@ -10491,7 +10736,7 @@ void P_SpawnPrecipitation(void)
 		else // everything else.
 		{
 			// Not in a sector with visible sky.
-			if (precipsector->sector->ceilingpic != skyflatnum)
+			if ((precipsector->sector->ceilingpic != skyflatnum) == !(precipsector->sector->flags & SF_INVERTPRECIP))
 				continue;
 
 			rainmo = P_SpawnRainMobj(x, y, height, MT_RAIN);
@@ -11311,6 +11556,16 @@ You should think about modifying the deathmatch starts to take full advantage of
 		// They're likely facets of the level's design and therefore required to progress.
 	}
 
+	if (i == MT_ROSY)
+	{
+		if (!(gametype == GT_COOP || (mthing->options & MTF_EXTRA)))
+			return; // she doesn't hang out here
+		else if (mariomode)
+			i = MT_TOAD; // don't remove on penalty of death
+		else if (!(netgame || multiplayer) && players[consoleplayer].skin == 5)
+			return; // no doubles
+	}
+
 	if (i == MT_TOKEN && ((gametype != GT_COOP && gametype != GT_COMPETITION) || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
@@ -11524,9 +11779,10 @@ You should think about modifying the deathmatch starts to take full advantage of
 		else
 			mobj->health = FixedMul(ss->sector->ceilingheight-ss->sector->floorheight, 3*(FRACUNIT/4))>>FRACBITS;
 		break;
-	case MT_FANG:
 	case MT_METALSONIC_RACE:
 	case MT_METALSONIC_BATTLE:
+	case MT_FANG:
+	case MT_ROSY:
 		if (mthing->options & MTF_EXTRA)
 		{
 			mobj->color = SKINCOLOR_SILVER;
@@ -12428,7 +12684,7 @@ ML_EFFECT5 : Don't stop thinking when too far away
 	{
 		if (mthing->options & MTF_AMBUSH)
 		{
-			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
+			if (i == MT_YELLOWDIAG || i == MT_REDDIAG || i == MT_BLUEDIAG)
 				mobj->angle += ANGLE_22h;
 
 			if (i == MT_YELLOWHORIZ || i == MT_REDHORIZ || i == MT_BLUEHORIZ)
@@ -12467,7 +12723,7 @@ ML_EFFECT5 : Don't stop thinking when too far away
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
-			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
+			if (i == MT_YELLOWDIAG || i == MT_REDDIAG || i == MT_BLUEDIAG)
 				mobj->flags |= MF_NOGRAVITY;
 
 			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)

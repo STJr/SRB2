@@ -898,7 +898,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	if (player->mo->target)
 	{
 		player->angle_pos = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
-		player->drawangle = player->mo->angle = player->angle_pos
+		player->drawangle = player->angle_pos
 			+ ((player->mo->target->flags2 & MF2_AMBUSH) ? // if axis is invert, take the opposite right angle
 				-ANGLE_90 : ANGLE_90); // flyangle is always 0 here, below is kept for posterity
 				/*(player->flyangle > 90 && player->flyangle < 270 ? ANGLE_90 : -ANGLE_90)
@@ -2260,7 +2260,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				else if (!player->skidtime)
 					player->pflags &= ~PF_GLIDING;
 			}
-			else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+			else if (player->charability2 == CA2_MELEE && ((player->panim == PA_ABILITY2) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 			{
 				if (player->mo->state-states != S_PLAY_MELEE_LANDING)
 				{
@@ -4674,8 +4674,9 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						if (player->speed < FixedMul(player->maxdash, player->mo->scale))
 #endif
 						{
-							player->drawangle = player->mo->angle;
-							P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));
+							if (player->panim == PA_IDLE)
+								player->drawangle = player->mo->angle;
+							P_InstaThrust(player->mo, player->drawangle, FixedMul(player->maxdash, player->mo->scale));
 						}
 						player->mo->momx += player->cmomx;
 						player->mo->momy += player->cmomy;
@@ -5873,35 +5874,28 @@ static void P_3dMovement(player_t *player)
 		else
 			topspeed = normalspd;
 	}
-	else if (player->powers[pw_super] || player->powers[pw_sneakers])
-	{
-		thrustfactor = player->thrustfactor*2;
-		acceleration = player->accelstart/2 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/2;
-
-		if (player->powers[pw_tailsfly])
-			topspeed = normalspd;
-		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
-		{
-			topspeed = normalspd;
-			acceleration = 2*acceleration/3;
-		}
-		else
-			topspeed = normalspd * 2;
-	}
 	else
 	{
-		thrustfactor = player->thrustfactor;
-		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
-
-		if (player->powers[pw_tailsfly])
-			topspeed = normalspd/2;
-		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
+		if (player->powers[pw_super] || player->powers[pw_sneakers])
 		{
-			topspeed = normalspd/2;
-			acceleration = 2*acceleration/3;
+			topspeed = 5 * normalspd / 3; // 1.67x
+			thrustfactor = player->thrustfactor*2;
+			acceleration = player->accelstart/2 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/2;
 		}
 		else
+		{
 			topspeed = normalspd;
+			thrustfactor = player->thrustfactor;
+			acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
+		}
+
+		if (player->powers[pw_tailsfly])
+			topspeed >>= 1;
+		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
+		{
+			topspeed >>= 1;
+			acceleration = 2*acceleration/3;
+		}
 	}
 
 	if (spin) // Prevent gaining speed whilst rolling!
@@ -8892,7 +8886,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 			continue;
 
 		if (mo->type == MT_MINUS && !(mo->flags & (MF_SPECIAL|MF_SHOOTABLE)))
-			mo->flags |= MF_SPECIAL|MF_SHOOTABLE;
+			mo->flags = (mo->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
 
 		if (mo->type == MT_EGGGUARD && mo->tracer) //nuke Egg Guard's shield!
 			P_KillMobj(mo->tracer, inflictor, source, DMG_NUKE);
@@ -10291,7 +10285,7 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 		ffloor_t *rover;
 		for (rover = sec->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS))
+			if (!(rover->flags & (FF_EXISTS|FF_BLOCKOTHERS)))
 				continue;
 
 			*nz = *rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;

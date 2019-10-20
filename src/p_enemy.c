@@ -5351,20 +5351,22 @@ static mobj_t *minus;
 
 static boolean PIT_MinusCarry(mobj_t *thing)
 {
+	if (minus->tracer)
+		return true;
+
 	if (minus->type == thing->type)
 		return true;
 
-	if (!(thing->flags & MF_SHOOTABLE) || !(thing->flags & MF_ENEMY))
+	if (!(thing->flags & (MF_PUSHABLE|MF_ENEMY)))
 		return true;
 
-	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius * 3)
+	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius*3)
 		return true;
 
 	if (abs(thing->z - minus->z) > minus->height)
 		return true;
 
 	P_SetTarget(&minus->tracer, thing);
-	minus->tracer->flags &= ~MF_PUSHABLE;
 
 	return true;
 }
@@ -5428,6 +5430,9 @@ void A_MinusDigging(mobj_t *actor)
 	A_Chase(actor);
 
 	// Carry over shit, maybe
+	if (P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		P_SetTarget(&actor->tracer, NULL);
+
 	if (!actor->tracer)
 	{
 		fixed_t radius = 3*actor->radius;
@@ -5477,7 +5482,6 @@ void A_MinusPopup(mobj_t *actor)
 	else
 		actor->momz = 10*FRACUNIT;
 
-	actor->flags |= MF_SPECIAL|MF_SHOOTABLE;
 	S_StartSound(actor, sfx_s3k82);
 	for (i = 1; i <= num; i++)
 	{
@@ -5490,6 +5494,7 @@ void A_MinusPopup(mobj_t *actor)
 	if (actor->tracer)
 		P_DamageMobj(actor->tracer, actor, actor, 1, 0);
 
+	actor->flags = (actor->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
 }
 
 // Function: A_MinusCheck
@@ -12248,7 +12253,6 @@ void A_ConnectToGround(mobj_t *actor)
 	mobj_t *work;
 	fixed_t workz;
 	fixed_t workh;
-	SINT8 dir;
 	angle_t ang;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
@@ -12262,23 +12266,17 @@ void A_ConnectToGround(mobj_t *actor)
 		P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
 
 	if (actor->flags2 & MF2_OBJECTFLIP)
-	{
-		workz = actor->ceilingz - (actor->z + actor->height);
-		dir = -1;
-	}
+		workz = (actor->z + actor->height) - actor->ceilingz;
 	else
-	{
 		workz = actor->floorz - actor->z;
-		dir = 1;
-	}
 
 	if (locvar2)
 	{
 		workh = FixedMul(mobjinfo[locvar2].height, actor->scale);
 		if (actor->flags2 & MF2_OBJECTFLIP)
-			workz -= workh;
+			workz += workh;
 		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar2);
-		workz += dir*workh;
+		workz += workh;
 	}
 
 	if (!locvar1)
@@ -12287,21 +12285,18 @@ void A_ConnectToGround(mobj_t *actor)
 	if (!(workh = FixedMul(mobjinfo[locvar1].height, actor->scale)))
 		return;
 
-	if (actor->flags2 & MF2_OBJECTFLIP)
-		workz -= workh;
-
 	ang = actor->angle + ANGLE_45;
-	while (dir*workz < 0)
+	while (workz < 0)
 	{
 		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar1);
 		if (work)
 			work->angle = ang;
 		ang += ANGLE_90;
-		workz += dir*workh;
+		workz += workh;
 	}
 
 	if (workz != 0)
-		actor->z += workz;
+		actor->z += P_MobjFlip(actor)*workz;
 }
 
 // Function: A_SpawnParticleRelative
@@ -13466,6 +13461,13 @@ void A_TNTExplode(mobj_t *actor)
 	if (LUA_CallAction("A_TNTExplode", actor))
 		return;
 #endif
+
+	if (actor->tracer)
+	{
+		P_SetTarget(&actor->tracer->tracer, NULL);
+		P_SetTarget(&actor->tracer, NULL);
+	}
+
 	P_UnsetThingPosition(actor);
 	if (sector_list)
 	{
@@ -13679,8 +13681,6 @@ void A_KillSegments(mobj_t *actor)
 static void P_SnapperLegPlace(mobj_t *mo)
 {
 	mobj_t *seg = mo->tracer;
-	fixed_t x0 = mo->x;
-	fixed_t y0 = mo->y;
 	angle_t a = mo->angle;
 	angle_t fa = (a >> ANGLETOFINESHIFT) & FINEMASK;
 	fixed_t c = FINECOSINE(fa);
@@ -13695,7 +13695,8 @@ static void P_SnapperLegPlace(mobj_t *mo)
 	fixed_t rad = mo->radius;
 	INT32 necklen = (32*(mo->info->reactiontime - mo->reactiontime))/mo->info->reactiontime; // Not in FU
 
-	P_TeleportMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, mo->z + mo->height/3);
+	seg->z = mo->z + ((mo->eflags & MFE_VERTICALFLIP) ? (((mo->height<<1)/3) - seg->height) : mo->height/3);
+	P_TryMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, true);
 	seg->angle = a;
 
 	// Move as many legs as available.
@@ -13715,13 +13716,14 @@ static void P_SnapperLegPlace(mobj_t *mo)
 		{
 			x = c*o2 + s*o1;
 			y = s*o2 - c*o1;
-			P_TryMove(seg, x0 + x, y0 + y, true);
+			seg->z = mo->z + (((mo->eflags & MFE_VERTICALFLIP) ? (mo->height - seg->height) : 0));
+			P_TryMove(seg, mo->x + x, mo->y + y, true);
 			P_SetMobjState(seg, seg->info->raisestate);
 		}
 		else
 			P_SetMobjState(seg, seg->info->spawnstate);
 
-		seg->angle = R_PointToAngle2(x0, y0, seg->x, seg->y);
+		seg->angle = R_PointToAngle2(mo->x, mo->y, seg->x, seg->y);
 
 		seg = seg->tracer;
 	} while (seg);
@@ -13749,14 +13751,14 @@ void A_SnapperSpawn(mobj_t *actor)
 #endif
 
 	// It spawns 1 head.
-	seg = P_SpawnMobj(actor->x, actor->y, actor->z, headtype);
+	seg = P_SpawnMobjFromMobj(actor, 0, 0, 0, headtype);
 	P_SetTarget(&ptr->tracer, seg);
 	ptr = seg;
 
 	// It spawns 4 legs which will be handled in the thinker function.
 	for (i = 1; i <= 4; i++)
 	{
-		seg = P_SpawnMobj(actor->x, actor->y, actor->z, legtype);
+		seg = P_SpawnMobjFromMobj(actor, 0, 0, 0, legtype);
 		P_SetTarget(&ptr->tracer, seg);
 		ptr = seg;
 
@@ -13904,51 +13906,43 @@ void A_SnapperThinker(mobj_t *actor)
 //
 // Description: Spawns a saloon door.
 //
-// var1 = unused
-// var2 = unused
+// var1 = mobjtype for sides
+// var2 = distance sides should be placed apart
 //
 void A_SaloonDoorSpawn(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 	angle_t ang = actor->angle;
 	angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
-	fixed_t c = FINECOSINE(fa);
-	fixed_t s = FINESINE(fa);
-	INT32 d = 48;
-	fixed_t x = actor->x;
-	fixed_t y = actor->y;
-	fixed_t z = actor->z;
+	fixed_t c = FINECOSINE(fa)*locvar2;
+	fixed_t s = FINESINE(fa)*locvar2;
 	mobj_t *door;
+	mobjflag2_t ambush = (actor->flags & MF2_AMBUSH);
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SaloonDoorSpawn", actor))
 		return;
 #endif
 
-	//Front
-	door = P_SpawnMobj(x + c*d, y + s*d, z, MT_SALOONDOOR);
+	if (!locvar1)
+		return;
+
+	// One door...
+	if (!(door = P_SpawnMobjFromMobj(actor, c, s, 0, locvar1))) return;
 	door->angle = ang + ANGLE_180;
+	door->extravalue1 = AngleFixed(door->angle); // Origin angle
+	door->extravalue2 = 0; // Angular speed
+	P_SetTarget(&door->tracer, actor); // Origin door
+	door->flags2 |= ambush; // Can be opened by normal players?
 
-	// Origin angle
-	door->extravalue1 = AngleFixed(door->angle);
-
-	// Angular speed
-	door->extravalue2 = 0;
-
-	// Origin door
-	P_SetTarget(&door->tracer, actor);
-
-	//Back
-	door = P_SpawnMobj(x - c*d, y - s*d, z, MT_SALOONDOOR);
+	// ...two door!
+	if (!(door = P_SpawnMobjFromMobj(actor, -c, -s, 0, locvar1))) return;
 	door->angle = ang;
-
-	// Origin angle
-	door->extravalue1 = AngleFixed(door->angle);
-
-	// Angular speed
-	door->extravalue2 = 0;
-
-	// Origin door
-	P_SetTarget(&door->tracer, actor);
+	door->extravalue1 = AngleFixed(door->angle); // Origin angle
+	door->extravalue2 = 0; // Angular speed
+	P_SetTarget(&door->tracer, actor); // Origin door
+	door->flags2 |= ambush; // Can be opened by normal players?
 }
 
 // Function: A_MinecartSparkThink
@@ -14200,7 +14194,7 @@ void A_RolloutSpawn(mobj_t *actor)
 		actor->target = P_SpawnMobj(actor->x, actor->y, actor->z, locvar2);
 		actor->target->flags2 |= (actor->flags2 & (MF2_AMBUSH | MF2_OBJECTFLIP)) | MF2_SLIDEPUSH;
 		actor->target->eflags |= (actor->eflags & MFE_VERTICALFLIP);
-		
+
 		if (actor->target->flags2 & MF2_AMBUSH)
 		{
 			actor->target->color = SKINCOLOR_SUPERRUST3;
@@ -14220,19 +14214,21 @@ void A_RolloutRock(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_RolloutRock", actor))
-		return;
-#endif
-
 	UINT8 maxframes = actor->info->reactiontime; // number of frames the mobj cycles through
 	fixed_t pi = (22*FRACUNIT/7);
 	fixed_t circumference = FixedMul(2 * pi, actor->radius); // used to calculate when to change frame
 	fixed_t speed = P_AproxDistance(actor->momx, actor->momy), topspeed = FixedMul(actor->info->speed, actor->scale);
 	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
 
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_RolloutRock", actor))
+		return;
+#endif
+
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
+
+	if (actor->threshold)
+		actor->threshold--;
 
 	if (inwater && !(actor->flags2 & MF2_AMBUSH)) // buoyancy in water (or lava)
 	{
@@ -14240,17 +14236,13 @@ void A_RolloutRock(mobj_t *actor)
 		fixed_t prevmomz = actor->momz;
 		actor->momz = FixedMul(actor->momz, locvar2);
 		actor->momz += flip * FixedMul(locvar2, actor->scale);
-		if (actor->threshold)
-			actor->threshold--;
-		if (flip*prevmomz < 0 && flip*actor->momz >= 0)
+		if (flip*prevmomz < 0 && flip*actor->momz >= 0 && !actor->threshold)
 		{
 			if (actor->eflags & MFE_UNDERWATER)
 				S_StartSound(actor, sfx_splash);
 			else if (!actor->threshold)
-			{
 				S_StartSound(actor, sfx_splish);
-				actor->threshold = max((topspeed - speed) >> FRACBITS, 0);
-			}
+			actor->threshold = max((topspeed - speed) >> FRACBITS, 8);
 		}
 	}
 
@@ -14259,7 +14251,7 @@ void A_RolloutRock(mobj_t *actor)
 		actor->momx = FixedMul(FixedDiv(actor->momx, speed), topspeed);
 		actor->momy = FixedMul(FixedDiv(actor->momy, speed), topspeed);
 	}
-	
+
 	if (P_IsObjectOnGround(actor) || inwater) // apply drag to speed (compensates for lack of friction but also works in liquids)
 	{
 		actor->momx = FixedMul(actor->momx, locvar1);
@@ -14287,13 +14279,13 @@ void A_RolloutRock(mobj_t *actor)
 	}
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
-	
+
 	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
 		actor->fuse = 0;
 	else if (!actor->fuse && actor->movecount == 1) // otherwise if rock has moved, set its fuse
 		actor->fuse = actor->info->painchance;
-	
+
 	if (actor->fuse && actor->fuse < 2*TICRATE)
 		actor->flags2 ^= MF2_DONTDRAW;
-		
+
 }

@@ -5885,7 +5885,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Saloon door
 	"S_SALOONDOOR",
-	"S_SALOONDOORTHINKER",
+	"S_SALOONDOORCENTER",
 
 	// Train cameo
 	"S_TRAINCAMEOSPAWNER_1",
@@ -5991,6 +5991,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LAMPPOST1",  // normal
 	"S_LAMPPOST2",  // with snow
 	"S_HANGSTAR",
+	"S_MISTLETOE",
 	// Xmas GFZ bushes
 	"S_XMASBLUEBERRYBUSH",
 	"S_XMASBERRYBUSH",
@@ -5998,6 +5999,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// FHZ
 	"S_FHZICE1",
 	"S_FHZICE2",
+	"S_ROSY_IDLE1",
+	"S_ROSY_IDLE2",
+	"S_ROSY_IDLE3",
+	"S_ROSY_IDLE4",
+	"S_ROSY_JUMP",
+	"S_ROSY_WALK",
+	"S_ROSY_HUG",
+	"S_ROSY_PAIN",
+	"S_ROSY_STND",
+	"S_ROSY_UNHAPPY",
 
 	// Halloween Scenery
 	// Pumpkins
@@ -7655,7 +7666,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MINECARTSIDEMARK",
 	"MT_MINECARTSPARK",
 	"MT_SALOONDOOR",
-	"MT_SALOONDOORTHINKER",
+	"MT_SALOONDOORCENTER",
 	"MT_TRAINCAMEOSPAWNER",
 	"MT_TRAINSEG",
 	"MT_TRAINDUSTSPAWNER",
@@ -7717,6 +7728,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LAMPPOST1",  // normal
 	"MT_LAMPPOST2",  // with snow
 	"MT_HANGSTAR",
+	"MT_MISTLETOE",
 	// Xmas GFZ bushes
 	"MT_XMASBLUEBERRYBUSH",
 	"MT_XMASBERRYBUSH",
@@ -7724,6 +7736,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// FHZ
 	"MT_FHZICE1",
 	"MT_FHZICE2",
+	"MT_ROSY",
+	"MT_CDLHRT",
 
 	// Halloween Scenery
 	// Pumpkins

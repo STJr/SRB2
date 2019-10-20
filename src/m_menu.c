@@ -247,6 +247,7 @@ menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
 // Single Player
 static void M_StartTutorial(INT32 choice);
 static void M_LoadGame(INT32 choice);
+static void M_HandleTimeAttackLevelSelect(INT32 choice);
 static void M_TimeAttackLevelSelect(INT32 choice);
 static void M_TimeAttack(INT32 choice);
 static void M_NightsAttackLevelSelect(INT32 choice);
@@ -743,7 +744,7 @@ static menuitem_t SP_TimeAttackLevelSelectMenu[] =
 // Single Player Time Attack
 static menuitem_t SP_TimeAttackMenu[] =
 {
-	{IT_STRING|IT_CALL,        NULL, "Level Select...", &M_TimeAttackLevelSelect,   52},
+	{IT_STRING|IT_KEYHANDLER,  NULL, "Level Select...", M_HandleTimeAttackLevelSelect,   52},
 	{IT_STRING|IT_CVAR,        NULL, "Character",       &cv_chooseskin,             62},
 
 	{IT_DISABLED,              NULL, "Guest Option...", &SP_GuestReplayDef, 100},
@@ -1224,7 +1225,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_HEADER, NULL, "Level", NULL, 155},
 	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        161},
 	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 166},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS mode Draw Dist.",    &cv_drawdist_nights, 171},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 171},
 
 	{IT_HEADER, NULL, "Diagnostic", NULL, 180},
 	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         186},
@@ -4894,13 +4895,25 @@ static void M_HandleLevelPlatter(INT32 choice)
 {
 	boolean exitmenu = false;  // exit to previous menu
 	INT32 selectval;
+	UINT8 iter;
 
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
+			if (lsrow == levelselect.numrows-1)
+			{
+				if (levelselect.numrows < 3)
+				{
+					if (!lsoffs[0]) // prevent sound spam
+					{
+						lsoffs[0] = -8;
+						S_StartSound(NULL,sfx_s3kb7);
+					}
+					return;
+				}
+				lsrow = UINT8_MAX;
+			}
 			lsrow++;
-			if (lsrow == levelselect.numrows)
-				lsrow = 0;
 
 			lsoffs[0] = lsvseperation(lsrow);
 
@@ -4914,17 +4927,29 @@ static void M_HandleLevelPlatter(INT32 choice)
 			break;
 
 		case KEY_UPARROW:
-			lsoffs[0] = -lsvseperation(lsrow);
-
+			iter = lsrow;
+			if (!lsrow)
+			{
+				if (levelselect.numrows < 3)
+				{
+					if (!lsoffs[0]) // prevent sound spam
+					{
+						lsoffs[0] = 8;
+						S_StartSound(NULL,sfx_s3kb7);
+					}
+					return;
+				}
+				lsrow = levelselect.numrows;
+			}
 			lsrow--;
-			if (lsrow == UINT8_MAX)
-				lsrow = levelselect.numrows-1;
+
+			lsoffs[0] = -lsvseperation(iter);
 
 			if (levelselect.rows[lsrow].header[0])
 				lshli = lsrow;
 			else
 			{
-				UINT8 iter = lsrow;
+				iter = lsrow;
 				do
 					iter = ((iter == 0) ? levelselect.numrows-1 : iter-1);
 				while ((iter != lsrow) && !(levelselect.rows[iter].header[0]));
@@ -4957,7 +4982,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 						M_LevelSelectWarp(0);
 					Nextmap_OnChange();
 				}
-				else if (!lsoffs[0]) //  prevent sound spam
+				else if (!lsoffs[0]) // prevent sound spam
 				{
 					lsoffs[0] = -8;
 					S_StartSound(NULL,sfx_s3kb2);
@@ -4987,7 +5012,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			}
-			else if (!lsoffs[1]) //  prevent sound spam
+			else if (!lsoffs[1]) // prevent sound spam
 			{
 				lsoffs[1] = 8;
 				S_StartSound(NULL,sfx_s3kb7);
@@ -5016,7 +5041,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			}
-			else if (!lsoffs[1]) //  prevent sound spam
+			else if (!lsoffs[1]) // prevent sound spam
 			{
 				lsoffs[1] = -8;
 				S_StartSound(NULL,sfx_s3kb7);
@@ -5187,7 +5212,13 @@ static void M_DrawLevelPlatterMenu(void)
 	// finds row at top of the screen
 	while (y > -8)
 	{
-		iter = ((iter == 0) ? levelselect.numrows-1 : iter-1);
+		if (iter == 0)
+		{
+			if (levelselect.numrows < 3)
+				break;
+			iter = levelselect.numrows;
+		}
+		iter--;
 		y -= lsvseperation(iter);
 	}
 
@@ -5196,7 +5227,13 @@ static void M_DrawLevelPlatterMenu(void)
 	{
 		M_DrawLevelPlatterRow(iter, y);
 		y += lsvseperation(iter);
-		iter = ((iter == levelselect.numrows-1) ? 0 : iter+1);
+		if (iter == levelselect.numrows-1)
+		{
+			if (levelselect.numrows < 3)
+				break;
+			iter = UINT8_MAX;
+		}
+		iter++;
 	}
 
 	// draw cursor box
@@ -8330,7 +8367,18 @@ void M_DrawTimeAttackMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
 
-		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
+		y = 32+lsheadingheight;
+		V_DrawSmallScaledPatch(208, y, 0, PictureOfLevel);
+
+		if (itemOn == talevel)
+		{
+			/* Draw arrows !! */
+			y = y + 25 - 4;
+			V_DrawCharacter(208 - 10 - (skullAnimCounter/5), y,
+					'\x1C' | V_YELLOWMAP, false);
+			V_DrawCharacter(208 + 80 + 2 + (skullAnimCounter/5), y,
+					'\x1D' | V_YELLOWMAP, false);
+		}
 
 		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
 
@@ -8398,6 +8446,39 @@ void M_DrawTimeAttackMenu(void)
 		V_DrawString(x, y + SP_TimeAttackMenu[taplayer].alphaKey, V_TRANSLUCENT, SP_TimeAttackMenu[taplayer].text);
 		V_DrawString(BASEVIDWIDTH - x - V_StringWidth(ncv->string, 0), y + SP_TimeAttackMenu[taplayer].alphaKey, V_YELLOWMAP|V_TRANSLUCENT, ncv->string);
 	}
+}
+
+static void M_HandleTimeAttackLevelSelect(INT32 choice)
+{
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			M_NextOpt();
+			break;
+		case KEY_UPARROW:
+			M_PrevOpt();
+			break;
+
+		case KEY_LEFTARROW:
+			CV_AddValue(&cv_nextmap, -1);
+			break;
+		case KEY_RIGHTARROW:
+			CV_AddValue(&cv_nextmap, 1);
+			break;
+
+		case KEY_ENTER:
+			M_TimeAttackLevelSelect(0);
+			break;
+
+		case KEY_ESCAPE:
+			noFurtherInput = true;
+			M_GoBack(0);
+			return;
+
+		default:
+			return;
+	}
+	S_StartSound(NULL, sfx_menu1);
 }
 
 static void M_TimeAttackLevelSelect(INT32 choice)
