@@ -11558,7 +11558,9 @@ You should think about modifying the deathmatch starts to take full advantage of
 
 	if (i == MT_ROSY)
 	{
-		if (mariomode)
+		if (!(gametype == GT_COOP || (mthing->options & MTF_EXTRA)))
+			return; // she doesn't hang out here
+		else if (mariomode)
 			i = MT_TOAD; // don't remove on penalty of death
 		else if (!(netgame || multiplayer) && players[consoleplayer].skin == 5)
 			return; // no doubles
@@ -12682,7 +12684,7 @@ ML_EFFECT5 : Don't stop thinking when too far away
 	{
 		if (mthing->options & MTF_AMBUSH)
 		{
-			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
+			if (i == MT_YELLOWDIAG || i == MT_REDDIAG || i == MT_BLUEDIAG)
 				mobj->angle += ANGLE_22h;
 
 			if (i == MT_YELLOWHORIZ || i == MT_REDHORIZ || i == MT_BLUEHORIZ)
@@ -12721,7 +12723,7 @@ ML_EFFECT5 : Don't stop thinking when too far away
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
-			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
+			if (i == MT_YELLOWDIAG || i == MT_REDDIAG || i == MT_BLUEDIAG)
 				mobj->flags |= MF_NOGRAVITY;
 
 			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
