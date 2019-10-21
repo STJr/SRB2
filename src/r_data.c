@@ -1446,48 +1446,6 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 		lump = LUMPERROR;
 	}
 
-	// Detect textures
-	if (lump == LUMPERROR)
-	{
-		// Scan wad files backwards so patched textures take preference.
-		for (i = numwadfiles - 1; i >= 0; i--)
-		{
-			switch (wadfiles[i]->type)
-			{
-			case RET_WAD:
-				if ((start = W_CheckNumForNamePwad("TX_START", (UINT16)i, 0)) == INT16_MAX)
-					continue;
-				if ((end = W_CheckNumForNamePwad("TX_END", (UINT16)i, start)) == INT16_MAX)
-					continue;
-				break;
-			case RET_PK3:
-				if ((start = W_CheckNumForFolderStartPK3("Textures/", i, 0)) == INT16_MAX)
-					continue;
-				if ((end = W_CheckNumForFolderEndPK3("Textures/", i, start)) == INT16_MAX)
-					continue;
-				break;
-			default:
-				continue;
-			}
-
-			// Now find lump with specified name in that range.
-			lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
-			if (lump < end)
-			{
-				lump += (i<<16); // found it, in our constraints
-				break;
-			}
-			lump = LUMPERROR;
-		}
-	}
-
-	if (lump == LUMPERROR)
-	{
-		if (strcmp(name, SKYFLATNAME))
-			CONS_Debug(DBG_SETUP, "R_GetFlatNumForName: Could not find flat %.8s\n", name);
-		lump = W_CheckNumForName("REDFLR");
-	}
-
 	return lump;
 }
 
