@@ -298,10 +298,11 @@ char sprnames[NUMSPRITES + 1][5] =
 	"HHPL", // Dr Seuss Trees
 	"SHRM", // Mushroom
 	"HHZM", // Misc
-	
+
 	// Azure Temple Scenery
 	"BGAR", // ATZ Gargoyles
 	"RCRY", // ATZ Red Crystal (Target)
+	"CFLM", // Green torch flame
 
 	// Botanic Serenity Scenery
 	"BSZ1", // Tall flowers
@@ -2581,6 +2582,9 @@ state_t states[NUMSTATES] =
 	{SPR_RCRY, FF_FULLBRIGHT|1, 45, {A_SetObjectFlags},      MF_PUSHABLE, 2, S_TARGET_RESPAWN},  // S_TARGET_HIT2
 	{SPR_RCRY,               1,  0, {A_SpawnObjectRelative}, 0, MT_TARGET, S_NULL},  // S_TARGET_RESPAWN
 	{SPR_RCRY, FF_FULLBRIGHT|1, -1, {A_SetObjectFlags},      MF_PUSHABLE, 1, S_TARGET_ALLDONE},  // S_TARGET_ALLDONE
+
+	// Green flame
+	{SPR_CFLM, FF_FULLBRIGHT|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 3, S_GREENFLAME}, // S_GREENFLAME
 
 	// Stalagmites
 	{SPR_STLG, 0, -1, {NULL}, 0, 0, S_NULL}, // S_STG0
@@ -13479,6 +13483,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_SHOOTABLE, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_GREENFLAME
+		1505,           // doomednum
+		S_GREENFLAME,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		MT_NULL,        // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		8*FRACUNIT,     // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,       // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_PAIN, // flags
 		S_NULL          // raisestate
 	},
 

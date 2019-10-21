@@ -199,7 +199,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_EGGO
 	&lspr[NOLIGHT],     // SPR_SEBH
 	&lspr[NOLIGHT],     // SPR_FAKE
-	&lspr[NOLIGHT],     // SPR_SHCK
+	&lspr[LBLUESHINE_L],// SPR_SHCK
 
 	// Boss 4 (Castle Eggman)
 	&lspr[NOLIGHT],     // SPR_EGGP
@@ -408,6 +408,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Azure Temple Scenery
 	&lspr[NOLIGHT],     // SPR_BGAR
 	&lspr[NOLIGHT],     // SPR_RCRY
+	&lspr[GREENBALL_L], // SPR_CFLM
 
 	// Botanic Serenity Scenery
 	&lspr[NOLIGHT],     // SPR_BSZ1

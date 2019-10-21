@@ -558,6 +558,7 @@ typedef enum sprite
 	// Azure Temple Scenery
 	SPR_BGAR, // ATZ Gargoyles
 	SPR_RCRY, // ATZ Red Crystal (Target)
+	SPR_CFLM, // Green torch flame
 
 	// Botanic Serenity Scenery
 	SPR_BSZ1, // Tall flowers
@@ -2698,6 +2699,9 @@ typedef enum state
 	S_TARGET_RESPAWN,
 	S_TARGET_ALLDONE,
 
+	// ATZ's green flame
+	S_GREENFLAME,
+
 	// Stalagmites
 	S_STG0,
 	S_STG1,
@@ -4456,6 +4460,7 @@ typedef enum mobj_type
 	MT_TRAPGOYLEDOWN,
 	MT_TRAPGOYLELONG,
 	MT_TARGET, // AKA Red Crystal
+	MT_GREENFLAME,
 
 	// Stalagmites
 	MT_STALAGMITE0,
