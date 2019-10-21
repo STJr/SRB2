@@ -3321,7 +3321,7 @@ void A_SkullAttack(mobj_t *actor)
 		fixed_t oldheight = mobjinfo[MT_NULL].height;
 		mobj_t *check;
 		INT32 i, j;
-		static INT32 k;
+		static INT32 k;/* static for (at least) GCC 9.1 weirdness */
 		boolean allow;
 		angle_t testang;
 
