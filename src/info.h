@@ -554,6 +554,10 @@ typedef enum sprite
 	SPR_HHPL, // Dr Seuss Trees
 	SPR_SHRM, // Mushroom
 	SPR_HHZM, // Misc
+	
+	// Azure Temple Scenery
+	SPR_BGAR, // ATZ Gargoyles
+	SPR_RCRY, // ATZ Red Crystal (Target)
 
 	// Botanic Serenity Scenery
 	SPR_BSZ1, // Tall flowers
@@ -574,7 +578,6 @@ typedef enum sprite
 	// Misc Scenery
 	SPR_STLG, // Stalagmites
 	SPR_DBAL, // Disco
-	SPR_RCRY, // ATZ Red Crystal (Target)
 
 	// Powerup Indicators
 	SPR_ARMA, // Armageddon Shield Orb
