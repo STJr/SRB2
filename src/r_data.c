@@ -35,7 +35,7 @@
 #endif
 
 // Not sure if this is necessary, but it was in w_wad.c, so I'm putting it here too -Shadow Hog
-#ifdef _WIN32_WCE
+#if 0
 #define AVOID_ERRNO
 #else
 #include <errno.h>
