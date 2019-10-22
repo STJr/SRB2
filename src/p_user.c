@@ -4345,7 +4345,6 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		{
 			player->mo->momz = 9*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
-			player->mo->tracer->flags |= MF_PUSHABLE;
 			P_SetTarget(&player->mo->tracer->target, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
@@ -12057,7 +12056,7 @@ void P_PlayerAfterThink(player_t *player)
 				mo->momx = rock->momx;
 				mo->momy = rock->momy;
 				mo->momz = 0;
-				
+
 				if (player->panim == PA_IDLE && (mo->momx || mo->momy))
 				{
 					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
