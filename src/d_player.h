@@ -511,6 +511,10 @@ typedef struct player_s
 #endif
 } player_t;
 
+// Values for dashmode
+#define DASHMODE_THRESHOLD (3*TICRATE)
+#define DASHMODE_MAX (DASHMODE_THRESHOLD + 3)
+
 // Value for infinite lives
 #define INFLIVES 0x7F
 

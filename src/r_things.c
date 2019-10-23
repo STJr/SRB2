@@ -754,8 +754,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		else if (!(vis->cut & SC_PRECIP)
-			&& vis->mobj->player && vis->mobj->player->dashmode >= 108 && vis->mobj->player->charflags & SF_MACHINE
-			&&((leveltime/2) & 1))
+			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& vis->mobj->player->charflags & (SF_DASHMODE|SF_MACHINE) == (SF_DASHMODE|SF_MACHINE)
+			&& ((leveltime/2) & 1))
 		{
 			dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
 		}
@@ -781,8 +782,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		else if (!(vis->cut & SC_PRECIP)
-			&& vis->mobj->player && vis->mobj->player->dashmode >= 108 && vis->mobj->player->charflags & SF_MACHINE
-			&&((leveltime/2) & 1))
+			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& vis->mobj->player->charflags & (SF_DASHMODE|SF_MACHINE) == (SF_DASHMODE|SF_MACHINE)
+			&& ((leveltime/2) & 1))
 		{
 			dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
 		}
