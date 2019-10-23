@@ -10456,7 +10456,7 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 			//Axes must be directly parallel or antiparallel, give or take 5 degrees.
 			if (angdiff < ANG10)
 			{
-				mark = P_SpawnMobj(nx, ny, nz, mobj->info->raisestate);
+				mark = P_SpawnMobj(nx, ny, nz, (mobjtype_t)mobj->info->raisestate);
 				return mark;
 			}
 		}

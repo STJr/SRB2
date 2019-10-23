@@ -4059,7 +4059,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MT_THOK,        // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SHOOTABLE, // flags
-		MT_NULL         // raisestate
+		(statenum_t)MT_NULL// raisestate
 	},
 
 	{           // MT_TAILSOVERLAY
@@ -4491,7 +4491,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_s3kd2l,     // activesound
 		MF_PAIN|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
-		MT_CRUSHCHAIN   // raisestate
+		(statenum_t)MT_CRUSHCHAIN// raisestate
 	},
 
 	{           // MT_CRUSHCHAIN
@@ -11829,7 +11829,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SLIDEME|MF_SOLID|MF_PUSHABLE, // flags
-		MT_ROCKCRUMBLE3 // raisestate
+		(statenum_t)MT_ROCKCRUMBLE3// raisestate
 	},
 
 	{           // MT_BRAMBLES
@@ -12531,7 +12531,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_s3k76,      // activesound
 		MF_PUSHABLE,    // flags
-		MT_MINECARTSIDEMARK // raisestate
+		(statenum_t)MT_MINECARTSIDEMARK// raisestate
 	},
 
 	{          // MT_MINECARTSEG
