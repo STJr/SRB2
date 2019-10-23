@@ -1097,7 +1097,7 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 	if (player->pflags & PF_SPINNING)
 		return true;
 	
-	if (player->dashmode >= DASHMODE_THRESHOLD && player->charflags & (SF_DASHMODE|SF_MACHINE) == (SF_DASHMODE|SF_MACHINE))
+	if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE))
 		return true;
 
 	// From the front.
@@ -2477,7 +2477,7 @@ static void P_CheckBustableBlocks(player_t *player)
 						&& !(player->powers[pw_super])
 						&& !(player->charability == CA_GLIDEANDCLIMB)
 						&& !(player->pflags & PF_BOUNCING)
-						&& !((player->charflags & (SF_DASHMODE|SF_MACHINE) == (SF_DASHMODE|SF_MACHINE)) && (player->dashmode >= DASHMODE_THRESHOLD))
+						&& !(((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)) && (player->dashmode >= DASHMODE_THRESHOLD))
 						&& !((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
 						&& !(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 						&& !(player->pflags & PF_DRILLING)
