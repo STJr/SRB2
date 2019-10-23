@@ -4549,7 +4549,11 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 			if (mapnum+1 == spstage_start)
 				return true;
 
-			return true;
+#ifndef DEVELOP
+			if (mapvisited[mapnum]) // MV_MP
+#endif
+				return true;
+
 			/* FALLTHRU */
 		case LLM_RECORDATTACK:
 		case LLM_NIGHTSATTACK:
