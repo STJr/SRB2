@@ -4292,6 +4292,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TAILSOVERLAY_GASP",
 	"S_TAILSOVERLAY_EDGE",
 
+	// [:
+	"S_JETFUMEFLASH",
+
 	// Blue Crawla
 	"S_POSS_STND",
 	"S_POSS_RUN1",
@@ -7294,6 +7297,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_THOK", // Thok! mobj
 	"MT_PLAYER",
 	"MT_TAILSOVERLAY", // c:
+	"MT_METALJETFUME", // [:
 
 	// Enemies
 	"MT_BLUECRAWLA", // Crawla (Blue)

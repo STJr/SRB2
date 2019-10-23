@@ -1990,7 +1990,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 		mobj_t *ghost2 = P_SpawnGhostMobj(mobj->player->followmobj);
 		P_SetTarget(&ghost2->tracer, ghost);
 		P_SetTarget(&ghost->tracer, ghost2);
-		ghost2->flags2 |= MF2_LINKDRAW;
+		ghost2->flags2 |= (mobj->player->followmobj->flags2 & MF2_LINKDRAW);
 	}
 
 	return ghost;
@@ -2204,6 +2204,9 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 	return false; // No vacuum here, Captain!
 }
 
+#define DASHMODE_THRESHOLD (3*TICRATE)
+#define DASHMODE_MAX (DASHMODE_THRESHOLD + 3)
+
 //
 // P_PlayerHitFloor
 //
@@ -2312,7 +2315,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 			{
 				if (player->cmomx || player->cmomy)
 				{
-					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+					if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD && player->panim != PA_DASH)
 						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
 					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
@@ -2325,7 +2328,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				}
 				else
 				{
-					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+					if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD && player->panim != PA_DASH)
 						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
 					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
@@ -2474,7 +2477,7 @@ static void P_CheckBustableBlocks(player_t *player)
 						&& !(player->powers[pw_super])
 						&& !(player->charability == CA_GLIDEANDCLIMB)
 						&& !(player->pflags & PF_BOUNCING)
-						&& !((player->charflags & SF_DASHMODE) && (player->dashmode >= 3*TICRATE))
+						&& !((player->charflags & SF_DASHMODE) && (player->dashmode >= DASHMODE_THRESHOLD))
 						&& !((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
 						&& !(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 						&& !(player->pflags & PF_DRILLING)
@@ -5291,7 +5294,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				case CA_SLOWFALL: // Slow descent hover
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
-						if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE)
+						if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD)
 							P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 						else if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
 							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
@@ -7936,7 +7939,7 @@ static void P_MovePlayer(player_t *player)
 	if ((cmd->forwardmove != 0 || cmd->sidemove != 0) || (player->powers[pw_super] && !onground))
 	{
 		// If the player is in dashmode, here's their peelout.
-		if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim == PA_RUN && !player->skidtime && (onground || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]))
+		if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD && player->panim == PA_RUN && !player->skidtime && (onground || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]))
 			P_SetPlayerMobjState (player->mo, S_PLAY_DASH);
 		// If the player is moving fast enough,
 		// break into a run!
@@ -7960,7 +7963,7 @@ static void P_MovePlayer(player_t *player)
 
 	// If your peelout animation is playing, and you're
 	// going too slow, switch back to the run.
-	if (player->charflags & SF_DASHMODE && player->panim == PA_DASH && player->dashmode < 3*TICRATE)
+	if (player->charflags & SF_DASHMODE && player->panim == PA_DASH && player->dashmode < DASHMODE_THRESHOLD)
 		P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 
 	// If your running animation is playing, and you're
@@ -10883,6 +10886,122 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	P_SetThingPosition(tails);
 }
 
+// Metal Sonic's jet fume
+static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
+{
+	static const UINT8 FUME_SKINCOLORS[] =
+	{
+		SKINCOLOR_ICY,
+		SKINCOLOR_SKY,
+		SKINCOLOR_CYAN,
+		SKINCOLOR_WAVE,
+		SKINCOLOR_TEAL,
+		SKINCOLOR_AQUA,
+		SKINCOLOR_SEAFOAM,
+		SKINCOLOR_MINT,
+		SKINCOLOR_PERIDOT,
+		SKINCOLOR_LIME,
+		SKINCOLOR_YELLOW,
+		SKINCOLOR_SANDY,
+		SKINCOLOR_GOLD,
+		SKINCOLOR_APRICOT,
+		SKINCOLOR_SUNSET
+	};
+	mobj_t *mo = player->mo;
+	angle_t angle = player->drawangle;
+	fixed_t dist;
+	panim_t panim = player->panim;
+	tic_t dashmode = player->dashmode;
+	boolean underwater = mo->eflags & MFE_UNDERWATER;
+	
+	if (panim != PA_WALK && panim != PA_RUN && panim != PA_DASH) // turn invisible when not in a coherent movement state
+	{
+		if (fume->state-states != fume->info->spawnstate)
+			P_SetMobjState(fume, S_SPAWNSTATE);
+		return;
+	}
+	
+	if (underwater) // No fume underwater; spawn bubbles instead!
+	{
+		fume->movedir	+= FixedAngle(FixedDiv(2 * player->speed, 3 * mo->scale));
+		fume->movefactor += player->speed;
+		
+		if (fume->movefactor > FixedDiv(2 * player->normalspeed, 3 * mo->scale))
+		{
+			INT16 i;
+			fixed_t radiusV = 4*FRACUNIT;
+			fixed_t radiusX = P_ReturnThrustX(mo, angle, -mo->radius >> (panim == PA_WALK ? 1 : 0));
+			fixed_t radiusY = P_ReturnThrustY(mo, angle, -mo->radius >> (panim == PA_WALK ? 1 : 0));
+			fixed_t factorX = P_ReturnThrustX(mo, angle + ANGLE_90, mo->scale);
+			fixed_t factorY = P_ReturnThrustY(mo, angle + ANGLE_90, mo->scale);
+			fixed_t offsetH, offsetV, x, y, z;
+			
+			for (i = -1; i < 2; i += 2)
+			{
+				offsetH = i*P_ReturnThrustX(fume, fume->movedir, radiusV);
+				offsetV = i*P_ReturnThrustY(fume, fume->movedir, radiusV);
+				x = mo->x + radiusX + FixedMul(offsetH, factorX);
+				y = mo->y + radiusY + FixedMul(offsetH, factorY);
+				z = mo->z + (mo->height >> 1) + offsetV;
+				P_SpawnMobj(x, y, z, MT_SMALLBUBBLE)->scale = mo->scale >> 1;
+			}
+			
+			fume->movefactor = 0;
+		}
+		
+		if (panim == PA_WALK)
+		{
+			if (fume->state-states != fume->info->spawnstate)
+				P_SetMobjState(fume, S_SPAWNSTATE);
+			return;
+		}
+	}
+	
+	if (fume->state-states == fume->info->spawnstate) // If currently inivisble, activate!
+	{
+		P_SetMobjState(fume, S_SEESTATE);
+		P_SetScale(fume, mo->scale);
+	}
+	
+	if (dashmode > DASHMODE_THRESHOLD && fume->state-states != fume->info->seestate) // If in dashmode, grow really big and flash
+	{
+		fume->destscale = mo->scale;
+		fume->flags2 ^= MF2_DONTDRAW;
+		fume->flags2 |= mo->flags2 & MF2_DONTDRAW;
+	}
+	else // Otherwise, pick a size and color depending on speed and proximity to dashmode
+	{
+		if (dashmode == DASHMODE_THRESHOLD && dashmode > fume->movecount) // If just about to enter dashmode, play the startup animation again
+		{
+			P_SetMobjState(fume, S_SEESTATE);
+			P_SetScale(fume, mo->scale << 1);
+		}
+		fume->flags2 = (fume->flags2 & ~MF2_DONTDRAW) | (mo->flags2 & MF2_DONTDRAW);
+		fume->destscale = (mo->scale + FixedDiv(player->speed, player->normalspeed)) / (underwater ? 6 : 3);
+		fume->color = FUME_SKINCOLORS[(dashmode * sizeof(FUME_SKINCOLORS)) / (DASHMODE_MAX + 1)];
+		
+		if (underwater)
+		{
+			fume->frame = (fume->frame & FF_FRAMEMASK) | FF_ANIMATE | (P_RandomRange(0, 9) * FF_TRANS10);
+		}
+	}
+	
+	fume->movecount = dashmode; // keeps track of previous dashmode value so we know whether Metal is entering or leaving it
+	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP); // Make sure to flip in reverse gravity!
+	
+	// Finally, set its position
+	dist = -mo->radius - FixedMul(fume->info->radius, fume->destscale - mo->scale/3);
+	
+	P_UnsetThingPosition(fume);
+	fume->x = mo->x + P_ReturnThrustX(fume, angle, dist);
+	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
+	if (fume->eflags & MFE_VERTICALFLIP)
+		fume->z = mo->z + ((mo->height + fume->height) >> 1);
+	else
+		fume->z = mo->z + ((mo->height - fume->height) >> 1);
+	P_SetThingPosition(fume);
+}
+
 //
 // P_PlayerThink
 //
@@ -11611,9 +11730,9 @@ void P_PlayerThink(player_t *player)
 
 		if ((totallyradical && !floating) || (player->pflags & PF_STARTDASH))
 		{
-			if (dashmode < 3*TICRATE + 3)
+			if (dashmode < DASHMODE_MAX)
 				dashmode++; // Counter. Adds 1 to dash mode per tic in top speed.
-			if (dashmode == 3*TICRATE) // This isn't in the ">=" equation because it'd cause the sound to play infinitely.
+			if (dashmode == DASHMODE_THRESHOLD) // This isn't in the ">=" equation because it'd cause the sound to play infinitely.
 				S_StartSound(player->mo, sfx_s3ka2); // If the player enters dashmode, play this sound on the the tic it starts.
 		}
 		else if ((!totallyradical || !floating) && !(player->pflags & PF_SPINNING))
@@ -11624,7 +11743,7 @@ void P_PlayerThink(player_t *player)
 				dashmode = 0;
 		}
 
-		if (dashmode < 3*TICRATE) // Exits Dash Mode if you drop below speed/dash counter tics. Not in the above block so it doesn't keep disabling in midair.
+		if (dashmode < DASHMODE_THRESHOLD) // Exits Dash Mode if you drop below speed/dash counter tics. Not in the above block so it doesn't keep disabling in midair.
 		{
 			player->normalspeed = skins[player->skin].normalspeed; // Reset to default if not capable of entering dash mode.
 			player->jumpfactor = skins[player->skin].jumpfactor;
@@ -11646,7 +11765,7 @@ void P_PlayerThink(player_t *player)
 	}
 	else if (dashmode)
 	{
-		if (dashmode >= 3*TICRATE) // catch getting the flag!
+		if (dashmode >= DASHMODE_THRESHOLD) // catch getting the flag!
 		{
 			player->normalspeed = skins[player->skin].normalspeed;
 			player->jumpfactor = skins[player->skin].jumpfactor;
@@ -12192,7 +12311,15 @@ void P_PlayerAfterThink(player_t *player)
 		{
 			P_SetTarget(&player->followmobj, P_SpawnMobjFromMobj(player->mo, 0, 0, 0, player->followitem));
 			P_SetTarget(&player->followmobj->tracer, player->mo);
-			player->followmobj->flags2 |= MF2_LINKDRAW;
+			switch (player->followmobj->type)
+			{
+				case MT_METALJETFUME:
+					player->followmobj->colorized = true;
+					break;
+				default:
+					player->followmobj->flags2 |= MF2_LINKDRAW;
+					break;
+			}
 		}
 
 		if (player->followmobj)
@@ -12207,6 +12334,9 @@ void P_PlayerAfterThink(player_t *player)
 				{
 					case MT_TAILSOVERLAY: // c:
 						P_DoTailsOverlay(player, player->followmobj);
+						break;
+					case MT_METALJETFUME:
+						P_DoMetalJetFume(player, player->followmobj);
 						break;
 					default:
 						var1 = 1;
