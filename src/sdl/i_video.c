@@ -580,11 +580,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		// Tell game we got focus back, resume music if necessary
 		window_notinfocus = false;
 		if (!paused)
-		{
 			S_ResumeAudio(); //resume it
-			if (cv_gamesounds.value)
-				S_EnableSound();
-		}
 
 		if (!firsttimeonmouse)
 		{
@@ -599,10 +595,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 	{
 		// Tell game we lost focus, pause music
 		window_notinfocus = true;
-		if (!cv_playmusicifunfocused.value)
-			S_PauseAudio();
-		if (!cv_playsoundifunfocused.value)
-			S_DisableSound();
+		S_PauseAudio();
 
 		if (!disable_mouse)
 		{
