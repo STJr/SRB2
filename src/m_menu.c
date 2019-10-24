@@ -1323,22 +1323,25 @@ static menuitem_t OP_OpenGLColorMenu[] =
 
 static menuitem_t OP_SoundOptionsMenu[] =
 {
-	{IT_HEADER, NULL, "Game Audio", NULL, 0}, // 0 // ScrollMenu offsets
-	{IT_STRING | IT_CVAR,  NULL,  "Sound Effects", &cv_gamesounds, 13}, // 6
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 23}, // 11
+	{IT_HEADER, NULL, "Game Audio", NULL, 0},
+	{IT_STRING | IT_CVAR,  NULL,  "Sound Effects", &cv_gamesounds, 6},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 11},
 
-	{IT_STRING | IT_CVAR,  NULL,  "Digital Music", &cv_gamedigimusic, 43}, // 21
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  53}, // 26
+	{IT_STRING | IT_CVAR,  NULL,  "Digital Music", &cv_gamedigimusic, 21},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  26},
 
-	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 73}, // 36
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 83}, // 41
+	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 36},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 41},
 
-	{IT_HEADER, NULL, "Accessibility", NULL, 103}, // 50
-	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
-	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 125}, // 62
+	{IT_HEADER, NULL, "Accessibility", NULL, 50},
+	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 56},
+	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 61},
+
+	{IT_STRING | IT_CVAR, NULL, "Play Sound Effects if Unfocused", &cv_playsoundsifunfocused, 71},
+	{IT_STRING | IT_CVAR, NULL, "Play Music if Unfocused", &cv_playmusicifunfocused, 76},
 
 #ifdef HAVE_MIXERX
-	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 143},
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 94},
 #endif
 };
 
@@ -1961,18 +1964,9 @@ menu_t OP_ColorOptionsDef =
 	0,
 	NULL
 };
-menu_t OP_SoundOptionsDef =
-{
+menu_t OP_SoundOptionsDef = DEFAULTSCROLLMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_SOUND << 6),
-	"M_SOUND",
-	sizeof (OP_SoundOptionsMenu)/sizeof (menuitem_t),
-	&OP_MainDef,
-	OP_SoundOptionsMenu,
-	M_DrawGenericMenu,
-	30, 30,
-	0,
-	NULL
-};
+	"M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 30, 30);
 #ifdef HAVE_MIXERX
 menu_t OP_SoundAdvancedDef = DEFAULTMENUSTYLE(MN_OP_MAIN + (MN_OP_SOUND << 6), "M_SOUND", OP_SoundAdvancedMenu, &OP_SoundOptionsDef, 30, 30);
 #endif
