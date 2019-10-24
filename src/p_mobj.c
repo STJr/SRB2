@@ -4929,6 +4929,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			mobj->movecount += mobj->threshold;
 			if (mobj->movecount <= 0)
 			{
+				mobj->flags2 &= ~MF2_INVERTAIMABLE;
 				mobj->movecount = 0;
 				mobj->movedir++; // Initialization complete, next phase!
 			}
@@ -10307,6 +10308,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_EGGMOBILE3:
 			mobj->movefactor = -512*FRACUNIT;
 			mobj->flags2 |= MF2_CLASSICPUSH;
+			break;
+		case MT_EGGMOBILE4:
+			mobj->flags2 |= MF2_INVERTAIMABLE;
 			break;
 		case MT_FLICKY_08:
 			mobj->color = (P_RandomChance(FRACUNIT/2) ? SKINCOLOR_RED : SKINCOLOR_AQUA);
