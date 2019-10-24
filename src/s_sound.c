@@ -117,6 +117,10 @@ consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_O
 consvar_t cv_gamemidimusic = {"midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
+// Window focus sound sytem toggles
+consvar_t cv_playmusicifunfocused = {"playmusicifunfocused", "No", CV_SAVE, CV_YesNo};
+consvar_t cv_playsoundsifunfocused = {"playsoundsifunfocused", "No", CV_SAVE, CV_YesNo};
+
 #ifdef HAVE_OPENMPT
 static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
 consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -278,6 +282,8 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&cv_samplerate);
 	CV_RegisterVar(&cv_resetmusic);
 	CV_RegisterVar(&cv_resetmusicbyheader);
+	CV_RegisterVar(&cv_playsoundsifunfocused);
+	CV_RegisterVar(&cv_playmusicifunfocused);
 	CV_RegisterVar(&cv_gamesounds);
 	CV_RegisterVar(&cv_gamedigimusic);
 	CV_RegisterVar(&cv_gamemidimusic);
@@ -371,6 +377,18 @@ lumpnum_t S_GetSfxLumpNum(sfxinfo_t *sfx)
 		return sfxlump;
 
 	return W_GetNumForName("dsthok");
+}
+
+//
+// Sound Status
+//
+
+boolean S_SoundDisabled(void)
+{
+	return (
+			sound_disabled ||
+			( window_notinfocus && ! cv_playsoundsifunfocused.value )
+	);
 }
 
 // Stop all sounds, load level info, THEN start sounds.
@@ -540,7 +558,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 	mobj_t *listenmobj = players[displayplayer].mo;
 	mobj_t *listenmobj2 = NULL;
 
-	if (sound_disabled || !sound_started)
+	if (S_SoundDisabled() || !sound_started)
 		return;
 
 	// Don't want a sound? Okay then...
@@ -730,7 +748,7 @@ dontplay:
 
 void S_StartSound(const void *origin, sfxenum_t sfx_id)
 {
-	if (sound_disabled)
+	if (S_SoundDisabled())
 		return;
 
 	if (mariomode) // Sounds change in Mario mode!
@@ -1434,6 +1452,13 @@ boolean S_MusicPaused(void)
 	return I_SongPaused();
 }
 
+boolean S_MusicNotInFocus(void)
+{
+	return (
+			( window_notinfocus && ! cv_playmusicifunfocused.value )
+	);
+}
+
 musictype_t S_MusicType(void)
 {
 	return I_SongType();
@@ -1867,6 +1892,10 @@ static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 	}
 
 	S_InitMusicVolume(); // switch between digi and sequence volume
+
+	if (S_MusicNotInFocus())
+		S_PauseAudio();
+
 	return true;
 }
 
@@ -2009,6 +2038,9 @@ void S_PauseAudio(void)
 
 void S_ResumeAudio(void)
 {
+	if (S_MusicNotInFocus())
+		return;
+
 	if (I_SongPlaying() && I_SongPaused())
 		I_ResumeSong();
 
