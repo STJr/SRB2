@@ -4156,8 +4156,11 @@ static void P_DoSuperStuff(player_t *player)
 		{
 			player->powers[pw_super] = 0;
 			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-			music_stack_noposition = true; // HACK: Do not reposition next music
-			music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			if (P_IsLocalPlayer(player))
+			{
+				music_stack_noposition = true; // HACK: Do not reposition next music
+				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			}
 			P_RestoreMusic(player);
 			P_SpawnShieldOrb(player);
 
@@ -4226,7 +4229,7 @@ static void P_DoSuperStuff(player_t *player)
 			if (gametype != GT_COOP)
 				player->powers[pw_flashing] = flashingtics-1;
 
-			if ((player->mo->health > 0) && (player->mo->sprite2 & FF_SPR2SUPER))
+			if (player->mo->sprite2 & FF_SPR2SUPER)
 				P_SetPlayerMobjState(player->mo, player->mo->state-states);
 
 			// Inform the netgame that the champion has fallen in the heat of battle.
@@ -4239,8 +4242,11 @@ static void P_DoSuperStuff(player_t *player)
 			}
 
 			// Resume normal music if you're the console player
-			music_stack_noposition = true; // HACK: Do not reposition next music
-			music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			if (P_IsLocalPlayer(player))
+			{
+				music_stack_noposition = true; // HACK: Do not reposition next music
+				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			}
 			P_RestoreMusic(player);
 
 			// If you had a shield, restore its visual significance.
@@ -10674,7 +10680,11 @@ static void P_MinecartThink(player_t *player)
 		}
 	}
 
-	P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+	if (player->mo->state-states != S_PLAY_STND)
+	{
+		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+		player->mo->tics = -1;
+	}
 
 	// Move player to minecart.
 	P_TeleportMove(player->mo, minecart->x - minecart->momx, minecart->y - minecart->momy, minecart->z + max(minecart->momz, 0) + 8*FRACUNIT);
