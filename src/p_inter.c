@@ -1493,8 +1493,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					P_SetMobjState(mo2, mo2->info->painstate);
 				}
 			}
-
-			S_StartSound(toucher, special->info->painsound);
 			return;
 
 		case MT_FAKEMOBILE:
