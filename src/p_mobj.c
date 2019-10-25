@@ -4716,13 +4716,17 @@ static void P_Boss4MoveSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
 	}
 }
 
+#define CEZ3TILT
+
 // Pull them closer.
 static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 {
 	INT32 s;
 	mobj_t *base = mobj, *seg;
-	fixed_t originx, originy, workx, worky, dx, dy, bz = mobj->watertop+(8<<FRACBITS);
-
+	fixed_t workx, worky, dx, dy, bz = mobj->watertop+(8<<FRACBITS);
+	fixed_t rad = (9*132)<<FRACBITS;
+#ifdef CEZ3TILT
+	fixed_t originx, originy;
 	if (mobj->spawnpoint)
 	{
 		originx = mobj->spawnpoint->x << FRACBITS;
@@ -4733,13 +4737,25 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 		originx = mobj->x;
 		originy = mobj->y;
 	}
+#else
+	if (mobj->spawnpoint)
+	{
+		rad -= R_PointToDist2(mobj->x, mobj->y,
+			(mobj->spawnpoint->x<<FRACBITS), (mobj->spawnpoint->y<<FRACBITS));
+	}
+#endif
 
 	dz /= 9;
 
 	while ((base = base->tracer)) // there are 10 per spoke, remember that
 	{
-		dx = (originx + P_ReturnThrustX(mobj, angle, (9*132)<<FRACBITS) - mobj->x)/9;
-		dy = (originy + P_ReturnThrustY(mobj, angle, (9*132)<<FRACBITS) - mobj->y)/9;
+#ifdef CEZ3TILT
+		dx = (originx + P_ReturnThrustX(mobj, angle, rad) - mobj->x)/9;
+		dy = (originy + P_ReturnThrustY(mobj, angle, rad) - mobj->y)/9;
+#else
+		dx = P_ReturnThrustX(mobj, angle, rad)/9;
+		dy = P_ReturnThrustY(mobj, angle, rad)/9;
+#endif
 		workx = mobj->x + P_ReturnThrustX(mobj, angle, (112)<<FRACBITS);
 		worky = mobj->y + P_ReturnThrustY(mobj, angle, (112)<<FRACBITS);
 		for (seg = base, s = 9; seg; seg = seg->hnext, --s)
@@ -4929,6 +4945,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			mobj->movecount += mobj->threshold;
 			if (mobj->movecount <= 0)
 			{
+				mobj->flags2 &= ~MF2_INVERTAIMABLE;
 				mobj->movecount = 0;
 				mobj->movedir++; // Initialization complete, next phase!
 			}
@@ -10307,6 +10324,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_EGGMOBILE3:
 			mobj->movefactor = -512*FRACUNIT;
 			mobj->flags2 |= MF2_CLASSICPUSH;
+			break;
+		case MT_EGGMOBILE4:
+			mobj->flags2 |= MF2_INVERTAIMABLE;
 			break;
 		case MT_FLICKY_08:
 			mobj->color = (P_RandomChance(FRACUNIT/2) ? SKINCOLOR_RED : SKINCOLOR_AQUA);
