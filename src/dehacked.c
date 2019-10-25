@@ -313,7 +313,13 @@ static boolean findFreeSlot(INT32 *num)
 	if (*num >= MAXSKINS)
 		return false;
 
-	description[*num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
+	// Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
+	description[*num].picname[0] = '\0';
+	description[*num].nametag[0] = '\0';
+	description[*num].displayname[0] = '\0';
+	description[*num].oppositecolor = SKINCOLOR_NONE;
+	description[*num].tagtextcolor = SKINCOLOR_NONE;
+	description[*num].tagoutlinecolor = SKINCOLOR_NONE;
 
 	// Found one! ^_^
 	return (description[*num].used = true);
@@ -326,8 +332,15 @@ static void readPlayer(MYFILE *f, INT32 num)
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
 	char *word2;
+	char *displayname = ZZ_Alloc(MAXLINELEN+1);
 	INT32 i;
 	boolean slotfound = false;
+
+	#define SLOTFOUND \
+		if (!slotfound && (slotfound = findFreeSlot(&num)) == false) \
+			goto done;
+
+	displayname[MAXLINELEN] = '\0';
 
 	do
 	{
@@ -335,6 +348,17 @@ static void readPlayer(MYFILE *f, INT32 num)
 		{
 			if (s[0] == '\n')
 				break;
+
+			for (i = 0; i < MAXLINELEN-3; i++)
+			{
+				char *tmp;
+				if (s[i] == '=')
+				{
+					tmp = &s[i+2];
+					strncpy(displayname, tmp, SKINNAMESIZE);
+					break;
+				}
+			}
 
 			word = strtok(s, " ");
 			if (word)
@@ -346,8 +370,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			{
 				char *playertext = NULL;
 
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
+				SLOTFOUND
 
 				for (i = 0; i < MAXLINELEN-3; i++)
 				{
@@ -395,10 +418,53 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "PICNAME"))
 			{
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
-
+				SLOTFOUND
 				strncpy(description[num].picname, word2, 8);
+			}
+			// new character select
+			else if (fastcmp(word, "DISPLAYNAME"))
+			{
+				SLOTFOUND
+				// replace '#' with line breaks
+				// (also remove any '\n')
+				{
+					char *cur = NULL;
+
+					// remove '\n'
+					cur = strchr(displayname, '\n');
+					if (cur)
+						*cur = '\0';
+
+					// turn '#' into '\n'
+					cur = strchr(displayname, '#');
+					while (cur)
+					{
+						*cur = '\n';
+						cur = strchr(cur, '#');
+					}
+				}
+				// copy final string
+				strncpy(description[num].displayname, displayname, SKINNAMESIZE);
+			}
+			else if (fastcmp(word, "OPPOSITECOLOR") || fastcmp(word, "OPPOSITECOLOUR"))
+			{
+				SLOTFOUND
+				description[num].oppositecolor = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "NAMETAG") || fastcmp(word, "TAGNAME"))
+			{
+				SLOTFOUND
+				strncpy(description[num].nametag, word2, 8);
+			}
+			else if (fastcmp(word, "TAGTEXTCOLOR") || fastcmp(word, "TAGTEXTCOLOUR"))
+			{
+				SLOTFOUND
+				description[num].tagtextcolor = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "TAGOUTLINECOLOR") || fastcmp(word, "TAGOUTLINECOLOUR"))
+			{
+				SLOTFOUND
+				description[num].tagoutlinecolor = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "STATUS"))
 			{
@@ -417,9 +483,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "SKINNAME"))
 			{
 				// Send to free slot.
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
-
+				SLOTFOUND
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
 			}
@@ -427,8 +491,9 @@ static void readPlayer(MYFILE *f, INT32 num)
 				deh_warning("readPlayer %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
-
+	#undef SLOTFOUND
 done:
+	Z_Free(displayname);
 	Z_Free(s);
 }
 
@@ -9092,6 +9157,7 @@ struct {
 	{"V_OFFSET",V_OFFSET},
 	{"V_ALLOWLOWERCASE",V_ALLOWLOWERCASE},
 	{"V_FLIP",V_FLIP},
+	{"V_CENTERNAMETAG",V_CENTERNAMETAG},
 	{"V_SNAPTOTOP",V_SNAPTOTOP},
 	{"V_SNAPTOBOTTOM",V_SNAPTOBOTTOM},
 	{"V_SNAPTOLEFT",V_SNAPTOLEFT},

@@ -2606,7 +2606,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	boolean loadedbm = false;
 	sector_t *ss;
 	boolean chase;
-
 	levelloading = true;
 
 	// This is needed. Don't touch.

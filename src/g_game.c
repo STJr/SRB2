@@ -3343,6 +3343,7 @@ void G_LoadGameData(void)
 	UINT32 recscore;
 	tic_t  rectime;
 	UINT16 recrings;
+	boolean gotperf;
 
 	UINT8 recmares;
 	INT32 curmare;
@@ -3435,6 +3436,7 @@ void G_LoadGameData(void)
 		recscore = READUINT32(save_p);
 		rectime  = (tic_t)READUINT32(save_p);
 		recrings = READUINT16(save_p);
+		gotperf = (boolean)READUINT8(save_p);
 
 		if (recrings > 10000 || recscore > MAXSCORE)
 			goto datacorrupt;
@@ -3446,6 +3448,9 @@ void G_LoadGameData(void)
 			mainrecords[i]->time = rectime;
 			mainrecords[i]->rings = recrings;
 		}
+
+		if (gotperf)
+			mainrecords[i]->gotperfect = gotperf;
 	}
 
 	// Nights records
@@ -3577,12 +3582,14 @@ void G_SaveGameData(void)
 			WRITEUINT32(save_p, mainrecords[i]->score);
 			WRITEUINT32(save_p, mainrecords[i]->time);
 			WRITEUINT16(save_p, mainrecords[i]->rings);
+			WRITEUINT8(save_p, mainrecords[i]->gotperfect);
 		}
 		else
 		{
 			WRITEUINT32(save_p, 0);
 			WRITEUINT32(save_p, 0);
 			WRITEUINT16(save_p, 0);
+			WRITEUINT8(save_p, 0);
 		}
 	}
 
