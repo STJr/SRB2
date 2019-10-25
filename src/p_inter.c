@@ -2466,6 +2466,28 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
 
+		if (target->player->powers[pw_super])
+		{
+			target->player->powers[pw_super] = 0;
+			if (P_IsLocalPlayer(target->player))
+			{
+				music_stack_noposition = true; // HACK: Do not reposition next music
+				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			}
+			P_RestoreMusic(target->player);
+
+			if (gametype != GT_COOP)
+			{
+				HU_SetCEchoFlags(0);
+				HU_SetCEchoDuration(5);
+				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[target->player-players]));
+			}
+		}
+
+		target->color = target->player->skincolor;
+		target->colorized = false;
+		G_GhostAddColor(GHC_NORMAL);
+
 		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
 			;
 		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap) && (target->player->lives != INFLIVES)
