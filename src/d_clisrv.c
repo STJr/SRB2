@@ -1264,7 +1264,8 @@ static boolean CL_SendJoin(void)
 	netbuffer->u.clientcfg.localplayers = localplayers;
 	netbuffer->u.clientcfg.version = VERSION;
 	netbuffer->u.clientcfg.subversion = SUBVERSION;
-
+	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
+	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
 
@@ -3186,6 +3187,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	if (!splitscreen && !botingame)
 		CL_ClearPlayer(newplayernum);
 	playeringame[newplayernum] = true;
+	READSTRINGN(*p, player_names[newplayernum], MAXPLAYERNAME);
 	G_AddPlayer(newplayernum);
 	if (newplayernum+1 > doomcom->numslots)
 		doomcom->numslots = (INT16)(newplayernum+1);
@@ -3218,10 +3220,10 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		{
 			const char *address;
 			if (I_GetNodeAddress && (address = I_GetNodeAddress(node)) != NULL)
-				HU_AddChatText(va("\x82*Player %d has joined the game (node %d) (%s)", newplayernum+1, node, address), false);	// merge join notification + IP to avoid clogging console/chat.
+				HU_AddChatText(va("\x82*%s has joined the game (node %d) (%s)", player_names[newplayernum], node, address), false);	// merge join notification + IP to avoid clogging console/chat.
 		}
 		else
-			HU_AddChatText(va("\x82*Player %d has joined the game (node %d)", newplayernum+1, node), false);	// if you don't wanna see the join address.
+			HU_AddChatText(va("\x82*%s has joined the game (node %d)", player_names[newplayernum], node), false);	// if you don't wanna see the join address.
 	}
 
 	if (server && multiplayer && motd[0] != '\0')
@@ -3232,10 +3234,11 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 #endif
 }
 
-static boolean SV_AddWaitingPlayers(void)
+static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
 {
 	INT32 node, n, newplayer = false;
-	UINT8 buf[2];
+	UINT8 buf[2 + MAXPLAYERNAME];
+	UINT8 *p;
 	UINT8 newplayernum = 0;
 
 	// What is the reason for this? Why can't newplayernum always be 0?
@@ -3318,18 +3321,23 @@ static boolean SV_AddWaitingPlayers(void)
 
 			playernode[newplayernum] = (UINT8)node;
 
+			p = buf + 2;
 			buf[0] = (UINT8)node;
 			buf[1] = newplayernum;
 			if (playerpernode[node] < 1)
+			{
 				nodetoplayer[node] = newplayernum;
+				WRITESTRINGN(p, name, MAXPLAYERNAME);
+			}
 			else
 			{
 				nodetoplayer2[node] = newplayernum;
 				buf[1] |= 0x80;
+				WRITESTRINGN(p, name2, MAXPLAYERNAME);
 			}
 			playerpernode[node]++;
 
-			SendNetXCmd(XD_ADDPLAYER, &buf, 2);
+			SendNetXCmd(XD_ADDPLAYER, &buf, p - buf);
 
 			DEBFILE(va("Server added player %d node %d\n", newplayernum, node));
 			// use the next free slot (we can't put playeringame[newplayernum] = true here)
@@ -3391,7 +3399,7 @@ boolean SV_SpawnServer(void)
 		else doomcom->numslots = 1;
 	}
 
-	return SV_AddWaitingPlayers();
+	return SV_AddWaitingPlayers(cv_playername.zstring, cv_playername2.zstring);
 }
 
 void SV_StopServer(void)
@@ -3462,6 +3470,9 @@ static size_t TotalTextCmdPerTic(tic_t tic)
   */
 static void HandleConnect(SINT8 node)
 {
+	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME + 1];
+	INT32 i;
+
 	if (bannednode && bannednode[node])
 		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server"));
 	else if (netbuffer->u.clientcfg.version != VERSION
@@ -3480,6 +3491,16 @@ static void HandleConnect(SINT8 node)
 #ifndef NONET
 		boolean newnode = false;
 #endif
+
+		for (i = 0; i < netbuffer->u.clientcfg.localplayers - playerpernode[node]; i++)
+		{
+			strlcpy(names[i], netbuffer->u.clientcfg.names[i], MAXPLAYERNAME + 1);
+			if (!EnsurePlayerNameIsGood(names[i], -1))
+			{
+				SV_SendRefuse(node, "Bad player name");
+				return;
+			}
+		}
 
 		// client authorised to join
 		nodewaiting[node] = (UINT8)(netbuffer->u.clientcfg.localplayers - playerpernode[node]);
@@ -3521,7 +3542,7 @@ static void HandleConnect(SINT8 node)
 				SV_SendSaveGame(node); // send a complete game state
 				DEBFILE("send savegame\n");
 			}
-			SV_AddWaitingPlayers();
+			SV_AddWaitingPlayers(names[0], names[1]);
 			player_joining = true;
 		}
 #else

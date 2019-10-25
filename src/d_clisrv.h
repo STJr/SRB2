@@ -15,6 +15,7 @@
 
 #include "d_ticcmd.h"
 #include "d_netcmd.h"
+#include "d_net.h"
 #include "tables.h"
 #include "d_player.h"
 
@@ -324,6 +325,7 @@ typedef struct
 	UINT8 subversion; // Contains build version
 	UINT8 localplayers;
 	UINT8 mode;
+	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME];
 } ATTRPACK clientconfig_pak;
 
 #define MAXSERVERNAME 32
