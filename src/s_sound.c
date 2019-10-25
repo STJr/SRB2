@@ -2202,7 +2202,7 @@ static void Command_RestartAudio_f(void)
 
 void GameSounds_OnChange(void)
 {
-	if (M_CheckParm("-nosound"))
+	if (M_CheckParm("-nosound") || M_CheckParm("-noaudio"))
 		return;
 
 	if (sound_disabled)
@@ -2220,7 +2220,7 @@ void GameSounds_OnChange(void)
 
 void GameDigiMusic_OnChange(void)
 {
-	if (M_CheckParm("-nomusic"))
+	if (M_CheckParm("-nomusic") || M_CheckParm("-noaudio"))
 		return;
 	else if (M_CheckParm("-nodigmusic"))
 		return;
@@ -2262,7 +2262,7 @@ void GameDigiMusic_OnChange(void)
 
 void GameMIDIMusic_OnChange(void)
 {
-	if (M_CheckParm("-nomusic"))
+	if (M_CheckParm("-nomusic") || M_CheckParm("-noaudio"))
 		return;
 	else if (M_CheckParm("-nomidimusic"))
 		return;

@@ -73,9 +73,7 @@ typedef enum
 
 	PT_LOGIN,         // Login attempt from the client.
 
-#ifdef NEWPING
 	PT_PING,          // Packet sent to tell clients the other client's latency to server.
-#endif
 	NUMPACKETTYPE
 } packettype_t;
 
@@ -425,9 +423,7 @@ typedef struct
 		msaskinfo_pak msaskinfo;            //          22 bytes
 		plrinfo playerinfo[MAXPLAYERS];     //        1152 bytes (I'd say 36~38)
 		plrconfig playerconfig[MAXPLAYERS]; // (up to) 896 bytes (welp they ARE)
-#ifdef NEWPING
 		UINT32 pingtable[MAXPLAYERS];       //         128 bytes
-#endif
 	} u; // This is needed to pack diff packet types data together
 } ATTRPACK doomdata_t;
 
@@ -461,9 +457,7 @@ extern consvar_t cv_playbackspeed;
 #define KICK_MSG_PLAYER_QUIT 3
 #define KICK_MSG_TIMEOUT     4
 #define KICK_MSG_BANNED      5
-#ifdef NEWPING
 #define KICK_MSG_PING_HIGH   6
-#endif
 #define KICK_MSG_CUSTOM_KICK 7
 #define KICK_MSG_CUSTOM_BAN  8
 
@@ -488,11 +482,9 @@ extern SINT8 servernode;
 void Command_Ping_f(void);
 extern tic_t connectiontimeout;
 extern tic_t jointimeout;
-#ifdef NEWPING
 extern UINT16 pingmeasurecount;
 extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
-#endif
 
 extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_resynchattempts, cv_blamecfail, cv_maxsend, cv_noticedownload, cv_downloadspeed;
 

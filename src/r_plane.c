@@ -1113,7 +1113,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
 		zeroheight = FIXED_TO_FLOAT(temp);
 
-#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
+#define ANG2RAD(angle) ((float)((angle)*M_PIl)/ANGLE_180)
 
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in
