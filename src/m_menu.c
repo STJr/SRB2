@@ -434,7 +434,8 @@ consvar_t cv_ghost_guest     = {"ghost_guest",     "Show", CV_SAVE, ghost2_cons_
 static CV_PossibleValue_t dummyteam_cons_t[] = {{0, "Spectator"}, {1, "Red"}, {2, "Blue"}, {0, NULL}};
 static CV_PossibleValue_t dummyscramble_cons_t[] = {{0, "Random"}, {1, "Points"}, {0, NULL}};
 static CV_PossibleValue_t ringlimit_cons_t[] = {{0, "MIN"}, {9999, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t liveslimit_cons_t[] = {{-1, "MIN"}, {99, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t liveslimit_cons_t[] = {{1, "MIN"}, {99, "MAX"}, {-1, "Infinite"}, {0, NULL}};
+static CV_PossibleValue_t contlimit_cons_t[] = {{0, "MIN"}, {99, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t dummymares_cons_t[] = {
 	{-1, "END"}, {0,"Overall"}, {1,"Mare 1"}, {2,"Mare 2"}, {3,"Mare 3"}, {4,"Mare 4"}, {5,"Mare 5"}, {6,"Mare 6"}, {7,"Mare 7"}, {8,"Mare 8"}, {0,NULL}
 };
@@ -443,7 +444,7 @@ static consvar_t cv_dummyteam = {"dummyteam", "Spectator", CV_HIDEN, dummyteam_c
 static consvar_t cv_dummyscramble = {"dummyscramble", "Random", CV_HIDEN, dummyscramble_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_dummyrings = {"dummyrings", "0", CV_HIDEN, ringlimit_cons_t,	NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_dummylives = {"dummylives", "0", CV_HIDEN, liveslimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_dummycontinues = {"dummycontinues", "0", CV_HIDEN, liveslimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t cv_dummycontinues = {"dummycontinues", "0", CV_HIDEN, contlimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_dummymares = {"dummymares", "Overall", CV_HIDEN|CV_CALL, dummymares_cons_t, Dummymares_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // ==========================================================================
@@ -2787,31 +2788,19 @@ static void M_ChangeCvar(INT32 choice)
 
 	choice = (choice<<1) - 1;
 
-	if (((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_SLIDER)
-	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_INVISSLIDER)
-	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_NOMOD))
+	if (cv->flags & CV_FLOAT)
 	{
-		if (cv->flags & CV_FLOAT && (currentMenu->menuitems[itemOn].status & IT_CV_FLOATSLIDER) == IT_CV_FLOATSLIDER)
+		if (((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_SLIDER)
+			||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_INVISSLIDER)
+			||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_NOMOD)
+			|| !(currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP))
 		{
 			char s[20];
 			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
 			CV_Set(cv,s);
 		}
 		else
-			CV_SetValue(cv,cv->value+(choice));
-	}
-	else if (cv->flags & CV_FLOAT)
-	{
-		if (currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP)
-		{
 			CV_SetValue(cv,FIXED_TO_FLOAT(cv->value)+(choice));
-		}
-		else
-		{
-			char s[20];
-			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
-			CV_Set(cv,s);
-		}
 	}
 	else
 		CV_AddValue(cv,choice);
@@ -2895,6 +2884,15 @@ static void M_PrevOpt(void)
 // lock out further input in a tic when important buttons are pressed
 // (in other words -- stop bullshit happening by mashing buttons in fades)
 static boolean noFurtherInput = false;
+
+static void Command_Manual_f(void)
+{
+	if (modeattacking)
+		return;
+	M_StartControlPanel();
+	currentMenu = &MISC_HelpDef;
+	itemOn = 0;
+}
 
 //
 // M_Responder
@@ -3046,11 +3044,7 @@ boolean M_Responder(event_t *ev)
 		switch (ch)
 		{
 			case KEY_F1: // Help key
-				if (modeattacking)
-					return true;
-				M_StartControlPanel();
-				currentMenu = &MISC_HelpDef;
-				itemOn = 0;
+				Command_Manual_f();
 				return true;
 
 			case KEY_F2: // Empty
@@ -3546,6 +3540,8 @@ void M_Ticker(void)
 void M_Init(void)
 {
 	int i;
+
+	COM_AddCommand("manual", Command_Manual_f);
 
 	CV_RegisterVar(&cv_nextmap);
 	CV_RegisterVar(&cv_newgametype);
@@ -6119,9 +6115,9 @@ static void M_PandorasBox(INT32 choice)
 	else
 		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
 	if (players[consoleplayer].lives == INFLIVES)
-		CV_StealthSetValue(&cv_dummylives, -1);
+		CV_StealthSet(&cv_dummylives, "Infinite");
 	else
-		CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
+		CV_StealthSetValue(&cv_dummylives, max(players[consoleplayer].lives, 1));
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
 	SR_PandorasBox[6].status = ((players[consoleplayer].charflags & SF_SUPER)
 #ifndef DEVELOP
