@@ -2633,6 +2633,14 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			}
 			break;
 
+		case MT_BANPYURA:
+			if (target->tracer)
+			{
+				S_StopSound(target->tracer);
+				P_KillMobj(target->tracer, inflictor, source, damagetype);
+			}
+			break;
+
 		case MT_EGGSHIELD:
 			P_SetObjectMomZ(target, 4*target->scale, false);
 			P_InstaThrust(target, target->angle, 3*target->scale);

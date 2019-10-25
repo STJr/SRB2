@@ -7571,6 +7571,7 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->fuse -= 2;
 
 					flame = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_FLAMEJETFLAME);
+					P_SetMobjState(flame, S_FLAMEJETFLAME4);
 
 					flame->angle = mobj->angle;
 
@@ -7615,7 +7616,10 @@ void P_MobjThinker(mobj_t *mobj)
 						flame->momz = -strength;
 					}
 					else
+					{
 						flame->momz = strength;
+						P_SetMobjState(flame, S_FLAMEJETFLAME7);
+					}
 					P_InstaThrust(flame, mobj->angle, FixedDiv(mobj->fuse*FRACUNIT,3*FRACUNIT));
 					S_StartSound(flame, sfx_fire);
 				}
@@ -10302,6 +10306,15 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 				mobj->reactiontime >>= 1;
 			}
 			break;
+		case MT_BANPYURA:
+			{
+				mobj_t *bigmeatyclaw = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_BANPSPRING);
+				bigmeatyclaw->angle = mobj->angle + ((mobj->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);;
+				P_SetTarget(&mobj->tracer, bigmeatyclaw);
+				P_SetTarget(&bigmeatyclaw->tracer, mobj);
+				mobj->reactiontime >>= 1;
+			}
+			break;
 		case MT_BIGMINE:
 			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
 			break;
@@ -12506,6 +12519,76 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			leaf->angle = angle;
 			angle += ANGLE_45;
 		}
+		break;
+	}
+	case MT_REDBOOSTER:
+	{
+		angle_t angle = FixedAngle(mthing->angle << FRACBITS);
+		fixed_t x1 = FINECOSINE((angle >> ANGLETOFINESHIFT) & FINEMASK);
+		fixed_t y1 = FINESINE((angle >> ANGLETOFINESHIFT) & FINEMASK);
+		fixed_t x2 = FINECOSINE(((angle+ANGLE_90) >> ANGLETOFINESHIFT) & FINEMASK);
+		fixed_t y2 = FINESINE(((angle+ANGLE_90) >> ANGLETOFINESHIFT) & FINEMASK);
+
+		mobj_t *seg = P_SpawnMobjFromMobj(mobj, 26*x1, 26*y1, 0, MT_BOOSTERSEG);
+		seg->angle = angle-ANGLE_90;
+		P_SetMobjState(seg, S_REDBOOSTERSEG_FACE);
+		seg = P_SpawnMobjFromMobj(mobj, -26*x1, -26*y1, 0, MT_BOOSTERSEG);
+		seg->angle = angle+ANGLE_90;
+		P_SetMobjState(seg, S_REDBOOSTERSEG_FACE);
+		seg = P_SpawnMobjFromMobj(mobj, 21*x2, 21*y2, 0, MT_BOOSTERSEG);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_REDBOOSTERSEG_LEFT);
+		seg = P_SpawnMobjFromMobj(mobj, -21*x2, -21*y2, 0, MT_BOOSTERSEG);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_REDBOOSTERSEG_RIGHT);
+
+		seg = P_SpawnMobjFromMobj(mobj, 13*(x1+x2), 13*(y1+y2), 0, MT_BOOSTERROLLER);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_REDBOOSTERROLLER);
+		seg = P_SpawnMobjFromMobj(mobj, 13*(x1-x2), 13*(y1-y2), 0, MT_BOOSTERROLLER);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_REDBOOSTERROLLER);
+		seg = P_SpawnMobjFromMobj(mobj, -13*(x1+x2), -13*(y1+y2), 0, MT_BOOSTERROLLER);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_REDBOOSTERROLLER);
+		seg = P_SpawnMobjFromMobj(mobj, -13*(x1-x2), -13*(y1-y2), 0, MT_BOOSTERROLLER);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_REDBOOSTERROLLER);
+		break;
+	}
+	case MT_YELLOWBOOSTER:
+	{
+		angle_t angle = FixedAngle(mthing->angle << FRACBITS);
+		fixed_t x1 = FINECOSINE((angle >> ANGLETOFINESHIFT) & FINEMASK);
+		fixed_t y1 = FINESINE((angle >> ANGLETOFINESHIFT) & FINEMASK);
+		fixed_t x2 = FINECOSINE(((angle+ANGLE_90) >> ANGLETOFINESHIFT) & FINEMASK);
+		fixed_t y2 = FINESINE(((angle+ANGLE_90) >> ANGLETOFINESHIFT) & FINEMASK);
+
+		mobj_t *seg = P_SpawnMobjFromMobj(mobj, 26*x1, 26*y1, 0, MT_BOOSTERSEG);
+		seg->angle = angle-ANGLE_90;
+		P_SetMobjState(seg, S_YELLOWBOOSTERSEG_FACE);
+		seg = P_SpawnMobjFromMobj(mobj, -26*x1, -26*y1, 0, MT_BOOSTERSEG);
+		seg->angle = angle+ANGLE_90;
+		P_SetMobjState(seg, S_YELLOWBOOSTERSEG_FACE);
+		seg = P_SpawnMobjFromMobj(mobj, 21*x2, 21*y2, 0, MT_BOOSTERSEG);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_YELLOWBOOSTERSEG_LEFT);
+		seg = P_SpawnMobjFromMobj(mobj, -21*x2, -21*y2, 0, MT_BOOSTERSEG);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_YELLOWBOOSTERSEG_RIGHT);
+
+		seg = P_SpawnMobjFromMobj(mobj, 13*(x1+x2), 13*(y1+y2), 0, MT_BOOSTERROLLER);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_YELLOWBOOSTERROLLER);
+		seg = P_SpawnMobjFromMobj(mobj, 13*(x1-x2), 13*(y1-y2), 0, MT_BOOSTERROLLER);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_YELLOWBOOSTERROLLER);
+		seg = P_SpawnMobjFromMobj(mobj, -13*(x1+x2), -13*(y1+y2), 0, MT_BOOSTERROLLER);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_YELLOWBOOSTERROLLER);
+		seg = P_SpawnMobjFromMobj(mobj, -13*(x1-x2), -13*(y1-y2), 0, MT_BOOSTERROLLER);
+		seg->angle = angle;
+		P_SetMobjState(seg, S_YELLOWBOOSTERROLLER);
 		break;
 	}
 	default:

@@ -306,6 +306,8 @@ typedef enum sprite
 	SPR_TURR, // Pop-Up Turret
 	SPR_SHRP, // Sharp
 	SPR_CRAB, // Crushstacean
+	SPR_CR2B, // Banpyura
+	SPR_CSPR, // Banpyura spring
 	SPR_JJAW, // Jet Jaw
 	SPR_SNLR, // Snailer
 	SPR_VLTR, // BASH
@@ -632,6 +634,8 @@ typedef enum sprite
 	SPR_SSWY, // Yellow Side Spring
 	SPR_SSWR, // Red Side Spring
 	SPR_SSWB, // Blue Side Spring
+	SPR_BSTY, // Yellow Booster
+	SPR_BSTR, // Red Booster
 
 	// Environmental Effects
 	SPR_RAIN, // Rain
@@ -1167,6 +1171,21 @@ typedef enum state
 	S_CRUSHCLAW_IN,
 	S_CRUSHCLAW_WAIT,
 	S_CRUSHCHAIN,
+
+	// Banpyura
+	S_BANPYURA_ROAM1,
+	S_BANPYURA_ROAM2,
+	S_BANPYURA_ROAM3,
+	S_BANPYURA_ROAM4,
+	S_BANPYURA_ROAMPAUSE,
+	S_CDIAG1,
+	S_CDIAG2,
+	S_CDIAG3,
+	S_CDIAG4,
+	S_CDIAG5,
+	S_CDIAG6,
+	S_CDIAG7,
+	S_CDIAG8,
 
 	// Jet Jaw
 	S_JETJAW_ROAM1,
@@ -2634,6 +2653,12 @@ typedef enum state
 	S_FLAMEJETFLAME1,
 	S_FLAMEJETFLAME2,
 	S_FLAMEJETFLAME3,
+	S_FLAMEJETFLAME4,
+	S_FLAMEJETFLAME5,
+	S_FLAMEJETFLAME6,
+	S_FLAMEJETFLAME7,
+	S_FLAMEJETFLAME8,
+	S_FLAMEJETFLAME9,
 
 	// Spinning flame jets
 	S_FJSPINAXISA1, // Counter-clockwise
@@ -3391,6 +3416,17 @@ typedef enum state
 	S_BHORIZ7,
 	S_BHORIZ8,
 
+	// Booster
+	S_BOOSTERSOUND,
+	S_YELLOWBOOSTERROLLER,
+	S_YELLOWBOOSTERSEG_LEFT,
+	S_YELLOWBOOSTERSEG_RIGHT,
+	S_YELLOWBOOSTERSEG_FACE,
+	S_REDBOOSTERROLLER,
+	S_REDBOOSTERSEG_LEFT,
+	S_REDBOOSTERSEG_RIGHT,
+	S_REDBOOSTERSEG_FACE,
+
 	// Rain
 	S_RAIN1,
 	S_RAINRETURN,
@@ -4065,6 +4101,8 @@ typedef enum mobj_type
 	MT_CRUSHSTACEAN, // Crushstacean
 	MT_CRUSHCLAW, // Big meaty claw
 	MT_CRUSHCHAIN, // Chain
+	MT_BANPYURA, // Banpyura
+	MT_BANPSPRING, // Banpyura spring
 	MT_JETJAW, // Jet Jaw
 	MT_SNAILER, // Snailer
 	MT_VULTURE, // BASH
@@ -4201,6 +4239,11 @@ typedef enum mobj_type
 	MT_YELLOWHORIZ,
 	MT_REDHORIZ,
 	MT_BLUEHORIZ,
+
+	MT_BOOSTERSEG,
+	MT_BOOSTERROLLER,
+	MT_YELLOWBOOSTER,
+	MT_REDBOOSTER,
 
 	// Interactive Objects
 	MT_BUBBLES, // Bubble source

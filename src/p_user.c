@@ -11336,6 +11336,13 @@ void P_PlayerThink(player_t *player)
 					break;
 			}
 		}
+		else if (player->powers[pw_justsprung])
+		{
+#ifdef SPRINGSPIN
+			if (player->powers[pw_justsprung] & (1<<15))
+				player->drawangle += (player->powers[pw_justsprung] & ~(1<<15))*(ANG2+ANG1);
+#endif
+		}
 		else if ((player->skidtime > (TICRATE/2 - 2) || ((player->pflags & (PF_SPINNING|PF_STARTDASH)) == PF_SPINNING)) && (abs(player->rmomx) > 5*player->mo->scale || abs(player->rmomy) > 5*player->mo->scale)) // spin/skid force
 			player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 		else if (((player->charability2 == CA2_GUNSLINGER || player->charability2 == CA2_MELEE) && player->panim == PA_ABILITY2) || player->pflags & PF_STASIS || player->skidtime)
@@ -11348,7 +11355,7 @@ void P_PlayerThink(player_t *player)
 				if (player->mo->eflags & MFE_TOUCHWATER || player->powers[pw_flashing] > (flashingtics/4)*3)
 				{
 					diff = (player->mo->angle - player->drawangle);
-					factor = 4;
+					factor = 16;
 				}
 				else
 				{
@@ -11357,7 +11364,7 @@ void P_PlayerThink(player_t *player)
 				}
 #else
 				diff = (player->mo->angle - player->drawangle);
-				factor = 4;
+				factor = 16;
 #endif
 			}
 			else if (player->pflags & PF_STARTDASH)
@@ -11392,7 +11399,9 @@ void P_PlayerThink(player_t *player)
 		{
 			boolean currentlyonground = P_IsObjectOnGround(player->mo);
 
-			if (!player->powers[pw_carry] && !player->powers[pw_nocontrol]
+			if (player->powers[pw_noautobrake])
+				;
+			else if (!player->powers[pw_carry] && !player->powers[pw_nocontrol]
 			&& ((player->pflags & (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE|PF_STASIS)) == (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE))
 			&& !(cmd->forwardmove || cmd->sidemove)
 			&& (player->rmomx || player->rmomy)
@@ -11433,9 +11442,6 @@ void P_PlayerThink(player_t *player)
 				player->pflags |= PF_APPLYAUTOBRAKE;
 		}
 	}
-
-	if (player->powers[pw_pushing])
-		player->powers[pw_pushing]--;
 
 	player->mo->movefactor = FRACUNIT; // We're not going to do any more with this, so let's change it back for the next frame.
 
@@ -11515,6 +11521,17 @@ void P_PlayerThink(player_t *player)
 
 	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM) // tails fly counter
 		player->powers[pw_tailsfly]--;
+
+	if (player->powers[pw_pushing] && player->powers[pw_pushing] < UINT16_MAX)
+		player->powers[pw_pushing]--;
+
+	if (player->powers[pw_justsprung] & ((1<<15)-1) && player->powers[pw_justsprung] < UINT16_MAX)
+		player->powers[pw_justsprung]--;
+	else
+		player->powers[pw_justsprung] = 0;
+
+	if (player->powers[pw_pushing] && player->powers[pw_pushing] < UINT16_MAX)
+		player->powers[pw_pushing]--;
 
 	if (player->powers[pw_underwater] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_PROTECTWATER)))
 	{
