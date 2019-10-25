@@ -1692,7 +1692,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		// Kick bot from special stages
 		if (botskin)
 		{
-			if (G_IsSpecialStage(mapnum))
+			if (G_IsSpecialStage(mapnum) || (mapheaderinfo[mapnum-1] && (mapheaderinfo[mapnum-1]->typeoflevel & TOL_NIGHTS)))
 			{
 				if (botingame)
 				{
