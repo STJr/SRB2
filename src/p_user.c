@@ -191,7 +191,7 @@ boolean P_AutoPause(void)
 	if (netgame || modeattacking || gamestate == GS_TITLESCREEN)
 		return false;
 
-	return (menuactive || window_notinfocus);
+	return (menuactive || ( window_notinfocus && cv_pauseifunfocused.value ));
 }
 
 //
@@ -2272,7 +2272,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					player->mo->momy = ((player->mo->momy - player->cmomy)/3) + player->cmomy;
 				}
 			}
-			else if (player->charability2 == CA2_MELEE && ((player->panim == PA_ABILITY2) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+			else if (player->charability2 == CA2_MELEE
+				&& ((player->panim == PA_ABILITY2) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY && player->cmd.buttons & (BT_JUMP|BT_USE))))
 			{
 				if (player->mo->state-states != S_PLAY_MELEE_LANDING)
 				{
@@ -2468,39 +2469,42 @@ static void P_CheckBustableBlocks(player_t *player)
 
 				if ((rover->flags & FF_BUSTUP)/* && !rover->master->frontsector->crumblestate*/)
 				{
-					// If it's an FF_SPINBUST, you have to either be jumping, or coming down
-					// onto the top from a spin.
-					if (rover->flags & FF_SPINBUST && ((!(player->pflags & PF_JUMPED) && !(player->pflags & PF_SPINNING) && !(player->pflags & PF_BOUNCING)) || (player->pflags & PF_STARTDASH)))
+					// If it's an FF_SHATTER, you can break it just by touching it.
+					if (rover->flags & FF_SHATTER)
+						goto bust;
+
+					// If it's an FF_SPINBUST, you can break it if you are in your spinning frames
+					// (either from jumping or spindashing).
+					if (rover->flags & FF_SPINBUST
+						&& (((player->pflags & PF_SPINNING) && !(player->pflags & PF_STARTDASH))
+							|| (player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE))))
+						goto bust;
+
+					// You can always break it if you have CA_GLIDEANDCLIMB
+					// or if you are bouncing on it
+					// or you are using CA_TWINSPIN/CA2_MELEE.
+					if (player->charability == CA_GLIDEANDCLIMB
+						|| (player->pflags & PF_BOUNCING)
+						|| ((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
+						|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+						goto bust;
+
+					if (rover->flags & FF_STRONGBUST)
 						continue;
 
-					// if it's not an FF_SHATTER, you must be spinning (and not jumping)
-					// or be super
-					// or have CA_GLIDEANDCLIMB
-					// or be in dashmode with SF_DASHMODE
-					// or be using CA_TWINSPIN
-					// or be using CA2_MELEE
-					// or are drilling in NiGHTS
-					// or are recording for Metal Sonic
-					if (!(rover->flags & FF_SHATTER) && !(rover->flags & FF_SPINBUST)
-						&& !((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
+					// If it's not an FF_STRONGBUST, you can break if you are spinning (and not jumping)
+					// or you are super
+					// or you are in dashmode with SF_DASHMODE
+					// or you are drilling in NiGHTS
+					// or you are recording for Metal Sonic
+					if (!((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
 						&& !(player->powers[pw_super])
-						&& !(player->charability == CA_GLIDEANDCLIMB)
-						&& !(player->pflags & PF_BOUNCING)
 						&& !((player->charflags & SF_DASHMODE) && (player->dashmode >= 3*TICRATE))
-						&& !((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
-						&& !(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 						&& !(player->pflags & PF_DRILLING)
 						&& !metalrecording)
 						continue;
 
-					// Only players with CA_GLIDEANDCLIMB, or CA_TWINSPIN/CA2_MELEE users can break this rock...
-					if (!(rover->flags & FF_SHATTER) && (rover->flags & FF_ONLYKNUX)
-						&& !(player->charability == CA_GLIDEANDCLIMB
-						|| (player->pflags & PF_BOUNCING)
-						|| ((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
-						|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)))
-						continue;
-
+				bust:
 					topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 					bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 
@@ -4175,8 +4179,11 @@ static void P_DoSuperStuff(player_t *player)
 		{
 			player->powers[pw_super] = 0;
 			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-			music_stack_noposition = true; // HACK: Do not reposition next music
-			music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			if (P_IsLocalPlayer(player))
+			{
+				music_stack_noposition = true; // HACK: Do not reposition next music
+				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			}
 			P_RestoreMusic(player);
 			P_SpawnShieldOrb(player);
 
@@ -4245,7 +4252,7 @@ static void P_DoSuperStuff(player_t *player)
 			if (gametype != GT_COOP)
 				player->powers[pw_flashing] = flashingtics-1;
 
-			if ((player->mo->health > 0) && (player->mo->sprite2 & FF_SPR2SUPER))
+			if (player->mo->sprite2 & FF_SPR2SUPER)
 				P_SetPlayerMobjState(player->mo, player->mo->state-states);
 
 			// Inform the netgame that the champion has fallen in the heat of battle.
@@ -4258,8 +4265,11 @@ static void P_DoSuperStuff(player_t *player)
 			}
 
 			// Resume normal music if you're the console player
-			music_stack_noposition = true; // HACK: Do not reposition next music
-			music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			if (P_IsLocalPlayer(player))
+			{
+				music_stack_noposition = true; // HACK: Do not reposition next music
+				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			}
 			P_RestoreMusic(player);
 
 			// If you had a shield, restore its visual significance.
@@ -4367,7 +4377,6 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		{
 			player->mo->momz = 9*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
-			player->mo->tracer->flags |= MF_PUSHABLE;
 			P_SetTarget(&player->mo->tracer->target, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
@@ -10508,7 +10517,7 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 			//Axes must be directly parallel or antiparallel, give or take 5 degrees.
 			if (angdiff < ANG10)
 			{
-				mark = P_SpawnMobj(nx, ny, nz, mobj->info->raisestate);
+				mark = P_SpawnMobj(nx, ny, nz, (mobjtype_t)mobj->info->raisestate);
 				return mark;
 			}
 		}
@@ -10723,7 +10732,11 @@ static void P_MinecartThink(player_t *player)
 		}
 	}
 
-	P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+	if (player->mo->state-states != S_PLAY_STND)
+	{
+		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+		player->mo->tics = -1;
+	}
 
 	// Move player to minecart.
 	P_TeleportMove(player->mo, minecart->x - minecart->momx, minecart->y - minecart->momy, minecart->z + max(minecart->momz, 0) + 8*FRACUNIT);
@@ -11373,6 +11386,13 @@ void P_PlayerThink(player_t *player)
 					break;
 			}
 		}
+		else if (player->powers[pw_justsprung])
+		{
+#ifdef SPRINGSPIN
+			if (player->powers[pw_justsprung] & (1<<15))
+				player->drawangle += (player->powers[pw_justsprung] & ~(1<<15))*(ANG2+ANG1);
+#endif
+		}
 		else if ((player->skidtime > (TICRATE/2 - 2) || ((player->pflags & (PF_SPINNING|PF_STARTDASH)) == PF_SPINNING)) && (abs(player->rmomx) > 5*player->mo->scale || abs(player->rmomy) > 5*player->mo->scale)) // spin/skid force
 			player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 		else if (((player->charability2 == CA2_GUNSLINGER || player->charability2 == CA2_MELEE) && player->panim == PA_ABILITY2) || player->pflags & PF_STASIS || player->skidtime)
@@ -11393,7 +11413,7 @@ void P_PlayerThink(player_t *player)
 				if (player->mo->eflags & MFE_TOUCHWATER || player->powers[pw_flashing] > (flashingtics/4)*3)
 				{
 					diff = (player->mo->angle - player->drawangle);
-					factor = 4;
+					factor = 16;
 				}
 				else
 				{
@@ -11402,7 +11422,7 @@ void P_PlayerThink(player_t *player)
 				}
 #else
 				diff = (player->mo->angle - player->drawangle);
-				factor = 4;
+				factor = 16;
 #endif
 			}
 			else if (player->pflags & PF_STARTDASH)
@@ -11437,7 +11457,9 @@ void P_PlayerThink(player_t *player)
 		{
 			boolean currentlyonground = P_IsObjectOnGround(player->mo);
 
-			if (!player->powers[pw_carry] && !player->powers[pw_nocontrol]
+			if (player->powers[pw_noautobrake])
+				;
+			else if (!player->powers[pw_carry] && !player->powers[pw_nocontrol]
 			&& ((player->pflags & (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE|PF_STASIS)) == (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE))
 			&& !(cmd->forwardmove || cmd->sidemove)
 			&& (player->rmomx || player->rmomy)
@@ -11478,9 +11500,6 @@ void P_PlayerThink(player_t *player)
 				player->pflags |= PF_APPLYAUTOBRAKE;
 		}
 	}
-
-	if (player->powers[pw_pushing])
-		player->powers[pw_pushing]--;
 
 	player->mo->movefactor = FRACUNIT; // We're not going to do any more with this, so let's change it back for the next frame.
 
@@ -11560,6 +11579,17 @@ void P_PlayerThink(player_t *player)
 
 	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM) // tails fly counter
 		player->powers[pw_tailsfly]--;
+
+	if (player->powers[pw_pushing] && player->powers[pw_pushing] < UINT16_MAX)
+		player->powers[pw_pushing]--;
+
+	if (player->powers[pw_justsprung] & ((1<<15)-1) && player->powers[pw_justsprung] < UINT16_MAX)
+		player->powers[pw_justsprung]--;
+	else
+		player->powers[pw_justsprung] = 0;
+
+	if (player->powers[pw_pushing] && player->powers[pw_pushing] < UINT16_MAX)
+		player->powers[pw_pushing]--;
 
 	if (player->powers[pw_underwater] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_PROTECTWATER)))
 	{
@@ -12115,7 +12145,7 @@ void P_PlayerAfterThink(player_t *player)
 				mo->momx = rock->momx;
 				mo->momy = rock->momy;
 				mo->momz = 0;
-				
+
 				if (player->panim == PA_IDLE && (mo->momx || mo->momy))
 				{
 					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);

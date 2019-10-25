@@ -715,7 +715,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"cdfm59", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"cdfm60", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"cdfm61", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"cdfm62", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
+  {"cdfm62", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Speed boost"},
   {"cdfm63", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"cdfm64", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"cdfm65", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},

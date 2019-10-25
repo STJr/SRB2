@@ -2425,7 +2425,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 	mobj_t *thing;
 	sector_t *sector;
 	INT32 i;
-	boolean playeronme = false;
+	boolean playeronme = false, active = false;
 	fixed_t ceilingdestination, floordestination;
 	result_e res = 0;
 
@@ -2459,8 +2459,53 @@ void T_RaiseSector(levelspecthink_t *raise)
 			break;
 		}
 	}
+	
+	if (raise->vars[9]) // Dynamically Sinking Platform^tm
+	{
+#define shaketime 10
+		if (raise->vars[11] > shaketime) // State: moving
+		{
+			if (playeronme) // If player is standing on the platform, accelerate
+			{
+				raise->vars[10] += (FRACUNIT >> 5);
+			}
+			else // otherwise, decelerate until inflection
+			{
+				raise->vars[10] -= FRACUNIT >> 3;
+				if (raise->vars[10] <= 0) // inflection!
+				{
+					raise->vars[10] = 0;
+					raise->vars[11] = 0; // allow the shake to occur again (fucks over players attempting to jump-cheese)
+				}
+			}
+			active = raise->vars[10] > 0;
+		}
+		else // State: shaking
+		{
+			if (playeronme || raise->vars[11])
+			{
+				active = true;
+				if (++raise->vars[11] > shaketime)
+				{
+					if (playeronme)
+						raise->vars[10] = FRACUNIT >> 5;
+					else
+						raise->vars[10] = FRACUNIT << 1;
+				}
+				else
+				{
+					raise->vars[10] = ((shaketime/2) - raise->vars[11]) << FRACBITS;
+					if (raise->vars[10] < -raise->vars[2]/2)
+						raise->vars[10] = -raise->vars[2]/2;
+				}
+			}
+		}
+#undef shaketime
+	}
+	else // Air bobbing platform (not a Dynamically Sinking Platform^tm)
+		active = playeronme;
 
-	if (playeronme)
+	if (active)
 	{
 		raise->vars[3] = raise->vars[2];
 
@@ -2553,6 +2598,8 @@ void T_RaiseSector(levelspecthink_t *raise)
 		else if (raise->vars[3] > origspeed)
 			raise->vars[3] = origspeed;
 	}
+
+	raise->vars[3] += raise->vars[10];
 
 	res = T_MovePlane
 	(

@@ -327,7 +327,7 @@ typedef struct
 	// Music stuff.
 	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
 	char musintername[7];    ///< Intermission screen music.
-	
+
 	char muspostbossname[7];    ///< Post-bossdeath music.
 	UINT16 muspostbosstrack;    ///< Post-bossdeath track.
 	UINT32 muspostbosspos;      ///< Post-bossdeath position
@@ -433,6 +433,7 @@ typedef struct
 	tic_t time;   ///< Time in which the level was finished.
 	UINT32 score; ///< Score when the level was finished.
 	UINT16 rings; ///< Rings when the level was finished.
+	boolean gotperfect; ///< Got perfect bonus?
 } recorddata_t;
 
 /** Setup for one NiGHTS map.

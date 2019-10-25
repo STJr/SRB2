@@ -175,11 +175,11 @@ static void CONS_Clear_f(void)
 
 // Choose english keymap
 //
-static void CONS_English_f(void)
+/*static void CONS_English_f(void)
 {
 	shiftxform = english_shiftxform;
 	CONS_Printf(M_GetText("%s keymap.\n"), M_GetText("English"));
-}
+}*/
 
 static char *bindtable[NUMINPUTS];
 
@@ -394,7 +394,7 @@ void CON_Init(void)
 	// register our commands
 	//
 	COM_AddCommand("cls", CONS_Clear_f);
-	COM_AddCommand("english", CONS_English_f);
+	//COM_AddCommand("english", CONS_English_f);
 	// set console full screen for game startup MAKE SURE VID_Init() done !!!
 	con_destlines = vid.height;
 	con_curlines = vid.height;
