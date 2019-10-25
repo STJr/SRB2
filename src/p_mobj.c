@@ -1991,7 +1991,7 @@ void P_XYMovement(mobj_t *mo)
 					mo->momz = transfermomz;
 					mo->standingslope = NULL;
 					if (player->pflags & PF_SPINNING)
-						player->pflags = (player->pflags & ~PF_SPINNING) | (P_GetJumpFlags(player) | PF_THOKKED);
+						player->pflags = (player->pflags & ~PF_SPINNING) | (PF_JUMPED | PF_THOKKED);
 				}
 			}
 #endif
