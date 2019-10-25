@@ -45,6 +45,9 @@ extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
 
+extern consvar_t cv_playmusicifunfocused;
+extern consvar_t cv_playsoundsifunfocused;
+
 #ifdef HAVE_OPENMPT
 extern consvar_t cv_modfilter;
 #endif
@@ -145,6 +148,12 @@ void S_StartEx(boolean reset);
 lumpnum_t S_GetSfxLumpNum(sfxinfo_t *sfx);
 
 //
+// Sound Status
+//
+
+boolean S_SoundDisabled(void);
+
+//
 // Start sound for thing at <origin> using <sound_id> from sounds.h
 //
 void S_StartSound(const void *origin, sfxenum_t sound_id);
@@ -164,6 +173,7 @@ boolean S_MIDIMusicDisabled(void);
 boolean S_MusicDisabled(void);
 boolean S_MusicPlaying(void);
 boolean S_MusicPaused(void);
+boolean S_MusicNotInFocus(void);
 musictype_t S_MusicType(void);
 const char *S_MusicName(void);
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
