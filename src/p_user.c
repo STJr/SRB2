@@ -10930,7 +10930,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	if (panim != PA_WALK && panim != PA_RUN && panim != PA_DASH) // turn invisible when not in a coherent movement state
 	{
 		if (fume->state-states != fume->info->spawnstate)
-			P_SetMobjState(fume, S_SPAWNSTATE);
+			P_SetMobjState(fume, fume->info->spawnstate);
 		return;
 	}
 	
@@ -10965,14 +10965,14 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 		if (panim == PA_WALK)
 		{
 			if (fume->state-states != fume->info->spawnstate)
-				P_SetMobjState(fume, S_SPAWNSTATE);
+				P_SetMobjState(fume, fume->info->spawnstate);
 			return;
 		}
 	}
 	
 	if (fume->state-states == fume->info->spawnstate) // If currently inivisble, activate!
 	{
-		P_SetMobjState(fume, S_SEESTATE);
+		P_SetMobjState(fume, fume->info->seestate);
 		P_SetScale(fume, mo->scale);
 	}
 	
@@ -10986,7 +10986,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	{
 		if (dashmode == DASHMODE_THRESHOLD && dashmode > fume->movecount) // If just about to enter dashmode, play the startup animation again
 		{
-			P_SetMobjState(fume, S_SEESTATE);
+			P_SetMobjState(fume, fume->seestate);
 			P_SetScale(fume, mo->scale << 1);
 		}
 		fume->flags2 = (fume->flags2 & ~MF2_DONTDRAW) | (mo->flags2 & MF2_DONTDRAW);
