@@ -2311,7 +2311,7 @@ void GameMIDIMusic_OnChange(void)
 	else
 	{
 		midi_disabled = true;
-		if (S_MusicType() == MU_MID)
+		if (S_MusicType() == MU_MID || S_MusicType() == MU_MID_EX)
 		{
 			if (digital_disabled)
 				S_StopMusic();
