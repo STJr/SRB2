@@ -4258,6 +4258,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// CA_GLIDEANDCLIMB
 	"S_PLAY_GLIDE",
+	"S_PLAY_GLIDE_LANDING",
 	"S_PLAY_CLING",
 	"S_PLAY_CLIMB",
 
