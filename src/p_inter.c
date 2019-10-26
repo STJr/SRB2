@@ -485,6 +485,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					toucher->momx = 7*toucher->momx>>3;
 					toucher->momy = 7*toucher->momy>>3;
 				}
+				else if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+					&& player->panim == PA_DASH)
+					P_DoPlayerPain(player, special, special);
 			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 			if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
