@@ -796,6 +796,7 @@ typedef enum playersprite
 	SPR2_TIRE, // tired
 
 	SPR2_GLID, // glide
+	SPR2_LAND, // landing after glide/bounce
 	SPR2_CLNG, // cling
 	SPR2_CLMB, // climb
 
@@ -803,7 +804,6 @@ typedef enum playersprite
 	SPR2_FRUN, // float run
 
 	SPR2_BNCE, // bounce
-	SPR2_BLND, // bounce landing
 
 	SPR2_FIRE, // fire
 
@@ -931,6 +931,7 @@ typedef enum state
 
 	// CA_GLIDEANDCLIMB
 	S_PLAY_GLIDE,
+	S_PLAY_GLIDE_LANDING,
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
 

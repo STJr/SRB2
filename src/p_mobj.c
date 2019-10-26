@@ -7976,7 +7976,7 @@ void P_MobjThinker(mobj_t *mobj)
 					INT32 strength;
 					++mobj->movedir;
 					mobj->frame &= ~FF_TRANSMASK;
-					strength = min(mobj->fuse, mobj->movedir)*3;
+					strength = min(mobj->fuse, (INT32)mobj->movedir)*3;
 					if (strength < 10)
 						mobj->frame |= ((10-strength)<<(FF_TRANSSHIFT));
 				}

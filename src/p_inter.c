@@ -477,7 +477,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momy = -toucher->momy;
 				if (player->charability == CA_FLY && player->panim == PA_ABILITY)
 					toucher->momz = -toucher->momz/2;
-				if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+				else if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
+				{
+					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
+					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+					toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
+					toucher->momx = 7*toucher->momx>>3;
+					toucher->momy = 7*toucher->momy>>3;
+				}
+				else if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
 					&& player->panim == PA_DASH)
 					P_DoPlayerPain(player, special, special);
 			}
@@ -1521,10 +1529,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momx = P_ReturnThrustX(special, angle, touchspeed);
 				toucher->momy = P_ReturnThrustY(special, angle, touchspeed);
 				toucher->momz = -toucher->momz;
-				if (player->pflags & PF_GLIDING)
+				if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
 				{
 					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+					toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
+					toucher->momx = 7*toucher->momx>>3;
+					toucher->momy = 7*toucher->momy>>3;
 				}
 				player->homing = 0;
 
@@ -1569,10 +1580,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					toucher->momx = P_ReturnThrustX(special, special->angle, touchspeed);
 					toucher->momy = P_ReturnThrustY(special, special->angle, touchspeed);
 					toucher->momz = -toucher->momz;
-					if (player->pflags & PF_GLIDING)
+					if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
 					{
 						player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 						P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+						toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
+						toucher->momx = 7*toucher->momx>>3;
+						toucher->momy = 7*toucher->momy>>3;
 					}
 					player->homing = 0;
 

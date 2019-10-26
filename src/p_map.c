@@ -3484,13 +3484,13 @@ isblocking:
 			&& canclimb)
 			{
 				slidemo->angle = climbangle;
-				if (!demoplayback || P_AnalogMove(slidemo->player))
+				/*if (!demoplayback || P_AnalogMove(slidemo->player))
 				{
 					if (slidemo->player == &players[consoleplayer])
 						localangle = slidemo->angle;
 					else if (slidemo->player == &players[secondarydisplayplayer])
 						localangle2 = slidemo->angle;
-				}
+				}*/
 
 				if (!slidemo->player->climbing)
 				{
