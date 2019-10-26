@@ -10986,7 +10986,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	{
 		if (dashmode == DASHMODE_THRESHOLD && dashmode > fume->movecount) // If just about to enter dashmode, play the startup animation again
 		{
-			P_SetMobjState(fume, fume->seestate);
+			P_SetMobjState(fume, fume->info->seestate);
 			P_SetScale(fume, mo->scale << 1);
 		}
 		fume->flags2 = (fume->flags2 & ~MF2_DONTDRAW) | (mo->flags2 & MF2_DONTDRAW);
