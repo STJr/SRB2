@@ -252,6 +252,8 @@ typedef enum
 	pw_spacetime, // In space, no one can hear you spin!
 	pw_extralife, // Extra Life timer
 	pw_pushing,
+	pw_justsprung,
+	pw_noautobrake,
 
 	pw_super, // Are you super?
 	pw_gravityboots, // gravity boots

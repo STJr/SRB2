@@ -2027,6 +2027,7 @@ void A_CrushstaceanWalk(mobj_t *actor)
 	|| (actor->reactiontime-- <= 0))
 	{
 		actor->flags2 ^= MF2_AMBUSH;
+		P_SetTarget(&actor->target, NULL);
 		P_SetMobjState(actor, locvar2);
 		actor->reactiontime = actor->info->reactiontime;
 	}
@@ -2087,7 +2088,7 @@ void A_CrushclawAim(mobj_t *actor)
 		return; // there is only one step and it is crab
 	}
 
-	if (crab->target || P_LookForPlayers(crab, true, false, 600*crab->scale))
+	if (crab->target || P_LookForPlayers(crab, true, false, actor->info->speed*crab->scale))
 		ang = R_PointToAngle2(crab->x, crab->y, crab->target->x, crab->target->y);
 	else
 		ang = crab->angle + ((crab->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);
@@ -2170,7 +2171,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		UINT8 i = 0;
 		for (i = 0; (i < CSEGS); i++)
 		{
-			mobj_t *newchain = P_SpawnMobjFromMobj(actor, 0, 0, 0, actor->info->raisestate);
+			mobj_t *newchain = P_SpawnMobjFromMobj(actor, 0, 0, 0, (mobjtype_t)actor->info->raisestate);
 			P_SetTarget(&prevchain->target, newchain);
 			prevchain = newchain;
 		}

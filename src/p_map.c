@@ -124,6 +124,7 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 //     Positive spring modes are minor variants of vanilla spring behaviour.
 //       1 = launch players in jump
 //       2 = don't modify player at all, just add momentum
+//       3 = speed-booster mode (force onto ground, MF_AMBUSH causes auto-spin)
 //     Negative spring modes are mildly-related gimmicks with customisation.
 //      -1 = pinball bumper
 //     Any other spring mode defaults to standard vanilla spring behaviour,
@@ -151,7 +152,9 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 	if (object->player)
 	{
-		if (object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
+		if (spring->info->painchance == 3)
+			;
+		else if (object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
 			strong = 1;
 		else if (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)
 			strong = 2;
@@ -286,7 +289,27 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	if (spring->info->painchance != 2)
 	{
 		if (object->player)
+		{
 			object->player->pflags &= ~PF_APPLYAUTOBRAKE;
+#ifndef SPRINGSPIN
+			object->player->powers[pw_justsprung] = 5;
+			if (horizspeed)
+				object->player->powers[pw_noautobrake] = ((horizspeed*TICRATE)>>(FRACBITS+3))/9; // TICRATE at 72*FRACUNIT
+			else if (P_MobjFlip(object) == P_MobjFlip(spring))
+				object->player->powers[pw_justsprung] |= (1<<15);
+#else
+			object->player->powers[pw_justsprung] = 15;
+			if (horizspeed)
+				object->player->powers[pw_noautobrake] = ((horizspeed*TICRATE)>>(FRACBITS+3))/9; // TICRATE at 72*FRACUNIT
+			else
+			{
+				if (abs(object->player->rmomx) > object->scale || abs(object->player->rmomy) > object->scale)
+					object->player->drawangle = R_PointToAngle2(0, 0, object->player->rmomx, object->player->rmomy);
+				if (P_MobjFlip(object) == P_MobjFlip(spring))
+					object->player->powers[pw_justsprung] |= (1<<15);
+			}
+#endif
+		}
 
 		if ((horizspeed && vertispeed) || (object->player && object->player->homing)) // Mimic SA
 		{
@@ -321,6 +344,14 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 			// Set position!
 			P_TryMove(object, spring->x + offx, spring->y + offy, true);
+
+			if ((spring->info->painchance == 3))
+			{
+				object->z = spring->z;
+				if (spring->eflags & MFE_VERTICALFLIP)
+					object->z -= object->height;
+				object->momz = 0;
+			}
 		}
 	}
 
@@ -344,8 +375,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 		if (horizspeed)
 		{
-			object->player->drawangle = spring->angle;
-			object->angle = spring->angle;
+			object->angle = object->player->drawangle = spring->angle;
 
 			if (!demoplayback || P_AnalogMove(object->player))
 			{
@@ -356,11 +386,25 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 
-		pflags = object->player->pflags & (PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_BOUNCING); // I still need these.
-		secondjump = object->player->secondjump;
-		washoming = object->player->homing;
 		if (object->player->pflags & PF_GLIDING)
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
+		if ((spring->info->painchance == 3))
+		{
+			if (!(pflags = (object->player->pflags & PF_SPINNING)) &&
+				(((object->player->charability2 == CA2_SPINDASH) && (object->player->cmd.buttons & BT_USE))
+				|| (spring->flags2 & MF2_AMBUSH)))
+			{
+				pflags = PF_SPINNING;
+				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+				S_StartSound(object, sfx_spin);
+			}
+			else
+				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+		}
+		else
+			pflags = object->player->pflags & (PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_BOUNCING); // I still need these.
+		secondjump = object->player->secondjump;
+		washoming = object->player->homing;
 		P_ResetPlayer(object->player);
 
 		if (spring->info->painchance == 1) // For all those ancient, SOC'd abilities.
@@ -368,7 +412,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			object->player->pflags |= P_GetJumpFlags(object->player);
 			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
-		else if ((spring->info->painchance == 2) || (pflags & PF_BOUNCING)) // Adding momentum only.
+		else if ((spring->info->painchance == 2) || ((spring->info->painchance != 3) && (pflags & PF_BOUNCING))) // Adding momentum only.
 		{
 			object->player->pflags |= (pflags &~ PF_STARTJUMP);
 			object->player->secondjump = secondjump;
@@ -382,6 +426,10 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				object->player->pflags |= pflags;
 				object->player->secondjump = secondjump;
 			}
+			else if (object->player->dashmode >= 3*TICRATE)
+				P_SetPlayerMobjState(object, S_PLAY_DASH);
+			else if (P_IsObjectOnGround(object) && horizspeed >= FixedMul(object->player->runspeed, object->scale))
+				P_SetPlayerMobjState(object, S_PLAY_RUN);
 			else
 				P_SetPlayerMobjState(object, S_PLAY_WALK);
 		}
