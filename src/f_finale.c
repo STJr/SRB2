@@ -2285,7 +2285,9 @@ void F_TitleScreenDrawer(void)
 	// Draw that sky!
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
-	else if (!curbghide || !titlemapinaction || gamestate == GS_WAITINGPLAYERS)
+	else if (titlemapinaction && curbghide && ! hidetitlemap)
+		D_Render();
+	else
 		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 
 	// Don't draw outside of the title screen, or if the patch isn't there.
@@ -2358,10 +2360,6 @@ void F_TitleScreenTicker(boolean run)
 	if (run)
 		finalecount++;
 
-	// don't trigger if doing anything besides idling on title
-	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
-		return;
-
 	// Execute the titlemap camera settings
 	if (titlemapinaction)
 	{
@@ -2407,6 +2405,10 @@ void F_TitleScreenTicker(boolean run)
 			camera.angle += titlescrollxspeed*ANG1/64;
 		}
 	}
+
+	// don't trigger if doing anything besides idling on title
+	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
+		return;
 
 	// no demos to play? or, are they disabled?
 	if (!cv_rollingdemos.value || !numDemos)
