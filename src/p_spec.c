@@ -205,8 +205,8 @@ void P_InitPicAnims(void)
 			if ((W_CheckNumForName(animdefs[i].startname)) == LUMPERROR)
 				continue;
 
-			lastanim->picnum = R_FlatNumForName(animdefs[i].endname);
-			lastanim->basepic = R_FlatNumForName(animdefs[i].startname);
+			lastanim->picnum = R_GetFlatNumForName(animdefs[i].endname);
+			lastanim->basepic = R_GetFlatNumForName(animdefs[i].startname);
 		}
 
 		lastanim->istexture = animdefs[i].istexture;
@@ -464,7 +464,19 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 	for (i = 0; i < numlevelflats; i++, foundflats++)
 	{
 		// is that levelflat from the flat anim sequence ?
-		if (foundflats->lumpnum >= startflatnum && foundflats->lumpnum <= endflatnum)
+		if ((anims[animnum].istexture) && (foundflats->texturenum != 0 && foundflats->texturenum != -1)
+			&& ((UINT16)foundflats->texturenum >= startflatnum && (UINT16)foundflats->texturenum <= endflatnum))
+		{
+			foundflats->basetexturenum = startflatnum;
+			foundflats->animseq = foundflats->texturenum - startflatnum;
+			foundflats->numpics = endflatnum - startflatnum + 1;
+			foundflats->speed = anims[animnum].speed;
+
+			CONS_Debug(DBG_SETUP, "animflat: #%03d name:%.8s animseq:%d numpics:%d speed:%d\n",
+					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
+					foundflats->numpics,foundflats->speed);
+		}
+		else if (foundflats->lumpnum >= startflatnum && foundflats->lumpnum <= endflatnum)
 		{
 			foundflats->baselumpnum = startflatnum;
 			foundflats->animseq = foundflats->lumpnum - startflatnum;
@@ -488,10 +500,7 @@ void P_SetupLevelFlatAnims(void)
 
 	// the original game flat anim sequences
 	for (i = 0; anims[i].istexture != -1; i++)
-	{
-		if (!anims[i].istexture)
-			P_FindAnimatedFlat(i);
-	}
+		P_FindAnimatedFlat(i);
 }
 
 //
@@ -2709,6 +2718,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
 					return;
 				}
+
 				if (line->tag != 0) // Do special stuff only if a non-zero linedef tag is set
 				{
 					if (line->flags & ML_EFFECT5) // Repeat Midtexture
@@ -2749,30 +2759,32 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							return;
 					}
 				}
-
-				if (line->flags & ML_NOCLIMB)
+				else
 				{
-					// play the sound from nowhere, but only if display player triggered it
-					if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
+					if (line->flags & ML_NOCLIMB)
+					{
+						// play the sound from nowhere, but only if display player triggered it
+						if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
+							S_StartSound(NULL, sfxnum);
+					}
+					else if (line->flags & ML_EFFECT4)
+					{
+						// play the sound from nowhere
 						S_StartSound(NULL, sfxnum);
-				}
-				else if (line->flags & ML_EFFECT4)
-				{
-					// play the sound from nowhere
-					S_StartSound(NULL, sfxnum);
-				}
-				else if (line->flags & ML_BLOCKMONSTERS)
-				{
-					// play the sound from calling sector's soundorg
-					if (callsec)
-						S_StartSound(&callsec->soundorg, sfxnum);
+					}
+					else if (line->flags & ML_BLOCKMONSTERS)
+					{
+						// play the sound from calling sector's soundorg
+						if (callsec)
+							S_StartSound(&callsec->soundorg, sfxnum);
+						else if (mo)
+							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+					}
 					else if (mo)
-						S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
-				}
-				else if (mo)
-				{
-					// play the sound from mobj that triggered it
-					S_StartSound(mo, sfxnum);
+					{
+						// play the sound from mobj that triggered it
+						S_StartSound(mo, sfxnum);
+					}
 				}
 			}
 			break;
@@ -3096,7 +3108,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 432: // Enable 2D Mode (Disable if noclimb)
-			if (mo->player)
+			if (mo && mo->player)
 			{
 				if (line->flags & ML_NOCLIMB)
 					mo->flags2 &= ~MF2_TWOD;
@@ -3122,7 +3134,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 434: // Custom Power
-			if (mo->player)
+			if (mo && mo->player)
 			{
 				mobj_t *dummy = P_SpawnMobj(mo->x, mo->y, mo->z, MT_NULL);
 
@@ -3205,7 +3217,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 437: // Disable Player Controls
-			if (mo->player)
+			if (mo && mo->player)
 			{
 				UINT16 fractime = (UINT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 				if (fractime < 1)
@@ -3953,6 +3965,39 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 461: // Spawns an object on the map based on texture offsets
+			{
+				const mobjtype_t type = (mobjtype_t)(sides[line->sidenum[0]].toptexture);
+				mobj_t *mobj;
+
+				fixed_t x, y, z;
+				x = sides[line->sidenum[0]].textureoffset;
+				y = sides[line->sidenum[0]].rowoffset;
+				z = line->frontsector->floorheight;
+
+				if (line->flags & ML_NOCLIMB) // If noclimb is set, spawn randomly within a range
+				{
+					if (line->sidenum[1] != 0xffff) // Make sure the linedef has a back side
+					{
+						x = P_RandomRange(sides[line->sidenum[0]].textureoffset>>FRACBITS, sides[line->sidenum[1]].textureoffset>>FRACBITS)<<FRACBITS;
+						y = P_RandomRange(sides[line->sidenum[0]].rowoffset>>FRACBITS, sides[line->sidenum[1]].rowoffset>>FRACBITS)<<FRACBITS;
+						z = P_RandomRange(line->frontsector->floorheight>>FRACBITS, line->frontsector->ceilingheight>>FRACBITS)<<FRACBITS;
+					}
+					else
+					{
+						CONS_Alert(CONS_WARNING,"Linedef Type %d - Spawn Object: Linedef is set for random range but has no back side.\n", line->special);
+						break;
+					}
+				}
+
+				mobj = P_SpawnMobj(x, y, z, type);
+				if (mobj)
+					CONS_Debug(DBG_GAMELOGIC, "Linedef Type %d - Spawn Object: %d spawned at (%d, %d, %d)\n", line->special, mobj->type, mobj->x>>FRACBITS, mobj->y>>FRACBITS, mobj->z>>FRACBITS); //TODO: Convert mobj->type to a string somehow.
+				else
+					CONS_Alert(CONS_ERROR,"Linedef Type %d - Spawn Object: Object did not spawn!\n", line->special);
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
@@ -4132,26 +4177,11 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
 		{
+			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
+			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
 			// Thing must be on top of the floor to be affected...
-			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-			{
-				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
-					continue;
-			}
-			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-			{
-				if (!(player->mo->eflags & MFE_VERTICALFLIP)
-					|| player->mo->z + player->mo->height != bottomheight)
-					continue;
-			}
-			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-			{
-				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
-					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
-					continue;
-			}
+			if (!(floorallowed || ceilingallowed))
+				continue;
 		}
 		else
 		{
@@ -4192,26 +4222,11 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 			// Check the 3D floor's type...
 			if (rover->flags & FF_BLOCKPLAYER)
 			{
+				boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
+				boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
 				// Thing must be on top of the floor to be affected...
-				if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-					&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-				{
-					if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
-						continue;
-				}
-				else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-					&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-				{
-					if (!(player->mo->eflags & MFE_VERTICALFLIP)
-						|| player->mo->z + player->mo->height != bottomheight)
-						continue;
-				}
-				else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-				{
-					if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
-						|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
-						continue;
-				}
+				if (!(floorallowed || ceilingallowed))
+					continue;
 			}
 			else
 			{
@@ -4262,26 +4277,11 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
 		{
+			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == top));
+			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == bottom));
 			// Thing must be on top of the floor to be affected...
-			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-			{
-				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != top)
-					return false;
-			}
-			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-			{
-				if (!(mo->eflags & MFE_VERTICALFLIP)
-					|| mo->z + mo->height != bottom)
-					return false;
-			}
-			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-			{
-				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == bottom)
-					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == top)))
-					return false;
-			}
+			if (!(floorallowed || ceilingallowed))
+				continue;
 		}
 		else
 		{
@@ -4303,10 +4303,10 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 //
 static boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
 {
-	if (mo->eflags & MFE_VERTICALFLIP)
-		return (mo->z+mo->height == P_GetSpecialTopZ(mo, sec, sec) && sec->flags & SF_FLIPSPECIAL_CEILING);
-	else
-		return (mo->z == P_GetSpecialBottomZ(mo, sec, sec) && sec->flags & SF_FLIPSPECIAL_FLOOR);
+	boolean floorallowed = ((sec->flags & SF_FLIPSPECIAL_FLOOR) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == P_GetSpecialBottomZ(mo, sec, sec)));
+	boolean ceilingallowed = ((sec->flags & SF_FLIPSPECIAL_CEILING) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == P_GetSpecialTopZ(mo, sec, sec)));
+	// Thing must be on top of the floor to be affected...
+	return (floorallowed || ceilingallowed);
 }
 
 /** Applies a sector special to a player.
@@ -4942,7 +4942,7 @@ DoneSection2:
 						CONS_Printf(M_GetText("%s started lap %u\n"), player_names[player-players], (UINT32)player->laps+1);
 
 					// Reset starposts (checkpoints) info
-					player->starpostangle = player->starposttime = player->starpostnum = 0;
+					player->starpostscale = player->starpostangle = player->starposttime = player->starpostnum = 0;
 					player->starpostx = player->starposty = player->starpostz = 0;
 					P_ResetStarposts();
 
@@ -5270,26 +5270,11 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 		if (((rover->flags & FF_BLOCKPLAYER) && mo->player)
 			|| ((rover->flags & FF_BLOCKOTHERS) && !mo->player))
 		{
+			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == topheight));
+			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == bottomheight));
 			// Thing must be on top of the floor to be affected...
-			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-			{
-				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != topheight)
-					continue;
-			}
-			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-			{
-				if (!(mo->eflags & MFE_VERTICALFLIP)
-					|| mo->z + mo->height != bottomheight)
-					continue;
-			}
-			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-			{
-				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == bottomheight)
-					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == topheight)))
-					continue;
-			}
+			if (!(floorallowed || ceilingallowed))
+				continue;
 		}
 		else
 		{
@@ -5332,26 +5317,11 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
 		{
+			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
+			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
 			// Thing must be on top of the floor to be affected...
-			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
-			{
-				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
-					continue;
-			}
-			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
-				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
-			{
-				if (!(player->mo->eflags & MFE_VERTICALFLIP)
-					|| player->mo->z + player->mo->height != bottomheight)
-					continue;
-			}
-			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
-			{
-				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
-					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
-					continue;
-			}
+			if (!(floorallowed || ceilingallowed))
+				continue;
 		}
 		else
 		{
@@ -5408,38 +5378,16 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 			}
 
 			if (!(po->flags & POF_TESTHEIGHT)) // Don't do height checking
-			{
-			}
+				;
 			else if (po->flags & POF_SOLID)
 			{
+				boolean floorallowed = ((polysec->flags & SF_FLIPSPECIAL_FLOOR) && ((polysec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == polysec->ceilingheight));
+				boolean ceilingallowed = ((polysec->flags & SF_FLIPSPECIAL_CEILING) && ((polysec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == polysec->floorheight));
 				// Thing must be on top of the floor to be affected...
-				if ((polysec->flags & SF_FLIPSPECIAL_FLOOR)
-					&& !(polysec->flags & SF_FLIPSPECIAL_CEILING))
+				if (!(floorallowed || ceilingallowed))
 				{
-					if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != polysec->ceilingheight)
-					{
-						po = (polyobj_t *)(po->link.next);
-						continue;
-					}
-				}
-				else if ((polysec->flags & SF_FLIPSPECIAL_CEILING)
-					&& !(polysec->flags & SF_FLIPSPECIAL_FLOOR))
-				{
-					if (!(player->mo->eflags & MFE_VERTICALFLIP)
-						|| player->mo->z + player->mo->height != polysec->floorheight)
-					{
-						po = (polyobj_t *)(po->link.next);
-						continue;
-					}
-				}
-				else if (polysec->flags & SF_FLIPSPECIAL_BOTH)
-				{
-					if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == polysec->floorheight)
-						|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == polysec->ceilingheight)))
-					{
-						po = (polyobj_t *)(po->link.next);
-						continue;
-					}
+					po = (polyobj_t *)(po->link.next);
+					continue;
 				}
 			}
 			else
@@ -5538,17 +5486,13 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 	f_affectpoint = P_GetSpecialBottomZ(player->mo, sector, sector);
 	c_affectpoint = P_GetSpecialTopZ(player->mo, sector, sector);
 
-	// Only go further if on the ground
-	if ((sector->flags & SF_FLIPSPECIAL_FLOOR) && !(sector->flags & SF_FLIPSPECIAL_CEILING) && player->mo->z != f_affectpoint)
-		return;
-
-	if ((sector->flags & SF_FLIPSPECIAL_CEILING) && !(sector->flags & SF_FLIPSPECIAL_FLOOR) && player->mo->z + player->mo->height != c_affectpoint)
-		return;
-
-	if ((sector->flags & SF_FLIPSPECIAL_BOTH)
-		&& player->mo->z != f_affectpoint
-		&& player->mo->z + player->mo->height != c_affectpoint)
-		return;
+	{
+		boolean floorallowed = ((sector->flags & SF_FLIPSPECIAL_FLOOR) && ((sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == f_affectpoint));
+		boolean ceilingallowed = ((sector->flags & SF_FLIPSPECIAL_CEILING) && ((sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == c_affectpoint));
+		// Thing must be on top of the floor to be affected...
+		if (!(floorallowed || ceilingallowed))
+			return;
+	}
 
 	P_ProcessSpecialSector(player, sector, NULL);
 }
@@ -5636,9 +5580,12 @@ void P_UpdateSpecials(void)
 	{
 		if (foundflats->speed) // it is an animated flat
 		{
+			// update the levelflat texture number
+			if (foundflats->basetexturenum != -1)
+				foundflats->texturenum = foundflats->basetexturenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 			// update the levelflat lump number
-			foundflats->lumpnum = foundflats->baselumpnum +
-				((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
+			else if (foundflats->baselumpnum != LUMPERROR)
+				foundflats->lumpnum = foundflats->baselumpnum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 		}
 	}
 }
@@ -6040,8 +5987,6 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
   * to the lowest nearby height if not
   * there already.
   *
-  * Replaces the old "AirBob".
-  *
   * \param sec          Control sector.
   * \param actionsector Target sector.
   * \param sourceline   Control linedef.
@@ -6086,8 +6031,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline)
 	raise->sourceline = sourceline;
 }
 
-// Function to maintain backwards compatibility
-static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
+static void P_AddAirbob(sector_t *sec, line_t *sourceline, boolean noadjust, boolean dynamic)
 {
 	levelspecthink_t *airbob;
 
@@ -6124,6 +6068,8 @@ static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
 	airbob->vars[5] = sec->ceilingheight;
 	airbob->vars[4] = airbob->vars[5]
 			- (sec->ceilingheight - sec->floorheight);
+	
+	airbob->vars[9] = dynamic ? 1 : 0;
 
 	airbob->sourceline = sourceline;
 }
@@ -6638,6 +6584,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 					if (lines[i].flags & ML_EFFECT3)
 						sectors[s].flags |= SF_TRIGGERSPECIAL_TOUCH;
+					if (lines[i].flags & ML_EFFECT2)
+						sectors[s].flags |= SF_TRIGGERSPECIAL_HEADBUMP;
+
+					if (lines[i].flags & ML_EFFECT1)
+						sectors[s].flags |= SF_INVERTPRECIP;
 
 					if (lines[i].frontsector && GETSECSPECIAL(lines[i].frontsector->special, 4) == 12)
 						sectors[s].camsec = sides[*lines[i].sidenum].sector-sectors;
@@ -6942,11 +6893,16 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 151: // Adjustable air bobbing platform
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, (lines[i].special != 151));
+				P_AddAirbob(lines[i].frontsector, lines + i, (lines[i].special != 151), false);
 				break;
 			case 152: // Adjustable air bobbing platform in reverse
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
+				break;
+			case 153: // Dynamic Sinking Platform
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
+				lines[i].flags |= ML_BLOCKMONSTERS;
+				P_AddAirbob(lines[i].frontsector, lines + i, false, true);
 				break;
 
 			case 160: // Float/bob platform
@@ -6997,14 +6953,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 176: // Air bobbing platform that will crumble and bob on the water when it falls and hits
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB|FF_CRUMBLE, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
 				break;
 
 			case 177: // Air bobbing platform that will crumble and bob on
 				// the water when it falls and hits, then never return
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB|FF_CRUMBLE|FF_NORETURN, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
 				break;
 
 			case 178: // Crumbling platform that will float when it hits water
@@ -7018,7 +6974,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 180: // Air bobbing platform that will crumble
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
 				break;
 
 			case 190: // Rising Platform FOF (solid, opaque, shadows)
@@ -7126,21 +7082,21 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 252: // Shatter block (breaks when touched)
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER;
+				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER;
 				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_SOLID|FF_SHATTERBOTTOM;
+					ffloorflags |= FF_BLOCKPLAYER|FF_SHATTERBOTTOM;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
 			case 253: // Translucent shatter block (see 76)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER|FF_TRANSLUCENT, secthinkers);
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER|FF_TRANSLUCENT, secthinkers);
 				break;
 
 			case 254: // Bustable block
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP;
 				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_ONLYKNUX;
+					ffloorflags |= FF_STRONGBUST;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;

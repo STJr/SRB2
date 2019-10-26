@@ -64,6 +64,7 @@ typedef enum
 	MN_MP_CONNECT,
 	MN_MP_ROOM,
 	MN_MP_PLAYERSETUP, // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	MN_MP_SERVER_OPTIONS,
 
 	// Options
 	MN_OP_MAIN,
@@ -73,10 +74,12 @@ typedef enum
 	MN_OP_P1MOUSE,
 	MN_OP_P1JOYSTICK,
 	MN_OP_JOYSTICKSET, // OP_JoystickSetDef shared with P2
+	MN_OP_P1CAMERA,
 
 	MN_OP_P2CONTROLS,
 	MN_OP_P2MOUSE,
 	MN_OP_P2JOYSTICK,
+	MN_OP_P2CAMERA,
 
 	MN_OP_VIDEO,
 	MN_OP_VIDEOMODE,
@@ -102,6 +105,7 @@ typedef enum
 	MN_SR_LEVELSELECT,
 	MN_SR_UNLOCKCHECKLIST,
 	MN_SR_EMBLEMHINT,
+	MN_SR_PLAYER,
 
 	// Addons (Part of MISC, but let's make it our own)
 	MN_AD_MAIN,
@@ -216,7 +220,6 @@ void M_QuitResponse(INT32 ch);
 // Determines whether to show a level in the list (platter version does not need to be exposed)
 boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 
-
 // flags for items in the menu
 // menu handle (what we do when key is pressed
 #define IT_TYPE             14     // (2+4+8)
@@ -252,6 +255,8 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_CV_NOPRINT     1536
 #define IT_CV_NOMOD       2048
 #define IT_CV_INVISSLIDER 2560
+#define IT_CV_INTEGERSTEP 4096			// if IT_CV_NORMAL and cvar is CV_FLOAT, modify it by 1 instead of 0.0625
+#define IT_CV_FLOATSLIDER	4608			// IT_CV_SLIDER, value modified by 0.0625 instead of 1 (for CV_FLOAT cvars)
 
 //call/submenu specific
 // There used to be a lot more here but ...
@@ -319,6 +324,10 @@ extern menu_t *currentMenu;
 extern menu_t MainDef;
 extern menu_t SP_LoadDef;
 
+// Call upon joystick hotplug
+void M_SetupJoystickMenu(INT32 choice);
+extern menu_t OP_JoystickSetDef;
+
 // Stuff for customizing the player select screen
 typedef struct
 {
@@ -326,9 +335,18 @@ typedef struct
 	char notes[441];
 	char picname[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
-	patch_t *pic;
+	patch_t *charpic;
 	UINT8 prev;
 	UINT8 next;
+
+	// new character select
+	char displayname[SKINNAMESIZE+1];
+	SINT8 skinnum[2];
+	UINT8 oppositecolor;
+	char nametag[8];
+	patch_t *namepic;
+	UINT8 tagtextcolor;
+	UINT8 tagoutlinecolor;
 } description_t;
 
 // level select platter
@@ -377,6 +395,7 @@ typedef struct
 
 extern description_t description[MAXSKINS];
 
+extern consvar_t cv_showfocuslost;
 extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;
 extern CV_PossibleValue_t gametype_cons_t[];
 
@@ -406,6 +425,9 @@ void Screenshot_option_Onchange(void);
 
 // Addons menu updating
 void Addons_option_Onchange(void);
+
+// Moviemode menu updating
+void Moviemode_option_Onchange(void);
 
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\

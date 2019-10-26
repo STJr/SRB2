@@ -50,6 +50,7 @@ enum hook {
 	hook_FollowMobj,
 	hook_PlayerCanDamage,
 	hook_PlayerQuit,
+	hook_IntermissionThinker,
 
 	hook_MAX // last hook
 };
@@ -91,5 +92,6 @@ boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing); // Hook for P_SpawnM
 boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj); // Hook for P_PlayerAfterThink Smiles mobj-following
 UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj); // Hook for P_PlayerCanDamage
 void LUAh_PlayerQuit(player_t *plr, int reason); // Hook for player quitting
+void LUAh_IntermissionThinker(void); // Hook for Y_Ticker
 
 #endif

@@ -148,7 +148,7 @@ extern FILE *logstream;
 
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-#define USE_PATCH_DTA
+//#define USE_PATCH_DTA
 
 // Use .kart extension addons
 //#define USE_KART
@@ -206,7 +206,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 28
+#define MODVERSION 30
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
@@ -506,13 +506,20 @@ INT32 I_GetKey(void);
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #endif
 
+// Max gamepad/joysticks that can be detected/used.
+#define MAX_JOYSTICKS 4
+
+#ifndef M_PIl
+#define M_PIl 3.1415926535897932384626433832795029L
+#endif
+
 // Floating point comparison epsilons from float.h
 #ifndef FLT_EPSILON
 #define FLT_EPSILON 1.1920928955078125e-7f
 #endif
 
 #ifndef DBL_EPSILON
-#define DBL_EPSILON 2.2204460492503131e-16
+#define DBL_EPSILON 2.2204460492503131e-16l
 #endif
 
 // An assert-type mechanism.
@@ -557,9 +564,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
-
-///	Improved way of dealing with ping values and a ping limit.
-#define NEWPING
 
 ///	See name of player in your crosshair
 #define SEENAMES
@@ -615,5 +619,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// \note	SRB2CB port.
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
+
+#ifndef HAVE_PNG
+#define NO_PNG_LUMPS
+#endif
 
 #endif // __DOOMDEF__

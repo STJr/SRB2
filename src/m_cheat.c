@@ -746,6 +746,18 @@ void Command_Weather_f(void)
 	P_SwitchWeather(atoi(COM_Argv(1)));
 }
 
+void Command_Toggletwod_f(void)
+{
+	player_t *p = &players[consoleplayer];
+
+	REQUIRE_DEVMODE;
+	REQUIRE_INLEVEL;
+	REQUIRE_SINGLEPLAYER;
+
+	if (p->mo)
+		p->mo->flags2 ^= MF2_TWOD;
+}
+
 #ifdef _DEBUG
 // You never thought you needed this, did you? >=D
 // Yes, this has the specific purpose of completely screwing you up
@@ -819,6 +831,12 @@ void Command_Savecheckpoint_f(void)
 	players[consoleplayer].starposty = players[consoleplayer].mo->y>>FRACBITS;
 	players[consoleplayer].starpostz = players[consoleplayer].mo->floorz>>FRACBITS;
 	players[consoleplayer].starpostangle = players[consoleplayer].mo->angle;
+	players[consoleplayer].starpostscale = players[consoleplayer].mo->destscale;
+	if (players[consoleplayer].mo->flags2 & MF2_OBJECTFLIP)
+	{
+		players[consoleplayer].starpostscale *= -1;
+		players[consoleplayer].starpostz += players[consoleplayer].mo->height;
+	}
 
 	CONS_Printf(M_GetText("Temporary checkpoint created at %d, %d, %d\n"), players[consoleplayer].starpostx, players[consoleplayer].starposty, players[consoleplayer].starpostz);
 }

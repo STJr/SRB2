@@ -39,13 +39,8 @@
 // we try to re-allocate a minimum of buffers for stability of the memory,
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
-#if defined (_WIN32_WCE)
-#define MAXVIDWIDTH 320
-#define MAXVIDHEIGHT 200
-#else
 #define MAXVIDWIDTH 1920 // don't set this too high because actually
 #define MAXVIDHEIGHT 1200 // lots of tables are allocated with the MAX size.
-#endif
 #define BASEVIDWIDTH 320 // NEVER CHANGE THIS! This is the original
 #define BASEVIDHEIGHT 200 // resolution of the graphics.
 
@@ -123,6 +118,7 @@ extern void (*transcolfunc)(void);
 extern void (*shadecolfunc)(void);
 extern void (*spanfunc)(void);
 extern void (*basespanfunc)(void);
+extern void (*mmxspanfunc)(void);
 extern void (*splatfunc)(void);
 extern void (*transtransfunc)(void);
 extern void (*twosmultipatchfunc)(void);

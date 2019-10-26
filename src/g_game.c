@@ -97,7 +97,7 @@ boolean runemeraldmanager = false;
 UINT16 emeraldspawndelay = 60*TICRATE;
 
 // menu demo things
-UINT8  numDemos      = 3;
+UINT8  numDemos      = 0;
 UINT32 demoDelayTime = 15*TICRATE;
 UINT32 demoIdleTime  = 3*TICRATE;
 
@@ -172,6 +172,7 @@ static boolean retrying = false;
 UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
 
 UINT16 emeralds;
+INT32 luabanks[NUM_LUABANKS]; // yes, even in non HAVE_BLUA
 UINT32 token; // Number of tokens collected in a level
 UINT32 tokenlist; // List of tokens collected
 boolean gottoken; // Did you get a token? Used for end of act
@@ -215,7 +216,9 @@ UINT16 spacetimetics = 11*TICRATE + (TICRATE/2);
 UINT16 extralifetics = 4*TICRATE;
 UINT16 nightslinktics = 2*TICRATE;
 
-INT32 gameovertics = 15*TICRATE;
+INT32 gameovertics = 11*TICRATE;
+
+UINT8 ammoremovaltics = 2*TICRATE;
 
 UINT8 use1upSound = 0;
 UINT8 maxXtraLife = 2; // Max extra lives from rings
@@ -358,6 +361,8 @@ consvar_t cv_chatbacktint = {"chatbacktint", "On", CV_SAVE, CV_OnOff, NULL, 0, N
 static CV_PossibleValue_t consolechat_cons_t[] = {{0, "Window"}, {1, "Console"}, {2, "Window (Hidden)"}, {0, NULL}};
 consvar_t cv_consolechat = {"chatmode", "Window", CV_SAVE, consolechat_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+// Pause game upon window losing focus
+consvar_t cv_pauseifunfocused = {"pauseifunfocused", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_crosshair = {"crosshair", "Cross", CV_SAVE, crosshair_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_crosshair2 = {"crosshair2", "Cross", CV_SAVE, crosshair_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -416,49 +421,13 @@ consvar_t cv_spinaxis2 = {"joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL
 consvar_t cv_fireaxis2 = {"joyaxis2_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-#if MAXPLAYERS > 32
-#error "please update player_name table using the new value for MAXPLAYERS"
-#endif
-
 #ifdef SEENAMES
 player_t *seenplayer; // player we're aiming at right now
 #endif
 
-char player_names[MAXPLAYERS][MAXPLAYERNAME+1] =
-{
-	"Player 1",
-	"Player 2",
-	"Player 3",
-	"Player 4",
-	"Player 5",
-	"Player 6",
-	"Player 7",
-	"Player 8",
-	"Player 9",
-	"Player 10",
-	"Player 11",
-	"Player 12",
-	"Player 13",
-	"Player 14",
-	"Player 15",
-	"Player 16",
-	"Player 17",
-	"Player 18",
-	"Player 19",
-	"Player 20",
-	"Player 21",
-	"Player 22",
-	"Player 23",
-	"Player 24",
-	"Player 25",
-	"Player 26",
-	"Player 27",
-	"Player 28",
-	"Player 29",
-	"Player 30",
-	"Player 31",
-	"Player 32"
-};
+// now automatically allocated in D_RegisterClientCommands
+// so that it doesn't have to be updated depending on the value of MAXPLAYERS
+char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 
 INT16 rw_maximums[NUM_WEAPONS] =
 {
@@ -919,6 +888,7 @@ static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
+	boolean forcefullinput = false;
 	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
@@ -992,6 +962,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
+	if (twodlevel
+		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
+		|| (!demoplayback && (player->pflags & PF_SLIDING)))
+			forcefullinput = true;
 	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| (!demoplayback && (player->climbing
@@ -1205,11 +1179,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// No additional acceleration when moving forward/backward and strafing simultaneously.
 	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
-	// 9-18-2017: ALSO, only do this when using keys to move. Gamepad analog sticks get severely gimped by this
-	if (!forcestrafe && (((movefkey || movebkey) && side) || ((strafelkey || straferkey) && forward)))
+	if (!forcefullinput && forward && side)
 	{
-		forward = FixedMul(forward, 3*FRACUNIT/4);
-		side = FixedMul(side, 3*FRACUNIT/4);
+		angle_t angle = R_PointToAngle2(0, 0, side << FRACBITS, forward << FRACBITS);
+		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
+		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
+		forward = max(min(forward, maxforward), -maxforward);
+		side = max(min(side, maxside), -maxside);
 	}
 
 	//Silly hack to make 2d mode *somewhat* playable with no chasecam.
@@ -1245,6 +1221,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
+	boolean forcefullinput = false;
 	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
@@ -1316,6 +1293,10 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
+	if (twodlevel
+		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
+		|| (!demoplayback && (player->pflags & PF_SLIDING)))
+			forcefullinput = true;
 	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
@@ -1526,11 +1507,13 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	// No additional acceleration when moving forward/backward and strafing simultaneously.
 	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
-	// 9-18-2017: ALSO, only do this when using keys to move. Gamepad analog sticks get severely gimped by this
-	if (!forcestrafe && (((movefkey || movebkey) && side) || ((strafelkey || straferkey) && forward)))
+	if (!forcefullinput && forward && side)
 	{
-		forward = FixedMul(forward, 3*FRACUNIT/4);
-		side = FixedMul(side, 3*FRACUNIT/4);
+		angle_t angle = R_PointToAngle2(0, 0, side << FRACBITS, forward << FRACBITS);
+		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
+		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
+		forward = max(min(forward, maxforward), -maxforward);
+		side = max(min(side, maxside), -maxside);
 	}
 
 	//Silly hack to make 2d mode *somewhat* playable with no chasecam.
@@ -1732,65 +1715,6 @@ static INT32 camtoggledelay, camtoggledelay2 = 0;
 //
 boolean G_Responder(event_t *ev)
 {
-	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && ev->type == ev_keydown
-		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
-	{
-		if (splitscreen || !netgame)
-			displayplayer = consoleplayer;
-		else
-		{
-			// spy mode
-			do
-			{
-				displayplayer++;
-				if (displayplayer == MAXPLAYERS)
-					displayplayer = 0;
-
-				if (!playeringame[displayplayer])
-					continue;
-
-				if (players[displayplayer].spectator)
-					continue;
-
-				if (G_GametypeHasTeams())
-				{
-					if (players[consoleplayer].ctfteam
-					 && players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
-						continue;
-				}
-				else if (gametype == GT_HIDEANDSEEK)
-				{
-					if (players[consoleplayer].pflags & PF_TAGIT)
-						continue;
-				}
-				// Other Tag-based gametypes?
-				else if (G_TagGametype())
-				{
-					if (!players[consoleplayer].spectator
-					 && (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
-						continue;
-				}
-				else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
-				{
-					if (!players[consoleplayer].spectator)
-						continue;
-				}
-
-				break;
-			} while (displayplayer != consoleplayer);
-
-			// change statusbar also if playing back demo
-			if (singledemo)
-				ST_changeDemoView();
-
-			// tell who's the view
-			CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
-
-			return true;
-		}
-	}
-
 	// any other key pops up menu if in demos
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
@@ -1866,6 +1790,65 @@ boolean G_Responder(event_t *ev)
 	else if (gamestate == GS_INTERMISSION || gamestate == GS_EVALUATION)
 		if (HU_Responder(ev))
 			return true; // chat ate the event
+
+	// allow spy mode changes even during the demo
+	if (gamestate == GS_LEVEL && ev->type == ev_keydown
+		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
+	{
+		if (splitscreen || !netgame)
+			displayplayer = consoleplayer;
+		else
+		{
+			// spy mode
+			do
+			{
+				displayplayer++;
+				if (displayplayer == MAXPLAYERS)
+					displayplayer = 0;
+
+				if (!playeringame[displayplayer])
+					continue;
+
+				if (players[displayplayer].spectator)
+					continue;
+
+				if (G_GametypeHasTeams())
+				{
+					if (players[consoleplayer].ctfteam
+					 && players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
+						continue;
+				}
+				else if (gametype == GT_HIDEANDSEEK)
+				{
+					if (players[consoleplayer].pflags & PF_TAGIT)
+						continue;
+				}
+				// Other Tag-based gametypes?
+				else if (G_TagGametype())
+				{
+					if (!players[consoleplayer].spectator
+					 && (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
+						continue;
+				}
+				else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
+				{
+					if (!players[consoleplayer].spectator)
+						continue;
+				}
+
+				break;
+			} while (displayplayer != consoleplayer);
+
+			// change statusbar also if playing back demo
+			if (singledemo)
+				ST_changeDemoView();
+
+			// tell who's the view
+			CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
+
+			return true;
+		}
+	}
 
 	// update keys current state
 	G_MapEventsToControls(ev);
@@ -2117,6 +2100,7 @@ static inline void G_PlayerFinishLevel(INT32 player)
 
 	p->mo->flags2 &= ~MF2_SHADOW; // cancel invisibility
 	P_FlashPal(p, 0, 0); // Resets
+	p->starpostscale = 0;
 	p->starpostangle = 0;
 	p->starposttime = 0;
 	p->starpostx = 0;
@@ -2132,7 +2116,7 @@ static inline void G_PlayerFinishLevel(INT32 player)
 // G_PlayerReborn
 // Called after a player dies. Almost everything is cleared and initialized.
 //
-void G_PlayerReborn(INT32 player)
+void G_PlayerReborn(INT32 player, boolean betweenmaps)
 {
 	player_t *p;
 	INT32 score;
@@ -2163,6 +2147,7 @@ void G_PlayerReborn(INT32 player)
 	INT16 starpostz;
 	INT32 starpostnum;
 	INT32 starpostangle;
+	fixed_t starpostscale;
 	fixed_t jumpfactor;
 	fixed_t height;
 	fixed_t spinheight;
@@ -2179,6 +2164,8 @@ void G_PlayerReborn(INT32 player)
 	boolean outofcoop;
 	INT16 bot;
 	SINT8 pity;
+	INT16 rings;
+	INT16 spheres;
 
 	score = players[player].score;
 	lives = players[player].lives;
@@ -2218,6 +2205,7 @@ void G_PlayerReborn(INT32 player)
 	starpostz = players[player].starpostz;
 	starpostnum = players[player].starpostnum;
 	starpostangle = players[player].starpostangle;
+	starpostscale = players[player].starpostscale;
 	jumpfactor = players[player].jumpfactor;
 	height = players[player].height;
 	spinheight = players[player].spinheight;
@@ -2232,6 +2220,17 @@ void G_PlayerReborn(INT32 player)
 	mare = players[player].mare;
 	bot = players[player].bot;
 	pity = players[player].pity;
+
+	if (betweenmaps || !G_IsSpecialStage(gamemap))
+	{
+		rings = (ultimatemode ? 0 : mapheaderinfo[gamemap-1]->startrings);
+		spheres = 0;
+	}
+	else
+	{
+		rings = players[player].rings;
+		spheres = players[player].spheres;
+	}
 
 	p = &players[player];
 	memset(p, 0, sizeof (*p));
@@ -2273,6 +2272,7 @@ void G_PlayerReborn(INT32 player)
 	p->starpostz = starpostz;
 	p->starpostnum = starpostnum;
 	p->starpostangle = starpostangle;
+	p->starpostscale = starpostscale;
 	p->jumpfactor = jumpfactor;
 	p->height = height;
 	p->spinheight = spinheight;
@@ -2286,6 +2286,8 @@ void G_PlayerReborn(INT32 player)
 	if (bot)
 		p->bot = 1; // reset to AI-controlled
 	p->pity = pity;
+	p->rings = rings;
+	p->spheres = spheres;
 
 	// Don't do anything immediately
 	p->pflags |= PF_USEDOWN;
@@ -2293,43 +2295,10 @@ void G_PlayerReborn(INT32 player)
 	p->pflags |= PF_JUMPDOWN;
 
 	p->playerstate = PST_LIVE;
-	p->rings = p->spheres = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
 		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
-
-	if (p-players == consoleplayer)
-	{
-		if (mapmusflags & MUSIC_RELOADRESET)
-		{
-			strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
-			mapmusname[6] = 0;
-			mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
-			mapmusposition = mapheaderinfo[gamemap-1]->muspos;
-		}
-
-		// This is in S_Start, but this was not here previously.
-		// if (cv_resetmusic.value)
-		// 	S_StopMusic();
-		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
-	}
-
-	if (gametype == GT_COOP)
-		P_FindEmerald(); // scan for emeralds to hunt for
-
-	// Reset Nights score and max link to 0 on death
-	p->marescore = p->maxlink = 0;
-
-	// If NiGHTS, find lowest mare to start with.
-	p->mare = P_FindLowestMare();
-
-	CONS_Debug(DBG_NIGHTS, M_GetText("Current mare is %d\n"), p->mare);
-
-	if (p->mare == 255)
-		p->mare = 0;
-
-	p->marelap = p->marebonuslap = 0;
 
 	// Check to make sure their color didn't change somehow...
 	if (G_GametypeHasTeams())
@@ -2349,6 +2318,36 @@ void G_PlayerReborn(INT32 player)
 				CV_SetValue(&cv_playercolor2, skincolor_blueteam);
 		}
 	}
+
+	if (betweenmaps)
+		return;
+
+	if (p-players == consoleplayer)
+	{
+		if (mapmusflags & MUSIC_RELOADRESET)
+		{
+			strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
+			mapmusname[6] = 0;
+			mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
+			mapmusposition = mapheaderinfo[gamemap-1]->muspos;
+		}
+
+		// This is in S_Start, but this was not here previously.
+		// if (RESETMUSIC)
+		// 	S_StopMusic();
+		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+	}
+
+	if (gametype == GT_COOP)
+		P_FindEmerald(); // scan for emeralds to hunt for
+
+	// If NiGHTS, find lowest mare to start with.
+	p->mare = P_FindLowestMare();
+
+	CONS_Debug(DBG_NIGHTS, M_GetText("Current mare is %d\n"), p->mare);
+
+	if (p->mare == 255)
+		p->mare = 0;
 }
 
 //
@@ -2403,8 +2402,6 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 		return;
 
 	P_SpawnPlayer(playernum);
-
-	players[playernum].rings = mapheaderinfo[gamemap-1]->startrings;
 
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
@@ -2628,7 +2625,7 @@ void G_DoReborn(INT32 playernum)
 
 	if (countdowntimeup || (!(netgame || multiplayer) && gametype == GT_COOP))
 		resetlevel = true;
-	else if (gametype == GT_COOP && (netgame || multiplayer))
+	else if (gametype == GT_COOP && (netgame || multiplayer) && !G_IsSpecialStage(gamemap))
 	{
 		boolean notgameover = true;
 
@@ -2691,6 +2688,7 @@ void G_DoReborn(INT32 playernum)
 			{
 				if (!playeringame[i])
 					continue;
+				players[i].starpostscale = 0;
 				players[i].starpostangle = 0;
 				players[i].starposttime = 0;
 				players[i].starpostx = 0;
@@ -2813,6 +2811,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!(cv_coopstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
 				continue;
 
+			p->starpostscale = players[i].starpostscale;
 			p->starposttime = players[i].starposttime;
 			p->starpostx = players[i].starpostx;
 			p->starposty = players[i].starposty;
@@ -3321,9 +3320,11 @@ void G_LoadGameSettings(void)
 {
 	// defaults
 	spstage_start = 1;
-	sstage_start = smpstage_start = 50;
-	sstage_end = smpstage_end = 56; // 7 special stages in vanilla SRB2
+	sstage_start = 50;
+	sstage_end = 56; // 7 special stages in vanilla SRB2
 	sstage_end++; // plus one weirdo
+	smpstage_start = 60;
+	smpstage_end = 66; // 7 multiplayer special stages too
 
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();
@@ -3342,6 +3343,7 @@ void G_LoadGameData(void)
 	UINT32 recscore;
 	tic_t  rectime;
 	UINT16 recrings;
+	boolean gotperf;
 
 	UINT8 recmares;
 	INT32 curmare;
@@ -3434,6 +3436,7 @@ void G_LoadGameData(void)
 		recscore = READUINT32(save_p);
 		rectime  = (tic_t)READUINT32(save_p);
 		recrings = READUINT16(save_p);
+		gotperf = (boolean)READUINT8(save_p);
 
 		if (recrings > 10000 || recscore > MAXSCORE)
 			goto datacorrupt;
@@ -3445,6 +3448,9 @@ void G_LoadGameData(void)
 			mainrecords[i]->time = rectime;
 			mainrecords[i]->rings = recrings;
 		}
+
+		if (gotperf)
+			mainrecords[i]->gotperfect = gotperf;
 	}
 
 	// Nights records
@@ -3576,12 +3582,14 @@ void G_SaveGameData(void)
 			WRITEUINT32(save_p, mainrecords[i]->score);
 			WRITEUINT32(save_p, mainrecords[i]->time);
 			WRITEUINT16(save_p, mainrecords[i]->rings);
+			WRITEUINT8(save_p, mainrecords[i]->gotperfect);
 		}
 		else
 		{
 			WRITEUINT32(save_p, 0);
 			WRITEUINT32(save_p, 0);
 			WRITEUINT16(save_p, 0);
+			WRITEUINT8(save_p, 0);
 		}
 	}
 
@@ -3814,7 +3822,29 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 
 		// File end marker check
 		CHECKPOS
-		if (READUINT8(save_p) != 0x1d) BADSAVE;
+		switch (READUINT8(save_p))
+		{
+			case 0xb7:
+				{
+					UINT8 i, banksinuse;
+					CHECKPOS
+					banksinuse = READUINT8(save_p);
+					CHECKPOS
+					if (banksinuse > NUM_LUABANKS)
+						BADSAVE
+					for (i = 0; i < banksinuse; i++)
+					{
+						(void)READINT32(save_p);
+						CHECKPOS
+					}
+					if (READUINT8(save_p) != 0x1d)
+						BADSAVE
+				}
+			case 0x1d:
+				break;
+			default:
+				BADSAVE
+		}
 
 		// done
 		saved = FIL_WriteFile(backup, savebuffer, length);
@@ -3898,7 +3928,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			players[i].playerstate = PST_REBORN;
-			players[i].starpostangle = players[i].starpostnum = players[i].starposttime = 0;
+			players[i].starpostscale = players[i].starpostangle = players[i].starpostnum = players[i].starposttime = 0;
 			players[i].starpostx = players[i].starposty = players[i].starpostz = 0;
 
 			if (netgame || multiplayer)
@@ -4609,7 +4639,7 @@ void G_GhostTicker(void)
 				default:
 				case GHC_RETURNSKIN:
 					g->mo->skin = g->oldmo.skin;
-					// fallthru
+					/* FALLTHRU */
 				case GHC_NORMAL: // Go back to skin color
 					g->mo->color = g->oldmo.color;
 					break;

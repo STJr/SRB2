@@ -34,18 +34,19 @@
 #include "p_spec.h"
 #include "m_cheat.h"
 #include "d_clisrv.h"
+#include "d_net.h"
 #include "v_video.h"
 #include "d_main.h"
 #include "m_random.h"
 #include "f_finale.h"
 #include "filesrch.h"
 #include "mserv.h"
-#include "md5.h"
 #include "z_zone.h"
 #include "lua_script.h"
 #include "lua_hook.h"
 #include "m_cond.h"
 #include "m_anigif.h"
+#include "md5.h"
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -73,6 +74,7 @@ static void Got_Clearscores(UINT8 **cp, INT32 playernum);
 static void PointLimit_OnChange(void);
 static void TimeLimit_OnChange(void);
 static void NumLaps_OnChange(void);
+static void BaseNumLaps_OnChange(void);
 static void Mute_OnChange(void);
 
 static void Hidetime_OnChange(void);
@@ -140,7 +142,6 @@ static void Command_Clearscores_f(void);
 // Remote Administration
 static void Command_Changepassword_f(void);
 static void Command_Login_f(void);
-static void Got_Login(UINT8 **cp, INT32 playernum);
 static void Got_Verification(UINT8 **cp, INT32 playernum);
 static void Got_Removal(UINT8 **cp, INT32 playernum);
 static void Command_Verify_f(void);
@@ -210,7 +211,7 @@ consvar_t cv_allowteamchange = {"allowteamchange", "Yes", CV_NETVAR, CV_YesNo, N
 
 consvar_t cv_startinglives = {"startinglives", "3", CV_NETVAR|CV_CHEAT, startingliveslimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t respawntime_cons_t[] = {{0, "MIN"}, {30, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t respawntime_cons_t[] = {{1, "MIN"}, {30, "MAX"}, {0, "Off"}, {0, NULL}};
 consvar_t cv_respawntime = {"respawndelay", "3", CV_NETVAR|CV_CHEAT, respawntime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_competitionboxes = {"competitionboxes", "Mystery", CV_NETVAR|CV_CHEAT, competitionboxes_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -246,20 +247,20 @@ INT32 cv_debug;
 consvar_t cv_usemouse = {"use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_usemouse2 = {"use_mouse2", "Off", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse2, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_usejoystick = {"use_joystick", "1", CV_SAVE|CV_CALL, usejoystick_cons_t,
+consvar_t cv_usejoystick = {"use_gamepad", "1", CV_SAVE|CV_CALL, usejoystick_cons_t,
 	I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_usejoystick2 = {"use_joystick2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t,
+consvar_t cv_usejoystick2 = {"use_gamepad2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t,
 	I_InitJoystick2, 0, NULL, NULL, 0, 0, NULL};
 #if (defined (LJOYSTICK) || defined (HAVE_SDL))
 #ifdef LJOYSTICK
-consvar_t cv_joyport = {"joyport", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_joyport2 = {"joyport2", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: for later
+consvar_t cv_joyport = {"padport", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_joyport2 = {"padport2", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: for later
 #endif
-consvar_t cv_joyscale = {"joyscale", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_joyscale2 = {"joyscale2", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale2, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_joyscale = {"padscale", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_joyscale2 = {"padscale2", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale2, 0, NULL, NULL, 0, 0, NULL};
 #else
-consvar_t cv_joyscale = {"joyscale", "1", CV_SAVE|CV_HIDEN, NULL, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: Dummy for save
-consvar_t cv_joyscale2 = {"joyscale2", "1", CV_SAVE|CV_HIDEN, NULL, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: Dummy for save
+consvar_t cv_joyscale = {"padscale", "1", CV_SAVE|CV_HIDEN, NULL, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: Dummy for save
+consvar_t cv_joyscale2 = {"padscale2", "1", CV_SAVE|CV_HIDEN, NULL, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: Dummy for save
 #endif
 #if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
 consvar_t cv_mouse2port = {"mouse2port", "/dev/gpmdata", CV_SAVE, mouse2port_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -315,16 +316,17 @@ consvar_t cv_timetic = {"timerres", "Classic", CV_SAVE, timetic_cons_t, NULL, 0,
 static CV_PossibleValue_t powerupdisplay_cons_t[] = {{0, "Never"}, {1, "First-person only"}, {2, "Always"}, {0, NULL}};
 consvar_t cv_powerupdisplay = {"powerupdisplay", "First-person only", CV_SAVE, powerupdisplay_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t pointlimit_cons_t[] = {{0, "MIN"}, {999999990, "MAX"}, {0, NULL}};
-consvar_t cv_pointlimit = {"pointlimit", "0", CV_NETVAR|CV_CALL|CV_NOINIT, pointlimit_cons_t,
+static CV_PossibleValue_t pointlimit_cons_t[] = {{1, "MIN"}, {MAXSCORE, "MAX"}, {0, "None"}, {0, NULL}};
+consvar_t cv_pointlimit = {"pointlimit", "None", CV_NETVAR|CV_CALL|CV_NOINIT, pointlimit_cons_t,
 	PointLimit_OnChange, 0, NULL, NULL, 0, 0, NULL};
-static CV_PossibleValue_t timelimit_cons_t[] = {{0, "MIN"}, {30, "MAX"}, {0, NULL}};
-consvar_t cv_timelimit = {"timelimit", "0", CV_NETVAR|CV_CALL|CV_NOINIT, timelimit_cons_t,
+static CV_PossibleValue_t timelimit_cons_t[] = {{1, "MIN"}, {30, "MAX"}, {0, "None"}, {0, NULL}};
+consvar_t cv_timelimit = {"timelimit", "None", CV_NETVAR|CV_CALL|CV_NOINIT, timelimit_cons_t,
 	TimeLimit_OnChange, 0, NULL, NULL, 0, 0, NULL};
-static CV_PossibleValue_t numlaps_cons_t[] = {{0, "MIN"}, {50, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t numlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, NULL}};
 consvar_t cv_numlaps = {"numlaps", "4", CV_NETVAR|CV_CALL|CV_NOINIT, numlaps_cons_t,
 	NumLaps_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_usemapnumlaps = {"usemaplaps", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t basenumlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, "Map default"}, {0, NULL}};
+consvar_t cv_basenumlaps = {"basenumlaps", "Map default", CV_NETVAR|CV_CALL|CV_CHEAT, basenumlaps_cons_t, BaseNumLaps_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // log elemental hazards -- not a netvar, is local to current player
 consvar_t cv_hazardlog = {"hazardlog", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -340,9 +342,7 @@ static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE
 consvar_t cv_nettimeout = {"nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
 static CV_PossibleValue_t jointimeout_cons_t[] = {{5*TICRATE, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
 consvar_t cv_jointimeout = {"jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
-#ifdef NEWPING
 consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
 // Intermission time Tails 04-19-2002
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
 consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -363,7 +363,7 @@ consvar_t cv_runscripts = {"runscripts", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL
 consvar_t cv_pause = {"pausepermission", "Server", CV_NETVAR, pause_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_mute = {"mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_sleep = {"cpusleep", "-1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
+consvar_t cv_sleep = {"cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
 
 INT16 gametype = GT_COOP;
 boolean splitscreen = false;
@@ -435,7 +435,6 @@ void D_RegisterServerCommands(void)
 
 	// Remote Administration
 	COM_AddCommand("password", Command_Changepassword_f);
-	RegisterNetXCmd(XD_LOGIN, Got_Login);
 	COM_AddCommand("login", Command_Login_f); // useful in dedicated to kick off remote admin
 	COM_AddCommand("promote", Command_Verify_f);
 	RegisterNetXCmd(XD_VERIFIED, Got_Verification);
@@ -498,7 +497,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_friendlyfire);
 	CV_RegisterVar(&cv_pointlimit);
 	CV_RegisterVar(&cv_numlaps);
-	CV_RegisterVar(&cv_usemapnumlaps);
+	CV_RegisterVar(&cv_basenumlaps);
 
 	CV_RegisterVar(&cv_hazardlog);
 
@@ -557,9 +556,16 @@ void D_RegisterServerCommands(void)
 
 	// d_clisrv
 	CV_RegisterVar(&cv_maxplayers);
+	CV_RegisterVar(&cv_resynchattempts);
 	CV_RegisterVar(&cv_maxsend);
 	CV_RegisterVar(&cv_noticedownload);
 	CV_RegisterVar(&cv_downloadspeed);
+#ifndef NONET
+	CV_RegisterVar(&cv_allownewplayer);
+	CV_RegisterVar(&cv_joinnextround);
+	CV_RegisterVar(&cv_showjoinaddress);
+	CV_RegisterVar(&cv_blamecfail);
+#endif
 
 	COM_AddCommand("ping", Command_Ping_f);
 	CV_RegisterVar(&cv_nettimeout);
@@ -567,9 +573,7 @@ void D_RegisterServerCommands(void)
 
 	CV_RegisterVar(&cv_skipmapcheck);
 	CV_RegisterVar(&cv_sleep);
-#ifdef NEWPING
 	CV_RegisterVar(&cv_maxping);
-#endif
 
 #ifdef SEENAMES
 	 CV_RegisterVar(&cv_allowseenames);
@@ -599,6 +603,11 @@ void D_RegisterClientCommands(void)
 	Color_cons_t[MAXSKINCOLORS].value = 0;
 	Color_cons_t[MAXSKINCOLORS].strvalue = NULL;
 
+	// Set default player names
+	// Monster Iestyn (12/08/19): not sure where else I could have actually put this, but oh well
+	for (i = 0; i < MAXPLAYERS; i++)
+		sprintf(player_names[i], "Player %d", i);
+
 	if (dedicated)
 		return;
 
@@ -626,6 +635,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_screenshot_folder);
 	CV_RegisterVar(&cv_screenshot_colorprofile);
 	CV_RegisterVar(&cv_moviemode);
+	CV_RegisterVar(&cv_movie_option);
+	CV_RegisterVar(&cv_movie_folder);
 	// PNG variables
 	CV_RegisterVar(&cv_zlib_level);
 	CV_RegisterVar(&cv_zlib_memory);
@@ -727,6 +738,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_chasefreelook);
 	CV_RegisterVar(&cv_chasefreelook2);
 	CV_RegisterVar(&cv_tutorialprompt);
+	CV_RegisterVar(&cv_showfocuslost);
+	CV_RegisterVar(&cv_pauseifunfocused);
 
 	// g_input.c
 	CV_RegisterVar(&cv_sideaxis);
@@ -845,6 +858,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("rteleport", Command_RTeleport_f);
 	COM_AddCommand("skynum", Command_Skynum_f);
 	COM_AddCommand("weather", Command_Weather_f);
+	COM_AddCommand("toggletwod", Command_Toggletwod_f);
 #ifdef _DEBUG
 	COM_AddCommand("causecfail", Command_CauseCfail_f);
 #endif
@@ -865,7 +879,7 @@ void D_RegisterClientCommands(void)
   * \sa CleanupPlayerName, SetPlayerName, Got_NameAndColor
   * \author Graue <graue@oceanbase.org>
   */
-static boolean IsNameGood(char *name, INT32 playernum)
+boolean EnsurePlayerNameIsGood(char *name, INT32 playernum)
 {
 	INT32 ix;
 
@@ -906,14 +920,14 @@ static boolean IsNameGood(char *name, INT32 playernum)
 			if (len > 1)
 			{
 				name[len-1] = '\0';
-				if (!IsNameGood (name, playernum))
+				if (!EnsurePlayerNameIsGood (name, playernum))
 					return false;
 			}
 			else if (len == 1) // Agh!
 			{
 				// Last ditch effort...
 				sprintf(name, "%d", M_RandomKey(10));
-				if (!IsNameGood (name, playernum))
+				if (!EnsurePlayerNameIsGood (name, playernum))
 					return false;
 			}
 			else
@@ -1042,12 +1056,12 @@ static void CleanupPlayerName(INT32 playernum, const char *newname)
   * \param newname   New name for that player. Should be good, but won't
   *                  necessarily be if the client is maliciously modified or
   *                  buggy.
-  * \sa CleanupPlayerName, IsNameGood
+  * \sa CleanupPlayerName, EnsurePlayerNameIsGood
   * \author Graue <graue@oceanbase.org>
   */
 static void SetPlayerName(INT32 playernum, char *newname)
 {
-	if (IsNameGood(newname, playernum))
+	if (EnsurePlayerNameIsGood(newname, playernum))
 	{
 		if (strcasecmp(newname, player_names[playernum]) != 0)
 		{
@@ -1172,11 +1186,11 @@ static void SendNameAndColor(void)
 	&& !strcmp(cv_skin.string, skins[players[consoleplayer].skin].name))
 		return;
 
+	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
+
 	// We'll handle it later if we're not playing.
 	if (!Playing())
 		return;
-
-	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
 
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (!netgame)
@@ -1290,11 +1304,11 @@ static void SendNameAndColor2(void)
 			CV_StealthSet(&cv_playercolor2, cv_playercolor2.defaultvalue);
 	}
 
+	players[secondplaya].availabilities = R_GetSkinAvailabilities();
+
 	// We'll handle it later if we're not playing.
 	if (!Playing())
 		return;
-
-	players[secondplaya].availabilities = R_GetSkinAvailabilities();
 
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (botingame)
@@ -1678,7 +1692,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		// Kick bot from special stages
 		if (botskin)
 		{
-			if (G_IsSpecialStage(mapnum))
+			if (G_IsSpecialStage(mapnum) || (mapheaderinfo[mapnum-1] && (mapheaderinfo[mapnum-1]->typeoflevel & TOL_NIGHTS)))
 			{
 				if (botingame)
 				{
@@ -1904,7 +1918,10 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 		precache = false;
 
 	if (resetplayer && !FLS)
+	{
 		emeralds = 0;
+		memset(&luabanks, 0, sizeof(luabanks));
+	}
 
 	if (modeattacking)
 	{
@@ -2015,8 +2032,6 @@ static void Command_Suicide(void)
 	UINT8 buf[4];
 	UINT8 *cp = buf;
 
-	WRITEINT32(cp, consoleplayer);
-
 	if (!(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
 	{
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
@@ -2036,6 +2051,7 @@ static void Command_Suicide(void)
 		return;
 	}
 
+	WRITEINT32(cp, consoleplayer);
 	SendNetXCmd(XD_SUICIDE, &buf, 4);
 }
 
@@ -2702,14 +2718,6 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		}
 	}
 
-	// Clear player score and rings if a spectator.
-	if (players[playernum].spectator)
-	{
-		players[playernum].score = players[playernum].rings = 0;
-		if (players[playernum].mo)
-			players[playernum].mo->health = 1;
-	}
-
 	// In tag, check to see if you still have a game.
 	if (G_TagGametype())
 		P_CheckSurvivors();
@@ -2719,35 +2727,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 // Attempts to make password system a little sane without
 // rewriting the entire goddamn XD_file system
 //
-#include "md5.h"
-static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest)
-{
-#ifdef NOMD5
-	(void)buffer;
-	(void)len;
-	(void)salt;
-	memset(dest, 0, 16);
-#else
-	char tmpbuf[256];
-	const size_t sl = strlen(salt);
-
-	if (len > 256-sl)
-		len = 256-sl;
-	memcpy(tmpbuf, buffer, len);
-	memmove(&tmpbuf[len], salt, sl);
-	//strcpy(&tmpbuf[len], salt);
-	len += strlen(salt);
-	if (len < 256)
-		memset(&tmpbuf[len],0,256-len);
-
-	// Yes, we intentionally md5 the ENTIRE buffer regardless of size...
-	md5_buffer(tmpbuf, 256, dest);
-#endif
-}
-
 #define BASESALT "basepasswordstorage"
-static UINT8 adminpassmd5[16];
-static boolean adminpasswordset = false;
 
 void D_SetPassword(const char *pw)
 {
@@ -2785,7 +2765,6 @@ static void Command_Login_f(void)
 	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
 	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
 #else
-	UINT8 finalmd5[16];
 	const char *pw;
 
 	if (!netgame)
@@ -2805,47 +2784,15 @@ static void Command_Login_f(void)
 	pw = COM_Argv(1);
 
 	// Do the base pass to get what the server has (or should?)
-	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &finalmd5);
+	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &netbuffer->u.md5sum);
 
 	// Do the final pass to get the comparison the server will come up with
-	D_MD5PasswordPass(finalmd5, 16, va("PNUM%02d", consoleplayer), &finalmd5);
+	D_MD5PasswordPass(netbuffer->u.md5sum, 16, va("PNUM%02d", consoleplayer), &netbuffer->u.md5sum);
 
 	CONS_Printf(M_GetText("Sending login... (Notice only given if password is correct.)\n"));
 
-	SendNetXCmd(XD_LOGIN, finalmd5, 16);
-#endif
-}
-
-static void Got_Login(UINT8 **cp, INT32 playernum)
-{
-#ifdef NOMD5
-	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
-	(void)cp;
-	(void)playernum;
-#else
-	UINT8 sentmd5[16], finalmd5[16];
-
-	READMEM(*cp, sentmd5, 16);
-
-	if (client)
-		return;
-
-	if (!adminpasswordset)
-	{
-		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[playernum]);
-		return;
-	}
-
-	// Do the final pass to compare with the sent md5
-	D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", playernum), &finalmd5);
-
-	if (!memcmp(sentmd5, finalmd5, 16))
-	{
-		CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[playernum]);
-		COM_BufInsertText(va("promote %d\n", playernum)); // do this immediately
-	}
-	else
-		CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[playernum]);
+	netbuffer->packettype = PT_LOGIN;
+	HSendPacket(servernode, true, 0, 16);
 #endif
 }
 
@@ -3657,7 +3604,7 @@ static void CoopLives_OnChange(void)
 	{
 		case 0:
 			CONS_Printf(M_GetText("Players can now respawn indefinitely.\n"));
-			return;
+			break;
 		case 1:
 			CONS_Printf(M_GetText("Lives are now per-player.\n"));
 			return;
@@ -4160,6 +4107,7 @@ void Command_ExitGame_f(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 
 	if (dirmenu)
 		closefilemenu(true);
@@ -4515,4 +4463,15 @@ static void Command_ShowTime_f(void)
 	}
 
 	CONS_Printf(M_GetText("The current time is %f.\nThe timelimit is %f\n"), (double)leveltime/TICRATE, (double)timelimitintics/TICRATE);
+}
+
+static void BaseNumLaps_OnChange(void)
+{
+	if (gametype == GT_RACE)
+	{
+		if (cv_basenumlaps.value)
+			CONS_Printf(M_GetText("Number of laps will be changed to map defaults next round.\n"));
+		else
+			CONS_Printf(M_GetText("Number of laps will be changed to %d next round.\n"), cv_basenumlaps.value);
+	}
 }
