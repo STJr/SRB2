@@ -64,6 +64,8 @@ static void ModFilter_OnChange(void);
 
 static lumpnum_t S_GetMusicLumpNum(const char *mname);
 
+static boolean S_CheckQueue(void);
+
 // commands for music and sound servers
 #ifdef MUSSERV
 consvar_t musserver_cmd = {"musserver_cmd", "musserver", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -1613,13 +1615,14 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 	if (!music_stacks)
 	{
 		music_stacks = Z_Calloc(sizeof (*mst), PU_MUSIC, NULL);
-		strncpy(music_stacks->musname, (status == JT_MASTER ? mname : mapmusname), 7);
-		music_stacks->musflags = (status == JT_MASTER ? mflags : mapmusflags);
-		music_stacks->looping = (status == JT_MASTER ? looping : true);
-		music_stacks->position = (status == JT_MASTER ? position : S_GetMusicPosition());
+		strncpy(music_stacks->musname, (status == JT_MASTER ? mname : (S_CheckQueue() ? queue_name : mapmusname)), 7);
+		music_stacks->musflags = (status == JT_MASTER ? mflags : (S_CheckQueue() ? queue_flags : mapmusflags));
+		music_stacks->looping = (status == JT_MASTER ? looping : (S_CheckQueue() ? queue_looping : true));
+		music_stacks->position = (status == JT_MASTER ? position : (S_CheckQueue() ? queue_position : S_GetMusicPosition()));
 		music_stacks->tic = gametic;
 		music_stacks->status = JT_MASTER;
 		music_stacks->mlumpnum = S_GetMusicLumpNum(music_stacks->musname);
+		music_stacks->noposition = S_CheckQueue();
 
 		if (status == JT_MASTER)
 			return; // we just added the user's entry here
@@ -1638,6 +1641,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 	new_mst->tic = gametic;
 	new_mst->status = status;
 	new_mst->mlumpnum = S_GetMusicLumpNum(new_mst->musname);
+	new_mst->noposition = false;
 
 	mst->next = new_mst;
 	new_mst->prev = mst;
@@ -1745,11 +1749,23 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		entry->tic = gametic;
 		entry->status = JT_MASTER;
 		entry->mlumpnum = S_GetMusicLumpNum(entry->musname);
+		entry->noposition = false; // don't set this until we do the mapmuschanged check, below. Else, this breaks some resumes.
 	}
 
 	if (entry->status == JT_MASTER)
 	{
 		mapmuschanged = strnicmp(entry->musname, mapmusname, 7);
+		if (mapmuschanged)
+		{
+			strncpy(entry->musname, mapmusname, 7);
+			entry->musflags = mapmusflags;
+			entry->looping = true;
+			entry->position = mapmusposition;
+			entry->tic = gametic;
+			entry->status = JT_MASTER;
+			entry->mlumpnum = S_GetMusicLumpNum(entry->musname);
+			entry->noposition = true;
+		}
 		S_ResetMusicStack();
 	}
 	else if (!entry->status)
@@ -1758,7 +1774,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		return false;
 	}
 
-	if (!mapmuschanged && strncmp(entry->musname, S_MusicName(), 7)) // don't restart music if we're already playing it
+	if (strncmp(entry->musname, S_MusicName(), 7)) // don't restart music if we're already playing it
 	{
 		if (music_stack_fadeout)
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, music_stack_fadeout, 0);
@@ -1766,7 +1782,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		{
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, 0, music_stack_fadein);
 
-			if (!music_stack_noposition) // HACK: Global boolean to toggle position resuming, e.g., de-superize
+			if (!entry->noposition && !music_stack_noposition) // HACK: Global boolean to toggle position resuming, e.g., de-superize
 			{
 				UINT32 poslapse = 0;
 
@@ -1906,6 +1922,11 @@ static void S_QueueMusic(const char *mmusic, UINT16 mflags, boolean looping, UIN
 	queue_looping = looping;
 	queue_position = position;
 	queue_fadeinms = fadeinms;
+}
+
+static boolean S_CheckQueue(void)
+{
+	return queue_name[0];
 }
 
 static void S_ClearQueue(void)
