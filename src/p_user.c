@@ -11811,8 +11811,8 @@ void P_PlayerThink(player_t *player)
 	player->pflags &= ~PF_SLIDING;
 
 #define dashmode player->dashmode
-	// Dash mode - thanks be to Iceman404
-	if ((player->charflags & SF_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
+	// Dash mode - thanks be to VelocitOni
+	if ((player->charflags & SF_DASHMODE) && !player->gotflag && !player->powers[pw_carry] && !player->exiting && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
 	{
 		boolean totallyradical = player->speed >= FixedMul(player->runspeed, player->mo->scale);
 		boolean floating = (player->secondjump == 1);
@@ -11827,7 +11827,11 @@ void P_PlayerThink(player_t *player)
 		else if ((!totallyradical || !floating) && !(player->pflags & PF_SPINNING))
 		{
 			if (dashmode > 3)
+			{
 				dashmode -= 3; // Rather than lose it all, it gently counts back down!
+				if ((dashmode+3) >= DASHMODE_THRESHOLD && dashmode < DASHMODE_THRESHOLD)
+					S_StartSound(player->mo, sfx_s3k72);
+			}
 			else
 				dashmode = 0;
 		}
@@ -11858,6 +11862,7 @@ void P_PlayerThink(player_t *player)
 		{
 			player->normalspeed = skins[player->skin].normalspeed;
 			player->jumpfactor = skins[player->skin].jumpfactor;
+			S_StartSound(player->mo, sfx_s3k72);
 		}
 		dashmode = 0;
 	}
