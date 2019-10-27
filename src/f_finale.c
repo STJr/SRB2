@@ -2586,8 +2586,8 @@ void F_ContinueDrawer(void)
 	{
 		if (!(continuetime & 1) || continuetime > 17)
 			V_DrawContinueIcon(x, 68, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);
-		V_DrawScaledPatch(x+12, 68-2, 0, stlivex);
-		V_DrawRightAlignedString(x+36, 69-5, 0,
+		V_DrawScaledPatch(x+12, 66, 0, stlivex);
+		V_DrawRightAlignedString(x+38, 64, 0,
 			va("%d",(imcontinuing ? ncontinues-1 : ncontinues)));
 	}
 	else
