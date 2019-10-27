@@ -10977,10 +10977,11 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	panim_t panim = player->panim;
 	tic_t dashmode = player->dashmode;
 	boolean underwater = mo->eflags & MFE_UNDERWATER;
+	statenum_t stat = fume->state-states;
 	
 	if (panim != PA_WALK && panim != PA_RUN && panim != PA_DASH) // turn invisible when not in a coherent movement state
 	{
-		if (fume->state-states != fume->info->spawnstate)
+		if (stat != fume->info->spawnstate)
 			P_SetMobjState(fume, fume->info->spawnstate);
 		return;
 	}
@@ -11015,19 +11016,19 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 		
 		if (panim == PA_WALK)
 		{
-			if (fume->state-states != fume->info->spawnstate)
+			if (stat != fume->info->spawnstate)
 				P_SetMobjState(fume, fume->info->spawnstate);
 			return;
 		}
 	}
 	
-	if (fume->state-states == fume->info->spawnstate) // If currently inivisble, activate!
+	if (stat == fume->info->spawnstate) // If currently inivisble, activate!
 	{
-		P_SetMobjState(fume, fume->info->seestate);
+		P_SetMobjState(fume, (stat = fume->info->seestate));
 		P_SetScale(fume, mo->scale);
 	}
 	
-	if (dashmode > DASHMODE_THRESHOLD && fume->state-states != fume->info->seestate) // If in dashmode, grow really big and flash
+	if (dashmode > DASHMODE_THRESHOLD && stat != fume->info->seestate) // If in dashmode, grow really big and flash
 	{
 		fume->destscale = mo->scale;
 		fume->flags2 ^= MF2_DONTDRAW;
@@ -11035,9 +11036,9 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	}
 	else // Otherwise, pick a size and color depending on speed and proximity to dashmode
 	{
-		if (dashmode == DASHMODE_THRESHOLD && dashmode > fume->movecount) // If just about to enter dashmode, play the startup animation again
+		if (dashmode == DASHMODE_THRESHOLD && dashmode > (tic_t)fume->movecount) // If just about to enter dashmode, play the startup animation again
 		{
-			P_SetMobjState(fume, fume->info->seestate);
+			P_SetMobjState(fume, (stat = fume->info->seestate));
 			P_SetScale(fume, mo->scale << 1);
 		}
 		fume->flags2 = (fume->flags2 & ~MF2_DONTDRAW) | (mo->flags2 & MF2_DONTDRAW);
