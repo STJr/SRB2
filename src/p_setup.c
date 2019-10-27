@@ -2246,6 +2246,8 @@ static void P_LevelInitStuff(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
+		G_PlayerReborn(i, true);
+
 		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
@@ -2253,41 +2255,18 @@ static void P_LevelInitStuff(void)
 		}
 
 		// obliteration station...
-		players[i].rings = players[i].spheres =\
-		 players[i].xtralife = players[i].deadtimer =\
-		 players[i].numboxes = players[i].totalring =\
-		 players[i].laps = players[i].aiming =\
-		 players[i].losstime = players[i].timeshit =\
-		 players[i].marescore = players[i].lastmarescore =\
-		 players[i].maxlink = players[i].startedtime =\
-		 players[i].finishedtime = players[i].finishedspheres =\
-		 players[i].finishedrings = players[i].lastmare =\
-		 players[i].lastmarelap = players[i].lastmarebonuslap =\
-		 players[i].totalmarelap = players[i].totalmarebonuslap =\
-		 players[i].marebegunat = players[i].textvar =\
-		 players[i].texttimer = players[i].linkcount =\
-		 players[i].linktimer = players[i].flyangle =\
-		 players[i].anotherflyangle = players[i].nightstime =\
-		 players[i].oldscale = players[i].mare = players[i].marelap =\
-		 players[i].marebonuslap = players[i].lapbegunat =\
-		 players[i].lapstartedtime = players[i].totalmarescore =\
-		 players[i].realtime = players[i].exiting = 0;
+		players[i].numboxes = players[i].totalring =\
+		 players[i].laps = players[i].marescore = players[i].lastmarescore =\
+		 players[i].mare = players[i].exiting = 0;
 
-		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
-		players[i].gotcontinue = false;
-
-		// aha, the first evidence this shouldn't be a memset!
 		players[i].drillmeter = 40*20;
 
-		P_ResetPlayer(&players[i]);
 		// hit these too
-		players[i].pflags &= ~(PF_GAMETYPEOVER|PF_TRANSFERTOCLOSEST);
-
-		// unset ALL the pointers. P_SetTarget isn't needed here because if this
-		// function is being called we're just going to clobber the data anyways
-		players[i].mo = players[i].followmobj = players[i].awayviewmobj =\
-		players[i].capsule = players[i].axis1 = players[i].axis2 = players[i].drone = NULL;
+		players[i].pflags &= ~(PF_GAMETYPEOVER);
 	}
+
+	if (botingame)
+		CV_SetValue(&cv_analog2, true);
 }
 
 //
@@ -2627,7 +2606,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	boolean loadedbm = false;
 	sector_t *ss;
 	boolean chase;
-
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -3068,8 +3046,11 @@ boolean P_SetupLevel(boolean skipprecip)
 			CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
 
 	}
-	else if (gametype == GT_RACE && server && cv_usemapnumlaps.value)
-		CV_StealthSetValue(&cv_numlaps, mapheaderinfo[gamemap - 1]->numlaps);
+	else if (gametype == GT_RACE && server)
+		CV_StealthSetValue(&cv_numlaps,
+			(cv_basenumlaps.value)
+			? cv_basenumlaps.value
+			: mapheaderinfo[gamemap - 1]->numlaps);
 
 	// ===========
 	// landing point for netgames.

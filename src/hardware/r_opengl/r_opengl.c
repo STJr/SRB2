@@ -1427,7 +1427,6 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 		Clamp2D(GL_TEXTURE_WRAP_T);
 }
 
-// PRBoom sky dome
 typedef struct vbo_vertex_s
 {
 	float x, y, z;
@@ -1456,62 +1455,59 @@ typedef struct
 static int rows, columns;
 static boolean yflip;
 static int texw, texh;
-static float yMult, yAdd;
 static boolean foglayer;
 static float delta = 0.0f;
+
 static int gl_sky_detail = 16;
+
 static INT32 lasttex = -1;
 
-static RGBA_t SkyColor;
-
 #define MAP_COEFF 128.0f
-#define MAP_SCALE (MAP_COEFF*(float)FRACUNIT)
 
 static void SkyVertex(vbo_vertex_t *vbo, int r, int c)
 {
-	static fixed_t scale = 10000 << FRACBITS;
-	static angle_t maxSideAngle = ANGLE_180 / 3;
+	const float radians = (M_PIl / 180.0f);
+	const float scale = 10000.0f;
+	const float maxSideAngle = 60.0f;
 
-	angle_t topAngle = (angle_t)(c / (float)columns * ANGLE_MAX);
-	angle_t sideAngle = maxSideAngle * (rows - r) / rows;
-	fixed_t height = FINESINE(sideAngle>>ANGLETOFINESHIFT);
-	fixed_t realRadius = FixedMul(scale, FINECOSINE(sideAngle>>ANGLETOFINESHIFT));
-	fixed_t x = FixedMul(realRadius, FINECOSINE(topAngle>>ANGLETOFINESHIFT));
-	fixed_t y = (!yflip) ? FixedMul(scale, height) : FixedMul(scale, height) * -1;
-	fixed_t z = FixedMul(realRadius, FINESINE(topAngle>>ANGLETOFINESHIFT));
-	float timesRepeat;
-
-	timesRepeat = (short)(4 * (256.0f / texw));
-	if (timesRepeat == 0.0f)
+	float topAngle = (c / (float)columns * 360.0f);
+	float sideAngle = (maxSideAngle * (rows - r) / rows);
+	float height = sin(sideAngle * radians);
+	float realRadius = scale * cos(sideAngle * radians);
+	float x = realRadius * cos(topAngle * radians);
+	float y = (!yflip) ? scale * height : -scale * height;
+	float z = realRadius * sin(topAngle * radians);
+	float timesRepeat = (4 * (256.0f / texw));
+	if (fpclassify(timesRepeat) == FP_ZERO)
 		timesRepeat = 1.0f;
 
 	if (!foglayer)
 	{
-		boolean flip = yflip;
 		vbo->r = 255;
 		vbo->g = 255;
 		vbo->b = 255;
 		vbo->a = (r == 0 ? 0 : 255);
 
-		// Flip Y coordinate anyway for the top part of the hemisphere
-		if (r <= 1)
-			flip = !flip;
-
 		// And the texture coordinates.
 		vbo->u = (-timesRepeat * c / (float)columns);
-		if (!flip)	// Flipped Y is for the lower hemisphere.
-			vbo->v = (r / (float)rows) * 1.f * yMult + yAdd;
+		if (!yflip)	// Flipped Y is for the lower hemisphere.
+			vbo->v = (r / (float)rows) + 0.5f;
 		else
-			vbo->v = ((rows-r)/(float)rows) * 1.f * yMult + yAdd;
+			vbo->v = 1.0f + ((rows - r) / (float)rows) + 0.5f;
+	}
+
+	if (r != 4)
+	{
+		y += 300.0f;
 	}
 
 	// And finally the vertex.
-	vbo->x = (float)x/(float)MAP_SCALE;
-	vbo->y = (float)y/(float)MAP_SCALE + delta;
-	vbo->z = (float)z/(float)MAP_SCALE;
+	vbo->x = x;
+	vbo->y = y + delta;
+	vbo->z = z;
 }
 
-GLSkyVBO sky_vbo;
+static GLSkyVBO sky_vbo;
 
 static void gld_BuildSky(int row_count, int col_count)
 {
@@ -1542,10 +1538,7 @@ static void gld_BuildSky(int row_count, int col_count)
 	vertex_p = &vbo->data[0];
 	vbo->loopcount = 0;
 
-	memset(&SkyColor, 0xFF, sizeof(SkyColor));
-
-	// Why not?
-	for (yflip = false; yflip <= true; yflip++)
+	for (yflip = 0; yflip < 2; yflip++)
 	{
 		vbo->loops[vbo->loopcount].mode = GL_TRIANGLE_FAN;
 		vbo->loops[vbo->loopcount].vertexindex = vertex_p - &vbo->data[0];
@@ -1553,21 +1546,14 @@ static void gld_BuildSky(int row_count, int col_count)
 		vbo->loops[vbo->loopcount].use_texture = false;
 		vbo->loopcount++;
 
-		yAdd = 0.5f;
-		yMult = 1.0f;
-		/*if (yflip == 0)
-			SkyColor = &sky->CeilingSkyColor[vbo_idx];
-		else
-			SkyColor = &sky->FloorSkyColor[vbo_idx];*/
-
 		delta = 0.0f;
 		foglayer = true;
 		for (c = 0; c < col_count; c++)
 		{
 			SkyVertex(vertex_p, 1, c);
-			vertex_p->r = SkyColor.s.red;
-			vertex_p->g = SkyColor.s.green;
-			vertex_p->b = SkyColor.s.blue;
+			vertex_p->r = 255;
+			vertex_p->g = 255;
+			vertex_p->b = 255;
 			vertex_p->a = 255;
 			vertex_p++;
 		}
@@ -1580,7 +1566,7 @@ static void gld_BuildSky(int row_count, int col_count)
 			vbo->loops[vbo->loopcount].mode = GL_TRIANGLE_STRIP;
 			vbo->loops[vbo->loopcount].vertexindex = vertex_p - &vbo->data[0];
 			vbo->loops[vbo->loopcount].vertexcount = 2 * col_count + 2;
-			vbo->loops[vbo->loopcount].use_texture = true; //(r > 1) ? true : false;
+			vbo->loops[vbo->loopcount].use_texture = true;
 			vbo->loopcount++;
 
 			for (c = 0; c <= col_count; c++)
@@ -1592,12 +1578,18 @@ static void gld_BuildSky(int row_count, int col_count)
 	}
 }
 
-static void RenderDomeForReal(INT32 skytexture)
+//-----------------------------------------------------------------------------
+//
+//
+//
+//-----------------------------------------------------------------------------
+
+static void RenderDome(INT32 skytexture)
 {
 	int i, j;
 	GLSkyVBO *vbo = &sky_vbo;
 
-	pglRotatef(270.f, 0.f, 1.f, 0.f);
+	pglRotatef(270.0f, 0.0f, 1.0f, 0.0f);
 
 	rows = 4;
 	columns = 4 * gl_sky_detail;
@@ -1636,8 +1628,6 @@ static void RenderDomeForReal(INT32 skytexture)
 	}
 
 	pglScalef(1.0f, 1.0f, 1.0f);
-
-	// current color is undefined after glDrawArrays
 	pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
@@ -1645,12 +1635,9 @@ EXPORT void HWRAPI(RenderSkyDome) (INT32 tex, INT32 texture_width, INT32 texture
 {
 	SetBlend(PF_Translucent|PF_NoDepthTest|PF_Modulated);
 	SetTransform(&transform);
-
 	texw = texture_width;
 	texh = texture_height;
-	RenderDomeForReal(tex);
-
-	// HWR_DrawSkyBackground left no blend flags after rendering the sky
+	RenderDome(tex);
 	SetBlend(0);
 }
 

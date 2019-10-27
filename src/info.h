@@ -138,6 +138,7 @@ void A_SetReactionTime();
 void A_Boss1Spikeballs();
 void A_Boss3TakeDamage();
 void A_Boss3Path();
+void A_Boss3ShockThink();
 void A_LinedefExecute();
 void A_PlaySeeSound();
 void A_PlayAttackSound();
@@ -252,6 +253,7 @@ void A_Boss5CheckOnGround();
 void A_Boss5CheckFalling();
 void A_Boss5PinchShot();
 void A_Boss5MakeItRain();
+void A_Boss5MakeJunk();
 void A_LookForBetter();
 void A_Boss5BombExplode();
 void A_DustDevilThink();
@@ -266,6 +268,14 @@ void A_SnapperThinker();
 void A_SaloonDoorSpawn();
 void A_MinecartSparkThink();
 void A_ModuloToState();
+void A_LavafallRocks();
+void A_LavafallLava();
+void A_FallingLavaCheck();
+void A_FireShrink();
+void A_SpawnPterabytes();
+void A_PterabyteHover();
+void A_RolloutSpawn();
+void A_RolloutRock();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -296,6 +306,8 @@ typedef enum sprite
 	SPR_TURR, // Pop-Up Turret
 	SPR_SHRP, // Sharp
 	SPR_CRAB, // Crushstacean
+	SPR_CR2B, // Banpyura
+	SPR_CSPR, // Banpyura spring
 	SPR_JJAW, // Jet Jaw
 	SPR_SNLR, // Snailer
 	SPR_VLTR, // BASH
@@ -314,6 +326,8 @@ typedef enum sprite
 	SPR_UNID, // Unidus
 	SPR_CANA, // Canarivore
 	SPR_CANG, // Canarivore gas
+	SPR_PYRE, // Pyre Fly
+	SPR_PTER, // Pterabyte
 
 	// Generic Boss Items
 	SPR_JETF, // Boss jet fumes
@@ -331,6 +345,7 @@ typedef enum sprite
 	SPR_EGGO, // Boss 3
 	SPR_SEBH, // Boss 3 Junk
 	SPR_FAKE, // Boss 3 Fakemobile
+	SPR_SHCK, // Boss 3 Shockwave
 
 	// Boss 4 (Castle Eggman)
 	SPR_EGGP,
@@ -339,6 +354,10 @@ typedef enum sprite
 
 	// Boss 5 (Arid Canyon)
 	SPR_FANG, // replaces EGGQ
+	SPR_BRKN,
+	SPR_WHAT,
+	SPR_VWRE,
+	SPR_PROJ, // projector light
 	SPR_FBOM,
 	SPR_FSGN,
 	SPR_BARX, // bomb explosion (also used by barrel)
@@ -390,6 +409,7 @@ typedef enum sprite
 	SPR_WSPB, // Wall spike base
 	SPR_STPT, // Starpost
 	SPR_BMNE, // Big floating mine
+	SPR_PUMI, // Rollout Rock
 
 	// Monitor Boxes
 	SPR_MSTV, // MiSc TV sprites
@@ -458,11 +478,11 @@ typedef enum sprite
 	SPR_GARG, // Deep Sea Gargoyle
 	SPR_SEWE, // Deep Sea Seaweed
 	SPR_DRIP, // Dripping water
-	SPR_CRL1, // Coral 1
-	SPR_CRL2, // Coral 2
-	SPR_CRL3, // Coral 3
+	SPR_CORL, // Coral
 	SPR_BCRY, // Blue Crystal
 	SPR_KELP, // Kelp
+	SPR_ALGA, // Animated algae top
+	SPR_ALGB, // Animated algae segment
 	SPR_DSTG, // DSZ Stalagmites
 	SPR_LIBE, // DSZ Light beam
 
@@ -492,7 +512,7 @@ typedef enum sprite
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
 	SPR_STBL, // Small tumbleweed
-	SPR_CACT, // Cacti sprites
+	SPR_CACT, // Cacti
 	SPR_WWSG, // Caution Sign
 	SPR_WWS2, // Cacti Sign
 	SPR_WWS3, // Sharp Turn Sign
@@ -504,7 +524,6 @@ typedef enum sprite
 	SPR_ADST, // Arid dust
 	SPR_MCRT, // Minecart
 	SPR_MCSP, // Minecart spark
-	SPR_NON2, // Saloon door thinker
 	SPR_SALD, // Saloon door
 	SPR_TRAE, // Train cameo locomotive
 	SPR_TRAI, // Train cameo wagon
@@ -513,6 +532,10 @@ typedef enum sprite
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
 	SPR_DFLM, // Blade's flame
+	SPR_LFAL, // Lavafall
+	SPR_JPLA, // Jungle palm
+	SPR_TFLO, // Torch flower
+	SPR_WVIN, // Wall vines
 
 	// Dark City Scenery
 
@@ -524,13 +547,20 @@ typedef enum sprite
 	SPR_XMS3, // Snowman
 	SPR_XMS4, // Lamppost
 	SPR_XMS5, // Hanging Star
+	SPR_XMS6, // Mistletoe
 	SPR_FHZI, // FHZ Ice
+	SPR_ROSY,
 
 	// Halloween Scenery
 	SPR_PUMK, // Pumpkins
 	SPR_HHPL, // Dr Seuss Trees
 	SPR_SHRM, // Mushroom
 	SPR_HHZM, // Misc
+	
+	// Azure Temple Scenery
+	SPR_BGAR, // ATZ Gargoyles
+	SPR_RCRY, // ATZ Red Crystal (Target)
+	SPR_CFLM, // Green torch flame
 
 	// Botanic Serenity Scenery
 	SPR_BSZ1, // Tall flowers
@@ -551,7 +581,6 @@ typedef enum sprite
 	// Misc Scenery
 	SPR_STLG, // Stalagmites
 	SPR_DBAL, // Disco
-	SPR_RCRY, // ATZ Red Crystal (Target)
 
 	// Powerup Indicators
 	SPR_ARMA, // Armageddon Shield Orb
@@ -605,11 +634,14 @@ typedef enum sprite
 	SPR_SSWY, // Yellow Side Spring
 	SPR_SSWR, // Red Side Spring
 	SPR_SSWB, // Blue Side Spring
+	SPR_BSTY, // Yellow Booster
+	SPR_BSTR, // Red Booster
 
 	// Environmental Effects
 	SPR_RAIN, // Rain
 	SPR_SNO1, // Snowflake
 	SPR_SPLH, // Water Splish
+	SPR_LSPL, // Lava Splish
 	SPR_SPLA, // Water Splash
 	SPR_SMOK,
 	SPR_BUBL, // Bubble
@@ -764,6 +796,7 @@ typedef enum playersprite
 	SPR2_TIRE, // tired
 
 	SPR2_GLID, // glide
+	SPR2_LAND, // landing after glide/bounce
 	SPR2_CLNG, // cling
 	SPR2_CLMB, // climb
 
@@ -771,7 +804,6 @@ typedef enum playersprite
 	SPR2_FRUN, // float run
 
 	SPR2_BNCE, // bounce
-	SPR2_BLND, // bounce landing
 
 	SPR2_FIRE, // fire
 
@@ -832,14 +864,26 @@ typedef enum playersprite
 	SPR2_TALA,
 	SPR2_TALB,
 
+	SPR2_CNT1, // continue disappointment
+	SPR2_CNT2, // continue lift
+	SPR2_CNT3, // continue spin
+	SPR2_CNT4, // continue "soooooooniiic!" tugging
+
 	SPR2_SIGN, // end sign head
 	SPR2_LIFE, // life monitor icon
-	SPR2_XTRA, // stuff that isn't in-game - keep this last in the list
+
+	SPR2_XTRA, // stuff that isn't in-map - "would this ever need an md2 or variable length animation?"
 
 	SPR2_FIRSTFREESLOT,
 	SPR2_LASTFREESLOT = 0x7f,
 	NUMPLAYERSPRITES
 } playersprite_t;
+
+// SPR2_XTRA
+#define XTRA_LIFEPIC    0                 // Life icon patch
+#define XTRA_CHARSEL    1                 // Character select picture
+#define XTRA_CONTINUE   2                 // Continue icon
+#define XTRA_ENDING     3                 // Ending finale patches
 
 typedef enum state
 {
@@ -887,6 +931,7 @@ typedef enum state
 
 	// CA_GLIDEANDCLIMB
 	S_PLAY_GLIDE,
+	S_PLAY_GLIDE_LANDING,
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
 
@@ -985,6 +1030,9 @@ typedef enum state
 	S_TAILSOVERLAY_PAIN,
 	S_TAILSOVERLAY_GASP,
 	S_TAILSOVERLAY_EDGE,
+
+	// [:
+	S_JETFUMEFLASH,
 
 	// Blue Crawla
 	S_POSS_STND,
@@ -1133,6 +1181,21 @@ typedef enum state
 	S_CRUSHCLAW_IN,
 	S_CRUSHCLAW_WAIT,
 	S_CRUSHCHAIN,
+
+	// Banpyura
+	S_BANPYURA_ROAM1,
+	S_BANPYURA_ROAM2,
+	S_BANPYURA_ROAM3,
+	S_BANPYURA_ROAM4,
+	S_BANPYURA_ROAMPAUSE,
+	S_CDIAG1,
+	S_CDIAG2,
+	S_CDIAG3,
+	S_CDIAG4,
+	S_CDIAG5,
+	S_CDIAG6,
+	S_CDIAG7,
+	S_CDIAG8,
 
 	// Jet Jaw
 	S_JETJAW_ROAM1,
@@ -1320,6 +1383,22 @@ typedef enum state
 	S_CANARIVOREGAS_7,
 	S_CANARIVOREGAS_8,
 
+	// Pyre Fly
+	S_PYREFLY_FLY,
+	S_PYREFLY_BURN,
+	S_PYREFIRE1,
+	S_PYREFIRE2,
+
+	// Pterabyte
+	S_PTERABYTESPAWNER,
+	S_PTERABYTEWAYPOINT,
+	S_PTERABYTE_FLY1,
+	S_PTERABYTE_FLY2,
+	S_PTERABYTE_FLY3,
+	S_PTERABYTE_FLY4,
+	S_PTERABYTE_SWOOPDOWN,
+	S_PTERABYTE_SWOOPUP,
+
 	// Boss Explosion
 	S_BOSSEXPLODE,
 
@@ -1447,6 +1526,10 @@ typedef enum state
 	S_BOSSSEBH1,
 	S_BOSSSEBH2,
 
+	// Boss 3 Shockwave
+	S_SHOCKWAVE1,
+	S_SHOCKWAVE2,
+
 	// Boss 4
 	S_EGGMOBILE4_STND,
 	S_EGGMOBILE4_LATK1,
@@ -1489,6 +1572,25 @@ typedef enum state
 	S_EGGROBOJET,
 
 	// Boss 5
+	S_FANG_SETUP,
+	S_FANG_INTRO0,
+	S_FANG_INTRO1,
+	S_FANG_INTRO2,
+	S_FANG_INTRO3,
+	S_FANG_INTRO4,
+	S_FANG_INTRO5,
+	S_FANG_INTRO6,
+	S_FANG_INTRO7,
+	S_FANG_INTRO8,
+	S_FANG_INTRO9,
+	S_FANG_INTRO10,
+	S_FANG_INTRO11,
+	S_FANG_INTRO12,
+	S_FANG_CLONE1,
+	S_FANG_CLONE2,
+	S_FANG_CLONE3,
+	S_FANG_CLONE4,
+	S_FANG_IDLE0,
 	S_FANG_IDLE1,
 	S_FANG_IDLE2,
 	S_FANG_IDLE3,
@@ -1559,6 +1661,26 @@ typedef enum state
 	S_FANG_FLEEBOUNCE1,
 	S_FANG_FLEEBOUNCE2,
 	S_FANG_KO,
+
+	S_BROKENROBOTRANDOM,
+	S_BROKENROBOTA,
+	S_BROKENROBOTB,
+	S_BROKENROBOTC,
+	S_BROKENROBOTD,
+	S_BROKENROBOTE,
+	S_BROKENROBOTF,
+
+	S_ALART1,
+	S_ALART2,
+
+	S_VWREF,
+	S_VWREB,
+
+	S_PROJECTORLIGHT1,
+	S_PROJECTORLIGHT2,
+	S_PROJECTORLIGHT3,
+	S_PROJECTORLIGHT4,
+	S_PROJECTORLIGHT5,
 
 	S_FBOMB1,
 	S_FBOMB2,
@@ -2283,20 +2405,23 @@ typedef enum state
 	S_DRIPC1,
 	S_DRIPC2,
 
-	// Coral 1
+	// Coral
 	S_CORAL1,
-
-	// Coral 2
 	S_CORAL2,
-
-	// Coral 3
 	S_CORAL3,
+	S_CORAL4,
+	S_CORAL5,
 
 	// Blue Crystal
 	S_BLUECRYSTAL1,
 
 	// Kelp,
 	S_KELP,
+
+	// Animated algae
+	S_ANIMALGAETOP1,
+	S_ANIMALGAETOP2,
+	S_ANIMALGAESEG,
 
 	// DSZ Stalagmites
 	S_DSZSTALAGMITE,
@@ -2432,7 +2557,7 @@ typedef enum state
 	S_LITTLETUMBLEWEED_ROLL7,
 	S_LITTLETUMBLEWEED_ROLL8,
 
-	// Cacti Sprites
+	// Cacti
 	S_CACTI1,
 	S_CACTI2,
 	S_CACTI3,
@@ -2442,8 +2567,12 @@ typedef enum state
 	S_CACTI7,
 	S_CACTI8,
 	S_CACTI9,
+	S_CACTI10,
+	S_CACTI11,
+	S_CACTITINYSEG,
+	S_CACTISMALLSEG,
 
-	// Warning signs sprites
+	// Warning signs
 	S_ARIDSIGN_CAUTION,
 	S_ARIDSIGN_CACTI,
 	S_ARIDSIGN_SHARPTURN,
@@ -2513,7 +2642,7 @@ typedef enum state
 
 	// Saloon door
 	S_SALOONDOOR,
-	S_SALOONDOORTHINKER,
+	S_SALOONDOORCENTER,
 
 	// Train cameo
 	S_TRAINCAMEOSPAWNER_1,
@@ -2534,6 +2663,12 @@ typedef enum state
 	S_FLAMEJETFLAME1,
 	S_FLAMEJETFLAME2,
 	S_FLAMEJETFLAME3,
+	S_FLAMEJETFLAME4,
+	S_FLAMEJETFLAME5,
+	S_FLAMEJETFLAME6,
+	S_FLAMEJETFLAME7,
+	S_FLAMEJETFLAME8,
+	S_FLAMEJETFLAME9,
 
 	// Spinning flame jets
 	S_FJSPINAXISA1, // Counter-clockwise
@@ -2545,6 +2680,28 @@ typedef enum state
 	S_FLAMEJETFLAMEB1,
 	S_FLAMEJETFLAMEB2,
 	S_FLAMEJETFLAMEB3,
+
+	// Lavafall
+	S_LAVAFALL_DORMANT,
+	S_LAVAFALL_TELL,
+	S_LAVAFALL_SHOOT,
+	S_LAVAFALL_LAVA1,
+	S_LAVAFALL_LAVA2,
+	S_LAVAFALL_LAVA3,
+	S_LAVAFALLROCK,
+
+	// Rollout Rock
+	S_ROLLOUTSPAWN,
+	S_ROLLOUTROCK,
+
+	// RVZ scenery
+	S_BIGFERNLEAF,
+	S_BIGFERN1,
+	S_BIGFERN2,
+	S_JUNGLEPALM,
+	S_TORCHFLOWER,
+	S_WALLVINE_LONG,
+	S_WALLVINE_SHORT,
 
 	// Trapgoyles
 	S_TRAPGOYLE,
@@ -2577,6 +2734,9 @@ typedef enum state
 	S_TARGET_RESPAWN,
 	S_TARGET_ALLDONE,
 
+	// ATZ's green flame
+	S_GREENFLAME,
+
 	// Stalagmites
 	S_STG0,
 	S_STG1,
@@ -2597,6 +2757,7 @@ typedef enum state
 	S_LAMPPOST1,  // normal
 	S_LAMPPOST2,  // with snow
 	S_HANGSTAR,
+	S_MISTLETOE,
 	// Xmas GFZ bushes
 	S_XMASBLUEBERRYBUSH,
 	S_XMASBERRYBUSH,
@@ -2604,6 +2765,16 @@ typedef enum state
 	// FHZ
 	S_FHZICE1,
 	S_FHZICE2,
+	S_ROSY_IDLE1,
+	S_ROSY_IDLE2,
+	S_ROSY_IDLE3,
+	S_ROSY_IDLE4,
+	S_ROSY_JUMP,
+	S_ROSY_WALK,
+	S_ROSY_HUG,
+	S_ROSY_PAIN,
+	S_ROSY_STND,
+	S_ROSY_UNHAPPY,
 
 	// Halloween Scenery
 	// Pumpkins
@@ -3255,6 +3426,17 @@ typedef enum state
 	S_BHORIZ7,
 	S_BHORIZ8,
 
+	// Booster
+	S_BOOSTERSOUND,
+	S_YELLOWBOOSTERROLLER,
+	S_YELLOWBOOSTERSEG_LEFT,
+	S_YELLOWBOOSTERSEG_RIGHT,
+	S_YELLOWBOOSTERSEG_FACE,
+	S_REDBOOSTERROLLER,
+	S_REDBOOSTERSEG_LEFT,
+	S_REDBOOSTERSEG_RIGHT,
+	S_REDBOOSTERSEG_FACE,
+
 	// Rain
 	S_RAIN1,
 	S_RAINRETURN,
@@ -3274,6 +3456,9 @@ typedef enum state
 	S_SPLISH7,
 	S_SPLISH8,
 	S_SPLISH9,
+
+	// Lava Splish
+	S_LAVASPLISH,
 
 	// added water splash
 	S_SPLASH1,
@@ -3908,6 +4093,7 @@ typedef enum mobj_type
 	MT_THOK, // Thok! mobj
 	MT_PLAYER,
 	MT_TAILSOVERLAY, // c:
+	MT_METALJETFUME,
 
 	// Enemies
 	MT_BLUECRAWLA, // Crawla (Blue)
@@ -3926,6 +4112,8 @@ typedef enum mobj_type
 	MT_CRUSHSTACEAN, // Crushstacean
 	MT_CRUSHCLAW, // Big meaty claw
 	MT_CRUSHCHAIN, // Chain
+	MT_BANPYURA, // Banpyura
+	MT_BANPSPRING, // Banpyura spring
 	MT_JETJAW, // Jet Jaw
 	MT_SNAILER, // Snailer
 	MT_VULTURE, // BASH
@@ -3947,6 +4135,11 @@ typedef enum mobj_type
 	MT_UNIBALL, // Unidus Ball
 	MT_CANARIVORE, // Canarivore
 	MT_CANARIVORE_GAS, // Canarivore gas
+	MT_PYREFLY, // Pyre Fly
+	MT_PYREFLY_FIRE, // Pyre Fly fire
+	MT_PTERABYTESPAWNER, // Pterabyte spawner
+	MT_PTERABYTEWAYPOINT, // Pterabyte waypoint
+	MT_PTERABYTE, // Pterabyte
 
 	// Generic Boss Items
 	MT_BOSSEXPLODE,
@@ -3973,7 +4166,7 @@ typedef enum mobj_type
 	// Boss 3
 	MT_EGGMOBILE3,
 	MT_FAKEMOBILE,
-	MT_SHOCK,
+	MT_SHOCKWAVE,
 
 	// Boss 4
 	MT_EGGMOBILE4,
@@ -3984,6 +4177,10 @@ typedef enum mobj_type
 
 	// Boss 5
 	MT_FANG,
+	MT_BROKENROBOT,
+	MT_VWREF,
+	MT_VWREB,
+	MT_PROJECTORLIGHT,
 	MT_FBOMB,
 	MT_TNTDUST, // also used by barrel
 	MT_FSGNA,
@@ -4053,6 +4250,11 @@ typedef enum mobj_type
 	MT_YELLOWHORIZ,
 	MT_REDHORIZ,
 	MT_BLUEHORIZ,
+
+	MT_BOOSTERSEG,
+	MT_BOOSTERROLLER,
+	MT_YELLOWBOOSTER,
+	MT_REDBOOSTER,
 
 	// Interactive Objects
 	MT_BUBBLES, // Bubble source
@@ -4182,11 +4384,15 @@ typedef enum mobj_type
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
-	MT_CORAL1, // Coral 1
-	MT_CORAL2, // Coral 2
-	MT_CORAL3, // Coral 3
+	MT_CORAL1, // Coral
+	MT_CORAL2,
+	MT_CORAL3,
+	MT_CORAL4,
+	MT_CORAL5,
 	MT_BLUECRYSTAL, // Blue Crystal
 	MT_KELP, // Kelp
+	MT_ANIMALGAETOP, // Animated algae top
+	MT_ANIMALGAESEG, // Animated algae segment
 	MT_DSZSTALAGMITE, // Deep Sea 1 Stalagmite
 	MT_DSZ2STALAGMITE, // Deep Sea 2 Stalagmite
 	MT_LIGHTBEAM, // DSZ Light beam
@@ -4237,15 +4443,19 @@ typedef enum mobj_type
 	// Arid Canyon Scenery
 	MT_BIGTUMBLEWEED,
 	MT_LITTLETUMBLEWEED,
-	MT_CACTI1,
-	MT_CACTI2,
-	MT_CACTI3,
-	MT_CACTI4,
-	MT_CACTI5, // Harmful Cactus 1
-	MT_CACTI6, // Harmful Cactus 2
-	MT_CACTI7, // Harmful Cactus 3
-	MT_CACTI8, // Harmful Cactus 4
-	MT_CACTI9, // Harmful Cactus 5
+	MT_CACTI1, // Tiny Red Flower Cactus
+	MT_CACTI2, // Small Red Flower Cactus
+	MT_CACTI3, // Tiny Blue Flower Cactus
+	MT_CACTI4, // Small Blue Flower Cactus
+	MT_CACTI5, // Prickly Pear
+	MT_CACTI6, // Barrel Cactus
+	MT_CACTI7, // Tall Barrel Cactus
+	MT_CACTI8, // Armed Cactus
+	MT_CACTI9, // Ball Cactus
+	MT_CACTI10, // Tiny Cactus
+	MT_CACTI11, // Small Cactus
+	MT_CACTITINYSEG, // Tiny Cactus Segment
+	MT_CACTISMALLSEG, // Small Cactus Segment
 	MT_ARIDSIGN_CAUTION, // Caution Sign
 	MT_ARIDSIGN_CACTI, // Cacti Sign
 	MT_ARIDSIGN_SHARPTURN, // Sharp Turn Sign
@@ -4263,7 +4473,7 @@ typedef enum mobj_type
 	MT_MINECARTSIDEMARK,
 	MT_MINECARTSPARK,
 	MT_SALOONDOOR,
-	MT_SALOONDOORTHINKER,
+	MT_SALOONDOORCENTER,
 	MT_TRAINCAMEOSPAWNER,
 	MT_TRAINSEG,
 	MT_TRAINDUSTSPAWNER,
@@ -4280,6 +4490,20 @@ typedef enum mobj_type
 
 	MT_FLAMEJETFLAMEB, // Blade's flame
 
+	MT_LAVAFALL,
+	MT_LAVAFALL_LAVA,
+	MT_LAVAFALLROCK,
+
+	MT_ROLLOUTSPAWN,
+	MT_ROLLOUTROCK,
+
+	MT_BIGFERNLEAF,
+	MT_BIGFERN,
+	MT_JUNGLEPALM,
+	MT_TORCHFLOWER,
+	MT_WALLVINE_LONG,
+	MT_WALLVINE_SHORT,
+
 	// Dark City Scenery
 
 	// Egg Rock Scenery
@@ -4290,6 +4514,7 @@ typedef enum mobj_type
 	MT_TRAPGOYLEDOWN,
 	MT_TRAPGOYLELONG,
 	MT_TARGET, // AKA Red Crystal
+	MT_GREENFLAME,
 
 	// Stalagmites
 	MT_STALAGMITE0,
@@ -4311,6 +4536,7 @@ typedef enum mobj_type
 	MT_LAMPPOST1,  // normal
 	MT_LAMPPOST2,  // with snow
 	MT_HANGSTAR,
+	MT_MISTLETOE,
 	// Xmas GFZ bushes
 	MT_XMASBLUEBERRYBUSH,
 	MT_XMASBERRYBUSH,
@@ -4318,6 +4544,8 @@ typedef enum mobj_type
 	// FHZ
 	MT_FHZICE1,
 	MT_FHZICE2,
+	MT_ROSY,
+	MT_CDLHRT,
 
 	// Halloween Scenery
 	// Pumpkins
@@ -4446,6 +4674,7 @@ typedef enum mobj_type
 	MT_RAIN, // Rain
 	MT_SNOWFLAKE, // Snowflake
 	MT_SPLISH, // Water splish!
+	MT_LAVASPLISH, // Lava splish!
 	MT_SMOKE,
 	MT_SMALLBUBBLE, // small bubble
 	MT_MEDIUMBUBBLE, // medium bubble
