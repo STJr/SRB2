@@ -1756,7 +1756,6 @@ static void Command_Map_f(void)
 
 	INT32 newgametype = gametype;
 
-	INT32 i;
 	INT32 d;
 	char *p;
 
