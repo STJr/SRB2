@@ -5303,14 +5303,23 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					// Now Knuckles-type abilities are checked.
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
-						INT32 glidespeed = player->actionspd;
+						fixed_t glidespeed = FixedMul(player->actionspd, player->mo->scale);
+						fixed_t playerspeed = player->speed;
+						
+						if (player->mo->eflags & MFE_UNDERWATER)
+						{
+							glidespeed >>= 1;
+							playerspeed >>= 1;
+							player->mo->momx = ((player->mo->momx - player->cmomx) >> 1) + player->cmomx;
+							player->mo->momy = ((player->mo->momy - player->cmomy) >> 1) + player->cmomy;
+						}
 
 						player->pflags |= PF_GLIDING|PF_THOKKED;
 						player->glidetime = 0;
 
 						P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
-						if (player->speed < glidespeed)
-							P_Thrust(player->mo, player->mo->angle, glidespeed - player->speed);
+						if (playerspeed < glidespeed)
+							P_Thrust(player->mo, player->mo->angle, glidespeed - playerspeed);
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 					}
 					break;
