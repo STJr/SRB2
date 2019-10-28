@@ -11727,8 +11727,8 @@ void P_PlayerThink(player_t *player)
 	else
 		player->powers[pw_justsprung] = 0;
 
-	if (player->powers[pw_pushing] && player->powers[pw_pushing] < UINT16_MAX)
-		player->powers[pw_pushing]--;
+	if (player->powers[pw_noautobrake] && player->powers[pw_noautobrake] < UINT16_MAX)
+		player->powers[pw_noautobrake]--;
 
 	if (player->powers[pw_underwater] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_PROTECTWATER)))
 	{
