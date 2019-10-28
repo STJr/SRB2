@@ -2683,37 +2683,25 @@ void R_PatchToFlat_16bpp(patch_t *patch, UINT16 *raw, boolean flip)
 	desttop = raw;
 	deststop = desttop + (SHORT(patch->width) * SHORT(patch->height));
 
-	#define DEAR_GOD_FORGIVE_ME_FOR_MY_MACROS \
-	{ \
-		INT32 topdelta, prevdelta = -1; \
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col])); \
-		while (column->topdelta != 0xff) \
-		{ \
-			topdelta = column->topdelta; \
-			if (topdelta <= prevdelta) \
-				topdelta += prevdelta; \
-			prevdelta = topdelta; \
-			dest = desttop + (topdelta * SHORT(patch->width)); \
-			source = (UINT8 *)(column) + 3; \
-			for (ofs = 0; dest < deststop && ofs < column->length; ofs++) \
-			{ \
-				*dest = source[ofs]; \
-				dest += SHORT(patch->width); \
-			} \
-			column = (column_t *)((UINT8 *)column + column->length + 4); \
-		} \
-	}
-
-	if (!flip)
+	for (col = 0; col < SHORT(patch->width); col++, desttop++)
 	{
-		for (col = 0; col < SHORT(patch->width); col++, desttop++)
-			DEAR_GOD_FORGIVE_ME_FOR_MY_MACROS
-	}
-	else
-	{
-		// flipped
-		for (col = SHORT(patch->width)-1; col >= 0; col--, desttop++)
-			DEAR_GOD_FORGIVE_ME_FOR_MY_MACROS
+		INT32 topdelta, prevdelta = -1;
+		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-col) : col]));
+		while (column->topdelta != 0xff)
+		{
+			topdelta = column->topdelta;
+			if (topdelta <= prevdelta)
+				topdelta += prevdelta;
+			prevdelta = topdelta;
+			dest = desttop + (topdelta * SHORT(patch->width));
+			source = (UINT8 *)(column) + 3;
+			for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
+			{
+				*dest = source[ofs];
+				dest += SHORT(patch->width);
+			}
+			column = (column_t *)((UINT8 *)column + column->length + 4);
+		}
 	}
 }
 
