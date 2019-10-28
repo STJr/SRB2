@@ -29,6 +29,7 @@
 #include "p_setup.h"
 #include "r_data.h"
 #include "r_draw.h"
+#include "r_patch.h"
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"

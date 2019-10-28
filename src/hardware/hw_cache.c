@@ -30,6 +30,7 @@
 #include "../z_zone.h"
 #include "../v_video.h"
 #include "../r_draw.h"
+#include "../r_patch.h"
 #include "../p_setup.h"
 
 //Hurdler: 25/04/2000: used for new colormap code in hardware mode

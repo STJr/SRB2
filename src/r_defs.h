@@ -732,7 +732,7 @@ typedef struct
 #pragma pack()
 #endif
 
-// Rotated sprite 0-360
+// rotsprite
 #ifdef ROTSPRITE
 typedef struct
 {
@@ -742,20 +742,7 @@ typedef struct
 	aatree_t *hardware_patch[8];
 #endif
 } rotsprite_t;
-
-typedef struct
-{
-	INT32 x, y;
-} spriteframepivot_t;
 #endif
-
-typedef struct
-{
-#ifdef ROTSPRITE
-	spriteframepivot_t pivot[64];
-#endif
-	boolean available;
-} spriteinfo_t;
 
 typedef enum
 {

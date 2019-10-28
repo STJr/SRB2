@@ -16,6 +16,7 @@
 
 #include "sounds.h"
 #include "r_plane.h"
+#include "r_patch.h"
 #include "r_portal.h"
 #include "r_defs.h"
 
@@ -51,10 +52,6 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 //faB: find sprites in wadfile, replace existing, add new ones
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
-
-#ifdef ROTSPRITE
-void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip);
-#endif
 
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
@@ -212,8 +209,6 @@ typedef struct vissprite_s
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
-extern spriteinfo_t spriteinfo[NUMSPRITES];
-
 // A drawnode is something that points to a 3D floor, 3D side, or masked
 // middle texture. This is used for sorting with sprites.
 typedef struct drawnode_s
@@ -239,9 +234,6 @@ UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
 void R_PatchSkins(UINT16 wadnum);
 void R_AddSkins(UINT16 wadnum);
-
-void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps);
-void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 
 UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
 
