@@ -836,7 +836,7 @@ void F_IntroDrawer(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 			V_DrawScaledPatch(0, 0, 0, radar);
 			W_UnlockCachedPatch(radar);
-			V_DrawString(8, 128, 0, cutscene_disptext);
+			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
@@ -849,7 +849,7 @@ void F_IntroDrawer(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 			V_DrawScaledPatch(0, 0, 0, grass);
 			W_UnlockCachedPatch(grass);
-			V_DrawString(8, 128, 0, cutscene_disptext);
+			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
@@ -862,7 +862,7 @@ void F_IntroDrawer(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 			V_DrawSmallScaledPatch(0, 0, 0, confront);
 			W_UnlockCachedPatch(confront);
-			V_DrawString(8, 128, 0, cutscene_disptext);
+			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
@@ -875,7 +875,7 @@ void F_IntroDrawer(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 			V_DrawSmallScaledPatch(0, 0, 0, sdo);
 			W_UnlockCachedPatch(sdo);
-			V_DrawString(224, 8, 0, cutscene_disptext);
+			V_DrawString(224, 8, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
