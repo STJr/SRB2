@@ -11455,7 +11455,7 @@ void P_PlayerThink(player_t *player)
 
 	// deez New User eXperiences.
 	{
-		angle_t diff = 0;
+		angle_t oldang = player->drawangle, diff = 0;
 		UINT8 factor;
 		// Directionchar!
 		// Camera angle stuff.
@@ -11571,6 +11571,22 @@ void P_PlayerThink(player_t *player)
 			else
 				diff /= factor;
 			player->drawangle += diff;
+		}
+
+		// reset from waiting to standing when turning on the spot
+		if (player->panim == PA_IDLE)
+		{
+			diff = player->drawangle - oldang;
+			if (diff > ANGLE_180)
+				diff = InvAngle(diff);
+			if (diff > ANG10/2)
+			{
+				statenum_t stat = player->mo->state-states;
+				if (stat == S_PLAY_WAIT)
+					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				else if (stat == S_PLAY_STND)
+					player->mo->tics++;
+			}
 		}
 
 		// Autobrake! check ST_drawInput if you modify this
@@ -11812,7 +11828,7 @@ void P_PlayerThink(player_t *player)
 
 #define dashmode player->dashmode
 	// Dash mode - thanks be to Iceman404
-	if ((player->charflags & SF_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
+	if ((player->charflags & SF_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS) && !metalrecording) // woo, dashmode! no nights tho.
 	{
 		boolean totallyradical = player->speed >= FixedMul(player->runspeed, player->mo->scale);
 		boolean floating = (player->secondjump == 1);

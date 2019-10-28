@@ -4044,7 +4044,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x000a
+#define DEMOVERSION 0x000b
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -4068,7 +4068,6 @@ static ticcmd_t oldcmd;
 #define GZT_MOMXY  0x02
 #define GZT_MOMZ   0x04
 #define GZT_ANGLE  0x08
-// Not used for Metal Sonic
 #define GZT_FRAME  0x10 // Animation frame
 #define GZT_SPR2   0x20 // Player animations
 #define GZT_EXTRA  0x40
@@ -4085,6 +4084,14 @@ static ticcmd_t oldcmd;
 #define EZT_HIT    0x20 // Damaged a mobj
 #define EZT_SPRITE 0x40 // Changed sprite set completely out of PLAY (NiGHTS, SOCs, whatever)
 // spare EZT slot  0x80
+
+// GZT_FOLLOW flags
+#define FZT_SPAWNED 0x01 // just been spawned
+#define FZT_SKIN 0x02 // has skin
+#define FZT_LINKDRAW 0x04 // has linkdraw (combine with spawned only)
+#define FZT_COLORIZED 0x08 // colorized (ditto)
+#define FZT_SCALE 0x10 // different scale to object
+// spare FZT slots 0x20 to 0x80
 
 static mobj_t oldmetal, oldghost;
 
@@ -4405,15 +4412,32 @@ void G_WriteGhostTic(mobj_t *ghost)
 			ghostext.hitlist = NULL;
 		}
 		if (ghostext.flags & EZT_SPRITE)
-			WRITEUINT8(demo_p,oldghost.sprite);
+			WRITEUINT16(demo_p,oldghost.sprite);
 		ghostext.flags = 0;
 	}
 
 	if (ghost->player && ghost->player->followmobj) // bloats tails runs but what can ya do
 	{
 		INT16 temp;
+		UINT8 *followtic_p = demo_p++;
+		UINT8 followtic = 0;
 
 		ziptic |= GZT_FOLLOW;
+
+		if (ghost->player->followmobj->skin)
+			followtic |= FZT_SKIN;
+
+		if (!(oldghost.flags2 & MF2_AMBUSH))
+		{
+			followtic |= FZT_SPAWNED;
+			if (ghost->player->followmobj->flags2 & MF2_LINKDRAW)
+				followtic |= FZT_LINKDRAW;
+			if (ghost->player->followmobj->colorized)
+				followtic |= FZT_COLORIZED;
+			if (followtic & FZT_SKIN)
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(ghost->player->followmobj->skin))-skins));
+			oldghost.flags2 |= MF2_AMBUSH;
+		}
 
 		temp = (INT16)((ghost->player->followmobj->x-ghost->x)>>8);
 		WRITEINT16(demo_p,temp);
@@ -4421,10 +4445,21 @@ void G_WriteGhostTic(mobj_t *ghost)
 		WRITEINT16(demo_p,temp);
 		temp = (INT16)((ghost->player->followmobj->z-ghost->z)>>8);
 		WRITEINT16(demo_p,temp);
-		WRITEUINT8(demo_p,ghost->player->followmobj->sprite);
-		WRITEUINT8(demo_p,ghost->player->followmobj->sprite2);
+		if (followtic & FZT_SKIN)
+			WRITEUINT8(demo_p,ghost->player->followmobj->sprite2);
+		WRITEUINT16(demo_p,ghost->player->followmobj->sprite);
 		WRITEUINT8(demo_p,(ghost->player->followmobj->frame & FF_FRAMEMASK));
+		WRITEUINT8(demo_p,ghost->player->followmobj->color);
+		if (ghost->player->followmobj->scale != ghost->scale)
+		{
+			followtic |= FZT_SCALE;
+			WRITEFIXED(demo_p,ghost->player->followmobj->scale);
+		}
+
+		*followtic_p = followtic;
 	}
+	else
+		oldghost.flags2 &= ~MF2_AMBUSH;
 
 	*ziptic_p = ziptic;
 
@@ -4528,17 +4563,24 @@ void G_ConsGhostTic(void)
 			}
 		}
 		if (xziptic & EZT_SPRITE)
-			demo_p++;
+			demo_p += sizeof(UINT16);
 	}
 
 	if (ziptic & GZT_FOLLOW)
 	{ // Even more...
+		UINT8 followtic = READUINT8(demo_p);
+		if ((followtic & (FZT_SPAWNED|FZT_SKIN)) == (FZT_SPAWNED|FZT_SKIN))
+			demo_p++;
 		demo_p += sizeof(INT16);
 		demo_p += sizeof(INT16);
 		demo_p += sizeof(INT16);
+		if (followtic & FZT_SKIN)
+			demo_p++;
+		demo_p += sizeof(UINT16);
 		demo_p++;
 		demo_p++;
-		demo_p++;
+		if (followtic & FZT_SCALE)
+			demo_p += sizeof(fixed_t);
 	}
 
 	// Re-synchronise
@@ -4737,7 +4779,7 @@ void G_GhostTicker(void)
 				}
 			}
 			if (xziptic & EZT_SPRITE)
-				g->mo->sprite = READUINT8(g->p);
+				g->mo->sprite = READUINT16(g->p);
 		}
 
 		// Tick ghost colors (Super and Mario Invincibility flashing)
@@ -4763,43 +4805,52 @@ void G_GhostTicker(void)
 #define follow g->mo->tracer
 		if (ziptic & GZT_FOLLOW)
 		{ // Even more...
-			if (!follow)
+			UINT8 followtic = READUINT8(g->p);
+			if (followtic & FZT_SPAWNED)
 			{
-				mobj_t *newmo = P_SpawnMobj(g->mo->x, g->mo->y, g->mo->z, MT_GHOST);
-				P_SetTarget(&g->mo->tracer, newmo);
-				P_SetTarget(&newmo->tracer, g->mo);
-				newmo->skin = g->mo->skin;
-				newmo->tics = -1;
-				newmo->flags2 |= MF2_LINKDRAW;
+				if (follow)
+					P_RemoveMobj(follow);
+				P_SetTarget(&follow, P_SpawnMobj(g->mo->x, g->mo->y, g->mo->z, MT_GHOST));
+				P_SetTarget(&follow->tracer, g->mo);
+				follow->tics = -1;
+
+				if (followtic & FZT_LINKDRAW)
+					follow->flags2 |= MF2_LINKDRAW;
+
+				if (followtic & FZT_COLORIZED)
+					follow->colorized = true;
+
+				if (followtic & FZT_SKIN)
+					follow->skin = &skins[READUINT8(g->p)];
 
 				follow->eflags = (follow->eflags & ~MFE_VERTICALFLIP)|(g->mo->eflags & MFE_VERTICALFLIP);
-				follow->destscale = g->mo->destscale;
-				if (follow->destscale != follow->scale)
-					P_SetScale(follow, follow->destscale);
 			}
-			else
+			if (follow)
 			{
-				if (xziptic & EZT_FLIP)
-					g->mo->eflags ^= MFE_VERTICALFLIP;
-				if (xziptic & EZT_SCALE)
+				if (!(followtic & FZT_SPAWNED))
 				{
-					follow->destscale = g->mo->destscale;
-					if (follow->destscale != follow->scale)
-						P_SetScale(follow, follow->destscale);
+					if (xziptic & EZT_FLIP)
+						follow->eflags ^= MFE_VERTICALFLIP;
 				}
+
+				P_UnsetThingPosition(follow);
+				follow->x = g->mo->x + (READINT16(g->p)<<8);
+				follow->y = g->mo->y + (READINT16(g->p)<<8);
+				follow->z = g->mo->z + (READINT16(g->p)<<8);
+				P_SetThingPosition(follow);
+				if (followtic & FZT_SKIN)
+					follow->sprite2 = READUINT8(g->p);
+				else
+					follow->sprite2 = 0;
+				follow->sprite = READUINT16(g->p);
+				follow->frame = (READUINT8(g->p)) | tr_trans30<<FF_TRANSSHIFT;
+				follow->angle = g->mo->angle;
+				follow->color = READUINT8(g->p);
+				if (followtic & FZT_SCALE)
+					P_SetScale(follow, (follow->destscale = READFIXED(g->p)));
+				else
+					P_SetScale(follow, (follow->destscale = g->mo->destscale));
 			}
-
-			P_UnsetThingPosition(follow);
-			follow->x = g->mo->x + (READINT16(g->p)<<8);
-			follow->y = g->mo->y + (READINT16(g->p)<<8);
-			follow->z = g->mo->z + (READINT16(g->p)<<8);
-			P_SetThingPosition(follow);
-			follow->sprite = READUINT8(g->p);
-			follow->sprite2 = READUINT8(g->p);
-			follow->frame = (READUINT8(g->p)) | tr_trans30<<FF_TRANSSHIFT;
-
-			follow->angle = g->mo->angle;
-			follow->color = g->mo->color;
 		}
 		else if (follow)
 		{
@@ -4826,11 +4877,11 @@ void G_GhostTicker(void)
 void G_ReadMetalTic(mobj_t *metal)
 {
 	UINT8 ziptic;
-	UINT16 speed;
-	UINT8 statetype;
+	UINT8 xziptic = 0;
 
 	if (!metal_p)
 		return;
+	metal_p++;
 	ziptic = READUINT8(metal_p);
 
 	// Read changes from the tic
@@ -4857,9 +4908,9 @@ void G_ReadMetalTic(mobj_t *metal)
 	if (ziptic & GZT_ANGLE)
 		metal->angle = READUINT8(metal_p)<<24;
 	if (ziptic & GZT_FRAME)
-		metal_p++; // Currently unused. (Metal Sonic figures out what he's doing his own damn self.)
+		oldmetal.frame = READUINT32(metal_p);
 	if (ziptic & GZT_SPR2)
-		metal_p++;
+		oldmetal.sprite2 = READUINT8(metal_p);
 
 	// Set movement, position, and angle
 	// oldmetal contains where you're supposed to be.
@@ -4871,13 +4922,15 @@ void G_ReadMetalTic(mobj_t *metal)
 	metal->y = oldmetal.y;
 	metal->z = oldmetal.z;
 	P_SetThingPosition(metal);
+	metal->frame = oldmetal.frame;
+	metal->sprite2 = oldmetal.sprite2;
 
 	if (ziptic & GZT_EXTRA)
 	{ // But wait, there's more!
-		ziptic = READUINT8(metal_p);
-		if (ziptic & EZT_FLIP)
+		xziptic = READUINT8(metal_p);
+		if (xziptic & EZT_FLIP)
 			metal->eflags ^= MFE_VERTICALFLIP;
-		if (ziptic & EZT_SCALE)
+		if (xziptic & EZT_SCALE)
 		{
 			metal->destscale = READFIXED(metal_p);
 			if (metal->destscale != metal->scale)
@@ -4885,36 +4938,52 @@ void G_ReadMetalTic(mobj_t *metal)
 		}
 	}
 
-	// Calculates player's speed based on distance-of-a-line formula
-	speed = FixedDiv(P_AproxDistance(oldmetal.momx, oldmetal.momy), metal->scale)>>FRACBITS;
+#define follow metal->tracer
+		if (ziptic & GZT_FOLLOW)
+		{ // Even more...
+			UINT8 followtic = READUINT8(metal_p);
+			if (followtic & FZT_SPAWNED)
+			{
+				if (follow)
+					P_RemoveMobj(follow);
+				P_SetTarget(&follow, P_SpawnMobj(metal->x, metal->y, metal->z, MT_GHOST));
+				P_SetTarget(&follow->tracer, metal);
+				follow->tics = -1;
 
-	// Use speed to decide an appropriate state
-	if (speed > 28) // default skin runspeed
-		statetype = 2;
-	else if (speed > 1) // stopspeed
-		statetype = 1;
-	else
-		statetype = 0;
+				if (followtic & FZT_COLORIZED)
+					follow->colorized = true;
 
-	// Set state
-	if (statetype != metal->threshold)
-	{
-		switch (statetype)
-		{
-		case 2: // run
-			P_SetMobjState(metal,metal->info->meleestate);
-			break;
-		case 1: // walk
-			P_SetMobjState(metal,metal->info->seestate);
-			break;
-		default: // stand
-			P_SetMobjState(metal,metal->info->spawnstate);
-			break;
+				follow->eflags = (follow->eflags & ~MFE_VERTICALFLIP)|(metal->eflags & MFE_VERTICALFLIP);
+			}
+			if (follow)
+			{
+				if (!(followtic & FZT_SPAWNED))
+				{
+					if (xziptic & EZT_FLIP)
+						follow->eflags ^= MFE_VERTICALFLIP;
+				}
+
+				P_UnsetThingPosition(follow);
+				follow->x = metal->x + (READINT16(metal_p)<<8);
+				follow->y = metal->y + (READINT16(metal_p)<<8);
+				follow->z = metal->z + (READINT16(metal_p)<<8);
+				P_SetThingPosition(follow);
+				follow->sprite = READUINT16(metal_p);
+				follow->frame = READUINT32(metal_p); // NOT & FF_FRAMEMASK here, so 32 bits
+				follow->angle = metal->angle;
+				follow->color = READUINT8(metal_p);
+				if (followtic & FZT_SCALE)
+					P_SetScale(follow, (follow->destscale = READFIXED(metal_p)));
+				else
+					P_SetScale(follow, (follow->destscale = metal->destscale));
+			}
 		}
-		metal->threshold = statetype;
-	}
-
-	// TODO: Modify state durations based on movement speed, similar to players?
+		else if (follow)
+		{
+			P_RemoveMobj(follow);
+			P_SetTarget(&follow, NULL);
+		}
+#undef follow
 
 	if (*metal_p == DEMOMARKER)
 	{
@@ -4931,7 +5000,7 @@ void G_WriteMetalTic(mobj_t *metal)
 
 	if (!demo_p) // demo_p will be NULL until the race start linedef executor is triggered!
 		return;
-
+	demo_p++;
 	ziptic_p = demo_p++; // the ziptic, written at the end of this function
 
 	#define MAXMOM (0xFFFF<<8)
@@ -4944,10 +5013,10 @@ void G_WriteMetalTic(mobj_t *metal)
 		oldmetal.x = metal->x;
 		oldmetal.y = metal->y;
 		oldmetal.z = metal->z;
+		ziptic |= GZT_XYZ;
 		WRITEFIXED(demo_p,oldmetal.x);
 		WRITEFIXED(demo_p,oldmetal.y);
 		WRITEFIXED(demo_p,oldmetal.z);
-		ziptic |= GZT_XYZ;
 	}
 	else
 	{
@@ -4960,16 +5029,16 @@ void G_WriteMetalTic(mobj_t *metal)
 		{
 			oldmetal.momx = momx;
 			oldmetal.momy = momy;
+			ziptic |= GZT_MOMXY;
 			WRITEINT16(demo_p,momx);
 			WRITEINT16(demo_p,momy);
-			ziptic |= GZT_MOMXY;
 		}
 		momx = (INT16)((metal->z-oldmetal.z)>>8);
 		if (momx != oldmetal.momz)
 		{
 			oldmetal.momz = momx;
-			WRITEINT16(demo_p,momx);
 			ziptic |= GZT_MOMZ;
+			WRITEINT16(demo_p,momx);
 		}
 
 		// This SHOULD set oldmetal.x/y/z to match metal->x/y/z
@@ -4992,8 +5061,21 @@ void G_WriteMetalTic(mobj_t *metal)
 		WRITEUINT8(demo_p,oldmetal.angle);
 	}
 
-	// Metal Sonic does not need our state changes.
-	// ... currently.
+	// Store the sprite frame.
+	if ((metal->frame & FF_FRAMEMASK) != oldmetal.frame)
+	{
+		oldmetal.frame = metal->frame; // NOT & FF_FRAMEMASK here, so 32 bits
+		ziptic |= GZT_FRAME;
+		WRITEUINT32(demo_p,oldmetal.frame);
+	}
+
+	if (metal->sprite == SPR_PLAY
+	&& metal->sprite2 != oldmetal.sprite2)
+	{
+		oldmetal.sprite2 = metal->sprite2;
+		ziptic |= GZT_SPR2;
+		WRITEUINT8(demo_p,oldmetal.sprite2);
+	}
 
 	{
 		UINT8 *exttic_p = NULL;
@@ -5019,6 +5101,48 @@ void G_WriteMetalTic(mobj_t *metal)
 			ziptic |= GZT_EXTRA;
 		}
 	}
+
+	if (metal->player && metal->player->followmobj)
+	{
+		INT16 temp;
+		UINT8 *followtic_p = demo_p++;
+		UINT8 followtic = 0;
+
+		ziptic |= GZT_FOLLOW;
+
+		if (!(oldmetal.flags2 & MF2_AMBUSH))
+		{
+			followtic |= FZT_SPAWNED;
+			/*if (metal->player->followmobj->flags2 & MF2_LINKDRAW)
+				followtic |= FZT_LINKDRAW;*/
+			if (metal->player->followmobj->colorized)
+				followtic |= FZT_COLORIZED;
+			/*if (followtic & FZT_SKIN)
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(metal->player->followmobj->skin))-skins));*/
+			oldmetal.flags2 |= MF2_AMBUSH;
+		}
+
+		temp = (INT16)((metal->player->followmobj->x-metal->x)>>8);
+		WRITEINT16(demo_p,temp);
+		temp = (INT16)((metal->player->followmobj->y-metal->y)>>8);
+		WRITEINT16(demo_p,temp);
+		temp = (INT16)((metal->player->followmobj->z-metal->z)>>8);
+		WRITEINT16(demo_p,temp);
+		/*if (followtic & FZT_SKIN)
+			WRITEUINT8(demo_p,metal->player->followmobj->sprite2);*/
+		WRITEUINT16(demo_p,metal->player->followmobj->sprite);
+		WRITEUINT32(demo_p,metal->player->followmobj->frame); // NOT & FF_FRAMEMASK here, so 32 bits
+		WRITEUINT8(demo_p,metal->player->followmobj->color);
+		if (metal->player->followmobj->scale != metal->scale)
+		{
+			followtic |= FZT_SCALE;
+			WRITEFIXED(demo_p,metal->player->followmobj->scale);
+		}
+
+		*followtic_p = followtic;
+	}
+	else
+		oldmetal.flags2 &= ~MF2_AMBUSH;
 
 	*ziptic_p = ziptic;
 

@@ -3615,11 +3615,12 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			}
 			else if (inflictor && inflictor->flags & MF_MISSILE)
 				return false; // Metal Sonic walk through flame !!
-			else
+			else if (!player->powers[pw_flashing])
 			{ // Oh no! Metal Sonic is hit !!
 				P_ShieldDamage(player, inflictor, source, damage, damagetype);
 				return true;
 			}
+			return false;
 		}
 		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super]) // ignore bouncing & such in invulnerability
 		{

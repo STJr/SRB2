@@ -1206,9 +1206,9 @@ static void SendNameAndColor(void)
 			players[consoleplayer].mo->color = players[consoleplayer].skincolor;
 
 		if (metalrecording)
-		{ // Metal Sonic is Sonic, obviously.
-			SetPlayerSkinByNum(consoleplayer, 0);
-			CV_StealthSet(&cv_skin, skins[0].name);
+		{ // Starring Metal Sonic as themselves, obviously.
+			SetPlayerSkinByNum(consoleplayer, 5);
+			CV_StealthSet(&cv_skin, skins[5].name);
 		}
 		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
 		{

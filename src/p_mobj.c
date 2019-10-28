@@ -10399,8 +10399,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			if (nummaprings >= 0)
 				nummaprings++;
 			break;
-		case MT_METALSONIC_BATTLE:
 		case MT_METALSONIC_RACE:
+			mobj->skin = &skins[5];
+			mobj->color = skins[5].prefcolor;
+			mobj->sprite2 = P_GetSkinSprite2(mobj->skin, mobj->frame & FF_FRAMEMASK, NULL);
+			mobj->frame &= ~FF_FRAMEMASK;
+			/* FALLTHRU */
+		case MT_METALSONIC_BATTLE:
 			sc = 5;
 			break;
 		case MT_FANG:
@@ -11248,6 +11253,8 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 		}
 		if (mthing->options & MTF_AMBUSH)
 			P_SetPlayerMobjState(mobj, S_PLAY_FALL);
+		else if (metalrecording)
+			P_SetPlayerMobjState(mobj, S_PLAY_WAIT);
 	}
 	else
 		z = floor;
