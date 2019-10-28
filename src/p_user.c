@@ -11822,7 +11822,7 @@ void P_PlayerThink(player_t *player)
 			if (dashmode < DASHMODE_MAX)
 				dashmode++; // Counter. Adds 1 to dash mode per tic in top speed.
 			if (dashmode == DASHMODE_THRESHOLD) // This isn't in the ">=" equation because it'd cause the sound to play infinitely.
-				S_StartSound(player->mo, sfx_s3ka2); // If the player enters dashmode, play this sound on the the tic it starts.
+				S_StartSound(player->mo, sfx_cdfm62); // If the player enters dashmode, play this sound on the the tic it starts.
 		}
 		else if ((!totallyradical || !floating) && !(player->pflags & PF_SPINNING))
 		{
