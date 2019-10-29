@@ -2802,22 +2802,23 @@ boolean R_IsLumpPNG(const UINT8 *d, size_t s)
 
 #ifdef HAVE_PNG
 
-#if PNG_LIBPNG_VER_DLLNUM < 14
+/*#if PNG_LIBPNG_VER_DLLNUM < 14
 typedef PNG_CONST png_byte *png_const_bytep;
-#endif
-typedef struct {
-	png_const_bytep buffer;
-	png_uint_32 bufsize;
-	png_uint_32 current_pos;
+#endif*/
+typedef struct
+{
+	const UINT8 *buffer;
+	UINT32 size;
+	UINT32 position;
 } png_io_t;
 
 static void PNG_IOReader(png_structp png_ptr, png_bytep data, png_size_t length)
 {
 	png_io_t *f = png_get_io_ptr(png_ptr);
-	if (length > (f->bufsize - f->current_pos))
+	if (length > (f->size - f->position))
 		png_error(png_ptr, "PNG_IOReader: buffer overrun");
-	memcpy(data, f->buffer + f->current_pos, length);
-	f->current_pos += length;
+	memcpy(data, f->buffer + f->position, length);
+	f->position += length;
 }
 
 typedef struct
@@ -2903,10 +2904,10 @@ static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoff
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// set our own read_function
-	png_io.buffer = (png_const_bytep)png;
-	png_io.bufsize = size;
-	png_io.current_pos = 0;
+	// set our own read function
+	png_io.buffer = png;
+	png_io.size = size;
+	png_io.position = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 	memset(&chunk, 0x00, sizeof(png_chunk_t));
@@ -3073,10 +3074,10 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// set our own read_function
-	png_io.buffer = (png_bytep)png;
-	png_io.bufsize = size;
-	png_io.current_pos = 0;
+	// set our own read function
+	png_io.buffer = png;
+	png_io.size = size;
+	png_io.position = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
