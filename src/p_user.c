@@ -2048,8 +2048,7 @@ void P_SpawnThokMobj(player_t *player)
 		mobj->eflags |= (player->mo->eflags & MFE_VERTICALFLIP);
 
 		// scale
-		P_SetScale(mobj, player->mo->scale);
-		mobj->destscale = player->mo->scale;
+		P_SetScale(mobj, (mobj->destscale = player->mo->scale));
 
 		if (type == MT_THOK) // spintrail-specific modification for MT_THOK
 		{
@@ -2059,8 +2058,7 @@ void P_SpawnThokMobj(player_t *player)
 	}
 
 	P_SetTarget(&mobj->target, player->mo); // the one thing P_SpawnGhostMobj doesn't do
-	if (demorecording)
-		G_GhostAddThok();
+	G_GhostAddThok();
 }
 
 //
@@ -4574,8 +4572,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (player->revitem && !(leveltime % 5)) // Now spawn the color thok circle.
 					{
 						P_SpawnSpinMobj(player, player->revitem);
-						if (demorecording)
-							G_GhostAddRev();
+						G_GhostAddRev();
 					}
 				}
 
@@ -8325,8 +8322,7 @@ static void P_MovePlayer(player_t *player)
 	if (player->pflags & PF_SPINNING && P_AproxDistance(player->speed, player->mo->momz) > FixedMul(15<<FRACBITS, player->mo->scale) && !(player->pflags & PF_JUMPED))
 	{
 		P_SpawnSpinMobj(player, player->spinitem);
-		if (demorecording)
-			G_GhostAddSpin();
+		G_GhostAddSpin();
 	}
 
 
@@ -11052,6 +11048,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	}
 	
 	fume->movecount = dashmode; // keeps track of previous dashmode value so we know whether Metal is entering or leaving it
+	fume->eflags = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP); // Make sure to flip in reverse gravity!
 	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP); // Make sure to flip in reverse gravity!
 	
 	// Finally, set its position
@@ -11060,10 +11057,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	P_UnsetThingPosition(fume);
 	fume->x = mo->x + P_ReturnThrustX(fume, angle, dist);
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
-	if (fume->eflags & MFE_VERTICALFLIP)
-		fume->z = mo->z + ((mo->height + fume->height) >> 1);
-	else
-		fume->z = mo->z + ((mo->height - fume->height) >> 1);
+	fume->z = mo->z + ((mo->height - fume->height) >> 1);
 	P_SetThingPosition(fume);
 }
 

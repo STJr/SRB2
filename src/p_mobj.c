@@ -10402,8 +10402,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_METALSONIC_RACE:
 			mobj->skin = &skins[5];
 			mobj->color = skins[5].prefcolor;
-			mobj->sprite2 = P_GetSkinSprite2(mobj->skin, mobj->frame & FF_FRAMEMASK, NULL);
-			mobj->frame &= ~FF_FRAMEMASK;
 			/* FALLTHRU */
 		case MT_METALSONIC_BATTLE:
 			sc = 5;
@@ -10470,6 +10468,12 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	if (!(mobj->flags & MF_NOTHINK))
 		P_AddThinker(THINK_MOBJ, &mobj->thinker);
+
+	if (mobj->skin) // correct inadequecies above.
+	{
+		mobj->sprite2 = P_GetSkinSprite2(mobj->skin, (mobj->frame & FF_FRAMEMASK), NULL);
+		mobj->frame &= ~FF_FRAMEMASK;
+	}
 
 	// Call action functions when the state is set
 	if (st->action.acp1 && (mobj->flags & MF_RUNSPAWNFUNC))
