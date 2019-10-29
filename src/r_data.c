@@ -831,7 +831,9 @@ void R_LoadTextures(void)
 		{
 			UINT16 wadnum = (UINT16)w;
 			lumpnum_t lumpnum = texstart + j;
+#ifndef NO_PNG_LUMPS
 			size_t lumplength;
+#endif
 
 			if (wadfiles[w]->type == RET_PK3)
 			{
@@ -839,8 +841,10 @@ void R_LoadTextures(void)
 					continue; // If it is then SKIP IT
 			}
 
-			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+#endif
 
 			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
 			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
