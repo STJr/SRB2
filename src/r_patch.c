@@ -475,13 +475,14 @@ boolean R_IsLumpPNG(const UINT8 *d, size_t s)
 #ifndef NO_PNG_LUMPS
 #ifdef HAVE_PNG
 
-#if PNG_LIBPNG_VER_DLLNUM < 14
+/*#if PNG_LIBPNG_VER_DLLNUM < 14
 typedef PNG_CONST png_byte *png_const_bytep;
-#endif
-typedef struct {
-	png_const_bytep buffer;
-	png_uint_32 size;
-	png_uint_32 position;
+#endif*/
+typedef struct
+{
+	const UINT8 *buffer;
+	UINT32 size;
+	UINT32 position;
 } png_io_t;
 
 static void PNG_IOReader(png_structp png_ptr, png_bytep data, png_size_t length)
@@ -577,7 +578,7 @@ static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoff
 #endif
 
 	// set our own read function
-	png_io.buffer = (png_const_bytep)png;
+	png_io.buffer = png;
 	png_io.size = size;
 	png_io.position = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
@@ -752,7 +753,7 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 #endif
 
 	// set our own read function
-	png_io.buffer = (png_bytep)png;
+	png_io.buffer = png;
 	png_io.size = size;
 	png_io.position = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
