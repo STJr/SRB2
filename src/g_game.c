@@ -4936,6 +4936,12 @@ void G_ReadMetalTic(mobj_t *metal)
 	if (!metal_p)
 		return;
 
+	if (!metal->health)
+	{
+		G_StopMetalDemo();
+		return;
+	}
+
 	switch (*metal_p)
 	{
 		case METALSNICE:
