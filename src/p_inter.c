@@ -2372,7 +2372,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	if (target->player && !target->player->spectator)
 	{
 		if (metalrecording) // Ack! Metal Sonic shouldn't die! Cut the tape, end recording!
-			G_StopMetalRecording();
+			G_StopMetalRecording(true);
 		if (gametype == GT_MATCH // note, no team match suicide penalty
 			&& ((target == source) || (source == NULL && inflictor == NULL) || (source && !source->player)))
 		{ // Suicide penalty
@@ -2760,6 +2760,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 						P_PlayDeathSound(target);
 				}
 			}
+			break;
+		case MT_METALSONIC_RACE:
+			target->fuse = TICRATE*3;
+			target->momx = target->momy = target->momz = 0;
+			P_SetObjectMomZ(target, 14*FRACUNIT, false);
+			target->flags = (target->flags & ~MF_NOGRAVITY)|(MF_NOCLIP|MF_NOCLIPTHING);
 			break;
 		default:
 			break;

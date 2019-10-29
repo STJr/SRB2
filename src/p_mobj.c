@@ -2570,19 +2570,30 @@ static boolean P_ZMovement(mobj_t *mo)
 
 	if (!mo->player && P_CheckDeathPitCollide(mo))
 	{
-		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
+		switch (mo->type)
 		{
-			// Kill enemies, bosses and minecarts that fall into death pits.
-			if (mo->health)
-			{
-				P_KillMobj(mo, NULL, NULL, 0);
-				return false;
-			}
-		}
-		else
-		{
-			P_RemoveMobj(mo);
-			return false;
+			case MT_GHOST:
+			case MT_METALSONIC_RACE:
+			case MT_EXPLODE:
+			case MT_BOSSEXPLODE:
+			case MT_SONIC3KBOSSEXPLODE:
+				break;
+			default:
+				if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
+				{
+					// Kill enemies, bosses and minecarts that fall into death pits.
+					if (mo->health)
+					{
+						P_KillMobj(mo, NULL, NULL, 0);
+					}
+					return false;
+				}
+				else
+				{
+					P_RemoveMobj(mo);
+					return false;
+				}
+				break;
 		}
 	}
 
@@ -8271,6 +8282,20 @@ void P_MobjThinker(mobj_t *mobj)
 					P_SetObjectMomZ(mobj, -2 * FRACUNIT / 3, true);
 			}
 			break;
+		case MT_METALSONIC_RACE:
+			{
+				if (!(mobj->fuse % 8))
+				{
+					fixed_t r = mobj->radius >> FRACBITS;
+					mobj_t *explosion = P_SpawnMobj(
+						mobj->x + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->y + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->z + (P_RandomKey(mobj->height >> FRACBITS) << FRACBITS),
+						MT_SONIC3KBOSSEXPLODE);
+					S_StartSound(explosion, sfx_s3kb4);
+				}
+				P_SetObjectMomZ(mobj, -2 * FRACUNIT / 3, true);
+			}
 		default:
 			break;
 		}

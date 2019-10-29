@@ -3053,7 +3053,7 @@ static void G_DoCompleted(void)
 	if (metalplayback)
 		G_StopMetalDemo();
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
@@ -4060,6 +4060,8 @@ char *G_BuildMapTitle(INT32 mapnum)
 #define ZT_BUTTONS 0x08
 #define ZT_AIMING  0x10
 #define DEMOMARKER 0x80 // demoend
+#define METALDEATH 0x44
+#define METALSNICE 0x69
 
 static ticcmd_t oldcmd;
 
@@ -4901,7 +4903,6 @@ void G_GhostTicker(void)
 			P_RemoveMobj(follow);
 			P_SetTarget(&follow, NULL);
 		}
-
 		// Demo ends after ghost data.
 		if (*g->p == DEMOMARKER)
 		{
@@ -4934,7 +4935,24 @@ void G_ReadMetalTic(mobj_t *metal)
 
 	if (!metal_p)
 		return;
+
+	switch (*metal_p)
+	{
+		case METALSNICE:
+			break;
+		case METALDEATH:
+			if (metal->tracer)
+				P_RemoveMobj(metal->tracer);
+			P_KillMobj(metal, NULL, NULL, 0);
+			/* FALLTHRU */
+		case DEMOMARKER:
+		default:
+			// end of demo data stream
+			G_StopMetalDemo();
+			return;
+	}
 	metal_p++;
+
 	ziptic = READUINT8(metal_p);
 
 	// Read changes from the tic
@@ -5117,13 +5135,6 @@ void G_ReadMetalTic(mobj_t *metal)
 			P_SetTarget(&follow, NULL);
 		}
 #undef follow
-
-	if (*metal_p == DEMOMARKER)
-	{
-		// end of demo data stream
-		G_StopMetalDemo();
-		return;
-	}
 }
 
 void G_WriteMetalTic(mobj_t *metal)
@@ -5134,7 +5145,8 @@ void G_WriteMetalTic(mobj_t *metal)
 
 	if (!demo_p) // demo_p will be NULL until the race start linedef executor is activated!
 		return;
-	demo_p++;
+
+	WRITEUINT8(demo_p, METALSNICE);
 	ziptic_p = demo_p++; // the ziptic, written at the end of this function
 
 	#define MAXMOM (0xFFFF<<8)
@@ -5300,7 +5312,7 @@ void G_WriteMetalTic(mobj_t *metal)
 	// latest demos with mouse aiming byte in ticcmd
 	if (demo_p >= demoend - 32)
 	{
-		G_StopMetalRecording(); // no more space
+		G_StopMetalRecording(false); // no more space
 		return;
 	}
 }
@@ -6282,19 +6294,23 @@ void G_StopMetalDemo(void)
 }
 
 // Stops metal sonic recording.
-ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void)
+ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 {
 	boolean saved = false;
 	if (demo_p)
 	{
 		UINT8 *p = demobuffer+16; // checksum position
+		if (kill)
+			WRITEUINT8(demo_p, METALDEATH); // add the metal death marker
+		else
+			WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 #ifdef NOMD5
-		UINT8 i;
-		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-		for (i = 0; i < 16; i++, p++)
-			*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
+		{
+			UINT8 i;
+			for (i = 0; i < 16; i++, p++)
+				*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
+		}
 #else
-		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		md5_buffer((char *)p+16, demo_p - (p+16), (void *)p); // make a checksum of everything after the checksum in the file.
 #endif
 		saved = FIL_WriteFile(va("%sMS.LMP", G_BuildMapName(gamemap)), demobuffer, demo_p - demobuffer); // finally output the file.

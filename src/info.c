@@ -6674,7 +6674,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,           // painsound
 		S_NULL,             // meleestate
 		S_NULL,             // missilestate
-		S_NULL,             // deathstate
+		S_PLAY_DEAD,        // deathstate
 		S_NULL,             // xdeathstate
 		sfx_None,           // deathsound
 		0,                  // speed
@@ -6684,7 +6684,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,                  // mass
 		0,                  // damage
 		sfx_None,           // activesound
-		MF_SCENERY|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
+		MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
 		S_NULL              // raisestate
 	},
 
