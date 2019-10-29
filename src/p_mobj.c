@@ -8406,7 +8406,7 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 				}
 				break;
-			case MT_BUBBLEBUZZ:
+			case MT_BUGGLE:
 				mobj->eflags |= MFE_UNDERWATER; //P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
 				{
 					if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
@@ -8420,6 +8420,9 @@ void P_MobjThinker(mobj_t *mobj)
 
 						if (leveltime % mobj->info->painchance == 0)
 							S_StartSound(mobj, mobj->info->activesound);
+
+						if ((statenum_t)(mobj->state-states) != mobj->info->seestate)
+							P_SetMobjState(mobj, mobj->info->seestate);
 					}
 					else
 					{
@@ -8428,6 +8431,8 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->momx >>= 1;
 						mobj->momy >>= 1;
 						mobj->momz >>= 1;
+						if ((statenum_t)(mobj->state-states) != mobj->info->spawnstate)
+							P_SetMobjState(mobj, mobj->info->spawnstate);
 					}
 				}
 				break;

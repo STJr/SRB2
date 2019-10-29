@@ -7253,8 +7253,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BUMBLEBORE_STUCK2",
 	"S_BUMBLEBORE_DIE",
 
-	"S_BBUZZFLY1",
-	"S_BBUZZFLY2",
+	"S_BUGGLEIDLE",
+	"S_BUGGLEFLY",
 
 	"S_SMASHSPIKE_FLOAT",
 	"S_SMASHSPIKE_EASE1",
@@ -8093,7 +8093,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_HIVEELEMENTAL",
 	"MT_BUMBLEBORE",
 
-	"MT_BUBBLEBUZZ",
+	"MT_BUGGLE",
 
 	"MT_SMASHINGSPIKEBALL",
 	"MT_CACOLANTERN",
