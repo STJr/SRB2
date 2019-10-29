@@ -5434,22 +5434,36 @@ void G_BeginRecording(void)
 	// And mobjtype_t is best with UINT32 too...
 	WRITEUINT32(demo_p, player->followitem);
 
-	// Save pflag data
+	// Save pflag data - see SendWeaponPref()
 	{
 		UINT8 buf = 0;
-		if (player->pflags & PF_FLIPCAM)
+		pflags_t pflags = 0;
+		if (cv_flipcam.value)
+		{
 			buf |= 0x01;
-		if (player->pflags & PF_ANALOGMODE)
+			pflags |= PF_FLIPCAM;
+		}
+		if (cv_analog.value)
+		{
 			buf |= 0x02;
-		if (player->pflags & PF_DIRECTIONCHAR)
+			pflags |= PF_ANALOGMODE;
+		}
+		if (cv_directionchar.value)
+		{
 			buf |= 0x04;
-		if (player->pflags & PF_AUTOBRAKE)
+			pflags |= PF_DIRECTIONCHAR;
+		}
+		if (cv_autobrake.value)
+		{
 			buf |= 0x08;
+			pflags |= PF_AUTOBRAKE;
+		}
 		if (cv_usejoystick.value)
 			buf |= 0x10;
 		CV_SetValue(&cv_showinputjoy, !!(cv_usejoystick.value));
 
 		WRITEUINT8(demo_p,buf);
+		player->pflags = pflags;
 	}
 
 	// Save netvar data
