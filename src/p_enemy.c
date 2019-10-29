@@ -8966,10 +8966,11 @@ void A_BossJetFume(mobj_t *actor)
 		P_SetTarget(&filler->target, actor);
 		filler->fuse = 59;
 		P_SetTarget(&actor->tracer, filler);
-		filler->destscale = actor->scale/3;
-		P_SetScale(filler, filler->destscale);
+		P_SetScale(filler, (filler->destscale = actor->scale/3));
 		if (actor->eflags & MFE_VERTICALFLIP)
 			filler->flags2 |= MF2_OBJECTFLIP;
+		filler->color = SKINCOLOR_ICY;
+		filler->colorized = true;
 	}
 	else if (locvar1 == 3) // Boss 4 jet flame
 	{

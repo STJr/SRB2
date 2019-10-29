@@ -5595,16 +5595,22 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 	if ((!mobj->target || !(mobj->target->flags & MF_SHOOTABLE)))
 	{
-		if (mobj->tracer)
-			P_RemoveMobj(mobj->tracer);
+		if (mobj->hprev)
+		{
+			P_RemoveMobj(mobj->hprev);
+			P_SetTarget(&mobj->hprev, NULL);
+		}
 		P_BossTargetPlayer(mobj, false);
 		if (mobj->target && (!P_IsObjectOnGround(mobj->target) || mobj->target->player->pflags & PF_SPINNING))
 			P_SetTarget(&mobj->target, NULL); // Wait for them to hit the ground first
 		if (!mobj->target) // Still no target, aww.
 		{
 			// Reset the boss.
-			if (mobj->tracer)
-				P_RemoveMobj(mobj->tracer);
+			if (mobj->hprev)
+			{
+				P_RemoveMobj(mobj->hprev);
+				P_SetTarget(&mobj->hprev, NULL);
+			}
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 			mobj->fuse = 0;
 			mobj->momx = FixedDiv(mobj->momx, FRACUNIT + (FRACUNIT>>2));
@@ -5618,7 +5624,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			return;
 		}
 		else if (!mobj->fuse)
-			mobj->fuse = 10*TICRATE;
+			mobj->fuse = 8*TICRATE;
 	}
 
 	// AI goes here.
@@ -5645,16 +5651,18 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				mobj->angle -= InvAngle(angle)/8;
 
 			// Alter your energy bubble's size/position
-			if (mobj->health > 3)
+			if (mobj->health > mobj->info->damage)
 			{
-				mobj->tracer->destscale = FRACUNIT + (4*TICRATE - mobj->fuse)*(FRACUNIT/2)/TICRATE + FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FRACUNIT/2);
-				P_SetScale(mobj->tracer, mobj->tracer->destscale);
-			}
+				if (mobj->hprev)
+				{
+					mobj->hprev->destscale = FRACUNIT + (2*TICRATE - mobj->fuse)*(FRACUNIT/2)/TICRATE + FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FRACUNIT/2);
+					P_SetScale(mobj->hprev, mobj->hprev->destscale);
 
-			P_TeleportMove(mobj->tracer, mobj->x, mobj->y, mobj->z + mobj->height/2 - mobj->tracer->height/2);
-			mobj->tracer->momx = mobj->momx;
-			mobj->tracer->momy = mobj->momy;
-			mobj->tracer->momz = mobj->momz;
+					P_TeleportMove(mobj->hprev, mobj->x, mobj->y, mobj->z + mobj->height/2 - mobj->hprev->height/2);
+					mobj->hprev->momx = mobj->momx;
+					mobj->hprev->momy = mobj->momy;
+					mobj->hprev->momz = mobj->momz;
+				}
 
 				// Firin' mah lazors - INDICATOR
 				if (mobj->fuse > TICRATE/2)
@@ -5742,6 +5750,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						S_StartSound(mobj, sfx_s3kb3);
 					}
 				}
+			}
 
 			// up...
 			mobj->z += mobj->height/2;
@@ -5768,12 +5777,12 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (mobj->health > mobj->info->damage)
 				{
 					P_SetScale(missile, FRACUNIT/3);
-					missile->color = SKINCOLOR_GOLD; // sonic cd electric power
+					missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
 				}
 				else
 				{
 					P_SetScale(missile, FRACUNIT/5);
-					missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
+					missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
 				}
 				missile->destscale = missile->scale*2;
 				missile->scalespeed = abs(missile->scale - missile->destscale)/missile->fuse;
@@ -5885,8 +5894,6 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				return;
 			}
 
-			P_SpawnGhostMobj(mobj);
-
 			// Pinball attack!
 			if (mobj->movecount == 3 && (mobj->movedir == 0 || mobj->movedir == 2))
 			{
@@ -5901,20 +5908,20 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (!P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true))
 				{ // Hit a wall? Find a direction to bounce
 					mobj->threshold--;
-					P_SetMobjState(mobj, mobj->state->nextstate);
 					if (!mobj->threshold) { // failed bounce!
 						S_StartSound(mobj, sfx_mspogo);
 						P_BounceMove(mobj);
 						mobj->angle = R_PointToAngle2(mobj->momx, mobj->momy,0,0);
 						mobj->momz = 4*FRACUNIT;
 						mobj->flags &= ~MF_PAIN;
-						mobj->fuse = 10*TICRATE;
+						mobj->fuse = 8*TICRATE;
 						mobj->movecount = 0;
 						P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
 						P_SetMobjState(mobj, mobj->info->meleestate);
 					}
 					else if (!(mobj->threshold%4))
 					{ // We've decided to lock onto the player this bounce.
+						P_SetMobjState(mobj, mobj->state->nextstate);
 						S_StartSound(mobj, sfx_s3k5a);
 						mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx*4, mobj->target->y + mobj->target->momy*4);
 						mobj->reactiontime = TICRATE - 5*(mobj->info->damage - mobj->health); // targetting time
@@ -5930,6 +5937,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				}
 				return;
 			}
+
+			P_SpawnGhostMobj(mobj);
 
 			// Vector form dodge!
 			mobj->angle += mobj->movedir;
@@ -6027,7 +6036,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (mobj->health > mobj->info->damage)
 				{ // No more bubble if we're broken (pinch phase)
 					mobj_t *shield = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_MSSHIELD_FRONT);
-					P_SetTarget(&mobj->tracer, shield);
+					P_SetTarget(&mobj->hprev, shield);
 					P_SetTarget(&shield->target, mobj);
 
 					// Attack 2: Energy shot!
@@ -6058,14 +6067,15 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				}
 				else
 				{
-					mobj_t *shield = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_MSSHIELD_FRONT);
+					/*mobj_t *shield = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_MSSHIELD_FRONT);
 					P_SetTarget(&mobj->tracer, shield);
 					P_SetTarget(&shield->target, mobj);
 					shield->height -= 20*FRACUNIT; // different offset...
-					P_SetMobjState(shield, S_MSSHIELD_F2);
+					P_SetMobjState(shield, S_MSSHIELD_F2);*/
+					P_SetMobjState(mobj, S_METALSONIC_BOUNCE);
 					//P_LinedefExecute(LE_PINCHPHASE, mobj, NULL); -- why does this happen twice? see case 2...
 				}
-				mobj->fuse = 4*TICRATE;
+				mobj->fuse = 3*TICRATE;
 				mobj->flags |= MF_PAIN;
 				if (mobj->info->attacksound)
 					S_StartSound(mobj, mobj->info->attacksound);
@@ -6076,14 +6086,14 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			case 2:
 			{
 				// We're all charged and ready now! Unleash the fury!!
-				mobj_t *removemobj = mobj->tracer;
 				S_StopSound(mobj);
-				P_SetTarget(&mobj->tracer, mobj->hnext);
-				P_RemoveMobj(removemobj);
+				if (mobj->hprev)
+				{
+					P_RemoveMobj(mobj->hprev);
+					P_SetTarget(&mobj->hprev, NULL);
+				}
 				if (mobj->health <= mobj->info->damage)
 				{
-					mobj_t *whoosh;
-
 					// Attack 1: Pinball dash!
 					if (mobj->health == 1)
 						mobj->movedir = 0;
@@ -6099,6 +6109,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
 					P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
 
+#if 0
 					whoosh = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_GHOST); // done here so the offset is correct
 					whoosh->frame = FF_FULLBRIGHT;
 					whoosh->sprite = SPR_ARMA;
@@ -6106,9 +6117,13 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					whoosh->scalespeed = FixedMul(whoosh->scalespeed, whoosh->scale);
 					whoosh->height = 38*whoosh->scale;
 					whoosh->fuse = 10;
-					whoosh->color = SKINCOLOR_MAGENTA;
+					whoosh->color = SKINCOLOR_SUNSET;
 					whoosh->colorized = true;
 					whoosh->flags |= MF_NOCLIPHEIGHT;
+#endif
+
+					P_SetMobjState(mobj->tracer, S_JETFUMEFLASH);
+					P_SetScale(mobj->tracer, mobj->scale << 1);
 				}
 				else
 				{
@@ -6123,7 +6138,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
 				P_SetMobjState(mobj, mobj->info->spawnstate);
 				mobj->flags &= ~MF_PAIN;
-				mobj->fuse = 10*TICRATE;
+				mobj->fuse = 8*TICRATE;
 				break;
 			}
 			mobj->movecount++;
@@ -8738,11 +8753,17 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					else if (mobj->fuse == 59)
 					{
+						boolean dashmod = ((mobj->target->flags & MF_PAIN) && (mobj->target->health <= mobj->target->info->damage));
 						jetx = mobj->target->x + P_ReturnThrustX(mobj->target, mobj->target->angle, -mobj->target->radius);
 						jety = mobj->target->y + P_ReturnThrustY(mobj->target, mobj->target->angle, -mobj->target->radius);
 						P_UnsetThingPosition(mobj);
 						mobj->x = jetx;
 						mobj->y = jety;
+						mobj->destscale = mobj->target->scale;
+						if (!(dashmod && mobj->target->state == states+S_METALSONIC_BOUNCE))
+						{
+							mobj->destscale = (mobj->destscale + FixedDiv(R_PointToDist2(0, 0, mobj->target->momx, mobj->target->momy), 36*mobj->target->scale))/3;
+						}
 						if (mobj->target->eflags & MFE_VERTICALFLIP)
 							mobj->z = mobj->target->z + mobj->target->height/2 + mobj->height/2;
 						else
@@ -8750,6 +8771,14 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->floorz = mobj->z;
 						mobj->ceilingz = mobj->z+mobj->height;
 						P_SetThingPosition(mobj);
+						if (dashmod)
+						{
+							mobj->color = SKINCOLOR_SUNSET;
+							if (mobj->target->movecount == 3 && !mobj->target->reactiontime && (mobj->target->movedir == 0 || mobj->target->movedir == 2))
+								P_SpawnGhostMobj(mobj);
+						}
+						else
+							mobj->color = SKINCOLOR_ICY;
 					}
 					mobj->fuse++;
 				}
@@ -10426,9 +10455,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_METALSONIC_RACE:
 			mobj->skin = &skins[5];
-			mobj->color = skins[5].prefcolor;
 			/* FALLTHRU */
 		case MT_METALSONIC_BATTLE:
+			mobj->color = skins[5].prefcolor;
 			sc = 5;
 			break;
 		case MT_FANG:
