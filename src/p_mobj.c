@@ -5938,7 +5938,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				return;
 			}
 
-			P_SpawnGhostMobj(mobj);
+			P_SpawnGhostMobj(mobj)->colorized = false;
 
 			// Vector form dodge!
 			mobj->angle += mobj->movedir;
