@@ -67,7 +67,7 @@ void HWR_StartScreenWipe(void);
 void HWR_EndScreenWipe(void);
 void HWR_DrawIntermissionBG(void);
 void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum);
-void HWR_DoWipeLevel(void);
+void HWR_DoWipeLevel(UINT8 wipenum, UINT8 scrnnum);
 void HWR_MakeScreenFinalTexture(void);
 void HWR_DrawScreenFinalTexture(int width, int height);
 
@@ -99,6 +99,7 @@ extern consvar_t cv_voodoocompatibility;
 extern consvar_t cv_grfovchange;
 extern consvar_t cv_grsolvetjoin;
 extern consvar_t cv_grspritebillboarding;
+extern consvar_t cv_grskydome;
 
 extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
 

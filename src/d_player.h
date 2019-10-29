@@ -234,7 +234,9 @@ typedef enum
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,
 	CR_MACESPIN,
-	CR_MINECART
+	CR_MINECART,
+	CR_ROLLOUT,
+	CR_PTERABYTE
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
@@ -250,6 +252,8 @@ typedef enum
 	pw_spacetime, // In space, no one can hear you spin!
 	pw_extralife, // Extra Life timer
 	pw_pushing,
+	pw_justsprung,
+	pw_noautobrake,
 
 	pw_super, // Are you super?
 	pw_gravityboots, // gravity boots
@@ -508,6 +512,10 @@ typedef struct player_s
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
 } player_t;
+
+// Values for dashmode
+#define DASHMODE_THRESHOLD (3*TICRATE)
+#define DASHMODE_MAX (DASHMODE_THRESHOLD + 3)
 
 // Value for infinite lives
 #define INFLIVES 0x7F

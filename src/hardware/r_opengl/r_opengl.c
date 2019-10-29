@@ -1427,6 +1427,219 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 		Clamp2D(GL_TEXTURE_WRAP_T);
 }
 
+typedef struct vbo_vertex_s
+{
+	float x, y, z;
+	float u, v;
+	unsigned char r, g, b, a;
+} vbo_vertex_t;
+
+typedef struct
+{
+	int mode;
+	int vertexcount;
+	int vertexindex;
+	int use_texture;
+} GLSkyLoopDef;
+
+typedef struct
+{
+	int id;
+	int rows, columns;
+	int loopcount;
+	GLSkyLoopDef *loops;
+	vbo_vertex_t *data;
+} GLSkyVBO;
+
+// The texture offset to be applied to the texture coordinates in SkyVertex().
+static int rows, columns;
+static boolean yflip;
+static int texw, texh;
+static boolean foglayer;
+static float delta = 0.0f;
+
+static int gl_sky_detail = 16;
+
+static INT32 lasttex = -1;
+
+#define MAP_COEFF 128.0f
+
+static void SkyVertex(vbo_vertex_t *vbo, int r, int c)
+{
+	const float radians = (M_PIl / 180.0f);
+	const float scale = 10000.0f;
+	const float maxSideAngle = 60.0f;
+
+	float topAngle = (c / (float)columns * 360.0f);
+	float sideAngle = (maxSideAngle * (rows - r) / rows);
+	float height = sin(sideAngle * radians);
+	float realRadius = scale * cos(sideAngle * radians);
+	float x = realRadius * cos(topAngle * radians);
+	float y = (!yflip) ? scale * height : -scale * height;
+	float z = realRadius * sin(topAngle * radians);
+	float timesRepeat = (4 * (256.0f / texw));
+	if (fpclassify(timesRepeat) == FP_ZERO)
+		timesRepeat = 1.0f;
+
+	if (!foglayer)
+	{
+		vbo->r = 255;
+		vbo->g = 255;
+		vbo->b = 255;
+		vbo->a = (r == 0 ? 0 : 255);
+
+		// And the texture coordinates.
+		vbo->u = (-timesRepeat * c / (float)columns);
+		if (!yflip)	// Flipped Y is for the lower hemisphere.
+			vbo->v = (r / (float)rows) + 0.5f;
+		else
+			vbo->v = 1.0f + ((rows - r) / (float)rows) + 0.5f;
+	}
+
+	if (r != 4)
+	{
+		y += 300.0f;
+	}
+
+	// And finally the vertex.
+	vbo->x = x;
+	vbo->y = y + delta;
+	vbo->z = z;
+}
+
+static GLSkyVBO sky_vbo;
+
+static void gld_BuildSky(int row_count, int col_count)
+{
+	int c, r;
+	vbo_vertex_t *vertex_p;
+	int vertex_count = 2 * row_count * (col_count * 2 + 2) + col_count * 2;
+
+	GLSkyVBO *vbo = &sky_vbo;
+
+	if ((vbo->columns != col_count) || (vbo->rows != row_count))
+	{
+		free(vbo->loops);
+		free(vbo->data);
+		memset(vbo, 0, sizeof(&vbo));
+	}
+
+	if (!vbo->data)
+	{
+		memset(vbo, 0, sizeof(&vbo));
+		vbo->loops = malloc((row_count * 2 + 2) * sizeof(vbo->loops[0]));
+		// create vertex array
+		vbo->data = malloc(vertex_count * sizeof(vbo->data[0]));
+	}
+
+	vbo->columns = col_count;
+	vbo->rows = row_count;
+
+	vertex_p = &vbo->data[0];
+	vbo->loopcount = 0;
+
+	for (yflip = 0; yflip < 2; yflip++)
+	{
+		vbo->loops[vbo->loopcount].mode = GL_TRIANGLE_FAN;
+		vbo->loops[vbo->loopcount].vertexindex = vertex_p - &vbo->data[0];
+		vbo->loops[vbo->loopcount].vertexcount = col_count;
+		vbo->loops[vbo->loopcount].use_texture = false;
+		vbo->loopcount++;
+
+		delta = 0.0f;
+		foglayer = true;
+		for (c = 0; c < col_count; c++)
+		{
+			SkyVertex(vertex_p, 1, c);
+			vertex_p->r = 255;
+			vertex_p->g = 255;
+			vertex_p->b = 255;
+			vertex_p->a = 255;
+			vertex_p++;
+		}
+		foglayer = false;
+
+		delta = (yflip ? 5.0f : -5.0f) / MAP_COEFF;
+
+		for (r = 0; r < row_count; r++)
+		{
+			vbo->loops[vbo->loopcount].mode = GL_TRIANGLE_STRIP;
+			vbo->loops[vbo->loopcount].vertexindex = vertex_p - &vbo->data[0];
+			vbo->loops[vbo->loopcount].vertexcount = 2 * col_count + 2;
+			vbo->loops[vbo->loopcount].use_texture = true;
+			vbo->loopcount++;
+
+			for (c = 0; c <= col_count; c++)
+			{
+				SkyVertex(vertex_p++, r + (yflip ? 1 : 0), (c ? c : 0));
+				SkyVertex(vertex_p++, r + (yflip ? 0 : 1), (c ? c : 0));
+			}
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//
+//
+//-----------------------------------------------------------------------------
+
+static void RenderDome(INT32 skytexture)
+{
+	int i, j;
+	GLSkyVBO *vbo = &sky_vbo;
+
+	pglRotatef(270.0f, 0.0f, 1.0f, 0.0f);
+
+	rows = 4;
+	columns = 4 * gl_sky_detail;
+
+	if (lasttex != skytexture)
+	{
+		lasttex = skytexture;
+		gld_BuildSky(rows, columns);
+	}
+
+	pglScalef(1.0f, (float)texh / 230.0f, 1.0f);
+
+	for (j = 0; j < 2; j++)
+	{
+		for (i = 0; i < vbo->loopcount; i++)
+		{
+			GLSkyLoopDef *loop = &vbo->loops[i];
+
+			if (j == 0 ? loop->use_texture : !loop->use_texture)
+				continue;
+			else
+			{
+				int k;
+				pglBegin(loop->mode);
+				for (k = loop->vertexindex; k < (loop->vertexindex + loop->vertexcount); k++)
+				{
+					vbo_vertex_t *v = &vbo->data[k];
+					if (loop->use_texture)
+						pglTexCoord2f(v->u, v->v);
+					pglColor4f(v->r, v->g, v->b, v->a);
+					pglVertex3f(v->x, v->y, v->z);
+				}
+				pglEnd();
+			}
+		}
+	}
+
+	pglScalef(1.0f, 1.0f, 1.0f);
+	pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+EXPORT void HWRAPI(RenderSkyDome) (INT32 tex, INT32 texture_width, INT32 texture_height, FTransform transform)
+{
+	SetBlend(PF_Translucent|PF_NoDepthTest|PF_Modulated);
+	SetTransform(&transform);
+	texw = texture_width;
+	texh = texture_height;
+	RenderDome(tex);
+	SetBlend(0);
+}
 
 // ==========================================================================
 //
@@ -2086,48 +2299,8 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 
 EXPORT void HWRAPI(DoScreenWipeLevel)(void)
 {
-	INT32 texsize = 2048;
-	float xfix, yfix;
-
-	// Use a power of two texture, dammit
-	if(screen_width <= 1024)
-		texsize = 1024;
-	if(screen_width <= 512)
-		texsize = 512;
-
-	xfix = 1/((float)(texsize)/((float)((screen_width))));
-	yfix = 1/((float)(texsize)/((float)((screen_height))));
-
-	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-	SetBlend(PF_Modulated|PF_NoDepthTest|PF_Clip|PF_NoZClip);
-
-	// Draw the original screen
-	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
-	pglBegin(GL_QUADS);
-		pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-
-		// Bottom left
-		pglTexCoord2f(0.0f, 0.0f);
-		pglVertex3f(-1.0f, -1.0f, 1.0f);
-
-		// Top left
-		pglTexCoord2f(0.0f, yfix);
-		pglVertex3f(-1.0f, 1.0f, 1.0f);
-
-		// Top right
-		pglTexCoord2f(xfix, yfix);
-		pglVertex3f(1.0f, 1.0f, 1.0f);
-
-		// Bottom right
-		pglTexCoord2f(xfix, 0.0f);
-		pglVertex3f(1.0f, -1.0f, 1.0f);
-
-	pglEnd();
-
-	SetBlend(PF_Modulated|PF_Translucent|PF_NoDepthTest|PF_Clip|PF_NoZClip);
+	DoScreenWipe(1.0f);
 }
-
 
 // Create a texture from the screen.
 EXPORT void HWRAPI(MakeScreenTexture) (void)

@@ -313,7 +313,13 @@ static boolean findFreeSlot(INT32 *num)
 	if (*num >= MAXSKINS)
 		return false;
 
-	description[*num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
+	// Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
+	description[*num].picname[0] = '\0';
+	description[*num].nametag[0] = '\0';
+	description[*num].displayname[0] = '\0';
+	description[*num].oppositecolor = SKINCOLOR_NONE;
+	description[*num].tagtextcolor = SKINCOLOR_NONE;
+	description[*num].tagoutlinecolor = SKINCOLOR_NONE;
 
 	// Found one! ^_^
 	return (description[*num].used = true);
@@ -326,8 +332,15 @@ static void readPlayer(MYFILE *f, INT32 num)
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
 	char *word2;
+	char *displayname = ZZ_Alloc(MAXLINELEN+1);
 	INT32 i;
 	boolean slotfound = false;
+
+	#define SLOTFOUND \
+		if (!slotfound && (slotfound = findFreeSlot(&num)) == false) \
+			goto done;
+
+	displayname[MAXLINELEN] = '\0';
 
 	do
 	{
@@ -335,6 +348,17 @@ static void readPlayer(MYFILE *f, INT32 num)
 		{
 			if (s[0] == '\n')
 				break;
+
+			for (i = 0; i < MAXLINELEN-3; i++)
+			{
+				char *tmp;
+				if (s[i] == '=')
+				{
+					tmp = &s[i+2];
+					strncpy(displayname, tmp, SKINNAMESIZE);
+					break;
+				}
+			}
 
 			word = strtok(s, " ");
 			if (word)
@@ -346,8 +370,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			{
 				char *playertext = NULL;
 
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
+				SLOTFOUND
 
 				for (i = 0; i < MAXLINELEN-3; i++)
 				{
@@ -395,10 +418,53 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "PICNAME"))
 			{
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
-
+				SLOTFOUND
 				strncpy(description[num].picname, word2, 8);
+			}
+			// new character select
+			else if (fastcmp(word, "DISPLAYNAME"))
+			{
+				SLOTFOUND
+				// replace '#' with line breaks
+				// (also remove any '\n')
+				{
+					char *cur = NULL;
+
+					// remove '\n'
+					cur = strchr(displayname, '\n');
+					if (cur)
+						*cur = '\0';
+
+					// turn '#' into '\n'
+					cur = strchr(displayname, '#');
+					while (cur)
+					{
+						*cur = '\n';
+						cur = strchr(cur, '#');
+					}
+				}
+				// copy final string
+				strncpy(description[num].displayname, displayname, SKINNAMESIZE);
+			}
+			else if (fastcmp(word, "OPPOSITECOLOR") || fastcmp(word, "OPPOSITECOLOUR"))
+			{
+				SLOTFOUND
+				description[num].oppositecolor = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "NAMETAG") || fastcmp(word, "TAGNAME"))
+			{
+				SLOTFOUND
+				strncpy(description[num].nametag, word2, 8);
+			}
+			else if (fastcmp(word, "TAGTEXTCOLOR") || fastcmp(word, "TAGTEXTCOLOUR"))
+			{
+				SLOTFOUND
+				description[num].tagtextcolor = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "TAGOUTLINECOLOR") || fastcmp(word, "TAGOUTLINECOLOUR"))
+			{
+				SLOTFOUND
+				description[num].tagoutlinecolor = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "STATUS"))
 			{
@@ -417,9 +483,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "SKINNAME"))
 			{
 				// Send to free slot.
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
-
+				SLOTFOUND
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
 			}
@@ -427,8 +491,9 @@ static void readPlayer(MYFILE *f, INT32 num)
 				deh_warning("readPlayer %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
-
+	#undef SLOTFOUND
 done:
+	Z_Free(displayname);
 	Z_Free(s);
 }
 
@@ -1181,6 +1246,20 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				mapheaderinfo[num-1]->muspostbosspos = (UINT32)get_number(word2);
 			else if (fastcmp(word, "MUSICPOSTBOSSFADEIN"))
 				mapheaderinfo[num-1]->muspostbossfadein = (UINT32)get_number(word2);
+			else if (fastcmp(word, "FORCERESETMUSIC"))
+			{
+				// This is a weird one because "FALSE"/"NO" could either apply to "leave to default preference" (cv_resetmusic)
+				// or "force off". Let's assume it means "force off", and let an unspecified value mean "default preference"
+				if      (fastcmp(word2, "OFF") || word2[0] == 'F' || word2[0] == 'N')  i = 0;
+				else if (fastcmp(word2, "ON") || word2[0] == 'T' || word2[0] == 'Y')   i = 1;
+				else i = -1; // (fastcmp(word2, "DEFAULT"))
+
+				if (i >= -1 && i <= 1) // -1 to force off, 1 to force on, 0 to honor default.
+					// This behavior can be disabled with cv_resetmusicbyheader
+					mapheaderinfo[num-1]->musforcereset = (SINT8)i;
+				else
+					deh_warning("Level header %d: invalid forceresetmusic option %d", num, i);
+			}
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
@@ -2311,6 +2390,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss1Spikeballs},        "A_BOSS1SPIKEBALLS"},
 	{{A_Boss3TakeDamage},        "A_BOSS3TAKEDAMAGE"},
 	{{A_Boss3Path},              "A_BOSS3PATH"},
+	{{A_Boss3ShockThink},        "A_BOSS3SHOCKTHINK"},
 	{{A_LinedefExecute},         "A_LINEDEFEXECUTE"},
 	{{A_PlaySeeSound},           "A_PLAYSEESOUND"},
 	{{A_PlayAttackSound},        "A_PLAYATTACKSOUND"},
@@ -2417,6 +2497,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss5CheckFalling},      "A_BOSS5CHECKFALLING"},
 	{{A_Boss5PinchShot},         "A_BOSS5PINCHSHOT"},
 	{{A_Boss5MakeItRain},        "A_BOSS5MAKEITRAIN"},
+	{{A_Boss5MakeJunk},          "A_BOSS5MAKEJUNK"},
 	{{A_LookForBetter},          "A_LOOKFORBETTER"},
 	{{A_Boss5BombExplode},       "A_BOSS5BOMBEXPLODE"},
 	{{A_DustDevilThink},         "A_DUSTDEVILTHINK"},
@@ -2431,6 +2512,14 @@ static actionpointer_t actionpointers[] =
 	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
 	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
 	{{A_ModuloToState},          "A_MODULOTOSTATE"},
+	{{A_LavafallRocks},          "A_LAVAFALLROCKS"},
+	{{A_LavafallLava},           "A_LAVAFALLLAVA"},
+	{{A_FallingLavaCheck},       "A_FALLINGLAVACHECK"},
+	{{A_FireShrink},             "A_FIRESHRINK"},
+	{{A_SpawnPterabytes},        "A_SPAWNPTERABYTES"},
+	{{A_PterabyteHover},         "A_PTERABYTEHOVER"},
+	{{A_RolloutSpawn},           "A_ROLLOUTSPAWN"},
+	{{A_RolloutRock},            "A_ROLLOUTROCK"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -4169,6 +4258,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// CA_GLIDEANDCLIMB
 	"S_PLAY_GLIDE",
+	"S_PLAY_GLIDE_LANDING",
 	"S_PLAY_CLING",
 	"S_PLAY_CLIMB",
 
@@ -4267,6 +4357,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TAILSOVERLAY_PAIN",
 	"S_TAILSOVERLAY_GASP",
 	"S_TAILSOVERLAY_EDGE",
+
+	// [:
+	"S_JETFUMEFLASH",
 
 	// Blue Crawla
 	"S_POSS_STND",
@@ -4415,6 +4508,21 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CRUSHCLAW_IN",
 	"S_CRUSHCLAW_WAIT",
 	"S_CRUSHCHAIN",
+
+	// Banpyura
+	"S_BANPYURA_ROAM1",
+	"S_BANPYURA_ROAM2",
+	"S_BANPYURA_ROAM3",
+	"S_BANPYURA_ROAM4",
+	"S_BANPYURA_ROAMPAUSE",
+	"S_CDIAG1",
+	"S_CDIAG2",
+	"S_CDIAG3",
+	"S_CDIAG4",
+	"S_CDIAG5",
+	"S_CDIAG6",
+	"S_CDIAG7",
+	"S_CDIAG8",
 
 	// Jet Jaw
 	"S_JETJAW_ROAM1",
@@ -4602,6 +4710,22 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CANARIVOREGAS_7",
 	"S_CANARIVOREGAS_8",
 
+	// Pyre Fly
+	"S_PYREFLY_FLY",
+	"S_PYREFLY_BURN",
+	"S_PYREFIRE1",
+	"S_PYREFIRE2",
+
+	// Pterabyte
+	"S_PTERABYTESPAWNER",
+	"S_PTERABYTEWAYPOINT",
+	"S_PTERABYTE_FLY1",
+	"S_PTERABYTE_FLY2",
+	"S_PTERABYTE_FLY3",
+	"S_PTERABYTE_FLY4",
+	"S_PTERABYTE_SWOOPDOWN",
+	"S_PTERABYTE_SWOOPUP",
+
 	// Boss Explosion
 	"S_BOSSEXPLODE",
 
@@ -4728,6 +4852,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BOSSSEBH1",
 	"S_BOSSSEBH2",
 
+	// Boss 3 Shockwave
+
+	"S_SHOCKWAVE1",
+	"S_SHOCKWAVE2",
+
 	// Boss 4
 	"S_EGGMOBILE4_STND",
 	"S_EGGMOBILE4_LATK1",
@@ -4770,6 +4899,25 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGROBOJET",
 
 	// Boss 5
+	"S_FANG_SETUP",
+	"S_FANG_INTRO0",
+	"S_FANG_INTRO1",
+	"S_FANG_INTRO2",
+	"S_FANG_INTRO3",
+	"S_FANG_INTRO4",
+	"S_FANG_INTRO5",
+	"S_FANG_INTRO6",
+	"S_FANG_INTRO7",
+	"S_FANG_INTRO8",
+	"S_FANG_INTRO9",
+	"S_FANG_INTRO10",
+	"S_FANG_INTRO11",
+	"S_FANG_INTRO12",
+	"S_FANG_CLONE1",
+	"S_FANG_CLONE2",
+	"S_FANG_CLONE3",
+	"S_FANG_CLONE4",
+	"S_FANG_IDLE0",
 	"S_FANG_IDLE1",
 	"S_FANG_IDLE2",
 	"S_FANG_IDLE3",
@@ -4840,6 +4988,26 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FANG_FLEEBOUNCE1",
 	"S_FANG_FLEEBOUNCE2",
 	"S_FANG_KO",
+
+	"S_BROKENROBOTRANDOM",
+	"S_BROKENROBOTA",
+	"S_BROKENROBOTB",
+	"S_BROKENROBOTC",
+	"S_BROKENROBOTD",
+	"S_BROKENROBOTE",
+	"S_BROKENROBOTF",
+
+	"S_ALART1",
+	"S_ALART2",
+
+	"S_VWREF",
+	"S_VWREB",
+
+	"S_PROJECTORLIGHT1",
+	"S_PROJECTORLIGHT2",
+	"S_PROJECTORLIGHT3",
+	"S_PROJECTORLIGHT4",
+	"S_PROJECTORLIGHT5",
 
 	"S_FBOMB1",
 	"S_FBOMB2",
@@ -5564,20 +5732,23 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DRIPC1",
 	"S_DRIPC2",
 
-	// Coral 1
+	// Coral
 	"S_CORAL1",
-
-	// Coral 2
 	"S_CORAL2",
-
-	// Coral 3
 	"S_CORAL3",
+	"S_CORAL4",
+	"S_CORAL5",
 
 	// Blue Crystal
 	"S_BLUECRYSTAL1",
 
 	// Kelp,
 	"S_KELP",
+
+	// Animated algae
+	"S_ANIMALGAETOP1",
+	"S_ANIMALGAETOP2",
+	"S_ANIMALGAESEG",
 
 	// DSZ Stalagmites
 	"S_DSZSTALAGMITE",
@@ -5723,6 +5894,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTI7",
 	"S_CACTI8",
 	"S_CACTI9",
+	"S_CACTI10",
+	"S_CACTI11",
+	"S_CACTITINYSEG",
+	"S_CACTISMALLSEG",
 
 	// Warning signs sprites
 	"S_ARIDSIGN_CAUTION",
@@ -5794,7 +5969,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Saloon door
 	"S_SALOONDOOR",
-	"S_SALOONDOORTHINKER",
+	"S_SALOONDOORCENTER",
 
 	// Train cameo
 	"S_TRAINCAMEOSPAWNER_1",
@@ -5815,6 +5990,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEJETFLAME1",
 	"S_FLAMEJETFLAME2",
 	"S_FLAMEJETFLAME3",
+	"S_FLAMEJETFLAME4",
+	"S_FLAMEJETFLAME5",
+	"S_FLAMEJETFLAME6",
+	"S_FLAMEJETFLAME7",
+	"S_FLAMEJETFLAME8",
+	"S_FLAMEJETFLAME9",
 
 	// Spinning flame jets
 	"S_FJSPINAXISA1", // Counter-clockwise
@@ -5826,6 +6007,28 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEJETFLAMEB1",
 	"S_FLAMEJETFLAMEB2",
 	"S_FLAMEJETFLAMEB3",
+
+	// Lavafall
+	"S_LAVAFALL_DORMANT",
+	"S_LAVAFALL_TELL",
+	"S_LAVAFALL_SHOOT",
+	"S_LAVAFALL_LAVA1",
+	"S_LAVAFALL_LAVA2",
+	"S_LAVAFALL_LAVA3",
+	"S_LAVAFALLROCK",
+
+	// Rollout Rock
+	"S_ROLLOUTSPAWN",
+	"S_ROLLOUTROCK",
+
+	// RVZ scenery
+	"S_BIGFERNLEAF",
+	"S_BIGFERN1",
+	"S_BIGFERN2",
+	"S_JUNGLEPALM",
+	"S_TORCHFLOWER",
+	"S_WALLVINE_LONG",
+	"S_WALLVINE_SHORT",
 
 	// Trapgoyles
 	"S_TRAPGOYLE",
@@ -5858,6 +6061,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TARGET_RESPAWN",
 	"S_TARGET_ALLDONE",
 
+	// ATZ's green flame
+	"S_GREENFLAME",
+
 	// Stalagmites
 	"S_STG0",
 	"S_STG1",
@@ -5878,6 +6084,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LAMPPOST1",  // normal
 	"S_LAMPPOST2",  // with snow
 	"S_HANGSTAR",
+	"S_MISTLETOE",
 	// Xmas GFZ bushes
 	"S_XMASBLUEBERRYBUSH",
 	"S_XMASBERRYBUSH",
@@ -5885,6 +6092,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// FHZ
 	"S_FHZICE1",
 	"S_FHZICE2",
+	"S_ROSY_IDLE1",
+	"S_ROSY_IDLE2",
+	"S_ROSY_IDLE3",
+	"S_ROSY_IDLE4",
+	"S_ROSY_JUMP",
+	"S_ROSY_WALK",
+	"S_ROSY_HUG",
+	"S_ROSY_PAIN",
+	"S_ROSY_STND",
+	"S_ROSY_UNHAPPY",
 
 	// Halloween Scenery
 	// Pumpkins
@@ -6536,6 +6753,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BHORIZ7",
 	"S_BHORIZ8",
 
+	"S_BOOSTERSOUND",
+	"S_YELLOWBOOSTERROLLER",
+	"S_YELLOWBOOSTERSEG_LEFT",
+	"S_YELLOWBOOSTERSEG_RIGHT",
+	"S_YELLOWBOOSTERSEG_FACE",
+	"S_REDBOOSTERROLLER",
+	"S_REDBOOSTERSEG_LEFT",
+	"S_REDBOOSTERSEG_RIGHT",
+	"S_REDBOOSTERSEG_FACE",
+
 	// Rain
 	"S_RAIN1",
 	"S_RAINRETURN",
@@ -6555,6 +6782,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPLISH7",
 	"S_SPLISH8",
 	"S_SPLISH9",
+
+	// Lava splish
+	"S_LAVASPLISH",
 
 	// added water splash
 	"S_SPLASH1",
@@ -7167,6 +7397,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_THOK", // Thok! mobj
 	"MT_PLAYER",
 	"MT_TAILSOVERLAY", // c:
+	"MT_METALJETFUME", // [:
 
 	// Enemies
 	"MT_BLUECRAWLA", // Crawla (Blue)
@@ -7185,6 +7416,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CRUSHSTACEAN", // Crushstacean
 	"MT_CRUSHCLAW", // Big meaty claw
 	"MT_CRUSHCHAIN", // Chain
+	"MT_BANPYURA", // Banpyura
+	"MT_BANPSPRING", // Banpyura spring
 	"MT_JETJAW", // Jet Jaw
 	"MT_SNAILER", // Snailer
 	"MT_VULTURE", // BASH
@@ -7206,6 +7439,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_UNIBALL", // Unidus Ball
 	"MT_CANARIVORE", // Canarivore
 	"MT_CANARIVORE_GAS", // Canarivore gas
+	"MT_PYREFLY", // Pyre Fly
+	"MT_PYREFLY_FIRE", // Pyre Fly fire
+	"MT_PTERABYTESPAWNER", // Pterabyte spawner
+	"MT_PTERABYTEWAYPOINT", // Pterabyte waypoint
+	"MT_PTERABYTE", // Pterabyte
 
 	// Generic Boss Items
 	"MT_BOSSEXPLODE",
@@ -7232,7 +7470,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Boss 3
 	"MT_EGGMOBILE3",
 	"MT_FAKEMOBILE",
-	"MT_SHOCK",
+	"MT_SHOCKWAVE",
 
 	// Boss 4
 	"MT_EGGMOBILE4",
@@ -7243,6 +7481,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Boss 5
 	"MT_FANG",
+	"MT_BROKENROBOT",
+	"MT_VWREF",
+	"MT_VWREB",
+	"MT_PROJECTORLIGHT",
 	"MT_FBOMB",
 	"MT_TNTDUST", // also used by barrel
 	"MT_FSGNA",
@@ -7312,6 +7554,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_YELLOWHORIZ",
 	"MT_REDHORIZ",
 	"MT_BLUEHORIZ",
+
+	"MT_BOOSTERSEG",
+	"MT_BOOSTERROLLER",
+	"MT_YELLOWBOOSTER",
+	"MT_REDBOOSTER",
 
 	// Interactive Objects
 	"MT_BUBBLES", // Bubble source
@@ -7441,11 +7688,15 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water
-	"MT_CORAL1", // Coral 1
-	"MT_CORAL2", // Coral 2
-	"MT_CORAL3", // Coral 3
+	"MT_CORAL1", // Coral
+	"MT_CORAL2",
+	"MT_CORAL3",
+	"MT_CORAL4",
+	"MT_CORAL5",
 	"MT_BLUECRYSTAL", // Blue Crystal
 	"MT_KELP", // Kelp
+	"MT_ANIMALGAETOP", // Animated algae top
+	"MT_ANIMALGAESEG", // Animated algae segment
 	"MT_DSZSTALAGMITE", // Deep Sea 1 Stalagmite
 	"MT_DSZ2STALAGMITE", // Deep Sea 2 Stalagmite
 	"MT_LIGHTBEAM", // DSZ Light beam
@@ -7505,6 +7756,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CACTI7",
 	"MT_CACTI8",
 	"MT_CACTI9",
+	"MT_CACTI10",
+	"MT_CACTI11",
+	"MT_CACTITINYSEG",
+	"MT_CACTISMALLSEG",
 	"MT_ARIDSIGN_CAUTION",
 	"MT_ARIDSIGN_CACTI",
 	"MT_ARIDSIGN_SHARPTURN",
@@ -7522,7 +7777,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MINECARTSIDEMARK",
 	"MT_MINECARTSPARK",
 	"MT_SALOONDOOR",
-	"MT_SALOONDOORTHINKER",
+	"MT_SALOONDOORCENTER",
 	"MT_TRAINCAMEOSPAWNER",
 	"MT_TRAINSEG",
 	"MT_TRAINDUSTSPAWNER",
@@ -7539,6 +7794,20 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	"MT_FLAMEJETFLAMEB", // Blade's flame
 
+	"MT_LAVAFALL",
+	"MT_LAVAFALL_LAVA",
+	"MT_LAVAFALLROCK",
+
+	"MT_ROLLOUTSPAWN",
+	"MT_ROLLOUTROCK",
+
+	"MT_BIGFERNLEAF",
+	"MT_BIGFERN",
+	"MT_JUNGLEPALM",
+	"MT_TORCHFLOWER",
+	"MT_WALLVINE_LONG",
+	"MT_WALLVINE_SHORT",
+
 	// Dark City Scenery
 
 	// Egg Rock Scenery
@@ -7549,6 +7818,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_TRAPGOYLEDOWN",
 	"MT_TRAPGOYLELONG",
 	"MT_TARGET",
+	"MT_GREENFLAME",
 
 	// Stalagmites
 	"MT_STALAGMITE0",
@@ -7570,6 +7840,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LAMPPOST1",  // normal
 	"MT_LAMPPOST2",  // with snow
 	"MT_HANGSTAR",
+	"MT_MISTLETOE",
 	// Xmas GFZ bushes
 	"MT_XMASBLUEBERRYBUSH",
 	"MT_XMASBERRYBUSH",
@@ -7577,6 +7848,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// FHZ
 	"MT_FHZICE1",
 	"MT_FHZICE2",
+	"MT_ROSY",
+	"MT_CDLHRT",
 
 	// Halloween Scenery
 	// Pumpkins
@@ -7705,6 +7978,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RAIN", // Rain
 	"MT_SNOWFLAKE", // Snowflake
 	"MT_SPLISH", // Water splish!
+	"MT_LAVASPLISH", // Lava splish!
 	"MT_SMOKE",
 	"MT_SMALLBUBBLE", // small bubble
 	"MT_MEDIUMBUBBLE", // medium bubble
@@ -8190,6 +8464,8 @@ static const char *const POWERS_LIST[] = {
 	"SPACETIME", // In space, no one can hear you spin!
 	"EXTRALIFE", // Extra Life timer
 	"PUSHING",
+	"JUSTSPRUNG",
+	"NOAUTOBRAKE",
 
 	"SUPER", // Are you super?
 	"GRAVITYBOOTS", // gravity boots
@@ -8530,6 +8806,8 @@ struct {
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
 	{"CR_MINECART",CR_MINECART},
+	{"CR_ROLLOUT", CR_ROLLOUT},
+	{"CR_PTERABYTE",CR_PTERABYTE},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon
@@ -8751,9 +9029,9 @@ struct {
 	{"FF_PLATFORM",FF_PLATFORM},               ///< You can jump up through this to the top.
 	{"FF_REVERSEPLATFORM",FF_REVERSEPLATFORM}, ///< A fall-through floor in normal gravity, a platform in reverse gravity.
 	{"FF_INTANGABLEFLATS",FF_INTANGABLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
-	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Thinks everyone's Knuckles.
-	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Jump or fall onto it while curled in a ball.
-	{"FF_ONLYKNUX",FF_ONLYKNUX},               ///< Used with ::FF_BUSTUP. Only Knuckles can break this rock.
+	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Bustable on mere touch.
+	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
+	{"FF_STRONGBUST",FF_STRONGBUST },          ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
@@ -8884,6 +9162,7 @@ struct {
 	{"V_OFFSET",V_OFFSET},
 	{"V_ALLOWLOWERCASE",V_ALLOWLOWERCASE},
 	{"V_FLIP",V_FLIP},
+	{"V_CENTERNAMETAG",V_CENTERNAMETAG},
 	{"V_SNAPTOTOP",V_SNAPTOTOP},
 	{"V_SNAPTOBOTTOM",V_SNAPTOBOTTOM},
 	{"V_SNAPTOLEFT",V_SNAPTOLEFT},
@@ -8917,6 +9196,7 @@ struct {
 	{"TC_ALLWHITE",TC_ALLWHITE},
 	{"TC_RAINBOW",TC_RAINBOW},
 	{"TC_BLINK",TC_BLINK},
+	{"TC_DASHMODE",TC_DASHMODE},
 #endif
 
 	{NULL,0}
@@ -9903,6 +10183,23 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"mapmusposition")) {
 		lua_pushinteger(L, mapmusposition);
 		return 1;
+	// local player variables, by popular request
+	} else if (fastcmp(word,"consoleplayer")) { // player controlling console (aka local player 1)
+		if (consoleplayer < 0 || !playeringame[consoleplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[consoleplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"displayplayer")) { // player visible on screen (aka display player 1)
+		if (displayplayer < 0 || !playeringame[displayplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[displayplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"secondarydisplayplayer")) { // local/display player 2, for splitscreen
+		if (!splitscreen || secondarydisplayplayer < 0 || !playeringame[secondarydisplayplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
+		return 1;
+	// end local player variables
 	} else if (fastcmp(word,"server")) {
 		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
 			return 0;

@@ -327,11 +327,13 @@ typedef struct
 	// Music stuff.
 	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
 	char musintername[7];    ///< Intermission screen music.
-	
+
 	char muspostbossname[7];    ///< Post-bossdeath music.
 	UINT16 muspostbosstrack;    ///< Post-bossdeath track.
 	UINT32 muspostbosspos;      ///< Post-bossdeath position
 	UINT32 muspostbossfadein;   ///< Post-bossdeath fade-in milliseconds.
+
+	SINT8 musforcereset; ///< Force resetmusic (-1 for default; 0 for force off; 1 for force on)
 
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
@@ -418,6 +420,10 @@ extern UINT16 emeralds;
 #define EMERALD7 64
 #define ALL7EMERALDS(v) ((v & (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7)) == (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7))
 
+// yes, even in non HAVE_BLUA
+#define NUM_LUABANKS 16 // please only make this number go up between versions, never down. you'll break saves otherwise. also, must fit in UINT8
+extern INT32 luabanks[NUM_LUABANKS];
+
 extern INT32 nummaprings; //keep track of spawned rings/coins
 
 /** Time attack information, currently a very small structure.
@@ -427,6 +433,7 @@ typedef struct
 	tic_t time;   ///< Time in which the level was finished.
 	UINT32 score; ///< Score when the level was finished.
 	UINT16 rings; ///< Rings when the level was finished.
+	boolean gotperfect; ///< Got perfect bonus?
 } recorddata_t;
 
 /** Setup for one NiGHTS map.

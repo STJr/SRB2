@@ -16,13 +16,19 @@
 
 #include "r_defs.h"
 #include "r_state.h"
+#include "p_setup.h" // levelflats
 
 #ifdef __GNUG__
 #pragma interface
 #endif
 
 // Possible alpha types for a patch.
-enum patchalphastyle {AST_COPY, AST_TRANSLUCENT}; // , AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
+enum patchalphastyle {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
+
+UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha);
+UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha);
+
+UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
 
 // moved here for r_sky.c (texpatch_t is used)
 
@@ -55,12 +61,17 @@ typedef struct
 	texpatch_t patches[0];
 } texture_t;
 
+typedef struct
+{
+	UINT8 *flat;
+	INT16 width, height;
+} textureflat_t;
+
 // all loaded and prepared textures from the start of the game
 extern texture_t **textures;
+extern textureflat_t *texflats;
 
-// texture width is a power of 2, so it can easily repeat along sidedefs using a simple mask
-extern INT32 *texturewidthmask;
-
+extern INT32 *texturewidth;
 extern fixed_t *textureheight; // needed for texture pegging
 
 extern INT16 color8to16[256]; // remap color index to highcolor
@@ -88,7 +99,6 @@ void R_PrecacheLevel(void);
 // Floor/ceiling opaque texture tiles,
 // lookup by name. For animation?
 lumpnum_t R_GetFlatNumForName(const char *name);
-#define R_FlatNumForName(x) R_GetFlatNumForName(x)
 
 // Called by P_Ticker for switches and animations,
 // returns the texture number for the texture name.
@@ -148,7 +158,18 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap);
 #define R_PutRgbaRGB(r, g, b) (R_PutRgbaR(r) + R_PutRgbaG(g) + R_PutRgbaB(b))
 #define R_PutRgbaRGBA(r, g, b, a) (R_PutRgbaRGB(r, g, b) + R_PutRgbaA(a))
 
-UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
+boolean R_CheckIfPatch(lumpnum_t lump);
+void R_TextureToFlat(size_t tex, UINT8 *flat);
+void R_PatchToFlat(patch_t *patch, UINT8 *flat);
+patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
+
+#ifndef NO_PNG_LUMPS
+boolean R_IsLumpPNG(const UINT8 *d, size_t s);
+
+UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size);
+patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency);
+boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
+#endif
 
 extern INT32 numtextures;
 

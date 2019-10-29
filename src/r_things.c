@@ -254,6 +254,19 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			// store sprite info in lookup tables
 			//FIXME : numspritelumps do not duplicate sprite replacements
 			W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
+#ifndef NO_PNG_LUMPS
+			{
+				patch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
+				size_t len = W_LumpLengthPwad(wadnum, l);
+				// lump is a png so convert it
+				if (R_IsLumpPNG((UINT8 *)png, len))
+				{
+					png = R_PNGToPatch((UINT8 *)png, len, NULL, true);
+					M_Memcpy(&patch, png, sizeof(INT16)*4);
+				}
+				Z_Free(png);
+			}
+#endif
 			spritecachedinfo[numspritelumps].width = SHORT(patch.width)<<FRACBITS;
 			spritecachedinfo[numspritelumps].offset = SHORT(patch.leftoffset)<<FRACBITS;
 			spritecachedinfo[numspritelumps].topoffset = SHORT(patch.topoffset)<<FRACBITS;
@@ -701,7 +714,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	INT32 texturecolumn;
 #endif
 	fixed_t frac;
-	patch_t *patch = W_CacheLumpNum(vis->patch, PU_CACHE);
+	patch_t *patch = W_CachePatchNum(vis->patch, PU_CACHE);
 	fixed_t this_scale = vis->mobj->scale;
 	INT32 x1, x2;
 	INT64 overflow_test;
@@ -740,6 +753,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		dc_transmap = vis->transmap;
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		else if (!(vis->cut & SC_PRECIP)
+			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& (vis->mobj->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+			&& ((leveltime/2) & 1))
+		{
+			dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
@@ -761,6 +781,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// New colormap stuff for skins Tails 06-07-2002
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		else if (!(vis->cut & SC_PRECIP)
+			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& (vis->mobj->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+			&& ((leveltime/2) & 1))
+		{
+			dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
@@ -870,7 +897,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	INT64 overflow_test;
 
 	//Fab : R_InitSprites now sets a wad lump number
-	patch = W_CacheLumpNum(vis->patch, PU_CACHE);
+	patch = W_CachePatchNum(vis->patch, PU_CACHE);
 	if (!patch)
 		return;
 
@@ -1217,7 +1244,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		else
 			range = 1;
 
-		scalestep = (yscale2 - yscale)/range;
+		scalestep = (yscale2 - yscale)/range ?: 1;
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -1624,7 +1651,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	mobj_t *thing;
 	precipmobj_t *precipthing; // Tails 08-25-2002
 	INT32 lightnum;
-	fixed_t approx_dist, limit_dist;
+	fixed_t approx_dist, limit_dist, hoop_limit_dist;
 
 	if (rendermode != render_soft)
 		return;
@@ -1655,7 +1682,9 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 	// Handle all things in sector.
 	// If a limit exists, handle things a tiny bit different.
-	if ((limit_dist = (fixed_t)((maptol & TOL_NIGHTS) ? cv_drawdist_nights.value : cv_drawdist.value) << FRACBITS))
+	limit_dist = (fixed_t)(cv_drawdist.value) << FRACBITS;
+	hoop_limit_dist = (fixed_t)(cv_drawdist_nights.value) << FRACBITS;
+	if (limit_dist || hoop_limit_dist)
 	{
 		for (thing = sec->thinglist; thing; thing = thing->snext)
 		{
@@ -1664,8 +1693,16 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
-			if (approx_dist > limit_dist)
-				continue;
+			if (thing->sprite == SPR_HOOP)
+			{
+				if (hoop_limit_dist && approx_dist > hoop_limit_dist)
+					continue;
+			}
+			else
+			{
+				if (limit_dist && approx_dist > limit_dist)
+					continue;
+			}
 
 			R_ProjectSprite(thing);
 		}
@@ -2511,7 +2548,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if (!skin)
 		return 0;
 
-	if ((unsigned)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
+	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
 		return 0;
 
 	while (!(skin->sprites[spr2].numframes)
@@ -2603,6 +2640,8 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->followitem = 0;
 
 	skin->highresscale = FRACUNIT;
+	skin->contspeed = 17;
+	skin->contangle = 0;
 
 	skin->availability = 0;
 
@@ -2771,9 +2810,9 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	}
 
 	if (P_IsLocalPlayer(player))
-		CONS_Alert(CONS_WARNING, M_GetText("Requested skin not found\n"));
+		CONS_Alert(CONS_WARNING, M_GetText("Requested skin %d not found\n"), skinnum);
 	else if(server || IsPlayerAdmin(consoleplayer))
-		CONS_Alert(CONS_WARNING, "Player %d (%s) skin not found\n", playernum, player_names[playernum]);
+		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
 	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
 }
 
@@ -2869,6 +2908,8 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 	for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
 		R_AddSingleSpriteDef((spritename = spr2names[sprite2]), &skin->sprites[sprite2], wadnum, *lump, *lastlump);
 
+	if (skin->sprites[0].numframes == 0)
+		I_Error("R_LoadSkinSprites: no frames found for sprite SPR2_%s\n", spr2names[0]);
 }
 
 // returns whether found appropriate property
@@ -2907,6 +2948,8 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETINT(thrustfactor)
 	GETINT(accelstart)
 	GETINT(acceleration)
+	GETINT(contspeed)
+	GETINT(contangle)
 #undef GETINT
 
 #define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) skin->field = R_GetColorByName(value);

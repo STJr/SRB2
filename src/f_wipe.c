@@ -430,20 +430,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
-		{
-			float frame = wipeframe-1;
-			if (wipestyle == WIPESTYLE_LEVEL)
-			{
-				float length = F_GetWipeLength(wipetype);
-				float strength = (frame / length) * 32.0f;
-				if (wipestyleflags & WSF_FADEIN)
-					strength = 31.0f - strength;
-				HWR_DoWipeLevel();
-				HWR_FadeScreenMenuBack(0xFF00|31, strength);
-			}
-			else
-				HWR_DoWipe(wipetype, frame-1); // send in the wipe type and wipeframe because we need to cache the graphic
-		}
+			HWR_DoWipe(wipetype, wipeframe-1); // send in the wipe type and wipeframe because we need to cache the graphic
 		else
 #endif
 			F_DoWipe(fmask);
@@ -487,20 +474,7 @@ void F_WipeTicker(void)
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-	{
-		float frame = curwipeframe-1;
-		if (wipestyle == WIPESTYLE_LEVEL)
-		{
-			float length = F_GetWipeLength(curwipetype);
-			float strength = (frame / length) * 32.0f;
-			if (wipestyleflags & WSF_FADEIN)
-				strength = 31.0f - strength;
-			HWR_FadeScreenMenuBack(0xFF00|31, strength);
-			F_WipeTitleCard();
-		}
-		else
-			HWR_DoWipe(curwipetype, frame-1); // send in the wipe type and wipeframe because we need to cache the graphic
-	}
+		HWR_DoWipeLevel(curwipetype, curwipeframe-1);
 	else
 #endif
 		F_DoWipe(fmask);

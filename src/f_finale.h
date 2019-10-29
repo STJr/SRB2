@@ -94,6 +94,7 @@ extern INT32 curbgcolor;
 extern INT32 curbgxspeed;
 extern INT32 curbgyspeed;
 extern boolean curbghide;
+extern boolean hidetitlemap;
 
 #define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
 

@@ -67,6 +67,8 @@ extern lua_State *gL;
 
 #define META_ACTION "ACTIONF_T*"
 
+#define META_LUABANKS "LUABANKS[]*"
+
 boolean luaL_checkboolean(lua_State *L, int narg);
 
 int LUA_EnumLib(lua_State *L);
