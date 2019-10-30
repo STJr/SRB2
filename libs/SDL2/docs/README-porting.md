@@ -13,7 +13,7 @@ There are two basic ways of building SDL at the moment:
 
 1. The "UNIX" way:  ./configure; make; make install
 
-   If you have a GNUish system, then you might try this.  Edit configure.ac,
+   If you have a GNUish system, then you might try this.  Edit configure.in,
    take a look at the large section labelled:
 
 	"Set up the configuration based on the host platform!"

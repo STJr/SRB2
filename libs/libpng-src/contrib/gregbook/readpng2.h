@@ -96,6 +96,11 @@ typedef struct _mainprog_info {
     int rowbytes;
     int channels;
     int need_bgcolor;
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__))
+    int nommxfilters;
+    int nommxcombine;
+    int nommxinterlace;
+#endif
     int state;
     uch bg_red;
     uch bg_green;

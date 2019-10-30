@@ -1,5 +1,5 @@
 # makefile for libpng
-# Copyright (C) 2002, 2014 Glenn Randers-Pehrson
+# Copyright (C) 2002 Glenn Randers-Pehrson
 # Copyright (C) 1995 Guy Eric Schalnat, Group 42, Inc.
 #
 # This code is released under the libpng license.
@@ -9,10 +9,9 @@
 # Modified for LC56/ATARI assumes libz.lib is in same dir and uses default
 # rules for library management
 #
-CPPFLAGS = -I..\zlib
-CFLAGS = -O
+CFLAGS=-I..\zlib -O
 LBR = png.lib
-LDFLAGS = -L. -L..\zlib -lpng -lz -lm
+LDFLAGS=-lpng -lz -lm
 
 # where make install puts libpng.a and png.h
 prefix=/usr/local
@@ -29,10 +28,6 @@ LIBPATH=$(prefix)/lib
 # you execute make install.
 DESTDIR=
 
-# Pre-built configuration
-# See scripts/pnglibconf.mak for more options
-PNGLIBCONF_H_PREBUILT = scripts/pnglibconf.h.prebuilt
-
 OBJS = $(LBR)(png.o) $(LBR)(pngset.o) $(LBR)(pngget.o) $(LBR)(pngrutil.o)\
 	$(LBR)(pngtrans.o) $(LBR)(pngwutil.o)\
 	$(LBR)(pngread.o) $(LBR)(pngerror.o) $(LBR)(pngwrite.o)\
@@ -41,15 +36,7 @@ OBJS = $(LBR)(png.o) $(LBR)(pngset.o) $(LBR)(pngget.o) $(LBR)(pngrutil.o)\
 
 all: $(LBR) pngtest.ttp
 
-.c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $<
-
 $(LBR): $(OBJS)
-
-$(OBJS): pngpriv.h png.h pngconf.h pnglibconf.h pnginfo.h pngstruct.h pngdebug.h
-
-pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
-	cp $(PNGLIBCONF_H_PREBUILT) $@
 
 pngtest.ttp: pngtest.o $(LBR)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o$@ pngtest.o
@@ -60,12 +47,9 @@ install: libpng.a
 	-@mkdir $(DESTDIR)$(LIBPATH)
 	-@rm -f $(DESTDIR)$(INCPATH)/png.h
 	-@rm -f $(DESTDIR)$(INCPATH)/pngconf.h
-	-@rm -f $(DESTDIR)$(INCPATH)/pnglibconf.h
 	cp png.h $(DESTDIR)$(INCPATH)/libpng
 	cp pngconf.h $(DESTDIR)$(INCPATH)/libpng
-	cp pnglibconf.h $(DESTDIR)$(INCPATH)/libpng
 	chmod 644 $(DESTDIR)$(INCPATH)/libpng/png.h
 	chmod 644 $(DESTDIR)$(INCPATH)/libpng/pngconf.h
-	chmod 644 $(DESTDIR)$(INCPATH)/libpng/pnglibconf.h
 	(cd $(DESTDIR)$(INCPATH); ln -f -s $(LIBNAME) libpng; \
 	ln -f -s $(LIBNAME)/* .)
