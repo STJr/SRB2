@@ -12441,10 +12441,10 @@ ML_EFFECT5 : Don't stop thinking when too far away
 		if (mthing->extrainfo)
 			mobj->extravalue1 = mthing->extrainfo;
 		break;
-	case MT_TRAPGOYLE:
-	case MT_TRAPGOYLEUP:
-	case MT_TRAPGOYLEDOWN:
-	case MT_TRAPGOYLELONG:
+	case MT_GLAREGOYLE:
+	case MT_GLAREGOYLEUP:
+	case MT_GLAREGOYLEDOWN:
+	case MT_GLAREGOYLELONG:
 		if (mthing->angle >= 360)
 			mobj->tics += 7*(mthing->angle / 360) + 1; // starting delay
 		break;

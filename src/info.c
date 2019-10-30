@@ -2579,32 +2579,32 @@ state_t states[NUMSTATES] =
 	{SPR_WVIN, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_WALLVINE_LONG
 	{SPR_WVIN, 1|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_WALLVINE_SHORT
 
-	// Trapgoyles
-	{SPR_BGAR, 0, 67, {NULL},       0, 0, S_TRAPGOYLE_CHECK},  // S_TRAPGOYLE
-	{SPR_BGAR, 0,  3, {NULL},       0, 0, S_TRAPGOYLE_FIRE1},  // S_TRAPGOYLE_CHECK
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLE_FIRE2},  // S_TRAPGOYLE_FIRE1
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLE_FIRE3},  // S_TRAPGOYLE_FIRE2
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLE},  // S_TRAPGOYLE_FIRE3
+	// Glaregoyles
+	{SPR_BGAR, FF_ANIMATE|1, 52, {NULL},       1, 0, S_GLAREGOYLE_WARNING},  // S_GLAREGOYLE
+	{SPR_BGAR,            2,  6, {NULL},       1, 2, S_GLAREGOYLE_FIRE}, // S_GLAREGOYLE_WARNING
+	{SPR_BGAR,            1,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_GLAREGOYLE_LOOP},  // S_GLAREGOYLE_FIRE
+	{SPR_BGAR,            1,  0, {A_Repeat},   3, S_GLAREGOYLE_FIRE, S_GLAREGOYLE_COOLDOWN}, // S_GLAREGOYLE_LOOP
+	{SPR_BGAR, FF_ANIMATE|1, 12, {NULL},       1, 6, S_GLAREGOYLE}, // S_GLAREGOYLE_COOLDOWN
 
-	{SPR_BGAR, 0, 67, {NULL},       0, 0, S_TRAPGOYLEUP_CHECK},  // S_TRAPGOYLEUP
-	{SPR_BGAR, 0,  3, {NULL},       0, 0, S_TRAPGOYLEUP_FIRE1},  // S_TRAPGOYLEUP_CHECK
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_TRAPGOYLEUP_FIRE2},  // S_TRAPGOYLEUP_FIRE1
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_TRAPGOYLEUP_FIRE3},  // S_TRAPGOYLEUP_FIRE2
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_TRAPGOYLEUP},  // S_TRAPGOYLEUP_FIRE3
+	{SPR_BGAR, 0, 67, {NULL},       0, 0, S_GLAREGOYLEUP_CHECK},  // S_GLAREGOYLEUP
+	{SPR_BGAR, 0,  3, {NULL},       0, 0, S_GLAREGOYLEUP_FIRE1},  // S_GLAREGOYLEUP_CHECK
+	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_GLAREGOYLEUP_FIRE2},  // S_GLAREGOYLEUP_FIRE1
+	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_GLAREGOYLEUP_FIRE3},  // S_GLAREGOYLEUP_FIRE2
+	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_GLAREGOYLEUP},  // S_GLAREGOYLEUP_FIRE3
 
-	{SPR_BGAR, 0, 67, {NULL},       0, 0, S_TRAPGOYLEDOWN_CHECK},  // S_TRAPGOYLEDOWN
-	{SPR_BGAR, 0,  3, {NULL},       0, 0, S_TRAPGOYLEDOWN_FIRE1},  // S_TRAPGOYLEDOWN_CHECK
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_TRAPGOYLEDOWN_FIRE2},  // S_TRAPGOYLEDOWN_FIRE1
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_TRAPGOYLEDOWN_FIRE3},  // S_TRAPGOYLEDOWN_FIRE2
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_TRAPGOYLEDOWN},  // S_TRAPGOYLEDOWN_FIRE3
+	{SPR_BGAR, 0, 67, {NULL},       0, 0, S_GLAREGOYLEDOWN_CHECK},  // S_GLAREGOYLEDOWN
+	{SPR_BGAR, 0,  3, {NULL},       0, 0, S_GLAREGOYLEDOWN_FIRE1},  // S_GLAREGOYLEDOWN_CHECK
+	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_GLAREGOYLEDOWN_FIRE2},  // S_GLAREGOYLEDOWN_FIRE1
+	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_GLAREGOYLEDOWN_FIRE3},  // S_GLAREGOYLEDOWN_FIRE2
+	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_GLAREGOYLEDOWN},  // S_GLAREGOYLEDOWN_FIRE3
 
-	{SPR_BGAR, 0, 135, {NULL},       0, 0, S_TRAPGOYLELONG_CHECK},  // S_TRAPGOYLELONG
-	{SPR_BGAR, 0,   3, {NULL},       0, 0, S_TRAPGOYLELONG_FIRE1},  // S_TRAPGOYLELONG_CHECK
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG_FIRE2},  // S_TRAPGOYLELONG_FIRE1
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG_FIRE3},  // S_TRAPGOYLELONG_FIRE2
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG_FIRE4},  // S_TRAPGOYLELONG_FIRE3
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG_FIRE5},  // S_TRAPGOYLELONG_FIRE4
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG},  // S_TRAPGOYLELONG_FIRE5
+	{SPR_BGAR, 0, 135, {NULL},       0, 0, S_GLAREGOYLELONG_CHECK},  // S_GLAREGOYLELONG
+	{SPR_BGAR, 0,   3, {NULL},       0, 0, S_GLAREGOYLELONG_FIRE1},  // S_GLAREGOYLELONG_CHECK
+	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_GLAREGOYLELONG_FIRE2},  // S_GLAREGOYLELONG_FIRE1
+	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_GLAREGOYLELONG_FIRE3},  // S_GLAREGOYLELONG_FIRE2
+	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_GLAREGOYLELONG_FIRE4},  // S_GLAREGOYLELONG_FIRE3
+	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_GLAREGOYLELONG_FIRE5},  // S_GLAREGOYLELONG_FIRE4
+	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_GLAREGOYLELONG},  // S_GLAREGOYLELONG_FIRE5
 
 	// Target/Red Crystal
 	{SPR_RCRY,               0, -1, {NULL},                  0, 0, S_TARGET_IDLE},  // S_TARGET_IDLE
@@ -13581,9 +13581,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_TRAPGOYLE
+	{           // MT_GLAREGOYLE
 		1500,           // doomednum
-		S_TRAPGOYLE,    // spawnstate
+		S_GLAREGOYLE,    // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -13608,9 +13608,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_TRAPGOYLEUP
+	{           // MT_GLAREGOYLEUP
 		1501,           // doomednum
-		S_TRAPGOYLEUP,  // spawnstate
+		S_GLAREGOYLEUP,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -13635,9 +13635,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_TRAPGOYLEDOWN
+	{           // MT_GLAREGOYLEDOWN
 		1502,           // doomednum
-		S_TRAPGOYLEDOWN,// spawnstate
+		S_GLAREGOYLEDOWN,// spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -13662,9 +13662,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_TRAPGOYLELONG
+	{           // MT_GLAREGOYLELONG
 		1503,           // doomednum
-		S_TRAPGOYLELONG,// spawnstate
+		S_GLAREGOYLELONG,// spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
