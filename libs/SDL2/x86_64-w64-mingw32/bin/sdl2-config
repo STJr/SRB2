@@ -39,7 +39,7 @@ while test $# -gt 0; do
       echo $exec_prefix
       ;;
     --version)
-      echo 2.0.10
+      echo 2.0.9
       ;;
     --cflags)
       echo -I${prefix}/include/SDL2  -Dmain=SDL_main
@@ -49,7 +49,7 @@ while test $# -gt 0; do
       ;;
     --static-libs)
 #    --libs|--static-libs)
-      echo -L${exec_prefix}/lib  -lmingw32 -lSDL2main -lSDL2 -mwindows  -Wl,--no-undefined -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lsetupapi -lversion -luuid -static-libgcc
+      echo -L${exec_prefix}/lib  -lmingw32 -lSDL2main -lSDL2 -mwindows  -Wl,--no-undefined -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lsetupapi -lversion -luuid -static-libgcc
       ;;
     *)
       echo "${usage}" 1>&2

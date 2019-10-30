@@ -1,18 +1,13 @@
 Microsoft Developer Studio Project File, Format Version 7.10 for libpng.
 
 Copyright (C) 2004 Simon-Pierre Cadieux.
-
-This code is released under the libpng license.
 For conditions of distribution and use, see copyright notice in png.h
-
-NOTE: This project will be removed from libpng-1.5.0.  It has
-been replaced with the "vstudio" project.
 
 Assumptions:
 * The libpng source files are in ..\..
 * The zlib source files are in ..\..\..\zlib
 * The zlib project file is in . /* Warning: This is until the zlib project
-  files get integrated into the next zlib release. The final zlib project
+  files get intergrated into the next zlib release. The final zlib project
   directory will then be ..\..\..\zlib\projects\visualc71. */
 
 To use:
@@ -37,11 +32,15 @@ To use:
 
 This project builds the libpng binaries as follows:
 
-* Win32_DLL_Release\libpng16.dll      DLL build
-* Win32_DLL_Debug\libpng16d.dll       DLL build (debug version)
-* Win32_DLL_VB\libpng16vb.dll         DLL build for Visual Basic, using stdcall
+* Win32_DLL_Release\libpng13.dll      DLL build
+* Win32_DLL_Debug\libpng13d.dll       DLL build (debug version)
+* Win32_DLL_ASM_Release\libpng13.dll  DLL build using ASM code
+* Win32_DLL_ASM_Debug\libpng13d.dll   DLL build using ASM (debug version)
+* Win32_DLL_VB\libpng13vb.dll         DLL build for Visual Basic, using stdcall
 * Win32_LIB_Release\libpng.lib        static build
 * Win32_LIB_Debug\libpngd.lib         static build (debug version)
+* Win32_LIB_ASM_Release\libpng.lib    static build using ASM code
+* Win32_LIB_ASM_Debug\libpngd.lib     static build using ASM (debug version)
 
 Notes:
 

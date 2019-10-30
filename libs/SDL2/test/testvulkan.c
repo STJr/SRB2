@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -1119,7 +1119,7 @@ static SDL_bool render(void)
 int main(int argc, char *argv[])
 {
     int fsaa, accel;
-    int done;
+    int i, done;
     SDL_DisplayMode mode;
     SDL_Event event;
     Uint32 then, now, frames;
@@ -1138,15 +1138,27 @@ int main(int argc, char *argv[])
     {
         return 1;
     }
+    for(i = 1; i < argc;)
+    {
+        int consumed;
+
+        consumed = SDLTest_CommonArg(state, i);
+        if(consumed < 0)
+        {
+            SDL_Log("Usage: %s %s\n", argv[0], SDLTest_CommonUsage(state));
+            quit(1);
+        }
+        i += consumed;
+    }
 
     /* Set Vulkan parameters */
     state->window_flags |= SDL_WINDOW_VULKAN;
     state->num_windows = 1;
     state->skip_renderer = 1;
 
-    if (!SDLTest_CommonDefaultArgs(state, argc, argv) || !SDLTest_CommonInit(state)) {
-        SDLTest_CommonQuit(state);
-        return 1;
+    if(!SDLTest_CommonInit(state))
+    {
+        quit(2);
     }
 
     SDL_GetCurrentDisplayMode(0, &mode);

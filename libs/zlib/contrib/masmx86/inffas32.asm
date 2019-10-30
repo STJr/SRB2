@@ -73,6 +73,11 @@ inflate_fast_use_mmx:
 
 
 _TEXT			segment
+PUBLIC _inflate_fast
+
+ALIGN 4
+_inflate_fast:
+	jmp inflate_fast_entry
 
 
 
@@ -158,8 +163,7 @@ distbits_state	 equ	(76+4+zlib1222sup)	;/* state->distbits */
 ;SECTION .text
 
 ALIGN 4
-_inflate_fast proc near
-.FPO (16, 4, 0, 0, 1, 0)
+inflate_fast_entry:
 	push  edi
 	push  esi
 	push  ebp
@@ -1074,7 +1078,6 @@ L_done:
 	pop  esi
 	pop  edi
 	ret
-_inflate_fast endp
 
 _TEXT	ends
 end

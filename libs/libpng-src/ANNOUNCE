@@ -1,47 +1,65 @@
-libpng 1.6.37 - April 14, 2019
-==============================
 
-This is a public release of libpng, intended for use in production code.
+Libpng 1.2.46 - July 9, 2011
 
+This is a public release of libpng, intended for use in production codes.
 
-Files available for download
-----------------------------
+Files available for download:
 
-Source files with LF line endings (for Unix/Linux):
+Source files with LF line endings (for Unix/Linux) and with a
+"configure" script
 
- * libpng-1.6.37.tar.xz (LZMA-compressed, recommended)
- * libpng-1.6.37.tar.gz
+   libpng-1.2.46.tar.xz (LZMA-compressed, recommended)
+   libpng-1.2.46.tar.gz
+   libpng-1.2.46.tar.bz2
 
-Source files with CRLF line endings (for Windows):
+Source files with LF line endings (for Unix/Linux) without the
+"configure" script
 
- * lp1637.7z (LZMA-compressed, recommended)
- * lp1637.zip
+   libpng-1.2.46-no-config.tar.xz (LZMA-compressed, recommended)
+   libpng-1.2.46-no-config.tar.gz
+   libpng-1.2.46-no-config.tar.bz2
+
+Source files with CRLF line endings (for Windows), without the
+"configure" script
+
+   lpng1246.zip
+   lpng1246.7z
+   lpng1246.tar.bz2
+
+Project files
+
+   libpng-1.2.46-project-netware.zip
+   libpng-1.2.46-project-wince.zip
 
 Other information:
 
- * README.md
- * LICENSE.md
- * AUTHORS.md
- * TRADEMARK.md
+   libpng-1.2.46-README.txt
+   libpng-1.2.46-KNOWNBUGS.txt
+   libpng-1.2.46-LICENSE.txt
+   libpng-1.2.46-Y2K-compliance.txt
+   libpng-1.2.46-[previous version]-diff.txt
 
+Changes since the last public release (1.2.43):
 
-Changes since the previous public release (version 1.6.36)
-----------------------------------------------------------
+version 1.2.45 [July 9, 2011]
 
- * Fixed a use-after-free vulnerability (CVE-2019-7317) in png_image_free.
- * Fixed a memory leak in the ARM NEON implementation of png_do_expand_palette.
- * Fixed a memory leak in pngtest.c.
- * Fixed two vulnerabilities (CVE-2018-14048, CVE-2018-14550) in
-   contrib/pngminus; refactor.
- * Changed the license of contrib/pngminus to MIT; refresh makefile and docs.
-   (Contributed by Willem van Schaik)
- * Fixed a typo in the libpng license v2.
-   (Contributed by Miguel Ojeda)
- * Added makefiles for AddressSanitizer-enabled builds.
- * Cleaned up various makefiles.
+  Fixed uninitialized memory read in png_format_buffer() (Bug
+    report by Frank Busse, related to CVE-2004-0421).
+  Pass "" instead of '\0' to png_default_error() in png_err().  This mistake
+    was introduced in libpng-1.2.20beta01.
+  Check for up->location !PNG_AFTER_IDAT when writing unknown chunks
+    before IDAT.
+  Ported bugfix in pngrtran.c from 1.5.3: when expanding a paletted image,
+    always expand to RGBA if transparency is present.
+  Check for integer overflow in png_set_rgb_to_gray().
+  Check for sCAL chunk too short.
+  Added CMakeLists.txt, projects/xcode, and pnggccrd.c to EXTRA_DIST in
+    Makefile.am and Makefile.in
+  Udated copyright year to 2011.
 
-
-Send comments/corrections/commendations to png-mng-implement at lists.sf.net.
-Subscription is required; visit
+Send comments/corrections/commendations to png-mng-implement at lists.sf.net
+(subscription required; visit
 https://lists.sourceforge.net/lists/listinfo/png-mng-implement
-to subscribe.
+to subscribe) or to glennrp at users.sourceforge.net
+
+Glenn R-P
