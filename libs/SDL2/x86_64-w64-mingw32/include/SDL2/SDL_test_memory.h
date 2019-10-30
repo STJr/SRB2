@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -42,14 +42,14 @@ extern "C" {
  * 
  * \note This should be called before any other SDL functions for complete tracking coverage
  */
-int SDLTest_TrackAllocations(void);
+int SDLTest_TrackAllocations();
 
 /**
  * \brief Print a log of any outstanding allocations
  *
  * \note This can be called after SDL_Quit()
  */
-void SDLTest_LogAllocations(void);
+void SDLTest_LogAllocations();
 
 
 /* Ends C function definitions when using C++ */
