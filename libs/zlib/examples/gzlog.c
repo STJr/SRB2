@@ -1,8 +1,8 @@
 /*
  * gzlog.c
- * Copyright (C) 2004, 2008, 2012, 2016 Mark Adler, all rights reserved
+ * Copyright (C) 2004, 2008 Mark Adler, all rights reserved
  * For conditions of distribution and use, see copyright notice in gzlog.h
- * version 2.2, 14 Aug 2012
+ * version 2.0, 25 Apr 2008
  */
 
 /*
@@ -243,7 +243,7 @@ typedef unsigned int uint;
 typedef unsigned long ulong;
 
 /* Macro for debugging to deterministically force recovery operations */
-#ifdef GZLOG_DEBUG
+#ifdef DEBUG
     #include <setjmp.h>         /* longjmp */
     jmp_buf gzlog_jump;         /* where to go back to */
     int gzlog_bail = 0;         /* which point to bail at (1..8) */
@@ -750,8 +750,7 @@ local int log_recover(struct log *log, int op)
         strcpy(log->end, ".add");
         if (stat(log->path, &st) == 0 && st.st_size) {
             len = (size_t)(st.st_size);
-            if ((off_t)len != st.st_size ||
-                    (data = malloc(st.st_size)) == NULL) {
+            if (len != st.st_size || (data = malloc(st.st_size)) == NULL) {
                 log_log(log, op, "allocation failure");
                 return -2;
             }
@@ -759,7 +758,7 @@ local int log_recover(struct log *log, int op)
                 log_log(log, op, ".add file read failure");
                 return -1;
             }
-            ret = (size_t)read(fd, data, len) != len;
+            ret = read(fd, data, len) != len;
             close(fd);
             if (ret) {
                 log_log(log, op, ".add file read failure");
@@ -914,7 +913,7 @@ int gzlog_compress(gzlog *logd)
     struct log *log = logd;
 
     /* check arguments */
-    if (log == NULL || strcmp(log->id, LOGID))
+    if (log == NULL || strcmp(log->id, LOGID) || len < 0)
         return -3;
 
     /* see if we lost the lock -- if so get it again and reload the extra
@@ -953,7 +952,7 @@ int gzlog_compress(gzlog *logd)
         fd = open(log->path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (fd < 0)
             break;
-        ret = (size_t)write(fd, data, len) != len;
+        ret = write(fd, data, len) != len;
         if (ret | close(fd))
             break;
         log_touch(log);
@@ -964,7 +963,7 @@ int gzlog_compress(gzlog *logd)
         if (fd < 0)
             break;
         next = DICT > len ? len : DICT;
-        ret = (size_t)write(fd, (char *)data + len - next, next) != next;
+        ret = write(fd, (char *)data + len - next, next) != next;
         if (ret | close(fd))
             break;
         log_touch(log);
@@ -998,9 +997,9 @@ int gzlog_write(gzlog *logd, void *data, size_t len)
     struct log *log = logd;
 
     /* check arguments */
-    if (log == NULL || strcmp(log->id, LOGID))
+    if (log == NULL || strcmp(log->id, LOGID) || len < 0)
         return -3;
-    if (data == NULL || len <= 0)
+    if (data == NULL || len == 0)
         return 0;
 
     /* see if we lost the lock -- if so get it again and reload the extra
@@ -1014,7 +1013,7 @@ int gzlog_write(gzlog *logd, void *data, size_t len)
     fd = open(log->path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0)
         return -1;
-    ret = (size_t)write(fd, data, len) != len;
+    ret = write(fd, data, len) != len;
     if (ret | close(fd))
         return -1;
     log_touch(log);

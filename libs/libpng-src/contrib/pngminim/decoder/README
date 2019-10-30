@@ -1,10 +1,9 @@
-This demonstrates the use of PNG_USER_CONFIG, pngusr.h and pngusr.dfa
+This demonstrates the use of PNG_USER_CONFIG and pngusr.h
 
-The makefile builds a minimal read-only decoder with embedded libpng
-and zlib.
+To build a minimal read-only decoder with embedded libpng and zlib, run
 
-Specify the location of the zlib source (1.2.1 or later) as ZLIBSRC
-on the make command line.
+    gather.sh  # to collect needed files from pngminus, libpng, and zlib
+    make
 
 If you prefer to use the shared libraries, go to contrib/pngminus
-and build the png2pnm application there.
+and build the png2pnm application there. 

@@ -40,15 +40,10 @@
     - 2.02:  fixed improper display of usage screen on PNG error(s); fixed
               unexpected-EOF and file-read-error cases; fixed Trace() cut-and-
               paste bugs
-    - 2.03:  deleted runtime MMX-enabling/disabling and obsolete -mmx* options
-    - 2.04:  Added "void(foo);" statements to quiet pedantic compiler warnings
-             about unused variables (GR-P)
-    - 2.05:  Use nanosleep() instead of usleep(), which is deprecated (GR-P).
-    - 2.06:  check for integer overflow (Glenn R-P)
+
   ---------------------------------------------------------------------------
 
-      Copyright (c) 1998-2010, 2014-2015, 2017 Greg Roelofs.  All rights
-      reserved.
+      Copyright (c) 1998-2008 Greg Roelofs.  All rights reserved.
 
       This software is provided "as is," without warranty of any kind,
       express or implied.  In no event shall the author or contributors
@@ -99,9 +94,9 @@
 
 #define PROGNAME  "rpng2-x"
 #define LONGNAME  "Progressive PNG Viewer for X"
-#define VERSION   "2.04 of 15 June 2014"
-#define RESNAME   "rpng2"       /* our X resource application name */
-#define RESCLASS  "Rpng"       /* our X resource class name */
+#define VERSION   "2.02 of 16 March 2008"
+#define RESNAME   "rpng2"	/* our X resource application name */
+#define RESCLASS  "Rpng"	/* our X resource class name */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -114,19 +109,6 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <X11/keysym.h>   /* defines XK_* macros */
-
-#if _POSIX_C_SOURCE >= 199309L /* have nanosleep() */
-# undef usleep
-# define usleep(usec) {        \
-   struct timespec ts;         \
-   ts.tv_sec = 0;              \
-   ts.tv_nsec = (usec) * 1000; \
-   nanosleep(&ts, NULL); }
-#  endif
-
-#ifndef usleep /* have neither nanosleep() nor usleep() */
-#  define usleep(x) sleep(((x)+499999)/1000000)
-#endif
 
 #ifdef VMS
 #  include <unistd.h>
@@ -149,7 +131,7 @@
                   (e.type == KeyPress &&   /*  v--- or 1 for shifted keys */  \
                   ((k = XLookupKeysym(&e.xkey, 0)) == XK_q || k == XK_Escape)))
 
-#define NO_24BIT_MASKS /* undef case not fully written--only for redisplay() */
+#define NO_24BIT_MASKS	/* undef case not fully written--only for redisplay() */
 
 #define rgb1_max   bg_freq
 #define rgb1_min   bg_gray
@@ -319,7 +301,7 @@ int main(int argc, char **argv)
     int have_bg = FALSE;
 #ifdef FEATURE_LOOP
     int loop = FALSE;
-    long loop_interval = -1;            /* seconds (100,000 max) */
+    long loop_interval = -1;		/* seconds (100,000 max) */
 #endif
     double LUT_exponent;                /* just the lookup table */
     double CRT_exponent = 2.2;          /* just the monitor */
@@ -453,6 +435,18 @@ int main(int argc, char **argv)
                     loop_interval = 100000;
             }
 #endif
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__))
+        } else if (!strncmp(*argv, "-nommxfilters", 7)) {
+            rpng2_info.nommxfilters = TRUE;
+        } else if (!strncmp(*argv, "-nommxcombine", 7)) {
+            rpng2_info.nommxcombine = TRUE;
+        } else if (!strncmp(*argv, "-nommxinterlace", 7)) {
+            rpng2_info.nommxinterlace = TRUE;
+        } else if (!strcmp(*argv, "-nommx")) {
+            rpng2_info.nommxfilters = TRUE;
+            rpng2_info.nommxcombine = TRUE;
+            rpng2_info.nommxinterlace = TRUE;
+#endif
         } else {
             if (**argv != '-') {
                 filename = *argv;
@@ -473,46 +467,49 @@ int main(int argc, char **argv)
         fprintf(stderr, "\n%s %s:  %s\n\n", PROGNAME, VERSION, appname);
         readpng2_version_info();
         fprintf(stderr, "\n"
-          "Usage:   ");
-        fprintf(stderr,
-          "%s [-display xdpy] [-gamma exp] [-bgcolor bg | -bgpat pat]\n"
-          "        %*s [-usleep dur | -timing] [-pause]\n",
-          PROGNAME, (int)strlen(PROGNAME), " ");
-        fprintf(stderr,
-#ifdef FEATURE_LOOP
-          "        [-loop [sec]]"
+          "Usage:  %s [-display xdpy] [-gamma exp] [-bgcolor bg | -bgpat pat]\n"
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__))
+          "        %*s [[-nommxfilters] [-nommxcombine] [-nommxinterlace] | -nommx]\n"
 #endif
-          " file.png\n\n");
-        fprintf(stderr,
+#ifdef FEATURE_LOOP
+          "        %*s [-usleep dur | -timing] [-pause] [-loop [sec]] file.png\n\n"
+#else
+          "        %*s [-usleep dur | -timing] [-pause] file.png\n\n"
+#endif
           "    xdpy\tname of the target X display (e.g., ``hostname:0'')\n"
           "    exp \ttransfer-function exponent (``gamma'') of the display\n"
           "\t\t  system in floating-point format (e.g., ``%.1f''); equal\n"
-          "\t\t  to the product of the lookup-table exponent (varies)\n",
-          default_display_exponent);
-        fprintf(stderr,
+          "\t\t  to the product of the lookup-table exponent (varies)\n"
           "\t\t  and the CRT exponent (usually 2.2); must be positive\n"
           "    bg  \tdesired background color in 7-character hex RGB format\n"
           "\t\t  (e.g., ``#ff7700'' for orange:  same as HTML colors);\n"
           "\t\t  used with transparent images; overrides -bgpat\n"
           "    pat \tdesired background pattern number (0-%d); used with\n"
-          "\t\t  transparent images; overrides -bgcolor\n",
-          num_bgpat-1);
+          "\t\t  transparent images; overrides -bgcolor\n"
 #ifdef FEATURE_LOOP
-        fprintf(stderr,
           "    -loop\tloops through background images after initial display\n"
           "\t\t  is complete (depends on -bgpat)\n"
-          "    sec \tseconds to display each background image (default = 2)\n");
+          "    sec \tseconds to display each background image (default = 2)\n"
 #endif
-        fprintf(stderr,
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__))
+          "    -nommx*\tdisable optimized MMX routines for decoding row filters,\n"
+          "\t\t  combining rows, and expanding interlacing, respectively\n"
+#endif
           "    dur \tduration in microseconds to wait after displaying each\n"
           "\t\t  row (for demo purposes)\n"
           "    -timing\tenables delay for every block read, to simulate modem\n"
           "\t\t  download of image (~36 Kbps)\n"
           "    -pause\tpauses after displaying each pass until mouse clicked\n"
           "\nPress Q, Esc or mouse button 1 (within image window, after image\n"
-          "is displayed) to quit.\n");
+          "is displayed) to quit.\n"
+          "\n", PROGNAME,
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__))
+          (int)strlen(PROGNAME), " ",
+#endif
+          (int)strlen(PROGNAME), " ", default_display_exponent, num_bgpat-1);
         exit(1);
     }
+
 
     if (!(infile = fopen(filename, "rb"))) {
         fprintf(stderr, PROGNAME ":  can't open PNG file [%s]\n", filename);
@@ -615,7 +612,7 @@ int main(int argc, char **argv)
                   "(unexpectedly) while reading PNG image file\n");
                 exit(3);
             } else /* if (error) */ {
-                /* will print error message below */
+                // will print error message below
             }
             break;
         }
@@ -759,8 +756,6 @@ int main(int argc, char **argv)
     Trace((stderr, "about to call rpng2_x_cleanup()\n"))
     rpng2_x_cleanup();
 
-    (void)argc; /* Unused */
-
     return 0;
 }
 
@@ -781,13 +776,6 @@ static void rpng2_x_init(void)
     Trace((stderr, "  rowbytes = %d\n", rpng2_info.rowbytes))
     Trace((stderr, "  width  = %ld\n", rpng2_info.width))
     Trace((stderr, "  height = %ld\n", rpng2_info.height))
-
-    /* Guard against integer overflow */
-    if (rpng2_info.height > ((size_t)(-1))/rpng2_info.rowbytes) {
-        fprintf(stderr, PROGNAME ":  image_data buffer would be too large\n");
-        readpng2_cleanup(&rpng2_info);
-        return;
-    }
 
     rpng2_info.image_data = (uch *)malloc(rowbytes * rpng2_info.height);
     if (!rpng2_info.image_data) {
@@ -814,9 +802,8 @@ static void rpng2_x_init(void)
     if (rpng2_x_create_window()) {
 
         /* GRR TEMPORARY HACK:  this is fundamentally no different from cases
-         * above; libpng should call our error handler to longjmp() back to us
-         * when png_ptr goes away.  If we/it segfault instead, seems like a
-         * libpng bug... */
+         * above; libpng should longjmp() back to us when png_ptr goes away.
+         * If we/it segfault instead, seems like a libpng bug... */
 
         /* we're here via libpng callback, so if window fails, clean and bail */
         readpng2_cleanup(&rpng2_info);
@@ -1310,7 +1297,7 @@ static int rpng2_x_load_bg_image(void)
         for (row = 0;  row < rpng2_info.height;  ++row) {
             src = bg_data + row*bg_rowbytes;
             dest = ximage->data + row*ximage_rowbytes;
-            if (bpp == 32) {    /* slightly optimized version */
+            if (bpp == 32) {	/* slightly optimized version */
                 for (i = rpng2_info.width;  i > 0;  --i) {
                     red   = *src++;
                     green = *src++;
@@ -1858,9 +1845,6 @@ static void rpng2_x_redisplay_image(ulg startcol, ulg startrow,
           (int)lastrow, rpng2_info.width, rpng2_info.height-lastrow);
         XFlush(display);
     }
-
-    (void)startcol;
-    (void)width;
 
 } /* end function rpng2_x_redisplay_image() */
 

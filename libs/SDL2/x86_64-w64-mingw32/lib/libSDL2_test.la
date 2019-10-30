@@ -38,4 +38,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='/Users/valve/release/SDL/SDL2-2.0.10/x86_64-w64-mingw32/lib'
+libdir='/Users/valve/release/SDL/SDL2-2.0.9/x86_64-w64-mingw32/lib'

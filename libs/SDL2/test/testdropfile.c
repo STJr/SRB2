@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -52,7 +52,7 @@ main(int argc, char *argv[])
             consumed = -1;
         }
         if (consumed < 0) {
-            SDLTest_CommonLogUsage(state, argv[0], NULL);
+            SDL_Log("Usage: %s %s\n", argv[0], SDLTest_CommonUsage(state));
             quit(1);
         }
         i += consumed;
@@ -75,6 +75,8 @@ main(int argc, char *argv[])
     while (!done) {
         /* Check for events */
         while (SDL_PollEvent(&event)) {
+            SDLTest_CommonEvent(state, &event, &done);
+
             if (event.type == SDL_DROPBEGIN) {
                 SDL_Log("Drop beginning on window %u", (unsigned int) event.drop.windowID);
             } else if (event.type == SDL_DROPCOMPLETE) {
@@ -83,11 +85,8 @@ main(int argc, char *argv[])
                 const char *typestr = (event.type == SDL_DROPFILE) ? "File" : "Text";
                 char *dropped_filedir = event.drop.file;
                 SDL_Log("%s dropped on window %u: %s", typestr, (unsigned int) event.drop.windowID, dropped_filedir);
-                /* Normally you'd have to do this, but this is freed in SDLTest_CommonEvent() */
-                /*SDL_free(dropped_filedir);*/
+                SDL_free(dropped_filedir);
             }
-
-            SDLTest_CommonEvent(state, &event, &done);
         }
     }
 
