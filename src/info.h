@@ -2743,6 +2743,9 @@ typedef enum state
 	// ATZ's green flame
 	S_GREENFLAME,
 
+	// ATZ Blue Gargoyle
+	S_BLUEGARGOYLE,
+
 	// Stalagmites
 	S_STG0,
 	S_STG1,
@@ -4521,6 +4524,7 @@ typedef enum mobj_type
 	MT_GLAREGOYLELONG,
 	MT_TARGET, // AKA Red Crystal
 	MT_GREENFLAME,
+	MT_BLUEGARGOYLE,
 
 	// Stalagmites
 	MT_STALAGMITE0,

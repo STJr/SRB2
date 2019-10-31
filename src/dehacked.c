@@ -6031,7 +6031,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_WALLVINE_SHORT",
 
 	// Glaregoyles
-	// Glaregoyles
 	"S_GLAREGOYLE",
 	"S_GLAREGOYLE_CHARGE",
 	"S_GLAREGOYLE_BLINK",
@@ -6070,6 +6069,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// ATZ's green flame
 	"S_GREENFLAME",
+
+	// ATZ Blue Gargoyle
+	"S_BLUEGARGOYLE",
 
 	// Stalagmites
 	"S_STG0",
@@ -7826,6 +7828,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GLAREGOYLELONG",
 	"MT_TARGET",
 	"MT_GREENFLAME",
+	"MT_BLUEGARGOYLE",
 
 	// Stalagmites
 	"MT_STALAGMITE0",

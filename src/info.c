@@ -2622,6 +2622,9 @@ state_t states[NUMSTATES] =
 	// Green flame
 	{SPR_CFLM, FF_FULLBRIGHT|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 3, S_GREENFLAME}, // S_GREENFLAME
 
+	// ATZ Blue Gargoyle
+	{SPR_BGAR, 3, -1, {NULL}, 0, 0, S_NULL}, // S_BLUEGARGOYLE
+
 	// Stalagmites
 	{SPR_STLG, 0, -1, {NULL}, 0, 0, S_NULL}, // S_STG0
 	{SPR_STLG, 1, -1, {NULL}, 0, 0, S_NULL}, // S_STG1
@@ -13746,6 +13749,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_PAIN, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_BLUEGARGOYLE
+		1506,           // doomednum
+		S_BLUEGARGOYLE, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		21*FRACUNIT,    // speed
+		16*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_statu2,     // activesound
+		MF_SLIDEME|MF_SOLID|MF_PUSHABLE, // flags
 		S_NULL          // raisestate
 	},
 
