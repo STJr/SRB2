@@ -72,7 +72,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "keys.h"
 #include "filesrch.h" // refreshdirmenu, mainwadstally
 #include "g_input.h" // tutorial mode control scheming
-#include "png.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -964,8 +963,6 @@ void D_SRB2Main(void)
 	"Sonic the Hedgehog and related characters are trademarks of SEGA.\n"
 	"We do not claim ownership of SEGA's intellectual property used\n"
 	"in this program.\n\n");
-
-	CONS_Printf("libpng version: %s\n", png_libpng_ver);
 
 	// keep error messages until the final flush(stderr)
 #if !defined (PC_DOS) && !defined(NOTERMIOS)
