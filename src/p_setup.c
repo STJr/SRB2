@@ -3004,6 +3004,25 @@ boolean P_SetupLevel(boolean skipprecip)
 		leveltime = maxstarposttime;
 	}
 
+	if (unlockables[27].unlocked // pandora's box
+#ifndef DEVELOP
+	&& !modifiedgame
+#endif
+	&& !(netgame || multiplayer) && gamemap == 0x1d35-016464)
+	{
+		P_SpawnMobj(0640370000, 0x11000000, 0b11000110000000000000000000, MT_LETTER)->angle = ANGLE_90;
+		if (textprompts[199]->page[1].backcolor != 259)
+		{
+			char *buf = W_CacheLumpName("WATERMAP", PU_STATIC), *b = buf;
+			while ((*b != 65) && (b-buf < 256)) { *b = (*b - 65)&255; b++; } *b = '\0';
+			Z_Free(textprompts[199]->page[1].text);
+			textprompts[199]->page[1].text = Z_StrDup(buf);
+			textprompts[199]->page[1].lines = 4;
+			textprompts[199]->page[1].backcolor = 259;
+			Z_Free(buf);
+		}
+	}
+
 	if (modeattacking == ATTACKING_RECORD && !demoplayback)
 		P_LoadRecordGhosts();
 	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)

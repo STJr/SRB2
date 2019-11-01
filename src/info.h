@@ -451,6 +451,9 @@ typedef enum sprite
 	SPR_AROW, // Arrow
 	SPR_CFIR, // Colored fire of various sorts
 
+	// The letter
+	SPR_LETR,
+
 	// Greenflower Scenery
 	SPR_FWR1,
 	SPR_FWR2, // GFZ Sunflower
@@ -2337,6 +2340,9 @@ typedef enum state
 
 	// Trapgoyle Demon fire
 	S_DEMONFIRE,
+
+	// The letter
+	S_LETTER,
 
 	// GFZ flowers
 	S_GFZFLOWERA,
@@ -4347,6 +4353,9 @@ typedef enum mobj_type
 	MT_CANNONBALLDECOR, // Decorative/still cannonball
 	MT_ARROW, // Arrow
 	MT_DEMONFIRE, // Trapgoyle fire
+
+	// The letter
+	MT_LETTER,
 
 	// Greenflower Scenery
 	MT_GFZFLOWER1,

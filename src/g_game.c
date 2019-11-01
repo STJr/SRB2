@@ -3912,7 +3912,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	}
 
 	if (netgame || multiplayer) // Nice try, haxor.
-		ultimatemode = false;
+		pultmode = false;
 
 	if (!demoplayback && !netgame) // Netgame sets random seed elsewhere, demo playback sets seed just before us!
 		P_SetRandSeed(M_RandomizedSeed()); // Use a more "Random" random seed

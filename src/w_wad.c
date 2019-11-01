@@ -981,6 +981,9 @@ lumpnum_t W_CheckNumForName(const char *name)
 	INT32 i;
 	lumpnum_t check = INT16_MAX;
 
+	if (!*name) // some doofus gave us an empty string?
+		return LUMPERROR;
+
 	// Check the lumpnumcache first. Loop backwards so that we check
 	// most recent entries first
 	for (i = lumpnumcacheindex + LUMPNUMCACHESIZE; i > lumpnumcacheindex; i--)
