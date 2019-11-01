@@ -3004,7 +3004,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		leveltime = maxstarposttime;
 	}
 
-	if (unlockables[27].unlocked // pandora's box
+	if (unlockables[27].unlocked && !modeattacking // pandora's box
 #ifndef DEVELOP
 	&& !modifiedgame
 #endif
