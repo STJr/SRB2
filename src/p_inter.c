@@ -1399,7 +1399,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				F_StartTextPrompt(199, 0, toucher, 0, true, false);
 				special->health = 0;
-				if (player->continues < 99)
+				if (ultimatemode && player->continues < 99)
 					player->continues++;
 			}
 			return;
