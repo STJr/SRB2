@@ -124,21 +124,35 @@ static patch_t *t1sont[TTMAX_ALACROIX];
 static patch_t *t1robo[TTMAX_ALACROIX];
 static patch_t *t1twot[TTMAX_ALACROIX];
 static patch_t *t1embl[TTMAX_ALACROIX];
+static patch_t *t1rbtx[TTMAX_ALACROIX];
+
 static patch_t *t2ribb[TTMAX_ALACROIX];
 static patch_t *t2sont[TTMAX_ALACROIX];
 static patch_t *t2robo[TTMAX_ALACROIX];
 static patch_t *t2twot[TTMAX_ALACROIX];
 static patch_t *t2embl[TTMAX_ALACROIX];
+static patch_t *t2rbtx[TTMAX_ALACROIX];
+
 static patch_t *t4ribb[TTMAX_ALACROIX];
 static patch_t *t4sont[TTMAX_ALACROIX];
 static patch_t *t4robo[TTMAX_ALACROIX];
 static patch_t *t4twot[TTMAX_ALACROIX];
 static patch_t *t4embl[TTMAX_ALACROIX];
+static patch_t *t4rbtx[TTMAX_ALACROIX];
+
 static patch_t *t6ribb[TTMAX_ALACROIX];
 static patch_t *t6sont[TTMAX_ALACROIX];
 static patch_t *t6robo[TTMAX_ALACROIX];
 static patch_t *t6twot[TTMAX_ALACROIX];
 static patch_t *t6embl[TTMAX_ALACROIX];
+static patch_t *t6rbtx[TTMAX_ALACROIX];
+
+#define TTEMBL (presc == 6 ? t6embl : presc == 4 ? t4embl : presc == 2 ? t2embl : t1embl)
+#define TTRIBB (presc == 6 ? t6ribb : presc == 4 ? t4ribb : presc == 2 ? t2ribb : t1ribb)
+#define TTSONT (presc == 6 ? t6sont : presc == 4 ? t4sont : presc == 2 ? t2sont : t1sont)
+#define TTROBO (presc == 6 ? t6robo : presc == 4 ? t4robo : presc == 2 ? t2robo : t1robo)
+#define TTTWOT (presc == 6 ? t6twot : presc == 4 ? t4twot : presc == 2 ? t2twot : t1twot)
+#define TTRBTX (presc == 6 ? t6rbtx : presc == 4 ? t4rbtx : presc == 2 ? t2rbtx : t1rbtx)
 
 // ttmode user
 static patch_t *ttuser[TTMAX_USER];
@@ -2372,21 +2386,28 @@ else \
 			LOADTTGFX(t1sont, "T1SONT", TTMAX_ALACROIX)
 			LOADTTGFX(t1robo, "T1ROBO", TTMAX_ALACROIX)
 			LOADTTGFX(t1twot, "T1TWOT", TTMAX_ALACROIX)
+			LOADTTGFX(t1rbtx, "T1RBTX", TTMAX_ALACROIX)
+
 			LOADTTGFX(t2embl, "T2EMBL", TTMAX_ALACROIX)
 			LOADTTGFX(t2ribb, "T2RIBB", TTMAX_ALACROIX)
 			LOADTTGFX(t2sont, "T2SONT", TTMAX_ALACROIX)
 			LOADTTGFX(t2robo, "T2ROBO", TTMAX_ALACROIX)
 			LOADTTGFX(t2twot, "T2TWOT", TTMAX_ALACROIX)
+			LOADTTGFX(t2rbtx, "T2RBTX", TTMAX_ALACROIX)
+
 			LOADTTGFX(t4embl, "T4EMBL", TTMAX_ALACROIX)
 			LOADTTGFX(t4ribb, "T4RIBB", TTMAX_ALACROIX)
 			LOADTTGFX(t4sont, "T4SONT", TTMAX_ALACROIX)
 			LOADTTGFX(t4robo, "T4ROBO", TTMAX_ALACROIX)
 			LOADTTGFX(t4twot, "T4TWOT", TTMAX_ALACROIX)
+			LOADTTGFX(t4rbtx, "T4RBTX", TTMAX_ALACROIX)
+
 			LOADTTGFX(t6embl, "T6EMBL", TTMAX_ALACROIX)
 			LOADTTGFX(t6ribb, "T6RIBB", TTMAX_ALACROIX)
 			LOADTTGFX(t6sont, "T6SONT", TTMAX_ALACROIX)
 			LOADTTGFX(t6robo, "T6ROBO", TTMAX_ALACROIX)
 			LOADTTGFX(t6twot, "T6TWOT", TTMAX_ALACROIX)
+			LOADTTGFX(t6rbtx, "T6RBTX", TTMAX_ALACROIX)
 			break;
 		}
 
@@ -2408,7 +2429,7 @@ else \
 void F_TitleScreenDrawer(void)
 {
 	boolean hidepics;
-	fixed_t presc = max(1, min(6, (vid.dupx == 6 ? 2 : vid.dupx == 5 ? 6 : (vid.dupx == 3 ? 4 : vid.dupx))));
+	fixed_t presc = max(1, min(6, (vid.dupx == 5 ? 6 : (vid.dupx == 3 ? 4 : vid.dupx))));
 	fixed_t sc = (curttmode == TTMODE_ALACROIX ? FRACUNIT / presc
 		: FRACUNIT / max(1, curttscale));
 
@@ -2481,58 +2502,72 @@ void F_TitleScreenDrawer(void)
 				ALICE ANIMATION CODE GOES HERE
 			 */
 
-#define TTEMBL (presc == 6 ? t6embl : presc == 4 ? t4embl : presc == 2 ? t2embl : t1embl)
-#define TTRIBB (presc == 6 ? t6ribb : presc == 4 ? t4ribb : presc == 2 ? t2ribb : t1ribb)
-#define TTSONT (presc == 6 ? t6sont : presc == 4 ? t4sont : presc == 2 ? t2sont : t1sont)
-#define TTROBO (presc == 6 ? t6robo : presc == 4 ? t4robo : presc == 2 ? t2robo : t1robo)
-#define TTTWOT (presc == 6 ? t6twot : presc == 4 ? t4twot : presc == 2 ? t2twot : t1twot)
-
-			// Start at black background, then at 8 tics, white flash to title background.
-			// Why 8 tics: The fanfare starts at 1.5 secs from O__TITLE.
-			// 1.5 secs * 35 tics/sec = 52.5 tics
-			// The music starts at the FIRST of two screen wipes. The standard screen wipe is 22 tics in duration.
-			// 52.5 tics - (22 tics * 2 wipes) = 8.5 tics
-			// Ergo, start the flash at tic 8, upon the fanfare.
-			if (max(0, finalecount) <= 7)
+			// Start at black background. Draw it until tic 30, where we replace with a white flash.
+			//
+			// TODO: How to NOT draw the titlemap while this background is drawn?
+			//
+			if (finalecount <= 29)
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-			else if (max(0, finalecount) > 7 && 17-finalecount > 0 && 17-finalecount < 10)
-				V_DrawFadeScreen(0, 17-finalecount);
 
 			// Draw emblem
 			V_DrawSciencePatch(40<<FRACBITS, 20<<FRACBITS, 0, TTEMBL[0], sc);
 
-			// Ribbon unfurls, revealing SONIC text, from frame 0 to frame 24. SONIC text is pre-baked into ribbon graphic.
-			V_DrawSciencePatch(40<<FRACBITS, 88<<FRACBITS, 0, TTRIBB[min(max(0, finalecount), 24)], sc);
-			
-			// Animate SONIC text after ribbon fully reveals it, at frame 10
-			if(max(0, finalecount) > 9)
+			// Animate SONIC ROBO BLAST 2 before the white flash at tic 30.
+			if (finalecount <= 29)
 			{
-				// Fade value for ROBO BLAST
-				INT32 fadeval = 0;
+				// Ribbon unfurls, revealing SONIC text, from tic 0 to tic 24. SONIC text is pre-baked into this ribbon graphic.
+				V_DrawSciencePatch(40<<FRACBITS, 88<<FRACBITS, 0, TTRIBB[min(max(0, finalecount), 24)], sc);
+				
+				// Animate SONIC text while the ribbon unfurls, from tic 0 to tic 28.
+				if(finalecount >= 0)
+					V_DrawSciencePatch(90<<FRACBITS, 92<<FRACBITS, 0, TTSONT[min(finalecount, 28)], sc);
 
-				// Draw SONIC text
-				V_DrawSciencePatch(90<<FRACBITS, 92<<FRACBITS, 0, TTSONT[min(finalecount-10, 28)], sc);
-
-				// Draw ROBO BLAST 2, and fade them in.
-				if (finalecount < 20)
+				// Fade in ROBO BLAST 2 starting at tic 10.
+				if (finalecount > 9)
 				{
-					UINT8 fadecounter = 20-finalecount;
-					switch(fadecounter)
+					INT32 fadeval = 0;
+
+					// Fade between tic 10 and tic 29.
+					if (finalecount < 30)
 					{
-						case 10: fadeval = V_90TRANS; break;
-						case 9: fadeval = V_80TRANS; break;
-						case 8: fadeval = V_70TRANS; break;
-						case 7: fadeval = V_60TRANS; break;
-						case 6: fadeval = V_TRANSLUCENT; break;
-						case 5: fadeval = V_40TRANS; break;
-						case 4: fadeval = V_30TRANS; break;
-						case 3: fadeval = V_20TRANS; break;
-						case 2: fadeval = V_10TRANS; break;
+						UINT8 fadecounter = 30-finalecount;
+						switch(fadecounter)
+						{
+							case 20: case 19: fadeval = V_90TRANS; break;
+							case 18: case 17: fadeval = V_80TRANS; break;
+							case 16: case 15: fadeval = V_70TRANS; break;
+							case 14: case 13: fadeval = V_60TRANS; break;
+							case 12: case 11: fadeval = V_TRANSLUCENT; break;
+							case 10: case 9: fadeval = V_40TRANS; break;
+							case 8: case 7: fadeval = V_30TRANS; break;
+							case 6: case 5: fadeval = V_20TRANS; break;
+							case 4: case 3: fadeval = V_10TRANS; break;
+						}
 					}
+					V_DrawSciencePatch(80<<FRACBITS, 132<<FRACBITS, fadeval, TTROBO[0], sc);
+
+					// Draw the TWO from tic 16 to tic 31, so the TWO lands right when the screen flashes white.
+					if(finalecount > 15)
+						V_DrawSciencePatch(107<<FRACBITS, 118<<FRACBITS, fadeval, TTTWOT[min(finalecount-16, 15)], sc);
 				}
-				V_DrawSciencePatch(80<<FRACBITS, 132<<FRACBITS, fadeval, TTROBO[0], sc);
-				V_DrawSciencePatch(107<<FRACBITS, 118<<FRACBITS, fadeval, TTTWOT[min(finalecount-10, 21)], sc);
 			}
+
+			//
+			// TODO: CHARACTERS GO HERE
+			//
+
+			// After tic 34, starting when the flash fades,
+			// draw the combined ribbon and SONIC ROBO BLAST 2 bake. Note the different Y value, because this
+			// graphic is cropped differently from the unfurling ribbon.
+			if (finalecount > 34)
+				V_DrawSciencePatch(40<<FRACBITS, 93<<FRACBITS, 0, TTRBTX[0], sc);
+
+			// Flash at tic 30, timed to O__TITLE percussion. Hold the flash until tic 34.
+			// After tic 34, fade the flash until tic 44.
+			if (finalecount > 29 && finalecount < 35)
+				V_DrawFadeScreen(0, 9);
+			else if (finalecount > 34 && 44-finalecount > 0 && 44-finalecount < 10)
+				V_DrawFadeScreen(0, 44-finalecount);
 
 			break;
 
