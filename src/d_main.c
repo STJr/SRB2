@@ -852,7 +852,7 @@ static void IdentifyVersion(void)
 	// checking in D_SRB2Main
 
 	// Add the maps
-	D_AddFile(va(pandf,srb2waddir,"zones.dta"));
+	D_AddFile(va(pandf,srb2waddir,"zones.pk3"));
 
 	// Add the players
 	D_AddFile(va(pandf,srb2waddir, "player.dta"));
@@ -1145,10 +1145,10 @@ void D_SRB2Main(void)
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_SRB2_PK3); // srb2.pk3
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_DTA); // zones.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_PK3); // zones.pk3
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_PLAYER_DTA); // player.dta
 #ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.pk3
 #endif
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
@@ -1157,7 +1157,7 @@ void D_SRB2Main(void)
 #else
 
 	mainwads++;	// srb2.pk3
-	mainwads++; // zones.dta
+	mainwads++; // zones.pk3
 	mainwads++; // player.dta
 #ifdef USE_PATCH_DTA
 	mainwads++; // patch.dta

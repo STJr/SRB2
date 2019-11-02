@@ -400,7 +400,8 @@ consvar_t cv_showfocuslost = {"showfocuslost", "Yes", CV_SAVE, CV_YesNo, NULL, 0
 
 static CV_PossibleValue_t map_cons_t[] = {
 	{1,"MIN"},
-	{NUMMAPS, "MAX"}
+	{NUMMAPS, "MAX"},
+	{0,NULL}
 };
 consvar_t cv_nextmap = {"nextmap", "1", CV_HIDEN|CV_CALL, map_cons_t, Nextmap_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
@@ -10576,7 +10577,7 @@ static void M_DrawJoystick(void)
 			compareval = cv_usejoystick.value;
 #else
 		compareval2 = cv_usejoystick2.value;
-		compareval = cv_usejoystick.value
+		compareval = cv_usejoystick.value;
 #endif
 
 		if ((setupcontrols_secondaryplayer && (i == compareval2))

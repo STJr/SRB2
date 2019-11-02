@@ -533,6 +533,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"TIRE",
 
 	"GLID",
+	"LAND",
 	"CLNG",
 	"CLMB",
 
@@ -540,7 +541,6 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"FRUN",
 
 	"BNCE",
-	"BLND",
 
 	"FIRE",
 
@@ -636,6 +636,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	0, // SPR2_TIRE, (conditional, will never be referenced)
 
 	SPR2_FLY , // SPR2_GLID,
+	SPR2_ROLL, // SPR2_LAND,
 	SPR2_CLMB, // SPR2_CLNG,
 	SPR2_ROLL, // SPR2_CLMB,
 
@@ -643,7 +644,6 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_RUN , // SPR2_FRUN,
 
 	SPR2_FALL, // SPR2_BNCE,
-	SPR2_ROLL, // SPR2_BLND,
 
 	0, // SPR2_FIRE,
 
@@ -766,6 +766,7 @@ state_t states[NUMSTATES] =
 
 	// CA_GLIDEANDCLIMB
 	{SPR_PLAY, SPR2_GLID,                 2, {NULL}, 0,  0, S_PLAY_GLIDE}, // S_PLAY_GLIDE
+	{SPR_PLAY, SPR2_LAND,                 9, {NULL}, 0,  0, S_PLAY_STND},  // S_PLAY_GLIDE_LANDING
 	{SPR_PLAY, SPR2_CLNG|FF_ANIMATE,     -1, {NULL}, 0,  4, S_NULL},       // S_PLAY_CLING
 	{SPR_PLAY, SPR2_CLMB,                 5, {NULL}, 0,  0, S_PLAY_CLIMB}, // S_PLAY_CLIMB
 
@@ -775,7 +776,7 @@ state_t states[NUMSTATES] =
 
 	// CA_BOUNCE
 	{SPR_PLAY, SPR2_BNCE|FF_ANIMATE,     -1, {NULL},             0,  0, S_NULL},                // S_PLAY_BOUNCE
-	{SPR_PLAY, SPR2_BLND|FF_SPR2ENDSTATE, 2, {NULL}, S_PLAY_BOUNCE,  0, S_PLAY_BOUNCE_LANDING}, // S_PLAY_BOUNCE_LANDING
+	{SPR_PLAY, SPR2_LAND|FF_SPR2ENDSTATE, 2, {NULL}, S_PLAY_BOUNCE,  0, S_PLAY_BOUNCE_LANDING}, // S_PLAY_BOUNCE_LANDING
 
 	// CA2_GUNSLINGER
 	{SPR_PLAY, SPR2_FIRE|FF_SPR2ENDSTATE,  2, {NULL}, S_PLAY_FIRE_FINISH, 0, S_PLAY_FIRE},   // S_PLAY_FIRE
@@ -865,6 +866,9 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_TAL9|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_PAIN}, // S_TAILSOVERLAY_PAIN
 	{SPR_PLAY, SPR2_TALA|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_GASP}, // S_TAILSOVERLAY_GASP
 	{SPR_PLAY, SPR2_TALB                , 35, {NULL}, 0, 0, S_TAILSOVERLAY_EDGE}, // S_TAILSOVERLAY_EDGE
+
+	// [:
+	{SPR_JETF, 3|FF_ANIMATE|FF_FULLBRIGHT, 2, {NULL}, 1, 1, S_JETFUME1}, // S_JETFUMEFLASH
 
 	// Blue Crawla
 	{SPR_POSS, 0, 5, {A_Look}, 0, 0, S_POSS_STND},   // S_POSS_STND
@@ -4131,6 +4135,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
+	},
+
+	{           // MT_METALJETFUME
+		-1,             // doomednum
+		S_INVISIBLE,    // spawnstate
+		1000,           // spawnhealth
+		S_JETFUMEFLASH, // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		16*FRACUNIT,    // height
+		2,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_JETFUME1      // raisestate
 	},
 
 	{           // MT_BLUECRAWLA

@@ -4360,6 +4360,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// CA_GLIDEANDCLIMB
 	"S_PLAY_GLIDE",
+	"S_PLAY_GLIDE_LANDING",
 	"S_PLAY_CLING",
 	"S_PLAY_CLIMB",
 
@@ -4458,6 +4459,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TAILSOVERLAY_PAIN",
 	"S_TAILSOVERLAY_GASP",
 	"S_TAILSOVERLAY_EDGE",
+
+	// [:
+	"S_JETFUMEFLASH",
 
 	// Blue Crawla
 	"S_POSS_STND",
@@ -7495,6 +7499,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_THOK", // Thok! mobj
 	"MT_PLAYER",
 	"MT_TAILSOVERLAY", // c:
+	"MT_METALJETFUME", // [:
 
 	// Enemies
 	"MT_BLUECRAWLA", // Crawla (Blue)
@@ -9293,6 +9298,7 @@ struct {
 	{"TC_ALLWHITE",TC_ALLWHITE},
 	{"TC_RAINBOW",TC_RAINBOW},
 	{"TC_BLINK",TC_BLINK},
+	{"TC_DASHMODE",TC_DASHMODE},
 #endif
 
 	{NULL,0}
