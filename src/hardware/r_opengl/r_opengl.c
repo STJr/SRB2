@@ -216,6 +216,7 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglVertexPointer glVertexPointer
 #define pglNormalPointer glNormalPointer
 #define pglTexCoordPointer glTexCoordPointer
+#define pglColorPointer glColorPointer
 #define pglDrawArrays glDrawArrays
 #define pglDrawElements glDrawElements
 #define pglEnableClientState glEnableClientState
@@ -320,6 +321,8 @@ typedef void (APIENTRY * PFNglNormalPointer) (GLenum type, GLsizei stride, const
 static PFNglNormalPointer pglNormalPointer;
 typedef void (APIENTRY * PFNglTexCoordPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 static PFNglTexCoordPointer pglTexCoordPointer;
+typedef void (APIENTRY * PFNglColorPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+static PFNglColorPointer pglColorPointer;
 typedef void (APIENTRY * PFNglDrawArrays) (GLenum mode, GLint first, GLsizei count);
 static PFNglDrawArrays pglDrawArrays;
 typedef void (APIENTRY * PFNglDrawElements) (GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
@@ -458,6 +461,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglVertexPointer, glVertexPointer)
 	GETOPENGLFUNC(pglNormalPointer, glNormalPointer)
 	GETOPENGLFUNC(pglTexCoordPointer, glTexCoordPointer)
+	GETOPENGLFUNC(pglColorPointer, glColorPointer)
 	GETOPENGLFUNC(pglDrawArrays, glDrawArrays)
 	GETOPENGLFUNC(pglDrawElements, glDrawElements)
 	GETOPENGLFUNC(pglEnableClientState, glEnableClientState)
@@ -1407,12 +1411,16 @@ typedef struct
 
 typedef struct
 {
-	int id;
+	unsigned int id;
 	int rows, columns;
 	int loopcount;
 	GLSkyLoopDef *loops;
 	vbo_vertex_t *data;
 } GLSkyVBO;
+
+#define sky_vbo_x (&vbo->data[0].x)
+#define sky_vbo_u (&vbo->data[0].u)
+#define sky_vbo_r (&vbo->data[0].r)
 
 // The texture offset to be applied to the texture coordinates in SkyVertex().
 static int rows, columns;
@@ -1423,6 +1431,7 @@ static float delta = 0.0f;
 
 static int gl_sky_detail = 16;
 
+static boolean vbo_init = false;
 static INT32 lasttex = -1;
 
 #define MAP_COEFF 128.0f
@@ -1550,20 +1559,45 @@ static void gld_BuildSky(int row_count, int col_count)
 static void RenderDome(INT32 skytexture)
 {
 	int i, j;
+	int vbosize;
 	GLSkyVBO *vbo = &sky_vbo;
-
-	pglRotatef(270.0f, 0.0f, 1.0f, 0.0f);
 
 	rows = 4;
 	columns = 4 * gl_sky_detail;
+	vbosize = 2 * rows * (columns * 2 + 2) + columns * 2;
 
+	// generate a new VBO and get the associated ID
+	if (!vbo_init)
+	{
+		pglGenBuffers(1, &vbo->id);
+		vbo_init = true;
+	}
+
+	// Build the sky dome! Yes!
 	if (lasttex != skytexture)
 	{
 		lasttex = skytexture;
 		gld_BuildSky(rows, columns);
+
+		// bind VBO in order to use
+		pglBindBuffer(GL_ARRAY_BUFFER, vbo->id);
+
+		// upload data to VBO
+		pglBufferData(GL_ARRAY_BUFFER, vbosize * sizeof(vbo->data[0]), vbo->data, GL_STATIC_DRAW);
 	}
 
+	// activate and specify pointers to arrays
+	pglBindBuffer(GL_ARRAY_BUFFER, vbo->id);
+	pglVertexPointer(3, GL_FLOAT, sizeof(vbo->data[0]), sky_vbo_x);
+	pglTexCoordPointer(2, GL_FLOAT, sizeof(vbo->data[0]), sky_vbo_u);
+	pglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(vbo->data[0]), sky_vbo_r);
+
+	// activate color arrays
+	pglEnableClientState(GL_COLOR_ARRAY);
+
+	// set transforms
 	pglScalef(1.0f, (float)texh / 230.0f, 1.0f);
+	pglRotatef(270.0f, 0.0f, 1.0f, 0.0f);
 
 	for (j = 0; j < 2; j++)
 	{
@@ -1573,25 +1607,19 @@ static void RenderDome(INT32 skytexture)
 
 			if (j == 0 ? loop->use_texture : !loop->use_texture)
 				continue;
-			else
-			{
-				int k;
-				pglBegin(loop->mode);
-				for (k = loop->vertexindex; k < (loop->vertexindex + loop->vertexcount); k++)
-				{
-					vbo_vertex_t *v = &vbo->data[k];
-					if (loop->use_texture)
-						pglTexCoord2f(v->u, v->v);
-					pglColor4f(v->r, v->g, v->b, v->a);
-					pglVertex3f(v->x, v->y, v->z);
-				}
-				pglEnd();
-			}
+
+			pglDrawArrays(loop->mode, loop->vertexindex, loop->vertexcount);
 		}
 	}
 
 	pglScalef(1.0f, 1.0f, 1.0f);
-	pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	pglColor4ubv(white);
+
+	// bind with 0, so, switch back to normal pointer operation
+	pglBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// deactivate color array
+	pglDisableClientState(GL_COLOR_ARRAY);
 }
 
 EXPORT void HWRAPI(RenderSkyDome) (INT32 tex, INT32 texture_width, INT32 texture_height, FTransform transform)
