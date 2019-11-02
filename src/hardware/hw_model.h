@@ -78,7 +78,7 @@ typedef struct tag_s
 typedef struct
 {
 	INT32 frames[256];
-	INT32 superframes[256];
+	UINT8 numframes;
 	boolean interpolate;
 } modelspr2frames_t;
 

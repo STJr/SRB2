@@ -139,7 +139,7 @@ static loadfunc_t hwdFuncTable[] = {
 	{"GClipRect",           &hwdriver.pfnGClipRect},
 	{"ClearMipMapCache",    &hwdriver.pfnClearMipMapCache},
 	{"SetSpecialState",     &hwdriver.pfnSetSpecialState},
-	{"DrawModel",             &hwdriver.pfnDrawModel},
+	{"DrawModel",           &hwdriver.pfnDrawModel},
 	{"SetTransform",        &hwdriver.pfnSetTransform},
 	{"GetTextureUsed",      &hwdriver.pfnGetTextureUsed},
 	{"GetRenderVersion",    &hwdriver.pfnGetRenderVersion},

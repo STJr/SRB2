@@ -296,7 +296,7 @@ void LoadModelSprite2(model_t *model)
 		char prefix[6];
 		char name[5];
 		char interpolation_flag[3];
-		char framechar[4];
+		char framechars[4];
 		UINT8 frame = 0;
 		UINT8 spr2idx;
 		boolean interpolate = false;
@@ -304,10 +304,11 @@ void LoadModelSprite2(model_t *model)
 		memset(&prefix, 0x00, 6);
 		memset(&name, 0x00, 5);
 		memset(&interpolation_flag, 0x00, 3);
-		memset(&framechar, 0x00, 4);
+		memset(&framechars, 0x00, 4);
 
 		if (strlen(framename) >= 9)
 		{
+			boolean super;
 			char *modelframename = framename;
 			memcpy(&prefix, modelframename, 5);
 			modelframename += 5;
@@ -320,22 +321,31 @@ void LoadModelSprite2(model_t *model)
 				interpolate = true;
 				modelframename += 2;
 			}
-			memcpy(&framechar, modelframename, 3);
-			frame = atoi(framechar);
+			memcpy(&framechars, modelframename, 3);
 
-			if ((!memcmp(prefix, "SPR2_", 5)) || (!memcmp(prefix, "SUPER", 5)))
+			if ((super = (!memcmp(prefix, "SUPER", 5))) || (!memcmp(prefix, "SPR2_", 5)))
 			{
 				spr2idx = 0;
-				while (spr2idx < NUMPLAYERSPRITES)
+				while (spr2idx < free_spr2)
 				{
 					if (!memcmp(spr2names[spr2idx], name, 4))
 					{
 						if (!spr2frames)
-							spr2frames = (modelspr2frames_t*)Z_Calloc(sizeof(modelspr2frames_t)*NUMPLAYERSPRITES, PU_STATIC, NULL);
-						if (!memcmp(prefix, "SUPER", 5))
-							spr2frames[spr2idx].superframes[frame] = i;
+							spr2frames = (modelspr2frames_t*)Z_Calloc(sizeof(modelspr2frames_t)*NUMPLAYERSPRITES*2, PU_STATIC, NULL);
+						if (super)
+							spr2idx |= FF_SPR2SUPER;
+						if (framechars[0])
+						{
+							frame = atoi(framechars);
+							if (spr2frames[spr2idx].numframes < frame+1)
+								spr2frames[spr2idx].numframes = frame+1;
+						}
 						else
-							spr2frames[spr2idx].frames[frame] = i;
+						{
+							frame = spr2frames[spr2idx].numframes;
+							spr2frames[spr2idx].numframes++;
+						}
+						spr2frames[spr2idx].frames[frame] = i;
 						spr2frames[spr2idx].interpolate = interpolate;
 						break;
 					}

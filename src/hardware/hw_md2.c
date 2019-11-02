@@ -848,6 +848,63 @@ static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
 	return spr2frame->interpolate;
 }
 
+//
+// P_GetModelSprite2 (see P_GetSkinSprite2)
+// For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
+// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
+//
+
+static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *player)
+{
+	UINT8 super = 0, i = 0;
+
+	if (!md2 || !md2->model || !md2->model->spr2frames || !skin)
+		return 0;
+
+	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
+		return 0;
+
+	while (!md2->model->spr2frames[spr2].numframes
+		&& spr2 != SPR2_STND
+		&& ++i != 32) // recursion limiter
+	{
+		if (spr2 & FF_SPR2SUPER)
+		{
+			super = FF_SPR2SUPER;
+			spr2 &= ~FF_SPR2SUPER;
+			continue;
+		}
+
+		switch(spr2)
+		{
+		// Normal special cases.
+		case SPR2_JUMP:
+			spr2 = ((player
+					? player->charflags
+					: skin->flags)
+					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
+			break;
+		case SPR2_TIRE:
+			spr2 = ((player
+					? player->charability
+					: skin->ability)
+					== CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
+			break;
+		// Use the handy list, that's what it's there for!
+		default:
+			spr2 = spr2defaults[spr2];
+			break;
+		}
+
+		spr2 |= super;
+	}
+
+	if (i >= 32) // probably an infinite loop...
+		return 0;
+
+	return spr2;
+}
+
 void HWR_DrawMD2(gr_vissprite_t *spr)
 {
 	FSurfaceInfo Surf;
@@ -906,9 +963,10 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		INT32 durs = spr->mobj->state->tics;
 		INT32 tics = spr->mobj->tics;
 		//mdlframe_t *next = NULL;
-		const UINT8 flip = (UINT8)((spr->mobj->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP);
+		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
+		INT32 mod;
 		float finalscale;
 
 		// Apparently people don't like jump frames like that, so back it goes
@@ -1018,34 +1076,49 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			tics = spr->mobj->anim_duration;
 		}
 
-		//FIXME: this is not yet correct
-		if (spr->mobj->sprite2 && md2->model->spr2frames)
+		frame = (spr->mobj->frame & FF_FRAMEMASK);
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
 		{
-			spr2 = (spr->mobj->sprite2 & ~FF_SPR2SUPER);
-			frame = (spr->mobj->frame & FF_FRAMEMASK);
-			if (spr->mobj->sprite2 & FF_SPR2SUPER)
-				frame = md2->model->spr2frames[spr2].superframes[frame];
+			spr2 = P_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
+			mod = md2->model->spr2frames[spr2].numframes;
+#ifndef DONTHIDEDIFFANIMLENGTH // by default, different anim length is masked by the mod
+			if (mod > (INT32)((skin_t *)spr->mobj->skin)->sprites[spr2].numframes)
+				mod = ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes;
+#endif
+			if (mod)
+				frame = md2->model->spr2frames[spr2].frames[frame%mod];
 			else
-				frame = md2->model->spr2frames[spr2].frames[frame];
+				frame = 0;
 		}
 		else
-			frame = (spr->mobj->frame & FF_FRAMEMASK);
+		{
+			mod = md2->model->meshes[0].numFrames;
+			if (mod)
+				frame %= mod;
+		}
 
 #ifdef USE_MODEL_NEXTFRAME
-		if (cv_grmodels.value == 1 && tics <= durs)
+#define INTERPOLERATION_LIMIT TICRATE/4
+		if (cv_grmodels.value == 1 && tics <= durs && tics <= INTERPOLERATION_LIMIT)
 		{
-			if (spr->mobj->sprite2 && md2->model->spr2frames)
+			if (durs > INTERPOLERATION_LIMIT)
+				durs = INTERPOLERATION_LIMIT;
+
+			if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
 			{
-				if (HWR_CanInterpolateSprite2(&md2->model->spr2frames[spr2]))
+				if (mod && HWR_CanInterpolateSprite2(&md2->model->spr2frames[spr2])
+					&& (spr->mobj->frame & FF_ANIMATE
+					|| (spr->mobj->state->nextstate != S_NULL
+					&& states[spr->mobj->state->nextstate].sprite == SPR_PLAY
+					&& ((P_GetSkinSprite2(spr->mobj->skin, (((spr->mobj->player && spr->mobj->player->powers[pw_super]) ? FF_SPR2SUPER : 0)|states[spr->mobj->state->nextstate].frame) & FF_FRAMEMASK, spr->mobj->player) == spr->mobj->sprite2)))))
 				{
-					UINT32 framecount = (&((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2])->numframes;
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
-					if (nextFrame >= framecount)
+					if (nextFrame >= mod)
 						nextFrame = 0;
-					if (spr->mobj->sprite2 & FF_SPR2SUPER)
-						nextFrame = md2->model->spr2frames[spr2].superframes[nextFrame];
-					else
+					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
 						nextFrame = md2->model->spr2frames[spr2].frames[nextFrame];
+					else
+						nextFrame = -1;
 				}
 			}
 			else if (HWR_CanInterpolateModel(spr->mobj, md2->model))
@@ -1054,7 +1127,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				if (spr->mobj->frame & FF_ANIMATE)
 				{
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
-					if (nextFrame >= spr->mobj->state->var1)
+					if (nextFrame >= (INT32)(spr->mobj->state->var1 + (spr->mobj->state->frame & FF_FRAMEMASK)))
 						nextFrame = (spr->mobj->state->frame & FF_FRAMEMASK);
 					//next = &md2->model->meshes[0].frames[nextFrame];
 				}
@@ -1069,13 +1142,14 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				}
 			}
 		}
+#undef INTERPOLERATION_LIMIT
 #endif
 
 		//Hurdler: it seems there is still a small problem with mobj angle
 		p.x = FIXED_TO_FLOAT(spr->mobj->x);
 		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
 
-		if (spr->mobj->eflags & MFE_VERTICALFLIP)
+		if (flip)
 			p.z = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
 		else
 			p.z = FIXED_TO_FLOAT(spr->mobj->z);
