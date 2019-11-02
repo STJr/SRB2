@@ -63,6 +63,7 @@ typedef enum
 	MN_MP_CONNECT,
 	MN_MP_ROOM,
 	MN_MP_PLAYERSETUP, // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	MN_MP_SERVER_OPTIONS,
 
 	// Options
 	MN_OP_MAIN,
@@ -103,6 +104,7 @@ typedef enum
 	MN_SR_LEVELSELECT,
 	MN_SR_UNLOCKCHECKLIST,
 	MN_SR_EMBLEMHINT,
+	MN_SR_PLAYER,
 
 	// Addons (Part of MISC, but let's make it our own)
 	MN_AD_MAIN,
@@ -323,9 +325,18 @@ typedef struct
 	char notes[441];
 	char picname[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
-	patch_t *pic;
+	patch_t *charpic;
 	UINT8 prev;
 	UINT8 next;
+
+	// new character select
+	char displayname[SKINNAMESIZE+1];
+	SINT8 skinnum[2];
+	UINT8 oppositecolor;
+	char nametag[8];
+	patch_t *namepic;
+	UINT8 tagtextcolor;
+	UINT8 tagoutlinecolor;
 } description_t;
 
 // level select platter
@@ -374,6 +385,7 @@ typedef struct
 
 extern description_t description[MAXSKINS];
 
+extern consvar_t cv_showfocuslost;
 extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;
 extern CV_PossibleValue_t gametype_cons_t[];
 

@@ -5,6 +5,44 @@ Changelog {#changelog}
 For fully detailed change log, please see the source repository directly. This
 is just a high-level summary.
 
+### libopenmpt 0.4.7 (2019-09-23)
+
+ *  [**Bug**] Compilation fix for various platforms that do not provide
+    `std::aligned_alloc` in C++17 mode. The problematic dependency has been
+    removed. This should fix build problems on MinGW, OpenBSD, Haiku, and others
+    for good.
+
+ *  J2B: Ignore notes with non-existing instrument (fixes Ending.j2b).
+
+ *  mpg123: Update to v1.25.13 (2019-08-24).
+ *  ogg: Update to v1.3.4. (2019-08-31).
+ *  flac: Update to v1.3.3. (2019-08-04).
+
+### libopenmpt 0.4.6 (2019-08-10)
+
+ *  [**Bug**] Compilation fix for OpenBSD.
+ *  [**Bug**] Compilation fix for NO_PLUGINS being defined.
+
+ *  in_openmpt: Correct documentation. `openmpt-mpg123.dll` must be placed into
+    the Winamp directory.
+
+ *  Detect IT files unpacked with early UNMO3 versions.
+
+ *  mpg123: Update to v1.25.11 (2019-07-18).
+ *  minimp3: Update to commit 977514a6dfc4960d819a103f43b358e58ac6c28f
+    (2019-07-24).
+ *  miniz: Update to v2.1.0 (2019-05-05).
+ *  stb_vorbis: Update to v1.17 (2019-08-09).
+
+### libopenmpt 0.4.5 (2019-05-27)
+
+ *  [**Sec**] Possible crash during playback due out-of-bounds read in XM and
+    MT2 files (r11608).
+
+ *  Breaking out of a sustain loop through Note-Off sometimes didn't continue in
+    the regular sample loop.
+ *  Seeking did not stop notes playing with XM Key Off (Kxx) effect.
+
 ### libopenmpt 0.4.4 (2019-04-07)
 
  *  [**Bug**] Channel VU meters were swapped.

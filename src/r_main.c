@@ -1218,6 +1218,7 @@ void R_RegisterEngineStuff(void)
 #endif
 	CV_RegisterVar(&cv_grmodels);
 	CV_RegisterVar(&cv_grspritebillboarding);
+	CV_RegisterVar(&cv_grskydome);
 #endif
 
 #ifdef HWRENDER

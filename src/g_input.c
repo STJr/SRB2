@@ -709,8 +709,8 @@ void G_DefineDefaultControls(void)
 
 	for (i = 1; i < num_gamecontrolschemes; i++) // skip gcs_custom (0)
 	{
-		gamecontroldefault[i][gc_weaponnext ][0] = 'e';
-		gamecontroldefault[i][gc_weaponprev ][0] = 'q';
+		gamecontroldefault[i][gc_weaponnext ][0] = KEY_MOUSEWHEELUP+0;
+		gamecontroldefault[i][gc_weaponprev ][0] = KEY_MOUSEWHEELDOWN+0;
 		gamecontroldefault[i][gc_wepslot1   ][0] = '1';
 		gamecontroldefault[i][gc_wepslot2   ][0] = '2';
 		gamecontroldefault[i][gc_wepslot3   ][0] = '3';

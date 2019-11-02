@@ -86,10 +86,7 @@
 D_DIR?=../bin/Resources
 D_FILES=$(D_DIR)/srb2.pk3 \
 	$(D_DIR)/player.dta \
-	$(D_DIR)/rings.wpn \
-	$(D_DIR)/drill.dta \
-	$(D_DIR)/soar.dta \
-	$(D_DIR)/zones.dta \
+	$(D_DIR)/zones.pk3 \
 	$(D_DIR)/music.dta \
 
 PKG_CONFIG?=pkg-config

@@ -75,6 +75,7 @@ INT32 curbgcolor;
 INT32 curbgxspeed;
 INT32 curbgyspeed;
 boolean curbghide;
+boolean hidetitlemap;		// WARNING: set to false by M_SetupNextMenu and M_ClearMenus
 
 static UINT8  curDemo = 0;
 static UINT32 demoDelayLeft;
@@ -637,6 +638,7 @@ static void F_IntroDrawScene(void)
 		}
 		else
 		{
+			menuanimtimer = animtimer; // Reusing this variable for the intro to fix the scrolling sky, better than changing the function around.
 			F_SkyScroll(80*4, 0, "TITLESKY");
 			if (timetonext == 6)
 			{
@@ -1584,15 +1586,15 @@ void F_StartEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 7)
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= (XTRA_ENDING+2)+1)
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
-			sprframe = &sprdef->spriteframes[4];
+			sprframe = &sprdef->spriteframes[XTRA_ENDING];
 			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
-			sprframe = &sprdef->spriteframes[5];
+			sprframe = &sprdef->spriteframes[XTRA_ENDING+1];
 			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
-			sprframe = &sprdef->spriteframes[6];
+			sprframe = &sprdef->spriteframes[XTRA_ENDING+2];
 			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 		}
 		else // Show a star if your character doesn't have an ending firework display. (Basically the MISSINGs for this)
@@ -2097,12 +2099,12 @@ void F_InitMenuPresValues(void)
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
-	curbgxspeed = titlescrollxspeed;
-	curbgyspeed = titlescrollyspeed;
-	curbghide = true;
+	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
+	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 22 : titlescrollyspeed;
+	curbghide = (gamestate == GS_TIMEATTACK) ? false : true;
 
 	// Find current presentation values
-	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "RECATTBG" : "TITLESKY");
 	M_SetMenuCurFadeValue(16);
 	M_SetMenuCurHideTitlePics();
 }
