@@ -11463,6 +11463,13 @@ void P_PlayerThink(player_t *player)
 			player->drawangle = player->mo->angle;
 		else if (P_PlayerInPain(player))
 			;
+		else if (player->powers[pw_justsprung]) // restricted, potentially by lua
+		{
+#ifdef SPRINGSPIN
+			if (player->powers[pw_justsprung] & (1<<15))
+				player->drawangle += (player->powers[pw_justsprung] & ~(1<<15))*(ANG2+ANG1);
+#endif
+		}
 		else if (player->powers[pw_carry] && player->mo->tracer) // carry
 		{
 			switch (player->powers[pw_carry])
@@ -11499,13 +11506,6 @@ void P_PlayerThink(player_t *player)
 					player->drawangle = player->mo->angle;
 					break;
 			}
-		}
-		else if (player->powers[pw_justsprung])
-		{
-#ifdef SPRINGSPIN
-			if (player->powers[pw_justsprung] & (1<<15))
-				player->drawangle += (player->powers[pw_justsprung] & ~(1<<15))*(ANG2+ANG1);
-#endif
 		}
 		else if ((player->skidtime > (TICRATE/2 - 2) || ((player->pflags & (PF_SPINNING|PF_STARTDASH)) == PF_SPINNING)) && (abs(player->rmomx) > 5*player->mo->scale || abs(player->rmomy) > 5*player->mo->scale)) // spin/skid force
 			player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
@@ -11578,7 +11578,7 @@ void P_PlayerThink(player_t *player)
 				statenum_t stat = player->mo->state-states;
 				if (stat == S_PLAY_WAIT)
 					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-				else if (stat == S_PLAY_STND)
+				else if (stat == S_PLAY_STND && player->mo->tics != -1)
 					player->mo->tics++;
 			}
 		}

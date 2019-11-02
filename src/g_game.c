@@ -2755,6 +2755,8 @@ void G_DoReborn(INT32 playernum)
 			LUAh_MapChange(gamemap);
 #endif
 			G_DoLoadLevel(true);
+			if (metalrecording)
+				G_BeginMetal();
 			return;
 		}
 	}
@@ -2922,7 +2924,7 @@ boolean G_GametypeUsesLives(void)
 {
 	 // Coop, Competitive
 	if ((gametype == GT_COOP || gametype == GT_COMPETITION)
-	 && !modeattacking // No lives in Time Attack
+	 && !(modeattacking || metalrecording) // No lives in Time Attack
 	 //&& !G_IsSpecialStage(gamemap)
 	 && !(maptol & TOL_NIGHTS)) // No lives in NiGHTS
 		return true;
@@ -5510,8 +5512,10 @@ void G_BeginMetal(void)
 {
 	mobj_t *mo = players[consoleplayer].mo;
 
+#if 0
 	if (demo_p)
 		return;
+#endif
 
 	demo_p = demobuffer;
 
