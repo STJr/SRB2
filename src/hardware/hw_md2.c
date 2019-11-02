@@ -1085,16 +1085,15 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			if (mod > (INT32)((skin_t *)spr->mobj->skin)->sprites[spr2].numframes)
 				mod = ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes;
 #endif
-			if (mod)
-				frame = md2->model->spr2frames[spr2].frames[frame%mod];
-			else
-				frame = 0;
+			if (!mod)
+				mod = 1;
+			frame = md2->model->spr2frames[spr2].frames[frame%mod];
 		}
 		else
 		{
 			mod = md2->model->meshes[0].numFrames;
-			if (mod)
-				frame %= mod;
+			if (!mod)
+				mod = 1;
 		}
 
 #ifdef USE_MODEL_NEXTFRAME
@@ -1106,7 +1105,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 			if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
 			{
-				if (mod && HWR_CanInterpolateSprite2(&md2->model->spr2frames[spr2])
+				if (HWR_CanInterpolateSprite2(&md2->model->spr2frames[spr2])
 					&& (spr->mobj->frame & FF_ANIMATE
 					|| (spr->mobj->state->nextstate != S_NULL
 					&& states[spr->mobj->state->nextstate].sprite == SPR_PLAY
@@ -1128,17 +1127,13 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				{
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
 					if (nextFrame >= (INT32)(spr->mobj->state->var1 + (spr->mobj->state->frame & FF_FRAMEMASK)))
-						nextFrame = (spr->mobj->state->frame & FF_FRAMEMASK);
-					//next = &md2->model->meshes[0].frames[nextFrame];
+						nextFrame = (spr->mobj->state->frame & FF_FRAMEMASK) % mod;
 				}
 				else
 				{
 					if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
-						&& !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_WAIT) && spr->mobj->state == &states[S_PLAY_STND]))
-					{
-						nextFrame = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK);
-						//next = &md2->model->meshes[0].frames[nextFrame];
-					}
+					&& !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_WAIT) && spr->mobj->state == &states[S_PLAY_STND]))
+						nextFrame = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % mod;
 				}
 			}
 		}
