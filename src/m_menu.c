@@ -2291,7 +2291,6 @@ void M_InitMenuPresTables(void)
 		menupres[i].hidetitlepics = -1; // inherits global hidetitlepics
 		menupres[i].ttmode = TTMODE_NONE;
 		menupres[i].ttscale = UINT8_MAX;
-		menupres[i].ttcounterset = INT32_MAX;
 		menupres[i].ttname[0] = 0;
 		menupres[i].ttx = INT16_MAX;
 		menupres[i].tty = INT16_MAX;
@@ -2496,7 +2495,6 @@ static boolean MIT_SetCurTitlePics(UINT32 menutype, INT32 level, INT32 *retval, 
 			curhidepics = menupres[menutype].hidetitlepics;
 			curttmode = menupres[menutype].ttmode;
 			curttscale = (menupres[menutype].ttscale != UINT8_MAX ? menupres[menutype].ttscale : ttscale);
-			curttcounterset = (menupres[menutype].ttcounterset != INT32_MAX ? menupres[menutype].ttcounterset : ttcounterset);
 			strncpy(curttname, menupres[menutype].ttname, 9);
 			curttx = (menupres[menutype].ttx != INT16_MAX ? menupres[menutype].ttx : ttx);
 			curtty = (menupres[menutype].tty != INT16_MAX ? menupres[menutype].tty : tty);
@@ -2512,7 +2510,6 @@ static boolean MIT_SetCurTitlePics(UINT32 menutype, INT32 level, INT32 *retval, 
 		curhidepics = menupres[menutype].hidetitlepics;
 		curttmode = menupres[menutype].ttmode;
 		curttscale = (menupres[menutype].ttscale != UINT8_MAX ? menupres[menutype].ttscale : ttscale);
-		curttcounterset = (menupres[menutype].ttcounterset != INT32_MAX ? menupres[menutype].ttcounterset : ttcounterset);
 		return true;
 	}
 	else if (!level)
@@ -2520,7 +2517,6 @@ static boolean MIT_SetCurTitlePics(UINT32 menutype, INT32 level, INT32 *retval, 
 		curhidepics = hidetitlepics;
 		curttmode = ttmode;
 		curttscale = ttscale;
-		curttcounterset = ttcounterset;
 		strncpy(curttname, ttname, 9);
 		curttx = ttx;
 		curtty = tty;
@@ -2625,7 +2621,6 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 
 	curttmode = ttmode;
 	curttscale = ttscale;
-	curttcounterset = ttcounterset;
 	strncpy(curttname, ttname, 9);
 	curttx = ttx;
 	curtty = tty;

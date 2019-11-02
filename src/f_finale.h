@@ -90,7 +90,6 @@ typedef enum
 
 extern ttmode_enum ttmode;
 extern UINT8 ttscale;
-extern INT32 ttcounterset;
 // ttmode user vars
 extern char ttname[9];
 extern INT16 ttx;
@@ -119,7 +118,6 @@ extern boolean hidetitlemap;
 extern boolean curhidepics;
 extern ttmode_enum curttmode;
 extern UINT8 curttscale;
-extern INT32 curttcounterset;
 // ttmode user vars
 extern char curttname[9];
 extern INT16 curttx;

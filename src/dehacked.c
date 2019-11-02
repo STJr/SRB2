@@ -2116,11 +2116,6 @@ static void readmenu(MYFILE *f, INT32 num)
 				menupres[num].ttscale = max(1, min(8, (UINT8)get_number(word2)));
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "TITLEPICSCOUNTERSET"))
-			{
-				menupres[num].ttcounterset = (INT32)get_number(word2);
-				titlechanged = true;
-			}
 			else if (fastcmp(word, "TITLEPICSNAME"))
 			{
 				strncpy(menupres[num].ttname, word2, 9);
@@ -3567,11 +3562,6 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "TITLEPICSSCALE"))
 			{
 				ttscale = max(1, min(8, (UINT8)get_number(word2)));
-				titlechanged = true;
-			}
-			else if (fastcmp(word, "TITLEPICSCOUNTERSET"))
-			{
-				ttcounterset = (INT32)get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLEPICSNAME"))

@@ -84,7 +84,6 @@ static UINT32 demoIdleLeft;
 
 ttmode_enum ttmode = TTMODE_OLD;
 UINT8 ttscale = 1; // FRACUNIT / ttscale
-INT32 ttcounterset = -1;
 // ttmode user vars
 char ttname[9];
 INT16 ttx = 0;
@@ -95,7 +94,6 @@ UINT16 tttics = 1;
 boolean curhidepics;
 ttmode_enum curttmode;
 UINT8 curttscale;
-INT32 curttcounterset;
 // ttmode user vars
 char curttname[9];
 INT16 curttx;
@@ -2153,7 +2151,6 @@ void F_InitMenuPresValues(void)
 	curhidepics = hidetitlepics;
 	curttmode = ttmode;
 	curttscale = ttscale;
-	curttcounterset = ttcounterset;
 	strncpy(curttname, ttname, 9);
 	curttx = ttx;
 	curtty = tty;
