@@ -120,22 +120,22 @@ static patch_t *ttspop7;
 
 // ttmode alacroix
 static patch_t *t1ribb[TTMAX_ALACROIX];
-static patch_t *t1sntx[TTMAX_ALACROIX];
+static patch_t *t1sont[TTMAX_ALACROIX];
 static patch_t *t1robo[TTMAX_ALACROIX];
 static patch_t *t1twot[TTMAX_ALACROIX];
 static patch_t *t1embl[TTMAX_ALACROIX];
 static patch_t *t2ribb[TTMAX_ALACROIX];
-static patch_t *t2sntx[TTMAX_ALACROIX];
+static patch_t *t2sont[TTMAX_ALACROIX];
 static patch_t *t2robo[TTMAX_ALACROIX];
 static patch_t *t2twot[TTMAX_ALACROIX];
 static patch_t *t2embl[TTMAX_ALACROIX];
 static patch_t *t4ribb[TTMAX_ALACROIX];
-static patch_t *t4sntx[TTMAX_ALACROIX];
+static patch_t *t4sont[TTMAX_ALACROIX];
 static patch_t *t4robo[TTMAX_ALACROIX];
 static patch_t *t4twot[TTMAX_ALACROIX];
 static patch_t *t4embl[TTMAX_ALACROIX];
 static patch_t *t6ribb[TTMAX_ALACROIX];
-static patch_t *t6sntx[TTMAX_ALACROIX];
+static patch_t *t6sont[TTMAX_ALACROIX];
 static patch_t *t6robo[TTMAX_ALACROIX];
 static patch_t *t6twot[TTMAX_ALACROIX];
 static patch_t *t6embl[TTMAX_ALACROIX];
@@ -2369,22 +2369,22 @@ else \
 
 			LOADTTGFX(t1embl, "T1EMBL", TTMAX_ALACROIX)
 			LOADTTGFX(t1ribb, "T1RIBB", TTMAX_ALACROIX)
-			LOADTTGFX(t1sntx, "T1SNTX", TTMAX_ALACROIX)
+			LOADTTGFX(t1sont, "T1SONT", TTMAX_ALACROIX)
 			LOADTTGFX(t1robo, "T1ROBO", TTMAX_ALACROIX)
 			LOADTTGFX(t1twot, "T1TWOT", TTMAX_ALACROIX)
 			LOADTTGFX(t2embl, "T2EMBL", TTMAX_ALACROIX)
 			LOADTTGFX(t2ribb, "T2RIBB", TTMAX_ALACROIX)
-			LOADTTGFX(t2sntx, "T2SNTX", TTMAX_ALACROIX)
+			LOADTTGFX(t2sont, "T2SONT", TTMAX_ALACROIX)
 			LOADTTGFX(t2robo, "T2ROBO", TTMAX_ALACROIX)
 			LOADTTGFX(t2twot, "T2TWOT", TTMAX_ALACROIX)
 			LOADTTGFX(t4embl, "T4EMBL", TTMAX_ALACROIX)
 			LOADTTGFX(t4ribb, "T4RIBB", TTMAX_ALACROIX)
-			LOADTTGFX(t4sntx, "T4SNTX", TTMAX_ALACROIX)
+			LOADTTGFX(t4sont, "T4SONT", TTMAX_ALACROIX)
 			LOADTTGFX(t4robo, "T4ROBO", TTMAX_ALACROIX)
 			LOADTTGFX(t4twot, "T4TWOT", TTMAX_ALACROIX)
 			LOADTTGFX(t6embl, "T6EMBL", TTMAX_ALACROIX)
 			LOADTTGFX(t6ribb, "T6RIBB", TTMAX_ALACROIX)
-			LOADTTGFX(t6sntx, "T6SNTX", TTMAX_ALACROIX)
+			LOADTTGFX(t6sont, "T6SONT", TTMAX_ALACROIX)
 			LOADTTGFX(t6robo, "T6ROBO", TTMAX_ALACROIX)
 			LOADTTGFX(t6twot, "T6TWOT", TTMAX_ALACROIX)
 			break;
@@ -2483,7 +2483,7 @@ void F_TitleScreenDrawer(void)
 
 #define TTEMBL (presc == 6 ? t6embl : presc == 4 ? t4embl : presc == 2 ? t2embl : t1embl)
 #define TTRIBB (presc == 6 ? t6ribb : presc == 4 ? t4ribb : presc == 2 ? t2ribb : t1ribb)
-#define TTSNTX (presc == 6 ? t6sntx : presc == 4 ? t4sntx : presc == 2 ? t2sntx : t1sntx)
+#define TTSONT (presc == 6 ? t6sont : presc == 4 ? t4sont : presc == 2 ? t2sont : t1sont)
 #define TTROBO (presc == 6 ? t6robo : presc == 4 ? t4robo : presc == 2 ? t2robo : t1robo)
 #define TTTWOT (presc == 6 ? t6twot : presc == 4 ? t4twot : presc == 2 ? t2twot : t1twot)
 
@@ -2511,7 +2511,7 @@ void F_TitleScreenDrawer(void)
 				INT32 fadeval = 0;
 
 				// Draw SONIC text
-				V_DrawSciencePatch(90<<FRACBITS, 92<<FRACBITS, 0, TTSNTX[min(finalecount-10, 39)], sc);
+				V_DrawSciencePatch(90<<FRACBITS, 92<<FRACBITS, 0, TTSONT[min(finalecount-10, 28)], sc);
 
 				// Draw ROBO BLAST 2, and fade them in.
 				if (finalecount < 20)
