@@ -121,11 +121,26 @@ static patch_t *ttspop6;
 static patch_t *ttspop7;
 
 // ttmode alacroix
-static patch_t *ttribb[TTMAX_ALACROIX];
-static patch_t *ttsntx[TTMAX_ALACROIX];
-static patch_t *ttrobo[TTMAX_ALACROIX];
-static patch_t *tttwot[TTMAX_ALACROIX];
-static patch_t *ttembl[TTMAX_ALACROIX];
+static patch_t *t1ribb[TTMAX_ALACROIX];
+static patch_t *t1sntx[TTMAX_ALACROIX];
+static patch_t *t1robo[TTMAX_ALACROIX];
+static patch_t *t1twot[TTMAX_ALACROIX];
+static patch_t *t1embl[TTMAX_ALACROIX];
+static patch_t *t2ribb[TTMAX_ALACROIX];
+static patch_t *t2sntx[TTMAX_ALACROIX];
+static patch_t *t2robo[TTMAX_ALACROIX];
+static patch_t *t2twot[TTMAX_ALACROIX];
+static patch_t *t2embl[TTMAX_ALACROIX];
+static patch_t *t4ribb[TTMAX_ALACROIX];
+static patch_t *t4sntx[TTMAX_ALACROIX];
+static patch_t *t4robo[TTMAX_ALACROIX];
+static patch_t *t4twot[TTMAX_ALACROIX];
+static patch_t *t4embl[TTMAX_ALACROIX];
+static patch_t *t6ribb[TTMAX_ALACROIX];
+static patch_t *t6sntx[TTMAX_ALACROIX];
+static patch_t *t6robo[TTMAX_ALACROIX];
+static patch_t *t6twot[TTMAX_ALACROIX];
+static patch_t *t6embl[TTMAX_ALACROIX];
 
 // ttmode user
 static patch_t *ttuser[TTMAX_USER];
@@ -2355,11 +2370,26 @@ else \
 			lumpnum_t lumpnum;
 			char lumpname[9];
 
-			LOADTTGFX(ttembl, "TTEMBL", TTMAX_ALACROIX)
-			LOADTTGFX(ttribb, "TTRIBB", TTMAX_ALACROIX)
-			LOADTTGFX(ttsntx, "TTSNTX", TTMAX_ALACROIX)
-			LOADTTGFX(ttrobo, "TTROBO", TTMAX_ALACROIX)
-			LOADTTGFX(tttwot, "TTTWOT", TTMAX_ALACROIX)
+			LOADTTGFX(t1embl, "T1EMBL", TTMAX_ALACROIX)
+			LOADTTGFX(t1ribb, "T1RIBB", TTMAX_ALACROIX)
+			LOADTTGFX(t1sntx, "T1SNTX", TTMAX_ALACROIX)
+			LOADTTGFX(t1robo, "T1ROBO", TTMAX_ALACROIX)
+			LOADTTGFX(t1twot, "T1TWOT", TTMAX_ALACROIX)
+			LOADTTGFX(t2embl, "T2EMBL", TTMAX_ALACROIX)
+			LOADTTGFX(t2ribb, "T2RIBB", TTMAX_ALACROIX)
+			LOADTTGFX(t2sntx, "T2SNTX", TTMAX_ALACROIX)
+			LOADTTGFX(t2robo, "T2ROBO", TTMAX_ALACROIX)
+			LOADTTGFX(t2twot, "T2TWOT", TTMAX_ALACROIX)
+			LOADTTGFX(t4embl, "T4EMBL", TTMAX_ALACROIX)
+			LOADTTGFX(t4ribb, "T4RIBB", TTMAX_ALACROIX)
+			LOADTTGFX(t4sntx, "T4SNTX", TTMAX_ALACROIX)
+			LOADTTGFX(t4robo, "T4ROBO", TTMAX_ALACROIX)
+			LOADTTGFX(t4twot, "T4TWOT", TTMAX_ALACROIX)
+			LOADTTGFX(t6embl, "T6EMBL", TTMAX_ALACROIX)
+			LOADTTGFX(t6ribb, "T6RIBB", TTMAX_ALACROIX)
+			LOADTTGFX(t6sntx, "T6SNTX", TTMAX_ALACROIX)
+			LOADTTGFX(t6robo, "T6ROBO", TTMAX_ALACROIX)
+			LOADTTGFX(t6twot, "T6TWOT", TTMAX_ALACROIX)
 			break;
 		}
 
@@ -2381,7 +2411,9 @@ else \
 void F_TitleScreenDrawer(void)
 {
 	boolean hidepics;
-	fixed_t sc = FRACUNIT / max(1, curttscale);
+	fixed_t presc = max(1, min(6, (vid.dupx == 6 ? 2 : vid.dupx == 5 ? 6 : (vid.dupx == 3 ? 4 : vid.dupx))));
+	fixed_t sc = (curttmode == TTMODE_ALACROIX ? FRACUNIT / presc
+		: FRACUNIT / max(1, curttscale));
 
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
@@ -2452,6 +2484,12 @@ void F_TitleScreenDrawer(void)
 				ALICE ANIMATION CODE GOES HERE
 			 */
 
+#define TTEMBL (presc == 6 ? t6embl : presc == 4 ? t4embl : presc == 2 ? t2embl : t1embl)
+#define TTRIBB (presc == 6 ? t6ribb : presc == 4 ? t4ribb : presc == 2 ? t2ribb : t1ribb)
+#define TTSNTX (presc == 6 ? t6sntx : presc == 4 ? t4sntx : presc == 2 ? t2sntx : t1sntx)
+#define TTROBO (presc == 6 ? t6robo : presc == 4 ? t4robo : presc == 2 ? t2robo : t1robo)
+#define TTTWOT (presc == 6 ? t6twot : presc == 4 ? t4twot : presc == 2 ? t2twot : t1twot)
+
 			// Start at black background, then at 8 tics, white flash to title background.
 			// Why 8 tics: The fanfare starts at 1.5 secs from O__TITLE.
 			// 1.5 secs * 35 tics/sec = 52.5 tics
@@ -2464,10 +2502,10 @@ void F_TitleScreenDrawer(void)
 				V_DrawFadeScreen(0, 17-finalecount);
 
 			// Draw emblem
-			V_DrawSciencePatch(52<<FRACBITS, 22<<FRACBITS, 0, ttembl[0], sc);
+			V_DrawSciencePatch(40<<FRACBITS, 20<<FRACBITS, 0, TTEMBL[0], sc);
 
 			// Ribbon unfurls, revealing SONIC text, from frame 0 to frame 24. SONIC text is pre-baked into ribbon graphic.
-			V_DrawSciencePatch(50<<FRACBITS, 84<<FRACBITS, 0, ttribb[min(max(0, finalecount), 24)], sc);
+			V_DrawSciencePatch(40<<FRACBITS, 88<<FRACBITS, 0, TTRIBB[min(max(0, finalecount), 24)], sc);
 			
 			// Animate SONIC text after ribbon fully reveals it, at frame 10
 			if(max(0, finalecount) > 9)
@@ -2476,7 +2514,7 @@ void F_TitleScreenDrawer(void)
 				INT32 fadeval = 0;
 
 				// Draw SONIC text
-				V_DrawSciencePatch(94<<FRACBITS, 88<<FRACBITS, 0, ttsntx[min(finalecount-10, 39)], sc);
+				V_DrawSciencePatch(90<<FRACBITS, 92<<FRACBITS, 0, TTSNTX[min(finalecount-10, 39)], sc);
 
 				// Draw ROBO BLAST 2, and fade them in.
 				if (finalecount < 20)
@@ -2495,10 +2533,10 @@ void F_TitleScreenDrawer(void)
 						case 2: fadeval = V_10TRANS; break;
 					}
 				}
-				V_DrawSciencePatch(88<<FRACBITS, 125<<FRACBITS, fadeval, ttrobo[0], sc);
-				V_DrawSciencePatch(110<<FRACBITS, 112<<FRACBITS, fadeval, tttwot[min(finalecount-10, 21)], sc);
+				V_DrawSciencePatch(80<<FRACBITS, 132<<FRACBITS, fadeval, TTROBO[0], sc);
+				V_DrawSciencePatch(107<<FRACBITS, 118<<FRACBITS, fadeval, TTTWOT[min(finalecount-10, 21)], sc);
 			}
-			
+
 			break;
 
 		case TTMODE_USER:
