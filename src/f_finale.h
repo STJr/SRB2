@@ -96,6 +96,8 @@ extern INT16 ttx;
 extern INT16 tty;
 extern INT16 ttloop;
 extern UINT16 tttics;
+extern boolean ttavailable[6];
+
 
 typedef enum
 {

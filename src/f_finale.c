@@ -119,120 +119,56 @@ static patch_t *ttspop6;
 static patch_t *ttspop7;
 
 // ttmode alacroix
-static patch_t *t1ribb[TTMAX_ALACROIX];
-static patch_t *t1sont[TTMAX_ALACROIX];
-static patch_t *t1robo[TTMAX_ALACROIX];
-static patch_t *t1twot[TTMAX_ALACROIX];
-static patch_t *t1embl[TTMAX_ALACROIX];
-static patch_t *t1rbtx[TTMAX_ALACROIX];
-static patch_t *t1soib[TTMAX_ALACROIX];
-static patch_t *t1soif[TTMAX_ALACROIX];
-static patch_t *t1soba[TTMAX_ALACROIX];
-static patch_t *t1sobk[TTMAX_ALACROIX];
-static patch_t *t1sodh[TTMAX_ALACROIX];
-static patch_t *t1taib[TTMAX_ALACROIX];
-static patch_t *t1taif[TTMAX_ALACROIX];
-static patch_t *t1taba[TTMAX_ALACROIX];
-static patch_t *t1tabk[TTMAX_ALACROIX];
-static patch_t *t1tabt[TTMAX_ALACROIX];
-static patch_t *t1taft[TTMAX_ALACROIX];
-static patch_t *t1knib[TTMAX_ALACROIX];
-static patch_t *t1knif[TTMAX_ALACROIX];
-static patch_t *t1knba[TTMAX_ALACROIX];
-static patch_t *t1knbk[TTMAX_ALACROIX];
-static patch_t *t1kndh[TTMAX_ALACROIX];
+static SINT8 testttscale = 0;
+static SINT8 activettscale = 0;
+boolean ttavailable[6];
+boolean ttloaded[6];
 
-static patch_t *t2ribb[TTMAX_ALACROIX];
-static patch_t *t2sont[TTMAX_ALACROIX];
-static patch_t *t2robo[TTMAX_ALACROIX];
-static patch_t *t2twot[TTMAX_ALACROIX];
-static patch_t *t2embl[TTMAX_ALACROIX];
-static patch_t *t2rbtx[TTMAX_ALACROIX];
-static patch_t *t2soib[TTMAX_ALACROIX];
-static patch_t *t2soif[TTMAX_ALACROIX];
-static patch_t *t2soba[TTMAX_ALACROIX];
-static patch_t *t2sobk[TTMAX_ALACROIX];
-static patch_t *t2sodh[TTMAX_ALACROIX];
-static patch_t *t2taib[TTMAX_ALACROIX];
-static patch_t *t2taif[TTMAX_ALACROIX];
-static patch_t *t2taba[TTMAX_ALACROIX];
-static patch_t *t2tabk[TTMAX_ALACROIX];
-static patch_t *t2tabt[TTMAX_ALACROIX];
-static patch_t *t2taft[TTMAX_ALACROIX];
-static patch_t *t2knib[TTMAX_ALACROIX];
-static patch_t *t2knif[TTMAX_ALACROIX];
-static patch_t *t2knba[TTMAX_ALACROIX];
-static patch_t *t2knbk[TTMAX_ALACROIX];
-static patch_t *t2kndh[TTMAX_ALACROIX];
+static patch_t *ttribb[6][TTMAX_ALACROIX];
+static patch_t *ttsont[6][TTMAX_ALACROIX];
+static patch_t *ttrobo[6][TTMAX_ALACROIX];
+static patch_t *tttwot[6][TTMAX_ALACROIX];
+static patch_t *ttembl[6][TTMAX_ALACROIX];
+static patch_t *ttrbtx[6][TTMAX_ALACROIX];
+static patch_t *ttsoib[6][TTMAX_ALACROIX];
+static patch_t *ttsoif[6][TTMAX_ALACROIX];
+static patch_t *ttsoba[6][TTMAX_ALACROIX];
+static patch_t *ttsobk[6][TTMAX_ALACROIX];
+static patch_t *ttsodh[6][TTMAX_ALACROIX];
+static patch_t *tttaib[6][TTMAX_ALACROIX];
+static patch_t *tttaif[6][TTMAX_ALACROIX];
+static patch_t *tttaba[6][TTMAX_ALACROIX];
+static patch_t *tttabk[6][TTMAX_ALACROIX];
+static patch_t *tttabt[6][TTMAX_ALACROIX];
+static patch_t *tttaft[6][TTMAX_ALACROIX];
+static patch_t *ttknib[6][TTMAX_ALACROIX];
+static patch_t *ttknif[6][TTMAX_ALACROIX];
+static patch_t *ttknba[6][TTMAX_ALACROIX];
+static patch_t *ttknbk[6][TTMAX_ALACROIX];
+static patch_t *ttkndh[6][TTMAX_ALACROIX];
 
-static patch_t *t4ribb[TTMAX_ALACROIX];
-static patch_t *t4sont[TTMAX_ALACROIX];
-static patch_t *t4robo[TTMAX_ALACROIX];
-static patch_t *t4twot[TTMAX_ALACROIX];
-static patch_t *t4embl[TTMAX_ALACROIX];
-static patch_t *t4rbtx[TTMAX_ALACROIX];
-static patch_t *t4soib[TTMAX_ALACROIX];
-static patch_t *t4soif[TTMAX_ALACROIX];
-static patch_t *t4soba[TTMAX_ALACROIX];
-static patch_t *t4sobk[TTMAX_ALACROIX];
-static patch_t *t4sodh[TTMAX_ALACROIX];
-static patch_t *t4taib[TTMAX_ALACROIX];
-static patch_t *t4taif[TTMAX_ALACROIX];
-static patch_t *t4taba[TTMAX_ALACROIX];
-static patch_t *t4tabk[TTMAX_ALACROIX];
-static patch_t *t4tabt[TTMAX_ALACROIX];
-static patch_t *t4taft[TTMAX_ALACROIX];
-static patch_t *t4knib[TTMAX_ALACROIX];
-static patch_t *t4knif[TTMAX_ALACROIX];
-static patch_t *t4knba[TTMAX_ALACROIX];
-static patch_t *t4knbk[TTMAX_ALACROIX];
-static patch_t *t4kndh[TTMAX_ALACROIX];
-
-static patch_t *t6ribb[TTMAX_ALACROIX];
-static patch_t *t6sont[TTMAX_ALACROIX];
-static patch_t *t6robo[TTMAX_ALACROIX];
-static patch_t *t6twot[TTMAX_ALACROIX];
-static patch_t *t6embl[TTMAX_ALACROIX];
-static patch_t *t6rbtx[TTMAX_ALACROIX];
-static patch_t *t6soib[TTMAX_ALACROIX];
-static patch_t *t6soif[TTMAX_ALACROIX];
-static patch_t *t6soba[TTMAX_ALACROIX];
-static patch_t *t6sobk[TTMAX_ALACROIX];
-static patch_t *t6sodh[TTMAX_ALACROIX];
-static patch_t *t6taib[TTMAX_ALACROIX];
-static patch_t *t6taif[TTMAX_ALACROIX];
-static patch_t *t6taba[TTMAX_ALACROIX];
-static patch_t *t6tabk[TTMAX_ALACROIX];
-static patch_t *t6tabt[TTMAX_ALACROIX];
-static patch_t *t6taft[TTMAX_ALACROIX];
-static patch_t *t6knib[TTMAX_ALACROIX];
-static patch_t *t6knif[TTMAX_ALACROIX];
-static patch_t *t6knba[TTMAX_ALACROIX];
-static patch_t *t6knbk[TTMAX_ALACROIX];
-static patch_t *t6kndh[TTMAX_ALACROIX];
-
-#define TTEMBL (presc == 6 ? t6embl : presc == 4 ? t4embl : presc == 2 ? t2embl : t1embl)
-#define TTRIBB (presc == 6 ? t6ribb : presc == 4 ? t4ribb : presc == 2 ? t2ribb : t1ribb)
-#define TTSONT (presc == 6 ? t6sont : presc == 4 ? t4sont : presc == 2 ? t2sont : t1sont)
-#define TTROBO (presc == 6 ? t6robo : presc == 4 ? t4robo : presc == 2 ? t2robo : t1robo)
-#define TTTWOT (presc == 6 ? t6twot : presc == 4 ? t4twot : presc == 2 ? t2twot : t1twot)
-#define TTRBTX (presc == 6 ? t6rbtx : presc == 4 ? t4rbtx : presc == 2 ? t2rbtx : t1rbtx)
-#define TTSOIB (presc == 6 ? t6soib : presc == 4 ? t4soib : presc == 2 ? t2soib : t1soib)
-#define TTSOIF (presc == 6 ? t6soif : presc == 4 ? t4soif : presc == 2 ? t2soif : t1soif)
-#define TTSOBA (presc == 6 ? t6soba : presc == 4 ? t4soba : presc == 2 ? t2soba : t1soba)
-#define TTSOBK (presc == 6 ? t6sobk : presc == 4 ? t4sobk : presc == 2 ? t2sobk : t1sobk)
-#define TTSODH (presc == 6 ? t6sodh : presc == 4 ? t4sodh : presc == 2 ? t2sodh : t1sodh)
-#define TTTAIB (presc == 6 ? t6taib : presc == 4 ? t4taib : presc == 2 ? t2taib : t1taib)
-#define TTTAIF (presc == 6 ? t6taif : presc == 4 ? t4taif : presc == 2 ? t2taif : t1taif)
-#define TTTABA (presc == 6 ? t6taba : presc == 4 ? t4taba : presc == 2 ? t2taba : t1taba)
-#define TTTABK (presc == 6 ? t6tabk : presc == 4 ? t4tabk : presc == 2 ? t2tabk : t1tabk)
-#define TTTABT (presc == 6 ? t6tabt : presc == 4 ? t4tabt : presc == 2 ? t2tabt : t1tabt)
-#define TTTAFT (presc == 6 ? t6taft : presc == 4 ? t4taft : presc == 2 ? t2taft : t1taft)
-#define TTKNIB (presc == 6 ? t6knib : presc == 4 ? t4knib : presc == 2 ? t2knib : t1knib)
-#define TTKNIF (presc == 6 ? t6knif : presc == 4 ? t4knif : presc == 2 ? t2knif : t1knif)
-#define TTKNBA (presc == 6 ? t6knba : presc == 4 ? t4knba : presc == 2 ? t2knba : t1knba)
-#define TTKNBK (presc == 6 ? t6knbk : presc == 4 ? t4knbk : presc == 2 ? t2knbk : t1knbk)
-#define TTKNDH (presc == 6 ? t6kndh : presc == 4 ? t4kndh : presc == 2 ? t2kndh : t1kndh)
+#define TTEMBL (ttembl[activettscale-1])
+#define TTRIBB (ttribb[activettscale-1])
+#define TTSONT (ttsont[activettscale-1])
+#define TTROBO (ttrobo[activettscale-1])
+#define TTTWOT (tttwot[activettscale-1])
+#define TTRBTX (ttrbtx[activettscale-1])
+#define TTSOIB (ttsoib[activettscale-1])
+#define TTSOIF (ttsoif[activettscale-1])
+#define TTSOBA (ttsoba[activettscale-1])
+#define TTSOBK (ttsobk[activettscale-1])
+#define TTSODH (ttsodh[activettscale-1])
+#define TTTAIB (tttaib[activettscale-1])
+#define TTTAIF (tttaif[activettscale-1])
+#define TTTABA (tttaba[activettscale-1])
+#define TTTABK (tttabk[activettscale-1])
+#define TTTABT (tttabt[activettscale-1])
+#define TTTAFT (tttaft[activettscale-1])
+#define TTKNIB (ttknib[activettscale-1])
+#define TTKNIF (ttknif[activettscale-1])
+#define TTKNBA (ttknba[activettscale-1])
+#define TTKNBK (ttknbk[activettscale-1])
+#define TTKNDH (ttkndh[activettscale-1])
 
 static boolean sonic_blink = false;
 static boolean sonic_blink_twice = false;
@@ -2338,6 +2274,32 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 	W_UnlockCachedPatch(pat);
 }
 
+#define LOADTTGFX(arr, name, maxf) \
+lumpnum = W_CheckNumForName(name); \
+if (lumpnum != LUMPERROR) \
+{ \
+	arr[0] = W_CachePatchName(name, PU_LEVEL); \
+	arr[min(1, maxf-1)] = 0; \
+} \
+else if (strlen(name) <= 6) \
+{ \
+	fixed_t cnt = strlen(name); \
+	strncpy(lumpname, name, 7); \
+	for (i = 0; i < maxf-1; i++) \
+	{ \
+		sprintf(&lumpname[cnt], "%.2hu", (UINT16)(i+1)); \
+		lumpname[8] = 0; \
+		lumpnum = W_CheckNumForName(lumpname); \
+		if (lumpnum != LUMPERROR) \
+			arr[i] = W_CachePatchName(lumpname, PU_LEVEL); \
+		else \
+			break; \
+	} \
+	arr[min(i, maxf-1)] = 0; \
+} \
+else \
+	arr[0] = 0;
+
 void F_StartTitleScreen(void)
 {
 	if (menupres[MN_MAIN].musname[0])
@@ -2348,6 +2310,8 @@ void F_StartTitleScreen(void)
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
 	{
 		ttuser_count =\
+		 ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] =\
+		 testttscale = activettscale =\
 		 sonic_blink = sonic_blink_twice = sonic_idle_start = sonic_idle_end =\
 		 tails_blink = tails_blink_twice = tails_idle_start = tails_idle_end =\
 		 knux_blink  = knux_blink_twice  = knux_idle_start  = knux_idle_end  = 0;
@@ -2432,32 +2396,6 @@ void F_StartTitleScreen(void)
 	demoDelayLeft = demoDelayTime;
 	demoIdleLeft = demoIdleTime;
 
-#define LOADTTGFX(arr, name, maxf) \
-lumpnum = W_CheckNumForName(name); \
-if (lumpnum != LUMPERROR) \
-{ \
-	arr[0] = W_CachePatchName(name, PU_LEVEL); \
-	arr[min(1, maxf-1)] = 0; \
-} \
-else if (strlen(name) <= 6) \
-{ \
-	fixed_t cnt = strlen(name); \
-	strncpy(lumpname, name, 7); \
-	for (i = 0; i < maxf-1; i++) \
-	{ \
-		sprintf(&lumpname[cnt], "%.2hu", (UINT16)(i+1)); \
-		lumpname[8] = 0; \
-		lumpnum = W_CheckNumForName(lumpname); \
-		if (lumpnum != LUMPERROR) \
-			arr[i] = W_CachePatchName(lumpname, PU_LEVEL); \
-		else \
-			break; \
-	} \
-	arr[min(i, maxf-1)] = 0; \
-} \
-else \
-	arr[0] = 0;
-
 	switch(curttmode)
 	{
 		case TTMODE_OLD:
@@ -2479,105 +2417,9 @@ else \
 			ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
 			break;
 		
+		// don't load alacroix gfx yet; we do that upon first draw.
 		case TTMODE_ALACROIX:
-		{
-			UINT16 i;
-			lumpnum_t lumpnum;
-			char lumpname[9];
-
-			LOADTTGFX(t1embl, "T1EMBL", TTMAX_ALACROIX)
-			LOADTTGFX(t1ribb, "T1RIBB", TTMAX_ALACROIX)
-			LOADTTGFX(t1sont, "T1SONT", TTMAX_ALACROIX)
-			LOADTTGFX(t1robo, "T1ROBO", TTMAX_ALACROIX)
-			LOADTTGFX(t1twot, "T1TWOT", TTMAX_ALACROIX)
-			LOADTTGFX(t1rbtx, "T1RBTX", TTMAX_ALACROIX)
-			LOADTTGFX(t1soib, "T1SOIB", TTMAX_ALACROIX)
-			LOADTTGFX(t1soif, "T1SOIF", TTMAX_ALACROIX)
-			LOADTTGFX(t1soba, "T1SOBA", TTMAX_ALACROIX)
-			LOADTTGFX(t1sobk, "T1SOBK", TTMAX_ALACROIX)
-			LOADTTGFX(t1sodh, "T1SODH", TTMAX_ALACROIX)
-			LOADTTGFX(t1taib, "T1TAIB", TTMAX_ALACROIX)
-			LOADTTGFX(t1taif, "T1TAIF", TTMAX_ALACROIX)
-			LOADTTGFX(t1taba, "T1TABA", TTMAX_ALACROIX)
-			LOADTTGFX(t1tabk, "T1TABK", TTMAX_ALACROIX)
-			LOADTTGFX(t1tabt, "T1TABT", TTMAX_ALACROIX)
-			LOADTTGFX(t1taft, "T1TAFT", TTMAX_ALACROIX)
-			LOADTTGFX(t1knib, "T1KNIB", TTMAX_ALACROIX)
-			LOADTTGFX(t1knif, "T1KNIF", TTMAX_ALACROIX)
-			LOADTTGFX(t1knba, "T1KNBA", TTMAX_ALACROIX)
-			LOADTTGFX(t1knbk, "T1KNBK", TTMAX_ALACROIX)
-			LOADTTGFX(t1kndh, "T1KNDH", TTMAX_ALACROIX)
-
-			LOADTTGFX(t2embl, "T2EMBL", TTMAX_ALACROIX)
-			LOADTTGFX(t2ribb, "T2RIBB", TTMAX_ALACROIX)
-			LOADTTGFX(t2sont, "T2SONT", TTMAX_ALACROIX)
-			LOADTTGFX(t2robo, "T2ROBO", TTMAX_ALACROIX)
-			LOADTTGFX(t2twot, "T2TWOT", TTMAX_ALACROIX)
-			LOADTTGFX(t2rbtx, "T2RBTX", TTMAX_ALACROIX)
-			LOADTTGFX(t2soib, "T2SOIB", TTMAX_ALACROIX)
-			LOADTTGFX(t2soif, "T2SOIF", TTMAX_ALACROIX)
-			LOADTTGFX(t2soba, "T2SOBA", TTMAX_ALACROIX)
-			LOADTTGFX(t2sobk, "T2SOBK", TTMAX_ALACROIX)
-			LOADTTGFX(t2sodh, "T2SODH", TTMAX_ALACROIX)
-			LOADTTGFX(t2taib, "T2TAIB", TTMAX_ALACROIX)
-			LOADTTGFX(t2taif, "T2TAIF", TTMAX_ALACROIX)
-			LOADTTGFX(t2taba, "T2TABA", TTMAX_ALACROIX)
-			LOADTTGFX(t2tabk, "T2TABK", TTMAX_ALACROIX)
-			LOADTTGFX(t2tabt, "T2TABT", TTMAX_ALACROIX)
-			LOADTTGFX(t2taft, "T2TAFT", TTMAX_ALACROIX)
-			LOADTTGFX(t2knib, "T2KNIB", TTMAX_ALACROIX)
-			LOADTTGFX(t2knif, "T2KNIF", TTMAX_ALACROIX)
-			LOADTTGFX(t2knba, "T2KNBA", TTMAX_ALACROIX)
-			LOADTTGFX(t2knbk, "T2KNBK", TTMAX_ALACROIX)
-			LOADTTGFX(t2kndh, "T2KNDH", TTMAX_ALACROIX)
-
-			LOADTTGFX(t4embl, "T4EMBL", TTMAX_ALACROIX)
-			LOADTTGFX(t4ribb, "T4RIBB", TTMAX_ALACROIX)
-			LOADTTGFX(t4sont, "T4SONT", TTMAX_ALACROIX)
-			LOADTTGFX(t4robo, "T4ROBO", TTMAX_ALACROIX)
-			LOADTTGFX(t4twot, "T4TWOT", TTMAX_ALACROIX)
-			LOADTTGFX(t4rbtx, "T4RBTX", TTMAX_ALACROIX)
-			LOADTTGFX(t4soib, "T4SOIB", TTMAX_ALACROIX)
-			LOADTTGFX(t4soif, "T4SOIF", TTMAX_ALACROIX)
-			LOADTTGFX(t4soba, "T4SOBA", TTMAX_ALACROIX)
-			LOADTTGFX(t4sobk, "T4SOBK", TTMAX_ALACROIX)
-			LOADTTGFX(t4sodh, "T4SODH", TTMAX_ALACROIX)
-			LOADTTGFX(t4taib, "T4TAIB", TTMAX_ALACROIX)
-			LOADTTGFX(t4taif, "T4TAIF", TTMAX_ALACROIX)
-			LOADTTGFX(t4taba, "T4TABA", TTMAX_ALACROIX)
-			LOADTTGFX(t4tabk, "T4TABK", TTMAX_ALACROIX)
-			LOADTTGFX(t4tabt, "T4TABT", TTMAX_ALACROIX)
-			LOADTTGFX(t4taft, "T4TAFT", TTMAX_ALACROIX)
-			LOADTTGFX(t4knib, "T4KNIB", TTMAX_ALACROIX)
-			LOADTTGFX(t4knif, "T4KNIF", TTMAX_ALACROIX)
-			LOADTTGFX(t4knba, "T4KNBA", TTMAX_ALACROIX)
-			LOADTTGFX(t4knbk, "T4KNBK", TTMAX_ALACROIX)
-			LOADTTGFX(t4kndh, "T4KNDH", TTMAX_ALACROIX)
-
-			LOADTTGFX(t6embl, "T6EMBL", TTMAX_ALACROIX)
-			LOADTTGFX(t6ribb, "T6RIBB", TTMAX_ALACROIX)
-			LOADTTGFX(t6sont, "T6SONT", TTMAX_ALACROIX)
-			LOADTTGFX(t6robo, "T6ROBO", TTMAX_ALACROIX)
-			LOADTTGFX(t6twot, "T6TWOT", TTMAX_ALACROIX)
-			LOADTTGFX(t6rbtx, "T6RBTX", TTMAX_ALACROIX)
-			LOADTTGFX(t6soib, "T6SOIB", TTMAX_ALACROIX)
-			LOADTTGFX(t6soif, "T6SOIF", TTMAX_ALACROIX)
-			LOADTTGFX(t6soba, "T6SOBA", TTMAX_ALACROIX)
-			LOADTTGFX(t6sobk, "T6SOBK", TTMAX_ALACROIX)
-			LOADTTGFX(t6sodh, "T6SODH", TTMAX_ALACROIX)
-			LOADTTGFX(t6taib, "T6TAIB", TTMAX_ALACROIX)
-			LOADTTGFX(t6taif, "T6TAIF", TTMAX_ALACROIX)
-			LOADTTGFX(t6taba, "T6TABA", TTMAX_ALACROIX)
-			LOADTTGFX(t6tabk, "T6TABK", TTMAX_ALACROIX)
-			LOADTTGFX(t6tabt, "T6TABT", TTMAX_ALACROIX)
-			LOADTTGFX(t6taft, "T6TAFT", TTMAX_ALACROIX)
-			LOADTTGFX(t6knib, "T6KNIB", TTMAX_ALACROIX)
-			LOADTTGFX(t6knif, "T6KNIF", TTMAX_ALACROIX)
-			LOADTTGFX(t6knba, "T6KNBA", TTMAX_ALACROIX)
-			LOADTTGFX(t6knbk, "T6KNBK", TTMAX_ALACROIX)
-			LOADTTGFX(t6kndh, "T6KNDH", TTMAX_ALACROIX)
 			break;
-		}
 
 		case TTMODE_USER:
 		{
@@ -2589,17 +2431,148 @@ else \
 			break;
 		}
 	}
+}
+
+static void F_UnloadAlacroixGraphics(SINT8 oldttscale)
+{
+	// This all gets freed by PU_LEVEL when exiting the menus.
+	// When re-visiting the menus (e.g., from exiting in-game), the gfx are force-reloaded.
+	// So leftover addresses here should not be a problem.
+	
+	UINT16 i;
+	oldttscale--; // zero-based index
+	for (i = 0; i < TTMAX_ALACROIX; i++)
+	{
+		if(ttembl[oldttscale][i]) { Z_Free(ttembl[oldttscale][i]); ttembl[oldttscale][i] = 0; }
+		if(ttribb[oldttscale][i]) { Z_Free(ttribb[oldttscale][i]); ttribb[oldttscale][i] = 0; }
+		if(ttsont[oldttscale][i]) { Z_Free(ttsont[oldttscale][i]); ttsont[oldttscale][i] = 0; }
+		if(ttrobo[oldttscale][i]) { Z_Free(ttrobo[oldttscale][i]); ttrobo[oldttscale][i] = 0; }
+		if(tttwot[oldttscale][i]) { Z_Free(tttwot[oldttscale][i]); tttwot[oldttscale][i] = 0; }
+		if(ttrbtx[oldttscale][i]) { Z_Free(ttrbtx[oldttscale][i]); ttrbtx[oldttscale][i] = 0; }
+		if(ttsoib[oldttscale][i]) { Z_Free(ttsoib[oldttscale][i]); ttsoib[oldttscale][i] = 0; }
+		if(ttsoif[oldttscale][i]) { Z_Free(ttsoif[oldttscale][i]); ttsoif[oldttscale][i] = 0; }
+		if(ttsoba[oldttscale][i]) { Z_Free(ttsoba[oldttscale][i]); ttsoba[oldttscale][i] = 0; }
+		if(ttsobk[oldttscale][i]) { Z_Free(ttsobk[oldttscale][i]); ttsobk[oldttscale][i] = 0; }
+		if(ttsodh[oldttscale][i]) { Z_Free(ttsodh[oldttscale][i]); ttsodh[oldttscale][i] = 0; }
+		if(tttaib[oldttscale][i]) { Z_Free(tttaib[oldttscale][i]); tttaib[oldttscale][i] = 0; }
+		if(tttaif[oldttscale][i]) { Z_Free(tttaif[oldttscale][i]); tttaif[oldttscale][i] = 0; }
+		if(tttaba[oldttscale][i]) { Z_Free(tttaba[oldttscale][i]); tttaba[oldttscale][i] = 0; }
+		if(tttabk[oldttscale][i]) { Z_Free(tttabk[oldttscale][i]); tttabk[oldttscale][i] = 0; }
+		if(tttabt[oldttscale][i]) { Z_Free(tttabt[oldttscale][i]); tttabt[oldttscale][i] = 0; }
+		if(tttaft[oldttscale][i]) { Z_Free(tttaft[oldttscale][i]); tttaft[oldttscale][i] = 0; }
+		if(ttknib[oldttscale][i]) { Z_Free(ttknib[oldttscale][i]); ttknib[oldttscale][i] = 0; }
+		if(ttknif[oldttscale][i]) { Z_Free(ttknif[oldttscale][i]); ttknif[oldttscale][i] = 0; }
+		if(ttknba[oldttscale][i]) { Z_Free(ttknba[oldttscale][i]); ttknba[oldttscale][i] = 0; }
+		if(ttknbk[oldttscale][i]) { Z_Free(ttknbk[oldttscale][i]); ttknbk[oldttscale][i] = 0; }
+		if(ttkndh[oldttscale][i]) { Z_Free(ttkndh[oldttscale][i]); ttkndh[oldttscale][i] = 0; }
+	}
+	ttloaded[oldttscale] = false;
+}
+
+static void F_LoadAlacroixGraphics(SINT8 newttscale)
+{
+	UINT16 i, j;
+	lumpnum_t lumpnum;
+	char lumpname[9];
+	char names[22][5] = {
+		"EMBL",
+		"RIBB",
+		"SONT",
+		"ROBO",
+		"TWOT",
+		"RBTX",
+		"SOIB",
+		"SOIF",
+		"SOBA",
+		"SOBK",
+		"SODH",
+		"TAIB",
+		"TAIF",
+		"TABA",
+		"TABK",
+		"TABT",
+		"TAFT",
+		"KNIB",
+		"KNIF",
+		"KNBA",
+		"KNBK",
+		"KNDH"
+	};
+	char lumpnames[22][7];
+
+	newttscale--; // 0-based index
+
+	if (!ttloaded[newttscale])
+	{
+		for (j = 0; j < 22; j++)
+			sprintf(&lumpnames[j][0], "T%.1hu%s", (UINT8)newttscale+1, names[j]);
+		
+		LOADTTGFX(ttembl[newttscale], lumpnames[0], TTMAX_ALACROIX)
+		LOADTTGFX(ttribb[newttscale], lumpnames[1], TTMAX_ALACROIX)
+		LOADTTGFX(ttsont[newttscale], lumpnames[2], TTMAX_ALACROIX)
+		LOADTTGFX(ttrobo[newttscale], lumpnames[3], TTMAX_ALACROIX)
+		LOADTTGFX(tttwot[newttscale], lumpnames[4], TTMAX_ALACROIX)
+		LOADTTGFX(ttrbtx[newttscale], lumpnames[5], TTMAX_ALACROIX)
+		LOADTTGFX(ttsoib[newttscale], lumpnames[6], TTMAX_ALACROIX)
+		LOADTTGFX(ttsoif[newttscale], lumpnames[7], TTMAX_ALACROIX)
+		LOADTTGFX(ttsoba[newttscale], lumpnames[8], TTMAX_ALACROIX)
+		LOADTTGFX(ttsobk[newttscale], lumpnames[9], TTMAX_ALACROIX)
+		LOADTTGFX(ttsodh[newttscale], lumpnames[10], TTMAX_ALACROIX)
+		LOADTTGFX(tttaib[newttscale], lumpnames[11], TTMAX_ALACROIX)
+		LOADTTGFX(tttaif[newttscale], lumpnames[12], TTMAX_ALACROIX)
+		LOADTTGFX(tttaba[newttscale], lumpnames[13], TTMAX_ALACROIX)
+		LOADTTGFX(tttabk[newttscale], lumpnames[14], TTMAX_ALACROIX)
+		LOADTTGFX(tttabt[newttscale], lumpnames[15], TTMAX_ALACROIX)
+		LOADTTGFX(tttaft[newttscale], lumpnames[16], TTMAX_ALACROIX)
+		LOADTTGFX(ttknib[newttscale], lumpnames[17], TTMAX_ALACROIX)
+		LOADTTGFX(ttknif[newttscale], lumpnames[18], TTMAX_ALACROIX)
+		LOADTTGFX(ttknba[newttscale], lumpnames[19], TTMAX_ALACROIX)
+		LOADTTGFX(ttknbk[newttscale], lumpnames[20], TTMAX_ALACROIX)
+		LOADTTGFX(ttkndh[newttscale], lumpnames[21], TTMAX_ALACROIX)
+
+		ttloaded[newttscale] = true;
+	}
+}
 
 #undef LOADTTGFX
+
+static void F_FigureActiveTtScale(void)
+{
+	SINT8 newttscale = max(1, min(6, vid.dupx));
+	SINT8 oldttscale = activettscale;
+
+	if (newttscale == testttscale)
+		return;
+	testttscale = newttscale;
+
+	// If ttscale is unavailable: look for lower scales, then higher scales.
+	for (; newttscale >= 1; newttscale--)
+	{
+		if (ttavailable[newttscale-1])
+			break;
+	}
+
+	for (; newttscale <= 6; newttscale++)
+	{
+		if (ttavailable[newttscale-1])
+			break;
+	}
+
+	activettscale = (newttscale >= 1 && newttscale <= 6) ? newttscale : 0;
+
+	// We have a new ttscale, so load gfx
+	if(oldttscale > 0)
+		F_UnloadAlacroixGraphics(oldttscale);
+
+	if(activettscale > 0)
+		F_LoadAlacroixGraphics(activettscale);
 }
 
 // (no longer) De-Demo'd Title Screen
 void F_TitleScreenDrawer(void)
 {
 	boolean hidepics;
-	fixed_t presc = max(1, min(6, (vid.dupx == 5 ? 6 : (vid.dupx == 3 ? 4 : vid.dupx))));
-	fixed_t sc = (curttmode == TTMODE_ALACROIX ? FRACUNIT / presc
-		: FRACUNIT / max(1, curttscale));
+	fixed_t sc = FRACUNIT / max(1, curttscale);
 
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
@@ -2669,6 +2642,13 @@ void F_TitleScreenDrawer(void)
 			//
 			// PRE-INTRO: WING ON BLACK BACKGROUND
 			//
+
+			// Figure the gfx scale and load gfx if necessary
+			F_FigureActiveTtScale();
+
+			if (!activettscale) // invalid scale, draw nothing
+				break;
+			sc = FRACUNIT / activettscale;
 
 			// Start at black background. Draw it until tic 30, where we replace with a white flash.
 			//

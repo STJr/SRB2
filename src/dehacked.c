@@ -2113,6 +2113,7 @@ static void readmenu(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "TITLEPICSSCALE"))
 			{
+				// Don't handle Alacroix special case here; see Maincfg section.
 				menupres[num].ttscale = max(1, min(8, (UINT8)get_number(word2)));
 				titlechanged = true;
 			}
@@ -3562,6 +3563,27 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "TITLEPICSSCALE"))
 			{
 				ttscale = max(1, min(8, (UINT8)get_number(word2)));
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALESAVAILABLE"))
+			{
+				// SPECIAL CASE for Alacroix: Comma-separated list of resolutions that are available
+				// for gfx loading.
+				ttavailable[0] = ttavailable[1] = ttavailable[2] = ttavailable[3] =\
+					ttavailable[4] = ttavailable[5] = false;
+
+				if (strstr(word2, "1") != NULL)
+					ttavailable[0] = true;
+				if (strstr(word2, "2") != NULL)
+					ttavailable[1] = true;
+				if (strstr(word2, "3") != NULL)
+					ttavailable[2] = true;
+				if (strstr(word2, "4") != NULL)
+					ttavailable[3] = true;
+				if (strstr(word2, "5") != NULL)
+					ttavailable[4] = true;
+				if (strstr(word2, "6") != NULL)
+					ttavailable[5] = true;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLEPICSNAME"))
