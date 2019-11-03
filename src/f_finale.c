@@ -234,6 +234,22 @@ static patch_t *t6kndh[TTMAX_ALACROIX];
 #define TTKNBK (presc == 6 ? t6knbk : presc == 4 ? t4knbk : presc == 2 ? t2knbk : t1knbk)
 #define TTKNDH (presc == 6 ? t6kndh : presc == 4 ? t4kndh : presc == 2 ? t2kndh : t1kndh)
 
+static boolean sonic_blink = false;
+static boolean sonic_blink_twice = false;
+static boolean sonic_blinked_already = false;
+static INT32 sonic_idle_start = 0;
+static INT32 sonic_idle_end = 0;
+static boolean tails_blink = false;
+static boolean tails_blink_twice = false;
+static boolean tails_blinked_already = false;
+static INT32 tails_idle_start = 0;
+static INT32 tails_idle_end = 0;
+static boolean knux_blink = false;
+static boolean knux_blink_twice = false;
+static boolean knux_blinked_already = false;
+static INT32 knux_idle_start = 0;
+static INT32 knux_idle_end = 0;
+
 // ttmode user
 static patch_t *ttuser[TTMAX_USER];
 static INT32 ttuser_count = 0;
@@ -2331,7 +2347,13 @@ void F_StartTitleScreen(void)
 
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
 	{
-		ttuser_count = 0;
+		ttuser_count =\
+		 sonic_blink = sonic_blink_twice = sonic_idle_start = sonic_idle_end =\
+		 tails_blink = tails_blink_twice = tails_idle_start = tails_idle_end =\
+		 knux_blink  = knux_blink_twice  = knux_idle_start  = knux_idle_end  = 0;
+
+		sonic_blinked_already = tails_blinked_already = knux_blinked_already = 1; // don't blink on the first idle cycle
+
 		if (curttmode == TTMODE_ALACROIX)
 			finalecount = -3; // hack so that frames don't advance during the entry wipe
 		else
@@ -2644,9 +2666,9 @@ void F_TitleScreenDrawer(void)
 			break;
 
 		case TTMODE_ALACROIX:
-			/*
-				ALICE ANIMATION CODE GOES HERE
-			 */
+			//
+			// PRE-INTRO: WING ON BLACK BACKGROUND
+			//
 
 			// Start at black background. Draw it until tic 30, where we replace with a white flash.
 			//
@@ -2662,11 +2684,11 @@ void F_TitleScreenDrawer(void)
 			if (finalecount <= 29)
 			{
 				// Ribbon unfurls, revealing SONIC text, from tic 0 to tic 24. SONIC text is pre-baked into this ribbon graphic.
-				V_DrawSciencePatch(40<<FRACBITS, 88<<FRACBITS, 0, TTRIBB[min(max(0, finalecount), 24)], sc);
+				V_DrawSciencePatch(39<<FRACBITS, 88<<FRACBITS, 0, TTRIBB[min(max(0, finalecount), 24)], sc);
 				
 				// Animate SONIC text while the ribbon unfurls, from tic 0 to tic 28.
 				if(finalecount >= 0)
-					V_DrawSciencePatch(90<<FRACBITS, 92<<FRACBITS, 0, TTSONT[min(finalecount, 28)], sc);
+					V_DrawSciencePatch(89<<FRACBITS, 92<<FRACBITS, 0, TTSONT[min(finalecount, 28)], sc);
 
 				// Fade in ROBO BLAST 2 starting at tic 10.
 				if (finalecount > 9)
@@ -2690,38 +2712,416 @@ void F_TitleScreenDrawer(void)
 							case 4: case 3: fadeval = V_10TRANS; break;
 						}
 					}
-					V_DrawSciencePatch(80<<FRACBITS, 132<<FRACBITS, fadeval, TTROBO[0], sc);
+					V_DrawSciencePatch(79<<FRACBITS, 132<<FRACBITS, fadeval, TTROBO[0], sc);
 
 					// Draw the TWO from tic 16 to tic 31, so the TWO lands right when the screen flashes white.
 					if(finalecount > 15)
-						V_DrawSciencePatch(107<<FRACBITS, 118<<FRACBITS, fadeval, TTTWOT[min(finalecount-16, 15)], sc);
+						V_DrawSciencePatch(106<<FRACBITS, 118<<FRACBITS, fadeval, TTTWOT[min(finalecount-16, 15)], sc);
 				}
 			}
 
 			//
-			// TODO: ALACROIX CHARACTER FRAMES
+			// ALACROIX CHARACTER FRAMES
 			//
 			// Start all animation from tic 34 (or whenever the white flash begins to fade; see below.)
-			//
-			// NOTE: CHARACTER GFX COORDINATES:
-			// All frames share the same X/Y coord per character.
-			//
-			// Sonic: X 89, Y 13
-			// Tails: X 35, Y 19
-			// Knux : X 167, Y 17
+			// Delay the start a bit for better music timing.
 			//
 
-			//
-			// TODO: BACK TAIL GFX GO HERE
-			//
+#define CHARSTART 41
+#define SONICSTART (CHARSTART+0)
+#define SONICIDLE (SONICSTART+57)
+#define SONICX 89
+#define SONICY 13
+#define TAILSSTART (CHARSTART+27)
+#define TAILSIDLE (TAILSSTART+60)
+#define TAILSX 35
+#define TAILSY 19
+#define KNUXSTART (CHARSTART+44)
+#define KNUXIDLE (KNUXSTART+70)
+#define KNUXX 167
+#define KNUXY 7
+
+			// Decide who gets to blink or not.
+			// Make this decision at the END of an idle/blink cycle.
+			// Upon first idle, both idle_start and idle_end will be 0.
+
+			if (finalecount >= KNUXIDLE)
+			{
+				if (!knux_idle_start || !((finalecount - knux_idle_start) % knux_idle_end))
+				{
+					if (knux_blink)
+					{
+						knux_blink = false; // don't run the cycle twice in a row
+						knux_blinked_already = true;
+					}
+					else if (knux_blinked_already) // or after the first non-blink cycle, either.
+						knux_blinked_already = false;
+					else
+					{
+						// make this chance higher than Sonic/Tails because Knux's idle cycle is longer
+						knux_blink = !(M_RandomKey(100) % 2);
+						knux_blink_twice = knux_blink ? !(M_RandomKey(100) % 5) : false;
+					}
+					knux_idle_start = finalecount;
+				}
+
+				knux_idle_end = knux_blink ? (knux_blink_twice ? 17 : 7) : 46;
+			}
+
+			if (finalecount >= TAILSIDLE)
+			{
+				if (!tails_idle_start || !((finalecount - tails_idle_start) % tails_idle_end))
+				{
+					if (tails_blink)
+					{
+						tails_blink = false; // don't run the cycle twice in a row
+						tails_blinked_already = true;
+					}
+					else if (tails_blinked_already) // or after the first non-blink cycle, either.
+						tails_blinked_already = false;
+					else
+					{
+						tails_blink = !(M_RandomKey(100) % 3);
+						tails_blink_twice = tails_blink ? !(M_RandomKey(100) % 5) : false;
+					}
+					tails_idle_start = finalecount;
+				}
+
+				// Tails does not actually have a non-blink idle cycle, but make up a number
+				// so he can still blink.
+				tails_idle_end = tails_blink ? (tails_blink_twice ? 17 : 7) : 35;
+			}
+
+			if (finalecount >= SONICIDLE)
+			{
+				if (!sonic_idle_start || !((finalecount - sonic_idle_start) % sonic_idle_end))
+				{
+					if (sonic_blink)
+					{
+						sonic_blink = false; // don't run the cycle twice in a row
+						sonic_blinked_already = true;
+					}
+					else if (sonic_blinked_already) // or after the first non-blink cycle, either.
+						sonic_blinked_already = false;
+					else
+					{
+						sonic_blink = !(M_RandomKey(100) % 3);
+						sonic_blink_twice = sonic_blink ? !(M_RandomKey(100) % 5) : false;
+					}
+					sonic_idle_start = finalecount;
+				}
+
+				sonic_idle_end = sonic_blink ? (sonic_blink_twice ? 17 : 7) : 25;
+			}
+
 
 			//
-			// TODO: FRONT TAIL GFX GO HERE
+			// BACK TAIL LAYER
 			//
 
+			if (finalecount >= TAILSSTART)
+			{
+				if (finalecount >= TAILSIDLE)
+				{
+					//
+					// Tails Back Tail Layer Idle
+					//
+					SINT8 taftcount = (finalecount - (TAILSIDLE)) % 41;
+					if      (taftcount >= 0   && taftcount < 5  )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[0 ], sc);
+					else if (taftcount >= 5   && taftcount < 9 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[1 ], sc);
+					else if (taftcount >= 9   && taftcount < 12 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[2 ], sc);
+					else if (taftcount >= 12  && taftcount < 14 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[3 ], sc);
+					else if (taftcount >= 14  && taftcount < 17 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[3 ], sc);
+					else if (taftcount >= 17  && taftcount < 21 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[5 ], sc);
+					else if (taftcount >= 21  && taftcount < 24 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[6 ], sc);
+					else if (taftcount >= 24  && taftcount < 25 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[7 ], sc);
+					else if (taftcount >= 25  && taftcount < 28 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[8 ], sc);
+					else if (taftcount >= 28  && taftcount < 31 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[9 ], sc);
+					else if (taftcount >= 31  && taftcount < 35 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[10], sc);
+					else if (taftcount >= 35  && taftcount < 41 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[11], sc);
+				}
+			}
+
 			//
-			// TODO: BACK LAYER GFX GO HERE
+			// FRONT TAIL LAYER
 			//
+
+			if (finalecount >= TAILSSTART)
+			{
+				if (finalecount >= TAILSIDLE)
+				{
+					//
+					// Tails Front Tail Layer Idle
+					//
+					SINT8 tabtcount = (finalecount - (TAILSIDLE)) % 41;
+					if      (tabtcount >= 0   && tabtcount < 6  )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[0 ], sc);
+					else if (tabtcount >= 6   && tabtcount < 11 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[1 ], sc);
+					else if (tabtcount >= 11  && tabtcount < 15 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[2 ], sc);
+					else if (tabtcount >= 15  && tabtcount < 18 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[3 ], sc);
+					else if (tabtcount >= 18  && tabtcount < 19 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[3 ], sc);
+					else if (tabtcount >= 19  && tabtcount < 22 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[5 ], sc);
+					else if (tabtcount >= 22  && tabtcount < 27 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[6 ], sc);
+					else if (tabtcount >= 27  && tabtcount < 30 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[7 ], sc);
+					else if (tabtcount >= 30  && tabtcount < 31 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[8 ], sc);
+					else if (tabtcount >= 31  && tabtcount < 34 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[9 ], sc);
+					else if (tabtcount >= 34  && tabtcount < 37 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[10], sc);
+					else if (tabtcount >= 37  && tabtcount < 41 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[11], sc);
+				}
+			}
+
+			//
+			// BACK LAYER CHARACTERS
+			//
+
+			if (finalecount >= KNUXSTART)
+			{
+				if (finalecount < KNUXIDLE)
+				{
+					//
+					// Knux Back Layer Intro
+					//
+					if      (finalecount >= KNUXSTART+0   && finalecount < KNUXSTART+6  )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[0 ], sc);
+					else if (finalecount >= KNUXSTART+6   && finalecount < KNUXSTART+10 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[1 ], sc);
+					else if (finalecount >= KNUXSTART+10  && finalecount < KNUXSTART+13 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[2 ], sc);
+					else if (finalecount >= KNUXSTART+13  && finalecount < KNUXSTART+15 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[3 ], sc);
+					else if (finalecount >= KNUXSTART+15  && finalecount < KNUXSTART+18 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[3 ], sc);
+					else if (finalecount >= KNUXSTART+18  && finalecount < KNUXSTART+22 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[5 ], sc);
+					else if (finalecount >= KNUXSTART+22  && finalecount < KNUXSTART+28 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[6 ], sc);
+					else if (finalecount >= KNUXSTART+28  && finalecount < KNUXSTART+32 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[7 ], sc);
+					else if (finalecount >= KNUXSTART+32  && finalecount < KNUXSTART+35 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[8 ], sc);
+					else if (finalecount >= KNUXSTART+35  && finalecount < KNUXSTART+40 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[9 ], sc);
+					else if (finalecount >= KNUXSTART+40  && finalecount < KNUXSTART+41 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[10], sc);
+					else if (finalecount >= KNUXSTART+41  && finalecount < KNUXSTART+44 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[11], sc);
+					else if (finalecount >= KNUXSTART+44  && finalecount < KNUXSTART+50 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[12], sc);
+					else if (finalecount >= KNUXSTART+50  && finalecount < KNUXSTART+56 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[13], sc);
+					else if (finalecount >= KNUXSTART+56  && finalecount < KNUXSTART+57 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[14], sc);
+					else if (finalecount >= KNUXSTART+57  && finalecount < KNUXSTART+60 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[15], sc);
+					else if (finalecount >= KNUXSTART+60  && finalecount < KNUXSTART+63 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[16], sc);
+					else if (finalecount >= KNUXSTART+63  && finalecount < KNUXSTART+67 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[17], sc);
+					else if (finalecount >= KNUXSTART+67  && finalecount < KNUXSTART+70 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[18], sc);
+					// Start idle animation (frame K20-B)
+				}
+				else
+				{
+					//
+					// Knux Back Layer Idle
+					//
+					if (!knux_blink)
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNBA[0], sc);
+					else
+					{
+						//
+						// Knux Blinking
+						//
+						SINT8 idlecount = finalecount - knux_idle_start;
+						if      (idlecount >= 0  && idlecount < 2 )
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNBK[0], sc);
+						else if (idlecount >= 2  && idlecount < 6 )
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNBK[1], sc);
+						else if (idlecount >= 6  && idlecount < 7 )
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNBK[2], sc);
+						// We reach this point if knux_blink_twice == true
+						else if (idlecount >= 7  && idlecount < 10)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNBA[0], sc);
+						else if (idlecount >= 10 && idlecount < 12)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNBK[0], sc);
+						else if (idlecount >= 12 && idlecount < 16)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNBK[1], sc);
+						else if (idlecount >= 16 && idlecount < 17)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNBK[2], sc);
+					}
+				}
+			}
+
+			if (finalecount >= TAILSSTART)
+			{
+				if (finalecount < TAILSIDLE)
+				{
+					//
+					// Tails Back Layer Intro
+					//
+					if      (finalecount >= TAILSSTART+0   && finalecount < TAILSSTART+6  )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[0 ], sc);
+					else if (finalecount >= TAILSSTART+6   && finalecount < TAILSSTART+10 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[1 ], sc);
+					else if (finalecount >= TAILSSTART+10  && finalecount < TAILSSTART+12 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[2 ], sc);
+					else if (finalecount >= TAILSSTART+12  && finalecount < TAILSSTART+16 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[3 ], sc);
+					else if (finalecount >= TAILSSTART+16  && finalecount < TAILSSTART+22 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[3 ], sc);
+					else if (finalecount >= TAILSSTART+22  && finalecount < TAILSSTART+23 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[5 ], sc);
+					else if (finalecount >= TAILSSTART+23  && finalecount < TAILSSTART+26 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[6 ], sc);
+					else if (finalecount >= TAILSSTART+26  && finalecount < TAILSSTART+30 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[7 ], sc);
+					else if (finalecount >= TAILSSTART+30  && finalecount < TAILSSTART+35 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[8 ], sc);
+					else if (finalecount >= TAILSSTART+35  && finalecount < TAILSSTART+41 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[9 ], sc);
+					else if (finalecount >= TAILSSTART+41  && finalecount < TAILSSTART+43 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[10], sc);
+					else if (finalecount >= TAILSSTART+43  && finalecount < TAILSSTART+47 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[11], sc);
+					else if (finalecount >= TAILSSTART+47  && finalecount < TAILSSTART+51 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[12], sc);
+					else if (finalecount >= TAILSSTART+51  && finalecount < TAILSSTART+53 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[13], sc);
+					else if (finalecount >= TAILSSTART+53  && finalecount < TAILSSTART+56 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[14], sc);
+					else if (finalecount >= TAILSSTART+56  && finalecount < TAILSSTART+60 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[15], sc);
+					// Start idle animation (frame T17-B)
+				}
+				else
+				{
+					//
+					// Tails Back Layer Idle
+					//
+					if (!tails_blink)
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABA[0], sc);
+					else
+					{
+						//
+						// Tails Blinking
+						//
+						SINT8 idlecount = finalecount - tails_idle_start;
+						if      (idlecount >= +0  && idlecount < +2 )
+							V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABK[0], sc);
+						else if (idlecount >= +2  && idlecount < +6 )
+							V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABK[1], sc);
+						else if (idlecount >= +6  && idlecount < +7 )
+							V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABK[2], sc);
+						// We reach this point if tails_blink_twice == true
+						else if (idlecount >= +7  && idlecount < +10)
+							V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABA[0], sc);
+						else if (idlecount >= +10 && idlecount < +12)
+							V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABK[0], sc);
+						else if (idlecount >= +12 && idlecount < +16)
+							V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABK[1], sc);
+						else if (idlecount >= +16 && idlecount < +17)
+							V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABK[2], sc);
+					}
+				}
+			}
+
+			if (finalecount >= SONICSTART)
+			{
+				if (finalecount < SONICIDLE)
+				{
+					//
+					// Sonic Back Layer Intro
+					//
+					if      (finalecount >= SONICSTART+0   && finalecount < SONICSTART+6  )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[0 ], sc);
+					else if (finalecount >= SONICSTART+6   && finalecount < SONICSTART+11 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[1 ], sc);
+					else if (finalecount >= SONICSTART+11  && finalecount < SONICSTART+14 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[2 ], sc);
+					else if (finalecount >= SONICSTART+14  && finalecount < SONICSTART+18 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[3 ], sc);
+					else if (finalecount >= SONICSTART+18  && finalecount < SONICSTART+19 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[3 ], sc);
+					else if (finalecount >= SONICSTART+19  && finalecount < SONICSTART+27 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[5 ], sc);
+					else if (finalecount >= SONICSTART+27  && finalecount < SONICSTART+31 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[6 ], sc);
+					//else if (finalecount >= SONICSTART+31  && finalecount < SONICSTART+33 )
+					//  Frame is blank
+					//	V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[7 ], sc);
+					else if (finalecount >= SONICSTART+33  && finalecount < SONICSTART+36 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[8 ], sc);
+					else if (finalecount >= SONICSTART+36  && finalecount < SONICSTART+40 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[9 ], sc);
+					else if (finalecount >= SONICSTART+40  && finalecount < SONICSTART+44 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[10], sc);
+					else if (finalecount >= SONICSTART+44  && finalecount < SONICSTART+47 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[11], sc);
+					else if (finalecount >= SONICSTART+47  && finalecount < SONICSTART+49 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[12], sc);
+					else if (finalecount >= SONICSTART+49  && finalecount < SONICSTART+50 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[13], sc);
+					else if (finalecount >= SONICSTART+50  && finalecount < SONICSTART+53 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[14], sc);
+					else if (finalecount >= SONICSTART+53  && finalecount < SONICSTART+57 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[15], sc);
+					// Start idle animation (frame S17-B)
+				}
+				else
+				{
+					//
+					// Sonic Back Layer Idle
+					//
+					if (!sonic_blink)
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOBA[0], sc);
+					else
+					{
+						//
+						// Sonic Blinking
+						//
+						SINT8 idlecount = finalecount - sonic_idle_start;
+						if      (idlecount >= 0  && idlecount < 2 )
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOBK[0], sc);
+						else if (idlecount >= 2  && idlecount < 6 )
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOBK[1], sc);
+						else if (idlecount >= 6  && idlecount < 7 )
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOBK[2], sc);
+						// We reach this point if sonic_blink_twice == true
+						else if (idlecount >= 7  && idlecount < 10)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOBA[0], sc);
+						else if (idlecount >= 10 && idlecount < 12)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOBK[0], sc);
+						else if (idlecount >= 12 && idlecount < 16)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOBK[1], sc);
+						else if (idlecount >= 16 && idlecount < 17)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOBK[2], sc);
+					}
+				}
+			}
 
 			//
 			// LOGO LAYER
@@ -2731,11 +3131,145 @@ void F_TitleScreenDrawer(void)
 			// draw the combined ribbon and SONIC ROBO BLAST 2 logo. Note the different Y value, because this
 			// graphic is cropped differently from the unfurling ribbon.
 			if (finalecount > 34)
-				V_DrawSciencePatch(40<<FRACBITS, 93<<FRACBITS, 0, TTRBTX[0], sc);
+				V_DrawSciencePatch(39<<FRACBITS, 93<<FRACBITS, 0, TTRBTX[0], sc);
 
 			//
-			// TODO: FRONT LAYER GFX GO HERE
+			// FRONT LAYER CHARACTERS
 			//
+
+			if (finalecount >= KNUXSTART)
+			{
+				if (finalecount < KNUXIDLE)
+				{
+					//
+					// Knux Front Layer Intro
+					//
+					if      (finalecount >= KNUXSTART+22  && finalecount < KNUXSTART+28 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIF[6 ], sc);
+					else if (finalecount >= KNUXSTART+28  && finalecount < KNUXSTART+32 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIF[7 ], sc);
+					else if (finalecount >= KNUXSTART+32  && finalecount < KNUXSTART+35 )
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIF[8 ], sc);
+				}
+				else
+				{
+					//
+					// Knux Front Layer Idle
+					//
+					if (!knux_blink)
+					{
+						SINT8 idlecount = finalecount - knux_idle_start;
+						if      (idlecount >= 0  && idlecount < 5 )
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[0 ], sc);
+						else if (idlecount >= 5  && idlecount < 10)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[1 ], sc);
+						else if (idlecount >= 10 && idlecount < 13)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[2 ], sc);
+						else if (idlecount >= 13 && idlecount < 14)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[3 ], sc);
+						else if (idlecount >= 14 && idlecount < 17)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[4 ], sc);
+						else if (idlecount >= 17 && idlecount < 21)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[5 ], sc);
+						else if (idlecount >= 21 && idlecount < 27)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[6 ], sc);
+						else if (idlecount >= 27 && idlecount < 32)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[7 ], sc);
+						else if (idlecount >= 32 && idlecount < 34)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[8 ], sc);
+						else if (idlecount >= 34 && idlecount < 37)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[9 ], sc);
+						else if (idlecount >= 37 && idlecount < 39)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[10], sc);
+						else if (idlecount >= 39 && idlecount < 42)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[11], sc);
+						else if (idlecount >= 42 && idlecount < 46)
+							V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[12], sc);
+					}
+					else
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNDH[0 ], sc);
+				}
+			}
+
+			if (finalecount >= TAILSSTART)
+			{
+				if (finalecount < TAILSIDLE)
+				{
+					//
+					// Tails Front Layer Intro
+					//
+					if      (finalecount >= TAILSSTART+26  && finalecount < TAILSSTART+30 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIF[7 ], sc);
+					else if (finalecount >= TAILSSTART+30  && finalecount < TAILSSTART+35 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIF[8 ], sc);
+					else if (finalecount >= TAILSSTART+35  && finalecount < TAILSSTART+41 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIF[9 ], sc);
+					else if (finalecount >= TAILSSTART+41  && finalecount < TAILSSTART+43 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIF[10], sc);
+					else if (finalecount >= TAILSSTART+43  && finalecount < TAILSSTART+47 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIF[11], sc);
+					else if (finalecount >= TAILSSTART+47  && finalecount < TAILSSTART+51 )
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIF[12], sc);
+				}
+				// No Tails Front Layer Idle
+			}
+
+			if (finalecount >= SONICSTART)
+			{
+				if (finalecount < SONICIDLE)
+				{
+					//
+					// Sonic Front Layer Intro
+					//
+					if      (finalecount >= SONICSTART+19  && finalecount < SONICSTART+27 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIF[5 ], sc);
+					else if (finalecount >= SONICSTART+27  && finalecount < SONICSTART+31 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIF[6 ], sc);
+					else if (finalecount >= SONICSTART+31  && finalecount < SONICSTART+33 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIF[7 ], sc);
+					else if (finalecount >= SONICSTART+33  && finalecount < SONICSTART+36 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIF[8 ], sc);
+					else if (finalecount >= SONICSTART+36  && finalecount < SONICSTART+40 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIF[9 ], sc);
+					else if (finalecount >= SONICSTART+40  && finalecount < SONICSTART+44 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIF[10], sc);
+					else if (finalecount >= SONICSTART+44  && finalecount < SONICSTART+47 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIF[11], sc);
+					// ...
+					else if (finalecount >= SONICSTART+53  && finalecount < SONICSTART+57 )
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIF[15], sc);
+				}
+				else
+				{
+					//
+					// Sonic Front Layer Idle
+					//
+					if (!sonic_blink)
+					{
+						SINT8 idlecount = finalecount - sonic_idle_start;
+						if      (idlecount >= 0  && idlecount < 5 )
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[0], sc);
+						else if (idlecount >= 5  && idlecount < 8 )
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[1], sc);
+						else if (idlecount >= 8  && idlecount < 9 )
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[2], sc);
+						else if (idlecount >= 9  && idlecount < 12)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[3], sc);
+						else if (idlecount >= 12 && idlecount < 17)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[4], sc);
+						else if (idlecount >= 17 && idlecount < 19)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[5], sc);
+						else if (idlecount >= 19 && idlecount < 21)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[6], sc);
+						else if (idlecount >= 21 && idlecount < 22)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[7], sc);
+						else if (idlecount >= 22 && idlecount < 25)
+							V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[8], sc);
+					}
+					else
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[0], sc);
+				}
+			}
 
 			// Flash at tic 30, timed to O__TITLE percussion. Hold the flash until tic 34.
 			// After tic 34, fade the flash until tic 44.
@@ -2743,6 +3277,20 @@ void F_TitleScreenDrawer(void)
 				V_DrawFadeScreen(0, 9);
 			else if (finalecount > 34 && 44-finalecount > 0 && 44-finalecount < 10)
 				V_DrawFadeScreen(0, 44-finalecount);
+
+#undef CHARSTART
+#undef SONICSTART
+#undef SONICIDLE
+#undef SONICX
+#undef SONICY
+#undef TAILSSTART
+#undef TAILSIDLE
+#undef TAILSX
+#undef TAILSY
+#undef KNUXSTART
+#undef KNUXIDLE
+#undef KNUXX
+#undef KNUXY
 
 			break;
 
