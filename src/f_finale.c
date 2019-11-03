@@ -88,7 +88,7 @@ UINT8 ttscale = 1; // FRACUNIT / ttscale
 char ttname[9];
 INT16 ttx = 0;
 INT16 tty = 0;
-INT16 ttloop = 0;
+INT16 ttloop = -1;
 UINT16 tttics = 1;
 
 boolean curhidepics;
@@ -156,6 +156,7 @@ static patch_t *t6rbtx[TTMAX_ALACROIX];
 
 // ttmode user
 static patch_t *ttuser[TTMAX_USER];
+static INT32 ttuser_count = 0;
 
 static boolean goodending;
 static patch_t *endbrdr[2]; // border - blue, white, pink - where have i seen those colours before?
@@ -2250,6 +2251,7 @@ void F_StartTitleScreen(void)
 
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
 	{
+		ttuser_count = 0;
 		if (curttmode == TTMODE_ALACROIX)
 			finalecount = -3; // hack so that frames don't advance during the entry wipe
 		else
@@ -2572,10 +2574,20 @@ void F_TitleScreenDrawer(void)
 			break;
 
 		case TTMODE_USER:
-			/*
-			 * USER DEFINED ANIMATION CODE GOES HERE
-			 */
-			//V_DrawSciencePatch(curttx<<FRACBITS, curtty<<FRACBITS, 0, ttuser[0], sc);
+			if (!ttuser[max(0, ttuser_count)])
+			{
+				if(curttloop > -1 && ttuser[curttloop])
+					ttuser_count = curttloop;
+				else if (ttuser[max(0, ttuser_count-1)])
+					ttuser_count = max(0, ttuser_count-1);
+				else
+					break; // draw nothing
+			}
+
+			V_DrawSciencePatch(curttx<<FRACBITS, curtty<<FRACBITS, 0, ttuser[ttuser_count], sc);
+
+			if (!(finalecount % max(1, curtttics)))
+				ttuser_count++;
 			break;
 	}
 
