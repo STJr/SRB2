@@ -1397,16 +1397,21 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				}
 				else if (spr->mobj->color)
 				{
-					if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+					if (spr->mobj->colorized)
+						skinnum = TC_RAINBOW;
+					else if (spr->mobj->player && spr->mobj->player->dashmode >= DASHMODE_THRESHOLD
+						&& (spr->mobj->player->charflags & SF_DASHMODE)
+						&& ((leveltime/2) & 1))
 					{
-						if (spr->mobj->colorized)
-							skinnum = TC_RAINBOW;
+						if (spr->mobj->player->charflags & SF_MACHINE)
+							skinnum = TC_DASHMODE;
 						else
-						{
-							skinnum = (INT32)((skin_t*)spr->mobj->skin-skins);
-						}
+							skinnum = TC_RAINBOW;
 					}
-					else skinnum = TC_DEFAULT;
+					else if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+						skinnum = (INT32)((skin_t*)spr->mobj->skin-skins);
+					else
+						skinnum = TC_DEFAULT;
 				}
 				HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, skinnum, spr->colormap, (skincolors_t)spr->mobj->color);
 			}
