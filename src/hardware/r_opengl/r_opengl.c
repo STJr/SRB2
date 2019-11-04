@@ -1418,9 +1418,12 @@ typedef struct
 	vbo_vertex_t *data;
 } GLSkyVBO;
 
-#define sky_vbo_x (&vbo->data[0].x)
-#define sky_vbo_u (&vbo->data[0].u)
-#define sky_vbo_r (&vbo->data[0].r)
+static const boolean gl_ext_arb_vertex_buffer_object = true;
+
+#define NULL_VBO_VERTEX ((vbo_vertex_t*)NULL)
+#define sky_vbo_x (gl_ext_arb_vertex_buffer_object ? &NULL_VBO_VERTEX->x : &vbo->data[0].x)
+#define sky_vbo_u (gl_ext_arb_vertex_buffer_object ? &NULL_VBO_VERTEX->u : &vbo->data[0].u)
+#define sky_vbo_r (gl_ext_arb_vertex_buffer_object ? &NULL_VBO_VERTEX->r : &vbo->data[0].r)
 
 // The texture offset to be applied to the texture coordinates in SkyVertex().
 static int rows, columns;
@@ -1431,7 +1434,6 @@ static float delta = 0.0f;
 
 static int gl_sky_detail = 16;
 
-static boolean vbo_init = false;
 static INT32 lasttex = -1;
 
 #define MAP_COEFF 128.0f
@@ -1564,30 +1566,40 @@ static void RenderDome(INT32 skytexture)
 
 	rows = 4;
 	columns = 4 * gl_sky_detail;
-	vbosize = 2 * rows * (columns * 2 + 2) + columns * 2;
 
-	// generate a new VBO and get the associated ID
-	if (!vbo_init)
-	{
-		pglGenBuffers(1, &vbo->id);
-		vbo_init = true;
-	}
+	vbosize = 2 * rows * (columns * 2 + 2) + columns * 2;
 
 	// Build the sky dome! Yes!
 	if (lasttex != skytexture)
 	{
+		// delete VBO when already exists
+		if (gl_ext_arb_vertex_buffer_object)
+		{
+			if (vbo->id)
+				pglDeleteBuffers(1, &vbo->id);
+		}
+
 		lasttex = skytexture;
 		gld_BuildSky(rows, columns);
 
-		// bind VBO in order to use
-		pglBindBuffer(GL_ARRAY_BUFFER, vbo->id);
+		if (gl_ext_arb_vertex_buffer_object)
+		{
+			// generate a new VBO and get the associated ID
+			pglGenBuffers(1, &vbo->id);
 
-		// upload data to VBO
-		pglBufferData(GL_ARRAY_BUFFER, vbosize * sizeof(vbo->data[0]), vbo->data, GL_STATIC_DRAW);
+			// bind VBO in order to use
+			pglBindBuffer(GL_ARRAY_BUFFER, vbo->id);
+
+			// upload data to VBO
+			pglBufferData(GL_ARRAY_BUFFER, vbosize * sizeof(vbo->data[0]), vbo->data, GL_STATIC_DRAW);
+		}
 	}
 
+	// bind VBO in order to use
+	if (gl_ext_arb_vertex_buffer_object)
+		pglBindBuffer(GL_ARRAY_BUFFER, vbo->id);
+
 	// activate and specify pointers to arrays
-	pglBindBuffer(GL_ARRAY_BUFFER, vbo->id);
 	pglVertexPointer(3, GL_FLOAT, sizeof(vbo->data[0]), sky_vbo_x);
 	pglTexCoordPointer(2, GL_FLOAT, sizeof(vbo->data[0]), sky_vbo_u);
 	pglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(vbo->data[0]), sky_vbo_r);
@@ -1616,7 +1628,8 @@ static void RenderDome(INT32 skytexture)
 	pglColor4ubv(white);
 
 	// bind with 0, so, switch back to normal pointer operation
-	pglBindBuffer(GL_ARRAY_BUFFER, 0);
+	if (gl_ext_arb_vertex_buffer_object)
+		pglBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// deactivate color array
 	pglDisableClientState(GL_COLOR_ARRAY);
