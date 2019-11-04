@@ -1926,10 +1926,12 @@ state_t states[NUMSTATES] =
 
 	// Level End Sign
 	{SPR_SIGN,                0, -1, {A_SignPlayer}, -3, 0, S_NULL},                    // S_SIGN
-	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, S_SIGNPLAYER, S_SIGNSPINLOOP}, // S_SIGNSPIN
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPINLOOP},            // S_SIGNSPIN
 	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN, S_SIGNROULETTE},   // S_SIGNSPINLOOP
 	{SPR_SIGN,                0,  0, {A_SignPlayer}, -2, 0, S_SIGNSPIN},                // S_SIGNROULETTE
-	{SPR_SIGN,                0, -1, {A_SignPlayer}, -1, 0, S_NULL},                    // S_SIGNPLAYER
+	{SPR_SIGN,                0,  1, {A_SignPlayer}, -1, 0, S_SIGNSLOW},                // S_SIGNPLAYER
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSLOW},                // S_SIGNSLOW
+	{SPR_SIGN,                0, -1,         {NULL},  0, 0, S_NULL},                    // S_SIGNSTOP
 	{SPR_SIGN, FF_PAPERSPRITE|2, -1,         {NULL},  0, 0, S_NULL},                    // S_SIGNBOARD
 	{SPR_SIGN, FF_PAPERSPRITE|1, -1,         {NULL},  0, 29, S_NULL},                   // S_EGGMANSIGN
 
@@ -7792,16 +7794,16 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_lvpass,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
-		S_NULL,         // painstate
+		S_SIGNPLAYER,   // painstate
 		MT_SPARK,       // painchance
 		sfx_None,       // painsound
 		S_EGGMANSIGN,   // meleestate
 		S_NULL,         // missilestate
-		S_NULL,         // deathstate
+		S_SIGNSTOP,     // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		8,              // speed
-		32*FRACUNIT,    // radius
+		36*FRACUNIT,    // radius
 		32*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass

@@ -5011,8 +5011,8 @@ void A_UnsetSolidSteam(mobj_t *actor)
 //
 // Description: Spins a signpost until it hits the ground and reaches its mapthing's angle.
 //
-// var1 = degrees to rotate object
-// var2 = state to set object to once spinning stops
+// var1 = degrees to rotate object (must be positive, because I'm lazy)
+// var2 = unused
 //
 void A_SignSpin(mobj_t *actor)
 {
@@ -5031,12 +5031,15 @@ void A_SignSpin(mobj_t *actor)
 		{
 			angle_t mapangle = FixedAngle(actor->spawnpoint->angle << FRACBITS);
 			angle_t diff = mapangle - actor->angle;
-			if (diff < rotateangle)
+			if (diff < ANG2)
 			{
 				actor->angle = mapangle;
-				P_SetMobjState(actor, locvar2);
+				P_SetMobjState(actor, actor->info->deathstate);
 				return;
 			}
+			if (actor->state-states != actor->info->painstate)
+				P_SetMobjState(actor, actor->info->painstate);
+			actor->movedir = min((mapangle - actor->angle) >> 2, actor->movedir);
 		}
 		else // no mapthing? just finish in your current angle
 		{
@@ -5044,15 +5047,19 @@ void A_SignSpin(mobj_t *actor)
 			return;
 		}
 	}
-	actor->angle += rotateangle;
-	if (leveltime & 1 || actor->tracer == NULL) return;
+	else
+	{
+		actor->movedir = rotateangle;
+	}
+	actor->angle += actor->movedir;
+	if (actor->tracer == NULL || P_MobjWasRemoved(actor->tracer)) return;
 	for (i = -1; i < 2; i += 2)
 	{
 		P_SpawnMobjFromMobj(actor,
 			P_ReturnThrustX(actor, actor->tracer->angle, i * actor->radius),
 			P_ReturnThrustY(actor, actor->tracer->angle, i * actor->radius),
 			(actor->eflags & MFE_VERTICALFLIP) ? 0 : actor->height,
-			actor->info->painchance);
+			actor->info->painchance)->destscale >>= 1;
 	}
 }
 
