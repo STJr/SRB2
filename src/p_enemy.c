@@ -129,6 +129,7 @@ void A_FishJump(mobj_t *actor);
 void A_ThrownRing(mobj_t *actor);
 void A_SetSolidSteam(mobj_t *actor);
 void A_UnsetSolidSteam(mobj_t *actor);
+void A_SignSpin(mobj_t *actor);
 void A_SignPlayer(mobj_t *actor);
 void A_OverlayThink(mobj_t *actor);
 void A_JetChase(mobj_t *actor);
@@ -5006,59 +5007,176 @@ void A_UnsetSolidSteam(mobj_t *actor)
 	actor->flags |= MF_NOCLIP;
 }
 
+// Function: A_SignSpin
+//
+// Description: Spins a signpost until it hits the ground and reaches its mapthing's angle.
+//
+// var1 = degrees to rotate object
+// var2 = state to set object to once spinning stops
+//
+void A_SignSpin(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SignSpin", actor))
+		return;
+#endif
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	INT16 i;
+	angle_t rotateangle = FixedAngle(locvar1 << FRACBITS);
+
+	if (P_IsObjectOnGround(actor) && P_MobjFlip(actor) * actor->momz <= 0)
+	{
+		if (actor->spawnpoint)
+		{
+			angle_t mapangle = FixedAngle(actor->spawnpoint->angle << FRACBITS);
+			angle_t diff = mapangle - actor->angle;
+			if (diff < rotateangle)
+			{
+				actor->angle = mapangle;
+				P_SetMobjState(actor, locvar2);
+				return;
+			}
+		}
+		else // no mapthing? just finish in your current angle
+		{
+			P_SetMobjState(actor, locvar2);
+			return;
+		}
+	}
+	actor->angle += rotateangle;
+	if (leveltime & 1 || actor->tracer == NULL) return;
+	for (i = -1; i < 2; i += 2)
+	{
+		P_SpawnMobjFromMobj(actor,
+			P_ReturnThrustX(actor, actor->tracer->angle, i * actor->radius),
+			P_ReturnThrustY(actor, actor->tracer->angle, i * actor->radius),
+			(actor->eflags & MFE_VERTICALFLIP) ? 0 : actor->height,
+			actor->info->painchance);
+	}
+}
+
 // Function: A_SignPlayer
 //
 // Description: Changes the state of a level end sign to reflect the player that hit it.
+//              Also used to display Eggman or the skin roulette whilst spinning.
 //
-// var1 = unused
+// var1 = number of skin to display (e.g. 2 = Knuckles; special cases: -1 = target's skin, -2 = skin roulette, -3 = Eggman)
 // var2 = unused
 //
 void A_SignPlayer(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	skin_t *skin = NULL;
 	mobj_t *ov;
-	skin_t *skin;
+	UINT8 facecolor, signcolor;
+	UINT32 signframe = states[actor->info->raisestate].frame;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SignPlayer", actor))
 		return;
 #endif
-	if (!actor->target)
+
+	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins)
 		return;
 
-	if (!actor->target->player)
-		return;
-
-	skin = &skins[actor->target->player->skin];
-
-	if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
+	// if no face overlay, spawn one
+	if (actor->tracer->tracer == NULL || P_MobjWasRemoved(actor->tracer->tracer))
 	{
-		actor->color = skin->prefoppositecolor;
-		/*
-		If you're here from the comment above Color_Opposite,
-		the following line is the one which is dependent on the
-		array being symmetrical. It gets the opposite of the
-		opposite of your desired colour just so it can get the
-		brightness frame for the End Sign. It's not a great
-		design choice, but it's constant time array access and
-		the idea that the colours should be OPPOSITES is kind
-		of in the name. If you have a better idea, feel free
-		to let me know. ~toast 2016/07/20
-		*/
-		actor->frame += (15 - Color_Opposite[Color_Opposite[skin->prefoppositecolor - 1][0] - 1][1]);
-	}
-	else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
-	{
-		actor->color = Color_Opposite[actor->target->player->skincolor - 1][0];
-		actor->frame += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
-	}
-
-	if (skin->sprites[SPR2_SIGN].numframes)
-	{
-		// spawn an overlay of the player's face.
 		ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
-		P_SetTarget(&ov->target, actor);
-		ov->color = actor->target->player->skincolor;
+		P_SetTarget(&ov->target, actor->tracer);
+		P_SetTarget(&actor->tracer->tracer, ov);
+	}
+	else
+		ov = actor->tracer->tracer;
+
+	if (locvar1 == -1) // set to target's skin
+	{
+		if (!actor->target)
+			return;
+
+		if (!actor->target->player)
+			return;
+
+		skin = &skins[actor->target->player->skin];
+		facecolor = actor->target->player->skincolor;
+
+		if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
+		{
+			signcolor = skin->prefoppositecolor;
+			/*
+			If you're here from the comment above Color_Opposite,
+			the following line is the one which is dependent on the
+			array being symmetrical. It gets the opposite of the
+			opposite of your desired colour just so it can get the
+			brightness frame for the End Sign. It's not a great
+			design choice, but it's constant time array access and
+			the idea that the colours should be OPPOSITES is kind
+			of in the name. If you have a better idea, feel free
+			to let me know. ~toast 2016/07/20
+			*/
+			signframe += (15 - Color_Opposite[Color_Opposite[skin->prefoppositecolor - 1][0] - 1][1]);
+		}
+		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
+		{
+			signcolor = Color_Opposite[actor->target->player->skincolor - 1][0];
+			signframe += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
+		}
+	}
+	else if (locvar1 != -3) // set to a defined skin
+	{
+		// I turned this function into a fucking mess. I'm so sorry. -Lach
+		if (locvar1 == -2) // next skin
+		{
+			if (ov->skin == NULL) // start at Sonic
+				skin = &skins[0];
+			else
+			{
+				UINT8 skinnum = (skin_t*)ov->skin-skins + 1;
+				player_t *player = actor->target ? actor->target->player : NULL;
+				while (skinnum < numskins && (player ? !R_SkinUsable(player-players, skinnum) : skins[skinnum].availability > 0))
+					skinnum++;
+				if (skinnum < numskins)
+					skin = &skins[skinnum];
+				// leave skin NULL if we go past the skin count, this will display Eggman
+			}
+		}
+		else // specific skin
+		{
+			skin = &skins[locvar1];
+		}
+
+		if (skin != NULL) // if not Eggman, get the appropriate colors
+		{
+			facecolor = skin->prefcolor;
+			if (skin->prefoppositecolor)
+			{
+				signcolor = skin->prefoppositecolor;
+			}
+			else
+			{
+				signcolor = Color_Opposite[facecolor - 1][0];
+			}
+			signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+		}
+	}
+
+	if (skin != NULL && skin->sprites[SPR2_SIGN].numframes) // player face
+	{
+		ov->color = facecolor;
 		ov->skin = skin;
 		P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+		actor->tracer->color = signcolor;
+		actor->tracer->frame = signframe;
+	}
+	else // Eggman face
+	{
+		ov->color = SKINCOLOR_NONE;
+		ov->skin = NULL;
+		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
+		actor->tracer->color = signcolor = SKINCOLOR_CARBON;
+		actor->tracer->frame = signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
 	}
 }
 
@@ -5106,7 +5224,7 @@ void A_OverlayThink(mobj_t *actor)
 		actor->z = actor->target->z + actor->target->height - mobjinfo[actor->type].height  - ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
 	else
 		actor->z = actor->target->z + ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
-	actor->angle = actor->target->angle;
+	actor->angle = actor->target->angle + actor->movedir;
 	actor->eflags = actor->target->eflags;
 
 	actor->momx = actor->target->momx;
