@@ -2816,7 +2816,7 @@ void F_TitleScreenDrawer(void)
 					else if (taftcount >= 12  && taftcount < 14 )
 						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABT[3 ], sc);
 					else if (taftcount >= 14  && taftcount < 17 )
-						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABT[3 ], sc);
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABT[4 ], sc);
 					else if (taftcount >= 17  && taftcount < 21 )
 						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTABT[5 ], sc);
 					else if (taftcount >= 21  && taftcount < 24 )
@@ -2855,7 +2855,7 @@ void F_TitleScreenDrawer(void)
 					else if (tabtcount >= 15  && tabtcount < 18 )
 						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[3 ], sc);
 					else if (tabtcount >= 18  && tabtcount < 19 )
-						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[3 ], sc);
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[4 ], sc);
 					else if (tabtcount >= 19  && tabtcount < 22 )
 						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAFT[5 ], sc);
 					else if (tabtcount >= 22  && tabtcount < 27 )
@@ -2893,7 +2893,7 @@ void F_TitleScreenDrawer(void)
 					else if (finalecount >= KNUXSTART+13  && finalecount < KNUXSTART+15 )
 						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[3 ], sc);
 					else if (finalecount >= KNUXSTART+15  && finalecount < KNUXSTART+18 )
-						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[3 ], sc);
+						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[4 ], sc);
 					else if (finalecount >= KNUXSTART+18  && finalecount < KNUXSTART+22 )
 						V_DrawSciencePatch(KNUXX<<FRACBITS, KNUXY<<FRACBITS, 0, TTKNIB[5 ], sc);
 					else if (finalecount >= KNUXSTART+22  && finalecount < KNUXSTART+28 )
@@ -2972,7 +2972,7 @@ void F_TitleScreenDrawer(void)
 					else if (finalecount >= TAILSSTART+12  && finalecount < TAILSSTART+16 )
 						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[3 ], sc);
 					else if (finalecount >= TAILSSTART+16  && finalecount < TAILSSTART+22 )
-						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[3 ], sc);
+						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[4 ], sc);
 					else if (finalecount >= TAILSSTART+22  && finalecount < TAILSSTART+23 )
 						V_DrawSciencePatch(TAILSX<<FRACBITS, TAILSY<<FRACBITS, 0, TTTAIB[5 ], sc);
 					else if (finalecount >= TAILSSTART+23  && finalecount < TAILSSTART+26 )
@@ -3045,7 +3045,7 @@ void F_TitleScreenDrawer(void)
 					else if (finalecount >= SONICSTART+14  && finalecount < SONICSTART+18 )
 						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[3 ], sc);
 					else if (finalecount >= SONICSTART+18  && finalecount < SONICSTART+19 )
-						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[3 ], sc);
+						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[4 ], sc);
 					else if (finalecount >= SONICSTART+19  && finalecount < SONICSTART+27 )
 						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSOIB[5 ], sc);
 					else if (finalecount >= SONICSTART+27  && finalecount < SONICSTART+31 )
