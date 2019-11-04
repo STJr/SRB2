@@ -2727,7 +2727,7 @@ void F_TitleScreenDrawer(void)
 
 			if (finalecount >= KNUXIDLE)
 			{
-				if (!knux_idle_start || !((finalecount - knux_idle_start) % knux_idle_end))
+				if (!knux_idle_start || finalecount - knux_idle_start >= knux_idle_end)
 				{
 					if (knux_blink)
 					{
@@ -2750,7 +2750,7 @@ void F_TitleScreenDrawer(void)
 
 			if (finalecount >= TAILSIDLE)
 			{
-				if (!tails_idle_start || !((finalecount - tails_idle_start) % tails_idle_end))
+				if (!tails_idle_start || finalecount - tails_idle_start >= tails_idle_end)
 				{
 					if (tails_blink)
 					{
@@ -2769,12 +2769,12 @@ void F_TitleScreenDrawer(void)
 
 				// Tails does not actually have a non-blink idle cycle, but make up a number
 				// so he can still blink.
-				tails_idle_end = tails_blink ? (tails_blink_twice ? 17 : 7) : 35;
+				tails_idle_end = tails_blink ? (tails_blink_twice ? 17 : 7) : 30;
 			}
 
 			if (finalecount >= SONICIDLE)
 			{
-				if (!sonic_idle_start || !((finalecount - sonic_idle_start) % sonic_idle_end))
+				if (!sonic_idle_start || finalecount - sonic_idle_start >= sonic_idle_end)
 				{
 					if (sonic_blink)
 					{
