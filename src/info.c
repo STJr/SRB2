@@ -1926,9 +1926,12 @@ state_t states[NUMSTATES] =
 
 	// Level End Sign
 	{SPR_SIGN,                0, -1, {A_SignPlayer}, -3, 0, S_NULL},                    // S_SIGN
-	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPINLOOP},            // S_SIGNSPIN
-	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN, S_SIGNROULETTE},   // S_SIGNSPINLOOP
-	{SPR_SIGN,                0,  0, {A_SignPlayer}, -2, 0, S_SIGNSPIN},                // S_SIGNROULETTE
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPIN2},            // S_SIGNSPIN1
+	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN1, S_SIGNSPIN3},   // S_SIGNSPIN2
+	{SPR_SIGN,                0,  0, {A_SignPlayer}, -2, 0, S_SIGNSPIN4},                // S_SIGNSPIN3
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPIN5},            // S_SIGNSPIN4
+	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN4, S_SIGNSPIN6},   // S_SIGNSPIN5
+	{SPR_SIGN,                0,  0, {A_SignPlayer}, -3, 0, S_SIGNSPIN1},                // S_SIGNSPIN6
 	{SPR_SIGN,                0,  1, {A_SignPlayer}, -1, 0, S_SIGNSLOW},                // S_SIGNPLAYER
 	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSLOW},                // S_SIGNSLOW
 	{SPR_SIGN,                0, -1,         {NULL},  0, 0, S_NULL},                    // S_SIGNSTOP

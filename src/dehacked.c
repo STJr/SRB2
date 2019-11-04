@@ -5387,9 +5387,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Level End Sign
 	"S_SIGN",
-	"S_SIGNSPIN",
-	"S_SIGNSPINLOOP",
-	"S_SIGNROULETTE",
+	"S_SIGNSPIN1",
+	"S_SIGNSPIN2",
+	"S_SIGNSPIN3",
+	"S_SIGNSPIN4",
+	"S_SIGNSPIN5",
+	"S_SIGNSPIN6",
 	"S_SIGNPLAYER",
 	"S_SIGNBOARD",
 	"S_EGGMANSIGN",

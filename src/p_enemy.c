@@ -5136,17 +5136,14 @@ void A_SignPlayer(mobj_t *actor)
 		// I turned this function into a fucking mess. I'm so sorry. -Lach
 		if (locvar1 == -2) // next skin
 		{
-			if (ov->skin == NULL) // start at Sonic
-				skin = &skins[0];
-			else
+			if (ov->skin == NULL) // pick a random skin to start with!
+				skin = &skins[P_RandomKey(numskins)];
+			else // otherwise, advance 1 skin
 			{
-				UINT8 skinnum = (skin_t*)ov->skin-skins + 1;
+				UINT8 skinnum = (skin_t*)ov->skin-skins;
 				player_t *player = actor->target ? actor->target->player : NULL;
-				while (skinnum < numskins && (player ? !R_SkinUsable(player-players, skinnum) : skins[skinnum].availability > 0))
-					skinnum++;
-				if (skinnum < numskins)
-					skin = &skins[skinnum];
-				// leave skin NULL if we go past the skin count, this will display Eggman
+				while ((skinnum = (skinnum + 1) % numskins) && (player ? !R_SkinUsable(player-players, skinnum) : skins[skinnum].availability > 0));
+				skin = &skins[skinnum];
 			}
 		}
 		else // specific skin
@@ -5154,19 +5151,16 @@ void A_SignPlayer(mobj_t *actor)
 			skin = &skins[locvar1];
 		}
 
-		if (skin != NULL) // if not Eggman, get the appropriate colors
+		facecolor = skin->prefcolor;
+		if (skin->prefoppositecolor)
 		{
-			facecolor = skin->prefcolor;
-			if (skin->prefoppositecolor)
-			{
-				signcolor = skin->prefoppositecolor;
-			}
-			else
-			{
-				signcolor = Color_Opposite[facecolor - 1][0];
-			}
-			signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+			signcolor = skin->prefoppositecolor;
 		}
+		else
+		{
+			signcolor = Color_Opposite[facecolor - 1][0];
+		}
+		signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
 	}
 
 	if (skin != NULL && skin->sprites[SPR2_SIGN].numframes) // player face
@@ -5180,7 +5174,6 @@ void A_SignPlayer(mobj_t *actor)
 	else // Eggman face
 	{
 		ov->color = SKINCOLOR_NONE;
-		ov->skin = NULL;
 		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		actor->tracer->color = signcolor = SKINCOLOR_CARBON;
 		actor->tracer->frame = signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);

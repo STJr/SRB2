@@ -4059,7 +4059,7 @@ void P_SetupSignExit(player_t *player)
 
 		P_SetTarget(&thing->target, player->mo);
 		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
-		P_SetMobjState(thing, S_SIGNSPIN);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 
@@ -4085,7 +4085,7 @@ void P_SetupSignExit(player_t *player)
 
 		P_SetTarget(&thing->target, player->mo);
 		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
-		P_SetMobjState(thing, S_SIGNSPIN);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 
