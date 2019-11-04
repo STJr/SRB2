@@ -840,11 +840,15 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 
 static boolean HWR_CanInterpolateModel(mobj_t *mobj, model_t *model)
 {
+	if (cv_grmodelinterpolation.value == 2) // Always
+		return true;
 	return model->interpolate[(mobj->frame & FF_FRAMEMASK)];
 }
 
 static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
 {
+	if (cv_grmodelinterpolation.value == 2) // Always
+		return true;
 	return spr2frame->interpolate;
 }
 
@@ -1101,7 +1105,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 #ifdef USE_MODEL_NEXTFRAME
 #define INTERPOLERATION_LIMIT TICRATE/4
-		if (cv_grmodels.value == 1 && tics <= durs && tics <= INTERPOLERATION_LIMIT)
+		if (cv_grmodelinterpolation.value && tics <= durs && tics <= INTERPOLERATION_LIMIT)
 		{
 			if (durs > INTERPOLERATION_LIMIT)
 				durs = INTERPOLERATION_LIMIT;

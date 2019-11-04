@@ -1216,6 +1216,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_grcoronas);
 	CV_RegisterVar(&cv_grcoronasize);
 #endif
+	CV_RegisterVar(&cv_grmodelinterpolation);
 	CV_RegisterVar(&cv_grmodels);
 	CV_RegisterVar(&cv_grspritebillboarding);
 	CV_RegisterVar(&cv_grskydome);

@@ -83,6 +83,7 @@ extern consvar_t cv_grcoronasize;
 #endif
 extern consvar_t cv_grfov;
 extern consvar_t cv_grmodels;
+extern consvar_t cv_grmodelinterpolation;
 extern consvar_t cv_grfog;
 extern consvar_t cv_grfogcolor;
 extern consvar_t cv_grfogdensity;
