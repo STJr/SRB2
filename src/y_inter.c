@@ -346,7 +346,7 @@ void Y_IntermissionDrawer(void)
 			}
 		}
 #ifdef HWRENDER
-		else if(rendermode != render_soft && usebuffer)
+		else if (rendermode != render_soft && usebuffer)
 			HWR_DrawIntermissionBG();
 #endif
 		else
