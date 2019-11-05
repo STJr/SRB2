@@ -5429,14 +5429,14 @@ static void HWR_DrawSprites(void)
 					if (!cv_grmodels.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
 						HWR_DrawSprite(spr);
 					else
-						HWR_DrawMD2(spr);
+						HWR_DrawModel(spr);
 				}
 				else
 				{
 					if (!cv_grmodels.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
 						HWR_DrawSprite(spr);
 					else
-						HWR_DrawMD2(spr);
+						HWR_DrawModel(spr);
 				}
 		}
 	}
@@ -6604,13 +6604,13 @@ void HWR_Startup(void)
 	// do this once
 	if (!startupdone)
 	{
-		CONS_Printf("HWR_Startup()\n");
+		CONS_Printf("HWR_Startup()...\n");
 		HWR_InitPolyPool();
 		// add console cmds & vars
 		HWR_AddEngineCommands();
 		HWR_InitTextureCache();
 
-		HWR_InitMD2();
+		HWR_InitModels();
 
 #ifdef ALAM_LIGHTING
 		HWR_InitLight();

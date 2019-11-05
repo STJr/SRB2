@@ -441,7 +441,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		{
 #ifdef HWRENDER
 			if (rendermode == render_opengl)
-				HWR_AddSpriteMD2(i);
+				HWR_AddSpriteModel(i);
 #endif
 			// if a new sprite was added (not just replaced)
 			addsprites++;
@@ -3180,7 +3180,7 @@ next_token:
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
-			HWR_AddPlayerMD2(numskins);
+			HWR_AddPlayerModel(numskins);
 #endif
 
 		numskins++;

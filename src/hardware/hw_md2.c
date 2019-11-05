@@ -351,7 +351,7 @@ static GrTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
 }
 
 // -----------------+
-// md2_loadTexture  : Download a pcx or png texture for MD2 models
+// md2_loadTexture  : Download a pcx or png texture for models
 // -----------------+
 static void md2_loadTexture(md2_t *model)
 {
@@ -455,7 +455,7 @@ static void md2_loadBlendTexture(md2_t *model)
 // Don't spam the console, or the OS with fopen requests!
 static boolean nomd2s = false;
 
-void HWR_InitMD2(void)
+void HWR_InitModels(void)
 {
 	size_t i;
 	INT32 s;
@@ -463,7 +463,7 @@ void HWR_InitMD2(void)
 	char name[18], filename[32];
 	float scale, offset;
 
-	CONS_Printf("InitMD2()...\n");
+	CONS_Printf("HWR_InitModels()...\n");
 	for (s = 0; s < MAXSKINS; s++)
 	{
 		md2_playermodels[s].scale = -1.0f;
@@ -497,7 +497,7 @@ void HWR_InitMD2(void)
 	{
 		if (stricmp(name, "PLAY") == 0)
 		{
-			CONS_Printf("MD2 for sprite PLAY detected in models.dat, use a player skin instead!\n");
+			CONS_Printf("Model for sprite PLAY detected in models.dat, use a player skin instead!\n");
 			continue;
 		}
 
@@ -531,7 +531,7 @@ void HWR_InitMD2(void)
 			}
 		}
 		// no sprite/player skin name found?!?
-		CONS_Printf("Unknown sprite/player skin %s detected in models.dat\n", name);
+		//CONS_Printf("Unknown sprite/player skin %s detected in models.dat\n", name);
 md2found:
 		// move on to next line...
 		continue;
@@ -539,7 +539,7 @@ md2found:
 	fclose(f);
 }
 
-void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
+void HWR_AddPlayerModel(int skin) // For skins that were added after startup
 {
 	FILE *f;
 	char name[18], filename[32];
@@ -548,7 +548,7 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 	if (nomd2s)
 		return;
 
-	CONS_Printf("AddPlayerMD2()...\n");
+	//CONS_Printf("HWR_AddPlayerModel()...\n");
 
 	// read the models.dat file
 	//Filename checking fixed ~Monster Iestyn and Golden
@@ -561,7 +561,7 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 		return;
 	}
 
-	// Check for any MD2s that match the names of player skins!
+	// Check for any model that match the names of player skins!
 	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
 		if (stricmp(name, skins[skin].name) == 0)
@@ -575,14 +575,13 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 		}
 	}
 
-	//CONS_Printf("MD2 for player skin %s not found\n", skins[skin].name);
+	//CONS_Printf("Model for player skin %s not found\n", skins[skin].name);
 	md2_playermodels[skin].notfound = true;
 playermd2found:
 	fclose(f);
 }
 
-
-void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startup
+void HWR_AddSpriteModel(size_t spritenum) // For sprites that were added after startup
 {
 	FILE *f;
 	// name[18] is used to check for names in the models.dat file that match with sprites or player skins
@@ -631,7 +630,6 @@ spritemd2found:
 // 0.2126 to red
 // 0.7152 to green
 // 0.0722 to blue
-// (See this same define in k_kart.c!)
 #define SETBRIGHTNESS(brightness,r,g,b) \
 	brightness = (UINT8)(((1063*((UINT16)r)/5000) + (3576*((UINT16)g)/5000) + (361*((UINT16)b)/5000)) / 3)
 
@@ -818,47 +816,27 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 #define NORMALFOG 0x00000000
 #define FADEFOG 0x19000000
 
-// -----------------+
-// HWR_DrawMD2      : Draw MD2
-//                  : (monsters, bonuses, weapons, lights, ...)
-// Returns          :
-// -----------------+
-	/*
-	wait/stand
-	death
-	pain
-	walk
-	shoot/fire
-
-	die?
-	atka?
-	atkb?
-	attacka/b/c/d?
-	res?
-	run?
-	*/
-
 static boolean HWR_CanInterpolateModel(mobj_t *mobj, model_t *model)
 {
-	if (cv_grmodelinterpolation.value == 2) // Always
+	if (cv_grmodelinterpolation.value == 2) // Always interpolate
 		return true;
 	return model->interpolate[(mobj->frame & FF_FRAMEMASK)];
 }
 
 static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
 {
-	if (cv_grmodelinterpolation.value == 2) // Always
+	if (cv_grmodelinterpolation.value == 2) // Always interpolate
 		return true;
 	return spr2frame->interpolate;
 }
 
 //
-// P_GetModelSprite2 (see P_GetSkinSprite2)
+// HWR_GetModelSprite2 (see P_GetSkinSprite2)
 // For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
 // For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
 //
 
-static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *player)
+static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *player)
 {
 	UINT8 super = 0, i = 0;
 
@@ -909,7 +887,11 @@ static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *p
 	return spr2;
 }
 
-void HWR_DrawMD2(gr_vissprite_t *spr)
+//
+// HWR_DrawModel
+//
+
+void HWR_DrawModel(gr_vissprite_t *spr)
 {
 	FSurfaceInfo Surf;
 
@@ -1086,7 +1068,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		frame = (spr->mobj->frame & FF_FRAMEMASK);
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
 		{
-			spr2 = P_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
+			spr2 = HWR_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
 			mod = md2->model->spr2frames[spr2].numframes;
 #ifndef DONTHIDEDIFFANIMLENGTH // by default, different anim length is masked by the mod
 			if (mod > (INT32)((skin_t *)spr->mobj->skin)->sprites[spr2].numframes)
