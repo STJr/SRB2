@@ -6999,7 +6999,7 @@ static char wipelumpname[9];
 static lumpnum_t wipelumpnum;
 
 // puts wipe lumpname in wipename[9]
-static boolean check_wipe(UINT8 wipenum, UINT8 scrnnum)
+static boolean HWR_WipeCheck(UINT8 wipenum, UINT8 scrnnum)
 {
 	size_t lsize;
 
@@ -7030,7 +7030,7 @@ static boolean check_wipe(UINT8 wipenum, UINT8 scrnnum)
 
 void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
 {
-	if (!check_wipe(wipenum, scrnnum))
+	if (!HWR_WipeCheck(wipenum, scrnnum))
 		return;
 
 	HWR_GetFadeMask(wipelumpnum);
@@ -7043,20 +7043,13 @@ void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
 
 void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum)
 {
-	if (!check_wipe(wipenum, scrnnum))
-		return;
-
-	HWR_GetFadeMask(wipelumpnum);
-	HWD.pfnDoScreenWipe(HWRWipeCounter);
-
-	HWRWipeCounter += 0.05f; // increase opacity of end screen
-	if (HWRWipeCounter > 1.0f)
-		HWRWipeCounter = 1.0f;
+	// It does the same thing
+	HWR_DoWipe(wipenum, scrnnum);
 }
 
 void HWR_DoLevelWipe(UINT8 wipenum, UINT8 scrnnum, UINT8 wipecolorfill)
 {
-	if (!check_wipe(wipenum, scrnnum))
+	if (!HWR_WipeCheck(wipenum, scrnnum))
 		return;
 
 	HWR_EndScreenWipe();
