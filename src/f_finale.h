@@ -130,8 +130,8 @@ extern wipestyleflags_t wipestyleflags;
 #define FADECOLORMAPDIV 8
 #define FADECOLORMAPROWS (256/FADECOLORMAPDIV)
 
-#define FADEREDFACTOR   20
-#define FADEGREENFACTOR 20
+#define FADEREDFACTOR   15
+#define FADEGREENFACTOR 15
 #define FADEBLUEFACTOR  10
 
 void F_WipeStartScreen(void);
