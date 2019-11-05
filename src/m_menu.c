@@ -228,6 +228,7 @@ static void M_GetAllEmeralds(INT32 choice);
 static void M_DestroyRobots(INT32 choice);
 static void M_LevelSelectWarp(INT32 choice);
 static void M_Credits(INT32 choice);
+static void M_SoundTest(INT32 choice);
 static void M_PandorasBox(INT32 choice);
 static void M_EmblemHints(INT32 choice);
 static void M_HandleChecklist(INT32 choice);
@@ -336,8 +337,8 @@ static void M_DrawGenericMenu(void);
 static void M_DrawGenericScrollMenu(void);
 static void M_DrawCenteredMenu(void);
 static void M_DrawAddons(void);
-static void M_DrawSkyRoom(void);
 static void M_DrawChecklist(void);
+static void M_DrawSoundTest(void);
 static void M_DrawEmblemHints(void);
 static void M_DrawPauseMenu(void);
 static void M_DrawServerMenu(void);
@@ -704,6 +705,11 @@ static menuitem_t SR_LevelSelectMenu[] =
 static menuitem_t SR_UnlockChecklistMenu[] =
 {
 	{IT_KEYHANDLER | IT_STRING, NULL, "", M_HandleChecklist, 0},
+};
+
+static menuitem_t SR_SoundTestMenu[] =
+{
+	{IT_KEYHANDLER | IT_STRING, NULL, "", M_HandleSoundTest, 0},
 };
 
 static menuitem_t SR_EmblemHintMenu[] =
@@ -1600,18 +1606,8 @@ menu_t SR_PandoraDef =
 	0,
 	M_ExitPandorasBox
 };
-menu_t SR_MainDef =
-{
-	MN_SR_MAIN,
-	"M_SECRET",
-	sizeof (SR_MainMenu)/sizeof (menuitem_t),
-	&MainDef,
-	SR_MainMenu,
-	M_DrawSkyRoom,
-	60, 40,
-	0,
-	NULL
-};
+
+menu_t SR_MainDef = DEFAULTMENUSTYLE(MN_SR_MAIN, "M_SECRET", SR_MainMenu, &MainDef, 60, 40);
 
 menu_t SR_LevelSelectDef = MAPPLATTERMENUSTYLE(
 	MN_SR_MAIN + (MN_SR_LEVELSELECT << 6),
@@ -1629,6 +1625,20 @@ menu_t SR_UnlockChecklistDef =
 	0,
 	NULL
 };
+
+menu_t SR_SoundTestDef =
+{
+	MN_SR_MAIN + (MN_SR_SOUNDTEST << 6),
+	NULL,
+	sizeof (SR_SoundTestMenu)/sizeof (menuitem_t),
+	&SR_MainDef,
+	SR_SoundTestMenu,
+	M_DrawSoundTest,
+	60, 150,
+	0,
+	NULL
+};
+
 menu_t SR_EmblemHintDef =
 {
 	MN_SR_MAIN + (MN_SR_EMBLEMHINT << 6),
@@ -2309,6 +2319,11 @@ void M_InitMenuPresTables(void)
 			strncpy(menupres[i].musname, "_nitat", 7);
 		else if (i == MN_SP_PLAYER)
 			strncpy(menupres[i].musname, "_chsel", 7);
+		else if (i == MN_SR_SOUNDTEST)
+		{
+			*menupres[i].musname = '\0';
+			menupres[i].musstop = true;
+		}
 	}
 }
 
@@ -6922,7 +6937,7 @@ static void M_DrawEmblemHints(void)
 	M_DrawGenericMenu();
 }
 
-static void M_DrawSkyRoom(void)
+/*static void M_DrawSkyRoom(void)
 {
 	INT32 i, y = 0;
 
@@ -6949,6 +6964,266 @@ static void M_DrawSkyRoom(void)
 	}
 	if (cv_soundtest.value)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + y + 8, V_YELLOWMAP, S_sfx[cv_soundtest.value].name);
+}*/
+
+static musicdef_t *curplaying = NULL;
+static INT32 st_sel = 0, st_cc = 0;
+static tic_t st_time = 0;
+static patch_t* st_radio[9];
+static patch_t* st_launchpad[4];
+
+static void M_SoundTest(INT32 choice)
+{
+	INT32 ul = skyRoomMenuTranslations[choice-1];
+	UINT8 i;
+	char buf[8];
+
+	soundtestpage = (UINT8)(unlockables[ul].variable);
+	if (!soundtestpage)
+		soundtestpage = 1;
+
+	if (!S_PrepareSoundTest())
+	{
+		M_StartMessage(M_GetText("No selectable tracks found.\n"),NULL,MM_NOTHING);
+		return;
+	}
+
+	STRBUFCPY(buf, "M_RADIOn");
+	for (i = 0; i < 9; i++)
+	{
+		if (st_radio[i])
+			W_UnlockCachedPatch(st_radio[i]);
+		buf[7] = (char)('0'+i);
+		st_radio[i] = W_CachePatchName(buf, PU_STATIC);
+	}
+
+	STRBUFCPY(buf, "M_LPADn");
+	for (i = 0; i < 4; i++)
+	{
+		if (st_launchpad[i])
+			W_UnlockCachedPatch(st_launchpad[i]);
+		buf[6] = (char)('0'+i);
+		st_launchpad[i] = W_CachePatchName(buf, PU_STATIC);
+	}
+
+	curplaying = NULL;
+	st_time = 0;
+
+	st_sel = 0;
+
+	st_cc = cv_closedcaptioning.value; // hack;
+	cv_closedcaptioning.value = 1; // hack
+
+	M_SetupNextMenu(&SR_SoundTestDef);
+}
+
+static void M_DrawSoundTest(void)
+{
+	INT32 x, y, i;
+	fixed_t hscale = FRACUNIT/2, vscale = FRACUNIT/2, bounce = 0;
+	UINT8 frame[4] = {0, 0, -1, SKINCOLOR_RUBY};
+
+	// let's handle the ticker first. ideally we'd tick this somewhere else, BUT...
+	if (curplaying)
+	{
+		if (curplaying == &soundtestsfx)
+		{
+			if (cv_soundtest.value)
+			{
+				frame[1] = (2-st_time);
+				frame[2] = ((cv_soundtest.value - 1) % 9);
+				frame[3] += (((cv_soundtest.value - 1) / 9) % (MAXSKINCOLORS - frame[3]));
+				if (st_time < 2)
+					st_time++;
+			}
+		}
+		else
+		{
+			if (curplaying->stoppingtics && st_time >= curplaying->stoppingtics)
+			{
+				curplaying = NULL;
+				st_time = 0;
+			}
+			else
+			{
+				fixed_t work, bpm = curplaying->bpm;
+				angle_t ang;
+				//bpm = FixedDiv((60*TICRATE)<<FRACBITS, bpm); -- bake this in on load
+
+				work = st_time<<FRACBITS;
+				work %= bpm;
+
+				if (st_time >= (FRACUNIT>>1)) // prevent overflow jump - takes about 15 minutes of loop on the same song to reach
+					st_time = (work>>FRACBITS);
+
+				work = FixedDiv(work*180, bpm);
+				frame[0] = 8-(work/(20<<FRACBITS));
+				ang = (FixedAngle(work)>>ANGLETOFINESHIFT) & FINEMASK;
+				bounce = (FINESINE(ang) - FRACUNIT/2);
+				hscale -= bounce/16;
+				vscale += bounce/16;
+
+				st_time++;
+			}
+		}
+	}
+
+	x = 90<<FRACBITS;
+	y = (BASEVIDHEIGHT-32)<<FRACBITS;
+
+	V_DrawStretchyFixedPatch(x, y,
+		hscale, vscale,
+		0, st_radio[frame[0]], NULL);
+
+	V_DrawFixedPatch(x, y, FRACUNIT/2, 0, st_launchpad[0], NULL);
+
+	for (i = 0; i < 9; i++)
+	{
+		if (i == frame[2])
+		{
+			UINT8 *colmap = R_GetTranslationColormap(TC_RAINBOW, frame[3], GTC_CACHE);
+			V_DrawFixedPatch(x, y + (frame[1]<<FRACBITS), FRACUNIT/2, 0, st_launchpad[frame[1]+1], colmap);
+		}
+		else
+			V_DrawFixedPatch(x, y, FRACUNIT/2, 0, st_launchpad[1], NULL);
+
+		if ((i % 3) == 2)
+		{
+			x -= ((2*28) + 25)<<(FRACBITS-1);
+			y -= ((2*7) - 11)<<(FRACBITS-1);
+		}
+		else
+		{
+			x += 28<<(FRACBITS-1);
+			y += 7<<(FRACBITS-1);
+		}
+	}
+
+	y = (BASEVIDWIDTH-(vid.width/vid.dupx))/2;
+
+	V_DrawFill(y, 20, vid.width/vid.dupx, 24, 159);
+	{
+		static fixed_t st_scroll = -1;
+		const char* titl;
+		x = 16;
+		V_DrawString(x, 10, 0, "NOW PLAYING:");
+		if (curplaying)
+		{
+			if (curplaying->alttitle[0])
+				titl = va("%s - %s - ", curplaying->title, curplaying->alttitle);
+			else
+				titl = va("%s - ", curplaying->title);
+		}
+		else
+			titl = "NONE - ";
+
+		i = V_LevelNameWidth(titl);
+
+		if (++st_scroll >= i)
+			st_scroll %= i;
+
+		x -= st_scroll;
+
+		while (x < BASEVIDWIDTH-y)
+			x += i;
+		while (x > y)
+		{
+			x -= i;
+			V_DrawLevelTitle(x, 24, 0, titl);
+		}
+
+		if (curplaying)
+			V_DrawRightAlignedString(BASEVIDWIDTH-16, 46, V_ALLOWLOWERCASE, curplaying->authors);
+	}
+
+	V_DrawFill(165, 60, 140, 112, 159);
+
+	{
+		INT32 t, b, q, m = 112;
+
+		if (numsoundtestdefs <= 7)
+		{
+			t = 0;
+			b = numsoundtestdefs - 1;
+			i = 0;
+		}
+		else
+		{
+			q = m;
+			m = (5*m)/numsoundtestdefs;
+			if (st_sel < 3)
+			{
+				t = 0;
+				b = 6;
+				i = 0;
+			}
+			else if (st_sel >= numsoundtestdefs-4)
+			{
+				t = numsoundtestdefs - 7;
+				b = numsoundtestdefs - 1;
+				i = q-m;
+			}
+			else
+			{
+				t = st_sel - 3;
+				b = st_sel + 3;
+				i = (t * (q-m))/(numsoundtestdefs - 7);
+			}
+		}
+
+		V_DrawFill(165+140-1, 60 + i, 1, m, 0);
+
+		if (t != 0)
+			V_DrawString(165+140+4, 60+4 - (skullAnimCounter/5), V_YELLOWMAP, "\x1A");
+
+		if (b != numsoundtestdefs - 1)
+			V_DrawString(165+140+4, 60+112-12 + (skullAnimCounter/5), V_YELLOWMAP, "\x1B");
+
+		x = 169;
+		y = 64;
+
+		while (t <= b)
+		{
+			if (t == st_sel)
+				V_DrawFill(165, y-4, 140-1, 16, 155);
+			if (!soundtestdefs[t]->allowed)
+			{
+				V_DrawString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, "???");
+			}
+			else if (soundtestdefs[t] == &soundtestsfx)
+			{
+				const char *sfxstr = va("SFX %s", cv_soundtest.string);
+				V_DrawString(x, y, (t == st_sel ? V_YELLOWMAP : 0), sfxstr);
+				if (t == st_sel)
+				{
+					V_DrawCharacter(x - 10 - (skullAnimCounter/5), y,
+						'\x1C' | V_YELLOWMAP, false);
+					V_DrawCharacter(x + 2 + V_StringWidth(sfxstr, 0) + (skullAnimCounter/5), y,
+						'\x1D' | V_YELLOWMAP, false);
+				}
+
+				if (curplaying == soundtestdefs[t])
+				{
+					sfxstr = (cv_soundtest.value) ? S_sfx[cv_soundtest.value].name : "N/A";
+					i = V_StringWidth(sfxstr, 0);
+					V_DrawFill(165+140-9-i, y-4, i+8, 16, 150);
+					V_DrawRightAlignedString(165+140-5, y, V_YELLOWMAP, sfxstr);
+				}
+			}
+			else
+			{
+				V_DrawString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, soundtestdefs[t]->title);
+				if (curplaying == soundtestdefs[t])
+				{
+					V_DrawFill(165+140-9, y-4, 8, 16, 150);
+					//V_DrawCharacter(165+140-8, y, '\x19' | V_YELLOWMAP, false);
+					V_DrawFixedPatch((165+140-9)<<FRACBITS, (y<<FRACBITS)-(bounce*4), FRACUNIT, 0, hu_font['\x19'-HU_FONTSTART], V_GetStringColormap(V_YELLOWMAP));
+				}
+			}
+			t++;
+			y += 16;
+		}
+	}
 }
 
 static void M_HandleSoundTest(INT32 choice)
@@ -6958,27 +7233,102 @@ static void M_HandleSoundTest(INT32 choice)
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
-			M_NextOpt();
-			S_StartSound(NULL, sfx_menu1);
+			if (st_sel++ >= numsoundtestdefs-1)
+				st_sel = 0;
+			{
+				cv_closedcaptioning.value = st_cc; // hack
+				S_StartSound(NULL, sfx_menu1);
+				cv_closedcaptioning.value = 1; // hack
+			}
 			break;
 		case KEY_UPARROW:
-			M_PrevOpt();
-			S_StartSound(NULL, sfx_menu1);
+			if (!st_sel--)
+				st_sel = numsoundtestdefs-1;
+			{
+				cv_closedcaptioning.value = st_cc; // hack
+				S_StartSound(NULL, sfx_menu1);
+				cv_closedcaptioning.value = 1; // hack
+			}
+			break;
+		case KEY_PGDN:
+			if (st_sel < numsoundtestdefs-1)
+			{
+				st_sel += 3;
+				if (st_sel >= numsoundtestdefs-1)
+					st_sel = numsoundtestdefs-1;
+				cv_closedcaptioning.value = st_cc; // hack
+				S_StartSound(NULL, sfx_menu1);
+				cv_closedcaptioning.value = 1; // hack
+			}
+			break;
+		case KEY_PGUP:
+			if (st_sel)
+			{
+				st_sel -= 3;
+				if (st_sel < 0)
+					st_sel = 0;
+				cv_closedcaptioning.value = st_cc; // hack
+				S_StartSound(NULL, sfx_menu1);
+				cv_closedcaptioning.value = 1; // hack
+			}
 			break;
 		case KEY_BACKSPACE:
+			if (curplaying)
+			{
+				S_StopSounds();
+				S_StopMusic();
+				curplaying = NULL;
+				st_time = 0;
+				cv_closedcaptioning.value = st_cc; // hack
+				S_StartSound(NULL, sfx_skid);
+				cv_closedcaptioning.value = 1; // hack
+			}
+			break;
 		case KEY_ESCAPE:
 			exitmenu = true;
 			break;
 
 		case KEY_RIGHTARROW:
-			CV_AddValue(&cv_soundtest, 1);
+			if (soundtestdefs[st_sel] == &soundtestsfx && soundtestdefs[st_sel]->allowed)
+			{
+				S_StopSounds();
+				S_StopMusic();
+				curplaying = soundtestdefs[st_sel];
+				st_time = 0;
+				CV_AddValue(&cv_soundtest, 1);
+			}
 			break;
 		case KEY_LEFTARROW:
-			CV_AddValue(&cv_soundtest, -1);
+			if (soundtestdefs[st_sel] == &soundtestsfx && soundtestdefs[st_sel]->allowed)
+			{
+				S_StopSounds();
+				S_StopMusic();
+				curplaying = soundtestdefs[st_sel];
+				st_time = 0;
+				CV_AddValue(&cv_soundtest, -1);
+			}
 			break;
 		case KEY_ENTER:
 			S_StopSounds();
-			S_StartSound(NULL, cv_soundtest.value);
+			S_StopMusic();
+			st_time = 0;
+			if (soundtestdefs[st_sel]->allowed)
+			{
+				curplaying = soundtestdefs[st_sel];
+				if (curplaying == &soundtestsfx)
+				{
+					// S_StopMusic() -- is this necessary?
+					if (cv_soundtest.value)
+						S_StartSound(NULL, cv_soundtest.value);
+				}
+				else
+					S_ChangeMusicInternal(curplaying->name, !curplaying->stoppingtics);
+			}
+			else
+			{
+				curplaying = NULL;
+				S_StartSound(NULL, sfx_lose);
+			}
 			break;
 
 		default:
@@ -6986,6 +7336,11 @@ static void M_HandleSoundTest(INT32 choice)
 	}
 	if (exitmenu)
 	{
+		Z_Free(soundtestdefs);
+		soundtestdefs = NULL;
+
+		cv_closedcaptioning.value = st_cc; // undo hack
+
 		if (currentMenu->prevMenu)
 			M_SetupNextMenu(currentMenu->prevMenu);
 		else
@@ -7060,8 +7415,8 @@ static void M_SecretsMenu(INT32 choice)
 					SR_MainMenu[i].itemaction = M_Credits;
 					break;
 				case SECRET_SOUNDTEST:
-					SR_MainMenu[i].status = IT_STRING|IT_KEYHANDLER;
-					SR_MainMenu[i].itemaction = M_HandleSoundTest;
+					SR_MainMenu[i].status = IT_STRING|IT_CALL;
+					SR_MainMenu[i].itemaction = M_SoundTest;
 				default:
 					break;
 			}

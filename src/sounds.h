@@ -879,6 +879,7 @@ typedef enum
 
 void S_InitRuntimeSounds(void);
 sfxenum_t S_AddSoundFx(const char *name, boolean singular, INT32 flags, boolean skinsound);
+extern sfxenum_t sfxfree; // sound test and slotting
 void S_RemoveSoundFx(sfxenum_t id);
 
 #endif
