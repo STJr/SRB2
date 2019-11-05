@@ -763,7 +763,7 @@ void F_IntroDrawer(void)
 			if (rendermode != render_none)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+				F_WipeColorFill(31);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -773,10 +773,11 @@ void F_IntroDrawer(void)
 		else if (intro_scenenum == 10)
 		{
 			// The only fade to white in the entire damn game.
+			// (not true)
 			if (rendermode != render_none)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+				F_WipeColorFill(0);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -786,7 +787,7 @@ void F_IntroDrawer(void)
 			if (rendermode != render_none)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+				F_WipeColorFill(31);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -833,7 +834,7 @@ void F_IntroDrawer(void)
 			patch_t *radar = W_CachePatchName("RADAR", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawScaledPatch(0, 0, 0, radar);
 			W_UnlockCachedPatch(radar);
 			V_DrawString(8, 128, 0, cutscene_disptext);
@@ -846,7 +847,7 @@ void F_IntroDrawer(void)
 			patch_t *grass = W_CachePatchName("SGRASS5", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawScaledPatch(0, 0, 0, grass);
 			W_UnlockCachedPatch(grass);
 			V_DrawString(8, 128, 0, cutscene_disptext);
@@ -859,7 +860,7 @@ void F_IntroDrawer(void)
 			patch_t *confront = W_CachePatchName("CONFRONT", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawSmallScaledPatch(0, 0, 0, confront);
 			W_UnlockCachedPatch(confront);
 			V_DrawString(8, 128, 0, cutscene_disptext);
@@ -872,7 +873,7 @@ void F_IntroDrawer(void)
 			patch_t *sdo = W_CachePatchName("SONICDO2", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawSmallScaledPatch(0, 0, 0, sdo);
 			W_UnlockCachedPatch(sdo);
 			V_DrawString(224, 8, 0, cutscene_disptext);

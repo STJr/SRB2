@@ -67,7 +67,8 @@ void HWR_StartScreenWipe(void);
 void HWR_EndScreenWipe(void);
 void HWR_DrawIntermissionBG(void);
 void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum);
-void HWR_DoWipeLevel(UINT8 wipenum, UINT8 scrnnum);
+void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum);
+void HWR_DoLevelWipe(UINT8 wipenum, UINT8 scrnnum, UINT8 wipecolorfill);
 void HWR_MakeScreenFinalTexture(void);
 void HWR_DrawScreenFinalTexture(int width, int height);
 

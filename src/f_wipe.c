@@ -103,6 +103,7 @@ static fixed_t paldiv = 0;
 
 static UINT8 curwipetype;
 static UINT8 curwipeframe;
+static UINT8 wipecolorfill = 31;
 
 /** Create fademask_t from lump
   *
@@ -186,7 +187,7 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	return NULL;
 }
 
-static void F_WipeTitleCard(void)
+void F_WipeTitleCard(void)
 {
 	if (wipestyle == WIPESTYLE_LEVEL
 		&& (!titlemapinaction)
@@ -197,6 +198,12 @@ static void F_WipeTitleCard(void)
 #endif
 		)
 		ST_drawLevelTitle(TICRATE);
+}
+
+void F_WipeColorFill(UINT8 color)
+{
+	wipecolorfill = color;
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, wipecolorfill);
 }
 
 /**	Wipe ticker
@@ -430,10 +437,17 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
-			HWR_DoWipe(wipetype, wipeframe-1); // send in the wipe type and wipeframe because we need to cache the graphic
+		{
+			// send in the wipe type and wipe frame because we need to cache the graphic
+			if (wipestyle == WIPESTYLE_LEVEL)
+				HWR_DoTintedWipe(wipetype, wipeframe-1);
+			else
+				HWR_DoWipe(wipetype, wipeframe-1);
+		}
 		else
 #endif
 			F_DoWipe(fmask);
+
 		I_OsPolling();
 		I_UpdateNoBlit();
 
@@ -473,8 +487,9 @@ void F_WipeTicker(void)
 	}
 
 #ifdef HWRENDER
+	// send in the wipe type and wipe frame because we need to cache the graphic
 	if (rendermode == render_opengl)
-		HWR_DoWipeLevel(curwipetype, curwipeframe-1);
+		HWR_DoLevelWipe(curwipetype, curwipeframe-1, wipecolorfill); // also send the wipe color
 	else
 #endif
 		F_DoWipe(fmask);

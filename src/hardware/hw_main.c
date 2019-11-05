@@ -39,6 +39,7 @@
 #include "../st_stuff.h"
 #include "../i_system.h"
 #include "../m_cheat.h"
+#include "../f_finale.h"
 #ifdef ESLOPE
 #include "../p_slopes.h"
 #endif
@@ -6991,73 +6992,82 @@ void HWR_DrawIntermissionBG(void)
 	HWD.pfnDrawIntermissionBG();
 }
 
-void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
+//
+// hwr mode wipes
+//
+static char wipelumpname[9];
+static lumpnum_t wipelumpnum;
+
+// puts wipe lumpname in wipename[9]
+static boolean check_wipe(UINT8 wipenum, UINT8 scrnnum)
 {
-	static char lumpname[9] = "FADEmmss";
-	lumpnum_t lumpnum;
 	size_t lsize;
 
-	if (wipenum > 99 || scrnnum > 99) // not a valid wipe number
-		return; // shouldn't end up here really, the loop should've stopped running beforehand
+	// write FADE prefix into wipelumpname
+	strncpy(wipelumpname, "FADEmmss", 8);
 
-	// puts the numbers into the lumpname
-	sprintf(&lumpname[4], "%.2hu%.2hu", (UINT16)wipenum, (UINT16)scrnnum);
-	lumpnum = W_CheckNumForName(lumpname);
+	// not a valid wipe number
+	if (wipenum > 99 || scrnnum > 99)
+		return false; // shouldn't end up here really, the loop should've stopped running beforehand
 
-	if (lumpnum == LUMPERROR) // again, shouldn't be here really
-		return;
+	// puts the numbers into the wipename
+	sprintf(&wipelumpname[4], "%.2hu%.2hu", (UINT16)wipenum, (UINT16)scrnnum);
+	wipelumpnum = W_CheckNumForName(wipelumpname);
 
-	lsize = W_LumpLength(lumpnum);
+	// again, shouldn't be here really
+	if (wipelumpnum == LUMPERROR)
+		return false;
 
+	lsize = W_LumpLength(wipelumpnum);
 	if (!(lsize == 256000 || lsize == 64000 || lsize == 16000 || lsize == 4000))
 	{
-		CONS_Alert(CONS_WARNING, "Fade mask lump %s of incorrect size, ignored\n", lumpname);
-		return; // again, shouldn't get here if it is a bad size
+		CONS_Alert(CONS_WARNING, "Fade mask lump %s of incorrect size, ignored\n", wipelumpname);
+		return false; // again, shouldn't get here if it is a bad size
 	}
 
-	HWR_GetFadeMask(lumpnum);
+	return true;
+}
 
+void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
+{
+	if (!check_wipe(wipenum, scrnnum))
+		return;
+
+	HWR_GetFadeMask(wipelumpnum);
 	HWD.pfnDoScreenWipe(HWRWipeCounter); // Still send in wipecounter since old stuff might not support multitexturing
 
 	HWRWipeCounter += 0.05f; // increase opacity of end screen
-
 	if (HWRWipeCounter > 1.0f)
 		HWRWipeCounter = 1.0f;
 }
 
-void HWR_DoWipeLevel(UINT8 wipenum, UINT8 scrnnum)
+void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum)
 {
-	static char lumpname[9] = "FADEmmss";
-	lumpnum_t lumpnum;
-	size_t lsize;
-
-	if (wipenum > 99 || scrnnum > 99) // not a valid wipe number
-		return; // shouldn't end up here really, the loop should've stopped running beforehand
-
-	// puts the numbers into the lumpname
-	sprintf(&lumpname[4], "%.2hu%.2hu", (UINT16)wipenum, (UINT16)scrnnum);
-	lumpnum = W_CheckNumForName(lumpname);
-
-	if (lumpnum == LUMPERROR) // again, shouldn't be here really
+	if (!check_wipe(wipenum, scrnnum))
 		return;
 
-	lsize = W_LumpLength(lumpnum);
-
-	if (!(lsize == 256000 || lsize == 64000 || lsize == 16000 || lsize == 4000))
-	{
-		CONS_Alert(CONS_WARNING, "Fade mask lump %s of incorrect size, ignored\n", lumpname);
-		return; // again, shouldn't get here if it is a bad size
-	}
-
-	HWR_EndScreenWipe();
-	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-	HWR_StartScreenWipe();
-	HWR_GetFadeMask(lumpnum);
-
-	HWD.pfnDoScreenWipeLevel();
+	HWR_GetFadeMask(wipelumpnum);
+	HWD.pfnDoScreenWipe(HWRWipeCounter);
 
 	HWRWipeCounter += 0.05f; // increase opacity of end screen
+	if (HWRWipeCounter > 1.0f)
+		HWRWipeCounter = 1.0f;
+}
 
+void HWR_DoLevelWipe(UINT8 wipenum, UINT8 scrnnum, UINT8 wipecolorfill)
+{
+	if (!check_wipe(wipenum, scrnnum))
+		return;
+
+	HWR_EndScreenWipe();
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, wipecolorfill);
+	HWR_StartScreenWipe();
+	HWR_GetFadeMask(wipelumpnum);
+
+	HWD.pfnDoScreenWipeLevel();
+	F_WipeTitleCard();
+
+	HWRWipeCounter += 0.05f; // increase opacity of end screen
 	if (HWRWipeCounter > 1.0f)
 		HWRWipeCounter = 1.0f;
 }

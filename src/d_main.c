@@ -267,7 +267,7 @@ static void D_Display(void)
 			 && wipetypepre != UINT8_MAX)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+				F_WipeColorFill(31);
 				F_WipeEndScreen();
 				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 			}

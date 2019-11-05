@@ -2691,10 +2691,15 @@ boolean P_SetupLevel(boolean skipprecip)
 		F_WipeStartScreen();
 		wipestyleflags |= WSF_FADEOUT|WSF_TOWHITE;
 
+#ifdef HWRENDER
+		// uh..........
+		if (rendermode == render_opengl)
+			F_WipeColorFill(0);
+#endif
+
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
 		I_OsPolling();
 		I_FinishUpdate(); // page flip or blit buffer
 		if (moviemode)
@@ -2734,7 +2739,12 @@ boolean P_SetupLevel(boolean skipprecip)
 	{
 		F_WipeStartScreen();
 		wipestyleflags |= WSF_FADEOUT;
-		//V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+
+#ifdef HWRENDER
+		// uh..........
+		if (rendermode == render_opengl)
+			F_WipeColorFill(31);
+#endif
 
 		F_WipeEndScreen();
 		// for titlemap: run a specific wipe if specified
@@ -3130,7 +3140,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Remove the loading shit from the screen
 	if (rendermode != render_none && !titlemapinaction)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+		F_WipeColorFill(levelfadecol);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();
@@ -3203,7 +3213,7 @@ boolean P_SetupLevel(boolean skipprecip)
 				I_Sleep();
 			lasttime = nowtime;
 
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+			F_WipeColorFill(levelfadecol);
 			stplyr = &players[consoleplayer];
 			ST_drawLevelTitle(nowtime - starttime);
 			if (splitscreen)
