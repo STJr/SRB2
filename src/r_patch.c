@@ -1096,16 +1096,16 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 	size_t size, size2;
 	INT32 bflip = ((flip != 0x00) ? -1 : 1);
 
-#define SPRITE_XCENTER (width / 2)
+#define SPRITE_XCENTER (patch->leftoffset)
 #define SPRITE_YCENTER (height / 2)
 #define ROTSPRITE_XCENTER (newwidth / 2)
 #define ROTSPRITE_YCENTER (newheight / 2)
 
 	if (!sprframe->rotsprite.cached[rot])
 	{
-		INT32 dx,dy;
-		INT32 px,py;
-		INT32 width,height;
+		INT32 dx, dy;
+		INT32 px, py;
+		INT32 width, height;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
 
@@ -1241,12 +1241,12 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			newpatch = R_FlatToPatch_16bpp(rawdst, newwidth, newheight, &size);
 			newpatch->leftoffset = (newpatch->width / 2) - ((SPRITE_XCENTER - patch->leftoffset) * bflip);
 			newpatch->topoffset = (newpatch->height / 2) - (SPRITE_YCENTER - patch->topoffset);
-			newpatch->leftoffset += (SPRITE_XCENTER - px);
+			newpatch->leftoffset += ((width / 2) - px);
 			newpatch->topoffset += (SPRITE_YCENTER - py);
 
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
 			if (rendermode != render_none) // not for psprite
-				newpatch->topoffset += 4;
+				newpatch->topoffset += FEETADJUST>>FRACBITS;
 
 			// P_PrecacheLevel
 			if (devparm) spritememory += size;
