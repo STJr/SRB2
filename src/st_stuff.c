@@ -351,7 +351,7 @@ void ST_LoadFaceGraphics(INT32 skinnum)
 	if (skins[skinnum].sprites[SPR2_XTRA].numframes)
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
-		spriteframe_t *sprframe = &sprdef->spriteframes[0];
+		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_LIFEPIC];
 		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
 		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes)
 		{
@@ -1474,12 +1474,9 @@ static void ST_drawNightsRecords(void)
 
 			if (P_HasGrades(gamemap, stplyr->lastmare + 1))
 			{
-				if (aflag)
-					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag,
-										   ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
-				else
-					V_DrawScaledPatch(BASEVIDWIDTH/2 + 60, 160, 0,
-									  ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
+				UINT8 grade = P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare);
+				if (modeattacking || grade >= GRADE_A)
+					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag, ngradeletters[grade]);
 			}
 			break;
 		}
@@ -1857,7 +1854,8 @@ static void ST_drawNiGHTSHUD(void)
 			numbersize = 48/2;
 
 		if ((oldspecialstage && leveltime & 2)
-			&& (stplyr->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)))
+			&& (stplyr->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
+			&& !(stplyr->powers[pw_shield] & SH_PROTECTWATER))
 			col = SKINCOLOR_ORANGE;
 
 		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP, realnightstime, nightsnum, col);

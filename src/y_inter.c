@@ -35,6 +35,7 @@
 #include "p_local.h"
 
 #include "m_cond.h" // condition sets
+#include "lua_hook.h" // IntermissionThinker hook
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -802,6 +803,10 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
+#ifdef HAVE_BLUA
+	LUAh_IntermissionThinker();
+#endif
+
 	intertic++;
 
 	// Team scramble code for team match and CTF.
@@ -1046,6 +1051,9 @@ static void Y_UpdateRecordReplays(void)
 
 	if ((UINT16)(players[consoleplayer].rings) > mainrecords[gamemap-1]->rings)
 		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
+
+	if (data.coop.gotperfbonus)
+		mainrecords[gamemap-1]->gotperfect = true;
 
 	// Save demo!
 	bestdemo[255] = '\0';

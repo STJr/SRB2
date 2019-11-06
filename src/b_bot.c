@@ -375,6 +375,9 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 
 void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward, boolean left, boolean right, boolean strafeleft, boolean straferight, boolean jump, boolean spin)
 {
+	// don't try to do stuff if your sonic is in a minecart or something
+	if (players[consoleplayer].powers[pw_carry])
+		return;
 	// Turn the virtual keypresses into ticcmd_t.
 	if (twodlevel || mo->flags2 & MF2_TWOD) {
 		if (players[consoleplayer].climbing
@@ -460,7 +463,12 @@ boolean B_CheckRespawn(player_t *player)
 		return false;
 
 	// Low ceiling, do not want!
-	if (sonic->ceilingz - sonic->z < 2*sonic->height)
+	if (sonic->eflags & MFE_VERTICALFLIP)
+	{
+		if (sonic->z - sonic->floorz < (sonic->player->exiting ? 5 : 2)*sonic->height)
+			return false;
+	}
+	else if (sonic->ceilingz - sonic->z < (sonic->player->exiting ? 6 : 3)*sonic->height)
 		return false;
 
 	// If you're dead, wait a few seconds to respawn.
@@ -494,11 +502,11 @@ void B_RespawnBot(INT32 playernum)
 	y = sonic->y;
 	if (sonic->eflags & MFE_VERTICALFLIP) {
 		tails->eflags |= MFE_VERTICALFLIP;
-		z = sonic->z - FixedMul(512*FRACUNIT,sonic->scale);
+		z = sonic->z - (512*sonic->scale);
 		if (z < sonic->floorz)
 			z = sonic->floorz;
 	} else {
-		z = sonic->z + sonic->height + FixedMul(512*FRACUNIT,sonic->scale);
+		z = sonic->z + sonic->height + (512*sonic->scale);
 		if (z > sonic->ceilingz - sonic->height)
 			z = sonic->ceilingz - sonic->height;
 	}
