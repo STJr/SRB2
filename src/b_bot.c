@@ -36,24 +36,25 @@ static mobj_t *overlay;
 static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
 	boolean forward=false, backward=false, left=false, right=false, jump=false, spin=false;
-	
+
 	player_t *player = sonic->player, *bot = tails->player;
 	ticcmd_t *pcmd = &player->cmd;
 	boolean water = tails->eflags & MFE_UNDERWATER;
 	boolean flip = P_MobjFlip(tails);
 	boolean _2d = (tails->flags2 & MF2_TWOD) || twodlevel;
 	fixed_t scale = tails->scale;
-	
+
 	fixed_t dist = P_AproxDistance(sonic->x - tails->x, sonic->y - tails->y);
 	fixed_t zdist = flip * (sonic->z - tails->z);
 	angle_t ang = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
 	fixed_t pmom = P_AproxDistance(sonic->momx, sonic->momy);
 	fixed_t bmom = P_AproxDistance(tails->momx, tails->momy);
-	fixed_t followmax = 128 * 8 *scale;
-	fixed_t followthres = 92 * scale;
+	fixed_t followmax = 128 * 8 * scale; // Max follow distance before AI begins to enter "panic" state
+	fixed_t followthres = 92 * scale; // Distance that AI will try to reach
 	fixed_t followmin = 32 * scale;
 	fixed_t comfortheight = 96 * scale;
 	fixed_t touchdist = 24 * scale;
+	boolean stalled = (bmom < scale >> 1) && dist > followthres; // Helps to see if the AI is having trouble catching up
 
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
@@ -83,7 +84,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 	}
 
 	// Adapted from CobaltBW's tails_AI.wad
-	
+
 	// Check water
 	if (water)
 	{
@@ -92,14 +93,14 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		followmax >>= 1;
 		thinkfly = false;
 	}
-	
+
 	// Check anxiety
 	if (spinmode)
 	{
 		anxiety = 0;
 		panic = false;
 	}
-	else if (dist > followmax || zdist > comfortheight)
+	else if (dist > followmax || zdist > comfortheight || stalled)
 	{
 		anxiety = min(anxiety + 2, 70);
 		if (anxiety >= 70)
@@ -110,7 +111,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		anxiety = max(anxiety - 1, 0);
 		panic = false;
 	}
-	
+
 	// Orientation
 	if ((bot->pflags & (PF_SPINNING|PF_STARTDASH)) || flymode == 2)
 	{
@@ -120,7 +121,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 	{
 		cmd->angleturn = (ang - tails->angle) >> FRACBITS;
 	}
-	
+
 	// ********
 	// FLY MODE
 	// spinmode check
@@ -141,7 +142,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 				}
 			}
 		}
-		
+
 		// Check positioning
 		// Thinker for co-op flight
 		if (!(water || pmom || bmom)
