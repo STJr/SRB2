@@ -425,11 +425,23 @@ void Y_IntermissionDrawer(void)
 				UINT8 continues = data.spec.continues & 0x7F;
 
 				V_DrawScaledPatch(152 + xoffset5, 150+yoffset, 0, data.spec.pcontinues);
-				for (i = 0; i < continues; ++i)
+				if (continues > 5)
 				{
-					if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
-						break;
-					V_DrawContinueIcon(246 + xoffset5 - (i*20), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					INT32 leftx = (continues >= 10) ? 216 : 224;
+					V_DrawContinueIcon(leftx + xoffset5, 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					V_DrawScaledPatch(leftx + xoffset5 + 12, 160+yoffset, 0, stlivex);
+					if (!((data.spec.continues & 0x80) && !(endtic < 0 || intertic%20 < 10)))
+						V_DrawRightAlignedString(252 + xoffset5, 158+yoffset, 0,
+							va("%d",(((data.spec.continues & 0x80) && (endtic < 0)) ? continues-1 : continues)));
+				}
+				else
+				{
+					for (i = 0; i < continues; ++i)
+					{
+						if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
+							break;
+						V_DrawContinueIcon(246 + xoffset5 - (i*20), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					}
 				}
 			}
 		}
