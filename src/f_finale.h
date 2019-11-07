@@ -79,7 +79,7 @@ extern INT32 titlescrollyspeed;
 
 typedef enum
 {
-	TTMODE_NONE = 0, 
+	TTMODE_NONE = 0,
 	TTMODE_OLD,
 	TTMODE_ALACROIX,
 	TTMODE_USER

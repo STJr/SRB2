@@ -2194,7 +2194,7 @@ void F_InitMenuPresValues(void)
 	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
 	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 22 : titlescrollyspeed;
 	curbghide = (gamestate == GS_TIMEATTACK) ? false : true;
-	
+
 	curhidepics = hidetitlepics;
 	curttmode = ttmode;
 	curttscale = ttscale;
@@ -2416,7 +2416,7 @@ void F_StartTitleScreen(void)
 			ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
 			ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
 			break;
-		
+
 		// don't load alacroix gfx yet; we do that upon first draw.
 		case TTMODE_ALACROIX:
 			break;
@@ -2438,7 +2438,7 @@ static void F_UnloadAlacroixGraphics(SINT8 oldttscale)
 	// This all gets freed by PU_LEVEL when exiting the menus.
 	// When re-visiting the menus (e.g., from exiting in-game), the gfx are force-reloaded.
 	// So leftover addresses here should not be a problem.
-	
+
 	UINT16 i;
 	oldttscale--; // zero-based index
 	for (i = 0; i < TTMAX_ALACROIX; i++)
@@ -2506,7 +2506,7 @@ static void F_LoadAlacroixGraphics(SINT8 newttscale)
 	{
 		for (j = 0; j < 22; j++)
 			sprintf(&lumpnames[j][0], "T%.1hu%s", (UINT8)newttscale+1, names[j]);
-		
+
 		LOADTTGFX(ttembl[newttscale], lumpnames[0], TTMAX_ALACROIX)
 		LOADTTGFX(ttribb[newttscale], lumpnames[1], TTMAX_ALACROIX)
 		LOADTTGFX(ttsont[newttscale], lumpnames[2], TTMAX_ALACROIX)
@@ -2665,7 +2665,7 @@ void F_TitleScreenDrawer(void)
 			{
 				// Ribbon unfurls, revealing SONIC text, from tic 0 to tic 24. SONIC text is pre-baked into this ribbon graphic.
 				V_DrawSciencePatch(39<<FRACBITS, 88<<FRACBITS, 0, TTRIBB[min(max(0, finalecount), 24)], sc);
-				
+
 				// Animate SONIC text while the ribbon unfurls, from tic 0 to tic 28.
 				if(finalecount >= 0)
 					V_DrawSciencePatch(89<<FRACBITS, 92<<FRACBITS, 0, TTSONT[min(finalecount, 28)], sc);

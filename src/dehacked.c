@@ -2131,7 +2131,7 @@ static void readmenu(MYFILE *f, INT32 num)
 			{
 				menupres[num].tty = (INT16)get_number(word2);
 				titlechanged = true;
-			} 
+			}
 			else if (fastcmp(word, "TITLEPICSLOOP"))
 			{
 				menupres[num].ttloop = (INT16)get_number(word2);
@@ -3600,7 +3600,7 @@ static void readmaincfg(MYFILE *f)
 			{
 				tty = (INT16)get_number(word2);
 				titlechanged = true;
-			} 
+			}
 			else if (fastcmp(word, "TITLEPICSLOOP"))
 			{
 				ttloop = (INT16)get_number(word2);
