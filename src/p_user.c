@@ -1240,6 +1240,8 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 			numlives = (numlives + prevlives - player->lives);
 		}
 	}
+	else if (player->lives == INFLIVES)
+		return;
 
 	player->lives += numlives;
 
