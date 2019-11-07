@@ -1096,7 +1096,7 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 	// Spinning.
 	if (player->pflags & PF_SPINNING)
 		return true;
-	
+
 	if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE))
 		return true;
 
@@ -7820,7 +7820,7 @@ static void P_MovePlayer(player_t *player)
 		if (!(player->powers[pw_nocontrol] & (1<<15)))
 			player->pflags |= PF_JUMPSTASIS;
 	}
-	
+
 	if (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
 	{
 		player->pflags |= PF_STASIS;
@@ -10978,19 +10978,19 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	tic_t dashmode = player->dashmode;
 	boolean underwater = mo->eflags & MFE_UNDERWATER;
 	statenum_t stat = fume->state-states;
-	
+
 	if (panim != PA_WALK && panim != PA_RUN && panim != PA_DASH) // turn invisible when not in a coherent movement state
 	{
 		if (stat != fume->info->spawnstate)
 			P_SetMobjState(fume, fume->info->spawnstate);
 		return;
 	}
-	
+
 	if (underwater) // No fume underwater; spawn bubbles instead!
 	{
 		fume->movedir	+= FixedAngle(FixedDiv(2 * player->speed, 3 * mo->scale));
 		fume->movefactor += player->speed;
-		
+
 		if (fume->movefactor > FixedDiv(2 * player->normalspeed, 3 * mo->scale))
 		{
 			INT16 i;
@@ -11000,7 +11000,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 			fixed_t factorX = P_ReturnThrustX(mo, angle + ANGLE_90, mo->scale);
 			fixed_t factorY = P_ReturnThrustY(mo, angle + ANGLE_90, mo->scale);
 			fixed_t offsetH, offsetV, x, y, z;
-			
+
 			for (i = -1; i < 2; i += 2)
 			{
 				offsetH = i*P_ReturnThrustX(fume, fume->movedir, radiusV);
@@ -11010,10 +11010,10 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 				z = mo->z + (mo->height >> 1) + offsetV;
 				P_SpawnMobj(x, y, z, MT_SMALLBUBBLE)->scale = mo->scale >> 1;
 			}
-			
+
 			fume->movefactor = 0;
 		}
-		
+
 		if (panim == PA_WALK)
 		{
 			if (stat != fume->info->spawnstate)
@@ -11021,13 +11021,13 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 			return;
 		}
 	}
-	
+
 	if (stat == fume->info->spawnstate) // If currently inivisble, activate!
 	{
 		P_SetMobjState(fume, (stat = fume->info->seestate));
 		P_SetScale(fume, mo->scale);
 	}
-	
+
 	if (dashmode > DASHMODE_THRESHOLD && stat != fume->info->seestate) // If in dashmode, grow really big and flash
 	{
 		fume->destscale = mo->scale;
@@ -11044,19 +11044,19 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 		fume->flags2 = (fume->flags2 & ~MF2_DONTDRAW) | (mo->flags2 & MF2_DONTDRAW);
 		fume->destscale = (mo->scale + FixedDiv(player->speed, player->normalspeed)) / (underwater ? 6 : 3);
 		fume->color = FUME_SKINCOLORS[(dashmode * sizeof(FUME_SKINCOLORS)) / (DASHMODE_MAX + 1)];
-		
+
 		if (underwater)
 		{
 			fume->frame = (fume->frame & FF_FRAMEMASK) | FF_ANIMATE | (P_RandomRange(0, 9) * FF_TRANS10);
 		}
 	}
-	
+
 	fume->movecount = dashmode; // keeps track of previous dashmode value so we know whether Metal is entering or leaving it
 	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP); // Make sure to flip in reverse gravity!
-	
+
 	// Finally, set its position
 	dist = -mo->radius - FixedMul(fume->info->radius, fume->destscale - mo->scale/3);
-	
+
 	P_UnsetThingPosition(fume);
 	fume->x = mo->x + P_ReturnThrustX(fume, angle, dist);
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);

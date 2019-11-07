@@ -1040,7 +1040,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !thing->health)
 			return true;
-		
+
 		if (thing == tmthing->tracer) // don't collide with rider
 			return true;
 
@@ -1054,7 +1054,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_KillMobj(thing, tmthing, tmthing->tracer, 0);
 			return true;
 		}
-		
+
 		if (thing->type == tmthing->type // bounce against other rollout rocks
 			&& (tmthing->momx || tmthing->momy || thing->momx || thing->momy))
 		{

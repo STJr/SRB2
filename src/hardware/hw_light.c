@@ -406,7 +406,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_HHPL
 	&lspr[NOLIGHT],     // SPR_SHRM
 	&lspr[NOLIGHT],     // SPR_HHZM
-	
+
 	// Azure Temple Scenery
 	&lspr[NOLIGHT],     // SPR_BGAR
 	&lspr[NOLIGHT],     // SPR_RCRY
