@@ -229,14 +229,13 @@ static int lib_spr2namelen(lua_State *L)
 
 static int lib_getSpriteInfo(lua_State *L)
 {
-	UINT32 i = 0;
+	UINT32 i = NUMSPRITES;
 	lua_remove(L, 1);
 
-	/*if (lua_isstring(L, 1))
+	if (lua_isstring(L, 1))
 	{
 		const char *name = lua_tostring(L, 1);
 		INT32 spr;
-		CONS_Printf("%s\n",name);
 		for (spr = 0; spr < NUMSPRITES; spr++)
 		{
 			if (fastcmp(name, sprnames[spr]))
@@ -245,8 +244,15 @@ static int lib_getSpriteInfo(lua_State *L)
 				break;
 			}
 		}
+		if (i == NUMSPRITES)
+		{
+			char *check;
+			i = strtol(name, &check, 10);
+			if (check == name || *check != '\0')
+				return luaL_error(L, "unknown sprite name %s", name);
+		}
 	}
-	else*/
+	else
 		i = luaL_checkinteger(L, 1);
 
 	if (i == 0 || i >= NUMSPRITES)
