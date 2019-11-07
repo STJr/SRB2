@@ -5305,7 +5305,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					{
 						fixed_t glidespeed = FixedMul(player->actionspd, player->mo->scale);
 						fixed_t playerspeed = player->speed;
-						
+
 						if (player->mo->eflags & MFE_UNDERWATER)
 						{
 							glidespeed >>= 1;
