@@ -8723,6 +8723,10 @@ void M_DrawTimeAttackMenu(void)
 		char beststr[40];
 		char reqscore[40], reqtime[40], reqrings[40];
 
+		strcpy(reqscore, "\0");
+		strcpy(reqtime, "\0");
+		strcpy(reqrings, "\0");
+
 		M_DrawLevelPlatterHeader(32-lsheadingheight/2, cv_nextmap.string, true, false);
 
 		//  A 160x100 image of the level as entry MAPxxP
