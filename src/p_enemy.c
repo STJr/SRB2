@@ -5016,14 +5016,15 @@ void A_UnsetSolidSteam(mobj_t *actor)
 //
 void A_SignSpin(mobj_t *actor)
 {
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_SignSpin", actor))
-		return;
-#endif
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
 	INT16 i;
 	angle_t rotateangle = FixedAngle(locvar1 << FRACBITS);
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SignSpin", actor))
+		return;
+#endif
 
 	if (P_IsObjectOnGround(actor) && P_MobjFlip(actor) * actor->momz <= 0)
 	{
