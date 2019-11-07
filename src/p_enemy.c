@@ -5075,10 +5075,9 @@ void A_SignSpin(mobj_t *actor)
 void A_SignPlayer(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
 	skin_t *skin = NULL;
 	mobj_t *ov;
-	UINT8 facecolor, signcolor;
+	UINT8 facecolor, signcolor = SKINCOLOR_NONE;
 	UINT32 signframe = states[actor->info->raisestate].frame;
 
 #ifdef HAVE_BLUA
