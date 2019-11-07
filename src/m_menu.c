@@ -2307,7 +2307,7 @@ void M_InitMenuPresTables(void)
 			strncpy(menupres[i].musname, "_recat", 7);
 		else if (i == MN_SP_NIGHTSATTACK)
 			strncpy(menupres[i].musname, "_nitat", 7);
-		else if (i == MN_SP_PLAYER)
+		else if (i == MN_SP_PLAYER || i == MN_SR_PLAYER)
 			strncpy(menupres[i].musname, "_chsel", 7);
 	}
 }
