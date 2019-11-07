@@ -18,6 +18,8 @@
 #include "p_mobj.h"
 #include "p_local.h"
 #include "z_zone.h"
+#include "r_patch.h"
+#include "r_things.h"
 #include "doomstat.h" // luabanks[]
 
 #include "lua_script.h"
@@ -218,6 +220,259 @@ static int lib_setSpr2default(lua_State *L)
 static int lib_spr2namelen(lua_State *L)
 {
 	lua_pushinteger(L, free_spr2);
+	return 1;
+}
+
+/////////////////
+// SPRITE INFO //
+/////////////////
+
+static int lib_getSpriteInfo(lua_State *L)
+{
+	UINT32 i = 0;
+	lua_remove(L, 1);
+
+	/*if (lua_isstring(L, 1))
+	{
+		const char *name = lua_tostring(L, 1);
+		INT32 spr;
+		CONS_Printf("%s\n",name);
+		for (spr = 0; spr < NUMSPRITES; spr++)
+		{
+			if (fastcmp(name, sprnames[spr]))
+			{
+				i = spr;
+				break;
+			}
+		}
+	}
+	else*/
+		i = luaL_checkinteger(L, 1);
+
+	if (i == 0 || i >= NUMSPRITES)
+		return luaL_error(L, "spriteinfo[] index %d out of range (1 - %d)", i, NUMSPRITES-1);
+
+	LUA_PushUserdata(L, &spriteinfo[i], META_SPRITEINFO);
+	return 1;
+}
+
+#define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to spriteinfo[] (%s)", e);
+#define TYPEERROR(f, t1, t2) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t1), lua_typename(L, t2)))
+
+#ifdef ROTSPRITE
+static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
+{
+	// Just in case?
+	if (!lua_istable(L, stk))
+		TYPEERROR("pivot table", LUA_TTABLE, lua_type(L, stk));
+
+	lua_pushnil(L);
+	// stk = 0 has the pivot table
+	// stk = 1 has the frame key
+	// stk = 2 has the frame table
+	// stk = 3 has either "x" or "y" or a number as key
+	// stk = 4 has the value for the key mentioned above
+	while (lua_next(L, stk))
+	{
+		int idx = 0;
+		const char *framestr = NULL;
+		switch (lua_type(L, stk+1))
+		{
+			case LUA_TSTRING:
+				framestr = lua_tostring(L, stk+1);
+				idx = R_Char2Frame(framestr[0]);
+				break;
+			case LUA_TNUMBER:
+				idx = lua_tonumber(L, stk+1);
+				break;
+			default:
+				TYPEERROR("pivot frame", LUA_TNUMBER, lua_type(L, stk+1));
+		}
+		if ((idx < 0) || (idx >= 64))
+			return luaL_error(L, "pivot frame %d out of range (0 - %d)", idx, 63);
+		// the values in pivot[] are also tables
+		switch (lua_type(L, stk+2))
+		{
+			case LUA_TTABLE:
+				lua_pushnil(L);
+				while (lua_next(L, stk+2))
+				{
+					const char *key = NULL;
+					lua_Integer ikey = -1;
+					lua_Integer value = 0;
+					// x or y?
+					switch (lua_type(L, stk+3))
+					{
+						case LUA_TSTRING:
+							key = lua_tostring(L, stk+3);
+							break;
+						case LUA_TNUMBER:
+							ikey = lua_tointeger(L, stk+3);
+							break;
+						default:
+							FIELDERROR("pivot key", va("string or number expected, got %s", luaL_typename(L, stk+3)))
+					}
+					// then get value
+					switch (lua_type(L, stk+4))
+					{
+						case LUA_TNUMBER:
+							value = lua_tonumber(L, stk+4);
+							break;
+						default:
+							TYPEERROR("pivot value", LUA_TNUMBER, lua_type(L, stk+4))
+					}
+					// finally set omg!!!!!!!!!!!!!!!!!!
+					if (ikey == 1 || (key && fastcmp(key, "x")))
+						info->pivot[idx].x = (INT32)value;
+					else if (ikey == 2 || (key && fastcmp(key, "y")))
+						info->pivot[idx].y = (INT32)value;
+					else if (ikey == -1 && (key != NULL))
+						FIELDERROR("pivot key", va("x or y expected, got %s", key));
+					info->available = true; // the pivot for this frame is available
+					lua_pop(L, 1);
+				}
+				break;
+			default:
+				TYPEERROR("sprite pivot", LUA_TTABLE, lua_type(L, stk+2))
+		}
+		lua_pop(L, 1);
+	}
+
+	return 0;
+}
+#endif
+
+static int lib_setSpriteInfo(lua_State *L)
+{
+	spriteinfo_t *info;
+
+	lua_remove(L, 1);
+	{
+		UINT32 i = luaL_checkinteger(L, 1);
+		if (i == 0 || i >= NUMSPRITES)
+			return luaL_error(L, "spriteinfo[] index %d out of range (1 - %d)", i, NUMSPRITES-1);
+		info = &spriteinfo[i]; // get the sfxinfo to assign to.
+	}
+	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
+	lua_remove(L, 1); // pop sprite num, don't need it any more.
+	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the spriteinfo.
+
+	if (!lua_lumploading)
+		return luaL_error(L, "Do not alter spriteinfo_t from within a hook or coroutine!");
+	if (hud_running)
+		return luaL_error(L, "Do not alter spriteinfo_t in HUD rendering code!");
+
+	lua_pushnil(L);
+	while (lua_next(L, 1)) {
+		lua_Integer i = 0;
+		const char *str = NULL;
+		if (lua_isnumber(L, 2))
+		{
+			i = lua_tointeger(L, 2);
+#ifndef ROTSPRITE
+			i++; // shift index in case of missing rotsprite support
+#endif
+		}
+		else
+			str = luaL_checkstring(L, 2);
+
+#ifdef ROTSPRITE
+		if (i == 1 || (str && fastcmp(str, "pivot")))
+		{
+			// pivot[] is a table
+			if (lua_istable(L, 3))
+				return PopPivotTable(info, L, 3);
+			else
+				FIELDERROR("pivot", va("%s expected, got %s", lua_typename(L, LUA_TTABLE), luaL_typename(L, -1)))
+		}
+#endif
+
+		lua_pop(L, 1);
+	}
+
+	return 0;
+}
+
+#undef FIELDERROR
+#undef TYPEERROR
+
+static int lib_spriteinfolen(lua_State *L)
+{
+	lua_pushinteger(L, NUMSPRITES);
+	return 1;
+}
+
+static int spriteinfo_get(lua_State *L)
+{
+	spriteinfo_t *sprinfo = *((spriteinfo_t **)luaL_checkudata(L, 1, META_SPRITEINFO));
+	const char *field = luaL_checkstring(L, 2);
+
+	I_Assert(sprinfo != NULL);
+
+#ifdef ROTSPRITE
+	// push a table with the contents of spriteinfo_t->pivot
+	if (fastcmp(field, "pivot"))
+	{
+		int i;
+		char c[2] = "";
+		lua_newtable(L);
+
+		for (i = 0; i < 64; i++)
+		{
+			c[0] = R_Frame2Char(i);
+			c[1] = 0;
+			lua_pushstring(L, c);
+			lua_newtable(L);
+				lua_pushnumber(L, sprinfo->pivot[i].x);
+				lua_setfield(L, -2, "x");
+				lua_pushnumber(L, sprinfo->pivot[i].y);
+				lua_setfield(L, -2, "y");
+			lua_settable(L, -3);
+		}
+		// the table is now on the top of the stack
+		return 1;
+	}
+	else
+#endif
+		return luaL_error(L, LUA_QL("spriteinfo_t") " has no field named " LUA_QS, field);
+
+	return 0;
+}
+
+static int spriteinfo_set(lua_State *L)
+{
+	spriteinfo_t *sprinfo = *((spriteinfo_t **)luaL_checkudata(L, 1, META_SPRITEINFO));
+	const char *field = luaL_checkstring(L, 2);
+
+	if (!lua_lumploading)
+		return luaL_error(L, "Do not alter spriteinfo_t from within a hook or coroutine!");
+	if (hud_running)
+		return luaL_error(L, "Do not alter spriteinfo_t in HUD rendering code!");
+
+	I_Assert(sprinfo != NULL);
+
+	lua_remove(L, 1); // remove spriteinfo
+	lua_remove(L, 1); // remove field
+	lua_settop(L, 1); // leave only one value
+
+#ifdef ROTSPRITE
+	if (fastcmp(field, "pivot"))
+		return PopPivotTable(sprinfo, L, 1);
+	else
+#endif
+		return luaL_error(L, va("Field %s does not exist in spriteinfo_t", field));
+
+	return 0;
+}
+
+static int spriteinfo_num(lua_State *L)
+{
+	spriteinfo_t *sprinfo = *((spriteinfo_t **)luaL_checkudata(L, 1, META_SFXINFO));
+
+	I_Assert(sprinfo != NULL);
+	I_Assert(sprinfo >= spriteinfo);
+
+	lua_pushinteger(L, (UINT32)(sprinfo-spriteinfo));
 	return 1;
 }
 
@@ -903,8 +1158,8 @@ static int lib_setSfxInfo(lua_State *L)
 		info = &S_sfx[i]; // get the sfxinfo to assign to.
 	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
-	lua_remove(L, 1); // pop mobjtype num, don't need it any more.
-	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the mobjinfo.
+	lua_remove(L, 1); // pop sfx num, don't need it any more.
+	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the sfx.
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter sfxinfo in HUD rendering code!");
@@ -1130,6 +1385,17 @@ int LUA_InfoLib(lua_State *L)
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
+	luaL_newmetatable(L, META_SPRITEINFO);
+		lua_pushcfunction(L, spriteinfo_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, spriteinfo_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, spriteinfo_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
 			lua_pushcfunction(L, lib_getSprname);
@@ -1203,6 +1469,20 @@ int LUA_InfoLib(lua_State *L)
 	lua_pushvalue(L, -1);
 	lua_setglobal(L, "S_sfx");
 	lua_setglobal(L, "sfxinfo");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getSpriteInfo);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_setSpriteInfo);
+			lua_setfield(L, -2, "__newindex");
+
+			lua_pushcfunction(L, lib_spriteinfolen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_pushvalue(L, -1);
+	lua_setglobal(L, "spriteinfo");
 
 	luaL_newmetatable(L, META_LUABANKS);
 		lua_pushcfunction(L, lib_getluabanks);

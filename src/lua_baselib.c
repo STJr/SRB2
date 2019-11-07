@@ -143,6 +143,7 @@ static const struct {
 	{META_STATE,        "state_t"},
 	{META_MOBJINFO,     "mobjinfo_t"},
 	{META_SFXINFO,      "sfxinfo_t"},
+	{META_SPRITEINFO,   "spriteinfo_t"},
 
 	{META_MOBJ,         "mobj_t"},
 	{META_MAPTHING,     "mapthing_t"},
