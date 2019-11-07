@@ -5077,7 +5077,7 @@ void A_SignPlayer(mobj_t *actor)
 	INT32 locvar1 = var1;
 	skin_t *skin = NULL;
 	mobj_t *ov;
-	UINT8 facecolor, signcolor = SKINCOLOR_NONE;
+	UINT8 facecolor, signcolor;
 	UINT32 signframe = states[actor->info->raisestate].frame;
 
 #ifdef HAVE_BLUA
@@ -5130,6 +5130,8 @@ void A_SignPlayer(mobj_t *actor)
 			signcolor = Color_Opposite[actor->target->player->skincolor - 1][0];
 			signframe += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
 		}
+		else
+			signcolor = SKINCOLOR_NONE;
 	}
 	else if (locvar1 != -3) // set to a defined skin
 	{
