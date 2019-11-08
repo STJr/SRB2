@@ -678,7 +678,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && --countdowntimer <= 0)
+		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && !stoppedclock && --countdowntimer <= 0)
 		{
 			countdowntimer = 0;
 			countdowntimeup = true;

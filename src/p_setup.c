@@ -103,6 +103,7 @@ side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 UINT16 bossdisabled;
+boolean stoppedclock;
 boolean levelloading;
 UINT8 levelfadecol;
 

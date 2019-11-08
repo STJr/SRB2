@@ -3981,7 +3981,6 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 
 static void P_NetArchiveMisc(void)
 {
-	UINT32 pig = 0;
 	INT32 i;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_MISC);
@@ -3989,9 +3988,12 @@ static void P_NetArchiveMisc(void)
 	WRITEINT16(save_p, gamemap);
 	WRITEINT16(save_p, gamestate);
 
-	for (i = 0; i < MAXPLAYERS; i++)
-		pig |= (playeringame[i] != 0)<<i;
-	WRITEUINT32(save_p, pig);
+	{
+		UINT32 pig = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+			pig |= (playeringame[i] != 0)<<i;
+		WRITEUINT32(save_p, pig);
+	}
 
 	WRITEUINT32(save_p, P_GetRandSeed());
 
@@ -4003,7 +4005,14 @@ static void P_NetArchiveMisc(void)
 	WRITEUINT16(save_p, bossdisabled);
 
 	WRITEUINT16(save_p, emeralds);
-	WRITEUINT8(save_p, stagefailed);
+	{
+		UINT8 globools = 0;
+		if (stagefailed)
+			globools |= 1;
+		if (stoppedclock)
+			globools |= (1<<1);
+		WRITEUINT8(save_p, globools);
+	}
 
 	WRITEUINT32(save_p, token);
 	WRITEINT32(save_p, sstimer);
@@ -4042,7 +4051,6 @@ static void P_NetArchiveMisc(void)
 
 static inline boolean P_NetUnArchiveMisc(void)
 {
-	UINT32 pig;
 	INT32 i;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_MISC)
@@ -4061,11 +4069,13 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	G_SetGamestate(READINT16(save_p));
 
-	pig = READUINT32(save_p);
-	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		playeringame[i] = (pig & (1<<i)) != 0;
-		// playerstate is set in unarchiveplayers
+		UINT32 pig = READUINT32(save_p);
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			playeringame[i] = (pig & (1<<i)) != 0;
+			// playerstate is set in unarchiveplayers
+		}
 	}
 
 	P_SetRandSeed(READUINT32(save_p));
@@ -4082,7 +4092,11 @@ static inline boolean P_NetUnArchiveMisc(void)
 	bossdisabled = READUINT16(save_p);
 
 	emeralds = READUINT16(save_p);
-	stagefailed = READUINT8(save_p);
+	{
+		UINT8 globools = READUINT8(save_p);
+		stagefailed = !!(globools & 1);
+		stoppedclock = !!(globools & (1<<1));
+	}
 
 	token = READUINT32(save_p);
 	sstimer = READINT32(save_p);
