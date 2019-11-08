@@ -557,7 +557,7 @@ typedef enum sprite
 	SPR_HHPL, // Dr Seuss Trees
 	SPR_SHRM, // Mushroom
 	SPR_HHZM, // Misc
-	
+
 	// Azure Temple Scenery
 	SPR_BGAR, // ATZ Gargoyles
 	SPR_RCRY, // ATZ Red Crystal (Target)

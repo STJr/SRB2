@@ -6070,7 +6070,7 @@ static void P_AddAirbob(sector_t *sec, line_t *sourceline, boolean noadjust, boo
 	airbob->vars[5] = sec->ceilingheight;
 	airbob->vars[4] = airbob->vars[5]
 			- (sec->ceilingheight - sec->floorheight);
-	
+
 	airbob->vars[9] = dynamic ? 1 : 0;
 
 	airbob->sourceline = sourceline;

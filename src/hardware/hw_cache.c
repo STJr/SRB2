@@ -690,7 +690,9 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+#ifndef NO_PNG_LUMPS
 		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
+#endif
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
@@ -929,9 +931,9 @@ static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
 	UINT8 *flat;
 	patch_t *patch = (patch_t *)W_CacheLumpNum(flatlumpnum, PU_STATIC);
+#ifndef NO_PNG_LUMPS
 	size_t lumplength = W_LumpLength(flatlumpnum);
 
-#ifndef NO_PNG_LUMPS
 	if (R_IsLumpPNG((UINT8 *)patch, lumplength))
 		patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL, false);
 #endif

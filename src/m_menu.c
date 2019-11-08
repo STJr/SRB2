@@ -2307,7 +2307,7 @@ void M_InitMenuPresTables(void)
 			strncpy(menupres[i].musname, "_recat", 7);
 		else if (i == MN_SP_NIGHTSATTACK)
 			strncpy(menupres[i].musname, "_nitat", 7);
-		else if (i == MN_SP_PLAYER)
+		else if (i == MN_SP_PLAYER || i == MN_SR_PLAYER)
 			strncpy(menupres[i].musname, "_chsel", 7);
 	}
 }
@@ -8722,6 +8722,10 @@ void M_DrawTimeAttackMenu(void)
 		lumpnum_t lumpnum;
 		char beststr[40];
 		char reqscore[40], reqtime[40], reqrings[40];
+
+		strcpy(reqscore, "\0");
+		strcpy(reqtime, "\0");
+		strcpy(reqrings, "\0");
 
 		M_DrawLevelPlatterHeader(32-lsheadingheight/2, cv_nextmap.string, true, false);
 
