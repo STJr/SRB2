@@ -5070,14 +5070,15 @@ void A_SignSpin(mobj_t *actor)
 //              Also used to display Eggman or the skin roulette whilst spinning.
 //
 // var1 = number of skin to display (e.g. 2 = Knuckles; special cases: -1 = target's skin, -2 = skin roulette, -3 = Eggman)
-// var2 = unused
+// var2 = custom sign color, if desired.
 //
 void A_SignPlayer(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 	skin_t *skin = NULL;
 	mobj_t *ov;
-	UINT8 facecolor, signcolor;
+	UINT8 facecolor, signcolor = (UINT8)locvar2;
 	UINT32 signframe = states[actor->info->raisestate].frame;
 
 #ifdef HAVE_BLUA
@@ -5109,7 +5110,9 @@ void A_SignPlayer(mobj_t *actor)
 		skin = &skins[actor->target->player->skin];
 		facecolor = actor->target->player->skincolor;
 
-		if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
+		if (signcolor)
+			;
+		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
 		{
 			signcolor = skin->prefoppositecolor;
 			/*
@@ -5154,7 +5157,9 @@ void A_SignPlayer(mobj_t *actor)
 		}
 
 		facecolor = skin->prefcolor;
-		if (skin->prefoppositecolor)
+		if (signcolor)
+			;
+		else if (skin->prefoppositecolor)
 		{
 			signcolor = skin->prefoppositecolor;
 		}
@@ -5177,7 +5182,10 @@ void A_SignPlayer(mobj_t *actor)
 	{
 		ov->color = SKINCOLOR_NONE;
 		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
-		actor->tracer->color = signcolor = SKINCOLOR_CARBON;
+		if (signcolor)
+			acotor->tracer->color = signcolor;
+		else
+			actor->tracer->color = signcolor = SKINCOLOR_CARBON;
 		actor->tracer->frame = signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
 	}
 }
