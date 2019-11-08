@@ -2459,16 +2459,6 @@ static boolean P_ZMovement(mobj_t *mo)
 				P_RemoveMobj(mo);
 				return false;
 			}
-			if (mo->momz
-			&& !(mo->flags & MF_NOGRAVITY)
-			&& ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z <= mo->floorz)
-			|| ((mo->eflags & MFE_VERTICALFLIP) && mo->z+mo->height >= mo->ceilingz)))
-			{
-				mo->flags |= MF_NOGRAVITY;
-				mo->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
-				mo->momy = mo->momz = 0;
-				mo->z = ((mo->eflags & MFE_VERTICALFLIP) ? mo->ceilingz-mo->height : mo->floorz);
-			}
 			break;
 		case MT_GOOP:
 			if (P_CheckDeathPitCollide(mo))
@@ -9568,6 +9558,14 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->z = mobj->ceilingz - mobj->height;
 					else
 						mobj->z = mobj->floorz;
+				}
+				else if ((!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z <= mobj->floorz)
+				|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z+mobj->height >= mobj->ceilingz))
+				{
+					mobj->flags |= MF_NOGRAVITY;
+					mobj->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
+					mobj->momy = mobj->momz = 0;
+					mobj->z = ((mobj->eflags & MFE_VERTICALFLIP) ? mobj->ceilingz-mobj->height : mobj->floorz);
 				}
 				/* FALLTHRU */
 			default:
