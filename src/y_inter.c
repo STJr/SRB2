@@ -2131,7 +2131,7 @@ static void Y_AwardSpecialStageBonus(void)
 
 	data.spec.score = players[consoleplayer].score;
 	memset(data.spec.bonuses, 0, sizeof(data.spec.bonuses));
-	memset(data.spec.bonuspatches, 0, sizeof(data.coop.bonuspatches));
+	memset(data.spec.bonuspatches, 0, sizeof(data.spec.bonuspatches));
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
