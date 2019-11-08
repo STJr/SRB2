@@ -3214,12 +3214,14 @@ boolean M_Responder(event_t *ev)
 				 || (currentMenu->menuitems[itemOn].status & IT_TYPE)==IT_SUBMENU)
                  && (currentMenu->menuitems[itemOn].status & IT_CALLTYPE))
 				{
+#ifndef DEVELOP
 					if (((currentMenu->menuitems[itemOn].status & IT_CALLTYPE) & IT_CALL_NOTMODIFIED) && modifiedgame && !savemoddata)
 					{
 						S_StartSound(NULL, sfx_skid);
 						M_StartMessage(M_GetText("This cannot be done in a modified game.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 						return true;
 					}
+#endif
 				}
 				S_StartSound(NULL, sfx_menu1);
 				switch (currentMenu->menuitems[itemOn].status & IT_TYPE)
@@ -4570,10 +4572,12 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 			/* FALLTHRU */
 		case LLM_RECORDATTACK:
 		case LLM_NIGHTSATTACK:
+#ifndef DEVELOP
 			if (mapvisited[mapnum] & MV_MAX)
 				return true;
 
 			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
+#endif
 				return true;
 
 			return false;
