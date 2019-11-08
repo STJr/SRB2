@@ -5585,9 +5585,9 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		P_InstaThrust(mobj, mobj->angle, -4*FRACUNIT);
 		P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true);
 		mobj->momz -= gravity;
-		if (mobj->z < mobj->watertop)
+		if (mobj->z < mobj->watertop || mobj->z < (mobj->floorz + 16*FRACUNIT))
 		{
-			mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
+			mobj->watertop = mobj->floorz + 32*FRACUNIT;
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 		}
 		return;
@@ -5801,8 +5801,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			if (mobj->movedir == 0 || mobj->movedir == 2) { // Pausing between bounces in the pinball phase
 				if (mobj->target->player->powers[pw_tailsfly]) // Trying to escape, eh?
 					mobj->watertop = mobj->target->z + mobj->target->momz*6; // Readjust your aim. >:3
-				else
+				else if (mobj->target->floorz > mobj->floorz)
 					mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
+				else
+					mobj->watertop = mobj->floorz + 16*FRACUNIT;
 
 				if (!(mobj->threshold%4)) {
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx*4, mobj->target->y + mobj->target->momy*4);
@@ -6106,7 +6108,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						mobj->threshold = 12; // bounce 12 times
 					else
 						mobj->threshold = 24; // bounce 24 times
-					mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
+					if (mobj->floorz >= mobj->target->floorz)
+						mobj->watertop = mobj->floorz + 16*FRACUNIT;
+					else
+						mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
 					P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
 
 #if 0
@@ -6135,7 +6140,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			}
 			case 3:
 				// Return to idle.
-				mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
+				if (mobj->floorz >= mobj->target->floorz)
+					mobj->watertop = mobj->floorz + 32*FRACUNIT;
+				else
+					mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
 				P_SetMobjState(mobj, mobj->info->spawnstate);
 				mobj->flags &= ~MF_PAIN;
 				mobj->fuse = 8*TICRATE;
