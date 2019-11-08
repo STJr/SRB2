@@ -5183,7 +5183,7 @@ void A_SignPlayer(mobj_t *actor)
 		ov->color = SKINCOLOR_NONE;
 		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		if (signcolor)
-			acotor->tracer->color = signcolor;
+			actor->tracer->color = signcolor;
 		else
 			actor->tracer->color = signcolor = SKINCOLOR_CARBON;
 		actor->tracer->frame = signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
