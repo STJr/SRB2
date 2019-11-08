@@ -2459,7 +2459,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 			break;
 		}
 	}
-	
+
 	if (raise->vars[9]) // Dynamically Sinking Platform^tm
 	{
 #define shaketime 10
