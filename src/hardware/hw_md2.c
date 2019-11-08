@@ -567,7 +567,7 @@ static GrTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_
 		//CONS_Debug(DBG_RENDER, "libpng load error on %s\n", filename);
 		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
 		fclose(png_FILE);
-		Z_Free(grpatch->mipmap.grInfo.data);
+		Z_Free(grpatch->mipmap->grInfo.data);
 		return 0;
 	}
 #ifdef USE_FAR_KEYWORD
@@ -608,7 +608,7 @@ static GrTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_
 
 	{
 		png_uint_32 i, pitch = png_get_rowbytes(png_ptr, png_info_ptr);
-		png_bytep PNG_image = Z_Malloc(pitch*height, PU_HWRCACHE, &grpatch->mipmap.grInfo.data);
+		png_bytep PNG_image = Z_Malloc(pitch*height, PU_HWRCACHE, &grpatch->mipmap->grInfo.data);
 		png_bytepp row_pointers = png_malloc(png_ptr, height * sizeof (png_bytep));
 		for (i = 0; i < height; i++)
 			row_pointers[i] = PNG_image + i*pitch;
@@ -682,7 +682,7 @@ static GrTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
 
 	pw = *w = header.xmax - header.xmin + 1;
 	ph = *h = header.ymax - header.ymin + 1;
-	image = Z_Malloc(pw*ph*4, PU_HWRCACHE, &grpatch->mipmap.grInfo.data);
+	image = Z_Malloc(pw*ph*4, PU_HWRCACHE, &grpatch->mipmap->grInfo.data);
 
 	if (fread(palette, sizeof (UINT8), PALSIZE, file) != PALSIZE)
 	{
@@ -730,39 +730,39 @@ static void md2_loadTexture(md2_t *model)
 	if (model->grpatch)
 	{
 		grpatch = model->grpatch;
-		Z_Free(grpatch->mipmap.grInfo.data);
+		Z_Free(grpatch->mipmap->grInfo.data);
 	}
 	else
 		grpatch = Z_Calloc(sizeof *grpatch, PU_HWRPATCHINFO,
 		                   &(model->grpatch));
 
-	if (!grpatch->mipmap.downloaded && !grpatch->mipmap.grInfo.data)
+	if (!grpatch->mipmap->downloaded && !grpatch->mipmap->grInfo.data)
 	{
 		int w = 0, h = 0;
 #ifdef HAVE_PNG
-		grpatch->mipmap.grInfo.format = PNG_Load(filename, &w, &h, grpatch);
-		if (grpatch->mipmap.grInfo.format == 0)
+		grpatch->mipmap->grInfo.format = PNG_Load(filename, &w, &h, grpatch);
+		if (grpatch->mipmap->grInfo.format == 0)
 #endif
-		grpatch->mipmap.grInfo.format = PCX_Load(filename, &w, &h, grpatch);
-		if (grpatch->mipmap.grInfo.format == 0)
+		grpatch->mipmap->grInfo.format = PCX_Load(filename, &w, &h, grpatch);
+		if (grpatch->mipmap->grInfo.format == 0)
 			return;
 
-		grpatch->mipmap.downloaded = 0;
-		grpatch->mipmap.flags = 0;
+		grpatch->mipmap->downloaded = 0;
+		grpatch->mipmap->flags = 0;
 
 		grpatch->width = (INT16)w;
 		grpatch->height = (INT16)h;
-		grpatch->mipmap.width = (UINT16)w;
-		grpatch->mipmap.height = (UINT16)h;
+		grpatch->mipmap->width = (UINT16)w;
+		grpatch->mipmap->height = (UINT16)h;
 
 #ifdef GLIDE_API_COMPATIBILITY
 		// not correct!
-		grpatch->mipmap.grInfo.smallLodLog2 = GR_LOD_LOG2_256;
-		grpatch->mipmap.grInfo.largeLodLog2 = GR_LOD_LOG2_256;
-		grpatch->mipmap.grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+		grpatch->mipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_256;
+		grpatch->mipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_256;
+		grpatch->mipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
 #endif
 	}
-	HWD.pfnSetTexture(&grpatch->mipmap);
+	HWD.pfnSetTexture(grpatch->mipmap);
 	HWR_UnlockCachedPatch(grpatch);
 }
 
@@ -780,42 +780,42 @@ static void md2_loadBlendTexture(md2_t *model)
 	if (model->blendgrpatch)
 	{
 		grpatch = model->blendgrpatch;
-		Z_Free(grpatch->mipmap.grInfo.data);
+		Z_Free(grpatch->mipmap->grInfo.data);
 	}
 	else
 		grpatch = Z_Calloc(sizeof *grpatch, PU_HWRPATCHINFO,
 		                   &(model->blendgrpatch));
 
-	if (!grpatch->mipmap.downloaded && !grpatch->mipmap.grInfo.data)
+	if (!grpatch->mipmap->downloaded && !grpatch->mipmap->grInfo.data)
 	{
 		int w = 0, h = 0;
 #ifdef HAVE_PNG
-		grpatch->mipmap.grInfo.format = PNG_Load(filename, &w, &h, grpatch);
-		if (grpatch->mipmap.grInfo.format == 0)
+		grpatch->mipmap->grInfo.format = PNG_Load(filename, &w, &h, grpatch);
+		if (grpatch->mipmap->grInfo.format == 0)
 #endif
-		grpatch->mipmap.grInfo.format = PCX_Load(filename, &w, &h, grpatch);
-		if (grpatch->mipmap.grInfo.format == 0)
+		grpatch->mipmap->grInfo.format = PCX_Load(filename, &w, &h, grpatch);
+		if (grpatch->mipmap->grInfo.format == 0)
 		{
 			Z_Free(filename);
 			return;
 		}
 
-		grpatch->mipmap.downloaded = 0;
-		grpatch->mipmap.flags = 0;
+		grpatch->mipmap->downloaded = 0;
+		grpatch->mipmap->flags = 0;
 
 		grpatch->width = (INT16)w;
 		grpatch->height = (INT16)h;
-		grpatch->mipmap.width = (UINT16)w;
-		grpatch->mipmap.height = (UINT16)h;
+		grpatch->mipmap->width = (UINT16)w;
+		grpatch->mipmap->height = (UINT16)h;
 
 #ifdef GLIDE_API_COMPATIBILITY
 		// not correct!
-		grpatch->mipmap.grInfo.smallLodLog2 = GR_LOD_LOG2_256;
-		grpatch->mipmap.grInfo.largeLodLog2 = GR_LOD_LOG2_256;
-		grpatch->mipmap.grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+		grpatch->mipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_256;
+		grpatch->mipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_256;
+		grpatch->mipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
 #endif
 	}
-	HWD.pfnSetTexture(&grpatch->mipmap); // We do need to do this so that it can be cleared and knows to recreate it when necessary
+	HWD.pfnSetTexture(grpatch->mipmap); // We do need to do this so that it can be cleared and knows to recreate it when necessary
 	HWR_UnlockCachedPatch(grpatch);
 
 	Z_Free(filename);
@@ -1029,8 +1029,8 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	cur = Z_Malloc(size*4, PU_HWRCACHE, &grmip->grInfo.data);
 	memset(cur, 0x00, size*4);
 
-	image = gpatch->mipmap.grInfo.data;
-	blendimage = blendgpatch->mipmap.grInfo.data;
+	image = gpatch->mipmap->grInfo.data;
+	blendimage = blendgpatch->mipmap->grInfo.data;
 
 	// Average all of the translation's colors
 	if (color == SKINCOLOR_NONE || color >= MAXTRANSLATIONS)
@@ -1145,13 +1145,13 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	if (colormap == colormaps || colormap == NULL)
 	{
 		// Don't do any blending
-		HWD.pfnSetTexture(&gpatch->mipmap);
+		HWD.pfnSetTexture(gpatch->mipmap);
 		return;
 	}
 
 	// search for the mimmap
 	// skip the first (no colormap translated)
-	for (grmip = &gpatch->mipmap; grmip->nextcolormap; )
+	for (grmip = gpatch->mipmap; grmip->nextcolormap; )
 	{
 		grmip = grmip->nextcolormap;
 		if (grmip->colormap == colormap)
@@ -1371,18 +1371,18 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
 		gpatch = md2->grpatch;
-		if (!gpatch || !gpatch->mipmap.grInfo.format || !gpatch->mipmap.downloaded)
+		if (!gpatch || !gpatch->mipmap->grInfo.format || !gpatch->mipmap->downloaded)
 			md2_loadTexture(md2);
 		gpatch = md2->grpatch; // Load it again, because it isn't being loaded into gpatch after md2_loadtexture...
 
-		if ((gpatch && gpatch->mipmap.grInfo.format) // don't load the blend texture if the base texture isn't available
-			&& (!md2->blendgrpatch || !((GLPatch_t *)md2->blendgrpatch)->mipmap.grInfo.format || !((GLPatch_t *)md2->blendgrpatch)->mipmap.downloaded))
+		if ((gpatch && gpatch->mipmap->grInfo.format) // don't load the blend texture if the base texture isn't available
+			&& (!md2->blendgrpatch || !((GLPatch_t *)md2->blendgrpatch)->mipmap->grInfo.format || !((GLPatch_t *)md2->blendgrpatch)->mipmap->downloaded))
 			md2_loadBlendTexture(md2);
 
-		if (gpatch && gpatch->mipmap.grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
+		if (gpatch && gpatch->mipmap->grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
 			if ((skincolors_t)spr->mobj->color != SKINCOLOR_NONE &&
-				md2->blendgrpatch && ((GLPatch_t *)md2->blendgrpatch)->mipmap.grInfo.format
+				md2->blendgrpatch && ((GLPatch_t *)md2->blendgrpatch)->mipmap->grInfo.format
 				&& gpatch->width == ((GLPatch_t *)md2->blendgrpatch)->width && gpatch->height == ((GLPatch_t *)md2->blendgrpatch)->height)
 			{
 				INT32 skinnum = TC_DEFAULT;
@@ -1413,7 +1413,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			else
 			{
 				// This is safe, since we know the texture has been downloaded
-				HWD.pfnSetTexture(&gpatch->mipmap);
+				HWD.pfnSetTexture(gpatch->mipmap);
 			}
 		}
 		else
