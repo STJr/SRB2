@@ -633,7 +633,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (!(netgame || multiplayer))
 				{
 					player->continues += 1;
-					players->gotcontinue = true;
+					player->gotcontinue = true;
 					if (P_IsLocalPlayer(player))
 						S_StartSound(NULL, sfx_s3kac);
 					else

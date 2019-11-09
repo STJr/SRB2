@@ -540,7 +540,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 
 static void P_DoPterabyteCarry(player_t *player, mobj_t *ptera)
 {
-	if (player->powers[pw_carry] && players->powers[pw_carry] != CR_ROLLOUT)
+	if (player->powers[pw_carry] && player->powers[pw_carry] != CR_ROLLOUT)
 		return;
 	if (ptera->extravalue1 != 1)
 		return; // Not swooping
@@ -1040,7 +1040,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !thing->health)
 			return true;
-		
+
 		if (thing == tmthing->tracer) // don't collide with rider
 			return true;
 
@@ -1054,7 +1054,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_KillMobj(thing, tmthing, tmthing->tracer, 0);
 			return true;
 		}
-		
+
 		if (thing->type == tmthing->type // bounce against other rollout rocks
 			&& (tmthing->momx || tmthing->momy || thing->momx || thing->momy))
 		{
