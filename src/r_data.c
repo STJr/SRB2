@@ -752,7 +752,6 @@ void R_LoadTextures(void)
 	for (w = 0, numtextures = 0; w < numwadfiles; w++)
 	{
 		// Count the textures from TEXTURES lumps
-
 		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 		while (texturesLumpPos != INT16_MAX)
 		{
@@ -761,7 +760,6 @@ void R_LoadTextures(void)
 		}
 
 		// Count single-patch textures
-
 		if (wadfiles[w]->type == RET_PK3)
 		{
 			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
@@ -774,7 +772,11 @@ void R_LoadTextures(void)
 		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
+#ifdef WALLFLATS
+			goto countflats;
+#else
 			continue;
+#endif
 
 		texstart++; // Do not count the first marker
 
@@ -793,6 +795,7 @@ void R_LoadTextures(void)
 		}
 
 #ifdef WALLFLATS
+countflats:
 		// Count flats
 		if (wadfiles[w]->type == RET_PK3)
 		{
@@ -802,7 +805,7 @@ void R_LoadTextures(void)
 		else
 		{
 			texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
-			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, 0);
+			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
 		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
@@ -873,7 +876,11 @@ void R_LoadTextures(void)
 		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
+#ifdef WALLFLATS
+			goto checkflats;
+#else
 			continue;
+#endif
 
 		texstart++; // Do not count the first marker
 
@@ -939,6 +946,7 @@ void R_LoadTextures(void)
 		}
 
 #ifdef WALLFLATS
+checkflats:
 		// Yes
 		if (wadfiles[w]->type == RET_PK3)
 		{
@@ -948,7 +956,7 @@ void R_LoadTextures(void)
 		else
 		{
 			texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
-			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, 0);
+			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
 		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
