@@ -2803,7 +2803,7 @@ void G_AddPlayer(INT32 playernum)
 
 			countplayers++;
 
-			if (!players->exiting)
+			if (!players[i].exiting)
 				notexiting++;
 
 			if (!(cv_coopstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
