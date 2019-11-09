@@ -1007,6 +1007,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
 			// Raw flats always have dimensions that are powers-of-two numbers.
 			ds_powersoftwo = true;
+			if (spanfunc == basespanfunc)
+				spanfunc = mmxspanfunc;
 			break;
 		default:
 			switch (type)
