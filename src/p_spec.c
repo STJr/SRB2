@@ -491,7 +491,8 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
 					foundflats->numpics,foundflats->speed);
 		}
-		else if (foundflats->u.flat.lumpnum >= startflatnum && foundflats->u.flat.lumpnum <= endflatnum)
+		else if ((!anims[animnum].istexture) && (foundflats->type == LEVELFLAT_FLAT)
+			&& (foundflats->u.flat.lumpnum >= startflatnum && foundflats->u.flat.lumpnum <= endflatnum))
 		{
 			foundflats->u.flat.baselumpnum = startflatnum;
 			foundflats->animseq = foundflats->u.flat.lumpnum - startflatnum;
@@ -5596,7 +5597,7 @@ void P_UpdateSpecials(void)
 		if (foundflats->speed) // it is an animated flat
 		{
 			// update the levelflat texture number
-			if (foundflats->type == LEVELFLAT_TEXTURE)
+			if ((foundflats->type == LEVELFLAT_TEXTURE) && (foundflats->u.texture.basenum != -1))
 				foundflats->u.texture.num = foundflats->u.texture.basenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 			// update the levelflat lump number
 			else if ((foundflats->type == LEVELFLAT_FLAT) && (foundflats->u.flat.baselumpnum != LUMPERROR))
