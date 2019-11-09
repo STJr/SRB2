@@ -456,6 +456,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
+	boolean dealloc = false;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
@@ -487,10 +488,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-		{
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
 			goto multipatch;
-		}
 #endif
 
 		// Check the patch for holes.
@@ -579,9 +577,14 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		dealloc = false;
+
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			dealloc = true;
+		}
 #endif
 
 		x1 = patch->originx;
@@ -619,6 +622,9 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 			colofs[x] = LONG((x * texture->height) + (texture->width*4));
 			ColumnDrawerPointer(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
 		}
+
+		if (dealloc)
+			Z_Free(realpatch);
 	}
 
 done:

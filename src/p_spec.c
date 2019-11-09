@@ -464,7 +464,7 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 	for (i = 0; i < numlevelflats; i++, foundflats++)
 	{
 		// is that levelflat from the flat anim sequence ?
-		if ((anims[animnum].istexture) && (foundflats->u.texture.num != 0 && foundflats->u.texture.num != -1)
+		if ((anims[animnum].istexture) && (foundflats->type == LEVELFLAT_TEXTURE)
 			&& ((UINT16)foundflats->u.texture.num >= startflatnum && (UINT16)foundflats->u.texture.num <= endflatnum))
 		{
 			foundflats->u.texture.basenum = startflatnum;
