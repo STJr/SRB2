@@ -138,6 +138,13 @@ static size_t maxanims;
 
 static animdef_t *animdefs = NULL;
 
+// Increase the size of animdefs to make room for a new animation definition
+static void GrowAnimDefs(void)
+{
+	maxanims++;
+	animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
+}
+
 // A prototype; here instead of p_spec.h, so they're "private"
 void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum);
 void P_ParseAnimationDefintion(SINT8 istexture);
@@ -347,8 +354,7 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 	if (i == maxanims)
 	{
 		// Increase the size to make room for the new animation definition
-		maxanims++;
-		animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
+		GrowAnimDefs();
 		strncpy(animdefs[i].startname, animdefsToken, 9);
 	}
 
@@ -434,8 +440,17 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 	}
 	animdefs[i].speed = animSpeed;
 	Z_Free(animdefsToken);
-}
 
+#ifdef WALLFLATS
+	// hehe... uhh.....
+	if (!istexture)
+	{
+		GrowAnimDefs();
+		M_Memcpy(&animdefs[maxanims-1], &animdefs[i], sizeof(animdef_t));
+		animdefs[maxanims-1].istexture = 1;
+	}
+#endif
+}
 
 /** Checks for flats in levelflats that are part of a flat animation sequence
   * and sets them up for animation.
