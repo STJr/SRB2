@@ -5581,10 +5581,10 @@ void P_UpdateSpecials(void)
 		if (foundflats->speed) // it is an animated flat
 		{
 			// update the levelflat texture number
-			if (foundflats->u.texture.basenum != -1)
+			if (foundflats->type == LEVELFLAT_TEXTURE)
 				foundflats->u.texture.num = foundflats->u.texture.basenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 			// update the levelflat lump number
-			else if (foundflats->u.flat.baselumpnum != LUMPERROR)
+			else if ((foundflats->type == LEVELFLAT_FLAT) && (foundflats->u.flat.baselumpnum != LUMPERROR))
 				foundflats->u.flat.lumpnum = foundflats->u.flat.baselumpnum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 		}
 	}

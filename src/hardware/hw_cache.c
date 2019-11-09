@@ -997,8 +997,11 @@ static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 // Download a Doom 'flat' to the hardware cache and make it ready for use
 void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 {
-	GLMipmap_t *grmip = &HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
+	GLMipmap_t *grmip;
+	if (flatlumpnum == LUMPERROR)
+		return;
 
+	grmip = &HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
 	if (!grmip->downloaded && !grmip->grInfo.data)
 		HWR_CacheFlat(grmip, flatlumpnum);
 
@@ -1008,8 +1011,12 @@ void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
 }
 
-void HWR_GetFlat(levelflat_t *levelflat)
+void HWR_GetLevelFlat(levelflat_t *levelflat)
 {
+	// Who knows?
+	if (levelflat == NULL)
+		return;
+
 	if (levelflat->type == LEVELFLAT_FLAT)
 		HWR_LiterallyGetFlat(levelflat->u.flat.lumpnum);
 	else if (levelflat->type == LEVELFLAT_TEXTURE)
@@ -1018,7 +1025,7 @@ void HWR_GetFlat(levelflat_t *levelflat)
 		INT32 texturenum = levelflat->u.texture.num;
 #ifdef PARANOIA
 		if ((unsigned)texturenum >= gr_numtextures)
-			I_Error("HWR_GetFlat: texturenum >= numtextures\n");
+			I_Error("HWR_GetLevelFlat: texturenum >= numtextures\n");
 #endif
 		if (texturenum == 0 || texturenum == -1)
 			return;
@@ -1032,6 +1039,8 @@ void HWR_GetFlat(levelflat_t *levelflat)
 		// The system-memory data can be purged now.
 		Z_ChangeTag(grtex->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
 	}
+	else // set no texture
+		HWD.pfnSetTexture(NULL);
 }
 
 //

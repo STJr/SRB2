@@ -101,7 +101,7 @@ void HWR_InitTextureCache(void);
 void HWR_FreeTextureCache(void);
 void HWR_FreeExtraSubsectors(void);
 
-void HWR_GetFlat(levelflat_t *levelflat);
+void HWR_GetLevelFlat(levelflat_t *levelflat);
 void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
 GLTexture_t *HWR_GetTexture(INT32 tex);
 void HWR_GetPatch(GLPatch_t *gpatch);
