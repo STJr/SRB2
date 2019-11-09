@@ -2225,8 +2225,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 	{
 		if (dorollstuff)
 		{
-			if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
-				player->pflags |= PF_SPINNING;
+			if ((player->charability2 == CA2_SPINDASH) && !((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+				player->pflags = (player->pflags|PF_SPINNING) & ~PF_THOKKED;
 			else if (!(player->pflags & PF_STARTDASH))
 				player->pflags &= ~PF_SPINNING;
 		}
@@ -5767,7 +5767,7 @@ static void P_2dMovement(player_t *player)
 			movepushforward >>= 1; // Proper air movement
 
 		// Allow a bit of movement while spinning
-		if (player->pflags & PF_SPINNING)
+		if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
 		{
 			if (!(player->pflags & PF_STARTDASH))
 				movepushforward = movepushforward/48;
@@ -5794,7 +5794,7 @@ static void P_3dMovement(player_t *player)
 	angle_t dangle; // replaces old quadrants bits
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
 	boolean analogmove = false;
-	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && player->pflags & PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
+	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && (player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
 	fixed_t oldMagnitude, newMagnitude;
 #ifdef ESLOPE
 	vector3_t totalthrust;
@@ -5979,7 +5979,7 @@ static void P_3dMovement(player_t *player)
 		movepushforward = cmd->forwardmove * (thrustfactor * acceleration);
 
 		// Allow a bit of movement while spinning
-		if (player->pflags & PF_SPINNING)
+		if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
 		{
 			if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
 			|| (player->pflags & PF_STARTDASH))
@@ -6020,7 +6020,7 @@ static void P_3dMovement(player_t *player)
 			movepushforward = max(abs(cmd->sidemove), abs(cmd->forwardmove)) * (thrustfactor * acceleration);
 
 			// Allow a bit of movement while spinning
-			if (player->pflags & PF_SPINNING)
+			if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
 			{
 				if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
 				|| (player->pflags & PF_STARTDASH))
@@ -6055,11 +6055,11 @@ static void P_3dMovement(player_t *player)
 		{
 			movepushside >>= 2; // proper air movement
 			// Reduce movepushslide even more if over "max" flight speed
-			if ((player->pflags & PF_SPINNING) || (player->powers[pw_tailsfly] && player->speed > topspeed))
+			if (((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING) || (player->powers[pw_tailsfly] && player->speed > topspeed))
 				movepushside >>= 2;
 		}
 		// Allow a bit of movement while spinning
-		else if (player->pflags & PF_SPINNING)
+		else if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
 		{
 			if (player->pflags & PF_STARTDASH)
 				movepushside = 0;
