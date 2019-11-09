@@ -456,7 +456,6 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
-	boolean dealloc = false;
 	UINT8 *pdata;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
@@ -574,6 +573,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+		boolean dealloc = true;
 		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
 		if (patch->style != AST_COPY)
 			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawBlendFlippedColumnInCache : R_DrawBlendColumnInCache;
@@ -585,7 +585,6 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 		realpatch = (patch_t *)pdata;
-		dealloc = true;
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
@@ -597,7 +596,10 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 			realpatch = R_FlatToPatch(pdata, texture->width, texture->height, 0, 0, NULL, false);
 		else
 #endif
+		{
+			(void)lumplength;
 			dealloc = false;
+		}
 
 		x1 = patch->originx;
 		width = SHORT(realpatch->width);

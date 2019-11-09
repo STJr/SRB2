@@ -642,6 +642,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
+	UINT8 *pdata;
 
 	INT32 i;
 	boolean skyspecial = false; //poor hack for Legacy large skies..
@@ -690,19 +691,30 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
-#ifndef NO_PNG_LUMPS
+		boolean dealloc = true;
 		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
-#endif
-		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+		pdata = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+		realpatch = (patch_t *)pdata;
+
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+		else
 #endif
-		HWR_DrawTexturePatchInCache(&grtex->mipmap,
-		                     blockwidth, blockheight,
-		                     texture, patch,
-		                     realpatch);
-		Z_Unlock(realpatch);
+#ifdef WALLFLATS
+		if (texture->type == TEXTURETYPE_FLAT)
+			realpatch = R_FlatToPatch(pdata, texture->width, texture->height, 0, 0, NULL, false);
+		else
+#endif
+		{
+			(void)lumplength;
+			dealloc = false;
+		}
+
+		HWR_DrawTexturePatchInCache(&grtex->mipmap, blockwidth, blockheight, texture, patch, realpatch);
+
+		if (dealloc)
+			Z_Unlock(realpatch);
 	}
 	//Hurdler: not efficient at all but I don't remember exactly how HWR_DrawPatchInCache works :(
 	if (format2bpp[grtex->mipmap.grInfo.format]==4)
