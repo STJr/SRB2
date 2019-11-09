@@ -5394,6 +5394,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SIGNSPIN5",
 	"S_SIGNSPIN6",
 	"S_SIGNPLAYER",
+	"S_SIGNSLOW",
+	"S_SIGNSTOP",
 	"S_SIGNBOARD",
 	"S_EGGMANSIGN",
 
