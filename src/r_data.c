@@ -583,7 +583,8 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		wadnum = patch->wad;
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		realpatch = (patch_t *)pdata;
 		dealloc = true;
 
 #ifndef NO_PNG_LUMPS
