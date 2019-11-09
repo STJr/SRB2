@@ -456,6 +456,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
+	boolean dealloc = false;
 	UINT8 *pdata;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
@@ -583,6 +584,8 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		dealloc = true;
+
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
@@ -591,7 +594,9 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
 			realpatch = R_FlatToPatch(pdata, texture->width, texture->height, 0, 0, NULL, false);
+		else
 #endif
+			dealloc = false;
 
 		x1 = patch->originx;
 		width = SHORT(realpatch->width);
@@ -628,6 +633,9 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 			colofs[x] = LONG((x * texture->height) + (texture->width*4));
 			ColumnDrawerPointer(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
 		}
+
+		if (dealloc)
+			Z_Free(realpatch);
 	}
 
 done:
