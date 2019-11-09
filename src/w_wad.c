@@ -1531,7 +1531,10 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		if (!lumpcache[lump])
 		{
 			size_t len = W_LumpLengthPwad(wad, lump);
-			void *ptr, *lumpdata, *srcdata = NULL;
+			void *ptr, *lumpdata;
+#ifndef NO_PNG_LUMPS
+			void *srcdata = NULL;
+#endif
 
 			ptr = Z_Malloc(len, tag, &lumpcache[lump]);
 			lumpdata = Z_Malloc(len, tag, NULL);

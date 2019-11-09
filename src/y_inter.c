@@ -35,6 +35,7 @@
 #include "p_local.h"
 
 #include "m_cond.h" // condition sets
+#include "lua_hook.h" // IntermissionThinker hook
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -142,9 +143,21 @@ static patch_t *widebgpatch = NULL; // INTERSCW
 static patch_t *bgtile = NULL;      // SPECTILE/SRB2BACK
 static patch_t *interpic = NULL;    // custom picture defined in map header
 static boolean usetile;
+static INT32 timer;
+
+typedef struct
+{
+	INT32 source_width, source_height;
+	INT32 source_bpp, source_rowbytes;
+	UINT8 *source_picture;
+	INT32 target_width, target_height;
+	INT32 target_bpp, target_rowbytes;
+	UINT8 *target_picture;
+} y_buffer_t;
+
 boolean usebuffer = false;
 static boolean useinterpic;
-static INT32 timer;
+static y_buffer_t *y_buffer;
 
 static INT32 intertic;
 static INT32 tallydonetic = -1;
@@ -152,6 +165,8 @@ static INT32 endtic = -1;
 
 intertype_t intertype = int_none;
 
+static void Y_RescaleScreenBuffer(void);
+static void Y_CleanupScreenBuffer(void);
 static void Y_AwardCoopBonuses(void);
 static void Y_AwardSpecialStageBonus(void);
 static void Y_CalculateCompetitionWinners(void);
@@ -207,6 +222,94 @@ static void Y_IntermissionTokenDrawer(void)
 }
 
 //
+// Y_ConsiderScreenBuffer
+//
+// Can we copy the current screen
+// to a buffer?
+//
+void Y_ConsiderScreenBuffer(void)
+{
+	if (gameaction != ga_completed)
+		return;
+
+	if (y_buffer == NULL)
+		y_buffer = Z_Calloc(sizeof(y_buffer_t), PU_STATIC, NULL);
+	else
+		return;
+
+	y_buffer->source_width = vid.width;
+	y_buffer->source_height = vid.height;
+	y_buffer->source_bpp = vid.bpp;
+	y_buffer->source_rowbytes = vid.rowbytes;
+	y_buffer->source_picture = ZZ_Alloc(y_buffer->source_width*vid.bpp * y_buffer->source_height);
+	VID_BlitLinearScreen(screens[1], y_buffer->source_picture, vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+
+	// Make the rescaled screen buffer
+	Y_RescaleScreenBuffer();
+}
+
+//
+// Y_RescaleScreenBuffer
+//
+// Write the rescaled source picture,
+// to the destination picture that
+// has the current screen's resolutions.
+//
+static void Y_RescaleScreenBuffer(void)
+{
+	INT32 sx, sy; // source
+	INT32 dx, dy; // dest
+	fixed_t scalefac, yscalefac;
+	fixed_t rowfrac, colfrac;
+	UINT8 *dest;
+
+	// Who knows?
+	if (y_buffer == NULL)
+		return;
+
+	if (y_buffer->target_picture)
+		Z_Free(y_buffer->target_picture);
+
+	y_buffer->target_width = vid.width;
+	y_buffer->target_height = vid.height;
+	y_buffer->target_rowbytes = vid.rowbytes;
+	y_buffer->target_bpp = vid.bpp;
+	y_buffer->target_picture = ZZ_Alloc(y_buffer->target_width*vid.bpp * y_buffer->target_height);
+	dest = y_buffer->target_picture;
+
+	scalefac = FixedDiv(y_buffer->target_width*FRACUNIT, y_buffer->source_width*FRACUNIT);
+	yscalefac = FixedDiv(y_buffer->target_height*FRACUNIT, y_buffer->source_height*FRACUNIT);
+
+	rowfrac = FixedDiv(FRACUNIT, yscalefac);
+	colfrac = FixedDiv(FRACUNIT, scalefac);
+
+	for (sy = 0, dy = 0; sy < (y_buffer->source_height << FRACBITS) && dy < y_buffer->target_height; sy += rowfrac, dy++)
+		for (sx = 0, dx = 0; sx < (y_buffer->source_width << FRACBITS) && dx < y_buffer->target_width; sx += colfrac, dx += y_buffer->target_bpp)
+			dest[(dy * y_buffer->target_rowbytes) + dx] = y_buffer->source_picture[((sy>>FRACBITS) * y_buffer->source_width) + (sx>>FRACBITS)];
+}
+
+//
+// Y_CleanupScreenBuffer
+//
+// Free all related memory.
+//
+static void Y_CleanupScreenBuffer(void)
+{
+	// Who knows?
+	if (y_buffer == NULL)
+		return;
+
+	if (y_buffer->target_picture)
+		Z_Free(y_buffer->target_picture);
+
+	if (y_buffer->source_picture)
+		Z_Free(y_buffer->source_picture);
+
+	Z_Free(y_buffer);
+	y_buffer = NULL;
+}
+
+//
 // Y_IntermissionDrawer
 //
 // Called by D_Display. Nothing is modified here; all it does is draw.
@@ -228,12 +331,23 @@ void Y_IntermissionDrawer(void)
 	else if (!usetile)
 	{
 		if (rendermode == render_soft && usebuffer)
-			VID_BlitLinearScreen(screens[1], screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
-#ifdef HWRENDER
-		else if(rendermode != render_soft && usebuffer)
 		{
-			HWR_DrawIntermissionBG();
+			// no y_buffer
+			if (y_buffer == NULL)
+				VID_BlitLinearScreen(screens[1], screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+			else
+			{
+				// Maybe the resolution changed?
+				if ((y_buffer->target_width != vid.width) || (y_buffer->target_height != vid.height))
+					Y_RescaleScreenBuffer();
+
+				// Blit the already-scaled screen buffer to the current screen
+				VID_BlitLinearScreen(y_buffer->target_picture, screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+			}
 		}
+#ifdef HWRENDER
+		else if (rendermode != render_soft && usebuffer)
+			HWR_DrawIntermissionBG();
 #endif
 		else
 		{
@@ -424,11 +538,23 @@ void Y_IntermissionDrawer(void)
 				UINT8 continues = data.spec.continues & 0x7F;
 
 				V_DrawScaledPatch(152 + xoffset5, 150+yoffset, 0, data.spec.pcontinues);
-				for (i = 0; i < continues; ++i)
+				if (continues > 5)
 				{
-					if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
-						break;
-					V_DrawContinueIcon(246 + xoffset5 - (i*20), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					INT32 leftx = (continues >= 10) ? 216 : 224;
+					V_DrawContinueIcon(leftx + xoffset5, 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					V_DrawScaledPatch(leftx + xoffset5 + 12, 160+yoffset, 0, stlivex);
+					if (!((data.spec.continues & 0x80) && !(endtic < 0 || intertic%20 < 10)))
+						V_DrawRightAlignedString(252 + xoffset5, 158+yoffset, 0,
+							va("%d",(((data.spec.continues & 0x80) && (endtic < 0)) ? continues-1 : continues)));
+				}
+				else
+				{
+					for (i = 0; i < continues; ++i)
+					{
+						if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
+							break;
+						V_DrawContinueIcon(246 + xoffset5 - (i*20), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					}
 				}
 			}
 		}
@@ -802,6 +928,10 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
+#ifdef HAVE_BLUA
+	LUAh_IntermissionThinker();
+#endif
+
 	intertic++;
 
 	// Team scramble code for team match and CTF.
@@ -1046,6 +1176,9 @@ static void Y_UpdateRecordReplays(void)
 
 	if ((UINT16)(players[consoleplayer].rings) > mainrecords[gamemap-1]->rings)
 		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
+
+	if (data.coop.gotperfbonus)
+		mainrecords[gamemap-1]->gotperfect = true;
 
 	// Save demo!
 	bestdemo[255] = '\0';
@@ -2087,6 +2220,8 @@ static void Y_UnloadData(void)
 	// It doesn't work and is unnecessary.
 	if (rendermode != render_soft)
 		return;
+
+	Y_CleanupScreenBuffer();
 
 	// unload the background patches
 	UNLOAD(bgpatch);

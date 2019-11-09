@@ -13,7 +13,7 @@
 
 #define ASSET_HASH_SRB2_PK3   "${SRB2_ASSET_srb2.pk3_HASH}"
 #define ASSET_HASH_PLAYER_DTA "${SRB2_ASSET_player.dta_HASH}"
-#define ASSET_HASH_ZONES_DTA  "${SRB2_ASSET_zones.dta_HASH}"
+#define ASSET_HASH_ZONES_PK3  "${SRB2_ASSET_zones.pk3_HASH}"
 #ifdef USE_PATCH_DTA
 #define ASSET_HASH_PATCH_PK3  "${SRB2_ASSET_patch.pk3_HASH}"
 #endif
@@ -30,7 +30,7 @@
  * Last updated 2018 / ?? / ?? - v2.2 - patch.pk3
  */
 #define ASSET_HASH_SRB2_PK3   "c1b9577687f8a795104aef4600720ea7"
-#define ASSET_HASH_ZONES_DTA  "303838c6c534d9540288360fa49cca60"
+#define ASSET_HASH_ZONES_PK3  "303838c6c534d9540288360fa49cca60"
 #define ASSET_HASH_PLAYER_DTA "cfca0f1c73023cbbd8f844f45480f799"
 #ifdef USE_PATCH_DTA
 #define ASSET_HASH_PATCH_PK3  "dbbf8bc6121618ee3be2d5b14650429b"

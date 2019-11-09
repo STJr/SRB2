@@ -2718,6 +2718,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
 					return;
 				}
+
 				if (line->tag != 0) // Do special stuff only if a non-zero linedef tag is set
 				{
 					if (line->flags & ML_EFFECT5) // Repeat Midtexture
@@ -2758,30 +2759,32 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							return;
 					}
 				}
-
-				if (line->flags & ML_NOCLIMB)
+				else
 				{
-					// play the sound from nowhere, but only if display player triggered it
-					if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
+					if (line->flags & ML_NOCLIMB)
+					{
+						// play the sound from nowhere, but only if display player triggered it
+						if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
+							S_StartSound(NULL, sfxnum);
+					}
+					else if (line->flags & ML_EFFECT4)
+					{
+						// play the sound from nowhere
 						S_StartSound(NULL, sfxnum);
-				}
-				else if (line->flags & ML_EFFECT4)
-				{
-					// play the sound from nowhere
-					S_StartSound(NULL, sfxnum);
-				}
-				else if (line->flags & ML_BLOCKMONSTERS)
-				{
-					// play the sound from calling sector's soundorg
-					if (callsec)
-						S_StartSound(&callsec->soundorg, sfxnum);
+					}
+					else if (line->flags & ML_BLOCKMONSTERS)
+					{
+						// play the sound from calling sector's soundorg
+						if (callsec)
+							S_StartSound(&callsec->soundorg, sfxnum);
+						else if (mo)
+							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+					}
 					else if (mo)
-						S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
-				}
-				else if (mo)
-				{
-					// play the sound from mobj that triggered it
-					S_StartSound(mo, sfxnum);
+					{
+						// play the sound from mobj that triggered it
+						S_StartSound(mo, sfxnum);
+					}
 				}
 			}
 			break;
@@ -5984,8 +5987,6 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
   * to the lowest nearby height if not
   * there already.
   *
-  * Replaces the old "AirBob".
-  *
   * \param sec          Control sector.
   * \param actionsector Target sector.
   * \param sourceline   Control linedef.
@@ -6030,8 +6031,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline)
 	raise->sourceline = sourceline;
 }
 
-// Function to maintain backwards compatibility
-static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
+static void P_AddAirbob(sector_t *sec, line_t *sourceline, boolean noadjust, boolean dynamic)
 {
 	levelspecthink_t *airbob;
 
@@ -6068,6 +6068,8 @@ static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
 	airbob->vars[5] = sec->ceilingheight;
 	airbob->vars[4] = airbob->vars[5]
 			- (sec->ceilingheight - sec->floorheight);
+
+	airbob->vars[9] = dynamic ? 1 : 0;
 
 	airbob->sourceline = sourceline;
 }
@@ -6891,11 +6893,16 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 151: // Adjustable air bobbing platform
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, (lines[i].special != 151));
+				P_AddAirbob(lines[i].frontsector, lines + i, (lines[i].special != 151), false);
 				break;
 			case 152: // Adjustable air bobbing platform in reverse
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
+				break;
+			case 153: // Dynamic Sinking Platform
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
+				lines[i].flags |= ML_BLOCKMONSTERS;
+				P_AddAirbob(lines[i].frontsector, lines + i, false, true);
 				break;
 
 			case 160: // Float/bob platform
@@ -6946,14 +6953,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 176: // Air bobbing platform that will crumble and bob on the water when it falls and hits
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB|FF_CRUMBLE, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
 				break;
 
 			case 177: // Air bobbing platform that will crumble and bob on
 				// the water when it falls and hits, then never return
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB|FF_CRUMBLE|FF_NORETURN, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
 				break;
 
 			case 178: // Crumbling platform that will float when it hits water
@@ -6967,7 +6974,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 180: // Air bobbing platform that will crumble
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
 				break;
 
 			case 190: // Rising Platform FOF (solid, opaque, shadows)
@@ -7089,7 +7096,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 254: // Bustable block
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP;
 				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_ONLYKNUX;
+					ffloorflags |= FF_STRONGBUST;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;

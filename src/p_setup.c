@@ -2627,7 +2627,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	boolean loadedbm = false;
 	sector_t *ss;
 	boolean chase;
-
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -3068,8 +3067,11 @@ boolean P_SetupLevel(boolean skipprecip)
 			CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
 
 	}
-	else if (gametype == GT_RACE && server && cv_usemapnumlaps.value)
-		CV_StealthSetValue(&cv_numlaps, mapheaderinfo[gamemap - 1]->numlaps);
+	else if (gametype == GT_RACE && server)
+		CV_StealthSetValue(&cv_numlaps,
+			(cv_basenumlaps.value)
+			? cv_basenumlaps.value
+			: mapheaderinfo[gamemap - 1]->numlaps);
 
 	// ===========
 	// landing point for netgames.

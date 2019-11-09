@@ -44,6 +44,9 @@
 // Quincunx antialiasing of flats!
 //#define QUINCUNX
 
+// good night sweet prince
+#define SHITPLANESPARENCY
+
 //SoM: 3/23/2000: Use Boom visplane hashing.
 
 visplane_t *visplanes[MAXVISPLANES];
@@ -867,7 +870,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else // Opaque, but allow transparent flat pixels
 			spanfunc = splatfunc;
 
+#ifdef SHITPLANESPARENCY
+		if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+#else
 		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
+#endif
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
@@ -921,7 +928,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else // Opaque, but allow transparent flat pixels
 				spanfunc = splatfunc;
 
+#ifdef SHITPLANESPARENCY
+			if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+#else
 			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
+#endif
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			else
 				light = LIGHTLEVELS-1;
@@ -1103,7 +1114,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
 		zeroheight = FIXED_TO_FLOAT(temp);
 
-#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
+#define ANG2RAD(angle) ((float)((angle)*M_PIl)/ANGLE_180)
 
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in

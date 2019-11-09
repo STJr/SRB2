@@ -361,6 +361,8 @@ consvar_t cv_chatbacktint = {"chatbacktint", "On", CV_SAVE, CV_OnOff, NULL, 0, N
 static CV_PossibleValue_t consolechat_cons_t[] = {{0, "Window"}, {1, "Console"}, {2, "Window (Hidden)"}, {0, NULL}};
 consvar_t cv_consolechat = {"chatmode", "Window", CV_SAVE, consolechat_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+// Pause game upon window losing focus
+consvar_t cv_pauseifunfocused = {"pauseifunfocused", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_crosshair = {"crosshair", "Cross", CV_SAVE, crosshair_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_crosshair2 = {"crosshair2", "Cross", CV_SAVE, crosshair_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -966,8 +968,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 			forcefullinput = true;
 	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
-		|| (!demoplayback && (player->climbing
-		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
+		|| (!demoplayback && ((player->powers[pw_carry] == CR_NIGHTSMODE)
 		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))))) // Analog
 			forcestrafe = true;
 	if (forcestrafe)
@@ -1148,8 +1149,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove.value)
 		forward += mousey;
 
-	if ((!demoplayback && (player->climbing
-		|| (player->pflags & PF_SLIDING)))) // Analog for mouse
+	if ((!demoplayback && (player->pflags & PF_SLIDING))) // Analog for mouse
 		side += mousex*2;
 	else if (cv_analog.value)
 	{
@@ -1713,65 +1713,6 @@ static INT32 camtoggledelay, camtoggledelay2 = 0;
 //
 boolean G_Responder(event_t *ev)
 {
-	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && ev->type == ev_keydown
-		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
-	{
-		if (splitscreen || !netgame)
-			displayplayer = consoleplayer;
-		else
-		{
-			// spy mode
-			do
-			{
-				displayplayer++;
-				if (displayplayer == MAXPLAYERS)
-					displayplayer = 0;
-
-				if (!playeringame[displayplayer])
-					continue;
-
-				if (players[displayplayer].spectator)
-					continue;
-
-				if (G_GametypeHasTeams())
-				{
-					if (players[consoleplayer].ctfteam
-					 && players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
-						continue;
-				}
-				else if (gametype == GT_HIDEANDSEEK)
-				{
-					if (players[consoleplayer].pflags & PF_TAGIT)
-						continue;
-				}
-				// Other Tag-based gametypes?
-				else if (G_TagGametype())
-				{
-					if (!players[consoleplayer].spectator
-					 && (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
-						continue;
-				}
-				else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
-				{
-					if (!players[consoleplayer].spectator)
-						continue;
-				}
-
-				break;
-			} while (displayplayer != consoleplayer);
-
-			// change statusbar also if playing back demo
-			if (singledemo)
-				ST_changeDemoView();
-
-			// tell who's the view
-			CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
-
-			return true;
-		}
-	}
-
 	// any other key pops up menu if in demos
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
@@ -1847,6 +1788,65 @@ boolean G_Responder(event_t *ev)
 	else if (gamestate == GS_INTERMISSION || gamestate == GS_EVALUATION)
 		if (HU_Responder(ev))
 			return true; // chat ate the event
+
+	// allow spy mode changes even during the demo
+	if (gamestate == GS_LEVEL && ev->type == ev_keydown
+		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
+	{
+		if (splitscreen || !netgame)
+			displayplayer = consoleplayer;
+		else
+		{
+			// spy mode
+			do
+			{
+				displayplayer++;
+				if (displayplayer == MAXPLAYERS)
+					displayplayer = 0;
+
+				if (!playeringame[displayplayer])
+					continue;
+
+				if (players[displayplayer].spectator)
+					continue;
+
+				if (G_GametypeHasTeams())
+				{
+					if (players[consoleplayer].ctfteam
+					 && players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
+						continue;
+				}
+				else if (gametype == GT_HIDEANDSEEK)
+				{
+					if (players[consoleplayer].pflags & PF_TAGIT)
+						continue;
+				}
+				// Other Tag-based gametypes?
+				else if (G_TagGametype())
+				{
+					if (!players[consoleplayer].spectator
+					 && (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
+						continue;
+				}
+				else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
+				{
+					if (!players[consoleplayer].spectator)
+						continue;
+				}
+
+				break;
+			} while (displayplayer != consoleplayer);
+
+			// change statusbar also if playing back demo
+			if (singledemo)
+				ST_changeDemoView();
+
+			// tell who's the view
+			CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
+
+			return true;
+		}
+	}
 
 	// update keys current state
 	G_MapEventsToControls(ev);
@@ -3341,6 +3341,7 @@ void G_LoadGameData(void)
 	UINT32 recscore;
 	tic_t  rectime;
 	UINT16 recrings;
+	boolean gotperf;
 
 	UINT8 recmares;
 	INT32 curmare;
@@ -3433,6 +3434,7 @@ void G_LoadGameData(void)
 		recscore = READUINT32(save_p);
 		rectime  = (tic_t)READUINT32(save_p);
 		recrings = READUINT16(save_p);
+		gotperf = (boolean)READUINT8(save_p);
 
 		if (recrings > 10000 || recscore > MAXSCORE)
 			goto datacorrupt;
@@ -3444,6 +3446,9 @@ void G_LoadGameData(void)
 			mainrecords[i]->time = rectime;
 			mainrecords[i]->rings = recrings;
 		}
+
+		if (gotperf)
+			mainrecords[i]->gotperfect = gotperf;
 	}
 
 	// Nights records
@@ -3575,12 +3580,14 @@ void G_SaveGameData(void)
 			WRITEUINT32(save_p, mainrecords[i]->score);
 			WRITEUINT32(save_p, mainrecords[i]->time);
 			WRITEUINT16(save_p, mainrecords[i]->rings);
+			WRITEUINT8(save_p, mainrecords[i]->gotperfect);
 		}
 		else
 		{
 			WRITEUINT32(save_p, 0);
 			WRITEUINT32(save_p, 0);
 			WRITEUINT16(save_p, 0);
+			WRITEUINT8(save_p, 0);
 		}
 	}
 

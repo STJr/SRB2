@@ -25,7 +25,6 @@
 static int lib_iteratePlayers(lua_State *L)
 {
 	INT32 i = -1;
-	INLEVEL
 	if (lua_gettop(L) < 2)
 	{
 		//return luaL_error(L, "Don't call players.iterate() directly, use it as 'for player in players.iterate do <block> end'.");
@@ -52,7 +51,6 @@ static int lib_getPlayer(lua_State *L)
 {
 	const char *field;
 	// i -> players[i]
-	INLEVEL
 	if (lua_type(L, 2) == LUA_TNUMBER)
 	{
 		lua_Integer i = luaL_checkinteger(L, 2);

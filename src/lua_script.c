@@ -431,7 +431,7 @@ void LUA_InvalidateLevel(void)
 	for (i = 0; i < numsectors; i++)
 	{
 		LUA_InvalidateUserdata(&sectors[i]);
-		LUA_InvalidateUserdata(sectors[i].lines);
+		LUA_InvalidateUserdata(&sectors[i].lines);
 		if (sectors[i].ffloors)
 		{
 			for (rover = sectors[i].ffloors; rover; rover = rover->next)

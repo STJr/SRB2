@@ -690,7 +690,9 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+#ifndef NO_PNG_LUMPS
 		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
+#endif
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))

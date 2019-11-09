@@ -75,6 +75,7 @@ INT32 curbgcolor;
 INT32 curbgxspeed;
 INT32 curbgyspeed;
 boolean curbghide;
+boolean hidetitlemap;		// WARNING: set to false by M_SetupNextMenu and M_ClearMenus
 
 static UINT8  curDemo = 0;
 static UINT32 demoDelayLeft;
@@ -835,7 +836,7 @@ void F_IntroDrawer(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 			V_DrawScaledPatch(0, 0, 0, radar);
 			W_UnlockCachedPatch(radar);
-			V_DrawString(8, 128, 0, cutscene_disptext);
+			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
@@ -848,7 +849,7 @@ void F_IntroDrawer(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 			V_DrawScaledPatch(0, 0, 0, grass);
 			W_UnlockCachedPatch(grass);
-			V_DrawString(8, 128, 0, cutscene_disptext);
+			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
@@ -861,7 +862,7 @@ void F_IntroDrawer(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 			V_DrawSmallScaledPatch(0, 0, 0, confront);
 			W_UnlockCachedPatch(confront);
-			V_DrawString(8, 128, 0, cutscene_disptext);
+			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
@@ -874,7 +875,7 @@ void F_IntroDrawer(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 			V_DrawSmallScaledPatch(0, 0, 0, sdo);
 			W_UnlockCachedPatch(sdo);
-			V_DrawString(224, 8, 0, cutscene_disptext);
+			V_DrawString(224, 8, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
@@ -1585,15 +1586,15 @@ void F_StartEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 7)
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= (XTRA_ENDING+2)+1)
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
-			sprframe = &sprdef->spriteframes[4];
+			sprframe = &sprdef->spriteframes[XTRA_ENDING];
 			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
-			sprframe = &sprdef->spriteframes[5];
+			sprframe = &sprdef->spriteframes[XTRA_ENDING+1];
 			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
-			sprframe = &sprdef->spriteframes[6];
+			sprframe = &sprdef->spriteframes[XTRA_ENDING+2];
 			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 		}
 		else // Show a star if your character doesn't have an ending firework display. (Basically the MISSINGs for this)
@@ -2098,12 +2099,12 @@ void F_InitMenuPresValues(void)
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
-	curbgxspeed = titlescrollxspeed;
-	curbgyspeed = titlescrollyspeed;
-	curbghide = true;
+	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
+	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 22 : titlescrollyspeed;
+	curbghide = (gamestate == GS_TIMEATTACK) ? false : true;
 
 	// Find current presentation values
-	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "RECATTBG" : "TITLESKY");
 	M_SetMenuCurFadeValue(16);
 	M_SetMenuCurHideTitlePics();
 }
@@ -2585,8 +2586,8 @@ void F_ContinueDrawer(void)
 	{
 		if (!(continuetime & 1) || continuetime > 17)
 			V_DrawContinueIcon(x, 68, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);
-		V_DrawScaledPatch(x+12, 68-2, 0, stlivex);
-		V_DrawRightAlignedString(x+36, 69-5, 0,
+		V_DrawScaledPatch(x+12, 66, 0, stlivex);
+		V_DrawRightAlignedString(x+38, 64, 0,
 			va("%d",(imcontinuing ? ncontinues-1 : ncontinues)));
 	}
 	else

@@ -164,6 +164,8 @@ static int mobj_get(lua_State *L)
 	enum mobj_e field = Lua_optoption(L, 2, NULL, mobj_opt);
 	lua_settop(L, 2);
 
+	INLEVEL
+
 	if (!mo) {
 		if (field == mobj_valid) {
 			lua_pushboolean(L, 0);
@@ -408,6 +410,8 @@ static int mobj_set(lua_State *L)
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	enum mobj_e field = Lua_optoption(L, 2, mobj_opt[0], mobj_opt);
 	lua_settop(L, 3);
+
+	INLEVEL
 
 	if (!mo)
 		return LUA_ErrInvalid(L, "mobj_t");

@@ -306,6 +306,8 @@ typedef enum sprite
 	SPR_TURR, // Pop-Up Turret
 	SPR_SHRP, // Sharp
 	SPR_CRAB, // Crushstacean
+	SPR_CR2B, // Banpyura
+	SPR_CSPR, // Banpyura spring
 	SPR_JJAW, // Jet Jaw
 	SPR_SNLR, // Snailer
 	SPR_VLTR, // BASH
@@ -555,6 +557,11 @@ typedef enum sprite
 	SPR_SHRM, // Mushroom
 	SPR_HHZM, // Misc
 
+	// Azure Temple Scenery
+	SPR_BGAR, // ATZ Gargoyles
+	SPR_RCRY, // ATZ Red Crystal (Target)
+	SPR_CFLM, // Green torch flame
+
 	// Botanic Serenity Scenery
 	SPR_BSZ1, // Tall flowers
 	SPR_BSZ2, // Medium flowers
@@ -574,7 +581,6 @@ typedef enum sprite
 	// Misc Scenery
 	SPR_STLG, // Stalagmites
 	SPR_DBAL, // Disco
-	SPR_RCRY, // ATZ Red Crystal (Target)
 
 	// Powerup Indicators
 	SPR_ARMA, // Armageddon Shield Orb
@@ -628,6 +634,8 @@ typedef enum sprite
 	SPR_SSWY, // Yellow Side Spring
 	SPR_SSWR, // Red Side Spring
 	SPR_SSWB, // Blue Side Spring
+	SPR_BSTY, // Yellow Booster
+	SPR_BSTR, // Red Booster
 
 	// Environmental Effects
 	SPR_RAIN, // Rain
@@ -788,6 +796,7 @@ typedef enum playersprite
 	SPR2_TIRE, // tired
 
 	SPR2_GLID, // glide
+	SPR2_LAND, // landing after glide/bounce
 	SPR2_CLNG, // cling
 	SPR2_CLMB, // climb
 
@@ -795,7 +804,6 @@ typedef enum playersprite
 	SPR2_FRUN, // float run
 
 	SPR2_BNCE, // bounce
-	SPR2_BLND, // bounce landing
 
 	SPR2_FIRE, // fire
 
@@ -871,6 +879,12 @@ typedef enum playersprite
 	NUMPLAYERSPRITES
 } playersprite_t;
 
+// SPR2_XTRA
+#define XTRA_LIFEPIC    0                 // Life icon patch
+#define XTRA_CHARSEL    1                 // Character select picture
+#define XTRA_CONTINUE   2                 // Continue icon
+#define XTRA_ENDING     3                 // Ending finale patches
+
 typedef enum state
 {
 	S_NULL,
@@ -917,6 +931,7 @@ typedef enum state
 
 	// CA_GLIDEANDCLIMB
 	S_PLAY_GLIDE,
+	S_PLAY_GLIDE_LANDING,
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
 
@@ -1015,6 +1030,9 @@ typedef enum state
 	S_TAILSOVERLAY_PAIN,
 	S_TAILSOVERLAY_GASP,
 	S_TAILSOVERLAY_EDGE,
+
+	// [:
+	S_JETFUMEFLASH,
 
 	// Blue Crawla
 	S_POSS_STND,
@@ -1163,6 +1181,21 @@ typedef enum state
 	S_CRUSHCLAW_IN,
 	S_CRUSHCLAW_WAIT,
 	S_CRUSHCHAIN,
+
+	// Banpyura
+	S_BANPYURA_ROAM1,
+	S_BANPYURA_ROAM2,
+	S_BANPYURA_ROAM3,
+	S_BANPYURA_ROAM4,
+	S_BANPYURA_ROAMPAUSE,
+	S_CDIAG1,
+	S_CDIAG2,
+	S_CDIAG3,
+	S_CDIAG4,
+	S_CDIAG5,
+	S_CDIAG6,
+	S_CDIAG7,
+	S_CDIAG8,
 
 	// Jet Jaw
 	S_JETJAW_ROAM1,
@@ -2630,6 +2663,12 @@ typedef enum state
 	S_FLAMEJETFLAME1,
 	S_FLAMEJETFLAME2,
 	S_FLAMEJETFLAME3,
+	S_FLAMEJETFLAME4,
+	S_FLAMEJETFLAME5,
+	S_FLAMEJETFLAME6,
+	S_FLAMEJETFLAME7,
+	S_FLAMEJETFLAME8,
+	S_FLAMEJETFLAME9,
 
 	// Spinning flame jets
 	S_FJSPINAXISA1, // Counter-clockwise
@@ -2694,6 +2733,9 @@ typedef enum state
 	S_TARGET_HIT2,
 	S_TARGET_RESPAWN,
 	S_TARGET_ALLDONE,
+
+	// ATZ's green flame
+	S_GREENFLAME,
 
 	// Stalagmites
 	S_STG0,
@@ -3384,6 +3426,17 @@ typedef enum state
 	S_BHORIZ7,
 	S_BHORIZ8,
 
+	// Booster
+	S_BOOSTERSOUND,
+	S_YELLOWBOOSTERROLLER,
+	S_YELLOWBOOSTERSEG_LEFT,
+	S_YELLOWBOOSTERSEG_RIGHT,
+	S_YELLOWBOOSTERSEG_FACE,
+	S_REDBOOSTERROLLER,
+	S_REDBOOSTERSEG_LEFT,
+	S_REDBOOSTERSEG_RIGHT,
+	S_REDBOOSTERSEG_FACE,
+
 	// Rain
 	S_RAIN1,
 	S_RAINRETURN,
@@ -4040,6 +4093,7 @@ typedef enum mobj_type
 	MT_THOK, // Thok! mobj
 	MT_PLAYER,
 	MT_TAILSOVERLAY, // c:
+	MT_METALJETFUME,
 
 	// Enemies
 	MT_BLUECRAWLA, // Crawla (Blue)
@@ -4058,6 +4112,8 @@ typedef enum mobj_type
 	MT_CRUSHSTACEAN, // Crushstacean
 	MT_CRUSHCLAW, // Big meaty claw
 	MT_CRUSHCHAIN, // Chain
+	MT_BANPYURA, // Banpyura
+	MT_BANPSPRING, // Banpyura spring
 	MT_JETJAW, // Jet Jaw
 	MT_SNAILER, // Snailer
 	MT_VULTURE, // BASH
@@ -4194,6 +4250,11 @@ typedef enum mobj_type
 	MT_YELLOWHORIZ,
 	MT_REDHORIZ,
 	MT_BLUEHORIZ,
+
+	MT_BOOSTERSEG,
+	MT_BOOSTERROLLER,
+	MT_YELLOWBOOSTER,
+	MT_REDBOOSTER,
 
 	// Interactive Objects
 	MT_BUBBLES, // Bubble source
@@ -4453,6 +4514,7 @@ typedef enum mobj_type
 	MT_TRAPGOYLEDOWN,
 	MT_TRAPGOYLELONG,
 	MT_TARGET, // AKA Red Crystal
+	MT_GREENFLAME,
 
 	// Stalagmites
 	MT_STALAGMITE0,
