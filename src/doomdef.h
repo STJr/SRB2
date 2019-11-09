@@ -620,8 +620,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
+/// PNG support
 #ifndef HAVE_PNG
 #define NO_PNG_LUMPS
 #endif
+
+/// Render flats on walls
+#define WALLFLATS
 
 #endif // __DOOMDEF__
