@@ -606,11 +606,18 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 	{
 		if (( texturenum = R_CheckTextureNumForName(flatname) ) == -1)
 		{
-			/* we can handle REDWALL later */
+			// check for REDWALL
+			if (( texturenum = R_CheckTextureNumForName("REDWALL") ) != -1)
+				goto texturefound;
+			// check for REDFLR
+			else if (( flatnum = R_GetFlatNumForName("REDFLR") ) != LUMPERROR)
+				goto flatfound;
+			// nevermind
 			levelflat->type = LEVELFLAT_NONE;
 		}
 		else
 		{
+texturefound:
 			levelflat->type = LEVELFLAT_TEXTURE;
 			levelflat->u.texture.    num = texturenum;
 			levelflat->u.texture.lastnum = texturenum;
@@ -620,6 +627,7 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 	}
 	else
 	{
+flatfound:
 		/* This could be a flat, patch, or PNG. */
 		if (R_CheckIfPatch(flatnum))
 			levelflat->type = LEVELFLAT_PATCH;
