@@ -32,10 +32,6 @@
 #include "../r_draw.h"
 #include "../p_setup.h"
 
-//Hurdler: 25/04/2000: used for new colormap code in hardware mode
-//static UINT8 *gr_colormap = NULL; // by default it must be NULL ! (because colormap tables are not initialized)
-boolean firetranslucent = false;
-
 // Values set after a call to HWR_ResizeBlock()
 static INT32 blocksize, blockwidth, blockheight;
 
@@ -121,17 +117,15 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 
 			texel = source[yfrac>>FRACBITS];
 
-			if (firetranslucent && (transtables[(texel<<8)+0x40000]!=texel))
-				alpha = 0x80;
+			//Hurdler: 25/04/2000: now support colormap in hardware mode
+			if (mipmap->colormap)
+				texel = mipmap->colormap[texel];
+
+			// transparent pixel
+			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX)
+				alpha = 0x00;
 			else
 				alpha = 0xff;
-
-			//Hurdler: not perfect, but better than holes
-			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX && (mipmap->flags & TF_CHROMAKEYED))
-				texel = HWR_CHROMAKEY_EQUIVALENTCOLORINDEX;
-			//Hurdler: 25/04/2000: now support colormap in hardware mode
-			else if (mipmap->colormap)
-				texel = mipmap->colormap[texel];
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
@@ -235,17 +229,15 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 
 			texel = source[yfrac>>FRACBITS];
 
-			if (firetranslucent && (transtables[(texel<<8)+0x40000]!=texel))
-				alpha = 0x80;
+			//Hurdler: 25/04/2000: now support colormap in hardware mode
+			if (mipmap->colormap)
+				texel = mipmap->colormap[texel];
+
+			// transparent pixel
+			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX)
+				alpha = 0x00;
 			else
 				alpha = 0xff;
-
-			//Hurdler: not perfect, but better than holes
-			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX && (mipmap->flags & TF_CHROMAKEYED))
-				texel = HWR_CHROMAKEY_EQUIVALENTCOLORINDEX;
-			//Hurdler: 25/04/2000: now support colormap in hardware mode
-			else if (mipmap->colormap)
-				texel = mipmap->colormap[texel];
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
@@ -612,7 +604,7 @@ static UINT8 *MakeBlock(GLMipmap_t *grMipmap)
 {
 	UINT8 *block;
 	INT32 bpp, i;
-	UINT16 bu16 = ((0x00 <<8) | HWR_CHROMAKEY_EQUIVALENTCOLORINDEX);
+	UINT16 bu16 = ((0x00 <<8) | HWR_PATCHES_CHROMAKEY_COLORINDEX);
 
 	bpp =  format2bpp[grMipmap->grInfo.format];
 	block = Z_Malloc(blocksize*bpp, PU_HWRCACHE, &(grMipmap->grInfo.data));
@@ -675,7 +667,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 		INT32 j;
 		RGBA_t col;
 
-		col = V_GetColor(HWR_CHROMAKEY_EQUIVALENTCOLORINDEX);
+		col = V_GetColor(HWR_PATCHES_CHROMAKEY_COLORINDEX);
 		for (j = 0; j < blockheight; j++)
 		{
 			for (i = 0; i < blockwidth; i++)
