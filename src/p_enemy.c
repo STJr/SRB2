@@ -5038,7 +5038,7 @@ void A_SignSpin(mobj_t *actor)
 				P_SetMobjState(actor, actor->info->deathstate);
 				return;
 			}
-			if (actor->state-states != actor->info->painstate)
+			if ((statenum_t)(actor->state-states) != actor->info->painstate)
 				P_SetMobjState(actor, actor->info->painstate);
 			actor->movedir = min((mapangle - actor->angle) >> 2, actor->movedir);
 		}
