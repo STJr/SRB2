@@ -362,6 +362,11 @@ static int lib_setSpriteInfo(lua_State *L)
 {
 	spriteinfo_t *info;
 
+	if (!lua_lumploading)
+		return luaL_error(L, "Do not alter spriteinfo_t from within a hook or coroutine!");
+	if (hud_running)
+		return luaL_error(L, "Do not alter spriteinfo_t in HUD rendering code!");
+
 	lua_remove(L, 1);
 	{
 		UINT32 i = luaL_checkinteger(L, 1);
@@ -372,11 +377,6 @@ static int lib_setSpriteInfo(lua_State *L)
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop sprite num, don't need it any more.
 	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the spriteinfo.
-
-	if (!lua_lumploading)
-		return luaL_error(L, "Do not alter spriteinfo_t from within a hook or coroutine!");
-	if (hud_running)
-		return luaL_error(L, "Do not alter spriteinfo_t in HUD rendering code!");
 
 	lua_pushnil(L);
 	while (lua_next(L, 1)) {
@@ -527,6 +527,11 @@ static int pivotlist_set(lua_State *L)
 	const char *field = luaL_checkstring(L, 2);
 	UINT8 frame;
 
+	if (!lua_lumploading)
+		return luaL_error(L, "Do not alter spriteframepivot_t from within a hook or coroutine!");
+	if (hud_running)
+		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
+
 	I_Assert(pivotlist != NULL);
 
 	frame = R_Char2Frame(field[0]);
@@ -573,6 +578,11 @@ static int framepivot_set(lua_State *L)
 {
 	spriteframepivot_t *framepivot = *((spriteframepivot_t **)luaL_checkudata(L, 1, META_FRAMEPIVOT));
 	const char *field = luaL_checkstring(L, 2);
+
+	if (!lua_lumploading)
+		return luaL_error(L, "Do not alter spriteframepivot_t from within a hook or coroutine!");
+	if (hud_running)
+		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
 
 	I_Assert(framepivot != NULL);
 
