@@ -922,29 +922,6 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	return grtex;
 }
 
-// HWR_RenderPlane and HWR_RenderPolyObjectPlane need this to get the flat dimensions from a patch.
-lumpnum_t gr_patchflat;
-
-static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
-{
-	UINT8 *flat;
-	patch_t *patch = (patch_t *)W_CacheLumpNum(flatlumpnum, PU_STATIC);
-	size_t lumplength = W_LumpLength(flatlumpnum);
-
-#ifndef NO_PNG_LUMPS
-	if (R_IsLumpPNG((UINT8 *)patch, lumplength))
-		patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL, false);
-#endif
-
-	grMipmap->width  = (UINT16)SHORT(patch->width);
-	grMipmap->height = (UINT16)SHORT(patch->height);
-
-	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data);
-	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
-
-	R_PatchToFlat(patch, flat);
-}
-
 static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
 	size_t size, pflatsize;
@@ -985,40 +962,15 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 			break;
 	}
 
-	if (R_CheckIfPatch(flatlumpnum))
-		HWR_LoadPatchFlat(grMipmap, flatlumpnum);
-	else
-	{
-		grMipmap->width  = (UINT16)pflatsize;
-		grMipmap->height = (UINT16)pflatsize;
+	grMipmap->width  = (UINT16)pflatsize;
+	grMipmap->height = (UINT16)pflatsize;
 
-		// the flat raw data needn't be converted with palettized textures
-		W_ReadLump(flatlumpnum, Z_Malloc(W_LumpLength(flatlumpnum),
-			PU_HWRCACHE, &grMipmap->grInfo.data));
-	}
+	// the flat raw data needn't be converted with palettized textures
+	W_ReadLump(flatlumpnum, Z_Malloc(W_LumpLength(flatlumpnum),
+		PU_HWRCACHE, &grMipmap->grInfo.data));
 }
 
-// Download a Doom 'flat' to the hardware cache and make it ready for use
-void HWR_GetFlat(lumpnum_t flatlumpnum)
-{
-	GLMipmap_t *grmip;
-
-	grmip = &HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
-
-	if (!grmip->downloaded && !grmip->grInfo.data)
-		HWR_CacheFlat(grmip, flatlumpnum);
-
-	HWD.pfnSetTexture(grmip);
-
-	// The system-memory data can be purged now.
-	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
-
-	gr_patchflat = 0;
-	if (R_CheckIfPatch(flatlumpnum))
-		gr_patchflat = flatlumpnum;
-}
-
-static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
+static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 {
 	UINT8 *flat;
 
@@ -1040,24 +992,44 @@ static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 	R_TextureToFlat(texturenum, flat);
 }
 
-void HWR_GetTextureFlat(INT32 texturenum)
+// Download a Doom 'flat' to the hardware cache and make it ready for use
+void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 {
-	GLTexture_t *grtex;
-#ifdef PARANOIA
-	if ((unsigned)texturenum >= gr_numtextures)
-		I_Error("HWR_GetTextureFlat: texturenum >= numtextures\n");
-#endif
-	if (texturenum == 0 || texturenum == -1)
-		return;
-	grtex = &gr_textures2[texturenum];
+	GLMipmap_t *grmip = &HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
 
-	if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
-		HWR_LoadTextureFlat(&grtex->mipmap, texturenum);
+	if (!grmip->downloaded && !grmip->grInfo.data)
+		HWR_CacheFlat(grmip, flatlumpnum);
 
-	HWD.pfnSetTexture(&grtex->mipmap);
+	HWD.pfnSetTexture(grmip);
 
 	// The system-memory data can be purged now.
-	Z_ChangeTag(grtex->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
+	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+}
+
+void HWR_GetFlat(levelflat_t *levelflat)
+{
+	if (levelflat->type == LEVELFLAT_FLAT)
+		HWR_LiterallyGetFlat(levelflat->u.flat.lumpnum);
+	else if (levelflat->type == LEVELFLAT_TEXTURE)
+	{
+		GLTexture_t *grtex;
+		INT32 texturenum = levelflat->u.texture.num;
+#ifdef PARANOIA
+		if ((unsigned)texturenum >= gr_numtextures)
+			I_Error("HWR_GetFlat: texturenum >= numtextures\n");
+#endif
+		if (texturenum == 0 || texturenum == -1)
+			return;
+		grtex = &gr_textures2[texturenum];
+
+		if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
+			HWR_CacheTextureAsFlat(&grtex->mipmap, texturenum);
+
+		HWD.pfnSetTexture(&grtex->mipmap);
+
+		// The system-memory data can be purged now.
+		Z_ChangeTag(grtex->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
+	}
 }
 
 //
