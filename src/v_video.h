@@ -33,6 +33,18 @@ extern consvar_t cv_ticrate, cv_usegamma, cv_allcaps, cv_constextsize;
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
 
+// Taken from my videos-in-SRB2 project
+// Generates a color look-up table
+// which has up to 64 colors at each channel
+
+#define COLORBITS 6
+#define SHIFTCOLORBITS (8-COLORBITS)
+#define CLUTSIZE (1<<COLORBITS)
+
+extern UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
+
+void InitColorLUT(void);
+
 // Set the current RGB palette lookup to use for palettized graphics
 void V_SetPalette(INT32 palettenum);
 
