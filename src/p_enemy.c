@@ -4759,7 +4759,7 @@ void A_DropMine(mobj_t *actor)
 // Description: Makes the stupid harmless fish in Greenflower Zone jump.
 //
 // var1 = Jump strength (in FRACBITS), if specified. Otherwise, uses the angle value.
-// var2 = unused
+// var2 = Trail object to spawn, if desired.
 //
 void A_FishJump(mobj_t *actor)
 {
@@ -4772,8 +4772,17 @@ void A_FishJump(mobj_t *actor)
 
 	if (locvar2)
 	{
-		fixed_t rad = actor->radius>>FRACBITS;
-		P_SpawnMobjFromMobj(actor, P_RandomRange(rad, -rad)<<FRACBITS, P_RandomRange(rad, -rad)<<FRACBITS, 0, (mobjtype_t)locvar2);
+		UINT8 i;
+		// Don't spawn trail unless a player is nearby.
+		for (i = 0; i < MAXPLAYERS; ++i)
+			if (playeringame[i] && players[i].mo
+				&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed))
+				break; // Stop looking.
+		if (i < MAXPLAYERS)
+		{
+			fixed_t rad = actor->radius>>FRACBITS;
+			P_SpawnMobjFromMobj(actor, P_RandomRange(rad, -rad)<<FRACBITS, P_RandomRange(rad, -rad)<<FRACBITS, 0, (mobjtype_t)locvar2);
+		}
 	}
 
 	if ((actor->z <= actor->floorz) || (actor->z <= actor->watertop - FixedMul((64 << FRACBITS), actor->scale)))
@@ -14024,7 +14033,7 @@ void A_LavafallRocks(mobj_t *actor)
 	// Don't spawn rocks unless a player is relatively close by.
 	for (i = 0; i < MAXPLAYERS; ++i)
 		if (playeringame[i] && players[i].mo
-			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600 << FRACBITS))
+			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed >> 1))
 			break; // Stop looking.
 
 	if (i < MAXPLAYERS)
@@ -14047,6 +14056,7 @@ void A_LavafallRocks(mobj_t *actor)
 void A_LavafallLava(mobj_t *actor)
 {
 	mobj_t *lavafall;
+	UINT8 i;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_LavafallLava", actor))
@@ -14054,6 +14064,15 @@ void A_LavafallLava(mobj_t *actor)
 #endif
 
 	if ((40 - actor->fuse) % (2*(actor->scale >> FRACBITS)))
+		return;
+
+	// Don't spawn lava unless a player is nearby.
+	for (i = 0; i < MAXPLAYERS; ++i)
+		if (playeringame[i] && players[i].mo
+			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed))
+			break; // Stop looking.
+
+	if (i >= MAXPLAYERS)
 		return;
 
 	lavafall = P_SpawnMobjFromMobj(actor, 0, 0, -8*FRACUNIT, MT_LAVAFALL_LAVA);

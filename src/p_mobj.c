@@ -9429,6 +9429,13 @@ void P_MobjThinker(mobj_t *mobj)
 
 					hdist = R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 
+					if (hdist > 1500*FRACUNIT)
+					{
+						mobj->flags2 &= ~MF2_BOSSNOTRAP;
+						P_SetTarget(&mobj->target, NULL);
+						break;
+					}
+
 					if (!(mobj->flags2 & MF2_BOSSNOTRAP) && hdist <= 450*FRACUNIT)
 						mobj->flags2 |= MF2_BOSSNOTRAP;
 
@@ -9448,11 +9455,6 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->momx = 0;
 						mobj->momy = 0;
 						mobj->momz = 0;
-						if (hdist >= 1500*FRACUNIT)
-						{
-							mobj->flags2 &= ~MF2_BOSSNOTRAP;
-							P_SetTarget(&mobj->target, NULL);
-						}
 					}
 					break;
 				}
