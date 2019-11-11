@@ -4070,11 +4070,15 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
+
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
 
 		P_SetTarget(&thing->target, player->mo);
-		P_SetMobjState(thing, S_SIGN1);
+		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 
@@ -4095,11 +4099,15 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
+
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
 
 		P_SetTarget(&thing->target, player->mo);
-		P_SetMobjState(thing, S_SIGN1);
+		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 

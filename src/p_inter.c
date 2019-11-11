@@ -633,7 +633,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (!(netgame || multiplayer))
 				{
 					player->continues += 1;
-					players->gotcontinue = true;
+					player->gotcontinue = true;
 					if (P_IsLocalPlayer(player))
 						S_StartSound(NULL, sfx_s3kac);
 					else
@@ -2482,6 +2482,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		P_UnsetThingPosition(target);
 		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
+		target->standingslope = NULL;
+		target->pmomz = 0;
 
 		if (target->player->powers[pw_super])
 		{
