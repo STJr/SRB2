@@ -2218,13 +2218,15 @@ void InitColorLUT(void)
 {
 	UINT8 r, g, b;
 	static boolean clutinit = false;
-	if (!clutinit)
+	static RGBA_t *lastpalette = NULL;
+	if ((!clutinit) || (lastpalette != pLocalPalette))
 	{
 		for (r = 0; r < CLUTSIZE; r++)
 			for (g = 0; g < CLUTSIZE; g++)
 				for (b = 0; b < CLUTSIZE; b++)
 					colorlookup[r][g][b] = NearestColor(r << SHIFTCOLORBITS, g << SHIFTCOLORBITS, b << SHIFTCOLORBITS);
 		clutinit = true;
+		lastpalette = pLocalPalette;
 	}
 }
 
