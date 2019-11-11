@@ -2089,10 +2089,57 @@ static void readmenu(MYFILE *f, INT32 num)
 				menupres[num].bgcolor = get_number(word2);
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS") || fastcmp(word, "TITLEPICSHIDE"))
 			{
 				// true by default, except MM_MAIN
 				menupres[num].hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSMODE"))
+			{
+				if (fastcmp(word2, "USER"))
+					menupres[num].ttmode = TTMODE_USER;
+				else if (fastcmp(word2, "ALACROIX"))
+					menupres[num].ttmode = TTMODE_ALACROIX;
+				else if (fastcmp(word2, "HIDE") || fastcmp(word2, "HIDDEN") || fastcmp(word2, "NONE"))
+				{
+					menupres[num].ttmode = TTMODE_USER;
+					menupres[num].ttname[0] = 0;
+					menupres[num].hidetitlepics = true;
+				}
+				else // if (fastcmp(word2, "OLD") || fastcmp(word2, "SSNTAILS"))
+					menupres[num].ttmode = TTMODE_OLD;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALE"))
+			{
+				// Don't handle Alacroix special case here; see Maincfg section.
+				menupres[num].ttscale = max(1, min(8, (UINT8)get_number(word2)));
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSNAME"))
+			{
+				strncpy(menupres[num].ttname, word2, 9);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSX"))
+			{
+				menupres[num].ttx = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSY"))
+			{
+				menupres[num].tty = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSLOOP"))
+			{
+				menupres[num].ttloop = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSTICS"))
+			{
+				menupres[num].tttics = (UINT16)get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED")
@@ -3492,9 +3539,76 @@ static void readmaincfg(MYFILE *f)
 				titlemap = (INT16)value;
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "HIDETITLEPICS"))
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "TITLEPICSHIDE"))
 			{
 				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSMODE"))
+			{
+				if (fastcmp(word2, "USER"))
+					ttmode = TTMODE_USER;
+				else if (fastcmp(word2, "ALACROIX"))
+					ttmode = TTMODE_ALACROIX;
+				else if (fastcmp(word2, "HIDE") || fastcmp(word2, "HIDDEN") || fastcmp(word2, "NONE"))
+				{
+					ttmode = TTMODE_USER;
+					ttname[0] = 0;
+					hidetitlepics = true;
+				}
+				else // if (fastcmp(word2, "OLD") || fastcmp(word2, "SSNTAILS"))
+					ttmode = TTMODE_OLD;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALE"))
+			{
+				ttscale = max(1, min(8, (UINT8)get_number(word2)));
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALESAVAILABLE"))
+			{
+				// SPECIAL CASE for Alacroix: Comma-separated list of resolutions that are available
+				// for gfx loading.
+				ttavailable[0] = ttavailable[1] = ttavailable[2] = ttavailable[3] =\
+					ttavailable[4] = ttavailable[5] = false;
+
+				if (strstr(word2, "1") != NULL)
+					ttavailable[0] = true;
+				if (strstr(word2, "2") != NULL)
+					ttavailable[1] = true;
+				if (strstr(word2, "3") != NULL)
+					ttavailable[2] = true;
+				if (strstr(word2, "4") != NULL)
+					ttavailable[3] = true;
+				if (strstr(word2, "5") != NULL)
+					ttavailable[4] = true;
+				if (strstr(word2, "6") != NULL)
+					ttavailable[5] = true;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSNAME"))
+			{
+				strncpy(ttname, word2, 9);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSX"))
+			{
+				ttx = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSY"))
+			{
+				tty = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSLOOP"))
+			{
+				ttloop = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSTICS"))
+			{
+				tttics = (UINT16)get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED"))
