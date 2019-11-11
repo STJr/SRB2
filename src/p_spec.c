@@ -4054,11 +4054,15 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
+
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
 
 		P_SetTarget(&thing->target, player->mo);
-		P_SetMobjState(thing, S_SIGN1);
+		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 
@@ -4079,11 +4083,15 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
+
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
 
 		P_SetTarget(&thing->target, player->mo);
-		P_SetMobjState(thing, S_SIGN1);
+		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 
@@ -6068,7 +6076,7 @@ static void P_AddAirbob(sector_t *sec, line_t *sourceline, boolean noadjust, boo
 	airbob->vars[5] = sec->ceilingheight;
 	airbob->vars[4] = airbob->vars[5]
 			- (sec->ceilingheight - sec->floorheight);
-	
+
 	airbob->vars[9] = dynamic ? 1 : 0;
 
 	airbob->sourceline = sourceline;

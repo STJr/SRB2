@@ -227,7 +227,14 @@ static void D_Display(void)
 		SCR_SetMode(); // change video mode
 
 	if (vid.recalc)
+	{
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
+#ifdef HWRENDER
+		// Shoot! The screen texture was flushed!
+		if ((rendermode == render_opengl) && (gamestate == GS_INTERMISSION))
+			usebuffer = false;
+#endif
+	}
 
 	// change the view size if needed
 	if (setsizeneeded)
@@ -415,6 +422,7 @@ static void D_Display(void)
 				if (rendermode == render_soft)
 				{
 					VID_BlitLinearScreen(screens[0], screens[1], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+					Y_ConsiderScreenBuffer();
 					usebuffer = true;
 				}
 				lastdraw = false;

@@ -241,11 +241,15 @@ static void R_FreeRotSprite(spritedef_t *spritedef)
 								Z_Free(grPatch->rawpatch);
 								grPatch->rawpatch = NULL;
 							}
-							if (grPatch->mipmap.grInfo.data)
+							if (grPatch->mipmap)
 							{
-								Z_Free(grPatch->mipmap.grInfo.data);
-								grPatch->mipmap.grInfo.data = NULL;
-								grPatch->mipmap.downloaded = 0;
+								if (grPatch->mipmap->grInfo.data)
+								{
+									Z_Free(grPatch->mipmap->grInfo.data);
+									grPatch->mipmap->grInfo.data = NULL;
+								}
+								Z_Free(grPatch->mipmap);
+								grPatch->mipmap = NULL;
 							}
 						}
 #endif
@@ -472,10 +476,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
 		if (start == INT16_MAX)
 			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
-		if (start == INT16_MAX)
-			start = 0; //let say S_START is lump 0
-		else
-			start++;   // just after S_START
 
 		end = W_CheckNumForNamePwad("S_END",wadnum,start);
 		if (end == INT16_MAX)
@@ -489,9 +489,16 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		return;
 	}
 
-	// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
-	if (start == 0 && W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != UINT16_MAX)
-		return;
+	if (start == INT16_MAX)
+	{
+		// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
+		if (W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != UINT16_MAX)
+			return;
+
+		start = 0; //let say S_START is lump 0
+	}
+	else
+		start++;   // just after S_START
 
 	if (end == INT16_MAX)
 	{

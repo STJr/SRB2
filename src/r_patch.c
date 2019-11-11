@@ -1115,7 +1115,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		if (!R_CheckIfPatch(lump))
 			return;
 
-		patch = (patch_t *)W_CachePatchNum(lump, PU_STATIC);
+		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
 		width = patch->width;
 		height = patch->height;
 
@@ -1255,7 +1255,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			if (rendermode == render_opengl)
 			{
 				GLPatch_t *grPatch = HWR_GetCachedGLRotSprite(sprframe->rotsprite.hardware_patch[rot], angle, newpatch);
-				HWR_MakePatch(newpatch, grPatch, &grPatch->mipmap, false);
+				HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
 				sprframe->rotsprite.patch[rot][angle] = (patch_t *)grPatch;
 			}
 			else

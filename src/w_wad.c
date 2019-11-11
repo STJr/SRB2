@@ -1517,7 +1517,10 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		if (!lumpcache[lump])
 		{
 			size_t len = W_LumpLengthPwad(wad, lump);
-			void *ptr, *lumpdata, *srcdata = NULL;
+			void *ptr, *lumpdata;
+#ifndef NO_PNG_LUMPS
+			void *srcdata = NULL;
+#endif
 
 			ptr = Z_Malloc(len, tag, &lumpcache[lump]);
 			lumpdata = Z_Malloc(len, tag, NULL);
@@ -1548,22 +1551,22 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 	grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
 
-	if (grPatch->mipmap.grInfo.data)
+	if (grPatch->mipmap->grInfo.data)
 	{
 		if (tag == PU_CACHE)
 			tag = PU_HWRCACHE;
-		Z_ChangeTag(grPatch->mipmap.grInfo.data, tag);
+		Z_ChangeTag(grPatch->mipmap->grInfo.data, tag);
 	}
 	else
 	{
 		patch_t *ptr = NULL;
 
 		// Only load the patch if we haven't initialised the grPatch yet
-		if (grPatch->mipmap.width == 0)
+		if (grPatch->mipmap->width == 0)
 			ptr = W_CacheLumpNumPwad(grPatch->wadnum, grPatch->lumpnum, PU_STATIC);
 
 		// Run HWR_MakePatch in all cases, to recalculate some things
-		HWR_MakePatch(ptr, grPatch, &grPatch->mipmap, false);
+		HWR_MakePatch(ptr, grPatch, grPatch->mipmap, false);
 		Z_Free(ptr);
 	}
 

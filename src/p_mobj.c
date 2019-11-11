@@ -1861,6 +1861,9 @@ void P_XYMovement(mobj_t *mo)
 	oldy = mo->y;
 
 #ifdef ESLOPE
+	if (mo->flags & MF_NOCLIPHEIGHT)
+		mo->standingslope = NULL;
+
 	// adjust various things based on slope
 	if (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8) {
 		if (!P_IsObjectOnGround(mo)) { // We fell off at some point? Do the twisty thing!
@@ -1991,7 +1994,7 @@ void P_XYMovement(mobj_t *mo)
 					mo->momz = transfermomz;
 					mo->standingslope = NULL;
 					if (player->pflags & PF_SPINNING)
-						player->pflags = (player->pflags & ~PF_SPINNING) | (PF_JUMPED | PF_THOKKED);
+						player->pflags |= PF_THOKKED;
 				}
 			}
 #endif
@@ -2051,7 +2054,7 @@ void P_XYMovement(mobj_t *mo)
 		return;
 
 #ifdef ESLOPE
-	if (moved && oldslope) { // Check to see if we ran off
+	if (moved && oldslope && !(mo->flags & MF_NOCLIPHEIGHT)) { // Check to see if we ran off
 
 		if (oldslope != mo->standingslope) { // First, compare different slopes
 			angle_t oldangle, newangle;
@@ -2458,16 +2461,6 @@ static boolean P_ZMovement(mobj_t *mo)
 			{
 				P_RemoveMobj(mo);
 				return false;
-			}
-			if (mo->momz
-			&& !(mo->flags & MF_NOGRAVITY)
-			&& ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z <= mo->floorz)
-			|| ((mo->eflags & MFE_VERTICALFLIP) && mo->z+mo->height >= mo->ceilingz)))
-			{
-				mo->flags |= MF_NOGRAVITY;
-				mo->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
-				mo->momy = mo->momz = 0;
-				mo->z = ((mo->eflags & MFE_VERTICALFLIP) ? mo->ceilingz-mo->height : mo->floorz);
 			}
 			break;
 		case MT_GOOP:
@@ -3314,7 +3307,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 	ffloor_t *rover;
 	player_t *p = mobj->player; // Will just be null if not a player.
 	fixed_t height = (p ? P_GetPlayerHeight(p) : mobj->height); // for players, calculation height does not necessarily match actual height for gameplay reasons (spin, etc)
-	boolean wasgroundpounding = (p && (mobj->eflags & MFE_GOOWATER) && ((p->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (p->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (p->pflags & PF_SHIELDABILITY));
+	boolean wasgroundpounding = (p && ((p->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (p->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (p->pflags & PF_SHIELDABILITY));
 
 	// Default if no water exists.
 	mobj->watertop = mobj->waterbottom = mobj->z - 1000*FRACUNIT;
@@ -3414,7 +3407,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			p->powers[pw_underwater] = underwatertics + 1;
 		}
 
-		if (wasgroundpounding)
+		if ((wasgroundpounding = ((mobj->eflags & MFE_GOOWATER) && wasgroundpounding)))
 		{
 			p->pflags &= ~PF_SHIELDABILITY;
 			mobj->momz >>= 1;
@@ -6914,7 +6907,7 @@ void P_RunOverlays(void)
 
 		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
 		mo->scale = mo->destscale = mo->target->scale;
-		mo->angle = mo->target->angle;
+		mo->angle = mo->target->angle + mo->movedir;
 
 		if (!(mo->state->frame & FF_ANIMATE))
 			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
@@ -9436,6 +9429,13 @@ void P_MobjThinker(mobj_t *mobj)
 
 					hdist = R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 
+					if (hdist > 1500*FRACUNIT)
+					{
+						mobj->flags2 &= ~MF2_BOSSNOTRAP;
+						P_SetTarget(&mobj->target, NULL);
+						break;
+					}
+
 					if (!(mobj->flags2 & MF2_BOSSNOTRAP) && hdist <= 450*FRACUNIT)
 						mobj->flags2 |= MF2_BOSSNOTRAP;
 
@@ -9455,11 +9455,6 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->momx = 0;
 						mobj->momy = 0;
 						mobj->momz = 0;
-						if (hdist >= 1500*FRACUNIT)
-						{
-							mobj->flags2 &= ~MF2_BOSSNOTRAP;
-							P_SetTarget(&mobj->target, NULL);
-						}
 					}
 					break;
 				}
@@ -9568,6 +9563,14 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->z = mobj->ceilingz - mobj->height;
 					else
 						mobj->z = mobj->floorz;
+				}
+				else if ((!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z <= mobj->floorz)
+				|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z+mobj->height >= mobj->ceilingz))
+				{
+					mobj->flags |= MF_NOGRAVITY;
+					mobj->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
+					mobj->momy = mobj->momz = 0;
+					mobj->z = ((mobj->eflags & MFE_VERTICALFLIP) ? mobj->ceilingz-mobj->height : mobj->floorz);
 				}
 				/* FALLTHRU */
 			default:
@@ -10441,6 +10444,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			mobj->extravalue2 = 0;
 			mobj->fuse = 100;
 			break;
+		case MT_SIGN:
+			P_SetTarget(&mobj->tracer, P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY));
+			P_SetTarget(&mobj->tracer->target, mobj);
+			P_SetMobjState(mobj->tracer, S_SIGNBOARD);
+			mobj->tracer->movedir = ANGLE_90;
 		default:
 			break;
 	}
