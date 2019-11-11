@@ -2089,10 +2089,57 @@ static void readmenu(MYFILE *f, INT32 num)
 				menupres[num].bgcolor = get_number(word2);
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS") || fastcmp(word, "TITLEPICSHIDE"))
 			{
 				// true by default, except MM_MAIN
 				menupres[num].hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSMODE"))
+			{
+				if (fastcmp(word2, "USER"))
+					menupres[num].ttmode = TTMODE_USER;
+				else if (fastcmp(word2, "ALACROIX"))
+					menupres[num].ttmode = TTMODE_ALACROIX;
+				else if (fastcmp(word2, "HIDE") || fastcmp(word2, "HIDDEN") || fastcmp(word2, "NONE"))
+				{
+					menupres[num].ttmode = TTMODE_USER;
+					menupres[num].ttname[0] = 0;
+					menupres[num].hidetitlepics = true;
+				}
+				else // if (fastcmp(word2, "OLD") || fastcmp(word2, "SSNTAILS"))
+					menupres[num].ttmode = TTMODE_OLD;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALE"))
+			{
+				// Don't handle Alacroix special case here; see Maincfg section.
+				menupres[num].ttscale = max(1, min(8, (UINT8)get_number(word2)));
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSNAME"))
+			{
+				strncpy(menupres[num].ttname, word2, 9);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSX"))
+			{
+				menupres[num].ttx = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSY"))
+			{
+				menupres[num].tty = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSLOOP"))
+			{
+				menupres[num].ttloop = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSTICS"))
+			{
+				menupres[num].tttics = (UINT16)get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED")
@@ -2308,6 +2355,7 @@ static actionpointer_t actionpointers[] =
 	{{A_ThrownRing},             "A_THROWNRING"},
 	{{A_SetSolidSteam},          "A_SETSOLIDSTEAM"},
 	{{A_UnsetSolidSteam},        "A_UNSETSOLIDSTEAM"},
+	{{A_SignSpin},               "S_SIGNSPIN"},
 	{{A_SignPlayer},             "A_SIGNPLAYER"},
 	{{A_OverlayThink},           "A_OVERLAYTHINK"},
 	{{A_JetChase},               "A_JETCHASE"},
@@ -3492,9 +3540,76 @@ static void readmaincfg(MYFILE *f)
 				titlemap = (INT16)value;
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "HIDETITLEPICS"))
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "TITLEPICSHIDE"))
 			{
 				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSMODE"))
+			{
+				if (fastcmp(word2, "USER"))
+					ttmode = TTMODE_USER;
+				else if (fastcmp(word2, "ALACROIX"))
+					ttmode = TTMODE_ALACROIX;
+				else if (fastcmp(word2, "HIDE") || fastcmp(word2, "HIDDEN") || fastcmp(word2, "NONE"))
+				{
+					ttmode = TTMODE_USER;
+					ttname[0] = 0;
+					hidetitlepics = true;
+				}
+				else // if (fastcmp(word2, "OLD") || fastcmp(word2, "SSNTAILS"))
+					ttmode = TTMODE_OLD;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALE"))
+			{
+				ttscale = max(1, min(8, (UINT8)get_number(word2)));
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALESAVAILABLE"))
+			{
+				// SPECIAL CASE for Alacroix: Comma-separated list of resolutions that are available
+				// for gfx loading.
+				ttavailable[0] = ttavailable[1] = ttavailable[2] = ttavailable[3] =\
+					ttavailable[4] = ttavailable[5] = false;
+
+				if (strstr(word2, "1") != NULL)
+					ttavailable[0] = true;
+				if (strstr(word2, "2") != NULL)
+					ttavailable[1] = true;
+				if (strstr(word2, "3") != NULL)
+					ttavailable[2] = true;
+				if (strstr(word2, "4") != NULL)
+					ttavailable[3] = true;
+				if (strstr(word2, "5") != NULL)
+					ttavailable[4] = true;
+				if (strstr(word2, "6") != NULL)
+					ttavailable[5] = true;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSNAME"))
+			{
+				strncpy(ttname, word2, 9);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSX"))
+			{
+				ttx = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSY"))
+			{
+				tty = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSLOOP"))
+			{
+				ttloop = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSTICS"))
+			{
+				tttics = (UINT16)get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED"))
@@ -5385,59 +5500,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BUBBLES4",
 
 	// Level End Sign
-	"S_SIGN1",
-	"S_SIGN2",
-	"S_SIGN3",
-	"S_SIGN4",
-	"S_SIGN5",
-	"S_SIGN6",
-	"S_SIGN7",
-	"S_SIGN8",
-	"S_SIGN9",
-	"S_SIGN10",
-	"S_SIGN11",
-	"S_SIGN12",
-	"S_SIGN13",
-	"S_SIGN14",
-	"S_SIGN15",
-	"S_SIGN16",
-	"S_SIGN17",
-	"S_SIGN18",
-	"S_SIGN19",
-	"S_SIGN20",
-	"S_SIGN21",
-	"S_SIGN22",
-	"S_SIGN23",
-	"S_SIGN24",
-	"S_SIGN25",
-	"S_SIGN26",
-	"S_SIGN27",
-	"S_SIGN28",
-	"S_SIGN29",
-	"S_SIGN30",
-	"S_SIGN31",
-	"S_SIGN32",
-	"S_SIGN33",
-	"S_SIGN34",
-	"S_SIGN35",
-	"S_SIGN36",
-	"S_SIGN37",
-	"S_SIGN38",
-	"S_SIGN39",
-	"S_SIGN40",
-	"S_SIGN41",
-	"S_SIGN42",
-	"S_SIGN43",
-	"S_SIGN44",
-	"S_SIGN45",
-	"S_SIGN46",
-	"S_SIGN47",
-	"S_SIGN48",
-	"S_SIGN49",
-	"S_SIGN50",
-	"S_SIGN51",
-	"S_SIGN52", // Eggman
-	"S_SIGN53",
+	"S_SIGN",
+	"S_SIGNSPIN1",
+	"S_SIGNSPIN2",
+	"S_SIGNSPIN3",
+	"S_SIGNSPIN4",
+	"S_SIGNSPIN5",
+	"S_SIGNSPIN6",
+	"S_SIGNPLAYER",
+	"S_SIGNSLOW",
+	"S_SIGNSTOP",
+	"S_SIGNBOARD",
+	"S_EGGMANSIGN",
 
 	// Spike Ball
 	"S_SPIKEBALL1",
