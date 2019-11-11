@@ -1861,6 +1861,9 @@ void P_XYMovement(mobj_t *mo)
 	oldy = mo->y;
 
 #ifdef ESLOPE
+	if (mo->flags & MF_NOCLIPHEIGHT)
+		mo->standingslope = NULL;
+
 	// adjust various things based on slope
 	if (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8) {
 		if (!P_IsObjectOnGround(mo)) { // We fell off at some point? Do the twisty thing!
@@ -2051,7 +2054,7 @@ void P_XYMovement(mobj_t *mo)
 		return;
 
 #ifdef ESLOPE
-	if (moved && oldslope) { // Check to see if we ran off
+	if (moved && oldslope && !(mo->flags & MF_NOCLIPHEIGHT)) { // Check to see if we ran off
 
 		if (oldslope != mo->standingslope) { // First, compare different slopes
 			angle_t oldangle, newangle;
