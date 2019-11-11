@@ -6907,7 +6907,7 @@ void P_RunOverlays(void)
 
 		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
 		mo->scale = mo->destscale = mo->target->scale;
-		mo->angle = mo->target->angle;
+		mo->angle = mo->target->angle + mo->movedir;
 
 		if (!(mo->state->frame & FF_ANIMATE))
 			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
@@ -10444,6 +10444,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			mobj->extravalue2 = 0;
 			mobj->fuse = 100;
 			break;
+		case MT_SIGN:
+			P_SetTarget(&mobj->tracer, P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY));
+			P_SetTarget(&mobj->tracer->target, mobj);
+			P_SetMobjState(mobj->tracer, S_SIGNBOARD);
+			mobj->tracer->movedir = ANGLE_90;
 		default:
 			break;
 	}
