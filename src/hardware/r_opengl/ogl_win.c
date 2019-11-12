@@ -347,13 +347,6 @@ static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 	if (strstr(renderer, "810"))   oglflags |= GLF_NOZBUFREAD;
 	DBG_Printf("oglflags   : 0x%X\n", oglflags);
 
-#ifdef USE_PALETTED_TEXTURE
-	if (isExtAvailable("GL_EXT_paletted_texture",gl_extensions))
-		glColorTableEXT = GetGLFunc("glColorTableEXT");
-	else
-		glColorTableEXT = NULL;
-#endif
-
 #ifdef USE_WGL_SWAP
 	if (isExtAvailable("WGL_EXT_swap_control",gl_extensions))
 		wglSwapIntervalEXT = GetGLFunc("wglSwapIntervalEXT");
@@ -582,19 +575,8 @@ EXPORT void HWRAPI(SetPalette) (RGBA_t *pal, RGBA_t *gamma)
 		myPaletteData[i].s.blue  = (UINT8)MIN((pal[i].s.blue*gamma->s.blue)/127,   255);
 		myPaletteData[i].s.alpha = pal[i].s.alpha;
 	}
-#ifdef USE_PALETTED_TEXTURE
-	if (glColorTableEXT)
-	{
-		for (i = 0; i < 256; i++)
-		{
-			palette_tex[3*i+0] = pal[i].s.red;
-			palette_tex[3*i+1] = pal[i].s.green;
-			palette_tex[3*i+2] = pal[i].s.blue;
-		}
-		glColorTableEXT(GL_TEXTURE_2D, GL_RGB8, 256, GL_RGB, GL_UNSIGNED_BYTE, palette_tex);
-	}
-#endif
-	// on a chang� de palette, il faut recharger toutes les textures
+
+	// on a palette change, you have to reload all of the textures
 	Flush();
 }
 

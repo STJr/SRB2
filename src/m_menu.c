@@ -1295,18 +1295,21 @@ static menuitem_t OP_ColorOptionsMenu[] =
 #ifdef HWRENDER
 static menuitem_t OP_OpenGLOptionsMenu[] =
 {
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            10},
-	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        20},
-	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     30},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,40},
+	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             10},
+	{IT_STRING|IT_CVAR,         NULL, "Model interpolation", &cv_grmodelinterpolation, 20},
+
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            40},
+	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        50},
+	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     60},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,70},
 #if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       50},
+	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       80},
 #endif
 #ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     70},
+	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     100},
 #endif
-	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          80},
-	{IT_SUBMENU|IT_STRING,      NULL, "Gamma...",        &OP_OpenGLColorDef,        90},
+	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          110},
+	{IT_SUBMENU|IT_STRING,      NULL, "Gamma...",        &OP_OpenGLColorDef,        120},
 };
 
 #ifdef ALAM_LIGHTING

@@ -444,7 +444,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		{
 #ifdef HWRENDER
 			if (rendermode == render_opengl)
-				HWR_AddSpriteMD2(i);
+				HWR_AddSpriteModel(i);
 #endif
 			// if a new sprite was added (not just replaced)
 			addsprites++;
@@ -2560,7 +2560,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
 		return 0;
 
-	while (!(skin->sprites[spr2].numframes)
+	while (!skin->sprites[spr2].numframes
 		&& spr2 != SPR2_STND
 		&& ++i < 32) // recursion limiter
 	{
@@ -3189,7 +3189,7 @@ next_token:
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
-			HWR_AddPlayerMD2(numskins);
+			HWR_AddPlayerModel(numskins);
 #endif
 
 		numskins++;
