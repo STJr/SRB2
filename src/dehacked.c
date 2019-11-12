@@ -2089,10 +2089,57 @@ static void readmenu(MYFILE *f, INT32 num)
 				menupres[num].bgcolor = get_number(word2);
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS") || fastcmp(word, "TITLEPICSHIDE"))
 			{
 				// true by default, except MM_MAIN
 				menupres[num].hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSMODE"))
+			{
+				if (fastcmp(word2, "USER"))
+					menupres[num].ttmode = TTMODE_USER;
+				else if (fastcmp(word2, "ALACROIX"))
+					menupres[num].ttmode = TTMODE_ALACROIX;
+				else if (fastcmp(word2, "HIDE") || fastcmp(word2, "HIDDEN") || fastcmp(word2, "NONE"))
+				{
+					menupres[num].ttmode = TTMODE_USER;
+					menupres[num].ttname[0] = 0;
+					menupres[num].hidetitlepics = true;
+				}
+				else // if (fastcmp(word2, "OLD") || fastcmp(word2, "SSNTAILS"))
+					menupres[num].ttmode = TTMODE_OLD;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALE"))
+			{
+				// Don't handle Alacroix special case here; see Maincfg section.
+				menupres[num].ttscale = max(1, min(8, (UINT8)get_number(word2)));
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSNAME"))
+			{
+				strncpy(menupres[num].ttname, word2, 9);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSX"))
+			{
+				menupres[num].ttx = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSY"))
+			{
+				menupres[num].tty = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSLOOP"))
+			{
+				menupres[num].ttloop = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSTICS"))
+			{
+				menupres[num].tttics = (UINT16)get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED")
@@ -2308,6 +2355,7 @@ static actionpointer_t actionpointers[] =
 	{{A_ThrownRing},             "A_THROWNRING"},
 	{{A_SetSolidSteam},          "A_SETSOLIDSTEAM"},
 	{{A_UnsetSolidSteam},        "A_UNSETSOLIDSTEAM"},
+	{{A_SignSpin},               "S_SIGNSPIN"},
 	{{A_SignPlayer},             "A_SIGNPLAYER"},
 	{{A_OverlayThink},           "A_OVERLAYTHINK"},
 	{{A_JetChase},               "A_JETCHASE"},
@@ -3492,9 +3540,76 @@ static void readmaincfg(MYFILE *f)
 				titlemap = (INT16)value;
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "HIDETITLEPICS"))
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "TITLEPICSHIDE"))
 			{
 				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSMODE"))
+			{
+				if (fastcmp(word2, "USER"))
+					ttmode = TTMODE_USER;
+				else if (fastcmp(word2, "ALACROIX"))
+					ttmode = TTMODE_ALACROIX;
+				else if (fastcmp(word2, "HIDE") || fastcmp(word2, "HIDDEN") || fastcmp(word2, "NONE"))
+				{
+					ttmode = TTMODE_USER;
+					ttname[0] = 0;
+					hidetitlepics = true;
+				}
+				else // if (fastcmp(word2, "OLD") || fastcmp(word2, "SSNTAILS"))
+					ttmode = TTMODE_OLD;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALE"))
+			{
+				ttscale = max(1, min(8, (UINT8)get_number(word2)));
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALESAVAILABLE"))
+			{
+				// SPECIAL CASE for Alacroix: Comma-separated list of resolutions that are available
+				// for gfx loading.
+				ttavailable[0] = ttavailable[1] = ttavailable[2] = ttavailable[3] =\
+					ttavailable[4] = ttavailable[5] = false;
+
+				if (strstr(word2, "1") != NULL)
+					ttavailable[0] = true;
+				if (strstr(word2, "2") != NULL)
+					ttavailable[1] = true;
+				if (strstr(word2, "3") != NULL)
+					ttavailable[2] = true;
+				if (strstr(word2, "4") != NULL)
+					ttavailable[3] = true;
+				if (strstr(word2, "5") != NULL)
+					ttavailable[4] = true;
+				if (strstr(word2, "6") != NULL)
+					ttavailable[5] = true;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSNAME"))
+			{
+				strncpy(ttname, word2, 9);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSX"))
+			{
+				ttx = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSY"))
+			{
+				tty = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSLOOP"))
+			{
+				ttloop = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSTICS"))
+			{
+				tttics = (UINT16)get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED"))
@@ -5260,25 +5375,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CYBRAKDEMONVILEEXPLOSION3",
 
 	// Metal Sonic (Race)
-	// S_PLAY_STND
-	"S_METALSONIC_STAND",
-	// S_PLAY_TAP1
-	"S_METALSONIC_WAIT1",
-	"S_METALSONIC_WAIT2",
-	// S_PLAY_WALK
-	"S_METALSONIC_WALK1",
-	"S_METALSONIC_WALK2",
-	"S_METALSONIC_WALK3",
-	"S_METALSONIC_WALK4",
-	"S_METALSONIC_WALK5",
-	"S_METALSONIC_WALK6",
-	"S_METALSONIC_WALK7",
-	"S_METALSONIC_WALK8",
-	// S_PLAY_SPD1
-	"S_METALSONIC_RUN1",
-	"S_METALSONIC_RUN2",
-	"S_METALSONIC_RUN3",
-	"S_METALSONIC_RUN4",
+	"S_METALSONIC_RACE",
 	// Metal Sonic (Battle)
 	"S_METALSONIC_FLOAT",
 	"S_METALSONIC_VECTOR",
@@ -5385,59 +5482,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BUBBLES4",
 
 	// Level End Sign
-	"S_SIGN1",
-	"S_SIGN2",
-	"S_SIGN3",
-	"S_SIGN4",
-	"S_SIGN5",
-	"S_SIGN6",
-	"S_SIGN7",
-	"S_SIGN8",
-	"S_SIGN9",
-	"S_SIGN10",
-	"S_SIGN11",
-	"S_SIGN12",
-	"S_SIGN13",
-	"S_SIGN14",
-	"S_SIGN15",
-	"S_SIGN16",
-	"S_SIGN17",
-	"S_SIGN18",
-	"S_SIGN19",
-	"S_SIGN20",
-	"S_SIGN21",
-	"S_SIGN22",
-	"S_SIGN23",
-	"S_SIGN24",
-	"S_SIGN25",
-	"S_SIGN26",
-	"S_SIGN27",
-	"S_SIGN28",
-	"S_SIGN29",
-	"S_SIGN30",
-	"S_SIGN31",
-	"S_SIGN32",
-	"S_SIGN33",
-	"S_SIGN34",
-	"S_SIGN35",
-	"S_SIGN36",
-	"S_SIGN37",
-	"S_SIGN38",
-	"S_SIGN39",
-	"S_SIGN40",
-	"S_SIGN41",
-	"S_SIGN42",
-	"S_SIGN43",
-	"S_SIGN44",
-	"S_SIGN45",
-	"S_SIGN46",
-	"S_SIGN47",
-	"S_SIGN48",
-	"S_SIGN49",
-	"S_SIGN50",
-	"S_SIGN51",
-	"S_SIGN52", // Eggman
-	"S_SIGN53",
+	"S_SIGN",
+	"S_SIGNSPIN1",
+	"S_SIGNSPIN2",
+	"S_SIGNSPIN3",
+	"S_SIGNSPIN4",
+	"S_SIGNSPIN5",
+	"S_SIGNSPIN6",
+	"S_SIGNPLAYER",
+	"S_SIGNSLOW",
+	"S_SIGNSTOP",
+	"S_SIGNBOARD",
+	"S_EGGMANSIGN",
 
 	// Spike Ball
 	"S_SPIKEBALL1",
@@ -5662,7 +5718,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARROW",
 	"S_ARROWBONK",
 
-	// Trapgoyle Demon fire
+	// Glaregoyle Demon fire
 	"S_DEMONFIRE",
 
 	// GFZ flowers
@@ -6030,29 +6086,35 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_WALLVINE_LONG",
 	"S_WALLVINE_SHORT",
 
-	// Trapgoyles
-	"S_TRAPGOYLE",
-	"S_TRAPGOYLE_CHECK",
-	"S_TRAPGOYLE_FIRE1",
-	"S_TRAPGOYLE_FIRE2",
-	"S_TRAPGOYLE_FIRE3",
-	"S_TRAPGOYLEUP",
-	"S_TRAPGOYLEUP_CHECK",
-	"S_TRAPGOYLEUP_FIRE1",
-	"S_TRAPGOYLEUP_FIRE2",
-	"S_TRAPGOYLEUP_FIRE3",
-	"S_TRAPGOYLEDOWN",
-	"S_TRAPGOYLEDOWN_CHECK",
-	"S_TRAPGOYLEDOWN_FIRE1",
-	"S_TRAPGOYLEDOWN_FIRE2",
-	"S_TRAPGOYLEDOWN_FIRE3",
-	"S_TRAPGOYLELONG",
-	"S_TRAPGOYLELONG_CHECK",
-	"S_TRAPGOYLELONG_FIRE1",
-	"S_TRAPGOYLELONG_FIRE2",
-	"S_TRAPGOYLELONG_FIRE3",
-	"S_TRAPGOYLELONG_FIRE4",
-	"S_TRAPGOYLELONG_FIRE5",
+	// Glaregoyles
+	"S_GLAREGOYLE",
+	"S_GLAREGOYLE_CHARGE",
+	"S_GLAREGOYLE_BLINK",
+	"S_GLAREGOYLE_HOLD",
+	"S_GLAREGOYLE_FIRE",
+	"S_GLAREGOYLE_LOOP",
+	"S_GLAREGOYLE_COOLDOWN",
+	"S_GLAREGOYLEUP",
+	"S_GLAREGOYLEUP_CHARGE",
+	"S_GLAREGOYLEUP_BLINK",
+	"S_GLAREGOYLEUP_HOLD",
+	"S_GLAREGOYLEUP_FIRE",
+	"S_GLAREGOYLEUP_LOOP",
+	"S_GLAREGOYLEUP_COOLDOWN",
+	"S_GLAREGOYLEDOWN",
+	"S_GLAREGOYLEDOWN_CHARGE",
+	"S_GLAREGOYLEDOWN_BLINK",
+	"S_GLAREGOYLEDOWN_HOLD",
+	"S_GLAREGOYLEDOWN_FIRE",
+	"S_GLAREGOYLEDOWN_LOOP",
+	"S_GLAREGOYLEDOWN_COOLDOWN",
+	"S_GLAREGOYLELONG",
+	"S_GLAREGOYLELONG_CHARGE",
+	"S_GLAREGOYLELONG_BLINK",
+	"S_GLAREGOYLELONG_HOLD",
+	"S_GLAREGOYLELONG_FIRE",
+	"S_GLAREGOYLELONG_LOOP",
+	"S_GLAREGOYLELONG_COOLDOWN",
 
 	// ATZ's Red Crystal/Target
 	"S_TARGET_IDLE",
@@ -6063,6 +6125,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// ATZ's green flame
 	"S_GREENFLAME",
+
+	// ATZ Blue Gargoyle
+	"S_BLUEGARGOYLE",
 
 	// Stalagmites
 	"S_STG0",
@@ -7253,8 +7318,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BUMBLEBORE_STUCK2",
 	"S_BUMBLEBORE_DIE",
 
-	"S_BBUZZFLY1",
-	"S_BBUZZFLY2",
+	"S_BUGGLEIDLE",
+	"S_BUGGLEFLY",
 
 	"S_SMASHSPIKE_FLOAT",
 	"S_SMASHSPIKE_EASE1",
@@ -7650,7 +7715,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CANNONBALL", // Cannonball
 	"MT_CANNONBALLDECOR", // Decorative/still cannonball
 	"MT_ARROW", // Arrow
-	"MT_DEMONFIRE", // Trapgoyle fire
+	"MT_DEMONFIRE", // Glaregoyle fire
 
 	// Greenflower Scenery
 	"MT_GFZFLOWER1",
@@ -7813,12 +7878,13 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Egg Rock Scenery
 
 	// Azure Temple Scenery
-	"MT_TRAPGOYLE",
-	"MT_TRAPGOYLEUP",
-	"MT_TRAPGOYLEDOWN",
-	"MT_TRAPGOYLELONG",
+	"MT_GLAREGOYLE",
+	"MT_GLAREGOYLEUP",
+	"MT_GLAREGOYLEDOWN",
+	"MT_GLAREGOYLELONG",
 	"MT_TARGET",
 	"MT_GREENFLAME",
+	"MT_BLUEGARGOYLE",
 
 	// Stalagmites
 	"MT_STALAGMITE0",
@@ -8093,7 +8159,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_HIVEELEMENTAL",
 	"MT_BUMBLEBORE",
 
-	"MT_BUBBLEBUZZ",
+	"MT_BUGGLE",
 
 	"MT_SMASHINGSPIKEBALL",
 	"MT_CACOLANTERN",

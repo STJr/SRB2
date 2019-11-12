@@ -2181,7 +2181,7 @@ void I_Quit(void)
 	if (demorecording)
 		G_CheckDemoStatus();
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
 	I_ShutdownMusic();
@@ -2299,7 +2299,7 @@ void I_Error(const char *error, ...)
 	if (demorecording)
 		G_CheckDemoStatus();
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
 	I_ShutdownMusic();

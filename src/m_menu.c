@@ -1295,18 +1295,21 @@ static menuitem_t OP_ColorOptionsMenu[] =
 #ifdef HWRENDER
 static menuitem_t OP_OpenGLOptionsMenu[] =
 {
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            10},
-	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        20},
-	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     30},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,40},
+	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             10},
+	{IT_STRING|IT_CVAR,         NULL, "Model interpolation", &cv_grmodelinterpolation, 20},
+
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            40},
+	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        50},
+	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     60},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,70},
 #if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       50},
+	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       80},
 #endif
 #ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     70},
+	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     100},
 #endif
-	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          80},
-	{IT_SUBMENU|IT_STRING,      NULL, "Gamma...",        &OP_OpenGLColorDef,        90},
+	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          110},
+	{IT_SUBMENU|IT_STRING,      NULL, "Gamma...",        &OP_OpenGLColorDef,        120},
 };
 
 #ifdef ALAM_LIGHTING
@@ -2289,6 +2292,13 @@ void M_InitMenuPresTables(void)
 		// so-called "undefined"
 		menupres[i].fadestrength = -1;
 		menupres[i].hidetitlepics = -1; // inherits global hidetitlepics
+		menupres[i].ttmode = TTMODE_NONE;
+		menupres[i].ttscale = UINT8_MAX;
+		menupres[i].ttname[0] = 0;
+		menupres[i].ttx = INT16_MAX;
+		menupres[i].tty = INT16_MAX;
+		menupres[i].ttloop = INT16_MAX;
+		menupres[i].tttics = UINT16_MAX;
 		menupres[i].enterwipe = -1;
 		menupres[i].exitwipe = -1;
 		menupres[i].bgcolor = -1;
@@ -2307,7 +2317,7 @@ void M_InitMenuPresTables(void)
 			strncpy(menupres[i].musname, "_recat", 7);
 		else if (i == MN_SP_NIGHTSATTACK)
 			strncpy(menupres[i].musname, "_nitat", 7);
-		else if (i == MN_SP_PLAYER)
+		else if (i == MN_SP_PLAYER || i == MN_SR_PLAYER)
 			strncpy(menupres[i].musname, "_chsel", 7);
 	}
 }
@@ -2467,7 +2477,7 @@ static boolean MIT_SetCurFadeValue(UINT32 menutype, INT32 level, INT32 *retval, 
 	return false;
 }
 
-static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
+static boolean MIT_SetCurTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	(void)input;
 	(void)retval;
@@ -2481,8 +2491,41 @@ static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retv
 		curhidepics = menupres[menutype].hidetitlepics;
 		return true;
 	}
+	else if (menupres[menutype].ttmode == TTMODE_USER)
+	{
+		if (menupres[menutype].ttname[0])
+		{
+			curhidepics = menupres[menutype].hidetitlepics;
+			curttmode = menupres[menutype].ttmode;
+			curttscale = (menupres[menutype].ttscale != UINT8_MAX ? menupres[menutype].ttscale : ttscale);
+			strncpy(curttname, menupres[menutype].ttname, 9);
+			curttx = (menupres[menutype].ttx != INT16_MAX ? menupres[menutype].ttx : ttx);
+			curtty = (menupres[menutype].tty != INT16_MAX ? menupres[menutype].tty : tty);
+			curttloop = (menupres[menutype].ttloop != INT16_MAX ? menupres[menutype].ttloop : ttloop);
+			curtttics = (menupres[menutype].tttics != UINT16_MAX ? menupres[menutype].tttics : tttics);
+		}
+		else
+			curhidepics = menupres[menutype].hidetitlepics;
+		return true;
+	}
+	else if (menupres[menutype].ttmode != TTMODE_NONE)
+	{
+		curhidepics = menupres[menutype].hidetitlepics;
+		curttmode = menupres[menutype].ttmode;
+		curttscale = (menupres[menutype].ttscale != UINT8_MAX ? menupres[menutype].ttscale : ttscale);
+		return true;
+	}
 	else if (!level)
+	{
 		curhidepics = hidetitlepics;
+		curttmode = ttmode;
+		curttscale = ttscale;
+		strncpy(curttname, ttname, 9);
+		curttx = ttx;
+		curtty = tty;
+		curttloop = ttloop;
+		curtttics = tttics;
+	}
 	return false;
 }
 
@@ -2527,9 +2570,9 @@ void M_SetMenuCurFadeValue(UINT8 defaultvalue)
 	M_IterateMenuTree(MIT_SetCurFadeValue, &defaultvalue);
 }
 
-void M_SetMenuCurHideTitlePics(void)
+void M_SetMenuCurTitlePics(void)
 {
-	M_IterateMenuTree(MIT_SetCurHideTitlePics, NULL);
+	M_IterateMenuTree(MIT_SetCurTitlePics, NULL);
 }
 
 // ====================================
@@ -2579,12 +2622,20 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	curbgyspeed = titlescrollyspeed;
 	curbghide = (gamestate != GS_TIMEATTACK); // show in time attack, hide in other menus
 
+	curttmode = ttmode;
+	curttscale = ttscale;
+	strncpy(curttname, ttname, 9);
+	curttx = ttx;
+	curtty = tty;
+	curttloop = ttloop;
+	curtttics = tttics;
+
 	// don't do the below during the in-game menus
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
 		return;
 
 	M_SetMenuCurFadeValue(16);
-	M_SetMenuCurHideTitlePics();
+	M_SetMenuCurTitlePics();
 
 	// Loop through both menu IDs in parallel and look for type changes
 	// The youngest child in activeMenuId is the entered menu
@@ -6516,7 +6567,7 @@ static void M_LevelSelectWarp(INT32 choice)
 
 	if (W_CheckNumForName(G_BuildMapName(cv_nextmap.value)) == LUMPERROR)
 	{
-//		CONS_Alert(CONS_WARNING, "Internal game map '%s' not found\n", G_BuildMapName(cv_nextmap.value));
+		CONS_Alert(CONS_WARNING, "Internal game map '%s' not found\n", G_BuildMapName(cv_nextmap.value));
 		return;
 	}
 
@@ -7933,81 +7984,80 @@ static void M_SetupChoosePlayer(INT32 choice)
 	char *and;
 	(void)choice;
 
-	SP_PlayerMenu[0].status &= ~IT_DYBIGSPACE; // Correcting a hack that may be made below.
-
-	for (i = 0; i < 32; i++) // Handle charsels, availability, and unlocks.
+	if (!(mapheaderinfo[startmap-1]
+			&& (mapheaderinfo[startmap-1]->forcecharacter[0] != '\0'
+			|| (mapheaderinfo[startmap-1]->typeoflevel & TOL_NIGHTS)) // remove this later when everyone gets their own nights sprites, maybe
+		))
 	{
-		if (description[i].used) // If the character's disabled through SOC, there's nothing we can do for it.
+		for (i = 0; i < 32; i++) // Handle charsels, availability, and unlocks.
 		{
-			and = strchr(description[i].skinname, '&');
-			if (and)
+			if (description[i].used) // If the character's disabled through SOC, there's nothing we can do for it.
 			{
-				char firstskin[SKINNAMESIZE+1];
-				strncpy(firstskin, description[i].skinname, (and - description[i].skinname));
-				firstskin[(and - description[i].skinname)] = '\0';
-				description[i].skinnum[0] = R_SkinAvailable(firstskin);
-				description[i].skinnum[1] = R_SkinAvailable(and+1);
-			}
-			else
-			{
-				description[i].skinnum[0] = R_SkinAvailable(description[i].skinname);
-				description[i].skinnum[1] = -1;
-			}
-			skinnum = description[i].skinnum[0];
-			if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
-			{
-				// Handling order.
-				if (firstvalid == 255)
-					firstvalid = i;
+				and = strchr(description[i].skinname, '&');
+				if (and)
+				{
+					char firstskin[SKINNAMESIZE+1];
+					strncpy(firstskin, description[i].skinname, (and - description[i].skinname));
+					firstskin[(and - description[i].skinname)] = '\0';
+					description[i].skinnum[0] = R_SkinAvailable(firstskin);
+					description[i].skinnum[1] = R_SkinAvailable(and+1);
+				}
 				else
 				{
-					description[i].prev = lastvalid;
-					description[lastvalid].next = i;
+					description[i].skinnum[0] = R_SkinAvailable(description[i].skinname);
+					description[i].skinnum[1] = -1;
 				}
-				lastvalid = i;
-
-				if (i == char_on)
-					allowed = true;
-
-				if (!(description[i].picname[0]))
+				skinnum = description[i].skinnum[0];
+				if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
 				{
-					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= XTRA_CHARSEL+1)
+					// Handling order.
+					if (firstvalid == 255)
+						firstvalid = i;
+					else
 					{
-						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
-						spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
-						description[i].charpic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+						description[i].prev = lastvalid;
+						description[lastvalid].next = i;
+					}
+					lastvalid = i;
+
+					if (i == char_on)
+						allowed = true;
+
+					if (!(description[i].picname[0]))
+					{
+						if (skins[skinnum].sprites[SPR2_XTRA].numframes >= XTRA_CHARSEL+1)
+						{
+							spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+							spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
+							description[i].charpic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+						}
+						else
+							description[i].charpic = W_CachePatchName("MISSING", PU_CACHE);
 					}
 					else
-						description[i].charpic = W_CachePatchName("MISSING", PU_CACHE);
-				}
-				else
-					description[i].charpic = W_CachePatchName(description[i].picname, PU_CACHE);
+						description[i].charpic = W_CachePatchName(description[i].picname, PU_CACHE);
 
-				if (description[i].nametag[0])
-				{
-					const char *nametag = description[i].nametag;
-					description[i].namepic = NULL;
-					if (W_LumpExists(nametag))
-						description[i].namepic = W_CachePatchName(nametag, PU_CACHE);
+					if (description[i].nametag[0])
+					{
+						const char *nametag = description[i].nametag;
+						description[i].namepic = NULL;
+						if (W_LumpExists(nametag))
+							description[i].namepic = W_CachePatchName(nametag, PU_CACHE);
+					}
 				}
+				// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 			}
-			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 		}
 	}
 
-	if ((firstvalid != 255)
-		&& !(mapheaderinfo[startmap-1]
-			&& (mapheaderinfo[startmap-1]->forcecharacter[0] != '\0')
-			)
-		)
+	if (firstvalid != 255)
 	{ // One last bit of order we can't do in the iteration above.
 		description[firstvalid].prev = lastvalid;
 		description[lastvalid].next = firstvalid;
 	}
-	else // We're being forced into a specific character, so might as well.
+	else // We're being forced into a specific character, so might as well just skip it.
 	{
-		SP_PlayerMenu[0].status |= IT_DYBIGSPACE; // This is a dummy flag hack to make a non-IT_CALL character in slot 0 not softlock the game.
-		M_ChoosePlayer(0);
+		M_ChoosePlayer(-1);
 		return;
 	}
 
@@ -8334,30 +8384,34 @@ static void M_DrawSetupChoosePlayerMenu(void)
 static void M_ChoosePlayer(INT32 choice)
 {
 	boolean ultmode = (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
+	UINT8 skinnum;
 
 	// skip this if forcecharacter or no characters available
-	if (!(SP_PlayerMenu[0].status & IT_DYBIGSPACE))
+	if (choice == -1)
 	{
-		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
+		skinnum = botskin = 0;
+		botingame = false;
+	}
+	// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
+	else
+	{
 		char_scroll = 0; // finish scrolling the menu
 		M_DrawSetupChoosePlayerMenu(); // draw the finally selected character one last time for the fadeout
 		// Is this a hack?
 		charseltimer = 0;
-	}
-	M_ClearMenus(true);
 
-	if (description[choice].skinnum[1] != -1) {
-		// this character has a second skin
-		botingame = true;
-		botskin = (UINT8)(description[choice].skinnum[1]+1);
-		botcolor = skins[description[choice].skinnum[1]].prefcolor;
+		skinnum = description[choice].skinnum[0];
+
+		if ((botingame = (description[choice].skinnum[1] != -1))) {
+			// this character has a second skin
+			botskin = (UINT8)(description[choice].skinnum[1]+1);
+			botcolor = skins[description[choice].skinnum[1]].prefcolor;
+		}
+		else
+			botskin = botcolor = 0;
 	}
-	else
-	{
-		botingame = false;
-		botskin = 0;
-		botcolor = 0;
-	}
+
+	M_ClearMenus(true);
 
 	if (startmap != spstage_start)
 		cursaveslot = 0;
@@ -8365,7 +8419,7 @@ static void M_ChoosePlayer(INT32 choice)
 	//lastmapsaved = 0;
 	gamecomplete = false;
 
-	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), (UINT8)description[choice].skinnum[0], false, fromlevelselect);
+	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
 
 	if (levelselect.rows)
@@ -8726,6 +8780,10 @@ void M_DrawTimeAttackMenu(void)
 		lumpnum_t lumpnum;
 		char beststr[40];
 		char reqscore[40], reqtime[40], reqrings[40];
+
+		strcpy(reqscore, "\0");
+		strcpy(reqtime, "\0");
+		strcpy(reqrings, "\0");
 
 		M_DrawLevelPlatterHeader(32-lsheadingheight/2, cv_nextmap.string, true, false);
 
