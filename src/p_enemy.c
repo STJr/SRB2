@@ -129,6 +129,7 @@ void A_FishJump(mobj_t *actor);
 void A_ThrownRing(mobj_t *actor);
 void A_SetSolidSteam(mobj_t *actor);
 void A_UnsetSolidSteam(mobj_t *actor);
+void A_SignSpin(mobj_t *actor);
 void A_SignPlayer(mobj_t *actor);
 void A_OverlayThink(mobj_t *actor);
 void A_JetChase(mobj_t *actor);
@@ -3930,11 +3931,15 @@ void A_BossDeath(mobj_t *mo)
 		{
 			// Touching the egg trap button calls P_DoPlayerExit, which calls P_RestoreMusic.
 			// So just park ourselves in the mapmus variables.
-			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7);
-			strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
-			mapmusname[6] = 0;
-			mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
-			mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
+			// But don't change the mapmus variables if they were modified from their level header values (e.g., TUNES).
+			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, S_MusicName(), 7);
+			if (!strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7))
+			{
+				strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
+				mapmusname[6] = 0;
+				mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
+				mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
+			}
 
 			// don't change if we're in another tune
 			// but in case we're in jingle, use our parked mapmus variables so the correct track restores
@@ -4759,7 +4764,7 @@ void A_DropMine(mobj_t *actor)
 // Description: Makes the stupid harmless fish in Greenflower Zone jump.
 //
 // var1 = Jump strength (in FRACBITS), if specified. Otherwise, uses the angle value.
-// var2 = unused
+// var2 = Trail object to spawn, if desired.
 //
 void A_FishJump(mobj_t *actor)
 {
@@ -4772,8 +4777,17 @@ void A_FishJump(mobj_t *actor)
 
 	if (locvar2)
 	{
-		fixed_t rad = actor->radius>>FRACBITS;
-		P_SpawnMobjFromMobj(actor, P_RandomRange(rad, -rad)<<FRACBITS, P_RandomRange(rad, -rad)<<FRACBITS, 0, (mobjtype_t)locvar2);
+		UINT8 i;
+		// Don't spawn trail unless a player is nearby.
+		for (i = 0; i < MAXPLAYERS; ++i)
+			if (playeringame[i] && players[i].mo
+				&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed))
+				break; // Stop looking.
+		if (i < MAXPLAYERS)
+		{
+			fixed_t rad = actor->radius>>FRACBITS;
+			P_SpawnMobjFromMobj(actor, P_RandomRange(rad, -rad)<<FRACBITS, P_RandomRange(rad, -rad)<<FRACBITS, 0, (mobjtype_t)locvar2);
+		}
 	}
 
 	if ((actor->z <= actor->floorz) || (actor->z <= actor->watertop - FixedMul((64 << FRACBITS), actor->scale)))
@@ -5006,59 +5020,186 @@ void A_UnsetSolidSteam(mobj_t *actor)
 	actor->flags |= MF_NOCLIP;
 }
 
+// Function: A_SignSpin
+//
+// Description: Spins a signpost until it hits the ground and reaches its mapthing's angle.
+//
+// var1 = degrees to rotate object (must be positive, because I'm lazy)
+// var2 = unused
+//
+void A_SignSpin(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	INT16 i;
+	angle_t rotateangle = FixedAngle(locvar1 << FRACBITS);
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SignSpin", actor))
+		return;
+#endif
+
+	if (P_IsObjectOnGround(actor) && P_MobjFlip(actor) * actor->momz <= 0)
+	{
+		if (actor->spawnpoint)
+		{
+			angle_t mapangle = FixedAngle(actor->spawnpoint->angle << FRACBITS);
+			angle_t diff = mapangle - actor->angle;
+			if (diff < ANG2)
+			{
+				actor->angle = mapangle;
+				P_SetMobjState(actor, actor->info->deathstate);
+				return;
+			}
+			if ((statenum_t)(actor->state-states) != actor->info->painstate)
+				P_SetMobjState(actor, actor->info->painstate);
+			actor->movedir = min((mapangle - actor->angle) >> 2, actor->movedir);
+		}
+		else // no mapthing? just finish in your current angle
+		{
+			P_SetMobjState(actor, locvar2);
+			return;
+		}
+	}
+	else
+	{
+		actor->movedir = rotateangle;
+	}
+	actor->angle += actor->movedir;
+	if (actor->tracer == NULL || P_MobjWasRemoved(actor->tracer)) return;
+	for (i = -1; i < 2; i += 2)
+	{
+		P_SpawnMobjFromMobj(actor,
+			P_ReturnThrustX(actor, actor->tracer->angle, i * actor->radius),
+			P_ReturnThrustY(actor, actor->tracer->angle, i * actor->radius),
+			(actor->eflags & MFE_VERTICALFLIP) ? 0 : actor->height,
+			actor->info->painchance)->destscale >>= 1;
+	}
+}
+
 // Function: A_SignPlayer
 //
 // Description: Changes the state of a level end sign to reflect the player that hit it.
+//              Also used to display Eggman or the skin roulette whilst spinning.
 //
-// var1 = unused
-// var2 = unused
+// var1 = number of skin to display (e.g. 2 = Knuckles; special cases: -1 = target's skin, -2 = skin roulette, -3 = Eggman)
+// var2 = custom sign color, if desired.
 //
 void A_SignPlayer(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	skin_t *skin = NULL;
 	mobj_t *ov;
-	skin_t *skin;
+	UINT8 facecolor, signcolor = (UINT8)locvar2;
+	UINT32 signframe = states[actor->info->raisestate].frame;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SignPlayer", actor))
 		return;
 #endif
-	if (!actor->target)
+
+	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins)
 		return;
 
-	if (!actor->target->player)
-		return;
-
-	skin = &skins[actor->target->player->skin];
-
-	if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
+	// if no face overlay, spawn one
+	if (actor->tracer->tracer == NULL || P_MobjWasRemoved(actor->tracer->tracer))
 	{
-		actor->color = skin->prefoppositecolor;
-		/*
-		If you're here from the comment above Color_Opposite,
-		the following line is the one which is dependent on the
-		array being symmetrical. It gets the opposite of the
-		opposite of your desired colour just so it can get the
-		brightness frame for the End Sign. It's not a great
-		design choice, but it's constant time array access and
-		the idea that the colours should be OPPOSITES is kind
-		of in the name. If you have a better idea, feel free
-		to let me know. ~toast 2016/07/20
-		*/
-		actor->frame += (15 - Color_Opposite[Color_Opposite[skin->prefoppositecolor - 1][0] - 1][1]);
-	}
-	else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
-	{
-		actor->color = Color_Opposite[actor->target->player->skincolor - 1][0];
-		actor->frame += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
-	}
-
-	if (skin->sprites[SPR2_SIGN].numframes)
-	{
-		// spawn an overlay of the player's face.
 		ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
-		P_SetTarget(&ov->target, actor);
-		ov->color = actor->target->player->skincolor;
+		P_SetTarget(&ov->target, actor->tracer);
+		P_SetTarget(&actor->tracer->tracer, ov);
+	}
+	else
+		ov = actor->tracer->tracer;
+
+	if (locvar1 == -1) // set to target's skin
+	{
+		if (!actor->target)
+			return;
+
+		if (!actor->target->player)
+			return;
+
+		skin = &skins[actor->target->player->skin];
+		facecolor = actor->target->player->skincolor;
+
+		if (signcolor)
+			;
+		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
+		{
+			signcolor = skin->prefoppositecolor;
+			/*
+			If you're here from the comment above Color_Opposite,
+			the following line is the one which is dependent on the
+			array being symmetrical. It gets the opposite of the
+			opposite of your desired colour just so it can get the
+			brightness frame for the End Sign. It's not a great
+			design choice, but it's constant time array access and
+			the idea that the colours should be OPPOSITES is kind
+			of in the name. If you have a better idea, feel free
+			to let me know. ~toast 2016/07/20
+			*/
+			signframe += (15 - Color_Opposite[Color_Opposite[skin->prefoppositecolor - 1][0] - 1][1]);
+		}
+		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
+		{
+			signcolor = Color_Opposite[actor->target->player->skincolor - 1][0];
+			signframe += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
+		}
+		else
+			signcolor = SKINCOLOR_NONE;
+	}
+	else if (locvar1 != -3) // set to a defined skin
+	{
+		// I turned this function into a fucking mess. I'm so sorry. -Lach
+		if (locvar1 == -2) // next skin
+		{
+			if (ov->skin == NULL) // pick a random skin to start with!
+				skin = &skins[P_RandomKey(numskins)];
+			else // otherwise, advance 1 skin
+			{
+				UINT8 skinnum = (skin_t*)ov->skin-skins;
+				player_t *player = actor->target ? actor->target->player : NULL;
+				while ((skinnum = (skinnum + 1) % numskins) && (player ? !R_SkinUsable(player-players, skinnum) : skins[skinnum].availability > 0));
+				skin = &skins[skinnum];
+			}
+		}
+		else // specific skin
+		{
+			skin = &skins[locvar1];
+		}
+
+		facecolor = skin->prefcolor;
+		if (signcolor)
+			;
+		else if (skin->prefoppositecolor)
+		{
+			signcolor = skin->prefoppositecolor;
+		}
+		else
+		{
+			signcolor = Color_Opposite[facecolor - 1][0];
+		}
+		signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+	}
+
+	if (skin != NULL && skin->sprites[SPR2_SIGN].numframes) // player face
+	{
+		ov->color = facecolor;
 		ov->skin = skin;
 		P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+		actor->tracer->color = signcolor;
+		actor->tracer->frame = signframe;
+	}
+	else // Eggman face
+	{
+		ov->color = SKINCOLOR_NONE;
+		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
+		if (signcolor)
+			actor->tracer->color = signcolor;
+		else
+			actor->tracer->color = signcolor = SKINCOLOR_CARBON;
+		actor->tracer->frame = signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
 	}
 }
 
@@ -5106,7 +5247,7 @@ void A_OverlayThink(mobj_t *actor)
 		actor->z = actor->target->z + actor->target->height - mobjinfo[actor->type].height  - ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
 	else
 		actor->z = actor->target->z + ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
-	actor->angle = actor->target->angle;
+	actor->angle = actor->target->angle + actor->movedir;
 	actor->eflags = actor->target->eflags;
 
 	actor->momx = actor->target->momx;
@@ -14025,7 +14166,7 @@ void A_LavafallRocks(mobj_t *actor)
 	// Don't spawn rocks unless a player is relatively close by.
 	for (i = 0; i < MAXPLAYERS; ++i)
 		if (playeringame[i] && players[i].mo
-			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600 << FRACBITS))
+			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed >> 1))
 			break; // Stop looking.
 
 	if (i < MAXPLAYERS)
@@ -14048,6 +14189,7 @@ void A_LavafallRocks(mobj_t *actor)
 void A_LavafallLava(mobj_t *actor)
 {
 	mobj_t *lavafall;
+	UINT8 i;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_LavafallLava", actor))
@@ -14055,6 +14197,15 @@ void A_LavafallLava(mobj_t *actor)
 #endif
 
 	if ((40 - actor->fuse) % (2*(actor->scale >> FRACBITS)))
+		return;
+
+	// Don't spawn lava unless a player is nearby.
+	for (i = 0; i < MAXPLAYERS; ++i)
+		if (playeringame[i] && players[i].mo
+			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed))
+			break; // Stop looking.
+
+	if (i >= MAXPLAYERS)
 		return;
 
 	lavafall = P_SpawnMobjFromMobj(actor, 0, 0, -8*FRACUNIT, MT_LAVAFALL_LAVA);

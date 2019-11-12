@@ -1565,22 +1565,22 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 	grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
 
-	if (grPatch->mipmap.grInfo.data)
+	if (grPatch->mipmap->grInfo.data)
 	{
 		if (tag == PU_CACHE)
 			tag = PU_HWRCACHE;
-		Z_ChangeTag(grPatch->mipmap.grInfo.data, tag);
+		Z_ChangeTag(grPatch->mipmap->grInfo.data, tag);
 	}
 	else
 	{
 		patch_t *ptr = NULL;
 
 		// Only load the patch if we haven't initialised the grPatch yet
-		if (grPatch->mipmap.width == 0)
+		if (grPatch->mipmap->width == 0)
 			ptr = W_CacheLumpNumPwad(grPatch->wadnum, grPatch->lumpnum, PU_STATIC);
 
 		// Run HWR_MakePatch in all cases, to recalculate some things
-		HWR_MakePatch(ptr, grPatch, &grPatch->mipmap, false);
+		HWR_MakePatch(ptr, grPatch, grPatch->mipmap, false);
 		Z_Free(ptr);
 	}
 
@@ -1679,12 +1679,12 @@ void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 	{
 		char actualmd5text[2*MD5_LEN+1];
 		PrintMD5String(wadfiles[wadfilenum]->md5sum, actualmd5text);
-#ifdef _DEBUG
+/*#ifdef _DEBUG
 		CONS_Printf
 #else
 		I_Error
 #endif
-			(M_GetText("File is corrupt or has been modified: %s (found md5: %s, wanted: %s)\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);
+			(M_GetText("File is corrupt or has been modified: %s (found md5: %s, wanted: %s)\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);*/
 	}
 #endif
 }

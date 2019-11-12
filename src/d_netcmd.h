@@ -113,6 +113,11 @@ extern consvar_t cv_skipmapcheck;
 
 extern consvar_t cv_sleep;
 
+extern char timedemo_name[256];
+extern boolean timedemo_csv;
+extern char timedemo_csv_id[256];
+extern boolean timedemo_quit;
+
 typedef enum
 {
 	XD_NAMEANDCOLOR = 1,
