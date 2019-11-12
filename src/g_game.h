@@ -175,7 +175,7 @@ void G_AddGhost(char *defdemoname);
 void G_DoPlayMetal(void);
 void G_DoneLevelLoad(void);
 void G_StopMetalDemo(void);
-ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void);
+ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 
