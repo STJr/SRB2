@@ -79,6 +79,28 @@ extern INT32 titlescrollyspeed;
 
 typedef enum
 {
+	TTMODE_NONE = 0,
+	TTMODE_OLD,
+	TTMODE_ALACROIX,
+	TTMODE_USER
+} ttmode_enum;
+
+#define TTMAX_ALACROIX 30 // max frames for SONIC typeface, plus one for NULL terminating entry
+#define TTMAX_USER 100
+
+extern ttmode_enum ttmode;
+extern UINT8 ttscale;
+// ttmode user vars
+extern char ttname[9];
+extern INT16 ttx;
+extern INT16 tty;
+extern INT16 ttloop;
+extern UINT16 tttics;
+extern boolean ttavailable[6];
+
+
+typedef enum
+{
 	TITLEMAP_OFF = 0,
 	TITLEMAP_LOADING,
 	TITLEMAP_RUNNING
@@ -89,11 +111,21 @@ typedef enum
 extern mobj_t *titlemapcameraref;
 extern char curbgname[9];
 extern SINT8 curfadevalue;
-extern boolean curhidepics;
 extern INT32 curbgcolor;
 extern INT32 curbgxspeed;
 extern INT32 curbgyspeed;
 extern boolean curbghide;
+extern boolean hidetitlemap;
+
+extern boolean curhidepics;
+extern ttmode_enum curttmode;
+extern UINT8 curttscale;
+// ttmode user vars
+extern char curttname[9];
+extern INT16 curttx;
+extern INT16 curtty;
+extern INT16 curttloop;
+extern UINT16 curtttics;
 
 #define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
 

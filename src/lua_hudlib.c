@@ -718,6 +718,68 @@ static int libd_drawString(lua_State *L)
 	return 0;
 }
 
+static int libd_drawNameTag(lua_State *L)
+{
+	INT32 x;
+	INT32 y;
+	const char *str;
+	INT32 flags;
+	UINT8 basecolor;
+	UINT8 outlinecolor;
+	UINT8 *basecolormap = NULL;
+	UINT8 *outlinecolormap = NULL;
+
+	HUDONLY
+
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	str = luaL_checkstring(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+	basecolor = luaL_optinteger(L, 5, SKINCOLOR_BLUE);
+	outlinecolor = luaL_optinteger(L, 6, SKINCOLOR_ORANGE);
+	if (basecolor != SKINCOLOR_NONE)
+		basecolormap = R_GetTranslationColormap(TC_DEFAULT, basecolor, GTC_CACHE);
+	if (outlinecolor != SKINCOLOR_NONE)
+		outlinecolormap = R_GetTranslationColormap(TC_DEFAULT, outlinecolor, GTC_CACHE);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+	V_DrawNameTag(x, y, flags, FRACUNIT, basecolormap, outlinecolormap, str);
+	return 0;
+}
+
+static int libd_drawScaledNameTag(lua_State *L)
+{
+	fixed_t x;
+	fixed_t y;
+	const char *str;
+	INT32 flags;
+	fixed_t scale;
+	UINT8 basecolor;
+	UINT8 outlinecolor;
+	UINT8 *basecolormap = NULL;
+	UINT8 *outlinecolormap = NULL;
+
+	HUDONLY
+
+	x = luaL_checkfixed(L, 1);
+	y = luaL_checkfixed(L, 2);
+	str = luaL_checkstring(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+	scale = luaL_optinteger(L, 5, FRACUNIT);
+	if (scale < 0)
+		return luaL_error(L, "negative scale");
+	basecolor = luaL_optinteger(L, 6, SKINCOLOR_BLUE);
+	outlinecolor = luaL_optinteger(L, 7, SKINCOLOR_ORANGE);
+	if (basecolor != SKINCOLOR_NONE)
+		basecolormap = R_GetTranslationColormap(TC_DEFAULT, basecolor, GTC_CACHE);
+	if (outlinecolor != SKINCOLOR_NONE)
+		outlinecolormap = R_GetTranslationColormap(TC_DEFAULT, outlinecolor, GTC_CACHE);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+	V_DrawNameTag(FixedInt(x), FixedInt(y), flags, scale, basecolormap, outlinecolormap, str);
+	return 0;
+}
+
 static int libd_stringWidth(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
@@ -737,6 +799,13 @@ static int libd_stringWidth(lua_State *L)
 		lua_pushinteger(L, V_ThinStringWidth(str, flags));
 		break;
 	}
+	return 1;
+}
+
+static int libd_nameTagWidth(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_NameTagWidth(luaL_checkstring(L, 1)));
 	return 1;
 }
 
@@ -918,9 +987,12 @@ static luaL_Reg lib_draw[] = {
 	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},
 	{"drawString", libd_drawString},
+	{"drawNameTag", libd_drawNameTag},
+	{"drawScaledNameTag", libd_drawScaledNameTag},
 	{"fadeScreen", libd_fadeScreen},
 	// misc
 	{"stringWidth", libd_stringWidth},
+	{"nameTagWidth", libd_nameTagWidth},
 	// m_random
 	{"RandomFixed",libd_RandomFixed},
 	{"RandomByte",libd_RandomByte},

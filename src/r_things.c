@@ -400,10 +400,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
 		if (start == INT16_MAX)
 			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
-		if (start == INT16_MAX)
-			start = 0; //let say S_START is lump 0
-		else
-			start++;   // just after S_START
 
 		end = W_CheckNumForNamePwad("S_END",wadnum,start);
 		if (end == INT16_MAX)
@@ -417,9 +413,16 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		return;
 	}
 
-	// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
-	if (start == 0 && W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != UINT16_MAX)
-		return;
+	if (start == INT16_MAX)
+	{
+		// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
+		if (W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != UINT16_MAX)
+			return;
+
+		start = 0; //let say S_START is lump 0
+	}
+	else
+		start++;   // just after S_START
 
 	if (end == INT16_MAX)
 	{
@@ -441,7 +444,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		{
 #ifdef HWRENDER
 			if (rendermode == render_opengl)
-				HWR_AddSpriteMD2(i);
+				HWR_AddSpriteModel(i);
 #endif
 			// if a new sprite was added (not just replaced)
 			addsprites++;
@@ -753,6 +756,16 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		dc_transmap = vis->transmap;
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		else if (!(vis->cut & SC_PRECIP)
+			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& (vis->mobj->player->charflags & SF_DASHMODE)
+			&& ((leveltime/2) & 1))
+		{
+			if (vis->mobj->player->charflags & SF_MACHINE)
+				dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			else
+				dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
@@ -774,6 +787,16 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// New colormap stuff for skins Tails 06-07-2002
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		else if (!(vis->cut & SC_PRECIP)
+			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& (vis->mobj->player->charflags & SF_DASHMODE)
+			&& ((leveltime/2) & 1))
+		{
+			if (vis->mobj->player->charflags & SF_MACHINE)
+				dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			else
+				dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
@@ -1230,7 +1253,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		else
 			range = 1;
 
-		scalestep = (yscale2 - yscale)/range;
+		scalestep = (yscale2 - yscale)/range ?: 1;
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -1637,7 +1660,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	mobj_t *thing;
 	precipmobj_t *precipthing; // Tails 08-25-2002
 	INT32 lightnum;
-	fixed_t approx_dist, limit_dist;
+	fixed_t approx_dist, limit_dist, hoop_limit_dist;
 
 	if (rendermode != render_soft)
 		return;
@@ -1668,7 +1691,9 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 	// Handle all things in sector.
 	// If a limit exists, handle things a tiny bit different.
-	if ((limit_dist = (fixed_t)((maptol & TOL_NIGHTS) ? cv_drawdist_nights.value : cv_drawdist.value) << FRACBITS))
+	limit_dist = (fixed_t)(cv_drawdist.value) << FRACBITS;
+	hoop_limit_dist = (fixed_t)(cv_drawdist_nights.value) << FRACBITS;
+	if (limit_dist || hoop_limit_dist)
 	{
 		for (thing = sec->thinglist; thing; thing = thing->snext)
 		{
@@ -1677,8 +1702,16 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
-			if (approx_dist > limit_dist)
-				continue;
+			if (thing->sprite == SPR_HOOP)
+			{
+				if (hoop_limit_dist && approx_dist > hoop_limit_dist)
+					continue;
+			}
+			else
+			{
+				if (limit_dist && approx_dist > limit_dist)
+					continue;
+			}
 
 			R_ProjectSprite(thing);
 		}
@@ -2527,7 +2560,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
 		return 0;
 
-	while (!(skin->sprites[spr2].numframes)
+	while (!skin->sprites[spr2].numframes
 		&& spr2 != SPR2_STND
 		&& ++i < 32) // recursion limiter
 	{
@@ -2668,6 +2701,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
 		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.
+		|| (metalrecording && skinnum == 5) // Force 3.
 		);
 }
 
@@ -2786,9 +2820,9 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	}
 
 	if (P_IsLocalPlayer(player))
-		CONS_Alert(CONS_WARNING, M_GetText("Requested skin not found\n"));
+		CONS_Alert(CONS_WARNING, M_GetText("Requested skin %d not found\n"), skinnum);
 	else if(server || IsPlayerAdmin(consoleplayer))
-		CONS_Alert(CONS_WARNING, "Player %d (%s) skin not found\n", playernum, player_names[playernum]);
+		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
 	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
 }
 
@@ -3156,7 +3190,7 @@ next_token:
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
-			HWR_AddPlayerMD2(numskins);
+			HWR_AddPlayerModel(numskins);
 #endif
 
 		numskins++;

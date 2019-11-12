@@ -37,6 +37,7 @@ extern boolean playeringame[MAXPLAYERS];
 
 // demoplaying back and demo recording
 extern boolean demoplayback, titledemo, demorecording, timingdemo;
+extern tic_t demostarttime;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;
@@ -58,6 +59,8 @@ extern INT32 pausedelay;
 extern boolean pausebreakkey;
 
 extern boolean promptactive;
+
+extern consvar_t cv_pauseifunfocused;
 
 // used in game menu
 extern consvar_t cv_tutorialprompt;
@@ -172,7 +175,7 @@ void G_AddGhost(char *defdemoname);
 void G_DoPlayMetal(void);
 void G_DoneLevelLoad(void);
 void G_StopMetalDemo(void);
-ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void);
+ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 

@@ -428,7 +428,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					  || special->state == &states[S_FANG_BOUNCE4]
 					  || special->state == &states[S_FANG_PINCHBOUNCE3]
 					  || special->state == &states[S_FANG_PINCHBOUNCE4])
-					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z - toucher->height/2)) > -(special->height/4))
+					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z - toucher->height/2)) > (special->height/4))
 					{
 						P_DamageMobj(toucher, special, special, 1, 0);
 						P_SetTarget(&special->tracer, toucher);
@@ -450,12 +450,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					}
 				}
 				break;
+			case MT_PYREFLY:
+				if (special->extravalue2 == 2 && P_DamageMobj(player->mo, special, special, 1, DMG_FIRE))
+					return;
 			default:
 				break;
 		}
 
 		if (P_PlayerCanDamage(player, special)) // Do you possess the ability to subdue the object?
 		{
+			if (special->type == MT_PTERABYTE && special->target == player->mo && special->extravalue1 == 1)
+				return; // Can't hurt a Pterabyte if it's trying to pick you up
+
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
 			{
 				if (elementalpierce == 2)
@@ -471,13 +477,29 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momy = -toucher->momy;
 				if (player->charability == CA_FLY && player->panim == PA_ABILITY)
 					toucher->momz = -toucher->momz/2;
+				else if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
+				{
+					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
+					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+					toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
+					toucher->momx = 7*toucher->momx>>3;
+					toucher->momy = 7*toucher->momy>>3;
+				}
+				else if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+					&& player->panim == PA_DASH)
+					P_DoPlayerPain(player, special, special);
 			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 			if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
 				P_TwinSpinRejuvenate(player, player->thokitem);
 		}
 		else
+		{
+			if (special->type == MT_PTERABYTE && special->target == player->mo)
+				return; // Don't hurt the player you're trying to grab
+
 			P_DamageMobj(toucher, special, special, 1, 0);
+		}
 
 		return;
 	}
@@ -611,7 +633,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (!(netgame || multiplayer))
 				{
 					player->continues += 1;
-					players->gotcontinue = true;
+					player->gotcontinue = true;
 					if (P_IsLocalPlayer(player))
 						S_StartSound(NULL, sfx_s3kac);
 					else
@@ -1074,7 +1096,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->exiting)
 				return;
 
-			if (player->bumpertime < TICRATE/4)
+			if (player->bumpertime <= (TICRATE/2)-5)
 			{
 				S_StartSound(toucher, special->info->seesound);
 				if (player->powers[pw_carry] == CR_NIGHTSMODE)
@@ -1482,8 +1504,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					P_SetMobjState(mo2, mo2->info->painstate);
 				}
 			}
-
-			S_StartSound(toucher, special->info->painsound);
 			return;
 
 		case MT_FAKEMOBILE:
@@ -1509,10 +1529,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momx = P_ReturnThrustX(special, angle, touchspeed);
 				toucher->momy = P_ReturnThrustY(special, angle, touchspeed);
 				toucher->momz = -toucher->momz;
-				if (player->pflags & PF_GLIDING)
+				if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
 				{
 					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+					toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
+					toucher->momx = 7*toucher->momx>>3;
+					toucher->momy = 7*toucher->momy>>3;
 				}
 				player->homing = 0;
 
@@ -1557,10 +1580,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					toucher->momx = P_ReturnThrustX(special, special->angle, touchspeed);
 					toucher->momy = P_ReturnThrustY(special, special->angle, touchspeed);
 					toucher->momz = -toucher->momz;
-					if (player->pflags & PF_GLIDING)
+					if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
 					{
 						player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 						P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+						toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
+						toucher->momx = 7*toucher->momx>>3;
+						toucher->momy = 7*toucher->momy>>3;
 					}
 					player->homing = 0;
 
@@ -1765,7 +1791,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_MINECARTSPAWNER:
-			if (!special->fuse || player->powers[pw_carry] != CR_MINECART)
+			if (!player->bot && (special->fuse < TICRATE || player->powers[pw_carry] != CR_MINECART))
 			{
 				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
 				P_SetTarget(&mcart->target, toucher);
@@ -1775,7 +1801,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_ResetPlayer(player);
 				player->pflags |= PF_JUMPDOWN;
 				player->powers[pw_carry] = CR_MINECART;
-				toucher->player->pflags &= ~PF_APPLYAUTOBRAKE;
+				player->pflags &= ~PF_APPLYAUTOBRAKE;
 				P_SetTarget(&toucher->tracer, mcart);
 				toucher->momx = toucher->momy = toucher->momz = 0;
 
@@ -2346,7 +2372,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	if (target->player && !target->player->spectator)
 	{
 		if (metalrecording) // Ack! Metal Sonic shouldn't die! Cut the tape, end recording!
-			G_StopMetalRecording();
+			G_StopMetalRecording(true);
 		if (gametype == GT_MATCH // note, no team match suicide penalty
 			&& ((target == source) || (source == NULL && inflictor == NULL) || (source && !source->player)))
 		{ // Suicide penalty
@@ -2456,6 +2482,30 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		P_UnsetThingPosition(target);
 		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
+		target->standingslope = NULL;
+		target->pmomz = 0;
+
+		if (target->player->powers[pw_super])
+		{
+			target->player->powers[pw_super] = 0;
+			if (P_IsLocalPlayer(target->player))
+			{
+				music_stack_noposition = true; // HACK: Do not reposition next music
+				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			}
+			P_RestoreMusic(target->player);
+
+			if (gametype != GT_COOP)
+			{
+				HU_SetCEchoFlags(0);
+				HU_SetCEchoDuration(5);
+				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[target->player-players]));
+			}
+		}
+
+		target->color = target->player->skincolor;
+		target->colorized = false;
+		G_GhostAddColor(GHC_NORMAL);
 
 		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
 			;
@@ -2567,7 +2617,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->fuse = target->info->damage;
 			break;
 
-		case MT_BUBBLEBUZZ:
+		case MT_BUGGLE:
 			if (inflictor && inflictor->player // did a player kill you? Spawn relative to the player so they're bound to get it
 			&& P_AproxDistance(inflictor->x - target->x, inflictor->y - target->y) <= inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale) // close enough?
 			&& inflictor->z <= target->z + target->height + FixedMul(8*FRACUNIT, inflictor->scale)
@@ -2597,6 +2647,14 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					P_RemoveMobj(chain);
 					chain = chainnext;
 				}
+				S_StopSound(target->tracer);
+				P_KillMobj(target->tracer, inflictor, source, damagetype);
+			}
+			break;
+
+		case MT_BANPYURA:
+			if (target->tracer)
+			{
 				S_StopSound(target->tracer);
 				P_KillMobj(target->tracer, inflictor, source, damagetype);
 			}
@@ -2704,6 +2762,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 						P_PlayDeathSound(target);
 				}
 			}
+			break;
+		case MT_METALSONIC_RACE:
+			target->fuse = TICRATE*3;
+			target->momx = target->momy = target->momz = 0;
+			P_SetObjectMomZ(target, 14*FRACUNIT, false);
+			target->flags = (target->flags & ~MF_NOGRAVITY)|(MF_NOCLIP|MF_NOCLIPTHING);
 			break;
 		default:
 			break;
@@ -3559,11 +3623,12 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			}
 			else if (inflictor && inflictor->flags & MF_MISSILE)
 				return false; // Metal Sonic walk through flame !!
-			else
+			else if (!player->powers[pw_flashing])
 			{ // Oh no! Metal Sonic is hit !!
 				P_ShieldDamage(player, inflictor, source, damage, damagetype);
 				return true;
 			}
+			return false;
 		}
 		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super]) // ignore bouncing & such in invulnerability
 		{

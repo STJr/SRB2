@@ -130,10 +130,11 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 #define ALLWHITE_TT_CACHE_INDEX (MAXSKINS + 3)
 #define RAINBOW_TT_CACHE_INDEX (MAXSKINS + 4)
 #define BLINK_TT_CACHE_INDEX (MAXSKINS + 5)
+#define DASHMODE_TT_CACHE_INDEX (MAXSKINS + 6)
 #define DEFAULT_STARTTRANSCOLOR 96
 #define NUM_PALETTE_ENTRIES 256
 
-static UINT8** translationtablecache[MAXSKINS + 6] = {NULL};
+static UINT8** translationtablecache[MAXSKINS + 7] = {NULL};
 
 const UINT8 Color_Index[MAXTRANSLATIONS-1][16] = {
 	// {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, // SKINCOLOR_NONE
@@ -566,8 +567,46 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		else if (skinnum == TC_METALSONIC)
 		{
 			for (i = 0; i < 6; i++)
+			{
 				dest_colormap[Color_Index[SKINCOLOR_BLUE-1][12-i]] = Color_Index[SKINCOLOR_BLUE-1][i];
+			}
 			dest_colormap[159] = dest_colormap[253] = dest_colormap[254] = 0;
+			for (i = 0; i < 16; i++)
+				dest_colormap[96+i] = dest_colormap[Color_Index[SKINCOLOR_COBALT-1][i]];
+		}
+		else if (skinnum == TC_DASHMODE) // This is a long one, because MotorRoach basically hand-picked the indices
+		{
+			// greens -> ketchups
+			dest_colormap[96] = dest_colormap[97] = 48;
+			dest_colormap[98] = 49;
+			dest_colormap[99] = 51;
+			dest_colormap[100] = 52;
+			dest_colormap[101] = dest_colormap[102] = 54;
+			dest_colormap[103] = 34;
+			dest_colormap[104] = 37;
+			dest_colormap[105] = 39;
+			dest_colormap[106] = 41;
+			for (i = 0; i < 5; i++)
+				dest_colormap[107 + i] = 43 + i;
+
+			// reds -> steel blues
+			dest_colormap[32] = 146;
+			dest_colormap[33] = 147;
+			dest_colormap[34] = dest_colormap[35] = 170;
+			dest_colormap[36] = 171;
+			dest_colormap[37] = dest_colormap[38] = 172;
+			dest_colormap[39] = dest_colormap[40] = dest_colormap[41] = 173;
+			dest_colormap[42] = dest_colormap[43] = dest_colormap[44] = 174;
+			dest_colormap[45] = dest_colormap[46] = dest_colormap[47] = 175;
+			dest_colormap[71] = 139;
+
+			// steel blues -> oranges
+			dest_colormap[170] = 52;
+			dest_colormap[171] = 54;
+			dest_colormap[172] = 56;
+			dest_colormap[173] = 42;
+			dest_colormap[174] = 45;
+			dest_colormap[175] = 47;
 		}
 		return;
 	}
@@ -628,6 +667,7 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolors_t color, UINT8 flags)
 		case TC_ALLWHITE:   skintableindex = ALLWHITE_TT_CACHE_INDEX; break;
 		case TC_RAINBOW:    skintableindex = RAINBOW_TT_CACHE_INDEX; break;
 		case TC_BLINK:      skintableindex = BLINK_TT_CACHE_INDEX; break;
+		case TC_DASHMODE:   skintableindex = DASHMODE_TT_CACHE_INDEX; break;
 		     default:       skintableindex = skinnum; break;
 	}
 

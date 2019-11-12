@@ -647,7 +647,7 @@ void HWR_DrawFlatFill (INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum
 	v[0].tow = v[1].tow = (float)((y & flatflag)/dflatsize);
 	v[2].tow = v[3].tow = (float)(v[0].tow + h/dflatsize);
 
-	HWR_GetFlat(flatlumpnum);
+	HWR_LiterallyGetFlat(flatlumpnum);
 
 	//Hurdler: Boris, the same comment as above... but maybe for pics
 	// it not a problem since they don't have any transparent pixel

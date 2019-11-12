@@ -247,7 +247,11 @@ void Z_Free(void *ptr)
 static void *xm(size_t size)
 {
 	const size_t padedsize = size+sizeof (size_t);
-	void *p = malloc(padedsize);
+	void *p;
+
+	if (padedsize < size)/* overflow check */
+		I_Error("You are allocating memory too large!");
+	p = malloc(padedsize);
 
 	if (p == NULL)
 	{
@@ -294,6 +298,9 @@ void *Z_MallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits)
 #ifdef ZDEBUG2
 	CONS_Debug(DBG_MEMORY, "Z_Malloc %s:%d\n", file, line);
 #endif
+
+	if (blocksize < size)/* overflow check */
+		I_Error("You are allocating memory too large!");
 
 	block = xm(sizeof *block);
 #ifdef HAVE_VALGRIND

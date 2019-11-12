@@ -64,6 +64,8 @@ static void ModFilter_OnChange(void);
 
 static lumpnum_t S_GetMusicLumpNum(const char *mname);
 
+static boolean S_CheckQueue(void);
+
 // commands for music and sound servers
 #ifdef MUSSERV
 consvar_t musserver_cmd = {"musserver_cmd", "musserver", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -116,6 +118,10 @@ consvar_t cv_resetmusicbyheader = {"resetmusicbyheader", "Yes", CV_SAVE, CV_YesN
 consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gamemidimusic = {"midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+// Window focus sound sytem toggles
+consvar_t cv_playmusicifunfocused = {"playmusicifunfocused", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_playsoundsifunfocused = {"playsoundsifunfocused", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef HAVE_OPENMPT
 static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
@@ -278,6 +284,8 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&cv_samplerate);
 	CV_RegisterVar(&cv_resetmusic);
 	CV_RegisterVar(&cv_resetmusicbyheader);
+	CV_RegisterVar(&cv_playsoundsifunfocused);
+	CV_RegisterVar(&cv_playmusicifunfocused);
 	CV_RegisterVar(&cv_gamesounds);
 	CV_RegisterVar(&cv_gamedigimusic);
 	CV_RegisterVar(&cv_gamemidimusic);
@@ -371,6 +379,18 @@ lumpnum_t S_GetSfxLumpNum(sfxinfo_t *sfx)
 		return sfxlump;
 
 	return W_GetNumForName("dsthok");
+}
+
+//
+// Sound Status
+//
+
+boolean S_SoundDisabled(void)
+{
+	return (
+			sound_disabled ||
+			( window_notinfocus && ! cv_playsoundsifunfocused.value )
+	);
 }
 
 // Stop all sounds, load level info, THEN start sounds.
@@ -540,7 +560,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 	mobj_t *listenmobj = players[displayplayer].mo;
 	mobj_t *listenmobj2 = NULL;
 
-	if (sound_disabled || !sound_started)
+	if (S_SoundDisabled() || !sound_started)
 		return;
 
 	// Don't want a sound? Okay then...
@@ -730,7 +750,7 @@ dontplay:
 
 void S_StartSound(const void *origin, sfxenum_t sfx_id)
 {
-	if (sound_disabled)
+	if (S_SoundDisabled())
 		return;
 
 	if (mariomode) // Sounds change in Mario mode!
@@ -1434,6 +1454,13 @@ boolean S_MusicPaused(void)
 	return I_SongPaused();
 }
 
+boolean S_MusicNotInFocus(void)
+{
+	return (
+			( window_notinfocus && ! cv_playmusicifunfocused.value )
+	);
+}
+
 musictype_t S_MusicType(void)
 {
 	return I_SongType();
@@ -1588,13 +1615,14 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 	if (!music_stacks)
 	{
 		music_stacks = Z_Calloc(sizeof (*mst), PU_MUSIC, NULL);
-		strncpy(music_stacks->musname, (status == JT_MASTER ? mname : mapmusname), 7);
-		music_stacks->musflags = (status == JT_MASTER ? mflags : mapmusflags);
-		music_stacks->looping = (status == JT_MASTER ? looping : true);
-		music_stacks->position = (status == JT_MASTER ? position : S_GetMusicPosition());
+		strncpy(music_stacks->musname, (status == JT_MASTER ? mname : (S_CheckQueue() ? queue_name : mapmusname)), 7);
+		music_stacks->musflags = (status == JT_MASTER ? mflags : (S_CheckQueue() ? queue_flags : mapmusflags));
+		music_stacks->looping = (status == JT_MASTER ? looping : (S_CheckQueue() ? queue_looping : true));
+		music_stacks->position = (status == JT_MASTER ? position : (S_CheckQueue() ? queue_position : S_GetMusicPosition()));
 		music_stacks->tic = gametic;
 		music_stacks->status = JT_MASTER;
 		music_stacks->mlumpnum = S_GetMusicLumpNum(music_stacks->musname);
+		music_stacks->noposition = S_CheckQueue();
 
 		if (status == JT_MASTER)
 			return; // we just added the user's entry here
@@ -1613,6 +1641,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 	new_mst->tic = gametic;
 	new_mst->status = status;
 	new_mst->mlumpnum = S_GetMusicLumpNum(new_mst->musname);
+	new_mst->noposition = false;
 
 	mst->next = new_mst;
 	new_mst->prev = mst;
@@ -1720,11 +1749,23 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		entry->tic = gametic;
 		entry->status = JT_MASTER;
 		entry->mlumpnum = S_GetMusicLumpNum(entry->musname);
+		entry->noposition = false; // don't set this until we do the mapmuschanged check, below. Else, this breaks some resumes.
 	}
 
 	if (entry->status == JT_MASTER)
 	{
 		mapmuschanged = strnicmp(entry->musname, mapmusname, 7);
+		if (mapmuschanged)
+		{
+			strncpy(entry->musname, mapmusname, 7);
+			entry->musflags = mapmusflags;
+			entry->looping = true;
+			entry->position = mapmusposition;
+			entry->tic = gametic;
+			entry->status = JT_MASTER;
+			entry->mlumpnum = S_GetMusicLumpNum(entry->musname);
+			entry->noposition = true;
+		}
 		S_ResetMusicStack();
 	}
 	else if (!entry->status)
@@ -1733,7 +1774,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		return false;
 	}
 
-	if (!mapmuschanged && strncmp(entry->musname, S_MusicName(), 7)) // don't restart music if we're already playing it
+	if (strncmp(entry->musname, S_MusicName(), 7)) // don't restart music if we're already playing it
 	{
 		if (music_stack_fadeout)
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, music_stack_fadeout, 0);
@@ -1741,7 +1782,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		{
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, 0, music_stack_fadein);
 
-			if (!music_stack_noposition) // HACK: Global boolean to toggle position resuming, e.g., de-superize
+			if (!entry->noposition && !music_stack_noposition) // HACK: Global boolean to toggle position resuming, e.g., de-superize
 			{
 				UINT32 poslapse = 0;
 
@@ -1867,6 +1908,10 @@ static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 	}
 
 	S_InitMusicVolume(); // switch between digi and sequence volume
+
+	if (S_MusicNotInFocus())
+		S_PauseAudio();
+
 	return true;
 }
 
@@ -1877,6 +1922,11 @@ static void S_QueueMusic(const char *mmusic, UINT16 mflags, boolean looping, UIN
 	queue_looping = looping;
 	queue_position = position;
 	queue_fadeinms = fadeinms;
+}
+
+static boolean S_CheckQueue(void)
+{
+	return queue_name[0];
 }
 
 static void S_ClearQueue(void)
@@ -2009,6 +2059,9 @@ void S_PauseAudio(void)
 
 void S_ResumeAudio(void)
 {
+	if (S_MusicNotInFocus())
+		return;
+
 	if (I_SongPlaying() && I_SongPaused())
 		I_ResumeSong();
 
@@ -2202,7 +2255,7 @@ static void Command_RestartAudio_f(void)
 
 void GameSounds_OnChange(void)
 {
-	if (M_CheckParm("-nosound"))
+	if (M_CheckParm("-nosound") || M_CheckParm("-noaudio"))
 		return;
 
 	if (sound_disabled)
@@ -2220,7 +2273,7 @@ void GameSounds_OnChange(void)
 
 void GameDigiMusic_OnChange(void)
 {
-	if (M_CheckParm("-nomusic"))
+	if (M_CheckParm("-nomusic") || M_CheckParm("-noaudio"))
 		return;
 	else if (M_CheckParm("-nodigmusic"))
 		return;
@@ -2262,7 +2315,7 @@ void GameDigiMusic_OnChange(void)
 
 void GameMIDIMusic_OnChange(void)
 {
-	if (M_CheckParm("-nomusic"))
+	if (M_CheckParm("-nomusic") || M_CheckParm("-noaudio"))
 		return;
 	else if (M_CheckParm("-nomidimusic"))
 		return;
@@ -2279,7 +2332,7 @@ void GameMIDIMusic_OnChange(void)
 	else
 	{
 		midi_disabled = true;
-		if (S_MusicType() == MU_MID)
+		if (S_MusicType() == MU_MID || S_MusicType() == MU_MID_EX)
 		{
 			if (digital_disabled)
 				S_StopMusic();

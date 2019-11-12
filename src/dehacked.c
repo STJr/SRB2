@@ -313,7 +313,13 @@ static boolean findFreeSlot(INT32 *num)
 	if (*num >= MAXSKINS)
 		return false;
 
-	description[*num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
+	// Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
+	description[*num].picname[0] = '\0';
+	description[*num].nametag[0] = '\0';
+	description[*num].displayname[0] = '\0';
+	description[*num].oppositecolor = SKINCOLOR_NONE;
+	description[*num].tagtextcolor = SKINCOLOR_NONE;
+	description[*num].tagoutlinecolor = SKINCOLOR_NONE;
 
 	// Found one! ^_^
 	return (description[*num].used = true);
@@ -326,8 +332,15 @@ static void readPlayer(MYFILE *f, INT32 num)
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
 	char *word2;
+	char *displayname = ZZ_Alloc(MAXLINELEN+1);
 	INT32 i;
 	boolean slotfound = false;
+
+	#define SLOTFOUND \
+		if (!slotfound && (slotfound = findFreeSlot(&num)) == false) \
+			goto done;
+
+	displayname[MAXLINELEN] = '\0';
 
 	do
 	{
@@ -335,6 +348,17 @@ static void readPlayer(MYFILE *f, INT32 num)
 		{
 			if (s[0] == '\n')
 				break;
+
+			for (i = 0; i < MAXLINELEN-3; i++)
+			{
+				char *tmp;
+				if (s[i] == '=')
+				{
+					tmp = &s[i+2];
+					strncpy(displayname, tmp, SKINNAMESIZE);
+					break;
+				}
+			}
 
 			word = strtok(s, " ");
 			if (word)
@@ -346,8 +370,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			{
 				char *playertext = NULL;
 
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
+				SLOTFOUND
 
 				for (i = 0; i < MAXLINELEN-3; i++)
 				{
@@ -395,10 +418,53 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "PICNAME"))
 			{
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
-
+				SLOTFOUND
 				strncpy(description[num].picname, word2, 8);
+			}
+			// new character select
+			else if (fastcmp(word, "DISPLAYNAME"))
+			{
+				SLOTFOUND
+				// replace '#' with line breaks
+				// (also remove any '\n')
+				{
+					char *cur = NULL;
+
+					// remove '\n'
+					cur = strchr(displayname, '\n');
+					if (cur)
+						*cur = '\0';
+
+					// turn '#' into '\n'
+					cur = strchr(displayname, '#');
+					while (cur)
+					{
+						*cur = '\n';
+						cur = strchr(cur, '#');
+					}
+				}
+				// copy final string
+				strncpy(description[num].displayname, displayname, SKINNAMESIZE);
+			}
+			else if (fastcmp(word, "OPPOSITECOLOR") || fastcmp(word, "OPPOSITECOLOUR"))
+			{
+				SLOTFOUND
+				description[num].oppositecolor = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "NAMETAG") || fastcmp(word, "TAGNAME"))
+			{
+				SLOTFOUND
+				strncpy(description[num].nametag, word2, 8);
+			}
+			else if (fastcmp(word, "TAGTEXTCOLOR") || fastcmp(word, "TAGTEXTCOLOUR"))
+			{
+				SLOTFOUND
+				description[num].tagtextcolor = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "TAGOUTLINECOLOR") || fastcmp(word, "TAGOUTLINECOLOUR"))
+			{
+				SLOTFOUND
+				description[num].tagoutlinecolor = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "STATUS"))
 			{
@@ -417,9 +483,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "SKINNAME"))
 			{
 				// Send to free slot.
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
-
+				SLOTFOUND
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
 			}
@@ -427,8 +491,9 @@ static void readPlayer(MYFILE *f, INT32 num)
 				deh_warning("readPlayer %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
-
+	#undef SLOTFOUND
 done:
+	Z_Free(displayname);
 	Z_Free(s);
 }
 
@@ -2024,10 +2089,57 @@ static void readmenu(MYFILE *f, INT32 num)
 				menupres[num].bgcolor = get_number(word2);
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS") || fastcmp(word, "TITLEPICSHIDE"))
 			{
 				// true by default, except MM_MAIN
 				menupres[num].hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSMODE"))
+			{
+				if (fastcmp(word2, "USER"))
+					menupres[num].ttmode = TTMODE_USER;
+				else if (fastcmp(word2, "ALACROIX"))
+					menupres[num].ttmode = TTMODE_ALACROIX;
+				else if (fastcmp(word2, "HIDE") || fastcmp(word2, "HIDDEN") || fastcmp(word2, "NONE"))
+				{
+					menupres[num].ttmode = TTMODE_USER;
+					menupres[num].ttname[0] = 0;
+					menupres[num].hidetitlepics = true;
+				}
+				else // if (fastcmp(word2, "OLD") || fastcmp(word2, "SSNTAILS"))
+					menupres[num].ttmode = TTMODE_OLD;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALE"))
+			{
+				// Don't handle Alacroix special case here; see Maincfg section.
+				menupres[num].ttscale = max(1, min(8, (UINT8)get_number(word2)));
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSNAME"))
+			{
+				strncpy(menupres[num].ttname, word2, 9);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSX"))
+			{
+				menupres[num].ttx = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSY"))
+			{
+				menupres[num].tty = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSLOOP"))
+			{
+				menupres[num].ttloop = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSTICS"))
+			{
+				menupres[num].tttics = (UINT16)get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED")
@@ -2243,6 +2355,7 @@ static actionpointer_t actionpointers[] =
 	{{A_ThrownRing},             "A_THROWNRING"},
 	{{A_SetSolidSteam},          "A_SETSOLIDSTEAM"},
 	{{A_UnsetSolidSteam},        "A_UNSETSOLIDSTEAM"},
+	{{A_SignSpin},               "S_SIGNSPIN"},
 	{{A_SignPlayer},             "A_SIGNPLAYER"},
 	{{A_OverlayThink},           "A_OVERLAYTHINK"},
 	{{A_JetChase},               "A_JETCHASE"},
@@ -2447,6 +2560,14 @@ static actionpointer_t actionpointers[] =
 	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
 	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
 	{{A_ModuloToState},          "A_MODULOTOSTATE"},
+	{{A_LavafallRocks},          "A_LAVAFALLROCKS"},
+	{{A_LavafallLava},           "A_LAVAFALLLAVA"},
+	{{A_FallingLavaCheck},       "A_FALLINGLAVACHECK"},
+	{{A_FireShrink},             "A_FIRESHRINK"},
+	{{A_SpawnPterabytes},        "A_SPAWNPTERABYTES"},
+	{{A_PterabyteHover},         "A_PTERABYTEHOVER"},
+	{{A_RolloutSpawn},           "A_ROLLOUTSPAWN"},
+	{{A_RolloutRock},            "A_ROLLOUTROCK"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -3419,9 +3540,76 @@ static void readmaincfg(MYFILE *f)
 				titlemap = (INT16)value;
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "HIDETITLEPICS"))
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "TITLEPICSHIDE"))
 			{
 				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSMODE"))
+			{
+				if (fastcmp(word2, "USER"))
+					ttmode = TTMODE_USER;
+				else if (fastcmp(word2, "ALACROIX"))
+					ttmode = TTMODE_ALACROIX;
+				else if (fastcmp(word2, "HIDE") || fastcmp(word2, "HIDDEN") || fastcmp(word2, "NONE"))
+				{
+					ttmode = TTMODE_USER;
+					ttname[0] = 0;
+					hidetitlepics = true;
+				}
+				else // if (fastcmp(word2, "OLD") || fastcmp(word2, "SSNTAILS"))
+					ttmode = TTMODE_OLD;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALE"))
+			{
+				ttscale = max(1, min(8, (UINT8)get_number(word2)));
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSSCALESAVAILABLE"))
+			{
+				// SPECIAL CASE for Alacroix: Comma-separated list of resolutions that are available
+				// for gfx loading.
+				ttavailable[0] = ttavailable[1] = ttavailable[2] = ttavailable[3] =\
+					ttavailable[4] = ttavailable[5] = false;
+
+				if (strstr(word2, "1") != NULL)
+					ttavailable[0] = true;
+				if (strstr(word2, "2") != NULL)
+					ttavailable[1] = true;
+				if (strstr(word2, "3") != NULL)
+					ttavailable[2] = true;
+				if (strstr(word2, "4") != NULL)
+					ttavailable[3] = true;
+				if (strstr(word2, "5") != NULL)
+					ttavailable[4] = true;
+				if (strstr(word2, "6") != NULL)
+					ttavailable[5] = true;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSNAME"))
+			{
+				strncpy(ttname, word2, 9);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSX"))
+			{
+				ttx = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSY"))
+			{
+				tty = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSLOOP"))
+			{
+				ttloop = (INT16)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEPICSTICS"))
+			{
+				tttics = (UINT16)get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED"))
@@ -4185,6 +4373,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// CA_GLIDEANDCLIMB
 	"S_PLAY_GLIDE",
+	"S_PLAY_GLIDE_LANDING",
 	"S_PLAY_CLING",
 	"S_PLAY_CLIMB",
 
@@ -4283,6 +4472,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TAILSOVERLAY_PAIN",
 	"S_TAILSOVERLAY_GASP",
 	"S_TAILSOVERLAY_EDGE",
+
+	// [:
+	"S_JETFUMEFLASH",
 
 	// Blue Crawla
 	"S_POSS_STND",
@@ -4431,6 +4623,21 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CRUSHCLAW_IN",
 	"S_CRUSHCLAW_WAIT",
 	"S_CRUSHCHAIN",
+
+	// Banpyura
+	"S_BANPYURA_ROAM1",
+	"S_BANPYURA_ROAM2",
+	"S_BANPYURA_ROAM3",
+	"S_BANPYURA_ROAM4",
+	"S_BANPYURA_ROAMPAUSE",
+	"S_CDIAG1",
+	"S_CDIAG2",
+	"S_CDIAG3",
+	"S_CDIAG4",
+	"S_CDIAG5",
+	"S_CDIAG6",
+	"S_CDIAG7",
+	"S_CDIAG8",
 
 	// Jet Jaw
 	"S_JETJAW_ROAM1",
@@ -4617,6 +4824,22 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CANARIVOREGAS_6",
 	"S_CANARIVOREGAS_7",
 	"S_CANARIVOREGAS_8",
+
+	// Pyre Fly
+	"S_PYREFLY_FLY",
+	"S_PYREFLY_BURN",
+	"S_PYREFIRE1",
+	"S_PYREFIRE2",
+
+	// Pterabyte
+	"S_PTERABYTESPAWNER",
+	"S_PTERABYTEWAYPOINT",
+	"S_PTERABYTE_FLY1",
+	"S_PTERABYTE_FLY2",
+	"S_PTERABYTE_FLY3",
+	"S_PTERABYTE_FLY4",
+	"S_PTERABYTE_SWOOPDOWN",
+	"S_PTERABYTE_SWOOPUP",
 
 	// Boss Explosion
 	"S_BOSSEXPLODE",
@@ -5152,25 +5375,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CYBRAKDEMONVILEEXPLOSION3",
 
 	// Metal Sonic (Race)
-	// S_PLAY_STND
-	"S_METALSONIC_STAND",
-	// S_PLAY_TAP1
-	"S_METALSONIC_WAIT1",
-	"S_METALSONIC_WAIT2",
-	// S_PLAY_WALK
-	"S_METALSONIC_WALK1",
-	"S_METALSONIC_WALK2",
-	"S_METALSONIC_WALK3",
-	"S_METALSONIC_WALK4",
-	"S_METALSONIC_WALK5",
-	"S_METALSONIC_WALK6",
-	"S_METALSONIC_WALK7",
-	"S_METALSONIC_WALK8",
-	// S_PLAY_SPD1
-	"S_METALSONIC_RUN1",
-	"S_METALSONIC_RUN2",
-	"S_METALSONIC_RUN3",
-	"S_METALSONIC_RUN4",
+	"S_METALSONIC_RACE",
 	// Metal Sonic (Battle)
 	"S_METALSONIC_FLOAT",
 	"S_METALSONIC_VECTOR",
@@ -5277,59 +5482,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BUBBLES4",
 
 	// Level End Sign
-	"S_SIGN1",
-	"S_SIGN2",
-	"S_SIGN3",
-	"S_SIGN4",
-	"S_SIGN5",
-	"S_SIGN6",
-	"S_SIGN7",
-	"S_SIGN8",
-	"S_SIGN9",
-	"S_SIGN10",
-	"S_SIGN11",
-	"S_SIGN12",
-	"S_SIGN13",
-	"S_SIGN14",
-	"S_SIGN15",
-	"S_SIGN16",
-	"S_SIGN17",
-	"S_SIGN18",
-	"S_SIGN19",
-	"S_SIGN20",
-	"S_SIGN21",
-	"S_SIGN22",
-	"S_SIGN23",
-	"S_SIGN24",
-	"S_SIGN25",
-	"S_SIGN26",
-	"S_SIGN27",
-	"S_SIGN28",
-	"S_SIGN29",
-	"S_SIGN30",
-	"S_SIGN31",
-	"S_SIGN32",
-	"S_SIGN33",
-	"S_SIGN34",
-	"S_SIGN35",
-	"S_SIGN36",
-	"S_SIGN37",
-	"S_SIGN38",
-	"S_SIGN39",
-	"S_SIGN40",
-	"S_SIGN41",
-	"S_SIGN42",
-	"S_SIGN43",
-	"S_SIGN44",
-	"S_SIGN45",
-	"S_SIGN46",
-	"S_SIGN47",
-	"S_SIGN48",
-	"S_SIGN49",
-	"S_SIGN50",
-	"S_SIGN51",
-	"S_SIGN52", // Eggman
-	"S_SIGN53",
+	"S_SIGN",
+	"S_SIGNSPIN1",
+	"S_SIGNSPIN2",
+	"S_SIGNSPIN3",
+	"S_SIGNSPIN4",
+	"S_SIGNSPIN5",
+	"S_SIGNSPIN6",
+	"S_SIGNPLAYER",
+	"S_SIGNSLOW",
+	"S_SIGNSTOP",
+	"S_SIGNBOARD",
+	"S_EGGMANSIGN",
 
 	// Spike Ball
 	"S_SPIKEBALL1",
@@ -5554,7 +5718,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARROW",
 	"S_ARROWBONK",
 
-	// Trapgoyle Demon fire
+	// Glaregoyle Demon fire
 	"S_DEMONFIRE",
 
 	// GFZ flowers
@@ -5861,7 +6025,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Saloon door
 	"S_SALOONDOOR",
-	"S_SALOONDOORTHINKER",
+	"S_SALOONDOORCENTER",
 
 	// Train cameo
 	"S_TRAINCAMEOSPAWNER_1",
@@ -5882,6 +6046,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEJETFLAME1",
 	"S_FLAMEJETFLAME2",
 	"S_FLAMEJETFLAME3",
+	"S_FLAMEJETFLAME4",
+	"S_FLAMEJETFLAME5",
+	"S_FLAMEJETFLAME6",
+	"S_FLAMEJETFLAME7",
+	"S_FLAMEJETFLAME8",
+	"S_FLAMEJETFLAME9",
 
 	// Spinning flame jets
 	"S_FJSPINAXISA1", // Counter-clockwise
@@ -5894,29 +6064,57 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEJETFLAMEB2",
 	"S_FLAMEJETFLAMEB3",
 
-	// Trapgoyles
-	"S_TRAPGOYLE",
-	"S_TRAPGOYLE_CHECK",
-	"S_TRAPGOYLE_FIRE1",
-	"S_TRAPGOYLE_FIRE2",
-	"S_TRAPGOYLE_FIRE3",
-	"S_TRAPGOYLEUP",
-	"S_TRAPGOYLEUP_CHECK",
-	"S_TRAPGOYLEUP_FIRE1",
-	"S_TRAPGOYLEUP_FIRE2",
-	"S_TRAPGOYLEUP_FIRE3",
-	"S_TRAPGOYLEDOWN",
-	"S_TRAPGOYLEDOWN_CHECK",
-	"S_TRAPGOYLEDOWN_FIRE1",
-	"S_TRAPGOYLEDOWN_FIRE2",
-	"S_TRAPGOYLEDOWN_FIRE3",
-	"S_TRAPGOYLELONG",
-	"S_TRAPGOYLELONG_CHECK",
-	"S_TRAPGOYLELONG_FIRE1",
-	"S_TRAPGOYLELONG_FIRE2",
-	"S_TRAPGOYLELONG_FIRE3",
-	"S_TRAPGOYLELONG_FIRE4",
-	"S_TRAPGOYLELONG_FIRE5",
+	// Lavafall
+	"S_LAVAFALL_DORMANT",
+	"S_LAVAFALL_TELL",
+	"S_LAVAFALL_SHOOT",
+	"S_LAVAFALL_LAVA1",
+	"S_LAVAFALL_LAVA2",
+	"S_LAVAFALL_LAVA3",
+	"S_LAVAFALLROCK",
+
+	// Rollout Rock
+	"S_ROLLOUTSPAWN",
+	"S_ROLLOUTROCK",
+
+	// RVZ scenery
+	"S_BIGFERNLEAF",
+	"S_BIGFERN1",
+	"S_BIGFERN2",
+	"S_JUNGLEPALM",
+	"S_TORCHFLOWER",
+	"S_WALLVINE_LONG",
+	"S_WALLVINE_SHORT",
+
+	// Glaregoyles
+	"S_GLAREGOYLE",
+	"S_GLAREGOYLE_CHARGE",
+	"S_GLAREGOYLE_BLINK",
+	"S_GLAREGOYLE_HOLD",
+	"S_GLAREGOYLE_FIRE",
+	"S_GLAREGOYLE_LOOP",
+	"S_GLAREGOYLE_COOLDOWN",
+	"S_GLAREGOYLEUP",
+	"S_GLAREGOYLEUP_CHARGE",
+	"S_GLAREGOYLEUP_BLINK",
+	"S_GLAREGOYLEUP_HOLD",
+	"S_GLAREGOYLEUP_FIRE",
+	"S_GLAREGOYLEUP_LOOP",
+	"S_GLAREGOYLEUP_COOLDOWN",
+	"S_GLAREGOYLEDOWN",
+	"S_GLAREGOYLEDOWN_CHARGE",
+	"S_GLAREGOYLEDOWN_BLINK",
+	"S_GLAREGOYLEDOWN_HOLD",
+	"S_GLAREGOYLEDOWN_FIRE",
+	"S_GLAREGOYLEDOWN_LOOP",
+	"S_GLAREGOYLEDOWN_COOLDOWN",
+	"S_GLAREGOYLELONG",
+	"S_GLAREGOYLELONG_CHARGE",
+	"S_GLAREGOYLELONG_BLINK",
+	"S_GLAREGOYLELONG_HOLD",
+	"S_GLAREGOYLELONG_FIRE",
+	"S_GLAREGOYLELONG_LOOP",
+	"S_GLAREGOYLELONG_COOLDOWN",
 
 	// ATZ's Red Crystal/Target
 	"S_TARGET_IDLE",
@@ -5924,6 +6122,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TARGET_HIT2",
 	"S_TARGET_RESPAWN",
 	"S_TARGET_ALLDONE",
+
+	// ATZ's green flame
+	"S_GREENFLAME",
+
+	// ATZ Blue Gargoyle
+	"S_BLUEGARGOYLE",
 
 	// Stalagmites
 	"S_STG0",
@@ -5945,6 +6149,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LAMPPOST1",  // normal
 	"S_LAMPPOST2",  // with snow
 	"S_HANGSTAR",
+	"S_MISTLETOE",
 	// Xmas GFZ bushes
 	"S_XMASBLUEBERRYBUSH",
 	"S_XMASBERRYBUSH",
@@ -5952,6 +6157,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// FHZ
 	"S_FHZICE1",
 	"S_FHZICE2",
+	"S_ROSY_IDLE1",
+	"S_ROSY_IDLE2",
+	"S_ROSY_IDLE3",
+	"S_ROSY_IDLE4",
+	"S_ROSY_JUMP",
+	"S_ROSY_WALK",
+	"S_ROSY_HUG",
+	"S_ROSY_PAIN",
+	"S_ROSY_STND",
+	"S_ROSY_UNHAPPY",
 
 	// Halloween Scenery
 	// Pumpkins
@@ -6603,6 +6818,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BHORIZ7",
 	"S_BHORIZ8",
 
+	"S_BOOSTERSOUND",
+	"S_YELLOWBOOSTERROLLER",
+	"S_YELLOWBOOSTERSEG_LEFT",
+	"S_YELLOWBOOSTERSEG_RIGHT",
+	"S_YELLOWBOOSTERSEG_FACE",
+	"S_REDBOOSTERROLLER",
+	"S_REDBOOSTERSEG_LEFT",
+	"S_REDBOOSTERSEG_RIGHT",
+	"S_REDBOOSTERSEG_FACE",
+
 	// Rain
 	"S_RAIN1",
 	"S_RAINRETURN",
@@ -6622,6 +6847,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPLISH7",
 	"S_SPLISH8",
 	"S_SPLISH9",
+
+	// Lava splish
+	"S_LAVASPLISH",
 
 	// added water splash
 	"S_SPLASH1",
@@ -7090,8 +7318,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BUMBLEBORE_STUCK2",
 	"S_BUMBLEBORE_DIE",
 
-	"S_BBUZZFLY1",
-	"S_BBUZZFLY2",
+	"S_BUGGLEIDLE",
+	"S_BUGGLEFLY",
 
 	"S_SMASHSPIKE_FLOAT",
 	"S_SMASHSPIKE_EASE1",
@@ -7234,6 +7462,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_THOK", // Thok! mobj
 	"MT_PLAYER",
 	"MT_TAILSOVERLAY", // c:
+	"MT_METALJETFUME", // [:
 
 	// Enemies
 	"MT_BLUECRAWLA", // Crawla (Blue)
@@ -7252,6 +7481,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CRUSHSTACEAN", // Crushstacean
 	"MT_CRUSHCLAW", // Big meaty claw
 	"MT_CRUSHCHAIN", // Chain
+	"MT_BANPYURA", // Banpyura
+	"MT_BANPSPRING", // Banpyura spring
 	"MT_JETJAW", // Jet Jaw
 	"MT_SNAILER", // Snailer
 	"MT_VULTURE", // BASH
@@ -7273,6 +7504,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_UNIBALL", // Unidus Ball
 	"MT_CANARIVORE", // Canarivore
 	"MT_CANARIVORE_GAS", // Canarivore gas
+	"MT_PYREFLY", // Pyre Fly
+	"MT_PYREFLY_FIRE", // Pyre Fly fire
+	"MT_PTERABYTESPAWNER", // Pterabyte spawner
+	"MT_PTERABYTEWAYPOINT", // Pterabyte waypoint
+	"MT_PTERABYTE", // Pterabyte
 
 	// Generic Boss Items
 	"MT_BOSSEXPLODE",
@@ -7384,6 +7620,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_REDHORIZ",
 	"MT_BLUEHORIZ",
 
+	"MT_BOOSTERSEG",
+	"MT_BOOSTERROLLER",
+	"MT_YELLOWBOOSTER",
+	"MT_REDBOOSTER",
+
 	// Interactive Objects
 	"MT_BUBBLES", // Bubble source
 	"MT_SIGN", // Level end sign
@@ -7474,7 +7715,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CANNONBALL", // Cannonball
 	"MT_CANNONBALLDECOR", // Decorative/still cannonball
 	"MT_ARROW", // Arrow
-	"MT_DEMONFIRE", // Trapgoyle fire
+	"MT_DEMONFIRE", // Glaregoyle fire
 
 	// Greenflower Scenery
 	"MT_GFZFLOWER1",
@@ -7601,7 +7842,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MINECARTSIDEMARK",
 	"MT_MINECARTSPARK",
 	"MT_SALOONDOOR",
-	"MT_SALOONDOORTHINKER",
+	"MT_SALOONDOORCENTER",
 	"MT_TRAINCAMEOSPAWNER",
 	"MT_TRAINSEG",
 	"MT_TRAINDUSTSPAWNER",
@@ -7618,16 +7859,32 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	"MT_FLAMEJETFLAMEB", // Blade's flame
 
+	"MT_LAVAFALL",
+	"MT_LAVAFALL_LAVA",
+	"MT_LAVAFALLROCK",
+
+	"MT_ROLLOUTSPAWN",
+	"MT_ROLLOUTROCK",
+
+	"MT_BIGFERNLEAF",
+	"MT_BIGFERN",
+	"MT_JUNGLEPALM",
+	"MT_TORCHFLOWER",
+	"MT_WALLVINE_LONG",
+	"MT_WALLVINE_SHORT",
+
 	// Dark City Scenery
 
 	// Egg Rock Scenery
 
 	// Azure Temple Scenery
-	"MT_TRAPGOYLE",
-	"MT_TRAPGOYLEUP",
-	"MT_TRAPGOYLEDOWN",
-	"MT_TRAPGOYLELONG",
+	"MT_GLAREGOYLE",
+	"MT_GLAREGOYLEUP",
+	"MT_GLAREGOYLEDOWN",
+	"MT_GLAREGOYLELONG",
 	"MT_TARGET",
+	"MT_GREENFLAME",
+	"MT_BLUEGARGOYLE",
 
 	// Stalagmites
 	"MT_STALAGMITE0",
@@ -7649,6 +7906,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LAMPPOST1",  // normal
 	"MT_LAMPPOST2",  // with snow
 	"MT_HANGSTAR",
+	"MT_MISTLETOE",
 	// Xmas GFZ bushes
 	"MT_XMASBLUEBERRYBUSH",
 	"MT_XMASBERRYBUSH",
@@ -7656,6 +7914,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// FHZ
 	"MT_FHZICE1",
 	"MT_FHZICE2",
+	"MT_ROSY",
+	"MT_CDLHRT",
 
 	// Halloween Scenery
 	// Pumpkins
@@ -7784,6 +8044,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RAIN", // Rain
 	"MT_SNOWFLAKE", // Snowflake
 	"MT_SPLISH", // Water splish!
+	"MT_LAVASPLISH", // Lava splish!
 	"MT_SMOKE",
 	"MT_SMALLBUBBLE", // small bubble
 	"MT_MEDIUMBUBBLE", // medium bubble
@@ -7898,7 +8159,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_HIVEELEMENTAL",
 	"MT_BUMBLEBORE",
 
-	"MT_BUBBLEBUZZ",
+	"MT_BUGGLE",
 
 	"MT_SMASHINGSPIKEBALL",
 	"MT_CACOLANTERN",
@@ -8269,6 +8530,8 @@ static const char *const POWERS_LIST[] = {
 	"SPACETIME", // In space, no one can hear you spin!
 	"EXTRALIFE", // Extra Life timer
 	"PUSHING",
+	"JUSTSPRUNG",
+	"NOAUTOBRAKE",
 
 	"SUPER", // Are you super?
 	"GRAVITYBOOTS", // gravity boots
@@ -8609,6 +8872,8 @@ struct {
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
 	{"CR_MINECART",CR_MINECART},
+	{"CR_ROLLOUT", CR_ROLLOUT},
+	{"CR_PTERABYTE",CR_PTERABYTE},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon
@@ -8830,9 +9095,9 @@ struct {
 	{"FF_PLATFORM",FF_PLATFORM},               ///< You can jump up through this to the top.
 	{"FF_REVERSEPLATFORM",FF_REVERSEPLATFORM}, ///< A fall-through floor in normal gravity, a platform in reverse gravity.
 	{"FF_INTANGABLEFLATS",FF_INTANGABLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
-	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Thinks everyone's Knuckles.
-	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Jump or fall onto it while curled in a ball.
-	{"FF_ONLYKNUX",FF_ONLYKNUX},               ///< Used with ::FF_BUSTUP. Only Knuckles can break this rock.
+	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Bustable on mere touch.
+	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
+	{"FF_STRONGBUST",FF_STRONGBUST },          ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
@@ -8963,6 +9228,7 @@ struct {
 	{"V_OFFSET",V_OFFSET},
 	{"V_ALLOWLOWERCASE",V_ALLOWLOWERCASE},
 	{"V_FLIP",V_FLIP},
+	{"V_CENTERNAMETAG",V_CENTERNAMETAG},
 	{"V_SNAPTOTOP",V_SNAPTOTOP},
 	{"V_SNAPTOBOTTOM",V_SNAPTOBOTTOM},
 	{"V_SNAPTOLEFT",V_SNAPTOLEFT},
@@ -8996,6 +9262,7 @@ struct {
 	{"TC_ALLWHITE",TC_ALLWHITE},
 	{"TC_RAINBOW",TC_RAINBOW},
 	{"TC_BLINK",TC_BLINK},
+	{"TC_DASHMODE",TC_DASHMODE},
 #endif
 
 	{NULL,0}
@@ -9982,6 +10249,23 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"mapmusposition")) {
 		lua_pushinteger(L, mapmusposition);
 		return 1;
+	// local player variables, by popular request
+	} else if (fastcmp(word,"consoleplayer")) { // player controlling console (aka local player 1)
+		if (consoleplayer < 0 || !playeringame[consoleplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[consoleplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"displayplayer")) { // player visible on screen (aka display player 1)
+		if (displayplayer < 0 || !playeringame[displayplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[displayplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"secondarydisplayplayer")) { // local/display player 2, for splitscreen
+		if (!splitscreen || secondarydisplayplayer < 0 || !playeringame[secondarydisplayplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
+		return 1;
+	// end local player variables
 	} else if (fastcmp(word,"server")) {
 		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
 			return 0;

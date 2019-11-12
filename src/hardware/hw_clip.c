@@ -77,8 +77,8 @@
 #include "r_opengl/r_opengl.h"
 
 #ifdef HAVE_SPHEREFRUSTRUM
-static GLdouble viewMatrix[16];
-static GLdouble projMatrix[16];
+static GLfloat viewMatrix[16];
+static GLfloat projMatrix[16];
 float frustum[6][4];
 #endif
 
@@ -380,8 +380,8 @@ void gld_FrustrumSetup(void)
 	float t;
 	float clip[16];
 
-	pglGetDoublev(GL_PROJECTION_MATRIX, projMatrix);
-	pglGetDoublev(GL_MODELVIEW_MATRIX, viewMatrix);
+	pglGeFloatv(GL_PROJECTION_MATRIX, projMatrix);
+	pglGetFloatv(GL_MODELVIEW_MATRIX, viewMatrix);
 
 	clip[0]  = CALCMATRIX(0, 0, 1, 4, 2, 8, 3, 12);
 	clip[1]  = CALCMATRIX(0, 1, 1, 5, 2, 9, 3, 13);

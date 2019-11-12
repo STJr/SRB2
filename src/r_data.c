@@ -35,7 +35,7 @@
 #endif
 
 // Not sure if this is necessary, but it was in w_wad.c, so I'm putting it here too -Shadow Hog
-#ifdef _WIN32_WCE
+#if 0
 #define AVOID_ERRNO
 #else
 #include <errno.h>
@@ -456,10 +456,11 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
+	boolean dealloc = false;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
-	UINT32 *colofs;
+	UINT8 *colofs;
 
 	UINT16 wadnum;
 	lumpnum_t lumpnum;
@@ -483,23 +484,20 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		wadnum = patch->wad;
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE); // can't use W_CachePatchNumPwad because OpenGL
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-		{
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
 			goto multipatch;
-		}
 #endif
 
 		// Check the patch for holes.
 		if (texture->width > SHORT(realpatch->width) || texture->height > SHORT(realpatch->height))
 			holey = true;
-		colofs = (UINT32 *)realpatch->columnofs;
+		colofs = (UINT8 *)realpatch->columnofs;
 		for (x = 0; x < texture->width && !holey; x++)
 		{
-			column_t *col = (column_t *)((UINT8 *)realpatch + LONG(colofs[x]));
+			column_t *col = (column_t *)((UINT8 *)realpatch + LONG(*(UINT32 *)&colofs[x<<2]));
 			INT32 topdelta, prevdelta = -1, y = 0;
 			while (col->topdelta != 0xff)
 			{
@@ -528,19 +526,19 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 			texturememory += blocksize;
 
 			// use the patch's column lookup
-			colofs = (UINT32 *)(void *)(block + 8);
-			texturecolumnofs[texnum] = colofs;
+			colofs = (block + 8);
+			texturecolumnofs[texnum] = (UINT32 *)colofs;
 			blocktex = block;
 			if (patch->flip & 1) // flip the patch horizontally
 			{
-				UINT32 *realcolofs = (UINT32 *)realpatch->columnofs;
+				UINT8 *realcolofs = (UINT8 *)realpatch->columnofs;
 				for (x = 0; x < texture->width; x++)
-					colofs[x] = realcolofs[texture->width-1-x]; // swap with the offset of the other side of the texture
+					*(UINT32 *)&colofs[x<<2] = realcolofs[( texture->width-1-x )<<2]; // swap with the offset of the other side of the texture
 			}
 			// we can't as easily flip the patch vertically sadly though,
 			//  we have wait until the texture itself is drawn to do that
 			for (x = 0; x < texture->width; x++)
-				colofs[x] = LONG(LONG(colofs[x]) + 3);
+				*(UINT32 *)&colofs[x<<2] = LONG(LONG(*(UINT32 *)&colofs[x<<2]) + 3);
 			goto done;
 		}
 
@@ -557,11 +555,11 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texturememory += blocksize;
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
 
-	memset(block, 0xFF, blocksize+1); // Transparency hack
+	memset(block, TRANSPARENTPIXEL, blocksize+1); // Transparency hack
 
 	// columns lookup table
-	colofs = (UINT32 *)(void *)block;
-	texturecolumnofs[texnum] = colofs;
+	colofs = block;
+	texturecolumnofs[texnum] = (UINT32 *)colofs;
 
 	// texture data after the lookup table
 	blocktex = block + (texture->width*4);
@@ -579,9 +577,14 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		dealloc = false;
+
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			dealloc = true;
+		}
 #endif
 
 		x1 = patch->originx;
@@ -616,9 +619,12 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
 
 			// generate column ofset lookup
-			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			ColumnDrawerPointer(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
+			*(UINT32 *)&colofs[x<<2] = LONG((x * texture->height) + (texture->width*4));
+			ColumnDrawerPointer(patchcol, block + LONG(*(UINT32 *)&colofs[x<<2]), patch, texture->height, height);
 		}
+
+		if (dealloc)
+			Z_Free(realpatch);
 	}
 
 done:
@@ -831,7 +837,9 @@ void R_LoadTextures(void)
 		{
 			UINT16 wadnum = (UINT16)w;
 			lumpnum_t lumpnum = texstart + j;
+#ifndef NO_PNG_LUMPS
 			size_t lumplength;
+#endif
 
 			if (wadfiles[w]->type == RET_PK3)
 			{
@@ -839,8 +847,10 @@ void R_LoadTextures(void)
 					continue; // If it is then SKIP IT
 			}
 
-			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+#endif
 
 			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
 			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
@@ -1444,48 +1454,6 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 			break;
 		}
 		lump = LUMPERROR;
-	}
-
-	// Detect textures
-	if (lump == LUMPERROR)
-	{
-		// Scan wad files backwards so patched textures take preference.
-		for (i = numwadfiles - 1; i >= 0; i--)
-		{
-			switch (wadfiles[i]->type)
-			{
-			case RET_WAD:
-				if ((start = W_CheckNumForNamePwad("TX_START", (UINT16)i, 0)) == INT16_MAX)
-					continue;
-				if ((end = W_CheckNumForNamePwad("TX_END", (UINT16)i, start)) == INT16_MAX)
-					continue;
-				break;
-			case RET_PK3:
-				if ((start = W_CheckNumForFolderStartPK3("Textures/", i, 0)) == INT16_MAX)
-					continue;
-				if ((end = W_CheckNumForFolderEndPK3("Textures/", i, start)) == INT16_MAX)
-					continue;
-				break;
-			default:
-				continue;
-			}
-
-			// Now find lump with specified name in that range.
-			lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
-			if (lump < end)
-			{
-				lump += (i<<16); // found it, in our constraints
-				break;
-			}
-			lump = LUMPERROR;
-		}
-	}
-
-	if (lump == LUMPERROR)
-	{
-		if (strcmp(name, SKYFLATNAME))
-			CONS_Debug(DBG_SETUP, "R_GetFlatNumForName: Could not find flat %.8s\n", name);
-		lump = W_CheckNumForName("REDFLR");
 	}
 
 	return lump;
@@ -2519,7 +2487,11 @@ void R_PrecacheLevel(void)
 			"spritememory:  %s k\n", sizeu1(flatmemory>>10), sizeu2(texturememory>>10), sizeu3(spritememory>>10));
 }
 
-// https://github.com/coelckers/prboom-plus/blob/master/prboom2/src/r_patch.c#L350
+//
+// R_CheckIfPatch
+//
+// Returns true if the lump is a valid patch.
+//
 boolean R_CheckIfPatch(lumpnum_t lump)
 {
 	size_t size;
@@ -2564,6 +2536,71 @@ boolean R_CheckIfPatch(lumpnum_t lump)
 	return result;
 }
 
+//
+// R_TextureToFlat
+//
+// Convert a texture to a flat.
+//
+void R_TextureToFlat(size_t tex, UINT8 *flat)
+{
+	texture_t *texture = textures[tex];
+
+	fixed_t col, ofs;
+	column_t *column;
+	UINT8 *desttop, *dest, *deststop;
+	UINT8 *source;
+
+	// yea
+	R_CheckTextureCache(tex);
+
+	desttop = flat;
+	deststop = desttop + (texture->width * texture->height);
+
+	for (col = 0; col < texture->width; col++, desttop++)
+	{
+		// no post_t info
+		if (!texture->holes)
+		{
+			column = (column_t *)(R_GetColumn(tex, col));
+			source = (UINT8 *)(column);
+			dest = desttop;
+			for (ofs = 0; dest < deststop && ofs < texture->height; ofs++)
+			{
+				if (source[ofs] != TRANSPARENTPIXEL)
+					*dest = source[ofs];
+				dest += texture->width;
+			}
+		}
+		else
+		{
+			INT32 topdelta, prevdelta = -1;
+			column = (column_t *)((UINT8 *)R_GetColumn(tex, col) - 3);
+			while (column->topdelta != 0xff)
+			{
+				topdelta = column->topdelta;
+				if (topdelta <= prevdelta)
+					topdelta += prevdelta;
+				prevdelta = topdelta;
+
+				dest = desttop + (topdelta * texture->width);
+				source = (UINT8 *)column + 3;
+				for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
+				{
+					if (source[ofs] != TRANSPARENTPIXEL)
+						*dest = source[ofs];
+					dest += texture->width;
+				}
+				column = (column_t *)((UINT8 *)column + column->length + 4);
+			}
+		}
+	}
+}
+
+//
+// R_PatchToFlat
+//
+// Convert a patch to a flat.
+//
 void R_PatchToFlat(patch_t *patch, UINT8 *flat)
 {
 	fixed_t col, ofs;
@@ -2598,7 +2635,124 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat)
 	}
 }
 
+//
+// R_FlatToPatch
+//
+// Convert a flat to a patch.
+//
+static unsigned char imgbuf[1<<26];
+patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency)
+{
+	UINT32 x, y;
+	UINT8 *img;
+	UINT8 *imgptr = imgbuf;
+	UINT8 *colpointers, *startofspan;
+	size_t size = 0;
+
+	// Write image size and offset
+	WRITEINT16(imgptr, width);
+	WRITEINT16(imgptr, height);
+	WRITEINT16(imgptr, leftoffset);
+	WRITEINT16(imgptr, topoffset);
+
+	// Leave placeholder to column pointers
+	colpointers = imgptr;
+	imgptr += width*4;
+
+	// Write columns
+	for (x = 0; x < width; x++)
+	{
+		int lastStartY = 0;
+		int spanSize = 0;
+		startofspan = NULL;
+
+		// Write column pointer
+		WRITEINT32(colpointers, imgptr - imgbuf);
+
+		// Write pixels
+		for (y = 0; y < height; y++)
+		{
+			UINT8 paletteIndex = raw[((y * width) + x)];
+			boolean opaque = transparency ? (paletteIndex != TRANSPARENTPIXEL) : true;
+
+			// End span if we have a transparent pixel
+			if (!opaque)
+			{
+				if (startofspan)
+					WRITEUINT8(imgptr, 0);
+				startofspan = NULL;
+				continue;
+			}
+
+			// Start new column if we need to
+			if (!startofspan || spanSize == 255)
+			{
+				int writeY = y;
+
+				// If we reached the span size limit, finish the previous span
+				if (startofspan)
+					WRITEUINT8(imgptr, 0);
+
+				if (y > 254)
+				{
+					// Make sure we're aligned to 254
+					if (lastStartY < 254)
+					{
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
+						imgptr += 2;
+						lastStartY = 254;
+					}
+
+					// Write stopgap empty spans if needed
+					writeY = y - lastStartY;
+
+					while (writeY > 254)
+					{
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
+						imgptr += 2;
+						writeY -= 254;
+					}
+				}
+
+				startofspan = imgptr;
+				WRITEUINT8(imgptr, writeY);
+				imgptr += 2;
+				spanSize = 0;
+
+				lastStartY = y;
+			}
+
+			// Write the pixel
+			WRITEUINT8(imgptr, paletteIndex);
+			spanSize++;
+			startofspan[1] = spanSize;
+		}
+
+		if (startofspan)
+			WRITEUINT8(imgptr, 0);
+
+		WRITEUINT8(imgptr, 0xFF);
+	}
+
+	size = imgptr-imgbuf;
+	img = Z_Malloc(size, PU_STATIC, NULL);
+	memcpy(img, imgbuf, size);
+
+	Z_Free(raw);
+
+	if (destsize != NULL)
+		*destsize = size;
+	return (patch_t *)img;
+}
+
 #ifndef NO_PNG_LUMPS
+//
+// R_IsLumpPNG
+//
+// Returns true if the lump is a valid PNG.
+//
 boolean R_IsLumpPNG(const UINT8 *d, size_t s)
 {
 	if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
@@ -2611,22 +2765,23 @@ boolean R_IsLumpPNG(const UINT8 *d, size_t s)
 
 #ifdef HAVE_PNG
 
-#if PNG_LIBPNG_VER_DLLNUM < 14
+/*#if PNG_LIBPNG_VER_DLLNUM < 14
 typedef PNG_CONST png_byte *png_const_bytep;
-#endif
-typedef struct {
-	png_const_bytep buffer;
-	png_uint_32 bufsize;
-	png_uint_32 current_pos;
+#endif*/
+typedef struct
+{
+	const UINT8 *buffer;
+	UINT32 size;
+	UINT32 position;
 } png_io_t;
 
 static void PNG_IOReader(png_structp png_ptr, png_bytep data, png_size_t length)
 {
 	png_io_t *f = png_get_io_ptr(png_ptr);
-	if (length > (f->bufsize - f->current_pos))
+	if (length > (f->size - f->position))
 		png_error(png_ptr, "PNG_IOReader: buffer overrun");
-	memcpy(data, f->buffer + f->current_pos, length);
-	f->current_pos += length;
+	memcpy(data, f->buffer + f->position, length);
+	f->position += length;
 }
 
 typedef struct
@@ -2712,10 +2867,10 @@ static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoff
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// set our own read_function
-	png_io.buffer = (png_const_bytep)png;
-	png_io.bufsize = size;
-	png_io.current_pos = 0;
+	// set our own read function
+	png_io.buffer = png;
+	png_io.size = size;
+	png_io.position = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 	memset(&chunk, 0x00, sizeof(png_chunk_t));
@@ -2811,125 +2966,31 @@ static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topo
 	return flat;
 }
 
+//
+// R_PNGToFlat
+//
 // Convert a PNG to a flat.
-UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size)
+//
+UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size)
 {
-	return PNG_RawConvert(png, &levelflat->width, &levelflat->height, NULL, NULL, size);
+	return PNG_RawConvert(png, width, height, NULL, NULL, size);
 }
 
+//
+// R_PNGToPatch
+//
 // Convert a PNG to a patch.
-static unsigned char imgbuf[1<<26];
+//
 patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency)
 {
 	UINT16 width, height;
 	INT16 topoffset = 0, leftoffset = 0;
 	UINT8 *raw = PNG_RawConvert(png, &width, &height, &topoffset, &leftoffset, size);
 
-	UINT32 x, y;
-	UINT8 *img;
-	UINT8 *imgptr = imgbuf;
-	UINT8 *colpointers, *startofspan;
-
 	if (!raw)
 		I_Error("R_PNGToPatch: conversion failed");
 
-	// Write image size and offset
-	WRITEINT16(imgptr, width);
-	WRITEINT16(imgptr, height);
-	WRITEINT16(imgptr, leftoffset);
-	WRITEINT16(imgptr, topoffset);
-
-	// Leave placeholder to column pointers
-	colpointers = imgptr;
-	imgptr += width*4;
-
-	// Write columns
-	for (x = 0; x < width; x++)
-	{
-		int lastStartY = 0;
-		int spanSize = 0;
-		startofspan = NULL;
-
-		//printf("%d ", x);
-		// Write column pointer (@TODO may be wrong)
-		WRITEINT32(colpointers, imgptr - imgbuf);
-
-		// Write pixels
-		for (y = 0; y < height; y++)
-		{
-			UINT8 paletteIndex = raw[((y * width) + x)];
-			boolean opaque = transparency ? (paletteIndex != TRANSPARENTPIXEL) : true;
-
-			// End span if we have a transparent pixel
-			if (!opaque)
-			{
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-				startofspan = NULL;
-				continue;
-			}
-
-			// Start new column if we need to
-			if (!startofspan || spanSize == 255)
-			{
-				int writeY = y;
-
-				// If we reached the span size limit, finish the previous span
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-
-				if (y > 254)
-				{
-					// Make sure we're aligned to 254
-					if (lastStartY < 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						lastStartY = 254;
-					}
-
-					// Write stopgap empty spans if needed
-					writeY = y - lastStartY;
-
-					while (writeY > 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						writeY -= 254;
-					}
-				}
-
-				startofspan = imgptr;
-				WRITEUINT8(imgptr, writeY);///@TODO calculate starting y pos
-				imgptr += 2;
-				spanSize = 0;
-
-				lastStartY = y;
-			}
-
-			// Write the pixel
-			WRITEUINT8(imgptr, paletteIndex);
-			spanSize++;
-			startofspan[1] = spanSize;
-		}
-
-		if (startofspan)
-			WRITEUINT8(imgptr, 0);
-
-		WRITEUINT8(imgptr, 0xFF);
-	}
-
-	size = imgptr-imgbuf;
-	img = Z_Malloc(size, PU_STATIC, NULL);
-	memcpy(img, imgbuf, size);
-
-	Z_Free(raw);
-
-	if (destsize != NULL)
-		*destsize = size;
-	return (patch_t *)img;
+	return R_FlatToPatch(raw, width, height, leftoffset, topoffset, destsize, transparency);
 }
 
 boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
@@ -2976,10 +3037,10 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// set our own read_function
-	png_io.buffer = (png_bytep)png;
-	png_io.bufsize = size;
-	png_io.current_pos = 0;
+	// set our own read function
+	png_io.buffer = png;
+	png_io.size = size;
+	png_io.position = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
@@ -3000,53 +3061,3 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 }
 #endif
 #endif
-
-void R_TextureToFlat(size_t tex, UINT8 *flat)
-{
-	texture_t *texture = textures[tex];
-
-	fixed_t col, ofs;
-	column_t *column;
-	UINT8 *desttop, *dest, *deststop;
-	UINT8 *source;
-
-	desttop = flat;
-	deststop = desttop + (texture->width * texture->height);
-
-	for (col = 0; col < texture->width; col++, desttop++)
-	{
-		column = (column_t *)R_GetColumn(tex, col);
-		if (!texture->holes)
-		{
-			dest = desttop;
-			source = (UINT8 *)(column);
-			for (ofs = 0; dest < deststop && ofs < texture->height; ofs++)
-			{
-				if (source[ofs] != TRANSPARENTPIXEL)
-					*dest = source[ofs];
-				dest += texture->width;
-			}
-		}
-		else
-		{
-			INT32 topdelta, prevdelta = -1;
-			while (column->topdelta != 0xff)
-			{
-				topdelta = column->topdelta;
-				if (topdelta <= prevdelta)
-					topdelta += prevdelta;
-				prevdelta = topdelta;
-
-				dest = desttop + (topdelta * texture->width);
-				source = (UINT8 *)(column) + 3;
-				for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
-				{
-					if (source[ofs] != TRANSPARENTPIXEL)
-						*dest = source[ofs];
-					dest += texture->width;
-				}
-				column = (column_t *)((UINT8 *)column + column->length + 4);
-			}
-		}
-	}
-}
