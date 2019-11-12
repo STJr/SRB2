@@ -5755,6 +5755,15 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		// New colormap stuff for skins Tails 06-07-2002
 		if (thing->colorized)
 			vis->colormap = R_GetTranslationColormap(TC_RAINBOW, thing->color, GTC_CACHE);
+		else if (thing->player && thing->player->dashmode >= DASHMODE_THRESHOLD
+			&& (thing->player->charflags & SF_DASHMODE)
+			&& ((leveltime/2) & 1))
+		{
+			if (thing->player->charflags & SF_MACHINE)
+				vis->colormap = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			else
+				vis->colormap = R_GetTranslationColormap(TC_RAINBOW, thing->color, GTC_CACHE);
+		}
 		else if (thing->skin && thing->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)thing->skin-skins;

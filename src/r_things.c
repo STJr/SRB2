@@ -758,10 +758,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		else if (!(vis->cut & SC_PRECIP)
 			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (vis->mobj->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+			&& (vis->mobj->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
 		{
-			dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			if (vis->mobj->player->charflags & SF_MACHINE)
+				dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			else
+				dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
 		{
@@ -786,10 +789,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		else if (!(vis->cut & SC_PRECIP)
 			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (vis->mobj->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+			&& (vis->mobj->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
 		{
-			dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			if (vis->mobj->player->charflags & SF_MACHINE)
+				dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			else
+				dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
