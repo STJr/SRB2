@@ -837,7 +837,13 @@ static void ST_drawLivesArea(void)
 	}
 
 	// Lives number
-	if (G_GametypeUsesLives() || gametype == GT_RACE)
+	if (metalrecording)
+	{
+		if (((2*leveltime)/TICRATE) & 1)
+			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
+				hudinfo[HUD_LIVES].f|V_PERPLAYER|V_REDMAP|V_HUDTRANS, "REC");
+	}
+	else if (G_GametypeUsesLives() || gametype == GT_RACE)
 	{
 		// x
 		V_DrawScaledPatch(hudinfo[HUD_LIVES].x+22, hudinfo[HUD_LIVES].y+10,

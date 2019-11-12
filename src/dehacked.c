@@ -5375,25 +5375,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CYBRAKDEMONVILEEXPLOSION3",
 
 	// Metal Sonic (Race)
-	// S_PLAY_STND
-	"S_METALSONIC_STAND",
-	// S_PLAY_TAP1
-	"S_METALSONIC_WAIT1",
-	"S_METALSONIC_WAIT2",
-	// S_PLAY_WALK
-	"S_METALSONIC_WALK1",
-	"S_METALSONIC_WALK2",
-	"S_METALSONIC_WALK3",
-	"S_METALSONIC_WALK4",
-	"S_METALSONIC_WALK5",
-	"S_METALSONIC_WALK6",
-	"S_METALSONIC_WALK7",
-	"S_METALSONIC_WALK8",
-	// S_PLAY_SPD1
-	"S_METALSONIC_RUN1",
-	"S_METALSONIC_RUN2",
-	"S_METALSONIC_RUN3",
-	"S_METALSONIC_RUN4",
+	"S_METALSONIC_RACE",
 	// Metal Sonic (Battle)
 	"S_METALSONIC_FLOAT",
 	"S_METALSONIC_VECTOR",
@@ -5736,7 +5718,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARROW",
 	"S_ARROWBONK",
 
-	// Trapgoyle Demon fire
+	// Glaregoyle Demon fire
 	"S_DEMONFIRE",
 
 	// GFZ flowers
@@ -6104,29 +6086,35 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_WALLVINE_LONG",
 	"S_WALLVINE_SHORT",
 
-	// Trapgoyles
-	"S_TRAPGOYLE",
-	"S_TRAPGOYLE_CHECK",
-	"S_TRAPGOYLE_FIRE1",
-	"S_TRAPGOYLE_FIRE2",
-	"S_TRAPGOYLE_FIRE3",
-	"S_TRAPGOYLEUP",
-	"S_TRAPGOYLEUP_CHECK",
-	"S_TRAPGOYLEUP_FIRE1",
-	"S_TRAPGOYLEUP_FIRE2",
-	"S_TRAPGOYLEUP_FIRE3",
-	"S_TRAPGOYLEDOWN",
-	"S_TRAPGOYLEDOWN_CHECK",
-	"S_TRAPGOYLEDOWN_FIRE1",
-	"S_TRAPGOYLEDOWN_FIRE2",
-	"S_TRAPGOYLEDOWN_FIRE3",
-	"S_TRAPGOYLELONG",
-	"S_TRAPGOYLELONG_CHECK",
-	"S_TRAPGOYLELONG_FIRE1",
-	"S_TRAPGOYLELONG_FIRE2",
-	"S_TRAPGOYLELONG_FIRE3",
-	"S_TRAPGOYLELONG_FIRE4",
-	"S_TRAPGOYLELONG_FIRE5",
+	// Glaregoyles
+	"S_GLAREGOYLE",
+	"S_GLAREGOYLE_CHARGE",
+	"S_GLAREGOYLE_BLINK",
+	"S_GLAREGOYLE_HOLD",
+	"S_GLAREGOYLE_FIRE",
+	"S_GLAREGOYLE_LOOP",
+	"S_GLAREGOYLE_COOLDOWN",
+	"S_GLAREGOYLEUP",
+	"S_GLAREGOYLEUP_CHARGE",
+	"S_GLAREGOYLEUP_BLINK",
+	"S_GLAREGOYLEUP_HOLD",
+	"S_GLAREGOYLEUP_FIRE",
+	"S_GLAREGOYLEUP_LOOP",
+	"S_GLAREGOYLEUP_COOLDOWN",
+	"S_GLAREGOYLEDOWN",
+	"S_GLAREGOYLEDOWN_CHARGE",
+	"S_GLAREGOYLEDOWN_BLINK",
+	"S_GLAREGOYLEDOWN_HOLD",
+	"S_GLAREGOYLEDOWN_FIRE",
+	"S_GLAREGOYLEDOWN_LOOP",
+	"S_GLAREGOYLEDOWN_COOLDOWN",
+	"S_GLAREGOYLELONG",
+	"S_GLAREGOYLELONG_CHARGE",
+	"S_GLAREGOYLELONG_BLINK",
+	"S_GLAREGOYLELONG_HOLD",
+	"S_GLAREGOYLELONG_FIRE",
+	"S_GLAREGOYLELONG_LOOP",
+	"S_GLAREGOYLELONG_COOLDOWN",
 
 	// ATZ's Red Crystal/Target
 	"S_TARGET_IDLE",
@@ -6137,6 +6125,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// ATZ's green flame
 	"S_GREENFLAME",
+
+	// ATZ Blue Gargoyle
+	"S_BLUEGARGOYLE",
 
 	// Stalagmites
 	"S_STG0",
@@ -7327,8 +7318,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BUMBLEBORE_STUCK2",
 	"S_BUMBLEBORE_DIE",
 
-	"S_BBUZZFLY1",
-	"S_BBUZZFLY2",
+	"S_BUGGLEIDLE",
+	"S_BUGGLEFLY",
 
 	"S_SMASHSPIKE_FLOAT",
 	"S_SMASHSPIKE_EASE1",
@@ -7724,7 +7715,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CANNONBALL", // Cannonball
 	"MT_CANNONBALLDECOR", // Decorative/still cannonball
 	"MT_ARROW", // Arrow
-	"MT_DEMONFIRE", // Trapgoyle fire
+	"MT_DEMONFIRE", // Glaregoyle fire
 
 	// Greenflower Scenery
 	"MT_GFZFLOWER1",
@@ -7887,12 +7878,13 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Egg Rock Scenery
 
 	// Azure Temple Scenery
-	"MT_TRAPGOYLE",
-	"MT_TRAPGOYLEUP",
-	"MT_TRAPGOYLEDOWN",
-	"MT_TRAPGOYLELONG",
+	"MT_GLAREGOYLE",
+	"MT_GLAREGOYLEUP",
+	"MT_GLAREGOYLEDOWN",
+	"MT_GLAREGOYLELONG",
 	"MT_TARGET",
 	"MT_GREENFLAME",
+	"MT_BLUEGARGOYLE",
 
 	// Stalagmites
 	"MT_STALAGMITE0",
@@ -8167,7 +8159,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_HIVEELEMENTAL",
 	"MT_BUMBLEBORE",
 
-	"MT_BUBBLEBUZZ",
+	"MT_BUGGLE",
 
 	"MT_SMASHINGSPIKEBALL",
 	"MT_CACOLANTERN",
