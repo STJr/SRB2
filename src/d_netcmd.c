@@ -365,6 +365,11 @@ consvar_t cv_mute = {"mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange, 
 
 consvar_t cv_sleep = {"cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
 
+char timedemo_name[256];
+boolean timedemo_csv;
+char timedemo_csv_id[256];
+boolean timedemo_quit;
+
 INT16 gametype = GT_COOP;
 boolean splitscreen = false;
 boolean circuitmap = false;
@@ -1569,11 +1574,11 @@ static void Command_Playdemo_f(void)
 
 static void Command_Timedemo_f(void)
 {
-	char name[256];
+	size_t i = 0;
 
-	if (COM_Argc() != 2)
+	if (COM_Argc() < 2)
 	{
-		CONS_Printf(M_GetText("timedemo <demoname>: time a demo\n"));
+		CONS_Printf(M_GetText("timedemo <demoname> [-csv [<trialid>]] [-quit]: time a demo\n"));
 		return;
 	}
 
@@ -1590,12 +1595,23 @@ static void Command_Timedemo_f(void)
 		G_StopMetalDemo();
 
 	// open the demo file
-	strcpy (name, COM_Argv(1));
+	strcpy (timedemo_name, COM_Argv(1));
 	// dont add .lmp so internal game demos can be played
 
-	CONS_Printf(M_GetText("Timing demo '%s'.\n"), name);
+	// print timedemo results as CSV?
+	i = COM_CheckParm("-csv");
+	timedemo_csv = (i > 0);
+	if (COM_CheckParm("-quit") != i + 1)
+		strcpy(timedemo_csv_id, COM_Argv(i + 1)); // user-defined string to identify row
+	else
+		timedemo_csv_id[0] = 0;
 
-	G_TimeDemo(name);
+	// exit after the timedemo?
+	timedemo_quit = (COM_CheckParm("-quit") > 0);
+
+	CONS_Printf(M_GetText("Timing demo '%s'.\n"), timedemo_name);
+
+	G_TimeDemo(timedemo_name);
 }
 
 // stop current demo
@@ -1646,7 +1662,31 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	// The supplied data are assumed to be good.
 	I_Assert(delay >= 0 && delay <= 2);
 	if (mapnum != -1)
+	{
 		CV_SetValue(&cv_nextmap, mapnum);
+		// Kick bot from special stages
+		if (botskin)
+		{
+			if (G_IsSpecialStage(mapnum) || (mapheaderinfo[mapnum-1] && (mapheaderinfo[mapnum-1]->typeoflevel & TOL_NIGHTS)))
+			{
+				if (botingame)
+				{
+					//CL_RemoveSplitscreenPlayer();
+					botingame = false;
+					playeringame[1] = false;
+				}
+			}
+			else if (!botingame)
+			{
+				//CL_AddSplitscreenPlayer();
+				botingame = true;
+				secondarydisplayplayer = 1;
+				playeringame[1] = true;
+				players[1].bot = 1;
+				SendNameAndColor2();
+			}
+		}
+	}
 	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d gametype=%d ultmode=%d resetplayers=%d delay=%d skipprecutscene=%d\n",
 	           mapnum, newgametype, pultmode, resetplayers, delay, skipprecutscene);
 	if ((netgame || multiplayer) && !((gametype == newgametype) && (newgametype == GT_COOP)))
@@ -1687,29 +1727,6 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 				buf[0] &= ~(1<<1);
 			if (!Playing()) // you failed to start a server somehow, so cancel the map change
 				return;
-		}
-
-		// Kick bot from special stages
-		if (botskin)
-		{
-			if (G_IsSpecialStage(mapnum) || (mapheaderinfo[mapnum-1] && (mapheaderinfo[mapnum-1]->typeoflevel & TOL_NIGHTS)))
-			{
-				if (botingame)
-				{
-					//CL_RemoveSplitscreenPlayer();
-					botingame = false;
-					playeringame[1] = false;
-				}
-			}
-			else if (!botingame)
-			{
-				//CL_AddSplitscreenPlayer();
-				botingame = true;
-				secondarydisplayplayer = 1;
-				playeringame[1] = true;
-				players[1].bot = 1;
-				SendNameAndColor2();
-			}
 		}
 
 		chmappending++;

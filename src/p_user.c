@@ -2265,7 +2265,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				else if (!player->skidtime)
 					player->pflags &= ~PF_GLIDING;
 			}
-			else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_THOKKED && (~player->pflags) & PF_SHIELDABILITY)
+			else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_THOKKED && !(player->pflags & PF_SHIELDABILITY) && player->mo->state-states == S_PLAY_FALL)
 			{
 				if (player->mo->state-states != S_PLAY_GLIDE_LANDING)
 				{
@@ -5305,14 +5305,23 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					// Now Knuckles-type abilities are checked.
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
-						INT32 glidespeed = player->actionspd;
+						fixed_t glidespeed = FixedMul(player->actionspd, player->mo->scale);
+						fixed_t playerspeed = player->speed;
+
+						if (player->mo->eflags & MFE_UNDERWATER)
+						{
+							glidespeed >>= 1;
+							playerspeed >>= 1;
+							player->mo->momx = ((player->mo->momx - player->cmomx) >> 1) + player->cmomx;
+							player->mo->momy = ((player->mo->momy - player->cmomy) >> 1) + player->cmomy;
+						}
 
 						player->pflags |= PF_GLIDING|PF_THOKKED;
 						player->glidetime = 0;
 
 						P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
-						if (player->speed < glidespeed)
-							P_Thrust(player->mo, player->mo->angle, glidespeed - player->speed);
+						if (playerspeed < glidespeed)
+							P_Thrust(player->mo, player->mo->angle, glidespeed - playerspeed);
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 					}
 					break;
@@ -5972,7 +5981,12 @@ static void P_3dMovement(player_t *player)
 	if (player->climbing)
 	{
 		if (cmd->forwardmove)
-			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 15*FRACUNIT>>1), false);
+		{
+			if (player->mo->eflags & MFE_UNDERWATER)
+				P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 10*FRACUNIT), false);
+			else
+				P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 15*FRACUNIT>>1), false);
+		}
 	}
 	else if (!analogmove
 		&& cmd->forwardmove != 0 && !(player->pflags & PF_GLIDING || player->exiting
@@ -6006,7 +6020,12 @@ static void P_3dMovement(player_t *player)
 	}
 	// Sideways movement
 	if (player->climbing)
-		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 15*FRACUNIT>>1));
+	{
+		if (player->mo->eflags & MFE_UNDERWATER)
+			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 10*FRACUNIT));
+		else
+			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 15*FRACUNIT>>1));
+	}
 	// Analog movement control
 	else if (analogmove)
 	{
@@ -11854,8 +11873,8 @@ void P_PlayerThink(player_t *player)
 	player->pflags &= ~PF_SLIDING;
 
 #define dashmode player->dashmode
-	// Dash mode - thanks be to Iceman404
-	if ((player->charflags & SF_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
+	// Dash mode - thanks be to VelocitOni
+	if ((player->charflags & SF_DASHMODE) && !player->gotflag && !player->powers[pw_carry] && !player->exiting && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
 	{
 		boolean totallyradical = player->speed >= FixedMul(player->runspeed, player->mo->scale);
 		boolean floating = (player->secondjump == 1);
@@ -11865,12 +11884,16 @@ void P_PlayerThink(player_t *player)
 			if (dashmode < DASHMODE_MAX)
 				dashmode++; // Counter. Adds 1 to dash mode per tic in top speed.
 			if (dashmode == DASHMODE_THRESHOLD) // This isn't in the ">=" equation because it'd cause the sound to play infinitely.
-				S_StartSound(player->mo, sfx_s3ka2); // If the player enters dashmode, play this sound on the the tic it starts.
+				S_StartSound(player->mo, (player->charflags & SF_MACHINE) ? sfx_kc4d : sfx_cdfm40); // If the player enters dashmode, play this sound on the the tic it starts.
 		}
 		else if ((!totallyradical || !floating) && !(player->pflags & PF_SPINNING))
 		{
 			if (dashmode > 3)
+			{
 				dashmode -= 3; // Rather than lose it all, it gently counts back down!
+				if ((dashmode+3) >= DASHMODE_THRESHOLD && dashmode < DASHMODE_THRESHOLD)
+					S_StartSound(player->mo, sfx_kc65);
+			}
 			else
 				dashmode = 0;
 		}
@@ -11901,6 +11924,7 @@ void P_PlayerThink(player_t *player)
 		{
 			player->normalspeed = skins[player->skin].normalspeed;
 			player->jumpfactor = skins[player->skin].jumpfactor;
+			S_StartSound(player->mo, sfx_kc65);
 		}
 		dashmode = 0;
 	}

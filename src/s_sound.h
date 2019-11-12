@@ -220,6 +220,7 @@ typedef struct musicstack_s
 	tic_t tic;
 	UINT16 status;
 	lumpnum_t mlumpnum;
+	boolean noposition; // force music stack resuming from zero (like music_stack_noposition)
 
     struct musicstack_s *prev;
     struct musicstack_s *next;

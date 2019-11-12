@@ -457,6 +457,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texpatch_t *patch;
 	patch_t *realpatch;
 	UINT8 *pdata;
+	boolean dealloc = false;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
@@ -491,7 +492,6 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
 			goto multipatch;
 #endif
-
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
 			goto multipatch;
@@ -582,9 +582,10 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 		wadnum = patch->wad;
 		lumpnum = patch->lump;
-		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		realpatch = (patch_t *)pdata;
+		dealloc = true;
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
