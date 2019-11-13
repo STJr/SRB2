@@ -2691,6 +2691,9 @@ void F_TitleScreenDrawer(void)
 				// Ribbon unfurls, revealing SONIC text, from tic 0 to tic 24. SONIC text is pre-baked into this ribbon graphic.
 				V_DrawSciencePatch(39<<FRACBITS, 88<<FRACBITS, 0, TTRIBB[min(max(0, finalecount), 24)], sc);
 
+				// Darken non-text things.
+				V_DrawFadeScreen(0xFF00, 12);
+
 				// Animate SONIC text while the ribbon unfurls, from tic 0 to tic 28.
 				if(finalecount >= 0)
 					V_DrawSciencePatch(89<<FRACBITS, 92<<FRACBITS, 0, TTSONT[min(finalecount, 28)], sc);
@@ -3282,9 +3285,6 @@ void F_TitleScreenDrawer(void)
 						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[0], sc);
 				}
 			}
-
-			if (finalecount <= 29)
-				V_DrawFadeScreen(0xFF00, 12);
 
 #undef CHARSTART
 #undef SONICSTART
