@@ -1905,10 +1905,22 @@ static void Command_Map_f(void)
 
 		if (newgametype == -1) // reached end of the list with no match
 		{
-			d = atoi(gametypename);
-			// assume they gave us a gametype number, which is okay too
-			if (d >= 0 && d < NUMGAMETYPES)
-				newgametype = d;
+			/* Did they give us a gametype number? That's okay too! */
+			if (isdigit(gametypename[0]))
+			{
+				d = atoi(gametypename);
+				if (d >= 0 && d < NUMGAMETYPES)
+					newgametype = d;
+			}
+			else
+			{
+				CONS_Alert(CONS_ERROR,
+						"'%s' is not a gametype.\n",
+						gametypename);
+				Z_Free(realmapname);
+				Z_Free(mapname);
+				return;
+			}
 		}
 	}
 
