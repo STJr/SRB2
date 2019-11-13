@@ -4667,6 +4667,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Snailer
 	"S_SNAILER1",
+	"S_SNAILER_FLICKY",
 
 	// Vulture
 	"S_VULTURE_STND",

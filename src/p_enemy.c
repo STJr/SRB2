@@ -11557,9 +11557,10 @@ void A_SpawnFreshCopy(mobj_t *actor)
 }
 
 // Internal Flicky spawning function.
-mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz, boolean lookforplayers)
+mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz, boolean lookforplayers, SINT8 moveforward)
 {
 	mobj_t *flicky;
+	fixed_t offsx = 0, offsy = 0;
 
 	if (!flickytype)
 	{
@@ -11572,7 +11573,14 @@ mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz
 		}
 	}
 
-	flicky = P_SpawnMobjFromMobj(actor, 0, 0, 0, flickytype);
+	if (moveforward)
+	{
+		fixed_t scal = mobjinfo[flickytype].radius*((fixed_t)moveforward);
+		offsx = P_ReturnThrustX(actor, actor->angle, scal);
+		offsy = P_ReturnThrustY(actor, actor->angle, scal);
+	}
+
+	flicky = P_SpawnMobjFromMobj(actor, offsx, offsy, 0, flickytype);
 	flicky->angle = actor->angle;
 
 	if (flickytype == MT_SEED)
@@ -11598,24 +11606,30 @@ mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz
 //
 // var1:
 //		lower 16 bits: if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
-//		upper 16 bits: if 0, no sound is played. Else, A_Scream is called.
+//		bit 17: if 0, no sound is played. Else, A_Scream is called.
+//		bit 18: if 1, spawn flicky slightly forward from spawn position, to avoid being stuck in wall. doesn't stack with 19. (snailers)
+//		bit 19: if 1, spawn flicky slightly backward from spawn position. doesn't stack with 18.
 // var2 = upwards thrust for spawned flicky. If zero, default value is provided.
 //
 void A_FlickySpawn(mobj_t *actor)
 {
-	INT32 locvar1 = var1;
+	INT32 locvar1 = var1 & 65535;
 	INT32 locvar2 = var2;
+	INT32 test = (var1 >> 16);
+	SINT8 moveforward = 0;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickySpawn", actor))
 		return;
 #endif
 
-	if (locvar1 >> 16) {
+	if (test & 1)
 		A_Scream(actor); // A shortcut for the truly lazy.
-		locvar1 &= 65535;
-	}
+	if (test & 2)
+		moveforward = 1;
+	else if (test & 4)
+		moveforward = -1;
 
-	P_InternalFlickySpawn(actor, locvar1, ((locvar2) ? locvar2 : 8*FRACUNIT), true);
+	P_InternalFlickySpawn(actor, locvar1, ((locvar2) ? locvar2 : 8*FRACUNIT), true, moveforward);
 }
 
 // Internal Flicky color setting
@@ -11679,7 +11693,7 @@ void A_FlickyCenter(mobj_t *actor)
 
 	if (!actor->tracer)
 	{
-		mobj_t *flicky = P_InternalFlickySpawn(actor, locvar1, 1, false);
+		mobj_t *flicky = P_InternalFlickySpawn(actor, locvar1, 1, false, 0);
 		P_SetTarget(&flicky->target, actor);
 		P_SetTarget(&actor->tracer, flicky);
 

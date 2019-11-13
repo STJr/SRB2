@@ -1061,6 +1061,7 @@ state_t states[NUMSTATES] =
 
 	// Snailer
 	{SPR_SNLR, 0, 1, {A_SnailerThink}, 0, 0, S_SNAILER1}, // S_SNAILER1
+	{SPR_BOM1, 0, 0, {A_FlickySpawn}, 1<<17, 0, S_XPLD1}, // S_SNAILER_FLICKY
 
 	// Vulture
 	{SPR_VLTR, 4, 35,        {A_Look},         1, 0, S_VULTURE_STND},  // S_VULTURE_STND
@@ -4644,7 +4645,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_XPLD_FLICKY,  // deathstate
+		S_SNAILER_FLICKY, // deathstate
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		FRACUNIT,       // speed
