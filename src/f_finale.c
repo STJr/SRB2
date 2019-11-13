@@ -2597,7 +2597,7 @@ void F_TitleScreenDrawer(void)
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
-	if (needpatchrecache)
+	if (needpatchrecache && (curttmode != TTMODE_ALACROIX))
 		F_CacheTitleScreen();
 
 	// Draw that sky!
@@ -2620,6 +2620,12 @@ void F_TitleScreenDrawer(void)
 #else
 		return;
 #endif
+
+	if (needpatchrecache && (curttmode == TTMODE_ALACROIX))
+	{
+		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = 0;
+		F_LoadAlacroixGraphics(activettscale);
+	}
 
 	switch(curttmode)
 	{
