@@ -1730,12 +1730,14 @@ enum
 
 static size_t CheckOptions(
 		int            num_options,
+		size_t       *first_argumentp,
 		size_t       *user_options,
 		const char ***option_names,
 		int          *option_num_arguments
 )
 {
-	int arguments_used;
+	int    arguments_used;
+	size_t first_argument;
 
 	int i;
 	const char **pp;
@@ -1743,6 +1745,7 @@ static size_t CheckOptions(
 	size_t n;
 
 	arguments_used = 0;
+	first_argument = COM_Argc();
 
 	for (i = 0; i < num_options; ++i)
 	{
@@ -1754,12 +1757,51 @@ static size_t CheckOptions(
 			{
 				user_options[i] = n;
 				arguments_used += 1 + option_num_arguments[i];
+				if (n < first_argument)
+					first_argument = n;
 			}
 		}
 		while (( name = *++pp )) ;
 	}
 
+	(*first_argumentp) = first_argument;
+
 	return arguments_used;
+}
+
+static char *
+ConcatCommandArgv (int start, int end)
+{
+	char *final;
+
+	size_t size;
+
+	int i;
+	char *p;
+
+	size = 0;
+
+	for (i = start; i < end; ++i)
+	{
+		/*
+		one space after each argument, but terminating
+		character on final argument
+		*/
+		size += strlen(COM_Argv(i)) + 1;
+	}
+
+	final = ZZ_Alloc(size);
+	p = final;
+
+	--end;/* handle the final argument separately */
+	for (i = start; i < end; ++i)
+	{
+		p += sprintf(p, "%s ", COM_Argv(i));
+	}
+	/* at this point "end" is actually the last argument's position */
+	strcpy(p, COM_Argv(end));
+
+	return final;
 }
 
 //
@@ -1802,6 +1844,7 @@ static void Command_Map_f(void)
 	};
 
 	size_t acceptableargc;/* (this includes the command name itself!) */
+	size_t first_argument;
 
 	size_t      user_options         [NUM_MAP_COMMAND_OPTIONS] = {0};
 
@@ -1813,7 +1856,7 @@ static void Command_Map_f(void)
 
 	INT32 newmapnum;
 
-	const char *mapname;
+	char   *    mapname;
 	size_t      mapnamelen;
 	char   *realmapname = NULL;
 
@@ -1830,6 +1873,7 @@ static void Command_Map_f(void)
 
 	/* map name + options */
 	acceptableargc = 2 + CheckOptions(NUM_MAP_COMMAND_OPTIONS,
+			&first_argument,
 			user_options, option_names, option_num_arguments);
 
 	newresetplayers = !user_options[MAP_COMMAND_NORESETPLAYERS_OPTION];
@@ -1857,7 +1901,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (COM_Argc() != acceptableargc)
+	if (COM_Argc() < acceptableargc)
 	{
 		/* I'm going over the fucking lines and I DON'T CAREEEEE */
 		CONS_Printf("map <name / [MAP]code / number> [-gametype <type>] [-force]:\n");
@@ -1869,7 +1913,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	mapname = COM_Argv(1);
+	mapname = ConcatCommandArgv(1, first_argument);
 	mapnamelen = strlen(mapname);
 
 	if (mapnamelen == 2)/* maybe two digit code */
@@ -1882,6 +1926,7 @@ static void Command_Map_f(void)
 		if (( newmapnum = M_MapNumber(mapname[3], mapname[4]) ) == 0)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Invalid map code '%s'.\n"), mapname);
+			Z_Free(mapname);
 			return;
 		}
 		usemapcode = true;
@@ -1896,6 +1941,7 @@ static void Command_Map_f(void)
 			if (newmapnum < 1 || newmapnum > NUMMAPS)
 			{
 				CONS_Alert(CONS_ERROR, M_GetText("Invalid map number %d.\n"), newmapnum);
+				Z_Free(mapname);
 				return;
 			}
 			usemapcode = true;
@@ -1909,6 +1955,7 @@ static void Command_Map_f(void)
 	if (newmapnum == 0 || !mapheaderinfo[newmapnum-1])
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Could not find any map described as '%s'.\n"), mapname);
+		Z_Free(mapname);
 		return;
 	}
 
@@ -1953,6 +2000,7 @@ static void Command_Map_f(void)
 			CONS_Alert(CONS_WARNING, M_GetText("%s (%s) doesn't support %s mode!\n(Use -force to override)\n"), realmapname, G_BuildMapName(newmapnum),
 				(multiplayer ? gametype_cons_t[newgametype].strvalue : "Single Player"));
 			Z_Free(realmapname);
+			Z_Free(mapname);
 			return;
 		}
 		else
@@ -1972,6 +2020,7 @@ static void Command_Map_f(void)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
 		Z_Free(realmapname);
+		Z_Free(mapname);
 		return;
 	}
 
