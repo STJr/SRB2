@@ -6748,6 +6748,12 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	}
 
+#ifdef ROTSPRITE
+	if ((player->mo->state == &states[S_PLAY_NIGHTS_PULL])
+	&& (player->mo->sprite2 == SPR2_NGT0))
+		player->mo->rollangle += ANG30;
+#endif
+
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
 		for (i = 0; i < MAXPLAYERS; i++)
