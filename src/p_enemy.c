@@ -5184,6 +5184,7 @@ void A_SignPlayer(mobj_t *actor)
 				skinnum = (skin_t*)ov->skin-skins;
 				while ((skinnum = (skinnum + 1) % numskins) && skincheck(skinnum));
 			}
+#undef skincheck
 			skin = &skins[skinnum];
 		}
 		else // specific skin
