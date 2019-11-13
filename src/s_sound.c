@@ -1434,7 +1434,7 @@ musicdef_t soundtestsfx = {
 	"_STSFX", // prevents exactly one valid track name from being used on the sound test
 	"Sound Effects",
 	"",
-	"SEGA, Sonic Team Jr, other sources",
+	"SEGA, VAdaPEGA, other sources",
 	1, // show on soundtest page 1
 	0, // with no conditions
 	0,
