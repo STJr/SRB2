@@ -5165,15 +5165,26 @@ void A_SignPlayer(mobj_t *actor)
 		// I turned this function into a fucking mess. I'm so sorry. -Lach
 		if (locvar1 == -2) // next skin
 		{
+			player_t *player = actor->target ? actor->target->player : NULL;
+			UINT8 skinnum;
+#define skincheck(num) (player ? !R_SkinUsable(player-players, num) : skins[num].availability > 0)
 			if (ov->skin == NULL) // pick a random skin to start with!
-				skin = &skins[P_RandomKey(numskins)];
+			{
+				UINT8 skincount = 0;
+				for (skincount = 0; skincount < numskins; skincount++)
+					if (!skincheck(skincount))
+						skincount++;
+				skinnum = P_RandomKey(skincount);
+				for (skincount = skinnum; skincount < numskins; skincount++)
+					if (skincheck(skinnum))
+						skinnum++;
+			}
 			else // otherwise, advance 1 skin
 			{
-				UINT8 skinnum = (skin_t*)ov->skin-skins;
-				player_t *player = actor->target ? actor->target->player : NULL;
-				while ((skinnum = (skinnum + 1) % numskins) && (player ? !R_SkinUsable(player-players, skinnum) : skins[skinnum].availability > 0));
-				skin = &skins[skinnum];
+				skinnum = (skin_t*)ov->skin-skins;
+				while ((skinnum = (skinnum + 1) % numskins) && skincheck(skinnum));
 			}
+			skin = &skins[skinnum];
 		}
 		else // specific skin
 		{
