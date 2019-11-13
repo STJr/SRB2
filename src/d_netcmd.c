@@ -1901,7 +1901,8 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (COM_Argc() < acceptableargc)
+	/* If the first argument is an option, you fucked up. */
+	if (COM_Argc() < acceptableargc || first_argument == 1)
 	{
 		/* I'm going over the fucking lines and I DON'T CAREEEEE */
 		CONS_Printf("map <name / [MAP]code / number> [-gametype <type>] [-force]:\n");
