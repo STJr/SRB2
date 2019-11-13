@@ -791,7 +791,7 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 #ifdef ROTSPRITE
 	INT16 frameXPivot = 0;
 	INT16 frameYPivot = 0;
-	rollaxis_t frameRollAxis = 0;
+	rotaxis_t frameRotAxis = 0;
 #endif
 
 	// Sprite identifier
@@ -840,16 +840,16 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 					sprinfoToken = M_GetToken(NULL);
 					frameYPivot = atoi(sprinfoToken);
 				}
-				else if (stricmp(sprinfoToken, "ROLLAXIS")==0)
+				else if (stricmp(sprinfoToken, "ROTAXIS")==0)
 				{
 					Z_Free(sprinfoToken);
 					sprinfoToken = M_GetToken(NULL);
-					if ((stricmp(sprinfoToken, "X")==0) || (stricmp(sprinfoToken, "XAXIS")==0))
-						frameRollAxis = ROLLAXIS_X;
-					else if ((stricmp(sprinfoToken, "Y")==0) || (stricmp(sprinfoToken, "YAXIS")==0))
-						frameRollAxis = ROLLAXIS_Y;
-					else if ((stricmp(sprinfoToken, "Z")==0) || (stricmp(sprinfoToken, "ZAXIS")==0))
-						frameRollAxis = ROLLAXIS_Z;
+					if ((stricmp(sprinfoToken, "X")==0) || (stricmp(sprinfoToken, "XAXIS")==0) || (stricmp(sprinfoToken, "ROLL")==0))
+						frameRotAxis = ROTAXIS_X;
+					else if ((stricmp(sprinfoToken, "Y")==0) || (stricmp(sprinfoToken, "YAXIS")==0) || (stricmp(sprinfoToken, "PITCH")==0))
+						frameRotAxis = ROTAXIS_Y;
+					else if ((stricmp(sprinfoToken, "Z")==0) || (stricmp(sprinfoToken, "ZAXIS")==0) || (stricmp(sprinfoToken, "YAW")==0))
+						frameRotAxis = ROTAXIS_Z;
 				}
 #endif
 				Z_Free(sprinfoToken);
@@ -868,7 +868,7 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 #ifdef ROTSPRITE
 	info->pivot[frameFrame].x = frameXPivot;
 	info->pivot[frameFrame].y = frameYPivot;
-	info->pivot[frameFrame].rollaxis = frameRollAxis;
+	info->pivot[frameFrame].rotaxis = frameRotAxis;
 #endif
 }
 

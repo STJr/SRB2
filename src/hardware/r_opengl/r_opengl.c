@@ -2071,9 +2071,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	{
 		float roll = (1.0f * pos->rollflip);
 		pglTranslatef(pos->centerx, pos->centery, 0);
-		if (pos->rollaxis == 2) // Z
+		if (pos->rotaxis == 2) // Z
 			pglRotatef(pos->rollangle, 0.0f, 0.0f, roll);
-		else if (pos->rollaxis == 1) // Y
+		else if (pos->rotaxis == 1) // Y
 			pglRotatef(pos->rollangle, 0.0f, roll, 0.0f);
 		else // X
 			pglRotatef(pos->rollangle, roll, 0.0f, 0.0f);

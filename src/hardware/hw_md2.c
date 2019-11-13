@@ -1187,8 +1187,8 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 
 #ifdef ROTSPRITE
 		p.rollangle = 0.0f;
-		p.rollaxis = 0;
 		p.rollflip = 0;
+		p.rotaxis = 0;
 		if (spr->mobj->rollangle)
 		{
 			fixed_t anglef = AngleFixed(spr->mobj->rollangle);
@@ -1199,9 +1199,9 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
 			p.centery = FIXED_TO_FLOAT(spr->mobj->height/2);
 
-			// roll axis
+			// rotation axis
 			if (sprinfo->available)
-				p.rollaxis = (UINT8)(sprinfo->pivot[(spr->mobj->frame & FF_FRAMEMASK)].rollaxis);
+				p.rotaxis = (UINT8)(sprinfo->pivot[(spr->mobj->frame & FF_FRAMEMASK)].rotaxis);
 
 			// for NiGHTS specifically but should work everywhere else
 			ang = R_PointToAngle (spr->mobj->x, spr->mobj->y) - (spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle);

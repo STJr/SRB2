@@ -21,15 +21,15 @@
 #ifdef ROTSPRITE
 typedef enum
 {
-	ROLLAXIS_X, // the default
-	ROLLAXIS_Y,
-	ROLLAXIS_Z
-} rollaxis_t;
+	ROTAXIS_X, // roll (the default)
+	ROTAXIS_Y, // pitch
+	ROTAXIS_Z  // yaw
+} rotaxis_t;
 
 typedef struct
 {
 	INT32 x, y;
-	rollaxis_t rollaxis;
+	rotaxis_t rotaxis;
 } spriteframepivot_t;
 #endif
 

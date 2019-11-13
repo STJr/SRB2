@@ -117,9 +117,9 @@ typedef struct
 	boolean     flip;            // screenflip
 #ifdef ROTSPRITE
 	boolean     roll;
-	UINT8       rollaxis;
 	SINT8       rollflip;
 	FLOAT       rollangle; // done to not override USE_FTRANSFORM_ANGLEZ
+	UINT8       rotaxis;
 	FLOAT       centerx, centery;
 #endif
 #ifdef USE_FTRANSFORM_MIRROR

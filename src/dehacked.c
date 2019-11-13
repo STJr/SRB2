@@ -9365,10 +9365,10 @@ struct {
 	{"NUMDIRS",NUMDIRS},
 
 #ifdef ROTSPRITE
-	// Sprite roll axis (rollaxis_t)
-	{"ROLLAXIS_X",ROLLAXIS_X},
-	{"ROLLAXIS_Y",ROLLAXIS_Y},
-	{"ROLLAXIS_Z",ROLLAXIS_Z},
+	// Sprite rotation axis (rotaxis_t)
+	{"ROTAXIS_X",ROTAXIS_X},
+	{"ROTAXIS_Y",ROTAXIS_Y},
+	{"ROTAXIS_Z",ROTAXIS_Z},
 #endif
 
 	// Buttons (ticcmd_t)
