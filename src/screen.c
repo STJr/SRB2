@@ -73,7 +73,7 @@ consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL,
 
 static void SCR_ActuallyChangeRenderer(void);
 static CV_PossibleValue_t cv_renderer_t[] = {{1, "Software"}, {2, "OpenGL"}, {0, NULL}};
-consvar_t cv_renderer = {"renderer", "Software", CV_SAVE|CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_renderer = {"renderer", "Software", CV_HIDEN|CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
 
 static void SCR_ChangeFullscreen(void);
 
