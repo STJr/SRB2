@@ -19,9 +19,17 @@
 
 // structs
 #ifdef ROTSPRITE
+typedef enum
+{
+	ROLLAXIS_X, // the default
+	ROLLAXIS_Y,
+	ROLLAXIS_Z
+} rollaxis_t;
+
 typedef struct
 {
 	INT32 x, y;
+	rollaxis_t rollaxis;
 } spriteframepivot_t;
 #endif
 

@@ -305,8 +305,10 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 					pivot[idx].x = (INT32)value;
 				else if (ikey == 2 || (key && fastcmp(key, "y")))
 					pivot[idx].y = (INT32)value;
+				else if (ikey == 3 || (key && fastcmp(key, "rollaxis")))
+					pivot[idx].rollaxis = (UINT8)value;
 				else if (ikey == -1 && (key != NULL))
-					FIELDERROR("pivot key", va("x or y expected, got %s", key));
+					FIELDERROR("pivot key", va("x, y or roll axis expected, got %s", key));
 				ok = 1;
 				//info->available = true; // the pivot for this frame is available
 				lua_pop(L, 1);
@@ -328,7 +330,7 @@ static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
 	// stk = 0 has the pivot table
 	// stk = 1 has the frame key
 	// stk = 2 has the frame table
-	// stk = 3 has either "x" or "y" or a number as key
+	// stk = 3 has either "x" or "y" or "rollaxis" or a number as key
 	// stk = 4 has the value for the key mentioned above
 	while (lua_next(L, stk))
 	{
@@ -568,6 +570,8 @@ static int framepivot_get(lua_State *L)
 		lua_pushinteger(L, framepivot->x);
 	else if (fastcmp("y", field))
 		lua_pushinteger(L, framepivot->y);
+	else if (fastcmp("rollaxis", field))
+		lua_pushinteger(L, (UINT8)framepivot->rollaxis);
 	else
 		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
 
@@ -590,6 +594,8 @@ static int framepivot_set(lua_State *L)
 		framepivot->x = luaL_checkinteger(L, 3);
 	else if (fastcmp("y", field))
 		framepivot->y = luaL_checkinteger(L, 3);
+	else if (fastcmp("rollaxis", field))
+		framepivot->rollaxis = (UINT8)luaL_checkinteger(L, 3);
 	else
 		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
 

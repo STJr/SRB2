@@ -961,6 +961,10 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
+#ifdef ROTSPRITE
+		spriteinfo_t *sprinfo;
+		angle_t ang;
+#endif
 		INT32 mod;
 		float finalscale;
 
@@ -984,9 +988,17 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 		{
 			md2 = &md2_playermodels[(skin_t*)spr->mobj->skin-skins];
 			md2->skin = (skin_t*)spr->mobj->skin-skins;
+#ifdef ROTSPRITE
+			sprinfo = &((skin_t *)spr->mobj->skin)->sprinfo[spr->mobj->sprite2];
+#endif
 		}
 		else
+		{
 			md2 = &md2_models[spr->mobj->sprite];
+#ifdef ROTSPRITE
+			sprinfo = &spriteinfo[spr->mobj->sprite];
+#endif
+		}
 
 		if (md2->error)
 			return; // we already failed loading this before :(
@@ -1175,29 +1187,28 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 
 #ifdef ROTSPRITE
 		p.rollangle = 0.0f;
-		p.nightsroll = 0;
+		p.rollaxis = 0;
+		p.rollflip = 0;
 		if (spr->mobj->rollangle)
 		{
-			// do i have to support ROTANGLES here??????
 			fixed_t anglef = AngleFixed(spr->mobj->rollangle);
 			p.rollangle = FIXED_TO_FLOAT(anglef);
-			// pivot
+			p.roll = true;
+
+			// rotation pivot
 			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
 			p.centery = FIXED_TO_FLOAT(spr->mobj->height/2);
-			p.roll = true;
-			// NiGHTS-specific conditional
-			//if (spr->mobj->player)
-			{
-				statenum_t state = spr->mobj->state-states;
-				if ((state == S_PLAY_NIGHTS_FLY0) || (state == S_PLAY_NIGHTS_DRILL0))
-				{
-					angle_t ang = R_PointToAngle (spr->mobj->x, spr->mobj->y) - (spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle);
-					if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
-						p.nightsroll = 1;
-					else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
-						p.nightsroll = -1;
-				}
-			}
+
+			// roll axis
+			if (sprinfo->available)
+				p.rollaxis = (UINT8)(sprinfo->pivot[(spr->mobj->frame & FF_FRAMEMASK)].rollaxis);
+
+			// for NiGHTS specifically but should work everywhere else
+			ang = R_PointToAngle (spr->mobj->x, spr->mobj->y) - (spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle);
+			if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
+				p.rollflip = 1;
+			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
+				p.rollflip = -1;
 		}
 #endif
 

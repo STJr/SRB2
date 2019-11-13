@@ -2069,11 +2069,14 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 #ifdef ROTSPRITE
 	if (pos->roll)
 	{
+		float roll = (1.0f * pos->rollflip);
 		pglTranslatef(pos->centerx, pos->centery, 0);
-		if (pos->nightsroll != 0)
-			pglRotatef(pos->rollangle, 0.0f, 0.0f, (1.0f * pos->nightsroll));
-		else
-			pglRotatef(pos->rollangle, 1.0f, 0.0f, 0.0f);
+		if (pos->rollaxis == 2) // Z
+			pglRotatef(pos->rollangle, 0.0f, 0.0f, roll);
+		else if (pos->rollaxis == 1) // Y
+			pglRotatef(pos->rollangle, 0.0f, roll, 0.0f);
+		else // X
+			pglRotatef(pos->rollangle, roll, 0.0f, 0.0f);
 		pglTranslatef(-pos->centerx, -pos->centery, 0);
 	}
 #endif

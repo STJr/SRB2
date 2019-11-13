@@ -9364,6 +9364,13 @@ struct {
 	{"DI_SOUTHEAST",DI_SOUTHEAST},
 	{"NUMDIRS",NUMDIRS},
 
+#ifdef ROTSPRITE
+	// Sprite roll axis (rollaxis_t)
+	{"ROLLAXIS_X",ROLLAXIS_X},
+	{"ROLLAXIS_Y",ROLLAXIS_Y},
+	{"ROLLAXIS_Z",ROLLAXIS_Z},
+#endif
+
 	// Buttons (ticcmd_t)
 	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},

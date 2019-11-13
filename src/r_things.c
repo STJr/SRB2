@@ -1148,7 +1148,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
+#ifdef ROTSPRITE
 	spriteinfo_t *sprinfo;
+#endif
 	size_t lump;
 
 	size_t rot;
@@ -1223,20 +1225,26 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
 		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+#ifdef ROTSPRITE
 		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
+#endif
 		if (rot >= sprdef->numframes) {
 			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(rot));
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
+#ifdef ROTSPRITE
 			sprinfo = NULL;
+#endif
 			rot = thing->frame&FF_FRAMEMASK;
 		}
 	}
 	else
 	{
 		sprdef = &sprites[thing->sprite];
+#ifdef ROTSPRITE
 		sprinfo = NULL;
+#endif
 	}
 
 	if (rot >= sprdef->numframes)

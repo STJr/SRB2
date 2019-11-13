@@ -791,6 +791,7 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 #ifdef ROTSPRITE
 	INT16 frameXPivot = 0;
 	INT16 frameYPivot = 0;
+	rollaxis_t frameRollAxis = 0;
 #endif
 
 	// Sprite identifier
@@ -839,6 +840,17 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 					sprinfoToken = M_GetToken(NULL);
 					frameYPivot = atoi(sprinfoToken);
 				}
+				else if (stricmp(sprinfoToken, "ROLLAXIS")==0)
+				{
+					Z_Free(sprinfoToken);
+					sprinfoToken = M_GetToken(NULL);
+					if ((stricmp(sprinfoToken, "X")==0) || (stricmp(sprinfoToken, "XAXIS")==0))
+						frameRollAxis = ROLLAXIS_X;
+					else if ((stricmp(sprinfoToken, "Y")==0) || (stricmp(sprinfoToken, "YAXIS")==0))
+						frameRollAxis = ROLLAXIS_Y;
+					else if ((stricmp(sprinfoToken, "Z")==0) || (stricmp(sprinfoToken, "ZAXIS")==0))
+						frameRollAxis = ROLLAXIS_Z;
+				}
 #endif
 				Z_Free(sprinfoToken);
 
@@ -856,6 +868,7 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 #ifdef ROTSPRITE
 	info->pivot[frameFrame].x = frameXPivot;
 	info->pivot[frameFrame].y = frameYPivot;
+	info->pivot[frameFrame].rollaxis = frameRollAxis;
 #endif
 }
 
