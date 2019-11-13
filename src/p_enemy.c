@@ -5176,7 +5176,7 @@ void A_SignPlayer(mobj_t *actor)
 						skincount++;
 				skinnum = P_RandomKey(skincount);
 				for (skincount = skinnum; skincount < numskins; skincount++)
-					if (skincheck(skinnum))
+					if (skincheck(skincount))
 						skinnum++;
 			}
 			else // otherwise, advance 1 skin
