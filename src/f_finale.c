@@ -2671,7 +2671,7 @@ void F_TitleScreenDrawer(void)
 				if (39-finalecount > 0)
 				{
 					whitefade = (9 - (39-finalecount))<<V_ALPHASHIFT;
-					whitecol[0] = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_SUPERGOLD5, GTC_CACHE);
+					whitecol[0] = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_SUPERGOLD3, GTC_CACHE);
 					whitecol[1] = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
 				}
 			}
@@ -2682,7 +2682,7 @@ void F_TitleScreenDrawer(void)
 			if (whitecol[0])
 			{
 				V_DrawFixedPatch(40<<FRACBITS, 20<<FRACBITS, sc, whitefade, TTEMBL[0], whitecol[0]);
-				V_DrawFixedPatch(40<<FRACBITS, 20<<FRACBITS, sc, V_TRANSLUCENT + ((whitefade/2) & ~V_ALPHAMASK), TTEMBL[0], whitecol[1]);
+				V_DrawFixedPatch(40<<FRACBITS, 20<<FRACBITS, sc, V_TRANSLUCENT + ((whitefade/2) & V_ALPHAMASK), TTEMBL[0], whitecol[1]);
 			}
 
 			// Animate SONIC ROBO BLAST 2 before the white flash at tic 30.
@@ -3145,7 +3145,7 @@ void F_TitleScreenDrawer(void)
 			if (whitecol[0])
 			{
 				V_DrawFixedPatch(39<<FRACBITS, 93<<FRACBITS, sc, whitefade, TTRBTX[0], whitecol[0]);
-				V_DrawFixedPatch(39<<FRACBITS, 93<<FRACBITS, sc, V_TRANSLUCENT + ((whitefade/2) & ~V_ALPHAMASK), TTRBTX[0], whitecol[1]);
+				V_DrawFixedPatch(39<<FRACBITS, 93<<FRACBITS, sc, V_TRANSLUCENT + ((whitefade/2) & V_ALPHAMASK), TTRBTX[0], whitecol[1]);
 			}
 
 			//
