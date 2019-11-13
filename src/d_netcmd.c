@@ -1719,16 +1719,49 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	}
 }
 
-/*
-Easy macro; declare parm_*id* and define acceptableargc; put in the parameter
-to match as a string as *name*. Set *argn* to the number of extra arguments
-following the parameter. parm_*id* is filled with the index of the parameter
-found and acceptableargc is incremented to match the macro parameters.
-Returned is whether the parameter was found.
-*/
-#define CHECKPARM( id, name, argn ) \
-( (( parm_ ## id = COM_CheckParm(name) )) &&\
-		( acceptableargc += 1 + argn ) )
+enum
+{
+	MAP_COMMAND_FORCE_OPTION,
+	MAP_COMMAND_GAMETYPE_OPTION,
+	MAP_COMMAND_NORESETPLAYERS_OPTION,
+
+	NUM_MAP_COMMAND_OPTIONS
+};
+
+static size_t CheckOptions(
+		int            num_options,
+		size_t       *user_options,
+		const char ***option_names,
+		int          *option_num_arguments
+)
+{
+	int arguments_used;
+
+	int i;
+	const char **pp;
+	const char  *name;
+	size_t n;
+
+	arguments_used = 0;
+
+	for (i = 0; i < num_options; ++i)
+	{
+		pp = option_names[i];
+		name = *pp;
+		do
+		{
+			if (( n = COM_CheckParm(name) ))
+			{
+				user_options[i] = n;
+				arguments_used += 1 + option_num_arguments[i];
+			}
+		}
+		while (( name = *++pp )) ;
+	}
+
+	return arguments_used;
+}
+
 //
 // Warp to map code.
 // Called either from map <mapname> console command, or idclev cheat.
@@ -1737,12 +1770,42 @@ Returned is whether the parameter was found.
 //
 static void Command_Map_f(void)
 {
-	size_t acceptableargc;
-	size_t parm_force;
-	size_t parm_gametype;
+	const char  *force_option_names[] =
+	{
+		"-force",
+		"-f",
+		NULL
+	};
+	const char  *gametype_option_names[] =
+	{
+		"-gametype",
+		"-g",
+		"-gt",
+		NULL
+	};
+	const char  *noresetplayers_option_names[] =
+	{
+		"-noresetplayers",
+		NULL
+	};
+	const char **option_names[] =
+	{
+		force_option_names,
+		gametype_option_names,
+		noresetplayers_option_names,
+	};
+	int         option_num_arguments[] =
+	{
+		0,/* -force */
+		1,/* -gametype */
+		0,/* -noresetplayers */
+	};
+
+	size_t acceptableargc;/* (this includes the command name itself!) */
+
+	size_t      user_options         [NUM_MAP_COMMAND_OPTIONS] = {0};
+
 	const char *arg_gametype;
-	/* debug? */
-	size_t parm_noresetplayers;
 	boolean newresetplayers;
 
 	boolean mustmodifygame;
@@ -1765,29 +1828,17 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	acceptableargc = 2;/* map name */
+	/* map name + options */
+	acceptableargc = 2 + CheckOptions(NUM_MAP_COMMAND_OPTIONS,
+			user_options, option_names, option_num_arguments);
 
-	(void)
-		(
-				CHECKPARM (force,    "-force",    0) ||
-				CHECKPARM (force,    "-f",        0)
-		);
-	(void)
-		(
-				CHECKPARM (gametype, "-gametype", 1) ||
-				CHECKPARM (gametype, "-g",        1) ||
-				CHECKPARM (gametype, "-gt",       1)
-		);
-
-	(void)CHECKPARM (noresetplayers, "-noresetplayers", 0);
-
-	newresetplayers = !parm_noresetplayers;
+	newresetplayers = !user_options[MAP_COMMAND_NORESETPLAYERS_OPTION];
 
 	mustmodifygame =
 		!( netgame     || multiplayer ) &&
 		(!modifiedgame || savemoddata );
 
-	if (mustmodifygame && !parm_force)
+	if (mustmodifygame && !user_options[MAP_COMMAND_FORCE_OPTION])
 	{
 		/* May want to be more descriptive? */
 		CONS_Printf(M_GetText("Sorry, level change disabled in single player.\n"));
@@ -1800,7 +1851,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (parm_gametype && !multiplayer)
+	if (user_options[MAP_COMMAND_GAMETYPE_OPTION] && !multiplayer)
 	{
 		CONS_Printf(M_GetText("You can't switch gametypes in single player!\n"));
 		return;
@@ -1866,16 +1917,16 @@ static void Command_Map_f(void)
 		realmapname = G_BuildMapTitle(newmapnum);
 	}
 
-	if (mustmodifygame && parm_force)
+	if (mustmodifygame && user_options[MAP_COMMAND_FORCE_OPTION])
 	{
 		G_SetGameModified(false);
 	}
 
 	// new gametype value
 	// use current one by default
-	if (parm_gametype)
+	if (user_options[MAP_COMMAND_GAMETYPE_OPTION])
 	{
-		arg_gametype = COM_Argv(parm_gametype + 1);
+		arg_gametype = COM_Argv(user_options[MAP_COMMAND_GAMETYPE_OPTION] + 1);
 
 		newgametype = G_GetGametypeByName(arg_gametype);
 
@@ -1889,7 +1940,7 @@ static void Command_Map_f(void)
 	}
 
 	// don't use a gametype the map doesn't support
-	if (cv_debug || parm_force || cv_skipmapcheck.value)
+	if (cv_debug || user_options[MAP_COMMAND_FORCE_OPTION] || cv_skipmapcheck.value)
 		fromlevelselect = false; // The player wants us to trek on anyway.  Do so.
 	// G_TOLFlag handles both multiplayer gametype and ignores it for !multiplayer
 	else
