@@ -6752,6 +6752,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	if ((player->mo->state == &states[S_PLAY_NIGHTS_PULL])
 	&& (player->mo->sprite2 == SPR2_NGT0))
 		player->mo->rollangle += ANG30;
+	else
+		player->mo->rollangle = 0;
 #endif
 
 	if (G_IsSpecialStage(gamemap))
