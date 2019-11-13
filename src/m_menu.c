@@ -7109,6 +7109,8 @@ static void M_DrawSoundTest(void)
 
 				work = FixedDiv(work*180, bpm);
 				frame[0] = 8-(work/(20<<FRACBITS));
+				if (frame[0] > 8) // VERY small likelihood for the above calculation to wrap, but it turns out it IS possible lmao
+					frame[0] = 0;
 				ang = (FixedAngle(work)>>ANGLETOFINESHIFT) & FINEMASK;
 				bounce = (FINESINE(ang) - FRACUNIT/2);
 				hscale -= bounce/16;
@@ -7184,7 +7186,7 @@ static void M_DrawSoundTest(void)
 		}
 
 		if (curplaying)
-			V_DrawRightAlignedString(BASEVIDWIDTH-16, 46, V_ALLOWLOWERCASE, curplaying->authors);
+			V_DrawRightAlignedThinString(BASEVIDWIDTH-16, 46, V_ALLOWLOWERCASE, curplaying->authors);
 	}
 
 	V_DrawFill(165, 60, 140, 112, 159);
