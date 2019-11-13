@@ -8656,6 +8656,8 @@ static const char *const MENUTYPES_LIST[] = {
 	"SR_LEVELSELECT",
 	"SR_UNLOCKCHECKLIST",
 	"SR_EMBLEMHINT",
+	"SR_PLAYER",
+	"SR_SOUNDTEST",
 
 	// Addons (Part of MISC, but let's make it our own)
 	"AD_MAIN",

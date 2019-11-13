@@ -1891,6 +1891,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"M_", 2}, // As does menu stuff
+		{"MUSICDEF", 8}, // Song definitions (thanks kart)
 
 		{NULL, 0},
 	};

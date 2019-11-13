@@ -3478,6 +3478,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	ST_ReloadSkinFaceGraphics();
 
 	//
+	// edit music defs
+	//
+	S_LoadMusicDefs(wadnum);
+
+	//
 	// search for maps
 	//
 	lumpinfo = wadfiles[wadnum]->lumpinfo;
