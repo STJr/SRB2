@@ -3912,10 +3912,16 @@ void A_BossDeath(mobj_t *mo)
 
 	// victory!
 	P_LinedefExecute(LE_ALLBOSSESDEAD, mo, NULL);
+	if (stoppedclock && modeattacking) // if you're just time attacking, skip making the capsule appear since you don't need to step on it anyways.
+		goto bossjustdie;
 	if (mo->flags2 & MF2_BOSSNOTRAP)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
 			P_DoPlayerExit(&players[i]);
+		}
 	}
 	else
 	{
@@ -10557,7 +10563,11 @@ void A_ForceWin(mobj_t *actor)
 		return;
 
 	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
 		P_DoPlayerExit(&players[i]);
+	}
 }
 
 // Function: A_SpikeRetract

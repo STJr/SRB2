@@ -475,4 +475,5 @@ extern boolean runemeraldmanager;
 extern UINT16 emeraldspawndelay;
 extern INT32 numstarposts;
 extern UINT16 bossdisabled;
+extern boolean stoppedclock;
 #endif
