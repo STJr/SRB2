@@ -1736,25 +1736,151 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	}
 }
 
+enum
+{
+	MAP_COMMAND_FORCE_OPTION,
+	MAP_COMMAND_GAMETYPE_OPTION,
+	MAP_COMMAND_NORESETPLAYERS_OPTION,
+
+	NUM_MAP_COMMAND_OPTIONS
+};
+
+static size_t CheckOptions(
+		int            num_options,
+		size_t       *first_argumentp,
+		size_t       *user_options,
+		const char ***option_names,
+		int          *option_num_arguments
+)
+{
+	int    arguments_used;
+	size_t first_argument;
+
+	int i;
+	const char **pp;
+	const char  *name;
+	size_t n;
+
+	arguments_used = 0;
+	first_argument = COM_Argc();
+
+	for (i = 0; i < num_options; ++i)
+	{
+		pp = option_names[i];
+		name = *pp;
+		do
+		{
+			if (( n = COM_CheckParm(name) ))
+			{
+				user_options[i] = n;
+				arguments_used += 1 + option_num_arguments[i];
+				if (n < first_argument)
+					first_argument = n;
+			}
+		}
+		while (( name = *++pp )) ;
+	}
+
+	(*first_argumentp) = first_argument;
+
+	return arguments_used;
+}
+
+static char *
+ConcatCommandArgv (int start, int end)
+{
+	char *final;
+
+	size_t size;
+
+	int i;
+	char *p;
+
+	size = 0;
+
+	for (i = start; i < end; ++i)
+	{
+		/*
+		one space after each argument, but terminating
+		character on final argument
+		*/
+		size += strlen(COM_Argv(i)) + 1;
+	}
+
+	final = ZZ_Alloc(size);
+	p = final;
+
+	--end;/* handle the final argument separately */
+	for (i = start; i < end; ++i)
+	{
+		p += sprintf(p, "%s ", COM_Argv(i));
+	}
+	/* at this point "end" is actually the last argument's position */
+	strcpy(p, COM_Argv(end));
+
+	return final;
+}
+
+//
 // Warp to map code.
 // Called either from map <mapname> console command, or idclev cheat.
 //
+// Largely rewritten by James.
+//
 static void Command_Map_f(void)
 {
-	const char *mapname;
-	size_t i;
-	INT32 newmapnum;
+	const char  *force_option_names[] =
+	{
+		"-force",
+		"-f",
+		NULL
+	};
+	const char  *gametype_option_names[] =
+	{
+		"-gametype",
+		"-g",
+		"-gt",
+		NULL
+	};
+	const char  *noresetplayers_option_names[] =
+	{
+		"-noresetplayers",
+		NULL
+	};
+	const char **option_names[] =
+	{
+		force_option_names,
+		gametype_option_names,
+		noresetplayers_option_names,
+	};
+	int         option_num_arguments[] =
+	{
+		0,/* -force */
+		1,/* -gametype */
+		0,/* -noresetplayers */
+	};
+
+	size_t acceptableargc;/* (this includes the command name itself!) */
+	size_t first_argument;
+
+	size_t      user_options         [NUM_MAP_COMMAND_OPTIONS] = {0};
+
+	const char *arg_gametype;
 	boolean newresetplayers;
+
+	boolean mustmodifygame;
+	boolean usemapcode = false;
+
+	INT32 newmapnum;
+
+	char   *    mapname;
+	size_t      mapnamelen;
+	char   *realmapname = NULL;
+
 	INT32 newgametype = gametype;
 
-	// max length of command: map map03 -gametype coop -noresetplayers -force
-	//                         1    2       3       4         5           6
-	// = 8 arg max
-	if (COM_Argc() < 2 || COM_Argc() > 8)
-	{
-		CONS_Printf(M_GetText("map <mapname> [-gametype <type> [-force]: warp to map\n"));
-		return;
-	}
+	INT32 d;
+	char *p;
 
 	if (client && !IsPlayerAdmin(consoleplayer))
 	{
@@ -1762,25 +1888,23 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	// internal wad lump always: map command doesn't support external files as in doom legacy
-	if (W_CheckNumForName(COM_Argv(1)) == LUMPERROR)
+	/* map name + options */
+	acceptableargc = 2 + CheckOptions(NUM_MAP_COMMAND_OPTIONS,
+			&first_argument,
+			user_options, option_names, option_num_arguments);
+
+	newresetplayers = !user_options[MAP_COMMAND_NORESETPLAYERS_OPTION];
+
+	mustmodifygame =
+		!( netgame     || multiplayer ) &&
+		(!modifiedgame || savemoddata );
+
+	if (mustmodifygame && !user_options[MAP_COMMAND_FORCE_OPTION])
 	{
-		CONS_Alert(CONS_ERROR, M_GetText("Internal game level '%s' not found\n"), COM_Argv(1));
+		/* May want to be more descriptive? */
+		CONS_Printf(M_GetText("Sorry, level change disabled in single player.\n"));
 		return;
 	}
-
-	if (!(netgame || multiplayer) && (!modifiedgame || savemoddata))
-	{
-		if (COM_CheckParm("-force"))
-			G_SetGameModified(false);
-		else
-		{
-			CONS_Printf(M_GetText("Sorry, level change disabled in single player.\n"));
-			return;
-		}
-	}
-
-	newresetplayers = !COM_CheckParm("-noresetplayers");
 
 	if (!newresetplayers && !cv_debug)
 	{
@@ -1788,36 +1912,121 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	mapname = COM_Argv(1);
-	if (strlen(mapname) != 5
-	|| (newmapnum = M_MapNumber(mapname[3], mapname[4])) == 0)
+	if (user_options[MAP_COMMAND_GAMETYPE_OPTION] && !multiplayer)
 	{
-		CONS_Alert(CONS_ERROR, M_GetText("Invalid level name %s\n"), mapname);
+		CONS_Printf(M_GetText("You can't switch gametypes in single player!\n"));
 		return;
 	}
 
-	// Ultimate Mode only in SP via menu
-	if (netgame || multiplayer)
-		ultimatemode = false;
+	/* If the first argument is an option, you fucked up. */
+	if (COM_Argc() < acceptableargc || first_argument == 1)
+	{
+		/* I'm going over the fucking lines and I DON'T CAREEEEE */
+		CONS_Printf("map <name / [MAP]code / number> [-gametype <type>] [-force]:\n");
+		CONS_Printf(M_GetText(
+					"Warp to a map, by its name, two character code, with optional \"MAP\" prefix, or by its number (though why would you).\n"
+					"All parameters are case-insensitive.\n"
+					"* \"-force\" may be shortened to \"-f\".\n"
+					"* \"-gametype\" may be shortened to \"-g\" or \"-gt\".\n"));
+		return;
+	}
+
+	mapname = ConcatCommandArgv(1, first_argument);
+	mapnamelen = strlen(mapname);
+
+	if (mapnamelen == 2)/* maybe two digit code */
+	{
+		if (( newmapnum = M_MapNumber(mapname[0], mapname[1]) ))
+			usemapcode = true;
+	}
+	else if (mapnamelen == 5 && strnicmp(mapname, "MAP", 3) == 0)
+	{
+		if (( newmapnum = M_MapNumber(mapname[3], mapname[4]) ) == 0)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Invalid map code '%s'.\n"), mapname);
+			Z_Free(mapname);
+			return;
+		}
+		usemapcode = true;
+	}
+
+	if (!usemapcode)
+	{
+		/* Now detect map number in base 10, which no one asked for. */
+		newmapnum = strtol(mapname, &p, 10);
+		if (*p == '\0')/* we got it */
+		{
+			if (newmapnum < 1 || newmapnum > NUMMAPS)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("Invalid map number %d.\n"), newmapnum);
+				Z_Free(mapname);
+				return;
+			}
+			usemapcode = true;
+		}
+		else
+		{
+			newmapnum = G_FindMap(mapname, &realmapname, NULL, NULL);
+		}
+	}
+
+	if (newmapnum == 0 || !mapheaderinfo[newmapnum-1])
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Could not find any map described as '%s'.\n"), mapname);
+		Z_Free(mapname);
+		return;
+	}
+
+	if (usemapcode)
+	{
+		realmapname = G_BuildMapTitle(newmapnum);
+	}
+
+	if (mustmodifygame && user_options[MAP_COMMAND_FORCE_OPTION])
+	{
+		G_SetGameModified(false);
+	}
 
 	// new gametype value
 	// use current one by default
-	i = COM_CheckParm("-gametype");
-	if (i)
+	if (user_options[MAP_COMMAND_GAMETYPE_OPTION])
 	{
-		if (!multiplayer)
-		{
-			CONS_Printf(M_GetText("You can't switch gametypes in single player!\n"));
-			return;
-		}
+		arg_gametype = COM_Argv(user_options[MAP_COMMAND_GAMETYPE_OPTION] + 1);
 
-		newgametype = G_GetGametypeByName(COM_Argv(i+1));
+		newgametype = G_GetGametypeByName(arg_gametype);
 
 		if (newgametype == -1) // reached end of the list with no match
 		{
-			INT32 j = atoi(COM_Argv(i+1)); // assume they gave us a gametype number, which is okay too
-			if (j >= 0 && j < NUMGAMETYPES)
-				newgametype = (INT16)j;
+			d = atoi(arg_gametype);
+			// assume they gave us a gametype number, which is okay too
+			if (d >= 0 && d < NUMGAMETYPES)
+				newgametype = d;
+		}
+	}
+
+	// don't use a gametype the map doesn't support
+	if (cv_debug || user_options[MAP_COMMAND_FORCE_OPTION] || cv_skipmapcheck.value)
+		fromlevelselect = false; // The player wants us to trek on anyway.  Do so.
+	// G_TOLFlag handles both multiplayer gametype and ignores it for !multiplayer
+	else
+	{
+		if (!(
+					mapheaderinfo[newmapnum-1] &&
+					mapheaderinfo[newmapnum-1]->typeoflevel & G_TOLFlag(newgametype)
+		))
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("%s (%s) doesn't support %s mode!\n(Use -force to override)\n"), realmapname, G_BuildMapName(newmapnum),
+				(multiplayer ? gametype_cons_t[newgametype].strvalue : "Single Player"));
+			Z_Free(realmapname);
+			Z_Free(mapname);
+			return;
+		}
+		else
+		{
+			fromlevelselect =
+				( netgame || multiplayer ) &&
+				newgametype == gametype    &&
+				newgametype == GT_COOP;
 		}
 	}
 
@@ -1828,31 +2037,14 @@ static void Command_Map_f(void)
 	if (!dedicated && M_MapLocked(newmapnum))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
+		Z_Free(realmapname);
+		Z_Free(mapname);
 		return;
 	}
 
-	// don't use a gametype the map doesn't support
-	if (cv_debug || COM_CheckParm("-force") || cv_skipmapcheck.value)
-		fromlevelselect = false; // The player wants us to trek on anyway.  Do so.
-	// G_TOLFlag handles both multiplayer gametype and ignores it for !multiplayer
-	// Alternatively, bail if the map header is completely missing anyway.
-	else if (!mapheaderinfo[newmapnum-1]
-	 || !(mapheaderinfo[newmapnum-1]->typeoflevel & G_TOLFlag(newgametype)))
-	{
-		char gametypestring[32] = "Single Player";
-
-		if (multiplayer)
-		{
-			if (newgametype >= 0 && newgametype < NUMGAMETYPES
-			&& Gametype_Names[newgametype])
-				strcpy(gametypestring, Gametype_Names[newgametype]);
-		}
-
-		CONS_Alert(CONS_WARNING, M_GetText("%s doesn't support %s mode!\n(Use -force to override)\n"), mapname, gametypestring);
-		return;
-	}
-	else
-		fromlevelselect = ((netgame || multiplayer) && ((gametype == newgametype) && (newgametype == GT_COOP)));
+	// Ultimate Mode only in SP via menu
+	if (netgame || multiplayer)
+		ultimatemode = false;
 
 	if (tutorialmode && tutorialgcs)
 	{
@@ -1865,7 +2057,10 @@ static void Command_Map_f(void)
 	tutorialmode = false; // warping takes us out of tutorial mode
 
 	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);
+
+	Z_Free(realmapname);
 }
+#undef CHECKPARM
 
 /** Receives a map command and changes the map.
   *
