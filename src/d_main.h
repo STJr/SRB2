@@ -54,4 +54,7 @@ const char *D_Home(void);
 void D_AdvanceDemo(void);
 void D_StartTitle(void);
 
+/* Here for title maps */
+void D_Render(void);
+
 #endif //__D_MAIN__

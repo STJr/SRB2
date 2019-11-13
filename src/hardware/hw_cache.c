@@ -506,43 +506,6 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 		if (blockheight < 1)
 			I_Error("3D GenerateTexture : too small");
 	}
-	else if (cv_voodoocompatibility.value)
-	{
-		if (originalwidth > 256 || originalheight > 256)
-		{
-			blockwidth = 256;
-			while (originalwidth < blockwidth)
-				blockwidth >>= 1;
-			if (blockwidth < 1)
-				I_Error("3D GenerateTexture : too small");
-
-			blockheight = 256;
-			while (originalheight < blockheight)
-				blockheight >>= 1;
-			if (blockheight < 1)
-				I_Error("3D GenerateTexture : too small");
-		}
-		else
-		{
-			//size up to nearest power of 2
-			blockwidth = 1;
-			while (blockwidth < originalwidth)
-				blockwidth <<= 1;
-			// scale down the original graphics to fit in 256
-			if (blockwidth > 256)
-				blockwidth = 256;
-				//I_Error("3D GenerateTexture : too big");
-
-			//size up to nearest power of 2
-			blockheight = 1;
-			while (blockheight < originalheight)
-				blockheight <<= 1;
-			// scale down the original graphics to fit in 256
-			if (blockheight > 256)
-				blockheight = 255;
-				//I_Error("3D GenerateTexture : too big");
-		}
-	}
 	else
 	{
 #ifdef GLIDE_API_COMPATIBILITY
@@ -771,18 +734,6 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 		newwidth = blockwidth;
 		newheight = blockheight;
 	}
-	else if (cv_voodoocompatibility.value) // Only scales down textures that exceed 256x256.
-	{
-		// no rounddown, do not size up patches, so they don't look 'scaled'
-		newwidth  = min(grPatch->width, blockwidth);
-		newheight = min(grPatch->height, blockheight);
-
-		if (newwidth > 256 || newheight > 256)
-		{
-			newwidth = blockwidth;
-			newheight = blockheight;
-		}
-	}
 	else
 	{
 		// no rounddown, do not size up patches, so they don't look 'scaled'
@@ -925,29 +876,6 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	return grtex;
 }
 
-// HWR_RenderPlane and HWR_RenderPolyObjectPlane need this to get the flat dimensions from a patch.
-lumpnum_t gr_patchflat;
-
-static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
-{
-	UINT8 *flat;
-	patch_t *patch = (patch_t *)W_CacheLumpNum(flatlumpnum, PU_STATIC);
-#ifndef NO_PNG_LUMPS
-	size_t lumplength = W_LumpLength(flatlumpnum);
-
-	if (R_IsLumpPNG((UINT8 *)patch, lumplength))
-		patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL, false);
-#endif
-
-	grMipmap->width  = (UINT16)SHORT(patch->width);
-	grMipmap->height = (UINT16)SHORT(patch->height);
-
-	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data);
-	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
-
-	R_PatchToFlat(patch, flat);
-}
-
 static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
 	size_t size, pflatsize;
@@ -988,40 +916,15 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 			break;
 	}
 
-	if (R_CheckIfPatch(flatlumpnum))
-		HWR_LoadPatchFlat(grMipmap, flatlumpnum);
-	else
-	{
-		grMipmap->width  = (UINT16)pflatsize;
-		grMipmap->height = (UINT16)pflatsize;
+	grMipmap->width  = (UINT16)pflatsize;
+	grMipmap->height = (UINT16)pflatsize;
 
-		// the flat raw data needn't be converted with palettized textures
-		W_ReadLump(flatlumpnum, Z_Malloc(W_LumpLength(flatlumpnum),
-			PU_HWRCACHE, &grMipmap->grInfo.data));
-	}
+	// the flat raw data needn't be converted with palettized textures
+	W_ReadLump(flatlumpnum, Z_Malloc(W_LumpLength(flatlumpnum),
+		PU_HWRCACHE, &grMipmap->grInfo.data));
 }
 
-// Download a Doom 'flat' to the hardware cache and make it ready for use
-void HWR_GetFlat(lumpnum_t flatlumpnum)
-{
-	GLMipmap_t *grmip;
-
-	grmip = HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
-
-	if (!grmip->downloaded && !grmip->grInfo.data)
-		HWR_CacheFlat(grmip, flatlumpnum);
-
-	HWD.pfnSetTexture(grmip);
-
-	// The system-memory data can be purged now.
-	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
-
-	gr_patchflat = 0;
-	if (R_CheckIfPatch(flatlumpnum))
-		gr_patchflat = flatlumpnum;
-}
-
-static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
+static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 {
 	UINT8 *flat;
 
@@ -1043,24 +946,53 @@ static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 	R_TextureToFlat(texturenum, flat);
 }
 
-void HWR_GetTextureFlat(INT32 texturenum)
+// Download a Doom 'flat' to the hardware cache and make it ready for use
+void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 {
-	GLTexture_t *grtex;
-#ifdef PARANOIA
-	if ((unsigned)texturenum >= gr_numtextures)
-		I_Error("HWR_GetTextureFlat: texturenum >= numtextures\n");
-#endif
-	if (texturenum == 0 || texturenum == -1)
+	GLMipmap_t *grmip;
+	if (flatlumpnum == LUMPERROR)
 		return;
-	grtex = &gr_textures2[texturenum];
 
-	if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
-		HWR_LoadTextureFlat(&grtex->mipmap, texturenum);
+	grmip = HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
+	if (!grmip->downloaded && !grmip->grInfo.data)
+		HWR_CacheFlat(grmip, flatlumpnum);
 
-	HWD.pfnSetTexture(&grtex->mipmap);
+	HWD.pfnSetTexture(grmip);
 
 	// The system-memory data can be purged now.
-	Z_ChangeTag(grtex->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
+	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+}
+
+void HWR_GetLevelFlat(levelflat_t *levelflat)
+{
+	// Who knows?
+	if (levelflat == NULL)
+		return;
+
+	if (levelflat->type == LEVELFLAT_FLAT)
+		HWR_LiterallyGetFlat(levelflat->u.flat.lumpnum);
+	else if (levelflat->type == LEVELFLAT_TEXTURE)
+	{
+		GLTexture_t *grtex;
+		INT32 texturenum = levelflat->u.texture.num;
+#ifdef PARANOIA
+		if ((unsigned)texturenum >= gr_numtextures)
+			I_Error("HWR_GetLevelFlat: texturenum >= numtextures\n");
+#endif
+		if (texturenum == 0 || texturenum == -1)
+			return;
+		grtex = &gr_textures2[texturenum];
+
+		if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
+			HWR_CacheTextureAsFlat(&grtex->mipmap, texturenum);
+
+		HWD.pfnSetTexture(&grtex->mipmap);
+
+		// The system-memory data can be purged now.
+		Z_ChangeTag(grtex->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
+	}
+	else // set no texture
+		HWD.pfnSetTexture(NULL);
 }
 
 //
@@ -1285,18 +1217,6 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 		{
 			newwidth = blockwidth;
 			newheight = blockheight;
-		}
-		else if (cv_voodoocompatibility.value) // Only scales down textures that exceed 256x256.
-		{
-			// no rounddown, do not size up patches, so they don't look 'scaled'
-			newwidth  = min(SHORT(pic->width),blockwidth);
-			newheight = min(SHORT(pic->height),blockheight);
-
-			if (newwidth > 256 || newheight > 256)
-			{
-				newwidth = blockwidth;
-				newheight = blockheight;
-			}
 		}
 		else
 		{

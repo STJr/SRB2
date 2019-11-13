@@ -2050,8 +2050,7 @@ void P_SpawnThokMobj(player_t *player)
 		mobj->eflags |= (player->mo->eflags & MFE_VERTICALFLIP);
 
 		// scale
-		P_SetScale(mobj, player->mo->scale);
-		mobj->destscale = player->mo->scale;
+		P_SetScale(mobj, (mobj->destscale = player->mo->scale));
 
 		if (type == MT_THOK) // spintrail-specific modification for MT_THOK
 		{
@@ -2061,8 +2060,7 @@ void P_SpawnThokMobj(player_t *player)
 	}
 
 	P_SetTarget(&mobj->target, player->mo); // the one thing P_SpawnGhostMobj doesn't do
-	if (demorecording)
-		G_GhostAddThok();
+	G_GhostAddThok();
 }
 
 //
@@ -2265,7 +2263,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				else if (!player->skidtime)
 					player->pflags &= ~PF_GLIDING;
 			}
-			else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_THOKKED && (~player->pflags) & PF_SHIELDABILITY)
+			else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_THOKKED && !(player->pflags & PF_SHIELDABILITY) && player->mo->state-states == S_PLAY_FALL)
 			{
 				if (player->mo->state-states != S_PLAY_GLIDE_LANDING)
 				{
@@ -4576,8 +4574,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (player->revitem && !(leveltime % 5)) // Now spawn the color thok circle.
 					{
 						P_SpawnSpinMobj(player, player->revitem);
-						if (demorecording)
-							G_GhostAddRev();
+						G_GhostAddRev();
 					}
 				}
 
@@ -5305,14 +5302,23 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					// Now Knuckles-type abilities are checked.
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
-						INT32 glidespeed = player->actionspd;
+						fixed_t glidespeed = FixedMul(player->actionspd, player->mo->scale);
+						fixed_t playerspeed = player->speed;
+
+						if (player->mo->eflags & MFE_UNDERWATER)
+						{
+							glidespeed >>= 1;
+							playerspeed >>= 1;
+							player->mo->momx = ((player->mo->momx - player->cmomx) >> 1) + player->cmomx;
+							player->mo->momy = ((player->mo->momy - player->cmomy) >> 1) + player->cmomy;
+						}
 
 						player->pflags |= PF_GLIDING|PF_THOKKED;
 						player->glidetime = 0;
 
 						P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
-						if (player->speed < glidespeed)
-							P_Thrust(player->mo, player->mo->angle, glidespeed - player->speed);
+						if (playerspeed < glidespeed)
+							P_Thrust(player->mo, player->mo->angle, glidespeed - playerspeed);
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 					}
 					break;
@@ -5972,7 +5978,12 @@ static void P_3dMovement(player_t *player)
 	if (player->climbing)
 	{
 		if (cmd->forwardmove)
-			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 15*FRACUNIT>>1), false);
+		{
+			if (player->mo->eflags & MFE_UNDERWATER)
+				P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 10*FRACUNIT), false);
+			else
+				P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 15*FRACUNIT>>1), false);
+		}
 	}
 	else if (!analogmove
 		&& cmd->forwardmove != 0 && !(player->pflags & PF_GLIDING || player->exiting
@@ -6006,7 +6017,12 @@ static void P_3dMovement(player_t *player)
 	}
 	// Sideways movement
 	if (player->climbing)
-		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 15*FRACUNIT>>1));
+	{
+		if (player->mo->eflags & MFE_UNDERWATER)
+			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 10*FRACUNIT));
+		else
+			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 15*FRACUNIT>>1));
+	}
 	// Analog movement control
 	else if (analogmove)
 	{
@@ -8361,8 +8377,7 @@ static void P_MovePlayer(player_t *player)
 	if (player->pflags & PF_SPINNING && P_AproxDistance(player->speed, player->mo->momz) > FixedMul(15<<FRACBITS, player->mo->scale) && !(player->pflags & PF_JUMPED))
 	{
 		P_SpawnSpinMobj(player, player->spinitem);
-		if (demorecording)
-			G_GhostAddSpin();
+		G_GhostAddSpin();
 	}
 
 
@@ -11129,6 +11144,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	}
 
 	fume->movecount = dashmode; // keeps track of previous dashmode value so we know whether Metal is entering or leaving it
+	fume->eflags = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP); // Make sure to flip in reverse gravity!
 	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP); // Make sure to flip in reverse gravity!
 
 	// Finally, set its position
@@ -11137,10 +11153,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	P_UnsetThingPosition(fume);
 	fume->x = mo->x + P_ReturnThrustX(fume, angle, dist);
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
-	if (fume->eflags & MFE_VERTICALFLIP)
-		fume->z = mo->z + ((mo->height + fume->height) >> 1);
-	else
-		fume->z = mo->z + ((mo->height - fume->height) >> 1);
+	fume->z = mo->z + ((mo->height - fume->height) >> 1);
 	P_SetThingPosition(fume);
 }
 
@@ -11532,7 +11545,7 @@ void P_PlayerThink(player_t *player)
 
 	// deez New User eXperiences.
 	{
-		angle_t diff = 0;
+		angle_t oldang = player->drawangle, diff = 0;
 		UINT8 factor;
 		// Directionchar!
 		// Camera angle stuff.
@@ -11546,6 +11559,13 @@ void P_PlayerThink(player_t *player)
 			player->drawangle = player->mo->angle;
 		else if (P_PlayerInPain(player))
 			;
+		else if (player->powers[pw_justsprung]) // restricted, potentially by lua
+		{
+#ifdef SPRINGSPIN
+			if (player->powers[pw_justsprung] & (1<<15))
+				player->drawangle += (player->powers[pw_justsprung] & ~(1<<15))*(ANG2+ANG1);
+#endif
+		}
 		else if (player->powers[pw_carry] && player->mo->tracer) // carry
 		{
 			switch (player->powers[pw_carry])
@@ -11582,13 +11602,6 @@ void P_PlayerThink(player_t *player)
 					player->drawangle = player->mo->angle;
 					break;
 			}
-		}
-		else if (player->powers[pw_justsprung])
-		{
-#ifdef SPRINGSPIN
-			if (player->powers[pw_justsprung] & (1<<15))
-				player->drawangle += (player->powers[pw_justsprung] & ~(1<<15))*(ANG2+ANG1);
-#endif
 		}
 		else if ((player->skidtime > (TICRATE/2 - 2) || ((player->pflags & (PF_SPINNING|PF_STARTDASH)) == PF_SPINNING)) && (abs(player->rmomx) > 5*player->mo->scale || abs(player->rmomy) > 5*player->mo->scale)) // spin/skid force
 			player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
@@ -11648,6 +11661,22 @@ void P_PlayerThink(player_t *player)
 			else
 				diff /= factor;
 			player->drawangle += diff;
+		}
+
+		// reset from waiting to standing when turning on the spot
+		if (player->panim == PA_IDLE)
+		{
+			diff = player->drawangle - oldang;
+			if (diff > ANGLE_180)
+				diff = InvAngle(diff);
+			if (diff > ANG10/2)
+			{
+				statenum_t stat = player->mo->state-states;
+				if (stat == S_PLAY_WAIT)
+					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				else if (stat == S_PLAY_STND && player->mo->tics != -1)
+					player->mo->tics++;
+			}
 		}
 
 		// Autobrake! check ST_drawInput if you modify this
@@ -11888,8 +11917,8 @@ void P_PlayerThink(player_t *player)
 	player->pflags &= ~PF_SLIDING;
 
 #define dashmode player->dashmode
-	// Dash mode - thanks be to Iceman404
-	if ((player->charflags & SF_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
+	// Dash mode - thanks be to VelocitOni
+	if ((player->charflags & SF_DASHMODE) && !player->gotflag && !player->powers[pw_carry] && !player->exiting && !(maptol & TOL_NIGHTS) && !metalrecording) // woo, dashmode! no nights tho.
 	{
 		boolean totallyradical = player->speed >= FixedMul(player->runspeed, player->mo->scale);
 		boolean floating = (player->secondjump == 1);
@@ -11899,12 +11928,16 @@ void P_PlayerThink(player_t *player)
 			if (dashmode < DASHMODE_MAX)
 				dashmode++; // Counter. Adds 1 to dash mode per tic in top speed.
 			if (dashmode == DASHMODE_THRESHOLD) // This isn't in the ">=" equation because it'd cause the sound to play infinitely.
-				S_StartSound(player->mo, sfx_s3ka2); // If the player enters dashmode, play this sound on the the tic it starts.
+				S_StartSound(player->mo, (player->charflags & SF_MACHINE) ? sfx_kc4d : sfx_cdfm40); // If the player enters dashmode, play this sound on the the tic it starts.
 		}
 		else if ((!totallyradical || !floating) && !(player->pflags & PF_SPINNING))
 		{
 			if (dashmode > 3)
+			{
 				dashmode -= 3; // Rather than lose it all, it gently counts back down!
+				if ((dashmode+3) >= DASHMODE_THRESHOLD && dashmode < DASHMODE_THRESHOLD)
+					S_StartSound(player->mo, sfx_kc65);
+			}
 			else
 				dashmode = 0;
 		}
@@ -11935,6 +11968,7 @@ void P_PlayerThink(player_t *player)
 		{
 			player->normalspeed = skins[player->skin].normalspeed;
 			player->jumpfactor = skins[player->skin].jumpfactor;
+			S_StartSound(player->mo, sfx_kc65);
 		}
 		dashmode = 0;
 	}

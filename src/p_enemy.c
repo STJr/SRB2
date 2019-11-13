@@ -3327,7 +3327,8 @@ void A_SkullAttack(mobj_t *actor)
 		fixed_t oldradius = mobjinfo[MT_NULL].radius;
 		fixed_t oldheight = mobjinfo[MT_NULL].height;
 		mobj_t *check;
-		INT32 i, j, k;
+		INT32 i, j;
+		static INT32 k;/* static for (at least) GCC 9.1 weirdness */
 		boolean allow;
 		angle_t testang;
 
@@ -3936,11 +3937,15 @@ void A_BossDeath(mobj_t *mo)
 		{
 			// Touching the egg trap button calls P_DoPlayerExit, which calls P_RestoreMusic.
 			// So just park ourselves in the mapmus variables.
-			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7);
-			strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
-			mapmusname[6] = 0;
-			mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
-			mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
+			// But don't change the mapmus variables if they were modified from their level header values (e.g., TUNES).
+			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, S_MusicName(), 7);
+			if (!strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7))
+			{
+				strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
+				mapmusname[6] = 0;
+				mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
+				mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
+			}
 
 			// don't change if we're in another tune
 			// but in case we're in jingle, use our parked mapmus variables so the correct track restores
@@ -9207,10 +9212,11 @@ void A_BossJetFume(mobj_t *actor)
 		P_SetTarget(&filler->target, actor);
 		filler->fuse = 59;
 		P_SetTarget(&actor->tracer, filler);
-		filler->destscale = actor->scale/3;
-		P_SetScale(filler, filler->destscale);
+		P_SetScale(filler, (filler->destscale = actor->scale/3));
 		if (actor->eflags & MFE_VERTICALFLIP)
 			filler->flags2 |= MF2_OBJECTFLIP;
+		filler->color = SKINCOLOR_ICY;
+		filler->colorized = true;
 	}
 	else if (locvar1 == 3) // Boss 4 jet flame
 	{

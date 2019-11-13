@@ -435,6 +435,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
+	boolean dealloc = false;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
@@ -466,10 +467,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-		{
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
 			goto multipatch;
-		}
 #endif
 
 		// Check the patch for holes.
@@ -558,9 +556,14 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		dealloc = false;
+
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			dealloc = true;
+		}
 #endif
 
 		x1 = patch->originx;
@@ -598,6 +601,9 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 			*(UINT32 *)&colofs[x<<2] = LONG((x * texture->height) + (texture->width*4));
 			ColumnDrawerPointer(patchcol, block + LONG(*(UINT32 *)&colofs[x<<2]), patch, texture->height, height);
 		}
+
+		if (dealloc)
+			Z_Free(realpatch);
 	}
 
 done:
@@ -1427,48 +1433,6 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 			break;
 		}
 		lump = LUMPERROR;
-	}
-
-	// Detect textures
-	if (lump == LUMPERROR)
-	{
-		// Scan wad files backwards so patched textures take preference.
-		for (i = numwadfiles - 1; i >= 0; i--)
-		{
-			switch (wadfiles[i]->type)
-			{
-			case RET_WAD:
-				if ((start = W_CheckNumForNamePwad("TX_START", (UINT16)i, 0)) == INT16_MAX)
-					continue;
-				if ((end = W_CheckNumForNamePwad("TX_END", (UINT16)i, start)) == INT16_MAX)
-					continue;
-				break;
-			case RET_PK3:
-				if ((start = W_CheckNumForFolderStartPK3("Textures/", i, 0)) == INT16_MAX)
-					continue;
-				if ((end = W_CheckNumForFolderEndPK3("Textures/", i, start)) == INT16_MAX)
-					continue;
-				break;
-			default:
-				continue;
-			}
-
-			// Now find lump with specified name in that range.
-			lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
-			if (lump < end)
-			{
-				lump += (i<<16); // found it, in our constraints
-				break;
-			}
-			lump = LUMPERROR;
-		}
-	}
-
-	if (lump == LUMPERROR)
-	{
-		if (strcmp(name, SKYFLATNAME))
-			CONS_Debug(DBG_SETUP, "R_GetFlatNumForName: Could not find flat %.8s\n", name);
-		lump = W_CheckNumForName("REDFLR");
 	}
 
 	return lump;

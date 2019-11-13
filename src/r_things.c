@@ -520,7 +520,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		{
 #ifdef HWRENDER
 			if (rendermode == render_opengl)
-				HWR_AddSpriteMD2(i);
+				HWR_AddSpriteModel(i);
 #endif
 			// if a new sprite was added (not just replaced)
 			addsprites++;
@@ -846,10 +846,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		else if (!(vis->cut & SC_PRECIP)
 			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (vis->mobj->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+			&& (vis->mobj->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
 		{
-			dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			if (vis->mobj->player->charflags & SF_MACHINE)
+				dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			else
+				dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
 		{
@@ -874,10 +877,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		else if (!(vis->cut & SC_PRECIP)
 			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (vis->mobj->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+			&& (vis->mobj->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
 		{
-			dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			if (vis->mobj->player->charflags & SF_MACHINE)
+				dc_translation = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			else
+				dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
@@ -2686,7 +2692,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
 		return 0;
 
-	while (!(skin->sprites[spr2].numframes)
+	while (!skin->sprites[spr2].numframes
 		&& spr2 != SPR2_STND
 		&& ++i < 32) // recursion limiter
 	{
@@ -2827,6 +2833,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
 		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.
+		|| (metalrecording && skinnum == 5) // Force 3.
 		);
 }
 
@@ -3315,7 +3322,7 @@ next_token:
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
-			HWR_AddPlayerMD2(numskins);
+			HWR_AddPlayerModel(numskins);
 #endif
 
 		numskins++;

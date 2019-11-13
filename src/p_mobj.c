@@ -2563,19 +2563,30 @@ static boolean P_ZMovement(mobj_t *mo)
 
 	if (!mo->player && P_CheckDeathPitCollide(mo))
 	{
-		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
+		switch (mo->type)
 		{
-			// Kill enemies, bosses and minecarts that fall into death pits.
-			if (mo->health)
-			{
-				P_KillMobj(mo, NULL, NULL, 0);
-				return false;
-			}
-		}
-		else
-		{
-			P_RemoveMobj(mo);
-			return false;
+			case MT_GHOST:
+			case MT_METALSONIC_RACE:
+			case MT_EXPLODE:
+			case MT_BOSSEXPLODE:
+			case MT_SONIC3KBOSSEXPLODE:
+				break;
+			default:
+				if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
+				{
+					// Kill enemies, bosses and minecarts that fall into death pits.
+					if (mo->health)
+					{
+						P_KillMobj(mo, NULL, NULL, 0);
+					}
+					return false;
+				}
+				else
+				{
+					P_RemoveMobj(mo);
+					return false;
+				}
+				break;
 		}
 	}
 
@@ -5567,9 +5578,9 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		P_InstaThrust(mobj, mobj->angle, -4*FRACUNIT);
 		P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true);
 		mobj->momz -= gravity;
-		if (mobj->z < mobj->watertop)
+		if (mobj->z < mobj->watertop || mobj->z < (mobj->floorz + 16*FRACUNIT))
 		{
-			mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
+			mobj->watertop = mobj->floorz + 32*FRACUNIT;
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 		}
 		return;
@@ -5577,16 +5588,22 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 	if ((!mobj->target || !(mobj->target->flags & MF_SHOOTABLE)))
 	{
-		if (mobj->tracer)
-			P_RemoveMobj(mobj->tracer);
+		if (mobj->hprev)
+		{
+			P_RemoveMobj(mobj->hprev);
+			P_SetTarget(&mobj->hprev, NULL);
+		}
 		P_BossTargetPlayer(mobj, false);
 		if (mobj->target && (!P_IsObjectOnGround(mobj->target) || mobj->target->player->pflags & PF_SPINNING))
 			P_SetTarget(&mobj->target, NULL); // Wait for them to hit the ground first
 		if (!mobj->target) // Still no target, aww.
 		{
 			// Reset the boss.
-			if (mobj->tracer)
-				P_RemoveMobj(mobj->tracer);
+			if (mobj->hprev)
+			{
+				P_RemoveMobj(mobj->hprev);
+				P_SetTarget(&mobj->hprev, NULL);
+			}
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 			mobj->fuse = 0;
 			mobj->momx = FixedDiv(mobj->momx, FRACUNIT + (FRACUNIT>>2));
@@ -5600,7 +5617,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			return;
 		}
 		else if (!mobj->fuse)
-			mobj->fuse = 10*TICRATE;
+			mobj->fuse = 8*TICRATE;
 	}
 
 	// AI goes here.
@@ -5627,16 +5644,18 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				mobj->angle -= InvAngle(angle)/8;
 
 			// Alter your energy bubble's size/position
-			if (mobj->health > 3)
+			if (mobj->health > mobj->info->damage)
 			{
-				mobj->tracer->destscale = FRACUNIT + (4*TICRATE - mobj->fuse)*(FRACUNIT/2)/TICRATE + FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FRACUNIT/2);
-				P_SetScale(mobj->tracer, mobj->tracer->destscale);
-			}
+				if (mobj->hprev)
+				{
+					mobj->hprev->destscale = FRACUNIT + (2*TICRATE - mobj->fuse)*(FRACUNIT/2)/TICRATE + FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FRACUNIT/2);
+					P_SetScale(mobj->hprev, mobj->hprev->destscale);
 
-			P_TeleportMove(mobj->tracer, mobj->x, mobj->y, mobj->z + mobj->height/2 - mobj->tracer->height/2);
-			mobj->tracer->momx = mobj->momx;
-			mobj->tracer->momy = mobj->momy;
-			mobj->tracer->momz = mobj->momz;
+					P_TeleportMove(mobj->hprev, mobj->x, mobj->y, mobj->z + mobj->height/2 - mobj->hprev->height/2);
+					mobj->hprev->momx = mobj->momx;
+					mobj->hprev->momy = mobj->momy;
+					mobj->hprev->momz = mobj->momz;
+				}
 
 				// Firin' mah lazors - INDICATOR
 				if (mobj->fuse > TICRATE/2)
@@ -5724,6 +5743,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						S_StartSound(mobj, sfx_s3kb3);
 					}
 				}
+			}
 
 			// up...
 			mobj->z += mobj->height/2;
@@ -5750,12 +5770,12 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (mobj->health > mobj->info->damage)
 				{
 					P_SetScale(missile, FRACUNIT/3);
-					missile->color = SKINCOLOR_GOLD; // sonic cd electric power
+					missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
 				}
 				else
 				{
 					P_SetScale(missile, FRACUNIT/5);
-					missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
+					missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
 				}
 				missile->destscale = missile->scale*2;
 				missile->scalespeed = abs(missile->scale - missile->destscale)/missile->fuse;
@@ -5774,8 +5794,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			if (mobj->movedir == 0 || mobj->movedir == 2) { // Pausing between bounces in the pinball phase
 				if (mobj->target->player->powers[pw_tailsfly]) // Trying to escape, eh?
 					mobj->watertop = mobj->target->z + mobj->target->momz*6; // Readjust your aim. >:3
-				else
+				else if (mobj->target->floorz > mobj->floorz)
 					mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
+				else
+					mobj->watertop = mobj->floorz + 16*FRACUNIT;
 
 				if (!(mobj->threshold%4)) {
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx*4, mobj->target->y + mobj->target->momy*4);
@@ -5867,8 +5889,6 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				return;
 			}
 
-			P_SpawnGhostMobj(mobj);
-
 			// Pinball attack!
 			if (mobj->movecount == 3 && (mobj->movedir == 0 || mobj->movedir == 2))
 			{
@@ -5883,20 +5903,20 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (!P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true))
 				{ // Hit a wall? Find a direction to bounce
 					mobj->threshold--;
-					P_SetMobjState(mobj, mobj->state->nextstate);
 					if (!mobj->threshold) { // failed bounce!
 						S_StartSound(mobj, sfx_mspogo);
 						P_BounceMove(mobj);
 						mobj->angle = R_PointToAngle2(mobj->momx, mobj->momy,0,0);
 						mobj->momz = 4*FRACUNIT;
 						mobj->flags &= ~MF_PAIN;
-						mobj->fuse = 10*TICRATE;
+						mobj->fuse = 8*TICRATE;
 						mobj->movecount = 0;
 						P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
 						P_SetMobjState(mobj, mobj->info->meleestate);
 					}
 					else if (!(mobj->threshold%4))
 					{ // We've decided to lock onto the player this bounce.
+						P_SetMobjState(mobj, mobj->state->nextstate);
 						S_StartSound(mobj, sfx_s3k5a);
 						mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx*4, mobj->target->y + mobj->target->momy*4);
 						mobj->reactiontime = TICRATE - 5*(mobj->info->damage - mobj->health); // targetting time
@@ -5912,6 +5932,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				}
 				return;
 			}
+
+			P_SpawnGhostMobj(mobj)->colorized = false;
 
 			// Vector form dodge!
 			mobj->angle += mobj->movedir;
@@ -6009,7 +6031,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (mobj->health > mobj->info->damage)
 				{ // No more bubble if we're broken (pinch phase)
 					mobj_t *shield = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_MSSHIELD_FRONT);
-					P_SetTarget(&mobj->tracer, shield);
+					P_SetTarget(&mobj->hprev, shield);
 					P_SetTarget(&shield->target, mobj);
 
 					// Attack 2: Energy shot!
@@ -6040,14 +6062,15 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				}
 				else
 				{
-					mobj_t *shield = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_MSSHIELD_FRONT);
+					/*mobj_t *shield = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_MSSHIELD_FRONT);
 					P_SetTarget(&mobj->tracer, shield);
 					P_SetTarget(&shield->target, mobj);
 					shield->height -= 20*FRACUNIT; // different offset...
-					P_SetMobjState(shield, S_MSSHIELD_F2);
+					P_SetMobjState(shield, S_MSSHIELD_F2);*/
+					P_SetMobjState(mobj, S_METALSONIC_BOUNCE);
 					//P_LinedefExecute(LE_PINCHPHASE, mobj, NULL); -- why does this happen twice? see case 2...
 				}
-				mobj->fuse = 4*TICRATE;
+				mobj->fuse = 3*TICRATE;
 				mobj->flags |= MF_PAIN;
 				if (mobj->info->attacksound)
 					S_StartSound(mobj, mobj->info->attacksound);
@@ -6058,14 +6081,14 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			case 2:
 			{
 				// We're all charged and ready now! Unleash the fury!!
-				mobj_t *removemobj = mobj->tracer;
 				S_StopSound(mobj);
-				P_SetTarget(&mobj->tracer, mobj->hnext);
-				P_RemoveMobj(removemobj);
+				if (mobj->hprev)
+				{
+					P_RemoveMobj(mobj->hprev);
+					P_SetTarget(&mobj->hprev, NULL);
+				}
 				if (mobj->health <= mobj->info->damage)
 				{
-					mobj_t *whoosh;
-
 					// Attack 1: Pinball dash!
 					if (mobj->health == 1)
 						mobj->movedir = 0;
@@ -6078,9 +6101,13 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						mobj->threshold = 12; // bounce 12 times
 					else
 						mobj->threshold = 24; // bounce 24 times
-					mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
+					if (mobj->floorz >= mobj->target->floorz)
+						mobj->watertop = mobj->floorz + 16*FRACUNIT;
+					else
+						mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
 					P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
 
+#if 0
 					whoosh = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_GHOST); // done here so the offset is correct
 					whoosh->frame = FF_FULLBRIGHT;
 					whoosh->sprite = SPR_ARMA;
@@ -6088,9 +6115,13 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					whoosh->scalespeed = FixedMul(whoosh->scalespeed, whoosh->scale);
 					whoosh->height = 38*whoosh->scale;
 					whoosh->fuse = 10;
-					whoosh->color = SKINCOLOR_MAGENTA;
+					whoosh->color = SKINCOLOR_SUNSET;
 					whoosh->colorized = true;
 					whoosh->flags |= MF_NOCLIPHEIGHT;
+#endif
+
+					P_SetMobjState(mobj->tracer, S_JETFUMEFLASH);
+					P_SetScale(mobj->tracer, mobj->scale << 1);
 				}
 				else
 				{
@@ -6102,10 +6133,13 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			}
 			case 3:
 				// Return to idle.
-				mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
+				if (mobj->floorz >= mobj->target->floorz)
+					mobj->watertop = mobj->floorz + 32*FRACUNIT;
+				else
+					mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
 				P_SetMobjState(mobj, mobj->info->spawnstate);
 				mobj->flags &= ~MF_PAIN;
-				mobj->fuse = 10*TICRATE;
+				mobj->fuse = 8*TICRATE;
 				break;
 			}
 			mobj->movecount++;
@@ -8264,6 +8298,20 @@ void P_MobjThinker(mobj_t *mobj)
 					P_SetObjectMomZ(mobj, -2 * FRACUNIT / 3, true);
 			}
 			break;
+		case MT_METALSONIC_RACE:
+			{
+				if (!(mobj->fuse % 8))
+				{
+					fixed_t r = mobj->radius >> FRACBITS;
+					mobj_t *explosion = P_SpawnMobj(
+						mobj->x + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->y + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->z + (P_RandomKey(mobj->height >> FRACBITS) << FRACBITS),
+						MT_SONIC3KBOSSEXPLODE);
+					S_StartSound(explosion, sfx_s3kb4);
+				}
+				P_SetObjectMomZ(mobj, -2 * FRACUNIT / 3, true);
+			}
 		default:
 			break;
 		}
@@ -8399,7 +8447,7 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 				}
 				break;
-			case MT_BUBBLEBUZZ:
+			case MT_BUGGLE:
 				mobj->eflags |= MFE_UNDERWATER; //P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
 				{
 					if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
@@ -8413,6 +8461,9 @@ void P_MobjThinker(mobj_t *mobj)
 
 						if (leveltime % mobj->info->painchance == 0)
 							S_StartSound(mobj, mobj->info->activesound);
+
+						if ((statenum_t)(mobj->state-states) != mobj->info->seestate)
+							P_SetMobjState(mobj, mobj->info->seestate);
 					}
 					else
 					{
@@ -8421,6 +8472,8 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->momx >>= 1;
 						mobj->momy >>= 1;
 						mobj->momz >>= 1;
+						if ((statenum_t)(mobj->state-states) != mobj->info->spawnstate)
+							P_SetMobjState(mobj, mobj->info->spawnstate);
 					}
 				}
 				break;
@@ -8706,11 +8759,17 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					else if (mobj->fuse == 59)
 					{
+						boolean dashmod = ((mobj->target->flags & MF_PAIN) && (mobj->target->health <= mobj->target->info->damage));
 						jetx = mobj->target->x + P_ReturnThrustX(mobj->target, mobj->target->angle, -mobj->target->radius);
 						jety = mobj->target->y + P_ReturnThrustY(mobj->target, mobj->target->angle, -mobj->target->radius);
 						P_UnsetThingPosition(mobj);
 						mobj->x = jetx;
 						mobj->y = jety;
+						mobj->destscale = mobj->target->scale;
+						if (!(dashmod && mobj->target->state == states+S_METALSONIC_BOUNCE))
+						{
+							mobj->destscale = (mobj->destscale + FixedDiv(R_PointToDist2(0, 0, mobj->target->momx, mobj->target->momy), 36*mobj->target->scale))/3;
+						}
 						if (mobj->target->eflags & MFE_VERTICALFLIP)
 							mobj->z = mobj->target->z + mobj->target->height/2 + mobj->height/2;
 						else
@@ -8718,6 +8777,14 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->floorz = mobj->z;
 						mobj->ceilingz = mobj->z+mobj->height;
 						P_SetThingPosition(mobj);
+						if (dashmod)
+						{
+							mobj->color = SKINCOLOR_SUNSET;
+							if (mobj->target->movecount == 3 && !mobj->target->reactiontime && (mobj->target->movedir == 0 || mobj->target->movedir == 2))
+								P_SpawnGhostMobj(mobj);
+						}
+						else
+							mobj->color = SKINCOLOR_ICY;
 					}
 					mobj->fuse++;
 				}
@@ -10402,8 +10469,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			if (nummaprings >= 0)
 				nummaprings++;
 			break;
-		case MT_METALSONIC_BATTLE:
 		case MT_METALSONIC_RACE:
+			mobj->skin = &skins[5];
+			/* FALLTHRU */
+		case MT_METALSONIC_BATTLE:
+			mobj->color = skins[5].prefcolor;
 			sc = 5;
 			break;
 		case MT_FANG:
@@ -10473,6 +10543,12 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	if (!(mobj->flags & MF_NOTHINK))
 		P_AddThinker(THINK_MOBJ, &mobj->thinker);
+
+	if (mobj->skin) // correct inadequecies above.
+	{
+		mobj->sprite2 = P_GetSkinSprite2(mobj->skin, (mobj->frame & FF_FRAMEMASK), NULL);
+		mobj->frame &= ~FF_FRAMEMASK;
+	}
 
 	// Call action functions when the state is set
 	if (st->action.acp1 && (mobj->flags & MF_RUNSPAWNFUNC))
@@ -11256,6 +11332,8 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 		}
 		if (mthing->options & MTF_AMBUSH)
 			P_SetPlayerMobjState(mobj, S_PLAY_FALL);
+		else if (metalrecording)
+			P_SetPlayerMobjState(mobj, S_PLAY_WAIT);
 	}
 	else
 		z = floor;
@@ -12444,10 +12522,10 @@ ML_EFFECT5 : Don't stop thinking when too far away
 		if (mthing->extrainfo)
 			mobj->extravalue1 = mthing->extrainfo;
 		break;
-	case MT_TRAPGOYLE:
-	case MT_TRAPGOYLEUP:
-	case MT_TRAPGOYLEDOWN:
-	case MT_TRAPGOYLELONG:
+	case MT_GLAREGOYLE:
+	case MT_GLAREGOYLEUP:
+	case MT_GLAREGOYLEDOWN:
+	case MT_GLAREGOYLELONG:
 		if (mthing->angle >= 360)
 			mobj->tics += 7*(mthing->angle / 360) + 1; // starting delay
 		break;
