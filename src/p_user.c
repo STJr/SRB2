@@ -7220,14 +7220,16 @@ static void P_NiGHTSMovement(player_t *player)
 		if (gametype != GT_RACE && gametype != GT_COMPETITION)
 			P_SetObjectMomZ(player->mo, FRACUNIT/2, true);
 
-		if (player->mo->state  != &states[S_PLAY_NIGHTS_DRILL6])
-			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL6);
-
-		player->mo->flags |= MF_NOCLIPHEIGHT;
 #ifdef ROTSPRITE
-		player->mo->rollangle = 0;
+		if (player->mo->state != &states[S_PLAY_NIGHTS_DRILL0])
+			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL0);
+		player->mo->rollangle = ANGLE_90;
+#else
+		if (player->mo->state != &states[S_PLAY_NIGHTS_DRILL6])
+			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL6);
 #endif
 
+		player->mo->flags |= MF_NOCLIPHEIGHT;
 		return;
 	}
 
