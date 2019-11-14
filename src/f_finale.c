@@ -4409,6 +4409,17 @@ void F_TextPromptDrawer(void)
 		V_DrawString(textr-8, chevrony + (skullAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
 }
 
+#define nocontrolallowed(j) {\
+		players[j].powers[pw_nocontrol] = 1;\
+		if (players[j].mo)\
+		{\
+			if (players[j].mo->state == states+S_PLAY_STND && players[j].mo->tics != -1)\
+				players[j].mo->tics++;\
+			else if (players[j].mo->state == states+S_PLAY_WAIT)\
+				P_SetPlayerMobjState(players[j].mo, S_PLAY_STND);\
+		}\
+	}
+
 void F_TextPromptTicker(void)
 {
 	INT32 i;
@@ -4438,10 +4449,10 @@ void F_TextPromptTicker(void)
 					// But only consoleplayer can advance the prompt.
 					// \todo Proper per-player splitscreen support (individual prompts)
 					if (i == consoleplayer || i == secondarydisplayplayer)
-						players[i].powers[pw_nocontrol] = 1;
+						nocontrolallowed(i)
 				}
 				else if (i == consoleplayer)
-					players[i].powers[pw_nocontrol] = 1;
+					nocontrolallowed(i)
 
 				if (!splitscreen)
 					break;
@@ -4483,7 +4494,7 @@ void F_TextPromptTicker(void)
 						continue;
 				}
 				else if (i == consoleplayer)
-					players[i].powers[pw_nocontrol] = 1;
+					nocontrolallowed(i)
 				else
 					continue;
 

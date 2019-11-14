@@ -27,6 +27,7 @@
 #include "m_cheat.h" // objectplace
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
+#include "f_finale.h"
 
 // CTF player names
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
@@ -1392,6 +1393,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				}
 			}
 			break;
+		case MT_LETTER:
+		{
+			if (special->health && !player->bot)
+			{
+				F_StartTextPrompt(199, 0, toucher, 0, true, false);
+				special->health = 0;
+				if (ultimatemode && player->continues < 99)
+					player->continues++;
+			}
+			return;
+		}
 		case MT_FIREFLOWER:
 			if (player->bot)
 				return;

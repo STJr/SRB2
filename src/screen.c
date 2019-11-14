@@ -440,7 +440,7 @@ void SCR_ClosedCaptions(void)
 	if (gamestate == GS_LEVEL)
 	{
 		if (promptactive)
-			basey -= 28;
+			basey -= 42;
 		else if (splitscreen)
 			basey -= 8;
 		else if ((modeattacking == ATTACKING_NIGHTS)

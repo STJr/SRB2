@@ -195,6 +195,9 @@ char sprnames[NUMSPRITES + 1][5] =
 	"AROW", // Arrow
 	"CFIR", // Colored fire of various sorts
 
+	// The letter
+	"LETR",
+
 	// Greenflower Scenery
 	"FWR1",
 	"FWR2", // GFZ Sunflower
@@ -2068,6 +2071,8 @@ state_t states[NUMSTATES] =
 	{SPR_AROW, FF_ANIMATE, TICRATE, {A_ArrowBonks}, 7, 2, S_NULL}, // S_ARROWBONK
 
 	{SPR_CFIR, FF_FULLBRIGHT|FF_ANIMATE, -1, {NULL}, 5, 2, S_NULL}, // S_DEMONFIRE
+
+	{SPR_LETR, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_LETTER
 
 	// GFZ flowers
 	{SPR_FWR1, FF_ANIMATE, -1, {NULL},  7, 3, S_NULL}, // S_GFZFLOWERA
@@ -9786,6 +9791,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LETTER
+		-1,             // doomednum
+		S_LETTER,       // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		7*FRACUNIT,     // radius -- heaven
+		13*FRACUNIT,    // height -- hell
+		0,              // display offset
+		0,              // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 

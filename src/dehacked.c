@@ -2053,24 +2053,29 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			// end copypasta from readcutscenescene
 			else if (fastcmp(word, "NAME"))
 			{
-				INT32 j;
-
-				// HACK: Add yellow control char now
-				// so the drawing function doesn't call it repeatedly
-				char name[34];
-				name[0] = '\x82'; // color yellow
-				name[1] = 0;
-				strncat(name, word2, 33);
-				name[33] = 0;
-
-				// Replace _ with ' '
-				for (j = 0; j < 32 && name[j]; j++)
+				if (*word2 != '\0')
 				{
-					if (name[j] == '_')
-						name[j] = ' ';
-				}
+					INT32 j;
 
-				strncpy(textprompts[num]->page[pagenum].name, name, 32);
+					// HACK: Add yellow control char now
+					// so the drawing function doesn't call it repeatedly
+					char name[34];
+					name[0] = '\x82'; // color yellow
+					name[1] = 0;
+					strncat(name, word2, 33);
+					name[33] = 0;
+
+					// Replace _ with ' '
+					for (j = 0; j < 32 && name[j]; j++)
+					{
+						if (name[j] == '_')
+							name[j] = ' ';
+					}
+
+					strncpy(textprompts[num]->page[pagenum].name, name, 32);
+				}
+				else
+					*textprompts[num]->page[pagenum].name = '\0';
 			}
 			else if (fastcmp(word, "ICON"))
 				strncpy(textprompts[num]->page[pagenum].iconname, word2, 8);
@@ -2103,6 +2108,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				else if (i == 16 || fastcmp(word2, "BLUE")) backcolor = 16;
 				else if (i == 17 || fastcmp(word2, "PURPLE")) backcolor = 17;
 				else if (i == 18 || fastcmp(word2, "LAVENDER")) backcolor = 18;
+				else if (i >= 256 && i < 512) backcolor = i; // non-transparent palette index
 				else if (i < 0) backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
 				else backcolor = 1; // default gray
 				textprompts[num]->page[pagenum].backcolor = backcolor;
@@ -5914,6 +5920,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Glaregoyle Demon fire
 	"S_DEMONFIRE",
 
+	// The letter
+	"S_LETTER",
+
 	// GFZ flowers
 	"S_GFZFLOWERA",
 	"S_GFZFLOWERB",
@@ -7909,6 +7918,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CANNONBALLDECOR", // Decorative/still cannonball
 	"MT_ARROW", // Arrow
 	"MT_DEMONFIRE", // Glaregoyle fire
+
+	// The letter
+	"MT_LETTER",
 
 	// Greenflower Scenery
 	"MT_GFZFLOWER1",

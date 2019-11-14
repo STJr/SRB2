@@ -3255,8 +3255,6 @@ void R_AddSkins(UINT16 wadnum)
 				skin->availability = atoi(value);
 				if (skin->availability >= MAXUNLOCKABLES)
 					skin->availability = 0;
-				if (skin->availability)
-					STRBUFCPY(unlockables[skin->availability - 1].name, skin->realname);
 			}
 			else if (!R_ProcessPatchableFields(skin, stoken, value))
 				CONS_Debug(DBG_SETUP, "R_AddSkins: Unknown keyword '%s' in S_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);

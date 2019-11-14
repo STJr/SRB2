@@ -1898,7 +1898,13 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 {
 	UINT8 *deststop, *buf;
 
-	boxheight *= vid.dupy;
+	boxheight = ((boxheight * 4) + (boxheight/2)*5);
+
+	if (color >= 256 && color < 512)
+	{
+		V_DrawFill((BASEVIDWIDTH-(vid.width/vid.dupx))/2, BASEVIDHEIGHT-boxheight, (vid.width/vid.dupx),boxheight, (color-256)|V_SNAPTOBOTTOM);
+		return;
+	}
 
 	if (color == INT32_MAX)
 		color = cons_backcolor.value;
@@ -1941,7 +1947,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 	// heavily simplified -- we don't need to know x or y position,
 	// just the start and stop positions
 	deststop = screens[0] + vid.rowbytes * vid.height;
-	buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
+	buf = deststop - vid.rowbytes * boxheight * vid.dupy; // 4 lines of space plus gaps between and some leeway
 	for (; buf < deststop; ++buf)
 		*buf = promptbgmap[*buf];
 }
