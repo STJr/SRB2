@@ -1118,7 +1118,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 	size_t size, size2;
 	INT32 bflip = (flip != 0x00);
 
-#define SPRITE_XCENTER (patch->leftoffset)
+#define SPRITE_XCENTER (leftoffset)
 #define SPRITE_YCENTER (height / 2)
 #define ROTSPRITE_XCENTER (newwidth / 2)
 #define ROTSPRITE_YCENTER (newheight / 2)
@@ -1127,7 +1127,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 	{
 		INT32 dx, dy;
 		INT32 px, py;
-		INT32 width, height;
+		INT32 width, height, leftoffset;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
 
@@ -1140,6 +1140,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
 		width = patch->width;
 		height = patch->height;
+		leftoffset = patch->leftoffset;
 
 		// rotation pivot
 		px = SPRITE_XCENTER;
@@ -1153,8 +1154,11 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			px = sprinfo->pivot[frame].x;
 			py = sprinfo->pivot[frame].y;
 		}
-		if (flip)
+		if (bflip)
+		{
 			px = width - px;
+			leftoffset = width - leftoffset;
+		}
 
 		// Draw the sprite to a temporary buffer.
 		size = (width*height);
@@ -1261,10 +1265,10 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 
 			// make patch
 			newpatch = R_FlatToPatch_16bpp(rawdst, newwidth, newheight, &size);
-			newpatch->leftoffset = (newpatch->width / 2) - ((SPRITE_XCENTER - patch->leftoffset) * (bflip ? -1 : 1));
-			newpatch->topoffset = (newpatch->height / 2) - (SPRITE_YCENTER - patch->topoffset);
-			newpatch->leftoffset += ((width / 2) - px);
-			newpatch->topoffset += (SPRITE_YCENTER - py);
+			{
+				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
+				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
+			}
 
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
 			if (rendermode != render_none) // not for psprite
