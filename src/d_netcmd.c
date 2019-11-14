@@ -1736,56 +1736,6 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	}
 }
 
-enum
-{
-	MAP_COMMAND_FORCE_OPTION,
-	MAP_COMMAND_GAMETYPE_OPTION,
-	MAP_COMMAND_NORESETPLAYERS_OPTION,
-
-	NUM_MAP_COMMAND_OPTIONS
-};
-
-static size_t CheckOptions(
-		int            num_options,
-		size_t       *first_argumentp,
-		size_t       *user_options,
-		const char ***option_names,
-		int          *option_num_arguments
-)
-{
-	int    arguments_used;
-	size_t first_argument;
-
-	int i;
-	const char **pp;
-	const char  *name;
-	size_t n;
-
-	arguments_used = 0;
-	first_argument = COM_Argc();
-
-	for (i = 0; i < num_options; ++i)
-	{
-		pp = option_names[i];
-		name = *pp;
-		do
-		{
-			if (( n = COM_CheckParm(name) ))
-			{
-				user_options[i] = n;
-				arguments_used += 1 + option_num_arguments[i];
-				if (n < first_argument)
-					first_argument = n;
-			}
-		}
-		while (( name = *++pp )) ;
-	}
-
-	(*first_argumentp) = first_argument;
-
-	return arguments_used;
-}
-
 static char *
 ConcatCommandArgv (int start, int end)
 {
@@ -1829,43 +1779,10 @@ ConcatCommandArgv (int start, int end)
 //
 static void Command_Map_f(void)
 {
-	const char  *force_option_names[] =
-	{
-		"-force",
-		"-f",
-		NULL
-	};
-	const char  *gametype_option_names[] =
-	{
-		"-gametype",
-		"-g",
-		"-gt",
-		NULL
-	};
-	const char  *noresetplayers_option_names[] =
-	{
-		"-noresetplayers",
-		NULL
-	};
-	const char **option_names[] =
-	{
-		force_option_names,
-		gametype_option_names,
-		noresetplayers_option_names,
-	};
-	int         option_num_arguments[] =
-	{
-		0,/* -force */
-		1,/* -gametype */
-		0,/* -noresetplayers */
-	};
-
-	size_t acceptableargc;/* (this includes the command name itself!) */
-	size_t first_argument;
-
-	size_t      user_options         [NUM_MAP_COMMAND_OPTIONS] = {0};
-
-	const char *arg_gametype;
+	size_t first_option;
+	size_t option_force;
+	size_t option_gametype;
+	const char *gametypename;
 	boolean newresetplayers;
 
 	boolean mustmodifygame;
@@ -1888,18 +1805,15 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	/* map name + options */
-	acceptableargc = 2 + CheckOptions(NUM_MAP_COMMAND_OPTIONS,
-			&first_argument,
-			user_options, option_names, option_num_arguments);
-
-	newresetplayers = !user_options[MAP_COMMAND_NORESETPLAYERS_OPTION];
+	option_force    =   COM_CheckPartialParm("-f");
+	option_gametype =   COM_CheckPartialParm("-g");
+	newresetplayers = ! COM_CheckParm("-noresetplayers");
 
 	mustmodifygame =
 		!( netgame     || multiplayer ) &&
 		(!modifiedgame || savemoddata );
 
-	if (mustmodifygame && !user_options[MAP_COMMAND_FORCE_OPTION])
+	if (mustmodifygame && !option_force)
 	{
 		/* May want to be more descriptive? */
 		CONS_Printf(M_GetText("Sorry, level change disabled in single player.\n"));
@@ -1912,26 +1826,37 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (user_options[MAP_COMMAND_GAMETYPE_OPTION] && !multiplayer)
+	if (option_gametype)
 	{
-		CONS_Printf(M_GetText("You can't switch gametypes in single player!\n"));
-		return;
+		if (!multiplayer)
+		{
+			CONS_Printf(M_GetText(
+						"You can't switch gametypes in single player!\n"));
+			return;
+		}
+		else if (COM_Argc() < option_gametype + 2)/* no argument after? */
+		{
+			CONS_Alert(CONS_ERROR,
+					"No gametype name follows parameter '%s'.\n",
+					COM_Argv(option_gametype));
+			return;
+		}
 	}
 
-	/* If the first argument is an option, you fucked up. */
-	if (COM_Argc() < acceptableargc || first_argument == 1)
+	if (!( first_option = COM_FirstOption() ))
+		first_option = COM_Argc();
+
+	if (first_option < 2)
 	{
 		/* I'm going over the fucking lines and I DON'T CAREEEEE */
 		CONS_Printf("map <name / [MAP]code / number> [-gametype <type>] [-force]:\n");
 		CONS_Printf(M_GetText(
 					"Warp to a map, by its name, two character code, with optional \"MAP\" prefix, or by its number (though why would you).\n"
-					"All parameters are case-insensitive.\n"
-					"* \"-force\" may be shortened to \"-f\".\n"
-					"* \"-gametype\" may be shortened to \"-g\" or \"-gt\".\n"));
+					"All parameters are case-insensitive and may be abbreviated.\n"));
 		return;
 	}
 
-	mapname = ConcatCommandArgv(1, first_argument);
+	mapname = ConcatCommandArgv(1, first_option);
 	mapnamelen = strlen(mapname);
 
 	if (mapnamelen == 2)/* maybe two digit code */
@@ -1982,30 +1907,42 @@ static void Command_Map_f(void)
 		realmapname = G_BuildMapTitle(newmapnum);
 	}
 
-	if (mustmodifygame && user_options[MAP_COMMAND_FORCE_OPTION])
+	if (mustmodifygame && option_force)
 	{
 		G_SetGameModified(false);
 	}
 
 	// new gametype value
 	// use current one by default
-	if (user_options[MAP_COMMAND_GAMETYPE_OPTION])
+	if (option_gametype)
 	{
-		arg_gametype = COM_Argv(user_options[MAP_COMMAND_GAMETYPE_OPTION] + 1);
+		gametypename = COM_Argv(option_gametype + 1);
 
-		newgametype = G_GetGametypeByName(arg_gametype);
+		newgametype = G_GetGametypeByName(gametypename);
 
 		if (newgametype == -1) // reached end of the list with no match
 		{
-			d = atoi(arg_gametype);
-			// assume they gave us a gametype number, which is okay too
-			if (d >= 0 && d < NUMGAMETYPES)
-				newgametype = d;
+			/* Did they give us a gametype number? That's okay too! */
+			if (isdigit(gametypename[0]))
+			{
+				d = atoi(gametypename);
+				if (d >= 0 && d < NUMGAMETYPES)
+					newgametype = d;
+			}
+			else
+			{
+				CONS_Alert(CONS_ERROR,
+						"'%s' is not a gametype.\n",
+						gametypename);
+				Z_Free(realmapname);
+				Z_Free(mapname);
+				return;
+			}
 		}
 	}
 
 	// don't use a gametype the map doesn't support
-	if (cv_debug || user_options[MAP_COMMAND_FORCE_OPTION] || cv_skipmapcheck.value)
+	if (cv_debug || option_force || cv_skipmapcheck.value)
 		fromlevelselect = false; // The player wants us to trek on anyway.  Do so.
 	// G_TOLFlag handles both multiplayer gametype and ignores it for !multiplayer
 	else
@@ -2060,7 +1997,6 @@ static void Command_Map_f(void)
 
 	Z_Free(realmapname);
 }
-#undef CHECKPARM
 
 /** Receives a map command and changes the map.
   *
