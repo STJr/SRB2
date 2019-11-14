@@ -868,6 +868,8 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 				sprinfo->pivot[frame].x = value;
 			else if (fastcmp(word, "YPIVOT"))
 				sprinfo->pivot[frame].y = value;
+			else if (fastcmp(word, "ROTAXIS"))
+				sprinfo->pivot[frame].rotaxis = value;
 #endif
 			else
 			{
@@ -892,6 +894,11 @@ static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 	// allocate a spriteinfo
 	spriteinfo_t *info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
 	info->available = true;
+
+#ifdef ROTSPRITE
+	if ((sprites != NULL) && (!sprite2))
+		R_FreeSingleRotSprite(&sprites[num]);
+#endif
 
 	do
 	{
@@ -1006,7 +1013,7 @@ static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 					break;
 				}
 
-				// read sprite frame and store it on the spriteinfo_t struct
+				// read sprite frame and store it in the spriteinfo_t struct
 				readspriteframe(f, info, frame);
 				if (sprite2)
 				{
@@ -1018,8 +1025,12 @@ static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 					}
 					for (i = 0; i < foundskins; i++)
 					{
-						skin_t *skin = &skins[skinnumbers[i]];
+						size_t skinnum = skinnumbers[i];
+						skin_t *skin = &skins[skinnum];
 						spriteinfo_t *sprinfo = skin->sprinfo;
+#ifdef ROTSPRITE
+						R_FreeSkinRotSprite(skinnum);
+#endif
 						M_Memcpy(&sprinfo[num], info, sizeof(spriteinfo_t));
 					}
 				}

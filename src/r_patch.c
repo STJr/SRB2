@@ -940,6 +940,11 @@ static void R_ParseSpriteInfo(boolean spr2)
 	info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
 	info->available = true;
 
+#ifdef ROTSPRITE
+	if ((sprites != NULL) && (!spr2))
+		R_FreeSingleRotSprite(&sprites[sprnum]);
+#endif
+
 	// Left Curly Brace
 	sprinfoToken = M_GetToken(NULL);
 	if (sprinfoToken == NULL)
@@ -997,8 +1002,12 @@ static void R_ParseSpriteInfo(boolean spr2)
 						I_Error("Error parsing SPRTINFO lump: No skins specified in this sprite2 definition");
 					for (i = 0; i < foundskins; i++)
 					{
-						skin_t *skin = &skins[skinnumbers[i]];
+						size_t skinnum = skinnumbers[i];
+						skin_t *skin = &skins[skinnum];
 						spriteinfo_t *sprinfo = skin->sprinfo;
+#ifdef ROTSPRITE
+						R_FreeSkinRotSprite(skinnum);
+#endif
 						M_Memcpy(&sprinfo[spr2num], info, sizeof(spriteinfo_t));
 					}
 				}
@@ -1293,11 +1302,11 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 }
 
 //
-// R_FreeRotSprite
+// R_FreeSingleRotSprite
 //
-// Free sprite rotation data from memory.
+// Free sprite rotation data from memory, for a single spritedef.
 //
-void R_FreeRotSprite(spritedef_t *spritedef)
+void R_FreeSingleRotSprite(spritedef_t *spritedef)
 {
 	UINT8 frame;
 	INT32 rot, ang;
@@ -1341,6 +1350,24 @@ void R_FreeRotSprite(spritedef_t *spritedef)
 				sprframe->rotsprite.cached[rot] = false;
 			}
 		}
+	}
+}
+
+//
+// R_FreeSkinRotSprite
+//
+// Free sprite rotation data from memory, for a skin.
+// Calls R_FreeSingleRotSprite.
+//
+void R_FreeSkinRotSprite(size_t skinnum)
+{
+	size_t i;
+	skin_t *skin = &skins[skinnum];
+	spritedef_t *skinsprites = skin->sprites;
+	for (i = 0; i < NUMPLAYERSPRITES*2; i++)
+	{
+		R_FreeSingleRotSprite(skinsprites);
+		skinsprites++;
 	}
 }
 #endif
