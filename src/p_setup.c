@@ -3504,6 +3504,20 @@ boolean P_AddWadFile(const char *wadfilename)
 	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
 
+#ifdef ROTSPRITE
+	for (i = 0; i < NUMSPRITES; i++)
+		R_FreeRotSprite(&sprites[i]);
+	for (i = 0; i < MAXSKINS; i++)
+	{
+		spritedef_t *skinsprites = skins[i].sprites;
+		for (j = 0; j < NUMPLAYERSPRITES*2; j++)
+		{
+			R_FreeRotSprite(skinsprites);
+			skinsprites++;
+		}
+	}
+#endif
+
 	R_LoadSpriteInfoLumps(wadnum, numlumps);
 
 #ifdef HWRENDER

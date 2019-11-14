@@ -297,6 +297,9 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 					case LUA_TNUMBER:
 						value = lua_tonumber(L, stk+2);
 						break;
+					case LUA_TBOOLEAN:
+						value = (UINT8)lua_toboolean(L, stk+2);
+						break;
 					default:
 						TYPEERROR("pivot value", LUA_TNUMBER, lua_type(L, stk+2))
 				}
@@ -308,9 +311,8 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 				else if (ikey == 3 || (key && fastcmp(key, "rotaxis")))
 					pivot[idx].rotaxis = (UINT8)value;
 				else if (ikey == -1 && (key != NULL))
-					FIELDERROR("pivot key", va("x, y or roll axis expected, got %s", key));
+					FIELDERROR("pivot key", va("invalid option %s", key));
 				ok = 1;
-				//info->available = true; // the pivot for this frame is available
 				lua_pop(L, 1);
 			}
 			break;
@@ -330,7 +332,7 @@ static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
 	// stk = 0 has the pivot table
 	// stk = 1 has the frame key
 	// stk = 2 has the frame table
-	// stk = 3 has either "x" or "y" or "rotaxis" or a number as key
+	// stk = 3 has either a string or a number as key
 	// stk = 4 has the value for the key mentioned above
 	while (lua_next(L, stk))
 	{

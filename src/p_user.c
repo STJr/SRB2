@@ -6748,6 +6748,17 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	}
 
+#ifdef ROTSPRITE
+	if (!(player->charflags & SF_NONIGHTSROTATION))
+	{
+		if ((player->mo->state == &states[S_PLAY_NIGHTS_PULL])
+		&& (player->mo->sprite2 == SPR2_NPUL))
+			player->mo->rollangle -= ANG30;
+		else
+			player->mo->rollangle = 0;
+	}
+#endif
+
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -7491,46 +7502,51 @@ static void P_NiGHTSMovement(player_t *player)
 		flystate = (P_IsObjectOnGround(player->mo)) ? S_PLAY_NIGHTS_STAND : S_PLAY_NIGHTS_FLOAT;
 	else
 	{
-#ifndef ROTSPRITE
-		visangle = ((player->anotherflyangle + 7) % 360)/15;
-		if (visangle > 18) // Over 270 degrees.
-			visangle = 30 - visangle;
-		else if (visangle > 12) // Over 180 degrees.
-			visangle -= 6;
-		else if (visangle > 6) // Over 90 degrees.
-			visangle = 12 - visangle;
-
-		if (player->mo->eflags & MFE_VERTICALFLIP && visangle) // S_PLAY_NIGHTS_FLY0 stays the same, even in reverse gravity
+		if (player->charflags & SF_NONIGHTSROTATION)
 		{
-			if (visangle > 6)
-				visangle -= 6; // shift to S_PLAY_NIGHTS_FLY1-6
-			else
-				visangle += 6; // shift to S_PLAY_NIGHTS_FLY7-C
+			visangle = ((player->anotherflyangle + 7) % 360)/15;
+			if (visangle > 18) // Over 270 degrees.
+				visangle = 30 - visangle;
+			else if (visangle > 12) // Over 180 degrees.
+				visangle -= 6;
+			else if (visangle > 6) // Over 90 degrees.
+				visangle = 12 - visangle;
+
+			if (player->mo->eflags & MFE_VERTICALFLIP && visangle) // S_PLAY_NIGHTS_FLY0 stays the same, even in reverse gravity
+			{
+				if (visangle > 6)
+					visangle -= 6; // shift to S_PLAY_NIGHTS_FLY1-6
+				else
+					visangle += 6; // shift to S_PLAY_NIGHTS_FLY7-C
+			}
+
+			flystate = S_PLAY_NIGHTS_FLY0 + (visangle*2); // S_PLAY_NIGHTS_FLY0-C - the *2 is to skip over drill states
+
+			if (player->pflags & PF_DRILLING)
+				flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
 		}
-
-		flystate = S_PLAY_NIGHTS_FLY0 + (visangle*2); // S_PLAY_NIGHTS_FLY0-C - the *2 is to skip over drill states
-
-		if (player->pflags & PF_DRILLING)
-			flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
-#else
-		angle_t a = R_PointToAngle(player->mo->x, player->mo->y) - player->mo->angle;
-		visangle = (player->flyangle % 360);
-
-		flystate = S_PLAY_NIGHTS_FLY0;
-		if (player->pflags & PF_DRILLING)
-			flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
-
-		if (player->flyangle >= 90 && player->flyangle <= 270)
+#ifdef ROTSPRITE
+		else
 		{
-			if (player->flyangle == 270 && (a < ANGLE_180))
-				;
-			else if (player->flyangle == 90 && (a < ANGLE_180))
-				;
-			else
-				visangle += 180;
-		}
+			angle_t a = R_PointToAngle(player->mo->x, player->mo->y) - player->mo->angle;
+			visangle = (player->flyangle % 360);
 
-		rollangle = FixedAngle(visangle*FRACUNIT);
+			flystate = S_PLAY_NIGHTS_FLY0;
+			if (player->pflags & PF_DRILLING)
+				flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
+
+			if (player->flyangle >= 90 && player->flyangle <= 270)
+			{
+				if (player->flyangle == 270 && (a < ANGLE_180))
+					;
+				else if (player->flyangle == 90 && (a < ANGLE_180))
+					;
+				else
+					visangle += 180;
+			}
+
+			rollangle = FixedAngle(visangle<<FRACBITS);
+		}
 #endif
 	}
 
@@ -7538,7 +7554,10 @@ static void P_NiGHTSMovement(player_t *player)
 		P_SetPlayerMobjState(player->mo, flystate);
 
 #ifdef ROTSPRITE
-	player->mo->rollangle = rollangle;
+	if (player->charflags & SF_NONIGHTSROTATION)
+		player->mo->rollangle = 0;
+	else
+		player->mo->rollangle = rollangle;
 #endif
 
 	if (player == &players[consoleplayer])

@@ -1107,7 +1107,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 	patch_t *newpatch;
 	UINT16 *rawsrc, *rawdst;
 	size_t size, size2;
-	INT32 bflip = ((flip != 0x00) ? -1 : 1);
+	INT32 bflip = (flip != 0x00);
 
 #define SPRITE_XCENTER (patch->leftoffset)
 #define SPRITE_YCENTER (height / 2)
@@ -1155,7 +1155,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		for (i = 0; i < size; i++)
 			rawsrc[i] = 0xFF00;
 
-		R_PatchToFlat_16bpp(patch, rawsrc, (flip != 0x00));
+		R_PatchToFlat_16bpp(patch, rawsrc, bflip);
 
 		// Don't cache angle = 0
 		for (angle = 1; angle < ROTANGLES; angle++)
@@ -1252,7 +1252,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 
 			// make patch
 			newpatch = R_FlatToPatch_16bpp(rawdst, newwidth, newheight, &size);
-			newpatch->leftoffset = (newpatch->width / 2) - ((SPRITE_XCENTER - patch->leftoffset) * bflip);
+			newpatch->leftoffset = (newpatch->width / 2) - ((SPRITE_XCENTER - patch->leftoffset) * (bflip ? -1 : 1));
 			newpatch->topoffset = (newpatch->height / 2) - (SPRITE_YCENTER - patch->topoffset);
 			newpatch->leftoffset += ((width / 2) - px);
 			newpatch->topoffset += (SPRITE_YCENTER - py);
@@ -1290,5 +1290,57 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 #undef SPRITE_YCENTER
 #undef ROTSPRITE_XCENTER
 #undef ROTSPRITE_YCENTER
+}
+
+//
+// R_FreeRotSprite
+//
+// Free sprite rotation data from memory.
+//
+void R_FreeRotSprite(spritedef_t *spritedef)
+{
+	UINT8 frame;
+	INT32 rot, ang;
+
+	for (frame = 0; frame < spritedef->numframes; frame++)
+	{
+		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
+		for (rot = 0; rot < 8; rot++)
+		{
+			if (sprframe->rotsprite.cached[rot])
+			{
+				for (ang = 0; ang < ROTANGLES; ang++)
+				{
+					patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang];
+					if (rotsprite)
+					{
+#ifdef HWRENDER
+						if (rendermode == render_opengl)
+						{
+							GLPatch_t *grPatch = (GLPatch_t *)rotsprite;
+							if (grPatch->rawpatch)
+							{
+								Z_Free(grPatch->rawpatch);
+								grPatch->rawpatch = NULL;
+							}
+							if (grPatch->mipmap)
+							{
+								if (grPatch->mipmap->grInfo.data)
+								{
+									Z_Free(grPatch->mipmap->grInfo.data);
+									grPatch->mipmap->grInfo.data = NULL;
+								}
+								Z_Free(grPatch->mipmap);
+								grPatch->mipmap = NULL;
+							}
+						}
+#endif
+						Z_Free(rotsprite);
+					}
+				}
+				sprframe->rotsprite.cached[rot] = false;
+			}
+		}
+	}
 }
 #endif

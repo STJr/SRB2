@@ -214,55 +214,6 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		sprtemp[frame].flip &= ~(1<<rotation);
 }
 
-#ifdef ROTSPRITE
-static void R_FreeRotSprite(spritedef_t *spritedef)
-{
-	UINT8 frame;
-	INT32 rot, ang;
-
-	for (frame = 0; frame < spritedef->numframes; frame++)
-	{
-		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
-		for (rot = 0; rot < 8; rot++)
-		{
-			if (sprframe->rotsprite.cached[rot])
-			{
-				for (ang = 0; ang < ROTANGLES; ang++)
-				{
-					patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang];
-					if (rotsprite)
-					{
-#ifdef HWRENDER
-						if (rendermode == render_opengl)
-						{
-							GLPatch_t *grPatch = (GLPatch_t *)rotsprite;
-							if (grPatch->rawpatch)
-							{
-								Z_Free(grPatch->rawpatch);
-								grPatch->rawpatch = NULL;
-							}
-							if (grPatch->mipmap)
-							{
-								if (grPatch->mipmap->grInfo.data)
-								{
-									Z_Free(grPatch->mipmap->grInfo.data);
-									grPatch->mipmap->grInfo.data = NULL;
-								}
-								Z_Free(grPatch->mipmap);
-								grPatch->mipmap = NULL;
-							}
-						}
-#endif
-						Z_Free(rotsprite);
-					}
-				}
-				sprframe->rotsprite.cached[rot] = false;
-			}
-		}
-	}
-}
-#endif
-
 // Install a single sprite, given its identifying name (4 chars)
 //
 // (originally part of R_AddSpriteDefs)
