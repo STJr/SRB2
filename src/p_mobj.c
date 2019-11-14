@@ -11011,6 +11011,7 @@ void P_RespawnSpecials(void)
 
 	// only respawn items when cv_itemrespawn is on
 	if (!(netgame || multiplayer) // Never respawn in single player
+	|| (maptol & TOL_NIGHTS)      // Never respawn in NiGHTs
 	|| !cv_itemrespawn.value)     // cvar is turned off
 		return;
 
