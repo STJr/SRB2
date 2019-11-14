@@ -744,7 +744,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
 		player->oldscale = player->mo->scale;
 
-		if (skins[player->skin].sprites[SPR2_NGT0].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+		if (skins[player->skin].sprites[SPR2_NFLY].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 		{
 			player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
 			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
@@ -7217,17 +7217,25 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		player->mo->momx = player->mo->momy = 0;
 
-		if (gametype != GT_RACE && gametype != GT_COMPETITION)
+		if (gametype != GT_RACE && gametype != GT_COMPETITION && P_MobjFlip(player->mo)*player->mo->momz >= 0)
 			P_SetObjectMomZ(player->mo, FRACUNIT/2, true);
+		else
+			player->mo->momz = 0;
 
 #ifdef ROTSPRITE
-		if (player->mo->state != &states[S_PLAY_NIGHTS_DRILL0])
-			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL0);
-		player->mo->rollangle = ANGLE_90;
-#else
-		if (player->mo->state != &states[S_PLAY_NIGHTS_DRILL6])
-			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL6);
+		if ((player->charflags & SF_NONIGHTSROTATION) && player->mo->momz)
+		{
+			if (player->mo->state != &states[S_PLAY_NIGHTS_DRILL])
+				P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL);
+			player->mo->rollangle = ANGLE_90;
+		}
+		else
 #endif
+		{
+			if (player->mo->state != &states[S_PLAY_NIGHTS_FLOAT])
+				P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_FLOAT);
+			player->drawangle += ANGLE_22h;
+		}
 
 		player->mo->flags |= MF_NOCLIPHEIGHT;
 		return;
@@ -7504,8 +7512,10 @@ static void P_NiGHTSMovement(player_t *player)
 		flystate = (P_IsObjectOnGround(player->mo)) ? S_PLAY_NIGHTS_STAND : S_PLAY_NIGHTS_FLOAT;
 	else
 	{
+		flystate = (player->pflags & PF_DRILLING) ? S_PLAY_NIGHTS_DRILL : S_PLAY_NIGHTS_FLY;
 		if (player->charflags & SF_NONIGHTSROTATION)
 		{
+#if 0
 			visangle = ((player->anotherflyangle + 7) % 360)/15;
 			if (visangle > 18) // Over 270 degrees.
 				visangle = 30 - visangle;
@@ -7522,20 +7532,14 @@ static void P_NiGHTSMovement(player_t *player)
 					visangle += 6; // shift to S_PLAY_NIGHTS_FLY7-C
 			}
 
-			flystate = S_PLAY_NIGHTS_FLY0 + (visangle*2); // S_PLAY_NIGHTS_FLY0-C - the *2 is to skip over drill states
-
-			if (player->pflags & PF_DRILLING)
-				flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
+			flystate += (visangle*2); // S_PLAY_NIGHTS_FLY0-C - the *2 is to skip over drill states
+#endif
 		}
 #ifdef ROTSPRITE
 		else
 		{
 			angle_t a = R_PointToAngle(player->mo->x, player->mo->y) - player->mo->angle;
 			visangle = (player->flyangle % 360);
-
-			flystate = S_PLAY_NIGHTS_FLY0;
-			if (player->pflags & PF_DRILLING)
-				flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
 
 			if (player->flyangle >= 90 && player->flyangle <= 270)
 			{
