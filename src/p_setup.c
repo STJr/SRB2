@@ -2221,7 +2221,10 @@ static void P_LevelInitStuff(void)
 	tokenbits = 0;
 	runemeraldmanager = false;
 	emeraldspawndelay = 60*TICRATE;
-	nummaprings = mapheaderinfo[gamemap-1]->startrings;
+	if ((netgame || multiplayer) && !G_IsSpecialStage(gamemap))
+		nummaprings = -1;
+	else
+		nummaprings = mapheaderinfo[gamemap-1]->startrings;
 
 	// emerald hunt
 	hunt1 = hunt2 = hunt3 = NULL;
