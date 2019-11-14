@@ -2505,7 +2505,7 @@ static void F_LoadAlacroixGraphics(SINT8 newttscale)
 	if (!ttloaded[newttscale])
 	{
 		for (j = 0; j < 22; j++)
-			sprintf(&lumpnames[j][0], "T%.1hu%s", (UINT8)newttscale+1, names[j]);
+			sprintf(&lumpnames[j][0], "T%.1hu%s", (UINT16)( (UINT8)newttscale+1 ), names[j]);
 
 		LOADTTGFX(ttembl[newttscale], lumpnames[0], TTMAX_ALACROIX)
 		LOADTTGFX(ttribb[newttscale], lumpnames[1], TTMAX_ALACROIX)
