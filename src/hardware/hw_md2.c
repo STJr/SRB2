@@ -961,6 +961,10 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
+#ifdef ROTSPRITE
+		spriteinfo_t *sprinfo;
+		angle_t ang;
+#endif
 		INT32 mod;
 		float finalscale;
 
@@ -984,9 +988,17 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 		{
 			md2 = &md2_playermodels[(skin_t*)spr->mobj->skin-skins];
 			md2->skin = (skin_t*)spr->mobj->skin-skins;
+#ifdef ROTSPRITE
+			sprinfo = &((skin_t *)spr->mobj->skin)->sprinfo[spr->mobj->sprite2];
+#endif
 		}
 		else
+		{
 			md2 = &md2_models[spr->mobj->sprite];
+#ifdef ROTSPRITE
+			sprinfo = &spriteinfo[spr->mobj->sprite];
+#endif
+		}
 
 		if (md2->error)
 			return; // we already failed loading this before :(
@@ -1065,7 +1077,7 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 		else
 		{
 			// Sprite
-			gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+			gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 			HWR_GetMappedPatch(gpatch, spr->colormap);
 		}
 
@@ -1172,7 +1184,36 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 			const fixed_t anglef = AngleFixed((R_PointToAngle(spr->mobj->x, spr->mobj->y))-ANGLE_180);
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
+
+#ifdef ROTSPRITE
+		p.rollangle = 0.0f;
+		p.rollflip = 0;
+		p.rotaxis = 0;
+		if (spr->mobj->rollangle)
+		{
+			fixed_t anglef = AngleFixed(spr->mobj->rollangle);
+			p.rollangle = FIXED_TO_FLOAT(anglef);
+			p.roll = true;
+
+			// rotation pivot
+			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
+			p.centery = FIXED_TO_FLOAT(spr->mobj->height/2);
+
+			// rotation axis
+			if (sprinfo->available)
+				p.rotaxis = (UINT8)(sprinfo->pivot[(spr->mobj->frame & FF_FRAMEMASK)].rotaxis);
+
+			// for NiGHTS specifically but should work everywhere else
+			ang = R_PointToAngle (spr->mobj->x, spr->mobj->y) - (spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle);
+			if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
+				p.rollflip = 1;
+			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
+				p.rollflip = -1;
+		}
+#endif
+
 		p.anglex = 0.0f;
+
 #ifdef USE_FTRANSFORM_ANGLEZ
 		// Slope rotation from Kart
 		p.anglez = 0.0f;

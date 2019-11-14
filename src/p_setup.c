@@ -28,6 +28,7 @@
 
 #include "r_data.h"
 #include "r_things.h"
+#include "r_patch.h"
 #include "r_sky.h"
 #include "r_draw.h"
 
@@ -543,9 +544,10 @@ levelflat_t *levelflats;
 size_t P_PrecacheLevelFlats(void)
 {
 	lumpnum_t lump;
-	size_t i, flatmemory = 0;
+	size_t i;
 
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
+	flatmemory = 0;
 	for (i = 0; i < numlevelflats; i++)
 	{
 		if (levelflats[i].type == LEVELFLAT_FLAT)
@@ -3508,9 +3510,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
 
+	R_LoadSpriteInfoLumps(wadnum, numlumps);
+
 #ifdef HWRENDER
 	HWR_ReloadModels();
-#endif // HWRENDER
+#endif
 
 	// reload status bar (warning should have valid player!)
 	if (gamestate == GS_LEVEL)

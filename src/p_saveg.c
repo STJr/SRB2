@@ -1277,6 +1277,9 @@ typedef enum
 	MD2_SLOPE        = 1<<11,
 #endif
 	MD2_COLORIZED    = 1<<12,
+#ifdef ROTSPRITE
+	MD2_ROLLANGLE    = 1<<13,
+#endif
 } mobj_diff2_t;
 
 typedef enum
@@ -1496,6 +1499,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 #endif
 	if (mobj->colorized)
 		diff2 |= MD2_COLORIZED;
+#ifdef ROTSPRITE
+	if (mobj->rollangle)
+		diff2 |= MD2_ROLLANGLE;
+#endif
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1660,6 +1667,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 #endif
 	if (diff2 & MD2_COLORIZED)
 		WRITEUINT8(save_p, mobj->colorized);
+#ifdef ROTSPRITE
+	if (diff2 & MD2_ROLLANGLE)
+		WRITEANGLE(save_p, mobj->rollangle);
+#endif
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2736,6 +2747,12 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 #endif
 	if (diff2 & MD2_COLORIZED)
 		mobj->colorized = READUINT8(save_p);
+#ifdef ROTSPRITE
+	if (diff2 & MD2_ROLLANGLE)
+		mobj->rollangle = READANGLE(save_p);
+	else
+		mobj->rollangle = 0;
+#endif
 
 	if (diff & MD_REDFLAG)
 	{
