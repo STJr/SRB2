@@ -7217,13 +7217,13 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		player->mo->momx = player->mo->momy = 0;
 
-		if (gametype != GT_RACE && gametype != GT_COMPETITION && P_MobjFlip(player->mo)*player->mo->momz >= 0)
-			P_SetObjectMomZ(player->mo, FRACUNIT/2, true);
+		if (gametype != GT_RACE && gametype != GT_COMPETITION)
+			P_SetObjectMomZ(player->mo, FRACUNIT/2, (P_MobjFlip(player->mo)*player->mo->momz >= 0));
 		else
 			player->mo->momz = 0;
 
-#ifdef ROTSPRITE
-		if ((player->charflags & SF_NONIGHTSROTATION) && player->mo->momz)
+#if 0//def ROTSPRITE
+		if (!(player->charflags & SF_NONIGHTSROTATION) && player->mo->momz)
 		{
 			if (player->mo->state != &states[S_PLAY_NIGHTS_DRILL])
 				P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL);
