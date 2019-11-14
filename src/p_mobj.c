@@ -8227,8 +8227,7 @@ void P_MobjThinker(mobj_t *mobj)
 			mobj->flags2 ^= MF2_DONTDRAW;
 			break;
 		case MT_EGGTRAP: // Egg Capsule animal release
-			if (mobj->fuse > 0 && mobj->fuse < 2*TICRATE-(TICRATE/7)
-				&& (mobj->fuse & 3))
+			if (mobj->fuse > 0 && mobj->fuse < 2*TICRATE-(TICRATE/7))
 			{
 				INT32 i;
 				fixed_t x,y,z;
@@ -8236,7 +8235,7 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj_t *mo2;
 				mobj_t *flicky;
 
-				z = mobj->subsector->sector->floorheight + ((P_RandomByte()&63)*FRACUNIT);
+				z = mobj->subsector->sector->floorheight + FRACUNIT + (P_RandomKey(64)<<FRACBITS);
 				for (i = 0; i < 2; i++)
 				{
 					const angle_t fa = (P_RandomByte()*FINEANGLES/16) & FINEMASK;
@@ -8249,18 +8248,18 @@ void P_MobjThinker(mobj_t *mobj)
 					ns = 4 * FRACUNIT;
 					mo2->momx = FixedMul(FINESINE(fa),ns);
 					mo2->momy = FixedMul(FINECOSINE(fa),ns);
+					mo2->angle = fa << ANGLETOFINESHIFT;
 
-					if (P_RandomChance(FRACUNIT/4)) // I filled a spreadsheet trying to get the equivalent chance to the original P_RandomByte hack!
+					if (!i && !(mobj->fuse & 2))
 						S_StartSound(mo2, mobj->info->deathsound);
 
-					flicky = P_InternalFlickySpawn(mo2, 0, 8*FRACUNIT, false);
+					flicky = P_InternalFlickySpawn(mo2, 0, 8*FRACUNIT, false, -1);
 					if (!flicky)
 						break;
 
 					P_SetTarget(&flicky->target, mo2);
 					flicky->momx = mo2->momx;
 					flicky->momy = mo2->momy;
-					flicky->angle = fa << ANGLETOFINESHIFT;
 				}
 
 				mobj->fuse--;
@@ -11011,7 +11010,7 @@ void P_RespawnSpecials(void)
 
 	// only respawn items when cv_itemrespawn is on
 	if (!(netgame || multiplayer) // Never respawn in single player
-	|| gametype == GT_COOP        // Never respawn in co-op gametype
+	|| (maptol & TOL_NIGHTS)      // Never respawn in NiGHTs
 	|| !cv_itemrespawn.value)     // cvar is turned off
 		return;
 

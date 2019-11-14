@@ -986,6 +986,7 @@ state_t states[NUMSTATES] =
 
 	// Snailer
 	{SPR_SNLR, 0, 1, {A_SnailerThink}, 0, 0, S_SNAILER1}, // S_SNAILER1
+	{SPR_BOM1, 0, 0, {A_FlickySpawn}, 1<<17, 0, S_XPLD1}, // S_SNAILER_FLICKY
 
 	// Vulture
 	{SPR_VLTR, 4, 35,        {A_Look},         1, 0, S_VULTURE_STND},  // S_VULTURE_STND
@@ -1836,18 +1837,18 @@ state_t states[NUMSTATES] =
 	{SPR_BBLS, 3, 8, {A_BubbleCheck}, 0, 0, S_BUBBLES1}, // S_BUBBLES4
 
 	// Level End Sign
-	{SPR_SIGN,                0, -1, {A_SignPlayer}, -3, 0, S_NULL},                    // S_SIGN
-	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPIN2},            // S_SIGNSPIN1
-	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN1, S_SIGNSPIN3},   // S_SIGNSPIN2
-	{SPR_SIGN,                0,  0, {A_SignPlayer}, -2, 0, S_SIGNSPIN4},                // S_SIGNSPIN3
-	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPIN5},            // S_SIGNSPIN4
-	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN4, S_SIGNSPIN6},   // S_SIGNSPIN5
-	{SPR_SIGN,                0,  0, {A_SignPlayer}, -3, 0, S_SIGNSPIN1},                // S_SIGNSPIN6
-	{SPR_SIGN,                0,  1, {A_SignPlayer}, -1, 0, S_SIGNSLOW},                // S_SIGNPLAYER
-	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSLOW},                // S_SIGNSLOW
-	{SPR_SIGN,                0, -1,         {NULL},  0, 0, S_NULL},                    // S_SIGNSTOP
-	{SPR_SIGN, FF_PAPERSPRITE|2, -1,         {NULL},  0, 0, S_NULL},                    // S_SIGNBOARD
-	{SPR_SIGN, FF_PAPERSPRITE|1, -1,         {NULL},  0, 29, S_NULL},                   // S_EGGMANSIGN
+	{SPR_SIGN,                0, -1, {A_SignPlayer}, -3, 0, S_NULL},                // S_SIGN
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPIN2},           // S_SIGNSPIN1
+	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN1, S_SIGNSPIN3}, // S_SIGNSPIN2
+	{SPR_SIGN,                0,  0, {A_SignPlayer}, -2, 0, S_SIGNSPIN4},           // S_SIGNSPIN3
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPIN5},           // S_SIGNSPIN4
+	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN4, S_SIGNSPIN6}, // S_SIGNSPIN5
+	{SPR_SIGN,                0,  0, {A_SignPlayer}, -3, 0, S_SIGNSPIN1},           // S_SIGNSPIN6
+	{SPR_SIGN,                0,  1, {A_SignPlayer}, -1, 0, S_SIGNSLOW},            // S_SIGNPLAYER
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSLOW},            // S_SIGNSLOW
+	{SPR_SIGN,                0, -1,         {NULL},  0, 0, S_NULL},                // S_SIGNSTOP
+	{SPR_SIGN, FF_PAPERSPRITE|2, -1,         {NULL},  0, 0, S_NULL},                // S_SIGNBOARD
+	{SPR_SIGN, FF_PAPERSPRITE|1, -1,         {NULL},  0, 29, S_NULL},               // S_EGGMANSIGN
 
 	// Spike Ball
 	{SPR_SPIK, 0, 1, {NULL}, 0, 0, S_SPIKEBALL2}, // S_SPIKEBALL1
@@ -4575,7 +4576,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_XPLD_FLICKY,  // deathstate
+		S_SNAILER_FLICKY, // deathstate
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		FRACUNIT,       // speed
@@ -7725,12 +7726,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // attacksound
 		S_SIGNPLAYER,   // painstate
 		MT_SPARK,       // painchance
-		sfx_None,       // painsound
+		sfx_s3kb8,      // painsound
 		S_EGGMANSIGN,   // meleestate
 		S_NULL,         // missilestate
 		S_SIGNSTOP,     // deathstate
 		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
+		sfx_s3k64,      // deathsound
 		8,              // speed
 		36*FRACUNIT,    // radius
 		32*FRACUNIT,    // height

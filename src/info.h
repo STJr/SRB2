@@ -1180,6 +1180,7 @@ typedef enum state
 
 	// Snailer
 	S_SNAILER1,
+	S_SNAILER_FLICKY,
 
 	// Vulture
 	S_VULTURE_STND,

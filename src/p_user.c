@@ -6906,7 +6906,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				{
 					/*for (i = 0; i < 16; i++)
 					{
-						mobj_t *flicky = P_InternalFlickySpawn(player->capsule, 0, ((i%4) + 1)*2*FRACUNIT, true);
+						mobj_t *flicky = P_InternalFlickySpawn(player->capsule, 0, ((i%4) + 1)*2*FRACUNIT, true, 0);
 						flicky->z += player->capsule->height/2;
 						flicky->angle = (i*(ANGLE_MAX/16));
 						P_InstaThrust(flicky, flicky->angle, 8*FRACUNIT);

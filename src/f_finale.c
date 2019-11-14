@@ -45,7 +45,7 @@
 
 // Stage of animation:
 // 0 = text, 1 = art screen
-static INT32 finalecount;
+INT32 finalecount;
 INT32 titlescrollxspeed = 20;
 INT32 titlescrollyspeed = 0;
 UINT8 titlemapinaction = TITLEMAP_OFF;
@@ -2506,7 +2506,7 @@ static void F_LoadAlacroixGraphics(SINT8 newttscale)
 	if (!ttloaded[newttscale])
 	{
 		for (j = 0; j < 22; j++)
-			sprintf(&lumpnames[j][0], "T%.1hu%s", (UINT8)newttscale+1, names[j]);
+			sprintf(&lumpnames[j][0], "T%.1hu%s", (UINT16)( (UINT8)newttscale+1 ), names[j]);
 
 		LOADTTGFX(ttembl[newttscale], lumpnames[0], TTMAX_ALACROIX)
 		LOADTTGFX(ttribb[newttscale], lumpnames[1], TTMAX_ALACROIX)
@@ -2574,6 +2574,8 @@ void F_TitleScreenDrawer(void)
 {
 	boolean hidepics;
 	fixed_t sc = FRACUNIT / max(1, curttscale);
+	INT32 whitefade = 0;
+	UINT8 *whitecol[2] = {NULL, NULL};
 
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
@@ -2659,15 +2661,39 @@ void F_TitleScreenDrawer(void)
 			//
 			if (finalecount <= 29)
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			// Flash at tic 30, timed to O__TITLE percussion. Hold the flash until tic 34.
+			// After tic 34, fade the flash until tic 44.
+			else
+			{
+				if (finalecount > 29 && finalecount < 35)
+					V_DrawFadeScreen(0, (whitefade = 9));
+				else if (finalecount > 34 && 44-finalecount > 0 && 44-finalecount < 10)
+					V_DrawFadeScreen(0, 44-finalecount);
+				if (39-finalecount > 0)
+				{
+					whitefade = (9 - (39-finalecount))<<V_ALPHASHIFT;
+					whitecol[0] = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_SUPERGOLD3, GTC_CACHE);
+					whitecol[1] = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
+				}
+			}
 
 			// Draw emblem
 			V_DrawSciencePatch(40<<FRACBITS, 20<<FRACBITS, 0, TTEMBL[0], sc);
+
+			if (whitecol[0])
+			{
+				V_DrawFixedPatch(40<<FRACBITS, 20<<FRACBITS, sc, whitefade, TTEMBL[0], whitecol[0]);
+				V_DrawFixedPatch(40<<FRACBITS, 20<<FRACBITS, sc, V_TRANSLUCENT + ((whitefade/2) & V_ALPHAMASK), TTEMBL[0], whitecol[1]);
+			}
 
 			// Animate SONIC ROBO BLAST 2 before the white flash at tic 30.
 			if (finalecount <= 29)
 			{
 				// Ribbon unfurls, revealing SONIC text, from tic 0 to tic 24. SONIC text is pre-baked into this ribbon graphic.
 				V_DrawSciencePatch(39<<FRACBITS, 88<<FRACBITS, 0, TTRIBB[min(max(0, finalecount), 24)], sc);
+
+				// Darken non-text things.
+				V_DrawFadeScreen(0xFF00, 12);
 
 				// Animate SONIC text while the ribbon unfurls, from tic 0 to tic 28.
 				if(finalecount >= 0)
@@ -2693,6 +2719,7 @@ void F_TitleScreenDrawer(void)
 							case 8: case 7: fadeval = V_30TRANS; break;
 							case 6: case 5: fadeval = V_20TRANS; break;
 							case 4: case 3: fadeval = V_10TRANS; break;
+							default: break;
 						}
 					}
 					V_DrawSciencePatch(79<<FRACBITS, 132<<FRACBITS, fadeval, TTROBO[0], sc);
@@ -3113,8 +3140,14 @@ void F_TitleScreenDrawer(void)
 			// After tic 34, starting when the flash fades,
 			// draw the combined ribbon and SONIC ROBO BLAST 2 logo. Note the different Y value, because this
 			// graphic is cropped differently from the unfurling ribbon.
-			if (finalecount > 34)
+			if (finalecount > 29)
 				V_DrawSciencePatch(39<<FRACBITS, 93<<FRACBITS, 0, TTRBTX[0], sc);
+
+			if (whitecol[0])
+			{
+				V_DrawFixedPatch(39<<FRACBITS, 93<<FRACBITS, sc, whitefade, TTRBTX[0], whitecol[0]);
+				V_DrawFixedPatch(39<<FRACBITS, 93<<FRACBITS, sc, V_TRANSLUCENT + ((whitefade/2) & V_ALPHAMASK), TTRBTX[0], whitecol[1]);
+			}
 
 			//
 			// FRONT LAYER CHARACTERS
@@ -3253,13 +3286,6 @@ void F_TitleScreenDrawer(void)
 						V_DrawSciencePatch(SONICX<<FRACBITS, SONICY<<FRACBITS, 0, TTSODH[0], sc);
 				}
 			}
-
-			// Flash at tic 30, timed to O__TITLE percussion. Hold the flash until tic 34.
-			// After tic 34, fade the flash until tic 44.
-			if (finalecount > 29 && finalecount < 35)
-				V_DrawFadeScreen(0, 9);
-			else if (finalecount > 34 && 44-finalecount > 0 && 44-finalecount < 10)
-				V_DrawFadeScreen(0, 44-finalecount);
 
 #undef CHARSTART
 #undef SONICSTART
