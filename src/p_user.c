@@ -9452,7 +9452,7 @@ static void P_DeathThink(player_t *player)
 	if (gametype == GT_RACE || gametype == GT_COMPETITION || (gametype == GT_COOP && (multiplayer || netgame)))
 	{
 		// Keep time rolling in race mode
-		if (!(countdown2 && !countdown) && !player->exiting && !(player->pflags & PF_GAMETYPEOVER))
+		if (!(countdown2 && !countdown) && !player->exiting && !(player->pflags & PF_GAMETYPEOVER) && !stoppedclock)
 		{
 			if (gametype == GT_RACE || gametype == GT_COMPETITION)
 			{
@@ -11444,7 +11444,7 @@ void P_PlayerThink(player_t *player)
 	}
 
 	// Synchronizes the "real" amount of time spent in the level.
-	if (!player->exiting)
+	if (!player->exiting && !stoppedclock)
 	{
 		if (gametype == GT_RACE || gametype == GT_COMPETITION)
 		{

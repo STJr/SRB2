@@ -857,34 +857,44 @@ void S_InitRuntimeSounds (void)
 	}
 }
 
+sfxenum_t sfxfree = sfx_freeslot0;
+
 // Add a new sound fx into a free sfx slot.
 //
 sfxenum_t S_AddSoundFx(const char *name, boolean singular, INT32 flags, boolean skinsound)
 {
-	sfxenum_t i, slot;
+	sfxenum_t i;
 
 	if (skinsound)
-		slot = sfx_skinsoundslot0;
-	else
-		slot = sfx_freeslot0;
-
-	for (i = slot; i < NUMSFX; i++)
 	{
-		if (!S_sfx[i].priority)
+		for (i = sfx_skinsoundslot0; i < NUMSFX; i++)
 		{
-			strncpy(freeslotnames[i-sfx_freeslot0], name, 6);
-			S_sfx[i].singularity = singular;
-			S_sfx[i].priority = 60;
-			S_sfx[i].pitch = flags;
-			S_sfx[i].volume = -1;
-			S_sfx[i].lumpnum = LUMPERROR;
-			S_sfx[i].skinsound = -1;
-			S_sfx[i].usefulness = -1;
-
-			/// \todo if precached load it here
-			S_sfx[i].data = NULL;
-			return i;
+			if (S_sfx[i].priority)
+				continue;
+			break;
 		}
+	}
+	else
+		i = sfxfree;
+
+	if (i < NUMSFX)
+	{
+		strncpy(freeslotnames[i-sfx_freeslot0], name, 6);
+		S_sfx[i].singularity = singular;
+		S_sfx[i].priority = 60;
+		S_sfx[i].pitch = flags;
+		S_sfx[i].volume = -1;
+		S_sfx[i].lumpnum = LUMPERROR;
+		S_sfx[i].skinsound = -1;
+		S_sfx[i].usefulness = -1;
+
+		/// \todo if precached load it here
+		S_sfx[i].data = NULL;
+
+		if (!skinsound)
+			sfxfree++;
+
+		return i;
 	}
 	CONS_Alert(CONS_WARNING, M_GetText("No more free sound slots\n"));
 	return 0;

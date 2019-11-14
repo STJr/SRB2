@@ -188,6 +188,39 @@ boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 // Set Speed of Music
 boolean S_SpeedMusic(float speed);
 
+// Music definitions
+typedef struct musicdef_s
+{
+	char name[7];
+	char title[32];
+	char alttitle[64];
+	char authors[256];
+	//char usage[256]; -- probably never going to be relevant to vanilla
+	/*
+	the trouble here is that kart combines what we call "title"
+	and "authors" into one string. we need to split it for sound
+	test reasons. they might split it later like we did, but...
+	*/
+	//char source[256];
+	UINT8 soundtestpage;
+	INT16 soundtestcond; // +ve for map, -ve for conditionset, 0 for already here
+	tic_t stoppingtics;
+	fixed_t bpm;
+	boolean allowed; // question marks or listenable on sound test?
+	struct musicdef_s *next;
+} musicdef_t;
+
+extern musicdef_t soundtestsfx;
+extern musicdef_t *musicdefstart;
+extern musicdef_t **soundtestdefs;
+extern INT32 numsoundtestdefs;
+extern UINT8 soundtestpage;
+
+void S_LoadMusicDefs(UINT16 wadnum);
+void S_InitMusicDefs(void);
+
+boolean S_PrepareSoundTest(void);
+
 //
 // Music Seeking
 //

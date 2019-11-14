@@ -108,6 +108,27 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer,
 	boolean skipprecutscene, boolean FLS);
 char *G_BuildMapTitle(INT32 mapnum);
 
+struct searchdim
+{
+	UINT8 pos;
+	UINT8 siz;
+};
+
+typedef struct
+{
+	INT16  mapnum;
+	UINT8  matchc;
+	struct searchdim *matchd;/* offset that a pattern was matched */
+	UINT8  keywhc;
+	struct searchdim *keywhd;/* ...in KEYWORD */
+	UINT8  total;/* total hits */
+}
+mapsearchfreq_t;
+
+INT32 G_FindMap(const char *query, char **foundmapnamep,
+		mapsearchfreq_t **freqp, INT32 *freqc);
+void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
+
 // XMOD spawning
 mapthing_t *G_FindCTFStart(INT32 playernum);
 mapthing_t *G_FindMatchStart(INT32 playernum);

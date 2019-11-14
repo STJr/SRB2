@@ -115,6 +115,9 @@ typedef long ssize_t;
 	#define strnicmp(x,y,n) strncasecmp(x,y,n)
 #endif
 
+char *strcasestr(const char *in, const char *what);
+#define stristr strcasestr
+
 #if defined (macintosh) //|| defined (__APPLE__) //skip all boolean/Boolean crap
 	#define true 1
 	#define false 0

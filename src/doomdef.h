@@ -497,6 +497,7 @@ extern boolean capslock;
 
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
+#define ZZ_Calloc(x) Z_Calloc(x, PU_STATIC, NULL)
 
 // i_system.c, replace getchar() once the keyboard has been appropriated
 INT32 I_GetKey(void);

@@ -105,6 +105,7 @@ side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 UINT16 bossdisabled;
+boolean stoppedclock;
 boolean levelloading;
 UINT8 levelfadecol;
 
@@ -3478,6 +3479,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	R_AddSkins(wadnum); // faB: wadfile index in wadfiles[]
 	R_PatchSkins(wadnum); // toast: PATCH PATCH
 	ST_ReloadSkinFaceGraphics();
+
+	//
+	// edit music defs
+	//
+	S_LoadMusicDefs(wadnum);
 
 	//
 	// search for maps
