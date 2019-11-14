@@ -244,7 +244,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	if (spritedef->numframes) // (then spriteframes is not null)
 	{
 #ifdef ROTSPRITE
-		R_FreeRotSprite(spritedef);
+		R_FreeSingleRotSprite(spritedef);
 #endif
 		// copy the already defined sprite frames
 		M_Memcpy(sprtemp, spritedef->spriteframes,
@@ -394,7 +394,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 		spritedef->numframes < maxframe)   // more frames are defined ?
 	{
 #ifdef ROTSPRITE
-		R_FreeRotSprite(spritedef);
+		R_FreeSingleRotSprite(spritedef);
 #endif
 		Z_Free(spritedef->spriteframes);
 		spritedef->spriteframes = NULL;

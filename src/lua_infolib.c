@@ -269,7 +269,7 @@ static int lib_getSpriteInfo(lua_State *L)
 #ifdef ROTSPRITE
 static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, int idx)
 {
-	int ok = 0;
+	int okcool = 0;
 	switch (lua_type(L, stk))
 	{
 		case LUA_TTABLE:
@@ -312,14 +312,14 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 					pivot[idx].rotaxis = (UINT8)value;
 				else if (ikey == -1 && (key != NULL))
 					FIELDERROR("pivot key", va("invalid option %s", key));
-				ok = 1;
+				okcool = 1;
 				lua_pop(L, 1);
 			}
 			break;
 		default:
 			TYPEERROR("sprite pivot", LUA_TTABLE, lua_type(L, stk))
 	}
-	return ok;
+	return okcool;
 }
 
 static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
@@ -376,7 +376,11 @@ static int lib_setSpriteInfo(lua_State *L)
 		UINT32 i = luaL_checkinteger(L, 1);
 		if (i == 0 || i >= NUMSPRITES)
 			return luaL_error(L, "spriteinfo[] index %d out of range (1 - %d)", i, NUMSPRITES-1);
-		info = &spriteinfo[i]; // get the sfxinfo to assign to.
+#ifdef ROTSPRITE
+		if (sprites != NULL)
+			R_FreeSingleRotSprite(&sprites[i]);
+#endif
+		info = &spriteinfo[i]; // get the spriteinfo to assign to.
 	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop sprite num, don't need it any more.
@@ -467,6 +471,9 @@ static int spriteinfo_set(lua_State *L)
 	lua_settop(L, 1); // leave only one value
 
 #ifdef ROTSPRITE
+	if (sprites != NULL)
+		R_FreeSingleRotSprite(&sprites[sprinfo-spriteinfo]);
+
 	if (fastcmp(field, "pivot"))
 	{
 		// pivot[] is a table
@@ -597,7 +604,7 @@ static int framepivot_set(lua_State *L)
 	else if (fastcmp("y", field))
 		framepivot->y = luaL_checkinteger(L, 3);
 	else if (fastcmp("rotaxis", field))
-		framepivot->rotaxis = (rotaxis_t)(luaL_checkinteger(L, 3));
+		framepivot->rotaxis = luaL_checkinteger(L, 3);
 	else
 		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
 
