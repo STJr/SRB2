@@ -744,7 +744,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
 		player->oldscale = player->mo->scale;
 
-		if (skins[player->skin].sprites[SPR2_NGT0].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+		if (skins[player->skin].sprites[SPR2_NFLY].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 		{
 			player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
 			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
@@ -6748,6 +6748,17 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	}
 
+#ifdef ROTSPRITE
+	if (!(player->charflags & SF_NONIGHTSROTATION))
+	{
+		if ((player->mo->state == &states[S_PLAY_NIGHTS_PULL])
+		&& (player->mo->sprite2 == SPR2_NPUL))
+			player->mo->rollangle -= ANG30;
+		else
+			player->mo->rollangle = 0;
+	}
+#endif
+
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -7009,6 +7020,9 @@ static void P_NiGHTSMovement(player_t *player)
 	INT32 i;
 	statenum_t flystate;
 	UINT16 visangle;
+#ifdef ROTSPRITE
+	angle_t rollangle = 0;
+#endif
 
 	player->pflags &= ~PF_DRILLING;
 
@@ -7193,6 +7207,9 @@ static void P_NiGHTSMovement(player_t *player)
 		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	{
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;
+#ifdef ROTSPRITE
+		player->mo->rollangle = 0;
+#endif
 		return;
 	}
 
@@ -7201,13 +7218,26 @@ static void P_NiGHTSMovement(player_t *player)
 		player->mo->momx = player->mo->momy = 0;
 
 		if (gametype != GT_RACE && gametype != GT_COMPETITION)
-			P_SetObjectMomZ(player->mo, FRACUNIT/2, true);
+			P_SetObjectMomZ(player->mo, FRACUNIT/2, (P_MobjFlip(player->mo)*player->mo->momz >= 0));
+		else
+			player->mo->momz = 0;
 
-		if (player->mo->state  != &states[S_PLAY_NIGHTS_DRILL6])
-			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL6);
+#if 0//def ROTSPRITE
+		if (!(player->charflags & SF_NONIGHTSROTATION) && player->mo->momz)
+		{
+			if (player->mo->state != &states[S_PLAY_NIGHTS_DRILL])
+				P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL);
+			player->mo->rollangle = ANGLE_90;
+		}
+		else
+#endif
+		{
+			if (player->mo->state != &states[S_PLAY_NIGHTS_FLOAT])
+				P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_FLOAT);
+			player->drawangle += ANGLE_22h;
+		}
 
 		player->mo->flags |= MF_NOCLIPHEIGHT;
-
 		return;
 	}
 
@@ -7482,30 +7512,59 @@ static void P_NiGHTSMovement(player_t *player)
 		flystate = (P_IsObjectOnGround(player->mo)) ? S_PLAY_NIGHTS_STAND : S_PLAY_NIGHTS_FLOAT;
 	else
 	{
-		visangle = ((player->anotherflyangle + 7) % 360)/15;
-		if (visangle > 18) // Over 270 degrees.
-			visangle = 30 - visangle;
-		else if (visangle > 12) // Over 180 degrees.
-			visangle -= 6;
-		else if (visangle > 6) // Over 90 degrees.
-			visangle = 12 - visangle;
-
-		if (player->mo->eflags & MFE_VERTICALFLIP && visangle) // S_PLAY_NIGHTS_FLY0 stays the same, even in reverse gravity
+		flystate = (player->pflags & PF_DRILLING) ? S_PLAY_NIGHTS_DRILL : S_PLAY_NIGHTS_FLY;
+		if (player->charflags & SF_NONIGHTSROTATION)
 		{
-			if (visangle > 6)
-				visangle -= 6; // shift to S_PLAY_NIGHTS_FLY1-6
-			else
-				visangle += 6; // shift to S_PLAY_NIGHTS_FLY7-C
+#if 0
+			visangle = ((player->anotherflyangle + 7) % 360)/15;
+			if (visangle > 18) // Over 270 degrees.
+				visangle = 30 - visangle;
+			else if (visangle > 12) // Over 180 degrees.
+				visangle -= 6;
+			else if (visangle > 6) // Over 90 degrees.
+				visangle = 12 - visangle;
+
+			if (player->mo->eflags & MFE_VERTICALFLIP && visangle) // S_PLAY_NIGHTS_FLY0 stays the same, even in reverse gravity
+			{
+				if (visangle > 6)
+					visangle -= 6; // shift to S_PLAY_NIGHTS_FLY1-6
+				else
+					visangle += 6; // shift to S_PLAY_NIGHTS_FLY7-C
+			}
+
+			flystate += (visangle*2); // S_PLAY_NIGHTS_FLY0-C - the *2 is to skip over drill states
+#endif
 		}
+#ifdef ROTSPRITE
+		else
+		{
+			angle_t a = R_PointToAngle(player->mo->x, player->mo->y) - player->mo->angle;
+			visangle = (player->flyangle % 360);
 
-		flystate = S_PLAY_NIGHTS_FLY0 + (visangle*2); // S_PLAY_FLY0-C - the *2 is to skip over drill states
+			if (player->flyangle >= 90 && player->flyangle <= 270)
+			{
+				if (player->flyangle == 270 && (a < ANGLE_180))
+					;
+				else if (player->flyangle == 90 && (a < ANGLE_180))
+					;
+				else
+					visangle += 180;
+			}
 
-		if (player->pflags & PF_DRILLING)
-			flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
+			rollangle = FixedAngle(visangle<<FRACBITS);
+		}
+#endif
 	}
 
 	if (player->mo->state != &states[flystate])
 		P_SetPlayerMobjState(player->mo, flystate);
+
+#ifdef ROTSPRITE
+	if (player->charflags & SF_NONIGHTSROTATION)
+		player->mo->rollangle = 0;
+	else
+		player->mo->rollangle = rollangle;
+#endif
 
 	if (player == &players[consoleplayer])
 		localangle = player->mo->angle;
@@ -9397,7 +9456,7 @@ static void P_DeathThink(player_t *player)
 	if (gametype == GT_RACE || gametype == GT_COMPETITION || (gametype == GT_COOP && (multiplayer || netgame)))
 	{
 		// Keep time rolling in race mode
-		if (!(countdown2 && !countdown) && !player->exiting && !(player->pflags & PF_GAMETYPEOVER))
+		if (!(countdown2 && !countdown) && !player->exiting && !(player->pflags & PF_GAMETYPEOVER) && !stoppedclock)
 		{
 			if (gametype == GT_RACE || gametype == GT_COMPETITION)
 			{
@@ -11389,7 +11448,7 @@ void P_PlayerThink(player_t *player)
 	}
 
 	// Synchronizes the "real" amount of time spent in the level.
-	if (!player->exiting)
+	if (!player->exiting && !stoppedclock)
 	{
 		if (gametype == GT_RACE || gametype == GT_COMPETITION)
 		{

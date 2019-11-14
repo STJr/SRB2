@@ -1290,6 +1290,7 @@ void D_SRB2Main(void)
 		I_StartupSound();
 		I_InitMusic();
 		S_InitSfxChannels(cv_soundvolume.value);
+		S_InitMusicDefs();
 	}
 
 	CONS_Printf("ST_Init(): Init status bar.\n");

@@ -3998,6 +3998,24 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 462: // Stop clock (and end level in record attack)
+			if (G_PlatformGametype())
+			{
+				stoppedclock = true;
+				CONS_Debug(DBG_GAMELOGIC, "Clock stopped!\n");
+				if (modeattacking)
+				{
+					UINT8 i;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+						P_DoPlayerExit(&players[i]);
+					}
+				}
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
@@ -4521,7 +4539,11 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 			// Mark all players with the time to exit thingy!
 			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
 				P_DoPlayerExit(&players[i]);
+			}
 			break;
 		}
 		case 10: // Special Stage Time/Rings
@@ -6395,6 +6417,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 	// yep, we do this here - "bossdisabled" is considered an apparatus of specials.
 	bossdisabled = 0;
+	stoppedclock = false;
 
 	// Init special SECTORs.
 	sector = sectors;

@@ -28,6 +28,7 @@
 
 #include "r_data.h"
 #include "r_things.h"
+#include "r_patch.h"
 #include "r_sky.h"
 #include "r_draw.h"
 
@@ -104,6 +105,7 @@ side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 UINT16 bossdisabled;
+boolean stoppedclock;
 boolean levelloading;
 UINT8 levelfadecol;
 
@@ -542,9 +544,10 @@ levelflat_t *levelflats;
 size_t P_PrecacheLevelFlats(void)
 {
 	lumpnum_t lump;
-	size_t i, flatmemory = 0;
+	size_t i;
 
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
+	flatmemory = 0;
 	for (i = 0; i < numlevelflats; i++)
 	{
 		if (levelflats[i].type == LEVELFLAT_FLAT)
@@ -3052,6 +3055,25 @@ boolean P_SetupLevel(boolean skipprecip)
 		leveltime = maxstarposttime;
 	}
 
+	if (unlockables[27].unlocked && !modeattacking // pandora's box
+#ifndef DEVELOP
+	&& !modifiedgame
+#endif
+	&& !(netgame || multiplayer) && gamemap == 0x1d35-016464)
+	{
+		P_SpawnMobj(0640370000, 0x11000000, 0b11000110000000000000000000, MT_LETTER)->angle = ANGLE_90;
+		if (textprompts[199]->page[1].backcolor != 259)
+		{
+			char *buf = W_CacheLumpName("WATERMAP", PU_STATIC), *b = buf;
+			while ((*b != 65) && (b-buf < 256)) { *b = (*b - 65)&255; b++; } *b = '\0';
+			Z_Free(textprompts[199]->page[1].text);
+			textprompts[199]->page[1].text = Z_StrDup(buf);
+			textprompts[199]->page[1].lines = 4;
+			textprompts[199]->page[1].backcolor = 259;
+			Z_Free(buf);
+		}
+	}
+
 	if (modeattacking == ATTACKING_RECORD && !demoplayback)
 		P_LoadRecordGhosts();
 	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
@@ -3499,6 +3521,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	ST_ReloadSkinFaceGraphics();
 
 	//
+	// edit music defs
+	//
+	S_LoadMusicDefs(wadnum);
+
+	//
 	// search for maps
 	//
 	lumpinfo = wadfiles[wadnum]->lumpinfo;
@@ -3523,9 +3550,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
 
+	R_LoadSpriteInfoLumps(wadnum, numlumps);
+
 #ifdef HWRENDER
 	HWR_ReloadModels();
-#endif // HWRENDER
+#endif
 
 	// reload status bar (warning should have valid player!)
 	if (gamestate == GS_LEVEL)

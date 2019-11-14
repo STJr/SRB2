@@ -3919,7 +3919,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	}
 
 	if (netgame || multiplayer) // Nice try, haxor.
-		ultimatemode = false;
+		pultmode = false;
 
 	if (!demoplayback && !netgame) // Netgame sets random seed elsewhere, demo playback sets seed just before us!
 		P_SetRandSeed(M_RandomizedSeed()); // Use a more "Random" random seed
@@ -4045,6 +4045,187 @@ char *G_BuildMapTitle(INT32 mapnum)
 	}
 
 	return title;
+}
+
+static void measurekeywords(mapsearchfreq_t *fr,
+		struct searchdim **dimp, UINT8 *cuntp,
+		const char *s, const char *q, boolean wanttable)
+{
+	char *qp;
+	char *sp;
+	if (wanttable)
+		(*dimp) = Z_Realloc((*dimp), 255 * sizeof (struct searchdim),
+				PU_STATIC, NULL);
+	for (qp = strtok(va("%s", q), " ");
+			qp && fr->total < 255;
+			qp = strtok(0, " "))
+	{
+		if (( sp = strcasestr(s, qp) ))
+		{
+			if (wanttable)
+			{
+				(*dimp)[(*cuntp)].pos = sp - s;
+				(*dimp)[(*cuntp)].siz = strlen(qp);
+			}
+			(*cuntp)++;
+			fr->total++;
+		}
+	}
+	if (wanttable)
+		(*dimp) = Z_Realloc((*dimp), (*cuntp) * sizeof (struct searchdim),
+				PU_STATIC, NULL);
+}
+
+static void writesimplefreq(mapsearchfreq_t *fr, INT32 *frc,
+		INT32 mapnum, UINT8 pos, UINT8 siz)
+{
+	fr[(*frc)].mapnum = mapnum;
+	fr[(*frc)].matchd = ZZ_Alloc(sizeof (struct searchdim));
+	fr[(*frc)].matchd[0].pos = pos;
+	fr[(*frc)].matchd[0].siz = siz;
+	fr[(*frc)].matchc = 1;
+	fr[(*frc)].total = 1;
+	(*frc)++;
+}
+
+INT32 G_FindMap(const char *mapname, char **foundmapnamep,
+		mapsearchfreq_t **freqp, INT32 *freqcp)
+{
+	INT32 newmapnum = 0;
+	INT32 mapnum;
+	INT32 apromapnum = 0;
+
+	size_t      mapnamelen;
+	char   *realmapname = NULL;
+	char   *newmapname = NULL;
+	char   *apromapname = NULL;
+	char   *aprop = NULL;
+
+	mapsearchfreq_t *freq;
+	boolean wanttable;
+	INT32 freqc;
+	UINT8 frequ;
+
+	INT32 i;
+
+	mapnamelen = strlen(mapname);
+
+	/* Count available maps; how ugly. */
+	for (i = 0, freqc = 0; i < NUMMAPS; ++i)
+	{
+		if (mapheaderinfo[i])
+			freqc++;
+	}
+
+	freq = ZZ_Calloc(freqc * sizeof (mapsearchfreq_t));
+
+	wanttable = !!( freqp );
+
+	freqc = 0;
+	for (i = 0, mapnum = 1; i < NUMMAPS; ++i, ++mapnum)
+		if (mapheaderinfo[i])
+	{
+		if (!( realmapname = G_BuildMapTitle(mapnum) ))
+			continue;
+
+		aprop = realmapname;
+
+		/* Now that we found a perfect match no need to fucking guess. */
+		if (strnicmp(realmapname, mapname, mapnamelen) == 0)
+		{
+			if (wanttable)
+			{
+				writesimplefreq(freq, &freqc, mapnum, 0, mapnamelen);
+			}
+			if (newmapnum == 0)
+			{
+				newmapnum = mapnum;
+				newmapname = realmapname;
+				realmapname = 0;
+				Z_Free(apromapname);
+				if (!wanttable)
+					break;
+			}
+		}
+		else
+		if (apromapnum == 0 || wanttable)
+		{
+			/* LEVEL 1--match keywords verbatim */
+			if (( aprop = strcasestr(realmapname, mapname) ))
+			{
+				if (wanttable)
+				{
+					writesimplefreq(freq, &freqc,
+							mapnum, aprop - realmapname, mapnamelen);
+				}
+				if (apromapnum == 0)
+				{
+					apromapnum = mapnum;
+					apromapname = realmapname;
+					realmapname = 0;
+				}
+			}
+			else/* ...match individual keywords */
+			{
+				freq[freqc].mapnum = mapnum;
+				measurekeywords(&freq[freqc],
+						&freq[freqc].matchd, &freq[freqc].matchc,
+						realmapname, mapname, wanttable);
+				if (freq[freqc].total)
+					freqc++;
+			}
+		}
+
+		Z_Free(realmapname);/* leftover old name */
+	}
+
+	if (newmapnum == 0)/* no perfect match--try a substring */
+	{
+		newmapnum = apromapnum;
+		newmapname = apromapname;
+	}
+
+	if (newmapnum == 0)/* calculate most queries met! */
+	{
+		frequ = 0;
+		for (i = 0; i < freqc; ++i)
+		{
+			if (freq[i].total > frequ)
+			{
+				frequ = freq[i].total;
+				newmapnum = freq[i].mapnum;
+			}
+		}
+		if (newmapnum)
+		{
+			newmapname = G_BuildMapTitle(newmapnum);
+		}
+	}
+
+	if (freqp)
+		(*freqp) = freq;
+	else
+		Z_Free(freq);
+
+	if (freqcp)
+		(*freqcp) = freqc;
+
+	if (foundmapnamep)
+		(*foundmapnamep) = newmapname;
+	else
+		Z_Free(newmapname);
+
+	return newmapnum;
+}
+
+void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc)
+{
+	INT32 i;
+	for (i = 0; i < freqc; ++i)
+	{
+		Z_Free(freq[i].matchd);
+	}
+	Z_Free(freq);
 }
 
 //

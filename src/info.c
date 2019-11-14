@@ -195,6 +195,9 @@ char sprnames[NUMSPRITES + 1][5] =
 	"AROW", // Arrow
 	"CFIR", // Colored fire of various sorts
 
+	// The letter
+	"LETR",
+
 	// Greenflower Scenery
 	"FWR1",
 	"FWR2", // GFZ Sunflower
@@ -553,37 +556,11 @@ char spr2names[NUMPLAYERSPRITES][5] =
 
 	"NSTD",
 	"NFLT",
+	"NFLY",
+	"NDRL",
 	"NSTN",
 	"NPUL",
 	"NATK",
-
-	"NGT0",
-	"NGT1",
-	"NGT2",
-	"NGT3",
-	"NGT4",
-	"NGT5",
-	"NGT6",
-	"NGT7",
-	"NGT8",
-	"NGT9",
-	"NGTA",
-	"NGTB",
-	"NGTC",
-
-	"DRL0",
-	"DRL1",
-	"DRL2",
-	"DRL3",
-	"DRL4",
-	"DRL5",
-	"DRL6",
-	"DRL7",
-	"DRL8",
-	"DRL9",
-	"DRLA",
-	"DRLB",
-	"DRLC",
 
 	"TAL0",
 	"TAL1",
@@ -656,37 +633,11 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 
 	FF_SPR2SUPER|SPR2_STND, // SPR2_NSTD,
 	FF_SPR2SUPER|SPR2_FLT , // SPR2_NFLT,
+	0, // SPR2_NFLY, (will never be referenced unless skin 0 lacks this)
+	SPR2_NFLY, // SPR2_NDRL,
 	FF_SPR2SUPER|SPR2_STUN, // SPR2_NSTN,
 	SPR2_NSTN, // SPR2_NPUL,
 	FF_SPR2SUPER|SPR2_ROLL, // SPR2_NATK,
-
-	0, // SPR2_NGT0, (will never be referenced unless skin 0 lacks this)
-	SPR2_NGT0, // SPR2_NGT1,
-	SPR2_NGT1, // SPR2_NGT2,
-	SPR2_NGT2, // SPR2_NGT3,
-	SPR2_NGT3, // SPR2_NGT4,
-	SPR2_NGT4, // SPR2_NGT5,
-	SPR2_NGT5, // SPR2_NGT6,
-	SPR2_NGT0, // SPR2_NGT7,
-	SPR2_NGT7, // SPR2_NGT8,
-	SPR2_NGT8, // SPR2_NGT9,
-	SPR2_NGT9, // SPR2_NGTA,
-	SPR2_NGTA, // SPR2_NGTB,
-	SPR2_NGTB, // SPR2_NGTC,
-
-	SPR2_NGT0, // SPR2_DRL0,
-	SPR2_NGT1, // SPR2_DRL1,
-	SPR2_NGT2, // SPR2_DRL2,
-	SPR2_NGT3, // SPR2_DRL3,
-	SPR2_NGT4, // SPR2_DRL4,
-	SPR2_NGT5, // SPR2_DRL5,
-	SPR2_NGT6, // SPR2_DRL6,
-	SPR2_NGT7, // SPR2_DRL7,
-	SPR2_NGT8, // SPR2_DRL8,
-	SPR2_NGT9, // SPR2_DRL9,
-	SPR2_NGTA, // SPR2_DRLA,
-	SPR2_NGTB, // SPR2_DRLB,
-	SPR2_NGTC, // SPR2_DRLC,
 
 	0, // SPR2_TAL0, (this will look mighty stupid but oh well)
 	SPR2_TAL0, // SPR2_TAL1,
@@ -818,40 +769,14 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_TRNS|FF_FULLBRIGHT,  2, {NULL},          0, 0, S_PLAY_NIGHTS_TRANS6}, // S_PLAY_NIGHTS_TRANS5
 	{SPR_PLAY, SPR2_TRNS|FF_FULLBRIGHT, 21, {A_FadeOverlay}, 2, 0, S_PLAY_NIGHTS_FLOAT},  // S_PLAY_NIGHTS_TRANS5
 
-	// NiGHTS Player, stand, float, pain, pull and attack
+	// NiGHTS Player
 	{SPR_PLAY, SPR2_NSTD, 7, {NULL}, 0, 0, S_PLAY_NIGHTS_STAND},  // S_PLAY_NIGHTS_STAND
 	{SPR_PLAY, SPR2_NFLT, 7, {NULL}, 0, 0, S_PLAY_NIGHTS_FLOAT},  // S_PLAY_NIGHTS_FLOAT
+	{SPR_PLAY, SPR2_NFLY, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY},    // S_PLAY_NIGHTS_FLY
+	{SPR_PLAY, SPR2_NDRL, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL},  // S_PLAY_NIGHTS_DRILL
 	{SPR_PLAY, SPR2_NSTN, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_STUN},   // S_PLAY_NIGHTS_STUN
 	{SPR_PLAY, SPR2_NPUL, 1, {NULL}, 0, 0, S_PLAY_NIGHTS_PULL},   // S_PLAY_NIGHTS_PULL
 	{SPR_PLAY, SPR2_NATK, 1, {NULL}, 0, 0, S_PLAY_NIGHTS_ATTACK}, // S_PLAY_NIGHTS_ATTACK
-
-	// NiGHTS Player, flying and drilling
-	{SPR_PLAY, SPR2_NGT0, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY0},   // S_PLAY_NIGHTS_FLY0
-	{SPR_PLAY, SPR2_DRL0, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL0}, // S_PLAY_NIGHTS_DRILL0
-	{SPR_PLAY, SPR2_NGT1, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY1},   // S_PLAY_NIGHTS_FLY1
-	{SPR_PLAY, SPR2_DRL1, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL1}, // S_PLAY_NIGHTS_DRILL1
-	{SPR_PLAY, SPR2_NGT2, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY2},   // S_PLAY_NIGHTS_FLY2
-	{SPR_PLAY, SPR2_DRL2, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL2}, // S_PLAY_NIGHTS_DRILL2
-	{SPR_PLAY, SPR2_NGT3, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY3},   // S_PLAY_NIGHTS_FLY3
-	{SPR_PLAY, SPR2_DRL3, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL3}, // S_PLAY_NIGHTS_DRILL3
-	{SPR_PLAY, SPR2_NGT4, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY4},   // S_PLAY_NIGHTS_FLY4
-	{SPR_PLAY, SPR2_DRL4, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL4}, // S_PLAY_NIGHTS_DRILL4
-	{SPR_PLAY, SPR2_NGT5, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY5},   // S_PLAY_NIGHTS_FLY5
-	{SPR_PLAY, SPR2_DRL5, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL5}, // S_PLAY_NIGHTS_DRILL5
-	{SPR_PLAY, SPR2_NGT6, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY6},   // S_PLAY_NIGHTS_FLY6
-	{SPR_PLAY, SPR2_DRL6, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL6}, // S_PLAY_NIGHTS_DRILL6
-	{SPR_PLAY, SPR2_NGT7, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY7},   // S_PLAY_NIGHTS_FLY7
-	{SPR_PLAY, SPR2_DRL7, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL7}, // S_PLAY_NIGHTS_DRILL7
-	{SPR_PLAY, SPR2_NGT8, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY8},   // S_PLAY_NIGHTS_FLY8
-	{SPR_PLAY, SPR2_DRL8, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL8}, // S_PLAY_NIGHTS_DRILL8
-	{SPR_PLAY, SPR2_NGT9, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY9},   // S_PLAY_NIGHTS_FLY9
-	{SPR_PLAY, SPR2_DRL9, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL9}, // S_PLAY_NIGHTS_DRILL9
-	{SPR_PLAY, SPR2_NGTA, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLYA},   // S_PLAY_NIGHTS_FLYA
-	{SPR_PLAY, SPR2_DRLA, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILLA}, // S_PLAY_NIGHTS_DRILLA
-	{SPR_PLAY, SPR2_NGTB, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLYB},   // S_PLAY_NIGHTS_FLYB
-	{SPR_PLAY, SPR2_DRLB, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILLB}, // S_PLAY_NIGHTS_DRILLB
-	{SPR_PLAY, SPR2_NGTC, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLYC},   // S_PLAY_NIGHTS_FLYC
-	{SPR_PLAY, SPR2_DRLC, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILLC}, // S_PLAY_NIGHTS_DRILLC
 
 	// c:
 	{SPR_PLAY, SPR2_TAL0|FF_SPR2MIDSTART,  5, {NULL}, 0, 0, S_TAILSOVERLAY_STAND}, // S_TAILSOVERLAY_STAND
@@ -2147,6 +2072,8 @@ state_t states[NUMSTATES] =
 
 	{SPR_CFIR, FF_FULLBRIGHT|FF_ANIMATE, -1, {NULL}, 5, 2, S_NULL}, // S_DEMONFIRE
 
+	{SPR_LETR, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_LETTER
+
 	// GFZ flowers
 	{SPR_FWR1, FF_ANIMATE, -1, {NULL},  7, 3, S_NULL}, // S_GFZFLOWERA
 	{SPR_FWR2, FF_ANIMATE, -1, {NULL}, 19, 3, S_NULL}, // S_GFZFLOWERB
@@ -2408,7 +2335,11 @@ state_t states[NUMSTATES] =
 	{SPR_BARX, 2|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL5}, // S_TNTBARREL_EXPL4
 	{SPR_BARX, 3|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL6}, // S_TNTBARREL_EXPL5
 	{SPR_NULL, 0, 35, {NULL}, 0, 0, S_NULL}, // S_TNTBARREL_EXPL6
+#ifndef ROTSPRITE
 	{SPR_BARR, 1|FF_ANIMATE, -1, {NULL}, 7, 2, S_NULL}, // S_TNTBARREL_FLYING
+#else
+	{SPR_BARR, 1, 1, {A_RollAngle}, 14, 0, S_TNTBARREL_FLYING}, // S_TNTBARREL_FLYING
+#endif
 
 	// TNT proximity shell
 	{SPR_REMT, 0, 10, {A_Look}, 33554433, 0, S_PROXIMITY_TNT}, // S_PROXIMITY_TNT
@@ -9860,6 +9791,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LETTER
+		-1,             // doomednum
+		S_LETTER,       // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		7*FRACUNIT,     // radius -- heaven
+		13*FRACUNIT,    // height -- hell
+		0,              // display offset
+		0,              // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 

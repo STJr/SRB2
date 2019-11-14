@@ -29,6 +29,7 @@
 #include "p_setup.h"
 #include "r_data.h"
 #include "r_draw.h"
+#include "r_patch.h"
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"
@@ -803,20 +804,28 @@ static void readlight(MYFILE *f, INT32 num)
 
 	Z_Free(s);
 }
+#endif // HWRENDER
 
-static void readspritelight(MYFILE *f, INT32 num)
+static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word;
+	char *word, *word2;
 	char *tmp;
 	INT32 value;
+	char *lastline;
 
 	do
 	{
+		lastline = f->curpos;
 		if (myfgets(s, MAXLINELEN, f))
 		{
 			if (s[0] == '\n')
 				break;
+
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
 
 			tmp = strchr(s, '#');
 			if (tmp)
@@ -824,29 +833,222 @@ static void readspritelight(MYFILE *f, INT32 num)
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
 
-			value = searchvalue(s);
+			// Set / reset word
+			word = s;
+			while ((*word == '\t') || (*word == ' '))
+				word++;
 
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
-			else
-				break;
-
-			if (fastcmp(word, "LIGHTTYPE"))
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
 			{
-				INT32 oldvar;
-				for (oldvar = 0; t_lspr[num] != &lspr[oldvar]; oldvar++)
-					;
-				t_lspr[num] = &lspr[value];
+				*(tmp-1) = '\0';
+				// Now get the part after
+				word2 = tmp += 2;
 			}
 			else
-				deh_warning("Sprite %d: unknown word '%s'", num, word);
+			{
+				// Get the part before the " "
+				tmp = strchr(s, ' ');
+				if (tmp)
+				{
+					*tmp = '\0';
+					// Now get the part after
+					tmp++;
+					word2 = tmp;
+				}
+				else
+					break;
+			}
+			strupr(word);
+			value = atoi(word2); // used for numerical settings
+
+#ifdef ROTSPRITE
+			if (fastcmp(word, "XPIVOT"))
+				sprinfo->pivot[frame].x = value;
+			else if (fastcmp(word, "YPIVOT"))
+				sprinfo->pivot[frame].y = value;
+			else if (fastcmp(word, "ROTAXIS"))
+				sprinfo->pivot[frame].rotaxis = value;
+#endif
+			else
+			{
+				f->curpos = lastline;
+				break;
+			}
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+	Z_Free(s);
+}
+
+static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word, *word2;
+	char *tmp;
+	INT32 value;
+	char *lastline;
+	INT32 skinnumbers[MAXSKINS];
+	INT32 foundskins = 0;
+
+	// allocate a spriteinfo
+	spriteinfo_t *info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
+	info->available = true;
+
+#ifdef ROTSPRITE
+	if ((sprites != NULL) && (!sprite2))
+		R_FreeSingleRotSprite(&sprites[num]);
+#endif
+
+	do
+	{
+		lastline = f->curpos;
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			// Set / reset word
+			word = s;
+			while ((*word == '\t') || (*word == ' '))
+				word++;
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+			{
+				*(tmp-1) = '\0';
+				// Now get the part after
+				word2 = tmp += 2;
+			}
+			else
+			{
+				// Get the part before the " "
+				tmp = strchr(s, ' ');
+				if (tmp)
+				{
+					*tmp = '\0';
+					// Now get the part after
+					tmp++;
+					word2 = tmp;
+				}
+				else
+					break;
+			}
+			strupr(word);
+			value = atoi(word2); // used for numerical settings
+
+#ifdef HWRENDER
+			if (fastcmp(word, "LIGHTTYPE"))
+			{
+				if (sprite2)
+					deh_warning("Sprite2 %s: invalid word '%s'", spr2names[num], word);
+				else
+				{
+					INT32 oldvar;
+					for (oldvar = 0; t_lspr[num] != &lspr[oldvar]; oldvar++)
+						;
+					t_lspr[num] = &lspr[value];
+				}
+			}
+			else
+#endif
+			if (fastcmp(word, "SKIN"))
+			{
+				INT32 skinnum = -1;
+				if (!sprite2)
+				{
+					deh_warning("Sprite %s: %s keyword found outside of SPRITE2INFO block, ignoring", spr2names[num], word);
+					continue;
+				}
+
+				// make lowercase
+				strlwr(word2);
+				skinnum = R_SkinAvailable(word2);
+				if (skinnum == -1)
+				{
+					deh_warning("Sprite2 %s: unknown skin %s", spr2names[num], word2);
+					break;
+				}
+
+				skinnumbers[foundskins] = skinnum;
+				foundskins++;
+			}
+			else if (fastcmp(word, "DEFAULT"))
+			{
+				if (!sprite2)
+				{
+					deh_warning("Sprite %s: %s keyword found outside of SPRITE2INFO block, ignoring", spr2names[num], word);
+					continue;
+				}
+				if (num < (INT32)free_spr2 && num >= (INT32)SPR2_FIRSTFREESLOT)
+					spr2defaults[num] = get_number(word2);
+				else
+				{
+					deh_warning("Sprite2 %s: out of range (%d - %d), ignoring", spr2names[num], SPR2_FIRSTFREESLOT, free_spr2-1);
+					continue;
+				}
+			}
+			else if (fastcmp(word, "FRAME"))
+			{
+				UINT8 frame = R_Char2Frame(word2[0]);
+				// frame number too high
+				if (frame >= 64)
+				{
+					if (sprite2)
+						deh_warning("Sprite2 %s: invalid frame %s", spr2names[num], word2);
+					else
+						deh_warning("Sprite %s: invalid frame %s", sprnames[num], word2);
+					break;
+				}
+
+				// read sprite frame and store it in the spriteinfo_t struct
+				readspriteframe(f, info, frame);
+				if (sprite2)
+				{
+					INT32 i;
+					if (!foundskins)
+					{
+						deh_warning("Sprite2 %s: no skins specified", spr2names[num]);
+						break;
+					}
+					for (i = 0; i < foundskins; i++)
+					{
+						size_t skinnum = skinnumbers[i];
+						skin_t *skin = &skins[skinnum];
+						spriteinfo_t *sprinfo = skin->sprinfo;
+#ifdef ROTSPRITE
+						R_FreeSkinRotSprite(skinnum);
+#endif
+						M_Memcpy(&sprinfo[num], info, sizeof(spriteinfo_t));
+					}
+				}
+				else
+					M_Memcpy(&spriteinfo[num], info, sizeof(spriteinfo_t));
+			}
+			else
+			{
+				//deh_warning("Sprite %s: unknown word '%s'", sprnames[num], word);
+				f->curpos = lastline;
+				break;
+			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
 	Z_Free(s);
+	Z_Free(info);
 }
-#endif // HWRENDER
 
 static void readsprite2(MYFILE *f, INT32 num)
 {
@@ -1851,24 +2053,29 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			// end copypasta from readcutscenescene
 			else if (fastcmp(word, "NAME"))
 			{
-				INT32 j;
-
-				// HACK: Add yellow control char now
-				// so the drawing function doesn't call it repeatedly
-				char name[34];
-				name[0] = '\x82'; // color yellow
-				name[1] = 0;
-				strncat(name, word2, 33);
-				name[33] = 0;
-
-				// Replace _ with ' '
-				for (j = 0; j < 32 && name[j]; j++)
+				if (*word2 != '\0')
 				{
-					if (name[j] == '_')
-						name[j] = ' ';
-				}
+					INT32 j;
 
-				strncpy(textprompts[num]->page[pagenum].name, name, 32);
+					// HACK: Add yellow control char now
+					// so the drawing function doesn't call it repeatedly
+					char name[34];
+					name[0] = '\x82'; // color yellow
+					name[1] = 0;
+					strncat(name, word2, 33);
+					name[33] = 0;
+
+					// Replace _ with ' '
+					for (j = 0; j < 32 && name[j]; j++)
+					{
+						if (name[j] == '_')
+							name[j] = ' ';
+					}
+
+					strncpy(textprompts[num]->page[pagenum].name, name, 32);
+				}
+				else
+					*textprompts[num]->page[pagenum].name = '\0';
 			}
 			else if (fastcmp(word, "ICON"))
 				strncpy(textprompts[num]->page[pagenum].iconname, word2, 8);
@@ -1901,6 +2108,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				else if (i == 16 || fastcmp(word2, "BLUE")) backcolor = 16;
 				else if (i == 17 || fastcmp(word2, "PURPLE")) backcolor = 17;
 				else if (i == 18 || fastcmp(word2, "LAVENDER")) backcolor = 18;
+				else if (i >= 256 && i < 512) backcolor = i; // non-transparent palette index
 				else if (i < 0) backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
 				else backcolor = 1; // default gray
 				textprompts[num]->page[pagenum].backcolor = backcolor;
@@ -2447,6 +2655,11 @@ static actionpointer_t actionpointers[] =
 	{{A_SpawnObjectRelative},    "A_SPAWNOBJECTRELATIVE"},
 	{{A_ChangeAngleRelative},    "A_CHANGEANGLERELATIVE"},
 	{{A_ChangeAngleAbsolute},    "A_CHANGEANGLEABSOLUTE"},
+#ifdef ROTSPRITE
+	{{A_RollAngle},              "A_ROLLANGLE"},
+	{{A_ChangeRollAngleRelative},"A_CHANGEROLLANGLERELATIVE"},
+	{{A_ChangeRollAngleAbsolute},"A_CHANGEROLLANGLEABSOLUTE"},
+#endif
 	{{A_PlaySound},              "A_PLAYSOUND"},
 	{{A_FindTarget},             "A_FINDTARGET"},
 	{{A_FindTracer},             "A_FINDTRACER"},
@@ -4081,19 +4294,31 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 						ignorelines(f);
 					}
 				}
-				else if (fastcmp(word, "SPRITE"))
+#endif
+				else if (fastcmp(word, "SPRITE") || fastcmp(word, "SPRITEINFO"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sprite(word2); // find a sprite by name
 					if (i < NUMSPRITES && i > 0)
-						readspritelight(f, i);
+						readspriteinfo(f, i, false);
 					else
 					{
 						deh_warning("Sprite number %d out of range (0 - %d)", i, NUMSPRITES-1);
 						ignorelines(f);
 					}
 				}
-#endif
+				else if (fastcmp(word, "SPRITE2INFO"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_sprite2(word2); // find a sprite by name
+					if (i < NUMPLAYERSPRITES && i >= 0)
+						readspriteinfo(f, i, true);
+					else
+					{
+						deh_warning("Sprite2 number %d out of range (0 - %d)", i, NUMPLAYERSPRITES-1);
+						ignorelines(f);
+					}
+				}
 				else if (fastcmp(word, "LEVEL"))
 				{
 					// Support using the actual map name,
@@ -4425,39 +4650,13 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_NIGHTS_TRANS4",
 	"S_PLAY_NIGHTS_TRANS5",
 	"S_PLAY_NIGHTS_TRANS6",
-
 	"S_PLAY_NIGHTS_STAND",
 	"S_PLAY_NIGHTS_FLOAT",
+	"S_PLAY_NIGHTS_FLY",
+	"S_PLAY_NIGHTS_DRILL",
 	"S_PLAY_NIGHTS_STUN",
 	"S_PLAY_NIGHTS_PULL",
 	"S_PLAY_NIGHTS_ATTACK",
-
-	"S_PLAY_NIGHTS_FLY0",
-	"S_PLAY_NIGHTS_DRILL0",
-	"S_PLAY_NIGHTS_FLY1",
-	"S_PLAY_NIGHTS_DRILL1",
-	"S_PLAY_NIGHTS_FLY2",
-	"S_PLAY_NIGHTS_DRILL2",
-	"S_PLAY_NIGHTS_FLY3",
-	"S_PLAY_NIGHTS_DRILL3",
-	"S_PLAY_NIGHTS_FLY4",
-	"S_PLAY_NIGHTS_DRILL4",
-	"S_PLAY_NIGHTS_FLY5",
-	"S_PLAY_NIGHTS_DRILL5",
-	"S_PLAY_NIGHTS_FLY6",
-	"S_PLAY_NIGHTS_DRILL6",
-	"S_PLAY_NIGHTS_FLY7",
-	"S_PLAY_NIGHTS_DRILL7",
-	"S_PLAY_NIGHTS_FLY8",
-	"S_PLAY_NIGHTS_DRILL8",
-	"S_PLAY_NIGHTS_FLY9",
-	"S_PLAY_NIGHTS_DRILL9",
-	"S_PLAY_NIGHTS_FLYA",
-	"S_PLAY_NIGHTS_DRILLA",
-	"S_PLAY_NIGHTS_FLYB",
-	"S_PLAY_NIGHTS_DRILLB",
-	"S_PLAY_NIGHTS_FLYC",
-	"S_PLAY_NIGHTS_DRILLC",
 
 	// c:
 	"S_TAILSOVERLAY_STAND",
@@ -5720,6 +5919,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Glaregoyle Demon fire
 	"S_DEMONFIRE",
+
+	// The letter
+	"S_LETTER",
 
 	// GFZ flowers
 	"S_GFZFLOWERA",
@@ -7717,6 +7919,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ARROW", // Arrow
 	"MT_DEMONFIRE", // Glaregoyle fire
 
+	// The letter
+	"MT_LETTER",
+
 	// Greenflower Scenery
 	"MT_GFZFLOWER1",
 	"MT_GFZFLOWER2",
@@ -8656,6 +8861,8 @@ static const char *const MENUTYPES_LIST[] = {
 	"SR_LEVELSELECT",
 	"SR_UNLOCKCHECKLIST",
 	"SR_EMBLEMHINT",
+	"SR_PLAYER",
+	"SR_SOUNDTEST",
 
 	// Addons (Part of MISC, but let's make it our own)
 	"AD_MAIN",
@@ -8900,6 +9107,7 @@ struct {
 	{"SF_DASHMODE",SF_DASHMODE},
 	{"SF_FASTEDGE",SF_FASTEDGE},
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
+	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
 
 	// Character abilities!
 	// Primary
@@ -9155,6 +9363,13 @@ struct {
 	{"DI_SOUTH",DI_SOUTH},
 	{"DI_SOUTHEAST",DI_SOUTHEAST},
 	{"NUMDIRS",NUMDIRS},
+
+#ifdef ROTSPRITE
+	// Sprite rotation axis (rotaxis_t)
+	{"ROTAXIS_X",ROTAXIS_X},
+	{"ROTAXIS_Y",ROTAXIS_Y},
+	{"ROTAXIS_Z",ROTAXIS_Z},
+#endif
 
 	// Buttons (ticcmd_t)
 	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.

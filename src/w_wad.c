@@ -981,6 +981,9 @@ lumpnum_t W_CheckNumForName(const char *name)
 	INT32 i;
 	lumpnum_t check = INT16_MAX;
 
+	if (!*name) // some doofus gave us an empty string?
+		return LUMPERROR;
+
 	// Check the lumpnumcache first. Loop backwards so that we check
 	// most recent entries first
 	for (i = lumpnumcacheindex + LUMPNUMCACHESIZE; i > lumpnumcacheindex; i--)
@@ -1183,21 +1186,6 @@ void zerr(int ret)
 }
 #endif
 
-#ifdef NO_PNG_LUMPS
-static void ErrorIfPNG(UINT8 *d, size_t s, char *f, char *l)
-{
-    if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
-        return;
-    // Check for PNG file signature using memcmp
-    // As it may be faster on CPUs with slow unaligned memory access
-    // Ref: http://www.libpng.org/pub/png/spec/1.2/PNG-Rationale.html#R.PNG-file-signature
-    if (memcmp(&d[0], "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", 8) == 0)
-    {
-        I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .PNG - please convert to either Doom or Flat (raw) image format.", l, f);
-    }
-}
-#endif
-
 /** Reads bytes from the head of a lump.
   * Note: If the lump is compressed, the whole thing has to be read anyway.
   *
@@ -1240,7 +1228,8 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 #ifdef NO_PNG_LUMPS
 		{
 			size_t bytesread = fread(dest, 1, size, handle);
-			ErrorIfPNG(dest, bytesread, wadfiles[wad]->filename, l->name2);
+			if (R_IsLumpPNG((UINT8 *)dest, bytesread))
+				I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", l->name2, wadfiles[wad]->filename);
 			return bytesread;
 		}
 #else
@@ -1891,6 +1880,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"M_", 2}, // As does menu stuff
+		{"MUSICDEF", 8}, // Song definitions (thanks kart)
 
 		{NULL, 0},
 	};

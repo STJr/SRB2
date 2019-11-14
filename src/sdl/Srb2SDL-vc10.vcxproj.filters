@@ -465,6 +465,9 @@
     <ClInclude Include="..\hardware\hw_clip.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
+    <ClInclude Include="..\r_patch.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
     <ClInclude Include="..\r_portal.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
@@ -922,6 +925,9 @@
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\apng.c" />
+    <ClCompile Include="..\r_patch.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
     <ClCompile Include="..\r_portal.c">
       <Filter>R_Rend</Filter>
     </ClCompile>

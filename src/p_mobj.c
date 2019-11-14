@@ -11670,7 +11670,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
 		 || i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX
 		 || i == MT_FLAMEAURA_BOX || i == MT_BUBBLEWRAP_BOX || i == MT_THUNDERCOIN_BOX
-		 || i == MT_RING_BOX)
+		 || i == MT_RING_BOX || i == MT_STARPOST)
 			return; // No rings or shields in Ultimate mode
 
 		// Don't include the gold repeating boxes here please.
