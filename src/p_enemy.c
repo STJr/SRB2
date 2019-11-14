@@ -5042,7 +5042,6 @@ void A_UnsetSolidSteam(mobj_t *actor)
 void A_SignSpin(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
 	INT16 i;
 	angle_t rotateangle = FixedAngle(locvar1 << FRACBITS);
 
@@ -5053,6 +5052,11 @@ void A_SignSpin(mobj_t *actor)
 
 	if (P_IsObjectOnGround(actor) && P_MobjFlip(actor) * actor->momz <= 0)
 	{
+		if (actor->flags2 & MF2_BOSSFLEE)
+		{
+			S_StartSound(actor, actor->info->deathsound);
+			actor->flags2 &= ~MF2_BOSSFLEE;
+		}
 		if (actor->spawnpoint)
 		{
 			angle_t mapangle = FixedAngle(actor->spawnpoint->angle << FRACBITS);
@@ -5069,14 +5073,20 @@ void A_SignSpin(mobj_t *actor)
 		}
 		else // no mapthing? just finish in your current angle
 		{
-			P_SetMobjState(actor, locvar2);
+			P_SetMobjState(actor, actor->info->deathstate);
 			return;
 		}
 	}
 	else
 	{
+		if (!(actor->flags2 & MF2_BOSSFLEE))
+		{
+			S_StartSound(actor, actor->info->painsound);
+			actor->flags2 |= MF2_BOSSFLEE;
+		}
 		actor->movedir = rotateangle;
 	}
+
 	actor->angle += actor->movedir;
 	if (actor->tracer == NULL || P_MobjWasRemoved(actor->tracer)) return;
 	for (i = -1; i < 2; i += 2)
@@ -5166,15 +5176,31 @@ void A_SignPlayer(mobj_t *actor)
 		// I turned this function into a fucking mess. I'm so sorry. -Lach
 		if (locvar1 == -2) // next skin
 		{
+			player_t *player = actor->target ? actor->target->player : NULL;
+			UINT8 skinnum;
+#define skincheck(num) (player ? !R_SkinUsable(player-players, num) : skins[num].availability > 0)
 			if (ov->skin == NULL) // pick a random skin to start with!
-				skin = &skins[P_RandomKey(numskins)];
+			{
+				UINT8 skincount = 0;
+				for (skincount = 0; skincount < numskins; skincount++)
+					if (!skincheck(skincount))
+						skincount++;
+				skinnum = P_RandomKey(skincount);
+				for (skincount = 0; skincount < numskins; skincount++)
+				{
+					if (skincheck(skincount))
+						skinnum++;
+					if (skincount > skinnum)
+						break;
+				}
+			}
 			else // otherwise, advance 1 skin
 			{
-				UINT8 skinnum = (skin_t*)ov->skin-skins;
-				player_t *player = actor->target ? actor->target->player : NULL;
-				while ((skinnum = (skinnum + 1) % numskins) && (player ? !R_SkinUsable(player-players, skinnum) : skins[skinnum].availability > 0));
-				skin = &skins[skinnum];
+				skinnum = (skin_t*)ov->skin-skins;
+				while ((skinnum = (skinnum + 1) % numskins) && skincheck(skinnum));
 			}
+#undef skincheck
+			skin = &skins[skinnum];
 		}
 		else // specific skin
 		{
