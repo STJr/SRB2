@@ -2530,6 +2530,7 @@ void GameSounds_OnChange(void)
 	if (sound_disabled)
 	{
 		sound_disabled = false;
+		I_StartupSound(); // will return early if initialised
 		S_InitSfxChannels(cv_soundvolume.value);
 		S_StartSound(NULL, sfx_strpst);
 	}
@@ -2550,6 +2551,7 @@ void GameDigiMusic_OnChange(void)
 	if (digital_disabled)
 	{
 		digital_disabled = false;
+		I_StartupSound(); // will return early if initialised
 		I_InitMusic();
 		S_StopMusic();
 		if (Playing())
@@ -2592,6 +2594,7 @@ void GameMIDIMusic_OnChange(void)
 	if (midi_disabled)
 	{
 		midi_disabled = false;
+		I_StartupSound(); // will return early if initialised
 		I_InitMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
