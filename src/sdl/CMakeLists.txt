@@ -27,7 +27,6 @@ else()
 endif()
 
 set(SRB2_SDL2_SOURCES
-	dosstr.c
 	endtxt.c
 	hwsym_sdl.c
 	i_cdmus.c

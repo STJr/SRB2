@@ -162,8 +162,8 @@ typedef long ssize_t;
 #endif
 
 #ifndef HAVE_DOSSTR_FUNCS
-int strupr(char *n); // from dosstr.c
-int strlwr(char *n); // from dosstr.c
+int strupr(char *n); // from string.c
+int strlwr(char *n); // from string.c
 #endif
 
 #include <stddef.h> // for size_t

@@ -82,7 +82,6 @@
 		1E44AFA90B67CF6400BAD059 /* w_wad.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFA70B67CF6400BAD059 /* w_wad.c */; };
 		1E44AFAD0B67CF6F00BAD059 /* y_inter.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFAB0B67CF6F00BAD059 /* y_inter.c */; };
 		1E44AFB10B67CF7A00BAD059 /* z_zone.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFAF0B67CF7A00BAD059 /* z_zone.c */; };
-		1E44AFC40B67CFDC00BAD059 /* dosstr.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFB40B67CFDC00BAD059 /* dosstr.c */; };
 		1E44AFC50B67CFDC00BAD059 /* endtxt.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFB50B67CFDC00BAD059 /* endtxt.c */; };
 		1E44AFC70B67CFDC00BAD059 /* hwsym_sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFB70B67CFDC00BAD059 /* hwsym_sdl.c */; };
 		1E44AFC90B67CFDC00BAD059 /* i_cdmus.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFB90B67CFDC00BAD059 /* i_cdmus.c */; };
@@ -335,7 +334,6 @@
 		1E44AFAC0B67CF6F00BAD059 /* y_inter.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = y_inter.h; path = ../../y_inter.h; sourceTree = SOURCE_ROOT; };
 		1E44AFAF0B67CF7A00BAD059 /* z_zone.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = z_zone.c; path = ../../z_zone.c; sourceTree = SOURCE_ROOT; };
 		1E44AFB00B67CF7A00BAD059 /* z_zone.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = z_zone.h; path = ../../z_zone.h; sourceTree = SOURCE_ROOT; };
-		1E44AFB40B67CFDC00BAD059 /* dosstr.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = dosstr.c; path = ../dosstr.c; sourceTree = SOURCE_ROOT; };
 		1E44AFB50B67CFDC00BAD059 /* endtxt.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = endtxt.c; path = ../endtxt.c; sourceTree = SOURCE_ROOT; };
 		1E44AFB60B67CFDC00BAD059 /* endtxt.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = endtxt.h; path = ../endtxt.h; sourceTree = SOURCE_ROOT; };
 		1E44AFB70B67CFDC00BAD059 /* hwsym_sdl.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = hwsym_sdl.c; path = ../hwsym_sdl.c; sourceTree = SOURCE_ROOT; };
@@ -794,7 +792,6 @@
 			children = (
 				1E44AFE50B67D04900BAD059 /* macosx */,
 				1E44AFD40B67D03100BAD059 /* filter */,
-				1E44AFB40B67CFDC00BAD059 /* dosstr.c */,
 				1E44AFB50B67CFDC00BAD059 /* endtxt.c */,
 				1E44AFB60B67CFDC00BAD059 /* endtxt.h */,
 				1E44AFB70B67CFDC00BAD059 /* hwsym_sdl.c */,
@@ -1142,7 +1139,6 @@
 				1E44AFA90B67CF6400BAD059 /* w_wad.c in Sources */,
 				1E44AFAD0B67CF6F00BAD059 /* y_inter.c in Sources */,
 				1E44AFB10B67CF7A00BAD059 /* z_zone.c in Sources */,
-				1E44AFC40B67CFDC00BAD059 /* dosstr.c in Sources */,
 				1E44AFC50B67CFDC00BAD059 /* endtxt.c in Sources */,
 				1E44AFC70B67CFDC00BAD059 /* hwsym_sdl.c in Sources */,
 				1E44AFC90B67CFDC00BAD059 /* i_cdmus.c in Sources */,

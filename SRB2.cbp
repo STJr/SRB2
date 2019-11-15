@@ -1785,15 +1785,6 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl/dosstr.c">
-			<Option compilerVar="CC" />
-			<Option target="Debug Native/SDL" />
-			<Option target="Release Native/SDL" />
-			<Option target="Debug Linux/SDL" />
-			<Option target="Release Linux/SDL" />
-			<Option target="Debug Mingw/SDL" />
-			<Option target="Release Mingw/SDL" />
-		</Unit>
 		<Unit filename="src/sdl/endtxt.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />

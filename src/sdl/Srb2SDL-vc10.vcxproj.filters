@@ -840,9 +840,6 @@
     <ClCompile Include="..\w_wad.c">
       <Filter>W_Wad</Filter>
     </ClCompile>
-    <ClCompile Include="dosstr.c">
-      <Filter>SDLApp</Filter>
-    </ClCompile>
     <ClCompile Include="endtxt.c">
       <Filter>SDLApp</Filter>
     </ClCompile>

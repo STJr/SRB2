@@ -128,10 +128,6 @@ SOURCE=.\filter\lq2x.h
 # End Group
 # Begin Source File
 
-SOURCE=.\dosstr.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\endtxt.c
 # End Source File
 # Begin Source File
