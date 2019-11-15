@@ -1461,7 +1461,7 @@ static void R_InitSpriteLumps(void)
 // R_CreateFadeColormaps
 //
 
-static void R_CreateFadeColormaps()
+static void R_CreateFadeColormaps(void)
 {
 	UINT8 px, fade;
 	RGBA_t rgba;
