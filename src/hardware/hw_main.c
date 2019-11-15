@@ -7079,6 +7079,7 @@ void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum)
 
 void HWR_DoLevelWipe(UINT8 wipenum, UINT8 scrnnum, UINT8 wipecolorfill)
 {
+#ifdef LEVELWIPES
 	if (!HWR_WipeCheck(wipenum, scrnnum))
 		return;
 
@@ -7089,6 +7090,7 @@ void HWR_DoLevelWipe(UINT8 wipenum, UINT8 scrnnum, UINT8 wipecolorfill)
 
 	HWD.pfnDoScreenWipeLevel();
 	F_WipeTitleCard();
+#endif
 }
 
 void HWR_MakeScreenFinalTexture(void)

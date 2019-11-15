@@ -141,7 +141,7 @@ void F_MenuPresTicker(boolean run);
 #define FORCEWIPEOFF -2
 
 extern boolean WipeInAction;
-extern boolean WipeFreezeGame;
+extern boolean WipeInLevel;
 extern INT32 lastwipetic;
 
 typedef enum

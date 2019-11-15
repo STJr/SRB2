@@ -89,7 +89,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 //--------------------------------------------------------------------------
 
 boolean WipeInAction = false;
-boolean WipeFreezeGame = true;
+boolean WipeInLevel = false;
 INT32 lastwipetic = 0;
 
 wipestyle_t wipestyle = WIPESTYLE_NORMAL;
@@ -273,7 +273,7 @@ static void F_DoWipe(fademask_t *fademask)
 			relativepos = (draw_linestart * vid.width) + draw_rowstart;
 			draw_linestogo = draw_lineend - draw_linestart;
 
-			if ((*mask == 0) && (wipestyle == WIPESTYLE_NORMAL))
+			if (*mask == 0)
 			{
 				// shortcut - memcpy source to work
 				while (draw_linestogo--)
@@ -282,7 +282,7 @@ static void F_DoWipe(fademask_t *fademask)
 					relativepos += vid.width;
 				}
 			}
-			else if ((*mask >= 10) && (wipestyle == WIPESTYLE_NORMAL))
+			else if (*mask >= ((wipestyle == WIPESTYLE_LEVEL) ? FADECOLORMAPROWS : 10))
 			{
 				// shortcut - memcpy target to work
 				while (draw_linestogo--)
@@ -412,8 +412,10 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 	curwipetype = wipetype;
 	curwipeframe = 0;
-	if (!WipeFreezeGame)
+#ifdef LEVELWIPES
+	if (WipeInLevel)
 		return;
+#endif
 
 	// lastwipetic should either be 0 or the tic we last wiped
 	// on for fade-to-black
@@ -454,13 +456,17 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			M_SaveFrame();
 	}
 	WipeInAction = false;
-	WipeFreezeGame = true;
+	WipeInLevel = false;
 #endif
 }
 
 // Works On My Machine seal of approval
 void F_WipeTicker(void)
 {
+#ifndef NOWIPE
+#ifndef LEVELWIPES
+	WipeInAction = false;
+#else
 	fademask_t *fmask;
 
 	// Wait, what?
@@ -476,7 +482,7 @@ void F_WipeTicker(void)
 	{
 		// stop
 		WipeInAction = false;
-		WipeFreezeGame = true;
+		WipeInLevel = false;
 		return;
 	}
 
@@ -487,6 +493,8 @@ void F_WipeTicker(void)
 	else
 #endif
 		F_DoWipe(fmask);
+#endif
+#endif
 }
 
 /** Returns tic length of wipe

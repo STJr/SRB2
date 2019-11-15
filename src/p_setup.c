@@ -3247,7 +3247,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// Stage title!
 	wipestyleflags |= WSF_FADEIN;
 	wipestyleflags &= ~WSF_FADEOUT;
-	WipeFreezeGame = false;
+	WipeInLevel = true;
 	if (rendermode != render_none
 		&& (!titlemapinaction)
 		&& ranspecialwipe != 2
