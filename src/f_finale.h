@@ -172,7 +172,7 @@ void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);
 void F_WipeTicker(void);
-void F_WipeTitleCard(void);
+void F_WipeStageTitle(void);
 #define F_WipeColorFill(c) V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (wipecolorfill = c))
 tic_t F_GetWipeLength(UINT8 wipetype);
 boolean F_WipeExists(UINT8 wipetype);

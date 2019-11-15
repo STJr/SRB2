@@ -7090,7 +7090,7 @@ void HWR_DoLevelWipe(UINT8 wipenum, UINT8 scrnnum, UINT8 colfill)
 	HWR_GetFadeMask(wipelumpnum);
 
 	HWD.pfnDoScreenWipeLevel();
-	F_WipeTitleCard();
+	F_WipeStageTitle();
 #endif
 }
 

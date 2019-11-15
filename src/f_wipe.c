@@ -18,6 +18,7 @@
 
 #include "r_draw.h" // transtable
 #include "p_pspr.h" // tr_transxxx
+#include "p_local.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -25,6 +26,7 @@
 #include "m_menu.h"
 #include "console.h"
 #include "d_main.h"
+#include "g_game.h"
 #include "m_misc.h" // movie mode
 
 #include "doomstat.h"
@@ -187,17 +189,27 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	return NULL;
 }
 
-void F_WipeTitleCard(void)
+/** Draw the stage title.
+  */
+void F_WipeStageTitle(void)
 {
 	if (wipestyle == WIPESTYLE_LEVEL
-		&& (!titlemapinaction)
-		&& (wipestyleflags & WSF_FADEIN)
-		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
+	&& (!titlemapinaction)
+	&& (wipestyleflags & WSF_FADEIN)
+	&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
 #ifdef HAVE_BLUA
-		&& LUA_HudEnabled(hud_stagetitle)
+	&& LUA_HudEnabled(hud_stagetitle)
 #endif
-		)
+	)
+	{
+		stplyr = &players[consoleplayer];
 		ST_drawLevelTitle(TICRATE);
+		if (splitscreen)
+		{
+			stplyr = &players[secondarydisplayplayer];
+			ST_drawLevelTitle(TICRATE);
+		}
+	}
 }
 
 /**	Wipe ticker
@@ -344,7 +356,8 @@ static void F_DoWipe(fademask_t *fademask)
 		free(scrxpos);
 		free(scrypos);
 	}
-	F_WipeTitleCard();
+	if (wipestyle == WIPESTYLE_LEVEL)
+		F_WipeStageTitle();
 }
 #endif
 
@@ -460,7 +473,8 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 #endif
 }
 
-// Works On My Machine seal of approval
+/** Run and display the fade with the level.
+  */
 void F_WipeTicker(void)
 {
 #ifndef NOWIPE
@@ -524,6 +538,8 @@ tic_t F_GetWipeLength(UINT8 wipetype)
 #endif
 }
 
+/** Does the specified wipe exist?
+  */
 boolean F_WipeExists(UINT8 wipetype)
 {
 #ifdef NOWIPE
