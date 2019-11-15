@@ -291,11 +291,8 @@ static void D_Display(void)
 	switch (gamestate)
 	{
 		case GS_TITLESCREEN:
-			if (!titlemapinaction || !curbghide) {
-				F_TitleScreenDrawer();
-				break;
-			}
-			/* FALLTHRU */
+			F_TitleScreenDrawer();
+			break;
 		case GS_LEVEL:
 			if (!gametic)
 				break;
@@ -366,56 +363,11 @@ static void D_Display(void)
 
 		// clean up border stuff
 		// see if the border needs to be initially drawn
-		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap)))
+		if (gamestate == GS_LEVEL)
 		{
 			// draw the view directly
 
-			if (!automapactive && !dedicated && cv_renderview.value)
-			{
-				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
-				{
-					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-					objectsdrawn = 0;
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
-						HWR_RenderPlayerView(0, &players[displayplayer]);
-					else
-	#endif
-					if (rendermode != render_none)
-						R_RenderPlayerView(&players[displayplayer]);
-				}
-
-				// render the second screen
-				if (splitscreen && players[secondarydisplayplayer].mo)
-				{
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
-						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
-					else
-	#endif
-					if (rendermode != render_none)
-					{
-						viewwindowy = vid.height / 2;
-						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
-
-						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-
-						R_RenderPlayerView(&players[secondarydisplayplayer]);
-
-						viewwindowy = 0;
-						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
-					}
-				}
-
-				// Image postprocessing effect
-				if (rendermode == render_soft)
-				{
-					if (postimgtype)
-						V_DoPostProcessor(0, postimgtype, postimgparam);
-					if (postimgtype2)
-						V_DoPostProcessor(1, postimgtype2, postimgparam2);
-				}
-			}
+			D_Render();
 
 			if (lastdraw)
 			{
@@ -428,14 +380,9 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
-			if (gamestate == GS_LEVEL)
-			{
-				ST_Drawer();
-				F_TextPromptDrawer();
-				HU_Drawer();
-			}
-			else
-				F_TitleScreenDrawer();
+			ST_Drawer();
+			F_TextPromptDrawer();
+			HU_Drawer();
 		}
 	}
 
@@ -491,6 +438,13 @@ static void D_Display(void)
 			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
 
+		// reset counters so timedemo doesn't count the wipe duration
+		if (timingdemo)
+		{
+			framecount = 0;
+			demostarttime = I_GetTime();
+		}
+		
 		wipetypepost = -1;
 	}
 	else
@@ -531,6 +485,56 @@ static void D_Display(void)
 	}
 }
 
+void D_Render(void)
+{
+	if (!automapactive && !dedicated && cv_renderview.value)
+	{
+		if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
+		{
+			topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+			objectsdrawn = 0;
+#ifdef HWRENDER
+			if (rendermode != render_soft)
+				HWR_RenderPlayerView(0, &players[displayplayer]);
+			else
+#endif
+			if (rendermode != render_none)
+				R_RenderPlayerView(&players[displayplayer]);
+		}
+
+		// render the second screen
+		if (splitscreen && players[secondarydisplayplayer].mo)
+		{
+#ifdef HWRENDER
+			if (rendermode != render_soft)
+				HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
+			else
+#endif
+			if (rendermode != render_none)
+			{
+				viewwindowy = vid.height / 2;
+				M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
+
+				topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+
+				R_RenderPlayerView(&players[secondarydisplayplayer]);
+
+				viewwindowy = 0;
+				M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+			}
+		}
+
+		// Image postprocessing effect
+		if (rendermode == render_soft)
+		{
+			if (postimgtype)
+				V_DoPostProcessor(0, postimgtype, postimgparam);
+			if (postimgtype2)
+				V_DoPostProcessor(1, postimgtype2, postimgparam2);
+		}
+	}
+}
+
 // =========================================================================
 // D_SRB2Loop
 // =========================================================================
@@ -543,9 +547,6 @@ void D_SRB2Loop(void)
 
 	if (dedicated)
 		server = true;
-
-	if (M_CheckParm("-voodoo")) // 256x256 Texture Limiter
-		COM_BufAddText("gr_voodoocompatibility on\n");
 
 	// Pushing of + parameters is now done back in D_SRB2Main, not here.
 
@@ -1285,6 +1286,7 @@ void D_SRB2Main(void)
 		I_StartupSound();
 		I_InitMusic();
 		S_InitSfxChannels(cv_soundvolume.value);
+		S_InitMusicDefs();
 	}
 
 	CONS_Printf("ST_Init(): Init status bar.\n");

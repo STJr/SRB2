@@ -47,6 +47,7 @@ typedef enum
 	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
 	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
 	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
+	SF_NONIGHTSROTATION = 1<<14, // Disable sprite rotation for NiGHTS
 	// free up to and including 1<<31
 } skinflags_t;
 

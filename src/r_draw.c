@@ -567,8 +567,12 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		else if (skinnum == TC_METALSONIC)
 		{
 			for (i = 0; i < 6; i++)
+			{
 				dest_colormap[Color_Index[SKINCOLOR_BLUE-1][12-i]] = Color_Index[SKINCOLOR_BLUE-1][i];
+			}
 			dest_colormap[159] = dest_colormap[253] = dest_colormap[254] = 0;
+			for (i = 0; i < 16; i++)
+				dest_colormap[96+i] = dest_colormap[Color_Index[SKINCOLOR_COBALT-1][i]];
 		}
 		else if (skinnum == TC_DASHMODE) // This is a long one, because MotorRoach basically hand-picked the indices
 		{

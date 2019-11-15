@@ -27,6 +27,7 @@
 #include "m_cheat.h" // objectplace
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
+#include "f_finale.h"
 
 // CTF player names
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
@@ -633,7 +634,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (!(netgame || multiplayer))
 				{
 					player->continues += 1;
-					players->gotcontinue = true;
+					player->gotcontinue = true;
 					if (P_IsLocalPlayer(player))
 						S_StartSound(NULL, sfx_s3kac);
 					else
@@ -1392,6 +1393,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				}
 			}
 			break;
+		case MT_LETTER:
+		{
+			if (special->health && !player->bot)
+			{
+				F_StartTextPrompt(199, 0, toucher, 0, true, false);
+				special->health = 0;
+				if (ultimatemode && player->continues < 99)
+					player->continues++;
+			}
+			return;
+		}
 		case MT_FIREFLOWER:
 			if (player->bot)
 				return;
@@ -2372,7 +2384,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	if (target->player && !target->player->spectator)
 	{
 		if (metalrecording) // Ack! Metal Sonic shouldn't die! Cut the tape, end recording!
-			G_StopMetalRecording();
+			G_StopMetalRecording(true);
 		if (gametype == GT_MATCH // note, no team match suicide penalty
 			&& ((target == source) || (source == NULL && inflictor == NULL) || (source && !source->player)))
 		{ // Suicide penalty
@@ -2392,7 +2404,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		{
 			P_SetTarget(&target->target, source);
 			source->player->numboxes++;
-			if ((cv_itemrespawn.value && gametype != GT_COOP && (modifiedgame || netgame || multiplayer)))
+			if (cv_itemrespawn.value && gametype != GT_COOP && (modifiedgame || netgame || multiplayer))
 				target->fuse = cv_itemrespawntime.value*TICRATE + 2; // Random box generation
 		}
 
@@ -2482,6 +2494,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		P_UnsetThingPosition(target);
 		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
+		target->standingslope = NULL;
+		target->pmomz = 0;
 
 		if (target->player->powers[pw_super])
 		{
@@ -2615,7 +2629,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->fuse = target->info->damage;
 			break;
 
-		case MT_BUBBLEBUZZ:
+		case MT_BUGGLE:
 			if (inflictor && inflictor->player // did a player kill you? Spawn relative to the player so they're bound to get it
 			&& P_AproxDistance(inflictor->x - target->x, inflictor->y - target->y) <= inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale) // close enough?
 			&& inflictor->z <= target->z + target->height + FixedMul(8*FRACUNIT, inflictor->scale)
@@ -2760,6 +2774,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 						P_PlayDeathSound(target);
 				}
 			}
+			break;
+		case MT_METALSONIC_RACE:
+			target->fuse = TICRATE*3;
+			target->momx = target->momy = target->momz = 0;
+			P_SetObjectMomZ(target, 14*FRACUNIT, false);
+			target->flags = (target->flags & ~MF_NOGRAVITY)|(MF_NOCLIP|MF_NOCLIPTHING);
 			break;
 		default:
 			break;
@@ -3615,11 +3635,12 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			}
 			else if (inflictor && inflictor->flags & MF_MISSILE)
 				return false; // Metal Sonic walk through flame !!
-			else
+			else if (!player->powers[pw_flashing])
 			{ // Oh no! Metal Sonic is hit !!
 				P_ShieldDamage(player, inflictor, source, damage, damagetype);
 				return true;
 			}
+			return false;
 		}
 		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super]) // ignore bouncing & such in invulnerability
 		{

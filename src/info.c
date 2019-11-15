@@ -195,6 +195,9 @@ char sprnames[NUMSPRITES + 1][5] =
 	"AROW", // Arrow
 	"CFIR", // Colored fire of various sorts
 
+	// The letter
+	"LETR",
+
 	// Greenflower Scenery
 	"FWR1",
 	"FWR2", // GFZ Sunflower
@@ -553,37 +556,11 @@ char spr2names[NUMPLAYERSPRITES][5] =
 
 	"NSTD",
 	"NFLT",
+	"NFLY",
+	"NDRL",
 	"NSTN",
 	"NPUL",
 	"NATK",
-
-	"NGT0",
-	"NGT1",
-	"NGT2",
-	"NGT3",
-	"NGT4",
-	"NGT5",
-	"NGT6",
-	"NGT7",
-	"NGT8",
-	"NGT9",
-	"NGTA",
-	"NGTB",
-	"NGTC",
-
-	"DRL0",
-	"DRL1",
-	"DRL2",
-	"DRL3",
-	"DRL4",
-	"DRL5",
-	"DRL6",
-	"DRL7",
-	"DRL8",
-	"DRL9",
-	"DRLA",
-	"DRLB",
-	"DRLC",
 
 	"TAL0",
 	"TAL1",
@@ -656,37 +633,11 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 
 	FF_SPR2SUPER|SPR2_STND, // SPR2_NSTD,
 	FF_SPR2SUPER|SPR2_FLT , // SPR2_NFLT,
+	0, // SPR2_NFLY, (will never be referenced unless skin 0 lacks this)
+	SPR2_NFLY, // SPR2_NDRL,
 	FF_SPR2SUPER|SPR2_STUN, // SPR2_NSTN,
 	SPR2_NSTN, // SPR2_NPUL,
 	FF_SPR2SUPER|SPR2_ROLL, // SPR2_NATK,
-
-	0, // SPR2_NGT0, (will never be referenced unless skin 0 lacks this)
-	SPR2_NGT0, // SPR2_NGT1,
-	SPR2_NGT1, // SPR2_NGT2,
-	SPR2_NGT2, // SPR2_NGT3,
-	SPR2_NGT3, // SPR2_NGT4,
-	SPR2_NGT4, // SPR2_NGT5,
-	SPR2_NGT5, // SPR2_NGT6,
-	SPR2_NGT0, // SPR2_NGT7,
-	SPR2_NGT7, // SPR2_NGT8,
-	SPR2_NGT8, // SPR2_NGT9,
-	SPR2_NGT9, // SPR2_NGTA,
-	SPR2_NGTA, // SPR2_NGTB,
-	SPR2_NGTB, // SPR2_NGTC,
-
-	SPR2_NGT0, // SPR2_DRL0,
-	SPR2_NGT1, // SPR2_DRL1,
-	SPR2_NGT2, // SPR2_DRL2,
-	SPR2_NGT3, // SPR2_DRL3,
-	SPR2_NGT4, // SPR2_DRL4,
-	SPR2_NGT5, // SPR2_DRL5,
-	SPR2_NGT6, // SPR2_DRL6,
-	SPR2_NGT7, // SPR2_DRL7,
-	SPR2_NGT8, // SPR2_DRL8,
-	SPR2_NGT9, // SPR2_DRL9,
-	SPR2_NGTA, // SPR2_DRLA,
-	SPR2_NGTB, // SPR2_DRLB,
-	SPR2_NGTC, // SPR2_DRLC,
 
 	0, // SPR2_TAL0, (this will look mighty stupid but oh well)
 	SPR2_TAL0, // SPR2_TAL1,
@@ -808,7 +759,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_LIFE, 20, {NULL}, 0,  4, S_NULL},       // S_PLAY_ICON3
 
 	// Level end sign (uses player sprite)
-	{SPR_PLAY, SPR2_SIGN, 1, {NULL}, 0, 24, S_PLAY_SIGN},         // S_PLAY_SIGN
+	{SPR_PLAY, SPR2_SIGN|FF_PAPERSPRITE, -1, {NULL}, 0, 29, S_PLAY_SIGN},         // S_PLAY_SIGN
 
 	// NiGHTS Player, transforming
 	{SPR_PLAY, SPR2_TRNS|FF_ANIMATE,     7, {NULL},          0, 4, S_PLAY_NIGHTS_TRANS2}, // S_PLAY_NIGHTS_TRANS1
@@ -818,40 +769,14 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_TRNS|FF_FULLBRIGHT,  2, {NULL},          0, 0, S_PLAY_NIGHTS_TRANS6}, // S_PLAY_NIGHTS_TRANS5
 	{SPR_PLAY, SPR2_TRNS|FF_FULLBRIGHT, 21, {A_FadeOverlay}, 2, 0, S_PLAY_NIGHTS_FLOAT},  // S_PLAY_NIGHTS_TRANS5
 
-	// NiGHTS Player, stand, float, pain, pull and attack
+	// NiGHTS Player
 	{SPR_PLAY, SPR2_NSTD, 7, {NULL}, 0, 0, S_PLAY_NIGHTS_STAND},  // S_PLAY_NIGHTS_STAND
 	{SPR_PLAY, SPR2_NFLT, 7, {NULL}, 0, 0, S_PLAY_NIGHTS_FLOAT},  // S_PLAY_NIGHTS_FLOAT
+	{SPR_PLAY, SPR2_NFLY, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY},    // S_PLAY_NIGHTS_FLY
+	{SPR_PLAY, SPR2_NDRL, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL},  // S_PLAY_NIGHTS_DRILL
 	{SPR_PLAY, SPR2_NSTN, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_STUN},   // S_PLAY_NIGHTS_STUN
 	{SPR_PLAY, SPR2_NPUL, 1, {NULL}, 0, 0, S_PLAY_NIGHTS_PULL},   // S_PLAY_NIGHTS_PULL
 	{SPR_PLAY, SPR2_NATK, 1, {NULL}, 0, 0, S_PLAY_NIGHTS_ATTACK}, // S_PLAY_NIGHTS_ATTACK
-
-	// NiGHTS Player, flying and drilling
-	{SPR_PLAY, SPR2_NGT0, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY0},   // S_PLAY_NIGHTS_FLY0
-	{SPR_PLAY, SPR2_DRL0, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL0}, // S_PLAY_NIGHTS_DRILL0
-	{SPR_PLAY, SPR2_NGT1, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY1},   // S_PLAY_NIGHTS_FLY1
-	{SPR_PLAY, SPR2_DRL1, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL1}, // S_PLAY_NIGHTS_DRILL1
-	{SPR_PLAY, SPR2_NGT2, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY2},   // S_PLAY_NIGHTS_FLY2
-	{SPR_PLAY, SPR2_DRL2, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL2}, // S_PLAY_NIGHTS_DRILL2
-	{SPR_PLAY, SPR2_NGT3, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY3},   // S_PLAY_NIGHTS_FLY3
-	{SPR_PLAY, SPR2_DRL3, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL3}, // S_PLAY_NIGHTS_DRILL3
-	{SPR_PLAY, SPR2_NGT4, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY4},   // S_PLAY_NIGHTS_FLY4
-	{SPR_PLAY, SPR2_DRL4, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL4}, // S_PLAY_NIGHTS_DRILL4
-	{SPR_PLAY, SPR2_NGT5, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY5},   // S_PLAY_NIGHTS_FLY5
-	{SPR_PLAY, SPR2_DRL5, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL5}, // S_PLAY_NIGHTS_DRILL5
-	{SPR_PLAY, SPR2_NGT6, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY6},   // S_PLAY_NIGHTS_FLY6
-	{SPR_PLAY, SPR2_DRL6, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL6}, // S_PLAY_NIGHTS_DRILL6
-	{SPR_PLAY, SPR2_NGT7, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY7},   // S_PLAY_NIGHTS_FLY7
-	{SPR_PLAY, SPR2_DRL7, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL7}, // S_PLAY_NIGHTS_DRILL7
-	{SPR_PLAY, SPR2_NGT8, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY8},   // S_PLAY_NIGHTS_FLY8
-	{SPR_PLAY, SPR2_DRL8, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL8}, // S_PLAY_NIGHTS_DRILL8
-	{SPR_PLAY, SPR2_NGT9, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLY9},   // S_PLAY_NIGHTS_FLY9
-	{SPR_PLAY, SPR2_DRL9, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILL9}, // S_PLAY_NIGHTS_DRILL9
-	{SPR_PLAY, SPR2_NGTA, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLYA},   // S_PLAY_NIGHTS_FLYA
-	{SPR_PLAY, SPR2_DRLA, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILLA}, // S_PLAY_NIGHTS_DRILLA
-	{SPR_PLAY, SPR2_NGTB, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLYB},   // S_PLAY_NIGHTS_FLYB
-	{SPR_PLAY, SPR2_DRLB, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILLB}, // S_PLAY_NIGHTS_DRILLB
-	{SPR_PLAY, SPR2_NGTC, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLYC},   // S_PLAY_NIGHTS_FLYC
-	{SPR_PLAY, SPR2_DRLC, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILLC}, // S_PLAY_NIGHTS_DRILLC
 
 	// c:
 	{SPR_PLAY, SPR2_TAL0|FF_SPR2MIDSTART,  5, {NULL}, 0, 0, S_TAILSOVERLAY_STAND}, // S_TAILSOVERLAY_STAND
@@ -1061,6 +986,7 @@ state_t states[NUMSTATES] =
 
 	// Snailer
 	{SPR_SNLR, 0, 1, {A_SnailerThink}, 0, 0, S_SNAILER1}, // S_SNAILER1
+	{SPR_BOM1, 0, 0, {A_FlickySpawn}, 1<<17, 0, S_XPLD1}, // S_SNAILER_FLICKY
 
 	// Vulture
 	{SPR_VLTR, 4, 35,        {A_Look},         1, 0, S_VULTURE_STND},  // S_VULTURE_STND
@@ -1800,38 +1726,24 @@ state_t states[NUMSTATES] =
 	{SPR_NULL, 0, 1, {A_BossScream}, 0, 0, S_CYBRAKDEMONVILEEXPLOSION1}, //S_CYBRAKDEMONVILEEXPLOSION3,
 
 	// Metal Sonic
-	{SPR_METL,  0, 35, {NULL}, 0, 0, S_METALSONIC_WAIT1}, // S_METALSONIC_STAND
-	{SPR_METL,  1,  8, {NULL}, 0, 0, S_METALSONIC_WAIT2}, // S_METALSONIC_WAIT1
-	{SPR_METL,  2,  8, {NULL}, 0, 0, S_METALSONIC_WAIT1}, // S_METALSONIC_WAIT2
-	{SPR_METL,  3,  4, {NULL}, 0, 0, S_METALSONIC_WALK2}, // S_METALSONIC_WALK1
-	{SPR_METL,  4,  4, {NULL}, 0, 0, S_METALSONIC_WALK3}, // S_METALSONIC_WALK2
-	{SPR_METL,  5,  4, {NULL}, 0, 0, S_METALSONIC_WALK4}, // S_METALSONIC_WALK3
-	{SPR_METL,  6,  4, {NULL}, 0, 0, S_METALSONIC_WALK5}, // S_METALSONIC_WALK4
-	{SPR_METL,  7,  4, {NULL}, 0, 0, S_METALSONIC_WALK6}, // S_METALSONIC_WALK5
-	{SPR_METL,  6,  4, {NULL}, 0, 0, S_METALSONIC_WALK7}, // S_METALSONIC_WALK6
-	{SPR_METL,  5,  4, {NULL}, 0, 0, S_METALSONIC_WALK8}, // S_METALSONIC_WALK7
-	{SPR_METL,  4,  4, {NULL}, 0, 0, S_METALSONIC_WALK1}, // S_METALSONIC_WALK8
-	{SPR_METL,  8,  2, {NULL}, 0, 0, S_METALSONIC_RUN2},  // S_METALSONIC_RUN1
-	{SPR_METL,  9,  2, {NULL}, 0, 0, S_METALSONIC_RUN3},  // S_METALSONIC_RUN2
-	{SPR_METL, 10,  2, {NULL}, 0, 0, S_METALSONIC_RUN4},  // S_METALSONIC_RUN3
-	{SPR_METL,  9,  2, {NULL}, 0, 0, S_METALSONIC_RUN1},  // S_METALSONIC_RUN4
+	{SPR_PLAY, SPR2_STND, -1, {NULL}, 0, 0, S_METALSONIC_RACE}, // S_METALSONIC_RACE
 
 	{SPR_METL,  4, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_FLOAT
-	{SPR_METL, 12|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_METALSONIC_STUN}, // S_METALSONIC_VECTOR
-	{SPR_METL, 11, -1, {NULL},         0, 0, S_METALSONIC_FLOAT}, // S_METALSONIC_STUN
-	{SPR_METL, 13, 20, {NULL},         0, 0, S_METALSONIC_GATHER},// S_METALSONIC_RAISE
-	{SPR_METL, 14, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_GATHER
-	{SPR_METL, 15, -1, {NULL},         0, 0, S_METALSONIC_BOUNCE},// S_METALSONIC_DASH
-	{SPR_METL, 14, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_BOUNCE
-	{SPR_METL, 16, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_BADBOUNCE
-	{SPR_METL, 13, -1, {NULL},         0, 0, S_METALSONIC_GATHER},// S_METALSONIC_SHOOT
-	{SPR_METL, 11, 40, {A_Pain},       0, 0, S_METALSONIC_FLOAT}, // S_METALSONIC_PAIN
-	{SPR_METL, 13,  2, {A_Fall},       0, 0, S_METALSONIC_DEATH2},// S_METALSONIC_DEATH1
-	{SPR_METL, 13,  4, {A_BossScream}, 0, 0, S_METALSONIC_DEATH3},// S_METALSONIC_DEATH2
-	{SPR_METL, 13,  0, {A_Repeat}, 17, S_METALSONIC_DEATH2, S_METALSONIC_DEATH4}, // S_METALSONIC_DEATH3
-	{SPR_METL, 13, -1, {A_BossDeath},  0, 0, S_NULL},             // S_METALSONIC_DEATH4
-	{SPR_METL, 11,  1, {A_BossScream},         0, 0, S_METALSONIC_FLEE2}, // S_METALSONIC_FLEE1
-	{SPR_METL, 11,  7, {NULL},                 0, 0, S_METALSONIC_FLEE1}, // S_METALSONIC_FLEE2
+	{SPR_METL, 16|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_METALSONIC_STUN}, // S_METALSONIC_VECTOR
+	{SPR_METL, 15, -1, {NULL},         0, 0, S_METALSONIC_FLOAT}, // S_METALSONIC_STUN
+	{SPR_METL, 17, 20, {NULL},         0, 0, S_METALSONIC_GATHER},// S_METALSONIC_RAISE
+	{SPR_METL, 18, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_GATHER
+	{SPR_METL,  6|FF_FULLBRIGHT|FF_ANIMATE|FF_GLOBALANIM, -1, {NULL}, 1, 2, S_METALSONIC_BOUNCE},// S_METALSONIC_DASH
+	{SPR_METL, 18|FF_FULLBRIGHT|FF_ANIMATE|FF_GLOBALANIM, -1, {NULL}, 1, 2, S_NULL},             // S_METALSONIC_BOUNCE
+	{SPR_METL, 14, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_BADBOUNCE
+	{SPR_METL, 17, -1, {NULL},         0, 0, S_METALSONIC_GATHER},// S_METALSONIC_SHOOT
+	{SPR_METL, 15, 40, {A_Pain},       0, 0, S_METALSONIC_FLOAT}, // S_METALSONIC_PAIN
+	{SPR_METL, 17,  2, {A_Fall},       0, 0, S_METALSONIC_DEATH2},// S_METALSONIC_DEATH1
+	{SPR_METL, 17,  4, {A_BossScream}, 0, 0, S_METALSONIC_DEATH3},// S_METALSONIC_DEATH2
+	{SPR_METL, 17,  0, {A_Repeat}, 17, S_METALSONIC_DEATH2, S_METALSONIC_DEATH4}, // S_METALSONIC_DEATH3
+	{SPR_METL, 17, -1, {A_BossDeath},  0, 0, S_NULL},             // S_METALSONIC_DEATH4
+	{SPR_METL, 15,  1, {A_BossScream},         0, 0, S_METALSONIC_FLEE2}, // S_METALSONIC_FLEE1
+	{SPR_METL, 15,  7, {NULL},                 0, 0, S_METALSONIC_FLEE1}, // S_METALSONIC_FLEE2
 
 	{SPR_MSCF, FF_FULLBRIGHT|FF_TRANS30|FF_ANIMATE, -1, {NULL}, 11, 1, S_NULL},  // S_MSSHIELD_F1
 	{SPR_MSCF, FF_FULLBRIGHT|FF_ANIMATE|12, -1, {NULL}, 8, 2, S_NULL},  // S_MSSHIELD_F2
@@ -1925,59 +1837,18 @@ state_t states[NUMSTATES] =
 	{SPR_BBLS, 3, 8, {A_BubbleCheck}, 0, 0, S_BUBBLES1}, // S_BUBBLES4
 
 	// Level End Sign
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN2},         // S_SIGN1
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN3},         // S_SIGN2
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN4},         // S_SIGN3
-	{SPR_SIGN, 5, 1, {NULL}, 0, 0, S_SIGN5},         // S_SIGN4
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN6},         // S_SIGN5
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN7},         // S_SIGN6
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN8},         // S_SIGN7
-	{SPR_SIGN, 3, 1, {NULL}, 0, 0, S_SIGN9},         // S_SIGN8
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN10},        // S_SIGN9
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN11},        // S_SIGN10
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN12},        // S_SIGN11
-	{SPR_SIGN, 4, 1, {NULL}, 0, 0, S_SIGN13},        // S_SIGN12
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN14},        // S_SIGN13
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN15},        // S_SIGN14
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN16},        // S_SIGN15
-	{SPR_SIGN, 3, 1, {NULL}, 0, 0, S_SIGN17},        // S_SIGN16
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN18},        // S_SIGN17
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN19},        // S_SIGN18
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN20},        // S_SIGN19
-	{SPR_SIGN, 6, 1, {NULL}, 0, 0, S_SIGN21},        // S_SIGN20
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN22},        // S_SIGN21
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN23},        // S_SIGN22
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN24},        // S_SIGN23
-	{SPR_SIGN, 3, 1, {NULL}, 0, 0, S_SIGN25},        // S_SIGN24
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN26},        // S_SIGN25
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN27},        // S_SIGN26
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN28},        // S_SIGN27
-	{SPR_SIGN, 5, 1, {NULL}, 0, 0, S_SIGN29},        // S_SIGN28
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN30},        // S_SIGN29
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN31},        // S_SIGN30
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN32},        // S_SIGN31
-	{SPR_SIGN, 3, 1, {NULL}, 0, 0, S_SIGN33},        // S_SIGN32
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN34},        // S_SIGN33
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN35},        // S_SIGN34
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN36},        // S_SIGN35
-	{SPR_SIGN, 4, 1, {NULL}, 0, 0, S_SIGN37},        // S_SIGN36
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN38},        // S_SIGN37
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN39},        // S_SIGN38
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN40},        // S_SIGN39
-	{SPR_SIGN, 3, 1, {NULL}, 0, 0, S_SIGN41},        // S_SIGN40
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN42},        // S_SIGN41
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN43},        // S_SIGN42
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN44},        // S_SIGN43
-	{SPR_SIGN, 6, 1, {NULL}, 0, 0, S_SIGN45},        // S_SIGN44
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN46},        // S_SIGN45
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN47},        // S_SIGN46
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN48},        // S_SIGN47
-	{SPR_SIGN, 3, 1, {NULL}, 0, 0, S_SIGN49},        // S_SIGN48
-	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN50},        // S_SIGN49
-	{SPR_SIGN, 1, 1, {NULL}, 0, 0, S_SIGN51},        // S_SIGN50
-	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN53},        // S_SIGN51
-	{SPR_SIGN, 3, -1, {NULL}, 0, 0, S_NULL},         // S_SIGN52 Eggman
-	{SPR_SIGN, 7, -1, {A_SignPlayer}, 0, 0, S_NULL}, // S_SIGN53 Blank
+	{SPR_SIGN,                0, -1, {A_SignPlayer}, -3, 0, S_NULL},                // S_SIGN
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPIN2},           // S_SIGNSPIN1
+	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN1, S_SIGNSPIN3}, // S_SIGNSPIN2
+	{SPR_SIGN,                0,  0, {A_SignPlayer}, -2, 0, S_SIGNSPIN4},           // S_SIGNSPIN3
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSPIN5},           // S_SIGNSPIN4
+	{SPR_SIGN,                0,  0,     {A_Repeat},  4, S_SIGNSPIN4, S_SIGNSPIN6}, // S_SIGNSPIN5
+	{SPR_SIGN,                0,  0, {A_SignPlayer}, -3, 0, S_SIGNSPIN1},           // S_SIGNSPIN6
+	{SPR_SIGN,                0,  1, {A_SignPlayer}, -1, 0, S_SIGNSLOW},            // S_SIGNPLAYER
+	{SPR_SIGN,                0,  1,   {A_SignSpin}, 30, 0, S_SIGNSLOW},            // S_SIGNSLOW
+	{SPR_SIGN,                0, -1,         {NULL},  0, 0, S_NULL},                // S_SIGNSTOP
+	{SPR_SIGN, FF_PAPERSPRITE|2, -1,         {NULL},  0, 0, S_NULL},                // S_SIGNBOARD
+	{SPR_SIGN, FF_PAPERSPRITE|1, -1,         {NULL},  0, 29, S_NULL},               // S_EGGMANSIGN
 
 	// Spike Ball
 	{SPR_SPIK, 0, 1, {NULL}, 0, 0, S_SPIKEBALL2}, // S_SPIKEBALL1
@@ -2201,6 +2072,8 @@ state_t states[NUMSTATES] =
 	{SPR_AROW, FF_ANIMATE, TICRATE, {A_ArrowBonks}, 7, 2, S_NULL}, // S_ARROWBONK
 
 	{SPR_CFIR, FF_FULLBRIGHT|FF_ANIMATE, -1, {NULL}, 5, 2, S_NULL}, // S_DEMONFIRE
+
+	{SPR_LETR, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_LETTER
 
 	// GFZ flowers
 	{SPR_FWR1, FF_ANIMATE, -1, {NULL},  7, 3, S_NULL}, // S_GFZFLOWERA
@@ -2463,7 +2336,11 @@ state_t states[NUMSTATES] =
 	{SPR_BARX, 2|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL5}, // S_TNTBARREL_EXPL4
 	{SPR_BARX, 3|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL6}, // S_TNTBARREL_EXPL5
 	{SPR_NULL, 0, 35, {NULL}, 0, 0, S_NULL}, // S_TNTBARREL_EXPL6
+#ifndef ROTSPRITE
 	{SPR_BARR, 1|FF_ANIMATE, -1, {NULL}, 7, 2, S_NULL}, // S_TNTBARREL_FLYING
+#else
+	{SPR_BARR, 1, 1, {A_RollAngle}, 14, 0, S_TNTBARREL_FLYING}, // S_TNTBARREL_FLYING
+#endif
 
 	// TNT proximity shell
 	{SPR_REMT, 0, 10, {A_Look}, 33554433, 0, S_PROXIMITY_TNT}, // S_PROXIMITY_TNT
@@ -2579,32 +2456,38 @@ state_t states[NUMSTATES] =
 	{SPR_WVIN, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_WALLVINE_LONG
 	{SPR_WVIN, 1|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_WALLVINE_SHORT
 
-	// Trapgoyles
-	{SPR_BGAR, 0, 67, {NULL},       0, 0, S_TRAPGOYLE_CHECK},  // S_TRAPGOYLE
-	{SPR_BGAR, 0,  3, {NULL},       0, 0, S_TRAPGOYLE_FIRE1},  // S_TRAPGOYLE_CHECK
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLE_FIRE2},  // S_TRAPGOYLE_FIRE1
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLE_FIRE3},  // S_TRAPGOYLE_FIRE2
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLE},  // S_TRAPGOYLE_FIRE3
+	// Glaregoyles
+	{SPR_BGAR,            0, 22, {NULL},       0, 0, S_GLAREGOYLE_CHARGE},  // S_GLAREGOYLE
+	{SPR_BGAR,            2,  6, {NULL},       0, 0, S_GLAREGOYLE_BLINK},  // S_GLAREGOYLE_CHARGE
+	{SPR_BGAR, FF_ANIMATE|1, 18, {NULL},       1, 3, S_GLAREGOYLE_HOLD}, // S_GLAREGOYLE_BLINK
+	{SPR_BGAR,            1,  9, {NULL},       0, 0, S_GLAREGOYLE_FIRE},  // S_GLAREGOYLE_HOLD
+	{SPR_BGAR,            1,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_GLAREGOYLE_LOOP},  // S_GLAREGOYLE_FIRE
+	{SPR_BGAR,            1,  0, {A_Repeat},   3, S_GLAREGOYLE_FIRE, S_GLAREGOYLE_COOLDOWN}, // S_GLAREGOYLE_LOOP
+	{SPR_BGAR, FF_ANIMATE|1, 15, {NULL},       1, 9, S_GLAREGOYLE}, // S_GLAREGOYLE_COOLDOWN
 
-	{SPR_BGAR, 0, 67, {NULL},       0, 0, S_TRAPGOYLEUP_CHECK},  // S_TRAPGOYLEUP
-	{SPR_BGAR, 0,  3, {NULL},       0, 0, S_TRAPGOYLEUP_FIRE1},  // S_TRAPGOYLEUP_CHECK
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_TRAPGOYLEUP_FIRE2},  // S_TRAPGOYLEUP_FIRE1
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_TRAPGOYLEUP_FIRE3},  // S_TRAPGOYLEUP_FIRE2
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_TRAPGOYLEUP},  // S_TRAPGOYLEUP_FIRE3
+	{SPR_BGAR,            0, 22, {NULL},       0, 0, S_GLAREGOYLEUP_CHARGE},  // S_GLAREGOYLEUP
+	{SPR_BGAR,            2,  6, {NULL},       0, 0, S_GLAREGOYLEUP_BLINK},  // S_GLAREGOYLEUP_CHARGE
+	{SPR_BGAR, FF_ANIMATE|1, 18, {NULL},       1, 3, S_GLAREGOYLEUP_HOLD}, // S_GLAREGOYLEUP_BLINK
+	{SPR_BGAR,            1,  9, {NULL},       0, 0, S_GLAREGOYLEUP_FIRE},  // S_GLAREGOYLEUP_HOLD
+	{SPR_BGAR,            1,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+45, S_GLAREGOYLEUP_LOOP},  // S_GLAREGOYLEUP_FIRE
+	{SPR_BGAR,            1,  0, {A_Repeat},   3, S_GLAREGOYLEUP_FIRE, S_GLAREGOYLEUP_COOLDOWN}, // S_GLAREGOYLEUP_LOOP
+	{SPR_BGAR, FF_ANIMATE|1, 15, {NULL},       1, 9, S_GLAREGOYLEUP}, // S_GLAREGOYLEUP_COOLDOWN
 
-	{SPR_BGAR, 0, 67, {NULL},       0, 0, S_TRAPGOYLEDOWN_CHECK},  // S_TRAPGOYLEDOWN
-	{SPR_BGAR, 0,  3, {NULL},       0, 0, S_TRAPGOYLEDOWN_FIRE1},  // S_TRAPGOYLEDOWN_CHECK
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_TRAPGOYLEDOWN_FIRE2},  // S_TRAPGOYLEDOWN_FIRE1
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_TRAPGOYLEDOWN_FIRE3},  // S_TRAPGOYLEDOWN_FIRE2
-	{SPR_BGAR, 0,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_TRAPGOYLEDOWN},  // S_TRAPGOYLEDOWN_FIRE3
+	{SPR_BGAR,            0, 22, {NULL},       0, 0, S_GLAREGOYLEDOWN_CHARGE},  // S_GLAREGOYLEDOWN
+	{SPR_BGAR,            2,  6, {NULL},       0, 0, S_GLAREGOYLEDOWN_BLINK},  // S_GLAREGOYLEDOWN_CHARGE
+	{SPR_BGAR, FF_ANIMATE|1, 18, {NULL},       1, 3, S_GLAREGOYLEDOWN_HOLD}, // S_GLAREGOYLEDOWN_BLINK
+	{SPR_BGAR,            1,  9, {NULL},       0, 0, S_GLAREGOYLEDOWN_FIRE},  // S_GLAREGOYLEDOWN_HOLD
+	{SPR_BGAR,            1,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16)+315, S_GLAREGOYLEDOWN_LOOP},  // S_GLAREGOYLEDOWN_FIRE
+	{SPR_BGAR,            1,  0, {A_Repeat},   3, S_GLAREGOYLEDOWN_FIRE, S_GLAREGOYLEDOWN_COOLDOWN}, // S_GLAREGOYLEDOWN_LOOP
+	{SPR_BGAR, FF_ANIMATE|1, 15, {NULL},       1, 9, S_GLAREGOYLEDOWN}, // S_GLAREGOYLEDOWN_COOLDOWN
 
-	{SPR_BGAR, 0, 135, {NULL},       0, 0, S_TRAPGOYLELONG_CHECK},  // S_TRAPGOYLELONG
-	{SPR_BGAR, 0,   3, {NULL},       0, 0, S_TRAPGOYLELONG_FIRE1},  // S_TRAPGOYLELONG_CHECK
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG_FIRE2},  // S_TRAPGOYLELONG_FIRE1
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG_FIRE3},  // S_TRAPGOYLELONG_FIRE2
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG_FIRE4},  // S_TRAPGOYLELONG_FIRE3
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG_FIRE5},  // S_TRAPGOYLELONG_FIRE4
-	{SPR_BGAR, 0,   1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_TRAPGOYLELONG},  // S_TRAPGOYLELONG_FIRE5
+	{SPR_BGAR,            0, 90, {NULL},       0, 0, S_GLAREGOYLELONG_CHARGE},  // S_GLAREGOYLELONG
+	{SPR_BGAR,            2,  6, {NULL},       0, 0, S_GLAREGOYLELONG_BLINK},  // S_GLAREGOYLELONG_CHARGE
+	{SPR_BGAR, FF_ANIMATE|1, 18, {NULL},       1, 3, S_GLAREGOYLELONG_HOLD}, // S_GLAREGOYLELONG_BLINK
+	{SPR_BGAR,            1,  9, {NULL},       0, 0, S_GLAREGOYLELONG_FIRE},  // S_GLAREGOYLELONG_HOLD
+	{SPR_BGAR,            1,  1, {A_TrapShot}, (16<<16)+MT_DEMONFIRE, (30<<16), S_GLAREGOYLELONG_LOOP},  // S_GLAREGOYLELONG_FIRE
+	{SPR_BGAR,            1,  0, {A_Repeat},   5, S_GLAREGOYLELONG_FIRE, S_GLAREGOYLELONG_COOLDOWN}, // S_GLAREGOYLELONG_LOOP
+	{SPR_BGAR, FF_ANIMATE|1, 15, {NULL},       1, 9, S_GLAREGOYLELONG}, // S_GLAREGOYLELONG_COOLDOWN
 
 	// Target/Red Crystal
 	{SPR_RCRY,               0, -1, {NULL},                  0, 0, S_TARGET_IDLE},  // S_TARGET_IDLE
@@ -2615,6 +2498,9 @@ state_t states[NUMSTATES] =
 
 	// Green flame
 	{SPR_CFLM, FF_FULLBRIGHT|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 7, 3, S_GREENFLAME}, // S_GREENFLAME
+
+	// ATZ Blue Gargoyle
+	{SPR_BGAR, 3, -1, {NULL}, 0, 0, S_NULL}, // S_BLUEGARGOYLE
 
 	// Stalagmites
 	{SPR_STLG, 0, -1, {NULL}, 0, 0, S_NULL}, // S_STG0
@@ -3863,8 +3749,8 @@ state_t states[NUMSTATES] =
 	{SPR_BUMB, 5, 120, {NULL}, 0, 0, S_BUMBLEBORE_DIE}, // S_BUMBLEBORE_STUCK2
 	{SPR_BUMB, 5, 0, {A_CryingToMomma}, 0, 0, S_XPLD1}, // S_BUMBLEBORE_DIE
 
-	{SPR_BBUZ, 0, 2, {NULL}, 0, 0, S_BBUZZFLY2}, // S_BBUZZFLY1
-	{SPR_BBUZ, 1, 2, {NULL}, 0, 0, S_BBUZZFLY1}, // S_BBUZZFLY2
+	{SPR_BBUZ,          0, -1, {NULL}, 0, 0, S_NULL}, // S_BUGGLEIDLE
+	{SPR_BBUZ, FF_ANIMATE, -1, {NULL}, 1, 2, S_NULL}, // S_BUGGLEFLY
 
 	{SPR_FMCE, 0, 20, {NULL}, 0, 0, S_SMASHSPIKE_EASE1}, // S_SMASHSPIKE_FLOAT
 	{SPR_FMCE, 0,  4, {A_ZThrust},  4, (1<<16)|1, S_SMASHSPIKE_EASE2}, // S_SMASHSPIKE_EASE1
@@ -4690,7 +4576,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_XPLD_FLICKY,  // deathstate
+		S_SNAILER_FLICKY, // deathstate
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		FRACUNIT,       // speed
@@ -5294,7 +5180,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOGRAVITY|MF_NOCLIPTHING|MF_NOBLOCKMAP|MF_RUNSPAWNFUNC, // flags
+		MF_NOGRAVITY|MF_NOCLIPTHING|MF_NOBLOCKMAP|MF_RUNSPAWNFUNC|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -5321,7 +5207,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOGRAVITY|MF_NOCLIPTHING|MF_NOBLOCKMAP|MF_RUNSPAWNFUNC, // flags
+		MF_NOGRAVITY|MF_NOCLIPTHING|MF_NOBLOCKMAP|MF_RUNSPAWNFUNC|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -6677,18 +6563,18 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_METALSONIC_RACE
 		207,                // doomednum
-		S_METALSONIC_STAND, // spawnstate
+		S_METALSONIC_RACE,  // spawnstate
 		8,                  // spawnhealth
-		S_METALSONIC_WALK1, // seestate
+		S_NULL,             // seestate
 		sfx_None,           // seesound
 		0,                  // reactiontime
 		sfx_None,           // attacksound
 		S_NULL,             // painstate
 		0,                  // painchance
 		sfx_None,           // painsound
-		S_METALSONIC_RUN1,  // meleestate
+		S_NULL,             // meleestate
 		S_NULL,             // missilestate
-		S_NULL,             // deathstate
+		S_PLAY_DEAD,        // deathstate
 		S_NULL,             // xdeathstate
 		sfx_None,           // deathsound
 		0,                  // speed
@@ -6698,7 +6584,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,                  // mass
 		0,                  // damage
 		sfx_None,           // activesound
-		MF_SCENERY|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
+		MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
 		S_NULL              // raisestate
 	},
 
@@ -6748,7 +6634,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // speed
 		32*FRACUNIT,    // radius
 		52*FRACUNIT,    // height
-		0,              // display offset
+		1,              // display offset
 		0,              // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -7832,29 +7718,29 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_SIGN
 		501,            // doomednum
-		S_SIGN52,       // spawnstate
+		S_SIGN,         // spawnstate
 		1000,           // spawnhealth
 		S_PLAY_SIGN,    // seestate
 		sfx_lvpass,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
+		S_SIGNPLAYER,   // painstate
+		MT_SPARK,       // painchance
+		sfx_s3kb8,      // painsound
+		S_EGGMANSIGN,   // meleestate
 		S_NULL,         // missilestate
-		S_NULL,         // deathstate
+		S_SIGNSTOP,     // deathstate
 		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
+		sfx_s3k64,      // deathsound
 		8,              // speed
-		8*FRACUNIT,     // radius
+		36*FRACUNIT,    // radius
 		32*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOCLIP|MF_SCENERY, // flags
-		S_NULL          // raisestate
+		MF_NOCLIP|MF_SCENERY|MF_BOUNCE|MF_RUNSPAWNFUNC, // flags
+		S_SIGNBOARD     // raisestate
 	},
 
 	{           // MT_SPIKEBALL
@@ -9906,6 +9792,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LETTER
+		-1,             // doomednum
+		S_LETTER,       // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		7*FRACUNIT,     // radius -- heaven
+		13*FRACUNIT,    // height -- hell
+		0,              // display offset
+		0,              // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -13300,7 +13213,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		0,              // speed
+		3200*FRACUNIT,  // speed
 		30*FRACUNIT,    // radius
 		32*FRACUNIT,    // height
 		1,              // display offset
@@ -13388,7 +13301,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_SPAWNCEILING,  // flags
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_SPAWNCEILING|MF_SCENERY,  // flags
 		S_NULL          // raisestate
 	},
 
@@ -13581,9 +13494,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_TRAPGOYLE
+	{           // MT_GLAREGOYLE
 		1500,           // doomednum
-		S_TRAPGOYLE,    // spawnstate
+		S_GLAREGOYLE,    // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -13608,9 +13521,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_TRAPGOYLEUP
+	{           // MT_GLAREGOYLEUP
 		1501,           // doomednum
-		S_TRAPGOYLEUP,  // spawnstate
+		S_GLAREGOYLEUP,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -13635,9 +13548,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_TRAPGOYLEDOWN
+	{           // MT_GLAREGOYLEDOWN
 		1502,           // doomednum
-		S_TRAPGOYLEDOWN,// spawnstate
+		S_GLAREGOYLEDOWN,// spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -13662,9 +13575,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_TRAPGOYLELONG
+	{           // MT_GLAREGOYLELONG
 		1503,           // doomednum
-		S_TRAPGOYLELONG,// spawnstate
+		S_GLAREGOYLELONG,// spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -13740,6 +13653,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_PAIN, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_BLUEGARGOYLE
+		1506,           // doomednum
+		S_BLUEGARGOYLE, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		21*FRACUNIT,    // speed
+		16*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_statu2,     // activesound
+		MF_SLIDEME|MF_SOLID|MF_PUSHABLE, // flags
 		S_NULL          // raisestate
 	},
 
@@ -19038,7 +18978,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // deathstate
 		S_PUMA_DOWN3,   // xdeathstate
 		sfx_None,       // deathsound
-		0,              // speed
+		2000*FRACUNIT,  // speed
 		8*FRACUNIT,     // radius
 		16*FRACUNIT,    // height
 		0,              // display offset
@@ -19072,7 +19012,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -20128,11 +20068,11 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_BUBBLEBUZZ
+	{           // MT_BUGGLE
 		124,            // doomednum
-		S_BBUZZFLY1,    // spawnstate
+		S_BUGGLEIDLE,   // spawnstate
 		1,              // spawnhealth
-		S_BBUZZFLY1,    // seestate
+		S_BUGGLEFLY,    // seestate
 		sfx_None,       // seesound
 		2,              // reactiontime
 		sfx_None,       // attacksound
