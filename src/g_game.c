@@ -5194,7 +5194,10 @@ void G_ReadMetalTic(mobj_t *metal)
 	{ // But wait, there's more!
 		xziptic = READUINT8(metal_p);
 		if (xziptic & EZT_FLIP)
+		{
 			metal->eflags ^= MFE_VERTICALFLIP;
+			metal->flags2 ^= MF2_OBJECTFLIP;
+		}
 		if (xziptic & EZT_SCALE)
 		{
 			metal->destscale = READFIXED(metal_p);
