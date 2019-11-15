@@ -1385,6 +1385,8 @@ boolean F_CreditResponder(event_t *event)
 
 void F_StartGameEvaluation(void)
 {
+	S_FadeOutStopMusic(5*MUSICRATE);
+
 	// Credits option in secrets menu
 	if (cursaveslot == -1)
 	{
@@ -1638,7 +1640,7 @@ void F_StartEnding(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	S_StopMusic(); // todo: placeholder
+	S_StopMusic();
 	S_StopSounds();
 
 	finalecount = -10; // what? this totally isn't a hack. why are you asking?
@@ -1718,6 +1720,9 @@ void F_EndingTicker(void)
 		wipetypepre = INT16_MAX;
 		return;
 	}
+
+	if (finalecount == -8)
+		S_ChangeMusicInternal((goodending ? "_endg" : "_endb"), false);
 
 	if (goodending && finalecount == INFLECTIONPOINT) // time to swap some assets
 	{
