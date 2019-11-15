@@ -7029,24 +7029,21 @@ void HWR_DrawIntermissionBG(void)
 //
 // hwr mode wipes
 //
-static char wipelumpname[10];
 static lumpnum_t wipelumpnum;
 
 // puts wipe lumpname in wipename[10]
 static boolean HWR_WipeCheck(UINT8 wipenum, UINT8 scrnnum)
 {
+	static char lumpname[10] = "FADEmmss";
 	size_t lsize;
-
-	// write FADE prefix into wipelumpname
-	strncpy(wipelumpname, "FADEmmss", 8);
 
 	// not a valid wipe number
 	if (wipenum > 99 || scrnnum > 99)
 		return false; // shouldn't end up here really, the loop should've stopped running beforehand
 
 	// puts the numbers into the wipename
-	sprintf(&wipelumpname[4], "%.2hu%.2hu", (UINT16)wipenum, (UINT16)scrnnum);
-	wipelumpnum = W_CheckNumForName(wipelumpname);
+	sprintf(&lumpname[4], "%.2hu%.2hu", (UINT16)wipenum, (UINT16)scrnnum);
+	wipelumpnum = W_CheckNumForName(lumpname);
 
 	// again, shouldn't be here really
 	if (wipelumpnum == LUMPERROR)
@@ -7055,7 +7052,7 @@ static boolean HWR_WipeCheck(UINT8 wipenum, UINT8 scrnnum)
 	lsize = W_LumpLength(wipelumpnum);
 	if (!(lsize == 256000 || lsize == 64000 || lsize == 16000 || lsize == 4000))
 	{
-		CONS_Alert(CONS_WARNING, "Fade mask lump %s of incorrect size, ignored\n", wipelumpname);
+		CONS_Alert(CONS_WARNING, "Fade mask lump %s of incorrect size, ignored\n", lumpname);
 		return false; // again, shouldn't get here if it is a bad size
 	}
 
