@@ -255,6 +255,7 @@ typedef struct
 
 	INT32 health;
 	angle_t angle;
+	angle_t rollangle;
 	fixed_t x;
 	fixed_t y;
 	fixed_t z;

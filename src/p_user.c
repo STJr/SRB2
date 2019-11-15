@@ -636,6 +636,10 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->marebonuslap = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
+#ifdef ROTSPRITE
+	player->mo->rollangle = 0;
+#endif
+
 	P_SetTarget(&player->mo->target, NULL);
 	P_SetTarget(&player->axis1, P_SetTarget(&player->axis2, NULL));
 
@@ -762,6 +766,9 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->secondjump = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
+#ifdef ROTSPRITE
+	player->mo->rollangle = 0;
+#endif
 
 	player->powers[pw_shield] = SH_NONE;
 	player->powers[pw_super] = 0;

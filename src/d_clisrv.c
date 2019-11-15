@@ -610,6 +610,11 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 
 	rsp->health = LONG(players[i].mo->health);
 	rsp->angle = (angle_t)LONG(players[i].mo->angle);
+#ifdef ROTSPRITE
+	rsp->rollangle = (angle_t)LONG(players[i].mo->rollangle);
+#else
+	rsp->rollangle = 0;
+#endif
 	rsp->x = LONG(players[i].mo->x);
 	rsp->y = LONG(players[i].mo->y);
 	rsp->z = LONG(players[i].mo->z);
@@ -760,6 +765,9 @@ static void resynch_read_player(resynch_pak *rsp)
 	//At this point, the player should have a body, whether they were respawned or not.
 	P_UnsetThingPosition(players[i].mo);
 	players[i].mo->angle = (angle_t)LONG(rsp->angle);
+#ifdef ROTSPRITE
+	players[i].mo->rollangle = (angle_t)LONG(rsp->rollangle);
+#endif
 	players[i].mo->eflags = (UINT16)SHORT(rsp->eflags);
 	players[i].mo->flags = LONG(rsp->flags);
 	players[i].mo->flags2 = LONG(rsp->flags2);
