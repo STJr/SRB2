@@ -448,7 +448,7 @@ static void D_Display(void)
 			framecount = 0;
 			demostarttime = I_GetTime();
 		}
-		
+
 		wipetypepost = -1;
 	}
 	else

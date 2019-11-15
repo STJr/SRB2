@@ -103,7 +103,7 @@ static fixed_t paldiv = 0;
 
 static UINT8 curwipetype;
 static UINT8 curwipeframe;
-static UINT8 wipecolorfill = 31;
+UINT8 wipecolorfill = 31;
 
 /** Create fademask_t from lump
   *
@@ -198,12 +198,6 @@ void F_WipeTitleCard(void)
 #endif
 		)
 		ST_drawLevelTitle(TICRATE);
-}
-
-void F_WipeColorFill(UINT8 color)
-{
-	wipecolorfill = color;
-	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, wipecolorfill);
 }
 
 /**	Wipe ticker
