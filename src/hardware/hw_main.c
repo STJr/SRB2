@@ -7029,10 +7029,10 @@ void HWR_DrawIntermissionBG(void)
 //
 // hwr mode wipes
 //
-static char wipelumpname[9];
+static char wipelumpname[10];
 static lumpnum_t wipelumpnum;
 
-// puts wipe lumpname in wipename[9]
+// puts wipe lumpname in wipename[10]
 static boolean HWR_WipeCheck(UINT8 wipenum, UINT8 scrnnum)
 {
 	size_t lsize;
