@@ -1068,14 +1068,13 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum)
 	{
 		if (!stricmp(sprinfoToken, "SPRITE") || !stricmp(sprinfoToken, "SPRITE2"))
 		{
-			Z_Free(sprinfoToken);
 			R_ParseSpriteInfo(!stricmp(sprinfoToken, "SPRITE2"));
+			Z_Free(sprinfoToken);
 		}
 		else
 			I_Error("Error parsing SPRTINFO lump: Unknown keyword \"%s\"", sprinfoToken);
 		sprinfoToken = M_GetToken(NULL);
 	}
-	Z_Free(sprinfoToken);
 	Z_Free((void *)sprinfoText);
 }
 
