@@ -2591,6 +2591,10 @@ void F_TitleScreenDrawer(void)
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
 		return;
 
+	// Don't draw if title mode is set to Old/None and the patch isn't there
+	if (!ttwing && (curttmode == TTMODE_OLD || curttmode == TTMODE_NONE))
+		return;
+
 	// rei|miru: use title pics?
 	hidepics = curhidepics;
 	if (hidepics)
