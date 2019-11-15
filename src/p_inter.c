@@ -2741,7 +2741,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_EGGTRAP:
 			// Time for birdies! Yaaaaaaaay!
-			target->fuse = TICRATE*2;
+			target->fuse = TICRATE;
 			break;
 
 		case MT_MINECART:
