@@ -7031,10 +7031,10 @@ void HWR_DrawIntermissionBG(void)
 //
 static lumpnum_t wipelumpnum;
 
-// puts wipe lumpname in wipename[10]
+// puts wipe lumpname in wipename[9]
 static boolean HWR_WipeCheck(UINT8 wipenum, UINT8 scrnnum)
 {
-	static char lumpname[10] = "FADEmmss";
+	static char lumpname[9] = "FADEmmss";
 	size_t lsize;
 
 	// not a valid wipe number
@@ -7042,7 +7042,10 @@ static boolean HWR_WipeCheck(UINT8 wipenum, UINT8 scrnnum)
 		return false; // shouldn't end up here really, the loop should've stopped running beforehand
 
 	// puts the numbers into the wipename
-	sprintf(&lumpname[4], "%.2hu%.2hu", (UINT16)wipenum, (UINT16)scrnnum);
+	lumpname[4] = '0'+(wipenum/10);
+	lumpname[5] = '0'+(wipenum%10);
+	lumpname[6] = '0'+(scrnnum/10);
+	lumpname[7] = '0'+(scrnnum%10);
 	wipelumpnum = W_CheckNumForName(lumpname);
 
 	// again, shouldn't be here really
