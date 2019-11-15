@@ -7077,14 +7077,18 @@ void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum)
 	HWR_DoWipe(wipenum, scrnnum);
 }
 
-void HWR_DoLevelWipe(UINT8 wipenum, UINT8 scrnnum, UINT8 wipecolorfill)
+void HWR_DoLevelWipe(UINT8 wipenum, UINT8 scrnnum, UINT8 colfill)
 {
-#ifdef LEVELWIPES
+#ifndef LEVELWIPES
+	(void)wipenum;
+	(void)scrnnum;
+	(void)colfill;
+#else
 	if (!HWR_WipeCheck(wipenum, scrnnum))
 		return;
 
 	HWR_EndScreenWipe();
-	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, wipecolorfill);
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, colfill);
 	HWR_StartScreenWipe();
 	HWR_GetFadeMask(wipelumpnum);
 
