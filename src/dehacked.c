@@ -5343,6 +5343,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FSGNA",
 	"S_FSGNB",
 	"S_FSGNC",
+	"S_FSGND",
 
 	// Black Eggman (Boss 7)
 	"S_BLACKEGG_STND",

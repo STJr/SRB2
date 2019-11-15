@@ -4070,19 +4070,28 @@ bossjustdie:
 					mobj_t *pole = P_SpawnMobj(
 						mo->tracer->x - P_ReturnThrustX(mo->tracer, mo->tracer->angle, speed*time),
 						mo->tracer->y - P_ReturnThrustY(mo->tracer, mo->tracer->angle, speed*time),
-						mo->tracer->floorz + 4*FRACUNIT,
+						mo->tracer->floorz + (256+1)*FRACUNIT,
 						MT_FSGNB);
 					P_SetTarget(&pole->tracer, P_SpawnMobj(
+						pole->x, pole->y,
+						pole->z - 256*FRACUNIT,
+						MT_FSGNB));
+					P_SetTarget(&pole->tracer->tracer, P_SpawnMobj(
 						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
 						pole->y + P_ReturnThrustY(pole, mo->tracer->angle, FRACUNIT),
 						pole->z + 256*FRACUNIT,
 						MT_FSGNA));
-					pole->angle = mo->tracer->angle;
-					pole->tracer->angle = pole->angle - ANGLE_90;
+					pole->tracer->flags |= MF_NOCLIPTHING;
+					P_SetScale(pole, (pole->destscale = 2*FRACUNIT));
+					P_SetScale(pole->tracer, (pole->tracer->destscale = 2*FRACUNIT));
+					pole->angle = pole->tracer->angle = mo->tracer->angle;
+					pole->tracer->tracer->angle = pole->angle - ANGLE_90;
 					pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
 					pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
 					pole->tracer->momx = pole->momx;
 					pole->tracer->momy = pole->momy;
+					pole->tracer->tracer->momx = pole->momx;
+					pole->tracer->tracer->momy = pole->momy;
 				}
 			}
 			else
