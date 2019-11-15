@@ -1160,6 +1160,17 @@ static int lib_pElementalFire(lua_State *L)
 	return 0;
 }
 
+static int lib_pDoPlayerFinish(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoPlayerFinish(player);
+	return 0;
+}
+
 static int lib_pDoPlayerExit(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -2632,6 +2643,13 @@ static int lib_gSetCustomExitVars(lua_State *L)
 	return 0;
 }
 
+static int lib_gEnoughPlayersFinished(lua_State *L)
+{
+	INLEVEL
+	lua_pushboolean(L, G_EnoughPlayersFinished());
+	return 1;
+}
+
 static int lib_gExitLevel(lua_State *L)
 {
 	int n = lua_gettop(L); // Num arguments
@@ -2827,6 +2845,7 @@ static luaL_Reg lib[] = {
 	{"P_DoBubbleBounce",lib_pDoBubbleBounce},
 	{"P_BlackOw",lib_pBlackOw},
 	{"P_ElementalFire",lib_pElementalFire},
+	{"P_DoPlayerFinish",lib_pDoPlayerFinish},
 	{"P_DoPlayerExit",lib_pDoPlayerExit},
 	{"P_InstaThrust",lib_pInstaThrust},
 	{"P_ReturnThrustX",lib_pReturnThrustX},
@@ -2938,6 +2957,7 @@ static luaL_Reg lib[] = {
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
+	{"G_EnoughPlayersFinished",lib_gEnoughPlayersFinished},
 	{"G_ExitLevel",lib_gExitLevel},
 	{"G_IsSpecialStage",lib_gIsSpecialStage},
 	{"G_GametypeUsesLives",lib_gGametypeUsesLives},

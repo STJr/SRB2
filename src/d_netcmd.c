@@ -87,6 +87,7 @@ static void JoinTimeout_OnChange(void);
 
 static void CoopStarposts_OnChange(void);
 static void CoopLives_OnChange(void);
+static void ExitMove_OnChange(void);
 
 static void Ringslinger_OnChange(void);
 static void Gravity_OnChange(void);
@@ -355,8 +356,11 @@ consvar_t cv_cooplives = {"cooplives", "Avoid Game Over", CV_NETVAR|CV_CALL|CV_C
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "1/4"}, {2, "Half"}, {3, "3/4"}, {4, "All"}, {0, NULL}};
 consvar_t cv_playersforexit = {"playersforexit", "All", CV_NETVAR, playersforexit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_exitmove = {"exitmove", "On", CV_NETVAR|CV_CALL, CV_OnOff, ExitMove_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_runscripts = {"runscripts", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -511,6 +515,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_inttime);
 	CV_RegisterVar(&cv_advancemap);
 	CV_RegisterVar(&cv_playersforexit);
+	CV_RegisterVar(&cv_exitmove);
 	CV_RegisterVar(&cv_timelimit);
 	CV_RegisterVar(&cv_playbackspeed);
 	CV_RegisterVar(&cv_forceskin);
@@ -3632,6 +3637,17 @@ static void CoopLives_OnChange(void)
 
 		P_SpectatorJoinGame(&players[i]);
 	}
+}
+
+static void ExitMove_OnChange(void)
+{
+	if (!(netgame || multiplayer) || gametype != GT_COOP)
+		return;
+
+	if (cv_exitmove.value)
+		CONS_Printf(M_GetText("Players can now move after completing the level.\n"));
+	else
+		CONS_Printf(M_GetText("Players can no longer move after completing the level.\n"));
 }
 
 UINT32 timelimitintics = 0;
