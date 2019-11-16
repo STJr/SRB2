@@ -10468,7 +10468,6 @@ static consvar_t *setupm_cvcolor;
 static consvar_t *setupm_cvname;
 static consvar_t *setupm_cvdefaultskin;
 static consvar_t *setupm_cvdefaultcolor;
-static consvar_t *setupm_cvdefaultname;
 static INT32      setupm_fakeskin;
 static INT32      setupm_fakecolor;
 
@@ -10630,8 +10629,7 @@ colordraw:
 
 	V_DrawString(x, y,
 		((R_SkinAvailable(setupm_cvdefaultskin->string) != setupm_fakeskin
-		|| setupm_cvdefaultcolor->value != setupm_fakecolor
-		|| strcmp(setupm_name, setupm_cvdefaultname->string))
+		|| setupm_cvdefaultcolor->value != setupm_fakecolor)
 			? 0
 			: V_TRANSLUCENT)
 		| ((itemOn == 3) ? V_YELLOWMAP : 0),
@@ -10686,14 +10684,12 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 		case KEY_ENTER:
 			if (itemOn == 3
 			&& (R_SkinAvailable(setupm_cvdefaultskin->string) != setupm_fakeskin
-			|| setupm_cvdefaultcolor->value != setupm_fakecolor
-			|| strcmp(setupm_name, setupm_cvdefaultname->string)))
+			|| setupm_cvdefaultcolor->value != setupm_fakecolor))
 			{
 				S_StartSound(NULL,sfx_strpst);
 				// you know what? always putting these in the buffer won't hurt anything.
 				COM_BufAddText (va("%s \"%s\"\n",setupm_cvdefaultskin->name,skins[setupm_fakeskin].name));
 				COM_BufAddText (va("%s %d\n",setupm_cvdefaultcolor->name,setupm_fakecolor));
-				COM_BufAddText (va("%s %s\n",setupm_cvdefaultname->name,setupm_name));
 				break;
 			}
 			/* FALLTHRU */
@@ -10792,7 +10788,6 @@ static void M_SetupMultiPlayer(INT32 choice)
 	setupm_cvname = &cv_playername;
 	setupm_cvdefaultskin = &cv_defaultskin;
 	setupm_cvdefaultcolor = &cv_defaultplayercolor;
-	setupm_cvdefaultname = &cv_defaultplayername;
 
 	// For whatever reason this doesn't work right if you just use ->value
 	setupm_fakeskin = R_SkinAvailable(setupm_cvskin->string);
@@ -10834,7 +10829,6 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	setupm_cvname = &cv_playername2;
 	setupm_cvdefaultskin = &cv_defaultskin2;
 	setupm_cvdefaultcolor = &cv_defaultplayercolor2;
-	setupm_cvdefaultname = &cv_defaultplayername2;
 
 	// For whatever reason this doesn't work right if you just use ->value
 	setupm_fakeskin = R_SkinAvailable(setupm_cvskin->string);
