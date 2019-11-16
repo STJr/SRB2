@@ -3225,10 +3225,10 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		{
 			const char *address;
 			if (I_GetNodeAddress && (address = I_GetNodeAddress(node)) != NULL)
-				HU_AddChatText(va("\x82*%s has joined the game (node %d) (%s)", player_names[newplayernum], node, address), false);	// merge join notification + IP to avoid clogging console/chat.
+				HU_AddChatText(va("\x82*%s has joined the game (player %d) (%s)", player_names[newplayernum], newplayernum, address), false);	// merge join notification + IP to avoid clogging console/chat.
 		}
 		else
-			HU_AddChatText(va("\x82*%s has joined the game (node %d)", player_names[newplayernum], node), false);	// if you don't wanna see the join address.
+			HU_AddChatText(va("\x82*%s has joined the game (player %d)", player_names[newplayernum], newplayernum), false);	// if you don't wanna see the join address.
 	}
 
 	if (server && multiplayer && motd[0] != '\0')
