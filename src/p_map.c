@@ -592,6 +592,9 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if (!(tails->pflags & PF_CANCARRY))
 		return;
 
+	if (sonic->pflags & PF_FINISHED)
+		return;
+
 	if (tails->bot == 1)
 		return;
 
