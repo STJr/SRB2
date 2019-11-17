@@ -9651,7 +9651,6 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					if (mobj->target != NULL) // Are we chasing a player?
 					{
-						CONS_Printf("%s\n", "Chase state");
 						fixed_t dist = P_AproxDistance(mobj->x - mobj->target->x, mobj->y - mobj->target->y);
 						if (dist > 2000 * mobj->scale) // Not anymore!
 							P_SetTarget(&mobj->target, NULL);
@@ -9673,7 +9672,6 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					else // Can we find a player to chase?
 					{
-						CONS_Printf("%s\n", "Search state");
 						if (mobj->tracer == NULL || mobj->tracer->state != &states[mobj->tracer->info->spawnstate]
 							|| !P_LookForPlayers(mobj, true, false, 2000*mobj->scale)) // if not, circle around the spawnpoint
 						{
