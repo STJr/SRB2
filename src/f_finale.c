@@ -991,7 +991,7 @@ static const char *credits[] = {
 	"Sally \"TehRealSalt\" Cochenour",
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJ Sonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
-	"Victor \"Steel Titanium\" Fuentes",
+	"Victor \"SteelT\" Fuentes",
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"james\"",
 	"\"Jimita\"",
@@ -1004,7 +1004,6 @@ static const char *credits[] = {
 	"Sean \"Sryder13\" Ryder",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
 	"Wessel \"sphere\" Smit",
-	"\"SteelT\"",
 	"Ben \"Cue\" Woodford",
 	"Lachlan \"Lach\" Wright",
 	// Git contributors with 5+ approved merges of substantive quality,
