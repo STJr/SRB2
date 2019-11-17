@@ -2781,6 +2781,9 @@ static actionpointer_t actionpointers[] =
 	{{A_PterabyteHover},         "A_PTERABYTEHOVER"},
 	{{A_RolloutSpawn},           "A_ROLLOUTSPAWN"},
 	{{A_RolloutRock},            "A_ROLLOUTROCK"},
+	{{A_DragonbomberSpawn},      "A_DRAGONBOMERSPAWN"},
+	{{A_DragonWing},             "A_DRAGONWING"},
+	{{A_DragonSegment},          "A_DRAGONSEGMENT"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -5040,6 +5043,25 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PTERABYTE_FLY4",
 	"S_PTERABYTE_SWOOPDOWN",
 	"S_PTERABYTE_SWOOPUP",
+
+	// Dragonbomber
+	"S_DRAGONBOMBER",
+	"S_DRAGONWING1",
+	"S_DRAGONWING2",
+	"S_DRAGONWING3",
+	"S_DRAGONWING4",
+	"S_DRAGONTAIL_LOADED",
+	"S_DRAGONTAIL_EMPTY",
+	"S_DRAGONTAIL_EMPTYLOOP",
+	"S_DRAGONTAIL_RELOAD",
+	"S_DRAGONMINE",
+	"S_DRAGONMINE_LAND",
+	"S_DRAGONMINE_GROUND1",
+	"S_DRAGONMINE_FLASH1",
+	"S_DRAGONMINE_LOOP1",
+	"S_DRAGONMINE_GROUND2",
+	"S_DRAGONMINE_FLASH2",
+	"S_DRAGONMINE_LOOP2",
 
 	// Boss Explosion
 	"S_BOSSEXPLODE",
@@ -7712,6 +7734,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_PTERABYTESPAWNER", // Pterabyte spawner
 	"MT_PTERABYTEWAYPOINT", // Pterabyte waypoint
 	"MT_PTERABYTE", // Pterabyte
+	"MT_DRAGONBOMBER", // Dragonbomber
+	"MT_DRAGONWING", // Dragonbomber wing
+	"MT_DRAGONTAIL", // Dragonbomber tail segment
+	"MT_DRAGONMINE", // Dragonbomber mine
 
 	// Generic Boss Items
 	"MT_BOSSEXPLODE",
