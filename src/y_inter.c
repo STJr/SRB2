@@ -485,14 +485,14 @@ void Y_IntermissionDrawer(void)
 
 		if (drawsection == 1)
 		{
-			const char *ringtext = "\x82" "50 RINGS, NO SHIELD";
-			const char *tut1text = "\x82" "PRESS " "\x80" "SPIN";
-			const char *tut2text = "\x82" "MID-" "\x80" "JUMP";
-			ttheight = 16;
+			const char *ringtext = "\x82" "50 rings, no shield";
+			const char *tut1text = "\x82" "press " "\x80" "spin";
+			const char *tut2text = "\x82" "mid-" "\x80" "jump";
+			ttheight = 8;
 			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
-			ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
+			ttheight += V_LevelNameHeight(data.spec.passed1) + 2;
 			V_DrawLevelTitle(data.spec.passedx3 + xoffset2, ttheight, 0, data.spec.passed3);
-			ttheight += V_LevelNameHeight(data.spec.passed4) + 2;
+			ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
 			V_DrawLevelTitle(data.spec.passedx4 + xoffset3, ttheight, 0, data.spec.passed4);
 
 			ttheight = 108;
@@ -509,7 +509,7 @@ void Y_IntermissionDrawer(void)
 			{
 				ttheight = 24;
 				V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
-				ttheight += V_LevelNameHeight(data.spec.passed2) + 2;
+				ttheight += V_LevelNameHeight(data.spec.passed1) + 2;
 				V_DrawLevelTitle(data.spec.passedx2 + xoffset2, ttheight, 0, data.spec.passed2);
 			}
 			else
