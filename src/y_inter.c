@@ -399,10 +399,13 @@ void Y_IntermissionDrawer(void)
 
 		// draw the "got through act" lines and act number
 		V_DrawLevelTitle(data.coop.passedx1, 49, 0, data.coop.passed1);
-		V_DrawLevelTitle(data.coop.passedx2, 49+V_LevelNameHeight(data.coop.passed1)+2, 0, data.coop.passed2);
+		{
+			INT32 h = V_LevelNameHeight(data.coop.passed2);
+			V_DrawLevelTitle(data.coop.passedx2, 49+h+2, 0, data.coop.passed2);
 
-		if (data.coop.actnum)
-			V_DrawLevelActNum(244, 58, 0, data.coop.actnum);
+			if (data.coop.actnum)
+				V_DrawLevelActNum(244, 42+h, 0, data.coop.actnum);
+		}
 
 		bonusy = 150;
 		// Total
@@ -490,16 +493,16 @@ void Y_IntermissionDrawer(void)
 			const char *tut2text = "\x82" "mid-" "\x80" "jump";
 			ttheight = 8;
 			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
-			ttheight += V_LevelNameHeight(data.spec.passed1) + 2;
-			V_DrawLevelTitle(data.spec.passedx3 + xoffset2, ttheight, 0, data.spec.passed3);
 			ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
+			V_DrawLevelTitle(data.spec.passedx3 + xoffset2, ttheight, 0, data.spec.passed3);
+			ttheight += V_LevelNameHeight(data.spec.passed4) + 2;
 			V_DrawLevelTitle(data.spec.passedx4 + xoffset3, ttheight, 0, data.spec.passed4);
 
 			ttheight = 108;
 			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset4 - (V_LevelNameWidth(ringtext)/2), ttheight, 0, ringtext);
-			ttheight += V_LevelNameHeight(ringtext) + 2;
-			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset5 - (V_LevelNameWidth(tut1text)/2), ttheight, 0, tut1text);
 			ttheight += V_LevelNameHeight(tut1text) + 2;
+			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset5 - (V_LevelNameWidth(tut1text)/2), ttheight, 0, tut1text);
+			ttheight += V_LevelNameHeight(tut2text) + 2;
 			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset6 - (V_LevelNameWidth(tut2text)/2), ttheight, 0, tut2text);
 		}
 		else
@@ -509,7 +512,7 @@ void Y_IntermissionDrawer(void)
 			{
 				ttheight = 24;
 				V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
-				ttheight += V_LevelNameHeight(data.spec.passed1) + 2;
+				ttheight += V_LevelNameHeight(data.spec.passed2) + 2;
 				V_DrawLevelTitle(data.spec.passedx2 + xoffset2, ttheight, 0, data.spec.passed2);
 			}
 			else
