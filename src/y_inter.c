@@ -399,10 +399,10 @@ void Y_IntermissionDrawer(void)
 
 		// draw the "got through act" lines and act number
 		V_DrawLevelTitle(data.coop.passedx1, 49, 0, data.coop.passed1);
-		V_DrawLevelTitle(data.coop.passedx2, 49+V_LevelNameHeight(data.coop.passed2)+2, 0, data.coop.passed2);
+		V_DrawLevelTitle(data.coop.passedx2, 49+V_LevelNameHeight(data.coop.passed1)+2, 0, data.coop.passed2);
 
 		if (data.coop.actnum)
-			V_DrawLevelActNum(244, 57, 0, data.coop.actnum);
+			V_DrawLevelActNum(244, 58, 0, data.coop.actnum);
 
 		bonusy = 150;
 		// Total
@@ -1384,21 +1384,21 @@ void Y_StartIntermission(void)
 			// too long so just show "YOU GOT THROUGH THE ACT"
 			if (strlen(skins[players[consoleplayer].skin].realname) > 13)
 			{
-				strcpy(data.coop.passed1, "YOU GOT");
-				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "THROUGH ACT" : "THROUGH THE ACT");
+				strcpy(data.coop.passed1, "you got");
+				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
 			}
 			// long enough that "X GOT" won't fit so use "X PASSED THE ACT"
 			else if (strlen(skins[players[consoleplayer].skin].realname) > 8)
 			{
 				strcpy(data.coop.passed1, skins[players[consoleplayer].skin].realname);
-				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "PASSED ACT" : "PASSED THE ACT");
+				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "passed act" : "passed the act");
 			}
 			// length is okay for normal use
 			else
 			{
-				snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s GOT",
+				snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s got",
 					skins[players[consoleplayer].skin].realname);
-				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "THROUGH ACT" : "THROUGH THE ACT");
+				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
 			}
 
 			// set X positions
@@ -1498,7 +1498,7 @@ void Y_StartIntermission(void)
 			// set up the "got through act" message according to skin name
 			if (stagefailed)
 			{
-				strcpy(data.spec.passed2, "SPECIAL STAGE");
+				strcpy(data.spec.passed2, "Special Stage");
 				data.spec.passed1[0] = '\0';
 			}
 			else if (ALL7EMERALDS(emeralds))
@@ -1507,13 +1507,13 @@ void Y_StartIntermission(void)
 					sizeof data.spec.passed1, "%s",
 					skins[players[consoleplayer].skin].realname);
 				data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
-				strcpy(data.spec.passed2, "GOT THEM ALL!");
+				strcpy(data.spec.passed2, "got them all!");
 
 				if (players[consoleplayer].charflags & SF_SUPER)
 				{
-					strcpy(data.spec.passed3, "CAN NOW BECOME");
+					strcpy(data.spec.passed3, "can now become");
 					snprintf(data.spec.passed4,
-						sizeof data.spec.passed4, "SUPER %s",
+						sizeof data.spec.passed4, "Super %s",
 						skins[players[consoleplayer].skin].realname);
 					data.spec.passed4[sizeof data.spec.passed4 - 1] = '\0';
 				}
@@ -1523,13 +1523,13 @@ void Y_StartIntermission(void)
 				if (strlen(skins[players[consoleplayer].skin].realname) <= SKINNAMESIZE-5)
 				{
 					snprintf(data.spec.passed1,
-						sizeof data.spec.passed1, "%s GOT",
+						sizeof data.spec.passed1, "%s got",
 						skins[players[consoleplayer].skin].realname);
 					data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				}
 				else
-					strcpy(data.spec.passed1, "YOU GOT");
-				strcpy(data.spec.passed2, "A CHAOS EMERALD");
+					strcpy(data.spec.passed1, "You got");
+				strcpy(data.spec.passed2, "a Chaos Emerald");
 				if (P_GetNextEmerald() > 6)
 				{
 					data.spec.passed2[15] = '?';

@@ -7175,7 +7175,7 @@ static void M_DrawSoundTest(void)
 				titl = va("%s - ", curplaying->title);
 		}
 		else
-			titl = "NONE - ";
+			titl = "None - ";
 
 		i = V_LevelNameWidth(titl);
 
@@ -7189,7 +7189,7 @@ static void M_DrawSoundTest(void)
 		while (x > y)
 		{
 			x -= i;
-			V_DrawLevelTitle(x, 24, 0, titl);
+			V_DrawLevelTitle(x, 22, 0, titl);
 		}
 
 		if (curplaying)
