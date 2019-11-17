@@ -7497,6 +7497,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_POPHAT_SHOOT1",
 	"S_POPHAT_SHOOT2",
 	"S_POPHAT_SHOOT3",
+	"S_POPHAT_SHOOT4",
+	"S_POPSHOT",
+	"S_POPSHOT_TRAIL",
 
 	"S_HIVEELEMENTAL_LOOK",
 	"S_HIVEELEMENTAL_PREPARE1",
@@ -8361,6 +8364,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_PENGUINATOR",
 	"MT_POPHAT",
 	"MT_POPSHOT",
+	"MT_POPSHOT_TRAIL",
 
 	"MT_HIVEELEMENTAL",
 	"MT_BUMBLEBORE",
