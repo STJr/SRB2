@@ -1385,14 +1385,15 @@ boolean F_CreditResponder(event_t *event)
 
 void F_StartGameEvaluation(void)
 {
-	S_FadeOutStopMusic(5*MUSICRATE);
-
 	// Credits option in secrets menu
 	if (cursaveslot == -1)
 	{
+		S_FadeOutStopMusic(2*MUSICRATE);
 		F_StartGameEnd();
 		return;
 	}
+
+	S_FadeOutStopMusic(5*MUSICRATE);
 
 	G_SetGamestate(GS_EVALUATION);
 
@@ -2153,7 +2154,6 @@ void F_StartGameEnd(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	S_StopMusic();
 	S_StopSounds();
 
 	// In case menus are still up?!!
