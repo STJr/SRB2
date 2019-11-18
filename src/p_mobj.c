@@ -9693,7 +9693,6 @@ void P_MobjThinker(mobj_t *mobj)
 								fixed_t x = mobj->spawnpoint->x << FRACBITS;
 								fixed_t y = mobj->spawnpoint->y << FRACBITS;
 								fixed_t z = mobj->spawnpoint->z << FRACBITS;
-								fixed_t dist = P_AproxDistance(mobj->x - x, mobj->y - y);
 								angle_t diff = R_PointToAngle2(mobj->x, mobj->y, x, y) - mobj->angle;
 								if (diff > ANGLE_180)
 									mobj->angle -= DRAGONTURNSPEED;
