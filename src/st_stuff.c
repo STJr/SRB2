@@ -1308,7 +1308,7 @@ void ST_drawTitleCard(void)
 		lvlttlxpos -= V_LevelActNumWidth(actnum);
 
 	ttlnumxpos = lvlttlxpos + V_LevelNameWidth(lvlttl);
-	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("ZONE"));
+	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("Zone"));
 	ttlnumxpos++;
 
 	if (lvlttlxpos < 0)
@@ -1332,7 +1332,7 @@ void ST_drawTitleCard(void)
 
 	V_DrawLevelTitle(lvlttlxpos - ttlscroll, 80, V_PERPLAYER, lvlttl);
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-		V_DrawLevelTitle(zonexpos + ttlscroll, 104, V_PERPLAYER, M_GetText("ZONE"));
+		V_DrawLevelTitle(zonexpos + ttlscroll, 104, V_PERPLAYER, M_GetText("Zone"));
 	V_DrawCenteredString(subttlxpos - ttlnumxpos, 128, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
 
 	lt_lasttic = lt_ticker;
@@ -2236,7 +2236,7 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
 	}
 
-	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && stplyr->exiting)
+	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && (stplyr->exiting || (stplyr->pflags & PF_FINISHED)))
 	{
 		UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
 		if (numneeded)
@@ -2251,7 +2251,7 @@ static void ST_drawTextHUD(void)
 					continue;
 
 				total++;
-				if (players[i].exiting)
+				if (players[i].exiting || (players[i].pflags & PF_FINISHED))
 					exiting++;
 			}
 

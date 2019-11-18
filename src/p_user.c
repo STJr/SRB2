@@ -636,6 +636,10 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->marebonuslap = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
+#ifdef ROTSPRITE
+	player->mo->rollangle = 0;
+#endif
+
 	P_SetTarget(&player->mo->target, NULL);
 	P_SetTarget(&player->axis1, P_SetTarget(&player->axis2, NULL));
 
@@ -762,6 +766,9 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->secondjump = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
+#ifdef ROTSPRITE
+	player->mo->rollangle = 0;
+#endif
 
 	player->powers[pw_shield] = SH_NONE;
 	player->powers[pw_super] = 0;
@@ -2124,6 +2131,30 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 	P_SetTarget(&mobj->target, player->mo); // the one thing P_SpawnGhostMobj doesn't do
 }
 
+/** Called when \p player finishes the level.
+  *
+  * Only use for cases where the player should be able to move
+  * while waiting for others to finish. Otherwise, use P_DoPlayerExit().
+  *
+  * In single player or if ::cv_exitmove is disabled, this will also cause
+  * P_PlayerThink() to call P_DoPlayerExit(), so you do not need to
+  * make a special cases for those.
+  *
+  * \param player The player who finished the level.
+  * \sa P_DoPlayerExit
+  *
+  */
+void P_DoPlayerFinish(player_t *player)
+{
+	if (player->pflags & PF_FINISHED)
+		return;
+
+	player->pflags |= PF_FINISHED;
+
+	if (netgame)
+		CONS_Printf(M_GetText("%s has completed the level.\n"), player_names[player-players]);
+}
+
 //
 // P_DoPlayerExit
 //
@@ -2158,12 +2189,14 @@ void P_DoPlayerExit(player_t *player)
 		player->pflags |= P_GetJumpFlags(player);
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 	}
+	else if (player->pflags & PF_STARTDASH)
+	{
+		player->pflags &= ~PF_STARTDASH;
+		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+	}
 	player->powers[pw_underwater] = 0;
 	player->powers[pw_spacetime] = 0;
 	P_RestoreMusic(player);
-
-	if (playeringame[player-players] && netgame && !circuitmap)
-		CONS_Printf(M_GetText("%s has completed the level.\n"), player_names[player-players]);
 }
 
 #define SPACESPECIAL 12
@@ -7701,9 +7734,9 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 	I_Assert(!P_MobjWasRemoved(player->mo));
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
-		ground = player->mo->ceilingz - FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
+		ground = player->mo->ceilingz - FixedMul(mobjinfo[MT_SPINFIRE].height - 1, player->mo->scale);
 	else
-		ground = player->mo->floorz;
+		ground = player->mo->floorz + 1;
 
 	if (cropcircle)
 	{
@@ -9889,10 +9922,20 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	pviewheight = FixedMul(41*player->height/48, mo->scale);
 
-	if (mo->eflags & MFE_VERTICALFLIP)
-		z = mo->z + mo->height - pviewheight - camheight + distz;
+	if (sign)
+	{
+		if (mo->eflags & MFE_VERTICALFLIP)
+			z = sign->ceilingz - pviewheight - camheight;
+		else
+			z = sign->floorz + pviewheight + camheight;
+	}
 	else
-		z = mo->z + pviewheight + camheight + distz;
+	{
+		if (mo->eflags & MFE_VERTICALFLIP)
+			z = mo->z + mo->height - pviewheight - camheight + distz;
+		else
+			z = mo->z + pviewheight + camheight + distz;
+	}
 
 	// move camera down to move under lower ceilings
 	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
@@ -11398,6 +11441,14 @@ void P_PlayerThink(player_t *player)
 			if (server)
 				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 		}
+	}
+
+	if (player->pflags & PF_FINISHED)
+	{
+		if (cv_exitmove.value && !G_EnoughPlayersFinished())
+			player->exiting = 0;
+		else
+			P_DoPlayerExit(player);
 	}
 
 	// check water content, set stuff in mobj
