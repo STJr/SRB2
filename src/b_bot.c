@@ -153,7 +153,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 				thinkfly = true;
 		else
 			thinkfly = false;
-		
+
 		// Ready for takeoff
 		if (flymode == 1)
 		{
@@ -180,7 +180,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 				player->pflags &= ~PF_JUMPED;
 			}
 		}
-		// Read player inputs
+		// Read player inputs while carrying
 		else if (flymode == 2)
 		{
 			cmd->forwardmove = pcmd->forwardmove;
@@ -203,10 +203,10 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 			}
 		}
 	}
-	
+
 	if (flymode && P_IsObjectOnGround(tails) && !(pcmd->buttons & BT_JUMP))
 		flymode = 0;
-	
+
 	// ********
 	// SPINNING
 	if (panic || flymode || !(player->pflags & PF_SPINNING) || (player->pflags & PF_JUMPED))
@@ -234,7 +234,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 					spinmode = true;
 				}
 				else
-					spinmode = 0;
+					spinmode = false;
 			}
 			// Spin
 			else if (player->dashspeed == bot->dashspeed && player->pflags & PF_SPINNING)
@@ -253,14 +253,15 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		// 2D mode
 		else
 		{
-			if ((player->dashspeed && !bmom) || (player->dashspeed == bot->dashspeed && player->pflags & PF_SPINNING))
+			if (((player->dashspeed && !bmom) || (player->dashspeed == bot->dashspeed && (player->pflags & PF_SPINNING)))
+				&& ((bot->pflags & PF_SPINNING) || !spin_last))
 			{
 				spin = true;
 				spinmode = true;
 			}
 		}
 	}
-	
+
 	// ********
 	// FOLLOW
 	if (!(flymode || spinmode))
@@ -288,7 +289,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		{
 			// Copy inputs
 			cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
-			bot->drawangle = player->drawangle;
+			bot->drawangle = ang;
 			cmd->forwardmove = 8 * pcmd->forwardmove / 10;
 			cmd->sidemove = 8 * pcmd->sidemove / 10;
 		}
@@ -301,21 +302,22 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		// Flying catch-up
 		if (bot->pflags & PF_THOKKED)
 		{
-			cmd->forwardmove = min(50, dist/scale/8);
+			cmd->forwardmove = min(MAXPLMOVE, (dist/scale)>>3);
 			if (zdist < -64*scale)
 				spin = true;
 			else if (zdist > 0 && !jump_last)
 				jump = true;
 		}
-		
+
 		// Just landed
 		if (tails->eflags & MFE_JUSTHITFLOOR)
 			jump = false;
 		// Start jump
-		else if (!jump_last && !(bot->pflags & PF_JUMPED) && !(player->pflags & PF_SPINNING)
+		else if (!jump_last && !(bot->pflags & PF_JUMPED) //&& !(player->pflags & PF_SPINNING)
 			&& ((zdist > 32*scale && player->pflags & PF_JUMPED) // Following
 				|| (zdist > 64*scale && panic) // Vertical catch-up
-				|| (bmom < scale>>3 && dist > followthres && !(bot->powers[pw_carry])) // Stopped & not in carry state
+				|| (stalled && anxiety > 20 && bot->powers[pw_carry] == CR_NONE)
+				//|| (bmom < scale>>3 && dist > followthres && !(bot->powers[pw_carry])) // Stopped & not in carry state
 				|| (bot->pflags & PF_SPINNING && !(bot->pflags & PF_JUMPED)))) // Spinning
 					jump = true;
 		// Hold jump
@@ -325,12 +327,12 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		else if (bot->pflags & PF_JUMPED && panic && !jump_last)
 			jump = true;
 	}
-	
+
 	// ********
 	// HISTORY
 	jump_last = jump;
 	spin_last = spin;
-	
+
 	// ********
 	// Thinkfly overlay
 		// doing this later :P
