@@ -3227,8 +3227,10 @@ boolean P_SetupLevel(boolean skipprecip)
 	}
 
 	// Stage title!
+	WipeStageTitle = (!titlemapinaction);
+	ST_startTitleCard();
 	if (rendermode != render_none
-		&& (!titlemapinaction)
+		&& WipeStageTitle
 		&& ranspecialwipe != 2
 		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
 #ifdef HAVE_BLUA
@@ -3236,33 +3238,8 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 	)
 	{
-		tic_t starttime = I_GetTime();
-		tic_t endtime = starttime + (10*NEWTICRATERATIO);
-		tic_t nowtime = starttime;
-		tic_t lasttime = starttime;
-		while (nowtime < endtime)
-		{
-			// draw loop
-			while (!((nowtime = I_GetTime()) - lasttime))
-				I_Sleep();
-			lasttime = nowtime;
-
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
-			stplyr = &players[consoleplayer];
-			ST_drawLevelTitle(nowtime - starttime);
-			if (splitscreen)
-			{
-				stplyr = &players[secondarydisplayplayer];
-				ST_drawLevelTitle(nowtime - starttime);
-			}
-
-			I_OsPolling();
-			I_UpdateNoBlit();
-			I_FinishUpdate(); // page flip or blit buffer
-
-			if (moviemode) // make sure we save frames for the white hold too
-				M_SaveFrame();
-		}
+		ST_runTitleCard();
+		ST_runPreLevelTitleCard(lt_ticker);
 	}
 
 	return true;

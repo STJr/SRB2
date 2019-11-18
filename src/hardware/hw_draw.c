@@ -380,9 +380,9 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 	{
 		FSurfaceInfo Surf;
 		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[cv_translucenthud.value];
-		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[cv_translucenthud.value];
-		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[cv_translucenthud.value];
+		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[st_translucency];
+		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[st_translucency];
+		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[st_translucency];
 		else Surf.FlatColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
@@ -538,9 +538,9 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	{
 		FSurfaceInfo Surf;
 		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[cv_translucenthud.value];
-		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[cv_translucenthud.value];
-		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[cv_translucenthud.value];
+		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[st_translucency];
+		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[st_translucency];
+		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[st_translucency];
 		else Surf.FlatColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);

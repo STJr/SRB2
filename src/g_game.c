@@ -1992,7 +1992,7 @@ void G_Ticker(boolean run)
 			if (titledemo)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
-			ST_Ticker();
+			ST_Ticker(run);
 			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();

@@ -910,9 +910,17 @@ static int libd_RandomChance(lua_State *L)
 	return 1;
 }
 
-// 30/10/18 Lat': Get cv_translucenthud's value for HUD rendering as a normal V_xxTRANS int
+// 30/10/18 Lat': Get st_translucency's value for HUD rendering as a normal V_xxTRANS int
 // Could as well be thrown in global vars for ease of access but I guess it makes sense for it to be a HUD fn
 static int libd_getlocaltransflag(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, (10-st_translucency)*V_10TRANS);
+	return 1;
+}
+
+// Get cv_translucenthud's value for HUD rendering as a normal V_xxTRANS int
+static int libd_getusertransflag(lua_State *L)
 {
 	HUDONLY
 	lua_pushinteger(L, (10-cv_translucenthud.value)*V_10TRANS);	// A bit weird that it's called "translucenthud" yet 10 is fully opaque :V
@@ -954,6 +962,7 @@ static luaL_Reg lib_draw[] = {
 	{"dupy", libd_dupy},
 	{"renderer", libd_renderer},
 	{"localTransFlag", libd_getlocaltransflag},
+	{"userTransFlag", libd_getusertransflag},
 	{NULL, NULL}
 };
 

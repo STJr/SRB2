@@ -24,7 +24,7 @@
 //
 
 // Called by main loop.
-void ST_Ticker(void);
+void ST_Ticker(boolean run);
 
 // Called by main loop.
 void ST_Drawer(void);
@@ -47,8 +47,17 @@ void ST_ReloadSkinFaceGraphics(void);
 
 void ST_doPaletteStuff(void);
 
-// level title draw
-void ST_drawLevelTitle(tic_t titletime);
+// title card
+void ST_startTitleCard(void);
+void ST_preDrawTitleCard(void);
+void ST_runTitleCard(void);
+void ST_drawTitleCard(void);
+void ST_preLevelTitleCardLoop(tic_t ticker, boolean update);
+void ST_runPreLevelTitleCard(tic_t ticker);
+void ST_drawWipeTitleCard(void);
+
+extern tic_t lt_ticker, lt_lasttic;
+extern tic_t lt_exitticker, lt_endtime;
 
 // return if player a is in the same team as player b
 boolean ST_SameTeam(player_t *a, player_t *b);
@@ -59,6 +68,7 @@ boolean ST_SameTeam(player_t *a, player_t *b);
 
 extern boolean st_overlay; // sb overlay on or off when fullscreen
 extern INT32 st_palette; // 0 is default, any others are special palettes.
+extern INT32 st_translucency;
 
 extern lumpnum_t st_borderpatchnum;
 // patches, also used in intermission

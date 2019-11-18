@@ -141,7 +141,12 @@ void F_MenuPresTicker(boolean run);
 #define FORCEWIPEOFF -2
 
 extern boolean WipeInAction;
+extern boolean WipeStageTitle;
 extern INT32 lastwipetic;
+
+// Don't know where else to place this constant
+// But this file seems appropriate
+#define PRELEVELTIME 24 // frames in tics
 
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
