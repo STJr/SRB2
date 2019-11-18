@@ -33,6 +33,17 @@ static boolean spinmode = false;
 static boolean thinkfly = false;
 static mobj_t *overlay;
 
+static inline void B_ResetAI()
+{
+	jump_last = false;
+	spin_last = false;
+	anxiety = 0;
+	panic = false;
+	flymode = 0;
+	spinmode = false;
+	thinkfly = false;
+}
+
 static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
 	boolean forward=false, backward=false, left=false, right=false, jump=false, spin=false;
@@ -135,11 +146,9 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 			if (!jump_last)
 			{
 				jump = true;
-				if (bot->pflags & PF_JUMPED)
-				{
-					flymode = 1;
-					thinkfly = false;
-				}
+				flymode = 1;
+				thinkfly = false;
+				bot->pflags |= PF_CANCARRY;
 			}
 		}
 
@@ -168,14 +177,8 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 				flymode = 0;
 			
 			// Set carried state
-			if (bot->pflags & PF_THOKKED && flymode == 1
-				&& !P_IsObjectOnGround(sonic)
-				&& dist < touchdist
-				&& zdist < 32*scale
-				&& flip * sonic->momz < 0)
+			if (player->powers[pw_carry] == CR_PLAYER && sonic->tracer == tails)
 			{
-				P_SetTarget(&sonic->tracer, tails);
-				player->powers[pw_carry] = CR_PLAYER;
 				flymode = 2;
 				player->pflags &= ~PF_JUMPED;
 			}
@@ -193,12 +196,9 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 			else if (!jump_last)
 				jump = true;
 			// End flymode
-			if (player->pflags & PF_JUMPED
-				|| player->powers[pw_carry] != CR_PLAYER
+			if (player->powers[pw_carry] != CR_PLAYER
 				|| P_IsObjectOnGround(sonic))
 			{
-				player->powers[pw_carry] = CR_NONE;
-				P_SetTarget(&sonic->tracer, NULL);
 				flymode = 0;
 			}
 		}
@@ -379,7 +379,7 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward, boolean left, boolean right, boolean strafeleft, boolean straferight, boolean jump, boolean spin)
 {
 	// don't try to do stuff if your sonic is in a minecart or something
-	if (players[consoleplayer].powers[pw_carry])
+	if (players[consoleplayer].powers[pw_carry] && players[consoleplayer].powers[pw_carry] != CR_PLAYER)
 		return;
 	// Turn the virtual keypresses into ticcmd_t.
 	if (twodlevel || mo->flags2 & MF2_TWOD) {
@@ -462,7 +462,7 @@ boolean B_CheckRespawn(player_t *player)
 	// If he's doing any of these things, he probably doesn't want to see us.
 	if (sonic->player->pflags & (PF_GLIDING|PF_SLIDING|PF_BOUNCING)
 	|| (sonic->player->panim != PA_IDLE && sonic->player->panim != PA_WALK)
-	|| (sonic->player->powers[pw_carry]))
+	|| (sonic->player->powers[pw_carry] && sonic->player->powers[pw_carry] != CR_PLAYER))
 		return false;
 
 	// Low ceiling, do not want!
@@ -496,6 +496,8 @@ void B_RespawnBot(INT32 playernum)
 
 	if (!sonic || sonic->health <= 0)
 		return;
+
+	B_ResetAI();
 
 	player->bot = 1;
 	P_SpawnPlayer(playernum);
