@@ -23,6 +23,7 @@
 #include "v_video.h"
 #include "z_zone.h"
 #include "hu_stuff.h"
+#include "console.h"
 #include "s_sound.h"
 #include "i_system.h"
 #include "m_menu.h"
@@ -1197,7 +1198,10 @@ static void ST_cacheLevelTitle(void)
 //
 void ST_startTitleCard(void)
 {
+	// cache every HUD patch used
 	ST_cacheLevelTitle();
+
+	// initialize HUD variables
 	lt_ticker = lt_exitticker = lt_lasttic = 0;
 	lt_endtime = 2*TICRATE;
 	lt_scroll = BASEVIDWIDTH * FRACUNIT;
@@ -1323,9 +1327,9 @@ void ST_drawTitleCard(void)
 }
 
 //
-// Drawer for ST_runPreLevelTitleCard.
+// Drawer for G_PreLevelTitleCard.
 //
-void ST_preLevelTitleCardLoop(tic_t ticker, boolean update)
+void ST_preLevelTitleCardDrawer(tic_t ticker, boolean update)
 {
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 	if (ticker < PRELEVELTIME-1)
@@ -1335,34 +1339,11 @@ void ST_preLevelTitleCardLoop(tic_t ticker, boolean update)
 	I_UpdateNoBlit();
 	if (update)
 		I_FinishUpdate(); // page flip or blit buffer
-
-	if (moviemode) // make sure we save frames for the white hold too
-		M_SaveFrame();
-}
-
-//
-// Run the title card before fading in to the level.
-//
-void ST_runPreLevelTitleCard(tic_t ticker, boolean update)
-{
-	tic_t starttime = I_GetTime();
-	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
-	tic_t nowtime = starttime;
-	tic_t lasttime = starttime;
-	while (nowtime < endtime)
-	{
-		// draw loop
-		while (!((nowtime = I_GetTime()) - lasttime))
-			I_Sleep();
-		lasttime = nowtime;
-		ST_runTitleCard();
-		ST_preLevelTitleCardLoop(ticker, update);
-	}
 }
 
 //
 // Draw the title card while on a wipe.
-// Also used in ST_runPreLevelTitleCard.
+// Also used in G_PreLevelTitleCard.
 //
 void ST_drawWipeTitleCard(void)
 {
@@ -1375,6 +1356,12 @@ void ST_drawWipeTitleCard(void)
 		ST_preDrawTitleCard();
 		ST_drawTitleCard();
 	}
+
+	// Draw on top of the title card,
+	// which is already on top of the wipe
+	// What a mess
+	CON_Drawer();
+	M_Drawer();
 }
 
 static void ST_drawPowerupHUD(void)

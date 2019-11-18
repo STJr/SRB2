@@ -1703,6 +1703,50 @@ void G_DoLoadLevel(boolean resetplayer)
 	CON_ClearHUD();
 }
 
+//
+// Start the title card.
+//
+void G_StartTitleCard(void)
+{
+	// clear the hud
+	CON_ClearHUD();
+
+	// prepare status bar
+	ST_startTitleCard();
+
+	// start the title card
+	WipeStageTitle = (!titlemapinaction);
+}
+
+//
+// Run the title card before fading in to the level.
+//
+void G_PreLevelTitleCard(tic_t ticker, boolean update)
+{
+	tic_t starttime = I_GetTime();
+	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
+	tic_t nowtime = starttime;
+	tic_t lasttime = starttime;
+	while (nowtime < endtime)
+	{
+		// draw loop
+		while (!((nowtime = I_GetTime()) - lasttime))
+			I_Sleep();
+		lasttime = nowtime;
+
+		// Run some bullshit whatever
+		D_ProcessEvents();
+
+		ST_runTitleCard();
+		ST_preLevelTitleCardDrawer(ticker, update);
+
+		if (moviemode)
+			M_SaveFrame();
+		if (takescreenshot) // Only take screenshots after drawing.
+			M_DoScreenShot();
+	}
+}
+
 INT32 pausedelay = 0;
 boolean pausebreakkey = false;
 static INT32 camtoggledelay, camtoggledelay2 = 0;

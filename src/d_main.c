@@ -180,6 +180,9 @@ void D_ProcessEvents(void)
 		if (M_ScreenshotResponder(ev))
 			continue; // ate the event
 
+		if (WipeStageTitle)
+			continue;
+
 		if (gameaction == ga_nothing && gamestate == GS_TITLESCREEN)
 		{
 			if (cht_Responder(ev))
@@ -440,7 +443,7 @@ static void D_Display(void)
 			{
 				lt_ticker--;
 				lt_lasttic = lt_ticker;
-				ST_preLevelTitleCardLoop(0, false);
+				ST_preLevelTitleCardDrawer(0, false);
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 				F_WipeStartScreen();
 			}

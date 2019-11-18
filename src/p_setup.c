@@ -3227,8 +3227,9 @@ boolean P_SetupLevel(boolean skipprecip)
 	}
 
 	// Stage title!
-	WipeStageTitle = (!titlemapinaction);
-	ST_startTitleCard();
+	G_StartTitleCard();
+
+	// Can the title card actually run, though?
 	if (rendermode != render_none
 		&& WipeStageTitle
 		&& ranspecialwipe != 2
@@ -3237,10 +3238,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		&& LUA_HudEnabled(hud_stagetitle)
 #endif
 	)
-	{
-		ST_runTitleCard();
-		ST_runPreLevelTitleCard(lt_ticker, true);
-	}
+		G_PreLevelTitleCard(lt_ticker, true);
 
 	return true;
 }
