@@ -246,6 +246,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	{
 	case S_PLAY_STND:
 	case S_PLAY_WAIT:
+	case S_PLAY_NIGHTS_STAND:
 		player->panim = PA_IDLE;
 		break;
 	case S_PLAY_EDGE:
@@ -254,6 +255,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_WALK:
 	case S_PLAY_SKID:
 	case S_PLAY_FLOAT:
+	case S_PLAY_NIGHTS_FLOAT:
 		player->panim = PA_WALK;
 		break;
 	case S_PLAY_RUN:
@@ -269,6 +271,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		break;
 	case S_PLAY_ROLL:
 	//case S_PLAY_SPINDASH: -- everyone can ROLL thanks to zoom tubes...
+	case S_PLAY_NIGHTS_ATTACK:
 		player->panim = PA_ROLL;
 		break;
 	case S_PLAY_JUMP:
