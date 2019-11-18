@@ -181,7 +181,6 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 			if (player->powers[pw_carry] == CR_PLAYER && sonic->tracer == tails)
 			{
 				flymode = 2;
-				player->pflags &= ~PF_JUMPED;
 			}
 		}
 		// Read player inputs while carrying
@@ -197,8 +196,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 			else if (!jump_last)
 				jump = true;
 			// End flymode
-			if (player->powers[pw_carry] != CR_PLAYER
-				|| P_IsObjectOnGround(sonic))
+			if (player->powers[pw_carry] != CR_PLAYER)
 			{
 				flymode = 0;
 			}

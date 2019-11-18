@@ -8367,7 +8367,7 @@ static void P_MovePlayer(player_t *player)
 
 			// Tails Put-Put noise
 			if (player->charability == CA_FLY
-				&& player->bot != 1
+				&& (player->pflags & PF_CANCARRY)
 				&& !(player->mo->eflags & MFE_UNDERWATER)
 				&& leveltime % 10 == 0
 				&& !player->spectator)
