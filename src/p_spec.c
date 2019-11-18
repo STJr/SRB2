@@ -4675,7 +4675,7 @@ DoneSection2:
 			{
 				INT32 lineindex;
 
-				P_DoPlayerExit(player);
+				P_DoPlayerFinish(player);
 
 				P_SetupSignExit(player);
 				// important: use sector->tag on next line instead of player->mo->subsector->tag

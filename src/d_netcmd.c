@@ -87,6 +87,7 @@ static void JoinTimeout_OnChange(void);
 
 static void CoopStarposts_OnChange(void);
 static void CoopLives_OnChange(void);
+static void ExitMove_OnChange(void);
 
 static void Ringslinger_OnChange(void);
 static void Gravity_OnChange(void);
@@ -341,6 +342,14 @@ consvar_t cv_nettimeout = {"nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons
 static CV_PossibleValue_t jointimeout_cons_t[] = {{5*TICRATE, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
 consvar_t cv_jointimeout = {"jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t pingtimeout_cons_t[] = {{8, "MIN"}, {120, "MAX"}, {0, NULL}};
+consvar_t cv_pingtimeout = {"pingtimeout", "10", CV_SAVE, pingtimeout_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// show your ping on the HUD next to framerate. Defaults to warning only (shows up if your ping is > maxping)
+static CV_PossibleValue_t showping_cons_t[] = {{0, "Off"}, {1, "Always"}, {2, "Warning"}, {0, NULL}};
+consvar_t cv_showping = {"showping", "Warning", CV_SAVE, showping_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 // Intermission time Tails 04-19-2002
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
 consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -353,8 +362,11 @@ consvar_t cv_cooplives = {"cooplives", "Avoid Game Over", CV_NETVAR|CV_CALL|CV_C
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "1/4"}, {2, "Half"}, {3, "3/4"}, {4, "All"}, {0, NULL}};
 consvar_t cv_playersforexit = {"playersforexit", "All", CV_NETVAR, playersforexit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_exitmove = {"exitmove", "Off", CV_NETVAR|CV_CALL, CV_OnOff, ExitMove_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_runscripts = {"runscripts", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -514,6 +526,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_inttime);
 	CV_RegisterVar(&cv_advancemap);
 	CV_RegisterVar(&cv_playersforexit);
+	CV_RegisterVar(&cv_exitmove);
 	CV_RegisterVar(&cv_timelimit);
 	CV_RegisterVar(&cv_playbackspeed);
 	CV_RegisterVar(&cv_forceskin);
@@ -577,6 +590,8 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_skipmapcheck);
 	CV_RegisterVar(&cv_sleep);
 	CV_RegisterVar(&cv_maxping);
+	CV_RegisterVar(&cv_pingtimeout);
+	CV_RegisterVar(&cv_showping);
 
 #ifdef SEENAMES
 	 CV_RegisterVar(&cv_allowseenames);
@@ -3776,6 +3791,17 @@ static void CoopLives_OnChange(void)
 
 		P_SpectatorJoinGame(&players[i]);
 	}
+}
+
+static void ExitMove_OnChange(void)
+{
+	if (!(netgame || multiplayer) || gametype != GT_COOP)
+		return;
+
+	if (cv_exitmove.value)
+		CONS_Printf(M_GetText("Players can now move after completing the level.\n"));
+	else
+		CONS_Printf(M_GetText("Players can no longer move after completing the level.\n"));
 }
 
 UINT32 timelimitintics = 0;

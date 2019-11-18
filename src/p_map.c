@@ -592,6 +592,9 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if (!(tails->pflags & PF_CANCARRY))
 		return;
 
+	if (sonic->pflags & PF_FINISHED)
+		return;
+
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
 
@@ -658,31 +661,32 @@ static void P_SlapStick(mobj_t *fang, mobj_t *pole)
 	momx2 = fang->momx/dist;
 	momy2 = fang->momy/dist;
 
-	pole->tracer->momx = momx1 + (dist-1)*momx2;
-	pole->tracer->momy = momy1 + (dist-1)*momy2;
+	pole->tracer->tracer->momx = momx1 + (dist-1)*momx2;
+	pole->tracer->tracer->momy = momy1 + (dist-1)*momy2;
 	fang->momx = (dist-1)*momx1 + momx2;
 	fang->momy = (dist-1)*momy1 + momy2;
 #undef dist
 
-	P_SetMobjState(pole, pole->info->deathstate);
-
-	P_SetObjectMomZ(pole->tracer, 6*FRACUNIT, false);
-	pole->tracer->flags &= ~(MF_NOGRAVITY|MF_NOCLIP);
-	pole->tracer->movedir = ANGLE_67h;
-	if ((R_PointToAngle(fang->x - pole->tracer->x, fang->y - pole->tracer->y) - pole->angle) > ANGLE_180)
-		pole->tracer->movedir = InvAngle(pole->tracer->movedir);
+	P_SetObjectMomZ(pole->tracer->tracer, 6*FRACUNIT, false);
+	pole->tracer->tracer->flags &= ~(MF_NOGRAVITY|MF_NOCLIP);
+	pole->tracer->tracer->movedir = ANGLE_67h;
+	if ((R_PointToAngle(fang->x - pole->tracer->tracer->x, fang->y - pole->tracer->tracer->y) - pole->angle) > ANGLE_180)
+		pole->tracer->tracer->movedir = InvAngle(pole->tracer->movedir);
 
 	P_SetObjectMomZ(fang, 14*FRACUNIT, false);
 	fang->flags |= MF_NOGRAVITY|MF_NOCLIP;
 	P_SetMobjState(fang, fang->info->xdeathstate);
 
-	pole->tracer->tics = pole->tics = fang->tics;
+	pole->tracer->tracer->tics = pole->tracer->tics = pole->tics = fang->tics;
 
 	var1 = var2 = 0;
-	A_Scream(pole->tracer);
+	A_Scream(pole->tracer->tracer);
 	S_StartSound(fang, sfx_altdi1);
 
+	P_SetTarget(&pole->tracer->tracer, NULL);
+	P_SetMobjState(pole->tracer, pole->info->xdeathstate);
 	P_SetTarget(&pole->tracer, NULL);
+	P_SetMobjState(pole, pole->info->deathstate);
 }
 
 static void P_PlayerBarrelCollide(mobj_t *toucher, mobj_t *barrel)
@@ -1086,7 +1090,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (thing->z + thing->height < tmthing->z)
 			return true; // underneath
-		if (!thing->tracer)
+		if (!thing->tracer || !thing->tracer->tracer)
 			return true;
 		P_SlapStick(tmthing, thing);
 		// no return value was used in the original prototype script at this point,

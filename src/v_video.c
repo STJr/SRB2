@@ -2899,7 +2899,7 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 			continue;
 		}
 
-		c = toupper(*ch) - LT_FONTSTART;
+		c = *ch - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 		{
 			cx += 16*dupx;
@@ -2934,7 +2934,7 @@ INT32 V_LevelNameWidth(const char *string)
 	{
 		if (string[i] & 0x80)
 			continue;
-		c = toupper(string[i]) - LT_FONTSTART;
+		c = string[i] - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 			w += 16;
 		else
@@ -2953,7 +2953,7 @@ INT32 V_LevelNameHeight(const char *string)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = toupper(string[i]) - LT_FONTSTART;
+		c = string[i] - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 			continue;
 

@@ -172,6 +172,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle);
 void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);
 void P_PlayerAfterThink(player_t *player);
+void P_DoPlayerFinish(player_t *player);
 void P_DoPlayerExit(player_t *player);
 void P_NightserizePlayer(player_t *player, INT32 ptime);
 

@@ -1196,20 +1196,20 @@ static void R_ProjectSprite(mobj_t *thing)
 #ifdef ROTSPRITE
 		sprinfo = NULL;
 #endif
-	}
 
-	if (rot >= sprdef->numframes)
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
-			sizeu1(rot), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
-		thing->sprite = states[S_UNKNOWN].sprite;
-		thing->frame = states[S_UNKNOWN].frame;
-		sprdef = &sprites[thing->sprite];
-		rot = thing->frame&FF_FRAMEMASK;
-		if (!thing->skin)
+		if (rot >= sprdef->numframes)
 		{
-			thing->state->sprite = thing->sprite;
-			thing->state->frame = thing->frame;
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
+				sizeu1(rot), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
+			if (thing->sprite == thing->state->sprite && thing->frame == thing->state->frame)
+			{
+				thing->state->sprite = states[S_UNKNOWN].sprite;
+				thing->state->frame = states[S_UNKNOWN].frame;
+			}
+			thing->sprite = states[S_UNKNOWN].sprite;
+			thing->frame = states[S_UNKNOWN].frame;
+			sprdef = &sprites[thing->sprite];
+			rot = thing->frame&FF_FRAMEMASK;
 		}
 	}
 

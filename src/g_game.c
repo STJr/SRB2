@@ -2833,6 +2833,31 @@ void G_AddPlayer(INT32 playernum)
 		P_DoPlayerExit(p);
 }
 
+boolean G_EnoughPlayersFinished(void)
+{
+	UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
+	INT32 total = 0;
+	INT32 exiting = 0;
+	INT32 i;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i] || players[i].spectator || players[i].bot)
+			continue;
+		if (players[i].lives <= 0)
+			continue;
+
+		total++;
+		if (players[i].pflags & PF_FINISHED)
+			exiting++;
+	}
+
+	if (exiting)
+		return exiting * 4 / total >= numneeded;
+	else
+		return false;
+}
+
 void G_ExitLevel(void)
 {
 	if (gamestate == GS_LEVEL)
@@ -4031,7 +4056,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 		len += strlen(mapheaderinfo[mapnum-1]->lvlttl);
 		if (!(mapheaderinfo[mapnum-1]->levelflags & LF_NOZONE))
 		{
-			zonetext = M_GetText("ZONE");
+			zonetext = M_GetText("Zone");
 			len += strlen(zonetext) + 1;	// ' ' + zonetext
 		}
 		if (actnum > 0)
@@ -5194,7 +5219,10 @@ void G_ReadMetalTic(mobj_t *metal)
 	{ // But wait, there's more!
 		xziptic = READUINT8(metal_p);
 		if (xziptic & EZT_FLIP)
+		{
 			metal->eflags ^= MFE_VERTICALFLIP;
+			metal->flags2 ^= MF2_OBJECTFLIP;
+		}
 		if (xziptic & EZT_SCALE)
 		{
 			metal->destscale = READFIXED(metal_p);

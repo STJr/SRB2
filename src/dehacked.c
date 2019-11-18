@@ -1201,6 +1201,14 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			word2 = tmp += 2;
 			i = atoi(word2); // used for numerical settings
 
+
+			if (fastcmp(word, "LEVELNAME"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
+					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
+				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
+				continue;
+			}
 			// CHEAP HACK: move this over here for lowercase subtitles
 			if (fastcmp(word, "SUBTITLE"))
 			{
@@ -1344,12 +1352,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 
 			// Strings that can be truncated
-			else if (fastcmp(word, "LEVELNAME"))
-			{
-				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
-					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
-				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
-			}
 			else if (fastcmp(word, "SELECTHEADING"))
 			{
 				deh_strlcpy(mapheaderinfo[num-1]->selectheading, word2,
@@ -5343,6 +5345,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FSGNA",
 	"S_FSGNB",
 	"S_FSGNC",
+	"S_FSGND",
 
 	// Black Eggman (Boss 7)
 	"S_BLACKEGG_STND",
@@ -7499,6 +7502,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_POPHAT_SHOOT1",
 	"S_POPHAT_SHOOT2",
 	"S_POPHAT_SHOOT3",
+	"S_POPHAT_SHOOT4",
+	"S_POPSHOT",
+	"S_POPSHOT_TRAIL",
 
 	"S_HIVEELEMENTAL_LOOK",
 	"S_HIVEELEMENTAL_PREPARE1",
@@ -8363,6 +8369,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_PENGUINATOR",
 	"MT_POPHAT",
 	"MT_POPSHOT",
+	"MT_POPSHOT_TRAIL",
 
 	"MT_HIVEELEMENTAL",
 	"MT_BUMBLEBORE",
@@ -8572,6 +8579,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"CANCARRY", // Can carry?
+	"FINISHED",
 
 	NULL // stop loop here.
 };

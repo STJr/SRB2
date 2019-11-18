@@ -4070,19 +4070,28 @@ bossjustdie:
 					mobj_t *pole = P_SpawnMobj(
 						mo->tracer->x - P_ReturnThrustX(mo->tracer, mo->tracer->angle, speed*time),
 						mo->tracer->y - P_ReturnThrustY(mo->tracer, mo->tracer->angle, speed*time),
-						mo->tracer->floorz + 4*FRACUNIT,
+						mo->tracer->floorz + (256+1)*FRACUNIT,
 						MT_FSGNB);
 					P_SetTarget(&pole->tracer, P_SpawnMobj(
+						pole->x, pole->y,
+						pole->z - 256*FRACUNIT,
+						MT_FSGNB));
+					P_SetTarget(&pole->tracer->tracer, P_SpawnMobj(
 						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
 						pole->y + P_ReturnThrustY(pole, mo->tracer->angle, FRACUNIT),
 						pole->z + 256*FRACUNIT,
 						MT_FSGNA));
-					pole->angle = mo->tracer->angle;
-					pole->tracer->angle = pole->angle - ANGLE_90;
+					pole->tracer->flags |= MF_NOCLIPTHING;
+					P_SetScale(pole, (pole->destscale = 2*FRACUNIT));
+					P_SetScale(pole->tracer, (pole->tracer->destscale = 2*FRACUNIT));
+					pole->angle = pole->tracer->angle = mo->tracer->angle;
+					pole->tracer->tracer->angle = pole->angle - ANGLE_90;
 					pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
 					pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
 					pole->tracer->momx = pole->momx;
 					pole->tracer->momy = pole->momy;
+					pole->tracer->tracer->momx = pole->momx;
+					pole->tracer->tracer->momy = pole->momy;
 				}
 			}
 			else
@@ -5121,7 +5130,7 @@ void A_SignPlayer(mobj_t *actor)
 		return;
 #endif
 
-	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins)
+	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins || signcolor >= MAXTRANSLATIONS)
 		return;
 
 	// if no face overlay, spawn one
@@ -5148,26 +5157,9 @@ void A_SignPlayer(mobj_t *actor)
 		if (signcolor)
 			;
 		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
-		{
 			signcolor = skin->prefoppositecolor;
-			/*
-			If you're here from the comment above Color_Opposite,
-			the following line is the one which is dependent on the
-			array being symmetrical. It gets the opposite of the
-			opposite of your desired colour just so it can get the
-			brightness frame for the End Sign. It's not a great
-			design choice, but it's constant time array access and
-			the idea that the colours should be OPPOSITES is kind
-			of in the name. If you have a better idea, feel free
-			to let me know. ~toast 2016/07/20
-			*/
-			signframe += (15 - Color_Opposite[Color_Opposite[skin->prefoppositecolor - 1][0] - 1][1]);
-		}
 		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
-		{
 			signcolor = Color_Opposite[actor->target->player->skincolor - 1][0];
-			signframe += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
-		}
 		else
 			signcolor = SKINCOLOR_NONE;
 	}
@@ -5188,10 +5180,10 @@ void A_SignPlayer(mobj_t *actor)
 				skinnum = P_RandomKey(skincount);
 				for (skincount = 0; skincount < numskins; skincount++)
 				{
-					if (skincheck(skincount))
-						skinnum++;
 					if (skincount > skinnum)
 						break;
+					if (skincheck(skincount))
+						skinnum++;
 				}
 			}
 			else // otherwise, advance 1 skin
@@ -5203,42 +5195,46 @@ void A_SignPlayer(mobj_t *actor)
 			skin = &skins[skinnum];
 		}
 		else // specific skin
-		{
 			skin = &skins[locvar1];
-		}
 
 		facecolor = skin->prefcolor;
 		if (signcolor)
 			;
 		else if (skin->prefoppositecolor)
-		{
 			signcolor = skin->prefoppositecolor;
-		}
-		else
-		{
+		else if (facecolor)
 			signcolor = Color_Opposite[facecolor - 1][0];
-		}
-		signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
 	}
 
-	if (skin != NULL && skin->sprites[SPR2_SIGN].numframes) // player face
+	if (skin && skin->sprites[SPR2_SIGN].numframes) // player face
 	{
 		ov->color = facecolor;
 		ov->skin = skin;
 		P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
-		actor->tracer->color = signcolor;
-		actor->tracer->frame = signframe;
 	}
 	else // Eggman face
 	{
 		ov->color = SKINCOLOR_NONE;
 		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
-		if (signcolor)
-			actor->tracer->color = signcolor;
-		else
-			actor->tracer->color = signcolor = SKINCOLOR_CARBON;
-		actor->tracer->frame = signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+		if (!signcolor)
+			signcolor = SKINCOLOR_CARBON;
 	}
+
+	actor->tracer->color = signcolor;
+	/*
+	If you're here from the comment above Color_Opposite,
+	the following line is the one which is dependent on the
+	array being symmetrical. It gets the opposite of the
+	opposite of your desired colour just so it can get the
+	brightness frame for the End Sign. It's not a great
+	design choice, but it's constant time array access and
+	the idea that the colours should be OPPOSITES is kind
+	of in the name. If you have a better idea, feel free
+	to let me know. ~toast 2016/07/20
+	*/
+	if (signcolor && signcolor < MAXSKINCOLORS)
+		signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+	actor->tracer->frame = signframe;
 }
 
 // Function: A_OverlayThink

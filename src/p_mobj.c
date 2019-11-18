@@ -8227,7 +8227,7 @@ void P_MobjThinker(mobj_t *mobj)
 			mobj->flags2 ^= MF2_DONTDRAW;
 			break;
 		case MT_EGGTRAP: // Egg Capsule animal release
-			if (mobj->fuse > 0 && mobj->fuse < 2*TICRATE-(TICRATE/7))
+			if (mobj->fuse > 0)// && mobj->fuse < TICRATE-(TICRATE/7))
 			{
 				INT32 i;
 				fixed_t x,y,z;
@@ -8236,9 +8236,9 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj_t *flicky;
 
 				z = mobj->subsector->sector->floorheight + FRACUNIT + (P_RandomKey(64)<<FRACBITS);
-				for (i = 0; i < 2; i++)
+				for (i = 0; i < 3; i++)
 				{
-					const angle_t fa = (P_RandomByte()*FINEANGLES/16) & FINEMASK;
+					const angle_t fa = P_RandomKey(FINEANGLES) & FINEMASK;
 					ns = 64 * FRACUNIT;
 					x = mobj->x + FixedMul(FINESINE(fa),ns);
 					y = mobj->y + FixedMul(FINECOSINE(fa),ns);
