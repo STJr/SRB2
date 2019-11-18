@@ -3723,9 +3723,12 @@ state_t states[NUMSTATES] =
 	{SPR_PENG, 0,  5, {A_FaceTarget},      0,  0, S_PENGUINATOR_LOOK},   // S_PENGUINATOR_SLIDE5
 
 	{SPR_POPH, 0,  2, {A_Look},  (2048<<16)|1,           0, S_POPHAT_LOOK},   // S_POPHAT_LOOK
-	{SPR_POPH, 1,  2, {A_LobShot}, MT_POPSHOT, (70<<16)|60, S_POPHAT_SHOOT2}, // S_POPHAT_SHOOT1
-	{SPR_POPH, 2,  1, {NULL},               0,           0, S_POPHAT_SHOOT3}, // S_POPHAT_SHOOT2
-	{SPR_POPH, 0, 57, {NULL},               0,           0, S_POPHAT_LOOK},   // S_POPHAT_SHOOT3
+	{SPR_POPH, 1,  0, {A_MultiShotDist}, (MT_SPINDUST<<16)|4, 24, S_POPHAT_SHOOT2}, // S_POPHAT_SHOOT1
+	{SPR_POPH, 1,  2, {A_LobShot}, MT_POPSHOT, (70<<16)|60, S_POPHAT_SHOOT3}, // S_POPHAT_SHOOT2
+	{SPR_POPH, 2,  1, {NULL},               0,           0, S_POPHAT_SHOOT4}, // S_POPHAT_SHOOT3
+	{SPR_POPH, 0, 57, {NULL},               0,           0, S_POPHAT_LOOK},   // S_POPHAT_SHOOT4
+	{SPR_POPH, 3,  3, {A_SpawnObjectRelative}, 0, MT_POPSHOT_TRAIL, S_POPSHOT},   // S_POPSHOT
+	{SPR_NULL, 0,  2, {NULL},                  0, 0,                S_SPINDUST1}, // S_POPSHOT_TRAIL
 
 	{SPR_HIVE, 0,  5, {A_Look}, 1, 1, S_HIVEELEMENTAL_LOOK}, // S_HIVEELEMENTAL_LOOK
 	{SPR_HIVE, 0, 14, {A_PlaySound}, sfx_s3k76, 1, S_HIVEELEMENTAL_PREPARE2}, // S_HIVEELEMENTAL_PREPARE1
@@ -19990,10 +19993,10 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_POPSHOT
 		-1,             // doomednum
-		S_ROCKCRUMBLEI, // spawnstate
+		S_POPSHOT,      // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_cannon,     // seesound
+		sfx_kc4c,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -20001,9 +20004,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_XPLD1,        // deathstate
+		S_SONIC3KBOSSEXPLOSION1, // deathstate
 		S_NULL,         // xdeathstate
-		sfx_pop,        // deathsound
+		sfx_cybdth,     // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
 		32*FRACUNIT,    // height
@@ -20012,6 +20015,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_MISSILE, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_POPSHOT_TRAIL
+		-1,             // doomednum
+		S_POPSHOT_TRAIL,// spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		4*FRACUNIT,     // speed
+		4*FRACUNIT,     // radius
+		4*FRACUNIT,     // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP, // flags
 		S_NULL          // raisestate
 	},
 
