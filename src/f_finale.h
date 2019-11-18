@@ -141,7 +141,32 @@ void F_MenuPresTicker(boolean run);
 #define FORCEWIPEOFF -2
 
 extern boolean WipeInAction;
+extern boolean WipeInLevel;
 extern boolean WipeStageTitle;
+
+typedef enum
+{
+	WIPESTYLE_NORMAL,
+	WIPESTYLE_LEVEL
+} wipestyle_t;
+extern wipestyle_t wipestyle;
+
+typedef enum
+{
+	WSF_FADEOUT = 1,
+	WSF_FADEIN  = 1<<1,
+	WSF_TOWHITE = 1<<2,
+} wipestyleflags_t;
+extern wipestyleflags_t wipestyleflags;
+
+#define FADECOLORMAPDIV 8
+#define FADECOLORMAPROWS (256/FADECOLORMAPDIV)
+
+#define FADEREDFACTOR   15
+#define FADEGREENFACTOR 15
+#define FADEBLUEFACTOR  10
+
+extern UINT8 wipecolorfill;
 extern INT32 lastwipetic;
 
 // Don't know where else to place this constant
@@ -151,6 +176,9 @@ extern INT32 lastwipetic;
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);
+void F_WipeTicker(void);
+void F_WipeStageTitle(void);
+#define F_WipeColorFill(c) V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (wipecolorfill = c))
 tic_t F_GetWipeLength(UINT8 wipetype);
 boolean F_WipeExists(UINT8 wipetype);
 

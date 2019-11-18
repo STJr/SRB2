@@ -40,6 +40,7 @@
 #include "../st_stuff.h"
 #include "../i_system.h"
 #include "../m_cheat.h"
+#include "../f_finale.h"
 #ifdef ESLOPE
 #include "../p_slopes.h"
 #endif
@@ -111,7 +112,6 @@ static consvar_t cv_grclipwalls = {"gr_clipwalls", "Off", 0, CV_OnOff, NULL, 0, 
 static consvar_t cv_gralpha = {"gr_alpha", "160", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_grbeta = {"gr_beta", "0", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static float HWRWipeCounter = 1.0f;
 consvar_t cv_grrounddown = {"gr_rounddown", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfov = {"gr_fov", "90", CV_FLOAT|CV_CALL, grfov_cons_t, CV_grFov_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfogdensity = {"gr_fogdensity", "150", CV_CALL|CV_NOINIT, CV_Unsigned,
@@ -7025,7 +7025,6 @@ void HWR_StartScreenWipe(void)
 
 void HWR_EndScreenWipe(void)
 {
-	HWRWipeCounter = 0.0f;
 	//CONS_Debug(DBG_RENDER, "In HWR_EndScreenWipe()\n");
 	HWD.pfnEndScreenWipe();
 }
@@ -7035,38 +7034,75 @@ void HWR_DrawIntermissionBG(void)
 	HWD.pfnDrawIntermissionBG();
 }
 
-void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
+//
+// hwr mode wipes
+//
+static lumpnum_t wipelumpnum;
+
+// puts wipe lumpname in wipename[9]
+static boolean HWR_WipeCheck(UINT8 wipenum, UINT8 scrnnum)
 {
 	static char lumpname[9] = "FADEmmss";
-	lumpnum_t lumpnum;
 	size_t lsize;
 
-	if (wipenum > 99 || scrnnum > 99) // not a valid wipe number
-		return; // shouldn't end up here really, the loop should've stopped running beforehand
+	// not a valid wipe number
+	if (wipenum > 99 || scrnnum > 99)
+		return false; // shouldn't end up here really, the loop should've stopped running beforehand
 
-	// puts the numbers into the lumpname
-	sprintf(&lumpname[4], "%.2hu%.2hu", (UINT16)wipenum, (UINT16)scrnnum);
-	lumpnum = W_CheckNumForName(lumpname);
+	// puts the numbers into the wipename
+	lumpname[4] = '0'+(wipenum/10);
+	lumpname[5] = '0'+(wipenum%10);
+	lumpname[6] = '0'+(scrnnum/10);
+	lumpname[7] = '0'+(scrnnum%10);
+	wipelumpnum = W_CheckNumForName(lumpname);
 
-	if (lumpnum == LUMPERROR) // again, shouldn't be here really
-		return;
+	// again, shouldn't be here really
+	if (wipelumpnum == LUMPERROR)
+		return false;
 
-	lsize = W_LumpLength(lumpnum);
-
+	lsize = W_LumpLength(wipelumpnum);
 	if (!(lsize == 256000 || lsize == 64000 || lsize == 16000 || lsize == 4000))
 	{
 		CONS_Alert(CONS_WARNING, "Fade mask lump %s of incorrect size, ignored\n", lumpname);
-		return; // again, shouldn't get here if it is a bad size
+		return false; // again, shouldn't get here if it is a bad size
 	}
 
-	HWR_GetFadeMask(lumpnum);
+	return true;
+}
 
+void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
+{
+	if (!HWR_WipeCheck(wipenum, scrnnum))
+		return;
+
+	HWR_GetFadeMask(wipelumpnum);
 	HWD.pfnDoScreenWipe();
+}
 
-	HWRWipeCounter += 0.05f; // increase opacity of end screen
+void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum)
+{
+	// It does the same thing
+	HWR_DoWipe(wipenum, scrnnum);
+}
 
-	if (HWRWipeCounter > 1.0f)
-		HWRWipeCounter = 1.0f;
+void HWR_DoLevelWipe(UINT8 wipenum, UINT8 scrnnum, UINT8 colfill)
+{
+#ifndef LEVELWIPES
+	(void)wipenum;
+	(void)scrnnum;
+	(void)colfill;
+#else
+	if (!HWR_WipeCheck(wipenum, scrnnum))
+		return;
+
+	HWR_EndScreenWipe();
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, colfill);
+	HWR_StartScreenWipe();
+	HWR_GetFadeMask(wipelumpnum);
+
+	HWD.pfnDoScreenWipeLevel();
+	F_WipeStageTitle();
+#endif
 }
 
 void HWR_MakeScreenFinalTexture(void)

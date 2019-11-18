@@ -1666,6 +1666,7 @@ void I_StartupGraphics(void)
 		HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
 		HWD.pfnEndScreenWipe    = hwSym("EndScreenWipe",NULL);
 		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
+		HWD.pfnDoScreenWipeLevel= hwSym("DoScreenWipeLevel",NULL);
 		HWD.pfnDrawIntermissionBG=hwSym("DrawIntermissionBG",NULL);
 		HWD.pfnMakeScreenTexture= hwSym("MakeScreenTexture",NULL);
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);

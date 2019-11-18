@@ -1202,7 +1202,7 @@ void ST_startTitleCard(void)
 
 	// initialize HUD variables
 	lt_ticker = lt_exitticker = lt_lasttic = 0;
-	lt_endtime = 2*TICRATE;
+	lt_endtime = 2*TICRATE + (10*NEWTICRATERATIO);
 	lt_scroll = BASEVIDWIDTH * FRACUNIT;
 	lt_zigzag = -((lt_patches[1])->width * FRACUNIT);
 	lt_mom = 0;
@@ -1294,8 +1294,10 @@ void ST_drawTitleCard(void)
 		return;
 #endif
 
+#ifndef LEVELWIPES
 	if ((lt_ticker-lt_lasttic) > 1)
 		lt_ticker = lt_lasttic+1;
+#endif
 
 	ST_cacheLevelTitle();
 	actpat = lt_patches[0];
@@ -1349,7 +1351,9 @@ luahook:
 void ST_preLevelTitleCardDrawer(tic_t ticker, boolean update)
 {
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+#ifndef LEVELWIPES
 	if (ticker < PRELEVELTIME-1)
+#endif
 		ST_drawWipeTitleCard();
 
 	I_OsPolling();
