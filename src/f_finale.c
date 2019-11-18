@@ -1024,6 +1024,7 @@ static const char *credits[] = {
 	"Andrew \"Senku Niola\" Moran",
 	"Wessel \"sphere\" Smit",
 	"David \"Instant Sonic\" Spencer Jr.",
+	"James \"SwitchKaze\" Hale",
 	"\"SSNTails\"",
 	"\"VelocitOni\"",
 	"",
