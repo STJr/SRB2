@@ -2106,7 +2106,7 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
 	}
 
-	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && stplyr->exiting)
+	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && (stplyr->exiting || (stplyr->pflags & PF_FINISHED)))
 	{
 		UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
 		if (numneeded)
@@ -2121,7 +2121,7 @@ static void ST_drawTextHUD(void)
 					continue;
 
 				total++;
-				if (players[i].exiting)
+				if (players[i].exiting || (players[i].pflags & PF_FINISHED))
 					exiting++;
 			}
 

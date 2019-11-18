@@ -2131,6 +2131,30 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 	P_SetTarget(&mobj->target, player->mo); // the one thing P_SpawnGhostMobj doesn't do
 }
 
+/** Called when \p player finishes the level.
+  *
+  * Only use for cases where the player should be able to move
+  * while waiting for others to finish. Otherwise, use P_DoPlayerExit().
+  *
+  * In single player or if ::cv_exitmove is disabled, this will also cause
+  * P_PlayerThink() to call P_DoPlayerExit(), so you do not need to
+  * make a special cases for those.
+  *
+  * \param player The player who finished the level.
+  * \sa P_DoPlayerExit
+  *
+  */
+void P_DoPlayerFinish(player_t *player)
+{
+	if (player->pflags & PF_FINISHED)
+		return;
+
+	player->pflags |= PF_FINISHED;
+
+	if (netgame)
+		CONS_Printf(M_GetText("%s has completed the level.\n"), player_names[player-players]);
+}
+
 //
 // P_DoPlayerExit
 //
@@ -2168,9 +2192,6 @@ void P_DoPlayerExit(player_t *player)
 	player->powers[pw_underwater] = 0;
 	player->powers[pw_spacetime] = 0;
 	P_RestoreMusic(player);
-
-	if (playeringame[player-players] && netgame && !circuitmap)
-		CONS_Printf(M_GetText("%s has completed the level.\n"), player_names[player-players]);
 }
 
 #define SPACESPECIAL 12
@@ -11415,6 +11436,14 @@ void P_PlayerThink(player_t *player)
 			if (server)
 				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 		}
+	}
+
+	if (player->pflags & PF_FINISHED)
+	{
+		if (cv_exitmove.value && !G_EnoughPlayersFinished())
+			player->exiting = 0;
+		else
+			P_DoPlayerExit(player);
 	}
 
 	// check water content, set stuff in mobj

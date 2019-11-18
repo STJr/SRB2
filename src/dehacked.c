@@ -8572,6 +8572,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"CANCARRY", // Can carry?
+	"FINISHED",
 
 	NULL // stop loop here.
 };
