@@ -3528,13 +3528,9 @@ state_t states[NUMSTATES] =
 	{SPR_FFWR, 3, 3, {NULL}, 0, 0, S_FIREFLOWER1}, // S_FIREFLOWER4
 
 	// Thrown Mario Fireball
-	{SPR_FBLL, FF_FULLBRIGHT,   3, {NULL}, 0, 0, S_FIREBALL2},    // S_FIREBALL1
-	{SPR_FBLL, FF_FULLBRIGHT|1, 3, {NULL}, 0, 0, S_FIREBALL3},    // S_FIREBALL2
-	{SPR_FBLL, FF_FULLBRIGHT|2, 3, {NULL}, 0, 0, S_FIREBALL4},    // S_FIREBALL3
-	{SPR_FBLL, FF_FULLBRIGHT|3, 3, {NULL}, 0, 0, S_FIREBALL1},    // S_FIREBALL4
-	{SPR_FBLL, FF_FULLBRIGHT|4, 3, {NULL}, 0, 0, S_FIREBALLEXP2}, // S_FIREBALLEXP1
-	{SPR_FBLL, FF_FULLBRIGHT|5, 3, {NULL}, 0, 0, S_FIREBALLEXP3}, // S_FIREBALLEXP2
-	{SPR_FBLL, FF_FULLBRIGHT|6, 3, {NULL}, 0, 0, S_NULL},         // S_FIREBALLEXP3
+	{SPR_FBLL, FF_FULLBRIGHT,   1, {A_SpawnObjectRelative}, 0, MT_FIREBALLTRAIL, S_FIREBALL},   // S_FIREBALL
+	{SPR_FBLL, 1|FF_FULLBRIGHT|FF_TRANS50, 1, {A_SetScale}, FRACUNIT*3/4, 0, S_FIREBALLTRAIL2}, // S_FIREBALLTRAIL1
+	{SPR_FBLL, 1|FF_FULLBRIGHT|FF_TRANS50, 8, {A_SetScale}, FRACUNIT/6, 1, S_NULL},             // S_FIREBALLTRAIL2
 
 	// Turtle Shell
 	{SPR_SHLL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_SHELL
@@ -18914,29 +18910,56 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_FIREBALL
 		-1,             // doomednum
-		S_FIREBALL1,    // spawnstate
+		S_FIREBALL,     // spawnstate
 		1000,           // spawnhealth
-		S_FIREBALLEXP1, // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
 		sfx_None,       // painsound
-		S_FIREBALLEXP1, // meleestate
-		S_FIREBALLEXP1, // missilestate
-		S_FIREBALLEXP1, // deathstate
-		S_FIREBALLEXP1, // xdeathstate
-		sfx_mario1,     // deathsound
-		10*FRACUNIT,    // speed
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		40*FRACUNIT,    // speed
 		4*FRACUNIT,     // radius
 		8*FRACUNIT,     // height
 		0,              // display offset
 		DMG_FIRE,       // mass
 		1,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_FIRE|MF_MISSILE, // flags
+		MF_FIRE|MF_BOUNCE|MF_MISSILE, // flags
 		S_NULL          // raisestate
+	},
+
+	{           // MT_FIREBALLTRAIL
+		-1,                  // doomednum
+		S_FIREBALLTRAIL1,    // spawnstate
+		1000,                // spawnhealth
+		S_NULL,              // seestate
+		sfx_None,            // seesound
+		8,                   // reactiontime
+		sfx_None,            // attacksound
+		S_NULL,              // painstate
+		0,                   // painchance
+		sfx_None,            // painsound
+		S_NULL,              // meleestate
+		S_NULL,              // missilestate
+		S_NULL,              // deathstate
+		S_NULL,              // xdeathstate
+		sfx_None,            // deathsound
+		0,                   // speed
+		16*FRACUNIT,         // radius
+		16*FRACUNIT,         // height
+		0,                   // display offset
+		0,                   // mass
+		1,                   // damage
+		sfx_None,            // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_RUNSPAWNFUNC, // flags
+		S_NULL               // raisestate
 	},
 
 	{           // MT_SHELL

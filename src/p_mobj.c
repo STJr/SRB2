@@ -8693,6 +8693,13 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_KOOPA:
 				P_KoopaThinker(mobj);
 				break;
+			case MT_FIREBALL:
+				if (P_AproxDistance(mobj->momx, mobj->momy) <= 16*FRACUNIT) // Once fireballs lose enough speed, kill them
+				{
+					P_KillMobj(mobj, NULL, NULL, 0);
+					return;
+				}
+				break;
 			case MT_REDRING:
 				if (((mobj->z < mobj->floorz) || (mobj->z + mobj->height > mobj->ceilingz))
 					&& mobj->flags & MF_MISSILE)
