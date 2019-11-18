@@ -141,7 +141,6 @@ void F_MenuPresTicker(boolean run);
 #define FORCEWIPEOFF -2
 
 extern boolean WipeInAction;
-extern boolean WipeInLevel;
 extern boolean WipeStageTitle;
 
 typedef enum
@@ -176,7 +175,6 @@ extern INT32 lastwipetic;
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);
-void F_WipeTicker(void);
 void F_WipeStageTitle(void);
 #define F_WipeColorFill(c) V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (wipecolorfill = c))
 tic_t F_GetWipeLength(UINT8 wipetype);

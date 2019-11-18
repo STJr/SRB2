@@ -1728,7 +1728,6 @@ void G_StartTitleCard(void)
 
 	// start the title card
 	WipeStageTitle = (!titlemapinaction);
-	WipeInLevel = true;
 	wipestyleflags |= WSF_FADEIN;
 	wipestyleflags &= ~WSF_FADEOUT;
 }

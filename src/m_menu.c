@@ -3365,8 +3365,6 @@ boolean M_Responder(event_t *ev)
 void M_Drawer(void)
 {
 	boolean wipe = WipeInAction;
-	if (WipeInLevel)
-		wipe = false;
 
 	if (currentMenu == &MessageDef)
 		menuactive = true;

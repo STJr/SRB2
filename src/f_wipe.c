@@ -91,7 +91,6 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 //--------------------------------------------------------------------------
 
 boolean WipeInAction = false;
-boolean WipeInLevel = false;
 boolean WipeStageTitle = false;
 INT32 lastwipetic = 0;
 
@@ -104,8 +103,6 @@ static UINT8 *wipe_scr_end; //screen 4
 static UINT8 *wipe_scr; //screen 0 (main drawing)
 static fixed_t paldiv = 0;
 
-static UINT8 curwipetype;
-static UINT8 curwipeframe;
 UINT8 wipecolorfill = 31;
 
 /** Create fademask_t from lump
@@ -349,8 +346,6 @@ static void F_DoWipe(fademask_t *fademask)
 		free(scrxpos);
 		free(scrypos);
 	}
-	if (wipestyle == WIPESTYLE_LEVEL)
-		F_WipeStageTitle();
 }
 #endif
 
@@ -416,13 +411,6 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	else
 		wipestyle = WIPESTYLE_NORMAL;
 
-	curwipetype = wipetype;
-	curwipeframe = 0;
-#ifdef LEVELWIPES
-	if (WipeInLevel)
-		return;
-#endif
-
 	// lastwipetic should either be 0 or the tic we last wiped
 	// on for fade-to-black
 	for (;;)
@@ -450,6 +438,9 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 #endif
 			F_DoWipe(fmask);
 
+		if (wipestyle == WIPESTYLE_LEVEL)
+			F_WipeStageTitle();
+
 		I_OsPolling();
 		I_UpdateNoBlit();
 
@@ -463,47 +454,6 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	}
 
 	WipeInAction = false;
-	WipeInLevel = false;
-	WipeStageTitle = false;
-#endif
-}
-
-/** Run and display the fade with the level.
-  */
-void F_WipeTicker(void)
-{
-#ifndef NOWIPE
-#ifndef LEVELWIPES
-	WipeInAction = false;
-#else
-	fademask_t *fmask;
-
-	// Wait, what?
-	if (!WipeInAction)
-		return;
-
-	if (rendermode == render_soft)
-		wipe_scr_start = wipe_scr_end = screens[0];
-
-	// get fademask first so we can tell if it exists or not
-	fmask = F_GetFadeMask(curwipetype, curwipeframe++);
-	if (!fmask)
-	{
-		// stop
-		WipeInAction = false;
-		WipeInLevel = false;
-		WipeStageTitle = false;
-		return;
-	}
-
-#ifdef HWRENDER
-	// send in the wipe type and wipe frame because we need to cache the graphic
-	if (rendermode == render_opengl)
-		HWR_DoLevelWipe(curwipetype, curwipeframe-1, wipecolorfill); // also send the wipe color
-	else
-#endif
-		F_DoWipe(fmask);
-#endif
 	WipeStageTitle = false;
 #endif
 }

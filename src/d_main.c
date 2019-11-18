@@ -420,12 +420,6 @@ static void D_Display(void)
 	if (gamestate != GS_TIMEATTACK)
 		CON_Drawer();
 
-#ifdef LEVELWIPES
-	// Running a level wipe
-	if (WipeInAction && WipeInLevel)
-		F_WipeTicker();
-#endif
-
 	M_Drawer(); // menu is drawn even on top of everything
 	// focus lost moved to M_Drawer
 
@@ -445,7 +439,6 @@ static void D_Display(void)
 		{
 			F_WipeEndScreen();
 			// Funny.
-#ifndef LEVELWIPES
 			if (WipeStageTitle && st_overlay)
 			{
 				lt_ticker--;
@@ -454,7 +447,6 @@ static void D_Display(void)
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 				F_WipeStartScreen();
 			}
-#endif
 			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
 
