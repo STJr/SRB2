@@ -4392,6 +4392,8 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		else if (player->powers[pw_carry] == CR_ROLLOUT)
 		{
 			player->mo->momz = 9*FRACUNIT;
+			if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
+				player->mo->momz += player->mo->tracer->momz;
 			player->powers[pw_carry] = CR_NONE;
 			player->mo->tracer->flags |= MF_PUSHABLE;
 			P_SetTarget(&player->mo->tracer->tracer, NULL);
