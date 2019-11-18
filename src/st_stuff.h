@@ -51,6 +51,7 @@ void ST_doPaletteStuff(void);
 void ST_startTitleCard(void);
 void ST_runTitleCard(void);
 void ST_drawTitleCard(void);
+void ST_preDrawTitleCard(void);
 void ST_preLevelTitleCardDrawer(tic_t ticker, boolean update);
 void ST_drawWipeTitleCard(void);
 

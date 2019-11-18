@@ -1209,7 +1209,7 @@ void ST_startTitleCard(void)
 }
 
 //
-// What happens before drawing the status bar.
+// What happens before drawing the title card.
 // Which is just setting the HUD translucency.
 //
 void ST_preDrawTitleCard(void)
