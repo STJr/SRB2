@@ -402,6 +402,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	// Game Indicators
 	"SCOR", // Score logo
 	"DRWN", // Drowning Timer
+	"FLII", // Flight indicator
 	"LCKN", // Target
 	"TTAG", // Tag Sign
 	"GFLG", // Got Flag sign
@@ -3318,6 +3319,9 @@ state_t states[NUMSTATES] =
 	{SPR_DRWN,  9, 40, {NULL}, 0, 0, S_NULL}, // S_THREE2
 	{SPR_DRWN, 10, 40, {NULL}, 0, 0, S_NULL}, // S_FOUR2
 	{SPR_DRWN, 11, 40, {NULL}, 0, 0, S_NULL}, // S_FIVE2
+
+	// Flight indicator
+	{SPR_FLII, FF_FULLBRIGHT|FF_ANIMATE|0, -1, {NULL}, 4, 4, S_NULL}, // S_FLIGHTINDICATOR
 
 	{SPR_LCKN,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LOCKON1
 	{SPR_LCKN, 1|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LOCKON2

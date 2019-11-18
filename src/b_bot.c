@@ -336,7 +336,20 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 
 	// ********
 	// Thinkfly overlay
-		// doing this later :P
+	if (thinkfly)
+	{
+		if (overlay == NULL)
+		{
+			overlay = P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY);
+			P_SetTarget(&overlay->target, tails);
+			P_SetMobjState(overlay, S_FLIGHTINDICATOR);
+		}
+	}
+	else if (overlay != NULL)
+	{
+		P_RemoveMobj(overlay);
+		overlay = NULL;
+	}
 
 	// Turn the virtual keypresses into ticcmd_t.
 	B_KeysToTiccmd(tails, cmd, forward, backward, left, right, false, false, jump, spin);

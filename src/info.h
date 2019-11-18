@@ -664,6 +664,7 @@ typedef enum sprite
 	// Game Indicators
 	SPR_SCOR, // Score logo
 	SPR_DRWN, // Drowning Timer
+	SPR_FLII, // AI flight indicator
 	SPR_LCKN, // Target
 	SPR_TTAG, // Tag Sign
 	SPR_GFLG, // Got Flag sign
@@ -3453,6 +3454,8 @@ typedef enum state
 	S_THREE2,
 	S_FOUR2,
 	S_FIVE2,
+
+	S_FLIGHTINDICATOR,
 
 	S_LOCKON1,
 	S_LOCKON2,
