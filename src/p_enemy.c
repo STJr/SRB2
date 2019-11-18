@@ -14606,8 +14606,6 @@ void A_RolloutRock(mobj_t *actor)
 //
 void A_DragonbomberSpawn(mobj_t *actor)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
 	UINT8 i;
 	mobj_t *mo = actor;
 
@@ -14646,8 +14644,6 @@ void A_DragonbomberSpawn(mobj_t *actor)
 //
 void A_DragonWing(mobj_t *actor)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
 	mobj_t *target = actor->target;
 	fixed_t x, y;
 
@@ -14676,8 +14672,6 @@ void A_DragonWing(mobj_t *actor)
 //
 void A_DragonSegment(mobj_t *actor)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
 	mobj_t *target = actor->target;
 	fixed_t dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
 	fixed_t radius = actor->radius + target->radius;
