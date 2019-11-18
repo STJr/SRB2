@@ -1177,7 +1177,7 @@ void ST_drawLevelTitle(tic_t titletime)
 		lvlttlxpos -= V_LevelActNumWidth(actnum);
 
 	ttlnumxpos = lvlttlxpos + V_LevelNameWidth(lvlttl);
-	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("ZONE"));
+	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("Zone"));
 	ttlnumxpos++;
 
 	if (lvlttlxpos < 0)
@@ -1204,7 +1204,7 @@ void ST_drawLevelTitle(tic_t titletime)
 	else
 	{
 		fixed_t z = ((titletime - 105)<<FRACBITS)/7;
-		INT32 zoneh = V_LevelNameHeight(M_GetText("ZONE"));
+		INT32 zoneh = V_LevelNameHeight(M_GetText("Zone"));
 		zoney = (MIDZONEY + zoneh - MIDDIFF)*(FRACUNIT - z) - (zoneh<<FRACBITS);
 		lvlttly = ((MIDTTLY + MIDDIFF)<<FRACBITS) + ((200 - (MIDTTLY + MIDDIFF))*z);
 	}
@@ -1239,7 +1239,7 @@ void ST_drawLevelTitle(tic_t titletime)
 	V_DrawLevelTitle(lvlttlxpos, lvlttly, V_PERPLAYER, lvlttl);
 
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-		V_DrawLevelTitle(zonexpos, zoney, V_PERPLAYER, M_GetText("ZONE"));
+		V_DrawLevelTitle(zonexpos, zoney, V_PERPLAYER, M_GetText("Zone"));
 
 	if (lvlttly+48 < 200)
 		V_DrawCenteredString(subttlxpos, lvlttly+48, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
