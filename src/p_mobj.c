@@ -246,6 +246,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	{
 	case S_PLAY_STND:
 	case S_PLAY_WAIT:
+	case S_PLAY_NIGHTS_STAND:
 		player->panim = PA_IDLE;
 		break;
 	case S_PLAY_EDGE:
@@ -254,6 +255,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_WALK:
 	case S_PLAY_SKID:
 	case S_PLAY_FLOAT:
+	case S_PLAY_NIGHTS_FLOAT:
 		player->panim = PA_WALK;
 		break;
 	case S_PLAY_RUN:
@@ -269,6 +271,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		break;
 	case S_PLAY_ROLL:
 	//case S_PLAY_SPINDASH: -- everyone can ROLL thanks to zoom tubes...
+	case S_PLAY_NIGHTS_ATTACK:
 		player->panim = PA_ROLL;
 		break;
 	case S_PLAY_JUMP:
@@ -8227,7 +8230,7 @@ void P_MobjThinker(mobj_t *mobj)
 			mobj->flags2 ^= MF2_DONTDRAW;
 			break;
 		case MT_EGGTRAP: // Egg Capsule animal release
-			if (mobj->fuse > 0 && mobj->fuse < 2*TICRATE-(TICRATE/7))
+			if (mobj->fuse > 0)// && mobj->fuse < TICRATE-(TICRATE/7))
 			{
 				INT32 i;
 				fixed_t x,y,z;
@@ -8236,9 +8239,9 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj_t *flicky;
 
 				z = mobj->subsector->sector->floorheight + FRACUNIT + (P_RandomKey(64)<<FRACBITS);
-				for (i = 0; i < 2; i++)
+				for (i = 0; i < 3; i++)
 				{
-					const angle_t fa = (P_RandomByte()*FINEANGLES/16) & FINEMASK;
+					const angle_t fa = P_RandomKey(FINEANGLES) & FINEMASK;
 					ns = 64 * FRACUNIT;
 					x = mobj->x + FixedMul(FINESINE(fa),ns);
 					y = mobj->y + FixedMul(FINECOSINE(fa),ns);

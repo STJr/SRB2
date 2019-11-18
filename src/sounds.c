@@ -779,7 +779,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"kc49",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"kc4a",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"kc4b",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"kc4c",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
+  {"kc4c",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pop-shot"},
   {"kc4d",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power up"},
   {"kc4e",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"kc4f",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
