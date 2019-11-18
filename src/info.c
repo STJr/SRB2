@@ -1165,23 +1165,24 @@ state_t states[NUMSTATES] =
 	{SPR_PTER, 0,  1, {NULL},              0, 0, S_PTERABYTE_SWOOPUP},   // S_PTERABYTE_SWOOPUP
 
 	// Dragonbomber
-	{SPR_DRAB,                0, -1, {A_DragonbomberSpawn}, 6, 0, S_NULL},                       // S_DRAGONBOMBER
-	{SPR_DRAB, FF_PAPERSPRITE|7,  1,        {A_DragonWing}, 0, 0, S_DRAGONWING2},                // S_DRAGONWING1
-	{SPR_DRAB, FF_PAPERSPRITE|8,  1,        {A_DragonWing}, 0, 0, S_DRAGONWING3},                // S_DRAGONWING2
-	{SPR_DRAB, FF_PAPERSPRITE|9,  1,        {A_DragonWing}, 0, 0, S_DRAGONWING4},                // S_DRAGONWING3
-	{SPR_DRAB, FF_PAPERSPRITE|10, 1,        {A_DragonWing}, 0, 0, S_DRAGONWING1},                // S_DRAGONWING4
-	{SPR_DRAB,                1,  1,     {A_DragonSegment}, 0, 0, S_DRAGONTAIL_LOADED},          // S_DRAGONTAIL_LOADED
-	{SPR_DRAB,                2,  1,     {A_DragonSegment}, 0, 0, S_DRAGONTAIL_EMPTYLOOP},       // S_DRAGONTAIL_EMPTY
+	{SPR_DRAB,                0, -1, {A_DragonbomberSpawn}, 6, 0, S_NULL},                          // S_DRAGONBOMBER
+	{SPR_DRAB, FF_PAPERSPRITE|7,  1,        {A_DragonWing}, 0, 0, S_DRAGONWING2},                   // S_DRAGONWING1
+	{SPR_DRAB, FF_PAPERSPRITE|8,  1,        {A_DragonWing}, 0, 0, S_DRAGONWING3},                   // S_DRAGONWING2
+	{SPR_DRAB, FF_PAPERSPRITE|9,  1,        {A_DragonWing}, 0, 0, S_DRAGONWING4},                   // S_DRAGONWING3
+	{SPR_DRAB, FF_PAPERSPRITE|10, 1,        {A_DragonWing}, 0, 0, S_DRAGONWING1},                   // S_DRAGONWING4
+	{SPR_DRAB,                1,  1,     {A_DragonSegment}, 0, 0, S_DRAGONTAIL_LOADED},             // S_DRAGONTAIL_LOADED
+	{SPR_DRAB,                2,  1,     {A_DragonSegment}, 0, 0, S_DRAGONTAIL_EMPTYLOOP},          // S_DRAGONTAIL_EMPTY
 	{SPR_DRAB,                2,  0,            {A_Repeat}, 3*TICRATE, S_DRAGONTAIL_EMPTY, S_DRAGONTAIL_RELOAD}, // S_DRAGONTAIL_EMPTYLOOP
-	{SPR_DRAB,                1,  0,   {A_PlayActiveSound}, 0, 0, S_DRAGONTAIL_LOADED},          // S_DRAGONTAIL_RELOAD
-	{SPR_DRAB,                3,  1,        {A_MinusCheck}, S_DRAGONMINE_LAND, 0, S_DRAGONMINE}, // S_DRAGONMINE
-	{SPR_DRAB,                4,  2,   {A_PlayActiveSound}, 0, 0, S_DRAGONMINE_GROUND1},         // S_DRAGONMINE_LAND
-	{SPR_DRAB,                5, 11,                {NULL}, 0, 0, S_DRAGONMINE_FLASH1},          // S_DRAGONMINE_GROUND1
-	{SPR_DRAB,  FF_FULLBRIGHT|6,  1,   {A_PlayAttackSound}, 0, 0, S_DRAGONMINE_LOOP1},           // S_DRAGONMINE_FLASH1
-	{SPR_DRAB,                5,  0,            {A_Repeat}, 4, S_DRAGONMINE_GROUND1, S_DRAGONMINE_GROUND2}, // S_DRAGONMINE_LOOP1
-	{SPR_DRAB,                5,  3,                {NULL}, 0, 0, S_DRAGONMINE_FLASH2},          // S_DRAGONMINE_GROUND2
-	{SPR_DRAB,  FF_FULLBRIGHT|6,  1,   {A_PlayAttackSound}, 0, 0, S_DRAGONMINE_LOOP2},           // S_DRAGONMINE_FLASH2
-	{SPR_DRAB,                5,  0,            {A_Repeat}, 5, S_DRAGONMINE_GROUND2, S_DEATHSTATE}, // S_DRAGONMINE_LOOP2
+	{SPR_DRAB,                1,  0,   {A_PlayActiveSound}, 0, 0, S_DRAGONTAIL_LOADED},             // S_DRAGONTAIL_RELOAD
+	{SPR_DRAB,                3,  1,        {A_MinusCheck}, S_DRAGONMINE_LAND1, 0, S_DRAGONMINE},   // S_DRAGONMINE
+	{SPR_DRAB,                4,  0,   {A_PlayActiveSound}, 0, 0, S_DRAGONMINE_LAND2},              // S_DRAGONMINE_LAND1
+	{SPR_DRAB,                4,  2,            {A_Thrust}, 0, 1, S_DRAGONMINE_SLOWFLASH1},         // S_DRAGONMINE_LAND2
+	{SPR_DRAB,                5, 11,                {NULL}, 0, 0, S_DRAGONMINE_SLOWFLASH2},         // S_DRAGONMINE_SLOWFLASH1
+	{SPR_DRAB,  FF_FULLBRIGHT|6,  1,   {A_PlayAttackSound}, 0, 0, S_DRAGONMINE_SLOWLOOP},           // S_DRAGONMINE_SLOWFLASH2
+	{SPR_DRAB,                5,  0,            {A_Repeat}, 4, S_DRAGONMINE_SLOWFLASH1, S_DRAGONMINE_FASTFLASH1}, // S_DRAGONMINE_SLOWLOOP
+	{SPR_DRAB,                5,  3,                {NULL}, 0, 0, S_DRAGONMINE_FASTFLASH2},         // S_DRAGONMINE_FASTFLASH1
+	{SPR_DRAB,  FF_FULLBRIGHT|6,  1,   {A_PlayAttackSound}, 0, 0, S_DRAGONMINE_FASTLOOP},           // S_DRAGONMINE_FASTFLASH2
+	{SPR_DRAB,                5,  0,            {A_Repeat}, 5, S_DRAGONMINE_FASTFLASH1, S_DEATHSTATE}, // S_DRAGONMINE_FASTLOOP
 
 	// Boss Explosion
 	{SPR_BOM2, FF_FULLBRIGHT|FF_ANIMATE, (5*7), {NULL}, 6, 5, S_NULL}, // S_BOSSEXPLODE
