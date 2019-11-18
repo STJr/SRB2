@@ -1315,14 +1315,14 @@ void ST_drawTitleCard(void)
 		lvlttlxpos = 0;
 
 	zzticker = lt_ticker;
-	V_DrawScaledPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
-	V_DrawScaledPatch(FixedInt(lt_zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
-	V_DrawScaledPatch(FixedInt(lt_zigzag), (-zigzag->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
-	V_DrawScaledPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
+	V_DrawScaledPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
+	V_DrawScaledPatch(FixedInt(lt_zigzag), (zigzag->height-zzticker) % zigzag->height, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
+	V_DrawScaledPatch(FixedInt(lt_zigzag), (-zigzag->height+zzticker) % zztext->height, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
+	V_DrawScaledPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
 
 	if (actnum)
 	{
-		V_DrawScaledPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat);
+		V_DrawScaledPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, V_PERPLAYER, actpat);
 		V_DrawLevelActNum(ttlnumxpos + ttlscroll, 104, V_PERPLAYER, actnum);
 	}
 
