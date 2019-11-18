@@ -1202,7 +1202,7 @@ void ST_startTitleCard(void)
 
 	// initialize HUD variables
 	lt_ticker = lt_exitticker = lt_lasttic = 0;
-	lt_endtime = 2*TICRATE;
+	lt_endtime = 2*TICRATE + (10*NEWTICRATERATIO);
 	lt_scroll = BASEVIDWIDTH * FRACUNIT;
 	lt_zigzag = -((lt_patches[1])->width * FRACUNIT);
 	lt_mom = 0;

@@ -450,15 +450,6 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 #endif
 			F_DoWipe(fmask);
 
-		// draw level title
-		if ((WipeStageTitle && st_overlay)
-		&& !(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
-		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0')
-		{
-			ST_runTitleCard();
-			ST_drawWipeTitleCard();
-		}
-
 		I_OsPolling();
 		I_UpdateNoBlit();
 
