@@ -3244,47 +3244,22 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 	}
 
-	// Stage title!
-	wipestyleflags |= WSF_FADEIN;
-	wipestyleflags &= ~WSF_FADEOUT;
-	WipeInLevel = true;
-	if (rendermode != render_none
-		&& (!titlemapinaction)
-		&& ranspecialwipe != 2
-		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
-#ifdef HAVE_BLUA
-		&& LUA_HudEnabled(hud_stagetitle)
-#endif
-	)
-	{
-		tic_t starttime = I_GetTime();
-		tic_t endtime = starttime + (10*NEWTICRATERATIO);
-		tic_t nowtime = starttime;
-		tic_t lasttime = starttime;
-		while (nowtime < endtime)
-		{
-			// draw loop
-			while (!((nowtime = I_GetTime()) - lasttime))
-				I_Sleep();
-			lasttime = nowtime;
+	// No render mode, stop here.
+	if (rendermode == render_none)
+		return true;
 
-			F_WipeColorFill(levelfadecol);
-			stplyr = &players[consoleplayer];
-			ST_drawLevelTitle(nowtime - starttime);
-			if (splitscreen)
-			{
-				stplyr = &players[secondarydisplayplayer];
-				ST_drawLevelTitle(nowtime - starttime);
-			}
+	// Title card!
+	G_StartTitleCard();
 
-			I_OsPolling();
-			I_UpdateNoBlit();
-			I_FinishUpdate(); // page flip or blit buffer
+	// Can the title card actually run, though?
+	if (!WipeStageTitle)
+		return true;
+	if (ranspecialwipe == 2)
+		return true;
 
-			if (moviemode) // make sure we save frames for the white hold too
-				M_SaveFrame();
-		}
-	}
+	// If so...
+	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
+		G_PreLevelTitleCard(lt_ticker, true);
 
 	return true;
 }

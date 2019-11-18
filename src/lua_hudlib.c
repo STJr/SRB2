@@ -92,12 +92,14 @@ static const char *const patch_opt[] = {
 enum hudhook {
 	hudhook_game = 0,
 	hudhook_scores,
-	hudhook_title
+	hudhook_title,
+	hudhook_titlecard
 };
 static const char *const hudhook_opt[] = {
 	"game",
 	"scores",
 	"title",
+	"titlecard",
 	NULL};
 
 // alignment types for v.drawString
@@ -910,9 +912,17 @@ static int libd_RandomChance(lua_State *L)
 	return 1;
 }
 
-// 30/10/18 Lat': Get cv_translucenthud's value for HUD rendering as a normal V_xxTRANS int
+// 30/10/18 Lat': Get st_translucency's value for HUD rendering as a normal V_xxTRANS int
 // Could as well be thrown in global vars for ease of access but I guess it makes sense for it to be a HUD fn
 static int libd_getlocaltransflag(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, (10-st_translucency)*V_10TRANS);
+	return 1;
+}
+
+// Get cv_translucenthud's value for HUD rendering as a normal V_xxTRANS int
+static int libd_getusertransflag(lua_State *L)
 {
 	HUDONLY
 	lua_pushinteger(L, (10-cv_translucenthud.value)*V_10TRANS);	// A bit weird that it's called "translucenthud" yet 10 is fully opaque :V
@@ -954,6 +964,7 @@ static luaL_Reg lib_draw[] = {
 	{"dupy", libd_dupy},
 	{"renderer", libd_renderer},
 	{"localTransFlag", libd_getlocaltransflag},
+	{"userTransFlag", libd_getusertransflag},
 	{NULL, NULL}
 };
 
@@ -1043,6 +1054,9 @@ int LUA_HudLib(lua_State *L)
 
 		lua_newtable(L);
 		lua_rawseti(L, -2, 4); // HUD[3] = title rendering functions array
+
+		lua_newtable(L);
+		lua_rawseti(L, -2, 5); // HUD[4] = title card rendering functions array
 	lua_setfield(L, LUA_REGISTRYINDEX, "HUD");
 
 	luaL_newmetatable(L, META_HUDINFO);
@@ -1176,6 +1190,40 @@ void LUAh_TitleHUD(void)
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
 		LUA_Call(gL, 1);
 	}
+	lua_pop(gL, -1);
+	hud_running = false;
+}
+
+void LUAh_TitleCardHUD(player_t *stplayr)
+{
+	if (!gL || !(hudAvailable & (1<<hudhook_titlecard)))
+		return;
+
+	hud_running = true;
+	lua_pop(gL, -1);
+
+	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
+	I_Assert(lua_istable(gL, -1));
+	lua_rawgeti(gL, -1, 5); // HUD[5] = rendering funcs
+	I_Assert(lua_istable(gL, -1));
+
+	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
+	I_Assert(lua_istable(gL, -1));
+	lua_remove(gL, -3); // pop HUD
+
+	LUA_PushUserdata(gL, stplayr, META_PLAYER);
+	lua_pushinteger(gL, lt_ticker);
+	lua_pushinteger(gL, (lt_endtime + TICRATE));
+	lua_pushnil(gL);
+
+	while (lua_next(gL, -6) != 0) {
+		lua_pushvalue(gL, -6); // graphics library (HUD[1])
+		lua_pushvalue(gL, -6); // stplayr
+		lua_pushvalue(gL, -6); // lt_ticker
+		lua_pushvalue(gL, -6); // lt_endtime
+		LUA_Call(gL, 4);
+	}
+
 	lua_pop(gL, -1);
 	hud_running = false;
 }

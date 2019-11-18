@@ -1201,6 +1201,14 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			word2 = tmp += 2;
 			i = atoi(word2); // used for numerical settings
 
+
+			if (fastcmp(word, "LEVELNAME"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
+					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
+				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
+				continue;
+			}
 			// CHEAP HACK: move this over here for lowercase subtitles
 			if (fastcmp(word, "SUBTITLE"))
 			{
@@ -1344,12 +1352,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 
 			// Strings that can be truncated
-			else if (fastcmp(word, "LEVELNAME"))
-			{
-				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
-					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
-				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
-			}
 			else if (fastcmp(word, "SELECTHEADING"))
 			{
 				deh_strlcpy(mapheaderinfo[num-1]->selectheading, word2,
@@ -1572,6 +1574,20 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->levelflags |= LF_MIXNIGHTSCOUNTDOWN;
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_MIXNIGHTSCOUNTDOWN;
+			}
+			else if (fastcmp(word, "WARNINGTITLE"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_WARNINGTITLE;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_WARNINGTITLE;
+			}
+			else if (fastcmp(word, "NOTITLECARD"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
 			}
 
 			// Individual triggers for menu flags
@@ -5343,6 +5359,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FSGNA",
 	"S_FSGNB",
 	"S_FSGNC",
+	"S_FSGND",
 
 	// Black Eggman (Boss 7)
 	"S_BLACKEGG_STND",
@@ -7322,13 +7339,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FIREFLOWER2",
 	"S_FIREFLOWER3",
 	"S_FIREFLOWER4",
-	"S_FIREBALL1",
-	"S_FIREBALL2",
-	"S_FIREBALL3",
-	"S_FIREBALL4",
-	"S_FIREBALLEXP1",
-	"S_FIREBALLEXP2",
-	"S_FIREBALLEXP3",
+	"S_FIREBALL",
+	"S_FIREBALLTRAIL1",
+	"S_FIREBALLTRAIL2",
 	"S_SHELL",
 	"S_PUMA_START1",
 	"S_PUMA_START2",
@@ -7497,6 +7510,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_POPHAT_SHOOT1",
 	"S_POPHAT_SHOOT2",
 	"S_POPHAT_SHOOT3",
+	"S_POPHAT_SHOOT4",
+	"S_POPSHOT",
+	"S_POPSHOT_TRAIL",
 
 	"S_HIVEELEMENTAL_LOOK",
 	"S_HIVEELEMENTAL_PREPARE1",
@@ -8317,6 +8333,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BLUEGOOMBA",
 	"MT_FIREFLOWER",
 	"MT_FIREBALL",
+	"MT_FIREBALLTRAIL",
 	"MT_SHELL",
 	"MT_PUMA",
 	"MT_PUMATRAIL",
@@ -8361,6 +8378,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_PENGUINATOR",
 	"MT_POPHAT",
 	"MT_POPSHOT",
+	"MT_POPSHOT_TRAIL",
 
 	"MT_HIVEELEMENTAL",
 	"MT_BUMBLEBORE",
@@ -8570,6 +8588,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"CANCARRY", // Can carry?
+	"FINISHED",
 
 	NULL // stop loop here.
 };
@@ -9012,6 +9031,8 @@ struct {
 	{"LF_NOZONE",LF_NOZONE},
 	{"LF_SAVEGAME",LF_SAVEGAME},
 	{"LF_MIXNIGHTSCOUNTDOWN",LF_MIXNIGHTSCOUNTDOWN},
+	{"LF_NOTITLECARD",LF_NOTITLECARD},
+	{"LF_WARNINGTITLE",LF_WARNINGTITLE},
 	// And map flags
 	{"LF2_HIDEINMENU",LF2_HIDEINMENU},
 	{"LF2_HIDEINSTATS",LF2_HIDEINSTATS},

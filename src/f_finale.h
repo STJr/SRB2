@@ -142,7 +142,7 @@ void F_MenuPresTicker(boolean run);
 
 extern boolean WipeInAction;
 extern boolean WipeInLevel;
-extern INT32 lastwipetic;
+extern boolean WipeStageTitle;
 
 typedef enum
 {
@@ -167,6 +167,11 @@ extern wipestyleflags_t wipestyleflags;
 #define FADEBLUEFACTOR  10
 
 extern UINT8 wipecolorfill;
+extern INT32 lastwipetic;
+
+// Don't know where else to place this constant
+// But this file seems appropriate
+#define PRELEVELTIME 24 // frames in tics
 
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);

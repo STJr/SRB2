@@ -1389,9 +1389,12 @@ void F_StartGameEvaluation(void)
 	// Credits option in secrets menu
 	if (cursaveslot == -1)
 	{
+		S_FadeOutStopMusic(2*MUSICRATE);
 		F_StartGameEnd();
 		return;
 	}
+
+	S_FadeOutStopMusic(5*MUSICRATE);
 
 	G_SetGamestate(GS_EVALUATION);
 
@@ -1639,7 +1642,7 @@ void F_StartEnding(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	S_StopMusic(); // todo: placeholder
+	S_StopMusic();
 	S_StopSounds();
 
 	finalecount = -10; // what? this totally isn't a hack. why are you asking?
@@ -1719,6 +1722,9 @@ void F_EndingTicker(void)
 		wipetypepre = INT16_MAX;
 		return;
 	}
+
+	if (finalecount == -8)
+		S_ChangeMusicInternal((goodending ? "_endg" : "_endb"), false);
 
 	if (goodending && finalecount == INFLECTIONPOINT) // time to swap some assets
 	{
@@ -2149,7 +2155,6 @@ void F_StartGameEnd(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	S_StopMusic();
 	S_StopSounds();
 
 	// In case menus are still up?!!
@@ -2590,6 +2595,10 @@ void F_TitleScreenDrawer(void)
 
 	// Don't draw outside of the title screen, or if the patch isn't there.
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
+		return;
+
+	// Don't draw if title mode is set to Old/None and the patch isn't there
+	if (!ttwing && (curttmode == TTMODE_OLD || curttmode == TTMODE_NONE))
 		return;
 
 	// rei|miru: use title pics?

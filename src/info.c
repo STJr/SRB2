@@ -1487,6 +1487,7 @@ state_t states[NUMSTATES] =
 	{SPR_FSGN, 0|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGNA
 	{SPR_FSGN, 1|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGNB
 	{SPR_FSGN, 2|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGNC
+	{SPR_FSGN, 3|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGND
 
 	// Black Eggman (Boss 7)
 	{SPR_BRAK, 0, 1, {A_SetReactionTime}, 0, 0, S_BLACKEGG_STND2}, // S_BLACKEGG_STND
@@ -3527,13 +3528,9 @@ state_t states[NUMSTATES] =
 	{SPR_FFWR, 3, 3, {NULL}, 0, 0, S_FIREFLOWER1}, // S_FIREFLOWER4
 
 	// Thrown Mario Fireball
-	{SPR_FBLL, FF_FULLBRIGHT,   3, {NULL}, 0, 0, S_FIREBALL2},    // S_FIREBALL1
-	{SPR_FBLL, FF_FULLBRIGHT|1, 3, {NULL}, 0, 0, S_FIREBALL3},    // S_FIREBALL2
-	{SPR_FBLL, FF_FULLBRIGHT|2, 3, {NULL}, 0, 0, S_FIREBALL4},    // S_FIREBALL3
-	{SPR_FBLL, FF_FULLBRIGHT|3, 3, {NULL}, 0, 0, S_FIREBALL1},    // S_FIREBALL4
-	{SPR_FBLL, FF_FULLBRIGHT|4, 3, {NULL}, 0, 0, S_FIREBALLEXP2}, // S_FIREBALLEXP1
-	{SPR_FBLL, FF_FULLBRIGHT|5, 3, {NULL}, 0, 0, S_FIREBALLEXP3}, // S_FIREBALLEXP2
-	{SPR_FBLL, FF_FULLBRIGHT|6, 3, {NULL}, 0, 0, S_NULL},         // S_FIREBALLEXP3
+	{SPR_FBLL, FF_FULLBRIGHT,   1, {A_SpawnObjectRelative}, 0, MT_FIREBALLTRAIL, S_FIREBALL},   // S_FIREBALL
+	{SPR_FBLL, 1|FF_FULLBRIGHT|FF_TRANS50, 1, {A_SetScale}, FRACUNIT*3/4, 0, S_FIREBALLTRAIL2}, // S_FIREBALLTRAIL1
+	{SPR_FBLL, 1|FF_FULLBRIGHT|FF_TRANS50, 8, {A_SetScale}, FRACUNIT/6, 1, S_NULL},             // S_FIREBALLTRAIL2
 
 	// Turtle Shell
 	{SPR_SHLL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_SHELL
@@ -3722,9 +3719,12 @@ state_t states[NUMSTATES] =
 	{SPR_PENG, 0,  5, {A_FaceTarget},      0,  0, S_PENGUINATOR_LOOK},   // S_PENGUINATOR_SLIDE5
 
 	{SPR_POPH, 0,  2, {A_Look},  (2048<<16)|1,           0, S_POPHAT_LOOK},   // S_POPHAT_LOOK
-	{SPR_POPH, 1,  2, {A_LobShot}, MT_POPSHOT, (70<<16)|60, S_POPHAT_SHOOT2}, // S_POPHAT_SHOOT1
-	{SPR_POPH, 2,  1, {NULL},               0,           0, S_POPHAT_SHOOT3}, // S_POPHAT_SHOOT2
-	{SPR_POPH, 0, 57, {NULL},               0,           0, S_POPHAT_LOOK},   // S_POPHAT_SHOOT3
+	{SPR_POPH, 1,  0, {A_MultiShotDist}, (MT_SPINDUST<<16)|4, 24, S_POPHAT_SHOOT2}, // S_POPHAT_SHOOT1
+	{SPR_POPH, 1,  2, {A_LobShot}, MT_POPSHOT, (70<<16)|60, S_POPHAT_SHOOT3}, // S_POPHAT_SHOOT2
+	{SPR_POPH, 2,  1, {NULL},               0,           0, S_POPHAT_SHOOT4}, // S_POPHAT_SHOOT3
+	{SPR_POPH, 0, 57, {NULL},               0,           0, S_POPHAT_LOOK},   // S_POPHAT_SHOOT4
+	{SPR_POPH, 3,  3, {A_SpawnObjectRelative}, 0, MT_POPSHOT_TRAIL, S_POPSHOT},   // S_POPSHOT
+	{SPR_NULL, 0,  2, {NULL},                  0, 0,                S_SPINDUST1}, // S_POPSHOT_TRAIL
 
 	{SPR_HIVE, 0,  5, {A_Look}, 1, 1, S_HIVEELEMENTAL_LOOK}, // S_HIVEELEMENTAL_LOOK
 	{SPR_HIVE, 0, 14, {A_PlaySound}, sfx_s3k76, 1, S_HIVEELEMENTAL_PREPARE2}, // S_HIVEELEMENTAL_PREPARE1
@@ -6115,11 +6115,11 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,            // meleestate
 		S_NULL,            // missilestate
 		S_FSGNC,           // deathstate
-		S_NULL,            // xdeathstate
+		S_FSGND,           // xdeathstate
 		sfx_None,          // deathsound
 		0,                 // speed
-		124*FRACUNIT,      // radius
-		640*FRACUNIT,      // height
+		74*FRACUNIT,       // radius
+		320*FRACUNIT,      // height
 		0,                 // display offset
 		0,                 // mass
 		0,                 // damage
@@ -18910,29 +18910,56 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_FIREBALL
 		-1,             // doomednum
-		S_FIREBALL1,    // spawnstate
+		S_FIREBALL,     // spawnstate
 		1000,           // spawnhealth
-		S_FIREBALLEXP1, // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
 		sfx_None,       // painsound
-		S_FIREBALLEXP1, // meleestate
-		S_FIREBALLEXP1, // missilestate
-		S_FIREBALLEXP1, // deathstate
-		S_FIREBALLEXP1, // xdeathstate
-		sfx_mario1,     // deathsound
-		10*FRACUNIT,    // speed
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		40*FRACUNIT,    // speed
 		4*FRACUNIT,     // radius
 		8*FRACUNIT,     // height
 		0,              // display offset
 		DMG_FIRE,       // mass
 		1,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_FIRE|MF_MISSILE, // flags
+		MF_FIRE|MF_BOUNCE|MF_MISSILE, // flags
 		S_NULL          // raisestate
+	},
+
+	{           // MT_FIREBALLTRAIL
+		-1,                  // doomednum
+		S_FIREBALLTRAIL1,    // spawnstate
+		1000,                // spawnhealth
+		S_NULL,              // seestate
+		sfx_None,            // seesound
+		8,                   // reactiontime
+		sfx_None,            // attacksound
+		S_NULL,              // painstate
+		0,                   // painchance
+		sfx_None,            // painsound
+		S_NULL,              // meleestate
+		S_NULL,              // missilestate
+		S_NULL,              // deathstate
+		S_NULL,              // xdeathstate
+		sfx_None,            // deathsound
+		0,                   // speed
+		16*FRACUNIT,         // radius
+		16*FRACUNIT,         // height
+		0,                   // display offset
+		0,                   // mass
+		1,                   // damage
+		sfx_None,            // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_RUNSPAWNFUNC, // flags
+		S_NULL               // raisestate
 	},
 
 	{           // MT_SHELL
@@ -19989,10 +20016,10 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_POPSHOT
 		-1,             // doomednum
-		S_ROCKCRUMBLEI, // spawnstate
+		S_POPSHOT,      // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_cannon,     // seesound
+		sfx_kc4c,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -20000,9 +20027,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_XPLD1,        // deathstate
+		S_SONIC3KBOSSEXPLOSION1, // deathstate
 		S_NULL,         // xdeathstate
-		sfx_pop,        // deathsound
+		sfx_cybdth,     // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
 		32*FRACUNIT,    // height
@@ -20011,6 +20038,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_MISSILE, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_POPSHOT_TRAIL
+		-1,             // doomednum
+		S_POPSHOT_TRAIL,// spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		4*FRACUNIT,     // speed
+		4*FRACUNIT,     // radius
+		4*FRACUNIT,     // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP, // flags
 		S_NULL          // raisestate
 	},
 

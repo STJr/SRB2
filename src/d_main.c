@@ -180,6 +180,9 @@ void D_ProcessEvents(void)
 		if (M_ScreenshotResponder(ev))
 			continue; // ate the event
 
+		if (WipeStageTitle)
+			continue;
+
 		if (gameaction == ga_nothing && gamestate == GS_TITLESCREEN)
 		{
 			if (cht_Responder(ev))
@@ -441,6 +444,17 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			F_WipeEndScreen();
+			// Funny.
+#ifndef LEVELWIPES
+			if (WipeStageTitle && st_overlay)
+			{
+				lt_ticker--;
+				lt_lasttic = lt_ticker;
+				ST_preLevelTitleCardDrawer(0, false);
+				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+				F_WipeStartScreen();
+			}
+#endif
 			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
 
@@ -741,14 +755,6 @@ void D_StartTitle(void)
 
 	// empty maptol so mario/etc sounds don't play in sound test when they shouldn't
 	maptol = 0;
-
-	// reset to default player stuff
-	COM_BufAddText (va("%s \"%s\"\n",cv_playername.name,cv_defaultplayername.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_skin.name,cv_defaultskin.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor.name,cv_defaultplayercolor.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playername2.name,cv_defaultplayername2.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_skin2.name,cv_defaultskin2.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor2.name,cv_defaultplayercolor2.string));
 
 	gameaction = ga_nothing;
 	displayplayer = consoleplayer = 0;

@@ -19,6 +19,7 @@
 #include "r_draw.h" // transtable
 #include "p_pspr.h" // tr_transxxx
 #include "p_local.h"
+#include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -30,7 +31,6 @@
 #include "m_misc.h" // movie mode
 
 #include "doomstat.h"
-#include "st_stuff.h"
 
 #ifdef HAVE_BLUA
 #include "lua_hud.h" // level title
@@ -92,6 +92,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 
 boolean WipeInAction = false;
 boolean WipeInLevel = false;
+boolean WipeStageTitle = false;
 INT32 lastwipetic = 0;
 
 wipestyle_t wipestyle = WIPESTYLE_NORMAL;
@@ -193,22 +194,14 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
   */
 void F_WipeStageTitle(void)
 {
-	if (wipestyle == WIPESTYLE_LEVEL
-	&& (!titlemapinaction)
-	&& (wipestyleflags & WSF_FADEIN)
-	&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
-#ifdef HAVE_BLUA
-	&& LUA_HudEnabled(hud_stagetitle)
-#endif
-	)
+	// draw level title
+	if ((WipeStageTitle && st_overlay)
+	&& (wipestyle == WIPESTYLE_LEVEL)
+	&& !(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+	&& *mapheaderinfo[gamemap-1]->lvlttl != '\0')
 	{
-		stplyr = &players[consoleplayer];
-		ST_drawLevelTitle(TICRATE);
-		if (splitscreen)
-		{
-			stplyr = &players[secondarydisplayplayer];
-			ST_drawLevelTitle(TICRATE);
-		}
+		ST_runTitleCard();
+		ST_drawWipeTitleCard();
 	}
 }
 
@@ -457,6 +450,15 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 #endif
 			F_DoWipe(fmask);
 
+		// draw level title
+		if ((WipeStageTitle && st_overlay)
+		&& !(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0')
+		{
+			ST_runTitleCard();
+			ST_drawWipeTitleCard();
+		}
+
 		I_OsPolling();
 		I_UpdateNoBlit();
 
@@ -468,8 +470,10 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		if (moviemode)
 			M_SaveFrame();
 	}
+
 	WipeInAction = false;
 	WipeInLevel = false;
+	WipeStageTitle = false;
 #endif
 }
 
@@ -497,6 +501,7 @@ void F_WipeTicker(void)
 		// stop
 		WipeInAction = false;
 		WipeInLevel = false;
+		WipeStageTitle = false;
 		return;
 	}
 
@@ -508,6 +513,7 @@ void F_WipeTicker(void)
 #endif
 		F_DoWipe(fmask);
 #endif
+	WipeStageTitle = false;
 #endif
 }
 

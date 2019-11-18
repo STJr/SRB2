@@ -1224,32 +1224,33 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	                      NULL, "HUD Transparency",          &cv_translucenthud,   66},
 	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",          &cv_timetic,          71},
 	{IT_STRING | IT_CVAR, NULL, "Show Powerups",             &cv_powerupdisplay,   76},
+	{IT_STRING | IT_CVAR, NULL, "Local ping display",		&cv_showping,			81}, // shows ping next to framerate if we want to.
 #ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         81},
+	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         86},
 #endif
 
-	{IT_HEADER, NULL, "Console", NULL, 90},
-	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      96},
-	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,    101},
+	{IT_HEADER, NULL, "Console", NULL, 95},
+	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      101},
+	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,    106},
 
-	{IT_HEADER, NULL, "Chat", NULL, 110},
-	{IT_STRING | IT_CVAR, NULL, "Chat Mode",            		 	 &cv_consolechat,  116},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     121},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    126},
-	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    131},
-	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  136},
-	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  141},
-	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  146},
+	{IT_HEADER, NULL, "Chat", NULL, 115},
+	{IT_STRING | IT_CVAR, NULL, "Chat Mode",            		 	 &cv_consolechat,  121},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     126},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    131},
+	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    136},
+	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  141},
+	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  146},
+	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  151},
 
-	{IT_HEADER, NULL, "Level", NULL, 155},
-	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        161},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 166},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 171},
+	{IT_HEADER, NULL, "Level", NULL, 160},
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        166},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 171},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 176},
 
-	{IT_HEADER, NULL, "Diagnostic", NULL, 180},
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         186},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      191},
-	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   196},
+	{IT_HEADER, NULL, "Diagnostic", NULL, 184},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         190},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      195},
+	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   200},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
@@ -7179,7 +7180,7 @@ static void M_DrawSoundTest(void)
 				titl = va("%s - ", curplaying->title);
 		}
 		else
-			titl = "NONE - ";
+			titl = "None - ";
 
 		i = V_LevelNameWidth(titl);
 
@@ -7193,7 +7194,7 @@ static void M_DrawSoundTest(void)
 		while (x > y)
 		{
 			x -= i;
-			V_DrawLevelTitle(x, 24, 0, titl);
+			V_DrawLevelTitle(x, 22, 0, titl);
 		}
 
 		if (curplaying)
@@ -10472,7 +10473,6 @@ static consvar_t *setupm_cvcolor;
 static consvar_t *setupm_cvname;
 static consvar_t *setupm_cvdefaultskin;
 static consvar_t *setupm_cvdefaultcolor;
-static consvar_t *setupm_cvdefaultname;
 static INT32      setupm_fakeskin;
 static INT32      setupm_fakecolor;
 
@@ -10634,8 +10634,7 @@ colordraw:
 
 	V_DrawString(x, y,
 		((R_SkinAvailable(setupm_cvdefaultskin->string) != setupm_fakeskin
-		|| setupm_cvdefaultcolor->value != setupm_fakecolor
-		|| strcmp(setupm_name, setupm_cvdefaultname->string))
+		|| setupm_cvdefaultcolor->value != setupm_fakecolor)
 			? 0
 			: V_TRANSLUCENT)
 		| ((itemOn == 3) ? V_YELLOWMAP : 0),
@@ -10690,14 +10689,12 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 		case KEY_ENTER:
 			if (itemOn == 3
 			&& (R_SkinAvailable(setupm_cvdefaultskin->string) != setupm_fakeskin
-			|| setupm_cvdefaultcolor->value != setupm_fakecolor
-			|| strcmp(setupm_name, setupm_cvdefaultname->string)))
+			|| setupm_cvdefaultcolor->value != setupm_fakecolor))
 			{
 				S_StartSound(NULL,sfx_strpst);
 				// you know what? always putting these in the buffer won't hurt anything.
 				COM_BufAddText (va("%s \"%s\"\n",setupm_cvdefaultskin->name,skins[setupm_fakeskin].name));
 				COM_BufAddText (va("%s %d\n",setupm_cvdefaultcolor->name,setupm_fakecolor));
-				COM_BufAddText (va("%s %s\n",setupm_cvdefaultname->name,setupm_name));
 				break;
 			}
 			/* FALLTHRU */
@@ -10796,7 +10793,6 @@ static void M_SetupMultiPlayer(INT32 choice)
 	setupm_cvname = &cv_playername;
 	setupm_cvdefaultskin = &cv_defaultskin;
 	setupm_cvdefaultcolor = &cv_defaultplayercolor;
-	setupm_cvdefaultname = &cv_defaultplayername;
 
 	// For whatever reason this doesn't work right if you just use ->value
 	setupm_fakeskin = R_SkinAvailable(setupm_cvskin->string);
@@ -10838,7 +10834,6 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	setupm_cvname = &cv_playername2;
 	setupm_cvdefaultskin = &cv_defaultskin2;
 	setupm_cvdefaultcolor = &cv_defaultplayercolor2;
-	setupm_cvdefaultname = &cv_defaultplayername2;
 
 	// For whatever reason this doesn't work right if you just use ->value
 	setupm_fakeskin = R_SkinAvailable(setupm_cvskin->string);

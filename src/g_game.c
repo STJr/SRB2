@@ -47,6 +47,10 @@
 #include "m_cond.h" // condition sets
 #include "md5.h" // demo checksums
 
+#ifdef HAVE_BLUA
+#include "lua_hud.h"
+#endif
+
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
 UINT8 ultimatemode = false;
@@ -1703,6 +1707,61 @@ void G_DoLoadLevel(boolean resetplayer)
 	CON_ClearHUD();
 }
 
+//
+// Start the title card.
+//
+void G_StartTitleCard(void)
+{
+	// The title card has been disabled for this map.
+	// Oh well.
+	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+	{
+		WipeStageTitle = false;
+		return;
+	}
+
+	// clear the hud
+	CON_ClearHUD();
+
+	// prepare status bar
+	ST_startTitleCard();
+
+	// start the title card
+	WipeStageTitle = (!titlemapinaction);
+	WipeInLevel = true;
+	wipestyleflags |= WSF_FADEIN;
+	wipestyleflags &= ~WSF_FADEOUT;
+}
+
+//
+// Run the title card before fading in to the level.
+//
+void G_PreLevelTitleCard(tic_t ticker, boolean update)
+{
+	tic_t starttime = I_GetTime();
+	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
+	tic_t nowtime = starttime;
+	tic_t lasttime = starttime;
+	while (nowtime < endtime)
+	{
+		// draw loop
+		while (!((nowtime = I_GetTime()) - lasttime))
+			I_Sleep();
+		lasttime = nowtime;
+
+		// Run some bullshit whatever
+		D_ProcessEvents();
+
+		ST_runTitleCard();
+		ST_preLevelTitleCardDrawer(ticker, update);
+
+		if (moviemode)
+			M_SaveFrame();
+		if (takescreenshot) // Only take screenshots after drawing.
+			M_DoScreenShot();
+	}
+}
+
 INT32 pausedelay = 0;
 boolean pausebreakkey = false;
 static INT32 camtoggledelay, camtoggledelay2 = 0;
@@ -1992,7 +2051,7 @@ void G_Ticker(boolean run)
 			if (titledemo)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
-			ST_Ticker();
+			ST_Ticker(run);
 			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
@@ -2831,6 +2890,31 @@ void G_AddPlayer(INT32 playernum)
 
 	if (countplayers && !notexiting)
 		P_DoPlayerExit(p);
+}
+
+boolean G_EnoughPlayersFinished(void)
+{
+	UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
+	INT32 total = 0;
+	INT32 exiting = 0;
+	INT32 i;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i] || players[i].spectator || players[i].bot)
+			continue;
+		if (players[i].lives <= 0)
+			continue;
+
+		total++;
+		if (players[i].pflags & PF_FINISHED)
+			exiting++;
+	}
+
+	if (exiting)
+		return exiting * 4 / total >= numneeded;
+	else
+		return false;
 }
 
 void G_ExitLevel(void)
@@ -4031,7 +4115,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 		len += strlen(mapheaderinfo[mapnum-1]->lvlttl);
 		if (!(mapheaderinfo[mapnum-1]->levelflags & LF_NOZONE))
 		{
-			zonetext = M_GetText("ZONE");
+			zonetext = M_GetText("Zone");
 			len += strlen(zonetext) + 1;	// ' ' + zonetext
 		}
 		if (actnum > 0)
@@ -5194,7 +5278,10 @@ void G_ReadMetalTic(mobj_t *metal)
 	{ // But wait, there's more!
 		xziptic = READUINT8(metal_p);
 		if (xziptic & EZT_FLIP)
+		{
 			metal->eflags ^= MFE_VERTICALFLIP;
+			metal->flags2 ^= MF2_OBJECTFLIP;
+		}
 		if (xziptic & EZT_SCALE)
 		{
 			metal->destscale = READFIXED(metal_p);

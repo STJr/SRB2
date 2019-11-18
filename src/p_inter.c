@@ -2741,7 +2741,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_EGGTRAP:
 			// Time for birdies! Yaaaaaaaay!
-			target->fuse = TICRATE*2;
+			target->fuse = TICRATE;
 			break;
 
 		case MT_MINECART:
@@ -3001,6 +3001,10 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		player->powers[pw_flashing] = flashingtics;
 		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_STUN);
 		S_StartSound(target, sfx_nghurt);
+
+#ifdef ROTSPRITE
+		player->mo->rollangle = 0;
+#endif
 
 		if (oldnightstime > 10*TICRATE
 			&& player->nightstime < 10*TICRATE)

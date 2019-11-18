@@ -1180,6 +1180,9 @@ void I_FinishUpdate(void)
 	{
 		if (cv_ticrate.value)
 			SCR_DisplayTicRate();
+
+		if (cv_showping.value && netgame && consoleplayer != serverplayer)
+			SCR_DisplayLocalPing();
 	}
 
 	if (rendermode == render_soft && screens[0])
