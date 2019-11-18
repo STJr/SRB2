@@ -506,6 +506,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Game Indicators
 	&lspr[NOLIGHT],     // SPR_SCOR
 	&lspr[NOLIGHT],     // SPR_DRWN
+	&lspr[NOLIGHT],     // SPR_FLII
 	&lspr[NOLIGHT],     // SPR_LCKN
 	&lspr[NOLIGHT],     // SPR_TTAG
 	&lspr[NOLIGHT],     // SPR_GFLG

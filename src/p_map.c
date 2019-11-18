@@ -595,9 +595,6 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if (sonic->pflags & PF_FINISHED)
 		return;
 
-	if (tails->bot == 1)
-		return;
-
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
 
