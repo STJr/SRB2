@@ -1210,7 +1210,7 @@ void ST_startTitleCard(void)
 }
 
 //
-// What happens before drawing the title card.
+// What happens before drawing the status bar.
 // Which is just setting the HUD translucency.
 //
 void ST_preDrawTitleCard(void)
@@ -1283,8 +1283,17 @@ void ST_drawTitleCard(void)
 	INT32 zzticker;
 	patch_t *actpat, *zigzag, *zztext;
 
+#ifdef HAVE_BLUA
+	if (!LUA_HudEnabled(hud_stagetitle))
+		goto luahook;
+#endif
+
 	if (lt_ticker >= (lt_endtime + TICRATE))
+#ifdef HAVE_BLUA
+		goto luahook;
+#else
 		return;
+#endif
 
 	if ((lt_ticker-lt_lasttic) > 1)
 		lt_ticker = lt_lasttic+1;
@@ -1324,6 +1333,11 @@ void ST_drawTitleCard(void)
 	V_DrawCenteredString(subttlxpos - ttlnumxpos, 128, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
 
 	lt_lasttic = lt_ticker;
+
+#ifdef HAVE_BLUA
+luahook:
+	LUAh_TitleCardHUD(stplyr);
+#endif
 }
 
 //
@@ -2525,11 +2539,7 @@ static void ST_overlayDrawer(void)
 	// Check for a valid level title
 	// If the HUD is enabled
 	// And, if Lua is running, if the HUD library has the stage title enabled
-	if (*mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer))
-#ifdef HAVE_BLUA
-	&& LUA_HudEnabled(hud_stagetitle)
-#endif
-	)
+	if (*mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer)))
 	{
 		stagetitle = true;
 		ST_preDrawTitleCard();

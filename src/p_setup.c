@@ -3234,9 +3234,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		&& WipeStageTitle
 		&& ranspecialwipe != 2
 		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
-#ifdef HAVE_BLUA
-		&& LUA_HudEnabled(hud_stagetitle)
-#endif
 	)
 		G_PreLevelTitleCard(lt_ticker, true);
 
