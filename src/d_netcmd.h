@@ -106,6 +106,9 @@ extern consvar_t cv_ringslinger, cv_soundtest;
 extern consvar_t cv_specialrings, cv_powerstones, cv_matchboxes, cv_competitionboxes;
 
 extern consvar_t cv_maxping;
+extern consvar_t cv_pingtimeout;
+extern consvar_t cv_showping;
+
 
 extern consvar_t cv_skipmapcheck;
 

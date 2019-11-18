@@ -2322,7 +2322,7 @@ void HU_Erase(void)
 //
 // HU_drawPing
 //
-void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext)
+void HU_drawPing(INT32 x, INT32 y, UINT32 ping, boolean notext)
 {
 	UINT8 numbars = 1; // how many ping bars do we draw?
 	UINT8 barcolor = 35; // color we use for the bars (green, yellow or red)

@@ -428,6 +428,17 @@ void SCR_DisplayTicRate(void)
 	lasttic = ontic;
 }
 
+void SCR_DisplayLocalPing(void)
+{
+	UINT32 ping = playerpingtable[consoleplayer];	// consoleplayer's ping is everyone's ping in a splitnetgame :P
+	if (cv_showping.value == 1 || (cv_showping.value == 2 && servermaxping && ping > servermaxping))	// only show 2 (warning) if our ping is at a bad level
+	{
+		INT32 dispy = cv_ticrate.value ? 181 : 190;
+		HU_drawPing(307, dispy, ping, true);
+	}
+}
+
+
 void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
