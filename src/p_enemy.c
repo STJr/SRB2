@@ -14656,7 +14656,7 @@ void A_DragonWing(mobj_t *actor)
 	fixed_t x, y;
 
 	#ifdef HAVE_BLUA
-		if (LUA_CallAction("A_DragonSegment", actor))
+		if (LUA_CallAction("A_DragonWing", actor))
 			return;
 	#endif
 
@@ -14697,5 +14697,6 @@ void A_DragonSegment(mobj_t *actor)
 			return;
 	#endif
 
+	actor->angle = hangle;
 	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);
 }

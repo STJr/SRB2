@@ -9633,7 +9633,7 @@ void P_MobjThinker(mobj_t *mobj)
 						if (mobj->threshold == 0) // if the timer hits 0, look for a mine to drop!
 						{
 							mobj_t *segment = mobj;
-							while (segment->tracer != NULL && segment->tracer->state == &states[segment->tracer->info->spawnstate])
+							while (segment->tracer != NULL && !P_MobjWasRemoved(segment->tracer) && segment->tracer->state == &states[segment->tracer->info->spawnstate])
 							{
 								segment = segment->tracer;
 							}
@@ -9641,7 +9641,7 @@ void P_MobjThinker(mobj_t *mobj)
 							{
 								mobj_t *mine = P_SpawnMobjFromMobj(segment, 0, 0, 0, segment->info->painchance);
 								mine->angle = segment->angle;
-								P_InstaThrust(mine, mobj->angle, P_AproxDistance(mobj->momx, mobj->momy));
+								P_InstaThrust(mine, mobj->angle, P_AproxDistance(mobj->momx, mobj->momy) >> 1);
 								P_SetObjectMomZ(mine, -2*FRACUNIT, true);
 								S_StartSound(mine, mine->info->seesound);
 								P_SetMobjState(segment, segment->info->raisestate);
