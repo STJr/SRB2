@@ -1712,6 +1712,14 @@ void G_DoLoadLevel(boolean resetplayer)
 //
 void G_StartTitleCard(void)
 {
+	// The title card has been disabled for this map.
+	// Oh well.
+	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+	{
+		WipeStageTitle = false;
+		return;
+	}
+
 	// clear the hud
 	CON_ClearHUD();
 

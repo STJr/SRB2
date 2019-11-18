@@ -2539,7 +2539,7 @@ static void ST_overlayDrawer(void)
 	// Check for a valid level title
 	// If the HUD is enabled
 	// And, if Lua is running, if the HUD library has the stage title enabled
-	if (*mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer)))
+	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD) && *mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer)))
 	{
 		stagetitle = true;
 		ST_preDrawTitleCard();

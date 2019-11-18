@@ -375,6 +375,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 		// draw level title
 		if ((WipeStageTitle && st_overlay)
+		&& !(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
 		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0')
 		{
 			ST_runTitleCard();

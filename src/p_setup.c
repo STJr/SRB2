@@ -3226,15 +3226,21 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 	}
 
-	// Stage title!
+	// No render mode, stop here.
+	if (rendermode == render_none)
+		return true;
+
+	// Title card!
 	G_StartTitleCard();
 
 	// Can the title card actually run, though?
-	if (rendermode != render_none
-		&& WipeStageTitle
-		&& ranspecialwipe != 2
-		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
-	)
+	if (!WipeStageTitle)
+		return true;
+	if (ranspecialwipe == 2)
+		return true;
+
+	// If so...
+	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
 		G_PreLevelTitleCard(lt_ticker, true);
 
 	return true;
