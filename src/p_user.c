@@ -3993,12 +3993,12 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	if (player->pflags & PF_ATTACKDOWN || player->climbing || (G_TagGametype() && !(player->pflags & PF_TAGIT)))
 		return;
 
-	if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
+	if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->weapondelay))
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		mo = P_SpawnPlayerMissile(player->mo, MT_FIREBALL, 0);
 		P_InstaThrust(mo, player->mo->angle, ((mo->info->speed>>FRACBITS)*player->mo->scale) + player->speed);
-		S_StartSound(player->mo, sfx_mario7);
+		P_SetWeaponDelay(player, TICRATE); // Short delay between fireballs so you can't spam them everywhere
 		return;
 	}
 

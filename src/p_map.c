@@ -1301,6 +1301,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return false;
 		}
 
+		// Fireball touched an enemy
+		// Don't bounce though, just despawn right there
+		if ((tmthing->type == MT_FIREBALL) && (thing->flags & MF_ENEMY))
+			P_KillMobj(tmthing, NULL, NULL, 0);
+
 		// damage / explode
 		if (tmthing->flags & MF_ENEMY) // An actual ENEMY! (Like the deton, for example)
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);

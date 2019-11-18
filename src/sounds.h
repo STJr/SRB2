@@ -326,6 +326,8 @@ typedef enum
 	sfx_mario9,
 	sfx_marioa,
 	sfx_thwomp,
+	sfx_fbll,
+	sfx_fblldi,
 
 	// Black Eggman
 	sfx_bebomb,
