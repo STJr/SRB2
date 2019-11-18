@@ -18909,7 +18909,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FIREBALL,     // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_fbll,       // seesound
+		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -18919,7 +18919,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
-		sfx_fblldi,     // deathsound
+		sfx_None,       // deathsound
 		40*FRACUNIT,    // speed
 		4*FRACUNIT,     // radius
 		8*FRACUNIT,     // height

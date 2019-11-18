@@ -277,8 +277,6 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"mario9",  true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Emerging power-up"},
   {"marioa",  true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "One-up"},
   {"thwomp",  true, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Thwomp"},
-  {"fbll",   false, 32,   0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Fireball throw"},
-  {"fblldi", false, 60,   0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Fireball hit"},
 
   // Black Eggman
   {"bebomb", false,  64, 64, -1, NULL, 0,        -1,  -1, LUMPERROR, "Big explosion"},
