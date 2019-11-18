@@ -445,10 +445,12 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 		
 		// cap inputs so the bot can't accelerate faster diagonally
 		angle = R_PointToAngle2(0, 0, cmd->sidemove << FRACBITS, cmd->forwardmove << FRACBITS);
-		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
-		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
-		cmd->forwardmove = max(min(cmd->forwardmove, maxforward), -maxforward);
-		cmd->sidemove = max(min(cmd->sidemove, maxside), -maxside);
+		{
+			INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
+			INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
+			cmd->forwardmove = max(min(cmd->forwardmove, maxforward), -maxforward);
+			cmd->sidemove = max(min(cmd->sidemove, maxside), -maxside);
+		}
 	}
 	if (jump)
 		cmd->buttons |= BT_JUMP;
