@@ -33,7 +33,7 @@ static boolean spinmode = false;
 static boolean thinkfly = false;
 static mobj_t *overlay;
 
-static inline void B_ResetAI()
+static inline void B_ResetAI(void)
 {
 	jump_last = false;
 	spin_last = false;
@@ -429,6 +429,7 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 				cmd->sidemove += MAXPLMOVE<<FRACBITS>>16;
 		}
 	} else {
+		angle_t angle;
 		if (forward)
 			cmd->forwardmove += MAXPLMOVE<<FRACBITS>>16;
 		if (backward)
@@ -443,7 +444,7 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 			cmd->sidemove += MAXPLMOVE<<FRACBITS>>16;
 		
 		// cap inputs so the bot can't accelerate faster diagonally
-		angle_t angle = R_PointToAngle2(0, 0, cmd->sidemove << FRACBITS, cmd->forwardmove << FRACBITS);
+		angle = R_PointToAngle2(0, 0, cmd->sidemove << FRACBITS, cmd->forwardmove << FRACBITS);
 		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
 		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
 		cmd->forwardmove = max(min(cmd->forwardmove, maxforward), -maxforward);
