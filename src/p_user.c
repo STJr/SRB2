@@ -9889,10 +9889,20 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	pviewheight = FixedMul(41*player->height/48, mo->scale);
 
-	if (mo->eflags & MFE_VERTICALFLIP)
-		z = mo->z + mo->height - pviewheight - camheight + distz;
+	if (sign)
+	{
+		if (mo->eflags & MFE_VERTICALFLIP)
+			z = sign->ceilingz - pviewheight - camheight;
+		else
+			z = sign->floorz + pviewheight + camheight;
+	}
 	else
-		z = mo->z + pviewheight + camheight + distz;
+	{
+		if (mo->eflags & MFE_VERTICALFLIP)
+			z = mo->z + mo->height - pviewheight - camheight + distz;
+		else
+			z = mo->z + pviewheight + camheight + distz;
+	}
 
 	// move camera down to move under lower ceilings
 	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
