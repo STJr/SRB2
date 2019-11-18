@@ -1487,6 +1487,7 @@ state_t states[NUMSTATES] =
 	{SPR_FSGN, 0|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGNA
 	{SPR_FSGN, 1|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGNB
 	{SPR_FSGN, 2|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGNC
+	{SPR_FSGN, 3|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGND
 
 	// Black Eggman (Boss 7)
 	{SPR_BRAK, 0, 1, {A_SetReactionTime}, 0, 0, S_BLACKEGG_STND2}, // S_BLACKEGG_STND
@@ -6115,11 +6116,11 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,            // meleestate
 		S_NULL,            // missilestate
 		S_FSGNC,           // deathstate
-		S_NULL,            // xdeathstate
+		S_FSGND,           // xdeathstate
 		sfx_None,          // deathsound
 		0,                 // speed
-		124*FRACUNIT,      // radius
-		640*FRACUNIT,      // height
+		74*FRACUNIT,       // radius
+		320*FRACUNIT,      // height
 		0,                 // display offset
 		0,                 // mass
 		0,                 // damage

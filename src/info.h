@@ -1657,6 +1657,7 @@ typedef enum state
 	S_FSGNA,
 	S_FSGNB,
 	S_FSGNC,
+	S_FSGND,
 
 	// Black Eggman (Boss 7)
 	S_BLACKEGG_STND,
