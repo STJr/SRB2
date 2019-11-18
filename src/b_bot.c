@@ -158,7 +158,8 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 			&& (dist < touchdist)
 			&& !(pcmd->forwardmove || pcmd->sidemove || player->dashspeed)
 			&& P_IsObjectOnGround(sonic) && P_IsObjectOnGround(tails)
-			&& !(player->pflags & PF_STASIS))
+			&& !(player->pflags & PF_STASIS)
+			&& bot->charability == CA_FLY)
 				thinkfly = true;
 		else
 			thinkfly = false;
@@ -324,7 +325,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		else if (bot->pflags & PF_JUMPED && jump_last && tails->momz*flip > 0 && (zdist > 0 || panic))
 			jump = true;
 		// Start flying
-		else if (bot->pflags & PF_JUMPED && panic && !jump_last)
+		else if (bot->pflags & PF_JUMPED && panic && !jump_last && bot->charability == CA_FLY)
 			jump = true;
 	}
 
