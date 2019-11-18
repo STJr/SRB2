@@ -24,8 +24,6 @@
 
 // Object place
 #include "m_cheat.h"
-boolean gameovermus;
-INT32 fadetogameovermus;
 
 tic_t leveltime;
 
@@ -484,7 +482,7 @@ static inline void P_DoSpecialStageStuff(void)
 				countspheres += players[i].spheres;
 
 				// If in water, deplete timer 6x as fast.
-				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
+				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & SH_PROTECTWATER))
 					players[i].nightstime -= 5;
 				if (--players[i].nightstime > 6)
 				{
@@ -680,7 +678,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && --countdowntimer <= 0)
+		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && !stoppedclock && --countdowntimer <= 0)
 		{
 			countdowntimer = 0;
 			countdowntimeup = true;

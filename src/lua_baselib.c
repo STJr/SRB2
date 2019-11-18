@@ -143,6 +143,11 @@ static const struct {
 	{META_STATE,        "state_t"},
 	{META_MOBJINFO,     "mobjinfo_t"},
 	{META_SFXINFO,      "sfxinfo_t"},
+	{META_SPRITEINFO,   "spriteinfo_t"},
+#ifdef ROTSPRITE
+	{META_PIVOTLIST,    "spriteframepivot_t[]"},
+	{META_FRAMEPIVOT,   "spriteframepivot_t"},
+#endif
 
 	{META_MOBJ,         "mobj_t"},
 	{META_MAPTHING,     "mapthing_t"},
@@ -182,6 +187,8 @@ static const struct {
 	{META_CAMERA,       "camera_t"},
 
 	{META_ACTION,       "action"},
+
+	{META_LUABANKS,     "luabanks[]"},
 	{NULL,              NULL}
 };
 
@@ -225,6 +232,18 @@ static int lib_isPlayerAdmin(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	lua_pushboolean(L, IsPlayerAdmin(player-players));
+	return 1;
+}
+
+static int lib_reserveLuabanks(lua_State *L)
+{
+	static boolean reserved = false;
+	if (!lua_lumploading)
+		return luaL_error(L, "luabanks[] cannot be reserved from within a hook or coroutine!");
+	if (reserved)
+		return luaL_error(L, "luabanks[] has already been reserved! Only one savedata-enabled mod at a time may use this feature.");
+	reserved = true;
+	LUA_PushUserdata(L, &luabanks, META_LUABANKS);
 	return 1;
 }
 
@@ -802,15 +821,12 @@ static int lib_pCheckDeathPitCollide(lua_State *L)
 
 static int lib_pCheckSolidLava(lua_State *L)
 {
-	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	ffloor_t *rover = *((ffloor_t **)luaL_checkudata(L, 2, META_FFLOOR));
 	//HUDSAFE
 	INLEVEL
-	if (!mo)
-		return LUA_ErrInvalid(L, "mobj_t");
 	if (!rover)
 		return LUA_ErrInvalid(L, "ffloor_t");
-	lua_pushboolean(L, P_CheckSolidLava(mo, rover));
+	lua_pushboolean(L, P_CheckSolidLava(rover));
 	return 1;
 }
 
@@ -2194,25 +2210,62 @@ static int lib_rFrame2Char(lua_State *L)
 static int lib_rSetPlayerSkin(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INT32 i = -1, j = -1;
 	NOHUD
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
+
+	j = (player-players);
+
 	if (lua_isnoneornil(L, 2))
 		return luaL_error(L, "argument #2 not given (expected number or string)");
 	else if (lua_type(L, 2) == LUA_TNUMBER) // skin number
 	{
-		INT32 i = luaL_checkinteger(L, 2);
-		if (i < 0 || i >= MAXSKINS)
-			return luaL_error(L, "skin number (argument #2) %d out of range (0 - %d)", i, MAXSKINS-1);
-		SetPlayerSkinByNum(player-players, i);
+		i = luaL_checkinteger(L, 2);
+		if (i < 0 || i >= numskins)
+			return luaL_error(L, "skin %d (argument #2) out of range (0 - %d)", i, numskins-1);
 	}
 	else // skin name
 	{
 		const char *skinname = luaL_checkstring(L, 2);
-		SetPlayerSkin(player-players, skinname);
+		i = R_SkinAvailable(skinname);
+		if (i == -1)
+			return luaL_error(L, "skin %s (argument 2) is not loaded", skinname);
 	}
+
+	if (!R_SkinUsable(j, i))
+		return luaL_error(L, "skin %d (argument 2) not usable - check with R_SkinUsable(player_t, skin) first.", i);
+	SetPlayerSkinByNum(j, i);
 	return 0;
+}
+
+static int lib_rSkinUsable(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INT32 i = -1, j = -1;
+	if (player)
+		j = (player-players);
+	else if (netgame || multiplayer)
+		return luaL_error(L, "player_t (argument #1) must be provided in multiplayer games");
+	if (lua_isnoneornil(L, 2))
+		return luaL_error(L, "argument #2 not given (expected number or string)");
+	else if (lua_type(L, 2) == LUA_TNUMBER) // skin number
+	{
+		i = luaL_checkinteger(L, 2);
+		if (i < 0 || i >= numskins)
+			return luaL_error(L, "skin %d (argument #2) out of range (0 - %d)", i, numskins-1);
+	}
+	else // skin name
+	{
+		const char *skinname = luaL_checkstring(L, 2);
+		i = R_SkinAvailable(skinname);
+		if (i == -1)
+			return luaL_error(L, "skin %s (argument 2) is not loaded", skinname);
+	}
+
+	lua_pushboolean(L, R_SkinUsable(j, i));
+	return 1;
 }
 
 // R_DATA
@@ -2736,6 +2789,7 @@ static luaL_Reg lib[] = {
 	{"chatprintf", lib_chatprintf},
 	{"userdataType", lib_userdataType},
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
+	{"reserveLuabanks", lib_reserveLuabanks},
 
 	// m_random
 	{"P_RandomFixed",lib_pRandomFixed},
@@ -2901,6 +2955,7 @@ static luaL_Reg lib[] = {
 	{"R_Char2Frame",lib_rChar2Frame},
 	{"R_Frame2Char",lib_rFrame2Char},
 	{"R_SetPlayerSkin",lib_rSetPlayerSkin},
+	{"R_SkinUsable",lib_rSkinUsable},
 
 	// r_data
 	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},

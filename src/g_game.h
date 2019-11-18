@@ -31,15 +31,13 @@ extern char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 extern player_t players[MAXPLAYERS];
 extern boolean playeringame[MAXPLAYERS];
 
-extern INT32 fadetogameovermus;
-extern boolean gameovermus;
-
 // ======================================
 // DEMO playback/recording related stuff.
 // ======================================
 
 // demoplaying back and demo recording
 extern boolean demoplayback, titledemo, demorecording, timingdemo;
+extern tic_t demostarttime;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;
@@ -54,12 +52,15 @@ extern tic_t levelstarttic;
 // for modding?
 extern INT16 prevmap, nextmap;
 extern INT32 gameovertics;
+extern UINT8 ammoremovaltics;
 extern tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 extern INT16 rw_maximums[NUM_WEAPONS];
 extern INT32 pausedelay;
 extern boolean pausebreakkey;
 
 extern boolean promptactive;
+
+extern consvar_t cv_pauseifunfocused;
 
 // used in game menu
 extern consvar_t cv_tutorialprompt;
@@ -102,10 +103,31 @@ extern INT32 localaiming, localaiming2; // should be an angle_t but signed
 //
 void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo);
 void G_DoReborn(INT32 playernum);
-void G_PlayerReborn(INT32 player);
+void G_PlayerReborn(INT32 player, boolean betweenmaps);
 void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer,
 	boolean skipprecutscene, boolean FLS);
 char *G_BuildMapTitle(INT32 mapnum);
+
+struct searchdim
+{
+	UINT8 pos;
+	UINT8 siz;
+};
+
+typedef struct
+{
+	INT16  mapnum;
+	UINT8  matchc;
+	struct searchdim *matchd;/* offset that a pattern was matched */
+	UINT8  keywhc;
+	struct searchdim *keywhd;/* ...in KEYWORD */
+	UINT8  total;/* total hits */
+}
+mapsearchfreq_t;
+
+INT32 G_FindMap(const char *query, char **foundmapnamep,
+		mapsearchfreq_t **freqp, INT32 *freqc);
+void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
 
 // XMOD spawning
 mapthing_t *G_FindCTFStart(INT32 playernum);
@@ -174,7 +196,7 @@ void G_AddGhost(char *defdemoname);
 void G_DoPlayMetal(void);
 void G_DoneLevelLoad(void);
 void G_StopMetalDemo(void);
-ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void);
+ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 

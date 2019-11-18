@@ -31,10 +31,22 @@ openmpt_module *openmpt_mhandle;
 extern consvar_t stereoreverse;
 extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
+
 extern consvar_t cv_resetmusic;
+extern consvar_t cv_resetmusicbyheader;
+
+#define RESETMUSIC (!modeattacking && \
+	(cv_resetmusicbyheader.value ? \
+		(mapheaderinfo[gamemap-1]->musforcereset != -1 ? mapheaderinfo[gamemap-1]->musforcereset : cv_resetmusic.value) \
+		: cv_resetmusic.value) \
+	)
+
 extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
+
+extern consvar_t cv_playmusicifunfocused;
+extern consvar_t cv_playsoundsifunfocused;
 
 #ifdef HAVE_OPENMPT
 extern consvar_t cv_modfilter;
@@ -136,6 +148,12 @@ void S_StartEx(boolean reset);
 lumpnum_t S_GetSfxLumpNum(sfxinfo_t *sfx);
 
 //
+// Sound Status
+//
+
+boolean S_SoundDisabled(void);
+
+//
 // Start sound for thing at <origin> using <sound_id> from sounds.h
 //
 void S_StartSound(const void *origin, sfxenum_t sound_id);
@@ -155,6 +173,7 @@ boolean S_MIDIMusicDisabled(void);
 boolean S_MusicDisabled(void);
 boolean S_MusicPlaying(void);
 boolean S_MusicPaused(void);
+boolean S_MusicNotInFocus(void);
 musictype_t S_MusicType(void);
 const char *S_MusicName(void);
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
@@ -168,6 +187,39 @@ boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 
 // Set Speed of Music
 boolean S_SpeedMusic(float speed);
+
+// Music definitions
+typedef struct musicdef_s
+{
+	char name[7];
+	char title[32];
+	char alttitle[64];
+	char authors[256];
+	//char usage[256]; -- probably never going to be relevant to vanilla
+	/*
+	the trouble here is that kart combines what we call "title"
+	and "authors" into one string. we need to split it for sound
+	test reasons. they might split it later like we did, but...
+	*/
+	//char source[256];
+	UINT8 soundtestpage;
+	INT16 soundtestcond; // +ve for map, -ve for conditionset, 0 for already here
+	tic_t stoppingtics;
+	fixed_t bpm;
+	boolean allowed; // question marks or listenable on sound test?
+	struct musicdef_s *next;
+} musicdef_t;
+
+extern musicdef_t soundtestsfx;
+extern musicdef_t *musicdefstart;
+extern musicdef_t **soundtestdefs;
+extern INT32 numsoundtestdefs;
+extern UINT8 soundtestpage;
+
+void S_LoadMusicDefs(UINT16 wadnum);
+void S_InitMusicDefs(void);
+
+boolean S_PrepareSoundTest(void);
 
 //
 // Music Seeking
@@ -201,6 +253,7 @@ typedef struct musicstack_s
 	tic_t tic;
 	UINT16 status;
 	lumpnum_t mlumpnum;
+	boolean noposition; // force music stack resuming from zero (like music_stack_noposition)
 
     struct musicstack_s *prev;
     struct musicstack_s *next;

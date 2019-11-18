@@ -411,37 +411,53 @@ static int sector_iterate(lua_State *L)
 
 // sector.lines, i -> sector.lines[i]
 // sector.lines.valid, for validity checking
+//
+// 25/9/19 Monster Iestyn
+// Modified this and _num to use triple pointers, to allow for a new hack of mine involving offsetof
+// this way we don't need to check frontsector or backsector of line #0 in the array
+//
 static int sectorlines_get(lua_State *L)
 {
-	line_t **seclines = *((line_t ***)luaL_checkudata(L, 1, META_SECTORLINES));
+	line_t ***seclines = *((line_t ****)luaL_checkudata(L, 1, META_SECTORLINES));
 	size_t i;
 	size_t numoflines = 0;
 	lua_settop(L, 2);
 	if (!lua_isnumber(L, 2))
 	{
 		int field = luaL_checkoption(L, 2, NULL, valid_opt);
-		if (!seclines)
+		if (!seclines || !(*seclines))
 		{
 			if (field == 0) {
 				lua_pushboolean(L, 0);
 				return 1;
 			}
-			return luaL_error(L, "accessed sector_t doesn't exist anymore.");
+			return luaL_error(L, "accessed sector_t.lines doesn't exist anymore.");
 		} else if (field == 0) {
 			lua_pushboolean(L, 1);
 			return 1;
 		}
 	}
 
+/* a snip from sector_t struct in r_defs.h, for reference
+	size_t linecount;
+	struct line_s **lines; // [linecount] size
+*/
+	// get the "linecount" by shifting our retrieved memory address of "lines" to where "linecount" is in the sector_t, then dereferencing the result
+	// we need this to determine the array's actual size, and therefore also the maximum value allowed as an index
+	// this only works if seclines is actually a pointer to a sector's lines member in memory, oh boy
+	numoflines = (size_t)(*(seclines - (offsetof(sector_t, lines) - offsetof(sector_t, linecount))));
+
+/* OLD HACK
 	// check first linedef to figure which of its sectors owns this sector->lines pointer
 	// then check that sector's linecount to get a maximum index
-	//if (!seclines[0])
+	//if (!(*seclines)[0])
 		//return luaL_error(L, "no lines found!"); // no first linedef?????
-	if (seclines[0]->frontsector->lines == seclines)
-		numoflines = seclines[0]->frontsector->linecount;
-	else if (seclines[0]->backsector && seclines[0]->backsector->lines == seclines) // check backsector exists first
-		numoflines = seclines[0]->backsector->linecount;
+	if ((*seclines)[0]->frontsector->lines == *seclines)
+		numoflines = (*seclines)[0]->frontsector->linecount;
+	else if ((*seclines)[0]->backsector && *seclines[0]->backsector->lines == *seclines) // check backsector exists first
+		numoflines = (*seclines)[0]->backsector->linecount;
 	//if neither sector has it then ???
+*/
 
 	if (!numoflines)
 		return luaL_error(L, "no lines found!");
@@ -449,23 +465,21 @@ static int sectorlines_get(lua_State *L)
 	i = (size_t)lua_tointeger(L, 2);
 	if (i >= numoflines)
 		return 0;
-	LUA_PushUserdata(L, seclines[i], META_LINE);
+	LUA_PushUserdata(L, (*seclines)[i], META_LINE);
 	return 1;
 }
 
+// #(sector.lines) -> sector.linecount
 static int sectorlines_num(lua_State *L)
 {
-	line_t **seclines = *((line_t ***)luaL_checkudata(L, 1, META_SECTORLINES));
+	line_t ***seclines = *((line_t ****)luaL_checkudata(L, 1, META_SECTORLINES));
 	size_t numoflines = 0;
-	// check first linedef to figure which of its sectors owns this sector->lines pointer
-	// then check that sector's linecount to get a maximum index
-	//if (!seclines[0])
-		//return luaL_error(L, "no lines found!"); // no first linedef?????
-	if (seclines[0]->frontsector->lines == seclines)
-		numoflines = seclines[0]->frontsector->linecount;
-	else if (seclines[0]->backsector && seclines[0]->backsector->lines == seclines) // check backsector exists first
-		numoflines = seclines[0]->backsector->linecount;
-	//if neither sector has it then ???
+
+	if (!seclines || !(*seclines))
+		return luaL_error(L, "accessed sector_t.lines doesn't exist anymore.");
+
+	// see comments in the _get function above
+	numoflines = (size_t)(*(seclines - (offsetof(sector_t, lines) - offsetof(sector_t, linecount))));
 	lua_pushinteger(L, numoflines);
 	return 1;
 }
@@ -543,7 +557,7 @@ static int sector_get(lua_State *L)
 		LUA_PushUserdata(L, &sectors[sector->camsec], META_SECTOR);
 		return 1;
 	case sector_lines: // lines
-		LUA_PushUserdata(L, sector->lines, META_SECTORLINES);
+		LUA_PushUserdata(L, &sector->lines, META_SECTORLINES); // push the address of the "lines" member in the struct, to allow our hacks in sectorlines_get/_num to work
 		return 1;
 	case sector_ffloors: // ffloors
 		lua_pushcfunction(L, lib_iterateSectorFFloors);
@@ -579,6 +593,7 @@ static int sector_set(lua_State *L)
 	case sector_thinglist: // thinglist
 	case sector_heightsec: // heightsec
 	case sector_camsec: // camsec
+	case sector_lines: // lines
 	case sector_ffloors: // ffloors
 #ifdef ESLOPE
 	case sector_fslope: // f_slope
@@ -2017,6 +2032,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->muspostbosspos);
 	else if (fastcmp(field,"muspostbossfadein"))
 		lua_pushinteger(L, header->muspostbossfadein);
+	else if (fastcmp(field,"musforcereset"))
+		lua_pushinteger(L, header->musforcereset);
 	else if (fastcmp(field,"forcecharacter"))
 		lua_pushstring(L, header->forcecharacter);
 	else if (fastcmp(field,"weather"))

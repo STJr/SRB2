@@ -489,12 +489,15 @@ extern INT32 cv_debug;
 // Misc stuff for later...
 // =======================
 
+#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
+
 // Modifier key variables, accessible anywhere
 extern UINT8 shiftdown, ctrldown, altdown;
 extern boolean capslock;
 
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
+#define ZZ_Calloc(x) Z_Calloc(x, PU_STATIC, NULL)
 
 // i_system.c, replace getchar() once the keyboard has been appropriated
 INT32 I_GetKey(void);
@@ -506,13 +509,20 @@ INT32 I_GetKey(void);
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #endif
 
+// Max gamepad/joysticks that can be detected/used.
+#define MAX_JOYSTICKS 4
+
+#ifndef M_PIl
+#define M_PIl 3.1415926535897932384626433832795029L
+#endif
+
 // Floating point comparison epsilons from float.h
 #ifndef FLT_EPSILON
 #define FLT_EPSILON 1.1920928955078125e-7f
 #endif
 
 #ifndef DBL_EPSILON
-#define DBL_EPSILON 2.2204460492503131e-16
+#define DBL_EPSILON 2.2204460492503131e-16l
 #endif
 
 // An assert-type mechanism.
@@ -557,9 +567,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
-
-///	Improved way of dealing with ping values and a ping limit.
-#define NEWPING
 
 ///	See name of player in your crosshair
 #define SEENAMES
@@ -615,5 +622,14 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// \note	SRB2CB port.
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
+
+/// Sprite rotation
+#define ROTSPRITE
+#define ROTANGLES 24	// Needs to be a divisor of 360 (45, 60, 90, 120...)
+#define ROTANGDIFF (360 / ROTANGLES)
+
+#ifndef HAVE_PNG
+#define NO_PNG_LUMPS
+#endif
 
 #endif // __DOOMDEF__

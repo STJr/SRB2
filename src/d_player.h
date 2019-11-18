@@ -47,6 +47,7 @@ typedef enum
 	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
 	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
 	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
+	SF_NONIGHTSROTATION = 1<<14, // Disable sprite rotation for NiGHTS
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -234,7 +235,9 @@ typedef enum
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,
 	CR_MACESPIN,
-	CR_MINECART
+	CR_MINECART,
+	CR_ROLLOUT,
+	CR_PTERABYTE
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
@@ -250,6 +253,8 @@ typedef enum
 	pw_spacetime, // In space, no one can hear you spin!
 	pw_extralife, // Extra Life timer
 	pw_pushing,
+	pw_justsprung,
+	pw_noautobrake,
 
 	pw_super, // Are you super?
 	pw_gravityboots, // gravity boots
@@ -332,6 +337,10 @@ typedef struct player_s
 	SINT8 pity; // i pity the fool.
 	INT32 currentweapon; // current weapon selected.
 	INT32 ringweapons; // weapons currently obtained.
+
+	UINT16 ammoremoval; // amount of ammo removed for the current weapon.
+	tic_t  ammoremovaltimer; // flashing counter for ammo used.
+	INT32  ammoremovalweapon; // weapon from which the ammo was removed.
 
 	// Power ups. invinc and invis are tic counters.
 	UINT16 powers[NUMPOWERS];
@@ -437,6 +446,7 @@ typedef struct player_s
 	INT32 starpostnum; // The number of the last starpost you hit
 	tic_t starposttime; // Your time when you hit the starpost
 	angle_t starpostangle; // Angle that the starpost is facing - you respawn facing this way
+	fixed_t starpostscale; // Scale of the player; if negative, player is gravflipped
 
 	/////////////////
 	// NiGHTS Stuff//
@@ -503,6 +513,10 @@ typedef struct player_s
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
 } player_t;
+
+// Values for dashmode
+#define DASHMODE_THRESHOLD (3*TICRATE)
+#define DASHMODE_MAX (DASHMODE_THRESHOLD + 3)
 
 // Value for infinite lives
 #define INFLIVES 0x7F

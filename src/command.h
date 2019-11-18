@@ -29,6 +29,8 @@ size_t COM_Argc(void);
 const char *COM_Argv(size_t arg); // if argv > argc, returns empty string
 char *COM_Args(void);
 size_t COM_CheckParm(const char *check); // like M_CheckParm :)
+size_t COM_CheckPartialParm(const char *check);
+size_t COM_FirstOption(void);
 
 // match existing command or NULL
 const char *COM_CompleteCommand(const char *partial, INT32 skips);

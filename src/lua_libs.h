@@ -22,6 +22,11 @@ extern lua_State *gL;
 #define META_STATE "STATE_T*"
 #define META_MOBJINFO "MOBJINFO_T*"
 #define META_SFXINFO "SFXINFO_T*"
+#define META_SPRITEINFO "SPRITEINFO_T*"
+#ifdef ROTSPRITE
+#define META_PIVOTLIST "SPRITEFRAMEPIVOT_T[]"
+#define META_FRAMEPIVOT "SPRITEFRAMEPIVOT_T*"
+#endif
 
 #define META_MOBJ "MOBJ_T*"
 #define META_MAPTHING "MAPTHING_T*"
@@ -66,6 +71,8 @@ extern lua_State *gL;
 #define META_CAMERA "CAMERA_T*"
 
 #define META_ACTION "ACTIONF_T*"
+
+#define META_LUABANKS "LUABANKS[]*"
 
 boolean luaL_checkboolean(lua_State *L, int narg);
 

@@ -49,6 +49,7 @@ void (*fuzzcolfunc)(void); // standard fuzzy effect column drawer
 void (*transcolfunc)(void); // translation column drawer
 void (*shadecolfunc)(void); // smokie test..
 void (*spanfunc)(void); // span drawer, use a 64x64 tile
+void (*mmxspanfunc)(void); // span drawer in MMX assembly
 void (*splatfunc)(void); // span drawer w/ transparency
 void (*basespanfunc)(void); // default span func for color mode
 void (*transtransfunc)(void); // translucent translated column drawer
@@ -112,7 +113,7 @@ void SCR_SetMode(void)
 	//
 	if (true)//vid.bpp == 1) //Always run in 8bpp. todo: remove all 16bpp code?
 	{
-		spanfunc = basespanfunc = R_DrawSpan_8;
+		spanfunc = basespanfunc = mmxspanfunc = R_DrawSpan_8;
 		splatfunc = R_DrawSplat_8;
 		transcolfunc = R_DrawTranslatedColumn_8;
 		transtransfunc = R_DrawTranslatedTranslucentColumn_8;
@@ -133,7 +134,7 @@ void SCR_SetMode(void)
 				//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
 				walldrawerfunc = R_DrawWallColumn_8_MMX;
 				twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_MMX;
-				spanfunc = basespanfunc = R_DrawSpan_8_MMX;
+				mmxspanfunc = R_DrawSpan_8_MMX;
 			}
 			else
 			{
@@ -420,9 +421,9 @@ void SCR_DisplayTicRate(void)
 	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
 
 	V_DrawString(vid.width-(72*vid.dupx), h,
-		V_YELLOWMAP|V_NOSCALESTART, "FPS:");
+		V_YELLOWMAP|V_NOSCALESTART|V_HUDTRANS, "FPS:");
 	V_DrawString(vid.width-(40*vid.dupx), h,
-		ticcntcolor|V_NOSCALESTART, va("%02d/%02u", totaltics, TICRATE));
+		ticcntcolor|V_NOSCALESTART|V_HUDTRANS, va("%02d/%02u", totaltics, TICRATE));
 
 	lasttic = ontic;
 }
@@ -439,7 +440,7 @@ void SCR_ClosedCaptions(void)
 	if (gamestate == GS_LEVEL)
 	{
 		if (promptactive)
-			basey -= 28;
+			basey -= 42;
 		else if (splitscreen)
 			basey -= 8;
 		else if ((modeattacking == ATTACKING_NIGHTS)

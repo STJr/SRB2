@@ -28,6 +28,7 @@
 
 #include "r_data.h"
 #include "r_things.h"
+#include "r_patch.h"
 #include "r_sky.h"
 #include "r_draw.h"
 
@@ -75,15 +76,12 @@
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #include "hardware/hw_light.h"
+#include "hardware/hw_model.h"
 #endif
 
 #ifdef ESLOPE
 #include "p_slopes.h"
 #endif
-
-// Game over stuff
-boolean gameovermus;
-INT32 fadetogameovermus;
 
 //
 // Map MD5, calculated on level load.
@@ -107,6 +105,7 @@ side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 UINT16 bossdisabled;
+boolean stoppedclock;
 boolean levelloading;
 UINT8 levelfadecol;
 
@@ -225,6 +224,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->muspostbosstrack = 0;
 	mapheaderinfo[num]->muspostbosspos = 0;
 	mapheaderinfo[num]->muspostbossfadein = 0;
+	mapheaderinfo[num]->musforcereset = -1;
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	mapheaderinfo[num]->weather = 0;
 	mapheaderinfo[num]->skynum = 1;
@@ -544,52 +544,124 @@ levelflat_t *levelflats;
 size_t P_PrecacheLevelFlats(void)
 {
 	lumpnum_t lump;
-	size_t i, flatmemory = 0;
+	size_t i;
 
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
+	flatmemory = 0;
 	for (i = 0; i < numlevelflats; i++)
 	{
-		lump = levelflats[i].lumpnum;
-		if (devparm)
-			flatmemory += W_LumpLength(lump);
-		R_GetFlat(lump);
+		if (levelflats[i].type == LEVELFLAT_FLAT)
+		{
+			lump = levelflats[i].u.flat.lumpnum;
+			if (devparm)
+				flatmemory += W_LumpLength(lump);
+			R_GetFlat(lump);
+		}
 	}
 	return flatmemory;
+}
+
+/*
+levelflat refers to an array of level flats,
+or NULL if we want to allocate it now.
+*/
+static INT32
+Ploadflat (levelflat_t *levelflat, const char *flatname)
+{
+	UINT8         buffer[8];
+
+	lumpnum_t    flatnum;
+	int       texturenum;
+
+	size_t i;
+
+	if (levelflat)
+	{
+		// Scan through the already found flats, return if it matches.
+		for (i = 0; i < numlevelflats; i++)
+		{
+			if (strnicmp(levelflat[i].name, flatname, 8) == 0)
+				return i;
+		}
+	}
+
+#ifndef ZDEBUG
+	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
+	if (numlevelflats >= MAXLEVELFLATS)
+		I_Error("Too many flats in level\n");
+
+	if (levelflat)
+		levelflat += numlevelflats;
+	else
+	{
+		// allocate new flat memory
+		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
+		levelflat  = levelflats + numlevelflats;
+	}
+
+	// Store the name.
+	strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
+	strupr(levelflat->name);
+
+	/* If we can't find a flat, try looking for a texture! */
+	if (( flatnum = R_GetFlatNumForName(flatname) ) == LUMPERROR)
+	{
+		if (( texturenum = R_CheckTextureNumForName(flatname) ) == -1)
+		{
+			// check for REDWALL
+			if (( texturenum = R_CheckTextureNumForName("REDWALL") ) != -1)
+				goto texturefound;
+			// check for REDFLR
+			else if (( flatnum = R_GetFlatNumForName("REDFLR") ) != LUMPERROR)
+				goto flatfound;
+			// nevermind
+			levelflat->type = LEVELFLAT_NONE;
+		}
+		else
+		{
+texturefound:
+			levelflat->type = LEVELFLAT_TEXTURE;
+			levelflat->u.texture.    num = texturenum;
+			levelflat->u.texture.lastnum = texturenum;
+			/* start out unanimated */
+			levelflat->u.texture.basenum = -1;
+		}
+	}
+	else
+	{
+flatfound:
+		/* This could be a flat, patch, or PNG. */
+		if (R_CheckIfPatch(flatnum))
+			levelflat->type = LEVELFLAT_PATCH;
+		else
+		{
+#ifndef NO_PNG_LUMPS
+			/*
+			Only need eight bytes for PNG headers.
+			FIXME: Put this elsewhere.
+			*/
+			W_ReadLumpHeader(flatnum, buffer, 8, 0);
+			if (R_IsLumpPNG(buffer, W_LumpLength(flatnum)))
+				levelflat->type = LEVELFLAT_PNG;
+			else
+#endif/*NO_PNG_LUMPS*/
+				levelflat->type = LEVELFLAT_FLAT;/* phew */
+		}
+
+		levelflat->u.flat.    lumpnum = flatnum;
+		levelflat->u.flat.baselumpnum = LUMPERROR;
+	}
+
+	return ( numlevelflats++ );
 }
 
 // Auxiliary function. Find a flat in the active wad files,
 // allocate an id for it, and set the levelflat (to speedup search)
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 {
-	size_t i;
-
-	// Scan through the already found flats, break if it matches.
-	for (i = 0; i < numlevelflats; i++, levelflat++)
-		if (strnicmp(levelflat->name, flatname, 8) == 0)
-			break;
-
-	// If there is no match, make room for a new flat.
-	if (i == numlevelflats)
-	{
-		// Store the name.
-		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
-		strupr(levelflat->name);
-
-		// store the flat lump number
-		levelflat->lumpnum = R_GetFlatNumForName(flatname);
-
-#ifndef ZDEBUG
-		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-		numlevelflats++;
-
-		if (numlevelflats >= MAXLEVELFLATS)
-			I_Error("Too many flats in level\n");
-	}
-
-	// level flat id
-	return (INT32)i;
+	return Ploadflat(levelflat, flatname);
 }
 
 // help function for Lua and $$$.sav reading
@@ -598,39 +670,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	size_t i;
-	levelflat_t *levelflat = levelflats;
-
-	//
-	//  first scan through the already found flats
-	//
-	for (i = 0; i < numlevelflats; i++, levelflat++)
-		if (strnicmp(levelflat->name,flatname,8)==0)
-			break;
-
-	// that flat was already found in the level, return the id
-	if (i == numlevelflats)
-	{
-		// allocate new flat memory
-		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
-		levelflat = levelflats+i;
-
-		// store the name
-		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
-		strupr(levelflat->name);
-
-		// store the flat lump number
-		levelflat->lumpnum = R_GetFlatNumForName(flatname);
-
-#ifndef ZDEBUG
-		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-		numlevelflats++;
-	}
-
-	// level flat id
-	return (INT32)i;
+	return Ploadflat(0, flatname);
 }
 
 // help function for $$$.sav checking
@@ -1484,6 +1524,7 @@ static void P_LoadRawSideDefs2(void *data)
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
+			case 461: // Spawns an object on the map based on texture offsets
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -2182,7 +2223,10 @@ static void P_LevelInitStuff(void)
 	tokenbits = 0;
 	runemeraldmanager = false;
 	emeraldspawndelay = 60*TICRATE;
-	nummaprings = mapheaderinfo[gamemap-1]->startrings;
+	if ((netgame || multiplayer) && !G_IsSpecialStage(gamemap))
+		nummaprings = -1;
+	else
+		nummaprings = mapheaderinfo[gamemap-1]->startrings;
 
 	// emerald hunt
 	hunt1 = hunt2 = hunt3 = NULL;
@@ -2238,6 +2282,8 @@ static void P_LevelInitStuff(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
+		G_PlayerReborn(i, true);
+
 		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
@@ -2245,41 +2291,18 @@ static void P_LevelInitStuff(void)
 		}
 
 		// obliteration station...
-		players[i].rings = players[i].spheres =\
-		 players[i].xtralife = players[i].deadtimer =\
-		 players[i].numboxes = players[i].totalring =\
-		 players[i].laps = players[i].aiming =\
-		 players[i].losstime = players[i].timeshit =\
-		 players[i].marescore = players[i].lastmarescore =\
-		 players[i].maxlink = players[i].startedtime =\
-		 players[i].finishedtime = players[i].finishedspheres =\
-		 players[i].finishedrings = players[i].lastmare =\
-		 players[i].lastmarelap = players[i].lastmarebonuslap =\
-		 players[i].totalmarelap = players[i].totalmarebonuslap =\
-		 players[i].marebegunat = players[i].textvar =\
-		 players[i].texttimer = players[i].linkcount =\
-		 players[i].linktimer = players[i].flyangle =\
-		 players[i].anotherflyangle = players[i].nightstime =\
-		 players[i].oldscale = players[i].mare = players[i].marelap =\
-		 players[i].marebonuslap = players[i].lapbegunat =\
-		 players[i].lapstartedtime = players[i].totalmarescore =\
-		 players[i].realtime = players[i].exiting = 0;
+		players[i].numboxes = players[i].totalring =\
+		 players[i].laps = players[i].marescore = players[i].lastmarescore =\
+		 players[i].mare = players[i].exiting = 0;
 
-		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
-		players[i].gotcontinue = false;
-
-		// aha, the first evidence this shouldn't be a memset!
 		players[i].drillmeter = 40*20;
 
-		P_ResetPlayer(&players[i]);
 		// hit these too
-		players[i].pflags &= ~(PF_GAMETYPEOVER|PF_TRANSFERTOCLOSEST);
-
-		// unset ALL the pointers. P_SetTarget isn't needed here because if this
-		// function is being called we're just going to clobber the data anyways
-		players[i].mo = players[i].followmobj = players[i].awayviewmobj =\
-		players[i].capsule = players[i].axis1 = players[i].axis2 = players[i].drone = NULL;
+		players[i].pflags &= ~(PF_GAMETYPEOVER);
 	}
+
+	if (botingame)
+		CV_SetValue(&cv_analog2, true);
 }
 
 //
@@ -2619,8 +2642,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	boolean loadedbm = false;
 	sector_t *ss;
 	boolean chase;
-	gameovermus = false;
-	fadetogameovermus = 0;
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -2697,7 +2718,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		S_StartSound(NULL, sfx_s3kaf);
 
 		// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
-		if (cv_resetmusic.value ||
+		if (RESETMUSIC ||
 			strnicmp(S_MusicName(),
 				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
@@ -2730,7 +2751,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
 	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
-	if (!titlemapinaction && (cv_resetmusic.value ||
+	if (!titlemapinaction && (RESETMUSIC ||
 		strnicmp(S_MusicName(),
 			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
 		S_FadeMusic(0, FixedMul(
@@ -3019,6 +3040,25 @@ boolean P_SetupLevel(boolean skipprecip)
 		leveltime = maxstarposttime;
 	}
 
+	if (unlockables[27].unlocked && !modeattacking // pandora's box
+#ifndef DEVELOP
+	&& !modifiedgame
+#endif
+	&& !(netgame || multiplayer) && gamemap == 0x1d35-016464)
+	{
+		P_SpawnMobj(0640370000, 0x11000000, 0b11000110000000000000000000, MT_LETTER)->angle = ANGLE_90;
+		if (textprompts[199]->page[1].backcolor != 259)
+		{
+			char *buf = W_CacheLumpName("WATERMAP", PU_STATIC), *b = buf;
+			while ((*b != 65) && (b-buf < 256)) { *b = (*b - 65)&255; b++; } *b = '\0';
+			Z_Free(textprompts[199]->page[1].text);
+			textprompts[199]->page[1].text = Z_StrDup(buf);
+			textprompts[199]->page[1].lines = 4;
+			textprompts[199]->page[1].backcolor = 259;
+			Z_Free(buf);
+		}
+	}
+
 	if (modeattacking == ATTACKING_RECORD && !demoplayback)
 		P_LoadRecordGhosts();
 	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
@@ -3061,8 +3101,11 @@ boolean P_SetupLevel(boolean skipprecip)
 			CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
 
 	}
-	else if (gametype == GT_RACE && server && cv_usemapnumlaps.value)
-		CV_StealthSetValue(&cv_numlaps, mapheaderinfo[gamemap - 1]->numlaps);
+	else if (gametype == GT_RACE && server)
+		CV_StealthSetValue(&cv_numlaps,
+			(cv_basenumlaps.value)
+			? cv_basenumlaps.value
+			: mapheaderinfo[gamemap - 1]->numlaps);
 
 	// ===========
 	// landing point for netgames.
@@ -3460,6 +3503,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	ST_ReloadSkinFaceGraphics();
 
 	//
+	// edit music defs
+	//
+	S_LoadMusicDefs(wadnum);
+
+	//
 	// search for maps
 	//
 	lumpinfo = wadfiles[wadnum]->lumpinfo;
@@ -3483,6 +3531,12 @@ boolean P_AddWadFile(const char *wadfilename)
 	}
 	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
+
+	R_LoadSpriteInfoLumps(wadnum, numlumps);
+
+#ifdef HWRENDER
+	HWR_ReloadModels();
+#endif
 
 	// reload status bar (warning should have valid player!)
 	if (gamestate == GS_LEVEL)

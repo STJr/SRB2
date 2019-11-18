@@ -327,7 +327,7 @@ static inline VOID I_GetConsoleEvents(VOID)
 							break;
 						case VK_RETURN:
 							entering_con_command = false;
-							// Fall through.
+							/* FALLTHRU */
 						default:
 							ev.data1 = MapVirtualKey(input.Event.KeyEvent.wVirtualKeyCode,2); // convert in to char
 					}
@@ -647,7 +647,7 @@ void I_Error(const char *error, ...)
 	if (demorecording)
 		G_CheckDemoStatus();
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
 
@@ -733,7 +733,7 @@ void I_Quit(void)
 	if (demorecording)
 		G_CheckDemoStatus();
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 
 	M_SaveConfig(NULL); // save game config, cvars..
 #ifndef NONET

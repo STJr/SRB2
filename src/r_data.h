@@ -16,13 +16,19 @@
 
 #include "r_defs.h"
 #include "r_state.h"
+#include "p_setup.h" // levelflats
 
 #ifdef __GNUG__
 #pragma interface
 #endif
 
 // Possible alpha types for a patch.
-enum patchalphastyle {AST_COPY, AST_TRANSLUCENT}; // , AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
+enum patchalphastyle {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
+
+UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha);
+UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha);
+
+UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
 
 // moved here for r_sky.c (texpatch_t is used)
 
@@ -55,12 +61,17 @@ typedef struct
 	texpatch_t patches[0];
 } texture_t;
 
+typedef struct
+{
+	UINT8 *flat;
+	INT16 width, height;
+} textureflat_t;
+
 // all loaded and prepared textures from the start of the game
 extern texture_t **textures;
+extern textureflat_t *texflats;
 
-// texture width is a power of 2, so it can easily repeat along sidedefs using a simple mask
-extern INT32 *texturewidthmask;
-
+extern INT32 *texturewidth;
 extern fixed_t *textureheight; // needed for texture pegging
 
 extern INT16 color8to16[256]; // remap color index to highcolor
@@ -77,18 +88,18 @@ void R_CheckTextureCache(INT32 tex);
 
 // Retrieve column data for span blitting.
 UINT8 *R_GetColumn(fixed_t tex, INT32 col);
-
 UINT8 *R_GetFlat(lumpnum_t flatnum);
 
 // I/O, setting up the stuff.
 void R_InitData(void);
 void R_PrecacheLevel(void);
 
+extern size_t flatmemory, spritememory, texturememory;
+
 // Retrieval.
 // Floor/ceiling opaque texture tiles,
 // lookup by name. For animation?
 lumpnum_t R_GetFlatNumForName(const char *name);
-#define R_FlatNumForName(x) R_GetFlatNumForName(x)
 
 // Called by P_Ticker for switches and animations,
 // returns the texture number for the texture name.

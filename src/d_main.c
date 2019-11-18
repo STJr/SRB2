@@ -129,6 +129,7 @@ char srb2home[256] = ".";
 char srb2path[256] = ".";
 boolean usehome = true;
 const char *pandf = "%s" PATHSEP "%s";
+static char addonsdir[MAX_WADPATH];
 
 //
 // EVENT HANDLING
@@ -226,7 +227,14 @@ static void D_Display(void)
 		SCR_SetMode(); // change video mode
 
 	if (vid.recalc)
+	{
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
+#ifdef HWRENDER
+		// Shoot! The screen texture was flushed!
+		if ((rendermode == render_opengl) && (gamestate == GS_INTERMISSION))
+			usebuffer = false;
+#endif
+	}
 
 	// change the view size if needed
 	if (setsizeneeded)
@@ -283,11 +291,8 @@ static void D_Display(void)
 	switch (gamestate)
 	{
 		case GS_TITLESCREEN:
-			if (!titlemapinaction || !curbghide) {
-				F_TitleScreenDrawer();
-				break;
-			}
-			// Intentional fall-through
+			F_TitleScreenDrawer();
+			break;
 		case GS_LEVEL:
 			if (!gametic)
 				break;
@@ -358,75 +363,26 @@ static void D_Display(void)
 
 		// clean up border stuff
 		// see if the border needs to be initially drawn
-		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap)))
+		if (gamestate == GS_LEVEL)
 		{
 			// draw the view directly
 
-			if (!automapactive && !dedicated && cv_renderview.value)
-			{
-				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
-				{
-					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-					objectsdrawn = 0;
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
-						HWR_RenderPlayerView(0, &players[displayplayer]);
-					else
-	#endif
-					if (rendermode != render_none)
-						R_RenderPlayerView(&players[displayplayer]);
-				}
-
-				// render the second screen
-				if (splitscreen && players[secondarydisplayplayer].mo)
-				{
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
-						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
-					else
-	#endif
-					if (rendermode != render_none)
-					{
-						viewwindowy = vid.height / 2;
-						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
-
-						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-
-						R_RenderPlayerView(&players[secondarydisplayplayer]);
-
-						viewwindowy = 0;
-						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
-					}
-				}
-
-				// Image postprocessing effect
-				if (rendermode == render_soft)
-				{
-					if (postimgtype)
-						V_DoPostProcessor(0, postimgtype, postimgparam);
-					if (postimgtype2)
-						V_DoPostProcessor(1, postimgtype2, postimgparam2);
-				}
-			}
+			D_Render();
 
 			if (lastdraw)
 			{
 				if (rendermode == render_soft)
 				{
 					VID_BlitLinearScreen(screens[0], screens[1], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+					Y_ConsiderScreenBuffer();
 					usebuffer = true;
 				}
 				lastdraw = false;
 			}
 
-			if (gamestate == GS_LEVEL)
-			{
-				ST_Drawer();
-				F_TextPromptDrawer();
-				HU_Drawer();
-			}
-			else
-				F_TitleScreenDrawer();
+			ST_Drawer();
+			F_TextPromptDrawer();
+			HU_Drawer();
 		}
 	}
 
@@ -482,6 +438,13 @@ static void D_Display(void)
 			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
 
+		// reset counters so timedemo doesn't count the wipe duration
+		if (timingdemo)
+		{
+			framecount = 0;
+			demostarttime = I_GetTime();
+		}
+		
 		wipetypepost = -1;
 	}
 	else
@@ -522,6 +485,56 @@ static void D_Display(void)
 	}
 }
 
+void D_Render(void)
+{
+	if (!automapactive && !dedicated && cv_renderview.value)
+	{
+		if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
+		{
+			topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+			objectsdrawn = 0;
+#ifdef HWRENDER
+			if (rendermode != render_soft)
+				HWR_RenderPlayerView(0, &players[displayplayer]);
+			else
+#endif
+			if (rendermode != render_none)
+				R_RenderPlayerView(&players[displayplayer]);
+		}
+
+		// render the second screen
+		if (splitscreen && players[secondarydisplayplayer].mo)
+		{
+#ifdef HWRENDER
+			if (rendermode != render_soft)
+				HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
+			else
+#endif
+			if (rendermode != render_none)
+			{
+				viewwindowy = vid.height / 2;
+				M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
+
+				topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+
+				R_RenderPlayerView(&players[secondarydisplayplayer]);
+
+				viewwindowy = 0;
+				M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+			}
+		}
+
+		// Image postprocessing effect
+		if (rendermode == render_soft)
+		{
+			if (postimgtype)
+				V_DoPostProcessor(0, postimgtype, postimgparam);
+			if (postimgtype2)
+				V_DoPostProcessor(1, postimgtype2, postimgparam2);
+		}
+	}
+}
+
 // =========================================================================
 // D_SRB2Loop
 // =========================================================================
@@ -534,9 +547,6 @@ void D_SRB2Loop(void)
 
 	if (dedicated)
 		server = true;
-
-	if (M_CheckParm("-voodoo")) // 256x256 Texture Limiter
-		COM_BufAddText("gr_voodoocompatibility on\n");
 
 	// Pushing of + parameters is now done back in D_SRB2Main, not here.
 
@@ -716,6 +726,7 @@ void D_StartTitle(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 	lastmaploaded = 0;
 
 	// In case someone exits out at the same time they start a time attack run,
@@ -724,14 +735,6 @@ void D_StartTitle(void)
 
 	// empty maptol so mario/etc sounds don't play in sound test when they shouldn't
 	maptol = 0;
-
-	// reset to default player stuff
-	COM_BufAddText (va("%s \"%s\"\n",cv_playername.name,cv_defaultplayername.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_skin.name,cv_defaultskin.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor.name,cv_defaultplayercolor.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playername2.name,cv_defaultplayername2.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_skin2.name,cv_defaultskin2.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor2.name,cv_defaultplayercolor2.string));
 
 	gameaction = ga_nothing;
 	displayplayer = consoleplayer = 0;
@@ -850,7 +853,7 @@ static void IdentifyVersion(void)
 	// checking in D_SRB2Main
 
 	// Add the maps
-	D_AddFile(va(pandf,srb2waddir,"zones.dta"));
+	D_AddFile(va(pandf,srb2waddir,"zones.pk3"));
 
 	// Add the players
 	D_AddFile(va(pandf,srb2waddir, "player.dta"));
@@ -1038,7 +1041,6 @@ void D_SRB2Main(void)
 			// can't use sprintf since there is %u in savegamename
 			strcatbf(savegamename, srb2home, PATHSEP);
 
-			I_mkdir(srb2home, 0700);
 #else
 			snprintf(srb2home, sizeof srb2home, "%s", userhome);
 			snprintf(downloaddir, sizeof downloaddir, "%s", userhome);
@@ -1054,6 +1056,10 @@ void D_SRB2Main(void)
 
 		configfile[sizeof configfile - 1] = '\0';
 	}
+
+	// Create addons dir
+	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
+	I_mkdir(addonsdir, 0755);
 
 	// rand() needs seeded regardless of password
 	srand((unsigned int)time(NULL));
@@ -1140,10 +1146,10 @@ void D_SRB2Main(void)
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_SRB2_PK3); // srb2.pk3
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_DTA); // zones.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_PK3); // zones.pk3
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_PLAYER_DTA); // player.dta
 #ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.pk3
 #endif
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
@@ -1152,7 +1158,7 @@ void D_SRB2Main(void)
 #else
 
 	mainwads++;	// srb2.pk3
-	mainwads++; // zones.dta
+	mainwads++; // zones.pk3
 	mainwads++; // player.dta
 #ifdef USE_PATCH_DTA
 	mainwads++; // patch.dta
@@ -1239,24 +1245,41 @@ void D_SRB2Main(void)
 		sound_disabled = true;
 		midi_disabled = digital_disabled = true;
 	}
+	if (M_CheckParm("-noaudio")) // combines -nosound and -nomusic
+	{
+		sound_disabled = true;
+		digital_disabled = true;
+		midi_disabled = true;
+	}
 	else
+	{
+		if (M_CheckParm("-nosound"))
+			sound_disabled = true;
+		if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
+		{
+			digital_disabled = true;
+			midi_disabled = true;
+		}
+		else
+		{
+			if (M_CheckParm("-nomidimusic"))
+				midi_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
+			if (M_CheckParm("-nodigmusic"))
+				digital_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
+		}
+	}
+	if (!( sound_disabled && digital_disabled
+#ifndef NO_MIDI
+				&& midi_disabled
+#endif
+	 ))
 	{
 		CONS_Printf("S_InitSfxChannels(): Setting up sound channels.\n");
+		I_StartupSound();
+		I_InitMusic();
+		S_InitSfxChannels(cv_soundvolume.value);
+		S_InitMusicDefs();
 	}
-	if (M_CheckParm("-nosound"))
-		sound_disabled = true;
-	if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
-		midi_disabled = digital_disabled = true;
-	else
-	{
-		if (M_CheckParm("-nomidimusic"))
-			midi_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
-		if (M_CheckParm("-nodigmusic"))
-			digital_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
-	}
-	I_StartupSound();
-	I_InitMusic();
-	S_InitSfxChannels(cv_soundvolume.value);
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();

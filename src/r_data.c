@@ -9,7 +9,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  r_data.c
-/// \brief Preparation of data for rendering,generation of lookups, caching, retrieval by name
+/// \brief Preparation of data for rendering, generation of lookups, caching, retrieval by name
 
 #include "doomdef.h"
 #include "g_game.h"
@@ -19,10 +19,12 @@
 #include "p_local.h"
 #include "m_misc.h"
 #include "r_data.h"
+#include "r_patch.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
 #include "v_video.h" // pMasterPalette
+#include "byteptr.h"
 #include "dehacked.h"
 
 #ifdef _WIN32
@@ -34,7 +36,7 @@
 #endif
 
 // Not sure if this is necessary, but it was in w_wad.c, so I'm putting it here too -Shadow Hog
-#ifdef _WIN32_WCE
+#if 0
 #define AVOID_ERRNO
 #else
 #include <errno.h>
@@ -98,12 +100,11 @@ INT32 numtextures = 0; // total number of textures found,
 // size of following tables
 
 texture_t **textures = NULL;
+textureflat_t *texflats = NULL;
 static UINT32 **texturecolumnofs; // column offset lookup table for each texture
 static UINT8 **texturecache; // graphics data for each generated full-size texture
 
-// texture width is a power of 2, so it can easily repeat along sidedefs using a simple mask
-INT32 *texturewidthmask;
-
+INT32 *texturewidth;
 fixed_t *textureheight; // needed for texture pegging
 
 INT32 *texturetranslation;
@@ -114,7 +115,7 @@ sprcache_t *spritecachedinfo;
 lighttable_t *colormaps;
 
 // for debugging/info purposes
-static size_t flatmemory, spritememory, texturememory;
+size_t flatmemory, spritememory, texturememory;
 
 // highcolor stuff
 INT16 color8to16[256]; // remap color index to highcolor rgb value
@@ -220,15 +221,121 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	}
 }
 
+UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
+{
+	RGBA_t output;
+	if (style == AST_TRANSLUCENT)
+	{
+		if (alpha == 0)
+			output.rgba = background.rgba;
+		else if (alpha == 0xFF)
+			output.rgba = foreground.rgba;
+		else if (alpha < 0xFF)
+		{
+			UINT8 beta = (0xFF - alpha);
+			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+		}
+		// write foreground pixel alpha
+		// if there's no pixel in here
+		if (!background.rgba)
+			output.s.alpha = foreground.s.alpha;
+		else
+			output.s.alpha = 0xFF;
+		return output.rgba;
+	}
+#define clamp(c) max(min(c, 0xFF), 0x00);
+	else
+	{
+		float falpha = ((float)alpha / 256.0f);
+		float fr = ((float)foreground.s.red * falpha);
+		float fg = ((float)foreground.s.green * falpha);
+		float fb = ((float)foreground.s.blue * falpha);
+		if (style == AST_ADD)
+		{
+			output.s.red = clamp((int)(background.s.red + fr));
+			output.s.green = clamp((int)(background.s.green + fg));
+			output.s.blue = clamp((int)(background.s.blue + fb));
+		}
+		else if (style == AST_SUBTRACT)
+		{
+			output.s.red = clamp((int)(background.s.red - fr));
+			output.s.green = clamp((int)(background.s.green - fg));
+			output.s.blue = clamp((int)(background.s.blue - fb));
+		}
+		else if (style == AST_REVERSESUBTRACT)
+		{
+			output.s.red = clamp((int)((-background.s.red) + fr));
+			output.s.green = clamp((int)((-background.s.green) + fg));
+			output.s.blue = clamp((int)((-background.s.blue) + fb));
+		}
+		else if (style == AST_MODULATE)
+		{
+			fr = ((float)foreground.s.red / 256.0f);
+			fg = ((float)foreground.s.green / 256.0f);
+			fb = ((float)foreground.s.blue / 256.0f);
+			output.s.red = clamp((int)(background.s.red * fr));
+			output.s.green = clamp((int)(background.s.green * fg));
+			output.s.blue = clamp((int)(background.s.blue * fb));
+		}
+		// just copy the pixel
+		else if (style == AST_COPY)
+			output.rgba = foreground.rgba;
+
+		output.s.alpha = 0xFF;
+		return output.rgba;
+	}
+#undef clamp
+	return 0;
+}
+
+UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+{
+	// Alpha style set to translucent?
+	if (style == AST_TRANSLUCENT)
+	{
+		// Is the alpha small enough for translucency?
+		if (alpha <= (10*255/11))
+		{
+			UINT8 *mytransmap;
+			// Is the patch way too translucent? Don't blend then.
+			if (alpha < 255/11)
+				return background;
+			// The equation's not exact but it works as intended. I'll call it a day for now.
+			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
+			if (background != 0xFF)
+				return *(mytransmap + (background<<8) + foreground);
+		}
+		else // just copy the pixel
+			return foreground;
+	}
+	// just copy the pixel
+	else if (style == AST_COPY)
+		return foreground;
+	// use ASTBlendPixel for all other blend modes
+	// and find the nearest colour in the palette
+	else if (style != AST_TRANSLUCENT)
+	{
+		RGBA_t texel;
+		RGBA_t bg = V_GetColor(background);
+		RGBA_t fg = V_GetColor(foreground);
+		texel.rgba = ASTBlendPixel(bg, fg, style, alpha);
+		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
+	}
+	// fallback if all above fails, somehow
+	// return the background pixel
+	return background;
+}
+
 //
-// R_DrawTransColumnInCache
+// R_DrawBlendColumnInCache
 // Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
 //
-static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -258,7 +365,8 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; source++, dest++)
-				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
+				if (*source != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -266,14 +374,13 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 }
 
 //
-// R_DrawTransColumnInCache
+// R_DrawBlendFlippedColumnInCache
 // Similar to the one above except that the column is inverted.
 //
-static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -302,7 +409,8 @@ static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; --source, dest++)
-				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
+				if (*source != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -315,7 +423,7 @@ static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache
 // Allocate space for full size texture, either single patch or 'composite'
 // Build the full textures from patches.
 // The texture caching system is a little more hungry of memory, but has
-// been simplified for the sake of highcolor, dynamic ligthing, & speed.
+// been simplified for the sake of highcolor (lol), dynamic ligthing, & speed.
 //
 // This is not optimised, but it's supposed to be executed only once
 // per level, when enough memory is available.
@@ -327,10 +435,15 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
+	boolean dealloc = false;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
-	UINT32 *colofs;
+	UINT8 *colofs;
+
+	UINT16 wadnum;
+	lumpnum_t lumpnum;
+	size_t lumplength;
 
 	I_Assert(texnum <= (size_t)numtextures);
 	texture = textures[texnum];
@@ -346,15 +459,24 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	{
 		boolean holey = false;
 		patch = texture->patches;
-		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+
+		wadnum = patch->wad;
+		lumpnum = patch->lump;
+		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE); // can't use W_CachePatchNumPwad because OpenGL
+
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+			goto multipatch;
+#endif
 
 		// Check the patch for holes.
 		if (texture->width > SHORT(realpatch->width) || texture->height > SHORT(realpatch->height))
 			holey = true;
-		colofs = (UINT32 *)realpatch->columnofs;
+		colofs = (UINT8 *)realpatch->columnofs;
 		for (x = 0; x < texture->width && !holey; x++)
 		{
-			column_t *col = (column_t *)((UINT8 *)realpatch + LONG(colofs[x]));
+			column_t *col = (column_t *)((UINT8 *)realpatch + LONG(*(UINT32 *)&colofs[x<<2]));
 			INT32 topdelta, prevdelta = -1, y = 0;
 			while (col->topdelta != 0xff)
 			{
@@ -376,26 +498,26 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		{
 			texture->holes = true;
 			texture->flip = patch->flip;
-			blocksize = W_LumpLengthPwad(patch->wad, patch->lump);
+			blocksize = lumplength;
 			block = Z_Calloc(blocksize, PU_STATIC, // will change tag at end of this function
 				&texturecache[texnum]);
 			M_Memcpy(block, realpatch, blocksize);
 			texturememory += blocksize;
 
 			// use the patch's column lookup
-			colofs = (UINT32 *)(void *)(block + 8);
-			texturecolumnofs[texnum] = colofs;
+			colofs = (block + 8);
+			texturecolumnofs[texnum] = (UINT32 *)colofs;
 			blocktex = block;
 			if (patch->flip & 1) // flip the patch horizontally
 			{
-				UINT32 *realcolofs = (UINT32 *)realpatch->columnofs;
+				UINT8 *realcolofs = (UINT8 *)realpatch->columnofs;
 				for (x = 0; x < texture->width; x++)
-					colofs[x] = realcolofs[texture->width-1-x]; // swap with the offset of the other side of the texture
+					*(UINT32 *)&colofs[x<<2] = realcolofs[( texture->width-1-x )<<2]; // swap with the offset of the other side of the texture
 			}
 			// we can't as easily flip the patch vertically sadly though,
 			//  we have wait until the texture itself is drawn to do that
 			for (x = 0; x < texture->width; x++)
-				colofs[x] = LONG(LONG(colofs[x]) + 3);
+				*(UINT32 *)&colofs[x<<2] = LONG(LONG(*(UINT32 *)&colofs[x<<2]) + 3);
 			goto done;
 		}
 
@@ -403,17 +525,20 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	}
 
 	// multi-patch textures (or 'composite')
+#ifndef NO_PNG_LUMPS
+	multipatch:
+#endif
 	texture->holes = false;
 	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
 	texturememory += blocksize;
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
 
-	memset(block, 0xFF, blocksize+1); // Transparency hack
+	memset(block, TRANSPARENTPIXEL, blocksize+1); // Transparency hack
 
 	// columns lookup table
-	colofs = (UINT32 *)(void *)block;
-	texturecolumnofs[texnum] = colofs;
+	colofs = block;
+	texturecolumnofs[texnum] = (UINT32 *)colofs;
 
 	// texture data after the lookup table
 	blocktex = block + (texture->width*4);
@@ -422,18 +547,25 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
 		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
-		if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
-		{
-			if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
-				continue;
-			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawTransFlippedColumnInCache : R_DrawTransColumnInCache;
-		}
+		if (patch->style != AST_COPY)
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawBlendFlippedColumnInCache : R_DrawBlendColumnInCache;
 		else
-		{
 			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawFlippedColumnInCache : R_DrawColumnInCache;
-		}
 
-		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+		wadnum = patch->wad;
+		lumpnum = patch->lump;
+		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		dealloc = false;
+
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			dealloc = true;
+		}
+#endif
+
 		x1 = patch->originx;
 		width = SHORT(realpatch->width);
 		height = SHORT(realpatch->height);
@@ -466,9 +598,12 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
 
 			// generate column ofset lookup
-			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			ColumnDrawerPointer(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
+			*(UINT32 *)&colofs[x<<2] = LONG((x * texture->height) + (texture->width*4));
+			ColumnDrawerPointer(patchcol, block + LONG(*(UINT32 *)&colofs[x<<2]), patch, texture->height, height);
 		}
+
+		if (dealloc)
+			Z_Free(realpatch);
 	}
 
 done:
@@ -509,10 +644,14 @@ void R_CheckTextureCache(INT32 tex)
 UINT8 *R_GetColumn(fixed_t tex, INT32 col)
 {
 	UINT8 *data;
+	INT32 width = texturewidth[tex];
 
-	col &= texturewidthmask[tex];
+	if (width & (width - 1))
+		col = (UINT32)col % width;
+	else
+		col &= (width - 1);
+
 	data = texturecache[tex];
-
 	if (!data)
 		data = R_GenerateTexture(tex);
 
@@ -550,7 +689,7 @@ void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *index);
 #define TX_END "TX_END"
 void R_LoadTextures(void)
 {
-	INT32 i, k, w;
+	INT32 i, w;
 	UINT16 j;
 	UINT16 texstart, texend, texturesLumpPos;
 	patch_t *patchlump;
@@ -567,6 +706,7 @@ void R_LoadTextures(void)
 		}
 		Z_Free(texturetranslation);
 		Z_Free(textures);
+		Z_Free(texflats);
 	}
 
 	// Load patches and textures.
@@ -627,15 +767,16 @@ void R_LoadTextures(void)
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
 	// There are actually 5 buffers allocated in one for convenience.
 	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
+	texflats = Z_Calloc((numtextures * sizeof(*texflats)), PU_STATIC, NULL);
 
 	// Allocate texture column offset table.
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
 	// Allocate texture referencing cache.
-	texturecache	 = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
-	// Allocate texture width mask table.
-	texturewidthmask = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
-	// Allocate texture height mask table.
-	textureheight	= (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
+	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
+	// Allocate texture width table.
+	texturewidth     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
+	// Allocate texture height table.
+	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
 	// Create translation table for global animation.
 	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
 
@@ -673,20 +814,43 @@ void R_LoadTextures(void)
 		// Work through each lump between the markers in the WAD.
 		for (j = 0; j < (texend - texstart); j++)
 		{
+			UINT16 wadnum = (UINT16)w;
+			lumpnum_t lumpnum = texstart + j;
+#ifndef NO_PNG_LUMPS
+			size_t lumplength;
+#endif
+
 			if (wadfiles[w]->type == RET_PK3)
 			{
-				if (W_IsLumpFolder((UINT16)w, texstart + j)) // Check if lump is a folder
+				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
 					continue; // If it is then SKIP IT
 			}
-			patchlump = W_CacheLumpNumPwad((UINT16)w, texstart + j, PU_CACHE);
+
+			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+#endif
 
 			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
 			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
 
 			// Set texture properties.
-			M_Memcpy(texture->name, W_CheckNameForNumPwad((UINT16)w, texstart + j), sizeof(texture->name));
-			texture->width = SHORT(patchlump->width);
-			texture->height = SHORT(patchlump->height);
+			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+
+#ifndef NO_PNG_LUMPS
+			if (R_IsLumpPNG((UINT8 *)patchlump, lumplength))
+			{
+				INT16 width, height;
+				R_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
+				texture->width = width;
+				texture->height = height;
+			}
+			else
+#endif
+			{
+				texture->width = SHORT(patchlump->width);
+				texture->height = SHORT(patchlump->height);
+			}
 			texture->patchcount = 1;
 			texture->holes = false;
 			texture->flip = 0;
@@ -701,11 +865,7 @@ void R_LoadTextures(void)
 
 			Z_Unlock(patchlump);
 
-			k = 1;
-			while (k << 1 <= texture->width)
-				k <<= 1;
-
-			texturewidthmask[i] = k - 1;
+			texturewidth[i] = texture->width;
 			textureheight[i] = texture->height << FRACBITS;
 			i++;
 		}
@@ -848,8 +1008,16 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 				{
 					Z_Free(texturesToken);
 					texturesToken = M_GetToken(NULL);
-					if(stricmp(texturesToken, "TRANSLUCENT")==0)
+					if (stricmp(texturesToken, "TRANSLUCENT")==0)
 						style = AST_TRANSLUCENT;
+					else if (stricmp(texturesToken, "ADD")==0)
+						style = AST_ADD;
+					else if (stricmp(texturesToken, "SUBTRACT")==0)
+						style = AST_SUBTRACT;
+					else if (stricmp(texturesToken, "REVERSESUBTRACT")==0)
+						style = AST_REVERSESUBTRACT;
+					else if (stricmp(texturesToken, "MODULATE")==0)
+						style = AST_MODULATE;
 				}
 				else if (stricmp(texturesToken, "FLIPX")==0)
 					flip |= 1;
@@ -1097,7 +1265,7 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum)
 	texturesToken = M_GetToken(texturesText);
 	while (texturesToken != NULL)
 	{
-		if (stricmp(texturesToken, "WALLTEXTURE")==0)
+		if (stricmp(texturesToken, "WALLTEXTURE") == 0 || stricmp(texturesToken, "TEXTURE") == 0)
 		{
 			numTexturesInLump++;
 			Z_Free(texturesToken);
@@ -1105,7 +1273,7 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum)
 		}
 		else
 		{
-			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\", got \"%s\"",texturesToken);
+			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\" or \"TEXTURE\", got \"%s\"",texturesToken);
 		}
 		texturesToken = M_GetToken(NULL);
 	}
@@ -1146,21 +1314,21 @@ void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *texindex)
 	texturesToken = M_GetToken(texturesText);
 	while (texturesToken != NULL)
 	{
-		if (stricmp(texturesToken, "WALLTEXTURE")==0)
+		if (stricmp(texturesToken, "WALLTEXTURE") == 0 || stricmp(texturesToken, "TEXTURE") == 0)
 		{
 			Z_Free(texturesToken);
 			// Get the new texture
 			newTexture = R_ParseTexture(true);
 			// Store the new texture
 			textures[*texindex] = newTexture;
-			texturewidthmask[*texindex] = newTexture->width - 1;
+			texturewidth[*texindex] = newTexture->width;
 			textureheight[*texindex] = newTexture->height << FRACBITS;
 			// Increment i back in R_LoadTextures()
 			(*texindex)++;
 		}
 		else
 		{
-			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\", got \"%s\"",texturesToken);
+			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\" or \"TEXTURE\", got \"%s\"",texturesToken);
 		}
 		texturesToken = M_GetToken(NULL);
 	}
@@ -1265,13 +1433,6 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 			break;
 		}
 		lump = LUMPERROR;
-	}
-
-	if (lump == LUMPERROR)
-	{
-		if (strcmp(name, SKYFLATNAME))
-			CONS_Debug(DBG_SETUP, "R_GetFlatNumForName: Could not find flat %.8s\n", name);
-		lump = W_CheckNumForName("REDFLR");
 	}
 
 	return lump;
@@ -1615,7 +1776,6 @@ extracolormap_t *R_ColormapForName(char *name)
 //
 static double deltas[256][3], map[256][3];
 
-static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
 static int RoundUp(double number);
 
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
@@ -2027,7 +2187,7 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 
 // Thanks to quake2 source!
 // utils3/qdata/images.c
-static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
+UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
 {
 	int dr, dg, db;
 	int distortion, bestdistortion = 256 * 256 * 4, bestcolor = 0, i;

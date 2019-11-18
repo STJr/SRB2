@@ -23,6 +23,7 @@
 #include "hw_defs.h"
 #include "hw_main.h"
 #include "../m_misc.h"
+#include "../p_setup.h"
 
 // the original aspect ratio of Doom graphics isn't square
 #define ORIGINAL_ASPECT (320.0f/200.0f)
@@ -72,7 +73,8 @@ typedef struct gr_vissprite_s
 	struct gr_vissprite_s *next;
 	float x1, x2;
 	float tz, ty;
-	lumpnum_t patchlumpnum;
+	//lumpnum_t patchlumpnum;
+	GLPatch_t *gpatch;
 	boolean flip;
 	UINT8 translucency;       //alpha level 0-255
 	mobj_t *mobj;
@@ -100,7 +102,8 @@ void HWR_InitTextureCache(void);
 void HWR_FreeTextureCache(void);
 void HWR_FreeExtraSubsectors(void);
 
-void HWR_GetFlat(lumpnum_t flatlumpnum);
+void HWR_GetLevelFlat(levelflat_t *levelflat);
+void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
 GLTexture_t *HWR_GetTexture(INT32 tex);
 void HWR_GetPatch(GLPatch_t *gpatch);
 void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap);
@@ -109,6 +112,9 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum);
 void HWR_SetPalette(RGBA_t *palette);
 GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
 GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
+#ifdef ROTSPRITE
+GLPatch_t *HWR_GetCachedGLRotSprite(aatree_t *hwrcache, UINT16 rollangle, patch_t *rawpatch);
+#endif
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 
 // --------

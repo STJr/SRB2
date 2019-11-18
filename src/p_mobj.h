@@ -233,15 +233,17 @@ typedef enum
 	MFE_VERTICALFLIP      = 1<<5,
 	// Goo water
 	MFE_GOOWATER          = 1<<6,
+	// The mobj is touching a lava block
+	MFE_TOUCHLAVA         = 1<<7,
 	// Mobj was already pushed this tic
-	MFE_PUSHED            = 1<<7,
+	MFE_PUSHED            = 1<<8,
 	// Mobj was already sprung this tic
-	MFE_SPRUNG            = 1<<8,
+	MFE_SPRUNG            = 1<<9,
 	// Platform movement
-	MFE_APPLYPMOMZ        = 1<<9,
+	MFE_APPLYPMOMZ        = 1<<10,
 	// Compute and trigger on mobj angle relative to tracer
 	// See Linedef Exec 457 (Track mobj angle to point)
-	MFE_TRACERANGLE       = 1<<10,
+	MFE_TRACERANGLE       = 1<<11,
 	// free: to and including 1<<15
 } mobjeflag_t;
 
@@ -277,6 +279,9 @@ typedef struct mobj_s
 
 	// More drawing info: to determine current sprite.
 	angle_t angle;  // orientation
+#ifdef ROTSPRITE
+	angle_t rollangle;
+#endif
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
@@ -397,6 +402,9 @@ typedef struct precipmobj_s
 
 	// More drawing info: to determine current sprite.
 	angle_t angle;  // orientation
+#ifdef ROTSPRITE
+	angle_t rollangle;
+#endif
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
@@ -473,4 +481,5 @@ extern boolean runemeraldmanager;
 extern UINT16 emeraldspawndelay;
 extern INT32 numstarposts;
 extern UINT16 bossdisabled;
+extern boolean stoppedclock;
 #endif

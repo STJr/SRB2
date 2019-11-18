@@ -83,11 +83,9 @@ tic_t jointimeout = (10*TICRATE);
 static boolean sendingsavegame[MAXNETNODES]; // Are we sending the savegame?
 static tic_t freezetimeout[MAXNETNODES]; // Until when can this node freeze the server before getting a timeout?
 
-#ifdef NEWPING
 UINT16 pingmeasurecount = 1;
 UINT32 realpingtable[MAXPLAYERS]; //the base table of ping where an average will be sent to everyone.
 UINT32 playerpingtable[MAXPLAYERS]; //table of player latency values.
-#endif
 SINT8 nodetoplayer[MAXNETNODES];
 SINT8 nodetoplayer2[MAXNETNODES]; // say the numplayer for this node if any (splitscreen)
 UINT8 playerpernode[MAXNETNODES]; // used specialy for scplitscreen
@@ -152,7 +150,7 @@ ticcmd_t netcmds[BACKUPTICS][MAXPLAYERS];
 static textcmdtic_t *textcmds[TEXTCMD_HASH_SIZE] = {NULL};
 
 
-static consvar_t cv_showjoinaddress = {"showjoinaddress", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_showjoinaddress = {"showjoinaddress", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = {"playbackspeed", "1", 0, playbackspeed_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -513,6 +511,10 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->currentweapon = LONG(players[i].currentweapon);
 	rsp->ringweapons = LONG(players[i].ringweapons);
 
+	rsp->ammoremoval = (UINT16)SHORT(players[i].ammoremoval);
+	rsp->ammoremovaltimer = (tic_t)LONG(players[i].ammoremovaltimer);
+	rsp->ammoremovalweapon = LONG(players[i].ammoremovalweapon);
+
 	for (j = 0; j < NUMPOWERS; ++j)
 		rsp->powers[j] = (UINT16)SHORT(players[i].powers[j]);
 
@@ -575,6 +577,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->starpostnum = LONG(players[i].starpostnum);
 	rsp->starposttime = (tic_t)LONG(players[i].starposttime);
 	rsp->starpostangle = (angle_t)LONG(players[i].starpostangle);
+	rsp->starpostscale = (fixed_t)LONG(players[i].starpostscale);
 
 	rsp->maxlink = LONG(players[i].maxlink);
 	rsp->dashspeed = (fixed_t)LONG(players[i].dashspeed);
@@ -616,6 +619,10 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->friction = LONG(players[i].mo->friction);
 	rsp->movefactor = LONG(players[i].mo->movefactor);
 
+	rsp->sprite = (spritenum_t)LONG(players[i].mo->sprite);
+	rsp->frame = LONG(players[i].mo->frame);
+	rsp->sprite2 = players[i].mo->sprite2;
+	rsp->anim_duration = SHORT(players[i].mo->anim_duration);
 	rsp->tics = LONG(players[i].mo->tics);
 	rsp->statenum = (statenum_t)LONG(players[i].mo->state-states); // :(
 	rsp->eflags = (UINT16)SHORT(players[i].mo->eflags);
@@ -643,6 +650,10 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].aiming = (angle_t)LONG(rsp->aiming);
 	players[i].currentweapon = LONG(rsp->currentweapon);
 	players[i].ringweapons = LONG(rsp->ringweapons);
+
+	players[i].ammoremoval = (UINT16)SHORT(rsp->ammoremoval);
+	players[i].ammoremovaltimer = (tic_t)LONG(rsp->ammoremovaltimer);
+	players[i].ammoremovalweapon = LONG(rsp->ammoremovalweapon);
 
 	for (j = 0; j < NUMPOWERS; ++j)
 		players[i].powers[j] = (UINT16)SHORT(rsp->powers[j]);
@@ -706,6 +717,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].starpostnum = LONG(rsp->starpostnum);
 	players[i].starposttime = (tic_t)LONG(rsp->starposttime);
 	players[i].starpostangle = (angle_t)LONG(rsp->starpostangle);
+	players[i].starpostscale = (fixed_t)LONG(rsp->starpostscale);
 
 	players[i].maxlink = LONG(rsp->maxlink);
 	players[i].dashspeed = (fixed_t)LONG(rsp->dashspeed);
@@ -757,8 +769,17 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->momy = LONG(rsp->momy);
 	players[i].mo->momz = LONG(rsp->momz);
 	players[i].mo->movefactor = LONG(rsp->movefactor);
+
+	// Don't use P_SetMobjStateNF to restore state, write/read all the values manually!
+	// This should stop those stupid console errors, hopefully.
+	// -- Monster Iestyn
+	players[i].mo->sprite = (spritenum_t)LONG(rsp->sprite);
+	players[i].mo->frame = LONG(rsp->frame);
+	players[i].mo->sprite2 = rsp->sprite2;
+	players[i].mo->anim_duration = SHORT(rsp->anim_duration);
 	players[i].mo->tics = LONG(rsp->tics);
-	P_SetMobjStateNF(players[i].mo, LONG(rsp->statenum));
+	players[i].mo->state = &states[LONG(rsp->statenum)];
+
 	players[i].mo->x = LONG(rsp->x);
 	players[i].mo->y = LONG(rsp->y);
 	players[i].mo->z = LONG(rsp->z);
@@ -770,7 +791,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->scalespeed = LONG(rsp->scalespeed);
 
 	// And finally, SET THE MOBJ SKIN damn it.
-	if ((players[i].powers[pw_carry] == CR_NIGHTSMODE) && (skins[players[i].skin].sprites[SPR2_NGT0].numframes == 0))
+	if ((players[i].powers[pw_carry] == CR_NIGHTSMODE) && (skins[players[i].skin].sprites[SPR2_NFLY].numframes == 0))
 	{
 		players[i].mo->skin = &skins[DEFAULTNIGHTSSKIN];
 		players[i].mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor; // this will be corrected by thinker to super flash
@@ -1243,7 +1264,8 @@ static boolean CL_SendJoin(void)
 	netbuffer->u.clientcfg.localplayers = localplayers;
 	netbuffer->u.clientcfg.version = VERSION;
 	netbuffer->u.clientcfg.subversion = SUBVERSION;
-
+	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
+	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
 
@@ -1302,33 +1324,13 @@ static void SV_SendPlayerInfo(INT32 node)
 			continue;
 		}
 
-		netbuffer->u.playerinfo[i].node = (UINT8)playernode[i];
+		netbuffer->u.playerinfo[i].node = i;
 		strncpy(netbuffer->u.playerinfo[i].name, (const char *)&player_names[i], MAXPLAYERNAME+1);
 		netbuffer->u.playerinfo[i].name[MAXPLAYERNAME] = '\0';
 
 		//fetch IP address
-		{
-			const char *claddress;
-			UINT32 numericaddress[4];
-
-			memset(netbuffer->u.playerinfo[i].address, 0, 4);
-			if (playernode[i] == 0)
-			{
-				//127.0.0.1
-				netbuffer->u.playerinfo[i].address[0] = 127;
-				netbuffer->u.playerinfo[i].address[3] = 1;
-			}
-			else if (playernode[i] > 0 && I_GetNodeAddress && (claddress = I_GetNodeAddress(playernode[i])) != NULL)
-			{
-				if (sscanf(claddress, "%d.%d.%d.%d", &numericaddress[0], &numericaddress[1], &numericaddress[2], &numericaddress[3]) < 4)
-					goto badaddress;
-				netbuffer->u.playerinfo[i].address[0] = (UINT8)numericaddress[0];
-				netbuffer->u.playerinfo[i].address[1] = (UINT8)numericaddress[1];
-				netbuffer->u.playerinfo[i].address[2] = (UINT8)numericaddress[2];
-				netbuffer->u.playerinfo[i].address[3] = (UINT8)numericaddress[3];
-			}
-		}
-		badaddress:
+		//No, don't do that, you fuckface.
+		memset(netbuffer->u.playerinfo[i].address, 0, 4);
 
 		if (G_GametypeHasTeams())
 		{
@@ -2223,6 +2225,7 @@ static void Command_ClearBans(void)
 		return;
 
 	I_ClearBans();
+	D_SaveBan();
 	reasontail = NULL;
 	while (reasonhead)
 	{
@@ -2407,7 +2410,7 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 	// the remaining players.
 	if (G_IsSpecialStage(gamemap))
 	{
-		INT32 i, count, increment, spheres;
+		INT32 i, count, sincrement, spheres, rincrement, rings;
 
 		for (i = 0, count = 0; i < MAXPLAYERS; i++)
 		{
@@ -2417,18 +2420,35 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 
 		count--;
 		spheres = players[playernum].spheres;
-		increment = spheres/count;
+		rings = players[playernum].rings;
+		sincrement = spheres/count;
+		rincrement = rings/count;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && i != playernum)
 			{
-				if (spheres < increment)
+				if (spheres < 2*sincrement)
+				{
 					P_GivePlayerSpheres(&players[i], spheres);
+					spheres = 0;
+				}
 				else
-					P_GivePlayerSpheres(&players[i], increment);
+				{
+					P_GivePlayerSpheres(&players[i], sincrement);
+					spheres -= sincrement;
+				}
 
-				spheres -= increment;
+				if (rings < 2*rincrement)
+				{
+					P_GivePlayerRings(&players[i], rings);
+					rings = 0;
+				}
+				else
+				{
+					P_GivePlayerRings(&players[i], rincrement);
+					rings -= rincrement;
+				}
 			}
 		}
 	}
@@ -2472,7 +2492,7 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 void CL_Reset(void)
 {
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 	if (metalplayback)
 		G_StopMetalDemo();
 	if (demorecording)
@@ -2568,9 +2588,13 @@ static void Command_Nodes(void)
 		if (playeringame[i])
 		{
 			CONS_Printf("%.2u: %*s", i, (int)maxlen, player_names[i]);
-			CONS_Printf(" - %.2d", playernode[i]);
-			if (I_GetNodeAddress && (address = I_GetNodeAddress(playernode[i])) != NULL)
-				CONS_Printf(" - %s", address);
+
+			if (playernode[i] != UINT8_MAX)
+			{
+				CONS_Printf(" - node %.2d", playernode[i]);
+				if (I_GetNodeAddress && (address = I_GetNodeAddress(playernode[i])) != NULL)
+					CONS_Printf(" - %s", address);
+			}
 
 			if (IsPlayerAdmin(i))
 				CONS_Printf(M_GetText(" (verified admin)"));
@@ -2843,12 +2867,10 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			HU_AddChatText(va("\x82*%s has been kicked (Go away)", player_names[pnum]), false);
 			kickreason = KR_KICK;
 			break;
-#ifdef NEWPING
 		case KICK_MSG_PING_HIGH:
 			HU_AddChatText(va("\x82*%s left the game (Broke ping limit)", player_names[pnum]), false);
 			kickreason = KR_PINGLIMIT;
 			break;
-#endif
 		case KICK_MSG_CON_FAIL:
 			HU_AddChatText(va("\x82*%s left the game (Synch Failure)", player_names[pnum]), false);
 			kickreason = KR_SYNCH;
@@ -2921,10 +2943,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		D_StartTitle();
 		if (msg == KICK_MSG_CON_FAIL)
 			M_StartMessage(M_GetText("Server closed connection\n(synch failure)\nPress ESC\n"), NULL, MM_NOTHING);
-#ifdef NEWPING
 		else if (msg == KICK_MSG_PING_HIGH)
 			M_StartMessage(M_GetText("Server closed connection\n(Broke ping limit)\nPress ESC\n"), NULL, MM_NOTHING);
-#endif
 		else if (msg == KICK_MSG_BANNED)
 			M_StartMessage(M_GetText("You have been banned by the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_CUSTOM_KICK)
@@ -2938,13 +2958,13 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		CL_RemovePlayer(pnum, kickreason);
 }
 
-consvar_t cv_allownewplayer = {"allowjoin", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
-consvar_t cv_joinnextround = {"joinnextround", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; /// \todo not done
+consvar_t cv_allownewplayer = {"allowjoin", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
+consvar_t cv_joinnextround = {"joinnextround", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
 consvar_t cv_maxplayers = {"maxplayers", "8", CV_SAVE, maxplayers_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-static CV_PossibleValue_t resynchattempts_cons_t[] = {{0, "MIN"}, {20, "MAX"}, {0, NULL}};
-consvar_t cv_resynchattempts = {"resynchattempts", "10", 0, resynchattempts_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL	};
-consvar_t cv_blamecfail = {"blamecfail", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
+static CV_PossibleValue_t resynchattempts_cons_t[] = {{1, "MIN"}, {20, "MAX"}, {0, "No"}, {0, NULL}};
+consvar_t cv_resynchattempts = {"resynchattempts", "10", CV_SAVE, resynchattempts_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL	};
+consvar_t cv_blamecfail = {"blamecfail", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
 
 // max file size to send to a player (in kilobytes)
 static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {51200, "MAX"}, {0, NULL}};
@@ -2985,11 +3005,6 @@ void D_ClientServerInit(void)
 	RegisterNetXCmd(XD_KICK, Got_KickCmd);
 	RegisterNetXCmd(XD_ADDPLAYER, Got_AddPlayer);
 #ifndef NONET
-	CV_RegisterVar(&cv_allownewplayer);
-	CV_RegisterVar(&cv_joinnextround);
-	CV_RegisterVar(&cv_showjoinaddress);
-	CV_RegisterVar(&cv_resynchattempts);
-	CV_RegisterVar(&cv_blamecfail);
 #ifdef DUMPCONSISTENCY
 	CV_RegisterVar(&cv_dumpconsistency);
 #endif
@@ -3177,6 +3192,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	if (!splitscreen && !botingame)
 		CL_ClearPlayer(newplayernum);
 	playeringame[newplayernum] = true;
+	READSTRINGN(*p, player_names[newplayernum], MAXPLAYERNAME);
 	G_AddPlayer(newplayernum);
 	if (newplayernum+1 > doomcom->numslots)
 		doomcom->numslots = (INT16)(newplayernum+1);
@@ -3209,10 +3225,10 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		{
 			const char *address;
 			if (I_GetNodeAddress && (address = I_GetNodeAddress(node)) != NULL)
-				HU_AddChatText(va("\x82*Player %d has joined the game (node %d) (%s)", newplayernum+1, node, address), false);	// merge join notification + IP to avoid clogging console/chat.
+				HU_AddChatText(va("\x82*%s has joined the game (player %d) (%s)", player_names[newplayernum], newplayernum, address), false);	// merge join notification + IP to avoid clogging console/chat.
 		}
 		else
-			HU_AddChatText(va("\x82*Player %d has joined the game (node %d)", newplayernum+1, node), false);	// if you don't wanna see the join address.
+			HU_AddChatText(va("\x82*%s has joined the game (player %d)", player_names[newplayernum], newplayernum), false);	// if you don't wanna see the join address.
 	}
 
 	if (server && multiplayer && motd[0] != '\0')
@@ -3223,10 +3239,11 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 #endif
 }
 
-static boolean SV_AddWaitingPlayers(void)
+static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
 {
 	INT32 node, n, newplayer = false;
-	UINT8 buf[2];
+	UINT8 buf[2 + MAXPLAYERNAME];
+	UINT8 *p;
 	UINT8 newplayernum = 0;
 
 	// What is the reason for this? Why can't newplayernum always be 0?
@@ -3309,18 +3326,23 @@ static boolean SV_AddWaitingPlayers(void)
 
 			playernode[newplayernum] = (UINT8)node;
 
+			p = buf + 2;
 			buf[0] = (UINT8)node;
 			buf[1] = newplayernum;
 			if (playerpernode[node] < 1)
+			{
 				nodetoplayer[node] = newplayernum;
+				WRITESTRINGN(p, name, MAXPLAYERNAME);
+			}
 			else
 			{
 				nodetoplayer2[node] = newplayernum;
 				buf[1] |= 0x80;
+				WRITESTRINGN(p, name2, MAXPLAYERNAME);
 			}
 			playerpernode[node]++;
 
-			SendNetXCmd(XD_ADDPLAYER, &buf, 2);
+			SendNetXCmd(XD_ADDPLAYER, &buf, p - buf);
 
 			DEBFILE(va("Server added player %d node %d\n", newplayernum, node));
 			// use the next free slot (we can't put playeringame[newplayernum] = true here)
@@ -3382,7 +3404,7 @@ boolean SV_SpawnServer(void)
 		else doomcom->numslots = 1;
 	}
 
-	return SV_AddWaitingPlayers();
+	return SV_AddWaitingPlayers(cv_playername.zstring, cv_playername2.zstring);
 }
 
 void SV_StopServer(void)
@@ -3453,6 +3475,9 @@ static size_t TotalTextCmdPerTic(tic_t tic)
   */
 static void HandleConnect(SINT8 node)
 {
+	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME + 1];
+	INT32 i;
+
 	if (bannednode && bannednode[node])
 		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server"));
 	else if (netbuffer->u.clientcfg.version != VERSION
@@ -3471,6 +3496,16 @@ static void HandleConnect(SINT8 node)
 #ifndef NONET
 		boolean newnode = false;
 #endif
+
+		for (i = 0; i < netbuffer->u.clientcfg.localplayers - playerpernode[node]; i++)
+		{
+			strlcpy(names[i], netbuffer->u.clientcfg.names[i], MAXPLAYERNAME + 1);
+			if (!EnsurePlayerNameIsGood(names[i], -1))
+			{
+				SV_SendRefuse(node, "Bad player name");
+				return;
+			}
+		}
 
 		// client authorised to join
 		nodewaiting[node] = (UINT8)(netbuffer->u.clientcfg.localplayers - playerpernode[node]);
@@ -3512,7 +3547,7 @@ static void HandleConnect(SINT8 node)
 				SV_SendSaveGame(node); // send a complete game state
 				DEBFILE("send savegame\n");
 			}
-			SV_AddWaitingPlayers();
+			SV_AddWaitingPlayers(names[0], names[1]);
 			player_joining = true;
 		}
 #else
@@ -3819,7 +3854,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 
 			// Ignore tics from those not synched
-			if (resynch_inprogress[node])
+			if (resynch_inprogress[node] && nettics[node] == gametic)
 				break;
 
 			// To save bytes, only the low byte of tic numbers are sent
@@ -4153,7 +4188,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 			resynch_local_inprogress = true;
 			CL_AcknowledgeResynch(&netbuffer->u.resynchpak);
 			break;
-#ifdef NEWPING
 		case PT_PING:
 			// Only accept PT_PING from the server.
 			if (node != servernode)
@@ -4181,7 +4215,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 			}
 
 			break;
-#endif
 		case PT_SERVERCFG:
 			break;
 		case PT_FILEFRAGMENT:
@@ -4677,10 +4710,15 @@ void TryRunTics(tic_t realtics)
 	if (player_joining)
 		return;
 
-	if (neededtic > gametic)
+	if (neededtic > gametic && !resynch_local_inprogress)
 	{
 		if (advancedemo)
-			D_StartTitle();
+		{
+			if (timedemo_quit)
+				COM_ImmedExecute("quit");
+			else
+				D_StartTitle();
+		}
 		else
 			// run the count * tics
 			while (neededtic > gametic)
@@ -4695,7 +4733,6 @@ void TryRunTics(tic_t realtics)
 	}
 }
 
-#ifdef NEWPING
 static inline void PingUpdate(void)
 {
 	INT32 i;
@@ -4753,7 +4790,6 @@ static inline void PingUpdate(void)
 
 	pingmeasurecount = 1; //Reset count
 }
-#endif
 
 void NetUpdate(void)
 {
@@ -4778,7 +4814,6 @@ void NetUpdate(void)
 
 	gametime = nowtime;
 
-#ifdef NEWPING
 	if (server)
 	{
 		if (netgame && !(gametime % 255))
@@ -4789,7 +4824,6 @@ void NetUpdate(void)
 				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
-#endif
 
 	if (client)
 		maketic = neededtic;
@@ -4831,8 +4865,13 @@ void NetUpdate(void)
 			for (i = 0; i < MAXNETNODES; ++i)
 				if (resynch_inprogress[i])
 				{
-					SV_SendResynch(i);
-					counts = -666;
+					if (!nodeingame[i] || nettics[i] == gametic)
+					{
+						SV_SendResynch(i);
+						counts = -666;
+					}
+					else
+						counts = 0; // Let the client catch up with the server
 				}
 
 			// Do not make tics while resynching

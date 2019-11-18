@@ -30,19 +30,57 @@ extern boolean levelloading;
 extern UINT8 levelfadecol;
 
 extern lumpnum_t lastloadedmaplumpnum; // for comparative savegame
+
+/* for levelflat type */
+enum
+{
+	LEVELFLAT_NONE,/* HOM time my friend */
+	LEVELFLAT_FLAT,
+	LEVELFLAT_PATCH,
+#ifndef NO_PNG_LUMPS
+	LEVELFLAT_PNG,
+#endif
+	LEVELFLAT_TEXTURE,
+};
+
 //
 // MAP used flats lookup table
 //
 typedef struct
 {
 	char name[9]; // resource name from wad
-	lumpnum_t lumpnum; // lump number of the flat
+
+	UINT8  type;
+	union
+	{
+		struct
+		{
+			lumpnum_t     lumpnum; // lump number of the flat
+			// for flat animation
+			lumpnum_t baselumpnum;
+		}
+		flat;
+		struct
+		{
+			INT32             num;
+			INT32         lastnum; // texture number of the flat
+			// for flat animation
+			INT32         basenum;
+		}
+		texture;
+	}
+	u;
+
+	UINT16 width, height;
+	fixed_t topoffset, leftoffset;
 
 	// for flat animation
-	lumpnum_t baselumpnum;
 	INT32 animseq; // start pos. in the anim sequence
 	INT32 numpics;
 	INT32 speed;
+
+	// for patchflats
+	UINT8 *flatpatch;
 } levelflat_t;
 
 extern size_t numlevelflats;

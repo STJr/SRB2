@@ -30,6 +30,8 @@
 #include "../z_zone.h"
 #include "../v_video.h"
 #include "../r_draw.h"
+#include "../r_patch.h"
+#include "../p_setup.h"
 
 //Hurdler: 25/04/2000: used for new colormap code in hardware mode
 //static UINT8 *gr_colormap = NULL; // by default it must be NULL ! (because colormap tables are not initialized)
@@ -59,7 +61,6 @@ static const INT32 format2bpp[16] =
 	2, //13 GR_TEXFMT_ALPHA_INTENSITY_88
 	2, //14 GR_TEXFMT_AP_88
 };
-
 
 // This code was originally placed directly in HWR_DrawPatchInCache.
 // It is now split from it for my sanity! (and the sanity of others)
@@ -138,18 +139,37 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : texelu16 = (UINT16)((alpha<<8) | texel);
+				case 2 : // uhhhhhhhh..........
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 texel = ASTBlendPixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
+						 texelu16 = (UINT16)((alpha<<8) | texel);
 						 memcpy(dest, &texelu16, sizeof(UINT16));
 						 break;
 				case 3 : colortemp = V_GetColor(texel);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp.rgba = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
 				case 4 : colortemp = V_GetColor(texel);
 						 colortemp.s.alpha = alpha;
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp.rgba = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;
 				// default is 1
-				default: *dest = texel;
+				default:
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 *dest = ASTBlendPixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
+						 else
+							 *dest = texel;
 						 break;
 			}
 
@@ -233,18 +253,37 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : texelu16 = (UINT16)((alpha<<8) | texel);
+				case 2 : // uhhhhhhhh..........
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 texel = ASTBlendPixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
+						 texelu16 = (UINT16)((alpha<<8) | texel);
 						 memcpy(dest, &texelu16, sizeof(UINT16));
 						 break;
 				case 3 : colortemp = V_GetColor(texel);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp.rgba = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
 				case 4 : colortemp = V_GetColor(texel);
 						 colortemp.s.alpha = alpha;
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp.rgba = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;
 				// default is 1
-				default: *dest = texel;
+				default:
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 *dest = ASTBlendPixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
+						 else
+							 *dest = texel;
 						 break;
 			}
 
@@ -331,16 +370,7 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	if (texture->width <= 0 || texture->height <= 0)
 		return;
 
-	/*if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
-	{
-		if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
-			continue;
-		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawTransFlippedColumnInCache : HWR_DrawTransColumnInCache;
-	}
-	else*/
-	{
-		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
-	}
+	ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
 
 	x1 = patch->originx;
 	width = SHORT(realpatch->width);
@@ -420,6 +450,7 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 	GrTexInfo *grInfo)
 {
+#ifdef GLIDE_API_COMPATIBILITY
 	//   Build the full textures from patches.
 	static const GrLOD_t gr_lods[9] =
 	{
@@ -456,6 +487,9 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 
 	INT32     j,k;
 	INT32     max,min;
+#else
+	(void)grInfo;
+#endif
 
 	// find a power of 2 width/height
 	if (cv_grrounddown.value)
@@ -472,45 +506,9 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 		if (blockheight < 1)
 			I_Error("3D GenerateTexture : too small");
 	}
-	else if (cv_voodoocompatibility.value)
-	{
-		if (originalwidth > 256 || originalheight > 256)
-		{
-			blockwidth = 256;
-			while (originalwidth < blockwidth)
-				blockwidth >>= 1;
-			if (blockwidth < 1)
-				I_Error("3D GenerateTexture : too small");
-
-			blockheight = 256;
-			while (originalheight < blockheight)
-				blockheight >>= 1;
-			if (blockheight < 1)
-				I_Error("3D GenerateTexture : too small");
-		}
-		else
-		{
-			//size up to nearest power of 2
-			blockwidth = 1;
-			while (blockwidth < originalwidth)
-				blockwidth <<= 1;
-			// scale down the original graphics to fit in 256
-			if (blockwidth > 256)
-				blockwidth = 256;
-				//I_Error("3D GenerateTexture : too big");
-
-			//size up to nearest power of 2
-			blockheight = 1;
-			while (blockheight < originalheight)
-				blockheight <<= 1;
-			// scale down the original graphics to fit in 256
-			if (blockheight > 256)
-				blockheight = 255;
-				//I_Error("3D GenerateTexture : too big");
-		}
-	}
 	else
 	{
+#ifdef GLIDE_API_COMPATIBILITY
 		//size up to nearest power of 2
 		blockwidth = 1;
 		while (blockwidth < originalwidth)
@@ -528,9 +526,14 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 		if (blockheight > 2048)
 			blockheight = 2048;
 			//I_Error("3D GenerateTexture : too big");
+#else
+		blockwidth = originalwidth;
+		blockheight = originalheight;
+#endif
 	}
 
 	// do the boring LOD stuff.. blech!
+#ifdef GLIDE_API_COMPATIBILITY
 	if (blockwidth >= blockheight)
 	{
 		max = blockwidth;
@@ -562,6 +565,7 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 	if (blockwidth < blockheight)
 		j += 4;
 	grInfo->aspectRatioLog2 = gr_aspects[j].aspect;
+#endif
 
 	blocksize = blockwidth * blockheight;
 
@@ -650,7 +654,14 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+#ifndef NO_PNG_LUMPS
+		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
+#endif
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+#endif
 		HWR_DrawTexturePatchInCache(&grtex->mipmap,
 		                     blockwidth, blockheight,
 		                     texture, patch,
@@ -678,6 +689,13 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap)
 {
 	INT32 newwidth, newheight;
+
+#ifndef NO_PNG_LUMPS
+	// lump is a png so convert it
+	size_t len = W_LumpLengthPwad(grPatch->wadnum, grPatch->lumpnum);
+	if ((patch != NULL) && R_IsLumpPNG((const UINT8 *)patch, len))
+		patch = R_PNGToPatch((const UINT8 *)patch, len, NULL, true);
+#endif
 
 	// don't do it twice (like a cache)
 	if (grMipmap->width == 0)
@@ -716,18 +734,6 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 		newwidth = blockwidth;
 		newheight = blockheight;
 	}
-	else if (cv_voodoocompatibility.value) // Only scales down textures that exceed 256x256.
-	{
-		// no rounddown, do not size up patches, so they don't look 'scaled'
-		newwidth  = min(grPatch->width, blockwidth);
-		newheight = min(grPatch->height, blockheight);
-
-		if (newwidth > 256 || newheight > 256)
-		{
-			newwidth = blockwidth;
-			newheight = blockheight;
-		}
-	}
 	else
 	{
 		// no rounddown, do not size up patches, so they don't look 'scaled'
@@ -756,11 +762,13 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 
 static size_t gr_numtextures;
 static GLTexture_t *gr_textures; // for ALL Doom textures
+static GLTexture_t *gr_textures2;
 
 void HWR_InitTextureCache(void)
 {
 	gr_numtextures = 0;
 	gr_textures = NULL;
+	gr_textures2 = NULL;
 }
 
 
@@ -769,10 +777,10 @@ static void FreeMipmapColormap(INT32 patchnum, void *patch)
 {
 	GLPatch_t* const grpatch = patch;
 	(void)patchnum; //unused
-	while (grpatch->mipmap.nextcolormap)
+	while (grpatch->mipmap->nextcolormap)
 	{
-		GLMipmap_t *grmip = grpatch->mipmap.nextcolormap;
-		grpatch->mipmap.nextcolormap = grmip->nextcolormap;
+		GLMipmap_t *grmip = grpatch->mipmap->nextcolormap;
+		grpatch->mipmap->nextcolormap = grmip->nextcolormap;
 		if (grmip->grInfo.data) Z_Free(grmip->grInfo.data);
 		free(grmip);
 	}
@@ -799,7 +807,10 @@ void HWR_FreeTextureCache(void)
 	// texturecache info, we can free it
 	if (gr_textures)
 		free(gr_textures);
+	if (gr_textures2)
+		free(gr_textures2);
 	gr_textures = NULL;
+	gr_textures2 = NULL;
 	gr_numtextures = 0;
 }
 
@@ -817,6 +828,9 @@ void HWR_PrepLevelCache(size_t pnumtextures)
 	gr_textures = calloc(pnumtextures, sizeof (*gr_textures));
 	if (gr_textures == NULL)
 		I_Error("3D can't alloc gr_textures");
+	gr_textures2 = calloc(pnumtextures, sizeof (*gr_textures2));
+	if (gr_textures2 == NULL)
+		I_Error("3D can't alloc gr_textures2");
 }
 
 void HWR_SetPalette(RGBA_t *palette)
@@ -847,7 +861,7 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	GLTexture_t *grtex;
 #ifdef PARANOIA
 	if ((unsigned)tex >= gr_numtextures)
-		I_Error(" HWR_GetTexture: tex >= numtextures\n");
+		I_Error("HWR_GetTexture: tex >= numtextures\n");
 #endif
 	grtex = &gr_textures[tex];
 
@@ -862,15 +876,16 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	return grtex;
 }
 
-
 static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
 	size_t size, pflatsize;
 
 	// setup the texture info
+#ifdef GLIDE_API_COMPATIBILITY
 	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
 	grMipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
 	grMipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+#endif
 	grMipmap->grInfo.format = GR_TEXFMT_P_8;
 	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
 
@@ -900,6 +915,7 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 			pflatsize = 64;
 			break;
 	}
+
 	grMipmap->width  = (UINT16)pflatsize;
 	grMipmap->height = (UINT16)pflatsize;
 
@@ -908,14 +924,36 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 		PU_HWRCACHE, &grMipmap->grInfo.data));
 }
 
+static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
+{
+	UINT8 *flat;
+
+	// setup the texture info
+#ifdef GLIDE_API_COMPATIBILITY
+	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
+	grMipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
+	grMipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+#endif
+	grMipmap->grInfo.format = GR_TEXFMT_P_8;
+	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
+
+	grMipmap->width  = (UINT16)textures[texturenum]->width;
+	grMipmap->height = (UINT16)textures[texturenum]->height;
+
+	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data);
+	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
+
+	R_TextureToFlat(texturenum, flat);
+}
 
 // Download a Doom 'flat' to the hardware cache and make it ready for use
-void HWR_GetFlat(lumpnum_t flatlumpnum)
+void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 {
 	GLMipmap_t *grmip;
+	if (flatlumpnum == LUMPERROR)
+		return;
 
-	grmip = &HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
-
+	grmip = HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
 	if (!grmip->downloaded && !grmip->grInfo.data)
 		HWR_CacheFlat(grmip, flatlumpnum);
 
@@ -923,6 +961,38 @@ void HWR_GetFlat(lumpnum_t flatlumpnum)
 
 	// The system-memory data can be purged now.
 	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+}
+
+void HWR_GetLevelFlat(levelflat_t *levelflat)
+{
+	// Who knows?
+	if (levelflat == NULL)
+		return;
+
+	if (levelflat->type == LEVELFLAT_FLAT)
+		HWR_LiterallyGetFlat(levelflat->u.flat.lumpnum);
+	else if (levelflat->type == LEVELFLAT_TEXTURE)
+	{
+		GLTexture_t *grtex;
+		INT32 texturenum = levelflat->u.texture.num;
+#ifdef PARANOIA
+		if ((unsigned)texturenum >= gr_numtextures)
+			I_Error("HWR_GetLevelFlat: texturenum >= numtextures\n");
+#endif
+		if (texturenum == 0 || texturenum == -1)
+			return;
+		grtex = &gr_textures2[texturenum];
+
+		if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
+			HWR_CacheTextureAsFlat(&grtex->mipmap, texturenum);
+
+		HWD.pfnSetTexture(&grtex->mipmap);
+
+		// The system-memory data can be purged now.
+		Z_ChangeTag(grtex->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
+	}
+	else // set no texture
+		HWD.pfnSetTexture(NULL);
 }
 
 //
@@ -933,10 +1003,14 @@ static void HWR_LoadMappedPatch(GLMipmap_t *grmip, GLPatch_t *gpatch)
 {
 	if (!grmip->downloaded && !grmip->grInfo.data)
 	{
-		patch_t *patch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+		patch_t *patch = gpatch->rawpatch;
+		if (!patch)
+			patch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
 		HWR_MakePatch(patch, gpatch, grmip, true);
 
-		Z_Free(patch);
+		// You can't free rawpatch for some reason?
+		if (!gpatch->rawpatch)
+			Z_Free(patch);
 	}
 
 	HWD.pfnSetTexture(grmip);
@@ -951,22 +1025,26 @@ static void HWR_LoadMappedPatch(GLMipmap_t *grmip, GLPatch_t *gpatch)
 void HWR_GetPatch(GLPatch_t *gpatch)
 {
 	// is it in hardware cache
-	if (!gpatch->mipmap.downloaded && !gpatch->mipmap.grInfo.data)
+	if (!gpatch->mipmap->downloaded && !gpatch->mipmap->grInfo.data)
 	{
 		// load the software patch, PU_STATIC or the Z_Malloc for hardware patch will
 		// flush the software patch before the conversion! oh yeah I suffered
-		patch_t *ptr = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
-		HWR_MakePatch(ptr, gpatch, &gpatch->mipmap, true);
+		patch_t *ptr = gpatch->rawpatch;
+		if (!ptr)
+			ptr = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+		HWR_MakePatch(ptr, gpatch, gpatch->mipmap, true);
 
 		// this is inefficient.. but the hardware patch in heap is purgeable so it should
 		// not fragment memory, and besides the REAL cache here is the hardware memory
-		Z_Free(ptr);
+		// You can't free rawpatch for some reason?
+		if (!gpatch->rawpatch)
+			Z_Free(ptr);
 	}
 
-	HWD.pfnSetTexture(&gpatch->mipmap);
+	HWD.pfnSetTexture(gpatch->mipmap);
 
 	// The system-memory patch data can be purged now.
-	Z_ChangeTag(gpatch->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
+	Z_ChangeTag(gpatch->mipmap->grInfo.data, PU_HWRCACHE_UNLOCKED);
 }
 
 
@@ -986,7 +1064,7 @@ void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap)
 
 	// search for the mimmap
 	// skip the first (no colormap translated)
-	for (grmip = &gpatch->mipmap; grmip->nextcolormap; )
+	for (grmip = gpatch->mipmap; grmip->nextcolormap; )
 	{
 		grmip = grmip->nextcolormap;
 		if (grmip->colormap == colormap)
@@ -1016,7 +1094,7 @@ void HWR_UnlockCachedPatch(GLPatch_t *gpatch)
 	if (!gpatch)
 		return;
 
-	Z_ChangeTag(gpatch->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
+	Z_ChangeTag(gpatch->mipmap->grInfo.data, PU_HWRCACHE_UNLOCKED);
 	Z_ChangeTag(gpatch, PU_HWRPATCHINFO_UNLOCKED);
 }
 
@@ -1104,7 +1182,7 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 
 	grpatch = HWR_GetCachedGLPatch(lumpnum);
 
-	if (!grpatch->mipmap.downloaded && !grpatch->mipmap.grInfo.data)
+	if (!grpatch->mipmap->downloaded && !grpatch->mipmap->grInfo.data)
 	{
 		pic_t *pic;
 		UINT8 *block;
@@ -1120,37 +1198,25 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 		grpatch->topoffset = 0;
 
 		// find the good 3dfx size (boring spec)
-		HWR_ResizeBlock (grpatch->width, grpatch->height, &grpatch->mipmap.grInfo);
-		grpatch->mipmap.width = (UINT16)blockwidth;
-		grpatch->mipmap.height = (UINT16)blockheight;
+		HWR_ResizeBlock (grpatch->width, grpatch->height, &grpatch->mipmap->grInfo);
+		grpatch->mipmap->width = (UINT16)blockwidth;
+		grpatch->mipmap->height = (UINT16)blockheight;
 
 		if (pic->mode == PALETTE)
-			grpatch->mipmap.grInfo.format = textureformat; // can be set by driver
+			grpatch->mipmap->grInfo.format = textureformat; // can be set by driver
 		else
-			grpatch->mipmap.grInfo.format = picmode2GR[pic->mode];
+			grpatch->mipmap->grInfo.format = picmode2GR[pic->mode];
 
-		Z_Free(grpatch->mipmap.grInfo.data);
+		Z_Free(grpatch->mipmap->grInfo.data);
 
 		// allocate block
-		block = MakeBlock(&grpatch->mipmap);
+		block = MakeBlock(grpatch->mipmap);
 
 		// if rounddown, rounddown patches as well as textures
 		if (cv_grrounddown.value)
 		{
 			newwidth = blockwidth;
 			newheight = blockheight;
-		}
-		else if (cv_voodoocompatibility.value) // Only scales down textures that exceed 256x256.
-		{
-			// no rounddown, do not size up patches, so they don't look 'scaled'
-			newwidth  = min(SHORT(pic->width),blockwidth);
-			newheight = min(SHORT(pic->height),blockheight);
-
-			if (newwidth > 256 || newheight > 256)
-			{
-				newwidth = blockwidth;
-				newheight = blockheight;
-			}
 		}
 		else
 		{
@@ -1162,25 +1228,25 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 
 		if (grpatch->width  == blockwidth &&
 			grpatch->height == blockheight &&
-			format2bpp[grpatch->mipmap.grInfo.format] == format2bpp[picmode2GR[pic->mode]])
+			format2bpp[grpatch->mipmap->grInfo.format] == format2bpp[picmode2GR[pic->mode]])
 		{
 			// no conversion needed
-			M_Memcpy(grpatch->mipmap.grInfo.data, pic->data,len);
+			M_Memcpy(grpatch->mipmap->grInfo.data, pic->data,len);
 		}
 		else
 			HWR_DrawPicInCache(block, newwidth, newheight,
-			                   blockwidth*format2bpp[grpatch->mipmap.grInfo.format],
+			                   blockwidth*format2bpp[grpatch->mipmap->grInfo.format],
 			                   pic,
-			                   format2bpp[grpatch->mipmap.grInfo.format]);
+			                   format2bpp[grpatch->mipmap->grInfo.format]);
 
 		Z_Unlock(pic);
 		Z_ChangeTag(block, PU_HWRCACHE_UNLOCKED);
 
-		grpatch->mipmap.flags = 0;
+		grpatch->mipmap->flags = 0;
 		grpatch->max_s = (float)newwidth  / (float)blockwidth;
 		grpatch->max_t = (float)newheight / (float)blockheight;
 	}
-	HWD.pfnSetTexture(&grpatch->mipmap);
+	HWD.pfnSetTexture(grpatch->mipmap);
 	//CONS_Debug(DBG_RENDER, "picloaded at %x as texture %d\n",grpatch->mipmap.grInfo.data, grpatch->mipmap.downloaded);
 
 	return grpatch;
@@ -1196,6 +1262,7 @@ GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum)
 		grpatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
 		grpatch->wadnum = wadnum;
 		grpatch->lumpnum = lumpnum;
+		grpatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
 		M_AATreeSet(hwrcache, lumpnum, grpatch);
 	}
 
@@ -1206,6 +1273,23 @@ GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum)
 {
 	return HWR_GetCachedGLPatchPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
+
+#ifdef ROTSPRITE
+GLPatch_t *HWR_GetCachedGLRotSprite(aatree_t *hwrcache, UINT16 rollangle, patch_t *rawpatch)
+{
+	GLPatch_t *grpatch;
+
+	if (!(grpatch = M_AATreeGet(hwrcache, rollangle)))
+	{
+		grpatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
+		grpatch->rawpatch = rawpatch;
+		grpatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
+		M_AATreeSet(hwrcache, rollangle, grpatch);
+	}
+
+	return grpatch;
+}
+#endif
 
 // Need to do this because they aren't powers of 2
 static void HWR_DrawFadeMaskInCache(GLMipmap_t *mipmap, INT32 pblockwidth, INT32 pblockheight,
@@ -1299,7 +1383,7 @@ void HWR_GetFadeMask(lumpnum_t fademasklumpnum)
 {
 	GLMipmap_t *grmip;
 
-	grmip = &HWR_GetCachedGLPatch(fademasklumpnum)->mipmap;
+	grmip = HWR_GetCachedGLPatch(fademasklumpnum)->mipmap;
 
 	if (!grmip->downloaded && !grmip->grInfo.data)
 		HWR_CacheFadeMask(grmip, fademasklumpnum);

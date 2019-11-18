@@ -89,8 +89,8 @@ static void CV_Gammaxxx_ONChange(void);
 // but they won't do anything.
 static CV_PossibleValue_t grgamma_cons_t[] = {{1, "MIN"}, {255, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t grsoftwarefog_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "LightPlanes"}, {0, NULL}};
+static CV_PossibleValue_t grmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
 
-consvar_t cv_voodoocompatibility = {"gr_voodoocompatibility", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfovchange = {"gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfog = {"gr_fog", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfogcolor = {"gr_fogcolor", "AAAAAA", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -108,10 +108,11 @@ consvar_t cv_grcoronas = {"gr_coronas", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, 
 consvar_t cv_grcoronasize = {"gr_coronasize", "1", CV_SAVE| CV_FLOAT, 0, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
-static CV_PossibleValue_t CV_MD2[] = {{0, "Off"}, {1, "On"}, {2, "Old"}, {0, NULL}};
-// console variables in development
-consvar_t cv_grmd2 = {"gr_md2", "Off", CV_SAVE, CV_MD2, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grmodels = {"gr_models", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grmodelinterpolation = {"gr_modelinterpolation", "Sometimes", CV_SAVE, grmodelinterpolation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 consvar_t cv_grspritebillboarding = {"gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grskydome = {"gr_skydome", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
 // local copy of the palette for V_GetColor()
@@ -540,12 +541,12 @@ static inline UINT8 transmappedpdraw(const UINT8 *dest, const UINT8 *source, fix
 }
 
 // Draws a patch scaled to arbitrary size.
-void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
+void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
 	UINT32 alphalevel = 0;
 
-	fixed_t col, ofs, colfrac, rowfrac, fdup;
+	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
 	INT32 dupx, dupy;
 	const column_t *column;
 	UINT8 *desttop, *dest, *deststart, *destend;
@@ -562,7 +563,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	//if (rendermode != render_soft && !con_startup)		// Why?
 	if (rendermode != render_soft)
 	{
-		HWR_DrawFixedPatch((GLPatch_t *)patch, x, y, pscale, scrn, colormap);
+		HWR_DrawStretchyFixedPatch((GLPatch_t *)patch, x, y, pscale, vscale, scrn, colormap);
 		return;
 	}
 #endif
@@ -617,9 +618,11 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 
 	// only use one dup, to avoid stretching (har har)
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
-	fdup = FixedMul(dupx<<FRACBITS, pscale);
+	fdup = vdup = FixedMul(dupx<<FRACBITS, pscale);
+	if (vscale != pscale)
+		vdup = FixedMul(dupx<<FRACBITS, vscale);
 	colfrac = FixedDiv(FRACUNIT, fdup);
-	rowfrac = FixedDiv(FRACUNIT, fdup);
+	rowfrac = FixedDiv(FRACUNIT, vdup);
 
 	// So it turns out offsets aren't scaled in V_NOSCALESTART unless V_OFFSET is applied ...poo, that's terrible
 	// For now let's just at least give V_OFFSET the ability to support V_FLIP
@@ -636,7 +639,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 
 		// top offset
 		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
-		offsety = FixedMul(SHORT(patch->topoffset)<<FRACBITS, pscale);
+		offsety = FixedMul(SHORT(patch->topoffset)<<FRACBITS, vscale);
 
 		if ((scrn & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
 		{
@@ -652,13 +655,14 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	if (splitscreen && (scrn & V_PERPLAYER))
 	{
 		fixed_t adjusty = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
-		fdup >>= 1;
+		vdup >>= 1;
 		rowfrac <<= 1;
 		y >>= 1;
 #ifdef QUADS
 		if (splitscreen > 1) // 3 or 4 players
 		{
 			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
+			fdup >>= 1;
 			colfrac <<= 1;
 			x >>= 1;
 			if (stplyr == &players[displayplayer])
@@ -824,7 +828,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 			dest = desttop;
 			if (scrn & V_FLIP)
 				dest = deststart + (destend - desttop);
-			dest += FixedInt(FixedMul(topdelta<<FRACBITS,fdup))*vid.width;
+			dest += FixedInt(FixedMul(topdelta<<FRACBITS,vdup))*vid.width;
 
 			for (ofs = 0; dest < deststop && (ofs>>FRACBITS) < column->length; ofs += rowfrac)
 			{
@@ -856,8 +860,8 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		return;
 
 #ifdef HWRENDER
-	// Done
-	if (rendermode != render_soft && !con_startup)
+	//if (rendermode != render_soft && !con_startup)		// Not this again
+	if (rendermode != render_soft)
 	{
 		HWR_DrawCroppedPatch((GLPatch_t*)patch,x,y,pscale,scrn,sx,sy,w,h);
 		return;
@@ -1045,9 +1049,15 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			prevdelta = topdelta;
 			source = (const UINT8 *)(column) + 3;
 			dest = desttop;
-			dest += FixedInt(FixedMul(topdelta<<FRACBITS,fdup))*vid.width;
+			if (topdelta-sy > 0)
+			{
+				dest += FixedInt(FixedMul((topdelta-sy)<<FRACBITS,fdup))*vid.width;
+				ofs = 0;
+			}
+			else
+				ofs = (sy-topdelta)<<FRACBITS;
 
-			for (ofs = sy<<FRACBITS; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
+			for (; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = patchdrawfunc(dest, source, ofs);
@@ -1064,17 +1074,17 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 //
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor)
 {
-	if (skinnum < 0 || skinnum >= numskins || (skins[skinnum].flags & SF_HIRES))
-		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
-	else
+	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes >= 4)
 	{
-		spriteframe_t *sprframe = &skins[skinnum].sprites[SPR2_WAIT].spriteframes[0];
-		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CONTINUE];
+		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 		const UINT8 *colormap = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
 
-		// No variant for translucency
-		V_DrawTinyMappedPatch(x, y, flags, patch, colormap);
+		V_DrawMappedPatch(x, y, flags, patch, colormap);
 	}
+	else
+		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
 }
 
 //
@@ -1174,7 +1184,8 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		return;
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && !con_startup)
+	//if (rendermode != render_soft && !con_startup)		// Not this again
+	if (rendermode != render_soft)
 	{
 		HWR_DrawFill(x, y, w, h, c);
 		return;
@@ -1887,7 +1898,13 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 {
 	UINT8 *deststop, *buf;
 
-	boxheight *= vid.dupy;
+	boxheight = ((boxheight * 4) + (boxheight/2)*5);
+
+	if (color >= 256 && color < 512)
+	{
+		V_DrawFill((BASEVIDWIDTH-(vid.width/vid.dupx))/2, BASEVIDHEIGHT-boxheight, (vid.width/vid.dupx),boxheight, (color-256)|V_SNAPTOBOTTOM);
+		return;
+	}
 
 	if (color == INT32_MAX)
 		color = cons_backcolor.value;
@@ -1930,7 +1947,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 	// heavily simplified -- we don't need to know x or y position,
 	// just the start and stop positions
 	deststop = screens[0] + vid.rowbytes * vid.height;
-	buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
+	buf = deststop - vid.rowbytes * boxheight * vid.dupy; // 4 lines of space plus gaps between and some leeway
 	for (; buf < deststop; ++buf)
 		*buf = promptbgmap[*buf];
 }
@@ -2618,6 +2635,203 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 		V_DrawSciencePatch(cx, cy, option, cred_font[c], FRACUNIT);
 		cx += w<<FRACBITS;
 	}
+}
+
+// Draw a string using the nt_font
+// Note that the outline is a seperate font set
+static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
+{
+	fixed_t cx, cy, w;
+	INT32 c, dupx, dupy, scrwidth, left = 0;
+	const char *ch = string;
+
+	if (option & V_CENTERNAMETAG)
+		x -= FixedInt(FixedMul((V_NameTagWidth(string)/2)*FRACUNIT, scale));
+	option &= ~V_CENTERNAMETAG; // which is also shared with V_ALLOWLOWERCASE...
+
+	cx = x<<FRACBITS;
+	cy = y<<FRACBITS;
+
+	if (option & V_NOSCALESTART)
+	{
+		dupx = vid.dupx;
+		dupy = vid.dupy;
+		scrwidth = vid.width;
+	}
+	else
+	{
+		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
+	}
+
+	for (;;ch++)
+	{
+		if (!*ch)
+			break;
+		if (*ch == '\n')
+		{
+			cx = x<<FRACBITS;
+			cy += FixedMul((21*dupy)*FRACUNIT, scale);
+			continue;
+		}
+
+		c = toupper(*ch);
+		c -= NT_FONTSTART;
+
+		// character does not exist or is a space
+		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
+		{
+			cx += FixedMul((4 * dupx)*FRACUNIT, scale);
+			continue;
+		}
+
+		w = FixedMul((SHORT(ntb_font[c]->width)+2 * dupx) * FRACUNIT, scale);
+
+		if (FixedInt(cx) > scrwidth)
+			continue;
+		if (cx+(left*FRACUNIT) + w < 0) // left boundary check
+		{
+			cx += w;
+			continue;
+		}
+
+		V_DrawFixedPatch(cx, cy, scale, option, nto_font[c], outlinecolormap);
+		V_DrawFixedPatch(cx, cy, scale, option, ntb_font[c], basecolormap);
+
+		cx += w;
+	}
+}
+
+// Looks familiar.
+void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
+{
+	const char *text = string;
+	const char *first_token = text;
+	char *last_token = strchr(text, '\n');
+	const INT32 lbreakheight = 21;
+	INT32 ntlines;
+
+	if (option & V_CENTERNAMETAG)
+	{
+		ntlines = V_CountNameTagLines(string);
+		y -= FixedInt(FixedMul(((lbreakheight/2) * (ntlines-1))*FRACUNIT, scale));
+	}
+
+	// No line breaks?
+	// Draw entire string
+	if (!last_token)
+		V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, string);
+	// Split string by the line break character
+	else
+	{
+		char *str = NULL;
+		INT32 len;
+		while (true)
+		{
+			// There are still lines left to draw
+			if (last_token)
+			{
+				size_t shift = 0;
+				// Free this line
+				if (str)
+					Z_Free(str);
+				// Find string length, do a malloc...
+				len = (last_token-first_token)+1;
+				str = ZZ_Alloc(len);
+				// Copy the line
+				strncpy(str, first_token, len-1);
+				str[len-1] = '\0';
+				// Don't leave a line break character
+				// at the start of the string!
+				if ((strlen(str) >= 2) && (string[0] == '\n') && (string[1] != '\n'))
+					shift++;
+				// Then draw it
+				V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, str+shift);
+			}
+			// No line break character was found
+			else
+			{
+				// Don't leave a line break character
+				// at the start of the string!
+				if ((strlen(first_token) >= 2) && (first_token[0] == '\n') && (first_token[1] != '\n'))
+					first_token++;
+				// Then draw it
+				V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, first_token);
+				break;
+			}
+
+			// Next line
+			y += FixedInt(FixedMul(lbreakheight*FRACUNIT, scale));
+			if ((last_token-text)+1 >= (signed)strlen(text))
+				last_token = NULL;
+			else
+			{
+				first_token = last_token;
+				last_token = strchr(first_token+1, '\n');
+			}
+		}
+		// Free this line
+		if (str)
+			Z_Free(str);
+	}
+}
+
+// Count the amount of lines in name tag string
+INT32 V_CountNameTagLines(const char *string)
+{
+	INT32 ntlines = 1;
+	const char *text = string;
+	const char *first_token = text;
+	char *last_token = strchr(text, '\n');
+
+	// No line breaks?
+	if (!last_token)
+		return ntlines;
+	// Split string by the line break character
+	else
+	{
+		while (true)
+		{
+			if (last_token)
+				ntlines++;
+			// No line break character was found
+			else
+				break;
+
+			// Next line
+			if ((last_token-text)+1 >= (signed)strlen(text))
+				last_token = NULL;
+			else
+			{
+				first_token = last_token;
+				last_token = strchr(first_token+1, '\n');
+			}
+		}
+	}
+	return ntlines;
+}
+
+INT32 V_NameTagWidth(const char *string)
+{
+	INT32 c, w = 0;
+	size_t i;
+
+	// It's possible for string to be a null pointer
+	if (!string)
+		return 0;
+
+	for (i = 0; i < strlen(string); i++)
+	{
+		c = toupper(string[i]) - NT_FONTSTART;
+		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
+			w += 4;
+		else
+			w += SHORT(ntb_font[c]->width)+2;
+	}
+
+	return w;
 }
 
 // Find string width from cred_font chars

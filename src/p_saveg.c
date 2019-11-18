@@ -125,6 +125,10 @@ static void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].currentweapon);
 		WRITEINT32(save_p, players[i].ringweapons);
 
+		WRITEUINT16(save_p, players[i].ammoremoval);
+		WRITEUINT32(save_p, players[i].ammoremovaltimer);
+		WRITEINT32(save_p, players[i].ammoremovaltimer);
+
 		for (j = 0; j < NUMPOWERS; j++)
 			WRITEUINT16(save_p, players[i].powers[j]);
 
@@ -185,6 +189,7 @@ static void P_NetArchivePlayers(void)
 		WRITEINT16(save_p, players[i].starpostz);
 		WRITEINT32(save_p, players[i].starpostnum);
 		WRITEANGLE(save_p, players[i].starpostangle);
+		WRITEFIXED(save_p, players[i].starpostscale);
 
 		WRITEANGLE(save_p, players[i].angle_pos);
 		WRITEANGLE(save_p, players[i].old_angle_pos);
@@ -329,6 +334,10 @@ static void P_NetUnArchivePlayers(void)
 		players[i].currentweapon = READINT32(save_p);
 		players[i].ringweapons = READINT32(save_p);
 
+		players[i].ammoremoval = READUINT16(save_p);
+		players[i].ammoremovaltimer = READUINT32(save_p);
+		players[i].ammoremovalweapon = READINT32(save_p);
+
 		for (j = 0; j < NUMPOWERS; j++)
 			players[i].powers[j] = READUINT16(save_p);
 
@@ -389,6 +398,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].starpostz = READINT16(save_p);
 		players[i].starpostnum = READINT32(save_p);
 		players[i].starpostangle = READANGLE(save_p);
+		players[i].starpostscale = READFIXED(save_p);
 
 		players[i].angle_pos = READANGLE(save_p);
 		players[i].old_angle_pos = READANGLE(save_p);
@@ -1267,6 +1277,9 @@ typedef enum
 	MD2_SLOPE        = 1<<11,
 #endif
 	MD2_COLORIZED    = 1<<12,
+#ifdef ROTSPRITE
+	MD2_ROLLANGLE    = 1<<13,
+#endif
 } mobj_diff2_t;
 
 typedef enum
@@ -1486,6 +1499,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 #endif
 	if (mobj->colorized)
 		diff2 |= MD2_COLORIZED;
+#ifdef ROTSPRITE
+	if (mobj->rollangle)
+		diff2 |= MD2_ROLLANGLE;
+#endif
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1650,6 +1667,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 #endif
 	if (diff2 & MD2_COLORIZED)
 		WRITEUINT8(save_p, mobj->colorized);
+#ifdef ROTSPRITE
+	if (diff2 & MD2_ROLLANGLE)
+		WRITEANGLE(save_p, mobj->rollangle);
+#endif
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2726,6 +2747,12 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 #endif
 	if (diff2 & MD2_COLORIZED)
 		mobj->colorized = READUINT8(save_p);
+#ifdef ROTSPRITE
+	if (diff2 & MD2_ROLLANGLE)
+		mobj->rollangle = READANGLE(save_p);
+	else
+		mobj->rollangle = 0;
+#endif
 
 	if (diff & MD_REDFLAG)
 	{
@@ -3608,7 +3635,7 @@ static void P_NetUnArchiveThinkers(void)
 	{
 		executor_t *delay = NULL;
 		UINT32 mobjnum;
-		for (currentthinker = thlist[i].next; currentthinker != &thlist[i];
+		for (currentthinker = thlist[THINK_MAIN].next; currentthinker != &thlist[THINK_MAIN];
 		currentthinker = currentthinker->next)
 		{
 			if (currentthinker->function.acp1 != (actionf_p1)T_ExecutorDelay)
@@ -3971,7 +3998,6 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 
 static void P_NetArchiveMisc(void)
 {
-	UINT32 pig = 0;
 	INT32 i;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_MISC);
@@ -3979,9 +4005,12 @@ static void P_NetArchiveMisc(void)
 	WRITEINT16(save_p, gamemap);
 	WRITEINT16(save_p, gamestate);
 
-	for (i = 0; i < MAXPLAYERS; i++)
-		pig |= (playeringame[i] != 0)<<i;
-	WRITEUINT32(save_p, pig);
+	{
+		UINT32 pig = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+			pig |= (playeringame[i] != 0)<<i;
+		WRITEUINT32(save_p, pig);
+	}
 
 	WRITEUINT32(save_p, P_GetRandSeed());
 
@@ -3993,7 +4022,14 @@ static void P_NetArchiveMisc(void)
 	WRITEUINT16(save_p, bossdisabled);
 
 	WRITEUINT16(save_p, emeralds);
-	WRITEUINT8(save_p, stagefailed);
+	{
+		UINT8 globools = 0;
+		if (stagefailed)
+			globools |= 1;
+		if (stoppedclock)
+			globools |= (1<<1);
+		WRITEUINT8(save_p, globools);
+	}
 
 	WRITEUINT32(save_p, token);
 	WRITEINT32(save_p, sstimer);
@@ -4032,7 +4068,6 @@ static void P_NetArchiveMisc(void)
 
 static inline boolean P_NetUnArchiveMisc(void)
 {
-	UINT32 pig;
 	INT32 i;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_MISC)
@@ -4051,11 +4086,13 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	G_SetGamestate(READINT16(save_p));
 
-	pig = READUINT32(save_p);
-	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		playeringame[i] = (pig & (1<<i)) != 0;
-		// playerstate is set in unarchiveplayers
+		UINT32 pig = READUINT32(save_p);
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			playeringame[i] = (pig & (1<<i)) != 0;
+			// playerstate is set in unarchiveplayers
+		}
 	}
 
 	P_SetRandSeed(READUINT32(save_p));
@@ -4072,7 +4109,11 @@ static inline boolean P_NetUnArchiveMisc(void)
 	bossdisabled = READUINT16(save_p);
 
 	emeralds = READUINT16(save_p);
-	stagefailed = READUINT8(save_p);
+	{
+		UINT8 globools = READUINT8(save_p);
+		stagefailed = !!(globools & 1);
+		stoppedclock = !!(globools & (1<<1));
+	}
 
 	token = READUINT32(save_p);
 	sstimer = READINT32(save_p);
@@ -4109,12 +4150,54 @@ static inline boolean P_NetUnArchiveMisc(void)
 	return true;
 }
 
+static inline void P_ArchiveLuabanksAndConsistency(void)
+{
+	UINT8 i, banksinuse = NUM_LUABANKS;
+
+	while (banksinuse && !luabanks[banksinuse-1])
+		banksinuse--; // get the last used bank
+
+	if (banksinuse)
+	{
+		WRITEUINT8(save_p, 0xb7); // luabanks marker
+		WRITEUINT8(save_p, banksinuse);
+		for (i = 0; i < banksinuse; i++)
+			WRITEINT32(save_p, luabanks[i]);
+	}
+
+	WRITEUINT8(save_p, 0x1d); // consistency marker
+}
+
+static inline boolean P_UnArchiveLuabanksAndConsistency(void)
+{
+	switch (READUINT8(save_p))
+	{
+		case 0xb7:
+			{
+				UINT8 i, banksinuse = READUINT8(save_p);
+				if (banksinuse > NUM_LUABANKS)
+					return false;
+				for (i = 0; i < banksinuse; i++)
+					luabanks[i] = READINT32(save_p);
+				if (READUINT8(save_p) != 0x1d)
+					return false;
+			}
+		case 0x1d:
+			break;
+		default:
+			return false;
+	}
+
+	return true;
+}
+
 void P_SaveGame(void)
 {
 	P_ArchiveMisc();
 	P_ArchivePlayer();
 
-	WRITEUINT8(save_p, 0x1d); // consistency marker
+	// yes, even in non HAVE_BLUA
+	P_ArchiveLuabanksAndConsistency();
 }
 
 void P_SaveNetGame(void)
@@ -4153,7 +4236,7 @@ void P_SaveNetGame(void)
 	LUA_Archive();
 #endif
 
-	WRITEUINT8(save_p, 0x1d); // consistency marker
+	P_ArchiveLuabanksAndConsistency();
 }
 
 boolean P_LoadGame(INT16 mapoverride)
@@ -4165,8 +4248,7 @@ boolean P_LoadGame(INT16 mapoverride)
 	P_UnArchiveSPGame(mapoverride);
 	P_UnArchivePlayer();
 
-	// Savegame end marker
-	if (READUINT8(save_p) != 0x1d)
+	if (!P_UnArchiveLuabanksAndConsistency())
 		return false;
 
 	// Only do this after confirming savegame is ok
@@ -4207,5 +4289,5 @@ boolean P_LoadNetGame(void)
 	// precipitation when loading a netgame save. Instead, precip has to be spawned here.
 	// This is done in P_NetUnArchiveSpecials now.
 
-	return READUINT8(save_p) == 0x1d;
+	return P_UnArchiveLuabanksAndConsistency();
 }

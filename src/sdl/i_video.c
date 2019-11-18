@@ -41,7 +41,7 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
-#elif 1
+#elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) // Windows doesn't need this, as SDL will do it for us.
 #define LOAD_XPM //I want XPM!
 #include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
 #define HAVE_IMAGE //I have SDL_Image, sortof
@@ -357,6 +357,14 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 	return 0;
 }
 
+static void SDLdoGrabMouse(void)
+{
+	SDL_ShowCursor(SDL_DISABLE);
+	SDL_SetWindowGrab(window, SDL_TRUE);
+	if (SDL_SetRelativeMouseMode(SDL_TRUE) == 0) // already warps mouse if successful
+		wrapmouseok = SDL_TRUE; // TODO: is wrapmouseok or HalfWarpMouse needed anymore?
+}
+
 static void SDLdoUngrabMouse(void)
 {
 	SDL_ShowCursor(SDL_ENABLE);
@@ -579,12 +587,18 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 			if (cv_usemouse.value) I_StartupMouse();
 		}
 		//else firsttimeonmouse = SDL_FALSE;
+
+		if (USE_MOUSEINPUT)
+			SDLdoGrabMouse();
 	}
 	else if (!mousefocus && !kbfocus)
 	{
 		// Tell game we lost focus, pause music
 		window_notinfocus = true;
-		S_PauseAudio();
+		if (! cv_playmusicifunfocused.value)
+			S_PauseAudio();
+		if (! cv_playsoundsifunfocused.value)
+			S_StopSounds();
 
 		if (!disable_mouse)
 		{
@@ -655,9 +669,7 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		// -- Monster Iestyn
 		if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 		{
-			SDL_SetWindowGrab(window, SDL_TRUE);
-			if (SDL_SetRelativeMouseMode(SDL_TRUE) == 0) // already warps mouse if successful
-				wrapmouseok = SDL_TRUE; // TODO: is wrapmouseok or HalfWarpMouse needed anymore?
+			SDLdoGrabMouse();
 		}
 	}
 }
@@ -886,6 +898,136 @@ void I_GetEvent(void)
 			case SDL_JOYBUTTONDOWN:
 				Impl_HandleJoystickButtonEvent(evt.jbutton, evt.type);
 				break;
+			case SDL_JOYDEVICEADDED:
+				{
+					SDL_Joystick *newjoy = SDL_JoystickOpen(evt.jdevice.which);
+
+					CONS_Debug(DBG_GAMELOGIC, "Joystick device index %d added\n", evt.jdevice.which + 1);
+
+					// Because SDL's device index is unstable, we're going to cheat here a bit:
+					// For the first joystick setting that is NOT active:
+					// 1. Set cv_usejoystickX.value to the new device index (this does not change what is written to config.cfg)
+					// 2. Set OTHERS' cv_usejoystickX.value to THEIR new device index, because it likely changed
+					//    * If device doesn't exist, switch cv_usejoystick back to default value (.string)
+					//      * BUT: If that default index is being occupied, use ANOTHER cv_usejoystick's default value!
+					if (newjoy && (!JoyInfo.dev || !SDL_JoystickGetAttached(JoyInfo.dev))
+						&& JoyInfo2.dev != newjoy) // don't override a currently active device
+					{
+						cv_usejoystick.value = evt.jdevice.which + 1;
+
+						if (JoyInfo2.dev)
+							cv_usejoystick2.value = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
+						else if (atoi(cv_usejoystick2.string) != JoyInfo.oldjoy
+								&& atoi(cv_usejoystick2.string) != cv_usejoystick.value)
+							cv_usejoystick2.value = atoi(cv_usejoystick2.string);
+						else if (atoi(cv_usejoystick.string) != JoyInfo.oldjoy
+								&& atoi(cv_usejoystick.string) != cv_usejoystick.value)
+							cv_usejoystick2.value = atoi(cv_usejoystick.string);
+						else // we tried...
+							cv_usejoystick2.value = 0;
+					}
+					else if (newjoy && (!JoyInfo2.dev || !SDL_JoystickGetAttached(JoyInfo2.dev))
+						&& JoyInfo.dev != newjoy) // don't override a currently active device
+					{
+						cv_usejoystick2.value = evt.jdevice.which + 1;
+
+						if (JoyInfo.dev)
+							cv_usejoystick.value = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
+						else if (atoi(cv_usejoystick.string) != JoyInfo2.oldjoy
+								&& atoi(cv_usejoystick.string) != cv_usejoystick2.value)
+							cv_usejoystick.value = atoi(cv_usejoystick.string);
+						else if (atoi(cv_usejoystick2.string) != JoyInfo2.oldjoy
+								&& atoi(cv_usejoystick2.string) != cv_usejoystick2.value)
+							cv_usejoystick.value = atoi(cv_usejoystick2.string);
+						else // we tried...
+							cv_usejoystick.value = 0;
+					}
+
+					// Was cv_usejoystick disabled in settings?
+					if (!strcmp(cv_usejoystick.string, "0") || !cv_usejoystick.value)
+						cv_usejoystick.value = 0;
+					else if (atoi(cv_usejoystick.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
+						     && cv_usejoystick.value) // update the cvar ONLY if a device exists
+						CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
+
+					if (!strcmp(cv_usejoystick2.string, "0") || !cv_usejoystick2.value)
+						cv_usejoystick2.value = 0;
+					else if (atoi(cv_usejoystick2.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
+					         && cv_usejoystick2.value) // update the cvar ONLY if a device exists
+						CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
+
+					// Update all joysticks' init states
+					// This is a little wasteful since cv_usejoystick already calls this, but
+					// we need to do this in case CV_SetValue did nothing because the string was already same.
+					// if the device is already active, this should do nothing, effectively.
+					I_InitJoystick();
+					I_InitJoystick2();
+
+					CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index: %d\n", JoyInfo.oldjoy);
+					CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index: %d\n", JoyInfo2.oldjoy);
+
+					// update the menu
+					if (currentMenu == &OP_JoystickSetDef)
+						M_SetupJoystickMenu(0);
+
+					if (JoyInfo.dev != newjoy && JoyInfo2.dev != newjoy)
+						SDL_JoystickClose(newjoy);
+				}
+				break;
+			case SDL_JOYDEVICEREMOVED:
+				if (JoyInfo.dev && !SDL_JoystickGetAttached(JoyInfo.dev))
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Joystick1 removed, device index: %d\n", JoyInfo.oldjoy);
+					I_ShutdownJoystick();
+				}
+
+				if (JoyInfo2.dev && !SDL_JoystickGetAttached(JoyInfo2.dev))
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Joystick2 removed, device index: %d\n", JoyInfo2.oldjoy);
+					I_ShutdownJoystick2();
+				}
+
+				// Update the device indexes, because they likely changed
+				// * If device doesn't exist, switch cv_usejoystick back to default value (.string)
+				//   * BUT: If that default index is being occupied, use ANOTHER cv_usejoystick's default value!
+				if (JoyInfo.dev)
+					cv_usejoystick.value = JoyInfo.oldjoy = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
+				else if (atoi(cv_usejoystick.string) != JoyInfo2.oldjoy)
+					cv_usejoystick.value = atoi(cv_usejoystick.string);
+				else if (atoi(cv_usejoystick2.string) != JoyInfo2.oldjoy)
+					cv_usejoystick.value = atoi(cv_usejoystick2.string);
+				else // we tried...
+					cv_usejoystick.value = 0;
+
+				if (JoyInfo2.dev)
+					cv_usejoystick2.value = JoyInfo2.oldjoy = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
+				else if (atoi(cv_usejoystick2.string) != JoyInfo.oldjoy)
+					cv_usejoystick2.value = atoi(cv_usejoystick2.string);
+				else if (atoi(cv_usejoystick.string) != JoyInfo.oldjoy)
+					cv_usejoystick2.value = atoi(cv_usejoystick.string);
+				else // we tried...
+					cv_usejoystick2.value = 0;
+
+				// Was cv_usejoystick disabled in settings?
+				if (!strcmp(cv_usejoystick.string, "0"))
+					cv_usejoystick.value = 0;
+				else if (atoi(cv_usejoystick.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
+						 && cv_usejoystick.value) // update the cvar ONLY if a device exists
+					CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
+
+				if (!strcmp(cv_usejoystick2.string, "0"))
+					cv_usejoystick2.value = 0;
+				else if (atoi(cv_usejoystick2.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
+						 && cv_usejoystick2.value) // update the cvar ONLY if a device exists
+					CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
+
+				CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index: %d\n", JoyInfo.oldjoy);
+				CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index: %d\n", JoyInfo2.oldjoy);
+
+				// update the menu
+				if (currentMenu == &OP_JoystickSetDef)
+					M_SetupJoystickMenu(0);
+			 	break;
 			case SDL_QUIT:
 				I_Quit();
 				M_QuitResponse('y');
@@ -926,7 +1068,7 @@ void I_StartupMouse(void)
 	else
 		firsttimeonmouse = SDL_FALSE;
 	if (cv_usemouse.value)
-		return;
+		SDLdoGrabMouse();
 	else
 		SDLdoUngrabMouse();
 }
@@ -1034,8 +1176,11 @@ void I_FinishUpdate(void)
 	if (cv_closedcaptioning.value)
 		SCR_ClosedCaptions();
 
-	if (cv_ticrate.value)
-		SCR_DisplayTicRate();
+	if (st_overlay)
+	{
+		if (cv_ticrate.value)
+			SCR_DisplayTicRate();
+	}
 
 	if (rendermode == render_soft && screens[0])
 	{
@@ -1499,6 +1644,7 @@ void I_StartupGraphics(void)
 		HWD.pfnFinishUpdate     = NULL;
 		HWD.pfnDraw2DLine       = hwSym("Draw2DLine",NULL);
 		HWD.pfnDrawPolygon      = hwSym("DrawPolygon",NULL);
+		HWD.pfnRenderSkyDome    = hwSym("RenderSkyDome",NULL);
 		HWD.pfnSetBlend         = hwSym("SetBlend",NULL);
 		HWD.pfnClearBuffer      = hwSym("ClearBuffer",NULL);
 		HWD.pfnSetTexture       = hwSym("SetTexture",NULL);
@@ -1508,13 +1654,11 @@ void I_StartupGraphics(void)
 		HWD.pfnSetSpecialState  = hwSym("SetSpecialState",NULL);
 		HWD.pfnSetPalette       = hwSym("SetPalette",NULL);
 		HWD.pfnGetTextureUsed   = hwSym("GetTextureUsed",NULL);
-		HWD.pfnDrawMD2          = hwSym("DrawMD2",NULL);
-		HWD.pfnDrawMD2i         = hwSym("DrawMD2i",NULL);
+		HWD.pfnDrawModel        = hwSym("DrawModel",NULL);
+		HWD.pfnCreateModelVBOs  = hwSym("CreateModelVBOs",NULL);
 		HWD.pfnSetTransform     = hwSym("SetTransform",NULL);
 		HWD.pfnGetRenderVersion = hwSym("GetRenderVersion",NULL);
-#ifdef SHUFFLE
 		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
-#endif
 		HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
 		HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
 		HWD.pfnEndScreenWipe    = hwSym("EndScreenWipe",NULL);
