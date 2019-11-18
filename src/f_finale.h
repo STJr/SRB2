@@ -165,7 +165,6 @@ extern wipestyleflags_t wipestyleflags;
 #define FADEGREENFACTOR 15
 #define FADEBLUEFACTOR  10
 
-extern UINT8 wipecolorfill;
 extern INT32 lastwipetic;
 
 // Don't know where else to place this constant
@@ -176,7 +175,7 @@ void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);
 void F_WipeStageTitle(void);
-#define F_WipeColorFill(c) V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (wipecolorfill = c))
+#define F_WipeColorFill(c) V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, c)
 tic_t F_GetWipeLength(UINT8 wipetype);
 boolean F_WipeExists(UINT8 wipetype);
 

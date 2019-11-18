@@ -103,8 +103,6 @@ static UINT8 *wipe_scr_end; //screen 4
 static UINT8 *wipe_scr; //screen 0 (main drawing)
 static fixed_t paldiv = 0;
 
-UINT8 wipecolorfill = 31;
-
 /** Create fademask_t from lump
   *
   * \param	lump	Lump name to get data from
