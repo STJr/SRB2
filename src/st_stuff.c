@@ -1343,7 +1343,7 @@ void ST_preLevelTitleCardLoop(tic_t ticker, boolean update)
 //
 // Run the title card before fading in to the level.
 //
-void ST_runPreLevelTitleCard(tic_t ticker)
+void ST_runPreLevelTitleCard(tic_t ticker, boolean update)
 {
 	tic_t starttime = I_GetTime();
 	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
@@ -1356,7 +1356,7 @@ void ST_runPreLevelTitleCard(tic_t ticker)
 			I_Sleep();
 		lasttime = nowtime;
 		ST_runTitleCard();
-		ST_preLevelTitleCardLoop(ticker, true);
+		ST_preLevelTitleCardLoop(ticker, update);
 	}
 }
 

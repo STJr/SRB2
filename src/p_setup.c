@@ -3239,7 +3239,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	)
 	{
 		ST_runTitleCard();
-		ST_runPreLevelTitleCard(lt_ticker);
+		ST_runPreLevelTitleCard(lt_ticker, true);
 	}
 
 	return true;
