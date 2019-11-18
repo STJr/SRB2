@@ -1314,7 +1314,7 @@ void ST_drawTitleCard(void)
 	if (lvlttlxpos < 0)
 		lvlttlxpos = 0;
 
-	if (!splitscreen)
+	if (!splitscreen || (splitscreen && stplyr == &players[displayplayer]))
 	{
 		zzticker = lt_ticker;
 		V_DrawScaledPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
