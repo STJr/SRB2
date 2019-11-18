@@ -2678,6 +2678,17 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->flags = (target->flags|MF_NOCLIPHEIGHT) & ~MF_NOGRAVITY;
 			break;
 
+		case MT_DRAGONBOMBER:
+			{
+				mobj_t *segment = target;
+				while (segment->tracer != NULL)
+				{
+					P_KillMobj(segment->tracer, NULL, NULL, 0);
+					segment = segment->tracer;
+				}
+				break;
+			}
+
 		case MT_EGGMOBILE3:
 			{
 				mobj_t *mo2;

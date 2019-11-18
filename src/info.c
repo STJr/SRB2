@@ -72,6 +72,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"CANG", // Canarivore gas
 	"PYRE", // Pyre Fly
 	"PTER", // Pterabyte
+	"DRAB", // Dragonbomber
 
 	// Generic Boss Items
 	"JETF", // Boss jet fumes
@@ -1162,6 +1163,26 @@ state_t states[NUMSTATES] =
 	{SPR_PTER, 3,  2, {NULL},              0, 0, S_PTERABYTE_FLY1},      // S_PTERABYTE_FLY4
 	{SPR_PTER, 4,  1, {NULL},              0, 0, S_PTERABYTE_SWOOPDOWN}, // S_PTERABYTE_SWOOPDOWN
 	{SPR_PTER, 0,  1, {NULL},              0, 0, S_PTERABYTE_SWOOPUP},   // S_PTERABYTE_SWOOPUP
+
+	// Dragonbomber
+	{SPR_DRAB,                0, -1, {A_DragonbomberSpawn}, 6, 0, S_NULL},                          // S_DRAGONBOMBER
+	{SPR_DRAB, FF_PAPERSPRITE|7,  1,        {A_DragonWing}, 0, 0, S_DRAGONWING2},                   // S_DRAGONWING1
+	{SPR_DRAB, FF_PAPERSPRITE|8,  1,        {A_DragonWing}, 0, 0, S_DRAGONWING3},                   // S_DRAGONWING2
+	{SPR_DRAB, FF_PAPERSPRITE|9,  1,        {A_DragonWing}, 0, 0, S_DRAGONWING4},                   // S_DRAGONWING3
+	{SPR_DRAB, FF_PAPERSPRITE|10, 1,        {A_DragonWing}, 0, 0, S_DRAGONWING1},                   // S_DRAGONWING4
+	{SPR_DRAB,                1,  1,     {A_DragonSegment}, 0, 0, S_DRAGONTAIL_LOADED},             // S_DRAGONTAIL_LOADED
+	{SPR_DRAB,                2,  1,     {A_DragonSegment}, 0, 0, S_DRAGONTAIL_EMPTYLOOP},          // S_DRAGONTAIL_EMPTY
+	{SPR_DRAB,                2,  0,            {A_Repeat}, 3*TICRATE, S_DRAGONTAIL_EMPTY, S_DRAGONTAIL_RELOAD}, // S_DRAGONTAIL_EMPTYLOOP
+	{SPR_DRAB,                1,  0,   {A_PlayActiveSound}, 0, 0, S_DRAGONTAIL_LOADED},             // S_DRAGONTAIL_RELOAD
+	{SPR_DRAB,                3,  1,        {A_MinusCheck}, S_DRAGONMINE_LAND1, 0, S_DRAGONMINE},   // S_DRAGONMINE
+	{SPR_DRAB,                4,  0,   {A_PlayActiveSound}, 0, 0, S_DRAGONMINE_LAND2},              // S_DRAGONMINE_LAND1
+	{SPR_DRAB,                4,  2,            {A_Thrust}, 0, 1, S_DRAGONMINE_SLOWFLASH1},         // S_DRAGONMINE_LAND2
+	{SPR_DRAB,                5, 11,                {NULL}, 0, 0, S_DRAGONMINE_SLOWFLASH2},         // S_DRAGONMINE_SLOWFLASH1
+	{SPR_DRAB,  FF_FULLBRIGHT|6,  1,   {A_PlayAttackSound}, 0, 0, S_DRAGONMINE_SLOWLOOP},           // S_DRAGONMINE_SLOWFLASH2
+	{SPR_DRAB,                5,  0,            {A_Repeat}, 4, S_DRAGONMINE_SLOWFLASH1, S_DRAGONMINE_FASTFLASH1}, // S_DRAGONMINE_SLOWLOOP
+	{SPR_DRAB,                5,  3,                {NULL}, 0, 0, S_DRAGONMINE_FASTFLASH2},         // S_DRAGONMINE_FASTFLASH1
+	{SPR_DRAB,  FF_FULLBRIGHT|6,  1,   {A_PlayAttackSound}, 0, 0, S_DRAGONMINE_FASTLOOP},           // S_DRAGONMINE_FASTFLASH2
+	{SPR_DRAB,                5,  0,            {A_Repeat}, 5, S_DRAGONMINE_FASTFLASH1, S_DEATHSTATE}, // S_DRAGONMINE_FASTLOOP
 
 	// Boss Explosion
 	{SPR_BOM2, FF_FULLBRIGHT|FF_ANIMATE, (5*7), {NULL}, 6, 5, S_NULL}, // S_BOSSEXPLODE
@@ -5235,6 +5256,114 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_SHOOTABLE|MF_ENEMY|MF_NOGRAVITY|MF_SLIDEME, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_DRAGONBOMBER
+		137,            // doomednum
+		S_DRAGONBOMBER, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		6,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD_FLICKY,  // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		10*FRACUNIT,    // speed
+		28*FRACUNIT,    // radius
+		48*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_SHOOTABLE|MF_ENEMY|MF_NOGRAVITY|MF_BOUNCE|MF_RUNSPAWNFUNC, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_DRAGONWING
+		-1,             // doomednum
+		S_DRAGONWING1,  // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD_FLICKY,  // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		0,              // speed
+		12*FRACUNIT,    // radius
+		12*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_SCENERY|MF_NOBLOCKMAP|MF_NOCLIP, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_DRAGONTAIL
+		-1,             // doomednum
+		S_DRAGONTAIL_LOADED, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		MT_DRAGONMINE,  // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_tink,       // activesound
+		MF_NOGRAVITY|MF_SLIDEME|MF_PAIN, // flags
+		S_DRAGONTAIL_EMPTY // raisestate
+	},
+
+	{           // MT_DRAGONMINE
+		-1,             // doomednum
+		S_DRAGONMINE,   // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_s3k76,      // seesound
+		0,              // reactiontime
+		sfx_s3k89,      // attacksound
+		S_NULL,         // painstate
+		6,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_TNTBARREL_EXPL1, // deathstate
+		S_NULL,         // xdeathstate
+		sfx_s3k6e,      // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_s3k5d,      // activesound
+		MF_SPECIAL|MF_SHOOTABLE, // flags
 		S_NULL          // raisestate
 	},
 

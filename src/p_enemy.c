@@ -312,6 +312,9 @@ void A_SpawnPterabytes(mobj_t *actor);
 void A_PterabyteHover(mobj_t *actor);
 void A_RolloutSpawn(mobj_t *actor);
 void A_RolloutRock(mobj_t *actor);
+void A_DragonbomberSpawn(mobj_t *actor);
+void A_DragonWing(mobj_t *actor);
+void A_DragonSegment(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -14592,4 +14595,104 @@ void A_RolloutRock(mobj_t *actor)
 	if (actor->fuse && actor->fuse < 2*TICRATE)
 		actor->flags2 ^= MF2_DONTDRAW;
 
+}
+
+// Function: A_DragonbomberSpawn
+//
+// Description: Spawns the body parts for Dragonbomber
+//
+// var1 = Tail segments to spawn
+// var2 = unused
+//
+void A_DragonbomberSpawn(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	UINT8 i;
+	mobj_t *mo = actor;
+
+	#ifdef HAVE_BLUA
+		if (LUA_CallAction("A_DragonbomberSpawn", actor))
+			return;
+	#endif
+
+	for (i = 0; i < var1; i++) // spawn tail segments
+	{
+		mobj_t *segment;
+		fixed_t x, y;
+		x = P_ReturnThrustX(mo, mo->angle, -mo->radius << 1);
+		y = P_ReturnThrustY(mo, mo->angle, -mo->radius << 1);
+		segment = P_SpawnMobjFromMobj(mo, x, y, 0, MT_DRAGONTAIL);
+		P_SetTarget(&segment->target, mo);
+		P_SetTarget(&mo->tracer, segment);
+		segment->angle = mo->angle;
+		mo = segment;
+	}
+	for (i = 0; i < 2; i++) // spawn wings
+	{
+		mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_DRAGONWING);
+		P_SetTarget(&mo->target, actor);
+		mo->movedir = ANGLE_90 + i * ANGLE_180;
+	}
+}
+
+// Function: A_DragonWing
+//
+// Description: Moves actor such that it is placed away from its target at a distance equal to the target's radius in the direction of its target's angle.
+// The actor's movedir can be used to offset the angle.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_DragonWing(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	mobj_t *target = actor->target;
+	fixed_t x, y;
+
+	#ifdef HAVE_BLUA
+		if (LUA_CallAction("A_DragonWing", actor))
+			return;
+	#endif
+
+	if (target == NULL || !target->health)
+	{
+		P_RemoveMobj(actor);
+		return;
+	}
+	actor->angle = target->angle + actor->movedir;
+	x = target->x + P_ReturnThrustX(actor, actor->angle, -target->radius);
+	y = target->y + P_ReturnThrustY(actor, actor->angle, -target->radius);
+	P_TeleportMove(actor, x, y, target->z);
+}
+
+// Function: A_DragonSegment
+//
+// Description: Moves actor such that it is placed away from its target at an absolute distance equal to the sum of the two mobjs' radii.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_DragonSegment(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	mobj_t *target = actor->target;
+	fixed_t dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
+	fixed_t radius = actor->radius + target->radius;
+	angle_t hangle = R_PointToAngle2(target->x, target->y, actor->x, actor->y);
+	angle_t zangle = R_PointToAngle2(0, target->z, dist, actor->z);
+	fixed_t hdist = P_ReturnThrustX(target, zangle, radius);
+	fixed_t xdist = P_ReturnThrustX(target, hangle, hdist);
+	fixed_t ydist = P_ReturnThrustY(target, hangle, hdist);
+	fixed_t zdist = P_ReturnThrustY(target, zangle, radius);
+
+	#ifdef HAVE_BLUA
+		if (LUA_CallAction("A_DragonSegment", actor))
+			return;
+	#endif
+
+	actor->angle = hangle;
+	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);
 }
