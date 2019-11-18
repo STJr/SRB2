@@ -1224,32 +1224,33 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	                      NULL, "HUD Transparency",          &cv_translucenthud,   66},
 	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",          &cv_timetic,          71},
 	{IT_STRING | IT_CVAR, NULL, "Show Powerups",             &cv_powerupdisplay,   76},
+	{IT_STRING | IT_CVAR, NULL, "Local ping display",		&cv_showping,			81}, // shows ping next to framerate if we want to.
 #ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         81},
+	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         86},
 #endif
 
-	{IT_HEADER, NULL, "Console", NULL, 90},
-	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      96},
-	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,    101},
+	{IT_HEADER, NULL, "Console", NULL, 95},
+	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      101},
+	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,    106},
 
-	{IT_HEADER, NULL, "Chat", NULL, 110},
-	{IT_STRING | IT_CVAR, NULL, "Chat Mode",            		 	 &cv_consolechat,  116},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     121},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    126},
-	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    131},
-	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  136},
-	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  141},
-	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  146},
+	{IT_HEADER, NULL, "Chat", NULL, 115},
+	{IT_STRING | IT_CVAR, NULL, "Chat Mode",            		 	 &cv_consolechat,  121},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     126},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    131},
+	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    136},
+	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  141},
+	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  146},
+	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  151},
 
-	{IT_HEADER, NULL, "Level", NULL, 155},
-	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        161},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 166},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 171},
+	{IT_HEADER, NULL, "Level", NULL, 160},
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        166},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 171},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 176},
 
-	{IT_HEADER, NULL, "Diagnostic", NULL, 180},
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         186},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      191},
-	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   196},
+	{IT_HEADER, NULL, "Diagnostic", NULL, 184},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         190},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      195},
+	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   200},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
