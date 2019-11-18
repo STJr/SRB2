@@ -1573,6 +1573,13 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_MIXNIGHTSCOUNTDOWN;
 			}
+			else if (fastcmp(word, "WARNINGTITLE"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_WARNINGTITLE;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_WARNINGTITLE;
+			}
 			else if (fastcmp(word, "NOTITLECARD"))
 			{
 				if (i || word2[0] == 'T' || word2[0] == 'Y')
@@ -9020,6 +9027,7 @@ struct {
 	{"LF_SAVEGAME",LF_SAVEGAME},
 	{"LF_MIXNIGHTSCOUNTDOWN",LF_MIXNIGHTSCOUNTDOWN},
 	{"LF_NOTITLECARD",LF_NOTITLECARD},
+	{"LF_WARNINGTITLE",LF_WARNINGTITLE},
 	// And map flags
 	{"LF2_HIDEINMENU",LF2_HIDEINMENU},
 	{"LF2_HIDEINSTATS",LF2_HIDEINSTATS},

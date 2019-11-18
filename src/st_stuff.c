@@ -1178,8 +1178,7 @@ tic_t lt_exitticker = 0, lt_endtime = 0;
 //
 static void ST_cacheLevelTitle(void)
 {
-	SINT8 bonustype = mapheaderinfo[gamemap-1]->bonustype;
-	if ((bonustype != 1) && (bonustype != 2))
+	if (mapheaderinfo[gamemap-1]->levelflags & LF_WARNINGTITLE)
 	{
 		lt_patches[0] = (patch_t *)W_CachePatchName("LTACTBLU", PU_HUDGFX);
 		lt_patches[1] = (patch_t *)W_CachePatchName("LTZIGZAG", PU_HUDGFX);
