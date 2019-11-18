@@ -51,7 +51,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 	player_t *player = sonic->player, *bot = tails->player;
 	ticcmd_t *pcmd = &player->cmd;
 	boolean water = tails->eflags & MFE_UNDERWATER;
-	boolean flip = P_MobjFlip(tails);
+	SINT8 flip = P_MobjFlip(tails);
 	boolean _2d = (tails->flags2 & MF2_TWOD) || twodlevel;
 	fixed_t scale = tails->scale;
 
