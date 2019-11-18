@@ -26,10 +26,8 @@ extern consvar_t cv_playername2;
 extern consvar_t cv_playercolor2;
 extern consvar_t cv_skin2;
 // saved versions of the above six
-extern consvar_t cv_defaultplayername;
 extern consvar_t cv_defaultplayercolor;
 extern consvar_t cv_defaultskin;
-extern consvar_t cv_defaultplayername2;
 extern consvar_t cv_defaultplayercolor2;
 extern consvar_t cv_defaultskin2;
 
@@ -112,6 +110,11 @@ extern consvar_t cv_maxping;
 extern consvar_t cv_skipmapcheck;
 
 extern consvar_t cv_sleep;
+
+extern char timedemo_name[256];
+extern boolean timedemo_csv;
+extern char timedemo_csv_id[256];
+extern boolean timedemo_quit;
 
 typedef enum
 {

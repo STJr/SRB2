@@ -37,6 +37,7 @@ extern boolean playeringame[MAXPLAYERS];
 
 // demoplaying back and demo recording
 extern boolean demoplayback, titledemo, demorecording, timingdemo;
+extern tic_t demostarttime;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;
@@ -107,6 +108,27 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer,
 	boolean skipprecutscene, boolean FLS);
 char *G_BuildMapTitle(INT32 mapnum);
 
+struct searchdim
+{
+	UINT8 pos;
+	UINT8 siz;
+};
+
+typedef struct
+{
+	INT16  mapnum;
+	UINT8  matchc;
+	struct searchdim *matchd;/* offset that a pattern was matched */
+	UINT8  keywhc;
+	struct searchdim *keywhd;/* ...in KEYWORD */
+	UINT8  total;/* total hits */
+}
+mapsearchfreq_t;
+
+INT32 G_FindMap(const char *query, char **foundmapnamep,
+		mapsearchfreq_t **freqp, INT32 *freqc);
+void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
+
 // XMOD spawning
 mapthing_t *G_FindCTFStart(INT32 playernum);
 mapthing_t *G_FindMatchStart(INT32 playernum);
@@ -174,7 +196,7 @@ void G_AddGhost(char *defdemoname);
 void G_DoPlayMetal(void);
 void G_DoneLevelLoad(void);
 void G_StopMetalDemo(void);
-ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void);
+ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 

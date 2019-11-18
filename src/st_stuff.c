@@ -707,7 +707,7 @@ static void ST_drawTime(void)
 			{
 				if (timelimitintics >= stplyr->realtime)
 				{
-					tics = (timelimitintics - stplyr->realtime);
+					tics = (timelimitintics + (TICRATE-1) - stplyr->realtime);
 					if (tics < 3*TICRATE)
 						ST_drawRaceNum(tics);
 				}
@@ -740,10 +740,12 @@ static void ST_drawTime(void)
 	if (F_GetPromptHideHud(hudinfo[HUD_TIME].y))
 		return;
 
-	// TIME:
-	ST_DrawPatchFromHud(HUD_TIME, ((downwards && (tics < 30*TICRATE) && (leveltime/5 & 1)) ? sboredtime : sbotime), V_HUDTRANS);
+	downwards = (downwards && (tics < 30*TICRATE) && (leveltime/5 & 1) && !stoppedclock); // overtime?
 
-	if (!tics && downwards && (leveltime/5 & 1)) // overtime!
+	// TIME:
+	ST_DrawPatchFromHud(HUD_TIME, (downwards ? sboredtime : sbotime), V_HUDTRANS);
+
+	if (downwards) // overtime!
 		return;
 
 	if (cv_timetic.value == 3) // Tics only -- how simple is this?
@@ -837,7 +839,13 @@ static void ST_drawLivesArea(void)
 	}
 
 	// Lives number
-	if (G_GametypeUsesLives() || gametype == GT_RACE)
+	if (metalrecording)
+	{
+		if (((2*leveltime)/TICRATE) & 1)
+			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
+				hudinfo[HUD_LIVES].f|V_PERPLAYER|V_REDMAP|V_HUDTRANS, "REC");
+	}
+	else if (G_GametypeUsesLives() || gametype == GT_RACE)
 	{
 		// x
 		V_DrawScaledPatch(hudinfo[HUD_LIVES].x+22, hudinfo[HUD_LIVES].y+10,

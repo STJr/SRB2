@@ -498,24 +498,24 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 
 	if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0) // used /pm
 	{
-		// what we're gonna do now is check if the node exists
+		// what we're gonna do now is check if the player exists
 		// with that logic, characters 4 and 5 are our numbers:
 		const char *newmsg;
-		char *nodenum = (char*) malloc(3);
-		INT32 spc = 1; // used if nodenum[1] is a space.
+		char *playernum = (char*) malloc(3);
+		INT32 spc = 1; // used if playernum[1] is a space.
 
-		strncpy(nodenum, msg+3, 3);
+		strncpy(playernum, msg+3, 3);
 		// check for undesirable characters in our "number"
-		if 	(((nodenum[0] < '0') || (nodenum[0] > '9')) || ((nodenum[1] < '0') || (nodenum[1] > '9')))
+		if 	(((playernum[0] < '0') || (playernum[0] > '9')) || ((playernum[1] < '0') || (playernum[1] > '9')))
 		{
-			// check if nodenum[1] is a space
-			if (nodenum[1] == ' ')
+			// check if playernum[1] is a space
+			if (playernum[1] == ' ')
 				spc = 0;
 				// let it slide
 			else
 			{
-				HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.", false);
-				free(nodenum);
+				HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<playernum> \'.", false);
+				free(playernum);
 				return;
 			}
 		}
@@ -524,14 +524,14 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 			{
 				if (msg[5] != ' ')
 				{
-					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.", false);
-					free(nodenum);
+					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<playernum> \'.", false);
+					free(playernum);
 					return;
 				}
 			}
 
-		target = atoi((const char*) nodenum); // turn that into a number
-		free(nodenum);
+		target = atoi((const char*) playernum); // turn that into a number
+		free(playernum);
 		//CONS_Printf("%d\n", target);
 
 		// check for target player, if it doesn't exist then we can't send the message!

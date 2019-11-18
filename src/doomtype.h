@@ -115,6 +115,9 @@ typedef long ssize_t;
 	#define strnicmp(x,y,n) strncasecmp(x,y,n)
 #endif
 
+char *strcasestr(const char *in, const char *what);
+#define stristr strcasestr
+
 #if defined (macintosh) //|| defined (__APPLE__) //skip all boolean/Boolean crap
 	#define true 1
 	#define false 0
@@ -326,16 +329,18 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 
 /* Miscellaneous types that don't fit anywhere else (Can this be changed?) */
 
+typedef struct
+{
+	UINT8 red;
+	UINT8 green;
+	UINT8 blue;
+	UINT8 alpha;
+} byteColor_t;
+
 union FColorRGBA
 {
 	UINT32 rgba;
-	struct
-	{
-		UINT8 red;
-		UINT8 green;
-		UINT8 blue;
-		UINT8 alpha;
-	} s;
+	byteColor_t s;
 } ATTRPACK;
 typedef union FColorRGBA RGBA_t;
 

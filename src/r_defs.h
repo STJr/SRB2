@@ -24,6 +24,10 @@
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
 
+#ifdef HWRENDER
+#include "m_aatree.h"
+#endif
+
 #define POLYOBJECTS
 
 //
@@ -728,6 +732,18 @@ typedef struct
 #pragma pack()
 #endif
 
+// rotsprite
+#ifdef ROTSPRITE
+typedef struct
+{
+	patch_t *patch[8][ROTANGLES];
+	boolean cached[8];
+#ifdef HWRENDER
+	aatree_t *hardware_patch[8];
+#endif
+} rotsprite_t;
+#endif
+
 typedef enum
 {
 	SRF_SINGLE      = 0,   // 0-angle for all rotations
@@ -765,6 +781,10 @@ typedef struct
 
 	// Flip bits (1 = flip) to use for view angles 0-7.
 	UINT8 flip;
+
+#ifdef ROTSPRITE
+	rotsprite_t rotsprite;
+#endif
 } spriteframe_t;
 
 //

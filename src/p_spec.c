@@ -464,11 +464,11 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 	for (i = 0; i < numlevelflats; i++, foundflats++)
 	{
 		// is that levelflat from the flat anim sequence ?
-		if ((anims[animnum].istexture) && (foundflats->texturenum != 0 && foundflats->texturenum != -1)
-			&& ((UINT16)foundflats->texturenum >= startflatnum && (UINT16)foundflats->texturenum <= endflatnum))
+		if ((anims[animnum].istexture) && (foundflats->type == LEVELFLAT_TEXTURE)
+			&& ((UINT16)foundflats->u.texture.num >= startflatnum && (UINT16)foundflats->u.texture.num <= endflatnum))
 		{
-			foundflats->basetexturenum = startflatnum;
-			foundflats->animseq = foundflats->texturenum - startflatnum;
+			foundflats->u.texture.basenum = startflatnum;
+			foundflats->animseq = foundflats->u.texture.num - startflatnum;
 			foundflats->numpics = endflatnum - startflatnum + 1;
 			foundflats->speed = anims[animnum].speed;
 
@@ -476,10 +476,10 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
 					foundflats->numpics,foundflats->speed);
 		}
-		else if (foundflats->lumpnum >= startflatnum && foundflats->lumpnum <= endflatnum)
+		else if (foundflats->u.flat.lumpnum >= startflatnum && foundflats->u.flat.lumpnum <= endflatnum)
 		{
-			foundflats->baselumpnum = startflatnum;
-			foundflats->animseq = foundflats->lumpnum - startflatnum;
+			foundflats->u.flat.baselumpnum = startflatnum;
+			foundflats->animseq = foundflats->u.flat.lumpnum - startflatnum;
 			foundflats->numpics = endflatnum - startflatnum + 1;
 			foundflats->speed = anims[animnum].speed;
 
@@ -3998,6 +3998,24 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 462: // Stop clock (and end level in record attack)
+			if (G_PlatformGametype())
+			{
+				stoppedclock = true;
+				CONS_Debug(DBG_GAMELOGIC, "Clock stopped!\n");
+				if (modeattacking)
+				{
+					UINT8 i;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+						P_DoPlayerExit(&players[i]);
+					}
+				}
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
@@ -4054,11 +4072,15 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
+
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
 
 		P_SetTarget(&thing->target, player->mo);
-		P_SetMobjState(thing, S_SIGN1);
+		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 
@@ -4079,11 +4101,15 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
+
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
 
 		P_SetTarget(&thing->target, player->mo);
-		P_SetMobjState(thing, S_SIGN1);
+		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 
@@ -4513,7 +4539,11 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 			// Mark all players with the time to exit thingy!
 			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
 				P_DoPlayerExit(&players[i]);
+			}
 			break;
 		}
 		case 10: // Special Stage Time/Rings
@@ -5581,11 +5611,11 @@ void P_UpdateSpecials(void)
 		if (foundflats->speed) // it is an animated flat
 		{
 			// update the levelflat texture number
-			if (foundflats->basetexturenum != -1)
-				foundflats->texturenum = foundflats->basetexturenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
+			if (foundflats->type == LEVELFLAT_TEXTURE)
+				foundflats->u.texture.num = foundflats->u.texture.basenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 			// update the levelflat lump number
-			else if (foundflats->baselumpnum != LUMPERROR)
-				foundflats->lumpnum = foundflats->baselumpnum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
+			else if ((foundflats->type == LEVELFLAT_FLAT) && (foundflats->u.flat.baselumpnum != LUMPERROR))
+				foundflats->u.flat.lumpnum = foundflats->u.flat.baselumpnum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 		}
 	}
 }
@@ -6068,7 +6098,7 @@ static void P_AddAirbob(sector_t *sec, line_t *sourceline, boolean noadjust, boo
 	airbob->vars[5] = sec->ceilingheight;
 	airbob->vars[4] = airbob->vars[5]
 			- (sec->ceilingheight - sec->floorheight);
-	
+
 	airbob->vars[9] = dynamic ? 1 : 0;
 
 	airbob->sourceline = sourceline;
@@ -6387,6 +6417,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 	// yep, we do this here - "bossdisabled" is considered an apparatus of specials.
 	bossdisabled = 0;
+	stoppedclock = false;
 
 	// Init special SECTORs.
 	sector = sectors;
