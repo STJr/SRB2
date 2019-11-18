@@ -9899,9 +9899,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	else
 	{
 		if (mo->eflags & MFE_VERTICALFLIP)
-			z = mo->z + mo->height - pviewheight - camheight;
+			z = mo->z + mo->height - pviewheight - camheight + distz;
 		else
-			z = mo->z + pviewheight + camheight;
+			z = mo->z + pviewheight + camheight + distz;
 	}
 
 	// move camera down to move under lower ceilings
