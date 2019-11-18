@@ -18,6 +18,7 @@
 
 #include "r_draw.h" // transtable
 #include "p_pspr.h" // tr_transxxx
+#include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -29,6 +30,10 @@
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
+#endif
+
+#ifdef HAVE_BLUA
+#include "lua_hud.h"
 #endif
 
 #if NUMSCREENS < 5
@@ -82,6 +87,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 //--------------------------------------------------------------------------
 
 boolean WipeInAction = false;
+boolean WipeStageTitle = false;
 INT32 lastwipetic = 0;
 
 #ifndef NOWIPE
@@ -366,6 +372,16 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		else
 #endif
 		F_DoWipe(fmask);
+
+		// draw level title
+		if ((WipeStageTitle && st_overlay)
+		&& !(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0')
+		{
+			ST_runTitleCard();
+			ST_drawWipeTitleCard();
+		}
+
 		I_OsPolling();
 		I_UpdateNoBlit();
 
@@ -377,7 +393,9 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		if (moviemode)
 			M_SaveFrame();
 	}
+
 	WipeInAction = false;
+	WipeStageTitle = false;
 #endif
 }
 

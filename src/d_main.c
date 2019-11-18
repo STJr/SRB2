@@ -180,6 +180,9 @@ void D_ProcessEvents(void)
 		if (M_ScreenshotResponder(ev))
 			continue; // ate the event
 
+		if (WipeStageTitle)
+			continue;
+
 		if (gameaction == ga_nothing && gamestate == GS_TITLESCREEN)
 		{
 			if (cht_Responder(ev))
@@ -435,6 +438,15 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			F_WipeEndScreen();
+			// Funny.
+			if (WipeStageTitle && st_overlay)
+			{
+				lt_ticker--;
+				lt_lasttic = lt_ticker;
+				ST_preLevelTitleCardDrawer(0, false);
+				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+				F_WipeStartScreen();
+			}
 			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
 
@@ -444,7 +456,7 @@ static void D_Display(void)
 			framecount = 0;
 			demostarttime = I_GetTime();
 		}
-		
+
 		wipetypepost = -1;
 	}
 	else
