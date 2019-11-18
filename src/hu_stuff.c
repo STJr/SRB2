@@ -2380,7 +2380,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 		if (!splitscreen) // don't draw it on splitscreen,
 		{
 			if (!(tab[i].num == serverplayer))
-				HU_drawPing(x+ 253, y+2, playerpingtable[tab[i].num], false, 0);
+				HU_drawPing(x+ 253, y, playerpingtable[tab[i].num], false, 0);
 			//else
 			//	V_DrawSmallString(x+ 246, y+4, V_YELLOWMAP, "SERVER");
 		}
@@ -2579,7 +2579,7 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (!splitscreen)
 		{
 			if (!(tab[i].num == serverplayer))
-				HU_drawPing(x+ 135, y+3, playerpingtable[tab[i].num], true, 0);
+				HU_drawPing(x+ 135, y+1, playerpingtable[tab[i].num], true, 0);
 		//else
 			//V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST");
 		}
@@ -2703,7 +2703,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (!splitscreen)
 		{
 			if (!(tab[i].num == serverplayer))
-				HU_drawPing(x+ 113, y+2, playerpingtable[tab[i].num], false, 0);
+				HU_drawPing(x+ 113, y, playerpingtable[tab[i].num], false, 0);
 		//else
 		//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER");
 		}
@@ -2734,7 +2734,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 
 		strlcpy(name, tab[i].name, 7);
 		if (!(tab[i].num == serverplayer))
-			HU_drawPing(x+ 113, y+2, playerpingtable[tab[i].num], false, 0);
+			HU_drawPing(x+ 113, y, playerpingtable[tab[i].num], false, 0);
 		//else
 		//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER");
 
@@ -2842,7 +2842,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 		if (!splitscreen) // don't draw it on splitscreen,
 		{
 			if (!(tab[i].num == serverplayer))
-				HU_drawPing(x+ 135, y+3, playerpingtable[tab[i].num], true, 0);
+				HU_drawPing(x+ 135, y+1, playerpingtable[tab[i].num], true, 0);
 		//else
 		//	V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST");
 		}
