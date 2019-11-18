@@ -1370,12 +1370,6 @@ void ST_drawWipeTitleCard(void)
 		ST_preDrawTitleCard();
 		ST_drawTitleCard();
 	}
-
-	// Draw on top of the title card,
-	// which is already on top of the wipe
-	// What a mess
-	CON_Drawer();
-	M_Drawer();
 }
 
 static void ST_drawPowerupHUD(void)
