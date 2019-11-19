@@ -75,7 +75,7 @@ strcasestr (const char *s, const char *q)
 	if (!( (intptr_t)up|(intptr_t)lp ))
 		return 0;
 
-	if (!lp || up < lp)
+	if (!lp || ( up && up < lp ))
 	{
 		ppa = &up;
 		ppb = &lp;
