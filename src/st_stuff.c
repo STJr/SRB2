@@ -1333,7 +1333,7 @@ void ST_drawTitleCard(void)
 	V_DrawLevelTitle(lvlttlxpos - ttlscroll, 80, V_PERPLAYER, lvlttl);
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
 		V_DrawLevelTitle(zonexpos + ttlscroll, 104, V_PERPLAYER, M_GetText("Zone"));
-	V_DrawCenteredString(subttlxpos - ttlscroll, 128, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
+	V_DrawCenteredString(subttlxpos - ttlscroll, 152, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
 
 	lt_lasttic = lt_ticker;
 
