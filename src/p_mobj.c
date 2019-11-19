@@ -3408,7 +3408,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 		// Drown timer setting
 		if ((p->powers[pw_shield] & SH_PROTECTWATER) // Has water protection
-		 || (p->exiting) // Or exiting
+		 || (p->exiting) || (p->pflags & PF_FINISHED) // Or finished/exiting
 		 || (maptol & TOL_NIGHTS) // Or in NiGHTS mode
 		 || (mariomode)) // Or in Mario mode...
 		{

@@ -2153,6 +2153,10 @@ void P_DoPlayerFinish(player_t *player)
 
 	if (netgame)
 		CONS_Printf(M_GetText("%s has completed the level.\n"), player_names[player-players]);
+
+	player->powers[pw_underwater] = 0;
+	player->powers[pw_spacetime] = 0;
+	P_RestoreMusic(player);
 }
 
 //
@@ -2860,7 +2864,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 {
 	tic_t timeleft = (player->powers[pw_spacetime]) ? player->powers[pw_spacetime] : player->powers[pw_underwater];
 
-	if (player->exiting)
+	if (player->exiting || (player->pflags & PF_FINISHED))
 		player->powers[pw_underwater] = player->powers[pw_spacetime] = 0;
 
 	timeleft--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
