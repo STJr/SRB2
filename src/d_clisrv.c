@@ -1304,7 +1304,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
 	{
 		char *read = mapheaderinfo[gamemap-1]->lvlttl, *writ = netbuffer->u.serverinfo.maptitle;
-		while (*read != '\0' && (read-mapheaderinfo[gamemap-1]->lvlttl) < 33)
+		while (*read != '\0' && (read-mapheaderinfo[gamemap-1]->lvlttl) < 32)
 		{
 			if (!(*read & 0x80))
 			{
@@ -1313,6 +1313,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 			}
 			read++;
 		}
+		*writ = '\0';
 		//strncpy(netbuffer->u.serverinfo.maptitle, (char *)mapheaderinfo[gamemap-1]->lvlttl, 33);
 	}
 	else
