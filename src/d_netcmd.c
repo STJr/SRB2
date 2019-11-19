@@ -2054,7 +2054,9 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	lastgametype = gametype;
 	gametype = READUINT8(*cp);
 
-	if (gametype != lastgametype)
+	if (gametype < 0 || gametype >= NUMGAMETYPES)
+		gametype = lastgametype;
+	else if (gametype != lastgametype)
 		D_GameTypeChanged(lastgametype); // emulate consvar_t behavior for gametype
 
 	skipprecutscene = ((flags & (1<<2)) != 0);
