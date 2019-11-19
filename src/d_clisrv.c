@@ -1301,10 +1301,10 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	M_Memcpy(netbuffer->u.serverinfo.mapmd5, mapmd5, 16);
 
-	if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
+	if (*mapheaderinfo[gamemap-1]->lvlttl)
 	{
 		char *read = mapheaderinfo[gamemap-1]->lvlttl, *writ = netbuffer->u.serverinfo.maptitle;
-		while (*read != '\0' && (read-mapheaderinfo[gamemap-1]->lvlttl) < 32)
+		while (writ < (netbuffer->u.serverinfo.maptitle+32) && *read != '\0')
 		{
 			if (!(*read & 0x80))
 			{
@@ -1317,7 +1317,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 		//strncpy(netbuffer->u.serverinfo.maptitle, (char *)mapheaderinfo[gamemap-1]->lvlttl, 33);
 	}
 	else
-		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 33);
+		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 32);
 
 	netbuffer->u.serverinfo.maptitle[32] = '\0';
 
