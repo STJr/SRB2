@@ -4443,27 +4443,18 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				{
 					if (roversector)
 					{
-						if (players[i].mo->subsector->sector == roversector)
-							;
-						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
 						{
-							boolean insector = false;
 							msecnode_t *node;
 							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 							{
-								if (node->m_sector == roversector)
-								{
-									insector = true;
+								if (P_ThingIsOnThe3DFloor(players[i].mo, sector, node->m_sector))
 									break;
-								}
 							}
-							if (!insector)
+							if (!node)
 								goto DoneSection2;
 						}
-						else
-							goto DoneSection2;
-
-						if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
+						else if (players[i].mo->subsector && !P_ThingIsOnThe3DFloor(players[i].mo, sector, players[i].mo->subsector->sector)) // this function handles basically everything for us lmao
 							goto DoneSection2;
 					}
 					else
