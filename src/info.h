@@ -3970,8 +3970,6 @@ typedef enum state
 	S_DUST3,
 	S_DUST4,
 
-	S_WOODDEBRIS,
-
 	S_ROCKSPAWN,
 
 	S_ROCKCRUMBLEA,
@@ -3991,8 +3989,10 @@ typedef enum state
 	S_ROCKCRUMBLEO,
 	S_ROCKCRUMBLEP,
 
-	// Bricks
+	// Level debris
+	S_GFZDEBRIS,
 	S_BRICKDEBRIS,
+	S_WOODDEBRIS,
 
 #ifdef SEENAMES
 	S_NAMECHECK,
@@ -4768,7 +4768,6 @@ typedef enum mobj_type
 	MT_EXPLODE, // Robot Explosion
 	MT_UWEXPLODE, // Underwater Explosion
 	MT_DUST,
-	MT_WOODDEBRIS,
 	MT_ROCKSPAWNER,
 	MT_FALLINGROCK,
 	MT_ROCKCRUMBLE1,
@@ -4788,8 +4787,10 @@ typedef enum mobj_type
 	MT_ROCKCRUMBLE15,
 	MT_ROCKCRUMBLE16,
 
-	// Bricks
+	// Level debris
+	MT_GFZDEBRIS,
 	MT_BRICKDEBRIS,
+	MT_WOODDEBRIS,
 
 #ifdef SEENAMES
 	MT_NAMECHECK,
