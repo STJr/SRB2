@@ -748,7 +748,6 @@ typedef enum sprite
 	SPR_BOM3, // Boss Explosion 2
 	SPR_BOM4, // Underwater Explosion
 	SPR_BMNB, // Mine Explosion
-	SPR_WDDB, // Wood Debris
 
 	// Crumbly rocks
 	SPR_ROIA,
@@ -768,8 +767,10 @@ typedef enum sprite
 	SPR_ROIO,
 	SPR_ROIP,
 
-	// Bricks
-	SPR_BRIC,
+	// Level debris
+	SPR_GFZD, // GFZ debris
+	SPR_BRIC, // Bricks
+	SPR_WDDB, // Wood Debris
 
 	// Gravity Well Objects
 	SPR_GWLG,

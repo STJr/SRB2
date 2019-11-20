@@ -483,7 +483,6 @@ char sprnames[NUMSPRITES + 1][5] =
 	"BOM3", // Boss Explosion 2
 	"BOM4", // Underwater Explosion
 	"BMNB", // Mine Explosion
-	"WDDB", // Wood Debris
 
 	// Crumbly rocks
 	"ROIA",
@@ -503,8 +502,10 @@ char sprnames[NUMSPRITES + 1][5] =
 	"ROIO",
 	"ROIP",
 
-	// Bricks
-	"BRIC",
+	// Level debris
+	"GFZD", // GFZ debris
+	"BRIC", // Bricks
+	"WDDB", // Wood Debris
 
 	// Gravity Well Objects
 	"GWLG",
