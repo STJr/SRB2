@@ -4439,50 +4439,55 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 3: // Linedef executor requires all players present
 			/// \todo check continues for proper splitscreen support?
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || players[i].lives > 0))
+			{
+				if (!playeringame[i])
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (players[i].bot)
+					continue;
+				if (gametype == GT_COOP && players[i].lives <= 0)
+					continue;
+				if (roversector)
 				{
-					if (roversector)
+					if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
 					{
-						if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						msecnode_t *node;
+						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 						{
-							msecnode_t *node;
-							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-							{
-								if (P_ThingIsOnThe3DFloor(players[i].mo, sector, node->m_sector))
-									break;
-							}
-							if (!node)
-								goto DoneSection2;
+							if (P_ThingIsOnThe3DFloor(players[i].mo, sector, node->m_sector))
+								break;
 						}
-						else if (players[i].mo->subsector && !P_ThingIsOnThe3DFloor(players[i].mo, sector, players[i].mo->subsector->sector)) // this function handles basically everything for us lmao
+						if (!node)
+							goto DoneSection2;
+					}
+					else if (players[i].mo->subsector && !P_ThingIsOnThe3DFloor(players[i].mo, sector, players[i].mo->subsector->sector)) // this function handles basically everything for us lmao
+						goto DoneSection2;
+				}
+				else
+				{
+					if (players[i].mo->subsector->sector == sector)
+						;
+					else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+					{
+						msecnode_t *node;
+						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+						{
+							if (node->m_sector == sector)
+								break;
+						}
+						if (!node)
 							goto DoneSection2;
 					}
 					else
-					{
-						if (players[i].mo->subsector->sector == sector)
-							;
-						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
-						{
-							boolean insector = false;
-							msecnode_t *node;
-							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-							{
-								if (node->m_sector == sector)
-								{
-									insector = true;
-									break;
-								}
-							}
-							if (!insector)
-								goto DoneSection2;
-						}
-						else
-							goto DoneSection2;
+						goto DoneSection2;
 
-						if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
-							goto DoneSection2;
-					}
+					if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
+						goto DoneSection2;
 				}
+			}
 			/* FALLTHRU */
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
