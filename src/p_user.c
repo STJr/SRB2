@@ -4428,6 +4428,8 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			player->mo->momz = 9*FRACUNIT;
 			if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
 				player->mo->momz += player->mo->tracer->momz;
+			if (!P_IsObjectOnGround(player->mo->tracer))
+				P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
 			player->powers[pw_carry] = CR_NONE;
 			player->mo->tracer->flags |= MF_PUSHABLE;
 			P_SetTarget(&player->mo->tracer->tracer, NULL);

@@ -13448,7 +13448,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		12*TICRATE,     // painchance (sets how long an unridden rock should last before disappearing - set to 0 to disable)
-		sfx_None,       // painsound
+		sfx_s3k49,      // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
 		S_NULL,         // deathstate
