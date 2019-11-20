@@ -474,16 +474,16 @@ static consvar_t cv_dummymares = {"dummymares", "Overall", CV_HIDEN|CV_CALL, dum
 // ---------
 static menuitem_t MainMenu[] =
 {
-	{IT_STRING|IT_CALL,    NULL, "Secrets",     M_SecretsMenu,           76},
-	{IT_STRING|IT_CALL,    NULL, "1  player",   M_SinglePlayerMenu,      84},
+	{IT_STRING|IT_CALL,    NULL, "1  Player",   M_SinglePlayerMenu,      76},
 #ifndef NONET
-	{IT_STRING|IT_SUBMENU, NULL, "multiplayer", &MP_MainDef,             92},
+	{IT_STRING|IT_SUBMENU, NULL, "Multiplayer", &MP_MainDef,             84},
 #else
-	{IT_STRING|IT_CALL,    NULL, "multiplayer", M_StartSplitServerMenu,  92},
+	{IT_STRING|IT_CALL,    NULL, "Multiplayer", M_StartSplitServerMenu,  84},
 #endif
-	{IT_STRING|IT_CALL,    NULL, "options",     M_Options,              100},
-	{IT_CALL   |IT_STRING, NULL, "addons",      M_Addons,               108},
-	{IT_STRING|IT_CALL,    NULL, "quit  game",  M_QuitSRB2,             116},
+	{IT_STRING|IT_CALL,    NULL, "Secrets",     M_SecretsMenu,           92},
+	{IT_CALL   |IT_STRING, NULL, "Addons",      M_Addons,               100},
+	{IT_STRING|IT_CALL,    NULL, "Options",     M_Options,              108},
+	{IT_STRING|IT_CALL,    NULL, "Quit  Game",  M_QuitSRB2,             116},
 };
 
 typedef enum
