@@ -184,6 +184,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_CANG
 	&lspr[NOLIGHT],     // SPR_PYRE
 	&lspr[NOLIGHT],     // SPR_PTER
+	&lspr[NOLIGHT],     // SPR_DRAB
 
 	// Generic Boos Items
 	&lspr[JETLIGHT_L],     // SPR_JETF // Boss jet fumes
@@ -505,6 +506,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Game Indicators
 	&lspr[NOLIGHT],     // SPR_SCOR
 	&lspr[NOLIGHT],     // SPR_DRWN
+	&lspr[NOLIGHT],     // SPR_FLII
 	&lspr[NOLIGHT],     // SPR_LCKN
 	&lspr[NOLIGHT],     // SPR_TTAG
 	&lspr[NOLIGHT],     // SPR_GFLG

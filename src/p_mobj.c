@@ -9632,6 +9632,80 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					break;
 				}
+			case MT_DRAGONBOMBER:
+				{
+#define DRAGONTURNSPEED ANG2
+					mobj->movecount = (mobj->movecount + 9) % 360;
+					P_SetObjectMomZ(mobj, 4*FINESINE(((mobj->movecount*ANG1) >> ANGLETOFINESHIFT) & FINEMASK), false);
+					if (mobj->threshold > 0) // are we dropping mines?
+					{
+						mobj->threshold--;
+						if (mobj->threshold == 0) // if the timer hits 0, look for a mine to drop!
+						{
+							mobj_t *segment = mobj;
+							while (segment->tracer != NULL && !P_MobjWasRemoved(segment->tracer) && segment->tracer->state == &states[segment->tracer->info->spawnstate])
+							{
+								segment = segment->tracer;
+							}
+							if (segment != mobj) // found an unactivated segment?
+							{
+								mobj_t *mine = P_SpawnMobjFromMobj(segment, 0, 0, 0, segment->info->painchance);
+								mine->angle = segment->angle;
+								P_InstaThrust(mine, mobj->angle, P_AproxDistance(mobj->momx, mobj->momy) >> 1);
+								P_SetObjectMomZ(mine, -2*FRACUNIT, true);
+								S_StartSound(mine, mine->info->seesound);
+								P_SetMobjState(segment, segment->info->raisestate);
+								mobj->threshold = mobj->info->painchance;
+							}
+						}
+					}
+					if (mobj->target != NULL) // Are we chasing a player?
+					{
+						fixed_t dist = P_AproxDistance(mobj->x - mobj->target->x, mobj->y - mobj->target->y);
+						if (dist > 2000 * mobj->scale) // Not anymore!
+							P_SetTarget(&mobj->target, NULL);
+						else
+						{
+							fixed_t vspeed = FixedMul(mobj->info->speed >> 3, mobj->scale);
+							fixed_t z = mobj->target->z + (mobj->height >> 1) + (mobj->flags & MFE_VERTICALFLIP ? -128*mobj->scale : 128*mobj->scale + mobj->target->height);
+							angle_t diff = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y) - mobj->angle;
+							if (diff > ANGLE_180)
+								mobj->angle -= DRAGONTURNSPEED;
+							else
+								mobj->angle += DRAGONTURNSPEED;
+							if (!mobj->threshold && dist < 512 * mobj->scale) // Close enough to drop bombs
+							{
+								mobj->threshold = mobj->info->painchance;
+							}
+							mobj->momz += max(min(z - mobj->z, vspeed), -vspeed);
+						}
+					}
+					else // Can we find a player to chase?
+					{
+						if (mobj->tracer == NULL || mobj->tracer->state != &states[mobj->tracer->info->spawnstate]
+							|| !P_LookForPlayers(mobj, true, false, 2000*mobj->scale)) // if not, circle around the spawnpoint
+						{
+							if (!mobj->spawnpoint) // unless we don't have one, in which case uhhh just circle around wherever we currently are I guess??
+								mobj->angle += DRAGONTURNSPEED;
+							else
+							{
+								fixed_t vspeed = FixedMul(mobj->info->speed >> 3, mobj->scale);
+								fixed_t x = mobj->spawnpoint->x << FRACBITS;
+								fixed_t y = mobj->spawnpoint->y << FRACBITS;
+								fixed_t z = mobj->spawnpoint->z << FRACBITS;
+								angle_t diff = R_PointToAngle2(mobj->x, mobj->y, x, y) - mobj->angle;
+								if (diff > ANGLE_180)
+									mobj->angle -= DRAGONTURNSPEED;
+								else
+									mobj->angle += DRAGONTURNSPEED;
+								mobj->momz += max(min(z - mobj->z, vspeed), -vspeed);
+							}
+						}
+					}
+					P_InstaThrust(mobj, mobj->angle, FixedMul(mobj->info->speed, mobj->scale));
+#undef DRAGONTURNSPEED
+				}
+				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{

@@ -282,6 +282,9 @@ void A_SpawnPterabytes();
 void A_PterabyteHover();
 void A_RolloutSpawn();
 void A_RolloutRock();
+void A_DragonbomberSpawn();
+void A_DragonWing();
+void A_DragonSegment();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -334,6 +337,7 @@ typedef enum sprite
 	SPR_CANG, // Canarivore gas
 	SPR_PYRE, // Pyre Fly
 	SPR_PTER, // Pterabyte
+	SPR_DRAB, // Dragonbomber
 
 	// Generic Boss Items
 	SPR_JETF, // Boss jet fumes
@@ -664,6 +668,7 @@ typedef enum sprite
 	// Game Indicators
 	SPR_SCOR, // Score logo
 	SPR_DRWN, // Drowning Timer
+	SPR_FLII, // AI flight indicator
 	SPR_LCKN, // Target
 	SPR_TTAG, // Tag Sign
 	SPR_GFLG, // Got Flag sign
@@ -1354,6 +1359,26 @@ typedef enum state
 	S_PTERABYTE_FLY4,
 	S_PTERABYTE_SWOOPDOWN,
 	S_PTERABYTE_SWOOPUP,
+
+	// Dragonbomber
+	S_DRAGONBOMBER,
+	S_DRAGONWING1,
+	S_DRAGONWING2,
+	S_DRAGONWING3,
+	S_DRAGONWING4,
+	S_DRAGONTAIL_LOADED,
+	S_DRAGONTAIL_EMPTY,
+	S_DRAGONTAIL_EMPTYLOOP,
+	S_DRAGONTAIL_RELOAD,
+	S_DRAGONMINE,
+	S_DRAGONMINE_LAND1,
+	S_DRAGONMINE_LAND2,
+	S_DRAGONMINE_SLOWFLASH1,
+	S_DRAGONMINE_SLOWFLASH2,
+	S_DRAGONMINE_SLOWLOOP,
+	S_DRAGONMINE_FASTFLASH1,
+	S_DRAGONMINE_FASTFLASH2,
+	S_DRAGONMINE_FASTLOOP,
 
 	// Boss Explosion
 	S_BOSSEXPLODE,
@@ -3455,6 +3480,8 @@ typedef enum state
 	S_FOUR2,
 	S_FIVE2,
 
+	S_FLIGHTINDICATOR,
+
 	S_LOCKON1,
 	S_LOCKON2,
 	S_LOCKON3,
@@ -4049,6 +4076,10 @@ typedef enum mobj_type
 	MT_PTERABYTESPAWNER, // Pterabyte spawner
 	MT_PTERABYTEWAYPOINT, // Pterabyte waypoint
 	MT_PTERABYTE, // Pterabyte
+	MT_DRAGONBOMBER, // Dragonbomber
+	MT_DRAGONWING, // Dragonbomber wing
+	MT_DRAGONTAIL, // Dragonbomber tail segment
+	MT_DRAGONMINE, // Dragonbomber mine
 
 	// Generic Boss Items
 	MT_BOSSEXPLODE,

@@ -4425,7 +4425,9 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		}
 		else if (player->powers[pw_carry] == CR_ROLLOUT)
 		{
-			player->mo->momz = 9*FRACUNIT + player->mo->tracer->momz;
+			player->mo->momz = 9*FRACUNIT;
+			if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
+				player->mo->momz += player->mo->tracer->momz;
 			player->powers[pw_carry] = CR_NONE;
 			player->mo->tracer->flags |= MF_PUSHABLE;
 			P_SetTarget(&player->mo->tracer->tracer, NULL);
@@ -5329,7 +5331,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
 
 						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_STARTDASH);
-						player->pflags |= (PF_THOKKED|PF_CANCARRY);
+						if (player->bot == 1)
+							player->pflags |= PF_THOKKED;
+						else
+							player->pflags |= (PF_THOKKED|PF_CANCARRY);
 					}
 					break;
 				case CA_GLIDEANDCLIMB:
@@ -8398,7 +8403,7 @@ static void P_MovePlayer(player_t *player)
 
 			// Tails Put-Put noise
 			if (player->charability == CA_FLY
-				&& player->bot != 1
+				&& (player->pflags & PF_CANCARRY)
 				&& !(player->mo->eflags & MFE_UNDERWATER)
 				&& leveltime % 10 == 0
 				&& !player->spectator)
@@ -12328,7 +12333,7 @@ void P_PlayerAfterThink(player_t *player)
 					player->mo->momz = tails->momz;
 				}
 
-				if (gametype == GT_COOP)
+				if (gametype == GT_COOP && (!tails->player || tails->player->bot != 1))
 				{
 					player->mo->angle = tails->angle;
 
