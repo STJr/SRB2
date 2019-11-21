@@ -3214,6 +3214,44 @@ static INT16 RandMap(INT16 tolflags, INT16 pprevmap)
 }
 
 //
+// G_UpdateVisited
+//
+static void G_UpdateVisited(void)
+{
+	boolean spec = G_IsSpecialStage(gamemap);
+	// Update visitation flags?
+	if ((!modifiedgame || savemoddata) // Not modified
+		&& !multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
+		&& !(spec && stagefailed)) // Not failed the special stage
+	{
+		UINT8 earnedEmblems;
+
+		// Update visitation flags
+		mapvisited[gamemap-1] |= MV_BEATEN;
+		// eh, what the hell
+		if (ultimatemode)
+			mapvisited[gamemap-1] |= MV_ULTIMATE;
+		// may seem incorrect but IS possible in what the main game uses as special stages, and nummaprings will be -1 in NiGHTS
+		if (nummaprings > 0 && players[consoleplayer].rings >= nummaprings)
+			mapvisited[gamemap-1] |= MV_PERFECT;
+		if (!spec)
+		{
+			// not available to special stages because they can only really be done in one order in an unmodified game, so impossible for first six and trivial for seventh
+			if (ALL7EMERALDS(emeralds))
+				mapvisited[gamemap-1] |= MV_ALLEMERALDS;
+		}
+
+		if (modeattacking == ATTACKING_RECORD)
+			G_UpdateRecordReplays();
+		else if (modeattacking == ATTACKING_NIGHTS)
+			G_SetNightsRecords();
+
+		if ((earnedEmblems = M_CompletionEmblems()))
+			CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+	}
+}
+
+//
 // G_DoCompleted
 //
 static void G_DoCompleted(void)
@@ -3342,43 +3380,16 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	// Update visitation flags?
-	if ((!modifiedgame || savemoddata) // Not modified
-		&& !multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
-		&& !(spec && stagefailed)) // Not failed the special stage
-	{
-		UINT8 earnedEmblems;
-
-		// Update visitation flags
-		mapvisited[gamemap-1] |= MV_BEATEN;
-		// eh, what the hell
-		if (ultimatemode)
-			mapvisited[gamemap-1] |= MV_ULTIMATE;
-		// may seem incorrect but IS possible in what the main game uses as special stages, and nummaprings will be -1 in NiGHTS
-		if (nummaprings > 0 && players[consoleplayer].rings >= nummaprings)
-			mapvisited[gamemap-1] |= MV_PERFECT;
-		if (!spec)
-		{
-			// not available to special stages because they can only really be done in one order in an unmodified game, so impossible for first six and trivial for seventh
-			if (ALL7EMERALDS(emeralds))
-				mapvisited[gamemap-1] |= MV_ALLEMERALDS;
-		}
-
-		if (modeattacking == ATTACKING_RECORD)
-			G_UpdateRecordReplays();
-		else if (modeattacking == ATTACKING_NIGHTS)
-			G_SetNightsRecords();
-
-		if ((earnedEmblems = M_CompletionEmblems()))
-			CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
-	}
-
 	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed))
+	{
+		G_UpdateVisited();
 		G_AfterIntermission();
+	}
 	else
 	{
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
+		G_UpdateVisited();
 	}
 }
 
