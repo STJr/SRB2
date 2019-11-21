@@ -1749,9 +1749,6 @@ void G_PreLevelTitleCard(tic_t ticker, boolean update)
 			I_Sleep();
 		lasttime = nowtime;
 
-		// Run some bullshit whatever
-		D_ProcessEvents();
-
 		ST_runTitleCard();
 		ST_preLevelTitleCardDrawer(ticker, update);
 
