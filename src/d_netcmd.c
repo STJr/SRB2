@@ -4336,9 +4336,9 @@ static void Command_Isgamemodified_f(void)
 	if (savemoddata)
 		CONS_Printf(M_GetText("modifiedgame is true, but you can save emblem and time data in this mod.\n"));
 	else if (modifiedgame)
-		CONS_Printf(M_GetText("modifiedgame is true, secrets will not be unlocked\n"));
+		CONS_Printf(M_GetText("modifiedgame is true, extras will not be unlocked\n"));
 	else
-		CONS_Printf(M_GetText("modifiedgame is false, you can unlock secrets\n"));
+		CONS_Printf(M_GetText("modifiedgame is false, you can unlock extravalues\n"));
 }
 
 static void Command_Cheats_f(void)

@@ -480,7 +480,7 @@ static menuitem_t MainMenu[] =
 #else
 	{IT_STRING|IT_CALL,    NULL, "Multiplayer", M_StartSplitServerMenu,  84},
 #endif
-	{IT_STRING|IT_CALL,    NULL, "Secrets",     M_SecretsMenu,           92},
+	{IT_STRING|IT_CALL,    NULL, "Extras",      M_SecretsMenu,           92},
 	{IT_CALL   |IT_STRING, NULL, "Addons",      M_Addons,               100},
 	{IT_STRING|IT_CALL,    NULL, "Options",     M_Options,              108},
 	{IT_STRING|IT_CALL,    NULL, "Quit  Game",  M_QuitSRB2,             116},
@@ -661,7 +661,7 @@ static menuitem_t SR_PandorasBox[] =
 // Sky Room Custom Unlocks
 static menuitem_t SR_MainMenu[] =
 {
-	{IT_STRING|IT_SUBMENU,NULL, "Secrets Checklist", &SR_UnlockChecklistDef, 0},
+	{IT_STRING|IT_SUBMENU,NULL, "Extras Checklist", &SR_UnlockChecklistDef, 0},
 	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom1
 	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom2
 	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom3
@@ -1455,7 +1455,7 @@ enum
 static menuitem_t OP_EraseDataMenu[] =
 {
 	{IT_STRING | IT_CALL, NULL, "Erase Record Data", M_EraseData, 10},
-	{IT_STRING | IT_CALL, NULL, "Erase Secrets Data", M_EraseData, 20},
+	{IT_STRING | IT_CALL, NULL, "Erase Extras Data", M_EraseData, 20},
 
 	{IT_STRING | IT_CALL, NULL, "\x85" "Erase ALL Data", M_EraseData, 40},
 };
@@ -10910,7 +10910,7 @@ static void M_EraseData(INT32 choice)
 	if (choice == 0)
 		eschoice = M_GetText("Record Attack data");
 	else if (choice == 1)
-		eschoice = M_GetText("Secrets data");
+		eschoice = M_GetText("Extras data");
 	else
 		eschoice = M_GetText("ALL game data");
 

@@ -1386,7 +1386,7 @@ boolean F_CreditResponder(event_t *event)
 
 void F_StartGameEvaluation(void)
 {
-	// Credits option in secrets menu
+	// Credits option in extras menu
 	if (cursaveslot == -1)
 	{
 		S_FadeOutStopMusic(2*MUSICRATE);
