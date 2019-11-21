@@ -4726,6 +4726,12 @@ void G_WriteGhostTic(mobj_t *ghost)
 			oldghost.flags2 |= MF2_AMBUSH;
 		}
 
+		if (ghost->player->followmobj->scale != ghost->scale)
+		{
+			followtic |= FZT_SCALE;
+			WRITEFIXED(demo_p,ghost->player->followmobj->scale);
+		}
+
 		temp = (INT16)((ghost->player->followmobj->x-ghost->x)>>8);
 		WRITEINT16(demo_p,temp);
 		temp = (INT16)((ghost->player->followmobj->y-ghost->y)>>8);
@@ -4737,11 +4743,6 @@ void G_WriteGhostTic(mobj_t *ghost)
 		WRITEUINT16(demo_p,ghost->player->followmobj->sprite);
 		WRITEUINT8(demo_p,(ghost->player->followmobj->frame & FF_FRAMEMASK));
 		WRITEUINT8(demo_p,ghost->player->followmobj->color);
-		if (ghost->player->followmobj->scale != ghost->scale)
-		{
-			followtic |= FZT_SCALE;
-			WRITEFIXED(demo_p,ghost->player->followmobj->scale);
-		}
 
 		*followtic_p = followtic;
 	}
