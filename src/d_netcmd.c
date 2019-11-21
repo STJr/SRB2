@@ -1939,6 +1939,17 @@ static void Command_Map_f(void)
 				d = atoi(gametypename);
 				if (d >= 0 && d < NUMGAMETYPES)
 					newgametype = d;
+				else
+				{
+					CONS_Alert(CONS_ERROR,
+							"Gametype number %d is out of range. Use a number between"
+							" 0 and %d inclusive. ...Or just use the name. :v\n",
+							d,
+							NUMGAMETYPES-1);
+					Z_Free(realmapname);
+					Z_Free(mapname);
+					return;
+				}
 			}
 			else
 			{
@@ -2054,7 +2065,9 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	lastgametype = gametype;
 	gametype = READUINT8(*cp);
 
-	if (gametype != lastgametype)
+	if (gametype < 0 || gametype >= NUMGAMETYPES)
+		gametype = lastgametype;
+	else if (gametype != lastgametype)
 		D_GameTypeChanged(lastgametype); // emulate consvar_t behavior for gametype
 
 	skipprecutscene = ((flags & (1<<2)) != 0);
