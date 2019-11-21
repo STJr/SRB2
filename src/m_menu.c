@@ -488,11 +488,11 @@ static menuitem_t MainMenu[] =
 
 typedef enum
 {
-	secrets = 0,
 	singleplr,
 	multiplr,
-	options,
+	secrets = 2,
 	addons,
+	options,
 	quitdoom
 } main_e;
 
@@ -3436,6 +3436,8 @@ void M_StartControlPanel(void)
 	if (!Playing())
 	{
 		// Secret menu!
+		MainMenu[singleplr].alphaKey = (M_AnySecretUnlocked()) ? 76 : 84;
+		MainMenu[multiplr].alphaKey = (M_AnySecretUnlocked()) ? 84 : 92;
 		MainMenu[secrets].status = (M_AnySecretUnlocked()) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 		currentMenu = &MainDef;
