@@ -312,9 +312,7 @@ menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
-#ifdef HAVE_MIXERX
 menu_t OP_SoundAdvancedDef;
-#endif
 
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
@@ -1360,12 +1358,8 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_HEADER, NULL, "Accessibility", NULL, 102},
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 114},
 
-#ifdef HAVE_MIXERX
 	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 144},
-#endif
 };
-
-#ifdef HAVE_MIXERX
 
 #ifdef HAVE_OPENMPT
 #define OPENMPT_MENUOFFSET 16
@@ -1403,7 +1397,6 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 
 #undef OPENMPT_MENUOFFSET
 #undef MIXERX_MENUOFFSET
-#endif
 
 static menuitem_t OP_DataOptionsMenu[] =
 {
@@ -1995,9 +1988,7 @@ menu_t OP_ColorOptionsDef =
 menu_t OP_SoundOptionsDef = DEFAULTMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_SOUND << 6),
 	"M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 30, 30);
-#ifdef HAVE_MIXERX
 menu_t OP_SoundAdvancedDef = DEFAULTSCROLLMENUSTYLE(MN_OP_MAIN + (MN_OP_SOUND << 6), "M_SOUND", OP_SoundAdvancedMenu, &OP_SoundOptionsDef, 30, 30);
-#endif
 
 menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_SERVER << 6),
