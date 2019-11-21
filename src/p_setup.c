@@ -2805,12 +2805,12 @@ boolean P_SetupLevel(boolean skipprecip)
 		{
 			// Don't include these in the fade!
 			char tx[64];
-			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE|V_TRANSLUCENT, M_GetText("Speeding off to..."));
 			snprintf(tx, 63, "%s%s%s",
 				mapheaderinfo[gamemap-1]->lvlttl,
-				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va("%d",mapheaderinfo[gamemap-1]->actnum) : "");
+			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT, tx);
 			I_UpdateNoVsync();
 		}
 
