@@ -4538,22 +4538,28 @@ static void P_Boss3Thinker(mobj_t *mobj)
 	}
 	else if (mobj->movecount) // Firing mode
 	{
-		// look for a new target
-		P_BossTargetPlayer(mobj, false);
-
-		if (!mobj->target || !mobj->target->player)
-			return;
-
-		// Always face your target.
-		A_FaceTarget(mobj);
-
 		// Check if the attack animation is running. If not, play it.
 		if (mobj->state < &states[mobj->info->missilestate] || mobj->state > &states[mobj->info->raisestate])
 		{
+			// look for a new target
+			P_BossTargetPlayer(mobj, true);
+
+			if (!mobj->target || !mobj->target->player)
+				return;
+
 			if (mobj->health <= mobj->info->damage) // pinch phase
 				mobj->movecount--; // limited number of shots before diving again
 			if (mobj->movecount)
 				P_SetMobjState(mobj, mobj->info->missilestate+1);
+		}
+		else if (mobj->target && mobj->target->player)
+		{
+			angle_t diff = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y) - mobj->angle;
+			if (diff > ANGLE_180)
+				diff = InvAngle(InvAngle(diff)/4);
+			else
+				diff /= 4;
+			mobj->angle += diff;
 		}
 	}
 	else if (mobj->threshold >= 0) // Traveling mode
@@ -4669,13 +4675,10 @@ static void P_Boss3Thinker(mobj_t *mobj)
 				S_StartSound(mobj, shock->info->seesound);
 
 				// look for a new target
-				P_BossTargetPlayer(mobj, false);
+				P_BossTargetPlayer(mobj, true);
 
 				if (mobj->target && mobj->target->player)
-				{
-					A_FaceTarget(mobj);
 					P_SetMobjState(mobj, mobj->info->missilestate);
-				}
 			}
 			else if (mobj->flags2 & (MF2_STRONGBOX|MF2_CLASSICPUSH)) // just hit the bottom of your tube
 			{
