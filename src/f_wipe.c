@@ -405,7 +405,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	// don't know where else to put this.
 	// this any good?
 	if ((gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN)
-	&& (wipestyleflags & (WSF_FADEIN|WSF_FADEOUT)) // only if wipestyleflags are actually set
+	&& (wipestyleflags & (WSF_FADEIN|WSF_FADEOUT)) // only if one of those wipestyleflags are actually set
 	&& !(wipestyleflags & WSF_CROSSFADE)) // and if not crossfading
 		wipestyle = WIPESTYLE_LEVEL;
 	else
