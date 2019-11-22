@@ -748,7 +748,6 @@ typedef enum sprite
 	SPR_BOM3, // Boss Explosion 2
 	SPR_BOM4, // Underwater Explosion
 	SPR_BMNB, // Mine Explosion
-	SPR_WDDB, // Wood Debris
 
 	// Crumbly rocks
 	SPR_ROIA,
@@ -768,8 +767,10 @@ typedef enum sprite
 	SPR_ROIO,
 	SPR_ROIP,
 
-	// Bricks
-	SPR_BRIC,
+	// Level debris
+	SPR_GFZD, // GFZ debris
+	SPR_BRIC, // Bricks
+	SPR_WDDB, // Wood Debris
 
 	// Gravity Well Objects
 	SPR_GWLG,
@@ -3970,8 +3971,6 @@ typedef enum state
 	S_DUST3,
 	S_DUST4,
 
-	S_WOODDEBRIS,
-
 	S_ROCKSPAWN,
 
 	S_ROCKCRUMBLEA,
@@ -3991,8 +3990,10 @@ typedef enum state
 	S_ROCKCRUMBLEO,
 	S_ROCKCRUMBLEP,
 
-	// Bricks
+	// Level debris
+	S_GFZDEBRIS,
 	S_BRICKDEBRIS,
+	S_WOODDEBRIS,
 
 #ifdef SEENAMES
 	S_NAMECHECK,
@@ -4768,7 +4769,6 @@ typedef enum mobj_type
 	MT_EXPLODE, // Robot Explosion
 	MT_UWEXPLODE, // Underwater Explosion
 	MT_DUST,
-	MT_WOODDEBRIS,
 	MT_ROCKSPAWNER,
 	MT_FALLINGROCK,
 	MT_ROCKCRUMBLE1,
@@ -4788,8 +4788,10 @@ typedef enum mobj_type
 	MT_ROCKCRUMBLE15,
 	MT_ROCKCRUMBLE16,
 
-	// Bricks
+	// Level debris
+	MT_GFZDEBRIS,
 	MT_BRICKDEBRIS,
+	MT_WOODDEBRIS,
 
 #ifdef SEENAMES
 	MT_NAMECHECK,

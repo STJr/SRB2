@@ -7669,8 +7669,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DUST3",
 	"S_DUST4",
 
-	"S_WOODDEBRIS",
-
 	"S_ROCKSPAWN",
 
 	"S_ROCKCRUMBLEA",
@@ -7689,7 +7687,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROCKCRUMBLEN",
 	"S_ROCKCRUMBLEO",
 	"S_ROCKCRUMBLEP",
+	"S_GFZDEBRIS",
 	"S_BRICKDEBRIS",
+	"S_WOODDEBRIS",
 
 #ifdef SEENAMES
 	"S_NAMECHECK",
@@ -8445,7 +8445,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EXPLODE", // Robot Explosion
 	"MT_UWEXPLODE", // Underwater Explosion
 	"MT_DUST",
-	"MT_WOODDEBRIS",
 	"MT_ROCKSPAWNER",
 	"MT_FALLINGROCK",
 	"MT_ROCKCRUMBLE1",
@@ -8464,7 +8463,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ROCKCRUMBLE14",
 	"MT_ROCKCRUMBLE15",
 	"MT_ROCKCRUMBLE16",
+	"MT_GFZDEBRIS",
 	"MT_BRICKDEBRIS",
+	"MT_WOODDEBRIS",
 
 #ifdef SEENAMES
 	"MT_NAMECHECK",
