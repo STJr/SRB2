@@ -14534,6 +14534,9 @@ void A_RolloutRock(mobj_t *actor)
 
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
 
+	if (actor->eflags & MFE_JUSTHITFLOOR)
+		S_StartSound(actor, actor->info->painsound);
+
 	if (actor->threshold)
 		actor->threshold--;
 
