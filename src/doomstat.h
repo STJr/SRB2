@@ -435,7 +435,6 @@ typedef struct
 	tic_t time;   ///< Time in which the level was finished.
 	UINT32 score; ///< Score when the level was finished.
 	UINT16 rings; ///< Rings when the level was finished.
-	boolean gotperfect; ///< Got perfect bonus?
 } recorddata_t;
 
 /** Setup for one NiGHTS map.
