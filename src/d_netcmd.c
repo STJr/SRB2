@@ -4338,7 +4338,7 @@ static void Command_Isgamemodified_f(void)
 	else if (modifiedgame)
 		CONS_Printf(M_GetText("modifiedgame is true, extras will not be unlocked\n"));
 	else
-		CONS_Printf(M_GetText("modifiedgame is false, you can unlock extravalues\n"));
+		CONS_Printf(M_GetText("modifiedgame is false, you can unlock extras\n"));
 }
 
 static void Command_Cheats_f(void)
