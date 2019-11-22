@@ -2725,7 +2725,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 		F_WipeStartScreen();
-		wipestyleflags |= WSF_FADEOUT|WSF_TOWHITE;
+		wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
 
 #ifdef HWRENDER
 		// uh..........

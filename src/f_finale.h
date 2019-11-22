@@ -152,9 +152,10 @@ extern wipestyle_t wipestyle;
 
 typedef enum
 {
-	WSF_FADEOUT = 1,
-	WSF_FADEIN  = 1<<1,
-	WSF_TOWHITE = 1<<2,
+	WSF_FADEOUT   = 1,
+	WSF_FADEIN    = 1<<1,
+	WSF_TOWHITE   = 1<<2,
+	WSF_CROSSFADE = 1<<3,
 } wipestyleflags_t;
 extern wipestyleflags_t wipestyleflags;
 

@@ -95,7 +95,7 @@ boolean WipeStageTitle = false;
 INT32 lastwipetic = 0;
 
 wipestyle_t wipestyle = WIPESTYLE_NORMAL;
-wipestyleflags_t wipestyleflags = 0;
+wipestyleflags_t wipestyleflags = WSF_CROSSFADE;
 
 #ifndef NOWIPE
 static UINT8 *wipe_scr_start; //screen 3
@@ -404,7 +404,9 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 	// don't know where else to put this.
 	// this any good?
-	if (gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN)
+	if ((gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN)
+	&& (wipestyleflags & (WSF_FADEIN|WSF_FADEOUT)) // only if wipestyleflags are actually set
+	&& !(wipestyleflags & WSF_CROSSFADE)) // and if not crossfading
 		wipestyle = WIPESTYLE_LEVEL;
 	else
 		wipestyle = WIPESTYLE_NORMAL;
