@@ -4030,7 +4030,8 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		mo = P_SpawnPlayerMissile(player->mo, MT_FIREBALL, 0);
-		P_InstaThrust(mo, player->mo->angle, ((mo->info->speed>>FRACBITS)*player->mo->scale) + player->speed);
+		if (mo)
+			P_InstaThrust(mo, player->mo->angle, ((mo->info->speed>>FRACBITS)*player->mo->scale) + player->speed);
 		S_StartSound(player->mo, sfx_mario7);
 		P_SetWeaponDelay(player, TICRATE); // Short delay between fireballs so you can't spam them everywhere
 		return;
@@ -4051,8 +4052,8 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 
 		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNBOUNCE, MF2_BOUNCERING);
 
-	if (mo)
-		mo->fuse = 3*TICRATE; // Bounce Ring time
+		if (mo)
+			mo->fuse = 3*TICRATE; // Bounce Ring time
 	}
 	// Rail ring
 	else if (player->currentweapon == WEP_RAIL && player->powers[pw_railring])
