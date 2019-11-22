@@ -727,8 +727,8 @@ static menuitem_t SP_MainMenu[] =
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 84},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,               92},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,            100},
-	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Statistics",    M_Statistics,              108},
-	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,           116},
+	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,           108},
+	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Statistics",    M_Statistics,              116}
 };
 
 enum
@@ -736,8 +736,8 @@ enum
 	sploadgame,
 	sprecordattack,
 	spnightsmode,
-	spstatistics,
-	sptutorial
+	sptutorial,
+	spstatistics
 };
 
 // Single Player Load Game
