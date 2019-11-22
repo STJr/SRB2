@@ -7743,9 +7743,12 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 	I_Assert(!P_MobjWasRemoved(player->mo));
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
-		ground = player->mo->ceilingz - FixedMul(mobjinfo[MT_SPINFIRE].height - 1, player->mo->scale);
+		ground = player->mo->ceilingz - FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
 	else
-		ground = player->mo->floorz + 1;
+		ground = player->mo->floorz;
+
+	if (cropcircle)
+		ground += P_MobjFlip(player->mo);
 
 	if (cropcircle)
 	{
