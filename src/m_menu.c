@@ -488,7 +488,7 @@ typedef enum
 {
 	singleplr,
 	multiplr,
-	secrets = 2,
+	secrets = 0,
 	addons,
 	options,
 	quitdoom
