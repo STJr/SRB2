@@ -486,9 +486,9 @@ static menuitem_t MainMenu[] =
 
 typedef enum
 {
-	singleplr,
+	singleplr = 0,
 	multiplr,
-	secrets = 0,
+	secrets,
 	addons,
 	options,
 	quitdoom
