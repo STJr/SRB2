@@ -4602,7 +4602,7 @@ static void Local_Maketic(INT32 realtics)
 {
 	I_OsPolling(); // I_Getevent
 	D_ProcessEvents(); // menu responder, cons responder,
-	                   // game responder calls HU_Responder, AM_Responder, F_Responder,
+	                   // game responder calls HU_Responder, AM_Responder,
 	                   // and G_MapEventsToControls
 	if (!dedicated) rendergametic = gametic;
 	// translate inputs (keyboard/mouse/joystick) into game controls
