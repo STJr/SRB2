@@ -2359,11 +2359,23 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				;
 			else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
 			{
+				fixed_t runspd = FixedMul(player->runspeed, player->mo->scale);
+
+				// See comments in P_MovePlayer for explanation of changes.
+
+				if (player->powers[pw_super])
+					runspd = FixedMul(runspd, 5*FRACUNIT/3);
+
+				runspd = FixedMul(runspd, player->mo->movefactor);
+
+				if (maptol & TOL_2D)
+					runspd = FixedMul(runspd, 2*FRACUNIT/3);
+
 				if (player->cmomx || player->cmomy)
 				{
 					if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD && player->panim != PA_DASH)
 						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					else if (player->speed >= runspd
 					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
 						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 					else if ((player->rmomx || player->rmomy)
@@ -2376,7 +2388,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				{
 					if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD && player->panim != PA_DASH)
 						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					else if (player->speed >= runspd
 					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
 						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 					else if ((player->mo->momx || player->mo->momy)
@@ -7926,6 +7938,11 @@ static void P_MovePlayer(player_t *player)
 
 	cmd = &player->cmd;
 	runspd = FixedMul(player->runspeed, player->mo->scale);
+
+	// This was done in Sonic 3 & Knuckles, but has been missed in Sonic Mania and the Taxman/Stealth mobile remakes. Thanks to NeoHazard for his 2017 blogpost on the matter, because this oversight otherwise almost made it all the way to 2.2's release.
+	//https://s3unlocked.blogspot.com/2017/12/over-threshold.html
+	if (player->powers[pw_super])
+		runspd = FixedMul(runspd, 5*FRACUNIT/3);
 
 	// Let's have some movement speed fun on low-friction surfaces, JUST for players... (high friction surfaces shouldn't have any adjustment, since the acceleration in this game is super high and that ends up cheesing high-friction surfaces.)
 	runspd = FixedMul(runspd, player->mo->movefactor);
