@@ -3471,7 +3471,7 @@ isblocking:
 		}
 
 		// see about climbing on the wall
-		if (!(checkline->flags & ML_NOCLIMB))
+		if (!(checkline->flags & ML_NOCLIMB) && checkline->special != HORIZONSPECIAL)
 		{
 			boolean canclimb;
 			angle_t climbangle, climbline;
