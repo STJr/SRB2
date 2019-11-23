@@ -106,6 +106,10 @@ extern RGBA_t *pMasterPalette;
 #define V_HUDTRANSHALF       0x000D0000
 #define V_HUDTRANS           0x000E0000 // draw the hud translucent
 #define V_HUDTRANSDOUBLE     0x000F0000
+// Macros follow
+#define V_USERHUDTRANSHALF   ((10-(cv_translucenthud.value/2))<<V_ALPHASHIFT)
+#define V_USERHUDTRANS       ((10-cv_translucenthud.value)<<V_ALPHASHIFT)
+#define V_USERHUDTRANSDOUBLE ((10-min(cv_translucenthud.value*2, 10))<<V_ALPHASHIFT)
 
 #define V_AUTOFADEOUT        0x00100000 // used by CECHOs, automatic fade out when almost over
 #define V_RETURN8            0x00200000 // 8 pixel return instead of 12
