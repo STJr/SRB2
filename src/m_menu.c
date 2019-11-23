@@ -3535,6 +3535,7 @@ void M_StartControlPanel(void)
 
 void M_EndModeAttackRun(void)
 {
+	G_ClearModeAttackRetryFlag();
 	M_ModeAttackEndGame(0);
 }
 

@@ -225,10 +225,14 @@ void G_AddPlayer(INT32 playernum);
 void G_SetExitGameFlag(void);
 void G_ClearExitGameFlag(void);
 boolean G_GetExitGameFlag(void);
+
 void G_SetRetryFlag(void);
 void G_ClearRetryFlag(void);
 boolean G_GetRetryFlag(void);
 
+void G_SetModeAttackRetryFlag(void);
+void G_ClearModeAttackRetryFlag(void);
+boolean G_GetModeAttackRetryFlag(void);
 
 void G_LoadGameData(void);
 void G_LoadGameSettings(void);
