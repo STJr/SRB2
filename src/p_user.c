@@ -9632,8 +9632,15 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	mo = player->mo;
 
-	if (player->exiting && mo->target && mo->target->type == MT_SIGN)
-		sign = mo->target;
+	if (player->exiting)
+	{
+		if (mo->target && mo->target->type == MT_SIGN && mo->target->spawnpoint)
+			sign = mo->target;
+		else if ((player->powers[pw_carry] == CR_NIGHTSMODE)
+		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
+		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6]))
+			return true;
+	}
 
 	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
