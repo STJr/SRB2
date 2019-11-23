@@ -31,7 +31,6 @@ static boolean panic = false;
 static UINT8 flymode = 0;
 static boolean spinmode = false;
 static boolean thinkfly = false;
-static mobj_t *overlay;
 
 static inline void B_ResetAI(void)
 {
@@ -336,17 +335,20 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 	// Thinkfly overlay
 	if (thinkfly)
 	{
-		if (overlay == NULL)
+		if (!tails->target)
 		{
-			overlay = P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY);
-			P_SetTarget(&overlay->target, tails);
-			P_SetMobjState(overlay, S_FLIGHTINDICATOR);
+			P_SetTarget(&tails->target, P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY));
+			if (tails->target)
+			{
+				P_SetTarget(&tails->target->target, tails);
+				P_SetMobjState(tails->target, S_FLIGHTINDICATOR);
+			}
 		}
 	}
-	else if (overlay != NULL)
+	else if (tails->target && tails->target->type == MT_OVERLAY && tails->target->state == states+S_FLIGHTINDICATOR)
 	{
-		P_RemoveMobj(overlay);
-		overlay = NULL;
+		P_RemoveMobj(tails->target);
+		P_SetTarget(&tails->target, NULL);
 	}
 
 	// Turn the virtual keypresses into ticcmd_t.
