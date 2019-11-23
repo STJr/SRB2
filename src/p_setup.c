@@ -2809,7 +2809,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			snprintf(tx, 63, "%s%s%s",
 				mapheaderinfo[gamemap-1]->lvlttl,
 				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va("%d",mapheaderinfo[gamemap-1]->actnum) : "");
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
 			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT, tx);
 			I_UpdateNoVsync();
 		}
