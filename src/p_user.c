@@ -10184,17 +10184,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!camstill && !resetcalled && !paused)
 		thiscam->angle = R_PointToAngle2(thiscam->x, thiscam->y, viewpointx, viewpointy);
 
-	if (sign)
-	{
-		viewpointx = sign->x + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-		viewpointy = sign->y + FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-	}
-	else
-	{
-		viewpointx = mo->x + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-		viewpointy = mo->y + FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-	}
-
 /*
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		thiscam->angle = angle;
@@ -10238,9 +10227,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	dist = FixedHypot(f1, f2);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
-		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - P_GetPlayerHeight(player));
+		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, (sign ? sign->ceilingz : mo->z + mo->height) - P_GetPlayerHeight(player));
 	else
-		angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + P_GetPlayerHeight(player));
+		angle = R_PointToAngle2(0, thiscam->z, dist, (sign ? sign->floorz : mo->z) + P_GetPlayerHeight(player));
 	if (player->playerstate != PST_DEAD)
 		angle += (focusaiming < ANGLE_180 ? focusaiming/2 : InvAngle(InvAngle(focusaiming)/2)); // overcomplicated version of '((signed)focusaiming)/2;'
 
