@@ -8897,7 +8897,7 @@ static const char *const MENUTYPES_LIST[] = {
 	"OP_SCREENSHOTS",
 	"OP_ERASEDATA",
 
-	// Secrets
+	// Extras
 	"SR_MAIN",
 	"SR_PANDORA",
 	"SR_LEVELSELECT",

@@ -1386,7 +1386,7 @@ boolean F_CreditResponder(event_t *event)
 
 void F_StartGameEvaluation(void)
 {
-	// Credits option in secrets menu
+	// Credits option in extras menu
 	if (cursaveslot == -1)
 	{
 		S_FadeOutStopMusic(2*MUSICRATE);
@@ -1541,9 +1541,9 @@ void F_GameEvaluationDrawer(void)
 			}
 		}
 		else if (netgame)
-			V_DrawString(8, 96, V_YELLOWMAP, "Prizes only\nawarded in\nsingle player!");
+			V_DrawString(8, 96, V_YELLOWMAP, "Multiplayer games\ncan't unlock\nextras!");
 		else
-			V_DrawString(8, 96, V_YELLOWMAP, "Prizes not\nawarded in\nmodified games!");
+			V_DrawString(8, 96, V_YELLOWMAP, "Modified games\ncan't unlock\nextras!");
 	}
 #endif
 }
@@ -1590,7 +1590,7 @@ void F_GameEvaluationTicker(void)
 		{
 			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
 			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Prizes only awarded in singleplayer!");
+			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Multiplayer games can't unlock extras!");
 			S_StartSound(NULL, sfx_s3k68);
 		}
 		else if (!modifiedgame || savemoddata)
@@ -1612,7 +1612,7 @@ void F_GameEvaluationTicker(void)
 		{
 			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
 			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Prizes not awarded in modified games!");
+			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Modified games can't unlock extras!");
 			S_StartSound(NULL, sfx_s3k68);
 		}
 	}
