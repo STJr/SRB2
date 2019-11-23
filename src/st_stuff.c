@@ -198,7 +198,7 @@ void ST_Ticker(boolean run)
 
 // 0 is default, any others are special palettes.
 INT32 st_palette = 0;
-INT32 st_translucency = 0;
+INT32 st_translucency = 10;
 
 void ST_doPaletteStuff(void)
 {
