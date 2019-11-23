@@ -2757,6 +2757,13 @@ boolean P_SetupLevel(boolean skipprecip)
 		ranspecialwipe = 1;
 	}
 
+	if (G_GetModeAttackRetryFlag())
+	{
+		if (modeattacking)
+			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+		G_ClearModeAttackRetryFlag();
+	}
+
 	// Make sure all sounds are stopped before Z_FreeTags.
 	S_StopSounds();
 	S_ClearSfx();
