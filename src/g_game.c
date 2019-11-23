@@ -1803,6 +1803,9 @@ void G_DoLoadLevel(boolean resetplayer)
 //
 void G_StartTitleCard(void)
 {
+	wipestyleflags |= WSF_FADEIN;
+	wipestyleflags &= ~WSF_FADEOUT;
+
 	// The title card has been disabled for this map.
 	// Oh well.
 	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
@@ -1819,8 +1822,6 @@ void G_StartTitleCard(void)
 
 	// start the title card
 	WipeStageTitle = (!titlemapinaction);
-	wipestyleflags |= WSF_FADEIN;
-	wipestyleflags &= ~WSF_FADEOUT;
 }
 
 //
@@ -2855,6 +2856,7 @@ void G_DoReborn(INT32 playernum)
 
 			// Do a wipe
 			wipegamestate = -1;
+			wipestyleflags = WSF_CROSSFADE;
 
 			if (camera.chase)
 				P_ResetCamera(&players[displayplayer], &camera);
