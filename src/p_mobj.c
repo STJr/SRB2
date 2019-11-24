@@ -9709,6 +9709,16 @@ void P_MobjThinker(mobj_t *mobj)
 #undef DRAGONTURNSPEED
 				}
 				break;
+			case MT_MINUS:
+#ifdef ROTSPRITE
+				{
+					if (P_IsObjectOnGround(mobj))
+						mobj->rollangle = 0;
+					else
+						mobj->rollangle = R_PointToAngle2(0, 0, mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
+				}
+#endif
+				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
