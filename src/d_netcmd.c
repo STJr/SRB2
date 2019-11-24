@@ -1363,7 +1363,7 @@ static void SendNameAndColor2(void)
 			//notsame = (cv_skin2.value != players[secondplaya].skin);
 
 			SetPlayerSkin(secondplaya, cv_skin2.string);
-			CV_StealthSet(&cv_skin, skins[cv_skin2.value].name);
+			CV_StealthSet(&cv_skin2, skins[cv_skin2.value].name);
 
 			/*if (notsame)
 			{
