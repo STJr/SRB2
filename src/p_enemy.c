@@ -2476,12 +2476,8 @@ void A_VultureBlast(mobj_t *actor)
 void A_VultureFly(mobj_t *actor)
 {
 	fixed_t speedmax = 18*FRACUNIT;
-	angle_t angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
-	fixed_t dx = actor->target->x - actor->x;
-	fixed_t dy = actor->target->y - actor->y;
-	fixed_t dz = actor->target->z - actor->z;
-	fixed_t dxy = FixedHypot(dx, dy);
-	fixed_t dm;
+	angle_t angledif;
+	fixed_t dx, dy, dz, dxy, dm;
 	mobj_t *dust;
 	fixed_t momm;
 
@@ -2489,6 +2485,18 @@ void A_VultureFly(mobj_t *actor)
 	if (LUA_CallAction("A_VultureFly", actor))
 		return;
 #endif
+
+	if (!actor->target || P_MobjWasRemoved(actor->target))
+	{
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
+	dx = actor->target->x - actor->x;
+	dy = actor->target->y - actor->y;
+	dz = actor->target->z - actor->z;
+	dxy = FixedHypot(dx, dy);
 
 	if (leveltime % 4 == 0)
 		S_StartSound(actor, actor->info->activesound);
