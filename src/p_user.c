@@ -2296,7 +2296,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				else if (!player->skidtime)
 					player->pflags &= ~PF_GLIDING;
 			}
-			else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_THOKKED && !(player->pflags & PF_SHIELDABILITY) && player->mo->state-states == S_PLAY_FALL)
+			else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_THOKKED && !(player->pflags & (PF_JUMPED|PF_SHIELDABILITY)) && player->mo->state-states == S_PLAY_FALL)
 			{
 				if (player->mo->state-states != S_PLAY_GLIDE_LANDING)
 				{
@@ -3523,7 +3523,7 @@ static void P_DoClimbing(player_t *player)
 			{
 				P_SetObjectMomZ(player->mo, 2*FRACUNIT, true);
 				if (cmd->forwardmove)
-					P_SetObjectMomZ(player->mo, 2*player->mo->momz/3, false);
+					player->mo->momz = 2*player->mo->momz/3;
 			}
 			if (thrust)
 				P_Thrust(player->mo, player->mo->angle, FixedMul(4*FRACUNIT, player->mo->scale)); // Lil' boost up.
