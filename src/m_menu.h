@@ -99,7 +99,7 @@ typedef enum
 	MN_OP_SCREENSHOTS,
 	MN_OP_ERASEDATA,
 
-	// Secrets
+	// Extras
 	MN_SR_MAIN,
 	MN_SR_PANDORA,
 	MN_SR_LEVELSELECT,

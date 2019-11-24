@@ -1685,7 +1685,7 @@ boolean S_PrepareSoundTest(void)
 		soundtestdefs[pos++] = def;
 		if (def->soundtestcond > 0 && !(mapvisited[def->soundtestcond-1] & MV_BEATEN))
 			continue;
-		if (def->soundtestcond < 0 && !M_Achieved(1-def->soundtestcond))
+		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond))
 			continue;
 		def->allowed = true;
 	}

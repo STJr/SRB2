@@ -2359,11 +2359,23 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				;
 			else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
 			{
+				fixed_t runspd = FixedMul(player->runspeed, player->mo->scale);
+
+				// See comments in P_MovePlayer for explanation of changes.
+
+				if (player->powers[pw_super])
+					runspd = FixedMul(runspd, 5*FRACUNIT/3);
+
+				runspd = FixedMul(runspd, player->mo->movefactor);
+
+				if (maptol & TOL_2D)
+					runspd = FixedMul(runspd, 2*FRACUNIT/3);
+
 				if (player->cmomx || player->cmomy)
 				{
 					if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD && player->panim != PA_DASH)
 						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					else if (player->speed >= runspd
 					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
 						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 					else if ((player->rmomx || player->rmomy)
@@ -2376,7 +2388,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				{
 					if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD && player->panim != PA_DASH)
 						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					else if (player->speed >= runspd
 					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
 						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 					else if ((player->mo->momx || player->mo->momy)
@@ -4429,6 +4441,8 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			player->mo->momz = 9*FRACUNIT;
 			if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
 				player->mo->momz += player->mo->tracer->momz;
+			if (!P_IsObjectOnGround(player->mo->tracer))
+				P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
 			player->powers[pw_carry] = CR_NONE;
 			player->mo->tracer->flags |= MF_PUSHABLE;
 			P_SetTarget(&player->mo->tracer->tracer, NULL);
@@ -7741,9 +7755,12 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 	I_Assert(!P_MobjWasRemoved(player->mo));
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
-		ground = player->mo->ceilingz - FixedMul(mobjinfo[MT_SPINFIRE].height - 1, player->mo->scale);
+		ground = player->mo->ceilingz - FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
 	else
-		ground = player->mo->floorz + 1;
+		ground = player->mo->floorz;
+
+	if (cropcircle)
+		ground += P_MobjFlip(player->mo);
 
 	if (cropcircle)
 	{
@@ -7921,6 +7938,11 @@ static void P_MovePlayer(player_t *player)
 
 	cmd = &player->cmd;
 	runspd = FixedMul(player->runspeed, player->mo->scale);
+
+	// This was done in Sonic 3 & Knuckles, but has been missed in Sonic Mania and the Taxman/Stealth mobile remakes. Thanks to NeoHazard for his 2017 blogpost on the matter, because this oversight otherwise almost made it all the way to 2.2's release.
+	//https://s3unlocked.blogspot.com/2017/12/over-threshold.html
+	if (player->powers[pw_super])
+		runspd = FixedMul(runspd, 5*FRACUNIT/3);
 
 	// Let's have some movement speed fun on low-friction surfaces, JUST for players... (high friction surfaces shouldn't have any adjustment, since the acceleration in this game is super high and that ends up cheesing high-friction surfaces.)
 	runspd = FixedMul(runspd, player->mo->movefactor);
@@ -9630,8 +9652,15 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	mo = player->mo;
 
-	if (player->exiting && mo->target && mo->target->type == MT_SIGN)
-		sign = mo->target;
+	if (player->exiting)
+	{
+		if (mo->target && mo->target->type == MT_SIGN && mo->target->spawnpoint)
+			sign = mo->target;
+		else if ((player->powers[pw_carry] == CR_NIGHTSMODE)
+		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
+		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6]))
+			return true;
+	}
 
 	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
@@ -10162,17 +10191,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!camstill && !resetcalled && !paused)
 		thiscam->angle = R_PointToAngle2(thiscam->x, thiscam->y, viewpointx, viewpointy);
 
-	if (sign)
-	{
-		viewpointx = sign->x + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-		viewpointy = sign->y + FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-	}
-	else
-	{
-		viewpointx = mo->x + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-		viewpointy = mo->y + FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-	}
-
 /*
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		thiscam->angle = angle;
@@ -10216,9 +10234,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	dist = FixedHypot(f1, f2);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
-		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - P_GetPlayerHeight(player));
+		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, (sign ? sign->ceilingz : mo->z + mo->height) - P_GetPlayerHeight(player));
 	else
-		angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + P_GetPlayerHeight(player));
+		angle = R_PointToAngle2(0, thiscam->z, dist, (sign ? sign->floorz : mo->z) + P_GetPlayerHeight(player));
 	if (player->playerstate != PST_DEAD)
 		angle += (focusaiming < ANGLE_180 ? focusaiming/2 : InvAngle(InvAngle(focusaiming)/2)); // overcomplicated version of '((signed)focusaiming)/2;'
 

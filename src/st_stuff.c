@@ -198,7 +198,7 @@ void ST_Ticker(boolean run)
 
 // 0 is default, any others are special palettes.
 INT32 st_palette = 0;
-INT32 st_translucency = 0;
+INT32 st_translucency = 10;
 
 void ST_doPaletteStuff(void)
 {
@@ -1294,10 +1294,8 @@ void ST_drawTitleCard(void)
 		return;
 #endif
 
-#ifndef LEVELWIPES
 	if ((lt_ticker-lt_lasttic) > 1)
 		lt_ticker = lt_lasttic+1;
-#endif
 
 	ST_cacheLevelTitle();
 	actpat = lt_patches[0];
@@ -1351,9 +1349,7 @@ luahook:
 void ST_preLevelTitleCardDrawer(tic_t ticker, boolean update)
 {
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
-#ifndef LEVELWIPES
 	if (ticker < PRELEVELTIME-1)
-#endif
 		ST_drawWipeTitleCard();
 
 	I_OsPolling();

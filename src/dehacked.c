@@ -4973,18 +4973,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_MINUS_UPWARD2",
 	"S_MINUS_UPWARD3",
 	"S_MINUS_UPWARD4",
-	"S_MINUS_UPWARD5",
-	"S_MINUS_UPWARD6",
-	"S_MINUS_UPWARD7",
-	"S_MINUS_UPWARD8",
 	"S_MINUS_DOWNWARD1",
 	"S_MINUS_DOWNWARD2",
 	"S_MINUS_DOWNWARD3",
 	"S_MINUS_DOWNWARD4",
-	"S_MINUS_DOWNWARD5",
-	"S_MINUS_DOWNWARD6",
-	"S_MINUS_DOWNWARD7",
-	"S_MINUS_DOWNWARD8",
 
 	// Minus dirt
 	"S_MINUSDIRT1",
@@ -7669,8 +7661,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DUST3",
 	"S_DUST4",
 
-	"S_WOODDEBRIS",
-
 	"S_ROCKSPAWN",
 
 	"S_ROCKCRUMBLEA",
@@ -7689,7 +7679,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROCKCRUMBLEN",
 	"S_ROCKCRUMBLEO",
 	"S_ROCKCRUMBLEP",
+	"S_GFZDEBRIS",
 	"S_BRICKDEBRIS",
+	"S_WOODDEBRIS",
 
 #ifdef SEENAMES
 	"S_NAMECHECK",
@@ -8445,7 +8437,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EXPLODE", // Robot Explosion
 	"MT_UWEXPLODE", // Underwater Explosion
 	"MT_DUST",
-	"MT_WOODDEBRIS",
 	"MT_ROCKSPAWNER",
 	"MT_FALLINGROCK",
 	"MT_ROCKCRUMBLE1",
@@ -8464,7 +8455,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ROCKCRUMBLE14",
 	"MT_ROCKCRUMBLE15",
 	"MT_ROCKCRUMBLE16",
+	"MT_GFZDEBRIS",
 	"MT_BRICKDEBRIS",
+	"MT_WOODDEBRIS",
 
 #ifdef SEENAMES
 	"MT_NAMECHECK",
@@ -8904,7 +8897,7 @@ static const char *const MENUTYPES_LIST[] = {
 	"OP_SCREENSHOTS",
 	"OP_ERASEDATA",
 
-	// Secrets
+	// Extras
 	"SR_MAIN",
 	"SR_PANDORA",
 	"SR_LEVELSELECT",

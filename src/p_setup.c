@@ -2725,7 +2725,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 		F_WipeStartScreen();
-		wipestyleflags |= WSF_FADEOUT|WSF_TOWHITE;
+		wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
 
 #ifdef HWRENDER
 		// uh..........
@@ -2755,6 +2755,13 @@ boolean P_SetupLevel(boolean skipprecip)
 		}
 
 		ranspecialwipe = 1;
+	}
+
+	if (G_GetModeAttackRetryFlag())
+	{
+		if (modeattacking)
+			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+		G_ClearModeAttackRetryFlag();
 	}
 
 	// Make sure all sounds are stopped before Z_FreeTags.
@@ -2809,7 +2816,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			snprintf(tx, 63, "%s%s%s",
 				mapheaderinfo[gamemap-1]->lvlttl,
 				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va("%d",mapheaderinfo[gamemap-1]->actnum) : "");
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
 			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT, tx);
 			I_UpdateNoVsync();
 		}

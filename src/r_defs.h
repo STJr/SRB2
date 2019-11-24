@@ -410,6 +410,8 @@ typedef enum
 	ST_NEGATIVE
 } slopetype_t;
 
+#define HORIZONSPECIAL 41
+
 typedef struct line_s
 {
 	// Vertices, from v1 to v2.

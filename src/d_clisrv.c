@@ -1301,10 +1301,23 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	M_Memcpy(netbuffer->u.serverinfo.mapmd5, mapmd5, 16);
 
-	if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
-		strncpy(netbuffer->u.serverinfo.maptitle, (char *)mapheaderinfo[gamemap-1]->lvlttl, 33);
+	if (*mapheaderinfo[gamemap-1]->lvlttl)
+	{
+		char *read = mapheaderinfo[gamemap-1]->lvlttl, *writ = netbuffer->u.serverinfo.maptitle;
+		while (writ < (netbuffer->u.serverinfo.maptitle+32) && *read != '\0')
+		{
+			if (!(*read & 0x80))
+			{
+				*writ = toupper(*read);
+				writ++;
+			}
+			read++;
+		}
+		*writ = '\0';
+		//strncpy(netbuffer->u.serverinfo.maptitle, (char *)mapheaderinfo[gamemap-1]->lvlttl, 33);
+	}
 	else
-		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 33);
+		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 32);
 
 	netbuffer->u.serverinfo.maptitle[32] = '\0';
 
@@ -1358,7 +1371,11 @@ static void SV_SendPlayerInfo(INT32 node)
 
 		netbuffer->u.playerinfo[i].score = LONG(players[i].score);
 		netbuffer->u.playerinfo[i].timeinserver = SHORT((UINT16)(players[i].jointime / TICRATE));
-		netbuffer->u.playerinfo[i].skin = (UINT8)players[i].skin;
+		netbuffer->u.playerinfo[i].skin = (UINT8)(players[i].skin
+#ifdef DEVELOP // it's safe to do this only because PLAYERINFO isn't read by the game itself
+		% 3
+#endif
+		);
 
 		// Extra data
 		netbuffer->u.playerinfo[i].data = 0; //players[i].skincolor;
@@ -4602,7 +4619,7 @@ static void Local_Maketic(INT32 realtics)
 {
 	I_OsPolling(); // I_Getevent
 	D_ProcessEvents(); // menu responder, cons responder,
-	                   // game responder calls HU_Responder, AM_Responder, F_Responder,
+	                   // game responder calls HU_Responder, AM_Responder,
 	                   // and G_MapEventsToControls
 	if (!dedicated) rendergametic = gametic;
 	// translate inputs (keyboard/mouse/joystick) into game controls

@@ -1032,7 +1032,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
 			tmthing->player->powers[pw_carry] = CR_ROLLOUT;
 			P_SetTarget(&tmthing->tracer, thing);
-			P_SetObjectMomZ(thing, tmthing->momz, true);
+			if (!P_IsObjectOnGround(thing))
+				thing->momz += tmthing->momz;
 			return true;
 		}
 	}
@@ -1063,6 +1064,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			thing->momy = tmthing->momy;
 			tmthing->momx = tempmomx;
 			tmthing->momy = tempmomy;
+			S_StartSound(thing, thing->info->painsound);
 		}
 	}
 
@@ -3469,7 +3471,7 @@ isblocking:
 		}
 
 		// see about climbing on the wall
-		if (!(checkline->flags & ML_NOCLIMB))
+		if (!(checkline->flags & ML_NOCLIMB) && checkline->special != HORIZONSPECIAL)
 		{
 			boolean canclimb;
 			angle_t climbangle, climbline;
