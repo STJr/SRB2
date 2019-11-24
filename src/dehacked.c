@@ -3195,6 +3195,8 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 					sizeof (extraemblems[num-1].description), va("Extra emblem %d: objective", num));
 			else if (fastcmp(word, "CONDITIONSET"))
 				extraemblems[num-1].conditionset = (UINT8)value;
+			else if (fastcmp(word, "SHOWCONDITIONSET"))
+				extraemblems[num-1].showconditionset = (UINT8)value;
 			else
 			{
 				strupr(word2);
@@ -3281,6 +3283,8 @@ static void readunlockable(MYFILE *f, INT32 num)
 					unlockables[num].height = (UINT16)i;
 				else if (fastcmp(word, "CONDITIONSET"))
 					unlockables[num].conditionset = (UINT8)i;
+				else if (fastcmp(word, "SHOWCONDITIONSET"))
+					unlockables[num].showconditionset = (UINT8)i;
 				else if (fastcmp(word, "NOCECHO"))
 					unlockables[num].nocecho = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
 				else if (fastcmp(word, "NOCHECKLIST"))

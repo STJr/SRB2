@@ -97,12 +97,13 @@ typedef struct
 } emblem_t;
 typedef struct
 {
-	char name[20];       ///< Name of the goal (used in the "emblem awarded" cecho)
-	char description[40];///< Description of goal (used in statistics)
-	UINT8 conditionset;  ///< Condition set that awards this emblem.
-	UINT8 sprite;        ///< emblem sprite to use, 0 - 25
-	UINT8 color;         ///< skincolor to use
-	UINT8 collected;     ///< Do you have this emblem?
+	char name[20];          ///< Name of the goal (used in the "emblem awarded" cecho)
+	char description[40];   ///< Description of goal (used in statistics)
+	UINT8 conditionset;     ///< Condition set that awards this emblem.
+	UINT8 showconditionset; ///< Condition set that shows this emblem.
+	UINT8 sprite;           ///< emblem sprite to use, 0 - 25
+	UINT8 color;            ///< skincolor to use
+	UINT8 collected;        ///< Do you have this emblem?
 } extraemblem_t;
 
 // Unlockable information
@@ -112,6 +113,7 @@ typedef struct
 	char objective[64];
 	UINT16 height; // menu height
 	UINT8 conditionset;
+	UINT8 showconditionset;
 	INT16 type;
 	INT16 variable;
 	UINT8 nocecho;
