@@ -2814,13 +2814,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (flip)
 				momz *= -1;
 #define makechunk(angtweak, xmov, ymov) \
-			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);\
-			chunk->eflags |= flip;\
+			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);\
 			P_SetMobjState(chunk, target->info->xdeathstate);\
 			chunk->health = 0;\
 			chunk->angle = angtweak;\
-			chunk->destscale = scale;\
-			P_SetScale(chunk, scale);\
 			P_UnsetThingPosition(chunk);\
 			chunk->flags = MF_NOCLIP;\
 			chunk->x += xmov;\
@@ -2839,14 +2836,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		if (flip)
 			momz *= -1;
 
-		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);
-		chunk->eflags |= flip;
-
+		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);
 		P_SetMobjState(chunk, target->info->deathstate);
 		chunk->health = 0;
 		chunk->angle = ang + ANGLE_180;
-		chunk->destscale = scale;
-		P_SetScale(chunk, scale);
 		P_UnsetThingPosition(chunk);
 		chunk->flags = MF_NOCLIP;
 		chunk->x -= xoffs;
@@ -2889,13 +2882,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			sprflip = P_RandomChance(FRACUNIT/2);
 
 #define makechunk(angtweak, xmov, ymov) \
-			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);\
-			chunk->eflags |= flip;\
+			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);\
 			P_SetMobjState(chunk, target->info->xdeathstate);\
 			chunk->health = 0;\
 			chunk->angle = target->angle;\
-			chunk->destscale = scale;\
-			P_SetScale(chunk, scale);\
 			P_UnsetThingPosition(chunk);\
 			chunk->flags = MF_NOCLIP;\
 			chunk->x += xmov - forwardxoffs;\
@@ -2917,14 +2907,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		sprflip = P_RandomChance(FRACUNIT/2);
 
-		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);
-		chunk->eflags |= flip;
+		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);
 
 		P_SetMobjState(chunk, target->info->deathstate);
 		chunk->health = 0;
 		chunk->angle = target->angle;
-		chunk->destscale = scale;
-		P_SetScale(chunk, scale);
 		P_UnsetThingPosition(chunk);
 		chunk->flags = MF_NOCLIP;
 		chunk->x += forwardxoffs - xoffs;

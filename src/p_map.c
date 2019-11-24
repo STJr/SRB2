@@ -784,12 +784,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->type == MT_SPIKE
 		|| thing->type == MT_WALLSPIKE)
 		{
-			mobjtype_t type = thing->type;
+			mobj_t *iter;
 			if (thing->flags & MF_SOLID)
 				S_StartSound(tmthing, thing->info->deathsound);
-			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
-				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(thing, tmthing, tmthing, 0);
+			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
+				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(iter, tmthing, tmthing, 0);
 		}
 		else
 		{
@@ -823,12 +823,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->type == MT_SPIKE
 		|| thing->type == MT_WALLSPIKE)
 		{
-			mobjtype_t type = thing->type;
+			mobj_t *iter;
 			if (thing->flags & MF_SOLID)
 				S_StartSound(tmthing, thing->info->deathsound);
-			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
-				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(thing, tmthing, tmthing, 0);
+			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
+				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(iter, tmthing, tmthing, 0);
 		}
 		else
 		{
