@@ -4624,6 +4624,13 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				 // Revving
 				else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
 				{
+					if (player->speed > 5*player->mo->scale)
+					{
+						player->pflags &= ~PF_STARTDASH;
+						P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+						S_StartSound(player->mo, sfx_spin);
+						break;
+					}
 					if (player->dashspeed < player->maxdash)
 					{
 #define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
@@ -4639,7 +4646,6 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						G_GhostAddRev();
 					}
 				}
-
 				// If not moving up or down, and travelling faster than a speed of five while not holding
 				// down the spin button and not spinning.
 				// AKA Just go into a spin on the ground, you idiot. ;)
@@ -4791,10 +4797,10 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 	// Rolling normally
 	if (onground && player->pflags & PF_SPINNING && !(player->pflags & PF_STARTDASH)
-		&& player->speed < FixedMul(5*FRACUNIT,player->mo->scale) && canstand)
+		&& player->speed < 5*player->mo->scale && canstand)
 	{
 		if (GETSECSPECIAL(player->mo->subsector->sector->special, 4) == 7 || (player->mo->ceilingz - player->mo->floorz < P_GetPlayerHeight(player)))
-			P_InstaThrust(player->mo, player->mo->angle, FixedMul(10*FRACUNIT, player->mo->scale));
+			P_InstaThrust(player->mo, player->mo->angle, 10*player->mo->scale);
 		else
 		{
 			player->skidtime = 0;
