@@ -11294,7 +11294,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj->radius = FixedMul(skins[p->skin].radius, mobj->scale);
 	mobj->height = P_GetPlayerHeight(p);
 
-	if (!leveltime && ((maptol & TOL_NIGHTS) == TOL_NIGHTS) != (G_IsSpecialStage(gamemap))) // non-special NiGHTS stage or special non-NiGHTS stage
+	if (!leveltime && !p->spectator && ((maptol & TOL_NIGHTS) == TOL_NIGHTS) != (G_IsSpecialStage(gamemap))) // non-special NiGHTS stage or special non-NiGHTS stage
 	{
 		if (maptol & TOL_NIGHTS)
 		{

@@ -2978,7 +2978,7 @@ void G_AddPlayer(INT32 playernum)
 	if (G_GametypeUsesLives() || ((netgame || multiplayer) && gametype == GT_COOP))
 		p->lives = cv_startinglives.value;
 
-	if (countplayers && !notexiting)
+	if ((countplayers && !notexiting) || G_IsSpecialStage(gamemap))
 		P_DoPlayerExit(p);
 }
 

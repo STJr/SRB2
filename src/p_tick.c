@@ -476,7 +476,7 @@ static inline void P_DoSpecialStageStuff(void)
 		// Count up the rings of all the players and see if
 		// they've collected the required amount.
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (playeringame[i] && players[i].nightstime)
 			{
 				tic_t oldnightstime = players[i].nightstime;
 				countspheres += players[i].spheres;
@@ -506,12 +506,11 @@ static inline void P_DoSpecialStageStuff(void)
 			{
 				// Halt all the players
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i])
+					if (playeringame[i] && !players[i].exiting)
 					{
 						players[i].mo->momx = players[i].mo->momy = 0;
 						players[i].exiting = (14*TICRATE)/5 + 1;
 					}
-
 				sstimer = 0;
 				P_GiveEmerald(true);
 				P_RestoreMusic(&players[consoleplayer]);

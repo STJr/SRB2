@@ -291,8 +291,11 @@ static void D_Display(void)
 	switch (gamestate)
 	{
 		case GS_TITLESCREEN:
-			F_TitleScreenDrawer();
-			break;
+			if (!titlemapinaction || !curbghide) {
+				F_TitleScreenDrawer();
+				break;
+			}
+			/* FALLTHRU */
 		case GS_LEVEL:
 			if (!gametic)
 				break;
@@ -363,11 +366,56 @@ static void D_Display(void)
 
 		// clean up border stuff
 		// see if the border needs to be initially drawn
-		if (gamestate == GS_LEVEL)
+		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap)))
 		{
 			// draw the view directly
 
-			D_Render();
+			if (!automapactive && !dedicated && cv_renderview.value)
+			{
+				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
+				{
+					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+					objectsdrawn = 0;
+	#ifdef HWRENDER
+					if (rendermode != render_soft)
+						HWR_RenderPlayerView(0, &players[displayplayer]);
+					else
+	#endif
+					if (rendermode != render_none)
+						R_RenderPlayerView(&players[displayplayer]);
+				}
+
+				// render the second screen
+				if (splitscreen && players[secondarydisplayplayer].mo)
+				{
+	#ifdef HWRENDER
+					if (rendermode != render_soft)
+						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
+					else
+	#endif
+					if (rendermode != render_none)
+					{
+						viewwindowy = vid.height / 2;
+						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
+
+						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+
+						R_RenderPlayerView(&players[secondarydisplayplayer]);
+
+						viewwindowy = 0;
+						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+					}
+				}
+
+				// Image postprocessing effect
+				if (rendermode == render_soft)
+				{
+					if (postimgtype)
+						V_DoPostProcessor(0, postimgtype, postimgparam);
+					if (postimgtype2)
+						V_DoPostProcessor(1, postimgtype2, postimgparam2);
+				}
+			}
 
 			if (lastdraw)
 			{
@@ -380,9 +428,14 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
-			ST_Drawer();
-			F_TextPromptDrawer();
-			HU_Drawer();
+			if (gamestate == GS_LEVEL)
+			{
+				ST_Drawer();
+				F_TextPromptDrawer();
+				HU_Drawer();
+			}
+			else
+				F_TitleScreenDrawer();
 		}
 	}
 
@@ -491,56 +544,6 @@ static void D_Display(void)
 		}
 
 		I_FinishUpdate(); // page flip or blit buffer
-	}
-}
-
-void D_Render(void)
-{
-	if (!automapactive && !dedicated && cv_renderview.value)
-	{
-		if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
-		{
-			topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-			objectsdrawn = 0;
-#ifdef HWRENDER
-			if (rendermode != render_soft)
-				HWR_RenderPlayerView(0, &players[displayplayer]);
-			else
-#endif
-			if (rendermode != render_none)
-				R_RenderPlayerView(&players[displayplayer]);
-		}
-
-		// render the second screen
-		if (splitscreen && players[secondarydisplayplayer].mo)
-		{
-#ifdef HWRENDER
-			if (rendermode != render_soft)
-				HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
-			else
-#endif
-			if (rendermode != render_none)
-			{
-				viewwindowy = vid.height / 2;
-				M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
-
-				topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-
-				R_RenderPlayerView(&players[secondarydisplayplayer]);
-
-				viewwindowy = 0;
-				M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
-			}
-		}
-
-		// Image postprocessing effect
-		if (rendermode == render_soft)
-		{
-			if (postimgtype)
-				V_DoPostProcessor(0, postimgtype, postimgparam);
-			if (postimgtype2)
-				V_DoPostProcessor(1, postimgtype2, postimgparam2);
-		}
 	}
 }
 
