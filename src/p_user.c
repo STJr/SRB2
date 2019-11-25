@@ -1223,6 +1223,7 @@ void P_GivePlayerSpheres(player_t *player, INT32 num_spheres)
 //
 void P_GivePlayerLives(player_t *player, INT32 numlives)
 {
+	UINT8 prevlives = player->lives;
 	if (!player)
 		return;
 
@@ -1239,10 +1240,9 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 
 		if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0)
 		{
-			UINT8 prevlives = player->lives;
 			P_GivePlayerRings(player, 100*numlives);
 			if (player->lives - prevlives >= numlives)
-				return;
+				goto docooprespawn;
 
 			numlives = (numlives + prevlives - player->lives);
 		}
@@ -1256,6 +1256,15 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 		player->lives = 99;
 	else if (player->lives < 1)
 		player->lives = 1;
+
+docooprespawn:
+	if (cv_coopstarposts.value)
+		return;
+	if (prevlives > 0)
+		return;
+	if (!player->spectator)
+		return;
+	P_SpectatorJoinGame(player);
 }
 
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound)
