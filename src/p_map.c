@@ -1719,8 +1719,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM) && (thing->player))
-		; // springs and gas jets should never be able to step up onto a player
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
+		; // springs, gas jets and springs should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
@@ -3758,6 +3758,33 @@ void P_SlideMove(mobj_t *mo)
 			v2.x = tmhitthing->x + cosradius;
 			v2.y = tmhitthing->y + sinradius;
 
+			// Can we box collision our way into smooth movement..?
+			if (sinradius && mo->y + mo->radius <= min(v1.y, v2.y))
+			{
+				mo->momy = 0;
+				P_TryMove(mo, mo->x + mo->momx, min(v1.y, v2.y) - mo->radius, true);
+				return;
+			}
+			else if (sinradius && mo->y - mo->radius >= max(v1.y, v2.y))
+			{
+				mo->momy = 0;
+				P_TryMove(mo, mo->x + mo->momx, max(v1.y, v2.y) + mo->radius, true);
+				return;
+			}
+			else if (cosradius && mo->x + mo->radius <= min(v1.x, v2.x))
+			{
+				mo->momx = 0;
+				P_TryMove(mo, min(v1.x, v2.x) - mo->radius, mo->y + mo->momy, true);
+				return;
+			}
+			else if (cosradius && mo->x - mo->radius >= max(v1.x, v2.x))
+			{
+				mo->momx = 0;
+				P_TryMove(mo, max(v1.x, v2.x) + mo->radius, mo->y + mo->momy, true);
+				return;
+			}
+
+			// nope, gotta fuck around with a fake linedef!
 			junk.v1 = &v1;
 			junk.v2 = &v2;
 			junk.dx = 2*cosradius; // v2.x - v1.x;
