@@ -6688,7 +6688,7 @@ static void M_DrawChecklist(void)
 		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS)
 			continue;
 
-		V_DrawString(currentMenu->x, y, ((unlockables[i].unlocked) ? V_GREENMAP : V_TRANSLUCENT), ((unlockables[i].unlocked || !unlockables[i].nochecklist) ? unlockables[i].name : M_CreateSecretMenuOption(unlockables[i].name)));
+		V_DrawString(currentMenu->x, y, ((unlockables[i].unlocked) ? V_GREENMAP : V_TRANSLUCENT)|V_ALLOWLOWERCASE, ((unlockables[i].unlocked || !unlockables[i].nochecklist) ? unlockables[i].name : M_CreateSecretMenuOption(unlockables[i].name)));
 
 		for (j = i+1; j < MAXUNLOCKABLES; j++)
 		{
@@ -8855,9 +8855,9 @@ static void M_DrawStatsMaps(int location)
 		M_DrawMapEmblems(mnum+1, 292, y);
 
 		if (mapheaderinfo[mnum]->actnum != 0)
-			V_DrawString(20, y, V_YELLOWMAP, va("%s %d", mapheaderinfo[mnum]->lvlttl, mapheaderinfo[mnum]->actnum));
+			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, va("%s %d", mapheaderinfo[mnum]->lvlttl, mapheaderinfo[mnum]->actnum));
 		else
-			V_DrawString(20, y, V_YELLOWMAP, mapheaderinfo[mnum]->lvlttl);
+			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, mapheaderinfo[mnum]->lvlttl);
 
 		y += 8;
 
@@ -8901,7 +8901,7 @@ static void M_DrawStatsMaps(int location)
 			else
 				V_DrawSmallScaledPatch(292, y, 0, W_CachePatchName("NEEDIT", PU_CACHE));
 
-			V_DrawString(20, y, V_YELLOWMAP, va("%s", exemblem->description));
+			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, va("%s", exemblem->description));
 		}
 
 		y += 8;
