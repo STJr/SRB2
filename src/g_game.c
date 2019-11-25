@@ -2997,7 +2997,7 @@ boolean G_EnoughPlayersFinished(void)
 			continue;
 
 		total++;
-		if (players[i].pflags & PF_FINISHED)
+		if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
 			exiting++;
 	}
 

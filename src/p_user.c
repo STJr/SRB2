@@ -11470,7 +11470,7 @@ void P_PlayerThink(player_t *player)
 
 	if (player->pflags & PF_FINISHED)
 	{
-		if (cv_exitmove.value && !G_EnoughPlayersFinished())
+		if ((gametype == GT_COOP && cv_exitmove.value) && !G_EnoughPlayersFinished())
 			player->exiting = 0;
 		else
 			P_DoPlayerExit(player);
