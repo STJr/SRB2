@@ -1076,7 +1076,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 //
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor)
 {
-	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes >= 4)
+	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_CONTINUE)
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CONTINUE];

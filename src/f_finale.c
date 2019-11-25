@@ -1683,7 +1683,7 @@ void F_StartEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= (XTRA_ENDING+2)+1)
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
