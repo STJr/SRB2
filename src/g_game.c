@@ -1019,11 +1019,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	movebkey = PLAYER1INPUTDOWN(gc_backward);
 
 	mouseaiming = (PLAYER1INPUTDOWN(gc_mouseaiming)) ^
-		(cv_chasecam.value ? cv_chasefreelook.value : cv_alwaysfreelook.value);
+		((cv_chasecam.value && !player->spectator) ? cv_chasefreelook.value : cv_alwaysfreelook.value);
 	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;
 
-	thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
+	thisjoyaiming = (cv_chasecam.value && !player->spectator) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
 
 	// Reset the vertical look if we're no longer joyaiming
 	if (!thisjoyaiming && joyaiming)
@@ -1348,11 +1348,11 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	movebkey = PLAYER2INPUTDOWN(gc_backward);
 
 	mouseaiming = (PLAYER2INPUTDOWN(gc_mouseaiming)) ^
-		(cv_chasecam2.value ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
+		((cv_chasecam2.value && !player->spectator) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
 	analogjoystickmove = cv_usejoystick2.value && !Joystick2.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick2.value && Joystick2.bGamepadStyle;
 
-	thisjoyaiming = (cv_chasecam2.value) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
+	thisjoyaiming = (cv_chasecam2.value && !player->spectator) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
 
 	// Reset the vertical look if we're no longer joyaiming
 	if (!thisjoyaiming && joyaiming)
