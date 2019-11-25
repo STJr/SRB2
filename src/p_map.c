@@ -3758,6 +3758,33 @@ void P_SlideMove(mobj_t *mo)
 			v2.x = tmhitthing->x + cosradius;
 			v2.y = tmhitthing->y + sinradius;
 
+			// Can we box collision our way into smooth movement..?
+			if (mo->y + mo->radius <= min(v1.y, v2.y))
+			{
+				mo->momy = 0;
+				P_TryMove(mo, mo->x + mo->momx, min(v1.y, v2.y) - mo->radius, true);
+				return;
+			}
+			else if (mo->y - mo->radius >= max(v1.y, v2.y))
+			{
+				mo->momy = 0;
+				P_TryMove(mo, mo->x + mo->momx, max(v1.y, v2.y) + mo->radius, true);
+				return;
+			}
+			else if (mo->x + mo->radius <= min(v1.x, v2.x))
+			{
+				mo->momx = 0;
+				P_TryMove(mo, min(v1.x, v2.x) - mo->radius, mo->y + mo->momy, true);
+				return;
+			}
+			else if (mo->x - mo->radius >= max(v1.x, v2.x))
+			{
+				mo->momx = 0;
+				P_TryMove(mo, max(v1.x, v2.x) + mo->radius, mo->y + mo->momy, true);
+				return;
+			}
+
+			// nope, gotta fuck around with a fake linedef!
 			junk.v1 = &v1;
 			junk.v2 = &v2;
 			junk.dx = 2*cosradius; // v2.x - v1.x;
