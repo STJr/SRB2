@@ -5550,7 +5550,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				else
 					potentialmomz = ((player->speed < 10*player->mo->scale)
 					? (player->speed - 10*player->mo->scale)/5
-					: -1);
+					: -1); // Should be 0, but made negative to ensure P_PlayerHitFloor runs upon touching ground
 				if (P_MobjFlip(player->mo)*player->mo->momz < potentialmomz)
 					player->mo->momz = P_MobjFlip(player->mo)*potentialmomz;
 				player->pflags &= ~PF_SPINNING;
