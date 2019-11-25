@@ -343,13 +343,15 @@ void P_GiveEmerald(boolean spawnObj)
 				continue;
 
 			emmo = P_SpawnMobjFromMobj(players[i].mo, 0, 0, players[i].mo->height, MT_GOTEMERALD);
+			if (!emmo)
+				continue;
 			P_SetTarget(&emmo->target, players[i].mo);
 			P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
 			P_SetTarget(&players[i].mo->tracer, emmo);
 
 			if (pnum == 255)
 			{
-				i = pnum;
+				pnum = i;
 				continue;
 			}
 
