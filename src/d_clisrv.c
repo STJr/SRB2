@@ -1633,7 +1633,7 @@ static void CL_LoadReceivedSavegame(void)
 		{
 			CONS_Printf(": %s", mapheaderinfo[gamemap-1]->lvlttl);
 			if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-				CONS_Printf(M_GetText(" ZONE"));
+				CONS_Printf(M_GetText(" Zone"));
 			if (actnum > 0)
 				CONS_Printf(" %2d", actnum);
 		}
