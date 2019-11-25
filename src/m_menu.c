@@ -8340,10 +8340,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	char *and;
 	(void)choice;
 
-	if (!(mapheaderinfo[startmap-1]
-			&& (mapheaderinfo[startmap-1]->forcecharacter[0] != '\0'
-			|| (mapheaderinfo[startmap-1]->typeoflevel & TOL_NIGHTS)) // remove this later when everyone gets their own nights sprites, maybe
-		))
+	if (!mapheaderinfo[startmap-1] || mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
 	{
 		for (i = 0; i < 32; i++) // Handle charsels, availability, and unlocks.
 		{
@@ -8406,16 +8403,15 @@ static void M_SetupChoosePlayer(INT32 choice)
 		}
 	}
 
-	if (firstvalid != 255)
-	{ // One last bit of order we can't do in the iteration above.
-		description[firstvalid].prev = lastvalid;
-		description[lastvalid].next = firstvalid;
-	}
-	else // We're being forced into a specific character, so might as well just skip it.
+	if (firstvalid == 255) // We're being forced into a specific character, so might as well just skip it.
 	{
 		M_ChoosePlayer(-1);
 		return;
 	}
+
+	// One last bit of order we can't do in the iteration above.
+	description[firstvalid].prev = lastvalid;
+	description[lastvalid].next = firstvalid;
 
 	M_ChangeMenuMusic("_chsel", true);
 
