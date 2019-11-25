@@ -2721,6 +2721,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (line->tag != 0) // Do special stuff only if a non-zero linedef tag is set
 				{
+					// Play sounds from tagged sectors' origins.
 					if (line->flags & ML_EFFECT5) // Repeat Midtexture
 					{
 						// Additionally play the sound from tagged sectors' soundorgs
@@ -2732,31 +2733,45 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							S_StartSound(&sec->soundorg, sfxnum);
 						}
 					}
-					else if (mo) // A mobj must have triggered the executor
+
+					// Play the sound without origin for anyone, as long as they're inside tagged areas.
+					else
 					{
-						// Only trigger if mobj is touching the tag
+						UINT i = 0;
+						mobj_t* camobj = players[displayplayer].mo;
 						ffloor_t *rover;
 						boolean foundit = false;
 
-						for(rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+						for (i = 0; i < 2; camobj = players[secondarydisplayplayer].mo, i++)
 						{
-							if (rover->master->frontsector->tag != line->tag)
+							if (!camobj)
 								continue;
 
-							if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
-								continue;
+							if (foundit || (camobj->subsector->sector->tag == line->tag))
+							{
+								foundit = true;
+								break;
+							}
 
-							if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
-								continue;
+							// Only trigger if mobj is touching the tag
+							for(rover = camobj->subsector->sector->ffloors; rover; rover = rover->next)
+							{
+								if (rover->master->frontsector->tag != line->tag)
+									continue;
 
-							foundit = true;
+								if (camobj->z > P_GetSpecialTopZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+									continue;
+
+								if (camobj->z + camobj->height < P_GetSpecialBottomZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+									continue;
+
+								foundit = true;
+								break;
+							}
 						}
 
-						if (mo->subsector->sector->tag == line->tag)
-							foundit = true;
-
-						if (!foundit)
-							return;
+						if (foundit)
+							S_StartSound(NULL, sfxnum);
 					}
 				}
 				else
