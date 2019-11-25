@@ -9654,7 +9654,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (player->exiting)
 	{
-		if (mo->target && mo->target->type == MT_SIGN && mo->target->spawnpoint)
+		if (mo->target && mo->target->type == MT_SIGN && mo->target->spawnpoint
+		&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value))
 			sign = mo->target;
 		else if ((player->powers[pw_carry] == CR_NIGHTSMODE)
 		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
