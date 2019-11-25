@@ -8379,7 +8379,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 
 					if (!(description[i].picname[0]))
 					{
-						if (skins[skinnum].sprites[SPR2_XTRA].numframes >= XTRA_CHARSEL+1)
+						if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
 						{
 							spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 							spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
@@ -9109,7 +9109,7 @@ void M_DrawTimeAttackMenu(void)
 
 	// Character face!
 	{
-		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes >= XTRA_CHARSEL+1)
+		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
 		{
 			spritedef_t *sprdef = &skins[cv_chooseskin.value-1].sprites[SPR2_XTRA];
 			spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
