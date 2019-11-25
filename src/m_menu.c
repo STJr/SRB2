@@ -9388,6 +9388,7 @@ void M_DrawNightsAttackMenu(void)
 	{
 		emblem_t *em;
 		INT32 yHeight;
+		INT32 xpos;
 		patch_t *PictureOfLevel;
 		lumpnum_t lumpnum;
 		char beststr[40];
@@ -9447,17 +9448,23 @@ void M_DrawNightsAttackMenu(void)
 			{
 				switch (em->type)
 				{
-					case ET_NGRADE: yHeight = 48; break;
-					case ET_NTIME:  yHeight = 68; break;
+					case ET_NGRADE:
+						xpos = 104+38;
+						yHeight = 48;
+						break;
+					case ET_NTIME:
+						xpos = 104+76;
+						yHeight = 68;
+						break;
 					default:
 						goto skipThisOne;
 				}
 
 				if (em->collected)
-					V_DrawSmallMappedPatch(104+38, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em, false), PU_CACHE),
+					V_DrawSmallMappedPatch(xpos, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em, false), PU_CACHE),
 																 R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 				else
-					V_DrawSmallScaledPatch(104+38, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_CACHE));
+					V_DrawSmallScaledPatch(xpos, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_CACHE));
 
 				skipThisOne:
 				em = M_GetLevelEmblems(-1);
