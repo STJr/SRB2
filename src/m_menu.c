@@ -8334,8 +8334,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 {
 	INT32 skinnum;
 	UINT8 i;
-	UINT8 firstvalid = 255;
-	UINT8 lastvalid = 0;
+	UINT8 firstvalid = 255, lastvalid = 255;
 	boolean allowed = false;
 	char *and;
 	(void)choice;
@@ -8405,9 +8404,9 @@ static void M_SetupChoosePlayer(INT32 choice)
 		}
 	}
 
-	if (firstvalid == 255) // We're being forced into a specific character, so might as well just skip it.
+	if (firstvalid == lastvalid) // We're being forced into a specific character, so might as well just skip it.
 	{
-		M_ChoosePlayer(-1);
+		M_ChoosePlayer(firstvalid);
 		return;
 	}
 
@@ -8741,7 +8740,7 @@ static void M_ChoosePlayer(INT32 choice)
 	UINT8 skinnum;
 
 	// skip this if forcecharacter or no characters available
-	if (choice == -1)
+	if (choice == 255)
 	{
 		skinnum = botskin = 0;
 		botingame = false;
