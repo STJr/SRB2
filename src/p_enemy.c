@@ -5672,10 +5672,10 @@ void A_MinusPopup(mobj_t *actor)
 	S_StartSound(actor, sfx_s3k82);
 	for (i = 1; i <= num; i++)
 	{
-		mobj_t *rock = P_SpawnMobj(actor->x, actor->y, actor->z + actor->height/4, MT_ROCKCRUMBLE1);
+		mobj_t *rock = P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_ROCKCRUMBLE1);
 		P_Thrust(rock, ani*i, FRACUNIT);
-		rock->momz = 3*FRACUNIT;
-		P_SetScale(rock, FRACUNIT/3);
+		P_SetObjectMomZ(rock, 3*FRACUNIT, false);
+		P_SetScale(rock, rock->scale/3);
 	}
 	P_RadiusAttack(actor, actor, 2*actor->radius, 0);
 	if (actor->tracer)
@@ -5689,11 +5689,12 @@ void A_MinusPopup(mobj_t *actor)
 // Description: If the minus hits the floor, dig back into the ground.
 //
 // var1 = State to switch to (if 0, use seestate).
-// var2 = unused
+// var2 = If not 0, spawn debris when hitting the floor.
 //
 void A_MinusCheck(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusCheck", actor))
@@ -5704,6 +5705,18 @@ void A_MinusCheck(mobj_t *actor)
 	{
 		P_SetMobjState(actor, locvar1 ? (statenum_t)locvar1 : actor->info->seestate);
 		actor->flags = actor->info->flags;
+		if (locvar2)
+		{
+			INT32 i, num = 6;
+			angle_t ani = FixedAngle(FRACUNIT*360/num);
+			for (i = 1; i <= num; i++)
+			{
+				mobj_t *rock = P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_ROCKCRUMBLE1);
+				P_Thrust(rock, ani*i, FRACUNIT);
+				P_SetObjectMomZ(rock, 3*FRACUNIT, false);
+				P_SetScale(rock, rock->scale/3);
+			}
+		}
 	}
 }
 
