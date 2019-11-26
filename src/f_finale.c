@@ -3550,7 +3550,7 @@ void F_ContinueDrawer(void)
 	if (timetonext >= (11*TICRATE)+10)
 		return;
 
-	V_DrawLevelTitle(x - (V_LevelNameWidth("CONTINUE")>>1), 16, 0, "CONTINUE");
+	V_DrawLevelTitle(x - (V_LevelNameWidth("Continue?")>>1), 16, 0, "Continue?");
 
 	// Two stars...
 	patch = W_CachePatchName("CONTSTAR", PU_CACHE);
