@@ -9501,7 +9501,6 @@ static void P_DeathThink(player_t *player)
 	}
 	else if ((netgame || multiplayer) && player->deadtimer >= 8*TICRATE)
 	{
-
 		INT32 i, deadtimercheck = INT32_MAX;
 
 		// In a net/multiplayer game, and out of lives
@@ -9666,7 +9665,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	fixed_t f1, f2;
 
 	// We probably shouldn't move the camera if there is no player or player mobj somehow
-	if (!player || !player->mo)
+	if (!player || !player->mo || player->playerstate == PST_REBORN)
 		return true;
 
 	mo = player->mo;

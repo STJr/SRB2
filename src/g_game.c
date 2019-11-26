@@ -3099,7 +3099,7 @@ boolean G_GametypeUsesLives(void)
 	 // Coop, Competitive
 	if ((gametype == GT_COOP || gametype == GT_COMPETITION)
 	 && !(modeattacking || metalrecording) // No lives in Time Attack
-	 //&& !G_IsSpecialStage(gamemap)
+	 && !G_IsSpecialStage(gamemap)
 	 && !(maptol & TOL_NIGHTS)) // No lives in NiGHTS
 		return true;
 	return false;
