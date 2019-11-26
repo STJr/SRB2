@@ -148,13 +148,19 @@ void P_ResetStarposts(void)
 //
 boolean P_CanPickupItem(player_t *player, boolean weapon)
 {
-	if (player->bot && weapon)
+soniccheck:
+	if (!player->mo || player->mo->health <= 0)
 		return false;
+
+	if (player->bot)
+	{
+		if (weapon || players[consoleplayer].bot)
+			return false;
+		player = &players[consoleplayer];
+		goto soniccheck;
+	}
 
 	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] < UINT16_MAX)
-		return false;
-
-	if (player->mo && player->mo->health <= 0)
 		return false;
 
 	return true;
