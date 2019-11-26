@@ -135,7 +135,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 	// ********
 	// FLY MODE
 	// spinmode check
-	if (spinmode)
+	if (spinmode || player->exiting)
 		thinkfly = false;
 	else
 	{
