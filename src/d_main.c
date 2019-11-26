@@ -667,6 +667,7 @@ void D_SRB2Loop(void)
 
 		// consoleplayer -> displayplayer (hear sounds from viewpoint)
 		S_UpdateSounds(); // move positional sounds
+		S_UpdateClosedCaptions();
 
 		// check for media change, loop music..
 		I_UpdateCD();
