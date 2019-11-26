@@ -14611,6 +14611,9 @@ void A_RolloutRock(mobj_t *actor)
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
 
+	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		actor->flags |= MF_PUSHABLE;
+
 	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
 		actor->fuse = 0;
 	else if (!actor->fuse && actor->movecount == 1) // otherwise if rock has moved, set its fuse
