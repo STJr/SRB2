@@ -148,13 +148,17 @@ void P_ResetStarposts(void)
 //
 boolean P_CanPickupItem(player_t *player, boolean weapon)
 {
-	if (player->bot && weapon)
+	if (!player->mo || player->mo->health <= 0)
 		return false;
+
+	if (player->bot)
+	{
+		if (weapon)
+			return false;
+		return P_CanPickupItem(&players[consoleplayer], true); // weapon is true to prevent infinite recursion if p1 is bot - doesn't occur in vanilla, but may be relevant for mods
+	}
 
 	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] < UINT16_MAX)
-		return false;
-
-	if (player->mo && player->mo->health <= 0)
 		return false;
 
 	return true;
