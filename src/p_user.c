@@ -5962,6 +5962,8 @@ static void P_3dMovement(player_t *player)
 	// When sliding, don't allow forward/back
 	if (player->pflags & PF_SLIDING)
 		cmd->forwardmove = 0;
+	else if (onground && player->mo->state == states+S_PLAY_PAIN)
+		P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 
 	player->aiming = cmd->aiming<<FRACBITS;
 
