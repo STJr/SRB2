@@ -355,7 +355,7 @@ static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NUL
 consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t coopstarposts_cons_t[] = {{0, "Per-player"}, {1, "Shared"}, {2, "Teamwork"}, {0, NULL}};
-consvar_t cv_coopstarposts = {"coopstarposts", "Teamwork", CV_NETVAR|CV_CALL|CV_CHEAT, coopstarposts_cons_t, CoopStarposts_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_coopstarposts = {"coopstarposts", "Per-player", CV_NETVAR|CV_CALL, coopstarposts_cons_t, CoopStarposts_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Infinite"}, {1, "Per-player"}, {2, "Avoid Game Over"}, {3, "Single pool"}, {0, NULL}};
 consvar_t cv_cooplives = {"cooplives", "Avoid Game Over", CV_NETVAR|CV_CALL|CV_CHEAT, cooplives_cons_t, CoopLives_OnChange, 0, NULL, NULL, 0, 0, NULL};
