@@ -9759,7 +9759,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camorbit = (!stricmp(cv_cam_orbit.defaultvalue, "off")) ? false : true;
 		camrotate = atoi(cv_cam_rotate.defaultvalue);
 		camdist = FixedMul((INT32)(atof(cv_cam_dist.defaultvalue) * FRACUNIT), mo->scale);
-		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), mo->scale);
 	}
 	else if (thiscam == &camera)
 	{
