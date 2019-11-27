@@ -9768,7 +9768,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camorbit = cv_cam_orbit.value;
 		camrotate = cv_cam_rotate.value;
 		camdist = FixedMul(cv_cam_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam_height.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam_height.value, mo->scale);
 	}
 	else // Camera 2
 	{
@@ -9777,8 +9777,11 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camorbit = cv_cam2_orbit.value;
 		camrotate = cv_cam2_rotate.value;
 		camdist = FixedMul(cv_cam2_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam2_height.value, mo->scale);
 	}
+
+	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
+		camheight = FixedMul(camheight, player->camerascale);
 
 #ifdef REDSANALOG
 	if (P_AnalogMove(player) && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
@@ -9890,9 +9893,10 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			dist <<= 1;
 	}
 
+	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
+		dist = FixedMul(dist, player->camerascale);
 
-
-	checkdist = (dist = FixedMul(dist, player->camerascale));
+	checkdist = dist;
 
 	if (checkdist < 128*FRACUNIT)
 		checkdist = 128*FRACUNIT;
