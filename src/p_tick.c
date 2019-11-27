@@ -476,10 +476,13 @@ static inline void P_DoSpecialStageStuff(void)
 		// Count up the rings of all the players and see if
 		// they've collected the required amount.
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].nightstime)
+			if (playeringame[i])
 			{
 				tic_t oldnightstime = players[i].nightstime;
 				countspheres += players[i].spheres;
+
+				if (!oldnightstime)
+					continue;
 
 				// If in water, deplete timer 6x as fast.
 				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & SH_PROTECTWATER))
