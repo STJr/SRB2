@@ -9665,10 +9665,16 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	fixed_t f1, f2;
 
 	// We probably shouldn't move the camera if there is no player or player mobj somehow
-	if (!player || !player->mo || player->playerstate == PST_REBORN)
+	if (!player || !player->mo)
 		return true;
 
 	mo = player->mo;
+
+	if (player->playerstate == PST_REBORN)
+	{
+		P_CalcChasePostImg(player, thiscam);
+		return true;
+	}
 
 	if (player->exiting)
 	{
@@ -9678,7 +9684,10 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		else if ((player->powers[pw_carry] == CR_NIGHTSMODE)
 		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6]))
+		{
+			P_CalcChasePostImg(player, thiscam);
 			return true;
+		}
 	}
 
 	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
@@ -10419,6 +10428,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 	return false;
 }
 
+// the below is first person only, if you're curious. check out P_CalcChasePostImg in p_mobj.c for chasecam
 static void P_CalcPostImg(player_t *player)
 {
 	sector_t *sector = player->mo->subsector->sector;
