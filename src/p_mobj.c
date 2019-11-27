@@ -255,7 +255,6 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_WALK:
 	case S_PLAY_SKID:
 	case S_PLAY_FLOAT:
-	case S_PLAY_NIGHTS_FLOAT:
 		player->panim = PA_WALK;
 		break;
 	case S_PLAY_RUN:
@@ -281,6 +280,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_SPRING;
 		break;
 	case S_PLAY_FALL:
+	case S_PLAY_NIGHTS_FLOAT:
 		player->panim = PA_FALL;
 		break;
 	case S_PLAY_FLY:
