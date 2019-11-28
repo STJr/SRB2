@@ -2737,7 +2737,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					// Play the sound without origin for anyone, as long as they're inside tagged areas.
 					else
 					{
-						UINT i = 0;
+						UINT8 i = 0;
 						mobj_t* camobj = players[displayplayer].mo;
 						ffloor_t *rover;
 						boolean foundit = false;
