@@ -3724,17 +3724,10 @@ void P_DestroyRobots(void)
 	}
 }
 
-// P_CameraThinker
-//
-// Process the mobj-ish required functions of the camera
-boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled)
+// the below is chasecam only, if you're curious. check out P_CalcPostImg in p_user.c for first person
+void P_CalcChasePostImg(player_t *player, camera_t *thiscam)
 {
-	boolean itsatwodlevel = false;
 	postimg_t postimg = postimg_none;
-	if (twodlevel
-		|| (thiscam == &camera && players[displayplayer].mo && (players[displayplayer].mo->flags2 & MF2_TWOD))
-		|| (thiscam == &camera2 && players[secondarydisplayplayer].mo && (players[secondarydisplayplayer].mo->flags2 & MF2_TWOD)))
-		itsatwodlevel = true;
 
 	if (player->pflags & PF_FLIPCAM && !(player->powers[pw_carry] == CR_NIGHTSMODE) && player->mo->eflags & MFE_VERTICALFLIP)
 		postimg = postimg_flip;
@@ -3762,13 +3755,27 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_heat;
 	}
 
-	if (postimg != postimg_none)
-	{
-		if (splitscreen && player == &players[secondarydisplayplayer])
-			postimgtype2 = postimg;
-		else
-			postimgtype = postimg;
-	}
+	if (postimg == postimg_none)
+		return;
+
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		postimgtype2 = postimg;
+	else
+		postimgtype = postimg;
+}
+
+// P_CameraThinker
+//
+// Process the mobj-ish required functions of the camera
+boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled)
+{
+	boolean itsatwodlevel = false;
+	if (twodlevel
+		|| (thiscam == &camera && players[displayplayer].mo && (players[displayplayer].mo->flags2 & MF2_TWOD))
+		|| (thiscam == &camera2 && players[secondarydisplayplayer].mo && (players[secondarydisplayplayer].mo->flags2 & MF2_TWOD)))
+		itsatwodlevel = true;
+
+	P_CalcChasePostImg(player, thiscam);
 
 	if (thiscam->momx || thiscam->momy)
 	{

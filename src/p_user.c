@@ -9669,10 +9669,16 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	fixed_t f1, f2;
 
 	// We probably shouldn't move the camera if there is no player or player mobj somehow
-	if (!player || !player->mo || player->playerstate == PST_REBORN)
+	if (!player || !player->mo)
 		return true;
 
 	mo = player->mo;
+
+	if (player->playerstate == PST_REBORN)
+	{
+		P_CalcChasePostImg(player, thiscam);
+		return true;
+	}
 
 	if (player->exiting)
 	{
@@ -9682,7 +9688,10 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		else if ((player->powers[pw_carry] == CR_NIGHTSMODE)
 		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6]))
+		{
+			P_CalcChasePostImg(player, thiscam);
 			return true;
+		}
 	}
 
 	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
@@ -9763,7 +9772,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camorbit = (!stricmp(cv_cam_orbit.defaultvalue, "off")) ? false : true;
 		camrotate = atoi(cv_cam_rotate.defaultvalue);
 		camdist = FixedMul((INT32)(atof(cv_cam_dist.defaultvalue) * FRACUNIT), mo->scale);
-		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), mo->scale);
 	}
 	else if (thiscam == &camera)
 	{
@@ -9772,7 +9781,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camorbit = cv_cam_orbit.value;
 		camrotate = cv_cam_rotate.value;
 		camdist = FixedMul(cv_cam_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam_height.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam_height.value, mo->scale);
 	}
 	else // Camera 2
 	{
@@ -9781,8 +9790,11 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camorbit = cv_cam2_orbit.value;
 		camrotate = cv_cam2_rotate.value;
 		camdist = FixedMul(cv_cam2_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam2_height.value, mo->scale);
 	}
+
+	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
+		camheight = FixedMul(camheight, player->camerascale);
 
 #ifdef REDSANALOG
 	if (P_AnalogMove(player) && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
@@ -9894,9 +9906,10 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			dist <<= 1;
 	}
 
+	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
+		dist = FixedMul(dist, player->camerascale);
 
-
-	checkdist = (dist = FixedMul(dist, player->camerascale));
+	checkdist = dist;
 
 	if (checkdist < 128*FRACUNIT)
 		checkdist = 128*FRACUNIT;
@@ -10419,6 +10432,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 	return false;
 }
 
+// the below is first person only, if you're curious. check out P_CalcChasePostImg in p_mobj.c for chasecam
 static void P_CalcPostImg(player_t *player)
 {
 	sector_t *sector = player->mo->subsector->sector;
