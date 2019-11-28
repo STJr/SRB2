@@ -1625,6 +1625,7 @@ void F_GameEvaluationTicker(void)
 // ==========
 
 #define INFLECTIONPOINT (6*TICRATE)
+#define STOPPINGPOINT (14*TICRATE)
 #define SPARKLLOOPTIME 15 // must be odd
 
 void F_StartEnding(void)
@@ -1716,7 +1717,7 @@ void F_StartEnding(void)
 
 void F_EndingTicker(void)
 {
-	if (++finalecount > INFLECTIONPOINT*2)
+	if (++finalecount > STOPPINGPOINT)
 	{
 		F_StartCredits();
 		wipetypepre = INT16_MAX;
@@ -2112,26 +2113,26 @@ void F_EndingDrawer(void)
 
 		if (finalecount < 10)
 			trans = (10-finalecount)/2;
-		else if (finalecount > (2*INFLECTIONPOINT) - 20)
+		else if (finalecount > STOPPINGPOINT - 20)
 		{
-			trans = 10 + (finalecount/2) - INFLECTIONPOINT;
+			trans = 10 + (finalecount - STOPPINGPOINT)/2;
 			donttouch = true;
 		}
 
-		if (trans != 10)
+		if (trans < 10)
 		{
 			//colset(linkmap,  164, 165, 169); -- the ideal purple colour to represent a clicked in-game link, but not worth it just for a soundtest-controlled secret
 			V_DrawCenteredString(BASEVIDWIDTH/2, 8, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), str);
 			V_DrawCharacter(32, BASEVIDHEIGHT-16, '>'|(trans<<V_ALPHASHIFT), false);
-			V_DrawString(40, ((finalecount == (2*INFLECTIONPOINT)-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= (2*INFLECTIONPOINT)-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
+			V_DrawString(40, ((finalecount == STOPPINGPOINT-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= STOPPINGPOINT-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
 		}
 
-		if (finalecount > (2*INFLECTIONPOINT)-(20+(2*TICRATE)))
+		if (finalecount > STOPPINGPOINT-(20+(2*TICRATE)))
 		{
 			INT32 trans2 = abs((5*FINECOSINE((FixedAngle((finalecount*5)<<FRACBITS)>>ANGLETOFINESHIFT & FINEMASK)))>>FRACBITS)+2;
 			if (!donttouch)
 			{
-				trans = 10 + ((2*INFLECTIONPOINT)-(20+(2*TICRATE))) - finalecount;
+				trans = 10 + (STOPPINGPOINT-(20+(2*TICRATE))) - finalecount;
 				if (trans > trans2)
 					trans2 = trans;
 			}
