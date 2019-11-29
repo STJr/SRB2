@@ -696,9 +696,9 @@ static void ST_drawTime(void)
 		// Counting down the hidetime?
 		if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (stplyr->realtime <= (hidetime*TICRATE)))
 		{
-			tics = (hidetime*TICRATE - stplyr->realtime);
-			if (tics < 3*TICRATE)
-				ST_drawRaceNum(tics);
+			tics = (hidetime*TICRATE + (TICRATE-1) - stplyr->realtime);
+			if ((tics+1-TICRATE) < 3*TICRATE)
+				ST_drawRaceNum(tics+1-TICRATE);
 			downwards = true;
 		}
 		else
@@ -713,8 +713,8 @@ static void ST_drawTime(void)
 				if (timelimitintics >= stplyr->realtime)
 				{
 					tics = (timelimitintics + (TICRATE-1) - stplyr->realtime);
-					if (tics < 3*TICRATE)
-						ST_drawRaceNum(tics);
+					if ((tics+1-TICRATE) && (tics+1-TICRATE) < 3*TICRATE)
+						ST_drawRaceNum(tics+1-TICRATE);
 				}
 				else // Overtime!
 					tics = 0;
