@@ -312,6 +312,9 @@ void A_SpawnPterabytes(mobj_t *actor);
 void A_PterabyteHover(mobj_t *actor);
 void A_RolloutSpawn(mobj_t *actor);
 void A_RolloutRock(mobj_t *actor);
+void A_DragonbomberSpawn(mobj_t *actor);
+void A_DragonWing(mobj_t *actor);
+void A_DragonSegment(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -2473,12 +2476,8 @@ void A_VultureBlast(mobj_t *actor)
 void A_VultureFly(mobj_t *actor)
 {
 	fixed_t speedmax = 18*FRACUNIT;
-	angle_t angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
-	fixed_t dx = actor->target->x - actor->x;
-	fixed_t dy = actor->target->y - actor->y;
-	fixed_t dz = actor->target->z - actor->z;
-	fixed_t dxy = FixedHypot(dx, dy);
-	fixed_t dm;
+	angle_t angledif;
+	fixed_t dx, dy, dz, dxy, dm;
 	mobj_t *dust;
 	fixed_t momm;
 
@@ -2486,6 +2485,18 @@ void A_VultureFly(mobj_t *actor)
 	if (LUA_CallAction("A_VultureFly", actor))
 		return;
 #endif
+
+	if (!actor->target || P_MobjWasRemoved(actor->target))
+	{
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
+	dx = actor->target->x - actor->x;
+	dy = actor->target->y - actor->y;
+	dz = actor->target->z - actor->z;
+	dxy = FixedHypot(dx, dy);
 
 	if (leveltime % 4 == 0)
 		S_StartSound(actor, actor->info->activesound);
@@ -4070,19 +4081,28 @@ bossjustdie:
 					mobj_t *pole = P_SpawnMobj(
 						mo->tracer->x - P_ReturnThrustX(mo->tracer, mo->tracer->angle, speed*time),
 						mo->tracer->y - P_ReturnThrustY(mo->tracer, mo->tracer->angle, speed*time),
-						mo->tracer->floorz + 4*FRACUNIT,
+						mo->tracer->floorz + (256+1)*FRACUNIT,
 						MT_FSGNB);
 					P_SetTarget(&pole->tracer, P_SpawnMobj(
+						pole->x, pole->y,
+						pole->z - 256*FRACUNIT,
+						MT_FSGNB));
+					P_SetTarget(&pole->tracer->tracer, P_SpawnMobj(
 						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
 						pole->y + P_ReturnThrustY(pole, mo->tracer->angle, FRACUNIT),
 						pole->z + 256*FRACUNIT,
 						MT_FSGNA));
-					pole->angle = mo->tracer->angle;
-					pole->tracer->angle = pole->angle - ANGLE_90;
+					pole->tracer->flags |= MF_NOCLIPTHING;
+					P_SetScale(pole, (pole->destscale = 2*FRACUNIT));
+					P_SetScale(pole->tracer, (pole->tracer->destscale = 2*FRACUNIT));
+					pole->angle = pole->tracer->angle = mo->tracer->angle;
+					pole->tracer->tracer->angle = pole->angle - ANGLE_90;
 					pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
 					pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
 					pole->tracer->momx = pole->momx;
 					pole->tracer->momy = pole->momy;
+					pole->tracer->tracer->momx = pole->momx;
+					pole->tracer->tracer->momy = pole->momy;
 				}
 			}
 			else
@@ -5121,7 +5141,7 @@ void A_SignPlayer(mobj_t *actor)
 		return;
 #endif
 
-	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins)
+	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins || signcolor >= MAXTRANSLATIONS)
 		return;
 
 	// if no face overlay, spawn one
@@ -5148,26 +5168,9 @@ void A_SignPlayer(mobj_t *actor)
 		if (signcolor)
 			;
 		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
-		{
 			signcolor = skin->prefoppositecolor;
-			/*
-			If you're here from the comment above Color_Opposite,
-			the following line is the one which is dependent on the
-			array being symmetrical. It gets the opposite of the
-			opposite of your desired colour just so it can get the
-			brightness frame for the End Sign. It's not a great
-			design choice, but it's constant time array access and
-			the idea that the colours should be OPPOSITES is kind
-			of in the name. If you have a better idea, feel free
-			to let me know. ~toast 2016/07/20
-			*/
-			signframe += (15 - Color_Opposite[Color_Opposite[skin->prefoppositecolor - 1][0] - 1][1]);
-		}
 		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
-		{
 			signcolor = Color_Opposite[actor->target->player->skincolor - 1][0];
-			signframe += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
-		}
 		else
 			signcolor = SKINCOLOR_NONE;
 	}
@@ -5188,10 +5191,10 @@ void A_SignPlayer(mobj_t *actor)
 				skinnum = P_RandomKey(skincount);
 				for (skincount = 0; skincount < numskins; skincount++)
 				{
-					if (skincheck(skincount))
-						skinnum++;
 					if (skincount > skinnum)
 						break;
+					if (skincheck(skincount))
+						skinnum++;
 				}
 			}
 			else // otherwise, advance 1 skin
@@ -5203,42 +5206,46 @@ void A_SignPlayer(mobj_t *actor)
 			skin = &skins[skinnum];
 		}
 		else // specific skin
-		{
 			skin = &skins[locvar1];
-		}
 
 		facecolor = skin->prefcolor;
 		if (signcolor)
 			;
 		else if (skin->prefoppositecolor)
-		{
 			signcolor = skin->prefoppositecolor;
-		}
-		else
-		{
+		else if (facecolor)
 			signcolor = Color_Opposite[facecolor - 1][0];
-		}
-		signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
 	}
 
-	if (skin != NULL && skin->sprites[SPR2_SIGN].numframes) // player face
+	if (skin && skin->sprites[SPR2_SIGN].numframes) // player face
 	{
 		ov->color = facecolor;
 		ov->skin = skin;
 		P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
-		actor->tracer->color = signcolor;
-		actor->tracer->frame = signframe;
 	}
 	else // Eggman face
 	{
 		ov->color = SKINCOLOR_NONE;
 		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
-		if (signcolor)
-			actor->tracer->color = signcolor;
-		else
-			actor->tracer->color = signcolor = SKINCOLOR_CARBON;
-		actor->tracer->frame = signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+		if (!signcolor)
+			signcolor = SKINCOLOR_CARBON;
 	}
+
+	actor->tracer->color = signcolor;
+	/*
+	If you're here from the comment above Color_Opposite,
+	the following line is the one which is dependent on the
+	array being symmetrical. It gets the opposite of the
+	opposite of your desired colour just so it can get the
+	brightness frame for the End Sign. It's not a great
+	design choice, but it's constant time array access and
+	the idea that the colours should be OPPOSITES is kind
+	of in the name. If you have a better idea, feel free
+	to let me know. ~toast 2016/07/20
+	*/
+	if (signcolor && signcolor < MAXSKINCOLORS)
+		signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+	actor->tracer->frame = signframe;
 }
 
 // Function: A_OverlayThink
@@ -5665,10 +5672,10 @@ void A_MinusPopup(mobj_t *actor)
 	S_StartSound(actor, sfx_s3k82);
 	for (i = 1; i <= num; i++)
 	{
-		mobj_t *rock = P_SpawnMobj(actor->x, actor->y, actor->z + actor->height/4, MT_ROCKCRUMBLE1);
+		mobj_t *rock = P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_ROCKCRUMBLE1);
 		P_Thrust(rock, ani*i, FRACUNIT);
-		rock->momz = 3*FRACUNIT;
-		P_SetScale(rock, FRACUNIT/3);
+		P_SetObjectMomZ(rock, 3*FRACUNIT, false);
+		P_SetScale(rock, rock->scale/3);
 	}
 	P_RadiusAttack(actor, actor, 2*actor->radius, 0);
 	if (actor->tracer)
@@ -5682,11 +5689,12 @@ void A_MinusPopup(mobj_t *actor)
 // Description: If the minus hits the floor, dig back into the ground.
 //
 // var1 = State to switch to (if 0, use seestate).
-// var2 = unused
+// var2 = If not 0, spawn debris when hitting the floor.
 //
 void A_MinusCheck(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusCheck", actor))
@@ -5697,6 +5705,18 @@ void A_MinusCheck(mobj_t *actor)
 	{
 		P_SetMobjState(actor, locvar1 ? (statenum_t)locvar1 : actor->info->seestate);
 		actor->flags = actor->info->flags;
+		if (locvar2)
+		{
+			INT32 i, num = 6;
+			angle_t ani = FixedAngle(FRACUNIT*360/num);
+			for (i = 1; i <= num; i++)
+			{
+				mobj_t *rock = P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_ROCKCRUMBLE1);
+				P_Thrust(rock, ani*i, FRACUNIT);
+				P_SetObjectMomZ(rock, 3*FRACUNIT, false);
+				P_SetScale(rock, rock->scale/3);
+			}
+		}
 	}
 }
 
@@ -14535,6 +14555,9 @@ void A_RolloutRock(mobj_t *actor)
 
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
 
+	if (actor->eflags & MFE_JUSTHITFLOOR)
+		S_StartSound(actor, actor->info->painsound);
+
 	if (actor->threshold)
 		actor->threshold--;
 
@@ -14588,6 +14611,9 @@ void A_RolloutRock(mobj_t *actor)
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
 
+	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		actor->flags |= MF_PUSHABLE;
+
 	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
 		actor->fuse = 0;
 	else if (!actor->fuse && actor->movecount == 1) // otherwise if rock has moved, set its fuse
@@ -14596,4 +14622,98 @@ void A_RolloutRock(mobj_t *actor)
 	if (actor->fuse && actor->fuse < 2*TICRATE)
 		actor->flags2 ^= MF2_DONTDRAW;
 
+}
+
+// Function: A_DragonbomberSpawn
+//
+// Description: Spawns the body parts for Dragonbomber
+//
+// var1 = Tail segments to spawn
+// var2 = unused
+//
+void A_DragonbomberSpawn(mobj_t *actor)
+{
+	UINT8 i;
+	mobj_t *mo = actor;
+
+	#ifdef HAVE_BLUA
+		if (LUA_CallAction("A_DragonbomberSpawn", actor))
+			return;
+	#endif
+
+	for (i = 0; i < var1; i++) // spawn tail segments
+	{
+		mobj_t *segment;
+		fixed_t x, y;
+		x = P_ReturnThrustX(mo, mo->angle, -mo->radius << 1);
+		y = P_ReturnThrustY(mo, mo->angle, -mo->radius << 1);
+		segment = P_SpawnMobjFromMobj(mo, x, y, 0, MT_DRAGONTAIL);
+		P_SetTarget(&segment->target, mo);
+		P_SetTarget(&mo->tracer, segment);
+		segment->angle = mo->angle;
+		mo = segment;
+	}
+	for (i = 0; i < 2; i++) // spawn wings
+	{
+		mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_DRAGONWING);
+		P_SetTarget(&mo->target, actor);
+		mo->movedir = ANGLE_90 + i * ANGLE_180;
+	}
+}
+
+// Function: A_DragonWing
+//
+// Description: Moves actor such that it is placed away from its target at a distance equal to the target's radius in the direction of its target's angle.
+// The actor's movedir can be used to offset the angle.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_DragonWing(mobj_t *actor)
+{
+	mobj_t *target = actor->target;
+	fixed_t x, y;
+
+	#ifdef HAVE_BLUA
+		if (LUA_CallAction("A_DragonWing", actor))
+			return;
+	#endif
+
+	if (target == NULL || !target->health)
+	{
+		P_RemoveMobj(actor);
+		return;
+	}
+	actor->angle = target->angle + actor->movedir;
+	x = target->x + P_ReturnThrustX(actor, actor->angle, -target->radius);
+	y = target->y + P_ReturnThrustY(actor, actor->angle, -target->radius);
+	P_TeleportMove(actor, x, y, target->z);
+}
+
+// Function: A_DragonSegment
+//
+// Description: Moves actor such that it is placed away from its target at an absolute distance equal to the sum of the two mobjs' radii.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_DragonSegment(mobj_t *actor)
+{
+	mobj_t *target = actor->target;
+	fixed_t dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
+	fixed_t radius = actor->radius + target->radius;
+	angle_t hangle = R_PointToAngle2(target->x, target->y, actor->x, actor->y);
+	angle_t zangle = R_PointToAngle2(0, target->z, dist, actor->z);
+	fixed_t hdist = P_ReturnThrustX(target, zangle, radius);
+	fixed_t xdist = P_ReturnThrustX(target, hangle, hdist);
+	fixed_t ydist = P_ReturnThrustY(target, hangle, hdist);
+	fixed_t zdist = P_ReturnThrustY(target, zangle, radius);
+
+	#ifdef HAVE_BLUA
+		if (LUA_CallAction("A_DragonSegment", actor))
+			return;
+	#endif
+
+	actor->angle = hangle;
+	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);
 }

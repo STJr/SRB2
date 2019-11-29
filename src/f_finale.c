@@ -856,7 +856,7 @@ void F_IntroDrawer(void)
 			if (rendermode != render_none)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+				F_WipeColorFill(31);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -866,10 +866,11 @@ void F_IntroDrawer(void)
 		else if (intro_scenenum == 10)
 		{
 			// The only fade to white in the entire damn game.
+			// (not true)
 			if (rendermode != render_none)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+				F_WipeColorFill(0);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -879,7 +880,7 @@ void F_IntroDrawer(void)
 			if (rendermode != render_none)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+				F_WipeColorFill(31);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -926,7 +927,7 @@ void F_IntroDrawer(void)
 			patch_t *radar = W_CachePatchName("RADAR", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawScaledPatch(0, 0, 0, radar);
 			W_UnlockCachedPatch(radar);
 			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
@@ -939,7 +940,7 @@ void F_IntroDrawer(void)
 			patch_t *grass = W_CachePatchName("SGRASS5", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawScaledPatch(0, 0, 0, grass);
 			W_UnlockCachedPatch(grass);
 			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
@@ -952,7 +953,7 @@ void F_IntroDrawer(void)
 			patch_t *confront = W_CachePatchName("CONFRONT", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawSmallScaledPatch(0, 0, 0, confront);
 			W_UnlockCachedPatch(confront);
 			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
@@ -965,7 +966,7 @@ void F_IntroDrawer(void)
 			patch_t *sdo = W_CachePatchName("SONICDO2", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawSmallScaledPatch(0, 0, 0, sdo);
 			W_UnlockCachedPatch(sdo);
 			V_DrawString(224, 8, V_ALLOWLOWERCASE, cutscene_disptext);
@@ -1385,12 +1386,15 @@ boolean F_CreditResponder(event_t *event)
 
 void F_StartGameEvaluation(void)
 {
-	// Credits option in secrets menu
+	// Credits option in extras menu
 	if (cursaveslot == -1)
 	{
+		S_FadeOutStopMusic(2*MUSICRATE);
 		F_StartGameEnd();
 		return;
 	}
+
+	S_FadeOutStopMusic(5*MUSICRATE);
 
 	G_SetGamestate(GS_EVALUATION);
 
@@ -1537,9 +1541,9 @@ void F_GameEvaluationDrawer(void)
 			}
 		}
 		else if (netgame)
-			V_DrawString(8, 96, V_YELLOWMAP, "Prizes only\nawarded in\nsingle player!");
+			V_DrawString(8, 96, V_YELLOWMAP, "Multiplayer games\ncan't unlock\nextras!");
 		else
-			V_DrawString(8, 96, V_YELLOWMAP, "Prizes not\nawarded in\nmodified games!");
+			V_DrawString(8, 96, V_YELLOWMAP, "Modified games\ncan't unlock\nextras!");
 	}
 #endif
 }
@@ -1586,7 +1590,7 @@ void F_GameEvaluationTicker(void)
 		{
 			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
 			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Prizes only awarded in singleplayer!");
+			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Multiplayer games can't unlock extras!");
 			S_StartSound(NULL, sfx_s3k68);
 		}
 		else if (!modifiedgame || savemoddata)
@@ -1608,7 +1612,7 @@ void F_GameEvaluationTicker(void)
 		{
 			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
 			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Prizes not awarded in modified games!");
+			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Modified games can't unlock extras!");
 			S_StartSound(NULL, sfx_s3k68);
 		}
 	}
@@ -1621,6 +1625,7 @@ void F_GameEvaluationTicker(void)
 // ==========
 
 #define INFLECTIONPOINT (6*TICRATE)
+#define STOPPINGPOINT (14*TICRATE)
 #define SPARKLLOOPTIME 15 // must be odd
 
 void F_StartEnding(void)
@@ -1638,7 +1643,7 @@ void F_StartEnding(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	S_StopMusic(); // todo: placeholder
+	S_StopMusic();
 	S_StopSounds();
 
 	finalecount = -10; // what? this totally isn't a hack. why are you asking?
@@ -1679,7 +1684,7 @@ void F_StartEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= (XTRA_ENDING+2)+1)
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
@@ -1712,12 +1717,15 @@ void F_StartEnding(void)
 
 void F_EndingTicker(void)
 {
-	if (++finalecount > INFLECTIONPOINT*2)
+	if (++finalecount > STOPPINGPOINT)
 	{
 		F_StartCredits();
 		wipetypepre = INT16_MAX;
 		return;
 	}
+
+	if (finalecount == -8)
+		S_ChangeMusicInternal((goodending ? "_endg" : "_endb"), false);
 
 	if (goodending && finalecount == INFLECTIONPOINT) // time to swap some assets
 	{
@@ -2105,26 +2113,26 @@ void F_EndingDrawer(void)
 
 		if (finalecount < 10)
 			trans = (10-finalecount)/2;
-		else if (finalecount > (2*INFLECTIONPOINT) - 20)
+		else if (finalecount > STOPPINGPOINT - 20)
 		{
-			trans = 10 + (finalecount/2) - INFLECTIONPOINT;
+			trans = 10 + (finalecount - STOPPINGPOINT)/2;
 			donttouch = true;
 		}
 
-		if (trans != 10)
+		if (trans < 10)
 		{
 			//colset(linkmap,  164, 165, 169); -- the ideal purple colour to represent a clicked in-game link, but not worth it just for a soundtest-controlled secret
 			V_DrawCenteredString(BASEVIDWIDTH/2, 8, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), str);
 			V_DrawCharacter(32, BASEVIDHEIGHT-16, '>'|(trans<<V_ALPHASHIFT), false);
-			V_DrawString(40, ((finalecount == (2*INFLECTIONPOINT)-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= (2*INFLECTIONPOINT)-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
+			V_DrawString(40, ((finalecount == STOPPINGPOINT-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= STOPPINGPOINT-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
 		}
 
-		if (finalecount > (2*INFLECTIONPOINT)-(20+(2*TICRATE)))
+		if (finalecount > STOPPINGPOINT-(20+(2*TICRATE)))
 		{
 			INT32 trans2 = abs((5*FINECOSINE((FixedAngle((finalecount*5)<<FRACBITS)>>ANGLETOFINESHIFT & FINEMASK)))>>FRACBITS)+2;
 			if (!donttouch)
 			{
-				trans = 10 + ((2*INFLECTIONPOINT)-(20+(2*TICRATE))) - finalecount;
+				trans = 10 + (STOPPINGPOINT-(20+(2*TICRATE))) - finalecount;
 				if (trans > trans2)
 					trans2 = trans;
 			}
@@ -2148,7 +2156,6 @@ void F_StartGameEnd(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	S_StopMusic();
 	S_StopSounds();
 
 	// In case menus are still up?!!
@@ -2582,9 +2589,7 @@ void F_TitleScreenDrawer(void)
 	// Draw that sky!
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
-	else if (titlemapinaction && curbghide && ! hidetitlemap)
-		D_Render();
-	else
+	else if (!curbghide || !titlemapinaction || gamestate == GS_WAITINGPLAYERS)
 		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 
 	// Don't draw outside of the title screen, or if the patch isn't there.
@@ -3344,6 +3349,10 @@ void F_TitleScreenTicker(boolean run)
 	if (run)
 		finalecount++;
 
+	// don't trigger if doing anything besides idling on title
+	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
+		return;
+
 	// Execute the titlemap camera settings
 	if (titlemapinaction)
 	{
@@ -3389,10 +3398,6 @@ void F_TitleScreenTicker(boolean run)
 			camera.angle += titlescrollxspeed*ANG1/64;
 		}
 	}
-
-	// don't trigger if doing anything besides idling on title
-	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
-		return;
 
 	// no demos to play? or, are they disabled?
 	if (!cv_rollingdemos.value || !numDemos)
@@ -3546,7 +3551,7 @@ void F_ContinueDrawer(void)
 	if (timetonext >= (11*TICRATE)+10)
 		return;
 
-	V_DrawLevelTitle(x - (V_LevelNameWidth("CONTINUE")>>1), 16, 0, "CONTINUE");
+	V_DrawLevelTitle(x - (V_LevelNameWidth("Continue?")>>1), 16, 0, "Continue?");
 
 	// Two stars...
 	patch = W_CachePatchName("CONTSTAR", PU_CACHE);

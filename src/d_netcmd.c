@@ -87,6 +87,7 @@ static void JoinTimeout_OnChange(void);
 
 static void CoopStarposts_OnChange(void);
 static void CoopLives_OnChange(void);
+static void ExitMove_OnChange(void);
 
 static void Ringslinger_OnChange(void);
 static void Gravity_OnChange(void);
@@ -341,20 +342,31 @@ consvar_t cv_nettimeout = {"nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons
 static CV_PossibleValue_t jointimeout_cons_t[] = {{5*TICRATE, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
 consvar_t cv_jointimeout = {"jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t pingtimeout_cons_t[] = {{8, "MIN"}, {120, "MAX"}, {0, NULL}};
+consvar_t cv_pingtimeout = {"pingtimeout", "10", CV_SAVE, pingtimeout_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// show your ping on the HUD next to framerate. Defaults to warning only (shows up if your ping is > maxping)
+static CV_PossibleValue_t showping_cons_t[] = {{0, "Off"}, {1, "Always"}, {2, "Warning"}, {0, NULL}};
+consvar_t cv_showping = {"showping", "Warning", CV_SAVE, showping_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 // Intermission time Tails 04-19-2002
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
 consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t coopstarposts_cons_t[] = {{0, "Per-player"}, {1, "Shared"}, {2, "Teamwork"}, {0, NULL}};
-consvar_t cv_coopstarposts = {"coopstarposts", "Teamwork", CV_NETVAR|CV_CALL|CV_CHEAT, coopstarposts_cons_t, CoopStarposts_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_coopstarposts = {"coopstarposts", "Per-player", CV_NETVAR|CV_CALL, coopstarposts_cons_t, CoopStarposts_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Infinite"}, {1, "Per-player"}, {2, "Avoid Game Over"}, {3, "Single pool"}, {0, NULL}};
 consvar_t cv_cooplives = {"cooplives", "Avoid Game Over", CV_NETVAR|CV_CALL|CV_CHEAT, cooplives_cons_t, CoopLives_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "1/4"}, {2, "Half"}, {3, "3/4"}, {4, "All"}, {0, NULL}};
 consvar_t cv_playersforexit = {"playersforexit", "All", CV_NETVAR, playersforexit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_exitmove = {"exitmove", "Off", CV_NETVAR|CV_CALL, CV_OnOff, ExitMove_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_runscripts = {"runscripts", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -514,6 +526,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_inttime);
 	CV_RegisterVar(&cv_advancemap);
 	CV_RegisterVar(&cv_playersforexit);
+	CV_RegisterVar(&cv_exitmove);
 	CV_RegisterVar(&cv_timelimit);
 	CV_RegisterVar(&cv_playbackspeed);
 	CV_RegisterVar(&cv_forceskin);
@@ -577,6 +590,8 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_skipmapcheck);
 	CV_RegisterVar(&cv_sleep);
 	CV_RegisterVar(&cv_maxping);
+	CV_RegisterVar(&cv_pingtimeout);
+	CV_RegisterVar(&cv_showping);
 
 #ifdef SEENAMES
 	 CV_RegisterVar(&cv_allowseenames);
@@ -1213,16 +1228,16 @@ static void SendNameAndColor(void)
 		}
 		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
 		{
-			boolean notsame;
+			//boolean notsame;
 
 			cv_skin.value = foundskin;
 
-			notsame = (cv_skin.value != players[consoleplayer].skin);
+			//notsame = (cv_skin.value != players[consoleplayer].skin);
 
 			SetPlayerSkin(consoleplayer, cv_skin.string);
 			CV_StealthSet(&cv_skin, skins[cv_skin.value].name);
 
-			if (notsame)
+			/*if (notsame)
 			{
 				CV_StealthSetValue(&cv_playercolor, skins[cv_skin.value].prefcolor);
 
@@ -1230,7 +1245,7 @@ static void SendNameAndColor(void)
 
 				if (players[consoleplayer].mo)
 					players[consoleplayer].mo->color = (UINT8)players[consoleplayer].skincolor;
-			}
+			}*/
 		}
 		else
 		{
@@ -1341,15 +1356,16 @@ static void SendNameAndColor2(void)
 		}
 		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUsable(secondplaya, foundskin))
 		{
-			boolean notsame;
+			//boolean notsame;
 
 			cv_skin2.value = foundskin;
 
-			notsame = (cv_skin2.value != players[secondplaya].skin);
+			//notsame = (cv_skin2.value != players[secondplaya].skin);
 
 			SetPlayerSkin(secondplaya, cv_skin2.string);
+			CV_StealthSet(&cv_skin2, skins[cv_skin2.value].name);
 
-			if (notsame)
+			/*if (notsame)
 			{
 				CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin].prefcolor);
 
@@ -1357,7 +1373,7 @@ static void SendNameAndColor2(void)
 
 				if (players[secondplaya].mo)
 					players[secondplaya].mo->color = players[secondplaya].skincolor;
-			}
+			}*/
 		}
 		else
 		{
@@ -1924,6 +1940,17 @@ static void Command_Map_f(void)
 				d = atoi(gametypename);
 				if (d >= 0 && d < NUMGAMETYPES)
 					newgametype = d;
+				else
+				{
+					CONS_Alert(CONS_ERROR,
+							"Gametype number %d is out of range. Use a number between"
+							" 0 and %d inclusive. ...Or just use the name. :v\n",
+							d,
+							NUMGAMETYPES-1);
+					Z_Free(realmapname);
+					Z_Free(mapname);
+					return;
+				}
 			}
 			else
 			{
@@ -2039,7 +2066,9 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	lastgametype = gametype;
 	gametype = READUINT8(*cp);
 
-	if (gametype != lastgametype)
+	if (gametype < 0 || gametype >= NUMGAMETYPES)
+		gametype = lastgametype;
+	else if (gametype != lastgametype)
 		D_GameTypeChanged(lastgametype); // emulate consvar_t behavior for gametype
 
 	skipprecutscene = ((flags & (1<<2)) != 0);
@@ -3778,6 +3807,17 @@ static void CoopLives_OnChange(void)
 	}
 }
 
+static void ExitMove_OnChange(void)
+{
+	if (!(netgame || multiplayer) || gametype != GT_COOP)
+		return;
+
+	if (cv_exitmove.value)
+		CONS_Printf(M_GetText("Players can now move after completing the level.\n"));
+	else
+		CONS_Printf(M_GetText("Players can no longer move after completing the level.\n"));
+}
+
 UINT32 timelimitintics = 0;
 
 /** Deals with a timelimit change by printing the change to the console.
@@ -4250,6 +4290,8 @@ void Command_ExitGame_f(void)
 	for (i = 0; i < MAXPLAYERS; i++)
 		CL_ClearPlayer(i);
 
+	players[consoleplayer].availabilities = players[1].availabilities = R_GetSkinAvailabilities(); // players[1] is supposed to be for 2p
+
 	splitscreen = false;
 	SplitScreen_OnChange();
 	botingame = false;
@@ -4310,9 +4352,9 @@ static void Command_Isgamemodified_f(void)
 	if (savemoddata)
 		CONS_Printf(M_GetText("modifiedgame is true, but you can save emblem and time data in this mod.\n"));
 	else if (modifiedgame)
-		CONS_Printf(M_GetText("modifiedgame is true, secrets will not be unlocked\n"));
+		CONS_Printf(M_GetText("modifiedgame is true, extras will not be unlocked\n"));
 	else
-		CONS_Printf(M_GetText("modifiedgame is false, you can unlock secrets\n"));
+		CONS_Printf(M_GetText("modifiedgame is false, you can unlock extras\n"));
 }
 
 static void Command_Cheats_f(void)

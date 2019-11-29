@@ -23,6 +23,8 @@
 #include <unistd.h>
 #endif
 
+#include <errno.h>
+
 // Extended map support.
 #include <ctype.h>
 
@@ -787,7 +789,7 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	if (gamestate == GS_LEVEL && mapheaderinfo[gamemap-1]->lvlttl[0] != '\0')
 		snprintf(lvlttltext, 48, "%s%s%s",
 			mapheaderinfo[gamemap-1]->lvlttl,
-			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
+			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
 			(mapheaderinfo[gamemap-1]->actnum > 0) ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
 	else
 		snprintf(lvlttltext, 48, "Unknown");
@@ -2440,4 +2442,14 @@ void M_SetupMemcpy(void)
 #if 0
 	M_Memcpy = cpu_cpy;
 #endif
+}
+
+/** Return the appropriate message for a file error or end of file.
+*/
+const char *M_FileError(FILE *fp)
+{
+	if (ferror(fp))
+		return strerror(errno);
+	else
+		return "end-of-file";
 }

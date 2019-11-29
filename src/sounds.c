@@ -92,7 +92,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"pstop",  false, 100,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crusher stomp"},
   {"steam1", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Steam jet"}, // Tails 06-19-2001
   {"steam2", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Steam jet"}, // Tails 06-19-2001
-  {"wbreak", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wood breaking"},
+  {"wbreak",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wood breaking"},
   {"ambmac", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Machinery"},
   {"spsmsh", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy impact"},
 
@@ -208,7 +208,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"shrpsp",  true,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spincushion"},
   {"shrpgo", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Launch"},
   {"mswarp", false,  60, 16, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spinning out"},
-  {"mspogo", false,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Breaking through"},
+  {"mspogo",  true,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Breaking through"},
   {"boingf", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bouncing"},
   {"corkp",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork fired"},
   {"corkh",  false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork hit"},
@@ -779,7 +779,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"kc49",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"kc4a",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"kc4b",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"kc4c",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
+  {"kc4c",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pop-shot"},
   {"kc4d",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power up"},
   {"kc4e",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"kc4f",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},

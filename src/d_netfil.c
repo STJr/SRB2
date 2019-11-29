@@ -716,7 +716,7 @@ void SV_FileSendTicker(void)
 		if (ram)
 			M_Memcpy(p->data, &f->id.ram[transfer[i].position], size);
 		else if (fread(p->data, 1, size, transfer[i].currentfile) != size)
-			I_Error("SV_FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(size), f->id.filename, transfer[i].position, strerror(ferror(transfer[i].currentfile)));
+			I_Error("SV_FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(size), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
 		p->position = LONG(transfer[i].position);
 		// Put flag so receiver knows the total size
 		if (transfer[i].position + size == f->size)
@@ -794,7 +794,7 @@ void Got_Filetxpak(void)
 		// We can receive packet in the wrong order, anyway all os support gaped file
 		fseek(file->file, pos, SEEK_SET);
 		if (fwrite(netbuffer->u.filetxpak.data,size,1,file->file) != 1)
-			I_Error("Can't write to %s: %s\n",filename, strerror(ferror(file->file)));
+			I_Error("Can't write to %s: %s\n",filename, M_FileError(file->file));
 		file->currentsize += size;
 
 		// Finished?

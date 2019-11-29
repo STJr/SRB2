@@ -90,6 +90,7 @@ SINT8 nodetoplayer[MAXNETNODES];
 SINT8 nodetoplayer2[MAXNETNODES]; // say the numplayer for this node if any (splitscreen)
 UINT8 playerpernode[MAXNETNODES]; // used specialy for scplitscreen
 boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
+tic_t servermaxping = 800; // server's max ping. Defaults to 800
 static tic_t nettics[MAXNETNODES]; // what tic the client have received
 static tic_t supposedtics[MAXNETNODES]; // nettics prevision for smaller packet
 static UINT8 nodewaiting[MAXNETNODES];
@@ -610,6 +611,11 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 
 	rsp->health = LONG(players[i].mo->health);
 	rsp->angle = (angle_t)LONG(players[i].mo->angle);
+#ifdef ROTSPRITE
+	rsp->rollangle = (angle_t)LONG(players[i].mo->rollangle);
+#else
+	rsp->rollangle = 0;
+#endif
 	rsp->x = LONG(players[i].mo->x);
 	rsp->y = LONG(players[i].mo->y);
 	rsp->z = LONG(players[i].mo->z);
@@ -760,6 +766,9 @@ static void resynch_read_player(resynch_pak *rsp)
 	//At this point, the player should have a body, whether they were respawned or not.
 	P_UnsetThingPosition(players[i].mo);
 	players[i].mo->angle = (angle_t)LONG(rsp->angle);
+#ifdef ROTSPRITE
+	players[i].mo->rollangle = (angle_t)LONG(rsp->rollangle);
+#endif
 	players[i].mo->eflags = (UINT16)SHORT(rsp->eflags);
 	players[i].mo->flags = LONG(rsp->flags);
 	players[i].mo->flags2 = LONG(rsp->flags2);
@@ -1292,10 +1301,23 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	M_Memcpy(netbuffer->u.serverinfo.mapmd5, mapmd5, 16);
 
-	if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
-		strncpy(netbuffer->u.serverinfo.maptitle, (char *)mapheaderinfo[gamemap-1]->lvlttl, 33);
+	if (*mapheaderinfo[gamemap-1]->lvlttl)
+	{
+		char *read = mapheaderinfo[gamemap-1]->lvlttl, *writ = netbuffer->u.serverinfo.maptitle;
+		while (writ < (netbuffer->u.serverinfo.maptitle+32) && *read != '\0')
+		{
+			if (!(*read & 0x80))
+			{
+				*writ = toupper(*read);
+				writ++;
+			}
+			read++;
+		}
+		*writ = '\0';
+		//strncpy(netbuffer->u.serverinfo.maptitle, (char *)mapheaderinfo[gamemap-1]->lvlttl, 33);
+	}
 	else
-		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 33);
+		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 32);
 
 	netbuffer->u.serverinfo.maptitle[32] = '\0';
 
@@ -1349,7 +1371,11 @@ static void SV_SendPlayerInfo(INT32 node)
 
 		netbuffer->u.playerinfo[i].score = LONG(players[i].score);
 		netbuffer->u.playerinfo[i].timeinserver = SHORT((UINT16)(players[i].jointime / TICRATE));
-		netbuffer->u.playerinfo[i].skin = (UINT8)players[i].skin;
+		netbuffer->u.playerinfo[i].skin = (UINT8)(players[i].skin
+#ifdef DEVELOP // it's safe to do this only because PLAYERINFO isn't read by the game itself
+		% 3
+#endif
+		);
 
 		// Extra data
 		netbuffer->u.playerinfo[i].data = 0; //players[i].skincolor;
@@ -1607,7 +1633,7 @@ static void CL_LoadReceivedSavegame(void)
 		{
 			CONS_Printf(": %s", mapheaderinfo[gamemap-1]->lvlttl);
 			if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-				CONS_Printf(M_GetText(" ZONE"));
+				CONS_Printf(M_GetText(" Zone"));
 			if (actnum > 0)
 				CONS_Printf(" %2d", actnum);
 		}
@@ -4208,10 +4234,12 @@ static void HandlePacketFromPlayer(SINT8 node)
 			//Update client ping table from the server.
 			if (client)
 			{
-				INT32 i;
+				UINT8 i;
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i])
 						playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
+
+				servermaxping = (tic_t)netbuffer->u.pingtable[MAXPLAYERS];
 			}
 
 			break;
@@ -4591,7 +4619,7 @@ static void Local_Maketic(INT32 realtics)
 {
 	I_OsPolling(); // I_Getevent
 	D_ProcessEvents(); // menu responder, cons responder,
-	                   // game responder calls HU_Responder, AM_Responder, F_Responder,
+	                   // game responder calls HU_Responder, AM_Responder,
 	                   // and G_MapEventsToControls
 	if (!dedicated) rendergametic = gametic;
 	// translate inputs (keyboard/mouse/joystick) into game controls
@@ -4733,6 +4761,14 @@ void TryRunTics(tic_t realtics)
 	}
 }
 
+/*
+Ping Update except better:
+We call this once per second and check for people's pings. If their ping happens to be too high, we increment some timer and kick them out.
+If they're not lagging, decrement the timer by 1. Of course, reset all of this if they leave.
+*/
+
+static INT32 pingtimeout[MAXPLAYERS];
+
 static inline void PingUpdate(void)
 {
 	INT32 i;
@@ -4753,6 +4789,8 @@ static inline void PingUpdate(void)
 					laggers[i] = true;
 				numlaggers++;
 			}
+			else
+				pingtimeout[i] = 0;
 		}
 
 		//kick lagging players... unless everyone but the server's ping sucks.
@@ -4763,12 +4801,27 @@ static inline void PingUpdate(void)
 			{
 				if (playeringame[i] && laggers[i])
 				{
-					char buf[2];
+					pingtimeout[i]++;
+					if (pingtimeout[i] > cv_pingtimeout.value)
+// ok your net has been bad for too long, you deserve to die.
+					{
+						char buf[2];
 
-					buf[0] = (char)i;
-					buf[1] = KICK_MSG_PING_HIGH;
-					SendNetXCmd(XD_KICK, &buf, 2);
+						pingtimeout[i] = 0;
+
+						buf[0] = (char)i;
+						buf[1] = KICK_MSG_PING_HIGH;
+						SendNetXCmd(XD_KICK, &buf, 2);
+					}
 				}
+				/*
+					you aren't lagging,
+					but you aren't free yet.
+					In case you'll keep spiking,
+					we just make the timer go back down. (Very unstable net must still get kicked).
+				*/
+				else
+					pingtimeout[i] = (pingtimeout[i] == 0 ? 0 : pingtimeout[i]-1);
 			}
 		}
 	}
@@ -4783,10 +4836,13 @@ static inline void PingUpdate(void)
 		realpingtable[i] = 0; //Reset each as we go.
 	}
 
+	// send the server's maxping as last element of our ping table. This is useful to let us know when we're about to get kicked.
+	netbuffer->u.pingtable[MAXPLAYERS] = cv_maxping.value;
+
 	//send out our ping packets
 	for (i = 0; i < MAXNETNODES; i++)
 		if (nodeingame[i])
-			HSendPacket(i, true, 0, sizeof(INT32) * MAXPLAYERS);
+			HSendPacket(i, true, 0, sizeof(INT32) * (MAXPLAYERS+1));
 
 	pingmeasurecount = 1; //Reset count
 }
@@ -4816,7 +4872,7 @@ void NetUpdate(void)
 
 	if (server)
 	{
-		if (netgame && !(gametime % 255))
+		if (netgame && !(gametime % 35)) // update once per second.
 			PingUpdate();
 		// update node latency values so we can take an average later.
 		for (i = 0; i < MAXPLAYERS; i++)

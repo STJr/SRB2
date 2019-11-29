@@ -47,6 +47,10 @@
 #include "m_cond.h" // condition sets
 #include "md5.h" // demo checksums
 
+#ifdef HAVE_BLUA
+#include "lua_hud.h"
+#endif
+
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
 UINT8 ultimatemode = false;
@@ -168,6 +172,7 @@ mapheader_t* mapheaderinfo[NUMMAPS] = {NULL};
 
 static boolean exitgame = false;
 static boolean retrying = false;
+static boolean retryingmodeattack = false;
 
 UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
 
@@ -536,11 +541,99 @@ void G_AddTempNightsRecords(UINT32 pscore, tic_t ptime, UINT8 mare)
 		ntemprecords.nummares = mare;
 }
 
+//
+// G_UpdateRecordReplays
+//
+// Update replay files/data, etc. for Record Attack
+// See G_SetNightsRecords for NiGHTS Attack.
+//
+static void G_UpdateRecordReplays(void)
+{
+	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
+	char *gpath;
+	char lastdemo[256], bestdemo[256];
+	UINT8 earnedEmblems;
+
+	// Record new best time
+	if (!mainrecords[gamemap-1])
+		G_AllocMainRecordData(gamemap-1);
+
+	if (players[consoleplayer].score > mainrecords[gamemap-1]->score)
+		mainrecords[gamemap-1]->score = players[consoleplayer].score;
+
+	if ((mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < mainrecords[gamemap-1]->time))
+		mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
+
+	if ((UINT16)(players[consoleplayer].rings) > mainrecords[gamemap-1]->rings)
+		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
+
+	// Save demo!
+	bestdemo[255] = '\0';
+	lastdemo[255] = '\0';
+	G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].rings));
+	G_CheckDemoStatus();
+
+	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
+	I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
+
+	if ((gpath = malloc(glen)) == NULL)
+		I_Error("Out of memory for replay filepath\n");
+
+	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
+	snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
+
+	if (FIL_FileExists(lastdemo))
+	{
+		UINT8 *buf;
+		size_t len = FIL_ReadFile(lastdemo, &buf);
+
+		snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+		if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
+		{ // Better time, save this demo.
+			if (FIL_FileExists(bestdemo))
+				remove(bestdemo);
+			FIL_WriteFile(bestdemo, buf, len);
+			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
+		}
+
+		snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
+		{ // Better score, save this demo.
+			if (FIL_FileExists(bestdemo))
+				remove(bestdemo);
+			FIL_WriteFile(bestdemo, buf, len);
+			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
+		}
+
+		snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
+		{ // Better rings, save this demo.
+			if (FIL_FileExists(bestdemo))
+				remove(bestdemo);
+			FIL_WriteFile(bestdemo, buf, len);
+			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW MOST RINGS!"), M_GetText("Saved replay as"), bestdemo);
+		}
+
+		//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
+
+		Z_Free(buf);
+	}
+	free(gpath);
+
+	// Check emblems when level data is updated
+	if ((earnedEmblems = M_CheckLevelEmblems()))
+		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+
+	// Update timeattack menu's replay availability.
+	Nextmap_OnChange();
+}
+
 void G_SetNightsRecords(void)
 {
 	INT32 i;
 	UINT32 totalscore = 0;
 	tic_t totaltime = 0;
+	UINT8 earnedEmblems;
 
 	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
 	char *gpath;
@@ -639,6 +732,9 @@ void G_SetNightsRecords(void)
 		Z_Free(buf);
 	}
 	free(gpath);
+
+	if ((earnedEmblems = M_CheckLevelEmblems()))
+		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for NiGHTS records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
 
 	// If the mare count changed, this will update the score display
 	Nextmap_OnChange();
@@ -923,11 +1019,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	movebkey = PLAYER1INPUTDOWN(gc_backward);
 
 	mouseaiming = (PLAYER1INPUTDOWN(gc_mouseaiming)) ^
-		(cv_chasecam.value ? cv_chasefreelook.value : cv_alwaysfreelook.value);
+		((cv_chasecam.value && !player->spectator) ? cv_chasefreelook.value : cv_alwaysfreelook.value);
 	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;
 
-	thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
+	thisjoyaiming = (cv_chasecam.value && !player->spectator) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
 
 	// Reset the vertical look if we're no longer joyaiming
 	if (!thisjoyaiming && joyaiming)
@@ -1252,11 +1348,11 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	movebkey = PLAYER2INPUTDOWN(gc_backward);
 
 	mouseaiming = (PLAYER2INPUTDOWN(gc_mouseaiming)) ^
-		(cv_chasecam2.value ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
+		((cv_chasecam2.value && !player->spectator) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
 	analogjoystickmove = cv_usejoystick2.value && !Joystick2.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick2.value && Joystick2.bGamepadStyle;
 
-	thisjoyaiming = (cv_chasecam2.value) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
+	thisjoyaiming = (cv_chasecam2.value && !player->spectator) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
 
 	// Reset the vertical look if we're no longer joyaiming
 	if (!thisjoyaiming && joyaiming)
@@ -1703,6 +1799,58 @@ void G_DoLoadLevel(boolean resetplayer)
 	CON_ClearHUD();
 }
 
+//
+// Start the title card.
+//
+void G_StartTitleCard(void)
+{
+	wipestyleflags |= WSF_FADEIN;
+	wipestyleflags &= ~WSF_FADEOUT;
+
+	// The title card has been disabled for this map.
+	// Oh well.
+	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+	{
+		WipeStageTitle = false;
+		return;
+	}
+
+	// clear the hud
+	CON_ClearHUD();
+
+	// prepare status bar
+	ST_startTitleCard();
+
+	// start the title card
+	WipeStageTitle = (!titlemapinaction);
+}
+
+//
+// Run the title card before fading in to the level.
+//
+void G_PreLevelTitleCard(tic_t ticker, boolean update)
+{
+	tic_t starttime = I_GetTime();
+	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
+	tic_t nowtime = starttime;
+	tic_t lasttime = starttime;
+	while (nowtime < endtime)
+	{
+		// draw loop
+		while (!((nowtime = I_GetTime()) - lasttime))
+			I_Sleep();
+		lasttime = nowtime;
+
+		ST_runTitleCard();
+		ST_preLevelTitleCardDrawer(ticker, update);
+
+		if (moviemode)
+			M_SaveFrame();
+		if (takescreenshot) // Only take screenshots after drawing.
+			M_DoScreenShot();
+	}
+}
+
 INT32 pausedelay = 0;
 boolean pausebreakkey = false;
 static INT32 camtoggledelay, camtoggledelay2 = 0;
@@ -1868,7 +2016,7 @@ boolean G_Responder(event_t *ev)
 						pausedelay = 1+(NEWTICRATE/2);
 					else if (++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
 					{
-						G_SetRetryFlag();
+						G_SetModeAttackRetryFlag();
 						return true;
 					}
 					pausedelay++; // counteract subsequent subtraction this frame
@@ -1992,7 +2140,7 @@ void G_Ticker(boolean run)
 			if (titledemo)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
-			ST_Ticker();
+			ST_Ticker(run);
 			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
@@ -2174,6 +2322,9 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
+
+	if (!betweenmaps)
+		pflags |= (players[player].pflags & PF_FINISHED);
 
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
@@ -2709,6 +2860,7 @@ void G_DoReborn(INT32 playernum)
 
 			// Do a wipe
 			wipegamestate = -1;
+			wipestyleflags = WSF_CROSSFADE;
 
 			if (camera.chase)
 				P_ResetCamera(&players[displayplayer], &camera);
@@ -2829,8 +2981,33 @@ void G_AddPlayer(INT32 playernum)
 	if (G_GametypeUsesLives() || ((netgame || multiplayer) && gametype == GT_COOP))
 		p->lives = cv_startinglives.value;
 
-	if (countplayers && !notexiting)
+	if ((countplayers && !notexiting) || G_IsSpecialStage(gamemap))
 		P_DoPlayerExit(p);
+}
+
+boolean G_EnoughPlayersFinished(void)
+{
+	UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
+	INT32 total = 0;
+	INT32 exiting = 0;
+	INT32 i;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i] || players[i].spectator || players[i].bot)
+			continue;
+		if (players[i].lives <= 0)
+			continue;
+
+		total++;
+		if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
+			exiting++;
+	}
+
+	if (exiting)
+		return exiting * 4 / total >= numneeded;
+	else
+		return false;
 }
 
 void G_ExitLevel(void)
@@ -2925,7 +3102,7 @@ boolean G_GametypeUsesLives(void)
 	 // Coop, Competitive
 	if ((gametype == GT_COOP || gametype == GT_COMPETITION)
 	 && !(modeattacking || metalrecording) // No lives in Time Attack
-	 //&& !G_IsSpecialStage(gamemap)
+	 && !G_IsSpecialStage(gamemap)
 	 && !(maptol & TOL_NIGHTS)) // No lives in NiGHTS
 		return true;
 	return false;
@@ -3039,11 +3216,50 @@ static INT16 RandMap(INT16 tolflags, INT16 pprevmap)
 }
 
 //
+// G_UpdateVisited
+//
+static void G_UpdateVisited(void)
+{
+	boolean spec = G_IsSpecialStage(gamemap);
+	// Update visitation flags?
+	if ((!modifiedgame || savemoddata) // Not modified
+		&& !multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
+		&& !(spec && stagefailed)) // Not failed the special stage
+	{
+		UINT8 earnedEmblems;
+
+		// Update visitation flags
+		mapvisited[gamemap-1] |= MV_BEATEN;
+		// eh, what the hell
+		if (ultimatemode)
+			mapvisited[gamemap-1] |= MV_ULTIMATE;
+		// may seem incorrect but IS possible in what the main game uses as special stages, and nummaprings will be -1 in NiGHTS
+		if (nummaprings > 0 && players[consoleplayer].rings >= nummaprings)
+			mapvisited[gamemap-1] |= MV_PERFECT;
+		if (!spec)
+		{
+			// not available to special stages because they can only really be done in one order in an unmodified game, so impossible for first six and trivial for seventh
+			if (ALL7EMERALDS(emeralds))
+				mapvisited[gamemap-1] |= MV_ALLEMERALDS;
+		}
+
+		if (modeattacking == ATTACKING_RECORD)
+			G_UpdateRecordReplays();
+		else if (modeattacking == ATTACKING_NIGHTS)
+			G_SetNightsRecords();
+
+		if ((earnedEmblems = M_CompletionEmblems()))
+			CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+	}
+}
+
+//
 // G_DoCompleted
 //
 static void G_DoCompleted(void)
 {
 	INT32 i;
+	boolean spec = G_IsSpecialStage(gamemap);
 
 	tokenlist = 0; // Reset the list
 
@@ -3076,14 +3292,14 @@ static void G_DoCompleted(void)
 		nextmap = (INT16)(mapheaderinfo[gamemap-1]->nextlevel-1);
 
 	// Remember last map for when you come out of the special stage.
-	if (!G_IsSpecialStage(gamemap))
+	if (!spec)
 		lastmap = nextmap;
 
 	// If nextmap is actually going to get used, make sure it points to
 	// a map of the proper gametype -- skip levels that don't support
 	// the current gametype. (Helps avoid playing boss levels in Race,
 	// for instance).
-	if (!token && !G_IsSpecialStage(gamemap)
+	if (!token && !spec
 		&& (nextmap >= 0 && nextmap < NUMMAPS))
 	{
 		register INT16 cm = nextmap;
@@ -3147,7 +3363,7 @@ static void G_DoCompleted(void)
 			gottoken = false;
 	}
 
-	if (G_IsSpecialStage(gamemap) && !gottoken)
+	if (spec && !gottoken)
 		nextmap = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
 
 	automapactive = false;
@@ -3166,17 +3382,29 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	if (skipstats && !modeattacking) // Don't skip stats if we're in record attack
+	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed))
+	{
+		G_UpdateVisited();
 		G_AfterIntermission();
+	}
 	else
 	{
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
+		G_UpdateVisited();
 	}
 }
 
 void G_AfterIntermission(void)
 {
+	Y_CleanupScreenBuffer();
+
+	if (modeattacking)
+	{
+		M_EndModeAttackRun();
+		return;
+	}
+
 	HU_ClearCEcho();
 
 	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1) // Start a custom cutscene.
@@ -3343,7 +3571,6 @@ void G_LoadGameData(void)
 	UINT32 recscore;
 	tic_t  rectime;
 	UINT16 recrings;
-	boolean gotperf;
 
 	UINT8 recmares;
 	INT32 curmare;
@@ -3441,7 +3668,7 @@ void G_LoadGameData(void)
 		recscore = READUINT32(save_p);
 		rectime  = (tic_t)READUINT32(save_p);
 		recrings = READUINT16(save_p);
-		gotperf = (boolean)READUINT8(save_p);
+		save_p++; // compat
 
 		if (recrings > 10000 || recscore > MAXSCORE)
 			goto datacorrupt;
@@ -3453,9 +3680,6 @@ void G_LoadGameData(void)
 			mainrecords[i]->time = rectime;
 			mainrecords[i]->rings = recrings;
 		}
-
-		if (gotperf)
-			mainrecords[i]->gotperfect = gotperf;
 	}
 
 	// Nights records
@@ -3587,15 +3811,14 @@ void G_SaveGameData(void)
 			WRITEUINT32(save_p, mainrecords[i]->score);
 			WRITEUINT32(save_p, mainrecords[i]->time);
 			WRITEUINT16(save_p, mainrecords[i]->rings);
-			WRITEUINT8(save_p, mainrecords[i]->gotperfect);
 		}
 		else
 		{
 			WRITEUINT32(save_p, 0);
 			WRITEUINT32(save_p, 0);
 			WRITEUINT16(save_p, 0);
-			WRITEUINT8(save_p, 0);
 		}
+		WRITEUINT8(save_p, 0); // compat
 	}
 
 	// NiGHTS records
@@ -4031,7 +4254,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 		len += strlen(mapheaderinfo[mapnum-1]->lvlttl);
 		if (!(mapheaderinfo[mapnum-1]->levelflags & LF_NOZONE))
 		{
-			zonetext = M_GetText("ZONE");
+			zonetext = M_GetText("Zone");
 			len += strlen(zonetext) + 1;	// ' ' + zonetext
 		}
 		if (actnum > 0)
@@ -4642,6 +4865,12 @@ void G_WriteGhostTic(mobj_t *ghost)
 			oldghost.flags2 |= MF2_AMBUSH;
 		}
 
+		if (ghost->player->followmobj->scale != ghost->scale)
+		{
+			followtic |= FZT_SCALE;
+			WRITEFIXED(demo_p,ghost->player->followmobj->scale);
+		}
+
 		temp = (INT16)((ghost->player->followmobj->x-ghost->x)>>8);
 		WRITEINT16(demo_p,temp);
 		temp = (INT16)((ghost->player->followmobj->y-ghost->y)>>8);
@@ -4653,11 +4882,6 @@ void G_WriteGhostTic(mobj_t *ghost)
 		WRITEUINT16(demo_p,ghost->player->followmobj->sprite);
 		WRITEUINT8(demo_p,(ghost->player->followmobj->frame & FF_FRAMEMASK));
 		WRITEUINT8(demo_p,ghost->player->followmobj->color);
-		if (ghost->player->followmobj->scale != ghost->scale)
-		{
-			followtic |= FZT_SCALE;
-			WRITEFIXED(demo_p,ghost->player->followmobj->scale);
-		}
 
 		*followtic_p = followtic;
 	}
@@ -5194,7 +5418,10 @@ void G_ReadMetalTic(mobj_t *metal)
 	{ // But wait, there's more!
 		xziptic = READUINT8(metal_p);
 		if (xziptic & EZT_FLIP)
+		{
 			metal->eflags ^= MFE_VERTICALFLIP;
+			metal->flags2 ^= MF2_OBJECTFLIP;
+		}
 		if (xziptic & EZT_SCALE)
 		{
 			metal->destscale = READFIXED(metal_p);
@@ -6700,6 +6927,22 @@ void G_ClearRetryFlag(void)
 boolean G_GetRetryFlag(void)
 {
 	return retrying;
+}
+
+void G_SetModeAttackRetryFlag(void)
+{
+	retryingmodeattack = true;
+	G_SetRetryFlag();
+}
+
+void G_ClearModeAttackRetryFlag(void)
+{
+	retryingmodeattack = false;
+}
+
+boolean G_GetModeAttackRetryFlag(void)
+{
+	return retryingmodeattack;
 }
 
 // Time utility functions

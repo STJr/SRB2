@@ -860,7 +860,6 @@ static INT32 actualmidimusicvolume;
 void S_UpdateSounds(void)
 {
 	INT32 audible, cnum, volume, sep, pitch;
-	UINT8 i;
 	channel_t *c;
 
 	listener_t listener;
@@ -1017,28 +1016,30 @@ void S_UpdateSounds(void)
 
 notinlevel:
 	I_UpdateSound();
+}
 
+void S_UpdateClosedCaptions(void)
+{
+	UINT8 i;
+	boolean gamestopped = (paused || P_AutoPause());
+	for (i = 0; i < NUMCAPTIONS; i++) // update captions
 	{
-		boolean gamestopped = (paused || P_AutoPause());
-		for (i = 0; i < NUMCAPTIONS; i++) // update captions
+		if (!closedcaptions[i].s)
+			continue;
+
+		if (i == 0 && (closedcaptions[0].s-S_sfx == sfx_None) && gamestopped)
+			continue;
+
+		if (!(--closedcaptions[i].t))
 		{
-			if (!closedcaptions[i].s)
-				continue;
-
-			if (i == 0 && (closedcaptions[0].s-S_sfx == sfx_None) && gamestopped)
-				continue;
-
-			if (!(--closedcaptions[i].t))
-			{
-				closedcaptions[i].c = NULL;
-				closedcaptions[i].s = NULL;
-			}
-			else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
-			{
-				closedcaptions[i].c = NULL;
-				if (closedcaptions[i].t > CAPTIONFADETICS)
-					closedcaptions[i].t = CAPTIONFADETICS;
-			}
+			closedcaptions[i].c = NULL;
+			closedcaptions[i].s = NULL;
+		}
+		else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
+		{
+			closedcaptions[i].c = NULL;
+			if (closedcaptions[i].t > CAPTIONFADETICS)
+				closedcaptions[i].t = CAPTIONFADETICS;
 		}
 	}
 }
@@ -1685,7 +1686,7 @@ boolean S_PrepareSoundTest(void)
 		soundtestdefs[pos++] = def;
 		if (def->soundtestcond > 0 && !(mapvisited[def->soundtestcond-1] & MV_BEATEN))
 			continue;
-		if (def->soundtestcond < 0 && !M_Achieved(1-def->soundtestcond))
+		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond))
 			continue;
 		def->allowed = true;
 	}

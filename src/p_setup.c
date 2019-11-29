@@ -2704,6 +2704,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
 	wipegamestate = FORCEWIPEOFF;
+	wipestyleflags = 0;
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
@@ -2724,10 +2725,21 @@ boolean P_SetupLevel(boolean skipprecip)
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+		wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+
+#ifdef HWRENDER
+		// uh..........
+		if (rendermode == render_opengl)
+			F_WipeColorFill(0);
+#endif
 
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+
+		I_OsPolling();
+		I_FinishUpdate(); // page flip or blit buffer
+		if (moviemode)
+			M_SaveFrame();
 
 		nowtime = lastwipetic;
 
@@ -2743,6 +2755,13 @@ boolean P_SetupLevel(boolean skipprecip)
 		}
 
 		ranspecialwipe = 1;
+	}
+
+	if (G_GetModeAttackRetryFlag())
+	{
+		if (modeattacking)
+			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+		G_ClearModeAttackRetryFlag();
 	}
 
 	// Make sure all sounds are stopped before Z_FreeTags.
@@ -2762,7 +2781,13 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (rendermode != render_none && !ranspecialwipe)
 	{
 		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		wipestyleflags |= WSF_FADEOUT;
+
+#ifdef HWRENDER
+		// uh..........
+		if (rendermode == render_opengl)
+			F_WipeColorFill(31);
+#endif
 
 		F_WipeEndScreen();
 		// for titlemap: run a specific wipe if specified
@@ -2787,12 +2812,12 @@ boolean P_SetupLevel(boolean skipprecip)
 		{
 			// Don't include these in the fade!
 			char tx[64];
-			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, M_GetText("Speeding off to..."));
 			snprintf(tx, 63, "%s%s%s",
 				mapheaderinfo[gamemap-1]->lvlttl,
-				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
+			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, tx);
 			I_UpdateNoVsync();
 		}
 
@@ -3177,7 +3202,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Remove the loading shit from the screen
 	if (rendermode != render_none && !titlemapinaction)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+		F_WipeColorFill(levelfadecol);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();
@@ -3226,44 +3251,22 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 	}
 
-	// Stage title!
-	if (rendermode != render_none
-		&& (!titlemapinaction)
-		&& ranspecialwipe != 2
-		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
-#ifdef HAVE_BLUA
-		&& LUA_HudEnabled(hud_stagetitle)
-#endif
-	)
-	{
-		tic_t starttime = I_GetTime();
-		tic_t endtime = starttime + (10*NEWTICRATERATIO);
-		tic_t nowtime = starttime;
-		tic_t lasttime = starttime;
-		while (nowtime < endtime)
-		{
-			// draw loop
-			while (!((nowtime = I_GetTime()) - lasttime))
-				I_Sleep();
-			lasttime = nowtime;
+	// No render mode, stop here.
+	if (rendermode == render_none)
+		return true;
 
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
-			stplyr = &players[consoleplayer];
-			ST_drawLevelTitle(nowtime - starttime);
-			if (splitscreen)
-			{
-				stplyr = &players[secondarydisplayplayer];
-				ST_drawLevelTitle(nowtime - starttime);
-			}
+	// Title card!
+	G_StartTitleCard();
 
-			I_OsPolling();
-			I_UpdateNoBlit();
-			I_FinishUpdate(); // page flip or blit buffer
+	// Can the title card actually run, though?
+	if (!WipeStageTitle)
+		return true;
+	if (ranspecialwipe == 2)
+		return true;
 
-			if (moviemode) // make sure we save frames for the white hold too
-				M_SaveFrame();
-		}
-	}
+	// If so...
+	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
+		G_PreLevelTitleCard(lt_ticker, true);
 
 	return true;
 }

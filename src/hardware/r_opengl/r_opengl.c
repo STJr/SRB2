@@ -2587,7 +2587,6 @@ EXPORT void HWRAPI(DoScreenWipe)(void)
 	tex_downloaded = endScreenWipe;
 }
 
-
 // Create a texture from the screen.
 EXPORT void HWRAPI(MakeScreenTexture) (void)
 {

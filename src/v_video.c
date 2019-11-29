@@ -18,7 +18,9 @@
 #include "p_local.h" // stplyr
 #include "g_game.h" // players
 #include "v_video.h"
+#include "st_stuff.h"
 #include "hu_stuff.h"
+#include "f_finale.h"
 #include "r_draw.h"
 #include "console.h"
 
@@ -574,11 +576,11 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
 	{
 		if (alphalevel == 13)
-			alphalevel = hudminusalpha[cv_translucenthud.value];
+			alphalevel = hudminusalpha[st_translucency];
 		else if (alphalevel == 14)
-			alphalevel = 10 - cv_translucenthud.value;
+			alphalevel = 10 - st_translucency;
 		else if (alphalevel == 15)
-			alphalevel = hudplusalpha[cv_translucenthud.value];
+			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
 			return; // invis
@@ -874,11 +876,11 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
 	{
 		if (alphalevel == 13)
-			alphalevel = hudminusalpha[cv_translucenthud.value];
+			alphalevel = hudminusalpha[st_translucency];
 		else if (alphalevel == 14)
-			alphalevel = 10 - cv_translucenthud.value;
+			alphalevel = 10 - st_translucency;
 		else if (alphalevel == 15)
-			alphalevel = hudplusalpha[cv_translucenthud.value];
+			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
 			return; // invis
@@ -1074,7 +1076,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 //
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor)
 {
-	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes >= 4)
+	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_CONTINUE)
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CONTINUE];
@@ -1393,11 +1395,11 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	if ((alphalevel = ((c & V_ALPHAMASK) >> V_ALPHASHIFT)))
 	{
 		if (alphalevel == 13)
-			alphalevel = hudminusalpha[cv_translucenthud.value];
+			alphalevel = hudminusalpha[st_translucency];
 		else if (alphalevel == 14)
-			alphalevel = 10 - cv_translucenthud.value;
+			alphalevel = 10 - st_translucency;
 		else if (alphalevel == 15)
-			alphalevel = hudplusalpha[cv_translucenthud.value];
+			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
 			return; // invis
@@ -1860,7 +1862,9 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 
 	{
 		const UINT8 *fadetable = ((color & 0xFF00) // Color is not palette index?
-		? ((UINT8 *)colormaps + strength*256) // Do COLORMAP fade.
+		? ((UINT8 *)(((color & 0x0F00) == 0x0A00) ? fadecolormap // Do fadecolormap fade.
+		: (((color & 0x0F00) == 0x0B00) ? fadecolormap + (256 * FADECOLORMAPROWS) // Do white fadecolormap fade.
+		: colormaps)) + strength*256) // Do COLORMAP fade.
 		: ((UINT8 *)transtables + ((9-strength)<<FF_TRANSSHIFT) + color*256)); // Else, do TRANSMAP** fade.
 		const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
 		UINT8 *buf = screens[0];
@@ -1898,13 +1902,14 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 {
 	UINT8 *deststop, *buf;
 
-	boxheight = ((boxheight * 4) + (boxheight/2)*5);
-
 	if (color >= 256 && color < 512)
 	{
+		boxheight = ((boxheight * 4) + (boxheight/2)*5);
 		V_DrawFill((BASEVIDWIDTH-(vid.width/vid.dupx))/2, BASEVIDHEIGHT-boxheight, (vid.width/vid.dupx),boxheight, (color-256)|V_SNAPTOBOTTOM);
 		return;
 	}
+
+	boxheight *= vid.dupy;
 
 	if (color == INT32_MAX)
 		color = cons_backcolor.value;
@@ -1947,7 +1952,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 	// heavily simplified -- we don't need to know x or y position,
 	// just the start and stop positions
 	deststop = screens[0] + vid.rowbytes * vid.height;
-	buf = deststop - vid.rowbytes * boxheight * vid.dupy; // 4 lines of space plus gaps between and some leeway
+	buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
 	for (; buf < deststop; ++buf)
 		*buf = promptbgmap[*buf];
 }
@@ -2899,7 +2904,7 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 			continue;
 		}
 
-		c = toupper(*ch) - LT_FONTSTART;
+		c = *ch - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 		{
 			cx += 16*dupx;
@@ -2934,7 +2939,7 @@ INT32 V_LevelNameWidth(const char *string)
 	{
 		if (string[i] & 0x80)
 			continue;
-		c = toupper(string[i]) - LT_FONTSTART;
+		c = string[i] - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 			w += 16;
 		else
@@ -2953,7 +2958,7 @@ INT32 V_LevelNameHeight(const char *string)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = toupper(string[i]) - LT_FONTSTART;
+		c = string[i] - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 			continue;
 
@@ -2964,7 +2969,7 @@ INT32 V_LevelNameHeight(const char *string)
 	return w;
 }
 
-// For ST_drawLevelTitle
+// For ST_drawTitleCard
 // Returns the width of the act num patch
 INT32 V_LevelActNumWidth(INT32 num)
 {
