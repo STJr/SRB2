@@ -7832,7 +7832,7 @@ static void M_DrawLoadGameData(void)
 				Z_Free(colormap);
 
 				tempx -= (20<<FRACBITS);
-				flip = V_FLIP;
+				//flip = V_FLIP;
 			}
 skipbot:
 			// signpost image
