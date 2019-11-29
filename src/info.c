@@ -4692,7 +4692,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_ROBOHOOD_STAND, // seestate
 		sfx_None,         // seesound
 		TICRATE,          // reactiontime
-		sfx_None,         // attacksound
+		sfx_ngjump,       // attacksound
 		S_NULL,           // painstate
 		0,                // painchance
 		sfx_None,         // painsound
