@@ -4135,6 +4135,8 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 {
 	INT32 i;
 
+	Y_CleanupScreenBuffer();
+
 	if (paused)
 	{
 		paused = false;
