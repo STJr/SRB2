@@ -969,19 +969,24 @@ static const char *credits[] = {
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
+	"Louis-Antoine \"LJ Sonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
+	"Victor \"SteelT\" Fuentes",
 	"Nathan \"Jazz\" Giroux",
 	"Vivian \"toaster\" Grannell",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
+	"\"james\"",
 	"Iestyn \"Monster Iestyn\" Jealous",
+	"\"Jimita\"",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"John \"JTE\" Muniz",
 	"Ehab \"Wolfy\" Saeed",
 	"Jonas \"MascaraSnake\" Sauer",
 	"\"Kaito Sinclaire\"",
 	"\"SSNTails\"",
+	"Lachlan \"Lach\" Wright",
 	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Programming",
@@ -990,11 +995,7 @@ static const char *credits[] = {
 	"Andrew \"orospakr\" Clunis",
 	"Sally \"TehRealSalt\" Cochenour",
 	"Gregor \"Oogaland\" Dick",
-	"Louis-Antoine \"LJ Sonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
-	"Victor \"SteelT\" Fuentes",
 	"Julio \"Chaos Zero 64\" Guir",
-	"\"james\"",
-	"\"Jimita\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
@@ -1005,7 +1006,6 @@ static const char *credits[] = {
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
 	"Wessel \"sphere\" Smit",
 	"Ben \"Cue\" Woodford",
-	"Lachlan \"Lach\" Wright",
 	// Git contributors with 5+ approved merges of substantive quality,
 	// or contributors with at least one groundbreaking merge, may be named.
 	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
@@ -1032,6 +1032,8 @@ static const char *credits[] = {
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo
 	"Ryan \"Blaze Hedgehog\" Bloom",
 	"Paul \"Boinciel\" Clempson",
+	"Desmond \"Blade\" DesJardins",
+	"Sherman \"CoatRack\" DesJardins",
 	"Buddy \"KinkaJoy\" Fischer",
 	"Vivian \"toaster\" Grannell",
 	"Kepa \"Nev3r\" Iceta",
