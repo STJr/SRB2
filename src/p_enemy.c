@@ -1731,6 +1731,7 @@ void A_HoodThink(mobj_t *actor)
 	// Target dangerously close to robohood, retreat then.
 	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS))
 	{
+		S_StartSound(actor, actor->info->attacksound);
 		P_SetMobjState(actor, actor->info->raisestate);
 		return;
 	}
