@@ -3474,18 +3474,14 @@ void A_BossScream(mobj_t *actor)
 	if (LUA_CallAction("A_BossScream", actor))
 		return;
 #endif
-	switch (locvar1)
+	if (locvar1 & 1)
 	{
-	default:
-	case 0:
 		actor->movecount += 4*16;
 		actor->movecount %= 360;
 		fa = (FixedAngle(actor->movecount*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
-		break;
-	case 1:
-		fa = (FixedAngle(P_RandomKey(360)*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
-		break;
 	}
+	else
+		fa = (FixedAngle(P_RandomKey(360)*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
 	x = actor->x + FixedMul(FINECOSINE(fa),actor->radius);
 	y = actor->y + FixedMul(FINESINE(fa),actor->radius);
 
@@ -3495,7 +3491,9 @@ void A_BossScream(mobj_t *actor)
 	else
 		explodetype = (mobjtype_t)locvar2;
 
-	if (actor->eflags & MFE_VERTICALFLIP)
+	if (locvar1 & 2)
+		z = actor->z + (P_RandomKey((actor->height - mobjinfo[explodetype].height)>>FRACBITS)<<FRACBITS);
+	else if (actor->eflags & MFE_VERTICALFLIP)
 		z = actor->z + actor->height - mobjinfo[explodetype].height - FixedMul((P_RandomByte()<<(FRACBITS-2)) - 8*FRACUNIT, actor->scale);
 	else
 		z = actor->z + FixedMul((P_RandomByte()<<(FRACBITS-2)) - 8*FRACUNIT, actor->scale);
@@ -4048,12 +4046,27 @@ bossjustdie:
 	switch (mo->type)
 	{
 		case MT_BLACKEGGMAN:
-		case MT_CYBRAKDEMON:
 		{
 			mo->flags |= MF_NOCLIP;
 			mo->flags &= ~MF_SPECIAL;
 
 			S_StartSound(NULL, sfx_befall);
+			break;
+		}
+		case MT_CYBRAKDEMON:
+		{
+			mo->flags |= MF_NOCLIP;
+			mo->flags &= ~(MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
+
+			S_StartSound(NULL, sfx_bedie2);
+			if (mo->spawnpoint && !(mo->spawnpoint->options & MTF_EXTRA))
+			{
+				P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
+				mo->z += P_MobjFlip(mo);
+				P_SetObjectMomZ(mo, 12*FRACUNIT, false);
+				P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->x, mo->y), 14*FRACUNIT);
+				S_StartSound(mo, sfx_bgxpld);
+			}
 			break;
 		}
 		case MT_KOOPA:

@@ -1572,6 +1572,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 					}
 					break;
 				case MT_WATERDROP:
+				case MT_CYBRAKDEMON:
 					gravityadd >>= 1;
 				default:
 					break;
@@ -8190,6 +8191,26 @@ void P_MobjThinker(mobj_t *mobj)
 			}
 			else if (mobj->target)
 				P_InstaThrust(mobj, mobj->angle, FixedMul(12*FRACUNIT, mobj->scale));
+		}
+		if (mobj->type == MT_CYBRAKDEMON && !mobj->health)
+		{
+			if (!(mobj->tics & 1))
+			{
+				var1 = 2;
+				var2 = 0;
+				A_BossScream(mobj);
+			}
+			if (mobj->momz && mobj->z+mobj->momz <= mobj->floorz)
+			{
+				if (P_CheckDeathPitCollide(mobj))
+				{
+					P_RemoveMobj(mobj);
+					return;
+				}
+				S_StartSound(mobj, sfx_befall);
+				if (mobj->state != states+S_CYBRAKDEMON_DIE8)
+					P_SetMobjState(mobj, S_CYBRAKDEMON_DIE8);
+			}
 		}
 	}
 	else if (mobj->health <= 0) // Dead things think differently than the living.
