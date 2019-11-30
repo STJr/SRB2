@@ -305,7 +305,7 @@ static void F_NewCutscene(const char *basetext)
 // =============
 //  INTRO SCENE
 // =============
-#define NUMINTROSCENES 16
+#define NUMINTROSCENES 17
 INT32 intro_scenenum = 0;
 INT32 intro_curtime = 0;
 
@@ -325,7 +325,8 @@ static tic_t introscenetime[NUMINTROSCENES] =
 	16*TICRATE,					// Meanwhile, Sonic was tearing across the zones...
 	16*TICRATE + (TICRATE/2),	// Sonic knew he was getting closer to the city...
 	17*TICRATE,					// Greenflower City was gone...
-	16*TICRATE + (TICRATE/2),	// You're not quite as dead as we thought, huh?...
+	 7*TICRATE,					// You're not quite as dead as we thought, huh?...
+	 8*TICRATE,					// We'll see... let's give you a quick warm up...
 	18*TICRATE + (TICRATE/2),	// Eggman took this as his cue and blasted off...
 	16*TICRATE,					// Easy! We go find Eggman and stop his...
 	25*TICRATE,					// I'm just finding what mission obje...
@@ -436,14 +437,22 @@ void F_StartIntro(void)
 	"had been obliterated.\n#");
 
 	introtext[12] = M_GetText(
-	"\xA7\"You're not quite as gone as we thought,\n"
-	"huh?\xBF Are you going to tell us your plan as\n"
-	"usual or will I \xA8\xB4'have to work it out'\xA7 or\n"
-	"something?\"\xD2\xD2\n"
+	"\xA7\"You're not\n"
+	"quite as gone\n"
+	"as we thought,\n"
+	"huh?\xBF Are you\n"
+	"going to tell\n"
+	"us your plan as\n"
+	"usual or will I\n"
+	"\xA8\xB4'have to work\n"
+	"it out'\xA7 or\n"
+	"something?\"\xD2\xD2\n#");
+
+	introtext[13] = M_GetText(
 	"\"We'll see\xAA...\xA7\xBF let's give you a quick warm\n"
 	"up, Sonic!\xA6\xC4 JETTYSYNS!\xA7\xBD Open fire!\"\n#");
 
-	introtext[13] = M_GetText(
+	introtext[14] = M_GetText(
 	"Eggman took this\n"
 	"as his cue and\n"
 	"blasted off,\n"
@@ -457,7 +466,7 @@ void F_StartIntro(void)
 	"\xA7\"Now\xB6 what do we\n"
 	"do?\",\xA9 he asked.\n#");
 
-	introtext[14] = M_GetText(
+	introtext[15] = M_GetText(
 	"\xA7\"Easy!\xBF We go\n"
 	"find Eggman\n"
 	"and stop his\n"
@@ -471,7 +480,7 @@ void F_StartIntro(void)
 	"\xAA*ARE*\xA9 you\n"
 	"doing?\"\n#");
 
-	introtext[15] = M_GetText(
+	introtext[16] = M_GetText(
 	"\xA8\"I'm just finding what mission obje\xAC\xB1...\xBF\n"
 	"\xA6""a-\xB8""ha!\xBF Here it is!\xA8\xBF This will only give us\n"
 	"the robot's primary objective.\xBF It says\xAC\xB1...\"\n"
@@ -509,91 +518,93 @@ void F_StartIntro(void)
 //
 static void F_IntroDrawScene(void)
 {
-	boolean highres = false;
+	boolean highres = true;
 	INT32 cx = 8, cy = 128;
 	patch_t *background = NULL;
 	INT32 bgxoffs = 0;
 	void *patch;
 
 	// DRAW A FULL PIC INSTEAD OF FLAT!
-	if (intro_scenenum == 0);
-	else if (intro_scenenum == 1)
-		background = W_CachePatchName("INTRO1", PU_CACHE);
-	else if (intro_scenenum == 2)
+	switch (intro_scenenum)
 	{
-		background = W_CachePatchName("INTRO2", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 3)
-		background = W_CachePatchName("INTRO3", PU_CACHE);
-	else if (intro_scenenum == 4)
-		background = W_CachePatchName("INTRO4", PU_CACHE);
-	else if (intro_scenenum == 5)
-	{
-		if (intro_curtime >= 5*TICRATE)
-			background = W_CachePatchName("RADAR", PU_CACHE);
-		else
+		case 0:
+			break;
+		case 1:
+			background = W_CachePatchName("INTRO1", PU_CACHE);
+			break;
+		case 2:
+			background = W_CachePatchName("INTRO2", PU_CACHE);
+			break;
+		case 3:
+			background = W_CachePatchName("INTRO3", PU_CACHE);
+			break;
+		case 4:
+			background = W_CachePatchName("INTRO4", PU_CACHE);
+			break;
+		case 5:
+			if (intro_curtime >= 5*TICRATE)
+				background = W_CachePatchName("RADAR", PU_CACHE);
+			else
+				background = W_CachePatchName("DRAT", PU_CACHE);
+			break;
+		case 6:
+			background = W_CachePatchName("INTRO6", PU_CACHE);
+			cx = 180;
+			cy = 8;
+			break;
+		case 7:
 		{
-			background = W_CachePatchName("DRAT", PU_CACHE);
-			highres = true;
+			if (intro_curtime >= 7*TICRATE + ((TICRATE/7)*2))
+				background = W_CachePatchName("SGRASS5", PU_CACHE);
+			else if (intro_curtime >= 7*TICRATE + (TICRATE/7))
+				background = W_CachePatchName("SGRASS4", PU_CACHE);
+			else if (intro_curtime >= 7*TICRATE)
+				background = W_CachePatchName("SGRASS3", PU_CACHE);
+			else if (intro_curtime >= 6*TICRATE)
+				background = W_CachePatchName("SGRASS2", PU_CACHE);
+			else
+				background = W_CachePatchName("SGRASS1", PU_CACHE);
+			break;
 		}
-	}
-	else if (intro_scenenum == 6)
-	{
-		background = W_CachePatchName("INTRO6", PU_CACHE);
-		cx = 180;
-		cy = 8;
-	}
-	else if (intro_scenenum == 7)
-	{
-		if (intro_curtime >= 6*TICRATE)
-			background = W_CachePatchName("SGRASS5", PU_CACHE);
-		else
-			background = W_CachePatchName("SGRASS1", PU_CACHE);
-	}
-	else if (intro_scenenum == 8)
-	{
-		background = W_CachePatchName("WATCHING", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 9)
-	{
-		background = W_CachePatchName("ZOOMING", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 10);
-	else if (intro_scenenum == 11)
-		background = W_CachePatchName("INTRO5", PU_CACHE);
-	else if (intro_scenenum == 12)
-	{
-		if (intro_curtime >= 7*TICRATE)
-			background = W_CachePatchName("CONFRONT", PU_CACHE);
-		else
+		case 8:
+			background = W_CachePatchName("WATCHING", PU_CACHE);
+			break;
+		case 9:
+			background = W_CachePatchName("ZOOMING", PU_CACHE);
+			break;
+		case 10:
+			break;
+		case 11:
+			background = W_CachePatchName("INTRO5", PU_CACHE);
+			break;
+		case 12:
 			background = W_CachePatchName("REVENGE", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 13)
-	{
-		background = W_CachePatchName("TAILSSAD", PU_CACHE);
-		highres = true;
-		bgxoffs = 144;
-		cx = 8;
-		cy = 8;
-	}
-	else if (intro_scenenum == 14)
-	{
-		if (intro_curtime >= 7*TICRATE)
-			background = W_CachePatchName("SONICDO2", PU_CACHE);
-		else
-			background = W_CachePatchName("SONICDO1", PU_CACHE);
-		highres = true;
-		cx = 224;
-		cy = 8;
-	}
-	else if (intro_scenenum == 15)
-	{
-		background = W_CachePatchName("INTRO7", PU_CACHE);
-		highres = true;
+			cx = 208;
+			cy = 8;
+			break;
+		case 13:
+			background = W_CachePatchName("CONFRONT", PU_CACHE);
+			cy += 48;
+			break;
+		case 14:
+			background = W_CachePatchName("TAILSSAD", PU_CACHE);
+			bgxoffs = 144;
+			cx = 8;
+			cy = 8;
+			break;
+		case 15:
+			if (intro_curtime >= 7*TICRATE)
+				background = W_CachePatchName("SONICDO2", PU_CACHE);
+			else
+				background = W_CachePatchName("SONICDO1", PU_CACHE);
+			cx = 224;
+			cy = 8;
+			break;
+		case 16:
+			background = W_CachePatchName("INTRO7", PU_CACHE);
+			break;
+		default:
+			break;
 	}
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
@@ -731,52 +742,111 @@ static void F_IntroDrawScene(void)
 		}
 		else
 		{
-			menuanimtimer = animtimer; // Reusing this variable for the intro to fix the scrolling sky, better than changing the function around.
-			F_SkyScroll(80*4, 0, "TITLESKY");
-			if (timetonext == 6)
+			tic_t sonicdelay = max(0, timetonext - 16*TICRATE);
+			tic_t tailsdelay = max(0, timetonext - (9*TICRATE >> 1));
+			tic_t knucklesdelay = max(0, timetonext - (5*TICRATE >> 1));
+			INT32 sonicx = (timetonext >> 2) + min(sonicdelay, TICRATE >> 1) * sonicdelay;
+			INT32 tailsx = 32 + min(tailsdelay, TICRATE >> 1) * tailsdelay;
+			INT32 knucklesx = 96 + min(knucklesdelay, TICRATE >> 1) * knucklesdelay;
+			INT32 tailsy = 12 + P_ReturnThrustX(NULL, finalecount * ANGLE_22h, 2);
+			INT32 knucklesy = 48 - (timetonext >> 3);
+			INT32 skyx, grassx;
+
+			if (timetonext >= 0 && timetonext < 18)
 			{
-				stoptimer = finalecount;
-				animtimer = finalecount % 16;
-			}
-			else if (timetonext >= 0 && timetonext < 6)
-			{
-				animtimer = stoptimer;
-				deplete -= 32;
+				deplete -= 16;
 			}
 			else
 			{
-				animtimer = finalecount % 16;
-				deplete = 160;
+				stoptimer = finalecount;
+				deplete = 96;
 			}
+			skyx = 2 * stoptimer % 320;
+			grassx = 16 * stoptimer % 320;
+			sonicx += deplete;
+			tailsx += sonicx;
+			knucklesx += sonicx;
+			sonicx += P_ReturnThrustX(NULL, finalecount * ANG10, 3);
+
+			V_DrawSmallScaledPatch(skyx, 0, 0, (patch = W_CachePatchName("INTROSKY", PU_CACHE)));
+			V_DrawSmallScaledPatch(skyx - 320, 0, 0, patch);
+			W_UnlockCachedPatch(patch);
+			V_DrawSmallScaledPatch(grassx, 0, 0, (patch = W_CachePatchName("INTROGRS", PU_CACHE)));
+			V_DrawSmallScaledPatch(grassx - 320, 0, 0, patch);
+			W_UnlockCachedPatch(patch);
 
 			if (finalecount & 1)
 			{
-				V_DrawScaledPatch(deplete, 8, 0, (patch = W_CachePatchName("RUN2", PU_CACHE)));
+				// Sonic
+				V_DrawSmallScaledPatch(sonicx, 54, 0, (patch = W_CachePatchName("RUN2", PU_CACHE)));
 				W_UnlockCachedPatch(patch);
-				V_DrawScaledPatch(deplete, 72, 0, (patch = W_CachePatchName("PEELOUT2", PU_CACHE)));
+
+				// Appendages
+				if (finalecount & 2)
+				{
+					// Sonic's feet
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT4", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+					// Tails' tails
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP2", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+				}
+				else
+				{
+					// Sonic's feet
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT2", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+					// Tails' tails
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP1", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+				}
+
+				// Tails
+				V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("FLY2", PU_CACHE)));
+				W_UnlockCachedPatch(patch);
+
+				// Knuckles
+				V_DrawSmallScaledPatch(knucklesx, knucklesy, 0, (patch = W_CachePatchName("GLIDE2", PU_CACHE)));
 				W_UnlockCachedPatch(patch);
 			}
 			else
 			{
-				V_DrawScaledPatch(deplete, 8, 0, (patch = W_CachePatchName("RUN1", PU_CACHE)));
+				// Sonic
+				V_DrawSmallScaledPatch(sonicx, 54, 0, (patch = W_CachePatchName("RUN1", PU_CACHE)));
 				W_UnlockCachedPatch(patch);
-				V_DrawScaledPatch(deplete, 72, 0, (patch = W_CachePatchName("PEELOUT1", PU_CACHE)));
+
+				// Appendages
+				if (finalecount & 2)
+				{
+					// Sonic's feet
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT3", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+					// Tails' tails
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP2", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+				}
+				else
+				{
+					// Sonic's feet
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT1", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+					// Tails' tails
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP1", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+				}
+
+				// Tails
+				V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("FLY1", PU_CACHE)));
+				W_UnlockCachedPatch(patch);
+
+				// Knuckles
+				V_DrawSmallScaledPatch(knucklesx, knucklesy, 0, (patch = W_CachePatchName("GLIDE1", PU_CACHE)));
 				W_UnlockCachedPatch(patch);
 			}
 
-			{ // Fixing up the black box rendering to look right in resolutions <16:10 -Red
-				INT32 y = 112;
-				INT32 h = BASEVIDHEIGHT - 112;
-				if (vid.height != BASEVIDHEIGHT * vid.dupy)
-				{
-					INT32 adjust = (vid.height/vid.dupy)-200;
-					adjust /= 2;
-					y += adjust;
-					h += adjust;
-					V_DrawFill(0, 0, BASEVIDWIDTH, adjust, 31); // Render a black bar on top so it keeps the "cinematic" windowboxing... I just prefer it this way. -Red
-				}
-				V_DrawFill(0, y, BASEVIDWIDTH, h, 31);
-			}
+			// Black bars to hide the sky on widescreen
+			V_DrawFill(-80, 0, 80, 256, 31);
+			V_DrawFill(BASEVIDWIDTH, 0, 80, 256, 31);
 		}
 	}
 
@@ -826,21 +896,6 @@ static void F_IntroDrawScene(void)
 	if (animtimer)
 		animtimer--;
 
-	if (intro_scenenum == 7 && intro_curtime > 7*TICRATE)
-	{
-		patch_t *sgrass;
-
-		if (intro_curtime >= 7*TICRATE + ((TICRATE/7)*2))
-			sgrass = W_CachePatchName("SGRASS4", PU_CACHE);
-		else if (intro_curtime >= 7*TICRATE + (TICRATE/7))
-			sgrass = W_CachePatchName("SGRASS3", PU_CACHE);
-		else
-			sgrass = W_CachePatchName("SGRASS2", PU_CACHE);
-		V_DrawScaledPatch(123, 4, 0, sgrass);
-
-		W_UnlockCachedPatch(sgrass);
-	}
-
 	V_DrawString(cx, cy, V_ALLOWLOWERCASE, cutscene_disptext);
 }
 
@@ -875,7 +930,7 @@ void F_IntroDrawer(void)
 				F_RunWipe(99,true);
 			}
 		}
-		else if (intro_scenenum == 15)
+		else if (intro_scenenum == 16)
 		{
 			if (rendermode != render_none)
 			{
@@ -928,7 +983,7 @@ void F_IntroDrawer(void)
 
 			F_WipeStartScreen();
 			F_WipeColorFill(31);
-			V_DrawScaledPatch(0, 0, 0, radar);
+			V_DrawSmallScaledPatch(0, 0, 0, radar);
 			W_UnlockCachedPatch(radar);
 			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
@@ -937,18 +992,18 @@ void F_IntroDrawer(void)
 		}
 		else if (intro_scenenum == 7 && intro_curtime == 6*TICRATE) // Force a wipe here
 		{
-			patch_t *grass = W_CachePatchName("SGRASS5", PU_CACHE);
+			patch_t *grass = W_CachePatchName("SGRASS2", PU_CACHE);
 
 			F_WipeStartScreen();
 			F_WipeColorFill(31);
-			V_DrawScaledPatch(0, 0, 0, grass);
+			V_DrawSmallScaledPatch(0, 0, 0, grass);
 			W_UnlockCachedPatch(grass);
 			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
 		}
-		else if (intro_scenenum == 12 && intro_curtime == 7*TICRATE)
+		/*else if (intro_scenenum == 12 && intro_curtime == 7*TICRATE)
 		{
 			patch_t *confront = W_CachePatchName("CONFRONT", PU_CACHE);
 
@@ -960,8 +1015,8 @@ void F_IntroDrawer(void)
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
-		}
-		if (intro_scenenum == 14 && intro_curtime == 7*TICRATE)
+		}*/
+		if (intro_scenenum == 15 && intro_curtime == 7*TICRATE)
 		{
 			patch_t *sdo = W_CachePatchName("SONICDO2", PU_CACHE);
 
