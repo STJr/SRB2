@@ -8200,13 +8200,13 @@ void P_MobjThinker(mobj_t *mobj)
 				var2 = 0;
 				A_BossScream(mobj);
 			}
+			if (P_CheckDeathPitCollide(mobj))
+			{
+				P_RemoveMobj(mobj);
+				return;
+			}
 			if (mobj->momz && mobj->z+mobj->momz <= mobj->floorz)
 			{
-				if (P_CheckDeathPitCollide(mobj))
-				{
-					P_RemoveMobj(mobj);
-					return;
-				}
 				S_StartSound(mobj, sfx_befall);
 				if (mobj->state != states+S_CYBRAKDEMON_DIE8)
 					P_SetMobjState(mobj, S_CYBRAKDEMON_DIE8);
