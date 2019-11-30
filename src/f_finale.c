@@ -720,7 +720,7 @@ static void F_IntroDrawScene(void)
 			else
 				background = W_CachePatchName("DARKEGG1", PU_CACHE);
 
-			V_DrawScaledPatch(0, 0, 0, background);
+			V_DrawSmallScaledPatch(0, 0, 0, background);
 		}
 		else if (timetonext > 3*TICRATE && timetonext < 4*TICRATE)
 		{
@@ -729,7 +729,7 @@ static void F_IntroDrawScene(void)
 			else
 				background = W_CachePatchName("DARKEGG2", PU_CACHE);
 
-			V_DrawScaledPatch(0, 0, 0, background);
+			V_DrawSmallScaledPatch(0, 0, 0, background);
 		}
 		else if (timetonext > 1*TICRATE && timetonext < 2*TICRATE)
 		{
@@ -738,7 +738,7 @@ static void F_IntroDrawScene(void)
 			else
 				background = W_CachePatchName("DARKEGG3", PU_CACHE);
 
-			V_DrawScaledPatch(0, 0, 0, background);
+			V_DrawSmallScaledPatch(0, 0, 0, background);
 		}
 		else
 		{
