@@ -6001,7 +6001,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 		if (mobj->health <= mobj->info->damage && mobj->fuse && !(mobj->fuse%TICRATE))
 		{
-			var1 = 0;
+			var1 = 1;
 			var2 = 0;
 			A_BossScream(mobj);
 		}
