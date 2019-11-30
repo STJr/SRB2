@@ -11977,7 +11977,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 			skyboxviewpnts[mthing->extrainfo] = mobj;
 		break;
 	case MT_EGGSTATUE:
-		if (tutorialmode != (mthing->options & MTF_OBJECTSPECIAL))
+		if (mthing->options & MTF_EXTRA)
 		{
 			mobj->color = SKINCOLOR_GOLD;
 			mobj->colorized = true;
