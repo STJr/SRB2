@@ -355,7 +355,7 @@ static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NUL
 consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t coopstarposts_cons_t[] = {{0, "Per-player"}, {1, "Shared"}, {2, "Teamwork"}, {0, NULL}};
-consvar_t cv_coopstarposts = {"coopstarposts", "Teamwork", CV_NETVAR|CV_CALL|CV_CHEAT, coopstarposts_cons_t, CoopStarposts_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_coopstarposts = {"coopstarposts", "Per-player", CV_NETVAR|CV_CALL, coopstarposts_cons_t, CoopStarposts_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Infinite"}, {1, "Per-player"}, {2, "Avoid Game Over"}, {3, "Single pool"}, {0, NULL}};
 consvar_t cv_cooplives = {"cooplives", "Avoid Game Over", CV_NETVAR|CV_CALL|CV_CHEAT, cooplives_cons_t, CoopLives_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -1228,16 +1228,16 @@ static void SendNameAndColor(void)
 		}
 		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
 		{
-			boolean notsame;
+			//boolean notsame;
 
 			cv_skin.value = foundskin;
 
-			notsame = (cv_skin.value != players[consoleplayer].skin);
+			//notsame = (cv_skin.value != players[consoleplayer].skin);
 
 			SetPlayerSkin(consoleplayer, cv_skin.string);
 			CV_StealthSet(&cv_skin, skins[cv_skin.value].name);
 
-			if (notsame)
+			/*if (notsame)
 			{
 				CV_StealthSetValue(&cv_playercolor, skins[cv_skin.value].prefcolor);
 
@@ -1245,7 +1245,7 @@ static void SendNameAndColor(void)
 
 				if (players[consoleplayer].mo)
 					players[consoleplayer].mo->color = (UINT8)players[consoleplayer].skincolor;
-			}
+			}*/
 		}
 		else
 		{
@@ -1356,15 +1356,16 @@ static void SendNameAndColor2(void)
 		}
 		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUsable(secondplaya, foundskin))
 		{
-			boolean notsame;
+			//boolean notsame;
 
 			cv_skin2.value = foundskin;
 
-			notsame = (cv_skin2.value != players[secondplaya].skin);
+			//notsame = (cv_skin2.value != players[secondplaya].skin);
 
 			SetPlayerSkin(secondplaya, cv_skin2.string);
+			CV_StealthSet(&cv_skin2, skins[cv_skin2.value].name);
 
-			if (notsame)
+			/*if (notsame)
 			{
 				CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin].prefcolor);
 
@@ -1372,7 +1373,7 @@ static void SendNameAndColor2(void)
 
 				if (players[secondplaya].mo)
 					players[secondplaya].mo->color = players[secondplaya].skincolor;
-			}
+			}*/
 		}
 		else
 		{
@@ -4288,6 +4289,8 @@ void Command_ExitGame_f(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		CL_ClearPlayer(i);
+
+	players[consoleplayer].availabilities = players[1].availabilities = R_GetSkinAvailabilities(); // players[1] is supposed to be for 2p
 
 	splitscreen = false;
 	SplitScreen_OnChange();

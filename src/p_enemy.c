@@ -2476,12 +2476,8 @@ void A_VultureBlast(mobj_t *actor)
 void A_VultureFly(mobj_t *actor)
 {
 	fixed_t speedmax = 18*FRACUNIT;
-	angle_t angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
-	fixed_t dx = actor->target->x - actor->x;
-	fixed_t dy = actor->target->y - actor->y;
-	fixed_t dz = actor->target->z - actor->z;
-	fixed_t dxy = FixedHypot(dx, dy);
-	fixed_t dm;
+	angle_t angledif;
+	fixed_t dx, dy, dz, dxy, dm;
 	mobj_t *dust;
 	fixed_t momm;
 
@@ -2489,6 +2485,18 @@ void A_VultureFly(mobj_t *actor)
 	if (LUA_CallAction("A_VultureFly", actor))
 		return;
 #endif
+
+	if (!actor->target || P_MobjWasRemoved(actor->target))
+	{
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
+	dx = actor->target->x - actor->x;
+	dy = actor->target->y - actor->y;
+	dz = actor->target->z - actor->z;
+	dxy = FixedHypot(dx, dy);
 
 	if (leveltime % 4 == 0)
 		S_StartSound(actor, actor->info->activesound);
@@ -5664,10 +5672,10 @@ void A_MinusPopup(mobj_t *actor)
 	S_StartSound(actor, sfx_s3k82);
 	for (i = 1; i <= num; i++)
 	{
-		mobj_t *rock = P_SpawnMobj(actor->x, actor->y, actor->z + actor->height/4, MT_ROCKCRUMBLE1);
+		mobj_t *rock = P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_ROCKCRUMBLE1);
 		P_Thrust(rock, ani*i, FRACUNIT);
-		rock->momz = 3*FRACUNIT;
-		P_SetScale(rock, FRACUNIT/3);
+		P_SetObjectMomZ(rock, 3*FRACUNIT, false);
+		P_SetScale(rock, rock->scale/3);
 	}
 	P_RadiusAttack(actor, actor, 2*actor->radius, 0);
 	if (actor->tracer)
@@ -5681,11 +5689,12 @@ void A_MinusPopup(mobj_t *actor)
 // Description: If the minus hits the floor, dig back into the ground.
 //
 // var1 = State to switch to (if 0, use seestate).
-// var2 = unused
+// var2 = If not 0, spawn debris when hitting the floor.
 //
 void A_MinusCheck(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusCheck", actor))
@@ -5696,6 +5705,18 @@ void A_MinusCheck(mobj_t *actor)
 	{
 		P_SetMobjState(actor, locvar1 ? (statenum_t)locvar1 : actor->info->seestate);
 		actor->flags = actor->info->flags;
+		if (locvar2)
+		{
+			INT32 i, num = 6;
+			angle_t ani = FixedAngle(FRACUNIT*360/num);
+			for (i = 1; i <= num; i++)
+			{
+				mobj_t *rock = P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_ROCKCRUMBLE1);
+				P_Thrust(rock, ani*i, FRACUNIT);
+				P_SetObjectMomZ(rock, 3*FRACUNIT, false);
+				P_SetScale(rock, rock->scale/3);
+			}
+		}
 	}
 }
 
@@ -14589,6 +14610,9 @@ void A_RolloutRock(mobj_t *actor)
 	}
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
+
+	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		actor->flags |= MF_PUSHABLE;
 
 	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
 		actor->fuse = 0;

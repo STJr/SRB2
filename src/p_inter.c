@@ -148,13 +148,17 @@ void P_ResetStarposts(void)
 //
 boolean P_CanPickupItem(player_t *player, boolean weapon)
 {
-	if (player->bot && weapon)
+	if (!player->mo || player->mo->health <= 0)
 		return false;
+
+	if (player->bot)
+	{
+		if (weapon)
+			return false;
+		return P_CanPickupItem(&players[consoleplayer], true); // weapon is true to prevent infinite recursion if p1 is bot - doesn't occur in vanilla, but may be relevant for mods
+	}
 
 	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] < UINT16_MAX)
-		return false;
-
-	if (player->mo && player->mo->health <= 0)
 		return false;
 
 	return true;
@@ -2521,7 +2525,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
 			;
-		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap) && (target->player->lives != INFLIVES)
+		else if (!target->player->bot && !target->player->spectator && (target->player->lives != INFLIVES)
 		 && G_GametypeUsesLives())
 		{
 			target->player->lives -= 1; // Lose a life Tails 03-11-2000
@@ -2814,13 +2818,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (flip)
 				momz *= -1;
 #define makechunk(angtweak, xmov, ymov) \
-			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);\
-			chunk->eflags |= flip;\
+			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);\
 			P_SetMobjState(chunk, target->info->xdeathstate);\
 			chunk->health = 0;\
 			chunk->angle = angtweak;\
-			chunk->destscale = scale;\
-			P_SetScale(chunk, scale);\
 			P_UnsetThingPosition(chunk);\
 			chunk->flags = MF_NOCLIP;\
 			chunk->x += xmov;\
@@ -2839,14 +2840,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		if (flip)
 			momz *= -1;
 
-		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);
-		chunk->eflags |= flip;
-
+		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);
 		P_SetMobjState(chunk, target->info->deathstate);
 		chunk->health = 0;
 		chunk->angle = ang + ANGLE_180;
-		chunk->destscale = scale;
-		P_SetScale(chunk, scale);
 		P_UnsetThingPosition(chunk);
 		chunk->flags = MF_NOCLIP;
 		chunk->x -= xoffs;
@@ -2889,13 +2886,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			sprflip = P_RandomChance(FRACUNIT/2);
 
 #define makechunk(angtweak, xmov, ymov) \
-			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);\
-			chunk->eflags |= flip;\
+			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);\
 			P_SetMobjState(chunk, target->info->xdeathstate);\
 			chunk->health = 0;\
 			chunk->angle = target->angle;\
-			chunk->destscale = scale;\
-			P_SetScale(chunk, scale);\
 			P_UnsetThingPosition(chunk);\
 			chunk->flags = MF_NOCLIP;\
 			chunk->x += xmov - forwardxoffs;\
@@ -2917,14 +2911,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		sprflip = P_RandomChance(FRACUNIT/2);
 
-		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);
-		chunk->eflags |= flip;
+		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);
 
 		P_SetMobjState(chunk, target->info->deathstate);
 		chunk->health = 0;
 		chunk->angle = target->angle;
-		chunk->destscale = scale;
-		P_SetScale(chunk, scale);
 		P_UnsetThingPosition(chunk);
 		chunk->flags = MF_NOCLIP;
 		chunk->x += forwardxoffs - xoffs;

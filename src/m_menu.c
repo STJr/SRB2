@@ -6688,7 +6688,7 @@ static void M_DrawChecklist(void)
 		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS)
 			continue;
 
-		V_DrawString(currentMenu->x, y, ((unlockables[i].unlocked) ? V_GREENMAP : V_TRANSLUCENT), ((unlockables[i].unlocked || !unlockables[i].nochecklist) ? unlockables[i].name : M_CreateSecretMenuOption(unlockables[i].name)));
+		V_DrawString(currentMenu->x, y, ((unlockables[i].unlocked) ? V_GREENMAP : V_TRANSLUCENT)|V_ALLOWLOWERCASE, ((unlockables[i].unlocked || !unlockables[i].nochecklist) ? unlockables[i].name : M_CreateSecretMenuOption(unlockables[i].name)));
 
 		for (j = i+1; j < MAXUNLOCKABLES; j++)
 		{
@@ -8334,16 +8334,12 @@ static void M_SetupChoosePlayer(INT32 choice)
 {
 	INT32 skinnum;
 	UINT8 i;
-	UINT8 firstvalid = 255;
-	UINT8 lastvalid = 0;
+	UINT8 firstvalid = 255, lastvalid = 255;
 	boolean allowed = false;
 	char *and;
 	(void)choice;
 
-	if (!(mapheaderinfo[startmap-1]
-			&& (mapheaderinfo[startmap-1]->forcecharacter[0] != '\0'
-			|| (mapheaderinfo[startmap-1]->typeoflevel & TOL_NIGHTS)) // remove this later when everyone gets their own nights sprites, maybe
-		))
+	if (!mapheaderinfo[startmap-1] || mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
 	{
 		for (i = 0; i < 32; i++) // Handle charsels, availability, and unlocks.
 		{
@@ -8353,6 +8349,8 @@ static void M_SetupChoosePlayer(INT32 choice)
 				if (and)
 				{
 					char firstskin[SKINNAMESIZE+1];
+					if (mapheaderinfo[startmap-1]->typeoflevel & TOL_NIGHTS) // skip tagteam characters for NiGHTS levels
+						continue;
 					strncpy(firstskin, description[i].skinname, (and - description[i].skinname));
 					firstskin[(and - description[i].skinname)] = '\0';
 					description[i].skinnum[0] = R_SkinAvailable(firstskin);
@@ -8381,7 +8379,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 
 					if (!(description[i].picname[0]))
 					{
-						if (skins[skinnum].sprites[SPR2_XTRA].numframes >= XTRA_CHARSEL+1)
+						if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
 						{
 							spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 							spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
@@ -8406,16 +8404,15 @@ static void M_SetupChoosePlayer(INT32 choice)
 		}
 	}
 
-	if (firstvalid != 255)
-	{ // One last bit of order we can't do in the iteration above.
-		description[firstvalid].prev = lastvalid;
-		description[lastvalid].next = firstvalid;
-	}
-	else // We're being forced into a specific character, so might as well just skip it.
+	if (firstvalid == lastvalid) // We're being forced into a specific character, so might as well just skip it.
 	{
-		M_ChoosePlayer(-1);
+		M_ChoosePlayer(firstvalid);
 		return;
 	}
+
+	// One last bit of order we can't do in the iteration above.
+	description[firstvalid].prev = lastvalid;
+	description[lastvalid].next = firstvalid;
 
 	M_ChangeMenuMusic("_chsel", true);
 
@@ -8743,7 +8740,7 @@ static void M_ChoosePlayer(INT32 choice)
 	UINT8 skinnum;
 
 	// skip this if forcecharacter or no characters available
-	if (choice == -1)
+	if (choice == 255)
 	{
 		skinnum = botskin = 0;
 		botingame = false;
@@ -8855,9 +8852,9 @@ static void M_DrawStatsMaps(int location)
 		M_DrawMapEmblems(mnum+1, 292, y);
 
 		if (mapheaderinfo[mnum]->actnum != 0)
-			V_DrawString(20, y, V_YELLOWMAP, va("%s %d", mapheaderinfo[mnum]->lvlttl, mapheaderinfo[mnum]->actnum));
+			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, va("%s %d", mapheaderinfo[mnum]->lvlttl, mapheaderinfo[mnum]->actnum));
 		else
-			V_DrawString(20, y, V_YELLOWMAP, mapheaderinfo[mnum]->lvlttl);
+			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, mapheaderinfo[mnum]->lvlttl);
 
 		y += 8;
 
@@ -8901,7 +8898,7 @@ static void M_DrawStatsMaps(int location)
 			else
 				V_DrawSmallScaledPatch(292, y, 0, W_CachePatchName("NEEDIT", PU_CACHE));
 
-			V_DrawString(20, y, V_YELLOWMAP, va("%s", exemblem->description));
+			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, va("%s", exemblem->description));
 		}
 
 		y += 8;
@@ -9112,7 +9109,7 @@ void M_DrawTimeAttackMenu(void)
 
 	// Character face!
 	{
-		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes >= XTRA_CHARSEL+1)
+		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
 		{
 			spritedef_t *sprdef = &skins[cv_chooseskin.value-1].sprites[SPR2_XTRA];
 			spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
@@ -9388,6 +9385,7 @@ void M_DrawNightsAttackMenu(void)
 	{
 		emblem_t *em;
 		INT32 yHeight;
+		INT32 xpos;
 		patch_t *PictureOfLevel;
 		lumpnum_t lumpnum;
 		char beststr[40];
@@ -9447,17 +9445,23 @@ void M_DrawNightsAttackMenu(void)
 			{
 				switch (em->type)
 				{
-					case ET_NGRADE: yHeight = 48; break;
-					case ET_NTIME:  yHeight = 68; break;
+					case ET_NGRADE:
+						xpos = 104+38;
+						yHeight = 48;
+						break;
+					case ET_NTIME:
+						xpos = 104+76;
+						yHeight = 68;
+						break;
 					default:
 						goto skipThisOne;
 				}
 
 				if (em->collected)
-					V_DrawSmallMappedPatch(104+38, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em, false), PU_CACHE),
+					V_DrawSmallMappedPatch(xpos, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em, false), PU_CACHE),
 																 R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 				else
-					V_DrawSmallScaledPatch(104+38, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_CACHE));
+					V_DrawSmallScaledPatch(xpos, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_CACHE));
 
 				skipThisOne:
 				em = M_GetLevelEmblems(-1);

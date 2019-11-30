@@ -784,12 +784,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->type == MT_SPIKE
 		|| thing->type == MT_WALLSPIKE)
 		{
-			mobjtype_t type = thing->type;
+			mobj_t *iter;
 			if (thing->flags & MF_SOLID)
 				S_StartSound(tmthing, thing->info->deathsound);
-			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
-				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(thing, tmthing, tmthing, 0);
+			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
+				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(iter, tmthing, tmthing, 0);
 		}
 		else
 		{
@@ -823,12 +823,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->type == MT_SPIKE
 		|| thing->type == MT_WALLSPIKE)
 		{
-			mobjtype_t type = thing->type;
+			mobj_t *iter;
 			if (thing->flags & MF_SOLID)
 				S_StartSound(tmthing, thing->info->deathsound);
-			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
-				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(thing, tmthing, tmthing, 0);
+			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
+				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(iter, tmthing, tmthing, 0);
 		}
 		else
 		{
@@ -1303,11 +1303,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return false;
 		}
 
-		// Fireball touched an enemy
-		// Don't bounce though, just despawn right there
-		if ((tmthing->type == MT_FIREBALL) && (thing->flags & MF_ENEMY))
-			P_KillMobj(tmthing, NULL, NULL, 0);
-
 		// damage / explode
 		if (tmthing->flags & MF_ENEMY) // An actual ENEMY! (Like the deton, for example)
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
@@ -1355,6 +1350,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				damagetype = DMG_FIRE;
 			P_DamageMobj(thing, tmthing, tmthing->target, 1, damagetype);
 		}
+
+		// Fireball touched an enemy
+		// Don't bounce though, just despawn right there
+		if ((tmthing->type == MT_FIREBALL) && (thing->flags & MF_ENEMY))
+			P_KillMobj(tmthing, NULL, NULL, 0);
 
 		// don't traverse any more
 
@@ -1719,8 +1719,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM) && (thing->player))
-		; // springs and gas jets should never be able to step up onto a player
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
+		; // springs, gas jets and springs should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
@@ -3758,6 +3758,33 @@ void P_SlideMove(mobj_t *mo)
 			v2.x = tmhitthing->x + cosradius;
 			v2.y = tmhitthing->y + sinradius;
 
+			// Can we box collision our way into smooth movement..?
+			if (sinradius && mo->y + mo->radius <= min(v1.y, v2.y))
+			{
+				mo->momy = 0;
+				P_TryMove(mo, mo->x + mo->momx, min(v1.y, v2.y) - mo->radius, true);
+				return;
+			}
+			else if (sinradius && mo->y - mo->radius >= max(v1.y, v2.y))
+			{
+				mo->momy = 0;
+				P_TryMove(mo, mo->x + mo->momx, max(v1.y, v2.y) + mo->radius, true);
+				return;
+			}
+			else if (cosradius && mo->x + mo->radius <= min(v1.x, v2.x))
+			{
+				mo->momx = 0;
+				P_TryMove(mo, min(v1.x, v2.x) - mo->radius, mo->y + mo->momy, true);
+				return;
+			}
+			else if (cosradius && mo->x - mo->radius >= max(v1.x, v2.x))
+			{
+				mo->momx = 0;
+				P_TryMove(mo, max(v1.x, v2.x) + mo->radius, mo->y + mo->momy, true);
+				return;
+			}
+
+			// nope, gotta fuck around with a fake linedef!
 			junk.v1 = &v1;
 			junk.v2 = &v2;
 			junk.dx = 2*cosradius; // v2.x - v1.x;

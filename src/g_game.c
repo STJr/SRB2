@@ -1019,11 +1019,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	movebkey = PLAYER1INPUTDOWN(gc_backward);
 
 	mouseaiming = (PLAYER1INPUTDOWN(gc_mouseaiming)) ^
-		(cv_chasecam.value ? cv_chasefreelook.value : cv_alwaysfreelook.value);
+		((cv_chasecam.value && !player->spectator) ? cv_chasefreelook.value : cv_alwaysfreelook.value);
 	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;
 
-	thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
+	thisjoyaiming = (cv_chasecam.value && !player->spectator) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
 
 	// Reset the vertical look if we're no longer joyaiming
 	if (!thisjoyaiming && joyaiming)
@@ -1348,11 +1348,11 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	movebkey = PLAYER2INPUTDOWN(gc_backward);
 
 	mouseaiming = (PLAYER2INPUTDOWN(gc_mouseaiming)) ^
-		(cv_chasecam2.value ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
+		((cv_chasecam2.value && !player->spectator) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
 	analogjoystickmove = cv_usejoystick2.value && !Joystick2.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick2.value && Joystick2.bGamepadStyle;
 
-	thisjoyaiming = (cv_chasecam2.value) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
+	thisjoyaiming = (cv_chasecam2.value && !player->spectator) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
 
 	// Reset the vertical look if we're no longer joyaiming
 	if (!thisjoyaiming && joyaiming)
@@ -2323,6 +2323,9 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	outofcoop = players[player].outofcoop;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
 
+	if (!betweenmaps)
+		pflags |= (players[player].pflags & PF_FINISHED);
+
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
 		pflags |= (players[player].pflags & (PF_GODMODE|PF_NOCLIP|PF_INVIS));
@@ -2978,7 +2981,7 @@ void G_AddPlayer(INT32 playernum)
 	if (G_GametypeUsesLives() || ((netgame || multiplayer) && gametype == GT_COOP))
 		p->lives = cv_startinglives.value;
 
-	if (countplayers && !notexiting)
+	if ((countplayers && !notexiting) || G_IsSpecialStage(gamemap))
 		P_DoPlayerExit(p);
 }
 
@@ -2997,7 +3000,7 @@ boolean G_EnoughPlayersFinished(void)
 			continue;
 
 		total++;
-		if (players[i].pflags & PF_FINISHED)
+		if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
 			exiting++;
 	}
 
@@ -3099,7 +3102,7 @@ boolean G_GametypeUsesLives(void)
 	 // Coop, Competitive
 	if ((gametype == GT_COOP || gametype == GT_COMPETITION)
 	 && !(modeattacking || metalrecording) // No lives in Time Attack
-	 //&& !G_IsSpecialStage(gamemap)
+	 && !G_IsSpecialStage(gamemap)
 	 && !(maptol & TOL_NIGHTS)) // No lives in NiGHTS
 		return true;
 	return false;

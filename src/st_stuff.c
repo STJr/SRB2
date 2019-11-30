@@ -353,12 +353,12 @@ void ST_LoadGraphics(void)
 // made separate so that skins code can reload custom face graphics
 void ST_LoadFaceGraphics(INT32 skinnum)
 {
-	if (skins[skinnum].sprites[SPR2_XTRA].numframes)
+	if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_LIFEPIC)
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_LIFEPIC];
 		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
-		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes)
+		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA|FF_SPR2SUPER];
 			sprframe = &sprdef->spriteframes[0];

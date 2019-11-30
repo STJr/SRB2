@@ -1681,6 +1681,7 @@ void F_GameEvaluationTicker(void)
 // ==========
 
 #define INFLECTIONPOINT (6*TICRATE)
+#define STOPPINGPOINT (14*TICRATE)
 #define SPARKLLOOPTIME 15 // must be odd
 
 void F_StartEnding(void)
@@ -1739,7 +1740,7 @@ void F_StartEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= (XTRA_ENDING+2)+1)
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
@@ -1772,7 +1773,7 @@ void F_StartEnding(void)
 
 void F_EndingTicker(void)
 {
-	if (++finalecount > INFLECTIONPOINT*2)
+	if (++finalecount > STOPPINGPOINT)
 	{
 		F_StartCredits();
 		wipetypepre = INT16_MAX;
@@ -2168,26 +2169,26 @@ void F_EndingDrawer(void)
 
 		if (finalecount < 10)
 			trans = (10-finalecount)/2;
-		else if (finalecount > (2*INFLECTIONPOINT) - 20)
+		else if (finalecount > STOPPINGPOINT - 20)
 		{
-			trans = 10 + (finalecount/2) - INFLECTIONPOINT;
+			trans = 10 + (finalecount - STOPPINGPOINT)/2;
 			donttouch = true;
 		}
 
-		if (trans != 10)
+		if (trans < 10)
 		{
 			//colset(linkmap,  164, 165, 169); -- the ideal purple colour to represent a clicked in-game link, but not worth it just for a soundtest-controlled secret
 			V_DrawCenteredString(BASEVIDWIDTH/2, 8, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), str);
 			V_DrawCharacter(32, BASEVIDHEIGHT-16, '>'|(trans<<V_ALPHASHIFT), false);
-			V_DrawString(40, ((finalecount == (2*INFLECTIONPOINT)-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= (2*INFLECTIONPOINT)-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
+			V_DrawString(40, ((finalecount == STOPPINGPOINT-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= STOPPINGPOINT-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
 		}
 
-		if (finalecount > (2*INFLECTIONPOINT)-(20+(2*TICRATE)))
+		if (finalecount > STOPPINGPOINT-(20+(2*TICRATE)))
 		{
 			INT32 trans2 = abs((5*FINECOSINE((FixedAngle((finalecount*5)<<FRACBITS)>>ANGLETOFINESHIFT & FINEMASK)))>>FRACBITS)+2;
 			if (!donttouch)
 			{
-				trans = 10 + ((2*INFLECTIONPOINT)-(20+(2*TICRATE))) - finalecount;
+				trans = 10 + (STOPPINGPOINT-(20+(2*TICRATE))) - finalecount;
 				if (trans > trans2)
 					trans2 = trans;
 			}
@@ -2644,9 +2645,7 @@ void F_TitleScreenDrawer(void)
 	// Draw that sky!
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
-	else if (titlemapinaction && curbghide && ! hidetitlemap)
-		D_Render();
-	else
+	else if (!curbghide || !titlemapinaction || gamestate == GS_WAITINGPLAYERS)
 		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 
 	// Don't draw outside of the title screen, or if the patch isn't there.
@@ -3406,6 +3405,10 @@ void F_TitleScreenTicker(boolean run)
 	if (run)
 		finalecount++;
 
+	// don't trigger if doing anything besides idling on title
+	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
+		return;
+
 	// Execute the titlemap camera settings
 	if (titlemapinaction)
 	{
@@ -3451,10 +3454,6 @@ void F_TitleScreenTicker(boolean run)
 			camera.angle += titlescrollxspeed*ANG1/64;
 		}
 	}
-
-	// don't trigger if doing anything besides idling on title
-	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
-		return;
 
 	// no demos to play? or, are they disabled?
 	if (!cv_rollingdemos.value || !numDemos)
@@ -3608,7 +3607,7 @@ void F_ContinueDrawer(void)
 	if (timetonext >= (11*TICRATE)+10)
 		return;
 
-	V_DrawLevelTitle(x - (V_LevelNameWidth("CONTINUE")>>1), 16, 0, "CONTINUE");
+	V_DrawLevelTitle(x - (V_LevelNameWidth("Continue?")>>1), 16, 0, "Continue?");
 
 	// Two stars...
 	patch = W_CachePatchName("CONTSTAR", PU_CACHE);

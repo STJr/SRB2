@@ -255,7 +255,6 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_WALK:
 	case S_PLAY_SKID:
 	case S_PLAY_FLOAT:
-	case S_PLAY_NIGHTS_FLOAT:
 		player->panim = PA_WALK;
 		break;
 	case S_PLAY_RUN:
@@ -281,6 +280,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_SPRING;
 		break;
 	case S_PLAY_FALL:
+	case S_PLAY_NIGHTS_FLOAT:
 		player->panim = PA_FALL;
 		break;
 	case S_PLAY_FLY:
@@ -3408,7 +3408,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 		// Drown timer setting
 		if ((p->powers[pw_shield] & SH_PROTECTWATER) // Has water protection
-		 || (p->exiting) // Or exiting
+		 || (p->exiting) || (p->pflags & PF_FINISHED) // Or finished/exiting
 		 || (maptol & TOL_NIGHTS) // Or in NiGHTS mode
 		 || (mariomode)) // Or in Mario mode...
 		{
@@ -3724,17 +3724,10 @@ void P_DestroyRobots(void)
 	}
 }
 
-// P_CameraThinker
-//
-// Process the mobj-ish required functions of the camera
-boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled)
+// the below is chasecam only, if you're curious. check out P_CalcPostImg in p_user.c for first person
+void P_CalcChasePostImg(player_t *player, camera_t *thiscam)
 {
-	boolean itsatwodlevel = false;
 	postimg_t postimg = postimg_none;
-	if (twodlevel
-		|| (thiscam == &camera && players[displayplayer].mo && (players[displayplayer].mo->flags2 & MF2_TWOD))
-		|| (thiscam == &camera2 && players[secondarydisplayplayer].mo && (players[secondarydisplayplayer].mo->flags2 & MF2_TWOD)))
-		itsatwodlevel = true;
 
 	if (player->pflags & PF_FLIPCAM && !(player->powers[pw_carry] == CR_NIGHTSMODE) && player->mo->eflags & MFE_VERTICALFLIP)
 		postimg = postimg_flip;
@@ -3762,13 +3755,27 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_heat;
 	}
 
-	if (postimg != postimg_none)
-	{
-		if (splitscreen && player == &players[secondarydisplayplayer])
-			postimgtype2 = postimg;
-		else
-			postimgtype = postimg;
-	}
+	if (postimg == postimg_none)
+		return;
+
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		postimgtype2 = postimg;
+	else
+		postimgtype = postimg;
+}
+
+// P_CameraThinker
+//
+// Process the mobj-ish required functions of the camera
+boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled)
+{
+	boolean itsatwodlevel = false;
+	if (twodlevel
+		|| (thiscam == &camera && players[displayplayer].mo && (players[displayplayer].mo->flags2 & MF2_TWOD))
+		|| (thiscam == &camera2 && players[secondarydisplayplayer].mo && (players[secondarydisplayplayer].mo->flags2 & MF2_TWOD)))
+		itsatwodlevel = true;
+
+	P_CalcChasePostImg(player, thiscam);
 
 	if (thiscam->momx || thiscam->momy)
 	{
@@ -7082,7 +7089,7 @@ static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
 		seg = P_SpawnMobj(x, y, z, MT_MINECARTSEG);
 		P_SetMobjState(seg, (statenum_t)(S_MINECARTSEG_FRONT + i));
 		if (i >= 2)
-			seg->extravalue1 = (i == 2) ? -18 : 18;
+			seg->extravalue1 = (i == 2) ? -20 : 20;
 		else
 		{
 			seg->extravalue2 = (i == 0) ? 24 : -24;
@@ -9709,6 +9716,16 @@ void P_MobjThinker(mobj_t *mobj)
 #undef DRAGONTURNSPEED
 				}
 				break;
+			case MT_MINUS:
+#ifdef ROTSPRITE
+				{
+					if (P_IsObjectOnGround(mobj))
+						mobj->rollangle = 0;
+					else
+						mobj->rollangle = R_PointToAngle2(0, 0, mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
+				}
+#endif
+				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
@@ -11294,7 +11311,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj->radius = FixedMul(skins[p->skin].radius, mobj->scale);
 	mobj->height = P_GetPlayerHeight(p);
 
-	if (!leveltime && ((maptol & TOL_NIGHTS) == TOL_NIGHTS) != (G_IsSpecialStage(gamemap))) // non-special NiGHTS stage or special non-NiGHTS stage
+	if (!leveltime && !p->spectator && ((maptol & TOL_NIGHTS) == TOL_NIGHTS) != (G_IsSpecialStage(gamemap))) // non-special NiGHTS stage or special non-NiGHTS stage
 	{
 		if (maptol & TOL_NIGHTS)
 		{

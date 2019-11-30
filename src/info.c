@@ -635,7 +635,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	0, // SPR2_TRNS,
 
 	FF_SPR2SUPER|SPR2_STND, // SPR2_NSTD,
-	FF_SPR2SUPER|SPR2_FLT , // SPR2_NFLT,
+	FF_SPR2SUPER|SPR2_FALL, // SPR2_NFLT,
 	0, // SPR2_NFLY, (will never be referenced unless skin 0 lacks this)
 	SPR2_NFLY, // SPR2_NDRL,
 	FF_SPR2SUPER|SPR2_STUN, // SPR2_NSTN,
@@ -1074,15 +1074,11 @@ state_t states[NUMSTATES] =
 	{SPR_MNUD, 2|FF_ANIMATE, 5,  {NULL},           1, 2, S_MINUS_BURST4},   // S_MINUS_BURST3
 	{SPR_MNUD, 3|FF_ANIMATE, 5,  {NULL},           1, 2, S_MINUS_BURST5},   // S_MINUS_BURST4
 	{SPR_MNUD, 4|FF_ANIMATE, 5,  {NULL},           1, 2, S_MINUSDIRT2},     // S_MINUS_BURST5
-	{SPR_MNUS, 3, 1, {A_MinusPopup}, 0, 0, S_MINUS_UPWARD1}, // S_MINUS_POPUP
-	{SPR_MNUS, 0, 1, {A_MinusCheck}, 0, 0, S_MINUS_UPWARD2},   // S_MINUS_UPWARD1
-	{SPR_MNUS, 1, 1, {A_MinusCheck}, 0, 0, S_MINUS_UPWARD3},   // S_MINUS_UPWARD2
-	{SPR_MNUS, 2, 1, {A_MinusCheck}, 0, 0, S_MINUS_UPWARD4},   // S_MINUS_UPWARD3
-	{SPR_MNUS, 3, 1, {A_MinusCheck}, 0, 0, S_MINUS_UPWARD1},   // S_MINUS_UPWARD4
-	{SPR_MNUS, 4, 1, {A_MinusCheck}, 0, 0, S_MINUS_DOWNWARD2}, // S_MINUS_DOWNWARD1
-	{SPR_MNUS, 5, 1, {A_MinusCheck}, 0, 0, S_MINUS_DOWNWARD3}, // S_MINUS_DOWNWARD2
-	{SPR_MNUS, 6, 1, {A_MinusCheck}, 0, 0, S_MINUS_DOWNWARD4}, // S_MINUS_DOWNWARD3
-	{SPR_MNUS, 7, 1, {A_MinusCheck}, 0, 0, S_MINUS_DOWNWARD1}, // S_MINUS_DOWNWARD4
+	{SPR_MNUS, 3, 1, {A_MinusPopup}, 0, 0, S_MINUS_AERIAL1}, // S_MINUS_POPUP
+	{SPR_MNUS, 0, 1, {A_MinusCheck}, 0, 1, S_MINUS_AERIAL2},   // S_MINUS_AERIAL1
+	{SPR_MNUS, 1, 1, {A_MinusCheck}, 0, 1, S_MINUS_AERIAL3},   // S_MINUS_AERIAL2
+	{SPR_MNUS, 2, 1, {A_MinusCheck}, 0, 1, S_MINUS_AERIAL4},   // S_MINUS_AERIAL3
+	{SPR_MNUS, 3, 1, {A_MinusCheck}, 0, 1, S_MINUS_AERIAL1},   // S_MINUS_AERIAL4
 
 	{SPR_MNUD, FF_ANIMATE, 6, {NULL}, 1, 5, S_MINUSDIRT2}, // S_MINUSDIRT1
 	{SPR_MNUD, 5,          8, {NULL}, 3, 5, S_MINUSDIRT3}, // S_MINUSDIRT2
@@ -13373,7 +13369,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SPECIAL|MF_PAIN|MF_NOGRAVITY, // flags
+		MF_SPECIAL|MF_PAIN|MF_NOGRAVITY|MF_FIRE, // flags
 		S_NULL          // raisestate
 	},
 
