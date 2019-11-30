@@ -540,7 +540,6 @@ static void F_IntroDrawScene(void)
 			break;
 		case 4:
 			background = W_CachePatchName("INTRO4", PU_CACHE);
-			highres = false;
 			break;
 		case 5:
 			if (intro_curtime >= 5*TICRATE)
