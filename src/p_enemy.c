@@ -4059,14 +4059,12 @@ bossjustdie:
 			mo->flags &= ~(MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
 
 			S_StartSound(NULL, sfx_bedie2);
+			P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
+			mo->z += P_MobjFlip(mo);
+			P_SetObjectMomZ(mo, 12*FRACUNIT, false);
+			S_StartSound(mo, sfx_bgxpld);
 			if (mo->spawnpoint && !(mo->spawnpoint->options & MTF_EXTRA))
-			{
-				P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
-				mo->z += P_MobjFlip(mo);
-				P_SetObjectMomZ(mo, 12*FRACUNIT, false);
 				P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->x, mo->y), 14*FRACUNIT);
-				S_StartSound(mo, sfx_bgxpld);
-			}
 			break;
 		}
 		case MT_KOOPA:
