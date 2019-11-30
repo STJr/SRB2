@@ -2862,6 +2862,17 @@ boolean P_SetupLevel(boolean skipprecip)
 		loadprecip = 0;
 		loademblems = 0;
 	}
+	else if (savedata.lives > 0)
+	{
+		numgameovers = savedata.numgameovers;
+		players[consoleplayer].continues = savedata.continues;
+		players[consoleplayer].lives = savedata.lives;
+		players[consoleplayer].score = savedata.score;
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
+		emeralds = savedata.emeralds;
+		savedata.lives = 0;
+	}
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
@@ -3224,18 +3235,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		G_SaveGame((UINT32)cursaveslot);
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
-
-	if (savedata.lives > 0)
-	{
-		numgameovers = savedata.numgameovers;
-		players[consoleplayer].continues = savedata.continues;
-		players[consoleplayer].lives = savedata.lives;
-		players[consoleplayer].score = savedata.score;
-		if ((botingame = ((botskin = savedata.botskin) != 0)))
-			botcolor = skins[botskin-1].prefcolor;
-		emeralds = savedata.emeralds;
-		savedata.lives = 0;
-	}
 
 	if (loadprecip) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
