@@ -4285,7 +4285,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_DETON1,       // spawnstate
 		1,              // spawnhealth
 		S_DETON2,       // seestate
-		sfx_None,       // seesound
+		sfx_s3k86,      // seesound -- sfx_kc57 for a self-propelled deton...
 		1,              // reactiontime
 		sfx_deton,      // attacksound
 		S_NULL,         // painstate
