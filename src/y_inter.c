@@ -603,8 +603,7 @@ void Y_IntermissionDrawer(void)
 					{
 						if (emeraldbounces < 3)
 						{
-							emeraldmomy += 1;
-							emeraldy += emeraldmomy;
+							emeraldy += (++emeraldmomy);
 							if (emeraldy > 74)
 							{
 								S_StartSound(NULL, sfx_tink); // tink
@@ -616,9 +615,11 @@ void Y_IntermissionDrawer(void)
 					}
 					else
 					{
-						emeraldmomy += 1;
-						emeraldy += emeraldmomy;
-						emeraldx += intertic - 6;
+						if (emeraldy < (vid.height/vid.dupy)+16)
+						{
+							emeraldy += (++emeraldmomy);
+							emeraldx += intertic - 6;
+						}
 						if (emeraldbounces < 1 && emeraldy > 74)
 						{
 							S_StartSound(NULL, sfx_shldls); // nope
