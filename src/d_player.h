@@ -47,6 +47,7 @@ typedef enum
 	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
 	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
 	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
+	SF_NONIGHTSROTATION = 1<<14, // Disable sprite rotation for NiGHTS
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -150,6 +151,7 @@ typedef enum
 	/*** misc ***/
 	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
 	PF_CANCARRY    = 1<<29, // Can carry another player?
+	PF_FINISHED    = 1<<30, // The player finished the level. NOT the same as exiting
 
 	// up to 1<<31 is free
 } pflags_t;
@@ -252,6 +254,8 @@ typedef enum
 	pw_spacetime, // In space, no one can hear you spin!
 	pw_extralife, // Extra Life timer
 	pw_pushing,
+	pw_justsprung,
+	pw_noautobrake,
 
 	pw_super, // Are you super?
 	pw_gravityboots, // gravity boots
@@ -510,6 +514,10 @@ typedef struct player_s
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
 } player_t;
+
+// Values for dashmode
+#define DASHMODE_THRESHOLD (3*TICRATE)
+#define DASHMODE_MAX (DASHMODE_THRESHOLD + 3)
 
 // Value for infinite lives
 #define INFLIVES 0x7F

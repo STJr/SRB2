@@ -162,6 +162,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_TURR
 	&lspr[NOLIGHT],     // SPR_SHRP
 	&lspr[NOLIGHT],     // SPR_CRAB
+	&lspr[NOLIGHT],     // SPR_CR2B
+	&lspr[NOLIGHT],     // SPR_CSPR
 	&lspr[NOLIGHT],     // SPR_JJAW
 	&lspr[NOLIGHT],     // SPR_SNLR
 	&lspr[NOLIGHT],     // SPR_VLTR
@@ -182,6 +184,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_CANG
 	&lspr[NOLIGHT],     // SPR_PYRE
 	&lspr[NOLIGHT],     // SPR_PTER
+	&lspr[NOLIGHT],     // SPR_DRAB
 
 	// Generic Boos Items
 	&lspr[JETLIGHT_L],     // SPR_JETF // Boss jet fumes
@@ -199,7 +202,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_EGGO
 	&lspr[NOLIGHT],     // SPR_SEBH
 	&lspr[NOLIGHT],     // SPR_FAKE
-	&lspr[NOLIGHT],     // SPR_SHCK
+	&lspr[LBLUESHINE_L],// SPR_SHCK
 
 	// Boss 4 (Castle Eggman)
 	&lspr[NOLIGHT],     // SPR_EGGP
@@ -405,6 +408,11 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SHRM
 	&lspr[NOLIGHT],     // SPR_HHZM
 
+	// Azure Temple Scenery
+	&lspr[NOLIGHT],     // SPR_BGAR
+	&lspr[NOLIGHT],     // SPR_RCRY
+	&lspr[GREENBALL_L], // SPR_CFLM
+
 	// Botanic Serenity Scenery
 	&lspr[NOLIGHT],     // SPR_BSZ1
 	&lspr[NOLIGHT],     // SPR_BSZ2
@@ -424,7 +432,6 @@ light_t *t_lspr[NUMSPRITES] =
 	// Misc Scenery
 	&lspr[NOLIGHT],     // SPR_STLG
 	&lspr[NOLIGHT],     // SPR_DBAL
-	&lspr[NOLIGHT],     // SPR_RCRY
 
 	// Powerup Indicators
 	&lspr[NOLIGHT],     // SPR_ARMA
@@ -478,6 +485,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SSWY
 	&lspr[NOLIGHT],     // SPR_SSWR
 	&lspr[NOLIGHT],     // SPR_SSWB
+	&lspr[NOLIGHT],     // SPR_BSTY
+	&lspr[NOLIGHT],     // SPR_BSTR
 
 	// Environmental Effects
 	&lspr[NOLIGHT],     // SPR_RAIN
@@ -497,6 +506,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Game Indicators
 	&lspr[NOLIGHT],     // SPR_SCOR
 	&lspr[NOLIGHT],     // SPR_DRWN
+	&lspr[NOLIGHT],     // SPR_FLII
 	&lspr[NOLIGHT],     // SPR_LCKN
 	&lspr[NOLIGHT],     // SPR_TTAG
 	&lspr[NOLIGHT],     // SPR_GFLG
@@ -576,7 +586,6 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[SUPERSPARK_L], // SPR_BOM3
 	&lspr[NOLIGHT],      // SPR_BOM4
 	&lspr[REDBALL_L],    // SPR_BMNB
-	&lspr[NOLIGHT],      // SPR_WDDB
 
 	// Crumbly rocks
 	&lspr[NOLIGHT],     // SPR_ROIA
@@ -596,8 +605,10 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ROIO
 	&lspr[NOLIGHT],     // SPR_ROIP
 
-	// Bricks
+	// Level debris
+	&lspr[NOLIGHT], // SPR_GFZD
 	&lspr[NOLIGHT], // SPR_BRIC
+	&lspr[NOLIGHT], // SPR_WDDB
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG
@@ -1197,7 +1208,8 @@ void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch)
 	dynlights->nb++;
 }
 
-static GLPatch_t lightmappatch;
+static GLMipmap_t lightmappatchmipmap;
+static GLPatch_t lightmappatch = { .mipmap = &lightmappatchmipmap };
 
 void HWR_InitLight(void)
 {
@@ -1207,7 +1219,7 @@ void HWR_InitLight(void)
 	for (i = 0;i < NUMLIGHTS;i++)
 		lspr[i].dynamic_sqrradius = lspr[i].dynamic_radius*lspr[i].dynamic_radius;
 
-	lightmappatch.mipmap.downloaded = false;
+	lightmappatch.mipmap->downloaded = false;
 	coronalumpnum = W_CheckNumForName("CORONA");
 }
 
@@ -1218,10 +1230,10 @@ static void HWR_SetLight(void)
 {
 	int    i, j;
 
-	if (!lightmappatch.mipmap.downloaded && !lightmappatch.mipmap.grInfo.data)
+	if (!lightmappatch.mipmap->downloaded && !lightmappatch.mipmap->grInfo.data)
 	{
 
-		UINT16 *Data = Z_Malloc(129*128*sizeof (UINT16), PU_HWRCACHE, &lightmappatch.mipmap.grInfo.data);
+		UINT16 *Data = Z_Malloc(129*128*sizeof (UINT16), PU_HWRCACHE, &lightmappatch.mipmap->grInfo.data);
 
 		for (i = 0; i < 128; i++)
 		{
@@ -1234,23 +1246,23 @@ static void HWR_SetLight(void)
 					Data[i*128+j] = 0;
 			}
 		}
-		lightmappatch.mipmap.grInfo.format = GR_TEXFMT_ALPHA_INTENSITY_88;
+		lightmappatch.mipmap->grInfo.format = GR_TEXFMT_ALPHA_INTENSITY_88;
 
 		lightmappatch.width = 128;
 		lightmappatch.height = 128;
-		lightmappatch.mipmap.width = 128;
-		lightmappatch.mipmap.height = 128;
+		lightmappatch.mipmap->width = 128;
+		lightmappatch.mipmap->height = 128;
 #ifdef GLIDE_API_COMPATIBILITY
-		lightmappatch.mipmap.grInfo.smallLodLog2 = GR_LOD_LOG2_128;
-		lightmappatch.mipmap.grInfo.largeLodLog2 = GR_LOD_LOG2_128;
-		lightmappatch.mipmap.grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+		lightmappatch.mipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_128;
+		lightmappatch.mipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_128;
+		lightmappatch.mipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
 #endif
-		lightmappatch.mipmap.flags = 0; //TF_WRAPXY; // DEBUG: view the overdraw !
+		lightmappatch.mipmap->flags = 0; //TF_WRAPXY; // DEBUG: view the overdraw !
 	}
-	HWD.pfnSetTexture(&lightmappatch.mipmap);
+	HWD.pfnSetTexture(lightmappatch.mipmap);
 
 	// The system-memory data can be purged now.
-	Z_ChangeTag(lightmappatch.mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
+	Z_ChangeTag(lightmappatch.mipmap->grInfo.data, PU_HWRCACHE_UNLOCKED);
 }
 
 //**********************************************************

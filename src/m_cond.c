@@ -284,6 +284,8 @@ void M_SilentUpdateUnlockablesAndEmblems(void)
 			continue;
 		unlockables[i].unlocked = M_Achieved(unlockables[i].conditionset - 1);
 	}
+
+	players[consoleplayer].availabilities = players[1].availabilities = R_GetSkinAvailabilities(); // players[1] is supposed to be for 2p
 }
 
 // Emblem unlocking shit
@@ -528,12 +530,22 @@ skincolors_t M_GetEmblemColor(emblem_t *em)
 	return em->color;
 }
 
-const char *M_GetEmblemPatch(emblem_t *em)
+const char *M_GetEmblemPatch(emblem_t *em, boolean big)
 {
-	static char pnamebuf[7] = "GOTITn";
+	static char pnamebuf[7];
+
+	if (!big)
+		strcpy(pnamebuf, "GOTITn");
+	else
+		strcpy(pnamebuf, "EMBMn0");
 
 	I_Assert(em->sprite >= 'A' && em->sprite <= 'Z');
-	pnamebuf[5] = em->sprite;
+
+	if (!big)
+		pnamebuf[5] = em->sprite;
+	else
+		pnamebuf[4] = em->sprite;
+
 	return pnamebuf;
 }
 
@@ -544,11 +556,21 @@ skincolors_t M_GetExtraEmblemColor(extraemblem_t *em)
 	return em->color;
 }
 
-const char *M_GetExtraEmblemPatch(extraemblem_t *em)
+const char *M_GetExtraEmblemPatch(extraemblem_t *em, boolean big)
 {
-	static char pnamebuf[7] = "GOTITn";
+	static char pnamebuf[7];
+
+	if (!big)
+		strcpy(pnamebuf, "GOTITn");
+	else
+		strcpy(pnamebuf, "EMBMn0");
 
 	I_Assert(em->sprite >= 'A' && em->sprite <= 'Z');
-	pnamebuf[5] = em->sprite;
+
+	if (!big)
+		pnamebuf[5] = em->sprite;
+	else
+		pnamebuf[4] = em->sprite;
+
 	return pnamebuf;
 }

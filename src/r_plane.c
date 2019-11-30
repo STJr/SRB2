@@ -44,6 +44,9 @@
 // Quincunx antialiasing of flats!
 //#define QUINCUNX
 
+// good night sweet prince
+#define SHITPLANESPARENCY
+
 //SoM: 3/23/2000: Use Boom visplane hashing.
 
 visplane_t *visplanes[MAXVISPLANES];
@@ -650,6 +653,11 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	}
 }
 
+//
+// R_CheckPowersOfTwo
+//
+// Self-explanatory?
+//
 boolean R_CheckPowersOfTwo(void)
 {
 	boolean wpow2 = (!(ds_flatwidth & (ds_flatwidth - 1)));
@@ -667,6 +675,11 @@ boolean R_CheckPowersOfTwo(void)
 	return ds_powersoftwo;
 }
 
+//
+// R_CheckFlatLength
+//
+// Determine the flat's dimensions from the lump length.
+//
 void R_CheckFlatLength(size_t size)
 {
 	switch (size)
@@ -723,12 +736,29 @@ void R_CheckFlatLength(size_t size)
 	}
 }
 
-static UINT8 *R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boolean ispng)
+//
+// R_GenerateFlat
+//
+// Generate a flat from specified width and height.
+//
+static UINT8 *R_GenerateFlat(UINT16 width, UINT16 height)
+{
+	UINT8 *flat = Z_Malloc(width * height, PU_LEVEL, NULL);
+	memset(flat, TRANSPARENTPIXEL, width * height);
+	return flat;
+}
+
+//
+// R_GetTextureFlat
+//
+// Convert a texture or patch to a flat.
+//
+static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boolean ispng)
 {
 	UINT8 *flat;
-	textureflat_t *texflat = &texflats[levelflat->texturenum];
+	textureflat_t *texflat = &texflats[levelflat->u.texture.num];
 	patch_t *patch = NULL;
-	boolean texturechanged = (leveltexture ? (levelflat->texturenum != levelflat->lasttexturenum) : false);
+	boolean texturechanged = (leveltexture ? (levelflat->u.texture.num != levelflat->u.texture.lastnum) : false);
 
 	// Check if the texture changed.
 	if (leveltexture && (!texturechanged))
@@ -747,28 +777,29 @@ static UINT8 *R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boole
 	// If the texture changed, or the patch doesn't exist, convert either of them to a flat.
 	if (levelflat->flatpatch == NULL || texturechanged)
 	{
+		// Level texture
 		if (leveltexture)
 		{
-			texture_t *texture = textures[levelflat->texturenum];
+			texture_t *texture = textures[levelflat->u.texture.num];
 			texflat->width = ds_flatwidth = texture->width;
 			texflat->height = ds_flatheight = texture->height;
 
-			texflat->flat = Z_Malloc(ds_flatwidth * ds_flatheight, PU_LEVEL, NULL);
-			memset(texflat->flat, TRANSPARENTPIXEL, ds_flatwidth * ds_flatheight);
-			R_TextureToFlat(levelflat->texturenum, texflat->flat);
+			texflat->flat = R_GenerateFlat(ds_flatwidth, ds_flatheight);
+			R_TextureToFlat(levelflat->u.texture.num, texflat->flat);
 			flat = texflat->flat;
 
 			levelflat->flatpatch = flat;
 			levelflat->width = ds_flatwidth;
 			levelflat->height = ds_flatheight;
 		}
+		// Patch (never happens yet)
 		else
 		{
 			patch = (patch_t *)ds_source;
 #ifndef NO_PNG_LUMPS
 			if (ispng)
 			{
-				levelflat->flatpatch = R_PNGToFlat(levelflat, ds_source, W_LumpLength(levelflat->lumpnum));
+				levelflat->flatpatch = R_PNGToFlat(&levelflat->width, &levelflat->height, ds_source, W_LumpLength(levelflat->u.flat.lumpnum));
 				levelflat->topoffset = levelflat->leftoffset = 0;
 				ds_flatwidth = levelflat->width;
 				ds_flatheight = levelflat->height;
@@ -782,8 +813,7 @@ static UINT8 *R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boole
 				levelflat->topoffset = patch->topoffset * FRACUNIT;
 				levelflat->leftoffset = patch->leftoffset * FRACUNIT;
 
-				levelflat->flatpatch = Z_Malloc(ds_flatwidth * ds_flatheight, PU_LEVEL, NULL);
-				memset(levelflat->flatpatch, TRANSPARENTPIXEL, ds_flatwidth * ds_flatheight);
+				levelflat->flatpatch = R_GenerateFlat(ds_flatwidth, ds_flatheight);
 				R_PatchToFlat(patch, levelflat->flatpatch);
 			}
 			flat = levelflat->flatpatch;
@@ -794,12 +824,12 @@ static UINT8 *R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boole
 		flat = levelflat->flatpatch;
 		ds_flatwidth = levelflat->width;
 		ds_flatheight = levelflat->height;
-
-		xoffs += levelflat->leftoffset;
-		yoffs += levelflat->topoffset;
 	}
 
-	levelflat->lasttexturenum = levelflat->texturenum;
+	xoffs += levelflat->leftoffset;
+	yoffs += levelflat->topoffset;
+
+	levelflat->u.texture.lastnum = levelflat->u.texture.num;
 	return flat;
 }
 
@@ -809,10 +839,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 	INT32 light = 0;
 	INT32 x;
 	INT32 stop, angle;
-	size_t size;
 	ffloor_t *rover;
 	levelflat_t *levelflat;
-	boolean rawflat = false;
+	int type;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -841,7 +870,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else // Opaque, but allow transparent flat pixels
 			spanfunc = splatfunc;
 
+#ifdef SHITPLANESPARENCY
+		if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+#else
 		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
+#endif
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
@@ -895,7 +928,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else // Opaque, but allow transparent flat pixels
 				spanfunc = splatfunc;
 
+#ifdef SHITPLANESPARENCY
+			if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+#else
 			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
+#endif
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			else
 				light = LIGHTLEVELS-1;
@@ -958,43 +995,47 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	currentplane = pl;
 	levelflat = &levelflats[pl->picnum];
-	size = W_LumpLength(levelflat->lumpnum);
-	ds_source = (UINT8 *)W_CacheLumpNum(levelflat->lumpnum, PU_STATIC); // Stay here until Z_ChangeTag
 
-	// Check if the flat is actually a wall texture.
-	if (levelflat->texturenum != 0 && levelflat->texturenum != -1)
-		flat = R_GetPatchFlat(levelflat, true, false);
+	/* :james: */
+	type = levelflat->type;
+	switch (type)
+	{
+		case LEVELFLAT_NONE:
+			return;
+		case LEVELFLAT_FLAT:
+			ds_source = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE);
+			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
+			// Raw flats always have dimensions that are powers-of-two numbers.
+			ds_powersoftwo = true;
+			if (spanfunc == basespanfunc)
+				spanfunc = mmxspanfunc;
+			break;
+		default:
+			switch (type)
+			{
+				case LEVELFLAT_TEXTURE:
+					/* Textures get cached differently and don't need ds_source */
+					ds_source = R_GetTextureFlat(levelflat, true, false);
+					break;
+				default:
+					ds_source = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_STATIC);
+					flat      = R_GetTextureFlat(levelflat, false,
 #ifndef NO_PNG_LUMPS
-	// Maybe it's a PNG?!
-	else if (R_IsLumpPNG(ds_source, size))
-		flat = R_GetPatchFlat(levelflat, false, true);
+							( type == LEVELFLAT_PNG )
+#else
+							false
 #endif
-	// Maybe it's just a patch, then?
-	else if (R_CheckIfPatch(levelflat->lumpnum))
-		flat = R_GetPatchFlat(levelflat, false, false);
-	// It's a raw flat.
-	else
-	{
-		rawflat = true;
-		R_CheckFlatLength(size);
-		flat = ds_source;
-	}
-
-	Z_ChangeTag(ds_source, PU_CACHE);
-	ds_source = flat;
-
-	if (ds_source == NULL)
-		return;
-
-	// Raw flats always have dimensions that are powers-of-two numbers.
-	if (rawflat)
-		ds_powersoftwo = true;
-	// Otherwise, check if this texture or patch has such dimensions.
-	else if (R_CheckPowersOfTwo())
-	{
-		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
-		if (spanfunc == basespanfunc)
-			spanfunc = mmxspanfunc;
+					);
+					Z_ChangeTag(ds_source, PU_CACHE);
+					ds_source = flat;
+			}
+			// Check if this texture or patch has power-of-two dimensions.
+			if (R_CheckPowersOfTwo())
+			{
+				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+				if (spanfunc == basespanfunc)
+					spanfunc = mmxspanfunc;
+			}
 	}
 
 	if (light >= LIGHTLEVELS)
@@ -1074,8 +1115,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
 		zeroheight = FIXED_TO_FLOAT(temp);
-
-#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
 
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in

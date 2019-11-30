@@ -88,12 +88,13 @@ void R_CheckTextureCache(INT32 tex);
 
 // Retrieve column data for span blitting.
 UINT8 *R_GetColumn(fixed_t tex, INT32 col);
-
 UINT8 *R_GetFlat(lumpnum_t flatnum);
 
 // I/O, setting up the stuff.
 void R_InitData(void);
 void R_PrecacheLevel(void);
+
+extern size_t flatmemory, spritememory, texturememory;
 
 // Retrieval.
 // Floor/ceiling opaque texture tiles,
@@ -157,20 +158,6 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap);
 #define R_PutRgbaA(a) (a << 24)
 #define R_PutRgbaRGB(r, g, b) (R_PutRgbaR(r) + R_PutRgbaG(g) + R_PutRgbaB(b))
 #define R_PutRgbaRGBA(r, g, b, a) (R_PutRgbaRGB(r, g, b) + R_PutRgbaA(a))
-
-boolean R_CheckIfPatch(lumpnum_t lump);
-UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
-
-void R_PatchToFlat(patch_t *patch, UINT8 *flat);
-void R_TextureToFlat(size_t tex, UINT8 *flat);
-
-#ifndef NO_PNG_LUMPS
-boolean R_IsLumpPNG(const UINT8 *d, size_t s);
-
-UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size);
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency);
-boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
-#endif
 
 extern INT32 numtextures;
 

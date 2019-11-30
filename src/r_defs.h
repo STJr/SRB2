@@ -24,6 +24,10 @@
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
 
+#ifdef HWRENDER
+#include "m_aatree.h"
+#endif
+
 #define POLYOBJECTS
 
 //
@@ -139,9 +143,9 @@ typedef enum
 	FF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
 	FF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
 	FF_INTANGABLEFLATS   = 0x6000000,  ///< Both flats are intangable, but the sides are still solid.
-	FF_SHATTER           = 0x8000000,  ///< Used with ::FF_BUSTUP. Thinks everyone's Knuckles.
-	FF_SPINBUST          = 0x10000000, ///< Used with ::FF_BUSTUP. Jump or fall onto it while curled in a ball.
-	FF_ONLYKNUX          = 0x20000000, ///< Used with ::FF_BUSTUP. Only Knuckles can break this rock.
+	FF_SHATTER           = 0x8000000,  ///< Used with ::FF_BUSTUP. Bustable on mere touch.
+	FF_SPINBUST          = 0x10000000, ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
+	FF_STRONGBUST        = 0x20000000, ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
 	FF_RIPPLE            = 0x40000000, ///< Ripple the flats
 	FF_COLORMAPONLY      = 0x80000000, ///< Only copy the colormap, not the lightlevel
 	FF_GOOWATER          = FF_SHATTERBOTTOM, ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
@@ -405,6 +409,8 @@ typedef enum
 	ST_POSITIVE,
 	ST_NEGATIVE
 } slopetype_t;
+
+#define HORIZONSPECIAL 41
 
 typedef struct line_s
 {
@@ -728,6 +734,18 @@ typedef struct
 #pragma pack()
 #endif
 
+// rotsprite
+#ifdef ROTSPRITE
+typedef struct
+{
+	patch_t *patch[8][ROTANGLES];
+	boolean cached[8];
+#ifdef HWRENDER
+	aatree_t *hardware_patch[8];
+#endif
+} rotsprite_t;
+#endif
+
 typedef enum
 {
 	SRF_SINGLE      = 0,   // 0-angle for all rotations
@@ -765,6 +783,10 @@ typedef struct
 
 	// Flip bits (1 = flip) to use for view angles 0-7.
 	UINT8 flip;
+
+#ifdef ROTSPRITE
+	rotsprite_t rotsprite;
+#endif
 } spriteframe_t;
 
 //

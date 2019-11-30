@@ -92,12 +92,14 @@ static const char *const patch_opt[] = {
 enum hudhook {
 	hudhook_game = 0,
 	hudhook_scores,
-	hudhook_title
+	hudhook_title,
+	hudhook_titlecard
 };
 static const char *const hudhook_opt[] = {
 	"game",
 	"scores",
 	"title",
+	"titlecard",
 	NULL};
 
 // alignment types for v.drawString
@@ -551,6 +553,33 @@ static int libd_drawScaled(lua_State *L)
 	return 0;
 }
 
+static int libd_drawStretched(lua_State *L)
+{
+	fixed_t x, y, hscale, vscale;
+	INT32 flags;
+	patch_t *patch;
+	const UINT8 *colormap = NULL;
+
+	HUDONLY
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	hscale = luaL_checkinteger(L, 3);
+	if (hscale < 0)
+		return luaL_error(L, "negative horizontal scale");
+	vscale = luaL_checkinteger(L, 4);
+	if (vscale < 0)
+		return luaL_error(L, "negative vertical scale");
+	patch = *((patch_t **)luaL_checkudata(L, 5, META_PATCH));
+	flags = luaL_optinteger(L, 6, 0);
+	if (!lua_isnoneornil(L, 7))
+		colormap = *((UINT8 **)luaL_checkudata(L, 7, META_COLORMAP));
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawStretchyFixedPatch(x, y, hscale, vscale, flags, patch, colormap);
+	return 0;
+}
+
 static int libd_drawNum(lua_State *L)
 {
 	INT32 x, y, flags, num;
@@ -637,6 +666,68 @@ static int libd_drawString(lua_State *L)
 	return 0;
 }
 
+static int libd_drawNameTag(lua_State *L)
+{
+	INT32 x;
+	INT32 y;
+	const char *str;
+	INT32 flags;
+	UINT8 basecolor;
+	UINT8 outlinecolor;
+	UINT8 *basecolormap = NULL;
+	UINT8 *outlinecolormap = NULL;
+
+	HUDONLY
+
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	str = luaL_checkstring(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+	basecolor = luaL_optinteger(L, 5, SKINCOLOR_BLUE);
+	outlinecolor = luaL_optinteger(L, 6, SKINCOLOR_ORANGE);
+	if (basecolor != SKINCOLOR_NONE)
+		basecolormap = R_GetTranslationColormap(TC_DEFAULT, basecolor, GTC_CACHE);
+	if (outlinecolor != SKINCOLOR_NONE)
+		outlinecolormap = R_GetTranslationColormap(TC_DEFAULT, outlinecolor, GTC_CACHE);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+	V_DrawNameTag(x, y, flags, FRACUNIT, basecolormap, outlinecolormap, str);
+	return 0;
+}
+
+static int libd_drawScaledNameTag(lua_State *L)
+{
+	fixed_t x;
+	fixed_t y;
+	const char *str;
+	INT32 flags;
+	fixed_t scale;
+	UINT8 basecolor;
+	UINT8 outlinecolor;
+	UINT8 *basecolormap = NULL;
+	UINT8 *outlinecolormap = NULL;
+
+	HUDONLY
+
+	x = luaL_checkfixed(L, 1);
+	y = luaL_checkfixed(L, 2);
+	str = luaL_checkstring(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+	scale = luaL_optinteger(L, 5, FRACUNIT);
+	if (scale < 0)
+		return luaL_error(L, "negative scale");
+	basecolor = luaL_optinteger(L, 6, SKINCOLOR_BLUE);
+	outlinecolor = luaL_optinteger(L, 7, SKINCOLOR_ORANGE);
+	if (basecolor != SKINCOLOR_NONE)
+		basecolormap = R_GetTranslationColormap(TC_DEFAULT, basecolor, GTC_CACHE);
+	if (outlinecolor != SKINCOLOR_NONE)
+		outlinecolormap = R_GetTranslationColormap(TC_DEFAULT, outlinecolor, GTC_CACHE);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+	V_DrawNameTag(FixedInt(x), FixedInt(y), flags, scale, basecolormap, outlinecolormap, str);
+	return 0;
+}
+
 static int libd_stringWidth(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
@@ -656,6 +747,13 @@ static int libd_stringWidth(lua_State *L)
 		lua_pushinteger(L, V_ThinStringWidth(str, flags));
 		break;
 	}
+	return 1;
+}
+
+static int libd_nameTagWidth(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_NameTagWidth(luaL_checkstring(L, 1)));
 	return 1;
 }
 
@@ -814,9 +912,17 @@ static int libd_RandomChance(lua_State *L)
 	return 1;
 }
 
-// 30/10/18 Lat': Get cv_translucenthud's value for HUD rendering as a normal V_xxTRANS int
+// 30/10/18 Lat': Get st_translucency's value for HUD rendering as a normal V_xxTRANS int
 // Could as well be thrown in global vars for ease of access but I guess it makes sense for it to be a HUD fn
 static int libd_getlocaltransflag(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, (10-st_translucency)*V_10TRANS);
+	return 1;
+}
+
+// Get cv_translucenthud's value for HUD rendering as a normal V_xxTRANS int
+static int libd_getusertransflag(lua_State *L)
 {
 	HUDONLY
 	lua_pushinteger(L, (10-cv_translucenthud.value)*V_10TRANS);	// A bit weird that it's called "translucenthud" yet 10 is fully opaque :V
@@ -833,13 +939,17 @@ static luaL_Reg lib_draw[] = {
 	// drawing
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
+	{"drawStretched", libd_drawStretched},
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},
 	{"drawString", libd_drawString},
+	{"drawNameTag", libd_drawNameTag},
+	{"drawScaledNameTag", libd_drawScaledNameTag},
 	{"fadeScreen", libd_fadeScreen},
 	// misc
 	{"stringWidth", libd_stringWidth},
+	{"nameTagWidth", libd_nameTagWidth},
 	// m_random
 	{"RandomFixed",libd_RandomFixed},
 	{"RandomByte",libd_RandomByte},
@@ -854,6 +964,7 @@ static luaL_Reg lib_draw[] = {
 	{"dupy", libd_dupy},
 	{"renderer", libd_renderer},
 	{"localTransFlag", libd_getlocaltransflag},
+	{"userTransFlag", libd_getusertransflag},
 	{NULL, NULL}
 };
 
@@ -943,6 +1054,9 @@ int LUA_HudLib(lua_State *L)
 
 		lua_newtable(L);
 		lua_rawseti(L, -2, 4); // HUD[3] = title rendering functions array
+
+		lua_newtable(L);
+		lua_rawseti(L, -2, 5); // HUD[4] = title card rendering functions array
 	lua_setfield(L, LUA_REGISTRYINDEX, "HUD");
 
 	luaL_newmetatable(L, META_HUDINFO);
@@ -1076,6 +1190,40 @@ void LUAh_TitleHUD(void)
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
 		LUA_Call(gL, 1);
 	}
+	lua_pop(gL, -1);
+	hud_running = false;
+}
+
+void LUAh_TitleCardHUD(player_t *stplayr)
+{
+	if (!gL || !(hudAvailable & (1<<hudhook_titlecard)))
+		return;
+
+	hud_running = true;
+	lua_pop(gL, -1);
+
+	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
+	I_Assert(lua_istable(gL, -1));
+	lua_rawgeti(gL, -1, 5); // HUD[5] = rendering funcs
+	I_Assert(lua_istable(gL, -1));
+
+	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
+	I_Assert(lua_istable(gL, -1));
+	lua_remove(gL, -3); // pop HUD
+
+	LUA_PushUserdata(gL, stplayr, META_PLAYER);
+	lua_pushinteger(gL, lt_ticker);
+	lua_pushinteger(gL, (lt_endtime + TICRATE));
+	lua_pushnil(gL);
+
+	while (lua_next(gL, -6) != 0) {
+		lua_pushvalue(gL, -6); // graphics library (HUD[1])
+		lua_pushvalue(gL, -6); // stplayr
+		lua_pushvalue(gL, -6); // lt_ticker
+		lua_pushvalue(gL, -6); // lt_endtime
+		LUA_Call(gL, 4);
+	}
+
 	lua_pop(gL, -1);
 	hud_running = false;
 }

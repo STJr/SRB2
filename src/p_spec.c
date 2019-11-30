@@ -464,11 +464,11 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 	for (i = 0; i < numlevelflats; i++, foundflats++)
 	{
 		// is that levelflat from the flat anim sequence ?
-		if ((anims[animnum].istexture) && (foundflats->texturenum != 0 && foundflats->texturenum != -1)
-			&& ((UINT16)foundflats->texturenum >= startflatnum && (UINT16)foundflats->texturenum <= endflatnum))
+		if ((anims[animnum].istexture) && (foundflats->type == LEVELFLAT_TEXTURE)
+			&& ((UINT16)foundflats->u.texture.num >= startflatnum && (UINT16)foundflats->u.texture.num <= endflatnum))
 		{
-			foundflats->basetexturenum = startflatnum;
-			foundflats->animseq = foundflats->texturenum - startflatnum;
+			foundflats->u.texture.basenum = startflatnum;
+			foundflats->animseq = foundflats->u.texture.num - startflatnum;
 			foundflats->numpics = endflatnum - startflatnum + 1;
 			foundflats->speed = anims[animnum].speed;
 
@@ -476,10 +476,10 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
 					foundflats->numpics,foundflats->speed);
 		}
-		else if (foundflats->lumpnum >= startflatnum && foundflats->lumpnum <= endflatnum)
+		else if (foundflats->u.flat.lumpnum >= startflatnum && foundflats->u.flat.lumpnum <= endflatnum)
 		{
-			foundflats->baselumpnum = startflatnum;
-			foundflats->animseq = foundflats->lumpnum - startflatnum;
+			foundflats->u.flat.baselumpnum = startflatnum;
+			foundflats->animseq = foundflats->u.flat.lumpnum - startflatnum;
 			foundflats->numpics = endflatnum - startflatnum + 1;
 			foundflats->speed = anims[animnum].speed;
 
@@ -2718,8 +2718,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
 					return;
 				}
+
 				if (line->tag != 0) // Do special stuff only if a non-zero linedef tag is set
 				{
+					// Play sounds from tagged sectors' origins.
 					if (line->flags & ML_EFFECT5) // Repeat Midtexture
 					{
 						// Additionally play the sound from tagged sectors' soundorgs
@@ -2731,57 +2733,73 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							S_StartSound(&sec->soundorg, sfxnum);
 						}
 					}
-					else if (mo) // A mobj must have triggered the executor
+
+					// Play the sound without origin for anyone, as long as they're inside tagged areas.
+					else
 					{
-						// Only trigger if mobj is touching the tag
+						UINT8 i = 0;
+						mobj_t* camobj = players[displayplayer].mo;
 						ffloor_t *rover;
 						boolean foundit = false;
 
-						for(rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+						for (i = 0; i < 2; camobj = players[secondarydisplayplayer].mo, i++)
 						{
-							if (rover->master->frontsector->tag != line->tag)
+							if (!camobj)
 								continue;
 
-							if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
-								continue;
+							if (foundit || (camobj->subsector->sector->tag == line->tag))
+							{
+								foundit = true;
+								break;
+							}
 
-							if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
-								continue;
+							// Only trigger if mobj is touching the tag
+							for(rover = camobj->subsector->sector->ffloors; rover; rover = rover->next)
+							{
+								if (rover->master->frontsector->tag != line->tag)
+									continue;
 
-							foundit = true;
+								if (camobj->z > P_GetSpecialTopZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+									continue;
+
+								if (camobj->z + camobj->height < P_GetSpecialBottomZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+									continue;
+
+								foundit = true;
+								break;
+							}
 						}
 
-						if (mo->subsector->sector->tag == line->tag)
-							foundit = true;
-
-						if (!foundit)
-							return;
+						if (foundit)
+							S_StartSound(NULL, sfxnum);
 					}
 				}
-
-				if (line->flags & ML_NOCLIMB)
+				else
 				{
-					// play the sound from nowhere, but only if display player triggered it
-					if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
+					if (line->flags & ML_NOCLIMB)
+					{
+						// play the sound from nowhere, but only if display player triggered it
+						if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
+							S_StartSound(NULL, sfxnum);
+					}
+					else if (line->flags & ML_EFFECT4)
+					{
+						// play the sound from nowhere
 						S_StartSound(NULL, sfxnum);
-				}
-				else if (line->flags & ML_EFFECT4)
-				{
-					// play the sound from nowhere
-					S_StartSound(NULL, sfxnum);
-				}
-				else if (line->flags & ML_BLOCKMONSTERS)
-				{
-					// play the sound from calling sector's soundorg
-					if (callsec)
-						S_StartSound(&callsec->soundorg, sfxnum);
+					}
+					else if (line->flags & ML_BLOCKMONSTERS)
+					{
+						// play the sound from calling sector's soundorg
+						if (callsec)
+							S_StartSound(&callsec->soundorg, sfxnum);
+						else if (mo)
+							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+					}
 					else if (mo)
-						S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
-				}
-				else if (mo)
-				{
-					// play the sound from mobj that triggered it
-					S_StartSound(mo, sfxnum);
+					{
+						// play the sound from mobj that triggered it
+						S_StartSound(mo, sfxnum);
+					}
 				}
 			}
 			break;
@@ -3995,6 +4013,24 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 462: // Stop clock (and end level in record attack)
+			if (G_PlatformGametype())
+			{
+				stoppedclock = true;
+				CONS_Debug(DBG_GAMELOGIC, "Clock stopped!\n");
+				if (modeattacking)
+				{
+					UINT8 i;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+						P_DoPlayerExit(&players[i]);
+					}
+				}
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
@@ -4051,11 +4087,15 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
+
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
 
 		P_SetTarget(&thing->target, player->mo);
-		P_SetMobjState(thing, S_SIGN1);
+		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 
@@ -4076,11 +4116,15 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
+
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
 
 		P_SetTarget(&thing->target, player->mo);
-		P_SetMobjState(thing, S_SIGN1);
+		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
+		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
 			S_StartSound(thing, thing->info->seesound);
 
@@ -4410,59 +4454,55 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 3: // Linedef executor requires all players present
 			/// \todo check continues for proper splitscreen support?
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || players[i].lives > 0))
+			{
+				if (!playeringame[i])
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (players[i].bot)
+					continue;
+				if (gametype == GT_COOP && players[i].lives <= 0)
+					continue;
+				if (roversector)
 				{
-					if (roversector)
+					if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
 					{
-						if (players[i].mo->subsector->sector == roversector)
-							;
-						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						msecnode_t *node;
+						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 						{
-							boolean insector = false;
-							msecnode_t *node;
-							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-							{
-								if (node->m_sector == roversector)
-								{
-									insector = true;
-									break;
-								}
-							}
-							if (!insector)
-								goto DoneSection2;
+							if (P_ThingIsOnThe3DFloor(players[i].mo, sector, node->m_sector))
+								break;
 						}
-						else
+						if (!node)
 							goto DoneSection2;
-
-						if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
+					}
+					else if (players[i].mo->subsector && !P_ThingIsOnThe3DFloor(players[i].mo, sector, players[i].mo->subsector->sector)) // this function handles basically everything for us lmao
+						goto DoneSection2;
+				}
+				else
+				{
+					if (players[i].mo->subsector->sector == sector)
+						;
+					else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+					{
+						msecnode_t *node;
+						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+						{
+							if (node->m_sector == sector)
+								break;
+						}
+						if (!node)
 							goto DoneSection2;
 					}
 					else
-					{
-						if (players[i].mo->subsector->sector == sector)
-							;
-						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
-						{
-							boolean insector = false;
-							msecnode_t *node;
-							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-							{
-								if (node->m_sector == sector)
-								{
-									insector = true;
-									break;
-								}
-							}
-							if (!insector)
-								goto DoneSection2;
-						}
-						else
-							goto DoneSection2;
+						goto DoneSection2;
 
-						if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
-							goto DoneSection2;
-					}
+					if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
+						goto DoneSection2;
 				}
+			}
 			/* FALLTHRU */
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
@@ -4510,7 +4550,11 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 			// Mark all players with the time to exit thingy!
 			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
 				P_DoPlayerExit(&players[i]);
+			}
 			break;
 		}
 		case 10: // Special Stage Time/Rings
@@ -4630,7 +4674,7 @@ DoneSection2:
 		}
 
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
-			if (player->bot)
+			if (player->bot || !G_PlatformGametype())
 				break;
 			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
 			{
@@ -4642,7 +4686,7 @@ DoneSection2:
 			{
 				INT32 lineindex;
 
-				P_DoPlayerExit(player);
+				P_DoPlayerFinish(player);
 
 				P_SetupSignExit(player);
 				// important: use sector->tag on next line instead of player->mo->subsector->tag
@@ -5578,11 +5622,11 @@ void P_UpdateSpecials(void)
 		if (foundflats->speed) // it is an animated flat
 		{
 			// update the levelflat texture number
-			if (foundflats->basetexturenum != -1)
-				foundflats->texturenum = foundflats->basetexturenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
+			if (foundflats->type == LEVELFLAT_TEXTURE)
+				foundflats->u.texture.num = foundflats->u.texture.basenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 			// update the levelflat lump number
-			else if (foundflats->baselumpnum != LUMPERROR)
-				foundflats->lumpnum = foundflats->baselumpnum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
+			else if ((foundflats->type == LEVELFLAT_FLAT) && (foundflats->u.flat.baselumpnum != LUMPERROR))
+				foundflats->u.flat.lumpnum = foundflats->u.flat.baselumpnum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 		}
 	}
 }
@@ -5984,8 +6028,6 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
   * to the lowest nearby height if not
   * there already.
   *
-  * Replaces the old "AirBob".
-  *
   * \param sec          Control sector.
   * \param actionsector Target sector.
   * \param sourceline   Control linedef.
@@ -6030,8 +6072,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline)
 	raise->sourceline = sourceline;
 }
 
-// Function to maintain backwards compatibility
-static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
+static void P_AddAirbob(sector_t *sec, line_t *sourceline, boolean noadjust, boolean dynamic)
 {
 	levelspecthink_t *airbob;
 
@@ -6068,6 +6109,8 @@ static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
 	airbob->vars[5] = sec->ceilingheight;
 	airbob->vars[4] = airbob->vars[5]
 			- (sec->ceilingheight - sec->floorheight);
+
+	airbob->vars[9] = dynamic ? 1 : 0;
 
 	airbob->sourceline = sourceline;
 }
@@ -6385,6 +6428,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 	// yep, we do this here - "bossdisabled" is considered an apparatus of specials.
 	bossdisabled = 0;
+	stoppedclock = false;
 
 	// Init special SECTORs.
 	sector = sectors;
@@ -6891,11 +6935,16 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 151: // Adjustable air bobbing platform
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, (lines[i].special != 151));
+				P_AddAirbob(lines[i].frontsector, lines + i, (lines[i].special != 151), false);
 				break;
 			case 152: // Adjustable air bobbing platform in reverse
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
+				break;
+			case 153: // Dynamic Sinking Platform
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
+				lines[i].flags |= ML_BLOCKMONSTERS;
+				P_AddAirbob(lines[i].frontsector, lines + i, false, true);
 				break;
 
 			case 160: // Float/bob platform
@@ -6946,14 +6995,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 176: // Air bobbing platform that will crumble and bob on the water when it falls and hits
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB|FF_CRUMBLE, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
 				break;
 
 			case 177: // Air bobbing platform that will crumble and bob on
 				// the water when it falls and hits, then never return
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB|FF_CRUMBLE|FF_NORETURN, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
 				break;
 
 			case 178: // Crumbling platform that will float when it hits water
@@ -6967,7 +7016,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 180: // Air bobbing platform that will crumble
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
 				break;
 
 			case 190: // Rising Platform FOF (solid, opaque, shadows)
@@ -7089,7 +7138,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 254: // Bustable block
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP;
 				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_ONLYKNUX;
+					ffloorflags |= FF_STRONGBUST;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;

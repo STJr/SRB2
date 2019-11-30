@@ -94,6 +94,8 @@ void strcatbf(char *s1, const char *s2, const char *s3);
 
 void M_SetupMemcpy(void);
 
+const char *M_FileError(FILE *handle);
+
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
 

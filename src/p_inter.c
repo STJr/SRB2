@@ -27,6 +27,7 @@
 #include "m_cheat.h" // objectplace
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
+#include "f_finale.h"
 
 // CTF player names
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
@@ -147,13 +148,17 @@ void P_ResetStarposts(void)
 //
 boolean P_CanPickupItem(player_t *player, boolean weapon)
 {
-	if (player->bot && weapon)
+	if (!player->mo || player->mo->health <= 0)
 		return false;
+
+	if (player->bot)
+	{
+		if (weapon)
+			return false;
+		return P_CanPickupItem(&players[consoleplayer], true); // weapon is true to prevent infinite recursion if p1 is bot - doesn't occur in vanilla, but may be relevant for mods
+	}
 
 	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] < UINT16_MAX)
-		return false;
-
-	if (player->mo && player->mo->health <= 0)
 		return false;
 
 	return true;
@@ -477,6 +482,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momy = -toucher->momy;
 				if (player->charability == CA_FLY && player->panim == PA_ABILITY)
 					toucher->momz = -toucher->momz/2;
+				else if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
+				{
+					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
+					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+					toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
+					toucher->momx = 7*toucher->momx>>3;
+					toucher->momy = 7*toucher->momy>>3;
+				}
+				else if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+					&& player->panim == PA_DASH)
+					P_DoPlayerPain(player, special, special);
 			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 			if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
@@ -622,7 +638,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (!(netgame || multiplayer))
 				{
 					player->continues += 1;
-					players->gotcontinue = true;
+					player->gotcontinue = true;
 					if (P_IsLocalPlayer(player))
 						S_StartSound(NULL, sfx_s3kac);
 					else
@@ -1381,6 +1397,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				}
 			}
 			break;
+		case MT_LETTER:
+		{
+			if (special->health && !player->bot)
+			{
+				F_StartTextPrompt(199, 0, toucher, 0, true, false);
+				special->health = 0;
+				if (ultimatemode && player->continues < 99)
+					player->continues++;
+			}
+			return;
+		}
 		case MT_FIREFLOWER:
 			if (player->bot)
 				return;
@@ -1493,8 +1520,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					P_SetMobjState(mo2, mo2->info->painstate);
 				}
 			}
-
-			S_StartSound(toucher, special->info->painsound);
 			return;
 
 		case MT_FAKEMOBILE:
@@ -1520,10 +1545,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momx = P_ReturnThrustX(special, angle, touchspeed);
 				toucher->momy = P_ReturnThrustY(special, angle, touchspeed);
 				toucher->momz = -toucher->momz;
-				if (player->pflags & PF_GLIDING)
+				if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
 				{
 					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+					toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
+					toucher->momx = 7*toucher->momx>>3;
+					toucher->momy = 7*toucher->momy>>3;
 				}
 				player->homing = 0;
 
@@ -1568,10 +1596,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					toucher->momx = P_ReturnThrustX(special, special->angle, touchspeed);
 					toucher->momy = P_ReturnThrustY(special, special->angle, touchspeed);
 					toucher->momz = -toucher->momz;
-					if (player->pflags & PF_GLIDING)
+					if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
 					{
 						player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 						P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+						toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
+						toucher->momx = 7*toucher->momx>>3;
+						toucher->momy = 7*toucher->momy>>3;
 					}
 					player->homing = 0;
 
@@ -2357,7 +2388,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	if (target->player && !target->player->spectator)
 	{
 		if (metalrecording) // Ack! Metal Sonic shouldn't die! Cut the tape, end recording!
-			G_StopMetalRecording();
+			G_StopMetalRecording(true);
 		if (gametype == GT_MATCH // note, no team match suicide penalty
 			&& ((target == source) || (source == NULL && inflictor == NULL) || (source && !source->player)))
 		{ // Suicide penalty
@@ -2377,7 +2408,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		{
 			P_SetTarget(&target->target, source);
 			source->player->numboxes++;
-			if ((cv_itemrespawn.value && gametype != GT_COOP && (modifiedgame || netgame || multiplayer)))
+			if (cv_itemrespawn.value && gametype != GT_COOP && (modifiedgame || netgame || multiplayer))
 				target->fuse = cv_itemrespawntime.value*TICRATE + 2; // Random box generation
 		}
 
@@ -2467,10 +2498,34 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		P_UnsetThingPosition(target);
 		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
+		target->standingslope = NULL;
+		target->pmomz = 0;
+
+		if (target->player->powers[pw_super])
+		{
+			target->player->powers[pw_super] = 0;
+			if (P_IsLocalPlayer(target->player))
+			{
+				music_stack_noposition = true; // HACK: Do not reposition next music
+				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			}
+			P_RestoreMusic(target->player);
+
+			if (gametype != GT_COOP)
+			{
+				HU_SetCEchoFlags(0);
+				HU_SetCEchoDuration(5);
+				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[target->player-players]));
+			}
+		}
+
+		target->color = target->player->skincolor;
+		target->colorized = false;
+		G_GhostAddColor(GHC_NORMAL);
 
 		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
 			;
-		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap) && (target->player->lives != INFLIVES)
+		else if (!target->player->bot && !target->player->spectator && (target->player->lives != INFLIVES)
 		 && G_GametypeUsesLives())
 		{
 			target->player->lives -= 1; // Lose a life Tails 03-11-2000
@@ -2578,7 +2633,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->fuse = target->info->damage;
 			break;
 
-		case MT_BUBBLEBUZZ:
+		case MT_BUGGLE:
 			if (inflictor && inflictor->player // did a player kill you? Spawn relative to the player so they're bound to get it
 			&& P_AproxDistance(inflictor->x - target->x, inflictor->y - target->y) <= inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale) // close enough?
 			&& inflictor->z <= target->z + target->height + FixedMul(8*FRACUNIT, inflictor->scale)
@@ -2613,11 +2668,30 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			}
 			break;
 
+		case MT_BANPYURA:
+			if (target->tracer)
+			{
+				S_StopSound(target->tracer);
+				P_KillMobj(target->tracer, inflictor, source, damagetype);
+			}
+			break;
+
 		case MT_EGGSHIELD:
 			P_SetObjectMomZ(target, 4*target->scale, false);
 			P_InstaThrust(target, target->angle, 3*target->scale);
 			target->flags = (target->flags|MF_NOCLIPHEIGHT) & ~MF_NOGRAVITY;
 			break;
+
+		case MT_DRAGONBOMBER:
+			{
+				mobj_t *segment = target;
+				while (segment->tracer != NULL)
+				{
+					P_KillMobj(segment->tracer, NULL, NULL, 0);
+					segment = segment->tracer;
+				}
+				break;
+			}
 
 		case MT_EGGMOBILE3:
 			{
@@ -2682,7 +2756,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_EGGTRAP:
 			// Time for birdies! Yaaaaaaaay!
-			target->fuse = TICRATE*2;
+			target->fuse = TICRATE;
 			break;
 
 		case MT_MINECART:
@@ -2716,6 +2790,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				}
 			}
 			break;
+		case MT_METALSONIC_RACE:
+			target->fuse = TICRATE*3;
+			target->momx = target->momy = target->momz = 0;
+			P_SetObjectMomZ(target, 14*FRACUNIT, false);
+			target->flags = (target->flags & ~MF_NOGRAVITY)|(MF_NOCLIP|MF_NOCLIPTHING);
+			break;
 		default:
 			break;
 	}
@@ -2738,13 +2818,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (flip)
 				momz *= -1;
 #define makechunk(angtweak, xmov, ymov) \
-			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);\
-			chunk->eflags |= flip;\
+			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);\
 			P_SetMobjState(chunk, target->info->xdeathstate);\
 			chunk->health = 0;\
 			chunk->angle = angtweak;\
-			chunk->destscale = scale;\
-			P_SetScale(chunk, scale);\
 			P_UnsetThingPosition(chunk);\
 			chunk->flags = MF_NOCLIP;\
 			chunk->x += xmov;\
@@ -2763,14 +2840,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		if (flip)
 			momz *= -1;
 
-		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);
-		chunk->eflags |= flip;
-
+		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);
 		P_SetMobjState(chunk, target->info->deathstate);
 		chunk->health = 0;
 		chunk->angle = ang + ANGLE_180;
-		chunk->destscale = scale;
-		P_SetScale(chunk, scale);
 		P_UnsetThingPosition(chunk);
 		chunk->flags = MF_NOCLIP;
 		chunk->x -= xoffs;
@@ -2813,13 +2886,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			sprflip = P_RandomChance(FRACUNIT/2);
 
 #define makechunk(angtweak, xmov, ymov) \
-			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);\
-			chunk->eflags |= flip;\
+			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);\
 			P_SetMobjState(chunk, target->info->xdeathstate);\
 			chunk->health = 0;\
 			chunk->angle = target->angle;\
-			chunk->destscale = scale;\
-			P_SetScale(chunk, scale);\
 			P_UnsetThingPosition(chunk);\
 			chunk->flags = MF_NOCLIP;\
 			chunk->x += xmov - forwardxoffs;\
@@ -2841,14 +2911,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		sprflip = P_RandomChance(FRACUNIT/2);
 
-		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);
-		chunk->eflags |= flip;
+		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);
 
 		P_SetMobjState(chunk, target->info->deathstate);
 		chunk->health = 0;
 		chunk->angle = target->angle;
-		chunk->destscale = scale;
-		P_SetScale(chunk, scale);
 		P_UnsetThingPosition(chunk);
 		chunk->flags = MF_NOCLIP;
 		chunk->x += forwardxoffs - xoffs;
@@ -2936,6 +3003,10 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		player->powers[pw_flashing] = flashingtics;
 		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_STUN);
 		S_StartSound(target, sfx_nghurt);
+
+#ifdef ROTSPRITE
+		player->mo->rollangle = 0;
+#endif
 
 		if (oldnightstime > 10*TICRATE
 			&& player->nightstime < 10*TICRATE)
@@ -3452,7 +3523,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		// Make sure that boxes cannot be popped by enemies, red rings, etc.
 		if (target->flags & MF_MONITOR && ((!source || !source->player || source->player->bot)
-		|| (inflictor && inflictor->type >= MT_REDRING && inflictor->type <= MT_GRENADERING)))
+		|| (inflictor && (inflictor->type == MT_REDRING || (inflictor->type >= MT_THROWNBOUNCE && inflictor->type <= MT_THROWNGRENADE)))))
 			return false;
 	}
 
@@ -3570,11 +3641,12 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			}
 			else if (inflictor && inflictor->flags & MF_MISSILE)
 				return false; // Metal Sonic walk through flame !!
-			else
+			else if (!player->powers[pw_flashing])
 			{ // Oh no! Metal Sonic is hit !!
 				P_ShieldDamage(player, inflictor, source, damage, damagetype);
 				return true;
 			}
+			return false;
 		}
 		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super]) // ignore bouncing & such in invulnerability
 		{

@@ -327,7 +327,7 @@ typedef struct
 	// Music stuff.
 	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
 	char musintername[7];    ///< Intermission screen music.
-	
+
 	char muspostbossname[7];    ///< Post-bossdeath music.
 	UINT16 muspostbosstrack;    ///< Post-bossdeath track.
 	UINT32 muspostbosspos;      ///< Post-bossdeath position
@@ -349,6 +349,8 @@ typedef struct
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
 #define LF_SAVEGAME      32 ///< Save the game upon loading this level
 #define LF_MIXNIGHTSCOUNTDOWN 64 ///< Play sfx_timeup instead of music change for NiGHTS countdown
+#define LF_WARNINGTITLE 128 ///< WARNING! WARNING! WARNING! WARNING!
+#define LF_NOTITLECARD  256 ///< Don't start the title card
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen

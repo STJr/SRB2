@@ -18,6 +18,7 @@
 #include "d_event.h"
 #include "command.h"
 #include "r_things.h" // for SKINNAMESIZE
+#include "f_finale.h" // for ttmode_enum
 
 //
 // MENUS
@@ -63,6 +64,7 @@ typedef enum
 	MN_MP_CONNECT,
 	MN_MP_ROOM,
 	MN_MP_PLAYERSETUP, // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	MN_MP_SERVER_OPTIONS,
 
 	// Options
 	MN_OP_MAIN,
@@ -97,12 +99,14 @@ typedef enum
 	MN_OP_SCREENSHOTS,
 	MN_OP_ERASEDATA,
 
-	// Secrets
+	// Extras
 	MN_SR_MAIN,
 	MN_SR_PANDORA,
 	MN_SR_LEVELSELECT,
 	MN_SR_UNLOCKCHECKLIST,
 	MN_SR_EMBLEMHINT,
+	MN_SR_PLAYER,
+	MN_SR_SOUNDTEST,
 
 	// Addons (Part of MISC, but let's make it our own)
 	MN_AD_MAIN,
@@ -126,11 +130,20 @@ typedef enum
 typedef struct
 {
 	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
-	SINT8 hidetitlepics; // hide title gfx per menu; -1 means undefined, inherits global setting
+	SINT8 fadestrength;  // darken background when displaying this menu, strength 0-31 or -1 for undefined
+	INT32 bgcolor; // fill color, overrides bg name. -1 means follow bg name rules.
 	INT32 titlescrollxspeed; // background gfx scroll per menu; inherits global setting
 	INT32 titlescrollyspeed; // y scroll
-	INT32 bgcolor; // fill color, overrides bg name. -1 means follow bg name rules.
 	boolean bghide; // for titlemaps, hide the background.
+
+	SINT8 hidetitlepics; // hide title gfx per menu; -1 means undefined, inherits global setting
+	ttmode_enum ttmode; // title wing animation mode; default TTMODE_OLD
+	UINT8 ttscale; // scale of title wing gfx (FRACUNIT / ttscale); -1 means undefined, inherits global setting
+	char ttname[9]; // lump name of title wing gfx. If name length is <= 6, engine will attempt to load numbered frames (TTNAMExx)
+	INT16 ttx; // X position of title wing
+	INT16 tty; // Y position of title wing
+	INT16 ttloop; // # frame to loop; -1 means dont loop
+	UINT16 tttics; // # of tics per frame
 
 	char musname[7]; ///< Music track to play. "" for no music.
 	UINT16 mustrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
@@ -138,7 +151,6 @@ typedef struct
 	boolean musstop; ///< Don't play any music
 	boolean musignore; ///< Let the current music keep playing
 
-	SINT8 fadestrength;  // darken background when displaying this menu, strength 0-31 or -1 for undefined
 	boolean enterbubble; // run all entrance line execs after common ancestor and up to child. If false, only run the child's exec
 	boolean exitbubble; // run all exit line execs from child and up to before common ancestor. If false, only run the child's exec
 	INT32 entertag; // line exec to run on menu enter, if titlemap
@@ -156,7 +168,7 @@ UINT8 M_GetYoungestChildMenu(void);
 void M_ChangeMenuMusic(const char *defaultmusname, boolean defaultmuslooping);
 void M_SetMenuCurBackground(const char *defaultname);
 void M_SetMenuCurFadeValue(UINT8 defaultvalue);
-void M_SetMenuCurHideTitlePics(void);
+void M_SetMenuCurTitlePics(void);
 
 // Called by main loop,
 // saves config file and calls I_Quit when user exits.
@@ -323,9 +335,18 @@ typedef struct
 	char notes[441];
 	char picname[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
-	patch_t *pic;
+	patch_t *charpic;
 	UINT8 prev;
 	UINT8 next;
+
+	// new character select
+	char displayname[SKINNAMESIZE+1];
+	SINT8 skinnum[2];
+	UINT8 oppositecolor;
+	char nametag[8];
+	patch_t *namepic;
+	UINT8 tagtextcolor;
+	UINT8 tagoutlinecolor;
 } description_t;
 
 // level select platter
@@ -374,6 +395,7 @@ typedef struct
 
 extern description_t description[MAXSKINS];
 
+extern consvar_t cv_showfocuslost;
 extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;
 extern CV_PossibleValue_t gametype_cons_t[];
 

@@ -28,6 +28,7 @@
 
 #include "r_data.h"
 #include "r_things.h"
+#include "r_patch.h"
 #include "r_sky.h"
 #include "r_draw.h"
 
@@ -75,6 +76,7 @@
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #include "hardware/hw_light.h"
+#include "hardware/hw_model.h"
 #endif
 
 #ifdef ESLOPE
@@ -103,6 +105,7 @@ side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 UINT16 bossdisabled;
+boolean stoppedclock;
 boolean levelloading;
 UINT8 levelfadecol;
 
@@ -541,57 +544,124 @@ levelflat_t *levelflats;
 size_t P_PrecacheLevelFlats(void)
 {
 	lumpnum_t lump;
-	size_t i, flatmemory = 0;
+	size_t i;
 
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
+	flatmemory = 0;
 	for (i = 0; i < numlevelflats; i++)
 	{
-		lump = levelflats[i].lumpnum;
-		if (devparm)
-			flatmemory += W_LumpLength(lump);
-		R_GetFlat(lump);
+		if (levelflats[i].type == LEVELFLAT_FLAT)
+		{
+			lump = levelflats[i].u.flat.lumpnum;
+			if (devparm)
+				flatmemory += W_LumpLength(lump);
+			R_GetFlat(lump);
+		}
 	}
 	return flatmemory;
+}
+
+/*
+levelflat refers to an array of level flats,
+or NULL if we want to allocate it now.
+*/
+static INT32
+Ploadflat (levelflat_t *levelflat, const char *flatname)
+{
+	UINT8         buffer[8];
+
+	lumpnum_t    flatnum;
+	int       texturenum;
+
+	size_t i;
+
+	if (levelflat)
+	{
+		// Scan through the already found flats, return if it matches.
+		for (i = 0; i < numlevelflats; i++)
+		{
+			if (strnicmp(levelflat[i].name, flatname, 8) == 0)
+				return i;
+		}
+	}
+
+#ifndef ZDEBUG
+	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
+	if (numlevelflats >= MAXLEVELFLATS)
+		I_Error("Too many flats in level\n");
+
+	if (levelflat)
+		levelflat += numlevelflats;
+	else
+	{
+		// allocate new flat memory
+		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
+		levelflat  = levelflats + numlevelflats;
+	}
+
+	// Store the name.
+	strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
+	strupr(levelflat->name);
+
+	/* If we can't find a flat, try looking for a texture! */
+	if (( flatnum = R_GetFlatNumForName(flatname) ) == LUMPERROR)
+	{
+		if (( texturenum = R_CheckTextureNumForName(flatname) ) == -1)
+		{
+			// check for REDWALL
+			if (( texturenum = R_CheckTextureNumForName("REDWALL") ) != -1)
+				goto texturefound;
+			// check for REDFLR
+			else if (( flatnum = R_GetFlatNumForName("REDFLR") ) != LUMPERROR)
+				goto flatfound;
+			// nevermind
+			levelflat->type = LEVELFLAT_NONE;
+		}
+		else
+		{
+texturefound:
+			levelflat->type = LEVELFLAT_TEXTURE;
+			levelflat->u.texture.    num = texturenum;
+			levelflat->u.texture.lastnum = texturenum;
+			/* start out unanimated */
+			levelflat->u.texture.basenum = -1;
+		}
+	}
+	else
+	{
+flatfound:
+		/* This could be a flat, patch, or PNG. */
+		if (R_CheckIfPatch(flatnum))
+			levelflat->type = LEVELFLAT_PATCH;
+		else
+		{
+#ifndef NO_PNG_LUMPS
+			/*
+			Only need eight bytes for PNG headers.
+			FIXME: Put this elsewhere.
+			*/
+			W_ReadLumpHeader(flatnum, buffer, 8, 0);
+			if (R_IsLumpPNG(buffer, W_LumpLength(flatnum)))
+				levelflat->type = LEVELFLAT_PNG;
+			else
+#endif/*NO_PNG_LUMPS*/
+				levelflat->type = LEVELFLAT_FLAT;/* phew */
+		}
+
+		levelflat->u.flat.    lumpnum = flatnum;
+		levelflat->u.flat.baselumpnum = LUMPERROR;
+	}
+
+	return ( numlevelflats++ );
 }
 
 // Auxiliary function. Find a flat in the active wad files,
 // allocate an id for it, and set the levelflat (to speedup search)
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 {
-	size_t i;
-
-	// Scan through the already found flats, break if it matches.
-	for (i = 0; i < numlevelflats; i++, levelflat++)
-		if (strnicmp(levelflat->name, flatname, 8) == 0)
-			break;
-
-	// If there is no match, make room for a new flat.
-	if (i == numlevelflats)
-	{
-		// Store the name.
-		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
-		strupr(levelflat->name);
-
-		// store the flat lump number
-		levelflat->lumpnum = R_GetFlatNumForName(flatname);
-		levelflat->texturenum = R_CheckTextureNumForName(flatname);
-		levelflat->lasttexturenum = levelflat->texturenum;
-
-		levelflat->baselumpnum = LUMPERROR;
-		levelflat->basetexturenum = -1;
-
-#ifndef ZDEBUG
-		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-		numlevelflats++;
-
-		if (numlevelflats >= MAXLEVELFLATS)
-			I_Error("Too many flats in level\n");
-	}
-
-	// level flat id
-	return (INT32)i;
+	return Ploadflat(levelflat, flatname);
 }
 
 // help function for Lua and $$$.sav reading
@@ -600,44 +670,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	size_t i;
-	levelflat_t *levelflat = levelflats;
-
-	//
-	//  first scan through the already found flats
-	//
-	for (i = 0; i < numlevelflats; i++, levelflat++)
-		if (strnicmp(levelflat->name,flatname,8)==0)
-			break;
-
-	// that flat was already found in the level, return the id
-	if (i == numlevelflats)
-	{
-		// allocate new flat memory
-		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
-		levelflat = levelflats+i;
-
-		// store the name
-		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
-		strupr(levelflat->name);
-
-		// store the flat lump number
-		levelflat->lumpnum = R_GetFlatNumForName(flatname);
-		levelflat->texturenum = R_CheckTextureNumForName(flatname);
-		levelflat->lasttexturenum = levelflat->texturenum;
-
-		levelflat->baselumpnum = LUMPERROR;
-		levelflat->basetexturenum = -1;
-
-#ifndef ZDEBUG
-		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-		numlevelflats++;
-	}
-
-	// level flat id
-	return (INT32)i;
+	return Ploadflat(0, flatname);
 }
 
 // help function for $$$.sav checking
@@ -2190,7 +2223,10 @@ static void P_LevelInitStuff(void)
 	tokenbits = 0;
 	runemeraldmanager = false;
 	emeraldspawndelay = 60*TICRATE;
-	nummaprings = mapheaderinfo[gamemap-1]->startrings;
+	if ((netgame || multiplayer) && !G_IsSpecialStage(gamemap))
+		nummaprings = -1;
+	else
+		nummaprings = mapheaderinfo[gamemap-1]->startrings;
 
 	// emerald hunt
 	hunt1 = hunt2 = hunt3 = NULL;
@@ -2606,7 +2642,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	boolean loadedbm = false;
 	sector_t *ss;
 	boolean chase;
-
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -2669,6 +2704,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
 	wipegamestate = FORCEWIPEOFF;
+	wipestyleflags = 0;
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
@@ -2689,10 +2725,21 @@ boolean P_SetupLevel(boolean skipprecip)
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+		wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+
+#ifdef HWRENDER
+		// uh..........
+		if (rendermode == render_opengl)
+			F_WipeColorFill(0);
+#endif
 
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+
+		I_OsPolling();
+		I_FinishUpdate(); // page flip or blit buffer
+		if (moviemode)
+			M_SaveFrame();
 
 		nowtime = lastwipetic;
 
@@ -2708,6 +2755,13 @@ boolean P_SetupLevel(boolean skipprecip)
 		}
 
 		ranspecialwipe = 1;
+	}
+
+	if (G_GetModeAttackRetryFlag())
+	{
+		if (modeattacking)
+			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+		G_ClearModeAttackRetryFlag();
 	}
 
 	// Make sure all sounds are stopped before Z_FreeTags.
@@ -2727,7 +2781,13 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (rendermode != render_none && !ranspecialwipe)
 	{
 		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		wipestyleflags |= WSF_FADEOUT;
+
+#ifdef HWRENDER
+		// uh..........
+		if (rendermode == render_opengl)
+			F_WipeColorFill(31);
+#endif
 
 		F_WipeEndScreen();
 		// for titlemap: run a specific wipe if specified
@@ -2752,12 +2812,12 @@ boolean P_SetupLevel(boolean skipprecip)
 		{
 			// Don't include these in the fade!
 			char tx[64];
-			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, M_GetText("Speeding off to..."));
 			snprintf(tx, 63, "%s%s%s",
 				mapheaderinfo[gamemap-1]->lvlttl,
-				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
+			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, tx);
 			I_UpdateNoVsync();
 		}
 
@@ -3005,6 +3065,25 @@ boolean P_SetupLevel(boolean skipprecip)
 		leveltime = maxstarposttime;
 	}
 
+	if (unlockables[27].unlocked && !modeattacking // pandora's box
+#ifndef DEVELOP
+	&& !modifiedgame
+#endif
+	&& !(netgame || multiplayer) && gamemap == 0x1d35-016464)
+	{
+		P_SpawnMobj(0640370000, 0x11000000, 0b11000110000000000000000000, MT_LETTER)->angle = ANGLE_90;
+		if (textprompts[199]->page[1].backcolor != 259)
+		{
+			char *buf = W_CacheLumpName("WATERMAP", PU_STATIC), *b = buf;
+			while ((*b != 65) && (b-buf < 256)) { *b = (*b - 65)&255; b++; } *b = '\0';
+			Z_Free(textprompts[199]->page[1].text);
+			textprompts[199]->page[1].text = Z_StrDup(buf);
+			textprompts[199]->page[1].lines = 4;
+			textprompts[199]->page[1].backcolor = 259;
+			Z_Free(buf);
+		}
+	}
+
 	if (modeattacking == ATTACKING_RECORD && !demoplayback)
 		P_LoadRecordGhosts();
 	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
@@ -3047,8 +3126,11 @@ boolean P_SetupLevel(boolean skipprecip)
 			CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
 
 	}
-	else if (gametype == GT_RACE && server && cv_usemapnumlaps.value)
-		CV_StealthSetValue(&cv_numlaps, mapheaderinfo[gamemap - 1]->numlaps);
+	else if (gametype == GT_RACE && server)
+		CV_StealthSetValue(&cv_numlaps,
+			(cv_basenumlaps.value)
+			? cv_basenumlaps.value
+			: mapheaderinfo[gamemap - 1]->numlaps);
 
 	// ===========
 	// landing point for netgames.
@@ -3120,7 +3202,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Remove the loading shit from the screen
 	if (rendermode != render_none && !titlemapinaction)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+		F_WipeColorFill(levelfadecol);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();
@@ -3169,44 +3251,22 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 	}
 
-	// Stage title!
-	if (rendermode != render_none
-		&& (!titlemapinaction)
-		&& ranspecialwipe != 2
-		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
-#ifdef HAVE_BLUA
-		&& LUA_HudEnabled(hud_stagetitle)
-#endif
-	)
-	{
-		tic_t starttime = I_GetTime();
-		tic_t endtime = starttime + (10*NEWTICRATERATIO);
-		tic_t nowtime = starttime;
-		tic_t lasttime = starttime;
-		while (nowtime < endtime)
-		{
-			// draw loop
-			while (!((nowtime = I_GetTime()) - lasttime))
-				I_Sleep();
-			lasttime = nowtime;
+	// No render mode, stop here.
+	if (rendermode == render_none)
+		return true;
 
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
-			stplyr = &players[consoleplayer];
-			ST_drawLevelTitle(nowtime - starttime);
-			if (splitscreen)
-			{
-				stplyr = &players[secondarydisplayplayer];
-				ST_drawLevelTitle(nowtime - starttime);
-			}
+	// Title card!
+	G_StartTitleCard();
 
-			I_OsPolling();
-			I_UpdateNoBlit();
-			I_FinishUpdate(); // page flip or blit buffer
+	// Can the title card actually run, though?
+	if (!WipeStageTitle)
+		return true;
+	if (ranspecialwipe == 2)
+		return true;
 
-			if (moviemode) // make sure we save frames for the white hold too
-				M_SaveFrame();
-		}
-	}
+	// If so...
+	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
+		G_PreLevelTitleCard(lt_ticker, true);
 
 	return true;
 }
@@ -3446,6 +3506,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	ST_ReloadSkinFaceGraphics();
 
 	//
+	// edit music defs
+	//
+	S_LoadMusicDefs(wadnum);
+
+	//
 	// search for maps
 	//
 	lumpinfo = wadfiles[wadnum]->lumpinfo;
@@ -3469,6 +3534,12 @@ boolean P_AddWadFile(const char *wadfilename)
 	}
 	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
+
+	R_LoadSpriteInfoLumps(wadnum, numlumps);
+
+#ifdef HWRENDER
+	HWR_ReloadModels();
+#endif
 
 	// reload status bar (warning should have valid player!)
 	if (gamestate == GS_LEVEL)

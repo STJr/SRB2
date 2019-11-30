@@ -35,6 +35,7 @@
 #include "p_local.h"
 
 #include "m_cond.h" // condition sets
+#include "lua_hook.h" // IntermissionThinker hook
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -142,9 +143,21 @@ static patch_t *widebgpatch = NULL; // INTERSCW
 static patch_t *bgtile = NULL;      // SPECTILE/SRB2BACK
 static patch_t *interpic = NULL;    // custom picture defined in map header
 static boolean usetile;
+static INT32 timer;
+
+typedef struct
+{
+	INT32 source_width, source_height;
+	INT32 source_bpp, source_rowbytes;
+	UINT8 *source_picture;
+	INT32 target_width, target_height;
+	INT32 target_bpp, target_rowbytes;
+	UINT8 *target_picture;
+} y_buffer_t;
+
 boolean usebuffer = false;
 static boolean useinterpic;
-static INT32 timer;
+static y_buffer_t *y_buffer;
 
 static INT32 intertic;
 static INT32 tallydonetic = -1;
@@ -152,12 +165,12 @@ static INT32 endtic = -1;
 
 intertype_t intertype = int_none;
 
+static void Y_RescaleScreenBuffer(void);
 static void Y_AwardCoopBonuses(void);
 static void Y_AwardSpecialStageBonus(void);
 static void Y_CalculateCompetitionWinners(void);
 static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
-static void Y_FollowIntermission(void);
 static void Y_UnloadData(void);
 
 // Stuff copy+pasted from st_stuff.c
@@ -207,6 +220,94 @@ static void Y_IntermissionTokenDrawer(void)
 }
 
 //
+// Y_ConsiderScreenBuffer
+//
+// Can we copy the current screen
+// to a buffer?
+//
+void Y_ConsiderScreenBuffer(void)
+{
+	if (gameaction != ga_completed)
+		return;
+
+	if (y_buffer == NULL)
+		y_buffer = Z_Calloc(sizeof(y_buffer_t), PU_STATIC, NULL);
+	else
+		return;
+
+	y_buffer->source_width = vid.width;
+	y_buffer->source_height = vid.height;
+	y_buffer->source_bpp = vid.bpp;
+	y_buffer->source_rowbytes = vid.rowbytes;
+	y_buffer->source_picture = ZZ_Alloc(y_buffer->source_width*vid.bpp * y_buffer->source_height);
+	VID_BlitLinearScreen(screens[1], y_buffer->source_picture, vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+
+	// Make the rescaled screen buffer
+	Y_RescaleScreenBuffer();
+}
+
+//
+// Y_RescaleScreenBuffer
+//
+// Write the rescaled source picture,
+// to the destination picture that
+// has the current screen's resolutions.
+//
+static void Y_RescaleScreenBuffer(void)
+{
+	INT32 sx, sy; // source
+	INT32 dx, dy; // dest
+	fixed_t scalefac, yscalefac;
+	fixed_t rowfrac, colfrac;
+	UINT8 *dest;
+
+	// Who knows?
+	if (y_buffer == NULL)
+		return;
+
+	if (y_buffer->target_picture)
+		Z_Free(y_buffer->target_picture);
+
+	y_buffer->target_width = vid.width;
+	y_buffer->target_height = vid.height;
+	y_buffer->target_rowbytes = vid.rowbytes;
+	y_buffer->target_bpp = vid.bpp;
+	y_buffer->target_picture = ZZ_Alloc(y_buffer->target_width*vid.bpp * y_buffer->target_height);
+	dest = y_buffer->target_picture;
+
+	scalefac = FixedDiv(y_buffer->target_width*FRACUNIT, y_buffer->source_width*FRACUNIT);
+	yscalefac = FixedDiv(y_buffer->target_height*FRACUNIT, y_buffer->source_height*FRACUNIT);
+
+	rowfrac = FixedDiv(FRACUNIT, yscalefac);
+	colfrac = FixedDiv(FRACUNIT, scalefac);
+
+	for (sy = 0, dy = 0; sy < (y_buffer->source_height << FRACBITS) && dy < y_buffer->target_height; sy += rowfrac, dy++)
+		for (sx = 0, dx = 0; sx < (y_buffer->source_width << FRACBITS) && dx < y_buffer->target_width; sx += colfrac, dx += y_buffer->target_bpp)
+			dest[(dy * y_buffer->target_rowbytes) + dx] = y_buffer->source_picture[((sy>>FRACBITS) * y_buffer->source_width) + (sx>>FRACBITS)];
+}
+
+//
+// Y_CleanupScreenBuffer
+//
+// Free all related memory.
+//
+void Y_CleanupScreenBuffer(void)
+{
+	// Who knows?
+	if (y_buffer == NULL)
+		return;
+
+	if (y_buffer->target_picture)
+		Z_Free(y_buffer->target_picture);
+
+	if (y_buffer->source_picture)
+		Z_Free(y_buffer->source_picture);
+
+	Z_Free(y_buffer);
+	y_buffer = NULL;
+}
+
+//
 // Y_IntermissionDrawer
 //
 // Called by D_Display. Nothing is modified here; all it does is draw.
@@ -228,12 +329,23 @@ void Y_IntermissionDrawer(void)
 	else if (!usetile)
 	{
 		if (rendermode == render_soft && usebuffer)
-			VID_BlitLinearScreen(screens[1], screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
-#ifdef HWRENDER
-		else if(rendermode != render_soft && usebuffer)
 		{
-			HWR_DrawIntermissionBG();
+			// no y_buffer
+			if (y_buffer == NULL)
+				VID_BlitLinearScreen(screens[1], screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+			else
+			{
+				// Maybe the resolution changed?
+				if ((y_buffer->target_width != vid.width) || (y_buffer->target_height != vid.height))
+					Y_RescaleScreenBuffer();
+
+				// Blit the already-scaled screen buffer to the current screen
+				VID_BlitLinearScreen(y_buffer->target_picture, screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+			}
 		}
+#ifdef HWRENDER
+		else if (rendermode != render_soft && usebuffer)
+			HWR_DrawIntermissionBG();
 #endif
 		else
 		{
@@ -285,10 +397,13 @@ void Y_IntermissionDrawer(void)
 
 		// draw the "got through act" lines and act number
 		V_DrawLevelTitle(data.coop.passedx1, 49, 0, data.coop.passed1);
-		V_DrawLevelTitle(data.coop.passedx2, 49+V_LevelNameHeight(data.coop.passed2)+2, 0, data.coop.passed2);
+		{
+			INT32 h = V_LevelNameHeight(data.coop.passed2);
+			V_DrawLevelTitle(data.coop.passedx2, 49+h+2, 0, data.coop.passed2);
 
-		if (data.coop.actnum)
-			V_DrawLevelActNum(244, 57, 0, data.coop.actnum);
+			if (data.coop.actnum)
+				V_DrawLevelActNum(244, 42+h, 0, data.coop.actnum);
+		}
 
 		bonusy = 150;
 		// Total
@@ -371,10 +486,10 @@ void Y_IntermissionDrawer(void)
 
 		if (drawsection == 1)
 		{
-			const char *ringtext = "\x82" "50 RINGS, NO SHIELD";
-			const char *tut1text = "\x82" "PRESS " "\x80" "SPIN";
-			const char *tut2text = "\x82" "MID-" "\x80" "JUMP";
-			ttheight = 16;
+			const char *ringtext = "\x82" "50 rings, no shield";
+			const char *tut1text = "\x82" "press " "\x80" "spin";
+			const char *tut2text = "\x82" "mid-" "\x80" "jump";
+			ttheight = 8;
 			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
 			ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
 			V_DrawLevelTitle(data.spec.passedx3 + xoffset2, ttheight, 0, data.spec.passed3);
@@ -383,9 +498,9 @@ void Y_IntermissionDrawer(void)
 
 			ttheight = 108;
 			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset4 - (V_LevelNameWidth(ringtext)/2), ttheight, 0, ringtext);
-			ttheight += V_LevelNameHeight(ringtext) + 2;
-			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset5 - (V_LevelNameWidth(tut1text)/2), ttheight, 0, tut1text);
 			ttheight += V_LevelNameHeight(tut1text) + 2;
+			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset5 - (V_LevelNameWidth(tut1text)/2), ttheight, 0, tut1text);
+			ttheight += V_LevelNameHeight(tut2text) + 2;
 			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset6 - (V_LevelNameWidth(tut2text)/2), ttheight, 0, tut2text);
 		}
 		else
@@ -424,11 +539,23 @@ void Y_IntermissionDrawer(void)
 				UINT8 continues = data.spec.continues & 0x7F;
 
 				V_DrawScaledPatch(152 + xoffset5, 150+yoffset, 0, data.spec.pcontinues);
-				for (i = 0; i < continues; ++i)
+				if (continues > 5)
 				{
-					if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
-						break;
-					V_DrawContinueIcon(246 + xoffset5 - (i*20), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					INT32 leftx = (continues >= 10) ? 216 : 224;
+					V_DrawContinueIcon(leftx + xoffset5, 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					V_DrawScaledPatch(leftx + xoffset5 + 12, 160+yoffset, 0, stlivex);
+					if (!((data.spec.continues & 0x80) && !(endtic < 0 || intertic%20 < 10)))
+						V_DrawRightAlignedString(252 + xoffset5, 158+yoffset, 0,
+							va("%d",(((data.spec.continues & 0x80) && (endtic < 0)) ? continues-1 : continues)));
+				}
+				else
+				{
+					for (i = 0; i < continues; ++i)
+					{
+						if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
+							break;
+						V_DrawContinueIcon(246 + xoffset5 - (i*20), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					}
 				}
 			}
 		}
@@ -690,7 +817,7 @@ void Y_IntermissionDrawer(void)
 			}
 		}
 	}
-	else if (intertype == int_classicrace)
+	else if (intertype == int_comp)
 	{
 		INT32 x = 4;
 		INT32 y = 48;
@@ -802,6 +929,10 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
+#ifdef HAVE_BLUA
+	LUAh_IntermissionThinker();
+#endif
+
 	intertic++;
 
 	// Team scramble code for team match and CTF.
@@ -820,7 +951,7 @@ void Y_Ticker(void)
 		if (!--timer)
 		{
 			Y_EndIntermission();
-			Y_FollowIntermission();
+			G_AfterIntermission();
 			return;
 		}
 	}
@@ -828,7 +959,7 @@ void Y_Ticker(void)
 	else if (intertic == endtic)
 	{
 		Y_EndIntermission();
-		Y_FollowIntermission();
+		G_AfterIntermission();
 		return;
 	}
 
@@ -1012,100 +1143,13 @@ void Y_Ticker(void)
 		if (data.match.numplayers != D_NumPlayers())
 			Y_CalculateMatchWinners();
 	}
-	else if (intertype == int_race || intertype == int_classicrace) // race
+	else if (intertype == int_race || intertype == int_comp) // race
 	{
 		if (!intertic) // first time only
 			S_ChangeMusicInternal("_inter", true); // loop it
 
 		// Don't bother recalcing for race. It doesn't make as much sense.
 	}
-}
-
-//
-// Y_UpdateRecordReplays
-//
-// Update replay files/data, etc. for Record Attack
-// See G_SetNightsRecords for NiGHTS Attack.
-//
-static void Y_UpdateRecordReplays(void)
-{
-	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
-	char *gpath;
-	char lastdemo[256], bestdemo[256];
-	UINT8 earnedEmblems;
-
-	// Record new best time
-	if (!mainrecords[gamemap-1])
-		G_AllocMainRecordData(gamemap-1);
-
-	if (players[consoleplayer].score > mainrecords[gamemap-1]->score)
-		mainrecords[gamemap-1]->score = players[consoleplayer].score;
-
-	if ((mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < mainrecords[gamemap-1]->time))
-		mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
-
-	if ((UINT16)(players[consoleplayer].rings) > mainrecords[gamemap-1]->rings)
-		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
-
-	// Save demo!
-	bestdemo[255] = '\0';
-	lastdemo[255] = '\0';
-	G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].rings));
-	G_CheckDemoStatus();
-
-	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
-	I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
-
-	if ((gpath = malloc(glen)) == NULL)
-		I_Error("Out of memory for replay filepath\n");
-
-	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
-	snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
-
-	if (FIL_FileExists(lastdemo))
-	{
-		UINT8 *buf;
-		size_t len = FIL_ReadFile(lastdemo, &buf);
-
-		snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
-		{ // Better time, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
-		}
-
-		snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
-		{ // Better score, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
-		}
-
-		snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
-		{ // Better rings, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW MOST RINGS!"), M_GetText("Saved replay as"), bestdemo);
-		}
-
-		//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
-
-		Z_Free(buf);
-	}
-	free(gpath);
-
-	// Check emblems when level data is updated
-	if ((earnedEmblems = M_CheckLevelEmblems()))
-		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
-
-	// Update timeattack menu's replay availability.
-	Nextmap_OnChange();
 }
 
 //
@@ -1116,7 +1160,6 @@ static void Y_UpdateRecordReplays(void)
 void Y_StartIntermission(void)
 {
 	INT32 i;
-	UINT8 completionEmblems = M_CompletionEmblems();
 
 	intertic = -1;
 
@@ -1129,10 +1172,7 @@ void Y_StartIntermission(void)
 	{
 		timer = 0;
 
-		if (G_IsSpecialStage(gamemap))
-			intertype = (maptol & TOL_NIGHTS) ? int_nightsspec : int_spec;
-		else
-			intertype = (maptol & TOL_NIGHTS) ? int_nights : int_coop;
+		intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
 	}
 	else
 	{
@@ -1147,14 +1187,7 @@ void Y_StartIntermission(void)
 		}
 
 		if (gametype == GT_COOP)
-		{
-			// Nights intermission is single player only
-			// Don't add it here
-			if (G_IsSpecialStage(gamemap))
-				intertype = int_spec;
-			else
-				intertype = int_coop;
-		}
+			intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
 		else if (gametype == GT_TEAMMATCH)
 			intertype = int_teammatch;
 		else if (gametype == GT_MATCH
@@ -1164,7 +1197,7 @@ void Y_StartIntermission(void)
 		else if (gametype == GT_RACE)
 			intertype = int_race;
 		else if (gametype == GT_COMPETITION)
-			intertype = int_classicrace;
+			intertype = int_comp;
 		else if (gametype == GT_CTF)
 			intertype = int_ctf;
 	}
@@ -1179,20 +1212,6 @@ void Y_StartIntermission(void)
 
 	switch (intertype)
 	{
-		case int_nights:
-			// Can't fail
-			G_SetNightsRecords();
-
-			// Check records
-			{
-				UINT8 earnedEmblems = M_CheckLevelEmblems();
-				if (earnedEmblems)
-					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for NiGHTS records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
-			}
-
-			// fall back into the coop intermission for now
-			intertype = int_coop;
-			/* FALLTHRU */
 		case int_coop: // coop or single player, normal level
 		{
 			// award time and ring bonuses
@@ -1200,24 +1219,6 @@ void Y_StartIntermission(void)
 
 			// setup time data
 			data.coop.tics = players[consoleplayer].realtime;
-
-			if ((!modifiedgame || savemoddata) && !multiplayer && !demoplayback)
-			{
-				// Update visitation flags
-				mapvisited[gamemap-1] |= MV_BEATEN;
-				if (ALL7EMERALDS(emeralds))
-					mapvisited[gamemap-1] |= MV_ALLEMERALDS;
-				if (ultimatemode)
-					mapvisited[gamemap-1] |= MV_ULTIMATE;
-				if (data.coop.gotperfbonus)
-					mapvisited[gamemap-1] |= MV_PERFECT;
-
-				if (modeattacking == ATTACKING_RECORD)
-					Y_UpdateRecordReplays();
-
-				if (completionEmblems)
-					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");
-			}
 
 			for (i = 0; i < 4; ++i)
 				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_STATIC);
@@ -1251,21 +1252,21 @@ void Y_StartIntermission(void)
 			// too long so just show "YOU GOT THROUGH THE ACT"
 			if (strlen(skins[players[consoleplayer].skin].realname) > 13)
 			{
-				strcpy(data.coop.passed1, "YOU GOT");
-				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "THROUGH ACT" : "THROUGH THE ACT");
+				strcpy(data.coop.passed1, "you got");
+				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
 			}
 			// long enough that "X GOT" won't fit so use "X PASSED THE ACT"
 			else if (strlen(skins[players[consoleplayer].skin].realname) > 8)
 			{
 				strcpy(data.coop.passed1, skins[players[consoleplayer].skin].realname);
-				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "PASSED ACT" : "PASSED THE ACT");
+				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "passed act" : "passed the act");
 			}
 			// length is okay for normal use
 			else
 			{
-				snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s GOT",
+				snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s got",
 					skins[players[consoleplayer].skin].realname);
-				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "THROUGH ACT" : "THROUGH THE ACT");
+				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
 			}
 
 			// set X positions
@@ -1285,40 +1286,8 @@ void Y_StartIntermission(void)
 			break;
 		}
 
-		case int_nightsspec:
-			if (modeattacking && stagefailed)
-			{
-				// Nuh-uh.  Get out of here.
-				Y_EndIntermission();
-				Y_FollowIntermission();
-				break;
-			}
-			if (!stagefailed)
-				G_SetNightsRecords();
-
-			// Check records
-			{
-				UINT8 earnedEmblems = M_CheckLevelEmblems();
-				if (earnedEmblems)
-					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for NiGHTS records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
-			}
-
-			// fall back into the special stage intermission for now
-			intertype = int_spec;
-			/* FALLTHRU */
 		case int_spec: // coop or single player, special stage
 		{
-			// Update visitation flags?
-			if ((!modifiedgame || savemoddata) && !multiplayer && !demoplayback)
-			{
-				if (!stagefailed)
-					mapvisited[gamemap-1] |= MV_BEATEN;
-
-				// all emeralds/ultimate/perfect emblems won't be possible in ss, oh well?
-				if (completionEmblems)
-					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");
-			}
-
 			// give out ring bonuses
 			Y_AwardSpecialStageBonus();
 
@@ -1365,7 +1334,7 @@ void Y_StartIntermission(void)
 			// set up the "got through act" message according to skin name
 			if (stagefailed)
 			{
-				strcpy(data.spec.passed2, "SPECIAL STAGE");
+				strcpy(data.spec.passed2, "Special Stage");
 				data.spec.passed1[0] = '\0';
 			}
 			else if (ALL7EMERALDS(emeralds))
@@ -1374,13 +1343,13 @@ void Y_StartIntermission(void)
 					sizeof data.spec.passed1, "%s",
 					skins[players[consoleplayer].skin].realname);
 				data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
-				strcpy(data.spec.passed2, "GOT THEM ALL!");
+				strcpy(data.spec.passed2, "got them all!");
 
 				if (players[consoleplayer].charflags & SF_SUPER)
 				{
-					strcpy(data.spec.passed3, "CAN NOW BECOME");
+					strcpy(data.spec.passed3, "can now become");
 					snprintf(data.spec.passed4,
-						sizeof data.spec.passed4, "SUPER %s",
+						sizeof data.spec.passed4, "Super %s",
 						skins[players[consoleplayer].skin].realname);
 					data.spec.passed4[sizeof data.spec.passed4 - 1] = '\0';
 				}
@@ -1390,13 +1359,13 @@ void Y_StartIntermission(void)
 				if (strlen(skins[players[consoleplayer].skin].realname) <= SKINNAMESIZE-5)
 				{
 					snprintf(data.spec.passed1,
-						sizeof data.spec.passed1, "%s GOT",
+						sizeof data.spec.passed1, "%s got",
 						skins[players[consoleplayer].skin].realname);
 					data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				}
 				else
-					strcpy(data.spec.passed1, "YOU GOT");
-				strcpy(data.spec.passed2, "A CHAOS EMERALD");
+					strcpy(data.spec.passed1, "You got");
+				strcpy(data.spec.passed2, "a Chaos Emerald");
 				if (P_GetNextEmerald() > 6)
 				{
 					data.spec.passed2[15] = '?';
@@ -1504,7 +1473,7 @@ void Y_StartIntermission(void)
 			break;
 		}
 
-		case int_classicrace: // classic (full race)
+		case int_comp: // classic (full race)
 		{
 			// find out who won
 			Y_CalculateCompetitionWinners();
@@ -1998,7 +1967,7 @@ static void Y_AwardSpecialStageBonus(void)
 
 	data.spec.score = players[consoleplayer].score;
 	memset(data.spec.bonuses, 0, sizeof(data.spec.bonuses));
-	memset(data.spec.bonuspatches, 0, sizeof(data.coop.bonuspatches));
+	memset(data.spec.bonuspatches, 0, sizeof(data.spec.bonuspatches));
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2059,23 +2028,6 @@ void Y_EndIntermission(void)
 	usebuffer = false;
 }
 
-//
-// Y_FollowIntermission
-//
-static void Y_FollowIntermission(void)
-{
-	if (modeattacking)
-	{
-		M_EndModeAttackRun();
-		return;
-	}
-
-	// This handles whether to play a post-level cutscene, end the game,
-	// or simply go to the next level.
-	// No need to duplicate the code here!
-	G_AfterIntermission();
-}
-
 #define UNLOAD(x) Z_ChangeTag(x, PU_CACHE); x = NULL
 
 //
@@ -2123,7 +2075,7 @@ static void Y_UnloadData(void)
 			break;
 		default:
 			//without this default,
-			//int_none, int_tag, int_chaos, and int_classicrace
+			//int_none, int_tag, int_chaos, and int_comp
 			//are not handled
 			break;
 	}

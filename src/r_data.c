@@ -9,7 +9,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  r_data.c
-/// \brief Preparation of data for rendering,generation of lookups, caching, retrieval by name
+/// \brief Preparation of data for rendering, generation of lookups, caching, retrieval by name
 
 #include "doomdef.h"
 #include "g_game.h"
@@ -19,10 +19,12 @@
 #include "p_local.h"
 #include "m_misc.h"
 #include "r_data.h"
+#include "r_patch.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
 #include "v_video.h" // pMasterPalette
+#include "f_finale.h" // wipes
 #include "byteptr.h"
 #include "dehacked.h"
 
@@ -35,32 +37,10 @@
 #endif
 
 // Not sure if this is necessary, but it was in w_wad.c, so I'm putting it here too -Shadow Hog
-#ifdef _WIN32_WCE
+#if 0
 #define AVOID_ERRNO
 #else
 #include <errno.h>
-#endif
-
-#ifdef HAVE_PNG
-
-#ifndef _MSC_VER
-#ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE64_SOURCE
-#endif
-#endif
-
-#ifndef _LFS64_LARGEFILE
-#define _LFS64_LARGEFILE
-#endif
-
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 0
-#endif
-
-#include "png.h"
-#ifndef PNG_READ_SUPPORTED
-#undef HAVE_PNG
-#endif
 #endif
 
 //
@@ -134,9 +114,10 @@ INT32 *texturetranslation;
 sprcache_t *spritecachedinfo;
 
 lighttable_t *colormaps;
+lighttable_t *fadecolormap;
 
 // for debugging/info purposes
-static size_t flatmemory, spritememory, texturememory;
+size_t flatmemory, spritememory, texturememory;
 
 // highcolor stuff
 INT16 color8to16[256]; // remap color index to highcolor rgb value
@@ -456,10 +437,11 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
+	boolean dealloc = false;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
-	UINT32 *colofs;
+	UINT8 *colofs;
 
 	UINT16 wadnum;
 	lumpnum_t lumpnum;
@@ -483,23 +465,20 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		wadnum = patch->wad;
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE); // can't use W_CachePatchNumPwad because OpenGL
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-		{
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
 			goto multipatch;
-		}
 #endif
 
 		// Check the patch for holes.
 		if (texture->width > SHORT(realpatch->width) || texture->height > SHORT(realpatch->height))
 			holey = true;
-		colofs = (UINT32 *)realpatch->columnofs;
+		colofs = (UINT8 *)realpatch->columnofs;
 		for (x = 0; x < texture->width && !holey; x++)
 		{
-			column_t *col = (column_t *)((UINT8 *)realpatch + LONG(colofs[x]));
+			column_t *col = (column_t *)((UINT8 *)realpatch + LONG(*(UINT32 *)&colofs[x<<2]));
 			INT32 topdelta, prevdelta = -1, y = 0;
 			while (col->topdelta != 0xff)
 			{
@@ -528,19 +507,19 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 			texturememory += blocksize;
 
 			// use the patch's column lookup
-			colofs = (UINT32 *)(void *)(block + 8);
-			texturecolumnofs[texnum] = colofs;
+			colofs = (block + 8);
+			texturecolumnofs[texnum] = (UINT32 *)colofs;
 			blocktex = block;
 			if (patch->flip & 1) // flip the patch horizontally
 			{
-				UINT32 *realcolofs = (UINT32 *)realpatch->columnofs;
+				UINT8 *realcolofs = (UINT8 *)realpatch->columnofs;
 				for (x = 0; x < texture->width; x++)
-					colofs[x] = realcolofs[texture->width-1-x]; // swap with the offset of the other side of the texture
+					*(UINT32 *)&colofs[x<<2] = realcolofs[( texture->width-1-x )<<2]; // swap with the offset of the other side of the texture
 			}
 			// we can't as easily flip the patch vertically sadly though,
 			//  we have wait until the texture itself is drawn to do that
 			for (x = 0; x < texture->width; x++)
-				colofs[x] = LONG(LONG(colofs[x]) + 3);
+				*(UINT32 *)&colofs[x<<2] = LONG(LONG(*(UINT32 *)&colofs[x<<2]) + 3);
 			goto done;
 		}
 
@@ -557,11 +536,11 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texturememory += blocksize;
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
 
-	memset(block, 0xFF, blocksize+1); // Transparency hack
+	memset(block, TRANSPARENTPIXEL, blocksize+1); // Transparency hack
 
 	// columns lookup table
-	colofs = (UINT32 *)(void *)block;
-	texturecolumnofs[texnum] = colofs;
+	colofs = block;
+	texturecolumnofs[texnum] = (UINT32 *)colofs;
 
 	// texture data after the lookup table
 	blocktex = block + (texture->width*4);
@@ -579,9 +558,14 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		dealloc = false;
+
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			dealloc = true;
+		}
 #endif
 
 		x1 = patch->originx;
@@ -616,9 +600,12 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
 
 			// generate column ofset lookup
-			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			ColumnDrawerPointer(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
+			*(UINT32 *)&colofs[x<<2] = LONG((x * texture->height) + (texture->width*4));
+			ColumnDrawerPointer(patchcol, block + LONG(*(UINT32 *)&colofs[x<<2]), patch, texture->height, height);
 		}
+
+		if (dealloc)
+			Z_Free(realpatch);
 	}
 
 done:
@@ -831,7 +818,9 @@ void R_LoadTextures(void)
 		{
 			UINT16 wadnum = (UINT16)w;
 			lumpnum_t lumpnum = texstart + j;
+#ifndef NO_PNG_LUMPS
 			size_t lumplength;
+#endif
 
 			if (wadfiles[w]->type == RET_PK3)
 			{
@@ -839,8 +828,10 @@ void R_LoadTextures(void)
 					continue; // If it is then SKIP IT
 			}
 
-			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+#endif
 
 			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
 			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
@@ -1446,48 +1437,6 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 		lump = LUMPERROR;
 	}
 
-	// Detect textures
-	if (lump == LUMPERROR)
-	{
-		// Scan wad files backwards so patched textures take preference.
-		for (i = numwadfiles - 1; i >= 0; i--)
-		{
-			switch (wadfiles[i]->type)
-			{
-			case RET_WAD:
-				if ((start = W_CheckNumForNamePwad("TX_START", (UINT16)i, 0)) == INT16_MAX)
-					continue;
-				if ((end = W_CheckNumForNamePwad("TX_END", (UINT16)i, start)) == INT16_MAX)
-					continue;
-				break;
-			case RET_PK3:
-				if ((start = W_CheckNumForFolderStartPK3("Textures/", i, 0)) == INT16_MAX)
-					continue;
-				if ((end = W_CheckNumForFolderEndPK3("Textures/", i, start)) == INT16_MAX)
-					continue;
-				break;
-			default:
-				continue;
-			}
-
-			// Now find lump with specified name in that range.
-			lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
-			if (lump < end)
-			{
-				lump += (i<<16); // found it, in our constraints
-				break;
-			}
-			lump = LUMPERROR;
-		}
-	}
-
-	if (lump == LUMPERROR)
-	{
-		if (strcmp(name, SKYFLATNAME))
-			CONS_Debug(DBG_SETUP, "R_GetFlatNumForName: Could not find flat %.8s\n", name);
-		lump = W_CheckNumForName("REDFLR");
-	}
-
 	return lump;
 }
 
@@ -1509,16 +1458,109 @@ static void R_InitSpriteLumps(void)
 }
 
 //
+// R_CreateFadeColormaps
+//
+
+static void R_CreateFadeColormaps(void)
+{
+	UINT8 px, fade;
+	RGBA_t rgba;
+	INT32 r, g, b;
+	size_t len, i;
+
+	len = (256 * FADECOLORMAPROWS);
+	fadecolormap = Z_MallocAlign(len*2, PU_STATIC, NULL, 8);
+	for (i = 0; i < len*2; i++)
+		fadecolormap[i] = (i%256);
+
+	// Load in the light tables, now 64k aligned for smokie...
+	{
+		lumpnum_t lump = W_CheckNumForName("FADECMAP");
+		lumpnum_t wlump = W_CheckNumForName("FADEWMAP");
+
+		// to black
+		if (lump != LUMPERROR)
+			W_ReadLumpHeader(lump, fadecolormap, len, 0U);
+		// to white
+		if (wlump != LUMPERROR)
+			W_ReadLumpHeader(wlump, fadecolormap+len, len, 0U);
+
+		// missing "to white" colormap lump
+		if (lump != LUMPERROR && wlump == LUMPERROR)
+			goto makewhite;
+		// missing "to black" colormap lump
+		else if (lump == LUMPERROR && wlump != LUMPERROR)
+			goto makeblack;
+		// both lumps found
+		else if (lump != LUMPERROR && wlump != LUMPERROR)
+			return;
+	}
+
+#define GETCOLOR \
+	px = colormaps[i%256]; \
+	fade = (i/256) * (256 / FADECOLORMAPROWS); \
+	rgba = V_GetColor(px);
+
+	// to black
+	makeblack:
+	for (i = 0; i < len; i++)
+	{
+		// find pixel and fade amount
+		GETCOLOR;
+
+		// subtractive color blending
+		r = rgba.s.red - FADEREDFACTOR*fade/10;
+		g = rgba.s.green - FADEGREENFACTOR*fade/10;
+		b = rgba.s.blue - FADEBLUEFACTOR*fade/10;
+
+		// clamp values
+		if (r < 0) r = 0;
+		if (g < 0) g = 0;
+		if (b < 0) b = 0;
+
+		// find nearest color in palette
+		fadecolormap[i] = NearestColor(r,g,b);
+	}
+
+	// to white
+	makewhite:
+	for (i = len; i < len*2; i++)
+	{
+		// find pixel and fade amount
+		GETCOLOR;
+
+		// additive color blending
+		r = rgba.s.red + FADEREDFACTOR*fade/10;
+		g = rgba.s.green + FADEGREENFACTOR*fade/10;
+		b = rgba.s.blue + FADEBLUEFACTOR*fade/10;
+
+		// clamp values
+		if (r > 255) r = 255;
+		if (g > 255) g = 255;
+		if (b > 255) b = 255;
+
+		// find nearest color in palette
+		fadecolormap[i] = NearestColor(r,g,b);
+	}
+#undef GETCOLOR
+}
+
+//
 // R_InitColormaps
 //
 static void R_InitColormaps(void)
 {
+	size_t len;
 	lumpnum_t lump;
 
 	// Load in the light tables
 	lump = W_GetNumForName("COLORMAP");
-	colormaps = Z_MallocAlign(W_LumpLength (lump), PU_STATIC, NULL, 8);
+	len = W_LumpLength(lump);
+	colormaps = Z_MallocAlign(len, PU_STATIC, NULL, 8);
 	W_ReadLump(lump, colormaps);
+
+	// Make colormap for fades
+	R_CreateFadeColormaps();
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
@@ -1548,6 +1590,9 @@ void R_ReInitColormaps(UINT16 num)
 	}
 
 	W_ReadLumpHeader(lump, colormaps, W_LumpLength(basecolormaplump), 0U);
+	if (fadecolormap)
+		Z_Free(fadecolormap);
+	R_CreateFadeColormaps();
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
@@ -2518,536 +2563,4 @@ void R_PrecacheLevel(void)
 			"flatmemory:    %s k\n"
 			"texturememory: %s k\n"
 			"spritememory:  %s k\n", sizeu1(flatmemory>>10), sizeu2(texturememory>>10), sizeu3(spritememory>>10));
-}
-
-// https://github.com/coelckers/prboom-plus/blob/master/prboom2/src/r_patch.c#L350
-boolean R_CheckIfPatch(lumpnum_t lump)
-{
-	size_t size;
-	INT16 width, height;
-	patch_t *patch;
-	boolean result;
-
-	size = W_LumpLength(lump);
-
-	// minimum length of a valid Doom patch
-	if (size < 13)
-		return false;
-
-	patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
-
-	width = SHORT(patch->width);
-	height = SHORT(patch->height);
-
-	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < (INT16)(size / 4));
-
-	if (result)
-	{
-		// The dimensions seem like they might be valid for a patch, so
-		// check the column directory for extra security. All columns
-		// must begin after the column directory, and none of them must
-		// point past the end of the patch.
-		INT16 x;
-
-		for (x = 0; x < width; x++)
-		{
-			UINT32 ofs = LONG(patch->columnofs[x]);
-
-			// Need one byte for an empty column (but there's patches that don't know that!)
-			if (ofs < (UINT32)width * 4 + 8 || ofs >= (UINT32)size)
-			{
-				result = false;
-				break;
-			}
-		}
-	}
-
-	return result;
-}
-
-void R_PatchToFlat(patch_t *patch, UINT8 *flat)
-{
-	fixed_t col, ofs;
-	column_t *column;
-	UINT8 *desttop, *dest, *deststop;
-	UINT8 *source;
-
-	desttop = flat;
-	deststop = desttop + (SHORT(patch->width) * SHORT(patch->height));
-
-	for (col = 0; col < SHORT(patch->width); col++, desttop++)
-	{
-		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col]));
-
-		while (column->topdelta != 0xff)
-		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-
-			dest = desttop + (topdelta * SHORT(patch->width));
-			source = (UINT8 *)(column) + 3;
-			for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
-			{
-				*dest = source[ofs];
-				dest += SHORT(patch->width);
-			}
-			column = (column_t *)((UINT8 *)column + column->length + 4);
-		}
-	}
-}
-
-#ifndef NO_PNG_LUMPS
-boolean R_IsLumpPNG(const UINT8 *d, size_t s)
-{
-	if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
-		return false;
-	// Check for PNG file signature using memcmp
-	// As it may be faster on CPUs with slow unaligned memory access
-	// Ref: http://www.libpng.org/pub/png/spec/1.2/PNG-Rationale.html#R.PNG-file-signature
-	return (memcmp(&d[0], "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", 8) == 0);
-}
-
-#ifdef HAVE_PNG
-
-#if PNG_LIBPNG_VER_DLLNUM < 14
-typedef PNG_CONST png_byte *png_const_bytep;
-#endif
-typedef struct {
-	png_const_bytep buffer;
-	png_uint_32 bufsize;
-	png_uint_32 current_pos;
-} png_io_t;
-
-static void PNG_IOReader(png_structp png_ptr, png_bytep data, png_size_t length)
-{
-	png_io_t *f = png_get_io_ptr(png_ptr);
-	if (length > (f->bufsize - f->current_pos))
-		png_error(png_ptr, "PNG_IOReader: buffer overrun");
-	memcpy(data, f->buffer + f->current_pos, length);
-	f->current_pos += length;
-}
-
-typedef struct
-{
-	char name[4];
-	void *data;
-	size_t size;
-} png_chunk_t;
-
-static png_byte *chunkname = NULL;
-static png_chunk_t chunk;
-
-static int PNG_ChunkReader(png_structp png_ptr, png_unknown_chunkp chonk)
-{
-	(void)png_ptr;
-	if (!memcmp(chonk->name, chunkname, 4))
-	{
-		memcpy(chunk.name, chonk->name, 4);
-		chunk.size = chonk->size;
-		chunk.data = Z_Malloc(chunk.size, PU_STATIC, NULL);
-		memcpy(chunk.data, chonk->data, chunk.size);
-		return 1;
-	}
-	return 0;
-}
-
-static void PNG_error(png_structp PNG, png_const_charp pngtext)
-{
-	CONS_Debug(DBG_RENDER, "libpng error at %p: %s", PNG, pngtext);
-	//I_Error("libpng error at %p: %s", PNG, pngtext);
-}
-
-static void PNG_warn(png_structp PNG, png_const_charp pngtext)
-{
-	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
-}
-
-static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
-{
-	png_structp png_ptr;
-	png_infop png_info_ptr;
-	png_uint_32 width, height;
-	int bit_depth, color_type;
-	png_uint_32 y;
-#ifdef PNG_SETJMP_SUPPORTED
-#ifdef USE_FAR_KEYWORD
-	jmp_buf jmpbuf;
-#endif
-#endif
-
-	png_io_t png_io;
-	png_bytep *row_pointers;
-
-	png_byte grAb_chunk[5] = {'g', 'r', 'A', 'b', (png_byte)'\0'};
-	png_voidp *user_chunk_ptr;
-
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
-	if (!png_ptr)
-	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
-		return NULL;
-	}
-
-	png_info_ptr = png_create_info_struct(png_ptr);
-	if (!png_info_ptr)
-	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on allocate for libpng\n");
-		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		return NULL;
-	}
-
-#ifdef USE_FAR_KEYWORD
-	if (setjmp(jmpbuf))
-#else
-	if (setjmp(png_jmpbuf(png_ptr)))
-#endif
-	{
-		//CONS_Debug(DBG_RENDER, "libpng load error on %s\n", filename);
-		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-		return NULL;
-	}
-#ifdef USE_FAR_KEYWORD
-	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
-#endif
-
-	// set our own read_function
-	png_io.buffer = (png_const_bytep)png;
-	png_io.bufsize = size;
-	png_io.current_pos = 0;
-	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
-
-	memset(&chunk, 0x00, sizeof(png_chunk_t));
-	chunkname = grAb_chunk; // I want to read a grAb chunk
-
-	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
-	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
-	png_set_keep_unknown_chunks(png_ptr, 2, chunkname, 1);
-
-#ifdef PNG_SET_USER_LIMITS_SUPPORTED
-	png_set_user_limits(png_ptr, 2048, 2048);
-#endif
-
-	png_read_info(png_ptr, png_info_ptr);
-	png_get_IHDR(png_ptr, png_info_ptr, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
-
-	if (bit_depth == 16)
-		png_set_strip_16(png_ptr);
-
-	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-		png_set_gray_to_rgb(png_ptr);
-	else if (color_type == PNG_COLOR_TYPE_PALETTE)
-		png_set_palette_to_rgb(png_ptr);
-
-	if (png_get_valid(png_ptr, png_info_ptr, PNG_INFO_tRNS))
-		png_set_tRNS_to_alpha(png_ptr);
-	else if (color_type != PNG_COLOR_TYPE_RGB_ALPHA && color_type != PNG_COLOR_TYPE_GRAY_ALPHA)
-	{
-#if PNG_LIBPNG_VER < 10207
-		png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
-#else
-		png_set_add_alpha(png_ptr, 0xFF, PNG_FILLER_AFTER);
-#endif
-	}
-
-	png_read_update_info(png_ptr, png_info_ptr);
-
-	// Read the image
-	row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * height);
-	for (y = 0; y < height; y++)
-		row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png_ptr, png_info_ptr));
-	png_read_image(png_ptr, row_pointers);
-
-	// Read grAB chunk
-	if ((topoffset || leftoffset) && (chunk.data != NULL))
-	{
-		INT32 *offsets = (INT32 *)chunk.data;
-		// read left offset
-		if (leftoffset != NULL)
-			*leftoffset = (INT16)BIGENDIAN_LONG(*offsets);
-		offsets++;
-		// read top offset
-		if (topoffset != NULL)
-			*topoffset = (INT16)BIGENDIAN_LONG(*offsets);
-	}
-
-	// bye
-	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-	if (chunk.data)
-		Z_Free(chunk.data);
-
-	*w = (INT32)width;
-	*h = (INT32)height;
-	return row_pointers;
-}
-
-// Convert a PNG to a raw image.
-static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
-{
-	UINT8 *flat;
-	png_uint_32 x, y;
-	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, size);
-	png_uint_32 width = *w, height = *h;
-
-	if (!row_pointers)
-		I_Error("PNG_RawConvert: conversion failed");
-
-	// Convert the image to 8bpp
-	flat = Z_Malloc(width * height, PU_LEVEL, NULL);
-	memset(flat, TRANSPARENTPIXEL, width * height);
-	for (y = 0; y < height; y++)
-	{
-		png_bytep row = row_pointers[y];
-		for (x = 0; x < width; x++)
-		{
-			png_bytep px = &(row[x * 4]);
-			if ((UINT8)px[3])
-				flat[((y * width) + x)] = NearestColor((UINT8)px[0], (UINT8)px[1], (UINT8)px[2]);
-		}
-	}
-	free(row_pointers);
-
-	return flat;
-}
-
-// Convert a PNG to a flat.
-UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size)
-{
-	return PNG_RawConvert(png, &levelflat->width, &levelflat->height, NULL, NULL, size);
-}
-
-// Convert a PNG to a patch.
-static unsigned char imgbuf[1<<26];
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency)
-{
-	UINT16 width, height;
-	INT16 topoffset = 0, leftoffset = 0;
-	UINT8 *raw = PNG_RawConvert(png, &width, &height, &topoffset, &leftoffset, size);
-
-	UINT32 x, y;
-	UINT8 *img;
-	UINT8 *imgptr = imgbuf;
-	UINT8 *colpointers, *startofspan;
-
-	if (!raw)
-		I_Error("R_PNGToPatch: conversion failed");
-
-	// Write image size and offset
-	WRITEINT16(imgptr, width);
-	WRITEINT16(imgptr, height);
-	WRITEINT16(imgptr, leftoffset);
-	WRITEINT16(imgptr, topoffset);
-
-	// Leave placeholder to column pointers
-	colpointers = imgptr;
-	imgptr += width*4;
-
-	// Write columns
-	for (x = 0; x < width; x++)
-	{
-		int lastStartY = 0;
-		int spanSize = 0;
-		startofspan = NULL;
-
-		//printf("%d ", x);
-		// Write column pointer (@TODO may be wrong)
-		WRITEINT32(colpointers, imgptr - imgbuf);
-
-		// Write pixels
-		for (y = 0; y < height; y++)
-		{
-			UINT8 paletteIndex = raw[((y * width) + x)];
-			boolean opaque = transparency ? (paletteIndex != TRANSPARENTPIXEL) : true;
-
-			// End span if we have a transparent pixel
-			if (!opaque)
-			{
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-				startofspan = NULL;
-				continue;
-			}
-
-			// Start new column if we need to
-			if (!startofspan || spanSize == 255)
-			{
-				int writeY = y;
-
-				// If we reached the span size limit, finish the previous span
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-
-				if (y > 254)
-				{
-					// Make sure we're aligned to 254
-					if (lastStartY < 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						lastStartY = 254;
-					}
-
-					// Write stopgap empty spans if needed
-					writeY = y - lastStartY;
-
-					while (writeY > 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						writeY -= 254;
-					}
-				}
-
-				startofspan = imgptr;
-				WRITEUINT8(imgptr, writeY);///@TODO calculate starting y pos
-				imgptr += 2;
-				spanSize = 0;
-
-				lastStartY = y;
-			}
-
-			// Write the pixel
-			WRITEUINT8(imgptr, paletteIndex);
-			spanSize++;
-			startofspan[1] = spanSize;
-		}
-
-		if (startofspan)
-			WRITEUINT8(imgptr, 0);
-
-		WRITEUINT8(imgptr, 0xFF);
-	}
-
-	size = imgptr-imgbuf;
-	img = Z_Malloc(size, PU_STATIC, NULL);
-	memcpy(img, imgbuf, size);
-
-	Z_Free(raw);
-
-	if (destsize != NULL)
-		*destsize = size;
-	return (patch_t *)img;
-}
-
-boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
-{
-	png_structp png_ptr;
-	png_infop png_info_ptr;
-	png_uint_32 w, h;
-	int bit_depth, color_type;
-#ifdef PNG_SETJMP_SUPPORTED
-#ifdef USE_FAR_KEYWORD
-	jmp_buf jmpbuf;
-#endif
-#endif
-
-	png_io_t png_io;
-
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
-		PNG_error, PNG_warn);
-	if (!png_ptr)
-	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
-		return false;
-	}
-
-	png_info_ptr = png_create_info_struct(png_ptr);
-	if (!png_info_ptr)
-	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on allocate for libpng\n");
-		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		return false;
-	}
-
-#ifdef USE_FAR_KEYWORD
-	if (setjmp(jmpbuf))
-#else
-	if (setjmp(png_jmpbuf(png_ptr)))
-#endif
-	{
-		//CONS_Debug(DBG_RENDER, "libpng load error on %s\n", filename);
-		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-		return false;
-	}
-#ifdef USE_FAR_KEYWORD
-	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
-#endif
-
-	// set our own read_function
-	png_io.buffer = (png_bytep)png;
-	png_io.bufsize = size;
-	png_io.current_pos = 0;
-	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
-
-#ifdef PNG_SET_USER_LIMITS_SUPPORTED
-	png_set_user_limits(png_ptr, 2048, 2048);
-#endif
-
-	png_read_info(png_ptr, png_info_ptr);
-
-	png_get_IHDR(png_ptr, png_info_ptr, &w, &h, &bit_depth, &color_type,
-	 NULL, NULL, NULL);
-
-	// okay done. stop.
-	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-
-	*width = (INT32)w;
-	*height = (INT32)h;
-	return true;
-}
-#endif
-#endif
-
-void R_TextureToFlat(size_t tex, UINT8 *flat)
-{
-	texture_t *texture = textures[tex];
-
-	fixed_t col, ofs;
-	column_t *column;
-	UINT8 *desttop, *dest, *deststop;
-	UINT8 *source;
-
-	desttop = flat;
-	deststop = desttop + (texture->width * texture->height);
-
-	for (col = 0; col < texture->width; col++, desttop++)
-	{
-		column = (column_t *)R_GetColumn(tex, col);
-		if (!texture->holes)
-		{
-			dest = desttop;
-			source = (UINT8 *)(column);
-			for (ofs = 0; dest < deststop && ofs < texture->height; ofs++)
-			{
-				if (source[ofs] != TRANSPARENTPIXEL)
-					*dest = source[ofs];
-				dest += texture->width;
-			}
-		}
-		else
-		{
-			INT32 topdelta, prevdelta = -1;
-			while (column->topdelta != 0xff)
-			{
-				topdelta = column->topdelta;
-				if (topdelta <= prevdelta)
-					topdelta += prevdelta;
-				prevdelta = topdelta;
-
-				dest = desttop + (topdelta * texture->width);
-				source = (UINT8 *)(column) + 3;
-				for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
-				{
-					if (source[ofs] != TRANSPARENTPIXEL)
-						*dest = source[ofs];
-					dest += texture->width;
-				}
-				column = (column_t *)((UINT8 *)column + column->length + 4);
-			}
-		}
-	}
 }

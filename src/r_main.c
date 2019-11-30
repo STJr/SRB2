@@ -123,8 +123,12 @@ consvar_t cv_chasecam2 = {"chasecam2", "On", CV_CALL, CV_OnOff, ChaseCam2_OnChan
 consvar_t cv_flipcam = {"flipcam", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_flipcam2 = {"flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
+#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
 consvar_t cv_shadow = {"shadow", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif //#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
+#ifdef GLBADSHADOWS
 consvar_t cv_shadowoffs = {"offsetshadows", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif //#ifdef GLBADSHADOWS
 consvar_t cv_skybox = {"skybox", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_allowmlook = {"allowmlook", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_showhud = {"showhud", "Yes", CV_CALL,  CV_YesNo, R_SetViewSize, 0, NULL, NULL, 0, 0, NULL};
@@ -1172,8 +1176,12 @@ void R_RegisterEngineStuff(void)
 
 	CV_RegisterVar(&cv_chasecam);
 	CV_RegisterVar(&cv_chasecam2);
+#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
 	CV_RegisterVar(&cv_shadow);
+#endif //#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
+#ifdef GLBADSHADOWS
 	CV_RegisterVar(&cv_shadowoffs);
+#endif //#ifdef GLBADSHADOWS
 	CV_RegisterVar(&cv_skybox);
 
 	CV_RegisterVar(&cv_cam_dist);
@@ -1208,7 +1216,6 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_grgammared);
 	CV_RegisterVar(&cv_grfovchange);
 	CV_RegisterVar(&cv_grfog);
-	CV_RegisterVar(&cv_voodoocompatibility);
 	CV_RegisterVar(&cv_grfogcolor);
 	CV_RegisterVar(&cv_grsoftwarefog);
 #ifdef ALAM_LIGHTING
@@ -1217,7 +1224,8 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_grcoronas);
 	CV_RegisterVar(&cv_grcoronasize);
 #endif
-	CV_RegisterVar(&cv_grmd2);
+	CV_RegisterVar(&cv_grmodelinterpolation);
+	CV_RegisterVar(&cv_grmodels);
 	CV_RegisterVar(&cv_grspritebillboarding);
 	CV_RegisterVar(&cv_grskydome);
 #endif

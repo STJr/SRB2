@@ -23,6 +23,7 @@
 #include "v_video.h"
 #include "z_zone.h"
 #include "hu_stuff.h"
+#include "console.h"
 #include "s_sound.h"
 #include "i_system.h"
 #include "m_menu.h"
@@ -186,14 +187,18 @@ boolean ST_SameTeam(player_t *a, player_t *b)
 
 static boolean st_stopped = true;
 
-void ST_Ticker(void)
+void ST_Ticker(boolean run)
 {
 	if (st_stopped)
 		return;
+
+	if (run)
+		ST_runTitleCard();
 }
 
 // 0 is default, any others are special palettes.
 INT32 st_palette = 0;
+INT32 st_translucency = 10;
 
 void ST_doPaletteStuff(void)
 {
@@ -348,12 +353,12 @@ void ST_LoadGraphics(void)
 // made separate so that skins code can reload custom face graphics
 void ST_LoadFaceGraphics(INT32 skinnum)
 {
-	if (skins[skinnum].sprites[SPR2_XTRA].numframes)
+	if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_LIFEPIC)
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
-		spriteframe_t *sprframe = &sprdef->spriteframes[0];
+		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_LIFEPIC];
 		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
-		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes)
+		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA|FF_SPR2SUPER];
 			sprframe = &sprdef->spriteframes[0];
@@ -694,6 +699,7 @@ static void ST_drawTime(void)
 			tics = (hidetime*TICRATE - stplyr->realtime);
 			if (tics < 3*TICRATE)
 				ST_drawRaceNum(tics);
+			tics += (TICRATE-1); // match the race num
 			downwards = true;
 		}
 		else
@@ -705,11 +711,12 @@ static void ST_drawTime(void)
 			// Time limit?
 			if (gametype != GT_COOP && gametype != GT_RACE && gametype != GT_COMPETITION && cv_timelimit.value && timelimitintics > 0)
 			{
-				if (timelimitintics >= stplyr->realtime)
+				if (timelimitintics > stplyr->realtime)
 				{
 					tics = (timelimitintics - stplyr->realtime);
 					if (tics < 3*TICRATE)
 						ST_drawRaceNum(tics);
+					tics += (TICRATE-1); // match the race num
 				}
 				else // Overtime!
 					tics = 0;
@@ -740,10 +747,12 @@ static void ST_drawTime(void)
 	if (F_GetPromptHideHud(hudinfo[HUD_TIME].y))
 		return;
 
-	// TIME:
-	ST_DrawPatchFromHud(HUD_TIME, ((downwards && (tics < 30*TICRATE) && (leveltime/5 & 1)) ? sboredtime : sbotime), V_HUDTRANS);
+	downwards = (downwards && (tics < 30*TICRATE) && (leveltime/5 & 1) && !stoppedclock); // overtime?
 
-	if (!tics && downwards && (leveltime/5 & 1)) // overtime!
+	// TIME:
+	ST_DrawPatchFromHud(HUD_TIME, (downwards ? sboredtime : sbotime), V_HUDTRANS);
+
+	if (downwards) // overtime!
 		return;
 
 	if (cv_timetic.value == 3) // Tics only -- how simple is this?
@@ -816,7 +825,7 @@ static void ST_drawLivesArea(void)
 			face = superprefix[stplyr->skin];
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
 			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, face, colormap);
-		if (cv_translucenthud.value == 10 && stplyr->powers[pw_super] == 1 && stplyr->mo->tracer)
+		if (st_translucency == 10 && stplyr->powers[pw_super] == 1 && stplyr->mo->tracer)
 		{
 			INT32 v_supertrans = (stplyr->mo->tracer->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
 			if (v_supertrans < 10)
@@ -837,7 +846,13 @@ static void ST_drawLivesArea(void)
 	}
 
 	// Lives number
-	if (G_GametypeUsesLives() || gametype == GT_RACE)
+	if (metalrecording)
+	{
+		if (((2*leveltime)/TICRATE) & 1)
+			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
+				hudinfo[HUD_LIVES].f|V_PERPLAYER|V_REDMAP|V_HUDTRANS, "REC");
+	}
+	else if (G_GametypeUsesLives() || gametype == GT_RACE)
 	{
 		// x
 		V_DrawScaledPatch(hudinfo[HUD_LIVES].x+22, hudinfo[HUD_LIVES].y+10,
@@ -1152,16 +1167,142 @@ static void ST_drawInput(void)
 		V_DrawThinString(x, y, hudinfo[HUD_LIVES].f|((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
 }
 
-void ST_drawLevelTitle(tic_t titletime)
+static patch_t *lt_patches[3];
+static INT32 lt_scroll = 0;
+static INT32 lt_mom = 0;
+static INT32 lt_zigzag = 0;
+
+tic_t lt_ticker = 0, lt_lasttic = 0;
+tic_t lt_exitticker = 0, lt_endtime = 0;
+
+//
+// Load the graphics for the title card.
+//
+static void ST_cacheLevelTitle(void)
+{
+	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_WARNINGTITLE))
+	{
+		lt_patches[0] = (patch_t *)W_CachePatchName("LTACTBLU", PU_HUDGFX);
+		lt_patches[1] = (patch_t *)W_CachePatchName("LTZIGZAG", PU_HUDGFX);
+		lt_patches[2] = (patch_t *)W_CachePatchName("LTZZTEXT", PU_HUDGFX);
+	}
+	else // boss map
+	{
+		lt_patches[0] = (patch_t *)W_CachePatchName("LTACTRED", PU_HUDGFX);
+		lt_patches[1] = (patch_t *)W_CachePatchName("LTZIGRED", PU_HUDGFX);
+		lt_patches[2] = (patch_t *)W_CachePatchName("LTZZWARN", PU_HUDGFX);
+	}
+}
+
+//
+// Start the title card.
+//
+void ST_startTitleCard(void)
+{
+	// cache every HUD patch used
+	ST_cacheLevelTitle();
+
+	// initialize HUD variables
+	lt_ticker = lt_exitticker = lt_lasttic = 0;
+	lt_endtime = 2*TICRATE + (10*NEWTICRATERATIO);
+	lt_scroll = BASEVIDWIDTH * FRACUNIT;
+	lt_zigzag = -((lt_patches[1])->width * FRACUNIT);
+	lt_mom = 0;
+}
+
+//
+// What happens before drawing the title card.
+// Which is just setting the HUD translucency.
+//
+void ST_preDrawTitleCard(void)
+{
+	if (lt_ticker >= (lt_endtime + TICRATE))
+		return;
+
+	if (!lt_exitticker)
+		st_translucency = 0;
+	else
+		st_translucency = max(0, min((INT32)lt_exitticker-4, cv_translucenthud.value));
+}
+
+//
+// Run the title card.
+// Called from ST_Ticker.
+//
+void ST_runTitleCard(void)
+{
+	if (lt_ticker >= (lt_endtime + TICRATE))
+		return;
+
+	if (!(paused || P_AutoPause()))
+	{
+		// tick
+		lt_ticker++;
+		if (lt_ticker >= lt_endtime)
+			lt_exitticker++;
+
+		// scroll to screen (level title)
+		if (!lt_exitticker)
+		{
+			if (abs(lt_scroll) > FRACUNIT)
+				lt_scroll -= (lt_scroll>>2);
+			else
+				lt_scroll = 0;
+		}
+		// scroll away from screen (level title)
+		else
+		{
+			lt_mom -= FRACUNIT*6;
+			lt_scroll += lt_mom;
+		}
+
+		// scroll to screen (zigzag)
+		if (!lt_exitticker)
+		{
+			if (abs(lt_zigzag) > FRACUNIT)
+				lt_zigzag -= (lt_zigzag>>2);
+			else
+				lt_zigzag = 0;
+		}
+		// scroll away from screen (zigzag)
+		else
+			lt_zigzag += lt_mom;
+	}
+}
+
+//
+// Draw the title card itself.
+//
+void ST_drawTitleCard(void)
 {
 	char *lvlttl = mapheaderinfo[gamemap-1]->lvlttl;
 	char *subttl = mapheaderinfo[gamemap-1]->subttl;
 	INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
-	INT32 lvlttly, zoney, lvlttlxpos, ttlnumxpos, zonexpos;
+	INT32 lvlttlxpos, ttlnumxpos, zonexpos;
 	INT32 subttlxpos = BASEVIDWIDTH/2;
+	INT32 ttlscroll = FixedInt(lt_scroll);
+	INT32 zzticker;
+	patch_t *actpat, *zigzag, *zztext;
 
-	if (!(titletime > 2 && titletime-3 < 110))
+#ifdef HAVE_BLUA
+	if (!LUA_HudEnabled(hud_stagetitle))
+		goto luahook;
+#endif
+
+	if (lt_ticker >= (lt_endtime + TICRATE))
+#ifdef HAVE_BLUA
+		goto luahook;
+#else
 		return;
+#endif
+
+	if ((lt_ticker-lt_lasttic) > 1)
+		lt_ticker = lt_lasttic+1;
+
+	ST_cacheLevelTitle();
+	actpat = lt_patches[0];
+	zigzag = lt_patches[1];
+	zztext = lt_patches[2];
 
 	lvlttlxpos = ((BASEVIDWIDTH/2) - (V_LevelNameWidth(lvlttl)/2));
 
@@ -1169,72 +1310,71 @@ void ST_drawLevelTitle(tic_t titletime)
 		lvlttlxpos -= V_LevelActNumWidth(actnum);
 
 	ttlnumxpos = lvlttlxpos + V_LevelNameWidth(lvlttl);
-	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("ZONE"));
+	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("Zone"));
 	ttlnumxpos++;
 
 	if (lvlttlxpos < 0)
 		lvlttlxpos = 0;
 
-#if 0 // toaster's experiment. srb2&toast.exe one day, maybe? Requires stuff below to be converted to fixed point.
-#define MIDTTLY 79
-#define MIDZONEY 105
-#define MIDDIFF 4
-
-	if (titletime < 10)
+	if (!splitscreen || (splitscreen && stplyr == &players[displayplayer]))
 	{
-		fixed_t z = ((titletime - 3)<<FRACBITS)/7;
-		INT32 ttlh = V_LevelNameHeight(lvlttl);
-		zoney = (200<<FRACBITS) - ((200 - (MIDZONEY + MIDDIFF))*z);
-		lvlttly = ((MIDTTLY + ttlh - MIDDIFF)*z) - (ttlh<<FRACBITS);
+		zzticker = lt_ticker;
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (-zigzag->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
 	}
-	else if (titletime < 105)
-	{
-		fixed_t z = (((titletime - 10)*MIDDIFF)<<(FRACBITS+1))/95;
-		zoney = ((MIDZONEY + MIDDIFF)<<FRACBITS) - z;
-		lvlttly = ((MIDTTLY - MIDDIFF)<<FRACBITS) + z;
-	}
-	else
-	{
-		fixed_t z = ((titletime - 105)<<FRACBITS)/7;
-		INT32 zoneh = V_LevelNameHeight(M_GetText("ZONE"));
-		zoney = (MIDZONEY + zoneh - MIDDIFF)*(FRACUNIT - z) - (zoneh<<FRACBITS);
-		lvlttly = ((MIDTTLY + MIDDIFF)<<FRACBITS) + ((200 - (MIDTTLY + MIDDIFF))*z);
-	}
-
-#undef MIDTTLY
-#undef MIDZONEY
-#undef MIDDIFF
-#else
-	// There's no consistent algorithm that can accurately define the old positions
-	// so I just ended up resorting to a single switch statement to define them
-	switch (titletime-3)
-	{
-		case 0:   zoney = 200; lvlttly =   0; break;
-		case 1:   zoney = 188; lvlttly =  12; break;
-		case 2:   zoney = 176; lvlttly =  24; break;
-		case 3:   zoney = 164; lvlttly =  36; break;
-		case 4:   zoney = 152; lvlttly =  48; break;
-		case 5:   zoney = 140; lvlttly =  60; break;
-		case 6:   zoney = 128; lvlttly =  72; break;
-		case 105: zoney =  80; lvlttly = 104; break;
-		case 106: zoney =  56; lvlttly = 128; break;
-		case 107: zoney =  32; lvlttly = 152; break;
-		case 108: zoney =   8; lvlttly = 176; break;
-		case 109: zoney =   0; lvlttly = 200; break;
-		default:  zoney = 104; lvlttly =  80; break;
-	}
-#endif
 
 	if (actnum)
-		V_DrawLevelActNum(ttlnumxpos, zoney, V_PERPLAYER, actnum);
+	{
+		if (!splitscreen)
+			V_DrawScaledPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat);
+		V_DrawLevelActNum(ttlnumxpos + ttlscroll, 104, V_PERPLAYER, actnum);
+	}
 
-	V_DrawLevelTitle(lvlttlxpos, lvlttly, V_PERPLAYER, lvlttl);
-
+	V_DrawLevelTitle(lvlttlxpos - ttlscroll, 80, V_PERPLAYER, lvlttl);
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-		V_DrawLevelTitle(zonexpos, zoney, V_PERPLAYER, M_GetText("ZONE"));
+		V_DrawLevelTitle(zonexpos + ttlscroll, 104, V_PERPLAYER, M_GetText("Zone"));
+	V_DrawCenteredString(subttlxpos - ttlscroll, 135, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
 
-	if (lvlttly+48 < 200)
-		V_DrawCenteredString(subttlxpos, lvlttly+48, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
+	lt_lasttic = lt_ticker;
+
+#ifdef HAVE_BLUA
+luahook:
+	LUAh_TitleCardHUD(stplyr);
+#endif
+}
+
+//
+// Drawer for G_PreLevelTitleCard.
+//
+void ST_preLevelTitleCardDrawer(tic_t ticker, boolean update)
+{
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+	if (ticker < PRELEVELTIME-1)
+		ST_drawWipeTitleCard();
+
+	I_OsPolling();
+	I_UpdateNoBlit();
+	if (update)
+		I_FinishUpdate(); // page flip or blit buffer
+}
+
+//
+// Draw the title card while on a wipe.
+// Also used in G_PreLevelTitleCard.
+//
+void ST_drawWipeTitleCard(void)
+{
+	stplyr = &players[consoleplayer];
+	ST_preDrawTitleCard();
+	ST_drawTitleCard();
+	if (splitscreen)
+	{
+		stplyr = &players[secondarydisplayplayer];
+		ST_preDrawTitleCard();
+		ST_drawTitleCard();
+	}
 }
 
 static void ST_drawPowerupHUD(void)
@@ -2098,7 +2238,7 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
 	}
 
-	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && stplyr->exiting)
+	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && (stplyr->exiting || (stplyr->pflags & PF_FINISHED)))
 	{
 		UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
 		if (numneeded)
@@ -2113,7 +2253,7 @@ static void ST_drawTextHUD(void)
 					continue;
 
 				total++;
-				if (players[i].exiting)
+				if (players[i].exiting || (players[i].pflags & PF_FINISHED))
 					exiting++;
 			}
 
@@ -2386,12 +2526,25 @@ static void ST_doItemFinderIconsAndSound(void)
 		S_StartSound(NULL, sfx_emfind);
 }
 
+//
 // Draw the status bar overlay, customisable: the user chooses which
 // kind of information to overlay
 //
 static void ST_overlayDrawer(void)
 {
-	//hu_showscores = auto hide score/time/rings when tab rankings are shown
+	// Decide whether to draw the stage title or not
+	boolean stagetitle = false;
+
+	// Check for a valid level title
+	// If the HUD is enabled
+	// And, if Lua is running, if the HUD library has the stage title enabled
+	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD) && *mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer)))
+	{
+		stagetitle = true;
+		ST_preDrawTitleCard();
+	}
+
+	// hu_showscores = auto hide score/time/rings when tab rankings are shown
 	if (!(hu_showscores && (netgame || multiplayer)))
 	{
 		if ((maptol & TOL_NIGHTS || G_IsSpecialStage(gamemap)) &&
@@ -2542,12 +2695,8 @@ static void ST_overlayDrawer(void)
 #endif
 
 	// draw level title Tails
-	if (*mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer))
-#ifdef HAVE_BLUA
-	&& LUA_HudEnabled(hud_stagetitle)
-#endif
-	)
-		ST_drawLevelTitle(timeinmap+70);
+	if (stagetitle && (!WipeInAction) && (!WipeStageTitle))
+		ST_drawTitleCard();
 
 	if (!hu_showscores && (netgame || multiplayer)
 #ifdef HAVE_BLUA
@@ -2622,6 +2771,8 @@ void ST_Drawer(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31|V_PERPLAYER);
 		}
 	}
+
+	st_translucency = cv_translucenthud.value;
 
 	if (st_overlay)
 	{
