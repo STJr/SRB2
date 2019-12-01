@@ -1338,7 +1338,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 
 		if ((range = x2 - x1) <= 0)
-			range = 1;
+			return;
 
 		scalestep = (yscale2 - yscale)/range;
 		scalestep = scalestep ? scalestep : 1;
