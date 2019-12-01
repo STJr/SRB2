@@ -3458,8 +3458,8 @@ void A_BossZoom(mobj_t *actor)
 // Description: Spawns explosions and plays appropriate sounds around the defeated boss.
 //
 // var1:
-//		0 - Use movecount to spawn explosions evenly
-//		1 - Use P_Random to spawn explosions at complete random
+//		& 1 - Use P_Random to spawn explosions at complete random
+//		& 2 - Use entire vertical range of object to spawn
 // var2 = Object to spawn. Default is MT_SONIC3KBOSSEXPLODE.
 //
 void A_BossScream(mobj_t *actor)
@@ -3476,13 +3476,13 @@ void A_BossScream(mobj_t *actor)
 		return;
 #endif
 	if (locvar1 & 1)
+		fa = (FixedAngle(P_RandomKey(360)*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
+	else
 	{
 		actor->movecount += 4*16;
 		actor->movecount %= 360;
 		fa = (FixedAngle(actor->movecount*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
 	}
-	else
-		fa = (FixedAngle(P_RandomKey(360)*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
 	x = actor->x + FixedMul(FINECOSINE(fa),actor->radius);
 	y = actor->y + FixedMul(FINESINE(fa),actor->radius);
 
