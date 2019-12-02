@@ -1253,29 +1253,40 @@ static const char *credits[] = {
 	"\1Published By",
 	"A 28K dialup modem",
 	"",
-	"\1Thank you",
-	"\1for playing!",
+	"\1Thank you       ",
+	"\1for playing!       ",
 	NULL
 };
 
+#define CREDITS_LEFT 8
+#define CREDITS_RIGHT ((BASEVIDWIDTH) - 8)
+
 static struct {
-	UINT32 x, y;
+	UINT32 x;
 	const char *patch;
 } credits_pics[] = {
-	{  8, 80+200* 1, "CREDIT01"},
-	{  4, 80+200* 2, "CREDIT13"},
-	{250, 80+200* 3, "CREDIT12"},
-	{  8, 80+200* 4, "CREDIT03"},
-	{248, 80+200* 5, "CREDIT11"},
-	{  8, 80+200* 6, "CREDIT04"},
-	{112, 80+200* 7, "CREDIT10"},
-	{240, 80+200* 8, "CREDIT05"},
-	{120, 80+200* 9, "CREDIT06"},
-	{  8, 80+200*10, "CREDIT07"},
-	{  8, 80+200*11, "CREDIT08"},
-	{112, 80+200*12, "CREDIT09"},
-	{0, 0, NULL}
+	{CREDITS_LEFT,                     "CREDIT01"},
+	{CREDITS_RIGHT - (271 >> 1),       "CREDIT02"},
+	{CREDITS_LEFT,                     "CREDIT03"},
+	{CREDITS_RIGHT - (316 >> 1),       "CREDIT04"},
+	{CREDITS_LEFT,                     "CREDIT05"},
+	{CREDITS_RIGHT - (399 >> 1),       "CREDIT06"},
+	{CREDITS_LEFT,                     "CREDIT07"},
+	{CREDITS_RIGHT - (302 >> 1),       "CREDIT08"},
+	{CREDITS_LEFT,                     "CREDIT09"},
+	{CREDITS_RIGHT - (250 >> 1),       "CREDIT10"},
+	{CREDITS_LEFT,                     "CREDIT11"},
+	{CREDITS_RIGHT - (279 >> 1),       "CREDIT12"},
+	//{(BASEVIDWIDTH - (279 >> 1)) >> 1, "CREDIT12"},
+	// CREDIT13 is extra art and is not shown by default
+	{0, NULL}
 };
+
+#undef CREDITS_LEFT
+#undef CREDITS_RIGHT
+
+static UINT32 credits_height = 0;
+static const UINT8 credits_numpics = sizeof(credits_pics)/sizeof(credits_pics[0]) - 1;
 
 void F_StartCredits(void)
 {
@@ -1310,13 +1321,20 @@ void F_StartCredits(void)
 void F_CreditDrawer(void)
 {
 	UINT16 i;
+	INT16 zagpos = (timetonext - finalecount - animtimer) % 32;
 	fixed_t y = (80<<FRACBITS) - 5*(animtimer<<FRACBITS)/8;
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
+	// Zig Zagz
+	V_DrawScaledPatch(-16,               zagpos,       V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_CACHE));
+	V_DrawScaledPatch(-16,               zagpos - 320, V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_CACHE));
+	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos,       V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_CACHE));
+	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos - 320, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_CACHE));
+
 	// Draw background pictures first
 	for (i = 0; credits_pics[i].patch; i++)
-		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (credits_pics[i].y<<FRACBITS) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_CACHE), FRACUNIT>>1);
+		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (280<<FRACBITS) + (((i*credits_height)<<FRACBITS)/(credits_numpics)) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_CACHE), FRACUNIT>>1);
 
 	// Dim the background
 	V_DrawFadeScreen(0xFF00, 16);
@@ -1334,6 +1352,11 @@ void F_CreditDrawer(void)
 				V_DrawCreditString((160 - (V_CreditStringWidth(&credits[i][1])>>1))<<FRACBITS, y, 0, &credits[i][1]);
 			y += 30<<FRACBITS;
 			break;
+		case 2:
+			if (y>>FRACBITS > -10)
+				V_DrawStringAtFixed((BASEVIDWIDTH-V_StringWidth(&credits[i][1], V_ALLOWLOWERCASE|V_YELLOWMAP))<<FRACBITS>>1, y, V_ALLOWLOWERCASE|V_YELLOWMAP, &credits[i][1]);
+			y += 12<<FRACBITS;
+			break;
 		default:
 			if (y>>FRACBITS > -10)
 				V_DrawStringAtFixed(32<<FRACBITS, y, V_ALLOWLOWERCASE, credits[i]);
@@ -1350,6 +1373,22 @@ void F_CreditTicker(void)
 	// "Simulate" the drawing of the credits so that dedicated mode doesn't get stuck
 	UINT16 i;
 	fixed_t y = (80<<FRACBITS) - 5*(animtimer<<FRACBITS)/8;
+
+	// Calculate credits height to display art properly
+	if (credits_height == 0)
+	{
+		for (i = 0; credits[i]; i++)
+		{
+			switch(credits[i][0])
+			{
+				case 0: credits_height += 80; break;
+				case 1: credits_height += 30; break;
+				default: credits_height += 12; break;
+			}
+		}
+		credits_height = 4*8*credits_height/5/5; // account for scroll speed (4/5 accounts for patch drawing, inverse 5/8 accounts for text scroll)
+		//credits_height += 280; // account for starting offset
+	}
 
 	// Draw credits text on top
 	for (i = 0; credits[i]; i++)
