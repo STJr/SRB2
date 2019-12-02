@@ -3342,7 +3342,7 @@ void A_SkullAttack(mobj_t *actor)
 		INT32 i, j;
 		static INT32 k;/* static for (at least) GCC 9.1 weirdness */
 		boolean allow;
-		angle_t testang;
+		angle_t testang = 0;
 
 		mobjinfo[MT_NULL].spawnstate = S_INVISIBLE;
 		mobjinfo[MT_NULL].flags = MF_NOGRAVITY|MF_NOTHINK|MF_NOCLIPTHING|MF_NOBLOCKMAP;
@@ -13379,7 +13379,7 @@ void A_Boss5MakeJunk(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	mobj_t *broked;
+	mobj_t *broked = NULL;
 	angle_t ang;
 	INT32 i = ((locvar2 & 1) ? 8 : 1);
 #ifdef HAVE_BLUA

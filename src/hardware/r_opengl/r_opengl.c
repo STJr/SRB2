@@ -417,6 +417,14 @@ static PFNglClientActiveTexture pglClientActiveTexture;
 #define GL_TEXTURE1 0x84C1
 #endif
 
+/* 1.5 Parms */
+#ifndef GL_ARRAY_BUFFER
+#define GL_ARRAY_BUFFER 0x8892
+#endif
+#ifndef GL_STATIC_DRAW
+#define GL_STATIC_DRAW 0x88E4
+#endif
+
 boolean SetupGLfunc(void)
 {
 #ifndef STATIC_OPENGL

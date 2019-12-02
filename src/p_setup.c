@@ -3071,7 +3071,7 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 	&& !(netgame || multiplayer) && gamemap == 0x1d35-016464)
 	{
-		P_SpawnMobj(0640370000, 0x11000000, 0b11000110000000000000000000, MT_LETTER)->angle = ANGLE_90;
+		P_SpawnMobj(0640370000, 0x11000000, 0x3180000, MT_LETTER)->angle = ANGLE_90;
 		if (textprompts[199]->page[1].backcolor != 259)
 		{
 			char *buf = W_CacheLumpName("WATERMAP", PU_STATIC), *b = buf;

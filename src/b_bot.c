@@ -43,7 +43,7 @@ static inline void B_ResetAI(void)
 	thinkfly = false;
 }
 
-static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
+static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
 	boolean forward=false, backward=false, left=false, right=false, jump=false, spin=false;
 
