@@ -56,7 +56,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 
 	fixed_t dist = P_AproxDistance(sonic->x - tails->x, sonic->y - tails->y);
 	fixed_t zdist = flip * (sonic->z - tails->z);
-	angle_t ang = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
+	angle_t ang = sonic->angle;
 	fixed_t pmom = P_AproxDistance(sonic->momx, sonic->momy);
 	fixed_t bmom = P_AproxDistance(tails->momx, tails->momy);
 	fixed_t followmax = 128 * 8 * scale; // Max follow distance before AI begins to enter "panic" state
@@ -65,6 +65,10 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	fixed_t comfortheight = 96 * scale;
 	fixed_t touchdist = 24 * scale;
 	boolean stalled = (bmom < scale >> 1) && dist > followthres; // Helps to see if the AI is having trouble catching up
+	boolean samepos = (sonic->x == tails->x && sonic->y == tails->y);
+
+	if (!samepos)
+		ang = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
 
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
@@ -154,7 +158,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		// Check positioning
 		// Thinker for co-op flight
 		if (!(water || pmom || bmom)
-			&& (dist < touchdist)
+			&& (dist < touchdist && !samepos)
 			&& !(pcmd->forwardmove || pcmd->sidemove || player->dashspeed)
 			&& P_IsObjectOnGround(sonic) && P_IsObjectOnGround(tails)
 			&& !(player->pflags & PF_STASIS)
