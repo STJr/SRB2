@@ -451,7 +451,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	else
 		start++;   // just after S_START
 
-	if (end == INT16_MAX)
+	if (end == INT16_MAX || start >= end)
 	{
 		CONS_Debug(DBG_SETUP, "no sprites in pwad %d\n", wadnum);
 		return;
