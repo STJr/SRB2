@@ -4738,7 +4738,6 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 							player->drawangle = player->mo->angle;
 #undef zpos
 
-							P_SetTarget(&player->mo->tracer, NULL);
 							player->mo->momx >>= 1;
 							player->mo->momy >>= 1;
 							player->pflags |= PF_USEDOWN;
