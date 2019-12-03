@@ -163,6 +163,12 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		else
 			thinkfly = false;
 
+		// Set carried state
+		if (player->powers[pw_carry] == CR_PLAYER && sonic->tracer == tails)
+		{
+			flymode = 2;
+		}
+
 		// Ready for takeoff
 		if (flymode == 1)
 		{
@@ -175,12 +181,6 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			// Abort if the player moves away or spins
 			if (dist > followthres || player->dashspeed)
 				flymode = 0;
-			
-			// Set carried state
-			if (player->powers[pw_carry] == CR_PLAYER && sonic->tracer == tails)
-			{
-				flymode = 2;
-			}
 		}
 		// Read player inputs while carrying
 		else if (flymode == 2)
