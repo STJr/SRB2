@@ -781,9 +781,12 @@ static void FreeMipmapColormap(INT32 patchnum, void *patch)
 		// Confusing at first, but pat->mipmap->nextcolormap
 		// at the beginning of the loop is the first colormap
 		// from the linked list of colormaps
-		GLMipmap_t *next = pat->mipmap->nextcolormap;
+		GLMipmap_t *next = pat->mipmap;
+		if (!next) // No mipmap in this patch, break out of loop.
+			break;
 		// Set the first colormap
 		// to the one that comes after it
+		next = next->nextcolormap;
 		pat->mipmap->nextcolormap = next->nextcolormap;
 		// Free image data from memory
 		if (next->grInfo.data)
