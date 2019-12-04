@@ -1997,7 +1997,7 @@ void P_XYMovement(mobj_t *mo)
 				{
 					mo->momz = transfermomz;
 					mo->standingslope = NULL;
-					if (player->pflags & PF_SPINNING)
+					if (player && (player->pflags & PF_SPINNING))
 						player->pflags |= PF_THOKKED;
 				}
 			}
