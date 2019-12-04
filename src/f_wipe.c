@@ -161,7 +161,7 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	{
 		// Determine pixel to use from fademask
 		pcolor = &pMasterPalette[*lump++];
-		if (wipestyle == WIPESTYLE_LEVEL)
+		if (wipestyle == WIPESTYLE_COLORMAP)
 			*mask++ = pcolor->s.red / FADECOLORMAPDIV;
 		else
 			*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
@@ -191,7 +191,7 @@ void F_WipeStageTitle(void)
 {
 	// draw level title
 	if ((WipeStageTitle && st_overlay)
-	&& (wipestyle == WIPESTYLE_LEVEL)
+	&& (wipestyle == WIPESTYLE_COLORMAP)
 	&& !(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
 	&& *mapheaderinfo[gamemap-1]->lvlttl != '\0')
 	{
@@ -282,7 +282,7 @@ static void F_DoWipe(fademask_t *fademask)
 					relativepos += vid.width;
 				}
 			}
-			else if (*mask >= ((wipestyle == WIPESTYLE_LEVEL) ? FADECOLORMAPROWS : 10))
+			else if (*mask >= ((wipestyle == WIPESTYLE_COLORMAP) ? FADECOLORMAPROWS : 10))
 			{
 				// shortcut - memcpy target to work
 				while (draw_linestogo--)
@@ -293,7 +293,7 @@ static void F_DoWipe(fademask_t *fademask)
 			}
 			else
 			{
-				if (wipestyle == WIPESTYLE_LEVEL)
+				if (wipestyle == WIPESTYLE_COLORMAP)
 				{
 					int nmask;
 					UINT8 *fade = fadecolormap;
@@ -321,7 +321,7 @@ static void F_DoWipe(fademask_t *fademask)
 					e = e_base + relativepos;
 					draw_rowstogo = draw_rowend - draw_rowstart;
 
-					if (wipestyle == WIPESTYLE_LEVEL)
+					if (wipestyle == WIPESTYLE_COLORMAP)
 					{
 						while (draw_rowstogo--)
 							*w++ = transtbl[*e++];
@@ -382,6 +382,62 @@ void F_WipeEndScreen(void)
 #endif
 }
 
+/** Verifies every condition for a colormapped fade.
+  */
+boolean F_ShouldColormapFade(void)
+{
+	if ((wipestyleflags & (WSF_FADEIN|WSF_FADEOUT)) // only if one of those wipestyleflags are actually set
+	&& !(wipestyleflags & WSF_CROSSFADE)) // and if not crossfading
+	{
+		// World
+		return (gamestate == GS_LEVEL
+		|| gamestate == GS_TITLESCREEN
+		// Finales
+		|| gamestate == GS_CONTINUING
+		|| gamestate == GS_CREDITS
+		|| gamestate == GS_EVALUATION
+		|| gamestate == GS_INTRO
+		|| gamestate == GS_ENDING
+		// Menus
+		|| gamestate == GS_TIMEATTACK);
+	}
+	return false;
+}
+
+/** Decides what wipe style to use.
+  */
+void F_DecideWipeStyle(void)
+{
+	// Set default wipe style
+	wipestyle = WIPESTYLE_NORMAL;
+
+	// Check for colormap wipe style
+	if (F_ShouldColormapFade())
+		wipestyle = WIPESTYLE_COLORMAP;
+}
+
+/** Attempt to run a colormap fade,
+    provided all the conditionals were properly met.
+    Returns true if so.
+    I demand you call F_RunWipe after this function.
+  */
+boolean F_TryColormapFade(UINT8 wipecolor)
+{
+	if (F_ShouldColormapFade())
+	{
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
+			F_WipeColorFill(wipecolor);
+#endif
+		return true;
+	}
+	else
+	{
+		F_WipeColorFill(wipecolor);
+		return false;
+	}
+}
+
 /** After setting up the screens you want to wipe,
   * calling this will do a 'typical' wipe.
   */
@@ -399,17 +455,9 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
 
 	// Init the wipe
+	F_DecideWipeStyle();
 	WipeInAction = true;
 	wipe_scr = screens[0];
-
-	// don't know where else to put this.
-	// this any good?
-	if ((gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN)
-	&& (wipestyleflags & (WSF_FADEIN|WSF_FADEOUT)) // only if one of those wipestyleflags are actually set
-	&& !(wipestyleflags & WSF_CROSSFADE)) // and if not crossfading
-		wipestyle = WIPESTYLE_LEVEL;
-	else
-		wipestyle = WIPESTYLE_NORMAL;
 
 	// lastwipetic should either be 0 or the tic we last wiped
 	// on for fade-to-black
@@ -429,7 +477,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		if (rendermode == render_opengl)
 		{
 			// send in the wipe type and wipe frame because we need to cache the graphic
-			if (wipestyle == WIPESTYLE_LEVEL)
+			if (wipestyle == WIPESTYLE_COLORMAP)
 				HWR_DoTintedWipe(wipetype, wipeframe-1);
 			else
 				HWR_DoWipe(wipetype, wipeframe-1);
@@ -438,7 +486,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 #endif
 			F_DoWipe(fmask);
 
-		if (wipestyle == WIPESTYLE_LEVEL)
+		if (wipestyle == WIPESTYLE_COLORMAP)
 			F_WipeStageTitle();
 
 		I_OsPolling();

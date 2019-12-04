@@ -910,8 +910,9 @@ void F_IntroDrawer(void)
 		{
 			if (rendermode != render_none)
 			{
+				wipestyleflags = WSF_FADEOUT;
 				F_WipeStartScreen();
-				F_WipeColorFill(31);
+				F_TryColormapFade(31);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -920,12 +921,11 @@ void F_IntroDrawer(void)
 		}
 		else if (intro_scenenum == 10)
 		{
-			// The only fade to white in the entire damn game.
-			// (not true)
 			if (rendermode != render_none)
 			{
+				wipestyleflags = (WSF_FADEOUT|WSF_TOWHITE);
 				F_WipeStartScreen();
-				F_WipeColorFill(0);
+				F_TryColormapFade(0);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -934,8 +934,9 @@ void F_IntroDrawer(void)
 		{
 			if (rendermode != render_none)
 			{
+				wipestyleflags = WSF_FADEOUT;
 				F_WipeStartScreen();
-				F_WipeColorFill(31);
+				F_TryColormapFade(31);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -970,6 +971,7 @@ void F_IntroDrawer(void)
 
 		F_WipeStartScreen();
 		wipegamestate = -1;
+		wipestyleflags = WSF_CROSSFADE;
 		animtimer = stoptimer = 0;
 	}
 

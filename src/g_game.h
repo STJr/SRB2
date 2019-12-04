@@ -141,7 +141,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar,
 	boolean SSSG, boolean FLS);
 void G_DoLoadLevel(boolean resetplayer);
 void G_StartTitleCard(void);
-void G_PreLevelTitleCard(tic_t ticker, boolean update);
+void G_PreLevelTitleCard(void);
 void G_DeferedPlayDemo(const char *demo);
 
 // Can be called by the startup code or M_Responder, calls P_SetupLevel.

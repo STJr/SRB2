@@ -1804,9 +1804,6 @@ void G_DoLoadLevel(boolean resetplayer)
 //
 void G_StartTitleCard(void)
 {
-	wipestyleflags |= WSF_FADEIN;
-	wipestyleflags &= ~WSF_FADEOUT;
-
 	// The title card has been disabled for this map.
 	// Oh well.
 	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
@@ -1828,7 +1825,7 @@ void G_StartTitleCard(void)
 //
 // Run the title card before fading in to the level.
 //
-void G_PreLevelTitleCard(tic_t ticker, boolean update)
+void G_PreLevelTitleCard(void)
 {
 	tic_t starttime = I_GetTime();
 	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
@@ -1842,13 +1839,15 @@ void G_PreLevelTitleCard(tic_t ticker, boolean update)
 		lasttime = nowtime;
 
 		ST_runTitleCard();
-		ST_preLevelTitleCardDrawer(ticker, update);
+		ST_preLevelTitleCardDrawer(true);
 
 		if (moviemode)
 			M_SaveFrame();
 		if (takescreenshot) // Only take screenshots after drawing.
 			M_DoScreenShot();
 	}
+	if (!st_overlay)
+		wipestyleflags = WSF_CROSSFADE;
 }
 
 INT32 pausedelay = 0;
