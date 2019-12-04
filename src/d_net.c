@@ -497,9 +497,9 @@ void Net_AckTicker(void)
 		node_t *node = &nodes[nodei];
 		if (ackpak[i].acknum && ackpak[i].senttime + NODETIMEOUT < I_GetTime())
 		{
-			if (ackpak[i].resentnum > 10 && (node->flags & NF_CLOSE))
+			if (ackpak[i].resentnum > 20 && (node->flags & NF_CLOSE))
 			{
-				DEBFILE(va("ack %d sent 10 times so connection is supposed lost: node %d\n",
+				DEBFILE(va("ack %d sent 20 times so connection is supposed lost: node %d\n",
 					i, nodei));
 				Net_CloseConnection(nodei | FORCECLOSE);
 
