@@ -6111,7 +6111,7 @@ static void P_3dMovement(player_t *player)
 			// (Why was it so complicated before? ~Red)
 			controldirection = R_PointToAngle2(0, 0, cmd->forwardmove*FRACUNIT, -cmd->sidemove*FRACUNIT)+movepushangle;
 
-			movepushforward = max(abs(cmd->sidemove), abs(cmd->forwardmove)) * (thrustfactor * acceleration);
+			movepushforward = FixedHypot(cmd->sidemove, cmd->forwardmove) * (thrustfactor * acceleration);
 
 			// Allow a bit of movement while spinning
 			if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
@@ -8247,7 +8247,7 @@ static void P_MovePlayer(player_t *player)
 	if (player->pflags & PF_GLIDING)
 	{
 		mobj_t *mo = player->mo; // seriously why isn't this at the top of the function hngngngng
-		fixed_t leeway;
+		fixed_t leeway = !P_AnalogMove(player) ? FixedAngle(cmd->sidemove*(FRACUNIT)) : 0;
 		fixed_t glidespeed = player->actionspd;
 		fixed_t momx = mo->momx - player->cmomx, momy = mo->momy - player->cmomy;
 		angle_t angle, moveangle = R_PointToAngle2(0, 0, momx, momy);
@@ -8267,7 +8267,6 @@ static void P_MovePlayer(player_t *player)
 		}
 
 		// Strafing while gliding.
-		leeway = FixedAngle(cmd->sidemove*(FRACUNIT));
 		angle = mo->angle - leeway;
 
 		if (!player->skidtime) // TODO: make sure this works in 2D!
