@@ -786,8 +786,8 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 {
 	char *sprinfoToken;
 	size_t sprinfoTokenLength;
-	char *frameChar;
-	UINT8 frameFrame;
+	char *frameChar = NULL;
+	UINT8 frameFrame = 0xFF;
 #ifdef ROTSPRITE
 	INT16 frameXPivot = 0;
 	INT16 frameYPivot = 0;
