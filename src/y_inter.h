@@ -16,6 +16,7 @@ void Y_Ticker(void);
 void Y_StartIntermission(void);
 void Y_EndIntermission(void);
 void Y_ConsiderScreenBuffer(void);
+void Y_CleanupScreenBuffer(void);
 
 typedef enum
 {
@@ -26,9 +27,7 @@ typedef enum
 //	int_tag,      // Tag
 	int_ctf,      // CTF
 	int_spec,     // Special Stage
-	int_nights,   // NiGHTS into Dreams
-	int_nightsspec,// NiGHTS special stage
 	int_race,     // Race
-	int_classicrace, // Competition
+	int_comp,     // Competition
 } intertype_t;
 extern intertype_t intertype;

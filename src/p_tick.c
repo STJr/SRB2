@@ -481,6 +481,9 @@ static inline void P_DoSpecialStageStuff(void)
 				tic_t oldnightstime = players[i].nightstime;
 				countspheres += players[i].spheres;
 
+				if (!oldnightstime)
+					continue;
+
 				// If in water, deplete timer 6x as fast.
 				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & SH_PROTECTWATER))
 					players[i].nightstime -= 5;
@@ -506,12 +509,11 @@ static inline void P_DoSpecialStageStuff(void)
 			{
 				// Halt all the players
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i])
+					if (playeringame[i] && !players[i].exiting)
 					{
 						players[i].mo->momx = players[i].mo->momy = 0;
 						players[i].exiting = (14*TICRATE)/5 + 1;
 					}
-
 				sstimer = 0;
 				P_GiveEmerald(true);
 				P_RestoreMusic(&players[consoleplayer]);

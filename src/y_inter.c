@@ -166,13 +166,11 @@ static INT32 endtic = -1;
 intertype_t intertype = int_none;
 
 static void Y_RescaleScreenBuffer(void);
-static void Y_CleanupScreenBuffer(void);
 static void Y_AwardCoopBonuses(void);
 static void Y_AwardSpecialStageBonus(void);
 static void Y_CalculateCompetitionWinners(void);
 static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
-static void Y_FollowIntermission(void);
 static void Y_UnloadData(void);
 
 // Stuff copy+pasted from st_stuff.c
@@ -293,7 +291,7 @@ static void Y_RescaleScreenBuffer(void)
 //
 // Free all related memory.
 //
-static void Y_CleanupScreenBuffer(void)
+void Y_CleanupScreenBuffer(void)
 {
 	// Who knows?
 	if (y_buffer == NULL)
@@ -605,8 +603,7 @@ void Y_IntermissionDrawer(void)
 					{
 						if (emeraldbounces < 3)
 						{
-							emeraldmomy += 1;
-							emeraldy += emeraldmomy;
+							emeraldy += (++emeraldmomy);
 							if (emeraldy > 74)
 							{
 								S_StartSound(NULL, sfx_tink); // tink
@@ -618,9 +615,11 @@ void Y_IntermissionDrawer(void)
 					}
 					else
 					{
-						emeraldmomy += 1;
-						emeraldy += emeraldmomy;
-						emeraldx += intertic - 6;
+						if (emeraldy < (vid.height/vid.dupy)+16)
+						{
+							emeraldy += (++emeraldmomy);
+							emeraldx += intertic - 6;
+						}
 						if (emeraldbounces < 1 && emeraldy > 74)
 						{
 							S_StartSound(NULL, sfx_shldls); // nope
@@ -819,7 +818,7 @@ void Y_IntermissionDrawer(void)
 			}
 		}
 	}
-	else if (intertype == int_classicrace)
+	else if (intertype == int_comp)
 	{
 		INT32 x = 4;
 		INT32 y = 48;
@@ -953,7 +952,7 @@ void Y_Ticker(void)
 		if (!--timer)
 		{
 			Y_EndIntermission();
-			Y_FollowIntermission();
+			G_AfterIntermission();
 			return;
 		}
 	}
@@ -961,7 +960,7 @@ void Y_Ticker(void)
 	else if (intertic == endtic)
 	{
 		Y_EndIntermission();
-		Y_FollowIntermission();
+		G_AfterIntermission();
 		return;
 	}
 
@@ -1145,103 +1144,13 @@ void Y_Ticker(void)
 		if (data.match.numplayers != D_NumPlayers())
 			Y_CalculateMatchWinners();
 	}
-	else if (intertype == int_race || intertype == int_classicrace) // race
+	else if (intertype == int_race || intertype == int_comp) // race
 	{
 		if (!intertic) // first time only
 			S_ChangeMusicInternal("_inter", true); // loop it
 
 		// Don't bother recalcing for race. It doesn't make as much sense.
 	}
-}
-
-//
-// Y_UpdateRecordReplays
-//
-// Update replay files/data, etc. for Record Attack
-// See G_SetNightsRecords for NiGHTS Attack.
-//
-static void Y_UpdateRecordReplays(void)
-{
-	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
-	char *gpath;
-	char lastdemo[256], bestdemo[256];
-	UINT8 earnedEmblems;
-
-	// Record new best time
-	if (!mainrecords[gamemap-1])
-		G_AllocMainRecordData(gamemap-1);
-
-	if (players[consoleplayer].score > mainrecords[gamemap-1]->score)
-		mainrecords[gamemap-1]->score = players[consoleplayer].score;
-
-	if ((mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < mainrecords[gamemap-1]->time))
-		mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
-
-	if ((UINT16)(players[consoleplayer].rings) > mainrecords[gamemap-1]->rings)
-		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
-
-	if (data.coop.gotperfbonus)
-		mainrecords[gamemap-1]->gotperfect = true;
-
-	// Save demo!
-	bestdemo[255] = '\0';
-	lastdemo[255] = '\0';
-	G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].rings));
-	G_CheckDemoStatus();
-
-	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
-	I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
-
-	if ((gpath = malloc(glen)) == NULL)
-		I_Error("Out of memory for replay filepath\n");
-
-	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
-	snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
-
-	if (FIL_FileExists(lastdemo))
-	{
-		UINT8 *buf;
-		size_t len = FIL_ReadFile(lastdemo, &buf);
-
-		snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
-		{ // Better time, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
-		}
-
-		snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
-		{ // Better score, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
-		}
-
-		snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
-		{ // Better rings, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW MOST RINGS!"), M_GetText("Saved replay as"), bestdemo);
-		}
-
-		//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
-
-		Z_Free(buf);
-	}
-	free(gpath);
-
-	// Check emblems when level data is updated
-	if ((earnedEmblems = M_CheckLevelEmblems()))
-		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
-
-	// Update timeattack menu's replay availability.
-	Nextmap_OnChange();
 }
 
 //
@@ -1252,7 +1161,6 @@ static void Y_UpdateRecordReplays(void)
 void Y_StartIntermission(void)
 {
 	INT32 i;
-	UINT8 completionEmblems = M_CompletionEmblems();
 
 	intertic = -1;
 
@@ -1265,10 +1173,7 @@ void Y_StartIntermission(void)
 	{
 		timer = 0;
 
-		if (G_IsSpecialStage(gamemap))
-			intertype = (maptol & TOL_NIGHTS) ? int_nightsspec : int_spec;
-		else
-			intertype = (maptol & TOL_NIGHTS) ? int_nights : int_coop;
+		intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
 	}
 	else
 	{
@@ -1283,14 +1188,7 @@ void Y_StartIntermission(void)
 		}
 
 		if (gametype == GT_COOP)
-		{
-			// Nights intermission is single player only
-			// Don't add it here
-			if (G_IsSpecialStage(gamemap))
-				intertype = int_spec;
-			else
-				intertype = int_coop;
-		}
+			intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
 		else if (gametype == GT_TEAMMATCH)
 			intertype = int_teammatch;
 		else if (gametype == GT_MATCH
@@ -1300,7 +1198,7 @@ void Y_StartIntermission(void)
 		else if (gametype == GT_RACE)
 			intertype = int_race;
 		else if (gametype == GT_COMPETITION)
-			intertype = int_classicrace;
+			intertype = int_comp;
 		else if (gametype == GT_CTF)
 			intertype = int_ctf;
 	}
@@ -1315,20 +1213,6 @@ void Y_StartIntermission(void)
 
 	switch (intertype)
 	{
-		case int_nights:
-			// Can't fail
-			G_SetNightsRecords();
-
-			// Check records
-			{
-				UINT8 earnedEmblems = M_CheckLevelEmblems();
-				if (earnedEmblems)
-					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for NiGHTS records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
-			}
-
-			// fall back into the coop intermission for now
-			intertype = int_coop;
-			/* FALLTHRU */
 		case int_coop: // coop or single player, normal level
 		{
 			// award time and ring bonuses
@@ -1336,24 +1220,6 @@ void Y_StartIntermission(void)
 
 			// setup time data
 			data.coop.tics = players[consoleplayer].realtime;
-
-			if ((!modifiedgame || savemoddata) && !multiplayer && !demoplayback)
-			{
-				// Update visitation flags
-				mapvisited[gamemap-1] |= MV_BEATEN;
-				if (ALL7EMERALDS(emeralds))
-					mapvisited[gamemap-1] |= MV_ALLEMERALDS;
-				if (ultimatemode)
-					mapvisited[gamemap-1] |= MV_ULTIMATE;
-				if (data.coop.gotperfbonus)
-					mapvisited[gamemap-1] |= MV_PERFECT;
-
-				if (modeattacking == ATTACKING_RECORD)
-					Y_UpdateRecordReplays();
-
-				if (completionEmblems)
-					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");
-			}
 
 			for (i = 0; i < 4; ++i)
 				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_STATIC);
@@ -1421,40 +1287,8 @@ void Y_StartIntermission(void)
 			break;
 		}
 
-		case int_nightsspec:
-			if (modeattacking && stagefailed)
-			{
-				// Nuh-uh.  Get out of here.
-				Y_EndIntermission();
-				Y_FollowIntermission();
-				break;
-			}
-			if (!stagefailed)
-				G_SetNightsRecords();
-
-			// Check records
-			{
-				UINT8 earnedEmblems = M_CheckLevelEmblems();
-				if (earnedEmblems)
-					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for NiGHTS records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
-			}
-
-			// fall back into the special stage intermission for now
-			intertype = int_spec;
-			/* FALLTHRU */
 		case int_spec: // coop or single player, special stage
 		{
-			// Update visitation flags?
-			if ((!modifiedgame || savemoddata) && !multiplayer && !demoplayback)
-			{
-				if (!stagefailed)
-					mapvisited[gamemap-1] |= MV_BEATEN;
-
-				// all emeralds/ultimate/perfect emblems won't be possible in ss, oh well?
-				if (completionEmblems)
-					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");
-			}
-
 			// give out ring bonuses
 			Y_AwardSpecialStageBonus();
 
@@ -1640,7 +1474,7 @@ void Y_StartIntermission(void)
 			break;
 		}
 
-		case int_classicrace: // classic (full race)
+		case int_comp: // classic (full race)
 		{
 			// find out who won
 			Y_CalculateCompetitionWinners();
@@ -2195,23 +2029,6 @@ void Y_EndIntermission(void)
 	usebuffer = false;
 }
 
-//
-// Y_FollowIntermission
-//
-static void Y_FollowIntermission(void)
-{
-	if (modeattacking)
-	{
-		M_EndModeAttackRun();
-		return;
-	}
-
-	// This handles whether to play a post-level cutscene, end the game,
-	// or simply go to the next level.
-	// No need to duplicate the code here!
-	G_AfterIntermission();
-}
-
 #define UNLOAD(x) Z_ChangeTag(x, PU_CACHE); x = NULL
 
 //
@@ -2223,8 +2040,6 @@ static void Y_UnloadData(void)
 	// It doesn't work and is unnecessary.
 	if (rendermode != render_soft)
 		return;
-
-	Y_CleanupScreenBuffer();
 
 	// unload the background patches
 	UNLOAD(bgpatch);
@@ -2261,7 +2076,7 @@ static void Y_UnloadData(void)
 			break;
 		default:
 			//without this default,
-			//int_none, int_tag, int_chaos, and int_classicrace
+			//int_none, int_tag, int_chaos, and int_comp
 			//are not handled
 			break;
 	}

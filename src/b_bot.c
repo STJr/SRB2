@@ -31,7 +31,6 @@ static boolean panic = false;
 static UINT8 flymode = 0;
 static boolean spinmode = false;
 static boolean thinkfly = false;
-static mobj_t *overlay;
 
 static inline void B_ResetAI(void)
 {
@@ -44,7 +43,7 @@ static inline void B_ResetAI(void)
 	thinkfly = false;
 }
 
-static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
+static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
 	boolean forward=false, backward=false, left=false, right=false, jump=false, spin=false;
 
@@ -57,7 +56,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 
 	fixed_t dist = P_AproxDistance(sonic->x - tails->x, sonic->y - tails->y);
 	fixed_t zdist = flip * (sonic->z - tails->z);
-	angle_t ang = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
+	angle_t ang = sonic->angle;
 	fixed_t pmom = P_AproxDistance(sonic->momx, sonic->momy);
 	fixed_t bmom = P_AproxDistance(tails->momx, tails->momy);
 	fixed_t followmax = 128 * 8 * scale; // Max follow distance before AI begins to enter "panic" state
@@ -66,6 +65,10 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 	fixed_t comfortheight = 96 * scale;
 	fixed_t touchdist = 24 * scale;
 	boolean stalled = (bmom < scale >> 1) && dist > followthres; // Helps to see if the AI is having trouble catching up
+	boolean samepos = (sonic->x == tails->x && sonic->y == tails->y);
+
+	if (!samepos)
+		ang = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
 
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
@@ -136,7 +139,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 	// ********
 	// FLY MODE
 	// spinmode check
-	if (spinmode)
+	if (spinmode || player->exiting)
 		thinkfly = false;
 	else
 	{
@@ -155,7 +158,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		// Check positioning
 		// Thinker for co-op flight
 		if (!(water || pmom || bmom)
-			&& (dist < touchdist)
+			&& (dist < touchdist && !samepos)
 			&& !(pcmd->forwardmove || pcmd->sidemove || player->dashspeed)
 			&& P_IsObjectOnGround(sonic) && P_IsObjectOnGround(tails)
 			&& !(player->pflags & PF_STASIS)
@@ -163,6 +166,12 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 				thinkfly = true;
 		else
 			thinkfly = false;
+
+		// Set carried state
+		if (player->powers[pw_carry] == CR_PLAYER && sonic->tracer == tails)
+		{
+			flymode = 2;
+		}
 
 		// Ready for takeoff
 		if (flymode == 1)
@@ -176,12 +185,6 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 			// Abort if the player moves away or spins
 			if (dist > followthres || player->dashspeed)
 				flymode = 0;
-			
-			// Set carried state
-			if (player->powers[pw_carry] == CR_PLAYER && sonic->tracer == tails)
-			{
-				flymode = 2;
-			}
 		}
 		// Read player inputs while carrying
 		else if (flymode == 2)
@@ -336,17 +339,20 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 	// Thinkfly overlay
 	if (thinkfly)
 	{
-		if (overlay == NULL)
+		if (!tails->target)
 		{
-			overlay = P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY);
-			P_SetTarget(&overlay->target, tails);
-			P_SetMobjState(overlay, S_FLIGHTINDICATOR);
+			P_SetTarget(&tails->target, P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY));
+			if (tails->target)
+			{
+				P_SetTarget(&tails->target->target, tails);
+				P_SetMobjState(tails->target, S_FLIGHTINDICATOR);
+			}
 		}
 	}
-	else if (overlay != NULL)
+	else if (tails->target && tails->target->type == MT_OVERLAY && tails->target->state == states+S_FLIGHTINDICATOR)
 	{
-		P_RemoveMobj(overlay);
-		overlay = NULL;
+		P_RemoveMobj(tails->target);
+		P_SetTarget(&tails->target, NULL);
 	}
 
 	// Turn the virtual keypresses into ticcmd_t.

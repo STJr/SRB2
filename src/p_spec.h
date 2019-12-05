@@ -21,8 +21,6 @@ extern mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpo
 extern mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
 extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
-mobj_t *endsign;
-
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.

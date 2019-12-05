@@ -586,7 +586,6 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[SUPERSPARK_L], // SPR_BOM3
 	&lspr[NOLIGHT],      // SPR_BOM4
 	&lspr[REDBALL_L],    // SPR_BMNB
-	&lspr[NOLIGHT],      // SPR_WDDB
 
 	// Crumbly rocks
 	&lspr[NOLIGHT],     // SPR_ROIA
@@ -606,8 +605,10 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ROIO
 	&lspr[NOLIGHT],     // SPR_ROIP
 
-	// Bricks
+	// Level debris
+	&lspr[NOLIGHT], // SPR_GFZD
 	&lspr[NOLIGHT], // SPR_BRIC
+	&lspr[NOLIGHT], // SPR_WDDB
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG

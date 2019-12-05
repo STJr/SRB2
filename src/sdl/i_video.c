@@ -1176,14 +1176,11 @@ void I_FinishUpdate(void)
 	if (cv_closedcaptioning.value)
 		SCR_ClosedCaptions();
 
-	if (st_overlay)
-	{
-		if (cv_ticrate.value)
-			SCR_DisplayTicRate();
+	if (cv_ticrate.value)
+		SCR_DisplayTicRate();
 
-		if (cv_showping.value && netgame && consoleplayer != serverplayer)
-			SCR_DisplayLocalPing();
-	}
+	if (cv_showping.value && netgame && consoleplayer != serverplayer)
+		SCR_DisplayLocalPing();
 
 	if (rendermode == render_soft && screens[0])
 	{
@@ -1666,7 +1663,6 @@ void I_StartupGraphics(void)
 		HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
 		HWD.pfnEndScreenWipe    = hwSym("EndScreenWipe",NULL);
 		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
-		HWD.pfnDoScreenWipeLevel= hwSym("DoScreenWipeLevel",NULL);
 		HWD.pfnDrawIntermissionBG=hwSym("DrawIntermissionBG",NULL);
 		HWD.pfnMakeScreenTexture= hwSym("MakeScreenTexture",NULL);
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);

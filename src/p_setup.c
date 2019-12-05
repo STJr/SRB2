@@ -2725,7 +2725,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 		F_WipeStartScreen();
-		wipestyleflags |= WSF_FADEOUT|WSF_TOWHITE;
+		wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
 
 #ifdef HWRENDER
 		// uh..........
@@ -2755,6 +2755,13 @@ boolean P_SetupLevel(boolean skipprecip)
 		}
 
 		ranspecialwipe = 1;
+	}
+
+	if (G_GetModeAttackRetryFlag())
+	{
+		if (modeattacking)
+			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+		G_ClearModeAttackRetryFlag();
 	}
 
 	// Make sure all sounds are stopped before Z_FreeTags.
@@ -2805,12 +2812,12 @@ boolean P_SetupLevel(boolean skipprecip)
 		{
 			// Don't include these in the fade!
 			char tx[64];
-			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE|V_TRANSLUCENT, M_GetText("Speeding off to..."));
+			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, M_GetText("Speeding off to..."));
 			snprintf(tx, 63, "%s%s%s",
 				mapheaderinfo[gamemap-1]->lvlttl,
 				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va("%d",mapheaderinfo[gamemap-1]->actnum) : "");
-			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT, tx);
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
+			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, tx);
 			I_UpdateNoVsync();
 		}
 
@@ -2854,6 +2861,17 @@ boolean P_SetupLevel(boolean skipprecip)
 		fromnetsave = 1;
 		loadprecip = 0;
 		loademblems = 0;
+	}
+	else if (savedata.lives > 0)
+	{
+		numgameovers = savedata.numgameovers;
+		players[consoleplayer].continues = savedata.continues;
+		players[consoleplayer].lives = savedata.lives;
+		players[consoleplayer].score = savedata.score;
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
+		emeralds = savedata.emeralds;
+		savedata.lives = 0;
 	}
 
 	// internal game map
@@ -3064,7 +3082,7 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 	&& !(netgame || multiplayer) && gamemap == 0x1d35-016464)
 	{
-		P_SpawnMobj(0640370000, 0x11000000, 0b11000110000000000000000000, MT_LETTER)->angle = ANGLE_90;
+		P_SpawnMobj(0640370000, 0x11000000, 0x3180000, MT_LETTER)->angle = ANGLE_90;
 		if (textprompts[199]->page[1].backcolor != 259)
 		{
 			char *buf = W_CacheLumpName("WATERMAP", PU_STATIC), *b = buf;
@@ -3217,18 +3235,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		G_SaveGame((UINT32)cursaveslot);
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
-
-	if (savedata.lives > 0)
-	{
-		numgameovers = savedata.numgameovers;
-		players[consoleplayer].continues = savedata.continues;
-		players[consoleplayer].lives = savedata.lives;
-		players[consoleplayer].score = savedata.score;
-		if ((botingame = ((botskin = savedata.botskin) != 0)))
-			botcolor = skins[botskin-1].prefcolor;
-		emeralds = savedata.emeralds;
-		savedata.lives = 0;
-	}
 
 	if (loadprecip) // uglier hack
 	{ // to make a newly loaded level start on the second frame.

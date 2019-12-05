@@ -198,7 +198,7 @@ void ST_Ticker(boolean run)
 
 // 0 is default, any others are special palettes.
 INT32 st_palette = 0;
-INT32 st_translucency = 0;
+INT32 st_translucency = 10;
 
 void ST_doPaletteStuff(void)
 {
@@ -353,12 +353,12 @@ void ST_LoadGraphics(void)
 // made separate so that skins code can reload custom face graphics
 void ST_LoadFaceGraphics(INT32 skinnum)
 {
-	if (skins[skinnum].sprites[SPR2_XTRA].numframes)
+	if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_LIFEPIC)
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_LIFEPIC];
 		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
-		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes)
+		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA|FF_SPR2SUPER];
 			sprframe = &sprdef->spriteframes[0];
@@ -699,6 +699,7 @@ static void ST_drawTime(void)
 			tics = (hidetime*TICRATE - stplyr->realtime);
 			if (tics < 3*TICRATE)
 				ST_drawRaceNum(tics);
+			tics += (TICRATE-1); // match the race num
 			downwards = true;
 		}
 		else
@@ -710,11 +711,12 @@ static void ST_drawTime(void)
 			// Time limit?
 			if (gametype != GT_COOP && gametype != GT_RACE && gametype != GT_COMPETITION && cv_timelimit.value && timelimitintics > 0)
 			{
-				if (timelimitintics >= stplyr->realtime)
+				if (timelimitintics > stplyr->realtime)
 				{
-					tics = (timelimitintics + (TICRATE-1) - stplyr->realtime);
+					tics = (timelimitintics - stplyr->realtime);
 					if (tics < 3*TICRATE)
 						ST_drawRaceNum(tics);
+					tics += (TICRATE-1); // match the race num
 				}
 				else // Overtime!
 					tics = 0;
@@ -1294,10 +1296,8 @@ void ST_drawTitleCard(void)
 		return;
 #endif
 
-#ifndef LEVELWIPES
 	if ((lt_ticker-lt_lasttic) > 1)
 		lt_ticker = lt_lasttic+1;
-#endif
 
 	ST_cacheLevelTitle();
 	actpat = lt_patches[0];
@@ -1351,9 +1351,7 @@ luahook:
 void ST_preLevelTitleCardDrawer(tic_t ticker, boolean update)
 {
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
-#ifndef LEVELWIPES
 	if (ticker < PRELEVELTIME-1)
-#endif
 		ST_drawWipeTitleCard();
 
 	I_OsPolling();

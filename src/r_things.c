@@ -1137,8 +1137,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	UINT32 rollangle = AngleFixed(arollangle)>>FRACBITS;
 #endif
 
-	fixed_t ang_scale = FRACUNIT;
-
 	// transform the origin point
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;
@@ -1223,8 +1221,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (sprframe->rotate != SRF_SINGLE || papersprite)
 	{
 		ang = R_PointToAngle (thing->x, thing->y) - (thing->player ? thing->player->drawangle : thing->angle);
-		if (papersprite)
-			ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
 	}
 
 	if (sprframe->rotate == SRF_SINGLE)
@@ -1286,24 +1282,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 		offset = -spr_offset;
 	offset = FixedMul(offset, this_scale);
-	tx += FixedMul(offset, ang_scale);
-	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
-
-	// off the right side?
-	if (x1 > viewwidth)
-		return;
-
 	offset2 = FixedMul(spr_width, this_scale);
-	tx += FixedMul(offset2, ang_scale);
-	x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - (papersprite ? 2 : 1);
-
-	// off the left side
-	if (x2 < 0)
-		return;
 
 	if (papersprite)
 	{
-		fixed_t yscale2, cosmul, sinmul, tz2;
+		fixed_t xscale2, yscale2, cosmul, sinmul, tz2;
 		INT32 range;
 
 		if (ang >= ANGLE_180)
@@ -1323,6 +1306,16 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale = FixedDiv(projectiony, tz);
 		if (yscale < 64) return; // Fix some funky visuals
 
+		gxt = -FixedMul(tr_x, viewsin);
+		gyt = FixedMul(tr_y, viewcos);
+		tx = -(gyt + gxt);
+		xscale = FixedDiv(projection, tz);
+		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
+
+		// off the right side?
+		if (x1 > viewwidth)
+			return;
+
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
 		gxt = FixedMul(tr_x, viewcos);
@@ -1331,15 +1324,25 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale2 = FixedDiv(projectiony, tz2);
 		if (yscale2 < 64) return; // ditto
 
+		gxt = -FixedMul(tr_x, viewsin);
+		gyt = FixedMul(tr_y, viewcos);
+		tx = -(gyt + gxt);
+		xscale2 = FixedDiv(projection, tz2);
+		x2 = (centerxfrac + FixedMul(tx,xscale2))>>FRACBITS; x2--;
+
+		// off the left side
+		if (x2 < 0)
+			return;
+
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
 
-		if (x2 > x1)
-			range = (x2 - x1);
-		else
-			range = 1;
+		if ((range = x2 - x1) <= 0)
+			return;
 
-		scalestep = (yscale2 - yscale)/range ?: 1;
+		scalestep = (yscale2 - yscale)/range;
+		scalestep = scalestep ? scalestep : 1;
+		xscale = FixedDiv(range<<FRACBITS, abs(offset2))+1;
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -1349,9 +1352,20 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		scalestep = 0;
 		yscale = sortscale;
-	}
+		tx += offset;
+		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
-	xscale = FixedMul(xscale, ang_scale);
+		// off the right side?
+		if (x1 > viewwidth)
+			return;
+
+		tx += offset2;
+		x2 = ((centerxfrac + FixedMul(tx,xscale))>>FRACBITS); x2--;
+
+		// off the left side
+		if (x2 < 0)
+			return;
+	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
 	{
