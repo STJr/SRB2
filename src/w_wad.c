@@ -1229,7 +1229,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 		{
 			size_t bytesread = fread(dest, 1, size, handle);
 			if (R_IsLumpPNG((UINT8 *)dest, bytesread))
-				I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", l->name2, wadfiles[wad]->filename);
+				W_ThrowPNGError(l->name2, wadfiles[wad]->filename);
 			return bytesread;
 		}
 #else
@@ -1270,7 +1270,8 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			Z_Free(rawData);
 			Z_Free(decData);
 #ifdef NO_PNG_LUMPS
-			ErrorIfPNG(dest, size, wadfiles[wad]->filename, l->name2);
+			if (R_IsLumpPNG((UINT8 *)dest, size))
+				W_ThrowPNGError(l->name2, wadfiles[wad]->filename);
 #endif
 			return size;
 #else
@@ -1332,7 +1333,8 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			Z_Free(decData);
 
 #ifdef NO_PNG_LUMPS
-			ErrorIfPNG(dest, size, wadfiles[wad]->filename, l->name2);
+			if (R_IsLumpPNG((UINT8 *)dest, size))
+				W_ThrowPNGError(l->name2, wadfiles[wad]->filename);
 #endif
 			return size;
 		}

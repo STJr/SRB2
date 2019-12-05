@@ -1623,11 +1623,14 @@ static void Y_CalculateCompetitionWinners(void)
 		for (j = 0; j < 5; j++)
 			bestat[j] = true;
 
+		if ((players[i].pflags & PF_GAMETYPEOVER) || players[i].lives <= 0)
+			players[i].rings = 0;
+
 		times[i]    = players[i].realtime;
 		rings[i]    = (UINT32)max(players[i].rings, 0);
 		maxrings[i] = (UINT32)players[i].totalring;
 		monitors[i] = (UINT32)players[i].numboxes;
-		scores[i]   = (UINT32)min(players[i].score, 99999990);
+		scores[i]   = (UINT32)min(players[i].score, MAXSCORE);
 
 		for (j = 0; j < MAXPLAYERS; j++)
 		{
