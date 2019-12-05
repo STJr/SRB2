@@ -2084,7 +2084,7 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 	for (i = 0; i < slen; ++i)
 	{
 		c = newstring[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+		if ((UINT8)c & 0x80) //color parsing! -Inuyasha 2.16.09
 			continue;
 
 		if (c == '\n')
