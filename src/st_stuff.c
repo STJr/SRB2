@@ -1348,16 +1348,12 @@ luahook:
 //
 // Drawer for G_PreLevelTitleCard.
 //
-void ST_preLevelTitleCardDrawer(tic_t ticker, boolean update)
+void ST_preLevelTitleCardDrawer(void)
 {
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
-	if (ticker < PRELEVELTIME-1)
-		ST_drawWipeTitleCard();
-
+	ST_drawWipeTitleCard();
 	I_OsPolling();
 	I_UpdateNoBlit();
-	if (update)
-		I_FinishUpdate(); // page flip or blit buffer
 }
 
 //
