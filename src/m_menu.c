@@ -6972,7 +6972,9 @@ static void M_DrawEmblemHints(void)
 	x = (local > NUMHINTS ? 4 : 12);
 	y = 8;
 
-	for (i = 0; i < numemblems; i++)
+	if (!local)
+		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
+	else for (i = 0; i < numemblems; i++)
 	{
 		emblem = &emblemlocations[i];
 		if (emblem->level != gamemap || emblem->type > ET_SKIN)
@@ -6993,7 +6995,7 @@ static void M_DrawEmblemHints(void)
 		if (emblem->hint[0])
 			hint = emblem->hint;
 		else
-			hint = M_GetText("No hints available.");
+			hint = M_GetText("No hint available for this emblem.");
 		hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
 		if (local > NUMHINTS)
 			V_DrawThinString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
@@ -7010,8 +7012,6 @@ static void M_DrawEmblemHints(void)
 		else if (j >= NUMHINTS*2)
 			break;
 	}
-	if (!j)
-		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
 
 	M_DrawGenericMenu();
 }
