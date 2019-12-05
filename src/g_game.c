@@ -1847,7 +1847,7 @@ void G_PreLevelTitleCard(void)
 		if (takescreenshot) // Only take screenshots after drawing.
 			M_DoScreenShot();
 	}
-	if (!st_overlay)
+	if (!cv_showhud.value)
 		wipestyleflags = WSF_CROSSFADE;
 }
 
