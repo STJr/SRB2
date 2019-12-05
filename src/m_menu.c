@@ -859,7 +859,7 @@ static menuitem_t SP_NightsAttackLevelSelectMenu[] =
 // Single Player Nights Attack
 static menuitem_t SP_NightsAttackMenu[] =
 {
-	{IT_STRING|IT_CALL,        NULL, "Level Select...",  &M_NightsAttackLevelSelect,  52},
+	{IT_STRING|IT_KEYHANDLER,        NULL, "Level Select...",  &M_HandleTimeAttackLevelSelect,  52},
 	{IT_STRING|IT_CVAR,        NULL, "Show Records For", &cv_dummymares,              62},
 
 	{IT_DISABLED,              NULL, "Guest Option...",  &SP_NightsGuestReplayDef,    100},
@@ -9273,7 +9273,10 @@ static void M_HandleTimeAttackLevelSelect(INT32 choice)
 			break;
 
 		case KEY_ENTER:
-			M_TimeAttackLevelSelect(0);
+			if (levellistmode == LLM_NIGHTSATTACK)
+				M_NightsAttackLevelSelect(0);
+			else
+				M_TimeAttackLevelSelect(0);
 			break;
 
 		case KEY_ESCAPE:
@@ -9405,7 +9408,24 @@ void M_DrawNightsAttackMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
 
-		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
+		y = 32+lsheadingheight;
+		V_DrawSmallScaledPatch(208, y, 0, PictureOfLevel);
+
+		// Draw press ESC to exit string on main nights attack menu
+		if (currentMenu == &SP_NightsAttackDef)
+		{
+			if (itemOn == nalevel)
+			{
+				/* Draw arrows !! */
+				y = y + 25 - 4;
+				V_DrawCharacter(208 - 10 - (skullAnimCounter/5), y,
+						'\x1C' | V_YELLOWMAP, false);
+				V_DrawCharacter(208 + 80 + 2 + (skullAnimCounter/5), y,
+						'\x1D' | V_YELLOWMAP, false);
+			}
+			// Draw press ESC to exit string on main record attack menu
+			V_DrawString(104-72, 180, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
+		}
 
 		// Super Sonic
 		M_DrawNightsAttackSuperSonic();
@@ -9468,10 +9488,6 @@ void M_DrawNightsAttackMenu(void)
 			}
 		}
 	}
-
-	// Draw press ESC to exit string on main nights attack menu
-	if (currentMenu == &SP_NightsAttackDef)
-		V_DrawString(104-72, 180, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
 
 	// ALWAYS DRAW level even when not on this menu!
 	if (currentMenu != &SP_NightsAttackDef)
