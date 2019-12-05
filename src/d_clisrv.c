@@ -1301,7 +1301,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	M_Memcpy(netbuffer->u.serverinfo.mapmd5, mapmd5, 16);
 
-	if (*mapheaderinfo[gamemap-1]->lvlttl)
+	if (mapheaderinfo[gamemap-1] && *mapheaderinfo[gamemap-1]->lvlttl)
 	{
 		char *read = mapheaderinfo[gamemap-1]->lvlttl, *writ = netbuffer->u.serverinfo.maptitle;
 		while (writ < (netbuffer->u.serverinfo.maptitle+32) && *read != '\0')
@@ -1321,12 +1321,13 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	netbuffer->u.serverinfo.maptitle[32] = '\0';
 
-	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
+	if (mapheaderinfo[gamemap-1] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
 		netbuffer->u.serverinfo.iszone = 1;
 	else
 		netbuffer->u.serverinfo.iszone = 0;
 
-	netbuffer->u.serverinfo.actnum = mapheaderinfo[gamemap-1]->actnum;
+	if (mapheaderinfo[gamemap-1])
+		netbuffer->u.serverinfo.actnum = mapheaderinfo[gamemap-1]->actnum;
 
 	p = PutFileNeeded();
 

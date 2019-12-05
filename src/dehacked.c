@@ -286,7 +286,7 @@ static void clear_levels(void)
 	// we may as well try to save some memory, right?
 	for (i = 0; i < NUMMAPS; ++i)
 	{
-		if (!mapheaderinfo[i])
+		if (!mapheaderinfo[i] || i == (tutorialmap-1))
 			continue;
 
 		// Custom map header info
