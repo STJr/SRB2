@@ -9233,7 +9233,7 @@ void M_DrawTimeAttackMenu(void)
 
 		V_DrawString(104-72, 73+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
 
-		V_DrawRightAlignedString(104+64, 73+lsheadingheight/2, V_ALLOWLOWERCASE|((mapvisited[cv_nextmap.value-1] & MV_PERFECT) ? V_YELLOWMAP : 0), beststr);
+		V_DrawRightAlignedString(104+64, 73+lsheadingheight/2, V_ALLOWLOWERCASE|((mapvisited[cv_nextmap.value-1] & MV_PERFECTRA) ? V_YELLOWMAP : 0), beststr);
 
 		V_DrawRightAlignedString(104+72, 83+lsheadingheight/2, V_ALLOWLOWERCASE, reqrings);
 	}

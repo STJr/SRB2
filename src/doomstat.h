@@ -466,7 +466,8 @@ extern recorddata_t *mainrecords[NUMMAPS];
 #define MV_ALLEMERALDS  4
 #define MV_ULTIMATE     8
 #define MV_PERFECT     16
-#define MV_MAX         31 // used in gamedata check
+#define MV_PERFECTRA   32
+#define MV_MAX         63 // used in gamedata check, update whenever MV's are added
 #define MV_MP         128
 extern UINT8 mapvisited[NUMMAPS];
 

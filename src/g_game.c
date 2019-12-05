@@ -3233,9 +3233,13 @@ static void G_UpdateVisited(void)
 		// eh, what the hell
 		if (ultimatemode)
 			mapvisited[gamemap-1] |= MV_ULTIMATE;
-		// may seem incorrect but IS possible in what the main game uses as special stages, and nummaprings will be -1 in NiGHTS
+		// may seem incorrect but IS possible in what the main game uses as mp special stages, and nummaprings will be -1 in NiGHTS
 		if (nummaprings > 0 && players[consoleplayer].rings >= nummaprings)
+		{
 			mapvisited[gamemap-1] |= MV_PERFECT;
+			if (modeattacking)
+				mapvisited[gamemap-1] |= MV_PERFECTRA;
+		}
 		if (!spec)
 		{
 			// not available to special stages because they can only really be done in one order in an unmodified game, so impossible for first six and trivial for seventh
