@@ -327,7 +327,7 @@
 /* If pnglibconf.h is missing, you can
  * copy scripts/pnglibconf.h.prebuilt to pnglibconf.h
  */
-#   include "pnglibconf.h"
+#   include "projects\pnglibconf.h"
 #endif
 
 #define PNG_APNG_SUPPORTED
@@ -336,7 +336,7 @@
 
 #ifndef PNG_VERSION_INFO_ONLY
 /* Machine specific configuration. */
-#  include "pngconf.h"
+#  include "projects\pngconf.h"
 #endif
 
 /*
