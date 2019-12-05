@@ -32,6 +32,7 @@
 #include "SDL.h"
 
 #ifdef _MSC_VER
+#include <windows.h>
 #pragma warning(default : 4214 4244)
 #endif
 
