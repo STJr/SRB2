@@ -497,7 +497,7 @@ static void D_Display(void)
 			{
 				lt_ticker--;
 				lt_lasttic = lt_ticker;
-				ST_preLevelTitleCardDrawer(false);
+				ST_preLevelTitleCardDrawer();
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 				F_WipeStartScreen();
 			}

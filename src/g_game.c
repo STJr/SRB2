@@ -1839,7 +1839,8 @@ void G_PreLevelTitleCard(void)
 		lasttime = nowtime;
 
 		ST_runTitleCard();
-		ST_preLevelTitleCardDrawer(true);
+		ST_preLevelTitleCardDrawer();
+		I_FinishUpdate(); // page flip or blit buffer
 
 		if (moviemode)
 			M_SaveFrame();
