@@ -1997,7 +1997,7 @@ void P_XYMovement(mobj_t *mo)
 				{
 					mo->momz = transfermomz;
 					mo->standingslope = NULL;
-					if (player->pflags & PF_SPINNING)
+					if (player && (player->pflags & PF_SPINNING))
 						player->pflags |= PF_THOKKED;
 				}
 			}
@@ -11811,7 +11811,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 			return; // no doubles
 	}
 
-	if (i == MT_TOKEN && ((gametype != GT_COOP && gametype != GT_COMPETITION) || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
+	if (i == MT_TOKEN && ((gametype != GT_COOP && gametype != GT_COMPETITION) || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
 	if (i == MT_EMBLEM && (netgame || multiplayer || (modifiedgame && !savemoddata))) // No cheating!!

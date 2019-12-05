@@ -94,7 +94,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"steam2", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Steam jet"}, // Tails 06-19-2001
   {"wbreak",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wood breaking"},
   {"ambmac", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Machinery"},
-  {"spsmsh", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy impact"},
+  {"spsmsh",  true,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy impact"},
 
   {"rainin",  true,  24,  4, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rain"},
   {"litng1", false,  16,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lightning"},

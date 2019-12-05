@@ -568,7 +568,9 @@ or NULL if we want to allocate it now.
 static INT32
 Ploadflat (levelflat_t *levelflat, const char *flatname)
 {
+#ifndef NO_PNG_LUMPS
 	UINT8         buffer[8];
+#endif
 
 	lumpnum_t    flatnum;
 	int       texturenum;
