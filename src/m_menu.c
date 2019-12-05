@@ -6955,10 +6955,22 @@ static void M_EmblemHints(INT32 choice)
 
 static void M_DrawEmblemHints(void)
 {
-	INT32 i, j = 0;
-	UINT32 collected = 0;
+	INT32 i, j = 0, x, y;
+	UINT32 collected = 0, local = 0;
 	emblem_t *emblem;
 	const char *hint;
+
+	for (i = 0; i < numemblems; i++)
+	{
+		emblem = &emblemlocations[i];
+		if (emblem->level != gamemap || emblem->type > ET_SKIN)
+			continue;
+		if (++local >= NUMHINTS*2)
+			break;
+	}
+
+	x = (local > NUMHINTS ? 4 : 12);
+	y = 8;
 
 	for (i = 0; i < numemblems; i++)
 	{
@@ -6969,13 +6981,13 @@ static void M_DrawEmblemHints(void)
 		if (emblem->collected)
 		{
 			collected = V_GREENMAP;
-			V_DrawMappedPatch(12, 12+(28*j), 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_CACHE),
+			V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_CACHE),
 				R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 		}
 		else
 		{
 			collected = 0;
-			V_DrawScaledPatch(12, 12+(28*j), 0, W_CachePatchName("NEEDIT", PU_CACHE));
+			V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_CACHE));
 		}
 
 		if (emblem->hint[0])
@@ -6983,9 +6995,19 @@ static void M_DrawEmblemHints(void)
 		else
 			hint = M_GetText("No hints available.");
 		hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
-		V_DrawString(40, 8+(28*j), V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+		if (local > NUMHINTS)
+			V_DrawThinString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+		else
+			V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
 
-		if (++j >= NUMHINTS)
+		y += 28;
+
+		if (++j == NUMHINTS)
+		{
+			x = 4+(BASEVIDWIDTH/2);
+			y = 8;
+		}
+		else if (j >= NUMHINTS*2)
 			break;
 	}
 	if (!j)
