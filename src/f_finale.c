@@ -1274,6 +1274,7 @@ static const char *credits[] = {
 	// Creators of small quantities of sprite/texture assets
 	// - Arietty - New Green Hill-styled textures
 	// - Scizor300 - the only other contributor to the 2.0 SRB2 Asset Pack
+	// - Revan/Icefox - the new Nimbus Ruins skybox
 	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
