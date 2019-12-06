@@ -129,7 +129,7 @@
 extern FILE *logstream;
 #endif
 
-#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
+//#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
 #define VERSION    0 // Game version
 #define SUBVERSION 0 // more precise version number
@@ -140,8 +140,8 @@ extern FILE *logstream;
 #else
 #define VERSION    202 // Game version
 #define SUBVERSION 0  // more precise version number
-#define VERSIONSTRING "v2.2"
-#define VERSIONSTRINGW L"v2.2"
+#define VERSIONSTRING "v2.2.0"
+#define VERSIONSTRINGW L"v2.2.0"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -199,14 +199,14 @@ extern FILE *logstream;
 
 // The Modification ID; must be obtained from Rob ( https://mb.srb2.org/private.php?do=newpm&u=546 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
-// "12" is the default mod ID for version 2.1
-#define MODID 12
+// "18" is the default mod ID for version 2.2
+#define MODID 18
 
 // The Modification Version, starting from 1. Do not follow your version string for this,
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
-// Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 30
+// Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
+#define MODVERSION 40
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
