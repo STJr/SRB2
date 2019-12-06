@@ -29,8 +29,8 @@
  * Last updated 2019 / 12 / 06 - v2.2.0 - main assets
  * Last updated 20?? / ?? / ?? - v2.2.? - patch.pk3
  */
-#define ASSET_HASH_SRB2_PK3   "3944e92e74078145abb312ad0b736966"
-#define ASSET_HASH_ZONES_PK3  "eeda723d16dc26a7450669b4c06d3ffc"
+#define ASSET_HASH_SRB2_PK3   "f31368d13c9cb73563475f201bac29d1"
+#define ASSET_HASH_ZONES_PK3  "cd44b67b9f7e8798ed64ec8698531d8c"
 #define ASSET_HASH_PLAYER_DTA "56a247e074dd0dc794b6617efef1e918"
 #ifdef USE_PATCH_DTA
 #define ASSET_HASH_PATCH_PK3  "there is no patch.pk3, only zuul"
