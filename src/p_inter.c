@@ -2643,6 +2643,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				mo = P_SpawnMobj(target->x, target->y, target->z, MT_EXTRALARGEBUBBLE);
 			mo->destscale = target->scale;
 			P_SetScale(mo, mo->destscale);
+			P_SetMobjState(mo, mo->info->raisestate);
 			break;
 
 		case MT_YELLOWSHELL:

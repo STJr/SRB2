@@ -17667,7 +17667,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_NOGRAVITY|MF_SCENERY, // flags
-		S_NULL          // raisestate
+		S_EXTRALARGEBUBBLE // raisestate
 	},
 
 	{           // MT_WATERZAP
