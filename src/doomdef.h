@@ -199,8 +199,8 @@ extern FILE *logstream;
 
 // The Modification ID; must be obtained from Rob ( https://mb.srb2.org/private.php?do=newpm&u=546 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
-// "12" is the default mod ID for version 2.1
-#define MODID 12
+// "18" is the default mod ID for version 2.2
+#define MODID 18
 
 // The Modification Version, starting from 1. Do not follow your version string for this,
 // it's only for detection of the version the player is using so the MS can alert them of an update.
