@@ -205,8 +205,8 @@ extern FILE *logstream;
 // The Modification Version, starting from 1. Do not follow your version string for this,
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
-// Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 31
+// Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
+#define MODVERSION 40
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
