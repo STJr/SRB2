@@ -34,11 +34,11 @@ SRB2 Message Board:
 https://mb.srb2.org
 
 SRB2 Official Discord:
-https://discord.gg/pYDXzpX
+https://discord.gg/pYDXzpX (13+)
 
 COPYRIGHT AND DISCLAIMER
 
-Design and content on SRB2 is copyright 1998-2018 by Sonic Team Junior.
+Design and content on SRB2 is copyright 1998-2019 by Sonic Team Junior.
 All non-original material on SRB2.ORG is copyrighted by their
 respective owners, and no copyright infringement is intended. The owner
 of the SRB2.ORG domain is only acting as an ISP, and is therefore not
