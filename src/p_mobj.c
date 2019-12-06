@@ -3794,13 +3794,13 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 				P_ResetCamera(player, thiscam);
 				resetcalled = true;
 			}
-			else
+			else if (!resetcalled)
 			{
 				fixed_t camspeed = P_AproxDistance(thiscam->momx, thiscam->momy);
 
 				P_SlideCameraMove(thiscam);
 
-				if (!resetcalled && P_AproxDistance(thiscam->momx, thiscam->momy) == camspeed)
+				if (P_AproxDistance(thiscam->momx, thiscam->momy) == camspeed)
 					{
 						P_ResetCamera(player, thiscam);
 						resetcalled = true;
