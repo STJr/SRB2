@@ -892,6 +892,13 @@ static void F_IntroDrawScene(void)
 				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, rockpat, R_GetTranslationColormap(TC_BLINK, SKINCOLOR_AQUA, GTC_CACHE));
 		}
 	}
+	else if (intro_scenenum == 1 && intro_curtime < 5*TICRATE)
+	{
+		INT32 trans = intro_curtime + 10 - (5*TICRATE);
+		if (trans < 0)
+			trans = 0;
+		V_DrawRightAlignedString(BASEVIDWIDTH-4, BASEVIDHEIGHT-12, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), "\x86""Press ""\x82""ENTER""\x86"" to skip...");
+	}
 
 	if (animtimer)
 		animtimer--;
