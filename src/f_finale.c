@@ -1341,7 +1341,7 @@ void F_StartCredits(void)
 	S_StopMusic();
 	S_StopSounds();
 
-	S_ChangeMusicInternal("_creds", false);
+	S_ChangeMusicInternal("_creds", true);
 
 	finalecount = 0;
 	animtimer = 0;
@@ -1352,7 +1352,7 @@ void F_CreditDrawer(void)
 {
 	UINT16 i;
 	INT16 zagpos = (timetonext - finalecount - animtimer) % 32;
-	fixed_t y = (80<<FRACBITS) - 5*(animtimer<<FRACBITS)/8;
+	fixed_t y = (80<<FRACBITS) - (animtimer<<FRACBITS>>1);
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
@@ -1402,7 +1402,7 @@ void F_CreditTicker(void)
 {
 	// "Simulate" the drawing of the credits so that dedicated mode doesn't get stuck
 	UINT16 i;
-	fixed_t y = (80<<FRACBITS) - 5*(animtimer<<FRACBITS)/8;
+	fixed_t y = (80<<FRACBITS) - (animtimer<<FRACBITS>>1);
 
 	// Calculate credits height to display art properly
 	if (credits_height == 0)
@@ -1416,8 +1416,7 @@ void F_CreditTicker(void)
 				default: credits_height += 12; break;
 			}
 		}
-		credits_height = 4*8*credits_height/5/5; // account for scroll speed (4/5 accounts for patch drawing, inverse 5/8 accounts for text scroll)
-		//credits_height += 280; // account for starting offset
+		credits_height = 131*credits_height/80; // account for scroll speeds. This is a guess now, so you may need to update this if you change the credits length.
 	}
 
 	// Draw credits text on top
