@@ -3790,21 +3790,18 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			dummy.z = thiscam->z;
 			dummy.height = thiscam->height;
 			if (!resetcalled && !(player->pflags & PF_NOCLIP) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
-			{
 				P_ResetCamera(player, thiscam);
-				resetcalled = true;
-			}
-			else if (!resetcalled)
+			else
 			{
 				fixed_t camspeed = P_AproxDistance(thiscam->momx, thiscam->momy);
 
 				P_SlideCameraMove(thiscam);
 
-				if (P_AproxDistance(thiscam->momx, thiscam->momy) == camspeed)
-					{
-						P_ResetCamera(player, thiscam);
-						resetcalled = true;
-					}
+				if (!resetcalled && P_AproxDistance(thiscam->momx, thiscam->momy) == camspeed)
+				{
+					P_ResetCamera(player, thiscam);
+					resetcalled = true;
+				}
 			}
 			if (resetcalled) // Okay this means the camera is fully reset.
 				return true;
