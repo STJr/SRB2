@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2018 by Sonic Team Junior.
+// Copyright (C) 2011-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -181,7 +181,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 				spin = true;
 			else if (!jump_last)
 				jump = true;
-			
+
 			// Abort if the player moves away or spins
 			if (dist > followthres || player->dashspeed)
 				flymode = 0;
@@ -296,7 +296,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			cmd->sidemove = 8 * pcmd->sidemove / 10;
 		}
 	}
-	
+
 	// ********
 	// JUMP
 	if (!(flymode || spinmode))
@@ -449,7 +449,7 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 			cmd->sidemove -= MAXPLMOVE<<FRACBITS>>16;
 		if (straferight)
 			cmd->sidemove += MAXPLMOVE<<FRACBITS>>16;
-		
+
 		// cap inputs so the bot can't accelerate faster diagonally
 		angle = R_PointToAngle2(0, 0, cmd->sidemove << FRACBITS, cmd->forwardmove << FRACBITS);
 		{

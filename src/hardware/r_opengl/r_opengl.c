@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-// Copyright (C) 1998-2018 by Sonic Team Junior.
+// Copyright (C) 1998-2019 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -1404,7 +1404,7 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 
 typedef struct vbo_vertex_s
 {
-	double x, y, z;
+	float x, y, z;
 	float u, v;
 	unsigned char r, g, b, a;
 } vbo_vertex_t;
@@ -1448,17 +1448,17 @@ static INT32 lasttex = -1;
 
 static void SkyVertex(vbo_vertex_t *vbo, int r, int c)
 {
-	const double radians = (M_PIl / 180.0f);
-	const double scale = 10000.0f;
+	const float radians = (float)(M_PIl / 180.0f);
+	const float scale = 10000.0f;
 	const float maxSideAngle = 60.0f;
 
 	float topAngle = (c / (float)columns * 360.0f);
 	float sideAngle = (maxSideAngle * (rows - r) / rows);
-	double height = sin(sideAngle * radians);
-	double realRadius = scale * cos(sideAngle * radians);
-	double x = realRadius * cos(topAngle * radians);
-	double y = (!yflip) ? scale * height : -scale * height;
-	double z = realRadius * sin(topAngle * radians);
+	float height = (float)(sin(sideAngle * radians));
+	float realRadius = (float)(scale * cos(sideAngle * radians));
+	float x = (float)(realRadius * cos(topAngle * radians));
+	float y = (!yflip) ? scale * height : -scale * height;
+	float z = (float)(realRadius * sin(topAngle * radians));
 	float timesRepeat = (4 * (256.0f / texw));
 	if (fpclassify(timesRepeat) == FP_ZERO)
 		timesRepeat = 1.0f;

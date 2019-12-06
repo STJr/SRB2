@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1174,11 +1174,11 @@ static menuitem_t OP_CameraOptionsMenu[] =
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 10},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 20},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 30},
-	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 40},
+	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 40},
 
-	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
-	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
-	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
 
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 100},
 };
@@ -1188,11 +1188,11 @@ static menuitem_t OP_Camera2OptionsMenu[] =
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 10},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 20},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 30},
-	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 40},
+	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 40},
 
-	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
-	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
-	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
 
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 100},
 };

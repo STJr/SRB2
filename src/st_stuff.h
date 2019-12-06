@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -52,7 +52,7 @@ void ST_startTitleCard(void);
 void ST_runTitleCard(void);
 void ST_drawTitleCard(void);
 void ST_preDrawTitleCard(void);
-void ST_preLevelTitleCardDrawer(tic_t ticker, boolean update);
+void ST_preLevelTitleCardDrawer(void);
 void ST_drawWipeTitleCard(void);
 
 extern tic_t lt_ticker, lt_lasttic;

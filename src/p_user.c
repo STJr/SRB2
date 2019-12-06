@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -6111,7 +6111,7 @@ static void P_3dMovement(player_t *player)
 			// (Why was it so complicated before? ~Red)
 			controldirection = R_PointToAngle2(0, 0, cmd->forwardmove*FRACUNIT, -cmd->sidemove*FRACUNIT)+movepushangle;
 
-			movepushforward = max(abs(cmd->sidemove), abs(cmd->forwardmove)) * (thrustfactor * acceleration);
+			movepushforward = FixedHypot(cmd->sidemove, cmd->forwardmove) * (thrustfactor * acceleration);
 
 			// Allow a bit of movement while spinning
 			if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
@@ -8247,7 +8247,7 @@ static void P_MovePlayer(player_t *player)
 	if (player->pflags & PF_GLIDING)
 	{
 		mobj_t *mo = player->mo; // seriously why isn't this at the top of the function hngngngng
-		fixed_t leeway;
+		fixed_t leeway = !P_AnalogMove(player) ? FixedAngle(cmd->sidemove*(FRACUNIT)) : 0;
 		fixed_t glidespeed = player->actionspd;
 		fixed_t momx = mo->momx - player->cmomx, momy = mo->momy - player->cmomy;
 		angle_t angle, moveangle = R_PointToAngle2(0, 0, momx, momy);
@@ -8267,7 +8267,6 @@ static void P_MovePlayer(player_t *player)
 		}
 
 		// Strafing while gliding.
-		leeway = FixedAngle(cmd->sidemove*(FRACUNIT));
 		angle = mo->angle - leeway;
 
 		if (!player->skidtime) // TODO: make sure this works in 2D!
@@ -9682,7 +9681,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (player->exiting)
 	{
 		if (mo->target && mo->target->type == MT_SIGN && mo->target->spawnpoint
-		&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value))
+		&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value)
+		&& !(twodlevel || (mo->flags2 & MF2_TWOD)))
 			sign = mo->target;
 		else if ((player->powers[pw_carry] == CR_NIGHTSMODE)
 		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
@@ -9693,7 +9693,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 	}
 
-	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
+	cameranoclip = (sign || player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
 	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || tutorialmode))
 	{
@@ -9826,7 +9826,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
 		}
 	}
-	else if (P_AnalogMove(player)) // Analog
+	else if (P_AnalogMove(player) && !sign) // Analog
 		angle = R_PointToAngle2(thiscam->x, thiscam->y, mo->x, mo->y);
 	else if (demoplayback)
 	{
@@ -9850,7 +9850,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		thiscam->angle = angle;
 	}
 
-	if ((((thiscam == &camera) && cv_analog.value) || ((thiscam != &camera) && cv_analog2.value) || demoplayback) && !objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
+	if ((((thiscam == &camera) && cv_analog.value) || ((thiscam != &camera) && cv_analog2.value) || demoplayback) && !sign && !objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
 	{
 #ifdef REDSANALOG
 		if ((player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)); else
@@ -9888,24 +9888,22 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			camheight = FixedMul(camheight, 3*FRACUNIT/2);
 		}
 
-		// x1.2 dist for analog
-		if (P_AnalogMove(player))
-		{
-			dist = FixedMul(dist, 6*FRACUNIT/5);
-			camheight = FixedMul(camheight, 6*FRACUNIT/5);
-		}
-
-		if (sign)
+		if (sign) // signpost camera has specific placement
 		{
 			camheight = mo->scale << 7;
 			camspeed = FRACUNIT/12;
+		}
+		else if (P_AnalogMove(player)) // x1.2 dist for analog
+		{
+			dist = FixedMul(dist, 6*FRACUNIT/5);
+			camheight = FixedMul(camheight, 6*FRACUNIT/5);
 		}
 
 		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_GENERIC || player->powers[pw_carry] == CR_MACESPIN))
 			dist <<= 1;
 	}
 
-	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
+	if (!sign && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
 		dist = FixedMul(dist, player->camerascale);
 
 	checkdist = dist;
@@ -9995,7 +9993,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (sign)
 	{
-		if (mo->eflags & MFE_VERTICALFLIP)
+		if (sign->eflags & MFE_VERTICALFLIP)
 			z = sign->ceilingz - pviewheight - camheight;
 		else
 			z = sign->floorz + pviewheight + camheight;
