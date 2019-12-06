@@ -3267,7 +3267,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// If so...
 	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
-		G_PreLevelTitleCard(lt_ticker, true);
+		G_PreLevelTitleCard();
 
 	return true;
 }

@@ -1828,7 +1828,7 @@ void G_StartTitleCard(void)
 //
 // Run the title card before fading in to the level.
 //
-void G_PreLevelTitleCard(tic_t ticker, boolean update)
+void G_PreLevelTitleCard(void)
 {
 	tic_t starttime = I_GetTime();
 	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
@@ -1842,7 +1842,8 @@ void G_PreLevelTitleCard(tic_t ticker, boolean update)
 		lasttime = nowtime;
 
 		ST_runTitleCard();
-		ST_preLevelTitleCardDrawer(ticker, update);
+		ST_preLevelTitleCardDrawer();
+		I_FinishUpdate(); // page flip or blit buffer
 
 		if (moviemode)
 			M_SaveFrame();
