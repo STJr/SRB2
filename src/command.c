@@ -1586,14 +1586,16 @@ void CV_StealthSet(consvar_t *var, const char *value)
   */
 static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth)
 {
-	char val[32];
+	char val[SKINNAMESIZE+1];
 
 	if (var == &cv_forceskin) // Special handling.
 	{
+		const char *tmpskin = NULL;
 		if ((value < 0) || (value >= numskins))
-			sprintf(val, "None");
+			tmpskin = "None";
 		else
-			strncpy(val, skins[value].name, sizeof val);
+			tmpskin = skins[value].name;
+		strncpy(val, tmpskin, SKINNAMESIZE);
 	}
 	else
 		sprintf(val, "%d", value);
