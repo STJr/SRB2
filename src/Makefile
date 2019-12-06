@@ -2,7 +2,7 @@
 #     GNU Make makefile for SRB2
 #############################################################################
 # Copyright (C) 1998-2000 by DooM Legacy Team.
-# Copyright (C) 2003-2018 by Sonic Team Junior.
+# Copyright (C) 2003-2019 by Sonic Team Junior.
 #
 # This program is free software distributed under the
 # terms of the GNU General Public License, version 2.
