@@ -7087,7 +7087,7 @@ static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
 		seg = P_SpawnMobj(x, y, z, MT_MINECARTSEG);
 		P_SetMobjState(seg, (statenum_t)(S_MINECARTSEG_FRONT + i));
 		if (i >= 2)
-			seg->extravalue1 = (i == 2) ? -20 : 20;
+			seg->extravalue1 = (i == 2) ? -18 : 18; // make -20/20 when papersprite projection fixed
 		else
 		{
 			seg->extravalue2 = (i == 0) ? 24 : -24;
