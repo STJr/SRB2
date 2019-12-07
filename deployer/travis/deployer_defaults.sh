@@ -27,10 +27,10 @@
 : ${_DPL_PACKAGE_ASSET}         # Build asset installation package. Linux only.
 
 # Asset File Parameters
-: ${ASSET_ARCHIVE_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-assets.7z}
-: ${ASSET_ARCHIVE_OPTIONAL_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-optional-assets.7z}
-: ${ASSET_FILES_HASHED:=srb2.srb zones.dta player.dta rings.dta patch.dta}
-: ${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt}
+: ${ASSET_ARCHIVE_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-assets.7z}
+: ${ASSET_ARCHIVE_OPTIONAL_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-optional-assets.7z}
+: ${ASSET_FILES_HASHED:=srb2.pk3 zones.pk3 player.dta patch.pk3}
+: ${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt README-SDL.txt}
 : ${ASSET_FILES_OPTIONAL_GET:=0}
 
 # FTP Parameters
@@ -51,7 +51,7 @@
 
 # Package Parameters
 : ${PACKAGE_NAME:=srb2}
-: ${PACKAGE_VERSION:=2.1.23}
+: ${PACKAGE_VERSION:=2.2.0}
 : ${PACKAGE_SUBVERSION}         # Highly recommended to set this to reflect the distro series target (e.g., ~18.04bionic)
 : ${PACKAGE_REVISION}           # Defaults to UTC timestamp
 : ${PACKAGE_INSTALL_PATH:=/usr/games/SRB2}
@@ -62,12 +62,12 @@
 : ${PACKAGE_GROUP_NAME_EMAIL:=Sonic Team Junior <stjr@srb2.org>}
 : ${PACKAGE_WEBSITE:=<http://www.srb2.org>}
 
-: ${PACKAGE_ASSET_MINVERSION:=2.1.21}  # Number this the version BEFORE the actual required version, because we do a > check
-: ${PACKAGE_ASSET_MAXVERSION:=2.1.24}  # Number this the version AFTER the actual required version, because we do a < check
+: ${PACKAGE_ASSET_MINVERSION:=2.1.26}  # Number this the version BEFORE the actual required version, because we do a > check
+: ${PACKAGE_ASSET_MAXVERSION:=2.2.1}  # Number this the version AFTER the actual required version, because we do a < check
 
 : ${PROGRAM_NAME:=Sonic Robo Blast 2}
 : ${PROGRAM_VENDOR:=Sonic Team Junior}
-: ${PROGRAM_VERSION:=2.1.23}
+: ${PROGRAM_VERSION:=2.2.0}
 : ${PROGRAM_DESCRIPTION:=A free 3D Sonic the Hedgehog fangame closely inspired by the original Sonic games on the Sega Genesis.}
 : ${PROGRAM_FILENAME:=srb2}
 
