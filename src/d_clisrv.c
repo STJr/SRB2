@@ -13,7 +13,7 @@
 #if !defined (UNDER_CE)
 #include <time.h>
 #endif
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h> //for unlink
 #endif
 

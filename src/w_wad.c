@@ -11,7 +11,7 @@
 /// \file  w_wad.c
 /// \brief Handles WAD file header, directory, lump I/O
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #endif
 

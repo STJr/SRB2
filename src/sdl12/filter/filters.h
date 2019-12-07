@@ -178,7 +178,7 @@ FUNCINLINE static ATTRINLINE int Setupf2x(int width, int height, int bpp)
 }
 #else
 
-#ifdef __GNUC__ // __attribute__ ((X))
+#if defined (__GNUC__) || defined (__TINYC__)
 #if (__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1)
 #define FUNCINLINE __attribute__((always_inline))
 #endif

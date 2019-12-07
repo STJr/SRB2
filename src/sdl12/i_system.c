@@ -47,7 +47,7 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #elif defined (_MSC_VER)
 #include <direct.h>
@@ -193,7 +193,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #define DEFAULTSEARCHPATH3 "/usr/local"
 #elif defined (_XBOX)
 #define NOCWD
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <openxdk/debug.h>
 #endif
 #define DEFAULTWADLOCATION1 "c:\\srb2"
@@ -2231,7 +2231,7 @@ INT32 I_StartupSystem(void)
 	SDL_version SDLcompiled;
 	const SDL_version *SDLlinked;
 #ifdef _XBOX
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 	char DP[] ="      Sonic Robo Blast 2!\n";
 	debugPrint(DP);
 #endif

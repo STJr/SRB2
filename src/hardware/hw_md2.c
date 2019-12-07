@@ -18,7 +18,7 @@
 ///	Inspired from md2.c by Mete Ciragan (mete@swissquake.ch)
 
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #endif
 #include <stdio.h>

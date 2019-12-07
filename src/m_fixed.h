@@ -16,7 +16,7 @@
 #define __M_FIXED__
 
 #include "doomtype.h"
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <stdlib.h>
 #endif
 

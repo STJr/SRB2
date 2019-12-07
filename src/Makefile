@@ -413,6 +413,10 @@ ifdef PACKETDROP
 	OPTS+=-DPACKETDROP
 endif
 
+ifdef C99
+CPPFLAGS+=-DSDL_DISABLE_IMMINTRIN_H
+endif
+
 ifdef DEBUGMODE
 
 	# build with debugging information

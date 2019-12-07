@@ -610,7 +610,7 @@ LONG WINAPI RecordExceptionInfo(PEXCEPTION_POINTERS data/*, LPCSTR Message, LPST
 		}
 #endif
 #elif defined (_AMD64_)
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 		__asm__("mov %%gs : 4, %%rax": "=a"(pStackTop));
 #elif defined (_MSC_VER)
 /*

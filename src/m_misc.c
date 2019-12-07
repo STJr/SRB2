@@ -12,7 +12,7 @@
 /// \brief Commonly used routines
 ///        Default config file, PCX screenshots, file i/o
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 
 #if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)
 // Ignore "argument might be clobbered by longjmp" warning in GCC
