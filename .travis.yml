@@ -471,7 +471,7 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
-          dist: bionic
+          dist: xenial
           if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
               AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
               AND env(DPL_TERMINATE_MAIN) != "1"
@@ -498,7 +498,7 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
-          dist: bionic
+          dist: xenial
           if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
               AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
               AND env(DPL_TERMINATE_MAIN) != "1"
@@ -525,7 +525,7 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
-          dist: bionic
+          dist: xenial
           if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
               AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
               AND env(DPL_TERMINATE_MAIN) != "1"
