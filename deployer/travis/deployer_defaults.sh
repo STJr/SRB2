@@ -29,7 +29,7 @@
 # Asset File Parameters
 : ${ASSET_ARCHIVE_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-assets.7z}
 : ${ASSET_ARCHIVE_OPTIONAL_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-optional-assets.7z}
-: ${ASSET_FILES_HASHED:=srb2.pk3 zones.pk3 player.dta patch.pk3}
+: ${ASSET_FILES_HASHED:=srb2.pk3 zones.pk3 player.dta} # POST v2.2 NOTE: Don't forget to add patch.pk3!
 : ${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt README-SDL.txt}
 : ${ASSET_FILES_OPTIONAL_GET:=0}
 
