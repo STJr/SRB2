@@ -1520,7 +1520,7 @@ static void gld_BuildSky(int row_count, int col_count)
 	vertex_p = &vbo->data[0];
 	vbo->loopcount = 0;
 
-	for (yflip = 0; yflip < 2; yflip++)
+	for (yflip = 0; (UINT8)yflip < 2; yflip++)
 	{
 		vbo->loops[vbo->loopcount].mode = GL_TRIANGLE_FAN;
 		vbo->loops[vbo->loopcount].vertexindex = vertex_p - &vbo->data[0];
