@@ -405,8 +405,8 @@ consvar_t cv_cam_shiftfacing[2] = {
 	{"cam2_shiftfacingchar", "0.33", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 consvar_t cv_cam_turnfacing[2] = {
-	{"cam_turnfacingchar", "0.002", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
-	{"cam2_turnfacingchar", "0.002", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam_turnfacingchar", "0.0", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_turnfacingchar", "0.0", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 consvar_t cv_cam_turnfacingability[2] = {
 	{"cam_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
