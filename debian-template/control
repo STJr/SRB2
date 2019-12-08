@@ -25,7 +25,7 @@ Depends: ${SHLIBS_DEPENDS}, ${MISC_DEPENDS},
  libsdl2-mixer-2.0-0,
  zlib1g,
  libgme0,
- libopenmpt,
+ libopenmpt | libopenmpt0,
  libpng | libpng16-16 | libpng12-0
 Description: A cross-platform 3D Sonic fangame
  Sonic Robo Blast 2 is a 3D open-source Sonic the Hedgehog
