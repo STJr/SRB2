@@ -915,6 +915,8 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 	if (spr->precip)
 		return;
 
+	memset(&p, 0x00, sizeof(FTransform));
+
 	// MD2 colormap fix
 	// colormap test
 	if (spr->mobj->subsector)
