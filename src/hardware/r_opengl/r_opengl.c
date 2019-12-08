@@ -85,7 +85,6 @@ static GLboolean MipMap = GL_FALSE;
 static GLint min_filter = GL_LINEAR;
 static GLint mag_filter = GL_LINEAR;
 static GLint anisotropic_filter = 0;
-static FTransform  md2_transform;
 
 const GLubyte *gl_extensions = NULL;
 
@@ -2226,8 +2225,6 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 	if (stransform)
 	{
 		boolean fovx90;
-		// keep a trace of the transformation for md2
-		memcpy(&md2_transform, stransform, sizeof (md2_transform));
 
 #ifdef USE_FTRANSFORM_MIRROR
 		// mirroring from Kart
