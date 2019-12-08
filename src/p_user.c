@@ -5350,6 +5350,12 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 						player->pflags |= PF_THOKKED;
+
+						// Change localangle to match?
+						if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0)
+							localangle = player->mo->angle;
+						else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0)
+							localangle2 = player->mo->angle;
 					}
 					break;
 

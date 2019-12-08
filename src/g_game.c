@@ -399,6 +399,19 @@ consvar_t cv_abilitydirection[2] = {
 	{"abilitydirection", "Movement", CV_SAVE, directionchar_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 	{"abilitydirection2", "Movement", CV_SAVE, directionchar_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
+static CV_PossibleValue_t zerotoone_cons_t[] = {{0, "MIN"}, {FRACUNIT, "MAX"}, {0, NULL}};
+consvar_t cv_cam_turnfacing[2] = {
+	{"cam_turnfacingchar", "0.002", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_turnfacingchar", "0.002", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+};
+consvar_t cv_cam_turnfacingability[2] = {
+	{"cam_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+};
+consvar_t cv_cam_turnfacinginput[2] = {
+	{"cam_turnfacinginput", "0.15", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_turnfacinginput", "0.15", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+};
 
 typedef enum
 {
@@ -1133,7 +1146,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		if (turnright)
 			cmd->angleturn = (INT16)(cmd->angleturn - angleturn[tspeed]);
-		else if (turnleft)
+		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 
 		if (analogjoystickmove && axis != 0)
@@ -1360,6 +1373,15 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		*myangle += (cmd->angleturn<<16);
 		cmd->angleturn = (INT16)(*myangle >> 16);
 
+		// Adjust camera angle by player input
+		if (!forcestrafe && !turnheld[forplayer] && !player->climbing)
+		{
+			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value; //@TODO cvar
+
+			if (camadjustfactor)
+				*myangle -= cmd->sidemove * 50 * camadjustfactor;
+		}
+
 		if (abilitydirection && !player->climbing && !forcestrafe)
 		{
 			if (cmd->forwardmove || cmd->sidemove)
@@ -1374,6 +1396,25 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			}
 			else
 				cmd->angleturn = (player->drawangle>>16);
+		}
+
+		// Adjust camera angle to face player direction, depending on circumstances
+		// Nothing happens if cam left/right are held, so you can hold both to lock the camera in one direction
+		if (!forcestrafe && !turnheld[forplayer])
+		{
+			fixed_t camadjustfactor;
+
+			if (player->climbing || player->pflags & (PF_GLIDING|PF_STARTDASH))
+				camadjustfactor = cv_cam_turnfacingability[forplayer].value;
+			else
+				camadjustfactor = cv_cam_turnfacing[forplayer].value;
+
+			if (camadjustfactor)
+			{
+				INT32 anglediff = player->drawangle - *myangle;
+
+				*myangle += FixedMul(anglediff, camadjustfactor);
+			}
 		}
 	}
 
