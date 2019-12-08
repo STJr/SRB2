@@ -1035,6 +1035,7 @@ static menuitem_t OP_P1ControlsMenu[] =
 	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  100},
 	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  70},
 	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[0],  90},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1048,6 +1049,7 @@ static menuitem_t OP_P2ControlsMenu[] =
 	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  100},
 	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  70},
 	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[1],  90},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
@@ -1180,7 +1182,11 @@ static menuitem_t OP_CameraOptionsMenu[] =
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
 	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
 
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 100},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[0],  100},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  110},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[0],  120},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 140},
 };
 
 static menuitem_t OP_Camera2OptionsMenu[] =
@@ -1194,7 +1200,11 @@ static menuitem_t OP_Camera2OptionsMenu[] =
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
 	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
 
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 100},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[1],  100},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[1],  110},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[1],  120},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 140},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
