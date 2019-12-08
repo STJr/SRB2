@@ -5941,7 +5941,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 {
 	if (cv_grskydome.value)
 	{
-		FTransform transform;
+		FTransform dometransform;
 		const float fpov = FIXED_TO_FLOAT(cv_grfov.value+player->fovadd);
 		postimg_t *type;
 
@@ -5950,27 +5950,27 @@ static void HWR_DrawSkyBackground(player_t *player)
 		else
 			type = &postimgtype;
 
-		memset(&transform, 0x00, sizeof(FTransform));
+		memset(&dometransform, 0x00, sizeof(FTransform));
 
 		//04/01/2000: Hurdler: added for T&L
 		//                     It should replace all other gr_viewxxx when finished
-		transform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
-		transform.angley = (float)((viewangle-ANGLE_270)>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+		dometransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+		dometransform.angley = (float)((viewangle-ANGLE_270)>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
 		if (*type == postimg_flip)
-			transform.flip = true;
+			dometransform.flip = true;
 		else
-			transform.flip = false;
+			dometransform.flip = false;
 
-		transform.scalex = 1;
-		transform.scaley = (float)vid.width/vid.height;
-		transform.scalez = 1;
-		transform.fovxangle = fpov; // Tails
-		transform.fovyangle = fpov; // Tails
-		transform.splitscreen = splitscreen;
+		dometransform.scalex = 1;
+		dometransform.scaley = (float)vid.width/vid.height;
+		dometransform.scalez = 1;
+		dometransform.fovxangle = fpov; // Tails
+		dometransform.fovyangle = fpov; // Tails
+		dometransform.splitscreen = splitscreen;
 
 		HWR_GetTexture(texturetranslation[skytexture]);
-		HWD.pfnRenderSkyDome(skytexture, textures[skytexture]->width, textures[skytexture]->height, transform);
+		HWD.pfnRenderSkyDome(skytexture, textures[skytexture]->width, textures[skytexture]->height, dometransform);
 	}
 	else
 	{
