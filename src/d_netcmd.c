@@ -823,6 +823,10 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_autobrake);
 	CV_RegisterVar(&cv_autobrake2);
 
+	// hi here's some new controls
+	CV_RegisterVar(&cv_abilitydirection[0]);
+	CV_RegisterVar(&cv_abilitydirection[1]);
+
 	// s_sound.c
 	CV_RegisterVar(&cv_soundvolume);
 	CV_RegisterVar(&cv_closedcaptioning);

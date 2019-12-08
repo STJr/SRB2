@@ -394,6 +394,12 @@ consvar_t cv_directionchar2 = {"directionchar2", "Movement", CV_SAVE|CV_CALL, di
 consvar_t cv_autobrake = {"autobrake", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_autobrake2 = {"autobrake2", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
+// hi here's some new controls
+consvar_t cv_abilitydirection[2] = {
+	{"abilitydirection", "Movement", CV_SAVE, directionchar_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"abilitydirection2", "Movement", CV_SAVE, directionchar_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+};
+
 typedef enum
 {
 	AXISNONE = 0,
@@ -996,7 +1002,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
-	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, analog, invertmouse, mousemove;
+	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, analog, invertmouse, mousemove, abilitydirection;
 	INT32 *mx; INT32 *my; INT32 *mly;
 
 	static INT32 turnheld[2]; // for accelerative turning
@@ -1033,6 +1039,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		mly = &mlook2y;
 		G_CopyTiccmd(cmd, I_BaseTiccmd2(), 1); // empty, or external driver
 	}
+	abilitydirection = cv_abilitydirection[forplayer].value;
 
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
@@ -1352,6 +1359,22 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		*myangle += (cmd->angleturn<<16);
 		cmd->angleturn = (INT16)(*myangle >> 16);
+
+		if (abilitydirection && !player->climbing && !forcestrafe)
+		{
+			if (cmd->forwardmove || cmd->sidemove)
+			{
+				angle_t controlangle = R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
+				cmd->angleturn += (controlangle>>16);
+
+				cmd->forwardmove = R_PointToDist2(0, 0, cmd->forwardmove, cmd->sidemove);
+				if (cmd->forwardmove > MAXPLMOVE)
+					cmd->forwardmove = MAXPLMOVE;
+				cmd->sidemove = 0;
+			}
+			else
+				cmd->angleturn = (player->drawangle>>16);
+		}
 	}
 
 	//Reset away view if a command is given.
