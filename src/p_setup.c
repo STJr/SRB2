@@ -3539,7 +3539,6 @@ boolean P_AddWadFile(const char *wadfilename)
 
 #ifdef HWRENDER
 	HWR_ReloadModels();
-	HWR_FreeMipmapCache();
 #endif
 
 	// reload status bar (warning should have valid player!)
