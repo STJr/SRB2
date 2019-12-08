@@ -1435,7 +1435,7 @@ static const boolean gl_ext_arb_vertex_buffer_object = true;
 
 // The texture offset to be applied to the texture coordinates in SkyVertex().
 static int rows, columns;
-static boolean yflip;
+static signed char yflip;
 static int texw, texh;
 static boolean foglayer;
 static float delta = 0.0f;
