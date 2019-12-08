@@ -1154,6 +1154,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			// JOYAXISRANGE should be 1023 (divide by 1024)
 			cmd->angleturn = (INT16)(cmd->angleturn - ((axis * angleturn[1]) >> 10)); // ANALOG!
 		}
+
+		// Make rotspeed affect turning speed :)
+		cmd->angleturn = (cmd->angleturn * (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value)) / 10;
 	}
 
 	axis = PlayerJoyAxis(ssplayer, AXISSTRAFE);
