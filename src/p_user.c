@@ -9677,6 +9677,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	subsector_t *newsubsec;
 	fixed_t f1, f2;
 
+	static fixed_t camsideshift[2] = {0, 0};
+	fixed_t shiftx = 0, shifty = 0;
+
 	// We probably shouldn't move the camera if there is no player or player mobj somehow
 	if (!player || !player->mo)
 		return true;
@@ -9880,6 +9883,20 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			else
 				angle += FixedAngle(cv_cam2_rotspeed.value*FRACUNIT);
 		}
+	}
+
+	if (cv_abilitydirection[(thiscam == &camera) ? 0 : 1].value)
+	{
+		// Shift the camera slightly to the sides depending on the player facing direction
+		UINT8 forplayer = (thiscam == &camera) ? 0 : 1;
+		fixed_t shift = FixedMul(FINESINE((player->drawangle - angle) >> ANGLETOFINESHIFT), cv_cam_shiftfacing[forplayer].value);
+
+		shift += FixedMul(camsideshift[forplayer] - shift, FRACUNIT-(camspeed>>3));
+		camsideshift[forplayer] = shift;
+
+		shift = FixedMul(shift, camdist);
+		shiftx = -FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), shift);
+		shifty = FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT), shift);
 	}
 
 	// sets ideal cam pos
@@ -10228,8 +10245,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		viewpointx = mo->x + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-		viewpointy = mo->y + FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
+		viewpointx = mo->x + shiftx + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
+		viewpointy = mo->y + shifty + FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
 	}
 
 	if (!camstill && !resetcalled && !paused)
@@ -10270,6 +10287,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 		else
 			thiscam->momz = FixedMul(z - thiscam->z, camspeed);
+
+		thiscam->momx += FixedMul(shiftx, camspeed);
+		thiscam->momy += FixedMul(shifty, camspeed);
 	}
 
 	// compute aming to look the viewed point

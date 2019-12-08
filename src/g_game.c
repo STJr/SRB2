@@ -400,6 +400,10 @@ consvar_t cv_abilitydirection[2] = {
 	{"abilitydirection2", "Movement", CV_SAVE, directionchar_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 static CV_PossibleValue_t zerotoone_cons_t[] = {{0, "MIN"}, {FRACUNIT, "MAX"}, {0, NULL}};
+consvar_t cv_cam_shiftfacing[2] = {
+	{"cam_shiftfacingchar", "0.33", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_shiftfacingchar", "0.33", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+};
 consvar_t cv_cam_turnfacing[2] = {
 	{"cam_turnfacingchar", "0.002", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 	{"cam2_turnfacingchar", "0.002", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
