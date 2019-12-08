@@ -776,22 +776,36 @@ static void FreeMipmapColormap(INT32 patchnum, void *patch)
 {
 	GLPatch_t* const pat = patch;
 	(void)patchnum; //unused
-	while (pat->mipmap && pat->mipmap->nextcolormap) // The mipmap must be valid, obviously
+
+	// The patch must be valid, obviously
+	if (!pat)
+		return;
+
+	// The mipmap must be valid, obviously
+	while (pat->mipmap)
 	{
 		// Confusing at first, but pat->mipmap->nextcolormap
 		// at the beginning of the loop is the first colormap
-		// from the linked list of colormaps
-		GLMipmap_t *next = pat->mipmap;
-		if (!next) // No mipmap in this patch, break out of loop.
+		// from the linked list of colormaps.
+		GLMipmap_t *next = NULL;
+
+		// No mipmap in this patch, break out of the loop.
+		if (!pat->mipmap)
 			break;
-		// Set the first colormap
-		// to the one that comes after it
-		next = next->nextcolormap;
+
+		// No colormap mipmap either.
+		if (!pat->mipmap->nextcolormap)
+			break;
+
+		// Set the first colormap to the one that comes after it.
+		next = pat->mipmap->nextcolormap;
 		pat->mipmap->nextcolormap = next->nextcolormap;
-		// Free image data from memory
+
+		// Free image data from memory.
 		if (next->grInfo.data)
 			Z_Free(next->grInfo.data);
-		// Free the old colormap from memory
+
+		// Free the old colormap from memory.
 		free(next);
 	}
 }
