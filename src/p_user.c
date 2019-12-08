@@ -5699,6 +5699,9 @@ static void P_2dMovement(player_t *player)
 	angle_t movepushangle = 0;
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
 
+	if ((gametic % NEWTICRATERATIO) != 0)
+		return;
+
 	cmd = &player->cmd;
 
 	if (player->exiting || player->pflags & PF_STASIS)
@@ -5884,6 +5887,9 @@ static void P_3dMovement(player_t *player)
 	totalthrust.x = totalthrust.y = 0; // I forget if this is needed
 	totalthrust.z = FRACUNIT*P_MobjFlip(player->mo)/3; // A bit of extra push-back on slopes
 #endif // ESLOPE
+
+	if ((gametic % NEWTICRATERATIO) != 0)
+		return;
 
 	// Get the old momentum; this will be needed at the end of the function! -SH
 	oldMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
@@ -7106,9 +7112,9 @@ static void P_NiGHTSMovement(player_t *player)
 
 	if (player->drillmeter > 96*20)
 		player->drillmeter = 96*20;
-
-	if (player->drilldelay)
-		player->drilldelay--;
+	if (gametic % NEWTICRATERATIO == 0)
+		if (player->drilldelay)
+			player->drilldelay--;
 
 	if (!(cmd->buttons & BT_JUMP))
 	{
@@ -7135,14 +7141,16 @@ static void P_NiGHTSMovement(player_t *player)
 		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 		&& !player->exiting)
-			player->nightstime--;
+			if (gametic % NEWTICRATERATIO == 0)
+				player->nightstime--;
 	}
 	else if (gametype != GT_RACE && gametype != GT_COMPETITION
 	&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	&& !(player->capsule && player->capsule->reactiontime)
 	&& !player->exiting)
-		player->nightstime--;
+		if (gametic % NEWTICRATERATIO == 0)
+			player->nightstime--;
 
 	if (!player->nightstime)
 	{
@@ -7405,9 +7413,11 @@ static void P_NiGHTSMovement(player_t *player)
 		{
 			if (player->speed < MAXDRILLSPEED)
 				player->speed += 150;
-
-			if (--player->drillmeter == 0)
-				player->drilldelay = TICRATE*2;
+			if (gametic % NEWTICRATERATIO == 0)
+			{
+				if (--player->drillmeter == 0)
+					player->drilldelay = TICRATE * 2;
+			}
 		}
 
 		if (player->speed < 0)
@@ -10248,8 +10258,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		thiscam->momx = FixedMul(x - thiscam->x, camspeed);
-		thiscam->momy = FixedMul(y - thiscam->y, camspeed);
+		thiscam->momx = FixedMul(x - thiscam->x, camspeed / NEWTICRATERATIO);
+		thiscam->momy = FixedMul(y - thiscam->y, camspeed / NEWTICRATERATIO);
 
 		if (GETSECSPECIAL(thiscam->subsector->sector->special, 1) == 6
 			&& thiscam->z < thiscam->subsector->sector->floorheight + 256*FRACUNIT
@@ -10258,7 +10268,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			thiscam->momz = 0; // Don't go down a death pit
 		}
 		else
-			thiscam->momz = FixedMul(z - thiscam->z, camspeed);
+			thiscam->momz = FixedMul(z - thiscam->z, camspeed / NEWTICRATERATIO);
 	}
 
 	// compute aming to look the viewed point
@@ -11421,7 +11431,8 @@ void P_PlayerThink(player_t *player)
 	// If it is set, start subtracting
 	// Don't allow it to go back to 0
 	if (player->exiting > 1 && player->exiting < 3*TICRATE)
-		player->exiting--;
+		if (gametic % NEWTICRATERATIO == 0)
+			player->exiting--;
 
 	if (player->exiting && countdown2)
 		player->exiting = 5;
@@ -11617,8 +11628,11 @@ void P_PlayerThink(player_t *player)
 
 	if (player->linktimer && !player->powers[pw_nights_linkfreeze])
 	{
-		if (--player->linktimer <= 0) // Link timer
-			player->linkcount = 0;
+		if (gametic % NEWTICRATERATIO == 0)
+		{
+			if (--player->linktimer <= 0) // Link timer
+				player->linkcount = 0;
+		}
 	}
 
 	// Move around.
@@ -11922,6 +11936,10 @@ void P_PlayerThink(player_t *player)
 	// Counters, time dependent power ups.
 	// Time Bonus & Ring Bonus count settings
 
+	// Only do these counters at 35 FPS
+	if ((gametic % NEWTICRATERATIO) != 0)
+		return;
+
 	if (player->ammoremovaltimer)
 	{
 		if (--player->ammoremovaltimer == 0)
@@ -12214,12 +12232,6 @@ void P_PlayerAfterThink(player_t *player)
 
 	if (player->playerstate == PST_DEAD)
 	{
-		// camera may still move when guy is dead
-		//if (!netgame)
-		{
-			if (thiscam && thiscam->chase)
-				P_MoveChaseCamera(player, thiscam, false);
-		}
 		if (player->followmobj)
 		{
 			P_RemoveMobj(player->followmobj);
@@ -12619,8 +12631,6 @@ void P_PlayerAfterThink(player_t *player)
 				player->viewz = player->mo->z + player->mo->height - player->viewheight;
 			else
 				player->viewz = player->mo->z + player->viewheight;
-			if (server || addedtogame)
-				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 		}
 	}
 

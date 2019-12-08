@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM">
@@ -440,7 +440,7 @@
     </ClCompile>
     <ClCompile Include="..\r_main.c" />
     <ClCompile Include="..\r_plane.c" />
-	<ClCompile Include="..\r_patch.c" />
+  <ClCompile Include="..\r_patch.c" />
     <ClCompile Include="..\r_portal.c" />
     <ClCompile Include="..\r_segs.c" />
     <ClCompile Include="..\r_sky.c" />

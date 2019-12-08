@@ -482,6 +482,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		for (;(state = seenstate[i]) > S_NULL; i = state - 1)
 			seenstate[i] = S_NULL; // erase memory of states
 
+#if NEWTICRATERATIO != 1
+	mobj->tics *= NEWTICRATERATIO;
+#endif
 	return true;
 }
 
@@ -1523,6 +1526,11 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 			gravityadd = -gravityadd;
 			mo->eflags ^= MFE_VERTICALFLIP;
 		}
+
+#if NEWTICRATERATIO != 1
+		gravityadd /= NEWTICRATERATIO;
+#endif		
+
 		if (wasflip == !(mo->eflags & MFE_VERTICALFLIP)) // note!! == ! is not equivalent to != here - turns numeric into bool this way
 			P_PlayerFlip(mo);
 	}
@@ -1673,8 +1681,13 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 			if (twodlevel || player->mo->flags2 & MF2_TWOD) // Otherwise handled in P_3DMovement
 			{
 				const fixed_t ns = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT);
+#if NEWTICRATERATIO != 1
+				mo->momx = FixedMul(mo->momx, FRACUNIT - (FRACUNIT - ns) / NEWTICRATERATIO);
+				mo->momy = FixedMul(mo->momy, FRACUNIT - (FRACUNIT - ns) / NEWTICRATERATIO);
+#else
 				mo->momx = FixedMul(mo->momx, ns);
 				mo->momy = FixedMul(mo->momy, ns);
+#endif
 			}
 		}
 		else if (abs(player->rmomx) < FixedMul(STOPSPEED, mo->scale)
@@ -1693,6 +1706,18 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		}
 		else if (!(mo->eflags & MFE_SPRUNG))
 		{
+#if NEWTICRATERATIO != 1
+			if (oldx == mo->x && oldy == mo->y) // didn't go anywhere
+			{
+				mo->momx = FixedMul(mo->momx, FRACUNIT - (FRACUNIT - ORIG_FRICTION) / NEWTICRATERATIO);
+				mo->momy = FixedMul(mo->momy, FRACUNIT - (FRACUNIT - ORIG_FRICTION) / NEWTICRATERATIO);
+			}
+			else
+			{
+				mo->momx = FixedMul(mo->momx, FRACUNIT - (FRACUNIT - mo->friction) / NEWTICRATERATIO);
+				mo->momy = FixedMul(mo->momy, FRACUNIT - (FRACUNIT - mo->friction) / NEWTICRATERATIO);
+			}
+#else
 			if (oldx == mo->x && oldy == mo->y) // didn't go anywhere
 			{
 				mo->momx = FixedMul(mo->momx, ORIG_FRICTION);
@@ -1703,6 +1728,7 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 				mo->momx = FixedMul(mo->momx, mo->friction);
 				mo->momy = FixedMul(mo->momy, mo->friction);
 			}
+#endif
 
 			mo->friction = ORIG_FRICTION;
 		}
@@ -1860,6 +1886,14 @@ void P_XYMovement(mobj_t *mo)
 
 	xmove = mo->momx;
 	ymove = mo->momy;
+
+#if NEWTICRATERATIO != 1
+	if (player)
+	{
+		xmove /= NEWTICRATERATIO;
+		ymove /= NEWTICRATERATIO;
+	}
+#endif
 
 	oldx = mo->x;
 	oldy = mo->y;
@@ -2910,7 +2944,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 
-	mo->z += mo->momz;
+	mo->z += mo->momz / NEWTICRATERATIO;
 	onground = P_IsObjectOnGround(mo);
 
 	// Have player fall through floor?
@@ -6866,9 +6900,9 @@ void P_RunShields(void)
 	for (i = 0; i < numshields; i++)
 	{
 		P_ShieldLook(shields[i], shields[i]->threshold);
-		P_SetTarget(&shields[i], NULL);
+		//P_SetTarget(&shields[i], NULL);
 	}
-	numshields = 0;
+	//numshields = 0;
 }
 
 static boolean P_AddShield(mobj_t *thing)
@@ -6917,7 +6951,7 @@ void P_RunOverlays(void)
 
 		// grab next in chain, then unset the chain target
 		next = mo->hnext;
-		P_SetTarget(&mo->hnext, NULL);
+		//P_SetTarget(&mo->hnext, NULL);
 
 		if (!mo->target)
 			continue;
@@ -6976,7 +7010,7 @@ void P_RunOverlays(void)
 			P_SetThingPosition(mo);
 		P_CheckPosition(mo, mo->x, mo->y);
 	}
-	P_SetTarget(&overlaycap, NULL);
+	//P_SetTarget(&overlaycap, NULL);
 }
 
 // Called only when MT_OVERLAY thinks.
@@ -7013,6 +7047,27 @@ static void P_RemoveOverlay(mobj_t *thing)
 		P_SetTarget(&thing->hnext, NULL);
 		return;
 	}
+}
+
+void P_ClearShieldsAndOverlays(void)
+{
+	INT32 i;
+    mobj_t *mo, *next = NULL;
+
+    // clear overlay list
+    for (mo = overlaycap; mo; mo = next)
+    {
+        // grab next in chain, then unset the chain target
+        next = mo->hnext;
+        P_SetTarget(&mo->hnext, NULL);
+    }
+    P_SetTarget(&overlaycap, NULL);
+
+	// clear shields list
+	for (i = 0; i < numshields; i++)
+		P_SetTarget(&shields[i], NULL);
+
+    numshields = 0;
 }
 
 void A_BossDeath(mobj_t *mo);
