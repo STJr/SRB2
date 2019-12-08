@@ -3379,10 +3379,10 @@ boolean P_AddWadFile(const char *wadfilename)
 	// WADs use markers for some resources, but others such as sounds are checked lump-by-lump anyway.
 //	UINT16 luaPos, luaNum = 0;
 //	UINT16 socPos, socNum = 0;
-	UINT16 sfxPos, sfxNum = 0;
+	UINT16 sfxPos = 0, sfxNum = 0;
 	UINT16 musPos = 0, musNum = 0;
 //	UINT16 sprPos, sprNum = 0;
-	UINT16 texPos, texNum = 0;
+	UINT16 texPos = 0, texNum = 0;
 //	UINT16 patPos, patNum = 0;
 //	UINT16 flaPos, flaNum = 0;
 //	UINT16 mapPos, mapNum = 0;
