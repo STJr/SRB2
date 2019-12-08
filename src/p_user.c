@@ -42,6 +42,8 @@
 #include "b_bot.h"
 // Objectplace
 #include "m_cheat.h"
+// Thok camera snap (ctrl-f "chalupa")
+#include "g_input.h"
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -5351,10 +5353,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 						player->pflags |= PF_THOKKED;
 
-						// Change localangle to match?
-						if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0)
+						// Change localangle to match? (P.S. chalupa)
+						if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(PLAYER1INPUTDOWN(gc_turnleft) || PLAYER1INPUTDOWN(gc_turnright)))
 							localangle = player->mo->angle;
-						else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0)
+						else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(PLAYER2INPUTDOWN(gc_turnleft) || PLAYER2INPUTDOWN(gc_turnright)))
 							localangle2 = player->mo->angle;
 					}
 					break;
