@@ -132,6 +132,7 @@ extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; //
 extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][num_gamecontrols][2];
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
+#define PLAYERINPUTDOWN(p, gc) ((p) == 2 ? PLAYER2INPUTDOWN(gc) : PLAYER1INPUTDOWN(gc))
 
 #define num_gcl_tutorial_check 6
 #define num_gcl_tutorial_used 8

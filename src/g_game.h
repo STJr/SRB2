@@ -83,8 +83,7 @@ extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_g
 
 // build an internal map name MAPxx from map number
 const char *G_BuildMapName(INT32 map);
-void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics);
-void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics);
+void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer);
 
 // copy ticcmd_t to and fro the normal way
 ticcmd_t *G_CopyTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n);

@@ -4624,9 +4624,9 @@ static void Local_Maketic(INT32 realtics)
 	                   // and G_MapEventsToControls
 	if (!dedicated) rendergametic = gametic;
 	// translate inputs (keyboard/mouse/joystick) into game controls
-	G_BuildTiccmd(&localcmds, realtics);
+	G_BuildTiccmd(&localcmds, realtics, 1);
 	if (splitscreen || botingame)
-		G_BuildTiccmd2(&localcmds2, realtics);
+		G_BuildTiccmd(&localcmds2, realtics, 2);
 
 	localcmds.angleturn |= TICCMD_RECEIVED;
 }

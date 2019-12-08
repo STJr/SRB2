@@ -965,6 +965,8 @@ static INT32 Joy2Axis(axis_input_e axissel)
 	return retaxis;
 }
 
+#define PlayerJoyAxis(p, ax) ((p) == 1 ? JoyAxis(ax) : Joy2Axis(ax))
+
 
 //
 // G_BuildTiccmd
@@ -981,7 +983,7 @@ static fixed_t forwardmove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16};
 static fixed_t sidemove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16}; // faster!
 static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 
-void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
+void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 {
 	boolean forcestrafe = false;
 	boolean forcefullinput = false;
@@ -989,48 +991,81 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
 	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
-	player_t *player = &players[consoleplayer];
-	camera_t *thiscam = &camera;
+	player_t *player = &players[ssplayer == 2 ? secondarydisplayplayer : consoleplayer];
+	camera_t *thiscam = ((ssplayer == 1 || player->bot == 2) ? &camera : &camera2);
+	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
+	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
-	static INT32 turnheld; // for accelerative turning
-	static boolean keyboard_look; // true if lookup/down using keyboard
-	static boolean resetdown; // don't cam reset every frame
-	static boolean joyaiming; // check the last frame's value if we need to reset the camera
+	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, analog, invertmouse, mousemove;
+	INT32 *mx; INT32 *my; INT32 *mly;
 
-	G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
+	static INT32 turnheld[2]; // for accelerative turning
+	static boolean keyboard_look[2]; // true if lookup/down using keyboard
+	static boolean resetdown[2]; // don't cam reset every frame
+	static boolean joyaiming[2]; // check the last frame's value if we need to reset the camera
+	UINT8 forplayer = ssplayer-1;
+
+	if (ssplayer == 1)
+	{
+		chasecam = cv_chasecam.value;
+		chasefreelook = cv_chasefreelook.value;
+		alwaysfreelook = cv_alwaysfreelook.value;
+		usejoystick = cv_usejoystick.value;
+		analog = cv_analog.value;
+		invertmouse = cv_invertmouse.value;
+		mousemove = cv_mousemove.value;
+		mx = &mousex;
+		my = &mousey;
+		mly = &mlooky;
+		G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
+	}
+	else
+	{
+		chasecam = cv_chasecam2.value;
+		chasefreelook = cv_chasefreelook2.value;
+		alwaysfreelook = cv_alwaysfreelook2.value;
+		usejoystick = cv_usejoystick2.value;
+		analog = cv_analog2.value;
+		invertmouse = cv_invertmouse2.value;
+		mousemove = cv_mousemove2.value;
+		mx = &mouse2x;
+		my = &mouse2y;
+		mly = &mlook2y;
+		G_CopyTiccmd(cmd, I_BaseTiccmd2(), 1); // empty, or external driver
+	}
 
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
 	// ...OR if we're blindfolded. No looking into the floor.
 	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
 	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
-	{
-		cmd->angleturn = (INT16)(localangle >> 16);
-		cmd->aiming = G_ClipAimingPitch(&localaiming);
+	{//@TODO splitscreen player
+		cmd->angleturn = (INT16)(*myangle >> 16);
+		cmd->aiming = G_ClipAimingPitch(myaiming);
 		return;
 	}
 
-	turnright = PLAYER1INPUTDOWN(gc_turnright);
-	turnleft = PLAYER1INPUTDOWN(gc_turnleft);
+	turnright = PLAYERINPUTDOWN(ssplayer, gc_turnright);
+	turnleft = PLAYERINPUTDOWN(ssplayer, gc_turnleft);
 
-	straferkey = PLAYER1INPUTDOWN(gc_straferight);
-	strafelkey = PLAYER1INPUTDOWN(gc_strafeleft);
-	movefkey = PLAYER1INPUTDOWN(gc_forward);
-	movebkey = PLAYER1INPUTDOWN(gc_backward);
+	straferkey = PLAYERINPUTDOWN(ssplayer, gc_straferight);
+	strafelkey = PLAYERINPUTDOWN(ssplayer, gc_strafeleft);
+	movefkey = PLAYERINPUTDOWN(ssplayer, gc_forward);
+	movebkey = PLAYERINPUTDOWN(ssplayer, gc_backward);
 
-	mouseaiming = (PLAYER1INPUTDOWN(gc_mouseaiming)) ^
-		((cv_chasecam.value && !player->spectator) ? cv_chasefreelook.value : cv_alwaysfreelook.value);
-	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
-	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;
+	mouseaiming = (PLAYERINPUTDOWN(ssplayer, gc_mouseaiming)) ^
+		((chasecam && !player->spectator) ? chasefreelook : alwaysfreelook);
+	analogjoystickmove = usejoystick && !Joystick.bGamepadStyle;
+	gamepadjoystickmove = usejoystick && Joystick.bGamepadStyle;
 
-	thisjoyaiming = (cv_chasecam.value && !player->spectator) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
+	thisjoyaiming = (chasecam && !player->spectator) ? chasefreelook : alwaysfreelook;
 
 	// Reset the vertical look if we're no longer joyaiming
-	if (!thisjoyaiming && joyaiming)
-		localaiming = 0;
-	joyaiming = thisjoyaiming;
+	if (!thisjoyaiming && joyaiming[forplayer])
+		*myaiming = 0;
+	joyaiming[forplayer] = thisjoyaiming;
 
-	axis = JoyAxis(AXISTURN);
+	axis = PlayerJoyAxis(ssplayer, AXISTURN);
 	if (gamepadjoystickmove && axis != 0)
 	{
 		turnright = turnright || (axis > 0);
@@ -1041,17 +1076,17 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	// use two stage accelerative turning
 	// on the keyboard and joystick
 	if (turnleft || turnright)
-		turnheld += realtics;
+		turnheld[forplayer] += realtics;
 	else
-		turnheld = 0;
+		turnheld[forplayer] = 0;
 
-	if (turnheld < SLOWTURNTICS)
+	if (turnheld[forplayer] < SLOWTURNTICS)
 		tspeed = 2; // slow turn
 	else
 		tspeed = speed;
 
 	// let movement keys cancel each other out
-	if (cv_analog.value) // Analog
+	if (analog) // Analog
 	{
 		if (turnright)
 			cmd->angleturn = (INT16)(cmd->angleturn - angleturn[tspeed]);
@@ -1080,7 +1115,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 			side += ((axis * sidemove[1]) >> 10);
 		}
 	}
-	else if (cv_analog.value) // Analog
+	else if (analog) // Analog
 	{
 		if (turnright)
 			cmd->buttons |= BT_CAMRIGHT;
@@ -1101,7 +1136,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		}
 	}
 
-	axis = JoyAxis(AXISSTRAFE);
+	axis = PlayerJoyAxis(ssplayer, AXISSTRAFE);
 	if (gamepadjoystickmove && axis != 0)
 	{
 		if (axis < 0)
@@ -1116,15 +1151,15 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	}
 
 	// forward with key or button
-	axis = JoyAxis(AXISMOVE);
-	altaxis = JoyAxis(AXISLOOK);
+	axis = PlayerJoyAxis(ssplayer, AXISMOVE);
+	altaxis = PlayerJoyAxis(ssplayer, AXISLOOK);
 	if (movefkey || (gamepadjoystickmove && axis < 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
 		forward = forwardmove[speed];
 	if (movebkey || (gamepadjoystickmove && axis > 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && axis != 0)
@@ -1137,9 +1172,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (strafelkey)
 		side -= sidemove[speed];
 
-	if (PLAYER1INPUTDOWN(gc_weaponnext))
+	if (PLAYERINPUTDOWN(ssplayer, gc_weaponnext))
 		cmd->buttons |= BT_WEAPONNEXT; // Next Weapon
-	if (PLAYER1INPUTDOWN(gc_weaponprev))
+	if (PLAYERINPUTDOWN(ssplayer, gc_weaponprev))
 		cmd->buttons |= BT_WEAPONPREV; // Previous Weapon
 
 #if NUM_WEAPONS > 10
@@ -1148,119 +1183,120 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	//use the four avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
 	for (i = 0; i < NUM_WEAPONS; ++i)
-		if (PLAYER1INPUTDOWN(gc_wepslot1 + i))
+		if (PLAYERINPUTDOWN(ssplayer, gc_wepslot1 + i))
 		{
 			cmd->buttons |= (UINT16)(i + 1);
 			break;
 		}
 
 	// fire with any button/key
-	axis = JoyAxis(AXISFIRE);
-	if (PLAYER1INPUTDOWN(gc_fire) || (cv_usejoystick.value && axis > 0))
+	axis = PlayerJoyAxis(ssplayer, AXISFIRE);
+	if (PLAYERINPUTDOWN(ssplayer, gc_fire) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_ATTACK;
 
 	// fire normal with any button/key
-	axis = JoyAxis(AXISFIRENORMAL);
-	if (PLAYER1INPUTDOWN(gc_firenormal) || (cv_usejoystick.value && axis > 0))
+	axis = PlayerJoyAxis(ssplayer, AXISFIRENORMAL);
+	if (PLAYERINPUTDOWN(ssplayer, gc_firenormal) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
 
-	if (PLAYER1INPUTDOWN(gc_tossflag))
+	if (PLAYERINPUTDOWN(ssplayer, gc_tossflag))
 		cmd->buttons |= BT_TOSSFLAG;
 
 	// Lua scriptable buttons
-	if (PLAYER1INPUTDOWN(gc_custom1))
+	if (PLAYERINPUTDOWN(ssplayer, gc_custom1))
 		cmd->buttons |= BT_CUSTOM1;
-	if (PLAYER1INPUTDOWN(gc_custom2))
+	if (PLAYERINPUTDOWN(ssplayer, gc_custom2))
 		cmd->buttons |= BT_CUSTOM2;
-	if (PLAYER1INPUTDOWN(gc_custom3))
+	if (PLAYERINPUTDOWN(ssplayer, gc_custom3))
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
-	axis = JoyAxis(AXISSPIN);
-	if (PLAYER1INPUTDOWN(gc_use) || (cv_usejoystick.value && axis > 0))
+	axis = PlayerJoyAxis(ssplayer, AXISSPIN);
+	if (PLAYERINPUTDOWN(ssplayer, gc_use) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_USE;
 
-	if (PLAYER1INPUTDOWN(gc_camreset))
+	if (PLAYERINPUTDOWN(ssplayer, gc_camreset))
 	{
-		if (camera.chase && !resetdown)
-			P_ResetCamera(&players[displayplayer], &camera);
-		resetdown = true;
+		if (camera.chase && !resetdown[forplayer])
+			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], &camera);
+		resetdown[forplayer] = true;
 	}
 	else
-		resetdown = false;
+		resetdown[forplayer] = false;
 
 	// jump button
-	axis = JoyAxis(AXISJUMP);
-	if (PLAYER1INPUTDOWN(gc_jump) || (cv_usejoystick.value && axis > 0))
+	axis = PlayerJoyAxis(ssplayer, AXISJUMP);
+	if (PLAYERINPUTDOWN(ssplayer, gc_jump) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
 	{
-		INT32 player_invert = cv_invertmouse.value ? -1 : 1;
+		INT32 player_invert = invertmouse ? -1 : 1;
 		INT32 screen_invert =
 			(player->mo && (player->mo->eflags & MFE_VERTICALFLIP)
 			 && (!camera.chase || player->pflags & PF_FLIPCAM)) //because chasecam's not inverted
 			 ? -1 : 1; // set to -1 or 1 to multiply
+		 INT32 lookaxis = ssplayer == 1 ? cv_lookaxis.value : cv_lookaxis2.value;
 
 		// mouse look stuff (mouse look is not the same as mouse aim)
 		if (mouseaiming)
 		{
-			keyboard_look = false;
+			keyboard_look[forplayer] = false;
 
 			// looking up/down
-			localaiming += (mlooky<<19)*player_invert*screen_invert;
+			*myaiming += (*mly<<19)*player_invert*screen_invert;
 		}
 
-		axis = JoyAxis(AXISLOOK);
-		if (analogjoystickmove && joyaiming && axis != 0 && cv_lookaxis.value != 0)
-			localaiming += (axis<<16) * screen_invert;
+		axis = PlayerJoyAxis(ssplayer, AXISLOOK);
+		if (analogjoystickmove && joyaiming[forplayer] && axis != 0 && lookaxis != 0)
+			*myaiming += (axis<<16) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look && cv_lookaxis.value == 0 && !joyaiming && !mouseaiming)
-			localaiming = 0;
+		if (!keyboard_look[forplayer] && lookaxis == 0 && !joyaiming[forplayer] && !mouseaiming)
+			*myaiming = 0;
 
 		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
-			if (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+			if (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && axis < 0))
 			{
-				localaiming += KB_LOOKSPEED * screen_invert;
-				keyboard_look = true;
+				*myaiming += KB_LOOKSPEED * screen_invert;
+				keyboard_look[forplayer] = true;
 			}
-			else if (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
+			else if (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && axis > 0))
 			{
-				localaiming -= KB_LOOKSPEED * screen_invert;
-				keyboard_look = true;
+				*myaiming -= KB_LOOKSPEED * screen_invert;
+				keyboard_look[forplayer] = true;
 			}
-			else if (PLAYER1INPUTDOWN(gc_centerview))
-				localaiming = 0;
+			else if (PLAYERINPUTDOWN(ssplayer, gc_centerview))
+				*myaiming = 0;
 		}
 
 		// accept no mlook for network games
 		if (!cv_allowmlook.value)
-			localaiming = 0;
+			*myaiming = 0;
 
-		cmd->aiming = G_ClipAimingPitch(&localaiming);
+		cmd->aiming = G_ClipAimingPitch(myaiming);
 	}
 
-	if (!mouseaiming && cv_mousemove.value)
-		forward += mousey;
+	if (!mouseaiming && mousemove)
+		forward += *my;
 
 	if ((!demoplayback && (player->pflags & PF_SLIDING))) // Analog for mouse
-		side += mousex*2;
-	else if (cv_analog.value)
+		side += *mx*2;
+	else if (analog)
 	{
-		if (mousex)
+		if (*mx)
 		{
-			if (mousex > 0)
+			if (*mx > 0)
 				cmd->buttons |= BT_CAMRIGHT;
 			else
 				cmd->buttons |= BT_CAMLEFT;
 		}
 	}
 	else
-		cmd->angleturn = (INT16)(cmd->angleturn - (mousex*8));
+		cmd->angleturn = (INT16)(cmd->angleturn - (*mx*8));
 
-	mousex = mousey = mlooky = 0;
+	*mx = *my = *mly = 0;
 
 	if (forward > MAXPLMOVE)
 		forward = MAXPLMOVE;
@@ -1293,335 +1329,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	cmd->forwardmove = (SINT8)(cmd->forwardmove + forward);
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
-	if (cv_analog.value) {
-		if (player->awayviewtics)
-			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
-		else
-			cmd->angleturn = (INT16)(thiscam->angle >> 16);
-	}
-	else
-	{
-		localangle += (cmd->angleturn<<16);
-		cmd->angleturn = (INT16)(localangle >> 16);
-	}
-
-	//Reset away view if a command is given.
-	if ((cmd->forwardmove || cmd->sidemove || cmd->buttons)
-		&& displayplayer != consoleplayer)
-		displayplayer = consoleplayer;
-}
-
-// like the g_buildticcmd 1 but using mouse2, gamcontrolbis, ...
-void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
-{
-	boolean forcestrafe = false;
-	boolean forcefullinput = false;
-	INT32 tspeed, forward, side, axis, altaxis, i;
-	const INT32 speed = 1;
-	// these ones used for multiple conditions
-	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
-	player_t *player = &players[secondarydisplayplayer];
-	camera_t *thiscam = (player->bot == 2 ? &camera : &camera2);
-
-	static INT32 turnheld; // for accelerative turning
-	static boolean keyboard_look; // true if lookup/down using keyboard
-	static boolean resetdown; // don't cam reset every frame
-	static boolean joyaiming; // check the last frame's value if we need to reset the camera
-
-	G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
-
-	//why build a ticcmd if we're paused?
-	// Or, for that matter, if we're being reborn.
-	if (paused || P_AutoPause() || player->playerstate == PST_REBORN)
-	{
-		cmd->angleturn = (INT16)(localangle2 >> 16);
-		cmd->aiming = G_ClipAimingPitch(&localaiming2);
-		return;
-	}
-
-	turnright = PLAYER2INPUTDOWN(gc_turnright);
-	turnleft = PLAYER2INPUTDOWN(gc_turnleft);
-
-	straferkey = PLAYER2INPUTDOWN(gc_straferight);
-	strafelkey = PLAYER2INPUTDOWN(gc_strafeleft);
-	movefkey = PLAYER2INPUTDOWN(gc_forward);
-	movebkey = PLAYER2INPUTDOWN(gc_backward);
-
-	mouseaiming = (PLAYER2INPUTDOWN(gc_mouseaiming)) ^
-		((cv_chasecam2.value && !player->spectator) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
-	analogjoystickmove = cv_usejoystick2.value && !Joystick2.bGamepadStyle;
-	gamepadjoystickmove = cv_usejoystick2.value && Joystick2.bGamepadStyle;
-
-	thisjoyaiming = (cv_chasecam2.value && !player->spectator) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
-
-	// Reset the vertical look if we're no longer joyaiming
-	if (!thisjoyaiming && joyaiming)
-		localaiming2 = 0;
-	joyaiming = thisjoyaiming;
-
-	axis = Joy2Axis(AXISTURN);
-	if (gamepadjoystickmove && axis != 0)
-	{
-		turnright = turnright || (axis > 0);
-		turnleft = turnleft || (axis < 0);
-	}
-	forward = side = 0;
-
-	// use two stage accelerative turning
-	// on the keyboard and joystick
-	if (turnleft || turnright)
-		turnheld += realtics;
-	else
-		turnheld = 0;
-
-	if (turnheld < SLOWTURNTICS)
-		tspeed = 2; // slow turn
-	else
-		tspeed = speed;
-
-	// let movement keys cancel each other out
-	if (cv_analog2.value) // Analog
-	{
-		if (turnright)
-			cmd->angleturn = (INT16)(cmd->angleturn - angleturn[tspeed]);
-		if (turnleft)
-			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
-	}
-	if (twodlevel
-		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
-		|| (!demoplayback && (player->pflags & PF_SLIDING)))
-			forcefullinput = true;
-	if (twodlevel
-		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
-		|| player->climbing
-		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
-		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))) // Analog
-			forcestrafe = true;
-	if (forcestrafe) // Analog
-	{
-		if (turnright)
-			side += sidemove[speed];
-		if (turnleft)
-			side -= sidemove[speed];
-
-		if (analogjoystickmove && axis != 0)
-		{
-			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-			side += ((axis * sidemove[1]) >> 10);
-		}
-	}
-	else if (cv_analog2.value) // Analog
-	{
-		if (turnright)
-			cmd->buttons |= BT_CAMRIGHT;
-		if (turnleft)
-			cmd->buttons |= BT_CAMLEFT;
-	}
-	else
-	{
-		if (turnright)
-			cmd->angleturn = (INT16)(cmd->angleturn - angleturn[tspeed]);
-		else if (turnleft)
-			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
-
-		if (analogjoystickmove && axis != 0)
-		{
-			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - ((axis * angleturn[1]) >> 10)); // ANALOG!
-		}
-	}
-
-	axis = Joy2Axis(AXISSTRAFE);
-	if (gamepadjoystickmove && axis != 0)
-	{
-		if (axis < 0)
-			side += sidemove[speed];
-		else if (axis > 0)
-			side -= sidemove[speed];
-	}
-	else if (analogjoystickmove && axis != 0)
-	{
-		// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-		side += ((axis * sidemove[1]) >> 10);
-	}
-
-	// forward with key or button
-	axis = Joy2Axis(AXISMOVE);
-	altaxis = Joy2Axis(AXISLOOK);
-	if (movefkey || (gamepadjoystickmove && axis < 0)
-		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
-		forward = forwardmove[speed];
-	if (movebkey || (gamepadjoystickmove && axis > 0)
-		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
-		forward -= forwardmove[speed];
-
-	if (analogjoystickmove && axis != 0)
-		forward -= ((axis * forwardmove[1]) >> 10); // ANALOG!
-
-	// some people strafe left & right with mouse buttons
-	// those people are (still) weird
-	if (straferkey)
-		side += sidemove[speed];
-	if (strafelkey)
-		side -= sidemove[speed];
-
-	if (PLAYER2INPUTDOWN(gc_weaponnext))
-		cmd->buttons |= BT_WEAPONNEXT; // Next Weapon
-	if (PLAYER2INPUTDOWN(gc_weaponprev))
-		cmd->buttons |= BT_WEAPONPREV; // Previous Weapon
-
-	//use the four avaliable bits to determine the weapon.
-	cmd->buttons &= ~BT_WEAPONMASK;
-	for (i = 0; i < NUM_WEAPONS; ++i)
-		if (PLAYER2INPUTDOWN(gc_wepslot1 + i))
-		{
-			cmd->buttons |= (UINT16)(i + 1);
-			break;
-		}
-
-	// fire with any button/key
-	axis = Joy2Axis(AXISFIRE);
-	if (PLAYER2INPUTDOWN(gc_fire) || (cv_usejoystick2.value && axis > 0))
-		cmd->buttons |= BT_ATTACK;
-
-	// fire normal with any button/key
-	axis = Joy2Axis(AXISFIRENORMAL);
-	if (PLAYER2INPUTDOWN(gc_firenormal) || (cv_usejoystick2.value && axis > 0))
-		cmd->buttons |= BT_FIRENORMAL;
-
-	if (PLAYER2INPUTDOWN(gc_tossflag))
-		cmd->buttons |= BT_TOSSFLAG;
-
-	// Lua scriptable buttons
-	if (PLAYER2INPUTDOWN(gc_custom1))
-		cmd->buttons |= BT_CUSTOM1;
-	if (PLAYER2INPUTDOWN(gc_custom2))
-		cmd->buttons |= BT_CUSTOM2;
-	if (PLAYER2INPUTDOWN(gc_custom3))
-		cmd->buttons |= BT_CUSTOM3;
-
-	// use with any button/key
-	axis = Joy2Axis(AXISSPIN);
-	if (PLAYER2INPUTDOWN(gc_use) || (cv_usejoystick2.value && axis > 0))
-		cmd->buttons |= BT_USE;
-
-	if (PLAYER2INPUTDOWN(gc_camreset))
-	{
-		if (camera2.chase && !resetdown)
-			P_ResetCamera(&players[secondarydisplayplayer], &camera2);
-		resetdown = true;
-	}
-	else
-		resetdown = false;
-
-	// jump button
-	axis = Joy2Axis(AXISJUMP);
-	if (PLAYER2INPUTDOWN(gc_jump) || (cv_usejoystick2.value && axis > 0))
-		cmd->buttons |= BT_JUMP;
-
-	// player aiming shit, ahhhh...
-	{
-		INT32 player_invert = cv_invertmouse2.value ? -1 : 1;
-		INT32 screen_invert =
-			(player->mo && (player->mo->eflags & MFE_VERTICALFLIP)
-			 && (!camera2.chase || player->pflags & PF_FLIPCAM)) //because chasecam's not inverted
-			 ? -1 : 1; // set to -1 or 1 to multiply
-
-		// mouse look stuff (mouse look is not the same as mouse aim)
-		if (mouseaiming)
-		{
-			keyboard_look = false;
-
-			// looking up/down
-			localaiming2 += (mlook2y<<19)*player_invert*screen_invert;
-		}
-
-		axis = Joy2Axis(AXISLOOK);
-		if (analogjoystickmove && joyaiming && axis != 0 && cv_lookaxis2.value != 0)
-			localaiming2 += (axis<<16) * screen_invert;
-
-		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look && cv_lookaxis2.value == 0 && !joyaiming && !mouseaiming)
-			localaiming2 = 0;
-
-		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
-		{
-			if (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
-			{
-				localaiming2 += KB_LOOKSPEED * screen_invert;
-				keyboard_look = true;
-			}
-			else if (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
-			{
-				localaiming2 -= KB_LOOKSPEED * screen_invert;
-				keyboard_look = true;
-			}
-			else if (PLAYER2INPUTDOWN(gc_centerview))
-				localaiming2 = 0;
-		}
-
-		// accept no mlook for network games
-		if (!cv_allowmlook.value)
-			localaiming2 = 0;
-
-		cmd->aiming = G_ClipAimingPitch(&localaiming2);
-	}
-
-	if (!mouseaiming && cv_mousemove2.value)
-		forward += mouse2y;
-
-	if (player->climbing
-		|| (player->pflags & PF_SLIDING)) // Analog for mouse
-		side += mouse2x*2;
-	else if (cv_analog2.value)
-	{
-		if (mouse2x)
-		{
-			if (mouse2x > 0)
-				cmd->buttons |= BT_CAMRIGHT;
-			else
-				cmd->buttons |= BT_CAMLEFT;
-		}
-	}
-	else
-		cmd->angleturn = (INT16)(cmd->angleturn - (mouse2x*8));
-
-	mouse2x = mouse2y = mlook2y = 0;
-
-	if (forward > MAXPLMOVE)
-		forward = MAXPLMOVE;
-	else if (forward < -MAXPLMOVE)
-		forward = -MAXPLMOVE;
-	if (side > MAXPLMOVE)
-		side = MAXPLMOVE;
-	else if (side < -MAXPLMOVE)
-		side = -MAXPLMOVE;
-
-	// No additional acceleration when moving forward/backward and strafing simultaneously.
-	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
-	if (!forcefullinput && forward && side)
-	{
-		angle_t angle = R_PointToAngle2(0, 0, side << FRACBITS, forward << FRACBITS);
-		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
-		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
-		forward = max(min(forward, maxforward), -maxforward);
-		side = max(min(side, maxside), -maxside);
-	}
-
-	//Silly hack to make 2d mode *somewhat* playable with no chasecam.
-	if ((twodlevel || (player->mo && player->mo->flags2 & MF2_TWOD)) && !camera2.chase)
-	{
-		INT32 temp = forward;
-		forward = side;
-		side = temp;
-	}
-
-	cmd->forwardmove = (SINT8)(cmd->forwardmove + forward);
-	cmd->sidemove = (SINT8)(cmd->sidemove + side);
-
-	if (player->bot == 1) {
+	if (player->bot == 1) { // Tailsbot for P2
 		if (!player->powers[pw_tailsfly] && (cmd->forwardmove || cmd->sidemove || cmd->buttons))
 		{
 			player->bot = 2; // A player-controlled bot. Returns to AI when it respawns.
@@ -1634,7 +1342,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		}
 	}
 
-	if (cv_analog2.value) {
+	if (analog) {
 		if (player->awayviewtics)
 			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
 		else
@@ -1642,9 +1350,14 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	}
 	else
 	{
-		localangle2 += (cmd->angleturn<<16);
-		cmd->angleturn = (INT16)(localangle2 >> 16);
+		*myangle += (cmd->angleturn<<16);
+		cmd->angleturn = (INT16)(*myangle >> 16);
 	}
+
+	//Reset away view if a command is given.
+	if (ssplayer == 1 && (cmd->forwardmove || cmd->sidemove || cmd->buttons)
+		&& displayplayer != consoleplayer)
+		displayplayer = consoleplayer;
 }
 
 // User has designated that they want
