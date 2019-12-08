@@ -3026,10 +3026,8 @@ boolean P_SetupLevel(boolean skipprecip)
 		// Even mipmaps that aren't related to level textures.
 		// Presumably, the hardware render code used to store textures as level data.
 		// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
-		// Now, only mipmaps that AREN'T level textures are freed between levels.
 		// Level textures are only reloaded after R_LoadTextures, which is
 		// when the texture list is loaded.
-		HWR_FreeMipmapCache();
 #ifdef ALAM_LIGHTING
 		// BP: reset light between levels (we draw preview frame lights on current frame)
 		HWR_ResetLights();
