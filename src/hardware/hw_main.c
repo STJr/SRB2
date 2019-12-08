@@ -3431,7 +3431,7 @@ static void HWR_AddPolyObjectPlanes(void)
 			{
 				HWR_GetLevelFlat(&levelflats[polyobjsector->ceilingpic]);
 				HWR_RenderPolyObjectPlane(po_ptrs[i], true, polyobjsector->ceilingheight, PF_Occlude,
-				                          (light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), &levelflats[polyobjsector->floorpic],
+				                          (light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), &levelflats[polyobjsector->ceilingpic],
 				                          polyobjsector, 255, (light == -1 ? gr_frontsector->extra_colormap : *gr_frontsector->lightlist[light].extra_colormap));
 			}
 		}
