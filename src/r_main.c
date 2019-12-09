@@ -1211,9 +1211,6 @@ void R_RegisterEngineStuff(void)
 
 #ifdef HWRENDER
 	// GL-specific Commands
-	CV_RegisterVar(&cv_grgammablue);
-	CV_RegisterVar(&cv_grgammagreen);
-	CV_RegisterVar(&cv_grgammared);
 	CV_RegisterVar(&cv_grfovchange);
 	CV_RegisterVar(&cv_grfog);
 	CV_RegisterVar(&cv_grfogcolor);

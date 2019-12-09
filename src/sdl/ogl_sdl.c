@@ -222,17 +222,15 @@ void OglSdlFinishUpdate(boolean waitvbl)
 	HWR_DrawScreenFinalTexture(realwidth, realheight);
 }
 
-EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette, RGBA_t *pgamma)
+EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette)
 {
-	INT32 i = -1;
-	UINT32 redgamma = pgamma->s.red, greengamma = pgamma->s.green,
-		bluegamma = pgamma->s.blue;
+	INT32 i;
 
 	for (i = 0; i < 256; i++)
 	{
-		myPaletteData[i].s.red   = (UINT8)MIN((palette[i].s.red   * redgamma)  /127, 255);
-		myPaletteData[i].s.green = (UINT8)MIN((palette[i].s.green * greengamma)/127, 255);
-		myPaletteData[i].s.blue  = (UINT8)MIN((palette[i].s.blue  * bluegamma) /127, 255);
+		myPaletteData[i].s.red   = palette[i].s.red;
+		myPaletteData[i].s.green = palette[i].s.green;
+		myPaletteData[i].s.blue  = palette[i].s.blue;
 		myPaletteData[i].s.alpha = palette[i].s.alpha;
 	}
 	Flush();

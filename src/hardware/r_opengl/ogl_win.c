@@ -564,15 +564,15 @@ EXPORT void HWRAPI(FinishUpdate) (INT32 waitvbl)
 //                  : in OpenGL, we store values for conversion of paletted graphics when
 //                  : they are downloaded to the 3D card.
 // -----------------+
-EXPORT void HWRAPI(SetPalette) (RGBA_t *pal, RGBA_t *gamma)
+EXPORT void HWRAPI(SetPalette) (RGBA_t *pal)
 {
 	INT32 i;
 
 	for (i = 0; i < 256; i++)
 	{
-		myPaletteData[i].s.red   = (UINT8)MIN((pal[i].s.red*gamma->s.red)/127,     255);
-		myPaletteData[i].s.green = (UINT8)MIN((pal[i].s.green*gamma->s.green)/127, 255);
-		myPaletteData[i].s.blue  = (UINT8)MIN((pal[i].s.blue*gamma->s.blue)/127,   255);
+		myPaletteData[i].s.red   = pal[i].s.red;
+		myPaletteData[i].s.green = pal[i].s.green;
+		myPaletteData[i].s.blue  = pal[i].s.blue;
 		myPaletteData[i].s.alpha = pal[i].s.alpha;
 	}
 
