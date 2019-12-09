@@ -723,8 +723,8 @@ void Flush(void)
 
 	while (gr_cachehead)
 	{
-		// ceci n'est pas du tout necessaire vu que tu les a charger normalement et
-		// donc il sont dans ta liste !
+		// this is not necessary at all, because you have loaded them normally,
+		// and so they already are in your list!
 #if 0
 		//Hurdler: 25/04/2000: now support colormap in hardware mode
 		FTextureInfo    *tmp = gr_cachehead->nextskin;
@@ -1296,11 +1296,11 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 
 		pTexInfo->nextmipmap = NULL;
 		if (gr_cachetail)
-		{ // insertion en fin de liste
+		{ // insertion at the tail
 			gr_cachetail->nextmipmap = pTexInfo;
 			gr_cachetail = pTexInfo;
 		}
-		else // initialisation de la liste
+		else // initialization of the linked list
 			gr_cachetail = gr_cachehead =  pTexInfo;
 	}
 }
