@@ -1009,35 +1009,27 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 static void P_PrepareRawThings(UINT8 *data, size_t i)
 {
 	mapthing_t *mt;
+	sector_t *mtsector;
 
 	nummapthings = i / (5 * sizeof (INT16));
 	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
 
-	// Spawn axis points first so they are
-	// at the front of the list for fast searching.
-	mt = mapthings;
-	for (i = 0; i < nummapthings; i++, mt++)
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
 		mt->x = READINT16(data);
 		mt->y = READINT16(data);
+		// Z for objects
+		mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
+		mt->z = (INT16)(
+#ifdef ESLOPE
+				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
+#endif
+				mtsector->floorheight)>>FRACBITS;
 		mt->angle = READINT16(data);
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
-
 		mt->type &= 4095;
-
-		switch (mt->type)
-		{
-			case 1700: // MT_AXIS
-			case 1701: // MT_AXISTRANSFER
-			case 1702: // MT_AXISTRANSFERLINE
-				mt->mobj = NULL;
-				P_SpawnMapThing(mt);
-				break;
-			default:
-				break;
-		}
 	}
 }
 
@@ -1053,21 +1045,26 @@ static void P_LoadThings(boolean loademblems)
 	size_t i;
 	mapthing_t *mt;
 
-	// Loading the things lump itself into memory is now handled in P_PrepareThings, above
-
-	mt = mapthings;
-	numhuntemeralds = 0;
-	for (i = 0; i < nummapthings; i++, mt++)
+	// Spawn axis points first so they are at the front of the list for fast searching.
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
-		sector_t *mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
+		switch (mt->type)
+		{
+			case 1700: // MT_AXIS
+			case 1701: // MT_AXISTRANSFER
+			case 1702: // MT_AXISTRANSFERLINE
+				mt->mobj = NULL;
+				P_SpawnMapThing(mt);
+				break;
+			default:
+				break;
+		}
+	}
 
-		// Z for objects
-		mt->z = (INT16)(
-#ifdef ESLOPE
-				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
-#endif
-				mtsector->floorheight)>>FRACBITS;
+	numhuntemeralds = 0;
 
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	{
 		if (mt->type == 1700 // MT_AXIS
 			|| mt->type == 1701 // MT_AXISTRANSFER
 			|| mt->type == 1702) // MT_AXISTRANSFERLINE
