@@ -1009,7 +1009,6 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 static void P_PrepareRawThings(UINT8 *data, size_t i)
 {
 	mapthing_t *mt;
-	sector_t *mtsector;
 
 	nummapthings = i / (5 * sizeof (INT16));
 	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
@@ -1018,13 +1017,8 @@ static void P_PrepareRawThings(UINT8 *data, size_t i)
 	{
 		mt->x = READINT16(data);
 		mt->y = READINT16(data);
-		// Z for objects
-		mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
-		mt->z = (INT16)(
-#ifdef ESLOPE
-				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
-#endif
-				mtsector->floorheight)>>FRACBITS;
+		mt->z = 0;
+
 		mt->angle = READINT16(data);
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
@@ -1137,11 +1131,6 @@ static void P_LoadThings(boolean loademblems)
 		 || mt->type == 1705 || mt->type == 1713) // hoops
 		{
 			mt->mobj = NULL;
-
-			// Z for objects Tails 05-26-2002
-			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-				->sector->floorheight>>FRACBITS);
-
 			P_SpawnHoopsAndRings(mt, false);
 		}
 	}
