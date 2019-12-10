@@ -77,7 +77,8 @@ extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
 
 // hi here's some new controls
-extern consvar_t cv_abilitydirection[2], cv_cam_shiftfacing[2], cv_cam_turnfacing[2], cv_cam_turnfacingability[2], cv_cam_turnfacinginput[2];
+extern consvar_t cv_abilitydirection[2], cv_cam_shiftfacing[2], cv_cam_turnfacing[2],
+	cv_cam_turnfacingability[2], cv_cam_turnfacingspindash[2], cv_cam_turnfacinginput[2];
 
 // mouseaiming (looking up/down with the mouse or keyboard)
 #define KB_LOOKSPEED (1<<25)

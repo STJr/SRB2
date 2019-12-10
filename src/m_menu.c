@@ -1191,9 +1191,10 @@ static menuitem_t OP_CameraOptionsMenu[] =
 	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
 	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam_rotspeed, 90},
 
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[0],  110},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[0],  120},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  130},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to player angle", &cv_cam_shiftfacing[0],  100},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to player angle", &cv_cam_turnfacing[0],  110},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  120},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[0],  130},
 	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[0],  140},
 
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 160},
@@ -1211,9 +1212,10 @@ static menuitem_t OP_Camera2OptionsMenu[] =
 	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
 	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam2_rotspeed, 90},
 
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[1],  110},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[1],  120},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[1],  130},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[1],  100},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[1],  110},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[1],  120},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[1],  130},
 	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[1],  140},
 
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 160},
@@ -4266,7 +4268,8 @@ static void M_DrawControlsDefMenu(void)
 			OP_CameraOptionsMenu[9].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
 			OP_CameraOptionsMenu[10].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
 			OP_CameraOptionsMenu[11].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_CameraOptionsMenu[12].alphaKey = 160;
+			OP_CameraOptionsMenu[12].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_CameraOptionsMenu[13].alphaKey = 160;
 		}
 		else
 		{
@@ -4274,7 +4277,8 @@ static void M_DrawControlsDefMenu(void)
 			OP_CameraOptionsMenu[9].status = IT_DISABLED;
 			OP_CameraOptionsMenu[10].status = IT_DISABLED;
 			OP_CameraOptionsMenu[11].status = IT_DISABLED;
-			OP_CameraOptionsMenu[12].alphaKey = 110;
+			OP_CameraOptionsMenu[12].status = IT_DISABLED;
+			OP_CameraOptionsMenu[13].alphaKey = 110;
 		}
 	}
 	else
@@ -4287,7 +4291,8 @@ static void M_DrawControlsDefMenu(void)
 			OP_Camera2OptionsMenu[9].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
 			OP_Camera2OptionsMenu[10].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
 			OP_Camera2OptionsMenu[11].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_Camera2OptionsMenu[12].alphaKey = 160;
+			OP_Camera2OptionsMenu[12].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_Camera2OptionsMenu[13].alphaKey = 160;
 		}
 		else
 		{
@@ -4295,7 +4300,8 @@ static void M_DrawControlsDefMenu(void)
 			OP_Camera2OptionsMenu[9].status = IT_DISABLED;
 			OP_Camera2OptionsMenu[10].status = IT_DISABLED;
 			OP_Camera2OptionsMenu[11].status = IT_DISABLED;
-			OP_Camera2OptionsMenu[12].alphaKey = 110;
+			OP_Camera2OptionsMenu[12].status = IT_DISABLED;
+			OP_Camera2OptionsMenu[13].alphaKey = 110;
 		}
 	}
 

@@ -834,6 +834,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_cam_turnfacing[1]);
 	CV_RegisterVar(&cv_cam_turnfacingability[0]);
 	CV_RegisterVar(&cv_cam_turnfacingability[1]);
+	CV_RegisterVar(&cv_cam_turnfacingspindash[0]);
+	CV_RegisterVar(&cv_cam_turnfacingspindash[1]);
 	CV_RegisterVar(&cv_cam_turnfacinginput[0]);
 	CV_RegisterVar(&cv_cam_turnfacinginput[1]);
 
