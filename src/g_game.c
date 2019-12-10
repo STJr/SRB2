@@ -1261,7 +1261,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		else
 			ticcmd_resetdown[forplayer] = true;
 	}
-	else
+	else if (ticcmd_resetdown[forplayer])
 	{
 		ticcmd_resetdown[forplayer] = false;
 
