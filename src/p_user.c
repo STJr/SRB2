@@ -5353,14 +5353,15 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 						player->pflags |= PF_THOKKED;
 
-						// Change localangle to match? (P.S. chalupa)
-						if (!demoplayback)
+						// Change localangle to match for simple controls? (P.S. chalupa)
+						// disabled because it seemed to disorient people and Z-targeting exists now
+						/*if (!demoplayback)
 						{
 							if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(PLAYER1INPUTDOWN(gc_turnleft) || PLAYER1INPUTDOWN(gc_turnright)))
 								localangle = player->mo->angle;
 							else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(PLAYER2INPUTDOWN(gc_turnleft) || PLAYER2INPUTDOWN(gc_turnright)))
 								localangle2 = player->mo->angle;
-						}
+						}*/
 					}
 					break;
 
