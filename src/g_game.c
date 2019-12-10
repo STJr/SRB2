@@ -1409,6 +1409,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		if (abilitydirection && camera.chase && !ticcmd_resetdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
 		{
+			///@TODO This block of code is a hack to get the desired abilitydirection and player angle behaviors while remaining netplay-compatible with EXEs without those features.
+			// This has side effects like making F12 spectate look kind of weird, and making the input viewer inaccurate.
+			// In a perfect world, this will be removed and player behavior would use facing direction in a way that mimics this.
+			// But that's a lot more work and I want to A) have this out quickly B) be netplay-compatible.
+
 			if (cmd->forwardmove || cmd->sidemove)
 			{
 				angle_t controlangle = R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
