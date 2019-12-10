@@ -1250,12 +1250,20 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		{
 			ticcmd_resetdown[forplayer] = true;
 			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], &camera);
+
+			if (abilitydirection)
+				CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 0);
 		}
 		else
 			ticcmd_resetdown[forplayer] = true;
 	}
 	else
+	{
 		ticcmd_resetdown[forplayer] = false;
+
+		if (abilitydirection)
+			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 1);
+	}
 
 	// jump button
 	axis = PlayerJoyAxis(ssplayer, AXISJUMP);
