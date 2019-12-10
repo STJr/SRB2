@@ -2194,10 +2194,10 @@ void HU_Drawer(void)
 		return;
 
 	// draw the crosshair, not when viewing demos nor with chasecam
-	if (!automapactive && cv_crosshair.value && !demoplayback && !camera.chase && !players[displayplayer].spectator)
+	if (!automapactive && cv_crosshair.value && !demoplayback && (!camera.chase || (cv_abilitydirection[0].value && ticcmd_resetdown[0])) && !players[displayplayer].spectator)
 		HU_DrawCrosshair();
 
-	if (!automapactive && cv_crosshair2.value && !demoplayback && !camera2.chase && !players[secondarydisplayplayer].spectator)
+	if (!automapactive && cv_crosshair2.value && !demoplayback && (!camera2.chase || (cv_abilitydirection[1].value && ticcmd_resetdown[1])) && !players[secondarydisplayplayer].spectator)
 		HU_DrawCrosshair2();
 
 	// draw desynch text
