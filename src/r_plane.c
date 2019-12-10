@@ -190,6 +190,15 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		ds_xfrac += FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
 		ds_yfrac += FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
 
+#ifdef ESLOPE
+		if (currentplane->slope)
+		{
+			ds_sup = &ds_su[y];
+			ds_svp = &ds_sv[y];
+			ds_szp = &ds_sz[y];
+		}
+#endif
+
 		if (y+ds_bgofs>=viewheight)
 			ds_bgofs = viewheight-y-1;
 		if (y+ds_bgofs<0)
@@ -833,6 +842,100 @@ static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boo
 	return flat;
 }
 
+// Lactokaiju
+#ifdef ESLOPE
+static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
+{
+	// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
+	// I copied ZDoom's code and adapted it to SRB2... -Red
+	floatv3_t p, m, n;
+	float ang;
+	float vx, vy, vz;
+	// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
+	// use this as a temp var to store P_GetZAt's return value each time
+	fixed_t temp;
+
+	vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
+	vy = FIXED_TO_FLOAT(pl->viewy-yoffs);
+	vz = FIXED_TO_FLOAT(pl->viewz);
+
+	temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
+	zeroheight = FIXED_TO_FLOAT(temp);
+
+	// p is the texture origin in view space
+	// Don't add in the offsets at this stage, because doing so can result in
+	// errors if the flat is rotated.
+	ang = ANG2RAD(ANGLE_270 - pl->viewangle);
+	p.x = vx * cos(ang) - vy * sin(ang);
+	p.z = vx * sin(ang) + vy * cos(ang);
+	temp = P_GetZAt(pl->slope, -xoffs, yoffs);
+	p.y = FIXED_TO_FLOAT(temp) - vz;
+
+	// m is the v direction vector in view space
+	ang = ANG2RAD(ANGLE_180 - (pl->viewangle + pl->plangle));
+	m.x = cos(ang);
+	m.z = sin(ang);
+
+	// n is the u direction vector in view space
+	n.x = sin(ang);
+	n.z = -cos(ang);
+
+	ang = ANG2RAD(pl->plangle);
+	temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(sin(ang)), pl->viewy + FLOAT_TO_FIXED(cos(ang)));
+	m.y = FIXED_TO_FLOAT(temp) - zeroheight;
+	temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
+	n.y = FIXED_TO_FLOAT(temp) - zeroheight;
+
+	if (ds_powersoftwo)
+	{
+		m.x /= fudge;
+		m.y /= fudge;
+		m.z /= fudge;
+
+		n.x *= fudge;
+		n.y *= fudge;
+		n.z *= fudge;
+	}
+
+	// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
+#define CROSS(d, v1, v2) \
+d.x = (v1.y * v2.z) - (v1.z * v2.y);\
+d.y = (v1.z * v2.x) - (v1.x * v2.z);\
+d.z = (v1.x * v2.y) - (v1.y * v2.x)
+	CROSS(ds_su[i], p, m);
+	CROSS(ds_sv[i], p, n);
+	CROSS(ds_sz[i], m, n);
+#undef CROSS
+
+	ds_su[i].z *= focallengthf;
+	ds_sv[i].z *= focallengthf;
+	ds_sz[i].z *= focallengthf;
+
+	// Premultiply the texture vectors with the scale factors
+#define SFMULT 65536.f
+	if (ds_powersoftwo)
+	{
+		ds_su[i].x *= (SFMULT * (1<<nflatshiftup));
+		ds_su[i].y *= (SFMULT * (1<<nflatshiftup));
+		ds_su[i].z *= (SFMULT * (1<<nflatshiftup));
+		ds_sv[i].x *= (SFMULT * (1<<nflatshiftup));
+		ds_sv[i].y *= (SFMULT * (1<<nflatshiftup));
+		ds_sv[i].z *= (SFMULT * (1<<nflatshiftup));
+	}
+	else
+	{
+		// I'm essentially multiplying the vectors by FRACUNIT...
+		ds_su[i].x *= SFMULT;
+		ds_su[i].y *= SFMULT;
+		ds_su[i].z *= SFMULT;
+		ds_sv[i].x *= SFMULT;
+		ds_sv[i].y *= SFMULT;
+		ds_sv[i].z *= SFMULT;
+	}
+#undef SFMULT
+}
+#endif // ESLOPE
+
 void R_DrawSinglePlane(visplane_t *pl)
 {
 	UINT8 *flat;
@@ -945,11 +1048,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
 #ifndef NOWATER
-		if (pl->ffloor->flags & FF_RIPPLE
-#ifdef ESLOPE
-				&& !pl->slope
-#endif
-			)
+		if (pl->ffloor->flags & FF_RIPPLE)
 		{
 			INT32 top, bottom;
 
@@ -1045,25 +1144,18 @@ void R_DrawSinglePlane(visplane_t *pl)
 		light = 0;
 
 #ifdef ESLOPE
-	if (pl->slope) {
-		// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
-		// I copied ZDoom's code and adapted it to SRB2... -Red
-		floatv3_t p, m, n;
-		float ang;
-		float vx, vy, vz;
-		float fudge = 0;
-		// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
-		// use this as a temp var to store P_GetZAt's return value each time
-		fixed_t temp;
-
+	if (pl->slope)
+	{
+		float fudgecanyon = 0;
 		angle_t hack = (pl->plangle & (ANGLE_90-1));
 
 		yoffs *= 1;
 
 		if (ds_powersoftwo)
 		{
+			fixed_t temp;
 			// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
-			fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+			fudgecanyon = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 			if (hack)
 			{
 				/*
@@ -1105,89 +1197,52 @@ void R_DrawSinglePlane(visplane_t *pl)
 				xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
 				yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
 			}
-			xoffs = (fixed_t)(xoffs*fudge);
-			yoffs = (fixed_t)(yoffs/fudge);
+			xoffs = (fixed_t)(xoffs*fudgecanyon);
+			yoffs = (fixed_t)(yoffs/fudgecanyon);
 		}
 
-		vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
-		vy = FIXED_TO_FLOAT(pl->viewy-yoffs);
-		vz = FIXED_TO_FLOAT(pl->viewz);
+		ds_sup = &ds_su[0];
+		ds_svp = &ds_sv[0];
+		ds_szp = &ds_sz[0];
 
-		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
-		zeroheight = FIXED_TO_FLOAT(temp);
-
-		// p is the texture origin in view space
-		// Don't add in the offsets at this stage, because doing so can result in
-		// errors if the flat is rotated.
-		ang = ANG2RAD(ANGLE_270 - pl->viewangle);
-		p.x = vx * cos(ang) - vy * sin(ang);
-		p.z = vx * sin(ang) + vy * cos(ang);
-		temp = P_GetZAt(pl->slope, -xoffs, yoffs);
-		p.y = FIXED_TO_FLOAT(temp) - vz;
-
-		// m is the v direction vector in view space
-		ang = ANG2RAD(ANGLE_180 - (pl->viewangle + pl->plangle));
-		m.x = cos(ang);
-		m.z = sin(ang);
-
-		// n is the u direction vector in view space
-		n.x = sin(ang);
-		n.z = -cos(ang);
-
-		ang = ANG2RAD(pl->plangle);
-		temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(sin(ang)), pl->viewy + FLOAT_TO_FIXED(cos(ang)));
-		m.y = FIXED_TO_FLOAT(temp) - zeroheight;
-		temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
-		n.y = FIXED_TO_FLOAT(temp) - zeroheight;
-
-		if (ds_powersoftwo)
+#ifndef NOWATER
+		if (itswater)
 		{
-			m.x /= fudge;
-			m.y /= fudge;
-			m.z /= fudge;
+			INT32 i;
+			fixed_t rxoffs = xoffs;
+			fixed_t ryoffs = yoffs;
 
-			n.x *= fudge;
-			n.y *= fudge;
-			n.z *= fudge;
-		}
+			R_PlaneBounds(pl);
 
-		// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
-#define CROSS(d, v1, v2) \
-   d.x = (v1.y * v2.z) - (v1.z * v2.y);\
-   d.y = (v1.z * v2.x) - (v1.x * v2.z);\
-   d.z = (v1.x * v2.y) - (v1.y * v2.x)
-		CROSS(ds_su, p, m);
-		CROSS(ds_sv, p, n);
-		CROSS(ds_sz, m, n);
-#undef CROSS
+			for (i = pl->high; i < pl->low; i++)
+			{
+				// Fuck it
+				fixed_t plheight = abs(P_GetZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
+				fixed_t distance = FixedMul(plheight, yslope[i]);
+				const INT32 yay = (wtofs + (distance>>9) ) & 8191;
+				// ripples da water texture
+				ds_bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
+				angle = (pl->viewangle + pl->plangle)>>ANGLETOFINESHIFT;
 
-		ds_su.z *= focallengthf;
-		ds_sv.z *= focallengthf;
-		ds_sz.z *= focallengthf;
+				angle = (angle + 2048) & 8191;  // 90 degrees
+				xoffs = rxoffs + FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
+				yoffs = ryoffs + FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
 
-		// Premultiply the texture vectors with the scale factors
-#define SFMULT 65536.f
-		if (ds_powersoftwo)
-		{
-			ds_su.x *= (SFMULT * (1<<nflatshiftup));
-			ds_su.y *= (SFMULT * (1<<nflatshiftup));
-			ds_su.z *= (SFMULT * (1<<nflatshiftup));
-			ds_sv.x *= (SFMULT * (1<<nflatshiftup));
-			ds_sv.y *= (SFMULT * (1<<nflatshiftup));
-			ds_sv.z *= (SFMULT * (1<<nflatshiftup));
+				R_SlopeVectors(pl, i, fudgecanyon);
+			}
+
+			xoffs = rxoffs;
+			yoffs = ryoffs;
 		}
 		else
-		{
-			// I'm essentially multiplying the vectors by FRACUNIT...
-			ds_su.x *= SFMULT;
-			ds_su.y *= SFMULT;
-			ds_su.z *= SFMULT;
-			ds_sv.x *= SFMULT;
-			ds_sv.y *= SFMULT;
-			ds_sv.z *= SFMULT;
-		}
-#undef SFMULT
+#endif
+			R_SlopeVectors(pl, 0, fudgecanyon);
 
+#ifndef NOWATER
+		if ((spanfunc == R_DrawTranslucentWaterSpan_8) || (spanfunc == R_DrawTranslucentSpan_8))
+			spanfunc = R_DrawTiltedTranslucentWaterSpan_8;
+		else
+#endif
 		if (spanfunc == R_DrawTranslucentSpan_8)
 			spanfunc = R_DrawTiltedTranslucentSpan_8;
 		else if (spanfunc == splatfunc)
