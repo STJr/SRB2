@@ -298,11 +298,14 @@ menu_t OP_MPControlsDef, OP_MiscControlsDef;
 menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
 menu_t OP_CameraOptionsDef, OP_Camera2OptionsDef;
+menu_t OP_PlaystyleDef;
 static void M_VideoModeMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
 static void M_Setup1PJoystickMenu(INT32 choice);
 static void M_Setup2PJoystickMenu(INT32 choice);
+static void M_Setup1PPlaystyleMenu(INT32 choice);
+static void M_Setup2PPlaystyleMenu(INT32 choice);
 static void M_AssignJoystick(INT32 choice);
 static void M_ChangeControl(INT32 choice);
 
@@ -347,6 +350,8 @@ static void M_DrawLevelStats(void);
 static void M_DrawTimeAttackMenu(void);
 static void M_DrawNightsAttackMenu(void);
 static void M_DrawSetupChoosePlayerMenu(void);
+static void M_DrawControlsDefMenu(void);
+static void M_DrawPlaystyleMenu(void);
 static void M_DrawControl(void);
 static void M_DrawMainVideoMenu(void);
 static void M_DrawVideoMode(void);
@@ -375,6 +380,7 @@ static void M_HandleSoundTest(INT32 choice);
 static void M_HandleImageDef(INT32 choice);
 static void M_HandleLoadSave(INT32 choice);
 static void M_HandleLevelStats(INT32 choice);
+static void M_HandlePlaystyleMenu(INT32 choice);
 #ifndef NONET
 static boolean M_CancelConnect(void);
 static void M_HandleConnectIP(INT32 choice);
@@ -1032,10 +1038,10 @@ static menuitem_t OP_P1ControlsMenu[] =
 
 	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_CameraOptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  100},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  70},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  80},
-	{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[0],  90},
+	//{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  70},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  70},
+	{IT_CALL    | IT_STRING, NULL, "Play Style...", M_Setup1PPlaystyleMenu, 80},
+	//{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[0],  90},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1046,10 +1052,10 @@ static menuitem_t OP_P2ControlsMenu[] =
 
 	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_Camera2OptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  100},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  70},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  80},
-	{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[1],  90},
+	//{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  70},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  70},
+	{IT_CALL    | IT_STRING, NULL, "Play Style...", M_Setup2PPlaystyleMenu, 80},
+	//{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[1],  90},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
@@ -1183,13 +1189,14 @@ static menuitem_t OP_CameraOptionsMenu[] =
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
 	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam_rotspeed, 90},
 
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[0],  100},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[0],  110},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  120},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[0],  130},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[0],  110},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[0],  120},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  130},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[0],  140},
 
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 140},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 160},
 };
 
 static menuitem_t OP_Camera2OptionsMenu[] =
@@ -1202,13 +1209,14 @@ static menuitem_t OP_Camera2OptionsMenu[] =
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
 	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam2_rotspeed, 90},
 
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[1],  100},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[1],  110},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[1],  120},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[1],  130},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[1],  110},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[1],  120},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[1],  130},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[1],  140},
 
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 140},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 160},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -1924,12 +1932,24 @@ menu_t OP_MainDef = DEFAULTMENUSTYLE(
 menu_t OP_ChangeControlsDef = CONTROLMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_CHANGECONTROLS << 12), // second level (<<6) set on runtime
 	OP_ChangeControlsMenu, &OP_MainDef);
-menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE(
+
+menu_t OP_P1ControlsDef = {
 	MN_OP_MAIN + (MN_OP_P1CONTROLS << 6),
-	"M_CONTRO", OP_P1ControlsMenu, &OP_MainDef, 50, 30);
-menu_t OP_P2ControlsDef = DEFAULTMENUSTYLE(
+	"M_CONTRO",
+	sizeof(OP_P1ControlsMenu)/sizeof(menuitem_t),
+	&OP_MainDef,
+	OP_P1ControlsMenu,
+	M_DrawControlsDefMenu,
+	50, 30, 0, NULL};
+menu_t OP_P2ControlsDef = {
 	MN_OP_MAIN + (MN_OP_P2CONTROLS << 6),
-	"M_CONTRO", OP_P2ControlsMenu, &OP_MainDef, 50, 30);
+	"M_CONTRO",
+	sizeof(OP_P2ControlsMenu)/sizeof(menuitem_t),
+	&OP_MainDef,
+	OP_P2ControlsMenu,
+	M_DrawControlsDefMenu,
+	50, 30, 0, NULL};
+
 menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1MOUSE << 12),
 	"M_CONTRO", OP_MouseOptionsMenu, &OP_P1ControlsDef, 35, 30);
@@ -1960,6 +1980,18 @@ menu_t OP_CameraOptionsDef = DEFAULTMENUSTYLE(
 menu_t OP_Camera2OptionsDef = DEFAULTMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),
 	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
+
+static menuitem_t OP_PlaystyleMenu[] = {{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandlePlaystyleMenu, 0}};
+
+menu_t OP_PlaystyleDef = {
+	MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_PLAYSTYLE << 12),
+	NULL,
+	1,
+	&OP_P1ControlsDef,
+	OP_PlaystyleMenu,
+	M_DrawPlaystyleMenu,
+	0, 0, 0, NULL
+};
 
 
 menu_t OP_VideoOptionsDef =
@@ -4164,6 +4196,98 @@ static void M_DrawGenericMenu(void)
 			W_CachePatchName("M_CURSOR", PU_CACHE));
 		V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 	}
+}
+
+const char *PlaystyleNames[3] = {"Legacy", "Standard", "Simple"};
+const char *PlaystyleDesc[3] = {
+	// Legacy
+	"The play style used for\n"
+	"old-school SRB2.\n"
+	"\n"
+	"This play style is identical\n"
+	"to Standard, except that the\n"
+	"player always looks in the\n"
+	"direction of the camera."
+	,
+
+	// Standard
+	"The default play style,\n"
+	"designed for full control\n"
+	"with a keyboard and mouse.\n"
+	"\n"
+	"The camera rotates only when\n"
+	"you tell it to. The player\n"
+	"looks in the direction they're\n"
+	"moving, but acts in the direction\n"
+	"the camera is facing.\n"
+	"\n"
+	"Mastery of this play style will\n"
+	"open up the highest level of play!"
+	,
+
+	// Simple
+	"A play style designed for\n"
+	"gamepads and hassle-free play.\n"
+	"\n"
+	"The camera rotates automatically\n"
+	"as you move, and the player faces\n"
+	"and acts in the direction\n"
+	"they're moving.\n"
+	"\n"
+	"Hold \x82Reset Camera\x80 to lock the\n"
+	"camera behind the player!\n"
+};
+
+static void M_DrawControlsDefMenu(void)
+{
+	UINT8 opt = 0;
+
+	M_DrawGenericMenu();
+
+	if (currentMenu == &OP_P1ControlsDef)
+	{
+		opt = (cv_abilitydirection[0].value ? 2 : cv_directionchar.value);
+
+		if (opt == 2)
+		{
+			OP_CameraOptionsMenu[8].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_CameraOptionsMenu[9].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_CameraOptionsMenu[10].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_CameraOptionsMenu[11].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_CameraOptionsMenu[12].alphaKey = 160;
+		}
+		else
+		{
+			OP_CameraOptionsMenu[8].status = IT_DISABLED;
+			OP_CameraOptionsMenu[9].status = IT_DISABLED;
+			OP_CameraOptionsMenu[10].status = IT_DISABLED;
+			OP_CameraOptionsMenu[11].status = IT_DISABLED;
+			OP_CameraOptionsMenu[12].alphaKey = 110;
+		}
+	}
+	else
+	{
+		opt = (cv_abilitydirection[1].value ? 2 : cv_directionchar2.value);
+
+		if (opt == 2)
+		{
+			OP_Camera2OptionsMenu[8].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_Camera2OptionsMenu[9].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_Camera2OptionsMenu[10].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_Camera2OptionsMenu[11].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
+			OP_Camera2OptionsMenu[12].alphaKey = 160;
+		}
+		else
+		{
+			OP_Camera2OptionsMenu[8].status = IT_DISABLED;
+			OP_Camera2OptionsMenu[9].status = IT_DISABLED;
+			OP_Camera2OptionsMenu[10].status = IT_DISABLED;
+			OP_Camera2OptionsMenu[11].status = IT_DISABLED;
+			OP_Camera2OptionsMenu[12].alphaKey = 110;
+		}
+	}
+
+	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + 80, V_YELLOWMAP, PlaystyleNames[opt]);
 }
 
 #define scrollareaheight 72
@@ -11428,6 +11552,87 @@ static void M_ChangeControl(INT32 choice)
 	strlcpy(controltochangetext, currentMenu->menuitems[choice].text, 33);
 
 	M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
+}
+
+static UINT8 playstyle_activeplayer = 0, playstyle_currentchoice = 0;
+
+static void M_Setup1PPlaystyleMenu(INT32 choice)
+{
+	(void)choice;
+
+	playstyle_activeplayer = 0;
+	playstyle_currentchoice = (cv_abilitydirection[0].value ? 2 : cv_directionchar.value);
+	OP_PlaystyleDef.prevMenu = &OP_P1ControlsDef;
+	M_SetupNextMenu(&OP_PlaystyleDef);
+}
+
+static void M_Setup2PPlaystyleMenu(INT32 choice)
+{
+	(void)choice;
+
+	playstyle_activeplayer = 1;
+	playstyle_currentchoice = (cv_abilitydirection[1].value ? 2 : cv_directionchar2.value);
+	OP_PlaystyleDef.prevMenu = &OP_P2ControlsDef;
+	M_SetupNextMenu(&OP_PlaystyleDef);
+}
+
+static void M_DrawPlaystyleMenu(void)
+{
+	size_t i;
+
+	for (i = 0; i < 3; i++)
+	{
+		V_DrawCenteredString((i+1)*BASEVIDWIDTH/4, 20, (i == playstyle_currentchoice) ? V_YELLOWMAP : 0, PlaystyleNames[i]);
+
+		if (i == playstyle_currentchoice)
+		{
+			V_DrawScaledPatch((i+1)*BASEVIDWIDTH/4 - 8, 10, 0, W_CachePatchName("M_CURSOR", PU_CACHE));
+			V_DrawString(30, 50, V_ALLOWLOWERCASE, PlaystyleDesc[i]);
+		}
+	}
+}
+
+static void M_HandlePlaystyleMenu(INT32 choice)
+{
+	switch (choice)
+	{
+	case KEY_ESCAPE:
+	case KEY_BACKSPACE:
+		M_SetupNextMenu(currentMenu->prevMenu);
+		break;
+
+	case KEY_ENTER:
+		S_StartSound(NULL, sfx_menu1);
+		if (cv_abilitydirection[playstyle_activeplayer].value != (playstyle_currentchoice/2))
+		{
+			if (cv_abilitydirection[playstyle_activeplayer].value)
+			{
+				CV_Set((playstyle_activeplayer ? &cv_cam2_dist : &cv_cam_dist), cv_cam_dist.defaultvalue);
+				CV_Set((playstyle_activeplayer ? &cv_cam2_height : &cv_cam_height), cv_cam_height.defaultvalue);
+			}
+			else
+			{
+				CV_SetValue((playstyle_activeplayer ? &cv_cam2_dist : &cv_cam_dist), 224);
+				CV_SetValue((playstyle_activeplayer ? &cv_cam2_height : &cv_cam_height), 50);
+			}
+
+			CV_SetValue(&cv_abilitydirection[playstyle_activeplayer], playstyle_currentchoice/2);
+		}
+		CV_SetValue((playstyle_activeplayer ? &cv_directionchar2 : &cv_directionchar), playstyle_currentchoice ? 1 : 0);
+
+		M_SetupNextMenu(currentMenu->prevMenu);
+		break;
+
+	case KEY_LEFTARROW:
+		S_StartSound(NULL, sfx_menu1);
+		playstyle_currentchoice = (playstyle_currentchoice+2)%3;
+		break;
+
+	case KEY_RIGHTARROW:
+		S_StartSound(NULL, sfx_menu1);
+		playstyle_currentchoice = (playstyle_currentchoice+1)%3;
+		break;
+	}
 }
 
 // ===============
