@@ -11563,6 +11563,7 @@ static fixed_t GetMobjSpawnHeight (const mobjtype_t i, const mapthing_t* mthing,
 	{
 	// Bumpers never spawn flipped.
 	case MT_NIGHTSBUMPER:
+		heightoffset = mthing->z*FRACUNIT;
 		flip = false;
 		break;
 
