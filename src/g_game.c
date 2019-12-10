@@ -409,12 +409,12 @@ consvar_t cv_cam_turnfacing[2] = {
 	{"cam2_turnfacingchar", "0.0", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 consvar_t cv_cam_turnfacingability[2] = {
-	{"cam_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
-	{"cam2_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam_turnfacingability", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_turnfacingability", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 consvar_t cv_cam_turnfacinginput[2] = {
-	{"cam_turnfacinginput", "0.15", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
-	{"cam2_turnfacinginput", "0.15", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 
 typedef enum
@@ -1390,7 +1390,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value; //@TODO cvar
 
 			if (camadjustfactor)
-				*myangle -= cmd->sidemove * min(50, player->speed / (FRACUNIT/7)) * camadjustfactor;
+				*myangle -= cmd->sidemove * min(20, player->speed / (FRACUNIT/7)) * camadjustfactor;
 		}
 
 		if (abilitydirection && camera.chase && !ticcmd_resetdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
@@ -1416,9 +1416,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			fixed_t camadjustfactor;
 
 			if (player->climbing || player->pflags & (PF_GLIDING|PF_STARTDASH))
-				camadjustfactor = cv_cam_turnfacingability[forplayer].value;
+				camadjustfactor = cv_cam_turnfacingability[forplayer].value/2;
 			else
-				camadjustfactor = cv_cam_turnfacing[forplayer].value;
+				camadjustfactor = cv_cam_turnfacing[forplayer].value/8;
 
 			if (camadjustfactor)
 			{
