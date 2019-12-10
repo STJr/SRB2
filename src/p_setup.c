@@ -1025,10 +1025,10 @@ static void P_PrepareRawThings(UINT8 *data, size_t i)
 
 		mt->type &= 4095;
 
-		if (mt->type == 1705 || (mt->type == 750 && mt->extrainfo)) // NiGHTS Hoops
-			mt->z = mthing->options;
+		if (mt->type == 1705 || (mt->type == 750 && mt->extrainfo))
+			mt->z = mt->options; // NiGHTS Hoops use the full flags bits to set the height.
 		else
-			mt->z = mthing->options >> ZSHIFT;
+			mt->z = mt->options >> ZSHIFT;
 	}
 }
 
