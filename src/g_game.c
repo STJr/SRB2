@@ -1390,7 +1390,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value; //@TODO cvar
 
 			if (camadjustfactor)
-				*myangle -= cmd->sidemove * min(20, player->speed / (FRACUNIT/7)) * camadjustfactor;
+				*myangle -= cmd->sidemove * min(20, player->speed / FRACUNIT) * camadjustfactor;
 		}
 
 		if (abilitydirection && camera.chase && !ticcmd_resetdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
