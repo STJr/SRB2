@@ -1017,13 +1017,18 @@ static void P_PrepareRawThings(UINT8 *data, size_t i)
 	{
 		mt->x = READINT16(data);
 		mt->y = READINT16(data);
-		mt->z = 0;
 
 		mt->angle = READINT16(data);
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
+
 		mt->type &= 4095;
+
+		if (mt->type == 1705 || (mt->type == 750 && mt->extrainfo)) // NiGHTS Hoops
+			mt->z = mthing->options;
+		else
+			mt->z = mthing->options >> ZSHIFT;
 	}
 }
 
@@ -1032,6 +1037,51 @@ static void P_PrepareThings(lumpnum_t lumpnum)
 	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
 	P_PrepareRawThings(data, W_LumpLength(lumpnum));
 	Z_Free(data);
+}
+
+static void SpawnEmeraldHunt (void)
+{
+	INT32 emer1, emer2, emer3;
+	INT32 timeout = 0; // keeps from getting stuck
+
+	emer1 = emer2 = emer3 = 0;
+
+	//increment spawn numbers because zero is valid.
+	emer1 = (P_RandomKey(numhuntemeralds)) + 1;
+	while (timeout++ < 100)
+	{
+		emer2 = (P_RandomKey(numhuntemeralds)) + 1;
+
+		if (emer2 != emer1)
+			break;
+	}
+
+	timeout = 0;
+	while (timeout++ < 100)
+	{
+		emer3 = (P_RandomKey(numhuntemeralds)) + 1;
+
+		if (emer3 != emer2 && emer3 != emer1)
+			break;
+	}
+
+	//decrement spawn values to the actual number because zero is valid.
+	if (emer1--)
+		P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
+			huntemeralds[emer1]->y<<FRACBITS,
+			huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
+
+	if (emer2--)
+		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
+			huntemeralds[emer2]->y<<FRACBITS,
+			huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
+		mobjinfo[MT_EMERHUNT].spawnstate+1);
+
+	if (emer3--)
+		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
+			huntemeralds[emer3]->y<<FRACBITS,
+			huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
+		mobjinfo[MT_EMERHUNT].spawnstate+2);
 }
 
 static void P_LoadThings(boolean loademblems)
@@ -1073,49 +1123,7 @@ static void P_LoadThings(boolean loademblems)
 
 	// random emeralds for hunt
 	if (numhuntemeralds)
-	{
-		INT32 emer1, emer2, emer3;
-		INT32 timeout = 0; // keeps from getting stuck
-
-		emer1 = emer2 = emer3 = 0;
-
-		//increment spawn numbers because zero is valid.
-		emer1 = (P_RandomKey(numhuntemeralds)) + 1;
-		while (timeout++ < 100)
-		{
-			emer2 = (P_RandomKey(numhuntemeralds)) + 1;
-
-			if (emer2 != emer1)
-				break;
-		}
-
-		timeout = 0;
-		while (timeout++ < 100)
-		{
-			emer3 = (P_RandomKey(numhuntemeralds)) + 1;
-
-			if (emer3 != emer2 && emer3 != emer1)
-				break;
-		}
-
-		//decrement spawn values to the actual number because zero is valid.
-		if (emer1--)
-			P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
-				huntemeralds[emer1]->y<<FRACBITS,
-				huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
-
-		if (emer2--)
-			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
-				huntemeralds[emer2]->y<<FRACBITS,
-				huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
-			mobjinfo[MT_EMERHUNT].spawnstate+1);
-
-		if (emer3--)
-			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
-				huntemeralds[emer3]->y<<FRACBITS,
-				huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
-			mobjinfo[MT_EMERHUNT].spawnstate+2);
-	}
+		SpawnEmeraldHunt();
 
 	if (metalrecording) // Metal Sonic gets no rings to distract him.
 		return;
