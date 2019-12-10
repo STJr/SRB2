@@ -1006,6 +1006,7 @@ static fixed_t forwardmove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16};
 static fixed_t sidemove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16}; // faster!
 static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 
+boolean ticcmd_resetdown[2]; // don't cam reset every frame
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 {
 	boolean forcestrafe = false;
@@ -1024,7 +1025,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	static INT32 turnheld[2]; // for accelerative turning
 	static boolean keyboard_look[2]; // true if lookup/down using keyboard
-	static boolean resetdown[2]; // don't cam reset every frame
 	static boolean joyaiming[2]; // check the last frame's value if we need to reset the camera
 	UINT8 forplayer = ssplayer-1;
 
@@ -1244,12 +1244,16 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	if (PLAYERINPUTDOWN(ssplayer, gc_camreset))
 	{
-		if (camera.chase && !resetdown[forplayer])
+		if (camera.chase && !ticcmd_resetdown[forplayer])
+		{
+			ticcmd_resetdown[forplayer] = true;
 			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], &camera);
-		resetdown[forplayer] = true;
+		}
+		else
+			ticcmd_resetdown[forplayer] = true;
 	}
 	else
-		resetdown[forplayer] = false;
+		ticcmd_resetdown[forplayer] = false;
 
 	// jump button
 	axis = PlayerJoyAxis(ssplayer, AXISJUMP);
@@ -1381,7 +1385,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->angleturn = (INT16)(*myangle >> 16);
 
 		// Adjust camera angle by player input
-		if (!forcestrafe && camera.chase && !turnheld[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
+		if (!forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_resetdown[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value; //@TODO cvar
 
@@ -1389,7 +1393,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				*myangle -= cmd->sidemove * min(50, player->speed / (FRACUNIT/7)) * camadjustfactor;
 		}
 
-		if (abilitydirection && camera.chase && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
+		if (abilitydirection && camera.chase && !ticcmd_resetdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
 		{
 			if (cmd->forwardmove || cmd->sidemove)
 			{
@@ -1407,7 +1411,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		// Adjust camera angle to face player direction, depending on circumstances
 		// Nothing happens if cam left/right are held, so you can hold both to lock the camera in one direction
-		if (!forcestrafe && camera.chase && !turnheld[forplayer] && player->powers[pw_carry] != CR_MINECART)
+		if (!forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_resetdown[forplayer] && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor;
 
