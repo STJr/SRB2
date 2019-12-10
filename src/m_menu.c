@@ -4198,8 +4198,8 @@ static void M_DrawGenericMenu(void)
 	}
 }
 
-const char *PlaystyleNames[3] = {"Legacy", "Standard", "Simple"};
-const char *PlaystyleDesc[3] = {
+const char *PlaystyleNames[4] = {"Legacy", "Standard", "Simple", "Old Analog??"};
+const char *PlaystyleDesc[4] = {
 	// Legacy
 	"The play style used for\n"
 	"old-school SRB2.\n"
@@ -4236,6 +4236,18 @@ const char *PlaystyleDesc[3] = {
 	"\n"
 	"Hold \x82Reset Camera\x80 to lock the\n"
 	"camera behind the player!\n"
+	,
+
+	// Old Analog
+	"I see.\n"
+	"\n"
+	"You really liked the old analog mode,\n"
+	"so when 2.2 came out, you opened up\n"
+	"your config file and brought it back.\n"
+	"\n"
+	"That's absolutely valid, but I implore\n"
+	"you to try the new Simple play style\n"
+	"instead!"
 };
 
 static void M_DrawControlsDefMenu(void)
@@ -4246,7 +4258,7 @@ static void M_DrawControlsDefMenu(void)
 
 	if (currentMenu == &OP_P1ControlsDef)
 	{
-		opt = (cv_abilitydirection[0].value ? 2 : cv_directionchar.value);
+		opt = cv_useranalog.value ? 3 : (cv_abilitydirection[0].value ? 2 : cv_directionchar.value);
 
 		if (opt == 2)
 		{
@@ -4267,7 +4279,7 @@ static void M_DrawControlsDefMenu(void)
 	}
 	else
 	{
-		opt = (cv_abilitydirection[1].value ? 2 : cv_directionchar2.value);
+		opt = cv_useranalog2.value ? 3 : (cv_abilitydirection[1].value ? 2 : cv_directionchar2.value);
 
 		if (opt == 2)
 		{
@@ -11561,7 +11573,7 @@ static void M_Setup1PPlaystyleMenu(INT32 choice)
 	(void)choice;
 
 	playstyle_activeplayer = 0;
-	playstyle_currentchoice = (cv_abilitydirection[0].value ? 2 : cv_directionchar.value);
+	playstyle_currentchoice = cv_useranalog.value ? 3 : (cv_abilitydirection[0].value ? 2 : cv_directionchar.value);
 	OP_PlaystyleDef.prevMenu = &OP_P1ControlsDef;
 	M_SetupNextMenu(&OP_PlaystyleDef);
 }
@@ -11571,7 +11583,7 @@ static void M_Setup2PPlaystyleMenu(INT32 choice)
 	(void)choice;
 
 	playstyle_activeplayer = 1;
-	playstyle_currentchoice = (cv_abilitydirection[1].value ? 2 : cv_directionchar2.value);
+	playstyle_currentchoice = cv_useranalog2.value ? 3 : (cv_abilitydirection[1].value ? 2 : cv_directionchar2.value);
 	OP_PlaystyleDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_PlaystyleDef);
 }
@@ -11580,9 +11592,10 @@ static void M_DrawPlaystyleMenu(void)
 {
 	size_t i;
 
-	for (i = 0; i < 3; i++)
+	for (i = 0; i < 4; i++)
 	{
-		V_DrawCenteredString((i+1)*BASEVIDWIDTH/4, 20, (i == playstyle_currentchoice) ? V_YELLOWMAP : 0, PlaystyleNames[i]);
+		if (i != 3)
+			V_DrawCenteredString((i+1)*BASEVIDWIDTH/4, 20, (i == playstyle_currentchoice) ? V_YELLOWMAP : 0, PlaystyleNames[i]);
 
 		if (i == playstyle_currentchoice)
 		{
@@ -11619,6 +11632,7 @@ static void M_HandlePlaystyleMenu(INT32 choice)
 			CV_SetValue(&cv_abilitydirection[playstyle_activeplayer], playstyle_currentchoice/2);
 		}
 		CV_SetValue((playstyle_activeplayer ? &cv_directionchar2 : &cv_directionchar), playstyle_currentchoice ? 1 : 0);
+		CV_SetValue((playstyle_activeplayer ? &cv_useranalog2 : &cv_useranalog), 0);
 
 		M_SetupNextMenu(currentMenu->prevMenu);
 		break;
