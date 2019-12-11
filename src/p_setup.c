@@ -2361,7 +2361,7 @@ static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 #endif
 }
 
-static void P_MakeMapMD5(lumpnum_t maplumpnum, void *dest)
+static void P_MakeMapMD5(virtres_t* virt, void *dest)
 {
 	unsigned char linemd5[16];
 	unsigned char sectormd5[16];
@@ -2372,20 +2372,15 @@ static void P_MakeMapMD5(lumpnum_t maplumpnum, void *dest)
 
 	// Create a hash for the current map
 	// get the actual lumps!
-	UINT8 *datalines   = W_CacheLumpNum(maplumpnum + ML_LINEDEFS, PU_CACHE);
-	UINT8 *datasectors = W_CacheLumpNum(maplumpnum + ML_SECTORS, PU_CACHE);
-	UINT8 *datathings  = W_CacheLumpNum(maplumpnum + ML_THINGS, PU_CACHE);
-	UINT8 *datasides   = W_CacheLumpNum(maplumpnum + ML_SIDEDEFS, PU_CACHE);
+	virtlump_t* virtlines   = vres_Find(virt, "LINEDEFS");
+	virtlump_t* virtsectors = vres_Find(virt, "SECTORS");
+	virtlump_t* virtmthings = vres_Find(virt, "THINGS");
+	virtlump_t* virtsides   = vres_Find(virt, "SIDEDEFS");
 
-	P_MakeBufferMD5((char*)datalines,   W_LumpLength(maplumpnum + ML_LINEDEFS), linemd5);
-	P_MakeBufferMD5((char*)datasectors, W_LumpLength(maplumpnum + ML_SECTORS),  sectormd5);
-	P_MakeBufferMD5((char*)datathings,  W_LumpLength(maplumpnum + ML_THINGS),   thingmd5);
-	P_MakeBufferMD5((char*)datasides,   W_LumpLength(maplumpnum + ML_SIDEDEFS), sidedefmd5);
-
-	Z_Free(datalines);
-	Z_Free(datasectors);
-	Z_Free(datathings);
-	Z_Free(datasides);
+	P_MakeBufferMD5((char*)virtlines->data,   virtlines->size, linemd5);
+	P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size,  sectormd5);
+	P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size,   thingmd5);
+	P_MakeBufferMD5((char*)virtsides->data,   virtsides->size, sidedefmd5);
 
 	for (i = 0; i < 16; i++)
 		resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
@@ -2870,8 +2865,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
 
-	P_MakeMapMD5(lastloadedmaplumpnum, &mapmd5);
-
 	if (lastloadedmaplumpnum)
 	{
 		virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
@@ -2887,6 +2880,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		virtlump_t* virtblockmap = vres_Find(virt, "BLOCKMAP");
 		virtlump_t* virtreject   = vres_Find(virt, "REJECT");
+
+		P_MakeMapMD5(virt, &mapmd5);
 
 		P_LoadRawVertexes(virtvertexes->data, virtvertexes->size);
 		P_LoadRawSectors(virtsectors->data, virtsectors->size);
