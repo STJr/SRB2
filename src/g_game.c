@@ -1399,15 +1399,25 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->angleturn = (INT16)(*myangle >> 16);
 
 		// Adjust camera angle by player input
-		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_resetdown[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
+		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] &&
+			!(ticcmd_resetdown[forplayer] && !(player->pflags & PF_STARTDASH))
+			&& !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value; //@TODO cvar
 
 			if (camadjustfactor)
 			{
 				fixed_t sine = FINESINE((R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - localangle)>>ANGLETOFINESHIFT);
-				*myangle -= cmd->sidemove * min(20, FixedMul(player->speed, abs(sine)) / FRACUNIT) * camadjustfactor;
+				fixed_t factor = min(20, FixedMul(player->speed, abs(sine)) / FRACUNIT);
+
+				if (ticcmd_resetdown[forplayer] && (player->pflags & PF_STARTDASH))
+					factor = (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value); // Turn while in startdash and locking camera
+
+				*myangle -= cmd->sidemove * factor * camadjustfactor;
 			}
+
+			if (ticcmd_resetdown[forplayer] && (player->pflags & PF_STARTDASH))
+				cmd->sidemove = 0;
 		}
 
 		if (abilitydirection && camera.chase && !ticcmd_resetdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
