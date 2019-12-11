@@ -553,31 +553,39 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			I_Sleep();
 		lastwipetic = nowtime;
 
+		// Wipe styles
+		if (wipestyle == WIPESTYLE_COLORMAP)
+		{
 #ifdef HWRENDER
-		if (rendermode == render_opengl)
-		{
-			// send in the wipe type and wipe frame because we need to cache the graphic
-			if (wipestyle == WIPESTYLE_COLORMAP)
+			if (rendermode == render_opengl)
+			{
+				// send in the wipe type and wipe frame because we need to cache the graphic
 				HWR_DoTintedWipe(wipetype, wipeframe-1);
+			}
 			else
-				HWR_DoWipe(wipetype, wipeframe-1);
-		}
-		else
 #endif
-		{
-			if (wipestyle == WIPESTYLE_COLORMAP)
 			{
 				UINT8 *colormap = fadecolormap;
 				if (wipestyleflags & WSF_TOWHITE)
 					colormap += (FADECOLORMAPROWS * 256);
 				F_DoColormapWipe(fmask, colormap);
 			}
+
+			// Draw the title card above the wipe
+			F_WipeStageTitle();
+		}
+		else
+		{
+#ifdef HWRENDER
+			if (rendermode == render_opengl)
+			{
+				// send in the wipe type and wipe frame because we need to cache the graphic
+				HWR_DoWipe(wipetype, wipeframe-1);
+			}
 			else
+#endif
 				F_DoWipe(fmask);
 		}
-
-		if (wipestyle == WIPESTYLE_COLORMAP)
-			F_WipeStageTitle();
 
 		I_OsPolling();
 		I_UpdateNoBlit();
