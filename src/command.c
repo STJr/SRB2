@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1586,14 +1586,16 @@ void CV_StealthSet(consvar_t *var, const char *value)
   */
 static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth)
 {
-	char val[32];
+	char val[SKINNAMESIZE+1];
 
 	if (var == &cv_forceskin) // Special handling.
 	{
+		const char *tmpskin = NULL;
 		if ((value < 0) || (value >= numskins))
-			sprintf(val, "None");
+			tmpskin = "None";
 		else
-			sprintf(val, "%s", skins[value].name);
+			tmpskin = skins[value].name;
+		strncpy(val, tmpskin, SKINNAMESIZE);
 	}
 	else
 		sprintf(val, "%d", value);

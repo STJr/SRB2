@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -981,7 +981,7 @@ void D_SRB2Main(void)
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2018 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2019 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1167,31 +1167,10 @@ void D_SRB2Main(void)
 	// Have to be done here before files are loaded
 	M_InitCharacterTables();
 
-	mainwads = 0;
-
-#ifndef DEVELOP // md5s last updated 12/14/14
-
-	// Check MD5s of autoloaded files
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_SRB2_PK3); // srb2.pk3
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_PK3); // zones.pk3
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_PLAYER_DTA); // player.dta
+	mainwads = 3; // doesn't include music.dta
 #ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.pk3
+	mainwads++;
 #endif
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
-	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
-	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
-	//mainwads++; // neither does music_new.dta
-#else
-
-	mainwads++;	// srb2.pk3
-	mainwads++; // zones.pk3
-	mainwads++; // player.dta
-#ifdef USE_PATCH_DTA
-	mainwads++; // patch.dta
-#endif
-	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
-	//mainwads++; // neither does music_new.dta
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
@@ -1203,11 +1182,20 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
+#ifndef DEVELOP // md5s last updated 06/12/19 (ddmmyy)
+
+	// Check MD5s of autoloaded files
+	W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3
+	W_VerifyFileMD5(1, ASSET_HASH_ZONES_PK3); // zones.pk3
+	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
+#ifdef USE_PATCH_DTA
+	W_VerifyFileMD5(3, ASSET_HASH_PATCH_DTA); // patch.pk3
+#endif
+	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif //ifndef DEVELOP
 
-	mainwadstally = packetsizetally;
-
-	mainwadstally = packetsizetally;
+	mainwadstally = packetsizetally; // technically not accurate atm, remember to port the two-stage -file process from kart in 2.2.x
 
 	cht_Init();
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3809,11 +3809,19 @@ static void CoopLives_OnChange(void)
 
 static void ExitMove_OnChange(void)
 {
+	UINT8 i;
+
 	if (!(netgame || multiplayer) || gametype != GT_COOP)
 		return;
 
 	if (cv_exitmove.value)
+	{
+		for (i = 0; i < MAXPLAYERS; ++i)
+			if (playeringame[i] && players[i].mo
+				&& players[i].mo->target && players[i].mo->target->type == MT_SIGN)
+				P_SetTarget(&players[i].mo->target, NULL);
 		CONS_Printf(M_GetText("Players can now move after completing the level.\n"));
+	}
 	else
 		CONS_Printf(M_GetText("Players can no longer move after completing the level.\n"));
 }

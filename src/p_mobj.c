@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3790,10 +3790,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			dummy.z = thiscam->z;
 			dummy.height = thiscam->height;
 			if (!resetcalled && !(player->pflags & PF_NOCLIP) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
-			{
 				P_ResetCamera(player, thiscam);
-				resetcalled = true;
-			}
 			else
 			{
 				fixed_t camspeed = P_AproxDistance(thiscam->momx, thiscam->momy);
@@ -3801,10 +3798,10 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 				P_SlideCameraMove(thiscam);
 
 				if (!resetcalled && P_AproxDistance(thiscam->momx, thiscam->momy) == camspeed)
-					{
-						P_ResetCamera(player, thiscam);
-						resetcalled = true;
-					}
+				{
+					P_ResetCamera(player, thiscam);
+					resetcalled = true;
+				}
 			}
 			if (resetcalled) // Okay this means the camera is fully reset.
 				return true;
@@ -4652,7 +4649,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			{
 				UINT8 i, numtospawn = 24;
 				angle_t ang = 0, interval = FixedAngle((360 << FRACBITS) / numtospawn);
-				mobj_t *shock, *sfirst = NULL, *sprev = NULL;
+				mobj_t *shock = NULL, *sfirst = NULL, *sprev = NULL;
 
 				mobj->movecount = mobj->health+1;
 				mobj->movefactor = -512*FRACUNIT;
@@ -7090,7 +7087,7 @@ static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
 		seg = P_SpawnMobj(x, y, z, MT_MINECARTSEG);
 		P_SetMobjState(seg, (statenum_t)(S_MINECARTSEG_FRONT + i));
 		if (i >= 2)
-			seg->extravalue1 = (i == 2) ? -20 : 20;
+			seg->extravalue1 = (i == 2) ? -18 : 18; // make -20/20 when papersprite projection fixed
 		else
 		{
 			seg->extravalue2 = (i == 0) ? 24 : -24;

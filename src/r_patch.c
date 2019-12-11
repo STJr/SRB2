@@ -1,8 +1,9 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 2005-2009 by Andrey "entryway" Budko.
+// Copyright (C) 2018-2019 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2019      by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -786,8 +787,8 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 {
 	char *sprinfoToken;
 	size_t sprinfoTokenLength;
-	char *frameChar;
-	UINT8 frameFrame;
+	char *frameChar = NULL;
+	UINT8 frameFrame = 0xFF;
 #ifdef ROTSPRITE
 	INT16 frameXPivot = 0;
 	INT16 frameYPivot = 0;

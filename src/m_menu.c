@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -859,7 +859,7 @@ static menuitem_t SP_NightsAttackLevelSelectMenu[] =
 // Single Player Nights Attack
 static menuitem_t SP_NightsAttackMenu[] =
 {
-	{IT_STRING|IT_CALL,        NULL, "Level Select...",  &M_NightsAttackLevelSelect,  52},
+	{IT_STRING|IT_KEYHANDLER,        NULL, "Level Select...",  &M_HandleTimeAttackLevelSelect,  52},
 	{IT_STRING|IT_CVAR,        NULL, "Show Records For", &cv_dummymares,              62},
 
 	{IT_DISABLED,              NULL, "Guest Option...",  &SP_NightsGuestReplayDef,    100},
@@ -1174,11 +1174,11 @@ static menuitem_t OP_CameraOptionsMenu[] =
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 10},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 20},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 30},
-	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 40},
+	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 40},
 
-	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
-	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
-	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
 
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 100},
 };
@@ -1188,11 +1188,11 @@ static menuitem_t OP_Camera2OptionsMenu[] =
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 10},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 20},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 30},
-	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 40},
+	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 40},
 
-	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
-	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
-	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
 
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 100},
 };
@@ -5361,7 +5361,7 @@ static void M_DrawNightsAttackBackground(void)
 	M_DrawNightsAttackMountains();
 
 	// back top foreground patch
-	x = -(ntsatkdrawtimer%backtopwidth);
+	x = 0-(ntsatkdrawtimer%backtopwidth);
 	V_DrawScaledPatch(x, y, V_SNAPTOTOP|V_SNAPTOLEFT, backtopfg);
 	for (i = 0; i < 3; i++)
 	{
@@ -5372,7 +5372,7 @@ static void M_DrawNightsAttackBackground(void)
 	}
 
 	// front top foreground patch
-	x = -((ntsatkdrawtimer*2)%fronttopwidth);
+	x = 0-((ntsatkdrawtimer*2)%fronttopwidth);
 	V_DrawScaledPatch(x, y, V_SNAPTOTOP|V_SNAPTOLEFT, fronttopfg);
 	for (i = 0; i < 3; i++)
 	{
@@ -5383,7 +5383,7 @@ static void M_DrawNightsAttackBackground(void)
 	}
 
 	// back bottom foreground patch
-	x = -(ntsatkdrawtimer%backbottomwidth);
+	x = 0-(ntsatkdrawtimer%backbottomwidth);
 	y = BASEVIDHEIGHT - backbottomheight;
 	V_DrawScaledPatch(x, y, V_SNAPTOBOTTOM|V_SNAPTOLEFT, backbottomfg);
 	for (i = 0; i < 3; i++)
@@ -5395,7 +5395,7 @@ static void M_DrawNightsAttackBackground(void)
 	}
 
 	// front bottom foreground patch
-	x = -((ntsatkdrawtimer*2)%frontbottomwidth);
+	x = 0-((ntsatkdrawtimer*2)%frontbottomwidth);
 	y = BASEVIDHEIGHT - frontbottomheight;
 	V_DrawScaledPatch(x, y, V_SNAPTOBOTTOM|V_SNAPTOLEFT, frontbottomfg);
 	for (i = 0; i < 3; i++)
@@ -6686,7 +6686,10 @@ static void M_DrawChecklist(void)
 	{
 		if (unlockables[i].name[0] == 0 //|| unlockables[i].nochecklist
 		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS)
+		{
+			i += 1;
 			continue;
+		}
 
 		V_DrawString(currentMenu->x, y, ((unlockables[i].unlocked) ? V_GREENMAP : V_TRANSLUCENT)|V_ALLOWLOWERCASE, ((unlockables[i].unlocked || !unlockables[i].nochecklist) ? unlockables[i].name : M_CreateSecretMenuOption(unlockables[i].name)));
 
@@ -9233,7 +9236,7 @@ void M_DrawTimeAttackMenu(void)
 
 		V_DrawString(104-72, 73+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
 
-		V_DrawRightAlignedString(104+64, 73+lsheadingheight/2, V_ALLOWLOWERCASE|((mapvisited[cv_nextmap.value-1] & MV_PERFECT) ? V_YELLOWMAP : 0), beststr);
+		V_DrawRightAlignedString(104+64, 73+lsheadingheight/2, V_ALLOWLOWERCASE|((mapvisited[cv_nextmap.value-1] & MV_PERFECTRA) ? V_YELLOWMAP : 0), beststr);
 
 		V_DrawRightAlignedString(104+72, 83+lsheadingheight/2, V_ALLOWLOWERCASE, reqrings);
 	}
@@ -9273,7 +9276,10 @@ static void M_HandleTimeAttackLevelSelect(INT32 choice)
 			break;
 
 		case KEY_ENTER:
-			M_TimeAttackLevelSelect(0);
+			if (levellistmode == LLM_NIGHTSATTACK)
+				M_NightsAttackLevelSelect(0);
+			else
+				M_TimeAttackLevelSelect(0);
 			break;
 
 		case KEY_ESCAPE:
@@ -9405,7 +9411,24 @@ void M_DrawNightsAttackMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
 
-		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
+		y = 32+lsheadingheight;
+		V_DrawSmallScaledPatch(208, y, 0, PictureOfLevel);
+
+		// Draw press ESC to exit string on main nights attack menu
+		if (currentMenu == &SP_NightsAttackDef)
+		{
+			if (itemOn == nalevel)
+			{
+				/* Draw arrows !! */
+				y = y + 25 - 4;
+				V_DrawCharacter(208 - 10 - (skullAnimCounter/5), y,
+						'\x1C' | V_YELLOWMAP, false);
+				V_DrawCharacter(208 + 80 + 2 + (skullAnimCounter/5), y,
+						'\x1D' | V_YELLOWMAP, false);
+			}
+			// Draw press ESC to exit string on main record attack menu
+			V_DrawString(104-72, 180, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
+		}
 
 		// Super Sonic
 		M_DrawNightsAttackSuperSonic();
@@ -9468,10 +9491,6 @@ void M_DrawNightsAttackMenu(void)
 			}
 		}
 	}
-
-	// Draw press ESC to exit string on main nights attack menu
-	if (currentMenu == &SP_NightsAttackDef)
-		V_DrawString(104-72, 180, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
 
 	// ALWAYS DRAW level even when not on this menu!
 	if (currentMenu != &SP_NightsAttackDef)

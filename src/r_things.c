@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1082,6 +1082,8 @@ static void R_SplitSprite(vissprite_t *sprite)
 	}
 }
 
+//#define PROPERPAPER // This was reverted less than 7 hours before 2.2's release because of very strange, frequent crashes.
+
 //
 // R_ProjectSprite
 // Generates a vissprite for a thing
@@ -1135,6 +1137,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	patch_t *rotsprite = NULL;
 	angle_t arollangle = thing->rollangle;
 	UINT32 rollangle = AngleFixed(arollangle)>>FRACBITS;
+#endif
+
+#ifndef PROPERPAPER
+	fixed_t ang_scale = FRACUNIT;
 #endif
 
 	// transform the origin point
@@ -1221,6 +1227,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (sprframe->rotate != SRF_SINGLE || papersprite)
 	{
 		ang = R_PointToAngle (thing->x, thing->y) - (thing->player ? thing->player->drawangle : thing->angle);
+#ifndef PROPERPAPER
+		if (papersprite)
+			ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
+#endif
 	}
 
 	if (sprframe->rotate == SRF_SINGLE)
@@ -1282,11 +1292,31 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 		offset = -spr_offset;
 	offset = FixedMul(offset, this_scale);
+#ifndef PROPERPAPER
+	tx += FixedMul(offset, ang_scale);
+	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
+
+	// off the right side?
+	if (x1 > viewwidth)
+		return;
+#endif
 	offset2 = FixedMul(spr_width, this_scale);
+#ifndef PROPERPAPER
+	tx += FixedMul(offset2, ang_scale);
+	x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - (papersprite ? 2 : 1);
+
+	// off the left side
+	if (x2 < 0)
+		return;
+#endif
 
 	if (papersprite)
 	{
-		fixed_t xscale2, yscale2, cosmul, sinmul, tz2;
+		fixed_t
+#ifdef PROPERPAPER
+			xscale2,
+#endif
+					yscale2, cosmul, sinmul, tz2;
 		INT32 range;
 
 		if (ang >= ANGLE_180)
@@ -1306,6 +1336,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale = FixedDiv(projectiony, tz);
 		if (yscale < 64) return; // Fix some funky visuals
 
+#ifdef PROPERPAPER
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
 		tx = -(gyt + gxt);
@@ -1315,6 +1346,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		// off the right side?
 		if (x1 > viewwidth)
 			return;
+#endif
 
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
@@ -1324,6 +1356,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale2 = FixedDiv(projectiony, tz2);
 		if (yscale2 < 64) return; // ditto
 
+#ifdef PROPERPAPER
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
 		tx = -(gyt + gxt);
@@ -1333,6 +1366,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		// off the left side
 		if (x2 < 0)
 			return;
+#endif
 
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
@@ -1340,9 +1374,18 @@ static void R_ProjectSprite(mobj_t *thing)
 		if ((range = x2 - x1) <= 0)
 			return;
 
+#ifdef PROPERPAPER
+		range++; // fencepost problem
+#endif
+
 		scalestep = (yscale2 - yscale)/range;
-		scalestep = scalestep ? scalestep : 1;
-		xscale = FixedDiv(range<<FRACBITS, abs(offset2))+1;
+		xscale =
+#ifdef PROPERPAPER
+		FixedDiv(range<<FRACBITS, abs(offset2))+1
+#else
+		FixedMul(xscale, ang_scale)
+#endif
+		;
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -1352,6 +1395,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		scalestep = 0;
 		yscale = sortscale;
+#ifdef PROPERPAPER
 		tx += offset;
 		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
@@ -1365,6 +1409,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		// off the left side
 		if (x2 < 0)
 			return;
+#endif
 	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)

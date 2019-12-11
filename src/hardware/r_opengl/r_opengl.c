@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-// Copyright (C) 1998-2018 by Sonic Team Junior.
+// Copyright (C) 1998-2019 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -221,11 +221,6 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglDrawElements glDrawElements
 #define pglEnableClientState glEnableClientState
 #define pglDisableClientState glDisableClientState
-#define pglClientActiveTexture glClientActiveTexture
-#define pglGenBuffers glGenBuffers
-#define pglBindBuffer glBindBuffer
-#define pglBufferData glBufferData
-#define pglDeleteBuffers glDeleteBuffers
 
 /* Lighting */
 #define pglShadeModel glShadeModel
@@ -331,15 +326,6 @@ typedef void (APIENTRY * PFNglEnableClientState) (GLenum cap);
 static PFNglEnableClientState pglEnableClientState;
 typedef void (APIENTRY * PFNglDisableClientState) (GLenum cap);
 static PFNglDisableClientState pglDisableClientState;
-typedef void (APIENTRY * PFNglGenBuffers) (GLsizei n, GLuint *buffers);
-static PFNglGenBuffers pglGenBuffers;
-typedef void (APIENTRY * PFNglBindBuffer) (GLenum target, GLuint buffer);
-static PFNglBindBuffer pglBindBuffer;
-typedef void (APIENTRY * PFNglBufferData) (GLenum target, GLsizei size, const GLvoid *data, GLenum usage);
-static PFNglBufferData pglBufferData;
-typedef void (APIENTRY * PFNglDeleteBuffers) (GLsizei n, const GLuint *buffers);
-static PFNglDeleteBuffers pglDeleteBuffers;
-
 
 /* Lighting */
 typedef void (APIENTRY * PFNglShadeModel) (GLenum mode);
@@ -396,6 +382,17 @@ typedef void (APIENTRY *PFNglMultiTexCoord2fv) (GLenum target, const GLfloat *v)
 static PFNglMultiTexCoord2fv pglMultiTexCoord2fv;
 typedef void (APIENTRY *PFNglClientActiveTexture) (GLenum);
 static PFNglClientActiveTexture pglClientActiveTexture;
+
+/* 1.5 functions for buffers */
+typedef void (APIENTRY * PFNglGenBuffers) (GLsizei n, GLuint *buffers);
+static PFNglGenBuffers pglGenBuffers;
+typedef void (APIENTRY * PFNglBindBuffer) (GLenum target, GLuint buffer);
+static PFNglBindBuffer pglBindBuffer;
+typedef void (APIENTRY * PFNglBufferData) (GLenum target, GLsizei size, const GLvoid *data, GLenum usage);
+static PFNglBufferData pglBufferData;
+typedef void (APIENTRY * PFNglDeleteBuffers) (GLsizei n, const GLuint *buffers);
+static PFNglDeleteBuffers pglDeleteBuffers;
+
 
 /* 1.2 Parms */
 /* GL_CLAMP_TO_EDGE_EXT */
@@ -512,6 +509,8 @@ boolean SetupGLFunc13(void)
 	pglMultiTexCoord2f = GetGLFunc("glMultiTexCoord2f");
 	pglClientActiveTexture = GetGLFunc("glClientActiveTexture");
 	pglMultiTexCoord2fv = GetGLFunc("glMultiTexCoord2fv");
+
+	/* 1.5 funcs */
 	pglGenBuffers = GetGLFunc("glGenBuffers");
 	pglBindBuffer = GetGLFunc("glBindBuffer");
 	pglBufferData = GetGLFunc("glBufferData");
@@ -1435,7 +1434,7 @@ static const boolean gl_ext_arb_vertex_buffer_object = true;
 
 // The texture offset to be applied to the texture coordinates in SkyVertex().
 static int rows, columns;
-static boolean yflip;
+static signed char yflip;
 static int texw, texh;
 static boolean foglayer;
 static float delta = 0.0f;
@@ -1448,17 +1447,17 @@ static INT32 lasttex = -1;
 
 static void SkyVertex(vbo_vertex_t *vbo, int r, int c)
 {
-	const float radians = (M_PIl / 180.0f);
+	const float radians = (float)(M_PIl / 180.0f);
 	const float scale = 10000.0f;
 	const float maxSideAngle = 60.0f;
 
 	float topAngle = (c / (float)columns * 360.0f);
 	float sideAngle = (maxSideAngle * (rows - r) / rows);
-	float height = sin(sideAngle * radians);
-	float realRadius = scale * cos(sideAngle * radians);
-	float x = realRadius * cos(topAngle * radians);
+	float height = (float)(sin(sideAngle * radians));
+	float realRadius = (float)(scale * cos(sideAngle * radians));
+	float x = (float)(realRadius * cos(topAngle * radians));
 	float y = (!yflip) ? scale * height : -scale * height;
-	float z = realRadius * sin(topAngle * radians);
+	float z = (float)(realRadius * sin(topAngle * radians));
 	float timesRepeat = (4 * (256.0f / texw));
 	if (fpclassify(timesRepeat) == FP_ZERO)
 		timesRepeat = 1.0f;

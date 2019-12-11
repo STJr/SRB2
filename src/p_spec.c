@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -4087,8 +4087,10 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
-		if (!player->mo->target || player->mo->target->type != MT_SIGN)
-			P_SetTarget(&player->mo->target, thing);
+		if (!numfound
+			&& !(player->mo->target && player->mo->target->type == MT_SIGN)
+			&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value))
+				P_SetTarget(&player->mo->target, thing);
 
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
@@ -4116,8 +4118,10 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
-		if (!player->mo->target || player->mo->target->type != MT_SIGN)
-			P_SetTarget(&player->mo->target, thing);
+		if (!numfound
+			&& !(player->mo->target && player->mo->target->type == MT_SIGN)
+			&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value))
+				P_SetTarget(&player->mo->target, thing);
 
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;

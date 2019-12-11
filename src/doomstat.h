@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -466,7 +466,8 @@ extern recorddata_t *mainrecords[NUMMAPS];
 #define MV_ALLEMERALDS  4
 #define MV_ULTIMATE     8
 #define MV_PERFECT     16
-#define MV_MAX         31 // used in gamedata check
+#define MV_PERFECTRA   32
+#define MV_MAX         63 // used in gamedata check, update whenever MV's are added
 #define MV_MP         128
 extern UINT8 mapvisited[NUMMAPS];
 
