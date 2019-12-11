@@ -73,6 +73,25 @@ typedef struct
 } lumpinfo_t;
 
 // =========================================================================
+//                         'VIRTUAL' RESOURCES
+// =========================================================================
+
+typedef struct {
+	char name[9];
+	UINT8* data;
+	size_t size;
+} virtlump_t;
+
+typedef struct {
+	size_t numlumps;
+	virtlump_t* vlumps;
+} virtres_t;
+
+virtres_t* vres_GetMap (lumpnum_t);
+void vres_Free (virtres_t*);
+virtlump_t* vres_Find (const virtres_t*, const char*);
+
+// =========================================================================
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
