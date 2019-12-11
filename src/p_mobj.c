@@ -11554,7 +11554,6 @@ INT32 numhuntemeralds;
 static fixed_t GetMobjSpawnHeight (const mobjtype_t i, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
 {
 	subsector_t *ss = R_PointInSubsector(x, y);
-	fixed_t z;
 	fixed_t extraoffset = 0;
 	fixed_t heightoffset = 0;
 	boolean flip;
@@ -13602,8 +13601,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			else
 				z += 24*FRACUNIT;
 		}
-
-		mthing->z = (INT16)(z>>FRACBITS);
 
 		mobj = P_SpawnMobj(x, y, z, ringthing);
 		mobj->spawnpoint = mthing;
