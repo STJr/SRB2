@@ -13077,7 +13077,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		mobj_t *hoopcenter;
 		INT16 spewangle;
 
-		z = mthing->options << FRACBITS;
+		z = mthing->z << FRACBITS;
 
 		hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 
@@ -13217,8 +13217,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		INT32 hoopsize;
 		INT32 hoopplacement;
 
-		// Save our flags!
-		z = (mthing->options>>ZSHIFT) << FRACBITS;
+		z = mthing->z << FRACBITS;
 
 		hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 		hoopcenter->spawnpoint = mthing;
@@ -13360,8 +13359,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
 #endif
 				sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->options >> ZSHIFT)
-				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			if (mthing->z)
+				z -= (mthing->z << FRACBITS);
 			}
 		else
 		{
@@ -13370,8 +13369,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
 #endif
 				sec->floorheight);
-			if (mthing->options >> ZSHIFT)
-				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+			if (mthing->z)
+				z += (mthing->z << FRACBITS);
 		}
 
 		for (r = 1; r <= 5; r++)
@@ -13420,8 +13419,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
 #endif
 				sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->options >> ZSHIFT)
-				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			if (mthing->z)
+				z -= (mthing->z << FRACBITS);
 			}
 		else
 		{
@@ -13430,8 +13429,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
 #endif
 				sec->floorheight);
-			if (mthing->options >> ZSHIFT)
-				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+			if (mthing->z)
+				z += (mthing->z << FRACBITS);
 		}
 
 		for (r = 1; r <= iterations; r++)
@@ -13477,8 +13476,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
 #endif
 			sec->floorheight;
-		if (mthing->options >> ZSHIFT)
-			z += ((mthing->options >> ZSHIFT) << FRACBITS);
+		if (mthing->z)
+			z += (mthing->z << FRACBITS);
 
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
 
@@ -13582,8 +13581,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
 #endif
 			sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->options >> ZSHIFT)
-				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			if (mthing->z)
+				z -= (mthing->z << FRACBITS);
 		}
 		else
 		{
@@ -13592,8 +13591,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
 #endif
 			sec->floorheight;
-			if (mthing->options >> ZSHIFT)
-				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+			if (mthing->z)
+				z += (mthing->z << FRACBITS);
 		}
 
 		if (mthing->options & MTF_AMBUSH) // Special flag for rings
