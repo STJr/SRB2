@@ -2126,8 +2126,6 @@ void P_LoadThingsOnly(void)
 	// Search through all the thinkers.
 	thinker_t *think;
 	INT32 i, viewid = -1, centerid = -1; // for skyboxes
-	virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
-	virtlump_t* vth = vres_Find(virt, "THINGS");
 
 	// check if these are any of the normal viewpoint/centerpoint mobjs in the level or not
 	if (skyboxmo[0] || skyboxmo[1])
@@ -2148,10 +2146,7 @@ void P_LoadThingsOnly(void)
 
 	P_LevelInitStuff();
 
-	P_PrepareRawThings(vth->data, vth->size);
 	P_LoadThings(true);
-
-	vres_Free(virt);
 
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
 	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
