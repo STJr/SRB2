@@ -11615,7 +11615,7 @@ static fixed_t GetMobjSpawnHeight (const mobjtype_t i, const mapthing_t* mthing,
 #ifdef ESLOPE
 			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
 #endif
-			ss->sector->ceilingheight) - extraoffset - mobjinfo[i].height;
+			ss->sector->ceilingheight) - extraoffset - heightoffset - mobjinfo[i].height;
 	else
 		return (
 #ifdef ESLOPE
