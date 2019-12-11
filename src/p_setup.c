@@ -1950,7 +1950,7 @@ static boolean P_LoadBlockMap(lumpnum_t lumpnum)
 // because making both the WAD and PK3 loading code use
 // the same functions is trickier than it looks for blockmap
 // -- Monster Iestyn 09/01/18
-static boolean P_LoadRawBlockMap(UINT8 *data, size_t count, const char *lumpname)
+static boolean P_LoadRawBlockMap(UINT8 *data, size_t count)
 {
 #if 0
 	(void)data;
@@ -1958,12 +1958,6 @@ static boolean P_LoadRawBlockMap(UINT8 *data, size_t count, const char *lumpname
 	(void)lumpname;
 	return false;
 #else
-	// Check if the lump is named "BLOCKMAP"
-	if (!lumpname || memcmp(lumpname, "BLOCKMAP", 8) != 0)
-	{
-		CONS_Printf("No blockmap lump found for pk3!\n");
-		return false;
-	}
 
 	if (!count || count >= 0x20000)
 		return false;
@@ -2120,16 +2114,8 @@ static void P_LoadReject(lumpnum_t lumpnum)
 
 // PK3 version
 // -- Monster Iestyn 09/01/18
-static void P_LoadRawReject(UINT8 *data, size_t count, const char *lumpname)
+static void P_LoadRawReject(UINT8 *data, size_t count)
 {
-	// Check if the lump is named "REJECT"
-	if (!lumpname || memcmp(lumpname, "REJECT\0\0", 8) != 0)
-	{
-		rejectmatrix = NULL;
-		CONS_Debug(DBG_SETUP, "P_LoadRawReject: No valid REJECT lump found\n");
-		return;
-	}
-
 	if (!count) // zero length, someone probably used ZDBSP
 	{
 		rejectmatrix = NULL;
@@ -2892,51 +2878,42 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_MakeMapMD5(lastloadedmaplumpnum, &mapmd5);
 
-	// HACK ALERT: Cache the WAD, get the map data into the tables, free memory.
-	// As it is implemented right now, we're assuming an uncompressed WAD.
-	// (As in, a normal PWAD, not ZWAD or anything. The lump itself can be compressed.)
-	// We're not accounting for extra lumps and scrambled lump positions. Any additional data will cause an error.
-	if (W_IsLumpWad(lastloadedmaplumpnum))
+	if (lastloadedmaplumpnum)
 	{
-		// Remember that we're assuming that the WAD will have a specific set of lumps in a specific order.
-		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-		//filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
-		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
-		UINT32 numlumps = ((wadinfo_t *)wadData)->numlumps;
+		virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
+		virtlump_t* virtthings   = vres_Find(virt, "THINGS");
+		virtlump_t* virtvertexes = vres_Find(virt, "VERTEXES");
+		virtlump_t* virtsectors  = vres_Find(virt, "SECTORS");
+		virtlump_t* virtsidedefs = vres_Find(virt, "SIDEDEFS");
+		virtlump_t* virtlinedefs = vres_Find(virt, "LINEDEFS");
 
-		if (numlumps < ML_REJECT) // at least 9 lumps should be in the wad for a map to be loaded
-		{
-			I_Error("Bad WAD file for map %s!\n", maplumpname);
-		}
+		virtlump_t* virtssectors = vres_Find(virt, "SSECTORS");
+		virtlump_t* virtsegs     = vres_Find(virt, "SEGS");
+		virtlump_t* virtnodes    = vres_Find(virt, "NODES");
 
-		if (numlumps > ML_BLOCKMAP) // enough room for a BLOCKMAP lump at least
-		{
-			loadedbm = P_LoadRawBlockMap(
-							wadData + (fileinfo + ML_BLOCKMAP)->filepos,
-							(fileinfo + ML_BLOCKMAP)->size,
-							(fileinfo + ML_BLOCKMAP)->name);
-		}
-		P_LoadRawVertexes(wadData + (fileinfo + ML_VERTEXES)->filepos, (fileinfo + ML_VERTEXES)->size);
-		P_LoadRawSectors(wadData + (fileinfo + ML_SECTORS)->filepos, (fileinfo + ML_SECTORS)->size);
-		P_LoadRawSideDefs((fileinfo + ML_SIDEDEFS)->size);
-		P_LoadRawLineDefs(wadData + (fileinfo + ML_LINEDEFS)->filepos, (fileinfo + ML_LINEDEFS)->size);
-		P_LoadRawSideDefs2(wadData + (fileinfo + ML_SIDEDEFS)->filepos);
-		P_LoadRawSubsectors(wadData + (fileinfo + ML_SSECTORS)->filepos, (fileinfo + ML_SSECTORS)->size);
-		P_LoadRawNodes(wadData + (fileinfo + ML_NODES)->filepos, (fileinfo + ML_NODES)->size);
-		P_LoadRawSegs(wadData + (fileinfo + ML_SEGS)->filepos, (fileinfo + ML_SEGS)->size);
-		if (numlumps > ML_REJECT) // enough room for a REJECT lump at least
-		{
-			P_LoadRawReject(
-					wadData + (fileinfo + ML_REJECT)->filepos,
-					(fileinfo + ML_REJECT)->size,
-					(fileinfo + ML_REJECT)->name);
-		}
+		virtlump_t* virtblockmap = vres_Find(virt, "BLOCKMAP");
+		virtlump_t* virtreject   = vres_Find(virt, "REJECT");
 
-		// Important: take care of the ordering of the next functions.
-		if (!loadedbm)
-			P_CreateBlockMap(); // Graue 02-29-2004
+		P_LoadRawVertexes(virtvertexes->data, virtvertexes->size);
+		P_LoadRawSectors(virtsectors->data, virtsectors->size);
+		P_LoadRawSideDefs(virtsidedefs->size);
+		P_LoadRawLineDefs(virtlinedefs->data, virtlinedefs->size);
+		P_LoadRawSideDefs2(virtsidedefs->data);
+		P_LoadRawSubsectors(virtssectors->data, virtssectors->size);
+		P_LoadRawNodes(virtnodes->data, virtnodes->size);
+		P_LoadRawSegs(virtsegs->data, virtsegs->size);
+
+		if (virtreject)
+			P_LoadRawReject(virtreject->data, virtreject->size);
+		else
+			rejectmatrix = NULL;
+
+		if (!(virtblockmap && P_LoadRawBlockMap(virtblockmap->data, virtblockmap->size)))
+			P_CreateBlockMap();
+
 		P_LoadLineDefs2();
 		P_GroupLines();
+
 		numdmstarts = numredctfstarts = numbluectfstarts = 0;
 
 		// reset the player starts
@@ -2954,46 +2931,9 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		P_MapStart();
 
-		P_PrepareRawThings(wadData + (fileinfo + ML_THINGS)->filepos, (fileinfo + ML_THINGS)->size);
-		Z_Free(wadData);
-	}
-	else
-	{
-		// Important: take care of the ordering of the next functions.
-		loadedbm = P_LoadBlockMap(lastloadedmaplumpnum + ML_BLOCKMAP);
-		P_LoadVertexes(lastloadedmaplumpnum + ML_VERTEXES);
-		P_LoadSectors(lastloadedmaplumpnum + ML_SECTORS);
-		P_LoadSideDefs(lastloadedmaplumpnum + ML_SIDEDEFS);
-		P_LoadLineDefs(lastloadedmaplumpnum + ML_LINEDEFS);
-		P_LoadSideDefs2(lastloadedmaplumpnum + ML_SIDEDEFS);
-		P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
-		P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
-		P_LoadSegs(lastloadedmaplumpnum + ML_SEGS);
-		P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
+		P_PrepareRawThings(virtthings->data, virtthings->size);
 
-		// Important: take care of the ordering of the next functions.
-		if (!loadedbm)
-			P_CreateBlockMap(); // Graue 02-29-2004
-		P_LoadLineDefs2();
-		P_GroupLines();
-		numdmstarts = numredctfstarts = numbluectfstarts = 0;
-
-		// reset the player starts
-		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
-
-		for (i = 0; i < MAX_DM_STARTS; i++)
-			deathmatchstarts[i] = NULL;
-
-		for (i = 0; i < 2; i++)
-			skyboxmo[i] = NULL;
-
-		for (i = 0; i < 16; i++)
-			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
-
-		P_MapStart();
-
-		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+		vres_Free(virt);
 	}
 
 	// init gravity, tag lists,
