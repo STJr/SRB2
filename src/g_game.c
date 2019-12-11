@@ -1033,6 +1033,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
+	angle_t drawangleoffset = (player->powers[pw_carry] == CR_ROLLOUT) ? ANGLE_180 : 0;
 	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, analog, invertmouse, mousemove, abilitydirection;
 	INT32 *mx; INT32 *my; INT32 *mly;
 
@@ -1445,7 +1446,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				cmd->sidemove = 0;
 			}
 			else
-				cmd->angleturn = (player->drawangle>>16);
+				cmd->angleturn = (player->drawangle+drawangleoffset)>>16;
 		}
 
 		// Adjust camera angle to face player direction, depending on circumstances
@@ -1463,7 +1464,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 			if (camadjustfactor)
 			{
-				INT32 anglediff = player->drawangle - *myangle;
+				INT32 anglediff = player->drawangle + drawangleoffset - *myangle;
 
 				*myangle += FixedMul(anglediff, camadjustfactor);
 			}
