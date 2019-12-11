@@ -7200,7 +7200,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 								I_Error("Make-Your-Own-FOF (tag %d) needs a value in the linedef's second side upper texture field.", lines[i].tag);
 						}
 					}
-					Z_Free(data);
 				}
 				else
 					I_Error("Make-Your-Own FOF (tag %d) found without a 2nd linedef side!", lines[i].tag);
