@@ -409,16 +409,16 @@ consvar_t cv_cam_turnfacing[2] = {
 	{"cam2_turnfacingchar", "0.0", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 consvar_t cv_cam_turnfacingability[2] = {
-	{"cam_turnfacingability", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
-	{"cam2_turnfacingability", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam_turnfacingability", "0.0", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_turnfacingability", "0.0", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 consvar_t cv_cam_turnfacingspindash[2] = {
 	{"cam_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 	{"cam2_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 consvar_t cv_cam_turnfacinginput[2] = {
-	{"cam_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
-	{"cam2_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam_turnfacinginput", "0.4375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_turnfacinginput", "0.4375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 
 typedef enum
@@ -1438,9 +1438,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			fixed_t camadjustfactor;
 
 			if (player->climbing || player->pflags & PF_GLIDING)
-				camadjustfactor = cv_cam_turnfacingability[forplayer].value/2;
+				camadjustfactor = cv_cam_turnfacingability[forplayer].value/4;
 			else if (player->pflags & PF_STARTDASH)
-				camadjustfactor = cv_cam_turnfacingspindash[forplayer].value/2;
+				camadjustfactor = cv_cam_turnfacingspindash[forplayer].value/4;
 			else
 				camadjustfactor = cv_cam_turnfacing[forplayer].value/8;
 
