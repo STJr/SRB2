@@ -906,10 +906,6 @@ void P_ReloadRings(void)
 		{
 			mt->mobj = NULL;
 
-			// Z for objects Tails 05-26-2002
-			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-				->sector->floorheight>>FRACBITS);
-
 			P_SpawnHoopsAndRings(mt, true);
 		}
 	}
@@ -1013,13 +1009,11 @@ static void P_PrepareRawThings(UINT8 *data, size_t i)
 	nummapthings = i / (5 * sizeof (INT16));
 	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
 
-	// Spawn axis points first so they are
-	// at the front of the list for fast searching.
-	mt = mapthings;
-	for (i = 0; i < nummapthings; i++, mt++)
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
 		mt->x = READINT16(data);
 		mt->y = READINT16(data);
+
 		mt->angle = READINT16(data);
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
@@ -1027,6 +1021,73 @@ static void P_PrepareRawThings(UINT8 *data, size_t i)
 
 		mt->type &= 4095;
 
+		if (mt->type == 1705 || (mt->type == 750 && mt->extrainfo))
+			mt->z = mt->options; // NiGHTS Hoops use the full flags bits to set the height.
+		else
+			mt->z = mt->options >> ZSHIFT;
+	}
+}
+
+static void P_PrepareThings(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_PrepareRawThings(data, W_LumpLength(lumpnum));
+	Z_Free(data);
+}
+
+static void SpawnEmeraldHunt (void)
+{
+	INT32 emer1, emer2, emer3;
+	INT32 timeout = 0; // keeps from getting stuck
+
+	emer1 = emer2 = emer3 = 0;
+
+	//increment spawn numbers because zero is valid.
+	emer1 = (P_RandomKey(numhuntemeralds)) + 1;
+	while (timeout++ < 100)
+	{
+		emer2 = (P_RandomKey(numhuntemeralds)) + 1;
+
+		if (emer2 != emer1)
+			break;
+	}
+
+	timeout = 0;
+	while (timeout++ < 100)
+	{
+		emer3 = (P_RandomKey(numhuntemeralds)) + 1;
+
+		if (emer3 != emer2 && emer3 != emer1)
+			break;
+	}
+
+	//decrement spawn values to the actual number because zero is valid.
+	if (emer1--)
+		P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
+			huntemeralds[emer1]->y<<FRACBITS,
+			huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
+
+	if (emer2--)
+		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
+			huntemeralds[emer2]->y<<FRACBITS,
+			huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
+		mobjinfo[MT_EMERHUNT].spawnstate+1);
+
+	if (emer3--)
+		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
+			huntemeralds[emer3]->y<<FRACBITS,
+			huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
+		mobjinfo[MT_EMERHUNT].spawnstate+2);
+}
+
+static void P_LoadThings(boolean loademblems)
+{
+	size_t i;
+	mapthing_t *mt;
+
+	// Spawn axis points first so they are at the front of the list for fast searching.
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	{
 		switch (mt->type)
 		{
 			case 1700: // MT_AXIS
@@ -1039,35 +1100,11 @@ static void P_PrepareRawThings(UINT8 *data, size_t i)
 				break;
 		}
 	}
-}
 
-static void P_PrepareThings(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_PrepareRawThings(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
-static void P_LoadThings(boolean loademblems)
-{
-	size_t i;
-	mapthing_t *mt;
-
-	// Loading the things lump itself into memory is now handled in P_PrepareThings, above
-
-	mt = mapthings;
 	numhuntemeralds = 0;
-	for (i = 0; i < nummapthings; i++, mt++)
+
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
-		sector_t *mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
-
-		// Z for objects
-		mt->z = (INT16)(
-#ifdef ESLOPE
-				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
-#endif
-				mtsector->floorheight)>>FRACBITS;
-
 		if (mt->type == 1700 // MT_AXIS
 			|| mt->type == 1701 // MT_AXISTRANSFER
 			|| mt->type == 1702) // MT_AXISTRANSFERLINE
@@ -1082,49 +1119,7 @@ static void P_LoadThings(boolean loademblems)
 
 	// random emeralds for hunt
 	if (numhuntemeralds)
-	{
-		INT32 emer1, emer2, emer3;
-		INT32 timeout = 0; // keeps from getting stuck
-
-		emer1 = emer2 = emer3 = 0;
-
-		//increment spawn numbers because zero is valid.
-		emer1 = (P_RandomKey(numhuntemeralds)) + 1;
-		while (timeout++ < 100)
-		{
-			emer2 = (P_RandomKey(numhuntemeralds)) + 1;
-
-			if (emer2 != emer1)
-				break;
-		}
-
-		timeout = 0;
-		while (timeout++ < 100)
-		{
-			emer3 = (P_RandomKey(numhuntemeralds)) + 1;
-
-			if (emer3 != emer2 && emer3 != emer1)
-				break;
-		}
-
-		//decrement spawn values to the actual number because zero is valid.
-		if (emer1--)
-			P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
-				huntemeralds[emer1]->y<<FRACBITS,
-				huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
-
-		if (emer2--)
-			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
-				huntemeralds[emer2]->y<<FRACBITS,
-				huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
-			mobjinfo[MT_EMERHUNT].spawnstate+1);
-
-		if (emer3--)
-			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
-				huntemeralds[emer3]->y<<FRACBITS,
-				huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
-			mobjinfo[MT_EMERHUNT].spawnstate+2);
-	}
+		SpawnEmeraldHunt();
 
 	if (metalrecording) // Metal Sonic gets no rings to distract him.
 		return;
@@ -1140,11 +1135,6 @@ static void P_LoadThings(boolean loademblems)
 		 || mt->type == 1705 || mt->type == 1713) // hoops
 		{
 			mt->mobj = NULL;
-
-			// Z for objects Tails 05-26-2002
-			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-				->sector->floorheight>>FRACBITS);
-
 			P_SpawnHoopsAndRings(mt, false);
 		}
 	}
