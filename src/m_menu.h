@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -99,13 +99,14 @@ typedef enum
 	MN_OP_SCREENSHOTS,
 	MN_OP_ERASEDATA,
 
-	// Secrets
+	// Extras
 	MN_SR_MAIN,
 	MN_SR_PANDORA,
 	MN_SR_LEVELSELECT,
 	MN_SR_UNLOCKCHECKLIST,
 	MN_SR_EMBLEMHINT,
 	MN_SR_PLAYER,
+	MN_SR_SOUNDTEST,
 
 	// Addons (Part of MISC, but let's make it our own)
 	MN_AD_MAIN,
@@ -254,8 +255,8 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_CV_NOPRINT     1536
 #define IT_CV_NOMOD       2048
 #define IT_CV_INVISSLIDER 2560
-#define IT_CV_INTEGERSTEP 4096			// if IT_CV_NORMAL and cvar is CV_FLOAT, modify it by 1 instead of 0.0625
-#define IT_CV_FLOATSLIDER	4608			// IT_CV_SLIDER, value modified by 0.0625 instead of 1 (for CV_FLOAT cvars)
+#define IT_CV_INTEGERSTEP 4096      // if IT_CV_NORMAL and cvar is CV_FLOAT, modify it by 1 instead of 0.0625
+#define IT_CV_FLOATSLIDER 4608      // IT_CV_SLIDER, value modified by 0.0625 instead of 1 (for CV_FLOAT cvars)
 
 //call/submenu specific
 // There used to be a lot more here but ...

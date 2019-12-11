@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,6 +29,7 @@
 #include "p_setup.h"
 #include "r_data.h"
 #include "r_draw.h"
+#include "r_patch.h"
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"
@@ -285,7 +286,7 @@ static void clear_levels(void)
 	// we may as well try to save some memory, right?
 	for (i = 0; i < NUMMAPS; ++i)
 	{
-		if (!mapheaderinfo[i])
+		if (!mapheaderinfo[i] || i == (tutorialmap-1))
 			continue;
 
 		// Custom map header info
@@ -803,20 +804,28 @@ static void readlight(MYFILE *f, INT32 num)
 
 	Z_Free(s);
 }
+#endif // HWRENDER
 
-static void readspritelight(MYFILE *f, INT32 num)
+static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word;
+	char *word, *word2;
 	char *tmp;
 	INT32 value;
+	char *lastline;
 
 	do
 	{
+		lastline = f->curpos;
 		if (myfgets(s, MAXLINELEN, f))
 		{
 			if (s[0] == '\n')
 				break;
+
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
 
 			tmp = strchr(s, '#');
 			if (tmp)
@@ -824,29 +833,222 @@ static void readspritelight(MYFILE *f, INT32 num)
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
 
-			value = searchvalue(s);
+			// Set / reset word
+			word = s;
+			while ((*word == '\t') || (*word == ' '))
+				word++;
 
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
-			else
-				break;
-
-			if (fastcmp(word, "LIGHTTYPE"))
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
 			{
-				INT32 oldvar;
-				for (oldvar = 0; t_lspr[num] != &lspr[oldvar]; oldvar++)
-					;
-				t_lspr[num] = &lspr[value];
+				*(tmp-1) = '\0';
+				// Now get the part after
+				word2 = tmp += 2;
 			}
 			else
-				deh_warning("Sprite %d: unknown word '%s'", num, word);
+			{
+				// Get the part before the " "
+				tmp = strchr(s, ' ');
+				if (tmp)
+				{
+					*tmp = '\0';
+					// Now get the part after
+					tmp++;
+					word2 = tmp;
+				}
+				else
+					break;
+			}
+			strupr(word);
+			value = atoi(word2); // used for numerical settings
+
+#ifdef ROTSPRITE
+			if (fastcmp(word, "XPIVOT"))
+				sprinfo->pivot[frame].x = value;
+			else if (fastcmp(word, "YPIVOT"))
+				sprinfo->pivot[frame].y = value;
+			else if (fastcmp(word, "ROTAXIS"))
+				sprinfo->pivot[frame].rotaxis = value;
+#endif
+			else
+			{
+				f->curpos = lastline;
+				break;
+			}
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+	Z_Free(s);
+}
+
+static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word, *word2;
+	char *tmp;
+	INT32 value;
+	char *lastline;
+	INT32 skinnumbers[MAXSKINS];
+	INT32 foundskins = 0;
+
+	// allocate a spriteinfo
+	spriteinfo_t *info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
+	info->available = true;
+
+#ifdef ROTSPRITE
+	if ((sprites != NULL) && (!sprite2))
+		R_FreeSingleRotSprite(&sprites[num]);
+#endif
+
+	do
+	{
+		lastline = f->curpos;
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			// Set / reset word
+			word = s;
+			while ((*word == '\t') || (*word == ' '))
+				word++;
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+			{
+				*(tmp-1) = '\0';
+				// Now get the part after
+				word2 = tmp += 2;
+			}
+			else
+			{
+				// Get the part before the " "
+				tmp = strchr(s, ' ');
+				if (tmp)
+				{
+					*tmp = '\0';
+					// Now get the part after
+					tmp++;
+					word2 = tmp;
+				}
+				else
+					break;
+			}
+			strupr(word);
+			value = atoi(word2); // used for numerical settings
+
+#ifdef HWRENDER
+			if (fastcmp(word, "LIGHTTYPE"))
+			{
+				if (sprite2)
+					deh_warning("Sprite2 %s: invalid word '%s'", spr2names[num], word);
+				else
+				{
+					INT32 oldvar;
+					for (oldvar = 0; t_lspr[num] != &lspr[oldvar]; oldvar++)
+						;
+					t_lspr[num] = &lspr[value];
+				}
+			}
+			else
+#endif
+			if (fastcmp(word, "SKIN"))
+			{
+				INT32 skinnum = -1;
+				if (!sprite2)
+				{
+					deh_warning("Sprite %s: %s keyword found outside of SPRITE2INFO block, ignoring", spr2names[num], word);
+					continue;
+				}
+
+				// make lowercase
+				strlwr(word2);
+				skinnum = R_SkinAvailable(word2);
+				if (skinnum == -1)
+				{
+					deh_warning("Sprite2 %s: unknown skin %s", spr2names[num], word2);
+					break;
+				}
+
+				skinnumbers[foundskins] = skinnum;
+				foundskins++;
+			}
+			else if (fastcmp(word, "DEFAULT"))
+			{
+				if (!sprite2)
+				{
+					deh_warning("Sprite %s: %s keyword found outside of SPRITE2INFO block, ignoring", spr2names[num], word);
+					continue;
+				}
+				if (num < (INT32)free_spr2 && num >= (INT32)SPR2_FIRSTFREESLOT)
+					spr2defaults[num] = get_number(word2);
+				else
+				{
+					deh_warning("Sprite2 %s: out of range (%d - %d), ignoring", spr2names[num], SPR2_FIRSTFREESLOT, free_spr2-1);
+					continue;
+				}
+			}
+			else if (fastcmp(word, "FRAME"))
+			{
+				UINT8 frame = R_Char2Frame(word2[0]);
+				// frame number too high
+				if (frame >= 64)
+				{
+					if (sprite2)
+						deh_warning("Sprite2 %s: invalid frame %s", spr2names[num], word2);
+					else
+						deh_warning("Sprite %s: invalid frame %s", sprnames[num], word2);
+					break;
+				}
+
+				// read sprite frame and store it in the spriteinfo_t struct
+				readspriteframe(f, info, frame);
+				if (sprite2)
+				{
+					INT32 i;
+					if (!foundskins)
+					{
+						deh_warning("Sprite2 %s: no skins specified", spr2names[num]);
+						break;
+					}
+					for (i = 0; i < foundskins; i++)
+					{
+						size_t skinnum = skinnumbers[i];
+						skin_t *skin = &skins[skinnum];
+						spriteinfo_t *sprinfo = skin->sprinfo;
+#ifdef ROTSPRITE
+						R_FreeSkinRotSprite(skinnum);
+#endif
+						M_Memcpy(&sprinfo[num], info, sizeof(spriteinfo_t));
+					}
+				}
+				else
+					M_Memcpy(&spriteinfo[num], info, sizeof(spriteinfo_t));
+			}
+			else
+			{
+				//deh_warning("Sprite %s: unknown word '%s'", sprnames[num], word);
+				f->curpos = lastline;
+				break;
+			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
 	Z_Free(s);
+	Z_Free(info);
 }
-#endif // HWRENDER
 
 static void readsprite2(MYFILE *f, INT32 num)
 {
@@ -999,6 +1201,14 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			word2 = tmp += 2;
 			i = atoi(word2); // used for numerical settings
 
+
+			if (fastcmp(word, "LEVELNAME"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
+					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
+				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
+				continue;
+			}
 			// CHEAP HACK: move this over here for lowercase subtitles
 			if (fastcmp(word, "SUBTITLE"))
 			{
@@ -1142,12 +1352,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 
 			// Strings that can be truncated
-			else if (fastcmp(word, "LEVELNAME"))
-			{
-				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
-					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
-				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
-			}
 			else if (fastcmp(word, "SELECTHEADING"))
 			{
 				deh_strlcpy(mapheaderinfo[num-1]->selectheading, word2,
@@ -1370,6 +1574,20 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->levelflags |= LF_MIXNIGHTSCOUNTDOWN;
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_MIXNIGHTSCOUNTDOWN;
+			}
+			else if (fastcmp(word, "WARNINGTITLE"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_WARNINGTITLE;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_WARNINGTITLE;
+			}
+			else if (fastcmp(word, "NOTITLECARD"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
 			}
 
 			// Individual triggers for menu flags
@@ -1851,24 +2069,29 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			// end copypasta from readcutscenescene
 			else if (fastcmp(word, "NAME"))
 			{
-				INT32 j;
-
-				// HACK: Add yellow control char now
-				// so the drawing function doesn't call it repeatedly
-				char name[34];
-				name[0] = '\x82'; // color yellow
-				name[1] = 0;
-				strncat(name, word2, 33);
-				name[33] = 0;
-
-				// Replace _ with ' '
-				for (j = 0; j < 32 && name[j]; j++)
+				if (*word2 != '\0')
 				{
-					if (name[j] == '_')
-						name[j] = ' ';
-				}
+					INT32 j;
 
-				strncpy(textprompts[num]->page[pagenum].name, name, 32);
+					// HACK: Add yellow control char now
+					// so the drawing function doesn't call it repeatedly
+					char name[34];
+					name[0] = '\x82'; // color yellow
+					name[1] = 0;
+					strncat(name, word2, 33);
+					name[33] = 0;
+
+					// Replace _ with ' '
+					for (j = 0; j < 32 && name[j]; j++)
+					{
+						if (name[j] == '_')
+							name[j] = ' ';
+					}
+
+					strncpy(textprompts[num]->page[pagenum].name, name, 32);
+				}
+				else
+					*textprompts[num]->page[pagenum].name = '\0';
 			}
 			else if (fastcmp(word, "ICON"))
 				strncpy(textprompts[num]->page[pagenum].iconname, word2, 8);
@@ -1901,6 +2124,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				else if (i == 16 || fastcmp(word2, "BLUE")) backcolor = 16;
 				else if (i == 17 || fastcmp(word2, "PURPLE")) backcolor = 17;
 				else if (i == 18 || fastcmp(word2, "LAVENDER")) backcolor = 18;
+				else if (i >= 256 && i < 512) backcolor = i; // non-transparent palette index
 				else if (i < 0) backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
 				else backcolor = 1; // default gray
 				textprompts[num]->page[pagenum].backcolor = backcolor;
@@ -2447,6 +2671,11 @@ static actionpointer_t actionpointers[] =
 	{{A_SpawnObjectRelative},    "A_SPAWNOBJECTRELATIVE"},
 	{{A_ChangeAngleRelative},    "A_CHANGEANGLERELATIVE"},
 	{{A_ChangeAngleAbsolute},    "A_CHANGEANGLEABSOLUTE"},
+#ifdef ROTSPRITE
+	{{A_RollAngle},              "A_ROLLANGLE"},
+	{{A_ChangeRollAngleRelative},"A_CHANGEROLLANGLERELATIVE"},
+	{{A_ChangeRollAngleAbsolute},"A_CHANGEROLLANGLEABSOLUTE"},
+#endif
 	{{A_PlaySound},              "A_PLAYSOUND"},
 	{{A_FindTarget},             "A_FINDTARGET"},
 	{{A_FindTracer},             "A_FINDTRACER"},
@@ -2568,6 +2797,9 @@ static actionpointer_t actionpointers[] =
 	{{A_PterabyteHover},         "A_PTERABYTEHOVER"},
 	{{A_RolloutSpawn},           "A_ROLLOUTSPAWN"},
 	{{A_RolloutRock},            "A_ROLLOUTROCK"},
+	{{A_DragonbomberSpawn},      "A_DRAGONBOMERSPAWN"},
+	{{A_DragonWing},             "A_DRAGONWING"},
+	{{A_DragonSegment},          "A_DRAGONSEGMENT"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -2952,7 +3184,6 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 
 			// Now get the part after
 			word2 = tmp += 2;
-			strupr(word2);
 
 			value = atoi(word2); // used for numerical settings
 
@@ -2964,22 +3195,26 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 					sizeof (extraemblems[num-1].description), va("Extra emblem %d: objective", num));
 			else if (fastcmp(word, "CONDITIONSET"))
 				extraemblems[num-1].conditionset = (UINT8)value;
-			else if (fastcmp(word, "SPRITE"))
-			{
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					value = word2[0];
-				else
-					value += 'A'-1;
-
-				if (value < 'A' || value > 'Z')
-					deh_warning("Emblem %d: sprite must be from A - Z (1 - 26)", num);
-				else
-					extraemblems[num-1].sprite = (UINT8)value;
-			}
-			else if (fastcmp(word, "COLOR"))
-				extraemblems[num-1].color = get_number(word2);
 			else
-				deh_warning("Extra emblem %d: unknown word '%s'", num, word);
+			{
+				strupr(word2);
+				if (fastcmp(word, "SPRITE"))
+				{
+					if (word2[0] >= 'A' && word2[0] <= 'Z')
+						value = word2[0];
+					else
+						value += 'A'-1;
+
+					if (value < 'A' || value > 'Z')
+						deh_warning("Emblem %d: sprite must be from A - Z (1 - 26)", num);
+					else
+						extraemblems[num-1].sprite = (UINT8)value;
+				}
+				else if (fastcmp(word, "COLOR"))
+					extraemblems[num-1].color = get_number(word2);
+				else
+					deh_warning("Extra emblem %d: unknown word '%s'", num, word);
+			}
 		}
 	} while (!myfeof(f));
 
@@ -3030,7 +3265,6 @@ static void readunlockable(MYFILE *f, INT32 num)
 
 			// Now get the part after
 			word2 = tmp += 2;
-			strupr(word2);
 
 			i = atoi(word2); // used for numerical settings
 
@@ -3040,54 +3274,58 @@ static void readunlockable(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "OBJECTIVE"))
 				deh_strlcpy(unlockables[num].objective, word2,
 					sizeof (unlockables[num].objective), va("Unlockable %d: objective", num));
-			else if (fastcmp(word, "HEIGHT"))
-				unlockables[num].height = (UINT16)i;
-			else if (fastcmp(word, "CONDITIONSET"))
-				unlockables[num].conditionset = (UINT8)i;
-			else if (fastcmp(word, "NOCECHO"))
-				unlockables[num].nocecho = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
-			else if (fastcmp(word, "NOCHECKLIST"))
-				unlockables[num].nochecklist = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
-			else if (fastcmp(word, "TYPE"))
-			{
-				if (fastcmp(word2, "NONE"))
-					unlockables[num].type = SECRET_NONE;
-				else if (fastcmp(word2, "ITEMFINDER"))
-					unlockables[num].type = SECRET_ITEMFINDER;
-				else if (fastcmp(word2, "EMBLEMHINTS"))
-					unlockables[num].type = SECRET_EMBLEMHINTS;
-				else if (fastcmp(word2, "PANDORA"))
-					unlockables[num].type = SECRET_PANDORA;
-				else if (fastcmp(word2, "CREDITS"))
-					unlockables[num].type = SECRET_CREDITS;
-				else if (fastcmp(word2, "RECORDATTACK"))
-					unlockables[num].type = SECRET_RECORDATTACK;
-				else if (fastcmp(word2, "NIGHTSMODE"))
-					unlockables[num].type = SECRET_NIGHTSMODE;
-				else if (fastcmp(word2, "HEADER"))
-					unlockables[num].type = SECRET_HEADER;
-				else if (fastcmp(word2, "LEVELSELECT"))
-					unlockables[num].type = SECRET_LEVELSELECT;
-				else if (fastcmp(word2, "WARP"))
-					unlockables[num].type = SECRET_WARP;
-				else if (fastcmp(word2, "SOUNDTEST"))
-					unlockables[num].type = SECRET_SOUNDTEST;
-				else
-					unlockables[num].type = (INT16)i;
-			}
-			else if (fastcmp(word, "VAR"))
-			{
-				// Support using the actual map name,
-				// i.e., Level AB, Level FZ, etc.
-
-				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					i = M_MapNumber(word2[0], word2[1]);
-
-				unlockables[num].variable = (INT16)i;
-			}
 			else
-				deh_warning("Unlockable %d: unknown word '%s'", num+1, word);
+			{
+				strupr(word2);
+				if (fastcmp(word, "HEIGHT"))
+					unlockables[num].height = (UINT16)i;
+				else if (fastcmp(word, "CONDITIONSET"))
+					unlockables[num].conditionset = (UINT8)i;
+				else if (fastcmp(word, "NOCECHO"))
+					unlockables[num].nocecho = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
+				else if (fastcmp(word, "NOCHECKLIST"))
+					unlockables[num].nochecklist = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
+				else if (fastcmp(word, "TYPE"))
+				{
+					if (fastcmp(word2, "NONE"))
+						unlockables[num].type = SECRET_NONE;
+					else if (fastcmp(word2, "ITEMFINDER"))
+						unlockables[num].type = SECRET_ITEMFINDER;
+					else if (fastcmp(word2, "EMBLEMHINTS"))
+						unlockables[num].type = SECRET_EMBLEMHINTS;
+					else if (fastcmp(word2, "PANDORA"))
+						unlockables[num].type = SECRET_PANDORA;
+					else if (fastcmp(word2, "CREDITS"))
+						unlockables[num].type = SECRET_CREDITS;
+					else if (fastcmp(word2, "RECORDATTACK"))
+						unlockables[num].type = SECRET_RECORDATTACK;
+					else if (fastcmp(word2, "NIGHTSMODE"))
+						unlockables[num].type = SECRET_NIGHTSMODE;
+					else if (fastcmp(word2, "HEADER"))
+						unlockables[num].type = SECRET_HEADER;
+					else if (fastcmp(word2, "LEVELSELECT"))
+						unlockables[num].type = SECRET_LEVELSELECT;
+					else if (fastcmp(word2, "WARP"))
+						unlockables[num].type = SECRET_WARP;
+					else if (fastcmp(word2, "SOUNDTEST"))
+						unlockables[num].type = SECRET_SOUNDTEST;
+					else
+						unlockables[num].type = (INT16)i;
+				}
+				else if (fastcmp(word, "VAR"))
+				{
+					// Support using the actual map name,
+					// i.e., Level AB, Level FZ, etc.
+
+					// Convert to map number
+					if (word2[0] >= 'A' && word2[0] <= 'Z')
+						i = M_MapNumber(word2[0], word2[1]);
+
+					unlockables[num].variable = (INT16)i;
+				}
+				else
+					deh_warning("Unlockable %d: unknown word '%s'", num+1, word);
+			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
@@ -4081,19 +4319,31 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 						ignorelines(f);
 					}
 				}
-				else if (fastcmp(word, "SPRITE"))
+#endif
+				else if (fastcmp(word, "SPRITE") || fastcmp(word, "SPRITEINFO"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sprite(word2); // find a sprite by name
 					if (i < NUMSPRITES && i > 0)
-						readspritelight(f, i);
+						readspriteinfo(f, i, false);
 					else
 					{
 						deh_warning("Sprite number %d out of range (0 - %d)", i, NUMSPRITES-1);
 						ignorelines(f);
 					}
 				}
-#endif
+				else if (fastcmp(word, "SPRITE2INFO"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_sprite2(word2); // find a sprite by name
+					if (i < NUMPLAYERSPRITES && i >= 0)
+						readspriteinfo(f, i, true);
+					else
+					{
+						deh_warning("Sprite2 number %d out of range (0 - %d)", i, NUMPLAYERSPRITES-1);
+						ignorelines(f);
+					}
+				}
 				else if (fastcmp(word, "LEVEL"))
 				{
 					// Support using the actual map name,
@@ -4425,39 +4675,13 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_NIGHTS_TRANS4",
 	"S_PLAY_NIGHTS_TRANS5",
 	"S_PLAY_NIGHTS_TRANS6",
-
 	"S_PLAY_NIGHTS_STAND",
 	"S_PLAY_NIGHTS_FLOAT",
+	"S_PLAY_NIGHTS_FLY",
+	"S_PLAY_NIGHTS_DRILL",
 	"S_PLAY_NIGHTS_STUN",
 	"S_PLAY_NIGHTS_PULL",
 	"S_PLAY_NIGHTS_ATTACK",
-
-	"S_PLAY_NIGHTS_FLY0",
-	"S_PLAY_NIGHTS_DRILL0",
-	"S_PLAY_NIGHTS_FLY1",
-	"S_PLAY_NIGHTS_DRILL1",
-	"S_PLAY_NIGHTS_FLY2",
-	"S_PLAY_NIGHTS_DRILL2",
-	"S_PLAY_NIGHTS_FLY3",
-	"S_PLAY_NIGHTS_DRILL3",
-	"S_PLAY_NIGHTS_FLY4",
-	"S_PLAY_NIGHTS_DRILL4",
-	"S_PLAY_NIGHTS_FLY5",
-	"S_PLAY_NIGHTS_DRILL5",
-	"S_PLAY_NIGHTS_FLY6",
-	"S_PLAY_NIGHTS_DRILL6",
-	"S_PLAY_NIGHTS_FLY7",
-	"S_PLAY_NIGHTS_DRILL7",
-	"S_PLAY_NIGHTS_FLY8",
-	"S_PLAY_NIGHTS_DRILL8",
-	"S_PLAY_NIGHTS_FLY9",
-	"S_PLAY_NIGHTS_DRILL9",
-	"S_PLAY_NIGHTS_FLYA",
-	"S_PLAY_NIGHTS_DRILLA",
-	"S_PLAY_NIGHTS_FLYB",
-	"S_PLAY_NIGHTS_DRILLB",
-	"S_PLAY_NIGHTS_FLYC",
-	"S_PLAY_NIGHTS_DRILLC",
 
 	// c:
 	"S_TAILSOVERLAY_STAND",
@@ -4667,6 +4891,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Snailer
 	"S_SNAILER1",
+	"S_SNAILER_FLICKY",
 
 	// Vulture
 	"S_VULTURE_STND",
@@ -4750,22 +4975,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_MINUS_BURST4",
 	"S_MINUS_BURST5",
 	"S_MINUS_POPUP",
-	"S_MINUS_UPWARD1",
-	"S_MINUS_UPWARD2",
-	"S_MINUS_UPWARD3",
-	"S_MINUS_UPWARD4",
-	"S_MINUS_UPWARD5",
-	"S_MINUS_UPWARD6",
-	"S_MINUS_UPWARD7",
-	"S_MINUS_UPWARD8",
-	"S_MINUS_DOWNWARD1",
-	"S_MINUS_DOWNWARD2",
-	"S_MINUS_DOWNWARD3",
-	"S_MINUS_DOWNWARD4",
-	"S_MINUS_DOWNWARD5",
-	"S_MINUS_DOWNWARD6",
-	"S_MINUS_DOWNWARD7",
-	"S_MINUS_DOWNWARD8",
+	"S_MINUS_AERIAL1",
+	"S_MINUS_AERIAL2",
+	"S_MINUS_AERIAL3",
+	"S_MINUS_AERIAL4",
 
 	// Minus dirt
 	"S_MINUSDIRT1",
@@ -4840,6 +5053,26 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PTERABYTE_FLY4",
 	"S_PTERABYTE_SWOOPDOWN",
 	"S_PTERABYTE_SWOOPUP",
+
+	// Dragonbomber
+	"S_DRAGONBOMBER",
+	"S_DRAGONWING1",
+	"S_DRAGONWING2",
+	"S_DRAGONWING3",
+	"S_DRAGONWING4",
+	"S_DRAGONTAIL_LOADED",
+	"S_DRAGONTAIL_EMPTY",
+	"S_DRAGONTAIL_EMPTYLOOP",
+	"S_DRAGONTAIL_RELOAD",
+	"S_DRAGONMINE",
+	"S_DRAGONMINE_LAND1",
+	"S_DRAGONMINE_LAND2",
+	"S_DRAGONMINE_SLOWFLASH1",
+	"S_DRAGONMINE_SLOWFLASH2",
+	"S_DRAGONMINE_SLOWLOOP",
+	"S_DRAGONMINE_FASTFLASH1",
+	"S_DRAGONMINE_FASTFLASH2",
+	"S_DRAGONMINE_FASTLOOP",
 
 	// Boss Explosion
 	"S_BOSSEXPLODE",
@@ -5143,6 +5376,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FSGNA",
 	"S_FSGNB",
 	"S_FSGNC",
+	"S_FSGND",
 
 	// Black Eggman (Boss 7)
 	"S_BLACKEGG_STND",
@@ -5720,6 +5954,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Glaregoyle Demon fire
 	"S_DEMONFIRE",
+
+	// The letter
+	"S_LETTER",
 
 	// GFZ flowers
 	"S_GFZFLOWERA",
@@ -6936,6 +7173,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FOUR2",
 	"S_FIVE2",
 
+	"S_FLIGHTINDICATOR",
+
 	"S_LOCKON1",
 	"S_LOCKON2",
 	"S_LOCKON3",
@@ -7119,13 +7358,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FIREFLOWER2",
 	"S_FIREFLOWER3",
 	"S_FIREFLOWER4",
-	"S_FIREBALL1",
-	"S_FIREBALL2",
-	"S_FIREBALL3",
-	"S_FIREBALL4",
-	"S_FIREBALLEXP1",
-	"S_FIREBALLEXP2",
-	"S_FIREBALLEXP3",
+	"S_FIREBALL",
+	"S_FIREBALLTRAIL1",
+	"S_FIREBALLTRAIL2",
 	"S_SHELL",
 	"S_PUMA_START1",
 	"S_PUMA_START2",
@@ -7294,6 +7529,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_POPHAT_SHOOT1",
 	"S_POPHAT_SHOOT2",
 	"S_POPHAT_SHOOT3",
+	"S_POPHAT_SHOOT4",
+	"S_POPSHOT",
+	"S_POPSHOT_TRAIL",
 
 	"S_HIVEELEMENTAL_LOOK",
 	"S_HIVEELEMENTAL_PREPARE1",
@@ -7425,8 +7663,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DUST3",
 	"S_DUST4",
 
-	"S_WOODDEBRIS",
-
 	"S_ROCKSPAWN",
 
 	"S_ROCKCRUMBLEA",
@@ -7445,7 +7681,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROCKCRUMBLEN",
 	"S_ROCKCRUMBLEO",
 	"S_ROCKCRUMBLEP",
+	"S_GFZDEBRIS",
 	"S_BRICKDEBRIS",
+	"S_WOODDEBRIS",
 
 #ifdef SEENAMES
 	"S_NAMECHECK",
@@ -7509,6 +7747,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_PTERABYTESPAWNER", // Pterabyte spawner
 	"MT_PTERABYTEWAYPOINT", // Pterabyte waypoint
 	"MT_PTERABYTE", // Pterabyte
+	"MT_DRAGONBOMBER", // Dragonbomber
+	"MT_DRAGONWING", // Dragonbomber wing
+	"MT_DRAGONTAIL", // Dragonbomber tail segment
+	"MT_DRAGONMINE", // Dragonbomber mine
 
 	// Generic Boss Items
 	"MT_BOSSEXPLODE",
@@ -7716,6 +7958,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CANNONBALLDECOR", // Decorative/still cannonball
 	"MT_ARROW", // Arrow
 	"MT_DEMONFIRE", // Glaregoyle fire
+
+	// The letter
+	"MT_LETTER",
 
 	// Greenflower Scenery
 	"MT_GFZFLOWER1",
@@ -8111,6 +8356,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BLUEGOOMBA",
 	"MT_FIREFLOWER",
 	"MT_FIREBALL",
+	"MT_FIREBALLTRAIL",
 	"MT_SHELL",
 	"MT_PUMA",
 	"MT_PUMATRAIL",
@@ -8155,6 +8401,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_PENGUINATOR",
 	"MT_POPHAT",
 	"MT_POPSHOT",
+	"MT_POPSHOT_TRAIL",
 
 	"MT_HIVEELEMENTAL",
 	"MT_BUMBLEBORE",
@@ -8192,7 +8439,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EXPLODE", // Robot Explosion
 	"MT_UWEXPLODE", // Underwater Explosion
 	"MT_DUST",
-	"MT_WOODDEBRIS",
 	"MT_ROCKSPAWNER",
 	"MT_FALLINGROCK",
 	"MT_ROCKCRUMBLE1",
@@ -8211,7 +8457,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ROCKCRUMBLE14",
 	"MT_ROCKCRUMBLE15",
 	"MT_ROCKCRUMBLE16",
+	"MT_GFZDEBRIS",
 	"MT_BRICKDEBRIS",
+	"MT_WOODDEBRIS",
 
 #ifdef SEENAMES
 	"MT_NAMECHECK",
@@ -8364,6 +8612,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"CANCARRY", // Can carry?
+	"FINISHED",
 
 	NULL // stop loop here.
 };
@@ -8650,12 +8899,14 @@ static const char *const MENUTYPES_LIST[] = {
 	"OP_SCREENSHOTS",
 	"OP_ERASEDATA",
 
-	// Secrets
+	// Extras
 	"SR_MAIN",
 	"SR_PANDORA",
 	"SR_LEVELSELECT",
 	"SR_UNLOCKCHECKLIST",
 	"SR_EMBLEMHINT",
+	"SR_PLAYER",
+	"SR_SOUNDTEST",
 
 	// Addons (Part of MISC, but let's make it our own)
 	"AD_MAIN",
@@ -8804,6 +9055,8 @@ struct {
 	{"LF_NOZONE",LF_NOZONE},
 	{"LF_SAVEGAME",LF_SAVEGAME},
 	{"LF_MIXNIGHTSCOUNTDOWN",LF_MIXNIGHTSCOUNTDOWN},
+	{"LF_NOTITLECARD",LF_NOTITLECARD},
+	{"LF_WARNINGTITLE",LF_WARNINGTITLE},
 	// And map flags
 	{"LF2_HIDEINMENU",LF2_HIDEINMENU},
 	{"LF2_HIDEINSTATS",LF2_HIDEINSTATS},
@@ -8900,6 +9153,7 @@ struct {
 	{"SF_DASHMODE",SF_DASHMODE},
 	{"SF_FASTEDGE",SF_FASTEDGE},
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
+	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
 
 	// Character abilities!
 	// Primary
@@ -9155,6 +9409,13 @@ struct {
 	{"DI_SOUTH",DI_SOUTH},
 	{"DI_SOUTHEAST",DI_SOUTHEAST},
 	{"NUMDIRS",NUMDIRS},
+
+#ifdef ROTSPRITE
+	// Sprite rotation axis (rotaxis_t)
+	{"ROTAXIS_X",ROTAXIS_X},
+	{"ROTAXIS_Y",ROTAXIS_Y},
+	{"ROTAXIS_Z",ROTAXIS_Z},
+#endif
 
 	// Buttons (ticcmd_t)
 	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.

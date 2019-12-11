@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -342,6 +342,40 @@ size_t COM_CheckParm(const char *check)
 	for (i = 1; i < com_argc; i++)
 		if (!strcasecmp(check, com_argv[i]))
 			return i;
+	return 0;
+}
+
+/** \brief COM_CheckParm, but checks only the start of each argument.
+  *        E.g. checking for "-no" would match "-noerror" too.
+  */
+size_t COM_CheckPartialParm(const char *check)
+{
+	int  len;
+	size_t i;
+
+	len = strlen(check);
+
+	for (i = 1; i < com_argc; i++)
+	{
+		if (strncasecmp(check, com_argv[i], len) == 0)
+			return i;
+	}
+	return 0;
+}
+
+/** Find the first argument that starts with a hyphen (-).
+  * \return The index of the argument, or 0
+  *         if there are no such arguments.
+  */
+size_t COM_FirstOption(void)
+{
+	size_t i;
+
+	for (i = 1; i < com_argc; i++)
+	{
+		if (com_argv[i][0] == '-')/* options start with a hyphen */
+			return i;
+	}
 	return 0;
 }
 
@@ -1552,14 +1586,16 @@ void CV_StealthSet(consvar_t *var, const char *value)
   */
 static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth)
 {
-	char val[32];
+	char val[SKINNAMESIZE+1];
 
 	if (var == &cv_forceskin) // Special handling.
 	{
+		const char *tmpskin = NULL;
 		if ((value < 0) || (value >= numskins))
-			sprintf(val, "None");
+			tmpskin = "None";
 		else
-			sprintf(val, "%s", skins[value].name);
+			tmpskin = skins[value].name;
+		strncpy(val, tmpskin, SKINNAMESIZE);
 	}
 	else
 		sprintf(val, "%d", value);

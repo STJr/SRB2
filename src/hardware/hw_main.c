@@ -30,6 +30,7 @@
 #include "../p_local.h"
 #include "../p_setup.h"
 #include "../r_local.h"
+#include "../r_patch.h"
 #include "../r_bsp.h"
 #include "../d_clisrv.h"
 #include "../w_wad.h"
@@ -39,6 +40,7 @@
 #include "../st_stuff.h"
 #include "../i_system.h"
 #include "../m_cheat.h"
+#include "../f_finale.h"
 #ifdef ESLOPE
 #include "../p_slopes.h"
 #endif
@@ -110,7 +112,6 @@ static consvar_t cv_grclipwalls = {"gr_clipwalls", "Off", 0, CV_OnOff, NULL, 0, 
 static consvar_t cv_gralpha = {"gr_alpha", "160", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_grbeta = {"gr_beta", "0", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static float HWRWipeCounter = 1.0f;
 consvar_t cv_grrounddown = {"gr_rounddown", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfov = {"gr_fov", "90", CV_FLOAT|CV_CALL, grfov_cons_t, CV_grFov_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfogdensity = {"gr_fogdensity", "150", CV_CALL|CV_NOINIT, CV_Unsigned,
@@ -1972,7 +1973,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	{
 		// Single sided line... Deal only with the middletexture (if one exists)
 		gr_midtexture = R_GetTextureNum(gr_sidedef->midtexture);
-		if (gr_midtexture && gr_linedef->special != 41) // Ignore horizon line for OGL
+		if (gr_midtexture && gr_linedef->special != HORIZONSPECIAL) // Ignore horizon line for OGL
 		{
 			{
 				fixed_t     texturevpeg;
@@ -4067,6 +4068,7 @@ static gr_vissprite_t *HWR_NewVisSprite(void)
 	return HWR_GetVisSprite(gr_visspritecount++);
 }
 
+#ifdef GLBADSHADOWS
 // Finds a floor through which light does not pass.
 static fixed_t HWR_OpaqueFloorAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 {
@@ -4097,6 +4099,7 @@ static fixed_t HWR_OpaqueFloorAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t hei
 
 	return floorz;
 }
+#endif //#ifdef GLBADSHADOWS
 
 //
 // HWR_DoCulling
@@ -4138,6 +4141,7 @@ static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float v
 	return false;
 }
 
+#ifdef GLBADSHADOWS
 static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float this_scale)
 {
 	FOutVector swallVerts[4];
@@ -4310,6 +4314,7 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 		HWD.pfnDrawPolygon(&sSurf, swallVerts, 4, PF_Translucent|PF_Modulated|PF_Clip);
 	}
 }
+#endif //#ifdef GLBADSHADOWS
 
 // This is expecting a pointer to an array containing 4 wallVerts for a sprite
 static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts)
@@ -4378,13 +4383,14 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	if (hires)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)spr->mobj->skin)->highresscale);
 
-	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_PATCH);
+	gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 
 	// cache the patch in the graphics card memory
 	//12/12/99: Hurdler: same comment as above (for md2)
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	HWR_GetMappedPatch(gpatch, spr->colormap);
 
+#ifdef GLBADSHADOWS
 	// Draw shadow BEFORE sprite
 	if (cv_shadow.value // Shadows enabled
 		&& (spr->mobj->flags & (MF_SCENERY|MF_SPAWNCEILING|MF_NOGRAVITY)) != (MF_SCENERY|MF_SPAWNCEILING|MF_NOGRAVITY) // Ceiling scenery have no shadow.
@@ -4400,6 +4406,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		////////////////////
 		HWR_DrawSpriteShadow(spr, gpatch, this_scale);
 	}
+#endif //#ifdef GLBADSHADOWS
 
 	baseWallVerts[0].x = baseWallVerts[3].x = spr->x1;
 	baseWallVerts[2].x = baseWallVerts[1].x = spr->x2;
@@ -4734,7 +4741,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	//          sure to do it the right way. So actually, we keep normal sprite
 	//          in memory and we add the md2 model if it exists for that sprite
 
-	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_PATCH);
+	gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 
 #ifdef ALAM_LIGHTING
 	if (!(spr->mobj->flags2 & MF2_DEBRIS) && (spr->mobj->sprite != SPR_PLAY ||
@@ -4787,6 +4794,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	HWR_GetMappedPatch(gpatch, spr->colormap);
 
+#ifdef GLBADSHADOWS
 	// Draw shadow BEFORE sprite
 	if (cv_shadow.value // Shadows enabled
 		&& (spr->mobj->flags & (MF_SCENERY|MF_SPAWNCEILING|MF_NOGRAVITY)) != (MF_SCENERY|MF_SPAWNCEILING|MF_NOGRAVITY) // Ceiling scenery have no shadow.
@@ -4802,6 +4810,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 		////////////////////
 		HWR_DrawSpriteShadow(spr, gpatch, this_scale);
 	}
+#endif //#ifdef GLBADSHADOWS
 
 	// if it has a dispoffset, push it a little towards the camera
 	if (spr->dispoffset) {
@@ -4879,7 +4888,7 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 		return;
 
 	// cache sprite graphics
-	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_PATCH);
+	gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 
 	// create the sprite billboard
 	//
@@ -5522,6 +5531,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float gz, gzt;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
+	spriteinfo_t *sprinfo;
 	size_t lumpoff;
 	unsigned rot;
 	UINT8 flip;
@@ -5533,10 +5543,22 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	angle_t mobjangle = (thing->player ? thing->player->drawangle : thing->angle);
 	float z1, z2;
 
+	fixed_t spr_width, spr_height;
+	fixed_t spr_offset, spr_topoffset;
+#ifdef ROTSPRITE
+	patch_t *rotsprite = NULL;
+	angle_t arollangle;
+	UINT32 rollangle;
+#endif
+
 	if (!thing)
 		return;
-	else
-		this_scale = FIXED_TO_FLOAT(thing->scale);
+
+#ifdef ROTSPRITE
+	arollangle = thing->rollangle;
+	rollangle = AngleFixed(arollangle)>>FRACBITS;
+#endif
+	this_scale = FIXED_TO_FLOAT(thing->scale);
 
 	// transform the origin point
 	tr_x = FIXED_TO_FLOAT(thing->x) - gr_viewx;
@@ -5563,9 +5585,15 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
 	if (thing->skin && thing->sprite == SPR_PLAY)
+	{
 		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
+	}
 	else
+	{
 		sprdef = &sprites[thing->sprite];
+		sprinfo = NULL;
+	}
 
 	if (rot >= sprdef->numframes)
 	{
@@ -5574,6 +5602,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		thing->sprite = states[S_UNKNOWN].sprite;
 		thing->frame = states[S_UNKNOWN].frame;
 		sprdef = &sprites[thing->sprite];
+		sprinfo = NULL;
 		rot = thing->frame&FF_FRAMEMASK;
 		thing->state->sprite = thing->sprite;
 		thing->state->frame = thing->frame;
@@ -5629,6 +5658,30 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
 
+	spr_width = spritecachedinfo[lumpoff].width;
+	spr_height = spritecachedinfo[lumpoff].height;
+	spr_offset = spritecachedinfo[lumpoff].offset;
+	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
+
+#ifdef ROTSPRITE
+	if (rollangle > 0)
+	{
+		if (!sprframe->rotsprite.cached[rot])
+			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
+		rollangle /= ROTANGDIFF;
+		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
+		if (rotsprite != NULL)
+		{
+			spr_width = rotsprite->width << FRACBITS;
+			spr_height = rotsprite->height << FRACBITS;
+			spr_offset = rotsprite->leftoffset << FRACBITS;
+			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			// flip -> rotate, not rotate -> flip
+			flip = 0;
+		}
+	}
+#endif
+
 	if (papersprite)
 	{
 		rightsin = FIXED_TO_FLOAT(FINESINE((mobjangle)>>ANGLETOFINESHIFT));
@@ -5642,13 +5695,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (flip)
 	{
-		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
-		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
+		x1 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_scale);
+		x2 = (FIXED_TO_FLOAT(spr_offset) * this_scale);
 	}
 	else
 	{
-		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
-		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
+		x1 = (FIXED_TO_FLOAT(spr_offset) * this_scale);
+		x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_scale);
 	}
 
 	// test if too close
@@ -5670,13 +5723,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (vflip)
 	{
-		gz = FIXED_TO_FLOAT(thing->z+thing->height) - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale;
-		gzt = gz + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
+		gz = FIXED_TO_FLOAT(thing->z+thing->height) - FIXED_TO_FLOAT(spr_topoffset) * this_scale;
+		gzt = gz + FIXED_TO_FLOAT(spr_height) * this_scale;
 	}
 	else
 	{
-		gzt = FIXED_TO_FLOAT(thing->z) + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale;
-		gz = gzt - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
+		gzt = FIXED_TO_FLOAT(thing->z) + FIXED_TO_FLOAT(spr_topoffset) * this_scale;
+		gz = gzt - FIXED_TO_FLOAT(spr_height) * this_scale;
 	}
 
 	if (thing->subsector->sector->cullheight)
@@ -5716,7 +5769,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->x2 = x2;
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	vis->patchlumpnum = sprframe->lumppat[rot];
+	//vis->patchlumpnum = sprframe->lumppat[rot];
+#ifdef ROTSPRITE
+	if (rotsprite)
+		vis->gpatch = (GLPatch_t *)rotsprite;
+	else
+#endif
+		vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = thing;
 	vis->z1 = z1;
@@ -5851,7 +5910,8 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->z2 = z2;
 	vis->tz = tz;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	vis->patchlumpnum = sprframe->lumppat[rot];
+	//vis->patchlumpnum = sprframe->lumppat[rot];
+	vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
 
@@ -6971,7 +7031,6 @@ void HWR_StartScreenWipe(void)
 
 void HWR_EndScreenWipe(void)
 {
-	HWRWipeCounter = 0.0f;
 	//CONS_Debug(DBG_RENDER, "In HWR_EndScreenWipe()\n");
 	HWD.pfnEndScreenWipe();
 }
@@ -6981,38 +7040,55 @@ void HWR_DrawIntermissionBG(void)
 	HWD.pfnDrawIntermissionBG();
 }
 
-void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
+//
+// hwr mode wipes
+//
+static lumpnum_t wipelumpnum;
+
+// puts wipe lumpname in wipename[9]
+static boolean HWR_WipeCheck(UINT8 wipenum, UINT8 scrnnum)
 {
 	static char lumpname[9] = "FADEmmss";
-	lumpnum_t lumpnum;
 	size_t lsize;
 
-	if (wipenum > 99 || scrnnum > 99) // not a valid wipe number
-		return; // shouldn't end up here really, the loop should've stopped running beforehand
+	// not a valid wipe number
+	if (wipenum > 99 || scrnnum > 99)
+		return false; // shouldn't end up here really, the loop should've stopped running beforehand
 
-	// puts the numbers into the lumpname
-	sprintf(&lumpname[4], "%.2hu%.2hu", (UINT16)wipenum, (UINT16)scrnnum);
-	lumpnum = W_CheckNumForName(lumpname);
+	// puts the numbers into the wipename
+	lumpname[4] = '0'+(wipenum/10);
+	lumpname[5] = '0'+(wipenum%10);
+	lumpname[6] = '0'+(scrnnum/10);
+	lumpname[7] = '0'+(scrnnum%10);
+	wipelumpnum = W_CheckNumForName(lumpname);
 
-	if (lumpnum == LUMPERROR) // again, shouldn't be here really
-		return;
+	// again, shouldn't be here really
+	if (wipelumpnum == LUMPERROR)
+		return false;
 
-	lsize = W_LumpLength(lumpnum);
-
+	lsize = W_LumpLength(wipelumpnum);
 	if (!(lsize == 256000 || lsize == 64000 || lsize == 16000 || lsize == 4000))
 	{
 		CONS_Alert(CONS_WARNING, "Fade mask lump %s of incorrect size, ignored\n", lumpname);
-		return; // again, shouldn't get here if it is a bad size
+		return false; // again, shouldn't get here if it is a bad size
 	}
 
-	HWR_GetFadeMask(lumpnum);
+	return true;
+}
 
+void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
+{
+	if (!HWR_WipeCheck(wipenum, scrnnum))
+		return;
+
+	HWR_GetFadeMask(wipelumpnum);
 	HWD.pfnDoScreenWipe();
+}
 
-	HWRWipeCounter += 0.05f; // increase opacity of end screen
-
-	if (HWRWipeCounter > 1.0f)
-		HWRWipeCounter = 1.0f;
+void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum)
+{
+	// It does the same thing
+	HWR_DoWipe(wipenum, scrnnum);
 }
 
 void HWR_MakeScreenFinalTexture(void)

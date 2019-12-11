@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -592,7 +592,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if (!(tails->pflags & PF_CANCARRY))
 		return;
 
-	if (tails->bot == 1)
+	if (sonic->pflags & PF_FINISHED)
 		return;
 
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
@@ -661,31 +661,32 @@ static void P_SlapStick(mobj_t *fang, mobj_t *pole)
 	momx2 = fang->momx/dist;
 	momy2 = fang->momy/dist;
 
-	pole->tracer->momx = momx1 + (dist-1)*momx2;
-	pole->tracer->momy = momy1 + (dist-1)*momy2;
+	pole->tracer->tracer->momx = momx1 + (dist-1)*momx2;
+	pole->tracer->tracer->momy = momy1 + (dist-1)*momy2;
 	fang->momx = (dist-1)*momx1 + momx2;
 	fang->momy = (dist-1)*momy1 + momy2;
 #undef dist
 
-	P_SetMobjState(pole, pole->info->deathstate);
-
-	P_SetObjectMomZ(pole->tracer, 6*FRACUNIT, false);
-	pole->tracer->flags &= ~(MF_NOGRAVITY|MF_NOCLIP);
-	pole->tracer->movedir = ANGLE_67h;
-	if ((R_PointToAngle(fang->x - pole->tracer->x, fang->y - pole->tracer->y) - pole->angle) > ANGLE_180)
-		pole->tracer->movedir = InvAngle(pole->tracer->movedir);
+	P_SetObjectMomZ(pole->tracer->tracer, 6*FRACUNIT, false);
+	pole->tracer->tracer->flags &= ~(MF_NOGRAVITY|MF_NOCLIP);
+	pole->tracer->tracer->movedir = ANGLE_67h;
+	if ((R_PointToAngle(fang->x - pole->tracer->tracer->x, fang->y - pole->tracer->tracer->y) - pole->angle) > ANGLE_180)
+		pole->tracer->tracer->movedir = InvAngle(pole->tracer->movedir);
 
 	P_SetObjectMomZ(fang, 14*FRACUNIT, false);
 	fang->flags |= MF_NOGRAVITY|MF_NOCLIP;
 	P_SetMobjState(fang, fang->info->xdeathstate);
 
-	pole->tracer->tics = pole->tics = fang->tics;
+	pole->tracer->tracer->tics = pole->tracer->tics = pole->tics = fang->tics;
 
 	var1 = var2 = 0;
-	A_Scream(pole->tracer);
+	A_Scream(pole->tracer->tracer);
 	S_StartSound(fang, sfx_altdi1);
 
+	P_SetTarget(&pole->tracer->tracer, NULL);
+	P_SetMobjState(pole->tracer, pole->info->xdeathstate);
 	P_SetTarget(&pole->tracer, NULL);
+	P_SetMobjState(pole, pole->info->deathstate);
 }
 
 static void P_PlayerBarrelCollide(mobj_t *toucher, mobj_t *barrel)
@@ -783,12 +784,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->type == MT_SPIKE
 		|| thing->type == MT_WALLSPIKE)
 		{
-			mobjtype_t type = thing->type;
+			mobj_t *iter;
 			if (thing->flags & MF_SOLID)
 				S_StartSound(tmthing, thing->info->deathsound);
-			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
-				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(thing, tmthing, tmthing, 0);
+			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
+				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(iter, tmthing, tmthing, 0);
 		}
 		else
 		{
@@ -822,12 +823,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->type == MT_SPIKE
 		|| thing->type == MT_WALLSPIKE)
 		{
-			mobjtype_t type = thing->type;
+			mobj_t *iter;
 			if (thing->flags & MF_SOLID)
 				S_StartSound(tmthing, thing->info->deathsound);
-			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
-				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(thing, tmthing, tmthing, 0);
+			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
+				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(iter, tmthing, tmthing, 0);
 		}
 		else
 		{
@@ -1020,7 +1021,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if ((thing->flags & MF_PUSHABLE) // not carrying a player
 			&& (tmthing->player->powers[pw_carry] == CR_NONE) // player is not already riding something
 			&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
-			&& (P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < (thing->radius))
 			&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
 			&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
 				|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
@@ -1032,7 +1032,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
 			tmthing->player->powers[pw_carry] = CR_ROLLOUT;
 			P_SetTarget(&tmthing->tracer, thing);
-			P_SetObjectMomZ(thing, tmthing->momz, true);
+			if (!P_IsObjectOnGround(thing))
+				thing->momz += tmthing->momz;
 			return true;
 		}
 	}
@@ -1063,6 +1064,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			thing->momy = tmthing->momy;
 			tmthing->momx = tempmomx;
 			tmthing->momy = tempmomy;
+			S_StartSound(thing, thing->info->painsound);
 		}
 	}
 
@@ -1089,7 +1091,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (thing->z + thing->height < tmthing->z)
 			return true; // underneath
-		if (!thing->tracer)
+		if (!thing->tracer || !thing->tracer->tracer)
 			return true;
 		P_SlapStick(tmthing, thing);
 		// no return value was used in the original prototype script at this point,
@@ -1348,6 +1350,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				damagetype = DMG_FIRE;
 			P_DamageMobj(thing, tmthing, tmthing->target, 1, damagetype);
 		}
+
+		// Fireball touched an enemy
+		// Don't bounce though, just despawn right there
+		if ((tmthing->type == MT_FIREBALL) && (thing->flags & MF_ENEMY))
+			P_KillMobj(tmthing, NULL, NULL, 0);
 
 		// don't traverse any more
 
@@ -1712,8 +1719,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM) && (thing->player))
-		; // springs and gas jets should never be able to step up onto a player
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
+		; // springs, gas jets and springs should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
@@ -3464,7 +3471,7 @@ isblocking:
 		}
 
 		// see about climbing on the wall
-		if (!(checkline->flags & ML_NOCLIMB))
+		if (!(checkline->flags & ML_NOCLIMB) && checkline->special != HORIZONSPECIAL)
 		{
 			boolean canclimb;
 			angle_t climbangle, climbline;
@@ -3751,6 +3758,33 @@ void P_SlideMove(mobj_t *mo)
 			v2.x = tmhitthing->x + cosradius;
 			v2.y = tmhitthing->y + sinradius;
 
+			// Can we box collision our way into smooth movement..?
+			if (sinradius && mo->y + mo->radius <= min(v1.y, v2.y))
+			{
+				mo->momy = 0;
+				P_TryMove(mo, mo->x + mo->momx, min(v1.y, v2.y) - mo->radius, true);
+				return;
+			}
+			else if (sinradius && mo->y - mo->radius >= max(v1.y, v2.y))
+			{
+				mo->momy = 0;
+				P_TryMove(mo, mo->x + mo->momx, max(v1.y, v2.y) + mo->radius, true);
+				return;
+			}
+			else if (cosradius && mo->x + mo->radius <= min(v1.x, v2.x))
+			{
+				mo->momx = 0;
+				P_TryMove(mo, min(v1.x, v2.x) - mo->radius, mo->y + mo->momy, true);
+				return;
+			}
+			else if (cosradius && mo->x - mo->radius >= max(v1.x, v2.x))
+			{
+				mo->momx = 0;
+				P_TryMove(mo, max(v1.x, v2.x) + mo->radius, mo->y + mo->momy, true);
+				return;
+			}
+
+			// nope, gotta fuck around with a fake linedef!
 			junk.v1 = &v1;
 			junk.v2 = &v2;
 			junk.dx = 2*cosradius; // v2.x - v1.x;

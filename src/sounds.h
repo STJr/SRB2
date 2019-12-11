@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -879,6 +879,7 @@ typedef enum
 
 void S_InitRuntimeSounds(void);
 sfxenum_t S_AddSoundFx(const char *name, boolean singular, INT32 flags, boolean skinsound);
+extern sfxenum_t sfxfree; // sound test and slotting
 void S_RemoveSoundFx(sfxenum_t id);
 
 #endif

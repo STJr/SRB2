@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,6 +23,10 @@
 #include "p_mobj.h"
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
+
+#ifdef HWRENDER
+#include "m_aatree.h"
+#endif
 
 #define POLYOBJECTS
 
@@ -406,6 +410,8 @@ typedef enum
 	ST_NEGATIVE
 } slopetype_t;
 
+#define HORIZONSPECIAL 41
+
 typedef struct line_s
 {
 	// Vertices, from v1 to v2.
@@ -728,6 +734,17 @@ typedef struct
 #pragma pack()
 #endif
 
+// rotsprite
+#ifdef ROTSPRITE
+typedef struct
+{
+	patch_t *patch[8][ROTANGLES];
+	boolean cached[8];
+#ifdef HWRENDER
+	aatree_t *hardware_patch[8];
+#endif
+} rotsprite_t;
+#endif
 
 typedef enum
 {
@@ -784,6 +801,10 @@ typedef struct
 
 	// Flip bits (1 = flip) to use for view angles 0-7.
 	UINT8 flip;
+
+#ifdef ROTSPRITE
+	rotsprite_t rotsprite;
+#endif
 } spriteframe_t;
 
 //

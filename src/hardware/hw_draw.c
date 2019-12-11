@@ -137,7 +137,7 @@ void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
 	HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
-void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, INT32 option, const UINT8 *colormap)
+void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap)
 {
 	FOutVector v[4];
 	FBITFIELD flags;
@@ -182,6 +182,8 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
 	fscalew = fscaleh = FIXED_TO_FLOAT(pscale);
+	if (vscale != pscale)
+		fscaleh = FIXED_TO_FLOAT(vscale);
 
 	// See my comments in v_video.c's V_DrawFixedPatch
 	// -- Monster Iestyn 29/10/18
@@ -378,9 +380,9 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	{
 		FSurfaceInfo Surf;
 		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[cv_translucenthud.value];
-		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[cv_translucenthud.value];
-		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[cv_translucenthud.value];
+		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[st_translucency];
+		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[st_translucency];
+		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[st_translucency];
 		else Surf.FlatColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
@@ -536,9 +538,9 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	{
 		FSurfaceInfo Surf;
 		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[cv_translucenthud.value];
-		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[cv_translucenthud.value];
-		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[cv_translucenthud.value];
+		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[st_translucency];
+		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[st_translucency];
+		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[st_translucency];
 		else Surf.FlatColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);

@@ -73,7 +73,8 @@ typedef struct gr_vissprite_s
 	struct gr_vissprite_s *next;
 	float x1, x2;
 	float tz, ty;
-	lumpnum_t patchlumpnum;
+	//lumpnum_t patchlumpnum;
+	GLPatch_t *gpatch;
 	boolean flip;
 	UINT8 translucency;       //alpha level 0-255
 	mobj_t *mobj;
@@ -112,6 +113,9 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum);
 void HWR_SetPalette(RGBA_t *palette);
 GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
 GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
+#ifdef ROTSPRITE
+GLPatch_t *HWR_GetCachedGLRotSprite(aatree_t *hwrcache, UINT16 rollangle, patch_t *rawpatch);
+#endif
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 
 // --------

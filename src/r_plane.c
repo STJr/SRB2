@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1007,6 +1007,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
 			// Raw flats always have dimensions that are powers-of-two numbers.
 			ds_powersoftwo = true;
+			if (spanfunc == basespanfunc)
+				spanfunc = mmxspanfunc;
 			break;
 		default:
 			switch (type)
@@ -1113,8 +1115,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
 		zeroheight = FIXED_TO_FLOAT(temp);
-
-#define ANG2RAD(angle) ((float)((angle)*M_PIl)/ANGLE_180)
 
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in

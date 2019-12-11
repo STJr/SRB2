@@ -98,6 +98,9 @@ void I_FinishUpdate (void)
 	if (cv_ticrate.value)
 		SCR_DisplayTicRate();
 
+	if (cv_showping.value && netgame && consoleplayer != serverplayer)
+		SCR_DisplayLocalPing();
+
 	//blast it to the screen
 	// this code sucks
 	//memcpy(dascreen,screens[0],screenwidth*screenheight);

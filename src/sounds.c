@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -92,9 +92,9 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"pstop",  false, 100,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crusher stomp"},
   {"steam1", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Steam jet"}, // Tails 06-19-2001
   {"steam2", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Steam jet"}, // Tails 06-19-2001
-  {"wbreak", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wood breaking"},
+  {"wbreak",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wood breaking"},
   {"ambmac", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Machinery"},
-  {"spsmsh", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy impact"},
+  {"spsmsh",  true,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy impact"},
 
   {"rainin",  true,  24,  4, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rain"},
   {"litng1", false,  16,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lightning"},
@@ -208,7 +208,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"shrpsp",  true,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spincushion"},
   {"shrpgo", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Launch"},
   {"mswarp", false,  60, 16, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spinning out"},
-  {"mspogo", false,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Breaking through"},
+  {"mspogo",  true,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Breaking through"},
   {"boingf", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bouncing"},
   {"corkp",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork fired"},
   {"corkh",  false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork hit"},
@@ -528,7 +528,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k83",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Collapsing"},
   {"s3k84",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powering up"},
   {"s3k85",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powering down"},
-  {"s3k86",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Alarm"},
+  {"s3k86",  false, 128,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Alarm"},
   {"s3k87",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bounce"},
   {"s3k88",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Metallic squeak"},
   {"s3k89",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Advanced tech"},
@@ -578,7 +578,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kb5",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Clink"},
   {"s3kb6",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spin launch"},
   {"s3kb7",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Tumbler"},
-  {"s3kb8",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling signpost"},
+  {"s3kb8",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spinning signpost"},
   {"s3kb9",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ring loss"},
   {"s3kba",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flight"},
   {"s3kbb",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Tired flight"},
@@ -779,7 +779,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"kc49",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"kc4a",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"kc4b",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"kc4c",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
+  {"kc4c",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pop-shot"},
   {"kc4d",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power up"},
   {"kc4e",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"kc4f",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
@@ -857,34 +857,44 @@ void S_InitRuntimeSounds (void)
 	}
 }
 
+sfxenum_t sfxfree = sfx_freeslot0;
+
 // Add a new sound fx into a free sfx slot.
 //
 sfxenum_t S_AddSoundFx(const char *name, boolean singular, INT32 flags, boolean skinsound)
 {
-	sfxenum_t i, slot;
+	sfxenum_t i;
 
 	if (skinsound)
-		slot = sfx_skinsoundslot0;
-	else
-		slot = sfx_freeslot0;
-
-	for (i = slot; i < NUMSFX; i++)
 	{
-		if (!S_sfx[i].priority)
+		for (i = sfx_skinsoundslot0; i < NUMSFX; i++)
 		{
-			strncpy(freeslotnames[i-sfx_freeslot0], name, 6);
-			S_sfx[i].singularity = singular;
-			S_sfx[i].priority = 60;
-			S_sfx[i].pitch = flags;
-			S_sfx[i].volume = -1;
-			S_sfx[i].lumpnum = LUMPERROR;
-			S_sfx[i].skinsound = -1;
-			S_sfx[i].usefulness = -1;
-
-			/// \todo if precached load it here
-			S_sfx[i].data = NULL;
-			return i;
+			if (S_sfx[i].priority)
+				continue;
+			break;
 		}
+	}
+	else
+		i = sfxfree;
+
+	if (i < NUMSFX)
+	{
+		strncpy(freeslotnames[i-sfx_freeslot0], name, 6);
+		S_sfx[i].singularity = singular;
+		S_sfx[i].priority = 60;
+		S_sfx[i].pitch = flags;
+		S_sfx[i].volume = -1;
+		S_sfx[i].lumpnum = LUMPERROR;
+		S_sfx[i].skinsound = -1;
+		S_sfx[i].usefulness = -1;
+
+		/// \todo if precached load it here
+		S_sfx[i].data = NULL;
+
+		if (!skinsound)
+			sfxfree++;
+
+		return i;
 	}
 	CONS_Alert(CONS_WARNING, M_GetText("No more free sound slots\n"));
 	return 0;

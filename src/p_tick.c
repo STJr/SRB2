@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -481,6 +481,9 @@ static inline void P_DoSpecialStageStuff(void)
 				tic_t oldnightstime = players[i].nightstime;
 				countspheres += players[i].spheres;
 
+				if (!oldnightstime)
+					continue;
+
 				// If in water, deplete timer 6x as fast.
 				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & SH_PROTECTWATER))
 					players[i].nightstime -= 5;
@@ -506,12 +509,11 @@ static inline void P_DoSpecialStageStuff(void)
 			{
 				// Halt all the players
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i])
+					if (playeringame[i] && !players[i].exiting)
 					{
 						players[i].mo->momx = players[i].mo->momy = 0;
 						players[i].exiting = (14*TICRATE)/5 + 1;
 					}
-
 				sstimer = 0;
 				P_GiveEmerald(true);
 				P_RestoreMusic(&players[consoleplayer]);
@@ -678,7 +680,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && --countdowntimer <= 0)
+		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && !stoppedclock && --countdowntimer <= 0)
 		{
 			countdowntimer = 0;
 			countdowntimeup = true;

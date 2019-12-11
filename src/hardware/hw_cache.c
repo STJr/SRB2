@@ -30,6 +30,7 @@
 #include "../z_zone.h"
 #include "../v_video.h"
 #include "../r_draw.h"
+#include "../r_patch.h"
 #include "../p_setup.h"
 
 //Hurdler: 25/04/2000: used for new colormap code in hardware mode
@@ -772,14 +773,25 @@ void HWR_InitTextureCache(void)
 // Callback function for HWR_FreeTextureCache.
 static void FreeMipmapColormap(INT32 patchnum, void *patch)
 {
-	GLPatch_t* const grpatch = patch;
+	GLPatch_t* const pat = patch;
 	(void)patchnum; //unused
-	while (grpatch->mipmap->nextcolormap)
+	while (pat->mipmap && pat->mipmap->nextcolormap) // The mipmap must be valid, obviously
 	{
-		GLMipmap_t *grmip = grpatch->mipmap->nextcolormap;
-		grpatch->mipmap->nextcolormap = grmip->nextcolormap;
-		if (grmip->grInfo.data) Z_Free(grmip->grInfo.data);
-		free(grmip);
+		// Confusing at first, but pat->mipmap->nextcolormap
+		// at the beginning of the loop is the first colormap
+		// from the linked list of colormaps
+		GLMipmap_t *next = pat->mipmap;
+		if (!next) // No mipmap in this patch, break out of loop.
+			break;
+		// Set the first colormap
+		// to the one that comes after it
+		next = next->nextcolormap;
+		pat->mipmap->nextcolormap = next->nextcolormap;
+		// Free image data from memory
+		if (next->grInfo.data)
+			Z_Free(next->grInfo.data);
+		// Free the old colormap from memory
+		free(next);
 	}
 }
 
@@ -1013,10 +1025,14 @@ static void HWR_LoadMappedPatch(GLMipmap_t *grmip, GLPatch_t *gpatch)
 {
 	if (!grmip->downloaded && !grmip->grInfo.data)
 	{
-		patch_t *patch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+		patch_t *patch = gpatch->rawpatch;
+		if (!patch)
+			patch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
 		HWR_MakePatch(patch, gpatch, grmip, true);
 
-		Z_Free(patch);
+		// You can't free rawpatch for some reason?
+		if (!gpatch->rawpatch)
+			Z_Free(patch);
 	}
 
 	HWD.pfnSetTexture(grmip);
@@ -1038,12 +1054,16 @@ void HWR_GetPatch(GLPatch_t *gpatch)
 	{
 		// load the software patch, PU_STATIC or the Z_Malloc for hardware patch will
 		// flush the software patch before the conversion! oh yeah I suffered
-		patch_t *ptr = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+		patch_t *ptr = gpatch->rawpatch;
+		if (!ptr)
+			ptr = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
 		HWR_MakePatch(ptr, gpatch, gpatch->mipmap, true);
 
 		// this is inefficient.. but the hardware patch in heap is purgeable so it should
 		// not fragment memory, and besides the REAL cache here is the hardware memory
-		Z_Free(ptr);
+		// You can't free rawpatch for some reason?
+		if (!gpatch->rawpatch)
+			Z_Free(ptr);
 	}
 
 	HWD.pfnSetTexture(gpatch->mipmap);
@@ -1284,6 +1304,23 @@ GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum)
 {
 	return HWR_GetCachedGLPatchPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
+
+#ifdef ROTSPRITE
+GLPatch_t *HWR_GetCachedGLRotSprite(aatree_t *hwrcache, UINT16 rollangle, patch_t *rawpatch)
+{
+	GLPatch_t *grpatch;
+
+	if (!(grpatch = M_AATreeGet(hwrcache, rollangle)))
+	{
+		grpatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
+		grpatch->rawpatch = rawpatch;
+		grpatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
+		M_AATreeSet(hwrcache, rollangle, grpatch);
+	}
+
+	return grpatch;
+}
+#endif
 
 // Need to do this because they aren't powers of 2
 static void HWR_DrawFadeMaskInCache(GLMipmap_t *mipmap, INT32 pblockwidth, INT32 pblockheight,

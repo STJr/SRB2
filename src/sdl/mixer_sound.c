@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014-2018 by Sonic Team Junior.
+// Copyright (C) 2014-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1251,7 +1251,7 @@ boolean I_LoadSong(char *data, size_t len)
 
 #ifdef HAVE_OPENMPT
 	/*
-		If the size of the data to be checked is bigger than the recommended size (> 2048)
+		If the size of the data to be checked is bigger than the recommended size (> 2048 bytes)
 		Let's just set the probe size to the recommended size
 		Otherwise let's give it the full data size
 	*/

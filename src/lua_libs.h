@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2018 by Sonic Team Junior.
+// Copyright (C) 2012-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,11 @@ extern lua_State *gL;
 #define META_STATE "STATE_T*"
 #define META_MOBJINFO "MOBJINFO_T*"
 #define META_SFXINFO "SFXINFO_T*"
+#define META_SPRITEINFO "SPRITEINFO_T*"
+#ifdef ROTSPRITE
+#define META_PIVOTLIST "SPRITEFRAMEPIVOT_T[]"
+#define META_FRAMEPIVOT "SPRITEFRAMEPIVOT_T*"
+#endif
 
 #define META_MOBJ "MOBJ_T*"
 #define META_MAPTHING "MAPTHING_T*"

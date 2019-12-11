@@ -42,7 +42,7 @@ void HWR_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum)
 void HWR_InitTextureMapping(void);
 void HWR_SetViewSize(void);
 void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option);
-void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, const UINT8 *colormap);
+void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap);
 void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
 void HWR_MakePatch(const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap);
 void HWR_CreatePlanePolygons(INT32 bspnum);
@@ -66,6 +66,7 @@ void HWR_StartScreenWipe(void);
 void HWR_EndScreenWipe(void);
 void HWR_DrawIntermissionBG(void);
 void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum);
+void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum);
 void HWR_MakeScreenFinalTexture(void);
 void HWR_DrawScreenFinalTexture(int width, int height);
 

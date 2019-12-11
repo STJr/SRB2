@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,6 +27,7 @@
 #include "m_cheat.h" // objectplace
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
+#include "f_finale.h"
 
 // CTF player names
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
@@ -147,13 +148,17 @@ void P_ResetStarposts(void)
 //
 boolean P_CanPickupItem(player_t *player, boolean weapon)
 {
-	if (player->bot && weapon)
+	if (!player->mo || player->mo->health <= 0)
 		return false;
+
+	if (player->bot)
+	{
+		if (weapon)
+			return false;
+		return P_CanPickupItem(&players[consoleplayer], true); // weapon is true to prevent infinite recursion if p1 is bot - doesn't occur in vanilla, but may be relevant for mods
+	}
 
 	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] < UINT16_MAX)
-		return false;
-
-	if (player->mo && player->mo->health <= 0)
 		return false;
 
 	return true;
@@ -1392,6 +1397,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				}
 			}
 			break;
+		case MT_LETTER:
+		{
+			if (special->health && !player->bot)
+			{
+				F_StartTextPrompt(199, 0, toucher, 0, true, false);
+				special->health = 0;
+				if (ultimatemode && player->continues < 99)
+					player->continues++;
+			}
+			return;
+		}
 		case MT_FIREFLOWER:
 			if (player->bot)
 				return;
@@ -2392,7 +2408,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		{
 			P_SetTarget(&target->target, source);
 			source->player->numboxes++;
-			if ((cv_itemrespawn.value && gametype != GT_COOP && (modifiedgame || netgame || multiplayer)))
+			if (cv_itemrespawn.value && gametype != GT_COOP && (modifiedgame || netgame || multiplayer))
 				target->fuse = cv_itemrespawntime.value*TICRATE + 2; // Random box generation
 		}
 
@@ -2509,7 +2525,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
 			;
-		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap) && (target->player->lives != INFLIVES)
+		else if (!target->player->bot && !target->player->spectator && (target->player->lives != INFLIVES)
 		 && G_GametypeUsesLives())
 		{
 			target->player->lives -= 1; // Lose a life Tails 03-11-2000
@@ -2627,6 +2643,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				mo = P_SpawnMobj(target->x, target->y, target->z, MT_EXTRALARGEBUBBLE);
 			mo->destscale = target->scale;
 			P_SetScale(mo, mo->destscale);
+			P_SetMobjState(mo, mo->info->raisestate);
 			break;
 
 		case MT_YELLOWSHELL:
@@ -2665,6 +2682,17 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			P_InstaThrust(target, target->angle, 3*target->scale);
 			target->flags = (target->flags|MF_NOCLIPHEIGHT) & ~MF_NOGRAVITY;
 			break;
+
+		case MT_DRAGONBOMBER:
+			{
+				mobj_t *segment = target;
+				while (segment->tracer != NULL)
+				{
+					P_KillMobj(segment->tracer, NULL, NULL, 0);
+					segment = segment->tracer;
+				}
+				break;
+			}
 
 		case MT_EGGMOBILE3:
 			{
@@ -2729,7 +2757,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_EGGTRAP:
 			// Time for birdies! Yaaaaaaaay!
-			target->fuse = TICRATE*2;
+			target->fuse = TICRATE;
 			break;
 
 		case MT_MINECART:
@@ -2791,13 +2819,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (flip)
 				momz *= -1;
 #define makechunk(angtweak, xmov, ymov) \
-			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);\
-			chunk->eflags |= flip;\
+			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);\
 			P_SetMobjState(chunk, target->info->xdeathstate);\
 			chunk->health = 0;\
 			chunk->angle = angtweak;\
-			chunk->destscale = scale;\
-			P_SetScale(chunk, scale);\
 			P_UnsetThingPosition(chunk);\
 			chunk->flags = MF_NOCLIP;\
 			chunk->x += xmov;\
@@ -2816,14 +2841,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		if (flip)
 			momz *= -1;
 
-		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);
-		chunk->eflags |= flip;
-
+		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);
 		P_SetMobjState(chunk, target->info->deathstate);
 		chunk->health = 0;
 		chunk->angle = ang + ANGLE_180;
-		chunk->destscale = scale;
-		P_SetScale(chunk, scale);
 		P_UnsetThingPosition(chunk);
 		chunk->flags = MF_NOCLIP;
 		chunk->x -= xoffs;
@@ -2866,13 +2887,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			sprflip = P_RandomChance(FRACUNIT/2);
 
 #define makechunk(angtweak, xmov, ymov) \
-			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);\
-			chunk->eflags |= flip;\
+			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);\
 			P_SetMobjState(chunk, target->info->xdeathstate);\
 			chunk->health = 0;\
 			chunk->angle = target->angle;\
-			chunk->destscale = scale;\
-			P_SetScale(chunk, scale);\
 			P_UnsetThingPosition(chunk);\
 			chunk->flags = MF_NOCLIP;\
 			chunk->x += xmov - forwardxoffs;\
@@ -2894,14 +2912,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		sprflip = P_RandomChance(FRACUNIT/2);
 
-		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);
-		chunk->eflags |= flip;
+		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);
 
 		P_SetMobjState(chunk, target->info->deathstate);
 		chunk->health = 0;
 		chunk->angle = target->angle;
-		chunk->destscale = scale;
-		P_SetScale(chunk, scale);
 		P_UnsetThingPosition(chunk);
 		chunk->flags = MF_NOCLIP;
 		chunk->x += forwardxoffs - xoffs;
@@ -2989,6 +3004,10 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		player->powers[pw_flashing] = flashingtics;
 		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_STUN);
 		S_StartSound(target, sfx_nghurt);
+
+#ifdef ROTSPRITE
+		player->mo->rollangle = 0;
+#endif
 
 		if (oldnightstime > 10*TICRATE
 			&& player->nightstime < 10*TICRATE)
@@ -3505,7 +3524,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		// Make sure that boxes cannot be popped by enemies, red rings, etc.
 		if (target->flags & MF_MONITOR && ((!source || !source->player || source->player->bot)
-		|| (inflictor && inflictor->type >= MT_REDRING && inflictor->type <= MT_GRENADERING)))
+		|| (inflictor && (inflictor->type == MT_REDRING || (inflictor->type >= MT_THROWNBOUNCE && inflictor->type <= MT_THROWNGRENADE)))))
 			return false;
 	}
 

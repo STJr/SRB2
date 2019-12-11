@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -349,6 +349,8 @@ typedef struct
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
 #define LF_SAVEGAME      32 ///< Save the game upon loading this level
 #define LF_MIXNIGHTSCOUNTDOWN 64 ///< Play sfx_timeup instead of music change for NiGHTS countdown
+#define LF_WARNINGTITLE 128 ///< WARNING! WARNING! WARNING! WARNING!
+#define LF_NOTITLECARD  256 ///< Don't start the title card
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen
@@ -433,7 +435,6 @@ typedef struct
 	tic_t time;   ///< Time in which the level was finished.
 	UINT32 score; ///< Score when the level was finished.
 	UINT16 rings; ///< Rings when the level was finished.
-	boolean gotperfect; ///< Got perfect bonus?
 } recorddata_t;
 
 /** Setup for one NiGHTS map.
@@ -465,7 +466,8 @@ extern recorddata_t *mainrecords[NUMMAPS];
 #define MV_ALLEMERALDS  4
 #define MV_ULTIMATE     8
 #define MV_PERFECT     16
-#define MV_MAX         31 // used in gamedata check
+#define MV_PERFECTRA   32
+#define MV_MAX         63 // used in gamedata check, update whenever MV's are added
 #define MV_MP         128
 extern UINT8 mapvisited[NUMMAPS];
 

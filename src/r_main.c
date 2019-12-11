@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -125,8 +125,12 @@ consvar_t cv_chasecam2 = {"chasecam2", "On", CV_CALL, CV_OnOff, ChaseCam2_OnChan
 consvar_t cv_flipcam = {"flipcam", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_flipcam2 = {"flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
+#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
 consvar_t cv_shadow = {"shadow", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif //#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
+#ifdef GLBADSHADOWS
 consvar_t cv_shadowoffs = {"offsetshadows", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif //#ifdef GLBADSHADOWS
 consvar_t cv_skybox = {"skybox", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_allowmlook = {"allowmlook", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_showhud = {"showhud", "Yes", CV_CALL,  CV_YesNo, R_SetViewSize, 0, NULL, NULL, 0, 0, NULL};
@@ -1195,8 +1199,12 @@ void R_RegisterEngineStuff(void)
 
 	CV_RegisterVar(&cv_chasecam);
 	CV_RegisterVar(&cv_chasecam2);
+#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
 	CV_RegisterVar(&cv_shadow);
+#endif //#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
+#ifdef GLBADSHADOWS
 	CV_RegisterVar(&cv_shadowoffs);
+#endif //#ifdef GLBADSHADOWS
 	CV_RegisterVar(&cv_skybox);
 
 	CV_RegisterVar(&cv_cam_dist);

@@ -2,7 +2,7 @@
 #     GNU Make makefile for SRB2
 #############################################################################
 # Copyright (C) 1998-2000 by DooM Legacy Team.
-# Copyright (C) 2003-2018 by Sonic Team Junior.
+# Copyright (C) 2003-2019 by Sonic Team Junior.
 #
 # This program is free software distributed under the
 # terms of the GNU General Public License, version 2.
@@ -471,6 +471,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_sky.o    \
 		$(OBJDIR)/r_splats.o \
 		$(OBJDIR)/r_things.o \
+		$(OBJDIR)/r_patch.o \
 		$(OBJDIR)/r_portal.o \
 		$(OBJDIR)/screen.o   \
 		$(OBJDIR)/v_video.o  \
