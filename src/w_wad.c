@@ -1944,6 +1944,7 @@ virtres_t* vres_GetMap (lumpnum_t lumpnum)
 	vres = Z_Malloc(sizeof(virtres_t), PU_LEVEL, NULL);
 	vres->vlumps	= vlumps;
 	vres->numlumps	= numlumps;
+
 	return vres;
 }
 
@@ -1961,12 +1962,14 @@ void vres_Free (virtres_t* vres)
 
 /** (Debug) Prints lumps from a virtual resource into console.
  */
+/*
 static void vres_Diag (const virtres_t* vres)
 {
 	UINT32 i;
 	for (i = 0; i < vres->numlumps; i++)
 		CONS_Printf("%s\n", vres->vlumps[i].name);
 }
+*/
 
 /** \brief Finds a lump in a given virtual resource.
  *
