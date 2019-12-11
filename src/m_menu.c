@@ -351,6 +351,7 @@ static void M_DrawTimeAttackMenu(void);
 static void M_DrawNightsAttackMenu(void);
 static void M_DrawSetupChoosePlayerMenu(void);
 static void M_DrawControlsDefMenu(void);
+static void M_DrawCameraOptionsMenu(void);
 static void M_DrawPlaystyleMenu(void);
 static void M_DrawControl(void);
 static void M_DrawMainVideoMenu(void);
@@ -1978,12 +1979,29 @@ menu_t OP_JoystickSetDef =
 	0,
 	NULL
 };
-menu_t OP_CameraOptionsDef = DEFAULTSCROLLMENUSTYLE(
+
+menu_t OP_CameraOptionsDef = {
 	MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1CAMERA << 12),
-	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 35, 30);
-menu_t OP_Camera2OptionsDef = DEFAULTSCROLLMENUSTYLE(
+	"M_CONTRO",
+	sizeof (OP_CameraOptionsMenu)/sizeof (menuitem_t),
+	&OP_P1ControlsDef,
+	OP_CameraOptionsMenu,
+	M_DrawCameraOptionsMenu,
+	35, 30,
+	0,
+	NULL
+};
+menu_t OP_Camera2OptionsDef = {
 	MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),
-	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
+	"M_CONTRO",
+	sizeof (OP_Camera2OptionsMenu)/sizeof (menuitem_t),
+	&OP_P2ControlsDef,
+	OP_Camera2OptionsMenu,
+	M_DrawCameraOptionsMenu,
+	35, 30,
+	0,
+	NULL
+};
 
 static menuitem_t OP_PlaystyleMenu[] = {{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandlePlaystyleMenu, 0}};
 
@@ -11660,6 +11678,19 @@ static void M_HandlePlaystyleMenu(INT32 choice)
 		S_StartSound(NULL, sfx_menu1);
 		playstyle_currentchoice = (playstyle_currentchoice+1)%3;
 		break;
+	}
+}
+
+static void M_DrawCameraOptionsMenu(void)
+{
+	M_DrawGenericScrollMenu();
+
+	if (gamestate == GS_LEVEL && (paused || P_AutoPause()))
+	{
+		if (currentMenu == &OP_Camera2OptionsDef && splitscreen && camera2.chase)
+			P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
+		if (currentMenu == &OP_CameraOptionsDef && camera.chase)
+			P_MoveChaseCamera(&players[displayplayer], &camera, false);
 	}
 }
 
