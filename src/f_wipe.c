@@ -282,7 +282,7 @@ static void F_DoWipe(fademask_t *fademask)
 					relativepos += vid.width;
 				}
 			}
-			else if (*mask >= ((wipestyle == WIPESTYLE_COLORMAP) ? FADECOLORMAPROWS : 10))
+			else if (*mask >= 10)
 			{
 				// shortcut - memcpy target to work
 				while (draw_linestogo--)
@@ -293,25 +293,8 @@ static void F_DoWipe(fademask_t *fademask)
 			}
 			else
 			{
-				if (wipestyle == WIPESTYLE_COLORMAP)
-				{
-					int nmask;
-					UINT8 *fade = fadecolormap;
-
-					if (wipestyleflags & WSF_TOWHITE)
-						fade = fadecolormap + (FADECOLORMAPROWS * 256);
-
-					nmask = *mask;
-					if (wipestyleflags & WSF_FADEIN)
-						nmask = (FADECOLORMAPROWS-1) - nmask;
-
-					transtbl = fade + (nmask * 256);
-				}
-				else
-				{
-					// pointer to transtable that this mask would use
-					transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
-				}
+				// pointer to transtable that this mask would use
+				transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
 
 				// DRAWING LOOP
 				while (draw_linestogo--)
@@ -321,16 +304,113 @@ static void F_DoWipe(fademask_t *fademask)
 					e = e_base + relativepos;
 					draw_rowstogo = draw_rowend - draw_rowstart;
 
-					if (wipestyle == WIPESTYLE_COLORMAP)
-					{
-						while (draw_rowstogo--)
-							*w++ = transtbl[*e++];
-					}
-					else
-					{
-						while (draw_rowstogo--)
-							*w++ = transtbl[ ( *e++ << 8 ) + *s++ ];
-					}
+					while (draw_rowstogo--)
+						*w++ = transtbl[ ( *e++ << 8 ) + *s++ ];
+
+					relativepos += vid.width;
+				}
+				// END DRAWING LOOP
+			}
+
+			if (++maskx >= fademask->width)
+				++masky, maskx = 0;
+		} while (++mask < maskend);
+
+		free(scrxpos);
+		free(scrypos);
+	}
+}
+
+static void F_DoColormapWipe(fademask_t *fademask, UINT8 *colormap)
+{
+	// Lactozilla: F_DoWipe for WIPESTYLE_COLORMAP
+	{
+		// wipe screen, start, end
+		UINT8       *w = wipe_scr;
+		const UINT8 *s = wipe_scr_start;
+		const UINT8 *e = wipe_scr_end;
+
+		// first pixel for each screen
+		UINT8       *w_base = w;
+		const UINT8 *s_base = s;
+		const UINT8 *e_base = e;
+
+		// mask data, end
+		UINT8       *transtbl;
+		const UINT8 *mask    = fademask->mask;
+		const UINT8 *maskend = mask + fademask->size;
+
+		// rectangle draw hints
+		UINT32 draw_linestart, draw_rowstart;
+		UINT32 draw_lineend,   draw_rowend;
+		UINT32 draw_linestogo, draw_rowstogo;
+
+		// rectangle coordinates, etc.
+		UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
+		UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
+		UINT16 maskx, masky;
+		UINT32 relativepos;
+
+		// ---
+		// Screw it, we do the fixed point math ourselves up front.
+		scrxpos[0] = 0;
+		for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
+			scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
+		scrxpos[fademask->width] = vid.width;
+
+		scrypos[0] = 0;
+		for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
+			scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
+		scrypos[fademask->height] = vid.height;
+		// ---
+
+		maskx = masky = 0;
+		do
+		{
+			draw_rowstart = scrxpos[maskx];
+			draw_rowend   = scrxpos[maskx + 1];
+			draw_linestart = scrypos[masky];
+			draw_lineend   = scrypos[masky + 1];
+
+			relativepos = (draw_linestart * vid.width) + draw_rowstart;
+			draw_linestogo = draw_lineend - draw_linestart;
+
+			if (*mask == 0)
+			{
+				// shortcut - memcpy source to work
+				while (draw_linestogo--)
+				{
+					M_Memcpy(w_base+relativepos, s_base+relativepos, draw_rowend-draw_rowstart);
+					relativepos += vid.width;
+				}
+			}
+			else if (*mask >= FADECOLORMAPROWS)
+			{
+				// shortcut - memcpy target to work
+				while (draw_linestogo--)
+				{
+					M_Memcpy(w_base+relativepos, e_base+relativepos, draw_rowend-draw_rowstart);
+					relativepos += vid.width;
+				}
+			}
+			else
+			{
+				int nmask = *mask;
+				if (wipestyleflags & WSF_FADEIN)
+					nmask = (FADECOLORMAPROWS-1) - nmask;
+
+				transtbl = colormap + (nmask * 256);
+
+				// DRAWING LOOP
+				while (draw_linestogo--)
+				{
+					w = w_base + relativepos;
+					s = s_base + relativepos;
+					e = e_base + relativepos;
+					draw_rowstogo = draw_rowend - draw_rowstart;
+
+					while (draw_rowstogo--)
+						*w++ = transtbl[*e++];
 
 					relativepos += vid.width;
 				}
@@ -484,7 +564,17 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		}
 		else
 #endif
-			F_DoWipe(fmask);
+		{
+			if (wipestyle == WIPESTYLE_COLORMAP)
+			{
+				UINT8 *colormap = fadecolormap;
+				if (wipestyleflags & WSF_TOWHITE)
+					colormap += (FADECOLORMAPROWS * 256);
+				F_DoColormapWipe(fmask, colormap);
+			}
+			else
+				F_DoWipe(fmask);
+		}
 
 		if (wipestyle == WIPESTYLE_COLORMAP)
 			F_WipeStageTitle();
