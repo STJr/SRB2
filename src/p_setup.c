@@ -397,13 +397,6 @@ static inline void P_LoadRawVertexes(UINT8 *data, size_t i)
 	}
 }
 
-static inline void P_LoadVertexes(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawVertexes(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
 /** Computes the length of a seg in fracunits.
   *
   * \param seg Seg to compute length for.
@@ -488,14 +481,6 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 	}
 }
 
-static void P_LoadSegs(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawSegs(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
-
 /** Loads the SSECTORS resource from a level.
   *
   * \param lump Lump number of the SSECTORS resource.
@@ -523,13 +508,6 @@ static inline void P_LoadRawSubsectors(void *data, size_t i)
 #endif
 		ss->validcount = 0;
 	}
-}
-
-static void P_LoadSubsectors(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawSubsectors(data, W_LumpLength(lumpnum));
-	Z_Free(data);
 }
 
 //
@@ -805,13 +783,6 @@ static void P_LoadRawSectors(UINT8 *data, size_t i)
 	P_SetupLevelFlatAnims();
 }
 
-static void P_LoadSectors(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawSectors(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
 //
 // P_LoadNodes
 //
@@ -842,13 +813,6 @@ static void P_LoadRawNodes(UINT8 *data, size_t i)
 				no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
 		}
 	}
-}
-
-static void P_LoadNodes(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawNodes(data, W_LumpLength(lumpnum));
-	Z_Free(data);
 }
 
 //
@@ -1039,13 +1003,6 @@ static void P_PrepareRawThings(UINT8 *data, size_t i)
 				break;
 		}
 	}
-}
-
-static void P_PrepareThings(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_PrepareRawThings(data, W_LumpLength(lumpnum));
-	Z_Free(data);
 }
 
 static void P_LoadThings(boolean loademblems)
@@ -1300,13 +1257,6 @@ static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 	}
 }
 
-static void P_LoadLineDefs(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawLineDefs(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
 static void P_LoadLineDefs2(void)
 {
 	size_t i = numlines;
@@ -1418,12 +1368,6 @@ static inline void P_LoadRawSideDefs(size_t i)
 		I_Error("Level has no sidedefs");
 	sides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
 }
-
-static inline void P_LoadSideDefs(lumpnum_t lumpnum)
-{
-	P_LoadRawSideDefs(W_LumpLength(lumpnum));
-}
-
 
 static void P_LoadRawSideDefs2(void *data)
 {
@@ -1584,15 +1528,6 @@ static void P_LoadRawSideDefs2(void *data)
 	}
 	R_ClearTextureNumCache(true);
 }
-
-// Delay loading texture names until after loaded linedefs.
-static void P_LoadSideDefs2(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawSideDefs2(data);
-	Z_Free(data);
-}
-
 
 static boolean LineInBlock(fixed_t cx1, fixed_t cy1, fixed_t cx2, fixed_t cy2, fixed_t bx1, fixed_t by1)
 {
@@ -1873,79 +1808,6 @@ static void P_ReadBlockMapLump(INT16 *wadblockmaplump, size_t count)
 	}
 }
 
-//
-// P_LoadBlockMap
-//
-// Levels might not have a blockmap, so if one does not exist
-// this should return false.
-static boolean P_LoadBlockMap(lumpnum_t lumpnum)
-{
-#if 0
-	(void)lumpnum;
-	return false;
-#else
-	size_t count;
-	const char *lumpname = W_CheckNameForNum(lumpnum);
-
-	// Check if the lump exists, and if it's named "BLOCKMAP"
-	if (!lumpname || memcmp(lumpname, "BLOCKMAP", 8) != 0)
-	{
-		return false;
-	}
-
-	count = W_LumpLength(lumpnum);
-
-	if (!count || count >= 0x20000)
-		return false;
-
-	{
-		INT16 *wadblockmaplump = malloc(count); //INT16 *wadblockmaplump = W_CacheLumpNum (lump, PU_LEVEL);
-		if (!wadblockmaplump)
-			return false;
-		W_ReadLump(lumpnum, wadblockmaplump);
-		count /= 2;
-		P_ReadBlockMapLump(wadblockmaplump, count);
-		free(wadblockmaplump);
-	}
-
-	bmaporgx = blockmaplump[0]<<FRACBITS;
-	bmaporgy = blockmaplump[1]<<FRACBITS;
-	bmapwidth = blockmaplump[2];
-	bmapheight = blockmaplump[3];
-
-	// clear out mobj chains
-	count = sizeof (*blocklinks)* bmapwidth*bmapheight;
-	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-	blockmap = blockmaplump+4;
-
-#ifdef POLYOBJECTS
-	// haleyjd 2/22/06: setup polyobject blockmap
-	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
-	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
-	return true;
-/* Original
-		blockmaplump = W_CacheLumpNum(lump, PU_LEVEL);
-		blockmap = blockmaplump+4;
-		count = W_LumpLength (lump)/2;
-
-		for (i = 0; i < count; i++)
-			blockmaplump[i] = SHORT(blockmaplump[i]);
-
-		bmaporgx = blockmaplump[0]<<FRACBITS;
-		bmaporgy = blockmaplump[1]<<FRACBITS;
-		bmapwidth = blockmaplump[2];
-		bmapheight = blockmaplump[3];
-	}
-
-	// clear out mobj chains
-	count = sizeof (*blocklinks)*bmapwidth*bmapheight;
-	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-	return true;
-	*/
-#endif
-}
-
 // This needs to be a separate function
 // because making both the WAD and PK3 loading code use
 // the same functions is trickier than it looks for blockmap
@@ -2081,35 +1943,6 @@ static void P_GroupLines(void)
 		sector->soundorg.y = (((bbox[BOXTOP]>>FRACBITS) + (bbox[BOXBOTTOM]>>FRACBITS))/2)<<FRACBITS;
 		sector->soundorg.z = sector->floorheight; // default to sector's floor height
 	}
-}
-
-//
-// P_LoadReject
-//
-// Detect if the REJECT lump is valid,
-// if not, rejectmatrix will be NULL
-static void P_LoadReject(lumpnum_t lumpnum)
-{
-	size_t count;
-	const char *lumpname = W_CheckNameForNum(lumpnum);
-
-	// Check if the lump exists, and if it's named "REJECT"
-	if (!lumpname || memcmp(lumpname, "REJECT\0\0", 8) != 0)
-	{
-		rejectmatrix = NULL;
-		CONS_Debug(DBG_SETUP, "P_LoadReject: No valid REJECT lump found\n");
-		return;
-	}
-
-	count = W_LumpLength(lumpnum);
-
-	if (!count) // zero length, someone probably used ZDBSP
-	{
-		rejectmatrix = NULL;
-		CONS_Debug(DBG_SETUP, "P_LoadReject: REJECT lump has size 0, will not be loaded\n");
-	}
-	else
-		rejectmatrix = W_CacheLumpNum(lumpnum, PU_LEVEL);
 }
 
 // PK3 version
@@ -2616,7 +2449,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	INT32 i, loadprecip = 1, ranspecialwipe = 0;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
-	boolean loadedbm = false;
 	sector_t *ss;
 	boolean chase;
 	levelloading = true;
