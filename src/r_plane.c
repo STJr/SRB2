@@ -135,6 +135,21 @@ INT32 ds_waterofs;
 
 static INT32 wtofs=0;
 static boolean itswater;
+static fixed_t ripple_xfrac;
+static fixed_t ripple_yfrac;
+
+static void R_PlaneRipple(visplane_t *plane, INT32 y, fixed_t plheight)
+{
+	fixed_t distance = FixedMul(plheight, yslope[y]);
+	const INT32 yay = (wtofs + (distance>>9) ) & 8191;
+	// ripples da water texture
+	angle_t angle = (plane->viewangle + plane->plangle)>>ANGLETOFINESHIFT;
+	ds_bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
+
+	angle = (angle + 2048) & 8191;  // 90 degrees
+	ripple_xfrac = FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
+	ripple_yfrac = FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
+}
 #endif
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
@@ -181,14 +196,8 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #ifndef NOWATER
 	if (itswater)
 	{
-		const INT32 yay = (wtofs + (distance>>9) ) & 8191;
-		// ripples da water texture
-		ds_bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
-		angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
-
-		angle = (angle + 2048) & 8191;  // 90 degrees
-		ds_xfrac += FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
-		ds_yfrac += FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
+		// Needed for ds_bgofs
+		R_PlaneRipple(currentplane, y, planeheight);
 
 #ifdef ESLOPE
 		if (currentplane->slope)
@@ -197,7 +206,12 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 			ds_svp = &ds_sv[y];
 			ds_szp = &ds_sz[y];
 		}
+		else
 #endif
+		{
+			ds_xfrac += ripple_xfrac;
+			ds_yfrac += ripple_yfrac;
+		}
 
 		if (y+ds_bgofs>=viewheight)
 			ds_bgofs = viewheight-y-1;
@@ -842,7 +856,6 @@ static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boo
 	return flat;
 }
 
-// Lactokaiju
 #ifdef ESLOPE
 static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 {
@@ -924,7 +937,7 @@ d.z = (v1.x * v2.y) - (v1.y * v2.x)
 	}
 	else
 	{
-		// I'm essentially multiplying the vectors by FRACUNIT...
+		// Lactozilla: I'm essentially multiplying the vectors by FRACUNIT...
 		ds_su[i].x *= SFMULT;
 		ds_su[i].y *= SFMULT;
 		ds_su[i].z *= SFMULT;
@@ -1209,6 +1222,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		if (itswater)
 		{
 			INT32 i;
+			fixed_t plheight = abs(P_GetZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
 			fixed_t rxoffs = xoffs;
 			fixed_t ryoffs = yoffs;
 
@@ -1216,18 +1230,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 			for (i = pl->high; i < pl->low; i++)
 			{
-				// Fuck it
-				fixed_t plheight = abs(P_GetZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
-				fixed_t distance = FixedMul(plheight, yslope[i]);
-				const INT32 yay = (wtofs + (distance>>9) ) & 8191;
-				// ripples da water texture
-				ds_bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
-				angle = (pl->viewangle + pl->plangle)>>ANGLETOFINESHIFT;
-
-				angle = (angle + 2048) & 8191;  // 90 degrees
-				xoffs = rxoffs + FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
-				yoffs = ryoffs + FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
-
+				R_PlaneRipple(pl, i, plheight);
+				xoffs = rxoffs + ripple_xfrac;
+				yoffs = ryoffs + ripple_yfrac;
 				R_SlopeVectors(pl, i, fudgecanyon);
 			}
 
