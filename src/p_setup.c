@@ -2303,6 +2303,8 @@ void P_LoadThingsOnly(void)
 	// Search through all the thinkers.
 	thinker_t *think;
 	INT32 i, viewid = -1, centerid = -1; // for skyboxes
+	virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
+	virtlump_t* vth = vres_Find(virt, "THINGS");
 
 	// check if these are any of the normal viewpoint/centerpoint mobjs in the level or not
 	if (skyboxmo[0] || skyboxmo[1])
@@ -2314,7 +2316,6 @@ void P_LoadThingsOnly(void)
 				centerid = i; // save id just in case
 		}
 
-
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
 		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
@@ -2324,17 +2325,10 @@ void P_LoadThingsOnly(void)
 
 	P_LevelInitStuff();
 
-	if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
-	{ // HACK: Open wad file rather quickly so we can use the things lump
-		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
-		fileinfo += ML_THINGS; // we only need the THINGS lump
-		P_PrepareRawThings(wadData + fileinfo->filepos, fileinfo->size);
-		Z_Free(wadData); // we're done with this now
-	}
-	else // phew it's just a WAD
-		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+	P_PrepareRawThings(vth->data, vth->size);
 	P_LoadThings(true);
+
+	vres_Free(virt);
 
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
 	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
