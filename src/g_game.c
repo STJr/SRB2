@@ -421,6 +421,13 @@ consvar_t cv_cam_turnfacinginput[2] = {
 	{"cam2_turnfacinginput", "0.4375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 
+static CV_PossibleValue_t lockedinput_cons_t[] = {{0, "Strafe"}, {1, "Turn Slow"}, {2, "Turn"}, {0, NULL}};
+
+consvar_t cv_cam_lockedinput[2] = {
+	{"cam_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+};
+
 typedef enum
 {
 	AXISNONE = 0,
@@ -1400,7 +1407,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		// Adjust camera angle by player input
 		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] &&
-			!(ticcmd_resetdown[forplayer] && !(player->pflags & PF_STARTDASH))
+			!(ticcmd_resetdown[forplayer] && !(cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
 			&& !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value; //@TODO cvar
@@ -1410,13 +1417,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				fixed_t sine = FINESINE((R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - localangle)>>ANGLETOFINESHIFT);
 				fixed_t factor = min(20, FixedMul(player->speed, abs(sine)) / FRACUNIT);
 
-				if (ticcmd_resetdown[forplayer] && (player->pflags & PF_STARTDASH))
-					factor = (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value); // Turn while in startdash and locking camera
+				if (ticcmd_resetdown[forplayer] && (cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
+					factor = (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value) * (cv_cam_lockedinput[forplayer].value ?: 1); // Turn while in startdash and locking camera
 
 				*myangle -= cmd->sidemove * factor * camadjustfactor;
 			}
 
-			if (ticcmd_resetdown[forplayer] && (player->pflags & PF_STARTDASH))
+			if (ticcmd_resetdown[forplayer] && (cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
 				cmd->sidemove = 0;
 		}
 

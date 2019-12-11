@@ -1181,44 +1181,46 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 
 static menuitem_t OP_CameraOptionsMenu[] =
 {
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 10},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 20},
-	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 30},
-	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 40},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 5},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 15},
+	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 20},
 
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam_rotspeed, 90},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 30},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 35},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 40},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam_rotspeed, 45},
 
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to player angle", &cv_cam_shiftfacing[0],  100},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to player angle", &cv_cam_turnfacing[0],  110},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  120},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[0],  130},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[0],  140},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to player angle", &cv_cam_shiftfacing[0],  55},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to player angle", &cv_cam_turnfacing[0],  60},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  65},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[0],  70},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[0],  75},
+	{IT_STRING  | IT_CVAR, NULL, "Locked movement", &cv_cam_lockedinput[0],  80},
 
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 160},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 90},
 };
 
 static menuitem_t OP_Camera2OptionsMenu[] =
 {
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 10},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 20},
-	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 30},
-	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 40},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 5},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 15},
+	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 20},
 
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam2_rotspeed, 90},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 30},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 35},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 40},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam2_rotspeed, 45},
 
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[1],  100},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[1],  110},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[1],  120},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[1],  130},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[1],  140},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[1],  55},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[1],  60},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[1],  65},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[1],  70},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[1],  75},
+	{IT_STRING  | IT_CVAR, NULL, "Locked movement", &cv_cam_lockedinput[0],  80},
 
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 160},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 90},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -1976,10 +1978,10 @@ menu_t OP_JoystickSetDef =
 	0,
 	NULL
 };
-menu_t OP_CameraOptionsDef = DEFAULTMENUSTYLE(
+menu_t OP_CameraOptionsDef = DEFAULTSCROLLMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1CAMERA << 12),
 	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 35, 30);
-menu_t OP_Camera2OptionsDef = DEFAULTMENUSTYLE(
+menu_t OP_Camera2OptionsDef = DEFAULTSCROLLMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),
 	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
 
@@ -4269,7 +4271,8 @@ static void M_DrawControlsDefMenu(void)
 			OP_CameraOptionsMenu[10].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
 			OP_CameraOptionsMenu[11].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
 			OP_CameraOptionsMenu[12].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_CameraOptionsMenu[13].alphaKey = 160;
+			OP_CameraOptionsMenu[13].status = IT_STRING|IT_CVAR;
+			OP_CameraOptionsMenu[14].alphaKey = 90;
 		}
 		else
 		{
@@ -4278,7 +4281,8 @@ static void M_DrawControlsDefMenu(void)
 			OP_CameraOptionsMenu[10].status = IT_DISABLED;
 			OP_CameraOptionsMenu[11].status = IT_DISABLED;
 			OP_CameraOptionsMenu[12].status = IT_DISABLED;
-			OP_CameraOptionsMenu[13].alphaKey = 110;
+			OP_CameraOptionsMenu[13].status = IT_DISABLED;
+			OP_CameraOptionsMenu[14].alphaKey = 55;
 		}
 	}
 	else
@@ -4292,7 +4296,8 @@ static void M_DrawControlsDefMenu(void)
 			OP_Camera2OptionsMenu[10].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
 			OP_Camera2OptionsMenu[11].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
 			OP_Camera2OptionsMenu[12].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_Camera2OptionsMenu[13].alphaKey = 160;
+			OP_Camera2OptionsMenu[13].status = IT_STRING|IT_CVAR;
+			OP_Camera2OptionsMenu[14].alphaKey = 90;
 		}
 		else
 		{
@@ -4301,7 +4306,8 @@ static void M_DrawControlsDefMenu(void)
 			OP_Camera2OptionsMenu[10].status = IT_DISABLED;
 			OP_Camera2OptionsMenu[11].status = IT_DISABLED;
 			OP_Camera2OptionsMenu[12].status = IT_DISABLED;
-			OP_Camera2OptionsMenu[13].alphaKey = 110;
+			OP_Camera2OptionsMenu[13].status = IT_DISABLED;
+			OP_Camera2OptionsMenu[14].alphaKey = 55;
 		}
 	}
 
@@ -4319,7 +4325,9 @@ static void M_DrawGenericScrollMenu(void)
 	x = currentMenu->x;
 	y = currentMenu->y;
 
-	if ((currentMenu->menuitems[itemOn].alphaKey*2 - currentMenu->menuitems[0].alphaKey*2) <= scrollareaheight)
+	if (currentMenu->menuitems[currentMenu->numitems-1].alphaKey < scrollareaheight)
+		tempcentery = currentMenu->y; // Not tall enough to scroll, but this thinker is used in case it becomes so
+	else if ((currentMenu->menuitems[itemOn].alphaKey*2 - currentMenu->menuitems[0].alphaKey*2) <= scrollareaheight)
 		tempcentery = currentMenu->y - currentMenu->menuitems[0].alphaKey*2;
 	else if ((currentMenu->menuitems[currentMenu->numitems-1].alphaKey*2 - currentMenu->menuitems[itemOn].alphaKey*2) <= scrollareaheight)
 		tempcentery = currentMenu->y - currentMenu->menuitems[currentMenu->numitems-1].alphaKey*2 + 2*scrollareaheight;
