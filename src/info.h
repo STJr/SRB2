@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -155,6 +155,11 @@ void A_SpawnObjectAbsolute();
 void A_SpawnObjectRelative();
 void A_ChangeAngleRelative();
 void A_ChangeAngleAbsolute();
+#ifdef ROTSPRITE
+void A_RollAngle();
+void A_ChangeRollAngleRelative();
+void A_ChangeRollAngleAbsolute();
+#endif
 void A_PlaySound();
 void A_FindTarget();
 void A_FindTracer();
@@ -277,6 +282,9 @@ void A_SpawnPterabytes();
 void A_PterabyteHover();
 void A_RolloutSpawn();
 void A_RolloutRock();
+void A_DragonbomberSpawn();
+void A_DragonWing();
+void A_DragonSegment();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -329,6 +337,7 @@ typedef enum sprite
 	SPR_CANG, // Canarivore gas
 	SPR_PYRE, // Pyre Fly
 	SPR_PTER, // Pterabyte
+	SPR_DRAB, // Dragonbomber
 
 	// Generic Boss Items
 	SPR_JETF, // Boss jet fumes
@@ -451,6 +460,9 @@ typedef enum sprite
 	SPR_CBLL, // Cannonball
 	SPR_AROW, // Arrow
 	SPR_CFIR, // Colored fire of various sorts
+
+	// The letter
+	SPR_LETR,
 
 	// Greenflower Scenery
 	SPR_FWR1,
@@ -656,6 +668,7 @@ typedef enum sprite
 	// Game Indicators
 	SPR_SCOR, // Score logo
 	SPR_DRWN, // Drowning Timer
+	SPR_FLII, // AI flight indicator
 	SPR_LCKN, // Target
 	SPR_TTAG, // Tag Sign
 	SPR_GFLG, // Got Flag sign
@@ -735,7 +748,6 @@ typedef enum sprite
 	SPR_BOM3, // Boss Explosion 2
 	SPR_BOM4, // Underwater Explosion
 	SPR_BMNB, // Mine Explosion
-	SPR_WDDB, // Wood Debris
 
 	// Crumbly rocks
 	SPR_ROIA,
@@ -755,8 +767,10 @@ typedef enum sprite
 	SPR_ROIO,
 	SPR_ROIP,
 
-	// Bricks
-	SPR_BRIC,
+	// Level debris
+	SPR_GFZD, // GFZ debris
+	SPR_BRIC, // Bricks
+	SPR_WDDB, // Wood Debris
 
 	// Gravity Well Objects
 	SPR_GWLG,
@@ -817,39 +831,11 @@ typedef enum playersprite
 
 	SPR2_NSTD, // NiGHTS stand
 	SPR2_NFLT, // NiGHTS float
+	SPR2_NFLY, // NiGHTS fly
+	SPR2_NDRL, // NiGHTS drill
 	SPR2_NSTN, // NiGHTS stun
 	SPR2_NPUL, // NiGHTS pull
 	SPR2_NATK, // NiGHTS attack
-
-	// NiGHTS flight
-	SPR2_NGT0,
-	SPR2_NGT1,
-	SPR2_NGT2,
-	SPR2_NGT3,
-	SPR2_NGT4,
-	SPR2_NGT5,
-	SPR2_NGT6,
-	SPR2_NGT7,
-	SPR2_NGT8,
-	SPR2_NGT9,
-	SPR2_NGTA,
-	SPR2_NGTB,
-	SPR2_NGTC,
-
-	// NiGHTS drill
-	SPR2_DRL0,
-	SPR2_DRL1,
-	SPR2_DRL2,
-	SPR2_DRL3,
-	SPR2_DRL4,
-	SPR2_DRL5,
-	SPR2_DRL6,
-	SPR2_DRL7,
-	SPR2_DRL8,
-	SPR2_DRL9,
-	SPR2_DRLA,
-	SPR2_DRLB,
-	SPR2_DRLC,
 
 	// c:
 	SPR2_TAL0,
@@ -984,39 +970,13 @@ typedef enum state
 	S_PLAY_NIGHTS_TRANS4,
 	S_PLAY_NIGHTS_TRANS5,
 	S_PLAY_NIGHTS_TRANS6,
-
 	S_PLAY_NIGHTS_STAND,
 	S_PLAY_NIGHTS_FLOAT,
+	S_PLAY_NIGHTS_FLY,
+	S_PLAY_NIGHTS_DRILL,
 	S_PLAY_NIGHTS_STUN,
 	S_PLAY_NIGHTS_PULL,
 	S_PLAY_NIGHTS_ATTACK,
-
-	S_PLAY_NIGHTS_FLY0,
-	S_PLAY_NIGHTS_DRILL0,
-	S_PLAY_NIGHTS_FLY1,
-	S_PLAY_NIGHTS_DRILL1,
-	S_PLAY_NIGHTS_FLY2,
-	S_PLAY_NIGHTS_DRILL2,
-	S_PLAY_NIGHTS_FLY3,
-	S_PLAY_NIGHTS_DRILL3,
-	S_PLAY_NIGHTS_FLY4,
-	S_PLAY_NIGHTS_DRILL4,
-	S_PLAY_NIGHTS_FLY5,
-	S_PLAY_NIGHTS_DRILL5,
-	S_PLAY_NIGHTS_FLY6,
-	S_PLAY_NIGHTS_DRILL6,
-	S_PLAY_NIGHTS_FLY7,
-	S_PLAY_NIGHTS_DRILL7,
-	S_PLAY_NIGHTS_FLY8,
-	S_PLAY_NIGHTS_DRILL8,
-	S_PLAY_NIGHTS_FLY9,
-	S_PLAY_NIGHTS_DRILL9,
-	S_PLAY_NIGHTS_FLYA,
-	S_PLAY_NIGHTS_DRILLA,
-	S_PLAY_NIGHTS_FLYB,
-	S_PLAY_NIGHTS_DRILLB,
-	S_PLAY_NIGHTS_FLYC,
-	S_PLAY_NIGHTS_DRILLC,
 
 	// c:
 	S_TAILSOVERLAY_STAND,
@@ -1226,6 +1186,7 @@ typedef enum state
 
 	// Snailer
 	S_SNAILER1,
+	S_SNAILER_FLICKY,
 
 	// Vulture
 	S_VULTURE_STND,
@@ -1309,22 +1270,10 @@ typedef enum state
 	S_MINUS_BURST4,
 	S_MINUS_BURST5,
 	S_MINUS_POPUP,
-	S_MINUS_UPWARD1,
-	S_MINUS_UPWARD2,
-	S_MINUS_UPWARD3,
-	S_MINUS_UPWARD4,
-	S_MINUS_UPWARD5,
-	S_MINUS_UPWARD6,
-	S_MINUS_UPWARD7,
-	S_MINUS_UPWARD8,
-	S_MINUS_DOWNWARD1,
-	S_MINUS_DOWNWARD2,
-	S_MINUS_DOWNWARD3,
-	S_MINUS_DOWNWARD4,
-	S_MINUS_DOWNWARD5,
-	S_MINUS_DOWNWARD6,
-	S_MINUS_DOWNWARD7,
-	S_MINUS_DOWNWARD8,
+	S_MINUS_AERIAL1,
+	S_MINUS_AERIAL2,
+	S_MINUS_AERIAL3,
+	S_MINUS_AERIAL4,
 
 	// Minus dirt
 	S_MINUSDIRT1,
@@ -1399,6 +1348,26 @@ typedef enum state
 	S_PTERABYTE_FLY4,
 	S_PTERABYTE_SWOOPDOWN,
 	S_PTERABYTE_SWOOPUP,
+
+	// Dragonbomber
+	S_DRAGONBOMBER,
+	S_DRAGONWING1,
+	S_DRAGONWING2,
+	S_DRAGONWING3,
+	S_DRAGONWING4,
+	S_DRAGONTAIL_LOADED,
+	S_DRAGONTAIL_EMPTY,
+	S_DRAGONTAIL_EMPTYLOOP,
+	S_DRAGONTAIL_RELOAD,
+	S_DRAGONMINE,
+	S_DRAGONMINE_LAND1,
+	S_DRAGONMINE_LAND2,
+	S_DRAGONMINE_SLOWFLASH1,
+	S_DRAGONMINE_SLOWFLASH2,
+	S_DRAGONMINE_SLOWLOOP,
+	S_DRAGONMINE_FASTFLASH1,
+	S_DRAGONMINE_FASTFLASH2,
+	S_DRAGONMINE_FASTLOOP,
 
 	// Boss Explosion
 	S_BOSSEXPLODE,
@@ -1702,6 +1671,7 @@ typedef enum state
 	S_FSGNA,
 	S_FSGNB,
 	S_FSGNC,
+	S_FSGND,
 
 	// Black Eggman (Boss 7)
 	S_BLACKEGG_STND,
@@ -2279,6 +2249,9 @@ typedef enum state
 
 	// Glaregoyle Demon fire
 	S_DEMONFIRE,
+
+	// The letter
+	S_LETTER,
 
 	// GFZ flowers
 	S_GFZFLOWERA,
@@ -3496,6 +3469,8 @@ typedef enum state
 	S_FOUR2,
 	S_FIVE2,
 
+	S_FLIGHTINDICATOR,
+
 	S_LOCKON1,
 	S_LOCKON2,
 	S_LOCKON3,
@@ -3679,13 +3654,9 @@ typedef enum state
 	S_FIREFLOWER2,
 	S_FIREFLOWER3,
 	S_FIREFLOWER4,
-	S_FIREBALL1,
-	S_FIREBALL2,
-	S_FIREBALL3,
-	S_FIREBALL4,
-	S_FIREBALLEXP1,
-	S_FIREBALLEXP2,
-	S_FIREBALLEXP3,
+	S_FIREBALL,
+	S_FIREBALLTRAIL1,
+	S_FIREBALLTRAIL2,
 	S_SHELL,
 	S_PUMA_START1,
 	S_PUMA_START2,
@@ -3854,6 +3825,9 @@ typedef enum state
 	S_POPHAT_SHOOT1,
 	S_POPHAT_SHOOT2,
 	S_POPHAT_SHOOT3,
+	S_POPHAT_SHOOT4,
+	S_POPSHOT,
+	S_POPSHOT_TRAIL,
 
 	S_HIVEELEMENTAL_LOOK,
 	S_HIVEELEMENTAL_PREPARE1,
@@ -3985,8 +3959,6 @@ typedef enum state
 	S_DUST3,
 	S_DUST4,
 
-	S_WOODDEBRIS,
-
 	S_ROCKSPAWN,
 
 	S_ROCKCRUMBLEA,
@@ -4006,8 +3978,10 @@ typedef enum state
 	S_ROCKCRUMBLEO,
 	S_ROCKCRUMBLEP,
 
-	// Bricks
+	// Level debris
+	S_GFZDEBRIS,
 	S_BRICKDEBRIS,
+	S_WOODDEBRIS,
 
 #ifdef SEENAMES
 	S_NAMECHECK,
@@ -4091,6 +4065,10 @@ typedef enum mobj_type
 	MT_PTERABYTESPAWNER, // Pterabyte spawner
 	MT_PTERABYTEWAYPOINT, // Pterabyte waypoint
 	MT_PTERABYTE, // Pterabyte
+	MT_DRAGONBOMBER, // Dragonbomber
+	MT_DRAGONWING, // Dragonbomber wing
+	MT_DRAGONTAIL, // Dragonbomber tail segment
+	MT_DRAGONMINE, // Dragonbomber mine
 
 	// Generic Boss Items
 	MT_BOSSEXPLODE,
@@ -4298,6 +4276,9 @@ typedef enum mobj_type
 	MT_CANNONBALLDECOR, // Decorative/still cannonball
 	MT_ARROW, // Arrow
 	MT_DEMONFIRE, // Glaregoyle fire
+
+	// The letter
+	MT_LETTER,
 
 	// Greenflower Scenery
 	MT_GFZFLOWER1,
@@ -4693,6 +4674,7 @@ typedef enum mobj_type
 	MT_BLUEGOOMBA,
 	MT_FIREFLOWER,
 	MT_FIREBALL,
+	MT_FIREBALLTRAIL,
 	MT_SHELL,
 	MT_PUMA,
 	MT_PUMATRAIL,
@@ -4737,6 +4719,7 @@ typedef enum mobj_type
 	MT_PENGUINATOR,
 	MT_POPHAT,
 	MT_POPSHOT,
+	MT_POPSHOT_TRAIL,
 
 	MT_HIVEELEMENTAL,
 	MT_BUMBLEBORE,
@@ -4774,7 +4757,6 @@ typedef enum mobj_type
 	MT_EXPLODE, // Robot Explosion
 	MT_UWEXPLODE, // Underwater Explosion
 	MT_DUST,
-	MT_WOODDEBRIS,
 	MT_ROCKSPAWNER,
 	MT_FALLINGROCK,
 	MT_ROCKCRUMBLE1,
@@ -4794,8 +4776,10 @@ typedef enum mobj_type
 	MT_ROCKCRUMBLE15,
 	MT_ROCKCRUMBLE16,
 
-	// Bricks
+	// Level debris
+	MT_GFZDEBRIS,
 	MT_BRICKDEBRIS,
+	MT_WOODDEBRIS,
 
 #ifdef SEENAMES
 	MT_NAMECHECK,

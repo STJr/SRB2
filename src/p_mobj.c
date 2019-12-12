@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -246,6 +246,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	{
 	case S_PLAY_STND:
 	case S_PLAY_WAIT:
+	case S_PLAY_NIGHTS_STAND:
 		player->panim = PA_IDLE;
 		break;
 	case S_PLAY_EDGE:
@@ -269,6 +270,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		break;
 	case S_PLAY_ROLL:
 	//case S_PLAY_SPINDASH: -- everyone can ROLL thanks to zoom tubes...
+	case S_PLAY_NIGHTS_ATTACK:
 		player->panim = PA_ROLL;
 		break;
 	case S_PLAY_JUMP:
@@ -278,6 +280,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_SPRING;
 		break;
 	case S_PLAY_FALL:
+	case S_PLAY_NIGHTS_FLOAT:
 		player->panim = PA_FALL;
 		break;
 	case S_PLAY_FLY:
@@ -1569,6 +1572,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 					}
 					break;
 				case MT_WATERDROP:
+				case MT_CYBRAKDEMON:
 					gravityadd >>= 1;
 				default:
 					break;
@@ -1993,7 +1997,7 @@ void P_XYMovement(mobj_t *mo)
 				{
 					mo->momz = transfermomz;
 					mo->standingslope = NULL;
-					if (player->pflags & PF_SPINNING)
+					if (player && (player->pflags & PF_SPINNING))
 						player->pflags |= PF_THOKKED;
 				}
 			}
@@ -3405,7 +3409,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 		// Drown timer setting
 		if ((p->powers[pw_shield] & SH_PROTECTWATER) // Has water protection
-		 || (p->exiting) // Or exiting
+		 || (p->exiting) || (p->pflags & PF_FINISHED) // Or finished/exiting
 		 || (maptol & TOL_NIGHTS) // Or in NiGHTS mode
 		 || (mariomode)) // Or in Mario mode...
 		{
@@ -3721,17 +3725,10 @@ void P_DestroyRobots(void)
 	}
 }
 
-// P_CameraThinker
-//
-// Process the mobj-ish required functions of the camera
-boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled)
+// the below is chasecam only, if you're curious. check out P_CalcPostImg in p_user.c for first person
+void P_CalcChasePostImg(player_t *player, camera_t *thiscam)
 {
-	boolean itsatwodlevel = false;
 	postimg_t postimg = postimg_none;
-	if (twodlevel
-		|| (thiscam == &camera && players[displayplayer].mo && (players[displayplayer].mo->flags2 & MF2_TWOD))
-		|| (thiscam == &camera2 && players[secondarydisplayplayer].mo && (players[secondarydisplayplayer].mo->flags2 & MF2_TWOD)))
-		itsatwodlevel = true;
 
 	if (player->pflags & PF_FLIPCAM && !(player->powers[pw_carry] == CR_NIGHTSMODE) && player->mo->eflags & MFE_VERTICALFLIP)
 		postimg = postimg_flip;
@@ -3759,13 +3756,27 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_heat;
 	}
 
-	if (postimg != postimg_none)
-	{
-		if (splitscreen && player == &players[secondarydisplayplayer])
-			postimgtype2 = postimg;
-		else
-			postimgtype = postimg;
-	}
+	if (postimg == postimg_none)
+		return;
+
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		postimgtype2 = postimg;
+	else
+		postimgtype = postimg;
+}
+
+// P_CameraThinker
+//
+// Process the mobj-ish required functions of the camera
+boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled)
+{
+	boolean itsatwodlevel = false;
+	if (twodlevel
+		|| (thiscam == &camera && players[displayplayer].mo && (players[displayplayer].mo->flags2 & MF2_TWOD))
+		|| (thiscam == &camera2 && players[secondarydisplayplayer].mo && (players[secondarydisplayplayer].mo->flags2 & MF2_TWOD)))
+		itsatwodlevel = true;
+
+	P_CalcChasePostImg(player, thiscam);
 
 	if (thiscam->momx || thiscam->momy)
 	{
@@ -3779,10 +3790,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			dummy.z = thiscam->z;
 			dummy.height = thiscam->height;
 			if (!resetcalled && !(player->pflags & PF_NOCLIP) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
-			{
 				P_ResetCamera(player, thiscam);
-				resetcalled = true;
-			}
 			else
 			{
 				fixed_t camspeed = P_AproxDistance(thiscam->momx, thiscam->momy);
@@ -3790,10 +3798,10 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 				P_SlideCameraMove(thiscam);
 
 				if (!resetcalled && P_AproxDistance(thiscam->momx, thiscam->momy) == camspeed)
-					{
-						P_ResetCamera(player, thiscam);
-						resetcalled = true;
-					}
+				{
+					P_ResetCamera(player, thiscam);
+					resetcalled = true;
+				}
 			}
 			if (resetcalled) // Okay this means the camera is fully reset.
 				return true;
@@ -4535,22 +4543,28 @@ static void P_Boss3Thinker(mobj_t *mobj)
 	}
 	else if (mobj->movecount) // Firing mode
 	{
-		// look for a new target
-		P_BossTargetPlayer(mobj, false);
-
-		if (!mobj->target || !mobj->target->player)
-			return;
-
-		// Always face your target.
-		A_FaceTarget(mobj);
-
 		// Check if the attack animation is running. If not, play it.
 		if (mobj->state < &states[mobj->info->missilestate] || mobj->state > &states[mobj->info->raisestate])
 		{
+			// look for a new target
+			P_BossTargetPlayer(mobj, true);
+
+			if (!mobj->target || !mobj->target->player)
+				return;
+
 			if (mobj->health <= mobj->info->damage) // pinch phase
 				mobj->movecount--; // limited number of shots before diving again
 			if (mobj->movecount)
 				P_SetMobjState(mobj, mobj->info->missilestate+1);
+		}
+		else if (mobj->target && mobj->target->player)
+		{
+			angle_t diff = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y) - mobj->angle;
+			if (diff > ANGLE_180)
+				diff = InvAngle(InvAngle(diff)/4);
+			else
+				diff /= 4;
+			mobj->angle += diff;
 		}
 	}
 	else if (mobj->threshold >= 0) // Traveling mode
@@ -4635,7 +4649,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			{
 				UINT8 i, numtospawn = 24;
 				angle_t ang = 0, interval = FixedAngle((360 << FRACBITS) / numtospawn);
-				mobj_t *shock, *sfirst, *sprev = NULL;
+				mobj_t *shock = NULL, *sfirst = NULL, *sprev = NULL;
 
 				mobj->movecount = mobj->health+1;
 				mobj->movefactor = -512*FRACUNIT;
@@ -4666,13 +4680,10 @@ static void P_Boss3Thinker(mobj_t *mobj)
 				S_StartSound(mobj, shock->info->seesound);
 
 				// look for a new target
-				P_BossTargetPlayer(mobj, false);
+				P_BossTargetPlayer(mobj, true);
 
 				if (mobj->target && mobj->target->player)
-				{
-					A_FaceTarget(mobj);
 					P_SetMobjState(mobj, mobj->info->missilestate);
-				}
 			}
 			else if (mobj->flags2 & (MF2_STRONGBOX|MF2_CLASSICPUSH)) // just hit the bottom of your tube
 			{
@@ -7076,7 +7087,7 @@ static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
 		seg = P_SpawnMobj(x, y, z, MT_MINECARTSEG);
 		P_SetMobjState(seg, (statenum_t)(S_MINECARTSEG_FRONT + i));
 		if (i >= 2)
-			seg->extravalue1 = (i == 2) ? -18 : 18;
+			seg->extravalue1 = (i == 2) ? -18 : 18; // make -20/20 when papersprite projection fixed
 		else
 		{
 			seg->extravalue2 = (i == 0) ? 24 : -24;
@@ -8178,6 +8189,26 @@ void P_MobjThinker(mobj_t *mobj)
 			else if (mobj->target)
 				P_InstaThrust(mobj, mobj->angle, FixedMul(12*FRACUNIT, mobj->scale));
 		}
+		if (mobj->type == MT_CYBRAKDEMON && !mobj->health)
+		{
+			if (!(mobj->tics & 1))
+			{
+				var1 = 2;
+				var2 = 0;
+				A_BossScream(mobj);
+			}
+			if (P_CheckDeathPitCollide(mobj))
+			{
+				P_RemoveMobj(mobj);
+				return;
+			}
+			if (mobj->momz && mobj->z+mobj->momz <= mobj->floorz)
+			{
+				S_StartSound(mobj, sfx_befall);
+				if (mobj->state != states+S_CYBRAKDEMON_DIE8)
+					P_SetMobjState(mobj, S_CYBRAKDEMON_DIE8);
+			}
+		}
 	}
 	else if (mobj->health <= 0) // Dead things think differently than the living.
 		switch (mobj->type)
@@ -8227,8 +8258,7 @@ void P_MobjThinker(mobj_t *mobj)
 			mobj->flags2 ^= MF2_DONTDRAW;
 			break;
 		case MT_EGGTRAP: // Egg Capsule animal release
-			if (mobj->fuse > 0 && mobj->fuse < 2*TICRATE-(TICRATE/7)
-				&& (mobj->fuse & 3))
+			if (mobj->fuse > 0)// && mobj->fuse < TICRATE-(TICRATE/7))
 			{
 				INT32 i;
 				fixed_t x,y,z;
@@ -8236,10 +8266,10 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj_t *mo2;
 				mobj_t *flicky;
 
-				z = mobj->subsector->sector->floorheight + ((P_RandomByte()&63)*FRACUNIT);
-				for (i = 0; i < 2; i++)
+				z = mobj->subsector->sector->floorheight + FRACUNIT + (P_RandomKey(64)<<FRACBITS);
+				for (i = 0; i < 3; i++)
 				{
-					const angle_t fa = (P_RandomByte()*FINEANGLES/16) & FINEMASK;
+					const angle_t fa = P_RandomKey(FINEANGLES) & FINEMASK;
 					ns = 64 * FRACUNIT;
 					x = mobj->x + FixedMul(FINESINE(fa),ns);
 					y = mobj->y + FixedMul(FINECOSINE(fa),ns);
@@ -8249,18 +8279,18 @@ void P_MobjThinker(mobj_t *mobj)
 					ns = 4 * FRACUNIT;
 					mo2->momx = FixedMul(FINESINE(fa),ns);
 					mo2->momy = FixedMul(FINECOSINE(fa),ns);
+					mo2->angle = fa << ANGLETOFINESHIFT;
 
-					if (P_RandomChance(FRACUNIT/4)) // I filled a spreadsheet trying to get the equivalent chance to the original P_RandomByte hack!
+					if (!i && !(mobj->fuse & 2))
 						S_StartSound(mo2, mobj->info->deathsound);
 
-					flicky = P_InternalFlickySpawn(mo2, 0, 8*FRACUNIT, false);
+					flicky = P_InternalFlickySpawn(mo2, 0, 8*FRACUNIT, false, -1);
 					if (!flicky)
 						break;
 
 					P_SetTarget(&flicky->target, mo2);
 					flicky->momx = mo2->momx;
 					flicky->momy = mo2->momy;
-					flicky->angle = fa << ANGLETOFINESHIFT;
 				}
 
 				mobj->fuse--;
@@ -8690,6 +8720,13 @@ void P_MobjThinker(mobj_t *mobj)
 				break;
 			case MT_KOOPA:
 				P_KoopaThinker(mobj);
+				break;
+			case MT_FIREBALL:
+				if (P_AproxDistance(mobj->momx, mobj->momy) <= 16*FRACUNIT) // Once fireballs lose enough speed, kill them
+				{
+					P_KillMobj(mobj, NULL, NULL, 0);
+					return;
+				}
 				break;
 			case MT_REDRING:
 				if (((mobj->z < mobj->floorz) || (mobj->z + mobj->height > mobj->ceilingz))
@@ -9623,6 +9660,90 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					break;
 				}
+			case MT_DRAGONBOMBER:
+				{
+#define DRAGONTURNSPEED ANG2
+					mobj->movecount = (mobj->movecount + 9) % 360;
+					P_SetObjectMomZ(mobj, 4*FINESINE(((mobj->movecount*ANG1) >> ANGLETOFINESHIFT) & FINEMASK), false);
+					if (mobj->threshold > 0) // are we dropping mines?
+					{
+						mobj->threshold--;
+						if (mobj->threshold == 0) // if the timer hits 0, look for a mine to drop!
+						{
+							mobj_t *segment = mobj;
+							while (segment->tracer != NULL && !P_MobjWasRemoved(segment->tracer) && segment->tracer->state == &states[segment->tracer->info->spawnstate])
+							{
+								segment = segment->tracer;
+							}
+							if (segment != mobj) // found an unactivated segment?
+							{
+								mobj_t *mine = P_SpawnMobjFromMobj(segment, 0, 0, 0, segment->info->painchance);
+								mine->angle = segment->angle;
+								P_InstaThrust(mine, mobj->angle, P_AproxDistance(mobj->momx, mobj->momy) >> 1);
+								P_SetObjectMomZ(mine, -2*FRACUNIT, true);
+								S_StartSound(mine, mine->info->seesound);
+								P_SetMobjState(segment, segment->info->raisestate);
+								mobj->threshold = mobj->info->painchance;
+							}
+						}
+					}
+					if (mobj->target != NULL) // Are we chasing a player?
+					{
+						fixed_t dist = P_AproxDistance(mobj->x - mobj->target->x, mobj->y - mobj->target->y);
+						if (dist > 2000 * mobj->scale) // Not anymore!
+							P_SetTarget(&mobj->target, NULL);
+						else
+						{
+							fixed_t vspeed = FixedMul(mobj->info->speed >> 3, mobj->scale);
+							fixed_t z = mobj->target->z + (mobj->height >> 1) + (mobj->flags & MFE_VERTICALFLIP ? -128*mobj->scale : 128*mobj->scale + mobj->target->height);
+							angle_t diff = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y) - mobj->angle;
+							if (diff > ANGLE_180)
+								mobj->angle -= DRAGONTURNSPEED;
+							else
+								mobj->angle += DRAGONTURNSPEED;
+							if (!mobj->threshold && dist < 512 * mobj->scale) // Close enough to drop bombs
+							{
+								mobj->threshold = mobj->info->painchance;
+							}
+							mobj->momz += max(min(z - mobj->z, vspeed), -vspeed);
+						}
+					}
+					else // Can we find a player to chase?
+					{
+						if (mobj->tracer == NULL || mobj->tracer->state != &states[mobj->tracer->info->spawnstate]
+							|| !P_LookForPlayers(mobj, true, false, 2000*mobj->scale)) // if not, circle around the spawnpoint
+						{
+							if (!mobj->spawnpoint) // unless we don't have one, in which case uhhh just circle around wherever we currently are I guess??
+								mobj->angle += DRAGONTURNSPEED;
+							else
+							{
+								fixed_t vspeed = FixedMul(mobj->info->speed >> 3, mobj->scale);
+								fixed_t x = mobj->spawnpoint->x << FRACBITS;
+								fixed_t y = mobj->spawnpoint->y << FRACBITS;
+								fixed_t z = mobj->spawnpoint->z << FRACBITS;
+								angle_t diff = R_PointToAngle2(mobj->x, mobj->y, x, y) - mobj->angle;
+								if (diff > ANGLE_180)
+									mobj->angle -= DRAGONTURNSPEED;
+								else
+									mobj->angle += DRAGONTURNSPEED;
+								mobj->momz += max(min(z - mobj->z, vspeed), -vspeed);
+							}
+						}
+					}
+					P_InstaThrust(mobj, mobj->angle, FixedMul(mobj->info->speed, mobj->scale));
+#undef DRAGONTURNSPEED
+				}
+				break;
+			case MT_MINUS:
+#ifdef ROTSPRITE
+				{
+					if (P_IsObjectOnGround(mobj))
+						mobj->rollangle = 0;
+					else
+						mobj->rollangle = R_PointToAngle2(0, 0, mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
+				}
+#endif
+				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
@@ -11011,7 +11132,7 @@ void P_RespawnSpecials(void)
 
 	// only respawn items when cv_itemrespawn is on
 	if (!(netgame || multiplayer) // Never respawn in single player
-	|| gametype == GT_COOP        // Never respawn in co-op gametype
+	|| (maptol & TOL_NIGHTS)      // Never respawn in NiGHTs
 	|| !cv_itemrespawn.value)     // cvar is turned off
 		return;
 
@@ -11208,7 +11329,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj->radius = FixedMul(skins[p->skin].radius, mobj->scale);
 	mobj->height = P_GetPlayerHeight(p);
 
-	if (!leveltime && ((maptol & TOL_NIGHTS) == TOL_NIGHTS) != (G_IsSpecialStage(gamemap))) // non-special NiGHTS stage or special non-NiGHTS stage
+	if (!leveltime && !p->spectator && ((maptol & TOL_NIGHTS) == TOL_NIGHTS) != (G_IsSpecialStage(gamemap))) // non-special NiGHTS stage or special non-NiGHTS stage
 	{
 		if (maptol & TOL_NIGHTS)
 		{
@@ -11670,7 +11791,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
 		 || i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX
 		 || i == MT_FLAMEAURA_BOX || i == MT_BUBBLEWRAP_BOX || i == MT_THUNDERCOIN_BOX
-		 || i == MT_RING_BOX)
+		 || i == MT_RING_BOX || i == MT_STARPOST)
 			return; // No rings or shields in Ultimate mode
 
 		// Don't include the gold repeating boxes here please.
@@ -11687,7 +11808,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 			return; // no doubles
 	}
 
-	if (i == MT_TOKEN && ((gametype != GT_COOP && gametype != GT_COMPETITION) || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
+	if (i == MT_TOKEN && ((gametype != GT_COOP && gametype != GT_COMPETITION) || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
 	if (i == MT_EMBLEM && (netgame || multiplayer || (modifiedgame && !savemoddata))) // No cheating!!
@@ -11874,7 +11995,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 			skyboxviewpnts[mthing->extrainfo] = mobj;
 		break;
 	case MT_EGGSTATUE:
-		if (tutorialmode != (mthing->options & MTF_OBJECTSPECIAL))
+		if (mthing->options & MTF_EXTRA)
 		{
 			mobj->color = SKINCOLOR_GOLD;
 			mobj->colorized = true;

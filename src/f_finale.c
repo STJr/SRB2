@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -45,7 +45,7 @@
 
 // Stage of animation:
 // 0 = text, 1 = art screen
-static INT32 finalecount;
+INT32 finalecount;
 INT32 titlescrollxspeed = 20;
 INT32 titlescrollyspeed = 0;
 UINT8 titlemapinaction = TITLEMAP_OFF;
@@ -305,7 +305,7 @@ static void F_NewCutscene(const char *basetext)
 // =============
 //  INTRO SCENE
 // =============
-#define NUMINTROSCENES 16
+#define NUMINTROSCENES 17
 INT32 intro_scenenum = 0;
 INT32 intro_curtime = 0;
 
@@ -325,7 +325,8 @@ static tic_t introscenetime[NUMINTROSCENES] =
 	16*TICRATE,					// Meanwhile, Sonic was tearing across the zones...
 	16*TICRATE + (TICRATE/2),	// Sonic knew he was getting closer to the city...
 	17*TICRATE,					// Greenflower City was gone...
-	16*TICRATE + (TICRATE/2),	// You're not quite as dead as we thought, huh?...
+	 7*TICRATE,					// You're not quite as dead as we thought, huh?...
+	 8*TICRATE,					// We'll see... let's give you a quick warm up...
 	18*TICRATE + (TICRATE/2),	// Eggman took this as his cue and blasted off...
 	16*TICRATE,					// Easy! We go find Eggman and stop his...
 	25*TICRATE,					// I'm just finding what mission obje...
@@ -436,14 +437,22 @@ void F_StartIntro(void)
 	"had been obliterated.\n#");
 
 	introtext[12] = M_GetText(
-	"\xA7\"You're not quite as gone as we thought,\n"
-	"huh?\xBF Are you going to tell us your plan as\n"
-	"usual or will I \xA8\xB4'have to work it out'\xA7 or\n"
-	"something?\"\xD2\xD2\n"
+	"\xA7\"You're not\n"
+	"quite as gone\n"
+	"as we thought,\n"
+	"huh?\xBF Are you\n"
+	"going to tell\n"
+	"us your plan as\n"
+	"usual or will I\n"
+	"\xA8\xB4'have to work\n"
+	"it out'\xA7 or\n"
+	"something?\"\xD2\xD2\n#");
+
+	introtext[13] = M_GetText(
 	"\"We'll see\xAA...\xA7\xBF let's give you a quick warm\n"
 	"up, Sonic!\xA6\xC4 JETTYSYNS!\xA7\xBD Open fire!\"\n#");
 
-	introtext[13] = M_GetText(
+	introtext[14] = M_GetText(
 	"Eggman took this\n"
 	"as his cue and\n"
 	"blasted off,\n"
@@ -457,7 +466,7 @@ void F_StartIntro(void)
 	"\xA7\"Now\xB6 what do we\n"
 	"do?\",\xA9 he asked.\n#");
 
-	introtext[14] = M_GetText(
+	introtext[15] = M_GetText(
 	"\xA7\"Easy!\xBF We go\n"
 	"find Eggman\n"
 	"and stop his\n"
@@ -471,7 +480,7 @@ void F_StartIntro(void)
 	"\xAA*ARE*\xA9 you\n"
 	"doing?\"\n#");
 
-	introtext[15] = M_GetText(
+	introtext[16] = M_GetText(
 	"\xA8\"I'm just finding what mission obje\xAC\xB1...\xBF\n"
 	"\xA6""a-\xB8""ha!\xBF Here it is!\xA8\xBF This will only give us\n"
 	"the robot's primary objective.\xBF It says\xAC\xB1...\"\n"
@@ -509,91 +518,93 @@ void F_StartIntro(void)
 //
 static void F_IntroDrawScene(void)
 {
-	boolean highres = false;
+	boolean highres = true;
 	INT32 cx = 8, cy = 128;
 	patch_t *background = NULL;
 	INT32 bgxoffs = 0;
 	void *patch;
 
 	// DRAW A FULL PIC INSTEAD OF FLAT!
-	if (intro_scenenum == 0);
-	else if (intro_scenenum == 1)
-		background = W_CachePatchName("INTRO1", PU_CACHE);
-	else if (intro_scenenum == 2)
+	switch (intro_scenenum)
 	{
-		background = W_CachePatchName("INTRO2", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 3)
-		background = W_CachePatchName("INTRO3", PU_CACHE);
-	else if (intro_scenenum == 4)
-		background = W_CachePatchName("INTRO4", PU_CACHE);
-	else if (intro_scenenum == 5)
-	{
-		if (intro_curtime >= 5*TICRATE)
-			background = W_CachePatchName("RADAR", PU_CACHE);
-		else
+		case 0:
+			break;
+		case 1:
+			background = W_CachePatchName("INTRO1", PU_CACHE);
+			break;
+		case 2:
+			background = W_CachePatchName("INTRO2", PU_CACHE);
+			break;
+		case 3:
+			background = W_CachePatchName("INTRO3", PU_CACHE);
+			break;
+		case 4:
+			background = W_CachePatchName("INTRO4", PU_CACHE);
+			break;
+		case 5:
+			if (intro_curtime >= 5*TICRATE)
+				background = W_CachePatchName("RADAR", PU_CACHE);
+			else
+				background = W_CachePatchName("DRAT", PU_CACHE);
+			break;
+		case 6:
+			background = W_CachePatchName("INTRO6", PU_CACHE);
+			cx = 180;
+			cy = 8;
+			break;
+		case 7:
 		{
-			background = W_CachePatchName("DRAT", PU_CACHE);
-			highres = true;
+			if (intro_curtime >= 7*TICRATE + ((TICRATE/7)*2))
+				background = W_CachePatchName("SGRASS5", PU_CACHE);
+			else if (intro_curtime >= 7*TICRATE + (TICRATE/7))
+				background = W_CachePatchName("SGRASS4", PU_CACHE);
+			else if (intro_curtime >= 7*TICRATE)
+				background = W_CachePatchName("SGRASS3", PU_CACHE);
+			else if (intro_curtime >= 6*TICRATE)
+				background = W_CachePatchName("SGRASS2", PU_CACHE);
+			else
+				background = W_CachePatchName("SGRASS1", PU_CACHE);
+			break;
 		}
-	}
-	else if (intro_scenenum == 6)
-	{
-		background = W_CachePatchName("INTRO6", PU_CACHE);
-		cx = 180;
-		cy = 8;
-	}
-	else if (intro_scenenum == 7)
-	{
-		if (intro_curtime >= 6*TICRATE)
-			background = W_CachePatchName("SGRASS5", PU_CACHE);
-		else
-			background = W_CachePatchName("SGRASS1", PU_CACHE);
-	}
-	else if (intro_scenenum == 8)
-	{
-		background = W_CachePatchName("WATCHING", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 9)
-	{
-		background = W_CachePatchName("ZOOMING", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 10);
-	else if (intro_scenenum == 11)
-		background = W_CachePatchName("INTRO5", PU_CACHE);
-	else if (intro_scenenum == 12)
-	{
-		if (intro_curtime >= 7*TICRATE)
-			background = W_CachePatchName("CONFRONT", PU_CACHE);
-		else
+		case 8:
+			background = W_CachePatchName("WATCHING", PU_CACHE);
+			break;
+		case 9:
+			background = W_CachePatchName("ZOOMING", PU_CACHE);
+			break;
+		case 10:
+			break;
+		case 11:
+			background = W_CachePatchName("INTRO5", PU_CACHE);
+			break;
+		case 12:
 			background = W_CachePatchName("REVENGE", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 13)
-	{
-		background = W_CachePatchName("TAILSSAD", PU_CACHE);
-		highres = true;
-		bgxoffs = 144;
-		cx = 8;
-		cy = 8;
-	}
-	else if (intro_scenenum == 14)
-	{
-		if (intro_curtime >= 7*TICRATE)
-			background = W_CachePatchName("SONICDO2", PU_CACHE);
-		else
-			background = W_CachePatchName("SONICDO1", PU_CACHE);
-		highres = true;
-		cx = 224;
-		cy = 8;
-	}
-	else if (intro_scenenum == 15)
-	{
-		background = W_CachePatchName("INTRO7", PU_CACHE);
-		highres = true;
+			cx = 208;
+			cy = 8;
+			break;
+		case 13:
+			background = W_CachePatchName("CONFRONT", PU_CACHE);
+			cy += 48;
+			break;
+		case 14:
+			background = W_CachePatchName("TAILSSAD", PU_CACHE);
+			bgxoffs = 144;
+			cx = 8;
+			cy = 8;
+			break;
+		case 15:
+			if (intro_curtime >= 7*TICRATE)
+				background = W_CachePatchName("SONICDO2", PU_CACHE);
+			else
+				background = W_CachePatchName("SONICDO1", PU_CACHE);
+			cx = 224;
+			cy = 8;
+			break;
+		case 16:
+			background = W_CachePatchName("INTRO7", PU_CACHE);
+			break;
+		default:
+			break;
 	}
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
@@ -709,7 +720,7 @@ static void F_IntroDrawScene(void)
 			else
 				background = W_CachePatchName("DARKEGG1", PU_CACHE);
 
-			V_DrawScaledPatch(0, 0, 0, background);
+			V_DrawSmallScaledPatch(0, 0, 0, background);
 		}
 		else if (timetonext > 3*TICRATE && timetonext < 4*TICRATE)
 		{
@@ -718,7 +729,7 @@ static void F_IntroDrawScene(void)
 			else
 				background = W_CachePatchName("DARKEGG2", PU_CACHE);
 
-			V_DrawScaledPatch(0, 0, 0, background);
+			V_DrawSmallScaledPatch(0, 0, 0, background);
 		}
 		else if (timetonext > 1*TICRATE && timetonext < 2*TICRATE)
 		{
@@ -727,56 +738,115 @@ static void F_IntroDrawScene(void)
 			else
 				background = W_CachePatchName("DARKEGG3", PU_CACHE);
 
-			V_DrawScaledPatch(0, 0, 0, background);
+			V_DrawSmallScaledPatch(0, 0, 0, background);
 		}
 		else
 		{
-			menuanimtimer = animtimer; // Reusing this variable for the intro to fix the scrolling sky, better than changing the function around.
-			F_SkyScroll(80*4, 0, "TITLESKY");
-			if (timetonext == 6)
+			tic_t sonicdelay = max(0, timetonext - 16*TICRATE);
+			tic_t tailsdelay = max(0, timetonext - (9*TICRATE >> 1));
+			tic_t knucklesdelay = max(0, timetonext - (5*TICRATE >> 1));
+			INT32 sonicx = (timetonext >> 2) + min(sonicdelay, TICRATE >> 1) * sonicdelay;
+			INT32 tailsx = 32 + min(tailsdelay, TICRATE >> 1) * tailsdelay;
+			INT32 knucklesx = 96 + min(knucklesdelay, TICRATE >> 1) * knucklesdelay;
+			INT32 tailsy = 12 + P_ReturnThrustX(NULL, finalecount * ANGLE_22h, 2);
+			INT32 knucklesy = 48 - (timetonext >> 3);
+			INT32 skyx, grassx;
+
+			if (timetonext >= 0 && timetonext < 18)
 			{
-				stoptimer = finalecount;
-				animtimer = finalecount % 16;
-			}
-			else if (timetonext >= 0 && timetonext < 6)
-			{
-				animtimer = stoptimer;
-				deplete -= 32;
+				deplete -= 16;
 			}
 			else
 			{
-				animtimer = finalecount % 16;
-				deplete = 160;
+				stoptimer = finalecount;
+				deplete = 96;
 			}
+			skyx = 2 * stoptimer % 320;
+			grassx = 16 * stoptimer % 320;
+			sonicx += deplete;
+			tailsx += sonicx;
+			knucklesx += sonicx;
+			sonicx += P_ReturnThrustX(NULL, finalecount * ANG10, 3);
+
+			V_DrawSmallScaledPatch(skyx, 0, 0, (patch = W_CachePatchName("INTROSKY", PU_CACHE)));
+			V_DrawSmallScaledPatch(skyx - 320, 0, 0, patch);
+			W_UnlockCachedPatch(patch);
+			V_DrawSmallScaledPatch(grassx, 0, 0, (patch = W_CachePatchName("INTROGRS", PU_CACHE)));
+			V_DrawSmallScaledPatch(grassx - 320, 0, 0, patch);
+			W_UnlockCachedPatch(patch);
 
 			if (finalecount & 1)
 			{
-				V_DrawScaledPatch(deplete, 8, 0, (patch = W_CachePatchName("RUN2", PU_CACHE)));
+				// Sonic
+				V_DrawSmallScaledPatch(sonicx, 54, 0, (patch = W_CachePatchName("RUN2", PU_CACHE)));
 				W_UnlockCachedPatch(patch);
-				V_DrawScaledPatch(deplete, 72, 0, (patch = W_CachePatchName("PEELOUT2", PU_CACHE)));
+
+				// Appendages
+				if (finalecount & 2)
+				{
+					// Sonic's feet
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT4", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+					// Tails' tails
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP2", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+				}
+				else
+				{
+					// Sonic's feet
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT2", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+					// Tails' tails
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP1", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+				}
+
+				// Tails
+				V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("FLY2", PU_CACHE)));
+				W_UnlockCachedPatch(patch);
+
+				// Knuckles
+				V_DrawSmallScaledPatch(knucklesx, knucklesy, 0, (patch = W_CachePatchName("GLIDE2", PU_CACHE)));
 				W_UnlockCachedPatch(patch);
 			}
 			else
 			{
-				V_DrawScaledPatch(deplete, 8, 0, (patch = W_CachePatchName("RUN1", PU_CACHE)));
+				// Sonic
+				V_DrawSmallScaledPatch(sonicx, 54, 0, (patch = W_CachePatchName("RUN1", PU_CACHE)));
 				W_UnlockCachedPatch(patch);
-				V_DrawScaledPatch(deplete, 72, 0, (patch = W_CachePatchName("PEELOUT1", PU_CACHE)));
+
+				// Appendages
+				if (finalecount & 2)
+				{
+					// Sonic's feet
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT3", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+					// Tails' tails
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP2", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+				}
+				else
+				{
+					// Sonic's feet
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT1", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+					// Tails' tails
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP1", PU_CACHE)));
+					W_UnlockCachedPatch(patch);
+				}
+
+				// Tails
+				V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("FLY1", PU_CACHE)));
+				W_UnlockCachedPatch(patch);
+
+				// Knuckles
+				V_DrawSmallScaledPatch(knucklesx, knucklesy, 0, (patch = W_CachePatchName("GLIDE1", PU_CACHE)));
 				W_UnlockCachedPatch(patch);
 			}
 
-			{ // Fixing up the black box rendering to look right in resolutions <16:10 -Red
-				INT32 y = 112;
-				INT32 h = BASEVIDHEIGHT - 112;
-				if (vid.height != BASEVIDHEIGHT * vid.dupy)
-				{
-					INT32 adjust = (vid.height/vid.dupy)-200;
-					adjust /= 2;
-					y += adjust;
-					h += adjust;
-					V_DrawFill(0, 0, BASEVIDWIDTH, adjust, 31); // Render a black bar on top so it keeps the "cinematic" windowboxing... I just prefer it this way. -Red
-				}
-				V_DrawFill(0, y, BASEVIDWIDTH, h, 31);
-			}
+			// Black bars to hide the sky on widescreen
+			V_DrawFill(-80, 0, 80, 256, 31);
+			V_DrawFill(BASEVIDWIDTH, 0, 80, 256, 31);
 		}
 	}
 
@@ -822,24 +892,16 @@ static void F_IntroDrawScene(void)
 				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, rockpat, R_GetTranslationColormap(TC_BLINK, SKINCOLOR_AQUA, GTC_CACHE));
 		}
 	}
+	else if (intro_scenenum == 1 && intro_curtime < 5*TICRATE)
+	{
+		INT32 trans = intro_curtime + 10 - (5*TICRATE);
+		if (trans < 0)
+			trans = 0;
+		V_DrawRightAlignedString(BASEVIDWIDTH-4, BASEVIDHEIGHT-12, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), "\x86""Press ""\x82""ENTER""\x86"" to skip...");
+	}
 
 	if (animtimer)
 		animtimer--;
-
-	if (intro_scenenum == 7 && intro_curtime > 7*TICRATE)
-	{
-		patch_t *sgrass;
-
-		if (intro_curtime >= 7*TICRATE + ((TICRATE/7)*2))
-			sgrass = W_CachePatchName("SGRASS4", PU_CACHE);
-		else if (intro_curtime >= 7*TICRATE + (TICRATE/7))
-			sgrass = W_CachePatchName("SGRASS3", PU_CACHE);
-		else
-			sgrass = W_CachePatchName("SGRASS2", PU_CACHE);
-		V_DrawScaledPatch(123, 4, 0, sgrass);
-
-		W_UnlockCachedPatch(sgrass);
-	}
 
 	V_DrawString(cx, cy, V_ALLOWLOWERCASE, cutscene_disptext);
 }
@@ -856,7 +918,7 @@ void F_IntroDrawer(void)
 			if (rendermode != render_none)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+				F_WipeColorFill(31);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -866,20 +928,21 @@ void F_IntroDrawer(void)
 		else if (intro_scenenum == 10)
 		{
 			// The only fade to white in the entire damn game.
+			// (not true)
 			if (rendermode != render_none)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+				F_WipeColorFill(0);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
 		}
-		else if (intro_scenenum == 15)
+		else if (intro_scenenum == 16)
 		{
 			if (rendermode != render_none)
 			{
 				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+				F_WipeColorFill(31);
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
@@ -926,8 +989,8 @@ void F_IntroDrawer(void)
 			patch_t *radar = W_CachePatchName("RADAR", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-			V_DrawScaledPatch(0, 0, 0, radar);
+			F_WipeColorFill(31);
+			V_DrawSmallScaledPatch(0, 0, 0, radar);
 			W_UnlockCachedPatch(radar);
 			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
@@ -936,36 +999,36 @@ void F_IntroDrawer(void)
 		}
 		else if (intro_scenenum == 7 && intro_curtime == 6*TICRATE) // Force a wipe here
 		{
-			patch_t *grass = W_CachePatchName("SGRASS5", PU_CACHE);
+			patch_t *grass = W_CachePatchName("SGRASS2", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-			V_DrawScaledPatch(0, 0, 0, grass);
+			F_WipeColorFill(31);
+			V_DrawSmallScaledPatch(0, 0, 0, grass);
 			W_UnlockCachedPatch(grass);
 			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
 		}
-		else if (intro_scenenum == 12 && intro_curtime == 7*TICRATE)
+		/*else if (intro_scenenum == 12 && intro_curtime == 7*TICRATE)
 		{
 			patch_t *confront = W_CachePatchName("CONFRONT", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawSmallScaledPatch(0, 0, 0, confront);
 			W_UnlockCachedPatch(confront);
 			V_DrawString(8, 128, V_ALLOWLOWERCASE, cutscene_disptext);
 
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
-		}
-		if (intro_scenenum == 14 && intro_curtime == 7*TICRATE)
+		}*/
+		if (intro_scenenum == 15 && intro_curtime == 7*TICRATE)
 		{
 			patch_t *sdo = W_CachePatchName("SONICDO2", PU_CACHE);
 
 			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeColorFill(31);
 			V_DrawSmallScaledPatch(0, 0, 0, sdo);
 			W_UnlockCachedPatch(sdo);
 			V_DrawString(224, 8, V_ALLOWLOWERCASE, cutscene_disptext);
@@ -1065,16 +1128,22 @@ static const char *credits[] = {
 	"Logan \"GBA\" Arias",
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
+	"Victor \"SteelT\" Fuentes",
 	"Nathan \"Jazz\" Giroux",
 	"Vivian \"toaster\" Grannell",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
+	"\"james\"",
 	"Iestyn \"Monster Iestyn\" Jealous",
+	"\"Jimita\"",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
+	"Louis-Antoine \"LJ Sonic\" de Moulins", // de Rochefort doesn't quite fit on the screen sorry lol
 	"John \"JTE\" Muniz",
 	"Ehab \"Wolfy\" Saeed",
+	"Jonas \"MascaraSnake\" Sauer",
 	"\"Kaito Sinclaire\"",
 	"\"SSNTails\"",
+	"Lachlan \"Lach\" Wright",
 	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Programming",
@@ -1083,10 +1152,7 @@ static const char *credits[] = {
 	"Andrew \"orospakr\" Clunis",
 	"Sally \"TehRealSalt\" Cochenour",
 	"Gregor \"Oogaland\" Dick",
-	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
-	"Victor \"Steel Titanium\" Fuentes",
 	"Julio \"Chaos Zero 64\" Guir",
-	"\"Jimita\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
@@ -1095,39 +1161,53 @@ static const char *credits[] = {
 	"Colin \"Sonict\" Pfaff",
 	"Sean \"Sryder13\" Ryder",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
+	"Wessel \"sphere\" Smit",
 	"Ben \"Cue\" Woodford",
 	// Git contributors with 5+ approved merges of substantive quality,
 	// or contributors with at least one groundbreaking merge, may be named.
 	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
 	"",
-	"\1Sprite Artists",
-	"\"Iceman404\"",
+	"\1Art",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
+	"Ryan \"Blaze Hedgehog\" Bloom",
+	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
-	"Jim \"MotorRoach\" DeMello",
+	"\"Dave Lite\"",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
-	"Vivian \"toaster\" Grannell",
-	"Andrew \"Senku Niola\" Moran",
-	"David \"Instant Sonic\" Spencer Jr.",
-	"\"SSNTails\"",
-	"",
-	"\1Texture Artists",
-	"Ryan \"Blaze Hedgehog\" Bloom",
+	"\"DirkTheHusky\"",
 	"Buddy \"KinkaJoy\" Fischer",
 	"Vivian \"toaster\" Grannell",
+	"James \"SwitchKaze\" Hale",
+	"James \"SeventhSentinel\" Hall",
 	"Kepa \"Nev3r\" Iceta",
+	"Iestyn \"Monster Iestyn\" Jealous",
+	"William \"GuyWithThePie\" Kloppenberg",
+	"Alice \"Alacroix\" de Lemos",
+	"Alexander \"DrTapeworm\" Moench-Ford",
+	"Andrew \"Senku Niola\" Moran",
+	"\"MotorRoach\"",
+	"Phillip \"TelosTurntable\" Robinson",
+	"Wessel \"sphere\" Smit",
+	"David \"Instant Sonic\" Spencer Jr.",
+	"\"SSNTails\"",
+	"Daniel \"Inazuma\" Trinh",
+	"\"VelocitOni\"",
 	"Jarrett \"JEV3\" Voight",
 	"",
 	"\1Music and Sound",
 	"\1Production",
+	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo
 	"Malcolm \"RedXVI\" Brown",
 	"Dave \"DemonTomatoDave\" Bulmer",
 	"Paul \"Boinciel\" Clempson",
+	"Shane \"CobaltBW\" Ellis",
+	"James \"SeventhSentinel\" Hall",
 	"Cyan Helkaraxe",
 	"Kepa \"Nev3r\" Iceta",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"Jarel \"Arrow\" Jones",
+	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Stefan \"Stuf\" Rimalia",
 	"Shane Mychal Sexton",
 	"\"Spazzo\"",
@@ -1136,16 +1216,20 @@ static const char *credits[] = {
 	"\"SSNTails\"",
 	"",
 	"\1Level Design",
+	"Hank \"FuriousFox\" Brannock",
 	"Matthew \"Fawfulfan\" Chapman",
 	"Paul \"Boinciel\" Clempson",
+	"Sally \"TehRealSalt\" Cochenour",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
 	"Ben \"Mystic\" Geyer",
 	"Nathan \"Jazz\" Giroux",
 	"Vivian \"toaster\" Grannell",
 	"Dan \"Blitzzo\" Hagerstrand",
+	"James \"SeventhSentinel\" Hall",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
+	"Alexander \"DrTapeworm\" Moench-Ford",
 	"\"Kaito Sinclaire\"",
 	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
@@ -1179,6 +1263,7 @@ static const char *credits[] = {
 	"iD Software",
 	"Doom Legacy Project",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
+	"Kart Krew",
 	"Alex \"MistaED\" Fuller",
 	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
@@ -1189,6 +1274,7 @@ static const char *credits[] = {
 	// Creators of small quantities of sprite/texture assets
 	// - Arietty - New Green Hill-styled textures
 	// - Scizor300 - the only other contributor to the 2.0 SRB2 Asset Pack
+	// - Revan/Icefox - the new Nimbus Ruins skybox
 	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
@@ -1197,29 +1283,40 @@ static const char *credits[] = {
 	"\1Published By",
 	"A 28K dialup modem",
 	"",
-	"\1Thank you",
-	"\1for playing!",
+	"\1Thank you       ",
+	"\1for playing!       ",
 	NULL
 };
 
+#define CREDITS_LEFT 8
+#define CREDITS_RIGHT ((BASEVIDWIDTH) - 8)
+
 static struct {
-	UINT32 x, y;
+	UINT32 x;
 	const char *patch;
 } credits_pics[] = {
-	{  8, 80+200* 1, "CREDIT01"},
-	{  4, 80+200* 2, "CREDIT13"},
-	{250, 80+200* 3, "CREDIT12"},
-	{  8, 80+200* 4, "CREDIT03"},
-	{248, 80+200* 5, "CREDIT11"},
-	{  8, 80+200* 6, "CREDIT04"},
-	{112, 80+200* 7, "CREDIT10"},
-	{240, 80+200* 8, "CREDIT05"},
-	{120, 80+200* 9, "CREDIT06"},
-	{  8, 80+200*10, "CREDIT07"},
-	{  8, 80+200*11, "CREDIT08"},
-	{112, 80+200*12, "CREDIT09"},
-	{0, 0, NULL}
+	{CREDITS_LEFT,                     "CREDIT01"},
+	{CREDITS_RIGHT - (271 >> 1),       "CREDIT02"},
+	{CREDITS_LEFT,                     "CREDIT03"},
+	{CREDITS_RIGHT - (316 >> 1),       "CREDIT04"},
+	{CREDITS_LEFT,                     "CREDIT05"},
+	{CREDITS_RIGHT - (399 >> 1),       "CREDIT06"},
+	{CREDITS_LEFT,                     "CREDIT07"},
+	{CREDITS_RIGHT - (302 >> 1),       "CREDIT08"},
+	{CREDITS_LEFT,                     "CREDIT09"},
+	{CREDITS_RIGHT - (250 >> 1),       "CREDIT10"},
+	{CREDITS_LEFT,                     "CREDIT11"},
+	{CREDITS_RIGHT - (279 >> 1),       "CREDIT12"},
+	//{(BASEVIDWIDTH - (279 >> 1)) >> 1, "CREDIT12"},
+	// CREDIT13 is extra art and is not shown by default
+	{0, NULL}
 };
+
+#undef CREDITS_LEFT
+#undef CREDITS_RIGHT
+
+static UINT32 credits_height = 0;
+static const UINT8 credits_numpics = sizeof(credits_pics)/sizeof(credits_pics[0]) - 1;
 
 void F_StartCredits(void)
 {
@@ -1244,7 +1341,7 @@ void F_StartCredits(void)
 	S_StopMusic();
 	S_StopSounds();
 
-	S_ChangeMusicInternal("_creds", false);
+	S_ChangeMusicInternal("_creds", true);
 
 	finalecount = 0;
 	animtimer = 0;
@@ -1254,13 +1351,20 @@ void F_StartCredits(void)
 void F_CreditDrawer(void)
 {
 	UINT16 i;
-	fixed_t y = (80<<FRACBITS) - 5*(animtimer<<FRACBITS)/8;
+	INT16 zagpos = (timetonext - finalecount - animtimer) % 32;
+	fixed_t y = (80<<FRACBITS) - (animtimer<<FRACBITS>>1);
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
+	// Zig Zagz
+	V_DrawScaledPatch(-16,               zagpos,       V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_CACHE));
+	V_DrawScaledPatch(-16,               zagpos - 320, V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_CACHE));
+	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos,       V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_CACHE));
+	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos - 320, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_CACHE));
+
 	// Draw background pictures first
 	for (i = 0; credits_pics[i].patch; i++)
-		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (credits_pics[i].y<<FRACBITS) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_CACHE), FRACUNIT>>1);
+		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (280<<FRACBITS) + (((i*credits_height)<<FRACBITS)/(credits_numpics)) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_CACHE), FRACUNIT>>1);
 
 	// Dim the background
 	V_DrawFadeScreen(0xFF00, 16);
@@ -1278,6 +1382,11 @@ void F_CreditDrawer(void)
 				V_DrawCreditString((160 - (V_CreditStringWidth(&credits[i][1])>>1))<<FRACBITS, y, 0, &credits[i][1]);
 			y += 30<<FRACBITS;
 			break;
+		case 2:
+			if (y>>FRACBITS > -10)
+				V_DrawStringAtFixed((BASEVIDWIDTH-V_StringWidth(&credits[i][1], V_ALLOWLOWERCASE|V_YELLOWMAP))<<FRACBITS>>1, y, V_ALLOWLOWERCASE|V_YELLOWMAP, &credits[i][1]);
+			y += 12<<FRACBITS;
+			break;
 		default:
 			if (y>>FRACBITS > -10)
 				V_DrawStringAtFixed(32<<FRACBITS, y, V_ALLOWLOWERCASE, credits[i]);
@@ -1293,7 +1402,22 @@ void F_CreditTicker(void)
 {
 	// "Simulate" the drawing of the credits so that dedicated mode doesn't get stuck
 	UINT16 i;
-	fixed_t y = (80<<FRACBITS) - 5*(animtimer<<FRACBITS)/8;
+	fixed_t y = (80<<FRACBITS) - (animtimer<<FRACBITS>>1);
+
+	// Calculate credits height to display art properly
+	if (credits_height == 0)
+	{
+		for (i = 0; credits[i]; i++)
+		{
+			switch(credits[i][0])
+			{
+				case 0: credits_height += 80; break;
+				case 1: credits_height += 30; break;
+				default: credits_height += 12; break;
+			}
+		}
+		credits_height = 131*credits_height/80; // account for scroll speeds. This is a guess now, so you may need to update this if you change the credits length.
+	}
 
 	// Draw credits text on top
 	for (i = 0; credits[i]; i++)
@@ -1385,12 +1509,15 @@ boolean F_CreditResponder(event_t *event)
 
 void F_StartGameEvaluation(void)
 {
-	// Credits option in secrets menu
+	// Credits option in extras menu
 	if (cursaveslot == -1)
 	{
+		S_FadeOutStopMusic(2*MUSICRATE);
 		F_StartGameEnd();
 		return;
 	}
+
+	S_FadeOutStopMusic(5*MUSICRATE);
 
 	G_SetGamestate(GS_EVALUATION);
 
@@ -1537,9 +1664,9 @@ void F_GameEvaluationDrawer(void)
 			}
 		}
 		else if (netgame)
-			V_DrawString(8, 96, V_YELLOWMAP, "Prizes only\nawarded in\nsingle player!");
+			V_DrawString(8, 96, V_YELLOWMAP, "Multiplayer games\ncan't unlock\nextras!");
 		else
-			V_DrawString(8, 96, V_YELLOWMAP, "Prizes not\nawarded in\nmodified games!");
+			V_DrawString(8, 96, V_YELLOWMAP, "Modified games\ncan't unlock\nextras!");
 	}
 #endif
 }
@@ -1586,7 +1713,7 @@ void F_GameEvaluationTicker(void)
 		{
 			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
 			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Prizes only awarded in singleplayer!");
+			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Multiplayer games can't unlock extras!");
 			S_StartSound(NULL, sfx_s3k68);
 		}
 		else if (!modifiedgame || savemoddata)
@@ -1608,7 +1735,7 @@ void F_GameEvaluationTicker(void)
 		{
 			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
 			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Prizes not awarded in modified games!");
+			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Modified games can't unlock extras!");
 			S_StartSound(NULL, sfx_s3k68);
 		}
 	}
@@ -1621,6 +1748,7 @@ void F_GameEvaluationTicker(void)
 // ==========
 
 #define INFLECTIONPOINT (6*TICRATE)
+#define STOPPINGPOINT (14*TICRATE)
 #define SPARKLLOOPTIME 15 // must be odd
 
 void F_StartEnding(void)
@@ -1638,7 +1766,7 @@ void F_StartEnding(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	S_StopMusic(); // todo: placeholder
+	S_StopMusic();
 	S_StopSounds();
 
 	finalecount = -10; // what? this totally isn't a hack. why are you asking?
@@ -1679,7 +1807,7 @@ void F_StartEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= (XTRA_ENDING+2)+1)
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
@@ -1712,12 +1840,15 @@ void F_StartEnding(void)
 
 void F_EndingTicker(void)
 {
-	if (++finalecount > INFLECTIONPOINT*2)
+	if (++finalecount > STOPPINGPOINT)
 	{
 		F_StartCredits();
 		wipetypepre = INT16_MAX;
 		return;
 	}
+
+	if (finalecount == -8)
+		S_ChangeMusicInternal((goodending ? "_endg" : "_endb"), false);
 
 	if (goodending && finalecount == INFLECTIONPOINT) // time to swap some assets
 	{
@@ -2105,26 +2236,26 @@ void F_EndingDrawer(void)
 
 		if (finalecount < 10)
 			trans = (10-finalecount)/2;
-		else if (finalecount > (2*INFLECTIONPOINT) - 20)
+		else if (finalecount > STOPPINGPOINT - 20)
 		{
-			trans = 10 + (finalecount/2) - INFLECTIONPOINT;
+			trans = 10 + (finalecount - STOPPINGPOINT)/2;
 			donttouch = true;
 		}
 
-		if (trans != 10)
+		if (trans < 10)
 		{
 			//colset(linkmap,  164, 165, 169); -- the ideal purple colour to represent a clicked in-game link, but not worth it just for a soundtest-controlled secret
 			V_DrawCenteredString(BASEVIDWIDTH/2, 8, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), str);
 			V_DrawCharacter(32, BASEVIDHEIGHT-16, '>'|(trans<<V_ALPHASHIFT), false);
-			V_DrawString(40, ((finalecount == (2*INFLECTIONPOINT)-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= (2*INFLECTIONPOINT)-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
+			V_DrawString(40, ((finalecount == STOPPINGPOINT-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= STOPPINGPOINT-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
 		}
 
-		if (finalecount > (2*INFLECTIONPOINT)-(20+(2*TICRATE)))
+		if (finalecount > STOPPINGPOINT-(20+(2*TICRATE)))
 		{
 			INT32 trans2 = abs((5*FINECOSINE((FixedAngle((finalecount*5)<<FRACBITS)>>ANGLETOFINESHIFT & FINEMASK)))>>FRACBITS)+2;
 			if (!donttouch)
 			{
-				trans = 10 + ((2*INFLECTIONPOINT)-(20+(2*TICRATE))) - finalecount;
+				trans = 10 + (STOPPINGPOINT-(20+(2*TICRATE))) - finalecount;
 				if (trans > trans2)
 					trans2 = trans;
 			}
@@ -2148,7 +2279,6 @@ void F_StartGameEnd(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	S_StopMusic();
 	S_StopSounds();
 
 	// In case menus are still up?!!
@@ -2505,7 +2635,7 @@ static void F_LoadAlacroixGraphics(SINT8 newttscale)
 	if (!ttloaded[newttscale])
 	{
 		for (j = 0; j < 22; j++)
-			sprintf(&lumpnames[j][0], "T%.1hu%s", (UINT8)newttscale+1, names[j]);
+			sprintf(&lumpnames[j][0], "T%.1hu%s", (UINT16)( (UINT8)newttscale+1 ), names[j]);
 
 		LOADTTGFX(ttembl[newttscale], lumpnames[0], TTMAX_ALACROIX)
 		LOADTTGFX(ttribb[newttscale], lumpnames[1], TTMAX_ALACROIX)
@@ -2573,6 +2703,8 @@ void F_TitleScreenDrawer(void)
 {
 	boolean hidepics;
 	fixed_t sc = FRACUNIT / max(1, curttscale);
+	INT32 whitefade = 0;
+	UINT8 *whitecol[2] = {NULL, NULL};
 
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
@@ -2580,13 +2712,15 @@ void F_TitleScreenDrawer(void)
 	// Draw that sky!
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
-	else if (titlemapinaction && curbghide && ! hidetitlemap)
-		D_Render();
-	else
+	else if (!curbghide || !titlemapinaction || gamestate == GS_WAITINGPLAYERS)
 		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 
 	// Don't draw outside of the title screen, or if the patch isn't there.
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
+		return;
+
+	// Don't draw if title mode is set to Old/None and the patch isn't there
+	if (!ttwing && (curttmode == TTMODE_OLD || curttmode == TTMODE_NONE))
 		return;
 
 	// rei|miru: use title pics?
@@ -2658,15 +2792,39 @@ void F_TitleScreenDrawer(void)
 			//
 			if (finalecount <= 29)
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			// Flash at tic 30, timed to O__TITLE percussion. Hold the flash until tic 34.
+			// After tic 34, fade the flash until tic 44.
+			else
+			{
+				if (finalecount > 29 && finalecount < 35)
+					V_DrawFadeScreen(0, (whitefade = 9));
+				else if (finalecount > 34 && 44-finalecount > 0 && 44-finalecount < 10)
+					V_DrawFadeScreen(0, 44-finalecount);
+				if (39-finalecount > 0)
+				{
+					whitefade = (9 - (39-finalecount))<<V_ALPHASHIFT;
+					whitecol[0] = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_SUPERGOLD3, GTC_CACHE);
+					whitecol[1] = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
+				}
+			}
 
 			// Draw emblem
 			V_DrawSciencePatch(40<<FRACBITS, 20<<FRACBITS, 0, TTEMBL[0], sc);
+
+			if (whitecol[0])
+			{
+				V_DrawFixedPatch(40<<FRACBITS, 20<<FRACBITS, sc, whitefade, TTEMBL[0], whitecol[0]);
+				V_DrawFixedPatch(40<<FRACBITS, 20<<FRACBITS, sc, V_TRANSLUCENT + ((whitefade/2) & V_ALPHAMASK), TTEMBL[0], whitecol[1]);
+			}
 
 			// Animate SONIC ROBO BLAST 2 before the white flash at tic 30.
 			if (finalecount <= 29)
 			{
 				// Ribbon unfurls, revealing SONIC text, from tic 0 to tic 24. SONIC text is pre-baked into this ribbon graphic.
 				V_DrawSciencePatch(39<<FRACBITS, 88<<FRACBITS, 0, TTRIBB[min(max(0, finalecount), 24)], sc);
+
+				// Darken non-text things.
+				V_DrawFadeScreen(0xFF00, 12);
 
 				// Animate SONIC text while the ribbon unfurls, from tic 0 to tic 28.
 				if(finalecount >= 0)
@@ -2692,6 +2850,7 @@ void F_TitleScreenDrawer(void)
 							case 8: case 7: fadeval = V_30TRANS; break;
 							case 6: case 5: fadeval = V_20TRANS; break;
 							case 4: case 3: fadeval = V_10TRANS; break;
+							default: break;
 						}
 					}
 					V_DrawSciencePatch(79<<FRACBITS, 132<<FRACBITS, fadeval, TTROBO[0], sc);
@@ -3112,8 +3271,14 @@ void F_TitleScreenDrawer(void)
 			// After tic 34, starting when the flash fades,
 			// draw the combined ribbon and SONIC ROBO BLAST 2 logo. Note the different Y value, because this
 			// graphic is cropped differently from the unfurling ribbon.
-			if (finalecount > 34)
+			if (finalecount > 29)
 				V_DrawSciencePatch(39<<FRACBITS, 93<<FRACBITS, 0, TTRBTX[0], sc);
+
+			if (whitecol[0])
+			{
+				V_DrawFixedPatch(39<<FRACBITS, 93<<FRACBITS, sc, whitefade, TTRBTX[0], whitecol[0]);
+				V_DrawFixedPatch(39<<FRACBITS, 93<<FRACBITS, sc, V_TRANSLUCENT + ((whitefade/2) & V_ALPHAMASK), TTRBTX[0], whitecol[1]);
+			}
 
 			//
 			// FRONT LAYER CHARACTERS
@@ -3253,13 +3418,6 @@ void F_TitleScreenDrawer(void)
 				}
 			}
 
-			// Flash at tic 30, timed to O__TITLE percussion. Hold the flash until tic 34.
-			// After tic 34, fade the flash until tic 44.
-			if (finalecount > 29 && finalecount < 35)
-				V_DrawFadeScreen(0, 9);
-			else if (finalecount > 34 && 44-finalecount > 0 && 44-finalecount < 10)
-				V_DrawFadeScreen(0, 44-finalecount);
-
 #undef CHARSTART
 #undef SONICSTART
 #undef SONICIDLE
@@ -3314,6 +3472,10 @@ void F_TitleScreenTicker(boolean run)
 	if (run)
 		finalecount++;
 
+	// don't trigger if doing anything besides idling on title
+	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
+		return;
+
 	// Execute the titlemap camera settings
 	if (titlemapinaction)
 	{
@@ -3359,10 +3521,6 @@ void F_TitleScreenTicker(boolean run)
 			camera.angle += titlescrollxspeed*ANG1/64;
 		}
 	}
-
-	// don't trigger if doing anything besides idling on title
-	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
-		return;
 
 	// no demos to play? or, are they disabled?
 	if (!cv_rollingdemos.value || !numDemos)
@@ -3516,7 +3674,7 @@ void F_ContinueDrawer(void)
 	if (timetonext >= (11*TICRATE)+10)
 		return;
 
-	V_DrawLevelTitle(x - (V_LevelNameWidth("CONTINUE")>>1), 16, 0, "CONTINUE");
+	V_DrawLevelTitle(x - (V_LevelNameWidth("Continue?")>>1), 16, 0, "Continue?");
 
 	// Two stars...
 	patch = W_CachePatchName("CONTSTAR", PU_CACHE);
@@ -4409,6 +4567,17 @@ void F_TextPromptDrawer(void)
 		V_DrawString(textr-8, chevrony + (skullAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
 }
 
+#define nocontrolallowed(j) {\
+		players[j].powers[pw_nocontrol] = 1;\
+		if (players[j].mo)\
+		{\
+			if (players[j].mo->state == states+S_PLAY_STND && players[j].mo->tics != -1)\
+				players[j].mo->tics++;\
+			else if (players[j].mo->state == states+S_PLAY_WAIT)\
+				P_SetPlayerMobjState(players[j].mo, S_PLAY_STND);\
+		}\
+	}
+
 void F_TextPromptTicker(void)
 {
 	INT32 i;
@@ -4438,10 +4607,10 @@ void F_TextPromptTicker(void)
 					// But only consoleplayer can advance the prompt.
 					// \todo Proper per-player splitscreen support (individual prompts)
 					if (i == consoleplayer || i == secondarydisplayplayer)
-						players[i].powers[pw_nocontrol] = 1;
+						nocontrolallowed(i)
 				}
 				else if (i == consoleplayer)
-					players[i].powers[pw_nocontrol] = 1;
+					nocontrolallowed(i)
 
 				if (!splitscreen)
 					break;
@@ -4483,7 +4652,7 @@ void F_TextPromptTicker(void)
 						continue;
 				}
 				else if (i == consoleplayer)
-					players[i].powers[pw_nocontrol] = 1;
+					nocontrolallowed(i)
 				else
 					continue;
 

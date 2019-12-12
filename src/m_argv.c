@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,7 @@
 #include "doomdef.h"
 #include "command.h"
 #include "m_argv.h"
+#include "m_misc.h"
 
 /**	\brief number of arg
 */
@@ -161,7 +162,7 @@ void M_FindResponseFile(void)
 			if (!file)
 				I_Error("No more free memory for the response file");
 			if (fread(file, size, 1, handle) != 1)
-				I_Error("Couldn't read response file because %s", strerror(ferror(handle)));
+				I_Error("Couldn't read response file because %s", M_FileError(handle));
 			fclose(handle);
 
 			// keep all the command line arguments following @responsefile

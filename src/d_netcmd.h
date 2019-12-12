@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -26,10 +26,8 @@ extern consvar_t cv_playername2;
 extern consvar_t cv_playercolor2;
 extern consvar_t cv_skin2;
 // saved versions of the above six
-extern consvar_t cv_defaultplayername;
 extern consvar_t cv_defaultplayercolor;
 extern consvar_t cv_defaultskin;
-extern consvar_t cv_defaultplayername2;
 extern consvar_t cv_defaultplayercolor2;
 extern consvar_t cv_defaultskin2;
 
@@ -96,7 +94,7 @@ extern consvar_t cv_recycler;
 
 extern consvar_t cv_itemfinder;
 
-extern consvar_t cv_inttime, cv_coopstarposts, cv_cooplives, cv_advancemap, cv_playersforexit;
+extern consvar_t cv_inttime, cv_coopstarposts, cv_cooplives, cv_advancemap, cv_playersforexit, cv_exitmove;
 extern consvar_t cv_overtime;
 extern consvar_t cv_startinglives;
 
@@ -108,6 +106,9 @@ extern consvar_t cv_ringslinger, cv_soundtest;
 extern consvar_t cv_specialrings, cv_powerstones, cv_matchboxes, cv_competitionboxes;
 
 extern consvar_t cv_maxping;
+extern consvar_t cv_pingtimeout;
+extern consvar_t cv_showping;
+
 
 extern consvar_t cv_skipmapcheck;
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -167,5 +167,6 @@ FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 // move out to main code for consistency
 void SCR_DisplayTicRate(void);
 void SCR_ClosedCaptions(void);
+void SCR_DisplayLocalPing(void);
 #undef DNWH
 #endif //__SCREEN_H__

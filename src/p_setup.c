@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -28,6 +28,7 @@
 
 #include "r_data.h"
 #include "r_things.h"
+#include "r_patch.h"
 #include "r_sky.h"
 #include "r_draw.h"
 
@@ -104,6 +105,7 @@ side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 UINT16 bossdisabled;
+boolean stoppedclock;
 boolean levelloading;
 UINT8 levelfadecol;
 
@@ -542,9 +544,10 @@ levelflat_t *levelflats;
 size_t P_PrecacheLevelFlats(void)
 {
 	lumpnum_t lump;
-	size_t i, flatmemory = 0;
+	size_t i;
 
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
+	flatmemory = 0;
 	for (i = 0; i < numlevelflats; i++)
 	{
 		if (levelflats[i].type == LEVELFLAT_FLAT)
@@ -565,7 +568,9 @@ or NULL if we want to allocate it now.
 static INT32
 Ploadflat (levelflat_t *levelflat, const char *flatname)
 {
+#ifndef NO_PNG_LUMPS
 	UINT8         buffer[8];
+#endif
 
 	lumpnum_t    flatnum;
 	int       texturenum;
@@ -2220,7 +2225,10 @@ static void P_LevelInitStuff(void)
 	tokenbits = 0;
 	runemeraldmanager = false;
 	emeraldspawndelay = 60*TICRATE;
-	nummaprings = mapheaderinfo[gamemap-1]->startrings;
+	if ((netgame || multiplayer) && !G_IsSpecialStage(gamemap))
+		nummaprings = -1;
+	else
+		nummaprings = mapheaderinfo[gamemap-1]->startrings;
 
 	// emerald hunt
 	hunt1 = hunt2 = hunt3 = NULL;
@@ -2698,6 +2706,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
 	wipegamestate = FORCEWIPEOFF;
+	wipestyleflags = 0;
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
@@ -2718,10 +2727,21 @@ boolean P_SetupLevel(boolean skipprecip)
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+		wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+
+#ifdef HWRENDER
+		// uh..........
+		if (rendermode == render_opengl)
+			F_WipeColorFill(0);
+#endif
 
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+
+		I_OsPolling();
+		I_FinishUpdate(); // page flip or blit buffer
+		if (moviemode)
+			M_SaveFrame();
 
 		nowtime = lastwipetic;
 
@@ -2737,6 +2757,13 @@ boolean P_SetupLevel(boolean skipprecip)
 		}
 
 		ranspecialwipe = 1;
+	}
+
+	if (G_GetModeAttackRetryFlag())
+	{
+		if (modeattacking)
+			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+		G_ClearModeAttackRetryFlag();
 	}
 
 	// Make sure all sounds are stopped before Z_FreeTags.
@@ -2756,7 +2783,13 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (rendermode != render_none && !ranspecialwipe)
 	{
 		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		wipestyleflags |= WSF_FADEOUT;
+
+#ifdef HWRENDER
+		// uh..........
+		if (rendermode == render_opengl)
+			F_WipeColorFill(31);
+#endif
 
 		F_WipeEndScreen();
 		// for titlemap: run a specific wipe if specified
@@ -2781,12 +2814,12 @@ boolean P_SetupLevel(boolean skipprecip)
 		{
 			// Don't include these in the fade!
 			char tx[64];
-			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, M_GetText("Speeding off to..."));
 			snprintf(tx, 63, "%s%s%s",
 				mapheaderinfo[gamemap-1]->lvlttl,
-				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
+			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, tx);
 			I_UpdateNoVsync();
 		}
 
@@ -2830,6 +2863,17 @@ boolean P_SetupLevel(boolean skipprecip)
 		fromnetsave = 1;
 		loadprecip = 0;
 		loademblems = 0;
+	}
+	else if (savedata.lives > 0)
+	{
+		numgameovers = savedata.numgameovers;
+		players[consoleplayer].continues = savedata.continues;
+		players[consoleplayer].lives = savedata.lives;
+		players[consoleplayer].score = savedata.score;
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
+		emeralds = savedata.emeralds;
+		savedata.lives = 0;
 	}
 
 	// internal game map
@@ -3034,6 +3078,25 @@ boolean P_SetupLevel(boolean skipprecip)
 		leveltime = maxstarposttime;
 	}
 
+	if (unlockables[27].unlocked && !modeattacking // pandora's box
+#ifndef DEVELOP
+	&& !modifiedgame
+#endif
+	&& !(netgame || multiplayer) && gamemap == 0x1d35-016464)
+	{
+		P_SpawnMobj(0640370000, 0x11000000, 0x3180000, MT_LETTER)->angle = ANGLE_90;
+		if (textprompts[199]->page[1].backcolor != 259)
+		{
+			char *buf = W_CacheLumpName("WATERMAP", PU_STATIC), *b = buf;
+			while ((*b != 65) && (b-buf < 256)) { *b = (*b - 65)&255; b++; } *b = '\0';
+			Z_Free(textprompts[199]->page[1].text);
+			textprompts[199]->page[1].text = Z_StrDup(buf);
+			textprompts[199]->page[1].lines = 4;
+			textprompts[199]->page[1].backcolor = 259;
+			Z_Free(buf);
+		}
+	}
+
 	if (modeattacking == ATTACKING_RECORD && !demoplayback)
 		P_LoadRecordGhosts();
 	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
@@ -3152,7 +3215,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Remove the loading shit from the screen
 	if (rendermode != render_none && !titlemapinaction)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+		F_WipeColorFill(levelfadecol);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();
@@ -3175,18 +3238,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
 
-	if (savedata.lives > 0)
-	{
-		numgameovers = savedata.numgameovers;
-		players[consoleplayer].continues = savedata.continues;
-		players[consoleplayer].lives = savedata.lives;
-		players[consoleplayer].score = savedata.score;
-		if ((botingame = ((botskin = savedata.botskin) != 0)))
-			botcolor = skins[botskin-1].prefcolor;
-		emeralds = savedata.emeralds;
-		savedata.lives = 0;
-	}
-
 	if (loadprecip) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
 		INT32 buf = gametic % BACKUPTICS;
@@ -3201,44 +3252,22 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 	}
 
-	// Stage title!
-	if (rendermode != render_none
-		&& (!titlemapinaction)
-		&& ranspecialwipe != 2
-		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
-#ifdef HAVE_BLUA
-		&& LUA_HudEnabled(hud_stagetitle)
-#endif
-	)
-	{
-		tic_t starttime = I_GetTime();
-		tic_t endtime = starttime + (10*NEWTICRATERATIO);
-		tic_t nowtime = starttime;
-		tic_t lasttime = starttime;
-		while (nowtime < endtime)
-		{
-			// draw loop
-			while (!((nowtime = I_GetTime()) - lasttime))
-				I_Sleep();
-			lasttime = nowtime;
+	// No render mode, stop here.
+	if (rendermode == render_none)
+		return true;
 
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
-			stplyr = &players[consoleplayer];
-			ST_drawLevelTitle(nowtime - starttime);
-			if (splitscreen)
-			{
-				stplyr = &players[secondarydisplayplayer];
-				ST_drawLevelTitle(nowtime - starttime);
-			}
+	// Title card!
+	G_StartTitleCard();
 
-			I_OsPolling();
-			I_UpdateNoBlit();
-			I_FinishUpdate(); // page flip or blit buffer
+	// Can the title card actually run, though?
+	if (!WipeStageTitle)
+		return true;
+	if (ranspecialwipe == 2)
+		return true;
 
-			if (moviemode) // make sure we save frames for the white hold too
-				M_SaveFrame();
-		}
-	}
+	// If so...
+	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
+		G_PreLevelTitleCard();
 
 	return true;
 }
@@ -3351,10 +3380,10 @@ boolean P_AddWadFile(const char *wadfilename)
 	// WADs use markers for some resources, but others such as sounds are checked lump-by-lump anyway.
 //	UINT16 luaPos, luaNum = 0;
 //	UINT16 socPos, socNum = 0;
-	UINT16 sfxPos, sfxNum = 0;
+	UINT16 sfxPos = 0, sfxNum = 0;
 	UINT16 musPos = 0, musNum = 0;
 //	UINT16 sprPos, sprNum = 0;
-	UINT16 texPos, texNum = 0;
+	UINT16 texPos = 0, texNum = 0;
 //	UINT16 patPos, patNum = 0;
 //	UINT16 flaPos, flaNum = 0;
 //	UINT16 mapPos, mapNum = 0;
@@ -3478,6 +3507,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	ST_ReloadSkinFaceGraphics();
 
 	//
+	// edit music defs
+	//
+	S_LoadMusicDefs(wadnum);
+
+	//
 	// search for maps
 	//
 	lumpinfo = wadfiles[wadnum]->lumpinfo;
@@ -3502,9 +3536,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
 
+	R_LoadSpriteInfoLumps(wadnum, numlumps);
+
 #ifdef HWRENDER
 	HWR_ReloadModels();
-#endif // HWRENDER
+#endif
 
 	// reload status bar (warning should have valid player!)
 	if (gamestate == GS_LEVEL)

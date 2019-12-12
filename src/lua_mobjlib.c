@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2018 by Sonic Team Junior.
+// Copyright (C) 2012-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -32,6 +32,9 @@ enum mobj_e {
 	mobj_snext,
 	mobj_sprev,
 	mobj_angle,
+#ifdef ROTSPRITE
+	mobj_rollangle,
+#endif
 	mobj_sprite,
 	mobj_frame,
 	mobj_sprite2,
@@ -98,6 +101,9 @@ static const char *const mobj_opt[] = {
 	"snext",
 	"sprev",
 	"angle",
+#ifdef ROTSPRITE
+	"rollangle",
+#endif
 	"sprite",
 	"frame",
 	"sprite2",
@@ -199,6 +205,11 @@ static int mobj_get(lua_State *L)
 	case mobj_angle:
 		lua_pushangle(L, mo->angle);
 		break;
+#ifdef ROTSPRITE
+	case mobj_rollangle:
+		lua_pushangle(L, mo->rollangle);
+		break;
+#endif
 	case mobj_sprite:
 		lua_pushinteger(L, mo->sprite);
 		break;
@@ -451,6 +462,11 @@ static int mobj_set(lua_State *L)
 		else if (mo->player == &players[secondarydisplayplayer])
 			localangle2 = mo->angle;
 		break;
+#ifdef ROTSPRITE
+	case mobj_rollangle:
+		mo->rollangle = luaL_checkangle(L, 3);
+		break;
+#endif
 	case mobj_sprite:
 		mo->sprite = luaL_checkinteger(L, 3);
 		break;

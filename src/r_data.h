@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -100,12 +100,13 @@ void R_CheckTextureCache(INT32 tex);
 
 // Retrieve column data for span blitting.
 UINT8 *R_GetColumn(fixed_t tex, INT32 col);
-
 UINT8 *R_GetFlat(lumpnum_t flatnum);
 
 // I/O, setting up the stuff.
 void R_InitData(void);
 void R_PrecacheLevel(void);
+
+extern size_t flatmemory, spritememory, texturememory;
 
 // Retrieval.
 // Floor/ceiling opaque texture tiles,
@@ -169,19 +170,6 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap);
 #define R_PutRgbaA(a) (a << 24)
 #define R_PutRgbaRGB(r, g, b) (R_PutRgbaR(r) + R_PutRgbaG(g) + R_PutRgbaB(b))
 #define R_PutRgbaRGBA(r, g, b, a) (R_PutRgbaRGB(r, g, b) + R_PutRgbaA(a))
-
-boolean R_CheckIfPatch(lumpnum_t lump);
-void R_TextureToFlat(size_t tex, UINT8 *flat);
-void R_PatchToFlat(patch_t *patch, UINT8 *flat);
-patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
-
-#ifndef NO_PNG_LUMPS
-boolean R_IsLumpPNG(const UINT8 *d, size_t s);
-
-UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size);
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency);
-boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
-#endif
 
 extern INT32 numtextures;
 

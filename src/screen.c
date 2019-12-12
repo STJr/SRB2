@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -421,12 +421,23 @@ void SCR_DisplayTicRate(void)
 	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
 
 	V_DrawString(vid.width-(72*vid.dupx), h,
-		V_YELLOWMAP|V_NOSCALESTART|V_HUDTRANS, "FPS:");
+		V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
 	V_DrawString(vid.width-(40*vid.dupx), h,
-		ticcntcolor|V_NOSCALESTART|V_HUDTRANS, va("%02d/%02u", totaltics, TICRATE));
+		ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d/%02u", totaltics, TICRATE));
 
 	lasttic = ontic;
 }
+
+void SCR_DisplayLocalPing(void)
+{
+	UINT32 ping = playerpingtable[consoleplayer];	// consoleplayer's ping is everyone's ping in a splitnetgame :P
+	if (cv_showping.value == 1 || (cv_showping.value == 2 && servermaxping && ping > servermaxping))	// only show 2 (warning) if our ping is at a bad level
+	{
+		INT32 dispy = cv_ticrate.value ? 180 : 189;
+		HU_drawPing(307, dispy, ping, true, V_SNAPTORIGHT | V_SNAPTOBOTTOM);
+	}
+}
+
 
 void SCR_ClosedCaptions(void)
 {
@@ -440,7 +451,7 @@ void SCR_ClosedCaptions(void)
 	if (gamestate == GS_LEVEL)
 	{
 		if (promptactive)
-			basey -= 28;
+			basey -= 42;
 		else if (splitscreen)
 			basey -= 8;
 		else if ((modeattacking == ATTACKING_NIGHTS)

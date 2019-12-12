@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,7 +22,9 @@
 #include "m_misc.h"
 #include "info.h" // spr2names
 #include "i_video.h" // rendermode
+#include "i_system.h"
 #include "r_things.h"
+#include "r_patch.h"
 #include "r_plane.h"
 #include "r_portal.h"
 #include "p_tick.h"
@@ -35,6 +37,9 @@
 #include "fastcmp.h"
 #ifdef HWRENDER
 #include "hardware/hw_md2.h"
+#include "hardware/hw_glob.h"
+#include "hardware/hw_light.h"
+#include "hardware/hw_drv.h"
 #endif
 
 #ifdef PC_DOS
@@ -68,6 +73,8 @@ static lighttable_t **spritelights;
 INT16 negonearray[MAXVIDWIDTH];
 INT16 screenheightarray[MAXVIDWIDTH];
 
+spriteinfo_t spriteinfo[NUMSPRITES];
+
 //
 // INITIALIZATION FUNCTIONS
 //
@@ -100,7 +107,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 {
 	char cn = R_Frame2Char(frame); // for debugging
 
-	INT32 r;
+	INT32 r, ang;
 	lumpnum_t lumppat = wad;
 	lumppat <<= 16;
 	lumppat += lump;
@@ -110,6 +117,20 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
+
+	// rotsprite
+#ifdef ROTSPRITE
+	for (r = 0; r < 8; r++)
+	{
+		sprtemp[frame].rotsprite.cached[r] = false;
+		for (ang = 0; ang < ROTANGLES; ang++)
+			sprtemp[frame].rotsprite.patch[r][ang] = NULL;
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
+			sprtemp[frame].rotsprite.hardware_patch[r] = M_AATreeAlloc(AATREE_ZUSER);
+#endif // HWRENDER
+	}
+#endif
 
 	if (rotation == 0)
 	{
@@ -222,6 +243,9 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	// if so, it might patch only certain frames, not all
 	if (spritedef->numframes) // (then spriteframes is not null)
 	{
+#ifdef ROTSPRITE
+		R_FreeSingleRotSprite(spritedef);
+#endif
 		// copy the already defined sprite frames
 		M_Memcpy(sprtemp, spritedef->spriteframes,
 		 spritedef->numframes * sizeof (spriteframe_t));
@@ -274,12 +298,12 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
 			if (rendermode != render_none) // not for psprite
-				spritecachedinfo[numspritelumps].topoffset += 4<<FRACBITS;
+				spritecachedinfo[numspritelumps].topoffset += FEETADJUST;
 			// Being selective with this causes bad things. :( Like the special stage tokens breaking apart.
 			/*if (rendermode != render_none // not for psprite
 			 && SHORT(patch.topoffset)>0 && SHORT(patch.topoffset)<SHORT(patch.height))
 				// perfect is patch.height but sometime it is too high
-				spritecachedinfo[numspritelumps].topoffset = min(SHORT(patch.topoffset)+4,SHORT(patch.height))<<FRACBITS;*/
+				spritecachedinfo[numspritelumps].topoffset = min(SHORT(patch.topoffset)+(FEETADJUST>>FRACBITS),SHORT(patch.height))<<FRACBITS;*/
 
 			//----------------------------------------------------
 
@@ -369,6 +393,9 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	if (spritedef->numframes &&             // has been allocated
 		spritedef->numframes < maxframe)   // more frames are defined ?
 	{
+#ifdef ROTSPRITE
+		R_FreeSingleRotSprite(spritedef);
+#endif
 		Z_Free(spritedef->spriteframes);
 		spritedef->spriteframes = NULL;
 	}
@@ -424,7 +451,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	else
 		start++;   // just after S_START
 
-	if (end == INT16_MAX)
+	if (end == INT16_MAX || start >= end)
 	{
 		CONS_Debug(DBG_SETUP, "no sprites in pwad %d\n", wadnum);
 		return;
@@ -465,7 +492,6 @@ UINT32 visspritecount;
 static UINT32 clippedvissprites;
 static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL};
 
-
 //
 // R_InitSprites
 // Called at program start.
@@ -473,11 +499,23 @@ static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL
 void R_InitSprites(void)
 {
 	size_t i;
+#ifdef ROTSPRITE
+	INT32 angle, realangle = 0;
+	float fa;
+#endif
 
 	for (i = 0; i < MAXVIDWIDTH; i++)
-	{
 		negonearray[i] = -1;
+
+#ifdef ROTSPRITE
+	for (angle = 0; angle < ROTANGLES; angle++)
+	{
+		fa = ANG2RAD(FixedAngle(realangle<<FRACBITS));
+		cosang2rad[angle] = FLOAT_TO_FIXED(cos(-fa));
+		sinang2rad[angle] = FLOAT_TO_FIXED(sin(-fa));
+		realangle += ROTANGDIFF;
 	}
+#endif
 
 	//
 	// count the number of sprite names, and allocate sprites table
@@ -505,6 +543,7 @@ void R_InitSprites(void)
 	{
 		R_AddSkins((UINT16)i);
 		R_PatchSkins((UINT16)i);
+		R_LoadSpriteInfoLumps(i, wadfiles[i]->numlumps);
 	}
 	ST_ReloadSkinFaceGraphics();
 
@@ -717,7 +756,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	INT32 texturecolumn;
 #endif
 	fixed_t frac;
-	patch_t *patch = W_CachePatchNum(vis->patch, PU_CACHE);
+	patch_t *patch = vis->patch;
 	fixed_t this_scale = vis->mobj->scale;
 	INT32 x1, x2;
 	INT64 overflow_test;
@@ -906,7 +945,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	INT64 overflow_test;
 
 	//Fab : R_InitSprites now sets a wad lump number
-	patch = W_CachePatchNum(vis->patch, PU_CACHE);
+	patch = vis->patch;
 	if (!patch)
 		return;
 
@@ -1043,6 +1082,8 @@ static void R_SplitSprite(vissprite_t *sprite)
 	}
 }
 
+//#define PROPERPAPER // This was reverted less than 7 hours before 2.2's release because of very strange, frequent crashes.
+
 //
 // R_ProjectSprite
 // Generates a vissprite for a thing
@@ -1060,6 +1101,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
+#ifdef ROTSPRITE
+	spriteinfo_t *sprinfo;
+#endif
 	size_t lump;
 
 	size_t rot;
@@ -1086,7 +1130,18 @@ static void R_ProjectSprite(mobj_t *thing)
 	INT32 light = 0;
 	fixed_t this_scale = thing->scale;
 
+	// rotsprite
+	fixed_t spr_width, spr_height;
+	fixed_t spr_offset, spr_topoffset;
+#ifdef ROTSPRITE
+	patch_t *rotsprite = NULL;
+	angle_t arollangle = thing->rollangle;
+	UINT32 rollangle = AngleFixed(arollangle)>>FRACBITS;
+#endif
+
+#ifndef PROPERPAPER
 	fixed_t ang_scale = FRACUNIT;
+#endif
 
 	// transform the origin point
 	tr_x = thing->x - viewx;
@@ -1125,29 +1180,40 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
 		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+#ifdef ROTSPRITE
+		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
+#endif
 		if (rot >= sprdef->numframes) {
 			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(rot));
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
+#ifdef ROTSPRITE
+			sprinfo = NULL;
+#endif
 			rot = thing->frame&FF_FRAMEMASK;
 		}
 	}
 	else
-		sprdef = &sprites[thing->sprite];
-
-	if (rot >= sprdef->numframes)
 	{
-		CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
-			sizeu1(rot), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
-		thing->sprite = states[S_UNKNOWN].sprite;
-		thing->frame = states[S_UNKNOWN].frame;
 		sprdef = &sprites[thing->sprite];
-		rot = thing->frame&FF_FRAMEMASK;
-		if (!thing->skin)
+#ifdef ROTSPRITE
+		sprinfo = NULL;
+#endif
+
+		if (rot >= sprdef->numframes)
 		{
-			thing->state->sprite = thing->sprite;
-			thing->state->frame = thing->frame;
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
+				sizeu1(rot), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
+			if (thing->sprite == thing->state->sprite && thing->frame == thing->state->frame)
+			{
+				thing->state->sprite = states[S_UNKNOWN].sprite;
+				thing->state->frame = states[S_UNKNOWN].frame;
+			}
+			thing->sprite = states[S_UNKNOWN].sprite;
+			thing->frame = states[S_UNKNOWN].frame;
+			sprdef = &sprites[thing->sprite];
+			rot = thing->frame&FF_FRAMEMASK;
 		}
 	}
 
@@ -1161,8 +1227,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (sprframe->rotate != SRF_SINGLE || papersprite)
 	{
 		ang = R_PointToAngle (thing->x, thing->y) - (thing->player ? thing->player->drawangle : thing->angle);
+#ifndef PROPERPAPER
 		if (papersprite)
 			ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
+#endif
 	}
 
 	if (sprframe->rotate == SRF_SINGLE)
@@ -1194,30 +1262,61 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		this_scale = FixedMul(this_scale, ((skin_t *)thing->skin)->highresscale);
 
+	spr_width = spritecachedinfo[lump].width;
+	spr_height = spritecachedinfo[lump].height;
+	spr_offset = spritecachedinfo[lump].offset;
+	spr_topoffset = spritecachedinfo[lump].topoffset;
+
+#ifdef ROTSPRITE
+	if (rollangle > 0)
+	{
+		if (!sprframe->rotsprite.cached[rot])
+			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
+		rollangle /= ROTANGDIFF;
+		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
+		if (rotsprite != NULL)
+		{
+			spr_width = rotsprite->width << FRACBITS;
+			spr_height = rotsprite->height << FRACBITS;
+			spr_offset = rotsprite->leftoffset << FRACBITS;
+			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			// flip -> rotate, not rotate -> flip
+			flip = 0;
+		}
+	}
+#endif
+
 	// calculate edges of the shape
 	if (flip)
-		offset = spritecachedinfo[lump].offset - spritecachedinfo[lump].width;
+		offset = spr_offset - spr_width;
 	else
-		offset = -spritecachedinfo[lump].offset;
+		offset = -spr_offset;
 	offset = FixedMul(offset, this_scale);
+#ifndef PROPERPAPER
 	tx += FixedMul(offset, ang_scale);
 	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
 
 	// off the right side?
 	if (x1 > viewwidth)
 		return;
-
-	offset2 = FixedMul(spritecachedinfo[lump].width, this_scale);
+#endif
+	offset2 = FixedMul(spr_width, this_scale);
+#ifndef PROPERPAPER
 	tx += FixedMul(offset2, ang_scale);
 	x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - (papersprite ? 2 : 1);
 
 	// off the left side
 	if (x2 < 0)
 		return;
+#endif
 
 	if (papersprite)
 	{
-		fixed_t yscale2, cosmul, sinmul, tz2;
+		fixed_t
+#ifdef PROPERPAPER
+			xscale2,
+#endif
+					yscale2, cosmul, sinmul, tz2;
 		INT32 range;
 
 		if (ang >= ANGLE_180)
@@ -1237,6 +1336,18 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale = FixedDiv(projectiony, tz);
 		if (yscale < 64) return; // Fix some funky visuals
 
+#ifdef PROPERPAPER
+		gxt = -FixedMul(tr_x, viewsin);
+		gyt = FixedMul(tr_y, viewcos);
+		tx = -(gyt + gxt);
+		xscale = FixedDiv(projection, tz);
+		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
+
+		// off the right side?
+		if (x1 > viewwidth)
+			return;
+#endif
+
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
 		gxt = FixedMul(tr_x, viewcos);
@@ -1245,15 +1356,36 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale2 = FixedDiv(projectiony, tz2);
 		if (yscale2 < 64) return; // ditto
 
+#ifdef PROPERPAPER
+		gxt = -FixedMul(tr_x, viewsin);
+		gyt = FixedMul(tr_y, viewcos);
+		tx = -(gyt + gxt);
+		xscale2 = FixedDiv(projection, tz2);
+		x2 = (centerxfrac + FixedMul(tx,xscale2))>>FRACBITS; x2--;
+
+		// off the left side
+		if (x2 < 0)
+			return;
+#endif
+
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
 
-		if (x2 > x1)
-			range = (x2 - x1);
-		else
-			range = 1;
+		if ((range = x2 - x1) <= 0)
+			return;
 
-		scalestep = (yscale2 - yscale)/range ?: 1;
+#ifdef PROPERPAPER
+		range++; // fencepost problem
+#endif
+
+		scalestep = (yscale2 - yscale)/range;
+		xscale =
+#ifdef PROPERPAPER
+		FixedDiv(range<<FRACBITS, abs(offset2))+1
+#else
+		FixedMul(xscale, ang_scale)
+#endif
+		;
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -1263,9 +1395,22 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		scalestep = 0;
 		yscale = sortscale;
-	}
+#ifdef PROPERPAPER
+		tx += offset;
+		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
-	xscale = FixedMul(xscale, ang_scale);
+		// off the right side?
+		if (x1 > viewwidth)
+			return;
+
+		tx += offset2;
+		x2 = ((centerxfrac + FixedMul(tx,xscale))>>FRACBITS); x2--;
+
+		// off the left side
+		if (x2 < 0)
+			return;
+#endif
+	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
 	{
@@ -1309,13 +1454,13 @@ static void R_ProjectSprite(mobj_t *thing)
 		// When vertical flipped, draw sprites from the top down, at least as far as offsets are concerned.
 		// sprite height - sprite topoffset is the proper inverse of the vertical offset, of course.
 		// remember gz and gzt should be seperated by sprite height, not thing height - thing height can be shorter than the sprite itself sometimes!
-		gz = oldthing->z + oldthing->height - FixedMul(spritecachedinfo[lump].topoffset, this_scale);
-		gzt = gz + FixedMul(spritecachedinfo[lump].height, this_scale);
+		gz = oldthing->z + oldthing->height - FixedMul(spr_topoffset, this_scale);
+		gzt = gz + FixedMul(spr_height, this_scale);
 	}
 	else
 	{
-		gzt = oldthing->z + FixedMul(spritecachedinfo[lump].topoffset, this_scale);
-		gz = gzt - FixedMul(spritecachedinfo[lump].height, this_scale);
+		gzt = oldthing->z + FixedMul(spr_topoffset, this_scale);
+		gz = gzt - FixedMul(spr_height, this_scale);
 	}
 
 	if (thing->subsector->sector->cullheight)
@@ -1414,7 +1559,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (flip)
 	{
-		vis->startfrac = spritecachedinfo[lump].width-1;
+		vis->startfrac = spr_width-1;
 		vis->xiscale = -iscale;
 	}
 	else
@@ -1431,7 +1576,12 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
-	vis->patch = sprframe->lumppat[rot];
+#ifdef ROTSPRITE
+	if (rotsprite != NULL)
+		vis->patch = rotsprite;
+	else
+#endif
+		vis->patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 
 //
 // determine the colormap (lightlevel & special effects)
@@ -1623,7 +1773,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
-	vis->patch = sprframe->lumppat[0];
+	vis->patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)
@@ -2801,7 +2951,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		if (player->mo)
 		{
 			fixed_t radius = FixedMul(skin->radius, player->mo->scale);
-			if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+			if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NFLY].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 			{
 				skin = &skins[DEFAULTNIGHTSSKIN];
 				player->followitem = skin->followitem;
@@ -3164,8 +3314,6 @@ void R_AddSkins(UINT16 wadnum)
 				skin->availability = atoi(value);
 				if (skin->availability >= MAXUNLOCKABLES)
 					skin->availability = 0;
-				if (skin->availability)
-					STRBUFCPY(unlockables[skin->availability - 1].name, skin->realname);
 			}
 			else if (!R_ProcessPatchableFields(skin, stoken, value))
 				CONS_Debug(DBG_SETUP, "R_AddSkins: Unknown keyword '%s' in S_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);

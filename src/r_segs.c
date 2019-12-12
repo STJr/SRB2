@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2694,7 +2694,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	worldbottomslope >>= 4;
 #endif
 
-	if (linedef->special == 41) { // HORIZON LINES
+	if (linedef->special == HORIZONSPECIAL) { // HORIZON LINES
 		topstep = bottomstep = 0;
 		topfrac = bottomfrac = (centeryfrac>>4);
 		topfrac++; // Prevent 1px HOM
@@ -2825,7 +2825,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			ffloor[i].f_pos_slope >>= 4;
 #endif
-			if (linedef->special == 41) // Horizon lines extend FOFs in contact with them too.
+			if (linedef->special == HORIZONSPECIAL) // Horizon lines extend FOFs in contact with them too.
 			{
 				ffloor[i].f_step = 0;
 				ffloor[i].f_frac = (centeryfrac>>4);

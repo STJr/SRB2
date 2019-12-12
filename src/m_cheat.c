@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -70,7 +70,6 @@ static UINT8 cheatf_ultimate(void)
 	return 1;
 }
 
-#ifdef REDXVI
 static UINT8 cheatf_warp(void)
 {
 	if (modifiedgame)
@@ -83,16 +82,15 @@ static UINT8 cheatf_warp(void)
 
 	// Temporarily unlock stuff.
 	G_SetGameModified(false);
-	unlockables[2].unlocked = true; // credits
-	unlockables[3].unlocked = true; // sound test
-	unlockables[16].unlocked = true; // level select
+	unlockables[31].unlocked = true; // credits
+	unlockables[30].unlocked = true; // sound test
+	unlockables[28].unlocked = true; // level select
 
 	// Refresh secrets menu existing.
 	M_ClearMenus(true);
 	M_StartControlPanel();
 	return 1;
 }
-#endif
 
 #ifdef DEVELOP
 static UINT8 cheatf_devmode(void)
@@ -133,20 +131,18 @@ static cheatseq_t cheat_ultimate_joy = {
 	  SCRAMBLE(KEY_ENTER), 0xff }
 };
 
-#ifdef REDXVI
 static cheatseq_t cheat_warp = {
 	0, cheatf_warp,
-	{ SCRAMBLE('r'), SCRAMBLE('e'), SCRAMBLE('d'), SCRAMBLE('x'), SCRAMBLE('v'), SCRAMBLE('i'), 0xff }
+	{ SCRAMBLE('c'), SCRAMBLE('a'), SCRAMBLE('s'), SCRAMBLE('h'), SCRAMBLE('r'), SCRAMBLE('i'), SCRAMBLE('d'), SCRAMBLE('a'), 0xff }
 };
 
 static cheatseq_t cheat_warp_joy = {
 	0, cheatf_warp,
-	{ SCRAMBLE(KEY_LEFTARROW), SCRAMBLE(KEY_LEFTARROW), SCRAMBLE(KEY_UPARROW),
-	  SCRAMBLE(KEY_RIGHTARROW), SCRAMBLE(KEY_RIGHTARROW), SCRAMBLE(KEY_UPARROW),
-	  SCRAMBLE(KEY_LEFTARROW), SCRAMBLE(KEY_UPARROW),
+	{ SCRAMBLE(KEY_RIGHTARROW), SCRAMBLE(KEY_RIGHTARROW), SCRAMBLE(KEY_DOWNARROW),
+	  SCRAMBLE(KEY_LEFTARROW), SCRAMBLE(KEY_LEFTARROW), SCRAMBLE(KEY_DOWNARROW),
+	  SCRAMBLE(KEY_RIGHTARROW), SCRAMBLE(KEY_DOWNARROW),
 	  SCRAMBLE(KEY_ENTER), 0xff }
 };
-#endif
 
 #ifdef DEVELOP
 static cheatseq_t cheat_devmode = {
@@ -239,10 +235,8 @@ boolean cht_Responder(event_t *ev)
 
 	ret += cht_CheckCheat(&cheat_ultimate, (char)ch);
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);
-#ifdef REDXVI
 	ret += cht_CheckCheat(&cheat_warp, (char)ch);
 	ret += cht_CheckCheat(&cheat_warp_joy, (char)ch);
-#endif
 #ifdef DEVELOP
 	ret += cht_CheckCheat(&cheat_devmode, (char)ch);
 #endif

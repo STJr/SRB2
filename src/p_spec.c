@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2737,6 +2737,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (line->tag != 0) // Do special stuff only if a non-zero linedef tag is set
 				{
+					// Play sounds from tagged sectors' origins.
 					if (line->flags & ML_EFFECT5) // Repeat Midtexture
 					{
 						// Additionally play the sound from tagged sectors' soundorgs
@@ -2748,31 +2749,45 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							S_StartSound(&sec->soundorg, sfxnum);
 						}
 					}
-					else if (mo) // A mobj must have triggered the executor
+
+					// Play the sound without origin for anyone, as long as they're inside tagged areas.
+					else
 					{
-						// Only trigger if mobj is touching the tag
+						UINT8 i = 0;
+						mobj_t* camobj = players[displayplayer].mo;
 						ffloor_t *rover;
 						boolean foundit = false;
 
-						for(rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+						for (i = 0; i < 2; camobj = players[secondarydisplayplayer].mo, i++)
 						{
-							if (rover->master->frontsector->tag != line->tag)
+							if (!camobj)
 								continue;
 
-							if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
-								continue;
+							if (foundit || (camobj->subsector->sector->tag == line->tag))
+							{
+								foundit = true;
+								break;
+							}
 
-							if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
-								continue;
+							// Only trigger if mobj is touching the tag
+							for(rover = camobj->subsector->sector->ffloors; rover; rover = rover->next)
+							{
+								if (rover->master->frontsector->tag != line->tag)
+									continue;
 
-							foundit = true;
+								if (camobj->z > P_GetSpecialTopZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+									continue;
+
+								if (camobj->z + camobj->height < P_GetSpecialBottomZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+									continue;
+
+								foundit = true;
+								break;
+							}
 						}
 
-						if (mo->subsector->sector->tag == line->tag)
-							foundit = true;
-
-						if (!foundit)
-							return;
+						if (foundit)
+							S_StartSound(NULL, sfxnum);
 					}
 				}
 				else
@@ -4014,6 +4029,24 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 462: // Stop clock (and end level in record attack)
+			if (G_PlatformGametype())
+			{
+				stoppedclock = true;
+				CONS_Debug(DBG_GAMELOGIC, "Clock stopped!\n");
+				if (modeattacking)
+				{
+					UINT8 i;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+						P_DoPlayerExit(&players[i]);
+					}
+				}
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
@@ -4070,8 +4103,10 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
-		if (!player->mo->target || player->mo->target->type != MT_SIGN)
-			P_SetTarget(&player->mo->target, thing);
+		if (!numfound
+			&& !(player->mo->target && player->mo->target->type == MT_SIGN)
+			&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value))
+				P_SetTarget(&player->mo->target, thing);
 
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
@@ -4099,8 +4134,10 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
-		if (!player->mo->target || player->mo->target->type != MT_SIGN)
-			P_SetTarget(&player->mo->target, thing);
+		if (!numfound
+			&& !(player->mo->target && player->mo->target->type == MT_SIGN)
+			&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value))
+				P_SetTarget(&player->mo->target, thing);
 
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
@@ -4437,59 +4474,55 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 3: // Linedef executor requires all players present
 			/// \todo check continues for proper splitscreen support?
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || players[i].lives > 0))
+			{
+				if (!playeringame[i])
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (players[i].bot)
+					continue;
+				if (gametype == GT_COOP && players[i].lives <= 0)
+					continue;
+				if (roversector)
 				{
-					if (roversector)
+					if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
 					{
-						if (players[i].mo->subsector->sector == roversector)
-							;
-						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						msecnode_t *node;
+						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 						{
-							boolean insector = false;
-							msecnode_t *node;
-							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-							{
-								if (node->m_sector == roversector)
-								{
-									insector = true;
-									break;
-								}
-							}
-							if (!insector)
-								goto DoneSection2;
+							if (P_ThingIsOnThe3DFloor(players[i].mo, sector, node->m_sector))
+								break;
 						}
-						else
+						if (!node)
 							goto DoneSection2;
-
-						if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
+					}
+					else if (players[i].mo->subsector && !P_ThingIsOnThe3DFloor(players[i].mo, sector, players[i].mo->subsector->sector)) // this function handles basically everything for us lmao
+						goto DoneSection2;
+				}
+				else
+				{
+					if (players[i].mo->subsector->sector == sector)
+						;
+					else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+					{
+						msecnode_t *node;
+						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+						{
+							if (node->m_sector == sector)
+								break;
+						}
+						if (!node)
 							goto DoneSection2;
 					}
 					else
-					{
-						if (players[i].mo->subsector->sector == sector)
-							;
-						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
-						{
-							boolean insector = false;
-							msecnode_t *node;
-							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-							{
-								if (node->m_sector == sector)
-								{
-									insector = true;
-									break;
-								}
-							}
-							if (!insector)
-								goto DoneSection2;
-						}
-						else
-							goto DoneSection2;
+						goto DoneSection2;
 
-						if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
-							goto DoneSection2;
-					}
+					if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
+						goto DoneSection2;
 				}
+			}
 			/* FALLTHRU */
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
@@ -4537,7 +4570,11 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 			// Mark all players with the time to exit thingy!
 			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
 				P_DoPlayerExit(&players[i]);
+			}
 			break;
 		}
 		case 10: // Special Stage Time/Rings
@@ -4657,7 +4694,7 @@ DoneSection2:
 		}
 
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
-			if (player->bot)
+			if (player->bot || !G_PlatformGametype())
 				break;
 			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
 			{
@@ -4669,7 +4706,7 @@ DoneSection2:
 			{
 				INT32 lineindex;
 
-				P_DoPlayerExit(player);
+				P_DoPlayerFinish(player);
 
 				P_SetupSignExit(player);
 				// important: use sector->tag on next line instead of player->mo->subsector->tag
@@ -6411,6 +6448,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 	// yep, we do this here - "bossdisabled" is considered an apparatus of specials.
 	bossdisabled = 0;
+	stoppedclock = false;
 
 	// Init special SECTORs.
 	sector = sectors;
