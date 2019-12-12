@@ -6536,23 +6536,6 @@ static void HWR_FoggingOn(void)
 //                                                         3D ENGINE COMMANDS
 // ==========================================================================
 
-static void Command_GrStats_f(void)
-{
-	Z_CheckHeap(9875); // debug
-
-	CONS_Printf(M_GetText("Patch info headers: %7s kb\n"), sizeu1(Z_TagUsage(PU_HWRPATCHINFO)>>10));
-	CONS_Printf(M_GetText("3D Texture cache  : %7s kb\n"), sizeu1(Z_TagUsage(PU_HWRCACHE)>>10));
-	CONS_Printf(M_GetText("Plane polygon     : %7s kb\n"), sizeu1(Z_TagUsage(PU_HWRPLANE)>>10));
-}
-
-
-// **************************************************************************
-//                                                            3D ENGINE SETUP
-// **************************************************************************
-
-// --------------------------------------------------------------------------
-// Add hardware engine commands & consvars
-// --------------------------------------------------------------------------
 static CV_PossibleValue_t grsoftwarefog_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "LightPlanes"}, {0, NULL}};
 static CV_PossibleValue_t grmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
 
@@ -6653,17 +6636,10 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_grrounddown);
 	CV_RegisterVar(&cv_grcorrecttricks);
 	CV_RegisterVar(&cv_grsolvetjoin);
-}
 
-static inline void HWR_AddEngineCommands(void)
-{
-	// engine state variables
 #ifndef NEWCLIP
 	CV_RegisterVar(&cv_grclipwalls);
 #endif
-
-	// engine commands
-	COM_AddCommand("gr_stats", Command_GrStats_f);
 }
 
 
@@ -6686,12 +6662,8 @@ void HWR_Startup(void)
 	{
 		CONS_Printf("HWR_Startup()...\n");
 		HWR_InitPolyPool();
-		// add console cmds & vars
-		HWR_AddEngineCommands();
 		HWR_InitTextureCache();
-
 		HWR_InitModels();
-
 #ifdef ALAM_LIGHTING
 		HWR_InitLight();
 #endif
