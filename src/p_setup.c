@@ -495,6 +495,7 @@ static inline void P_LoadRawSubsectors(void *data)
 
 size_t numlevelflats;
 levelflat_t *levelflats;
+levelflat_t *foundflats;
 
 //SoM: Other files want this info.
 size_t P_PrecacheLevelFlats(void)
@@ -659,16 +660,7 @@ static void P_LoadRawSectors(UINT8 *data)
 {
 	mapsector_t *ms = (mapsector_t *)data;
 	sector_t *ss = sectors;
-	levelflat_t *foundflats;
 	size_t i;
-
-	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
-	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
-	foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
-	if (foundflats == NULL)
-		I_Error("Ran out of memory while loading sectors\n");
-
-	numlevelflats = 0;
 
 	// For each counted sector, copy the sector raw data from our cache pointer ms, to the global table pointer ss.
 	for (i = 0; i < numsectors; i++, ss++, ms++)
@@ -740,16 +732,6 @@ static void P_LoadRawSectors(UINT8 *data)
 		ss->lineoutLength = -1.0l;
 #endif // ----- end special tricks -----
 	}
-
-	// set the sky flat num
-	skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
-
-	// copy table for global usage
-	levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
-	free(foundflats);
-
-	// search for animated flats and set up
-	P_SetupLevelFlatAnims();
 }
 
 //
@@ -1470,7 +1452,6 @@ static void P_LoadRawSideDefs2(void *data)
 				break;
 		}
 	}
-	R_ClearTextureNumCache(true);
 }
 
 static boolean LineInBlock(fixed_t cx1, fixed_t cy1, fixed_t cx2, fixed_t cy2, fixed_t bx1, fixed_t by1)
@@ -2275,6 +2256,14 @@ static void LoadMapData (const virtres_t* virt)
 	lines    = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
 	mapthings= Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
 
+	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
+	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
+	foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
+	if (foundflats == NULL)
+		I_Error("Ran out of memory while loading sectors\n");
+
+	numlevelflats = 0;
+
 #ifdef UDMF
 	if (textmap)
 	{
@@ -2289,7 +2278,18 @@ static void LoadMapData (const virtres_t* virt)
 		P_LoadRawLineDefs(virtlinedefs->data);
 		SetupLines();
 		P_LoadRawSideDefs2(virtsidedefs->data);
+		R_ClearTextureNumCache(true);
 	}
+
+	// set the sky flat num
+	skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
+
+	// copy table for global usage
+	levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
+	free(foundflats);
+
+	// search for animated flats and set up
+	P_SetupLevelFlatAnims();
 }
 
 #if 0
