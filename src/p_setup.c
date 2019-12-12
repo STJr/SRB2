@@ -373,21 +373,11 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade)
   * \sa ML_VERTEXES
   */
 
-static inline void P_LoadRawVertexes(UINT8 *data, size_t i)
+static inline void P_LoadRawVertexes(UINT8 *data)
 {
-	mapvertex_t *ml;
-	vertex_t *li;
-
-	numvertexes = i / sizeof (mapvertex_t);
-
-	if (numvertexes <= 0)
-		I_Error("Level has no vertices"); // instead of crashing
-
-	// Allocate zone memory for buffer.
-	vertexes = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
-
-	ml = (mapvertex_t *)data;
-	li = vertexes;
+	mapvertex_t *ml = (mapvertex_t *)data;
+	vertex_t *li = vertexes;
+	size_t i;
 
 	// Copy and convert vertex coordinates, internal representation as fixed.
 	for (i = 0; i < numvertexes; i++, li++, ml++)
@@ -677,19 +667,12 @@ INT32 P_CheckLevelFlat(const char *flatname)
 
 // Sets up the ingame sectors structures.
 // Lumpnum is the lumpnum of a SECTORS lump.
-static void P_LoadRawSectors(UINT8 *data, size_t i)
+static void P_LoadRawSectors(UINT8 *data)
 {
-	mapsector_t *ms;
-	sector_t *ss;
+	mapsector_t *ms = (mapsector_t *)data;
+	sector_t *ss = sectors;
 	levelflat_t *foundflats;
-
-	// We count how many sectors we got.
-	numsectors = i / sizeof (mapsector_t);
-	if (numsectors <= 0)
-		I_Error("Level has no sectors");
-
-	// Allocate as much memory as we need into the global sectors table.
-	sectors = Z_Calloc(numsectors*sizeof (*sectors), PU_LEVEL, NULL);
+	size_t i;
 
 	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
 	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
@@ -700,8 +683,6 @@ static void P_LoadRawSectors(UINT8 *data, size_t i)
 	numlevelflats = 0;
 
 	// For each counted sector, copy the sector raw data from our cache pointer ms, to the global table pointer ss.
-	ms = (mapsector_t *)data;
-	ss = sectors;
 	for (i = 0; i < numsectors; i++, ss++, ms++)
 	{
 		ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
@@ -1150,32 +1131,45 @@ void P_WriteThings(lumpnum_t lumpnum)
 	CONS_Printf(M_GetText("newthings%d.lmp saved.\n"), gamemap);
 }
 
-static void P_LoadRawLineDefs(UINT8 *data, size_t i)
+static void P_LoadRawLineDefs(UINT8 *data)
 {
-	maplinedef_t *mld;
-	line_t *ld;
-	vertex_t *v1, *v2;
+	maplinedef_t *mld = (maplinedef_t *)data;
+	line_t *ld = lines;
+	size_t i;
 
-	numlines = i / sizeof (maplinedef_t);
-	if (numlines <= 0)
-		I_Error("Level has no linedefs");
-	lines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
-
-	mld = (maplinedef_t *)data;
-	ld = lines;
 	for (i = 0; i < numlines; i++, mld++, ld++)
 	{
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
-		v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
-		v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
-		ld->dx = v2->x - v1->x;
-		ld->dy = v2->y - v1->y;
+		ld->v1 = &vertexes[SHORT(mld->v1)];
+		ld->v2 = &vertexes[SHORT(mld->v2)];
+
+		ld->sidenum[0] = SHORT(mld->sidenum[0]);
+		ld->sidenum[1] = SHORT(mld->sidenum[1]);
+	}
+}
+
+static void SetupLines (void)
+{
+	line_t *ld = lines;
+	size_t i;
+
+	for (i = 0; i < numlines; i++, ld++)
+	{
+		vertex_t *v1 = ld->v1;
+		vertex_t *v2 = ld->v2;
 
 #ifdef WALLSPLATS
 		ld->splats = NULL;
 #endif
+
+#ifdef POLYOBJECTS
+		ld->polyobj = NULL;
+#endif
+
+		ld->dx = v2->x - v1->x;
+		ld->dy = v2->y - v1->y;
 
 		if (!ld->dx)
 			ld->slopetype = ST_VERTICAL;
@@ -1208,52 +1202,43 @@ static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 			ld->bbox[BOXTOP] = v1->y;
 		}
 
-		ld->sidenum[0] = SHORT(mld->sidenum[0]);
-		ld->sidenum[1] = SHORT(mld->sidenum[1]);
-
 		{
 			// cph 2006/09/30 - fix sidedef errors right away.
 			// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
 			UINT8 j;
 
 			for (j=0; j < 2; j++)
-			{
 				if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
 				{
 					ld->sidenum[j] = 0xffff;
 					CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
 				}
-			}
 		}
 
 		ld->frontsector = ld->backsector = NULL;
 		ld->validcount = 0;
 		ld->firsttag = ld->nexttag = -1;
 		ld->callcount = 0;
-		// killough 11/98: fix common wad errors (missing sidedefs):
 
+		// killough 11/98: fix common wad errors (missing sidedefs):
 		if (ld->sidenum[0] == 0xffff)
 		{
 			ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
 			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s missing first sidedef\n", sizeu1(numlines-i-1));
+			CONS_Debug(DBG_SETUP, "Linedef %s missing first sidedef\n", sizeu1(numlines-i-1));
 		}
 
 		if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
 		{
 			ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
 			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
+			CONS_Debug(DBG_SETUP, "Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
 		}
 
 		if (ld->sidenum[0] != 0xffff && ld->special)
 			sides[ld->sidenum[0]].special = ld->special;
 		if (ld->sidenum[1] != 0xffff && ld->special)
 			sides[ld->sidenum[1]].special = ld->special;
-
-#ifdef POLYOBJECTS
-		ld->polyobj = NULL;
-#endif
 	}
 }
 
@@ -1357,16 +1342,6 @@ static void P_LoadLineDefs2(void)
 		sides = newsides;
 		numsides = numnewsides;
 	}
-}
-
-
-
-static inline void P_LoadRawSideDefs(size_t i)
-{
-	numsides = i / sizeof (mapsidedef_t);
-	if (numsides <= 0)
-		I_Error("Level has no sidedefs");
-	sides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
 }
 
 static void P_LoadRawSideDefs2(void *data)
@@ -2697,6 +2672,23 @@ boolean P_SetupLevel(boolean skipprecip)
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
 
+	numdmstarts = numredctfstarts = numbluectfstarts = 0;
+
+	// reset the player starts
+	for (i = 0; i < MAXPLAYERS; i++)
+		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+	for (i = 0; i < MAX_DM_STARTS; i++)
+		deathmatchstarts[i] = NULL;
+
+	for (i = 0; i < 2; i++)
+		skyboxmo[i] = NULL;
+
+	for (i = 0; i < 16; i++)
+		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+
+	P_MapStart();
+
 	if (lastloadedmaplumpnum)
 	{
 		virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
@@ -2713,17 +2705,41 @@ boolean P_SetupLevel(boolean skipprecip)
 		virtlump_t* virtblockmap = vres_Find(virt, "BLOCKMAP");
 		virtlump_t* virtreject   = vres_Find(virt, "REJECT");
 
-		P_MakeMapMD5(virt, &mapmd5);
+		// Traditional doom map format just assumes the number of elements from the lump sixes.
+		numvertexes  = virtvertexes->size / sizeof (mapvertex_t);
+		numsectors   = virtsectors->size  / sizeof (mapsector_t);
+		numsides     = virtsidedefs->size / sizeof (mapsidedef_t);
+		numlines     = virtlinedefs->size / sizeof (maplinedef_t);
+		nummapthings = virtthings->size   / (5 * sizeof (INT16));
 
-		P_LoadRawVertexes(virtvertexes->data, virtvertexes->size);
-		P_LoadRawSectors(virtsectors->data, virtsectors->size);
-		P_LoadRawSideDefs(virtsidedefs->size);
-		P_LoadRawLineDefs(virtlinedefs->data, virtlinedefs->size);
+		if (numvertexes <= 0)
+			I_Error("Level has no vertices");
+		if (numsectors <= 0)
+			I_Error("Level has no sectors");
+		if (numsides <= 0)
+			I_Error("Level has no sidedefs");
+		if (numlines <= 0)
+			I_Error("Level has no linedefs");
+
+		vertexes = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
+		sectors  = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
+		sides    = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
+		lines    = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+		mapthings= Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+
+		// Strict map data
+		P_LoadRawVertexes(virtvertexes->data);
+		P_LoadRawSectors(virtsectors->data);
+		P_LoadRawLineDefs(virtlinedefs->data);
+		SetupLines();
 		P_LoadRawSideDefs2(virtsidedefs->data);
+
+		// Nodes
 		P_LoadRawSubsectors(virtssectors->data, virtssectors->size);
 		P_LoadRawNodes(virtnodes->data, virtnodes->size);
 		P_LoadRawSegs(virtsegs->data, virtsegs->size);
 
+		// Lookup tables
 		if (virtreject)
 			P_LoadRawReject(virtreject->data, virtreject->size);
 		else
@@ -2735,24 +2751,9 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_LoadLineDefs2();
 		P_GroupLines();
 
-		numdmstarts = numredctfstarts = numbluectfstarts = 0;
-
-		// reset the player starts
-		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
-
-		for (i = 0; i < MAX_DM_STARTS; i++)
-			deathmatchstarts[i] = NULL;
-
-		for (i = 0; i < 2; i++)
-			skyboxmo[i] = NULL;
-
-		for (i = 0; i < 16; i++)
-			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
-
-		P_MapStart();
-
 		P_PrepareRawThings(virtthings->data, virtthings->size);
+
+		P_MakeMapMD5(virt, &mapmd5);
 
 		vres_Free(virt);
 	}
