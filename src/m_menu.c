@@ -4256,7 +4256,7 @@ const char *PlaystyleDesc[4] = {
 	"and acts in the direction\n"
 	"they're moving.\n"
 	"\n"
-	"Hold \x82Center View\x80 to lock the\n"
+	"Hold \x82" "Center View\x80 to lock the\n"
 	"camera behind the player!\n"
 	,
 
