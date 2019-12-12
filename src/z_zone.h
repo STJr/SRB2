@@ -46,6 +46,7 @@ enum
 
 	PU_HWRPATCHINFO          = 21, // Hardware GLPatch_t struct for OpenGL texture cache
 	PU_HWRPATCHCOLMIPMAP     = 22, // Hardware GLMipmap_t struct colormap variation of patch
+	PU_HWRMODELTEXTURE       = 23, // Hardware model texture
 
 	PU_HWRCACHE              = 48, // static until unlocked
 	PU_CACHE                 = 49, // static until unlocked
