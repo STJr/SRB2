@@ -229,13 +229,11 @@ SDL_bool framebuffer = SDL_FALSE;
 
 UINT8 keyboard_started = false;
 
-FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
+void I_ReportSignal(int num, int coredumped)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
 	const char *      sigmsg;
-	char        sigdef[32];
-
-	D_QuitNetGame(); // Fix server freezes
+	char msg[128];
 
 	switch (num)
 	{
@@ -261,8 +259,21 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 		sigmsg = "SIGABRT - abnormal termination triggered by abort call";
 		break;
 	default:
-		sprintf(sigdef,"signal number %d", num);
-		sigmsg = sigdef;
+		sprintf(msg,"signal number %d", num);
+		if (coredumped)
+			sigmsg = 0;
+		else
+			sigmsg = msg;
+	}
+
+	if (coredumped)
+	{
+		if (sigmsg)
+			sprintf(msg, "%s (core dumped)", sigmsg);
+		else
+			strcat(msg, " (core dumped)");
+
+		sigmsg = msg;
 	}
 
 	I_OutputMsg("\nsignal_handler() error: %s\n", sigmsg);
@@ -270,11 +281,19 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
 		"Signal caught",
 		sigmsg, NULL);
+}
+
+#ifndef NEWSIGNALHANDLER
+FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
+{
+	D_QuitNetGame(); // Fix server freezes
+	I_ReportSignal(num, 0);
 	I_ShutdownSystem();
 	signal(num, SIG_DFL);               //default signal action
 	raise(num);
 	I_Quit();
 }
+#endif
 
 FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 {
@@ -664,10 +683,12 @@ void I_StartupKeyboard (void)
 
 	// If these defines don't exist,
 	// then compilation would have failed above us...
+#ifndef NEWSIGNALHANDLER
 	signal(SIGILL , signal_handler);
 	signal(SIGSEGV , signal_handler);
 	signal(SIGABRT , signal_handler);
 	signal(SIGFPE , signal_handler);
+#endif
 }
 
 //
