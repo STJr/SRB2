@@ -1963,6 +1963,7 @@ static void LoadMapLUT (const virtres_t* virt)
 static void LoadMapData (const virtres_t* virt)
 {
 	virtlump_t* virtvertexes = NULL, * virtsectors = NULL, * virtsidedefs = NULL, * virtlinedefs = NULL, * virtthings = NULL;
+#ifdef UDMF
 	virtlump_t* textmap = vres_Find(virt, "TEXTMAP");
 
 	// Count map data.
@@ -1978,6 +1979,7 @@ static void LoadMapData (const virtres_t* virt)
 		//TextmapCount(vtextmap->data, vtextmap->size);
 	}
 	else
+#endif
 	{
 		virtthings   = vres_Find(virt, "THINGS");
 		virtvertexes = vres_Find(virt, "VERTEXES");
@@ -2008,11 +2010,13 @@ static void LoadMapData (const virtres_t* virt)
 	lines    = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
 	mapthings= Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
 
+#ifdef UDMF
 	if (textmap)
 	{
 
 	}
 	else
+#endif
 	{
 		// Strict map data
 		P_LoadRawVertexes(virtvertexes->data);
@@ -2020,7 +2024,6 @@ static void LoadMapData (const virtres_t* virt)
 		P_LoadRawLineDefs(virtlinedefs->data);
 		SetupLines();
 		P_LoadRawSideDefs2(virtsidedefs->data);
-		P_PrepareRawThings(virtthings->data);
 	}
 }
 
@@ -2787,6 +2790,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		P_LoadLineDefs2();
 		P_GroupLines();
+
+		P_PrepareRawThings(vres_Find(virt, "THINGS")->data);
 
 		P_MakeMapMD5(virt, &mapmd5);
 
