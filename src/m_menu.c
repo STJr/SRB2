@@ -1182,46 +1182,96 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 
 static menuitem_t OP_CameraOptionsMenu[] =
 {
+	{IT_HEADER,            NULL, "General Toggles", NULL, 0},
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 5},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 10},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 15},
 	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 20},
 
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 30},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 35},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 40},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam_rotspeed, 45},
+	{IT_HEADER,                                NULL, "Camera Positioning", NULL, 30},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 35},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 40},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 45},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam_rotspeed, 50},
 
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to player angle", &cv_cam_shiftfacing[0],  55},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to player angle", &cv_cam_turnfacing[0],  60},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  65},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[0],  70},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[0],  75},
-	{IT_STRING  | IT_CVAR, NULL, "Locked movement", &cv_cam_lockedinput[0],  80},
-
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 90},
+	{IT_HEADER,            NULL, "Display Options", NULL, 60},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 65},
 };
 
 static menuitem_t OP_Camera2OptionsMenu[] =
 {
+	{IT_HEADER,            NULL, "General Toggles", NULL, 0},
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 5},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 10},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 15},
 	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 20},
 
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 30},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 35},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 40},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam2_rotspeed, 45},
+	{IT_HEADER,                                NULL, "Camera Positioning", NULL, 30},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 35},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 40},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 45},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam2_rotspeed, 50},
 
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to character angle", &cv_cam_shiftfacing[1],  55},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to character angle", &cv_cam_turnfacing[1],  60},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[1],  65},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[1],  70},
-	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[1],  75},
-	{IT_STRING  | IT_CVAR, NULL, "Locked movement", &cv_cam_lockedinput[0],  80},
+	{IT_HEADER,            NULL, "Display Options", NULL, 60},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 65},
+};
 
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 90},
+static menuitem_t OP_CameraExtendedOptionsMenu[] =
+{
+	{IT_HEADER,            NULL, "General Toggles", NULL, 0},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 5},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 15},
+	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 20},
+
+	{IT_HEADER,                                NULL, "Camera Positioning", NULL, 30},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 35},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 40},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 45},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam_rotspeed, 50},
+
+	{IT_HEADER,                           NULL, "Automatic Camera Options", NULL, 60},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to player angle", &cv_cam_shiftfacing[0],  65},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to player angle", &cv_cam_turnfacing[0],  70},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  75},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[0],  80},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[0],  85},
+
+	{IT_HEADER,            NULL, "Locked Camera Options", NULL, 95},
+	{IT_STRING  | IT_CVAR, NULL, "Sideways movement", &cv_cam_lockedinput[0],  100},
+	{IT_STRING  | IT_CVAR, NULL, "Boss targeting assist", &cv_cam_lockonboss[0],  105},
+
+	{IT_HEADER,            NULL, "Display Options", NULL, 115},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 120},
+};
+
+static menuitem_t OP_Camera2ExtendedOptionsMenu[] =
+{
+	{IT_HEADER,            NULL, "General Toggles", NULL, 0},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 5},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 15},
+	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 20},
+
+	{IT_HEADER,                                NULL, "Camera Positioning", NULL, 30},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 35},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 40},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 45},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER,      NULL, "Rotation Speed", &cv_cam2_rotspeed, 50},
+
+	{IT_HEADER,                           NULL, "Automatic Camera Options", NULL, 60},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to player angle", &cv_cam_shiftfacing[1],  65},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to player angle", &cv_cam_turnfacing[1],  70},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[1],  75},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to spindash", &cv_cam_turnfacingspindash[1],  80},
+	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[1],  85},
+
+	{IT_HEADER,            NULL, "Locked Camera Options", NULL, 95},
+	{IT_STRING  | IT_CVAR, NULL, "Sideways movement", &cv_cam_lockedinput[1],  100},
+	{IT_STRING  | IT_CVAR, NULL, "Boss targeting assist", &cv_cam_lockonboss[1],  105},
+
+	{IT_HEADER,            NULL, "Display Options", NULL, 115},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 120},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -4284,23 +4334,13 @@ static void M_DrawControlsDefMenu(void)
 
 		if (opt == 2)
 		{
-			OP_CameraOptionsMenu[8].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_CameraOptionsMenu[9].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_CameraOptionsMenu[10].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_CameraOptionsMenu[11].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_CameraOptionsMenu[12].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_CameraOptionsMenu[13].status = IT_STRING|IT_CVAR;
-			OP_CameraOptionsMenu[14].alphaKey = 90;
+			OP_CameraOptionsDef.menuitems = OP_CameraExtendedOptionsMenu;
+			OP_CameraOptionsDef.numitems = sizeof (OP_CameraExtendedOptionsMenu) / sizeof (menuitem_t);
 		}
 		else
 		{
-			OP_CameraOptionsMenu[8].status = IT_DISABLED;
-			OP_CameraOptionsMenu[9].status = IT_DISABLED;
-			OP_CameraOptionsMenu[10].status = IT_DISABLED;
-			OP_CameraOptionsMenu[11].status = IT_DISABLED;
-			OP_CameraOptionsMenu[12].status = IT_DISABLED;
-			OP_CameraOptionsMenu[13].status = IT_DISABLED;
-			OP_CameraOptionsMenu[14].alphaKey = 55;
+			OP_CameraOptionsDef.menuitems = OP_CameraOptionsMenu;
+			OP_CameraOptionsDef.numitems = sizeof (OP_CameraOptionsMenu) / sizeof (menuitem_t);
 		}
 	}
 	else
@@ -4309,23 +4349,13 @@ static void M_DrawControlsDefMenu(void)
 
 		if (opt == 2)
 		{
-			OP_Camera2OptionsMenu[8].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_Camera2OptionsMenu[9].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_Camera2OptionsMenu[10].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_Camera2OptionsMenu[11].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_Camera2OptionsMenu[12].status = IT_STRING|IT_CVAR|IT_CV_SLIDER;
-			OP_Camera2OptionsMenu[13].status = IT_STRING|IT_CVAR;
-			OP_Camera2OptionsMenu[14].alphaKey = 90;
+			OP_Camera2OptionsDef.menuitems = OP_Camera2ExtendedOptionsMenu;
+			OP_Camera2OptionsDef.numitems = sizeof (OP_Camera2ExtendedOptionsMenu) / sizeof (menuitem_t);
 		}
 		else
 		{
-			OP_Camera2OptionsMenu[8].status = IT_DISABLED;
-			OP_Camera2OptionsMenu[9].status = IT_DISABLED;
-			OP_Camera2OptionsMenu[10].status = IT_DISABLED;
-			OP_Camera2OptionsMenu[11].status = IT_DISABLED;
-			OP_Camera2OptionsMenu[12].status = IT_DISABLED;
-			OP_Camera2OptionsMenu[13].status = IT_DISABLED;
-			OP_Camera2OptionsMenu[14].alphaKey = 55;
+			OP_Camera2OptionsDef.menuitems = OP_Camera2OptionsMenu;
+			OP_Camera2OptionsDef.numitems = sizeof (OP_Camera2OptionsMenu) / sizeof (menuitem_t);
 		}
 	}
 

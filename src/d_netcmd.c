@@ -840,6 +840,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_cam_turnfacinginput[1]);
 	CV_RegisterVar(&cv_cam_lockedinput[0]);
 	CV_RegisterVar(&cv_cam_lockedinput[1]);
+	CV_RegisterVar(&cv_cam_lockonboss[0]);
+	CV_RegisterVar(&cv_cam_lockonboss[1]);
 
 	// s_sound.c
 	CV_RegisterVar(&cv_soundvolume);

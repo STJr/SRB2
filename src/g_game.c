@@ -428,6 +428,11 @@ consvar_t cv_cam_lockedinput[2] = {
 	{"cam2_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 
+consvar_t cv_cam_lockonboss[2] = {
+	{"cam_lockonboss", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_lockonboss", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL},
+};
+
 typedef enum
 {
 	AXISNONE = 0,
@@ -1020,6 +1025,7 @@ static fixed_t sidemove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16}; // faster!
 static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 
 boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
+mobj_t *ticcmd_ztargetfocus[2]; // Locking onto an object?
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 {
 	boolean forcestrafe = false;
@@ -1278,6 +1284,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 0);
 			*myangle = player->mo->angle;
 			*myaiming = 0;
+
+			if (cv_cam_lockonboss[forplayer].value)
+				P_SetTarget(&ticcmd_ztargetfocus[forplayer], P_LookForFocusTarget(player, NULL, 0));
 		}
 
 		ticcmd_centerviewdown[forplayer] = true;
@@ -1285,9 +1294,42 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	else if (ticcmd_centerviewdown[forplayer])
 	{
 		if (abilitydirection)
+		{
+			P_SetTarget(&ticcmd_ztargetfocus[forplayer], NULL);
 			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 1);
+		}
 
 		ticcmd_centerviewdown[forplayer] = false;
+	}
+
+	if (ticcmd_ztargetfocus[forplayer])
+	{
+		if (
+			P_MobjWasRemoved(ticcmd_ztargetfocus[forplayer]) ||
+			!ticcmd_ztargetfocus[forplayer]->health ||
+			(ticcmd_ztargetfocus[forplayer]->flags2 & MF2_FRET) ||
+			(ticcmd_ztargetfocus[forplayer]->type == MT_EGGMOBILE3 && !ticcmd_ztargetfocus[forplayer]->movecount) // Sea Egg is moving around underground and shouldn't be tracked
+		)
+			P_SetTarget(&ticcmd_ztargetfocus[forplayer], NULL);
+		else
+		{
+			if (P_AproxDistance(
+				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
+				player->mo->y - ticcmd_ztargetfocus[forplayer]->y
+			) > 50*player->mo->scale)
+			{
+				INT32 anglediff = R_PointToAngle2(player->mo->x, player->mo->y, ticcmd_ztargetfocus[forplayer]->x, ticcmd_ztargetfocus[forplayer]->y) - *myangle;
+				const INT32 maxturn = ANG10/2;
+				anglediff /= 4;
+
+				if (anglediff > maxturn)
+					anglediff = maxturn;
+				else if (anglediff < -maxturn)
+					anglediff = -maxturn;
+
+				*myangle += anglediff;
+			}
+		}
 	}
 
 	if (PLAYERINPUTDOWN(ssplayer, gc_camreset))

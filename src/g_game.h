@@ -79,7 +79,7 @@ extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_g
 // hi here's some new controls
 extern consvar_t cv_abilitydirection[2], cv_cam_shiftfacing[2], cv_cam_turnfacing[2],
 	cv_cam_turnfacingability[2], cv_cam_turnfacingspindash[2], cv_cam_turnfacinginput[2],
-	cv_cam_lockedinput[2];
+	cv_cam_lockedinput[2], cv_cam_lockonboss[2];
 
 // mouseaiming (looking up/down with the mouse or keyboard)
 #define KB_LOOKSPEED (1<<25)
@@ -90,6 +90,7 @@ extern consvar_t cv_abilitydirection[2], cv_cam_shiftfacing[2], cv_cam_turnfacin
 const char *G_BuildMapName(INT32 map);
 
 extern boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
+extern mobj_t *ticcmd_ztargetfocus[2]; // Locking onto an object?
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer);
 
 // copy ticcmd_t to and fro the normal way

@@ -9136,6 +9136,94 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 }
 
 //
+// P_LookForFocusTarget
+// Looks for a target for a player to focus on, for Z-targeting etc.
+// exclude would be the current focus target, to ignore.
+// direction, if set, requires the target to be to the left (1) or right (-1) of the angle
+// mobjflags can be used to limit the flags of objects that can be focused
+//
+mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction)
+{
+	mobj_t *mo;
+	thinker_t *think;
+	mobj_t *closestmo = NULL;
+	const fixed_t maxdist = 2560*player->mo->scale;
+	const angle_t span = ANGLE_45;
+	fixed_t dist, closestdist = 0;
+	angle_t dangle, closestdangle = 0;
+
+	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
+	{
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
+		mo = (mobj_t *)think;
+
+		if (mo->flags & MF_NOCLIPTHING)
+			continue;
+
+		if (mo->health <= 0) // dead
+			continue;
+
+		if (!(mo->flags & MF_BOSS && (mo->flags & MF_SHOOTABLE)) == !(mo->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
+			continue; // not a valid target
+
+		if (mo == player->mo)
+			continue;
+
+		if (mo->flags2 & MF2_FRET)
+			continue;
+
+		if (mo->type == MT_DETON) // Don't be STUPID, Sonic!
+			continue;
+
+		{
+			fixed_t zdist = (player->mo->z + player->mo->height/2) - (mo->z + mo->height/2);
+			dist = P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y);
+
+			if (abs(zdist) > dist)
+				continue; // Don't home outside of desired angle!
+
+			dist = P_AproxDistance(dist, zdist);
+			if (dist > maxdist)
+				continue; // out of range
+		}
+
+		if ((twodlevel || player->mo->flags2 & MF2_TWOD)
+		&& abs(player->mo->y-mo->y) > player->mo->radius)
+			continue; // not in your 2d plane
+
+		if (mo->type == MT_PLAYER) // Don't chase after other players!
+			continue;
+
+		dangle = R_PointToAngle2(player->mo->x + P_ReturnThrustX(player->mo, player->mo->angle, player->mo->radius), player->mo->y + P_ReturnThrustY(player->mo, player->mo->angle, player->mo->radius), mo->x, mo->y) - player->mo->angle;
+
+		if ((dangle + span) > span*2)
+			continue; // behind back
+
+		if (direction)
+		{
+			if (direction == 1 && dangle > ANGLE_180)
+				continue; // To the right of the player
+			if (direction == -1 && dangle < ANGLE_180)
+				continue; // To the left of the player
+		}
+
+		if (closestmo && (exclude ? (dangle > closestdangle) : (dist > closestdist)))
+			continue;
+
+		if (!P_CheckSight(player->mo, mo))
+			continue; // out of sight
+
+		closestmo = mo;
+		closestdist = dist;
+		closestdangle = dangle;
+	}
+
+	return closestmo;
+}
+
+//
 // P_LookForEnemies
 // Looks for something you can hit - Used for homing attack
 // If nonenemies is true, includes monitors and springs!
