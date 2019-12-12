@@ -108,9 +108,6 @@ boolean drawsky = true;
 #ifndef NEWCLIP
 static consvar_t cv_grclipwalls = {"gr_clipwalls", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
-//development variables for diverse uses
-static consvar_t cv_gralpha = {"gr_alpha", "160", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_grbeta = {"gr_beta", "0", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_grrounddown = {"gr_rounddown", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfov = {"gr_fov", "90", CV_FLOAT|CV_CALL, grfov_cons_t, CV_grFov_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -122,7 +119,7 @@ consvar_t cv_grfiltermode = {"gr_filtermode", "Nearest", CV_CALL, grfiltermode_c
                              CV_filtermode_ONChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotropicmode_cons_t,
                              CV_anisotropic_ONChange, 0, NULL, NULL, 0, 0, NULL};
-//static consvar_t cv_grzbuffer = {"gr_zbuffer", "On", 0, CV_OnOff};
+
 consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -2477,7 +2474,7 @@ static cliprange_t     gr_solidsegs[MAXSEGS];
 static void printsolidsegs(void)
 {
 	cliprange_t *       start;
-	if (!hw_newend || cv_grbeta.value != 2)
+	if (!hw_newend)
 		return;
 	for (start = gr_solidsegs;start != hw_newend;start++)
 	{
@@ -6627,15 +6624,9 @@ void HWR_AddCommands(void)
 static inline void HWR_AddEngineCommands(void)
 {
 	// engine state variables
-	//CV_RegisterVar(&cv_grzbuffer);
 #ifndef NEWCLIP
 	CV_RegisterVar(&cv_grclipwalls);
 #endif
-
-	// engine development mode variables
-	// - usage may vary from version to version..
-	CV_RegisterVar(&cv_gralpha);
-	CV_RegisterVar(&cv_grbeta);
 
 	// engine commands
 	COM_AddCommand("gr_stats", Command_GrStats_f);
