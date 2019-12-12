@@ -102,6 +102,12 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
+#if (defined (__unix__) && !defined (_MSDOS)) || defined (UNIXCOMMON)
+#include <errno.h>
+#include <sys/wait.h>
+#define NEWSIGNALHANDLER
+#endif
+
 #ifndef NOMUMBLE
 #ifdef __linux__ // need -lrt
 #include <sys/mman.h>
@@ -229,7 +235,7 @@ SDL_bool framebuffer = SDL_FALSE;
 
 UINT8 keyboard_started = false;
 
-void I_ReportSignal(int num, int coredumped)
+static void I_ReportSignal(int num, int coredumped)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
 	const char *      sigmsg;
@@ -2160,6 +2166,53 @@ void I_Sleep(void)
 		SDL_Delay(cv_sleep.value);
 }
 
+#ifdef NEWSIGNALHANDLER
+static void I_Fork(void)
+{
+	int status;
+	int signum;
+	switch (fork())
+	{
+		case -1:
+			I_Error(
+					"Error setting up signal reporting: fork(): %s\n",
+					strerror(errno)
+			);
+			break;
+		case 0:
+			break;
+		default:
+			if (wait(&status))
+			{
+				I_Error(
+						"Error setting up signal reporting: fork(): %s\n",
+						strerror(errno)
+				);
+			}
+			else
+			{
+				if (WIFSIGNALED (status))
+				{
+					signum = WTERMSIG (status);
+#ifdef WCOREDUMP
+					I_ReportSignal(signum, WCOREDUMP (status));
+#else
+					I_ReportSignal(signum, 0);
+#endif
+					status = 128 + signum;
+				}
+				else if (WIFEXITED (status))
+				{
+					status = WEXITSTATUS (status);
+				}
+
+				I_ShutdownSystem();
+				exit(status);
+			}
+	}
+}
+#endif/*NEWSIGNALHANDLER*/
+
 INT32 I_StartupSystem(void)
 {
 	SDL_version SDLcompiled;
@@ -2167,6 +2220,9 @@ INT32 I_StartupSystem(void)
 	SDL_VERSION(&SDLcompiled)
 	SDL_GetVersion(&SDLlinked);
 	I_StartupConsole();
+#ifdef NEWSIGNALHANDLER
+	I_Fork();
+#endif
 	I_OutputMsg("Compiled for SDL version: %d.%d.%d\n",
 	 SDLcompiled.major, SDLcompiled.minor, SDLcompiled.patch);
 	I_OutputMsg("Linked with SDL version: %d.%d.%d\n",

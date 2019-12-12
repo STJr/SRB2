@@ -84,10 +84,6 @@ ticcmd_t *I_BaseTiccmd2(void);
 */
 void I_Quit(void) FUNCNORETURN;
 
-/**	\brief Print a message and text box about a signal that was raised.
-*/
-void I_ReportSignal(int num, int coredumped);
-
 typedef enum
 {
 	EvilForce = -1,

@@ -28,11 +28,6 @@
 
 #include "time.h" // For log timestamps
 
-#ifdef NEWSIGNALHANDLER
-#include <errno.h>
-#include <sys/wait.h>
-#endif
-
 #ifdef HAVE_SDL
 
 #ifdef HAVE_TTF
@@ -186,52 +181,6 @@ int main(int argc, char **argv)
 #endif
 	MakeCodeWritable();
 #endif
-
-#ifdef NEWSIGNALHANDLER
-	switch (fork())
-	{
-		case -1:
-			I_Error(
-					"Error setting up signal reporting: fork(): %s\n",
-					strerror(errno)
-			);
-			break;
-		case 0:
-			break;
-		default:
-			{
-				int status;
-				int signum;
-				if (wait(&status) == -1)
-				{
-					I_Error(
-							"Error setting up signal reporting: fork(): %s\n",
-							strerror(errno)
-					);
-				}
-				else
-				{
-					if (WIFSIGNALED (status))
-					{
-						signum = WTERMSIG (status);
-#ifdef WCOREDUMP
-						I_ReportSignal(signum, WCOREDUMP (status));
-#else
-						I_ReportSignal(signum, 0);
-#endif
-						status = 128 + signum;
-					}
-					else if (WIFEXITED (status))
-					{
-						status = WEXITSTATUS (status);
-					}
-
-					I_ShutdownSystem();
-					exit(status);
-				}
-			}
-	}
-#endif/*NEWSIGNALHANDLER*/
 
 	// startup SRB2
 	CONS_Printf("Setting up SRB2...\n");
