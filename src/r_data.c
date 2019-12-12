@@ -438,7 +438,6 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texpatch_t *patch;
 	patch_t *realpatch;
 	UINT8 *pdata;
-	boolean dealloc = false;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
