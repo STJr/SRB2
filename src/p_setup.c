@@ -423,20 +423,14 @@ static inline float P_SegLengthFloat(seg_t *seg)
   * \param lump Lump number of the SEGS resource.
   * \sa ::ML_SEGS
   */
-static void P_LoadRawSegs(UINT8 *data, size_t i)
+static void P_LoadRawSegs(UINT8 *data)
 {
 	INT32 linedef, side;
-	mapseg_t *ml;
-	seg_t *li;
+	mapseg_t *ml = (mapseg_t *)data;
+	seg_t *li = segs;
 	line_t *ldef;
+	size_t i;
 
-	numsegs = i / sizeof (mapseg_t);
-	if (numsegs <= 0)
-		I_Error("Level has no segs"); // instead of crashing
-	segs = Z_Calloc(numsegs * sizeof (*segs), PU_LEVEL, NULL);
-
-	ml = (mapseg_t *)data;
-	li = segs;
 	for (i = 0; i < numsegs; i++, li++, ml++)
 	{
 		li->v1 = &vertexes[SHORT(ml->v1)];
@@ -476,17 +470,11 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
   * \param lump Lump number of the SSECTORS resource.
   * \sa ::ML_SSECTORS
   */
-static inline void P_LoadRawSubsectors(void *data, size_t i)
+static inline void P_LoadRawSubsectors(void *data)
 {
-	mapsubsector_t *ms;
-	subsector_t *ss;
-
-	numsubsectors = i / sizeof (mapsubsector_t);
-	if (numsubsectors <= 0)
-		I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
-	ss = subsectors = Z_Calloc(numsubsectors * sizeof (*subsectors), PU_LEVEL, NULL);
-
-	ms = (mapsubsector_t *)data;
+	mapsubsector_t *ms = (mapsubsector_t *)data;
+	subsector_t *ss = subsectors;
+	size_t i;
 
 	for (i = 0; i < numsubsectors; i++, ss++, ms++)
 	{
@@ -767,19 +755,12 @@ static void P_LoadRawSectors(UINT8 *data)
 //
 // P_LoadNodes
 //
-static void P_LoadRawNodes(UINT8 *data, size_t i)
+static void P_LoadRawNodes(UINT8 *data)
 {
+	size_t i;
 	UINT8 j, k;
-	mapnode_t *mn;
-	node_t *no;
-
-	numnodes = i / sizeof (mapnode_t);
-	if (numnodes <= 0)
-		I_Error("Level has no nodes");
-	nodes = Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
-
-	mn = (mapnode_t *)data;
-	no = nodes;
+	mapnode_t *mn = (mapnode_t *)data;
+	node_t *no = nodes;
 
 	for (i = 0; i < numnodes; i++, no++, mn++)
 	{
@@ -1924,16 +1905,309 @@ static void P_LoadRawReject(UINT8 *data, size_t count)
 	}
 }
 
-static void LoadMapBSP (const virtres_t* virt)
+// Auxiliary function: Shrink node ID from 32-bit to 16-bit.
+static UINT16 ShrinkNodeID(UINT32 x) {
+	UINT16 mask = (x >> 16) & 0xC000;
+	UINT16 result = x;
+	return result | mask;
+}
+
+typedef enum {
+	NT_BINARY,
+	NT_XNOD,
+	NT_ZNOD,
+	NT_XGLN,
+	NT_ZGLN,
+	NT_XGL2,
+	NT_ZGL2,
+	NT_XGL3,
+	NT_ZGL3,
+	NT_UNSUPPORTED
+} nodetype_t;
+
+static boolean LoadMapBSP (const virtres_t* virt)
 {
 	virtlump_t* virtssectors = vres_Find(virt, "SSECTORS");
 	virtlump_t* virtsegs     = vres_Find(virt, "SEGS");
 	virtlump_t* virtnodes    = vres_Find(virt, "NODES");
 
-	// Nodes
-	P_LoadRawSubsectors(virtssectors->data, virtssectors->size);
-	P_LoadRawNodes(virtnodes->data, virtnodes->size);
-	P_LoadRawSegs(virtsegs->data, virtsegs->size);
+	nodetype_t nodetype = NT_UNSUPPORTED;
+
+	// Find out the BSP format.
+	if (vres_Find(virt, "TEXTMAP"))
+	{
+		virtnodes = vres_Find(virt, "ZNODES");
+		if (!memcmp(virtnodes->data, "XGLN", 4))
+			nodetype = NT_XGLN;
+		else if (!memcmp(virtnodes->data, "XGL3", 4))
+			nodetype = NT_XGL3;
+	}
+	else
+	{
+		// Detect nodes.
+		if (!virtsegs || !virtsegs->size)
+		{
+			// Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
+			if (!virtssectors || !virtssectors->size)
+			{
+				if (!memcmp(virtnodes->data, "XNOD", 4))
+					nodetype = NT_XNOD;
+				else if (!memcmp(virtnodes->data, "ZNOD", 4)) // Compressed variant.
+					nodetype = NT_ZNOD;
+			}
+			// Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
+			else
+			{
+				if (!memcmp(virtssectors->data, "XGLN", 4))
+				{
+					virtnodes = virtssectors;
+					nodetype = NT_XGLN;
+				}
+				else if (!memcmp(virtssectors->data, "ZGLN", 4)) // Compressed variant.
+				{
+					virtnodes = virtssectors;
+					nodetype = NT_ZGLN;
+				}
+				else if (!memcmp(virtssectors->data, "XGL3", 4)) // Compressed variant.
+				{
+					virtnodes = virtssectors;
+					nodetype = NT_ZGL3;
+				}
+			}
+		}
+		else // Traditional binary map format.
+			nodetype = NT_BINARY;
+	}
+
+	switch (nodetype)
+	{
+	case NT_BINARY:
+	{
+
+		numsubsectors	= virtssectors->size/ sizeof (mapsubsector_t);
+		numnodes		= virtnodes->size	/ sizeof (mapnode_t);
+		numsegs			= virtsegs->size	/ sizeof (mapseg_t);
+
+		if (numsubsectors <= 0)
+			I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
+		if (numnodes <= 0)
+			I_Error("Level has no nodes");
+		if (numsegs <= 0)
+			I_Error("Level has no segs");
+
+		subsectors	= Z_Calloc(numsubsectors * sizeof (*subsectors), PU_LEVEL, NULL);
+		nodes		= Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
+		segs		= Z_Calloc(numsegs * sizeof (*segs), PU_LEVEL, NULL);
+
+		P_LoadRawSubsectors(virtssectors->data);
+		P_LoadRawNodes(virtnodes->data);
+		P_LoadRawSegs(virtsegs->data);
+	}
+		break;
+	case NT_XNOD:
+	case NT_XGLN:
+	case NT_XGL3:
+	{
+		size_t i, j, k;
+		UINT8* data = virtnodes->data;
+		data += 4;
+
+		/// Extended node formats feature additional vertexes; useful for OpenGL, but totally useless in gamelogic.
+		UINT32 orivtx = READUINT32(data);
+		UINT32 xtrvtx = READUINT32(data);
+
+		if (numvertexes != orivtx) /// If native vertex count doesn't match node original vertex count, bail out (broken data?).
+		{
+			CONS_Printf("Vertex count in map data (%d) and nodes' (%d) differ!\n", numvertexes, orivtx);
+			return false;
+		}
+
+		if (xtrvtx) /// If extra vertexes were generated, reallocate the vertex array.
+		{
+			line_t*	ld		= lines;
+			size_t	oldpos	= (size_t) vertexes;
+			ssize_t	offset;
+			numvertexes+= xtrvtx;
+			vertexes	= Z_Realloc(vertexes, numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
+			offset		= ((size_t) vertexes) - oldpos;
+			for(i = 0; i < numvertexes; i++)
+			{
+				CONS_Printf("%d: %d %d\n", i, vertexes[i].x/FRACUNIT, vertexes[i].y/FRACUNIT);
+			}
+			for (i = 0, ld = lines; i < numlines; i++, ld++)
+			{
+				ld->v1 = (vertex_t*) ((size_t) ld->v1 + offset);
+				ld->v2 = (vertex_t*) ((size_t) ld->v2 + offset);
+				CONS_Printf("V1: %d %d\n", ld->v1->x/FRACUNIT, ld->v1->y/FRACUNIT);
+			}
+		}
+
+		// Read vertex data.
+		for (i = orivtx; i < numvertexes; i++)
+		{
+			vertexes[i].x = READFIXED(data);
+			vertexes[i].y = READFIXED(data);
+		}
+
+		// Subsectors
+		numsubsectors	= READUINT32(data);
+		subsectors		= Z_Calloc(numsubsectors * sizeof (*subsectors), PU_LEVEL, NULL);
+
+		for (i = 0; i < numsubsectors; i++)
+			subsectors[i].numlines = READUINT32(data);
+
+		// Segs
+		numsegs		= READUINT32(data);
+		segs		= Z_Calloc(numsegs * sizeof (*segs), PU_LEVEL, NULL);
+
+		for (i = 0, k = 0; i < numsubsectors; i++)
+		{
+			subsectors[i].firstline = k;
+			for (j = 0; j < subsectors[i].numlines; j++, k++)
+			{
+				if (nodetype == NT_XGLN)
+				{
+					UINT16 linenum;
+					UINT32 vert;
+					vert = READUINT32(data);
+					segs[k].v1 = &vertexes[vert];
+					if (j == 0)
+						segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
+					else
+						segs[k - 1].v2 = segs[k].v1;
+					data += 4;// partner; can be ignored by software renderer;
+					linenum = READUINT16(data);
+					if (linenum == 0xFFFF)
+					{
+						segs[k].glseg = true;
+						//segs[k].linedef = 0xFFFFFFFF;
+						segs[k].linedef = &lines[0]; /// \todo Not meant to do this.
+					}
+					else
+					{
+						segs[k].glseg = false;
+						segs[k].linedef = &lines[linenum];
+					}
+					segs[k].side = READUINT8(data);
+				}
+				else if (nodetype == NT_XGL3)
+				{
+					UINT32 linenum;
+					UINT32 vert;
+					vert = READUINT32(data);
+					segs[k].v1 = &vertexes[vert];
+					if (j == 0)
+						segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
+					else
+						segs[k - 1].v2 = segs[k].v1;
+					data += 4;// partner; can be ignored by software renderer;
+					linenum = READUINT32(data);
+					if (linenum == 0xFFFFFFFF)
+					{
+						segs[k].glseg = true;
+						//segs[k].linedef = 0xFFFFFFFF;
+						segs[k].linedef = &lines[0]; /// \todo Not meant to do this.
+					}
+					else
+					{
+						segs[k].glseg = false;
+						segs[k].linedef = &lines[linenum];
+					}
+					segs[k].side = READUINT8(data);
+				}
+				else if (nodetype == NT_XNOD)
+				{
+					segs[k].v1		= &vertexes[READUINT32(data)];
+					segs[k].v2		= &vertexes[READUINT32(data)];
+					segs[k].linedef	= &lines[READUINT16(data)];
+					segs[k].side	= READUINT8(data);
+				}
+			}
+		}
+
+		{
+			INT32 side;
+			seg_t *li;
+
+			for (i = 0, li = segs; i < numsegs; i++, li++)
+			{
+				vertex_t *v1 = li->v1;
+				vertex_t *v2 = li->v2;
+				li->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
+				//li->angle = 0;
+				li->offset = FixedHypot(v1->x - li->linedef->v1->x, v1->y - li->linedef->v1->y);
+				side = li->side;
+				li->sidedef = &sides[li->linedef->sidenum[side]];
+
+				li->frontsector = sides[li->linedef->sidenum[side]].sector;
+				if (li->linedef->flags & ML_TWOSIDED)
+					li->backsector = sides[li->linedef->sidenum[side^1]].sector;
+				else
+					li->backsector = 0;
+
+				segs[i].numlights = 0;
+				segs[i].rlights = NULL;
+			}
+		}
+
+		// Nodes
+		numnodes = READINT32(data);
+		nodes		= Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
+		if (nodetype == NT_XGL3)
+		{
+			UINT32 x, y, dx, dy;
+			UINT32 c0, c1;
+			node_t *mn;
+			for (i = 0, mn = nodes; i < numnodes; i++, mn++)
+			{
+				// Splitter.
+				x = READINT32(data);
+				y = READINT32(data);
+				dx = READINT32(data);
+				dy = READINT32(data);
+				mn->x = x;
+				mn->y = y;
+				mn->dx = dx;
+				mn->dy = dy;
+
+				// Bounding boxes and children.
+				for (j = 0; j < 2; j++)
+					for (k = 0; k < 4; k++)
+						mn->bbox[j][k] = READINT16(data)<<FRACBITS;
+				c0 = READUINT32(data);
+				c1 = READUINT32(data);
+				mn->children[0] = ShrinkNodeID(c0); /// \todo Use UINT32 for node children in a future, instead?
+				mn->children[1] = ShrinkNodeID(c1);
+			}
+		}
+		else
+		{
+			UINT32 c0, c1;
+			node_t *mn;
+			for (i = 0, mn = nodes; i < numnodes; i++, mn++)
+			{
+				// Splitter.
+				mn->x = READINT16(data)<<FRACBITS;
+				mn->y = READINT16(data)<<FRACBITS;
+				mn->dx = READINT16(data)<<FRACBITS;
+				mn->dy = READINT16(data)<<FRACBITS;
+				// Bounding boxes and children.
+				for (j = 0; j < 2; j++)
+					for (k = 0; k < 4; k++)
+						mn->bbox[j][k] = READINT16(data)<<FRACBITS;
+				c0 = READUINT32(data);
+				c1 = READUINT32(data);
+				mn->children[0] = ShrinkNodeID(c0); /// \todo Use UINT32 for node children in a future, instead?
+				mn->children[1] = ShrinkNodeID(c1);
+			}
+		}
+	}
+		break;
+	default:
+		CONS_Printf("Unsupported node format.\n");
+		return false;
+	}
+	return true;
 }
 
 static void LoadMapLUT (const virtres_t* virt)
@@ -2770,7 +3044,8 @@ boolean P_SetupLevel(boolean skipprecip)
 		virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
 
 		LoadMapData(virt);
-		LoadMapBSP(virt);
+		if (!LoadMapBSP(virt))
+			return false;
 		LoadMapLUT(virt);
 
 		P_LoadLineDefs2();
