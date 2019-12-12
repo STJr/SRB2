@@ -1784,6 +1784,7 @@ char *M_GetToken(const char *inputString)
 			|| stringToUse[startPos] == '\n'
 			|| stringToUse[startPos] == '\0'
 			|| stringToUse[startPos] == '"' // we're treating this as whitespace because SLADE likes adding it for no good reason
+			|| stringToUse[startPos] == '=' || stringToUse[startPos] == ';' // UDMF TEXTMAP.
 			|| inComment != 0)
 			&& startPos < stringLength)
 	{
@@ -1852,6 +1853,7 @@ char *M_GetToken(const char *inputString)
 			&& stringToUse[endPos] != '{'
 			&& stringToUse[endPos] != '}'
 			&& stringToUse[endPos] != '"' // see above
+			&& stringToUse[startPos] != '=' && stringToUse[startPos] != ';' // UDMF TEXTMAP.
 			&& inComment == 0)
 			&& endPos < stringLength)
 	{
@@ -1893,6 +1895,20 @@ char *M_GetToken(const char *inputString)
 void M_UnGetToken(void)
 {
 	endPos = oldendPos;
+}
+
+/** Returns the current token's position.
+ */
+UINT32 M_GetTokenPos(void)
+{
+	return endPos;
+}
+
+/** Sets the current token's position.
+ */
+void M_SetTokenPos(UINT32 newPos)
+{
+	endPos = newPos;
 }
 
 /** Count bits in a number.
