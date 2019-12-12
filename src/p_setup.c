@@ -83,6 +83,8 @@
 #include "p_slopes.h"
 #endif
 
+#include "fastcmp.h" // For UDMF parsing
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -108,6 +110,14 @@ UINT16 bossdisabled;
 boolean stoppedclock;
 boolean levelloading;
 UINT8 levelfadecol;
+
+// Store positions for relevant map data spread through TEXTMAP, we will need them later.
+// TODO: Find the real max values for the map data.
+UINT32 mapthingsPos[UINT16_MAX];
+UINT32 linesPos[UINT16_MAX];
+UINT32 sidesPos[UINT16_MAX];
+UINT32 vertexesPos[UINT16_MAX];
+UINT32 sectorsPos[UINT16_MAX];
 
 // BLOCKMAP
 // Created from axis aligned bounding box
@@ -855,6 +865,468 @@ static void GeneralDefaults(void)
 		vt->ceilingzset	= false;
 	}
 */
+}
+
+/** Set map defaults in UDMF format.
+  *
+  * Due to UDMF's format specs, some fields are assumed to have default values.
+  * Therefore, it is necessary to set said fields beforehand.
+  */
+static void TextmapDefaults ()
+{
+	UINT32 i;//, j;
+
+	line_t *ld;
+	side_t *sd;
+	sector_t *sc;
+	mapthing_t *mt;
+//	vertex_t* vt;
+
+	for (i = 0, ld = lines; i < numlines; i++, ld++)
+	{
+		ld->tag = 0;
+		ld->special = 0;
+		ld->sidenum[1] = 0xffff;
+//		ld->alpha = FRACUNIT;
+//		for (j = 0; j < NUMLINEARGS; j++)
+//			ld->args[j] = 0;
+//		ld->executordelay = 0;
+//		ld->udmfflags = 0;
+	}
+
+	for (i = 0, sd = sides; i < numsides; i++, sd++)
+	{
+		sd->rowoffset = 0;
+		sd->textureoffset = 0;
+
+		sd->toptexture = R_TextureNumForName("-");
+		sd->midtexture = R_TextureNumForName("-");
+		sd->bottomtexture = R_TextureNumForName("-");
+		sd->repeatcnt = 0;
+
+//		sd->colormap_data = NULL;
+	}
+
+	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
+	{
+		sc->floorheight = 0;
+		sc->ceilingheight = 0;
+
+		/// \todo Doing this for floorpic and ceilingpic doesn't work, probably.
+		sc->floorpic = 0;
+		sc->ceilingpic = 0;
+
+		sc->lightlevel = 255;
+
+		sc->special = 0;
+		sc->tag = 0;
+
+		sc->floor_xoffs = sc->floor_yoffs = sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
+		sc->floorpic_angle = sc->ceilingpic_angle = 0;
+
+//		sc->gravity = FRACUNIT;
+		sc->verticalflip = false;
+//		sc->udmfflags = 0;
+
+	}
+
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	{
+		mt->z = 0;
+		mt->angle = /*mt->pitch = mt->roll =*/ 0;
+//		mt->scale = FRACUNIT;
+//		for (j = 0; j < NUMTHINGPARAMS; j++)
+//			mt->params[j] = 0;
+//		mt->spawntrigger = 0;
+//		mt->seetrigger = 0;
+//		mt->paintrigger = 0;
+//		mt->meleetrigger = 0;
+//		mt->missiletrigger = 0;
+//		mt->deathtrigger = 0;
+//		mt->xdeathtrigger = 0;
+//		mt->raisetrigger = 0;
+	}
+/*
+	for (i = 0, vt = vertexes; i < numvertexes; i++, vt++)
+	{
+		vt->floorzset = false;
+		vt->ceilingzset = false;
+	}*/
+}
+
+static boolean TextmapCount (UINT8 *data, size_t size)
+{
+	char *token;
+
+	// Determine total amount of map data in TEXTMAP.
+	// Look for namespace at the beginning.
+	if (fastcmp(M_GetToken((char *)data), "namespace"))
+		// Check if namespace is valid.
+		if (fastcmp((token = M_GetToken(NULL)), "srb2"))
+			while ((token = M_GetToken(NULL)) != NULL && M_GetTokenPos() < size)
+			{
+				// Avoid anything inside bracketed stuff, only look for external keywords.
+				// Assuming there's only one level of bracket nesting.
+				if (fastcmp(token, "{"))
+					while (!fastcmp(token, "}"))
+						token = M_GetToken(NULL);
+
+				// Check for valid fields.
+				else if (fastcmp(token, "thing"))
+					mapthingsPos[nummapthings++] = M_GetTokenPos();
+				else if (fastcmp(token, "linedef"))
+					linesPos[numlines++] = M_GetTokenPos();
+				else if (fastcmp(token, "sidedef"))
+					sidesPos[numsides++] = M_GetTokenPos();
+				else if (fastcmp(token, "vertex"))
+					vertexesPos[numvertexes++] = M_GetTokenPos();
+				else if (fastcmp(token, "sector"))
+					sectorsPos[numsectors++] = M_GetTokenPos();
+				else
+					CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", token);
+			}
+		else
+		{
+			CONS_Alert(CONS_WARNING, "Invalid namespace '%s', only 'srb2' is supported.\n", token);
+			return false;
+		}
+	else
+	{
+		CONS_Alert(CONS_WARNING, "No namespace at beginning of lump!\n");
+		return false;
+	}
+	return true;
+}
+
+/** Auxiliary function for TextmapParse.
+  *
+  * \param Vertex number.
+  * \param Parameter string.
+  */
+static void TextmapVertex(UINT32 i, char *param)
+{
+	if (fastcmp(param, "x"))
+		vertexes[i].x = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "y"))
+		vertexes[i].y = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+#ifdef ADVUDMF
+	else if (fastcmp(param, "zfloor"))
+	{
+		vertexes[i].floorz = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+		vertexes[i].floorzset = true;
+	}
+	else if (fastcmp(param, "zceiling"))
+	{
+		vertexes[i].ceilingz = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+		vertexes[i].ceilingzset = true;
+	}
+#endif
+}
+
+/** Auxiliary function for TextmapParse.
+  *
+  * \param Sector number.
+  * \param Parameter string.
+  */
+static void TextmapSector(UINT32 i, char *param)
+{
+	if (fastcmp(param, "heightfloor"))
+		sectors[i].floorheight = atol(M_GetToken(NULL)) << FRACBITS;
+	else if (fastcmp(param, "heightceiling"))
+		sectors[i].ceilingheight = atol(M_GetToken(NULL)) << FRACBITS;
+	if (fastcmp(param, "texturefloor"))
+		sectors[i].floorpic = P_AddLevelFlat(M_GetToken(NULL), foundflats);
+	else if (fastcmp(param, "textureceiling"))
+		sectors[i].ceilingpic = P_AddLevelFlat(M_GetToken(NULL), foundflats);
+	else if (fastcmp(param, "lightlevel"))
+		sectors[i].lightlevel = atol(M_GetToken(NULL));
+	/// \todo Separate the 4 fields.
+	else if (fastcmp(param, "special"))
+		sectors[i].special = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "id"))
+		sectors[i].tag = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "xpanningfloor"))
+		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "ypanningfloor"))
+		sectors[i].floor_yoffs = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "xpanningceiling"))
+		sectors[i].ceiling_xoffs = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "ypanningceiling"))
+		sectors[i].ceiling_yoffs = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "rotationfloor"))
+		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(M_GetToken(NULL))));
+	else if (fastcmp(param, "rotationceiling"))
+		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(M_GetToken(NULL))));
+	#ifdef ADVUDMF
+	else if (fastcmp(param, "gravity"))
+		sectors[i].gravity = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "flip") && fastcmp("true", M_GetToken(NULL)))
+		sectors[i].verticalflip = true;
+	else if (fastcmp(param, "heatwave") && fastcmp("true", M_GetToken(NULL)))
+		sectors[i].udmfflags |= SFU_HEATWAVE;
+	else if (fastcmp(param, "xscalefloor"))
+		sectors[i].floor_scale = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "xscaleceiling"))
+		sectors[i].ceiling_scale = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "lightfloor"))
+		sectors[i].lightfloor = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "lightceiling"))
+		sectors[i].lightceiling = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "lightfloorabsolute") && fastcmp("true", M_GetToken(NULL)))
+		sectors[i].lightfloorabsolute = true;
+	else if (fastcmp(param, "lightceilingabsolute") && fastcmp("true", M_GetToken(NULL)))
+		sectors[i].lightceilingabsolute = true;
+	#endif
+}
+
+/** Auxiliary function for TextmapParse.
+  *
+  * \param Side number.
+  * \param Parameter string.
+  */
+static void TextmapSide(UINT32 i, char *param)
+{
+	if (fastcmp(param, "offsetx"))
+		sides[i].textureoffset = atol(M_GetToken(NULL))<<FRACBITS;
+	else if (fastcmp(param, "offsety"))
+		sides[i].rowoffset = atol(M_GetToken(NULL))<<FRACBITS;
+	else if (fastcmp(param, "texturetop"))
+		sides[i].toptexture = R_TextureNumForName(M_GetToken(NULL));
+	else if (fastcmp(param, "texturebottom"))
+		sides[i].bottomtexture = R_TextureNumForName(M_GetToken(NULL));
+	else if (fastcmp(param, "texturemiddle"))
+		sides[i].midtexture = R_TextureNumForName(M_GetToken(NULL));
+	else if (fastcmp(param, "sector"))
+		sides[i].sector = &sectors[atol(M_GetToken(NULL))];
+	else if (fastcmp(param, "repeatcnt"))
+		sides[i].repeatcnt = atol(M_GetToken(NULL));
+	#ifdef ADVUDMF
+	else if (fastcmp(param, "scalex_top"))
+		sides[i].scalex_top = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scaley_top"))
+		sides[i].scaley_top = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scalex_mid"))
+		sides[i].scalex_mid = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scaley_mid"))
+		sides[i].scaley_mid = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scalex_bottom"))
+		sides[i].scalex_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scaley_bottom"))
+		sides[i].scaley_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsetx_top"))
+		sides[i].offsetx_top = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsety_top"))
+		sides[i].offsety_top = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsetx_mid"))
+		sides[i].offsetx_mid = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsety_mid"))
+		sides[i].offsety_mid = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsetx_bottom"))
+		sides[i].offsetx_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsety_bottom"))
+		sides[i].offsety_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "light"))
+		sides[i].light = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "lightabsolute") && fastcmp("true", M_GetToken(NULL)))
+		sides[i].lightabsolute = true;
+	#endif
+}
+
+/** Auxiliary function for TextmapParse.
+  *
+  * \param Line number.
+  * \param Parameter string.
+  */
+static void TextmapLine(UINT32 i, char *param)
+{
+	if (fastcmp(param, "id"))
+		lines[i].tag = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "special"))
+		lines[i].special = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "v1"))
+		lines[i].v1 = &vertexes[atol(M_GetToken(NULL))];
+	else if (fastcmp(param, "v2"))
+		lines[i].v2 = &vertexes[atol(M_GetToken(NULL))];
+	else if (fastcmp(param, "sidefront"))
+		lines[i].sidenum[0] = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "sideback"))
+		lines[i].sidenum[1] = atol(M_GetToken(NULL));
+	#ifdef ADVUDMF
+	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
+	{
+		if (fastcmp(param + 4, "str"))
+		{
+			size_t argnum = param[3] - '0';
+			if (argnum < 0 || argnum >= NUMLINESTRINGARGS)
+			{
+				CONS_Debug(DBG_SETUP, "Invalid linedef string argument number: %d\n", argnum);
+				return;
+			}
+			char* token = M_GetToken(NULL);
+			lines[i].stringargs[argnum] = Z_Malloc(strlen(token)+1, PU_LEVEL, NULL);
+			M_Memcpy(lines[i].stringargs[argnum], token, strlen(token) + 1);
+		}
+		else
+		{
+			size_t argnum = atol(param + 3);
+			if (argnum < 0 || argnum >= NUMLINEARGS)
+			{
+				CONS_Debug(DBG_SETUP, "Invalid linedef argument number: %d\n", argnum);
+				return;
+			}
+			lines[i].args[argnum] = atol(M_GetToken(NULL));
+		}
+	}
+	else if (fastcmp(param, "alpha"))
+		lines[i].alpha = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "executordelay"))
+		lines[i].executordelay = atol(M_GetToken(NULL));
+	#endif
+	// Flags
+	else if (fastcmp(param, "blocking") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_IMPASSIBLE;
+	else if (fastcmp(param, "blockmonsters") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_BLOCKMONSTERS;
+	else if (fastcmp(param, "twosided") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_TWOSIDED;
+	else if (fastcmp(param, "dontpegtop") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_DONTPEGTOP;
+	else if (fastcmp(param, "dontpegbottom") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_DONTPEGBOTTOM;
+	else if (fastcmp(param, "skewtd") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_EFFECT1;
+	else if (fastcmp(param, "noclimb") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_NOCLIMB;
+	else if (fastcmp(param, "noskew") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_EFFECT2;
+	else if (fastcmp(param, "midpeg") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_EFFECT3;
+	else if (fastcmp(param, "midsolid") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_EFFECT4;
+	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_EFFECT5;
+/*
+	else if (fastcmp(param, "nosonic") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_NOSONIC;
+	else if (fastcmp(param, "notails") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_NOSONIC;
+	else if (fastcmp(param, "noknux") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_NOKNUX;
+*/
+	else if (fastcmp(param, "bouncy") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_BOUNCY;
+	else if (fastcmp(param, "transfer") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].flags |= ML_TFERLINE;
+	#ifdef ADVUDMF
+	else if (fastcmp(param, "fogwall") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].udmfflags |= MLU_FOGWALL;
+	else if (fastcmp(param, "horizoneffect") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].udmfflags |= MLU_HORIZON;
+	else if (fastcmp(param, "notriggerorder") && fastcmp("true", M_GetToken(NULL)))
+		lines[i].udmfflags |= MLU_NOTRIGGERORDER;
+	#endif
+}
+
+/** Auxiliary function for TextmapParse.
+  *
+  * \param Thing number.
+  * \param Parameter string.
+  */
+static void TextmapThing(UINT32 i, char *param)
+{
+/*	if (fastcmp(param, "id"))
+		mapthings[i].tag = atol(M_GetToken(NULL));
+	else*/ if (fastcmp(param, "x"))
+		mapthings[i].x = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "y"))
+		mapthings[i].y = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "height"))
+		mapthings[i].z = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "angle"))
+		mapthings[i].angle = atol(M_GetToken(NULL));
+	#ifdef ADVUDMF
+	else if (fastcmp(param, "pitch"))
+		mapthings[i].pitch = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "roll"))
+		mapthings[i].roll = atol(M_GetToken(NULL));
+	#endif
+	else if (fastcmp(param, "type"))
+		mapthings[i].type = atol(M_GetToken(NULL));
+	#ifdef ADVUDMF
+	else if (fastcmp(param, "scale") || fastcmp(param, "scalex"))
+		mapthings[i].scale = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "spawntrigger"))
+		mapthings[i].spawntrigger = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "seetrigger"))
+		mapthings[i].seetrigger = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "paintrigger"))
+		mapthings[i].paintrigger = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "meleetrigger"))
+		mapthings[i].meleetrigger = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "missiletrigger"))
+		mapthings[i].missiletrigger = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "deathtrigger"))
+		mapthings[i].deathtrigger = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "xdeathtrigger"))
+		mapthings[i].xdeathtrigger = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "raisetrigger"))
+		mapthings[i].raisetrigger = atol(M_GetToken(NULL));
+	else if (fastncmp(param, "param", 5) && strlen(param) > 5)
+	{
+		if (fastcmp(param + 6, "str"))
+		{
+			size_t argnum = param[5] - '0';
+			if (argnum < 0 || argnum >= NUMLINESTRINGARGS)
+			{
+				CONS_Debug(DBG_SETUP, "Invalid Thing string parameter number: %d\n", argnum);
+				return;
+			}
+			char* token = M_GetToken(NULL);
+			mapthings[i].stringparams[argnum] = Z_Malloc(strlen(token) + 1, PU_LEVEL, NULL);
+			M_Memcpy(mapthings[i].stringparams[argnum], token, strlen(token) + 1);
+		}
+		else
+		{
+			size_t paramnum = atol(param + 5);
+			if (paramnum < 0 || paramnum >= NUMTHINGPARAMS)
+			{
+				CONS_Debug(DBG_SETUP, "Invalid Thing parameter number: %d\n", paramnum);
+				return;
+			}
+			mapthings[i].params[paramnum] = atol(M_GetToken(NULL));
+		}
+	}
+	#endif
+	// Flags
+	else if (fastcmp(param, "extra") && fastcmp("true", M_GetToken(NULL)))
+		mapthings[i].options |= 1;
+	else if (fastcmp(param, "flip") && fastcmp("true", M_GetToken(NULL)))
+		mapthings[i].options |= MTF_OBJECTFLIP;
+	else if (fastcmp(param, "special") && fastcmp("true", M_GetToken(NULL)))
+		mapthings[i].options |= MTF_OBJECTSPECIAL;
+	else if (fastcmp(param, "ceiling") && fastcmp("true", M_GetToken(NULL)))
+		mapthings[i].options |= MTF_OBJECTFLIP;
+}
+
+/** From a given position table, run a specified parser function through a {}-encapsuled text.
+  *
+  * \param Positions array of encapsulated data of a given type, in the TEXTMAP data.
+  * \param Structure number (mapthings, sectors, ...).
+  * \param Parser function pointer.
+  */
+static void TextmapParse(UINT32 dataPos[], size_t num, void (*parser)(UINT32, char *))
+{
+	UINT32 i;
+	char *token;
+	for (i = 0; i < num; i++)
+	{
+		M_SetTokenPos(dataPos[i]);
+		if (fastcmp(M_GetToken(NULL), "{"))
+			while (!fastcmp(token = M_GetToken(NULL), "}"))
+				parser(i, token);
+		else
+			CONS_Alert(CONS_WARNING, "Invalid UDMF data capsule!\n");
+	}
 }
 
 //
@@ -2302,7 +2774,6 @@ static void LoadMapLUT (const virtres_t* virt)
 static void LoadMapData (const virtres_t* virt)
 {
 	virtlump_t* virtvertexes = NULL, * virtsectors = NULL, * virtsidedefs = NULL, * virtlinedefs = NULL, * virtthings = NULL;
-#ifdef UDMF
 	virtlump_t* textmap = vres_Find(virt, "TEXTMAP");
 
 	// Count map data.
@@ -2315,10 +2786,10 @@ static void LoadMapData (const virtres_t* virt)
 		numsectors = 0;
 
 		// Count how many entries for each type we got in textmap.
-		//TextmapCount(vtextmap->data, vtextmap->size);
+		if (!TextmapCount(textmap->data, textmap->size))
+			return;
 	}
 	else
-#endif
 	{
 		virtthings   = vres_Find(virt, "THINGS");
 		virtvertexes = vres_Find(virt, "VERTEXES");
@@ -2359,13 +2830,16 @@ static void LoadMapData (const virtres_t* virt)
 
 	numlevelflats = 0;
 
-#ifdef UDMF
 	if (textmap)
 	{
-
+		TextmapDefaults(); // UDMF-specific defaults (since some fields may get omitted).
+		TextmapParse(vertexesPos, numvertexes, TextmapVertex);
+		TextmapParse(sectorsPos,  numsectors,  TextmapSector);
+		TextmapParse(sidesPos,    numsides,    TextmapSide);
+		TextmapParse(linesPos,    numlines,    TextmapLine);
+		SetupLines();
 	}
 	else
-#endif
 	{
 		// Strict map data
 		P_LoadRawVertexes(virtvertexes->data);
@@ -2373,8 +2847,8 @@ static void LoadMapData (const virtres_t* virt)
 		P_LoadRawLineDefs(virtlinedefs->data);
 		SetupLines();
 		P_LoadRawSideDefs2(virtsidedefs->data);
-		R_ClearTextureNumCache(true);
 	}
+	R_ClearTextureNumCache(true);
 
 	// set the sky flat num
 	skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
@@ -2385,6 +2859,18 @@ static void LoadMapData (const virtres_t* virt)
 
 	// search for animated flats and set up
 	P_SetupLevelFlatAnims();
+
+	if (!LoadMapBSP(virt))
+		return false;
+	LoadMapLUT(virt);
+
+	if (textmap)
+		TextmapParse(mapthingsPos,nummapthings,TextmapThing);
+	else
+		P_PrepareRawThings(virtthings->data);
+
+	P_LoadLineDefs2();
+	P_GroupLines();
 }
 
 #if 0
@@ -2616,27 +3102,34 @@ static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 
 static void P_MakeMapMD5(virtres_t* virt, void *dest)
 {
-	unsigned char linemd5[16];
-	unsigned char sectormd5[16];
-	unsigned char thingmd5[16];
-	unsigned char sidedefmd5[16];
+	virtlump_t* textmap   = vres_Find(virt, "TEXTMAP");
 	unsigned char resmd5[16];
-	UINT8 i;
 
-	// Create a hash for the current map
-	// get the actual lumps!
-	virtlump_t* virtlines   = vres_Find(virt, "LINEDEFS");
-	virtlump_t* virtsectors = vres_Find(virt, "SECTORS");
-	virtlump_t* virtmthings = vres_Find(virt, "THINGS");
-	virtlump_t* virtsides   = vres_Find(virt, "SIDEDEFS");
+	if (textmap)
+		P_MakeBufferMD5((char*)textmap->data, textmap->size, resmd5);
+	else
+	{
+		unsigned char linemd5[16];
+		unsigned char sectormd5[16];
+		unsigned char thingmd5[16];
+		unsigned char sidedefmd5[16];
+		UINT8 i;
 
-	P_MakeBufferMD5((char*)virtlines->data,   virtlines->size, linemd5);
-	P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size,  sectormd5);
-	P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size,   thingmd5);
-	P_MakeBufferMD5((char*)virtsides->data,   virtsides->size, sidedefmd5);
+		// Create a hash for the current map
+		// get the actual lumps!
+		virtlump_t* virtlines   = vres_Find(virt, "LINEDEFS");
+		virtlump_t* virtsectors = vres_Find(virt, "SECTORS");
+		virtlump_t* virtmthings = vres_Find(virt, "THINGS");
+		virtlump_t* virtsides   = vres_Find(virt, "SIDEDEFS");
 
-	for (i = 0; i < 16; i++)
-		resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
+		P_MakeBufferMD5((char*)virtlines->data,   virtlines->size, linemd5);
+		P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size,  sectormd5);
+		P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size,   thingmd5);
+		P_MakeBufferMD5((char*)virtsides->data,   virtsides->size, sidedefmd5);
+
+		for (i = 0; i < 16; i++)
+			resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
+	}
 
 	M_Memcpy(dest, &resmd5, 16);
 }
@@ -3139,14 +3632,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
 
 		LoadMapData(virt);
-		if (!LoadMapBSP(virt))
-			return false;
-		LoadMapLUT(virt);
-
-		P_LoadLineDefs2();
-		P_GroupLines();
-
-		P_PrepareRawThings(vres_Find(virt, "THINGS")->data);
 
 		P_MakeMapMD5(virt, &mapmd5);
 
