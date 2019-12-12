@@ -6580,7 +6580,7 @@ consvar_t cv_grfogdensity = {"gr_fogdensity", "150", CV_CALL|CV_NOINIT, CV_Unsig
 
 consvar_t cv_grfiltermode = {"gr_filtermode", "Nearest", CV_SAVE|CV_CALL, grfiltermode_cons_t,
                              CV_grfiltermode_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_SAVE|CV_CALL, granisotropicmode_cons_t,
+consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotropicmode_cons_t,
                              CV_granisotropic_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -6642,7 +6642,6 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_grspritebillboarding);
 
 	CV_RegisterVar(&cv_grfiltermode);
-	CV_RegisterVar(&cv_granisotropicmode);
 	CV_RegisterVar(&cv_grrounddown);
 	CV_RegisterVar(&cv_grcorrecttricks);
 	CV_RegisterVar(&cv_grsolvetjoin);
@@ -6652,6 +6651,10 @@ void HWR_AddCommands(void)
 #endif
 }
 
+void HWR_AddSessionCommands(void)
+{
+	CV_RegisterVar(&cv_granisotropicmode);
+}
 
 // --------------------------------------------------------------------------
 // Setup the hardware renderer
@@ -6672,6 +6675,7 @@ void HWR_Startup(void)
 	{
 		CONS_Printf("HWR_Startup()...\n");
 		HWR_InitPolyPool();
+		HWR_AddSessionCommands();
 		HWR_InitTextureCache();
 		HWR_InitModels();
 #ifdef ALAM_LIGHTING
