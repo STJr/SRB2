@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -49,6 +49,7 @@ static void COM_Exec_f(void);
 static void COM_Wait_f(void);
 static void COM_Help_f(void);
 static void COM_Toggle_f(void);
+static void COM_Add_f(void);
 
 static void CV_EnforceExecVersion(void);
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
@@ -291,6 +292,7 @@ void COM_Init(void)
 	COM_AddCommand("wait", COM_Wait_f);
 	COM_AddCommand("help", COM_Help_f);
 	COM_AddCommand("toggle", COM_Toggle_f);
+	COM_AddCommand("add", COM_Add_f);
 	RegisterNetXCmd(XD_NETVAR, Got_NetVar);
 }
 
@@ -340,6 +342,40 @@ size_t COM_CheckParm(const char *check)
 	for (i = 1; i < com_argc; i++)
 		if (!strcasecmp(check, com_argv[i]))
 			return i;
+	return 0;
+}
+
+/** \brief COM_CheckParm, but checks only the start of each argument.
+  *        E.g. checking for "-no" would match "-noerror" too.
+  */
+size_t COM_CheckPartialParm(const char *check)
+{
+	int  len;
+	size_t i;
+
+	len = strlen(check);
+
+	for (i = 1; i < com_argc; i++)
+	{
+		if (strncasecmp(check, com_argv[i], len) == 0)
+			return i;
+	}
+	return 0;
+}
+
+/** Find the first argument that starts with a hyphen (-).
+  * \return The index of the argument, or 0
+  *         if there are no such arguments.
+  */
+size_t COM_FirstOption(void)
+{
+	size_t i;
+
+	for (i = 1; i < com_argc; i++)
+	{
+		if (com_argv[i][0] == '-')/* options start with a hyphen */
+			return i;
+	}
 	return 0;
 }
 
@@ -709,15 +745,21 @@ static void COM_Help_f(void)
 
 	if (COM_Argc() > 1)
 	{
-		cvar = CV_FindVar(COM_Argv(1));
+		const char *help = COM_Argv(1);
+		cvar = CV_FindVar(help);
 		if (cvar)
 		{
-			CONS_Printf(M_GetText("Variable %s:\n"), cvar->name);
+			boolean floatmode = false;
+			const char *cvalue = NULL;
+			CONS_Printf("\x82""Variable %s:\n", cvar->name);
 			CONS_Printf(M_GetText("  flags :"));
 			if (cvar->flags & CV_SAVE)
 				CONS_Printf("AUTOSAVE ");
 			if (cvar->flags & CV_FLOAT)
+			{
 				CONS_Printf("FLOAT ");
+				floatmode = true;
+			}
 			if (cvar->flags & CV_NETVAR)
 				CONS_Printf("NETVAR ");
 			if (cvar->flags & CV_CALL)
@@ -727,59 +769,113 @@ static void COM_Help_f(void)
 			CONS_Printf("\n");
 			if (cvar->PossibleValue)
 			{
-				if (stricmp(cvar->PossibleValue[0].strvalue, "MIN") == 0)
-				{
-					for (i = 1; cvar->PossibleValue[i].strvalue != NULL; i++)
-						if (!stricmp(cvar->PossibleValue[i].strvalue, "MAX"))
-							break;
-					CONS_Printf(M_GetText("  range from %d to %d\n"), cvar->PossibleValue[0].value,
-						cvar->PossibleValue[i].value);
-					CONS_Printf(M_GetText(" Current value: %d\n"), cvar->value);
-				}
+				CONS_Printf(" Possible values:\n");
+				if (cvar->PossibleValue == CV_YesNo)
+					CONS_Printf("  Yes or No (On or Off, 1 or 0)\n");
+				else if (cvar->PossibleValue == CV_OnOff)
+					CONS_Printf("  On or Off (Yes or No, 1 or 0)\n");
 				else
 				{
-					const char *cvalue = NULL;
-					CONS_Printf(M_GetText("  possible value : %s\n"), cvar->name);
+#define MINVAL 0
+#define MAXVAL 1
+					if (!stricmp(cvar->PossibleValue[MINVAL].strvalue, "MIN"))
+					{
+						if (floatmode)
+							CONS_Printf("  range from %f to %f\n", FIXED_TO_FLOAT(cvar->PossibleValue[MINVAL].value),
+								FIXED_TO_FLOAT(cvar->PossibleValue[MAXVAL].value));
+						else
+							CONS_Printf("  range from %d to %d\n", cvar->PossibleValue[MINVAL].value,
+								cvar->PossibleValue[MAXVAL].value);
+						i = MAXVAL+1;
+					}
+#undef MINVAL
+#undef MAXVAL
+
+					//CONS_Printf(M_GetText("  possible value : %s\n"), cvar->name);
 					while (cvar->PossibleValue[i].strvalue)
 					{
-						CONS_Printf("    %-2d : %s\n", cvar->PossibleValue[i].value,
-							cvar->PossibleValue[i].strvalue);
+						if (floatmode)
+							CONS_Printf("  %-2f : %s\n", FIXED_TO_FLOAT(cvar->PossibleValue[i].value),
+								cvar->PossibleValue[i].strvalue);
+						else
+							CONS_Printf("  %-2d : %s\n", cvar->PossibleValue[i].value,
+								cvar->PossibleValue[i].strvalue);
 						if (cvar->PossibleValue[i].value == cvar->value)
 							cvalue = cvar->PossibleValue[i].strvalue;
 						i++;
 					}
-					if (cvalue)
-						CONS_Printf(M_GetText(" Current value: %s\n"), cvalue);
-					else
-						CONS_Printf(M_GetText(" Current value: %d\n"), cvar->value);
 				}
 			}
+
+			if (cvalue)
+				CONS_Printf(" Current value: %s\n", cvalue);
+			else if (cvar->string)
+				CONS_Printf(" Current value: %s\n", cvar->string);
 			else
-				CONS_Printf(M_GetText(" Current value: %d\n"), cvar->value);
+				CONS_Printf(" Current value: %d\n", cvar->value);
 		}
 		else
-			CONS_Printf(M_GetText("No help for this command/variable\n"));
+		{
+			for (cmd = com_commands; cmd; cmd = cmd->next)
+			{
+				if (strcmp(cmd->name, help))
+					continue;
+
+				CONS_Printf("\x82""Command %s:\n", cmd->name);
+				CONS_Printf("  help is not available for commands");
+				CONS_Printf("\x82""\nCheck wiki.srb2.org for more or try typing <name> without arguments\n");
+				return;
+			}
+
+			CONS_Printf("No exact match, searching...\n");
+
+			// variables
+			CONS_Printf("\x82""Variables:\n");
+			for (cvar = consvar_vars; cvar; cvar = cvar->next)
+			{
+				if ((cvar->flags & CV_NOSHOWHELP) || (!strstr(cvar->name, help)))
+					continue;
+				CONS_Printf("%s ", cvar->name);
+				i++;
+			}
+
+			// commands
+			CONS_Printf("\x82""\nCommands:\n");
+			for (cmd = com_commands; cmd; cmd = cmd->next)
+			{
+				if (!strstr(cmd->name, help))
+					continue;
+				CONS_Printf("%s ",cmd->name);
+				i++;
+			}
+
+			CONS_Printf("\x82""\nCheck wiki.srb2.org for more or type help <command or variable>\n");
+
+			CONS_Debug(DBG_GAMELOGIC, "\x87Total : %d\n", i);
+		}
+		return;
 	}
 	else
 	{
+		// variables
+		CONS_Printf("\x82""Variables:\n");
+		for (cvar = consvar_vars; cvar; cvar = cvar->next)
+		{
+			if (cvar->flags & CV_NOSHOWHELP)
+				continue;
+			CONS_Printf("%s ", cvar->name);
+			i++;
+		}
+
 		// commands
-		CONS_Printf("\x82%s", M_GetText("Commands\n"));
+		CONS_Printf("\x82""\nCommands:\n");
 		for (cmd = com_commands; cmd; cmd = cmd->next)
 		{
 			CONS_Printf("%s ",cmd->name);
 			i++;
 		}
 
-		// variables
-		CONS_Printf("\n\x82%s", M_GetText("Variables\n"));
-		for (cvar = consvar_vars; cvar; cvar = cvar->next)
-		{
-			if (!(cvar->flags & CV_NOSHOWHELP))
-				CONS_Printf("%s ", cvar->name);
-			i++;
-		}
-
-		CONS_Printf("\n\x82%s", M_GetText("Read help file for more or type help <command or variable>\n"));
+		CONS_Printf("\x82""\nCheck wiki.srb2.org for more or type help <command or variable>\n");
 
 		CONS_Debug(DBG_GAMELOGIC, "\x82Total : %d\n", i);
 	}
@@ -814,6 +910,30 @@ static void COM_Toggle_f(void)
 	// netcvar don't change imediately
 	cvar->flags |= CV_SHOWMODIFONETIME;
 	CV_AddValue(cvar, +1);
+}
+
+/** Command variant of CV_AddValue
+  */
+static void COM_Add_f(void)
+{
+	consvar_t *cvar;
+
+	if (COM_Argc() != 3)
+	{
+		CONS_Printf(M_GetText("Add <cvar_name> <value>: Add to the value of a cvar. Negative values work too!\n"));
+		return;
+	}
+	cvar = CV_FindVar(COM_Argv(1));
+	if (!cvar)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("%s is not a cvar\n"), COM_Argv(1));
+		return;
+	}
+
+	if (( cvar->flags & CV_FLOAT ))
+		CV_Set(cvar, va("%f", FIXED_TO_FLOAT (cvar->value) + atof(COM_Argv(2))));
+	else
+		CV_AddValue(cvar, atoi(COM_Argv(2)));
 }
 
 // =========================================================================
@@ -1123,32 +1243,42 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 
 		if (var->PossibleValue[0].strvalue && !stricmp(var->PossibleValue[0].strvalue, "MIN")) // bounded cvar
 		{
+#define MINVAL 0
+#define MAXVAL 1
 			INT32 i;
-			// search for maximum
-			for (i = 1; var->PossibleValue[i].strvalue; i++)
-				if (!stricmp(var->PossibleValue[i].strvalue, "MAX"))
-					break;
 #ifdef PARANOIA
-			if (!var->PossibleValue[i].strvalue)
+			if (!var->PossibleValue[MAXVAL].strvalue)
 				I_Error("Bounded cvar \"%s\" without maximum!\n", var->name);
 #endif
 
-			if ((v != INT32_MIN && v < var->PossibleValue[0].value) || !stricmp(valstr, "MIN"))
+			// search for other
+			for (i = MAXVAL+1; var->PossibleValue[i].strvalue; i++)
+				if (v == var->PossibleValue[i].value || !stricmp(var->PossibleValue[i].strvalue, valstr))
+				{
+					var->value = var->PossibleValue[i].value;
+					var->string = var->PossibleValue[i].strvalue;
+					goto finish;
+				}
+
+
+			if ((v != INT32_MIN && v < var->PossibleValue[MINVAL].value) || !stricmp(valstr, "MIN"))
 			{
-				v = var->PossibleValue[0].value;
-				valstr = var->PossibleValue[0].strvalue;
+				v = var->PossibleValue[MINVAL].value;
+				valstr = var->PossibleValue[MINVAL].strvalue;
 				override = true;
 				overrideval = v;
 			}
-			else if ((v != INT32_MIN && v > var->PossibleValue[i].value) || !stricmp(valstr, "MAX"))
+			else if ((v != INT32_MIN && v > var->PossibleValue[MAXVAL].value) || !stricmp(valstr, "MAX"))
 			{
-				v = var->PossibleValue[i].value;
-				valstr = var->PossibleValue[i].strvalue;
+				v = var->PossibleValue[MAXVAL].value;
+				valstr = var->PossibleValue[MAXVAL].strvalue;
 				override = true;
 				overrideval = v;
 			}
 			if (v == INT32_MIN)
 				goto badinput;
+#undef MINVAL
+#undef MAXVAL
 		}
 		else
 		{
@@ -1204,7 +1334,16 @@ found:
 		var->value = (INT32)(d * FRACUNIT);
 	}
 	else
-		var->value = atoi(var->string);
+	{
+		if (var == &cv_forceskin)
+		{
+			var->value = R_SkinAvailable(var->string);
+			if (!R_SkinUsable(-1, var->value))
+				var->value = -1;
+		}
+		else
+			var->value = atoi(var->string);
+	}
 
 finish:
 	// See the note above.
@@ -1270,7 +1409,7 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -1289,9 +1428,6 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 		CONS_Alert(CONS_WARNING, "Netvar not found with netid %hu\n", netid);
 		return;
 	}
-#if 0 //defined (GP2X) || defined (PSP)
-	CONS_Printf("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue);
-#endif
 	DEBFILE(va("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue));
 
 	Setvalue(cvar, svalue, stealth);
@@ -1390,12 +1526,22 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 	if (var->flags & CV_NETVAR)
 	{
 		// send the value of the variable
-		XBOXSTATIC UINT8 buf[128];
+		UINT8 buf[128];
 		UINT8 *p = buf;
 		if (!(server || (IsPlayerAdmin(consoleplayer))))
 		{
 			CONS_Printf(M_GetText("Only the server or admin can change: %s %s\n"), var->name, var->string);
 			return;
+		}
+
+		if (var == &cv_forceskin)
+		{
+			INT32 skin = R_SkinAvailable(value);
+			if ((stricmp(value, "None")) && ((skin == -1) || !R_SkinUsable(-1, skin)))
+			{
+				CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
+				return;
+			}
 		}
 
 		// Only add to netcmd buffer if in a netgame, otherwise, just change it.
@@ -1431,6 +1577,32 @@ void CV_StealthSet(consvar_t *var, const char *value)
 	CV_SetCVar(var, value, true);
 }
 
+/** Sets a numeric value to a variable, sometimes calling its callback
+  * function.
+  *
+  * \param var   The variable.
+  * \param value The numeric value, converted to a string before setting.
+  * \param stealth Do we call the callback function or not?
+  */
+static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth)
+{
+	char val[SKINNAMESIZE+1];
+
+	if (var == &cv_forceskin) // Special handling.
+	{
+		const char *tmpskin = NULL;
+		if ((value < 0) || (value >= numskins))
+			tmpskin = "None";
+		else
+			tmpskin = skins[value].name;
+		strncpy(val, tmpskin, SKINNAMESIZE);
+	}
+	else
+		sprintf(val, "%d", value);
+
+	CV_SetCVar(var, val, stealth);
+}
+
 /** Sets a numeric value to a variable without calling its callback
   * function.
   *
@@ -1440,10 +1612,7 @@ void CV_StealthSet(consvar_t *var, const char *value)
   */
 void CV_StealthSetValue(consvar_t *var, INT32 value)
 {
-	char val[32];
-
-	sprintf(val, "%d", value);
-	CV_SetCVar(var, val, true);
+	CV_SetValueMaybeStealth(var, value, true);
 }
 
 // New wrapper for what used to be CV_Set()
@@ -1461,10 +1630,7 @@ void CV_Set(consvar_t *var, const char *value)
   */
 void CV_SetValue(consvar_t *var, INT32 value)
 {
-	char val[32];
-
-	sprintf(val, "%d", value);
-	CV_SetCVar(var, val, false);
+	CV_SetValueMaybeStealth(var, value, false);
 }
 
 /** Adds a value to a console variable.
@@ -1481,20 +1647,37 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 {
 	INT32 newvalue, max;
 
+	if (!increment)
+		return;
+
 	// count pointlimit better
 	if (var == &cv_pointlimit && (gametype == GT_MATCH))
 		increment *= 50;
-	newvalue = var->value + increment;
+
+	if (var == &cv_forceskin) // Special handling.
+	{
+		INT32 oldvalue = var->value;
+		newvalue = oldvalue;
+		do
+		{
+			newvalue += increment;
+			if (newvalue < -1)
+				newvalue = (numskins - 1);
+			else if (newvalue >= numskins)
+				newvalue = -1;
+		} while ((oldvalue != newvalue)
+				&& !(R_SkinUsable(-1, newvalue)));
+	}
+	else
+		newvalue = var->value + increment;
 
 	if (var->PossibleValue)
 	{
-#define MINVAL 0
 		if (var == &cv_nextmap)
 		{
 			// Special case for the nextmap variable, used only directly from the menu
 			INT32 oldvalue = var->value - 1, gt;
 			gt = cv_newgametype.value;
-			if (increment != 0) // Going up!
 			{
 				newvalue = var->value - 1;
 				do
@@ -1525,21 +1708,58 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 				return;
 			}
 		}
+#define MINVAL 0
+#define MAXVAL 1
 		else if (var->PossibleValue[MINVAL].strvalue && !strcmp(var->PossibleValue[MINVAL].strvalue, "MIN"))
 		{
-			// search the next to last
-			for (max = 0; var->PossibleValue[max+1].strvalue; max++)
-				;
+#ifdef PARANOIA
+			if (!var->PossibleValue[MAXVAL].strvalue)
+				I_Error("Bounded cvar \"%s\" without maximum!\n", var->name);
+#endif
 
-			if (newvalue < var->PossibleValue[MINVAL].value) // add the max+1
-				newvalue += var->PossibleValue[max].value - var->PossibleValue[MINVAL].value + 1;
+			if (newvalue < var->PossibleValue[MINVAL].value || newvalue > var->PossibleValue[MAXVAL].value)
+			{
+				INT32 currentindice = -1, newindice;
+				for (max = MAXVAL+1; var->PossibleValue[max].strvalue; max++)
+				{
+					if (var->PossibleValue[max].value == newvalue)
+					{
+						increment = 0;
+						currentindice = max;
+					}
+					else if (var->PossibleValue[max].value == var->value)
+						currentindice = max;
+				}
 
-			newvalue = var->PossibleValue[MINVAL].value + (newvalue - var->PossibleValue[MINVAL].value)
-				% (var->PossibleValue[max].value - var->PossibleValue[MINVAL].value + 1);
+				if (increment)
+				{
+					increment = (increment > 0) ? 1 : -1;
+					if (currentindice == -1 && max != MAXVAL+1)
+						newindice = ((increment > 0) ? MAXVAL : max) + increment;
+					else
+						newindice = currentindice + increment;
 
-			CV_SetValue(var, newvalue);
-#undef MINVAL
+					if (newindice >= max || newindice <= MAXVAL)
+					{
+						if (var == &cv_pointlimit && (gametype == GT_MATCH) && increment > 0)
+							CV_SetValue(var, 50);
+						else
+						{
+							newvalue = var->PossibleValue[((increment > 0) ? MINVAL : MAXVAL)].value;
+							CV_SetValue(var, newvalue);
+						}
+					}
+					else
+						CV_Set(var, var->PossibleValue[newindice].strvalue);
+				}
+				else
+					CV_Set(var, var->PossibleValue[currentindice].strvalue);
+			}
+			else
+				CV_SetValue(var, newvalue);
 		}
+#undef MINVAL
+#undef MAXVAL
 		else
 		{
 			INT32 currentindice = -1, newindice;
@@ -1549,39 +1769,30 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 				if (var->PossibleValue[max].value == var->value)
 					currentindice = max;
 
-			max--;
-
 			if (var == &cv_chooseskin)
 			{
 				// Special case for the chooseskin variable, used only directly from the menu
-				if (increment > 0) // Going up!
+				newvalue = var->value - 1;
+				do
 				{
-					newvalue = var->value - 1;
-					do
+					if (increment > 0) // Going up!
 					{
 						newvalue++;
 						if (newvalue == MAXSKINS)
 							newvalue = 0;
-					} while (var->PossibleValue[newvalue].strvalue == NULL);
-					var->value = newvalue + 1;
-					var->string = var->PossibleValue[newvalue].strvalue;
-					var->func();
-					return;
-				}
-				else if (increment < 0) // Going down!
-				{
-					newvalue = var->value - 1;
-					do
+					}
+					else if (increment < 0) // Going down!
 					{
 						newvalue--;
 						if (newvalue == -1)
 							newvalue = MAXSKINS-1;
-					} while (var->PossibleValue[newvalue].strvalue == NULL);
-					var->value = newvalue + 1;
-					var->string = var->PossibleValue[newvalue].strvalue;
-					var->func();
-					return;
-				}
+					}
+				} while (var->PossibleValue[newvalue].strvalue == NULL);
+
+				var->value = newvalue + 1;
+				var->string = var->PossibleValue[newvalue].strvalue;
+				var->func();
+				return;
 			}
 #ifdef PARANOIA
 			if (currentindice == -1)
@@ -1589,7 +1800,7 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 					var->value);
 #endif
 
-			newindice = (currentindice + increment + max + 1) % (max+1);
+			newindice = (currentindice + increment + max) % max;
 			CV_Set(var, var->PossibleValue[newindice].strvalue);
 		}
 	}
@@ -1623,7 +1834,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 
 	if (joyaxis_default)
 	{
-#if !defined (_WII) && !defined  (WMINPUT)
 		if (!stricmp(v->name, "joyaxis_turn"))
 		{
 			if (joyaxis_count > 6) return false;
@@ -1633,7 +1843,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "X-Axis")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#if !defined (PSP)
 		if (!stricmp(v->name, "joyaxis_move"))
 		{
 			if (joyaxis_count > 6) return false;
@@ -1642,8 +1851,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "Y-Axis")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#endif
-#if !defined (_arch_dreamcast) && !defined (_XBOX) && !defined (PSP)
 		if (!stricmp(v->name, "joyaxis_side"))
 		{
 			if (joyaxis_count > 6) return false;
@@ -1652,8 +1859,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "Z-Axis")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#endif
-#if !defined (_XBOX) && !defined (PSP)
 		if (!stricmp(v->name, "joyaxis_look"))
 		{
 			if (joyaxis_count > 6) return false;
@@ -1662,7 +1867,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "None")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#endif
 		if (!stricmp(v->name, "joyaxis_fire")
 			|| !stricmp(v->name, "joyaxis_firenormal"))
 		{
@@ -1672,7 +1876,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "None")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#endif
 		// reset all axis settings to defaults
 		if (joyaxis_count == 6)
 		{
@@ -1689,7 +1892,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 
 	if (joyaxis2_default)
 	{
-#if !defined (_WII) && !defined  (WMINPUT)
 		if (!stricmp(v->name, "joyaxis2_turn"))
 		{
 			if (joyaxis2_count > 6) return false;
@@ -1699,7 +1901,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "X-Axis")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-// #if !defined (PSP)
 		if (!stricmp(v->name, "joyaxis2_move"))
 		{
 			if (joyaxis2_count > 6) return false;
@@ -1708,8 +1909,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "Y-Axis")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-// #endif
-#if !defined (_arch_dreamcast) && !defined (_XBOX) && !defined (PSP)
 		if (!stricmp(v->name, "joyaxis2_side"))
 		{
 			if (joyaxis2_count > 6) return false;
@@ -1718,8 +1917,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "Z-Axis")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-#endif
-#if !defined (_XBOX) // && !defined (PSP)
 		if (!stricmp(v->name, "joyaxis2_look"))
 		{
 			if (joyaxis2_count > 6) return false;
@@ -1728,7 +1925,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "None")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-#endif
 		if (!stricmp(v->name, "joyaxis2_fire")
 			|| !stricmp(v->name, "joyaxis2_firenormal"))
 		{
@@ -1738,7 +1934,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "None")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-#endif
 
 		// reset all axis settings to defaults
 		if (joyaxis2_count == 6)

@@ -26,6 +26,8 @@
 #include <unistd.h>
 #endif
 
+#include "time.h" // For log timestamps
+
 #ifdef HAVE_SDL
 
 #ifdef HAVE_TTF
@@ -114,6 +116,7 @@ int main(int argc, char **argv)
 #endif
 {
 	const char *logdir = NULL;
+	char logfile[MAX_WADPATH];
 	myargc = argc;
 	myargv = argv; /// \todo pull out path to exe from this string
 
@@ -125,15 +128,36 @@ int main(int argc, char **argv)
 #endif
 #endif
 
-	logdir = D_Home();
-
 #ifdef LOGMESSAGES
+	if (!M_CheckParm("-nolog"))
+	{
+		time_t my_time;
+		struct tm * timeinfo;
+		char buf[26];
+
+		logdir = D_Home();
+
+		my_time = time(NULL);
+		timeinfo = localtime(&my_time);
+
+		strftime(buf, 26, "%Y-%m-%d %H-%M-%S", timeinfo);
+		strcpy(logfile, va("log-%s.txt", buf));
+
 #ifdef DEFAULTDIR
-	if (logdir)
-		logstream = fopen(va("%s/"DEFAULTDIR"/log.txt",logdir), "wt");
-	else
+		if (logdir)
+		{
+			// Create dirs here because D_SRB2Main() is too late.
+			I_mkdir(va("%s%s"DEFAULTDIR, logdir, PATHSEP), 0755);
+			I_mkdir(va("%s%s"DEFAULTDIR"%slogs",logdir, PATHSEP, PATHSEP), 0755);
+			logstream = fopen(va("%s%s"DEFAULTDIR"%slogs%s%s",logdir, PATHSEP, PATHSEP, PATHSEP, logfile), "wt");
+		}
+		else
 #endif
-		logstream = fopen("./log.txt", "wt");
+		{
+			I_mkdir("."PATHSEP"logs"PATHSEP, 0755);
+			logstream = fopen(va("."PATHSEP"logs"PATHSEP"%s", logfile), "wt");
+		}
+	}
 #endif
 
 	//I_OutputMsg("I_StartupSystem() ...\n");
@@ -160,6 +184,10 @@ int main(int argc, char **argv)
 	// startup SRB2
 	CONS_Printf("Setting up SRB2...\n");
 	D_SRB2Main();
+#ifdef LOGMESSAGES
+	if (!M_CheckParm("-nolog"))
+		CONS_Printf("Logfile: %s\n", logfile);
+#endif
 	CONS_Printf("Entering main game loop...\n");
 	// never return
 	D_SRB2Loop();

@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-// Copyright (C) 2006-2018 by Sonic Team Jr.
+// Copyright (C) 2006-2019 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -30,6 +30,9 @@ extern SDL_bool framebuffer;
 #else
 #define SDL2STUB() CONS_Printf("SDL2: stubbed: %s:%d\n", __func__, __LINE__)
 #endif
+
+// So m_menu knows whether to store cv_usejoystick value or string
+#define JOYSTICK_HOTPLUG
 
 /**	\brief	The JoyInfo_s struct
 
@@ -66,6 +69,13 @@ extern SDLJoyInfo_t JoyInfo;
 /**	\brief SDL inof about joystick 2
 */
 extern SDLJoyInfo_t JoyInfo2;
+
+// So we can call this from i_video event loop
+void I_ShutdownJoystick(void);
+void I_ShutdownJoystick2(void);
+
+// Cheat to get the device index for a joystick handle
+INT32 I_GetJoystickDeviceIndex(SDL_Joystick *dev);
 
 void I_GetConsoleEvents(void);
 

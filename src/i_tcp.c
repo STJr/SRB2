@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,20 +18,12 @@
 #ifdef __GNUC__
 #include <unistd.h>
 #endif
-#ifdef __OS2__
-#include <sys/types.h>
-#include <sys/time.h>
-#endif // __OS2__
-
-#ifdef _PS3
-#define NO_IPV6 // PSL1GHT v2 do not have IPv6 support
-#endif
 
 #ifndef NO_IPV6
 #define HAVE_IPV6
 #endif
 
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #define USE_WINSOCK
 #if defined (_WIN64) || defined (HAVE_IPV6)
 #define USE_WINSOCK2
@@ -39,12 +31,6 @@
 #define USE_WINSOCK1
 #endif
 #endif //WIN32 OS
-
-#ifdef _XBOX // XBox have on WinSock API?
-#undef USE_WINSOCK
-#undef USE_WINSOCK1
-#undef USE_WINSOCK2
-#endif
 
 #ifdef USE_WINSOCK2
 #include <ws2tcpip.h>
@@ -61,17 +47,12 @@
 #else
 #ifdef USE_WINSOCK1
 #include <winsock.h>
-#elif !defined (SCOUW2) && !defined (SCOUW7) && !defined (__OS2__)
-#ifdef HAVE_LWIP
-#include <lwip/inet.h>
-#elif !defined (USE_WINSOCK)
+#elif !defined (SCOUW2) && !defined (SCOUW7)
+#ifndef USE_WINSOCK
 #include <arpa/inet.h>
 #endif //normal BSD API
 
-#ifdef HAVE_LWIP
-#include <lwip/sockets.h>
-#define ioctl lwip_ioctl
-#elif !defined (USE_WINSOCK) //!HAVE_LWIP
+#ifndef USE_WINSOCK
 #ifdef __APPLE_CC__
 #ifndef _BSD_SOCKLEN_T_
 #define _BSD_SOCKLEN_T_
@@ -81,24 +62,13 @@
 #include <netinet/in.h>
 #endif //normal BSD API
 
-#if defined(_arch_dreamcast) && !defined(HAVE_LWIP)
-#include <kos/net.h>
-#elif defined(HAVE_LWIP)
-#include <lwip/lwip.h>
-#elif defined (_PS3)
-#include <net/select.h>
-#include <net/net.h>
-#elif !defined(USE_WINSOCK) //!HAVE_LWIP
+#ifndef USE_WINSOCK
 #include <netdb.h>
 #include <sys/ioctl.h>
 #endif //normal BSD API
 
 #include <errno.h>
 #include <time.h>
-
-#ifdef _arch_dreamcast
-#include "sdl12/SRB2DC/dchelp.h"
-#endif
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
 	#include <sys/time.h>
@@ -190,11 +160,6 @@ static UINT8 UPNP_support = TRUE;
 	// winsock stuff (in winsock a socket is not a file)
 	#define ioctl ioctlsocket
 	#define close closesocket
-
-	#ifdef _WIN32_WCE
-	#include "sdl12/SRB2CE/cehelp.h"
-	#endif
-
 #endif
 
 #include "i_addrinfo.h"
@@ -205,9 +170,7 @@ static UINT8 UPNP_support = TRUE;
 #define SELECTTEST
 #endif
 
-#elif defined(HAVE_LWIP)
-#define SELECTTEST
-#elif !defined( _arch_dreamcast)
+#else
 #define SELECTTEST
 #endif
 
@@ -217,7 +180,7 @@ static UINT8 UPNP_support = TRUE;
 typedef SOCKET SOCKET_TYPE;
 #define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__) || defined(_PS3)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
 typedef int SOCKET_TYPE;
 #else
 typedef unsigned long SOCKET_TYPE;
@@ -813,6 +776,8 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 #endif
 #endif
 	mysockaddr_t straddr;
+	struct sockaddr_in sin;
+	socklen_t len = sizeof(sin);
 
 	if (s == (SOCKET_TYPE)ERRSOCKET)
 		return (SOCKET_TYPE)ERRSOCKET;
@@ -906,12 +871,16 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 			CONS_Printf(M_GetText("Network system buffer set to: %dKb\n"), opt>>10);
 	}
 
+	if (getsockname(s, (struct sockaddr *)&sin, &len) == -1)
+		CONS_Alert(CONS_WARNING, M_GetText("Failed to get port number\n"));
+	else
+		current_port = (UINT16)ntohs(sin.sin_port);
+
 	return s;
 }
 
 static boolean UDP_Socket(void)
 {
-	const char *sock_port = NULL;
 	size_t s;
 	struct my_addrinfo *ai, *runp, hints;
 	int gaie;
@@ -933,20 +902,11 @@ static boolean UDP_Socket(void)
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
 
-	if (M_CheckParm("-clientport"))
-	{
-		if (!M_IsNextParm())
-			I_Error("syntax: -clientport <portnum>");
-		sock_port = M_GetNextParm();
-	}
-	else
-		sock_port = port_name;
-
 	if (M_CheckParm("-bindaddr"))
 	{
 		while (M_IsNextParm())
 		{
-			gaie = I_getaddrinfo(M_GetNextParm(), sock_port, &hints, &ai);
+			gaie = I_getaddrinfo(M_GetNextParm(), port_name, &hints, &ai);
 			if (gaie == 0)
 			{
 				runp = ai;
@@ -967,7 +927,7 @@ static boolean UDP_Socket(void)
 	}
 	else
 	{
-		gaie = I_getaddrinfo("0.0.0.0", sock_port, &hints, &ai);
+		gaie = I_getaddrinfo("0.0.0.0", port_name, &hints, &ai);
 		if (gaie == 0)
 		{
 			runp = ai;
@@ -982,8 +942,8 @@ static boolean UDP_Socket(void)
 #ifdef HAVE_MINIUPNPC
 					if (UPNP_support)
 					{
-						I_UPnP_rem(sock_port, "UDP");
-						I_UPnP_add(NULL, sock_port, "UDP");
+						I_UPnP_rem(port_name, "UDP");
+						I_UPnP_add(NULL, port_name, "UDP");
 					}
 #endif
 				}
@@ -1000,7 +960,7 @@ static boolean UDP_Socket(void)
 		{
 			while (M_IsNextParm())
 			{
-				gaie = I_getaddrinfo(M_GetNextParm(), sock_port, &hints, &ai);
+				gaie = I_getaddrinfo(M_GetNextParm(), port_name, &hints, &ai);
 				if (gaie == 0)
 				{
 					runp = ai;
@@ -1021,7 +981,7 @@ static boolean UDP_Socket(void)
 		}
 		else
 		{
-			gaie = I_getaddrinfo("::", sock_port, &hints, &ai);
+			gaie = I_getaddrinfo("::", port_name, &hints, &ai);
 			if (gaie == 0)
 			{
 				runp = ai;
@@ -1177,12 +1137,6 @@ boolean I_InitTcpDriver(void)
 		CONS_Debug(DBG_NETPLAY, "WinSock description: %s\n",WSAData.szDescription);
 		CONS_Debug(DBG_NETPLAY, "WinSock System Status: %s\n",WSAData.szSystemStatus);
 #endif
-#ifdef HAVE_LWIP
-		lwip_kos_init();
-#elif defined(_arch_dreamcast)
-		//return;
-		net_init();
-#endif
 #ifdef __DJGPP__
 #ifdef WATTCP // Alam_GBC: survive bootp, dhcp, rarp and wattcp/pktdrv from failing to load
 		survive_eth   = 1; // would be needed to not exit if pkt_eth_init() fails
@@ -1235,9 +1189,6 @@ boolean I_InitTcpDriver(void)
 			CONS_Debug(DBG_NETPLAY, "No TCP/IP driver detected\n");
 #endif // libsocket
 #endif // __DJGPP__
-#ifdef _PS3
-		netInitialize();
-#endif
 #ifndef __DJGPP__
 		init_tcp_driver = true;
 #endif
@@ -1285,11 +1236,6 @@ void I_ShutdownTcpDriver(void)
 	WS_addrinfocleanup();
 	WSACleanup();
 #endif
-#ifdef HAVE_LWIP
-	lwip_kos_shutdown();
-#elif defined(_arch_dreamcast)
-	net_shutdown();
-#endif
 #ifdef __DJGPP__
 #ifdef WATTCP // wattcp
 	//_outch = NULL;
@@ -1298,9 +1244,6 @@ void I_ShutdownTcpDriver(void)
 	__lsck_uninit();
 #endif // libsocket
 #endif // __DJGPP__
-#ifdef _PS3
-	netDeinitialize();
-#endif
 	CONS_Printf("shut down\n");
 	init_tcp_driver = false;
 #endif
@@ -1314,7 +1257,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	int gaie;
 
 	 if (!port || !port[0])
-		port = port_name;
+		port = DEFAULTPORT;
 
 	DEBFILE(va("Creating new node: %s@%s\n", address, port));
 
@@ -1478,14 +1421,15 @@ boolean I_InitTcpNetwork(void)
 	if (!I_InitTcpDriver())
 		return false;
 
-	if (M_CheckParm("-udpport"))
+	if (M_CheckParm("-port"))
+	// Combined -udpport and -clientport into -port
+	// As it was really redundant having two seperate parms that does the same thing
 	{
 		if (M_IsNextParm())
 			strcpy(port_name, M_GetNextParm());
 		else
 			strcpy(port_name, "0");
 	}
-	current_port = (UINT16)atoi(port_name);
 
 	// parse network game options,
 	if (M_CheckParm("-server") || dedicated)

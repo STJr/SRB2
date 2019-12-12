@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -168,12 +168,10 @@ angle_t FixedAngle(fixed_t fa)
 }
 
 
-#if !(defined _NDS) || !(defined NONET)
 #include "t_ftan.c"
 
 #include "t_fsin.c"
 fixed_t *finecosine = &finesine[FINEANGLES/4];
-#endif
 
 #include "t_tan2a.c"
 

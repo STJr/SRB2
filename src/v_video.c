@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,8 +15,12 @@
 
 #include "doomdef.h"
 #include "r_local.h"
+#include "p_local.h" // stplyr
+#include "g_game.h" // players
 #include "v_video.h"
+#include "st_stuff.h"
 #include "hu_stuff.h"
+#include "f_finale.h"
 #include "r_draw.h"
 #include "console.h"
 
@@ -38,11 +42,39 @@ UINT8 *screens[5];
 // screens[3] = fade screen start
 // screens[4] = fade screen end, postimage tempoarary buffer
 
-static CV_PossibleValue_t gamma_cons_t[] = {{0, "MIN"}, {4, "MAX"}, {0, NULL}};
-static void CV_usegamma_OnChange(void);
-
 consvar_t cv_ticrate = {"showfps", "No", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_usegamma = {"gamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_usegamma_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+static void CV_palette_OnChange(void);
+
+static CV_PossibleValue_t gamma_cons_t[] = {{-15, "MIN"}, {5, "MAX"}, {0, NULL}};
+consvar_t cv_globalgamma = {"gamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t saturation_cons_t[] = {{0, "MIN"}, {10, "MAX"}, {0, NULL}};
+consvar_t cv_globalsaturation = {"saturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+#define huecoloursteps 4
+
+static CV_PossibleValue_t hue_cons_t[] = {{0, "MIN"}, {(huecoloursteps*6)-1, "MAX"}, {0, NULL}};
+consvar_t cv_rhue = {"rhue",  "0", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_yhue = {"yhue",  "4", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ghue = {"ghue",  "8", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_chue = {"chue", "12", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_bhue = {"bhue", "16", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mhue = {"mhue", "20", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_rgamma = {"rgamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ygamma = {"ygamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ggamma = {"ggamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cgamma = {"cgamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_bgamma = {"bgamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mgamma = {"mgamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_rsaturation = {"rsaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ysaturation = {"ysaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gsaturation = {"gsaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_csaturation = {"csaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_bsaturation = {"bsaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_msaturation = {"msaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_allcaps = {"allcaps", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -59,8 +91,8 @@ static void CV_Gammaxxx_ONChange(void);
 // but they won't do anything.
 static CV_PossibleValue_t grgamma_cons_t[] = {{1, "MIN"}, {255, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t grsoftwarefog_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "LightPlanes"}, {0, NULL}};
+static CV_PossibleValue_t grmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
 
-consvar_t cv_voodoocompatibility = {"gr_voodoocompatibility", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfovchange = {"gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfog = {"gr_fog", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfogcolor = {"gr_fogcolor", "AAAAAA", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -78,14 +110,218 @@ consvar_t cv_grcoronas = {"gr_coronas", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, 
 consvar_t cv_grcoronasize = {"gr_coronasize", "1", CV_SAVE| CV_FLOAT, 0, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
-static CV_PossibleValue_t CV_MD2[] = {{0, "Off"}, {1, "On"}, {2, "Old"}, {0, NULL}};
-// console variables in development
-consvar_t cv_grmd2 = {"gr_md2", "Off", CV_SAVE, CV_MD2, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grmodels = {"gr_models", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grmodelinterpolation = {"gr_modelinterpolation", "Sometimes", CV_SAVE, grmodelinterpolation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 consvar_t cv_grspritebillboarding = {"gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grskydome = {"gr_skydome", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
-const UINT8 gammatable[5][256] =
+// local copy of the palette for V_GetColor()
+RGBA_t *pLocalPalette = NULL;
+RGBA_t *pMasterPalette = NULL;
+
+/*
+The following was an extremely helpful resource when developing my Colour Cube LUT.
+http://http.developer.nvidia.com/GPUGems2/gpugems2_chapter24.html
+Please check it out if you're trying to maintain this.
+toast 18/04/17
+*/
+float Cubepal[2][2][2][3];
+
+// returns whether to apply cube, selectively avoiding expensive operations
+static boolean InitCube(void)
 {
+	boolean apply = false;
+	UINT8 q;
+	float working[2][2][2][3] = // the initial positions of the corners of the colour cube!
+	{
+		{
+			{
+				{0.0, 0.0, 0.0}, // black corner
+				{0.0, 0.0, 1.0}  // blue corner
+			},
+			{
+				{0.0, 1.0, 0.0}, // green corner
+				{0.0, 1.0, 1.0}  // cyan corner
+			}
+		},
+		{
+			{
+				{1.0, 0.0, 0.0}, // red corner
+				{1.0, 0.0, 1.0}  // magenta corner
+			},
+			{
+				{1.0, 1.0, 0.0}, // yellow corner
+				{1.0, 1.0, 1.0}  // white corner
+			}
+		}
+	};
+	float desatur[3]; // grey
+	float globalgammamul, globalgammaoffs;
+	boolean doinggamma;
+
+#define diffcons(cv) (cv.value != atoi(cv.defaultvalue))
+
+	doinggamma = diffcons(cv_globalgamma);
+
+#define gammascale 8
+	globalgammamul = (cv_globalgamma.value ? ((255 - (gammascale*abs(cv_globalgamma.value)))/255.0) : 1.0);
+	globalgammaoffs = ((cv_globalgamma.value > 0) ? ((gammascale*cv_globalgamma.value)/255.0) : 0.0);
+	desatur[0] = desatur[1] = desatur[2] = globalgammaoffs + (0.33*globalgammamul);
+
+	if (doinggamma
+		|| diffcons(cv_rhue)
+		|| diffcons(cv_yhue)
+		|| diffcons(cv_ghue)
+		|| diffcons(cv_chue)
+		|| diffcons(cv_bhue)
+		|| diffcons(cv_mhue)
+		|| diffcons(cv_rgamma)
+		|| diffcons(cv_ygamma)
+		|| diffcons(cv_ggamma)
+		|| diffcons(cv_cgamma)
+		|| diffcons(cv_bgamma)
+		|| diffcons(cv_mgamma)) // set the gamma'd/hued positions (saturation is done later)
+	{
+		float mod, tempgammamul, tempgammaoffs;
+
+		apply = true;
+
+		working[0][0][0][0] = working[0][0][0][1] = working[0][0][0][2] = globalgammaoffs;
+		working[1][1][1][0] = working[1][1][1][1] = working[1][1][1][2] = globalgammaoffs+globalgammamul;
+
+#define dohue(hue, gamma, loc) \
+		tempgammamul = (gamma ? ((255 - (gammascale*abs(gamma)))/255.0)*globalgammamul : globalgammamul);\
+		tempgammaoffs = ((gamma > 0) ? ((gammascale*gamma)/255.0) + globalgammaoffs : globalgammaoffs);\
+		mod = ((hue % huecoloursteps)*(tempgammamul)/huecoloursteps);\
+		switch (hue/huecoloursteps)\
+		{\
+			case 0:\
+			default:\
+				loc[0] = tempgammaoffs+tempgammamul;\
+				loc[1] = tempgammaoffs+mod;\
+				loc[2] = tempgammaoffs;\
+				break;\
+			case 1:\
+				loc[0] = tempgammaoffs+tempgammamul-mod;\
+				loc[1] = tempgammaoffs+tempgammamul;\
+				loc[2] = tempgammaoffs;\
+				break;\
+			case 2:\
+				loc[0] = tempgammaoffs;\
+				loc[1] = tempgammaoffs+tempgammamul;\
+				loc[2] = tempgammaoffs+mod;\
+				break;\
+			case 3:\
+				loc[0] = tempgammaoffs;\
+				loc[1] = tempgammaoffs+tempgammamul-mod;\
+				loc[2] = tempgammaoffs+tempgammamul;\
+				break;\
+			case 4:\
+				loc[0] = tempgammaoffs+mod;\
+				loc[1] = tempgammaoffs;\
+				loc[2] = tempgammaoffs+tempgammamul;\
+				break;\
+			case 5:\
+				loc[0] = tempgammaoffs+tempgammamul;\
+				loc[1] = tempgammaoffs;\
+				loc[2] = tempgammaoffs+tempgammamul-mod;\
+				break;\
+		}
+		dohue(cv_rhue.value, cv_rgamma.value, working[1][0][0]);
+		dohue(cv_yhue.value, cv_ygamma.value, working[1][1][0]);
+		dohue(cv_ghue.value, cv_ggamma.value, working[0][1][0]);
+		dohue(cv_chue.value, cv_cgamma.value, working[0][1][1]);
+		dohue(cv_bhue.value, cv_bgamma.value, working[0][0][1]);
+		dohue(cv_mhue.value, cv_mgamma.value, working[1][0][1]);
+#undef dohue
+	}
+
+#define dosaturation(a, e) a = ((1 - work)*e + work*a)
+#define docvsat(cv_sat, hue, gamma, r, g, b) \
+	if diffcons(cv_sat)\
+	{\
+		float work, mod, tempgammamul, tempgammaoffs;\
+		apply = true;\
+		work = (cv_sat.value/10.0);\
+		mod = ((hue % huecoloursteps)*(1.0)/huecoloursteps);\
+		if (hue & huecoloursteps)\
+			mod = 2-mod;\
+		else\
+			mod += 1;\
+		tempgammamul = (gamma ? ((255 - (gammascale*abs(gamma)))/255.0)*globalgammamul : globalgammamul);\
+		tempgammaoffs = ((gamma > 0) ? ((gammascale*gamma)/255.0) + globalgammaoffs : globalgammaoffs);\
+		for (q = 0; q < 3; q++)\
+			dosaturation(working[r][g][b][q], (tempgammaoffs+(desatur[q]*mod*tempgammamul)));\
+	}
+
+	docvsat(cv_rsaturation, cv_rhue.value, cv_rgamma.value, 1, 0, 0);
+	docvsat(cv_ysaturation, cv_yhue.value, cv_ygamma.value, 1, 1, 0);
+	docvsat(cv_gsaturation, cv_ghue.value, cv_ggamma.value, 0, 1, 0);
+	docvsat(cv_csaturation, cv_chue.value, cv_cgamma.value, 0, 1, 1);
+	docvsat(cv_bsaturation, cv_bhue.value, cv_bgamma.value, 0, 0, 1);
+	docvsat(cv_msaturation, cv_mhue.value, cv_mgamma.value, 1, 0, 1);
+
+#undef gammascale
+
+	if diffcons(cv_globalsaturation)
+	{
+		float work = (cv_globalsaturation.value/10.0);
+
+		apply = true;
+
+		for (q = 0; q < 3; q++)
+		{
+			dosaturation(working[1][0][0][q], desatur[q]);
+			dosaturation(working[0][1][0][q], desatur[q]);
+			dosaturation(working[0][0][1][q], desatur[q]);
+
+			dosaturation(working[1][1][0][q], 2*desatur[q]);
+			dosaturation(working[0][1][1][q], 2*desatur[q]);
+			dosaturation(working[1][0][1][q], 2*desatur[q]);
+		}
+	}
+
+#undef dosaturation
+
+#undef diffcons
+
+	if (!apply)
+		return false;
+
+#define dowork(i, j, k, l) \
+	if (working[i][j][k][l] > 1.0)\
+		working[i][j][k][l] = 1.0;\
+	else if (working[i][j][k][l] < 0.0)\
+		working[i][j][k][l] = 0.0;\
+	Cubepal[i][j][k][l] = working[i][j][k][l]
+	for (q = 0; q < 3; q++)
+	{
+		dowork(0, 0, 0, q);
+		dowork(1, 0, 0, q);
+		dowork(0, 1, 0, q);
+		dowork(1, 1, 0, q);
+		dowork(0, 0, 1, q);
+		dowork(1, 0, 1, q);
+		dowork(0, 1, 1, q);
+		dowork(1, 1, 1, q);
+	}
+#undef dowork
+
+	return true;
+}
+
+#ifdef BACKWARDSCOMPATCORRECTION
+/*
+So it turns out that the way gamma was implemented previously, the default
+colour profile of the game was messed up. Since this bad decision has been
+around for a long time, and the intent is to keep the base game looking the
+same, I'm not gonna be the one to remove this base modification.
+toast 20/04/17
+... welp yes i am (27/07/19, see the ifdef around it)
+*/
+const UINT8 correctiontable[256] =
 	{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
 	17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,
 	33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,
@@ -101,95 +337,74 @@ const UINT8 gammatable[5][256] =
 	192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,
 	208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,
 	224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,
-	240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255},
-
-	{2,4,5,7,8,10,11,12,14,15,16,18,19,20,21,23,24,25,26,27,29,30,31,
-	32,33,34,36,37,38,39,40,41,42,44,45,46,47,48,49,50,51,52,54,55,
-	56,57,58,59,60,61,62,63,64,65,66,67,69,70,71,72,73,74,75,76,77,
-	78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,
-	99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,
-	115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,129,
-	130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,
-	146,147,148,148,149,150,151,152,153,154,155,156,157,158,159,160,
-	161,162,163,163,164,165,166,167,168,169,170,171,172,173,174,175,
-	175,176,177,178,179,180,181,182,183,184,185,186,186,187,188,189,
-	190,191,192,193,194,195,196,196,197,198,199,200,201,202,203,204,
-	205,205,206,207,208,209,210,211,212,213,214,214,215,216,217,218,
-	219,220,221,222,222,223,224,225,226,227,228,229,230,230,231,232,
-	233,234,235,236,237,237,238,239,240,241,242,243,244,245,245,246,
-	247,248,249,250,251,252,252,253,254,255},
-
-	{4,7,9,11,13,15,17,19,21,22,24,26,27,29,30,32,33,35,36,38,39,40,42,
-	43,45,46,47,48,50,51,52,54,55,56,57,59,60,61,62,63,65,66,67,68,69,
-	70,72,73,74,75,76,77,78,79,80,82,83,84,85,86,87,88,89,90,91,92,93,
-	94,95,96,97,98,100,101,102,103,104,105,106,107,108,109,110,111,112,
-	113,114,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,
-	129,130,131,132,133,133,134,135,136,137,138,139,140,141,142,143,144,
-	144,145,146,147,148,149,150,151,152,153,153,154,155,156,157,158,159,
-	160,160,161,162,163,164,165,166,166,167,168,169,170,171,172,172,173,
-	174,175,176,177,178,178,179,180,181,182,183,183,184,185,186,187,188,
-	188,189,190,191,192,193,193,194,195,196,197,197,198,199,200,201,201,
-	202,203,204,205,206,206,207,208,209,210,210,211,212,213,213,214,215,
-	216,217,217,218,219,220,221,221,222,223,224,224,225,226,227,228,228,
-	229,230,231,231,232,233,234,235,235,236,237,238,238,239,240,241,241,
-	242,243,244,244,245,246,247,247,248,249,250,251,251,252,253,254,254,
-	255},
-
-	{8,12,16,19,22,24,27,29,31,34,36,38,40,41,43,45,47,49,50,52,53,55,
-	57,58,60,61,63,64,65,67,68,70,71,72,74,75,76,77,79,80,81,82,84,85,
-	86,87,88,90,91,92,93,94,95,96,98,99,100,101,102,103,104,105,106,107,
-	108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,
-	125,126,127,128,129,130,131,132,133,134,135,135,136,137,138,139,140,
-	141,142,143,143,144,145,146,147,148,149,150,150,151,152,153,154,155,
-	155,156,157,158,159,160,160,161,162,163,164,165,165,166,167,168,169,
-	169,170,171,172,173,173,174,175,176,176,177,178,179,180,180,181,182,
-	183,183,184,185,186,186,187,188,189,189,190,191,192,192,193,194,195,
-	195,196,197,197,198,199,200,200,201,202,202,203,204,205,205,206,207,
-	207,208,209,210,210,211,212,212,213,214,214,215,216,216,217,218,219,
-	219,220,221,221,222,223,223,224,225,225,226,227,227,228,229,229,230,
-	231,231,232,233,233,234,235,235,236,237,237,238,238,239,240,240,241,
-	242,242,243,244,244,245,246,246,247,247,248,249,249,250,251,251,252,
-	253,253,254,254,255},
-
-	{16,23,28,32,36,39,42,45,48,50,53,55,57,60,62,64,66,68,69,71,73,75,76,
-	78,80,81,83,84,86,87,89,90,92,93,94,96,97,98,100,101,102,103,105,106,
-	107,108,109,110,112,113,114,115,116,117,118,119,120,121,122,123,124,
-	125,126,128,128,129,130,131,132,133,134,135,136,137,138,139,140,141,
-	142,143,143,144,145,146,147,148,149,150,150,151,152,153,154,155,155,
-	156,157,158,159,159,160,161,162,163,163,164,165,166,166,167,168,169,
-	169,170,171,172,172,173,174,175,175,176,177,177,178,179,180,180,181,
-	182,182,183,184,184,185,186,187,187,188,189,189,190,191,191,192,193,
-	193,194,195,195,196,196,197,198,198,199,200,200,201,202,202,203,203,
-	204,205,205,206,207,207,208,208,209,210,210,211,211,212,213,213,214,
-	214,215,216,216,217,217,218,219,219,220,220,221,221,222,223,223,224,
-	224,225,225,226,227,227,228,228,229,229,230,230,231,232,232,233,233,
-	234,234,235,235,236,236,237,237,238,239,239,240,240,241,241,242,242,
-	243,243,244,244,245,245,246,246,247,247,248,248,249,249,250,250,251,
-	251,252,252,253,254,254,255,255}
-};
-
-// local copy of the palette for V_GetColor()
-RGBA_t *pLocalPalette = NULL;
+	240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255};
+#endif
 
 // keep a copy of the palette so that we can get the RGB value for a color index at any time.
 static void LoadPalette(const char *lumpname)
 {
-	const UINT8 *usegamma = gammatable[cv_usegamma.value];
+	boolean cube = InitCube();
 	lumpnum_t lumpnum = W_GetNumForName(lumpname);
 	size_t i, palsize = W_LumpLength(lumpnum)/3;
 	UINT8 *pal;
 
 	Z_Free(pLocalPalette);
+	Z_Free(pMasterPalette);
 
 	pLocalPalette = Z_Malloc(sizeof (*pLocalPalette)*palsize, PU_STATIC, NULL);
+	pMasterPalette = Z_Malloc(sizeof (*pMasterPalette)*palsize, PU_STATIC, NULL);
 
 	pal = W_CacheLumpNum(lumpnum, PU_CACHE);
 	for (i = 0; i < palsize; i++)
 	{
-		pLocalPalette[i].s.red = usegamma[*pal++];
-		pLocalPalette[i].s.green = usegamma[*pal++];
-		pLocalPalette[i].s.blue = usegamma[*pal++];
-		pLocalPalette[i].s.alpha = 0xFF;
+#ifdef BACKWARDSCOMPATCORRECTION
+		pMasterPalette[i].s.red = pLocalPalette[i].s.red = correctiontable[*pal++];
+		pMasterPalette[i].s.green = pLocalPalette[i].s.green = correctiontable[*pal++];
+		pMasterPalette[i].s.blue = pLocalPalette[i].s.blue = correctiontable[*pal++];
+#else
+		pMasterPalette[i].s.red = pLocalPalette[i].s.red = *pal++;
+		pMasterPalette[i].s.green = pLocalPalette[i].s.green = *pal++;
+		pMasterPalette[i].s.blue = pLocalPalette[i].s.blue = *pal++;
+#endif
+		pMasterPalette[i].s.alpha = pLocalPalette[i].s.alpha = 0xFF;
+
+		// lerp of colour cubing! if you want, make it smoother yourself
+		if (cube)
+		{
+			float working[4][3];
+			float linear;
+			UINT8 q;
+
+			linear = (pLocalPalette[i].s.red/255.0);
+#define dolerp(e1, e2) ((1 - linear)*e1 + linear*e2)
+			for (q = 0; q < 3; q++)
+			{
+				working[0][q] = dolerp(Cubepal[0][0][0][q], Cubepal[1][0][0][q]);
+				working[1][q] = dolerp(Cubepal[0][1][0][q], Cubepal[1][1][0][q]);
+				working[2][q] = dolerp(Cubepal[0][0][1][q], Cubepal[1][0][1][q]);
+				working[3][q] = dolerp(Cubepal[0][1][1][q], Cubepal[1][1][1][q]);
+			}
+			linear = (pLocalPalette[i].s.green/255.0);
+			for (q = 0; q < 3; q++)
+			{
+				working[0][q] = dolerp(working[0][q], working[1][q]);
+				working[1][q] = dolerp(working[2][q], working[3][q]);
+			}
+			linear = (pLocalPalette[i].s.blue/255.0);
+			for (q = 0; q < 3; q++)
+			{
+				working[0][q] = 255*dolerp(working[0][q], working[1][q]);
+				if (working[0][q] > 255.0)
+					working[0][q] = 255.0;
+				else if (working[0][q]  < 0.0)
+					working[0][q] = 0.0;
+			}
+#undef dolerp
+
+			pLocalPalette[i].s.red = (UINT8)(working[0][0]);
+			pLocalPalette[i].s.green = (UINT8)(working[0][1]);
+			pLocalPalette[i].s.blue = (UINT8)(working[0][2]);
+		}
 	}
 }
 
@@ -251,7 +466,7 @@ void V_SetPaletteLump(const char *pal)
 		I_SetPalette(pLocalPalette);
 }
 
-static void CV_usegamma_OnChange(void)
+static void CV_palette_OnChange(void)
 {
 	// reload palette
 	LoadMapPalette();
@@ -328,18 +543,20 @@ static inline UINT8 transmappedpdraw(const UINT8 *dest, const UINT8 *source, fix
 }
 
 // Draws a patch scaled to arbitrary size.
-void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
+void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
 	UINT32 alphalevel = 0;
 
-	fixed_t col, ofs, colfrac, rowfrac, fdup;
+	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
 	INT32 dupx, dupy;
 	const column_t *column;
 	UINT8 *desttop, *dest, *deststart, *destend;
 	const UINT8 *source, *deststop;
 	fixed_t pwidth; // patch width
 	fixed_t offx = 0; // x offset
+
+	UINT8 perplayershuffle = 0;
 
 	if (rendermode == render_none)
 		return;
@@ -348,7 +565,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	//if (rendermode != render_soft && !con_startup)		// Why?
 	if (rendermode != render_soft)
 	{
-		HWR_DrawFixedPatch((GLPatch_t *)patch, x, y, pscale, scrn, colormap);
+		HWR_DrawStretchyFixedPatch((GLPatch_t *)patch, x, y, pscale, vscale, scrn, colormap);
 		return;
 	}
 #endif
@@ -359,19 +576,20 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
 	{
 		if (alphalevel == 13)
-			alphalevel = hudminusalpha[cv_translucenthud.value];
+			alphalevel = hudminusalpha[st_translucency];
 		else if (alphalevel == 14)
-			alphalevel = 10 - cv_translucenthud.value;
+			alphalevel = 10 - st_translucency;
 		else if (alphalevel == 15)
-			alphalevel = hudplusalpha[cv_translucenthud.value];
+			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
 			return; // invis
-	}
-	if (alphalevel)
-	{
-		v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
-		patchdrawfunc = translucentpdraw;
+
+		if (alphalevel)
+		{
+			v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
+			patchdrawfunc = translucentpdraw;
+		}
 	}
 
 	v_colormap = NULL;
@@ -402,9 +620,11 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 
 	// only use one dup, to avoid stretching (har har)
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
-	fdup = FixedMul(dupx<<FRACBITS, pscale);
+	fdup = vdup = FixedMul(dupx<<FRACBITS, pscale);
+	if (vscale != pscale)
+		vdup = FixedMul(dupx<<FRACBITS, vscale);
 	colfrac = FixedDiv(FRACUNIT, fdup);
-	rowfrac = FixedDiv(FRACUNIT, fdup);
+	rowfrac = FixedDiv(FRACUNIT, vdup);
 
 	// So it turns out offsets aren't scaled in V_NOSCALESTART unless V_OFFSET is applied ...poo, that's terrible
 	// For now let's just at least give V_OFFSET the ability to support V_FLIP
@@ -421,7 +641,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 
 		// top offset
 		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
-		offsety = FixedMul(SHORT(patch->topoffset)<<FRACBITS, pscale);
+		offsety = FixedMul(SHORT(patch->topoffset)<<FRACBITS, vscale);
 
 		if ((scrn & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
 		{
@@ -434,8 +654,75 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 		y -= offsety;
 	}
 
-	if (scrn & V_SPLITSCREEN)
-		y>>=1;
+	if (splitscreen && (scrn & V_PERPLAYER))
+	{
+		fixed_t adjusty = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
+		vdup >>= 1;
+		rowfrac <<= 1;
+		y >>= 1;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
+			fdup >>= 1;
+			colfrac <<= 1;
+			x >>= 1;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				y += adjusty;
+				scrn &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else //if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				y += adjusty;
+				scrn &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 1;
+				scrn &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 2;
+				y += adjusty;
+				scrn &= ~V_SNAPTOTOP;
+			}
+		}
+	}
 
 	desttop = screens[scrn&V_PARAMMASK];
 
@@ -460,13 +747,17 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 		// Center it if necessary
 		if (!(scrn & V_SCALEPATCHMASK))
 		{
-			// if it's meant to cover the whole screen, black out the rest
+			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
 			if (x == 0 && SHORT(patch->width) == BASEVIDWIDTH && y == 0 && SHORT(patch->height) == BASEVIDHEIGHT)
 			{
 				column = (const column_t *)((const UINT8 *)(patch) + LONG(patch->columnofs[0]));
-				source = (const UINT8 *)(column) + 3;
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
+				if (!column->topdelta)
+				{
+					source = (const UINT8 *)(column) + 3;
+					V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, source[0]);
+				}
 			}
+
 			if (vid.width != BASEVIDWIDTH * dupx)
 			{
 				// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
@@ -475,20 +766,26 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 					x += (vid.width - (BASEVIDWIDTH * dupx));
 				else if (!(scrn & V_SNAPTOLEFT))
 					x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+				if (perplayershuffle & 4)
+					x -= (vid.width - (BASEVIDWIDTH * dupx)) / 4;
+				else if (perplayershuffle & 8)
+					x += (vid.width - (BASEVIDWIDTH * dupx)) / 4;
 			}
 			if (vid.height != BASEVIDHEIGHT * dupy)
 			{
 				// same thing here
-				if ((scrn & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
-					y += (vid.height/2 - (BASEVIDHEIGHT/2 * dupy));
-				else if (scrn & V_SNAPTOBOTTOM)
+				if (scrn & V_SNAPTOBOTTOM)
 					y += (vid.height - (BASEVIDHEIGHT * dupy));
 				else if (!(scrn & V_SNAPTOTOP))
 					y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+				if (perplayershuffle & 1)
+					y -= (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
+				else if (perplayershuffle & 2)
+					y += (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
 			}
-
-			desttop += (y*vid.width) + x;
 		}
+
+		desttop += (y*vid.width) + x;
 	}
 
 	if (pscale != FRACUNIT) // scale width properly
@@ -533,7 +830,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 			dest = desttop;
 			if (scrn & V_FLIP)
 				dest = deststart + (destend - desttop);
-			dest += FixedInt(FixedMul(topdelta<<FRACBITS,fdup))*vid.width;
+			dest += FixedInt(FixedMul(topdelta<<FRACBITS,vdup))*vid.width;
 
 			for (ofs = 0; dest < deststop && (ofs>>FRACBITS) < column->length; ofs += rowfrac)
 			{
@@ -549,23 +846,51 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 // Draws a patch cropped and scaled to arbitrary size.
 void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
+	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
+	UINT32 alphalevel = 0;
+	// boolean flip = false;
+
 	fixed_t col, ofs, colfrac, rowfrac, fdup;
 	INT32 dupx, dupy;
 	const column_t *column;
 	UINT8 *desttop, *dest;
 	const UINT8 *source, *deststop;
 
+	UINT8 perplayershuffle = 0;
+
 	if (rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
-	// Done
-	if (rendermode != render_soft && !con_startup)
+	//if (rendermode != render_soft && !con_startup)		// Not this again
+	if (rendermode != render_soft)
 	{
 		HWR_DrawCroppedPatch((GLPatch_t*)patch,x,y,pscale,scrn,sx,sy,w,h);
 		return;
 	}
 #endif
+
+	patchdrawfunc = standardpdraw;
+
+	v_translevel = NULL;
+	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	{
+		if (alphalevel == 13)
+			alphalevel = hudminusalpha[st_translucency];
+		else if (alphalevel == 14)
+			alphalevel = 10 - st_translucency;
+		else if (alphalevel == 15)
+			alphalevel = hudplusalpha[st_translucency];
+
+		if (alphalevel >= 10)
+			return; // invis
+
+		if (alphalevel)
+		{
+			v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
+			patchdrawfunc = translucentpdraw;
+		}
+	}
 
 	// only use one dup, to avoid stretching (har har)
 	dupx = dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
@@ -575,6 +900,84 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 
 	y -= FixedMul(SHORT(patch->topoffset)<<FRACBITS, pscale);
 	x -= FixedMul(SHORT(patch->leftoffset)<<FRACBITS, pscale);
+
+	if (splitscreen && (scrn & V_PERPLAYER))
+	{
+		fixed_t adjusty = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
+		fdup >>= 1;
+		rowfrac <<= 1;
+		y >>= 1;
+		sy >>= 1;
+		h >>= 1;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
+			colfrac <<= 1;
+			x >>= 1;
+			sx >>= 1;
+			w >>= 1;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				sx += adjustx;
+				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				y += adjusty;
+				sy += adjusty;
+				scrn &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else //if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				sx += adjustx;
+				y += adjusty;
+				sy += adjusty;
+				scrn &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				scrn &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				y += adjusty;
+				sy += adjusty;
+				scrn &= ~V_SNAPTOTOP;
+			}
+		}
+	}
 
 	desttop = screens[scrn&V_PARAMMASK];
 
@@ -599,12 +1002,8 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		if (!(scrn & V_SCALEPATCHMASK))
 		{
 			// if it's meant to cover the whole screen, black out the rest
-			if (x == 0 && SHORT(patch->width) == BASEVIDWIDTH && y == 0 && SHORT(patch->height) == BASEVIDHEIGHT)
-			{
-				column = (const column_t *)((const UINT8 *)(patch) + LONG(patch->columnofs[0]));
-				source = (const UINT8 *)(column) + 3;
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
-			}
+			// no the patch is cropped do not do this ever
+
 			if (vid.width != BASEVIDWIDTH * dupx)
 			{
 				// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
@@ -613,6 +1012,10 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 					x += (vid.width - (BASEVIDWIDTH * dupx));
 				else if (!(scrn & V_SNAPTOLEFT))
 					x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+				if (perplayershuffle & 4)
+					x -= (vid.width - (BASEVIDWIDTH * dupx)) / 4;
+				else if (perplayershuffle & 8)
+					x += (vid.width - (BASEVIDWIDTH * dupx)) / 4;
 			}
 			if (vid.height != BASEVIDHEIGHT * dupy)
 			{
@@ -621,13 +1024,17 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 					y += (vid.height - (BASEVIDHEIGHT * dupy));
 				else if (!(scrn & V_SNAPTOTOP))
 					y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+				if (perplayershuffle & 1)
+					y -= (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
+				else if (perplayershuffle & 2)
+					y += (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
 			}
 		}
 
 		desttop += (y*vid.width) + x;
 	}
 
-	for (col = sx<<FRACBITS; (col>>FRACBITS) < SHORT(patch->width) && (col>>FRACBITS) < w; col += colfrac, ++x, desttop++)
+	for (col = sx<<FRACBITS; (col>>FRACBITS) < SHORT(patch->width) && ((col>>FRACBITS) - sx) < w; col += colfrac, ++x, desttop++)
 	{
 		INT32 topdelta, prevdelta = -1;
 		if (x < 0) // don't draw off the left of the screen (WRAP PREVENTION)
@@ -644,12 +1051,18 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			prevdelta = topdelta;
 			source = (const UINT8 *)(column) + 3;
 			dest = desttop;
-			dest += FixedInt(FixedMul(topdelta<<FRACBITS,fdup))*vid.width;
+			if (topdelta-sy > 0)
+			{
+				dest += FixedInt(FixedMul((topdelta-sy)<<FRACBITS,fdup))*vid.width;
+				ofs = 0;
+			}
+			else
+				ofs = (sy-topdelta)<<FRACBITS;
 
-			for (ofs = sy<<FRACBITS; dest < deststop && (ofs>>FRACBITS) < column->length && (ofs>>FRACBITS) < h; ofs += rowfrac)
+			for (; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
-					*dest = source[ofs>>FRACBITS];
+					*dest = patchdrawfunc(dest, source, ofs);
 				dest += vid.width;
 			}
 			column = (const column_t *)((const UINT8 *)column + column->length + 4);
@@ -663,17 +1076,17 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 //
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor)
 {
-	if (skinnum < 0 || skinnum >= numskins || (skins[skinnum].flags & SF_HIRES))
-		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE)); // Draw a star
-	else
-	{ // Find front angle of the first waiting frame of the character's actual sprites
-		spriteframe_t *sprframe = &skins[skinnum].spritedef.spriteframes[2 & FF_FRAMEMASK];
-		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_CONTINUE)
+	{
+		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CONTINUE];
+		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 		const UINT8 *colormap = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
 
-		// No variant for translucency
-		V_DrawTinyMappedPatch(x, y, flags, patch, colormap);
+		V_DrawMappedPatch(x, y, flags, patch, colormap);
 	}
+	else
+		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
 }
 
 //
@@ -767,16 +1180,87 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	UINT8 *dest;
 	const UINT8 *deststop;
 
+	UINT8 perplayershuffle = 0;
+
 	if (rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && !con_startup)
+	//if (rendermode != render_soft && !con_startup)		// Not this again
+	if (rendermode != render_soft)
 	{
 		HWR_DrawFill(x, y, w, h, c);
 		return;
 	}
 #endif
+
+	if (splitscreen && (c & V_PERPLAYER))
+	{
+		fixed_t adjusty = ((c & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+		h >>= 1;
+		y >>= 1;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			fixed_t adjustx = ((c & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+			w >>= 1;
+			x >>= 1;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				c &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				c &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				y += adjusty;
+				c &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else //if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				y += adjusty;
+				c &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				c &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				y += adjusty;
+				c &= ~V_SNAPTOTOP;
+			}
+		}
+	}
 
 	if (!(c & V_NOSCALESTART))
 	{
@@ -802,6 +1286,10 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 				x += (vid.width - (BASEVIDWIDTH * dupx));
 			else if (!(c & V_SNAPTOLEFT))
 				x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+			if (perplayershuffle & 4)
+				x -= (vid.width - (BASEVIDWIDTH * dupx)) / 4;
+			else if (perplayershuffle & 8)
+				x += (vid.width - (BASEVIDWIDTH * dupx)) / 4;
 		}
 		if (vid.height != BASEVIDHEIGHT * dupy)
 		{
@@ -810,6 +1298,10 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 				y += (vid.height - (BASEVIDHEIGHT * dupy));
 			else if (!(c & V_SNAPTOTOP))
 				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+			if (perplayershuffle & 1)
+				y -= (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
+			else if (perplayershuffle & 2)
+				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
 		}
 	}
 
@@ -850,7 +1342,7 @@ static UINT32 V_GetHWConsBackColor(void)
 	switch (cons_backcolor.value)
 	{
 		case 0:		hwcolor = 0xffffff00;	break; 	// White
-		case 1:		hwcolor = 0x80808000;	break; 	// Gray
+		case 1:		hwcolor = 0x80808000;	break; 	// Black
 		case 2:		hwcolor = 0xdeb88700;	break;	// Sepia
 		case 3:		hwcolor = 0x40201000;	break; 	// Brown
 		case 4:		hwcolor = 0xfa807200;	break; 	// Pink
@@ -877,13 +1369,16 @@ static UINT32 V_GetHWConsBackColor(void)
 
 
 // THANK YOU MPC!!!
+// and thanks toaster for cleaning it up.
 
 void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 {
 	UINT8 *dest;
-	INT32 u, v;
+	const UINT8 *deststop;
+	INT32 u;
 	UINT8 *fadetable;
 	UINT32 alphalevel = 0;
+	UINT8 perplayershuffle = 0;
 
 	if (rendermode == render_none)
 		return;
@@ -892,20 +1387,95 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	if (rendermode != render_soft && rendermode != render_none)
 	{
 		UINT32 hwcolor = V_GetHWConsBackColor();
-		HWR_DrawConsoleFill(x, y, w, h, hwcolor, c);	// we still use the regular color stuff but only for flags. actual draw color is "hwcolor" for this.
+		HWR_DrawConsoleFill(x, y, w, h, c, hwcolor);	// we still use the regular color stuff but only for flags. actual draw color is "hwcolor" for this.
 		return;
 	}
 #endif
 
+	if ((alphalevel = ((c & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	{
+		if (alphalevel == 13)
+			alphalevel = hudminusalpha[st_translucency];
+		else if (alphalevel == 14)
+			alphalevel = 10 - st_translucency;
+		else if (alphalevel == 15)
+			alphalevel = hudplusalpha[st_translucency];
+
+		if (alphalevel >= 10)
+			return; // invis
+	}
+
+	if (splitscreen && (c & V_PERPLAYER))
+	{
+		fixed_t adjusty = ((c & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+		h >>= 1;
+		y >>= 1;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			fixed_t adjustx = ((c & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+			w >>= 1;
+			x >>= 1;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				c &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				c &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				y += adjusty;
+				c &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else //if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				y += adjusty;
+				c &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				c &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				y += adjusty;
+				c &= ~V_SNAPTOTOP;
+			}
+		}
+	}
+
 	if (!(c & V_NOSCALESTART))
 	{
 		INT32 dupx = vid.dupx, dupy = vid.dupy;
-
-		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
-		{ // Clear the entire screen, from dest to deststop. Yes, this really works.
-			memset(screens[0], (UINT8)(c&255), vid.width * vid.height * vid.bpp);
-			return;
-		}
 
 		x *= dupx;
 		y *= dupy;
@@ -921,6 +1491,10 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 				x += (vid.width - (BASEVIDWIDTH * dupx));
 			else if (!(c & V_SNAPTOLEFT))
 				x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+			if (perplayershuffle & 4)
+				x -= (vid.width - (BASEVIDWIDTH * dupx)) / 4;
+			else if (perplayershuffle & 8)
+				x += (vid.width - (BASEVIDWIDTH * dupx)) / 4;
 		}
 		if (vid.height != BASEVIDHEIGHT * dupy)
 		{
@@ -929,6 +1503,10 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 				y += (vid.height - (BASEVIDHEIGHT * dupy));
 			else if (!(c & V_SNAPTOTOP))
 				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+			if (perplayershuffle & 1)
+				y -= (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
+			else if (perplayershuffle & 2)
+				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
 		}
 	}
 
@@ -951,34 +1529,206 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		h = vid.height-y;
 
 	dest = screens[0] + y*vid.width + x;
-
-	if ((alphalevel = ((c & V_ALPHAMASK) >> V_ALPHASHIFT)))
-	{
-		if (alphalevel == 13)
-			alphalevel = hudminusalpha[cv_translucenthud.value];
-		else if (alphalevel == 14)
-			alphalevel = 10 - cv_translucenthud.value;
-		else if (alphalevel == 15)
-			alphalevel = hudplusalpha[cv_translucenthud.value];
-
-		if (alphalevel >= 10)
-			return; // invis
-	}
+	deststop = screens[0] + vid.rowbytes * vid.height;
 
 	c &= 255;
 
 	// Jimita (12-04-2018)
-	w = min(w, vid.width);
-	h = min(h, vid.height);
-	fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
-	for (v = 0; v < h; v++, dest += vid.width)
-		for (u = 0; u < w; u++)
+	if (alphalevel)
+	{
+		fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
+		for (;(--h >= 0) && dest < deststop; dest += vid.width)
 		{
-			if (!alphalevel)
-				dest[u] = consolebgmap[dest[u]];
-			else
+			u = 0;
+			while (u < w)
+			{
 				dest[u] = fadetable[consolebgmap[dest[u]]];
+				u++;
+			}
 		}
+	}
+	else
+	{
+		for (;(--h >= 0) && dest < deststop; dest += vid.width)
+		{
+			u = 0;
+			while (u < w)
+			{
+				dest[u] = consolebgmap[dest[u]];
+				u++;
+			}
+		}
+	}
+}
+
+//
+// If color is 0x00 to 0xFF, draw transtable (strength range 0-9).
+// Else, use COLORMAP lump (strength range 0-31).
+// c is not color, it is for flags only. transparency flags will be ignored.
+// IF YOU ARE NOT CAREFUL, THIS CAN AND WILL CRASH!
+// I have kept the safety checks for strength out of this function;
+// I don't trust Lua users with it, so it doesn't matter.
+//
+void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, UINT8 strength)
+{
+	UINT8 *dest;
+	const UINT8 *deststop;
+	INT32 u;
+	UINT8 *fadetable;
+	UINT8 perplayershuffle = 0;
+
+	if (rendermode == render_none)
+		return;
+
+#ifdef HWRENDER
+	if (rendermode != render_soft && rendermode != render_none)
+	{
+		// ughhhhh please can someone else do this? thanks ~toast 25/7/19 in 38 degrees centigrade w/o AC
+		HWR_DrawFadeFill(x, y, w, h, c, color, strength); // toast two days later - left above comment in 'cause it's funny
+		return;
+	}
+#endif
+
+	if (splitscreen && (c & V_PERPLAYER))
+	{
+		fixed_t adjusty = ((c & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+		h >>= 1;
+		y >>= 1;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			fixed_t adjustx = ((c & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+			w >>= 1;
+			x >>= 1;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				c &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				c &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				y += adjusty;
+				c &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else //if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(c & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				y += adjusty;
+				c &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				c &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(c & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				y += adjusty;
+				c &= ~V_SNAPTOTOP;
+			}
+		}
+	}
+
+	if (!(c & V_NOSCALESTART))
+	{
+		INT32 dupx = vid.dupx, dupy = vid.dupy;
+
+		x *= dupx;
+		y *= dupy;
+		w *= dupx;
+		h *= dupy;
+
+		// Center it if necessary
+		if (vid.width != BASEVIDWIDTH * dupx)
+		{
+			// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
+			// so center this imaginary screen
+			if (c & V_SNAPTORIGHT)
+				x += (vid.width - (BASEVIDWIDTH * dupx));
+			else if (!(c & V_SNAPTOLEFT))
+				x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+			if (perplayershuffle & 4)
+				x -= (vid.width - (BASEVIDWIDTH * dupx)) / 4;
+			else if (perplayershuffle & 8)
+				x += (vid.width - (BASEVIDWIDTH * dupx)) / 4;
+		}
+		if (vid.height != BASEVIDHEIGHT * dupy)
+		{
+			// same thing here
+			if (c & V_SNAPTOBOTTOM)
+				y += (vid.height - (BASEVIDHEIGHT * dupy));
+			else if (!(c & V_SNAPTOTOP))
+				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+			if (perplayershuffle & 1)
+				y -= (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
+			else if (perplayershuffle & 2)
+				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
+		}
+	}
+
+	if (x >= vid.width || y >= vid.height)
+		return; // off the screen
+	if (x < 0) {
+		w += x;
+		x = 0;
+	}
+	if (y < 0) {
+		h += y;
+		y = 0;
+	}
+
+	if (w <= 0 || h <= 0)
+		return; // zero width/height wouldn't draw anything
+	if (x + w > vid.width)
+		w = vid.width-x;
+	if (y + h > vid.height)
+		h = vid.height-y;
+
+	dest = screens[0] + y*vid.width + x;
+	deststop = screens[0] + vid.rowbytes * vid.height;
+
+	c &= 255;
+
+	fadetable = ((color & 0xFF00) // Color is not palette index?
+		? ((UINT8 *)colormaps + strength*256) // Do COLORMAP fade.
+		: ((UINT8 *)transtables + ((9-strength)<<FF_TRANSSHIFT) + color*256)); // Else, do TRANSMAP** fade.
+	for (;(--h >= 0) && dest < deststop; dest += vid.width)
+	{
+		u = 0;
+		while (u < w)
+		{
+			dest[u] = fadetable[dest[u]];
+			u++;
+		}
+	}
 }
 
 //
@@ -1094,25 +1844,36 @@ void V_DrawPatchFill(patch_t *pat)
 //
 // Fade all the screen buffer, so that the menu is more readable,
 // especially now that we use the small hufont in the menus...
+// If color is 0x00 to 0xFF, draw transtable (strength range 0-9).
+// Else, use COLORMAP lump (strength range 0-31).
+// IF YOU ARE NOT CAREFUL, THIS CAN AND WILL CRASH!
+// I have kept the safety checks out of this function;
+// the v.fadeScreen Lua interface handles those.
 //
-void V_DrawFadeScreen(void)
+void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 {
-	const UINT8 *fadetable = (UINT8 *)colormaps + 16*256;
-	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
-	UINT8 *buf = screens[0];
-
 #ifdef HWRENDER
 	if (rendermode != render_soft && rendermode != render_none)
 	{
-		HWR_FadeScreenMenuBack(0x01010160, 0); // hack, 0 means full height
+		HWR_FadeScreenMenuBack(color, strength);
 		return;
 	}
 #endif
 
-	// heavily simplified -- we don't need to know x or y
-	// position when we're doing a full screen fade
-	for (; buf < deststop; ++buf)
-		*buf = fadetable[*buf];
+	{
+		const UINT8 *fadetable = ((color & 0xFF00) // Color is not palette index?
+		? ((UINT8 *)(((color & 0x0F00) == 0x0A00) ? fadecolormap // Do fadecolormap fade.
+		: (((color & 0x0F00) == 0x0B00) ? fadecolormap + (256 * FADECOLORMAPROWS) // Do white fadecolormap fade.
+		: colormaps)) + strength*256) // Do COLORMAP fade.
+		: ((UINT8 *)transtables + ((9-strength)<<FF_TRANSSHIFT) + color*256)); // Else, do TRANSMAP** fade.
+		const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+		UINT8 *buf = screens[0];
+
+		// heavily simplified -- we don't need to know x or y
+		// position when we're doing a full screen fade
+		for (; buf < deststop; ++buf)
+			*buf = fadetable[*buf];
+	}
 }
 
 // Simple translucency with one color, over a set number of lines starting from the top.
@@ -1136,26 +1897,102 @@ void V_DrawFadeConsBack(INT32 plines)
 		*buf = consolebgmap[*buf];
 }
 
+// Very similar to F_DrawFadeConsBack, except we draw from the middle(-ish) of the screen to the bottom.
+void V_DrawPromptBack(INT32 boxheight, INT32 color)
+{
+	UINT8 *deststop, *buf;
+
+	if (color >= 256 && color < 512)
+	{
+		boxheight = ((boxheight * 4) + (boxheight/2)*5);
+		V_DrawFill((BASEVIDWIDTH-(vid.width/vid.dupx))/2, BASEVIDHEIGHT-boxheight, (vid.width/vid.dupx),boxheight, (color-256)|V_SNAPTOBOTTOM);
+		return;
+	}
+
+	boxheight *= vid.dupy;
+
+	if (color == INT32_MAX)
+		color = cons_backcolor.value;
+
+#ifdef HWRENDER
+	if (rendermode != render_soft && rendermode != render_none)
+	{
+		UINT32 hwcolor;
+		switch (color)
+		{
+			case 0:		hwcolor = 0xffffff00;	break; 	// White
+			case 1:		hwcolor = 0x00000000;	break; 	// Black // Note this is different from V_DrawFadeConsBack
+			case 2:		hwcolor = 0xdeb88700;	break;	// Sepia
+			case 3:		hwcolor = 0x40201000;	break; 	// Brown
+			case 4:		hwcolor = 0xfa807200;	break; 	// Pink
+			case 5:		hwcolor = 0xff69b400;	break; 	// Raspberry
+			case 6:		hwcolor = 0xff000000;	break; 	// Red
+			case 7:		hwcolor = 0xffd68300;	break;	// Creamsicle
+			case 8:		hwcolor = 0xff800000;	break; 	// Orange
+			case 9:		hwcolor = 0xdaa52000;	break; 	// Gold
+			case 10:	hwcolor = 0x80800000;	break; 	// Yellow
+			case 11:	hwcolor = 0x00ff0000;	break; 	// Emerald
+			case 12:	hwcolor = 0x00800000;	break; 	// Green
+			case 13:	hwcolor = 0x4080ff00;	break; 	// Cyan
+			case 14:	hwcolor = 0x4682b400;	break; 	// Steel
+			case 15:	hwcolor = 0x1e90ff00;	break;	// Periwinkle
+			case 16:	hwcolor = 0x0000ff00;	break; 	// Blue
+			case 17:	hwcolor = 0xff00ff00;	break; 	// Purple
+			case 18:	hwcolor = 0xee82ee00;	break; 	// Lavender
+			// Default green
+			default:	hwcolor = 0x00800000;	break;
+		}
+		HWR_DrawTutorialBack(hwcolor, boxheight);
+		return;
+	}
+#endif
+
+	CON_SetupBackColormapEx(color, true);
+
+	// heavily simplified -- we don't need to know x or y position,
+	// just the start and stop positions
+	deststop = screens[0] + vid.rowbytes * vid.height;
+	buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
+	for (; buf < deststop; ++buf)
+		*buf = promptbgmap[*buf];
+}
+
 // Gets string colormap, used for 0x80 color codes
 //
 UINT8 *V_GetStringColormap(INT32 colorflags)
 {
 	switch ((colorflags & V_CHARCOLORMASK) >> V_CHARCOLORSHIFT)
 	{
-	case 1: // 0x81, purple
-		return purplemap;
-	case 2: // 0x82, yellow
+	case  1: // 0x81, magenta
+		return magentamap;
+	case  2: // 0x82, yellow
 		return yellowmap;
-	case 3: // 0x83, lgreen
+	case  3: // 0x83, lgreen
 		return lgreenmap;
-	case 4: // 0x84, blue
+	case  4: // 0x84, blue
 		return bluemap;
-	case 5: // 0x85, red
+	case  5: // 0x85, red
 		return redmap;
-	case 6: // 0x86, gray
+	case  6: // 0x86, gray
 		return graymap;
-	case 7: // 0x87, orange
+	case  7: // 0x87, orange
 		return orangemap;
+	case  8: // 0x88, sky
+		return skymap;
+	case  9: // 0x89, purple
+		return purplemap;
+	case 10: // 0x8A, aqua
+		return aquamap;
+	case 11: // 0x8B, peridot
+		return peridotmap;
+	case 12: // 0x8C, azure
+		return azuremap;
+	case 13: // 0x8D, brown
+		return brownmap;
+	case 14: // 0x8E, rosy
+		return rosymap;
+	case 15: // 0x8F, invert
+		return invertmap;
 	default: // reset
 		return NULL;
 	}
@@ -1247,7 +2084,7 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 	for (i = 0; i < slen; ++i)
 	{
 		c = newstring[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+		if ((UINT8)c & 0x80) //color parsing! -Inuyasha 2.16.09
 			continue;
 
 		if (c == '\n')
@@ -1290,7 +2127,7 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 {
 	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, center = 0, left = 0;
 	const char *ch = string;
-	INT32 charflags = 0;
+	INT32 charflags = (option & V_CHARCOLORMASK);
 	const UINT8 *colormap = NULL;
 	INT32 spacewidth = 4, charwidth = 0;
 
@@ -1310,8 +2147,6 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
-
-	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
 	{
@@ -1371,7 +2206,7 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 			w = SHORT(hu_font[c]->width) * dupx;
 
 		if (cx > scrwidth)
-			break;
+			continue;
 		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
@@ -1483,8 +2318,9 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 		}
 		else
 			w = SHORT(hu_font[c]->width) * dupx / 2;
+
 		if (cx > scrwidth)
-			break;
+			continue;
 		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
@@ -1589,7 +2425,7 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 			w = (SHORT(tny_font[c]->width) * dupx);
 
 		if (cx > scrwidth)
-			break;
+			continue;
 		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
@@ -1615,6 +2451,8 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 	fixed_t cx = x, cy = y;
 	INT32 w, c, dupx, dupy, scrwidth, center = 0, left = 0;
 	const char *ch = string;
+	INT32 charflags = 0;
+	const UINT8 *colormap = NULL;
 	INT32 spacewidth = 4, charwidth = 0;
 
 	INT32 lowercase = (option & V_ALLOWLOWERCASE);
@@ -1633,6 +2471,8 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
 	{
@@ -1653,7 +2493,12 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		if (!*ch)
 			break;
 		if (*ch & 0x80) //color ignoring
+		{
+			// manually set flags override color codes
+			if (!(option & V_CHARCOLORMASK))
+				charflags = ((*ch & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
 			continue;
+		}
 		if (*ch == '\n')
 		{
 			cx = x;
@@ -1687,14 +2532,15 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 			w = SHORT(hu_font[c]->width) * dupx;
 
 		if ((cx>>FRACBITS) > scrwidth)
-			break;
+			continue;
 		if ((cx>>FRACBITS)+left + w < 0) //left boundary check
 		{
 			cx += w<<FRACBITS;
 			continue;
 		}
 
-		V_DrawSciencePatch(cx + (center<<FRACBITS), cy, option, hu_font[c], FRACUNIT);
+		colormap = V_GetStringColormap(charflags);
+		V_DrawFixedPatch(cx + (center<<FRACBITS), cy, FRACUNIT, option, hu_font[c], colormap);
 
 		cx += w<<FRACBITS;
 	}
@@ -1746,6 +2592,16 @@ void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 	} while (--digits);
 }
 
+// Draw an act number for a level title
+// Todo: actually draw two-digit numbers as two act num patches
+void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, INT32 num)
+{
+	if (num < 0 || num > 19)
+		return; // not supported
+
+	V_DrawScaledPatch(x, y, flags, ttlnum[num]);
+}
+
 // Write a string using the credit font
 // NOTE: the text is centered for screens larger than the base width
 //
@@ -1789,11 +2645,208 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 
 		w = SHORT(cred_font[c]->width) * dupx;
 		if ((cx>>FRACBITS) > scrwidth)
-			break;
+			continue;
 
 		V_DrawSciencePatch(cx, cy, option, cred_font[c], FRACUNIT);
 		cx += w<<FRACBITS;
 	}
+}
+
+// Draw a string using the nt_font
+// Note that the outline is a seperate font set
+static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
+{
+	fixed_t cx, cy, w;
+	INT32 c, dupx, dupy, scrwidth, left = 0;
+	const char *ch = string;
+
+	if (option & V_CENTERNAMETAG)
+		x -= FixedInt(FixedMul((V_NameTagWidth(string)/2)*FRACUNIT, scale));
+	option &= ~V_CENTERNAMETAG; // which is also shared with V_ALLOWLOWERCASE...
+
+	cx = x<<FRACBITS;
+	cy = y<<FRACBITS;
+
+	if (option & V_NOSCALESTART)
+	{
+		dupx = vid.dupx;
+		dupy = vid.dupy;
+		scrwidth = vid.width;
+	}
+	else
+	{
+		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
+	}
+
+	for (;;ch++)
+	{
+		if (!*ch)
+			break;
+		if (*ch == '\n')
+		{
+			cx = x<<FRACBITS;
+			cy += FixedMul((21*dupy)*FRACUNIT, scale);
+			continue;
+		}
+
+		c = toupper(*ch);
+		c -= NT_FONTSTART;
+
+		// character does not exist or is a space
+		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
+		{
+			cx += FixedMul((4 * dupx)*FRACUNIT, scale);
+			continue;
+		}
+
+		w = FixedMul((SHORT(ntb_font[c]->width)+2 * dupx) * FRACUNIT, scale);
+
+		if (FixedInt(cx) > scrwidth)
+			continue;
+		if (cx+(left*FRACUNIT) + w < 0) // left boundary check
+		{
+			cx += w;
+			continue;
+		}
+
+		V_DrawFixedPatch(cx, cy, scale, option, nto_font[c], outlinecolormap);
+		V_DrawFixedPatch(cx, cy, scale, option, ntb_font[c], basecolormap);
+
+		cx += w;
+	}
+}
+
+// Looks familiar.
+void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
+{
+	const char *text = string;
+	const char *first_token = text;
+	char *last_token = strchr(text, '\n');
+	const INT32 lbreakheight = 21;
+	INT32 ntlines;
+
+	if (option & V_CENTERNAMETAG)
+	{
+		ntlines = V_CountNameTagLines(string);
+		y -= FixedInt(FixedMul(((lbreakheight/2) * (ntlines-1))*FRACUNIT, scale));
+	}
+
+	// No line breaks?
+	// Draw entire string
+	if (!last_token)
+		V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, string);
+	// Split string by the line break character
+	else
+	{
+		char *str = NULL;
+		INT32 len;
+		while (true)
+		{
+			// There are still lines left to draw
+			if (last_token)
+			{
+				size_t shift = 0;
+				// Free this line
+				if (str)
+					Z_Free(str);
+				// Find string length, do a malloc...
+				len = (last_token-first_token)+1;
+				str = ZZ_Alloc(len);
+				// Copy the line
+				strncpy(str, first_token, len-1);
+				str[len-1] = '\0';
+				// Don't leave a line break character
+				// at the start of the string!
+				if ((strlen(str) >= 2) && (string[0] == '\n') && (string[1] != '\n'))
+					shift++;
+				// Then draw it
+				V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, str+shift);
+			}
+			// No line break character was found
+			else
+			{
+				// Don't leave a line break character
+				// at the start of the string!
+				if ((strlen(first_token) >= 2) && (first_token[0] == '\n') && (first_token[1] != '\n'))
+					first_token++;
+				// Then draw it
+				V_DrawNameTagLine(x, y, option, scale, basecolormap, outlinecolormap, first_token);
+				break;
+			}
+
+			// Next line
+			y += FixedInt(FixedMul(lbreakheight*FRACUNIT, scale));
+			if ((last_token-text)+1 >= (signed)strlen(text))
+				last_token = NULL;
+			else
+			{
+				first_token = last_token;
+				last_token = strchr(first_token+1, '\n');
+			}
+		}
+		// Free this line
+		if (str)
+			Z_Free(str);
+	}
+}
+
+// Count the amount of lines in name tag string
+INT32 V_CountNameTagLines(const char *string)
+{
+	INT32 ntlines = 1;
+	const char *text = string;
+	const char *first_token = text;
+	char *last_token = strchr(text, '\n');
+
+	// No line breaks?
+	if (!last_token)
+		return ntlines;
+	// Split string by the line break character
+	else
+	{
+		while (true)
+		{
+			if (last_token)
+				ntlines++;
+			// No line break character was found
+			else
+				break;
+
+			// Next line
+			if ((last_token-text)+1 >= (signed)strlen(text))
+				last_token = NULL;
+			else
+			{
+				first_token = last_token;
+				last_token = strchr(first_token+1, '\n');
+			}
+		}
+	}
+	return ntlines;
+}
+
+INT32 V_NameTagWidth(const char *string)
+{
+	INT32 c, w = 0;
+	size_t i;
+
+	// It's possible for string to be a null pointer
+	if (!string)
+		return 0;
+
+	for (i = 0; i < strlen(string); i++)
+	{
+		c = toupper(string[i]) - NT_FONTSTART;
+		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
+			w += 4;
+		else
+			w += SHORT(ntb_font[c]->width)+2;
+	}
+
+	return w;
 }
 
 // Find string width from cred_font chars
@@ -1826,6 +2879,8 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 {
 	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
 	const char *ch = string;
+	INT32 charflags = (option & V_CHARCOLORMASK);
+	const UINT8 *colormap = NULL;
 
 	if (option & V_NOSCALESTART)
 	{
@@ -1841,19 +2896,25 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth -= left;
 	}
 
-	for (;;)
+	for (;;ch++)
 	{
-		c = *ch++;
-		if (!c)
+		if (!*ch)
 			break;
-		if (c == '\n')
+		if (*ch & 0x80) //color parsing -x 2.16.09
+		{
+			// manually set flags override color codes
+			if (!(option & V_CHARCOLORMASK))
+				charflags = ((*ch & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
+			continue;
+		}
+		if (*ch == '\n')
 		{
 			cx = x;
 			cy += 12*dupy;
 			continue;
 		}
 
-		c = toupper(c) - LT_FONTSTART;
+		c = *ch - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 		{
 			cx += 16*dupx;
@@ -1861,16 +2922,18 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 		}
 
 		w = SHORT(lt_font[c]->width) * dupx;
-		if (cx > scrwidth)
-			break;
-		if (cx+left + w < 0) //left boundary check
 
+		if (cx > scrwidth)
+			continue;
+		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
 			continue;
 		}
 
-		V_DrawScaledPatch(cx, cy, option, lt_font[c]);
+		colormap = V_GetStringColormap(charflags);
+		V_DrawFixedPatch(cx<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, lt_font[c], colormap);
+
 		cx += w;
 	}
 }
@@ -1884,7 +2947,9 @@ INT32 V_LevelNameWidth(const char *string)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = toupper(string[i]) - LT_FONTSTART;
+		if (string[i] & 0x80)
+			continue;
+		c = string[i] - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 			w += 16;
 		else
@@ -1903,7 +2968,7 @@ INT32 V_LevelNameHeight(const char *string)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = toupper(string[i]) - LT_FONTSTART;
+		c = string[i] - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 			continue;
 
@@ -1912,6 +2977,16 @@ INT32 V_LevelNameHeight(const char *string)
 	}
 
 	return w;
+}
+
+// For ST_drawTitleCard
+// Returns the width of the act num patch
+INT32 V_LevelActNumWidth(INT32 num)
+{
+	if (num < 0 || num > 19)
+		return 0; // not a valid number
+
+	return SHORT(ttlnum[num]->width);
 }
 
 //
@@ -1939,16 +3014,17 @@ INT32 V_StringWidth(const char *string, INT32 option)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = string[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+		if (string[i] & 0x80)
 			continue;
-
-		c = toupper(c) - HU_FONTSTART;
+		c = toupper(string[i]) - HU_FONTSTART;
 		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
 			w += spacewidth;
 		else
 			w += (charwidth ? charwidth : SHORT(hu_font[c]->width));
 	}
+
+	if (option & V_NOSCALESTART)
+	w *= vid.dupx;
 
 	return w;
 }
@@ -1978,11 +3054,9 @@ INT32 V_SmallStringWidth(const char *string, INT32 option)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = string[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+		if (string[i] & 0x80)
 			continue;
-
-		c = toupper(c) - HU_FONTSTART;
+		c = toupper(string[i]) - HU_FONTSTART;
 		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
 			w += spacewidth;
 		else
@@ -2017,11 +3091,9 @@ INT32 V_ThinStringWidth(const char *string, INT32 option)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = string[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+		if (string[i] & 0x80)
 			continue;
-
-		c = toupper(c) - HU_FONTSTART;
+		c = toupper(string[i]) - HU_FONTSTART;
 		if (c < 0 || c >= HU_FONTSIZE || !tny_font[c])
 			w += spacewidth;
 		else

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,6 +29,8 @@ size_t COM_Argc(void);
 const char *COM_Argv(size_t arg); // if argv > argc, returns empty string
 char *COM_Args(void);
 size_t COM_CheckParm(const char *check); // like M_CheckParm :)
+size_t COM_CheckPartialParm(const char *check);
+size_t COM_FirstOption(void);
 
 // match existing command or NULL
 const char *COM_CompleteCommand(const char *partial, INT32 skips);

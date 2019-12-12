@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2018 by Sonic Team Junior.
+// Copyright (C) 2012-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -164,6 +164,11 @@ void LUA_ClearExtVars(void)
 }
 #endif
 
+// Use this variable to prevent certain functions from running
+// if they were not called on lump load
+// (i.e. they were called in hooks or coroutines etc)
+boolean lua_lumploading = false;
+
 // Load a script from a MYFILE
 static inline void LUA_LoadFile(MYFILE *f, char *name)
 {
@@ -175,11 +180,15 @@ static inline void LUA_LoadFile(MYFILE *f, char *name)
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
 
+	lua_lumploading = true; // turn on loading flag
+
 	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, 0)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
 	lua_gc(gL, LUA_GCCOLLECT, 0);
+
+	lua_lumploading = false; // turn off again
 }
 
 // Load a script from a lump
@@ -408,18 +417,27 @@ void LUA_InvalidateLevel(void)
 {
 	thinker_t *th;
 	size_t i;
+	ffloor_t *rover = NULL;
 	if (!gL)
 		return;
-
-	for (th = thinkercap.next; th && th != &thinkercap; th = th->next)
-		LUA_InvalidateUserdata(th);
+	for (i = 0; i < NUM_THINKERLISTS; i++)
+		for (th = thlist[i].next; th && th != &thlist[i]; th = th->next)
+			LUA_InvalidateUserdata(th);
 
 	LUA_InvalidateMapthings();
 
 	for (i = 0; i < numsubsectors; i++)
 		LUA_InvalidateUserdata(&subsectors[i]);
 	for (i = 0; i < numsectors; i++)
+	{
 		LUA_InvalidateUserdata(&sectors[i]);
+		LUA_InvalidateUserdata(&sectors[i].lines);
+		if (sectors[i].ffloors)
+		{
+			for (rover = sectors[i].ffloors; rover; rover = rover->next)
+				LUA_InvalidateUserdata(rover);
+		}
+	}
 	for (i = 0; i < numlines; i++)
 	{
 		LUA_InvalidateUserdata(&lines[i]);
@@ -429,6 +447,16 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&sides[i]);
 	for (i = 0; i < numvertexes; i++)
 		LUA_InvalidateUserdata(&vertexes[i]);
+#ifdef HAVE_LUA_SEGS
+	for (i = 0; i < numsegs; i++)
+		LUA_InvalidateUserdata(&segs[i]);
+	for (i = 0; i < numnodes; i++)
+	{
+		LUA_InvalidateUserdata(&nodes[i]);
+		LUA_InvalidateUserdata(nodes[i].bbox);
+		LUA_InvalidateUserdata(nodes[i].children);
+	}
+#endif
 }
 
 void LUA_InvalidateMapthings(void)
@@ -468,6 +496,11 @@ enum
 	ARCH_SIDE,
 	ARCH_SUBSECTOR,
 	ARCH_SECTOR,
+#ifdef HAVE_LUA_SEGS
+	ARCH_SEG,
+	ARCH_NODE,
+#endif
+	ARCH_FFLOOR,
 #ifdef ESLOPE
 	ARCH_SLOPE,
 #endif
@@ -490,6 +523,11 @@ static const struct {
 	{META_SIDE,     ARCH_SIDE},
 	{META_SUBSECTOR,ARCH_SUBSECTOR},
 	{META_SECTOR,   ARCH_SECTOR},
+#ifdef HAVE_LUA_SEGS
+	{META_SEG,      ARCH_SEG},
+	{META_NODE,     ARCH_NODE},
+#endif
+	{META_FFLOOR,	ARCH_FFLOOR},
 #ifdef ESLOPE
 	{META_SLOPE,    ARCH_SLOPE},
 #endif
@@ -694,6 +732,56 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			else {
 				WRITEUINT8(save_p, ARCH_SECTOR);
 				WRITEUINT16(save_p, sector - sectors);
+			}
+			break;
+		}
+#ifdef HAVE_LUA_SEGS
+		case ARCH_SEG:
+		{
+			seg_t *seg = *((seg_t **)lua_touserdata(gL, myindex));
+			if (!seg)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_SEG);
+				WRITEUINT16(save_p, seg - segs);
+			}
+			break;
+		}
+		case ARCH_NODE:
+		{
+			node_t *node = *((node_t **)lua_touserdata(gL, myindex));
+			if (!node)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_NODE);
+				WRITEUINT16(save_p, node - nodes);
+			}
+			break;
+		}
+#endif
+		case ARCH_FFLOOR:
+		{
+			ffloor_t *rover = *((ffloor_t **)lua_touserdata(gL, myindex));
+			if (!rover)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				ffloor_t *r2;
+				UINT16 i = 0;
+				// search for id
+				for (r2 = rover->target->ffloors; r2; r2 = r2->next)
+				{
+					if (r2 == rover)
+						break;
+					i++;
+				}
+				if (!r2)
+					WRITEUINT8(save_p, ARCH_NULL);
+				else
+				{
+					WRITEUINT8(save_p, ARCH_FFLOOR);
+					WRITEUINT16(save_p, rover->target - sectors);
+					WRITEUINT16(save_p, i);
+				}
 			}
 			break;
 		}
@@ -914,6 +1002,23 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_SECTOR:
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
 		break;
+#ifdef HAVE_LUA_SEGS
+	case ARCH_SEG:
+		LUA_PushUserdata(gL, &segs[READUINT16(save_p)], META_SEG);
+		break;
+	case ARCH_NODE:
+		LUA_PushUserdata(gL, &nodes[READUINT16(save_p)], META_NODE);
+		break;
+#endif
+	case ARCH_FFLOOR:
+	{
+		sector_t *sector = &sectors[READUINT16(save_p)];
+		UINT16 id = READUINT16(save_p);
+		ffloor_t *rover = P_GetFFloorByID(sector, id);
+		if (rover)
+			LUA_PushUserdata(gL, rover, META_FFLOOR);
+		break;
+	}
 #ifdef ESLOPE
 	case ARCH_SLOPE:
 		LUA_PushUserdata(gL, P_SlopeById(READUINT16(save_p)), META_SLOPE);
@@ -1016,19 +1121,22 @@ void LUA_Archive(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!playeringame[i] && i > 0) // dedicated servers...
 			continue;
 		// all players in game will be archived, even if they just add a 0.
 		ArchiveExtVars(&players[i], "player");
 	}
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
-		{
-			// archive function will determine when to skip mobjs,
-			// and write mobjnum in otherwise.
-			ArchiveExtVars(th, "mobj");
-		}
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
+		// archive function will determine when to skip mobjs,
+		// and write mobjnum in otherwise.
+		ArchiveExtVars(th, "mobj");
+	}
+
 	WRITEUINT32(save_p, UINT32_MAX); // end of mobjs marker, replaces mobjnum.
 
 	LUAh_NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
@@ -1049,17 +1157,21 @@ void LUA_UnArchive(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!playeringame[i] && i > 0) // dedicated servers...
 			continue;
 		UnArchiveExtVars(&players[i]);
 	}
 
 	do {
 		mobjnum = READUINT32(save_p); // read a mobjnum
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
-			if (th->function.acp1 == (actionf_p1)P_MobjThinker
-			&& ((mobj_t *)th)->mobjnum == mobjnum) // find matching mobj
-				UnArchiveExtVars(th); // apply variables
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+			if (((mobj_t *)th)->mobjnum != mobjnum) // find matching mobj
+				continue;
+			UnArchiveExtVars(th); // apply variables
+		}
 	} while(mobjnum != UINT32_MAX); // repeat until end of mobjs marker.
 
 	LUAh_NetArchiveHook(NetUnArchive); // call the NetArchive hook in unarchive mode

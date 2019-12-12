@@ -13,11 +13,9 @@ set(SRB2_ASSET_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/installer"
 	CACHE STRING "Path to directory that contains all asset files for the installer.")
 
 set(SRB2_ASSET_HASHED
-"srb2.srb;\
+"srb2.pk3;\
 player.dta;\
-rings.dta;\
-zones.dta;\
-patch.dta"
+zones.pk3"
 	CACHE STRING "Asset filenames to apply MD5 checks. No spaces between entries!"
 )
 

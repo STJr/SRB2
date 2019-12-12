@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,7 +33,7 @@
 void P_MixUp(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 			INT16 starpostx, INT16 starposty, INT16 starpostz,
 			INT32 starpostnum, tic_t starposttime, angle_t starpostangle,
-			INT32 flags2)
+			fixed_t starpostscale, angle_t drawangle, INT32 flags2)
 {
 	const INT32 takeflags2 = MF2_TWOD|MF2_OBJECTFLIP;
 
@@ -89,7 +89,10 @@ void P_MixUp(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 		thing->player->starpostz = starpostz;
 		thing->player->starposttime = starposttime;
 		thing->player->starpostangle = starpostangle;
+		thing->player->starpostscale = starpostscale;
 		thing->player->starpostnum = starpostnum;
+
+		thing->player->drawangle = drawangle;
 
 		// Reset map starposts for the player's new info.
 		P_ResetStarposts();
@@ -125,12 +128,10 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 	if (!P_TeleportMove(thing, x, y, z))
 		return false;
 
-	thing->angle = angle;
-
 	if (!dontstopmove)
 		thing->momx = thing->momy = thing->momz = 0;
 	else // Change speed to match direction
-		P_InstaThrust(thing, thing->angle, P_AproxDistance(thing->momx, thing->momy));
+		P_InstaThrust(thing, angle, FixedHypot(thing->momx, thing->momy));
 
 	if (thing->player)
 	{
@@ -139,8 +140,29 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 		else
 			thing->player->viewz = thing->z + thing->player->viewheight;
 
+		// don't run in place after a teleport
 		if (!dontstopmove)
+		{
+			INT32 p;
+			// Search for any players you might be carrying, so you can get them off before they end up being taken with you!
+			for (p = 0; p < MAXPLAYERS; p++)
+				if (playeringame[p] && players[p].mo && players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == thing)
+				{
+					players[p].powers[pw_carry] = CR_NONE;
+					P_SetTarget(&players[p].mo->tracer, NULL);
+					break;
+				}
+			thing->player->cmomx = thing->player->cmomy = 0;
+			thing->player->rmomx = thing->player->rmomy = 0;
+			thing->player->speed = 0;
+			P_ResetPlayer(thing->player);
+			P_SetPlayerMobjState(thing, S_PLAY_STND);
+
 			thing->reactiontime = TICRATE/2; // don't move for about half a second
+			thing->player->drawangle = angle;
+		}
+		else
+			thing->player->drawangle += (angle - thing->angle);
 
 		// absolute angle position
 		if (thing->player == &players[consoleplayer])
@@ -154,27 +176,11 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 		else if (camera.chase && thing->player == &players[displayplayer])
 			P_ResetCamera(thing->player, &camera);
 
-		// don't run in place after a teleport
-		if (!dontstopmove)
-		{
-			INT32 p;
-			// Search for any players you might be carrying, so you can get them off before they end up being taken with you!
-			for (p = 0; p < MAXPLAYERS; p++)
-				if (playeringame[p] && players[p].mo && players[p].pflags & PF_CARRIED && players[p].mo->tracer == thing)
-				{
-					players[p].pflags &= ~PF_CARRIED;
-					break;
-				}
-			thing->player->cmomx = thing->player->cmomy = 0;
-			thing->player->rmomx = thing->player->rmomy = 0;
-			thing->player->speed = 0;
-			P_ResetPlayer(thing->player);
-			P_SetPlayerMobjState(thing, S_PLAY_STND);
-		}
-
 		if (flash)
 			P_FlashPal(thing->player, PAL_MIXUP, 10);
 	}
+
+	thing->angle = angle;
 
 	return true;
 }

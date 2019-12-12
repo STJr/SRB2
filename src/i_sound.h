@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,7 +30,9 @@ typedef enum {
 	MU_MP3_MAD_UNUSED, // use MU_MP3 instead
 	MU_FLAC,
 	MU_MODPLUG_UNUSED, // use MU_MOD instead
-	MU_GME
+	MU_GME,
+	MU_MOD_EX, // libopenmpt
+	MU_MID_EX // Non-native MIDI
 } musictype_t;
 
 /**	\brief Sound subsystem runing and waiting

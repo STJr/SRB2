@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,16 +20,43 @@
 #include "command.h"
 #include "tables.h" // angle_t
 
+#ifdef HAVE_OPENMPT
+#include "libopenmpt/libopenmpt.h"
+openmpt_module *openmpt_mhandle;
+#endif
+
 // mask used to indicate sound origin is player item pickup
 #define PICKUP_SOUND 0x8000
 
 extern consvar_t stereoreverse;
-extern consvar_t cv_soundvolume, cv_digmusicvolume, cv_midimusicvolume;
+extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
+
 extern consvar_t cv_resetmusic;
+extern consvar_t cv_resetmusicbyheader;
+
+#define RESETMUSIC (!modeattacking && \
+	(cv_resetmusicbyheader.value ? \
+		(mapheaderinfo[gamemap-1]->musforcereset != -1 ? mapheaderinfo[gamemap-1]->musforcereset : cv_resetmusic.value) \
+		: cv_resetmusic.value) \
+	)
+
 extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
+
+extern consvar_t cv_playmusicifunfocused;
+extern consvar_t cv_playsoundsifunfocused;
+
+#ifdef HAVE_OPENMPT
+extern consvar_t cv_modfilter;
+#endif
+
+#ifdef HAVE_MIXERX
+extern consvar_t cv_midiplayer;
+extern consvar_t cv_midisoundfontpath;
+extern consvar_t cv_miditimiditypath;
+#endif
 
 #ifdef SNDSERV
 extern consvar_t sndserver_cmd, sndserver_arg;
@@ -69,6 +96,34 @@ typedef struct {
 	angle_t angle;
 } listener_t;
 
+typedef struct
+{
+	// sound information (if null, channel avail.)
+	sfxinfo_t *sfxinfo;
+
+	// origin of sound
+	const void *origin;
+
+	// handle of the sound being played
+	INT32 handle;
+
+} channel_t;
+
+typedef struct {
+	channel_t *c;
+	sfxinfo_t *s;
+	UINT16 t;
+	UINT8 b;
+} caption_t;
+
+#define NUMCAPTIONS 8
+#define MAXCAPTIONTICS (2*TICRATE)
+#define CAPTIONFADETICS 20
+
+extern caption_t closedcaptions[NUMCAPTIONS];
+void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan);
+void S_ResetCaptions(void);
+
 // register sound vars and commands at game startup
 void S_RegisterSoundStuff(void);
 
@@ -84,12 +139,19 @@ void S_InitSfxChannels(INT32 sfxVolume);
 //
 void S_StopSounds(void);
 void S_ClearSfx(void);
-void S_Start(void);
+void S_StartEx(boolean reset);
+#define S_Start() S_StartEx(false)
 
 //
 // Basically a W_GetNumForName that adds "ds" at the beginning of the string. Returns a lumpnum.
 //
 lumpnum_t S_GetSfxLumpNum(sfxinfo_t *sfx);
+
+//
+// Sound Status
+//
+
+boolean S_SoundDisabled(void);
 
 //
 // Start sound for thing at <origin> using <sound_id> from sounds.h
@@ -111,6 +173,7 @@ boolean S_MIDIMusicDisabled(void);
 boolean S_MusicDisabled(void);
 boolean S_MusicPlaying(void);
 boolean S_MusicPaused(void);
+boolean S_MusicNotInFocus(void);
 musictype_t S_MusicType(void);
 const char *S_MusicName(void);
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
@@ -124,6 +187,39 @@ boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 
 // Set Speed of Music
 boolean S_SpeedMusic(float speed);
+
+// Music definitions
+typedef struct musicdef_s
+{
+	char name[7];
+	char title[32];
+	char alttitle[64];
+	char authors[256];
+	//char usage[256]; -- probably never going to be relevant to vanilla
+	/*
+	the trouble here is that kart combines what we call "title"
+	and "authors" into one string. we need to split it for sound
+	test reasons. they might split it later like we did, but...
+	*/
+	//char source[256];
+	UINT8 soundtestpage;
+	INT16 soundtestcond; // +ve for map, -ve for conditionset, 0 for already here
+	tic_t stoppingtics;
+	fixed_t bpm;
+	boolean allowed; // question marks or listenable on sound test?
+	struct musicdef_s *next;
+} musicdef_t;
+
+extern musicdef_t soundtestsfx;
+extern musicdef_t *musicdefstart;
+extern musicdef_t **soundtestdefs;
+extern INT32 numsoundtestdefs;
+extern UINT8 soundtestpage;
+
+void S_LoadMusicDefs(UINT16 wadnum);
+void S_InitMusicDefs(void);
+
+boolean S_PrepareSoundTest(void);
 
 //
 // Music Seeking
@@ -143,6 +239,35 @@ boolean S_SetMusicPosition(UINT32 position);
 
 // Get Position of Music
 UINT32 S_GetMusicPosition(void);
+
+//
+// Music Stacking (Jingles)
+//
+
+typedef struct musicstack_s
+{
+	char musname[7];
+	UINT16 musflags;
+	boolean looping;
+	UINT32 position;
+	tic_t tic;
+	UINT16 status;
+	lumpnum_t mlumpnum;
+	boolean noposition; // force music stack resuming from zero (like music_stack_noposition)
+
+    struct musicstack_s *prev;
+    struct musicstack_s *next;
+} musicstack_t;
+
+char music_stack_nextmusname[7];
+boolean music_stack_noposition;
+UINT32 music_stack_fadeout;
+UINT32 music_stack_fadein;
+
+void S_SetStackAdjustmentStart(void);
+void S_AdjustMusicStackTics(void);
+void S_RetainMusic(const char *mname, UINT16 mflags, boolean looping, UINT32 position, UINT16 status);
+boolean S_RecallMusic(UINT16 status, boolean fromfirst);
 
 //
 // Music Playback
@@ -178,6 +303,7 @@ boolean S_FadeOutStopMusic(UINT32 ms);
 // Updates music & sounds
 //
 void S_UpdateSounds(void);
+void S_UpdateClosedCaptions(void);
 
 FUNCMATH fixed_t S_CalculateSoundDistance(fixed_t px1, fixed_t py1, fixed_t pz1, fixed_t px2, fixed_t py2, fixed_t pz2);
 

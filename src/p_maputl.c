@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -311,6 +311,7 @@ fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 #ifdef ESLOPE
 pslope_t *opentopslope, *openbottomslope;
 #endif
+ffloor_t *openfloorrover, *openceilingrover;
 
 // P_CameraLineOpening
 // P_LineOpening, but for camera
@@ -490,6 +491,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 	I_Assert(front != NULL);
 	I_Assert(back != NULL);
 
+	openfloorrover = openceilingrover = NULL;
 #ifdef POLYOBJECTS
 	if (linedef->polyobj)
 	{
@@ -660,7 +662,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
-				if (mobj->player && (P_CheckSolidLava(mobj, rover) || P_CanRunOnWater(mobj->player, rover)))
+				if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
 					;
 				else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
 					|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
@@ -672,25 +674,27 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
-				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
+				if (delta1 >= delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_PLATFORM) // thing is below FOF
 				{
 					if (bottomheight < opentop) {
 						opentop = bottomheight;
 #ifdef ESLOPE
 						opentopslope = *rover->b_slope;
 #endif
+						openceilingrover = rover;
 					}
 					else if (bottomheight < highceiling)
 						highceiling = bottomheight;
 				}
 
-				if (delta1 < delta2 && !(rover->flags & FF_REVERSEPLATFORM)) // thing is above FOF
+				if (delta1 < delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
 				{
 					if (topheight > openbottom) {
 						openbottom = topheight;
 #ifdef ESLOPE
 						openbottomslope = *rover->t_slope;
 #endif
+						openfloorrover = rover;
 					}
 					else if (topheight > lowfloor)
 						lowfloor = topheight;
@@ -704,7 +708,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
-				if (mobj->player && (P_CheckSolidLava(mobj, rover) || P_CanRunOnWater(mobj->player, rover)))
+				if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
 					;
 				else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
 					|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
@@ -716,25 +720,27 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
-				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
+				if (delta1 >= delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_PLATFORM) // thing is below FOF
 				{
 					if (bottomheight < opentop) {
 						opentop = bottomheight;
 #ifdef ESLOPE
 						opentopslope = *rover->b_slope;
 #endif
+						openceilingrover = rover;
 					}
 					else if (bottomheight < highceiling)
 						highceiling = bottomheight;
 				}
 
-				if (delta1 < delta2 && !(rover->flags & FF_REVERSEPLATFORM)) // thing is above FOF
+				if (delta1 < delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
 				{
 					if (topheight > openbottom) {
 						openbottom = topheight;
 #ifdef ESLOPE
 						openbottomslope = *rover->t_slope;
 #endif
+						openfloorrover = rover;
 					}
 					else if (topheight > lowfloor)
 						lowfloor = topheight;
@@ -1057,7 +1063,10 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *))
 	{
 		P_SetTarget(&bnext, mobj->bnext); // We want to note our reference to bnext here incase it is MF_NOTHINK and gets removed!
 		if (!func(mobj))
+		{
+			P_SetTarget(&bnext, NULL);
 			return false;
+		}
 		if (P_MobjWasRemoved(tmthing) // func just popped our tmthing, cannot continue.
 		|| (bnext && P_MobjWasRemoved(bnext))) // func just broke blockmap chain, cannot continue.
 		{

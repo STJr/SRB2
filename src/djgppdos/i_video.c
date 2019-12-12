@@ -90,9 +90,16 @@ static   unsigned long  nombre = NEWTICRATE*10;
 static void I_BlitScreenVesa1(void);   //see later
 void I_FinishUpdate (void)
 {
+	// draw captions if enabled
+	if (cv_closedcaptioning.value)
+		SCR_ClosedCaptions();
+
 	// draw FPS if enabled
 	if (cv_ticrate.value)
 		SCR_DisplayTicRate();
+
+	if (cv_showping.value && netgame && consoleplayer != serverplayer)
+		SCR_DisplayLocalPing();
 
 	//blast it to the screen
 	// this code sucks

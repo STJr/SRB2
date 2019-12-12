@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -37,10 +37,12 @@ extern boolean playeringame[MAXPLAYERS];
 
 // demoplaying back and demo recording
 extern boolean demoplayback, titledemo, demorecording, timingdemo;
+extern tic_t demostarttime;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;
 extern boolean demo_start;
+extern boolean demosynced;
 
 extern mobj_t *metalplayback;
 
@@ -50,16 +52,26 @@ extern tic_t levelstarttic;
 // for modding?
 extern INT16 prevmap, nextmap;
 extern INT32 gameovertics;
+extern UINT8 ammoremovaltics;
 extern tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 extern INT16 rw_maximums[NUM_WEAPONS];
+extern INT32 pausedelay;
+extern boolean pausebreakkey;
+
+extern boolean promptactive;
+
+extern consvar_t cv_pauseifunfocused;
 
 // used in game menu
+extern consvar_t cv_tutorialprompt;
 extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime, cv_consolechat, cv_chatbacktint, cv_chatspamprotection, cv_compactscoreboard;
 extern consvar_t cv_crosshair, cv_crosshair2;
 extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_chasefreelook, cv_mousemove;
 extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_chasefreelook2, cv_mousemove2;
 extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
+extern consvar_t cv_directionchar, cv_directionchar2;
+extern consvar_t cv_autobrake, cv_autobrake2;
 extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis;
 extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
@@ -91,10 +103,31 @@ extern INT32 localaiming, localaiming2; // should be an angle_t but signed
 //
 void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo);
 void G_DoReborn(INT32 playernum);
-void G_PlayerReborn(INT32 player);
+void G_PlayerReborn(INT32 player, boolean betweenmaps);
 void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer,
-	boolean skipprecutscene);
+	boolean skipprecutscene, boolean FLS);
 char *G_BuildMapTitle(INT32 mapnum);
+
+struct searchdim
+{
+	UINT8 pos;
+	UINT8 siz;
+};
+
+typedef struct
+{
+	INT16  mapnum;
+	UINT8  matchc;
+	struct searchdim *matchd;/* offset that a pattern was matched */
+	UINT8  keywhc;
+	struct searchdim *keywhd;/* ...in KEYWORD */
+	UINT8  total;/* total hits */
+}
+mapsearchfreq_t;
+
+INT32 G_FindMap(const char *query, char **foundmapnamep,
+		mapsearchfreq_t **freqp, INT32 *freqc);
+void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
 
 // XMOD spawning
 mapthing_t *G_FindCTFStart(INT32 playernum);
@@ -107,7 +140,8 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost);
 void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar,
 	boolean SSSG, boolean FLS);
 void G_DoLoadLevel(boolean resetplayer);
-
+void G_StartTitleCard(void);
+void G_PreLevelTitleCard(void);
 void G_DeferedPlayDemo(const char *demo);
 
 // Can be called by the startup code or M_Responder, calls P_SetupLevel.
@@ -116,6 +150,8 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride);
 void G_SaveGameData(void);
 
 void G_SaveGame(UINT32 slot);
+
+void G_SaveGameOver(UINT32 slot, boolean modifylives);
 
 // Only called by startup code.
 void G_RecordDemo(const char *name);
@@ -132,7 +168,9 @@ typedef enum
 	GHC_NORMAL = 0,
 	GHC_SUPER,
 	GHC_FIREFLOWER,
-	GHC_INVINCIBLE
+	GHC_INVINCIBLE,
+	GHC_NIGHTSSKIN, // not actually a colour
+	GHC_RETURNSKIN // ditto
 } ghostcolor_t;
 
 // Record/playback tics
@@ -159,7 +197,7 @@ void G_AddGhost(char *defdemoname);
 void G_DoPlayMetal(void);
 void G_DoneLevelLoad(void);
 void G_StopMetalDemo(void);
-ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void);
+ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 
@@ -171,6 +209,7 @@ boolean G_GametypeHasSpectators(void);
 boolean G_RingSlingerGametype(void);
 boolean G_PlatformGametype(void);
 boolean G_TagGametype(void);
+boolean G_EnoughPlayersFinished(void);
 void G_ExitLevel(void);
 void G_NextLevel(void);
 void G_Continue(void);
@@ -186,10 +225,14 @@ void G_AddPlayer(INT32 playernum);
 void G_SetExitGameFlag(void);
 void G_ClearExitGameFlag(void);
 boolean G_GetExitGameFlag(void);
+
 void G_SetRetryFlag(void);
 void G_ClearRetryFlag(void);
 boolean G_GetRetryFlag(void);
 
+void G_SetModeAttackRetryFlag(void);
+void G_ClearModeAttackRetryFlag(void);
+boolean G_GetModeAttackRetryFlag(void);
 
 void G_LoadGameData(void);
 void G_LoadGameSettings(void);

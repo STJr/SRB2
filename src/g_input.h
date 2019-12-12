@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,33 +22,10 @@
 // keys (mousebuttons and joybuttons becomes keys)
 #define NUMKEYS 256
 
-
-#ifdef _arch_dreamcast
-#define MOUSEBUTTONS 5
-#define JOYBUTTONS   8 //  8 buttons
-#define JOYHATS      2  // 2 hats
-#define JOYAXISSET   3  // 3 Sets of 2 axises
-#elif defined (_XBOX)
-#define MOUSEBUTTONS 5
-#define JOYBUTTONS   12 // 12 buttons
-#define JOYHATS      1  // 1 hat
-#define JOYAXISSET   2  // 2 Sets of 2 axises
-#elif defined (_PSP)
-#define MOUSEBUTTONS 3
-#define JOYBUTTONS   14 // 10 buttons
-#define JOYHATS      1  // 1 hat
-#define JOYAXISSET   1  // 1 Set of 2 axises
-#elif defined (_WII)
-#define MOUSEBUTTONS 3
-#define JOYBUTTONS   20 // 20 buttons
-#define JOYHATS      1  // 1 hat
-#define JOYAXISSET   5  // 5 Sets of 2 axises
-#else
 #define MOUSEBUTTONS 8
 #define JOYBUTTONS   32 // 32 buttons
 #define JOYHATS      4  // 4 hats
 #define JOYAXISSET   4  // 4 Sets of 2 axises
-#endif
 
 //
 // mouse and joystick buttons are handled as 'virtual' keys
@@ -105,8 +82,6 @@ typedef enum
 	gc_tossflag,
 	gc_use,
 	gc_camtoggle,
-	gc_camleft,
-	gc_camright,
 	gc_camreset,
 	gc_lookup,
 	gc_lookdown,
@@ -128,6 +103,14 @@ typedef enum
 	num_gamecontrols
 } gamecontrols_e;
 
+typedef enum
+{
+	gcs_custom,
+	gcs_fps,
+	gcs_platform,
+	num_gamecontrolschemes
+} gamecontrolschemes_e;
+
 // mouse values are used once
 extern consvar_t cv_mousesens, cv_mouseysens;
 extern consvar_t cv_mousesens2, cv_mouseysens2;
@@ -145,8 +128,30 @@ extern UINT8 gamekeydown[NUMINPUTS];
 // two key codes (or virtual key) per game control
 extern INT32 gamecontrol[num_gamecontrols][2];
 extern INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
+extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // default control storage, use 0 (gcs_custom) for memory retention
+extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][num_gamecontrols][2];
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
+
+#define num_gcl_tutorial_check 6
+#define num_gcl_tutorial_used 8
+#define num_gcl_tutorial_full 13
+#define num_gcl_movement 4
+#define num_gcl_camera 2
+#define num_gcl_movement_camera 6
+#define num_gcl_jump 1
+#define num_gcl_use 1
+#define num_gcl_jump_use 2
+
+extern const INT32 gcl_tutorial_check[num_gcl_tutorial_check];
+extern const INT32 gcl_tutorial_used[num_gcl_tutorial_used];
+extern const INT32 gcl_tutorial_full[num_gcl_tutorial_full];
+extern const INT32 gcl_movement[num_gcl_movement];
+extern const INT32 gcl_camera[num_gcl_camera];
+extern const INT32 gcl_movement_camera[num_gcl_movement_camera];
+extern const INT32 gcl_jump[num_gcl_jump];
+extern const INT32 gcl_use[num_gcl_use];
+extern const INT32 gcl_jump_use[num_gcl_jump_use];
 
 // peace to my little coder fingers!
 // check a gamecontrol being active or not
@@ -163,8 +168,10 @@ void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
 void G_ClearAllControlKeys(void);
 void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
-void G_Controldefault(void);
-void G_SaveKeySetting(FILE *f);
+void G_DefineDefaultControls(void);
+INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
+void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
+void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
 INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify);
 
 #endif

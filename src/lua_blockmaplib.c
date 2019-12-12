@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2016 by Iestyn "Monster Iestyn" Jealous.
-// Copyright (C) 2016 by Sonic Team Junior.
+// Copyright (C) 2016-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,10 +54,12 @@ static UINT8 lib_searchBlockmap_Objects(lua_State *L, INT32 x, INT32 y, mobj_t *
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
 			blockfuncerror = true;
+			P_SetTarget(&bnext, NULL);
 			return 0; // *shrugs*
 		}
 		if (!lua_isnil(gL, -1))
 		{ // if nil, continue
+			P_SetTarget(&bnext, NULL);
 			if (lua_toboolean(gL, -1))
 				return 2; // stop whole search
 			else

@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014-2018 by Sonic Team Junior.
+// Copyright (C) 2014-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -10,6 +10,7 @@
 /// \brief SDL Mixer interface for sound
 
 #include "../doomdef.h"
+#include "../doomstat.h" // menuactive
 
 #if defined(HAVE_SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
 
@@ -28,7 +29,11 @@
 #pragma warning(default : 4214 4244)
 #endif
 
+#ifdef HAVE_MIXERX
+#include "SDL_mixer_ext.h"
+#else
 #include "SDL_mixer.h"
+#endif
 
 /* This is the version number macro for the current SDL_mixer version: */
 #ifndef SDL_MIXER_COMPILEDVERSION
@@ -72,6 +77,17 @@
 #endif // HAVE_ZLIB
 #endif // HAVE_LIBGME
 
+static UINT16 BUFFERSIZE = 2048;
+static UINT16 SAMPLERATE = 44100;
+
+#ifdef HAVE_OPENMPT
+#include "libopenmpt/libopenmpt.h"
+#endif
+
+/// ------------------------
+/// Audio Declarations
+/// ------------------------
+
 UINT8 sound_started = false;
 
 static Mix_Music *music;
@@ -90,10 +106,97 @@ static UINT32 fading_timer;
 static UINT32 fading_duration;
 static INT32 fading_id;
 static void (*fading_callback)(void);
+static boolean fading_nocleanup;
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
-static INT32 current_track;
+static UINT16 current_track;
+#endif
+
+#ifdef HAVE_OPENMPT
+static int mod_err = OPENMPT_ERROR_OK;
+static const char *mod_err_str;
+static UINT16 current_subsong;
+static size_t probesize;
+static int result;
+#endif
+
+#ifdef HAVE_MIXERX
+static void Midiplayer_Onchange(void)
+{
+	boolean restart = false;
+
+	if (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX && I_SongType() != MU_MID)
+		return;
+
+	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
+	{
+		if (Mix_SetMidiPlayer(cv_midiplayer.value)) // <> 0 means error
+			CONS_Alert(CONS_ERROR, "Midi player error: %s", Mix_GetError());
+		else
+			restart = true;
+	}
+
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	{
+		if (!Mix_SetSoundFonts(cv_midisoundfontpath.string)) // == 0 means error
+			CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+		else
+			restart = true;
+	}
+
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+
+	if (restart)
+		S_StartEx(true);
+}
+
+static void MidiSoundfontPath_Onchange(void)
+{
+	if (Mix_GetMidiPlayer() != MIDI_Fluidsynth || (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX))
+		return;
+
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	{
+		char *miditoken;
+		char *source = strdup(cv_midisoundfontpath.string);
+		boolean proceed = true;
+		// check if file exists; menu calls this method at every keystroke
+
+		// get first token
+		miditoken = strtok(source, ";");
+
+		while (miditoken != NULL)
+		{
+			SDL_RWops *rw = SDL_RWFromFile(miditoken, "r");
+			if (rw != NULL)
+				SDL_RWclose(rw);
+			else
+			{
+				proceed = false;
+				break;
+			}
+			miditoken = strtok(NULL, ";");
+		}
+
+		free(source);
+
+		if (proceed)
+		{
+			if (!Mix_SetSoundFonts(cv_midisoundfontpath.string))
+				CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+			else
+				S_StartEx(true);
+		}
+	}
+}
+
+// make sure that s_sound.c does not already verify these
+// which happens when: defined(HAVE_MIXERX) && !defined(HAVE_MIXER)
+static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
+consvar_t cv_midiplayer = {"midiplayer", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midisoundfontpath = {"midisoundfont", "sf2/8bitsf.SF2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_miditimiditypath = {"midisoundbank", "./timidity", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
 static void var_cleanup(void)
@@ -105,18 +208,24 @@ static void var_cleanup(void)
 	songpaused = is_looping =\
 	 is_fading = false;
 
-	fading_callback = NULL;
+	// HACK: See music_loop, where we want the fade timing to proceed after a non-looping
+	// song has stopped playing
+	if (!fading_nocleanup)
+		fading_callback = NULL;
+	else
+		fading_nocleanup = false; // use it once, set it back immediately
 
 	internal_volume = 100;
 }
-
 /// ------------------------
 /// Audio System
 /// ------------------------
 
 void I_StartupSound(void)
 {
-	I_Assert(!sound_started);
+	//I_Assert(!sound_started);
+	if (sound_started)
+		return;
 
 #ifdef _WIN32
 	// Force DirectSound instead of WASAPI
@@ -137,21 +246,33 @@ void I_StartupSound(void)
 		return;
 	}
 
+	fading_nocleanup = false;
+
 	var_cleanup();
 
 	music = NULL;
 	music_volume = sfx_volume = 0;
 
+#ifdef HAVE_MIXERX
+	Mix_SetMidiPlayer(cv_midiplayer.value);
+	Mix_SetSoundFonts(cv_midisoundfontpath.string);
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+#endif
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
-	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
+	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MP3|MIX_INIT_OGG|MIX_INIT_MOD);
 #endif
 
-	if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048) < 0)
+	if (Mix_OpenAudio(SAMPLERATE, AUDIO_S16SYS, 2, BUFFERSIZE) < 0)
 	{
 		CONS_Alert(CONS_ERROR, "Error starting SDL_Mixer: %s\n", Mix_GetError());
 		// call to start audio failed -- we do not have it
 		return;
 	}
+
+#ifdef HAVE_OPENMPT
+	CONS_Printf("libopenmpt version: %s\n", openmpt_get_string("library_version"));
+	CONS_Printf("libopenmpt build date: %s\n", openmpt_get_string("build"));
+#endif
 
 	sound_started = true;
 	songpaused = false;
@@ -174,6 +295,10 @@ void I_ShutdownSound(void)
 #ifdef HAVE_LIBGME
 	if (gme)
 		gme_delete(gme);
+#endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+		openmpt_module_destroy(openmpt_mhandle);
 #endif
 }
 
@@ -572,7 +697,15 @@ static void music_loop(void)
 		music_bytes = (UINT32)(loop_point*44100.0L*4); //assume 44.1khz, 4-byte length (see I_GetSongPosition)
 	}
 	else
+	{
+		// HACK: Let fade timing proceed beyond the end of a
+		// non-looping song. This is a specific case where the timing
+		// should persist after stopping a song, so I don't believe
+		// this should apply every time the user stops a song.
+		// This is auto-unset in var_cleanup, called by I_StopSong
+		fading_nocleanup = true;
 		I_StopSong();
+	}
 }
 
 static UINT32 music_fade(UINT32 interval, void *param)
@@ -625,12 +758,39 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 	// play gme into stream
 	gme_play(gme, len/2, (short *)stream);
 
+	// Limiter to prevent music from being disorted with some formats
+	if (music_volume >= 18)
+		music_volume = 18;
+
 	// apply volume to stream
 	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 42;
+		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
 }
 #endif
 
+#ifdef HAVE_OPENMPT
+static void mix_openmpt(void *udata, Uint8 *stream, int len)
+{
+	int i;
+	short *p;
+
+	(void)udata;
+
+	if (!openmpt_mhandle || songpaused)
+		return;
+
+	// Play module into stream
+	openmpt_module_read_interleaved_stereo(openmpt_mhandle, SAMPLERATE, BUFFERSIZE, (short *)stream);
+
+	// Limiter to prevent music from being disorted with some formats
+	if (music_volume >= 18)
+		music_volume = 18;
+
+	// apply volume to stream
+	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
+		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
+}
+#endif
 
 /// ------------------------
 /// Music System
@@ -656,10 +816,21 @@ musictype_t I_SongType(void)
 		return MU_GME;
 	else
 #endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+		return MU_MOD_EX;
+#endif
 	if (!music)
 		return MU_NONE;
 	else if (Mix_GetMusicType(music) == MUS_MID)
+	{
+#ifdef HAVE_MIXERX
+		if (Mix_GetMidiPlayer() != MIDI_Native)
+			return MU_MID_EX;
+		else
+#endif
 		return MU_MID;
+	}
 	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG)
 		return MU_MOD;
 	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD)
@@ -673,6 +844,9 @@ boolean I_SongPlaying(void)
 	return (
 #ifdef HAVE_LIBGME
 		(I_SongType() == MU_GME && gme) ||
+#endif
+#ifdef HAVE_OPENMPT
+		(I_SongType() == MU_MOD_EX && openmpt_mhandle) ||
 #endif
 		music != NULL
 	);
@@ -699,8 +873,23 @@ boolean I_SetSongSpeed(float speed)
 		SDL_UnlockAudio();
 		return true;
 	}
+	else
+#endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+	{
+		char modspd[13];
+
+		if (speed > 4.0f)
+			speed = 4.0f; // Limit this to 4x to prevent crashing, stupid fix but... ~SteelT 27/9/19
+
+		sprintf(modspd, "%g", speed);
+		openmpt_module_ctl_set(openmpt_mhandle, "play.tempo_factor", modspd);
+		return true;
+	}
 #else
 	(void)speed;
+	return false;
 #endif
 	return false;
 }
@@ -742,10 +931,20 @@ UINT32 I_GetSongLength(void)
 	}
 	else
 #endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+		return (UINT32)(openmpt_module_get_duration_seconds(openmpt_mhandle) * 1000.);
+	else
+#endif
 	if (!music || I_SongType() == MU_MOD || I_SongType() == MU_MID)
 		return 0;
 	else
 	{
+#ifdef HAVE_MIXERX
+		double xlength = Mix_GetMusicTotalTime(music);
+		if (xlength >= 0)
+			return (UINT32)(xlength*1000);
+#endif
 		// VERY IMPORTANT to set your LENGTHMS= in your song files, folks!
 		// SDL mixer can't read music length itself.
 		length = (UINT32)(song_length*1000);
@@ -827,6 +1026,16 @@ boolean I_SetSongPosition(UINT32 position)
 	}
 	else
 #endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+	{
+		// This isn't 100% correct because we don't account for loop points because we can't get them.
+		// But if you seek past end of song, OpenMPT seeks to 0. So adjust the position anyway.
+		openmpt_module_set_position_seconds(openmpt_mhandle, (double)(get_adjusted_position(position)/1000.0L)); // returns new position
+		return true;
+	}
+	else
+#endif
 	if (!music || I_SongType() == MU_MID)
 		return false;
 	else if (I_SongType() == MU_MOD)
@@ -884,13 +1093,28 @@ UINT32 I_GetSongPosition(void)
 	}
 	else
 #endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+		// This will be incorrect if we adjust for length because we can't get loop points.
+		// So return unadjusted. See note in SetMusicPosition: we adjust for that.
+		return (UINT32)(openmpt_module_get_position_seconds(openmpt_mhandle)*1000.);
+		//return get_adjusted_position((UINT32)(openmpt_module_get_position_seconds(openmpt_mhandle)*1000.));
+	else
+#endif
 	if (!music || I_SongType() == MU_MID)
 		return 0;
 	else
+	{
+#ifdef HAVE_MIXERX
+		double xposition = Mix_GetMusicPosition(music);
+		if (xposition >= 0)
+			return (UINT32)(xposition*1000);
+#endif
 		return (UINT32)(music_bytes/44100.0L*1000.0L/4); //assume 44.1khz
 		// 4 = byte length for 16-bit samples (AUDIO_S16SYS), stereo (2-channel)
 		// This is hardcoded in I_StartupSound. Other formats for factor:
 		// 8M: 1 | 8S: 2 | 16M: 2 | 16S: 4
+	}
 }
 
 /// ------------------------
@@ -905,13 +1129,15 @@ boolean I_LoadSong(char *data, size_t len)
 	const size_t key1len = strlen(key1);
 	const size_t key2len = strlen(key2);
 	const size_t key3len = strlen(key3);
-
 	char *p = data;
 	SDL_RWops *rw;
 
 	if (music
 #ifdef HAVE_LIBGME
 		|| gme
+#endif
+#ifdef HAVE_OPENMPT
+		|| openmpt_mhandle
 #endif
 	)
 		I_UnloadSong();
@@ -1015,8 +1241,45 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 #endif
 
+#ifdef HAVE_MIXERX
+	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
+		Mix_SetMidiPlayer(cv_midiplayer.value);
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+		Mix_SetSoundFonts(cv_midisoundfontpath.string);
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string); // this overwrites previous custom path
+#endif
+
+#ifdef HAVE_OPENMPT
+	/*
+		If the size of the data to be checked is bigger than the recommended size (> 2048 bytes)
+		Let's just set the probe size to the recommended size
+		Otherwise let's give it the full data size
+	*/
+
+	if (len > openmpt_probe_file_header_get_recommended_size())
+		probesize = openmpt_probe_file_header_get_recommended_size();
+	else
+		probesize = len;
+
+	result = openmpt_probe_file_header(OPENMPT_PROBE_FILE_HEADER_FLAGS_DEFAULT, data, probesize, len, NULL, NULL, NULL, NULL, NULL, NULL);
+
+	if (result == OPENMPT_PROBE_FILE_HEADER_RESULT_SUCCESS) // We only cared if it succeeded, continue on if not.
+	{
+		openmpt_mhandle = openmpt_module_create_from_memory2(data, len, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+		if (!openmpt_mhandle) // Failed to create module handle? Show error and return!
+		{
+			mod_err = openmpt_module_error_get_last(openmpt_mhandle);
+			mod_err_str = openmpt_error_string(mod_err);
+			CONS_Alert(CONS_ERROR, "openmpt_module_create_from_memory2: %s\n", mod_err_str);
+			return false;
+		}
+		else
+			return true; // All good and we're ready for music playback!
+	}
+#endif
+
+	// Let's see if Mixer is able to load this.
 	rw = SDL_RWFromMem(data, len);
-	if (rw != NULL)
 	{
 		music = Mix_LoadMUS_RW(rw, 1);
 	}
@@ -1071,6 +1334,13 @@ void I_UnloadSong(void)
 		gme = NULL;
 	}
 #endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+	{
+		openmpt_module_destroy(openmpt_mhandle);
+		openmpt_mhandle = NULL;
+	}
+#endif
 	if (music)
 	{
 		Mix_FreeMusic(music);
@@ -1090,6 +1360,19 @@ boolean I_PlaySong(boolean looping)
 	}
 	else
 #endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+	{
+		openmpt_module_select_subsong(openmpt_mhandle, 0);
+		openmpt_module_set_render_param(openmpt_mhandle, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
+		if (looping)
+			openmpt_module_set_repeat_count(openmpt_mhandle, -1); // Always repeat
+		current_subsong = 0;
+		Mix_HookMusic(mix_openmpt, openmpt_mhandle);
+		return true;
+	}
+	else
+#endif
 	if (!music)
 		return false;
 
@@ -1101,7 +1384,7 @@ boolean I_PlaySong(boolean looping)
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return false;
 	}
-	else if ((I_SongType() == MU_MOD || I_SongType() == MU_MID) && Mix_PlayMusic(music, looping ? -1 : 0) == -1) // if MOD, loop forever
+	else if ((I_SongType() == MU_MOD || I_SongType() == MU_MID || I_SongType() == MU_MID_EX) && Mix_PlayMusic(music, looping ? -1 : 0) == -1) // if MOD, loop forever
 	{
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return false;
@@ -1111,10 +1394,10 @@ boolean I_PlaySong(boolean looping)
 
 	I_SetMusicVolume(music_volume);
 
-	if (I_SongType() != MU_MOD && I_SongType() != MU_MID)
+	if (I_SongType() != MU_MOD && I_SongType() != MU_MID && I_SongType() != MU_MID_EX)
 		Mix_HookMusicFinished(music_loop); // don't bother counting if MOD
 
-	if(I_SongType() != MU_MOD && I_SongType() != MU_MID && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
+	if(I_SongType() != MU_MOD && I_SongType() != MU_MID && I_SongType() != MU_MID_EX && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 		CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
 
 	return true;
@@ -1122,13 +1405,23 @@ boolean I_PlaySong(boolean looping)
 
 void I_StopSong(void)
 {
-	I_StopFadingSong();
+	// HACK: See music_loop on why we want fade timing to proceed
+	// after end of song
+	if (!fading_nocleanup)
+		I_StopFadingSong();
 
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
 		Mix_HookMusic(NULL, NULL);
 		current_track = -1;
+	}
+#endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+	{
+		Mix_HookMusic(NULL, NULL);
+		current_subsong = -1;
 	}
 #endif
 	if (music)
@@ -1191,15 +1484,13 @@ void I_SetMusicVolume(UINT8 volume)
 boolean I_SetSongTrack(int track)
 {
 #ifdef HAVE_LIBGME
-	if (current_track == track)
-		return false;
-
 	// If the specified track is within the number of tracks playing, then change it
 	if (gme)
 	{
+		if (current_track == track)
+			return false;
 		SDL_LockAudio();
-		if (track >= 0
-			&& track < gme_track_count(gme))
+		if (track >= 0 && track < gme_track_count(gme)-1)
 		{
 			gme_err_t gme_e = gme_start_track(gme, track);
 			if (gme_e != NULL)
@@ -1215,6 +1506,24 @@ boolean I_SetSongTrack(int track)
 		return false;
 	}
 	else
+#endif
+#ifdef HAVE_OPENMPT
+	if (openmpt_mhandle)
+	{
+		if (current_subsong == track)
+			return false;
+		SDL_LockAudio();
+		if (track >= 0 && track < openmpt_module_get_num_subsongs(openmpt_mhandle))
+		{
+			openmpt_module_select_subsong(openmpt_mhandle, track);
+			current_subsong = track;
+			SDL_UnlockAudio();
+			return true;
+		}
+		SDL_UnlockAudio();
+
+		return false;
+	}
 #endif
 	if (I_SongType() == MU_MOD)
 		return !Mix_SetMusicPosition(track);
@@ -1240,6 +1549,8 @@ void I_StopFadingSong(void)
 		SDL_RemoveTimer(fading_id);
 	is_fading = false;
 	fading_source = fading_target = fading_timer = fading_duration = fading_id = 0;
+	// don't unset fading_nocleanup here just yet; fading_callback is cleaned up
+	// in var_cleanup()
 }
 
 boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))

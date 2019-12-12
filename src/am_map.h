@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,11 +25,6 @@ typedef struct
 {
 	fpoint_t a, b;
 } fline_t;
-
-// Used by ST StatusBar stuff.
-#define AM_MSGHEADER (('a'<<24)+('m'<<16))
-#define AM_MSGENTERED (AM_MSGHEADER | ('e'<<8))
-#define AM_MSGEXITED (AM_MSGHEADER | ('x'<<8))
 
 extern boolean am_recalc; // true if screen size changes
 extern boolean automapactive; // In AutoMap mode?

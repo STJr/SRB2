@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -76,9 +76,14 @@ extern consvar_t cv_showhud, cv_translucenthud;
 extern consvar_t cv_homremoval;
 extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
-extern consvar_t cv_shadow, cv_shadowoffs;
+#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
+extern consvar_t cv_shadow;
+#endif
+#ifdef GLBADSHADOWS
+extern conscar_t cv_shadowoffs;
+#endif //#ifdef GLBADSHADOWS
 extern consvar_t cv_translucency;
-extern consvar_t cv_precipdensity, cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
+extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
@@ -94,7 +99,7 @@ void R_ExecuteSetViewSize(void);
 
 void R_SkyboxFrame(player_t *player);
 
-void R_SetupFrame(player_t *player, boolean skybox);
+void R_SetupFrame(player_t *player);
 // Called by G_Drawer.
 void R_RenderPlayerView(player_t *player);
 

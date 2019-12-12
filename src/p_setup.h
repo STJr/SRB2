@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,21 +27,60 @@ extern mapthing_t *deathmatchstarts[MAX_DM_STARTS];
 extern INT32 numdmstarts, numcoopstarts, numredctfstarts, numbluectfstarts;
 
 extern boolean levelloading;
+extern UINT8 levelfadecol;
 
 extern lumpnum_t lastloadedmaplumpnum; // for comparative savegame
+
+/* for levelflat type */
+enum
+{
+	LEVELFLAT_NONE,/* HOM time my friend */
+	LEVELFLAT_FLAT,
+	LEVELFLAT_PATCH,
+#ifndef NO_PNG_LUMPS
+	LEVELFLAT_PNG,
+#endif
+	LEVELFLAT_TEXTURE,
+};
+
 //
 // MAP used flats lookup table
 //
 typedef struct
 {
 	char name[9]; // resource name from wad
-	lumpnum_t lumpnum; // lump number of the flat
+
+	UINT8  type;
+	union
+	{
+		struct
+		{
+			lumpnum_t     lumpnum; // lump number of the flat
+			// for flat animation
+			lumpnum_t baselumpnum;
+		}
+		flat;
+		struct
+		{
+			INT32             num;
+			INT32         lastnum; // texture number of the flat
+			// for flat animation
+			INT32         basenum;
+		}
+		texture;
+	}
+	u;
+
+	UINT16 width, height;
+	fixed_t topoffset, leftoffset;
 
 	// for flat animation
-	lumpnum_t baselumpnum;
 	INT32 animseq; // start pos. in the anim sequence
 	INT32 numpics;
 	INT32 speed;
+
+	// for patchflats
+	UINT8 *flatpatch;
 } levelflat_t;
 
 extern size_t numlevelflats;
@@ -60,16 +99,19 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
 void P_LoadThingsOnly(void);
 boolean P_SetupLevel(boolean skipprecip);
 boolean P_AddWadFile(const char *wadfilename);
-#ifdef DELFILE
-boolean P_DelWadFile(void);
-#endif
 boolean P_RunSOC(const char *socfilename);
+void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num);
+void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num);
 void P_WriteThings(lumpnum_t lump);
 size_t P_PrecacheLevelFlats(void);
 void P_AllocMapHeader(INT16 i);
 
+void P_SetDemoFlickies(INT16 i);
+void P_DeleteFlickies(INT16 i);
+
 // Needed for NiGHTS
 void P_ReloadRings(void);
+void P_SwitchSpheresBonusMode(boolean bonustime);
 void P_DeleteGrades(INT16 i);
 void P_AddGradesForMare(INT16 i, UINT8 mare, char *gtext);
 UINT8 P_GetGrade(UINT32 pscore, INT16 map, UINT8 mare);

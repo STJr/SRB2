@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,6 +25,11 @@ extern consvar_t cv_skin;
 extern consvar_t cv_playername2;
 extern consvar_t cv_playercolor2;
 extern consvar_t cv_skin2;
+// saved versions of the above six
+extern consvar_t cv_defaultplayercolor;
+extern consvar_t cv_defaultskin;
+extern consvar_t cv_defaultplayercolor2;
+extern consvar_t cv_defaultskin2;
 
 #ifdef SEENAMES
 extern consvar_t cv_seenames, cv_allowseenames;
@@ -51,7 +56,6 @@ extern consvar_t cv_itemrespawntime;
 extern consvar_t cv_itemrespawn;
 
 extern consvar_t cv_flagtime;
-extern consvar_t cv_suddendeath;
 
 extern consvar_t cv_touchtag;
 extern consvar_t cv_hidetime;
@@ -60,7 +64,7 @@ extern consvar_t cv_friendlyfire;
 extern consvar_t cv_pointlimit;
 extern consvar_t cv_timelimit;
 extern consvar_t cv_numlaps;
-extern consvar_t cv_usemapnumlaps;
+extern consvar_t cv_basenumlaps;
 extern UINT32 timelimitintics;
 extern consvar_t cv_allowexitlevel;
 
@@ -90,9 +94,7 @@ extern consvar_t cv_recycler;
 
 extern consvar_t cv_itemfinder;
 
-extern consvar_t cv_inttime, cv_advancemap, cv_playersforexit;
-extern consvar_t cv_soniccd;
-extern consvar_t cv_match_scoring;
+extern consvar_t cv_inttime, cv_coopstarposts, cv_cooplives, cv_advancemap, cv_playersforexit, cv_exitmove;
 extern consvar_t cv_overtime;
 extern consvar_t cv_startinglives;
 
@@ -103,13 +105,19 @@ extern consvar_t cv_ringslinger, cv_soundtest;
 
 extern consvar_t cv_specialrings, cv_powerstones, cv_matchboxes, cv_competitionboxes;
 
-#ifdef NEWPING
 extern consvar_t cv_maxping;
-#endif
+extern consvar_t cv_pingtimeout;
+extern consvar_t cv_showping;
+
 
 extern consvar_t cv_skipmapcheck;
 
 extern consvar_t cv_sleep;
+
+extern char timedemo_name[256];
+extern boolean timedemo_csv;
+extern char timedemo_csv_id[256];
+extern boolean timedemo_quit;
 
 typedef enum
 {
@@ -130,7 +138,7 @@ typedef enum
 	XD_RANDOMSEED,  // 15
 	XD_RUNSOC,      // 16
 	XD_REQADDFILE,  // 17
-	XD_DELFILE,     // 18
+	XD_DELFILE,     // 18 - replace next time we add an XD
 	XD_SETMOTD,     // 19
 	XD_SUICIDE,     // 20
 	XD_DEMOTED,     // 21
@@ -186,6 +194,7 @@ typedef union {
 // add game commands, needs cleanup
 void D_RegisterServerCommands(void);
 void D_RegisterClientCommands(void);
+boolean EnsurePlayerNameIsGood(char *name, INT32 playernum);
 void D_SendPlayerConfig(void);
 void Command_ExitGame_f(void);
 void Command_Retry_f(void);

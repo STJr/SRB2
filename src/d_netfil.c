@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,21 +11,14 @@
 /// \brief Transfer a file using HSendPacket.
 
 #include <stdio.h>
-#ifndef _WIN32_WCE
-#ifdef __OS2__
-#include <sys/types.h>
-#endif // __OS2__
 #include <sys/stat.h>
-#endif
 
-#if !defined (UNDER_CE)
 #include <time.h>
-#endif
 
-#if ((defined (_WIN32) && !defined (_WIN32_WCE)) || defined (__DJGPP__)) && !defined (_XBOX)
+#if defined (_WIN32) || defined (__DJGPP__)
 #include <io.h>
 #include <direct.h>
-#elif !defined (_WIN32_WCE) && !(defined (_XBOX) && !defined (__GNUC__))
+#else
 #include <sys/types.h>
 #include <dirent.h>
 #include <utime.h>
@@ -34,7 +27,7 @@
 #ifdef __GNUC__
 #include <unistd.h>
 #include <limits.h>
-#elif defined (_WIN32) && !defined (_WIN32_WCE)
+#elif defined (_WIN32)
 #include <sys/utime.h>
 #endif
 #ifdef __DJGPP__
@@ -104,7 +97,7 @@ INT32 lastfilenum = -1;
 /** Fills a serverinfo packet with information about wad files loaded.
   *
   * \todo Give this function a better name since it is in global scope.
-  * Used to have size limiting built in - now handed via W_LoadWadFile in w_wad.c
+  * Used to have size limiting built in - now handled via W_LoadWadFile in w_wad.c
   *
   */
 UINT8 *PutFileNeeded(void)
@@ -336,7 +329,7 @@ INT32 CL_CheckFiles(void)
 //		return 1;
 
 	// the first is the iwad (the main wad file)
-	// we don't care if it's called srb2.srb or srb2.wad.
+	// we don't care if it's called srb2.pk3 or not.
 	// Never download the IWAD, just assume it's there and identical
 	fileneeded[0].status = FS_OPEN;
 
@@ -350,7 +343,7 @@ INT32 CL_CheckFiles(void)
 		{
 			if (j < numwadfiles && !wadfiles[j]->important)
 			{
-				// Unimportant on our side. still don't care.
+				// Unimportant on our side.
 				++j;
 				continue;
 			}
@@ -723,7 +716,7 @@ void SV_FileSendTicker(void)
 		if (ram)
 			M_Memcpy(p->data, &f->id.ram[transfer[i].position], size);
 		else if (fread(p->data, 1, size, transfer[i].currentfile) != size)
-			I_Error("SV_FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(size), f->id.filename, transfer[i].position, strerror(ferror(transfer[i].currentfile)));
+			I_Error("SV_FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(size), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
 		p->position = LONG(transfer[i].position);
 		// Put flag so receiver knows the total size
 		if (transfer[i].position + size == f->size)
@@ -758,12 +751,10 @@ void Got_Filetxpak(void)
 	filename = va("%s", file->filename);
 	nameonly(filename);
 
-	if (!(strcmp(filename, "srb2.srb")
-		&& strcmp(filename, "srb2.wad")
-		&& strcmp(filename, "zones.dta")
+	if (!(strcmp(filename, "srb2.pk3")
+		&& strcmp(filename, "zones.pk3")
 		&& strcmp(filename, "player.dta")
-		&& strcmp(filename, "rings.dta")
-		&& strcmp(filename, "patch.dta")
+		&& strcmp(filename, "patch.pk3")
 		&& strcmp(filename, "music.dta")
 		))
 		I_Error("Tried to download \"%s\"", filename);
@@ -803,7 +794,7 @@ void Got_Filetxpak(void)
 		// We can receive packet in the wrong order, anyway all os support gaped file
 		fseek(file->file, pos, SEEK_SET);
 		if (fwrite(netbuffer->u.filetxpak.data,size,1,file->file) != 1)
-			I_Error("Can't write to %s: %s\n",filename, strerror(ferror(file->file)));
+			I_Error("Can't write to %s: %s\n",filename, M_FileError(file->file));
 		file->currentsize += size;
 
 		// Finished?
@@ -907,9 +898,9 @@ void nameonly(char *s)
 			ns = &(s[j+1]);
 			len = strlen(ns);
 #if 0
-				M_Memcpy(s, ns, len+1);
+			M_Memcpy(s, ns, len+1);
 #else
-				memmove(s, ns, len+1);
+			memmove(s, ns, len+1);
 #endif
 			return;
 		}
@@ -933,7 +924,7 @@ size_t nameonlylength(const char *s)
 
 filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum)
 {
-#if defined (NOMD5) || defined (_arch_dreamcast)
+#if defined (NOMD5)
 	(void)wantedmd5sum;
 	(void)filename;
 #else
@@ -985,11 +976,7 @@ filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum, boolean complet
 	// if not found at all, just move on without doing anything
 
 	// finally check "." directory
-#ifdef _arch_dreamcast
-	homecheck = filesearch(filename, "/cd", wantedmd5sum, completepath, 10);
-#else
 	homecheck = filesearch(filename, ".", wantedmd5sum, completepath, 10);
-#endif
 
 	if (homecheck != FS_NOTFOUND) // if not found this time, fall back on the below return statement
 		return homecheck; // otherwise return the result we got

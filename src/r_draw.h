@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -57,7 +57,9 @@ extern INT32 dc_texheight;
 extern INT32 ds_y, ds_x1, ds_x2;
 extern lighttable_t *ds_colormap;
 extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
-extern UINT8 *ds_source; // start of a 64*64 tile image
+extern UINT16 ds_flatwidth, ds_flatheight;
+extern boolean ds_powersoftwo;
+extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
 
 #ifdef ESLOPE
@@ -105,12 +107,16 @@ extern lumpnum_t viewborderlump[8];
 #define TC_BOSS       -2
 #define TC_METALSONIC -3 // For Metal Sonic battle
 #define TC_ALLWHITE   -4 // For Cy-Brak-demon
+#define TC_RAINBOW    -5 // For single colour
+#define TC_BLINK      -6 // For item blinking, according to kart
+#define TC_DASHMODE   -7 // For Metal Sonic's dashmode
 
 // Initialize color translation tables, for player rendering etc.
 void R_InitTranslationTables(void);
 UINT8* R_GetTranslationColormap(INT32 skinnum, skincolors_t color, UINT8 flags);
 void R_FlushTranslationColormapCache(void);
 UINT8 R_GetColorByName(const char *name);
+UINT8 R_GetSuperColorByName(const char *name);
 
 // Custom player skin translation
 void R_InitViewBuffer(INT32 width, INT32 height);
@@ -124,6 +130,8 @@ void R_FillBackScreen(void);
 // If the view size is not full screen, draws a border around it.
 void R_DrawViewBorder(void);
 #endif
+
+#define TRANSPARENTPIXEL 255
 
 // -----------------
 // 8bpp DRAWING CODE
@@ -165,6 +173,13 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogSpan_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
+
+#ifndef NOWATER
+void R_DrawTranslucentWaterSpan_8(void);
+
+extern INT32 ds_bgofs;
+extern INT32 ds_waterofs;
+#endif
 
 // ------------------
 // 16bpp DRAWING CODE

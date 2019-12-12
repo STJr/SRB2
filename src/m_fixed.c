@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -56,7 +56,7 @@ fixed_t FixedDiv2(fixed_t a, fixed_t b)
 	if (b == 0)
 		I_Error("FixedDiv: divide by zero");
 
-	ret = (((INT64)a * FRACUNIT) ) / b;
+	ret = (((INT64)a * FRACUNIT)) / b;
 
 	if ((ret > INT32_MAX) || (ret < INT32_MIN))
 		I_Error("FixedDiv: divide by zero");
@@ -117,7 +117,7 @@ fixed_t FixedHypot(fixed_t x, fixed_t y)
 		yx = FixedDiv(y, x); // (x/y)
 	}
 	yx2 = FixedMul(yx, yx); // (x/y)^2
-	yx1 = FixedSqrt(1*FRACUNIT + yx2); // (1 + (x/y)^2)^1/2
+	yx1 = FixedSqrt(1 * FRACUNIT + yx2); // (1 + (x/y)^2)^1/2
 	return FixedMul(ax, yx1); // |x|*((1 + (x/y)^2)^1/2)
 }
 
@@ -191,8 +191,8 @@ vector2_t *FV2_Divide(vector2_t *a_i, fixed_t a_c)
 // Vector Complex Math
 vector2_t *FV2_Midpoint(const vector2_t *a_1, const vector2_t *a_2, vector2_t *a_o)
 {
-	a_o->x = FixedDiv(a_2->x - a_1->x, 2*FRACUNIT);
-	a_o->y = FixedDiv(a_2->y - a_1->y, 2*FRACUNIT);
+	a_o->x = FixedDiv(a_2->x - a_1->x, 2 * FRACUNIT);
+	a_o->y = FixedDiv(a_2->y - a_1->y, 2 * FRACUNIT);
 	a_o->x = a_1->x + a_o->x;
 	a_o->y = a_1->y + a_o->y;
 	return a_o;
@@ -200,16 +200,16 @@ vector2_t *FV2_Midpoint(const vector2_t *a_1, const vector2_t *a_2, vector2_t *a
 
 fixed_t FV2_Distance(const vector2_t *p1, const vector2_t *p2)
 {
-	fixed_t xs = FixedMul(p2->x-p1->x,p2->x-p1->x);
-	fixed_t ys = FixedMul(p2->y-p1->y,p2->y-p1->y);
-	return FixedSqrt(xs+ys);
+	fixed_t xs = FixedMul(p2->x - p1->x, p2->x - p1->x);
+	fixed_t ys = FixedMul(p2->y - p1->y, p2->y - p1->y);
+	return FixedSqrt(xs + ys);
 }
 
 fixed_t FV2_Magnitude(const vector2_t *a_normal)
 {
-	fixed_t xs = FixedMul(a_normal->x,a_normal->x);
-	fixed_t ys = FixedMul(a_normal->y,a_normal->y);
-	return FixedSqrt(xs+ys);
+	fixed_t xs = FixedMul(a_normal->x, a_normal->x);
+	fixed_t ys = FixedMul(a_normal->y, a_normal->y);
+	return FixedSqrt(xs + ys);
 }
 
 // Also returns the magnitude
@@ -240,7 +240,7 @@ vector2_t *FV2_Negate(vector2_t *a_1)
 
 boolean FV2_Equal(const vector2_t *a_1, const vector2_t *a_2)
 {
-	fixed_t Epsilon = FRACUNIT/FRACUNIT;
+	fixed_t Epsilon = FRACUNIT / FRACUNIT;
 
 	if ((abs(a_2->x - a_1->x) > Epsilon) ||
 		(abs(a_2->y - a_1->y) > Epsilon))
@@ -261,7 +261,7 @@ fixed_t FV2_Dot(const vector2_t *a_1, const vector2_t *a_2)
 //
 // Given two points, create a vector between them.
 //
-vector2_t *FV2_Point2Vec (const vector2_t *point1, const vector2_t *point2, vector2_t *a_o)
+vector2_t *FV2_Point2Vec(const vector2_t *point1, const vector2_t *point2, vector2_t *a_o)
 {
 	a_o->x = point1->x - point2->x;
 	a_o->y = point1->y - point2->y;
@@ -344,9 +344,9 @@ vector3_t *FV3_Divide(vector3_t *a_i, fixed_t a_c)
 // Vector Complex Math
 vector3_t *FV3_Midpoint(const vector3_t *a_1, const vector3_t *a_2, vector3_t *a_o)
 {
-	a_o->x = FixedDiv(a_2->x - a_1->x, 2*FRACUNIT);
-	a_o->y = FixedDiv(a_2->y - a_1->y, 2*FRACUNIT);
-	a_o->z = FixedDiv(a_2->z - a_1->z, 2*FRACUNIT);
+	a_o->x = FixedDiv(a_2->x - a_1->x, 2 * FRACUNIT);
+	a_o->y = FixedDiv(a_2->y - a_1->y, 2 * FRACUNIT);
+	a_o->z = FixedDiv(a_2->z - a_1->z, 2 * FRACUNIT);
 	a_o->x = a_1->x + a_o->x;
 	a_o->y = a_1->y + a_o->y;
 	a_o->z = a_1->z + a_o->z;
@@ -355,18 +355,18 @@ vector3_t *FV3_Midpoint(const vector3_t *a_1, const vector3_t *a_2, vector3_t *a
 
 fixed_t FV3_Distance(const vector3_t *p1, const vector3_t *p2)
 {
-	fixed_t xs = FixedMul(p2->x-p1->x,p2->x-p1->x);
-	fixed_t ys = FixedMul(p2->y-p1->y,p2->y-p1->y);
-	fixed_t zs = FixedMul(p2->z-p1->z,p2->z-p1->z);
-	return FixedSqrt(xs+ys+zs);
+	fixed_t xs = FixedMul(p2->x - p1->x, p2->x - p1->x);
+	fixed_t ys = FixedMul(p2->y - p1->y, p2->y - p1->y);
+	fixed_t zs = FixedMul(p2->z - p1->z, p2->z - p1->z);
+	return FixedSqrt(xs + ys + zs);
 }
 
 fixed_t FV3_Magnitude(const vector3_t *a_normal)
 {
-	fixed_t xs = FixedMul(a_normal->x,a_normal->x);
-	fixed_t ys = FixedMul(a_normal->y,a_normal->y);
-	fixed_t zs = FixedMul(a_normal->z,a_normal->z);
-	return FixedSqrt(xs+ys+zs);
+	fixed_t xs = FixedMul(a_normal->x, a_normal->x);
+	fixed_t ys = FixedMul(a_normal->y, a_normal->y);
+	fixed_t zs = FixedMul(a_normal->z, a_normal->z);
+	return FixedSqrt(xs + ys + zs);
 }
 
 // Also returns the magnitude
@@ -399,7 +399,7 @@ vector3_t *FV3_Negate(vector3_t *a_1)
 
 boolean FV3_Equal(const vector3_t *a_1, const vector3_t *a_2)
 {
-	fixed_t Epsilon = FRACUNIT/FRACUNIT;
+	fixed_t Epsilon = FRACUNIT / FRACUNIT;
 
 	if ((abs(a_2->x - a_1->x) > Epsilon) ||
 		(abs(a_2->y - a_1->y) > Epsilon) ||
@@ -459,13 +459,27 @@ vector3_t *FV3_ClosestPointOnLine(const vector3_t *Line, const vector3_t *p, vec
 }
 
 //
+// ClosestPointOnVector
+//
+// Similar to ClosestPointOnLine, but uses a vector instead of two points.
+//
+void FV3_ClosestPointOnVector(const vector3_t *dir, const vector3_t *p, vector3_t *out)
+{
+	fixed_t t = FV3_Dot(dir, p);
+
+	// Return the point on the line closest
+	FV3_MulEx(dir, t, out);
+	return;
+}
+
+//
 // ClosestPointOnTriangle
 //
 // Given a triangle and a point,
 // the closest point on the edge of
 // the triangle is returned.
 //
-void FV3_ClosestPointOnTriangle (const vector3_t *tri, const vector3_t *point, vector3_t *result)
+void FV3_ClosestPointOnTriangle(const vector3_t *tri, const vector3_t *point, vector3_t *result)
 {
 	UINT8 i;
 	fixed_t dist, closestdist;
@@ -506,7 +520,7 @@ void FV3_ClosestPointOnTriangle (const vector3_t *tri, const vector3_t *point, v
 //
 // Given two points, create a vector between them.
 //
-vector3_t *FV3_Point2Vec (const vector3_t *point1, const vector3_t *point2, vector3_t *a_o)
+vector3_t *FV3_Point2Vec(const vector3_t *point1, const vector3_t *point2, vector3_t *a_o)
 {
 	a_o->x = point1->x - point2->x;
 	a_o->y = point1->y - point2->y;
@@ -519,7 +533,7 @@ vector3_t *FV3_Point2Vec (const vector3_t *point1, const vector3_t *point2, vect
 //
 // Calculates the normal of a polygon.
 //
-void FV3_Normal (const vector3_t *a_triangle, vector3_t *a_normal)
+fixed_t FV3_Normal(const vector3_t *a_triangle, vector3_t *a_normal)
 {
 	vector3_t a_1;
 	vector3_t a_2;
@@ -529,7 +543,28 @@ void FV3_Normal (const vector3_t *a_triangle, vector3_t *a_normal)
 
 	FV3_Cross(&a_1, &a_2, a_normal);
 
-	FV3_NormalizeEx(a_normal, a_normal);
+	return FV3_NormalizeEx(a_normal, a_normal);
+}
+
+//
+// Strength
+//
+// Measures the 'strength' of a vector in a particular direction.
+//
+fixed_t FV3_Strength(const vector3_t *a_1, const vector3_t *dir)
+{
+	vector3_t normal;
+	fixed_t dist = FV3_NormalizeEx(a_1, &normal);
+	fixed_t dot = FV3_Dot(&normal, dir);
+
+	FV3_ClosestPointOnVector(dir, a_1, &normal);
+
+	dist = FV3_Magnitude(&normal);
+
+	if (dot < 0) // Not facing same direction, so negate result.
+		dist = -dist;
+
+	return dist;
 }
 
 //
@@ -550,11 +585,11 @@ boolean FV3_IntersectedPlane(const vector3_t *a_triangle, const vector3_t *a_lin
 
 	*originDistance = FV3_PlaneDistance(a_normal, &a_triangle[0]);
 
-	distance1 = (FixedMul(a_normal->x, a_line[0].x)  + FixedMul(a_normal->y, a_line[0].y)
-				+ FixedMul(a_normal->z, a_line[0].z)) + *originDistance;
+	distance1 = (FixedMul(a_normal->x, a_line[0].x) + FixedMul(a_normal->y, a_line[0].y)
+		+ FixedMul(a_normal->z, a_line[0].z)) + *originDistance;
 
-	distance2 = (FixedMul(a_normal->x, a_line[1].x)  + FixedMul(a_normal->y, a_line[1].y)
-				+ FixedMul(a_normal->z, a_line[1].z)) + *originDistance;
+	distance2 = (FixedMul(a_normal->x, a_line[1].x) + FixedMul(a_normal->y, a_line[1].y)
+		+ FixedMul(a_normal->z, a_line[1].z)) + *originDistance;
 
 	// Positive or zero number means no intersection
 	if (FixedMul(distance1, distance2) >= 0)
@@ -575,8 +610,8 @@ boolean FV3_IntersectedPlane(const vector3_t *a_triangle, const vector3_t *a_lin
 fixed_t FV3_PlaneIntersection(const vector3_t *pOrigin, const vector3_t *pNormal, const vector3_t *rOrigin, const vector3_t *rVector)
 {
 	fixed_t d = -(FV3_Dot(pNormal, pOrigin));
-	fixed_t number = FV3_Dot(pNormal,rOrigin) + d;
-	fixed_t denom = FV3_Dot(pNormal,rVector);
+	fixed_t number = FV3_Dot(pNormal, rOrigin) + d;
+	fixed_t denom = FV3_Dot(pNormal, rVector);
 	return -FixedDiv(number, denom);
 }
 
@@ -597,11 +632,11 @@ fixed_t FV3_IntersectRaySphere(const vector3_t *rO, const vector3_t *rV, const v
 
 	c = FV3_Magnitude(&Q);
 	v = FV3_Dot(&Q, rV);
-	d = FixedMul(sR, sR) - (FixedMul(c,c) - FixedMul(v,v));
+	d = FixedMul(sR, sR) - (FixedMul(c, c) - FixedMul(v, v));
 
 	// If there was no intersection, return -1
-	if (d < 0*FRACUNIT)
-		return (-1*FRACUNIT);
+	if (d < 0 * FRACUNIT)
+		return (-1 * FRACUNIT);
 
 	// Return the distance to the [first] intersecting point
 	return (v - FixedSqrt(d));
@@ -629,9 +664,9 @@ vector3_t *FV3_IntersectionPoint(const vector3_t *vNormal, const vector3_t *vLin
 	//    Here I just chose a arbitrary point as the point to find that distance.  You notice we negate that
 	//    distance.  We negate the distance because we want to eventually go BACKWARDS from our point to the plane.
 	//    By doing this is will basically bring us back to the plane to find our intersection point.
-	Numerator = - (FixedMul(vNormal->x, vLine[0].x) +		// Use the plane equation with the normal and the line
-				   FixedMul(vNormal->y, vLine[0].y) +
-				   FixedMul(vNormal->z, vLine[0].z) + distance);
+	Numerator = -(FixedMul(vNormal->x, vLine[0].x) +		// Use the plane equation with the normal and the line
+		FixedMul(vNormal->y, vLine[0].y) +
+		FixedMul(vNormal->z, vLine[0].z) + distance);
 
 	// 3) If we take the dot product between our line vector and the normal of the polygon,
 	//    this will give us the cosine of the angle between the 2 (since they are both normalized - length 1).
@@ -643,7 +678,7 @@ vector3_t *FV3_IntersectionPoint(const vector3_t *vNormal, const vector3_t *vLin
 	// on the plane (the normal is perpendicular to the line - (Normal.Vector = 0)).
 	// In this case, we should just return any point on the line.
 
-	if( Denominator == 0*FRACUNIT) // Check so we don't divide by zero
+	if (Denominator == 0 * FRACUNIT) // Check so we don't divide by zero
 	{
 		ReturnVec->x = vLine[0].x;
 		ReturnVec->y = vLine[0].y;
@@ -686,8 +721,8 @@ vector3_t *FV3_IntersectionPoint(const vector3_t *vNormal, const vector3_t *vLin
 //
 UINT8 FV3_PointOnLineSide(const vector3_t *point, const vector3_t *line)
 {
-	fixed_t s1 = FixedMul((point->y - line[0].y),(line[1].x - line[0].x));
-	fixed_t s2 = FixedMul((point->x - line[0].x),(line[1].y - line[0].y));
+	fixed_t s1 = FixedMul((point->y - line[0].y), (line[1].x - line[0].x));
+	fixed_t s2 = FixedMul((point->x - line[0].x), (line[1].y - line[0].y));
 	return (UINT8)(s1 - s2 < 0);
 }
 
@@ -752,7 +787,7 @@ void FM_CreateObjectMatrix(matrix_t *matrix, fixed_t x, fixed_t y, fixed_t z, fi
 	matrix->m[0] = upcross.x;
 	matrix->m[1] = upcross.y;
 	matrix->m[2] = upcross.z;
-	matrix->m[3] = 0*FRACUNIT;
+	matrix->m[3] = 0 * FRACUNIT;
 
 	matrix->m[4] = upx;
 	matrix->m[5] = upy;
@@ -764,9 +799,9 @@ void FM_CreateObjectMatrix(matrix_t *matrix, fixed_t x, fixed_t y, fixed_t z, fi
 	matrix->m[10] = anglez;
 	matrix->m[11] = 0;
 
-	matrix->m[12] = x - FixedMul(upx,radius);
-	matrix->m[13] = y - FixedMul(upy,radius);
-	matrix->m[14] = z - FixedMul(upz,radius);
+	matrix->m[12] = x - FixedMul(upx, radius);
+	matrix->m[13] = y - FixedMul(upy, radius);
+	matrix->m[14] = z - FixedMul(upz, radius);
 	matrix->m[15] = FRACUNIT;
 }
 
@@ -778,20 +813,20 @@ void FM_CreateObjectMatrix(matrix_t *matrix, fixed_t x, fixed_t y, fixed_t z, fi
 void FM_MultMatrixVec3(const matrix_t *matrix, const vector3_t *vec, vector3_t *out)
 {
 #define M(row,col)  matrix->m[col * 4 + row]
-	out->x = FixedMul(vec->x,M(0, 0))
-	       + FixedMul(vec->y,M(0, 1))
-	       + FixedMul(vec->z,M(0, 2))
-	       + M(0, 3);
+	out->x = FixedMul(vec->x, M(0, 0))
+		+ FixedMul(vec->y, M(0, 1))
+		+ FixedMul(vec->z, M(0, 2))
+		+ M(0, 3);
 
-	out->y = FixedMul(vec->x,M(1, 0))
-	       + FixedMul(vec->y,M(1, 1))
-	       + FixedMul(vec->z,M(1, 2))
-	       + M(1, 3);
+	out->y = FixedMul(vec->x, M(1, 0))
+		+ FixedMul(vec->y, M(1, 1))
+		+ FixedMul(vec->z, M(1, 2))
+		+ M(1, 3);
 
-	out->z = FixedMul(vec->x,M(2, 0))
-	       + FixedMul(vec->y,M(2, 1))
-	       + FixedMul(vec->z,M(2, 2))
-	       + M(2, 3);
+	out->z = FixedMul(vec->x, M(2, 0))
+		+ FixedMul(vec->y, M(2, 1))
+		+ FixedMul(vec->z, M(2, 2))
+		+ M(2, 3);
 #undef M
 }
 
@@ -811,7 +846,7 @@ void FM_MultMatrix(matrix_t *dest, const matrix_t *multme)
 	for (i = 0; i < 4; i++)
 	{
 		for (j = 0; j < 4; j++)
-			R(i, j) = FixedMul(D(i, 0),M(0, j)) + FixedMul(D(i, 1),M(1, j)) + FixedMul(D(i, 2),M(2, j)) + FixedMul(D(i, 3),M(3, j));
+			R(i, j) = FixedMul(D(i, 0), M(0, j)) + FixedMul(D(i, 1), M(1, j)) + FixedMul(D(i, 2), M(2, j)) + FixedMul(D(i, 3), M(3, j));
 	}
 
 	M_Memcpy(dest, &result, sizeof(matrix_t));
@@ -869,8 +904,8 @@ void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z)
 
 static inline void M_print(INT64 a)
 {
-	const fixed_t w = (a>>FRACBITS);
-	fixed_t f = a%FRACUNIT;
+	const fixed_t w = (a >> FRACBITS);
+	fixed_t f = a % FRACUNIT;
 	fixed_t d = FRACUNIT;
 
 	if (f == 0)
@@ -878,7 +913,7 @@ static inline void M_print(INT64 a)
 		printf("%d", (fixed_t)w);
 		return;
 	}
-	else while (f != 1 && f/2 == f>>1)
+	else while (f != 1 && f / 2 == f >> 1)
 	{
 		d /= 2;
 		f /= 2;
@@ -892,7 +927,7 @@ static inline void M_print(INT64 a)
 
 FUNCMATH FUNCINLINE static inline fixed_t FixedMulC(fixed_t a, fixed_t b)
 {
-	return (fixed_t)((((INT64)a * b) ) / FRACUNIT);
+	return (fixed_t)((((INT64)a * b)) / FRACUNIT);
 }
 
 FUNCMATH FUNCINLINE static inline fixed_t FixedDivC2(fixed_t a, fixed_t b)
@@ -902,7 +937,7 @@ FUNCMATH FUNCINLINE static inline fixed_t FixedDivC2(fixed_t a, fixed_t b)
 	if (b == 0)
 		I_Error("FixedDiv: divide by zero");
 
-	ret = (((INT64)a * FRACUNIT) ) / b;
+	ret = (((INT64)a * FRACUNIT)) / b;
 
 	if ((ret > INT32_MAX) || (ret < INT32_MIN))
 		I_Error("FixedDiv: divide by zero");
@@ -911,7 +946,7 @@ FUNCMATH FUNCINLINE static inline fixed_t FixedDivC2(fixed_t a, fixed_t b)
 
 FUNCMATH FUNCINLINE static inline fixed_t FixedDivC(fixed_t a, fixed_t b)
 {
-	if ((abs(a) >> (FRACBITS-2)) >= abs(b))
+	if ((abs(a) >> (FRACBITS - 2)) >= abs(b))
 		return (a^b) < 0 ? INT32_MIN : INT32_MAX;
 
 	return FixedDivC2(a, b);
@@ -938,43 +973,43 @@ int main(int argc, char** argv)
 
 #ifdef MULDIV_TEST
 	for (a = 1; a <= INT32_MAX; a += FRACUNIT)
-	for (b = 0; b <= INT32_MAX; b += FRACUNIT)
-	{
-		c = FixedMul(a, b);
-		d = FixedMulC(a, b);
-		if (c != d)
+		for (b = 0; b <= INT32_MAX; b += FRACUNIT)
 		{
-			printf("(");
-			M_print(a);
-			printf(") * (");
-			M_print(b);
-			printf(") = (");
-			M_print(c);
-			printf(") != (");
-			M_print(d);
-			printf(") \n");
-			n--;
-			printf("%d != %d\n", c, d);
+			c = FixedMul(a, b);
+			d = FixedMulC(a, b);
+			if (c != d)
+			{
+				printf("(");
+				M_print(a);
+				printf(") * (");
+				M_print(b);
+				printf(") = (");
+				M_print(c);
+				printf(") != (");
+				M_print(d);
+				printf(") \n");
+				n--;
+				printf("%d != %d\n", c, d);
+			}
+			c = FixedDiv(a, b);
+			d = FixedDivC(a, b);
+			if (c != d)
+			{
+				printf("(");
+				M_print(a);
+				printf(") / (");
+				M_print(b);
+				printf(") = (");
+				M_print(c);
+				printf(") != (");
+				M_print(d);
+				printf(")\n");
+				n--;
+				printf("%d != %d\n", c, d);
+			}
+			if (n <= 0)
+				exit(-1);
 		}
-		c = FixedDiv(a, b);
-		d = FixedDivC(a, b);
-		if (c != d)
-		{
-			printf("(");
-			M_print(a);
-			printf(") / (");
-			M_print(b);
-			printf(") = (");
-			M_print(c);
-			printf(") != (");
-			M_print(d);
-			printf(")\n");
-			n--;
-			printf("%d != %d\n", c, d);
-		}
-		if (n <= 0)
-			exit(-1);
-	}
 #endif
 
 #ifdef SQRT_TEST
@@ -982,7 +1017,7 @@ int main(int argc, char** argv)
 	{
 		c = FixedSqrt(a);
 		d = FixedSqrtC(a);
-		b = abs(c-d);
+		b = abs(c - d);
 		if (b > 1)
 		{
 			printf("sqrt(");

@@ -41,14 +41,8 @@ typedef unsigned char   FBOOLEAN;
 // ==========================================================================
 
 // byte value for paletted graphics, which represent the transparent color
-#ifdef _NDS
-// NDS is hardwired to use zero as transparent color
-#define HWR_PATCHES_CHROMAKEY_COLORINDEX   0
-#define HWR_CHROMAKEY_EQUIVALENTCOLORINDEX 1
-#else
-#define HWR_PATCHES_CHROMAKEY_COLORINDEX   247
-#define HWR_CHROMAKEY_EQUIVALENTCOLORINDEX 220
-#endif
+#define HWR_PATCHES_CHROMAKEY_COLORINDEX   255
+#define HWR_CHROMAKEY_EQUIVALENTCOLORINDEX 130
 
 // the chroma key color shows on border sprites, set it to black
 #define HWR_PATCHES_CHROMAKEY_COLORVALUE     (0x00000000)    //RGBA format as in grSstWinOpen()
@@ -101,14 +95,36 @@ typedef struct
 
 //Hurdler: Transform (coords + angles)
 //BP: transform order : scale(rotation_x(rotation_y(translation(v))))
+
+// Kart features
+//#define USE_FTRANSFORM_ANGLEZ
+//#define USE_FTRANSFORM_MIRROR
+
+// Vanilla features
+#define USE_MODEL_NEXTFRAME
+
 typedef struct
 {
 	FLOAT       x,y,z;           // position
+#ifdef USE_FTRANSFORM_ANGLEZ
+	FLOAT       anglex,angley,anglez;   // aimingangle / viewangle
+#else
 	FLOAT       anglex,angley;   // aimingangle / viewangle
+#endif
 	FLOAT       scalex,scaley,scalez;
 	FLOAT       fovxangle, fovyangle;
-	INT32       splitscreen;
+	UINT8       splitscreen;
 	boolean     flip;            // screenflip
+#ifdef ROTSPRITE
+	boolean     roll;
+	SINT8       rollflip;
+	FLOAT       rollangle; // done to not override USE_FTRANSFORM_ANGLEZ
+	UINT8       rotaxis;
+	FLOAT       centerx, centery;
+#endif
+#ifdef USE_FTRANSFORM_MIRROR
+	boolean     mirror;          // SRB2Kart: Encore Mode
+#endif
 } FTransform;
 
 // Transformed vector, as passed to HWR API
@@ -151,7 +167,7 @@ enum EPolyFlags
 	                                    // When set, pass the color constant into the FSurfaceInfo -> FlatColor
 	PF_NoTexture        = 0x00002000,   // Use the small white texture
 	PF_Corona           = 0x00004000,   // Tell the rendrer we are drawing a corona
-	PF_MD2              = 0x00008000,   // Tell the rendrer we are drawing an MD2
+	PF_Unused           = 0x00008000,   // Unused
 	PF_RemoveYWrap      = 0x00010000,   // Force clamp texture on Y
 	PF_ForceWrapX       = 0x00020000,   // Force repeat texture on X
 	PF_ForceWrapY       = 0x00040000,   // Force repeat texture on Y
@@ -209,8 +225,6 @@ enum hwdsetspecialstate
 	HWD_SET_FOG_COLOR,
 	HWD_SET_FOG_DENSITY,
 	HWD_SET_FOV,
-	HWD_SET_POLYGON_SMOOTH,
-	HWD_SET_PALETTECOLOR,
 	HWD_SET_TEXTUREFILTERMODE,
 	HWD_SET_TEXTUREANISOTROPICMODE,
 	HWD_NUMSTATE

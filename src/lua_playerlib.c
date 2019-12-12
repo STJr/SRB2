@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2018 by Sonic Team Junior.
+// Copyright (C) 2012-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -108,6 +108,10 @@ static int player_get(lua_State *L)
 		LUA_PushUserdata(L, &plr->cmd, META_TICCMD);
 	else if (fastcmp(field,"playerstate"))
 		lua_pushinteger(L, plr->playerstate);
+	else if (fastcmp(field,"camerascale"))
+		lua_pushfixed(L, plr->camerascale);
+	else if (fastcmp(field,"shieldscale"))
+		lua_pushfixed(L, plr->shieldscale);
 	else if (fastcmp(field,"viewz"))
 		lua_pushfixed(L, plr->viewz);
 	else if (fastcmp(field,"viewheight"))
@@ -118,14 +122,24 @@ static int player_get(lua_State *L)
 		lua_pushfixed(L, plr->bob);
 	else if (fastcmp(field,"aiming"))
 		lua_pushangle(L, plr->aiming);
-	else if (fastcmp(field,"health"))
-		lua_pushinteger(L, plr->health);
+	else if (fastcmp(field,"drawangle"))
+		lua_pushangle(L, plr->drawangle);
+	else if (fastcmp(field,"rings"))
+		lua_pushinteger(L, plr->rings);
+	else if (fastcmp(field,"spheres"))
+		lua_pushinteger(L, plr->spheres);
 	else if (fastcmp(field,"pity"))
 		lua_pushinteger(L, plr->pity);
 	else if (fastcmp(field,"currentweapon"))
 		lua_pushinteger(L, plr->currentweapon);
 	else if (fastcmp(field,"ringweapons"))
 		lua_pushinteger(L, plr->ringweapons);
+	else if (fastcmp(field,"ammoremoval"))
+		lua_pushinteger(L, plr->ammoremoval);
+	else if (fastcmp(field,"ammoremovaltimer"))
+		lua_pushinteger(L, plr->ammoremovaltimer);
+	else if (fastcmp(field,"ammoremovalweapon"))
+		lua_pushinteger(L, plr->ammoremovalweapon);
 	else if (fastcmp(field,"powers"))
 		LUA_PushUserdata(L, plr->powers, META_POWERS);
 	else if (fastcmp(field,"pflags"))
@@ -142,8 +156,6 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->score);
 	else if (fastcmp(field,"dashspeed"))
 		lua_pushfixed(L, plr->dashspeed);
-	else if (fastcmp(field,"dashtime"))
-		lua_pushinteger(L, plr->dashtime);
 	else if (fastcmp(field,"normalspeed"))
 		lua_pushfixed(L, plr->normalspeed);
 	else if (fastcmp(field,"runspeed"))
@@ -166,6 +178,10 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->spinitem);
 	else if (fastcmp(field,"revitem"))
 		lua_pushinteger(L, plr->revitem);
+	else if (fastcmp(field,"followitem"))
+		lua_pushinteger(L, plr->followitem);
+	else if (fastcmp(field,"followmobj"))
+		LUA_PushUserdata(L, plr->followmobj, META_MOBJ);
 	else if (fastcmp(field,"actionspd"))
 		lua_pushfixed(L, plr->actionspd);
 	else if (fastcmp(field,"mindash"))
@@ -174,6 +190,10 @@ static int player_get(lua_State *L)
 		lua_pushfixed(L, plr->maxdash);
 	else if (fastcmp(field,"jumpfactor"))
 		lua_pushfixed(L, plr->jumpfactor);
+	else if (fastcmp(field,"height"))
+		lua_pushfixed(L, plr->height);
+	else if (fastcmp(field,"spinheight"))
+		lua_pushfixed(L, plr->spinheight);
 	else if (fastcmp(field,"lives"))
 		lua_pushinteger(L, plr->lives);
 	else if (fastcmp(field,"continues"))
@@ -184,8 +204,6 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->gotcontinue);
 	else if (fastcmp(field,"speed"))
 		lua_pushfixed(L, plr->speed);
-	else if (fastcmp(field,"jumping"))
-		lua_pushboolean(L, plr->jumping);
 	else if (fastcmp(field,"secondjump"))
 		lua_pushinteger(L, plr->secondjump);
 	else if (fastcmp(field,"fly1"))
@@ -202,6 +220,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->exiting);
 	else if (fastcmp(field,"homing"))
 		lua_pushinteger(L, plr->homing);
+	else if (fastcmp(field,"dashmode"))
+		lua_pushinteger(L, plr->dashmode);
 	else if (fastcmp(field,"skidtime"))
 		lua_pushinteger(L, plr->skidtime);
 	else if (fastcmp(field,"cmomx"))
@@ -240,6 +260,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->starposttime);
 	else if (fastcmp(field,"starpostangle"))
 		lua_pushangle(L, plr->starpostangle);
+	else if (fastcmp(field,"starpostscale"))
+		lua_pushfixed(L, plr->starpostscale);
 	else if (fastcmp(field,"angle_pos"))
 		lua_pushangle(L, plr->angle_pos);
 	else if (fastcmp(field,"old_angle_pos"))
@@ -270,22 +292,46 @@ static int player_get(lua_State *L)
 		lua_pushboolean(L, plr->bonustime);
 	else if (fastcmp(field,"capsule"))
 		LUA_PushUserdata(L, plr->capsule, META_MOBJ);
+	else if (fastcmp(field,"drone"))
+		LUA_PushUserdata(L, plr->drone, META_MOBJ);
+	else if (fastcmp(field,"oldscale"))
+		lua_pushfixed(L, plr->oldscale);
 	else if (fastcmp(field,"mare"))
 		lua_pushinteger(L, plr->mare);
+	else if (fastcmp(field,"marelap"))
+		lua_pushinteger(L, plr->marelap);
+	else if (fastcmp(field,"marebonuslap"))
+		lua_pushinteger(L, plr->marebonuslap);
 	else if (fastcmp(field,"marebegunat"))
 		lua_pushinteger(L, plr->marebegunat);
 	else if (fastcmp(field,"startedtime"))
 		lua_pushinteger(L, plr->startedtime);
 	else if (fastcmp(field,"finishedtime"))
 		lua_pushinteger(L, plr->finishedtime);
+	else if (fastcmp(field,"lapbegunat"))
+		lua_pushinteger(L, plr->lapbegunat);
+	else if (fastcmp(field,"lapstartedtime"))
+		lua_pushinteger(L, plr->lapstartedtime);
+	else if (fastcmp(field,"finishedspheres"))
+		lua_pushinteger(L, plr->finishedspheres);
 	else if (fastcmp(field,"finishedrings"))
 		lua_pushinteger(L, plr->finishedrings);
 	else if (fastcmp(field,"marescore"))
 		lua_pushinteger(L, plr->marescore);
 	else if (fastcmp(field,"lastmarescore"))
 		lua_pushinteger(L, plr->lastmarescore);
+	else if (fastcmp(field,"totalmarescore"))
+		lua_pushinteger(L, plr->totalmarescore);
 	else if (fastcmp(field,"lastmare"))
 		lua_pushinteger(L, plr->lastmare);
+	else if (fastcmp(field,"lastmarelap"))
+		lua_pushinteger(L, plr->lastmarelap);
+	else if (fastcmp(field,"lastmarebonuslap"))
+		lua_pushinteger(L, plr->lastmarebonuslap);
+	else if (fastcmp(field,"totalmarelap"))
+		lua_pushinteger(L, plr->totalmarelap);
+	else if (fastcmp(field,"totalmarebonuslap"))
+		lua_pushinteger(L, plr->totalmarebonuslap);
 	else if (fastcmp(field,"maxlink"))
 		lua_pushinteger(L, plr->maxlink);
 	else if (fastcmp(field,"texttimer"))
@@ -310,6 +356,8 @@ static int player_get(lua_State *L)
 		lua_pushangle(L, plr->awayviewaiming);
 	else if (fastcmp(field,"spectator"))
 		lua_pushboolean(L, plr->spectator);
+	else if (fastcmp(field,"outofcoop"))
+		lua_pushboolean(L, plr->outofcoop);
 	else if (fastcmp(field,"bot"))
 		lua_pushinteger(L, plr->bot);
 	else if (fastcmp(field,"jointime"))
@@ -355,6 +403,10 @@ static int player_set(lua_State *L)
 		return NOSET;
 	else if (fastcmp(field,"playerstate"))
 		plr->playerstate = luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"camerascale"))
+		plr->camerascale = luaL_checkfixed(L, 3);
+	else if (fastcmp(field,"shieldscale"))
+		plr->shieldscale = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"viewz"))
 		plr->viewz = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"viewheight"))
@@ -370,14 +422,24 @@ static int player_set(lua_State *L)
 		else if (plr == &players[secondarydisplayplayer])
 			localaiming2 = plr->aiming;
 	}
-	else if (fastcmp(field,"health"))
-		plr->health = (INT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"drawangle"))
+		plr->drawangle = luaL_checkangle(L, 3);
+	else if (fastcmp(field,"rings"))
+		plr->rings = (INT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"spheres"))
+		plr->spheres = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"pity"))
 		plr->pity = (SINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"currentweapon"))
 		plr->currentweapon = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"ringweapons"))
 		plr->ringweapons = (INT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"ammoremoval"))
+		plr->ammoremoval = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"ammoremovaltimer"))
+		plr->ammoremovaltimer = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"ammoremovalweapon"))
+		plr->ammoremovalweapon = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"powers"))
 		return NOSET;
 	else if (fastcmp(field,"pflags"))
@@ -399,8 +461,6 @@ static int player_set(lua_State *L)
 		plr->score = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"dashspeed"))
 		plr->dashspeed = luaL_checkfixed(L, 3);
-	else if (fastcmp(field,"dashtime"))
-		plr->dashtime = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"normalspeed"))
 		plr->normalspeed = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"runspeed"))
@@ -423,6 +483,15 @@ static int player_set(lua_State *L)
 		plr->spinitem = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"revitem"))
 		plr->revitem = luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"followitem"))
+		plr->followitem = luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"followmobj"))
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->followmobj, mo);
+	}
 	else if (fastcmp(field,"actionspd"))
 		plr->actionspd = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"mindash"))
@@ -431,6 +500,10 @@ static int player_set(lua_State *L)
 		plr->maxdash = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"jumpfactor"))
 		plr->jumpfactor = (INT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"height"))
+		plr->height = luaL_checkfixed(L, 3);
+	else if (fastcmp(field,"spinheight"))
+		plr->spinheight = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"lives"))
 		plr->lives = (SINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"continues"))
@@ -441,8 +514,6 @@ static int player_set(lua_State *L)
 		plr->gotcontinue = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"speed"))
 		plr->speed = luaL_checkfixed(L, 3);
-	else if (fastcmp(field,"jumping"))
-		plr->jumping = luaL_checkboolean(L, 3);
 	else if (fastcmp(field,"secondjump"))
 		plr->secondjump = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"fly1"))
@@ -459,6 +530,8 @@ static int player_set(lua_State *L)
 		plr->exiting = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"homing"))
 		plr->homing = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"dashmode"))
+		plr->dashmode = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"skidtime"))
 		plr->skidtime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"cmomx"))
@@ -497,14 +570,26 @@ static int player_set(lua_State *L)
 		plr->starposttime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"starpostangle"))
 		plr->starpostangle = luaL_checkangle(L, 3);
+	else if (fastcmp(field,"starpostscale"))
+		plr->starpostscale = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"angle_pos"))
 		plr->angle_pos = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"old_angle_pos"))
 		plr->old_angle_pos = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"axis1"))
-		P_SetTarget(&plr->axis1, *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ)));
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->axis1, mo);
+	}
 	else if (fastcmp(field,"axis2"))
-		P_SetTarget(&plr->axis2, *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ)));
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->axis2, mo);
+	}
 	else if (fastcmp(field,"bumpertime"))
 		plr->bumpertime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"flyangle"))
@@ -532,22 +617,51 @@ static int player_set(lua_State *L)
 			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 		P_SetTarget(&plr->capsule, mo);
 	}
+	else if (fastcmp(field,"drone"))
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->drone, mo);
+	}
+	else if (fastcmp(field,"oldscale"))
+		plr->oldscale = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"mare"))
 		plr->mare = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"marelap"))
+		plr->marelap = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"marebonuslap"))
+		plr->marebonuslap = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"marebegunat"))
 		plr->marebegunat = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"startedtime"))
 		plr->startedtime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"finishedtime"))
 		plr->finishedtime = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lapbegunat"))
+		plr->lapbegunat = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lapstartedtime"))
+		plr->lapstartedtime = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"finishedspheres"))
+		plr->finishedspheres = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"finishedrings"))
 		plr->finishedrings = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"marescore"))
 		plr->marescore = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"lastmarescore"))
 		plr->lastmarescore = (UINT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"totalmarescore"))
+		plr->totalmarescore = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"lastmare"))
 		plr->lastmare = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lastmarelap"))
+		plr->lastmarelap = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lastmarebonuslap"))
+		plr->lastmarebonuslap = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"totalmarelap"))
+		plr->totalmarelap = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"totalmarebonuslap"))
+		plr->totalmarebonuslap = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"maxlink"))
 		plr->maxlink = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"texttimer"))
@@ -581,6 +695,8 @@ static int player_set(lua_State *L)
 		plr->awayviewaiming = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"spectator"))
 		plr->spectator = lua_toboolean(L, 3);
+	else if (fastcmp(field,"outofcoop"))
+		plr->outofcoop = lua_toboolean(L, 3);
 	else if (fastcmp(field,"bot"))
 		return NOSET;
 	else if (fastcmp(field,"jointime"))

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,8 @@
 
 #include <unistd.h>
 #endif
+
+#include <errno.h>
 
 // Extended map support.
 #include <ctype.h>
@@ -62,7 +64,7 @@ typedef off_t off64_t;
 #define PRIdS "u"
 #elif defined (_WIN32)
 #define PRIdS "Iu"
-#elif defined (_PSP) || defined (_arch_dreamcast) || defined (DJGPP) || defined (_WII) || defined (_NDS) || defined (_PS3)
+#elif defined (DJGPP)
 #define PRIdS "u"
 #else
 #define PRIdS "zu"
@@ -71,10 +73,8 @@ typedef off_t off64_t;
 #ifdef HAVE_PNG
 
 #ifndef _MSC_VER
-#ifndef _WII
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
-#endif
 #endif
 #endif
 
@@ -105,8 +105,13 @@ static CV_PossibleValue_t screenshot_cons_t[] = {{0, "Default"}, {1, "HOME"}, {2
 consvar_t cv_screenshot_option = {"screenshot_option", "Default", CV_SAVE|CV_CALL, screenshot_cons_t, Screenshot_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_screenshot_folder = {"screenshot_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+consvar_t cv_screenshot_colorprofile = {"screenshot_colorprofile", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 static CV_PossibleValue_t moviemode_cons_t[] = {{MM_GIF, "GIF"}, {MM_APNG, "aPNG"}, {MM_SCREENSHOT, "Screenshots"}, {0, NULL}};
 consvar_t cv_moviemode = {"moviemode_mode", "GIF", CV_SAVE|CV_CALL, moviemode_cons_t, Moviemode_mode_Onchange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_movie_option = {"movie_option", "Default", CV_SAVE|CV_CALL, screenshot_cons_t, Moviemode_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_movie_folder = {"movie_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t zlib_mem_level_t[] = {
 	{1, "(Min Memory) 1"},
@@ -194,7 +199,7 @@ INT32 M_MapNumber(char first, char second)
 // ==========================================================================
 
 // some libcs has no access function, make our own
-#if defined (_WIN32_WCE) || defined (_XBOX) || defined (_WII) || defined (_PS3)
+#if 0
 int access(const char *path, int amode)
 {
 	int accesshandle = -1;
@@ -446,7 +451,8 @@ void Command_LoadConfig_f(void)
 
 	// load default control
 	G_ClearAllControlKeys();
-	G_Controldefault();
+	G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], NULL, 0);
+	G_CopyControls(gamecontrolbis, gamecontrolbisdefault[gcs_fps], NULL, 0);
 
 	// temporarily reset execversion to default
 	CV_ToggleExecVersion(true);
@@ -493,7 +499,9 @@ void M_FirstLoadConfig(void)
 	}
 
 	// load default control
-	G_Controldefault();
+	G_DefineDefaultControls();
+	G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], NULL, 0);
+	G_CopyControls(gamecontrolbis, gamecontrolbisdefault[gcs_fps], NULL, 0);
 
 	// register execversion here before we load any configs
 	CV_RegisterVar(&cv_execversion);
@@ -515,6 +523,12 @@ void M_FirstLoadConfig(void)
 	// make sure I_Quit() will write back the correct config
 	// (do not write back the config if it crash before)
 	gameconfig_loaded = true;
+
+	// reset to default player stuff
+	COM_BufAddText (va("%s \"%s\"\n",cv_skin.name,cv_defaultskin.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor.name,cv_defaultplayercolor.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_skin2.name,cv_defaultskin2.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor2.name,cv_defaultplayercolor2.string));
 }
 
 /** Saves the game configuration.
@@ -581,8 +595,28 @@ void M_SaveConfig(const char *filename)
 
 	// FIXME: save key aliases if ever implemented..
 
-	CV_SaveVariables(f);
-	if (!dedicated) G_SaveKeySetting(f);
+	if (tutorialmode && tutorialgcs)
+	{
+		CV_SetValue(&cv_usemouse, tutorialusemouse);
+		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
+		CV_SetValue(&cv_mousemove, tutorialmousemove);
+		CV_SetValue(&cv_analog, tutorialanalog);
+		CV_SaveVariables(f);
+		CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
+		CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
+		CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
+		CV_Set(&cv_analog, cv_analog.defaultvalue);
+	}
+	else
+		CV_SaveVariables(f);
+
+	if (!dedicated)
+	{
+		if (tutorialmode && tutorialgcs)
+			G_SaveKeySetting(f, gamecontroldefault[gcs_custom], gamecontrolbis); // using gcs_custom as temp storage
+		else
+			G_SaveKeySetting(f, gamecontrol, gamecontrolbis);
+	}
 
 	fclose(f);
 }
@@ -596,7 +630,9 @@ static void M_CreateScreenShotPalette(void)
 	size_t i, j;
 	for (i = 0, j = 0; i < 768; i += 3, j++)
 	{
-		RGBA_t locpal = pLocalPalette[(max(st_palette,0)*256)+j];
+		RGBA_t locpal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette[(max(st_palette,0)*256)+j]
+		: pMasterPalette[(max(st_palette,0)*256)+j]);
 		screenshot_palette[i] = locpal.s.red;
 		screenshot_palette[i+1] = locpal.s.green;
 		screenshot_palette[i+2] = locpal.s.blue;
@@ -753,7 +789,7 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	if (gamestate == GS_LEVEL && mapheaderinfo[gamemap-1]->lvlttl[0] != '\0')
 		snprintf(lvlttltext, 48, "%s%s%s",
 			mapheaderinfo[gamemap-1]->lvlttl,
-			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
+			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
 			(mapheaderinfo[gamemap-1]->actnum > 0) ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
 	else
 		snprintf(lvlttltext, 48, "Unknown");
@@ -1099,19 +1135,25 @@ static inline moviemode_t M_StartMovieGIF(const char *pathname)
 void M_StartMovie(void)
 {
 #if NUMSCREENS > 2
-	const char *pathname = ".";
+	char pathname[MAX_WADPATH];
 
 	if (moviemode)
 		return;
 
-	if (cv_screenshot_option.value == 0)
-		pathname = usehome ? srb2home : srb2path;
-	else if (cv_screenshot_option.value == 1)
-		pathname = srb2home;
-	else if (cv_screenshot_option.value == 2)
-		pathname = srb2path;
-	else if (cv_screenshot_option.value == 3 && *cv_screenshot_folder.string != '\0')
-		pathname = cv_screenshot_folder.string;
+	if (cv_movie_option.value == 0)
+		strcpy(pathname, usehome ? srb2home : srb2path);
+	else if (cv_movie_option.value == 1)
+		strcpy(pathname, srb2home);
+	else if (cv_movie_option.value == 2)
+		strcpy(pathname, srb2path);
+	else if (cv_movie_option.value == 3 && *cv_movie_folder.string != '\0')
+		strcpy(pathname, cv_movie_folder.string);
+
+	if (cv_movie_option.value != 3)
+	{
+		strcat(pathname, PATHSEP"movies"PATHSEP);
+		I_mkdir(pathname, 0755);
+	}
 
 	if (rendermode == render_none)
 		I_Error("Can't make a movie without a render system\n");
@@ -1369,7 +1411,7 @@ typedef struct
   * \param palette  Palette of image data
   */
 #if NUMSCREENS > 2
-static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height, const UINT8 *palette)
+static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height, const UINT8 *pal)
 {
 	int i;
 	size_t length;
@@ -1410,8 +1452,16 @@ static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, 
 
 	// write the palette
 	*pack++ = 0x0c; // palette ID byte
-	for (i = 0; i < 768; i++)
-		*pack++ = *palette++;
+
+	// write color table
+	{
+		for (i = 0; i < 256; i++)
+		{
+			*pack++ = *pal; pal++;
+			*pack++ = *pal; pal++;
+			*pack++ = *pal; pal++;
+		}
+	}
 
 	// write output file
 	length = pack - (UINT8 *)pcx;
@@ -1437,7 +1487,8 @@ void M_ScreenShot(void)
 void M_DoScreenShot(void)
 {
 #if NUMSCREENS > 2
-	const char *freename = NULL, *pathname = ".";
+	const char *freename = NULL;
+	char pathname[MAX_WADPATH];
 	boolean ret = false;
 	UINT8 *linear = NULL;
 
@@ -1449,13 +1500,19 @@ void M_DoScreenShot(void)
 		return;
 
 	if (cv_screenshot_option.value == 0)
-		pathname = usehome ? srb2home : srb2path;
+		strcpy(pathname, usehome ? srb2home : srb2path);
 	else if (cv_screenshot_option.value == 1)
-		pathname = srb2home;
+		strcpy(pathname, srb2home);
 	else if (cv_screenshot_option.value == 2)
-		pathname = srb2path;
+		strcpy(pathname, srb2path);
 	else if (cv_screenshot_option.value == 3 && *cv_screenshot_folder.string != '\0')
-		pathname = cv_screenshot_folder.string;
+		strcpy(pathname, cv_screenshot_folder.string);
+
+	if (cv_screenshot_option.value != 3)
+	{
+		strcat(pathname, PATHSEP"screenshots"PATHSEP);
+		I_mkdir(pathname, 0755);
+	}
 
 #ifdef USE_PNG
 	freename = Newsnapshotfile(pathname,"png");
@@ -1659,6 +1716,11 @@ INT32 axtoi(const char *hexStg)
 	return intValue;
 }
 
+// Token parser variables
+
+static UINT32 oldendPos = 0; // old value of endPos, used by M_UnGetToken
+static UINT32 endPos = 0; // now external to M_GetToken, but still static
+
 /** Token parser for TEXTURES, ANIMDEFS, and potentially other lumps later down the line.
   * Was originally R_GetTexturesToken when I was coding up the TEXTURES parser, until I realized I needed it for ANIMDEFS too.
   * Parses up to the next whitespace character or comma. When finding the start of the next token, whitespace is skipped.
@@ -1673,7 +1735,7 @@ char *M_GetToken(const char *inputString)
 {
 	static const char *stringToUse = NULL; // Populated if inputString != NULL; used otherwise
 	static UINT32 startPos = 0;
-	static UINT32 endPos = 0;
+//	static UINT32 endPos = 0;
 	static UINT32 stringLength = 0;
 	static UINT8 inComment = 0; // 0 = not in comment, 1 = // Single-line, 2 = /* Multi-line */
 	char *texturesToken = NULL;
@@ -1683,12 +1745,12 @@ char *M_GetToken(const char *inputString)
 	{
 		stringToUse = inputString;
 		startPos = 0;
-		endPos = 0;
+		oldendPos = endPos = 0;
 		stringLength = strlen(inputString);
 	}
 	else
 	{
-		startPos = endPos;
+		startPos = oldendPos = endPos;
 	}
 	if (stringToUse == NULL)
 		return NULL;
@@ -1817,6 +1879,16 @@ char *M_GetToken(const char *inputString)
 	// Make the final character NUL.
 	texturesToken[texturesTokenLength] = '\0';
 	return texturesToken;
+}
+
+/** Undoes the last M_GetToken call
+  * The current position along the string being parsed is reset to the last saved position.
+  * This exists mostly because of R_ParseTexture/R_ParsePatch honestly, but could be useful elsewhere?
+  * -Monster Iestyn (22/10/16)
+ */
+void M_UnGetToken(void)
+{
+	endPos = oldendPos;
 }
 
 /** Count bits in a number.
@@ -2366,4 +2438,14 @@ void M_SetupMemcpy(void)
 #if 0
 	M_Memcpy = cpu_cpy;
 #endif
+}
+
+/** Return the appropriate message for a file error or end of file.
+*/
+const char *M_FileError(FILE *fp)
+{
+	if (ferror(fp))
+		return strerror(errno);
+	else
+		return "end-of-file";
 }

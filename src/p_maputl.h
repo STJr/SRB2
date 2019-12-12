@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -58,6 +58,7 @@ extern fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 #ifdef ESLOPE
 extern pslope_t *opentopslope, *openbottomslope;
 #endif
+extern ffloor_t *openfloorrover, *openceilingrover;
 
 void P_LineOpening(line_t *plinedef, mobj_t *mobj);
 

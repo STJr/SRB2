@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,11 +19,6 @@
 #ifdef __GNUC__
 #include <stdlib.h>
 #endif
-
-// Was this just for the #define USEASM?
-//#ifdef _WIN32_WCE
-//#include "sdl12/SRB2CE/cehelp.h"
-//#endif
 
 /*!
   \brief bits of the fraction
@@ -206,14 +201,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedDiv(fixed_t a, fixed_t b)
 */
 FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRem(fixed_t x, fixed_t y)
 {
-	const boolean n = x < 0;
-	x = abs(x);
-	while (x >= y)
-		x -= y;
-	if (n)
-		return -x;
-	else
-		return x;
+	return x % y;
 }
 
 /**	\brief	The FixedSqrt function
@@ -394,9 +382,11 @@ boolean FV3_Equal(const vector3_t *a_1, const vector3_t *a_2);
 fixed_t FV3_Dot(const vector3_t *a_1, const vector3_t *a_2);
 vector3_t *FV3_Cross(const vector3_t *a_1, const vector3_t *a_2, vector3_t *a_o);
 vector3_t *FV3_ClosestPointOnLine(const vector3_t *Line, const vector3_t *p, vector3_t *out);
+void FV3_ClosestPointOnVector(const vector3_t *dir, const vector3_t *p, vector3_t *out);
 void FV3_ClosestPointOnTriangle(const vector3_t *tri, const vector3_t *point, vector3_t *result);
 vector3_t *FV3_Point2Vec(const vector3_t *point1, const vector3_t *point2, vector3_t *a_o);
-void FV3_Normal(const vector3_t *a_triangle, vector3_t *a_normal);
+fixed_t FV3_Normal(const vector3_t *a_triangle, vector3_t *a_normal);
+fixed_t FV3_Strength(const vector3_t *a_1, const vector3_t *dir);
 fixed_t FV3_PlaneDistance(const vector3_t *a_normal, const vector3_t *a_point);
 boolean FV3_IntersectedPlane(const vector3_t *a_triangle, const vector3_t *a_line, vector3_t *a_normal, fixed_t *originDistance);
 fixed_t FV3_PlaneIntersection(const vector3_t *pOrigin, const vector3_t *pNormal, const vector3_t *rOrigin, const vector3_t *rVector);

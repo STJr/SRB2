@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,8 +43,13 @@ extern INT16 maptol;
 extern UINT8 globalweather;
 extern INT32 curWeather;
 extern INT32 cursaveslot;
-extern INT16 lastmapsaved;
+//extern INT16 lastmapsaved;
+extern INT16 lastmaploaded;
 extern boolean gamecomplete;
+
+#define maxgameovers 13
+extern UINT8 numgameovers;
+extern SINT8 startinglivesbalance[maxgameovers+1];
 
 #define PRECIP_NONE  0
 #define PRECIP_STORM 1
@@ -120,11 +125,21 @@ extern INT32 secondarydisplayplayer; // for splitscreen
 
 // Maps of special importance
 extern INT16 spstage_start;
-extern INT16 sstage_start;
-extern INT16 sstage_end;
+extern INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
+
+extern INT16 titlemap;
+extern boolean hidetitlepics;
+extern INT16 bootmap; //bootmap for loading a map on startup
+
+extern INT16 tutorialmap; // map to load for tutorial
+extern boolean tutorialmode; // are we in a tutorial right now?
+extern INT32 tutorialgcs; // which control scheme is loaded?
+extern INT32 tutorialusemouse; // store cv_usemouse user value
+extern INT32 tutorialfreelook; // store cv_alwaysfreelook user value
+extern INT32 tutorialmousemove; // store cv_mousemove user value
+extern INT32 tutorialanalog; // store cv_analog user value
 
 extern boolean looptitle;
-extern boolean useNightsSS;
 
 // CTF colors.
 extern UINT8 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
@@ -163,11 +178,65 @@ typedef struct
 
 extern cutscene_t *cutscenes[128];
 
+// Reserve prompt space for tutorials
+#define TUTORIAL_PROMPT 201 // one-based
+#define TUTORIAL_AREAS 6
+#define TUTORIAL_AREA_PROMPTS 5
+#define MAX_PROMPTS (TUTORIAL_PROMPT+TUTORIAL_AREAS*TUTORIAL_AREA_PROMPTS*3) // 3 control modes
+#define MAX_PAGES 128
+
+#define PROMPT_PIC_PERSIST 0
+#define PROMPT_PIC_LOOP 1
+#define PROMPT_PIC_DESTROY 2
+#define MAX_PROMPT_PICS 8
+typedef struct
+{
+	UINT8 numpics;
+	UINT8 picmode; // sequence mode after displaying last pic, 0 = persist, 1 = loop, 2 = destroy
+	UINT8 pictoloop; // if picmode == loop, which pic to loop to?
+	UINT8 pictostart; // initial pic number to show
+	char picname[MAX_PROMPT_PICS][8];
+	UINT8 pichires[MAX_PROMPT_PICS];
+	UINT16 xcoord[MAX_PROMPT_PICS]; // gfx
+	UINT16 ycoord[MAX_PROMPT_PICS]; // gfx
+	UINT16 picduration[MAX_PROMPT_PICS];
+
+	char   musswitch[7];
+	UINT16 musswitchflags;
+	UINT8 musicloop;
+
+	char tag[33]; // page tag
+	char name[34]; // narrator name, extra char for color
+	char iconname[8]; // narrator icon lump
+	boolean rightside; // narrator side, false = left, true = right
+	boolean iconflip; // narrator flip icon horizontally
+	UINT8 hidehud; // hide hud, 0 = show all, 1 = hide depending on prompt position (top/bottom), 2 = hide all
+	UINT8 lines; // # of lines to show. If name is specified, name takes one of the lines. If 0, defaults to 4.
+	INT32 backcolor; // see CON_SetupBackColormap: 0-11, INT32_MAX for user-defined (CONS_BACKCOLOR)
+	UINT8 align; // text alignment, 0 = left, 1 = right, 2 = center
+	UINT8 verticalalign; // vertical text alignment, 0 = top, 1 = bottom, 2 = middle
+	UINT8 textspeed; // text speed, delay in tics between characters.
+	sfxenum_t textsfx; // sfx_ id for printing text
+	UINT8 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
+	UINT8 nextpage; // next page to jump to, one-based. 0 = next page within prompt->numpages
+	char nexttag[33]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
+	INT32 timetonext; // time in tics to jump to next page automatically. 0 = don't jump automatically
+	char *text;
+} textpage_t;
+
+typedef struct
+{
+	textpage_t page[MAX_PAGES];
+	INT32 numpages; // Number of pages in this prompt
+} textprompt_t;
+
+extern textprompt_t *textprompts[MAX_PROMPTS];
+
 // For the Custom Exit linedef.
 extern INT16 nextmapoverride;
-extern boolean skipstats;
+extern UINT8 skipstats;
 
-extern UINT32 totalrings; //  Total # of rings in a level
+extern UINT32 ssspheres; //  Total # of spheres in a level
 
 // Fun extra stuff
 extern INT16 lastmap; // Last level you were at (returning from special stages).
@@ -239,10 +308,17 @@ typedef struct
 	SINT8 unlockrequired; ///< Is an unlockable required to play this level? -1 if no.
 	UINT8 levelselect;    ///< Is this map available in the level select? If so, which map list is it available in?
 	SINT8 bonustype;      ///< What type of bonus does this level have? (-1 for null.)
-	SINT8 saveoverride;   ///< Set how the game is allowed to save (1 for always, -1 for never, 0 is 2.1 default)
+	SINT8 maxbonuslives;  ///< How many bonus lives to award at Intermission? (-1 for unlimited.)
 
-	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
+	UINT8 levelflags;     ///< LF_flags:  merged booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
+
+	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
+	UINT16 startrings;      ///< Number of rings players start with.
+
+	// Freed animals stuff.
+	UINT8 numFlickies;     ///< Internal. For freed flicky support.
+	mobjtype_t *flickies;  ///< List of freeable flickies in this level. Allocated dynamically for space reasons. Be careful.
 
 	// NiGHTS stuff.
 	UINT8 numGradedMares;   ///< Internal. For grade support.
@@ -251,6 +327,13 @@ typedef struct
 	// Music stuff.
 	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
 	char musintername[7];    ///< Intermission screen music.
+
+	char muspostbossname[7];    ///< Post-bossdeath music.
+	UINT16 muspostbosstrack;    ///< Post-bossdeath track.
+	UINT32 muspostbosspos;      ///< Post-bossdeath position
+	UINT32 muspostbossfadein;   ///< Post-bossdeath fade-in milliseconds.
+
+	SINT8 musforcereset; ///< Force resetmusic (-1 for default; 0 for force off; 1 for force on)
 
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
@@ -264,17 +347,17 @@ typedef struct
 #define LF_NOSSMUSIC      4 ///< Disable Super Sonic music
 #define LF_NORELOAD       8 ///< Don't reload level on death
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
+#define LF_SAVEGAME      32 ///< Save the game upon loading this level
+#define LF_MIXNIGHTSCOUNTDOWN 64 ///< Play sfx_timeup instead of music change for NiGHTS countdown
+#define LF_WARNINGTITLE 128 ///< WARNING! WARNING! WARNING! WARNING!
+#define LF_NOTITLECARD  256 ///< Don't start the title card
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen
 #define LF2_RECORDATTACK   4 ///< Show this map in Time Attack
 #define LF2_NIGHTSATTACK   8 ///< Show this map in NiGHTS mode menu
 #define LF2_NOVISITNEEDED 16 ///< Available in time attack/nights mode without visiting the level
-
-// Save override
-#define SAVE_NEVER   -1
-#define SAVE_DEFAULT  0
-#define SAVE_ALWAYS   1
+#define LF2_WIDEICON      32 ///< If you're in a circumstance where it fits, use a wide map icon
 
 extern mapheader_t* mapheaderinfo[NUMMAPS];
 
@@ -319,7 +402,7 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update dehacked.c, and Gametype_Names in g_game.c
+// If you alter this list, update dehacked.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
 
 // String names for gametypes
 extern const char *Gametype_Names[NUMGAMETYPES];
@@ -338,6 +421,10 @@ extern UINT16 emeralds;
 #define EMERALD6 32
 #define EMERALD7 64
 #define ALL7EMERALDS(v) ((v & (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7)) == (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7))
+
+// yes, even in non HAVE_BLUA
+#define NUM_LUABANKS 16 // please only make this number go up between versions, never down. you'll break saves otherwise. also, must fit in UINT8
+extern INT32 luabanks[NUM_LUABANKS];
 
 extern INT32 nummaprings; //keep track of spawned rings/coins
 
@@ -379,7 +466,9 @@ extern recorddata_t *mainrecords[NUMMAPS];
 #define MV_ALLEMERALDS  4
 #define MV_ULTIMATE     8
 #define MV_PERFECT     16
-#define MV_MAX         31 // used in gamedata check
+#define MV_PERFECTRA   32
+#define MV_MAX         63 // used in gamedata check, update whenever MV's are added
+#define MV_MP         128
 extern UINT8 mapvisited[NUMMAPS];
 
 // Temporary holding place for nights data for the current map
@@ -387,6 +476,7 @@ nightsdata_t ntemprecords;
 
 extern UINT32 token; ///< Number of tokens collected in a level
 extern UINT32 tokenlist; ///< List of tokens collected
+extern boolean gottoken; ///< Did you get a token? Used for end of act
 extern INT32 tokenbits; ///< Used for setting token bits
 extern INT32 sstimer; ///< Time allotted in the special stage
 extern UINT32 bluescore; ///< Blue Team Scores
@@ -408,6 +498,7 @@ extern UINT16 tailsflytics;
 extern UINT16 underwatertics;
 extern UINT16 spacetimetics;
 extern UINT16 extralifetics;
+extern UINT16 nightslinktics;
 
 extern UINT8 introtoplay;
 extern UINT8 creditscutscene;
@@ -480,6 +571,8 @@ extern boolean precache;
 // wipegamestate can be set to -1
 //  to force a wipe on the next draw
 extern gamestate_t wipegamestate;
+extern INT16 wipetypepre;
+extern INT16 wipetypepost;
 
 // debug flag to cancel adaptiveness
 extern boolean singletics;
@@ -491,6 +584,8 @@ extern boolean singletics;
 #include "d_clisrv.h"
 
 extern consvar_t cv_timetic; // display high resolution timer
+extern consvar_t cv_powerupdisplay; // display powerups
+extern consvar_t cv_showinputjoy; // display joystick in time attack
 extern consvar_t cv_forceskin; // force clients to use the server's skin
 extern consvar_t cv_downloading; // allow clients to downloading WADs.
 extern ticcmd_t netcmds[BACKUPTICS][MAXPLAYERS];

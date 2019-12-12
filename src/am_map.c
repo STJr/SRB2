@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,10 +43,6 @@ static const UINT8 NOCLIMBBROWNS      = (2*16);
 static const UINT8 NOCLIMBYELLOWS     = (11*16);
 
 
-#ifdef _NDS
-#undef BACKGROUND
-#endif
-
 // Automap colors
 #define BACKGROUND            DBLACK
 #define WALLCOLORS            (REDS + REDRANGE/2)
@@ -66,7 +62,7 @@ static const UINT8 NOCLIMBYELLOWS     = (11*16);
 #define NOCLIMBCDWALLCOLORS   NOCLIMBYELLOWS
 #define THINGCOLORS           GREENS
 #define GRIDCOLORS            (GRAYS + GRAYSRANGE/2)
-#define XHAIRCOLORS           GRAYS
+#define XHAIRCOLORS           DWHITE
 
 // controls
 #define AM_PANUPKEY     KEY_UPARROW
@@ -115,11 +111,6 @@ typedef struct
 	mpoint_t a, b;
 } mline_t;
 
-typedef struct
-{
-	fixed_t slp, islp;
-} islope_t;
-
 //
 // The vector graphics for the automap.
 // A line drawing of the player pointing right,
@@ -141,16 +132,14 @@ static const mline_t player_arrow[] = {
 #undef R
 #define NUMPLYRLINES (sizeof (player_arrow)/sizeof (mline_t))
 
-#if 0
 #define R (FRACUNIT)
-static mline_t triangle_guy[] = {
-	{ { (fixed_t)-.867f*R, (fixed_t)-.5f*R }, { (fixed_t) .867f*R, (fixed_t)-.5f*R } },
-	{ { (fixed_t) .867f*R, (fixed_t)-.5f*R }, { (fixed_t)       0, (fixed_t)     R } },
-	{ { (fixed_t)       0, (fixed_t)     R }, { (fixed_t)-.867f*R, (fixed_t)-.5f*R } }
+static const mline_t cross_mark[] =
+{
+	{ { -R, 0 }, { R, 0} },
+	{ { 0, -R }, { 0, R } },
 };
 #undef R
-#define NUMTRIANGLEGUYLINES (sizeof (triangle_guy)/sizeof (mline_t))
-#endif
+#define NUMCROSSMARKLINES (sizeof(cross_mark)/sizeof(mline_t))
 
 #define R (FRACUNIT)
 static const mline_t thintriangle_guy[] = {
@@ -210,7 +199,7 @@ static fixed_t scale_ftom;
 
 static player_t *plr; // the player represented by an arrow
 
-static INT32 followplayer = true; // specifies whether to follow the player around
+static boolean followplayer = true; // specifies whether to follow the player around
 
 // function for drawing lines, depends on rendermode
 typedef void (*AMDRAWFLINEFUNC) (const fline_t *fl, INT32 color);
@@ -820,17 +809,18 @@ static void AM_drawGrid(INT32 color)
 	fixed_t x, y;
 	fixed_t start, end;
 	mline_t ml;
+	fixed_t gridsize = (MAPBLOCKUNITS<<MAPBITS);
 
 	// Figure out start of vertical gridlines
 	start = m_x;
-	if ((start - bmaporgx) % (MAPBLOCKUNITS<<FRACBITS))
-		start += (MAPBLOCKUNITS<<FRACBITS) - ((start - bmaporgx) % (MAPBLOCKUNITS<<FRACBITS));
+	if ((start - (bmaporgx>>FRACTOMAPBITS)) % gridsize)
+		start += gridsize - ((start - (bmaporgx>>FRACTOMAPBITS)) % gridsize);
 	end = m_x + m_w;
 
 	// draw vertical gridlines
 	ml.a.y = m_y;
 	ml.b.y = m_y + m_h;
-	for (x = start; x < end; x += (MAPBLOCKUNITS<<FRACBITS))
+	for (x = start; x < end; x += gridsize)
 	{
 		ml.a.x = x;
 		ml.b.x = x;
@@ -839,14 +829,14 @@ static void AM_drawGrid(INT32 color)
 
 	// Figure out start of horizontal gridlines
 	start = m_y;
-	if ((start - bmaporgy) % (MAPBLOCKUNITS<<FRACBITS))
-		start += (MAPBLOCKUNITS<<FRACBITS) - ((start - bmaporgy) % (MAPBLOCKUNITS<<FRACBITS));
+	if ((start - (bmaporgy>>FRACTOMAPBITS)) % gridsize)
+		start += gridsize - ((start - (bmaporgy>>FRACTOMAPBITS)) % gridsize);
 	end = m_y + m_h;
 
 	// draw horizontal gridlines
 	ml.a.x = m_x;
 	ml.b.x = m_x + m_w;
-	for (y = start; y < end; y += (MAPBLOCKUNITS<<FRACBITS))
+	for (y = start; y < end; y += gridsize)
 	{
 		ml.a.y = y;
 		ml.b.y = y;
@@ -1043,7 +1033,7 @@ static inline void AM_drawPlayers(void)
 
 	if (!multiplayer)
 	{
-		AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0, plr->mo->angle, DWHITE, plr->mo->x, plr->mo->y);
+		AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 16<<FRACBITS, plr->mo->angle, DWHITE, plr->mo->x, plr->mo->y);
 		return;
 	}
 
@@ -1057,7 +1047,7 @@ static inline void AM_drawPlayers(void)
 		if (p->skincolor > 0)
 			color = R_GetTranslationColormap(TC_DEFAULT, p->skincolor, GTC_CACHE)[GREENS + 8];
 
-		AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0, p->mo->angle, color, p->mo->x, p->mo->y);
+		AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 16<<FRACBITS, p->mo->angle, color, p->mo->x, p->mo->y);
 	}
 }
 
@@ -1077,13 +1067,30 @@ static inline void AM_drawThings(UINT8 colors)
 	}
 }
 
-/** Draws the crosshair, actually just a dot in software mode.
+/** Draws the crosshair.
   *
   * \param color Color for the crosshair.
   */
 static inline void AM_drawCrosshair(UINT8 color)
 {
-	V_DrawFill(f_w/2 + f_x, f_h/2 + f_y, 1, 1, color|V_NOSCALESTART);
+	const fixed_t scale = 4<<FRACBITS;
+	size_t i;
+	fline_t fl;
+
+	for (i = 0; i < NUMCROSSMARKLINES; i++)
+	{
+		fl.a.x = FixedMul(cross_mark[i].a.x, scale) >> FRACBITS;
+		fl.a.y = FixedMul(cross_mark[i].a.y, scale) >> FRACBITS;
+		fl.b.x = FixedMul(cross_mark[i].b.x, scale) >> FRACBITS;
+		fl.b.y = FixedMul(cross_mark[i].b.y, scale) >> FRACBITS;
+
+		fl.a.x += f_x + (f_w / 2);
+		fl.a.y += f_y + (f_h / 2);
+		fl.b.x += f_x + (f_w / 2);
+		fl.b.y += f_y + (f_h / 2);
+
+		AM_drawFline(&fl, color);
+	}
 }
 
 /** Draws the automap.
@@ -1099,5 +1106,5 @@ void AM_Drawer(void)
 	AM_drawPlayers();
 	AM_drawThings(THINGCOLORS);
 
-	AM_drawCrosshair(XHAIRCOLORS);
+	if (!followplayer) AM_drawCrosshair(XHAIRCOLORS);
 }

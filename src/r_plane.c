@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,6 +23,8 @@
 #include "r_state.h"
 #include "r_splats.h" // faB(21jan):testing
 #include "r_sky.h"
+#include "r_portal.h"
+
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -46,9 +48,8 @@
 #define SHITPLANESPARENCY
 
 //SoM: 3/23/2000: Use Boom visplane hashing.
-#define MAXVISPLANES 512
 
-static visplane_t *visplanes[MAXVISPLANES];
+visplane_t *visplanes[MAXVISPLANES];
 static visplane_t *freetail;
 static visplane_t **freehead = &freetail;
 
@@ -115,50 +116,6 @@ void R_InitPlanes(void)
 	// FIXME: unused
 }
 
-// R_PortalStoreClipValues
-// Saves clipping values for later. -Red
-void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		*ceil = ceilingclip[start+i];
-		ceil++;
-		*floor = floorclip[start+i];
-		floor++;
-		*scale = frontscale[start+i];
-		scale++;
-	}
-}
-
-// R_PortalRestoreClipValues
-// Inverse of the above. Restores the old value!
-void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		ceilingclip[start+i] = *ceil;
-		ceil++;
-		floorclip[start+i] = *floor;
-		floor++;
-		frontscale[start+i] = *scale;
-		scale++;
-	}
-
-	// HACKS FOLLOW
-	for (i = 0; i < start; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
-	for (i = end; i < vid.width; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
-}
-
 //
 // R_MapPlane
 //
@@ -173,89 +130,11 @@ void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor
 //  viewheight
 
 #ifndef NOWATER
-static INT32 bgofs;
+INT32 ds_bgofs;
+INT32 ds_waterofs;
+
 static INT32 wtofs=0;
-static INT32 waterofs;
 static boolean itswater;
-#endif
-
-#ifndef NOWATER
-static void R_DrawTranslucentWaterSpan_8(void)
-{
-	UINT32 xposition;
-	UINT32 yposition;
-	UINT32 xstep, ystep;
-
-	UINT8 *source;
-	UINT8 *colormap;
-	UINT8 *dest;
-	UINT8 *dsrc;
-
-	size_t count;
-
-	// SoM: we only need 6 bits for the integer part (0 thru 63) so the rest
-	// can be used for the fraction part. This allows calculation of the memory address in the
-	// texture with two shifts, an OR and one AND. (see below)
-	// for texture sizes > 64 the amount of precision we can allow will decrease, but only by one
-	// bit per power of two (obviously)
-	// Ok, because I was able to eliminate the variable spot below, this function is now FASTER
-	// than the original span renderer. Whodathunkit?
-	xposition = ds_xfrac << nflatshiftup; yposition = (ds_yfrac + waterofs) << nflatshiftup;
-	xstep = ds_xstep << nflatshiftup; ystep = ds_ystep << nflatshiftup;
-
-	source = ds_source;
-	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
-	dsrc = screens[1] + (ds_y+bgofs)*vid.width + ds_x1;
-	count = ds_x2 - ds_x1 + 1;
-
-	while (count >= 8)
-	{
-		// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-		// have the uber complicated math to calculate it now, so that was a memory write we didn't
-		// need!
-		dest[0] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[1] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[2] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[3] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[4] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[5] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[6] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[7] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest += 8;
-		count -= 8;
-	}
-	while (count--)
-	{
-		*dest++ = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-	}
-}
 #endif
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
@@ -304,17 +183,17 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	{
 		const INT32 yay = (wtofs + (distance>>9) ) & 8191;
 		// ripples da water texture
-		bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
+		ds_bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
 		angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
 
 		angle = (angle + 2048) & 8191;  // 90 degrees
-		ds_xfrac += FixedMul(FINECOSINE(angle), (bgofs<<FRACBITS));
-		ds_yfrac += FixedMul(FINESINE(angle), (bgofs<<FRACBITS));
+		ds_xfrac += FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
+		ds_yfrac += FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
 
-		if (y+bgofs>=viewheight)
-			bgofs = viewheight-y-1;
-		if (y+bgofs<0)
-			bgofs = -y;
+		if (y+ds_bgofs>=viewheight)
+			ds_bgofs = viewheight-y-1;
+		if (y+ds_bgofs<0)
+			ds_bgofs = -y;
 	}
 #endif
 
@@ -351,6 +230,23 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #endif
 }
 
+void R_ClearFFloorClips (void)
+{
+	INT32 i, p;
+
+	// opening / clipping determination
+	for (i = 0; i < viewwidth; i++)
+	{
+		for (p = 0; p < MAXFFLOORS; p++)
+		{
+			ffloor[p].f_clip[i] = (INT16)viewheight;
+			ffloor[p].c_clip[i] = -1;
+		}
+	}
+
+	numffloors = 0;
+}
+
 //
 // R_ClearPlanes
 // At begining of frame.
@@ -372,8 +268,6 @@ void R_ClearPlanes(void)
 			ffloor[p].c_clip[i] = -1;
 		}
 	}
-
-	numffloors = 0;
 
 	for (i = 0; i < MAXVISPLANES; i++)
 	for (*freehead = visplanes[i], visplanes[i] = NULL;
@@ -436,18 +330,36 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 #ifdef ESLOPE
 	if (slope); else // Don't mess with this right now if a slope is involved
 #endif
-	if (plangle != 0)
-	{
-		// Add the view offset, rotated by the plane angle.
-		angle_t angle = plangle>>ANGLETOFINESHIFT;
-		xoff += FixedMul(viewx,FINECOSINE(angle))-FixedMul(viewy,FINESINE(angle));
-		yoff += -FixedMul(viewx,FINESINE(angle))-FixedMul(viewy,FINECOSINE(angle));
-	}
-	else
 	{
 		xoff += viewx;
 		yoff -= viewy;
+		if (plangle != 0)
+		{
+			// Add the view offset, rotated by the plane angle.
+			fixed_t cosinecomponent = FINECOSINE(plangle>>ANGLETOFINESHIFT);
+			fixed_t sinecomponent = FINESINE(plangle>>ANGLETOFINESHIFT);
+			fixed_t oldxoff = xoff;
+			xoff = FixedMul(xoff,cosinecomponent)+FixedMul(yoff,sinecomponent);
+			yoff = -FixedMul(oldxoff,sinecomponent)+FixedMul(yoff,cosinecomponent);
+		}
 	}
+
+#ifdef POLYOBJECTS_PLANES
+	if (polyobj)
+	{
+		if (polyobj->angle != 0)
+		{
+			angle_t fineshift = polyobj->angle >> ANGLETOFINESHIFT;
+			xoff -= FixedMul(FINECOSINE(fineshift), polyobj->centerPt.x)+FixedMul(FINESINE(fineshift), polyobj->centerPt.y);
+			yoff -= FixedMul(FINESINE(fineshift), polyobj->centerPt.x)-FixedMul(FINECOSINE(fineshift), polyobj->centerPt.y);
+		}
+		else
+		{
+			xoff -= polyobj->centerPt.x;
+			yoff += polyobj->centerPt.y;
+		}
+	}
+#endif
 
 	// This appears to fix the Nimbus Ruins sky bug.
 	if (picnum == skyflatnum && pfloor)
@@ -474,6 +386,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			&& !pfloor && !check->ffloor
 			&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 			&& check->viewangle == viewangle
+			&& check->plangle == plangle
 #ifdef ESLOPE
 			&& check->slope == slope
 #endif
@@ -597,7 +510,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 // overlap.
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 {
-	INT32 unionl, unionh;
+//	INT32 unionl, unionh;
 //	INT32 x;
 
 #ifdef POLYOBJECTS_PLANES
@@ -606,6 +519,9 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 		return;
 #endif
 
+	if (pl->minx > start) pl->minx = start;
+	if (pl->maxx < stop)  pl->maxx = stop;
+/*
 	if (start < pl->minx)
 	{
 		unionl = start;
@@ -623,15 +539,16 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 	{
 		unionh = pl->maxx;
 	}
-/*
 	for (x = start; x <= stop; x++)
 		if (pl->top[x] != 0xffff || pl->bottom[x] != 0x0000)
 			break;
 
 	if (x <= stop)
 		I_Error("R_ExpandPlane: planes in same subsector overlap?!\nminx: %d, maxx: %d, start: %d, stop: %d\n", pl->minx, pl->maxx, start, stop);
-*/
+
 	pl->minx = unionl, pl->maxx = unionh;
+*/
+
 }
 
 //
@@ -666,10 +583,10 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 void R_DrawPlanes(void)
 {
 	visplane_t *pl;
-	INT32 x;
-	INT32 angle;
 	INT32 i;
 
+	// Note: are these two lines really needed?
+	// R_DrawSinglePlane and R_DrawSkyPlane do span/column drawer resets themselves anyway
 	spanfunc = basespanfunc;
 	wallcolfunc = walldrawerfunc;
 
@@ -677,44 +594,6 @@ void R_DrawPlanes(void)
 	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
-			// sky flat
-			if (pl->picnum == skyflatnum)
-			{
-				if (!viewsky)
-				{
-					skyVisible = true;
-					continue;
-				}
-
-				// use correct aspect ratio scale
-				dc_iscale = skyscale;
-
-				// Sky is always drawn full bright,
-				//  i.e. colormaps[0] is used.
-				// Because of this hack, sky is not affected
-				//  by INVUL inverse mapping.
-				dc_colormap = colormaps;
-				dc_texturemid = skytexturemid;
-				dc_texheight = textureheight[skytexture]
-					>>FRACBITS;
-				for (x = pl->minx; x <= pl->maxx; x++)
-				{
-					dc_yl = pl->top[x];
-					dc_yh = pl->bottom[x];
-
-					if (dc_yl <= dc_yh)
-					{
-						angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
-						dc_x = x;
-						dc_source =
-							R_GetColumn(skytexture,
-								angle);
-						wallcolfunc();
-					}
-				}
-				continue;
-			}
-
 			if (pl->ffloor != NULL
 #ifdef POLYOBJECTS_PLANES
 			|| pl->polyobj != NULL
@@ -726,21 +605,253 @@ void R_DrawPlanes(void)
 		}
 	}
 #ifndef NOWATER
-	waterofs = (leveltime & 1)*16384;
+	ds_waterofs = (leveltime & 1)*16384;
 	wtofs = leveltime * 140;
 #endif
 }
 
+// R_DrawSkyPlane
+//
+// Draws the sky within the plane's top/bottom bounds
+// Note: this uses column drawers instead of span drawers, since the sky is always a texture
+//
+static void R_DrawSkyPlane(visplane_t *pl)
+{
+	INT32 x;
+	INT32 angle;
+
+	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
+	// (that is, unless we'll need to switch drawers in future for some reason)
+	wallcolfunc = walldrawerfunc;
+
+	// use correct aspect ratio scale
+	dc_iscale = skyscale;
+
+	// Sky is always drawn full bright,
+	//  i.e. colormaps[0] is used.
+	// Because of this hack, sky is not affected
+	//  by sector colormaps (INVUL inverse mapping is not implemented in SRB2 so is irrelevant).
+	dc_colormap = colormaps;
+	dc_texturemid = skytexturemid;
+	dc_texheight = textureheight[skytexture]
+		>>FRACBITS;
+	for (x = pl->minx; x <= pl->maxx; x++)
+	{
+		dc_yl = pl->top[x];
+		dc_yh = pl->bottom[x];
+
+		if (dc_yl <= dc_yh)
+		{
+			angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+			dc_iscale = FixedMul(skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
+			dc_x = x;
+			dc_source =
+				R_GetColumn(texturetranslation[skytexture],
+					-angle); // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
+			wallcolfunc();
+		}
+	}
+}
+
+//
+// R_CheckPowersOfTwo
+//
+// Self-explanatory?
+//
+boolean R_CheckPowersOfTwo(void)
+{
+	boolean wpow2 = (!(ds_flatwidth & (ds_flatwidth - 1)));
+	boolean hpow2 = (!(ds_flatheight & (ds_flatheight - 1)));
+
+	// Initially, the flat isn't powers-of-two-sized.
+	ds_powersoftwo = false;
+
+	// But if the width and height are powers of two,
+	// and are EQUAL, then it's okay :]
+	if ((ds_flatwidth == ds_flatheight) && (wpow2 && hpow2))
+		ds_powersoftwo = true;
+
+	// Just return ds_powersoftwo.
+	return ds_powersoftwo;
+}
+
+//
+// R_CheckFlatLength
+//
+// Determine the flat's dimensions from the lump length.
+//
+void R_CheckFlatLength(size_t size)
+{
+	switch (size)
+	{
+		case 4194304: // 2048x2048 lump
+			nflatmask = 0x3FF800;
+			nflatxshift = 21;
+			nflatyshift = 10;
+			nflatshiftup = 5;
+			ds_flatwidth = ds_flatheight = 2048;
+			break;
+		case 1048576: // 1024x1024 lump
+			nflatmask = 0xFFC00;
+			nflatxshift = 22;
+			nflatyshift = 12;
+			nflatshiftup = 6;
+			ds_flatwidth = ds_flatheight = 1024;
+			break;
+		case 262144:// 512x512 lump
+			nflatmask = 0x3FE00;
+			nflatxshift = 23;
+			nflatyshift = 14;
+			nflatshiftup = 7;
+			ds_flatwidth = ds_flatheight = 512;
+			break;
+		case 65536: // 256x256 lump
+			nflatmask = 0xFF00;
+			nflatxshift = 24;
+			nflatyshift = 16;
+			nflatshiftup = 8;
+			ds_flatwidth = ds_flatheight = 256;
+			break;
+		case 16384: // 128x128 lump
+			nflatmask = 0x3F80;
+			nflatxshift = 25;
+			nflatyshift = 18;
+			nflatshiftup = 9;
+			ds_flatwidth = ds_flatheight = 128;
+			break;
+		case 1024: // 32x32 lump
+			nflatmask = 0x3E0;
+			nflatxshift = 27;
+			nflatyshift = 22;
+			nflatshiftup = 11;
+			ds_flatwidth = ds_flatheight = 32;
+			break;
+		default: // 64x64 lump
+			nflatmask = 0xFC0;
+			nflatxshift = 26;
+			nflatyshift = 20;
+			nflatshiftup = 10;
+			ds_flatwidth = ds_flatheight = 64;
+			break;
+	}
+}
+
+//
+// R_GenerateFlat
+//
+// Generate a flat from specified width and height.
+//
+static UINT8 *R_GenerateFlat(UINT16 width, UINT16 height)
+{
+	UINT8 *flat = Z_Malloc(width * height, PU_LEVEL, NULL);
+	memset(flat, TRANSPARENTPIXEL, width * height);
+	return flat;
+}
+
+//
+// R_GetTextureFlat
+//
+// Convert a texture or patch to a flat.
+//
+static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boolean ispng)
+{
+	UINT8 *flat;
+	textureflat_t *texflat = &texflats[levelflat->u.texture.num];
+	patch_t *patch = NULL;
+	boolean texturechanged = (leveltexture ? (levelflat->u.texture.num != levelflat->u.texture.lastnum) : false);
+
+	// Check if the texture changed.
+	if (leveltexture && (!texturechanged))
+	{
+		if (texflat != NULL && texflat->flat)
+		{
+			flat = texflat->flat;
+			ds_flatwidth = texflat->width;
+			ds_flatheight = texflat->height;
+			texturechanged = false;
+		}
+		else
+			texturechanged = true;
+	}
+
+	// If the texture changed, or the patch doesn't exist, convert either of them to a flat.
+	if (levelflat->flatpatch == NULL || texturechanged)
+	{
+		// Level texture
+		if (leveltexture)
+		{
+			texture_t *texture = textures[levelflat->u.texture.num];
+			texflat->width = ds_flatwidth = texture->width;
+			texflat->height = ds_flatheight = texture->height;
+
+			texflat->flat = R_GenerateFlat(ds_flatwidth, ds_flatheight);
+			R_TextureToFlat(levelflat->u.texture.num, texflat->flat);
+			flat = texflat->flat;
+
+			levelflat->flatpatch = flat;
+			levelflat->width = ds_flatwidth;
+			levelflat->height = ds_flatheight;
+		}
+		// Patch (never happens yet)
+		else
+		{
+			patch = (patch_t *)ds_source;
+#ifndef NO_PNG_LUMPS
+			if (ispng)
+			{
+				levelflat->flatpatch = R_PNGToFlat(&levelflat->width, &levelflat->height, ds_source, W_LumpLength(levelflat->u.flat.lumpnum));
+				levelflat->topoffset = levelflat->leftoffset = 0;
+				ds_flatwidth = levelflat->width;
+				ds_flatheight = levelflat->height;
+			}
+			else
+#endif
+			{
+				levelflat->width = ds_flatwidth = SHORT(patch->width);
+				levelflat->height = ds_flatheight = SHORT(patch->height);
+
+				levelflat->topoffset = patch->topoffset * FRACUNIT;
+				levelflat->leftoffset = patch->leftoffset * FRACUNIT;
+
+				levelflat->flatpatch = R_GenerateFlat(ds_flatwidth, ds_flatheight);
+				R_PatchToFlat(patch, levelflat->flatpatch);
+			}
+			flat = levelflat->flatpatch;
+		}
+	}
+	else
+	{
+		flat = levelflat->flatpatch;
+		ds_flatwidth = levelflat->width;
+		ds_flatheight = levelflat->height;
+	}
+
+	xoffs += levelflat->leftoffset;
+	yoffs += levelflat->topoffset;
+
+	levelflat->u.texture.lastnum = levelflat->u.texture.num;
+	return flat;
+}
+
 void R_DrawSinglePlane(visplane_t *pl)
 {
+	UINT8 *flat;
 	INT32 light = 0;
 	INT32 x;
 	INT32 stop, angle;
-	size_t size;
 	ffloor_t *rover;
+	levelflat_t *levelflat;
+	int type;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
+
+	// sky flat
+	if (pl->picnum == skyflatnum)
+	{
+		R_DrawSkyPlane(pl);
+		return;
+	}
 
 #ifndef NOWATER
 	itswater = false;
@@ -760,7 +871,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			spanfunc = splatfunc;
 
 #ifdef SHITPLANESPARENCY
-		if (spanfunc == splatfunc || (pl->extra_colormap && pl->extra_colormap->fog))
+		if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
 #else
 		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 #endif
@@ -818,7 +929,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 				spanfunc = splatfunc;
 
 #ifdef SHITPLANESPARENCY
-			if (spanfunc == splatfunc || (pl->extra_colormap && pl->extra_colormap->fog))
+			if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
 #else
 			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 #endif
@@ -878,63 +989,54 @@ void R_DrawSinglePlane(visplane_t *pl)
 		viewangle = pl->viewangle+pl->plangle;
 	}
 
-	currentplane = pl;
-
-	ds_source = (UINT8 *)
-		W_CacheLumpNum(levelflats[pl->picnum].lumpnum,
-			PU_STATIC); // Stay here until Z_ChangeTag
-
-	size = W_LumpLength(levelflats[pl->picnum].lumpnum);
-
-	switch (size)
-	{
-		case 4194304: // 2048x2048 lump
-			nflatmask = 0x3FF800;
-			nflatxshift = 21;
-			nflatyshift = 10;
-			nflatshiftup = 5;
-			break;
-		case 1048576: // 1024x1024 lump
-			nflatmask = 0xFFC00;
-			nflatxshift = 22;
-			nflatyshift = 12;
-			nflatshiftup = 6;
-			break;
-		case 262144:// 512x512 lump'
-			nflatmask = 0x3FE00;
-			nflatxshift = 23;
-			nflatyshift = 14;
-			nflatshiftup = 7;
-			break;
-		case 65536: // 256x256 lump
-			nflatmask = 0xFF00;
-			nflatxshift = 24;
-			nflatyshift = 16;
-			nflatshiftup = 8;
-			break;
-		case 16384: // 128x128 lump
-			nflatmask = 0x3F80;
-			nflatxshift = 25;
-			nflatyshift = 18;
-			nflatshiftup = 9;
-			break;
-		case 1024: // 32x32 lump
-			nflatmask = 0x3E0;
-			nflatxshift = 27;
-			nflatyshift = 22;
-			nflatshiftup = 11;
-			break;
-		default: // 64x64 lump
-			nflatmask = 0xFC0;
-			nflatxshift = 26;
-			nflatyshift = 20;
-			nflatshiftup = 10;
-			break;
-	}
-
 	xoffs = pl->xoffs;
 	yoffs = pl->yoffs;
 	planeheight = abs(pl->height - pl->viewz);
+
+	currentplane = pl;
+	levelflat = &levelflats[pl->picnum];
+
+	/* :james: */
+	type = levelflat->type;
+	switch (type)
+	{
+		case LEVELFLAT_NONE:
+			return;
+		case LEVELFLAT_FLAT:
+			ds_source = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE);
+			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
+			// Raw flats always have dimensions that are powers-of-two numbers.
+			ds_powersoftwo = true;
+			if (spanfunc == basespanfunc)
+				spanfunc = mmxspanfunc;
+			break;
+		default:
+			switch (type)
+			{
+				case LEVELFLAT_TEXTURE:
+					/* Textures get cached differently and don't need ds_source */
+					ds_source = R_GetTextureFlat(levelflat, true, false);
+					break;
+				default:
+					ds_source = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_STATIC);
+					flat      = R_GetTextureFlat(levelflat, false,
+#ifndef NO_PNG_LUMPS
+							( type == LEVELFLAT_PNG )
+#else
+							false
+#endif
+					);
+					Z_ChangeTag(ds_source, PU_CACHE);
+					ds_source = flat;
+			}
+			// Check if this texture or patch has power-of-two dimensions.
+			if (R_CheckPowersOfTwo())
+			{
+				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+				if (spanfunc == basespanfunc)
+					spanfunc = mmxspanfunc;
+			}
+	}
 
 	if (light >= LIGHTLEVELS)
 		light = LIGHTLEVELS-1;
@@ -949,22 +1051,63 @@ void R_DrawSinglePlane(visplane_t *pl)
 		floatv3_t p, m, n;
 		float ang;
 		float vx, vy, vz;
-		float fudge;
+		float fudge = 0;
 		// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
 		// use this as a temp var to store P_GetZAt's return value each time
 		fixed_t temp;
 
-		xoffs &= ((1 << (32-nflatshiftup))-1);
-		yoffs &= ((1 << (32-nflatshiftup))-1);
+		angle_t hack = (pl->plangle & (ANGLE_90-1));
 
-		xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-		yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+		yoffs *= 1;
 
-		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
-		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+		if (ds_powersoftwo)
+		{
+			// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
+			fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+			if (hack)
+			{
+				/*
+				Essentially: We can't & the components along the regular axes when the plane is rotated.
+				This is because the distance on each regular axis in order to loop is different.
+				We rotate them, & the components, add them together, & them again, and then rotate them back.
+				These three seperate & operations are done per axis in order to prevent overflows.
+				toast 10/04/17
+				*/
+				const fixed_t cosinecomponent = FINECOSINE(hack>>ANGLETOFINESHIFT);
+				const fixed_t sinecomponent = FINESINE(hack>>ANGLETOFINESHIFT);
 
-		xoffs = (fixed_t)(xoffs*fudge);
-		yoffs = (fixed_t)(yoffs/fudge);
+				const fixed_t modmask = ((1 << (32-nflatshiftup)) - 1);
+
+				fixed_t ox = (FixedMul(pl->slope->o.x,cosinecomponent) & modmask) - (FixedMul(pl->slope->o.y,sinecomponent) & modmask);
+				fixed_t oy = (-FixedMul(pl->slope->o.x,sinecomponent) & modmask) - (FixedMul(pl->slope->o.y,cosinecomponent) & modmask);
+
+				temp = ox & modmask;
+				oy &= modmask;
+				ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
+				oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
+
+				temp = xoffs;
+				xoffs = (FixedMul(temp,cosinecomponent) & modmask) + (FixedMul(yoffs,sinecomponent) & modmask);
+				yoffs = (-FixedMul(temp,sinecomponent) & modmask) + (FixedMul(yoffs,cosinecomponent) & modmask);
+
+				temp = xoffs & modmask;
+				yoffs &= modmask;
+				xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
+				yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
+
+				xoffs -= (pl->slope->o.x - ox);
+				yoffs += (pl->slope->o.y + oy);
+			}
+			else
+			{
+				xoffs &= ((1 << (32-nflatshiftup))-1);
+				yoffs &= ((1 << (32-nflatshiftup))-1);
+				xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+				yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+			}
+			xoffs = (fixed_t)(xoffs*fudge);
+			yoffs = (fixed_t)(yoffs/fudge);
+		}
 
 		vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
 		vy = FIXED_TO_FLOAT(pl->viewy-yoffs);
@@ -972,8 +1115,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
 		zeroheight = FIXED_TO_FLOAT(temp);
-
-#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
 
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in
@@ -999,13 +1140,16 @@ void R_DrawSinglePlane(visplane_t *pl)
 		temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
 		n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
-		m.x /= fudge;
-		m.y /= fudge;
-		m.z /= fudge;
+		if (ds_powersoftwo)
+		{
+			m.x /= fudge;
+			m.y /= fudge;
+			m.z /= fudge;
 
-		n.x *= fudge;
-		n.y *= fudge;
-		n.z *= fudge;
+			n.x *= fudge;
+			n.y *= fudge;
+			n.z *= fudge;
+		}
 
 		// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
 #define CROSS(d, v1, v2) \
@@ -1022,13 +1166,26 @@ void R_DrawSinglePlane(visplane_t *pl)
 		ds_sz.z *= focallengthf;
 
 		// Premultiply the texture vectors with the scale factors
-#define SFMULT 65536.f*(1<<nflatshiftup)
-		ds_su.x *= SFMULT;
-		ds_su.y *= SFMULT;
-		ds_su.z *= SFMULT;
-		ds_sv.x *= SFMULT;
-		ds_sv.y *= SFMULT;
-		ds_sv.z *= SFMULT;
+#define SFMULT 65536.f
+		if (ds_powersoftwo)
+		{
+			ds_su.x *= (SFMULT * (1<<nflatshiftup));
+			ds_su.y *= (SFMULT * (1<<nflatshiftup));
+			ds_su.z *= (SFMULT * (1<<nflatshiftup));
+			ds_sv.x *= (SFMULT * (1<<nflatshiftup));
+			ds_sv.y *= (SFMULT * (1<<nflatshiftup));
+			ds_sv.z *= (SFMULT * (1<<nflatshiftup));
+		}
+		else
+		{
+			// I'm essentially multiplying the vectors by FRACUNIT...
+			ds_su.x *= SFMULT;
+			ds_su.y *= SFMULT;
+			ds_su.z *= SFMULT;
+			ds_sv.x *= SFMULT;
+			ds_sv.y *= SFMULT;
+			ds_sv.z *= SFMULT;
+		}
 #undef SFMULT
 
 		if (spanfunc == R_DrawTranslucentSpan_8)
@@ -1136,8 +1293,6 @@ using the palette colors.
 		}
 	}
 #endif
-
-	Z_ChangeTag(ds_source, PU_CACHE);
 }
 
 void R_PlaneBounds(visplane_t *plane)

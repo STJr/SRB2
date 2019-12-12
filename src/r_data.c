@@ -2,14 +2,14 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  r_data.c
-/// \brief Preparation of data for rendering,generation of lookups, caching, retrieval by name
+/// \brief Preparation of data for rendering, generation of lookups, caching, retrieval by name
 
 #include "doomdef.h"
 #include "g_game.h"
@@ -19,13 +19,16 @@
 #include "p_local.h"
 #include "m_misc.h"
 #include "r_data.h"
+#include "r_patch.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
-#include "v_video.h" // pLocalPalette
+#include "v_video.h" // pMasterPalette
+#include "f_finale.h" // wipes
+#include "byteptr.h"
 #include "dehacked.h"
 
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #include <malloc.h> // alloca(sizeof)
 #endif
 
@@ -34,7 +37,7 @@
 #endif
 
 // Not sure if this is necessary, but it was in w_wad.c, so I'm putting it here too -Shadow Hog
-#ifdef _WIN32_WCE
+#if 0
 #define AVOID_ERRNO
 #else
 #include <errno.h>
@@ -98,12 +101,11 @@ INT32 numtextures = 0; // total number of textures found,
 // size of following tables
 
 texture_t **textures = NULL;
+textureflat_t *texflats = NULL;
 static UINT32 **texturecolumnofs; // column offset lookup table for each texture
 static UINT8 **texturecache; // graphics data for each generated full-size texture
 
-// texture width is a power of 2, so it can easily repeat along sidedefs using a simple mask
-INT32 *texturewidthmask;
-
+INT32 *texturewidth;
 fixed_t *textureheight; // needed for texture pegging
 
 INT32 *texturetranslation;
@@ -112,9 +114,10 @@ INT32 *texturetranslation;
 sprcache_t *spritecachedinfo;
 
 lighttable_t *colormaps;
+lighttable_t *fadecolormap;
 
 // for debugging/info purposes
-static size_t flatmemory, spritememory, texturememory;
+size_t flatmemory, spritememory, texturememory;
 
 // highcolor stuff
 INT16 color8to16[256]; // remap color index to highcolor rgb value
@@ -141,11 +144,14 @@ static INT32 tidcachelen = 0;
 // R_DrawColumnInCache
 // Clip and draw a column from a patch into a cached post.
 //
-static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight)
+static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source;
 	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	(void)patchheight; // This parameter is unused
 
 	while (patch->topdelta != 0xff)
 	{
@@ -160,6 +166,7 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 		if (position < 0)
 		{
 			count += position;
+			source -= position; // start further down the column
 			position = 0;
 		}
 
@@ -174,12 +181,251 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 }
 
 //
+// R_DrawFlippedColumnInCache
+// Similar to R_DrawColumnInCache; it draws the column inverted, however.
+//
+static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		topdelta = patchheight-patch->length-topdelta;
+		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source += position; // start further UP the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; --source)
+				*dest++ = *source;
+		}
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
+{
+	RGBA_t output;
+	if (style == AST_TRANSLUCENT)
+	{
+		if (alpha == 0)
+			output.rgba = background.rgba;
+		else if (alpha == 0xFF)
+			output.rgba = foreground.rgba;
+		else if (alpha < 0xFF)
+		{
+			UINT8 beta = (0xFF - alpha);
+			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+		}
+		// write foreground pixel alpha
+		// if there's no pixel in here
+		if (!background.rgba)
+			output.s.alpha = foreground.s.alpha;
+		else
+			output.s.alpha = 0xFF;
+		return output.rgba;
+	}
+#define clamp(c) max(min(c, 0xFF), 0x00);
+	else
+	{
+		float falpha = ((float)alpha / 256.0f);
+		float fr = ((float)foreground.s.red * falpha);
+		float fg = ((float)foreground.s.green * falpha);
+		float fb = ((float)foreground.s.blue * falpha);
+		if (style == AST_ADD)
+		{
+			output.s.red = clamp((int)(background.s.red + fr));
+			output.s.green = clamp((int)(background.s.green + fg));
+			output.s.blue = clamp((int)(background.s.blue + fb));
+		}
+		else if (style == AST_SUBTRACT)
+		{
+			output.s.red = clamp((int)(background.s.red - fr));
+			output.s.green = clamp((int)(background.s.green - fg));
+			output.s.blue = clamp((int)(background.s.blue - fb));
+		}
+		else if (style == AST_REVERSESUBTRACT)
+		{
+			output.s.red = clamp((int)((-background.s.red) + fr));
+			output.s.green = clamp((int)((-background.s.green) + fg));
+			output.s.blue = clamp((int)((-background.s.blue) + fb));
+		}
+		else if (style == AST_MODULATE)
+		{
+			fr = ((float)foreground.s.red / 256.0f);
+			fg = ((float)foreground.s.green / 256.0f);
+			fb = ((float)foreground.s.blue / 256.0f);
+			output.s.red = clamp((int)(background.s.red * fr));
+			output.s.green = clamp((int)(background.s.green * fg));
+			output.s.blue = clamp((int)(background.s.blue * fb));
+		}
+		// just copy the pixel
+		else if (style == AST_COPY)
+			output.rgba = foreground.rgba;
+
+		output.s.alpha = 0xFF;
+		return output.rgba;
+	}
+#undef clamp
+	return 0;
+}
+
+UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+{
+	// Alpha style set to translucent?
+	if (style == AST_TRANSLUCENT)
+	{
+		// Is the alpha small enough for translucency?
+		if (alpha <= (10*255/11))
+		{
+			UINT8 *mytransmap;
+			// Is the patch way too translucent? Don't blend then.
+			if (alpha < 255/11)
+				return background;
+			// The equation's not exact but it works as intended. I'll call it a day for now.
+			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
+			if (background != 0xFF)
+				return *(mytransmap + (background<<8) + foreground);
+		}
+		else // just copy the pixel
+			return foreground;
+	}
+	// just copy the pixel
+	else if (style == AST_COPY)
+		return foreground;
+	// use ASTBlendPixel for all other blend modes
+	// and find the nearest colour in the palette
+	else if (style != AST_TRANSLUCENT)
+	{
+		RGBA_t texel;
+		RGBA_t bg = V_GetColor(background);
+		RGBA_t fg = V_GetColor(foreground);
+		texel.rgba = ASTBlendPixel(bg, fg, style, alpha);
+		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
+	}
+	// fallback if all above fails, somehow
+	// return the background pixel
+	return background;
+}
+
+//
+// R_DrawBlendColumnInCache
+// Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
+//
+static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	(void)patchheight; // This parameter is unused
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		source = (UINT8 *)patch + 3;
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source -= position; // start further down the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; source++, dest++)
+				if (*source != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+		}
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+//
+// R_DrawBlendFlippedColumnInCache
+// Similar to the one above except that the column is inverted.
+//
+static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		topdelta = patchheight-patch->length-topdelta;
+		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source += position; // start further UP the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; --source, dest++)
+				if (*source != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+		}
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+//
 // R_GenerateTexture
 //
 // Allocate space for full size texture, either single patch or 'composite'
 // Build the full textures from patches.
 // The texture caching system is a little more hungry of memory, but has
-// been simplified for the sake of highcolor, dynamic ligthing, & speed.
+// been simplified for the sake of highcolor (lol), dynamic ligthing, & speed.
 //
 // This is not optimised, but it's supposed to be executed only once
 // per level, when enough memory is available.
@@ -191,10 +437,15 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
-	int x, x1, x2, i;
+	boolean dealloc = false;
+	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
-	UINT32 *colofs;
+	UINT8 *colofs;
+
+	UINT16 wadnum;
+	lumpnum_t lumpnum;
+	size_t lumplength;
 
 	I_Assert(texnum <= (size_t)numtextures);
 	texture = textures[texnum];
@@ -210,15 +461,24 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	{
 		boolean holey = false;
 		patch = texture->patches;
-		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+
+		wadnum = patch->wad;
+		lumpnum = patch->lump;
+		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE); // can't use W_CachePatchNumPwad because OpenGL
+
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+			goto multipatch;
+#endif
 
 		// Check the patch for holes.
 		if (texture->width > SHORT(realpatch->width) || texture->height > SHORT(realpatch->height))
 			holey = true;
-		colofs = (UINT32 *)realpatch->columnofs;
+		colofs = (UINT8 *)realpatch->columnofs;
 		for (x = 0; x < texture->width && !holey; x++)
 		{
-			column_t *col = (column_t *)((UINT8 *)realpatch + LONG(colofs[x]));
+			column_t *col = (column_t *)((UINT8 *)realpatch + LONG(*(UINT32 *)&colofs[x<<2]));
 			INT32 topdelta, prevdelta = -1, y = 0;
 			while (col->topdelta != 0xff)
 			{
@@ -239,18 +499,27 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		if (holey)
 		{
 			texture->holes = true;
-			blocksize = W_LumpLengthPwad(patch->wad, patch->lump);
+			texture->flip = patch->flip;
+			blocksize = lumplength;
 			block = Z_Calloc(blocksize, PU_STATIC, // will change tag at end of this function
 				&texturecache[texnum]);
 			M_Memcpy(block, realpatch, blocksize);
 			texturememory += blocksize;
 
 			// use the patch's column lookup
-			colofs = (UINT32 *)(void *)(block + 8);
-			texturecolumnofs[texnum] = colofs;
+			colofs = (block + 8);
+			texturecolumnofs[texnum] = (UINT32 *)colofs;
 			blocktex = block;
+			if (patch->flip & 1) // flip the patch horizontally
+			{
+				UINT8 *realcolofs = (UINT8 *)realpatch->columnofs;
+				for (x = 0; x < texture->width; x++)
+					*(UINT32 *)&colofs[x<<2] = realcolofs[( texture->width-1-x )<<2]; // swap with the offset of the other side of the texture
+			}
+			// we can't as easily flip the patch vertically sadly though,
+			//  we have wait until the texture itself is drawn to do that
 			for (x = 0; x < texture->width; x++)
-				colofs[x] = LONG(LONG(colofs[x]) + 3);
+				*(UINT32 *)&colofs[x<<2] = LONG(LONG(*(UINT32 *)&colofs[x<<2]) + 3);
 			goto done;
 		}
 
@@ -258,16 +527,20 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	}
 
 	// multi-patch textures (or 'composite')
+#ifndef NO_PNG_LUMPS
+	multipatch:
+#endif
 	texture->holes = false;
+	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
 	texturememory += blocksize;
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
 
-	memset(block, 0xF7, blocksize+1); // Transparency hack
+	memset(block, TRANSPARENTPIXEL, blocksize+1); // Transparency hack
 
 	// columns lookup table
-	colofs = (UINT32 *)(void *)block;
-	texturecolumnofs[texnum] = colofs;
+	colofs = block;
+	texturecolumnofs[texnum] = (UINT32 *)colofs;
 
 	// texture data after the lookup table
 	blocktex = block + (texture->width*4);
@@ -275,26 +548,64 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
-		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
-		x1 = patch->originx;
-		x2 = x1 + SHORT(realpatch->width);
+		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
+		if (patch->style != AST_COPY)
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawBlendFlippedColumnInCache : R_DrawBlendColumnInCache;
+		else
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawFlippedColumnInCache : R_DrawColumnInCache;
 
+		wadnum = patch->wad;
+		lumpnum = patch->lump;
+		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		dealloc = false;
+
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			dealloc = true;
+		}
+#endif
+
+		x1 = patch->originx;
+		width = SHORT(realpatch->width);
+		height = SHORT(realpatch->height);
+		x2 = x1 + width;
+
+		if (x1 > texture->width || x2 < 0)
+			continue; // patch not located within texture's x bounds, ignore
+
+		if (patch->originy > texture->height || (patch->originy + height) < 0)
+			continue; // patch not located within texture's y bounds, ignore
+
+		// patch is actually inside the texture!
+		// now check if texture is partly off-screen and adjust accordingly
+
+		// left edge
 		if (x1 < 0)
 			x = 0;
 		else
 			x = x1;
 
+		// right edge
 		if (x2 > texture->width)
 			x2 = texture->width;
 
 		for (; x < x2; x++)
 		{
-			patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
+			if (patch->flip & 1)
+				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[(x1+width-1)-x]));
+			else
+				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
 
 			// generate column ofset lookup
-			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			R_DrawColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height);
+			*(UINT32 *)&colofs[x<<2] = LONG((x * texture->height) + (texture->width*4));
+			ColumnDrawerPointer(patchcol, block + LONG(*(UINT32 *)&colofs[x<<2]), patch, texture->height, height);
 		}
+
+		if (dealloc)
+			Z_Free(realpatch);
 	}
 
 done:
@@ -335,10 +646,14 @@ void R_CheckTextureCache(INT32 tex)
 UINT8 *R_GetColumn(fixed_t tex, INT32 col)
 {
 	UINT8 *data;
+	INT32 width = texturewidth[tex];
 
-	col &= texturewidthmask[tex];
+	if (width & (width - 1))
+		col = (UINT32)col % width;
+	else
+		col &= (width - 1);
+
 	data = texturecache[tex];
-
 	if (!data)
 		data = R_GenerateTexture(tex);
 
@@ -376,7 +691,7 @@ void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *index);
 #define TX_END "TX_END"
 void R_LoadTextures(void)
 {
-	INT32 i, k, w;
+	INT32 i, w;
 	UINT16 j;
 	UINT16 texstart, texend, texturesLumpPos;
 	patch_t *patchlump;
@@ -393,6 +708,7 @@ void R_LoadTextures(void)
 		}
 		Z_Free(texturetranslation);
 		Z_Free(textures);
+		Z_Free(texflats);
 	}
 
 	// Load patches and textures.
@@ -453,14 +769,15 @@ void R_LoadTextures(void)
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
 	// There are actually 5 buffers allocated in one for convenience.
 	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
+	texflats = Z_Calloc((numtextures * sizeof(*texflats)), PU_STATIC, NULL);
 
 	// Allocate texture column offset table.
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
 	// Allocate texture referencing cache.
 	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
-	// Allocate texture width mask table.
-	texturewidthmask = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
-	// Allocate texture height mask table.
+	// Allocate texture width table.
+	texturewidth     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
+	// Allocate texture height table.
 	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
 	// Create translation table for global animation.
 	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
@@ -499,22 +816,46 @@ void R_LoadTextures(void)
 		// Work through each lump between the markers in the WAD.
 		for (j = 0; j < (texend - texstart); j++)
 		{
+			UINT16 wadnum = (UINT16)w;
+			lumpnum_t lumpnum = texstart + j;
+#ifndef NO_PNG_LUMPS
+			size_t lumplength;
+#endif
+
 			if (wadfiles[w]->type == RET_PK3)
 			{
-				if (W_IsLumpFolder((UINT16)w, texstart + j)) // Check if lump is a folder
+				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
 					continue; // If it is then SKIP IT
 			}
-			patchlump = W_CacheLumpNumPwad((UINT16)w, texstart + j, PU_CACHE);
+
+			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+#endif
 
 			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
 			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
 
 			// Set texture properties.
-			M_Memcpy(texture->name, W_CheckNameForNumPwad((UINT16)w, texstart + j), sizeof(texture->name));
-			texture->width = SHORT(patchlump->width);
-			texture->height = SHORT(patchlump->height);
+			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+
+#ifndef NO_PNG_LUMPS
+			if (R_IsLumpPNG((UINT8 *)patchlump, lumplength))
+			{
+				INT16 width, height;
+				R_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
+				texture->width = width;
+				texture->height = height;
+			}
+			else
+#endif
+			{
+				texture->width = SHORT(patchlump->width);
+				texture->height = SHORT(patchlump->height);
+			}
 			texture->patchcount = 1;
 			texture->holes = false;
+			texture->flip = 0;
 
 			// Allocate information for the texture's patches.
 			patch = &texture->patches[0];
@@ -522,13 +863,11 @@ void R_LoadTextures(void)
 			patch->originx = patch->originy = 0;
 			patch->wad = (UINT16)w;
 			patch->lump = texstart + j;
+			patch->flip = 0;
 
 			Z_Unlock(patchlump);
 
-			k = 1;
-			while (k << 1 <= texture->width)
-				k <<= 1;
-			texturewidthmask[i] = k - 1;
+			texturewidth[i] = texture->width;
 			textureheight[i] = texture->height << FRACBITS;
 			i++;
 		}
@@ -543,6 +882,9 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	char *patchName = NULL;
 	INT16 patchXPos;
 	INT16 patchYPos;
+	UINT8 flip = 0;
+	UINT8 alpha = 255;
+	enum patchalphastyle style = AST_COPY;
 	texpatch_t *resultPatch = NULL;
 	lumpnum_t patchLumpNum;
 
@@ -639,6 +981,68 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	}
 	Z_Free(texturesToken);
 
+	// Patch parameters block (OPTIONAL)
+	// added by Monster Iestyn (22/10/16)
+
+	// Left Curly Brace
+	texturesToken = M_GetToken(NULL);
+	if (texturesToken == NULL)
+		; // move on and ignore, R_ParseTextures will deal with this
+	else
+	{
+		if (strcmp(texturesToken,"{")==0)
+		{
+			Z_Free(texturesToken);
+			texturesToken = M_GetToken(NULL);
+			if (texturesToken == NULL)
+			{
+				I_Error("Error parsing TEXTURES lump: Unexpected end of file where patch \"%s\"'s parameters should be",patchName);
+			}
+			while (strcmp(texturesToken,"}")!=0)
+			{
+				if (stricmp(texturesToken, "ALPHA")==0)
+				{
+					Z_Free(texturesToken);
+					texturesToken = M_GetToken(NULL);
+					alpha = 255*strtof(texturesToken, NULL);
+				}
+				else if (stricmp(texturesToken, "STYLE")==0)
+				{
+					Z_Free(texturesToken);
+					texturesToken = M_GetToken(NULL);
+					if (stricmp(texturesToken, "TRANSLUCENT")==0)
+						style = AST_TRANSLUCENT;
+					else if (stricmp(texturesToken, "ADD")==0)
+						style = AST_ADD;
+					else if (stricmp(texturesToken, "SUBTRACT")==0)
+						style = AST_SUBTRACT;
+					else if (stricmp(texturesToken, "REVERSESUBTRACT")==0)
+						style = AST_REVERSESUBTRACT;
+					else if (stricmp(texturesToken, "MODULATE")==0)
+						style = AST_MODULATE;
+				}
+				else if (stricmp(texturesToken, "FLIPX")==0)
+					flip |= 1;
+				else if (stricmp(texturesToken, "FLIPY")==0)
+					flip |= 2;
+				Z_Free(texturesToken);
+
+				texturesToken = M_GetToken(NULL);
+				if (texturesToken == NULL)
+				{
+					I_Error("Error parsing TEXTURES lump: Unexpected end of file where patch \"%s\"'s parameters or right curly brace should be",patchName);
+				}
+			}
+		}
+		else
+		{
+			 // this is not what we wanted...
+			 // undo last read so R_ParseTextures can re-get the token for its own purposes
+			M_UnGetToken();
+		}
+		Z_Free(texturesToken);
+	}
+
 	if (actuallyLoadPatch == true)
 	{
 		// Check lump exists
@@ -649,6 +1053,9 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 		resultPatch->originy = patchYPos;
 		resultPatch->lump = patchLumpNum & 65535;
 		resultPatch->wad = patchLumpNum>>16;
+		resultPatch->flip = flip;
+		resultPatch->alpha = alpha;
+		resultPatch->style = style;
 		// Clean up a little after ourselves
 		Z_Free(patchName);
 		// Then return it
@@ -860,7 +1267,7 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum)
 	texturesToken = M_GetToken(texturesText);
 	while (texturesToken != NULL)
 	{
-		if (stricmp(texturesToken, "WALLTEXTURE")==0)
+		if (stricmp(texturesToken, "WALLTEXTURE") == 0 || stricmp(texturesToken, "TEXTURE") == 0)
 		{
 			numTexturesInLump++;
 			Z_Free(texturesToken);
@@ -868,7 +1275,7 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum)
 		}
 		else
 		{
-			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\", got \"%s\"",texturesToken);
+			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\" or \"TEXTURE\", got \"%s\"",texturesToken);
 		}
 		texturesToken = M_GetToken(NULL);
 	}
@@ -909,27 +1316,31 @@ void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *texindex)
 	texturesToken = M_GetToken(texturesText);
 	while (texturesToken != NULL)
 	{
-		if (stricmp(texturesToken, "WALLTEXTURE")==0)
+		if (stricmp(texturesToken, "WALLTEXTURE") == 0 || stricmp(texturesToken, "TEXTURE") == 0)
 		{
 			Z_Free(texturesToken);
 			// Get the new texture
 			newTexture = R_ParseTexture(true);
 			// Store the new texture
 			textures[*texindex] = newTexture;
-			texturewidthmask[*texindex] = newTexture->width - 1;
+			texturewidth[*texindex] = newTexture->width;
 			textureheight[*texindex] = newTexture->height << FRACBITS;
 			// Increment i back in R_LoadTextures()
 			(*texindex)++;
 		}
 		else
 		{
-			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\", got \"%s\"",texturesToken);
+			I_Error("Error parsing TEXTURES lump: Expected \"WALLTEXTURE\" or \"TEXTURE\", got \"%s\"",texturesToken);
 		}
 		texturesToken = M_GetToken(NULL);
 	}
 	Z_Free(texturesToken);
 	Z_Free((void *)texturesText);
 }
+
+#ifdef EXTRACOLORMAPLUMPS
+static lumplist_t *colormaplumps = NULL; ///\todo free leak
+static size_t numcolormaplumps = 0;
 
 static inline lumpnum_t R_CheckNumForNameList(const char *name, lumplist_t *list, size_t listsize)
 {
@@ -946,9 +1357,6 @@ static inline lumpnum_t R_CheckNumForNameList(const char *name, lumplist_t *list
 	}
 	return LUMPERROR;
 }
-
-static lumplist_t *colormaplumps = NULL; ///\todo free leak
-static size_t numcolormaplumps = 0;
 
 static void R_InitExtraColormaps(void)
 {
@@ -982,6 +1390,7 @@ static void R_InitExtraColormaps(void)
 	}
 	CONS_Printf(M_GetText("Number of Extra Colormaps: %s\n"), sizeu1(numcolormaplumps));
 }
+#endif
 
 // Search for flat name.
 lumpnum_t R_GetFlatNumForName(const char *name)
@@ -1028,13 +1437,6 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 		lump = LUMPERROR;
 	}
 
-	if (lump == LUMPERROR)
-	{
-		if (strcmp(name, SKYFLATNAME))
-			CONS_Debug(DBG_SETUP, "R_GetFlatNumForName: Could not find flat %.8s\n", name);
-		lump = W_CheckNumForName("REDFLR");
-	}
-
 	return lump;
 }
 
@@ -1056,20 +1458,115 @@ static void R_InitSpriteLumps(void)
 }
 
 //
+// R_CreateFadeColormaps
+//
+
+static void R_CreateFadeColormaps(void)
+{
+	UINT8 px, fade;
+	RGBA_t rgba;
+	INT32 r, g, b;
+	size_t len, i;
+
+	len = (256 * FADECOLORMAPROWS);
+	fadecolormap = Z_MallocAlign(len*2, PU_STATIC, NULL, 8);
+	for (i = 0; i < len*2; i++)
+		fadecolormap[i] = (i%256);
+
+	// Load in the light tables, now 64k aligned for smokie...
+	{
+		lumpnum_t lump = W_CheckNumForName("FADECMAP");
+		lumpnum_t wlump = W_CheckNumForName("FADEWMAP");
+
+		// to black
+		if (lump != LUMPERROR)
+			W_ReadLumpHeader(lump, fadecolormap, len, 0U);
+		// to white
+		if (wlump != LUMPERROR)
+			W_ReadLumpHeader(wlump, fadecolormap+len, len, 0U);
+
+		// missing "to white" colormap lump
+		if (lump != LUMPERROR && wlump == LUMPERROR)
+			goto makewhite;
+		// missing "to black" colormap lump
+		else if (lump == LUMPERROR && wlump != LUMPERROR)
+			goto makeblack;
+		// both lumps found
+		else if (lump != LUMPERROR && wlump != LUMPERROR)
+			return;
+	}
+
+#define GETCOLOR \
+	px = colormaps[i%256]; \
+	fade = (i/256) * (256 / FADECOLORMAPROWS); \
+	rgba = V_GetColor(px);
+
+	// to black
+	makeblack:
+	for (i = 0; i < len; i++)
+	{
+		// find pixel and fade amount
+		GETCOLOR;
+
+		// subtractive color blending
+		r = rgba.s.red - FADEREDFACTOR*fade/10;
+		g = rgba.s.green - FADEGREENFACTOR*fade/10;
+		b = rgba.s.blue - FADEBLUEFACTOR*fade/10;
+
+		// clamp values
+		if (r < 0) r = 0;
+		if (g < 0) g = 0;
+		if (b < 0) b = 0;
+
+		// find nearest color in palette
+		fadecolormap[i] = NearestColor(r,g,b);
+	}
+
+	// to white
+	makewhite:
+	for (i = len; i < len*2; i++)
+	{
+		// find pixel and fade amount
+		GETCOLOR;
+
+		// additive color blending
+		r = rgba.s.red + FADEREDFACTOR*fade/10;
+		g = rgba.s.green + FADEGREENFACTOR*fade/10;
+		b = rgba.s.blue + FADEBLUEFACTOR*fade/10;
+
+		// clamp values
+		if (r > 255) r = 255;
+		if (g > 255) g = 255;
+		if (b > 255) b = 255;
+
+		// find nearest color in palette
+		fadecolormap[i] = NearestColor(r,g,b);
+	}
+#undef GETCOLOR
+}
+
+//
 // R_InitColormaps
 //
 static void R_InitColormaps(void)
 {
+	size_t len;
 	lumpnum_t lump;
 
 	// Load in the light tables
 	lump = W_GetNumForName("COLORMAP");
-	colormaps = Z_MallocAlign(W_LumpLength (lump), PU_STATIC, NULL, 8);
+	len = W_LumpLength(lump);
+	colormaps = Z_MallocAlign(len, PU_STATIC, NULL, 8);
 	W_ReadLump(lump, colormaps);
+
+	// Make colormap for fades
+	R_CreateFadeColormaps();
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
+#ifdef EXTRACOLORMAPLUMPS
 	R_InitExtraColormaps();
+#endif
 }
 
 void R_ReInitColormaps(UINT16 num)
@@ -1077,7 +1574,6 @@ void R_ReInitColormaps(UINT16 num)
 	char colormap[9] = "COLORMAP";
 	lumpnum_t lump;
 	const lumpnum_t basecolormaplump = W_GetNumForName(colormap);
-
 	if (num > 0 && num <= 10000)
 		snprintf(colormap, 8, "CLM%04u", num-1);
 
@@ -1094,12 +1590,13 @@ void R_ReInitColormaps(UINT16 num)
 	}
 
 	W_ReadLumpHeader(lump, colormaps, W_LumpLength(basecolormaplump), 0U);
+	if (fadecolormap)
+		Z_Free(fadecolormap);
+	R_CreateFadeColormaps();
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
 }
-
-static lumpnum_t foundcolormaps[MAXCOLORMAPS];
 
 //
 // R_ClearColormaps
@@ -1108,49 +1605,264 @@ static lumpnum_t foundcolormaps[MAXCOLORMAPS];
 //
 void R_ClearColormaps(void)
 {
-	size_t i;
-
-	num_extra_colormaps = 0;
-
-	for (i = 0; i < MAXCOLORMAPS; i++)
-		foundcolormaps[i] = LUMPERROR;
-
-	memset(extra_colormaps, 0, sizeof (extra_colormaps));
+	// Purged by PU_LEVEL, just overwrite the pointer
+	extra_colormaps = R_CreateDefaultColormap(true);
 }
 
-INT32 R_ColormapNumForName(char *name)
+//
+// R_CreateDefaultColormap()
+// NOTE: The result colormap is not added to the extra_colormaps chain. You must do that yourself!
+//
+extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
 {
-	lumpnum_t lump, i;
+	extracolormap_t *exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+	exc->fadestart = 0;
+	exc->fadeend = 31;
+	exc->fog = 0;
+	exc->rgba = 0;
+	exc->fadergba = 0x19000000;
+	exc->colormap = lighttable ? R_CreateLightTable(exc) : NULL;
+#ifdef EXTRACOLORMAPLUMPS
+	exc->lump = LUMPERROR;
+	exc->lumpname[0] = 0;
+#endif
+	exc->next = exc->prev = NULL;
+	return exc;
+}
 
-	if (num_extra_colormaps == MAXCOLORMAPS)
-		I_Error("R_ColormapNumForName: Too many colormaps! the limit is %d\n", MAXCOLORMAPS);
+//
+// R_GetDefaultColormap()
+//
+extracolormap_t *R_GetDefaultColormap(void)
+{
+#ifdef COLORMAPREVERSELIST
+	extracolormap_t *exc;
+#endif
+
+	if (!extra_colormaps)
+		return (extra_colormaps = R_CreateDefaultColormap(true));
+
+#ifdef COLORMAPREVERSELIST
+	for (exc = extra_colormaps; exc->next; exc = exc->next);
+	return exc;
+#else
+	return extra_colormaps;
+#endif
+}
+
+//
+// R_CopyColormap()
+// NOTE: The result colormap is not added to the extra_colormaps chain. You must do that yourself!
+//
+extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lighttable)
+{
+	extracolormap_t *exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+
+	if (!extra_colormap)
+		extra_colormap = R_GetDefaultColormap();
+
+	*exc = *extra_colormap;
+	exc->next = exc->prev = NULL;
+
+#ifdef EXTRACOLORMAPLUMPS
+	strncpy(exc->lumpname, extra_colormap->lumpname, 9);
+
+	if (exc->lump != LUMPERROR && lighttable)
+	{
+		// aligned on 8 bit for asm code
+		exc->colormap = Z_MallocAlign(W_LumpLength(lump), PU_LEVEL, NULL, 16);
+		W_ReadLump(lump, exc->colormap);
+	}
+	else
+#endif
+	if (lighttable)
+		exc->colormap = R_CreateLightTable(exc);
+	else
+		exc->colormap = NULL;
+
+	return exc;
+}
+
+//
+// R_AddColormapToList
+//
+// Sets prev/next chain for extra_colormaps var
+// Copypasta from P_AddFFloorToList
+//
+void R_AddColormapToList(extracolormap_t *extra_colormap)
+{
+#ifndef COLORMAPREVERSELIST
+	extracolormap_t *exc;
+#endif
+
+	if (!extra_colormaps)
+	{
+		extra_colormaps = extra_colormap;
+		extra_colormap->next = 0;
+		extra_colormap->prev = 0;
+		return;
+	}
+
+#ifdef COLORMAPREVERSELIST
+	extra_colormaps->prev = extra_colormap;
+	extra_colormap->next = extra_colormaps;
+	extra_colormaps = extra_colormap;
+	extra_colormap->prev = 0;
+#else
+	for (exc = extra_colormaps; exc->next; exc = exc->next);
+
+	exc->next = extra_colormap;
+	extra_colormap->prev = exc;
+	extra_colormap->next = 0;
+#endif
+}
+
+//
+// R_CheckDefaultColormapByValues()
+//
+#ifdef EXTRACOLORMAPLUMPS
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
+#else
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
+#endif
+{
+	return (
+		(!checkparams ? true :
+			(fadestart == 0
+				&& fadeend == 31
+				&& !fog)
+			)
+		&& (!checkrgba ? true : rgba == 0)
+		&& (!checkfadergba ? true : fadergba == 0x19000000)
+#ifdef EXTRACOLORMAPLUMPS
+		&& lump == LUMPERROR
+		&& extra_colormap->lumpname[0] == 0
+#endif
+		);
+}
+
+boolean R_CheckDefaultColormap(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+{
+	if (!extra_colormap)
+		return true;
+
+#ifdef EXTRACOLORMAPLUMPS
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+#else
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+#endif
+}
+
+boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+{
+	// Treat NULL as default colormap
+	// We need this because what if one exc is a default colormap, and the other is NULL? They're really both equal.
+	if (!exc_a)
+		exc_a = R_GetDefaultColormap();
+	if (!exc_b)
+		exc_b = R_GetDefaultColormap();
+
+	if (exc_a == exc_b)
+		return true;
+
+	return (
+		(!checkparams ? true :
+			(exc_a->fadestart == exc_b->fadestart
+				&& exc_a->fadeend == exc_b->fadeend
+				&& exc_a->fog == exc_b->fog)
+			)
+		&& (!checkrgba ? true : exc_a->rgba == exc_b->rgba)
+		&& (!checkfadergba ? true : exc_a->fadergba == exc_b->fadergba)
+#ifdef EXTRACOLORMAPLUMPS
+		&& exc_a->lump == exc_b->lump
+		&& !strncmp(exc_a->lumpname, exc_b->lumpname, 9)
+#endif
+		);
+}
+
+//
+// R_GetColormapFromListByValues()
+// NOTE: Returns NULL if no match is found
+//
+#ifdef EXTRACOLORMAPLUMPS
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
+#else
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
+#endif
+{
+	extracolormap_t *exc;
+	UINT32 dbg_i = 0;
+
+	for (exc = extra_colormaps; exc; exc = exc->next)
+	{
+		if (rgba == exc->rgba
+			&& fadergba == exc->fadergba
+			&& fadestart == exc->fadestart
+			&& fadeend == exc->fadeend
+			&& fog == exc->fog
+#ifdef EXTRACOLORMAPLUMPS
+			&& (lump != LUMPERROR && lump == exc->lump)
+#endif
+		)
+		{
+			CONS_Debug(DBG_RENDER, "Found Colormap %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+				dbg_i, R_GetRgbaR(rgba), R_GetRgbaG(rgba), R_GetRgbaB(rgba), R_GetRgbaA(rgba),
+				R_GetRgbaR(fadergba), R_GetRgbaG(fadergba), R_GetRgbaB(fadergba), R_GetRgbaA(fadergba));
+			return exc;
+		}
+		dbg_i++;
+	}
+	return NULL;
+}
+
+extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap)
+{
+#ifdef EXTRACOLORMAPLUMPS
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+#else
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+#endif
+}
+
+#ifdef EXTRACOLORMAPLUMPS
+extracolormap_t *R_ColormapForName(char *name)
+{
+	lumpnum_t lump;
+	extracolormap_t *exc;
 
 	lump = R_CheckNumForNameList(name, colormaplumps, numcolormaplumps);
 	if (lump == LUMPERROR)
-		I_Error("R_ColormapNumForName: Cannot find colormap lump %.8s\n", name);
+		I_Error("R_ColormapForName: Cannot find colormap lump %.8s\n", name);
 
-	for (i = 0; i < num_extra_colormaps; i++)
-		if (lump == foundcolormaps[i])
-			return i;
+	exc = R_GetColormapFromListByValues(0, 0x19000000, 0, 31, 0, lump);
+	if (exc)
+		return exc;
 
-	foundcolormaps[num_extra_colormaps] = lump;
+	exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+
+	exc->lump = lump;
+	strncpy(exc->lumpname, name, 9);
+	exc->lumpname[8] = 0;
 
 	// aligned on 8 bit for asm code
-	extra_colormaps[num_extra_colormaps].colormap = Z_MallocAlign(W_LumpLength(lump), PU_LEVEL, NULL, 16);
-	W_ReadLump(lump, extra_colormaps[num_extra_colormaps].colormap);
+	exc->colormap = Z_MallocAlign(W_LumpLength(lump), PU_LEVEL, NULL, 16);
+	W_ReadLump(lump, exc->colormap);
 
 	// We set all params of the colormap to normal because there
 	// is no real way to tell how GL should handle a colormap lump anyway..
-	extra_colormaps[num_extra_colormaps].maskcolor = 0xffff;
-	extra_colormaps[num_extra_colormaps].fadecolor = 0x0;
-	extra_colormaps[num_extra_colormaps].maskamt = 0x0;
-	extra_colormaps[num_extra_colormaps].fadestart = 0;
-	extra_colormaps[num_extra_colormaps].fadeend = 31;
-	extra_colormaps[num_extra_colormaps].fog = 0;
+	exc->fadestart = 0;
+	exc->fadeend = 31;
+	exc->fog = 0;
+	exc->rgba = 0;
+	exc->fadergba = 0x19000000;
 
-	num_extra_colormaps++;
-	return (INT32)num_extra_colormaps - 1;
+	R_AddColormapToList(exc);
+
+	return exc;
 }
+#endif
 
 //
 // R_CreateColormap
@@ -1164,107 +1876,60 @@ static double deltas[256][3], map[256][3];
 
 static int RoundUp(double number);
 
-INT32 R_CreateColormap(char *p1, char *p2, char *p3)
+lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 {
 	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
 	double maskamt = 0, othermask = 0;
-	int mask, fog = 0;
-	size_t mapnum = num_extra_colormaps;
+
+	UINT8 cr = R_GetRgbaR(extra_colormap->rgba),
+		cg = R_GetRgbaG(extra_colormap->rgba),
+		cb = R_GetRgbaB(extra_colormap->rgba),
+		ca = R_GetRgbaA(extra_colormap->rgba),
+		cfr = R_GetRgbaR(extra_colormap->fadergba),
+		cfg = R_GetRgbaG(extra_colormap->fadergba),
+		cfb = R_GetRgbaB(extra_colormap->fadergba);
+//		cfa = R_GetRgbaA(extra_colormap->fadergba); // unused in software
+
+	UINT8 fadestart = extra_colormap->fadestart,
+		fadedist = extra_colormap->fadeend - extra_colormap->fadestart;
+
+	lighttable_t *lighttable = NULL;
 	size_t i;
-	UINT32 cr, cg, cb, maskcolor, fadecolor;
-	UINT32 fadestart = 0, fadeend = 31, fadedist = 31;
 
-#define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
-	if (p1[0] == '#')
-	{
-		cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
-		cmaskr = cr;
-		cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
-		cmaskg = cg;
-		cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
-		cmaskb = cb;
-		// Create a rough approximation of the color (a 16 bit color)
-		maskcolor = ((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11);
-		if (p1[7] >= 'a' && p1[7] <= 'z')
-			mask = (p1[7] - 'a');
-		else if (p1[7] >= 'A' && p1[7] <= 'Z')
-			mask = (p1[7] - 'A');
-		else
-			mask = 24;
+	/////////////////////
+	// Calc the RGBA mask
+	/////////////////////
+	cmaskr = cr;
+	cmaskg = cg;
+	cmaskb = cb;
 
-		maskamt = (double)(mask/24.0l);
+	maskamt = (double)(ca/24.0l);
+	othermask = 1 - maskamt;
+	maskamt /= 0xff;
 
-		othermask = 1 - maskamt;
-		maskamt /= 0xff;
-		cmaskr *= maskamt;
-		cmaskg *= maskamt;
-		cmaskb *= maskamt;
-	}
-	else
-	{
-		cmaskr = cmaskg = cmaskb = 0xff;
-		maskamt = 0;
-		maskcolor = ((0xff) >> 3) + (((0xff) >> 2) << 5) + (((0xff) >> 3) << 11);
-	}
+	cmaskr *= maskamt;
+	cmaskg *= maskamt;
+	cmaskb *= maskamt;
 
-#define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
-	if (p2[0] == '#')
-	{
-		// Get parameters like fadestart, fadeend, and the fogflag
-		fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
-		fadeend = NUMFROMCHAR(p2[5]) + (NUMFROMCHAR(p2[4]) * 10);
-		if (fadestart > 30)
-			fadestart = 0;
-		if (fadeend > 31 || fadeend < 1)
-			fadeend = 31;
-		fadedist = fadeend - fadestart;
-		fog = NUMFROMCHAR(p2[1]);
-	}
-#undef NUMFROMCHAR
+	/////////////////////
+	// Calc the RGBA fade mask
+	/////////////////////
+	cdestr = cfr;
+	cdestg = cfg;
+	cdestb = cfb;
 
-	if (p3[0] == '#')
-	{
-		cdestr = cr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
-		cdestg = cg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
-		cdestb = cb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
-		fadecolor = (((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11));
-	}
-	else
-		cdestr = cdestg = cdestb = fadecolor = 0;
-#undef HEX2INT
+	// fade alpha unused in software
+	// maskamt = (double)(cfa/24.0l);
+	// othermask = 1 - maskamt;
+	// maskamt /= 0xff;
 
-	for (i = 0; i < num_extra_colormaps; i++)
-	{
-		if (foundcolormaps[i] != LUMPERROR)
-			continue;
-		if (maskcolor == extra_colormaps[i].maskcolor
-			&& fadecolor == extra_colormaps[i].fadecolor
-			&& fabs(maskamt - extra_colormaps[i].maskamt) < DBL_EPSILON
-			&& fadestart == extra_colormaps[i].fadestart
-			&& fadeend == extra_colormaps[i].fadeend
-			&& fog == extra_colormaps[i].fog)
-		{
-			return (INT32)i;
-		}
-	}
+	// cdestr *= maskamt;
+	// cdestg *= maskamt;
+	// cdestb *= maskamt;
 
-	if (num_extra_colormaps == MAXCOLORMAPS)
-		I_Error("R_CreateColormap: Too many colormaps! the limit is %d\n", MAXCOLORMAPS);
-
-	num_extra_colormaps++;
-
-	foundcolormaps[mapnum] = LUMPERROR;
-
-	// aligned on 8 bit for asm code
-	extra_colormaps[mapnum].colormap = NULL;
-	extra_colormaps[mapnum].maskcolor = (UINT16)maskcolor;
-	extra_colormaps[mapnum].fadecolor = (UINT16)fadecolor;
-	extra_colormaps[mapnum].maskamt = maskamt;
-	extra_colormaps[mapnum].fadestart = (UINT16)fadestart;
-	extra_colormaps[mapnum].fadeend = (UINT16)fadeend;
-	extra_colormaps[mapnum].fog = fog;
-
+	/////////////////////
 	// This code creates the colormap array used by software renderer
+	/////////////////////
 	if (rendermode == render_soft)
 	{
 		double r, g, b, cbrightness;
@@ -1278,9 +1943,9 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 		//  map[i]'s values are decremented by after each use
 		for (i = 0; i < 256; i++)
 		{
-			r = pLocalPalette[i].s.red;
-			g = pLocalPalette[i].s.green;
-			b = pLocalPalette[i].s.blue;
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
 			cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
@@ -1300,8 +1965,9 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 		}
 
 		// Now allocate memory for the actual colormap array itself!
+		// aligned on 8 bit for asm code
 		colormap_p = Z_MallocAlign((256 * 34) + 10, PU_LEVEL, NULL, 8);
-		extra_colormaps[mapnum].colormap = (UINT8 *)colormap_p;
+		lighttable = (UINT8 *)colormap_p;
 
 		// Calculate the palette index for each palette index, for each light level
 		// (as well as the two unused colormap lines we inherited from Doom)
@@ -1336,7 +2002,285 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 		}
 	}
 
-	return (INT32)mapnum;
+	return lighttable;
+}
+
+extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
+{
+	extracolormap_t *extra_colormap, *exc;
+
+	// default values
+	UINT8 cr = 0, cg = 0, cb = 0, ca = 0, cfr = 0, cfg = 0, cfb = 0, cfa = 25;
+	UINT32 fadestart = 0, fadeend = 31;
+	UINT8 fog = 0;
+	INT32 rgba = 0, fadergba = 0x19000000;
+
+#define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
+#define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : x >= '0' && x <= '9' ? 25 : 0)
+
+	// Get base colormap value
+	// First alpha-only, then full value
+	if (p1[0] >= 'a' && p1[0] <= 'z' && !p1[1])
+		ca = (p1[0] - 'a');
+	else if (p1[0] == '#' && p1[1] >= 'a' && p1[1] <= 'z' && !p1[2])
+		ca = (p1[1] - 'a');
+	else if (p1[0] >= 'A' && p1[0] <= 'Z' && !p1[1])
+		ca = (p1[0] - 'A');
+	else if (p1[0] == '#' && p1[1] >= 'A' && p1[1] <= 'Z' && !p1[2])
+		ca = (p1[1] - 'A');
+	else if (p1[0] == '#')
+	{
+		// For each subsequent value, the value before it must exist
+		// If we don't get every value, then set alpha to max
+		if (p1[1] && p1[2])
+		{
+			cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
+			if (p1[3] && p1[4])
+			{
+				cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
+				if (p1[5] && p1[6])
+				{
+					cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
+
+					if (p1[7] >= 'a' && p1[7] <= 'z')
+						ca = (p1[7] - 'a');
+					else if (p1[7] >= 'A' && p1[7] <= 'Z')
+						ca = (p1[7] - 'A');
+					else
+						ca = 25;
+				}
+				else
+					ca = 25;
+			}
+			else
+				ca = 25;
+		}
+		else
+			ca = 25;
+	}
+
+#define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
+
+	// Get parameters like fadestart, fadeend, and the fogflag
+	if (p2[0] == '#')
+	{
+		if (p2[1])
+		{
+			fog = NUMFROMCHAR(p2[1]);
+			if (p2[2] && p2[3])
+			{
+				fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
+				if (p2[4] && p2[5])
+					fadeend = NUMFROMCHAR(p2[5]) + (NUMFROMCHAR(p2[4]) * 10);
+			}
+		}
+
+		if (fadestart > 30)
+			fadestart = 0;
+		if (fadeend > 31 || fadeend < 1)
+			fadeend = 31;
+	}
+
+#undef NUMFROMCHAR
+
+	// Get fade (dark) colormap value
+	// First alpha-only, then full value
+	if (p3[0] >= 'a' && p3[0] <= 'z' && !p3[1])
+		cfa = (p3[0] - 'a');
+	else if (p3[0] == '#' && p3[1] >= 'a' && p3[1] <= 'z' && !p3[2])
+		cfa = (p3[1] - 'a');
+	else if (p3[0] >= 'A' && p3[0] <= 'Z' && !p3[1])
+		cfa = (p3[0] - 'A');
+	else if (p3[0] == '#' && p3[1] >= 'A' && p3[1] <= 'Z' && !p3[2])
+		cfa = (p3[1] - 'A');
+	else if (p3[0] == '#')
+	{
+		// For each subsequent value, the value before it must exist
+		// If we don't get every value, then set alpha to max
+		if (p3[1] && p3[2])
+		{
+			cfr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
+			if (p3[3] && p3[4])
+			{
+				cfg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
+				if (p3[5] && p3[6])
+				{
+					cfb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
+
+					if (p3[7] >= 'a' && p3[7] <= 'z')
+						cfa = (p3[7] - 'a');
+					else if (p3[7] >= 'A' && p3[7] <= 'Z')
+						cfa = (p3[7] - 'A');
+					else
+						cfa = 25;
+				}
+				else
+					cfa = 25;
+			}
+			else
+				cfa = 25;
+		}
+		else
+			cfa = 25;
+	}
+#undef ALPHA2INT
+#undef HEX2INT
+
+	// Pack rgba values into combined var
+	// OpenGL also uses this instead of lighttables for rendering
+	rgba = R_PutRgbaRGBA(cr, cg, cb, ca);
+	fadergba = R_PutRgbaRGBA(cfr, cfg, cfb, cfa);
+
+	// Did we just make a default colormap?
+#ifdef EXTRACOLORMAPLUMPS
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog, LUMPERROR))
+		return NULL;
+#else
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog))
+		return NULL;
+#endif
+
+	// Look for existing colormaps
+#ifdef EXTRACOLORMAPLUMPS
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog, LUMPERROR);
+#else
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
+#endif
+	if (exc)
+		return exc;
+
+	CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+		cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+
+	extra_colormap = Z_Calloc(sizeof (*extra_colormap), PU_LEVEL, NULL);
+
+	extra_colormap->fadestart = (UINT16)fadestart;
+	extra_colormap->fadeend = (UINT16)fadeend;
+	extra_colormap->fog = fog;
+
+	extra_colormap->rgba = rgba;
+	extra_colormap->fadergba = fadergba;
+
+#ifdef EXTRACOLORMAPLUMPS
+	extra_colormap->lump = LUMPERROR;
+	extra_colormap->lumpname[0] = 0;
+#endif
+
+	// Having lighttables for alpha-only entries is kind of pointless,
+	// but if there happens to be a matching rgba entry that is NOT alpha-only (but has same rgb values),
+	// then it needs this lighttable because we share matching entries.
+	extra_colormap->colormap = R_CreateLightTable(extra_colormap);
+
+	R_AddColormapToList(extra_colormap);
+
+	return extra_colormap;
+}
+
+//
+// R_AddColormaps()
+// NOTE: The result colormap is not added to the extra_colormaps chain. You must do that yourself!
+//
+extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *exc_addend,
+	boolean subR, boolean subG, boolean subB, boolean subA,
+	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
+	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFog,
+	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
+	boolean lighttable)
+{
+	INT16 red, green, blue, alpha;
+
+	// exc_augend is added (or subtracted) onto by exc_addend
+	// In Rennaisance times, the first number was considered the augend, the second number the addend
+	// But since the commutative property was discovered, today they're both called addends!
+	// So let's be Olde English for a hot second.
+
+	exc_augend = R_CopyColormap(exc_augend, false);
+	if(!exc_addend)
+		exc_addend = R_GetDefaultColormap();
+
+	///////////////////
+	// base rgba
+	///////////////////
+
+	red = max(min(
+		R_GetRgbaR(exc_augend->rgba)
+			+ (subR ? -1 : 1) // subtract R
+			* R_GetRgbaR(exc_addend->rgba)
+		, 255), 0);
+
+	green = max(min(
+		R_GetRgbaG(exc_augend->rgba)
+			+ (subG ? -1 : 1) // subtract G
+			* R_GetRgbaG(exc_addend->rgba)
+		, 255), 0);
+
+	blue = max(min(
+		R_GetRgbaB(exc_augend->rgba)
+			+ (subB ? -1 : 1) // subtract B
+			* R_GetRgbaB(exc_addend->rgba)
+		, 255), 0);
+
+	alpha = useAltAlpha ? altAlpha : R_GetRgbaA(exc_addend->rgba);
+	alpha = max(min(R_GetRgbaA(exc_augend->rgba) + (subA ? -1 : 1) * alpha, 25), 0);
+
+	exc_augend->rgba = R_PutRgbaRGBA(red, green, blue, alpha);
+
+	///////////////////
+	// fade/dark rgba
+	///////////////////
+
+	red = max(min(
+		R_GetRgbaR(exc_augend->fadergba)
+			+ (subFadeR ? -1 : 1) // subtract R
+			* R_GetRgbaR(exc_addend->fadergba)
+		, 255), 0);
+
+	green = max(min(
+		R_GetRgbaG(exc_augend->fadergba)
+			+ (subFadeG ? -1 : 1) // subtract G
+			* R_GetRgbaG(exc_addend->fadergba)
+		, 255), 0);
+
+	blue = max(min(
+		R_GetRgbaB(exc_augend->fadergba)
+			+ (subFadeB ? -1 : 1) // subtract B
+			* R_GetRgbaB(exc_addend->fadergba)
+		, 255), 0);
+
+	alpha = useAltAlpha ? altFadeAlpha : R_GetRgbaA(exc_addend->fadergba);
+	if (alpha == 25 && !useAltAlpha && !R_GetRgbaRGB(exc_addend->fadergba))
+		alpha = 0; // HACK: fadergba A defaults at 25, so don't add anything in this case
+	alpha = max(min(R_GetRgbaA(exc_augend->fadergba) + (subFadeA ? -1 : 1) * alpha, 25), 0);
+
+	exc_augend->fadergba = R_PutRgbaRGBA(red, green, blue, alpha);
+
+	///////////////////
+	// parameters
+	///////////////////
+
+	exc_augend->fadestart = max(min(
+		exc_augend->fadestart
+			+ (subFadeStart ? -1 : 1) // subtract fadestart
+			* exc_addend->fadestart
+		, 31), 0);
+
+	exc_augend->fadeend = max(min(
+		exc_augend->fadeend
+			+ (subFadeEnd ? -1 : 1) // subtract fadeend
+			* (exc_addend->fadeend == 31 && !exc_addend->fadestart ? 0 : exc_addend->fadeend)
+				// HACK: fadeend defaults to 31, so don't add anything in this case
+		, 31), 0);
+
+	if (!ignoreFog) // overwrite fog with new value
+		exc_augend->fog = exc_addend->fog;
+
+	///////////////////
+	// put it together
+	///////////////////
+
+	exc_augend->colormap = lighttable ? R_CreateLightTable(exc_augend) : NULL;
+	exc_augend->next = exc_augend->prev = NULL;
+	return exc_augend;
 }
 
 // Thanks to quake2 source!
@@ -1348,9 +2292,9 @@ UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
 
 	for (i = 0; i < 256; i++)
 	{
-		dr = r - pLocalPalette[i].s.red;
-		dg = g - pLocalPalette[i].s.green;
-		db = b - pLocalPalette[i].s.blue;
+		dr = r - pMasterPalette[i].s.red;
+		dg = g - pMasterPalette[i].s.green;
+		db = b - pMasterPalette[i].s.blue;
 		distortion = dr*dr + dg*dg + db*db;
 		if (distortion < bestdistortion)
 		{
@@ -1379,20 +2323,18 @@ static int RoundUp(double number)
 	return (int)number;
 }
 
-const char *R_ColormapNameForNum(INT32 num)
+#ifdef EXTRACOLORMAPLUMPS
+const char *R_NameForColormap(extracolormap_t *extra_colormap)
 {
-	if (num == -1)
+	if (!extra_colormap)
 		return "NONE";
 
-	if (num < 0 || num > MAXCOLORMAPS)
-		I_Error("R_ColormapNameForNum: num %d is invalid!\n", num);
-
-	if (foundcolormaps[num] == LUMPERROR)
+	if (extra_colormap->lump == LUMPERROR)
 		return "INLEVEL";
 
-	return W_CheckNameForNum(foundcolormaps[num]);
+	return extra_colormap->lumpname;
 }
-
+#endif
 
 //
 // build a table for quick conversion from 8bpp to 15bpp
@@ -1591,8 +2533,8 @@ void R_PrecacheLevel(void)
 	spritepresent = calloc(numsprites, sizeof (*spritepresent));
 	if (spritepresent == NULL) I_Error("%s: Out of memory looking up sprites", "R_PrecacheLevel");
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed)
 			spritepresent[((mobj_t *)th)->sprite] = 1;
 
 	spritememory = 0;

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,8 +29,8 @@ typedef enum {
 } moviemode_t;
 extern moviemode_t moviemode;
 
-extern consvar_t cv_screenshot_option, cv_screenshot_folder;
-extern consvar_t cv_moviemode;
+extern consvar_t cv_screenshot_option, cv_screenshot_folder, cv_screenshot_colorprofile;
+extern consvar_t cv_moviemode, cv_movie_folder, cv_movie_option;
 extern consvar_t cv_zlib_memory, cv_zlib_level, cv_zlib_strategy, cv_zlib_window_bits;
 extern consvar_t cv_zlib_memorya, cv_zlib_levela, cv_zlib_strategya, cv_zlib_window_bitsa;
 extern consvar_t cv_apng_delay;
@@ -40,13 +40,7 @@ void M_SaveFrame(void);
 void M_StopMovie(void);
 
 // the file where game vars and settings are saved
-#ifdef DC
-#define CONFIGFILENAME "srb2dc.cfg"
-#elif defined (PSP)
-#define CONFIGFILENAME "srb2psp.cfg"
-#else
 #define CONFIGFILENAME "config.cfg"
-#endif
 
 INT32 M_MapNumber(char first, char second);
 
@@ -99,6 +93,8 @@ TMatrix *RotateZMatrix(angle_t rad);
 void strcatbf(char *s1, const char *s2, const char *s3);
 
 void M_SetupMemcpy(void);
+
+const char *M_FileError(FILE *handle);
 
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);

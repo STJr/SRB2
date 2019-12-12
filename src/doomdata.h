@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -45,6 +45,9 @@ enum
 	ML_REJECT,    // LUT, sector-sector visibility
 	ML_BLOCKMAP,  // LUT, motion clipping, walls/grid element
 };
+
+// Extra flag for objects.
+#define MTF_EXTRA 1
 
 // Reverse gravity flag for objects.
 #define MTF_OBJECTFLIP 2
@@ -127,11 +130,9 @@ typedef struct
 #define ML_EFFECT4             512
 #define ML_EFFECT5            1024
 
-// New ones to disable lines for characters
-#define ML_NOSONIC           2048
-#define ML_NOTAILS           4096
-#define ML_NOKNUX            8192
-#define ML_NETONLY          14336 // all of the above
+#define ML_NETONLY           2048 // Apply effect only in netgames
+#define ML_NONET             4096 // Apply  effect only in single player games
+#define ML_EFFECT6           8192
 
 // Bounce off walls!
 #define ML_BOUNCY           16384
@@ -207,8 +208,9 @@ typedef struct
 
 #define ZSHIFT 4
 
-extern const char *Color_Names[MAXSKINCOLORS];
-extern const UINT8 Color_Opposite[MAXSKINCOLORS*2];
+extern const UINT8 Color_Index[MAXTRANSLATIONS-1][16];
+extern const char *Color_Names[MAXSKINCOLORS + NUMSUPERCOLORS];
+extern const UINT8 Color_Opposite[MAXSKINCOLORS - 1][2];
 
 #define NUMMAPS 1035
 
