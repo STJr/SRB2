@@ -11609,6 +11609,14 @@ static fixed_t GetMobjSpawnHeight (const mobjtype_t i, const mapthing_t* mthing,
 		flip = (!!(mobjinfo[i].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
 	}
 
+	if (heightoffset + extraoffset == 0) // Snap to the surfaces when there's no offset set.
+	{
+		if (flip)
+			return ONCEILINGZ;
+		else
+			return ONFLOORZ;
+	}
+
 	// Establish height.
 	if (flip)
 		return (
