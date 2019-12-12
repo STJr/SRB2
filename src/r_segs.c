@@ -315,6 +315,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	// hack translucent linedef types (900-909 for transtables 1-9)
 	ldef = curline->linedef;
+
+	if (curline->glseg)
+		return;
+
 	switch (ldef->special)
 	{
 		case 900:
