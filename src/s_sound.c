@@ -2543,7 +2543,6 @@ void GameDigiMusic_OnChange(void)
 		I_StartupSound(); // will return early if initialised
 		I_InitMusic();
 		S_StopMusic();
-		S_InitMusicDefs();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
@@ -2586,7 +2585,6 @@ void GameMIDIMusic_OnChange(void)
 		midi_disabled = false;
 		I_StartupSound(); // will return early if initialised
 		I_InitMusic();
-		S_InitMusicDefs();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
