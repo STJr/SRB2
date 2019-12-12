@@ -1259,7 +1259,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	if (PLAYERINPUTDOWN(ssplayer, gc_centerview))
 	{
-		if (abilitydirection)
+		if (abilitydirection && !ticcmd_centerviewdown[forplayer])
 		{
 			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 0);
 			*myangle = player->mo->angle;
@@ -1268,9 +1268,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		ticcmd_centerviewdown[forplayer] = true;
 	}
-	else
+	else if (ticcmd_centerviewdown[forplayer])
 	{
-		CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 1);
+		if (abilitydirection)
+			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 1);
 
 		ticcmd_centerviewdown[forplayer] = false;
 	}
