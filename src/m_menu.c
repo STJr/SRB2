@@ -3675,12 +3675,6 @@ void M_Init(void)
 	quitmsg[QUIT3MSG5] = M_GetText("You'll be back to play soon, though...\n......right?\n\n(Press 'Y' to quit)");
 	quitmsg[QUIT3MSG6] = M_GetText("Aww, is Egg Rock Zone too\ndifficult for you?\n\n(Press 'Y' to quit)");
 
-#ifdef HWRENDER
-	// Permanently hide some options based on render mode
-	if (rendermode == render_opengl)
-		OP_ScreenshotOptionsMenu[op_screenshot_colorprofile].status = IT_GRAYEDOUT;
-#endif
-
 	/*
 	Well the menu sucks for forcing us to have an item set
 	at all if every item just calls the same function, and
@@ -11807,17 +11801,7 @@ static void M_HandleVideoMode(INT32 ch)
 
 static void M_DrawScreenshotMenu(void)
 {
-
 	M_DrawGenericScrollMenu();
-#ifdef HWRENDER
-	if ((rendermode == render_opengl) && (itemOn < 7)) // where it starts to go offscreen; change this number if you change the layout of the screenshot menu
-	{
-		INT32 y = currentMenu->y+currentMenu->menuitems[op_screenshot_colorprofile].alphaKey*2;
-		if (itemOn == 6)
-			y -= 10;
-		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y, V_REDMAP, "ON");
-	}
-#endif
 }
 
 // ===============
