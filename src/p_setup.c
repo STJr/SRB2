@@ -675,62 +675,6 @@ static void P_LoadRawSectors(UINT8 *data)
 		ss->spawn_lightlevel = SHORT(ms->lightlevel);
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
-		ss->nexttag = ss->firsttag = -1;
-		ss->spawn_nexttag = ss->spawn_firsttag = -1;
-
-		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
-		ss->validcount = 0;
-
-		ss->thinglist = NULL;
-		ss->touching_thinglist = NULL;
-		ss->preciplist = NULL;
-		ss->touching_preciplist = NULL;
-
-		ss->floordata = NULL;
-		ss->ceilingdata = NULL;
-		ss->lightingdata = NULL;
-
-		ss->linecount = 0;
-		ss->lines = NULL;
-
-		ss->heightsec = -1;
-		ss->camsec = -1;
-		ss->floorlightsec = -1;
-		ss->ceilinglightsec = -1;
-		ss->crumblestate = 0;
-		ss->ffloors = NULL;
-		ss->lightlist = NULL;
-		ss->numlights = 0;
-		ss->attached = NULL;
-		ss->attachedsolid = NULL;
-		ss->numattached = 0;
-		ss->maxattached = 1;
-		ss->moved = true;
-
-		ss->extra_colormap = NULL;
-		ss->spawn_extra_colormap = NULL;
-
-		ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
-		ss->spawn_flr_xoffs = ss->spawn_ceil_xoffs = ss->spawn_flr_yoffs = ss->spawn_ceil_yoffs = 0;
-		ss->floorpic_angle = ss->ceilingpic_angle = 0;
-		ss->spawn_flrpic_angle = ss->spawn_ceilpic_angle = 0;
-		ss->gravity = NULL;
-		ss->cullheight = NULL;
-		ss->verticalflip = false;
-		ss->flags = 0;
-		ss->flags |= SF_FLIPSPECIAL_FLOOR;
-
-		ss->floorspeed = 0;
-		ss->ceilspeed = 0;
-
-#ifdef HWRENDER // ----- for special tricks with HW renderer -----
-		ss->pseudoSector = false;
-		ss->virtualFloor = false;
-		ss->virtualCeiling = false;
-		ss->sectorLines = NULL;
-		ss->stackList = NULL;
-		ss->lineoutLength = -1.0l;
-#endif // ----- end special tricks -----
 	}
 }
 
@@ -757,6 +701,160 @@ static void P_LoadRawNodes(UINT8 *data)
 				no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
 		}
 	}
+}
+
+static void GeneralDefaults(void)
+{
+	UINT32 i;
+//	UINT32 j;
+
+	line_t *ld;
+//	side_t *sd;
+	sector_t *sc;
+//	mapthing_t *mt;
+//	vertex_t* vt;
+
+	for (i = 0, ld = lines; i < numlines; i++, ld++)
+	{
+		// Initialization.
+		ld->frontsector = ld->backsector = NULL;
+		ld->validcount = 0;
+		ld->firsttag = ld->nexttag = -1;
+		ld->callcount = 0;
+#ifdef POLYOBJECTS
+		ld->polyobj = NULL;
+#endif
+#ifdef WALLSPLATS
+	ld->splats = NULL;
+#endif
+		// Defaults.
+		/*
+		ld->alpha = FRACUNIT;
+
+		for (j = 0; j < NUMLINEARGS; j++)
+			ld->args[j] = 0;
+
+		ld->executordelay = 0;
+		ld->udmfflags = 0;*/
+	}
+/*
+	for (i = 0, sd = sides; i < numsides; i++, sd++)
+	{
+		// Initialization.
+
+		// Defaults.
+		sd->scalex_top = sd->scaley_top = sd->scalex_mid = sd->scaley_mid = sd->scalex_bot = sd->scaley_bot = FRACUNIT;
+		sd->offsetx_top = sd->offsety_top = sd->offsetx_mid = sd->offsety_mid = sd->offsetx_bot = sd->offsety_bot = 0;
+		sd->light = 0;
+		sd->lightabsolute = false;
+	}
+*/
+	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
+	{
+		// Initialization.
+		sc->nexttag = sc->firsttag = -1;
+		sc->spawn_nexttag = sc->spawn_firsttag = -1;
+
+		memset(&sc->soundorg, 0, sizeof(sc->soundorg));
+		sc->validcount = 0;
+
+		sc->thinglist = NULL;
+		sc->touching_thinglist = NULL;
+		sc->preciplist = NULL;
+		sc->touching_preciplist = NULL;
+
+		sc->floordata = NULL;
+		sc->ceilingdata = NULL;
+		sc->lightingdata = NULL;
+
+		sc->linecount = 0;
+		sc->lines = NULL;
+
+		sc->heightsec = -1;
+		sc->camsec = -1;
+		sc->floorlightsec = -1;
+		sc->ceilinglightsec = -1;
+		sc->crumblestate = 0;
+		sc->ffloors = NULL;
+		sc->lightlist = NULL;
+		sc->numlights = 0;
+		sc->attached = NULL;
+		sc->attachedsolid = NULL;
+		sc->numattached = 0;
+		sc->maxattached = 1;
+		sc->moved = true;
+
+		sc->extra_colormap = NULL;
+//		sc->gravityptr = NULL;
+		sc->cullheight = NULL;
+		sc->flags = 0;
+		sc->flags |= SF_FLIPSPECIAL_FLOOR;
+
+		sc->floorspeed = 0;
+		sc->ceilspeed = 0;
+
+//		sc->floor_scale = FRACUNIT;
+//		sc->ceiling_scale = FRACUNIT;
+
+#ifdef HWRENDER // ----- for special tricks with HW renderer -----
+		sc->pseudoSector = false;
+		sc->virtualFloor = false;
+		sc->virtualCeiling = false;
+		sc->sectorLines = NULL;
+		sc->stackList = NULL;
+		sc->lineoutLength = -1.0l;
+#endif // ----- end special tricks -----
+
+		// Defaults.
+		sc->floor_xoffs = sc->ceiling_xoffs = sc->floor_yoffs = sc->ceiling_yoffs = 0;
+		sc->floorpic_angle = sc->ceilingpic_angle = 0;
+		//sc->gravity = FRACUNIT;
+		sc->gravity = NULL;
+		sc->verticalflip = false;
+//		sc->udmfflags = 0;
+
+		sc->spawn_extra_colormap = NULL;
+
+		sc->spawn_lightlevel = sc->lightlevel;
+		sc->spawn_flr_xoffs = sc->floor_xoffs;
+		sc->spawn_ceil_xoffs = sc->ceiling_xoffs;
+		sc->spawn_flr_yoffs = sc->floor_yoffs;
+		sc->spawn_ceil_yoffs = sc->ceiling_yoffs;
+		sc->spawn_flrpic_angle = sc->floorpic_angle;
+		sc->spawn_ceilpic_angle = sc->ceilingpic_angle;
+
+//		sc->lightfloor = sc->lightceiling = 0;
+//		sc->lightfloorabsolute = sc->lightceilingabsolute = false;
+	}
+/*
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	{
+		// Initialization.
+
+		// Defaults.
+		mt->pitch = mt->roll = 0;
+		mt->scale = FRACUNIT;
+		for (j = 0; j < NUMTHINGPARAMS; j++)
+			mt->params[j] = 0;
+		mt->spawntrigger = 0;
+		mt->seetrigger = 0;
+		mt->paintrigger = 0;
+		mt->meleetrigger = 0;
+		mt->missiletrigger = 0;
+		mt->deathtrigger = 0;
+		mt->xdeathtrigger = 0;
+		mt->raisetrigger = 0;
+	}
+
+	for (i = 0, vt = vertexes; i < numvertexes; i++, vt++)
+	{
+		// Initialization.
+
+		// Defaults.
+		vt->floorzset	= false;
+		vt->ceilingzset	= false;
+	}
+*/
 }
 
 //
@@ -1165,11 +1263,6 @@ static void SetupLines (void)
 					CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
 				}
 		}
-
-		ld->frontsector = ld->backsector = NULL;
-		ld->validcount = 0;
-		ld->firsttag = ld->nexttag = -1;
-		ld->callcount = 0;
 
 		// killough 11/98: fix common wad errors (missing sidedefs):
 		if (ld->sidenum[0] == 0xffff)
@@ -2255,6 +2348,8 @@ static void LoadMapData (const virtres_t* virt)
 	sides    = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
 	lines    = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
 	mapthings= Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+
+	GeneralDefaults();
 
 	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
 	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
