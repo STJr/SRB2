@@ -421,7 +421,7 @@ consvar_t cv_cam_turnfacinginput[2] = {
 	{"cam2_turnfacinginput", "0.4375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 
-static CV_PossibleValue_t lockedinput_cons_t[] = {{0, "Strafe"}, {1, "Turn Slow"}, {2, "Turn"}, {0, NULL}};
+static CV_PossibleValue_t lockedinput_cons_t[] = {{0, "Strafe"}, {1, "Turn"}, {0, NULL}};
 
 consvar_t cv_cam_lockedinput[2] = {
 	{"cam_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
@@ -1028,6 +1028,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
 	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
+	boolean strafeisturn; // Simple controls only
 	player_t *player = &players[ssplayer == 2 ? secondarydisplayplayer : consoleplayer];
 	camera_t *thiscam = ((ssplayer == 1 || player->bot == 2) ? &camera : &camera2);
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
@@ -1073,6 +1074,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	}
 	abilitydirection = cv_abilitydirection[forplayer].value;
 
+	strafeisturn = abilitydirection && ticcmd_centerviewdown[forplayer] &&
+		(cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)) &&
+		!player->climbing && player->powers[pw_carry] != CR_MINECART;
+
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
 	// ...OR if we're blindfolded. No looking into the floor.
@@ -1092,6 +1097,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	movefkey = PLAYERINPUTDOWN(ssplayer, gc_forward);
 	movebkey = PLAYERINPUTDOWN(ssplayer, gc_backward);
 
+	if (strafeisturn)
+	{
+		turnright |= straferkey;
+		turnleft |= strafelkey;
+		straferkey = strafelkey = false;
+	}
+
 	mouseaiming = (PLAYERINPUTDOWN(ssplayer, gc_mouseaiming)) ^
 		((chasecam && !player->spectator) ? chasefreelook : alwaysfreelook);
 	analogjoystickmove = usejoystick && !Joystick.bGamepadStyle;
@@ -1105,6 +1117,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	joyaiming[forplayer] = thisjoyaiming;
 
 	axis = PlayerJoyAxis(ssplayer, AXISTURN);
+	if (strafeisturn)
+		axis += PlayerJoyAxis(ssplayer, AXISSTRAFE);
 	if (gamepadjoystickmove && axis != 0)
 	{
 		turnright = turnright || (axis > 0);
@@ -1178,7 +1192,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->angleturn = (cmd->angleturn * (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value)) / 10;
 	}
 
-	axis = PlayerJoyAxis(ssplayer, AXISSTRAFE);
+	axis = strafeisturn ? 0 : PlayerJoyAxis(ssplayer, AXISSTRAFE);
 	if (gamepadjoystickmove && axis != 0)
 	{
 		if (axis < 0)
@@ -1417,9 +1431,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->angleturn = (INT16)(*myangle >> 16);
 
 		// Adjust camera angle by player input
-		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] &&
-			!(ticcmd_centerviewdown[forplayer] && !(cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
-			&& !player->climbing && player->powers[pw_carry] != CR_MINECART)
+		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value; //@TODO cvar
 
