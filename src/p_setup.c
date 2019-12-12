@@ -3182,11 +3182,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		if (!cv_analog2.changed)
 			CV_SetValue(&cv_analog2, 0);
 
-#ifdef HWRENDER
-		if (rendermode != render_soft && rendermode != render_none)
-			CV_Set(&cv_grfov, cv_grfov.defaultvalue);
-#endif
-
 		displayplayer = consoleplayer; // Start with your OWN view, please!
 	}
 
