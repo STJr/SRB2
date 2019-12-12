@@ -951,16 +951,13 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 }
 #endif
 
-static void P_PrepareRawThings(UINT8 *data, size_t i)
+static void P_PrepareRawThings(UINT8 *data)
 {
-	mapthing_t *mt;
-
-	nummapthings = i / (5 * sizeof (INT16));
-	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+	mapthing_t *mt = mapthings;
+	size_t i;
 
 	// Spawn axis points first so they are
 	// at the front of the list for fast searching.
-	mt = mapthings;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
 		mt->x = READINT16(data);
@@ -1936,6 +1933,97 @@ static void P_LoadRawReject(UINT8 *data, size_t count)
 	}
 }
 
+static void LoadMapBSP (const virtres_t* virt)
+{
+	virtlump_t* virtssectors = vres_Find(virt, "SSECTORS");
+	virtlump_t* virtsegs     = vres_Find(virt, "SEGS");
+	virtlump_t* virtnodes    = vres_Find(virt, "NODES");
+
+	// Nodes
+	P_LoadRawSubsectors(virtssectors->data, virtssectors->size);
+	P_LoadRawNodes(virtnodes->data, virtnodes->size);
+	P_LoadRawSegs(virtsegs->data, virtsegs->size);
+}
+
+static void LoadMapLUT (const virtres_t* virt)
+{
+	virtlump_t* virtblockmap = vres_Find(virt, "BLOCKMAP");
+	virtlump_t* virtreject   = vres_Find(virt, "REJECT");
+
+	// Lookup tables
+	if (virtreject)
+		P_LoadRawReject(virtreject->data, virtreject->size);
+	else
+		rejectmatrix = NULL;
+
+	if (!(virtblockmap && P_LoadRawBlockMap(virtblockmap->data, virtblockmap->size)))
+		P_CreateBlockMap();
+}
+
+static void LoadMapData (const virtres_t* virt)
+{
+	virtlump_t* virtvertexes = NULL, * virtsectors = NULL, * virtsidedefs = NULL, * virtlinedefs = NULL, * virtthings = NULL;
+	virtlump_t* textmap = vres_Find(virt, "TEXTMAP");
+
+	// Count map data.
+	if (textmap)
+	{
+		nummapthings = 0;
+		numlines = 0;
+		numsides = 0;
+		numvertexes = 0;
+		numsectors = 0;
+
+		// Count how many entries for each type we got in textmap.
+		//TextmapCount(vtextmap->data, vtextmap->size);
+	}
+	else
+	{
+		virtthings   = vres_Find(virt, "THINGS");
+		virtvertexes = vres_Find(virt, "VERTEXES");
+		virtsectors  = vres_Find(virt, "SECTORS");
+		virtsidedefs = vres_Find(virt, "SIDEDEFS");
+		virtlinedefs = vres_Find(virt, "LINEDEFS");
+
+		// Traditional doom map format just assumes the number of elements from the lump sixes.
+		numvertexes  = virtvertexes->size / sizeof (mapvertex_t);
+		numsectors   = virtsectors->size  / sizeof (mapsector_t);
+		numsides     = virtsidedefs->size / sizeof (mapsidedef_t);
+		numlines     = virtlinedefs->size / sizeof (maplinedef_t);
+		nummapthings = virtthings->size   / (5 * sizeof (INT16));
+	}
+
+	if (numvertexes <= 0)
+		I_Error("Level has no vertices");
+	if (numsectors <= 0)
+		I_Error("Level has no sectors");
+	if (numsides <= 0)
+		I_Error("Level has no sidedefs");
+	if (numlines <= 0)
+		I_Error("Level has no linedefs");
+
+	vertexes = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
+	sectors  = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
+	sides    = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
+	lines    = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+	mapthings= Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+
+	if (textmap)
+	{
+
+	}
+	else
+	{
+		// Strict map data
+		P_LoadRawVertexes(virtvertexes->data);
+		P_LoadRawSectors(virtsectors->data);
+		P_LoadRawLineDefs(virtlinedefs->data);
+		SetupLines();
+		P_LoadRawSideDefs2(virtsidedefs->data);
+		P_PrepareRawThings(virtthings->data);
+	}
+}
+
 #if 0
 static char *levellumps[] =
 {
@@ -2133,7 +2221,7 @@ void P_LoadThingsOnly(void)
 
 	P_LevelInitStuff();
 
-	P_PrepareRawThings(vth->data, vth->size);
+	P_PrepareRawThings(vth->data);
 	P_LoadThings(true);
 
 	vres_Free(virt);
@@ -2692,66 +2780,13 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (lastloadedmaplumpnum)
 	{
 		virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
-		virtlump_t* virtthings   = vres_Find(virt, "THINGS");
-		virtlump_t* virtvertexes = vres_Find(virt, "VERTEXES");
-		virtlump_t* virtsectors  = vres_Find(virt, "SECTORS");
-		virtlump_t* virtsidedefs = vres_Find(virt, "SIDEDEFS");
-		virtlump_t* virtlinedefs = vres_Find(virt, "LINEDEFS");
 
-		virtlump_t* virtssectors = vres_Find(virt, "SSECTORS");
-		virtlump_t* virtsegs     = vres_Find(virt, "SEGS");
-		virtlump_t* virtnodes    = vres_Find(virt, "NODES");
-
-		virtlump_t* virtblockmap = vres_Find(virt, "BLOCKMAP");
-		virtlump_t* virtreject   = vres_Find(virt, "REJECT");
-
-		// Traditional doom map format just assumes the number of elements from the lump sixes.
-		numvertexes  = virtvertexes->size / sizeof (mapvertex_t);
-		numsectors   = virtsectors->size  / sizeof (mapsector_t);
-		numsides     = virtsidedefs->size / sizeof (mapsidedef_t);
-		numlines     = virtlinedefs->size / sizeof (maplinedef_t);
-		nummapthings = virtthings->size   / (5 * sizeof (INT16));
-
-		if (numvertexes <= 0)
-			I_Error("Level has no vertices");
-		if (numsectors <= 0)
-			I_Error("Level has no sectors");
-		if (numsides <= 0)
-			I_Error("Level has no sidedefs");
-		if (numlines <= 0)
-			I_Error("Level has no linedefs");
-
-		vertexes = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
-		sectors  = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
-		sides    = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
-		lines    = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
-		mapthings= Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
-
-		// Strict map data
-		P_LoadRawVertexes(virtvertexes->data);
-		P_LoadRawSectors(virtsectors->data);
-		P_LoadRawLineDefs(virtlinedefs->data);
-		SetupLines();
-		P_LoadRawSideDefs2(virtsidedefs->data);
-
-		// Nodes
-		P_LoadRawSubsectors(virtssectors->data, virtssectors->size);
-		P_LoadRawNodes(virtnodes->data, virtnodes->size);
-		P_LoadRawSegs(virtsegs->data, virtsegs->size);
-
-		// Lookup tables
-		if (virtreject)
-			P_LoadRawReject(virtreject->data, virtreject->size);
-		else
-			rejectmatrix = NULL;
-
-		if (!(virtblockmap && P_LoadRawBlockMap(virtblockmap->data, virtblockmap->size)))
-			P_CreateBlockMap();
+		LoadMapData(virt);
+		LoadMapBSP(virt);
+		LoadMapLUT(virt);
 
 		P_LoadLineDefs2();
 		P_GroupLines();
-
-		P_PrepareRawThings(virtthings->data, virtthings->size);
 
 		P_MakeMapMD5(virt, &mapmd5);
 
