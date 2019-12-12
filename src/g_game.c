@@ -1019,7 +1019,7 @@ static fixed_t forwardmove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16};
 static fixed_t sidemove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16}; // faster!
 static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 
-boolean ticcmd_resetdown[2]; // don't cam reset every frame
+boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 {
 	boolean forcestrafe = false;
@@ -1039,6 +1039,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	static INT32 turnheld[2]; // for accelerative turning
 	static boolean keyboard_look[2]; // true if lookup/down using keyboard
+	static boolean resetdown[2]; // don't cam reset every frame
 	static boolean joyaiming[2]; // check the last frame's value if we need to reset the camera
 	UINT8 forplayer = ssplayer-1;
 
@@ -1256,26 +1257,34 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (PLAYERINPUTDOWN(ssplayer, gc_use) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_USE;
 
+	if (PLAYERINPUTDOWN(ssplayer, gc_centerview))
+	{
+		if (abilitydirection)
+		{
+			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 0);
+			*myangle = player->mo->angle;
+			*myaiming = 0;
+		}
+
+		ticcmd_centerviewdown[forplayer] = true;
+	}
+	else
+	{
+		CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 1);
+
+		ticcmd_centerviewdown[forplayer] = false;
+	}
+
 	if (PLAYERINPUTDOWN(ssplayer, gc_camreset))
 	{
-		if (camera.chase && !ticcmd_resetdown[forplayer])
-		{
-			ticcmd_resetdown[forplayer] = true;
+		if (camera.chase && !resetdown[forplayer])
 			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], &camera);
 
-			if (abilitydirection)
-				CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 0);
-		}
-		else
-			ticcmd_resetdown[forplayer] = true;
+		resetdown[forplayer] = true;
 	}
-	else if (ticcmd_resetdown[forplayer])
-	{
-		ticcmd_resetdown[forplayer] = false;
+	else
+		resetdown[forplayer] = false;
 
-		if (abilitydirection)
-			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 1);
-	}
 
 	// jump button
 	axis = PlayerJoyAxis(ssplayer, AXISJUMP);
@@ -1320,7 +1329,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				*myaiming -= KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
 			}
-			else if (PLAYERINPUTDOWN(ssplayer, gc_centerview))
+			else if (ticcmd_centerviewdown[forplayer])
 				*myaiming = 0;
 		}
 
@@ -1408,7 +1417,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		// Adjust camera angle by player input
 		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] &&
-			!(ticcmd_resetdown[forplayer] && !(cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
+			!(ticcmd_centerviewdown[forplayer] && !(cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
 			&& !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value; //@TODO cvar
@@ -1418,17 +1427,17 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				fixed_t sine = FINESINE((R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - localangle)>>ANGLETOFINESHIFT);
 				fixed_t factor = min(20, FixedMul(player->speed, abs(sine)) / FRACUNIT);
 
-				if (ticcmd_resetdown[forplayer] && (cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
+				if (ticcmd_centerviewdown[forplayer] && (cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
 					factor = (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value) * (cv_cam_lockedinput[forplayer].value ?: 1); // Turn while in startdash and locking camera
 
 				*myangle -= cmd->sidemove * factor * camadjustfactor;
 			}
 
-			if (ticcmd_resetdown[forplayer] && (cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
+			if (ticcmd_centerviewdown[forplayer] && (cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
 				cmd->sidemove = 0;
 		}
 
-		if (abilitydirection && camera.chase && !ticcmd_resetdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
+		if (abilitydirection && camera.chase && !ticcmd_centerviewdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
 		{
 			///@TODO This block of code is a hack to get the desired abilitydirection and player angle behaviors while remaining netplay-compatible with EXEs without those features.
 			// This has side effects like making F12 spectate look kind of weird, and making the input viewer inaccurate.
@@ -1451,7 +1460,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		// Adjust camera angle to face player direction, depending on circumstances
 		// Nothing happens if cam left/right are held, so you can hold both to lock the camera in one direction
-		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_resetdown[forplayer] && player->powers[pw_carry] != CR_MINECART)
+		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor;
 

@@ -9652,17 +9652,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	thiscam->y = y;
 	thiscam->z = z;
 
-	if (thiscam == &camera && cv_abilitydirection[0].value && ticcmd_resetdown[0])
-	{
-		localangle = player->mo->angle;
-		localaiming = thiscam->aiming = 0;
-	}
-	else if (thiscam == &camera2 && cv_abilitydirection[1].value && ticcmd_resetdown[1])
-	{
-		localangle2 = player->mo->angle;
-		localaiming2 = thiscam->aiming = 0;
-	}
-	else if (!(thiscam == &camera && (cv_cam_still.value || cv_analog.value))
+	if (!(thiscam == &camera && (cv_cam_still.value || cv_analog.value))
 	&& !(thiscam == &camera2 && (cv_cam2_still.value || cv_analog2.value)))
 	{
 		thiscam->angle = player->mo->angle;
@@ -9905,7 +9895,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (player->powers[pw_carry] == CR_ROLLOUT)
 			shift = -shift;
 
-		if (ticcmd_resetdown[(thiscam == &camera) ? 0 : 1])
+		if (ticcmd_centerviewdown[(thiscam == &camera) ? 0 : 1])
 			shift = FixedMul(camsideshift[forplayer], FRACUNIT-camspeed);
 		else
 			shift += FixedMul(camsideshift[forplayer] - shift, FRACUNIT-(camspeed>>3));

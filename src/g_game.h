@@ -89,7 +89,7 @@ extern consvar_t cv_abilitydirection[2], cv_cam_shiftfacing[2], cv_cam_turnfacin
 // build an internal map name MAPxx from map number
 const char *G_BuildMapName(INT32 map);
 
-extern boolean ticcmd_resetdown[2]; // don't cam reset every frame
+extern boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer);
 
 // copy ticcmd_t to and fro the normal way
