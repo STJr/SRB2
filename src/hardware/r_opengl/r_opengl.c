@@ -85,6 +85,7 @@ static GLboolean MipMap = GL_FALSE;
 static GLint min_filter = GL_LINEAR;
 static GLint mag_filter = GL_LINEAR;
 static GLint anisotropic_filter = 0;
+static boolean model_lighting = true;
 
 const GLubyte *gl_extensions = NULL;
 
@@ -1658,16 +1659,9 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 {
 	switch (IdState)
 	{
-
-#if 0
-		case 77:
-		{
-			//08/01/00: Hurdler this is a test for mirror
-			if (!Value)
-				ClearBuffer(false, true, 0); // clear depth buffer
+		case HWD_SET_MODEL_LIGHTING:
+			model_lighting = Value;
 			break;
-		}
-#endif
 
 		case HWD_SET_FOG_COLOR:
 		{
@@ -1680,6 +1674,7 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 			pglFogfv(GL_FOG_COLOR, fogcolor);
 			break;
 		}
+
 		case HWD_SET_FOG_DENSITY:
 			pglFogf(GL_FOG_DENSITY, Value*1200/(500*1000000.0f));
 			break;
@@ -2044,16 +2039,25 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	}
 #endif
 
-	pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+	if (model_lighting)
+	{
+		pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+		pglShadeModel(GL_SMOOTH);
+	}
 
-	pglShadeModel(GL_SMOOTH);
 	if (color)
 	{
 #ifdef GL_LIGHT_MODEL_AMBIENT
-		pglEnable(GL_LIGHTING);
-		pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
-		pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+		if (model_lighting)
+		{
+			pglEnable(GL_LIGHTING);
+			pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
+			pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+		}
+		else
 #endif
+			pglColor4ubv((GLubyte*)color);
+
 		if (color[3] < 255)
 			SetBlend(PF_Translucent|PF_Modulated|PF_Clip);
 		else
