@@ -1058,6 +1058,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	static boolean resetdown[2]; // don't cam reset every frame
 	static boolean joyaiming[2]; // check the last frame's value if we need to reset the camera
 	static boolean zchange[2]; // only switch z targets once per press
+	static fixed_t tta_factor[2] = {FRACUNIT, FRACUNIT}; // disables turn-to-angle when manually turning camera until movement happens
 	UINT8 forplayer = ssplayer-1;
 
 	if (ssplayer == 1)
@@ -1203,6 +1204,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			// JOYAXISRANGE should be 1023 (divide by 1024)
 			cmd->angleturn = (INT16)(cmd->angleturn - ((axis * angleturn[1]) >> 10)); // ANALOG!
 		}
+
+		if (turnright || turnleft || abs(cmd->angleturn) > angleturn[1])
+			tta_factor[forplayer] = 0; // suspend turn to angle
 
 		// Make rotspeed affect turning speed :)
 		cmd->angleturn = (cmd->angleturn * (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value)) / 10;
@@ -1557,8 +1561,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			else
 			{
 				alt = true;
-				camadjustfactor = cv_cam_turnfacing[forplayer].value/8;
+				camadjustfactor = FixedMul(cv_cam_turnfacing[forplayer].value/8, tta_factor[forplayer]);
 			}
+
+			if (tta_factor[forplayer] < FRACUNIT && (!alt || cmd->forwardmove || cmd->sidemove || tta_factor[forplayer] >= FRACUNIT/3))
+				tta_factor[forplayer] += FRACUNIT>>5;
+			else if (tta_factor[forplayer] && tta_factor[forplayer] < FRACUNIT/3)
+				tta_factor[forplayer] -= FRACUNIT>>5;
 
 			if (camadjustfactor)
 			{
