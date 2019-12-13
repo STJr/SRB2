@@ -5368,14 +5368,20 @@ static void HWR_DrawSprites(void)
 					if (!cv_grmodels.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
 						HWR_DrawSprite(spr);
 					else
-						HWR_DrawModel(spr);
+					{
+						if (!HWR_DrawModel(spr))
+							HWR_DrawSprite(spr);
+					}
 				}
 				else
 				{
 					if (!cv_grmodels.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
 						HWR_DrawSprite(spr);
 					else
-						HWR_DrawModel(spr);
+					{
+						if (!HWR_DrawModel(spr))
+							HWR_DrawSprite(spr);
+					}
 				}
 		}
 	}

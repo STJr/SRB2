@@ -985,6 +985,16 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 #define NORMALFOG 0x00000000
 #define FADEFOG 0x19000000
 
+static boolean HWR_AllowModel(mobj_t *mobj)
+{
+	// Signpost overlay. Not needed.
+	if (mobj->state-states == S_PLAY_SIGN)
+		return false;
+
+	// Otherwise, render the model.
+	return true;
+}
+
 static boolean HWR_CanInterpolateModel(mobj_t *mobj, model_t *model)
 {
 	if (cv_grmodelinterpolation.value == 2) // Always interpolate
@@ -1060,7 +1070,7 @@ static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t 
 // HWR_DrawModel
 //
 
-void HWR_DrawModel(gr_vissprite_t *spr)
+boolean HWR_DrawModel(gr_vissprite_t *spr)
 {
 	FSurfaceInfo Surf;
 
@@ -1073,10 +1083,10 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 	UINT8 color[4];
 
 	if (!cv_grmodels.value)
-		return;
+		return false;
 
 	if (spr->precip)
-		return;
+		return false;
 
 	memset(&p, 0x00, sizeof(FTransform));
 
@@ -1166,7 +1176,7 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 		}
 
 		if (md2->error)
-			return; // we already failed loading this before :(
+			return false; // we already failed loading this before :(
 		if (!md2->model)
 		{
 			//CONS_Debug(DBG_RENDER, "Loading model... (%s)", sprnames[spr->mobj->sprite]);
@@ -1182,9 +1192,14 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 			{
 				//CONS_Debug(DBG_RENDER, " FAILED\n");
 				md2->error = true; // prevent endless fail
-				return;
+				return false;
 			}
 		}
+
+		// Lactozilla: Disallow certain models from rendering
+		if (!HWR_AllowModel(spr->mobj))
+			return false;
+
 		//HWD.pfnSetBlend(blend); // This seems to actually break translucency?
 		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
@@ -1416,6 +1431,8 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 
 		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, color);
 	}
+
+	return true;
 }
 
 #endif //HWRENDER
