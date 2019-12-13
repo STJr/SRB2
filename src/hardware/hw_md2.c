@@ -649,7 +649,6 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 
 	if (grmip->width == 0)
 	{
-
 		grmip->width = gpatch->width;
 		grmip->height = gpatch->height;
 
@@ -679,10 +678,11 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	{
 		if (skinnum == TC_BOSS)
 		{
-			// Pure black turns into white
-			if (image->s.red == 0 && image->s.green == 0 && image->s.blue == 0)
+			// Turn everything below a certain threshold white
+			if ((image->s.red == image->s.green) && (image->s.green == image->s.blue) && image->s.blue <= 82)
 			{
-				cur->s.red = cur->s.green = cur->s.blue = 255;
+				// Lactozilla: Invert the colors
+				cur->s.red = cur->s.green = cur->s.blue = (255 - image->s.blue);
 			}
 			else
 			{
@@ -908,19 +908,19 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	// mostly copied from HWR_GetMappedPatch, hence the similarities and comment
 	GLMipmap_t *grmip, *newmip;
 
-	if (colormap == colormaps || colormap == NULL)
+	if ((colormap == colormaps || colormap == NULL) && (skinnum > TC_DEFAULT))
 	{
 		// Don't do any blending
 		HWD.pfnSetTexture(gpatch->mipmap);
 		return;
 	}
 
-	// search for the mimmap
+	// search for the mipmap
 	// skip the first (no colormap translated)
 	for (grmip = gpatch->mipmap; grmip->nextcolormap; )
 	{
 		grmip = grmip->nextcolormap;
-		if (grmip->colormap == colormap)
+		if (grmip->colormap == colormap || grmip->tcindex == skinnum)
 		{
 			if (grmip->downloaded && grmip->grInfo.data)
 			{
@@ -943,6 +943,7 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 		I_Error("%s: Out of memory", "HWR_GetMappedPatch");
 	grmip->nextcolormap = newmip;
 	newmip->colormap = colormap;
+	newmip->tcindex = skinnum;
 
 	HWR_CreateBlendedTexture(gpatch, blendgpatch, newmip, skinnum, color);
 
@@ -1167,11 +1168,10 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 
 		if (gpatch && gpatch->mipmap->grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
-			if ((skincolors_t)spr->mobj->color != SKINCOLOR_NONE &&
-				md2->blendgrpatch && ((GLPatch_t *)md2->blendgrpatch)->mipmap->grInfo.format
+			if (md2->blendgrpatch && ((GLPatch_t *)md2->blendgrpatch)->mipmap->grInfo.format
 				&& gpatch->width == ((GLPatch_t *)md2->blendgrpatch)->width && gpatch->height == ((GLPatch_t *)md2->blendgrpatch)->height)
 			{
-				INT32 skinnum = TC_DEFAULT;
+				INT32 skinnum = INT32_MAX;
 				if ((spr->mobj->flags & (MF_ENEMY|MF_BOSS)) && (spr->mobj->flags2 & MF2_FRET) && !(spr->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 				{
 					if (spr->mobj->type == MT_CYBRAKDEMON || spr->mobj->colorized)
@@ -1181,7 +1181,7 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 					else
 						skinnum = TC_BOSS;
 				}
-				else if (spr->mobj->color)
+				else if ((skincolors_t)spr->mobj->color != SKINCOLOR_NONE)
 				{
 					if (spr->mobj->colorized)
 						skinnum = TC_RAINBOW;
@@ -1199,7 +1199,15 @@ void HWR_DrawModel(gr_vissprite_t *spr)
 					else
 						skinnum = TC_DEFAULT;
 				}
-				HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, skinnum, spr->colormap, (skincolors_t)spr->mobj->color);
+
+				// Translation or skin number found
+				if (skinnum != INT32_MAX)
+					HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, skinnum, spr->colormap, (skincolors_t)spr->mobj->color);
+				else
+				{
+					// Sorry nothing
+					HWD.pfnSetTexture(gpatch->mipmap);
+				}
 			}
 			else
 			{
