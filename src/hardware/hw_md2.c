@@ -743,6 +743,8 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 				UINT8 ialpha = 255 - blendimage->s.alpha, balpha = blendimage->s.alpha;
 				RGBA_t icolor = *image, bcolor;
 
+				memset(&bcolor, 0x00, sizeof(RGBA_t));
+
 				if (blendimage->s.alpha)
 				{
 					bcolor.s.blue = 0;
