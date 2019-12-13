@@ -99,11 +99,11 @@ unsigned char mapmd5[16];
 size_t numvertexes, numsegs, numsectors, numsubsectors, numnodes, numlines, numsides, nummapthings;
 vertex_t *vertexes;
 seg_t *segs;
-sector_t *sectors;
+sector_t *sectors, *spawnsectors;
 subsector_t *subsectors;
 node_t *nodes;
-line_t *lines;
-side_t *sides;
+line_t *lines, *spawnlines;
+side_t *sides, *spawnsides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 UINT16 bossdisabled;
@@ -2565,7 +2565,7 @@ static boolean LoadMapBSP (const virtres_t* virt)
 
 		if (numvertexes != orivtx) /// If native vertex count doesn't match node original vertex count, bail out (broken data?).
 		{
-			CONS_Alert(CONS_WARNING, "Vertex count in map data (%d) and nodes' (%d) differ!\n", numvertexes, orivtx);
+			CONS_Alert(CONS_WARNING, "Vertex count in map data and nodes differ!\n");
 			return false;
 		}
 
@@ -2707,7 +2707,7 @@ static boolean LoadMapBSP (const virtres_t* virt)
 
 		// Nodes
 		numnodes = READINT32(data);
-		nodes		= Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
+		nodes    = Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
 		if (nodetype == NT_XGL3)
 		{
 			UINT32 x, y, dx, dy;
@@ -2887,6 +2887,15 @@ static boolean LoadMapData (const virtres_t* virt)
 
 	P_LoadLineDefs2();
 	P_GroupLines();
+
+	// Copy relevant map data for NetArchive purposes.
+	spawnsectors = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
+	spawnlines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+	spawnsides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
+
+	memcpy(spawnsectors, sectors, numsectors * sizeof (*sectors));
+	memcpy(spawnlines, lines, numlines * sizeof (*lines));
+	memcpy(spawnsides, sides, numsides * sizeof (*sides));
 
 	return true;
 }
