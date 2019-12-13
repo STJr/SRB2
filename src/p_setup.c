@@ -2779,7 +2779,7 @@ static void LoadMapLUT (const virtres_t* virt)
 		P_CreateBlockMap();
 }
 
-static void LoadMapData (const virtres_t* virt)
+static boolean LoadMapData (const virtres_t* virt)
 {
 	virtlump_t* virtvertexes = NULL, * virtsectors = NULL, * virtsidedefs = NULL, * virtlinedefs = NULL, * virtthings = NULL;
 	virtlump_t* textmap = vres_Find(virt, "TEXTMAP");
@@ -2795,7 +2795,10 @@ static void LoadMapData (const virtres_t* virt)
 
 		// Count how many entries for each type we got in textmap.
 		if (!TextmapCount(textmap->data, textmap->size))
-			return;
+		{
+			CONS_Alert(CONS_WARNING, "Textmap data empty!\n");
+			return false;
+		}
 	}
 	else
 	{
@@ -2869,7 +2872,11 @@ static void LoadMapData (const virtres_t* virt)
 	P_SetupLevelFlatAnims();
 
 	if (!LoadMapBSP(virt))
+	{
+		CONS_Alert(CONS_WARNING, "Failed to load map BSP!\n");
 		return false;
+	}
+
 	LoadMapLUT(virt);
 
 	if (textmap)
@@ -2879,6 +2886,8 @@ static void LoadMapData (const virtres_t* virt)
 
 	P_LoadLineDefs2();
 	P_GroupLines();
+
+	return true;
 }
 
 #if 0
@@ -3639,7 +3648,11 @@ boolean P_SetupLevel(boolean skipprecip)
 	{
 		virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
 
-		LoadMapData(virt);
+		if (!LoadMapData(virt))
+		{
+			CONS_Alert(CONS_ERROR, "Invalid map data.\n");
+			return false;
+		}
 
 		P_MakeMapMD5(virt, &mapmd5);
 
