@@ -1459,11 +1459,13 @@ void OP_ObjectplaceMovement(player_t *player)
 //
 void Command_Writethings_f(void)
 {
+	CONS_Printf("Writethings is currently unsupported due to the UDMF rework.\n"); /*
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_OBJECTPLACE;
 
 	P_WriteThings(W_GetNumForName(G_BuildMapName(gamemap)) + ML_THINGS);
+*/
 }
 
 void Command_ObjectPlace_f(void)
