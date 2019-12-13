@@ -1548,17 +1548,32 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor;
+			boolean alt = false; // Reduce intensity on diagonals and prevent backwards movement from turning the camera
 
 			if (player->climbing || player->pflags & PF_GLIDING)
 				camadjustfactor = cv_cam_turnfacingability[forplayer].value/4;
 			else if (player->pflags & PF_STARTDASH)
 				camadjustfactor = cv_cam_turnfacingspindash[forplayer].value/4;
 			else
+			{
+				alt = true;
 				camadjustfactor = cv_cam_turnfacing[forplayer].value/8;
+			}
 
 			if (camadjustfactor)
 			{
 				INT32 anglediff = player->drawangle + drawangleoffset - *myangle;
+
+				if (alt)
+				{
+					fixed_t sine = FINESINE((angle_t) (anglediff)>>ANGLETOFINESHIFT);
+					sine = abs(sine);
+
+					if (abs(anglediff) > ANGLE_90)
+						sine = max(0, sine*3 - 2*FRACUNIT); // At about 135 degrees, this will stop turning
+
+					anglediff = FixedMul(anglediff, sine);
+				}
 
 				*myangle += FixedMul(anglediff, camadjustfactor);
 			}
