@@ -282,10 +282,10 @@ static void I_ReportSignal(int num, int coredumped)
 		sigmsg = msg;
 	}
 
-	I_OutputMsg("\nsignal_handler() error: %s\n", sigmsg);
+	I_OutputMsg("\nProcess killed by signal: %s\n\n", sigmsg);
 
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-		"Signal caught",
+		"Process killed by signal",
 		sigmsg, NULL);
 }
 
