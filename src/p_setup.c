@@ -1317,13 +1317,13 @@ static void TextmapThing(UINT32 i, char *param)
 static void TextmapParse(UINT32 dataPos[], size_t num, void (*parser)(UINT32, char *))
 {
 	UINT32 i;
-	char *token;
+	char *tkn;
 	for (i = 0; i < num; i++)
 	{
 		M_SetTokenPos(dataPos[i]);
 		if (fastcmp(M_GetToken(NULL), "{"))
-			while (!fastcmp(token = M_GetToken(NULL), "}"))
-				parser(i, token);
+			while (!fastcmp(tkn = M_GetToken(NULL), "}"))
+				parser(i, tkn);
 		else
 			CONS_Alert(CONS_WARNING, "Invalid UDMF data capsule!\n");
 	}
