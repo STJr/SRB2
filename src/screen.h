@@ -152,6 +152,7 @@ enum
 
 extern void (*spanfunc)(void);
 extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
+extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
 // -----
 // CPUID

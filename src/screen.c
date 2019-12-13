@@ -46,6 +46,7 @@ void (*colfuncs[COLDRAWFUNC_MAX])(void);
 
 void (*spanfunc)(void);
 void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
+void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
 // ------------------
 // global video state
@@ -133,6 +134,21 @@ void SCR_SetMode(void)
 		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_8;
 #endif
 
+		// Lactozilla: Non-powers-of-two
+		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
+		spanfuncs_npo2[SPANDRAWFUNC_MMX] = NULL; // Same
+#ifndef NOWATER
+		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
+#endif
+#ifdef ESLOPE
+		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_8;
+#endif
 
 #ifdef RUSEASM
 		if (R_ASM)

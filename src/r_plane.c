@@ -841,6 +841,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	ffloor_t *rover;
 	levelflat_t *levelflat;
 	int type;
+	int spanfunctype = BASEDRAWFUNC;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -858,8 +859,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 	spanfunc = spanfuncs[BASEDRAWFUNC];
 
 #ifdef POLYOBJECTS_PLANES
-	if (pl->polyobj && pl->polyobj->translucency != 0) {
-		spanfunc = spanfuncs[SPANDRAWFUNC_TRANS];
+	if (pl->polyobj && pl->polyobj->translucency != 0)
+	{
+		spanfunctype = SPANDRAWFUNC_TRANS;
 
 		// Hacked up support for alpha value in software mode Tails 09-24-2002 (sidenote: ported to polys 10-15-2014, there was no time travel involved -Red)
 		if (pl->polyobj->translucency >= 10)
@@ -867,10 +869,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else if (pl->polyobj->translucency > 0)
 			ds_transmap = transtables + ((pl->polyobj->translucency-1)<<FF_TRANSSHIFT);
 		else // Opaque, but allow transparent flat pixels
-			spanfunc = spanfuncs[SPANDRAWFUNC_SPLAT];
+			spanfunctype = SPANDRAWFUNC_SPLAT;
 
 #ifdef SHITPLANESPARENCY
-		if ((spanfunc == spanfuncs[SPANDRAWFUNC_SPLAT]) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+		if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
 #else
 		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 #endif
@@ -901,7 +903,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (pl->ffloor->flags & FF_TRANSLUCENT)
 		{
-			spanfunc = spanfuncs[SPANDRAWFUNC_TRANS];
+			spanfunctype = SPANDRAWFUNC_TRANS;
 
 			// Hacked up support for alpha value in software mode Tails 09-24-2002
 			if (pl->ffloor->alpha < 12)
@@ -925,10 +927,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else if (pl->ffloor->alpha < 243)
 				ds_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
 			else // Opaque, but allow transparent flat pixels
-				spanfunc = spanfuncs[SPANDRAWFUNC_SPLAT];
+				spanfunctype = SPANDRAWFUNC_SPLAT;
 
 #ifdef SHITPLANESPARENCY
-			if ((spanfunc == spanfuncs[SPANDRAWFUNC_SPLAT]) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+			if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
 #else
 			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 #endif
@@ -938,7 +940,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		}
 		else if (pl->ffloor->flags & FF_FOG)
 		{
-			spanfunc = spanfuncs[SPANDRAWFUNC_FOG];
+			spanfunctype = SPANDRAWFUNC_FOG;
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		}
 		else light = (pl->lightlevel >> LIGHTSEGSHIFT);
@@ -953,9 +955,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 			INT32 top, bottom;
 
 			itswater = true;
-			if (spanfunc == spanfuncs[SPANDRAWFUNC_TRANS])
+			if (spanfunctype == SPANDRAWFUNC_TRANS)
 			{
-				spanfunc = spanfuncs[SPANDRAWFUNC_WATER];
+				spanfunctype = SPANDRAWFUNC_WATER;
 
 				// Copy the current scene, ugh
 				top = pl->high-8;
@@ -1032,8 +1034,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 			if (R_CheckPowersOfTwo())
 			{
 				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
-				if (spanfunc == spanfuncs[BASEDRAWFUNC])
-					spanfunc = spanfuncs[SPANDRAWFUNC_MMX];
+				if (spanfunctype == BASEDRAWFUNC)
+					spanfunctype = SPANDRAWFUNC_MMX;
 			}
 	}
 
@@ -1187,18 +1189,29 @@ void R_DrawSinglePlane(visplane_t *pl)
 		}
 #undef SFMULT
 
-		if (spanfunc == spanfuncs[SPANDRAWFUNC_TRANS])
-			spanfunc = spanfuncs[SPANDRAWFUNC_TILTEDTRANS];
-		else if (spanfunc == spanfuncs[SPANDRAWFUNC_SPLAT])
-			spanfunc = spanfuncs[SPANDRAWFUNC_TILTEDSPLAT];
+		if (spanfunctype == SPANDRAWFUNC_TRANS)
+			spanfunctype = SPANDRAWFUNC_TILTEDTRANS;
+		else if (spanfunctype == SPANDRAWFUNC_SPLAT)
+			spanfunctype = SPANDRAWFUNC_TILTEDSPLAT;
 		else
-			spanfunc = spanfuncs[SPANDRAWFUNC_TILTED];
+			spanfunctype = SPANDRAWFUNC_TILTED;
 
 		planezlight = scalelight[light];
 	} else
 #endif // ESLOPE
 
 	planezlight = zlight[light];
+
+	// Use the correct span drawer depending on the powers-of-twoness
+	if (!ds_powersoftwo)
+	{
+		if (spanfuncs_npo2[spanfunctype])
+			spanfunc = spanfuncs_npo2[spanfunctype];
+		else
+			spanfunc = spanfuncs[spanfunctype];
+	}
+	else
+		spanfunc = spanfuncs[spanfunctype];
 
 	// set the maximum value for unsigned
 	pl->top[pl->maxx+1] = 0xffff;
