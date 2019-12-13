@@ -138,19 +138,16 @@ void R_DrawViewBorder(void);
 // -----------------
 
 void R_DrawColumn_8(void);
-#define R_DrawWallColumn_8	R_DrawColumn_8
 void R_DrawShadeColumn_8(void);
 void R_DrawTranslucentColumn_8(void);
 
 #ifdef USEASM
 void ASMCALL R_DrawColumn_8_ASM(void);
-#define R_DrawWallColumn_8_ASM	R_DrawColumn_8_ASM
 void ASMCALL R_DrawShadeColumn_8_ASM(void);
 void ASMCALL R_DrawTranslucentColumn_8_ASM(void);
 void ASMCALL R_Draw2sMultiPatchColumn_8_ASM(void);
 
 void ASMCALL R_DrawColumn_8_MMX(void);
-#define R_DrawWallColumn_8_MMX	R_DrawColumn_8_MMX
 
 void ASMCALL R_Draw2sMultiPatchColumn_8_MMX(void);
 void ASMCALL R_DrawSpan_8_MMX(void);

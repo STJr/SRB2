@@ -587,8 +587,7 @@ void R_DrawPlanes(void)
 
 	// Note: are these two lines really needed?
 	// R_DrawSinglePlane and R_DrawSkyPlane do span/column drawer resets themselves anyway
-	spanfunc = basespanfunc;
-	wallcolfunc = walldrawerfunc;
+	spanfunc = spanfuncs[BASEDRAWFUNC];
 
 	for (i = 0; i < MAXVISPLANES; i++, pl++)
 	{
@@ -622,7 +621,7 @@ static void R_DrawSkyPlane(visplane_t *pl)
 
 	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
-	wallcolfunc = walldrawerfunc;
+	colfunc = colfuncs[BASEDRAWFUNC];
 
 	// use correct aspect ratio scale
 	dc_iscale = skyscale;
@@ -648,7 +647,7 @@ static void R_DrawSkyPlane(visplane_t *pl)
 			dc_source =
 				R_GetColumn(texturetranslation[skytexture],
 					-angle); // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
-			wallcolfunc();
+			colfunc();
 		}
 	}
 }
@@ -856,11 +855,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 #ifndef NOWATER
 	itswater = false;
 #endif
-	spanfunc = basespanfunc;
+	spanfunc = spanfuncs[BASEDRAWFUNC];
 
 #ifdef POLYOBJECTS_PLANES
 	if (pl->polyobj && pl->polyobj->translucency != 0) {
-		spanfunc = R_DrawTranslucentSpan_8;
+		spanfunc = spanfuncs[SPANDRAWFUNC_TRANS];
 
 		// Hacked up support for alpha value in software mode Tails 09-24-2002 (sidenote: ported to polys 10-15-2014, there was no time travel involved -Red)
 		if (pl->polyobj->translucency >= 10)
@@ -868,10 +867,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else if (pl->polyobj->translucency > 0)
 			ds_transmap = transtables + ((pl->polyobj->translucency-1)<<FF_TRANSSHIFT);
 		else // Opaque, but allow transparent flat pixels
-			spanfunc = splatfunc;
+			spanfunc = spanfuncs[SPANDRAWFUNC_SPLAT];
 
 #ifdef SHITPLANESPARENCY
-		if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+		if ((spanfunc == spanfuncs[SPANDRAWFUNC_SPLAT]) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
 #else
 		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 #endif
@@ -902,7 +901,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (pl->ffloor->flags & FF_TRANSLUCENT)
 		{
-			spanfunc = R_DrawTranslucentSpan_8;
+			spanfunc = spanfuncs[SPANDRAWFUNC_TRANS];
 
 			// Hacked up support for alpha value in software mode Tails 09-24-2002
 			if (pl->ffloor->alpha < 12)
@@ -926,10 +925,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else if (pl->ffloor->alpha < 243)
 				ds_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
 			else // Opaque, but allow transparent flat pixels
-				spanfunc = splatfunc;
+				spanfunc = spanfuncs[SPANDRAWFUNC_SPLAT];
 
 #ifdef SHITPLANESPARENCY
-			if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+			if ((spanfunc == spanfuncs[SPANDRAWFUNC_SPLAT]) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
 #else
 			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 #endif
@@ -939,7 +938,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		}
 		else if (pl->ffloor->flags & FF_FOG)
 		{
-			spanfunc = R_DrawFogSpan_8;
+			spanfunc = spanfuncs[SPANDRAWFUNC_FOG];
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		}
 		else light = (pl->lightlevel >> LIGHTSEGSHIFT);
@@ -954,9 +953,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 			INT32 top, bottom;
 
 			itswater = true;
-			if (spanfunc == R_DrawTranslucentSpan_8)
+			if (spanfunc == spanfuncs[SPANDRAWFUNC_TRANS])
 			{
-				spanfunc = R_DrawTranslucentWaterSpan_8;
+				spanfunc = spanfuncs[SPANDRAWFUNC_WATER];
 
 				// Copy the current scene, ugh
 				top = pl->high-8;
@@ -1007,8 +1006,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
 			// Raw flats always have dimensions that are powers-of-two numbers.
 			ds_powersoftwo = true;
-			if (spanfunc == basespanfunc)
-				spanfunc = mmxspanfunc;
+			if (spanfunc == spanfuncs[BASEDRAWFUNC])
+				spanfunc = spanfuncs[SPANDRAWFUNC_MMX];
 			break;
 		default:
 			switch (type)
@@ -1033,8 +1032,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 			if (R_CheckPowersOfTwo())
 			{
 				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
-				if (spanfunc == basespanfunc)
-					spanfunc = mmxspanfunc;
+				if (spanfunc == spanfuncs[BASEDRAWFUNC])
+					spanfunc = spanfuncs[SPANDRAWFUNC_MMX];
 			}
 	}
 
@@ -1188,12 +1187,12 @@ void R_DrawSinglePlane(visplane_t *pl)
 		}
 #undef SFMULT
 
-		if (spanfunc == R_DrawTranslucentSpan_8)
-			spanfunc = R_DrawTiltedTranslucentSpan_8;
-		else if (spanfunc == splatfunc)
-			spanfunc = R_DrawTiltedSplat_8;
+		if (spanfunc == spanfuncs[SPANDRAWFUNC_TRANS])
+			spanfunc = spanfuncs[SPANDRAWFUNC_TILTEDTRANS];
+		else if (spanfunc == spanfuncs[SPANDRAWFUNC_SPLAT])
+			spanfunc = spanfuncs[SPANDRAWFUNC_TILTEDSPLAT];
 		else
-			spanfunc = R_DrawTiltedSpan_8;
+			spanfunc = spanfuncs[SPANDRAWFUNC_TILTED];
 
 		planezlight = scalelight[light];
 	} else
@@ -1240,11 +1239,11 @@ a 'smoothing' of the texture while
 using the palette colors.
 */
 #ifdef QUINCUNX
-	if (spanfunc == R_DrawSpan_8)
+	if (spanfunc == spanfuncs[BASEDRAWFUNC])
 	{
 		INT32 i;
 		ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
-		spanfunc = R_DrawTranslucentSpan_8;
+		spanfunc = spanfuncs[SPANDRAWFUNC_TRANS];
 		for (i=0; i<4; i++)
 		{
 			xoffs = pl->xoffs;

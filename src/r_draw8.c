@@ -1880,7 +1880,7 @@ void R_DrawColumnShadowed_8(void)
 
 		if (dc_yh > realyh)
 			dc_yh = realyh;
-		basecolfunc();		// R_DrawColumn_8 for the appropriate architecture
+		(colfuncs[BASEDRAWFUNC])();		// R_DrawColumn_8 for the appropriate architecture
 		if (solid)
 			dc_yl = bheight;
 		else
@@ -1890,5 +1890,5 @@ void R_DrawColumnShadowed_8(void)
 	}
 	dc_yh = realyh;
 	if (dc_yl <= realyh)
-		walldrawerfunc();		// R_DrawWallColumn_8 for the appropriate architecture
+		(colfuncs[BASEDRAWFUNC])();		// R_DrawWallColumn_8 for the appropriate architecture
 }
