@@ -23,29 +23,6 @@
 // Some global defines, that configure the game.
 #include "doomdef.h"
 
-//
-// Map level types.
-// The following data structures define the persistent format
-// used in the lumps of the WAD files.
-//
-
-// Lump order in a map WAD: each map needs a couple of lumps
-// to provide a complete scene geometry description.
-enum
-{
-	ML_LABEL,    // A separator, name, MAPxx
-	ML_THINGS,   // Enemies, rings, monitors, scenery, etc.
-	ML_LINEDEFS, // Linedefs, from editing
-	ML_SIDEDEFS, // Sidedefs, from editing
-	ML_VERTEXES, // Vertices, edited and BSP splits generated
-	ML_SEGS,     // Linesegs, from linedefs split by BSP
-	ML_SSECTORS, // Subsectors, list of linesegs
-	ML_NODES,    // BSP nodes
-	ML_SECTORS,  // Sectors, from editing
-	ML_REJECT,    // LUT, sector-sector visibility
-	ML_BLOCKMAP,  // LUT, motion clipping, walls/grid element
-};
-
 // Extra flag for objects.
 #define MTF_EXTRA 1
 
