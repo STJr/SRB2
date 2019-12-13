@@ -1081,7 +1081,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	abilitydirection = cv_abilitydirection[forplayer].value;
 
 	strafeisturn = abilitydirection && ticcmd_centerviewdown[forplayer] &&
-		(cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)) &&
+		((cv_cam_lockedinput[forplayer].value && !ticcmd_ztargetfocus[forplayer]) || (player->pflags & PF_STARTDASH)) &&
 		!player->climbing && player->powers[pw_carry] != CR_MINECART;
 
 	// why build a ticcmd if we're paused?
