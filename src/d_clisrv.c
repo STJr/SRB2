@@ -1301,6 +1301,8 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	M_Memcpy(netbuffer->u.serverinfo.mapmd5, mapmd5, 16);
 
+	memset(netbuffer->u.serverinfo.maptitle, 0, sizeof netbuffer->u.serverinfo.maptitle);
+
 	if (mapheaderinfo[gamemap-1] && *mapheaderinfo[gamemap-1]->lvlttl)
 	{
 		char *read = mapheaderinfo[gamemap-1]->lvlttl, *writ = netbuffer->u.serverinfo.maptitle;
@@ -1318,8 +1320,6 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	}
 	else
 		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 32);
-
-	netbuffer->u.serverinfo.maptitle[32] = '\0';
 
 	if (mapheaderinfo[gamemap-1] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
 		netbuffer->u.serverinfo.iszone = 1;
