@@ -2560,8 +2560,9 @@ static boolean LoadMapBSP (const virtres_t* virt)
 		data += 4;
 
 		/// Extended node formats feature additional vertexes; useful for OpenGL, but totally useless in gamelogic.
-		UINT32 orivtx = READUINT32(data);
-		UINT32 xtrvtx = READUINT32(data);
+		UINT32 orivtx, xtrvtx;
+		orivtx = READUINT32(data);
+		xtrvtx = READUINT32(data);
 
 		if (numvertexes != orivtx) /// If native vertex count doesn't match node original vertex count, bail out (broken data?).
 		{
