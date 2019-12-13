@@ -95,6 +95,7 @@ Please check it out if you're trying to maintain this.
 toast 18/04/17
 */
 float Cubepal[2][2][2][3];
+boolean Cubeapply = false;
 
 // returns whether to apply cube, selectively avoiding expensive operations
 static boolean InitCube(void)
@@ -310,7 +311,7 @@ const UINT8 correctiontable[256] =
 // keep a copy of the palette so that we can get the RGB value for a color index at any time.
 static void LoadPalette(const char *lumpname)
 {
-	boolean cube = InitCube();
+	Cubeapply = InitCube();
 	lumpnum_t lumpnum = W_GetNumForName(lumpname);
 	size_t i, palsize = W_LumpLength(lumpnum)/3;
 	UINT8 *pal;
@@ -336,43 +337,48 @@ static void LoadPalette(const char *lumpname)
 		pMasterPalette[i].s.alpha = pLocalPalette[i].s.alpha = 0xFF;
 
 		// lerp of colour cubing! if you want, make it smoother yourself
-		if (cube)
-		{
-			float working[4][3];
-			float linear;
-			UINT8 q;
+		V_CubeApply(&pLocalPalette[i].s.red, &pLocalPalette[i].s.green, &pLocalPalette[i].s.blue);
+	}
+}
 
-			linear = (pLocalPalette[i].s.red/255.0);
+void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue)
+{
+	float working[4][3];
+	float linear;
+	UINT8 q;
+
+	if (!Cubeapply)
+		return;
+
+	linear = (*red/255.0);
 #define dolerp(e1, e2) ((1 - linear)*e1 + linear*e2)
-			for (q = 0; q < 3; q++)
-			{
-				working[0][q] = dolerp(Cubepal[0][0][0][q], Cubepal[1][0][0][q]);
-				working[1][q] = dolerp(Cubepal[0][1][0][q], Cubepal[1][1][0][q]);
-				working[2][q] = dolerp(Cubepal[0][0][1][q], Cubepal[1][0][1][q]);
-				working[3][q] = dolerp(Cubepal[0][1][1][q], Cubepal[1][1][1][q]);
-			}
-			linear = (pLocalPalette[i].s.green/255.0);
-			for (q = 0; q < 3; q++)
-			{
-				working[0][q] = dolerp(working[0][q], working[1][q]);
-				working[1][q] = dolerp(working[2][q], working[3][q]);
-			}
-			linear = (pLocalPalette[i].s.blue/255.0);
-			for (q = 0; q < 3; q++)
-			{
-				working[0][q] = 255*dolerp(working[0][q], working[1][q]);
-				if (working[0][q] > 255.0)
-					working[0][q] = 255.0;
-				else if (working[0][q]  < 0.0)
-					working[0][q] = 0.0;
-			}
+	for (q = 0; q < 3; q++)
+	{
+		working[0][q] = dolerp(Cubepal[0][0][0][q], Cubepal[1][0][0][q]);
+		working[1][q] = dolerp(Cubepal[0][1][0][q], Cubepal[1][1][0][q]);
+		working[2][q] = dolerp(Cubepal[0][0][1][q], Cubepal[1][0][1][q]);
+		working[3][q] = dolerp(Cubepal[0][1][1][q], Cubepal[1][1][1][q]);
+	}
+	linear = (*green/255.0);
+	for (q = 0; q < 3; q++)
+	{
+		working[0][q] = dolerp(working[0][q], working[1][q]);
+		working[1][q] = dolerp(working[2][q], working[3][q]);
+	}
+	linear = (*blue/255.0);
+	for (q = 0; q < 3; q++)
+	{
+		working[0][q] = 255*dolerp(working[0][q], working[1][q]);
+		if (working[0][q] > 255.0)
+			working[0][q] = 255.0;
+		else if (working[0][q]  < 0.0)
+			working[0][q] = 0.0;
+	}
 #undef dolerp
 
-			pLocalPalette[i].s.red = (UINT8)(working[0][0]);
-			pLocalPalette[i].s.green = (UINT8)(working[0][1]);
-			pLocalPalette[i].s.blue = (UINT8)(working[0][2]);
-		}
-	}
+	*red = (UINT8)(working[0][0]);
+	*green = (UINT8)(working[0][1]);
+	*blue = (UINT8)(working[0][2]);
 }
 
 const char *R_GetPalname(UINT16 num)
