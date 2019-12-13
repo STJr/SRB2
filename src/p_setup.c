@@ -763,7 +763,6 @@ static void GeneralDefaults(void)
 	{
 		// Initialization.
 		sc->nexttag = sc->firsttag = -1;
-		sc->spawn_nexttag = sc->spawn_firsttag = -1;
 
 		memset(&sc->soundorg, 0, sizeof(sc->soundorg));
 		sc->validcount = 0;
@@ -824,14 +823,7 @@ static void GeneralDefaults(void)
 //		sc->udmfflags = 0;
 
 		sc->spawn_extra_colormap = NULL;
-
 		sc->spawn_lightlevel = sc->lightlevel;
-		sc->spawn_flr_xoffs = sc->floor_xoffs;
-		sc->spawn_ceil_xoffs = sc->ceiling_xoffs;
-		sc->spawn_flr_yoffs = sc->floor_yoffs;
-		sc->spawn_ceil_yoffs = sc->ceiling_yoffs;
-		sc->spawn_flrpic_angle = sc->floorpic_angle;
-		sc->spawn_ceilpic_angle = sc->ceilingpic_angle;
 
 //		sc->lightfloor = sc->lightceiling = 0;
 //		sc->lightfloorabsolute = sc->lightceilingabsolute = false;
