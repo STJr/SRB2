@@ -2564,7 +2564,7 @@ static boolean LoadMapBSP (const virtres_t* virt)
 
 		if (numvertexes != orivtx) /// If native vertex count doesn't match node original vertex count, bail out (broken data?).
 		{
-			CONS_Printf("Vertex count in map data (%d) and nodes' (%d) differ!\n", numvertexes, orivtx);
+			CONS_Alert(CONS_WARNING, "Vertex count in map data (%d) and nodes' (%d) differ!\n", numvertexes, orivtx);
 			return false;
 		}
 
@@ -2576,15 +2576,11 @@ static boolean LoadMapBSP (const virtres_t* virt)
 			numvertexes+= xtrvtx;
 			vertexes	= Z_Realloc(vertexes, numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
 			offset		= ((size_t) vertexes) - oldpos;
-			for(i = 0; i < numvertexes; i++)
-			{
-				CONS_Printf("%d: %d %d\n", i, vertexes[i].x/FRACUNIT, vertexes[i].y/FRACUNIT);
-			}
+
 			for (i = 0, ld = lines; i < numlines; i++, ld++)
 			{
 				ld->v1 = (vertex_t*) ((size_t) ld->v1 + offset);
 				ld->v2 = (vertex_t*) ((size_t) ld->v2 + offset);
-				CONS_Printf("V1: %d %d\n", ld->v1->x/FRACUNIT, ld->v1->y/FRACUNIT);
 			}
 		}
 
@@ -2609,9 +2605,11 @@ static boolean LoadMapBSP (const virtres_t* virt)
 		for (i = 0, k = 0; i < numsubsectors; i++)
 		{
 			subsectors[i].firstline = k;
-			for (j = 0; j < subsectors[i].numlines; j++, k++)
+
+			switch (nodetype)
 			{
-				if (nodetype == NT_XGLN)
+			case NT_XGLN:
+				for (j = 0; j < subsectors[i].numlines; j++, k++)
 				{
 					UINT16 linenum;
 					UINT32 vert;
@@ -2636,7 +2634,10 @@ static boolean LoadMapBSP (const virtres_t* virt)
 					}
 					segs[k].side = READUINT8(data);
 				}
-				else if (nodetype == NT_XGL3)
+				break;
+
+			case NT_XGL3:
+				for (j = 0; j < subsectors[i].numlines; j++, k++)
 				{
 					UINT32 linenum;
 					UINT32 vert;
@@ -2661,13 +2662,20 @@ static boolean LoadMapBSP (const virtres_t* virt)
 					}
 					segs[k].side = READUINT8(data);
 				}
-				else if (nodetype == NT_XNOD)
+				break;
+
+			case NT_XNOD:
+				for (j = 0; j < subsectors[i].numlines; j++, k++)
 				{
 					segs[k].v1		= &vertexes[READUINT32(data)];
 					segs[k].v2		= &vertexes[READUINT32(data)];
 					segs[k].linedef	= &lines[READUINT16(data)];
 					segs[k].side	= READUINT8(data);
 				}
+				break;
+
+			default:
+				return false;
 			}
 		}
 
