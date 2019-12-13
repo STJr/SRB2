@@ -2182,7 +2182,7 @@ static void I_Fork(void)
 		case 0:
 			break;
 		default:
-			if (wait(&status))
+			if (wait(&status) == -1)
 			{
 				I_Error(
 						"Error setting up signal reporting: fork(): %s\n",
