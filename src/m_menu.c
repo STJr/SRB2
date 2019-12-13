@@ -1299,20 +1299,25 @@ static menuitem_t OP_ColorOptionsMenu[] =
 #ifdef HWRENDER
 static menuitem_t OP_OpenGLOptionsMenu[] =
 {
-	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             10},
-	{IT_STRING|IT_CVAR,         NULL, "Model interpolation", &cv_grmodelinterpolation, 20},
+	{IT_HEADER, NULL, "3D Models", NULL, 0},
+	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             12},
+	{IT_STRING|IT_CVAR,         NULL, "Model interpolation", &cv_grmodelinterpolation, 22},
+	{IT_STRING|IT_CVAR,         NULL, "Model lighting",      &cv_grmodellighting, 32},
 
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            40},
-	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        50},
-	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     60},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,70},
-#if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       80},
-#endif
+	{IT_HEADER, NULL, "General", NULL, 51},
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            62},
+	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        72},
+	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     82},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,92},
+
+	{IT_HEADER, NULL, "Miscellaneous", NULL, 111},
+	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          123},
 #ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     100},
+	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     133},
 #endif
-	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          110},
+#if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
+	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,            143},
+#endif
 };
 
 #ifdef ALAM_LIGHTING
