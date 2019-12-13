@@ -709,6 +709,35 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 
 			cur->s.alpha = image->s.alpha;
 		}
+		else if (skinnum == TC_DASHMODE)
+		{
+			if (image->s.alpha == 0 && blendimage->s.alpha == 0)
+			{
+				// Don't bother with blending the pixel if the alpha of the blend pixel is 0
+				cur->rgba = image->rgba;
+			}
+			else
+			{
+				UINT8 ialpha = 255 - blendimage->s.alpha, balpha = blendimage->s.alpha;
+				RGBA_t icolor = *image, bcolor;
+
+				if (blendimage->s.alpha)
+				{
+					bcolor.s.blue = 0;
+					bcolor.s.red = 255;
+					bcolor.s.green = (blendimage->s.red + blendimage->s.green + blendimage->s.blue) / 3;
+				}
+				if (image->s.alpha && image->s.red > image->s.green << 1) // this is pretty arbitrary, but it works well for Metal Sonic
+				{
+					icolor.s.red = image->s.blue;
+					icolor.s.blue = image->s.red;
+				}
+				cur->s.red = (ialpha * icolor.s.red + balpha * bcolor.s.red)/255;
+				cur->s.green = (ialpha * icolor.s.green + balpha * bcolor.s.green)/255;
+				cur->s.blue = (ialpha * icolor.s.blue + balpha * bcolor.s.blue)/255;
+				cur->s.alpha = image->s.alpha;
+			}
+		}
 		else if (skinnum == TC_ALLWHITE)
 		{
 			// Turn everything white
