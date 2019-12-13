@@ -428,9 +428,18 @@ consvar_t cv_cam_lockedinput[2] = {
 	{"cam2_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 
+static CV_PossibleValue_t lockedassist_cons_t[] = {
+	{0, "Off"},
+	{LOCK_BOSS, "Bosses"},
+	{LOCK_BOSS|LOCK_ENEMY, "Enemies"},
+	{LOCK_BOSS|LOCK_INTERESTS, "Interests"},
+	{LOCK_BOSS|LOCK_ENEMY|LOCK_INTERESTS, "Full"},
+	{0, NULL}
+};
+
 consvar_t cv_cam_lockonboss[2] = {
-	{"cam_lockonboss", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL},
-	{"cam2_lockonboss", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam_lockaimassist", "Bosses", CV_SAVE, lockedassist_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_lockaimassist", "Bosses", CV_SAVE, lockedassist_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 
 typedef enum
@@ -1286,7 +1295,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			*myaiming = 0;
 
 			if (cv_cam_lockonboss[forplayer].value)
-				P_SetTarget(&ticcmd_ztargetfocus[forplayer], P_LookForFocusTarget(player, NULL, 0));
+				P_SetTarget(&ticcmd_ztargetfocus[forplayer], P_LookForFocusTarget(player, NULL, 0, cv_cam_lockonboss[forplayer].value));
 		}
 
 		ticcmd_centerviewdown[forplayer] = true;

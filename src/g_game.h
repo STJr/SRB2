@@ -81,6 +81,14 @@ extern consvar_t cv_abilitydirection[2], cv_cam_shiftfacing[2], cv_cam_turnfacin
 	cv_cam_turnfacingability[2], cv_cam_turnfacingspindash[2], cv_cam_turnfacinginput[2],
 	cv_cam_lockedinput[2], cv_cam_lockonboss[2];
 
+typedef enum
+{
+	LOCK_BOSS = 1<<0,
+	LOCK_ENEMY = 1<<1,
+	LOCK_INTERESTS = 1<<2,
+} lockassist_e;
+
+
 // mouseaiming (looking up/down with the mouse or keyboard)
 #define KB_LOOKSPEED (1<<25)
 #define MAXPLMOVE (50)

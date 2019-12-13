@@ -9142,7 +9142,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 // direction, if set, requires the target to be to the left (1) or right (-1) of the angle
 // mobjflags can be used to limit the flags of objects that can be focused
 //
-mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction)
+mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction, UINT8 lockonflags)
 {
 	mobj_t *mo;
 	thinker_t *think;
@@ -9162,20 +9162,53 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction)
 		if (mo->flags & MF_NOCLIPTHING)
 			continue;
 
-		if (mo->health <= 0) // dead
-			continue;
-
-		if (!(mo->flags & MF_BOSS && (mo->flags & MF_SHOOTABLE)) == !(mo->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
-			continue; // not a valid target
-
 		if (mo == player->mo)
 			continue;
 
-		if (mo->flags2 & MF2_FRET)
+		if (mo->health <= 0) // dead
 			continue;
 
-		if (mo->type == MT_DETON) // Don't be STUPID, Sonic!
-			continue;
+		switch (mo->type)
+		{
+		case MT_TNTBARREL:
+			if (lockonflags & LOCK_INTERESTS)
+				break;
+			/*fallthru*/
+		case MT_PLAYER: // Don't chase other players!
+		case MT_DETON:
+			continue; // Don't be STUPID, Sonic!
+
+		case MT_FAKEMOBILE:
+			if (!(lockonflags & LOCK_BOSS))
+				continue;
+			break;
+
+		case MT_EGGSHIELD:
+			if (!(lockonflags & LOCK_ENEMY))
+				continue;
+			break;
+
+		case MT_EGGSTATUE:
+			if (tutorialmode)
+				break; // Always focus egg statue in the tutorial
+			/*fallthru*/
+		default:
+
+			if ((lockonflags & LOCK_BOSS) && ((mo->flags & (MF_BOSS|MF_SHOOTABLE)) == (MF_BOSS|MF_SHOOTABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
+			{
+				if (mo->flags2 & MF2_FRET)
+					continue;
+				break;
+			}
+
+			if ((lockonflags & LOCK_ENEMY) && (!((mo->flags & (MF_ENEMY|MF_SHOOTABLE)) == (MF_ENEMY|MF_SHOOTABLE)) != !(mo->flags2 & MF2_INVERTAIMABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
+				break;
+
+			if ((lockonflags & LOCK_INTERESTS) && (mo->flags & (MF_PUSHABLE|MF_MONITOR))) // allows if it has the flags desired XOR it has the invert aimable flag
+				break;
+
+			continue; // not a valid object
+		}
 
 		{
 			fixed_t zdist = (player->mo->z + player->mo->height/2) - (mo->z + mo->height/2);
@@ -9193,13 +9226,9 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction)
 		&& abs(player->mo->y-mo->y) > player->mo->radius)
 			continue; // not in your 2d plane
 
-		if (mo->type == MT_PLAYER) // Don't chase after other players!
-			continue;
-
-		dangle = R_PointToAngle2(player->mo->x + P_ReturnThrustX(player->mo, player->mo->angle, player->mo->radius), player->mo->y + P_ReturnThrustY(player->mo, player->mo->angle, player->mo->radius), mo->x, mo->y) - player->mo->angle;
-
-		if ((dangle + span) > span*2)
-			continue; // behind back
+		dangle = R_PointToAngle2(player->mo->x, player->mo->y, mo->x, mo->y) - (
+			!exclude ? player->mo->angle : R_PointToAngle2(player->mo->x, player->mo->y, exclude->x, exclude->y)
+		);
 
 		if (direction)
 		{
@@ -9208,6 +9237,15 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction)
 			if (direction == -1 && dangle < ANGLE_180)
 				continue; // To the left of the player
 		}
+
+		if (dangle > ANGLE_180)
+			dangle = InvAngle(dangle);
+
+		if (dangle > span)
+			continue; // behind back
+
+		// Inflate dist by angle difference to bias toward objects at a closer angle
+		dist = FixedDiv(dist, FINECOSINE(dangle>>ANGLETOFINESHIFT)*3);
 
 		if (closestmo && (exclude ? (dangle > closestdangle) : (dist > closestdist)))
 			continue;
