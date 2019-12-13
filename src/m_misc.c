@@ -1853,7 +1853,7 @@ char *M_GetToken(const char *inputString)
 			&& stringToUse[endPos] != '{'
 			&& stringToUse[endPos] != '}'
 			&& stringToUse[endPos] != '"' // see above
-			&& stringToUse[startPos] != '=' && stringToUse[startPos] != ';' // UDMF TEXTMAP.
+			&& stringToUse[endPos] != '=' && stringToUse[endPos] != ';' // UDMF TEXTMAP.
 			&& inComment == 0)
 			&& endPos < stringLength)
 	{
