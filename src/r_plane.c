@@ -1008,8 +1008,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
 			// Raw flats always have dimensions that are powers-of-two numbers.
 			ds_powersoftwo = true;
-			if (spanfunc == spanfuncs[BASEDRAWFUNC])
-				spanfunc = spanfuncs[SPANDRAWFUNC_MMX];
 			break;
 		default:
 			switch (type)
@@ -1032,11 +1030,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			}
 			// Check if this texture or patch has power-of-two dimensions.
 			if (R_CheckPowersOfTwo())
-			{
 				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
-				if (spanfunctype == BASEDRAWFUNC)
-					spanfunctype = SPANDRAWFUNC_MMX;
-			}
 	}
 
 	if (light >= LIGHTLEVELS)

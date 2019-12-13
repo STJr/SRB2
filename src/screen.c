@@ -124,7 +124,6 @@ void SCR_SetMode(void)
 		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_8;
 		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_8;
 		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_8;
-		spanfuncs[SPANDRAWFUNC_MMX] = spanfuncs[BASEDRAWFUNC];
 #ifndef NOWATER
 		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_8;
 #endif
@@ -140,7 +139,6 @@ void SCR_SetMode(void)
 		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
-		spanfuncs_npo2[SPANDRAWFUNC_MMX] = NULL; // Same
 #ifndef NOWATER
 		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
 #endif
@@ -159,7 +157,7 @@ void SCR_SetMode(void)
 				//colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8_ASM;
 				//colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8_ASM;
 				colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8_MMX;
-				spanfuncs[SPANDRAWFUNC_MMX] = R_DrawSpan_8_MMX;
+				spanfuncs[BASEDRAWFUNC] = R_DrawSpan_8_MMX;
 			}
 			else
 			{
