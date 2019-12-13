@@ -2556,8 +2556,7 @@ static boolean LoadMapBSP (const virtres_t* virt)
 	{
 		size_t i, j, k;
 		INT16 m;
-		UINT8* data = virtnodes->data;
-		data += 4;
+		UINT8* data = virtnodes->data + 4;
 
 		/// Extended node formats feature additional vertexes; useful for OpenGL, but totally useless in gamelogic.
 		UINT32 orivtx, xtrvtx;
