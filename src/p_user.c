@@ -9162,7 +9162,7 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 		if (mo->flags & MF_NOCLIPTHING)
 			continue;
 
-		if (mo == player->mo)
+		if (mo == player->mo || mo == exclude)
 			continue;
 
 		if (mo->health <= 0) // dead

@@ -1057,6 +1057,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	static boolean keyboard_look[2]; // true if lookup/down using keyboard
 	static boolean resetdown[2]; // don't cam reset every frame
 	static boolean joyaiming[2]; // check the last frame's value if we need to reset the camera
+	static boolean zchange[2]; // only switch z targets once per press
 	UINT8 forplayer = ssplayer-1;
 
 	if (ssplayer == 1)
@@ -1322,6 +1323,26 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			P_SetTarget(&ticcmd_ztargetfocus[forplayer], NULL);
 		else
 		{
+			mobj_t *newtarget = NULL;
+			if (zchange[forplayer])
+			{
+				if (!turnleft && !turnright && abs(cmd->angleturn) < angleturn[0])
+					zchange[forplayer] = false;
+			}
+			else if (turnleft || cmd->angleturn > angleturn[0])
+			{
+				zchange[forplayer] = true;
+				newtarget = P_LookForFocusTarget(player, ticcmd_ztargetfocus[forplayer], 1, cv_cam_lockonboss[forplayer].value);
+			}
+			else if (turnright || cmd->angleturn < -angleturn[0])
+			{
+				zchange[forplayer] = true;
+				newtarget = P_LookForFocusTarget(player, ticcmd_ztargetfocus[forplayer], -1, cv_cam_lockonboss[forplayer].value);
+			}
+
+			if (newtarget)
+				P_SetTarget(&ticcmd_ztargetfocus[forplayer], newtarget);
+
 			if (P_AproxDistance(
 				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
 				player->mo->y - ticcmd_ztargetfocus[forplayer]->y
