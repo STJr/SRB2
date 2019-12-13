@@ -2842,6 +2842,7 @@ static boolean LoadMapData (const virtres_t* virt)
 		TextmapParse(sidesPos,    numsides,    TextmapSide);
 		TextmapParse(linesPos,    numlines,    TextmapLine);
 		SetupLines();
+		TextmapParse(mapthingsPos,nummapthings,TextmapThing);
 	}
 	else
 	{
@@ -2851,7 +2852,9 @@ static boolean LoadMapData (const virtres_t* virt)
 		P_LoadRawLineDefs(virtlinedefs->data);
 		SetupLines();
 		P_LoadRawSideDefs2(virtsidedefs->data);
+		P_PrepareRawThings(virtthings->data);
 	}
+
 	R_ClearTextureNumCache(true);
 
 	// set the sky flat num
@@ -2863,22 +2866,6 @@ static boolean LoadMapData (const virtres_t* virt)
 
 	// search for animated flats and set up
 	P_SetupLevelFlatAnims();
-
-	if (!LoadMapBSP(virt))
-	{
-		CONS_Alert(CONS_WARNING, "Failed to load map BSP!\n");
-		return false;
-	}
-
-	LoadMapLUT(virt);
-
-	if (textmap)
-		TextmapParse(mapthingsPos,nummapthings,TextmapThing);
-	else
-		P_PrepareRawThings(virtthings->data);
-
-	P_LoadLineDefs2();
-	P_GroupLines();
 
 	// Copy relevant map data for NetArchive purposes.
 	spawnsectors = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
@@ -3618,6 +3605,17 @@ boolean P_SetupLevel(boolean skipprecip)
 			CONS_Alert(CONS_ERROR, "Invalid map data.\n");
 			return false;
 		}
+
+		if (!LoadMapBSP(virt))
+		{
+			CONS_Alert(CONS_ERROR, "Failed to load map BSP.\n");
+			return false;
+		}
+
+		LoadMapLUT(virt);
+
+		P_LoadLineDefs2();
+		P_GroupLines();
 
 		P_MakeMapMD5(virt, &mapmd5);
 
