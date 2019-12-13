@@ -562,9 +562,6 @@ void D_SRB2Loop(void)
 
 	// Pushing of + parameters is now done back in D_SRB2Main, not here.
 
-	CONS_Printf("I_StartupKeyboard()...\n");
-	I_StartupKeyboard();
-
 #ifdef _WINDOWS
 	CONS_Printf("I_StartupMouse()...\n");
 	I_DoStartupMouse();
