@@ -1205,7 +1205,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			cmd->angleturn = (INT16)(cmd->angleturn - ((axis * angleturn[1]) >> 10)); // ANALOG!
 		}
 
-		if (turnright || turnleft || abs(cmd->angleturn) > angleturn[1])
+		if (turnright || turnleft || abs(cmd->angleturn) > angleturn[2])
 			tta_factor[forplayer] = 0; // suspend turn to angle
 
 		// Make rotspeed affect turning speed :)
