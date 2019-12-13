@@ -721,7 +721,7 @@ static void GeneralDefaults(void)
 	line_t *ld;
 //	side_t *sd;
 	sector_t *sc;
-//	mapthing_t *mt;
+	mapthing_t *mt;
 //	vertex_t* vt;
 
 	for (i = 0, ld = lines; i < numlines; i++, ld++)
@@ -828,15 +828,15 @@ static void GeneralDefaults(void)
 //		sc->lightfloor = sc->lightceiling = 0;
 //		sc->lightfloorabsolute = sc->lightceilingabsolute = false;
 	}
-/*
+
 	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
 		// Initialization.
 
 		// Defaults.
-		mt->pitch = mt->roll = 0;
+/*		mt->pitch = mt->roll = 0; */
 		mt->scale = FRACUNIT;
-		for (j = 0; j < NUMTHINGPARAMS; j++)
+/*		for (j = 0; j < NUMTHINGPARAMS; j++)
 			mt->params[j] = 0;
 		mt->spawntrigger = 0;
 		mt->seetrigger = 0;
@@ -845,9 +845,9 @@ static void GeneralDefaults(void)
 		mt->missiletrigger = 0;
 		mt->deathtrigger = 0;
 		mt->xdeathtrigger = 0;
-		mt->raisetrigger = 0;
+		mt->raisetrigger = 0;*/
 	}
-
+/*
 	for (i = 0, vt = vertexes; i < numvertexes; i++, vt++)
 	{
 		// Initialization.
@@ -1244,9 +1244,9 @@ static void TextmapThing(UINT32 i, char *param)
 	#endif
 	else if (fastcmp(param, "type"))
 		mapthings[i].type = atol(M_GetToken(NULL));
-	#ifdef ADVUDMF
 	else if (fastcmp(param, "scale") || fastcmp(param, "scalex"))
 		mapthings[i].scale = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	#ifdef ADVUDMF
 	else if (fastcmp(param, "spawntrigger"))
 		mapthings[i].spawntrigger = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "seetrigger"))

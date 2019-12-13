@@ -11623,13 +11623,13 @@ static fixed_t GetMobjSpawnHeight (const mobjtype_t i, const mapthing_t* mthing,
 #ifdef ESLOPE
 			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
 #endif
-			ss->sector->ceilingheight) - extraoffset - heightoffset - mobjinfo[i].height;
+			ss->sector->ceilingheight) - FixedMul(extraoffset, mthing->scale) - heightoffset - mobjinfo[i].height;
 	else
 		return (
 #ifdef ESLOPE
 			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
 #endif
-			ss->sector->floorheight) + extraoffset + heightoffset;
+			ss->sector->floorheight) + FixedMul(extraoffset, mthing->scale) + heightoffset;
 }
 
 //
@@ -11897,6 +11897,8 @@ You should think about modifying the deathmatch starts to take full advantage of
 	z = GetMobjSpawnHeight(i, mthing, x, y);
 
 	mobj = P_SpawnMobj(x, y, z, i);
+	P_SetScale(mobj, mthing->scale);
+	mobj->destscale = mthing->scale;
 	mobj->spawnpoint = mthing;
 
 #ifdef HAVE_BLUA
