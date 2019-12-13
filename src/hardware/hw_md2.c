@@ -637,14 +637,17 @@ spritemd2found:
 // 0.7152 to green
 // 0.0722 to blue
 #define SETBRIGHTNESS(brightness,r,g,b) \
-	brightness = (UINT8)(((1063*((UINT16)r)/5000) + (3576*((UINT16)g)/5000) + (361*((UINT16)b)/5000)) / 3)
+	brightness = (UINT8)(((1063*(UINT16)(r))/5000) + ((3576*(UINT16)(g))/5000) + ((361*(UINT16)(b))/5000))
 
 static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, GLMipmap_t *grmip, INT32 skinnum, skincolors_t color)
 {
-	UINT8 i;
 	UINT16 w = gpatch->width, h = gpatch->height;
 	UINT32 size = w*h;
 	RGBA_t *image, *blendimage, *cur, blendcolor;
+
+	// vanilla port
+	UINT8 translation[16];
+	memset(translation, 0, sizeof(translation));
 
 	if (grmip->width == 0)
 	{
@@ -658,113 +661,243 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 		grmip->grInfo.format = GR_RGBA;
 	}
 
-	Z_Free(grmip->grInfo.data);
-	grmip->grInfo.data = NULL;
+	if (grmip->grInfo.data)
+	{
+		Z_Free(grmip->grInfo.data);
+		grmip->grInfo.data = NULL;
+	}
 
 	cur = Z_Malloc(size*4, PU_HWRMODELTEXTURE, &grmip->grInfo.data);
 	memset(cur, 0x00, size*4);
 
 	image = gpatch->mipmap->grInfo.data;
 	blendimage = blendgpatch->mipmap->grInfo.data;
+	blendcolor = V_GetColor(0); // initialize
 
-	// Average all of the translation's colors
-	if (color == SKINCOLOR_NONE || color >= MAXTRANSLATIONS)
-		blendcolor = V_GetColor(0xff);
-	else
+	if (color != SKINCOLOR_NONE)
+		memcpy(&translation, &Color_Index[color - 1], 16);
+
+	while (size--)
 	{
-		const UINT8 div = 6;
-		const UINT8 start = 4;
-		UINT32 r, g, b;
-
-		blendcolor = V_GetColor(Color_Index[color-1][start]);
-		r = (UINT32)(blendcolor.s.red*blendcolor.s.red);
-		g = (UINT32)(blendcolor.s.green*blendcolor.s.green);
-		b = (UINT32)(blendcolor.s.blue*blendcolor.s.blue);
-
-		for (i = 1; i < div; i++)
+		if (skinnum == TC_BOSS)
 		{
-			RGBA_t nextcolor = V_GetColor(Color_Index[color-1][start+i]);
-			r += (UINT32)(nextcolor.s.red*nextcolor.s.red);
-			g += (UINT32)(nextcolor.s.green*nextcolor.s.green);
-			b += (UINT32)(nextcolor.s.blue*nextcolor.s.blue);
-		}
-
-		blendcolor.s.red = (UINT8)(FixedSqrt((r/div)<<FRACBITS)>>FRACBITS);
-		blendcolor.s.green = (UINT8)(FixedSqrt((g/div)<<FRACBITS)>>FRACBITS);
-		blendcolor.s.blue = (UINT8)(FixedSqrt((b/div)<<FRACBITS)>>FRACBITS);
-	}
-
-	// rainbow support, could theoretically support boss ones too
-	if (skinnum == TC_RAINBOW)
-	{
-		while (size--)
-		{
-			if (image->s.alpha == 0 && blendimage->s.alpha == 0)
+			// Pure black turns into white
+			if (image->s.red == 0 && image->s.green == 0 && image->s.blue == 0)
 			{
-				// Don't bother with blending the pixel if the alpha of the blend pixel is 0
-				cur->rgba = image->rgba;
+				cur->s.red = cur->s.green = cur->s.blue = 255;
 			}
 			else
+			{
+				cur->s.red = image->s.red;
+				cur->s.green = image->s.green;
+				cur->s.blue = image->s.blue;
+			}
+
+			cur->s.alpha = image->s.alpha;
+		}
+		else if (skinnum == TC_METALSONIC)
+		{
+			// Turn everything below a certain blue threshold white
+			if (image->s.red == 0 && image->s.green == 0 && image->s.blue <= 82)
+			{
+				cur->s.red = cur->s.green = cur->s.blue = 255;
+			}
+			else
+			{
+				cur->s.red = image->s.red;
+				cur->s.green = image->s.green;
+				cur->s.blue = image->s.blue;
+			}
+
+			cur->s.alpha = image->s.alpha;
+		}
+		else if (skinnum == TC_ALLWHITE)
+		{
+			// Turn everything white
+			cur->s.red = cur->s.green = cur->s.blue = 255;
+			cur->s.alpha = image->s.alpha;
+		}
+		else
+		{
+			UINT16 brightness;
+
+			// Don't bother with blending the pixel if the alpha of the blend pixel is 0
+			if (skinnum == TC_RAINBOW)
+			{
+				if (image->s.alpha == 0 && blendimage->s.alpha == 0)
+				{
+					cur->rgba = image->rgba;
+					cur++; image++; blendimage++;
+					continue;
+				}
+				else
+				{
+					UINT16 imagebright, blendbright;
+					SETBRIGHTNESS(imagebright,image->s.red,image->s.green,image->s.blue);
+					SETBRIGHTNESS(blendbright,blendimage->s.red,blendimage->s.green,blendimage->s.blue);
+					// slightly dumb average between the blend image color and base image colour, usually one or the other will be fully opaque anyway
+					brightness = (imagebright*(255-blendimage->s.alpha))/255 + (blendbright*blendimage->s.alpha)/255;
+				}
+			}
+			else
+			{
+				if (blendimage->s.alpha == 0)
+				{
+					cur->rgba = image->rgba;
+					cur++; image++; blendimage++;
+					continue;
+				}
+				else
+				{
+					SETBRIGHTNESS(brightness,blendimage->s.red,blendimage->s.green,blendimage->s.blue);
+				}
+			}
+
+			// Calculate a sort of "gradient" for the skincolor
+			// (Me splitting this into a function didn't work, so I had to ruin this entire function's groove...)
+			{
+				RGBA_t nextcolor;
+				UINT8 firsti, secondi, mul;
+				UINT32 r, g, b;
+
+				// Rainbow needs to find the closest match to the textures themselves, instead of matching brightnesses to other colors.
+				// Ensue horrible mess.
+				if (skinnum == TC_RAINBOW)
+				{
+					UINT16 brightdif = 256;
+					UINT8 colorbrightnesses[16];
+					INT32 compare, m, d;
+					UINT8 i;
+
+					// Ignore pure white & pitch black
+					if (brightness > 253 || brightness < 2)
+					{
+						cur->rgba = image->rgba;
+						cur++; image++; blendimage++;
+						continue;
+					}
+
+					firsti = 0;
+					mul = 0;
+
+					for (i = 0; i < 16; i++)
+					{
+						RGBA_t tempc = V_GetColor(translation[i]);
+						SETBRIGHTNESS(colorbrightnesses[i], tempc.s.red, tempc.s.green, tempc.s.blue); // store brightnesses for comparison
+					}
+
+					for (i = 0; i < 16; i++)
+					{
+						if (brightness > colorbrightnesses[i]) // don't allow greater matches (because calculating a makeshift gradient for this is already a huge mess as is)
+							continue;
+						compare = abs((INT16)(colorbrightnesses[i]) - (INT16)(brightness));
+						if (compare < brightdif)
+						{
+							brightdif = (UINT16)compare;
+							firsti = i; // best matching color that's equal brightness or darker
+						}
+					}
+
+					secondi = firsti+1; // next color in line
+					if (secondi == 16)
+					{
+						m = (INT16)brightness; // - 0;
+						d = (INT16)colorbrightnesses[firsti]; // - 0;
+					}
+					else
+					{
+						m = (INT16)brightness - (INT16)colorbrightnesses[secondi];
+						d = (INT16)colorbrightnesses[firsti] - (INT16)colorbrightnesses[secondi];
+					}
+
+					if (m >= d)
+						m = d-1;
+
+					// calculate the "gradient" multiplier based on how close this color is to the one next in line
+					if (m <= 0 || d <= 0)
+						mul = 0;
+					else
+						mul = 15 - ((m * 16) / d);
+				}
+				else
+				{
+					// Thankfully, it's normally way more simple.
+					// Just convert brightness to a skincolor value, use remainder to find the gradient multipler
+					firsti = ((UINT8)(255-brightness) / 16);
+					secondi = firsti+1;
+					mul = ((UINT8)(255-brightness) % 16);
+				}
+
+				blendcolor = V_GetColor(translation[firsti]);
+
+				if (mul > 0 // If it's 0, then we only need the first color.
+					&& translation[firsti] != translation[secondi]) // Some colors have duplicate colors in a row, so let's just save the process
+				{
+					if (secondi == 16) // blend to black
+						nextcolor = V_GetColor(31);
+					else
+						nextcolor = V_GetColor(translation[secondi]);
+
+					// Find difference between points
+					r = (UINT32)(nextcolor.s.red - blendcolor.s.red);
+					g = (UINT32)(nextcolor.s.green - blendcolor.s.green);
+					b = (UINT32)(nextcolor.s.blue - blendcolor.s.blue);
+
+					// Find the gradient of the two points
+					r = ((mul * r) / 16);
+					g = ((mul * g) / 16);
+					b = ((mul * b) / 16);
+
+					// Add gradient value to color
+					blendcolor.s.red += r;
+					blendcolor.s.green += g;
+					blendcolor.s.blue += b;
+				}
+			}
+
+			if (skinnum == TC_RAINBOW)
 			{
 				UINT32 tempcolor;
-				UINT16 imagebright, blendbright, finalbright, colorbright;
-				SETBRIGHTNESS(imagebright,image->s.red,image->s.green,image->s.blue);
-				SETBRIGHTNESS(blendbright,blendimage->s.red,blendimage->s.green,blendimage->s.blue);
-				// slightly dumb average between the blend image color and base image colour, usually one or the other will be fully opaque anyway
-				finalbright = (imagebright*(255-blendimage->s.alpha))/255 + (blendbright*blendimage->s.alpha)/255;
-				SETBRIGHTNESS(colorbright,blendcolor.s.red,blendcolor.s.green,blendcolor.s.blue);
+				UINT16 colorbright;
 
-				tempcolor = (finalbright*blendcolor.s.red)/colorbright;
+				SETBRIGHTNESS(colorbright,blendcolor.s.red,blendcolor.s.green,blendcolor.s.blue);
+				if (colorbright == 0)
+					colorbright = 1; // no dividing by 0 please
+
+				tempcolor = (brightness * blendcolor.s.red) / colorbright;
 				tempcolor = min(255, tempcolor);
 				cur->s.red = (UINT8)tempcolor;
-				tempcolor = (finalbright*blendcolor.s.green)/colorbright;
+
+				tempcolor = (brightness * blendcolor.s.green) / colorbright;
 				tempcolor = min(255, tempcolor);
 				cur->s.green = (UINT8)tempcolor;
-				tempcolor = (finalbright*blendcolor.s.blue)/colorbright;
+
+				tempcolor = (brightness * blendcolor.s.blue) / colorbright;
 				tempcolor = min(255, tempcolor);
 				cur->s.blue = (UINT8)tempcolor;
 				cur->s.alpha = image->s.alpha;
-			}
-
-			cur++; image++; blendimage++;
-		}
-	}
-	else
-	{
-		while (size--)
-		{
-			if (blendimage->s.alpha == 0)
-			{
-				// Don't bother with blending the pixel if the alpha of the blend pixel is 0
-				cur->rgba = image->rgba;
 			}
 			else
 			{
+				// Color strength depends on image alpha
 				INT32 tempcolor;
-				INT16 tempmult, tempalpha;
-				tempalpha = -(abs(blendimage->s.red-127)-127)*2;
-				if (tempalpha > 255)
-					tempalpha = 255;
-				else if (tempalpha < 0)
-					tempalpha = 0;
 
-				tempmult = (blendimage->s.red-127)*2;
-				if (tempmult > 255)
-					tempmult = 255;
-				else if (tempmult < 0)
-					tempmult = 0;
-
-				tempcolor = (image->s.red*(255-blendimage->s.alpha))/255 + ((tempmult + ((tempalpha*blendcolor.s.red)/255)) * blendimage->s.alpha)/255;
+				tempcolor = ((image->s.red * (255-blendimage->s.alpha)) / 255) + ((blendcolor.s.red * blendimage->s.alpha) / 255);
+				tempcolor = min(255, tempcolor);
 				cur->s.red = (UINT8)tempcolor;
-				tempcolor = (image->s.green*(255-blendimage->s.alpha))/255 + ((tempmult + ((tempalpha*blendcolor.s.green)/255)) * blendimage->s.alpha)/255;
+
+				tempcolor = ((image->s.green * (255-blendimage->s.alpha)) / 255) + ((blendcolor.s.green * blendimage->s.alpha) / 255);
+				tempcolor = min(255, tempcolor);
 				cur->s.green = (UINT8)tempcolor;
-				tempcolor = (image->s.blue*(255-blendimage->s.alpha))/255 + ((tempmult + ((tempalpha*blendcolor.s.blue)/255)) * blendimage->s.alpha)/255;
+
+				tempcolor = ((image->s.blue * (255-blendimage->s.alpha)) / 255) + ((blendcolor.s.blue * blendimage->s.alpha) / 255);
+				tempcolor = min(255, tempcolor);
 				cur->s.blue = (UINT8)tempcolor;
 				cur->s.alpha = image->s.alpha;
 			}
-
-			cur++; image++; blendimage++;
 		}
+
+		cur++; image++; blendimage++;
 	}
 
 	return;
