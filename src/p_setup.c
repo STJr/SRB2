@@ -872,7 +872,7 @@ static void GeneralDefaults(void)
   * Due to UDMF's format specs, some fields are assumed to have default values.
   * Therefore, it is necessary to set said fields beforehand.
   */
-static void TextmapDefaults ()
+static void TextmapDefaults (void)
 {
 	UINT32 i;//, j;
 
@@ -956,38 +956,38 @@ static void TextmapDefaults ()
 
 static boolean TextmapCount (UINT8 *data, size_t size)
 {
-	char *token;
+	char *tkn;
 
 	// Determine total amount of map data in TEXTMAP.
 	// Look for namespace at the beginning.
 	if (fastcmp(M_GetToken((char *)data), "namespace"))
 		// Check if namespace is valid.
-		if (fastcmp((token = M_GetToken(NULL)), "srb2"))
-			while ((token = M_GetToken(NULL)) != NULL && M_GetTokenPos() < size)
+		if (fastcmp((tkn = M_GetToken(NULL)), "srb2"))
+			while ((tkn = M_GetToken(NULL)) != NULL && M_GetTokenPos() < size)
 			{
 				// Avoid anything inside bracketed stuff, only look for external keywords.
 				// Assuming there's only one level of bracket nesting.
-				if (fastcmp(token, "{"))
-					while (!fastcmp(token, "}"))
-						token = M_GetToken(NULL);
+				if (fastcmp(tkn, "{"))
+					while (!fastcmp(tkn, "}"))
+						tkn = M_GetToken(NULL);
 
 				// Check for valid fields.
-				else if (fastcmp(token, "thing"))
+				else if (fastcmp(tkn, "thing"))
 					mapthingsPos[nummapthings++] = M_GetTokenPos();
-				else if (fastcmp(token, "linedef"))
+				else if (fastcmp(tkn, "linedef"))
 					linesPos[numlines++] = M_GetTokenPos();
-				else if (fastcmp(token, "sidedef"))
+				else if (fastcmp(tkn, "sidedef"))
 					sidesPos[numsides++] = M_GetTokenPos();
-				else if (fastcmp(token, "vertex"))
+				else if (fastcmp(tkn, "vertex"))
 					vertexesPos[numvertexes++] = M_GetTokenPos();
-				else if (fastcmp(token, "sector"))
+				else if (fastcmp(tkn, "sector"))
 					sectorsPos[numsectors++] = M_GetTokenPos();
 				else
-					CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", token);
+					CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", tkn);
 			}
 		else
 		{
-			CONS_Alert(CONS_WARNING, "Invalid namespace '%s', only 'srb2' is supported.\n", token);
+			CONS_Alert(CONS_WARNING, "Invalid namespace '%s', only 'srb2' is supported.\n", tkn);
 			return false;
 		}
 	else
@@ -2555,6 +2555,7 @@ static boolean LoadMapBSP (const virtres_t* virt)
 	case NT_XGL3:
 	{
 		size_t i, j, k;
+		INT16 m;
 		UINT8* data = virtnodes->data;
 		data += 4;
 
@@ -2609,13 +2610,13 @@ static boolean LoadMapBSP (const virtres_t* virt)
 			switch (nodetype)
 			{
 			case NT_XGLN:
-				for (j = 0; j < subsectors[i].numlines; j++, k++)
+				for (m = 0; m < subsectors[i].numlines; m++, k++)
 				{
 					UINT16 linenum;
 					UINT32 vert;
 					vert = READUINT32(data);
 					segs[k].v1 = &vertexes[vert];
-					if (j == 0)
+					if (m == 0)
 						segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
 					else
 						segs[k - 1].v2 = segs[k].v1;
@@ -2637,13 +2638,13 @@ static boolean LoadMapBSP (const virtres_t* virt)
 				break;
 
 			case NT_XGL3:
-				for (j = 0; j < subsectors[i].numlines; j++, k++)
+				for (m = 0; m < subsectors[i].numlines; m++, k++)
 				{
 					UINT32 linenum;
 					UINT32 vert;
 					vert = READUINT32(data);
 					segs[k].v1 = &vertexes[vert];
-					if (j == 0)
+					if (m == 0)
 						segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
 					else
 						segs[k - 1].v2 = segs[k].v1;
@@ -2665,7 +2666,7 @@ static boolean LoadMapBSP (const virtres_t* virt)
 				break;
 
 			case NT_XNOD:
-				for (j = 0; j < subsectors[i].numlines; j++, k++)
+				for (m = 0; m < subsectors[i].numlines; m++, k++)
 				{
 					segs[k].v1		= &vertexes[READUINT32(data)];
 					segs[k].v2		= &vertexes[READUINT32(data)];
