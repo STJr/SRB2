@@ -107,7 +107,8 @@ UINT8 *ds_transmap; // one of the translucency tables
 
 #ifdef ESLOPE
 pslope_t *ds_slope; // Current slope being used
-floatv3_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
+floatv3_t ds_su[MAXVIDHEIGHT], ds_sv[MAXVIDHEIGHT], ds_sz[MAXVIDHEIGHT]; // Vectors for... stuff?
+floatv3_t *ds_sup, *ds_svp, *ds_szp;
 float focallengthf, zeroheight;
 #endif
 
