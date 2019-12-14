@@ -311,10 +311,11 @@ const UINT8 correctiontable[256] =
 // keep a copy of the palette so that we can get the RGB value for a color index at any time.
 static void LoadPalette(const char *lumpname)
 {
-	Cubeapply = InitCube();
 	lumpnum_t lumpnum = W_GetNumForName(lumpname);
 	size_t i, palsize = W_LumpLength(lumpnum)/3;
 	UINT8 *pal;
+
+	Cubeapply = InitCube();
 
 	Z_Free(pLocalPalette);
 	Z_Free(pMasterPalette);
