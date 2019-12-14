@@ -623,6 +623,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
+/// Text input events
+#define HAVE_TEXTINPUT
+
 /// Sprite rotation
 #define ROTSPRITE
 #define ROTANGLES 24	// Needs to be a divisor of 360 (45, 60, 90, 120...)

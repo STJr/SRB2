@@ -66,6 +66,7 @@
 #include "../d_main.h"
 #include "../s_sound.h"
 #include "../i_joy.h"
+#include "../hu_stuff.h"
 #include "../st_stuff.h"
 #include "../g_game.h"
 #include "../i_video.h"
@@ -100,6 +101,13 @@ consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL
 static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
+
+// Lactozilla: keyboard input
+#ifdef HAVE_TEXTINPUT
+consvar_t cv_textinput = {"textinput", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif
+consvar_t cv_keyboardlocale = {"keyboardlocale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_forceqwerty = {"forceqwerty", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // To disable fullscreen at startup; is set in VID_PrepareModeList
 boolean allow_fullscreen = false;
@@ -264,92 +272,274 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	}
 }
 
-static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
+static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 {
-	if (code >= SDL_SCANCODE_A && code <= SDL_SCANCODE_Z)
+	boolean useqwerty = true;
+	if (cv_keyboardlocale.value)
 	{
-		// get lowercase ASCII
-		return code - SDL_SCANCODE_A + 'a';
-	}
-	if (code >= SDL_SCANCODE_1 && code <= SDL_SCANCODE_9)
-	{
-		return code - SDL_SCANCODE_1 + '1';
-	}
-	else if (code == SDL_SCANCODE_0)
-	{
-		return '0';
-	}
-	if (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F10)
-	{
-		return KEY_F1 + (code - SDL_SCANCODE_F1);
-	}
-	switch (code)
-	{
-		// F11 and F12 are separated from the rest of the function keys
-		case SDL_SCANCODE_F11: return KEY_F11;
-		case SDL_SCANCODE_F12: return KEY_F12;
+		SDL_Keycode keycode = SDL_GetKeyFromScancode(code);
 
-		case SDL_SCANCODE_KP_0: return KEY_KEYPAD0;
-		case SDL_SCANCODE_KP_1: return KEY_KEYPAD1;
-		case SDL_SCANCODE_KP_2: return KEY_KEYPAD2;
-		case SDL_SCANCODE_KP_3: return KEY_KEYPAD3;
-		case SDL_SCANCODE_KP_4: return KEY_KEYPAD4;
-		case SDL_SCANCODE_KP_5: return KEY_KEYPAD5;
-		case SDL_SCANCODE_KP_6: return KEY_KEYPAD6;
-		case SDL_SCANCODE_KP_7: return KEY_KEYPAD7;
-		case SDL_SCANCODE_KP_8: return KEY_KEYPAD8;
-		case SDL_SCANCODE_KP_9: return KEY_KEYPAD9;
+		// Lactozilla
+		// Use keycodes instead of scancodes,
+		// so that non-US keyboards can work! Wow!
+		switch (keycode)
+		{
+			// F11 and F12 are separated from the rest of the function keys
+			case SDLK_F11: return KEY_F11;
+			case SDLK_F12: return KEY_F12;
 
-		case SDL_SCANCODE_RETURN:         return KEY_ENTER;
-		case SDL_SCANCODE_ESCAPE:         return KEY_ESCAPE;
-		case SDL_SCANCODE_BACKSPACE:      return KEY_BACKSPACE;
-		case SDL_SCANCODE_TAB:            return KEY_TAB;
-		case SDL_SCANCODE_SPACE:          return KEY_SPACE;
-		case SDL_SCANCODE_MINUS:          return KEY_MINUS;
-		case SDL_SCANCODE_EQUALS:         return KEY_EQUALS;
-		case SDL_SCANCODE_LEFTBRACKET:    return '[';
-		case SDL_SCANCODE_RIGHTBRACKET:   return ']';
-		case SDL_SCANCODE_BACKSLASH:      return '\\';
-		case SDL_SCANCODE_NONUSHASH:      return '#';
-		case SDL_SCANCODE_SEMICOLON:      return ';';
-		case SDL_SCANCODE_APOSTROPHE:     return '\'';
-		case SDL_SCANCODE_GRAVE:          return '`';
-		case SDL_SCANCODE_COMMA:          return ',';
-		case SDL_SCANCODE_PERIOD:         return '.';
-		case SDL_SCANCODE_SLASH:          return '/';
-		case SDL_SCANCODE_CAPSLOCK:       return KEY_CAPSLOCK;
-		case SDL_SCANCODE_PRINTSCREEN:    return 0; // undefined?
-		case SDL_SCANCODE_SCROLLLOCK:     return KEY_SCROLLLOCK;
-		case SDL_SCANCODE_PAUSE:          return KEY_PAUSE;
-		case SDL_SCANCODE_INSERT:         return KEY_INS;
-		case SDL_SCANCODE_HOME:           return KEY_HOME;
-		case SDL_SCANCODE_PAGEUP:         return KEY_PGUP;
-		case SDL_SCANCODE_DELETE:         return KEY_DEL;
-		case SDL_SCANCODE_END:            return KEY_END;
-		case SDL_SCANCODE_PAGEDOWN:       return KEY_PGDN;
-		case SDL_SCANCODE_RIGHT:          return KEY_RIGHTARROW;
-		case SDL_SCANCODE_LEFT:           return KEY_LEFTARROW;
-		case SDL_SCANCODE_DOWN:           return KEY_DOWNARROW;
-		case SDL_SCANCODE_UP:             return KEY_UPARROW;
-		case SDL_SCANCODE_NUMLOCKCLEAR:   return KEY_NUMLOCK;
-		case SDL_SCANCODE_KP_DIVIDE:      return KEY_KPADSLASH;
-		case SDL_SCANCODE_KP_MULTIPLY:    return '*'; // undefined?
-		case SDL_SCANCODE_KP_MINUS:       return KEY_MINUSPAD;
-		case SDL_SCANCODE_KP_PLUS:        return KEY_PLUSPAD;
-		case SDL_SCANCODE_KP_ENTER:       return KEY_ENTER;
-		case SDL_SCANCODE_KP_PERIOD:      return KEY_KPADDEL;
-		case SDL_SCANCODE_NONUSBACKSLASH: return '\\';
+			case SDLK_KP_0: return KEY_KEYPAD0;
+			case SDLK_KP_1: return KEY_KEYPAD1;
+			case SDLK_KP_2: return KEY_KEYPAD2;
+			case SDLK_KP_3: return KEY_KEYPAD3;
+			case SDLK_KP_4: return KEY_KEYPAD4;
+			case SDLK_KP_5: return KEY_KEYPAD5;
+			case SDLK_KP_6: return KEY_KEYPAD6;
+			case SDLK_KP_7: return KEY_KEYPAD7;
+			case SDLK_KP_8: return KEY_KEYPAD8;
+			case SDLK_KP_9: return KEY_KEYPAD9;
 
-		case SDL_SCANCODE_LSHIFT: return KEY_LSHIFT;
-		case SDL_SCANCODE_RSHIFT: return KEY_RSHIFT;
-		case SDL_SCANCODE_LCTRL:  return KEY_LCTRL;
-		case SDL_SCANCODE_RCTRL:  return KEY_RCTRL;
-		case SDL_SCANCODE_LALT:   return KEY_LALT;
-		case SDL_SCANCODE_RALT:   return KEY_RALT;
-		case SDL_SCANCODE_LGUI:   return KEY_LEFTWIN;
-		case SDL_SCANCODE_RGUI:   return KEY_RIGHTWIN;
-		default:                  break;
+			case SDLK_RETURN:         return KEY_ENTER;
+			case SDLK_ESCAPE:         return KEY_ESCAPE;
+			case SDLK_BACKSPACE:      return KEY_BACKSPACE;
+			case SDLK_TAB:            return KEY_TAB;
+			case SDLK_SPACE:          return KEY_SPACE;
+			case SDLK_CAPSLOCK:       return KEY_CAPSLOCK;
+			//case SDLK_PRINTSCREEN:    return KEY_PRTSC;
+			case SDLK_SCROLLLOCK:     return KEY_SCROLLLOCK;
+			case SDLK_APPLICATION:    return KEY_MENU;
+			case SDLK_PAUSE:          return KEY_PAUSE;
+			case SDLK_INSERT:         return KEY_INS;
+			case SDLK_HOME:           return KEY_HOME;
+			case SDLK_PAGEUP:         return KEY_PGUP;
+			case SDLK_DELETE:         return KEY_DEL;
+			case SDLK_END:            return KEY_END;
+			case SDLK_PAGEDOWN:       return KEY_PGDN;
+			case SDLK_RIGHT:          return KEY_RIGHTARROW;
+			case SDLK_LEFT:           return KEY_LEFTARROW;
+			case SDLK_DOWN:           return KEY_DOWNARROW;
+			case SDLK_UP:             return KEY_UPARROW;
+			case SDLK_NUMLOCKCLEAR:   return KEY_NUMLOCK;
+			case SDLK_KP_DIVIDE:      return KEY_KPADSLASH;
+			case SDLK_KP_MULTIPLY:    return '*'; // undefined?
+			case SDLK_KP_MINUS:       return KEY_MINUSPAD;
+			case SDLK_KP_PLUS:        return KEY_PLUSPAD;
+			case SDLK_KP_ENTER:       return KEY_ENTER;
+			case SDLK_KP_PERIOD:      return KEY_KPADDEL;
+
+			case SDLK_LSHIFT: return KEY_LSHIFT;
+			case SDLK_RSHIFT: return KEY_RSHIFT;
+			case SDLK_LCTRL:  return KEY_LCTRL;
+			case SDLK_RCTRL:  return KEY_RCTRL;
+			case SDLK_LALT:   return KEY_LALT;
+			case SDLK_RALT:   return KEY_RALT;
+			case SDLK_LGUI:   return KEY_LEFTWIN;
+			case SDLK_RGUI:   return KEY_RIGHTWIN;
+			default:          break;
+		}
+
+		if (keycode >= SDLK_F1 && keycode <= SDLK_F10)
+		{
+			return KEY_F1 + (keycode - SDLK_F1);
+		}
+
+		// Do send keyup events to avoid stuck movement keys
+		if (type != SDL_KEYUP && (!ctrldown))
+		{
+#ifdef HAVE_TEXTINPUT
+			if (cv_textinput.value)
+			{
+				// Lactozilla: console input
+				if (CON_AcceptInput())
+					return 0;
+				// menu text input
+				if (M_TextInput())
+					return 0;
+				// chat input
+				if (HU_ChatActive())
+					return 0;
+			}
+#else
+			if (CON_AcceptInput() // console input
+			|| M_TextInput() // menu text input
+			|| HU_ChatActive()) // chat input
+				useqwerty = (cv_forceqwerty.value);
+#endif
+		}
+
+		switch (keycode)
+		{
+			case SDLK_MINUS:          return KEY_MINUS;
+			case SDLK_EQUALS:         return KEY_EQUALS;
+			case SDLK_LEFTBRACKET:    return '[';
+			case SDLK_RIGHTBRACKET:   return ']';
+			case SDLK_BACKSLASH:      return '\\';
+			case SDLK_SEMICOLON:      return ';';
+			case SDLK_QUOTE:          return '\'';
+			case SDLK_BACKQUOTE:      return '`';
+			case SDLK_COMMA:          return ',';
+			case SDLK_PERIOD:         return '.';
+			case SDLK_SLASH:          return '/';
+			case SDLK_AMPERSAND:      return '&';
+			case SDLK_ASTERISK:       return '*';
+			case SDLK_AT:             return '@';
+			case SDLK_CARET:          return '^';
+			case SDLK_COLON:          return ':';
+			case SDLK_DOLLAR:         return '$';
+			case SDLK_EXCLAIM:        return '!';
+			case SDLK_GREATER:        return '>';
+			case SDLK_HASH:           return '#';
+			case SDLK_LEFTPAREN:      return '(';
+			case SDLK_LESS:           return '<';
+			case SDLK_PERCENT:        return '%';
+			case SDLK_PLUS:           return '+';
+			case SDLK_QUESTION:       return '?';
+			case SDLK_QUOTEDBL:       return '"';
+			case SDLK_RIGHTPAREN:     return ')';
+			case SDLK_UNDERSCORE:     return '_';
+			default:          break;
+		}
+
+		// Tested by installing a French keymap
+		if (useqwerty)
+		{
+			if (code >= SDL_SCANCODE_A && code <= SDL_SCANCODE_Z)
+				return code - SDL_SCANCODE_A + 'a';
+			else if (code >= SDL_SCANCODE_1 && code <= SDL_SCANCODE_9)
+				return code - SDL_SCANCODE_1 + '1';
+			else if (code == SDL_SCANCODE_0)
+				return '0';
+		}
+		else
+		{
+			if (keycode >= SDLK_a && keycode <= SDLK_z)
+				return keycode - SDLK_a + 'a';
+			else if (keycode >= SDLK_1 && keycode <= SDLK_9)
+				return keycode - SDLK_1 + '1';
+			else if (keycode == SDLK_0)
+				return '0';
+		}
 	}
+	else
+	{
+		switch (code)
+		{
+			// F11 and F12 are separated from the rest of the function keys
+			case SDL_SCANCODE_F11: return KEY_F11;
+			case SDL_SCANCODE_F12: return KEY_F12;
+
+			case SDL_SCANCODE_KP_0: return KEY_KEYPAD0;
+			case SDL_SCANCODE_KP_1: return KEY_KEYPAD1;
+			case SDL_SCANCODE_KP_2: return KEY_KEYPAD2;
+			case SDL_SCANCODE_KP_3: return KEY_KEYPAD3;
+			case SDL_SCANCODE_KP_4: return KEY_KEYPAD4;
+			case SDL_SCANCODE_KP_5: return KEY_KEYPAD5;
+			case SDL_SCANCODE_KP_6: return KEY_KEYPAD6;
+			case SDL_SCANCODE_KP_7: return KEY_KEYPAD7;
+			case SDL_SCANCODE_KP_8: return KEY_KEYPAD8;
+			case SDL_SCANCODE_KP_9: return KEY_KEYPAD9;
+
+			case SDL_SCANCODE_RETURN:         return KEY_ENTER;
+			case SDL_SCANCODE_ESCAPE:         return KEY_ESCAPE;
+			case SDL_SCANCODE_BACKSPACE:      return KEY_BACKSPACE;
+			case SDL_SCANCODE_TAB:            return KEY_TAB;
+			case SDL_SCANCODE_SPACE:          return KEY_SPACE;
+			case SDL_SCANCODE_CAPSLOCK:       return KEY_CAPSLOCK;
+			case SDL_SCANCODE_PRINTSCREEN:    return 0; // undefined?
+			case SDL_SCANCODE_SCROLLLOCK:     return KEY_SCROLLLOCK;
+			case SDL_SCANCODE_PAUSE:          return KEY_PAUSE;
+			case SDL_SCANCODE_INSERT:         return KEY_INS;
+			case SDL_SCANCODE_HOME:           return KEY_HOME;
+			case SDL_SCANCODE_PAGEUP:         return KEY_PGUP;
+			case SDL_SCANCODE_DELETE:         return KEY_DEL;
+			case SDL_SCANCODE_END:            return KEY_END;
+			case SDL_SCANCODE_PAGEDOWN:       return KEY_PGDN;
+			case SDL_SCANCODE_RIGHT:          return KEY_RIGHTARROW;
+			case SDL_SCANCODE_LEFT:           return KEY_LEFTARROW;
+			case SDL_SCANCODE_DOWN:           return KEY_DOWNARROW;
+			case SDL_SCANCODE_UP:             return KEY_UPARROW;
+			case SDL_SCANCODE_NUMLOCKCLEAR:   return KEY_NUMLOCK;
+			case SDL_SCANCODE_KP_DIVIDE:      return KEY_KPADSLASH;
+			case SDL_SCANCODE_KP_MULTIPLY:    return '*'; // undefined?
+			case SDL_SCANCODE_KP_MINUS:       return KEY_MINUSPAD;
+			case SDL_SCANCODE_KP_PLUS:        return KEY_PLUSPAD;
+			case SDL_SCANCODE_KP_ENTER:       return KEY_ENTER;
+			case SDL_SCANCODE_KP_PERIOD:      return KEY_KPADDEL;
+			case SDL_SCANCODE_NONUSBACKSLASH: return '\\';
+
+			case SDL_SCANCODE_LSHIFT: return KEY_LSHIFT;
+			case SDL_SCANCODE_RSHIFT: return KEY_RSHIFT;
+			case SDL_SCANCODE_LCTRL:  return KEY_LCTRL;
+			case SDL_SCANCODE_RCTRL:  return KEY_RCTRL;
+			case SDL_SCANCODE_LALT:   return KEY_LALT;
+			case SDL_SCANCODE_RALT:   return KEY_RALT;
+			case SDL_SCANCODE_LGUI:   return KEY_LEFTWIN;
+			case SDL_SCANCODE_RGUI:   return KEY_RIGHTWIN;
+			default:                  break;
+		}
+
+		if (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F10)
+		{
+			return KEY_F1 + (code - SDL_SCANCODE_F1);
+		}
+
+		// Do send keyup events to avoid stuck movement keys
+		if (type != SDL_KEYUP && (!ctrldown))
+		{
+#ifdef HAVE_TEXTINPUT
+			if (cv_textinput.value)
+			{
+				// Lactozilla: console input
+				if (CON_AcceptInput())
+					return 0;
+				// menu text input
+				if (M_TextInput())
+					return 0;
+				// chat input
+				if (HU_ChatActive())
+					return 0;
+			}
+#else
+			if (CON_AcceptInput() // console input
+			|| M_TextInput() // menu text input
+			|| HU_ChatActive()) // chat input
+				useqwerty = (cv_forceqwerty.value);
+#endif
+		}
+
+		switch (code)
+		{
+			case SDL_SCANCODE_MINUS:          return KEY_MINUS;
+			case SDL_SCANCODE_EQUALS:         return KEY_EQUALS;
+			case SDL_SCANCODE_LEFTBRACKET:    return '[';
+			case SDL_SCANCODE_RIGHTBRACKET:   return ']';
+			case SDL_SCANCODE_BACKSLASH:      return '\\';
+			case SDL_SCANCODE_NONUSHASH:      return '#';
+			case SDL_SCANCODE_SEMICOLON:      return ';';
+			case SDL_SCANCODE_APOSTROPHE:     return '\'';
+			case SDL_SCANCODE_GRAVE:          return '`';
+			case SDL_SCANCODE_COMMA:          return ',';
+			case SDL_SCANCODE_PERIOD:         return '.';
+			case SDL_SCANCODE_SLASH:          return '/';
+			default:                  break;
+		}
+
+		// cv_forceqwerty assumed on
+		if (code >= SDL_SCANCODE_A && code <= SDL_SCANCODE_Z)
+		{
+			// get lowercase ASCII
+			return code - SDL_SCANCODE_A + 'a';
+		}
+		if (code >= SDL_SCANCODE_1 && code <= SDL_SCANCODE_9)
+		{
+			return code - SDL_SCANCODE_1 + '1';
+		}
+		else if (code == SDL_SCANCODE_0)
+		{
+			return '0';
+		}
+	}
+
 #ifdef HWRENDER
 	DBG_Printf("Unknown incoming scancode: %d, represented %c\n",
 				code,
@@ -630,9 +820,26 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	{
 		return;
 	}
-	event.data1 = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode);
+	event.data1 = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode, type);
 	if (event.data1) D_PostEvent(&event);
 }
+
+#ifdef HAVE_TEXTINPUT
+static void Impl_HandleTextInputEvent(char *text)
+{
+	event_t event;
+
+	if (!cv_textinput.value)
+		return;
+
+	if (text[0] < 32 || text[0] > 127)
+		return;
+
+	event.data1 = text[0];
+	event.type = ev_keydown;
+	D_PostEvent(&event);
+}
+#endif
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
@@ -875,6 +1082,11 @@ void I_GetEvent(void)
 			case SDL_KEYDOWN:
 				Impl_HandleKeyboardEvent(evt.key, evt.type);
 				break;
+#ifdef HAVE_TEXTINPUT
+			case SDL_TEXTINPUT:
+				Impl_HandleTextInputEvent(evt.text.text);
+				break;
+#endif
 			case SDL_MOUSEMOTION:
 				//if (!mouseMotionOnce)
 				Impl_HandleMouseMotionEvent(evt.motion);
@@ -1605,6 +1817,23 @@ void I_StartupGraphics(void)
 	CV_RegisterVar (&cv_stretch);
 	disable_mouse = M_CheckParm("-nomouse");
 	disable_fullscreen = M_CheckParm("-win") ? 1 : 0;
+
+	// Lactozilla
+	// Small explanation from your local kaiju
+	// * cv_textinput allows "text input" events from SDL,
+	//   so that console and chat is guaranteed to use
+	//   your keyboard's locale reliably
+	// * When disabled, the game will fallback to using
+	//   keycode events, still following your locale somewhat
+	// * If cv_keyboardlocale is disabled, input will default
+	//   to using the US keyboard layout
+	// * cv_forceqwerty does what it says on the tin, but only
+	//   if text input events were disabled
+#ifdef HAVE_TEXTINPUT
+	CV_RegisterVar (&cv_textinput);
+#endif
+	CV_RegisterVar (&cv_keyboardlocale);
+	CV_RegisterVar (&cv_forceqwerty);
 
 	keyboard_started = true;
 

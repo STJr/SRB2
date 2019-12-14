@@ -1182,6 +1182,11 @@ static INT16 typelines = 1; // number of drawfill lines we need when drawing the
 // It's up here since it has to be reset when we open the chat.
 #endif
 
+boolean HU_ChatActive(void)
+{
+	return chat_on;
+}
+
 //
 // Returns true if key eaten
 //

@@ -16,6 +16,7 @@
 void CON_Init(void);
 
 boolean CON_Responder(event_t *ev);
+boolean CON_AcceptInput(void);
 
 // set true when screen size has changed, to adapt console
 extern boolean con_recalc;
