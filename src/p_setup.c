@@ -1296,8 +1296,8 @@ static void TextmapThing(UINT32 i, char *param)
 		mapthings[i].options |= MTF_OBJECTFLIP;
 	else if (fastcmp(param, "special") && fastcmp("true", M_GetToken(NULL)))
 		mapthings[i].options |= MTF_OBJECTSPECIAL;
-	else if (fastcmp(param, "ceiling") && fastcmp("true", M_GetToken(NULL)))
-		mapthings[i].options |= MTF_OBJECTFLIP;
+	else if (fastcmp(param, "ambush") && fastcmp("true", M_GetToken(NULL)))
+		mapthings[i].options |= MTF_AMBUSH;
 }
 
 /** From a given position table, run a specified parser function through a {}-encapsuled text.
