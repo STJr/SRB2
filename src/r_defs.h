@@ -317,6 +317,9 @@ typedef struct sector_s
 	angle_t floorpic_angle;
 	angle_t ceilingpic_angle;
 
+	fixed_t floor_scalex, floor_scaley;
+	fixed_t ceiling_scalex, ceiling_scaley;
+
 	INT32 heightsec; // other sector, or -1 if no other sector
 	INT32 camsec; // used for camera clipping
 
@@ -451,6 +454,16 @@ typedef struct
 
 	// add this to the calculated texture top
 	fixed_t rowoffset;
+
+	// Individual scaling.
+	fixed_t scalex_top, scaley_top;
+	fixed_t scalex_mid, scaley_mid;
+	fixed_t scalex_bot, scaley_bot;
+
+	// Individual offsets.
+	fixed_t offsetx_top, offsety_top;
+	fixed_t offsetx_mid, offsety_mid;
+	fixed_t offsetx_bot, offsety_bot;
 
 	// Texture indices.
 	// We do not maintain names here.

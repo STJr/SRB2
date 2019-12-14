@@ -719,7 +719,7 @@ static void GeneralDefaults(void)
 //	UINT32 j;
 
 	line_t *ld;
-//	side_t *sd;
+	side_t *sd;
 	sector_t *sc;
 	mapthing_t *mt;
 //	vertex_t* vt;
@@ -747,7 +747,7 @@ static void GeneralDefaults(void)
 		ld->executordelay = 0;
 		ld->udmfflags = 0;*/
 	}
-/*
+
 	for (i = 0, sd = sides; i < numsides; i++, sd++)
 	{
 		// Initialization.
@@ -755,10 +755,11 @@ static void GeneralDefaults(void)
 		// Defaults.
 		sd->scalex_top = sd->scaley_top = sd->scalex_mid = sd->scaley_mid = sd->scalex_bot = sd->scaley_bot = FRACUNIT;
 		sd->offsetx_top = sd->offsety_top = sd->offsetx_mid = sd->offsety_mid = sd->offsetx_bot = sd->offsety_bot = 0;
+/*
 		sd->light = 0;
 		sd->lightabsolute = false;
-	}
 */
+	}
 	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
 	{
 		// Initialization.
@@ -802,8 +803,8 @@ static void GeneralDefaults(void)
 		sc->floorspeed = 0;
 		sc->ceilspeed = 0;
 
-//		sc->floor_scale = FRACUNIT;
-//		sc->ceiling_scale = FRACUNIT;
+		sc->floor_scalex = sc->floor_scaley = FRACUNIT;
+		sc->ceiling_scalex = sc->ceiling_scaley = FRACUNIT;
 
 #ifdef HWRENDER // ----- for special tricks with HW renderer -----
 		sc->pseudoSector = false;
@@ -1056,10 +1057,16 @@ static void TextmapSector(UINT32 i, char *param)
 		sectors[i].verticalflip = true;
 	else if (fastcmp(param, "heatwave") && fastcmp("true", M_GetToken(NULL)))
 		sectors[i].udmfflags |= SFU_HEATWAVE;
+	#endif
 	else if (fastcmp(param, "xscalefloor"))
-		sectors[i].floor_scale = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+		sectors[i].floor_scalex = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "yscalefloor"))
+		sectors[i].floor_scaley = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 	else if (fastcmp(param, "xscaleceiling"))
-		sectors[i].ceiling_scale = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+		sectors[i].ceiling_scalex = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "yscaleceiling"))
+		sectors[i].ceiling_scaley = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	#ifdef ADVUDMF
 	else if (fastcmp(param, "lightfloor"))
 		sectors[i].lightfloor = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "lightceiling"))
@@ -1092,7 +1099,7 @@ static void TextmapSide(UINT32 i, char *param)
 		sides[i].sector = &sectors[atol(M_GetToken(NULL))];
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(M_GetToken(NULL));
-	#ifdef ADVUDMF
+
 	else if (fastcmp(param, "scalex_top"))
 		sides[i].scalex_top = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 	else if (fastcmp(param, "scaley_top"))
@@ -1117,6 +1124,7 @@ static void TextmapSide(UINT32 i, char *param)
 		sides[i].offsetx_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 	else if (fastcmp(param, "offsety_bottom"))
 		sides[i].offsety_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	#ifdef ADVUDMF
 	else if (fastcmp(param, "light"))
 		sides[i].light = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "lightabsolute") && fastcmp("true", M_GetToken(NULL)))
