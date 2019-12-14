@@ -117,17 +117,10 @@ void R_InitPlanes(void)
 }
 
 //
-// R_MapPlane
+// Water ripple effect!!
+// Needs the height of the plane, and the vertical position of the span.
+// Sets ripple_xfrac and ripple_yfrac, added to ds_xfrac and ds_yfrac, if the span is not tilted.
 //
-// Uses global vars:
-//  basexscale
-//  baseyscale
-//  centerx
-//  viewx
-//  viewy
-//  viewsin
-//  viewcos
-//  viewheight
 
 #ifndef NOWATER
 INT32 ds_bgofs;
@@ -151,6 +144,19 @@ static void R_PlaneRipple(visplane_t *plane, INT32 y, fixed_t plheight)
 	ripple_yfrac = FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
 }
 #endif
+
+//
+// R_MapPlane
+//
+// Uses global vars:
+//  basexscale
+//  baseyscale
+//  centerx
+//  viewx
+//  viewy
+//  viewsin
+//  viewcos
+//  viewheight
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
