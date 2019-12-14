@@ -107,7 +107,7 @@ UINT8 graphics_started = 0; // Is used in console.c and screen.c
 consvar_t cv_textinput = {"textinput", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 consvar_t cv_keyboardlocale = {"keyboardlocale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_forceqwerty = {"forceqwerty", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_forceqwerty = {"forceqwerty", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // To disable fullscreen at startup; is set in VID_PrepareModeList
 boolean allow_fullscreen = false;
