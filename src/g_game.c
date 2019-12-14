@@ -1561,17 +1561,19 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			else
 			{
 				alt = true;
-				camadjustfactor = FixedMul(cv_cam_turnfacing[forplayer].value/8, tta_factor[forplayer]);
+				camadjustfactor = cv_cam_turnfacing[forplayer].value/8;
 			}
 
-			if (tta_factor[forplayer] < FRACUNIT && (!alt || cmd->forwardmove || cmd->sidemove || tta_factor[forplayer] >= FRACUNIT/3))
+			camadjustfactor = FixedMul(camadjustfactor, tta_factor[forplayer]);
+
+			if (tta_factor[forplayer] < FRACUNIT && (cmd->forwardmove || cmd->sidemove || tta_factor[forplayer] >= FRACUNIT/3))
 				tta_factor[forplayer] += FRACUNIT>>5;
 			else if (tta_factor[forplayer] && tta_factor[forplayer] < FRACUNIT/3)
 				tta_factor[forplayer] -= FRACUNIT>>5;
 
 			if (camadjustfactor)
 			{
-				INT32 anglediff = (cmd->angleturn<<16) + drawangleoffset - *myangle;
+				INT32 anglediff = ((player->pflags & PF_SPINNING) ? player->drawangle : (cmd->angleturn<<16)) + drawangleoffset - *myangle;
 
 				if (alt)
 				{
