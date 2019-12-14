@@ -417,8 +417,8 @@ consvar_t cv_cam_turnfacingspindash[2] = {
 	{"cam2_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 consvar_t cv_cam_turnfacinginput[2] = {
-	{"cam_turnfacinginput", "0.4375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
-	{"cam2_turnfacinginput", "0.4375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam_turnfacinginput", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_turnfacinginput", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 
 static CV_PossibleValue_t lockedinput_cons_t[] = {{0, "Strafe"}, {1, "Turn"}, {0, NULL}};
@@ -1509,15 +1509,12 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		// Adjust camera angle by player input
 		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
-			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value; //@TODO cvar
+			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value;
 
 			if (camadjustfactor)
 			{
 				fixed_t sine = FINESINE((R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - localangle)>>ANGLETOFINESHIFT);
-				fixed_t factor = min(20, FixedMul(player->speed, abs(sine)) / FRACUNIT);
-
-				if (ticcmd_centerviewdown[forplayer] && (cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
-					factor = (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value) * (cv_cam_lockedinput[forplayer].value ?: 1); // Turn while in startdash and locking camera
+				fixed_t factor = min(40, FixedMul(player->speed, abs(sine))*2 / FRACUNIT);
 
 				*myangle -= cmd->sidemove * factor * camadjustfactor;
 			}
