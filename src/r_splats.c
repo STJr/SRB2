@@ -512,7 +512,7 @@ static void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, UINT8 *pTe
 			ds_x1 = x1;
 			ds_x2 = x2;
 			ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
-			splatfunc();
+			(spanfuncs[SPANDRAWFUNC_SPLAT])();
 		}
 
 		// reset for next calls to edge rasterizer
