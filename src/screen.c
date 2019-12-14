@@ -41,20 +41,12 @@
 // --------------------------------------------
 // assembly or c drawer routines for 8bpp/16bpp
 // --------------------------------------------
-void (*wallcolfunc)(void); // new wall column drawer to draw posts >128 high
-void (*colfunc)(void); // standard column, up to 128 high posts
+void (*colfunc)(void);
+void (*colfuncs[COLDRAWFUNC_MAX])(void);
 
-void (*basecolfunc)(void);
-void (*fuzzcolfunc)(void); // standard fuzzy effect column drawer
-void (*transcolfunc)(void); // translation column drawer
-void (*shadecolfunc)(void); // smokie test..
-void (*spanfunc)(void); // span drawer, use a 64x64 tile
-void (*mmxspanfunc)(void); // span drawer in MMX assembly
-void (*splatfunc)(void); // span drawer w/ transparency
-void (*basespanfunc)(void); // default span func for color mode
-void (*transtransfunc)(void); // translucent translated column drawer
-void (*twosmultipatchfunc)(void); // for cols with transparent pixels
-void (*twosmultipatchtransfunc)(void); // for cols with transparent pixels AND translucency
+void (*spanfunc)(void);
+void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
+void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
 // ------------------
 // global video state
@@ -113,36 +105,72 @@ void SCR_SetMode(void)
 	//
 	if (true)//vid.bpp == 1) //Always run in 8bpp. todo: remove all 16bpp code?
 	{
-		spanfunc = basespanfunc = mmxspanfunc = R_DrawSpan_8;
-		splatfunc = R_DrawSplat_8;
-		transcolfunc = R_DrawTranslatedColumn_8;
-		transtransfunc = R_DrawTranslatedTranslucentColumn_8;
+		colfuncs[BASEDRAWFUNC] = R_DrawColumn_8;
+		spanfuncs[BASEDRAWFUNC] = R_DrawSpan_8;
 
-		colfunc = basecolfunc = R_DrawColumn_8;
-		shadecolfunc = R_DrawShadeColumn_8;
-		fuzzcolfunc = R_DrawTranslucentColumn_8;
-		walldrawerfunc = R_DrawWallColumn_8;
-		twosmultipatchfunc = R_Draw2sMultiPatchColumn_8;
-		twosmultipatchtransfunc = R_Draw2sMultiPatchTranslucentColumn_8;
+		colfunc = colfuncs[BASEDRAWFUNC];
+		spanfunc = spanfuncs[BASEDRAWFUNC];
+
+		colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8;
+		colfuncs[COLDRAWFUNC_TRANS] = R_DrawTranslatedColumn_8;
+		colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8;
+		colfuncs[COLDRAWFUNC_SHADOWED] = R_DrawColumnShadowed_8;
+		colfuncs[COLDRAWFUNC_TRANSTRANS] = R_DrawTranslatedTranslucentColumn_8;
+		colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8;
+		colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS] = R_Draw2sMultiPatchTranslucentColumn_8;
+		colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_8;
+
+		spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_8;
+		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_8;
+		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_8;
+		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_8;
+#ifndef NOWATER
+		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_8;
+#endif
+#ifdef ESLOPE
+		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_8;
+		spanfuncs[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_8;
+#ifndef NOWATER
+		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_8;
+#endif
+		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_8;
+#endif
+
+		// Lactozilla: Non-powers-of-two
+		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
+#ifndef NOWATER
+		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
+#endif
+#ifdef ESLOPE
+		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_8;
+#ifndef NOWATER
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_8;
+#endif
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_8;
+#endif
+
 #ifdef RUSEASM
 		if (R_ASM)
 		{
 			if (R_MMX)
 			{
-				colfunc = basecolfunc = R_DrawColumn_8_MMX;
-				//shadecolfunc = R_DrawShadeColumn_8_ASM;
-				//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
-				walldrawerfunc = R_DrawWallColumn_8_MMX;
-				twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_MMX;
-				mmxspanfunc = R_DrawSpan_8_MMX;
+				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_MMX;
+				//colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8_ASM;
+				//colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8_ASM;
+				colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8_MMX;
+				spanfuncs[BASEDRAWFUNC] = R_DrawSpan_8_MMX;
 			}
 			else
 			{
-				colfunc = basecolfunc = R_DrawColumn_8_ASM;
-				//shadecolfunc = R_DrawShadeColumn_8_ASM;
-				//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
-				walldrawerfunc = R_DrawWallColumn_8_ASM;
-				twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_ASM;
+				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_ASM;
+				//colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8_ASM;
+				//colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8_ASM;
+				colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8_ASM;
 			}
 		}
 #endif
@@ -165,8 +193,6 @@ void SCR_SetMode(void)
 	if (SCR_IsAspectCorrect(vid.width, vid.height))
 		CONS_Alert(CONS_WARNING, M_GetText("Resolution is not aspect-correct!\nUse a multiple of %dx%d\n"), BASEVIDWIDTH, BASEVIDHEIGHT);
 */
-
-	wallcolfunc = walldrawerfunc;
 
 	// set the apprpriate drawer for the sky (tall or INT16)
 	setmodeneeded = 0;
