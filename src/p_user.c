@@ -10016,7 +10016,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	{
 		// Shift the camera slightly to the sides depending on the player facing direction
 		UINT8 forplayer = (thiscam == &camera) ? 0 : 1;
-		fixed_t shift = FixedMul(FINESINE((player->drawangle - angle) >> ANGLETOFINESHIFT), cv_cam_shiftfacing[forplayer].value);
+		fixed_t shift = FixedMul(FINESINE((player->mo->angle - angle) >> ANGLETOFINESHIFT), cv_cam_shiftfacing[forplayer].value);
 
 		if (player->powers[pw_carry] == CR_ROLLOUT)
 			shift = -shift;

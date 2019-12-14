@@ -1571,10 +1571,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 			if (camadjustfactor)
 			{
-				INT32 anglediff =
-					// This check to potentially use angleturn fixes the judder when holding back in the air to brake
-					((alt && (forward || side) && !P_IsObjectOnGround(player->mo)) ? (cmd->angleturn<<16) : player->drawangle)
-					+ drawangleoffset - *myangle;
+				INT32 anglediff = (cmd->angleturn<<16) + drawangleoffset - *myangle;
 
 				if (alt)
 				{
