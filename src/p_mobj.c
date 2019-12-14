@@ -11551,18 +11551,16 @@ mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
 
-static fixed_t GetMobjSpawnHeight (const mobjtype_t i, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
+static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
 {
-	subsector_t *ss = R_PointInSubsector(x, y);
-	fixed_t extraoffset = 0;
-	fixed_t heightoffset = 0;
-	boolean flip;
+	const subsector_t *ss = R_PointInSubsector(x, y);
+	fixed_t offset = mthing->z << FRACBITS;
+	boolean flip = (!!(mobjinfo[mobjtype].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
 
-	switch (i)
+	switch (mobjtype)
 	{
 	// Bumpers never spawn flipped.
 	case MT_NIGHTSBUMPER:
-		heightoffset = mthing->z*FRACUNIT;
 		flip = false;
 		break;
 
@@ -11578,38 +11576,34 @@ static fixed_t GetMobjSpawnHeight (const mobjtype_t i, const mapthing_t* mthing,
 	case MT_JETTBOMBER:
 	case MT_JETTGUNNER:
 	case MT_EGGMOBILE2:
-		heightoffset = mthing->z ? 0 : 33*FRACUNIT;
-		goto atend;
+		if (!offset)
+			offset = 33*FRACUNIT;
+		break;
 	case MT_EGGMOBILE:
-		heightoffset = mthing->z ? 0 : 128*FRACUNIT;
-		goto atend;
+		if (!offset)
+			offset = 128*FRACUNIT;
+		break;
 	case MT_GOLDBUZZ:
 	case MT_REDBUZZ:
-		heightoffset = mthing->z ? 0 : 288*FRACUNIT;
-		goto atend;
+		if (!offset)
+			offset = 288*FRACUNIT;
+		break;
 
 	// Ring-like items, may float additional units with MTF_AMBUSH.
 	case MT_SPIKEBALL:
 	case MT_EMERALDSPAWN:
 	case MT_TOKEN:
 	case MT_EMBLEM:
-	weaponfloat:
-		flip = mthing->options & MTF_OBJECTFLIP;
-		extraoffset = mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
-		heightoffset = mthing->z*FRACUNIT;
+		offset += mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
 		break;
 
 	// Remaining objects.
 	default:
-		if (P_WeaponOrPanel(i))
-			goto weaponfloat; // Ring-like items don't use MF_SPAWNCEILING to consider flips.
-
-	atend:
-		heightoffset = mthing->z*FRACUNIT;
-		flip = (!!(mobjinfo[i].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
+		if (P_WeaponOrPanel(mobjtype))
+			offset += mthing->options & MTF_AMBUSH ? 24 * FRACUNIT : 0;
 	}
 
-	if (heightoffset + extraoffset == 0) // Snap to the surfaces when there's no offset set.
+	if (!offset) // Snap to the surfaces when there's no offset set.
 	{
 		if (flip)
 			return ONCEILINGZ;
@@ -11623,13 +11617,13 @@ static fixed_t GetMobjSpawnHeight (const mobjtype_t i, const mapthing_t* mthing,
 #ifdef ESLOPE
 			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
 #endif
-			ss->sector->ceilingheight) - extraoffset - heightoffset - mobjinfo[i].height;
+			ss->sector->ceilingheight) - offset - mobjinfo[mobjtype].height;
 	else
 		return (
 #ifdef ESLOPE
 			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
 #endif
-			ss->sector->floorheight) + extraoffset + heightoffset;
+			ss->sector->floorheight) + offset;
 }
 
 //
@@ -11894,7 +11888,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 	// spawn it
 	x = mthing->x << FRACBITS;
 	y = mthing->y << FRACBITS;
-	z = GetMobjSpawnHeight(i, mthing, x, y);
+	z = P_GetMobjSpawnHeight(i, mthing, x, y);
 
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
