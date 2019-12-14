@@ -84,6 +84,8 @@ typedef struct extracolormap_s
 typedef struct
 {
 	fixed_t x, y, z;
+	fixed_t floorz, ceilingz;
+	boolean floorzset, ceilingzset;
 } vertex_t;
 
 // Forward of linedefs, for sectors.

@@ -508,6 +508,56 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 	side->sector->hasslope = true;
 }
 
+/// Spawn textmap vertex slopes.
+void SpawnVertexSlopes (void)
+{
+	line_t *l1, *l2;
+	sector_t* sc;
+	vertex_t *v1, *v2, *v3;
+	size_t i;
+	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
+	{
+		// The vertex slopes only work for 3-vertex sectors (and thus 3-sided sectors).
+		if (sc->linecount != 3)
+			continue;
+
+		l1 = sc->lines[0];
+		l2 = sc->lines[1];
+
+		// Determine the vertexes.
+		v1 = l1->v1;
+		v2 = l1->v2;
+		if ((l2->v1 != v1) && (l2->v1 != v2))
+			v3 = l2->v1;
+		else
+			v3 = l2->v2;
+
+		if (v1->floorzset || v2->floorzset || v3->floorzset)
+		{
+			vector3_t vtx[3] = {
+				{v1->x, v1->y, v1->floorzset == true ? v1->floorz : sc->floorheight},
+				{v2->x, v2->y, v2->floorzset == true ? v2->floorz : sc->floorheight},
+				{v3->x, v3->y, v3->floorzset == true ? v3->floorz : sc->floorheight}};
+			pslope_t* slop = Slope_Add(0);
+			sc->f_slope = slop;
+			sc->hasslope = true;
+			ReconfigureViaVertexes(slop, vtx[0], vtx[1], vtx[2]);
+		}
+
+		if (v1->ceilingzset || v2->ceilingzset || v3->ceilingzset)
+		{
+			vector3_t vtx[3] = {
+				{v1->x, v1->y, v1->ceilingzset == true ? v1->ceilingz : sc->ceilingheight},
+				{v2->x, v2->y, v2->ceilingzset == true ? v2->ceilingz : sc->ceilingheight},
+				{v3->x, v3->y, v3->ceilingzset == true ? v3->ceilingz : sc->ceilingheight}};
+			pslope_t* slop = Slope_Add(0);
+			sc->c_slope = slop;
+			sc->hasslope = true;
+			ReconfigureViaVertexes(slop, vtx[0], vtx[1], vtx[2]);
+		}
+
+	}
+}
 
 //
 // P_CopySectorSlope
@@ -560,6 +610,9 @@ void P_ResetDynamicSlopes(const UINT32 fromsave) {
 
 	slopelist = NULL;
 	slopecount = 0;
+
+	/// Generates vertex-based Textmap UDMF slopes.
+	SpawnVertexSlopes();
 
 	/// Generates line special-defined slopes.
 	for (i = 0; i < numlines; i++)

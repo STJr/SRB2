@@ -722,7 +722,7 @@ static void GeneralDefaults(void)
 	side_t *sd;
 	sector_t *sc;
 	mapthing_t *mt;
-//	vertex_t* vt;
+	vertex_t* vt;
 
 	for (i = 0, ld = lines; i < numlines; i++, ld++)
 	{
@@ -848,7 +848,7 @@ static void GeneralDefaults(void)
 		mt->xdeathtrigger = 0;
 		mt->raisetrigger = 0;*/
 	}
-/*
+
 	for (i = 0, vt = vertexes; i < numvertexes; i++, vt++)
 	{
 		// Initialization.
@@ -857,7 +857,7 @@ static void GeneralDefaults(void)
 		vt->floorzset	= false;
 		vt->ceilingzset	= false;
 	}
-*/
+
 }
 
 /** Set map defaults in UDMF format.
@@ -1002,7 +1002,6 @@ static void TextmapVertex(UINT32 i, char *param)
 		vertexes[i].x = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 	else if (fastcmp(param, "y"))
 		vertexes[i].y = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
-#ifdef ADVUDMF
 	else if (fastcmp(param, "zfloor"))
 	{
 		vertexes[i].floorz = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
@@ -1013,7 +1012,6 @@ static void TextmapVertex(UINT32 i, char *param)
 		vertexes[i].ceilingz = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 		vertexes[i].ceilingzset = true;
 	}
-#endif
 }
 
 /** Auxiliary function for TextmapParse.
