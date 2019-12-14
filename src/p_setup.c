@@ -1321,6 +1321,42 @@ static void TextmapParse(UINT32 dataPos[], size_t num, void (*parser)(UINT32, ch
 	}
 }
 
+/** Provides a temporary fix to the flat alignment coordinate transform from standard Textmaps.
+ */
+static void TextmapFixFlatOffsets (void)
+{
+	fixed_t pc, ps;
+	fixed_t xoffs, yoffs;
+	size_t i;
+	sector_t* sec = sectors;
+	for (i = 0; i < numsectors; i++, sec++)
+	{
+		if (sec->floorpic_angle)
+		{
+			pc = FINECOSINE(sec->floorpic_angle>>ANGLETOFINESHIFT);
+			ps = FINESINE  (sec->floorpic_angle>>ANGLETOFINESHIFT);
+			xoffs = sec->floor_xoffs;
+			yoffs = sec->floor_yoffs;
+			#define MAXFLATSIZE (2048<<FRACBITS)
+			sec->floor_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+			sec->floor_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+			#undef MAXFLATSIZE
+		}
+
+		if (sec->ceilingpic_angle)
+		{
+			pc = FINECOSINE(sec->ceilingpic_angle>>ANGLETOFINESHIFT);
+			ps = FINESINE  (sec->ceilingpic_angle>>ANGLETOFINESHIFT);
+			xoffs = sec->ceiling_xoffs;
+			yoffs = sec->ceiling_yoffs;
+			#define MAXFLATSIZE (2048<<FRACBITS)
+			sec->ceiling_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+			sec->ceiling_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+			#undef MAXFLATSIZE
+		}
+	}
+}
+
 //
 // P_ReloadRings
 // Used by NiGHTS, clears all ring/wing/etc items and respawns them
@@ -2839,6 +2875,7 @@ static boolean LoadMapData (const virtres_t* virt)
 		TextmapDefaults(); // UDMF-specific defaults (since some fields may get omitted).
 		TextmapParse(vertexesPos, numvertexes, TextmapVertex);
 		TextmapParse(sectorsPos,  numsectors,  TextmapSector);
+		TextmapFixFlatOffsets();
 		TextmapParse(sidesPos,    numsides,    TextmapSide);
 		TextmapParse(linesPos,    numlines,    TextmapLine);
 		SetupLines();
