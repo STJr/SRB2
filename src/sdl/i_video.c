@@ -835,7 +835,7 @@ static void Impl_HandleTextInputEvent(char *text)
 	|| HU_ChatActive())) // chat input
 		return;
 
-	if (text[0] < 32 || text[0] > 127)
+	if (text[0] < 32)
 		return;
 
 	event.data1 = text[0];
