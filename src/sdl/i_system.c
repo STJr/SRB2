@@ -2192,6 +2192,7 @@ static void I_Fork(void)
 	int child;
 	int status;
 	int signum;
+	int c;
 
 	child = fork();
 
@@ -2203,7 +2204,19 @@ static void I_Fork(void)
 		case 0:
 			break;
 		default:
-			if (wait(&status) == -1)
+			if (logstream)
+				fclose(logstream);/* the child has this */
+
+			c = wait(&status);
+
+#ifdef LOGMESSAGES
+			/* By the way, exit closes files. */
+			logstream = fopen(logfilename, "at");
+#else
+			logstream = 0;
+#endif
+
+			if (c == -1)
 			{
 				kill(child, SIGKILL);
 				newsignalhandler_Warn("wait()");
