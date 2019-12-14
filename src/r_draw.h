@@ -139,50 +139,63 @@ void R_DrawViewBorder(void);
 // -----------------
 
 void R_DrawColumn_8(void);
-#define R_DrawWallColumn_8	R_DrawColumn_8
 void R_DrawShadeColumn_8(void);
 void R_DrawTranslucentColumn_8(void);
-
-#ifdef USEASM
-void ASMCALL R_DrawColumn_8_ASM(void);
-#define R_DrawWallColumn_8_ASM	R_DrawColumn_8_ASM
-void ASMCALL R_DrawShadeColumn_8_ASM(void);
-void ASMCALL R_DrawTranslucentColumn_8_ASM(void);
-void ASMCALL R_Draw2sMultiPatchColumn_8_ASM(void);
-
-void ASMCALL R_DrawColumn_8_MMX(void);
-#define R_DrawWallColumn_8_MMX	R_DrawColumn_8_MMX
-
-void ASMCALL R_Draw2sMultiPatchColumn_8_MMX(void);
-void ASMCALL R_DrawSpan_8_MMX(void);
-#endif
-
 void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslatedTranslucentColumn_8(void);
+void R_Draw2sMultiPatchColumn_8(void);
+void R_Draw2sMultiPatchTranslucentColumn_8(void);
+void R_DrawFogColumn_8(void);
+void R_DrawColumnShadowed_8(void);
+
 void R_DrawSpan_8(void);
+void R_DrawSplat_8(void);
+void R_DrawTranslucentSpan_8(void);
+void R_DrawTranslucentSplat_8(void);
 #ifdef ESLOPE
-void R_CalcTiltedLighting(fixed_t start, fixed_t end);
 void R_DrawTiltedSpan_8(void);
 void R_DrawTiltedTranslucentSpan_8(void);
 #ifndef NOWATER
 void R_DrawTiltedTranslucentWaterSpan_8(void);
 #endif
 void R_DrawTiltedSplat_8(void);
+void R_CalcTiltedLighting(fixed_t start, fixed_t end);
+extern INT32 tiltlighting[MAXVIDWIDTH];
 #endif
-void R_DrawSplat_8(void);
-void R_DrawTranslucentSplat_8(void);
-void R_DrawTranslucentSpan_8(void);
-void R_Draw2sMultiPatchColumn_8(void);
-void R_Draw2sMultiPatchTranslucentColumn_8(void);
-void R_DrawFogSpan_8(void);
-void R_DrawFogColumn_8(void);
-void R_DrawColumnShadowed_8(void);
-
 #ifndef NOWATER
 void R_DrawTranslucentWaterSpan_8(void);
-
 extern INT32 ds_bgofs;
 extern INT32 ds_waterofs;
+#endif
+void R_DrawFogSpan_8(void);
+
+// Lactozilla: Non-powers-of-two
+void R_DrawSpan_NPO2_8(void);
+void R_DrawTranslucentSpan_NPO2_8(void);
+void R_DrawSplat_NPO2_8(void);
+void R_DrawTranslucentSplat_NPO2_8(void);
+#ifdef ESLOPE
+void R_DrawTiltedSpan_NPO2_8(void);
+void R_DrawTiltedTranslucentSpan_NPO2_8(void);
+#ifndef NOWATER
+void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void);
+#endif
+void R_DrawTiltedSplat_NPO2_8(void);
+#endif
+#ifndef NOWATER
+void R_DrawTranslucentWaterSpan_NPO2_8(void);
+#endif
+
+#ifdef USEASM
+void ASMCALL R_DrawColumn_8_ASM(void);
+void ASMCALL R_DrawShadeColumn_8_ASM(void);
+void ASMCALL R_DrawTranslucentColumn_8_ASM(void);
+void ASMCALL R_Draw2sMultiPatchColumn_8_ASM(void);
+
+void ASMCALL R_DrawColumn_8_MMX(void);
+
+void ASMCALL R_Draw2sMultiPatchColumn_8_MMX(void);
+void ASMCALL R_DrawSpan_8_MMX(void);
 #endif
 
 // ------------------

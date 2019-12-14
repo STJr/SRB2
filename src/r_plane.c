@@ -610,8 +610,7 @@ void R_DrawPlanes(void)
 
 	// Note: are these two lines really needed?
 	// R_DrawSinglePlane and R_DrawSkyPlane do span/column drawer resets themselves anyway
-	spanfunc = basespanfunc;
-	wallcolfunc = walldrawerfunc;
+	spanfunc = spanfuncs[BASEDRAWFUNC];
 
 	for (i = 0; i < MAXVISPLANES; i++, pl++)
 	{
@@ -645,7 +644,7 @@ static void R_DrawSkyPlane(visplane_t *pl)
 
 	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
-	wallcolfunc = walldrawerfunc;
+	colfunc = colfuncs[BASEDRAWFUNC];
 
 	// use correct aspect ratio scale
 	dc_iscale = skyscale;
@@ -671,7 +670,7 @@ static void R_DrawSkyPlane(visplane_t *pl)
 			dc_source =
 				R_GetColumn(texturetranslation[skytexture],
 					-angle); // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
-			wallcolfunc();
+			colfunc();
 		}
 	}
 }
@@ -958,6 +957,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	ffloor_t *rover;
 	levelflat_t *levelflat;
 	int type;
+	int spanfunctype = BASEDRAWFUNC;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -972,11 +972,12 @@ void R_DrawSinglePlane(visplane_t *pl)
 #ifndef NOWATER
 	itswater = false;
 #endif
-	spanfunc = basespanfunc;
+	spanfunc = spanfuncs[BASEDRAWFUNC];
 
 #ifdef POLYOBJECTS_PLANES
-	if (pl->polyobj && pl->polyobj->translucency != 0) {
-		spanfunc = R_DrawTranslucentSpan_8;
+	if (pl->polyobj && pl->polyobj->translucency != 0)
+	{
+		spanfunctype = SPANDRAWFUNC_TRANS;
 
 		// Hacked up support for alpha value in software mode Tails 09-24-2002 (sidenote: ported to polys 10-15-2014, there was no time travel involved -Red)
 		if (pl->polyobj->translucency >= 10)
@@ -984,10 +985,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else if (pl->polyobj->translucency > 0)
 			ds_transmap = transtables + ((pl->polyobj->translucency-1)<<FF_TRANSSHIFT);
 		else // Opaque, but allow transparent flat pixels
-			spanfunc = splatfunc;
+			spanfunctype = SPANDRAWFUNC_SPLAT;
 
 #ifdef SHITPLANESPARENCY
-		if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+		if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
 #else
 		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 #endif
@@ -1018,7 +1019,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (pl->ffloor->flags & FF_TRANSLUCENT)
 		{
-			spanfunc = R_DrawTranslucentSpan_8;
+			spanfunctype = SPANDRAWFUNC_TRANS;
 
 			// Hacked up support for alpha value in software mode Tails 09-24-2002
 			if (pl->ffloor->alpha < 12)
@@ -1042,10 +1043,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else if (pl->ffloor->alpha < 243)
 				ds_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
 			else // Opaque, but allow transparent flat pixels
-				spanfunc = splatfunc;
+				spanfunctype = SPANDRAWFUNC_SPLAT;
 
 #ifdef SHITPLANESPARENCY
-			if ((spanfunc == splatfunc) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
+			if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
 #else
 			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 #endif
@@ -1055,7 +1056,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		}
 		else if (pl->ffloor->flags & FF_FOG)
 		{
-			spanfunc = R_DrawFogSpan_8;
+			spanfunctype = SPANDRAWFUNC_FOG;
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		}
 		else light = (pl->lightlevel >> LIGHTSEGSHIFT);
@@ -1066,9 +1067,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 			INT32 top, bottom;
 
 			itswater = true;
-			if (spanfunc == R_DrawTranslucentSpan_8)
+			if (spanfunctype == SPANDRAWFUNC_TRANS)
 			{
-				spanfunc = R_DrawTranslucentWaterSpan_8;
+				spanfunctype = SPANDRAWFUNC_WATER;
 
 				// Copy the current scene, ugh
 				top = pl->high-8;
@@ -1119,8 +1120,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
 			// Raw flats always have dimensions that are powers-of-two numbers.
 			ds_powersoftwo = true;
-			if (spanfunc == basespanfunc)
-				spanfunc = mmxspanfunc;
 			break;
 		default:
 			switch (type)
@@ -1143,11 +1142,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			}
 			// Check if this texture or patch has power-of-two dimensions.
 			if (R_CheckPowersOfTwo())
-			{
 				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
-				if (spanfunc == basespanfunc)
-					spanfunc = mmxspanfunc;
-			}
 	}
 
 	if (light >= LIGHTLEVELS)
@@ -1244,22 +1239,33 @@ void R_DrawSinglePlane(visplane_t *pl)
 			R_SlopeVectors(pl, 0, fudgecanyon);
 
 #ifndef NOWATER
-		if ((spanfunc == R_DrawTranslucentWaterSpan_8) || (spanfunc == R_DrawTranslucentSpan_8))
-			spanfunc = R_DrawTiltedTranslucentWaterSpan_8;
+		if (itswater && (spanfunctype == SPANDRAWFUNC_WATER))
+			spanfunctype = SPANDRAWFUNC_TILTEDWATER;
 		else
 #endif
-		if (spanfunc == R_DrawTranslucentSpan_8)
-			spanfunc = R_DrawTiltedTranslucentSpan_8;
-		else if (spanfunc == splatfunc)
-			spanfunc = R_DrawTiltedSplat_8;
+		if (spanfunctype == SPANDRAWFUNC_TRANS)
+			spanfunctype = SPANDRAWFUNC_TILTEDTRANS;
+		else if (spanfunctype == SPANDRAWFUNC_SPLAT)
+			spanfunctype = SPANDRAWFUNC_TILTEDSPLAT;
 		else
-			spanfunc = R_DrawTiltedSpan_8;
+			spanfunctype = SPANDRAWFUNC_TILTED;
 
 		planezlight = scalelight[light];
 	} else
 #endif // ESLOPE
 
 	planezlight = zlight[light];
+
+	// Use the correct span drawer depending on the powers-of-twoness
+	if (!ds_powersoftwo)
+	{
+		if (spanfuncs_npo2[spanfunctype])
+			spanfunc = spanfuncs_npo2[spanfunctype];
+		else
+			spanfunc = spanfuncs[spanfunctype];
+	}
+	else
+		spanfunc = spanfuncs[spanfunctype];
 
 	// set the maximum value for unsigned
 	pl->top[pl->maxx+1] = 0xffff;
@@ -1300,11 +1306,11 @@ a 'smoothing' of the texture while
 using the palette colors.
 */
 #ifdef QUINCUNX
-	if (spanfunc == R_DrawSpan_8)
+	if (spanfunc == spanfuncs[BASEDRAWFUNC])
 	{
 		INT32 i;
 		ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
-		spanfunc = R_DrawTranslucentSpan_8;
+		spanfunc = spanfuncs[SPANDRAWFUNC_TRANS];
 		for (i=0; i<4; i++)
 		{
 			xoffs = pl->xoffs;

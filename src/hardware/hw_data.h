@@ -48,6 +48,7 @@ struct GLMipmap_s
 
 	struct GLMipmap_s    *nextcolormap;
 	const UINT8          *colormap;
+	INT32                tcindex;
 
 	// opengl
 	struct GLMipmap_s *nextmipmap; // opengl : liste of all texture in opengl driver
