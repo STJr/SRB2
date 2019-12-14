@@ -1564,6 +1564,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				camadjustfactor = cv_cam_turnfacing[forplayer].value/8;
 			}
 
+			camadjustfactor = FixedMul(camadjustfactor, max(FRACUNIT - player->speed, min(player->speed/18, FRACUNIT)));
+
 			camadjustfactor = FixedMul(camadjustfactor, tta_factor[forplayer]);
 
 			if (tta_factor[forplayer] < FRACUNIT && (cmd->forwardmove || cmd->sidemove || tta_factor[forplayer] >= FRACUNIT/3))
