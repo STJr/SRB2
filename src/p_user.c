@@ -10012,7 +10012,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 	}
 
-	if (cv_abilitydirection[(thiscam == &camera) ? 0 : 1].value)
+	if (cv_abilitydirection[(thiscam == &camera) ? 0 : 1].value && !sign)
 	{
 		// Shift the camera slightly to the sides depending on the player facing direction
 		UINT8 forplayer = (thiscam == &camera) ? 0 : 1;
@@ -10020,6 +10020,12 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 		if (player->powers[pw_carry] == CR_ROLLOUT)
 			shift = -shift;
+
+		if (player->powers[pw_carry] == CR_NIGHTSMODE)
+		{
+			fixed_t cos = FINECOSINE((angle_t) (player->flyangle * ANG1)>>ANGLETOFINESHIFT);
+			shift = FixedMul(shift, min(FRACUNIT, player->speed*abs(cos)/6000));
+		}
 
 		if (ticcmd_centerviewdown[(thiscam == &camera) ? 0 : 1])
 			shift = FixedMul(camsideshift[forplayer], FRACUNIT-camspeed);
