@@ -2060,7 +2060,12 @@ void CV_SaveVariables(FILE *f)
 
 			// Silly hack for Min/Max vars
 			if (!strcmp(cvar->string, "MAX") || !strcmp(cvar->string, "MIN"))
-				sprintf(stringtowrite, "%d", cvar->value);
+			{
+				if (cvar->flags & CV_FLOAT)
+					sprintf(stringtowrite, "%f", FIXED_TO_FLOAT(cvar->value));
+				else
+					sprintf(stringtowrite, "%d", cvar->value);
+			}
 			else
 				strcpy(stringtowrite, cvar->string);
 
