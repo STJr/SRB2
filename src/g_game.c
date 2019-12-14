@@ -1554,7 +1554,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			fixed_t camadjustfactor;
 			boolean alt = false; // Reduce intensity on diagonals and prevent backwards movement from turning the camera
 
-			if (player->climbing || player->pflags & PF_GLIDING)
+			if (player->pflags & PF_GLIDING)
 				camadjustfactor = cv_cam_turnfacingability[forplayer].value/4;
 			else if (player->pflags & PF_STARTDASH)
 				camadjustfactor = cv_cam_turnfacingspindash[forplayer].value/4;
