@@ -11899,6 +11899,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 	mobj = P_SpawnMobj(x, y, z, i);
 	P_SetScale(mobj, mthing->scale);
 	mobj->destscale = mthing->scale;
+	mobj->rollangle = FixedAngle(mthing->roll*FRACUNIT);
 	mobj->spawnpoint = mthing;
 
 #ifdef HAVE_BLUA

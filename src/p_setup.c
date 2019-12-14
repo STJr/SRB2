@@ -1236,12 +1236,10 @@ static void TextmapThing(UINT32 i, char *param)
 		mapthings[i].z = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "angle"))
 		mapthings[i].angle = atol(M_GetToken(NULL));
-	#ifdef ADVUDMF
 	else if (fastcmp(param, "pitch"))
 		mapthings[i].pitch = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "roll"))
 		mapthings[i].roll = atol(M_GetToken(NULL));
-	#endif
 	else if (fastcmp(param, "type"))
 		mapthings[i].type = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "scale") || fastcmp(param, "scalex"))
