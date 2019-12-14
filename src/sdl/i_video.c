@@ -288,22 +288,10 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 			case SDLK_F11: return KEY_F11;
 			case SDLK_F12: return KEY_F12;
 
-			case SDLK_KP_0: return KEY_KEYPAD0;
-			case SDLK_KP_1: return KEY_KEYPAD1;
-			case SDLK_KP_2: return KEY_KEYPAD2;
-			case SDLK_KP_3: return KEY_KEYPAD3;
-			case SDLK_KP_4: return KEY_KEYPAD4;
-			case SDLK_KP_5: return KEY_KEYPAD5;
-			case SDLK_KP_6: return KEY_KEYPAD6;
-			case SDLK_KP_7: return KEY_KEYPAD7;
-			case SDLK_KP_8: return KEY_KEYPAD8;
-			case SDLK_KP_9: return KEY_KEYPAD9;
-
 			case SDLK_RETURN:         return KEY_ENTER;
 			case SDLK_ESCAPE:         return KEY_ESCAPE;
 			case SDLK_BACKSPACE:      return KEY_BACKSPACE;
 			case SDLK_TAB:            return KEY_TAB;
-			case SDLK_SPACE:          return KEY_SPACE;
 			case SDLK_CAPSLOCK:       return KEY_CAPSLOCK;
 			//case SDLK_PRINTSCREEN:    return KEY_PRTSC;
 			case SDLK_SCROLLLOCK:     return KEY_SCROLLLOCK;
@@ -320,12 +308,6 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 			case SDLK_DOWN:           return KEY_DOWNARROW;
 			case SDLK_UP:             return KEY_UPARROW;
 			case SDLK_NUMLOCKCLEAR:   return KEY_NUMLOCK;
-			case SDLK_KP_DIVIDE:      return KEY_KPADSLASH;
-			case SDLK_KP_MULTIPLY:    return '*'; // undefined?
-			case SDLK_KP_MINUS:       return KEY_MINUSPAD;
-			case SDLK_KP_PLUS:        return KEY_PLUSPAD;
-			case SDLK_KP_ENTER:       return KEY_ENTER;
-			case SDLK_KP_PERIOD:      return KEY_KPADDEL;
 
 			case SDLK_LSHIFT: return KEY_LSHIFT;
 			case SDLK_RSHIFT: return KEY_RSHIFT;
@@ -369,6 +351,25 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 
 		switch (keycode)
 		{
+			case SDLK_KP_0: return KEY_KEYPAD0;
+			case SDLK_KP_1: return KEY_KEYPAD1;
+			case SDLK_KP_2: return KEY_KEYPAD2;
+			case SDLK_KP_3: return KEY_KEYPAD3;
+			case SDLK_KP_4: return KEY_KEYPAD4;
+			case SDLK_KP_5: return KEY_KEYPAD5;
+			case SDLK_KP_6: return KEY_KEYPAD6;
+			case SDLK_KP_7: return KEY_KEYPAD7;
+			case SDLK_KP_8: return KEY_KEYPAD8;
+			case SDLK_KP_9: return KEY_KEYPAD9;
+
+			case SDLK_KP_DIVIDE:      return KEY_KPADSLASH;
+			case SDLK_KP_MULTIPLY:    return '*'; // undefined?
+			case SDLK_KP_MINUS:       return KEY_MINUSPAD;
+			case SDLK_KP_PLUS:        return KEY_PLUSPAD;
+			case SDLK_KP_ENTER:       return KEY_ENTER;
+			case SDLK_KP_PERIOD:      return KEY_KPADDEL;
+
+			case SDLK_SPACE:          return KEY_SPACE;
 			case SDLK_MINUS:          return KEY_MINUS;
 			case SDLK_EQUALS:         return KEY_EQUALS;
 			case SDLK_LEFTBRACKET:    return '[';
@@ -428,25 +429,14 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 			case SDL_SCANCODE_F11: return KEY_F11;
 			case SDL_SCANCODE_F12: return KEY_F12;
 
-			case SDL_SCANCODE_KP_0: return KEY_KEYPAD0;
-			case SDL_SCANCODE_KP_1: return KEY_KEYPAD1;
-			case SDL_SCANCODE_KP_2: return KEY_KEYPAD2;
-			case SDL_SCANCODE_KP_3: return KEY_KEYPAD3;
-			case SDL_SCANCODE_KP_4: return KEY_KEYPAD4;
-			case SDL_SCANCODE_KP_5: return KEY_KEYPAD5;
-			case SDL_SCANCODE_KP_6: return KEY_KEYPAD6;
-			case SDL_SCANCODE_KP_7: return KEY_KEYPAD7;
-			case SDL_SCANCODE_KP_8: return KEY_KEYPAD8;
-			case SDL_SCANCODE_KP_9: return KEY_KEYPAD9;
-
 			case SDL_SCANCODE_RETURN:         return KEY_ENTER;
 			case SDL_SCANCODE_ESCAPE:         return KEY_ESCAPE;
 			case SDL_SCANCODE_BACKSPACE:      return KEY_BACKSPACE;
 			case SDL_SCANCODE_TAB:            return KEY_TAB;
-			case SDL_SCANCODE_SPACE:          return KEY_SPACE;
 			case SDL_SCANCODE_CAPSLOCK:       return KEY_CAPSLOCK;
 			case SDL_SCANCODE_PRINTSCREEN:    return 0; // undefined?
 			case SDL_SCANCODE_SCROLLLOCK:     return KEY_SCROLLLOCK;
+			case SDL_SCANCODE_APPLICATION:    return KEY_MENU;
 			case SDL_SCANCODE_PAUSE:          return KEY_PAUSE;
 			case SDL_SCANCODE_INSERT:         return KEY_INS;
 			case SDL_SCANCODE_HOME:           return KEY_HOME;
@@ -459,12 +449,6 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 			case SDL_SCANCODE_DOWN:           return KEY_DOWNARROW;
 			case SDL_SCANCODE_UP:             return KEY_UPARROW;
 			case SDL_SCANCODE_NUMLOCKCLEAR:   return KEY_NUMLOCK;
-			case SDL_SCANCODE_KP_DIVIDE:      return KEY_KPADSLASH;
-			case SDL_SCANCODE_KP_MULTIPLY:    return '*'; // undefined?
-			case SDL_SCANCODE_KP_MINUS:       return KEY_MINUSPAD;
-			case SDL_SCANCODE_KP_PLUS:        return KEY_PLUSPAD;
-			case SDL_SCANCODE_KP_ENTER:       return KEY_ENTER;
-			case SDL_SCANCODE_KP_PERIOD:      return KEY_KPADDEL;
 			case SDL_SCANCODE_NONUSBACKSLASH: return '\\';
 
 			case SDL_SCANCODE_LSHIFT: return KEY_LSHIFT;
@@ -499,16 +483,30 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 				if (HU_ChatActive())
 					return 0;
 			}
-#else
-			if (CON_AcceptInput() // console input
-			|| M_TextInput() // menu text input
-			|| HU_ChatActive()) // chat input
-				useqwerty = (cv_forceqwerty.value);
 #endif
 		}
 
 		switch (code)
 		{
+			case SDL_SCANCODE_KP_0: return KEY_KEYPAD0;
+			case SDL_SCANCODE_KP_1: return KEY_KEYPAD1;
+			case SDL_SCANCODE_KP_2: return KEY_KEYPAD2;
+			case SDL_SCANCODE_KP_3: return KEY_KEYPAD3;
+			case SDL_SCANCODE_KP_4: return KEY_KEYPAD4;
+			case SDL_SCANCODE_KP_5: return KEY_KEYPAD5;
+			case SDL_SCANCODE_KP_6: return KEY_KEYPAD6;
+			case SDL_SCANCODE_KP_7: return KEY_KEYPAD7;
+			case SDL_SCANCODE_KP_8: return KEY_KEYPAD8;
+			case SDL_SCANCODE_KP_9: return KEY_KEYPAD9;
+
+			case SDL_SCANCODE_KP_DIVIDE:      return KEY_KPADSLASH;
+			case SDL_SCANCODE_KP_MULTIPLY:    return '*'; // undefined?
+			case SDL_SCANCODE_KP_MINUS:       return KEY_MINUSPAD;
+			case SDL_SCANCODE_KP_PLUS:        return KEY_PLUSPAD;
+			case SDL_SCANCODE_KP_ENTER:       return KEY_ENTER;
+			case SDL_SCANCODE_KP_PERIOD:      return KEY_KPADDEL;
+
+			case SDL_SCANCODE_SPACE:          return KEY_SPACE;
 			case SDL_SCANCODE_MINUS:          return KEY_MINUS;
 			case SDL_SCANCODE_EQUALS:         return KEY_EQUALS;
 			case SDL_SCANCODE_LEFTBRACKET:    return '[';
@@ -830,6 +828,11 @@ static void Impl_HandleTextInputEvent(char *text)
 	event_t event;
 
 	if (!cv_textinput.value)
+		return;
+
+	if (!(CON_AcceptInput() // console input
+	|| M_TextInput() // menu text input
+	|| HU_ChatActive())) // chat input
 		return;
 
 	if (text[0] < 32 || text[0] > 127)
