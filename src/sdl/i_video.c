@@ -467,10 +467,10 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 			return KEY_F1 + (code - SDL_SCANCODE_F1);
 		}
 
+#ifdef HAVE_TEXTINPUT
 		// Do send keyup events to avoid stuck movement keys
 		if (type != SDL_KEYUP && (!ctrldown))
 		{
-#ifdef HAVE_TEXTINPUT
 			if (cv_textinput.value)
 			{
 				// Lactozilla: console input
@@ -483,8 +483,8 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 				if (HU_ChatActive())
 					return 0;
 			}
-#endif
 		}
+#endif
 
 		switch (code)
 		{

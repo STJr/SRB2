@@ -624,7 +624,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 #define NEWCLIP
 
 /// Text input events
-#define HAVE_TEXTINPUT
+//#define HAVE_TEXTINPUT
 
 /// Sprite rotation
 #define ROTSPRITE
