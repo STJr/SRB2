@@ -2664,23 +2664,17 @@ static int lib_gSetCustomExitVars(lua_State *L)
 	// Supported:
 	//	G_SetCustomExitVars();			[reset to defaults]
 	//	G_SetCustomExitVars(int)		[nextmap override only]
-	//	G_SetCustomExitVars(bool)		[skipstats only]
-	//	G_SetCustomExitVars(int, bool)	[both of the above]
+	//	G_SetCustomExitVars(nil, int)	[skipstats only]
+	//	G_SetCustomExitVars(int, int)	[both of the above]
+
+	nextmapoverride = 0;
+	skipstats = 0;
+
 	if (n >= 1)
 	{
-		if (lua_isnumber(L, 1) || n >= 2)
-		{
-			nextmapoverride = (INT16)luaL_checknumber(L, 1);
-			lua_remove(L, 1); // remove nextmapoverride; skipstats now 1 if available
-		}
-		skipstats = luaL_optinteger(L, 2, 0);
+		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
+		skipstats = (INT16)luaL_optinteger(L, 2, 0);
 	}
-	else
-	{
-		nextmapoverride = 0;
-		skipstats = 0;
-	}
-	// ---
 
 	return 0;
 }
