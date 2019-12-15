@@ -1895,12 +1895,12 @@ int W_VerifyNMUSlumps(const char *filename)
  * \return Virtual resource
  *
  */
-virtres_t* vres_GetMap (lumpnum_t lumpnum)
+virtres_t* vres_GetMap(lumpnum_t lumpnum)
 {
 	UINT32 i;
-	virtres_t*	vres	= NULL;
-	virtlump_t*	vlumps	= NULL;
-	size_t	numlumps	= 0;
+	virtres_t* vres = NULL;
+	virtlump_t* vlumps = NULL;
+	size_t numlumps = 0;
 
 	if (W_IsLumpWad(lumpnum))
 	{
@@ -1942,8 +1942,8 @@ virtres_t* vres_GetMap (lumpnum_t lumpnum)
 		}
 	}
 	vres = Z_Malloc(sizeof(virtres_t), PU_LEVEL, NULL);
-	vres->vlumps	= vlumps;
-	vres->numlumps	= numlumps;
+	vres->vlumps = vlumps;
+	vres->numlumps = numlumps;
 
 	return vres;
 }
@@ -1952,7 +1952,7 @@ virtres_t* vres_GetMap (lumpnum_t lumpnum)
  *
  * \param Virtual resource
  */
-void vres_Free (virtres_t* vres)
+void vres_Free(virtres_t* vres)
 {
 	while (vres->numlumps--)
 		Z_Free(vres->vlumps[vres->numlumps].data);
@@ -1963,7 +1963,7 @@ void vres_Free (virtres_t* vres)
 /** (Debug) Prints lumps from a virtual resource into console.
  */
 /*
-static void vres_Diag (const virtres_t* vres)
+static void vres_Diag(const virtres_t* vres)
 {
 	UINT32 i;
 	for (i = 0; i < vres->numlumps; i++)

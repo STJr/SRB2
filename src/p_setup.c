@@ -367,12 +367,7 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade)
 	return mapheaderinfo[map-1]->grades[mare].grade[grade-1];
 }
 
-/** Loads the vertexes for a level.
-  *
-  * \param lump VERTEXES lump number.
-  * \sa ML_VERTEXES
-  */
-
+// Loads the vertexes for a level.
 static inline void P_LoadRawVertexes(UINT8 *data)
 {
 	mapvertex_t *ml = (mapvertex_t *)data;
@@ -666,7 +661,6 @@ INT32 P_CheckLevelFlat(const char *flatname)
 }
 
 // Sets up the ingame sectors structures.
-// Lumpnum is the lumpnum of a SECTORS lump.
 static void P_LoadRawSectors(UINT8 *data)
 {
 	mapsector_t *ms = (mapsector_t *)data;
@@ -1147,7 +1141,7 @@ static void P_LoadRawLineDefs(UINT8 *data)
 	}
 }
 
-static void SetupLines (void)
+static void P_SetupLines(void)
 {
 	line_t *ld = lines;
 	size_t i;
@@ -1933,7 +1927,7 @@ static void P_LoadRawReject(UINT8 *data, size_t count)
 	}
 }
 
-static void LoadMapBSP (const virtres_t* virt)
+static void P_LoadMapBSP(const virtres_t* virt)
 {
 	virtlump_t* virtssectors = vres_Find(virt, "SSECTORS");
 	virtlump_t* virtsegs     = vres_Find(virt, "SEGS");
@@ -1945,7 +1939,7 @@ static void LoadMapBSP (const virtres_t* virt)
 	P_LoadRawSegs(virtsegs->data, virtsegs->size);
 }
 
-static void LoadMapLUT (const virtres_t* virt)
+static void P_LoadMapLUT(const virtres_t* virt)
 {
 	virtlump_t* virtblockmap = vres_Find(virt, "BLOCKMAP");
 	virtlump_t* virtreject   = vres_Find(virt, "REJECT");
@@ -1960,7 +1954,7 @@ static void LoadMapLUT (const virtres_t* virt)
 		P_CreateBlockMap();
 }
 
-static void LoadMapData (const virtres_t* virt)
+static void P_LoadMapData(const virtres_t* virt)
 {
 	virtlump_t* virtvertexes = NULL, * virtsectors = NULL, * virtsidedefs = NULL, * virtlinedefs = NULL, * virtthings = NULL;
 #ifdef UDMF
@@ -2022,7 +2016,7 @@ static void LoadMapData (const virtres_t* virt)
 		P_LoadRawVertexes(virtvertexes->data);
 		P_LoadRawSectors(virtsectors->data);
 		P_LoadRawLineDefs(virtlinedefs->data);
-		SetupLines();
+		P_SetupLines();
 		P_LoadRawSideDefs2(virtsidedefs->data);
 	}
 }
@@ -2784,9 +2778,9 @@ boolean P_SetupLevel(boolean skipprecip)
 	{
 		virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
 
-		LoadMapData(virt);
-		LoadMapBSP(virt);
-		LoadMapLUT(virt);
+		P_LoadMapData(virt);
+		P_LoadMapBSP(virt);
+		P_LoadMapLUT(virt);
 
 		P_LoadLineDefs2();
 		P_GroupLines();

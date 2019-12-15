@@ -87,9 +87,9 @@ typedef struct {
 	virtlump_t* vlumps;
 } virtres_t;
 
-virtres_t* vres_GetMap (lumpnum_t);
-void vres_Free (virtres_t*);
-virtlump_t* vres_Find (const virtres_t*, const char*);
+virtres_t* vres_GetMap(lumpnum_t);
+void vres_Free(virtres_t*);
+virtlump_t* vres_Find(const virtres_t*, const char*);
 
 // =========================================================================
 //                         DYNAMIC WAD LOADING
