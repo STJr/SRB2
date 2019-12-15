@@ -2203,7 +2203,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->floorlightsec != frontsector->floorlightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
+		    || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag)
+		    || frontsector->floor_scalex != backsector->floor_scalex
+		    || frontsector->floor_scaley != backsector->floor_scaley)
 		{
 			markfloor = true;
 		}
@@ -2236,7 +2238,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->ceilinglightsec != frontsector->ceilinglightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
+		    || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag)
+		    || frontsector->ceiling_scalex != backsector->ceiling_scalex
+		    || frontsector->ceiling_scaley != backsector->ceiling_scaley)
 		{
 				markceiling = true;
 		}
