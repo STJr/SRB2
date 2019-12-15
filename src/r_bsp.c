@@ -915,6 +915,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 			, frontsector->f_slope
 #endif
+			, frontsector->floor_scalex
 			);
 	}
 	else
@@ -937,6 +938,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 			, frontsector->c_slope
 #endif
+			, frontsector->ceiling_scalex
 			);
 	}
 	else
@@ -998,6 +1000,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 					, *rover->b_slope
 #endif
+					, frontsector->floor_scalex
 					);
 
 #ifdef ESLOPE
@@ -1044,6 +1047,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 					, *rover->t_slope
 #endif
+					, frontsector->ceiling_scalex
 					);
 
 #ifdef ESLOPE
@@ -1094,6 +1098,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
+					, polysec->floor_scalex
 					);
 
 				ffloor[numffloors].height = polysec->floorheight;
@@ -1122,6 +1127,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
+					, polysec->ceiling_scalex
 					);
 
 				ffloor[numffloors].polyobj = po;
