@@ -11422,8 +11422,8 @@ void P_PlayerThink(player_t *player)
 			{
 #ifdef HAVE_BLUA
 				LUAh_PlayerThink(player);
-				return;
 #endif
+				return;
 			}
 		}
 	}
