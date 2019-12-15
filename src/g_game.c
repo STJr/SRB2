@@ -1514,6 +1514,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			if (camadjustfactor)
 			{
 				fixed_t sine = FINESINE((R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - localangle)>>ANGLETOFINESHIFT);
+
+				if ((sine > 0) == (cmd->sidemove > 0))
+					sine = 0; // Prevent jerking right when braking from going left, or vice versa
+
 				fixed_t factor = min(40, FixedMul(player->speed, abs(sine))*2 / FRACUNIT);
 
 				*myangle -= cmd->sidemove * factor * camadjustfactor;
