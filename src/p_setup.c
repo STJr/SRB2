@@ -413,25 +413,15 @@ static inline float P_SegLengthFloat(seg_t *seg)
 }
 #endif
 
-/** Loads the SEGS resource from a level.
-  *
-  * \param lump Lump number of the SEGS resource.
-  * \sa ::ML_SEGS
-  */
-static void P_LoadRawSegs(UINT8 *data, size_t i)
+// Loads the SEGS resource from a level.
+static void P_LoadRawSegs(UINT8 *data)
 {
 	INT32 linedef, side;
-	mapseg_t *ml;
-	seg_t *li;
+	mapseg_t *ml = (mapseg_t*)data;
+	seg_t *li = segs;
 	line_t *ldef;
+	size_t i;
 
-	numsegs = i / sizeof (mapseg_t);
-	if (numsegs <= 0)
-		I_Error("Level has no segs"); // instead of crashing
-	segs = Z_Calloc(numsegs * sizeof (*segs), PU_LEVEL, NULL);
-
-	ml = (mapseg_t *)data;
-	li = segs;
 	for (i = 0; i < numsegs; i++, li++, ml++)
 	{
 		li->v1 = &vertexes[SHORT(ml->v1)];
@@ -456,7 +446,7 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 		li->side = side = SHORT(ml->side);
 		li->sidedef = &sides[ldef->sidenum[side]];
 		li->frontsector = sides[ldef->sidenum[side]].sector;
-		if (ldef-> flags & ML_TWOSIDED)
+		if (ldef->flags & ML_TWOSIDED)
 			li->backsector = sides[ldef->sidenum[side^1]].sector;
 		else
 			li->backsector = 0;
@@ -466,22 +456,12 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 	}
 }
 
-/** Loads the SSECTORS resource from a level.
-  *
-  * \param lump Lump number of the SSECTORS resource.
-  * \sa ::ML_SSECTORS
-  */
-static inline void P_LoadRawSubsectors(void *data, size_t i)
+// Loads the SSECTORS resource from a level.
+static inline void P_LoadRawSubsectors(void *data)
 {
-	mapsubsector_t *ms;
-	subsector_t *ss;
-
-	numsubsectors = i / sizeof (mapsubsector_t);
-	if (numsubsectors <= 0)
-		I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
-	ss = subsectors = Z_Calloc(numsubsectors * sizeof (*subsectors), PU_LEVEL, NULL);
-
-	ms = (mapsubsector_t *)data;
+	mapsubsector_t *ms = (mapsubsector_t*)data;
+	subsector_t *ss = subsectors;
+	size_t i;
 
 	for (i = 0; i < numsubsectors; i++, ss++, ms++)
 	{
@@ -761,19 +741,12 @@ static void P_LoadRawSectors(UINT8 *data)
 //
 // P_LoadNodes
 //
-static void P_LoadRawNodes(UINT8 *data, size_t i)
+static void P_LoadRawNodes(UINT8 *data)
 {
 	UINT8 j, k;
-	mapnode_t *mn;
-	node_t *no;
-
-	numnodes = i / sizeof (mapnode_t);
-	if (numnodes <= 0)
-		I_Error("Level has no nodes");
-	nodes = Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
-
-	mn = (mapnode_t *)data;
-	no = nodes;
+	mapnode_t *mn = (mapnode_t*)data;
+	node_t *no = nodes;
+	size_t i;
 
 	for (i = 0; i < numnodes; i++, no++, mn++)
 	{
@@ -1933,10 +1906,25 @@ static void P_LoadMapBSP(const virtres_t* virt)
 	virtlump_t* virtsegs     = vres_Find(virt, "SEGS");
 	virtlump_t* virtnodes    = vres_Find(virt, "NODES");
 
+	numsubsectors = virtssectors->size / sizeof(mapsubsector_t);
+	numnodes      = virtnodes->size    / sizeof(mapnode_t);
+	numsegs       = virtsegs->size     / sizeof(mapseg_t);
+
+	if (numsubsectors <= 0)
+		I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
+	if (numnodes <= 0)
+		I_Error("Level has no nodes");
+	if (numsegs <= 0)
+		I_Error("Level has no segs");
+
+	subsectors = Z_Calloc(numsubsectors * sizeof(*subsectors), PU_LEVEL, NULL);
+	nodes      = Z_Calloc(numnodes * sizeof(*nodes), PU_LEVEL, NULL);
+	segs       = Z_Calloc(numsegs * sizeof(*segs), PU_LEVEL, NULL);
+
 	// Nodes
-	P_LoadRawSubsectors(virtssectors->data, virtssectors->size);
-	P_LoadRawNodes(virtnodes->data, virtnodes->size);
-	P_LoadRawSegs(virtsegs->data, virtsegs->size);
+	P_LoadRawSubsectors(virtssectors->data);
+	P_LoadRawNodes(virtnodes->data);
+	P_LoadRawSegs(virtsegs->data);
 }
 
 static void P_LoadMapLUT(const virtres_t* virt)
@@ -1981,7 +1969,7 @@ static void P_LoadMapData(const virtres_t* virt)
 		virtsidedefs = vres_Find(virt, "SIDEDEFS");
 		virtlinedefs = vres_Find(virt, "LINEDEFS");
 
-		// Traditional doom map format just assumes the number of elements from the lump sixes.
+		// Traditional doom map format just assumes the number of elements from the lump sizes.
 		numvertexes  = virtvertexes->size / sizeof (mapvertex_t);
 		numsectors   = virtsectors->size  / sizeof (mapsector_t);
 		numsides     = virtsidedefs->size / sizeof (mapsidedef_t);
@@ -1998,11 +1986,11 @@ static void P_LoadMapData(const virtres_t* virt)
 	if (numlines <= 0)
 		I_Error("Level has no linedefs");
 
-	vertexes = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
-	sectors  = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
-	sides    = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
-	lines    = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
-	mapthings= Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+	vertexes  = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
+	sectors   = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
+	sides     = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
+	lines     = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
 
 #ifdef UDMF
 	if (textmap)
