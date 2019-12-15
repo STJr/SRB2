@@ -5273,7 +5273,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
-		else if (player->pflags & PF_SLIDING || (gametype == GT_CTF && player->gotflag))
+		else if (player->pflags & PF_SLIDING || (gametype == GT_CTF && player->gotflag) || player->pflags & PF_SHIELDABILITY)
 			;
 		/*else if (P_SuperReady(player))
 		{

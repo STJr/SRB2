@@ -7833,7 +7833,8 @@ void P_MobjThinker(mobj_t *mobj)
 						boolean dojump = false, targonground, love, makeheart = false;
 						if (mobj->target != player->mo)
 							P_SetTarget(&mobj->target, player->mo);
-						targonground = (P_IsObjectOnGround(mobj->target) && (player->panim == PA_IDLE || player->panim == PA_WALK || player->panim == PA_RUN));
+						// Tatsuru: Don't try to hug them if they're above or below you!
+						targonground = (P_IsObjectOnGround(mobj->target) && (player->panim == PA_IDLE || player->panim == PA_WALK || player->panim == PA_RUN) && player->mo->z == mobj->z);
 						love = (player->skin == 0 || player->skin == 5);
 
 						switch (stat)
