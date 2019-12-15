@@ -1606,7 +1606,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 			if (camadjustfactor)
 			{
-				INT32 anglediff = ((player->pflags & PF_SPINNING) ? player->drawangle : (cmd->angleturn<<16)) + drawangleoffset - *myangle;
+				INT32 anglediff = ((player->pflags & PF_SPINNING) ? player->drawangle + drawangleoffset : (cmd->angleturn<<16)) - *myangle;
 
 				if (alt)
 				{

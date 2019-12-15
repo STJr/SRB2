@@ -10018,16 +10018,13 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		UINT8 forplayer = (thiscam == &camera) ? 0 : 1;
 		fixed_t shift = FixedMul(FINESINE((player->mo->angle - angle) >> ANGLETOFINESHIFT), cv_cam_shiftfacing[forplayer].value);
 
-		if (player->powers[pw_carry] == CR_ROLLOUT)
-			shift = -shift;
-
 		if (player->powers[pw_carry] == CR_NIGHTSMODE)
 		{
 			fixed_t cos = FINECOSINE((angle_t) (player->flyangle * ANG1)>>ANGLETOFINESHIFT);
 			shift = FixedMul(shift, min(FRACUNIT, player->speed*abs(cos)/6000));
+			shift += FixedMul(camsideshift[forplayer] - shift, FRACUNIT-(camspeed>>2));
 		}
-
-		if (ticcmd_centerviewdown[(thiscam == &camera) ? 0 : 1])
+		else if (ticcmd_centerviewdown[(thiscam == &camera) ? 0 : 1])
 			shift = FixedMul(camsideshift[forplayer], FRACUNIT-camspeed);
 		else
 			shift += FixedMul(camsideshift[forplayer] - shift, FRACUNIT-(camspeed>>3));
