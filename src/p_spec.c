@@ -1573,6 +1573,35 @@ void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean e
 	}
 }
 
+#define MAXTAGS 65536
+typedef struct{
+	size_t* list;
+	size_t size;
+} taggroup_t;
+
+taggroup_t* taglist_sec[MAXTAGS];
+
+/** Insert an item id into a given taglist.
+ */
+static void Taglist_AddTo (const size_t tag, const size_t itemid)
+{
+	taggroup_t* group;
+	if (!taglist_sec[tag])
+	{
+		taglist_sec[tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
+		group = taglist_sec[tag];
+		group->size = 1;
+		group->list = Z_Malloc(sizeof(size_t), PU_LEVEL, NULL);
+	}
+	else
+	{
+		group = taglist_sec[tag];
+		group->size++;
+		group->list = Z_Realloc(group->list, group->size * sizeof(size_t), PU_LEVEL, NULL);
+	}
+	group->list[group->size - 1] = itemid;
+}
+
 /** Hashes the sector tags across the sectors and linedefs.
   *
   * \sa P_FindSectorFromTag, P_ChangeSectorTag
@@ -1595,7 +1624,32 @@ static inline void P_InitTagLists(void)
 		lines[i].nexttag = lines[j].firsttag;
 		lines[j].firsttag = (INT32)i;
 	}
+
+	for (i = 0; i < MAXTAGS; i++)
+		taglist_sec[i] = NULL;
+
+	for (i = 0; i < numsectors; i++)
+	{
+		if (sectors[i].tag > 0)
+			Taglist_AddTo(sectors[i].tag, i);
+	}
+
+	for (i = 0; i < MAXTAGS; i++)
+	{
+		if (taglist_sec[i])
+		{
+			taggroup_t* group = taglist_sec[i];
+			size_t j;
+			CONS_Printf("Tag list for %u :\n", i);
+			for (j = 0; j < group->size; j++)
+			{
+				CONS_Printf("Sector %d\n", group->list[j]);
+			}
+		}
+	}
 }
+
+#undef MAXTAGS
 
 /** Finds minimum light from an adjacent sector.
   *

@@ -75,6 +75,12 @@ typedef struct extracolormap_s
 	struct extracolormap_s *prev;
 } extracolormap_t;
 
+typedef struct
+{
+	UINT16* tags;
+	UINT16 numtags;
+} tags_t;
+
 //
 // INTERNAL MAP TYPES used by play and refresh
 //
@@ -294,6 +300,7 @@ typedef struct sector_s
 	INT16 special;
 	UINT16 tag;
 	INT32 nexttag, firsttag; // for fast tag searches
+	tags_t tags;
 
 	// origin for any sounds played by the sector
 	// also considered the center for e.g. Mario blocks
@@ -418,6 +425,7 @@ typedef struct line_s
 	INT16 flags;
 	INT16 special;
 	INT16 tag;
+	tags_t tags;
 
 	// Visual appearance: sidedefs.
 	UINT16 sidenum[2]; // sidenum[1] will be 0xffff if one-sided
