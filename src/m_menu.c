@@ -6370,11 +6370,7 @@ static void M_PandorasBox(INT32 choice)
 	else
 		CV_StealthSetValue(&cv_dummylives, max(players[consoleplayer].lives, 1));
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
-	SR_PandorasBox[6].status = ((players[consoleplayer].charflags & SF_SUPER)
-#ifndef DEVELOP
-	|| cv_skin.value == 1
-#endif
-	) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
+	SR_PandorasBox[6].status = (players[consoleplayer].charflags & SF_SUPER) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
 	SR_PandorasBox[7].status = (emeralds == ((EMERALD7)*2)-1) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
 	M_SetupNextMenu(&SR_PandoraDef);
 }
