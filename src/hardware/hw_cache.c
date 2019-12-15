@@ -760,15 +760,15 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 //             CACHING HANDLING
 // =================================================
 
-static size_t gr_numtextures;
-static GLTexture_t *gr_textures; // for ALL Doom textures
-static GLTexture_t *gr_textures2;
+static size_t gr_numtextures; // Texture count
+static GLTexture_t *gr_textures; // For all textures
+static GLTexture_t *gr_flats; // For all (texture) flats, as normal flats don't need to be cached
 
 void HWR_InitTextureCache(void)
 {
 	gr_numtextures = 0;
 	gr_textures = NULL;
-	gr_textures2 = NULL;
+	gr_flats = NULL;
 }
 
 // Callback function for HWR_FreeTextureCache.
@@ -776,29 +776,45 @@ static void FreeMipmapColormap(INT32 patchnum, void *patch)
 {
 	GLPatch_t* const pat = patch;
 	(void)patchnum; //unused
-	while (pat->mipmap && pat->mipmap->nextcolormap) // The mipmap must be valid, obviously
+
+	// The patch must be valid, obviously
+	if (!pat)
+		return;
+
+	// The mipmap must be valid, obviously
+	while (pat->mipmap)
 	{
 		// Confusing at first, but pat->mipmap->nextcolormap
 		// at the beginning of the loop is the first colormap
-		// from the linked list of colormaps
-		GLMipmap_t *next = pat->mipmap;
-		if (!next) // No mipmap in this patch, break out of loop.
+		// from the linked list of colormaps.
+		GLMipmap_t *next = NULL;
+
+		// No mipmap in this patch, break out of the loop.
+		if (!pat->mipmap)
 			break;
-		// Set the first colormap
-		// to the one that comes after it
-		next = next->nextcolormap;
+
+		// No colormap mipmap either.
+		if (!pat->mipmap->nextcolormap)
+			break;
+
+		// Set the first colormap to the one that comes after it.
+		next = pat->mipmap->nextcolormap;
 		pat->mipmap->nextcolormap = next->nextcolormap;
-		// Free image data from memory
+
+		// Free image data from memory.
 		if (next->grInfo.data)
 			Z_Free(next->grInfo.data);
-		// Free the old colormap from memory
+		next->grInfo.data = NULL;
+
+		// Free the old colormap mipmap from memory.
 		free(next);
 	}
 }
 
-void HWR_FreeTextureCache(void)
+void HWR_FreeMipmapCache(void)
 {
 	INT32 i;
+
 	// free references to the textures
 	HWD.pfnClearMipMapCache();
 
@@ -808,51 +824,46 @@ void HWR_FreeTextureCache(void)
 	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
 
 	// Alam: free the Z_Blocks before freeing it's users
-
 	// free all patch colormaps after each level: must be done after ClearMipMapCache!
 	for (i = 0; i < numwadfiles; i++)
 		M_AATreeIterate(wadfiles[i]->hwrcache, FreeMipmapColormap);
+}
+
+void HWR_FreeTextureCache(void)
+{
+	// free references to the textures
+	HWR_FreeMipmapCache();
 
 	// now the heap don't have any 'user' pointing to our
 	// texturecache info, we can free it
 	if (gr_textures)
 		free(gr_textures);
-	if (gr_textures2)
-		free(gr_textures2);
+	if (gr_flats)
+		free(gr_flats);
 	gr_textures = NULL;
-	gr_textures2 = NULL;
+	gr_flats = NULL;
 	gr_numtextures = 0;
 }
 
-void HWR_PrepLevelCache(size_t pnumtextures)
+void HWR_LoadTextures(size_t pnumtextures)
 {
-	// problem: the mipmap cache management hold a list of mipmaps.. but they are
-	//           reallocated on each level..
-	//sub-optimal, but 1) just need re-download stuff in hardware cache VERY fast
-	//   2) sprite/menu stuff mixed with level textures so can't do anything else
-
 	// we must free it since numtextures changed
 	HWR_FreeTextureCache();
 
+	// Why not Z_Malloc?
 	gr_numtextures = pnumtextures;
-	gr_textures = calloc(pnumtextures, sizeof (*gr_textures));
-	if (gr_textures == NULL)
-		I_Error("3D can't alloc gr_textures");
-	gr_textures2 = calloc(pnumtextures, sizeof (*gr_textures2));
-	if (gr_textures2 == NULL)
-		I_Error("3D can't alloc gr_textures2");
+	gr_textures = calloc(gr_numtextures, sizeof(*gr_textures));
+	gr_flats = calloc(gr_numtextures, sizeof(*gr_flats));
+
+	// Doesn't tell you which it _is_, but hopefully
+	// should never ever happen (right?!)
+	if ((gr_textures == NULL) || (gr_flats == NULL))
+		I_Error("HWR_LoadTextures: ran out of memory for OpenGL textures. Sad!");
 }
 
 void HWR_SetPalette(RGBA_t *palette)
 {
-	//Hudler: 16/10/99: added for OpenGL gamma correction
-	RGBA_t gamma_correction = {0x7F7F7F7F};
-
-	//Hurdler 16/10/99: added for OpenGL gamma correction
-	gamma_correction.s.red   = (UINT8)cv_grgammared.value;
-	gamma_correction.s.green = (UINT8)cv_grgammagreen.value;
-	gamma_correction.s.blue  = (UINT8)cv_grgammablue.value;
-	HWD.pfnSetPalette(palette, &gamma_correction);
+	HWD.pfnSetPalette(palette);
 
 	// hardware driver will flush there own cache if cache is non paletized
 	// now flush data texture cache so 32 bit texture are recomputed
@@ -873,11 +884,16 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	if ((unsigned)tex >= gr_numtextures)
 		I_Error("HWR_GetTexture: tex >= numtextures\n");
 #endif
+
+	// Every texture in memory, stored in the
+	// hardware renderer's bit depth format. Wow!
 	grtex = &gr_textures[tex];
 
+	// Generate texture if missing from the cache
 	if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
 		HWR_GenerateTexture(tex, grtex);
 
+	// Tell the hardware driver to bind the current texture to the flat's mipmap
 	HWD.pfnSetTexture(&grtex->mipmap);
 
 	// The system-memory data can be purged now.
@@ -989,13 +1005,19 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		if ((unsigned)texturenum >= gr_numtextures)
 			I_Error("HWR_GetLevelFlat: texturenum >= numtextures\n");
 #endif
+
+		// Who knows?
 		if (texturenum == 0 || texturenum == -1)
 			return;
-		grtex = &gr_textures2[texturenum];
 
+		// Every texture in memory, stored as a 8-bit flat. Wow!
+		grtex = &gr_flats[texturenum];
+
+		// Generate flat if missing from the cache
 		if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
 			HWR_CacheTextureAsFlat(&grtex->mipmap, texturenum);
 
+		// Tell the hardware driver to bind the current texture to the flat's mipmap
 		HWD.pfnSetTexture(&grtex->mipmap);
 
 		// The system-memory data can be purged now.
@@ -1019,6 +1041,7 @@ static void HWR_LoadMappedPatch(GLMipmap_t *grmip, GLPatch_t *gpatch)
 		HWR_MakePatch(patch, gpatch, grmip, true);
 
 		// You can't free rawpatch for some reason?
+		// (Obviously I can't, sprite rotation needs that...)
 		if (!gpatch->rawpatch)
 			Z_Free(patch);
 	}
@@ -1046,7 +1069,6 @@ void HWR_GetPatch(GLPatch_t *gpatch)
 
 		// this is inefficient.. but the hardware patch in heap is purgeable so it should
 		// not fragment memory, and besides the REAL cache here is the hardware memory
-		// You can't free rawpatch for some reason?
 		if (!gpatch->rawpatch)
 			Z_Free(ptr);
 	}
