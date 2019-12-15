@@ -79,7 +79,7 @@ extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_g
 // hi here's some new controls
 extern consvar_t cv_abilitydirection[2], cv_cam_shiftfacing[2], cv_cam_turnfacing[2],
 	cv_cam_turnfacingability[2], cv_cam_turnfacingspindash[2], cv_cam_turnfacinginput[2],
-	cv_cam_lockedinput[2], cv_cam_lockonboss[2];
+	cv_cam_centertoggle[2], cv_cam_lockedinput[2], cv_cam_lockonboss[2];
 
 typedef enum
 {

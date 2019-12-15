@@ -421,8 +421,13 @@ consvar_t cv_cam_turnfacinginput[2] = {
 	{"cam2_turnfacinginput", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 };
 
-static CV_PossibleValue_t lockedinput_cons_t[] = {{0, "Strafe"}, {1, "Turn"}, {0, NULL}};
+static CV_PossibleValue_t centertoggle_cons_t[] = {{0, "Hold"}, {1, "Toggle"}, {0, NULL}};
+consvar_t cv_cam_centertoggle[2] = {
+	{"cam_centertoggle", "Hold", CV_SAVE, centertoggle_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+	{"cam2_centertoggle", "Hold", CV_SAVE, centertoggle_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
+};
 
+static CV_PossibleValue_t lockedinput_cons_t[] = {{0, "Strafe"}, {1, "Turn"}, {0, NULL}};
 consvar_t cv_cam_lockedinput[2] = {
 	{"cam_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 	{"cam2_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
@@ -436,7 +441,6 @@ static CV_PossibleValue_t lockedassist_cons_t[] = {
 	{LOCK_BOSS|LOCK_ENEMY|LOCK_INTERESTS, "Full"},
 	{0, NULL}
 };
-
 consvar_t cv_cam_lockonboss[2] = {
 	{"cam_lockaimassist", "Bosses", CV_SAVE, lockedassist_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
 	{"cam2_lockaimassist", "Bosses", CV_SAVE, lockedassist_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
@@ -1057,8 +1061,12 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	static boolean keyboard_look[2]; // true if lookup/down using keyboard
 	static boolean resetdown[2]; // don't cam reset every frame
 	static boolean joyaiming[2]; // check the last frame's value if we need to reset the camera
+
+	// simple mode vars
 	static boolean zchange[2]; // only switch z targets once per press
 	static fixed_t tta_factor[2] = {FRACUNIT, FRACUNIT}; // disables turn-to-angle when manually turning camera until movement happens
+	boolean centerviewdown = false;
+
 	UINT8 forplayer = ssplayer-1;
 
 	if (ssplayer == 1)
@@ -1291,7 +1299,23 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (PLAYERINPUTDOWN(ssplayer, gc_use) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_USE;
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_centerview))
+	// Centerview can be a toggle in simple mode!
+	{
+		static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
+		boolean down = PLAYERINPUTDOWN(ssplayer, gc_centerview);
+
+		if (!(abilitydirection && cv_cam_centertoggle[forplayer].value))
+			centerviewdown = down;
+		else
+		{
+			if (down && !last_centerviewdown[forplayer])
+				centerviewhold[forplayer] = !centerviewhold[forplayer];
+			last_centerviewdown[forplayer] = down;
+			centerviewdown = centerviewhold[forplayer];
+		}
+	}
+
+	if (centerviewdown)
 	{
 		if (abilitydirection && !ticcmd_centerviewdown[forplayer])
 		{

@@ -1238,11 +1238,12 @@ static menuitem_t OP_CameraExtendedOptionsMenu[] =
 	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[0],  85},
 
 	{IT_HEADER,            NULL, "Locked Camera Options", NULL, 95},
-	{IT_STRING  | IT_CVAR, NULL, "Sideways movement", &cv_cam_lockedinput[0],  100},
-	{IT_STRING  | IT_CVAR, NULL, "Targeting assist", &cv_cam_lockonboss[0],  105},
+	{IT_STRING  | IT_CVAR, NULL, "Lock button behavior", &cv_cam_centertoggle[0],  100},
+	{IT_STRING  | IT_CVAR, NULL, "Sideways movement", &cv_cam_lockedinput[0],  105},
+	{IT_STRING  | IT_CVAR, NULL, "Targeting assist", &cv_cam_lockonboss[0],  110},
 
-	{IT_HEADER,            NULL, "Display Options", NULL, 115},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 120},
+	{IT_HEADER,            NULL, "Display Options", NULL, 120},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 125},
 };
 
 static menuitem_t OP_Camera2ExtendedOptionsMenu[] =
@@ -1267,11 +1268,12 @@ static menuitem_t OP_Camera2ExtendedOptionsMenu[] =
 	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to input", &cv_cam_turnfacinginput[1],  85},
 
 	{IT_HEADER,            NULL, "Locked Camera Options", NULL, 95},
-	{IT_STRING  | IT_CVAR, NULL, "Sideways movement", &cv_cam_lockedinput[1],  100},
-	{IT_STRING  | IT_CVAR, NULL, "Targeting assist", &cv_cam_lockonboss[1],  105},
+	{IT_STRING  | IT_CVAR, NULL, "Lock button behavior", &cv_cam_centertoggle[1],  100},
+	{IT_STRING  | IT_CVAR, NULL, "Sideways movement", &cv_cam_lockedinput[1],  105},
+	{IT_STRING  | IT_CVAR, NULL, "Targeting assist", &cv_cam_lockonboss[1],  110},
 
-	{IT_HEADER,            NULL, "Display Options", NULL, 115},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 120},
+	{IT_HEADER,            NULL, "Display Options", NULL, 120},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 125},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
