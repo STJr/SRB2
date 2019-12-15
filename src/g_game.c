@@ -468,7 +468,8 @@ consvar_t cv_jumpaxis = {"joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL, 
 consvar_t cv_spinaxis = {"joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_fireaxis = {"joyaxis_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis = {"joyaxis_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_deadzone = {"joy_deadzone", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_deadzone = {"joy_deadzone", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_digitaldeadzone = {"joy_digdeadzone", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_turnaxis2 = {"joyaxis2_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_moveaxis2 = {"joyaxis2_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -478,7 +479,8 @@ consvar_t cv_jumpaxis2 = {"joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL
 consvar_t cv_spinaxis2 = {"joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_fireaxis2 = {"joyaxis2_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_deadzone2 = {"joy_deadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_deadzone2 = {"joy_deadzone2", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_digitaldeadzone2 = {"joy_digdeadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef SEENAMES
 player_t *seenplayer; // player we're aiming at right now
@@ -936,9 +938,9 @@ static INT32 JoyAxis(axis_input_e axissel)
 		retaxis = -JOYAXISRANGE;
 	if (retaxis > (+JOYAXISRANGE))
 		retaxis = +JOYAXISRANGE;
-	if (!Joystick.bGamepadStyle && axissel < AXISDEAD)
+	if (!Joystick.bGamepadStyle)
 	{
-		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_deadzone.value) >> FRACBITS;
+		const INT32 jdeadzone = ((JOYAXISRANGE-1) * ((axissel < AXISDEAD) ? cv_deadzone.value : cv_digitaldeadzone.value)) >> FRACBITS;
 		if (-jdeadzone < retaxis && retaxis < jdeadzone)
 			return 0;
 	}
@@ -1009,9 +1011,9 @@ static INT32 Joy2Axis(axis_input_e axissel)
 		retaxis = -JOYAXISRANGE;
 	if (retaxis > (+JOYAXISRANGE))
 		retaxis = +JOYAXISRANGE;
-	if (!Joystick2.bGamepadStyle && axissel < AXISDEAD)
+	if (!Joystick2.bGamepadStyle)
 	{
-		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_deadzone2.value) >> FRACBITS;
+		const INT32 jdeadzone = ((JOYAXISRANGE-1) * ((axissel < AXISDEAD) ? cv_deadzone2.value : cv_digitaldeadzone2.value)) >> FRACBITS;
 		if (-jdeadzone < retaxis && retaxis < jdeadzone)
 			return 0;
 	}
