@@ -400,6 +400,11 @@ consvar_t cv_directionchar2 = {"directionchar2", "Movement", CV_SAVE|CV_CALL, di
 consvar_t cv_autobrake = {"autobrake", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_autobrake2 = {"autobrake2", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
+static CV_PossibleValue_t deadzone_cons_t[] = {{0, "MIN"}, {FRACUNIT, "MAX"}, {0, NULL}};
+consvar_t cv_deadzone = {"deadzone", "0.25", CV_FLOAT|CV_SAVE, deadzone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_deadzone2 = {"deadzone2", "0.25", CV_FLOAT|CV_SAVE, deadzone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+
 typedef enum
 {
 	AXISNONE = 0,
@@ -407,7 +412,6 @@ typedef enum
 	AXISMOVE,
 	AXISLOOK,
 	AXISSTRAFE,
-	AXISDEAD, //Axises that don't want deadzones
 	AXISJUMP,
 	AXISSPIN,
 	AXISFIRE,
@@ -961,10 +965,9 @@ static INT32 Joy2Axis(axis_input_e axissel)
 
 // Take a magnitude of two axes, and adjust it to take out the deadzone
 // Will return a value between 0 and JOYAXISRANGE
-static INT32 G_BasicDeadZoneCalculation(INT32 magnitude)
+static INT32 G_BasicDeadZoneCalculation(INT32 magnitude, fixed_t deadZone)
 {
-	// TODO: console variable for deadzone setting
-	const INT32 jdeadzone = JOYAXISRANGE/4;
+	const INT32 jdeadzone = (JOYAXISRANGE * deadZone) / FRACUNIT;
 	INT32 deadzoneAppliedValue = 0;
 
 	if (jdeadzone > 0)
@@ -987,10 +990,12 @@ static INT32 G_BasicDeadZoneCalculation(INT32 magnitude)
 static void G_HandleAxisDeadZone(UINT8 splitnum, joystickvector2_t *joystickvector)
 {
 	INT32 gamepadStyle = Joystick.bGamepadStyle;
+	fixed_t deadZone = cv_deadzone.value;
 
 	if (splitnum == 1)
 	{
 		gamepadStyle = Joystick2.bGamepadStyle;
+		deadZone = cv_deadzone2.value;
 	}
 
 	// When gamepadstyle is "true" the values are just -1, 0, or 1. This is done in the interface code.
@@ -998,22 +1003,22 @@ static void G_HandleAxisDeadZone(UINT8 splitnum, joystickvector2_t *joystickvect
 	{
 		// Get the total magnitude of the 2 axes
 		INT32 magnitude = (joystickvector->xaxis * joystickvector->xaxis) + (joystickvector->yaxis * joystickvector->yaxis);
-		INT32 normalisedxaxis;
-		INT32 normalisedyaxis;
+		INT32 normalisedXAxis;
+		INT32 normalisedYAxis;
 		INT32 normalisedMagnitude;
 		double dMagnitude = sqrt((double)magnitude);
 		magnitude = (INT32)dMagnitude;
 
 		// Get the normalised xy values from the magnitude
-		normalisedxaxis = (joystickvector->xaxis * magnitude) / JOYAXISRANGE;
-		normalisedyaxis = (joystickvector->yaxis * magnitude) / JOYAXISRANGE;
+		normalisedXAxis = (joystickvector->xaxis * magnitude) / JOYAXISRANGE;
+		normalisedYAxis = (joystickvector->yaxis * magnitude) / JOYAXISRANGE;
 
 		// Apply the deadzone to the magnitude to give a correct value between 0 and JOYAXISRANGE
-		normalisedMagnitude = G_BasicDeadZoneCalculation(magnitude);
+		normalisedMagnitude = G_BasicDeadZoneCalculation(magnitude, deadZone);
 
 		// Apply the deadzone to the xy axes
-		joystickvector->xaxis = (normalisedxaxis * normalisedMagnitude) / JOYAXISRANGE;
-		joystickvector->yaxis = (normalisedyaxis * normalisedMagnitude) / JOYAXISRANGE;
+		joystickvector->xaxis = (normalisedXAxis * normalisedMagnitude) / JOYAXISRANGE;
+		joystickvector->yaxis = (normalisedYAxis * normalisedMagnitude) / JOYAXISRANGE;
 
 		// Cap the values so they don't go above the correct maximum
 		joystickvector->xaxis = min(joystickvector->xaxis, JOYAXISRANGE);
