@@ -1035,7 +1035,7 @@ static void P_PrepareThings(lumpnum_t lumpnum)
 	Z_Free(data);
 }
 
-static void SpawnEmeraldHunt (void)
+static void P_SpawnEmeraldHunt(void)
 {
 	INT32 emer1, emer2, emer3;
 	INT32 timeout = 0; // keeps from getting stuck
@@ -1119,7 +1119,7 @@ static void P_LoadThings(boolean loademblems)
 
 	// random emeralds for hunt
 	if (numhuntemeralds)
-		SpawnEmeraldHunt();
+		P_SpawnEmeraldHunt();
 
 	if (metalrecording) // Metal Sonic gets no rings to distract him.
 		return;
