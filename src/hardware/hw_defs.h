@@ -220,11 +220,10 @@ typedef struct FSurfaceInfo FSurfaceInfo;
 //Hurdler: added for backward compatibility
 enum hwdsetspecialstate
 {
-	HWD_SET_FOG_TABLE = 1,
+	HWD_SET_MODEL_LIGHTING = 1,
 	HWD_SET_FOG_MODE,
 	HWD_SET_FOG_COLOR,
 	HWD_SET_FOG_DENSITY,
-	HWD_SET_FOV,
 	HWD_SET_TEXTUREFILTERMODE,
 	HWD_SET_TEXTUREANISOTROPICMODE,
 	HWD_NUMSTATE

@@ -1386,5 +1386,13 @@ void R_RenderBSPNode(INT32 bspnum)
 		bspnum = bsp->children[side^1];
 	}
 
+	// PORTAL CULLING
+	if (portalcullsector) {
+		sector_t *sect = subsectors[bspnum & ~NF_SUBSECTOR].sector;
+		if (sect != portalcullsector)
+			return;
+		portalcullsector = NULL;
+	}
+
 	R_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);
 }
