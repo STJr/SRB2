@@ -975,6 +975,15 @@ static sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, INT32 secnum)
 }
 #endif
 
+// Calculates the per-sector gravity.
+fixed_t P_GetSectorGravity(sector_t *sec)
+{
+	if (sec->gravityptr)
+		return FixedDiv(*sec->gravityptr >> FRACBITS, 1000);
+	else
+		return sec->gravity;
+}
+
 /** Searches the tag lists for the next sector tagged to a line.
   *
   * \param line  Tagged line used as a reference.
@@ -6576,6 +6585,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	sector = sectors;
 	for (i = 0; i < numsectors; i++, sector++)
 	{
+		if (sector->verticalflip)
+			CheckForReverseGravity = true;
+
 		if (!sector->special)
 			continue;
 
@@ -6691,12 +6703,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			INT32 s;
 			size_t sec;
 			ffloortype_e ffloorflags;
-
 			case 1: // Definable gravity per sector
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
 				{
-					sectors[s].gravity = &sectors[sec].floorheight; // This allows it to change in realtime!
+					sectors[s].gravityptr = &sectors[sec].floorheight; // This allows it to change in realtime!
 
 					if (lines[i].flags & ML_NOCLIMB)
 						sectors[s].verticalflip = true;

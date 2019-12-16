@@ -831,8 +831,8 @@ static void GeneralDefaults(void)
 		// Defaults.
 		sc->floor_xoffs = sc->ceiling_xoffs = sc->floor_yoffs = sc->ceiling_yoffs = 0;
 		sc->floorpic_angle = sc->ceilingpic_angle = 0;
-		//sc->gravity = FRACUNIT;
-		sc->gravity = NULL;
+		sc->gravity = FRACUNIT;
+		sc->gravityptr = NULL;
 		sc->verticalflip = false;
 //		sc->udmfflags = 0;
 
@@ -930,7 +930,7 @@ static void TextmapDefaults (void)
 		sc->floor_xoffs = sc->floor_yoffs = sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
 		sc->floorpic_angle = sc->ceilingpic_angle = 0;
 
-//		sc->gravity = FRACUNIT;
+		sc->gravity = FRACUNIT;
 		sc->verticalflip = false;
 //		sc->udmfflags = 0;
 
@@ -1064,11 +1064,11 @@ static void TextmapSector(UINT32 i, char *param)
 		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(M_GetToken(NULL))));
 	else if (fastcmp(param, "rotationceiling"))
 		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(M_GetToken(NULL))));
-	#ifdef ADVUDMF
 	else if (fastcmp(param, "gravity"))
 		sectors[i].gravity = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 	else if (fastcmp(param, "flip") && fastcmp("true", M_GetToken(NULL)))
 		sectors[i].verticalflip = true;
+	#ifdef ADVUDMF
 	else if (fastcmp(param, "heatwave") && fastcmp("true", M_GetToken(NULL)))
 		sectors[i].udmfflags |= SFU_HEATWAVE;
 	#endif

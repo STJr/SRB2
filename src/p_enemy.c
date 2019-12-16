@@ -11559,10 +11559,7 @@ void A_BrakLobShot(mobj_t *actor)
 		return; // Don't even bother if we've got nothing to aim at.
 
 	// Look up actor's current gravity situation
-	if (actor->subsector->sector->gravity)
-		g = FixedMul(gravity,(FixedDiv(*actor->subsector->sector->gravity>>FRACBITS, 1000)));
-	else
-		g = gravity;
+	g = FixedMul(gravity, P_GetSectorGravity(actor->subsector->sector));
 
 	// Look up distance between actor and its target
 	x = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
@@ -11676,10 +11673,7 @@ void A_NapalmScatter(mobj_t *actor)
 		airtime = 16<<FRACBITS;
 
 	// Look up actor's current gravity situation
-	if (actor->subsector->sector->gravity)
-		g = FixedMul(gravity,(FixedDiv(*actor->subsector->sector->gravity>>FRACBITS, 1000)));
-	else
-		g = gravity;
+	g = FixedMul(gravity, P_GetSectorGravity(actor->subsector->sector));
 
 	// vy = (g*(airtime-1))/2
 	vy = FixedMul(g,(airtime-(1<<FRACBITS)))>>1;
@@ -12402,10 +12396,7 @@ void A_Boss5Jump(mobj_t *actor)
 		return; // Don't even bother if we've got nothing to aim at.
 
 	// Look up actor's current gravity situation
-	if (actor->subsector->sector->gravity)
-		g = FixedMul(gravity,(FixedDiv(*actor->subsector->sector->gravity>>FRACBITS, 1000)));
-	else
-		g = gravity;
+	g = FixedMul(gravity, P_GetSectorGravity(actor->subsector->sector));
 
 	// Look up distance between actor and its tracer
 	x = P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
