@@ -376,7 +376,7 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade)
 
 	return mapheaderinfo[map-1]->grades[mare].grade[grade-1];
 }
-
+/*
 static void Tags_Add (tags_t* itemtags, const UINT16 tag)
 {
 	itemtags->numtags++;
@@ -388,7 +388,7 @@ static void Tags_Add (tags_t* itemtags, const UINT16 tag)
 
 	itemtags->tags[itemtags->numtags - 1] = tag;
 }
-
+*/
 /** Loads the vertexes for a level.
   *
   * \param lump VERTEXES lump number.
@@ -697,7 +697,7 @@ static void P_LoadRawSectors(UINT8 *data)
 		ss->spawn_lightlevel = SHORT(ms->lightlevel);
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
-		Tags_Add(&(ss->tags), ss->tag);
+//		Tags_Add(&(ss->tags), ss->tag);
 	}
 }
 
@@ -1050,7 +1050,7 @@ static void TextmapSector(UINT32 i, char *param)
 	else if (fastcmp(param, "id"))
 	{
 		sectors[i].tag = atol(M_GetToken(NULL));
-		Tags_Add(&sectors[i].tags, sectors[i].tag);
+//		Tags_Add(&sectors[i].tags, sectors[i].tag);
 	}
 	else if (fastcmp(param, "xpanningfloor"))
 		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));

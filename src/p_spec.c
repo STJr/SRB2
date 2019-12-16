@@ -1633,7 +1633,7 @@ static inline void P_InitTagLists(void)
 		lines[i].nexttag = lines[j].firsttag;
 		lines[j].firsttag = (INT32)i;
 	}
-
+/*
 	for (i = 0; i < MAXTAGS; i++)
 		taglist_sec[i] = NULL;
 
@@ -1656,6 +1656,7 @@ static inline void P_InitTagLists(void)
 			}
 		}
 	}
+*/
 }
 
 #undef MAXTAGS
