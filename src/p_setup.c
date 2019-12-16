@@ -2049,6 +2049,19 @@ static void P_LoadRawSideDefs2(void *data)
 				break;
 			}
 
+			case 259: // Custom FOF
+			{
+				if ((msd->toptexture[0] >= '0' && msd->toptexture[0] <= '9')
+					|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'F'))
+				{
+					sd->toptexture = axtoi(msd->toptexture);
+					sd->midtexture = R_TextureNumForName(msd->midtexture);
+					sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+					break;
+				}
+				//else: fallthru (needed for front side alpha value)
+			}
+
 			default: // normal cases
 				if (msd->toptexture[0] == '#')
 				{

@@ -1739,8 +1739,8 @@ static void P_PushableCheckBustables(mobj_t *mo)
 
 				if (!(rover->flags & FF_BUSTUP)) continue;
 
-				// Needs ML_EFFECT4 flag for pushables to break it
-				if (!(rover->master->flags & ML_EFFECT4)) continue;
+				// Needs flag for pushables to break it
+				if (!(rover->master->args[4] & 1)) continue;
 
 				if (!rover->master->frontsector->crumblestate)
 				{
