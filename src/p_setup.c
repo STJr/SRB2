@@ -1190,9 +1190,9 @@ static void TextmapLine(UINT32 i, char *param)
 			lines[i].args[argnum] = atol(M_GetToken(NULL));
 		}
 	}
-	#ifdef ADVUDMF
 	else if (fastcmp(param, "alpha"))
 		lines[i].alpha = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	#ifdef ADVUDMF
 	else if (fastcmp(param, "executordelay"))
 		lines[i].executordelay = atol(M_GetToken(NULL));
 
