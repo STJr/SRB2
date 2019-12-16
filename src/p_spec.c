@@ -6490,6 +6490,18 @@ void P_ConvertBinaryLinedefs(void)
 				lines[i].args[1] = lines[i].tag;
 			lines[i].special = 720;
 			break;
+		case 900: //Translucent wall (10%)
+		case 901: //Translucent wall (20%)
+		case 902: //Translucent wall (30%)
+		case 903: //Translucent wall (40%)
+		case 904: //Translucent wall (50%)
+		case 905: //Translucent wall (60%)
+		case 906: //Translucent wall (70%)
+		case 907: //Translucent wall (80%)
+		case 908: //Translucent wall (90%)
+			lines[i].alpha = (FRACUNIT * (909 - lines[i].special))/10;
+			lines[i].special = 0;
+			break;
 		default:
 			break;
 		}

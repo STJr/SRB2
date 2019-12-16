@@ -295,6 +295,28 @@ static void R_DrawFlippedMaskedSegColumn(column_t *column)
 	R_DrawFlippedMaskedColumn(column, column2s_length);
 }
 
+transnum_t R_GetLinedefTransTable(fixed_t alpha)
+{
+	if (alpha < 9830)
+		return tr_trans90;
+	else if (alpha < 16384)
+		return tr_trans80;
+	else if (alpha < 22937)
+		return tr_trans70;
+	else if (alpha < 29491)
+		return tr_trans60;
+	else if (alpha < 36044)
+		return tr_trans50;
+	else if (alpha < 42598)
+		return tr_trans40;
+	else if (alpha < 49152)
+		return tr_trans30;
+	else if (alpha < 55705)
+		return tr_trans20;
+	else
+		return tr_trans10;
+}
+
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 {
 	size_t pindex;
@@ -322,35 +344,24 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	texnum = R_GetTextureNum(curline->sidedef->midtexture);
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
 
-	// hack translucent linedef types (900-909 for transtables 1-9)
 	ldef = curline->linedef;
 
 	if (curline->glseg)
 		return;
 
-	switch (ldef->special)
+	if (ldef->alpha > 0 && ldef->alpha < FRACUNIT)
 	{
-		case 900:
-		case 901:
-		case 902:
-		case 903:
-		case 904:
-		case 905:
-		case 906:
-		case 907:
-		case 908:
-			dc_transmap = transtables + ((ldef->special-900)<<FF_TRANSSHIFT);
-			colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-			break;
-		case 909:
-			colfunc = colfuncs[COLDRAWFUNC_FOG];
-			windowtop = frontsector->ceilingheight;
-			windowbottom = frontsector->floorheight;
-			break;
-		default:
-			colfunc = colfuncs[BASEDRAWFUNC];
-			break;
+		dc_transmap = transtables + ((R_GetLinedefTransTable(ldef->alpha) - 1) << FF_TRANSSHIFT);
+		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
+	else if (ldef->special == 909)
+	{
+		colfunc = colfuncs[COLDRAWFUNC_FOG];
+		windowtop = frontsector->ceilingheight;
+		windowbottom = frontsector->floorheight;
+	}
+	else
+		colfunc = colfuncs[BASEDRAWFUNC];
 
 	if (curline->polyseg && curline->polyseg->translucency > 0)
 	{
