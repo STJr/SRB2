@@ -402,7 +402,7 @@ boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixe
 		return false;
 
 	cullplane = cullheight->frontsector->floorheight;
-	if (cullheight->flags & ML_NOCLIMB) // Group culling
+	if (cullheight->args[1]) // Group culling
 	{
 		if (!viewcullheight)
 			return false;

@@ -6405,6 +6405,10 @@ void P_ConvertBinaryLinedefs(void)
 	{
 		switch (lines[i].special)
 		{
+		case 10: //Culling plane
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].flags & ML_NOCLIMB);
+			break;
 		case 11: //Rope hang parameters
 			lines[i].args[0] = lines[i].tag;
 			lines[i].args[1] = abs(sides[lines[i].sidenum[0]].textureoffset) >> FRACBITS;
@@ -6412,6 +6416,9 @@ void P_ConvertBinaryLinedefs(void)
 			lines[i].args[3] = lines[i].flags & ML_EFFECT1;
 			if (lines[i].flags & ML_NOCLIMB) //Static
 				lines[i].args[1] = 0;
+			break;
+		case 63: //Fake floor/ceiling planes
+			lines[i].args[0] = lines[i].tag;
 			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
@@ -6804,7 +6811,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 10: // Vertical culling plane for sprites and FOFs
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 					sectors[s].cullheight = &lines[i]; // This allows it to change in realtime!
 				break;
 
@@ -6865,7 +6872,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 63: // support for drawn heights coming from different sector
 				sec = sides[*lines[i].sidenum].sector-sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 					sectors[s].heightsec = (INT32)sec;
 				break;
 

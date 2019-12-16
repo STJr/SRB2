@@ -4038,7 +4038,7 @@ static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float v
 		return false;
 
 	cullplane = FIXED_TO_FLOAT(cullheight->frontsector->floorheight);
-	if (cullheight->flags & ML_NOCLIMB) // Group culling
+	if (cullheight->args[1]) // Group culling
 	{
 		if (!viewcullheight)
 			return false;
