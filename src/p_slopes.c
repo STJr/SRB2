@@ -487,7 +487,7 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 }
 
 /// Spawn textmap vertex slopes.
-void SpawnVertexSlopes (void)
+static void SpawnVertexSlopes (void)
 {
 	line_t *l1, *l2;
 	sector_t* sc;
