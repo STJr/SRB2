@@ -729,7 +729,7 @@ static void P_LoadRawNodes(UINT8 *data)
 static void GeneralDefaults(void)
 {
 	UINT32 i;
-//	UINT32 j;
+	UINT32 j;
 
 	line_t *ld;
 	side_t *sd;
@@ -752,12 +752,12 @@ static void GeneralDefaults(void)
 #endif
 		// Defaults.
 		/*
-		ld->alpha = FRACUNIT;
+		ld->alpha = FRACUNIT;*/
 
 		for (j = 0; j < NUMLINEARGS; j++)
 			ld->args[j] = 0;
 
-		ld->executordelay = 0;
+/*		ld->executordelay = 0;
 		ld->udmfflags = 0;*/
 	}
 
@@ -1165,7 +1165,6 @@ static void TextmapLine(UINT32 i, char *param)
 		lines[i].sidenum[0] = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "sideback"))
 		lines[i].sidenum[1] = atol(M_GetToken(NULL));
-	#ifdef ADVUDMF
 	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
 	{
 		if (fastcmp(param + 4, "str"))
@@ -1191,10 +1190,12 @@ static void TextmapLine(UINT32 i, char *param)
 			lines[i].args[argnum] = atol(M_GetToken(NULL));
 		}
 	}
+	#ifdef ADVUDMF
 	else if (fastcmp(param, "alpha"))
 		lines[i].alpha = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 	else if (fastcmp(param, "executordelay"))
 		lines[i].executordelay = atol(M_GetToken(NULL));
+
 	#endif
 	// Flags
 	else if (fastcmp(param, "blocking") && fastcmp("true", M_GetToken(NULL)))
@@ -2577,7 +2578,6 @@ static boolean LoadMapBSP (const virtres_t* virt)
 	{
 	case NT_BINARY:
 	{
-
 		numsubsectors	= virtssectors->size/ sizeof (mapsubsector_t);
 		numnodes		= virtnodes->size	/ sizeof (mapnode_t);
 		numsegs			= virtsegs->size	/ sizeof (mapseg_t);
@@ -2910,6 +2910,7 @@ static boolean LoadMapData (const virtres_t* virt)
 		SetupLines();
 		P_LoadRawSideDefs2(virtsidedefs->data);
 		P_PrepareRawThings(virtthings->data);
+		P_ConvertBinaryLinedefs();
 	}
 
 	R_ClearTextureNumCache(true);

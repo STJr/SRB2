@@ -6398,6 +6398,97 @@ static void P_RunLevelLoadExecutors(void)
 	}
 }
 
+//For maps in binary format, converts linedef specials to the setup used by UDMF.
+//\todo unfinished
+void P_ConvertBinaryLinedefs(void)
+{
+	size_t i;
+	for (i = 0; i < numlines; i++)
+	{
+		switch (lines[i].special)
+		{
+		case 700: //Slope front sector floor
+		case 701: //Slope front sector ceiling
+		case 702: //Slope front sector floor and ceiling
+		case 703: //Slope front sector floor and back sector ceiling
+		case 710: //Slope back sector floor
+		case 711: //Slope back sector ceiling
+		case 712: //Slope back sector floor and ceiling
+		case 713: //Slope back sector floor and front sector ceiling
+			{
+				boolean frontfloor = (lines[i].special == 700 || lines[i].special == 702 || lines[i].special == 703);
+				boolean backfloor = (lines[i].special == 710 || lines[i].special == 712 || lines[i].special == 713);
+				boolean frontceil = (lines[i].special == 701 || lines[i].special == 702 || lines[i].special == 713);
+				boolean backceil = (lines[i].special == 711 || lines[i].special == 712 || lines[i].special == 703);
+
+				lines[i].args[0] = backfloor ? 2 : (frontfloor ? 1 : 0);
+				lines[i].args[1] = backceil ? 2 : (frontceil ? 1 : 0);
+
+				if (lines[i].flags & ML_NETONLY)
+					lines[i].args[2] |= SL_NOPHYSICS;
+				if (!(lines[i].flags & ML_NONET))
+					lines[i].args[2] |= SL_DYNAMIC;
+
+				lines[i].special = 700;
+				break;
+			}
+		case 704: //Slope front sector floor by 3 tagged vertices
+		case 705: //Slope front sector ceiling by 3 tagged vertices
+		case 714: //Slope back sector floor by 3 tagged vertices
+		case 715: //Slope back sector ceiling  by 3 tagged vertices
+			{
+				if (lines[i].special == 704)
+					lines[i].args[0] = 0;
+				else if (lines[i].special == 705)
+					lines[i].args[0] = 1;
+				else if (lines[i].special == 714)
+					lines[i].args[0] = 2;
+				else if (lines[i].special == 715)
+					lines[i].args[0] = 3;
+
+				lines[i].args[1] = lines[i].tag;
+
+				if (lines[i].flags & ML_EFFECT6)
+				{
+					UINT8 side = lines[i].special >= 714;
+
+					if (side == 1 && lines[i].sidenum[1] == 0xffff)
+						CONS_Debug(DBG_GAMELOGIC, "Line special %d (line #%s) missing 2nd side!\n", lines[i].special, sizeu1(i));
+					else
+					{
+						lines[i].args[2] = sides[lines[i].sidenum[side]].textureoffset >> FRACBITS;
+						lines[i].args[3] = sides[lines[i].sidenum[side]].rowoffset >> FRACBITS;
+					}
+				}
+				else
+				{
+					lines[i].args[2] = lines[i].args[1];
+					lines[i].args[3] = lines[i].args[1];
+				}
+
+				if (lines[i].flags & ML_NETONLY)
+					lines[i].args[4] |= SL_NOPHYSICS;
+				if (!(lines[i].flags & ML_NONET))
+					lines[i].args[4] |= SL_DYNAMIC;
+
+				lines[i].special = 704;
+				break;
+			}
+		case 720: //Copy front side floor slope
+		case 721: //Copy front side ceiling slope
+		case 722: //Copy front side floor and ceiling slope
+			if (lines[i].special != 721)
+				lines[i].args[0] = lines[i].tag;
+			if (lines[i].special != 720)
+				lines[i].args[1] = lines[i].tag;
+			lines[i].special = 720;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 /** Before things are loaded, initialises certain stuff in case they're needed
   * by P_ResetDynamicSlopes or P_LoadThings. This was split off from
   * P_SpawnSpecials, in case you couldn't tell.
