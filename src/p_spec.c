@@ -5121,14 +5121,8 @@ DoneSection2:
 				}
 
 				// Grab speed and sequence values
-				speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
-				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
-
-				if (speed == 0)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
-					break;
-				}
+				speed = (lines[lineindex].args[1] << FRACBITS)/8;
+				sequence = lines[lineindex].args[2];
 
 				// Find the closest waypoint
 				// Find the preceding waypoint
@@ -5276,20 +5270,20 @@ DoneSection2:
 				P_ResetPlayer(player);
 				player->mo->momx = player->mo->momy = player->mo->momz = 0;
 
-				if (lines[lineindex].flags & ML_EFFECT1) // Don't wrap
+				if (lines[lineindex].args[3]) // Don't wrap
 				{
 					highest->flags |= MF_SLIDEME;
 				}
 
 				// Changing the conditions on these ifs to fix issues with snapping to the wrong spot -Red
-				if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == 0)
+				if ((lines[lineindex].args[3]) && waypointmid->health == 0)
 				{
 					closest = waypointhigh;
 					player->mo->x = resulthigh.x;
 					player->mo->y = resulthigh.y;
 					player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
 				}
-				else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == highest->health)
+				else if ((lines[lineindex].args[3]) && waypointmid->health == highest->health)
 				{
 					closest = waypointmid;
 					player->mo->x = resultlow.x;
@@ -5320,12 +5314,7 @@ DoneSection2:
 
 				P_SetTarget(&player->mo->tracer, closest);
 				player->powers[pw_carry] = CR_ROPEHANG;
-
-				// Option for static ropes.
-				if (lines[lineindex].flags & ML_NOCLIMB)
-					player->speed = 0;
-				else
-					player->speed = speed;
+				player->speed = speed;
 
 				S_StartSound(player->mo, sfx_s3k4a);
 
@@ -6416,6 +6405,14 @@ void P_ConvertBinaryLinedefs(void)
 	{
 		switch (lines[i].special)
 		{
+		case 11: //Rope hang parameters
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = abs(sides[lines[i].sidenum[0]].textureoffset) >> FRACBITS;
+			lines[i].args[2] = abs(sides[lines[i].sidenum[0]].rowoffset) >> FRACBITS;
+			lines[i].args[3] = lines[i].flags & ML_EFFECT1;
+			if (lines[i].flags & ML_NOCLIMB) //Static
+				lines[i].args[1] = 0;
+			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
 		case 702: //Slope front sector floor and ceiling
