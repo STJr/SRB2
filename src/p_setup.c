@@ -1195,7 +1195,6 @@ static void TextmapLine(UINT32 i, char *param)
 	#ifdef ADVUDMF
 	else if (fastcmp(param, "executordelay"))
 		lines[i].executordelay = atol(M_GetToken(NULL));
-
 	#endif
 	// Flags
 	else if (fastcmp(param, "blocking") && fastcmp("true", M_GetToken(NULL)))
