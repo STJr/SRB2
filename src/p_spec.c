@@ -6420,6 +6420,115 @@ void P_ConvertBinaryLinedefs(void)
 		case 63: //Fake floor/ceiling planes
 			lines[i].args[0] = lines[i].tag;
 			break;
+		case 100: //FOF: solid, opaque, shadowcasting
+		case 101: //FOF: solid, opaque, non-shadowcasting
+		case 102: //FOF: solid, translucent
+		case 103: //FOF: solid, sides only
+		case 104: //FOF: solid, no sides
+		case 105: //FOF: solid, invisible
+			lines[i].args[0] = lines[i].tag;
+
+			//Visibility
+			if (lines[i].special == 105)
+				lines[i].args[1] = 3;
+			else if (lines[i].special == 104)
+				lines[i].args[1] = 2;
+			else if (lines[i].special == 103)
+				lines[i].args[1] = 1;
+			else
+				lines[i].args[1] = 0;
+
+			//Translucency
+			if (lines[i].special == 102)
+			{
+				lines[i].args[2] = (lines[i].flags & ML_NOCLIMB) ? 2 : 1;
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+			}
+			else
+				lines[i].args[2] = 0;
+
+			//Tangibility
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] |= 4;
+
+			//Shadow?
+			lines[i].args[4] = (lines[i].special == 100) ? 0 : 1;
+
+			lines[i].special = 100;
+			break;
+		case 120: //FOF: water, opaque
+		case 121: //FOF: water, translucent
+		case 122: //FOF: water, opaque, no sides
+		case 123: //FOF: water, translucent, no sides
+		case 124: //FOF: goo water, translucent
+		case 125: //FOF: goo water, translucent, no sides
+			lines[i].args[0] = lines[i].tag;
+
+			//Opaque?
+			if (lines[i].special == 120 || lines[i].special == 122)
+				lines[i].args[1] |= 1;
+			else
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+
+			//No sides?
+			if (lines[i].special == 122 || lines[i].special == 123 || lines[i].special == 125)
+				lines[i].args[1] |= 2;
+
+			//Flags
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] |= 4;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[1] |= 8;
+			if (!(lines[i].flags & ML_EFFECT5))
+				lines[i].args[1] |= 16;
+
+			//Goo?
+			if (lines[i].special >= 124)
+				lines[i].args[1] |= 32;
+
+			lines[i].special = 120;
+			break;
+		case 140: //FOF: intangible from bottom, opaque
+		case 141: //FOF: intangible from bottom, translucent
+		case 142: //FOF: intangible from bottom, translucent, no sides
+		case 143: //FOF: intangible from top, opaque
+		case 144: //FOF: intangible from top, translucent
+		case 145: //FOF: intangible from top, translucent, no sides
+		case 146: //FOF: only tangible from sides
+			lines[i].args[0] = lines[i].tag;
+
+			//Visibility
+			if (lines[i].special == 142 || lines[i].special == 145)
+				lines[i].args[1] = 2;
+			else if (lines[i].special == 146)
+				lines[i].args[1] = 1;
+			else
+				lines[i].args[1] = 0;
+
+			//Translucency
+			if (lines[i].special == 141 || lines[i].special == 142 || lines[i].special == 144 || lines[i].special == 145)
+			{
+				lines[i].args[2] = (lines[i].flags & ML_EFFECT2) ? 2 : 1;
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+			}
+			else
+				lines[i].args[2] = 0;
+
+			//Tangibility
+			if (lines[i].special <= 142)
+				lines[i].args[3] |= 2;
+			else if (lines[i].special <= 145)
+				lines[i].args[3] |= 1;
+			else
+				lines[i].args[3] |= 3;
+
+			//Shadow?
+			lines[i].args[4] = (lines[i].special != 146 && lines[i].flags & ML_NOCLIMB) ? 1 : 0;
+
+			lines[i].special = 100;
+			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
 		case 702: //Slope front sector floor and ceiling
@@ -6912,192 +7021,64 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					P_AddPlaneDisplaceThinker(pd_both, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
-			case 100: // FOF (solid, opaque, shadows)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				break;
-
-			case 101: // FOF (solid, opaque, no shadows)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_CUTLEVEL, secthinkers);
-				break;
-
-			case 102: // TL block: FOF (solid, translucent)
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_NOCLIMB)
+			case 100: // FOF (solid)
+				ffloorflags = FF_EXISTS | FF_SOLID;
+				if (lines[i].args[1] == 0)
+					ffloorflags |= FF_RENDERALL;
+				if (lines[i].args[1] == 1)
+					ffloorflags |= FF_RENDERSIDES;
+				if (lines[i].args[1] == 2)
+					ffloorflags |= FF_RENDERPLANES;
+				//Translucency settings are irrelevant for invisible FOFs
+				if (lines[i].args[1] != 3)
 				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
+					if (lines[i].args[2] == 0)
+					{
+						if (lines[i].args[3] & 3)
+						{
+							//At least partially intangible: You can see it from the inside
+							ffloorflags |= FF_ALLSIDES;
+							//Unless the planes are invisible, render both sides.
+							if (lines[i].args[1] != 1)
+								ffloorflags |= FF_BOTHPLANES;
+						}
+						else
+							ffloorflags |= FF_CUTLEVEL;
+					}
+					if (lines[i].args[2] == 1)
+						ffloorflags |= FF_TRANSLUCENT | FF_EXTRA | FF_CUTEXTRA;
+					if (lines[i].args[2] == 2)
+						ffloorflags |= FF_TRANSLUCENT | FF_CUTLEVEL | FF_BOTHPLANES | FF_ALLSIDES;
 				}
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 103: // Solid FOF with no floor/ceiling (quite possibly useless)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_NOSHADE|FF_CUTLEVEL, secthinkers);
-				break;
-
-			case 104: // 3D Floor type that doesn't draw sides
-				// If line has no-climb set, give it shadows, otherwise don't
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERPLANES|FF_CUTLEVEL;
-				if (!(lines[i].flags & ML_NOCLIMB))
+				if (lines[i].args[3] & 1)
+					ffloorflags |= FF_REVERSEPLATFORM;
+				if (lines[i].args[3] & 2)
+					ffloorflags |= FF_PLATFORM;
+				if (lines[i].args[3] & 4)
+					ffloorflags &= ~FF_BLOCKPLAYER;
+				if (lines[i].args[3] & 8)
+					ffloorflags &= ~FF_BLOCKOTHERS;
+				if (lines[i].args[4])
 					ffloorflags |= FF_NOSHADE;
-
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
-			case 105: // FOF (solid, invisible)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_NOSHADE, secthinkers);
-				break;
-
-			case 120: // Opaque water
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
+			case 120: // FOF (water)
+				ffloorflags = FF_EXISTS | FF_RENDERPLANES | FF_SWIMMABLE | FF_BOTHPLANES | FF_CUTEXTRA | FF_EXTRA | FF_CUTSPRITES;
+				if (!(lines[i].args[1] & 1))
+					ffloorflags |= FF_TRANSLUCENT;
+				if (!(lines[i].args[1] & 2))
+					ffloorflags |= FF_RENDERSIDES | FF_ALLSIDES;
+				if (lines[i].args[1] & 4)
 					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
+				if (lines[i].args[1] & 8)
 					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
+				if (!(lines[i].args[1] & 16))
 					ffloorflags |= FF_RIPPLE;
+				if (lines[i].args[1] & 32)
+					ffloorflags |= FF_GOOWATER;
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 121: // TL water
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 122: // Opaque water, no sides
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 123: // TL water, no sides
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 124: // goo water
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_GOOWATER|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 125: // goo water, no sides
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_TRANSLUCENT|FF_SWIMMABLE|FF_GOOWATER|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 140: // 'Platform' - You can jump up through it
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 141: // Translucent "platform"
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_EFFECT2)
-				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
-				}
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 142: // Translucent "platform" with no sides
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERPLANES|FF_TRANSLUCENT|FF_PLATFORM|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_EFFECT2)
-				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
-				}
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 143: // 'Reverse platform' - You fall through it
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_REVERSEPLATFORM|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 144: // Translucent "reverse platform"
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_REVERSEPLATFORM|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_EFFECT2)
-				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
-				}
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 145: // Translucent "reverse platform" with no sides
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERPLANES|FF_TRANSLUCENT|FF_REVERSEPLATFORM|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_EFFECT2)
-				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
-				}
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 146: // Intangible floor/ceiling with solid sides (fences/hoops maybe?)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_ALLSIDES|FF_INTANGABLEFLATS, secthinkers);
 				break;
 
 			case 150: // Air bobbing platform
