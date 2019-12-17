@@ -144,10 +144,8 @@ static const struct {
 	{META_MOBJINFO,     "mobjinfo_t"},
 	{META_SFXINFO,      "sfxinfo_t"},
 	{META_SPRITEINFO,   "spriteinfo_t"},
-#ifdef ROTSPRITE
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
-#endif
 
 	{META_MOBJ,         "mobj_t"},
 	{META_MAPTHING,     "mapthing_t"},
