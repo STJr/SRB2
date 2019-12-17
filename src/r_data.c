@@ -32,6 +32,10 @@
 #include <malloc.h> // alloca(sizeof)
 #endif
 
+#ifdef HWRENDER
+#include "hardware/hw_main.h" // HWR_LoadTextures
+#endif
+
 #if defined(_MSC_VER)
 #pragma pack(1)
 #endif
@@ -1029,6 +1033,11 @@ checkflats:
 		}
 #endif
 	}
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		HWR_LoadTextures(numtextures);
+#endif
 }
 
 static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
