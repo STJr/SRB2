@@ -1073,6 +1073,17 @@ static void TextmapSector(UINT32 i, char *param)
 		sectors[i].tag = atol(dat = M_GetToken(NULL));
 //		Tags_Add(&sectors[i].tags, sectors[i].tag);
 	}
+/*	else if (fastcmp(param, "moreids"))
+	{
+		char* id = dat = M_GetToken(NULL);
+		while (id)
+		{
+			CONS_Printf("Extra id: %d\n", atol(id));
+			id = strchr(id, ' ');
+			if (id)
+				id++;
+		}
+	}*/
 	else if (fastcmp(param, "xpanningfloor"))
 		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(dat = M_GetToken(NULL)));
 	else if (fastcmp(param, "ypanningfloor"))
