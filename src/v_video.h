@@ -47,7 +47,7 @@ void V_Init(void);
 
 extern UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
 
-void InitColorLUT(void);
+void InitColorLUT(RGBA_t *palette);
 
 // Set the current RGB palette lookup to use for palettized graphics
 void V_SetPalette(INT32 palettenum);

@@ -33,6 +33,7 @@ consvar_t cv_gif_downscale =  {"gif_downscale", "On", CV_SAVE, CV_OnOff, NULL, 0
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
 static boolean gif_downscale = false; // like changing cvars mid output
+static RGBA_t *gif_palette = NULL;
 
 static FILE *gif_out = NULL;
 static INT32 gif_frames = 0;
@@ -432,13 +433,7 @@ static void GIF_headwrite(void)
 
 	// write color table
 	{
-		RGBA_t *pal = ((cv_screenshot_colorprofile.value
-#ifdef HWRENDER
-		&& (rendermode == render_soft)
-#endif
-		) ? pLocalPalette
-		: pMasterPalette);
-
+		RGBA_t *pal = gif_palette;
 		for (i = 0; i < 256; i++)
 		{
 			WRITEUINT8(p, pal[i].s.red);
@@ -473,7 +468,7 @@ static void hwrconvert(void)
 	INT32 x, y;
 	size_t i = 0;
 
-	InitColorLUT();
+	InitColorLUT(gif_palette);
 
 	for (y = 0; y < vid.height; y++)
 	{
@@ -643,6 +638,16 @@ INT32 GIF_open(const char *filename)
 
 	gif_optimize = (!!cv_gif_optimize.value);
 	gif_downscale = (!!cv_gif_downscale.value);
+
+	// GIF color table
+	// In hardware mode, uses the master palette
+	gif_palette = ((cv_screenshot_colorprofile.value
+#ifdef HWRENDER
+	&& (rendermode == render_soft)
+#endif
+	) ? pLocalPalette
+	: pMasterPalette);
+
 	GIF_headwrite();
 	gif_frames = 0;
 	return 1;
