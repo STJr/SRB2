@@ -1592,6 +1592,7 @@ taggroup_t* taglist_sec[MAXTAGS];
 
 /** Insert an item id into a given taglist.
  */
+/*
 static void Taglist_AddTo (const size_t tag, const size_t itemid)
 {
 	taggroup_t* group;
@@ -1609,7 +1610,7 @@ static void Taglist_AddTo (const size_t tag, const size_t itemid)
 		group->list = Z_Realloc(group->list, group->size * sizeof(size_t), PU_LEVEL, NULL);
 	}
 	group->list[group->size - 1] = itemid;
-}
+}*/
 
 /** Hashes the sector tags across the sectors and linedefs.
   *
