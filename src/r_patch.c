@@ -1102,7 +1102,7 @@ static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
 	column_t *column;
 	UINT8 *source;
 
-	if (x < SHORT(patch->width))
+	if (x >= 0 && x < SHORT(patch->width))
 	{
 		INT32 topdelta, prevdelta = -1;
 		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-x) : x]));
