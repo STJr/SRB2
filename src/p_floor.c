@@ -2025,7 +2025,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 	mobj_t *thing;
 	boolean FOFsector = false;
 
-	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(nobaddies->sourceline->args[0], secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -2041,7 +2041,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			while ((targetsecnum = P_FindSectorFromTag(sec->lines[i]->args[0], targetsecnum)) >= 0)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -2187,7 +2187,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		playersOnArea[i] = false;
 	}
 
-	while ((secnum = P_FindSectorFromLineTag(eachtime->sourceline, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(eachtime->sourceline->args[0], secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -2210,7 +2210,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			while ((targetsecnum = P_FindSectorFromTag(sec->lines[i]->args[0], targetsecnum)) >= 0)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -2352,7 +2352,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		}
 	}
 
-	if ((eachtime->sourceline->flags & ML_BOUNCY) == ML_BOUNCY)
+	if (eachtime->sourceline->args[1] == 2)
 		inAndOut = true;
 
 	// Check if a new player entered.

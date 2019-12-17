@@ -1878,15 +1878,13 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	// Distance-checking/sector trigger conditions //
 	/////////////////////////////////////////////////
 
-	// Linetypes 303 and 304 require a specific
-	// number, or minimum or maximum, of rings.
-	if (specialtype == 303 || specialtype == 304)
+	// Linetype 303 requires a specific number, or minimum or maximum, of rings.
+	if (specialtype == 303)
 	{
 		fixed_t rings = 0;
 
-		// With the passuse flag, count all player's
-		// rings.
-		if (triggerline->flags & ML_EFFECT4)
+		// If args[4] is set, count all player's rings.
+		if (triggerline->args[4])
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -1907,28 +1905,28 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			rings = (maptol & TOL_NIGHTS) ? actor->player->spheres : actor->player->rings;
 		}
 
-		if (triggerline->flags & ML_NOCLIMB)
+		if (triggerline->args[3] == 2)
 		{
-			if (rings > dist)
+			if (rings > triggerline->args[2])
 				return false;
 		}
-		else if (triggerline->flags & ML_BLOCKMONSTERS)
+		else if (triggerline->args[3] == 1)
 		{
-			if (rings < dist)
+			if (rings < triggerline->args[2])
 				return false;
 		}
 		else
 		{
-			if (rings != dist)
+			if (rings != triggerline->args[2])
 				return false;
 		}
 	}
-	else if (specialtype >= 314 && specialtype <= 315)
+	else if (specialtype == 314)
 	{
 		msecnode_t *node;
 		mobj_t *mo;
 		INT32 numpush = 0;
-		INT32 numneeded = dist;
+		INT32 numneeded = triggerline->args[2];
 
 		if (!caller)
 			return false; // we need a calling sector to find pushables in, silly!
@@ -1943,12 +1941,12 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			node = node->m_thinglist_next;
 		}
 
-		if (triggerline->flags & ML_NOCLIMB) // Need at least or more
+		if (triggerline->args[3] == 1) // Need at least or more
 		{
 			if (numpush < numneeded)
 				return false;
 		}
-		else if (triggerline->flags & ML_EFFECT4) // Need less than
+		else if (triggerline->args[3] == 2) // Need at most or less than
 		{
 			if (numpush >= numneeded)
 				return false;
@@ -1994,7 +1992,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		// If we were not triggered by a sector type especially for the purpose,
 		// a Linedef Executor linedef trigger is not handling sector triggers properly, return.
 
-		else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 322))
+		else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 321))
 		{
 			CONS_Alert(CONS_WARNING,
 				M_GetText("Linedef executor trigger isn't handling sector triggers properly!\nspecialtype = %d, if you are not a dev, report this warning instance\nalong with the wad that caused it!\n"),
@@ -2009,58 +2007,45 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 
 	switch (specialtype)
 	{
-		case 305: // continuous
-		case 306: // each time
-		case 307: // once
-			if (!(actor && actor->player && actor->player->charability == dist/10))
+		case 305: // charability
+			if (!(actor && actor->player && triggerline->args[2] & (1 << actor->player->charability)))
 				return false;
 			break;
-		case 309: // continuous
-		case 310: // each time
-			// Only red team members can activate this.
-			if (!(actor && actor->player && actor->player->ctfteam == 1))
+		case 309: // CTF team
+			if (!(actor && actor->player && actor->player->ctfteam == triggerline->args[2] + 1))
 				return false;
 			break;
-		case 311: // continuous
-		case 312: // each time
-			// Only blue team members can activate this.
-			if (!(actor && actor->player && actor->player->ctfteam == 2))
-				return false;
-			break;
-		case 317: // continuous
-		case 318: // once
-			{ // Unlockable triggers required
-				INT32 trigid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
+		case 317: // Unlockable triggers required
+			{
+				INT32 trigid = (INT32)(triggerline->args[2]);
 
 				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
 					return false;
 				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (linedef %d): bad trigger ID %d\n", triggerline - lines, trigid);
 					return false;
 				}
 				else if (!(unlocktriggers & (1 << trigid)))
 					return false;
 			}
 			break;
-		case 319: // continuous
-		case 320: // once
-			{ // An unlockable itself must be unlocked!
-				INT32 unlockid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
+		case 319: // An unlockable itself must be unlocked!
+			{
+				INT32 unlockid = (INT32)(triggerline->args[2]);
 
 				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
 					return false;
 				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %hu): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (linedef %d): bad unlockable ID %d\n", triggerline - lines, unlockid);
 					return false;
 				}
 				else if (!(unlockables[unlockid-1].unlocked))
 					return false;
 			}
 			break;
-		case 321: // continuous
-		case 322: // each time
+		case 321: // trigger after X calls
 			// decrement calls left before triggering
 			if (triggerline->callcount > 0)
 			{
@@ -2199,20 +2184,14 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		}
 	}
 
-	// "Trigger on X calls" linedefs reset if noclimb is set
-	if ((specialtype == 321 || specialtype == 322) && triggerline->flags & ML_NOCLIMB)
-		triggerline->callcount = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
+	// "Trigger on X calls" linedef resets if args[2] is set
+	if (specialtype == 321 && triggerline->args[3])
+		triggerline->callcount = triggerline->args[2];
 	else
 	// These special types work only once
-	if (specialtype == 302  // Once
-	 || specialtype == 304  // Ring count - Once
-	 || specialtype == 307  // Character ability - Once
-	 || specialtype == 308  // Race only - Once
+	if (triggerline->args[1] == 3
 	 || specialtype == 313  // No More Enemies - Once
-	 || specialtype == 315  // No of pushables - Once
-	 || specialtype == 318  // Unlockable trigger - Once
-	 || specialtype == 320  // Unlockable - Once
-	 || specialtype == 321 || specialtype == 322 // Trigger on X calls - Continuous + Each Time
+	 || specialtype == 321 // Trigger on X calls
 	 || specialtype == 324 // Nightserize - Once
 	 || specialtype == 326 // DeNightserize - Once
 	 || specialtype == 328 // Nights lap - Once
@@ -2247,18 +2226,15 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 
 	for (masterline = 0; masterline < numlines; masterline++)
 	{
-		if (lines[masterline].tag != tag)
+		if (lines[masterline].args[0] != tag)
 			continue;
 
 		// "No More Enemies" and "Level Load" take care of themselves.
 		if (lines[masterline].special == 313
 		 || lines[masterline].special == 399
 		 // Each-time executors handle themselves, too
-		 || lines[masterline].special == 301 // Each time
-		 || lines[masterline].special == 306 // Character ability - Each time
-		 || lines[masterline].special == 310 // CTF Red team - Each time
-		 || lines[masterline].special == 312 // CTF Blue team - Each time
-		 || lines[masterline].special == 322 // Trigger on X calls - Each Time
+		 || lines[masterline].args[1] == 1
+		 || lines[masterline].args[1] == 2
 		 || lines[masterline].special == 332)// Skin - Each time
 			continue;
 
@@ -6739,6 +6715,121 @@ void P_ConvertBinaryLinedefs(void)
 			lines[i].args[5] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 			lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
 			break;
+		case 300: //Trigger linedef executor: Continuous
+		case 301: //Trigger linedef executor: Each time
+		case 302: //Trigger linedef executor: Once
+			lines[i].args[0] = lines[i].tag;
+
+			//Trigger type
+			if (lines[i].special == 300)
+				lines[i].args[1] = 0;
+			else if (lines[i].special == 301)
+				lines[i].args[1] = (lines[i].flags & ML_BOUNCY) ? 2 : 1;
+			else
+				lines[i].args[1] = 3;
+
+			lines[i].special = 300;
+			break;
+		case 303: //Trigger linedef executor: Ring count - continuous
+		case 304: //Trigger linedef executor: Ring count - once
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].special == 304) ? 3 : 0;
+			lines[i].args[2] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[3] = 2;
+			//ML_NOCLIMB takes precedence
+			else if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[3] = 1;
+			lines[i].args[4] = (lines[i].flags & ML_EFFECT4) == ML_EFFECT4;
+			lines[i].special = 303;
+			break;
+		case 305: //Trigger linedef executor: Character ability - continuous
+		case 306: //Trigger linedef executor: Character ability - each time
+		case 307: //Trigger linedef executor: Character ability - once
+			lines[i].args[0] = lines[i].tag;
+
+			//Trigger type
+			if (lines[i].special == 305)
+				lines[i].args[1] = 0;
+			else if (lines[i].special == 306)
+				lines[i].args[1] = (lines[i].flags & ML_BOUNCY) ? 2 : 1;
+			else
+				lines[i].args[1] = 3;
+
+			//Ability
+			lines[i].args[2] = 1 << ((P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS) / 10);
+
+			lines[i].special = 305;
+			break;
+			lines[i].args[1] = (lines[i].flags & ML_BOUNCY) ? 2 : 1;
+			int ability = (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS) / 10;
+			lines[i].args[2] = 1 << ability;
+			lines[i].special = 305;
+			break;
+		case 308: //Trigger linedef executor: Race only - once
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = 3;
+			lines[i].args[2] = 12;
+			break;
+		case 309: //Trigger linedef executor: CTF red team - continuous
+		case 310: //Trigger linedef executor: CTF red team - each time
+		case 311: //Trigger linedef executor: CTF blue team - continuous
+		case 312: //Trigger linedef executor: CTF blue team - each time
+			lines[i].args[0] = lines[i].tag;
+
+			//Trigger type
+			if (lines[i].special % 2 == 0)
+				lines[i].args[1] = (lines[i].flags & ML_BOUNCY) ? 2 : 1;
+			else
+				lines[i].args[1] = 0;
+
+			//Team
+			lines[i].args[2] = (lines[i].special >= 311);
+
+			lines[i].special = 309;
+			break;
+		case 313: //Trigger linedef executor: No more enemies - once
+			//TODO: Change setup
+			lines[i].args[0] = lines[i].tag;
+			break;
+		case 314: //Trigger linedef executor: Number of pushables - continuous
+		case 315: //Trigger linedef executor: Number of pushables - once
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].special == 315) ? 3 : 0;
+			lines[i].args[2] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[3] = 1;
+			//ML_NOCLIMB takes precedence
+			else if (lines[i].flags & ML_EFFECT4)
+			{
+				lines[i].args[2]++; //"Less" was changed to "less or equal" for the sake of consistency.
+				lines[i].args[3] = 2;
+			}
+			lines[i].special = 314;
+			break;
+		case 317: //Trigger linedef executor: Condition set trigger - continuous
+		case 318: //Trigger linedef executor: Condition set trigger - once
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].special == 318) ? 3 : 0;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].special = 317;
+			break;
+		case 319: //Trigger linedef executor: Unlockable - continuous
+		case 320: //Trigger linedef executor: Unlockable - once
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].special == 320) ? 3 : 0;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].special = 319;
+			break;
+		case 321: //Trigger linedef executor: Trigger after X calls - continuous
+		case 322: //Trigger linedef executor: Trigger after X calls - each time
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].special == 322) ? 1 : 0;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[3] = (lines[i].flags & ML_NOCLIMB) == ML_NOCLIMB;
+			lines[i].args[4] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].special = 321;
+			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
 		case 702: //Slope front sector floor and ceiling
@@ -7493,36 +7584,52 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				P_AddFakeFloorsByLine(i, lines[i].args[1], secthinkers);
 				break;
 
-			case 300: // Linedef executor (combines with sector special 974/975) and commands
-			case 302:
-			case 303:
-			case 304:
-
-			// Charability linedef executors
-			case 305:
-			case 307:
+			case 300: // Linedef executor triggers
+			case 303: // Ring count
+			case 305: // Charability
+				if (lines[i].args[1] == 1 || lines[i].args[1] == 2)
+				{
+					sec = sides[*lines[i].sidenum].sector - sectors;
+					P_AddEachTimeThinker(&sectors[sec], &lines[i]);
+				}
 				break;
 
-			case 308: // Race-only linedef executor. Triggers once.
-				if (gametype != GT_RACE && gametype != GT_COMPETITION)
+			case 308: // Gametype-specific.
+			{
+				boolean enabled = false;
+
+				if (lines[i].args[2] & 1 && !(netgame || multiplayer))
+					enabled = true;
+				else if (lines[i].args[2] & 2 && netgame && gametype == GT_COOP)
+					enabled = true;
+				else if (lines[i].args[2] & 4 && gametype == GT_COMPETITION)
+					enabled = true;
+				else if (lines[i].args[2] & 8 && gametype == GT_RACE)
+					enabled = true;
+				else if (lines[i].args[2] & 16 && gametype == GT_MATCH)
+					enabled = true;
+				else if (lines[i].args[2] & 32 && gametype == GT_TEAMMATCH)
+					enabled = true;
+				else if (lines[i].args[2] & 64 && gametype == GT_TAG)
+					enabled = true;
+				else if (lines[i].args[2] & 128 && gametype == GT_HIDEANDSEEK)
+					enabled = true;
+				else if (lines[i].args[2] & 256 && gametype == GT_CTF)
+					enabled = true;
+
+				if (!enabled)
 					lines[i].special = 0;
+				else if(lines[i].args[1] == 1 || lines[i].args[1] == 2)
+				{
+					sec = sides[*lines[i].sidenum].sector - sectors;
+					P_AddEachTimeThinker(&sectors[sec], &lines[i]);
+				}
 				break;
-
+			}
 			// Linedef executor triggers for CTF teams.
 			case 309:
-			case 311:
 				if (gametype != GT_CTF)
 					lines[i].special = 0;
-				break;
-
-			// Each time executors
-			case 306:
-			case 301:
-			case 310:
-			case 312:
-			case 332:
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				P_AddEachTimeThinker(&sectors[sec], &lines[i]);
 				break;
 
 			// No More Enemies Linedef Exec
@@ -7531,27 +7638,27 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				P_AddNoEnemiesThinker(&sectors[sec], &lines[i]);
 				break;
 
-			// Pushable linedef executors (count # of pushables)
+			// Pushable linedef executor (count # of pushables)
 			case 314:
-			case 315:
-				break;
 
 			// Unlock trigger executors
 			case 317:
-			case 318:
-				break;
+
 			case 319:
-			case 320:
+				if (lines[i].args[1] == 1 || lines[i].args[1] == 2)
+				{
+					sec = sides[*lines[i].sidenum].sector - sectors;
+					P_AddEachTimeThinker(&sectors[sec], &lines[i]);
+				}
 				break;
 
 			// Trigger on X calls
 			case 321:
-			case 322:
-				if (lines[i].flags & ML_NOCLIMB && sides[lines[i].sidenum[0]].rowoffset > 0) // optional "starting" count
-					lines[i].callcount = sides[lines[i].sidenum[0]].rowoffset>>FRACBITS;
+				if (lines[i].args[3] && lines[i].args[4] > 0) // optional "starting" count
+					lines[i].callcount = lines[i].args[4];
 				else
-					lines[i].callcount = sides[lines[i].sidenum[0]].textureoffset>>FRACBITS;
-				if (lines[i].special == 322) // Each time
+					lines[i].callcount = lines[i].args[2];
+				if (lines[i].args[1] == 1 || lines[i].args[2] == 2) // Each time
 				{
 					sec = sides[*lines[i].sidenum].sector - sectors;
 					P_AddEachTimeThinker(&sectors[sec], &lines[i]);
