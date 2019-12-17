@@ -1645,7 +1645,7 @@ void I_StartupGraphics(void)
 #ifdef HWRENDER
 	if (M_CheckParm("-opengl"))
 		rendermode = render_opengl;
-	else if (M_CheckParm("software"))
+	else if (M_CheckParm("-software"))
 #endif
 		rendermode = render_soft;
 
