@@ -1070,6 +1070,35 @@ static INT32 P_FindLineFromLineTag(const line_t *line, INT32 start)
 		return start;
 	}
 }
+
+/** Searches the tag lists for the next line with a given tag.
+*
+* \param tag   Tag number to look for.
+* \param start -1 to start anew, or the result of a previous call to keep
+*              searching.
+* \return Number of the next tagged line found.
+* \sa P_FindLineFromLineTag
+*/
+static INT32 P_FindLineFromTag(INT16 tag, INT32 start)
+{
+	if (tag == -1)
+	{
+		start++;
+
+		if (start >= (INT32)numlines)
+			return -1;
+
+		return start;
+	}
+	else
+	{
+		start = start >= 0 ? lines[start].nexttag :
+			lines[(unsigned)tag % numlines].firsttag;
+		while (start >= 0 && lines[start].tag != tag)
+			start = lines[start].nexttag;
+		return start;
+	}
+}
 #if 0
 /** Searches the tag lists for the next line with a given tag and special.
   *
@@ -6831,6 +6860,93 @@ void P_ConvertBinaryLinedefs(void)
 			lines[i].args[4] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].special = 321;
 			break;
+		case 500: //Scroll wall front side left
+		case 501: //Scroll wall front side right
+			lines[i].args[0] = 0;
+			lines[i].args[1] = 0;
+			lines[i].args[2] = (lines[i].special == 501) ? 1 : -1;
+			lines[i].args[3] = 0;
+			lines[i].special = 500;
+			break;
+		case 502: //Scroll wall according to linedef
+		case 503: //Scroll wall according to linedef (accelerative)
+		case 504: //Scroll wall according to linedef (displacement)
+			lines[i].args[0] = lines[i].tag;
+
+			//Front side
+			lines[i].args[1] = 0;
+
+			//Scroll and carry
+			lines[i].args[2] = 0;
+
+			//X and Y speed
+			lines[i].args[3] = lines[i].dx >> FRACBITS;
+			lines[i].args[4] = lines[i].dy >> FRACBITS;
+
+			//Accelerative/displacement?
+			lines[i].args[5] = lines[i].special - 502;
+
+			lines[i].special = 502;
+			break;
+		case 505: //Scroll texture by front side offsets
+		case 506: //Scroll texture by back side offsets
+		{
+			UINT8 side = lines[i].special - 505;
+			if (side == 1 && lines[i].sidenum[1] == 0xffff)
+				CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing 2nd side!\n", sizeu1(i));
+			else
+			{
+				lines[i].args[0] = 0;
+				lines[i].args[1] = 0;
+				lines[i].args[2] = sides[lines[i].sidenum[side]].textureoffset >> FRACBITS;
+				lines[i].args[3] = sides[lines[i].sidenum[side]].rowoffset >> FRACBITS;
+				lines[i].special = 500;
+
+			}
+			break;
+		}
+		case 510: //Scroll floor texture
+		case 511: //Scroll floor texture (accelerative)
+		case 512: //Scroll floor texture (displacement)
+		case 513: //Scroll ceiling texture
+		case 514: //Scroll ceiling texture (accelerative)
+		case 515: //Scroll ceiling texture (displacement)
+		case 520: //Carry objects on floor
+		case 521: //Carry objects on floor (accelerative)
+		case 522: //Carry objects on floor (displacement)
+		case 523: //Carry objects on ceiling
+		case 524: //Carry objects on ceiling (accelerative)
+		case 525: //Carry objects on ceiling (displacement)
+		case 530: //Scroll floor texture and carry objects
+		case 531: //Scroll floor texture and carry objects (accelerative)
+		case 532: //Scroll floor texture and carry objects (displacement)
+		case 533: //Scroll ceiling texture and carry objects
+		case 534: //Scroll ceiling texture and carry objects (accelerative)
+		case 535: //Scroll ceiling texture and carry objects (displacement)
+			lines[i].args[0] = lines[i].tag;
+
+			//Affected planes
+			lines[i].args[1] = (lines[i].special % 10 >= 3) ? 1 : 0;
+
+			//Scroll/carry?
+			if (lines[i].special < 520)
+				lines[i].args[2] = 1;
+			else if (lines[i].special < 530)
+				lines[i].args[2] = 2;
+			else
+				lines[i].args[2] = 0;
+
+			//X and Y speed
+			lines[i].args[3] = lines[i].dx >> FRACBITS;
+			lines[i].args[4] = lines[i].dy >> FRACBITS;
+
+			//Settings: Accelerative/displacement/exclusive?
+			lines[i].args[5] = (lines[i].special % 10) % 3;
+			if (lines[i].special >= 520 && lines[i].flags & ML_NOCLIMB)
+				lines[i].args[5] |= 4;
+
+			lines[i].special = 510;
+			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
 		case 702: //Slope front sector floor and ceiling
@@ -7739,29 +7855,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			}
 
 			// 500 is used for a scroller
-			// 501 is used for a scroller
 			// 502 is used for a scroller
-			// 503 is used for a scroller
-			// 504 is used for a scroller
-			// 505 is used for a scroller
 			// 510 is used for a scroller
-			// 511 is used for a scroller
-			// 512 is used for a scroller
-			// 513 is used for a scroller
-			// 514 is used for a scroller
-			// 515 is used for a scroller
-			// 520 is used for a scroller
-			// 521 is used for a scroller
-			// 522 is used for a scroller
-			// 523 is used for a scroller
-			// 524 is used for a scroller
-			// 525 is used for a scroller
-			// 530 is used for a scroller
-			// 531 is used for a scroller
-			// 532 is used for a scroller
-			// 533 is used for a scroller
-			// 534 is used for a scroller
-			// 535 is used for a scroller
 			// 540 is used for friction
 			// 541 is used for wind
 			// 542 is used for upwards wind
@@ -8016,7 +8111,7 @@ void T_Scroll(scroll_t *s)
 				if (!is3dblock)
 					continue;
 
-				for (sect = -1; (sect = P_FindSectorFromTag(line->tag, sect)) >= 0 ;)
+				for (sect = -1; (sect = P_FindSectorFromTag(line->args[0], sect)) >= 0 ;)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
@@ -8092,7 +8187,7 @@ void T_Scroll(scroll_t *s)
 				if (!is3dblock)
 					continue;
 
-				for (sect = -1; (sect = P_FindSectorFromTag(line->tag, sect)) >= 0 ;)
+				for (sect = -1; (sect = P_FindSectorFromTag(line->args[0], sect)) >= 0 ;)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
@@ -8183,7 +8278,6 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 
 /** Initializes the scrollers.
   *
-  * \todo Get rid of all the magic numbers.
   * \sa P_SpawnSpecials, Add_Scroller, Add_WallScroller
   */
 static void P_SpawnScrollers(void)
@@ -8193,102 +8287,108 @@ static void P_SpawnScrollers(void)
 
 	for (i = 0; i < numlines; i++, l++)
 	{
-		fixed_t dx = l->dx >> SCROLL_SHIFT; // direction and speed of scrolling
-		fixed_t dy = l->dy >> SCROLL_SHIFT;
-		INT32 control = -1, accel = 0; // no control sector or acceleration
-		INT32 special = l->special;
-
-		// These types are same as the ones they get set to except that the
-		// first side's sector's heights cause scrolling when they change, and
-		// this linedef controls the direction and speed of the scrolling. The
-		// most complicated linedef since donuts, but powerful :)
-
-		if (special == 515 || special == 512 || special == 522 || special == 532 || special == 504) // displacement scrollers
-		{
-			special -= 2;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 514 || special == 511 || special == 521 || special == 531 || special == 503) // accelerative scrollers
-		{
-			special--;
-			accel = 1;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 535 || special == 525) // displacement scrollers
-		{
-			special -= 2;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 534 || special == 524) // accelerative scrollers
-		{
-			accel = 1;
-			special--;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-
-		switch (special)
+		switch (l->special)
 		{
 			register INT32 s;
 
-			case 513: // scroll effect ceiling
-			case 533: // scroll and carry objects on ceiling
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				if (special != 533)
-					break;
-				/* FALLTHRU */
+			case 500: //Scroll wall directly
+			{
+				fixed_t dx = l->args[2] << FRACBITS; // direction and speed of scrolling
+				fixed_t dy = l->args[3] << FRACBITS;
 
-			case 523:	// carry objects on ceiling
-				dx = FixedMul(dx, CARRYFACTOR);
-				dy = FixedMul(dy, CARRYFACTOR);
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Scroller(sc_carry_ceiling, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				//Back side
+				if (l->args[1] != 0 && l->sidenum[1] != 0xffff)
+					Add_Scroller(sc_side, -dx, dy, -1, l->sidenum[1], 0, 0);
+
+				//Front side
+				if (l->args[1] != 1)
+					Add_Scroller(sc_side, -dx, dy, -1, l->sidenum[0], 0, 0);
+
 				break;
+			}
 
-			case 510: // scroll effect floor
-			case 530: // scroll and carry objects on floor
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				if (special != 530)
-					break;
-				/* FALLTHRU */
+			case 502: //Scroll wall remotely
+			{
+				fixed_t dx = l->args[3] << (FRACBITS - SCROLL_SHIFT); // direction and speed of scrolling
+				fixed_t dy = l->args[4] << (FRACBITS - SCROLL_SHIFT);
 
-			case 520:	// carry objects on floor
-				dx = FixedMul(dx, CARRYFACTOR);
-				dy = FixedMul(dy, CARRYFACTOR);
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Scroller(sc_carry, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				break;
+				INT32 control = -1, accel = 0; // no control sector or acceleration
+				if ((l->args[5] & 3) == 1)
+				{
+					//Accelerative scroller
+					accel = 1;
+					control = (INT32)(sides[*l->sidenum].sector - sectors);
+				}
+				else if ((l->args[5] & 3) == 2)
+				{
+					//Displacement scroller
+					control = (INT32)(sides[*l->sidenum].sector - sectors);
+				}
 
-			// scroll wall according to linedef
-			// (same direction and speed as scrolling floors)
-			case 502:
-				for (s = -1; (s = P_FindLineFromLineTag(l, s)) >= 0 ;)
-					if (s != (INT32)i)
+				for (s = -1; (s = P_FindLineFromTag(l->args[0], s)) >= 0;)
+				{
+					if (s == (INT32)i) continue;
+
+					//Back side
+					if (l->args[1] != 0 && lines[s].sidenum[1] != 0xffff)
+						Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[1], accel, 0);
+
+					//Front side
+					if (l->args[1] != 1)
 						Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
+				}
 				break;
+			}
 
-			case 505:
-				s = lines[i].sidenum[0];
-				Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
+			case 510: // Plane scroller
+			{
+				fixed_t dx = l->args[3] << (FRACBITS - SCROLL_SHIFT); // direction and speed of scrolling
+				fixed_t dy = l->args[4] << (FRACBITS - SCROLL_SHIFT);
+				fixed_t carrydx = FixedMul(dx, CARRYFACTOR);
+				fixed_t carrydy = FixedMul(dy, CARRYFACTOR);
+
+				INT32 control = -1, accel = 0; // no control sector or acceleration
+				if ((l->args[5] & 3) == 1)
+				{
+					//Accelerative scroller
+					accel = 1;
+					control = (INT32)(sides[*l->sidenum].sector - sectors);
+				}
+				else if ((l->args[5] & 3) == 2)
+				{
+					//Displacement scroller
+					control = (INT32)(sides[*l->sidenum].sector - sectors);
+				}
+
+				for (s = -1; (s = P_FindSectorFromTag(l->args[0], s)) >= 0;)
+				{
+					//Ceiling
+					if (l->args[1] != 0)
+					{
+						//Carry objects
+						if (l->args[2] != 1)
+							Add_Scroller(sc_carry_ceiling, carrydx, carrydy, control, s, accel, (l->args[5] & 4) == 4);
+
+						//Scroll textures
+						if (l->args[2] != 2)
+							Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, (l->args[5] & 4) == 4);
+					}
+
+					//Floor
+					if (l->args[1] != 1)
+					{
+						//Carry objects
+						if (l->args[2] != 1)
+							Add_Scroller(sc_carry, carrydx, carrydy, control, s, accel, (l->args[5] & 4) == 4);
+
+						//Scroll textures
+						if (l->args[2] != 2)
+							Add_Scroller(sc_floor, -dx, dy, control, s, accel, (l->args[5] & 4) == 4);
+					}
+				}
+
 				break;
-
-			case 506:
-				s = lines[i].sidenum[1];
-
-				if (s != 0xffff)
-					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[0], accel, 0);
-				else
-					CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing 2nd side!\n", sizeu1(i));
-				break;
-
-			case 500: // scroll first side
-				Add_Scroller(sc_side, FRACUNIT, 0, -1, lines[i].sidenum[0], accel, 0);
-				break;
-
-			case 501: // jff 1/30/98 2-way scroll
-				Add_Scroller(sc_side, -FRACUNIT, 0, -1, lines[i].sidenum[0], accel, 0);
-				break;
+			}
 		}
 	}
 }
