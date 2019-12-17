@@ -1476,6 +1476,7 @@ void VID_CheckRenderer(void)
 	{
 		I_StartupHardwareGraphics();
 		R_InitHardwareMode();
+		HWR_Switch();
 	}
 #endif
 }

@@ -85,61 +85,7 @@ static void HWR_RenderTransparentWalls(void);
 static void HWR_FoggingOn(void);
 static UINT32 atohex(const char *s);
 
-static void CV_filtermode_ONChange(void);
-static void CV_anisotropic_ONChange(void);
-static void CV_FogDensity_ONChange(void);
-static void CV_grFov_OnChange(void);
-// ==========================================================================
-//                                          3D ENGINE COMMANDS & CONSOLE VARS
-// ==========================================================================
-
-static CV_PossibleValue_t grfov_cons_t[] = {{0, "MIN"}, {179*FRACUNIT, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t grfiltermode_cons_t[]= {{HWD_SET_TEXTUREFILTER_POINTSAMPLED, "Nearest"},
-	{HWD_SET_TEXTUREFILTER_BILINEAR, "Bilinear"}, {HWD_SET_TEXTUREFILTER_TRILINEAR, "Trilinear"},
-	{HWD_SET_TEXTUREFILTER_MIXED1, "Linear_Nearest"},
-	{HWD_SET_TEXTUREFILTER_MIXED2, "Nearest_Linear"},
-	{HWD_SET_TEXTUREFILTER_MIXED3, "Nearest_Mipmap"},
-	{0, NULL}};
-CV_PossibleValue_t granisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NULL}};
-
 boolean drawsky = true;
-
-// needs fix: walls are incorrectly clipped one column less
-#ifndef NEWCLIP
-static consvar_t cv_grclipwalls = {"gr_clipwalls", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
-//development variables for diverse uses
-static consvar_t cv_gralpha = {"gr_alpha", "160", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_grbeta = {"gr_beta", "0", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-consvar_t cv_grrounddown = {"gr_rounddown", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grfov = {"gr_fov", "90", CV_FLOAT|CV_CALL, grfov_cons_t, CV_grFov_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grfogdensity = {"gr_fogdensity", "150", CV_CALL|CV_NOINIT, CV_Unsigned,
-                             CV_FogDensity_ONChange, 0, NULL, NULL, 0, 0, NULL};
-
-// Unfortunately, this can no longer be saved..
-consvar_t cv_grfiltermode = {"gr_filtermode", "Nearest", CV_CALL, grfiltermode_cons_t,
-                             CV_filtermode_ONChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotropicmode_cons_t,
-                             CV_anisotropic_ONChange, 0, NULL, NULL, 0, 0, NULL};
-//static consvar_t cv_grzbuffer = {"gr_zbuffer", "On", 0, CV_OnOff};
-consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-static void CV_FogDensity_ONChange(void)
-{
-	HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, cv_grfogdensity.value);
-}
-
-static void CV_filtermode_ONChange(void)
-{
-	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_grfiltermode.value);
-}
-
-static void CV_anisotropic_ONChange(void)
-{
-	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_granisotropicmode.value);
-}
 
 /*
  * lookuptable for lightvalues
@@ -2473,11 +2419,13 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 static cliprange_t *   hw_newend;
 static cliprange_t     gr_solidsegs[MAXSEGS];
 
+// needs fix: walls are incorrectly clipped one column less
+static consvar_t cv_grclipwalls = {"gr_clipwalls", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static void printsolidsegs(void)
 {
 	cliprange_t *       start;
-	if (!hw_newend || cv_grbeta.value != 2)
+	if (!hw_newend)
 		return;
 	for (start = gr_solidsegs;start != hw_newend;start++)
 	{
@@ -3431,7 +3379,7 @@ static void HWR_AddPolyObjectPlanes(void)
 			{
 				HWR_GetLevelFlat(&levelflats[polyobjsector->ceilingpic]);
 				HWR_RenderPolyObjectPlane(po_ptrs[i], true, polyobjsector->ceilingheight, PF_Occlude,
-				                          (light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), &levelflats[polyobjsector->floorpic],
+				                          (light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), &levelflats[polyobjsector->ceilingpic],
 				                          polyobjsector, 255, (light == -1 ? gr_frontsector->extra_colormap : *gr_frontsector->lightlist[light].extra_colormap));
 			}
 		}
@@ -5420,14 +5368,20 @@ static void HWR_DrawSprites(void)
 					if (!cv_grmodels.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
 						HWR_DrawSprite(spr);
 					else
-						HWR_DrawModel(spr);
+					{
+						if (!HWR_DrawModel(spr))
+							HWR_DrawSprite(spr);
+					}
 				}
 				else
 				{
 					if (!cv_grmodels.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
 						HWR_DrawSprite(spr);
 					else
-						HWR_DrawModel(spr);
+					{
+						if (!HWR_DrawModel(spr))
+							HWR_DrawSprite(spr);
+					}
 				}
 		}
 	}
@@ -5941,7 +5895,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 {
 	if (cv_grskydome.value)
 	{
-		FTransform transform;
+		FTransform dometransform;
 		const float fpov = FIXED_TO_FLOAT(cv_grfov.value+player->fovadd);
 		postimg_t *type;
 
@@ -5950,27 +5904,27 @@ static void HWR_DrawSkyBackground(player_t *player)
 		else
 			type = &postimgtype;
 
-		memset(&transform, 0x00, sizeof(FTransform));
+		memset(&dometransform, 0x00, sizeof(FTransform));
 
 		//04/01/2000: Hurdler: added for T&L
 		//                     It should replace all other gr_viewxxx when finished
-		transform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
-		transform.angley = (float)((viewangle-ANGLE_270)>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+		dometransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+		dometransform.angley = (float)((viewangle-ANGLE_270)>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
 		if (*type == postimg_flip)
-			transform.flip = true;
+			dometransform.flip = true;
 		else
-			transform.flip = false;
+			dometransform.flip = false;
 
-		transform.scalex = 1;
-		transform.scaley = (float)vid.width/vid.height;
-		transform.scalez = 1;
-		transform.fovxangle = fpov; // Tails
-		transform.fovyangle = fpov; // Tails
-		transform.splitscreen = splitscreen;
+		dometransform.scalex = 1;
+		dometransform.scaley = (float)vid.width/vid.height;
+		dometransform.scalez = 1;
+		dometransform.fovxangle = fpov; // Tails
+		dometransform.fovyangle = fpov; // Tails
+		dometransform.splitscreen = splitscreen;
 
 		HWR_GetTexture(texturetranslation[skytexture]);
-		HWD.pfnRenderSkyDome(skytexture, textures[skytexture]->width, textures[skytexture]->height, transform);
+		HWD.pfnRenderSkyDome(skytexture, textures[skytexture]->width, textures[skytexture]->height, dometransform);
 	}
 	else
 	{
@@ -6172,6 +6126,8 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 
 	//04/01/2000: Hurdler: added for T&L
 	//                     It should replace all other gr_viewxxx when finished
+	memset(&atransform, 0x00, sizeof(FTransform));
+
 	atransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
@@ -6390,6 +6346,8 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 	//04/01/2000: Hurdler: added for T&L
 	//                     It should replace all other gr_viewxxx when finished
+	memset(&atransform, 0x00, sizeof(FTransform));
+
 	atransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
@@ -6584,64 +6542,131 @@ static void HWR_FoggingOn(void)
 //                                                         3D ENGINE COMMANDS
 // ==========================================================================
 
+static CV_PossibleValue_t grsoftwarefog_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "LightPlanes"}, {0, NULL}};
+static CV_PossibleValue_t grmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
 
-static void CV_grFov_OnChange(void)
+static void CV_grmodellighting_OnChange(void);
+static void CV_grfiltermode_OnChange(void);
+static void CV_granisotropic_OnChange(void);
+static void CV_grfogdensity_OnChange(void);
+static void CV_grfov_OnChange(void);
+
+static CV_PossibleValue_t grfov_cons_t[] = {{0, "MIN"}, {179*FRACUNIT, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t grfiltermode_cons_t[]= {{HWD_SET_TEXTUREFILTER_POINTSAMPLED, "Nearest"},
+	{HWD_SET_TEXTUREFILTER_BILINEAR, "Bilinear"}, {HWD_SET_TEXTUREFILTER_TRILINEAR, "Trilinear"},
+	{HWD_SET_TEXTUREFILTER_MIXED1, "Linear_Nearest"},
+	{HWD_SET_TEXTUREFILTER_MIXED2, "Nearest_Linear"},
+	{HWD_SET_TEXTUREFILTER_MIXED3, "Nearest_Mipmap"},
+	{0, NULL}};
+CV_PossibleValue_t granisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NULL}};
+
+consvar_t cv_grfovchange = {"gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grfog = {"gr_fog", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grfogcolor = {"gr_fogcolor", "AAAAAA", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grsoftwarefog = {"gr_softwarefog", "Off", CV_SAVE, grsoftwarefog_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+#ifdef ALAM_LIGHTING
+consvar_t cv_grdynamiclighting = {"gr_dynamiclighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grstaticlighting  = {"gr_staticlighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grcoronas = {"gr_coronas", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grcoronasize = {"gr_coronasize", "1", CV_SAVE|CV_FLOAT, 0, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif
+
+consvar_t cv_grmodels = {"gr_models", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grmodelinterpolation = {"gr_modelinterpolation", "Sometimes", CV_SAVE, grmodelinterpolation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grmodellighting = {"gr_modellighting", "Off", CV_SAVE|CV_CALL, CV_OnOff, CV_grmodellighting_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_grspritebillboarding = {"gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grskydome = {"gr_skydome", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_grrounddown = {"gr_rounddown", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grfov = {"gr_fov", "90", CV_FLOAT|CV_CALL, grfov_cons_t, CV_grfov_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grfogdensity = {"gr_fogdensity", "150", CV_CALL|CV_NOINIT, CV_Unsigned,
+                             CV_grfogdensity_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_grfiltermode = {"gr_filtermode", "Nearest", CV_SAVE|CV_CALL, grfiltermode_cons_t,
+                             CV_grfiltermode_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotropicmode_cons_t,
+                             CV_granisotropic_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static void CV_grmodellighting_OnChange(void)
+{
+	if (rendermode == render_opengl)
+		HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_grmodellighting.value);
+}
+
+static void CV_grfogdensity_OnChange(void)
+{
+	if (rendermode == render_opengl)
+		HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, cv_grfogdensity.value);
+}
+
+static void CV_grfiltermode_OnChange(void)
+{
+	if (rendermode == render_opengl)
+		HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_grfiltermode.value);
+}
+
+static void CV_granisotropic_OnChange(void)
+{
+	if (rendermode == render_opengl)
+		HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_granisotropicmode.value);
+}
+
+static void CV_grfov_OnChange(void)
 {
 	if ((netgame || multiplayer) && !cv_debug && cv_grfov.value != 90*FRACUNIT)
 		CV_Set(&cv_grfov, cv_grfov.defaultvalue);
 }
 
-static void Command_GrStats_f(void)
-{
-	Z_CheckHeap(9875); // debug
-
-	CONS_Printf(M_GetText("Patch info headers: %7s kb\n"), sizeu1(Z_TagUsage(PU_HWRPATCHINFO)>>10));
-	CONS_Printf(M_GetText("3D Texture cache  : %7s kb\n"), sizeu1(Z_TagUsage(PU_HWRCACHE)>>10));
-	CONS_Printf(M_GetText("Plane polygon     : %7s kb\n"), sizeu1(Z_TagUsage(PU_HWRPLANE)>>10));
-}
-
-
-// **************************************************************************
-//                                                            3D ENGINE SETUP
-// **************************************************************************
-
-// --------------------------------------------------------------------------
-// Add hardware engine commands & consvars
-// --------------------------------------------------------------------------
 //added by Hurdler: console varibale that are saved
 void HWR_AddCommands(void)
 {
-	static boolean alreadycalled = false;
-	if (!alreadycalled)
-	{
-		CV_RegisterVar(&cv_grrounddown);
-		CV_RegisterVar(&cv_grfov);
-		CV_RegisterVar(&cv_grfogdensity);
-		CV_RegisterVar(&cv_grfiltermode);
-		CV_RegisterVar(&cv_granisotropicmode);
-		CV_RegisterVar(&cv_grcorrecttricks);
-		CV_RegisterVar(&cv_grsolvetjoin);
-	}
-	alreadycalled = true;
-}
+	CV_RegisterVar(&cv_grfovchange);
+	CV_RegisterVar(&cv_grfov);
 
-static inline void HWR_AddEngineCommands(void)
-{
-	// engine state variables
-	//CV_RegisterVar(&cv_grzbuffer);
+	CV_RegisterVar(&cv_grfogdensity);
+	CV_RegisterVar(&cv_grfogcolor);
+	CV_RegisterVar(&cv_grfog);
+	CV_RegisterVar(&cv_grsoftwarefog);
+
+#ifdef ALAM_LIGHTING
+	CV_RegisterVar(&cv_grstaticlighting);
+	CV_RegisterVar(&cv_grdynamiclighting);
+	CV_RegisterVar(&cv_grcoronasize);
+	CV_RegisterVar(&cv_grcoronas);
+#endif
+
+	CV_RegisterVar(&cv_grmodellighting);
+	CV_RegisterVar(&cv_grmodelinterpolation);
+	CV_RegisterVar(&cv_grmodels);
+
+	CV_RegisterVar(&cv_grskydome);
+	CV_RegisterVar(&cv_grspritebillboarding);
+
+	CV_RegisterVar(&cv_grfiltermode);
+	CV_RegisterVar(&cv_grrounddown);
+	CV_RegisterVar(&cv_grcorrecttricks);
+	CV_RegisterVar(&cv_grsolvetjoin);
+
 #ifndef NEWCLIP
 	CV_RegisterVar(&cv_grclipwalls);
 #endif
-
-	// engine development mode variables
-	// - usage may vary from version to version..
-	CV_RegisterVar(&cv_gralpha);
-	CV_RegisterVar(&cv_grbeta);
-
-	// engine commands
-	COM_AddCommand("gr_stats", Command_GrStats_f);
 }
 
+void HWR_AddSessionCommands(void)
+{
+	static boolean alreadycalled = false;
+	if (alreadycalled)
+		return;
+
+	CV_RegisterVar(&cv_granisotropicmode);
+
+	alreadycalled = true;
+}
 
 // --------------------------------------------------------------------------
 // Setup the hardware renderer
@@ -6662,12 +6687,9 @@ void HWR_Startup(void)
 	{
 		CONS_Printf("HWR_Startup()...\n");
 		HWR_InitPolyPool();
-		// add console cmds & vars
-		HWR_AddEngineCommands();
+		HWR_AddSessionCommands();
 		HWR_InitTextureCache();
-
 		HWR_InitModels();
-
 #ifdef ALAM_LIGHTING
 		HWR_InitLight();
 #endif
@@ -6679,6 +6701,17 @@ void HWR_Startup(void)
 	startupdone = true;
 }
 
+// --------------------------------------------------------------------------
+// Called after switching to the hardware renderer
+// --------------------------------------------------------------------------
+void HWR_Switch(void)
+{
+	// Set special states from CVARs
+	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_grmodellighting.value);
+	HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, cv_grfogdensity.value);
+	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_grfiltermode.value);
+	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_granisotropicmode.value);
+}
 
 // --------------------------------------------------------------------------
 // Free resources allocated by the hardware renderer
@@ -6688,8 +6721,8 @@ void HWR_Shutdown(void)
 	CONS_Printf("HWR_Shutdown()\n");
 	HWR_FreeExtraSubsectors();
 	HWR_FreePolyPool();
+	HWR_FreeMipmapCache();
 	HWR_FreeTextureCache();
-	HWR_FreeColormaps();
 	HWD.pfnFlushScreenTextures();
 }
 

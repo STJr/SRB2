@@ -1535,8 +1535,8 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 #ifdef HWRENDER
 	// Software-only compile cache the data without conversion
 	if (rendermode == render_soft || rendermode == render_none)
-	{
 #endif
+	{
 		lumpcache_t *lumpcache = wadfiles[wad]->patchcache;
 		if (!lumpcache[lump])
 		{
@@ -1570,8 +1570,8 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 			Z_ChangeTag(lumpcache[lump], tag);
 
 		return lumpcache[lump];
-#ifdef HWRENDER
 	}
+#ifdef HWRENDER
 
 	grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
 

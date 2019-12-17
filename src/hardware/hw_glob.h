@@ -100,7 +100,7 @@ void HWR_FreePolyPool(void);
 // --------
 void HWR_InitTextureCache(void);
 void HWR_FreeTextureCache(void);
-void HWR_FreeColormaps(void);
+void HWR_FreeMipmapCache(void);
 void HWR_FreeExtraSubsectors(void);
 
 void HWR_GetLevelFlat(levelflat_t *levelflat);
