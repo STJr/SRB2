@@ -1379,7 +1379,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		}
 
 		p.rollangle = 0.0f;
-		p.rollflip = 0;
+		p.rollflip = 1;
 		p.rotaxis = 0;
 		if (spr->mobj->rollangle)
 		{
