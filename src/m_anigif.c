@@ -432,8 +432,11 @@ static void GIF_headwrite(void)
 
 	// write color table
 	{
-		RGBA_t *pal = ((cv_screenshot_colorprofile.value)
-		? pLocalPalette
+		RGBA_t *pal = ((cv_screenshot_colorprofile.value
+#ifdef HWRENDER
+		&& (rendermode == render_soft)
+#endif
+		) ? pLocalPalette
 		: pMasterPalette);
 
 		for (i = 0; i < 256; i++)
