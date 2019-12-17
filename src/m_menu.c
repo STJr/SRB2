@@ -7669,18 +7669,6 @@ static void M_DrawLoadGameData(void)
 	INT32 i, savetodraw, x, y, hsep = 90;
 	skin_t *charskin = NULL;
 
-	// Lactozilla: Intentional, because there is
-	// no way to know if those patches were ever
-	// flushed from memory, other than pointers
-	// to nowhere.
-	savselp[0] = W_CachePatchName("SAVEBACK", PU_PATCH);
-	savselp[1] = W_CachePatchName("SAVENONE", PU_PATCH);
-	savselp[2] = W_CachePatchName("ULTIMATE", PU_PATCH);
-
-	savselp[3] = W_CachePatchName("GAMEDONE", PU_PATCH);
-	savselp[4] = W_CachePatchName("BLACXLVL", PU_PATCH);
-	savselp[5] = W_CachePatchName("BLANKLVL", PU_PATCH);
-
 	if (vid.width != BASEVIDWIDTH*vid.dupx)
 		hsep = (hsep*vid.width)/(BASEVIDWIDTH*vid.dupx);
 
@@ -8159,6 +8147,14 @@ static void M_ReadSaveStrings(void)
 		}
 		M_ReadSavegameInfo(i);
 	}
+
+	savselp[0] = W_CachePatchName("SAVEBACK", PU_PATCH);
+	savselp[1] = W_CachePatchName("SAVENONE", PU_PATCH);
+	savselp[2] = W_CachePatchName("ULTIMATE", PU_PATCH);
+
+	savselp[3] = W_CachePatchName("GAMEDONE", PU_PATCH);
+	savselp[4] = W_CachePatchName("BLACXLVL", PU_PATCH);
+	savselp[5] = W_CachePatchName("BLANKLVL", PU_PATCH);
 }
 
 //
