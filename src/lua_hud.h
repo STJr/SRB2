@@ -21,6 +21,7 @@ enum hud {
 	// Match / CTF / Tag / Ringslinger
 	hud_weaponrings,
 	hud_powerstones,
+	hud_teamscores,
 	// NiGHTS mode
 	hud_nightslink,
 	hud_nightsdrill,
