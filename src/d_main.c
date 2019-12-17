@@ -225,7 +225,7 @@ static void D_Display(void)
 	if (nodrawers)
 		return; // for comparative timing/profiling
 
-	// Jimita: Switching renderers works by checking
+	// Lactozilla: Switching renderers works by checking
 	// if the game has to do it right when the frame
 	// needs to render. If so, five things will happen:
 	// 1. Interface functions will be called so
@@ -273,7 +273,7 @@ static void D_Display(void)
 		forcerefresh = true; // force background redraw
 	}
 
-	// Jimita
+	// Lactozilla: Renderer switching
 	D_CheckRendererState();
 
 	// draw buffered stuff to screen
@@ -583,7 +583,7 @@ static void D_Display(void)
 	needpatchrecache = false;
 }
 
-// Jimita: Check the renderer's state
+// Lactozilla: Check the renderer's state
 // after a possible renderer switch.
 void D_CheckRendererState(void)
 {
@@ -1281,7 +1281,7 @@ void D_SRB2Main(void)
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
 
-	// Jimita: Does the render mode need to change?
+	// Lactozilla: Does the render mode need to change?
 	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
 	{
 		needpatchflush = true;

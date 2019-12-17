@@ -3019,7 +3019,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	// Jimita: Free extrasubsectors regardless of renderer.
+	// Lactozilla: Free extrasubsectors regardless of renderer.
 	// Maybe we're not in OpenGL anymore.
 	if (extrasubsectors)
 		free(extrasubsectors);
