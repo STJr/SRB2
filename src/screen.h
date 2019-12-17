@@ -110,19 +110,51 @@ extern vmode_t specialmodes[NUMSPECIALMODES];
 // color mode dependent drawer function pointers
 // ---------------------------------------------
 
-extern void (*wallcolfunc)(void);
+#define BASEDRAWFUNC 0
+
+enum
+{
+	COLDRAWFUNC_BASE = BASEDRAWFUNC,
+	COLDRAWFUNC_FUZZY,
+	COLDRAWFUNC_TRANS,
+	COLDRAWFUNC_SHADE,
+	COLDRAWFUNC_SHADOWED,
+	COLDRAWFUNC_TRANSTRANS,
+	COLDRAWFUNC_TWOSMULTIPATCH,
+	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
+	COLDRAWFUNC_FOG,
+
+	COLDRAWFUNC_MAX
+};
+
 extern void (*colfunc)(void);
-extern void (*basecolfunc)(void);
-extern void (*fuzzcolfunc)(void);
-extern void (*transcolfunc)(void);
-extern void (*shadecolfunc)(void);
+extern void (*colfuncs[COLDRAWFUNC_MAX])(void);
+
+enum
+{
+	SPANDRAWFUNC_BASE = BASEDRAWFUNC,
+	SPANDRAWFUNC_TRANS,
+	SPANDRAWFUNC_SPLAT,
+	SPANDRAWFUNC_TRANSSPLAT,
+	SPANDRAWFUNC_FOG,
+#ifndef NOWATER
+	SPANDRAWFUNC_WATER,
+#endif
+#ifdef ESLOPE
+	SPANDRAWFUNC_TILTED,
+	SPANDRAWFUNC_TILTEDTRANS,
+	SPANDRAWFUNC_TILTEDSPLAT,
+#ifndef NOWATER
+	SPANDRAWFUNC_TILTEDWATER,
+#endif
+#endif
+
+	SPANDRAWFUNC_MAX
+};
+
 extern void (*spanfunc)(void);
-extern void (*basespanfunc)(void);
-extern void (*mmxspanfunc)(void);
-extern void (*splatfunc)(void);
-extern void (*transtransfunc)(void);
-extern void (*twosmultipatchfunc)(void);
-extern void (*twosmultipatchtransfunc)(void);
+extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
+extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
 // -----
 // CPUID
@@ -147,9 +179,6 @@ extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_fullscreen;
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
-
-// quick fix for tall/short skies, depending on bytesperpixel
-extern void (*walldrawerfunc)(void);
 
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);

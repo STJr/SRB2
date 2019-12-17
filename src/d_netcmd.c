@@ -1907,7 +1907,7 @@ static void Command_Map_f(void)
 		}
 	}
 
-	if (newmapnum == 0 || !mapheaderinfo[newmapnum-1])
+	if (newmapnum == 0)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Could not find any map described as '%s'.\n"), mapname);
 		Z_Free(mapname);
