@@ -37,6 +37,10 @@
 #include "m_cond.h" // condition sets
 #include "lua_hook.h" // IntermissionThinker hook
 
+#ifdef HAVE_BLUA
+#include "lua_hud.h"
+#endif
+
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #endif
@@ -319,8 +323,16 @@ void Y_IntermissionDrawer(void)
 	// Bonus loops
 	INT32 i;
 
-	if (intertype == int_none || rendermode == render_none)
+	if (rendermode == render_none)
 		return;
+
+	if (intertype == int_none)
+	{
+#ifdef HAVE_BLUA
+		LUAh_IntermissionHUD();
+#endif
+		return;
+	}
 
 	if (!usebuffer)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
@@ -358,6 +370,12 @@ void Y_IntermissionDrawer(void)
 	}
 	else
 		V_DrawPatchFill(bgtile);
+
+#ifdef HAVE_BLUA
+	LUAh_IntermissionHUD();
+	if (!LUA_HudEnabled(hud_intermissiontally))
+		goto skiptallydrawer;
+#endif
 
 	if (intertype == int_coop)
 	{
@@ -907,6 +925,12 @@ void Y_IntermissionDrawer(void)
 				break;
 		}
 	}
+
+#ifdef HAVE_BLUA
+skiptallydrawer:
+	if (!LUA_HudEnabled(hud_intermissionmessages))
+		return;
+#endif
 
 	if (timer)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
