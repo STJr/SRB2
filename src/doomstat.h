@@ -402,9 +402,9 @@ enum GameTypeRules
 	// flexibility! Those will replace some straight-up gametype checks scattered around the source code!
 
 	GTR_CHASECAM         = 1<<7,  // Prefer chasecam at map load (All platform gametypes)
-	// 1<<8, empty
-	GTR_HIDETIME         = 1<<9,  // Tag and Hide and Seek
-	GTR_HIDETIMEFROZEN   = 1<<10, // Hide and Seek, but not Tag
+	GTR_FRIENDLYFIRE     = 1<<8,  // Always allow friendly fire
+	GTR_HIDETIME         = 1<<9,  // Hide time (Tag and Hide and Seek)
+	GTR_HIDEFROZEN       = 1<<10, // Frozen after hide time (Hide and Seek, but not Tag)
 	GTR_BLINDFOLDED      = 1<<11, // Blindfolded view (Tag and Hide and Seek)
 	GTR_EMERALDS         = 1<<12, // Ringslinger emeralds (Match and CTF)
 	GTR_TEAMFLAGS        = 1<<13, // Gametype has team flags (CTF)
@@ -424,6 +424,10 @@ enum GameTypeRules
 // String names for gametypes
 extern const char *Gametype_Names[NUMGAMETYPES];
 extern const char *Gametype_ConstantNames[NUMGAMETYPES];
+
+// Point and time limits for every gametype
+extern INT32 pointlimits[NUMGAMETYPES];
+extern INT32 timelimits[NUMGAMETYPES];
 
 enum TypeOfLevel
 {

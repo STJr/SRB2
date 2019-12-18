@@ -2298,7 +2298,7 @@ static void ST_drawTextHUD(void)
 				textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
 				donef12 = true;
 			}
-			if (gametyperules & GTR_HIDETIMEFROZEN)
+			if (gametyperules & GTR_HIDEFROZEN)
 				textHUDdraw(M_GetText("You cannot move while hiding."))
 		}
 	}

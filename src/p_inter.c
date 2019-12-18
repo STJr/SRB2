@@ -3042,7 +3042,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		return false;
 
 	// Ignore IT players shooting each other, unless friendlyfire is on.
-	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) &&
+	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) &&
 		source && source->player && source->player->pflags & PF_TAGIT)))
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
@@ -3058,7 +3058,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 
 	// Don't allow players on the same team to hurt one another,
 	// unless cv_friendlyfire is on.
-	if (!(cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
+	if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
@@ -3143,7 +3143,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 			return false;
 
 		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
-		if (!cv_friendlyfire.value && (G_PlatformGametype()))
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (G_PlatformGametype()))
 		{
 			if (gametype == GT_COOP && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
 			{
@@ -3166,7 +3166,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 	{
 		// Don't allow players on the same team to hurt one another,
 		// unless cv_friendlyfire is on.
-		if (!cv_friendlyfire.value && target->player->ctfteam == source->player->ctfteam)
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && target->player->ctfteam == source->player->ctfteam)
 		{
 			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 			{
@@ -3593,7 +3593,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			{
 				if (source == target)
 					return false; // Don't hit yourself with your own paraloop, baka
-				if (source && source->player && !cv_friendlyfire.value
+				if (source && source->player && !(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE))
 				&& (gametype == GT_COOP
 				|| (G_GametypeHasTeams() && player->ctfteam == source->player->ctfteam)))
 					return false; // Don't run eachother over in special stages and team games and such
@@ -3688,7 +3688,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		// by friendly fire. Spilling their rings and other items is enough.
 		else if (!force && G_GametypeHasTeams()
 			&& source && source->player && (source->player->ctfteam == player->ctfteam)
-			&& cv_friendlyfire.value)
+			&& (cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)))
 		{
 			damage = 0;
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);

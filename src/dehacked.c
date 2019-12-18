@@ -8900,9 +8900,9 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"LIVES",
 	"RACE",
 	"CHASECAM",
-	"\x01", // 1<<8, empty
+	"FRIENDLYFIRE",
 	"HIDETIME",
-	"HIDETIMEFROZEN",
+	"HIDEFROZEN",
 	"BLINDFOLDED",
 	"EMERALDS",
 	"TEAMFLAGS",

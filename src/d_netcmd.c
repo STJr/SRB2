@@ -2419,7 +2419,7 @@ static void Command_Teamchange_f(void)
 	}
 
 	//additional check for hide and seek. Don't allow change of status after hidetime ends.
-	if ((gametyperules & GTR_HIDETIMEFROZEN) && leveltime >= (hidetime * TICRATE))
+	if ((gametyperules & GTR_HIDEFROZEN) && leveltime >= (hidetime * TICRATE))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Hiding time expired; no Hide and Seek status changes allowed!\n"));
 		return;
@@ -2516,7 +2516,7 @@ static void Command_Teamchange2_f(void)
 	}
 
 	//additional check for hide and seek. Don't allow change of status after hidetime ends.
-	if ((gametyperules & GTR_HIDETIMEFROZEN) && leveltime >= (hidetime * TICRATE))
+	if ((gametyperules & GTR_HIDEFROZEN) && leveltime >= (hidetime * TICRATE))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Hiding time expired; no Hide and Seek status changes allowed!\n"));
 		return;
@@ -2645,7 +2645,7 @@ static void Command_ServerTeamChange_f(void)
 	}
 
 	//additional check for hide and seek. Don't allow change of status after hidetime ends.
-	if ((gametyperules & GTR_HIDETIMEFROZEN) && leveltime >= (hidetime * TICRATE))
+	if ((gametyperules & GTR_HIDEFROZEN) && leveltime >= (hidetime * TICRATE))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Hiding time expired; no Hide and Seek status changes allowed!\n"));
 		return;
@@ -2735,7 +2735,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	}
 
 	//no status changes after hidetime
-	if ((gametyperules & GTR_HIDETIMEFROZEN) && (leveltime >= (hidetime * TICRATE)))
+	if ((gametyperules & GTR_HIDEFROZEN) && (leveltime >= (hidetime * TICRATE)))
 		error = true;
 
 	//Make sure that the right team number is sent. Keep in mind that normal clients cannot change to certain teams in certain gametypes.
