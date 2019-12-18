@@ -694,7 +694,7 @@ static void ST_drawTime(void)
 	else
 	{
 		// Counting down the hidetime?
-		if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (stplyr->realtime <= (hidetime*TICRATE)))
+		if ((gametyperules & GTR_HIDETIME) && (stplyr->realtime <= (hidetime*TICRATE)))
 		{
 			tics = (hidetime*TICRATE - stplyr->realtime);
 			if (tics < 3*TICRATE)
@@ -705,11 +705,11 @@ static void ST_drawTime(void)
 		else
 		{
 			// Hidetime finish!
-			if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (stplyr->realtime < ((hidetime+1)*TICRATE)))
+			if ((gametyperules & GTR_HIDETIME) && (stplyr->realtime < ((hidetime+1)*TICRATE)))
 				ST_drawRaceNum(hidetime*TICRATE - stplyr->realtime);
 
 			// Time limit?
-			if (gametype != GT_COOP && gametype != GT_RACE && gametype != GT_COMPETITION && cv_timelimit.value && timelimitintics > 0)
+			if ((gametyperules & GTR_TIMELIMIT) && cv_timelimit.value && timelimitintics > 0)
 			{
 				if (timelimitintics > stplyr->realtime)
 				{
@@ -723,7 +723,7 @@ static void ST_drawTime(void)
 				downwards = true;
 			}
 			// Post-hidetime normal.
-			else if (gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+			else if (gametyperules & GTR_TAG)
 				tics = stplyr->realtime - hidetime*TICRATE;
 			// "Shadow! What are you doing? Hurry and get back here
 			// right now before the island blows up with you on it!"
@@ -912,7 +912,7 @@ static void ST_drawLivesArea(void)
 	else if (stplyr->spectator)
 		v_colmap = V_GRAYMAP;
 	// Tag
-	else if (gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+	else if (gametyperules & GTR_TAG)
 	{
 		if (stplyr->pflags & PF_TAGIT)
 		{
@@ -1762,7 +1762,7 @@ static void ST_drawNiGHTSHUD(void)
 		ST_drawNiGHTSLink();
 	}
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 	{
 		ST_drawScore();
 		ST_drawTime();
@@ -2273,7 +2273,7 @@ static void ST_drawTextHUD(void)
 			}
 		}
 	}
-	else if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (!stplyr->spectator))
+	else if ((gametyperules & GTR_TAG) && (!stplyr->spectator))
 	{
 		if (leveltime < hidetime * TICRATE)
 		{
@@ -2648,7 +2648,7 @@ static void ST_overlayDrawer(void)
 			ST_drawMatchHUD();
 
 		// Race HUD Stuff
-		if (gametype == GT_RACE || gametype == GT_COMPETITION)
+		if (gametyperules & GTR_RACE)
 			ST_drawRaceHUD();
 
 		// Emerald Hunt Indicators
@@ -2753,7 +2753,7 @@ void ST_Drawer(void)
 		if (rendermode != render_none) ST_doPaletteStuff();
 
 	// Blindfold!
-	if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+	if ((gametyperules & GTR_BLINDFOLDED)
 	&& (leveltime < hidetime * TICRATE))
 	{
 		if (players[displayplayer].pflags & PF_TAGIT)

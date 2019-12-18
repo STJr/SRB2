@@ -1125,7 +1125,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 			return true;
 
 		// Can change skin during initial countdown.
-		if ((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE)
+		if ((gametyperules & GTR_RACE) && leveltime < 4*TICRATE)
 			return true;
 
 		if (G_TagGametype())
@@ -2413,7 +2413,7 @@ static void Command_Teamchange_f(void)
 	}
 
 	//additional check for hide and seek. Don't allow change of status after hidetime ends.
-	if (gametype == GT_HIDEANDSEEK && leveltime >= (hidetime * TICRATE))
+	if ((gametyperules & GTR_HIDETIMEFROZEN) && leveltime >= (hidetime * TICRATE))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Hiding time expired; no Hide and Seek status changes allowed!\n"));
 		return;
@@ -2510,7 +2510,7 @@ static void Command_Teamchange2_f(void)
 	}
 
 	//additional check for hide and seek. Don't allow change of status after hidetime ends.
-	if (gametype == GT_HIDEANDSEEK && leveltime >= (hidetime * TICRATE))
+	if ((gametyperules & GTR_HIDETIMEFROZEN) && leveltime >= (hidetime * TICRATE))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Hiding time expired; no Hide and Seek status changes allowed!\n"));
 		return;
@@ -2639,7 +2639,7 @@ static void Command_ServerTeamChange_f(void)
 	}
 
 	//additional check for hide and seek. Don't allow change of status after hidetime ends.
-	if (gametype == GT_HIDEANDSEEK && leveltime >= (hidetime * TICRATE))
+	if ((gametyperules & GTR_HIDETIMEFROZEN) && leveltime >= (hidetime * TICRATE))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Hiding time expired; no Hide and Seek status changes allowed!\n"));
 		return;
@@ -2727,6 +2727,10 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		}
 		return;
 	}
+
+	//no status changes after hidetime
+	if ((gametyperules & GTR_HIDETIMEFROZEN) && (leveltime >= (hidetime * TICRATE)))
+		error = true;
 
 	//Make sure that the right team number is sent. Keep in mind that normal clients cannot change to certain teams in certain gametypes.
 	switch (gametype)

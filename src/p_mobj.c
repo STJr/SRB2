@@ -11702,7 +11702,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 		if (!cv_powerstones.value)
 			return;
 
-		if (!(gametype == GT_MATCH || gametype == GT_CTF))
+		if (!(gametyperules & GTR_EMERALDS))
 			return;
 
 		runemeraldmanager = true;
@@ -11722,7 +11722,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 	// Yeah, this is a dirty hack.
 	if ((mobjinfo[i].flags & (MF_MONITOR|MF_GRENADEBOUNCE)) == MF_MONITOR)
 	{
-		if (gametype == GT_COMPETITION || gametype == GT_RACE)
+		if (gametyperules & GTR_RACE)
 		{
 			// Set powerup boxes to user settings for competition.
 			if (cv_competitionboxes.value == 1) // Mystery

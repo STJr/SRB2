@@ -2978,7 +2978,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		player->flyangle += 180; // Shuffle's BETTERNIGHTSMOVEMENT?
 		player->flyangle %= 360;
 
-		if (gametype == GT_RACE || gametype == GT_COMPETITION)
+		if (gametyperules & GTR_RACE)
 			player->drillmeter -= 5*20;
 		else
 		{

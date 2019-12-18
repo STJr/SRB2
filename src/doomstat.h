@@ -411,12 +411,26 @@ enum GameType
 // Game type rules
 enum GameTypeRules
 {
-	GTR_PLATFORM    = 1,    // Co-op, Competition, Race
-	GTR_TAG         = 1<<1, // Tag, Hide and Seek
-	GTR_RINGSLINGER = 1<<2, // Not Co-op, not Competition, and not Race (overriden by cv_ringslinger)
-	GTR_SPECTATORS  = 1<<3, // Not Co-op, not Competition, and not Race
-	GTR_TEAMS       = 1<<4, // Team Match, CTF
-	GTR_LIVES       = 1<<5, // A lot of special cases in G_GametypeUsesLives actually, but just Co-op and Competition
+	GTR_PLATFORM       = 1,     // Co-op, Competition, and Race
+	GTR_TAG            = 1<<1,  // Tag and Hide and Seek
+	GTR_RINGSLINGER    = 1<<2,  // Not Co-op, not Competition, and not Race (overriden by cv_ringslinger)
+	GTR_SPECTATORS     = 1<<3,  // Not Co-op, not Competition, and not Race
+	GTR_TEAMS          = 1<<4,  // Team Match, CTF
+	GTR_LIVES          = 1<<5,  // A lot of special cases in G_GametypeUsesLives actually, but just Co-op and Competition
+	GTR_RACE           = 1<<6,  // Race and Competition
+
+	// Lactozilla
+	// Awesome! Those are new game type rules
+	// provided by yours truly to allow for more
+	// flexibility! Those will replace some
+	// straight-up gametype checks scattered
+	// around the source code!
+	GTR_CHASECAM       = 1<<7,  // Prefer chasecam at map load
+	GTR_TIMELIMIT      = 1<<8,  // Ringslinger time limit
+	GTR_HIDETIME       = 1<<9,  // Tag and Hide and Seek
+	GTR_HIDETIMEFROZEN = 1<<10, // Hide and Seek, but not Tag
+	GTR_BLINDFOLDED    = 1<<11, // Blindfolded view for Tag and Hide and Seek
+	GTR_EMERALDS       = 1<<12, // Ringslinger emeralds
 };
 
 // String names for gametypes

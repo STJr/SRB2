@@ -1002,7 +1002,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
 	// ...OR if we're blindfolded. No looking into the floor.
-	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
 	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{
 		cmd->angleturn = (INT16)(localangle >> 16);
@@ -3061,17 +3061,25 @@ const char *Gametype_Names[NUMGAMETYPES] =
 // Game type rules
 INT16 gametypedefaultrules[NUMGAMETYPES] =
 {
-	GTR_PLATFORM|GTR_LIVES, // GT_COOP
-	GTR_PLATFORM|GTR_LIVES, // GT_COMPETITION
-	GTR_PLATFORM, // GT_RACE
+	// Co-op
+	GTR_PLATFORM|GTR_LIVES|GTR_CHASECAM,
+	// Competition
+	GTR_PLATFORM|GTR_LIVES|GTR_RACE|GTR_CHASECAM,
+	// Race
+	GTR_PLATFORM|GTR_RACE|GTR_CHASECAM,
 
-	GTR_RINGSLINGER|GTR_SPECTATORS, // GT_MATCH
-	GTR_RINGSLINGER|GTR_TEAMS|GTR_SPECTATORS, // GT_TEAMMATCH
+	// Match
+	GTR_RINGSLINGER|GTR_SPECTATORS|GTR_TIMELIMIT|GTR_EMERALDS,
+	// Team Match
+	GTR_RINGSLINGER|GTR_TEAMS|GTR_SPECTATORS|GTR_TIMELIMIT,
 
-	GTR_RINGSLINGER|GTR_TAG|GTR_SPECTATORS, // GT_TAG
-	GTR_RINGSLINGER|GTR_TAG|GTR_SPECTATORS, // GT_HIDEANDSEEK
+	// Tag
+	GTR_RINGSLINGER|GTR_TAG|GTR_SPECTATORS|GTR_TIMELIMIT|GTR_HIDETIME|GTR_BLINDFOLDED,
+	// Hide and Seek
+	GTR_RINGSLINGER|GTR_TAG|GTR_SPECTATORS|GTR_TIMELIMIT|GTR_HIDETIME|GTR_BLINDFOLDED,
 
-	GTR_RINGSLINGER|GTR_TEAMS|GTR_SPECTATORS // GT_CTF
+	// CTF
+	GTR_RINGSLINGER|GTR_TEAMS|GTR_SPECTATORS|GTR_TIMELIMIT|GTR_EMERALDS,
 };
 
 //
@@ -3384,7 +3392,7 @@ static void G_DoCompleted(void)
 		I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
 
 	// wrap around in race
-	if (nextmap >= 1100-1 && nextmap <= 1102-1 && (gametype == GT_RACE || gametype == GT_COMPETITION))
+	if (nextmap >= 1100-1 && nextmap <= 1102-1 && (gametyperules & GTR_RACE))
 		nextmap = (INT16)(spstage_start-1);
 
 	if ((gottoken = (gametype == GT_COOP && token)))

@@ -2512,7 +2512,7 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 
 	if (G_TagGametype()) //Check if you still have a game. Location flexible. =P
 		P_CheckSurvivors();
-	else if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	else if (gametyperules & GTR_RACE)
 		P_CheckRacers();
 }
 

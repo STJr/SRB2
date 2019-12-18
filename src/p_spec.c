@@ -7224,7 +7224,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 308: // Race-only linedef executor. Triggers once.
-				if (gametype != GT_RACE && gametype != GT_COMPETITION)
+				if (!(gametyperules & GTR_RACE))
 					lines[i].special = 0;
 				break;
 

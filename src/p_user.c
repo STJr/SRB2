@@ -387,7 +387,7 @@ UINT8 P_FindLowestMare(void)
 	mobj_t *mo2;
 	UINT8 mare = UINT8_MAX;
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 		return 0;
 
 	// scan the thinkers
@@ -793,7 +793,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		P_RestoreMusic(player);
 	}
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 	{
 		if (player->drillmeter < 48*20)
 			player->drillmeter = 48*20;
@@ -2181,7 +2181,7 @@ void P_DoPlayerExit(player_t *player)
 
 	if (cv_allowexitlevel.value == 0 && !G_PlatformGametype())
 		return;
-	else if (gametype == GT_RACE || gametype == GT_COMPETITION) // If in Race Mode, allow
+	else if (gametyperules & GTR_RACE) // If in Race Mode, allow
 	{
 		if (!countdown) // a 60-second wait ala Sonic 2.
 			countdown = (cv_countdowntime.value - 1)*TICRATE + 1; // Use cv_countdowntime
@@ -4670,7 +4670,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (player->powers[pw_carry] == CR_BRAKGOOP)
 						player->dashspeed = 0;
 
-					if (!((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE))
+					if (!((gametyperules & GTR_RACE) && leveltime < 4*TICRATE))
 					{
 						if (player->dashspeed)
 						{
@@ -7137,7 +7137,7 @@ static void P_NiGHTSMovement(player_t *player)
 		&& !player->exiting)
 			player->nightstime--;
 	}
-	else if (gametype != GT_RACE && gametype != GT_COMPETITION
+	else if (!(gametyperules & GTR_RACE)
 	&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	&& !(player->capsule && player->capsule->reactiontime)
@@ -7293,7 +7293,7 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		player->mo->momx = player->mo->momy = 0;
 
-		if (gametype != GT_RACE && gametype != GT_COMPETITION)
+		if (!(gametyperules & GTR_RACE))
 			P_SetObjectMomZ(player->mo, FRACUNIT/2, (P_MobjFlip(player->mo)*player->mo->momz >= 0));
 		else
 			player->mo->momz = 0;
@@ -9535,12 +9535,12 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	}
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION || (gametype == GT_COOP && (multiplayer || netgame)))
+	if ((gametyperules & GTR_RACE) || (gametype == GT_COOP && (multiplayer || netgame)))
 	{
 		// Keep time rolling in race mode
 		if (!(countdown2 && !countdown) && !player->exiting && !(player->pflags & PF_GAMETYPEOVER) && !stoppedclock)
 		{
-			if (gametype == GT_RACE || gametype == GT_COMPETITION)
+			if (gametyperules & GTR_RACE)
 			{
 				if (leveltime >= 4*TICRATE)
 					player->realtime = leveltime - 4*TICRATE;
@@ -11372,7 +11372,7 @@ void P_PlayerThink(player_t *player)
 		I_Error("player %s is in PST_REBORN\n", sizeu1(playeri));
 #endif
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 	{
 		INT32 i;
 
@@ -11435,7 +11435,7 @@ void P_PlayerThink(player_t *player)
 		player->exiting > 0 && player->exiting <= 1*TICRATE &&
 		(!multiplayer || gametype == GT_COOP ? !mapheaderinfo[gamemap-1]->musinterfadeout : true) &&
 			// don't fade if we're fading during intermission. follows Y_StartIntermission intertype = int_coop
-		(gametype == GT_RACE || gametype == GT_COMPETITION ? countdown2 == 0 : true) && // don't fade on timeout
+		((gametyperules & GTR_RACE) ? countdown2 == 0 : true) && // don't fade on timeout
 		player->lives > 0 && // don't fade on game over (competition)
 		P_IsLocalPlayer(player))
 	{
@@ -11550,7 +11550,7 @@ void P_PlayerThink(player_t *player)
 		player->lives = cv_startinglives.value;
 	}
 
-	if ((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE)
+	if ((gametyperules & GTR_RACE) && leveltime < 4*TICRATE)
 	{
 		cmd->buttons &= BT_USE; // Remove all buttons except BT_USE
 		cmd->forwardmove = 0;
@@ -11560,7 +11560,7 @@ void P_PlayerThink(player_t *player)
 	// Synchronizes the "real" amount of time spent in the level.
 	if (!player->exiting && !stoppedclock)
 	{
-		if (gametype == GT_RACE || gametype == GT_COMPETITION)
+		if (gametyperules & GTR_RACE)
 		{
 			if (leveltime >= 4*TICRATE)
 				player->realtime = leveltime - 4*TICRATE;
