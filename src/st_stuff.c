@@ -2203,9 +2203,10 @@ static void ST_drawTextHUD(void)
 
 		if (G_IsSpecialStage(gamemap))
 			textHUDdraw(M_GetText("\x82""Wait for the stage to end..."))
-		else if (gametype == GT_COOP)
+		else if (G_PlatformGametype())
 		{
-			if (stplyr->lives <= 0
+			if (gametype == GT_COOP
+			&& stplyr->lives <= 0
 			&& cv_cooplives.value == 2
 			&& (netgame || multiplayer))
 			{
@@ -2230,7 +2231,7 @@ static void ST_drawTextHUD(void)
 			else
 				textHUDdraw(M_GetText("Wait to respawn..."))
 		}
-		else
+		else if (G_GametypeHasSpectators())
 			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
 	}
 
