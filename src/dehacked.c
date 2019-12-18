@@ -8804,6 +8804,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"TEAMFLAGS",
 	"PITYSHIELD",
 	"DEATHPENALTY",
+	"NOSPECTATORSPAWN",
 	NULL
 };
 

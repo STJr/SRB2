@@ -3636,7 +3636,11 @@ static void Command_ShowGametype_f(void)
 static void Command_SetGametype_f(void)
 {
 	if (COM_Argc() > 1)
+	{
+		INT16 oldgametype = gametype;
 		G_SetGametype(atoi(COM_Argv(1)));
+		D_GameTypeChanged(oldgametype);
+	}
 }
 
 /** Plays the intro.
@@ -3978,6 +3982,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 
 	// When swapping to a gametype that supports spectators,
 	// make everyone a spectator initially.
+	// Averted with GTR_NOSPECTATORSPAWN.
 	if (!splitscreen && (G_GametypeHasSpectators()))
 	{
 		INT32 i;
@@ -3985,7 +3990,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 			if (playeringame[i])
 			{
 				players[i].ctfteam = 0;
-				players[i].spectator = true;
+				players[i].spectator = (gametyperules & GTR_NOSPECTATORSPAWN) ? false : true;
 			}
 	}
 
