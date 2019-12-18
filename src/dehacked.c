@@ -1140,6 +1140,7 @@ static void readgametype(MYFILE *f, char *gtname)
 	char *word;
 	char *word2, *word2lwr = NULL;
 	char *tmp;
+	char *gtconst;
 	INT32 i;
 
 	INT16 newgtidx = 0;
@@ -1276,6 +1277,53 @@ static void readgametype(MYFILE *f, char *gtname)
 
 	// Write the new gametype name.
 	Gametype_Names[newgtidx] = Z_StrDup((const char *)gtname);
+
+	// Write the constant name.
+	gtconst = Z_Malloc(strlen((const char *)gtname) + 3, PU_STATIC, NULL);
+	// Copy GT_ and the gametype name.
+	strcpy(gtconst, "GT_");
+	strcat(gtconst, (const char *)gtname);
+	// Make uppercase.
+	strupr(gtconst);
+	// Remove characters.
+#define REMOVECHAR(chr) \
+	word = strchr(gtconst, chr); \
+	while (word) \
+	{ \
+		*word = '_'; \
+		word = strchr(word, chr); \
+	}
+
+	// Space
+	REMOVECHAR(' ')
+	// Used for operations
+	REMOVECHAR('+')
+	REMOVECHAR('-')
+	REMOVECHAR('*')
+	REMOVECHAR('/')
+	REMOVECHAR('%')
+	REMOVECHAR('^')
+	// Part of Lua's syntax
+	REMOVECHAR('#')
+	REMOVECHAR('=')
+	REMOVECHAR('~')
+	REMOVECHAR('<')
+	REMOVECHAR('>')
+	REMOVECHAR('(')
+	REMOVECHAR(')')
+	REMOVECHAR('{')
+	REMOVECHAR('}')
+	REMOVECHAR('[')
+	REMOVECHAR(']')
+	REMOVECHAR(':')
+	REMOVECHAR(';')
+	REMOVECHAR(',')
+	REMOVECHAR('.')
+
+#undef REMOVECHAR
+
+	// Finally, set the constant string.
+	Gametype_ConstantNames[newgtidx] = gtconst;
 
 	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();
@@ -10441,13 +10489,13 @@ static inline int lib_getenum(lua_State *L)
 		return 0;
 	}
 	else if (fastncmp("GT_", word, 3)) {
-		p = word+3;
+		p = word;
 		for (i = 0; Gametype_ConstantNames[i]; i++)
 			if (fastcmp(p, Gametype_ConstantNames[i])) {
-				lua_pushinteger(L, ((lua_Integer)1<<i));
+				lua_pushinteger(L, i);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "mobjflag '%s' could not be found.\n", word);
+		if (mathlib) return luaL_error(L, "gametype '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("GTR_", word, 4)) {
@@ -10613,15 +10661,6 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		return luaL_error(L, "power '%s' could not be found.\n", word);
-	}
-	else if (fastncmp("GT_",word,3)) {
-		p = word+3;
-		for (i = 0; i < NUMGAMETYPES; i++)
-			if (fastcmp(p, Gametype_ConstantNames[i]+3)) {
-				lua_pushinteger(L, i);
-				return 1;
-			}
-		return luaL_error(L, "gametype '%s' does not exist.\n", word);
 	}
 	else if (fastncmp("HUD_",word,4)) {
 		p = word+4;
