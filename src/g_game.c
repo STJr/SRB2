@@ -1809,7 +1809,7 @@ void G_StartTitleCard(void)
 
 	// The title card has been disabled for this map.
 	// Oh well.
-	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+	if ((mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD) || (gametyperules & GTR_NOTITLECARD))
 	{
 		WipeStageTitle = false;
 		return;

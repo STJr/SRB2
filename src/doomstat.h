@@ -415,6 +415,7 @@ enum GameTypeRules
 	GTR_SPAWNENEMIES     = 1<<18, // Spawn enemies
 	GTR_ALLOWEXIT        = 1<<19, // Allow exit sectors
 	GTR_ROUNDENDMESSAGE  = 1<<20, // Prints "The round has ended." into the console
+	GTR_NOTITLECARD      = 1<<21, // Don't show the title card
 };
 
 // String names for gametypes
