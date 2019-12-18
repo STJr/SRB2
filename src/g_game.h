@@ -202,6 +202,8 @@ void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 
 void G_SetGametype(INT16 gametype);
+INT16 G_NewGametype(UINT32 rules);
+
 INT32 G_GetGametypeByName(const char *gametypestr);
 boolean G_IsSpecialStage(INT32 mapnum);
 boolean G_GametypeUsesLives(void);

@@ -3095,6 +3095,33 @@ void G_SetGametype(INT16 gtype)
 }
 
 //
+// G_NewGametype
+//
+// Create a new gametype. Returns the new gametype number.
+//
+INT16 G_NewGametype(UINT32 rules)
+{
+	INT32 i;
+	INT16 newgtype = numgametypes;
+	numgametypes++;
+
+	// Set gametype rules.
+	gametypedefaultrules[newgtype] = numgametypes;
+	Gametype_Names[newgtype] = "???";
+
+	// Update gametype_cons_t accordingly.
+	for (i = 0; i < numgametypes; i++)
+	{
+		gametype_cons_t[i].value = i;
+		gametype_cons_t[i].strvalue = Gametype_Names[i];
+	}
+	gametype_cons_t[NUMGAMETYPES].value = 0;
+	gametype_cons_t[NUMGAMETYPES].strvalue = NULL;
+
+	return newgtype;
+}
+
+//
 // G_GetGametypeByName
 //
 // Returns the number for the given gametype name string, or -1 if not valid.

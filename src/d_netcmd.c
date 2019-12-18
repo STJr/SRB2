@@ -383,6 +383,8 @@ boolean timedemo_quit;
 
 INT16 gametype = GT_COOP;
 UINT32 gametyperules = 0;
+INT16 numgametypes = (GT_CTF + 1);
+
 boolean splitscreen = false;
 boolean circuitmap = false;
 INT32 adminplayers[MAXPLAYERS];
