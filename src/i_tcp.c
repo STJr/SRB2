@@ -209,7 +209,8 @@ static size_t numbans = 0;
 static boolean SOCK_bannednode[MAXNETNODES+1]; /// \note do we really need the +1?
 static boolean init_tcp_driver = false;
 
-static const char *port_name = DEFAULTPORT;
+static const char *serverport_name = DEFAULTPORT;
+static const char *clientport_name;/* any port */
 
 #ifndef NONET
 
@@ -904,9 +905,9 @@ static boolean UDP_Socket(void)
 	hints.ai_protocol = IPPROTO_UDP;
 
 	if (serverrunning)
-		serv = port_name;
+		serv = serverport_name;
 	else
-		serv = NULL;/* any port */
+		serv = clientport_name;
 
 	if (M_CheckParm("-bindaddr"))
 	{
@@ -948,8 +949,8 @@ static boolean UDP_Socket(void)
 #ifdef HAVE_MINIUPNPC
 					if (UPNP_support)
 					{
-						I_UPnP_rem(port_name, "UDP");
-						I_UPnP_add(NULL, port_name, "UDP");
+						I_UPnP_rem(serverport_name, "UDP");
+						I_UPnP_add(NULL, serverport_name, "UDP");
 					}
 #endif
 				}
@@ -1427,16 +1428,19 @@ boolean I_InitTcpNetwork(void)
 	if (!I_InitTcpDriver())
 		return false;
 
-	if (M_CheckParm("-port"))
+	if (M_CheckParm("-port") || M_CheckParm("-serverport"))
 	// Combined -udpport and -clientport into -port
 	// As it was really redundant having two seperate parms that does the same thing
+	/* Sorry Steel, I'm adding these back. But -udpport is a stupid name. */
 	{
 		/*
 		If it's NULL, that's okay! Because then
 		we'll get a random port from getaddrinfo.
 		*/
-		port_name = M_GetNextParm();
+		serverport_name = M_GetNextParm();
 	}
+	if (M_CheckParm("-clientport"))
+		clientport_name = M_GetNextParm();
 
 	// parse network game options,
 	if (M_CheckParm("-server") || dedicated)
