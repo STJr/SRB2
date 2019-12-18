@@ -594,8 +594,13 @@ static void readfreeslots(MYFILE *f)
 			}
 			else if (fastcmp(type, "TOL"))
 			{
-				G_AddTOL(lastcustomtol, word);
-				lastcustomtol <<= 1;
+				if (lastcustomtol > 31)
+					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				else
+				{
+					G_AddTOL((1<<lastcustomtol), word);
+					lastcustomtol++;
+				}
 			}
 			else
 				deh_warning("Freeslots: unknown enum class '%s' for '%s_%s'", type, type, word);
@@ -1103,7 +1108,7 @@ static void readsprite2(MYFILE *f, INT32 num)
 }
 
 INT32 numtolinfo = NUMBASETOL;
-UINT32 lastcustomtol = (TOL_XMAS << 1);
+UINT32 lastcustomtol = 13;
 
 tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
 	{"SOLO",TOL_SP},
@@ -1287,6 +1292,13 @@ static void readgametype(MYFILE *f, char *gtname)
 	Z_Free(s);
 	if (word2lwr)
 		Z_Free(word2lwr);
+
+	// Ran out of gametype slots
+	if (gametypecount == NUMGAMETYPEFREESLOTS)
+	{
+		CONS_Alert(CONS_WARNING, "Ran out of free gametype slots!\n");
+		return;
+	}
 
 	// Add the new gametype
 	newgtidx = G_AddGametype(newgtrules);
