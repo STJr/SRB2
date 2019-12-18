@@ -3120,7 +3120,7 @@ INT16 G_AddGametype(UINT32 rules)
 	gametypecount++;
 
 	// Set gametype rules.
-	gametypedefaultrules[newgtype] = gametypecount;
+	gametypedefaultrules[newgtype] = rules;
 	Gametype_Names[newgtype] = "???";
 
 	// Update gametype_cons_t accordingly.

@@ -11249,7 +11249,6 @@ void P_SpawnPlayer(INT32 playernum)
 	else
 	{
 		p->outofcoop = false;
-		p->spectator = false;
 		if (netgame && p->jointime < 1)
 		{
 			// Averted by GTR_NOSPECTATORSPAWN.
