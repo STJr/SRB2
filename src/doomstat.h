@@ -389,7 +389,7 @@ enum TypeOfLevel
 };
 
 // Gametypes
-#define NUMGAMETYPEFREESLOTS 512
+#define NUMGAMETYPEFREESLOTS 128
 enum GameType
 {
 	GT_COOP = 0, // also used in single player
