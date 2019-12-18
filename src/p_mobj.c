@@ -11682,7 +11682,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 	if (i == MT_EMERHUNT)
 	{
 		// Emerald Hunt is Coop only.
-		if (gametype != GT_COOP)
+		if (!(gametyperules & GTR_EMERALDHUNT))
 			return;
 
 		ss = R_PointInSubsector(mthing->x << FRACBITS, mthing->y << FRACBITS);
@@ -11708,7 +11708,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 		runemeraldmanager = true;
 	}
 
-	if (!G_PlatformGametype()) // No enemies in match or CTF modes
+	if (!(gametyperules & GTR_SPAWNENEMIES)) // No enemies in match or CTF modes
 		if ((mobjinfo[i].flags & MF_ENEMY) || (mobjinfo[i].flags & MF_BOSS))
 			return;
 

@@ -411,6 +411,8 @@ enum GameTypeRules
 	GTR_PITYSHIELD       = 1<<14, // Award pity shield
 	GTR_DEATHPENALTY     = 1<<15, // Death score penalty
 	GTR_NOSPECTATORSPAWN = 1<<16, // For use with GTR_SPECTATORS - spawn in the map instead of with the spectators
+	GTR_EMERALDHUNT      = 1<<17, // Emerald Hunt
+	GTR_SPAWNENEMIES     = 1<<18, // Spawn enemies
 };
 
 // String names for gametypes

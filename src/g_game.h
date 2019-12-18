@@ -201,7 +201,7 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 
-extern INT16 gametypedefaultrules[NUMGAMETYPES];
+extern UINT32 gametypedefaultrules[NUMGAMETYPES];
 extern UINT32 gametypetol[NUMGAMETYPES];
 
 void G_SetGametype(INT16 gametype);
