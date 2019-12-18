@@ -209,7 +209,7 @@ static size_t numbans = 0;
 static boolean SOCK_bannednode[MAXNETNODES+1]; /// \note do we really need the +1?
 static boolean init_tcp_driver = false;
 
-static char port_name[8] = DEFAULTPORT;
+static const char *port_name = DEFAULTPORT;
 
 #ifndef NONET
 
@@ -1431,10 +1431,11 @@ boolean I_InitTcpNetwork(void)
 	// Combined -udpport and -clientport into -port
 	// As it was really redundant having two seperate parms that does the same thing
 	{
-		if (M_IsNextParm())
-			strcpy(port_name, M_GetNextParm());
-		else
-			strcpy(port_name, "0");
+		/*
+		If it's NULL, that's okay! Because then
+		we'll get a random port from getaddrinfo.
+		*/
+		port_name = M_GetNextParm();
 	}
 
 	// parse network game options,
