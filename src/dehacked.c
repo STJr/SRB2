@@ -1134,6 +1134,7 @@ tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
 };
 
 // copypasted from readPlayer :sleep:
+static const char *const GAMETYPERULE_LIST[];
 static void readgametype(MYFILE *f, char *gtname)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -1141,7 +1142,7 @@ static void readgametype(MYFILE *f, char *gtname)
 	char *word2, *word2lwr = NULL;
 	char *tmp;
 	char *gtconst;
-	INT32 i;
+	INT32 i, j;
 
 	INT16 newgtidx = 0;
 	UINT32 newgtrules = 0;
@@ -1261,8 +1262,26 @@ static void readgametype(MYFILE *f, char *gtname)
 					newgttol = tol;
 				}
 			}
+			// The SOC probably provided gametype rules as words,
+			// instead of using the RULES keyword.
+			// Like for example "NOSPECTATORSPAWN = 1".
+			// This is completely valid, and looks better anyway.
 			else
-				deh_warning("readgametype %s: unknown word '%s'", gtname, word);
+			{
+				UINT32 wordgt = 0;
+				for (j = 0; GAMETYPERULE_LIST[j]; j++)
+					if (fastcmp(word, GAMETYPERULE_LIST[j])) {
+						if (!j) // GTR_PLATFORM
+							wordgt |= 1;
+						else
+							wordgt |= (1<<j);
+						if (i || word2[0] == 'T' || word2[0] == 'Y')
+							newgtrules |= wordgt;
+						break;
+					}
+				if (!wordgt)
+					deh_warning("readgametype %s: unknown word '%s'", gtname, word);
+			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 	Z_Free(s);
