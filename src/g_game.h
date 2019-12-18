@@ -206,8 +206,10 @@ extern UINT32 gametypetol[NUMGAMETYPES];
 
 void G_SetGametype(INT16 gametype);
 INT16 G_AddGametype(UINT32 rules);
+void G_UpdateGametypeSelections();
 void G_AddTOL(UINT32 newtol, const char *tolname);
 void G_AddGametypeTOL(INT16 gametype, UINT32 newtol);
+void G_SetGametypeDescription(INT16 gtype, char *description, UINT8 leftcolor, UINT8 rightcolor);
 
 INT32 G_GetGametypeByName(const char *gametypestr);
 boolean G_IsSpecialStage(INT32 mapnum);

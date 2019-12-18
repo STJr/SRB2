@@ -76,6 +76,7 @@ static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
 static hudnum_t get_huditem(const char *word);
 static menutype_t get_menutype(const char *word);
 #ifndef HAVE_BLUA
+static INT16 get_gametype(const char *word);
 static powertype_t get_power(const char *word);
 #endif
 
@@ -1123,6 +1124,145 @@ tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
 
 	{NULL, 0}
 };
+
+// copypasted from readPlayer :sleep:
+static void readgametype(MYFILE *f, char *gtname)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *word2;
+	char *tmp;
+	INT32 i;
+
+	INT16 newgtidx = 0;
+	UINT32 newgtrules = 0;
+	UINT32 newgttol = 0;
+	UINT8 newgtleftcolor = 0;
+	UINT8 newgtrightcolor = 0;
+	char gtdescription[441];
+	const char *gtnamestring;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			if (fastcmp(word, "DESCRIPTION"))
+			{
+				char *descr = NULL;
+
+				for (i = 0; i < MAXLINELEN-3; i++)
+				{
+					if (s[i] == '=')
+					{
+						descr = &s[i+2];
+						break;
+					}
+				}
+				if (descr)
+				{
+					strcpy(gtdescription, descr);
+					strcat(gtdescription, myhashfgets(descr, sizeof (gtdescription), f));
+				}
+				else
+					strcpy(gtdescription, "");
+
+				// For some reason, cutting the string did not work above. Most likely due to strcpy or strcat...
+				// It works down here, though.
+				{
+					INT32 numline = 0;
+					for (i = 0; i < MAXLINELEN-1; i++)
+					{
+						if (numline < 20 && gtdescription[i] == '\n')
+							numline++;
+
+						if (numline >= 20 || gtdescription[i] == '\0' || gtdescription[i] == '#')
+							break;
+					}
+				}
+				gtdescription[strlen(gtdescription)-1] = '\0';
+				gtdescription[i] = '\0';
+				continue;
+			}
+
+			word2 = strtok(NULL, " = ");
+			if (word2)
+				strupr(word2);
+			else
+				break;
+
+			if (word2[strlen(word2)-1] == '\n')
+				word2[strlen(word2)-1] = '\0';
+			i = atoi(word2);
+
+			if (fastcmp(word, "RULES"))
+			{
+				// Game type rules (GTR_)
+				newgtrules = (UINT32)get_number(word2);
+			}
+			else if (fastcmp(word, "HEADERCOLOR") || fastcmp(word, "HEADERCOLOUR"))
+			{
+				// Level platter
+				newgtleftcolor = newgtrightcolor = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "HEADERLEFTCOLOR") || fastcmp(word, "HEADERLEFTCOLOUR"))
+			{
+				// Level platter
+				newgtleftcolor = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "HEADERRIGHTCOLOR") || fastcmp(word, "HEADERRIGHTCOLOUR"))
+			{
+				// Level platter
+				newgtrightcolor = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "TYPEOFLEVEL"))
+			{
+				if (i) // it's just a number
+					newgttol = (UINT16)i;
+				else
+				{
+					UINT16 tol = 0;
+					tmp = strtok(word2,",");
+					do {
+						for (i = 0; TYPEOFLEVEL[i].name; i++)
+							if (fastcmp(tmp, TYPEOFLEVEL[i].name))
+								break;
+						if (!TYPEOFLEVEL[i].name)
+							deh_warning("readgametype %s: unknown typeoflevel flag %s\n", gtname, tmp);
+						tol |= TYPEOFLEVEL[i].flag;
+					} while((tmp = strtok(NULL,",")) != NULL);
+					newgttol = tol;
+				}
+			}
+			else
+				deh_warning("readgametype %s: unknown word '%s'", gtname, word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+	Z_Free(s);
+
+	// Add the new gametype
+	newgtidx = G_AddGametype(newgtrules);
+	G_AddGametypeTOL(newgtidx, newgttol);
+	G_SetGametypeDescription(newgtidx, gtdescription, newgtleftcolor, newgtrightcolor);
+
+	// Write the new gametype name.
+	gtnamestring = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	memcpy((void *)gtnamestring, gtname, MAXLINELEN);
+	Gametype_Names[newgtidx] = gtnamestring;
+
+	// Update gametype_cons_t accordingly.
+	G_UpdateGametypeSelections();
+
+	CONS_Printf("Added gametype %s\n", Gametype_Names[newgtidx]);
+}
 
 static const struct {
 	const char *name;
@@ -4151,6 +4291,7 @@ static void ignorelines(MYFILE *f)
 static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char textline[MAXLINELEN];
 	char *word;
 	char *word2;
 	INT32 i;
@@ -4171,6 +4312,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 		char *traverse;
 
 		myfgets(s, MAXLINELEN, f);
+		memcpy(textline, s, MAXLINELEN);
 		if (s[0] == '\n' || s[0] == '#')
 			continue;
 
@@ -4357,6 +4499,36 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					{
 						deh_warning("Level number %d out of range (1 - %d)", i, NUMMAPS);
 						ignorelines(f);
+					}
+				}
+				else if (fastcmp(word, "GAMETYPE"))
+				{
+					// Get the gametype name from textline
+					// instead of word2, so that gametype names
+					// aren't allcaps
+					INT32 i;
+					for (i = 0; i < MAXLINELEN; i++)
+					{
+						if (textline[i] == '\0')
+							break;
+						if (textline[i] == ' ')
+						{
+							char *gtname = (textline+i+1);
+							if (gtname)
+							{
+								// remove funny characters
+								INT32 j;
+								for (j = 0; j < (MAXLINELEN - i); j++)
+								{
+									if (gtname[j] == '\0')
+										break;
+									if (gtname[j] < 32 || gtname[j] > 127)
+										gtname[j] = '\0';
+								}
+								readgametype(f, gtname);
+							}
+							break;
+						}
 					}
 				}
 				else if (fastcmp(word, "CUTSCENE"))
@@ -8615,6 +8787,26 @@ static const char *const PLAYERFLAG_LIST[] = {
 	NULL // stop loop here.
 };
 
+static const char *const GAMETYPERULE_LIST[] = {
+	"PLATFORM",
+	"TAG",
+	"RINGSLINGER",
+	"SPECTATORS",
+	"TEAMS",
+	"LIVES",
+	"RACE",
+	"CHASECAM",
+	"TIMELIMIT",
+	"HIDETIME",
+	"HIDETIMEFROZEN",
+	"BLINDFOLDED",
+	"EMERALDS",
+	"TEAMFLAGS",
+	"PITYSHIELD",
+	"DEATHPENALTY",
+	NULL
+};
+
 #ifdef HAVE_BLUA
 // Linedef flags
 static const char *const ML_LIST[16] = {
@@ -9227,6 +9419,7 @@ struct {
 	{"DMG_DEATHMASK",DMG_DEATHMASK},
 
 	// Gametypes, for use with global var "gametype"
+	// Left them here just in case??
 	{"GT_COOP",GT_COOP},
 	{"GT_COMPETITION",GT_COMPETITION},
 	{"GT_RACE",GT_RACE},
@@ -9679,6 +9872,20 @@ static menutype_t get_menutype(const char *word)
 }
 
 #ifndef HAVE_BLUA
+static INT16 get_gametype(const char *word)
+{ // Returns the value of GT_ enumerations
+	INT16 i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("GT_",word,3))
+		word += 3; // take off the GT_
+	for (i = 0; i < NUMGAMETYPES; i++)
+		if (fastcmp(word, Gametype_ConstantNames[i]+3))
+			return i;
+	deh_warning("Couldn't find gametype named 'GT_%s'",word);
+	return GT_COOP;
+}
+
 static powertype_t get_power(const char *word)
 { // Returns the vlaue of pw_ enumerations
 	powertype_t i;
@@ -9842,6 +10049,19 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return 0;
 	}
+	else if (fastncmp("GTR_", word, 4)) {
+		char *p = word+4;
+		for (i = 0; GAMETYPERULE_LIST[i]; i++)
+			if (fastcmp(p, GAMETYPERULE_LIST[i])) {
+				free(word);
+				return (1<<i);
+			}
+
+		// Not found error
+		const_warning("game type rule",word);
+		free(word);
+		return 0;
+	}
 	else if (fastncmp("S_",word,2)) {
 		r = get_state(word);
 		free(word);
@@ -9874,8 +10094,13 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-	else if (fastncmp("MN_",word,4)) {
+	else if (fastncmp("MN_",word,3)) {
 		r = get_menutype(word);
+		free(word);
+		return r;
+	}
+	else if (fastncmp("GT_",word,4)) {
+		r = get_gametype(word);
 		free(word);
 		return r;
 	}
@@ -10192,6 +10417,16 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "playerflag '%s' could not be found.\n", word);
 		return 0;
 	}
+	else if (fastncmp("GTR_", word, 4)) {
+		p = word+4;
+		for (i = 0; GAMETYPERULE_LIST[i]; i++)
+			if (fastcmp(p, GAMETYPERULE_LIST[i])) {
+				lua_pushinteger(L, ((lua_Integer)1<<i));
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "game type rule '%s' could not be found.\n", word);
+		return 0;
+	}
 	else if (fastncmp("ML_", word, 3)) {
 		p = word+3;
 		for (i = 0; i < 16; i++)
@@ -10335,6 +10570,15 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		return luaL_error(L, "power '%s' could not be found.\n", word);
+	}
+	else if (fastncmp("GT_",word,3)) {
+		p = word+3;
+		for (i = 0; i < NUMGAMETYPES; i++)
+			if (fastcmp(p, Gametype_ConstantNames[i]+3)) {
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		return luaL_error(L, "gametype '%s' does not exist.\n", word);
 	}
 	else if (fastncmp("HUD_",word,4)) {
 		p = word+4;

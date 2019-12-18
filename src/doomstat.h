@@ -416,6 +416,7 @@ enum GameTypeRules
 
 // String names for gametypes
 extern const char *Gametype_Names[NUMGAMETYPES];
+extern const char *Gametype_ConstantNames[NUMGAMETYPES];
 
 enum TypeOfLevel
 {

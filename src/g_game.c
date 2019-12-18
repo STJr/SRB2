@@ -3058,6 +3058,22 @@ const char *Gametype_Names[NUMGAMETYPES] =
 	"CTF" // GT_CTF
 };
 
+// For dehacked
+const char *Gametype_ConstantNames[NUMGAMETYPES] =
+{
+	"GT_COOP", // GT_COOP
+	"GT_COMPETITION", // GT_COMPETITION
+	"GT_RACE", // GT_RACE
+
+	"GT_MATCH", // GT_MATCH
+	"GT_TEAMMATCH", // GT_TEAMMATCH
+
+	"GT_TAG", // GT_TAG
+	"GT_HIDEANDSEEK", // GT_HIDEANDSEEK
+
+	"GT_CTF" // GT_CTF
+};
+
 // Game type rules
 INT16 gametypedefaultrules[NUMGAMETYPES] =
 {
@@ -3091,7 +3107,6 @@ void G_SetGametype(INT16 gtype)
 {
 	gametype = gtype;
 	gametyperules = gametypedefaultrules[gametype];
-	CONS_Printf("Gametype set to %s (%d)\n", Gametype_Names[gametype], gametype);
 }
 
 //
@@ -3110,6 +3125,19 @@ INT16 G_AddGametype(UINT32 rules)
 	Gametype_Names[newgtype] = "???";
 
 	// Update gametype_cons_t accordingly.
+	G_UpdateGametypeSelections();
+
+	return newgtype;
+}
+
+//
+// G_UpdateGametypeSelections
+//
+// Updates gametype_cons_t.
+//
+void G_UpdateGametypeSelections(void)
+{
+	INT32 i;
 	for (i = 0; i < gametypecount; i++)
 	{
 		gametype_cons_t[i].value = i;
@@ -3117,8 +3145,6 @@ INT16 G_AddGametype(UINT32 rules)
 	}
 	gametype_cons_t[NUMGAMETYPES].value = 0;
 	gametype_cons_t[NUMGAMETYPES].strvalue = NULL;
-
-	return newgtype;
 }
 
 //
@@ -3127,7 +3153,7 @@ INT16 G_AddGametype(UINT32 rules)
 // Set a description for the specified gametype.
 // (Level platter)
 //
-void G_SetGametypeDescription(INT16 gtype, const char *description, UINT8 leftcolor, UINT8 rightcolor)
+void G_SetGametypeDescription(INT16 gtype, char *description, UINT8 leftcolor, UINT8 rightcolor)
 {
 	strncpy(gametypedesc[gtype].notes, description, 441);
 	gametypedesc[gtype].col[0] = leftcolor;
