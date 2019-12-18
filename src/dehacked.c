@@ -1095,10 +1095,8 @@ static void readsprite2(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-static const struct {
-	const char *name;
-	const UINT16 flag;
-} TYPEOFLEVEL[] = {
+INT32 numtolinfo = NUMBASETOL;
+tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
 	{"SOLO",TOL_SP},
 	{"SP",TOL_SP},
 	{"SINGLEPLAYER",TOL_SP},

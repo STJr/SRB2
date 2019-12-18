@@ -39,7 +39,7 @@ extern UINT32 mapmusposition;
 #define MUSIC_FORCERESET  0x4000 // -*--------------
 // Use other bits if necessary.
 
-extern INT16 maptol;
+extern UINT32 maptol;
 extern UINT8 globalweather;
 extern INT32 curWeather;
 extern INT32 cursaveslot;
@@ -364,30 +364,6 @@ typedef struct
 
 extern mapheader_t* mapheaderinfo[NUMMAPS];
 
-enum TypeOfLevel
-{
-	TOL_SP          = 0x01, ///< Single Player
-	TOL_COOP        = 0x02, ///< Cooperative
-	TOL_COMPETITION = 0x04, ///< Competition
-	TOL_RACE        = 0x08, ///< Race
-// Single Player default = 15
-
-	TOL_MATCH       = 0x10, ///< Match
-	TOL_TAG         = 0x20, ///< Tag
-// Match/Tag default = 48
-
-	TOL_CTF         = 0x40, ///< Capture the Flag
-// CTF default = 64
-
-	//TOL_CUSTOM      = 0x80, ///< Custom (Lua-scripted, etc.)
-
-	TOL_2D     = 0x0100, ///< 2D
-	TOL_MARIO  = 0x0200, ///< Mario
-	TOL_NIGHTS = 0x0400, ///< NiGHTS
-	TOL_ERZ3   = 0x0800, ///< ERZ3
-	TOL_XMAS   = 0x1000  ///< Christmas NiGHTS
-};
-
 // Gametypes
 #define NUMGAMETYPEFREESLOTS 128
 enum GameType
@@ -440,6 +416,41 @@ enum GameTypeRules
 
 // String names for gametypes
 extern const char *Gametype_Names[NUMGAMETYPES];
+
+enum TypeOfLevel
+{
+	TOL_SP          = 0x01, ///< Single Player
+	TOL_COOP        = 0x02, ///< Cooperative
+	TOL_COMPETITION = 0x04, ///< Competition
+	TOL_RACE        = 0x08, ///< Race
+// Single Player default = 15
+
+	TOL_MATCH       = 0x10, ///< Match
+	TOL_TAG         = 0x20, ///< Tag
+// Match/Tag default = 48
+
+	TOL_CTF         = 0x40, ///< Capture the Flag
+// CTF default = 64
+
+	// 0x80 was here
+
+	TOL_2D     = 0x0100, ///< 2D
+	TOL_MARIO  = 0x0200, ///< Mario
+	TOL_NIGHTS = 0x0400, ///< NiGHTS
+	TOL_ERZ3   = 0x0800, ///< ERZ3
+	TOL_XMAS   = 0x1000, ///< Christmas NiGHTS
+};
+
+#define NUMBASETOL 18
+#define NUMMAXTOL (18 + NUMGAMETYPEFREESLOTS)
+
+typedef struct
+{
+	const char *name;
+	UINT32 flag;
+} tolinfo_t;
+extern tolinfo_t TYPEOFLEVEL[NUMMAXTOL];
+extern INT32 numtolinfo;
 
 extern tic_t totalplaytime;
 

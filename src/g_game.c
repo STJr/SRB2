@@ -79,7 +79,7 @@ UINT16 mapmusflags; // Track and reset bit
 UINT32 mapmusposition; // Position to jump to
 
 INT16 gamemap = 1;
-INT16 maptol;
+UINT32 maptol;
 UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
 INT32 cursaveslot = 0; // Auto-save 1p savegame slot
@@ -3095,11 +3095,11 @@ void G_SetGametype(INT16 gtype)
 }
 
 //
-// G_NewGametype
+// G_AddGametype
 //
-// Create a new gametype. Returns the new gametype number.
+// Add a gametype. Returns the new gametype number.
 //
-INT16 G_NewGametype(UINT32 rules)
+INT16 G_AddGametype(UINT32 rules)
 {
 	INT32 i;
 	INT16 newgtype = gametypecount;
@@ -3119,6 +3119,59 @@ INT16 G_NewGametype(UINT32 rules)
 	gametype_cons_t[NUMGAMETYPES].strvalue = NULL;
 
 	return newgtype;
+}
+
+//
+// G_SetGametypeDescription
+//
+// Set a description for the specified gametype.
+// (Level platter)
+//
+void G_SetGametypeDescription(INT16 gtype, const char *description, UINT8 leftcolor, UINT8 rightcolor)
+{
+	strncpy(gametypedesc[gtype].notes, description, 441);
+	gametypedesc[gtype].col[0] = leftcolor;
+	gametypedesc[gtype].col[1] = rightcolor;
+}
+
+UINT32 gametypetol[NUMGAMETYPES] =
+{
+	TOL_COOP, // Co-op
+	TOL_COMPETITION, // Competition
+	TOL_RACE, // Race
+
+	TOL_MATCH, // Match
+	TOL_MATCH, // Team Match
+
+	TOL_TAG, // Tag
+	TOL_TAG, // Hide and Seek
+
+	TOL_CTF, // CTF
+};
+
+//
+// G_AddTOL
+//
+// Adds a type of level.
+//
+void G_AddTOL(UINT32 newtol, const char *tolname)
+{
+	TYPEOFLEVEL[numtolinfo].name = tolname;
+	TYPEOFLEVEL[numtolinfo].flag = newtol;
+	numtolinfo++;
+
+	TYPEOFLEVEL[numtolinfo].name = NULL;
+	TYPEOFLEVEL[numtolinfo].flag = 0;
+}
+
+//
+// G_AddTOL
+//
+// Assigns a type of level to a gametype.
+//
+void G_AddGametypeTOL(INT16 gametype, UINT32 newtol)
+{
+	gametypetol[gametype] = newtol;
 }
 
 //
@@ -3240,6 +3293,8 @@ boolean G_TagGametype(void)
 INT16 G_TOLFlag(INT32 pgametype)
 {
 	if (!multiplayer)                 return TOL_SP;
+	return gametypetol[pgametype];
+#if 0
 	if (pgametype == GT_COOP)         return TOL_COOP;
 	if (pgametype == GT_COMPETITION)  return TOL_COMPETITION;
 	if (pgametype == GT_RACE)         return TOL_RACE;
@@ -3251,6 +3306,7 @@ INT16 G_TOLFlag(INT32 pgametype)
 
 	CONS_Alert(CONS_ERROR, M_GetText("Unknown gametype! %d\n"), pgametype);
 	return INT16_MAX;
+#endif
 }
 
 /** Select a random map with the given typeoflevel flags.

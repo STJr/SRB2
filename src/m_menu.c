@@ -605,7 +605,7 @@ static menuitem_t MISC_ChangeTeamMenu[] =
 	{IT_WHITESTRING|IT_CALL,         NULL, "Confirm",           M_ConfirmTeamChange,    90},
 };
 
-static const gtdesc_t gametypedesc[] =
+gtdesc_t gametypedesc[NUMGAMETYPES] =
 {
 	{{ 54,  54}, "Play through the single-player campaign with your friends, teaming up to beat Dr Eggman's nefarious challenges!"},
 	{{103, 103}, "Speed your way through the main acts, competing in several different categories to see who's the best."},
@@ -4682,6 +4682,9 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 				return true;
 
 			if (gt == GT_RACE && (mapheaderinfo[mapnum]->typeoflevel & TOL_RACE))
+				return true;
+
+			if (gt > 0 && gt < gametypecount && (mapheaderinfo[mapnum]->typeoflevel & gametypetol[gt]))
 				return true;
 
 			return false;

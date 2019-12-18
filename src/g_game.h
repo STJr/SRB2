@@ -201,8 +201,13 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 
+extern INT16 gametypedefaultrules[NUMGAMETYPES];
+extern UINT32 gametypetol[NUMGAMETYPES];
+
 void G_SetGametype(INT16 gametype);
-INT16 G_NewGametype(UINT32 rules);
+INT16 G_AddGametype(UINT32 rules);
+void G_AddTOL(UINT32 newtol, const char *tolname);
+void G_AddGametypeTOL(INT16 gametype, UINT32 newtol);
 
 INT32 G_GetGametypeByName(const char *gametypestr);
 boolean G_IsSpecialStage(INT32 mapnum);
