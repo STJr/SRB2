@@ -386,6 +386,7 @@ enum TypeOfLevel
 };
 
 // Gametypes
+#define NUMGAMETYPEFREESLOTS 512
 enum GameType
 {
 	GT_COOP = 0, // also used in single player
@@ -400,6 +401,8 @@ enum GameType
 
 	GT_CTF, // capture the flag
 
+	GT_FIRSTFREESLOT,
+	GT_LASTFREESLOT = GT_FIRSTFREESLOT + NUMGAMETYPEFREESLOTS - 1,
 	NUMGAMETYPES
 };
 // If you alter this list, update dehacked.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
