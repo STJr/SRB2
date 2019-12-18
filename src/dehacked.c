@@ -1264,7 +1264,7 @@ static void readgametype(MYFILE *f, char *gtname)
 			}
 			// The SOC probably provided gametype rules as words,
 			// instead of using the RULES keyword.
-			// Like for example "NOSPECTATORSPAWN = 1".
+			// Like for example "NOSPECTATORSPAWN = TRUE".
 			// This is completely valid, and looks better anyway.
 			else
 			{
