@@ -425,12 +425,12 @@ enum GameTypeRules
 	// flexibility! Those will replace some
 	// straight-up gametype checks scattered
 	// around the source code!
-	GTR_CHASECAM       = 1<<7,  // Prefer chasecam at map load
-	GTR_TIMELIMIT      = 1<<8,  // Ringslinger time limit
+	GTR_CHASECAM       = 1<<7,  // Prefer chasecam at map load (All platform gametypes)
+	GTR_TIMELIMIT      = 1<<8,  // Ringslinger time limit (Tag and Hide and Seek)
 	GTR_HIDETIME       = 1<<9,  // Tag and Hide and Seek
 	GTR_HIDETIMEFROZEN = 1<<10, // Hide and Seek, but not Tag
-	GTR_BLINDFOLDED    = 1<<11, // Blindfolded view for Tag and Hide and Seek
-	GTR_EMERALDS       = 1<<12, // Ringslinger emeralds
+	GTR_BLINDFOLDED    = 1<<11, // Blindfolded view (Tag and Hide and Seek)
+	GTR_EMERALDS       = 1<<12, // Ringslinger emeralds (Match and CTF)
 };
 
 // String names for gametypes
