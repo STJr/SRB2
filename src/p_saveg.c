@@ -1851,6 +1851,7 @@ static inline void SavePusherThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->type);
 	WRITEINT32(save_p, ht->x_mag);
 	WRITEINT32(save_p, ht->y_mag);
+	WRITEINT32(save_p, ht->z_mag);
 	WRITEINT32(save_p, ht->magnitude);
 	WRITEINT32(save_p, ht->radius);
 	WRITEINT32(save_p, ht->x);
@@ -3005,6 +3006,7 @@ static thinker_t* LoadPusherThinker(actionf_p1 thinker)
 	ht->type = READUINT8(save_p);
 	ht->x_mag = READINT32(save_p);
 	ht->y_mag = READINT32(save_p);
+	ht->z_mag = READINT32(save_p);
 	ht->magnitude = READINT32(save_p);
 	ht->radius = READINT32(save_p);
 	ht->x = READINT32(save_p);

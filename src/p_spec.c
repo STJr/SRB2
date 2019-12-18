@@ -102,7 +102,7 @@ typedef struct
 static void P_SpawnScrollers(void);
 static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
-static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
+static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t z_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
 #define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL, false);
@@ -5893,7 +5893,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 			p = (pusher_t *)th;
 
 			if (p->affectee == (INT32)sec2num)
-				Add_Pusher(p->type, p->x_mag<<FRACBITS, p->y_mag<<FRACBITS, p->source, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
+				Add_Pusher(p->type, p->x_mag<<FRACBITS, p->y_mag<<FRACBITS, p->z_mag<<FRACBITS, p->source, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
 		}
 
 		if(secthinkers) i++;
@@ -6947,6 +6947,37 @@ void P_ConvertBinaryLinedefs(void)
 
 			lines[i].special = 510;
 			break;
+		case 541: //Wind
+		case 542: //Upwards wind
+		case 543: //Downwards wind
+		case 544: //Current
+		case 545: //Upwards current
+		case 546: //Downwards current
+			lines[i].args[0] = lines[i].tag;
+
+			if (lines[i].special % 3 == 1)
+			{
+				lines[i].args[1] = lines[i].dx >> FRACBITS;
+				lines[i].args[2] = lines[i].dy >> FRACBITS;
+				lines[i].args[3] = 0;
+			}
+			else
+			{
+				lines[i].args[1] = 0;
+				lines[i].args[2] = 0;
+				lines[i].args[3] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+				if (lines[i].special % 3 == 0)
+					lines[i].args[3] = -lines[i].args[3];
+			}
+
+			lines[i].args[4] = (lines[i].special >= 544) ? 1 : 0;
+
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[5] |= 1;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[5] |= 2;
+			lines[i].special = 541;
+			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
 		case 702: //Slope front sector floor and ceiling
@@ -7858,12 +7889,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			// 502 is used for a scroller
 			// 510 is used for a scroller
 			// 540 is used for friction
-			// 541 is used for wind
-			// 542 is used for upwards wind
-			// 543 is used for downwards wind
-			// 544 is used for current
-			// 545 is used for upwards current
-			// 546 is used for downwards current
+			// 541 is used for wind/current
 			// 547 is used for push/pull
 
 			case 600: // floor lighting independently (e.g. lava)
@@ -9213,12 +9239,13 @@ static void P_SpawnFriction(void)
   * \param type     Type of push/pull effect.
   * \param x_mag    X magnitude.
   * \param y_mag    Y magnitude.
+  * \param z_mag    Z magnitude.
   * \param source   For a point pusher/puller, the source object.
   * \param affectee Target sector.
   * \param referrer What sector set it
   * \sa T_Pusher, P_GetPushThing, P_SpawnPushers
   */
-static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider)
+static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t z_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider)
 {
 	pusher_t *p = Z_Calloc(sizeof *p, PU_LEVSPEC, NULL);
 
@@ -9227,6 +9254,7 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 	p->type = type;
 	p->x_mag = x_mag>>FRACBITS;
 	p->y_mag = y_mag>>FRACBITS;
+	p->z_mag = z_mag>>FRACBITS;
 	p->exclusive = exclusive;
 	p->slider = slider;
 
@@ -9238,12 +9266,8 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 	else
 		p->roverpusher = false;
 
-	// "The right triangle of the square of the length of the hypotenuse is equal to the sum of the squares of the lengths of the other two sides."
-	// "Bah! Stupid brains! Don't you know anything besides the Pythagorean Theorem?" - Earthworm Jim
-	if (type == p_downcurrent || type == p_upcurrent || type == p_upwind || type == p_downwind)
-		p->magnitude = P_AproxDistance(p->x_mag,p->y_mag)<<(FRACBITS-PUSH_FACTOR);
-	else
-		p->magnitude = P_AproxDistance(p->x_mag,p->y_mag);
+	p->magnitude = P_AproxDistance(p->x_mag,p->y_mag);
+
 	if (source) // point source exist?
 	{
 		// where force goes to zero
@@ -9421,15 +9445,13 @@ void T_Pusher(pusher_t *p)
 	sector_t *sec, *referrer = NULL;
 	mobj_t *thing;
 	msecnode_t *node;
-	INT32 xspeed = 0,yspeed = 0;
+	INT32 xspeed = 0,yspeed = 0,zspeed = 0;
 	INT32 xl, xh, yl, yh, bx, by;
 	INT32 radius;
 	//INT32 ht = 0;
 	boolean inFOF;
 	boolean touching;
 	boolean moved;
-
-	xspeed = yspeed = 0;
 
 	sec = sectors + p->affectee;
 
@@ -9566,77 +9588,44 @@ void T_Pusher(pusher_t *p)
 			{
 				xspeed = (p->x_mag)>>1; // half force
 				yspeed = (p->y_mag)>>1;
+				zspeed = (p->z_mag)>>1;
 				moved = true;
 			}
 			else if (inFOF)
 			{
 				xspeed = (p->x_mag); // full force
 				yspeed = (p->y_mag);
-				moved = true;
-			}
-		}
-		else if (p->type == p_upwind)
-		{
-			if (touching) // on ground
-			{
-				thing->momz += (p->magnitude)>>1;
-				moved = true;
-			}
-			else if (inFOF)
-			{
-				thing->momz += p->magnitude;
-				moved = true;
-			}
-		}
-		else if (p->type == p_downwind)
-		{
-			if (touching) // on ground
-			{
-				thing->momz -= (p->magnitude)>>1;
-				moved = true;
-			}
-			else if (inFOF)
-			{
-				thing->momz -= p->magnitude;
+				zspeed = (p->z_mag);
 				moved = true;
 			}
 		}
 		else // p_current
 		{
 			if (!touching && !inFOF) // Not in water at all
-				xspeed = yspeed = 0; // no force
+				xspeed = yspeed = zspeed = 0; // no force
 			else // underwater / touching water
 			{
-				if (p->type == p_upcurrent)
-					thing->momz += p->magnitude;
-				else if (p->type == p_downcurrent)
-					thing->momz -= p->magnitude;
-				else
-				{
-					xspeed = p->x_mag; // full force
-					yspeed = p->y_mag;
-				}
+				xspeed = p->x_mag; // full force
+				yspeed = p->y_mag;
+				zspeed = p->z_mag;
 				moved = true;
 			}
 		}
 
-		if (p->type != p_downcurrent && p->type != p_upcurrent
-			&& p->type != p_upwind && p->type != p_downwind)
+		thing->momx += xspeed << (FRACBITS - PUSH_FACTOR);
+		thing->momy += yspeed << (FRACBITS - PUSH_FACTOR);
+		thing->momz += zspeed << (FRACBITS - PUSH_FACTOR);
+		if (thing->player)
 		{
-			thing->momx += xspeed<<(FRACBITS-PUSH_FACTOR);
-			thing->momy += yspeed<<(FRACBITS-PUSH_FACTOR);
-			if (thing->player)
-			{
-				thing->player->cmomx += xspeed<<(FRACBITS-PUSH_FACTOR);
-				thing->player->cmomy += yspeed<<(FRACBITS-PUSH_FACTOR);
-				thing->player->cmomx = FixedMul(thing->player->cmomx, ORIG_FRICTION);
-				thing->player->cmomy = FixedMul(thing->player->cmomy, ORIG_FRICTION);
-			}
-
-			// Tumbleweeds bounce a bit...
-			if (thing->type == MT_LITTLETUMBLEWEED || thing->type == MT_BIGTUMBLEWEED)
-				thing->momz += P_AproxDistance(xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR)) >> 2;
+			thing->player->cmomx += xspeed << (FRACBITS - PUSH_FACTOR);
+			thing->player->cmomy += yspeed << (FRACBITS - PUSH_FACTOR);
+			thing->player->cmomx = FixedMul(thing->player->cmomx, ORIG_FRICTION);
+			thing->player->cmomy = FixedMul(thing->player->cmomy, ORIG_FRICTION);
 		}
+
+		// Tumbleweeds bounce a bit...
+		if (thing->type == MT_LITTLETUMBLEWEED || thing->type == MT_BIGTUMBLEWEED)
+			thing->momz += P_AproxDistance(xspeed << (FRACBITS - PUSH_FACTOR), yspeed << (FRACBITS - PUSH_FACTOR)) >> 2;
 
 		if (moved)
 		{
@@ -9712,7 +9701,6 @@ mobj_t *P_GetPushThing(UINT32 s)
 
 /** Spawns pushers.
   *
-  * \todo Remove magic numbers.
   * \sa P_SpawnSpecials, Add_Pusher
   */
 static void P_SpawnPushers(void)
@@ -9725,37 +9713,17 @@ static void P_SpawnPushers(void)
 	for (i = 0; i < numlines; i++, l++)
 		switch (l->special)
 		{
-			case 541: // wind
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_wind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 544: // current
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_current, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+			case 541: // wind/current
+				for (s = -1; (s = P_FindSectorFromTag(l->args[0], s)) >= 0 ;)
+					Add_Pusher(l->args[4] ? p_current : p_wind, l->args[1] << FRACBITS, l->args[2] << FRACBITS, l->args[3] << FRACBITS, NULL, s, -1, (l->args[5] & 2) == 2, (l->args[5] & 1) == 1);
 				break;
 			case 547: // push/pull
 				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
 				{
 					thing = P_GetPushThing(s);
 					if (thing) // No MT_P* means no effect
-						Add_Pusher(p_push, l->dx, l->dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+						Add_Pusher(p_push, l->dx, l->dy, 0, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				}
-				break;
-			case 545: // current up
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_upcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 546: // current down
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_downcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 542: // wind up
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_upwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 543: // wind down
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_downwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 		}
 }

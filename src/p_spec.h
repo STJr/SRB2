@@ -423,10 +423,6 @@ typedef enum
 	p_push,        ///< Point pusher or puller.
 	p_wind,        ///< Wind.
 	p_current,     ///< Current.
-	p_upcurrent,   ///< Upwards current.
-	p_downcurrent, ///< Downwards current.
-	p_upwind,      ///< Upwards wind.
-	p_downwind     ///< Downwards wind.
 } pushertype_e;
 
 // Model for pushers for push/pull effects
@@ -439,6 +435,7 @@ typedef struct
 	mobj_t *source;     ///< Point source if point pusher/puller.
 	INT32 x_mag;        ///< X strength.
 	INT32 y_mag;        ///< Y strength.
+	INT32 z_mag;        ///< Z strength.
 	INT32 magnitude;    ///< Vector strength for point pusher/puller.
 	INT32 radius;       ///< Effective radius for point pusher/puller.
 	INT32 x, y, z;      ///< Point source if point pusher/puller.
