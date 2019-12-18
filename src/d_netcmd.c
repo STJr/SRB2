@@ -382,7 +382,7 @@ char timedemo_csv_id[256];
 boolean timedemo_quit;
 
 INT16 gametype = GT_COOP;
-INT16 gametyperules = 0;
+UINT32 gametyperules = 0;
 boolean splitscreen = false;
 boolean circuitmap = false;
 INT32 adminplayers[MAXPLAYERS];
