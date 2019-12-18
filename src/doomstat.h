@@ -287,7 +287,7 @@ typedef struct
 	char lvlttl[22];       ///< Level name without "Zone". (21 character limit instead of 32, 21 characters can display on screen max anyway)
 	char subttl[33];       ///< Subtitle for level
 	UINT8 actnum;          ///< Act number or 0 for none.
-	UINT16 typeoflevel;    ///< Combination of typeoflevel flags.
+	UINT32 typeoflevel;    ///< Combination of typeoflevel flags.
 	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
 	char musname[7];       ///< Music track to play. "" for no music.
 	UINT16 mustrack;       ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
@@ -379,7 +379,7 @@ enum TypeOfLevel
 	TOL_CTF         = 0x40, ///< Capture the Flag
 // CTF default = 64
 
-	TOL_CUSTOM      = 0x80, ///< Custom (Lua-scripted, etc.)
+	//TOL_CUSTOM      = 0x80, ///< Custom (Lua-scripted, etc.)
 
 	TOL_2D     = 0x0100, ///< 2D
 	TOL_MARIO  = 0x0200, ///< Mario

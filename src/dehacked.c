@@ -1114,8 +1114,6 @@ static const struct {
 	{"TAG",TOL_TAG},
 	{"CTF",TOL_CTF},
 
-	{"CUSTOM",TOL_CUSTOM},
-
 	{"2D",TOL_2D},
 	{"MARIO",TOL_MARIO},
 	{"NIGHTS",TOL_NIGHTS},
@@ -9042,7 +9040,6 @@ struct {
 	{"TOL_MATCH",TOL_MATCH},
 	{"TOL_TAG",TOL_TAG},
 	{"TOL_CTF",TOL_CTF},
-	{"TOL_CUSTOM",TOL_CUSTOM},
 	{"TOL_2D",TOL_2D},
 	{"TOL_MARIO",TOL_MARIO},
 	{"TOL_NIGHTS",TOL_NIGHTS},
