@@ -383,7 +383,7 @@ boolean timedemo_quit;
 
 INT16 gametype = GT_COOP;
 UINT32 gametyperules = 0;
-INT16 numgametypes = (GT_CTF + 1);
+INT16 gametypecount = (GT_CTF + 1);
 
 boolean splitscreen = false;
 boolean circuitmap = false;
@@ -1943,7 +1943,7 @@ static void Command_Map_f(void)
 			if (isdigit(gametypename[0]))
 			{
 				d = atoi(gametypename);
-				if (d >= 0 && d < NUMGAMETYPES)
+				if (d >= 0 && d < gametypecount)
 					newgametype = d;
 				else
 				{
@@ -1951,7 +1951,7 @@ static void Command_Map_f(void)
 							"Gametype number %d is out of range. Use a number between"
 							" 0 and %d inclusive. ...Or just use the name. :v\n",
 							d,
-							NUMGAMETYPES-1);
+							gametypecount-1);
 					Z_Free(realmapname);
 					Z_Free(mapname);
 					return;
@@ -2072,7 +2072,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	gametype = READUINT8(*cp);
 	G_SetGametype(gametype); // I fear putting that macro as an argument
 
-	if (gametype < 0 || gametype >= NUMGAMETYPES)
+	if (gametype < 0 || gametype >= gametypecount)
 		gametype = lastgametype;
 	else if (gametype != lastgametype)
 		D_GameTypeChanged(lastgametype); // emulate consvar_t behavior for gametype
@@ -3624,7 +3624,7 @@ static void Command_ShowGametype_f(void)
 	}
 
 	// get name string for current gametype
-	if (gametype >= 0 && gametype < NUMGAMETYPES)
+	if (gametype >= 0 && gametype < gametypecount)
 		gametypestr = Gametype_Names[gametype];
 
 	if (gametypestr)
@@ -3891,9 +3891,9 @@ void D_GameTypeChanged(INT32 lastgametype)
 	{
 		const char *oldgt = NULL, *newgt = NULL;
 
-		if (lastgametype >= 0 && lastgametype < NUMGAMETYPES)
+		if (lastgametype >= 0 && lastgametype < gametypecount)
 			oldgt = Gametype_Names[lastgametype];
-		if (gametype >= 0 && lastgametype < NUMGAMETYPES)
+		if (gametype >= 0 && lastgametype < gametypecount)
 			newgt = Gametype_Names[gametype];
 
 		if (oldgt && newgt)

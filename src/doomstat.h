@@ -85,7 +85,7 @@ extern boolean multiplayer;
 
 extern INT16 gametype;
 extern UINT32 gametyperules;
-extern INT16 numgametypes;
+extern INT16 gametypecount;
 
 extern boolean splitscreen;
 extern boolean circuitmap; // Does this level have 'circuit mode'?

@@ -3102,15 +3102,15 @@ void G_SetGametype(INT16 gtype)
 INT16 G_NewGametype(UINT32 rules)
 {
 	INT32 i;
-	INT16 newgtype = numgametypes;
-	numgametypes++;
+	INT16 newgtype = gametypecount;
+	gametypecount++;
 
 	// Set gametype rules.
-	gametypedefaultrules[newgtype] = numgametypes;
+	gametypedefaultrules[newgtype] = gametypecount;
 	Gametype_Names[newgtype] = "???";
 
 	// Update gametype_cons_t accordingly.
-	for (i = 0; i < numgametypes; i++)
+	for (i = 0; i < gametypecount; i++)
 	{
 		gametype_cons_t[i].value = i;
 		gametype_cons_t[i].strvalue = Gametype_Names[i];

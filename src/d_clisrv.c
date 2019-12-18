@@ -2114,7 +2114,7 @@ static void CL_ConnectToServer(boolean viams)
 		UINT8 num = serverlist[i].info.gametype;
 		const char *gametypestr = NULL;
 		CONS_Printf(M_GetText("Connecting to: %s\n"), serverlist[i].info.servername);
-		if (num < NUMGAMETYPES)
+		if (num < gametypecount)
 			gametypestr = Gametype_Names[num];
 		if (gametypestr)
 			CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);

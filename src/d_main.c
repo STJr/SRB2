@@ -1409,7 +1409,7 @@ void D_SRB2Main(void)
 			if (newgametype == -1) // reached end of the list with no match
 			{
 				j = atoi(sgametype); // assume they gave us a gametype number, which is okay too
-				if (j >= 0 && j < NUMGAMETYPES)
+				if (j >= 0 && j < gametypecount)
 					newgametype = (INT16)j;
 			}
 

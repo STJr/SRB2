@@ -9932,7 +9932,7 @@ static void M_DrawConnectMenu(void)
 		                     va("Ping: %u", (UINT32)LONG(serverlist[slindex].info.time)));
 
 		gt = "Unknown";
-		if (serverlist[slindex].info.gametype < NUMGAMETYPES)
+		if (serverlist[slindex].info.gametype < gametypecount)
 			gt = Gametype_Names[serverlist[slindex].info.gametype];
 
 		V_DrawSmallString(currentMenu->x+46,S_LINEY(i)+8, globalflags,

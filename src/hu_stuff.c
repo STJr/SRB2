@@ -2066,7 +2066,7 @@ static void HU_drawGametype(void)
 {
 	const char *strvalue = NULL;
 
-	if (gametype < 0 || gametype >= NUMGAMETYPES)
+	if (gametype < 0 || gametype >= gametypecount)
 		return; // not a valid gametype???
 
 	strvalue = Gametype_Names[gametype];
