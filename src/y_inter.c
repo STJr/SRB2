@@ -164,6 +164,7 @@ static INT32 tallydonetic = -1;
 static INT32 endtic = -1;
 
 intertype_t intertype = int_none;
+intertype_t intermissiontypes[NUMGAMETYPES];
 
 static void Y_RescaleScreenBuffer(void);
 static void Y_AwardCoopBonuses(void);
@@ -1187,7 +1188,9 @@ void Y_StartIntermission(void)
 				timer = 1;
 		}
 
-		if (gametype == GT_COOP)
+		if (intermissiontypes[gametype] != int_none)
+			intertype = intermissiontypes[gametype];
+		else if (gametype == GT_COOP)
 			intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
 		else if (gametype == GT_TEAMMATCH)
 			intertype = int_teammatch;

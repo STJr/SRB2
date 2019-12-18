@@ -414,6 +414,7 @@ enum GameTypeRules
 	GTR_EMERALDHUNT      = 1<<17, // Emerald Hunt
 	GTR_SPAWNENEMIES     = 1<<18, // Spawn enemies
 	GTR_ALLOWEXIT        = 1<<19, // Allow exit sectors
+	GTR_ROUNDENDMESSAGE  = 1<<20, // Prints "The round has ended." into the console
 };
 
 // String names for gametypes

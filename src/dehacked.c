@@ -22,6 +22,7 @@
 #include "m_menu.h"
 #include "m_misc.h"
 #include "f_finale.h"
+#include "y_inter.h"
 #include "dehacked.h"
 #include "st_stuff.h"
 #include "i_system.h"
@@ -1137,7 +1138,7 @@ static void readgametype(MYFILE *f, char *gtname)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
-	char *word2;
+	char *word2, *word2lwr = NULL;
 	char *tmp;
 	INT32 i;
 
@@ -1146,6 +1147,7 @@ static void readgametype(MYFILE *f, char *gtname)
 	UINT32 newgttol = 0;
 	UINT8 newgtleftcolor = 0;
 	UINT8 newgtrightcolor = 0;
+	int newgtinttype = 0;
 	char gtdescription[441];
 
 	do
@@ -1201,7 +1203,12 @@ static void readgametype(MYFILE *f, char *gtname)
 
 			word2 = strtok(NULL, " = ");
 			if (word2)
+			{
+				if (!word2lwr)
+					word2lwr = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+				strcpy(word2lwr, word2);
 				strupr(word2);
+			}
 			else
 				break;
 
@@ -1229,10 +1236,15 @@ static void readgametype(MYFILE *f, char *gtname)
 				// Level platter
 				newgtrightcolor = (UINT8)get_number(word2);
 			}
+			else if (fastcmp(word, "INTERMISSIONTYPE"))
+			{
+				// Case sensitive
+				newgtinttype = (int)get_number(word2lwr);
+			}
 			else if (fastcmp(word, "TYPEOFLEVEL"))
 			{
 				if (i) // it's just a number
-					newgttol = (UINT16)i;
+					newgttol = (UINT32)i;
 				else
 				{
 					UINT16 tol = 0;
@@ -1253,11 +1265,14 @@ static void readgametype(MYFILE *f, char *gtname)
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 	Z_Free(s);
+	if (word2lwr)
+		Z_Free(word2lwr);
 
 	// Add the new gametype
 	newgtidx = G_AddGametype(newgtrules);
 	G_AddGametypeTOL(newgtidx, newgttol);
 	G_SetGametypeDescription(newgtidx, gtdescription, newgtleftcolor, newgtrightcolor);
+	intermissiontypes[newgtidx] = newgtinttype;
 
 	// Write the new gametype name.
 	Gametype_Names[newgtidx] = Z_StrDup((const char *)gtname);
@@ -1535,7 +1550,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "TYPEOFLEVEL"))
 			{
 				if (i) // it's just a number
-					mapheaderinfo[num-1]->typeoflevel = (UINT16)i;
+					mapheaderinfo[num-1]->typeoflevel = (UINT32)i;
 				else
 				{
 					UINT16 tol = 0;
@@ -8812,6 +8827,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"EMERALDHUNT",
 	"SPAWNENEMIES",
 	"ALLOWEXIT",
+	"ROUNDENDMESSAGE",
 	NULL
 };
 
@@ -9230,20 +9246,6 @@ struct {
 	{"tr_trans90",tr_trans90},
 	{"NUMTRANSMAPS",NUMTRANSMAPS},
 
-	// Type of levels
-	{"TOL_SP",TOL_SP},
-	{"TOL_COOP",TOL_COOP},
-	{"TOL_COMPETITION",TOL_COMPETITION},
-	{"TOL_RACE",TOL_RACE},
-	{"TOL_MATCH",TOL_MATCH},
-	{"TOL_TAG",TOL_TAG},
-	{"TOL_CTF",TOL_CTF},
-	{"TOL_2D",TOL_2D},
-	{"TOL_MARIO",TOL_MARIO},
-	{"TOL_NIGHTS",TOL_NIGHTS},
-	{"TOL_ERZ3",TOL_ERZ3},
-	{"TOL_XMAS",TOL_XMAS},
-
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
 	{"LF_SPEEDMUSIC",LF_SPEEDMUSIC},
@@ -9426,16 +9428,16 @@ struct {
 	{"DMG_CANHURTSELF",DMG_CANHURTSELF},
 	{"DMG_DEATHMASK",DMG_DEATHMASK},
 
-	// Gametypes, for use with global var "gametype"
-	// Left them here just in case??
-	{"GT_COOP",GT_COOP},
-	{"GT_COMPETITION",GT_COMPETITION},
-	{"GT_RACE",GT_RACE},
-	{"GT_MATCH",GT_MATCH},
-	{"GT_TEAMMATCH",GT_TEAMMATCH},
-	{"GT_TAG",GT_TAG},
-	{"GT_HIDEANDSEEK",GT_HIDEANDSEEK},
-	{"GT_CTF",GT_CTF},
+	// Intermission types
+	{"int_none",int_none},
+	{"int_coop",int_coop},
+	{"int_match",int_match},
+	{"int_teammatch",int_teammatch},
+	//{"int_tag",int_tag},
+	{"int_ctf",int_ctf},
+	{"int_spec",int_spec},
+	{"int_race",int_race},
+	{"int_comp",int_comp},
 
 	// Jingles (jingletype_t)
 	{"JT_NONE",JT_NONE},
@@ -9728,7 +9730,7 @@ struct {
 };
 
 static mobjtype_t get_mobjtype(const char *word)
-{ // Returns the vlaue of MT_ enumerations
+{ // Returns the value of MT_ enumerations
 	mobjtype_t i;
 	if (*word >= '0' && *word <= '9')
 		return atoi(word);
@@ -9895,7 +9897,7 @@ static INT16 get_gametype(const char *word)
 }
 
 static powertype_t get_power(const char *word)
-{ // Returns the vlaue of pw_ enumerations
+{ // Returns the value of pw_ enumerations
 	powertype_t i;
 	if (*word >= '0' && *word <= '9')
 		return atoi(word);
@@ -10057,19 +10059,6 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return 0;
 	}
-	else if (fastncmp("GTR_", word, 4)) {
-		char *p = word+4;
-		for (i = 0; GAMETYPERULE_LIST[i]; i++)
-			if (fastcmp(p, GAMETYPERULE_LIST[i])) {
-				free(word);
-				return (1<<i);
-			}
-
-		// Not found error
-		const_warning("game type rule",word);
-		free(word);
-		return 0;
-	}
 	else if (fastncmp("S_",word,2)) {
 		r = get_state(word);
 		free(word);
@@ -10111,6 +10100,32 @@ static fixed_t find_const(const char **rword)
 		r = get_gametype(word);
 		free(word);
 		return r;
+	}
+	else if (fastncmp("GTR_", word, 4)) {
+		char *p = word+4;
+		for (i = 0; GAMETYPERULE_LIST[i]; i++)
+			if (fastcmp(p, GAMETYPERULE_LIST[i])) {
+				free(word);
+				return (1<<i);
+			}
+
+		// Not found error
+		const_warning("game type rule",word);
+		free(word);
+		return 0;
+	}
+	else if (fastncmp("TOL_", word, 4)) {
+		char *p = word+4;
+		for (i = 0; TYPEOFLEVEL[i].name; i++)
+			if (fastcmp(p, TYPEOFLEVEL[i].name)) {
+				free(word);
+				return TYPEOFLEVEL[i].flag;
+			}
+
+		// Not found error
+		const_warning("typeoflevel",word);
+		free(word);
+		return 0;
 	}
 	else if (fastncmp("HUD_",word,4)) {
 		r = get_huditem(word);
@@ -10425,6 +10440,16 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "playerflag '%s' could not be found.\n", word);
 		return 0;
 	}
+	else if (fastncmp("GT_", word, 3)) {
+		p = word+3;
+		for (i = 0; Gametype_ConstantNames[i]; i++)
+			if (fastcmp(p, Gametype_ConstantNames[i])) {
+				lua_pushinteger(L, ((lua_Integer)1<<i));
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "mobjflag '%s' could not be found.\n", word);
+		return 0;
+	}
 	else if (fastncmp("GTR_", word, 4)) {
 		p = word+4;
 		for (i = 0; GAMETYPERULE_LIST[i]; i++)
@@ -10433,6 +10458,16 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		if (mathlib) return luaL_error(L, "game type rule '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("TOL_", word, 4)) {
+		p = word+4;
+		for (i = 0; TYPEOFLEVEL[i].name; i++)
+			if (fastcmp(p, TYPEOFLEVEL[i].name)) {
+				lua_pushinteger(L, TYPEOFLEVEL[i].flag);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "typeoflevel '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("ML_", word, 3)) {
