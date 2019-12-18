@@ -1520,10 +1520,27 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
 			}
 
+			// Title card
+			else if (fastcmp(word, "TITLECARDZIGZAG"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->ltzzpatch, word2,
+					sizeof(mapheaderinfo[num-1]->ltzzpatch), va("Level header %d: title card zigzag patch name", num));
+			}
+			else if (fastcmp(word, "TITLECARDZIGZAGTEXT"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->ltzztext, word2,
+					sizeof(mapheaderinfo[num-1]->ltzztext), va("Level header %d: title card zigzag text patch name", num));
+			}
+			else if (fastcmp(word, "TITLECARDACTDIAMOND"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->ltactdiamond, word2,
+					sizeof(mapheaderinfo[num-1]->ltactdiamond), va("Level header %d: title card act diamond patch name", num));
+			}
+
 			else if (fastcmp(word, "MAXBONUSLIVES"))
 				mapheaderinfo[num-1]->maxbonuslives = (SINT8)i;
 			else if (fastcmp(word, "LEVELFLAGS"))
-				mapheaderinfo[num-1]->levelflags = (UINT8)i;
+				mapheaderinfo[num-1]->levelflags = (UINT16)i;
 			else if (fastcmp(word, "MENUFLAGS"))
 				mapheaderinfo[num-1]->menuflags = (UINT8)i;
 

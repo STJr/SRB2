@@ -2071,6 +2071,12 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->levelselect);
 	else if (fastcmp(field,"bonustype"))
 		lua_pushinteger(L, header->bonustype);
+	else if (fastcmp(field,"ltzzpatch"))
+		lua_pushstring(L, header->ltzzpatch);
+	else if (fastcmp(field,"ltzztext"))
+		lua_pushstring(L, header->ltzztext);
+	else if (fastcmp(field,"ltactdiamond"))
+		lua_pushstring(L, header->ltactdiamond);
 	else if (fastcmp(field,"maxbonuslives"))
 		lua_pushinteger(L, header->maxbonuslives);
 	else if (fastcmp(field,"levelflags"))
