@@ -8894,7 +8894,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"LIVES",
 	"RACE",
 	"CHASECAM",
-	"TIMELIMIT",
+	"\x01", // 1<<8, empty
 	"HIDETIME",
 	"HIDETIMEFROZEN",
 	"BLINDFOLDED",
@@ -8908,6 +8908,9 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"ALLOWEXIT",
 	"ROUNDENDMESSAGE",
 	"NOTITLECARD",
+	"POINTLIMIT",
+	"TIMELIMIT",
+	"OVERTIME",
 	NULL
 };
 

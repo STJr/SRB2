@@ -402,7 +402,7 @@ enum GameTypeRules
 	// flexibility! Those will replace some straight-up gametype checks scattered around the source code!
 
 	GTR_CHASECAM         = 1<<7,  // Prefer chasecam at map load (All platform gametypes)
-	GTR_TIMELIMIT        = 1<<8,  // Ringslinger time limit (Tag and Hide and Seek)
+	// 1<<8, empty
 	GTR_HIDETIME         = 1<<9,  // Tag and Hide and Seek
 	GTR_HIDETIMEFROZEN   = 1<<10, // Hide and Seek, but not Tag
 	GTR_BLINDFOLDED      = 1<<11, // Blindfolded view (Tag and Hide and Seek)
@@ -416,6 +416,9 @@ enum GameTypeRules
 	GTR_ALLOWEXIT        = 1<<19, // Allow exit sectors
 	GTR_ROUNDENDMESSAGE  = 1<<20, // Prints "The round has ended." into the console
 	GTR_NOTITLECARD      = 1<<21, // Don't show the title card
+	GTR_POINTLIMIT       = 1<<22, // Ringslinger point limit
+	GTR_TIMELIMIT        = 1<<23, // Ringslinger time limit
+	GTR_OVERTIME         = 1<<24, // Allow overtime
 };
 
 // String names for gametypes

@@ -2093,7 +2093,7 @@ void P_CheckTimeLimit(void)
 	if (!(multiplayer || netgame))
 		return;
 
-	if (G_PlatformGametype())
+	if (!(gametyperules & GTR_TIMELIMIT))
 		return;
 
 	if (leveltime < timelimitintics)
@@ -2124,7 +2124,7 @@ void P_CheckTimeLimit(void)
 	}
 
 	//Optional tie-breaker for Match/CTF
-	else if (cv_overtime.value)
+	else if ((cv_overtime.value) && (gametyperules & GTR_OVERTIME))
 	{
 		INT32 playerarray[MAXPLAYERS];
 		INT32 tempplayer = 0;
@@ -2206,7 +2206,7 @@ void P_CheckPointLimit(void)
 	if (!(multiplayer || netgame))
 		return;
 
-	if (G_PlatformGametype())
+	if (!(gametyperules & GTR_POINTLIMIT))
 		return;
 
 	// pointlimit is nonzero, check if it's been reached by this player

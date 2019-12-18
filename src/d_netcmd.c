@@ -3696,7 +3696,7 @@ void ItemFinder_OnChange(void)
 static void PointLimit_OnChange(void)
 {
 	// Don't allow pointlimit in Single Player/Co-Op/Race!
-	if (server && Playing() && G_PlatformGametype())
+	if (server && Playing() && !(gametyperules & GTR_POINTLIMIT))
 	{
 		if (cv_pointlimit.value)
 			CV_StealthSetValue(&cv_pointlimit, 0);
@@ -3859,7 +3859,7 @@ UINT32 timelimitintics = 0;
 static void TimeLimit_OnChange(void)
 {
 	// Don't allow timelimit in Single Player/Co-Op/Race!
-	if (server && Playing() && cv_timelimit.value != 0 && G_PlatformGametype())
+	if (server && Playing() && cv_timelimit.value != 0 && !(gametyperules & GTR_TIMELIMIT))
 	{
 		CV_SetValue(&cv_timelimit, 0);
 		return;
@@ -3964,7 +3964,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 	// reset timelimit and pointlimit in race/coop, prevent stupid cheats
 	if (server)
 	{
-		if (G_PlatformGametype())
+		if (!(gametyperules & GTR_POINTLIMIT))
 		{
 			if (cv_timelimit.value)
 				CV_SetValue(&cv_timelimit, 0);

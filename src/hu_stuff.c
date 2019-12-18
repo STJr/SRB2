@@ -3026,7 +3026,7 @@ static void HU_DrawRankings(void)
 	// draw the current gametype in the lower right
 	HU_drawGametype();
 
-	if (!G_PlatformGametype())
+	if (gametyperules & GTR_POINTLIMIT)
 	{
 		if (cv_timelimit.value && timelimitintics > 0)
 		{
