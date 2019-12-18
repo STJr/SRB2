@@ -11249,8 +11249,12 @@ void P_SpawnPlayer(INT32 playernum)
 	else
 	{
 		p->outofcoop = false;
+		p->spectator = false;
 		if (netgame && p->jointime < 1)
-			p->spectator = true;
+		{
+			// Averted by GTR_NOSPECTATORSPAWN.
+			p->spectator = (gametyperules & GTR_NOSPECTATORSPAWN) ? false : true;
+		}
 		else if (multiplayer && !netgame)
 		{
 			// If you're in a team game and you don't have a team assigned yet...

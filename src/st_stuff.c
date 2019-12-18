@@ -2205,31 +2205,33 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(M_GetText("\x82""Wait for the stage to end..."))
 		else if (G_PlatformGametype())
 		{
-			if (gametype == GT_COOP
-			&& stplyr->lives <= 0
-			&& cv_cooplives.value == 2
-			&& (netgame || multiplayer))
+			if (gametype == GT_COOP)
 			{
-				INT32 i;
-				for (i = 0; i < MAXPLAYERS; i++)
+				if (stplyr->lives <= 0
+				&& cv_cooplives.value == 2
+				&& (netgame || multiplayer))
 				{
-					if (!playeringame[i])
-						continue;
+					INT32 i;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
 
-					if (&players[i] == stplyr)
-						continue;
+						if (&players[i] == stplyr)
+							continue;
 
-					if (players[i].lives > 1)
-						break;
-					}
+						if (players[i].lives > 1)
+							break;
+						}
 
-				if (i != MAXPLAYERS)
-					textHUDdraw(M_GetText("You'll steal a life on respawn..."))
+					if (i != MAXPLAYERS)
+						textHUDdraw(M_GetText("You'll steal a life on respawn..."))
+					else
+						textHUDdraw(M_GetText("Wait to respawn..."))
+				}
 				else
 					textHUDdraw(M_GetText("Wait to respawn..."))
 			}
-			else
-				textHUDdraw(M_GetText("Wait to respawn..."))
 		}
 		else if (G_GametypeHasSpectators())
 			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
