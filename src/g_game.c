@@ -3181,7 +3181,7 @@ UINT32 gametypetol[NUMGAMETYPES] =
 //
 void G_AddTOL(UINT32 newtol, const char *tolname)
 {
-	TYPEOFLEVEL[numtolinfo].name = tolname;
+	TYPEOFLEVEL[numtolinfo].name = Z_StrDup(tolname);
 	TYPEOFLEVEL[numtolinfo].flag = newtol;
 	numtolinfo++;
 

@@ -453,6 +453,7 @@ typedef struct
 } tolinfo_t;
 extern tolinfo_t TYPEOFLEVEL[NUMMAXTOL];
 extern INT32 numtolinfo;
+extern UINT32 lastcustomtol;
 
 extern tic_t totalplaytime;
 

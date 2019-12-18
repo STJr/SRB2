@@ -591,6 +591,11 @@ static void readfreeslots(MYFILE *f)
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
 			}
+			else if (fastcmp(type, "TOL"))
+			{
+				G_AddTOL(lastcustomtol, word);
+				lastcustomtol <<= 1;
+			}
 			else
 				deh_warning("Freeslots: unknown enum class '%s' for '%s_%s'", type, type, word);
 		}
@@ -1097,6 +1102,8 @@ static void readsprite2(MYFILE *f, INT32 num)
 }
 
 INT32 numtolinfo = NUMBASETOL;
+UINT32 lastcustomtol = (TOL_XMAS << 1);
+
 tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
 	{"SOLO",TOL_SP},
 	{"SP",TOL_SP},
@@ -1232,7 +1239,7 @@ static void readgametype(MYFILE *f, char *gtname)
 					tmp = strtok(word2,",");
 					do {
 						for (i = 0; TYPEOFLEVEL[i].name; i++)
-							if (fastcmp(tmp, TYPEOFLEVEL[i].name))
+							if (fasticmp(tmp, TYPEOFLEVEL[i].name))
 								break;
 						if (!TYPEOFLEVEL[i].name)
 							deh_warning("readgametype %s: unknown typeoflevel flag %s\n", gtname, tmp);
