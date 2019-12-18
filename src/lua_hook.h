@@ -51,6 +51,7 @@ enum hook {
 	hook_PlayerCanDamage,
 	hook_PlayerQuit,
 	hook_IntermissionThinker,
+	hook_ViewpointSwitch,
 
 	hook_MAX // last hook
 };
@@ -93,5 +94,6 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj); // Hook for P_PlayerAft
 UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj); // Hook for P_PlayerCanDamage
 void LUAh_PlayerQuit(player_t *plr, int reason); // Hook for player quitting
 void LUAh_IntermissionThinker(void); // Hook for Y_Ticker
+UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer); // Hook for spy mode in G_Responder
 
 #endif

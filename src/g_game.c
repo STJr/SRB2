@@ -1956,6 +1956,16 @@ boolean G_Responder(event_t *ev)
 				if (!playeringame[displayplayer])
 					continue;
 
+#ifdef HAVE_BLUA
+				{
+					UINT8 canSwitchView = LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer]);
+					if (canSwitchView == 1) // Set viewpoint to this player
+						break;
+					else if (canSwitchView == 2) // Skip this player
+						continue;
+				}
+#endif
+
 				if (players[displayplayer].spectator)
 					continue;
 

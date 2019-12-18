@@ -62,6 +62,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"PlayerCanDamage",
 	"PlayerQuit",
 	"IntermissionThinker",
+	"ViewpointSwitch",
 	NULL
 };
 
@@ -203,6 +204,7 @@ static int lib_addHook(lua_State *L)
 	case hook_PlayerSpawn:
 	case hook_FollowMobj:
 	case hook_PlayerCanDamage:
+	case hook_ViewpointSwitch:
 	case hook_ShieldSpawn:
 	case hook_ShieldSpecial:
 		lastp = &playerhooks;
@@ -1344,6 +1346,51 @@ void LUAh_IntermissionThinker(void)
 			hookp->error = true;
 		}
 	}
+}
+
+// Hook for spy mode in G_Responder
+UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer)
+{
+	hook_p hookp;
+	UINT8 canSwitchView = 0; // 0 = default, 1 = force yes, 2 = force no.
+	if (!gL || !(hooksAvailable[hook_ViewpointSwitch/8] & (1<<(hook_ViewpointSwitch%8))))
+		return 0;
+
+	lua_settop(gL, 0);
+
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_ViewpointSwitch)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			LUA_PushUserdata(gL, newdisplayplayer, META_PLAYER);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{ // if nil, leave canSwitchView = 0.
+			if (lua_toboolean(gL, -1))
+				canSwitchView = 1; // Force viewpoint switch
+			else
+				canSwitchView = 2; // Skip viewpoint switch
+		}
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return canSwitchView;
 }
 
 #endif
