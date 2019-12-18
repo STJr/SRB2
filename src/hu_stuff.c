@@ -3026,7 +3026,7 @@ static void HU_DrawRankings(void)
 	// draw the current gametype in the lower right
 	HU_drawGametype();
 
-	if (gametype != GT_RACE && gametype != GT_COMPETITION && gametype != GT_COOP)
+	if (!G_PlatformGametype())
 	{
 		if (cv_timelimit.value && timelimitintics > 0)
 		{
@@ -3083,7 +3083,7 @@ static void HU_DrawRankings(void)
 		if (!playeringame[j])
 			continue;
 
-		if (gametype != GT_COOP && players[j].spectator)
+		if (!G_PlatformGametype() && players[j].spectator)
 			continue;
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -3091,7 +3091,7 @@ static void HU_DrawRankings(void)
 			if (!playeringame[i])
 				continue;
 
-			if (gametype != GT_COOP && players[i].spectator)
+			if (!G_PlatformGametype() && players[i].spectator)
 				continue;
 
 			if (gametype == GT_RACE)
