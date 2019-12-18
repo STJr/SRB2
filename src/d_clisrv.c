@@ -1025,7 +1025,7 @@ static void SV_SendResynch(INT32 node)
 		netbuffer->packettype = PT_RESYNCHEND;
 
 		netbuffer->u.resynchend.randomseed = P_GetRandSeed();
-		if (gametype == GT_CTF)
+		if (gametyperules & GTR_TEAMFLAGS)
 			resynch_write_ctf(&netbuffer->u.resynchend);
 		resynch_write_others(&netbuffer->u.resynchend);
 
@@ -2430,7 +2430,7 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 		}
 	}
 
-	if (gametype == GT_CTF)
+	if (gametyperules & GTR_TEAMFLAGS)
 		P_PlayerFlagBurst(&players[playernum], false); // Don't take the flag with you!
 
 	// If in a special stage, redistribute the player's spheres across
@@ -4124,7 +4124,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 
 			P_SetRandSeed(netbuffer->u.resynchend.randomseed);
 
-			if (gametype == GT_CTF)
+			if (gametyperules & GTR_TEAMFLAGS)
 				resynch_read_ctf(&netbuffer->u.resynchend);
 			resynch_read_others(&netbuffer->u.resynchend);
 

@@ -2541,7 +2541,7 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		             | (greycheck ? 0 : V_TRANSLUCENT)
 		             | V_ALLOWLOWERCASE, name);
 
-		if (gametype == GT_CTF)
+		if (gametyperules & GTR_TEAMFLAGS)
 		{
 			if (players[tab[i].num].gotflag & GF_REDFLAG) // Red
 				V_DrawFixedPatch((x-10)*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, rflagico, 0);
@@ -2669,7 +2669,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		             | (greycheck ? V_TRANSLUCENT : 0)
 		             | V_ALLOWLOWERCASE, name);
 
-		if (gametype == GT_CTF)
+		if (gametyperules & GTR_TEAMFLAGS)
 		{
 			if (players[tab[i].num].gotflag & GF_REDFLAG) // Red
 				V_DrawSmallScaledPatch(x-28, y-4, 0, rflagico);

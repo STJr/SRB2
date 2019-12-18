@@ -3110,7 +3110,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 			}
 		}
 	}
-	else if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))) // If you have the flag (duh).
+	else if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))) // If you have the flag (duh).
 	{
 		// Spawn a got-flag message over the head of the player that
 		// has it (but not on your own screen if you have the flag).
@@ -5048,7 +5048,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	{
 		if (onground || player->climbing || player->powers[pw_carry])
 			;
-		else if (gametype == GT_CTF && player->gotflag)
+		else if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag)
 			;
 		else if (player->pflags & (PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player has used an ability previously
 			;
@@ -5273,7 +5273,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
-		else if (player->pflags & PF_SLIDING || (gametype == GT_CTF && player->gotflag))
+		else if (player->pflags & PF_SLIDING || ((gametyperules & GTR_TEAMFLAGS) && player->gotflag))
 			;
 		/*else if (P_SuperReady(player))
 		{
@@ -5560,7 +5560,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	{
 		player->pflags |= PF_JUMPDOWN;
 
-		if ((gametype != GT_CTF || !player->gotflag) && !player->exiting)
+		if ((!(gametyperules & GTR_TEAMFLAGS) || !player->gotflag) && !player->exiting)
 		{
 			if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP)
 			{

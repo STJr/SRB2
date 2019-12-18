@@ -2279,7 +2279,8 @@ static void ST_drawTextHUD(void)
 		{
 			if (stplyr->pflags & PF_TAGIT)
 			{
-				textHUDdraw(M_GetText("\x82""You are blindfolded!"))
+				if (gametyperules & GTR_BLINDFOLDED)
+					textHUDdraw(M_GetText("\x82""You are blindfolded!"))
 				textHUDdraw(M_GetText("Waiting for players to hide..."))
 			}
 			else if (gametype == GT_HIDEANDSEEK)
@@ -2294,7 +2295,8 @@ static void ST_drawTextHUD(void)
 				textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
 				donef12 = true;
 			}
-			textHUDdraw(M_GetText("You cannot move while hiding."))
+			if (gametyperules & GTR_HIDETIMEFROZEN)
+				textHUDdraw(M_GetText("You cannot move while hiding."))
 		}
 	}
 
@@ -2316,21 +2318,21 @@ static void ST_drawTeamHUD(void)
 	if (F_GetPromptHideHud(0)) // y base is 0
 		return;
 
-	if (gametype == GT_CTF)
+	if (gametyperules & GTR_TEAMFLAGS)
 		p = bflagico;
 	else
 		p = bmatcico;
 
 	V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
-	if (gametype == GT_CTF)
+	if (gametyperules & GTR_TEAMFLAGS)
 		p = rflagico;
 	else
 		p = rmatcico;
 
 	V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
-	if (gametype != GT_CTF)
+	if (!(gametyperules & GTR_TEAMFLAGS))
 		goto num;
 	{
 		INT32 i;

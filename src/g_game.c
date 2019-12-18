@@ -2564,7 +2564,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 
 	// -- CTF --
 	// Order: CTF->DM->Coop
-	if (gametype == GT_CTF && players[playernum].ctfteam)
+	if ((gametyperules & GTR_TEAMFLAGS) && players[playernum].ctfteam)
 	{
 		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
 		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
@@ -3079,7 +3079,7 @@ INT16 gametypedefaultrules[NUMGAMETYPES] =
 	GTR_RINGSLINGER|GTR_TAG|GTR_SPECTATORS|GTR_TIMELIMIT|GTR_HIDETIME|GTR_BLINDFOLDED,
 
 	// CTF
-	GTR_RINGSLINGER|GTR_TEAMS|GTR_SPECTATORS|GTR_TIMELIMIT|GTR_EMERALDS,
+	GTR_RINGSLINGER|GTR_TEAMS|GTR_SPECTATORS|GTR_TIMELIMIT|GTR_EMERALDS|GTR_TEAMFLAGS,
 };
 
 //

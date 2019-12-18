@@ -3224,7 +3224,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 		player->mo->flags2 &= ~MF2_DONTDRAW;
 
 	P_SetPlayerMobjState(player->mo, player->mo->info->deathstate);
-	if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
 		if (source && source->player)
@@ -3349,7 +3349,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 	else
 		S_StartSound (player->mo, sfx_shldls); // Ba-Dum! Shield loss.
 
-	if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
 		if (source && source->player)
@@ -3383,7 +3383,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 			P_AddPlayerScore(source->player, 50);
 	}
 
-	if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
 		if (source && source->player)
@@ -3442,7 +3442,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 
 	P_DoPlayerPain(player, inflictor, source);
 
-	if (gametype == GT_CTF && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
+	if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
 		P_PlayerFlagBurst(player, false);
 
 	if (oldnightstime > 10*TICRATE

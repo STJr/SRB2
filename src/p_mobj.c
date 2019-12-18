@@ -11179,7 +11179,7 @@ void P_RespawnSpecials(void)
 		}
 
 		//CTF rings should continue to respawn as normal rings outside of CTF.
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 		{
 			if (i == MT_REDTEAMRING || i == MT_BLUETEAMRING)
 				i = MT_RING;
@@ -11750,7 +11750,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 		}
 	}
 
-	if (gametype != GT_CTF) // CTF specific things
+	if (!(gametyperules & GTR_TEAMFLAGS)) // CTF specific things
 	{
 		if (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX)
 			i = MT_RING_BOX;
@@ -13597,9 +13597,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			else if (mthing->type == mobjinfo[MT_COIN].doomednum)
 				ringthing = MT_COIN;
 			else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
-				ringthing = (gametype == GT_CTF) ? MT_REDTEAMRING : MT_RING;
+				ringthing = (gametyperules & GTR_TEAMFLAGS) ? MT_REDTEAMRING : MT_RING;
 			else if (mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum) // Ditto
-				ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
+				ringthing = (gametyperules & GTR_TEAMFLAGS) ? MT_BLUETEAMRING : MT_RING;
 		}
 
 		// Set proper height
