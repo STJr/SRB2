@@ -413,6 +413,7 @@ enum GameTypeRules
 	GTR_NOSPECTATORSPAWN = 1<<16, // For use with GTR_SPECTATORS - spawn in the map instead of with the spectators
 	GTR_EMERALDHUNT      = 1<<17, // Emerald Hunt
 	GTR_SPAWNENEMIES     = 1<<18, // Spawn enemies
+	GTR_ALLOWEXIT        = 1<<19, // Allow exit sectors
 };
 
 // String names for gametypes

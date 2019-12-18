@@ -8811,6 +8811,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"NOSPECTATORSPAWN",
 	"EMERALDHUNT",
 	"SPAWNENEMIES",
+	"ALLOWEXIT",
 	NULL
 };
 
