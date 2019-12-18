@@ -3152,9 +3152,9 @@ void G_UpdateGametypeSelections(void)
 // Set a description for the specified gametype.
 // (Level platter)
 //
-void G_SetGametypeDescription(INT16 gtype, char *description, UINT8 leftcolor, UINT8 rightcolor)
+void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolor, UINT8 rightcolor)
 {
-	strncpy(gametypedesc[gtype].notes, description, 441);
+	strncpy(gametypedesc[gtype].notes, descriptiontext, 441);
 	gametypedesc[gtype].col[0] = leftcolor;
 	gametypedesc[gtype].col[1] = rightcolor;
 }
@@ -3194,9 +3194,9 @@ void G_AddTOL(UINT32 newtol, const char *tolname)
 //
 // Assigns a type of level to a gametype.
 //
-void G_AddGametypeTOL(INT16 gametype, UINT32 newtol)
+void G_AddGametypeTOL(INT16 gtype, UINT32 newtol)
 {
-	gametypetol[gametype] = newtol;
+	gametypetol[gtype] = newtol;
 }
 
 //
@@ -3342,7 +3342,7 @@ INT16 G_TOLFlag(INT32 pgametype)
   *         has those flags.
   * \author Graue <graue@oceanbase.org>
   */
-static INT16 RandMap(INT16 tolflags, INT16 pprevmap)
+static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 {
 	INT16 *okmaps = Z_Malloc(NUMMAPS * sizeof(INT16), PU_STATIC, NULL);
 	INT32 numokmaps = 0;

@@ -1140,7 +1140,6 @@ static void readgametype(MYFILE *f, char *gtname)
 	UINT8 newgtleftcolor = 0;
 	UINT8 newgtrightcolor = 0;
 	char gtdescription[441];
-	const char *gtnamestring;
 
 	do
 	{
@@ -1254,9 +1253,7 @@ static void readgametype(MYFILE *f, char *gtname)
 	G_SetGametypeDescription(newgtidx, gtdescription, newgtleftcolor, newgtrightcolor);
 
 	// Write the new gametype name.
-	gtnamestring = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	memcpy((void *)gtnamestring, gtname, MAXLINELEN);
-	Gametype_Names[newgtidx] = gtnamestring;
+	Gametype_Names[newgtidx] = Z_StrDup((const char *)gtname);
 
 	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();
@@ -4506,23 +4503,23 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					// Get the gametype name from textline
 					// instead of word2, so that gametype names
 					// aren't allcaps
-					INT32 i;
-					for (i = 0; i < MAXLINELEN; i++)
+					INT32 c;
+					for (c = 0; c < MAXLINELEN; c++)
 					{
-						if (textline[i] == '\0')
+						if (textline[c] == '\0')
 							break;
-						if (textline[i] == ' ')
+						if (textline[c] == ' ')
 						{
-							char *gtname = (textline+i+1);
+							char *gtname = (textline+c+1);
 							if (gtname)
 							{
 								// remove funny characters
 								INT32 j;
-								for (j = 0; j < (MAXLINELEN - i); j++)
+								for (j = 0; j < (MAXLINELEN - c); j++)
 								{
 									if (gtname[j] == '\0')
 										break;
-									if (gtname[j] < 32 || gtname[j] > 127)
+									if (gtname[j] < 32)
 										gtname[j] = '\0';
 								}
 								readgametype(f, gtname);
