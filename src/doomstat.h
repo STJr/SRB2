@@ -433,6 +433,7 @@ enum GameTypeRules
 	GTR_EMERALDS       = 1<<12, // Ringslinger emeralds (Match and CTF)
 	GTR_TEAMFLAGS      = 1<<13, // Gametype has team flags (CTF)
 	GTR_PITYSHIELD     = 1<<14, // Award pity shield
+	GTR_DEATHPENALTY   = 1<<15, // Death score penalty
 };
 
 // String names for gametypes
