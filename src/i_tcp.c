@@ -887,6 +887,7 @@ static boolean UDP_Socket(void)
 #ifdef HAVE_IPV6
 	const INT32 b_ipv6 = M_CheckParm("-ipv6");
 #endif
+	const char *serv;
 
 
 	for (s = 0; s < mysocketses; s++)
@@ -902,11 +903,16 @@ static boolean UDP_Socket(void)
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
 
+	if (serverrunning)
+		serv = port_name;
+	else
+		serv = NULL;/* any port */
+
 	if (M_CheckParm("-bindaddr"))
 	{
 		while (M_IsNextParm())
 		{
-			gaie = I_getaddrinfo(M_GetNextParm(), port_name, &hints, &ai);
+			gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
 			if (gaie == 0)
 			{
 				runp = ai;
@@ -927,7 +933,7 @@ static boolean UDP_Socket(void)
 	}
 	else
 	{
-		gaie = I_getaddrinfo("0.0.0.0", port_name, &hints, &ai);
+		gaie = I_getaddrinfo("0.0.0.0", serv, &hints, &ai);
 		if (gaie == 0)
 		{
 			runp = ai;
@@ -960,7 +966,7 @@ static boolean UDP_Socket(void)
 		{
 			while (M_IsNextParm())
 			{
-				gaie = I_getaddrinfo(M_GetNextParm(), port_name, &hints, &ai);
+				gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
 				if (gaie == 0)
 				{
 					runp = ai;
@@ -981,7 +987,7 @@ static boolean UDP_Socket(void)
 		}
 		else
 		{
-			gaie = I_getaddrinfo("::", port_name, &hints, &ai);
+			gaie = I_getaddrinfo("::", serv, &hints, &ai);
 			if (gaie == 0)
 			{
 				runp = ai;
