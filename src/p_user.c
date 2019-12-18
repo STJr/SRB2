@@ -10539,7 +10539,7 @@ void P_DoPityCheck(player_t *player)
 {
 	// No pity outside of match or CTF.
 	if (player->spectator
-		|| !(gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
+		|| !(gametyperules & GTR_PITYSHIELD))
 		return;
 
 	// Apply pity shield if available.

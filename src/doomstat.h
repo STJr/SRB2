@@ -432,6 +432,7 @@ enum GameTypeRules
 	GTR_BLINDFOLDED    = 1<<11, // Blindfolded view (Tag and Hide and Seek)
 	GTR_EMERALDS       = 1<<12, // Ringslinger emeralds (Match and CTF)
 	GTR_TEAMFLAGS      = 1<<13, // Gametype has team flags (CTF)
+	GTR_PITYSHIELD     = 1<<14, // Award pity shield
 };
 
 // String names for gametypes
