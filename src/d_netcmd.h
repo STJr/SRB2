@@ -60,9 +60,12 @@ extern consvar_t cv_flagtime;
 extern consvar_t cv_touchtag;
 extern consvar_t cv_hidetime;
 
-extern consvar_t cv_friendlyfire;
 extern consvar_t cv_pointlimit;
 extern consvar_t cv_timelimit;
+extern INT32 pointlimits[NUMGAMETYPES];
+extern INT32 timelimits[NUMGAMETYPES];
+
+extern consvar_t cv_friendlyfire;
 extern consvar_t cv_numlaps;
 extern consvar_t cv_basenumlaps;
 extern UINT32 timelimitintics;

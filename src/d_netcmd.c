@@ -328,6 +328,10 @@ consvar_t cv_numlaps = {"numlaps", "4", CV_NETVAR|CV_CALL|CV_NOINIT, numlaps_con
 static CV_PossibleValue_t basenumlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, "Map default"}, {0, NULL}};
 consvar_t cv_basenumlaps = {"basenumlaps", "Map default", CV_NETVAR|CV_CALL|CV_CHEAT, basenumlaps_cons_t, BaseNumLaps_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
+// Point and time limits for every gametype
+INT32 pointlimits[NUMGAMETYPES];
+INT32 timelimits[NUMGAMETYPES];
+
 // log elemental hazards -- not a netvar, is local to current player
 consvar_t cv_hazardlog = {"hazardlog", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -3947,6 +3951,15 @@ void D_GameTypeChanged(INT32 lastgametype)
 					// default settings for CTF: no timelimit, pointlimit 5
 					CV_SetValue(&cv_timelimit, 0);
 					CV_SetValue(&cv_pointlimit, 5);
+				}
+				if (!cv_itemrespawntime.changed)
+					CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally
+				break;
+			default:
+				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
+				{
+					CV_SetValue(&cv_timelimit, timelimits[gametype]);
+					CV_SetValue(&cv_pointlimit, pointlimits[gametype]);
 				}
 				if (!cv_itemrespawntime.changed)
 					CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally

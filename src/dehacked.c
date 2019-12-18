@@ -1152,6 +1152,8 @@ static void readgametype(MYFILE *f, char *gtname)
 	INT16 newgtidx = 0;
 	UINT32 newgtrules = 0;
 	UINT32 newgttol = 0;
+	INT32 newgtpointlimit = 0;
+	INT32 newgttimelimit = 0;
 	UINT8 newgtleftcolor = 0;
 	UINT8 newgtrightcolor = 0;
 	int newgtinttype = 0;
@@ -1223,31 +1225,31 @@ static void readgametype(MYFILE *f, char *gtname)
 				word2[strlen(word2)-1] = '\0';
 			i = atoi(word2);
 
+			// Game type rules
 			if (fastcmp(word, "RULES"))
 			{
-				// Game type rules (GTR_)
+				// GTR_
 				newgtrules = (UINT32)get_number(word2);
 			}
+			// Point and time limits
+			else if (fastcmp(word, "DEFAULTPOINTLIMIT"))
+				newgtpointlimit = (INT32)i;
+			else if (fastcmp(word, "DEFAULTTIMELIMIT"))
+				newgttimelimit = (INT32)i;
+			// Level platter
 			else if (fastcmp(word, "HEADERCOLOR") || fastcmp(word, "HEADERCOLOUR"))
-			{
-				// Level platter
 				newgtleftcolor = newgtrightcolor = (UINT8)get_number(word2);
-			}
 			else if (fastcmp(word, "HEADERLEFTCOLOR") || fastcmp(word, "HEADERLEFTCOLOUR"))
-			{
-				// Level platter
 				newgtleftcolor = (UINT8)get_number(word2);
-			}
 			else if (fastcmp(word, "HEADERRIGHTCOLOR") || fastcmp(word, "HEADERRIGHTCOLOUR"))
-			{
-				// Level platter
 				newgtrightcolor = (UINT8)get_number(word2);
-			}
+			// Type of intermission
 			else if (fastcmp(word, "INTERMISSIONTYPE"))
 			{
 				// Case sensitive
 				newgtinttype = (int)get_number(word2lwr);
 			}
+			// Type of level
 			else if (fastcmp(word, "TYPEOFLEVEL"))
 			{
 				if (i) // it's just a number
@@ -1304,7 +1306,11 @@ static void readgametype(MYFILE *f, char *gtname)
 	newgtidx = G_AddGametype(newgtrules);
 	G_AddGametypeTOL(newgtidx, newgttol);
 	G_SetGametypeDescription(newgtidx, gtdescription, newgtleftcolor, newgtrightcolor);
+
+	// Not covered by G_AddGametype alone.
 	intermissiontypes[newgtidx] = newgtinttype;
+	pointlimits[newgtidx] = newgtpointlimit;
+	timelimits[newgtidx] = newgttimelimit;
 
 	// Write the new gametype name.
 	Gametype_Names[newgtidx] = Z_StrDup((const char *)gtname);
