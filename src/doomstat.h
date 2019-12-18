@@ -84,6 +84,7 @@ extern boolean addedtogame; // true after the server has added you
 extern boolean multiplayer;
 
 extern INT16 gametype;
+extern INT16 gametyperules;
 extern boolean splitscreen;
 extern boolean circuitmap; // Does this level have 'circuit mode'?
 extern boolean fromlevelselect;
@@ -406,6 +407,17 @@ enum GameType
 	NUMGAMETYPES
 };
 // If you alter this list, update dehacked.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
+
+// Game type rules
+enum GameTypeRules
+{
+	GTR_PLATFORM    = 1,    // Co-op, Competition, Race
+	GTR_TAG         = 1<<1, // Tag, Hide and Seek
+	GTR_RINGSLINGER = 1<<2, // Not Co-op, not Competition, and not Race (overriden by cv_ringslinger)
+	GTR_SPECTATORS  = 1<<3, // Not Co-op, not Competition, and not Race
+	GTR_TEAMS       = 1<<4, // Team Match, CTF
+	GTR_LIVES       = 1<<5, // A lot of special cases in G_GametypeUsesLives actually, but just Co-op and Competition
+};
 
 // String names for gametypes
 extern const char *Gametype_Names[NUMGAMETYPES];

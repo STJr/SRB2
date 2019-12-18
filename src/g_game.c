@@ -3058,6 +3058,34 @@ const char *Gametype_Names[NUMGAMETYPES] =
 	"CTF" // GT_CTF
 };
 
+// Game type rules
+INT16 gametypedefaultrules[NUMGAMETYPES] =
+{
+	GTR_PLATFORM|GTR_LIVES, // GT_COOP
+	GTR_PLATFORM|GTR_LIVES, // GT_COMPETITION
+	GTR_PLATFORM, // GT_RACE
+
+	GTR_RINGSLINGER|GTR_SPECTATORS, // GT_MATCH
+	GTR_RINGSLINGER|GTR_TEAMS|GTR_SPECTATORS, // GT_TEAMMATCH
+
+	GTR_RINGSLINGER|GTR_TAG|GTR_SPECTATORS, // GT_TAG
+	GTR_RINGSLINGER|GTR_TAG|GTR_SPECTATORS, // GT_HIDEANDSEEK
+
+	GTR_RINGSLINGER|GTR_TEAMS|GTR_SPECTATORS // GT_CTF
+};
+
+//
+// G_SetGametype
+//
+// Set a new gametype, also setting gametype rules accordingly. Yay!
+//
+void G_SetGametype(INT16 gtype)
+{
+	gametype = gtype;
+	gametyperules = gametypedefaultrules[gametype];
+	CONS_Printf("Gametype set to %s (%d)\n", Gametype_Names[gametype], gametype);
+}
+
 //
 // G_GetGametypeByName
 //
@@ -3101,7 +3129,8 @@ boolean G_IsSpecialStage(INT32 mapnum)
 boolean G_GametypeUsesLives(void)
 {
 	 // Coop, Competitive
-	if ((gametype == GT_COOP || gametype == GT_COMPETITION)
+	//if ((gametype == GT_COOP || gametype == GT_COMPETITION)
+	if ((gametyperules & GTR_LIVES)
 	 && !(modeattacking || metalrecording) // No lives in Time Attack
 	 && !G_IsSpecialStage(gamemap)
 	 && !(maptol & TOL_NIGHTS)) // No lives in NiGHTS
@@ -3117,7 +3146,8 @@ boolean G_GametypeUsesLives(void)
 //
 boolean G_GametypeHasTeams(void)
 {
-	return (gametype == GT_TEAMMATCH || gametype == GT_CTF);
+	return (gametyperules & GTR_TEAMS);
+	//return (gametype == GT_TEAMMATCH || gametype == GT_CTF);
 }
 
 //
@@ -3128,7 +3158,8 @@ boolean G_GametypeHasTeams(void)
 //
 boolean G_GametypeHasSpectators(void)
 {
-	return (gametype != GT_COOP && gametype != GT_COMPETITION && gametype != GT_RACE);
+	return (gametyperules & GTR_SPECTATORS);
+	//return (gametype != GT_COOP && gametype != GT_COMPETITION && gametype != GT_RACE);
 }
 
 //
@@ -3139,7 +3170,8 @@ boolean G_GametypeHasSpectators(void)
 //
 boolean G_RingSlingerGametype(void)
 {
-	return ((gametype != GT_COOP && gametype != GT_COMPETITION && gametype != GT_RACE) || (cv_ringslinger.value));
+	return ((gametyperules & GTR_RINGSLINGER) || (cv_ringslinger.value));
+	//return ((gametype != GT_COOP && gametype != GT_COMPETITION && gametype != GT_RACE) || (cv_ringslinger.value));
 }
 
 //
@@ -3149,7 +3181,8 @@ boolean G_RingSlingerGametype(void)
 //
 boolean G_PlatformGametype(void)
 {
-	return (gametype == GT_COOP || gametype == GT_RACE || gametype == GT_COMPETITION);
+	return (gametyperules & GTR_PLATFORM);
+	//return (gametype == GT_COOP || gametype == GT_RACE || gametype == GT_COMPETITION);
 }
 
 //
@@ -3159,7 +3192,8 @@ boolean G_PlatformGametype(void)
 //
 boolean G_TagGametype(void)
 {
-	return (gametype == GT_TAG || gametype == GT_HIDEANDSEEK);
+	return (gametyperules & GTR_TAG);
+	//return (gametype == GT_TAG || gametype == GT_HIDEANDSEEK);
 }
 
 /** Get the typeoflevel flag needed to indicate support of a gametype.

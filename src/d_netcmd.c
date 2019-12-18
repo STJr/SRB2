@@ -125,6 +125,7 @@ static void Command_Version_f(void);
 static void Command_ModDetails_f(void);
 #endif
 static void Command_ShowGametype_f(void);
+static void Command_SetGametype_f(void);
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void);
 static void Command_Playintro_f(void);
 
@@ -381,6 +382,7 @@ char timedemo_csv_id[256];
 boolean timedemo_quit;
 
 INT16 gametype = GT_COOP;
+INT16 gametyperules = 0;
 boolean splitscreen = false;
 boolean circuitmap = false;
 INT32 adminplayers[MAXPLAYERS];
@@ -480,6 +482,7 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("suicide", Command_Suicide);
 
 	COM_AddCommand("gametype", Command_ShowGametype_f);
+	COM_AddCommand("setgametype", Command_SetGametype_f);
 	COM_AddCommand("version", Command_Version_f);
 #ifdef UPDATE_ALERT
 	COM_AddCommand("mod_details", Command_ModDetails_f);
@@ -2065,6 +2068,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 
 	lastgametype = gametype;
 	gametype = READUINT8(*cp);
+	G_SetGametype(gametype); // I fear putting that macro as an argument
 
 	if (gametype < 0 || gametype >= NUMGAMETYPES)
 		gametype = lastgametype;
@@ -3623,6 +3627,12 @@ static void Command_ShowGametype_f(void)
 		CONS_Printf(M_GetText("Unknown gametype set (%d)\n"), gametype);
 }
 
+static void Command_SetGametype_f(void)
+{
+	if (COM_Argc() > 1)
+		G_SetGametype(atoi(COM_Argv(1)));
+}
+
 /** Plays the intro.
   */
 static void Command_Playintro_f(void)
@@ -3935,7 +3945,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 	}
 	else if (!multiplayer && !netgame)
 	{
-		gametype = GT_COOP;
+		G_SetGametype(GT_COOP);
 		// These shouldn't matter anymore
 		//CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue);
 		//CV_SetValue(&cv_itemrespawn, 0);
