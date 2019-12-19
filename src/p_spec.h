@@ -58,7 +58,6 @@ fixed_t P_GetSectorGravity(sector_t *sec);
 INT32 P_FindSectorFromLineTag(line_t *line, INT32 start);
 INT32 P_FindSectorFromTag(INT16 tag, INT32 start);
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
-boolean Tags_Compare (const tags_t* tags1, const tags_t* tags2);
 
 INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
 

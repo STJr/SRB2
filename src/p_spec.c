@@ -984,16 +984,6 @@ fixed_t P_GetSectorGravity(sector_t *sec)
 		return sec->gravity;
 }
 
-static INT32 tpos = -1;
-
-#define MAXTAGS 65536
-typedef struct{
-	INT32* list;
-	size_t size;
-} taggroup_t;
-
-taggroup_t* taglist_sec[MAXTAGS];
-
 /** Searches the tag lists for the next sector tagged to a line.
   *
   * \param line  Tagged line used as a reference.
@@ -1004,7 +994,23 @@ taggroup_t* taglist_sec[MAXTAGS];
   */
 INT32 P_FindSectorFromLineTag(line_t *line, INT32 start)
 {
-	return P_FindSectorFromTag(line->tag, start);
+	if (line->tag == -1)
+	{
+		start++;
+
+		if (start >= (INT32)numsectors)
+			return -1;
+
+		return start;
+	}
+	else
+	{
+		start = start >= 0 ? sectors[start].nexttag :
+			sectors[(unsigned)line->tag % numsectors].firsttag;
+		while (start >= 0 && sectors[start].tag != line->tag)
+			start = sectors[start].nexttag;
+		return start;
+	}
 }
 
 /** Searches the tag lists for the next sector with a given tag.
@@ -1017,22 +1023,23 @@ INT32 P_FindSectorFromLineTag(line_t *line, INT32 start)
   */
 INT32 P_FindSectorFromTag(INT16 tag, INT32 start)
 {
-	tpos = 0;
-
-	if (taglist_sec[tag])
+	if (tag == -1)
 	{
-		if (start != -1)
-			for (; tpos < taglist_sec[tag]->size;)
-				if (start == taglist_sec[tag]->list[tpos++])
-					break;
+		start++;
 
-		if (tpos >= taglist_sec[tag]->size)
+		if (start >= (INT32)numsectors)
 			return -1;
 
-		return taglist_sec[tag]->list[tpos++];
+		return start;
 	}
-
-	return -1;
+	else
+	{
+		start = start >= 0 ? sectors[start].nexttag :
+			sectors[(unsigned)tag % numsectors].firsttag;
+		while (start >= 0 && sectors[start].tag != tag)
+			start = sectors[start].nexttag;
+		return start;
+	}
 }
 
 /** Searches the tag lists for the next line tagged to a line.
@@ -1604,8 +1611,17 @@ void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean e
 	}
 }
 
+#define MAXTAGS 65536
+typedef struct{
+	size_t* list;
+	size_t size;
+} taggroup_t;
+
+taggroup_t* taglist_sec[MAXTAGS];
+
 /** Insert an item id into a given taglist.
  */
+/*
 static void Taglist_AddTo (const size_t tag, const size_t itemid)
 {
 	taggroup_t* group;
@@ -1623,21 +1639,7 @@ static void Taglist_AddTo (const size_t tag, const size_t itemid)
 		group->list = Z_Realloc(group->list, group->size * sizeof(size_t), PU_LEVEL, NULL);
 	}
 	group->list[group->size - 1] = itemid;
-}
-
-boolean Tags_Compare (const tags_t* tags1, const tags_t* tags2)
-{
-	size_t i;
-
-	if (tags1->numtags != tags2->numtags)
-		return false;
-
-	for (i = 0; i < tags1->numtags; i++)
-	if (tags1->tags[i] != tags2->tags[i])
-		return false;
-
-	return true;
-}
+}*/
 
 /** Hashes the sector tags across the sectors and linedefs.
   *
@@ -1661,20 +1663,16 @@ static inline void P_InitTagLists(void)
 		lines[i].nexttag = lines[j].firsttag;
 		lines[j].firsttag = (INT32)i;
 	}
-
+/*
 	for (i = 0; i < MAXTAGS; i++)
 		taglist_sec[i] = NULL;
 
 	for (i = 0; i < numsectors; i++)
 	{
-		if (sectors[i].tags.numtags)
-		{
-			size_t j;
-			for (j = 0; j < sectors[i].tags.numtags; j++)
-				Taglist_AddTo(sectors[i].tags.tags[j], i);
-		}
+		if (sectors[i].tag > 0)
+			Taglist_AddTo(sectors[i].tag, i);
 	}
-	/*
+
 	for (i = 0; i < MAXTAGS; i++)
 	{
 		if (taglist_sec[i])
@@ -1687,7 +1685,8 @@ static inline void P_InitTagLists(void)
 				CONS_Printf("Sector %d\n", group->list[j]);
 			}
 		}
-	}*/
+	}
+*/
 }
 
 #undef MAXTAGS
