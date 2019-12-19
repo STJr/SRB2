@@ -1357,7 +1357,7 @@ boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, b
 	hook_p hookp;
 	boolean canSwitchTeam = true;
 	if (!gL || !(hooksAvailable[hook_TeamSwitch/8] & (1<<(hook_TeamSwitch%8))))
-		return 0;
+		return true;
 
 	lua_settop(gL, 0);
 
