@@ -1087,12 +1087,9 @@ void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
 	for (i = 0; i < numlumps; i++, lumpinfo++)
 	{
 		name = lumpinfo->name;
-		// load SPRTINFO lumps
-		if (!stricmp(name, "SPRTINFO"))
+		// Load SPRTINFO and SPR_ lumps as SpriteInfo
+		if (!memcmp(name, "SPRTINFO", 8) || !memcmp(name, "SPR_", 4))
 			R_ParseSPRTINFOLump(wadnum, i);
-		// load SPR_ lumps (as DEHACKED lump)
-		else if (!memcmp(name, "SPR_", 4))
-			DEH_LoadDehackedLumpPwad(wadnum, i, false);
 	}
 }
 
