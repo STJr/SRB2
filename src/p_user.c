@@ -11419,7 +11419,12 @@ void P_PlayerThink(player_t *player)
 			player->lives = 0;
 
 			if (player->playerstate == PST_DEAD)
+			{
+#ifdef HAVE_BLUA
+				LUAh_PlayerThink(player);
+#endif
 				return;
+			}
 		}
 	}
 
