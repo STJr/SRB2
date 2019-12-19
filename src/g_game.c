@@ -2583,7 +2583,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 
 	// -- DM/Tag/CTF-spectator/etc --
 	// Order: DM->CTF->Coop
-	else if (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF
+	else if ((gametyperules & GTR_DEATHMATCHSTARTS) || gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF
 	 || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && !(players[playernum].pflags & PF_TAGIT)))
 	{
 		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
