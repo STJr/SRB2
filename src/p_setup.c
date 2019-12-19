@@ -672,7 +672,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	return Ploadflat(0, flatname);
+	return Ploadflat(levelflats, flatname);
 }
 
 // help function for $$$.sav checking
@@ -3019,8 +3019,15 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 	{
+		// Lactozilla (December 8, 2019)
+		// Level setup used to free EVERY mipmap from memory.
+		// Even mipmaps that aren't related to level textures.
+		// Presumably, the hardware render code used to store textures as level data.
+		// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
+		// Level textures are only reloaded after R_LoadTextures, which is
+		// when the texture list is loaded.
 #ifdef ALAM_LIGHTING
 		// BP: reset light between levels (we draw preview frame lights on current frame)
 		HWR_ResetLights();
@@ -3175,11 +3182,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		if (!cv_analog2.changed)
 			CV_SetValue(&cv_analog2, 0);
 
-#ifdef HWRENDER
-		if (rendermode != render_soft && rendermode != render_none)
-			CV_Set(&cv_grfov, cv_grfov.defaultvalue);
-#endif
-
 		displayplayer = consoleplayer; // Start with your OWN view, please!
 	}
 
@@ -3202,14 +3204,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Fab : 19-07-98 : start cd music for this level (note: can be remapped)
 	I_PlayCD((UINT8)(gamemap), false);
-
-	// preload graphics
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-	if (rendermode != render_soft && rendermode != render_none)
-	{
-		HWR_PrepLevelCache(numtextures);
-	}
-#endif
 
 	P_MapEnd();
 
@@ -3380,10 +3374,10 @@ boolean P_AddWadFile(const char *wadfilename)
 	// WADs use markers for some resources, but others such as sounds are checked lump-by-lump anyway.
 //	UINT16 luaPos, luaNum = 0;
 //	UINT16 socPos, socNum = 0;
-	UINT16 sfxPos, sfxNum = 0;
+	UINT16 sfxPos = 0, sfxNum = 0;
 	UINT16 musPos = 0, musNum = 0;
 //	UINT16 sprPos, sprNum = 0;
-	UINT16 texPos, texNum = 0;
+	UINT16 texPos = 0, texNum = 0;
 //	UINT16 patPos, patNum = 0;
 //	UINT16 flaPos, flaNum = 0;
 //	UINT16 mapPos, mapNum = 0;

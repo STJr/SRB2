@@ -26,6 +26,7 @@ UINT8 portalrender;			/**< When rendering a portal, it establishes the depth of 
 portal_t *portal_base, *portal_cap;
 
 line_t *portalclipline;
+sector_t *portalcullsector;
 INT32 portalclipstart, portalclipend;
 
 boolean portalline; // is curline a portal seg?

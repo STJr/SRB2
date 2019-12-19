@@ -1193,6 +1193,13 @@ void D_SRB2Main(void)
 	CONS_Printf("I_StartupGraphics()...\n");
 	I_StartupGraphics();
 
+#ifdef HWRENDER
+	// Lactozilla: Add every hardware mode CVAR and CCMD.
+	// Has to be done before the configuration file loads,
+	// but after the OpenGL library loads.
+	HWR_AddCommands();
+#endif
+
 	//--------------------------------------------------------- CONSOLE
 	// setup loading screen
 	SCR_Startup();
