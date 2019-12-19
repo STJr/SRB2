@@ -1406,6 +1406,7 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer)
 		return 0;
 
 	lua_settop(gL, 0);
+	hud_running = true;
 
 	for (hookp = playerhooks; hookp; hookp = hookp->next)
 	{
@@ -1439,6 +1440,8 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer)
 	}
 
 	lua_settop(gL, 0);
+	hud_running = false;
+
 	return canSwitchView;
 }
 
