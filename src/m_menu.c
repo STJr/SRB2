@@ -4929,17 +4929,6 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 	}
 #endif
 
-	if (levselp[0][0]) // never going to have some provided but not all, saves individually checking
-	{
-		W_UnlockCachedPatch(levselp[0][0]);
-		W_UnlockCachedPatch(levselp[0][1]);
-		W_UnlockCachedPatch(levselp[0][2]);
-
-		W_UnlockCachedPatch(levselp[1][0]);
-		W_UnlockCachedPatch(levselp[1][1]);
-		W_UnlockCachedPatch(levselp[1][2]);
-	}
-
 	levselp[0][0] = W_CachePatchName("SLCT1LVL", PU_PATCH);
 	levselp[0][1] = W_CachePatchName("SLCT2LVL", PU_PATCH);
 	levselp[0][2] = W_CachePatchName("BLANKLVL", PU_PATCH);
@@ -5874,13 +5863,6 @@ static void M_Addons(INT32 choice)
 	}
 	else
 		dir_on[menudepthleft] = 0;
-
-	if (addonsp[0]) // never going to have some provided but not all, saves individually checking
-	{
-		size_t i;
-		for (i = 0; i < NUM_EXT+5; i++)
-			W_UnlockCachedPatch(addonsp[i]);
-	}
 
 	M_LoadAddonsPatches();
 
@@ -7040,8 +7022,6 @@ static void M_SoundTest(INT32 choice)
 	STRBUFCPY(buf, "M_RADIOn");
 	for (i = 0; i < 9; i++)
 	{
-		if (st_radio[i])
-			W_UnlockCachedPatch(st_radio[i]);
 		buf[7] = (char)('0'+i);
 		st_radio[i] = W_CachePatchName(buf, PU_STATIC);
 	}
@@ -7049,8 +7029,6 @@ static void M_SoundTest(INT32 choice)
 	STRBUFCPY(buf, "M_LPADn");
 	for (i = 0; i < 4; i++)
 	{
-		if (st_launchpad[i])
-			W_UnlockCachedPatch(st_launchpad[i]);
 		buf[6] = (char)('0'+i);
 		st_launchpad[i] = W_CachePatchName(buf, PU_STATIC);
 	}
