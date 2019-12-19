@@ -24,6 +24,7 @@
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
+#include "m_menu.h"
 #include "y_inter.h"
 #include "hu_stuff.h"	// HU_AddChatText
 #include "console.h"
@@ -2737,7 +2738,8 @@ static int lib_gAddGametype(lua_State *L)
 	// Add the new gametype
 	newgtidx = G_AddGametype(newgtrules);
 	G_AddGametypeTOL(newgtidx, newgttol);
-	G_SetGametypeDescription(newgtidx, (char *)gtdescription, newgtleftcolor, newgtrightcolor);
+	G_SetGametypeDescription(newgtidx, NULL, newgtleftcolor, newgtrightcolor);
+	strncpy(gametypedesc[newgtidx].notes, gtdescription, 441);
 
 	// Not covered by G_AddGametype alone.
 	if (newgtrankingstype == -1)

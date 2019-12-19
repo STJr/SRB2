@@ -3220,7 +3220,8 @@ void G_UpdateGametypeSelections(void)
 //
 void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolor, UINT8 rightcolor)
 {
-	strncpy(gametypedesc[gtype].notes, descriptiontext, 441);
+	if (descriptiontext != NULL)
+		strncpy(gametypedesc[gtype].notes, descriptiontext, 441);
 	gametypedesc[gtype].col[0] = leftcolor;
 	gametypedesc[gtype].col[1] = rightcolor;
 }
