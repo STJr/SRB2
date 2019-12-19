@@ -63,6 +63,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"PlayerQuit",
 	"IntermissionThinker",
 	"PlayerThink",
+	"CalculateCamera",
 	NULL
 };
 
@@ -207,6 +208,7 @@ static int lib_addHook(lua_State *L)
 	case hook_ShieldSpawn:
 	case hook_ShieldSpecial:
 	case hook_PlayerThink:
+	case hook_CalculateCamera:
 		lastp = &playerhooks;
 		break;
 	case hook_LinedefExecute:
@@ -1346,6 +1348,45 @@ void LUAh_IntermissionThinker(void)
 			hookp->error = true;
 		}
 	}
+}
+
+boolean LUAh_CalculateCamera(player_t *player, camera_t *camera)
+{
+	hook_p hookp;
+	boolean hooked;
+	if (!gL || !(hooksAvailable[hook_CalculateCamera/8] & (1<<(hook_CalculateCamera%8))))
+		return 0;
+	
+	lua_settop(gL, 0);
+	
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_CalculateCamera)
+			continue;
+		
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			LUA_PushUserdata(gL, camera, META_CAMERA);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			hooked = true;
+		lua_pop(gL, 1);
+	}
+	
+	lua_settop(gL, 0);
+	return hooked;
 }
 
 #endif

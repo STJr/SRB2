@@ -52,6 +52,7 @@ enum hook {
 	hook_PlayerQuit,
 	hook_IntermissionThinker,
 	hook_PlayerThink,
+	hook_CalculateCamera,
 
 	hook_MAX // last hook
 };
@@ -95,5 +96,6 @@ UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj); // Hook for P_Player
 void LUAh_PlayerQuit(player_t *plr, int reason); // Hook for player quitting
 void LUAh_IntermissionThinker(void); // Hook for Y_Ticker
 #define LUAh_PlayerThink(player) LUAh_PlayerHook(player, hook_PlayerThink) // Hook for P_PlayerThink
+boolean LUAh_CalculateCamera(player_t *player, camera_t *camera); // Hook for P_PlayerAfterThink Camera calculations
 
 #endif

@@ -12626,22 +12626,29 @@ void P_PlayerAfterThink(player_t *player)
 
 	if (thiscam)
 	{
-		if (!thiscam->chase) // bob view only if looking through the player's eyes
-		{
-			P_CalcHeight(player);
-			P_CalcPostImg(player);
-		}
+#ifdef HAVE_BLUA
+		if (LUAh_CalculateCamera(player, thiscam))
+			{;}
 		else
+#endif
 		{
-			// defaults to make sure 1st person cam doesn't do anything weird on startup
-			player->deltaviewheight = 0;
-			player->viewheight = FixedMul(41*player->height/48, player->mo->scale);
-			if (player->mo->eflags & MFE_VERTICALFLIP)
-				player->viewz = player->mo->z + player->mo->height - player->viewheight;
+			if (!thiscam->chase) // bob view only if looking through the player's eyes
+			{
+				P_CalcHeight(player);
+				P_CalcPostImg(player);
+			}
 			else
-				player->viewz = player->mo->z + player->viewheight;
-			if (server || addedtogame)
-				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
+			{
+				// defaults to make sure 1st person cam doesn't do anything weird on startup
+				player->deltaviewheight = 0;
+				player->viewheight = FixedMul(41*player->height/48, player->mo->scale);
+				if (player->mo->eflags & MFE_VERTICALFLIP)
+					player->viewz = player->mo->z + player->mo->height - player->viewheight;
+				else
+					player->viewz = player->mo->z + player->viewheight;
+				if (server || addedtogame)
+					P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
+			}
 		}
 	}
 
