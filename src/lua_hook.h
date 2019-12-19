@@ -14,6 +14,7 @@
 
 #include "r_defs.h"
 #include "d_player.h"
+#include "p_local.h"
 
 enum hook {
 	hook_NetVars=0,
