@@ -125,7 +125,6 @@ static void Command_Version_f(void);
 static void Command_ModDetails_f(void);
 #endif
 static void Command_ShowGametype_f(void);
-static void Command_SetGametype_f(void);
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void);
 static void Command_Playintro_f(void);
 
@@ -488,7 +487,6 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("suicide", Command_Suicide);
 
 	COM_AddCommand("gametype", Command_ShowGametype_f);
-	COM_AddCommand("setgametype", Command_SetGametype_f);
 	COM_AddCommand("version", Command_Version_f);
 #ifdef UPDATE_ALERT
 	COM_AddCommand("mod_details", Command_ModDetails_f);
@@ -3641,16 +3639,6 @@ static void Command_ShowGametype_f(void)
 		CONS_Printf(M_GetText("Current gametype is %s\n"), gametypestr);
 	else // string for current gametype was not found above (should never happen)
 		CONS_Printf(M_GetText("Unknown gametype set (%d)\n"), gametype);
-}
-
-static void Command_SetGametype_f(void)
-{
-	if (COM_Argc() > 1)
-	{
-		INT16 oldgametype = gametype;
-		G_SetGametype(atoi(COM_Argv(1)));
-		D_GameTypeChanged(oldgametype);
-	}
 }
 
 /** Plays the intro.
