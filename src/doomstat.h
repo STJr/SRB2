@@ -419,11 +419,10 @@ enum GameTypeRules
 	GTR_ALLOWEXIT        = 1<<22, // Allow exit sectors
 	GTR_CAMPAIGN         = 1<<23, // Linear Co-op map progression. Don't allow random maps.
 	GTR_NOGAMEEND        = 1<<24, // Don't end the game. That is, wrap around the maps instead of starting the ending.
-	GTR_ROUNDENDMESSAGE  = 1<<25, // Prints "The round has ended." into the console
-	GTR_NOTITLECARD      = 1<<26, // Don't show the title card
-	GTR_POINTLIMIT       = 1<<27, // Ringslinger point limit
-	GTR_TIMELIMIT        = 1<<28, // Ringslinger time limit
-	GTR_OVERTIME         = 1<<29, // Allow overtime
+	GTR_NOTITLECARD      = 1<<25, // Don't show the title card
+	GTR_POINTLIMIT       = 1<<26, // Ringslinger point limit
+	GTR_TIMELIMIT        = 1<<27, // Ringslinger time limit
+	GTR_OVERTIME         = 1<<28, // Allow overtime
 };
 
 // String names for gametypes
