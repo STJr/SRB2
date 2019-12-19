@@ -3325,8 +3325,7 @@ boolean G_IsSpecialStage(INT32 mapnum)
 //
 boolean G_GametypeUsesLives(void)
 {
-	 // Coop, Competitive
-	//if ((gametype == GT_COOP || gametype == GT_COMPETITION)
+	// Coop, Competitive
 	if ((gametyperules & GTR_LIVES)
 	 && !(modeattacking || metalrecording) // No lives in Time Attack
 	 && !G_IsSpecialStage(gamemap)
@@ -3344,7 +3343,6 @@ boolean G_GametypeUsesLives(void)
 boolean G_GametypeHasTeams(void)
 {
 	return (gametyperules & GTR_TEAMS);
-	//return (gametype == GT_TEAMMATCH || gametype == GT_CTF);
 }
 
 //
@@ -3356,7 +3354,6 @@ boolean G_GametypeHasTeams(void)
 boolean G_GametypeHasSpectators(void)
 {
 	return (gametyperules & GTR_SPECTATORS);
-	//return (gametype != GT_COOP && gametype != GT_COMPETITION && gametype != GT_RACE);
 }
 
 //
@@ -3368,7 +3365,6 @@ boolean G_GametypeHasSpectators(void)
 boolean G_RingSlingerGametype(void)
 {
 	return ((gametyperules & GTR_RINGSLINGER) || (cv_ringslinger.value));
-	//return ((gametype != GT_COOP && gametype != GT_COMPETITION && gametype != GT_RACE) || (cv_ringslinger.value));
 }
 
 //
@@ -3389,7 +3385,6 @@ boolean G_PlatformGametype(void)
 boolean G_TagGametype(void)
 {
 	return (gametyperules & GTR_TAG);
-	//return (gametype == GT_TAG || gametype == GT_HIDEANDSEEK);
 }
 
 /** Get the typeoflevel flag needed to indicate support of a gametype.
@@ -3400,21 +3395,9 @@ boolean G_TagGametype(void)
   */
 INT16 G_TOLFlag(INT32 pgametype)
 {
-	if (!multiplayer)                 return TOL_SP;
+	if (!multiplayer)
+		return TOL_SP;
 	return gametypetol[pgametype];
-#if 0
-	if (pgametype == GT_COOP)         return TOL_COOP;
-	if (pgametype == GT_COMPETITION)  return TOL_COMPETITION;
-	if (pgametype == GT_RACE)         return TOL_RACE;
-	if (pgametype == GT_MATCH)        return TOL_MATCH;
-	if (pgametype == GT_TEAMMATCH)    return TOL_MATCH;
-	if (pgametype == GT_TAG)          return TOL_TAG;
-	if (pgametype == GT_HIDEANDSEEK)  return TOL_TAG;
-	if (pgametype == GT_CTF)          return TOL_CTF;
-
-	CONS_Alert(CONS_ERROR, M_GetText("Unknown gametype! %d\n"), pgametype);
-	return INT16_MAX;
-#endif
 }
 
 /** Select a random map with the given typeoflevel flags.
