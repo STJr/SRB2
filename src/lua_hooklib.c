@@ -62,6 +62,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"PlayerCanDamage",
 	"PlayerQuit",
 	"IntermissionThinker",
+	"TeamSwitch",
 	"ViewpointSwitch",
 	NULL
 };
@@ -204,6 +205,7 @@ static int lib_addHook(lua_State *L)
 	case hook_PlayerSpawn:
 	case hook_FollowMobj:
 	case hook_PlayerCanDamage:
+	case hook_TeamSwitch:
 	case hook_ViewpointSwitch:
 	case hook_ShieldSpawn:
 	case hook_ShieldSpecial:
@@ -1346,6 +1348,53 @@ void LUAh_IntermissionThinker(void)
 			hookp->error = true;
 		}
 	}
+}
+
+// Hook for team switching
+// It's just an edit of LUAh_ViewpointSwitch.
+boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, boolean autobalance, boolean scrambled)
+{
+	hook_p hookp;
+	boolean canSwitchTeam = true;
+	if (!gL || !(hooksAvailable[hook_TeamSwitch/8] & (1<<(hook_TeamSwitch%8))))
+		return 0;
+
+	lua_settop(gL, 0);
+
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_TeamSwitch)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			lua_pushinteger(gL, newteam);
+			lua_pushboolean(gL, fromspectators);
+			lua_pushboolean(gL, autobalance);
+			lua_pushboolean(gL, scrambled);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		if (lua_pcall(gL, 5, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1) && !lua_toboolean(gL, -1))
+			canSwitchTeam = false; // Can't switch team
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return canSwitchTeam;
 }
 
 // Hook for spy mode in G_Responder

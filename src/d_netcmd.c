@@ -2734,6 +2734,12 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
+#ifdef HAVE_BLUA
+	// Don't switch team, just go away, please, go awaayyyy, aaauuauugghhhghgh
+	if (!LUAh_TeamSwitch(&players[playernum], NetPacket.packet.newteam, players[playernum].spectator, NetPacket.packet.autobalance, NetPacket.packet.scrambled))
+		return;
+#endif
+
 	//no status changes after hidetime
 	if ((gametyperules & GTR_HIDEFROZEN) && (leveltime >= (hidetime * TICRATE)))
 		error = true;

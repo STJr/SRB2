@@ -10364,6 +10364,11 @@ boolean P_SpectatorJoinGame(player_t *player)
 		else
 			changeto = (P_RandomFixed() & 1) + 1;
 
+#ifdef HAVE_BLUA
+		if (!LUAh_TeamSwitch(player, changeto, true, false, false))
+			return false;
+#endif
+
 		if (player->mo)
 		{
 			P_RemoveMobj(player->mo);
@@ -10389,8 +10394,12 @@ boolean P_SpectatorJoinGame(player_t *player)
 	{
 		// Exception for hide and seek. Don't join a game when you simply
 		// respawn in place and sit there for the rest of the round.
-		if (!(gametype == GT_HIDEANDSEEK && leveltime > (hidetime * TICRATE)))
+		if (!((gametyperules & GTR_HIDEFROZEN) && leveltime > (hidetime * TICRATE)))
 		{
+#ifdef HAVE_BLUA
+			if (!LUAh_TeamSwitch(player, 3, true, false, false))
+				return false;
+#endif
 			if (player->mo)
 			{
 				P_RemoveMobj(player->mo);
