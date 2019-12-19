@@ -8857,7 +8857,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 };
 
 static const char *const GAMETYPERULE_LIST[] = {
-	"PLATFORM",
+	"\x01",
 	"TAG",
 	"RINGSLINGER",
 	"SPECTATORS",

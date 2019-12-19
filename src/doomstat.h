@@ -389,7 +389,7 @@ enum GameType
 // Game type rules
 enum GameTypeRules
 {
-	GTR_PLATFORM         = 1,     // Co-op, Competition, and Race
+	GTR_SORRYNOTHING     = 1,
 	GTR_TAG              = 1<<1,  // Tag and Hide and Seek
 	GTR_RINGSLINGER      = 1<<2,  // Not Co-op, not Competition, and not Race (overriden by cv_ringslinger)
 	GTR_SPECTATORS       = 1<<3,  // Not Co-op, not Competition, and not Race
