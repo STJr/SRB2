@@ -3084,7 +3084,7 @@ const char *Gametype_ConstantNames[NUMGAMETYPES] =
 	"GT_CTF" // GT_CTF
 };
 
-// Game type rules
+// Gametype rules
 UINT32 gametypedefaultrules[NUMGAMETYPES] =
 {
 	// Co-op
@@ -3169,6 +3169,23 @@ void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolo
 	gametypedesc[gtype].col[1] = rightcolor;
 }
 
+// Gametype rankings
+INT16 gametyperankings[NUMGAMETYPES] =
+{
+	GT_COOP,
+	GT_COMPETITION,
+	GT_RACE,
+
+	GT_MATCH,
+	GT_TEAMMATCH,
+
+	GT_TAG,
+	GT_HIDEANDSEEK,
+
+	GT_CTF,
+};
+
+// Gametype to TOL (Type Of Level)
 UINT32 gametypetol[NUMGAMETYPES] =
 {
 	TOL_COOP, // Co-op

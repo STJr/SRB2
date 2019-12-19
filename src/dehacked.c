@@ -1156,6 +1156,7 @@ static void readgametype(MYFILE *f, char *gtname)
 	INT32 newgttimelimit = 0;
 	UINT8 newgtleftcolor = 0;
 	UINT8 newgtrightcolor = 0;
+	INT16 newgtrankingstype = -1;
 	int newgtinttype = 0;
 	char gtdescription[441];
 
@@ -1243,7 +1244,13 @@ static void readgametype(MYFILE *f, char *gtname)
 				newgtleftcolor = (UINT8)get_number(word2);
 			else if (fastcmp(word, "HEADERRIGHTCOLOR") || fastcmp(word, "HEADERRIGHTCOLOUR"))
 				newgtrightcolor = (UINT8)get_number(word2);
-			// Type of intermission
+			// Rankings type
+			else if (fastcmp(word, "RANKINGTYPE"))
+			{
+				// Case insensitive
+				newgtrankingstype = (int)get_number(word2);
+			}
+			// Intermission type
 			else if (fastcmp(word, "INTERMISSIONTYPE"))
 			{
 				// Case sensitive
@@ -1308,6 +1315,9 @@ static void readgametype(MYFILE *f, char *gtname)
 	G_SetGametypeDescription(newgtidx, gtdescription, newgtleftcolor, newgtrightcolor);
 
 	// Not covered by G_AddGametype alone.
+	if (newgtrankingstype == -1)
+		newgtrankingstype = newgtidx;
+	gametyperankings[newgtidx] = newgtrankingstype;
 	intermissiontypes[newgtidx] = newgtinttype;
 	pointlimits[newgtidx] = newgtpointlimit;
 	timelimits[newgtidx] = newgttimelimit;
