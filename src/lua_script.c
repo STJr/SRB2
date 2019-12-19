@@ -106,6 +106,17 @@ static int noglobals(lua_State *L)
 		return 0;
 	}
 
+	if (fastcmp(csname,"redscore"))
+	{
+		redscore = (UINT32)luaL_checkinteger(L, 2);
+		return 0;
+	}
+	else if (fastcmp(csname,"bluescore"))
+	{
+		bluescore = (UINT32)luaL_checkinteger(L, 2);
+		return 0;
+	}
+
 	Z_Free(name);
 	return luaL_error(L, "Implicit global " LUA_QS " prevented. Create a local variable instead.", csname);
 }
