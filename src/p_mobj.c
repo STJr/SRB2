@@ -11774,7 +11774,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 		if (!cv_powerstones.value)
 			return;
 
-		if (!(gametyperules & GTR_EMERALDS))
+		if (!(gametyperules & GTR_MATCHEMERALDS))
 			return;
 
 		runemeraldmanager = true;

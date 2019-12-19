@@ -389,40 +389,34 @@ enum GameType
 // Game type rules
 enum GameTypeRules
 {
-	GTR_SORRYNOTHING     = 1,
-	GTR_TAG              = 1<<1,  // Tag and Hide and Seek
-	GTR_RINGSLINGER      = 1<<2,  // Not Co-op, not Competition, and not Race (overriden by cv_ringslinger)
-	GTR_SPECTATORS       = 1<<3,  // Not Co-op, not Competition, and not Race
-	GTR_TEAMS            = 1<<4,  // Team Match, CTF
-	GTR_LIVES            = 1<<5,  // A lot of special cases in G_GametypeUsesLives actually, but just Co-op and Competition
+	GTR_CAMPAIGN         = 1,     // Linear Co-op map progression. Don't allow random maps.
+	GTR_RINGSLINGER      = 1<<1,  // Outside of Co-op, Competition, and Race (overriden by cv_ringslinger)
+	GTR_SPECTATORS       = 1<<2,  // Outside of Co-op, Competition, and Race
+	GTR_FRIENDLYFIRE     = 1<<3,  // Always allow friendly fire
+	GTR_LIVES            = 1<<4,  // Co-op and Competition
+	GTR_TEAMS            = 1<<5,  // Team Match, CTF
 	GTR_RACE             = 1<<6,  // Race and Competition
-
-	// Lactozilla
-	// Awesome! Those are new game type rules provided by yours truly to allow for more
-	// flexibility! Those will replace some straight-up gametype checks scattered around the source code!
-
-	GTR_CHASECAM         = 1<<7,  // Prefer chasecam at map load (All platform gametypes)
-	GTR_FRIENDLYFIRE     = 1<<8,  // Always allow friendly fire
-	GTR_HIDETIME         = 1<<9,  // Hide time (Tag and Hide and Seek)
-	GTR_HIDEFROZEN       = 1<<10, // Frozen after hide time (Hide and Seek, but not Tag)
-	GTR_BLINDFOLDED      = 1<<11, // Blindfolded view (Tag and Hide and Seek)
-	GTR_EMERALDS         = 1<<12, // Ringslinger emeralds (Match and CTF)
-	GTR_TEAMFLAGS        = 1<<13, // Gametype has team flags (CTF)
-	GTR_PITYSHIELD       = 1<<14, // Award pity shield
-	GTR_DEATHPENALTY     = 1<<15, // Death score penalty
-	GTR_NOSPECTATORSPAWN = 1<<16, // For use with GTR_SPECTATORS - spawn in the map instead of with the spectators
-	GTR_DEATHMATCHSTARTS = 1<<17, // Use deathmatch starts
-	GTR_SPECIALSTAGES    = 1<<18, // Allow special stages
-	GTR_EMERALDTOKENS    = 1<<19, // Spawn emerald tokens
-	GTR_EMERALDHUNT      = 1<<20, // Emerald Hunt
-	GTR_SPAWNENEMIES     = 1<<21, // Spawn enemies
-	GTR_ALLOWEXIT        = 1<<22, // Allow exit sectors
-	GTR_CAMPAIGN         = 1<<23, // Linear Co-op map progression. Don't allow random maps.
-	GTR_NOGAMEEND        = 1<<24, // Don't end the game. That is, wrap around the maps instead of starting the ending.
-	GTR_NOTITLECARD      = 1<<25, // Don't show the title card
-	GTR_POINTLIMIT       = 1<<26, // Ringslinger point limit
-	GTR_TIMELIMIT        = 1<<27, // Ringslinger time limit
-	GTR_OVERTIME         = 1<<28, // Allow overtime
+	GTR_TAG              = 1<<7,  // Tag and Hide and Seek
+	GTR_POINTLIMIT       = 1<<8,  // Ringslinger point limit
+	GTR_TIMELIMIT        = 1<<9,  // Ringslinger time limit
+	GTR_HIDETIME         = 1<<10, // Hide time (Tag and Hide and Seek)
+	GTR_HIDEFROZEN       = 1<<11, // Frozen after hide time (Hide and Seek, but not Tag)
+	GTR_BLINDFOLDED      = 1<<12, // Blindfolded view (Tag and Hide and Seek)
+	GTR_CHASECAM         = 1<<13, // Prefer chasecam at map load (All platform gametypes)
+	GTR_MATCHEMERALDS    = 1<<14, // Ringslinger emeralds (Match and CTF)
+	GTR_TEAMFLAGS        = 1<<15, // Gametype has team flags (CTF)
+	GTR_PITYSHIELD       = 1<<16, // Award pity shield
+	GTR_DEATHPENALTY     = 1<<17, // Death score penalty
+	GTR_NOSPECTATORSPAWN = 1<<18, // For use with GTR_SPECTATORS - spawn in the map instead of with the spectators
+	GTR_DEATHMATCHSTARTS = 1<<19, // Use deathmatch starts
+	GTR_SPECIALSTAGES    = 1<<20, // Allow special stages
+	GTR_EMERALDTOKENS    = 1<<21, // Spawn emerald tokens
+	GTR_EMERALDHUNT      = 1<<22, // Emerald Hunt
+	GTR_SPAWNENEMIES     = 1<<23, // Spawn enemies
+	GTR_ALLOWEXIT        = 1<<24, // Allow exit sectors
+	GTR_NOGAMEEND        = 1<<25, // Don't end the game. That is, wrap around the maps instead of starting the ending.
+	GTR_NOTITLECARD      = 1<<26, // Don't show the title card
+	GTR_OVERTIME         = 1<<27, // Allow overtime
 };
 
 // String names for gametypes
