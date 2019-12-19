@@ -414,9 +414,8 @@ enum GameTypeRules
 	GTR_EMERALDHUNT      = 1<<22, // Emerald Hunt
 	GTR_SPAWNENEMIES     = 1<<23, // Spawn enemies
 	GTR_ALLOWEXIT        = 1<<24, // Allow exit sectors
-	GTR_NOGAMEEND        = 1<<25, // Don't end the game. That is, wrap around the maps instead of starting the ending.
-	GTR_NOTITLECARD      = 1<<26, // Don't show the title card
-	GTR_OVERTIME         = 1<<27, // Allow overtime
+	GTR_NOTITLECARD      = 1<<25, // Don't show the title card
+	GTR_OVERTIME         = 1<<26, // Allow overtime
 };
 
 // String names for gametypes
