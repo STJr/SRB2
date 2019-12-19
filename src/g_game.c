@@ -2574,7 +2574,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 
 	// -- CTF --
 	// Order: CTF->DM->Coop
-	if ((gametyperules & GTR_TEAMFLAGS) && players[playernum].ctfteam)
+	if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
 	{
 		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
 		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
