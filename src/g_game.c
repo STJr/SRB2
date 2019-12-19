@@ -3374,7 +3374,7 @@ boolean G_RingSlingerGametype(void)
 //
 boolean G_PlatformGametype(void)
 {
-	return (!G_RingSlingerGametype());
+	return (!(gametyperules & GTR_RINGSLINGER));
 }
 
 //
