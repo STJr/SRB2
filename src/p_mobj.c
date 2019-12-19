@@ -11838,8 +11838,10 @@ You should think about modifying the deathmatch starts to take full advantage of
 		}
 	}
 
-	if (!G_PlatformGametype() && (i == MT_SIGN || i == MT_STARPOST))
-		return; // Don't spawn exit signs or starposts in wrong game modes
+	if (!(gametyperules & GTR_ALLOWEXIT) && i == MT_SIGN)
+		return; // Don't spawn exit signs without the necessary gametype rule
+	if (!G_PlatformGametype() && i == MT_STARPOST)
+		return; // Don't spawn starposts in wrong game modes
 
 	if (modeattacking) // Record Attack special stuff
 	{
