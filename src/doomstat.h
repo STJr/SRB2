@@ -416,11 +416,13 @@ enum GameTypeRules
 	GTR_EMERALDHUNT      = 1<<19, // Emerald Hunt
 	GTR_SPAWNENEMIES     = 1<<20, // Spawn enemies
 	GTR_ALLOWEXIT        = 1<<21, // Allow exit sectors
-	GTR_ROUNDENDMESSAGE  = 1<<22, // Prints "The round has ended." into the console
-	GTR_NOTITLECARD      = 1<<23, // Don't show the title card
-	GTR_POINTLIMIT       = 1<<24, // Ringslinger point limit
-	GTR_TIMELIMIT        = 1<<25, // Ringslinger time limit
-	GTR_OVERTIME         = 1<<26, // Allow overtime
+	GTR_CAMPAIGN         = 1<<22, // Linear Co-op map progression. Don't allow random maps.
+	GTR_NOGAMEEND        = 1<<23, // Don't end the game. That is, wrap around the maps instead of starting the ending.
+	GTR_ROUNDENDMESSAGE  = 1<<24, // Prints "The round has ended." into the console
+	GTR_NOTITLECARD      = 1<<25, // Don't show the title card
+	GTR_POINTLIMIT       = 1<<26, // Ringslinger point limit
+	GTR_TIMELIMIT        = 1<<27, // Ringslinger time limit
+	GTR_OVERTIME         = 1<<28, // Allow overtime
 };
 
 // String names for gametypes
