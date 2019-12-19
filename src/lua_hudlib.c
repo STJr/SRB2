@@ -48,6 +48,7 @@ static const char *const hud_disable_options[] = {
 
 	"weaponrings",
 	"powerstones",
+	"teamscores",
 
 	"nightslink",
 	"nightsdrill",

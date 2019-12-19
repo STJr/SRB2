@@ -1106,7 +1106,7 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 #else
 		fixed_t cheight = sec->ceilingheight;
 #endif
-		mt->options = (UINT16)((cheight - player->mo->z - player->mo->height)>>FRACBITS);
+		mt->z = (UINT16)((cheight - player->mo->z - player->mo->height)>>FRACBITS);
 	}
 	else
 	{
@@ -1115,12 +1115,11 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 #else
 		fixed_t fheight = sec->floorheight;
 #endif
-		mt->options = (UINT16)((player->mo->z - fheight)>>FRACBITS);
+		mt->z = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 	}
-	mt->options <<= ZSHIFT;
 	mt->angle = (INT16)(FixedInt(AngleFixed(player->mo->angle)));
 
-	mt->options |= (UINT16)cv_opflags.value;
+	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
 	return mt;
 }
 

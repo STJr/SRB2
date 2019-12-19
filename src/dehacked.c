@@ -10824,12 +10824,84 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"paused")) {
 		lua_pushboolean(L, paused);
 		return 1;
+	// begin map vars
+	} else if (fastcmp(word,"spstage_start")) {
+		lua_pushinteger(L, spstage_start);
+		return 1;
+	} else if (fastcmp(word,"sstage_start")) {
+		lua_pushinteger(L, sstage_start);
+		return 1;
+	} else if (fastcmp(word,"sstage_end")) {
+		lua_pushinteger(L, sstage_end);
+		return 1;
+	} else if (fastcmp(word,"smpstage_start")) {
+		lua_pushinteger(L, smpstage_start);
+		return 1;
+	} else if (fastcmp(word,"smpstage_end")) {
+		lua_pushinteger(L, smpstage_end);
+		return 1;
 	} else if (fastcmp(word,"titlemap")) {
 		lua_pushinteger(L, titlemap);
 		return 1;
 	} else if (fastcmp(word,"titlemapinaction")) {
 		lua_pushboolean(L, (titlemapinaction != TITLEMAP_OFF));
 		return 1;
+	} else if (fastcmp(word,"bootmap")) {
+		lua_pushinteger(L, bootmap);
+		return 1;
+	} else if (fastcmp(word,"tutorialmap")) {
+		lua_pushinteger(L, tutorialmap);
+		return 1;
+	} else if (fastcmp(word,"tutorialmode")) {
+		lua_pushboolean(L, tutorialmode);
+		return 1;
+	// end map vars
+	// begin CTF colors
+	} else if (fastcmp(word,"skincolor_redteam")) {
+		lua_pushinteger(L, skincolor_redteam);
+		return 1;
+	} else if (fastcmp(word,"skincolor_blueteam")) {
+		lua_pushinteger(L, skincolor_blueteam);
+		return 1;
+	} else if (fastcmp(word,"skincolor_redring")) {
+		lua_pushinteger(L, skincolor_redring);
+		return 1;
+	} else if (fastcmp(word,"skincolor_bluering")) {
+		lua_pushinteger(L, skincolor_bluering);
+		return 1;
+	// end CTF colors
+	// begin timers
+	} else if (fastcmp(word,"invulntics")) {
+		lua_pushinteger(L, invulntics);
+		return 1;
+	} else if (fastcmp(word,"sneakertics")) {
+		lua_pushinteger(L, sneakertics);
+		return 1;
+	} else if (fastcmp(word,"flashingtics")) {
+		lua_pushinteger(L, flashingtics);
+		return 1;
+	} else if (fastcmp(word,"tailsflytics")) {
+		lua_pushinteger(L, tailsflytics);
+		return 1;
+	} else if (fastcmp(word,"underwatertics")) {
+		lua_pushinteger(L, underwatertics);
+		return 1;
+	} else if (fastcmp(word,"spacetimetics")) {
+		lua_pushinteger(L, spacetimetics);
+		return 1;
+	} else if (fastcmp(word,"extralifetics")) {
+		lua_pushinteger(L, extralifetics);
+		return 1;
+	} else if (fastcmp(word,"nightslinktics")) {
+		lua_pushinteger(L, nightslinktics);
+		return 1;
+	} else if (fastcmp(word,"gameovertics")) {
+		lua_pushinteger(L, gameovertics);
+		return 1;
+	} else if (fastcmp(word,"ammoremovaltics")) {
+		lua_pushinteger(L, ammoremovaltics);
+		return 1;
+	// end timers
 	} else if (fastcmp(word,"gametype")) {
 		lua_pushinteger(L, gametype);
 		return 1;

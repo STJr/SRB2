@@ -2326,6 +2326,9 @@ static void ST_drawTeamHUD(void)
 	else
 		p = bmatcico;
 
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_teamscores))
+#endif
 	V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
 	if (gametyperules & GTR_TEAMFLAGS)
@@ -2333,6 +2336,9 @@ static void ST_drawTeamHUD(void)
 	else
 		p = rmatcico;
 
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_teamscores))
+#endif
 	V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
 	if (!(gametyperules & GTR_TEAMFLAGS))
@@ -2344,28 +2350,53 @@ static void ST_drawTeamHUD(void)
 		// Show which flags aren't at base.
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (players[i].gotflag & GF_BLUEFLAG) // Blue flag isn't at base
+			if (players[i].gotflag & GF_BLUEFLAG // Blue flag isn't at base
+#ifdef HAVE_BLUA
+			&& LUA_HudEnabled(hud_teamscores)
+#endif
+			)
 				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(nonicon->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
-			if (players[i].gotflag & GF_REDFLAG) // Red flag isn't at base
+
+			if (players[i].gotflag & GF_REDFLAG // Red flag isn't at base
+#ifdef HAVE_BLUA
+			&& LUA_HudEnabled(hud_teamscores)
+#endif
+			)
 				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(nonicon2->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
 
 			whichflag |= players[i].gotflag;
+
 			if ((whichflag & (GF_REDFLAG|GF_BLUEFLAG)) == (GF_REDFLAG|GF_BLUEFLAG))
 				break; // both flags were found, let's stop early
 		}
 
 		// Display a countdown timer showing how much time left until the flag returns to base.
 		{
-			if (blueflag && blueflag->fuse > 1)
+			if (blueflag && blueflag->fuse > 1
+#ifdef HAVE_BLUA
+			&& LUA_HudEnabled(hud_teamscores)
+#endif
+			)
 				V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (blueflag->fuse / TICRATE)));
 
-			if (redflag && redflag->fuse > 1)
+			if (redflag && redflag->fuse > 1
+#ifdef HAVE_BLUA
+			&& LUA_HudEnabled(hud_teamscores)
+#endif
+			)
 				V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (redflag->fuse / TICRATE)));
 		}
 	}
 
 num:
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_teamscores))
+#endif
 	V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", bluescore));
+
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_teamscores))
+#endif
 	V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", redscore));
 
 #undef SEP

@@ -4635,7 +4635,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						S_StartSound(player->mo, sfx_spin);
 						break;
 					}
-					if (player->dashspeed < player->maxdash)
+					if (player->dashspeed < player->maxdash && player->mindash != player->maxdash)
 					{
 #define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
 						fixed_t soundcalculation = chargecalculation;
@@ -5273,7 +5273,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
-		else if (player->pflags & PF_SLIDING || ((gametyperules & GTR_TEAMFLAGS) && player->gotflag))
+		else if (player->pflags & PF_SLIDING || ((gametyperules & GTR_TEAMFLAGS) && player->gotflag) || player->pflags & PF_SHIELDABILITY)
 			;
 		/*else if (P_SuperReady(player))
 		{
