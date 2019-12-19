@@ -3026,15 +3026,15 @@ static void HU_DrawRankings(void)
 	// draw the current gametype in the lower right
 	HU_drawGametype();
 
-	if (gametyperules & GTR_POINTLIMIT)
+	if (gametyperules & (GTR_TIMELIMIT|GTR_POINTLIMIT))
 	{
-		if (cv_timelimit.value && timelimitintics > 0)
+		if ((gametyperules & GTR_TIMELIMIT) && cv_timelimit.value && timelimitintics > 0)
 		{
 			V_DrawCenteredString(64, 8, 0, "TIME");
 			V_DrawCenteredString(64, 16, 0, va("%i:%02i", G_TicsToMinutes(stplyr->realtime, true), G_TicsToSeconds(stplyr->realtime)));
 		}
 
-		if (cv_pointlimit.value > 0)
+		if ((gametyperules & GTR_POINTLIMIT) && cv_pointlimit.value > 0)
 		{
 			V_DrawCenteredString(256, 8, 0, "POINT LIMIT");
 			V_DrawCenteredString(256, 16, 0, va("%d", cv_pointlimit.value));
