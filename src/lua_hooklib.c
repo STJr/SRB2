@@ -1352,7 +1352,7 @@ void LUAh_IntermissionThinker(void)
 
 // Hook for team switching
 // It's just an edit of LUAh_ViewpointSwitch.
-boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, boolean autobalance, boolean scrambled)
+boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, boolean tryingautobalance, boolean tryingscramble)
 {
 	hook_p hookp;
 	boolean canSwitchTeam = true;
@@ -1371,8 +1371,8 @@ boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, b
 			LUA_PushUserdata(gL, player, META_PLAYER);
 			lua_pushinteger(gL, newteam);
 			lua_pushboolean(gL, fromspectators);
-			lua_pushboolean(gL, autobalance);
-			lua_pushboolean(gL, scrambled);
+			lua_pushboolean(gL, tryingautobalance);
+			lua_pushboolean(gL, tryingscramble);
 		}
 		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 		lua_gettable(gL, LUA_REGISTRYINDEX);
