@@ -10909,6 +10909,9 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"gametype")) {
 		lua_pushinteger(L, gametype);
 		return 1;
+	} else if (fastcmp(word,"gametyperules")) {
+		lua_pushinteger(L, gametyperules);
+		return 1;
 	} else if (fastcmp(word,"leveltime")) {
 		lua_pushinteger(L, leveltime);
 		return 1;
