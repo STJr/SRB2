@@ -3140,6 +3140,62 @@ INT16 G_AddGametype(UINT32 rules)
 }
 
 //
+// G_AddGametypeConstant
+//
+// Self-explanatory. Filters out "bad" characters.
+//
+void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
+{
+	char *gtconst = Z_Malloc(strlen(newgtconst) + 3, PU_STATIC, NULL);
+	// Copy GT_ and the gametype name.
+	strcpy(gtconst, "GT_");
+	strcat(gtconst, newgtconst);
+	// Make uppercase.
+	strupr(gtconst);
+	// Remove characters.
+#define REMOVECHAR(chr) \
+	{ \
+		char *chrfind = strchr(gtconst, chr); \
+		while (chrfind) \
+		{ \
+			*chrfind = '_'; \
+			chrfind = strchr(chrfind, chr); \
+		} \
+	}
+
+	// Space
+	REMOVECHAR(' ')
+	// Used for operations
+	REMOVECHAR('+')
+	REMOVECHAR('-')
+	REMOVECHAR('*')
+	REMOVECHAR('/')
+	REMOVECHAR('%')
+	REMOVECHAR('^')
+	// Part of Lua's syntax
+	REMOVECHAR('#')
+	REMOVECHAR('=')
+	REMOVECHAR('~')
+	REMOVECHAR('<')
+	REMOVECHAR('>')
+	REMOVECHAR('(')
+	REMOVECHAR(')')
+	REMOVECHAR('{')
+	REMOVECHAR('}')
+	REMOVECHAR('[')
+	REMOVECHAR(']')
+	REMOVECHAR(':')
+	REMOVECHAR(';')
+	REMOVECHAR(',')
+	REMOVECHAR('.')
+
+#undef REMOVECHAR
+
+	// Finally, set the constant string.
+	Gametype_ConstantNames[gtype] = gtconst;
+}
+
+//
 // G_UpdateGametypeSelections
 //
 // Updates gametype_cons_t.

@@ -1146,7 +1146,6 @@ static void readgametype(MYFILE *f, char *gtname)
 	char *word;
 	char *word2, *word2lwr = NULL;
 	char *tmp;
-	char *gtconst;
 	INT32 i, j;
 
 	INT16 newgtidx = 0;
@@ -1326,51 +1325,7 @@ static void readgametype(MYFILE *f, char *gtname)
 	Gametype_Names[newgtidx] = Z_StrDup((const char *)gtname);
 
 	// Write the constant name.
-	gtconst = Z_Malloc(strlen((const char *)gtname) + 3, PU_STATIC, NULL);
-	// Copy GT_ and the gametype name.
-	strcpy(gtconst, "GT_");
-	strcat(gtconst, (const char *)gtname);
-	// Make uppercase.
-	strupr(gtconst);
-	// Remove characters.
-#define REMOVECHAR(chr) \
-	word = strchr(gtconst, chr); \
-	while (word) \
-	{ \
-		*word = '_'; \
-		word = strchr(word, chr); \
-	}
-
-	// Space
-	REMOVECHAR(' ')
-	// Used for operations
-	REMOVECHAR('+')
-	REMOVECHAR('-')
-	REMOVECHAR('*')
-	REMOVECHAR('/')
-	REMOVECHAR('%')
-	REMOVECHAR('^')
-	// Part of Lua's syntax
-	REMOVECHAR('#')
-	REMOVECHAR('=')
-	REMOVECHAR('~')
-	REMOVECHAR('<')
-	REMOVECHAR('>')
-	REMOVECHAR('(')
-	REMOVECHAR(')')
-	REMOVECHAR('{')
-	REMOVECHAR('}')
-	REMOVECHAR('[')
-	REMOVECHAR(']')
-	REMOVECHAR(':')
-	REMOVECHAR(';')
-	REMOVECHAR(',')
-	REMOVECHAR('.')
-
-#undef REMOVECHAR
-
-	// Finally, set the constant string.
-	Gametype_ConstantNames[newgtidx] = gtconst;
+	G_AddGametypeConstant(newgtidx, (const char *)gtname);
 
 	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();
@@ -10438,6 +10393,20 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
 			}
 			r++;
+		}
+		else if (fastcmp(type, "TOL"))
+		{
+			if (lastcustomtol > 31)
+				CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+			else
+			{
+				UINT32 newtol = (1<<lastcustomtol);
+				CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
+				G_AddTOL(newtol, word);
+				lua_pushinteger(L, newtol);
+				lastcustomtol++;
+				r++;
+			}
 		}
 		Z_Free(s);
 		lua_remove(L, 1);
