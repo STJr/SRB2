@@ -625,7 +625,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			P_AddPlayerScore(player, 1000);
 
-			if (gametype != GT_COOP || modeattacking) // score only?
+			if (!(gametyperules & GTR_SPECIALSTAGES) || modeattacking) // score only?
 			{
 				S_StartSound(toucher, sfx_chchng);
 				break;

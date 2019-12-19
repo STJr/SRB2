@@ -411,14 +411,16 @@ enum GameTypeRules
 	GTR_PITYSHIELD       = 1<<14, // Award pity shield
 	GTR_DEATHPENALTY     = 1<<15, // Death score penalty
 	GTR_NOSPECTATORSPAWN = 1<<16, // For use with GTR_SPECTATORS - spawn in the map instead of with the spectators
-	GTR_EMERALDHUNT      = 1<<17, // Emerald Hunt
-	GTR_SPAWNENEMIES     = 1<<18, // Spawn enemies
-	GTR_ALLOWEXIT        = 1<<19, // Allow exit sectors
-	GTR_ROUNDENDMESSAGE  = 1<<20, // Prints "The round has ended." into the console
-	GTR_NOTITLECARD      = 1<<21, // Don't show the title card
-	GTR_POINTLIMIT       = 1<<22, // Ringslinger point limit
-	GTR_TIMELIMIT        = 1<<23, // Ringslinger time limit
-	GTR_OVERTIME         = 1<<24, // Allow overtime
+	GTR_SPECIALSTAGES    = 1<<17, // Allow special stages
+	GTR_EMERALDTOKENS    = 1<<18, // Spawn emerald tokens
+	GTR_EMERALDHUNT      = 1<<19, // Emerald Hunt
+	GTR_SPAWNENEMIES     = 1<<20, // Spawn enemies
+	GTR_ALLOWEXIT        = 1<<21, // Allow exit sectors
+	GTR_ROUNDENDMESSAGE  = 1<<22, // Prints "The round has ended." into the console
+	GTR_NOTITLECARD      = 1<<23, // Don't show the title card
+	GTR_POINTLIMIT       = 1<<24, // Ringslinger point limit
+	GTR_TIMELIMIT        = 1<<25, // Ringslinger time limit
+	GTR_OVERTIME         = 1<<26, // Allow overtime
 };
 
 // String names for gametypes
