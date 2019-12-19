@@ -11313,7 +11313,12 @@ void P_PlayerThink(player_t *player)
 				player->playerstate = PST_REBORN;
 		}
 		if (player->playerstate == PST_REBORN)
+		{
+#ifdef HAVE_BLUA
+			LUAh_PlayerThink(player);
+#endif
 			return;
+		}
 	}
 
 #ifdef SEENAMES
