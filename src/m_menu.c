@@ -10436,6 +10436,28 @@ static void M_HandleConnectIP(INT32 choice)
 			if (l >= 28-1)
 				break;
 
+			const char *paste = I_ClipboardPaste(); // Paste clipboard into char
+
+			if ( ctrldown ) {
+				switch (choice) {
+					case 118: // ctrl+v, pasting
+						if (paste != NULL)
+							strcat(setupm_ip, paste); // Concat the ip field with clipboard
+						setupm_ip[127] = 0; // Truncate to maximum length
+						break;
+					case 99: // ctrl+c, copying
+						I_ClipboardCopy(setupm_ip, l);
+						break;
+					case 120: // ctrl+x, cutting
+						I_ClipboardCopy(setupm_ip, l);
+						setupm_ip[0] = 0;
+						break;
+					default: // otherwise do nothing
+						break;
+				}
+				break; // break
+			}
+
 			// Rudimentary number and period enforcing - also allows letters so hostnames can be used instead
 			if ((choice >= '-' && choice <= ':') || (choice >= 'A' && choice <= 'Z') || (choice >= 'a' && choice <= 'z'))
 			{
