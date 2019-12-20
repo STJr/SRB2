@@ -5128,11 +5128,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 									boolean elem = ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL);
 									player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 									if (elem)
-									{
-										player->pflags |= PF_NOJUMPDAMAGE;
-										P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 										S_StartSound(player->mo, sfx_s3k43);
-									}
 									else
 									{
 										player->pflags &= ~PF_NOJUMPDAMAGE;
