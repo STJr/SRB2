@@ -223,14 +223,13 @@ static void D_Display(void)
 		return; // for comparative timing/profiling
 
 	// check for change of screen size
-	if (setresneeded[2] && !wipe)
+	if (!wipe)
 	{
-		// change resolution (interface-dependent function)
-		VID_SetResolution(setresneeded[0], setresneeded[1]);
-		setresneeded[2] = 0;
+		if (setresneeded[2])
+			SCR_SetResolution();
+		else if (setmodeneeded)
+			SCR_SetMode();
 	}
-	else if (setmodeneeded && !wipe)
-		SCR_SetMode(); // change video mode
 
 	if (vid.recalc)
 	{

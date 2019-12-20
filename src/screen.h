@@ -183,6 +183,8 @@ extern consvar_t cv_vidwait;
 
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);
+// Change resolution
+void SCR_SetResolution(void);
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);
 // Check parms once at startup
