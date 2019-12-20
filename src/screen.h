@@ -40,7 +40,7 @@
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
 #define MAXVIDWIDTH 3840 // don't set this too high because actually
-#define MAXVIDHEIGHT 2160 // lots of tables are allocated with the MAX size.
+#define MAXVIDHEIGHT 2560 // lots of tables are allocated with the MAX size.
 #define BASEVIDWIDTH 320 // NEVER CHANGE THIS! This is the original
 #define BASEVIDHEIGHT 200 // resolution of the graphics.
 
