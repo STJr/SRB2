@@ -51,6 +51,13 @@ INT32 VID_SetMode(INT32 modenum)
   return 0;
 }
 
+INT32 VID_SetResolution(INT32 width, INT32 height)
+{
+  (void)width;
+  (void)height;
+  return 0;
+}
+
 const char *VID_GetModeName(INT32 modenum)
 {
   return "A320x240";

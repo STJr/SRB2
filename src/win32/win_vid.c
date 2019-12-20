@@ -946,6 +946,13 @@ INT32 VID_SetMode(INT32 modenum)
 	return 1;
 }
 
+INT32 VID_SetResolution(INT32 width, INT32 height)
+{
+	(void)width;
+	(void)height;
+	return 0;
+}
+
 // ========================================================================
 // Free the video buffer of the last video mode,
 // allocate a new buffer for the video mode to set.

@@ -85,6 +85,18 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h);
 */
 INT32 VID_SetMode(INT32 modenum);
 
+/**	\brief	The VID_SetResolution function
+
+	The same as VID_SetMode, but allows
+	any arbitrary resolution.
+
+	\param	width width
+	\param	height height
+
+	\return	???
+*/
+INT32 VID_SetResolution(INT32 width, INT32 height);
+
 /**	\brief	The VID_GetModeName function
 
 	\param	modenum	video mode number

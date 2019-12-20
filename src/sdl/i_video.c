@@ -572,6 +572,9 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 			kbfocus = SDL_FALSE;
 			mousefocus = SDL_FALSE;
 			break;
+		case SDL_WINDOWEVENT_RESIZED:
+			VID_SetResolution(evt.data1, evt.data2);
+			break;
 		case SDL_WINDOWEVENT_MAXIMIZED:
 			break;
 	}
@@ -1456,6 +1459,35 @@ INT32 VID_SetMode(INT32 modeNum)
 	return SDL_TRUE;
 }
 
+// VID_SetMode but no video modes
+INT32 VID_SetResolution(INT32 width, INT32 height)
+{
+	SDLdoUngrabMouse();
+
+	vid.recalc = 1;
+	vid.bpp = 1;
+
+	vid.width = (width < BASEVIDWIDTH) ? BASEVIDWIDTH : ((width >= MAXVIDWIDTH) ? MAXVIDWIDTH-1 : width);
+	vid.height = (height < BASEVIDHEIGHT) ? BASEVIDHEIGHT : ((height >= MAXVIDHEIGHT) ? MAXVIDHEIGHT-1 : height);
+	vid.modenum = MAXWINMODES;
+	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
+
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
+
+	if (rendermode == render_soft)
+	{
+		if (bufSurface)
+		{
+			SDL_FreeSurface(bufSurface);
+			bufSurface = NULL;
+		}
+
+		Impl_VideoSetupBuffer();
+	}
+
+	return SDL_TRUE;
+}
+
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 {
 	int flags = 0;
@@ -1476,6 +1508,8 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	if (rendermode == render_opengl)
 		flags |= SDL_WINDOW_OPENGL;
 #endif
+
+	flags |= SDL_WINDOW_RESIZABLE;
 
 	// Create a window
 	window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
