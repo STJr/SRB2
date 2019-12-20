@@ -573,7 +573,9 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 			mousefocus = SDL_FALSE;
 			break;
 		case SDL_WINDOWEVENT_RESIZED:
-			VID_SetResolution(evt.data1, evt.data2);
+			setresneeded[0] = evt.data1;
+			setresneeded[1] = evt.data2;
+			setresneeded[2] = 0x48555242;
 			break;
 		case SDL_WINDOWEVENT_MAXIMIZED:
 			break;
