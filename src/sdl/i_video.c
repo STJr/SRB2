@@ -171,7 +171,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
 //static void Impl_SetWindowName(const char *title);
 static void Impl_SetWindowIcon(void);
 
-static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
+static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool centerscreen)
 {
 	static SDL_bool wasfullscreen = SDL_FALSE;
 	Uint32 rmask;
@@ -200,10 +200,13 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window,
-				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window)),
-				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window))
-			);
+			if (centerscreen)
+			{
+				SDL_SetWindowPosition(window,
+					SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window)),
+					SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window))
+				);
+			}
 		}
 	}
 	else
@@ -575,7 +578,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		case SDL_WINDOWEVENT_RESIZED:
 			setresneeded[0] = evt.data1;
 			setresneeded[1] = evt.data2;
-			setresneeded[2] = 0x48555242;
+			setresneeded[2] = 1;
 			break;
 		case SDL_WINDOWEVENT_MAXIMIZED:
 			break;
@@ -1445,7 +1448,7 @@ INT32 VID_SetMode(INT32 modeNum)
 	}
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 
-	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, SDL_TRUE);
 
 	if (rendermode == render_soft)
 	{
@@ -1472,9 +1475,8 @@ INT32 VID_SetResolution(INT32 width, INT32 height)
 	vid.width = (width < BASEVIDWIDTH) ? BASEVIDWIDTH : ((width >= MAXVIDWIDTH) ? MAXVIDWIDTH-1 : width);
 	vid.height = (height < BASEVIDHEIGHT) ? BASEVIDHEIGHT : ((height >= MAXVIDHEIGHT) ? MAXVIDHEIGHT-1 : height);
 	vid.modenum = MAXWINMODES;
-	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 
-	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, (setresneeded[2] == 2));
 
 	if (rendermode == render_soft)
 	{

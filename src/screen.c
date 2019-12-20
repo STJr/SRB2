@@ -55,15 +55,17 @@ viddef_t vid;
 INT32 setmodeneeded; //video mode change needed if > 0 (the mode number to set + 1)
 INT32 setresneeded[3]; // if setresneeded[2] is > 0, set resolution
 
+static void SCR_ChangeFullscreen (void);
+static void SCR_ChangeWidthCVAR (void);
+static void SCR_ChangeHeightCVAR (void);
+
 static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, {24, "24 bits"}, {32, "32 bits"}, {0, NULL}};
 
 //added : 03-02-98: default screen mode, as loaded/saved in config
-consvar_t cv_scr_width = {"scr_width", "1280", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_scr_width = {"scr_width", "1280", CV_SAVE|CV_CALL|CV_NOINIT, CV_Unsigned, SCR_ChangeWidthCVAR, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE|CV_CALL|CV_NOINIT, CV_Unsigned, SCR_ChangeHeightCVAR, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-static void SCR_ChangeFullscreen (void);
 
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
 
@@ -373,15 +375,17 @@ void SCR_CheckDefaultMode(void)
 	if (scr_forcex && scr_forcey)
 	{
 		CONS_Printf(M_GetText("Using resolution: %d x %d\n"), scr_forcex, scr_forcey);
-		// returns -1 if not found, thus will be 0 (no mode change) if not found
-		setmodeneeded = VID_GetModeForSize(scr_forcex, scr_forcey) + 1;
+		setresneeded[0] = scr_forcex;
+		setresneeded[1] = scr_forcey;
+		setresneeded[2] = 2;
 	}
 	else
 	{
 		CONS_Printf(M_GetText("Default resolution: %d x %d (%d bits)\n"), cv_scr_width.value,
 			cv_scr_height.value, cv_scr_depth.value);
-		// see note above
-		setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
+		setresneeded[0] = cv_scr_width.value;
+		setresneeded[1] = cv_scr_height.value;
+		setresneeded[2] = 2;
 	}
 }
 
@@ -406,10 +410,30 @@ void SCR_ChangeFullscreen(void)
 	if (graphics_started)
 	{
 		VID_PrepareModeList();
-		setmodeneeded = VID_GetModeForSize(vid.width, vid.height) + 1;
+		setresneeded[0] = cv_scr_width.value;
+		setresneeded[1] = cv_scr_height.value;
+		setresneeded[2] = 1;
 	}
 	return;
 #endif
+}
+
+// Called after changing the value of scr_width
+// Keeps the height the same
+void SCR_ChangeWidthCVAR(void)
+{
+	setresneeded[0] = cv_scr_width.value;
+	setresneeded[1] = vid.height;
+	setresneeded[2] = 1;
+}
+
+// Called after changing the value of scr_height
+// Keeps the width the same
+void SCR_ChangeHeightCVAR(void)
+{
+	setresneeded[0] = vid.width;
+	setresneeded[1] = cv_scr_height.value;
+	setresneeded[2] = 1;
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
