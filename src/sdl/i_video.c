@@ -861,6 +861,7 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 void I_GetEvent(void)
 {
 	SDL_Event evt;
+	char* dropped_filedir;
 	// We only want the first motion event,
 	// otherwise we'll end up catching the warp back to center.
 	//int mouseMotionOnce = 0;
@@ -1037,6 +1038,11 @@ void I_GetEvent(void)
 				if (currentMenu == &OP_JoystickSetDef)
 					M_SetupJoystickMenu(0);
 			 	break;
+			case SDL_DROPFILE:
+				dropped_filedir = evt.drop.file;
+				COM_BufInsertText(va("addfile \"%s\"", dropped_filedir));
+				SDL_free(dropped_filedir);    // Free dropped_filedir memory
+				break;
 			case SDL_QUIT:
 				I_Quit();
 				M_QuitResponse('y');
