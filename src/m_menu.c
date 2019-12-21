@@ -10436,14 +10436,16 @@ static void M_HandleConnectIP(INT32 choice)
 			if (l >= 28-1)
 				break;
 
-			const char *paste = I_ClipboardPaste(); // Paste clipboard into char
+			char *paste = (char *)I_ClipboardPaste(); // Paste clipboard into char
 
 			if ( ctrldown ) {
 				switch (choice) {
 					case 118: // ctrl+v, pasting
-						if (paste != NULL)
+						if (paste != NULL) {
+							if (strlen(paste) + strlen(setupm_ip) >= 28-1)
+								paste[28-1 - strlen(setupm_ip)] = 0;
 							strcat(setupm_ip, paste); // Concat the ip field with clipboard
-						setupm_ip[127] = 0; // Truncate to maximum length
+						}
 						break;
 					case 99: // ctrl+c, copying
 						I_ClipboardCopy(setupm_ip, l);
