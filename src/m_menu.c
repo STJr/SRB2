@@ -11810,6 +11810,8 @@ static void M_HandleVideoMode(INT32 ch)
 			{
 				// Pull out the width and height
 				INT32 width = vid.width, height = vid.height;
+				if (strlen(vidm_customres) < 1)
+					break;
 				sscanf(vidm_customres, "%u%*c%u", &width, &height);
 
 				vidm_previousres[0] = vid.width;
