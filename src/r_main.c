@@ -77,6 +77,7 @@ player_t *viewplayer;
 mobj_t *r_viewmobj;
 
 fixed_t rendertimefrac;
+fixed_t renderdeltatics;
 
 //
 // precalculated math tables

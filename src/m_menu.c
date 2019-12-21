@@ -207,17 +207,17 @@ menu_t SPauseDef;
 static levelselect_t levelselect = {0, NULL};
 static UINT8 levelselectselect[3];
 static patch_t *levselp[2][3];
-static INT32 lsoffs[2];
+static fixed_t lsoffs[2];
 
 #define lsrow levelselectselect[0]
 #define lscol levelselectselect[1]
 #define lshli levelselectselect[2]
 
 #define lshseperation 101
-#define lsbasevseperation (62*vid.height)/(BASEVIDHEIGHT*vid.dupy) //62
+#define lsbasevseperation ((62*vid.height)/(BASEVIDHEIGHT*vid.dupy)) //62
 #define lsheadingheight 16
 #define getheadingoffset(row) (levelselect.rows[row].header[0] ? lsheadingheight : 0)
-#define lsvseperation(row) lsbasevseperation + getheadingoffset(row)
+#define lsvseperation(row) (lsbasevseperation + getheadingoffset(row))
 #define lswide(row) levelselect.rows[row].mapavailable[3]
 
 #define lsbasex 19
@@ -5504,7 +5504,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 				{
 					if (!lsoffs[0]) // prevent sound spam
 					{
-						lsoffs[0] = -8;
+						lsoffs[0] = -8 * FRACUNIT;
 						S_StartSound(NULL,sfx_s3kb7);
 					}
 					return;
@@ -5513,7 +5513,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			}
 			lsrow++;
 
-			lsoffs[0] = lsvseperation(lsrow);
+			lsoffs[0] = lsvseperation(lsrow) * FRACUNIT;
 
 			if (levelselect.rows[lsrow].header[0])
 				lshli = lsrow;
@@ -5532,7 +5532,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 				{
 					if (!lsoffs[0]) // prevent sound spam
 					{
-						lsoffs[0] = 8;
+						lsoffs[0] = 8 * FRACUNIT;
 						S_StartSound(NULL,sfx_s3kb7);
 					}
 					return;
@@ -5541,7 +5541,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			}
 			lsrow--;
 
-			lsoffs[0] = -lsvseperation(iter);
+			lsoffs[0] = -lsvseperation(iter) * FRACUNIT;
 
 			if (levelselect.rows[lsrow].header[0])
 				lshli = lsrow;
@@ -5582,7 +5582,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 				}
 				else if (!lsoffs[0]) // prevent sound spam
 				{
-					lsoffs[0] = -8;
+					lsoffs[0] = -8 * FRACUNIT;
 					S_StartSound(NULL,sfx_s3kb2);
 				}
 				break;
@@ -5608,14 +5608,14 @@ static void M_HandleLevelPlatter(INT32 choice)
 			{
 				lscol++;
 
-				lsoffs[1] = (lswide(lsrow) ? 8 : -lshseperation);
+				lsoffs[1] = (lswide(lsrow) ? 8 : -lshseperation) * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
 
 				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			}
 			else if (!lsoffs[1]) // prevent sound spam
 			{
-				lsoffs[1] = 8;
+				lsoffs[1] = 8 * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
@@ -5640,14 +5640,14 @@ static void M_HandleLevelPlatter(INT32 choice)
 			{
 				lscol--;
 
-				lsoffs[1] = (lswide(lsrow) ? -8 : lshseperation);
+				lsoffs[1] = (lswide(lsrow) ? -8 : lshseperation) * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
 
 				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			}
 			else if (!lsoffs[1]) // prevent sound spam
 			{
-				lsoffs[1] = -8;
+				lsoffs[1] = -8 * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
@@ -5946,7 +5946,7 @@ static void M_DrawNightsAttackSuperSonic(void)
 static void M_DrawLevelPlatterMenu(void)
 {
 	UINT8 iter = lsrow, sizeselect = (lswide(lsrow) ? 1 : 0);
-	INT32 y = lsbasey + lsoffs[0] - getheadingoffset(lsrow);
+	INT32 y = lsbasey + FixedInt(lsoffs[0]) - getheadingoffset(lsrow);
 	const INT32 cursorx = (sizeselect ? 0 : (lscol*lshseperation));
 
 	if (currentMenu->prevMenu == &SP_TimeAttackDef)
@@ -6014,7 +6014,7 @@ static void M_DrawLevelPlatterMenu(void)
 
 	// draw cursor box
 	if (levellistmode != LLM_CREATESERVER || lsrow)
-		V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey+lsoffs[0], 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
+		V_DrawSmallScaledPatch(lsbasex + cursorx + FixedInt(lsoffs[1]), lsbasey+FixedInt(lsoffs[0]), 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
 
 #if 0
 	if (levelselect.rows[lsrow].maplist[lscol] > 0)
@@ -6022,13 +6022,26 @@ static void M_DrawLevelPlatterMenu(void)
 #endif
 
 	// handle movement of cursor box
-	if (lsoffs[0] > 1 || lsoffs[0] < -1)
-		lsoffs[0] = 2*lsoffs[0]/3;
+	fixed_t cursormovefrac = FixedDiv(2, 3);
+	if (lsoffs[0] > FRACUNIT || lsoffs[0] < -FRACUNIT)
+	{
+		fixed_t offs = lsoffs[0];
+		fixed_t newoffs = FixedMul(offs, cursormovefrac);
+		fixed_t deltaoffs = newoffs - offs;
+		newoffs = offs + FixedMul(deltaoffs, renderdeltatics);
+		lsoffs[0] = newoffs;
+	}
 	else
 		lsoffs[0] = 0;
 
-	if (lsoffs[1] > 1 || lsoffs[1] < -1)
-		lsoffs[1] = 2*lsoffs[1]/3;
+	if (lsoffs[1] > FRACUNIT || lsoffs[1] < -FRACUNIT)
+	{
+		fixed_t offs = lsoffs[1];
+		fixed_t newoffs = FixedMul(offs, cursormovefrac);
+		fixed_t deltaoffs = newoffs - offs;
+		newoffs = offs + FixedMul(deltaoffs, renderdeltatics);
+		lsoffs[1] = newoffs;
+	}
 	else
 		lsoffs[1] = 0;
 

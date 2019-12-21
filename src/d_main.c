@@ -148,7 +148,6 @@ event_t events[MAXEVENTS];
 INT32 eventhead, eventtail;
 
 boolean dedicated = false;
-boolean tic_happened = false; // Frame interpolation/uncapped
 
 //
 // D_PostEvent
@@ -782,13 +781,25 @@ void D_SRB2Loop(void)
 			realtics = 1;
 
 		// process tics (but maybe not if realtic == 0)
-		tic_happened = realtics ? true : false;
 		TryRunTics(realtics);
 
 		if (cv_frameinterpolation.value == 1)
-			rendertimefrac = I_GetTimeFrac();
+		{
+			fixed_t entertimefrac = I_GetTimeFrac();
+			// renderdeltatics is a bit awkard to evaluate, since the system time interface is whole tic-based
+			renderdeltatics = realtics * FRACUNIT;
+			if (entertimefrac > rendertimefrac)
+				renderdeltatics += entertimefrac - rendertimefrac;
+			else
+				renderdeltatics -= rendertimefrac - entertimefrac;
+
+			rendertimefrac = entertimefrac;
+		}
 		else
+		{
 			rendertimefrac = FRACUNIT;
+			renderdeltatics = realtics * FRACUNIT;
+		}
 
 		if (cv_frameinterpolation.value == 1)
 		{
