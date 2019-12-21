@@ -1318,11 +1318,17 @@ void ST_drawTitleCard(void)
 
 	if (!splitscreen || (splitscreen && stplyr == &players[displayplayer]))
 	{
+		INT16 zzheight = SHORT(zigzag->height);
+		INT16 ztheight = SHORT(zztext->height);
 		zzticker = lt_ticker;
-		V_DrawScaledPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
-		V_DrawScaledPatch(FixedInt(lt_zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
-		V_DrawScaledPatch(FixedInt(lt_zigzag), (-zigzag->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
-		V_DrawScaledPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (zzheight-zzticker) % zzheight, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (-zzticker) % zzheight, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), ((-zzticker) % zzheight) + zzheight, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), ((-zzticker) % zzheight) + zzheight*2, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (-ztheight+zzticker) % ztheight, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (zzticker % ztheight), V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (zzticker % ztheight) + ztheight, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
+		V_DrawScaledPatch(FixedInt(lt_zigzag), (zzticker % ztheight) + (ztheight*2), V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
 	}
 
 	if (actnum)

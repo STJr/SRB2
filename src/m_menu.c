@@ -5322,7 +5322,7 @@ static void M_DrawNightsAttackMountains(void)
 
 	if (vid.height != BASEVIDHEIGHT * dupz)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 158);
-	V_DrawFill(0, y+50, vid.width, BASEVIDHEIGHT, V_SNAPTOLEFT|31);
+	V_DrawFill(0, y+50, vid.width, vid.height, V_SNAPTOLEFT|31);
 
 	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
 	x += SHORT(background->width);
@@ -8583,11 +8583,20 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	}
 
 	y = (charseltimer%32);
+
+	V_DrawMappedPatch(0, y-(bgheight*3), V_SNAPTOTOP, charbg, colormap);
+	V_DrawMappedPatch(0, y-(bgheight*2), V_SNAPTOTOP, charbg, colormap);
 	V_DrawMappedPatch(0, y-bgheight, V_SNAPTOTOP, charbg, colormap);
 	V_DrawMappedPatch(0, y, V_SNAPTOTOP, charbg, colormap);
 	V_DrawMappedPatch(0, y+bgheight, V_SNAPTOTOP, charbg, colormap);
+	V_DrawMappedPatch(0, y+(bgheight*2), V_SNAPTOTOP, charbg, colormap);
+	V_DrawMappedPatch(0, y+(bgheight*3), V_SNAPTOTOP, charbg, colormap);
+
 	V_DrawMappedPatch(0, -y, V_SNAPTOTOP, charfg, colormap);
 	V_DrawMappedPatch(0, -y+fgheight, V_SNAPTOTOP, charfg, colormap);
+	V_DrawMappedPatch(0, -y+(fgheight*2), V_SNAPTOTOP, charfg, colormap);
+	V_DrawMappedPatch(0, -y+(fgheight*3), V_SNAPTOTOP, charfg, colormap);
+
 	V_DrawFill(fgwidth, 0, vid.width, vid.height, V_SNAPTOTOP|colormap[106]);
 
 	// Character pictures
