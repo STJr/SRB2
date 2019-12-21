@@ -166,7 +166,9 @@ static INT32 vidm_previousres[3];
 static INT32 vidm_selected = 0;
 static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
-static char vidm_customres[10];
+
+#define vidm_customreslength 12 // (XXXXXxYYYYY) - 11 plus the zero terminator
+static char vidm_customres[vidm_customreslength];
 
 // new menus
 static tic_t recatkdrawtimer = 0;
@@ -11548,7 +11550,7 @@ static void M_DrawVideoMode(void)
 		if (modedescs[i].modenum == -1)
 		{
 			M_DrawLevelPlatterHeader(OP_VideoModeDef.y + 76, "Custom resolution", true, false);
-			V_DrawFill(19, OP_VideoModeDef.y + 92, (8*10)+4, 8+6, 159);
+			V_DrawFill(19, OP_VideoModeDef.y + 92, (vidm_customreslength*8)+4, 8+6, 159);
 			V_DrawString(22, OP_VideoModeDef.y + 95, V_ALLOWLOWERCASE|V_MONOSPACE, vidm_customres);
 			continue;
 		}
@@ -11870,7 +11872,7 @@ static void M_HandleVideoMode(INT32 ch)
 				break;
 
 			l = strlen(vidm_customres);
-			if (l >= 9)
+			if (l >= vidm_customreslength-1)
 				break;
 
 			if ((ch == 'x' || ch == 'X') || (ch >= '0' && ch <= '9'))
