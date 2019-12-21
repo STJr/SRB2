@@ -8350,8 +8350,8 @@ static void M_StartTutorial(INT32 choice)
 // ==============
 
 static INT32 saveSlotSelected = 1;
-static INT32 loadgamescroll = 0;
-static UINT8 loadgameoffset = 0;
+static fixed_t loadgamescroll = 0;
+static fixed_t loadgameoffset = 0;
 
 static void M_CacheLoadGameData(void)
 {
@@ -8376,14 +8376,14 @@ static void M_DrawLoadGameData(void)
 	{
 		prev_i = i;
 		savetodraw = (saveSlotSelected + i + numsaves)%numsaves;
-		x = (BASEVIDWIDTH/2 - 42 + loadgamescroll) + (i*hsep);
+		x = (BASEVIDWIDTH/2 - 42 + FixedInt(loadgamescroll)) + (i*hsep);
 		y = 33 + 9;
 
 		{
 			INT32 diff = x - (BASEVIDWIDTH/2 - 42);
 			if (diff < 0)
 				diff = -diff;
-			diff = (42 - diff)/3 - loadgameoffset;
+			diff = (42 - diff)/3 - FixedInt(loadgameoffset);
 			if (diff < 0)
 				diff = 0;
 			y -= diff;
@@ -8668,14 +8668,23 @@ skiplife:
 static void M_DrawLoad(void)
 {
 	M_DrawMenuTitle();
+	fixed_t scrollfrac = FixedDiv(2, 3);
 
-	if (loadgamescroll > 1 || loadgamescroll < -1)
-		loadgamescroll = 2*loadgamescroll/3;
+	if (loadgamescroll > FRACUNIT || loadgamescroll < -FRACUNIT)
+	{
+		fixed_t newscroll = FixedMul(loadgamescroll, scrollfrac);
+		fixed_t deltascroll = FixedMul(newscroll - loadgamescroll, renderdeltatics);
+		loadgamescroll += deltascroll;
+	}
 	else
 		loadgamescroll = 0;
 
-	if (loadgameoffset > 1)
-		loadgameoffset = 2*loadgameoffset/3;
+	if (loadgameoffset > FRACUNIT)
+	{
+		fixed_t newoffs = FixedMul(loadgameoffset, scrollfrac);
+		fixed_t deltaoffs = FixedMul(newoffs - loadgameoffset, renderdeltatics);
+		loadgameoffset += deltaoffs;
+	}
 	else
 		loadgameoffset = 0;
 
@@ -8884,7 +8893,7 @@ static void M_ReadSaveStrings(void)
 	UINT8 lastseen = 0;
 
 	loadgamescroll = 0;
-	loadgameoffset = 14;
+	loadgameoffset = 14 * FRACUNIT;
 
 	for (i = 1; (i < MAXSAVEGAMES); i++) // slot 0 is no save
 	{
@@ -8975,7 +8984,7 @@ static void M_HandleLoadSave(INT32 choice)
 			++saveSlotSelected;
 			if (saveSlotSelected >= numsaves)
 				saveSlotSelected -= numsaves;
-			loadgamescroll = 90;
+			loadgamescroll = 90 * FRACUNIT;
 			break;
 
 		case KEY_LEFTARROW:
@@ -8983,7 +8992,7 @@ static void M_HandleLoadSave(INT32 choice)
 			--saveSlotSelected;
 			if (saveSlotSelected < 0)
 				saveSlotSelected += numsaves;
-			loadgamescroll = -90;
+			loadgamescroll = -90 * FRACUNIT;
 			break;
 
 		case KEY_ENTER:
@@ -9008,7 +9017,7 @@ static void M_HandleLoadSave(INT32 choice)
 			else if (!loadgameoffset)
 			{
 				S_StartSound(NULL, sfx_lose);
-				loadgameoffset = 14;
+				loadgameoffset = 14 * FRACUNIT;
 			}
 			break;
 
@@ -9034,7 +9043,7 @@ static void M_HandleLoadSave(INT32 choice)
 				}
 				else
 					S_StartSound(NULL, sfx_lose);
-				loadgameoffset = 14;
+				loadgameoffset = 14 * FRACUNIT;
 			}
 			break;
 	}
@@ -9094,13 +9103,13 @@ static void M_LoadGame(INT32 choice)
 //
 void M_ForceSaveSlotSelected(INT32 sslot)
 {
-	loadgameoffset = 14;
+	loadgameoffset = 14 * FRACUNIT;
 
 	// Already there? Whatever, then!
 	if (sslot == saveSlotSelected)
 		return;
 
-	loadgamescroll = 90;
+	loadgamescroll = 90 * FRACUNIT;
 	if (saveSlotSelected <= numsaves/2)
 		loadgamescroll = -loadgamescroll;
 
