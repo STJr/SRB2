@@ -1387,6 +1387,9 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_HEADER, NULL, "Renderer", NULL, 208},
 	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 214},
 #endif
+
+	{IT_HEADER, NULL, "Experimental", NULL, 222},
+	{IT_STRING | IT_CVAR, NULL, "Frame Interpolation",       &cv_frameinterpolation, 228},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
