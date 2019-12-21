@@ -171,8 +171,8 @@ static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
 
 // new menus
-static tic_t recatkdrawtimer = 0;
-static tic_t ntsatkdrawtimer = 0;
+static fixed_t recatkdrawtimer = 0;
+static fixed_t ntsatkdrawtimer = 0;
 
 static tic_t charseltimer = 0;
 static fixed_t char_scroll = 0;
@@ -5810,7 +5810,7 @@ static void M_DrawRecordAttackForeground(void)
 
 	for (i = -12; i < (BASEVIDHEIGHT/height) + 12; i++)
 	{
-		INT32 y = ((i*height) - (height - ((recatkdrawtimer*2)%height)));
+		INT32 y = ((i*height) - (height - ((FixedInt(recatkdrawtimer*2))%height)));
 		// don't draw above the screen
 		{
 			INT32 sy = FixedMul(y, dupz<<FRACBITS) >> FRACBITS;
@@ -5827,17 +5827,18 @@ static void M_DrawRecordAttackForeground(void)
 	}
 
 	// draw clock
-	fa = (FixedAngle(((recatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
+	fa = (FixedAngle(((FixedInt(recatkdrawtimer * 4)) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
 	V_DrawSciencePatch(160<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, clock, FRACUNIT);
 
 	// Increment timer.
-	recatkdrawtimer++;
+	recatkdrawtimer += renderdeltatics;
+	if (recatkdrawtimer < 0) recatkdrawtimer = 0;
 }
 
 // NiGHTS Attack background.
 static void M_DrawNightsAttackMountains(void)
 {
-	static INT32 bgscrollx;
+	static fixed_t bgscrollx;
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	patch_t *background = W_CachePatchName(curbgname, PU_PATCH);
 	INT16 w = background->width;
@@ -5853,7 +5854,7 @@ static void M_DrawNightsAttackMountains(void)
 	if (x < BASEVIDWIDTH)
 		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
 
-	bgscrollx += (FRACUNIT/2);
+	bgscrollx += FixedMul(FRACUNIT/2, renderdeltatics);
 	if (bgscrollx > w<<FRACBITS)
 		bgscrollx &= 0xFFFF;
 }
@@ -5884,7 +5885,7 @@ static void M_DrawNightsAttackBackground(void)
 	M_DrawNightsAttackMountains();
 
 	// back top foreground patch
-	x = 0-(ntsatkdrawtimer%backtopwidth);
+	x = 0-(FixedInt(ntsatkdrawtimer)%backtopwidth);
 	V_DrawScaledPatch(x, y, V_SNAPTOTOP|V_SNAPTOLEFT, backtopfg);
 	for (i = 0; i < 3; i++)
 	{
@@ -5895,7 +5896,7 @@ static void M_DrawNightsAttackBackground(void)
 	}
 
 	// front top foreground patch
-	x = 0-((ntsatkdrawtimer*2)%fronttopwidth);
+	x = 0-(FixedInt(ntsatkdrawtimer*2)%fronttopwidth);
 	V_DrawScaledPatch(x, y, V_SNAPTOTOP|V_SNAPTOLEFT, fronttopfg);
 	for (i = 0; i < 3; i++)
 	{
@@ -5906,7 +5907,7 @@ static void M_DrawNightsAttackBackground(void)
 	}
 
 	// back bottom foreground patch
-	x = 0-(ntsatkdrawtimer%backbottomwidth);
+	x = 0-(FixedInt(ntsatkdrawtimer)%backbottomwidth);
 	y = BASEVIDHEIGHT - backbottomheight;
 	V_DrawScaledPatch(x, y, V_SNAPTOBOTTOM|V_SNAPTOLEFT, backbottomfg);
 	for (i = 0; i < 3; i++)
@@ -5918,7 +5919,7 @@ static void M_DrawNightsAttackBackground(void)
 	}
 
 	// front bottom foreground patch
-	x = 0-((ntsatkdrawtimer*2)%frontbottomwidth);
+	x = 0-(FixedInt(ntsatkdrawtimer*2)%frontbottomwidth);
 	y = BASEVIDHEIGHT - frontbottomheight;
 	V_DrawScaledPatch(x, y, V_SNAPTOBOTTOM|V_SNAPTOLEFT, frontbottomfg);
 	for (i = 0; i < 3; i++)
@@ -5930,7 +5931,8 @@ static void M_DrawNightsAttackBackground(void)
 	}
 
 	// Increment timer.
-	ntsatkdrawtimer++;
+	ntsatkdrawtimer += renderdeltatics;
+	if (ntsatkdrawtimer < 0) ntsatkdrawtimer = 0;
 }
 
 // NiGHTS Attack floating Super Sonic.
@@ -5938,8 +5940,8 @@ static patch_t *ntssupersonic[2];
 static void M_DrawNightsAttackSuperSonic(void)
 {
 	const UINT8 *colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_YELLOW, GTC_CACHE);
-	INT32 timer = (ntsatkdrawtimer/4) % 2;
-	angle_t fa = (FixedAngle(((ntsatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
+	INT32 timer = FixedInt(ntsatkdrawtimer/4) % 2;
+	angle_t fa = (FixedAngle((FixedInt(ntsatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
 	V_DrawFixedPatch(235<<FRACBITS, (120<<FRACBITS) - (8*FINESINE(fa)), FRACUNIT, 0, ntssupersonic[timer], colormap);
 }
 
