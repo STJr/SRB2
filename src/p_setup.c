@@ -1960,6 +1960,17 @@ static void P_LoadMapData(const virtres_t* virt)
 		virtsidedefs = vres_Find(virt, "SIDEDEFS");
 		virtlinedefs = vres_Find(virt, "LINEDEFS");
 
+		if (!virtthings)
+			I_Error("THINGS lump not found");
+		if (!virtvertexes)
+			I_Error("VERTEXES lump not found");
+		if (!virtsectors)
+			I_Error("SECTORS lump not found");
+		if (!virtsidedefs)
+			I_Error("SIDEDEFS lump not found");
+		if (!virtlinedefs)
+			I_Error("LINEDEFS lump not found");
+
 		// Traditional doom map format just assumes the number of elements from the lump sizes.
 		numvertexes  = virtvertexes->size / sizeof (mapvertex_t);
 		numsectors   = virtsectors->size  / sizeof (mapsector_t);
