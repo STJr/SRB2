@@ -309,7 +309,7 @@ static void M_ChangeControl(INT32 choice);
 // Video & Sound
 menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 #ifdef HWRENDER
-menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
+menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef;
 #endif
 menu_t OP_SoundOptionsDef;
 menu_t OP_SoundAdvancedDef;
@@ -355,7 +355,6 @@ static void M_DrawScreenshotMenu(void);
 static void M_DrawMonitorToggles(void);
 #ifdef HWRENDER
 static void M_OGL_DrawFogMenu(void);
-static void M_OGL_DrawColorMenu(void);
 #endif
 #ifndef NONET
 static void M_DrawScreenshotMenu(void);
@@ -1119,6 +1118,8 @@ static menuitem_t OP_Joystick1Menu[] =
 
 	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook, 120},
 	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook,  130},
+	{IT_STRING | IT_CVAR | IT_CV_FLOATSLIDER,
+	                      NULL, "Deadzone",               &cv_deadzone,       140 },
 };
 
 static menuitem_t OP_Joystick2Menu[] =
@@ -1135,6 +1136,8 @@ static menuitem_t OP_Joystick2Menu[] =
 
 	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook2,120},
 	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook2, 130},
+	{IT_STRING | IT_CVAR | IT_CV_FLOATSLIDER,
+	                      NULL, "Deadzone",               &cv_deadzone2,      140 },
 };
 
 static menuitem_t OP_JoystickSetMenu[1+MAX_JOYSTICKS];
@@ -1300,21 +1303,25 @@ static menuitem_t OP_ColorOptionsMenu[] =
 #ifdef HWRENDER
 static menuitem_t OP_OpenGLOptionsMenu[] =
 {
-	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             10},
-	{IT_STRING|IT_CVAR,         NULL, "Model interpolation", &cv_grmodelinterpolation, 20},
+	{IT_HEADER, NULL, "3D Models", NULL, 0},
+	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             12},
+	{IT_STRING|IT_CVAR,         NULL, "Model interpolation", &cv_grmodelinterpolation, 22},
+	{IT_STRING|IT_CVAR,         NULL, "Model lighting",      &cv_grmodellighting, 32},
 
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            40},
-	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        50},
-	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     60},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,70},
-#if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       80},
-#endif
+	{IT_HEADER, NULL, "General", NULL, 51},
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            62},
+	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        72},
+	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     82},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,92},
+
+	{IT_HEADER, NULL, "Miscellaneous", NULL, 111},
+	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          123},
 #ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     100},
+	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     133},
 #endif
-	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          110},
-	{IT_SUBMENU|IT_STRING,      NULL, "Gamma...",        &OP_OpenGLColorDef,        120},
+#if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
+	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,            143},
+#endif
 };
 
 #ifdef ALAM_LIGHTING
@@ -1333,13 +1340,6 @@ static menuitem_t OP_OpenGLFogMenu[] =
 	{IT_STRING|IT_KEYHANDLER, NULL, "Fog color",   M_HandleFogColor, 20},
 	{IT_STRING|IT_CVAR,       NULL, "Fog density", &cv_grfogdensity, 30},
 	{IT_STRING|IT_CVAR,       NULL, "Software Fog",&cv_grsoftwarefog,40},
-};
-
-static menuitem_t OP_OpenGLColorMenu[] =
-{
-	{IT_STRING|IT_CVAR|IT_CV_SLIDER, NULL, "red",   &cv_grgammared,   10},
-	{IT_STRING|IT_CVAR|IT_CV_SLIDER, NULL, "green", &cv_grgammagreen, 20},
-	{IT_STRING|IT_CVAR|IT_CV_SLIDER, NULL, "blue",  &cv_grgammablue,  30},
 };
 #endif
 
@@ -2023,18 +2023,6 @@ menu_t OP_OpenGLFogDef =
 	&OP_OpenGLOptionsDef,
 	OP_OpenGLFogMenu,
 	M_OGL_DrawFogMenu,
-	60, 40,
-	0,
-	NULL
-};
-menu_t OP_OpenGLColorDef =
-{
-	MN_OP_MAIN + (MN_OP_VIDEO << 6) + (MN_OP_OPENGL << 12) + (MN_OP_OPENGL_COLOR << 18),
-	"M_VIDEO",
-	sizeof (OP_OpenGLColorMenu)/sizeof (menuitem_t),
-	&OP_OpenGLOptionsDef,
-	OP_OpenGLColorMenu,
-	M_OGL_DrawColorMenu,
 	60, 40,
 	0,
 	NULL
@@ -3025,7 +3013,7 @@ boolean M_Responder(event_t *ev)
 		}
 		else if (ev->type == ev_joystick  && ev->data1 == 0 && joywait < I_GetTime())
 		{
-			const INT32 jdeadzone = JOYAXISRANGE/4;
+			const INT32 jdeadzone = (JOYAXISRANGE * cv_deadzone.value) / FRACUNIT;
 			if (ev->data3 != INT32_MAX)
 			{
 				if (Joystick.bGamepadStyle || abs(ev->data3) > jdeadzone)
@@ -6386,11 +6374,7 @@ static void M_PandorasBox(INT32 choice)
 	else
 		CV_StealthSetValue(&cv_dummylives, max(players[consoleplayer].lives, 1));
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
-	SR_PandorasBox[6].status = ((players[consoleplayer].charflags & SF_SUPER)
-#ifndef DEVELOP
-	|| cv_skin.value == 1
-#endif
-	) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
+	SR_PandorasBox[6].status = (players[consoleplayer].charflags & SF_SUPER) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
 	SR_PandorasBox[7].status = (emeralds == ((EMERALD7)*2)-1) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
 	M_SetupNextMenu(&SR_PandoraDef);
 }
@@ -11929,20 +11913,6 @@ static void M_OGL_DrawFogMenu(void)
 	if (itemOn == FOG_COLOR_ITEM && skullAnimCounter < 4)
 		V_DrawCharacter(BASEVIDWIDTH - mx,
 			my + currentMenu->menuitems[FOG_COLOR_ITEM].alphaKey, '_' | 0x80,false);
-}
-
-// =====================
-// M_OGL_DrawColorMenu()
-// =====================
-static void M_OGL_DrawColorMenu(void)
-{
-	INT32 mx, my;
-
-	mx = currentMenu->x;
-	my = currentMenu->y;
-	M_DrawGenericMenu(); // use generic drawer for cursor, items and title
-	V_DrawString(mx, my + currentMenu->menuitems[0].alphaKey - 10,
-		V_YELLOWMAP, "Gamma correction");
 }
 
 //===================

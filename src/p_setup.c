@@ -615,7 +615,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	return Ploadflat(0, flatname);
+	return Ploadflat(levelflats, flatname);
 }
 
 // help function for $$$.sav checking
@@ -818,10 +818,6 @@ void P_ReloadRings(void)
 		{
 			mt->mobj = NULL;
 
-			// Z for objects Tails 05-26-2002
-			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-				->sector->floorheight>>FRACBITS);
-
 			P_SpawnHoopsAndRings(mt, true);
 		}
 	}
@@ -920,15 +916,14 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_PrepareRawThings(UINT8 *data)
 {
-	mapthing_t *mt = mapthings;
+	mapthing_t *mt;
 	size_t i;
 
-	// Spawn axis points first so they are
-	// at the front of the list for fast searching.
-	for (i = 0; i < nummapthings; i++, mt++)
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
 		mt->x = READINT16(data);
 		mt->y = READINT16(data);
+
 		mt->angle = READINT16(data);
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
@@ -936,6 +931,66 @@ static void P_PrepareRawThings(UINT8 *data)
 
 		mt->type &= 4095;
 
+		if (mt->type == 1705 || (mt->type == 750 && mt->extrainfo))
+			mt->z = mt->options; // NiGHTS Hoops use the full flags bits to set the height.
+		else
+			mt->z = mt->options >> ZSHIFT;
+	}
+}
+
+static void P_SpawnEmeraldHunt(void)
+{
+	INT32 emer1, emer2, emer3;
+	INT32 timeout = 0; // keeps from getting stuck
+
+	emer1 = emer2 = emer3 = 0;
+
+	//increment spawn numbers because zero is valid.
+	emer1 = (P_RandomKey(numhuntemeralds)) + 1;
+	while (timeout++ < 100)
+	{
+		emer2 = (P_RandomKey(numhuntemeralds)) + 1;
+
+		if (emer2 != emer1)
+			break;
+	}
+
+	timeout = 0;
+	while (timeout++ < 100)
+	{
+		emer3 = (P_RandomKey(numhuntemeralds)) + 1;
+
+		if (emer3 != emer2 && emer3 != emer1)
+			break;
+	}
+
+	//decrement spawn values to the actual number because zero is valid.
+	if (emer1--)
+		P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
+			huntemeralds[emer1]->y<<FRACBITS,
+			huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
+
+	if (emer2--)
+		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
+			huntemeralds[emer2]->y<<FRACBITS,
+			huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
+		mobjinfo[MT_EMERHUNT].spawnstate+1);
+
+	if (emer3--)
+		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
+			huntemeralds[emer3]->y<<FRACBITS,
+			huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
+		mobjinfo[MT_EMERHUNT].spawnstate+2);
+}
+
+static void P_LoadThings(boolean loademblems)
+{
+	size_t i;
+	mapthing_t *mt;
+
+        // Spawn axis points first so they are at the front of the list for fast searching.
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	{
 		switch (mt->type)
 		{
 			case 1700: // MT_AXIS
@@ -948,28 +1003,11 @@ static void P_PrepareRawThings(UINT8 *data)
 				break;
 		}
 	}
-}
 
-static void P_LoadThings(boolean loademblems)
-{
-	size_t i;
-	mapthing_t *mt;
-
-	// Loading the things lump itself into memory is now handled in P_PrepareThings, above
-
-	mt = mapthings;
 	numhuntemeralds = 0;
-	for (i = 0; i < nummapthings; i++, mt++)
+
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
-		sector_t *mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
-
-		// Z for objects
-		mt->z = (INT16)(
-#ifdef ESLOPE
-				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
-#endif
-				mtsector->floorheight)>>FRACBITS;
-
 		if (mt->type == 1700 // MT_AXIS
 			|| mt->type == 1701 // MT_AXISTRANSFER
 			|| mt->type == 1702) // MT_AXISTRANSFERLINE
@@ -984,49 +1022,7 @@ static void P_LoadThings(boolean loademblems)
 
 	// random emeralds for hunt
 	if (numhuntemeralds)
-	{
-		INT32 emer1, emer2, emer3;
-		INT32 timeout = 0; // keeps from getting stuck
-
-		emer1 = emer2 = emer3 = 0;
-
-		//increment spawn numbers because zero is valid.
-		emer1 = (P_RandomKey(numhuntemeralds)) + 1;
-		while (timeout++ < 100)
-		{
-			emer2 = (P_RandomKey(numhuntemeralds)) + 1;
-
-			if (emer2 != emer1)
-				break;
-		}
-
-		timeout = 0;
-		while (timeout++ < 100)
-		{
-			emer3 = (P_RandomKey(numhuntemeralds)) + 1;
-
-			if (emer3 != emer2 && emer3 != emer1)
-				break;
-		}
-
-		//decrement spawn values to the actual number because zero is valid.
-		if (emer1--)
-			P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
-				huntemeralds[emer1]->y<<FRACBITS,
-				huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
-
-		if (emer2--)
-			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
-				huntemeralds[emer2]->y<<FRACBITS,
-				huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
-			mobjinfo[MT_EMERHUNT].spawnstate+1);
-
-		if (emer3--)
-			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
-				huntemeralds[emer3]->y<<FRACBITS,
-				huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
-			mobjinfo[MT_EMERHUNT].spawnstate+2);
-	}
+		P_SpawnEmeraldHunt();
 
 	if (metalrecording) // Metal Sonic gets no rings to distract him.
 		return;
@@ -1042,11 +1038,6 @@ static void P_LoadThings(boolean loademblems)
 		 || mt->type == 1705 || mt->type == 1713) // hoops
 		{
 			mt->mobj = NULL;
-
-			// Z for objects Tails 05-26-2002
-			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-				->sector->floorheight>>FRACBITS);
-
 			P_SpawnHoopsAndRings(mt, false);
 		}
 	}
@@ -2803,8 +2794,15 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 	{
+		// Lactozilla (December 8, 2019)
+		// Level setup used to free EVERY mipmap from memory.
+		// Even mipmaps that aren't related to level textures.
+		// Presumably, the hardware render code used to store textures as level data.
+		// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
+		// Level textures are only reloaded after R_LoadTextures, which is
+		// when the texture list is loaded.
 #ifdef ALAM_LIGHTING
 		// BP: reset light between levels (we draw preview frame lights on current frame)
 		HWR_ResetLights();
@@ -2959,11 +2957,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		if (!cv_analog2.changed)
 			CV_SetValue(&cv_analog2, 0);
 
-#ifdef HWRENDER
-		if (rendermode != render_soft && rendermode != render_none)
-			CV_Set(&cv_grfov, cv_grfov.defaultvalue);
-#endif
-
 		displayplayer = consoleplayer; // Start with your OWN view, please!
 	}
 
@@ -2986,14 +2979,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Fab : 19-07-98 : start cd music for this level (note: can be remapped)
 	I_PlayCD((UINT8)(gamemap), false);
-
-	// preload graphics
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-	if (rendermode != render_soft && rendermode != render_none)
-	{
-		HWR_PrepLevelCache(numtextures);
-	}
-#endif
 
 	P_MapEnd();
 

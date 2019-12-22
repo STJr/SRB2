@@ -653,11 +653,7 @@ void R_DrawMaskedColumn(column_t *column)
 			// quick fix... something more proper should be done!!!
 			if (ylookup[dc_yl])
 				colfunc();
-			else if (colfunc == R_DrawColumn_8
-#ifdef USEASM
-			|| colfunc == R_DrawColumn_8_ASM || colfunc == R_DrawColumn_8_MMX
-#endif
-			)
+			else if (colfunc == colfuncs[COLDRAWFUNC_BASE])
 			{
 				static INT32 first = 1;
 				if (first)
@@ -724,11 +720,7 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 			// Still drawn by R_DrawColumn.
 			if (ylookup[dc_yl])
 				colfunc();
-			else if (colfunc == R_DrawColumn_8
-#ifdef USEASM
-			|| colfunc == R_DrawColumn_8_ASM || colfunc == R_DrawColumn_8_MMX
-#endif
-			)
+			else if (colfunc == colfuncs[COLDRAWFUNC_BASE])
 			{
 				static INT32 first = 1;
 				if (first)
@@ -776,12 +768,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // ditto
 	}
 
-	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
+	colfunc = colfuncs[BASEDRAWFUNC]; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
 	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 	{
 		// translate certain pixels to white
-		colfunc = transcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
@@ -791,7 +783,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 	else if (vis->mobj->color && vis->transmap) // Color mapping
 	{
-		colfunc = transtransfunc;
+		colfunc = colfuncs[COLDRAWFUNC_TRANSTRANS];
 		dc_transmap = vis->transmap;
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
@@ -815,13 +807,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 	else if (vis->transmap)
 	{
-		colfunc = fuzzcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 	else if (vis->mobj->color)
 	{
 		// translate green skin to another color
-		colfunc = transcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 
 		// New colormap stuff for skins Tails 06-07-2002
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
@@ -846,7 +838,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 	{
-		colfunc = transcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 		dc_translation = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
 	}
 
@@ -926,7 +918,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		spryscale += vis->scalestep;
 	}
 
-	colfunc = basecolfunc;
+	colfunc = colfuncs[BASEDRAWFUNC];
 	dc_hires = 0;
 
 	vis->x1 = x1;
@@ -956,7 +948,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	if (vis->transmap)
 	{
-		colfunc = fuzzcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 
@@ -992,7 +984,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 		R_DrawMaskedColumn(column);
 	}
 
-	colfunc = basecolfunc;
+	colfunc = colfuncs[BASEDRAWFUNC];
 }
 
 //

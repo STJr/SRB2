@@ -823,6 +823,10 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_autobrake);
 	CV_RegisterVar(&cv_autobrake2);
 
+	// Ported from kart
+	CV_RegisterVar(&cv_deadzone);
+	CV_RegisterVar(&cv_deadzone2);
+
 	// s_sound.c
 	CV_RegisterVar(&cv_soundvolume);
 	CV_RegisterVar(&cv_closedcaptioning);
@@ -1907,7 +1911,7 @@ static void Command_Map_f(void)
 		}
 	}
 
-	if (newmapnum == 0 || !mapheaderinfo[newmapnum-1])
+	if (newmapnum == 0)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Could not find any map described as '%s'.\n"), mapname);
 		Z_Free(mapname);
