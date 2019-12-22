@@ -1600,7 +1600,7 @@ void P_RestoreMusic(player_t *player)
 		P_PlayJingle(player, JT_SUPER);
 
 	// Invulnerability
-	else if (player->powers[pw_invulnerability] > 1)
+	else if (player->powers[pw_invulnerability] > 1 && !player->powers[pw_super])
 	{
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
