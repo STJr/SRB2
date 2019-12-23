@@ -13322,7 +13322,7 @@ static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y,
 	}
 }
 
-static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, boolean bonustime)
+static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, INT32 numitems, fixed_t size, boolean bonustime)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
@@ -13330,14 +13330,6 @@ static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t 
 	angle_t closestangle, fa;
 	INT32 i;
 	TVector v, *res;
-	INT32 numitems = 8;
-	INT32 size = 96*FRACUNIT;
-
-	if (mthing->type & 1)
-	{
-		numitems = 16;
-		size = 192*FRACUNIT;
-	}
 
 	z = P_GetMobjSpawnHeight(ringthing, x, y, z, false);
 
@@ -13430,13 +13422,17 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		P_SpawnDiagonalSpringRings(mthing, x, y, z);
 		return;
 	case 604: // Circle of rings (8 items)
-	case 605: // Circle of rings (16 bits)
+	case 605: // Circle of rings (16 items)
 	case 606: // Circle of blue spheres (8 items)
 	case 607: // Circle of blue spheres (16 items)
 	case 608: // Circle of rings and blue spheres (8 items)
 	case 609: // Circle of rings and blue spheres (16 items)
-		P_SpawnItemCircle(mthing, x, y, z, bonustime);
+	{
+		INT32 numitems = (mthing->type & 1) ? 16 : 8;
+		fixed_t size = (mthing->type & 1) ? 192*FRACUNIT : 96*FRACUNIT;
+		P_SpawnItemCircle(mthing, x, y, z, numitems, size, bonustime);
 		return;
+	}
 	// Hoops
 	case 1705: // Generic NiGHTS hoop
 		P_SpawnHoop(mthing, x, y, z, 24, 4*FRACUNIT);
