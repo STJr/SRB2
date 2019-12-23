@@ -328,18 +328,6 @@ ifdef STATIC
 LIBS:=-static $(LIBS)
 endif
 
-ifdef HAVE_MINIUPNPC
-ifdef NONET
-HAVE_MINIUPNPC=''
-else
-LIBS+=-lminiupnpc
-ifdef MINGW
-LIBS+=-lws2_32 -liphlpapi
-endif
-CFLAGS+=-DHAVE_MINIUPNPC
-endif
-endif
-
 ifndef NO_LUA
 	include blua/Makefile.cfg
 endif
