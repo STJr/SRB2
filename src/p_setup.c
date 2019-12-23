@@ -103,6 +103,9 @@ node_t *nodes;
 line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
+sector_t *spawnsectors;
+line_t *spawnlines;
+side_t *spawnsides;
 INT32 numstarposts;
 UINT16 bossdisabled;
 boolean stoppedclock;
@@ -2774,6 +2777,15 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		P_LoadLineDefs2();
 		P_GroupLines();
+
+		// Copy relevant map data for NetArchive purposes.
+		spawnsectors = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
+		spawnlines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+		spawnsides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
+
+		memcpy(spawnsectors, sectors, numsectors * sizeof (*sectors));
+		memcpy(spawnlines, lines, numlines * sizeof (*lines));
+		memcpy(spawnsides, sides, numsides * sizeof (*sides));
 
 		P_PrepareRawThings(vres_Find(virt, "THINGS")->data);
 
