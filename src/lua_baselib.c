@@ -2660,6 +2660,10 @@ static int lib_gAddGametype(lua_State *L)
 	if (!lua_lumploading)
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 
+	// Ran out of gametype slots
+	if (gametypecount == NUMGAMETYPEFREESLOTS)
+		return luaL_error(L, "Ran out of free gametype slots!");
+
 #define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to " LUA_QL("G_AddGametype") " (%s)", e);
 #define TYPEERROR(f, t) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t), luaL_typename(L, -1)))
 
@@ -2733,10 +2737,6 @@ static int lib_gAddGametype(lua_State *L)
 
 	// pop gametype table
 	lua_pop(L, 1);
-
-	// Ran out of gametype slots
-	if (gametypecount == NUMGAMETYPEFREESLOTS)
-		return luaL_error(L, "Ran out of free gametype slots!");
 
 	// Set defaults
 	if (gtname == NULL)
