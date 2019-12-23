@@ -11559,10 +11559,39 @@ void P_MovePlayerToStarpost(INT32 playernum)
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
-
-static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
+static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip)
 {
 	const subsector_t *ss = R_PointInSubsector(x, y);
+
+	// Axis objects snap to the floor.
+	if (mobjtype == MT_AXIS || mobjtype == MT_AXISTRANSFER || mobjtype == MT_AXISTRANSFERLINE)
+		return ONFLOORZ;
+
+	if (!offset) // Snap to the surfaces when there's no offset set.
+	{
+		if (flip)
+			return ONCEILINGZ;
+		else
+			return ONFLOORZ;
+	}
+
+	// Establish height.
+	if (flip)
+		return (
+#ifdef ESLOPE
+			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
+#endif
+			ss->sector->ceilingheight) - offset - mobjinfo[mobjtype].height;
+	else
+		return (
+#ifdef ESLOPE
+			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
+#endif
+			ss->sector->floorheight) + offset;
+}
+
+static fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
+{
 	fixed_t offset = mthing->z << FRACBITS;
 	boolean flip = (!!(mobjinfo[mobjtype].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
 
@@ -11572,12 +11601,6 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t*
 	case MT_NIGHTSBUMPER:
 		flip = false;
 		break;
-
-	// Axis objects snap to the floor.
-	case MT_AXIS:
-	case MT_AXISTRANSFER:
-	case MT_AXISTRANSFERLINE:
-		return ONFLOORZ;
 
 	// Objects with a non-zero default height.
 	case MT_CRAWLACOMMANDER:
@@ -11626,27 +11649,7 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t*
 			offset += mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
 	}
 
-	if (!offset) // Snap to the surfaces when there's no offset set.
-	{
-		if (flip)
-			return ONCEILINGZ;
-		else
-			return ONFLOORZ;
-	}
-
-	// Establish height.
-	if (flip)
-		return (
-#ifdef ESLOPE
-			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
-#endif
-			ss->sector->ceilingheight) - offset - mobjinfo[mobjtype].height;
-	else
-		return (
-#ifdef ESLOPE
-			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
-#endif
-			ss->sector->floorheight) + offset;
+	return P_GetMobjSpawnHeight(mobjtype, x, y, offset, flip);
 }
 
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
@@ -13022,7 +13025,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	// spawn it
 	x = mthing->x << FRACBITS;
 	y = mthing->y << FRACBITS;
-	z = P_GetMobjSpawnHeight(i, mthing, x, y);
+	z = P_GetMapThingSpawnHeight(i, mthing, x, y);
 
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
@@ -13074,7 +13077,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		mobj->flags2 |= MF2_DONTDRAW;
 }
 
-static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, sector_t* sec, INT32 hoopsize, fixed_t sizefactor)
+static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, INT32 hoopsize, fixed_t sizefactor)
 {
 	mobj_t *mobj = NULL;
 	mobj_t *nextmobj = NULL;
@@ -13085,11 +13088,7 @@ static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, sec
 	angle_t fa;
 	TVector v, *res;
 
-	z +=
-#ifdef ESLOPE
-		sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-		sec->floorheight;
+	z = P_GetMobjSpawnHeight(MT_HOOP, x, y, z, false);
 
 	hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 	hoopcenter->spawnpoint = mthing;
@@ -13209,7 +13208,7 @@ static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bo
 			ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
 	}
 
-	z = P_GetMobjSpawnHeight(ringthing, mthing, x, y);
+	z = P_GetMapThingSpawnHeight(ringthing, mthing, x, y);
 	mobj = P_SpawnMobj(x, y, z, ringthing);
 	mobj->spawnpoint = mthing;
 
@@ -13230,11 +13229,10 @@ static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bo
 		P_SetMobjState(mobj, mobj->info->seestate);
 }
 
-static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y, sector_t* sec, boolean nightsreplace)
+static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, boolean nightsreplace)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t* mobj = NULL;
-	fixed_t z;
 	INT32 r;
 
 	INT32 dist = 64*FRACUNIT;
@@ -13247,26 +13245,7 @@ static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y,
 	if (nightsreplace)
 		ringthing = MT_NIGHTSSTAR;
 
-	if (mthing->options & MTF_OBJECTFLIP)
-	{
-		z = (
-#ifdef ESLOPE
-			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-			sec->ceilingheight) - mobjinfo[ringthing].height;
-		if (mthing->z)
-			z -= (mthing->z << FRACBITS);
-	}
-	else
-	{
-		z = (
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight);
-		if (mthing->z)
-			z += (mthing->z << FRACBITS);
-	}
+	z = P_GetMobjSpawnHeight(ringthing, x, y, z, mthing->options & MTF_OBJECTFLIP);
 
 	for (r = 1; r <= 5; r++)
 	{
@@ -13292,11 +13271,10 @@ static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y,
 	}
 }
 
-static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y, sector_t* sec, boolean nightsreplace)
+static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, boolean nightsreplace)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
-	fixed_t z;
 	INT32 r;
 	angle_t closestangle, fa;
 
@@ -13313,26 +13291,7 @@ static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y,
 	closestangle = FixedAngle(mthing->angle << FRACBITS);
 	fa = (closestangle >> ANGLETOFINESHIFT);
 
-	if (mthing->options & MTF_OBJECTFLIP)
-	{
-		z = (
-#ifdef ESLOPE
-			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-			sec->ceilingheight) - mobjinfo[ringthing].height;
-		if (mthing->z)
-			z -= (mthing->z << FRACBITS);
-	}
-	else
-	{
-		z = (
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight);
-		if (mthing->z)
-			z += (mthing->z << FRACBITS);
-	}
+	z = P_GetMobjSpawnHeight(ringthing, x, y, z, mthing->options & MTF_OBJECTFLIP);
 
 	for (r = 1; r <= iterations; r++)
 	{
@@ -13361,11 +13320,11 @@ static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y,
 	}
 }
 
-static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, sector_t* sec, boolean bonustime, boolean nightsreplace)
+static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, boolean bonustime, boolean nightsreplace)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
-	fixed_t z, finalx, finaly, finalz;
+	fixed_t finalx, finaly, finalz;
 	angle_t closestangle, fa;
 	INT32 i;
 	TVector v, *res;
@@ -13378,13 +13337,7 @@ static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, sector_t
 		size = 192*FRACUNIT;
 	}
 
-	z =
-#ifdef ESLOPE
-		sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-		sec->floorheight;
-	if (mthing->z)
-		z += (mthing->z << FRACBITS);
+	z = P_GetMobjSpawnHeight(ringthing, x, y, z, false);
 
 	closestangle = FixedAngle(mthing->angle << FRACBITS);
 
@@ -13462,7 +13415,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 	fixed_t x = mthing->x << FRACBITS;
 	fixed_t y = mthing->y << FRACBITS;
 	fixed_t z = mthing->z << FRACBITS;
-	sector_t *sec = R_PointInSubsector(x, y)->sector;
 	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
 
 	switch (mthing->type)
@@ -13470,11 +13422,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 	// Special placement patterns
 	case 600: // 5 vertical rings (yellow spring)
 	case 601: // 5 vertical rings (red spring)
-		P_SpawnVerticalSpringRings(mthing, x, y, sec, nightsreplace);
+		P_SpawnVerticalSpringRings(mthing, x, y, z, nightsreplace);
 		return;
 	case 602: // 5 diagonal rings (yellow spring)
 	case 603: // 10 diagonal rings (red spring)
-		P_SpawnDiagonalSpringRings(mthing, x, y, sec, nightsreplace);
+		P_SpawnDiagonalSpringRings(mthing, x, y, z, nightsreplace);
 		return;
 	case 604: // Circle of rings (8 items)
 	case 605: // Circle of rings (16 bits)
@@ -13482,16 +13434,16 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 	case 607: // Circle of blue spheres (16 items)
 	case 608: // Circle of rings and blue spheres (8 items)
 	case 609: // Circle of rings and blue spheres (16 items)
-		P_SpawnItemCircle(mthing, x, y, sec, bonustime, nightsreplace);
+		P_SpawnItemCircle(mthing, x, y, z, bonustime, nightsreplace);
 		return;
 	// Hoops
 	case 1705: // Generic NiGHTS hoop
-		P_SpawnHoop(mthing, x, y, z, sec, 24, 4*FRACUNIT);
+		P_SpawnHoop(mthing, x, y, z, 24, 4*FRACUNIT);
 		return;
 	case 1713: // Customizable NiGHTS hoop
 		// For each flag add 16 fracunits to the size
 		// Default (0 flags) is 32 fracunits
-		P_SpawnHoop(mthing, x, y, z, sec, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
+		P_SpawnHoop(mthing, x, y, z, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
 		return;
 	default: // All manners of rings and coins
 		P_SpawnRingItem(mthing, x, y, bonustime, nightsreplace);
