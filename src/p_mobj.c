@@ -11698,6 +11698,198 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 	return false;
 }
 
+static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
+{
+	switch (i)
+	{
+	case MT_RING:
+	case MT_COIN:
+	case MT_REDTEAMRING:
+	case MT_BLUETEAMRING:
+	case MT_BLUESPHERE:
+	case MT_BOMBSPHERE:
+	case MT_NIGHTSSTAR:
+	case MT_NIGHTSCHIP:
+		return false; // These are handled in P_SpawnHoopsAndRings().
+	case MT_EMERALD1:
+	case MT_EMERALD2:
+	case MT_EMERALD3:
+	case MT_EMERALD4:
+	case MT_EMERALD5:
+	case MT_EMERALD6:
+	case MT_EMERALD7:
+		if (gametype != GT_COOP) // Don't place emeralds in non-coop modes
+			return false;
+
+		if (metalrecording)
+			return false; // Metal Sonic isn't for collecting emeralds.
+
+		if (emeralds & mobjinfo[i].speed) // You already have this emerald!
+			return false;
+
+		break;
+	case MT_EMERHUNT:
+		// Emerald Hunt is Coop only.
+		if (gametype != GT_COOP)
+			return false;
+
+		if (numhuntemeralds < MAXHUNTEMERALDS)
+			huntemeralds[numhuntemeralds++] = mthing;
+		return false;
+	case MT_EMERALDSPAWN:
+		if (!cv_powerstones.value)
+			return false;
+
+		if (!(gametype == GT_MATCH || gametype == GT_CTF))
+			return false;
+
+		runemeraldmanager = true;
+		break;
+	case MT_ROSY:
+		if (!(gametype == GT_COOP || (mthing->options & MTF_EXTRA)))
+			return false; // she doesn't hang out here
+
+		if (!mariomode && !(netgame || multiplayer) && players[consoleplayer].skin == 3)
+			return false; // no doubles
+
+		break;
+	case MT_TOKEN:
+		if (gametype != GT_COOP && gametype != GT_COMPETITION)
+			return false; // Gametype's not right
+
+		if (tokenbits == 30)
+			return false; // Too many tokens
+
+		if (tokenlist & (1 << tokenbits++))
+			return false; // You already got this token
+
+		break;
+	case MT_EMBLEM:
+		if (netgame || multiplayer)
+			return false; // Single player
+
+		if (modifiedgame && !savemoddata)
+			return false; // No cheating!!
+
+		break;
+	default:
+		break;
+	}
+
+	if (metalrecording) // Metal Sonic can't use these things.
+		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_TOKEN || i == MT_STARPOST)
+			return false;
+
+	if (!G_PlatformGametype())
+	{
+		if ((mobjinfo[i].flags & MF_ENEMY) || (mobjinfo[i].flags & MF_BOSS))
+			return false; // No enemies in ringslinger modes
+
+		if (i == MT_SIGN || i == MT_STARPOST)
+			return false; // Don't spawn exit signs or starposts in wrong game modes
+	}
+
+	if (!G_RingSlingerGametype() || !cv_specialrings.value)
+		if (P_WeaponOrPanel(i))
+			return false; // Don't place weapons/panels in non-ringslinger modes
+
+	if (gametype != GT_CTF) // CTF specific things
+	{
+		if (i == MT_BLUEFLAG || i == MT_REDFLAG)
+			return false; // No flags in non-CTF modes!
+	}
+	else
+	{
+		if ((i == MT_BLUEFLAG && blueflag) || (i == MT_REDFLAG && redflag))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Only one flag per team allowed in CTF!\n"));
+			return false;
+		}
+	}
+
+	if (modeattacking) // Record Attack special stuff
+	{
+		// Don't spawn starposts that wouldn't be usable
+		if (i == MT_STARPOST)
+			return false;
+	}
+
+	if (ultimatemode)
+	{
+		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
+			|| i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX
+			|| i == MT_FLAMEAURA_BOX || i == MT_BUBBLEWRAP_BOX || i == MT_THUNDERCOIN_BOX
+			|| i == MT_RING_BOX || i == MT_STARPOST)
+			return false; // No rings or shields in Ultimate mode
+
+		// Don't include the gold repeating boxes here please.
+		// They're likely facets of the level's design and therefore required to progress.
+	}
+
+	return true;
+}
+
+static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
+{
+	// Altering monitor spawns via cvars
+	// If MF_GRENADEBOUNCE is set in the monitor's info,
+	// skip this step. (Used for gold monitors)
+	// Yeah, this is a dirty hack.
+	if ((mobjinfo[i].flags & (MF_MONITOR|MF_GRENADEBOUNCE)) == MF_MONITOR)
+	{
+		if (gametype == GT_COMPETITION || gametype == GT_RACE)
+		{
+			// Set powerup boxes to user settings for competition.
+			switch (cv_competitionboxes.value)
+			{
+			case 1: // Mystery
+				return MT_MYSTERY_BOX;
+			case 2: // Teleport
+				return MT_MIXUP_BOX;
+			case 3: // None
+				return MT_NULL; // Don't spawn!
+			default:
+				return i;
+			}
+		}
+		// Set powerup boxes to user settings for other netplay modes
+		else if (gametype != GT_COOP)
+		{
+			switch (cv_matchboxes.value)
+			{
+			case 1: // Mystery
+				return MT_MYSTERY_BOX;
+			case 2: // Unchanging
+				if (i == MT_MYSTERY_BOX)
+					return MT_NULL; // don't spawn
+				mthing->options &= ~(MTF_AMBUSH|MTF_OBJECTSPECIAL); // no random respawning!
+				return i;
+			case 3: // Don't spawn
+				return MT_NULL;
+			default:
+				return i;
+			}
+		}
+	}
+
+	if (gametype != GT_CTF && (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX))
+		return MT_RING_BOX;
+
+	if (modeattacking && i == MT_1UP_BOX) // 1UPs -->> Score TVs
+	{
+		// Either or, doesn't matter which.
+		if (mthing->options & (MTF_AMBUSH | MTF_OBJECTSPECIAL))
+			return MT_SCORE10K_BOX; // 10,000
+		else
+			return MT_SCORE1K_BOX; // 1,000
+	}
+
+	if (mariomode && i == MT_ROSY)
+		return MT_TOAD; // don't remove on penalty of death
+
+	return i;
+}
+
 //
 // P_SpawnMapThing
 // The fields of the mapthing should
@@ -11716,175 +11908,23 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	if (mthing->type == 3328) // 3D Mode start Thing
 		return;
 
-	// Always spawn in objectplace.
-	// Skip all returning code.
-	if (objectplacing)
-	{
-		// find which type to spawn
-		i = P_GetMobjtype(mthing->type);
-		if (i == MT_UNKNOWN)
-			CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
-		goto noreturns;
-	}
-
-	if (P_SpawnNonMobjMapThing(mthing))
+	if (!objectplacing && P_SpawnNonMobjMapThing(mthing))
 		return;
-
-	if (mthing->type == mobjinfo[MT_RING].doomednum || mthing->type == mobjinfo[MT_COIN].doomednum
-	 || mthing->type == mobjinfo[MT_REDTEAMRING].doomednum || mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum
-	 || mthing->type == mobjinfo[MT_BLUESPHERE].doomednum || mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum) // hoops
-		return; // These are handled in P_SpawnHoopsAndRings().
 
 	i = P_GetMobjtype(mthing->type);
 	if (i == MT_UNKNOWN)
 		CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
 
-	if (metalrecording) // Metal Sonic can't use these things.
-		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_TOKEN || i == MT_STARPOST)
+	// Skip all returning/substitution code in objectplace.
+	if (!objectplacing)
+	{
+		if (!P_AllowMobjSpawn(mthing, i))
 			return;
 
-	if (i >= MT_EMERALD1 && i <= MT_EMERALD7) // Pickupable Emeralds
-	{
-		if (gametype != GT_COOP) // Don't place emeralds in non-coop modes
-			return;
-
-		if (metalrecording)
-			return; // Metal Sonic isn't for collecting emeralds.
-
-		if (emeralds & mobjinfo[i].speed) // You already have this emerald!
+		i = P_GetMobjtypeSubstitute(mthing, i);
+		if (i == MT_NULL) // Don't spawn mobj
 			return;
 	}
-
-	if (i == MT_EMERHUNT)
-	{
-		// Emerald Hunt is Coop only.
-		if (gametype != GT_COOP)
-			return;
-
-		if (numhuntemeralds < MAXHUNTEMERALDS)
-			huntemeralds[numhuntemeralds++] = mthing;
-		return;
-	}
-
-	if (i == MT_EMERALDSPAWN)
-	{
-		if (!cv_powerstones.value)
-			return;
-
-		if (!(gametype == GT_MATCH || gametype == GT_CTF))
-			return;
-
-		runemeraldmanager = true;
-	}
-
-	if (!G_PlatformGametype()) // No enemies in match or CTF modes
-		if ((mobjinfo[i].flags & MF_ENEMY) || (mobjinfo[i].flags & MF_BOSS))
-			return;
-
-	if (!G_RingSlingerGametype() || !cv_specialrings.value)
-		if (P_WeaponOrPanel(i))
-			return; // Don't place weapons/panels in non-ringslinger modes
-
-	// Altering monitor spawns via cvars
-	// If MF_GRENADEBOUNCE is set in the monitor's info,
-	// skip this step. (Used for gold monitors)
-	// Yeah, this is a dirty hack.
-	if ((mobjinfo[i].flags & (MF_MONITOR|MF_GRENADEBOUNCE)) == MF_MONITOR)
-	{
-		if (gametype == GT_COMPETITION || gametype == GT_RACE)
-		{
-			// Set powerup boxes to user settings for competition.
-			if (cv_competitionboxes.value == 1) // Mystery
-				i = MT_MYSTERY_BOX;
-			else if (cv_competitionboxes.value == 2) // Teleport
-				i = MT_MIXUP_BOX;
-			else if (cv_competitionboxes.value == 3) // None
-				return; // Don't spawn!
-			// default case: normal
-		}
-		// Set powerup boxes to user settings for other netplay modes
-		else if (gametype != GT_COOP)
-		{
-			if (cv_matchboxes.value == 1) // Mystery
-				i = MT_MYSTERY_BOX;
-			else if (cv_matchboxes.value == 2) // Unchanging
-			{
-				if (i == MT_MYSTERY_BOX)
-					return; // don't spawn
-				mthing->options &= ~(MTF_AMBUSH|MTF_OBJECTSPECIAL); // no random respawning!
-			}
-			else if (cv_matchboxes.value == 3) // Don't spawn
-				return;
-			// default case: normal
-		}
-	}
-
-	if (gametype != GT_CTF) // CTF specific things
-	{
-		if (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX)
-			i = MT_RING_BOX;
-		else if (i == MT_BLUEFLAG || i == MT_REDFLAG)
-			return; // No flags in non-CTF modes!
-	}
-	else
-	{
-		if ((i == MT_BLUEFLAG && blueflag) || (i == MT_REDFLAG && redflag))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Only one flag per team allowed in CTF!\n"));
-			return;
-		}
-	}
-
-	if (!G_PlatformGametype() && (i == MT_SIGN || i == MT_STARPOST))
-		return; // Don't spawn exit signs or starposts in wrong game modes
-
-	if (modeattacking) // Record Attack special stuff
-	{
-		// Don't spawn starposts that wouldn't be usable
-		if (i == MT_STARPOST)
-			return;
-
-		// 1UPs -->> Score TVs
-		else if (i == MT_1UP_BOX) // 1UP
-		{
-			// Either or, doesn't matter which.
-			if (mthing->options & (MTF_AMBUSH|MTF_OBJECTSPECIAL))
-				i = MT_SCORE10K_BOX; // 10,000
-			else
-				i = MT_SCORE1K_BOX; // 1,000
-		}
-	}
-
-	if (ultimatemode)
-	{
-		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
-		 || i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX
-		 || i == MT_FLAMEAURA_BOX || i == MT_BUBBLEWRAP_BOX || i == MT_THUNDERCOIN_BOX
-		 || i == MT_RING_BOX || i == MT_STARPOST)
-			return; // No rings or shields in Ultimate mode
-
-		// Don't include the gold repeating boxes here please.
-		// They're likely facets of the level's design and therefore required to progress.
-	}
-
-	if (i == MT_ROSY)
-	{
-		if (!(gametype == GT_COOP || (mthing->options & MTF_EXTRA)))
-			return; // she doesn't hang out here
-		else if (mariomode)
-			i = MT_TOAD; // don't remove on penalty of death
-		else if (!(netgame || multiplayer) && players[consoleplayer].skin == 3)
-			return; // no doubles
-	}
-
-	if (i == MT_TOKEN && ((gametype != GT_COOP && gametype != GT_COMPETITION) || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
-		return; // you already got this token, or there are too many, or the gametype's not right
-
-	if (i == MT_EMBLEM && (netgame || multiplayer || (modifiedgame && !savemoddata))) // No cheating!!
-		return;
-
-	// Objectplace landing point
-	noreturns:
 
 	// spawn it
 	x = mthing->x << FRACBITS;
