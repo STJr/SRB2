@@ -103,6 +103,9 @@ node_t *nodes;
 line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
+sector_t *spawnsectors;
+line_t *spawnlines;
+side_t *spawnsides;
 INT32 numstarposts;
 UINT16 bossdisabled;
 boolean stoppedclock;
@@ -666,11 +669,9 @@ static void P_LoadRawSectors(UINT8 *data)
 		ss->ceilingpic = P_AddLevelFlat(ms->ceilingpic, foundflats);
 
 		ss->lightlevel = SHORT(ms->lightlevel);
-		ss->spawn_lightlevel = SHORT(ms->lightlevel);
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
 		ss->nexttag = ss->firsttag = -1;
-		ss->spawn_nexttag = ss->spawn_firsttag = -1;
 
 		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
 		ss->validcount = 0;
@@ -705,9 +706,7 @@ static void P_LoadRawSectors(UINT8 *data)
 		ss->spawn_extra_colormap = NULL;
 
 		ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
-		ss->spawn_flr_xoffs = ss->spawn_ceil_xoffs = ss->spawn_flr_yoffs = ss->spawn_ceil_yoffs = 0;
 		ss->floorpic_angle = ss->ceilingpic_angle = 0;
-		ss->spawn_flrpic_angle = ss->spawn_ceilpic_angle = 0;
 		ss->gravity = NULL;
 		ss->cullheight = NULL;
 		ss->verticalflip = false;
@@ -2774,6 +2773,15 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		P_LoadLineDefs2();
 		P_GroupLines();
+
+		// Copy relevant map data for NetArchive purposes.
+		spawnsectors = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
+		spawnlines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+		spawnsides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
+
+		memcpy(spawnsectors, sectors, numsectors * sizeof (*sectors));
+		memcpy(spawnlines, lines, numlines * sizeof (*lines));
+		memcpy(spawnsides, sides, numsides * sizeof (*sides));
 
 		P_PrepareRawThings(vres_Find(virt, "THINGS")->data);
 
