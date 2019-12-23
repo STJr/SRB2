@@ -13033,12 +13033,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	if (doangle)
 		mobj->angle = FixedAngle(mthing->angle<<FRACBITS);
 
+	mthing->mobj = mobj;
+
 	// ignore MTF_ flags and return early
 	if (i == MT_NIGHTSBUMPER)
-	{
-		mthing->mobj = mobj;
 		return;
-	}
 
 	if ((mthing->options & MTF_AMBUSH)
 	&& (mthing->options & MTF_OBJECTSPECIAL)
@@ -13073,8 +13072,6 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	// Final set of not being able to draw nightsitems.
 	if (mobj->flags & MF_NIGHTSITEM)
 		mobj->flags2 |= MF2_DONTDRAW;
-
-	mthing->mobj = mobj;
 }
 
 static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, sector_t* sec, INT32 hoopsize, fixed_t sizefactor)
