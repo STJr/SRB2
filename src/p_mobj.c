@@ -11121,6 +11121,19 @@ void P_PrecipitationEffects(void)
 	}
 }
 
+/** Returns corresponding mobj type from mapthing number.
+ * \param mthingtype Mapthing number in question.
+ * \return Mobj type; MT_UNKNOWN if nothing found.
+ */
+static mobjtype_t P_GetMobjtype(UINT16 mthingtype)
+{
+	mobjtype_t i;
+	for (i = 0; i < NUMMOBJTYPES; i++)
+		if (mthingtype == mobjinfo[i].doomednum)
+			return i;
+	return MT_UNKNOWN;
+}
+
 //
 // P_RespawnSpecials
 //
@@ -11628,19 +11641,6 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t*
 			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
 #endif
 			ss->sector->floorheight) + offset;
-}
-
-/** Returns corresponding mobj type from mapthing number.
- * \param mthingtype Mapthing number in question.
- * \return Mobj type; MT_UNKNOWN if nothing found.
- */
-static mobjtype_t P_GetMobjtype(UINT16 mthingtype)
-{
-	mobjtype_t i;
-	for (i = 0; i < NUMMOBJTYPES; i++)
-		if (mthingtype == mobjinfo[i].doomednum)
-			return i;
-	return MT_UNKNOWN;
 }
 
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
