@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 		if (M_CheckParm("-logfile") && M_IsNextParm())
 			format = M_GetNextParm();
 		else
-			format = "log-%Y-%m-%d %H-%M-%S.txt";
+			format = "log-%Y-%m-%d_%H-%M-%S.txt";
 
 		strftime(logfile, sizeof logfile, format, timeinfo);
 
