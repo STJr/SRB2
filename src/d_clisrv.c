@@ -2486,6 +2486,17 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 	(void)reason;
 #endif
 
+	// don't look through someone's view who isn't there
+	if (playernum == displayplayer)
+	{
+#ifdef HAVE_BLUA
+		// Call ViewpointSwitch hooks here.
+		// The viewpoint was forcibly changed.
+		LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], true);
+#endif
+		displayplayer = consoleplayer;
+	}
+
 	// Reset player data
 	CL_ClearPlayer(playernum);
 
@@ -2502,9 +2513,6 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 	{
 		RemoveAdminPlayer(playernum); // don't stay admin after you're gone
 	}
-
-	if (playernum == displayplayer)
-		displayplayer = consoleplayer; // don't look through someone's view who isn't there
 
 #ifdef HAVE_BLUA
 	LUA_InvalidatePlayer(&players[playernum]);

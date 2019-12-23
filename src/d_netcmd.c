@@ -2900,7 +2900,15 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 
 	//reset view if you are changed, or viewing someone who was changed.
 	if (playernum == consoleplayer || displayplayer == playernum)
+	{
+#ifdef HAVE_BLUA
+		// Call ViewpointSwitch hooks here.
+		// The viewpoint was forcibly changed.
+		if (displayplayer != consoleplayer) // You're already viewing yourself. No big deal.
+			LUAh_ViewpointSwitch(&players[playernum], &players[displayplayer], true);
+#endif
 		displayplayer = consoleplayer;
+	}
 
 	if (G_GametypeHasTeams())
 	{

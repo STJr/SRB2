@@ -10380,7 +10380,14 @@ boolean P_SpectatorJoinGame(player_t *player)
 
 		//Reset away view
 		if (P_IsLocalPlayer(player) && displayplayer != consoleplayer)
+		{
+#ifdef HAVE_BLUA
+			// Call ViewpointSwitch hooks here.
+			// The viewpoint was forcibly changed.
+			LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+#endif
 			displayplayer = consoleplayer;
+		}
 
 		if (changeto == 1)
 			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x85', M_GetText("Red team"), '\x80');
@@ -10422,7 +10429,14 @@ boolean P_SpectatorJoinGame(player_t *player)
 
 			//Reset away view
 			if (P_IsLocalPlayer(player) && displayplayer != consoleplayer)
+			{
+#ifdef HAVE_BLUA
+				// Call ViewpointSwitch hooks here.
+				// The viewpoint was forcibly changed.
+				LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+#endif
 				displayplayer = consoleplayer;
+			}
 
 			if (gametype != GT_COOP)
 				CONS_Printf(M_GetText("%s entered the game.\n"), player_names[player-players]);

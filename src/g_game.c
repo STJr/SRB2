@@ -1379,7 +1379,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	//Reset away view if a command is given.
 	if ((cmd->forwardmove || cmd->sidemove || cmd->buttons)
 		&& displayplayer != consoleplayer)
+	{
+#ifdef HAVE_BLUA
+		// Call ViewpointSwitch hooks here.
+		// The viewpoint was forcibly changed.
+		LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+#endif
 		displayplayer = consoleplayer;
+	}
 }
 
 // like the g_buildticcmd 1 but using mouse2, gamcontrolbis, ...
@@ -2021,6 +2028,11 @@ boolean G_Responder(event_t *ev)
 	if (gamestate == GS_LEVEL && ev->type == ev_keydown
 		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
 	{
+		// ViewpointSwitch Lua hook.
+#ifdef HAVE_BLUA
+		UINT8 canSwitchView = 0;
+#endif
+
 		if (splitscreen || !netgame)
 			displayplayer = consoleplayer;
 		else
@@ -2036,13 +2048,12 @@ boolean G_Responder(event_t *ev)
 					continue;
 
 #ifdef HAVE_BLUA
-				{
-					UINT8 canSwitchView = LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer]);
-					if (canSwitchView == 1) // Set viewpoint to this player
-						break;
-					else if (canSwitchView == 2) // Skip this player
-						continue;
-				}
+				// Call ViewpointSwitch hooks here.
+				canSwitchView = LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
+				if (canSwitchView == 1) // Set viewpoint to this player
+					break;
+				else if (canSwitchView == 2) // Skip this player
+					continue;
 #endif
 
 				if (players[displayplayer].spectator)

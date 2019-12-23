@@ -1397,8 +1397,8 @@ boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, b
 	return canSwitchTeam;
 }
 
-// Hook for spy mode in G_Responder
-UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer)
+// Hook for spy mode
+UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean forced)
 {
 	hook_p hookp;
 	UINT8 canSwitchView = 0; // 0 = default, 1 = force yes, 2 = force no.
@@ -1417,12 +1417,14 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer)
 		{
 			LUA_PushUserdata(gL, player, META_PLAYER);
 			LUA_PushUserdata(gL, newdisplayplayer, META_PLAYER);
+			lua_pushboolean(gL, forced);
 		}
 		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 		lua_gettable(gL, LUA_REGISTRYINDEX);
-		lua_pushvalue(gL, -3);
-		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		lua_pushvalue(gL, -4);
+		lua_pushvalue(gL, -4);
+		lua_pushvalue(gL, -4);
+		if (lua_pcall(gL, 3, 1, 0)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
