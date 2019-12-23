@@ -10828,6 +10828,12 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"redscore")) {
 		lua_pushinteger(L, redscore);
 		return 1;
+	} else if (fastcmp(word,"timelimit")) {
+		lua_pushinteger(L, cv_timelimit.value);
+		return 1;
+	} else if (fastcmp(word,"pointlimit")) {
+		lua_pushinteger(L, cv_pointlimit.value);
+		return 1;
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
 		lua_pushinteger(L, spstage_start);
