@@ -6425,7 +6425,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	INT32 j;
 	thinkerlist_t *secthinkers;
 	thinker_t *th;
-
+	virtres_t* virt = NULL;
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
 	(void)fromnetsave;
@@ -7177,17 +7177,10 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					UINT8 *data;
 					UINT16 b;
 
-					if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
-					{ // HACK: Open wad file rather quickly so we can get the data from the sidedefs lump
-						UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-						filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
-						fileinfo += ML_SIDEDEFS; // we only need the SIDEDEFS lump
-						data = Z_Malloc(fileinfo->size, PU_STATIC, NULL);
-						M_Memcpy(data, wadData + fileinfo->filepos, fileinfo->size); // copy data
-						Z_Free(wadData); // we're done with this now
-					}
-					else // phew it's just a WAD
-						data = W_CacheLumpNum(lastloadedmaplumpnum + ML_SIDEDEFS,PU_STATIC);
+					if (!virt)
+						virt = vres_GetMap(lastloadedmaplumpnum);
+
+					data = (UINT8*) vres_Find(virt, "SIDEDEFS")->data;
 
 					for (b = 0; b < (INT16)numsides; b++)
 					{
@@ -7207,7 +7200,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 								I_Error("Make-Your-Own-FOF (tag %d) needs a value in the linedef's second side upper texture field.", lines[i].tag);
 						}
 					}
-					Z_Free(data);
 				}
 				else
 					I_Error("Make-Your-Own FOF (tag %d) found without a 2nd linedef side!", lines[i].tag);
@@ -7432,6 +7424,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 		}
 	}
+
+	if (virt)
+		vres_Free(virt);
 
 	// Allocate each list
 	for (i = 0; i < numsectors; i++)
