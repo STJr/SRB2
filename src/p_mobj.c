@@ -13182,7 +13182,9 @@ static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, INT
 	} while (hoopsize >= 8);
 }
 
-static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bonustime, boolean nightsreplace)
+#define nightsreplace ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
+
+static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bonustime)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
@@ -13229,7 +13231,7 @@ static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bo
 		P_SetMobjState(mobj, mobj->info->seestate);
 }
 
-static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, boolean nightsreplace)
+static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t* mobj = NULL;
@@ -13271,7 +13273,7 @@ static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y,
 	}
 }
 
-static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, boolean nightsreplace)
+static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
@@ -13320,7 +13322,7 @@ static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y,
 	}
 }
 
-static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, boolean bonustime, boolean nightsreplace)
+static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, boolean bonustime)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
@@ -13415,18 +13417,17 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 	fixed_t x = mthing->x << FRACBITS;
 	fixed_t y = mthing->y << FRACBITS;
 	fixed_t z = mthing->z << FRACBITS;
-	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
 
 	switch (mthing->type)
 	{
 	// Special placement patterns
 	case 600: // 5 vertical rings (yellow spring)
 	case 601: // 5 vertical rings (red spring)
-		P_SpawnVerticalSpringRings(mthing, x, y, z, nightsreplace);
+		P_SpawnVerticalSpringRings(mthing, x, y, z);
 		return;
 	case 602: // 5 diagonal rings (yellow spring)
 	case 603: // 10 diagonal rings (red spring)
-		P_SpawnDiagonalSpringRings(mthing, x, y, z, nightsreplace);
+		P_SpawnDiagonalSpringRings(mthing, x, y, z);
 		return;
 	case 604: // Circle of rings (8 items)
 	case 605: // Circle of rings (16 bits)
@@ -13434,7 +13435,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 	case 607: // Circle of blue spheres (16 items)
 	case 608: // Circle of rings and blue spheres (8 items)
 	case 609: // Circle of rings and blue spheres (16 items)
-		P_SpawnItemCircle(mthing, x, y, z, bonustime, nightsreplace);
+		P_SpawnItemCircle(mthing, x, y, z, bonustime);
 		return;
 	// Hoops
 	case 1705: // Generic NiGHTS hoop
@@ -13446,7 +13447,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		P_SpawnHoop(mthing, x, y, z, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
 		return;
 	default: // All manners of rings and coins
-		P_SpawnRingItem(mthing, x, y, bonustime, nightsreplace);
+		P_SpawnRingItem(mthing, x, y, bonustime);
 	}
 }
 
