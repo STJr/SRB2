@@ -782,10 +782,10 @@ static void P_NetArchiveWorld(void)
 
 	// reload the map just to see difference
 	virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
-	mapsector_t  *ms  = (mapsector_t*) vres_Find(virt, "SECTORS")->data;
 	mapsidedef_t *msd = (mapsidedef_t*) vres_Find(virt, "SIDEDEFS")->data;
 	maplinedef_t *mld = (maplinedef_t*) vres_Find(virt, "LINEDEFS")->data;
 	const sector_t *ss = sectors;
+	const sector_t *spawnss = spawnsectors;
 	UINT8 diff, diff2, diff3;
 
 	// initialize colormap vars because paranoia
@@ -794,45 +794,45 @@ static void P_NetArchiveWorld(void)
 	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
 	put = save_p;
 
-	for (i = 0; i < numsectors; i++, ss++, ms++)
+	for (i = 0; i < numsectors; i++, ss++, spawnss++)
 	{
 		diff = diff2 = diff3 = 0;
-		if (ss->floorheight != SHORT(ms->floorheight)<<FRACBITS)
+		if (ss->floorheight != spawnss->floorheight)
 			diff |= SD_FLOORHT;
-		if (ss->ceilingheight != SHORT(ms->ceilingheight)<<FRACBITS)
+		if (ss->ceilingheight != spawnss->ceilingheight)
 			diff |= SD_CEILHT;
 		//
 		// flats
 		//
-		if (ss->floorpic != P_CheckLevelFlat(ms->floorpic))
+		if (ss->floorpic != spawnss->floorpic)
 			diff |= SD_FLOORPIC;
-		if (ss->ceilingpic != P_CheckLevelFlat(ms->ceilingpic))
+		if (ss->ceilingpic != spawnss->ceilingpic)
 			diff |= SD_CEILPIC;
 
-		if (ss->lightlevel != SHORT(ms->lightlevel))
+		if (ss->lightlevel != spawnss->lightlevel)
 			diff |= SD_LIGHT;
-		if (ss->special != SHORT(ms->special))
+		if (ss->special != spawnss->special)
 			diff |= SD_SPECIAL;
 
-		if (ss->floor_xoffs != ss->spawn_flr_xoffs)
+		if (ss->floor_xoffs != spawnss->floor_xoffs)
 			diff2 |= SD_FXOFFS;
-		if (ss->floor_yoffs != ss->spawn_flr_yoffs)
+		if (ss->floor_yoffs != spawnss->floor_yoffs)
 			diff2 |= SD_FYOFFS;
-		if (ss->ceiling_xoffs != ss->spawn_ceil_xoffs)
+		if (ss->ceiling_xoffs != spawnss->ceiling_xoffs)
 			diff2 |= SD_CXOFFS;
-		if (ss->ceiling_yoffs != ss->spawn_ceil_yoffs)
+		if (ss->ceiling_yoffs != spawnss->ceiling_yoffs)
 			diff2 |= SD_CYOFFS;
-		if (ss->floorpic_angle != ss->spawn_flrpic_angle)
+		if (ss->floorpic_angle != spawnss->floorpic_angle)
 			diff2 |= SD_FLOORANG;
-		if (ss->ceilingpic_angle != ss->spawn_flrpic_angle)
+		if (ss->ceilingpic_angle != spawnss->ceilingpic_angle)
 			diff2 |= SD_CEILANG;
 
-		if (ss->tag != SHORT(ms->tag))
+		if (ss->tag != spawnss->tag)
 			diff2 |= SD_TAG;
-		if (ss->nexttag != ss->spawn_nexttag || ss->firsttag != ss->spawn_firsttag)
+		if (ss->nexttag != spawnss->nexttag || ss->firsttag != spawnss->firsttag)
 			diff3 |= SD_TAGLIST;
 
-		if (ss->extra_colormap != ss->spawn_extra_colormap)
+		if (ss->extra_colormap != spawnss->extra_colormap)
 			diff3 |= SD_COLORMAP;
 
 		// Check if any of the sector's FOFs differ from how they spawned
