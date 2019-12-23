@@ -70,7 +70,7 @@
 boolean server = true; // true or false but !server == client
 #define client (!server)
 boolean nodownload = false;
-static boolean serverrunning = false;
+boolean serverrunning = false;
 INT32 serverplayer = 0;
 char motd[254], server_context[8]; // Message of the Day, Unique Context (even without Mumble support)
 

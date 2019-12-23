@@ -459,11 +459,15 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
@@ -473,43 +477,24 @@ matrix:
               AND env(DPL_TERMINATE_MAIN) != "1"
           env:
           - _DPL_JOB_ENABLED=1
-          - _DPL_JOB_NAME=bionic
+          - _DPL_JOB_NAME=eoan
           - _DPL_DPUT_TARGET=1
           - _DPL_PACKAGE_SOURCE=1
-          - PACKAGE_DISTRO=bionic
-          - PACKAGE_SUBVERSION=~18.04bionic
+          - PACKAGE_DISTRO=eoan
+          - PACKAGE_SUBVERSION=~19.10eoan
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
             apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
-              - p7zip-full
-              - gcc-4.8
-          compiler: gcc-4.8
-          dist: trusty
-          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
-              AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
-              AND env(DPL_TERMINATE_MAIN) != "1"
-          env:
-          - _DPL_JOB_ENABLED=1
-          - _DPL_JOB_NAME=trusty
-          - _DPL_DPUT_TARGET=1
-          - _DPL_PACKAGE_SOURCE=1
-          - PACKAGE_DISTRO=trusty
-          - PACKAGE_SUBVERSION=~14.04trusty
-          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
-        - os: linux
-          addons:
-            apt:
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
@@ -528,11 +513,15 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
@@ -542,20 +531,24 @@ matrix:
               AND env(DPL_TERMINATE_MAIN) != "1"
           env:
           - _DPL_JOB_ENABLED=1
-          - _DPL_JOB_NAME=cosmic
+          - _DPL_JOB_NAME=bionic
           - _DPL_DPUT_TARGET=1
           - _DPL_PACKAGE_SOURCE=1
-          - PACKAGE_DISTRO=cosmic
-          - PACKAGE_SUBVERSION=~18.10cosmic
+          - PACKAGE_DISTRO=bionic
+          - PACKAGE_SUBVERSION=~18.04bionic
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
             apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
@@ -570,6 +563,33 @@ matrix:
           - _DPL_PACKAGE_SOURCE=1
           - PACKAGE_DISTRO=xenial
           - PACKAGE_SUBVERSION=~16.04xenial
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: trusty
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+              AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+              AND env(DPL_TERMINATE_MAIN) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=trusty
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=trusty
+          - PACKAGE_SUBVERSION=~14.04trusty
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
     allow_failures:
       - compiler: clang-3.5
