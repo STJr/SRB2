@@ -1925,7 +1925,7 @@ void I_StartupMouse2(void)
 		}
 	}
 	mouse2_started = 1;
-	I_AddExitFunc(I_ShutdownMouse2);
+	atexit(I_ShutdownMouse2);
 #elif defined (_WIN32)
 	DCB dcb;
 
@@ -1982,7 +1982,7 @@ void I_StartupMouse2(void)
 	dcb.fParity = TRUE;
 
 	SetCommState(mouse2filehandle, &dcb);
-	I_AddExitFunc(I_ShutdownMouse2);
+	atexit(I_ShutdownMouse2);
 #endif
 }
 
@@ -2127,7 +2127,7 @@ void I_StartupTimer(void)
 			pfntimeBeginPeriod(1);
 		pfntimeGetTime = (p_timeGetTime)(LPVOID)GetProcAddress(winmm, "timeGetTime");
 	}
-	I_AddExitFunc(I_ShutdownTimer);
+	atexit(I_ShutdownTimer);
 #endif
 }
 
@@ -2328,51 +2328,6 @@ void I_Error(const char *error, ...)
 	exit(-1);
 }
 
-/**	\brief quit function table
-*/
-static quitfuncptr quit_funcs[MAX_QUIT_FUNCS]; /* initialized to all bits 0 */
-
-//
-//  Adds a function to the list that need to be called by I_SystemShutdown().
-//
-void I_AddExitFunc(void (*func)())
-{
-	INT32 c;
-
-	for (c = 0; c < MAX_QUIT_FUNCS; c++)
-	{
-		if (!quit_funcs[c])
-		{
-			quit_funcs[c] = func;
-			break;
-		}
-	}
-}
-
-
-//
-//  Removes a function from the list that need to be called by
-//   I_SystemShutdown().
-//
-void I_RemoveExitFunc(void (*func)())
-{
-	INT32 c;
-
-	for (c = 0; c < MAX_QUIT_FUNCS; c++)
-	{
-		if (quit_funcs[c] == func)
-		{
-			while (c < MAX_QUIT_FUNCS-1)
-			{
-				quit_funcs[c] = quit_funcs[c+1];
-				c++;
-			}
-			quit_funcs[MAX_QUIT_FUNCS-1] = NULL;
-			break;
-		}
-	}
-}
-
 //
 //  Closes down everything. This includes restoring the initial
 //  palette and video mode, and removing whatever mouse, keyboard, and
@@ -2382,11 +2337,6 @@ void I_RemoveExitFunc(void (*func)())
 //
 void I_ShutdownSystem(void)
 {
-	INT32 c;
-
-	for (c = MAX_QUIT_FUNCS-1; c >= 0; c--)
-		if (quit_funcs[c])
-			(*quit_funcs[c])();
 #ifdef LOGMESSAGES
 	if (logstream)
 	{

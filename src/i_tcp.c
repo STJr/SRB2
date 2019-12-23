@@ -1110,7 +1110,7 @@ boolean I_InitTcpDriver(void)
 #endif
 	if (!tcp_was_up && init_tcp_driver)
 	{
-		I_AddExitFunc(I_ShutdownTcpDriver);
+		atexit(I_ShutdownTcpDriver);
 	}
 	return init_tcp_driver;
 }

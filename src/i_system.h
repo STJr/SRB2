@@ -21,10 +21,6 @@
 #pragma interface
 #endif
 
-/**	\brief max quit functions
-*/
-#define MAX_QUIT_FUNCS     16
-
 
 /**	\brief Graphic system had started up
 */
@@ -191,26 +187,6 @@ void I_StartupKeyboard(void);
 /**	\brief  setup timer irq and user timer routine.
 */
 void I_StartupTimer(void);
-
-/**	\brief sample quit function
-*/
-typedef void (*quitfuncptr)();
-
-/**	\brief	add a list of functions to call at program cleanup
-
-	\param	(*func)()	funcction to call at program cleanup
-
-	\return	void
-*/
-void I_AddExitFunc(void (*func)());
-
-/**	\brief	The I_RemoveExitFunc function
-
-	\param	(*func)()	function to remove from the list
-
-	\return	void
-*/
-void I_RemoveExitFunc(void (*func)());
 
 /**	\brief Setup signal handler, plus stuff for trapping errors and cleanly exit.
 */
