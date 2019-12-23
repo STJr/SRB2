@@ -2642,6 +2642,7 @@ static int lib_gAddGametype(lua_State *L)
 	lua_Integer i;
 
 	const char *gtname = NULL;
+	const char *gtconst = NULL;
 	const char *gtdescription = NULL;
 	INT16 newgtidx = 0;
 	UINT32 newgtrules = 0;
@@ -2678,39 +2679,43 @@ static int lib_gAddGametype(lua_State *L)
 			if (!lua_isstring(L, 3))
 				TYPEERROR("name", LUA_TSTRING)
 			gtname = Z_StrDup(lua_tostring(L, 3));
-		} else if (i == 2 || (k && fasticmp(k, "rules"))) {
+		} else if (i == 2 || (k && fasticmp(k, "identifier"))) {
+			if (!lua_isstring(L, 3))
+				TYPEERROR("identifier", LUA_TSTRING)
+			gtconst = Z_StrDup(lua_tostring(L, 3));
+		} else if (i == 3 || (k && fasticmp(k, "rules"))) {
 			if (!lua_isnumber(L, 3))
 				TYPEERROR("rules", LUA_TNUMBER)
 			newgtrules = (UINT32)lua_tointeger(L, 3);
-		} else if (i == 3 || (k && fasticmp(k, "typeoflevel"))) {
+		} else if (i == 4 || (k && fasticmp(k, "typeoflevel"))) {
 			if (!lua_isnumber(L, 3))
 				TYPEERROR("typeoflevel", LUA_TNUMBER)
 			newgttol = (UINT32)lua_tointeger(L, 3);
-		} else if (i == 4 || (k && fasticmp(k, "rankingtype"))) {
+		} else if (i == 5 || (k && fasticmp(k, "rankingtype"))) {
 			if (!lua_isnumber(L, 3))
 				TYPEERROR("rankingtype", LUA_TNUMBER)
 			newgtrankingstype = (INT16)lua_tointeger(L, 3);
-		} else if (i == 5 || (k && fasticmp(k, "intermissiontype"))) {
+		} else if (i == 6 || (k && fasticmp(k, "intermissiontype"))) {
 			if (!lua_isnumber(L, 3))
 				TYPEERROR("intermissiontype", LUA_TNUMBER)
 			newgtinttype = (int)lua_tointeger(L, 3);
-		} else if (i == 6 || (k && fasticmp(k, "defaultpointlimit"))) {
+		} else if (i == 7 || (k && fasticmp(k, "defaultpointlimit"))) {
 			if (!lua_isnumber(L, 3))
 				TYPEERROR("defaultpointlimit", LUA_TNUMBER)
 			newgtpointlimit = (INT32)lua_tointeger(L, 3);
-		} else if (i == 7 || (k && fasticmp(k, "defaulttimelimit"))) {
+		} else if (i == 8 || (k && fasticmp(k, "defaulttimelimit"))) {
 			if (!lua_isnumber(L, 3))
 				TYPEERROR("defaulttimelimit", LUA_TNUMBER)
 			newgttimelimit = (INT32)lua_tointeger(L, 3);
-		} else if (i == 8 || (k && fasticmp(k, "description"))) {
+		} else if (i == 9 || (k && fasticmp(k, "description"))) {
 			if (!lua_isstring(L, 3))
 				TYPEERROR("description", LUA_TSTRING)
 			gtdescription = Z_StrDup(lua_tostring(L, 3));
-		} else if (i == 9 || (k && fasticmp(k, "headerleftcolor"))) {
+		} else if (i == 10 || (k && fasticmp(k, "headerleftcolor"))) {
 			if (!lua_isnumber(L, 3))
 				TYPEERROR("headerleftcolor", LUA_TNUMBER)
 			newgtleftcolor = (UINT8)lua_tointeger(L, 3);
-		} else if (i == 10 || (k && fasticmp(k, "headerrightcolor"))) {
+		} else if (i == 11 || (k && fasticmp(k, "headerrightcolor"))) {
 			if (!lua_isnumber(L, 3))
 				TYPEERROR("headerrightcolor", LUA_TNUMBER)
 			newgtrightcolor = (UINT8)lua_tointeger(L, 3);
@@ -2753,7 +2758,9 @@ static int lib_gAddGametype(lua_State *L)
 	Gametype_Names[newgtidx] = gtname;
 
 	// Write the constant name.
-	G_AddGametypeConstant(newgtidx, gtname);
+	if (gtconst == NULL)
+		gtconst = gtname;
+	G_AddGametypeConstant(newgtidx, gtconst);
 
 	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();
