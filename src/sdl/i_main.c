@@ -133,15 +133,19 @@ int main(int argc, char **argv)
 	{
 		time_t my_time;
 		struct tm * timeinfo;
-		char buf[26];
+		const char *format;
 
 		logdir = D_Home();
 
 		my_time = time(NULL);
 		timeinfo = localtime(&my_time);
 
-		strftime(buf, 26, "%Y-%m-%d %H-%M-%S", timeinfo);
-		strcpy(logfile, va("log-%s.txt", buf));
+		if (M_CheckParm("-logfile") && M_IsNextParm())
+			format = M_GetNextParm();
+		else
+			format = "log-%Y-%m-%d %H-%M-%S.txt";
+
+		strftime(logfile, sizeof logfile, format, timeinfo);
 
 #ifdef DEFAULTDIR
 		if (logdir)
