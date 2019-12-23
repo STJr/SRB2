@@ -79,8 +79,22 @@ FUNCNORETURN static int LUA_Panic(lua_State *L)
 #endif
 }
 
+// See lib_getenum in dehacked.c.
+static boolean gamestateglobals(const char *csname, lua_State *L)
+{
+	if (fastcmp(csname,"redscore"))
+		redscore = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(csname,"bluescore"))
+		bluescore = (UINT32)luaL_checkinteger(L, 2);
+	else
+		return false;
+
+	// Global variable set, so return and don't error.
+	return true;
+}
+
 // This function decides which global variables you are allowed to set.
-static int noglobals(lua_State *L)
+static int setglobals(lua_State *L)
 {
 	const char *csname;
 	char *name;
@@ -106,16 +120,8 @@ static int noglobals(lua_State *L)
 		return 0;
 	}
 
-	if (fastcmp(csname,"redscore"))
-	{
-		redscore = (UINT32)luaL_checkinteger(L, 2);
+	if (gamestateglobals(csname, L))
 		return 0;
-	}
-	else if (fastcmp(csname,"bluescore"))
-	{
-		bluescore = (UINT32)luaL_checkinteger(L, 2);
-		return 0;
-	}
 
 	Z_Free(name);
 	return luaL_error(L, "Implicit global " LUA_QS " prevented. Create a local variable instead.", csname);
@@ -155,7 +161,7 @@ static void LUA_ClearState(void)
 
 	// lock the global namespace
 	lua_getmetatable(L, LUA_GLOBALSINDEX);
-		lua_pushcfunction(L, noglobals);
+		lua_pushcfunction(L, setglobals);
 		lua_setfield(L, -2, "__newindex");
 		lua_newtable(L);
 		lua_setfield(L, -2, "__metatable");
