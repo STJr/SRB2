@@ -11598,6 +11598,12 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t*
 			offset = 288*FRACUNIT;
 		break;
 
+	// Horizontal springs, may float additional units with MTF_AMBUSH.
+	case MT_YELLOWHORIZ:
+	case MT_REDHORIZ:
+	case MT_BLUEHORIZ:
+		offset += mthing->options & MTF_AMBUSH ? 16*FRACUNIT : 0;
+
 	// Ring-like items, may float additional units with MTF_AMBUSH.
 	case MT_SPIKEBALL:
 	case MT_EMERALDSPAWN:
@@ -12924,6 +12930,59 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	return true;
 }
 
+static void P_SetAmbush(mobj_t *mobj)
+{
+	if (mobj->type == MT_YELLOWDIAG || mobj->type == MT_REDDIAG || mobj->type == MT_BLUEDIAG)
+		mobj->angle += ANGLE_22h;
+
+	if (mobj->flags & MF_NIGHTSITEM)
+	{
+		// Spawn already displayed
+		mobj->flags |= MF_SPECIAL;
+		mobj->flags &= ~MF_NIGHTSITEM;
+	}
+
+	if (mobj->flags & MF_PUSHABLE)
+		mobj->flags &= ~MF_PUSHABLE;
+
+	if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
+	{
+		// flag for strong/weak random boxes
+		// any monitor with nonzero speed is allowed to respawn like this
+		mobj->flags2 |= MF2_AMBUSH;
+	}
+
+	else if (mobj->type != MT_AXIS &&
+		mobj->type != MT_AXISTRANSFER &&
+		mobj->type != MT_AXISTRANSFERLINE &&
+		mobj->type != MT_NIGHTSBUMPER &&
+		mobj->type != MT_STARPOST)
+		mobj->flags2 |= MF2_AMBUSH;
+}
+
+static void P_SetObjectSpecial(mobj_t *mobj)
+{
+	if (mobj->type == MT_YELLOWDIAG || mobj->type == MT_REDDIAG || mobj->type == MT_BLUEDIAG)
+		mobj->flags |= MF_NOGRAVITY;
+
+	if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
+	{
+		// flag for strong/weak random boxes
+		// any monitor with nonzero speed is allowed to respawn like this
+		mobj->flags2 |= MF2_STRONGBOX;
+	}
+
+	// Requires you to be in bonus time to activate
+	if (mobj->flags & MF_NIGHTSITEM)
+		mobj->flags2 |= MF2_STRONGBOX;
+
+	// Pushables bounce and slide coolly with object special flag set
+	if (mobj->flags & MF_PUSHABLE)
+	{
+		mobj->flags2 |= MF2_SLIDEPUSH;
+		mobj->flags |= MF_BOUNCE;
+	}
+}
 //
 // P_SpawnMapThing
 // The fields of the mapthing should
@@ -12988,67 +13047,10 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	else
 	{
 		if (mthing->options & MTF_AMBUSH)
-		{
-			if (i == MT_YELLOWDIAG || i == MT_REDDIAG || i == MT_BLUEDIAG)
-				mobj->angle += ANGLE_22h;
-
-			if (i == MT_YELLOWHORIZ || i == MT_REDHORIZ || i == MT_BLUEHORIZ)
-			{
-				if (mthing->options & MTF_OBJECTFLIP)
-					mobj->z -= 16*FRACUNIT;
-				else
-					mobj->z += 16*FRACUNIT;
-			}
-
-
-			if (mobj->flags & MF_NIGHTSITEM)
-			{
-				// Spawn already displayed
-				mobj->flags |= MF_SPECIAL;
-				mobj->flags &= ~MF_NIGHTSITEM;
-			}
-
-			if (mobj->flags & MF_PUSHABLE)
-				mobj->flags &= ~MF_PUSHABLE;
-
-			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
-			{
-				// flag for strong/weak random boxes
-				// any monitor with nonzero speed is allowed to respawn like this
-				mobj->flags2 |= MF2_AMBUSH;
-			}
-
-			else if (mthing->type != mobjinfo[MT_AXIS].doomednum &&
-				mthing->type != mobjinfo[MT_AXISTRANSFER].doomednum &&
-				mthing->type != mobjinfo[MT_AXISTRANSFERLINE].doomednum &&
-				mthing->type != mobjinfo[MT_NIGHTSBUMPER].doomednum &&
-				mthing->type != mobjinfo[MT_STARPOST].doomednum)
-				mobj->flags2 |= MF2_AMBUSH;
-		}
+			P_SetAmbush(mobj);
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
-		{
-			if (i == MT_YELLOWDIAG || i == MT_REDDIAG || i == MT_BLUEDIAG)
-				mobj->flags |= MF_NOGRAVITY;
-
-			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
-			{
-				// flag for strong/weak random boxes
-				// any monitor with nonzero speed is allowed to respawn like this
-				mobj->flags2 |= MF2_STRONGBOX;
-			}
-
-			// Requires you to be in bonus time to activate
-			if (mobj->flags & MF_NIGHTSITEM)
-				mobj->flags2 |= MF2_STRONGBOX;
-
-			// Pushables bounce and slide coolly with object special flag set
-			if (mobj->flags & MF_PUSHABLE)
-			{
-				mobj->flags2 |= MF2_SLIDEPUSH;
-				mobj->flags |= MF_BOUNCE;
-			}
-		}
+			P_SetObjectSpecial(mobj);
 	}
 
 	// Generic reverse gravity for individual objects flag.
