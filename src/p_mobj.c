@@ -11595,13 +11595,21 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t*
 	case MT_EMERALDSPAWN:
 	case MT_TOKEN:
 	case MT_EMBLEM:
+	case MT_RING:
+	case MT_REDTEAMRING:
+	case MT_BLUETEAMRING:
+	case MT_COIN:
+	case MT_BLUESPHERE:
+	case MT_BOMBSPHERE:
+	case MT_NIGHTSCHIP:
+	case MT_NIGHTSSTAR:
 		offset += mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
 		break;
 
 	// Remaining objects.
 	default:
 		if (P_WeaponOrPanel(mobjtype))
-			offset += mthing->options & MTF_AMBUSH ? 24 * FRACUNIT : 0;
+			offset += mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
 	}
 
 	if (!offset) // Snap to the surfaces when there's no offset set.
@@ -13165,6 +13173,53 @@ static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, sec
 	} while (hoopsize >= 8);
 }
 
+static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bonustime, boolean nightsreplace)
+{
+	mobjtype_t ringthing = MT_RING;
+	mobj_t *mobj = NULL;
+	fixed_t z;
+
+	// Which ringthing to use
+	if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
+		ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+	else if (mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum)
+		ringthing = MT_BOMBSPHERE;
+	else
+	{
+		if (ultimatemode)
+			return; // No rings in Ultimate!
+
+		if (nightsreplace)
+			ringthing = MT_NIGHTSSTAR;
+		else if (mthing->type == mobjinfo[MT_COIN].doomednum)
+			ringthing = MT_COIN;
+		else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
+			ringthing = (gametype == GT_CTF) ? MT_REDTEAMRING : MT_RING;
+		else if (mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum) // Ditto
+			ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
+	}
+
+	z = P_GetMobjSpawnHeight(ringthing, mthing, x, y);
+	mobj = P_SpawnMobj(x, y, z, ringthing);
+	mobj->spawnpoint = mthing;
+
+	if (mthing->options & MTF_OBJECTFLIP)
+	{
+		mobj->eflags |= MFE_VERTICALFLIP;
+		mobj->flags2 |= MF2_OBJECTFLIP;
+	}
+
+	mobj->angle = FixedAngle(mthing->angle << FRACBITS);
+	mthing->mobj = mobj;
+	if (mthing->options & MTF_AMBUSH)
+		mobj->flags2 |= MF2_AMBUSH;
+
+	if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
+		P_SetMobjState(mobj, mobj->info->raisestate);
+	else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
+		P_SetMobjState(mobj, mobj->info->seestate);
+}
+
 void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 {
 	mobjtype_t ringthing = MT_RING;
@@ -13414,77 +13469,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 	}
 	// All manners of rings and coins
 	else
-	{
-
-		// Which ringthing to use
-		if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
-			ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-		else if (mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum)
-			ringthing = MT_BOMBSPHERE;
-		else
-		{
-			if (ultimatemode)
-				return; // No rings in Ultimate!
-
-			if (nightsreplace)
-				ringthing = MT_NIGHTSSTAR;
-			else if (mthing->type == mobjinfo[MT_COIN].doomednum)
-				ringthing = MT_COIN;
-			else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
-				ringthing = (gametype == GT_CTF) ? MT_REDTEAMRING : MT_RING;
-			else if (mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum) // Ditto
-				ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
-		}
-
-		// Set proper height
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
-#ifdef ESLOPE
-			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-			sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->z)
-				z -= (mthing->z << FRACBITS);
-		}
-		else
-		{
-			z =
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight;
-			if (mthing->z)
-				z += (mthing->z << FRACBITS);
-		}
-
-		if (mthing->options & MTF_AMBUSH) // Special flag for rings
-		{
-			if (mthing->options & MTF_OBJECTFLIP)
-				z -= 24*FRACUNIT;
-			else
-				z += 24*FRACUNIT;
-		}
-
-		mobj = P_SpawnMobj(x, y, z, ringthing);
-		mobj->spawnpoint = mthing;
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mobj->eflags |= MFE_VERTICALFLIP;
-			mobj->flags2 |= MF2_OBJECTFLIP;
-		}
-
-		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
-		mthing->mobj = mobj;
-		if (mthing->options & MTF_AMBUSH)
-			mobj->flags2 |= MF2_AMBUSH;
-
-		if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
-			P_SetMobjState(mobj, mobj->info->raisestate);
-		else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-			P_SetMobjState(mobj, mobj->info->seestate);
-	}
+		P_SpawnRingItem(mthing, x, y, bonustime, nightsreplace);
 }
 
 //
