@@ -777,13 +777,11 @@ static void P_NetArchiveWorld(void)
 	size_t i;
 	INT32 statsec = 0, statline = 0;
 	const line_t *li = lines;
+	const line_t *spawnli = spawnlines;
 	const side_t *si;
+	const side_t *spawnsi;
 	UINT8 *put;
 
-	// reload the map just to see difference
-	virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
-	mapsidedef_t *msd = (mapsidedef_t*) vres_Find(virt, "SIDEDEFS")->data;
-	maplinedef_t *mld = (maplinedef_t*) vres_Find(virt, "LINEDEFS")->data;
 	const sector_t *ss = sectors;
 	const sector_t *spawnss = spawnsectors;
 	UINT8 diff, diff2, diff3;
@@ -936,45 +934,41 @@ static void P_NetArchiveWorld(void)
 	WRITEUINT16(put, 0xffff);
 
 	// do lines
-	for (i = 0; i < numlines; i++, mld++, li++)
+	for (i = 0; i < numlines; i++, spawnli++, li++)
 	{
 		diff = diff2 = diff3 = 0;
 
-		if (li->special != SHORT(mld->special))
+		if (li->special != spawnli->special)
 			diff |= LD_SPECIAL;
 
-		if (SHORT(mld->special) == 321 || SHORT(mld->special) == 322) // only reason li->callcount would be non-zero is if either of these are involved
+		if (spawnli->special == 321 || spawnli->special == 322) // only reason li->callcount would be non-zero is if either of these are involved
 			diff |= LD_CLLCOUNT;
 
 		if (li->sidenum[0] != 0xffff)
 		{
 			si = &sides[li->sidenum[0]];
-			if (si->textureoffset != SHORT(msd[li->sidenum[0]].textureoffset)<<FRACBITS)
+			spawnsi = &spawnsides[li->sidenum[0]];
+			if (si->textureoffset != spawnsi->textureoffset)
 				diff |= LD_S1TEXOFF;
 			//SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
-			if (R_CheckTextureNumForName(msd[li->sidenum[0]].toptexture) != -1
-				&& si->toptexture != R_TextureNumForName(msd[li->sidenum[0]].toptexture))
+			if (si->toptexture != spawnsi->toptexture)
 				diff |= LD_S1TOPTEX;
-			if (R_CheckTextureNumForName(msd[li->sidenum[0]].bottomtexture) != -1
-				&& si->bottomtexture != R_TextureNumForName(msd[li->sidenum[0]].bottomtexture))
+			if (si->bottomtexture != spawnsi->bottomtexture)
 				diff |= LD_S1BOTTEX;
-			if (R_CheckTextureNumForName(msd[li->sidenum[0]].midtexture) != -1
-				&& si->midtexture != R_TextureNumForName(msd[li->sidenum[0]].midtexture))
+			if (si->midtexture != spawnsi->midtexture)
 				diff |= LD_S1MIDTEX;
 		}
 		if (li->sidenum[1] != 0xffff)
 		{
 			si = &sides[li->sidenum[1]];
-			if (si->textureoffset != SHORT(msd[li->sidenum[1]].textureoffset)<<FRACBITS)
+			spawnsi = &spawnsides[li->sidenum[1]];
+			if (si->textureoffset != spawnsi->textureoffset)
 				diff2 |= LD_S2TEXOFF;
-			if (R_CheckTextureNumForName(msd[li->sidenum[1]].toptexture) != -1
-				&& si->toptexture != R_TextureNumForName(msd[li->sidenum[1]].toptexture))
+			if (si->toptexture != spawnsi->toptexture)
 				diff2 |= LD_S2TOPTEX;
-			if (R_CheckTextureNumForName(msd[li->sidenum[1]].bottomtexture) != -1
-				&& si->bottomtexture != R_TextureNumForName(msd[li->sidenum[1]].bottomtexture))
+			if (si->bottomtexture != spawnsi->bottomtexture)
 				diff2 |= LD_S2BOTTEX;
-			if (R_CheckTextureNumForName(msd[li->sidenum[1]].midtexture) != -1
-				&& si->midtexture != R_TextureNumForName(msd[li->sidenum[1]].midtexture))
+			if (si->midtexture != spawnsi->midtexture)
 				diff2 |= LD_S2MIDTEX;
 			if (diff2)
 				diff |= LD_DIFF2;
@@ -1018,7 +1012,6 @@ static void P_NetArchiveWorld(void)
 	WRITEUINT16(put, 0xffff);
 	R_ClearTextureNumCache(false);
 
-	vres_Free(virt);
 	save_p = put;
 }
 
