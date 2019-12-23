@@ -2734,6 +2734,10 @@ static int lib_gAddGametype(lua_State *L)
 	// pop gametype table
 	lua_pop(L, 1);
 
+	// Ran out of gametype slots
+	if (gametypecount == NUMGAMETYPEFREESLOTS)
+		return luaL_error(L, "Ran out of free gametype slots!");
+
 	// Set defaults
 	if (gtname == NULL)
 		gtname = Z_StrDup("Unnamed gametype");
