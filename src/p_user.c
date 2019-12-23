@@ -4635,6 +4635,8 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						S_StartSound(player->mo, sfx_spin);
 						break;
 					}
+					if (player->dashspeed < player->mindash)
+						player->dashspeed = player->mindash;
 					if (player->dashspeed < player->maxdash && player->mindash != player->maxdash)
 					{
 #define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
