@@ -13614,12 +13614,12 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 		}
 		else
 		{ //Player on the top of the tornado.
+			P_ResetPlayer(player);
 			thing->z = dustdevil->z + dustdevil->height;
 			thrust = 20 * FRACUNIT;
 			player->powers[pw_nocontrol] = 0;
 			S_StartSound(thing, sfx_wdjump);
 			P_SetPlayerMobjState(thing, S_PLAY_FALL);
-			player->pflags &= ~PF_JUMPED;
 		}
 
 		thing->momz = thrust;
