@@ -11159,17 +11159,12 @@ void P_RespawnSpecials(void)
 
 	if (mthing)
 	{
-		mobjtype_t i;
+		mobjtype_t i = P_GetMobjtype(mthing->type);
 		x = mthing->x << FRACBITS;
 		y = mthing->y << FRACBITS;
 		ss = R_PointInSubsector(x, y);
 
-		// find which type to spawn
-		for (i = 0; i < NUMMOBJTYPES; i++)
-			if (mthing->type == mobjinfo[i].doomednum)
-				break;
-
-		if (i == NUMMOBJTYPES) // prevent creation of objects with this type -- Monster Iestyn 17/12/17
+		if (i == MT_UNKNOWN) // prevent creation of objects with this type -- Monster Iestyn 17/12/17
 		{
 			// 3D Mode start Thing is unlikely to be added to the que,
 			// so don't bother checking for that specific type
@@ -11635,6 +11630,19 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t*
 			ss->sector->floorheight) + offset;
 }
 
+/** Returns corresponding mobj type from mapthing number.
+ * \param mthingtype Mapthing number in question.
+ * \return Mobj type; MT_UNKNOWN if nothing found.
+ */
+static mobjtype_t P_GetMobjtype(UINT16 mthingtype)
+{
+	mobjtype_t i;
+	for (i = 0; i < NUMMOBJTYPES; i++)
+		if (mthingtype == mobjinfo[i].doomednum)
+			return i;
+	return MT_UNKNOWN;
+}
+
 //
 // P_SpawnMapThing
 // The fields of the mapthing should
@@ -11650,22 +11658,17 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	if (!mthing->type)
 		return; // Ignore type-0 things as NOPs
 
+	if (mthing->type == 3328) // 3D Mode start Thing
+		return;
+
 	// Always spawn in objectplace.
 	// Skip all returning code.
 	if (objectplacing)
 	{
 		// find which type to spawn
-		for (i = 0; i < NUMMOBJTYPES; i++)
-			if (mthing->type == mobjinfo[i].doomednum)
-				break;
-
-		if (i == NUMMOBJTYPES)
-		{
-			if (mthing->type == 3328) // 3D Mode start Thing
-				return;
+		i = P_GetMobjtype(mthing->type);
+		if (i == MT_UNKNOWN)
 			CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
-			i = MT_UNKNOWN;
-		}
 		goto noreturns;
 	}
 
@@ -11734,18 +11737,9 @@ You should think about modifying the deathmatch starts to take full advantage of
 		return;
 	}
 
-	// find which type to spawn
-	for (i = 0; i < NUMMOBJTYPES; i++)
-		if (mthing->type == mobjinfo[i].doomednum)
-			break;
-
-	if (i == NUMMOBJTYPES)
-	{
-		if (mthing->type == 3328) // 3D Mode start Thing
-			return;
+	i = P_GetMobjtype(mthing->type);
+	if (i == MT_UNKNOWN)
 		CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
-		i = MT_UNKNOWN;
-	}
 
 	if (metalrecording) // Metal Sonic can't use these things.
 		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_TOKEN || i == MT_STARPOST)
