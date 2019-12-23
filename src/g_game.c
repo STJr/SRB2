@@ -1497,14 +1497,14 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	else
 	{
 		if (turnright)
-			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(angleturn[tspeed]<<FRACBITS, cv_cam2_turnmultiplier.value)>>FRACBITS));
+			cmd->angleturn = (INT16)(cmd->angleturn - (((angleturn[tspeed]<<FRACBITS) * cv_cam2_turnmultiplier.value)>>FRACBITS));
 		else if (turnleft)
-			cmd->angleturn = (INT16)(cmd->angleturn + (FixedMul(angleturn[tspeed]<<FRACBITS, cv_cam2_turnmultiplier.value)>>FRACBITS));
+			cmd->angleturn = (INT16)(cmd->angleturn + (((angleturn[tspeed]<<FRACBITS) * cv_cam2_turnmultiplier.value)>>FRACBITS));
 
 		if (analogjoystickmove && lookjoystickvector.xaxis != 0)
 		{
 			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(((lookjoystickvector.xaxis * angleturn[1]) >> 10)<<FRACBITS, cv_cam2_turnmultiplier.value)>>FRACBITS)); // ANALOG!
+			cmd->angleturn = (INT16)(cmd->angleturn - ((((lookjoystickvector.xaxis * angleturn[1]) >> 10) * cv_cam2_turnmultiplier.value)>>FRACBITS)); // ANALOG!
 		}
 	}
 
