@@ -1180,8 +1180,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			leftoffset = width - leftoffset;
 		}
 
-		// Don't cache angle = 0
-		for (angle = 1; angle < ROTANGLES; angle++)
+		for (angle = 0; angle < ROTANGLES; angle++)
 		{
 			INT32 newwidth, newheight;
 
