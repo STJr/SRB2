@@ -11643,6 +11643,61 @@ static mobjtype_t P_GetMobjtype(UINT16 mthingtype)
 	return MT_UNKNOWN;
 }
 
+static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
+{
+#if MAXPLAYERS > 32
+	You should think about modifying the deathmatch starts to take full advantage of this!
+#endif
+	if (mthing->type <= MAXPLAYERS) // Player starts
+	{
+		// save spots for respawning in network games
+		if (!metalrecording)
+			playerstarts[mthing->type - 1] = mthing;
+		return true;
+	}
+	else if (mthing->type == 33) // Match starts
+	{
+		if (numdmstarts < MAX_DM_STARTS)
+		{
+			deathmatchstarts[numdmstarts] = mthing;
+			mthing->type = 0;
+			numdmstarts++;
+		}
+		return true;
+	}
+	else if (mthing->type == 34) // Red CTF starts
+	{
+		if (numredctfstarts < MAXPLAYERS)
+		{
+			redctfstarts[numredctfstarts] = mthing;
+			mthing->type = 0;
+			numredctfstarts++;
+		}
+		return true;
+	}
+	else if (mthing->type == 35) // Blue CTF starts
+	{
+		if (numbluectfstarts < MAXPLAYERS)
+		{
+			bluectfstarts[numbluectfstarts] = mthing;
+			mthing->type = 0;
+			numbluectfstarts++;
+		}
+		return true;
+	}
+	else if (metalrecording && mthing->type == mobjinfo[MT_METALSONIC_RACE].doomednum)
+	{ // If recording, you ARE Metal Sonic. Do not spawn it, do not save normal spawnpoints.
+		playerstarts[0] = mthing;
+		return true;
+	}
+	else if (mthing->type == 750 // Slope vertex point (formerly chaos spawn)
+		     || (mthing->type >= 600 && mthing->type <= 609) // Special placement patterns
+		     || mthing->type == 1705 || mthing->type == 1713) // Hoops
+		return true; // These are handled elsewhere.
+
+	return false;
+}
+
 //
 // P_SpawnMapThing
 // The fields of the mapthing should
@@ -11672,70 +11727,13 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		goto noreturns;
 	}
 
-	// count deathmatch start positions
-	if (mthing->type == 33)
-	{
-		if (numdmstarts < MAX_DM_STARTS)
-		{
-			deathmatchstarts[numdmstarts] = mthing;
-			mthing->type = 0;
-			numdmstarts++;
-		}
-		return;
-	}
-
-	else if (mthing->type == 34) // Red CTF Starts
-	{
-		if (numredctfstarts < MAXPLAYERS)
-		{
-			redctfstarts[numredctfstarts] = mthing;
-			mthing->type = 0;
-			numredctfstarts++;
-		}
-		return;
-	}
-
-	else if (mthing->type == 35) // Blue CTF Starts
-	{
-		if (numbluectfstarts < MAXPLAYERS)
-		{
-			bluectfstarts[numbluectfstarts] = mthing;
-			mthing->type = 0;
-			numbluectfstarts++;
-		}
-		return;
-	}
-
-	else if (mthing->type == 750) // Slope vertex point (formerly chaos spawn)
+	if (P_SpawnNonMobjMapThing(mthing))
 		return;
 
-	else if (mthing->type == mobjinfo[MT_RING].doomednum || mthing->type == mobjinfo[MT_COIN].doomednum
+	if (mthing->type == mobjinfo[MT_RING].doomednum || mthing->type == mobjinfo[MT_COIN].doomednum
 	 || mthing->type == mobjinfo[MT_REDTEAMRING].doomednum || mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum
-	 || mthing->type == mobjinfo[MT_BLUESPHERE].doomednum || mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum
-	 || (mthing->type >= 600 && mthing->type <= 609) // circles and diagonals
-	 || mthing->type == 1705 || mthing->type == 1713) // hoops
-	{
-		// Don't spawn hoops, wings, or rings yet!
-		return;
-	}
-
-	// check for players specially
-#if MAXPLAYERS > 32
-You should think about modifying the deathmatch starts to take full advantage of this!
-#endif
-	if (mthing->type > 0 && mthing->type <= MAXPLAYERS)
-	{
-		// save spots for respawning in network games
-		if (!metalrecording)
-			playerstarts[mthing->type-1] = mthing;
-		return;
-	}
-
-	if (metalrecording && mthing->type == mobjinfo[MT_METALSONIC_RACE].doomednum)
-	{ // If recording, you ARE Metal Sonic. Do not spawn it, do not save normal spawnpoints.
-		playerstarts[0] = mthing;
-		return;
-	}
+	 || mthing->type == mobjinfo[MT_BLUESPHERE].doomednum || mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum) // hoops
+		return; // These are handled in P_SpawnHoopsAndRings().
 
 	i = P_GetMobjtype(mthing->type);
 	if (i == MT_UNKNOWN)
