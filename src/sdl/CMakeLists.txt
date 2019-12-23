@@ -30,7 +30,6 @@ set(SRB2_SDL2_SOURCES
 	dosstr.c
 	endtxt.c
 	hwsym_sdl.c
-	i_cdmus.c
 	i_main.c
 	i_net.c
 	i_system.c

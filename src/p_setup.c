@@ -21,7 +21,6 @@
 #include "p_spec.h"
 #include "p_saveg.h"
 
-#include "i_sound.h" // for I_PlayCD()..
 #include "i_video.h" // for I_FinishUpdate()..
 #include "r_sky.h"
 #include "i_system.h"
@@ -3201,9 +3200,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// clear special respawning que
 	iquehead = iquetail = 0;
-
-	// Fab : 19-07-98 : start cd music for this level (note: can be remapped)
-	I_PlayCD((UINT8)(gamemap), false);
 
 	P_MapEnd();
 

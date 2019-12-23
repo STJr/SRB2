@@ -2186,7 +2186,6 @@ void I_Quit(void)
 	D_QuitNetGame();
 	I_ShutdownMusic();
 	I_ShutdownSound();
-	I_ShutdownCD();
 	// use this for 1.28 19990220 by Kin
 	I_ShutdownGraphics();
 	I_ShutdownInput();
@@ -2247,16 +2246,14 @@ void I_Error(const char *error, ...)
 		if (errorcount == 3)
 			I_ShutdownSound();
 		if (errorcount == 4)
-			I_ShutdownCD();
-		if (errorcount == 5)
 			I_ShutdownGraphics();
-		if (errorcount == 6)
+		if (errorcount == 5)
 			I_ShutdownInput();
-		if (errorcount == 7)
+		if (errorcount == 6)
 			I_ShutdownSystem();
-		if (errorcount == 8)
+		if (errorcount == 7)
 			SDL_Quit();
-		if (errorcount == 9)
+		if (errorcount == 8)
 		{
 			M_SaveConfig(NULL);
 			G_SaveGameData();
@@ -2304,7 +2301,6 @@ void I_Error(const char *error, ...)
 	D_QuitNetGame();
 	I_ShutdownMusic();
 	I_ShutdownSound();
-	I_ShutdownCD();
 	// use this for 1.28 19990220 by Kin
 	I_ShutdownGraphics();
 	I_ShutdownInput();
