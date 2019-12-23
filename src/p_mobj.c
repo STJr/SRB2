@@ -13231,58 +13231,13 @@ static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bo
 		P_SetMobjState(mobj, mobj->info->seestate);
 }
 
-static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z)
-{
-	mobjtype_t ringthing = MT_RING;
-	mobj_t* mobj = NULL;
-	INT32 r;
-
-	INT32 dist = 64*FRACUNIT;
-	if (mthing->type == 601)
-		dist = 128*FRACUNIT;
-
-	if (ultimatemode)
-		return; // No rings in Ultimate!
-
-	if (nightsreplace)
-		ringthing = MT_NIGHTSSTAR;
-
-	z = P_GetMobjSpawnHeight(ringthing, x, y, z, mthing->options & MTF_OBJECTFLIP);
-
-	for (r = 1; r <= 5; r++)
-	{
-		if (mthing->options & MTF_OBJECTFLIP)
-			z -= dist;
-		else
-			z += dist;
-
-		mobj = P_SpawnMobj(x, y, z, ringthing);
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mobj->eflags |= MFE_VERTICALFLIP;
-			mobj->flags2 |= MF2_OBJECTFLIP;
-		}
-
-		mobj->angle = FixedAngle(mthing->angle << FRACBITS);
-		if (mthing->options & MTF_AMBUSH)
-			mobj->flags2 |= MF2_AMBUSH;
-
-		if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-			P_SetMobjState(mobj, mobj->info->seestate);
-	}
-}
-
-static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z)
+static void P_SpawnItemRow(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
 	INT32 r;
-	angle_t closestangle, fa;
-
-	INT32 iterations = 5;
-	if (mthing->type == 603)
-		iterations = 10;
+	angle_t angle = FixedAngle(fixedangle << FRACBITS);
+	angle_t fineangle = (angle >> ANGLETOFINESHIFT) & FINEMASK;
 
 	if (ultimatemode)
 		return; // No rings in Ultimate!
@@ -13290,20 +13245,13 @@ static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y,
 	if (nightsreplace)
 		ringthing = MT_NIGHTSSTAR;
 
-	closestangle = FixedAngle(mthing->angle << FRACBITS);
-	fa = (closestangle >> ANGLETOFINESHIFT);
-
 	z = P_GetMobjSpawnHeight(ringthing, x, y, z, mthing->options & MTF_OBJECTFLIP);
 
-	for (r = 1; r <= iterations; r++)
+	for (r = 0; r < numitems; r++)
 	{
-		x += FixedMul(64*FRACUNIT, FINECOSINE(fa));
-		y += FixedMul(64*FRACUNIT, FINESINE(fa));
-
-		if (mthing->options & MTF_OBJECTFLIP)
-			z -= 64*FRACUNIT;
-		else
-			z += 64*FRACUNIT;
+		x += FixedMul(horizontalspacing, FINECOSINE(fineangle));
+		y += FixedMul(horizontalspacing, FINESINE(fineangle));
+		z += (mthing->options & MTF_OBJECTFLIP) ? -verticalspacing : verticalspacing;
 
 		mobj = P_SpawnMobj(x, y, z, ringthing);
 
@@ -13313,7 +13261,7 @@ static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y,
 			mobj->flags2 |= MF2_OBJECTFLIP;
 		}
 
-		mobj->angle = closestangle;
+		mobj->angle = angle;
 		if (mthing->options & MTF_AMBUSH)
 			mobj->flags2 |= MF2_AMBUSH;
 
@@ -13414,12 +13362,16 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 	{
 	// Special placement patterns
 	case 600: // 5 vertical rings (yellow spring)
+		P_SpawnItemRow(mthing, x, y, z, 5, 0, 64*FRACUNIT, 0);
+		return;
 	case 601: // 5 vertical rings (red spring)
-		P_SpawnVerticalSpringRings(mthing, x, y, z);
+		P_SpawnItemRow(mthing, x, y, z, 5, 0, 128*FRACUNIT, 0);
 		return;
 	case 602: // 5 diagonal rings (yellow spring)
+		P_SpawnItemRow(mthing, x, y, z, 5, 64*FRACUNIT, 64*FRACUNIT, mthing->angle);
+		return;
 	case 603: // 10 diagonal rings (red spring)
-		P_SpawnDiagonalSpringRings(mthing, x, y, z);
+		P_SpawnItemRow(mthing, x, y, z, 10, 64*FRACUNIT, 64*FRACUNIT, mthing->angle);
 		return;
 	case 604: // Circle of rings (8 items)
 	case 605: // Circle of rings (16 items)
