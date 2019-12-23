@@ -228,6 +228,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"leveltime")) {
 		lua_pushinteger(L, leveltime);
 		return 1;
+	} else if (fastcmp(word,"sstimer")) {
+		lua_pushinteger(L, sstimer);
+		return 1;
 	} else if (fastcmp(word,"curWeather")) {
 		lua_pushinteger(L, curWeather);
 		return 1;
