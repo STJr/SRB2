@@ -270,7 +270,6 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
 		"Signal caught",
 		sigmsg, NULL);
-	I_ShutdownSystem();
 	signal(num, SIG_DFL);               //default signal action
 	raise(num);
 	I_Quit();
@@ -2145,6 +2144,7 @@ INT32 I_StartupSystem(void)
 	SDL_version SDLlinked;
 	SDL_VERSION(&SDLcompiled)
 	SDL_GetVersion(&SDLlinked);
+	atexit(I_ShutdownSystem);
 	I_StartupConsole();
 	I_OutputMsg("Compiled for SDL version: %d.%d.%d\n",
 	 SDLcompiled.major, SDLcompiled.minor, SDLcompiled.patch);
@@ -2189,7 +2189,6 @@ void I_Quit(void)
 	// use this for 1.28 19990220 by Kin
 	I_ShutdownGraphics();
 	I_ShutdownInput();
-	I_ShutdownSystem();
 	SDL_Quit();
 	/* if option -noendtxt is set, don't print the text */
 	if (!M_CheckParm("-noendtxt") && W_CheckNumForName("ENDOOM") != LUMPERROR)
@@ -2250,10 +2249,8 @@ void I_Error(const char *error, ...)
 		if (errorcount == 5)
 			I_ShutdownInput();
 		if (errorcount == 6)
-			I_ShutdownSystem();
-		if (errorcount == 7)
 			SDL_Quit();
-		if (errorcount == 8)
+		if (errorcount == 7)
 		{
 			M_SaveConfig(NULL);
 			G_SaveGameData();
@@ -2304,7 +2301,6 @@ void I_Error(const char *error, ...)
 	// use this for 1.28 19990220 by Kin
 	I_ShutdownGraphics();
 	I_ShutdownInput();
-	I_ShutdownSystem();
 	SDL_Quit();
 
 	// Implement message box with SDL_ShowSimpleMessageBox,
