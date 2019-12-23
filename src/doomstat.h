@@ -389,7 +389,7 @@ enum GameType
 // Game type rules
 enum GameTypeRules
 {
-	GTR_CAMPAIGN         = 1,     // Linear Co-op map progression. Don't allow random maps.
+	GTR_CAMPAIGN         = 1,     // Linear Co-op map progression, don't allow random maps
 	GTR_RINGSLINGER      = 1<<1,  // Outside of Co-op, Competition, and Race (overriden by cv_ringslinger)
 	GTR_SPECTATORS       = 1<<2,  // Outside of Co-op, Competition, and Race
 	GTR_FRIENDLYFIRE     = 1<<3,  // Always allow friendly fire
@@ -402,12 +402,12 @@ enum GameTypeRules
 	GTR_HIDETIME         = 1<<10, // Hide time (Tag and Hide and Seek)
 	GTR_HIDEFROZEN       = 1<<11, // Frozen after hide time (Hide and Seek, but not Tag)
 	GTR_BLINDFOLDED      = 1<<12, // Blindfolded view (Tag and Hide and Seek)
-	GTR_CHASECAM         = 1<<13, // Prefer chasecam at map load (All platform gametypes)
+	GTR_FIRSTPERSON      = 1<<13, // First person camera
 	GTR_MATCHEMERALDS    = 1<<14, // Ringslinger emeralds (Match and CTF)
 	GTR_TEAMFLAGS        = 1<<15, // Gametype has team flags (CTF)
 	GTR_PITYSHIELD       = 1<<16, // Award pity shield
 	GTR_DEATHPENALTY     = 1<<17, // Death score penalty
-	GTR_NOSPECTATORSPAWN = 1<<18, // For use with GTR_SPECTATORS - spawn in the map instead of with the spectators
+	GTR_NOSPECTATORSPAWN = 1<<18, // Use with GTR_SPECTATORS, spawn in the map instead of with the spectators
 	GTR_DEATHMATCHSTARTS = 1<<19, // Use deathmatch starts
 	GTR_SPECIALSTAGES    = 1<<20, // Allow special stages
 	GTR_EMERALDTOKENS    = 1<<21, // Spawn emerald tokens

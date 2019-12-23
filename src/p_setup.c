@@ -2673,7 +2673,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// chasecam on in chaos, race, coop
 	// chasecam off in match, tag, capture the flag
-	chase = (gametyperules & GTR_CHASECAM) || (maptol & TOL_2D);
+	chase = (!(gametyperules & GTR_FIRSTPERSON)) || (maptol & TOL_2D);
 
 	if (!dedicated)
 	{
