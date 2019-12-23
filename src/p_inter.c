@@ -3430,6 +3430,15 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	// unless cv_friendlyfire is on.
 	if (!cv_friendlyfire.value)
 	{
+		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+		{
+			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+			{
+				P_SwitchShield(player, SH_PINK);
+				S_StartSound(player->mo, mobjinfo[MT_PITY_ICON].seesound);
+			}
+		}
+
 		if (inflictor->type == MT_LHRT)
 			return;
 
