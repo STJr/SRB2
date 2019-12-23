@@ -13220,256 +13220,272 @@ static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bo
 		P_SetMobjState(mobj, mobj->info->seestate);
 }
 
-void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
+static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y, sector_t* sec, boolean nightsreplace)
 {
 	mobjtype_t ringthing = MT_RING;
-	mobj_t *mobj = NULL;
-	INT32 r, i;
-	fixed_t x, y, z, finalx, finaly, finalz;
-	sector_t *sec;
-	TVector v, *res;
-	angle_t closestangle, fa;
-	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
+	mobj_t* mobj = NULL;
+	fixed_t z;
+	INT32 r;
 
-	x = mthing->x << FRACBITS;
-	y = mthing->y << FRACBITS;
+	INT32 dist = 64*FRACUNIT;
+	if (mthing->type == 601)
+		dist = 128*FRACUNIT;
 
-	sec = R_PointInSubsector(x, y)->sector;
+	if (ultimatemode)
+		return; // No rings in Ultimate!
 
-	// NiGHTS hoop!
-	if (mthing->type == 1705)
+	if (nightsreplace)
+		ringthing = MT_NIGHTSSTAR;
+
+	if (mthing->options & MTF_OBJECTFLIP)
 	{
-		z = mthing->z << FRACBITS;
-		P_SpawnHoop(mthing, x, y, z, sec, 24, 4*FRACUNIT);
-		return;
-	}
-	// CUSTOMIZABLE NiGHTS hoop!
-	else if (mthing->type == 1713)
-	{
-		// Super happy fun time
-		// For each flag add 16 fracunits to the size
-		// Default (0 flags) is 32 fracunits
-		z = mthing->z << FRACBITS;
-		P_SpawnHoop(mthing, x, y, z, sec, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
-		return;
-	}
-	// ***
-	// Special placement patterns
-	// ***
-
-	// Vertical Rings - Stack of 5 (handles both red and yellow)
-	else if (mthing->type == 600 || mthing->type == 601)
-	{
-		INT32 dist = 64*FRACUNIT;
-		if (mthing->type == 601)
-			dist = 128*FRACUNIT;
-
-		if (ultimatemode)
-			return; // No rings in Ultimate!
-
-		if (nightsreplace)
-			ringthing = MT_NIGHTSSTAR;
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
+		z = (
 #ifdef ESLOPE
-				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
 #endif
-				sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->z)
-				z -= (mthing->z << FRACBITS);
-			}
-		else
-		{
-			z = (
-#ifdef ESLOPE
-				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-				sec->floorheight);
-			if (mthing->z)
-				z += (mthing->z << FRACBITS);
-		}
-
-		for (r = 1; r <= 5; r++)
-		{
-			if (mthing->options & MTF_OBJECTFLIP)
-				z -= dist;
-			else
-				z += dist;
-
-			mobj = P_SpawnMobj(x, y, z, ringthing);
-
-			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				mobj->eflags |= MFE_VERTICALFLIP;
-				mobj->flags2 |= MF2_OBJECTFLIP;
-			}
-
-			mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
-			if (mthing->options & MTF_AMBUSH)
-				mobj->flags2 |= MF2_AMBUSH;
-
-			if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-				P_SetMobjState(mobj, mobj->info->seestate);
-		}
+			sec->ceilingheight) - mobjinfo[ringthing].height;
+		if (mthing->z)
+			z -= (mthing->z << FRACBITS);
 	}
-	// Diagonal rings (handles both types)
-	else if (mthing->type == 602 || mthing->type == 603) // Diagonal rings (5)
+	else
 	{
-		INT32 iterations = 5;
-		if (mthing->type == 603)
-			iterations = 10;
-
-		if (ultimatemode)
-			return; // No rings in Ultimate!
-
-		if (nightsreplace)
-			ringthing = MT_NIGHTSSTAR;
-
-		closestangle = FixedAngle(mthing->angle*FRACUNIT);
-		fa = (closestangle >> ANGLETOFINESHIFT);
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
-#ifdef ESLOPE
-				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-				sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->z)
-				z -= (mthing->z << FRACBITS);
-			}
-		else
-		{
-			z = (
-#ifdef ESLOPE
-				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-				sec->floorheight);
-			if (mthing->z)
-				z += (mthing->z << FRACBITS);
-		}
-
-		for (r = 1; r <= iterations; r++)
-		{
-			x += FixedMul(64*FRACUNIT, FINECOSINE(fa));
-			y += FixedMul(64*FRACUNIT, FINESINE(fa));
-
-			if (mthing->options & MTF_OBJECTFLIP)
-				z -= 64*FRACUNIT;
-			else
-				z += 64*FRACUNIT;
-
-			mobj = P_SpawnMobj(x, y, z, ringthing);
-
-			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				mobj->eflags |= MFE_VERTICALFLIP;
-				mobj->flags2 |= MF2_OBJECTFLIP;
-			}
-
-			mobj->angle = closestangle;
-			if (mthing->options & MTF_AMBUSH)
-				mobj->flags2 |= MF2_AMBUSH;
-
-			if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-				P_SetMobjState(mobj, mobj->info->seestate);
-		}
-	}
-	// Rings of items (all six of them)
-	else if (mthing->type >= 604 && mthing->type <= 609)
-	{
-		INT32 numitems = 8;
-		INT32 size = 96*FRACUNIT;
-
-		if (mthing->type & 1)
-		{
-			numitems = 16;
-			size = 192*FRACUNIT;
-		}
-
-		z =
+		z = (
 #ifdef ESLOPE
 			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
 #endif
-			sec->floorheight;
+			sec->floorheight);
 		if (mthing->z)
 			z += (mthing->z << FRACBITS);
-
-		closestangle = FixedAngle(mthing->angle*FRACUNIT);
-
-		switch (mthing->type)
-		{
-			case 604:
-			case 605:
-				if (ultimatemode)
-					return; // No rings in Ultimate!
-				if (nightsreplace)
-					ringthing = MT_NIGHTSSTAR;
-				break;
-			case 608:
-			case 609:
-				/*ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE; -- i == 0 is bluesphere
-				break;*/
-			case 606:
-			case 607:
-				ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-				break;
-			default:
-				break;
-		}
-
-		// Create the hoop!
-		for (i = 0; i < numitems; i++)
-		{
-			if (mthing->type == 608 || mthing->type == 609)
-			{
-				if (i & 1)
-				{
-					if (ultimatemode)
-						continue; // No rings in Ultimate!
-					ringthing = (nightsreplace) ? MT_NIGHTSSTAR : MT_RING;
-				}
-				else
-					ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-			}
-
-			fa = i*FINEANGLES/numitems;
-			v[0] = FixedMul(FINECOSINE(fa),size);
-			v[1] = 0;
-			v[2] = FixedMul(FINESINE(fa),size);
-			v[3] = FRACUNIT;
-
-			res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
-			M_Memcpy(&v, res, sizeof (v));
-
-			finalx = x + v[0];
-			finaly = y + v[1];
-			finalz = z + v[2];
-
-			mobj = P_SpawnMobj(finalx, finaly, finalz, ringthing);
-			mobj->z -= mobj->height/2;
-
-			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				mobj->eflags |= MFE_VERTICALFLIP;
-				mobj->flags2 |= MF2_OBJECTFLIP;
-			}
-
-			mobj->angle = closestangle;
-			if (mthing->options & MTF_AMBUSH)
-				mobj->flags2 |= MF2_AMBUSH;
-
-			if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
-				P_SetMobjState(mobj, mobj->info->raisestate);
-			else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-				P_SetMobjState(mobj, mobj->info->seestate);
-		}
 	}
-	// All manners of rings and coins
+
+	for (r = 1; r <= 5; r++)
+	{
+		if (mthing->options & MTF_OBJECTFLIP)
+			z -= dist;
+		else
+			z += dist;
+
+		mobj = P_SpawnMobj(x, y, z, ringthing);
+
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			mobj->eflags |= MFE_VERTICALFLIP;
+			mobj->flags2 |= MF2_OBJECTFLIP;
+		}
+
+		mobj->angle = FixedAngle(mthing->angle << FRACBITS);
+		if (mthing->options & MTF_AMBUSH)
+			mobj->flags2 |= MF2_AMBUSH;
+
+		if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
+			P_SetMobjState(mobj, mobj->info->seestate);
+	}
+}
+
+static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y, sector_t* sec, boolean nightsreplace)
+{
+	mobjtype_t ringthing = MT_RING;
+	mobj_t *mobj = NULL;
+	fixed_t z;
+	INT32 r;
+	angle_t closestangle, fa;
+
+	INT32 iterations = 5;
+	if (mthing->type == 603)
+		iterations = 10;
+
+	if (ultimatemode)
+		return; // No rings in Ultimate!
+
+	if (nightsreplace)
+		ringthing = MT_NIGHTSSTAR;
+
+	closestangle = FixedAngle(mthing->angle << FRACBITS);
+	fa = (closestangle >> ANGLETOFINESHIFT);
+
+	if (mthing->options & MTF_OBJECTFLIP)
+	{
+		z = (
+#ifdef ESLOPE
+			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+			sec->ceilingheight) - mobjinfo[ringthing].height;
+		if (mthing->z)
+			z -= (mthing->z << FRACBITS);
+	}
 	else
+	{
+		z = (
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight);
+		if (mthing->z)
+			z += (mthing->z << FRACBITS);
+	}
+
+	for (r = 1; r <= iterations; r++)
+	{
+		x += FixedMul(64*FRACUNIT, FINECOSINE(fa));
+		y += FixedMul(64*FRACUNIT, FINESINE(fa));
+
+		if (mthing->options & MTF_OBJECTFLIP)
+			z -= 64*FRACUNIT;
+		else
+			z += 64*FRACUNIT;
+
+		mobj = P_SpawnMobj(x, y, z, ringthing);
+
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			mobj->eflags |= MFE_VERTICALFLIP;
+			mobj->flags2 |= MF2_OBJECTFLIP;
+		}
+
+		mobj->angle = closestangle;
+		if (mthing->options & MTF_AMBUSH)
+			mobj->flags2 |= MF2_AMBUSH;
+
+		if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
+			P_SetMobjState(mobj, mobj->info->seestate);
+	}
+}
+
+static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, sector_t* sec, boolean bonustime, boolean nightsreplace)
+{
+	mobjtype_t ringthing = MT_RING;
+	mobj_t *mobj = NULL;
+	fixed_t z, finalx, finaly, finalz;
+	angle_t closestangle, fa;
+	INT32 i;
+	TVector v, *res;
+	INT32 numitems = 8;
+	INT32 size = 96*FRACUNIT;
+
+	if (mthing->type & 1)
+	{
+		numitems = 16;
+		size = 192*FRACUNIT;
+	}
+
+	z =
+#ifdef ESLOPE
+		sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+		sec->floorheight;
+	if (mthing->z)
+		z += (mthing->z << FRACBITS);
+
+	closestangle = FixedAngle(mthing->angle << FRACBITS);
+
+	switch (mthing->type)
+	{
+	case 604:
+	case 605:
+		if (ultimatemode)
+			return; // No rings in Ultimate!
+		if (nightsreplace)
+			ringthing = MT_NIGHTSSTAR;
+		break;
+	case 608:
+	case 609:
+		/*ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE; -- i == 0 is bluesphere
+		break;*/
+	case 606:
+	case 607:
+		ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+		break;
+	default:
+		break;
+	}
+
+	// Create the hoop!
+	for (i = 0; i < numitems; i++)
+	{
+		if (mthing->type == 608 || mthing->type == 609)
+		{
+			if (i & 1)
+			{
+				if (ultimatemode)
+					continue; // No rings in Ultimate!
+				ringthing = (nightsreplace) ? MT_NIGHTSSTAR : MT_RING;
+			}
+			else
+				ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+		}
+
+		fa = i * FINEANGLES/numitems;
+		v[0] = FixedMul(FINECOSINE(fa), size);
+		v[1] = 0;
+		v[2] = FixedMul(FINESINE(fa), size);
+		v[3] = FRACUNIT;
+
+		res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
+		M_Memcpy(&v, res, sizeof(v));
+
+		finalx = x + v[0];
+		finaly = y + v[1];
+		finalz = z + v[2];
+
+		mobj = P_SpawnMobj(finalx, finaly, finalz, ringthing);
+		mobj->z -= mobj->height/2;
+
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			mobj->eflags |= MFE_VERTICALFLIP;
+			mobj->flags2 |= MF2_OBJECTFLIP;
+		}
+
+		mobj->angle = closestangle;
+		if (mthing->options & MTF_AMBUSH)
+			mobj->flags2 |= MF2_AMBUSH;
+
+		if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
+			P_SetMobjState(mobj, mobj->info->raisestate);
+		else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
+			P_SetMobjState(mobj, mobj->info->seestate);
+	}
+}
+
+void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
+{
+	fixed_t x = mthing->x << FRACBITS;
+	fixed_t y = mthing->y << FRACBITS;
+	fixed_t z = mthing->z << FRACBITS;
+	sector_t *sec = R_PointInSubsector(x, y)->sector;
+	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
+
+	switch (mthing->type)
+	{
+	// Special placement patterns
+	case 600: // 5 vertical rings (yellow spring)
+	case 601: // 5 vertical rings (red spring)
+		P_SpawnVerticalSpringRings(mthing, x, y, sec, nightsreplace);
+		return;
+	case 602: // 5 diagonal rings (yellow spring)
+	case 603: // 10 diagonal rings (red spring)
+		P_SpawnDiagonalSpringRings(mthing, x, y, sec, nightsreplace);
+		return;
+	case 604: // Circle of rings (8 items)
+	case 605: // Circle of rings (16 bits)
+	case 606: // Circle of blue spheres (8 items)
+	case 607: // Circle of blue spheres (16 items)
+	case 608: // Circle of rings and blue spheres (8 items)
+	case 609: // Circle of rings and blue spheres (16 items)
+		P_SpawnItemCircle(mthing, x, y, sec, bonustime, nightsreplace);
+		return;
+	// Hoops
+	case 1705: // Generic NiGHTS hoop
+		P_SpawnHoop(mthing, x, y, z, sec, 24, 4*FRACUNIT);
+		return;
+	case 1713: // Customizable NiGHTS hoop
+		// For each flag add 16 fracunits to the size
+		// Default (0 flags) is 32 fracunits
+		P_SpawnHoop(mthing, x, y, z, sec, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
+		return;
+	default: // All manners of rings and coins
 		P_SpawnRingItem(mthing, x, y, bonustime, nightsreplace);
+	}
 }
 
 //
