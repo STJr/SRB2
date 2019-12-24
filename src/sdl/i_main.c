@@ -137,6 +137,7 @@ int main(int argc, char **argv)
 		const char *format;
 		const char *reldir;
 		int left;
+		boolean fileabs;
 
 		logdir = D_Home();
 
@@ -144,38 +145,55 @@ int main(int argc, char **argv)
 		timeinfo = localtime(&my_time);
 
 		if (M_CheckParm("-logfile") && M_IsNextParm())
+		{
 			format = M_GetNextParm();
+			fileabs = M_IsPathAbsolute(format);
+		}
 		else
+		{
 			format = "log-%Y-%m-%d_%H-%M-%S.txt";
+			fileabs = false;
+		}
 
-		if (M_CheckParm("-logdir") && M_IsNextParm())
-			reldir = M_GetNextParm();
-		else
-			reldir = "logs";
-
-		if (M_IsPathAbsolute(reldir))
+		if (fileabs)
 		{
-			left = snprintf(logfile, sizeof logfile,
-					"%s"PATHSEP, reldir);
+			strftime(logfile, sizeof logfile, format, timeinfo);
+
+			M_MkdirEachUntil(logfile,
+					M_PathParts(logdir) - 1,
+					M_PathParts(logfile) - 1, 0755);
 		}
 		else
+		{
+			if (M_CheckParm("-logdir") && M_IsNextParm())
+				reldir = M_GetNextParm();
+			else
+				reldir = "logs";
+
+			if (M_IsPathAbsolute(reldir))
+			{
+				left = snprintf(logfile, sizeof logfile,
+						"%s"PATHSEP, reldir);
+			}
+			else
 #ifdef DEFAULTDIR
-		if (logdir)
-		{
-			left = snprintf(logfile, sizeof logfile,
-					"%s"PATHSEP DEFAULTDIR PATHSEP"%s"PATHSEP, logdir, reldir);
-		}
-		else
+			if (logdir)
+			{
+				left = snprintf(logfile, sizeof logfile,
+						"%s"PATHSEP DEFAULTDIR PATHSEP"%s"PATHSEP, logdir, reldir);
+			}
+			else
 #endif/*DEFAULTDIR*/
-		{
-			left = snprintf(logfile, sizeof logfile,
-					"."PATHSEP"%s"PATHSEP, reldir);
-		}
+			{
+				left = snprintf(logfile, sizeof logfile,
+						"."PATHSEP"%s"PATHSEP, reldir);
+			}
 #endif/*LOGMESSAGES*/
 
-		M_MkdirEach(logfile, M_PathParts(logdir) - 1, 0755);
+			M_MkdirEach(logfile, M_PathParts(logdir) - 1, 0755);
 
-		strftime(&logfile[left], sizeof logfile - left, format, timeinfo);
+			strftime(&logfile[left], sizeof logfile - left, format, timeinfo);
+		}
 
 		logstream = fopen(logfile, "wt");
 	}

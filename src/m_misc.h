@@ -99,6 +99,7 @@ const char *M_FileError(FILE *handle);
 int     M_PathParts      (const char *path);
 boolean M_IsPathAbsolute (const char *path);
 void    M_MkdirEach      (const char *path, int start, int mode);
+void    M_MkdirEachUntil (const char *path, int start, int end, int mode);
 
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
