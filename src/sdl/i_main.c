@@ -23,8 +23,12 @@
 #include "../m_misc.h"/* path shit */
 #include "../i_system.h"
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__unix__)
 #include <unistd.h>
+#endif
+
+#ifdef __unix__
+#include <errno.h>
 #endif
 
 #include "time.h" // For log timestamps
@@ -48,6 +52,7 @@ extern int SDL_main(int argc, char *argv[]);
 
 #ifdef LOGMESSAGES
 FILE *logstream = NULL;
+char logfilename[1024];
 #endif
 
 #ifndef DOXYGEN
@@ -117,7 +122,6 @@ int main(int argc, char **argv)
 #endif
 {
 	const char *logdir = NULL;
-	char logfile[MAX_WADPATH];
 	myargc = argc;
 	myargv = argv; /// \todo pull out path to exe from this string
 
@@ -157,7 +161,7 @@ int main(int argc, char **argv)
 
 		if (fileabs)
 		{
-			strftime(logfile, sizeof logfile, format, timeinfo);
+			strftime(logfilename, sizeof logfilename, format, timeinfo);
 		}
 		else
 		{
@@ -168,32 +172,46 @@ int main(int argc, char **argv)
 
 			if (M_IsPathAbsolute(reldir))
 			{
-				left = snprintf(logfile, sizeof logfile,
+				left = snprintf(logfilename, sizeof logfilename,
 						"%s"PATHSEP, reldir);
 			}
 			else
 #ifdef DEFAULTDIR
 			if (logdir)
 			{
-				left = snprintf(logfile, sizeof logfile,
+				left = snprintf(logfilename, sizeof logfilename,
 						"%s"PATHSEP DEFAULTDIR PATHSEP"%s"PATHSEP, logdir, reldir);
 			}
 			else
 #endif/*DEFAULTDIR*/
 			{
-				left = snprintf(logfile, sizeof logfile,
+				left = snprintf(logfilename, sizeof logfilename,
 						"."PATHSEP"%s"PATHSEP, reldir);
 			}
 #endif/*LOGMESSAGES*/
 
-			strftime(&logfile[left], sizeof logfile - left, format, timeinfo);
+			strftime(&logfilename[left], sizeof logfilename - left,
+					format, timeinfo);
 		}
 
-		M_MkdirEachUntil(logfile,
+		M_MkdirEachUntil(logfilename,
 				M_PathParts(logdir) - 1,
-				M_PathParts(logfile) - 1, 0755);
+				M_PathParts(logfilename) - 1, 0755);
 
-		logstream = fopen(logfile, "wt");
+#ifdef __unix__
+		logstream = fopen(logfilename, "w");
+#ifdef DEFAULTDIR
+		if (symlink(logfilename,
+					va("%s/"DEFAULTDIR"/latest-log.txt", logdir)) == -1)
+#else
+		if (symlink(logfilename, va("%s/latest-log.txt", logdir)) == -1)
+#endif/*DEFAULTDIR*/
+		{
+			I_OutputMsg("Error symlinking latest-log.txt: %s\n", strerror(errno));
+		}
+#else/*__unix__*/
+		logstream = fopen("latest-log.txt", "wt+");
+#endif/*__unix__*/
 	}
 
 	//I_OutputMsg("I_StartupSystem() ...\n");
@@ -222,7 +240,7 @@ int main(int argc, char **argv)
 	D_SRB2Main();
 #ifdef LOGMESSAGES
 	if (!M_CheckParm("-nolog"))
-		CONS_Printf("Logfile: %s\n", logfile);
+		CONS_Printf("Logfile: %s\n", logfilename);
 #endif
 	CONS_Printf("Entering main game loop...\n");
 	// never return
