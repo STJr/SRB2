@@ -11711,15 +11711,6 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 {
 	switch (i)
 	{
-	case MT_RING:
-	case MT_COIN:
-	case MT_REDTEAMRING:
-	case MT_BLUETEAMRING:
-	case MT_BLUESPHERE:
-	case MT_BOMBSPHERE:
-	case MT_NIGHTSSTAR:
-	case MT_NIGHTSCHIP:
-		return false; // These are handled in P_SpawnHoopsAndRings().
 	case MT_EMERALD1:
 	case MT_EMERALD2:
 	case MT_EMERALD3:
@@ -11786,8 +11777,12 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 	}
 
 	if (metalrecording) // Metal Sonic can't use these things.
-		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_TOKEN || i == MT_STARPOST)
+	{
+		if ((mobjinfo[i].flags & (MF_ENEMY|MF_BOSS)) || i == MT_TOKEN || i == MT_STARPOST
+			|| i == MT_RING || i == MT_BLUETEAMRING || i == MT_REDTEAMRING || i == MT_COIN
+			|| i == MT_BLUESPHERE || i == MT_BOMBSPHERE || i == MT_NIGHTSCHIP || i == MT_NIGHTSSTAR)
 			return false;
+	}
 
 	if (!G_PlatformGametype())
 	{
@@ -11825,7 +11820,9 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 
 	if (ultimatemode)
 	{
-		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
+		if (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING
+			|| i == MT_COIN || i == MT_NIGHTSSTAR || i == MT_NIGHTSCHIP
+			|| i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
 			|| i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX
 			|| i == MT_FLAMEAURA_BOX || i == MT_BUBBLEWRAP_BOX || i == MT_THUNDERCOIN_BOX
 			|| i == MT_RING_BOX || i == MT_STARPOST)
@@ -11837,6 +11834,8 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 
 	return true;
 }
+
+#define nightsreplace ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
 
 static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 {
@@ -11881,8 +11880,23 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 		}
 	}
 
-	if (gametype != GT_CTF && (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX))
-		return MT_RING_BOX;
+	if (nightsreplace)
+	{
+		if (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN)
+			return MT_NIGHTSSTAR;
+
+		if (i == MT_BLUESPHERE)
+			return MT_NIGHTSCHIP;
+	}
+
+	if (gametype != GT_CTF)
+	{
+		if (i == MT_BLUETEAMRING || i == MT_REDTEAMRING)
+			return MT_RING;
+
+		if (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX)
+			return MT_RING_BOX;
+	}
 
 	if (modeattacking && i == MT_1UP_BOX) // 1UPs -->> Score TVs
 	{
@@ -12920,6 +12934,10 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (G_IsSpecialStage(gamemap))
 			P_SetMobjState(mobj, (mobj->type == MT_PUSH) ? S_GRAVWELLGREEN : S_GRAVWELLRED);
 		break;
+	case MT_NIGHTSSTAR:
+		if (maptol & TOL_XMAS)
+			P_SetMobjState(mobj, mobj->info->seestate);
+		break;
 	default:
 		break;
 	}
@@ -12991,21 +13009,21 @@ static void P_SetObjectSpecial(mobj_t *mobj)
 // The fields of the mapthing should
 // already be in host byte order.
 //
-void P_SpawnMapThing(mapthing_t *mthing)
+mobj_t *P_SpawnMapThing(mapthing_t *mthing)
 {
 	mobjtype_t i;
-	mobj_t *mobj;
+	mobj_t *mobj = NULL;
 	fixed_t x, y, z;
 	boolean doangle = true;
 
 	if (!mthing->type)
-		return; // Ignore type-0 things as NOPs
+		return mobj; // Ignore type-0 things as NOPs
 
 	if (mthing->type == 3328) // 3D Mode start Thing
-		return;
+		return mobj;
 
 	if (!objectplacing && P_SpawnNonMobjMapThing(mthing))
-		return;
+		return mobj;
 
 	i = P_GetMobjtype(mthing->type);
 	if (i == MT_UNKNOWN)
@@ -13015,11 +13033,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	if (!objectplacing)
 	{
 		if (!P_AllowMobjSpawn(mthing, i))
-			return;
+			return mobj;
 
 		i = P_GetMobjtypeSubstitute(mthing, i);
 		if (i == MT_NULL) // Don't spawn mobj
-			return;
+			return mobj;
 	}
 
 	// spawn it
@@ -13031,7 +13049,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	mobj->spawnpoint = mthing;
 
 	if (!P_SetupSpawnedMapThing(mthing, mobj, &doangle))
-		return;
+		return mobj;
 
 	if (doangle)
 		mobj->angle = FixedAngle(mthing->angle<<FRACBITS);
@@ -13040,7 +13058,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 	// ignore MTF_ flags and return early
 	if (i == MT_NIGHTSBUMPER)
-		return;
+		return mobj;
 
 	if ((mthing->options & MTF_AMBUSH)
 	&& (mthing->options & MTF_OBJECTSPECIAL)
@@ -13075,9 +13093,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	// Final set of not being able to draw nightsitems.
 	if (mobj->flags & MF_NIGHTSITEM)
 		mobj->flags2 |= MF2_DONTDRAW;
+
+	return mobj;
 }
 
-static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, INT32 hoopsize, fixed_t sizefactor)
+static void P_SpawnHoopInternal(mapthing_t *mthing, INT32 hoopsize, fixed_t sizefactor)
 {
 	mobj_t *mobj = NULL;
 	mobj_t *nextmobj = NULL;
@@ -13087,8 +13107,9 @@ static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, INT
 	INT32 i;
 	angle_t fa;
 	TVector v, *res;
-
-	z = P_GetMobjSpawnHeight(MT_HOOP, x, y, z, false);
+	fixed_t x = mthing->x << FRACBITS;
+	fixed_t y = mthing->y << FRACBITS;
+	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, false);
 
 	hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 	hoopcenter->spawnpoint = mthing;
@@ -13182,56 +13203,27 @@ static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, INT
 	} while (hoopsize >= 8);
 }
 
-#define nightsreplace ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
-
-static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bonustime)
+void P_SpawnHoop(mapthing_t *mthing)
 {
-	mobjtype_t ringthing = MT_RING;
-	mobj_t *mobj = NULL;
-	fixed_t z;
+	if (metalrecording)
+		return;
 
-	// Which ringthing to use
-	if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
-		ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-	else if (mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum)
-		ringthing = MT_BOMBSPHERE;
-	else
-	{
-		if (ultimatemode)
-			return; // No rings in Ultimate!
-
-		if (nightsreplace)
-			ringthing = MT_NIGHTSSTAR;
-		else if (mthing->type == mobjinfo[MT_COIN].doomednum)
-			ringthing = MT_COIN;
-		else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
-			ringthing = (gametype == GT_CTF) ? MT_REDTEAMRING : MT_RING;
-		else if (mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum) // Ditto
-			ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
-	}
-
-	z = P_GetMapThingSpawnHeight(ringthing, mthing, x, y);
-	mobj = P_SpawnMobj(x, y, z, ringthing);
-	mobj->spawnpoint = mthing;
-
-	if (mthing->options & MTF_OBJECTFLIP)
-	{
-		mobj->eflags |= MFE_VERTICALFLIP;
-		mobj->flags2 |= MF2_OBJECTFLIP;
-	}
-
-	mobj->angle = FixedAngle(mthing->angle << FRACBITS);
-	mthing->mobj = mobj;
-	if (mthing->options & MTF_AMBUSH)
-		mobj->flags2 |= MF2_AMBUSH;
-
-	if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
-		P_SetMobjState(mobj, mobj->info->raisestate);
-	else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-		P_SetMobjState(mobj, mobj->info->seestate);
+	if (mthing->type == 1705) // Generic hoop
+		P_SpawnHoopInternal(mthing, 24, 4*FRACUNIT);
+	else // Customizable hoop
+		// For each flag add 16 fracunits to the size
+		// Default (0 flags) is 32 fracunits
+		P_SpawnHoopInternal(mthing, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
 }
 
-static void P_SpawnItemRow(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle)
+void P_SpawnBonusTimeItem(mapthing_t *mthing)
+{
+	mobj_t *mobj = P_SpawnMapThing(mthing);
+	if (mobj && (mobj->type == MT_BLUESPHERE || mobj->type == MT_NIGHTSCHIP))
+		P_SetMobjState(mobj, mobj->info->raisestate);
+}
+
+static void P_SpawnItemRow(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
@@ -13270,7 +13262,7 @@ static void P_SpawnItemRow(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, 
 	}
 }
 
-static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, INT32 numitems, fixed_t size, boolean bonustime)
+static void P_SpawnItemCircle(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, INT32 numitems, fixed_t size, boolean bonustime)
 {
 	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
@@ -13352,11 +13344,14 @@ static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t 
 	}
 }
 
-void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
+void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 {
 	fixed_t x = mthing->x << FRACBITS;
 	fixed_t y = mthing->y << FRACBITS;
 	fixed_t z = mthing->z << FRACBITS;
+
+	if (metalrecording)
+		return;
 
 	switch (mthing->type)
 	{
@@ -13385,17 +13380,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		P_SpawnItemCircle(mthing, x, y, z, numitems, size, bonustime);
 		return;
 	}
-	// Hoops
-	case 1705: // Generic NiGHTS hoop
-		P_SpawnHoop(mthing, x, y, z, 24, 4*FRACUNIT);
+	default:
 		return;
-	case 1713: // Customizable NiGHTS hoop
-		// For each flag add 16 fracunits to the size
-		// Default (0 flags) is 32 fracunits
-		P_SpawnHoop(mthing, x, y, z, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
-		return;
-	default: // All manners of rings and coins
-		P_SpawnRingItem(mthing, x, y, bonustime);
 	}
 }
 
