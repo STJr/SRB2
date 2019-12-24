@@ -675,7 +675,7 @@ static inline void I_ShutdownConsole(void){}
 //
 // StartupKeyboard
 //
-void I_RegisterSignals (void)
+static void I_RegisterSignals (void)
 {
 #ifdef SIGINT
 	signal(SIGINT , quit_handler);
