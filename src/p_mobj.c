@@ -13221,11 +13221,15 @@ void P_SpawnHoop(mapthing_t *mthing)
 		P_SpawnHoopInternal(mthing, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
 }
 
-void P_SpawnBonusTimeItem(mapthing_t *mthing)
+void P_SetBonusTime(mobj_t *mobj)
 {
-	mobj_t *mobj = P_SpawnMapThing(mthing);
-	if (mobj && (mobj->type == MT_BLUESPHERE || mobj->type == MT_NIGHTSCHIP))
-		P_SetMobjState(mobj, mobj->info->raisestate);
+	if (!mobj)
+		return;
+
+	if (mobj->type != MT_BLUESPHERE && mobj->type != MT_NIGHTSCHIP)
+		return;
+
+	P_SetMobjState(mobj, mobj->info->raisestate);
 }
 
 static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t* itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
@@ -13274,8 +13278,8 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t* itemtypes, UINT8 numi
 			continue;
 
 		mobj->spawnpoint = NULL;
-		if (bonustime && (mobj->type == MT_BLUESPHERE || mobj->type == MT_NIGHTSCHIP))
-			P_SetMobjState(mobj, mobj->info->raisestate);
+		if (bonustime)
+			P_SetBonusTime(mobj);
 	}
 }
 
@@ -13338,8 +13342,8 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 
 		mobj->z -= mobj->height/2;
 		mobj->spawnpoint = NULL;
-		if (bonustime && (mobj->type == MT_BLUESPHERE || mobj->type == MT_NIGHTSCHIP))
-			P_SetMobjState(mobj, mobj->info->raisestate);
+		if (bonustime)
+			P_SetBonusTime(mobj);
 	}
 }
 

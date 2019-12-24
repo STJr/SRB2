@@ -458,7 +458,7 @@ void P_AfterPlayerSpawn(INT32 playernum);
 
 mobj_t *P_SpawnMapThing(mapthing_t *mthing);
 void P_SpawnHoop(mapthing_t *mthing);
-void P_SpawnBonusTimeItem(mapthing_t *mthing);
+void P_SetBonusTime(mobj_t *mobj);
 void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime);
 void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, angle_t rotangle);
 void P_SpawnPrecipitation(void);

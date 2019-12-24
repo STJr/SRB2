@@ -816,7 +816,7 @@ void P_ReloadRings(void)
 			|| mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum)
 		{
 			mt->mobj = NULL;
-			P_SpawnBonusTimeItem(mt);
+			P_SetBonusTime(P_SpawnMapThing(mt));
 		}
 		else if (mt->type >= 600 && mt->type <= 609) // Item patterns
 		{
