@@ -536,9 +536,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	}
 
 	// multi-patch textures (or 'composite')
-#ifndef NO_PNG_LUMPS
 	multipatch:
-#endif
 	texture->holes = false;
 	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
