@@ -1161,12 +1161,8 @@ void M_StartMovie(void)
 	switch (cv_moviemode.value)
 	{
 		case MM_GIF:
-			if (rendermode == render_soft)
-			{
-				moviemode = M_StartMovieGIF(pathname);
-				break;
-			}
-			/* FALLTHRU */
+			moviemode = M_StartMovieGIF(pathname);
+			break;
 		case MM_APNG:
 			moviemode = M_StartMovieAPNG(pathname);
 			break;
