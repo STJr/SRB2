@@ -11598,13 +11598,21 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t*
 	case MT_EMERALDSPAWN:
 	case MT_TOKEN:
 	case MT_EMBLEM:
+	case MT_RING:
+	case MT_REDTEAMRING:
+	case MT_BLUETEAMRING:
+	case MT_COIN:
+	case MT_BLUESPHERE:
+	case MT_BOMBSPHERE:
+	case MT_NIGHTSCHIP:
+	case MT_NIGHTSSTAR:
 		offset += mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
 		break;
 
 	// Remaining objects.
 	default:
 		if (P_WeaponOrPanel(mobjtype))
-			offset += mthing->options & MTF_AMBUSH ? 24 * FRACUNIT : 0;
+			offset += mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
 	}
 
 	if (!offset) // Snap to the surfaces when there's no offset set.
@@ -13061,557 +13069,208 @@ ML_EFFECT5 : Don't stop thinking when too far away
 	mthing->mobj = mobj;
 }
 
-void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
+static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, sector_t* sec, INT32 hoopsize, fixed_t sizefactor)
 {
-	mobjtype_t ringthing = MT_RING;
 	mobj_t *mobj = NULL;
-	INT32 r, i;
-	fixed_t x, y, z, finalx, finaly, finalz;
-	sector_t *sec;
+	mobj_t *nextmobj = NULL;
+	mobj_t *hoopcenter;
+	TMatrix *pitchmatrix, *yawmatrix;
+	fixed_t radius = hoopsize*sizefactor;
+	INT32 i;
+	angle_t fa;
 	TVector v, *res;
-	angle_t closestangle, fa;
-	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
 
-	x = mthing->x << FRACBITS;
-	y = mthing->y << FRACBITS;
-
-	sec = R_PointInSubsector(x, y)->sector;
-
-	// NiGHTS hoop!
-	if (mthing->type == 1705)
-	{
-		mobj_t *nextmobj = NULL;
-		mobj_t *hoopcenter;
-		INT16 spewangle;
-
-		z = mthing->z << FRACBITS;
-
-		hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
-
-		hoopcenter->spawnpoint = mthing;
-
-		// Screw these damn hoops, I need this thinker.
-		//hoopcenter->flags |= MF_NOTHINK;
-
-		z +=
+	z +=
 #ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+		sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
 #endif
-			sec->floorheight;
+		sec->floorheight;
 
-		hoopcenter->z = z - hoopcenter->height/2;
+	hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
+	hoopcenter->spawnpoint = mthing;
+	hoopcenter->z -= hoopcenter->height/2;
 
-		P_UnsetThingPosition(hoopcenter);
-		hoopcenter->x = x;
-		hoopcenter->y = y;
-		P_SetThingPosition(hoopcenter);
+	P_UnsetThingPosition(hoopcenter);
+	hoopcenter->x = x;
+	hoopcenter->y = y;
+	P_SetThingPosition(hoopcenter);
 
-		// Scale 0-255 to 0-359 =(
-		closestangle = FixedAngle(FixedMul((mthing->angle>>8)*FRACUNIT,
-			360*(FRACUNIT/256)));
+	// Scale 0-255 to 0-359 =(
+	hoopcenter->movedir = ((mthing->angle & 255)*360)/256; // Pitch
+	pitchmatrix = RotateXMatrix(FixedAngle(hoopcenter->movedir << FRACBITS));
+	hoopcenter->movecount = (((UINT16)mthing->angle >> 8)*360)/256; // Yaw
+	yawmatrix = RotateZMatrix(FixedAngle(hoopcenter->movecount << FRACBITS));
 
-		hoopcenter->movedir = FixedInt(FixedMul((mthing->angle&255)*FRACUNIT,
-			360*(FRACUNIT/256)));
-		hoopcenter->movecount = FixedInt(AngleFixed(closestangle));
+	// For the hoop when it flies away
+	hoopcenter->extravalue1 = hoopsize;
+	hoopcenter->extravalue2 = radius/12;
 
-		// For the hoop when it flies away
-		hoopcenter->extravalue1 = 32;
-		hoopcenter->extravalue2 = 8 * FRACUNIT;
+	// Create the hoop!
+	for (i = 0; i < hoopsize; i++)
+	{
+		fa = i*(FINEANGLES/hoopsize);
+		v[0] = FixedMul(FINECOSINE(fa), radius);
+		v[1] = 0;
+		v[2] = FixedMul(FINESINE(fa), radius);
+		v[3] = FRACUNIT;
 
-		spewangle = (INT16)hoopcenter->movedir;
+		res = VectorMatrixMultiply(v, *pitchmatrix);
+		M_Memcpy(&v, res, sizeof(v));
+		res = VectorMatrixMultiply(v, *yawmatrix);
+		M_Memcpy(&v, res, sizeof(v));
 
-		// Create the hoop!
-		for (i = 0; i < 32; i++)
+		mobj = P_SpawnMobj(x + v[0], y + v[1], z + v[2], MT_HOOP);
+		mobj->z -= mobj->height/2;
+
+		if (maptol & TOL_XMAS)
+			P_SetMobjState(mobj, mobj->info->seestate + (i & 1));
+
+		P_SetTarget(&mobj->target, hoopcenter); // Link the sprite to the center.
+		mobj->fuse = 0;
+
+		// Link all the sprites in the hoop together
+		if (nextmobj)
 		{
-			fa = i*(FINEANGLES/32);
-			v[0] = FixedMul(FINECOSINE(fa),96*FRACUNIT);
-			v[1] = 0;
-			v[2] = FixedMul(FINESINE(fa),96*FRACUNIT);
-			v[3] = FRACUNIT;
-
-			res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(spewangle*FRACUNIT)));
-			M_Memcpy(&v, res, sizeof (v));
-			res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
-			M_Memcpy(&v, res, sizeof (v));
-
-			finalx = x + v[0];
-			finaly = y + v[1];
-			finalz = z + v[2];
-
-			mobj = P_SpawnMobj(finalx, finaly, finalz, MT_HOOP);
-
-			if (maptol & TOL_XMAS)
-				P_SetMobjState(mobj, mobj->info->seestate + (i & 1));
-
-			mobj->z -= mobj->height/2;
-			P_SetTarget(&mobj->target, hoopcenter); // Link the sprite to the center.
-			mobj->fuse = 0;
-
-			// Link all the sprites in the hoop together
-			if (nextmobj)
-			{
-				P_SetTarget(&mobj->hprev, nextmobj);
-				P_SetTarget(&mobj->hprev->hnext, mobj);
-			}
-			else
-				P_SetTarget(&mobj->hprev, P_SetTarget(&mobj->hnext, NULL));
-
-			nextmobj = mobj;
-		}
-
-		// Create the collision detectors!
-		for (i = 0; i < 16; i++)
-		{
-			fa = i*FINEANGLES/16;
-			v[0] = FixedMul(FINECOSINE(fa),32*FRACUNIT);
-			v[1] = 0;
-			v[2] = FixedMul(FINESINE(fa),32*FRACUNIT);
-			v[3] = FRACUNIT;
-			res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(spewangle*FRACUNIT)));
-			M_Memcpy(&v, res, sizeof (v));
-			res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
-			M_Memcpy(&v, res, sizeof (v));
-
-			finalx = x + v[0];
-			finaly = y + v[1];
-			finalz = z + v[2];
-
-			mobj = P_SpawnMobj(finalx, finaly, finalz, MT_HOOPCOLLIDE);
-			mobj->z -= mobj->height/2;
-
-			// Link all the collision sprites together.
-			P_SetTarget(&mobj->hnext, NULL);
 			P_SetTarget(&mobj->hprev, nextmobj);
 			P_SetTarget(&mobj->hprev->hnext, mobj);
-
-			nextmobj = mobj;
 		}
-		// Create the collision detectors!
-		for (i = 0; i < 16; i++)
-		{
-			fa = i*FINEANGLES/16;
-			v[0] = FixedMul(FINECOSINE(fa),64*FRACUNIT);
-			v[1] = 0;
-			v[2] = FixedMul(FINESINE(fa),64*FRACUNIT);
-			v[3] = FRACUNIT;
-			res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(spewangle*FRACUNIT)));
-			M_Memcpy(&v, res, sizeof (v));
-			res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
-			M_Memcpy(&v, res, sizeof (v));
+		else
+			P_SetTarget(&mobj->hprev, P_SetTarget(&mobj->hnext, NULL));
 
-			finalx = x + v[0];
-			finaly = y + v[1];
-			finalz = z + v[2];
-
-			mobj = P_SpawnMobj(finalx, finaly, finalz, MT_HOOPCOLLIDE);
-			mobj->z -= mobj->height/2;
-
-			// Link all the collision sprites together.
-			P_SetTarget(&mobj->hnext, NULL);
-			P_SetTarget(&mobj->hprev, nextmobj);
-			P_SetTarget(&mobj->hprev->hnext, mobj);
-
-			nextmobj = mobj;
-		}
-		return;
+		nextmobj = mobj;
 	}
-	// CUSTOMIZABLE NiGHTS hoop!
-	else if (mthing->type == 1713)
+
+	// Create the collision detectors!
+	// Create them until the size is less than 8
+	// But always create at least ONE set of collision detectors
+	do
 	{
-		mobj_t *nextmobj = NULL;
-		mobj_t *hoopcenter;
-		INT16 spewangle;
-		INT32 hoopsize;
-		INT32 hoopplacement;
+		if (hoopsize >= 32)
+			hoopsize -= 16;
+		else
+			hoopsize /= 2;
 
-		z = mthing->z << FRACBITS;
+		radius = hoopsize*sizefactor;
 
-		hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
-		hoopcenter->spawnpoint = mthing;
-
-		z +=
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight;
-		hoopcenter->z = z - hoopcenter->height/2;
-
-		P_UnsetThingPosition(hoopcenter);
-		hoopcenter->x = x;
-		hoopcenter->y = y;
-		P_SetThingPosition(hoopcenter);
-
-		// Scale 0-255 to 0-359 =(
-		closestangle = FixedAngle(FixedMul((mthing->angle>>8)*FRACUNIT,
-			360*(FRACUNIT/256)));
-
-		hoopcenter->movedir = FixedInt(FixedMul((mthing->angle&255)*FRACUNIT,
-			360*(FRACUNIT/256)));
-		hoopcenter->movecount = FixedInt(AngleFixed(closestangle));
-
-		spewangle = (INT16)hoopcenter->movedir;
-
-		// Super happy fun time
-		// For each flag add 4 fracunits to the size
-		// Default (0 flags) is 8 fracunits
-		hoopsize = 8 + (4 * (mthing->options & 0xF));
-		hoopplacement = hoopsize * (4*FRACUNIT);
-
-		// For the hoop when it flies away
-		hoopcenter->extravalue1 = hoopsize;
-		hoopcenter->extravalue2 = FixedDiv(hoopplacement, 12*FRACUNIT);
-
-		// Create the hoop!
 		for (i = 0; i < hoopsize; i++)
 		{
 			fa = i*(FINEANGLES/hoopsize);
-			v[0] = FixedMul(FINECOSINE(fa), hoopplacement);
+			v[0] = FixedMul(FINECOSINE(fa), radius);
 			v[1] = 0;
-			v[2] = FixedMul(FINESINE(fa), hoopplacement);
+			v[2] = FixedMul(FINESINE(fa), radius);
 			v[3] = FRACUNIT;
 
-			res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(spewangle*FRACUNIT)));
-			M_Memcpy(&v, res, sizeof (v));
-			res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
-			M_Memcpy(&v, res, sizeof (v));
+			res = VectorMatrixMultiply(v, *pitchmatrix);
+			M_Memcpy(&v, res, sizeof(v));
+			res = VectorMatrixMultiply(v, *yawmatrix);
+			M_Memcpy(&v, res, sizeof(v));
 
-			finalx = x + v[0];
-			finaly = y + v[1];
-			finalz = z + v[2];
-
-			mobj = P_SpawnMobj(finalx, finaly, finalz, MT_HOOP);
-
-			if (maptol & TOL_XMAS)
-				P_SetMobjState(mobj, mobj->info->seestate + (i & 1));
-
+			mobj = P_SpawnMobj(x + v[0], y + v[1], z + v[2], MT_HOOPCOLLIDE);
 			mobj->z -= mobj->height/2;
-			P_SetTarget(&mobj->target, hoopcenter); // Link the sprite to the center.
-			mobj->fuse = 0;
 
-			// Link all the sprites in the hoop together
-			if (nextmobj)
-			{
-				P_SetTarget(&mobj->hprev, nextmobj);
-				P_SetTarget(&mobj->hprev->hnext, mobj);
-			}
-			else
-				P_SetTarget(&mobj->hprev, P_SetTarget(&mobj->hnext, NULL));
+			// Link all the collision sprites together.
+			P_SetTarget(&mobj->hnext, NULL);
+			P_SetTarget(&mobj->hprev, nextmobj);
+			P_SetTarget(&mobj->hprev->hnext, mobj);
 
 			nextmobj = mobj;
 		}
+	} while (hoopsize >= 8);
+}
 
-		// Create the collision detectors!
-		// Create them until the size is less than 8
-		// But always create at least ONE set of collision detectors
-		do
-		{
-			if (hoopsize >= 32)
-				hoopsize -= 16;
-			else
-				hoopsize /= 2;
+static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bonustime, boolean nightsreplace)
+{
+	mobjtype_t ringthing = MT_RING;
+	mobj_t *mobj = NULL;
+	fixed_t z;
 
-			hoopplacement = hoopsize * (4*FRACUNIT);
-
-			for (i = 0; i < hoopsize; i++)
-			{
-				fa = i*FINEANGLES/hoopsize;
-				v[0] = FixedMul(FINECOSINE(fa), hoopplacement);
-				v[1] = 0;
-				v[2] = FixedMul(FINESINE(fa), hoopplacement);
-				v[3] = FRACUNIT;
-				res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(spewangle*FRACUNIT)));
-				M_Memcpy(&v, res, sizeof (v));
-				res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
-				M_Memcpy(&v, res, sizeof (v));
-
-				finalx = x + v[0];
-				finaly = y + v[1];
-				finalz = z + v[2];
-
-				mobj = P_SpawnMobj(finalx, finaly, finalz, MT_HOOPCOLLIDE);
-				mobj->z -= mobj->height/2;
-
-				// Link all the collision sprites together.
-				P_SetTarget(&mobj->hnext, NULL);
-				P_SetTarget(&mobj->hprev, nextmobj);
-				P_SetTarget(&mobj->hprev->hnext, mobj);
-
-				nextmobj = mobj;
-			}
-		} while (hoopsize >= 8);
-
-		return;
-	}
-	// ***
-	// Special placement patterns
-	// ***
-
-	// Vertical Rings - Stack of 5 (handles both red and yellow)
-	else if (mthing->type == 600 || mthing->type == 601)
-	{
-		INT32 dist = 64*FRACUNIT;
-		if (mthing->type == 601)
-			dist = 128*FRACUNIT;
-
-		if (ultimatemode)
-			return; // No rings in Ultimate!
-
-		if (nightsreplace)
-			ringthing = MT_NIGHTSSTAR;
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
-#ifdef ESLOPE
-				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-				sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->z)
-				z -= (mthing->z << FRACBITS);
-			}
-		else
-		{
-			z = (
-#ifdef ESLOPE
-				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-				sec->floorheight);
-			if (mthing->z)
-				z += (mthing->z << FRACBITS);
-		}
-
-		for (r = 1; r <= 5; r++)
-		{
-			if (mthing->options & MTF_OBJECTFLIP)
-				z -= dist;
-			else
-				z += dist;
-
-			mobj = P_SpawnMobj(x, y, z, ringthing);
-
-			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				mobj->eflags |= MFE_VERTICALFLIP;
-				mobj->flags2 |= MF2_OBJECTFLIP;
-			}
-
-			mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
-			if (mthing->options & MTF_AMBUSH)
-				mobj->flags2 |= MF2_AMBUSH;
-
-			if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-				P_SetMobjState(mobj, mobj->info->seestate);
-		}
-	}
-	// Diagonal rings (handles both types)
-	else if (mthing->type == 602 || mthing->type == 603) // Diagonal rings (5)
-	{
-		INT32 iterations = 5;
-		if (mthing->type == 603)
-			iterations = 10;
-
-		if (ultimatemode)
-			return; // No rings in Ultimate!
-
-		if (nightsreplace)
-			ringthing = MT_NIGHTSSTAR;
-
-		closestangle = FixedAngle(mthing->angle*FRACUNIT);
-		fa = (closestangle >> ANGLETOFINESHIFT);
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
-#ifdef ESLOPE
-				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-				sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->z)
-				z -= (mthing->z << FRACBITS);
-			}
-		else
-		{
-			z = (
-#ifdef ESLOPE
-				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-				sec->floorheight);
-			if (mthing->z)
-				z += (mthing->z << FRACBITS);
-		}
-
-		for (r = 1; r <= iterations; r++)
-		{
-			x += FixedMul(64*FRACUNIT, FINECOSINE(fa));
-			y += FixedMul(64*FRACUNIT, FINESINE(fa));
-
-			if (mthing->options & MTF_OBJECTFLIP)
-				z -= 64*FRACUNIT;
-			else
-				z += 64*FRACUNIT;
-
-			mobj = P_SpawnMobj(x, y, z, ringthing);
-
-			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				mobj->eflags |= MFE_VERTICALFLIP;
-				mobj->flags2 |= MF2_OBJECTFLIP;
-			}
-
-			mobj->angle = closestangle;
-			if (mthing->options & MTF_AMBUSH)
-				mobj->flags2 |= MF2_AMBUSH;
-
-			if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-				P_SetMobjState(mobj, mobj->info->seestate);
-		}
-	}
-	// Rings of items (all six of them)
-	else if (mthing->type >= 604 && mthing->type <= 609)
-	{
-		INT32 numitems = 8;
-		INT32 size = 96*FRACUNIT;
-
-		if (mthing->type & 1)
-		{
-			numitems = 16;
-			size = 192*FRACUNIT;
-		}
-
-		z =
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight;
-		if (mthing->z)
-			z += (mthing->z << FRACBITS);
-
-		closestangle = FixedAngle(mthing->angle*FRACUNIT);
-
-		switch (mthing->type)
-		{
-			case 604:
-			case 605:
-				if (ultimatemode)
-					return; // No rings in Ultimate!
-				if (nightsreplace)
-					ringthing = MT_NIGHTSSTAR;
-				break;
-			case 608:
-			case 609:
-				/*ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE; -- i == 0 is bluesphere
-				break;*/
-			case 606:
-			case 607:
-				ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-				break;
-			default:
-				break;
-		}
-
-		// Create the hoop!
-		for (i = 0; i < numitems; i++)
-		{
-			if (mthing->type == 608 || mthing->type == 609)
-			{
-				if (i & 1)
-				{
-					if (ultimatemode)
-						continue; // No rings in Ultimate!
-					ringthing = (nightsreplace) ? MT_NIGHTSSTAR : MT_RING;
-				}
-				else
-					ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-			}
-
-			fa = i*FINEANGLES/numitems;
-			v[0] = FixedMul(FINECOSINE(fa),size);
-			v[1] = 0;
-			v[2] = FixedMul(FINESINE(fa),size);
-			v[3] = FRACUNIT;
-
-			res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
-			M_Memcpy(&v, res, sizeof (v));
-
-			finalx = x + v[0];
-			finaly = y + v[1];
-			finalz = z + v[2];
-
-			mobj = P_SpawnMobj(finalx, finaly, finalz, ringthing);
-			mobj->z -= mobj->height/2;
-
-			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				mobj->eflags |= MFE_VERTICALFLIP;
-				mobj->flags2 |= MF2_OBJECTFLIP;
-			}
-
-			mobj->angle = closestangle;
-			if (mthing->options & MTF_AMBUSH)
-				mobj->flags2 |= MF2_AMBUSH;
-
-			if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
-				P_SetMobjState(mobj, mobj->info->raisestate);
-			else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-				P_SetMobjState(mobj, mobj->info->seestate);
-		}
-	}
-	// All manners of rings and coins
+	// Which ringthing to use
+	if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
+		ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+	else if (mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum)
+		ringthing = MT_BOMBSPHERE;
 	else
 	{
+		if (ultimatemode)
+			return; // No rings in Ultimate!
 
-		// Which ringthing to use
-		if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
-			ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-		else if (mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum)
-			ringthing = MT_BOMBSPHERE;
-		else
-		{
-			if (ultimatemode)
-				return; // No rings in Ultimate!
+		if (nightsreplace)
+			ringthing = MT_NIGHTSSTAR;
+		else if (mthing->type == mobjinfo[MT_COIN].doomednum)
+			ringthing = MT_COIN;
+		else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
+			ringthing = (gametyperules & GTR_TEAMFLAGS) ? MT_REDTEAMRING : MT_RING;
+		else if (mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum) // Ditto
+			ringthing = (gametyperules & GTR_TEAMFLAGS) ? MT_BLUETEAMRING : MT_RING;
+	}
 
-			if (nightsreplace)
-				ringthing = MT_NIGHTSSTAR;
-			else if (mthing->type == mobjinfo[MT_COIN].doomednum)
-				ringthing = MT_COIN;
-			else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
-				ringthing = (gametyperules & GTR_TEAMFLAGS) ? MT_REDTEAMRING : MT_RING;
-			else if (mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum) // Ditto
-				ringthing = (gametyperules & GTR_TEAMFLAGS) ? MT_BLUETEAMRING : MT_RING;
-		}
+	z = P_GetMobjSpawnHeight(ringthing, mthing, x, y);
+	mobj = P_SpawnMobj(x, y, z, ringthing);
+	mobj->spawnpoint = mthing;
 
-		// Set proper height
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
+	if (mthing->options & MTF_OBJECTFLIP)
+	{
+		mobj->eflags |= MFE_VERTICALFLIP;
+		mobj->flags2 |= MF2_OBJECTFLIP;
+	}
+
+	mobj->angle = FixedAngle(mthing->angle << FRACBITS);
+	mthing->mobj = mobj;
+	if (mthing->options & MTF_AMBUSH)
+		mobj->flags2 |= MF2_AMBUSH;
+
+	if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
+		P_SetMobjState(mobj, mobj->info->raisestate);
+	else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
+		P_SetMobjState(mobj, mobj->info->seestate);
+}
+
+static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y, sector_t* sec, boolean nightsreplace)
+{
+	mobjtype_t ringthing = MT_RING;
+	mobj_t* mobj = NULL;
+	fixed_t z;
+	INT32 r;
+
+	INT32 dist = 64*FRACUNIT;
+	if (mthing->type == 601)
+		dist = 128*FRACUNIT;
+
+	if (ultimatemode)
+		return; // No rings in Ultimate!
+
+	if (nightsreplace)
+		ringthing = MT_NIGHTSSTAR;
+
+	if (mthing->options & MTF_OBJECTFLIP)
+	{
+		z = (
 #ifdef ESLOPE
 			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
 #endif
 			sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->z)
-				z -= (mthing->z << FRACBITS);
-		}
-		else
-		{
-			z =
+		if (mthing->z)
+			z -= (mthing->z << FRACBITS);
+	}
+	else
+	{
+		z = (
 #ifdef ESLOPE
 			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
 #endif
-			sec->floorheight;
-			if (mthing->z)
-				z += (mthing->z << FRACBITS);
-		}
+			sec->floorheight);
+		if (mthing->z)
+			z += (mthing->z << FRACBITS);
+	}
 
-		if (mthing->options & MTF_AMBUSH) // Special flag for rings
-		{
-			if (mthing->options & MTF_OBJECTFLIP)
-				z -= 24*FRACUNIT;
-			else
-				z += 24*FRACUNIT;
-		}
+	for (r = 1; r <= 5; r++)
+	{
+		if (mthing->options & MTF_OBJECTFLIP)
+			z -= dist;
+		else
+			z += dist;
 
 		mobj = P_SpawnMobj(x, y, z, ringthing);
-		mobj->spawnpoint = mthing;
 
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -13619,8 +13278,170 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			mobj->flags2 |= MF2_OBJECTFLIP;
 		}
 
-		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
-		mthing->mobj = mobj;
+		mobj->angle = FixedAngle(mthing->angle << FRACBITS);
+		if (mthing->options & MTF_AMBUSH)
+			mobj->flags2 |= MF2_AMBUSH;
+
+		if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
+			P_SetMobjState(mobj, mobj->info->seestate);
+	}
+}
+
+static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y, sector_t* sec, boolean nightsreplace)
+{
+	mobjtype_t ringthing = MT_RING;
+	mobj_t *mobj = NULL;
+	fixed_t z;
+	INT32 r;
+	angle_t closestangle, fa;
+
+	INT32 iterations = 5;
+	if (mthing->type == 603)
+		iterations = 10;
+
+	if (ultimatemode)
+		return; // No rings in Ultimate!
+
+	if (nightsreplace)
+		ringthing = MT_NIGHTSSTAR;
+
+	closestangle = FixedAngle(mthing->angle << FRACBITS);
+	fa = (closestangle >> ANGLETOFINESHIFT);
+
+	if (mthing->options & MTF_OBJECTFLIP)
+	{
+		z = (
+#ifdef ESLOPE
+			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+			sec->ceilingheight) - mobjinfo[ringthing].height;
+		if (mthing->z)
+			z -= (mthing->z << FRACBITS);
+	}
+	else
+	{
+		z = (
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight);
+		if (mthing->z)
+			z += (mthing->z << FRACBITS);
+	}
+
+	for (r = 1; r <= iterations; r++)
+	{
+		x += FixedMul(64*FRACUNIT, FINECOSINE(fa));
+		y += FixedMul(64*FRACUNIT, FINESINE(fa));
+
+		if (mthing->options & MTF_OBJECTFLIP)
+			z -= 64*FRACUNIT;
+		else
+			z += 64*FRACUNIT;
+
+		mobj = P_SpawnMobj(x, y, z, ringthing);
+
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			mobj->eflags |= MFE_VERTICALFLIP;
+			mobj->flags2 |= MF2_OBJECTFLIP;
+		}
+
+		mobj->angle = closestangle;
+		if (mthing->options & MTF_AMBUSH)
+			mobj->flags2 |= MF2_AMBUSH;
+
+		if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
+			P_SetMobjState(mobj, mobj->info->seestate);
+	}
+}
+
+static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, sector_t* sec, boolean bonustime, boolean nightsreplace)
+{
+	mobjtype_t ringthing = MT_RING;
+	mobj_t *mobj = NULL;
+	fixed_t z, finalx, finaly, finalz;
+	angle_t closestangle, fa;
+	INT32 i;
+	TVector v, *res;
+	INT32 numitems = 8;
+	INT32 size = 96*FRACUNIT;
+
+	if (mthing->type & 1)
+	{
+		numitems = 16;
+		size = 192*FRACUNIT;
+	}
+
+	z =
+#ifdef ESLOPE
+		sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+		sec->floorheight;
+	if (mthing->z)
+		z += (mthing->z << FRACBITS);
+
+	closestangle = FixedAngle(mthing->angle << FRACBITS);
+
+	switch (mthing->type)
+	{
+	case 604:
+	case 605:
+		if (ultimatemode)
+			return; // No rings in Ultimate!
+		if (nightsreplace)
+			ringthing = MT_NIGHTSSTAR;
+		break;
+	case 608:
+	case 609:
+		/*ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE; -- i == 0 is bluesphere
+		break;*/
+	case 606:
+	case 607:
+		ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+		break;
+	default:
+		break;
+	}
+
+	// Create the hoop!
+	for (i = 0; i < numitems; i++)
+	{
+		if (mthing->type == 608 || mthing->type == 609)
+		{
+			if (i & 1)
+			{
+				if (ultimatemode)
+					continue; // No rings in Ultimate!
+				ringthing = (nightsreplace) ? MT_NIGHTSSTAR : MT_RING;
+			}
+			else
+				ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+		}
+
+		fa = i * FINEANGLES/numitems;
+		v[0] = FixedMul(FINECOSINE(fa), size);
+		v[1] = 0;
+		v[2] = FixedMul(FINESINE(fa), size);
+		v[3] = FRACUNIT;
+
+		res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
+		M_Memcpy(&v, res, sizeof(v));
+
+		finalx = x + v[0];
+		finaly = y + v[1];
+		finalz = z + v[2];
+
+		mobj = P_SpawnMobj(finalx, finaly, finalz, ringthing);
+		mobj->z -= mobj->height/2;
+
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			mobj->eflags |= MFE_VERTICALFLIP;
+			mobj->flags2 |= MF2_OBJECTFLIP;
+		}
+
+		mobj->angle = closestangle;
 		if (mthing->options & MTF_AMBUSH)
 			mobj->flags2 |= MF2_AMBUSH;
 
@@ -13628,6 +13449,47 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			P_SetMobjState(mobj, mobj->info->raisestate);
 		else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
 			P_SetMobjState(mobj, mobj->info->seestate);
+	}
+}
+
+void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
+{
+	fixed_t x = mthing->x << FRACBITS;
+	fixed_t y = mthing->y << FRACBITS;
+	fixed_t z = mthing->z << FRACBITS;
+	sector_t *sec = R_PointInSubsector(x, y)->sector;
+	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
+
+	switch (mthing->type)
+	{
+	// Special placement patterns
+	case 600: // 5 vertical rings (yellow spring)
+	case 601: // 5 vertical rings (red spring)
+		P_SpawnVerticalSpringRings(mthing, x, y, sec, nightsreplace);
+		return;
+	case 602: // 5 diagonal rings (yellow spring)
+	case 603: // 10 diagonal rings (red spring)
+		P_SpawnDiagonalSpringRings(mthing, x, y, sec, nightsreplace);
+		return;
+	case 604: // Circle of rings (8 items)
+	case 605: // Circle of rings (16 bits)
+	case 606: // Circle of blue spheres (8 items)
+	case 607: // Circle of blue spheres (16 items)
+	case 608: // Circle of rings and blue spheres (8 items)
+	case 609: // Circle of rings and blue spheres (16 items)
+		P_SpawnItemCircle(mthing, x, y, sec, bonustime, nightsreplace);
+		return;
+	// Hoops
+	case 1705: // Generic NiGHTS hoop
+		P_SpawnHoop(mthing, x, y, z, sec, 24, 4*FRACUNIT);
+		return;
+	case 1713: // Customizable NiGHTS hoop
+		// For each flag add 16 fracunits to the size
+		// Default (0 flags) is 32 fracunits
+		P_SpawnHoop(mthing, x, y, z, sec, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
+		return;
+	default: // All manners of rings and coins
+		P_SpawnRingItem(mthing, x, y, bonustime, nightsreplace);
 	}
 }
 
