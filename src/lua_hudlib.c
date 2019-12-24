@@ -1056,13 +1056,16 @@ int LUA_HudLib(lua_State *L)
 		lua_rawseti(L, -2, 2); // HUD[2] = game rendering functions array
 
 		lua_newtable(L);
-		lua_rawseti(L, -2, 3); // HUD[2] = scores rendering functions array
+		lua_rawseti(L, -2, 3); // HUD[3] = scores rendering functions array
 
 		lua_newtable(L);
-		lua_rawseti(L, -2, 4); // HUD[3] = title rendering functions array
+		lua_rawseti(L, -2, 4); // HUD[4] = intermission rendering functions array
 
 		lua_newtable(L);
-		lua_rawseti(L, -2, 5); // HUD[4] = title card rendering functions array
+		lua_rawseti(L, -2, 5); // HUD[5] = title rendering functions array
+
+		lua_newtable(L);
+		lua_rawseti(L, -2, 6); // HUD[6] = title card rendering functions array
 	lua_setfield(L, LUA_REGISTRYINDEX, "HUD");
 
 	luaL_newmetatable(L, META_HUDINFO);
