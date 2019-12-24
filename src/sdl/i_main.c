@@ -202,10 +202,11 @@ int main(int argc, char **argv)
 #ifdef __unix__
 		logstream = fopen(logfilename, "w");
 #ifdef DEFAULTDIR
-		link = va("%s/"DEFAULTDIR"/latest-log.txt", logdir);
-#else
-		link = va("%s/latest-log.txt", logdir);
+		if (logdir)
+			link = va("%s/"DEFAULTDIR"/latest-log.txt", logdir);
+		else
 #endif/*DEFAULTDIR*/
+			link = "latest-log.txt";
 		unlink(link);
 		if (symlink(logfilename, link) == -1)
 		{
