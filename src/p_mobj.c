@@ -13269,97 +13269,66 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t itemtype, INT32 numite
 	}
 }
 
-static void P_SpawnItemCircle(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, INT32 numitems, fixed_t size, boolean bonustime)
+static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t size, boolean bonustime)
 {
-	mobjtype_t ringthing = MT_RING;
-	mobj_t *mobj = NULL;
-	fixed_t finalx, finaly, finalz;
-	angle_t closestangle, fa;
+	mapthing_t dummything;
+	mobj_t* mobj = NULL;
+	fixed_t x = mthing->x << FRACBITS;
+	fixed_t y = mthing->y << FRACBITS;
+	fixed_t z = mthing->z << FRACBITS;
+	angle_t angle = FixedAngle(mthing->angle << FRACBITS);
+	angle_t fa;
 	INT32 i;
 	TVector v, *res;
 
-	if (metalrecording)
-		return;
-
-	z = P_GetMobjSpawnHeight(ringthing, x, y, z, false);
-
-	closestangle = FixedAngle(mthing->angle << FRACBITS);
-
-	switch (mthing->type)
+	for (i = 0; i < numitemtypes; i++)
 	{
-	case 604:
-	case 605:
-		if (ultimatemode)
-			return; // No rings in Ultimate!
-		if (nightsreplace)
-			ringthing = MT_NIGHTSSTAR;
-		break;
-	case 608:
-	case 609:
-		/*ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE; -- i == 0 is bluesphere
-		break;*/
-	case 606:
-	case 607:
-		ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-		break;
-	default:
-		break;
-	}
+		dummything = *mthing;
+		dummything.type = mobjinfo[itemtypes[i]].doomednum;
+		// Skip all returning/substitution code in objectplace.
+		if (!objectplacing)
+		{
+			if (!P_AllowMobjSpawn(&dummything, itemtypes[i]))
+			{
+				itemtypes[i] = MT_NULL;
+				continue;
+			}
 
-	// Create the hoop!
+			itemtypes[i] = P_GetMobjtypeSubstitute(&dummything, itemtypes[i]);
+		}
+	}
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, false);
+
 	for (i = 0; i < numitems; i++)
 	{
-		if (mthing->type == 608 || mthing->type == 609)
-		{
-			if (i & 1)
-			{
-				if (ultimatemode)
-					continue; // No rings in Ultimate!
-				ringthing = (nightsreplace) ? MT_NIGHTSSTAR : MT_RING;
-			}
-			else
-				ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-		}
+		mobjtype_t itemtype = itemtypes[i % numitemtypes];
+		if (itemtype == MT_NULL)
+			continue;
+		dummything.type = mobjinfo[itemtype].doomednum;
 
-		fa = i * FINEANGLES/numitems;
+		fa = i*FINEANGLES/numitems;
 		v[0] = FixedMul(FINECOSINE(fa), size);
 		v[1] = 0;
 		v[2] = FixedMul(FINESINE(fa), size);
 		v[3] = FRACUNIT;
 
-		res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
+		res = VectorMatrixMultiply(v, *RotateZMatrix(angle));
 		M_Memcpy(&v, res, sizeof(v));
 
-		finalx = x + v[0];
-		finaly = y + v[1];
-		finalz = z + v[2];
+		mobj = P_SpawnMobjFromMapThing(&dummything, x + v[0], y + v[1], z + v[2], itemtype);
 
-		mobj = P_SpawnMobj(finalx, finaly, finalz, ringthing);
+		if (!mobj)
+			continue;
+
 		mobj->z -= mobj->height/2;
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mobj->eflags |= MFE_VERTICALFLIP;
-			mobj->flags2 |= MF2_OBJECTFLIP;
-		}
-
-		mobj->angle = closestangle;
-		if (mthing->options & MTF_AMBUSH)
-			mobj->flags2 |= MF2_AMBUSH;
-
-		if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
+		mobj->spawnpoint = NULL;
+		if (bonustime && (mobj->type == MT_BLUESPHERE || mobj->type == MT_NIGHTSCHIP))
 			P_SetMobjState(mobj, mobj->info->raisestate);
-		else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-			P_SetMobjState(mobj, mobj->info->seestate);
 	}
 }
 
 void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 {
-	fixed_t x = mthing->x << FRACBITS;
-	fixed_t y = mthing->y << FRACBITS;
-	fixed_t z = mthing->z << FRACBITS;
-
 	switch (mthing->type)
 	{
 	// Special placement patterns
@@ -13379,12 +13348,20 @@ void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 	case 605: // Circle of rings (16 items)
 	case 606: // Circle of blue spheres (8 items)
 	case 607: // Circle of blue spheres (16 items)
+	{
+		INT32 numitems = (mthing->type & 1) ? 16 : 8;
+		fixed_t size = (mthing->type & 1) ? 192*FRACUNIT : 96*FRACUNIT;
+		mobjtype_t itemtypes[1] = { (mthing->type & 1) ? MT_RING : MT_BLUESPHERE };
+		P_SpawnItemCircle(mthing, itemtypes, 1, numitems, size, bonustime);
+		return;
+	}
 	case 608: // Circle of rings and blue spheres (8 items)
 	case 609: // Circle of rings and blue spheres (16 items)
 	{
 		INT32 numitems = (mthing->type & 1) ? 16 : 8;
 		fixed_t size = (mthing->type & 1) ? 192*FRACUNIT : 96*FRACUNIT;
-		P_SpawnItemCircle(mthing, x, y, z, numitems, size, bonustime);
+		mobjtype_t itemtypes[2] = { MT_RING, MT_BLUESPHERE };
+		P_SpawnItemCircle(mthing, itemtypes, 2, numitems, size, bonustime);
 		return;
 	}
 	default:
