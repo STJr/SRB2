@@ -416,6 +416,7 @@ enum GameTypeRules
 	GTR_ALLOWEXIT        = 1<<24, // Allow exit sectors
 	GTR_NOTITLECARD      = 1<<25, // Don't show the title card
 	GTR_OVERTIME         = 1<<26, // Allow overtime
+	GTR_HURTMESSAGES     = 1<<27, // Hit and death messages
 };
 
 // String names for gametypes

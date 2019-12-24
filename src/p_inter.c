@@ -1888,7 +1888,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	char targetname[MAXPLAYERNAME+4];
 	char sourcename[MAXPLAYERNAME+4];
 
-	if (G_PlatformGametype())
+	if (!(gametyperules & (GTR_RINGSLINGER|GTR_HURTMESSAGES)))
 		return; // Not in coop, etc.
 
 	if (!player)
