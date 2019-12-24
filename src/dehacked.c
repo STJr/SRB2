@@ -1158,6 +1158,11 @@ static void readgametype(MYFILE *f, char *gtname)
 	INT16 newgtrankingstype = -1;
 	int newgtinttype = 0;
 	char gtdescription[441];
+	char gtconst[MAXLINELEN];
+
+	// Empty strings.
+	gtdescription[0] = '\0';
+	gtconst[0] = '\0';
 
 	do
 	{
@@ -1231,6 +1236,12 @@ static void readgametype(MYFILE *f, char *gtname)
 				// GTR_
 				newgtrules = (UINT32)get_number(word2);
 			}
+			// Identifier
+			else if (fastcmp(word, "IDENTIFIER"))
+			{
+				// GT_
+				strncpy(gtconst, word2, MAXLINELEN);
+			}
 			// Point and time limits
 			else if (fastcmp(word, "DEFAULTPOINTLIMIT"))
 				newgtpointlimit = (INT32)i;
@@ -1297,6 +1308,8 @@ static void readgametype(MYFILE *f, char *gtname)
 			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
+
+	// Free strings.
 	Z_Free(s);
 	if (word2lwr)
 		Z_Free(word2lwr);
@@ -1325,7 +1338,9 @@ static void readgametype(MYFILE *f, char *gtname)
 	Gametype_Names[newgtidx] = Z_StrDup((const char *)gtname);
 
 	// Write the constant name.
-	G_AddGametypeConstant(newgtidx, (const char *)gtname);
+	if (gtconst[0] == '\0')
+		strncpy(gtconst, gtname, MAXLINELEN);
+	G_AddGametypeConstant(newgtidx, (const char *)gtconst);
 
 	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();
