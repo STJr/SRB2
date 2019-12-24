@@ -1895,7 +1895,7 @@ void G_StartTitleCard(void)
 
 	// The title card has been disabled for this map.
 	// Oh well.
-	if ((mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD) || (gametyperules & GTR_NOTITLECARD))
+	if (!G_IsTitleCardAvailable())
 	{
 		WipeStageTitle = false;
 		return;
@@ -1936,6 +1936,23 @@ void G_PreLevelTitleCard(void)
 		if (takescreenshot) // Only take screenshots after drawing.
 			M_DoScreenShot();
 	}
+}
+
+//
+// Returns true if the current level has a title card.
+//
+boolean G_IsTitleCardAvailable(void)
+{
+	// The current level header explicitly disabled the title card.
+	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+		return false;
+
+	// The current gametype doesn't have a title card.
+	if (gametyperules & GTR_NOTITLECARD)
+		return false;
+
+	// The title card is available.
+	return true;
 }
 
 INT32 pausedelay = 0;

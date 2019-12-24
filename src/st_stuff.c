@@ -1216,6 +1216,9 @@ void ST_startTitleCard(void)
 //
 void ST_preDrawTitleCard(void)
 {
+	if (!G_IsTitleCardAvailable())
+		return;
+
 	if (lt_ticker >= (lt_endtime + TICRATE))
 		return;
 
@@ -1231,6 +1234,9 @@ void ST_preDrawTitleCard(void)
 //
 void ST_runTitleCard(void)
 {
+	if (!G_IsTitleCardAvailable())
+		return;
+
 	if (lt_ticker >= (lt_endtime + TICRATE))
 		return;
 
@@ -1283,6 +1289,9 @@ void ST_drawTitleCard(void)
 	INT32 ttlscroll = FixedInt(lt_scroll);
 	INT32 zzticker;
 	patch_t *actpat, *zigzag, *zztext;
+
+	if (!G_IsTitleCardAvailable())
+		return;
 
 #ifdef HAVE_BLUA
 	if (!LUA_HudEnabled(hud_stagetitle))
