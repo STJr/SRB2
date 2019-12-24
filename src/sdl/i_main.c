@@ -158,10 +158,6 @@ int main(int argc, char **argv)
 		if (fileabs)
 		{
 			strftime(logfile, sizeof logfile, format, timeinfo);
-
-			M_MkdirEachUntil(logfile,
-					M_PathParts(logdir) - 1,
-					M_PathParts(logfile) - 1, 0755);
 		}
 		else
 		{
@@ -190,10 +186,12 @@ int main(int argc, char **argv)
 			}
 #endif/*LOGMESSAGES*/
 
-			M_MkdirEach(logfile, M_PathParts(logdir) - 1, 0755);
-
 			strftime(&logfile[left], sizeof logfile - left, format, timeinfo);
 		}
+
+		M_MkdirEachUntil(logfile,
+				M_PathParts(logdir) - 1,
+				M_PathParts(logfile) - 1, 0755);
 
 		logstream = fopen(logfile, "wt");
 	}
