@@ -384,17 +384,6 @@ typedef struct sector_s
 	// for fade thinker
 	INT16 spawn_lightlevel;
 
-	// these are saved for netgames, so do not let Lua touch these!
-	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
-
-	// offsets sector spawned with (via linedef type 7)
-	fixed_t spawn_flr_xoffs, spawn_flr_yoffs;
-	fixed_t spawn_ceil_xoffs, spawn_ceil_yoffs;
-
-	// flag angles sector spawned with (via linedef type 7)
-	angle_t spawn_flrpic_angle;
-	angle_t spawn_ceilpic_angle;
-
 	// colormap structure
 	extracolormap_t *spawn_extra_colormap;
 } sector_t;
