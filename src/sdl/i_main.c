@@ -142,6 +142,7 @@ int main(int argc, char **argv)
 		const char *reldir;
 		int left;
 		boolean fileabs;
+		const char *link;
 
 		logdir = D_Home();
 
@@ -201,11 +202,12 @@ int main(int argc, char **argv)
 #ifdef __unix__
 		logstream = fopen(logfilename, "w");
 #ifdef DEFAULTDIR
-		if (symlink(logfilename,
-					va("%s/"DEFAULTDIR"/latest-log.txt", logdir)) == -1)
+		link = va("%s/"DEFAULTDIR"/latest-log.txt", logdir);
 #else
-		if (symlink(logfilename, va("%s/latest-log.txt", logdir)) == -1)
+		link = va("%s/latest-log.txt", logdir);
 #endif/*DEFAULTDIR*/
+		unlink(link);
+		if (symlink(logfilename, link) == -1)
 		{
 			I_OutputMsg("Error symlinking latest-log.txt: %s\n", strerror(errno));
 		}
