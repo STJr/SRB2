@@ -3426,8 +3426,6 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
 		return;
 
-	// Don't allow players to hurt one another,
-	// unless cv_friendlyfire is on.
 	if (!cv_friendlyfire.value)
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
