@@ -171,6 +171,8 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap);
 #define R_PutRgbaRGB(r, g, b) (R_PutRgbaR(r) + R_PutRgbaG(g) + R_PutRgbaB(b))
 #define R_PutRgbaRGBA(r, g, b, a) (R_PutRgbaRGB(r, g, b) + R_PutRgbaA(a))
 
+UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
+
 extern INT32 numtextures;
 
 #endif

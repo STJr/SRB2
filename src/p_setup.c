@@ -213,6 +213,9 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->lvlttl[0] = '\0';
 	mapheaderinfo[num]->selectheading[0] = '\0';
 	mapheaderinfo[num]->subttl[0] = '\0';
+	mapheaderinfo[num]->ltzzpatch[0] = '\0';
+	mapheaderinfo[num]->ltzztext[0] = '\0';
+	mapheaderinfo[num]->ltactdiamond[0] = '\0';
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);

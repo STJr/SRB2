@@ -1309,18 +1309,18 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_STRING|IT_CVAR,         NULL, "Model lighting",      &cv_grmodellighting, 32},
 
 	{IT_HEADER, NULL, "General", NULL, 51},
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            62},
-	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        72},
-	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     82},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,92},
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            63},
+	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        73},
+	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     83},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,93},
 
-	{IT_HEADER, NULL, "Miscellaneous", NULL, 111},
-	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          123},
+	{IT_HEADER, NULL, "Miscellaneous", NULL, 112},
+	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          124},
 #ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     133},
+	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     134},
 #endif
 #if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,            143},
+	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,            144},
 #endif
 };
 
