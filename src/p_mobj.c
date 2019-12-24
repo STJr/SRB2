@@ -9803,6 +9803,55 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 	return true;
 }
 
+static void P_FiringThink(mobj_t* mobj)
+{
+	if (!mobj->target)
+		return;
+
+	if (mobj->health <= 0)
+		return;
+
+	if (mobj->state->action.acp1 == (actionf_p1)A_Boss1Laser)
+	{
+		if (mobj->state->tics > 1)
+		{
+			var1 = mobj->state->var1;
+			var2 = mobj->state->var2 & 65535;
+			mobj->state->action.acp1(mobj);
+		}
+	}
+	else if (leveltime & 1) // Fire mode
+	{
+		mobj_t *missile;
+
+		if (mobj->target->player && mobj->target->player->powers[pw_carry] == CR_NIGHTSMODE)
+		{
+			fixed_t oldval = mobjinfo[mobj->extravalue1].speed;
+
+			mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx, mobj->target->y + mobj->target->momy);
+			mobjinfo[mobj->extravalue1].speed = FixedMul(60*FRACUNIT, mobj->scale);
+			missile = P_SpawnMissile(mobj, mobj->target, mobj->extravalue1);
+			mobjinfo[mobj->extravalue1].speed = oldval;
+		}
+		else
+		{
+			mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+			missile = P_SpawnMissile(mobj, mobj->target, mobj->extravalue1);
+		}
+
+		if (missile)
+		{
+			if (mobj->flags2 & MF2_SUPERFIRE)
+				missile->flags2 |= MF2_SUPERFIRE;
+
+			if (mobj->info->attacksound)
+				S_StartSound(missile, mobj->info->attacksound);
+		}
+	}
+	else
+		mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+}
+
 //
 // P_MobjThinker
 //
@@ -9907,48 +9956,8 @@ void P_MobjThinker(mobj_t *mobj)
 	if (P_MobjWasRemoved(mobj))
 		return;
 
-	if (mobj->flags2 & MF2_FIRING && mobj->target && mobj->health > 0)
-	{
-		if (mobj->state->action.acp1 == (actionf_p1)A_Boss1Laser)
-		{
-			if (mobj->state->tics > 1)
-			{
-				var1 = mobj->state->var1;
-				var2 = mobj->state->var2 & 65535;
-				mobj->state->action.acp1(mobj);
-			}
-		}
-		else if (leveltime & 1) // Fire mode
-		{
-			mobj_t *missile;
-
-			if (mobj->target->player && mobj->target->player->powers[pw_carry] == CR_NIGHTSMODE)
-			{
-				fixed_t oldval = mobjinfo[mobj->extravalue1].speed;
-
-				mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x+mobj->target->momx, mobj->target->y+mobj->target->momy);
-				mobjinfo[mobj->extravalue1].speed = FixedMul(60*FRACUNIT, mobj->scale);
-				missile = P_SpawnMissile(mobj, mobj->target, mobj->extravalue1);
-				mobjinfo[mobj->extravalue1].speed = oldval;
-			}
-			else
-			{
-				mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
-				missile = P_SpawnMissile(mobj, mobj->target, mobj->extravalue1);
-			}
-
-			if (missile)
-			{
-				if (mobj->flags2 & MF2_SUPERFIRE)
-					missile->flags2 |= MF2_SUPERFIRE;
-
-				if (mobj->info->attacksound)
-					S_StartSound(missile, mobj->info->attacksound);
-			}
-		}
-		else
-			mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
-	}
+	if (mobj->flags2 & MF2_FIRING)
+		P_FiringThink(mobj);
 
 	if (mobj->flags & MF_AMBIENT)
 	{
