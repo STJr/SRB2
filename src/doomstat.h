@@ -386,7 +386,7 @@ enum GameType
 };
 // If you alter this list, update dehacked.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
 
-// Game type rules
+// Gametype rules
 enum GameTypeRules
 {
 	GTR_CAMPAIGN         = 1,     // Linear Co-op map progression, don't allow random maps
@@ -417,6 +417,7 @@ enum GameTypeRules
 	GTR_NOTITLECARD      = 1<<25, // Don't show the title card
 	GTR_OVERTIME         = 1<<26, // Allow overtime
 	GTR_HURTMESSAGES     = 1<<27, // Hit and death messages
+	GTR_SPAWNINVUL       = 1<<28, // Babysitting deterrent
 };
 
 // String names for gametypes
