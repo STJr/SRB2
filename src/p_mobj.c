@@ -13228,9 +13228,9 @@ void P_SpawnBonusTimeItem(mapthing_t *mthing)
 		P_SetMobjState(mobj, mobj->info->raisestate);
 }
 
-static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t itemtype, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
+static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t* itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
 {
-	mapthing_t dummything = *mthing;
+	mapthing_t dummything;
 	mobj_t *mobj = NULL;
 	fixed_t x = mthing->x << FRACBITS;
 	fixed_t y = mthing->y << FRACBITS;
@@ -13239,21 +13239,31 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t itemtype, INT32 numite
 	angle_t angle = FixedAngle(fixedangle << FRACBITS);
 	angle_t fineangle = (angle >> ANGLETOFINESHIFT) & FINEMASK;
 
-	dummything.type = mobjinfo[itemtype].doomednum;
-	// Skip all returning/substitution code in objectplace.
-	if (!objectplacing)
+	for (r = 0; r < numitemtypes; r++)
 	{
-		if (!P_AllowMobjSpawn(&dummything, itemtype))
-			return;
+		dummything = *mthing;
+		dummything.type = mobjinfo[itemtypes[r]].doomednum;
+		// Skip all returning/substitution code in objectplace.
+		if (!objectplacing)
+		{
+			if (!P_AllowMobjSpawn(&dummything, itemtypes[r]))
+			{
+				itemtypes[r] = MT_NULL;
+				continue;
+			}
 
-		itemtype = P_GetMobjtypeSubstitute(&dummything, itemtype);
-		if (itemtype == MT_NULL) // Don't spawn
-			return;
+			itemtypes[r] = P_GetMobjtypeSubstitute(&dummything, itemtypes[r]);
+		}
 	}
-	z = P_GetMobjSpawnHeight(itemtype, x, y, z, mthing->options & MTF_OBJECTFLIP);
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, mthing->options & MTF_OBJECTFLIP);
 
 	for (r = 0; r < numitems; r++)
 	{
+		mobjtype_t itemtype = itemtypes[r % numitemtypes];
+		if (itemtype == MT_NULL)
+			continue;
+		dummything.type = mobjinfo[itemtype].doomednum;
+
 		x += FixedMul(horizontalspacing, FINECOSINE(fineangle));
 		y += FixedMul(horizontalspacing, FINESINE(fineangle));
 		z += (mthing->options & MTF_OBJECTFLIP) ? -verticalspacing : verticalspacing;
@@ -13267,6 +13277,12 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t itemtype, INT32 numite
 		if (bonustime && (mobj->type == MT_BLUESPHERE || mobj->type == MT_NIGHTSCHIP))
 			P_SetMobjState(mobj, mobj->info->raisestate);
 	}
+}
+
+static void P_SpawnSingularItemRow(mapthing_t* mthing, mobjtype_t itemtype, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
+{
+	mobjtype_t itemtypes[1] = { itemtype };
+	return P_SpawnItemRow(mthing, itemtypes, 1, numitems, horizontalspacing, verticalspacing, fixedangle, bonustime);
 }
 
 static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t size, boolean bonustime)
@@ -13333,16 +13349,16 @@ void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 	{
 	// Special placement patterns
 	case 600: // 5 vertical rings (yellow spring)
-		P_SpawnItemRow(mthing, MT_RING, 5, 0, 64*FRACUNIT, 0, bonustime);
+		P_SpawnSingularItemRow(mthing, MT_RING, 5, 0, 64*FRACUNIT, 0, bonustime);
 		return;
 	case 601: // 5 vertical rings (red spring)
-		P_SpawnItemRow(mthing, MT_RING, 5, 0, 128*FRACUNIT, 0, bonustime);
+		P_SpawnSingularItemRow(mthing, MT_RING, 5, 0, 128*FRACUNIT, 0, bonustime);
 		return;
 	case 602: // 5 diagonal rings (yellow spring)
-		P_SpawnItemRow(mthing, MT_RING, 5, 64*FRACUNIT, 64*FRACUNIT, mthing->angle, bonustime);
+		P_SpawnSingularItemRow(mthing, MT_RING, 5, 64*FRACUNIT, 64*FRACUNIT, mthing->angle, bonustime);
 		return;
 	case 603: // 10 diagonal rings (red spring)
-		P_SpawnItemRow(mthing, MT_RING, 10, 64*FRACUNIT, 64*FRACUNIT, mthing->angle, bonustime);
+		P_SpawnSingularItemRow(mthing, MT_RING, 10, 64*FRACUNIT, 64*FRACUNIT, mthing->angle, bonustime);
 		return;
 	case 604: // Circle of rings (8 items)
 	case 605: // Circle of rings (16 items)
