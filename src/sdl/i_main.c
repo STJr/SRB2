@@ -20,6 +20,7 @@
 #include "../doomdef.h"
 #include "../m_argv.h"
 #include "../d_main.h"
+#include "../m_misc.h"/* path shit */
 #include "../i_system.h"
 
 #ifdef __GNUC__
@@ -134,6 +135,8 @@ int main(int argc, char **argv)
 		time_t my_time;
 		struct tm * timeinfo;
 		const char *format;
+		const char *reldir;
+		int left;
 
 		logdir = D_Home();
 
@@ -145,24 +148,37 @@ int main(int argc, char **argv)
 		else
 			format = "log-%Y-%m-%d_%H-%M-%S.txt";
 
-		strftime(logfile, sizeof logfile, format, timeinfo);
+		if (M_CheckParm("-logdir") && M_IsNextParm())
+			reldir = M_GetNextParm();
+		else
+			reldir = "logs";
 
+		if (M_IsPathAbsolute(reldir))
+		{
+			left = snprintf(logfile, sizeof logfile,
+					"%s"PATHSEP, reldir);
+		}
+		else
 #ifdef DEFAULTDIR
 		if (logdir)
 		{
-			// Create dirs here because D_SRB2Main() is too late.
-			I_mkdir(va("%s%s"DEFAULTDIR, logdir, PATHSEP), 0755);
-			I_mkdir(va("%s%s"DEFAULTDIR"%slogs",logdir, PATHSEP, PATHSEP), 0755);
-			logstream = fopen(va("%s%s"DEFAULTDIR"%slogs%s%s",logdir, PATHSEP, PATHSEP, PATHSEP, logfile), "wt");
+			left = snprintf(logfile, sizeof logfile,
+					"%s"PATHSEP DEFAULTDIR PATHSEP"%s"PATHSEP, logdir, reldir);
 		}
 		else
-#endif
+#endif/*DEFAULTDIR*/
 		{
-			I_mkdir("."PATHSEP"logs"PATHSEP, 0755);
-			logstream = fopen(va("."PATHSEP"logs"PATHSEP"%s", logfile), "wt");
+			left = snprintf(logfile, sizeof logfile,
+					"."PATHSEP"%s"PATHSEP, reldir);
 		}
+#endif/*LOGMESSAGES*/
+
+		M_MkdirEach(logfile, M_PathParts(logdir) - 1, 0755);
+
+		strftime(&logfile[left], sizeof logfile - left, format, timeinfo);
+
+		logstream = fopen(logfile, "wt");
 	}
-#endif
 
 	//I_OutputMsg("I_StartupSystem() ...\n");
 	I_StartupSystem();
