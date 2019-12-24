@@ -10433,32 +10433,41 @@ static void M_HandleConnectIP(INT32 choice)
 
 		default:
 			l = strlen(setupm_ip);
-			if (l >= 28-1)
-				break;
-
-			char *paste = (char *)I_ClipboardPaste(); // Paste clipboard into char
 
 			if ( ctrldown ) {
 				switch (choice) {
 					case 118: // ctrl+v, pasting
+						;
+						char *paste = (char *)I_ClipboardPaste(); // Paste clipboard into char
+
 						if (paste != NULL) {
-							if (strlen(paste) + strlen(setupm_ip) >= 28-1)
-								paste[28-1 - strlen(setupm_ip)] = 0;
+							if (strlen(paste) + l >= 28-1)
+								paste[28-1 - l] = 0;
 							strcat(setupm_ip, paste); // Concat the ip field with clipboard
+							if (strlen(paste) != 0) // Don't play sound if nothing was pasted
+								S_StartSound(NULL,sfx_menu1); // Tails
 						}
 						break;
+
 					case 99: // ctrl+c, copying
 						I_ClipboardCopy(setupm_ip, l);
+						S_StartSound(NULL,sfx_menu1); // Tails
 						break;
+
 					case 120: // ctrl+x, cutting
 						I_ClipboardCopy(setupm_ip, l);
+						S_StartSound(NULL,sfx_menu1); // Tails
 						setupm_ip[0] = 0;
 						break;
+
 					default: // otherwise do nothing
 						break;
 				}
-				break; // break
+				break; // don't check for typed keys
 			}
+
+			if (l >= 28-1)
+				break;
 
 			// Rudimentary number and period enforcing - also allows letters so hostnames can be used instead
 			if ((choice >= '-' && choice <= ':') || (choice >= 'A' && choice <= 'Z') || (choice >= 'a' && choice <= 'z'))
