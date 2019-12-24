@@ -11618,6 +11618,7 @@ static fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthin
 	case MT_REDHORIZ:
 	case MT_BLUEHORIZ:
 		offset += mthing->options & MTF_AMBUSH ? 16*FRACUNIT : 0;
+		break;
 
 	// Ring-like items, may float additional units with MTF_AMBUSH.
 	case MT_SPIKEBALL:
