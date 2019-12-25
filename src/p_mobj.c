@@ -2601,7 +2601,7 @@ static boolean P_ZMovement(mobj_t *mo)
 	if (mo->flags & MF_FLOAT && mo->target && mo->health
 	&& !(mo->type == MT_EGGMOBILE) && mo->target->health > 0)
 	{
-		// float down towards target if too close
+		// float down tards target if too close
 		if (!(mo->flags2 & MF2_SKULLFLY) && !(mo->flags2 & MF2_INFLOAT))
 		{
 			dist = P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y);
@@ -2938,7 +2938,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 		if (mo->player->powers[pw_carry] == CR_NIGHTSMODE)
 		{
-			// bounce off floor if you were flying towards it
+			// bounce off floor if you were flying tards it
 			if ((mo->eflags & MFE_VERTICALFLIP && mo->player->flyangle > 0 && mo->player->flyangle < 180)
 			|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->player->flyangle > 180 && mo->player->flyangle <= 359))
 			{
@@ -3088,7 +3088,7 @@ nightsdone:
 
 		if (mo->player->powers[pw_carry] == CR_NIGHTSMODE)
 		{
-			// bounce off ceiling if you were flying towards it
+			// bounce off ceiling if you were flying tards it
 			if ((mo->eflags & MFE_VERTICALFLIP && mo->player->flyangle > 180 && mo->player->flyangle <= 359)
 			|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->player->flyangle > 0 && mo->player->flyangle < 180))
 				{
@@ -6289,7 +6289,7 @@ static void P_MoveHoop(mobj_t *mobj)
 	y = mobj->target->y;
 	z = mobj->target->z+mobj->target->height/2;
 
-	// Make the sprite travel towards the center of the hoop
+	// Make the sprite travel tards the center of the hoop
 	v[0] = FixedMul(FINECOSINE(fa),fuse);
 	v[1] = 0;
 	v[2] = FixedMul(FINESINE(fa),fuse);
@@ -6758,7 +6758,7 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 		if (!pos_lengthways[3] || P_MobjWasRemoved(mobj) || (mobj->flags & MF_NOCLIPHEIGHT))
 			goto cont;
 
-		if ((fa = ((center->threshold & (FINEMASK/2)) << ANGLETOFINESHIFT)) > ANGLE_45 && fa < ANGLE_135) // only move towards center when the motion is towards/away from the ground, rather than alongside it
+		if ((fa = ((center->threshold & (FINEMASK/2)) << ANGLETOFINESHIFT)) > ANGLE_45 && fa < ANGLE_135) // only move tards center when the motion is tards/away from the ground, rather than alongside it
 			goto cont;
 
 		if (mobj->subsector->sector->ffloors)

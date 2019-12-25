@@ -233,7 +233,7 @@ static tic_t cutscene_lasttextwrite = 0;
 //
 static UINT8 F_WriteText(void)
 {
-	INT32 numtowrite = 1;
+	INT32 numtrite = 1;
 	const char *c;
 	tic_t ltw = I_GetTime();
 
@@ -244,7 +244,7 @@ static UINT8 F_WriteText(void)
 	if (cutscene_boostspeed)
 	{
 		// for custom cutscene speedup mode
-		numtowrite = 8;
+		numtrite = 8;
 	}
 	else
 	{
@@ -253,10 +253,10 @@ static UINT8 F_WriteText(void)
 			return 1;
 
 		if (cutscene_textspeed < 7)
-			numtowrite = 8 - cutscene_textspeed;
+			numtrite = 8 - cutscene_textspeed;
 	}
 
-	for (;numtowrite > 0;++cutscene_baseptr)
+	for (;numtrite > 0;++cutscene_baseptr)
 	{
 		c = &cutscene_basetext[cutscene_baseptr];
 		if (!c || !*c || *c=='#')
@@ -272,7 +272,7 @@ static UINT8 F_WriteText(void)
 		else if ((UINT8)*c >= 0xB0 && (UINT8)*c <= (0xB0+TICRATE-1))
 		{
 			cutscene_textcount = (INT32)((UINT8)*c - 0xAF);
-			numtowrite = 0;
+			numtrite = 0;
 			continue;
 		}
 
@@ -280,7 +280,7 @@ static UINT8 F_WriteText(void)
 
 		// Ignore other control codes (color)
 		if ((UINT8)*c < 0x80)
-			--numtowrite;
+			--numtrite;
 	}
 	// Reset textcount for next tic based on speed
 	// if it wasn't already set by a delay.

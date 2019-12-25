@@ -1349,13 +1349,13 @@ wegotit:
 	{
 		// Lower controlsec like a regular T_RaiseSector
 		// Set the heights of all the other control sectors to
-		// be a gradient of this height toward the edges
+		// be a gradient of this height tard the edges
 	}
 	else
 	{
 		// Raise controlsec like a regular T_RaiseSector
 		// Set the heights of all the other control sectors to
-		// be a gradient of this height toward the edges.
+		// be a gradient of this height tard the edges.
 	}
 
 	if (playeronme && controlsec)

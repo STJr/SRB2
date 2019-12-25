@@ -75,7 +75,8 @@ void *hwSym(const char *funcName,void *handle)
 	void *funcPointer = NULL;
 #ifdef HWRENDER
 	if (0 == strcmp("SetPalette", funcName))
-                funcPointer = &OglSdlSetPalette;
+		funcPointer = &OglSdlSetPalette;
+
 	GETFUNC(Init);
 	GETFUNC(Draw2DLine);
 	GETFUNC(DrawPolygon);
@@ -91,7 +92,6 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(DrawModel);
 	GETFUNC(CreateModelVBOs);
 	GETFUNC(SetTransform);
-	GETFUNC(GetRenderVersion);
 	GETFUNC(PostImgRedraw);
 	GETFUNC(FlushScreenTextures);
 	GETFUNC(StartScreenWipe);
@@ -101,6 +101,15 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(MakeScreenTexture);
 	GETFUNC(MakeScreenFinalTexture);
 	GETFUNC(DrawScreenFinalTexture);
+
+	GETFUNC(LoadShaders);
+	GETFUNC(KillShaders);
+	GETFUNC(SetShader);
+	GETFUNC(UnSetShader);
+
+	GETFUNC(LoadCustomShader);
+	GETFUNC(InitCustomShaders);
+
 #else //HWRENDER
 	if (0 == strcmp("FinishUpdate", funcName))
 		return funcPointer; //&FinishUpdate;

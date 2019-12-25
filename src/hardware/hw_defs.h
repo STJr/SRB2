@@ -19,6 +19,7 @@
 #ifndef _HWR_DEFS_
 #define _HWR_DEFS_
 #include "../doomtype.h"
+#include "../r_defs.h"
 
 #define ZCLIP_PLANE 4.0f // Used for the actual game drawing
 #define NZCLIP_PLANE 0.9f // Seems to be only used for the HUD and screen textures
@@ -79,19 +80,15 @@ typedef struct
 	FLOAT x,y;
 } F2DCoord, v2d_t;
 
-// Simple 3D vector
-typedef struct FVector
-{
-		FLOAT x,y,z;
-} FVector;
+// ======================
+//      wallVert3D
+// ----------------------
+// :crab: IS GONE! :crab:
+// ======================
 
-// 3D model vector (coords + texture coords)
-typedef struct
-{
-	//FVector     Point;
-	FLOAT       x,y,z;
-	FLOAT       s,t,w;            // texture coordinates
-} v3d_t, wallVert3D;
+// -----------
+// structures
+// -----------
 
 //Hurdler: Transform (coords + angles)
 //BP: transform order : scale(rotation_x(rotation_y(translation(v))))
@@ -125,15 +122,16 @@ typedef struct
 #ifdef USE_FTRANSFORM_MIRROR
 	boolean     mirror;          // SRB2Kart: Encore Mode
 #endif
+	boolean     shearing;        // 14042019
+	angle_t     viewaiming;      // 17052019
 } FTransform;
 
 // Transformed vector, as passed to HWR API
 typedef struct
 {
 	FLOAT       x,y,z;
-	FUINT       argb;           // flat-shaded color
-	FLOAT       sow;            // s texture ordinate (s over w)
-	FLOAT       tow;            // t texture ordinate (t over w)
+	FLOAT       s;            // s texture ordinate (s over w)
+	FLOAT       t;            // t texture ordinate (t over w)
 } FOutVector;
 
 
@@ -164,10 +162,10 @@ enum EPolyFlags
 	PF_Invisible        = 0x00000400,   // Disable write to color buffer
 	PF_Decal            = 0x00000800,   // Enable polygon offset
 	PF_Modulated        = 0x00001000,   // Modulation (multiply output with constant ARGB)
-	                                    // When set, pass the color constant into the FSurfaceInfo -> FlatColor
+	                                    // When set, pass the color constant into the FSurfaceInfo -> PolyColor
 	PF_NoTexture        = 0x00002000,   // Use the small white texture
 	PF_Corona           = 0x00004000,   // Tell the rendrer we are drawing a corona
-	PF_Unused           = 0x00008000,   // Unused
+	PF_Ripple           = 0x00008000,   // Water shader effect
 	PF_RemoveYWrap      = 0x00010000,   // Force clamp texture on Y
 	PF_ForceWrapX       = 0x00020000,   // Force repeat texture on X
 	PF_ForceWrapY       = 0x00040000,   // Force repeat texture on Y
@@ -180,7 +178,6 @@ enum EPolyFlags
 enum ESurfFlags
 {
 	SF_DYNLIGHT         = 0x00000001,
-
 };
 
 enum ETextureFlags
@@ -192,30 +189,30 @@ enum ETextureFlags
 	TF_TRANSPARENT = 0x00000040,        // texture with some alpha == 0
 };
 
-#ifdef TODO
-struct FTextureInfo
-{
-	FUINT       Width;              // Pixels
-	FUINT       Height;             // Pixels
-	FUBYTE     *TextureData;        // Image data
-	FUINT       Format;             // FORMAT_RGB, ALPHA ...
-	FBITFIELD   Flags;              // Flags to tell driver about texture (see ETextureFlags)
-	void        DriverExtra;        // (OpenGL texture object nr, ...)
-	                                // chromakey enabled,...
-
-	struct FTextureInfo *Next;      // Manage list of downloaded textures.
-};
-#else
 typedef struct GLMipmap_s FTextureInfo;
-#endif
+
+// jimita 14032019
+struct FLightInfo
+{
+	FUINT			light_level;
+	FUINT			fade_start;
+	FUINT			fade_end;
+};
+typedef struct FLightInfo FLightInfo;
 
 // Description of a renderable surface
 struct FSurfaceInfo
 {
-	FUINT    PolyFlags;          // Surface flags -- UNUSED YET --
-	RGBA_t   FlatColor;          // Flat-shaded color used with PF_Modulated mode
+	FUINT			PolyFlags;
+	RGBA_t			PolyColor;
+	RGBA_t			TintColor;
+	RGBA_t			FadeColor;
+	FLightInfo		LightInfo;	// jimita 14032019
 };
 typedef struct FSurfaceInfo FSurfaceInfo;
+
+#define GL_DEFAULTMIX 0x00000000
+#define GL_DEFAULTFOG 0xFF000000
 
 //Hurdler: added for backward compatibility
 enum hwdsetspecialstate
@@ -224,6 +221,7 @@ enum hwdsetspecialstate
 	HWD_SET_FOG_MODE,
 	HWD_SET_FOG_COLOR,
 	HWD_SET_FOG_DENSITY,
+	HWD_SET_SHADERS,
 	HWD_SET_TEXTUREFILTERMODE,
 	HWD_SET_TEXTUREANISOTROPICMODE,
 	HWD_NUMSTATE

@@ -118,12 +118,12 @@ GLPatch_t *HWR_GetCachedGLRotSprite(aatree_t *hwrcache, UINT16 rollangle, patch_
 #endif
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 
+// hardware driver
+extern INT32 gl_leveltime;
+
 // --------
 // hw_draw.c
 // --------
-extern float gr_patch_scalex;
-extern float gr_patch_scaley;
-
 extern consvar_t cv_grrounddown; // on/off
 
 extern INT32 patchformat;

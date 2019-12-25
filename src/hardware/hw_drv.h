@@ -32,7 +32,7 @@
 //                                                       STANDARD DLL EXPORTS
 // ==========================================================================
 
-EXPORT boolean HWRAPI(Init) (I_Error_t ErrorFunction);
+EXPORT boolean HWRAPI(Init) (void);
 #ifndef HAVE_SDL
 EXPORT void HWRAPI(Shutdown) (void);
 #endif
@@ -55,14 +55,11 @@ EXPORT void HWRAPI(ClearMipMapCache) (void);
 EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value);
 
 //Hurdler: added for new development
-EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 *color);
+EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, FSurfaceInfo *Surface);
 EXPORT void HWRAPI(CreateModelVBOs) (model_t *model);
 EXPORT void HWRAPI(SetTransform) (FTransform *ptransform);
 EXPORT INT32 HWRAPI(GetTextureUsed) (void);
-EXPORT INT32 HWRAPI(GetRenderVersion) (void);
 
-#define SCREENVERTS 10
-EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
 EXPORT void HWRAPI(FlushScreenTextures) (void);
 EXPORT void HWRAPI(StartScreenWipe) (void);
 EXPORT void HWRAPI(EndScreenWipe) (void);
@@ -71,6 +68,19 @@ EXPORT void HWRAPI(DrawIntermissionBG) (void);
 EXPORT void HWRAPI(MakeScreenTexture) (void);
 EXPORT void HWRAPI(MakeScreenFinalTexture) (void);
 EXPORT void HWRAPI(DrawScreenFinalTexture) (int width, int height);
+
+#define SCREENVERTS 10
+EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
+
+// jimita
+EXPORT void HWRAPI(LoadShaders) (void);
+EXPORT void HWRAPI(KillShaders) (void);
+EXPORT void HWRAPI(SetShader) (int shader);
+EXPORT void HWRAPI(UnSetShader) (void);
+
+EXPORT void HWRAPI(LoadCustomShader) (int number, char *shader, size_t size, boolean fragment);
+EXPORT void HWRAPI(InitCustomShaders) (void);
+
 // ==========================================================================
 //                                      HWR DRIVER OBJECT, FOR CLIENT PROGRAM
 // ==========================================================================
@@ -96,7 +106,6 @@ struct hwdriver_s
 	CreateModelVBOs     pfnCreateModelVBOs;
 	SetTransform        pfnSetTransform;
 	GetTextureUsed      pfnGetTextureUsed;
-	GetRenderVersion    pfnGetRenderVersion;
 #ifdef _WINDOWS
 	GetModeList         pfnGetModeList;
 #endif
@@ -112,12 +121,17 @@ struct hwdriver_s
 	MakeScreenTexture   pfnMakeScreenTexture;
 	MakeScreenFinalTexture  pfnMakeScreenFinalTexture;
 	DrawScreenFinalTexture  pfnDrawScreenFinalTexture;
+
+	LoadShaders pfnLoadShaders;
+	KillShaders pfnKillShaders;
+	SetShader pfnSetShader;
+	UnSetShader pfnUnSetShader;
+
+	LoadCustomShader pfnLoadCustomShader;
+	InitCustomShaders pfnInitCustomShaders;
 };
 
 extern struct hwdriver_s hwdriver;
-
-//Hurdler: 16/10/99: added for OpenGL gamma correction
-//extern RGBA_t  gamma_correction;
 
 #define HWD hwdriver
 

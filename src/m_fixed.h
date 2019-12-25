@@ -264,7 +264,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedTrunc(fixed_t x)
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
 	const fixed_t f = a-i; // cut out the integral part
 	if (x != INT32_MIN)
-	{ // return rounded to nearest whole number, towards zero
+	{ // return rounded to nearest whole number, tards zero
 		if (x > 0)
 			return x-f;
 		else

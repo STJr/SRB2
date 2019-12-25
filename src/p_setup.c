@@ -1559,7 +1559,7 @@ static void P_CreateBlockMap(void)
 	//
 	//     If current block is the same as the ending vertex's block, exit loop.
 	//
-	//     Move to an adjacent block by moving towards the ending block in
+	//     Move to an adjacent block by moving tards the ending block in
 	//     either the x or y direction, to the block which contains the linedef.
 
 	{
@@ -2581,10 +2581,10 @@ boolean P_SetupLevel(boolean skipprecip)
 		if (RESETMUSIC ||
 			strnicmp(S_MusicName(),
 				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
-			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
+			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_thite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 		F_WipeStartScreen();
-		wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+		wipestyleflags |= (WSF_FADEOUT|WSF_tHITE);
 
 #ifdef HWRENDER
 		// uh..........
@@ -2593,7 +2593,7 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 
 		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+		F_RunWipe(wipedefs[wipe_speclevel_thite], false);
 
 		I_OsPolling();
 		I_FinishUpdate(); // page flip or blit buffer
@@ -2619,7 +2619,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (G_GetModeAttackRetryFlag())
 	{
 		if (modeattacking)
-			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+			wipestyleflags |= (WSF_FADEOUT|WSF_tHITE);
 		G_ClearModeAttackRetryFlag();
 	}
 

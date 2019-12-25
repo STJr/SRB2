@@ -68,7 +68,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 
 	0,  // wipe_specinter_toblack
 	0,  // wipe_multinter_toblack
-	0,  // wipe_speclevel_towhite
+	0,  // wipe_speclevel_thite
 
 	0,  // wipe_level_final
 	0,  // wipe_intermission_final
@@ -298,7 +298,7 @@ static void F_DoWipe(fademask_t *fademask)
 					int nmask;
 					UINT8 *fade = fadecolormap;
 
-					if (wipestyleflags & WSF_TOWHITE)
+					if (wipestyleflags & WSF_tHITE)
 						fade = fadecolormap + (FADECOLORMAPROWS * 256);
 
 					nmask = *mask;

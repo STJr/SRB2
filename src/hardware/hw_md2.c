@@ -1084,15 +1084,14 @@ static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t 
 
 boolean HWR_DrawModel(gr_vissprite_t *spr)
 {
-	FSurfaceInfo Surf;
+	md2_t *md2;
 
 	char filename[64];
 	INT32 frame = 0;
 	INT32 nextFrame = -1;
 	UINT8 spr2 = 0;
 	FTransform p;
-	md2_t *md2;
-	UINT8 color[4];
+	FSurfaceInfo Surf;
 
 	if (!cv_grmodels.value)
 		return false;
@@ -1131,13 +1130,10 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 				colormap = sector->extra_colormap;
 		}
 
-		if (colormap)
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
-		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+		HWR_Lighting(&Surf, lightlevel, colormap);
 	}
 	else
-		Surf.FlatColor.rgba = 0xFFFFFFFF;
+		Surf.PolyColor.rgba = 0xFFFFFFFF;
 
 	// Look at HWR_ProjectSprite for more
 	{
@@ -1160,11 +1156,11 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 			//durs = tics;
 
 		if (spr->mobj->flags2 & MF2_SHADOW)
-			Surf.FlatColor.s.alpha = 0x40;
+			Surf.PolyColor.s.alpha = 0x40;
 		else if (spr->mobj->frame & FF_TRANSMASK)
 			HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
-			Surf.FlatColor.s.alpha = 0xFF;
+			Surf.PolyColor.s.alpha = 0xFF;
 
 		// dont forget to enabled the depth test because we can't do this like
 		// before: polygons models are not sorted
@@ -1428,11 +1424,6 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		}
 #endif
 
-		color[0] = Surf.FlatColor.s.red;
-		color[1] = Surf.FlatColor.s.green;
-		color[2] = Surf.FlatColor.s.blue;
-		color[3] = Surf.FlatColor.s.alpha;
-
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
 
@@ -1441,7 +1432,8 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		p.mirror = atransform.mirror; // from Kart
 #endif
 
-		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, color);
+		HWD.pfnSetShader(4);	// model shader
+		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, &Surf);
 	}
 
 	return true;

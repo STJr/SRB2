@@ -2428,7 +2428,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					// Also, add to the link.
 					// I don't know if NiGHTS did this, but
 					// Sonic Time Attacked did and it seems like a good enough incentive
-					// to make people want to actually dash towards/paraloop enemies
+					// to make people want to actually dash tards/paraloop enemies
 					if (++source->player->linkcount > source->player->maxlink)
 						source->player->maxlink = source->player->linkcount;
 					source->player->linktimer = nightslinktics;

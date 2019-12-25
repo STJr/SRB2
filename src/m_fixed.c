@@ -670,7 +670,7 @@ vector3_t *FV3_IntersectionPoint(const vector3_t *vNormal, const vector3_t *vLin
 
 	// 3) If we take the dot product between our line vector and the normal of the polygon,
 	//    this will give us the cosine of the angle between the 2 (since they are both normalized - length 1).
-	//    We will then divide our Numerator by this value to find the offset towards the plane from our arbitrary point.
+	//    We will then divide our Numerator by this value to find the offset tards the plane from our arbitrary point.
 	Denominator = FV3_Dot(vNormal, &vLineDir);		// Get the dot product of the line's vector and the normal of the plane
 
 	// Since we are using division, we need to make sure we don't get a divide by zero error

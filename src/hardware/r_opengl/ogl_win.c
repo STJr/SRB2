@@ -206,7 +206,7 @@ int SetupPixelFormat(INT32 WantColorBits, INT32 WantStencilBits, INT32 WantDepth
 
 	if (iLastPFD)
 	{
-		DBG_Printf("WARNING : SetPixelFormat() called twise not supported by all drivers !\n");
+		GL_DBG_Printf("WARNING : SetPixelFormat() called twise not supported by all drivers !\n");
 	}
 
 	// set the pixel format only if different than the current
@@ -215,17 +215,17 @@ int SetupPixelFormat(INT32 WantColorBits, INT32 WantStencilBits, INT32 WantDepth
 	else
 		iLastPFD = iPFD;
 
-	DBG_Printf("SetupPixelFormat() - %d ColorBits - %d StencilBits - %d DepthBits\n",
+	GL_DBG_Printf("SetupPixelFormat() - %d ColorBits - %d StencilBits - %d DepthBits\n",
 	           WantColorBits, WantStencilBits, WantDepthBits);
 
 	nPixelFormat = ChoosePixelFormat(hDC, &pfd);
 
 	if (nPixelFormat == 0)
-		DBG_Printf("ChoosePixelFormat() FAILED\n");
+		GL_DBG_Printf("ChoosePixelFormat() FAILED\n");
 
 	if (SetPixelFormat(hDC, nPixelFormat, &pfd) == 0)
 	{
-		DBG_Printf("SetPixelFormat() FAILED\n");
+		GL_DBG_Printf("SetPixelFormat() FAILED\n");
 		return 0;
 	}
 
@@ -243,7 +243,7 @@ static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 	BOOL WantFullScreen = !(lvid->u.windowed);  //(lvid->u.windowed ? 0 : CDS_FULLSCREEN);
 
 	UNREFERENCED_PARAMETER(pcurrentmode);
-	DBG_Printf ("SetMode(): %dx%d %d bits (%s)\n",
+	GL_DBG_Printf ("SetMode(): %dx%d %d bits (%s)\n",
 	            lvid->width, lvid->height, lvid->bpp*8,
 	            WantFullScreen ? "fullscreen" : "windowed");
 
@@ -301,7 +301,7 @@ static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 		hDC = GetDC(hWnd);
 	if (!hDC)
 	{
-		DBG_Printf("GetDC() FAILED\n");
+		GL_DBG_Printf("GetDC() FAILED\n");
 		return 0;
 	}
 
@@ -321,12 +321,12 @@ static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 			hGLRC = pwglCreateContext(hDC);
 			if (!hGLRC)
 			{
-				DBG_Printf("pwglCreateContext() FAILED\n");
+				GL_DBG_Printf("pwglCreateContext() FAILED\n");
 				return 0;
 			}
 			if (!pwglMakeCurrent(hDC, hGLRC))
 			{
-				DBG_Printf("wglMakeCurrent() FAILED\n");
+				GL_DBG_Printf("wglMakeCurrent() FAILED\n");
 				return 0;
 			}
 		}
@@ -337,15 +337,15 @@ static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 	//BP: why don't we make it earlier ?
 	//Hurdler: we cannot do that before intialising gl context
 	renderer = (LPCSTR)pglGetString(GL_RENDERER);
-	DBG_Printf("Vendor     : %s\n", pglGetString(GL_VENDOR));
-	DBG_Printf("Renderer   : %s\n", renderer);
-	DBG_Printf("Version    : %s\n", pglGetString(GL_VERSION));
-	DBG_Printf("Extensions : %s\n", gl_extensions);
+	GL_DBG_Printf("Vendor     : %s\n", pglGetString(GL_VENDOR));
+	GL_DBG_Printf("Renderer   : %s\n", renderer);
+	GL_DBG_Printf("Version    : %s\n", pglGetString(GL_VERSION));
+	GL_DBG_Printf("Extensions : %s\n", gl_extensions);
 
 	// BP: disable advenced feature that don't work on somes hardware
 	// Hurdler: Now works on G400 with bios 1.6 and certified drivers 6.04
 	if (strstr(renderer, "810"))   oglflags |= GLF_NOZBUFREAD;
-	DBG_Printf("oglflags   : 0x%X\n", oglflags);
+	GL_DBG_Printf("oglflags   : 0x%X\n", oglflags);
 
 #ifdef USE_WGL_SWAP
 	if (isExtAvailable("WGL_EXT_swap_control",gl_extensions))
@@ -386,7 +386,7 @@ static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 // -----------------+
 static void UnSetRes(void)
 {
-	DBG_Printf("UnSetRes()\n");
+	GL_DBG_Printf("UnSetRes()\n");
 
 	pwglMakeCurrent(hDC, NULL);
 	pwglDeleteContext(hGLRC);
@@ -437,7 +437,7 @@ EXPORT void HWRAPI(GetModeList) (vmode_t** pvidmodes, INT32 *numvidmodes)
 			video_modes[iMode].misc = 0;
 			video_modes[iMode].name = malloc(12 * sizeof (CHAR));
 			sprintf(video_modes[iMode].name, "%dx%d", (INT32)Tmp.dmPelsWidth, (INT32)Tmp.dmPelsHeight);
-			DBG_Printf ("Mode: %s\n", video_modes[iMode].name);
+			GL_DBG_Printf ("Mode: %s\n", video_modes[iMode].name);
 			video_modes[iMode].width = Tmp.dmPelsWidth;
 			video_modes[iMode].height = Tmp.dmPelsHeight;
 			video_modes[iMode].bytesperpixel = Tmp.dmBitsPerPel/8;
@@ -474,7 +474,7 @@ EXPORT void HWRAPI(GetModeList) (vmode_t** pvidmodes, INT32 *numvidmodes)
 	HDC bpphdc;
 	INT32 iBitsPerPel;
 
-	DBG_Printf ("HWRAPI GetModeList()\n");
+	GL_DBG_Printf ("HWRAPI GetModeList()\n");
 
 	bpphdc = GetDC(NULL); // on obtient le bpp actuel
 	iBitsPerPel = GetDeviceCaps(bpphdc, BITSPIXEL);
@@ -490,7 +490,7 @@ EXPORT void HWRAPI(GetModeList) (vmode_t** pvidmodes, INT32 *numvidmodes)
 		video_modes[i].misc = 0;
 		video_modes[i].name = malloc(12 * sizeof (CHAR));
 		sprintf(video_modes[i].name, "%dx%d", res[i][0], res[i][1]);
-		DBG_Printf ("Mode: %s\n", video_modes[i].name);
+		GL_DBG_Printf ("Mode: %s\n", video_modes[i].name);
 		video_modes[i].width = res[i][0];
 		video_modes[i].height = res[i][1];
 		video_modes[i].bytesperpixel = iBitsPerPel/8;
@@ -511,9 +511,9 @@ EXPORT void HWRAPI(Shutdown) (void)
 #ifdef DEBUG_TO_FILE
 	long nb_centiemes;
 
-	DBG_Printf ("HWRAPI Shutdown()\n");
+	GL_DBG_Printf ("HWRAPI Shutdown()\n");
 	nb_centiemes = ((clock()-my_clock)*100)/CLOCKS_PER_SEC;
-	DBG_Printf("Nb frames: %li;  Nb sec: %2.2f  ->  %2.1f fps\n",
+	GL_DBG_Printf("Nb frames: %li;  Nb sec: %2.2f  ->  %2.1f fps\n",
 					nb_frames, nb_centiemes/100.0f, (100*nb_frames)/(double)nb_centiemes);
 #endif
 
@@ -530,7 +530,7 @@ EXPORT void HWRAPI(Shutdown) (void)
 	}
 	FreeLibrary(GLU32);
 	FreeLibrary(OGL32);
-	DBG_Printf ("HWRAPI Shutdown(DONE)\n");
+	GL_DBG_Printf ("HWRAPI Shutdown(DONE)\n");
 }
 
 // -----------------+
@@ -543,7 +543,7 @@ EXPORT void HWRAPI(FinishUpdate) (INT32 waitvbl)
 #else
 	UNREFERENCED_PARAMETER(waitvbl);
 #endif
-	// DBG_Printf ("FinishUpdate()\n");
+	// GL_DBG_Printf ("FinishUpdate()\n");
 #ifdef DEBUG_TO_FILE
 	if ((++nb_frames)==2)  // on ne commence pas � la premi�re frame
 		my_clock = clock();

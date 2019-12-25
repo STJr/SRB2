@@ -758,10 +758,10 @@ void S_StartSound(const void *origin, sfxenum_t sfx_id)
 	{
 		switch (sfx_id)
 		{
-//			case sfx_altow1:
-//			case sfx_altow2:
-//			case sfx_altow3:
-//			case sfx_altow4:
+//			case sfx_alt1:
+//			case sfx_alt2:
+//			case sfx_alt3:
+//			case sfx_alt4:
 //				sfx_id = sfx_mario8;
 //				break;
 			case sfx_thok:

@@ -154,7 +154,7 @@ typedef enum
 {
 	WSF_FADEOUT   = 1,
 	WSF_FADEIN    = 1<<1,
-	WSF_TOWHITE   = 1<<2,
+	WSF_tHITE   = 1<<2,
 	WSF_CROSSFADE = 1<<3,
 } wipestyleflags_t;
 extern wipestyleflags_t wipestyleflags;
@@ -199,7 +199,7 @@ enum
 	// custom intermissions
 	wipe_specinter_toblack,
 	wipe_multinter_toblack,
-	wipe_speclevel_towhite,
+	wipe_speclevel_thite,
 
 	wipe_level_final,
 	wipe_intermission_final,

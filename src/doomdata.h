@@ -76,7 +76,7 @@ typedef struct
 {
 	INT16 textureoffset, rowoffset;
 	char toptexture[8], bottomtexture[8], midtexture[8];
-	// Front sector, towards viewer.
+	// Front sector, tards viewer.
 	INT16 sector;
 } ATTRPACK mapsidedef_t;
 

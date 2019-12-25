@@ -6043,7 +6043,7 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
 /** Adds a raise thinker.
   * A raise thinker checks to see if the
   * player is standing on its 3D Floor,
-  * and if so, raises the platform towards
+  * and if so, raises the platform tards
   * it's destination. Otherwise, it lowers
   * to the lowest nearby height if not
   * there already.
