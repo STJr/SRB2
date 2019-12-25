@@ -1340,6 +1340,20 @@ static int lib_pSwitchShield(lua_State *L)
 // P_MAP
 ///////////
 
+static int lib_pCheckWallCollision(lua_State *L)
+{
+	NOHUD
+	INLEVEL
+	mobj_t *thing = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	if (!thing)
+		return LUA_ErrInvalid(L, "mobj_t");
+	line_t *line = *((line_t **)luaL_checkudata(L, 2, META_LINE));
+	if (!line)
+		return LUA_ErrInvalid(L, "line_t");
+	lua_pushboolean(L, P_CheckWallCollision(thing, line));
+	return 1;
+}
+
 static int lib_pCheckPosition(lua_State *L)
 {
 	mobj_t *ptmthing = tmthing;
@@ -2903,6 +2917,7 @@ static luaL_Reg lib[] = {
 	{"P_SwitchShield",lib_pSwitchShield},
 
 	// p_map
+	{"P_CheckWallCollision",lib_pCheckWallCollision},
 	{"P_CheckPosition",lib_pCheckPosition},
 	{"P_TryMove",lib_pTryMove},
 	{"P_Move",lib_pMove},
