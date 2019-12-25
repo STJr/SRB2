@@ -654,10 +654,14 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	UINT16 w = gpatch->width, h = gpatch->height;
 	UINT32 size = w*h;
 	RGBA_t *image, *blendimage, *cur, blendcolor;
+	UINT8 i;
 
-	// vanilla port
-	UINT8 translation[16];
+	UINT8 translation[16]; // First the color index
+	UINT8 cutoff[16]; // Brightness cutoff before using the next color
+	UINT8 translen = 0;
+
 	memset(translation, 0, sizeof(translation));
+	memset(cutoff, 0, sizeof(cutoff));
 
 	if (grmip->width == 0)
 	{
@@ -684,7 +688,33 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	blendcolor = V_GetColor(0); // initialize
 
 	if (color != SKINCOLOR_NONE)
-		memcpy(&translation, &Color_Index[color - 1], 16);
+	{
+		UINT8 numdupes = 1;
+
+		translation[translen] = Color_Index[color-1][0];
+		cutoff[translen] = 255;
+
+		for (i = 1; i < 16; i++)
+		{
+			if (translation[translen] == Color_Index[color-1][i])
+			{
+				numdupes++;
+				continue;
+			}
+
+			if (translen > 0)
+			{
+				cutoff[translen] = cutoff[translen-1] - (256 / (16 / numdupes));
+			}
+
+			numdupes = 1;
+			translen++;
+
+			translation[translen] = (UINT8)Color_Index[color-1][i];
+		}
+
+		translen++;
+	}
 
 	while (size--)
 	{
@@ -710,7 +740,7 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 			// Turn everything below a certain blue threshold white
 			if (image->s.red == 0 && image->s.green == 0 && image->s.blue <= 82)
 			{
-				cur->s.red = cur->s.green = cur->s.blue = 255;
+				cur->s.red = cur->s.green = cur->s.blue = (255 - image->s.blue);
 			}
 			else
 			{
@@ -762,6 +792,8 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 		{
 			UINT16 brightness;
 
+			I_Assert(translen > 0);
+
 			// Don't bother with blending the pixel if the alpha of the blend pixel is 0
 			if (skinnum == TC_RAINBOW)
 			{
@@ -798,8 +830,8 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 			// (Me splitting this into a function didn't work, so I had to ruin this entire function's groove...)
 			{
 				RGBA_t nextcolor;
-				UINT8 firsti, secondi, mul;
-				UINT32 r, g, b;
+				UINT8 firsti, secondi, mul, mulmax;
+				INT32 r, g, b;
 
 				// Rainbow needs to find the closest match to the textures themselves, instead of matching brightnesses to other colors.
 				// Ensue horrible mess.
@@ -808,7 +840,6 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 					UINT16 brightdif = 256;
 					UINT8 colorbrightnesses[16];
 					INT32 compare, m, d;
-					UINT8 i;
 
 					// Ignore pure white & pitch black
 					if (brightness > 253 || brightness < 2)
@@ -820,18 +851,21 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 
 					firsti = 0;
 					mul = 0;
+					mulmax = 1;
 
-					for (i = 0; i < 16; i++)
+					for (i = 0; i < translen; i++)
 					{
 						RGBA_t tempc = V_GetColor(translation[i]);
 						SETBRIGHTNESS(colorbrightnesses[i], tempc.s.red, tempc.s.green, tempc.s.blue); // store brightnesses for comparison
 					}
 
-					for (i = 0; i < 16; i++)
+					for (i = 0; i < translen; i++)
 					{
 						if (brightness > colorbrightnesses[i]) // don't allow greater matches (because calculating a makeshift gradient for this is already a huge mess as is)
 							continue;
+
 						compare = abs((INT16)(colorbrightnesses[i]) - (INT16)(brightness));
+
 						if (compare < brightdif)
 						{
 							brightdif = (UINT16)compare;
@@ -840,7 +874,7 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 					}
 
 					secondi = firsti+1; // next color in line
-					if (secondi == 16)
+					if (secondi >= translen)
 					{
 						m = (INT16)brightness; // - 0;
 						d = (INT16)colorbrightnesses[firsti]; // - 0;
@@ -856,38 +890,57 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 
 					// calculate the "gradient" multiplier based on how close this color is to the one next in line
 					if (m <= 0 || d <= 0)
+					{
 						mul = 0;
+					}
 					else
-						mul = 15 - ((m * 16) / d);
+					{
+						mulmax = cutoff[firsti];
+						if (secondi < translen)
+							mulmax -= cutoff[secondi];
+
+						mul = (mulmax-1) - ((m * mulmax) / d);
+					}
 				}
 				else
 				{
-					// Thankfully, it's normally way more simple.
-					// Just convert brightness to a skincolor value, use remainder to find the gradient multipler
-					firsti = ((UINT8)(255-brightness) / 16);
+					// Just convert brightness to a skincolor value, use distance to next position to find the gradient multipler
+					firsti = 0;
+
+					for (i = 1; i < translen; i++)
+					{
+						if (brightness >= cutoff[i])
+							break;
+						firsti = i;
+					}
+
 					secondi = firsti+1;
-					mul = ((UINT8)(255-brightness) % 16);
+
+					mulmax = cutoff[firsti];
+					if (secondi < translen)
+						mulmax -= cutoff[secondi];
+
+					mul = cutoff[firsti] - brightness;
 				}
 
 				blendcolor = V_GetColor(translation[firsti]);
 
-				if (mul > 0 // If it's 0, then we only need the first color.
-					&& translation[firsti] != translation[secondi]) // Some colors have duplicate colors in a row, so let's just save the process
+				if (mul > 0) // If it's 0, then we only need the first color.
 				{
-					if (secondi == 16) // blend to black
+					if (secondi >= translen) // blend to black
 						nextcolor = V_GetColor(31);
 					else
 						nextcolor = V_GetColor(translation[secondi]);
 
 					// Find difference between points
-					r = (UINT32)(nextcolor.s.red - blendcolor.s.red);
-					g = (UINT32)(nextcolor.s.green - blendcolor.s.green);
-					b = (UINT32)(nextcolor.s.blue - blendcolor.s.blue);
+					r = (INT32)(nextcolor.s.red - blendcolor.s.red);
+					g = (INT32)(nextcolor.s.green - blendcolor.s.green);
+					b = (INT32)(nextcolor.s.blue - blendcolor.s.blue);
 
 					// Find the gradient of the two points
-					r = ((mul * r) / 16);
-					g = ((mul * g) / 16);
-					b = ((mul * b) / 16);
+					r = ((mul * r) / mulmax);
+					g = ((mul * g) / mulmax);
+					b = ((mul * b) / mulmax);
 
 					// Add gradient value to color
 					blendcolor.s.red += r;
