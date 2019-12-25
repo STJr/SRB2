@@ -127,6 +127,7 @@
 
 #ifdef LOGMESSAGES
 extern FILE *logstream;
+extern char  logfilename[1024];
 #endif
 
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
@@ -628,8 +629,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 #define ROTANGLES 24	// Needs to be a divisor of 360 (45, 60, 90, 120...)
 #define ROTANGDIFF (360 / ROTANGLES)
 
+/// PNG support
 #ifndef HAVE_PNG
 #define NO_PNG_LUMPS
 #endif
+
+/// Render flats on walls
+#define WALLFLATS
 
 #endif // __DOOMDEF__
