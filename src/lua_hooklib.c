@@ -657,14 +657,16 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
 			LUA_PushUserdata(gL, source, META_MOBJ);
 			lua_pushinteger(gL, damage);
+			lua_pushinteger(gL, damagetype);
 		}
 		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 		lua_gettable(gL, LUA_REGISTRYINDEX);
-		lua_pushvalue(gL, -5);
-		lua_pushvalue(gL, -5);
-		lua_pushvalue(gL, -5);
-		lua_pushvalue(gL, -5);
-		if (lua_pcall(gL, 4, 1, 0)) {
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		if (lua_pcall(gL, 5, 1, 0)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -745,14 +747,16 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
 			LUA_PushUserdata(gL, source, META_MOBJ);
 			lua_pushinteger(gL, damage);
+			lua_pushinteger(gL, damagetype);
 		}
 		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 		lua_gettable(gL, LUA_REGISTRYINDEX);
-		lua_pushvalue(gL, -5);
-		lua_pushvalue(gL, -5);
-		lua_pushvalue(gL, -5);
-		lua_pushvalue(gL, -5);
-		if (lua_pcall(gL, 4, 1, 0)) {
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		lua_pushvalue(gL, -6);
+		if (lua_pcall(gL, 5, 1, 0)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -823,13 +827,15 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 
 			LUA_PushUserdata(gL, target, META_MOBJ);
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
 			LUA_PushUserdata(gL, source, META_MOBJ);
+			lua_pushinteger(gL, damagetype);
 		}
 		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 		lua_gettable(gL, LUA_REGISTRYINDEX);
-		lua_pushvalue(gL, -4);
-		lua_pushvalue(gL, -4);
-		lua_pushvalue(gL, -4);
-		if (lua_pcall(gL, 3, 1, 0)) {
+		lua_pushvalue(gL, -5);
+		lua_pushvalue(gL, -5);
+		lua_pushvalue(gL, -5);
+		lua_pushvalue(gL, -5);
+		if (lua_pcall(gL, 4, 1, 0)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
