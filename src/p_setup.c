@@ -651,14 +651,6 @@ static void P_LoadRawSectors(UINT8 *data)
 	sector_t *ss = sectors;
 	size_t i;
 
-	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
-	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
-	foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
-	if (foundflats == NULL)
-		I_Error("Ran out of memory while loading sectors\n");
-
-	numlevelflats = 0;
-
 	// For each counted sector, copy the sector raw data from our cache pointer ms, to the global table pointer ss.
 	for (i = 0; i < numsectors; i++, ss++, ms++)
 	{
@@ -1981,6 +1973,14 @@ static void P_LoadMapData(const virtres_t* virt)
 	sides     = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
 	lines     = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
 	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+
+	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
+	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
+	foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
+	if (foundflats == NULL)
+		I_Error("Ran out of memory while loading sectors\n");
+
+	numlevelflats = 0;
 
 #ifdef UDMF
 	if (textmap)
