@@ -68,7 +68,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 
 	0,  // wipe_specinter_toblack
 	0,  // wipe_multinter_toblack
-	0,  // wipe_speclevel_thite
+	0,  // wipe_speclevel_towhite
 
 	0,  // wipe_level_final
 	0,  // wipe_intermission_final
