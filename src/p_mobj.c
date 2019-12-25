@@ -11559,10 +11559,31 @@ void P_MovePlayerToStarpost(INT32 playernum)
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
-
-static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
+static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip)
 {
 	const subsector_t *ss = R_PointInSubsector(x, y);
+
+	// Axis objects snap to the floor.
+	if (mobjtype == MT_AXIS || mobjtype == MT_AXISTRANSFER || mobjtype == MT_AXISTRANSFERLINE)
+		return ONFLOORZ;
+
+	// Establish height.
+	if (flip)
+		return (
+#ifdef ESLOPE
+			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
+#endif
+			ss->sector->ceilingheight) - offset - mobjinfo[mobjtype].height;
+	else
+		return (
+#ifdef ESLOPE
+			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
+#endif
+			ss->sector->floorheight) + offset;
+}
+
+static fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
+{
 	fixed_t offset = mthing->z << FRACBITS;
 	boolean flip = (!!(mobjinfo[mobjtype].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
 
@@ -11572,12 +11593,6 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t*
 	case MT_NIGHTSBUMPER:
 		flip = false;
 		break;
-
-	// Axis objects snap to the floor.
-	case MT_AXIS:
-	case MT_AXISTRANSFER:
-	case MT_AXISTRANSFERLINE:
-		return ONFLOORZ;
 
 	// Objects with a non-zero default height.
 	case MT_CRAWLACOMMANDER:
@@ -11635,19 +11650,7 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const mapthing_t*
 			return ONFLOORZ;
 	}
 
-	// Establish height.
-	if (flip)
-		return (
-#ifdef ESLOPE
-			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
-#endif
-			ss->sector->ceilingheight) - offset - mobjinfo[mobjtype].height;
-	else
-		return (
-#ifdef ESLOPE
-			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
-#endif
-			ss->sector->floorheight) + offset;
+	return P_GetMobjSpawnHeight(mobjtype, x, y, offset, flip);
 }
 
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
@@ -11701,6 +11704,13 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 		     || (mthing->type >= 600 && mthing->type <= 609) // Special placement patterns
 		     || mthing->type == 1705 || mthing->type == 1713) // Hoops
 		return true; // These are handled elsewhere.
+	else if (mthing->type == mobjinfo[MT_EMERHUNT].doomednum)
+	{
+		// Emerald Hunt is Coop only. Don't spawn the emerald yet, but save the spawnpoint for later.
+		if (gametype == GT_COOP && numhuntemeralds < MAXHUNTEMERALDS)
+			huntemeralds[numhuntemeralds++] = mthing;
+		return true;
+	}
 
 	return false;
 }
@@ -11709,15 +11719,6 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 {
 	switch (i)
 	{
-	case MT_RING:
-	case MT_COIN:
-	case MT_REDTEAMRING:
-	case MT_BLUETEAMRING:
-	case MT_BLUESPHERE:
-	case MT_BOMBSPHERE:
-	case MT_NIGHTSSTAR:
-	case MT_NIGHTSCHIP:
-		return false; // These are handled in P_SpawnHoopsAndRings().
 	case MT_EMERALD1:
 	case MT_EMERALD2:
 	case MT_EMERALD3:
@@ -11735,14 +11736,6 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 			return false;
 
 		break;
-	case MT_EMERHUNT:
-		// Emerald Hunt is Coop only.
-		if (gametype != GT_COOP)
-			return false;
-
-		if (numhuntemeralds < MAXHUNTEMERALDS)
-			huntemeralds[numhuntemeralds++] = mthing;
-		return false;
 	case MT_EMERALDSPAWN:
 		if (!cv_powerstones.value)
 			return false;
@@ -11784,8 +11777,12 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 	}
 
 	if (metalrecording) // Metal Sonic can't use these things.
-		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_TOKEN || i == MT_STARPOST)
+	{
+		if ((mobjinfo[i].flags & (MF_ENEMY|MF_BOSS)) || i == MT_TOKEN || i == MT_STARPOST
+			|| i == MT_RING || i == MT_BLUETEAMRING || i == MT_REDTEAMRING || i == MT_COIN
+			|| i == MT_BLUESPHERE || i == MT_BOMBSPHERE || i == MT_NIGHTSCHIP || i == MT_NIGHTSSTAR)
 			return false;
+	}
 
 	if (!G_PlatformGametype())
 	{
@@ -11823,7 +11820,9 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 
 	if (ultimatemode)
 	{
-		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
+		if (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING
+			|| i == MT_COIN || i == MT_NIGHTSSTAR || i == MT_NIGHTSCHIP
+			|| i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
 			|| i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX
 			|| i == MT_FLAMEAURA_BOX || i == MT_BUBBLEWRAP_BOX || i == MT_THUNDERCOIN_BOX
 			|| i == MT_RING_BOX || i == MT_STARPOST)
@@ -11835,6 +11834,8 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 
 	return true;
 }
+
+#define nightsreplace ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
 
 static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 {
@@ -11879,8 +11880,23 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 		}
 	}
 
-	if (gametype != GT_CTF && (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX))
-		return MT_RING_BOX;
+	if (nightsreplace)
+	{
+		if (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN)
+			return MT_NIGHTSSTAR;
+
+		if (i == MT_BLUESPHERE)
+			return MT_NIGHTSCHIP;
+	}
+
+	if (gametype != GT_CTF)
+	{
+		if (i == MT_BLUETEAMRING || i == MT_REDTEAMRING)
+			return MT_RING;
+
+		if (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX)
+			return MT_RING_BOX;
+	}
 
 	if (modeattacking && i == MT_1UP_BOX) // 1UPs -->> Score TVs
 	{
@@ -12918,6 +12934,10 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (G_IsSpecialStage(gamemap))
 			P_SetMobjState(mobj, (mobj->type == MT_PUSH) ? S_GRAVWELLGREEN : S_GRAVWELLRED);
 		break;
+	case MT_NIGHTSSTAR:
+		if (maptol & TOL_XMAS)
+			P_SetMobjState(mobj, mobj->info->seestate);
+		break;
 	default:
 		break;
 	}
@@ -12984,65 +13004,30 @@ static void P_SetObjectSpecial(mobj_t *mobj)
 		mobj->flags |= MF_BOUNCE;
 	}
 }
-//
-// P_SpawnMapThing
-// The fields of the mapthing should
-// already be in host byte order.
-//
-void P_SpawnMapThing(mapthing_t *mthing)
+
+mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
 {
-	mobjtype_t i;
-	mobj_t *mobj;
-	fixed_t x, y, z;
+	mobj_t *mobj = NULL;
 	boolean doangle = true;
-
-	if (!mthing->type)
-		return; // Ignore type-0 things as NOPs
-
-	if (mthing->type == 3328) // 3D Mode start Thing
-		return;
-
-	if (!objectplacing && P_SpawnNonMobjMapThing(mthing))
-		return;
-
-	i = P_GetMobjtype(mthing->type);
-	if (i == MT_UNKNOWN)
-		CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
-
-	// Skip all returning/substitution code in objectplace.
-	if (!objectplacing)
-	{
-		if (!P_AllowMobjSpawn(mthing, i))
-			return;
-
-		i = P_GetMobjtypeSubstitute(mthing, i);
-		if (i == MT_NULL) // Don't spawn mobj
-			return;
-	}
-
-	// spawn it
-	x = mthing->x << FRACBITS;
-	y = mthing->y << FRACBITS;
-	z = P_GetMobjSpawnHeight(i, mthing, x, y);
 
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
 
 	if (!P_SetupSpawnedMapThing(mthing, mobj, &doangle))
-		return;
+		return mobj;
 
 	if (doangle)
-		mobj->angle = FixedAngle(mthing->angle<<FRACBITS);
+		mobj->angle = FixedAngle(mthing->angle << FRACBITS);
 
 	mthing->mobj = mobj;
 
 	// ignore MTF_ flags and return early
 	if (i == MT_NIGHTSBUMPER)
-		return;
+		return mobj;
 
 	if ((mthing->options & MTF_AMBUSH)
-	&& (mthing->options & MTF_OBJECTSPECIAL)
-	&& (mobj->flags & MF_PUSHABLE))
+		&& (mthing->options & MTF_OBJECTSPECIAL)
+		&& (mobj->flags & MF_PUSHABLE))
 		mobj->flags2 |= MF2_CLASSICPUSH;
 	else
 	{
@@ -13073,9 +13058,52 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	// Final set of not being able to draw nightsitems.
 	if (mobj->flags & MF_NIGHTSITEM)
 		mobj->flags2 |= MF2_DONTDRAW;
+
+	return mobj;
 }
 
-static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, sector_t* sec, INT32 hoopsize, fixed_t sizefactor)
+//
+// P_SpawnMapThing
+// The fields of the mapthing should
+// already be in host byte order.
+//
+mobj_t *P_SpawnMapThing(mapthing_t *mthing)
+{
+	mobjtype_t i;
+	mobj_t *mobj = NULL;
+	fixed_t x, y, z;
+
+	if (!mthing->type)
+		return mobj; // Ignore type-0 things as NOPs
+
+	if (mthing->type == 3328) // 3D Mode start Thing
+		return mobj;
+
+	if (!objectplacing && P_SpawnNonMobjMapThing(mthing))
+		return mobj;
+
+	i = P_GetMobjtype(mthing->type);
+	if (i == MT_UNKNOWN)
+		CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
+
+	// Skip all returning/substitution code in objectplace.
+	if (!objectplacing)
+	{
+		if (!P_AllowMobjSpawn(mthing, i))
+			return mobj;
+
+		i = P_GetMobjtypeSubstitute(mthing, i);
+		if (i == MT_NULL) // Don't spawn mobj
+			return mobj;
+	}
+
+	x = mthing->x << FRACBITS;
+	y = mthing->y << FRACBITS;
+	z = P_GetMapThingSpawnHeight(i, mthing, x, y);
+	return P_SpawnMobjFromMapThing(mthing, x, y, z, i);
+}
+
+static void P_SpawnHoopInternal(mapthing_t *mthing, INT32 hoopsize, fixed_t sizefactor)
 {
 	mobj_t *mobj = NULL;
 	mobj_t *nextmobj = NULL;
@@ -13085,12 +13113,9 @@ static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, sec
 	INT32 i;
 	angle_t fa;
 	TVector v, *res;
-
-	z +=
-#ifdef ESLOPE
-		sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-		sec->floorheight;
+	fixed_t x = mthing->x << FRACBITS;
+	fixed_t y = mthing->y << FRACBITS;
+	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, false);
 
 	hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 	hoopcenter->spawnpoint = mthing;
@@ -13184,318 +13209,184 @@ static void P_SpawnHoop(mapthing_t* mthing, fixed_t x, fixed_t y, fixed_t z, sec
 	} while (hoopsize >= 8);
 }
 
-static void P_SpawnRingItem(mapthing_t *mthing, fixed_t x, fixed_t y, boolean bonustime, boolean nightsreplace)
+void P_SpawnHoop(mapthing_t *mthing)
 {
-	mobjtype_t ringthing = MT_RING;
-	mobj_t *mobj = NULL;
-	fixed_t z;
+	if (metalrecording)
+		return;
 
-	// Which ringthing to use
-	if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
-		ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-	else if (mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum)
-		ringthing = MT_BOMBSPHERE;
-	else
-	{
-		if (ultimatemode)
-			return; // No rings in Ultimate!
-
-		if (nightsreplace)
-			ringthing = MT_NIGHTSSTAR;
-		else if (mthing->type == mobjinfo[MT_COIN].doomednum)
-			ringthing = MT_COIN;
-		else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
-			ringthing = (gametype == GT_CTF) ? MT_REDTEAMRING : MT_RING;
-		else if (mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum) // Ditto
-			ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
-	}
-
-	z = P_GetMobjSpawnHeight(ringthing, mthing, x, y);
-	mobj = P_SpawnMobj(x, y, z, ringthing);
-	mobj->spawnpoint = mthing;
-
-	if (mthing->options & MTF_OBJECTFLIP)
-	{
-		mobj->eflags |= MFE_VERTICALFLIP;
-		mobj->flags2 |= MF2_OBJECTFLIP;
-	}
-
-	mobj->angle = FixedAngle(mthing->angle << FRACBITS);
-	mthing->mobj = mobj;
-	if (mthing->options & MTF_AMBUSH)
-		mobj->flags2 |= MF2_AMBUSH;
-
-	if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
-		P_SetMobjState(mobj, mobj->info->raisestate);
-	else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-		P_SetMobjState(mobj, mobj->info->seestate);
+	if (mthing->type == 1705) // Generic hoop
+		P_SpawnHoopInternal(mthing, 24, 4*FRACUNIT);
+	else // Customizable hoop
+		// For each flag add 16 fracunits to the size
+		// Default (0 flags) is 32 fracunits
+		P_SpawnHoopInternal(mthing, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
 }
 
-static void P_SpawnVerticalSpringRings(mapthing_t *mthing, fixed_t x, fixed_t y, sector_t* sec, boolean nightsreplace)
+void P_SetBonusTime(mobj_t *mobj)
 {
-	mobjtype_t ringthing = MT_RING;
+	if (!mobj)
+		return;
+
+	if (mobj->type != MT_BLUESPHERE && mobj->type != MT_NIGHTSCHIP)
+		return;
+
+	P_SetMobjState(mobj, mobj->info->raisestate);
+}
+
+static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t* itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
+{
+	mapthing_t dummything;
+	mobj_t *mobj = NULL;
+	fixed_t x = mthing->x << FRACBITS;
+	fixed_t y = mthing->y << FRACBITS;
+	fixed_t z = mthing->z << FRACBITS;
+	INT32 r;
+	angle_t angle = FixedAngle(fixedangle << FRACBITS);
+	angle_t fineangle = (angle >> ANGLETOFINESHIFT) & FINEMASK;
+
+	for (r = 0; r < numitemtypes; r++)
+	{
+		dummything = *mthing;
+		dummything.type = mobjinfo[itemtypes[r]].doomednum;
+		// Skip all returning/substitution code in objectplace.
+		if (!objectplacing)
+		{
+			if (!P_AllowMobjSpawn(&dummything, itemtypes[r]))
+			{
+				itemtypes[r] = MT_NULL;
+				continue;
+			}
+
+			itemtypes[r] = P_GetMobjtypeSubstitute(&dummything, itemtypes[r]);
+		}
+	}
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, mthing->options & MTF_OBJECTFLIP);
+
+	for (r = 0; r < numitems; r++)
+	{
+		mobjtype_t itemtype = itemtypes[r % numitemtypes];
+		if (itemtype == MT_NULL)
+			continue;
+		dummything.type = mobjinfo[itemtype].doomednum;
+
+		x += FixedMul(horizontalspacing, FINECOSINE(fineangle));
+		y += FixedMul(horizontalspacing, FINESINE(fineangle));
+		z += (mthing->options & MTF_OBJECTFLIP) ? -verticalspacing : verticalspacing;
+
+		mobj = P_SpawnMobjFromMapThing(&dummything, x, y, z, itemtype);
+
+		if (!mobj)
+			continue;
+
+		mobj->spawnpoint = NULL;
+		if (bonustime)
+			P_SetBonusTime(mobj);
+	}
+}
+
+static void P_SpawnSingularItemRow(mapthing_t* mthing, mobjtype_t itemtype, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
+{
+	mobjtype_t itemtypes[1] = { itemtype };
+	return P_SpawnItemRow(mthing, itemtypes, 1, numitems, horizontalspacing, verticalspacing, fixedangle, bonustime);
+}
+
+static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t size, boolean bonustime)
+{
+	mapthing_t dummything;
 	mobj_t* mobj = NULL;
-	fixed_t z;
-	INT32 r;
-
-	INT32 dist = 64*FRACUNIT;
-	if (mthing->type == 601)
-		dist = 128*FRACUNIT;
-
-	if (ultimatemode)
-		return; // No rings in Ultimate!
-
-	if (nightsreplace)
-		ringthing = MT_NIGHTSSTAR;
-
-	if (mthing->options & MTF_OBJECTFLIP)
-	{
-		z = (
-#ifdef ESLOPE
-			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-			sec->ceilingheight) - mobjinfo[ringthing].height;
-		if (mthing->z)
-			z -= (mthing->z << FRACBITS);
-	}
-	else
-	{
-		z = (
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight);
-		if (mthing->z)
-			z += (mthing->z << FRACBITS);
-	}
-
-	for (r = 1; r <= 5; r++)
-	{
-		if (mthing->options & MTF_OBJECTFLIP)
-			z -= dist;
-		else
-			z += dist;
-
-		mobj = P_SpawnMobj(x, y, z, ringthing);
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mobj->eflags |= MFE_VERTICALFLIP;
-			mobj->flags2 |= MF2_OBJECTFLIP;
-		}
-
-		mobj->angle = FixedAngle(mthing->angle << FRACBITS);
-		if (mthing->options & MTF_AMBUSH)
-			mobj->flags2 |= MF2_AMBUSH;
-
-		if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-			P_SetMobjState(mobj, mobj->info->seestate);
-	}
-}
-
-static void P_SpawnDiagonalSpringRings(mapthing_t* mthing, fixed_t x, fixed_t y, sector_t* sec, boolean nightsreplace)
-{
-	mobjtype_t ringthing = MT_RING;
-	mobj_t *mobj = NULL;
-	fixed_t z;
-	INT32 r;
-	angle_t closestangle, fa;
-
-	INT32 iterations = 5;
-	if (mthing->type == 603)
-		iterations = 10;
-
-	if (ultimatemode)
-		return; // No rings in Ultimate!
-
-	if (nightsreplace)
-		ringthing = MT_NIGHTSSTAR;
-
-	closestangle = FixedAngle(mthing->angle << FRACBITS);
-	fa = (closestangle >> ANGLETOFINESHIFT);
-
-	if (mthing->options & MTF_OBJECTFLIP)
-	{
-		z = (
-#ifdef ESLOPE
-			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-			sec->ceilingheight) - mobjinfo[ringthing].height;
-		if (mthing->z)
-			z -= (mthing->z << FRACBITS);
-	}
-	else
-	{
-		z = (
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight);
-		if (mthing->z)
-			z += (mthing->z << FRACBITS);
-	}
-
-	for (r = 1; r <= iterations; r++)
-	{
-		x += FixedMul(64*FRACUNIT, FINECOSINE(fa));
-		y += FixedMul(64*FRACUNIT, FINESINE(fa));
-
-		if (mthing->options & MTF_OBJECTFLIP)
-			z -= 64*FRACUNIT;
-		else
-			z += 64*FRACUNIT;
-
-		mobj = P_SpawnMobj(x, y, z, ringthing);
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mobj->eflags |= MFE_VERTICALFLIP;
-			mobj->flags2 |= MF2_OBJECTFLIP;
-		}
-
-		mobj->angle = closestangle;
-		if (mthing->options & MTF_AMBUSH)
-			mobj->flags2 |= MF2_AMBUSH;
-
-		if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-			P_SetMobjState(mobj, mobj->info->seestate);
-	}
-}
-
-static void P_SpawnItemCircle(mapthing_t* mthing, fixed_t x, fixed_t y, sector_t* sec, boolean bonustime, boolean nightsreplace)
-{
-	mobjtype_t ringthing = MT_RING;
-	mobj_t *mobj = NULL;
-	fixed_t z, finalx, finaly, finalz;
-	angle_t closestangle, fa;
+	fixed_t x = mthing->x << FRACBITS;
+	fixed_t y = mthing->y << FRACBITS;
+	fixed_t z = mthing->z << FRACBITS;
+	angle_t angle = FixedAngle(mthing->angle << FRACBITS);
+	angle_t fa;
 	INT32 i;
 	TVector v, *res;
-	INT32 numitems = 8;
-	INT32 size = 96*FRACUNIT;
 
-	if (mthing->type & 1)
+	for (i = 0; i < numitemtypes; i++)
 	{
-		numitems = 16;
-		size = 192*FRACUNIT;
+		dummything = *mthing;
+		dummything.type = mobjinfo[itemtypes[i]].doomednum;
+		// Skip all returning/substitution code in objectplace.
+		if (!objectplacing)
+		{
+			if (!P_AllowMobjSpawn(&dummything, itemtypes[i]))
+			{
+				itemtypes[i] = MT_NULL;
+				continue;
+			}
+
+			itemtypes[i] = P_GetMobjtypeSubstitute(&dummything, itemtypes[i]);
+		}
 	}
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, false);
 
-	z =
-#ifdef ESLOPE
-		sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-		sec->floorheight;
-	if (mthing->z)
-		z += (mthing->z << FRACBITS);
-
-	closestangle = FixedAngle(mthing->angle << FRACBITS);
-
-	switch (mthing->type)
-	{
-	case 604:
-	case 605:
-		if (ultimatemode)
-			return; // No rings in Ultimate!
-		if (nightsreplace)
-			ringthing = MT_NIGHTSSTAR;
-		break;
-	case 608:
-	case 609:
-		/*ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE; -- i == 0 is bluesphere
-		break;*/
-	case 606:
-	case 607:
-		ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-		break;
-	default:
-		break;
-	}
-
-	// Create the hoop!
 	for (i = 0; i < numitems; i++)
 	{
-		if (mthing->type == 608 || mthing->type == 609)
-		{
-			if (i & 1)
-			{
-				if (ultimatemode)
-					continue; // No rings in Ultimate!
-				ringthing = (nightsreplace) ? MT_NIGHTSSTAR : MT_RING;
-			}
-			else
-				ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
-		}
+		mobjtype_t itemtype = itemtypes[i % numitemtypes];
+		if (itemtype == MT_NULL)
+			continue;
+		dummything.type = mobjinfo[itemtype].doomednum;
 
-		fa = i * FINEANGLES/numitems;
+		fa = i*FINEANGLES/numitems;
 		v[0] = FixedMul(FINECOSINE(fa), size);
 		v[1] = 0;
 		v[2] = FixedMul(FINESINE(fa), size);
 		v[3] = FRACUNIT;
 
-		res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
+		res = VectorMatrixMultiply(v, *RotateZMatrix(angle));
 		M_Memcpy(&v, res, sizeof(v));
 
-		finalx = x + v[0];
-		finaly = y + v[1];
-		finalz = z + v[2];
+		mobj = P_SpawnMobjFromMapThing(&dummything, x + v[0], y + v[1], z + v[2], itemtype);
 
-		mobj = P_SpawnMobj(finalx, finaly, finalz, ringthing);
+		if (!mobj)
+			continue;
+
 		mobj->z -= mobj->height/2;
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mobj->eflags |= MFE_VERTICALFLIP;
-			mobj->flags2 |= MF2_OBJECTFLIP;
-		}
-
-		mobj->angle = closestangle;
-		if (mthing->options & MTF_AMBUSH)
-			mobj->flags2 |= MF2_AMBUSH;
-
-		if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
-			P_SetMobjState(mobj, mobj->info->raisestate);
-		else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-			P_SetMobjState(mobj, mobj->info->seestate);
+		mobj->spawnpoint = NULL;
+		if (bonustime)
+			P_SetBonusTime(mobj);
 	}
 }
 
-void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
+void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 {
-	fixed_t x = mthing->x << FRACBITS;
-	fixed_t y = mthing->y << FRACBITS;
-	fixed_t z = mthing->z << FRACBITS;
-	sector_t *sec = R_PointInSubsector(x, y)->sector;
-	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
-
 	switch (mthing->type)
 	{
 	// Special placement patterns
 	case 600: // 5 vertical rings (yellow spring)
+		P_SpawnSingularItemRow(mthing, MT_RING, 5, 0, 64*FRACUNIT, 0, bonustime);
+		return;
 	case 601: // 5 vertical rings (red spring)
-		P_SpawnVerticalSpringRings(mthing, x, y, sec, nightsreplace);
+		P_SpawnSingularItemRow(mthing, MT_RING, 5, 0, 128*FRACUNIT, 0, bonustime);
 		return;
 	case 602: // 5 diagonal rings (yellow spring)
+		P_SpawnSingularItemRow(mthing, MT_RING, 5, 64*FRACUNIT, 64*FRACUNIT, mthing->angle, bonustime);
+		return;
 	case 603: // 10 diagonal rings (red spring)
-		P_SpawnDiagonalSpringRings(mthing, x, y, sec, nightsreplace);
+		P_SpawnSingularItemRow(mthing, MT_RING, 10, 64*FRACUNIT, 64*FRACUNIT, mthing->angle, bonustime);
 		return;
 	case 604: // Circle of rings (8 items)
-	case 605: // Circle of rings (16 bits)
+	case 605: // Circle of rings (16 items)
 	case 606: // Circle of blue spheres (8 items)
 	case 607: // Circle of blue spheres (16 items)
+	{
+		INT32 numitems = (mthing->type & 1) ? 16 : 8;
+		fixed_t size = (mthing->type & 1) ? 192*FRACUNIT : 96*FRACUNIT;
+		mobjtype_t itemtypes[1] = { (mthing->type & 1) ? MT_RING : MT_BLUESPHERE };
+		P_SpawnItemCircle(mthing, itemtypes, 1, numitems, size, bonustime);
+		return;
+	}
 	case 608: // Circle of rings and blue spheres (8 items)
 	case 609: // Circle of rings and blue spheres (16 items)
-		P_SpawnItemCircle(mthing, x, y, sec, bonustime, nightsreplace);
+	{
+		INT32 numitems = (mthing->type & 1) ? 16 : 8;
+		fixed_t size = (mthing->type & 1) ? 192*FRACUNIT : 96*FRACUNIT;
+		mobjtype_t itemtypes[2] = { MT_RING, MT_BLUESPHERE };
+		P_SpawnItemCircle(mthing, itemtypes, 2, numitems, size, bonustime);
 		return;
-	// Hoops
-	case 1705: // Generic NiGHTS hoop
-		P_SpawnHoop(mthing, x, y, z, sec, 24, 4*FRACUNIT);
+	}
+	default:
 		return;
-	case 1713: // Customizable NiGHTS hoop
-		// For each flag add 16 fracunits to the size
-		// Default (0 flags) is 32 fracunits
-		P_SpawnHoop(mthing, x, y, z, sec, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
-		return;
-	default: // All manners of rings and coins
-		P_SpawnRingItem(mthing, x, y, bonustime, nightsreplace);
 	}
 }
 
