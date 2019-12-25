@@ -963,7 +963,7 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	for (grmip = gpatch->mipmap; grmip->nextcolormap; )
 	{
 		grmip = grmip->nextcolormap;
-		if (grmip->colormap == colormap || grmip->tcindex == skinnum)
+		if (grmip->colormap == colormap || (skinnum < TC_DEFAULT && grmip->tcindex == skinnum))
 		{
 			if (grmip->downloaded && grmip->grInfo.data)
 			{

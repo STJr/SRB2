@@ -3243,6 +3243,29 @@ Unoptimized version
 #endif
 }
 
+// Taken from my videos-in-SRB2 project
+// Generates a color look-up table
+// which has up to 64 colors at each channel
+// (see the defines in v_video.h)
+
+UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
+
+void InitColorLUT(RGBA_t *palette)
+{
+	UINT8 r, g, b;
+	static boolean clutinit = false;
+	static RGBA_t *lastpalette = NULL;
+	if ((!clutinit) || (lastpalette != palette))
+	{
+		for (r = 0; r < CLUTSIZE; r++)
+			for (g = 0; g < CLUTSIZE; g++)
+				for (b = 0; b < CLUTSIZE; b++)
+					colorlookup[r][g][b] = NearestColor(r << SHIFTCOLORBITS, g << SHIFTCOLORBITS, b << SHIFTCOLORBITS);
+		clutinit = true;
+		lastpalette = palette;
+	}
+}
+
 // V_Init
 // old software stuff, buffers are allocated at video mode setup
 // here we set the screens[x] pointers accordingly
@@ -3254,13 +3277,9 @@ void V_Init(void)
 	const INT32 screensize = vid.rowbytes * vid.height;
 
 	LoadMapPalette();
-	// hardware modes do not use screens[] pointers
+
 	for (i = 0; i < NUMSCREENS; i++)
 		screens[i] = NULL;
-	if (rendermode != render_soft)
-	{
-		return; // be sure to cause a NULL read/write error so we detect it, in case of..
-	}
 
 	// start address of NUMSCREENS * width*height vidbuffers
 	if (base)

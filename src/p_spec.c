@@ -1603,8 +1603,6 @@ static inline void P_InitTagLists(void)
 		size_t j = (unsigned)sectors[i].tag % numsectors;
 		sectors[i].nexttag = sectors[j].firsttag;
 		sectors[j].firsttag = (INT32)i;
-		sectors[i].spawn_nexttag = sectors[i].nexttag;
-		sectors[j].spawn_firsttag = sectors[j].firsttag;
 	}
 
 	for (i = numlines - 1; i != (size_t)-1; i--)
@@ -6405,22 +6403,16 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
 {
 	if (!(master->flags & ML_NETONLY)) // Modify floor flat alignment unless ML_NETONLY flag is set
 	{
-		sector->spawn_flrpic_angle = sector->floorpic_angle = flatangle;
+		sector->floorpic_angle = flatangle;
 		sector->floor_xoffs += xoffs;
 		sector->floor_yoffs += yoffs;
-		// saved for netgames
-		sector->spawn_flr_xoffs = sector->floor_xoffs;
-		sector->spawn_flr_yoffs = sector->floor_yoffs;
 	}
 
 	if (!(master->flags & ML_NONET)) // Modify ceiling flat alignment unless ML_NONET flag is set
 	{
-		sector->spawn_ceilpic_angle = sector->ceilingpic_angle = flatangle;
+		sector->ceilingpic_angle = flatangle;
 		sector->ceiling_xoffs += xoffs;
 		sector->ceiling_yoffs += yoffs;
-		// saved for netgames
-		sector->spawn_ceil_xoffs = sector->ceiling_xoffs;
-		sector->spawn_ceil_yoffs = sector->ceiling_yoffs;
 	}
 
 }
