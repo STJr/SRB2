@@ -9905,19 +9905,12 @@ static void P_FlagFuseThink(mobj_t *mobj)
 
 	x = mobj->spawnpoint->x << FRACBITS;
 	y = mobj->spawnpoint->y << FRACBITS;
+	z = mobj->spawnpoint->z << FRACBITS;
 	ss = R_PointInSubsector(x, y);
 	if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
-	{
-		z = ss->sector->ceilingheight - mobjinfo[mobj->type].height;
-		if (mobj->spawnpoint->options >> ZSHIFT)
-			z -= (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
-	}
+		z = ss->sector->ceilingheight - mobjinfo[mobj->type].height - z;
 	else
-	{
-		z = ss->sector->floorheight;
-		if (mobj->spawnpoint->options >> ZSHIFT)
-			z += (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
-	}
+		z = ss->sector->floorheight + z;
 	flagmo = P_SpawnMobj(x, y, z, mobj->type);
 	flagmo->spawnpoint = mobj->spawnpoint;
 	if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
