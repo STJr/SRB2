@@ -1177,21 +1177,33 @@ tic_t lt_exitticker = 0, lt_endtime = 0;
 
 //
 // Load the graphics for the title card.
+// Don't let LJ see this
 //
 static void ST_cacheLevelTitle(void)
 {
-	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_WARNINGTITLE))
-	{
-		lt_patches[0] = (patch_t *)W_CachePatchName("LTACTBLU", PU_HUDGFX);
-		lt_patches[1] = (patch_t *)W_CachePatchName("LTZIGZAG", PU_HUDGFX);
-		lt_patches[2] = (patch_t *)W_CachePatchName("LTZZTEXT", PU_HUDGFX);
-	}
-	else // boss map
-	{
-		lt_patches[0] = (patch_t *)W_CachePatchName("LTACTRED", PU_HUDGFX);
-		lt_patches[1] = (patch_t *)W_CachePatchName("LTZIGRED", PU_HUDGFX);
-		lt_patches[2] = (patch_t *)W_CachePatchName("LTZZWARN", PU_HUDGFX);
-	}
+#define SETPATCH(default, warning, custom, idx) \
+{ \
+	lumpnum_t patlumpnum = LUMPERROR; \
+	if (mapheaderinfo[gamemap-1]->custom[0] != '\0') \
+	{ \
+		patlumpnum = W_CheckNumForName(mapheaderinfo[gamemap-1]->custom); \
+		if (patlumpnum != LUMPERROR) \
+			lt_patches[idx] = (patch_t *)W_CachePatchNum(patlumpnum, PU_HUDGFX); \
+	} \
+	if (patlumpnum == LUMPERROR) \
+	{ \
+		if (!(mapheaderinfo[gamemap-1]->levelflags & LF_WARNINGTITLE)) \
+			lt_patches[idx] = (patch_t *)W_CachePatchName(default, PU_HUDGFX); \
+		else \
+			lt_patches[idx] = (patch_t *)W_CachePatchName(warning, PU_HUDGFX); \
+	} \
+}
+
+	SETPATCH("LTACTBLU", "LTACTRED", ltactdiamond, 0)
+	SETPATCH("LTZIGZAG", "LTZIGRED", ltzzpatch, 1)
+	SETPATCH("LTZZTEXT", "LTZZWARN", ltzztext, 2)
+
+#undef SETPATCH
 }
 
 //
@@ -2320,14 +2332,20 @@ static void ST_drawTeamHUD(void)
 		p = bflagico;
 	else
 		p = bmatcico;
-
+	
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_teamscores))
+#endif
 	V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
-
+	
 	if (gametype == GT_CTF)
 		p = rflagico;
 	else
 		p = rmatcico;
-
+	
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_teamscores))
+#endif
 	V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
 	if (gametype != GT_CTF)
@@ -2339,28 +2357,53 @@ static void ST_drawTeamHUD(void)
 		// Show which flags aren't at base.
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (players[i].gotflag & GF_BLUEFLAG) // Blue flag isn't at base
+			if (players[i].gotflag & GF_BLUEFLAG // Blue flag isn't at base
+#ifdef HAVE_BLUA
+			&& LUA_HudEnabled(hud_teamscores)
+#endif
+			)
 				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(nonicon->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
-			if (players[i].gotflag & GF_REDFLAG) // Red flag isn't at base
+
+			if (players[i].gotflag & GF_REDFLAG // Red flag isn't at base
+#ifdef HAVE_BLUA
+			&& LUA_HudEnabled(hud_teamscores)
+#endif
+			)
 				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(nonicon2->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
 
 			whichflag |= players[i].gotflag;
+
 			if ((whichflag & (GF_REDFLAG|GF_BLUEFLAG)) == (GF_REDFLAG|GF_BLUEFLAG))
 				break; // both flags were found, let's stop early
 		}
 
 		// Display a countdown timer showing how much time left until the flag returns to base.
 		{
-			if (blueflag && blueflag->fuse > 1)
+			if (blueflag && blueflag->fuse > 1
+#ifdef HAVE_BLUA
+			&& LUA_HudEnabled(hud_teamscores)
+#endif
+			)
 				V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (blueflag->fuse / TICRATE)));
 
-			if (redflag && redflag->fuse > 1)
+			if (redflag && redflag->fuse > 1
+#ifdef HAVE_BLUA
+			&& LUA_HudEnabled(hud_teamscores)
+#endif
+			)
 				V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (redflag->fuse / TICRATE)));
 		}
 	}
 
 num:
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_teamscores))
+#endif
 	V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", bluescore));
+
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_teamscores))
+#endif
 	V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", redscore));
 
 #undef SEP
