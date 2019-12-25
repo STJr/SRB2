@@ -146,7 +146,7 @@ extern boolean WipeStageTitle;
 typedef enum
 {
 	WIPESTYLE_NORMAL,
-	WIPESTYLE_LEVEL
+	WIPESTYLE_COLORMAP
 } wipestyle_t;
 extern wipestyle_t wipestyle;
 
@@ -158,6 +158,11 @@ typedef enum
 	WSF_CROSSFADE = 1<<3,
 } wipestyleflags_t;
 extern wipestyleflags_t wipestyleflags;
+
+// Even my function names are borderline
+boolean F_ShouldColormapFade(void);
+boolean F_TryColormapFade(UINT8 wipecolor);
+void F_DecideWipeStyle(void);
 
 #define FADECOLORMAPDIV 8
 #define FADECOLORMAPROWS (256/FADECOLORMAPDIV)

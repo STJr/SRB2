@@ -242,7 +242,7 @@ static void D_Display(void)
 	// 5. The frame is ready to be drawn!
 
 	// stop movie if needs to change renderer
-	if (setrenderneeded && (moviemode != MM_OFF))
+	if (setrenderneeded && (moviemode == MM_APNG))
 		M_StopMovie();
 
 	// check for change of renderer or screen size (video mode)
@@ -307,7 +307,10 @@ static void D_Display(void)
 			 && wipetypepre != UINT8_MAX)
 			{
 				F_WipeStartScreen();
-				F_WipeColorFill(31);
+				// Check for Mega Genesis fade
+				wipestyleflags = WSF_FADEOUT;
+				if (F_TryColormapFade(31))
+					wipetypepost = -1; // Don't run the fade below this one
 				F_WipeEndScreen();
 				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 			}
@@ -521,6 +524,7 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			F_WipeEndScreen();
+
 			// Funny.
 			if (WipeStageTitle && st_overlay)
 			{
@@ -530,6 +534,14 @@ static void D_Display(void)
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 				F_WipeStartScreen();
 			}
+
+			// Check for Mega Genesis fade
+			if (F_ShouldColormapFade())
+			{
+				wipestyleflags |= WSF_FADEIN;
+				wipestyleflags &= ~WSF_FADEOUT;
+			}
+
 			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
 
@@ -613,9 +625,6 @@ void D_SRB2Loop(void)
 		server = true;
 
 	// Pushing of + parameters is now done back in D_SRB2Main, not here.
-
-	CONS_Printf("I_StartupKeyboard()...\n");
-	I_StartupKeyboard();
 
 #ifdef _WINDOWS
 	CONS_Printf("I_StartupMouse()...\n");
@@ -1349,8 +1358,9 @@ void D_SRB2Main(void)
 		I_StartupSound();
 		I_InitMusic();
 		S_InitSfxChannels(cv_soundvolume.value);
-		S_InitMusicDefs();
 	}
+
+	S_InitMusicDefs();
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();

@@ -1457,6 +1457,7 @@ void VID_CheckRenderer(void)
 	}
 
 	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
+	Impl_VideoSetupBuffer();
 
 	if (rendermode == render_soft)
 	{
@@ -1465,7 +1466,6 @@ void VID_CheckRenderer(void)
 			SDL_FreeSurface(bufSurface);
 			bufSurface = NULL;
 		}
-		Impl_VideoSetupBuffer();
 #ifdef HWRENDER
 		HWR_FreeTextureCache();
 #endif
@@ -1587,17 +1587,14 @@ static void Impl_VideoSetupSDLBuffer(void)
 static void Impl_VideoSetupBuffer(void)
 {
 	// Set up game's software render buffer
-	if (rendermode == render_soft)
+	vid.rowbytes = vid.width * vid.bpp;
+	vid.direct = NULL;
+	if (vid.buffer)
+		free(vid.buffer);
+	vid.buffer = calloc(vid.rowbytes*vid.height, NUMSCREENS);
+	if (!vid.buffer)
 	{
-		vid.rowbytes = vid.width * vid.bpp;
-		vid.direct = NULL;
-		if (vid.buffer)
-			free(vid.buffer);
-		vid.buffer = calloc(vid.rowbytes*vid.height, NUMSCREENS);
-		if (!vid.buffer)
-		{
-			I_Error("%s", M_GetText("Not enough memory for video buffer\n"));
-		}
+		I_Error("%s", M_GetText("Not enough memory for video buffer\n"));
 	}
 }
 
