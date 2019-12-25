@@ -767,7 +767,7 @@ static void P_LoadRawNodes(UINT8 *data)
 
 //
 // P_ReloadRings
-// Used by NiGHTS, clears all ring/wing/etc items and respawns them
+// Used by NiGHTS, clears all ring/sphere/hoop/etc items and respawns them
 //
 void P_ReloadRings(void)
 {
@@ -814,18 +814,21 @@ void P_ReloadRings(void)
 	{
 		// Notice an omission? We handle hoops differently.
 		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
-		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
-		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
-		 || (mt->type >= 600 && mt->type <= 609)) // circles and diagonals
+			|| mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
+			|| mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum)
 		{
 			mt->mobj = NULL;
-
-			P_SpawnHoopsAndRings(mt, true);
+			P_SetBonusTime(P_SpawnMapThing(mt));
+		}
+		else if (mt->type >= 600 && mt->type <= 609) // Item patterns
+		{
+			mt->mobj = NULL;
+			P_SpawnItemPattern(mt, true);
 		}
 	}
 	for (i = 0; i < numHoops; i++)
 	{
-		P_SpawnHoopsAndRings(hoopsToRespawn[i], false);
+		P_SpawnHoop(hoopsToRespawn[i]);
 	}
 }
 
@@ -1019,30 +1022,18 @@ static void P_LoadThings(boolean loademblems)
 			continue;
 
 		mt->mobj = NULL;
-		P_SpawnMapThing(mt);
+
+		if (mt->type >= 600 && mt->type <= 609) // item patterns
+			P_SpawnItemPattern(mt, false);
+		else if (mt->type == 1705 || mt->type == 1713) // hoops
+			P_SpawnHoop(mt);
+		else // Everything else
+			P_SpawnMapThing(mt);
 	}
 
 	// random emeralds for hunt
 	if (numhuntemeralds)
 		P_SpawnEmeraldHunt();
-
-	if (metalrecording) // Metal Sonic gets no rings to distract him.
-		return;
-
-	// Run through the list of mapthings again to spawn hoops and rings
-	mt = mapthings;
-	for (i = 0; i < nummapthings; i++, mt++)
-	{
-		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
-		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
-		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
-		 || (mt->type >= 600 && mt->type <= 609) // circles and diagonals
-		 || mt->type == 1705 || mt->type == 1713) // hoops
-		{
-			mt->mobj = NULL;
-			P_SpawnHoopsAndRings(mt, false);
-		}
-	}
 }
 
 // Experimental groovy write function!
