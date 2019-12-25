@@ -1106,7 +1106,7 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 #else
 		fixed_t cheight = sec->ceilingheight;
 #endif
-		mt->options = (UINT16)((cheight - player->mo->z - player->mo->height)>>FRACBITS);
+		mt->z = (UINT16)((cheight - player->mo->z - player->mo->height)>>FRACBITS);
 	}
 	else
 	{
@@ -1115,12 +1115,11 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 #else
 		fixed_t fheight = sec->floorheight;
 #endif
-		mt->options = (UINT16)((player->mo->z - fheight)>>FRACBITS);
+		mt->z = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 	}
-	mt->options <<= ZSHIFT;
 	mt->angle = (INT16)(FixedInt(AngleFixed(player->mo->angle)));
 
-	mt->options |= (UINT16)cv_opflags.value;
+	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
 	return mt;
 }
 
@@ -1187,7 +1186,7 @@ void OP_NightsObjectplace(player_t *player)
 		mt->options = (mt->options & ~(UINT16)cv_opflags.value) | (UINT16)cv_ophoopflags.value;
 		mt->angle = (INT16)(mt->angle+(INT16)((FixedInt(FixedDiv(temp*FRACUNIT, 360*(FRACUNIT/256))))<<8));
 
-		P_SpawnHoopsAndRings(mt, false);
+		P_SpawnHoop(mt);
 	}
 
 	// This places a bumper!
@@ -1250,7 +1249,7 @@ void OP_NightsObjectplace(player_t *player)
 			return;
 
 		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_BLUESPHERE].doomednum, false);
-		P_SpawnHoopsAndRings(mt, false);
+		P_SpawnMapThing(mt);
 	}
 
 	// This places a ring!
@@ -1261,7 +1260,7 @@ void OP_NightsObjectplace(player_t *player)
 			return;
 
 		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_RING].doomednum, false);
-		P_SpawnHoopsAndRings(mt, false);
+		P_SpawnMapThing(mt);
 	}
 
 	// This places a custom object as defined in the console cv_mapthingnum.
@@ -1293,15 +1292,10 @@ void OP_NightsObjectplace(player_t *player)
 		mt = OP_CreateNewMapThing(player, (UINT16)cv_mapthingnum.value, false);
 		mt->angle = angle;
 
-		if (mt->type == 300 // Ring
-		|| mt->type == 308 || mt->type == 309 // Team Rings
-		|| mt->type == 1706 // Sphere
-		|| (mt->type >= 600 && mt->type <= 609) // Placement patterns
-		|| mt->type == 1705 || mt->type == 1713 // NiGHTS Hoops
-		|| mt->type == 1800) // Mario Coin
-		{
-			P_SpawnHoopsAndRings(mt, false);
-		}
+		if (mt->type >= 600 && mt->type <= 609) // Placement patterns
+			P_SpawnItemPattern(mt, false);
+		else if (mt->type == 1705 || mt->type == 1713) // NiGHTS Hoops
+			P_SpawnHoop(mt);
 		else
 			P_SpawnMapThing(mt);
 	}
@@ -1438,15 +1432,10 @@ void OP_ObjectplaceMovement(player_t *player)
 			return;
 
 		mt = OP_CreateNewMapThing(player, (UINT16)spawnthing, ceiling);
-		if (mt->type == 300 // Ring
-		|| mt->type == 308 || mt->type == 309 // Team Rings
-		|| mt->type == 1706 // Nights Wing
-		|| (mt->type >= 600 && mt->type <= 609) // Placement patterns
-		|| mt->type == 1705 || mt->type == 1713 // NiGHTS Hoops
-		|| mt->type == 1800) // Mario Coin
-		{
-			P_SpawnHoopsAndRings(mt, false);
-		}
+		if (mt->type >= 600 && mt->type <= 609) // Placement patterns
+			P_SpawnItemPattern(mt, false);
+		else if (mt->type == 1705 || mt->type == 1713) // NiGHTS Hoops
+			P_SpawnHoop(mt);
 		else
 			P_SpawnMapThing(mt);
 

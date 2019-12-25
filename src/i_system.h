@@ -180,10 +180,6 @@ void I_StartupMouse(void);
 */
 void I_StartupMouse2(void);
 
-/**	\brief keyboard startup, shutdown, handler
-*/
-void I_StartupKeyboard(void);
-
 /**	\brief  setup timer irq and user timer routine.
 */
 void I_StartupTimer(void);
