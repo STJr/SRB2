@@ -13372,7 +13372,7 @@ void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 	{
 		INT32 numitems = (mthing->type & 1) ? 16 : 8;
 		fixed_t size = (mthing->type & 1) ? 192*FRACUNIT : 96*FRACUNIT;
-		mobjtype_t itemtypes[1] = { (mthing->type & 1) ? MT_RING : MT_BLUESPHERE };
+		mobjtype_t itemtypes[1] = { (mthing->type < 606) ? MT_RING : MT_BLUESPHERE };
 		P_SpawnItemCircle(mthing, itemtypes, 1, numitems, size, bonustime);
 		return;
 	}
