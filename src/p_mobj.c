@@ -11562,7 +11562,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 
 	fixed_t z;
 	sector_t *sector;
-	fixed_t floor, ceiling;
+	fixed_t floor, ceiling, ceilingspawn;
 
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
@@ -11589,23 +11589,18 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 	sector->c_slope ? P_GetZAt(sector->c_slope, x, y) :
 #endif
 	sector->ceilingheight;
+	ceilingspawn = ceiling - mobjinfo[MT_PLAYER].height;
 
 	if (mthing)
 	{
+		fixed_t offset = mthing->z << FRACBITS;
+
 		// Flagging a player's ambush will make them start on the ceiling
 		// Objectflip inverts
 		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
-		{
-			z = ceiling - mobjinfo[MT_PLAYER].height;
-			if (mthing->options >> ZSHIFT)
-				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-		}
+			z = ceilingspawn - offset;
 		else
-		{
-			z = floor;
-			if (mthing->options >> ZSHIFT)
-				z += ((mthing->options >> ZSHIFT) << FRACBITS);
-		}
+			z = floor + offset;
 
 		if (mthing->options & MTF_OBJECTFLIP) // flip the player!
 		{
@@ -11622,8 +11617,8 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 
 	if (z < floor)
 		z = floor;
-	else if (z > ceiling - mobjinfo[MT_PLAYER].height)
-		z = ceiling - mobjinfo[MT_PLAYER].height;
+	else if (z > ceilingspawn)
+		z = ceilingspawn;
 
 	mobj->floorz = floor;
 	mobj->ceilingz = ceiling;
