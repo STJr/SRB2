@@ -12464,7 +12464,7 @@ static boolean P_SetupParticleGen(mapthing_t *mthing, mobj_t *mobj)
 		|| (ticcount = (sides[lines[line].sidenum[1]].textureoffset >> FRACBITS)) < 1)
 		ticcount = 3;
 
-	numdivisions = (mthing->options >> ZSHIFT);
+	numdivisions = mthing->z;
 
 	if (numdivisions)
 	{
