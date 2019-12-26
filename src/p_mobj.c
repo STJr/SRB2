@@ -11342,7 +11342,7 @@ void P_RespawnSpecials(void)
 		}
 
 		//CTF rings should continue to respawn as normal rings outside of CTF.
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 		{
 			if (i == MT_REDTEAMRING || i == MT_BLUETEAMRING)
 				i = MT_RING;
@@ -11413,7 +11413,10 @@ void P_SpawnPlayer(INT32 playernum)
 	{
 		p->outofcoop = false;
 		if (netgame && p->jointime < 1)
-			p->spectator = true;
+		{
+			// Averted by GTR_NOSPECTATORSPAWN.
+			p->spectator = (gametyperules & GTR_NOSPECTATORSPAWN) ? false : true;
+		}
 		else if (multiplayer && !netgame)
 		{
 			// If you're in a team game and you don't have a team assigned yet...
@@ -11456,7 +11459,7 @@ void P_SpawnPlayer(INT32 playernum)
 			p->skincolor = skincolor_blueteam;
 	}
 
-	if ((netgame || multiplayer) && (gametype != GT_COOP || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
+	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
@@ -11861,7 +11864,7 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 	else if (mthing->type == mobjinfo[MT_EMERHUNT].doomednum)
 	{
 		// Emerald Hunt is Coop only. Don't spawn the emerald yet, but save the spawnpoint for later.
-		if (gametype == GT_COOP && numhuntemeralds < MAXHUNTEMERALDS)
+		if ((gametyperules & GTR_EMERALDHUNT) && numhuntemeralds < MAXHUNTEMERALDS)
 			huntemeralds[numhuntemeralds++] = mthing;
 		return true;
 	}
@@ -11894,7 +11897,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		if (!cv_powerstones.value)
 			return false;
 
-		if (!(gametype == GT_MATCH || gametype == GT_CTF))
+		if (!(gametyperules & GTR_MATCHEMERALDS))
 			return false;
 
 		runemeraldmanager = true;
@@ -11908,7 +11911,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 
 		break;
 	case MT_TOKEN:
-		if (gametype != GT_COOP && gametype != GT_COMPETITION)
+		if (!(gametyperules & GTR_EMERALDTOKENS))
 			return false; // Gametype's not right
 
 		if (tokenbits == 30)
@@ -11938,20 +11941,20 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 			return false;
 	}
 
-	if (!G_PlatformGametype())
-	{
-		if ((mobjinfo[i].flags & MF_ENEMY) || (mobjinfo[i].flags & MF_BOSS))
-			return false; // No enemies in ringslinger modes
+	if (((mobjinfo[i].flags & MF_ENEMY) || (mobjinfo[i].flags & MF_BOSS)) && !(gametyperules & GTR_SPAWNENEMIES))
+		return false; // No enemies in ringslinger modes
 
-		if (i == MT_SIGN || i == MT_STARPOST)
-			return false; // Don't spawn exit signs or starposts in wrong game modes
-	}
+	if (!(gametyperules & GTR_ALLOWEXIT) && (i == MT_SIGN))
+		return false; // Don't spawn exit signs in wrong game modes
+
+	if (!G_PlatformGametype() && (i == MT_STARPOST))
+		return false; // Don't spawn starposts in wrong game modes
 
 	if (!G_RingSlingerGametype() || !cv_specialrings.value)
 		if (P_WeaponOrPanel(i))
 			return false; // Don't place weapons/panels in non-ringslinger modes
 
-	if (gametype != GT_CTF) // CTF specific things
+	if (!(gametyperules & GTR_TEAMFLAGS)) // CTF specific things
 	{
 		if (i == MT_BLUEFLAG || i == MT_REDFLAG)
 			return false; // No flags in non-CTF modes!
@@ -11999,7 +12002,7 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 	// Yeah, this is a dirty hack.
 	if ((mobjinfo[i].flags & (MF_MONITOR|MF_GRENADEBOUNCE)) == MF_MONITOR)
 	{
-		if (gametype == GT_COMPETITION || gametype == GT_RACE)
+		if (gametyperules & GTR_RACE)
 		{
 			// Set powerup boxes to user settings for competition.
 			switch (cv_competitionboxes.value)
@@ -12043,7 +12046,7 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 			return MT_NIGHTSCHIP;
 	}
 
-	if (gametype != GT_CTF)
+	if (!(gametyperules & GTR_TEAMS))
 	{
 		if (i == MT_BLUETEAMRING || i == MT_REDTEAMRING)
 			return MT_RING;

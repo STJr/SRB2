@@ -625,7 +625,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			P_AddPlayerScore(player, 1000);
 
-			if (gametype != GT_COOP || modeattacking) // score only?
+			if (!(gametyperules & GTR_SPECIALSTAGES) || modeattacking) // score only?
 			{
 				S_StartSound(toucher, sfx_chchng);
 				break;
@@ -1888,7 +1888,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	char targetname[MAXPLAYERNAME+4];
 	char sourcename[MAXPLAYERNAME+4];
 
-	if (G_PlatformGametype())
+	if (!(gametyperules & (GTR_RINGSLINGER|GTR_HURTMESSAGES)))
 		return; // Not in coop, etc.
 
 	if (!player)
@@ -2093,7 +2093,7 @@ void P_CheckTimeLimit(void)
 	if (!(multiplayer || netgame))
 		return;
 
-	if (G_PlatformGametype())
+	if (!(gametyperules & GTR_TIMELIMIT))
 		return;
 
 	if (leveltime < timelimitintics)
@@ -2124,7 +2124,7 @@ void P_CheckTimeLimit(void)
 	}
 
 	//Optional tie-breaker for Match/CTF
-	else if (cv_overtime.value)
+	else if ((cv_overtime.value) && (gametyperules & GTR_OVERTIME))
 	{
 		INT32 playerarray[MAXPLAYERS];
 		INT32 tempplayer = 0;
@@ -2206,7 +2206,7 @@ void P_CheckPointLimit(void)
 	if (!(multiplayer || netgame))
 		return;
 
-	if (G_PlatformGametype())
+	if (!(gametyperules & GTR_POINTLIMIT))
 		return;
 
 	// pointlimit is nonzero, check if it's been reached by this player
@@ -2389,7 +2389,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	{
 		if (metalrecording) // Ack! Metal Sonic shouldn't die! Cut the tape, end recording!
 			G_StopMetalRecording(true);
-		if (gametype == GT_MATCH // note, no team match suicide penalty
+		if ((gametyperules & GTR_DEATHPENALTY) // note, no team match suicide penalty
 			&& ((target == source) || (source == NULL && inflictor == NULL) || (source && !source->player)))
 		{ // Suicide penalty
 			if (target->player->score >= 50)
@@ -2978,7 +2978,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		player->flyangle += 180; // Shuffle's BETTERNIGHTSMOVEMENT?
 		player->flyangle %= 360;
 
-		if (gametype == GT_RACE || gametype == GT_COMPETITION)
+		if (gametyperules & GTR_RACE)
 			player->drillmeter -= 5*20;
 		else
 		{
@@ -3042,7 +3042,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		return false;
 
 	// Ignore IT players shooting each other, unless friendlyfire is on.
-	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) &&
+	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) &&
 		source && source->player && source->player->pflags & PF_TAGIT)))
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
@@ -3058,7 +3058,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 
 	// Don't allow players on the same team to hurt one another,
 	// unless cv_friendlyfire is on.
-	if (!(cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
+	if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
@@ -3143,7 +3143,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 			return false;
 
 		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
-		if (!cv_friendlyfire.value && (G_PlatformGametype()))
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (G_PlatformGametype()))
 		{
 			if (gametype == GT_COOP && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
 			{
@@ -3166,7 +3166,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 	{
 		// Don't allow players on the same team to hurt one another,
 		// unless cv_friendlyfire is on.
-		if (!cv_friendlyfire.value && target->player->ctfteam == source->player->ctfteam)
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && target->player->ctfteam == source->player->ctfteam)
 		{
 			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 			{
@@ -3224,7 +3224,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 		player->mo->flags2 &= ~MF2_DONTDRAW;
 
 	P_SetPlayerMobjState(player->mo, player->mo->info->deathstate);
-	if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
 		if (source && source->player)
@@ -3349,7 +3349,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 	else
 		S_StartSound (player->mo, sfx_shldls); // Ba-Dum! Shield loss.
 
-	if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
 		if (source && source->player)
@@ -3383,7 +3383,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 			P_AddPlayerScore(source->player, 50);
 	}
 
-	if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
 		if (source && source->player)
@@ -3426,6 +3426,24 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
 		return;
 
+	if (!cv_friendlyfire.value)
+	{
+		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+		{
+			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+			{
+				P_SwitchShield(player, SH_PINK);
+				S_StartSound(player->mo, mobjinfo[MT_PITY_ICON].seesound);
+			}
+		}
+
+		if (source->player->ctfteam == player->ctfteam)
+			return;
+	}
+
+	if (inflictor->type == MT_LHRT)
+		return;
+
 	if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
 	{
 		P_RemoveShield(player);
@@ -3442,7 +3460,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 
 	P_DoPlayerPain(player, inflictor, source);
 
-	if (gametype == GT_CTF && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
+	if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
 		P_PlayerFlagBurst(player, false);
 
 	if (oldnightstime > 10*TICRATE
@@ -3593,7 +3611,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			{
 				if (source == target)
 					return false; // Don't hit yourself with your own paraloop, baka
-				if (source && source->player && !cv_friendlyfire.value
+				if (source && source->player && !(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE))
 				&& (gametype == GT_COOP
 				|| (G_GametypeHasTeams() && player->ctfteam == source->player->ctfteam)))
 					return false; // Don't run eachother over in special stages and team games and such
@@ -3688,7 +3706,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		// by friendly fire. Spilling their rings and other items is enough.
 		else if (!force && G_GametypeHasTeams()
 			&& source && source->player && (source->player->ctfteam == player->ctfteam)
-			&& cv_friendlyfire.value)
+			&& (cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)))
 		{
 			damage = 0;
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);

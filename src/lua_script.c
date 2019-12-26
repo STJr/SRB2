@@ -18,7 +18,9 @@
 #include "w_wad.h"
 #include "p_setup.h"
 #include "r_state.h"
+#include "r_sky.h"
 #include "g_game.h"
+#include "f_finale.h"
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "p_local.h"
@@ -79,8 +81,239 @@ FUNCNORETURN static int LUA_Panic(lua_State *L)
 #endif
 }
 
+// Moved here from lib_getenum.
+int LUA_PushGlobals(lua_State *L, const char *word)
+{
+	if (fastcmp(word,"gamemap")) {
+		lua_pushinteger(L, gamemap);
+		return 1;
+	} else if (fastcmp(word,"maptol")) {
+		lua_pushinteger(L, maptol);
+		return 1;
+	} else if (fastcmp(word,"ultimatemode")) {
+		lua_pushboolean(L, ultimatemode != 0);
+		return 1;
+	} else if (fastcmp(word,"mariomode")) {
+		lua_pushboolean(L, mariomode != 0);
+		return 1;
+	} else if (fastcmp(word,"twodlevel")) {
+		lua_pushboolean(L, twodlevel != 0);
+		return 1;
+	} else if (fastcmp(word,"circuitmap")) {
+		lua_pushboolean(L, circuitmap);
+		return 1;
+	} else if (fastcmp(word,"netgame")) {
+		lua_pushboolean(L, netgame);
+		return 1;
+	} else if (fastcmp(word,"multiplayer")) {
+		lua_pushboolean(L, multiplayer);
+		return 1;
+	} else if (fastcmp(word,"modeattacking")) {
+		lua_pushboolean(L, modeattacking);
+		return 1;
+	} else if (fastcmp(word,"splitscreen")) {
+		lua_pushboolean(L, splitscreen);
+		return 1;
+	} else if (fastcmp(word,"gamecomplete")) {
+		lua_pushboolean(L, gamecomplete);
+		return 1;
+	} else if (fastcmp(word,"devparm")) {
+		lua_pushboolean(L, devparm);
+		return 1;
+	} else if (fastcmp(word,"modifiedgame")) {
+		lua_pushboolean(L, modifiedgame && !savemoddata);
+		return 1;
+	} else if (fastcmp(word,"menuactive")) {
+		lua_pushboolean(L, menuactive);
+		return 1;
+	} else if (fastcmp(word,"paused")) {
+		lua_pushboolean(L, paused);
+		return 1;
+	} else if (fastcmp(word,"bluescore")) {
+		lua_pushinteger(L, bluescore);
+		return 1;
+	} else if (fastcmp(word,"redscore")) {
+		lua_pushinteger(L, redscore);
+		return 1;
+	} else if (fastcmp(word,"timelimit")) {
+		lua_pushinteger(L, cv_timelimit.value);
+		return 1;
+	} else if (fastcmp(word,"pointlimit")) {
+		lua_pushinteger(L, cv_pointlimit.value);
+		return 1;
+	// begin map vars
+	} else if (fastcmp(word,"spstage_start")) {
+		lua_pushinteger(L, spstage_start);
+		return 1;
+	} else if (fastcmp(word,"sstage_start")) {
+		lua_pushinteger(L, sstage_start);
+		return 1;
+	} else if (fastcmp(word,"sstage_end")) {
+		lua_pushinteger(L, sstage_end);
+		return 1;
+	} else if (fastcmp(word,"smpstage_start")) {
+		lua_pushinteger(L, smpstage_start);
+		return 1;
+	} else if (fastcmp(word,"smpstage_end")) {
+		lua_pushinteger(L, smpstage_end);
+		return 1;
+	} else if (fastcmp(word,"titlemap")) {
+		lua_pushinteger(L, titlemap);
+		return 1;
+	} else if (fastcmp(word,"titlemapinaction")) {
+		lua_pushboolean(L, (titlemapinaction != TITLEMAP_OFF));
+		return 1;
+	} else if (fastcmp(word,"bootmap")) {
+		lua_pushinteger(L, bootmap);
+		return 1;
+	} else if (fastcmp(word,"tutorialmap")) {
+		lua_pushinteger(L, tutorialmap);
+		return 1;
+	} else if (fastcmp(word,"tutorialmode")) {
+		lua_pushboolean(L, tutorialmode);
+		return 1;
+	// end map vars
+	// begin CTF colors
+	} else if (fastcmp(word,"skincolor_redteam")) {
+		lua_pushinteger(L, skincolor_redteam);
+		return 1;
+	} else if (fastcmp(word,"skincolor_blueteam")) {
+		lua_pushinteger(L, skincolor_blueteam);
+		return 1;
+	} else if (fastcmp(word,"skincolor_redring")) {
+		lua_pushinteger(L, skincolor_redring);
+		return 1;
+	} else if (fastcmp(word,"skincolor_bluering")) {
+		lua_pushinteger(L, skincolor_bluering);
+		return 1;
+	// end CTF colors
+	// begin timers
+	} else if (fastcmp(word,"invulntics")) {
+		lua_pushinteger(L, invulntics);
+		return 1;
+	} else if (fastcmp(word,"sneakertics")) {
+		lua_pushinteger(L, sneakertics);
+		return 1;
+	} else if (fastcmp(word,"flashingtics")) {
+		lua_pushinteger(L, flashingtics);
+		return 1;
+	} else if (fastcmp(word,"tailsflytics")) {
+		lua_pushinteger(L, tailsflytics);
+		return 1;
+	} else if (fastcmp(word,"underwatertics")) {
+		lua_pushinteger(L, underwatertics);
+		return 1;
+	} else if (fastcmp(word,"spacetimetics")) {
+		lua_pushinteger(L, spacetimetics);
+		return 1;
+	} else if (fastcmp(word,"extralifetics")) {
+		lua_pushinteger(L, extralifetics);
+		return 1;
+	} else if (fastcmp(word,"nightslinktics")) {
+		lua_pushinteger(L, nightslinktics);
+		return 1;
+	} else if (fastcmp(word,"gameovertics")) {
+		lua_pushinteger(L, gameovertics);
+		return 1;
+	} else if (fastcmp(word,"ammoremovaltics")) {
+		lua_pushinteger(L, ammoremovaltics);
+		return 1;
+	// end timers
+	} else if (fastcmp(word,"gametype")) {
+		lua_pushinteger(L, gametype);
+		return 1;
+	} else if (fastcmp(word,"gametyperules")) {
+		lua_pushinteger(L, gametyperules);
+		return 1;
+	} else if (fastcmp(word,"leveltime")) {
+		lua_pushinteger(L, leveltime);
+		return 1;
+	} else if (fastcmp(word,"sstimer")) {
+		lua_pushinteger(L, sstimer);
+		return 1;
+	} else if (fastcmp(word,"curWeather")) {
+		lua_pushinteger(L, curWeather);
+		return 1;
+	} else if (fastcmp(word,"globalweather")) {
+		lua_pushinteger(L, globalweather);
+		return 1;
+	} else if (fastcmp(word,"levelskynum")) {
+		lua_pushinteger(L, levelskynum);
+		return 1;
+	} else if (fastcmp(word,"globallevelskynum")) {
+		lua_pushinteger(L, globallevelskynum);
+		return 1;
+	} else if (fastcmp(word,"mapmusname")) {
+		lua_pushstring(L, mapmusname);
+		return 1;
+	} else if (fastcmp(word,"mapmusflags")) {
+		lua_pushinteger(L, mapmusflags);
+		return 1;
+	} else if (fastcmp(word,"mapmusposition")) {
+		lua_pushinteger(L, mapmusposition);
+		return 1;
+	// local player variables, by popular request
+	} else if (fastcmp(word,"consoleplayer")) { // player controlling console (aka local player 1)
+		if (consoleplayer < 0 || !playeringame[consoleplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[consoleplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"displayplayer")) { // player visible on screen (aka display player 1)
+		if (displayplayer < 0 || !playeringame[displayplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[displayplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"secondarydisplayplayer")) { // local/display player 2, for splitscreen
+		if (!splitscreen || secondarydisplayplayer < 0 || !playeringame[secondarydisplayplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
+		return 1;
+	// end local player variables
+	} else if (fastcmp(word,"server")) {
+		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"admin")) { // BACKWARDS COMPATIBILITY HACK: This was replaced with IsPlayerAdmin(), but some 2.1 Lua scripts still use the admin variable. It now points to the first admin player in the array.
+		LUA_Deprecated(L, "admin", "IsPlayerAdmin(player)");
+		if (!playeringame[adminplayers[0]] || IsPlayerAdmin(serverplayer))
+			return 0;
+		LUA_PushUserdata(L, &players[adminplayers[0]], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"emeralds")) {
+		lua_pushinteger(L, emeralds);
+		return 1;
+	} else if (fastcmp(word,"gravity")) {
+		lua_pushinteger(L, gravity);
+		return 1;
+	} else if (fastcmp(word,"VERSIONSTRING")) {
+		lua_pushstring(L, VERSIONSTRING);
+		return 1;
+	} else if (fastcmp(word, "token")) {
+		lua_pushinteger(L, token);
+		return 1;
+	}
+	return 0;
+}
+
+// See the above.
+int LUA_CheckGlobals(lua_State *L, const char *word)
+{
+	if (fastcmp(word, "gametyperules"))
+		gametyperules = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "redscore"))
+		redscore = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "bluescore"))
+		bluescore = (UINT32)luaL_checkinteger(L, 2);
+	else
+		return 0;
+
+	// Global variable set, so return and don't error.
+	return 1;
+}
+
 // This function decides which global variables you are allowed to set.
-static int noglobals(lua_State *L)
+static int setglobals(lua_State *L)
 {
 	const char *csname;
 	char *name;
@@ -105,6 +338,9 @@ static int noglobals(lua_State *L)
 		Z_Free(name);
 		return 0;
 	}
+
+	if (LUA_CheckGlobals(L, csname))
+		return 0;
 
 	Z_Free(name);
 	return luaL_error(L, "Implicit global " LUA_QS " prevented. Create a local variable instead.", csname);
@@ -144,7 +380,7 @@ static void LUA_ClearState(void)
 
 	// lock the global namespace
 	lua_getmetatable(L, LUA_GLOBALSINDEX);
-		lua_pushcfunction(L, noglobals);
+		lua_pushcfunction(L, setglobals);
 		lua_setfield(L, -2, "__newindex");
 		lua_newtable(L);
 		lua_setfield(L, -2, "__metatable");
