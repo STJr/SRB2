@@ -9763,15 +9763,11 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		P_DragonbomberThink(mobj);
 		break;
 	case MT_MINUS:
-#ifdef ROTSPRITE
-	{
 		if (P_IsObjectOnGround(mobj))
 			mobj->rollangle = 0;
 		else
 			mobj->rollangle = R_PointToAngle2(0, 0, mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
-	}
-#endif
-	break;
+		break;
 	case MT_SPINFIRE:
 		if (mobj->flags & MF_NOGRAVITY)
 		{

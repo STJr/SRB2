@@ -18,7 +18,6 @@
 #include "doomdef.h"
 
 // Structs
-#ifdef ROTSPRITE
 typedef enum
 {
 	ROTAXIS_X, // Roll (the default)
@@ -31,13 +30,10 @@ typedef struct
 	INT32 x, y;
 	rotaxis_t rotaxis;
 } spriteframepivot_t;
-#endif
 
 typedef struct
 {
-#ifdef ROTSPRITE
 	spriteframepivot_t pivot[64];
-#endif
 	boolean available;
 } spriteinfo_t;
 
