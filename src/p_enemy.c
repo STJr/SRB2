@@ -4985,7 +4985,7 @@ void A_ThrownRing(mobj_t *actor)
 				continue;
 
 			// Don't home in on teammates.
-			if (gametype == GT_CTF
+			if ((gametyperules & GTR_TEAMFLAGS)
 				&& actor->target->player->ctfteam == player->ctfteam)
 				continue;
 		}
@@ -6591,7 +6591,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 		if (changecolor)
 		{
-			if (gametype != GT_CTF)
+			if (!(gametyperules & GTR_TEAMFLAGS))
 				mo->color = actor->target->color; //copy color
 			else if (actor->target->player->ctfteam == 2)
 				mo->color = skincolor_bluering;
@@ -6607,7 +6607,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -6622,7 +6622,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
