@@ -50,6 +50,9 @@ angle_t rw_normalangle;
 angle_t rw_angle1;
 fixed_t rw_distance;
 
+// for R_CalculateSegDistance
+#define SOFTWARE_USE_FLOATS
+
 //
 // regular wall
 //
@@ -1706,22 +1709,73 @@ static void R_RenderSegLoop (void)
 //
 // R_CalculateSegDistance
 // Calculate the distance from a seg.
-// Uses precalculated seg->length.
+// Uses precalculated seg length.
 //
-static INT64 R_CalculateSegDistance(seg_t* seg, INT64 x2, INT64 y2)
+static void R_CalculateSegDistance(seg_t *seg, INT64 x2, INT64 y2, boolean longboi)
 {
+#ifdef SOFTWARE_USE_FLOATS
+	float v1x = FIXED_TO_FLOAT(seg->v1->x);
+	float v1y = FIXED_TO_FLOAT(seg->v1->y);
+	float v2x = FIXED_TO_FLOAT(seg->v2->x);
+	float v2y = FIXED_TO_FLOAT(seg->v2->y);
+	float dx, dy, vdx, vdy;
+	float distance = 0.0f;
+
+	// The seg is vertical.
 	if (!seg->linedef->dy)
-		return llabs(y2 - seg->v1->y);
+		distance = fabsf(y2 - v1y);
+	// The seg is horizontal.
 	else if (!seg->linedef->dx)
-		return llabs(x2 - seg->v1->x);
+		distance = fabsf(x2 - v1x);
+	// Uses precalculated seg->flength
+	else if (longboi)
+	{
+		dx = v2x-v1x;
+		dy = v2y-v1y;
+		vdx = x2-v1x;
+		vdy = y2-v1y;
+		distance = ((dy*vdx)-(dx*vdy))/(seg->flength);
+	}
+	// Linguica's fix converted to floating-point math
+	else
+	{
+		fixed_t x, y;
+		float a, c, ac;
+
+		v1x -= FIXED_TO_FLOAT(viewx);
+		v1y -= FIXED_TO_FLOAT(viewy);
+		v2x -= FIXED_TO_FLOAT(viewx);
+		v2y -= FIXED_TO_FLOAT(viewy);
+		dx = v2x - v1x;
+		dy = v2y - v1y;
+
+		a = (v1x*v2y) - (v1y*v2x);
+		c = (dx*dx) + (dy*dy);
+		ac = (a/c);
+
+		x = FLOAT_TO_FIXED(ac*(-dy));
+		y = FLOAT_TO_FIXED(ac*dx);
+
+		rw_distance = R_PointToDist(viewx + x, viewy + y);
+		return;
+	}
+
+	rw_distance = FLOAT_TO_FIXED(distance);
+#else
+	(void)longboi;
+	if (!seg->linedef->dy)
+		rw_distance = (fixed_t)(llabs(y2 - seg->v1->y));
+	else if (!seg->linedef->dx)
+		rw_distance = (fixed_t)(llabs(x2 - seg->v1->x));
 	else
 	{
 		INT64 dx = (seg->v2->x)-(seg->v1->x);
 		INT64 dy = (seg->v2->y)-(seg->v1->y);
 		INT64 vdx = x2-(seg->v1->x);
 		INT64 vdy = y2-(seg->v1->y);
-		return ((dy*vdx)-(dx*vdy))/(seg->length);
+		rw_distance = (fixed_t)(((dy*vdx)-(dx*vdy))/(seg->length));
 	}
+#endif
 }
 
 //
@@ -3187,12 +3241,19 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	sineval = FINESINE(distangle>>ANGLETOFINESHIFT);
 
 	hyp = R_PointToDist(curline->v1->x, curline->v1->y);
-	rw_distance = FixedMul(hyp, sineval);
 	longboi = (hyp >= INT32_MAX);
 
+	// The seg is vertical.
+	if (curline->v1->y == curline->v2->y)
+		rw_distance = (fixed_t)(llabs(viewy - curline->v1->y));
+	// The seg is horizontal.
+	else if (curline->v1->x == curline->v2->x)
+		rw_distance = (fixed_t)(llabs(viewx - curline->v1->x));
 	// big room fix
-	if (longboi)
-		rw_distance = (fixed_t)R_CalculateSegDistance(curline,viewx,viewy);
+	else if ((curline->length >= 1024<<FRACBITS) || longboi)
+		R_CalculateSegDistance(curline, viewx, viewy, longboi);
+	else
+		rw_distance = FixedMul(hyp, sineval);
 
 	ds_p->x1 = rw_x = start;
 	ds_p->x2 = stop;
