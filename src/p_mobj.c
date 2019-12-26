@@ -8321,6 +8321,8 @@ static boolean P_MobjDeadThink(mobj_t *mobj)
 // See Linedef Exec 457 (Track mobj angle to point)
 static void P_TracerAngleThink(mobj_t *mobj)
 {
+	angle_t ang;
+
 	if (!mobj->tracer)
 		return;
 
@@ -8333,7 +8335,7 @@ static void P_TracerAngleThink(mobj_t *mobj)
 	// mobj->cvval - Allowable failure delay
 	// mobj->cvmem - Failure timer
 
-	angle_t ang = mobj->angle - R_PointToAngle2(mobj->x, mobj->y, mobj->tracer->x, mobj->tracer->y);
+	ang = mobj->angle - R_PointToAngle2(mobj->x, mobj->y, mobj->tracer->x, mobj->tracer->y);
 
 	// \todo account for distance between mobj and tracer
 	// Because closer mobjs can be facing beyond the angle tolerance
