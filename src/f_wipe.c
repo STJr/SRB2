@@ -56,7 +56,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 
 	0,  // wipe_level_toblack
 	UINT8_MAX,  // wipe_intermission_toblack
-	UINT8_MAX,  // wipe_continuing_toblack
+	0,  // wipe_continuing_toblack
 	0,  // wipe_titlescreen_toblack
 	0,  // wipe_timeattack_toblack
 	99, // wipe_credits_toblack
@@ -161,7 +161,7 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	{
 		// Determine pixel to use from fademask
 		pcolor = &pMasterPalette[*lump++];
-		if (wipestyle == WIPESTYLE_LEVEL)
+		if (wipestyle == WIPESTYLE_COLORMAP)
 			*mask++ = pcolor->s.red / FADECOLORMAPDIV;
 		else
 			*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
@@ -191,7 +191,7 @@ void F_WipeStageTitle(void)
 {
 	// draw level title
 	if ((WipeStageTitle && st_overlay)
-	&& (wipestyle == WIPESTYLE_LEVEL)
+	&& (wipestyle == WIPESTYLE_COLORMAP)
 	&& !(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
 	&& *mapheaderinfo[gamemap-1]->lvlttl != '\0')
 	{
@@ -282,7 +282,7 @@ static void F_DoWipe(fademask_t *fademask)
 					relativepos += vid.width;
 				}
 			}
-			else if (*mask >= ((wipestyle == WIPESTYLE_LEVEL) ? FADECOLORMAPROWS : 10))
+			else if (*mask >= 10)
 			{
 				// shortcut - memcpy target to work
 				while (draw_linestogo--)
@@ -293,25 +293,8 @@ static void F_DoWipe(fademask_t *fademask)
 			}
 			else
 			{
-				if (wipestyle == WIPESTYLE_LEVEL)
-				{
-					int nmask;
-					UINT8 *fade = fadecolormap;
-
-					if (wipestyleflags & WSF_TOWHITE)
-						fade = fadecolormap + (FADECOLORMAPROWS * 256);
-
-					nmask = *mask;
-					if (wipestyleflags & WSF_FADEIN)
-						nmask = (FADECOLORMAPROWS-1) - nmask;
-
-					transtbl = fade + (nmask * 256);
-				}
-				else
-				{
-					// pointer to transtable that this mask would use
-					transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
-				}
+				// pointer to transtable that this mask would use
+				transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
 
 				// DRAWING LOOP
 				while (draw_linestogo--)
@@ -321,16 +304,113 @@ static void F_DoWipe(fademask_t *fademask)
 					e = e_base + relativepos;
 					draw_rowstogo = draw_rowend - draw_rowstart;
 
-					if (wipestyle == WIPESTYLE_LEVEL)
-					{
-						while (draw_rowstogo--)
-							*w++ = transtbl[*e++];
-					}
-					else
-					{
-						while (draw_rowstogo--)
-							*w++ = transtbl[ ( *e++ << 8 ) + *s++ ];
-					}
+					while (draw_rowstogo--)
+						*w++ = transtbl[ ( *e++ << 8 ) + *s++ ];
+
+					relativepos += vid.width;
+				}
+				// END DRAWING LOOP
+			}
+
+			if (++maskx >= fademask->width)
+				++masky, maskx = 0;
+		} while (++mask < maskend);
+
+		free(scrxpos);
+		free(scrypos);
+	}
+}
+
+static void F_DoColormapWipe(fademask_t *fademask, UINT8 *colormap)
+{
+	// Lactozilla: F_DoWipe for WIPESTYLE_COLORMAP
+	{
+		// wipe screen, start, end
+		UINT8       *w = wipe_scr;
+		const UINT8 *s = wipe_scr_start;
+		const UINT8 *e = wipe_scr_end;
+
+		// first pixel for each screen
+		UINT8       *w_base = w;
+		const UINT8 *s_base = s;
+		const UINT8 *e_base = e;
+
+		// mask data, end
+		UINT8       *transtbl;
+		const UINT8 *mask    = fademask->mask;
+		const UINT8 *maskend = mask + fademask->size;
+
+		// rectangle draw hints
+		UINT32 draw_linestart, draw_rowstart;
+		UINT32 draw_lineend,   draw_rowend;
+		UINT32 draw_linestogo, draw_rowstogo;
+
+		// rectangle coordinates, etc.
+		UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
+		UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
+		UINT16 maskx, masky;
+		UINT32 relativepos;
+
+		// ---
+		// Screw it, we do the fixed point math ourselves up front.
+		scrxpos[0] = 0;
+		for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
+			scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
+		scrxpos[fademask->width] = vid.width;
+
+		scrypos[0] = 0;
+		for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
+			scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
+		scrypos[fademask->height] = vid.height;
+		// ---
+
+		maskx = masky = 0;
+		do
+		{
+			draw_rowstart = scrxpos[maskx];
+			draw_rowend   = scrxpos[maskx + 1];
+			draw_linestart = scrypos[masky];
+			draw_lineend   = scrypos[masky + 1];
+
+			relativepos = (draw_linestart * vid.width) + draw_rowstart;
+			draw_linestogo = draw_lineend - draw_linestart;
+
+			if (*mask == 0)
+			{
+				// shortcut - memcpy source to work
+				while (draw_linestogo--)
+				{
+					M_Memcpy(w_base+relativepos, s_base+relativepos, draw_rowend-draw_rowstart);
+					relativepos += vid.width;
+				}
+			}
+			else if (*mask >= FADECOLORMAPROWS)
+			{
+				// shortcut - memcpy target to work
+				while (draw_linestogo--)
+				{
+					M_Memcpy(w_base+relativepos, e_base+relativepos, draw_rowend-draw_rowstart);
+					relativepos += vid.width;
+				}
+			}
+			else
+			{
+				int nmask = *mask;
+				if (wipestyleflags & WSF_FADEIN)
+					nmask = (FADECOLORMAPROWS-1) - nmask;
+
+				transtbl = colormap + (nmask * 256);
+
+				// DRAWING LOOP
+				while (draw_linestogo--)
+				{
+					w = w_base + relativepos;
+					s = s_base + relativepos;
+					e = e_base + relativepos;
+					draw_rowstogo = draw_rowend - draw_rowstart;
+
+					while (draw_rowstogo--)
+						*w++ = transtbl[*e++];
 
 					relativepos += vid.width;
 				}
@@ -382,6 +462,62 @@ void F_WipeEndScreen(void)
 #endif
 }
 
+/** Verifies every condition for a colormapped fade.
+  */
+boolean F_ShouldColormapFade(void)
+{
+	if ((wipestyleflags & (WSF_FADEIN|WSF_FADEOUT)) // only if one of those wipestyleflags are actually set
+	&& !(wipestyleflags & WSF_CROSSFADE)) // and if not crossfading
+	{
+		// World
+		return (gamestate == GS_LEVEL
+		|| gamestate == GS_TITLESCREEN
+		// Finales
+		|| gamestate == GS_CONTINUING
+		|| gamestate == GS_CREDITS
+		|| gamestate == GS_EVALUATION
+		|| gamestate == GS_INTRO
+		|| gamestate == GS_ENDING
+		// Menus
+		|| gamestate == GS_TIMEATTACK);
+	}
+	return false;
+}
+
+/** Decides what wipe style to use.
+  */
+void F_DecideWipeStyle(void)
+{
+	// Set default wipe style
+	wipestyle = WIPESTYLE_NORMAL;
+
+	// Check for colormap wipe style
+	if (F_ShouldColormapFade())
+		wipestyle = WIPESTYLE_COLORMAP;
+}
+
+/** Attempt to run a colormap fade,
+    provided all the conditionals were properly met.
+    Returns true if so.
+    I demand you call F_RunWipe after this function.
+  */
+boolean F_TryColormapFade(UINT8 wipecolor)
+{
+	if (F_ShouldColormapFade())
+	{
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
+			F_WipeColorFill(wipecolor);
+#endif
+		return true;
+	}
+	else
+	{
+		F_WipeColorFill(wipecolor);
+		return false;
+	}
+}
+
 /** After setting up the screens you want to wipe,
   * calling this will do a 'typical' wipe.
   */
@@ -399,17 +535,9 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
 
 	// Init the wipe
+	F_DecideWipeStyle();
 	WipeInAction = true;
 	wipe_scr = screens[0];
-
-	// don't know where else to put this.
-	// this any good?
-	if ((gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN)
-	&& (wipestyleflags & (WSF_FADEIN|WSF_FADEOUT)) // only if one of those wipestyleflags are actually set
-	&& !(wipestyleflags & WSF_CROSSFADE)) // and if not crossfading
-		wipestyle = WIPESTYLE_LEVEL;
-	else
-		wipestyle = WIPESTYLE_NORMAL;
 
 	// lastwipetic should either be 0 or the tic we last wiped
 	// on for fade-to-black
@@ -425,21 +553,39 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			I_Sleep();
 		lastwipetic = nowtime;
 
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
+		// Wipe styles
+		if (wipestyle == WIPESTYLE_COLORMAP)
 		{
-			// send in the wipe type and wipe frame because we need to cache the graphic
-			if (wipestyle == WIPESTYLE_LEVEL)
+#ifdef HWRENDER
+			if (rendermode == render_opengl)
+			{
+				// send in the wipe type and wipe frame because we need to cache the graphic
 				HWR_DoTintedWipe(wipetype, wipeframe-1);
+			}
 			else
-				HWR_DoWipe(wipetype, wipeframe-1);
+#endif
+			{
+				UINT8 *colormap = fadecolormap;
+				if (wipestyleflags & WSF_TOWHITE)
+					colormap += (FADECOLORMAPROWS * 256);
+				F_DoColormapWipe(fmask, colormap);
+			}
+
+			// Draw the title card above the wipe
+			F_WipeStageTitle();
 		}
 		else
+		{
+#ifdef HWRENDER
+			if (rendermode == render_opengl)
+			{
+				// send in the wipe type and wipe frame because we need to cache the graphic
+				HWR_DoWipe(wipetype, wipeframe-1);
+			}
+			else
 #endif
-			F_DoWipe(fmask);
-
-		if (wipestyle == WIPESTYLE_LEVEL)
-			F_WipeStageTitle();
+				F_DoWipe(fmask);
+		}
 
 		I_OsPolling();
 		I_UpdateNoBlit();
