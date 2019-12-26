@@ -93,10 +93,23 @@ extern angle_t doubleclipangle;
 extern INT32 viewangletox[FINEANGLES/2];
 extern angle_t xtoviewangle[MAXVIDWIDTH+1];
 
-extern fixed_t rw_distance;
-extern angle_t rw_normalangle;
-
-// angle to line origin
-extern angle_t rw_angle1;
+// Wall rendering
+typedef struct
+{
+	INT32 x, stopx;
+	angle_t centerangle;
+	fixed_t offset;
+	fixed_t offset2; // for splats
+	fixed_t scale, scalestep;
+	fixed_t midtexturemid, toptexturemid, bottomtexturemid;
+#ifdef ESLOPE
+	fixed_t toptextureslide, midtextureslide, bottomtextureslide; // Defines how to adjust Y offsets along the wall for slopes
+	fixed_t midtextureback, midtexturebackslide; // Values for masked midtexture height calculation
+#endif
+	fixed_t distance;
+	angle_t normalangle;
+	angle_t angle1; // angle to line origin
+} renderwall_t;
+extern renderwall_t rw;
 
 #endif
