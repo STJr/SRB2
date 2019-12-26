@@ -37,6 +37,14 @@ static boolean maskedtexture;
 static INT32 toptexture, bottomtexture, midtexture;
 static INT32 numthicksides, numbackffloors;
 
+static boolean bothceilingssky;
+static boolean bothfloorssky;
+
+#ifdef ESLOPE
+static vertex_t segleft, segright;
+static fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
+#endif
+
 angle_t rw_normalangle;
 // angle to line origin
 angle_t rw_angle1;
@@ -1687,8 +1695,20 @@ static void R_RenderSegLoop (void)
 	}
 }
 
-// Uses precalculated seg->length
-static INT64 R_CalcSegDist(seg_t* seg, INT64 x2, INT64 y2)
+// Macro for slope bullshit
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+	if (slope) { \
+		end1 = P_GetZAt(slope, segleft.x, segleft.y); \
+		end2 = P_GetZAt(slope, segright.x, segright.y); \
+	} else \
+		end1 = end2 = normalheight;
+
+//
+// R_CalculateSegDistance
+// Calculate the distance from a seg.
+// Uses precalculated seg->length.
+//
+static INT64 R_CalculateSegDistance(seg_t* seg, INT64 x2, INT64 y2)
 {
 	if (!seg->linedef->dy)
 		return llabs(y2 - seg->v1->y);
@@ -1705,112 +1725,13 @@ static INT64 R_CalcSegDist(seg_t* seg, INT64 x2, INT64 y2)
 }
 
 //
-// R_StoreWallRange
-// A wall segment will be drawn
-//  between start and stop pixels (inclusive).
+// R_CalculateWallScale
+// Calculate scale at both ends and step.
 //
-void R_StoreWallRange(INT32 start, INT32 stop)
+static INT32 R_CalculateWallScale(INT32 start, INT32 stop)
 {
-	fixed_t       hyp;
-	fixed_t       sineval;
-	angle_t       distangle, offsetangle;
-	boolean longboi;
-#ifndef ESLOPE
-	fixed_t       vtop;
-#endif
-	INT32           lightnum;
-	INT32           i, p;
-	lightlist_t   *light;
-	r_lightlist_t *rlight;
-	INT32 range;
-#ifdef ESLOPE
-	vertex_t segleft, segright;
-	fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
-#endif
-	static size_t maxdrawsegs = 0;
+	INT32 range = 1;
 
-#ifdef ESLOPE
-	maskedtextureheight = NULL;
-	//initialize segleft and segright
-	memset(&segleft, 0x00, sizeof(segleft));
-	memset(&segright, 0x00, sizeof(segright));
-#endif
-
-	colfunc = colfuncs[BASEDRAWFUNC];
-
-	if (ds_p == drawsegs+maxdrawsegs)
-	{
-		size_t curpos = curdrawsegs - drawsegs;
-		size_t pos = ds_p - drawsegs;
-		size_t newmax = maxdrawsegs ? maxdrawsegs*2 : 128;
-		if (firstseg)
-			firstseg = (drawseg_t *)(firstseg - drawsegs);
-		drawsegs = Z_Realloc(drawsegs, newmax*sizeof (*drawsegs), PU_STATIC, NULL);
-		ds_p = drawsegs + pos;
-		maxdrawsegs = newmax;
-		curdrawsegs = drawsegs + curpos;
-		if (firstseg)
-			firstseg = drawsegs + (size_t)firstseg;
-	}
-
-	sidedef = curline->sidedef;
-	linedef = curline->linedef;
-
-	// calculate rw_distance for scale calculation
-	rw_normalangle = curline->angle + ANGLE_90;
-	offsetangle = abs((INT32)(rw_normalangle-rw_angle1));
-
-	if (offsetangle > ANGLE_90)
-		offsetangle = ANGLE_90;
-
-	distangle = ANGLE_90 - offsetangle;
-	sineval = FINESINE(distangle>>ANGLETOFINESHIFT);
-
-	hyp = R_PointToDist(curline->v1->x, curline->v1->y);
-	rw_distance = FixedMul(hyp, sineval);
-	longboi = (hyp >= INT32_MAX);
-
-	// big room fix
-	if (longboi)
-		rw_distance = (fixed_t)R_CalcSegDist(curline,viewx,viewy);
-
-	ds_p->x1 = rw_x = start;
-	ds_p->x2 = stop;
-	ds_p->curline = curline;
-	rw_stopx = stop+1;
-
-	//SoM: Code to remove limits on openings.
-	{
-		size_t pos = lastopening - openings;
-		size_t need = (rw_stopx - start)*4 + pos;
-		if (need > maxopenings)
-		{
-			drawseg_t *ds;  //needed for fix from *cough* zdoom *cough*
-			INT16 *oldopenings = openings;
-			INT16 *oldlast = lastopening;
-
-			do
-				maxopenings = maxopenings ? maxopenings*2 : 16384;
-			while (need > maxopenings);
-			openings = Z_Realloc(openings, maxopenings * sizeof (*openings), PU_STATIC, NULL);
-			lastopening = openings + pos;
-
-			// borrowed fix from *cough* zdoom *cough*
-			// [RH] We also need to adjust the openings pointers that
-			//    were already stored in drawsegs.
-			for (ds = drawsegs; ds < ds_p; ds++)
-			{
-#define ADJUST(p) if (ds->p + ds->x1 >= oldopenings && ds->p + ds->x1 <= oldlast) ds->p = ds->p - oldopenings + openings;
-				ADJUST(maskedtexturecol);
-				ADJUST(sprtopclip);
-				ADJUST(sprbottomclip);
-				ADJUST(thicksidecol);
-#undef ADJUST
-			}
-		}
-	}  // end of code to remove limits on openings
-
-	// calculate scale at both ends and step
 	ds_p->scale1 = rw_scale = R_ScaleFromGlobalAngle(viewangle + xtoviewangle[start]);
 
 	if (stop > start)
@@ -1837,13 +1758,20 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 #endif
 		ds_p->scale2 = ds_p->scale1;
-		range = 1;
 	}
 
 	ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (range);
 
-	// calculate texture boundaries
-	//  and decide if floor / ceiling marks are needed
+	return range;
+}
+
+//
+// R_WorldTopAndBottom
+// Calculate texture boundaries
+// and decide if floor or ceiling marks are needed.
+//
+static void R_WorldTopAndBottom(INT32 start, INT32 stop)
+{
 #ifdef ESLOPE
 	// Figure out map coordinates of where start and end are mapping to on seg, so we can clip right for slope bullshit
 	if (frontsector->hasslope || (backsector && backsector->hasslope)) // Commenting this out for FOFslop. -Red
@@ -1895,14 +1823,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 	}
 
-
-#define SLOPEPARAMS(slope, end1, end2, normalheight) \
-	if (slope) { \
-		end1 = P_GetZAt(slope, segleft.x, segleft.y); \
-		end2 = P_GetZAt(slope, segright.x, segright.y); \
-	} else \
-		end1 = end2 = normalheight;
-
 	SLOPEPARAMS(frontsector->c_slope, worldtop,    worldtopslope,    frontsector->ceilingheight)
 	SLOPEPARAMS(frontsector->f_slope, worldbottom, worldbottomslope, frontsector->floorheight)
 	// subtract viewz from these to turn them into
@@ -1915,60 +1835,350 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	worldtop = frontsector->ceilingheight - viewz;
 	worldbottom = frontsector->floorheight - viewz;
 #endif
+}
 
-	midtexture = toptexture = bottomtexture = maskedtexture = 0;
-	ds_p->maskedtexturecol = NULL;
-	ds_p->numthicksides = numthicksides = 0;
-	ds_p->thicksidecol = NULL;
-	ds_p->tsilheight = 0;
+//
+// R_WorldSegTextured
+// Calculate rw_offset.
+// Only needed for textured lines.
+//
+static void R_WorldSegTextured(fixed_t hyp, boolean longboi)
+{
+	INT32 lightnum;
+	fixed_t sineval;
+	angle_t offsetangle = rw_normalangle-rw_angle1;
 
-	numbackffloors = 0;
+	if (offsetangle > ANGLE_180)
+		offsetangle = -(signed)offsetangle;
+	if (offsetangle > ANGLE_90)
+		offsetangle = ANGLE_90;
 
-	for (i = 0; i < MAXFFLOORS; i++)
-		ds_p->thicksides[i] = NULL;
+	sineval = FINESINE(offsetangle>>ANGLETOFINESHIFT);
+	rw_offset = FixedMul(hyp, sineval);
 
-	if (numffloors)
+	// big room fix
+	if (longboi)
 	{
-		for (i = 0; i < numffloors; i++)
+		INT64 dx = (curline->v2->x)-(curline->v1->x);
+		INT64 dy = (curline->v2->y)-(curline->v1->y);
+		INT64 vdx = viewx-(curline->v1->x);
+		INT64 vdy = viewy-(curline->v1->y);
+		rw_offset = ((dx*vdx-dy*vdy))/(curline->length);
+	}
+
+	if (rw_normalangle-rw_angle1 < ANGLE_180)
+		rw_offset = -rw_offset;
+
+	/// don't use texture offset for splats
+	rw_offset2 = rw_offset + curline->offset;
+	rw_offset += sidedef->textureoffset + curline->offset;
+	rw_centerangle = ANGLE_90 + viewangle - rw_normalangle;
+
+	// calculate light table
+	//  use different light tables
+	//  for horizontal / vertical / diagonal
+	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
+	lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+
+	if (curline->v1->y == curline->v2->y)
+		lightnum--;
+	else if (curline->v1->x == curline->v2->x)
+		lightnum++;
+
+	if (lightnum < 0)
+		walllights = scalelight[0];
+	else if (lightnum >= LIGHTLEVELS)
+		walllights = scalelight[LIGHTLEVELS - 1];
+	else
+		walllights = scalelight[lightnum];
+}
+
+//
+// R_CheckMaskedTextures
+// Midtexture stuff, presumably.
+//
+static void R_CheckMaskedTextures(void)
+{
+	INT32 i = 0;
+	// allocate space for masked texture tables
+	if (frontsector && backsector && frontsector->tag != backsector->tag && (backsector->ffloors || frontsector->ffloors))
+	{
+		ffloor_t *rover;
+		ffloor_t *r2;
+		fixed_t   lowcut, highcut;
+#ifdef ESLOPE
+		fixed_t lowcutslope, highcutslope;
+
+		// Used for height comparisons and etc across FOFs and slopes
+		fixed_t high1, highslope1, low1, lowslope1, high2, highslope2, low2, lowslope2;
+#endif
+
+		//markceiling = markfloor = true;
+		maskedtexture = true;
+
+		ds_p->thicksidecol = maskedtexturecol = lastopening - rw_x;
+		lastopening += rw_stopx - rw_x;
+
+		lowcut = max(worldbottom, worldlow) + viewz;
+		highcut = min(worldtop, worldhigh) + viewz;
+#ifdef ESLOPE
+		lowcutslope = max(worldbottomslope, worldlowslope) + viewz;
+		highcutslope = min(worldtopslope, worldhighslope) + viewz;
+#endif
+
+		if (frontsector->ffloors && backsector->ffloors)
 		{
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!ds_p->curline->polyseg || ffloor[i].polyobj != ds_p->curline->polyseg))
-				continue;
-#endif
+			i = 0;
+			for (rover = backsector->ffloors; rover && i < MAXFFLOORS; rover = rover->next)
+			{
+				if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
+					continue;
+				if (rover->flags & FF_INVERTSIDES)
+					continue;
+
+				if (rover->norender == leveltime)
+					continue;
 
 #ifdef ESLOPE
-			if (ffloor[i].slope) {
-				ffloor[i].f_pos = P_GetZAt(ffloor[i].slope, segleft.x, segleft.y) - viewz;
-				ffloor[i].f_pos_slope = P_GetZAt(ffloor[i].slope, segright.x, segright.y) - viewz;
-			} else
-				ffloor[i].f_pos_slope =
+				SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+				SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
+
+				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
+					continue;
+#else
+				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
+					continue;
 #endif
-			ffloor[i].f_pos = ffloor[i].height - viewz;
+
+				for (r2 = frontsector->ffloors; r2; r2 = r2->next)
+				{
+					if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
+						continue;
+
+					if (r2->norender == leveltime)
+						continue;
+
+					if (rover->flags & FF_EXTRA)
+					{
+						if (!(r2->flags & FF_CUTEXTRA))
+							continue;
+
+						if (r2->flags & FF_EXTRA && (r2->flags & (FF_TRANSLUCENT|FF_FOG)) != (rover->flags & (FF_TRANSLUCENT|FF_FOG)))
+							continue;
+					}
+					else
+					{
+						if (!(r2->flags & FF_CUTSOLIDS))
+							continue;
+					}
+
+#ifdef ESLOPE
+					SLOPEPARAMS(*r2->t_slope, high2, highslope2, *r2->topheight)
+					SLOPEPARAMS(*r2->b_slope, low2,  lowslope2,  *r2->bottomheight)
+
+					if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
+						continue;
+					if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))
+						continue;
+#else
+					if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
+						continue;
+					if (*rover->topheight > *r2->topheight || *rover->bottomheight < *r2->bottomheight)
+						continue;
+#endif
+
+					break;
+				}
+				if (r2)
+					continue;
+
+				ds_p->thicksides[i] = rover;
+				i++;
+			}
+
+			for (rover = frontsector->ffloors; rover && i < MAXFFLOORS; rover = rover->next)
+			{
+				if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
+					continue;
+				if (!(rover->flags & FF_ALLSIDES))
+					continue;
+
+				if (rover->norender == leveltime)
+					continue;
+
+#ifdef ESLOPE
+				SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+				SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
+
+				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
+					continue;
+#else
+				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
+					continue;
+#endif
+
+				for (r2 = backsector->ffloors; r2; r2 = r2->next)
+				{
+					if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
+						continue;
+
+					if (r2->norender == leveltime)
+						continue;
+
+					if (rover->flags & FF_EXTRA)
+					{
+						if (!(r2->flags & FF_CUTEXTRA))
+							continue;
+
+						if (r2->flags & FF_EXTRA && (r2->flags & (FF_TRANSLUCENT|FF_FOG)) != (rover->flags & (FF_TRANSLUCENT|FF_FOG)))
+							continue;
+					}
+					else
+					{
+						if (!(r2->flags & FF_CUTSOLIDS))
+							continue;
+					}
+
+#ifdef ESLOPE
+					SLOPEPARAMS(*r2->t_slope, high2, highslope2, *r2->topheight)
+					SLOPEPARAMS(*r2->b_slope, low2,  lowslope2,  *r2->bottomheight)
+					if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
+						continue;
+					if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))
+						continue;
+#else
+					if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
+						continue;
+					if (*rover->topheight > *r2->topheight || *rover->bottomheight < *r2->bottomheight)
+						continue;
+#endif
+
+					break;
+				}
+				if (r2)
+					continue;
+
+				ds_p->thicksides[i] = rover;
+				i++;
+			}
 		}
-	}
+		else if (backsector->ffloors)
+		{
+			for (rover = backsector->ffloors, i = 0; rover && i < MAXFFLOORS; rover = rover->next)
+			{
+				if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS) || rover->flags & FF_INVERTSIDES)
+					continue;
+				if (rover->norender == leveltime)
+					continue;
 
 #ifdef ESLOPE
-	// Set up texture Y offset slides for sloped walls
-	rw_toptextureslide = rw_midtextureslide = rw_bottomtextureslide = 0;
-	ceilingfrontslide = floorfrontslide = ceilingbackslide = floorbackslide = 0;
-
-	{
-		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
-
-		if (frontsector->f_slope)
-			floorfrontslide = FixedMul(frontsector->f_slope->zdelta, FINECOSINE((lineangle-frontsector->f_slope->xydirection)>>ANGLETOFINESHIFT));
-
-		if (frontsector->c_slope)
-			ceilingfrontslide = FixedMul(frontsector->c_slope->zdelta, FINECOSINE((lineangle-frontsector->c_slope->xydirection)>>ANGLETOFINESHIFT));
-
-		if (backsector && backsector->f_slope)
-			floorbackslide = FixedMul(backsector->f_slope->zdelta, FINECOSINE((lineangle-backsector->f_slope->xydirection)>>ANGLETOFINESHIFT));
-
-		if (backsector && backsector->c_slope)
-			ceilingbackslide = FixedMul(backsector->c_slope->zdelta, FINECOSINE((lineangle-backsector->c_slope->xydirection)>>ANGLETOFINESHIFT));
-	}
+				// Oy vey.
+				if ((	   (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) <= worldbottom+viewz
+						&& (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) <= worldbottomslope+viewz)
+						||((*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) >= worldtop+viewz
+						&& (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) >= worldtopslope+viewz))
+					continue;
+#else
+				if (*rover->topheight <= frontsector->floorheight || *rover->bottomheight >= frontsector->ceilingheight)
+					continue;
 #endif
 
+				ds_p->thicksides[i] = rover;
+				i++;
+			}
+		}
+		else if (frontsector->ffloors)
+		{
+			for (rover = frontsector->ffloors, i = 0; rover && i < MAXFFLOORS; rover = rover->next)
+			{
+				if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_ALLSIDES))
+					continue;
+				if (rover->norender == leveltime)
+					continue;
+#ifdef ESLOPE
+				// Oy vey.
+				if ((	   (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) <= worldbottom+viewz
+						&& (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) <= worldbottomslope+viewz)
+						||((*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) >= worldtop+viewz
+						&& (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) >= worldtopslope+viewz))
+					continue;
+
+				if ((	   (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) <= worldlow+viewz
+						&& (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) <= worldlowslope+viewz)
+						||((*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) >= worldhigh+viewz
+						&& (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) >= worldhighslope+viewz))
+					continue;
+#else
+				if (*rover->topheight <= frontsector->floorheight || *rover->bottomheight >= frontsector->ceilingheight)
+					continue;
+				if (*rover->topheight <= backsector->floorheight || *rover->bottomheight >= backsector->ceilingheight)
+					continue;
+#endif
+
+				ds_p->thicksides[i] = rover;
+				i++;
+			}
+		}
+
+		ds_p->numthicksides = numthicksides = i;
+	}
+
+	if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures)
+	{
+		// masked midtexture
+		if (!ds_p->thicksidecol)
+		{
+			ds_p->maskedtexturecol = maskedtexturecol = lastopening - rw_x;
+			lastopening += rw_stopx - rw_x;
+		}
+		else
+			ds_p->maskedtexturecol = ds_p->thicksidecol;
+
+#ifdef ESLOPE
+		maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
+
+#ifdef POLYOBJECTS
+		if (curline->polyseg) { // use REAL front and back floors please, so midtexture rendering isn't mucked up
+			rw_midtextureslide = rw_midtexturebackslide = 0;
+			if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+				rw_midtexturemid = rw_midtextureback = max(curline->frontsector->floorheight, curline->backsector->floorheight) - viewz;
+			else
+				rw_midtexturemid = rw_midtextureback = min(curline->frontsector->ceilingheight, curline->backsector->ceilingheight) - viewz;
+		} else
+#endif
+		// Set midtexture starting height
+		if (linedef->flags & ML_EFFECT2) { // Ignore slopes when texturing
+			rw_midtextureslide = rw_midtexturebackslide = 0;
+			if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+				rw_midtexturemid = rw_midtextureback = max(frontsector->floorheight, backsector->floorheight) - viewz;
+			else
+				rw_midtexturemid = rw_midtextureback = min(frontsector->ceilingheight, backsector->ceilingheight) - viewz;
+
+		} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
+			rw_midtexturemid = worldbottom;
+			rw_midtextureslide = floorfrontslide;
+			rw_midtextureback = worldlow;
+			rw_midtexturebackslide = floorbackslide;
+		} else {
+			rw_midtexturemid = worldtop;
+			rw_midtextureslide = ceilingfrontslide;
+			rw_midtextureback = worldhigh;
+			rw_midtexturebackslide = ceilingbackslide;
+		}
+		rw_midtexturemid += sidedef->rowoffset;
+		rw_midtextureback += sidedef->rowoffset;
+#endif
+
+		maskedtexture = true;
+	}
+}
+
+//
+// R_CheckWallTextures
+// Self-explanatory, I hope?!
+//
+static void R_CheckWallTextures(void)
+{
 	if (!backsector)
 	{
 		fixed_t texheight;
@@ -2006,7 +2216,113 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #endif
 		}
 		rw_midtexturemid += sidedef->rowoffset;
+	}
+	else
+	{
+		// check TOP TEXTURE
+		if (!bothceilingssky // never draw the top texture if on
+			&& (worldhigh < worldtop
+#ifdef ESLOPE
+				|| worldhighslope < worldtopslope
+#endif
+			))
+		{
+			fixed_t texheight;
+			// top texture
+			if ((linedef->flags & (ML_DONTPEGTOP) && (linedef->flags & ML_DONTPEGBOTTOM))
+				&& linedef->sidenum[1] != 0xffff)
+			{
+				// Special case... use offsets from 2nd side but only if it has a texture.
+				side_t *def = &sides[linedef->sidenum[1]];
+				toptexture = R_GetTextureNum(def->toptexture);
 
+				if (!toptexture) //Second side has no texture, use the first side's instead.
+					toptexture = R_GetTextureNum(sidedef->toptexture);
+				texheight = textureheight[toptexture];
+			}
+			else
+			{
+				toptexture = R_GetTextureNum(sidedef->toptexture);
+				texheight = textureheight[toptexture];
+			}
+#ifdef ESLOPE
+			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
+				if (linedef->flags & ML_DONTPEGTOP)
+					rw_toptexturemid = frontsector->ceilingheight - viewz;
+				else
+					rw_toptexturemid = backsector->ceilingheight - viewz;
+			} else
+#endif
+			if (linedef->flags & ML_DONTPEGTOP)
+			{
+				// top of texture at top
+				rw_toptexturemid = worldtop;
+#ifdef ESLOPE
+				rw_toptextureslide = ceilingfrontslide;
+#endif
+			}
+			else
+			{
+#ifdef ESLOPE
+				rw_toptexturemid = worldhigh + texheight;
+				rw_toptextureslide = ceilingbackslide;
+#else
+				vtop = backsector->ceilingheight + texheight;
+				// bottom of texture
+				rw_toptexturemid = vtop - viewz;
+#endif
+			}
+		}
+		// check BOTTOM TEXTURE
+		if (!bothfloorssky // never draw the bottom texture if on
+			&& (worldlow > worldbottom
+#ifdef ESLOPE
+				|| worldlowslope > worldbottomslope
+#endif
+			))     //seulement si VISIBLE!!!
+		{
+			// bottom texture
+			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
+
+#ifdef ESLOPE
+			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
+				if (linedef->flags & ML_DONTPEGBOTTOM)
+					rw_bottomtexturemid = frontsector->floorheight - viewz;
+				else
+					rw_bottomtexturemid = backsector->floorheight - viewz;
+			} else
+#endif
+			if (linedef->flags & ML_DONTPEGBOTTOM)
+			{
+				// bottom of texture at bottom
+				// top of texture at top
+				rw_bottomtexturemid = worldbottom;
+#ifdef ESLOPE
+				rw_bottomtextureslide = floorfrontslide;
+#endif
+			}
+			else {   // top of texture at top
+				rw_bottomtexturemid = worldlow;
+#ifdef ESLOPE
+				rw_bottomtextureslide = floorbackslide;
+#endif
+			}
+		}
+
+		rw_toptexturemid += sidedef->rowoffset;
+		rw_bottomtexturemid += sidedef->rowoffset;
+	}
+}
+
+//
+// R_StoreWallSilhouette
+// Sets the silhouette for the current seg.
+// Also checks if any floors or ceilings have to be marked.
+//
+static void R_StoreWallSilhouette(void)
+{
+	if (!backsector)
+	{
 		ds_p->silhouette = SIL_BOTH;
 		ds_p->sprtopclip = screenheightarray;
 		ds_p->sprbottomclip = negonearray;
@@ -2016,8 +2332,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	else
 	{
 		// two sided line
-		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
-		boolean bothfloorssky = false; // likewise, but for floors
+		bothceilingssky = false; // turned on if both back and front ceilings are sky
+		bothfloorssky = false; // likewise, but for floors
 
 #ifdef ESLOPE
 		SLOPEPARAMS(backsector->c_slope, worldhigh, worldhighslope, backsector->ceilingheight)
@@ -2240,460 +2556,22 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				markceiling = markfloor = true;
 			}
 		}
-
-		// check TOP TEXTURE
-		if (!bothceilingssky // never draw the top texture if on
-			&& (worldhigh < worldtop
-#ifdef ESLOPE
-				|| worldhighslope < worldtopslope
-#endif
-			))
-		{
-			fixed_t texheight;
-			// top texture
-			if ((linedef->flags & (ML_DONTPEGTOP) && (linedef->flags & ML_DONTPEGBOTTOM))
-				&& linedef->sidenum[1] != 0xffff)
-			{
-				// Special case... use offsets from 2nd side but only if it has a texture.
-				side_t *def = &sides[linedef->sidenum[1]];
-				toptexture = R_GetTextureNum(def->toptexture);
-
-				if (!toptexture) //Second side has no texture, use the first side's instead.
-					toptexture = R_GetTextureNum(sidedef->toptexture);
-				texheight = textureheight[toptexture];
-			}
-			else
-			{
-				toptexture = R_GetTextureNum(sidedef->toptexture);
-				texheight = textureheight[toptexture];
-			}
-#ifdef ESLOPE
-			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
-				if (linedef->flags & ML_DONTPEGTOP)
-					rw_toptexturemid = frontsector->ceilingheight - viewz;
-				else
-					rw_toptexturemid = backsector->ceilingheight - viewz;
-			} else
-#endif
-			if (linedef->flags & ML_DONTPEGTOP)
-			{
-				// top of texture at top
-				rw_toptexturemid = worldtop;
-#ifdef ESLOPE
-				rw_toptextureslide = ceilingfrontslide;
-#endif
-			}
-			else
-			{
-#ifdef ESLOPE
-				rw_toptexturemid = worldhigh + texheight;
-				rw_toptextureslide = ceilingbackslide;
-#else
-				vtop = backsector->ceilingheight + texheight;
-				// bottom of texture
-				rw_toptexturemid = vtop - viewz;
-#endif
-			}
-		}
-		// check BOTTOM TEXTURE
-		if (!bothfloorssky // never draw the bottom texture if on
-			&& (worldlow > worldbottom
-#ifdef ESLOPE
-				|| worldlowslope > worldbottomslope
-#endif
-			))     //seulement si VISIBLE!!!
-		{
-			// bottom texture
-			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
-
-#ifdef ESLOPE
-			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
-				if (linedef->flags & ML_DONTPEGBOTTOM)
-					rw_bottomtexturemid = frontsector->floorheight - viewz;
-				else
-					rw_bottomtexturemid = backsector->floorheight - viewz;
-			} else
-#endif
-			if (linedef->flags & ML_DONTPEGBOTTOM)
-			{
-				// bottom of texture at bottom
-				// top of texture at top
-				rw_bottomtexturemid = worldbottom;
-#ifdef ESLOPE
-				rw_bottomtextureslide = floorfrontslide;
-#endif
-			}
-			else {   // top of texture at top
-				rw_bottomtexturemid = worldlow;
-#ifdef ESLOPE
-				rw_bottomtextureslide = floorbackslide;
-#endif
-			}
-		}
-
-		rw_toptexturemid += sidedef->rowoffset;
-		rw_bottomtexturemid += sidedef->rowoffset;
-
-		// allocate space for masked texture tables
-		if (frontsector && backsector && frontsector->tag != backsector->tag && (backsector->ffloors || frontsector->ffloors))
-		{
-			ffloor_t *rover;
-			ffloor_t *r2;
-			fixed_t   lowcut, highcut;
-#ifdef ESLOPE
-			fixed_t lowcutslope, highcutslope;
-
-			// Used for height comparisons and etc across FOFs and slopes
-			fixed_t high1, highslope1, low1, lowslope1, high2, highslope2, low2, lowslope2;
-#endif
-
-			//markceiling = markfloor = true;
-			maskedtexture = true;
-
-			ds_p->thicksidecol = maskedtexturecol = lastopening - rw_x;
-			lastopening += rw_stopx - rw_x;
-
-			lowcut = max(worldbottom, worldlow) + viewz;
-			highcut = min(worldtop, worldhigh) + viewz;
-#ifdef ESLOPE
-			lowcutslope = max(worldbottomslope, worldlowslope) + viewz;
-			highcutslope = min(worldtopslope, worldhighslope) + viewz;
-#endif
-
-			if (frontsector->ffloors && backsector->ffloors)
-			{
-				i = 0;
-				for (rover = backsector->ffloors; rover && i < MAXFFLOORS; rover = rover->next)
-				{
-					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
-						continue;
-					if (rover->flags & FF_INVERTSIDES)
-						continue;
-
-					if (rover->norender == leveltime)
-						continue;
-
-#ifdef ESLOPE
-					SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
-					SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
-
-					if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
-						continue;
-#else
-					if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
-						continue;
-#endif
-
-					for (r2 = frontsector->ffloors; r2; r2 = r2->next)
-					{
-						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
-							continue;
-
-						if (r2->norender == leveltime)
-							continue;
-
-						if (rover->flags & FF_EXTRA)
-						{
-							if (!(r2->flags & FF_CUTEXTRA))
-								continue;
-
-							if (r2->flags & FF_EXTRA && (r2->flags & (FF_TRANSLUCENT|FF_FOG)) != (rover->flags & (FF_TRANSLUCENT|FF_FOG)))
-								continue;
-						}
-						else
-						{
-							if (!(r2->flags & FF_CUTSOLIDS))
-								continue;
-						}
-
-#ifdef ESLOPE
-						SLOPEPARAMS(*r2->t_slope, high2, highslope2, *r2->topheight)
-						SLOPEPARAMS(*r2->b_slope, low2,  lowslope2,  *r2->bottomheight)
-
-						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
-							continue;
-						if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))
-							continue;
-#else
-						if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
-							continue;
-						if (*rover->topheight > *r2->topheight || *rover->bottomheight < *r2->bottomheight)
-							continue;
-#endif
-
-						break;
-					}
-					if (r2)
-						continue;
-
-					ds_p->thicksides[i] = rover;
-					i++;
-				}
-
-				for (rover = frontsector->ffloors; rover && i < MAXFFLOORS; rover = rover->next)
-				{
-					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
-						continue;
-					if (!(rover->flags & FF_ALLSIDES))
-						continue;
-
-					if (rover->norender == leveltime)
-						continue;
-
-#ifdef ESLOPE
-					SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
-					SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
-
-					if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
-						continue;
-#else
-					if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
-						continue;
-#endif
-
-					for (r2 = backsector->ffloors; r2; r2 = r2->next)
-					{
-						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
-							continue;
-
-						if (r2->norender == leveltime)
-							continue;
-
-						if (rover->flags & FF_EXTRA)
-						{
-							if (!(r2->flags & FF_CUTEXTRA))
-								continue;
-
-							if (r2->flags & FF_EXTRA && (r2->flags & (FF_TRANSLUCENT|FF_FOG)) != (rover->flags & (FF_TRANSLUCENT|FF_FOG)))
-								continue;
-						}
-						else
-						{
-							if (!(r2->flags & FF_CUTSOLIDS))
-								continue;
-						}
-
-#ifdef ESLOPE
-						SLOPEPARAMS(*r2->t_slope, high2, highslope2, *r2->topheight)
-						SLOPEPARAMS(*r2->b_slope, low2,  lowslope2,  *r2->bottomheight)
-#undef SLOPEPARAMS
-						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
-							continue;
-						if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))
-							continue;
-#else
-						if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
-							continue;
-						if (*rover->topheight > *r2->topheight || *rover->bottomheight < *r2->bottomheight)
-							continue;
-#endif
-
-						break;
-					}
-					if (r2)
-						continue;
-
-					ds_p->thicksides[i] = rover;
-					i++;
-				}
-			}
-			else if (backsector->ffloors)
-			{
-				for (rover = backsector->ffloors, i = 0; rover && i < MAXFFLOORS; rover = rover->next)
-				{
-					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS) || rover->flags & FF_INVERTSIDES)
-						continue;
-					if (rover->norender == leveltime)
-						continue;
-
-#ifdef ESLOPE
-					// Oy vey.
-					if ((	   (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) <= worldbottom+viewz
-							&& (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) <= worldbottomslope+viewz)
-							||((*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) >= worldtop+viewz
-							&& (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) >= worldtopslope+viewz))
-						continue;
-#else
-					if (*rover->topheight <= frontsector->floorheight || *rover->bottomheight >= frontsector->ceilingheight)
-						continue;
-#endif
-
-					ds_p->thicksides[i] = rover;
-					i++;
-				}
-			}
-			else if (frontsector->ffloors)
-			{
-				for (rover = frontsector->ffloors, i = 0; rover && i < MAXFFLOORS; rover = rover->next)
-				{
-					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_ALLSIDES))
-						continue;
-					if (rover->norender == leveltime)
-						continue;
-#ifdef ESLOPE
-					// Oy vey.
-					if ((	   (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) <= worldbottom+viewz
-							&& (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) <= worldbottomslope+viewz)
-							||((*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) >= worldtop+viewz
-							&& (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) >= worldtopslope+viewz))
-						continue;
-
-					if ((	   (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) <= worldlow+viewz
-							&& (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) <= worldlowslope+viewz)
-							||((*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) >= worldhigh+viewz
-							&& (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) >= worldhighslope+viewz))
-						continue;
-#else
-					if (*rover->topheight <= frontsector->floorheight || *rover->bottomheight >= frontsector->ceilingheight)
-						continue;
-					if (*rover->topheight <= backsector->floorheight || *rover->bottomheight >= backsector->ceilingheight)
-						continue;
-#endif
-
-					ds_p->thicksides[i] = rover;
-					i++;
-				}
-			}
-
-			ds_p->numthicksides = numthicksides = i;
-		}
-		if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures)
-		{
-			// masked midtexture
-			if (!ds_p->thicksidecol)
-			{
-				ds_p->maskedtexturecol = maskedtexturecol = lastopening - rw_x;
-				lastopening += rw_stopx - rw_x;
-			}
-			else
-				ds_p->maskedtexturecol = ds_p->thicksidecol;
-
-#ifdef ESLOPE
-			maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
-
-#ifdef POLYOBJECTS
-			if (curline->polyseg) { // use REAL front and back floors please, so midtexture rendering isn't mucked up
-				rw_midtextureslide = rw_midtexturebackslide = 0;
-				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
-					rw_midtexturemid = rw_midtextureback = max(curline->frontsector->floorheight, curline->backsector->floorheight) - viewz;
-				else
-					rw_midtexturemid = rw_midtextureback = min(curline->frontsector->ceilingheight, curline->backsector->ceilingheight) - viewz;
-			} else
-#endif
-			// Set midtexture starting height
-			if (linedef->flags & ML_EFFECT2) { // Ignore slopes when texturing
-				rw_midtextureslide = rw_midtexturebackslide = 0;
-				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
-					rw_midtexturemid = rw_midtextureback = max(frontsector->floorheight, backsector->floorheight) - viewz;
-				else
-					rw_midtexturemid = rw_midtextureback = min(frontsector->ceilingheight, backsector->ceilingheight) - viewz;
-
-			} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
-				rw_midtexturemid = worldbottom;
-				rw_midtextureslide = floorfrontslide;
-				rw_midtextureback = worldlow;
-				rw_midtexturebackslide = floorbackslide;
-			} else {
-				rw_midtexturemid = worldtop;
-				rw_midtextureslide = ceilingfrontslide;
-				rw_midtextureback = worldhigh;
-				rw_midtexturebackslide = ceilingbackslide;
-			}
-			rw_midtexturemid += sidedef->rowoffset;
-			rw_midtextureback += sidedef->rowoffset;
-#endif
-
-			maskedtexture = true;
-		}
 	}
+}
 
-	// calculate rw_offset (only needed for textured lines)
-	segtextured = midtexture || toptexture || bottomtexture || maskedtexture || (numthicksides > 0);
-
-	if (segtextured)
-	{
-		offsetangle = rw_normalangle-rw_angle1;
-
-		if (offsetangle > ANGLE_180)
-			offsetangle = -(signed)offsetangle;
-
-		if (offsetangle > ANGLE_90)
-			offsetangle = ANGLE_90;
-
-		sineval = FINESINE(offsetangle>>ANGLETOFINESHIFT);
-		rw_offset = FixedMul(hyp, sineval);
-
-		// big room fix
-		if (longboi)
-		{
-			INT64 dx = (curline->v2->x)-(curline->v1->x);
-			INT64 dy = (curline->v2->y)-(curline->v1->y);
-			INT64 vdx = viewx-(curline->v1->x);
-			INT64 vdy = viewy-(curline->v1->y);
-			rw_offset = ((dx*vdx-dy*vdy))/(curline->length);
-		}
-
-		if (rw_normalangle-rw_angle1 < ANGLE_180)
-			rw_offset = -rw_offset;
-
-		/// don't use texture offset for splats
-		rw_offset2 = rw_offset + curline->offset;
-		rw_offset += sidedef->textureoffset + curline->offset;
-		rw_centerangle = ANGLE_90 + viewangle - rw_normalangle;
-
-		// calculate light table
-		//  use different light tables
-		//  for horizontal / vertical / diagonal
-		// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
-		lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
-
-		if (curline->v1->y == curline->v2->y)
-			lightnum--;
-		else if (curline->v1->x == curline->v2->x)
-			lightnum++;
-
-		if (lightnum < 0)
-			walllights = scalelight[0];
-		else if (lightnum >= LIGHTLEVELS)
-			walllights = scalelight[LIGHTLEVELS - 1];
-		else
-			walllights = scalelight[lightnum];
-	}
-
-	// if a floor / ceiling plane is on the wrong side
-	//  of the view plane, it is definitely invisible
-	//  and doesn't need to be marked.
-	if (frontsector->heightsec == -1)
-	{
-		if (frontsector->floorpic != skyflatnum
-		&& (
-#ifdef ESLOPE
-			frontsector->f_slope ? P_GetZAt(frontsector->f_slope, viewx, viewy) :
-#endif
-			frontsector->floorheight) >= viewz)
-		{
-			// above view plane
-			markfloor = false;
-		}
-
-		if (frontsector->ceilingpic != skyflatnum
-		&& (
-#ifdef ESLOPE
-			frontsector->c_slope ? P_GetZAt(frontsector->c_slope, viewx, viewy) :
-#endif
-			frontsector->ceilingheight) <= viewz)
-		{
-			// below view plane
-			markceiling = false;
-		}
-	}
-
-	// calculate incremental stepping values for texture edges
+//
+// R_WorldStep
+// Does... stepping... stuff?
+//
+static void R_WorldStep(INT32 range)
+{
 	worldtop >>= 4;
 	worldbottom >>= 4;
 #ifdef ESLOPE
 	worldtopslope >>= 4;
 	worldbottomslope >>= 4;
+#else
+	(void)range;
 #endif
 
 	if (linedef->special == HORIZONSPECIAL) { // HORIZON LINES
@@ -2718,6 +2596,329 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 #endif
 	}
+}
+
+//
+// R_WorldBackStep
+// Does... stepping... stuff? For backsides?!?!?!?!?!?!
+//
+static void R_WorldBackStep(INT32 range)
+{
+	INT32 i;
+
+	worldhigh >>= 4;
+	worldlow >>= 4;
+#ifdef ESLOPE
+	worldhighslope >>= 4;
+	worldlowslope >>= 4;
+#else
+	(void)range;
+#endif
+
+	if (toptexture)
+	{
+		pixhigh = (centeryfrac>>4) - FixedMul (worldhigh, rw_scale);
+		pixhighstep = -FixedMul (rw_scalestep,worldhigh);
+
+#ifdef ESLOPE
+		if (backsector->c_slope) {
+			fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldhighslope, ds_p->scale2);
+			pixhighstep = (topfracend-pixhigh)/(range);
+		}
+#endif
+	}
+
+	if (bottomtexture)
+	{
+		pixlow = (centeryfrac>>4) - FixedMul (worldlow, rw_scale);
+		pixlowstep = -FixedMul (rw_scalestep,worldlow);
+#ifdef ESLOPE
+		if (backsector->f_slope) {
+			fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldlowslope, ds_p->scale2);
+			pixlowstep = (bottomfracend-pixlow)/(range);
+		}
+#endif
+	}
+
+	{
+		ffloor_t * rover;
+#ifdef ESLOPE
+		fixed_t roverleft, roverright;
+		fixed_t planevistest;
+#endif
+		i = 0;
+
+		if (backsector->ffloors)
+		{
+			for (rover = backsector->ffloors; rover && i < MAXFFLOORS; rover = rover->next)
+			{
+				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES))
+					continue;
+				if (rover->norender == leveltime)
+					continue;
+
+#ifdef ESLOPE
+				// Let the renderer know this sector is sloped.
+				if (*rover->b_slope || *rover->t_slope)
+					backsector->hasslope = true;
+
+				roverleft = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
+				roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
+				planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
+
+				if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					(roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
+					((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
+					 (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
+				{
+					//ffloor[i].slope = *rover->b_slope;
+					ffloor[i].b_pos = roverleft;
+					ffloor[i].b_pos_slope = roverright;
+					ffloor[i].b_pos >>= 4;
+					ffloor[i].b_pos_slope >>= 4;
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
+					ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
+					i++;
+				}
+
+				if (i >= MAXFFLOORS)
+					break;
+
+				roverleft = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
+				roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
+				planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
+
+				if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					(roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
+					((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
+					 (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
+				{
+					//ffloor[i].slope = *rover->t_slope;
+					ffloor[i].b_pos = roverleft;
+					ffloor[i].b_pos_slope = roverright;
+					ffloor[i].b_pos >>= 4;
+					ffloor[i].b_pos_slope >>= 4;
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
+					ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
+					i++;
+				}
+#else
+				if (*rover->bottomheight <= backsector->ceilingheight &&
+					*rover->bottomheight >= backsector->floorheight &&
+					((viewz < *rover->bottomheight && !(rover->flags & FF_INVERTPLANES)) ||
+					 (viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES))))
+				{
+					ffloor[i].b_pos = *rover->bottomheight;
+					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					i++;
+				}
+
+				if (i >= MAXFFLOORS)
+					break;
+
+				if (*rover->topheight >= backsector->floorheight &&
+					*rover->topheight <= backsector->ceilingheight &&
+					((viewz > *rover->topheight && !(rover->flags & FF_INVERTPLANES)) ||
+					 (viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES))))
+				{
+					ffloor[i].b_pos = *rover->topheight;
+					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					i++;
+				}
+#endif
+			}
+		}
+		else if (frontsector && frontsector->ffloors)
+		{
+			for (rover = frontsector->ffloors; rover && i < MAXFFLOORS; rover = rover->next)
+			{
+				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES))
+					continue;
+				if (rover->norender == leveltime)
+					continue;
+
+
+#ifdef ESLOPE
+				// Let the renderer know this sector is sloped.
+				if (*rover->b_slope || *rover->t_slope)
+					frontsector->hasslope = true;
+
+				roverleft = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
+				roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
+				planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
+
+				if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					(roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
+					((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
+					 (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
+				{
+					//ffloor[i].slope = *rover->b_slope;
+					ffloor[i].b_pos = roverleft;
+					ffloor[i].b_pos_slope = roverright;
+					ffloor[i].b_pos >>= 4;
+					ffloor[i].b_pos_slope >>= 4;
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
+					ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
+					i++;
+				}
+
+				if (i >= MAXFFLOORS)
+					break;
+
+				roverleft = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
+				roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
+				planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
+
+				if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					(roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
+					((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
+					 (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
+				{
+					//ffloor[i].slope = *rover->t_slope;
+					ffloor[i].b_pos = roverleft;
+					ffloor[i].b_pos_slope = roverright;
+					ffloor[i].b_pos >>= 4;
+					ffloor[i].b_pos_slope >>= 4;
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
+					ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
+					i++;
+				}
+#else
+				if (*rover->bottomheight <= frontsector->ceilingheight &&
+					*rover->bottomheight >= frontsector->floorheight &&
+					((viewz < *rover->bottomheight && !(rover->flags & FF_INVERTPLANES)) ||
+					 (viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES))))
+				{
+					ffloor[i].b_pos = *rover->bottomheight;
+					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					i++;
+				}
+				if (i >= MAXFFLOORS)
+					break;
+				if (*rover->topheight >= frontsector->floorheight &&
+					*rover->topheight <= frontsector->ceilingheight &&
+					((viewz > *rover->topheight && !(rover->flags & FF_INVERTPLANES)) ||
+					 (viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES))))
+				{
+					ffloor[i].b_pos = *rover->topheight;
+					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					i++;
+				}
+#endif
+			}
+		}
+
+#ifdef POLYOBJECTS_PLANES
+		if (curline->polyseg && frontsector && (curline->polyseg->flags & POF_RENDERPLANES))
+		{
+			while (i < numffloors && ffloor[i].polyobj != curline->polyseg) i++;
+			if (i < numffloors && backsector->floorheight <= frontsector->ceilingheight &&
+				backsector->floorheight >= frontsector->floorheight &&
+				(viewz < backsector->floorheight))
+			{
+				if (ffloor[i].plane->minx > ds_p->x1)
+					ffloor[i].plane->minx = ds_p->x1;
+
+				if (ffloor[i].plane->maxx < ds_p->x2)
+					ffloor[i].plane->maxx = ds_p->x2;
+
+#ifdef ESLOPE
+				ffloor[i].slope = NULL;
+#endif
+				ffloor[i].b_pos = backsector->floorheight;
+				ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+				ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+				ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+				i++;
+			}
+			if (i < numffloors && backsector->ceilingheight >= frontsector->floorheight &&
+				backsector->ceilingheight <= frontsector->ceilingheight &&
+				(viewz > backsector->ceilingheight))
+			{
+				if (ffloor[i].plane->minx > ds_p->x1)
+					ffloor[i].plane->minx = ds_p->x1;
+
+				if (ffloor[i].plane->maxx < ds_p->x2)
+					ffloor[i].plane->maxx = ds_p->x2;
+
+#ifdef ESLOPE
+				ffloor[i].slope = NULL;
+#endif
+				ffloor[i].b_pos = backsector->ceilingheight;
+				ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+				ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+				ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+				i++;
+			}
+		}
+#endif
+
+		numbackffloors = i;
+	}
+}
+
+//
+// R_WorldFFloorStep
+// Does... stepping... stuff? For FOFs?!
+//
+static void R_WorldFFloorStep(INT32 range)
+{
+	INT32 i;
+
+#ifndef ESLOPE
+	(void)range; // Not needed!
+#endif
+
+	for (i = 0; i < numffloors; i++)
+	{
+		ffloor[i].f_pos >>= 4;
+#ifdef ESLOPE
+		ffloor[i].f_pos_slope >>= 4;
+#endif
+		if (linedef->special == HORIZONSPECIAL) // Horizon lines extend FOFs in contact with them too.
+		{
+			ffloor[i].f_step = 0;
+			ffloor[i].f_frac = (centeryfrac>>4);
+			topfrac++; // Prevent 1px HOM
+		}
+		else
+		{
+#ifdef ESLOPE
+			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
+			ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
+#else
+			ffloor[i].f_step = FixedMul(-rw_scalestep, ffloor[i].f_pos);
+			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
+#endif
+		}
+	}
+}
+
+//
+// R_WorldLightLists
+// Creates light lists.
+//
+static void R_WorldLightLists(INT32 range)
+{
+	INT32 i, p;
+	lightlist_t   *light;
+	r_lightlist_t *rlight;
+
+#ifndef ESLOPE
+	(void)range; // Not needed!
+#endif
 
 	dc_numlights = 0;
 
@@ -2818,295 +3019,15 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		dc_numlights = p;
 	}
+}
 
-	if (numffloors)
-	{
-		for (i = 0; i < numffloors; i++)
-		{
-			ffloor[i].f_pos >>= 4;
-#ifdef ESLOPE
-			ffloor[i].f_pos_slope >>= 4;
-#endif
-			if (linedef->special == HORIZONSPECIAL) // Horizon lines extend FOFs in contact with them too.
-			{
-				ffloor[i].f_step = 0;
-				ffloor[i].f_frac = (centeryfrac>>4);
-				topfrac++; // Prevent 1px HOM
-			}
-			else
-			{
-#ifdef ESLOPE
-				ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
-				ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
-#else
-				ffloor[i].f_step = FixedMul(-rw_scalestep, ffloor[i].f_pos);
-				ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
-#endif
-			}
-		}
-	}
-
-	if (backsector)
-	{
-		worldhigh >>= 4;
-		worldlow >>= 4;
-#ifdef ESLOPE
-		worldhighslope >>= 4;
-		worldlowslope >>= 4;
-#endif
-
-		if (toptexture)
-		{
-			pixhigh = (centeryfrac>>4) - FixedMul (worldhigh, rw_scale);
-			pixhighstep = -FixedMul (rw_scalestep,worldhigh);
-
-#ifdef ESLOPE
-			if (backsector->c_slope) {
-				fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldhighslope, ds_p->scale2);
-				pixhighstep = (topfracend-pixhigh)/(range);
-			}
-#endif
-		}
-
-		if (bottomtexture)
-		{
-			pixlow = (centeryfrac>>4) - FixedMul (worldlow, rw_scale);
-			pixlowstep = -FixedMul (rw_scalestep,worldlow);
-#ifdef ESLOPE
-			if (backsector->f_slope) {
-				fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldlowslope, ds_p->scale2);
-				pixlowstep = (bottomfracend-pixlow)/(range);
-			}
-#endif
-		}
-
-		{
-			ffloor_t * rover;
-#ifdef ESLOPE
-			fixed_t roverleft, roverright;
-			fixed_t planevistest;
-#endif
-			i = 0;
-
-			if (backsector->ffloors)
-			{
-				for (rover = backsector->ffloors; rover && i < MAXFFLOORS; rover = rover->next)
-				{
-					if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES))
-						continue;
-					if (rover->norender == leveltime)
-						continue;
-
-#ifdef ESLOPE
-					// Let the renderer know this sector is sloped.
-					if (*rover->b_slope || *rover->t_slope)
-						backsector->hasslope = true;
-
-					roverleft = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
-					roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
-					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
-
-					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
-					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
-					{
-						//ffloor[i].slope = *rover->b_slope;
-						ffloor[i].b_pos = roverleft;
-						ffloor[i].b_pos_slope = roverright;
-						ffloor[i].b_pos >>= 4;
-						ffloor[i].b_pos_slope >>= 4;
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
-						i++;
-					}
-
-					if (i >= MAXFFLOORS)
-						break;
-
-					roverleft = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
-					roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
-					planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
-
-					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
-					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
-					{
-						//ffloor[i].slope = *rover->t_slope;
-						ffloor[i].b_pos = roverleft;
-						ffloor[i].b_pos_slope = roverright;
-						ffloor[i].b_pos >>= 4;
-						ffloor[i].b_pos_slope >>= 4;
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
-						i++;
-					}
-#else
-					if (*rover->bottomheight <= backsector->ceilingheight &&
-					    *rover->bottomheight >= backsector->floorheight &&
-					    ((viewz < *rover->bottomheight && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES))))
-					{
-						ffloor[i].b_pos = *rover->bottomheight;
-						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-						ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						i++;
-					}
-
-					if (i >= MAXFFLOORS)
-						break;
-
-					if (*rover->topheight >= backsector->floorheight &&
-					    *rover->topheight <= backsector->ceilingheight &&
-					    ((viewz > *rover->topheight && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES))))
-					{
-						ffloor[i].b_pos = *rover->topheight;
-						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-						ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						i++;
-					}
-#endif
-				}
-			}
-			else if (frontsector && frontsector->ffloors)
-			{
-				for (rover = frontsector->ffloors; rover && i < MAXFFLOORS; rover = rover->next)
-				{
-					if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES))
-						continue;
-					if (rover->norender == leveltime)
-						continue;
-
-
-#ifdef ESLOPE
-					// Let the renderer know this sector is sloped.
-					if (*rover->b_slope || *rover->t_slope)
-						frontsector->hasslope = true;
-
-					roverleft = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
-					roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
-					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
-
-					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
-					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
-					{
-						//ffloor[i].slope = *rover->b_slope;
-						ffloor[i].b_pos = roverleft;
-						ffloor[i].b_pos_slope = roverright;
-						ffloor[i].b_pos >>= 4;
-						ffloor[i].b_pos_slope >>= 4;
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
-						i++;
-					}
-
-					if (i >= MAXFFLOORS)
-						break;
-
-					roverleft = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
-					roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
-					planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
-
-					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
-					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
-					{
-						//ffloor[i].slope = *rover->t_slope;
-						ffloor[i].b_pos = roverleft;
-						ffloor[i].b_pos_slope = roverright;
-						ffloor[i].b_pos >>= 4;
-						ffloor[i].b_pos_slope >>= 4;
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
-						i++;
-					}
-#else
-					if (*rover->bottomheight <= frontsector->ceilingheight &&
-					    *rover->bottomheight >= frontsector->floorheight &&
-					    ((viewz < *rover->bottomheight && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES))))
-					{
-						ffloor[i].b_pos = *rover->bottomheight;
-						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-						ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						i++;
-					}
-					if (i >= MAXFFLOORS)
-						break;
-					if (*rover->topheight >= frontsector->floorheight &&
-					    *rover->topheight <= frontsector->ceilingheight &&
-					    ((viewz > *rover->topheight && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES))))
-					{
-						ffloor[i].b_pos = *rover->topheight;
-						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-						ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						i++;
-					}
-#endif
-				}
-			}
-#ifdef POLYOBJECTS_PLANES
-			if (curline->polyseg && frontsector && (curline->polyseg->flags & POF_RENDERPLANES))
-			{
-				while (i < numffloors && ffloor[i].polyobj != curline->polyseg) i++;
-				if (i < numffloors && backsector->floorheight <= frontsector->ceilingheight &&
-					backsector->floorheight >= frontsector->floorheight &&
-					(viewz < backsector->floorheight))
-				{
-					if (ffloor[i].plane->minx > ds_p->x1)
-						ffloor[i].plane->minx = ds_p->x1;
-
-					if (ffloor[i].plane->maxx < ds_p->x2)
-						ffloor[i].plane->maxx = ds_p->x2;
-
-#ifdef ESLOPE
-					ffloor[i].slope = NULL;
-#endif
-					ffloor[i].b_pos = backsector->floorheight;
-					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-					i++;
-				}
-				if (i < numffloors && backsector->ceilingheight >= frontsector->floorheight &&
-					backsector->ceilingheight <= frontsector->ceilingheight &&
-					(viewz > backsector->ceilingheight))
-				{
-					if (ffloor[i].plane->minx > ds_p->x1)
-						ffloor[i].plane->minx = ds_p->x1;
-
-					if (ffloor[i].plane->maxx < ds_p->x2)
-						ffloor[i].plane->maxx = ds_p->x2;
-
-#ifdef ESLOPE
-					ffloor[i].slope = NULL;
-#endif
-					ffloor[i].b_pos = backsector->ceilingheight;
-					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-					i++;
-				}
-			}
-#endif
-
-			numbackffloors = i;
-		}
-	}
+//
+// R_MarkPlanes
+// Creates visplanes.
+//
+static void R_MarkPlanes(void)
+{
+	INT32 i;
 
 	// get a new or use the same visplane
 	if (markceiling)
@@ -3173,6 +3094,231 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 #endif
 	}
+}
+
+//
+// R_RemoveOpeningLimits
+// Code to remove limits on openings.
+//
+static void R_RemoveOpeningLimits(INT32 start)
+{
+	size_t pos = lastopening - openings;
+	size_t need = (rw_stopx - start)*4 + pos;
+	if (need > maxopenings)
+	{
+		drawseg_t *ds;  //needed for fix from *cough* zdoom *cough*
+		INT16 *oldopenings = openings;
+		INT16 *oldlast = lastopening;
+
+		do
+			maxopenings = maxopenings ? maxopenings*2 : 16384;
+		while (need > maxopenings);
+		openings = Z_Realloc(openings, maxopenings * sizeof (*openings), PU_STATIC, NULL);
+		lastopening = openings + pos;
+
+		// borrowed fix from *cough* zdoom *cough*
+		// [RH] We also need to adjust the openings pointers that
+		//    were already stored in drawsegs.
+		for (ds = drawsegs; ds < ds_p; ds++)
+		{
+#define ADJUST(p) if (ds->p + ds->x1 >= oldopenings && ds->p + ds->x1 <= oldlast) ds->p = ds->p - oldopenings + openings;
+			ADJUST(maskedtexturecol);
+			ADJUST(sprtopclip);
+			ADJUST(sprbottomclip);
+			ADJUST(thicksidecol);
+#undef ADJUST
+		}
+	}
+}
+
+//
+// R_StoreWallRange
+// A wall segment will be drawn
+//  between start and stop pixels (inclusive).
+//
+void R_StoreWallRange(INT32 start, INT32 stop)
+{
+	fixed_t       hyp;
+	fixed_t       sineval;
+	angle_t       distangle, offsetangle;
+	boolean longboi;
+#ifndef ESLOPE
+	fixed_t       vtop;
+#endif
+	INT32           i;
+	INT32 range;
+	static size_t maxdrawsegs = 0;
+
+#ifdef ESLOPE
+	maskedtextureheight = NULL;
+	//initialize segleft and segright
+	memset(&segleft, 0x00, sizeof(segleft));
+	memset(&segright, 0x00, sizeof(segright));
+#endif
+
+	colfunc = colfuncs[BASEDRAWFUNC];
+
+	if (ds_p == drawsegs+maxdrawsegs)
+	{
+		size_t curpos = curdrawsegs - drawsegs;
+		size_t pos = ds_p - drawsegs;
+		size_t newmax = maxdrawsegs ? maxdrawsegs*2 : 128;
+		if (firstseg)
+			firstseg = (drawseg_t *)(firstseg - drawsegs);
+		drawsegs = Z_Realloc(drawsegs, newmax*sizeof (*drawsegs), PU_STATIC, NULL);
+		ds_p = drawsegs + pos;
+		maxdrawsegs = newmax;
+		curdrawsegs = drawsegs + curpos;
+		if (firstseg)
+			firstseg = drawsegs + (size_t)firstseg;
+	}
+
+	sidedef = curline->sidedef;
+	linedef = curline->linedef;
+
+	// calculate rw_distance for scale calculation
+	rw_normalangle = curline->angle + ANGLE_90;
+	offsetangle = abs((INT32)(rw_normalangle-rw_angle1));
+
+	if (offsetangle > ANGLE_90)
+		offsetangle = ANGLE_90;
+
+	distangle = ANGLE_90 - offsetangle;
+	sineval = FINESINE(distangle>>ANGLETOFINESHIFT);
+
+	hyp = R_PointToDist(curline->v1->x, curline->v1->y);
+	rw_distance = FixedMul(hyp, sineval);
+	longboi = (hyp >= INT32_MAX);
+
+	// big room fix
+	if (longboi)
+		rw_distance = (fixed_t)R_CalculateSegDistance(curline,viewx,viewy);
+
+	ds_p->x1 = rw_x = start;
+	ds_p->x2 = stop;
+	ds_p->curline = curline;
+	rw_stopx = stop+1;
+
+	//SoM: Code to remove limits on openings.
+	R_RemoveOpeningLimits(start);
+
+	// calculate scale at both ends and step
+	range = R_CalculateWallScale(start, stop);
+
+	// calculate texture boundaries
+	//  and decide if floor / ceiling marks are needed
+	R_WorldTopAndBottom(start, stop);
+
+	midtexture = toptexture = bottomtexture = maskedtexture = 0;
+	ds_p->maskedtexturecol = NULL;
+	ds_p->numthicksides = numthicksides = 0;
+	ds_p->thicksidecol = NULL;
+	ds_p->tsilheight = 0;
+
+	numbackffloors = 0;
+
+	for (i = 0; i < MAXFFLOORS; i++)
+		ds_p->thicksides[i] = NULL;
+
+	if (numffloors)
+	{
+		for (i = 0; i < numffloors; i++)
+		{
+#ifdef POLYOBJECTS_PLANES
+			if (ffloor[i].polyobj && (!ds_p->curline->polyseg || ffloor[i].polyobj != ds_p->curline->polyseg))
+				continue;
+#endif
+
+#ifdef ESLOPE
+			if (ffloor[i].slope) {
+				ffloor[i].f_pos = P_GetZAt(ffloor[i].slope, segleft.x, segleft.y) - viewz;
+				ffloor[i].f_pos_slope = P_GetZAt(ffloor[i].slope, segright.x, segright.y) - viewz;
+			} else
+				ffloor[i].f_pos_slope =
+#endif
+			ffloor[i].f_pos = ffloor[i].height - viewz;
+		}
+	}
+
+#ifdef ESLOPE
+	// Set up texture Y offset slides for sloped walls
+	rw_toptextureslide = rw_midtextureslide = rw_bottomtextureslide = 0;
+	ceilingfrontslide = floorfrontslide = ceilingbackslide = floorbackslide = 0;
+
+	{
+		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
+
+		if (frontsector->f_slope)
+			floorfrontslide = FixedMul(frontsector->f_slope->zdelta, FINECOSINE((lineangle-frontsector->f_slope->xydirection)>>ANGLETOFINESHIFT));
+
+		if (frontsector->c_slope)
+			ceilingfrontslide = FixedMul(frontsector->c_slope->zdelta, FINECOSINE((lineangle-frontsector->c_slope->xydirection)>>ANGLETOFINESHIFT));
+
+		if (backsector && backsector->f_slope)
+			floorbackslide = FixedMul(backsector->f_slope->zdelta, FINECOSINE((lineangle-backsector->f_slope->xydirection)>>ANGLETOFINESHIFT));
+
+		if (backsector && backsector->c_slope)
+			ceilingbackslide = FixedMul(backsector->c_slope->zdelta, FINECOSINE((lineangle-backsector->c_slope->xydirection)>>ANGLETOFINESHIFT));
+	}
+#endif
+
+	// Check for textures
+	R_StoreWallSilhouette();
+	R_CheckWallTextures();
+	if (backsector)
+		R_CheckMaskedTextures();
+
+#undef SLOPEPARAMS
+
+	// Calculate rw_offset (only needed for textured lines)
+	segtextured = midtexture || toptexture || bottomtexture || maskedtexture || (numthicksides > 0);
+	if (segtextured)
+		R_WorldSegTextured(hyp, longboi);
+
+	// if a floor / ceiling plane is on the wrong side
+	//  of the view plane, it is definitely invisible
+	//  and doesn't need to be marked.
+	if (frontsector->heightsec == -1)
+	{
+		if (frontsector->floorpic != skyflatnum
+		&& (
+#ifdef ESLOPE
+			frontsector->f_slope ? P_GetZAt(frontsector->f_slope, viewx, viewy) :
+#endif
+			frontsector->floorheight) >= viewz)
+		{
+			// above view plane
+			markfloor = false;
+		}
+
+		if (frontsector->ceilingpic != skyflatnum
+		&& (
+#ifdef ESLOPE
+			frontsector->c_slope ? P_GetZAt(frontsector->c_slope, viewx, viewy) :
+#endif
+			frontsector->ceilingheight) <= viewz)
+		{
+			// below view plane
+			markceiling = false;
+		}
+	}
+
+	// Calculate incremental stepping values for texture edges
+	R_WorldStep(range);
+
+	// Create light lists
+	R_WorldLightLists(range);
+
+	// Step FOFs
+	if (numffloors)
+		 R_WorldFFloorStep(range);
+
+	// Step world back
+	if (backsector)
+		R_WorldBackStep(range);
+
+	// Mark floor and or ceiling visplanes
+	R_MarkPlanes();
 
 #ifdef WALLSPLATS
 	if (linedef->splats && cv_splats.value)
@@ -3220,5 +3366,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		ds_p->silhouette |= SIL_BOTTOM;
 		ds_p->bsilheight = (sidedef->midtexture > 0 && sidedef->midtexture < numtextures) ? INT32_MAX: INT32_MIN;
 	}
+
 	ds_p++;
 }
