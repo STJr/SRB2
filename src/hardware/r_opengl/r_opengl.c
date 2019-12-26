@@ -806,6 +806,23 @@ EXPORT void HWRAPI(ClearMipMapCache) (void)
 
 
 // -----------------+
+// SetPalette       : Set the color lookup table for paletted textures
+//                  : in OpenGL, we store values for conversion of paletted graphics when
+//                  : they are downloaded to the 3D card.
+// -----------------+
+EXPORT void HWRAPI(SetPalette) (RGBA_t *pal)
+{
+	size_t palsize = (sizeof(RGBA_t) * 256);
+	// on a palette change, you have to reload all of the textures
+	if (memcmp(&myPaletteData, pal, palsize))
+	{
+		memcpy(&myPaletteData, pal, palsize);
+		Flush();
+	}
+}
+
+
+// -----------------+
 // ReadRect         : Read a rectangle region of the truecolor framebuffer
 //                  : store pixels as 16bit 565 RGB
 // Returns          : 16bit 565 RGB pixel array stored in dst_data

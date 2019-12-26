@@ -45,7 +45,6 @@
 
 #ifdef HWRENDER
 #include "../hardware/hw_drv.h"
-#include "ogl_sdl.h"
 #ifdef STATIC_OPENGL
 #include "../hardware/r_opengl/r_opengl.h"
 #endif
@@ -73,9 +72,10 @@
 void *hwSym(const char *funcName,void *handle)
 {
 	void *funcPointer = NULL;
+	if (!funcName)
+		return NULL;
 #ifdef HWRENDER
-	if (0 == strcmp("SetPalette", funcName))
-                funcPointer = &OglSdlSetPalette;
+	GETFUNC(SetPalette);
 	GETFUNC(Init);
 	GETFUNC(Draw2DLine);
 	GETFUNC(DrawPolygon);
@@ -102,7 +102,7 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(MakeScreenFinalTexture);
 	GETFUNC(DrawScreenFinalTexture);
 #else //HWRENDER
-	if (0 == strcmp("FinishUpdate", funcName))
+	else if (0 == strcmp("FinishUpdate", funcName))
 		return funcPointer; //&FinishUpdate;
 #endif //!HWRENDER
 #ifdef STATIC3DS
