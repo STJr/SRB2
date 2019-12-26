@@ -115,6 +115,9 @@ typedef struct
 	void (*colfunc_2s) (column_t *);
 	INT32 column2s_length; // column->length : for multi-patch on 2sided wall = texture->height
 
+	// masked segs
+	INT32 maskedrepeat;
+
 	// thick sides
 	ffloor_t *pfloor;
 #ifdef ESLOPE
