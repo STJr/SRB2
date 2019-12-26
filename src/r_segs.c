@@ -644,11 +644,11 @@ static void R_WorldTopAndBottom(INT32 start, INT32 stop)
 }
 
 //
-// R_WorldSegTextured
+// R_SegTextured
 // Calculate rw.offset.
 // Only needed for textured lines.
 //
-static void R_WorldSegTextured(fixed_t hyp, boolean longboi)
+static void R_SegTextured(fixed_t hyp, boolean longboi)
 {
 	INT32 lightnum;
 	fixed_t sineval;
@@ -2090,7 +2090,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	// Calculate rw.offset (only needed for textured lines)
 	segtextured = midtexture || toptexture || bottomtexture || maskedtexture || (numthicksides > 0);
 	if (segtextured)
-		R_WorldSegTextured(hyp, longboi);
+		R_SegTextured(hyp, longboi);
 
 	// if a floor / ceiling plane is on the wrong side
 	//  of the view plane, it is definitely invisible
