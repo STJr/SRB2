@@ -47,6 +47,7 @@ extern int SDL_main(int argc, char *argv[]);
 
 #ifdef LOGMESSAGES
 FILE *logstream = NULL;
+char  logfilename[1024];
 #endif
 
 #ifndef DOXYGEN
@@ -116,7 +117,6 @@ int main(int argc, char **argv)
 #endif
 {
 	const char *logdir = NULL;
-	char logfile[MAX_WADPATH];
 	myargc = argc;
 	myargv = argv; /// \todo pull out path to exe from this string
 
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 		timeinfo = localtime(&my_time);
 
 		strftime(buf, 26, "%Y-%m-%d %H-%M-%S", timeinfo);
-		strcpy(logfile, va("log-%s.txt", buf));
+		strcpy(logfilename, va("log-%s.txt", buf));
 
 #ifdef DEFAULTDIR
 		if (logdir)
@@ -149,14 +149,16 @@ int main(int argc, char **argv)
 			// Create dirs here because D_SRB2Main() is too late.
 			I_mkdir(va("%s%s"DEFAULTDIR, logdir, PATHSEP), 0755);
 			I_mkdir(va("%s%s"DEFAULTDIR"%slogs",logdir, PATHSEP, PATHSEP), 0755);
-			logstream = fopen(va("%s%s"DEFAULTDIR"%slogs%s%s",logdir, PATHSEP, PATHSEP, PATHSEP, logfile), "wt");
+			strcpy(logfilename, va("%s%s"DEFAULTDIR"%slogs%s%s",logdir, PATHSEP, PATHSEP, PATHSEP, logfilename));
 		}
 		else
 #endif
 		{
 			I_mkdir("."PATHSEP"logs"PATHSEP, 0755);
-			logstream = fopen(va("."PATHSEP"logs"PATHSEP"%s", logfile), "wt");
+			strcpy(logfilename, va("."PATHSEP"logs"PATHSEP"%s", logfilename));
 		}
+
+		logstream = fopen(logfilename, "wt");
 	}
 #endif
 
@@ -181,12 +183,13 @@ int main(int argc, char **argv)
 #endif
 	MakeCodeWritable();
 #endif
+
 	// startup SRB2
 	CONS_Printf("Setting up SRB2...\n");
 	D_SRB2Main();
 #ifdef LOGMESSAGES
 	if (!M_CheckParm("-nolog"))
-		CONS_Printf("Logfile: %s\n", logfile);
+		CONS_Printf("Logfile: %s\n", logfilename);
 #endif
 	CONS_Printf("Entering main game loop...\n");
 	// never return

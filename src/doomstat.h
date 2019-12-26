@@ -310,11 +310,16 @@ typedef struct
 	SINT8 bonustype;      ///< What type of bonus does this level have? (-1 for null.)
 	SINT8 maxbonuslives;  ///< How many bonus lives to award at Intermission? (-1 for unlimited.)
 
-	UINT8 levelflags;     ///< LF_flags:  merged booleans into one UINT8 for space, see below
+	UINT16 levelflags;     ///< LF_flags:  merged booleans into one UINT16 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
 	UINT16 startrings;      ///< Number of rings players start with.
+
+	// Title card.
+	char ltzzpatch[8];      ///< Zig zag patch.
+	char ltzztext[8];       ///< Zig zag text.
+	char ltactdiamond[8];   ///< Act diamond.
 
 	// Freed animals stuff.
 	UINT8 numFlickies;     ///< Internal. For freed flicky support.
