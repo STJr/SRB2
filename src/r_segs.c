@@ -1349,7 +1349,7 @@ UINT32 nombre = 100000;
 static void R_RenderSegLoop (void)
 {
 	angle_t angle;
-	size_t  pindex;
+	size_t  pindex = 0;
 	INT32     yl;
 	INT32     yh;
 
@@ -1361,6 +1361,10 @@ static void R_RenderSegLoop (void)
 	INT32     top;
 	INT32     bottom;
 	INT32     i;
+
+	// Set the shadowed column drawer for light lists.
+	if (dc_numlights)
+		colfunc = colfuncs[COLDRAWFUNC_SHADOWED];
 
 	for (; rw_x < rw_stopx; rw_x++)
 	{
@@ -1472,6 +1476,15 @@ static void R_RenderSegLoop (void)
 			}
 		}
 
+		// Calculate lighting.
+		// Done for light lists anyway to avoid doing it for every light.
+		if (segtextured || dc_numlights)
+		{
+			pindex = FixedMul(rw_scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+			if (pindex >= MAXLIGHTSCALE)
+				pindex = MAXLIGHTSCALE-1;
+		}
+
 		//SoM: Calculate offsets for Thick fake floors.
 		// calculate texture offset
 		angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
@@ -1492,12 +1505,6 @@ static void R_RenderSegLoop (void)
 		// texturecolumn and lighting are independent of wall tiers
 		if (segtextured)
 		{
-			// calculate lighting
-			pindex = FixedMul(rw_scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
-			if (pindex >=  MAXLIGHTSCALE)
-				pindex = MAXLIGHTSCALE-1;
-
 			dc_colormap = walllights[pindex];
 			dc_x = rw_x;
 			dc_iscale = 0xffffffffu / (unsigned)rw_scale;
@@ -1528,17 +1535,10 @@ static void R_RenderSegLoop (void)
 				else
 					xwalllights = scalelight[lightnum];
 
-				pindex = FixedMul(rw_scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
-				if (pindex >=  MAXLIGHTSCALE)
-					pindex = MAXLIGHTSCALE-1;
-
 				if (dc_lightlist[i].extra_colormap)
 					dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 				else
 					dc_lightlist[i].rcolormap = xwalllights[pindex];
-
-				colfunc = colfuncs[COLDRAWFUNC_SHADOWED];
 			}
 		}
 
