@@ -517,6 +517,7 @@ void Command_Teleport_f(void)
 		if (!starpostnum) // spawnpoints...
 		{
 			mapthing_t *mt;
+			fixed_t offset;
 
 			if (starpostpath >= numcoopstarts)
 			{
@@ -527,6 +528,7 @@ void Command_Teleport_f(void)
 			mt = playerstarts[starpostpath]; // Given above check, should never be NULL.
 			intx = mt->x<<FRACBITS;
 			inty = mt->y<<FRACBITS;
+			offset = mt->z<<FRACBITS;
 
 			ss = R_IsPointInSubsector(intx, inty);
 			if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
@@ -538,17 +540,9 @@ void Command_Teleport_f(void)
 			// Flagging a player's ambush will make them start on the ceiling
 			// Objectflip inverts
 			if (!!(mt->options & MTF_AMBUSH) ^ !!(mt->options & MTF_OBJECTFLIP))
-			{
-				intz = ss->sector->ceilingheight - p->mo->height;
-				if (mt->options >> ZSHIFT)
-					intz -= ((mt->options >> ZSHIFT) << FRACBITS);
-			}
+				intz = ss->sector->ceilingheight - p->mo->height - offset;
 			else
-			{
-				intz = ss->sector->floorheight;
-				if (mt->options >> ZSHIFT)
-					intz += ((mt->options >> ZSHIFT) << FRACBITS);
-			}
+				intz = ss->sector->floorheight + offset;
 
 			if (mt->options & MTF_OBJECTFLIP) // flip the player!
 			{
