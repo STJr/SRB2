@@ -3250,7 +3250,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	else if (curline->v1->x == curline->v2->x)
 		rw_distance = (fixed_t)(llabs(viewx - curline->v1->x));
 	// big room fix
+#ifdef SOFTWARE_USE_FLOATS
 	else if ((curline->length >= 1024<<FRACBITS) || longboi)
+#else
+	else if (longboi)
+#endif
 		R_CalculateSegDistance(curline, viewx, viewy, longboi);
 	else
 		rw_distance = FixedMul(hyp, sineval);
