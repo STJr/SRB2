@@ -674,6 +674,46 @@ static float HWR_ClipViewSegment(INT32 x, polyvertex_t *v1, polyvertex_t *v2)
 }
 #endif
 
+static FUINT HWR_CalcWallLight(FUINT lightnum, fixed_t v1x, fixed_t v1y, fixed_t v2x, fixed_t v2y)
+{
+	INT16 finallight = lightnum;
+
+	if (cv_grfakecontrast.value != 0)
+	{
+		const UINT8 contrast = 8;
+		fixed_t extralight = 0;
+
+		if (cv_grfakecontrast.value == 2) // Smooth setting
+		{
+			extralight = -(contrast<<FRACBITS) +
+			FixedDiv(AngleFixed(R_PointToAngle2(0, 0,
+				abs(v1x - v2x),
+				abs(v1y - v2y))), 90<<FRACBITS)
+			* (contrast * 2);
+			extralight = FixedFloor(extralight + (FRACUNIT>>1)) >> FRACBITS;
+		}
+		else
+		{
+			if (v1y == v2y)
+				extralight = -contrast;
+			else if (v1x == v2x)
+				extralight = contrast;
+		}
+
+		if (extralight != 0)
+		{
+			finallight += extralight;
+
+			if (finallight < 0)
+				finallight = 0;
+			if (finallight > 255)
+				finallight = 255;
+		}
+	}
+
+	return (FUINT)finallight;
+}
+
 //
 // HWR_SplitWall
 //
@@ -692,19 +732,20 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 	float endpegt, endpegb, endpegmul;
 	float endheight = 0.0f, endbheight = 0.0f;
 
-	fixed_t v1x = FLOAT_TO_FIXED(wallVerts[0].x);
-	fixed_t v1y = FLOAT_TO_FIXED(wallVerts[0].z); // not a typo
-	fixed_t v2x = FLOAT_TO_FIXED(wallVerts[1].x);
-	fixed_t v2y = FLOAT_TO_FIXED(wallVerts[1].z); // not a typo
 	// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
 	// use this as a temp var to store P_GetZAt's return value each time
 	fixed_t temp;
 #endif
 
-	INT32   solid, i;
+	fixed_t v1x = FLOAT_TO_FIXED(wallVerts[0].x);
+	fixed_t v1y = FLOAT_TO_FIXED(wallVerts[0].z); // not a typo
+	fixed_t v2x = FLOAT_TO_FIXED(wallVerts[1].x);
+	fixed_t v2y = FLOAT_TO_FIXED(wallVerts[1].z); // not a typo
+
+	INT32 solid, i;
 	lightlist_t *  list = sector->lightlist;
 	const UINT8 alpha = Surf->PolyColor.s.alpha;
-	FUINT lightnum = sector->lightlevel;
+	FUINT lightnum = HWR_CalcWallLight(sector->lightlevel, v1x, v1y, v2x, v2y);
 	extracolormap_t *colormap = NULL;
 
 	realtop = top = wallVerts[3].y;
@@ -733,12 +774,12 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 		{
 			if (pfloor && (pfloor->flags & FF_FOG))
 			{
-				lightnum = pfloor->master->frontsector->lightlevel;
+				lightnum = HWR_CalcWallLight(pfloor->master->frontsector->lightlevel, v1x, v1y, v2x, v2y);
 				colormap = pfloor->master->frontsector->extra_colormap;
 			}
 			else
 			{
-				lightnum = *list[i].lightlevel;
+				lightnum = HWR_CalcWallLight(*list[i].lightlevel, v1x, v1y, v2x, v2y);
 				colormap = *list[i].extra_colormap;
 			}
 		}
@@ -1021,7 +1062,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		cliphigh = (float)(texturehpeg + (gr_curline->flength*FRACUNIT));
 	}
 
-	lightnum = gr_frontsector->lightlevel;
+	lightnum = HWR_CalcWallLight(gr_frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y);
 	colormap = gr_frontsector->extra_colormap;
 
 	if (gr_frontsector)
@@ -1784,7 +1825,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 					blendmode = PF_Fog|PF_NoTexture;
 
-					lightnum = rover->master->frontsector->lightlevel;
+					lightnum = HWR_CalcWallLight(rover->master->frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y);
 					colormap = rover->master->frontsector->extra_colormap;
 
 					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
@@ -1896,7 +1937,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 					blendmode = PF_Fog|PF_NoTexture;
 
-					lightnum = rover->master->frontsector->lightlevel;
+					lightnum = HWR_CalcWallLight(rover->master->frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y);
 					colormap = rover->master->frontsector->extra_colormap;
 
 					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
@@ -6125,6 +6166,7 @@ static void HWR_FoggingOn(void)
 
 static CV_PossibleValue_t grsoftwarefog_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "LightPlanes"}, {0, NULL}};
 static CV_PossibleValue_t grmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
+static CV_PossibleValue_t grfakecontrast_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Smooth"}, {0, NULL}};
 
 static void CV_grmodellighting_OnChange(void);
 static void CV_grfiltermode_OnChange(void);
@@ -6161,6 +6203,7 @@ consvar_t cv_grmodellighting = {"gr_modellighting", "Off", CV_SAVE|CV_CALL, CV_O
 consvar_t cv_grshearing = {"gr_shearing", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grspritebillboarding = {"gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grskydome = {"gr_skydome", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grfakecontrast = {"gr_fakecontrast", "Smooth", CV_SAVE, grfakecontrast_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_grrounddown = {"gr_rounddown", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfov = {"gr_fov", "90", CV_FLOAT|CV_CALL, grfov_cons_t, CV_grfov_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -6229,7 +6272,7 @@ void HWR_AddCommands(void)
 
 	CV_RegisterVar(&cv_grskydome);
 	CV_RegisterVar(&cv_grspritebillboarding);
-
+	CV_RegisterVar(&cv_grfakecontrast);
 	CV_RegisterVar(&cv_grshearing);
 	CV_RegisterVar(&cv_grshaders);
 
