@@ -685,12 +685,11 @@ static FUINT HWR_CalcWallLight(FUINT lightnum, fixed_t v1x, fixed_t v1y, fixed_t
 
 		if (cv_grfakecontrast.value == 2) // Smooth setting
 		{
-			extralight = -(contrast<<FRACBITS) +
+			extralight = (-(contrast<<FRACBITS) +
 			FixedDiv(AngleFixed(R_PointToAngle2(0, 0,
 				abs(v1x - v2x),
 				abs(v1y - v2y))), 90<<FRACBITS)
-			* (contrast * 2);
-			extralight = FixedFloor(extralight + (FRACUNIT>>1)) >> FRACBITS;
+			* (contrast * 2)) >> FRACBITS;
 		}
 		else
 		{
