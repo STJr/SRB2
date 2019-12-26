@@ -109,6 +109,21 @@ typedef struct
 	fixed_t distance;
 	angle_t normalangle;
 	angle_t angle1; // angle to line origin
+
+	// for masked segs and thick sides
+	INT32 texnum;
+	void (*colfunc_2s) (column_t *);
+	INT32 column2s_length; // column->length : for multi-patch on 2sided wall = texture->height
+
+	// thick sides
+	ffloor_t *pfloor;
+#ifdef ESLOPE
+	// Render FOF sides kinda like normal sides, with the frac and step and everything
+	// NOTE: INT64 instead of fixed_t because overflow concerns
+	INT64 top_frac, top_step, bottom_frac, bottom_step;
+	fixed_t ffloortextureslide;
+	fixed_t left_top, left_bottom; // needed here for slope skewing
+#endif
 } renderwall_t;
 extern renderwall_t rw;
 
