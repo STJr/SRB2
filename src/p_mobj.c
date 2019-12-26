@@ -13005,7 +13005,7 @@ static void P_SetObjectSpecial(mobj_t *mobj)
 	}
 }
 
-mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
+static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
 {
 	mobj_t *mobj = NULL;
 	boolean doangle = true;
