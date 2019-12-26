@@ -2863,7 +2863,7 @@ static void R_DrawRepeatFlippedMaskedColumn(column_t *col)
 // R_RenderThickSegLoop
 // Like R_RenderSegLoop, but for thick sides.
 //
-void R_RenderThickSegLoop(void)
+static void R_RenderThickSegLoop(void)
 {
 	column_t *col;
 	size_t pindex;
