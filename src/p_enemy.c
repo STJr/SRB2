@@ -4983,7 +4983,7 @@ void A_ThrownRing(mobj_t *actor)
 				continue;
 
 			// Don't home in on teammates.
-			if (gametype == GT_CTF
+			if ((gametyperules & GTR_TEAMFLAGS)
 				&& actor->target->player->ctfteam == player->ctfteam)
 				continue;
 		}
@@ -6589,7 +6589,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 		if (changecolor)
 		{
-			if (gametype != GT_CTF)
+			if (!(gametyperules & GTR_TEAMFLAGS))
 				mo->color = actor->target->color; //copy color
 			else if (actor->target->player->ctfteam == 2)
 				mo->color = skincolor_bluering;
@@ -6605,7 +6605,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -6620,7 +6620,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -13591,12 +13591,12 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 		}
 		else
 		{ //Player on the top of the tornado.
+			P_ResetPlayer(player);
 			thing->z = dustdevil->z + dustdevil->height;
 			thrust = 20 * FRACUNIT;
 			player->powers[pw_nocontrol] = 0;
 			S_StartSound(thing, sfx_wdjump);
 			P_SetPlayerMobjState(thing, S_PLAY_FALL);
-			player->pflags &= ~PF_JUMPED;
 		}
 
 		thing->momz = thrust;
@@ -14689,19 +14689,34 @@ void A_DragonWing(mobj_t *actor)
 void A_DragonSegment(mobj_t *actor)
 {
 	mobj_t *target = actor->target;
-	fixed_t dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
-	fixed_t radius = actor->radius + target->radius;
-	angle_t hangle = R_PointToAngle2(target->x, target->y, actor->x, actor->y);
-	angle_t zangle = R_PointToAngle2(0, target->z, dist, actor->z);
-	fixed_t hdist = P_ReturnThrustX(target, zangle, radius);
-	fixed_t xdist = P_ReturnThrustX(target, hangle, hdist);
-	fixed_t ydist = P_ReturnThrustY(target, hangle, hdist);
-	fixed_t zdist = P_ReturnThrustY(target, zangle, radius);
+	fixed_t dist;
+	fixed_t radius;
+	angle_t hangle;
+	angle_t zangle;
+	fixed_t hdist;
+	fixed_t xdist;
+	fixed_t ydist;
+	fixed_t zdist;
 
 	#ifdef HAVE_BLUA
 		if (LUA_CallAction("A_DragonSegment", actor))
 			return;
 	#endif
+
+	if (target == NULL || !target->health)
+	{
+		P_RemoveMobj(actor);
+		return;
+	}
+
+	dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
+	radius = actor->radius + target->radius;
+	hangle = R_PointToAngle2(target->x, target->y, actor->x, actor->y);
+	zangle = R_PointToAngle2(0, target->z, dist, actor->z);
+	hdist = P_ReturnThrustX(target, zangle, radius);
+	xdist = P_ReturnThrustX(target, hangle, hdist);
+	ydist = P_ReturnThrustY(target, hangle, hdist);
+	zdist = P_ReturnThrustY(target, zangle, radius);
 
 	actor->angle = hangle;
 	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);

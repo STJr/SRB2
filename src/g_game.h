@@ -72,6 +72,7 @@ extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
 extern consvar_t cv_directionchar, cv_directionchar2;
 extern consvar_t cv_autobrake, cv_autobrake2;
+extern consvar_t cv_deadzone, cv_deadzone2;
 extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis;
 extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
@@ -142,6 +143,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar,
 void G_DoLoadLevel(boolean resetplayer);
 void G_StartTitleCard(void);
 void G_PreLevelTitleCard(void);
+boolean G_IsTitleCardAvailable(void);
 void G_DeferedPlayDemo(const char *demo);
 
 // Can be called by the startup code or M_Responder, calls P_SetupLevel.
@@ -200,6 +202,18 @@ void G_StopMetalDemo(void);
 ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
+
+extern UINT32 gametypedefaultrules[NUMGAMETYPES];
+extern UINT32 gametypetol[NUMGAMETYPES];
+extern INT16 gametyperankings[NUMGAMETYPES];
+
+void G_SetGametype(INT16 gametype);
+INT16 G_AddGametype(UINT32 rules);
+void G_AddGametypeConstant(INT16 gtype, const char *newgtconst);
+void G_UpdateGametypeSelections(void);
+void G_AddTOL(UINT32 newtol, const char *tolname);
+void G_AddGametypeTOL(INT16 gtype, UINT32 newtol);
+void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolor, UINT8 rightcolor);
 
 INT32 G_GetGametypeByName(const char *gametypestr);
 boolean G_IsSpecialStage(INT32 mapnum);

@@ -387,7 +387,7 @@ UINT8 P_FindLowestMare(void)
 	mobj_t *mo2;
 	UINT8 mare = UINT8_MAX;
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 		return 0;
 
 	// scan the thinkers
@@ -789,7 +789,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		P_RestoreMusic(player);
 	}
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 	{
 		if (player->drillmeter < 48*20)
 			player->drillmeter = 48*20;
@@ -1596,7 +1596,7 @@ void P_RestoreMusic(player_t *player)
 		P_PlayJingle(player, JT_SUPER);
 
 	// Invulnerability
-	else if (player->powers[pw_invulnerability] > 1)
+	else if (player->powers[pw_invulnerability] > 1 && !player->powers[pw_super])
 	{
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
@@ -2177,7 +2177,7 @@ void P_DoPlayerExit(player_t *player)
 
 	if (cv_allowexitlevel.value == 0 && !G_PlatformGametype())
 		return;
-	else if (gametype == GT_RACE || gametype == GT_COMPETITION) // If in Race Mode, allow
+	else if (gametyperules & GTR_RACE) // If in Race Mode, allow
 	{
 		if (!countdown) // a 60-second wait ala Sonic 2.
 			countdown = (cv_countdowntime.value - 1)*TICRATE + 1; // Use cv_countdowntime
@@ -3106,7 +3106,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 			}
 		}
 	}
-	else if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))) // If you have the flag (duh).
+	else if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))) // If you have the flag (duh).
 	{
 		// Spawn a got-flag message over the head of the player that
 		// has it (but not on your own screen if you have the flag).
@@ -4631,7 +4631,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						S_StartSound(player->mo, sfx_spin);
 						break;
 					}
-					if (player->dashspeed < player->maxdash)
+					if (player->dashspeed < player->maxdash && player->mindash != player->maxdash)
 					{
 #define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
 						fixed_t soundcalculation = chargecalculation;
@@ -4666,7 +4666,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (player->powers[pw_carry] == CR_BRAKGOOP)
 						player->dashspeed = 0;
 
-					if (!((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE))
+					if (!((gametyperules & GTR_RACE) && leveltime < 4*TICRATE))
 					{
 						if (player->dashspeed)
 						{
@@ -5044,7 +5044,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	{
 		if (onground || player->climbing || player->powers[pw_carry])
 			;
-		else if (gametype == GT_CTF && player->gotflag)
+		else if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag)
 			;
 		else if (player->pflags & (PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player has used an ability previously
 			;
@@ -5124,11 +5124,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 									boolean elem = ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL);
 									player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 									if (elem)
-									{
-										player->pflags |= PF_NOJUMPDAMAGE;
-										P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 										S_StartSound(player->mo, sfx_s3k43);
-									}
 									else
 									{
 										player->pflags &= ~PF_NOJUMPDAMAGE;
@@ -5269,7 +5265,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
-		else if (player->pflags & PF_SLIDING || (gametype == GT_CTF && player->gotflag))
+		else if (player->pflags & PF_SLIDING || ((gametyperules & GTR_TEAMFLAGS) && player->gotflag) || player->pflags & PF_SHIELDABILITY)
 			;
 		/*else if (P_SuperReady(player))
 		{
@@ -5556,7 +5552,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	{
 		player->pflags |= PF_JUMPDOWN;
 
-		if ((gametype != GT_CTF || !player->gotflag) && !player->exiting)
+		if ((!(gametyperules & GTR_TEAMFLAGS) || !player->gotflag) && !player->exiting)
 		{
 			if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP)
 			{
@@ -7129,7 +7125,7 @@ static void P_NiGHTSMovement(player_t *player)
 		&& !player->exiting)
 			player->nightstime--;
 	}
-	else if (gametype != GT_RACE && gametype != GT_COMPETITION
+	else if (!(gametyperules & GTR_RACE)
 	&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	&& !(player->capsule && player->capsule->reactiontime)
@@ -7283,7 +7279,7 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		player->mo->momx = player->mo->momy = 0;
 
-		if (gametype != GT_RACE && gametype != GT_COMPETITION)
+		if (!(gametyperules & GTR_RACE))
 			P_SetObjectMomZ(player->mo, FRACUNIT/2, (P_MobjFlip(player->mo)*player->mo->momz >= 0));
 		else
 			player->mo->momz = 0;
@@ -9521,12 +9517,12 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	}
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION || (gametype == GT_COOP && (multiplayer || netgame)))
+	if ((gametyperules & GTR_RACE) || (gametype == GT_COOP && (multiplayer || netgame)))
 	{
 		// Keep time rolling in race mode
 		if (!(countdown2 && !countdown) && !player->exiting && !(player->pflags & PF_GAMETYPEOVER) && !stoppedclock)
 		{
-			if (gametype == GT_RACE || gametype == GT_COMPETITION)
+			if (gametyperules & GTR_RACE)
 			{
 				if (leveltime >= 4*TICRATE)
 					player->realtime = leveltime - 4*TICRATE;
@@ -10350,6 +10346,11 @@ boolean P_SpectatorJoinGame(player_t *player)
 		else
 			changeto = (P_RandomFixed() & 1) + 1;
 
+#ifdef HAVE_BLUA
+		if (!LUAh_TeamSwitch(player, changeto, true, false, false))
+			return false;
+#endif
+
 		if (player->mo)
 		{
 			P_RemoveMobj(player->mo);
@@ -10361,7 +10362,14 @@ boolean P_SpectatorJoinGame(player_t *player)
 
 		//Reset away view
 		if (P_IsLocalPlayer(player) && displayplayer != consoleplayer)
+		{
+#ifdef HAVE_BLUA
+			// Call ViewpointSwitch hooks here.
+			// The viewpoint was forcibly changed.
+			LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+#endif
 			displayplayer = consoleplayer;
+		}
 
 		if (changeto == 1)
 			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x85', M_GetText("Red team"), '\x80');
@@ -10375,8 +10383,12 @@ boolean P_SpectatorJoinGame(player_t *player)
 	{
 		// Exception for hide and seek. Don't join a game when you simply
 		// respawn in place and sit there for the rest of the round.
-		if (!(gametype == GT_HIDEANDSEEK && leveltime > (hidetime * TICRATE)))
+		if (!((gametyperules & GTR_HIDEFROZEN) && leveltime > (hidetime * TICRATE)))
 		{
+#ifdef HAVE_BLUA
+			if (!LUAh_TeamSwitch(player, 3, true, false, false))
+				return false;
+#endif
 			if (player->mo)
 			{
 				P_RemoveMobj(player->mo);
@@ -10399,7 +10411,14 @@ boolean P_SpectatorJoinGame(player_t *player)
 
 			//Reset away view
 			if (P_IsLocalPlayer(player) && displayplayer != consoleplayer)
+			{
+#ifdef HAVE_BLUA
+				// Call ViewpointSwitch hooks here.
+				// The viewpoint was forcibly changed.
+				LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+#endif
 				displayplayer = consoleplayer;
+			}
 
 			if (gametype != GT_COOP)
 				CONS_Printf(M_GetText("%s entered the game.\n"), player_names[player-players]);
@@ -10525,7 +10544,7 @@ void P_DoPityCheck(player_t *player)
 {
 	// No pity outside of match or CTF.
 	if (player->spectator
-		|| !(gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
+		|| !(gametyperules & GTR_PITYSHIELD))
 		return;
 
 	// Apply pity shield if available.
@@ -11358,7 +11377,7 @@ void P_PlayerThink(player_t *player)
 		I_Error("player %s is in PST_REBORN\n", sizeu1(playeri));
 #endif
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 	{
 		INT32 i;
 
@@ -11421,7 +11440,7 @@ void P_PlayerThink(player_t *player)
 		player->exiting > 0 && player->exiting <= 1*TICRATE &&
 		(!multiplayer || gametype == GT_COOP ? !mapheaderinfo[gamemap-1]->musinterfadeout : true) &&
 			// don't fade if we're fading during intermission. follows Y_StartIntermission intertype = int_coop
-		(gametype == GT_RACE || gametype == GT_COMPETITION ? countdown2 == 0 : true) && // don't fade on timeout
+		((gametyperules & GTR_RACE) ? countdown2 == 0 : true) && // don't fade on timeout
 		player->lives > 0 && // don't fade on game over (competition)
 		P_IsLocalPlayer(player))
 	{
@@ -11536,7 +11555,7 @@ void P_PlayerThink(player_t *player)
 		player->lives = cv_startinglives.value;
 	}
 
-	if ((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE)
+	if ((gametyperules & GTR_RACE) && leveltime < 4*TICRATE)
 	{
 		cmd->buttons &= BT_USE; // Remove all buttons except BT_USE
 		cmd->forwardmove = 0;
@@ -11546,7 +11565,7 @@ void P_PlayerThink(player_t *player)
 	// Synchronizes the "real" amount of time spent in the level.
 	if (!player->exiting && !stoppedclock)
 	{
-		if (gametype == GT_RACE || gametype == GT_COMPETITION)
+		if (gametyperules & GTR_RACE)
 		{
 			if (leveltime >= 4*TICRATE)
 				player->realtime = leveltime - 4*TICRATE;

@@ -274,7 +274,10 @@ static void D_Display(void)
 			 && wipetypepre != UINT8_MAX)
 			{
 				F_WipeStartScreen();
-				F_WipeColorFill(31);
+				// Check for Mega Genesis fade
+				wipestyleflags = WSF_FADEOUT;
+				if (F_TryColormapFade(31))
+					wipetypepost = -1; // Don't run the fade below this one
 				F_WipeEndScreen();
 				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 			}
@@ -488,6 +491,7 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			F_WipeEndScreen();
+
 			// Funny.
 			if (WipeStageTitle && st_overlay)
 			{
@@ -497,6 +501,14 @@ static void D_Display(void)
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 				F_WipeStartScreen();
 			}
+
+			// Check for Mega Genesis fade
+			if (F_ShouldColormapFade())
+			{
+				wipestyleflags |= WSF_FADEIN;
+				wipestyleflags &= ~WSF_FADEOUT;
+			}
+
 			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
 
@@ -561,9 +573,6 @@ void D_SRB2Loop(void)
 		server = true;
 
 	// Pushing of + parameters is now done back in D_SRB2Main, not here.
-
-	CONS_Printf("I_StartupKeyboard()...\n");
-	I_StartupKeyboard();
 
 #ifdef _WINDOWS
 	CONS_Printf("I_StartupMouse()...\n");
@@ -753,7 +762,7 @@ void D_StartTitle(void)
 
 	gameaction = ga_nothing;
 	displayplayer = consoleplayer = 0;
-	gametype = GT_COOP;
+	G_SetGametype(GT_COOP);
 	paused = false;
 	advancedemo = false;
 	F_InitMenuPresValues();
@@ -1288,8 +1297,9 @@ void D_SRB2Main(void)
 		I_StartupSound();
 		I_InitMusic();
 		S_InitSfxChannels(cv_soundvolume.value);
-		S_InitMusicDefs();
 	}
+
+	S_InitMusicDefs();
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
@@ -1409,14 +1419,14 @@ void D_SRB2Main(void)
 			if (newgametype == -1) // reached end of the list with no match
 			{
 				j = atoi(sgametype); // assume they gave us a gametype number, which is okay too
-				if (j >= 0 && j < NUMGAMETYPES)
+				if (j >= 0 && j < gametypecount)
 					newgametype = (INT16)j;
 			}
 
 			if (newgametype != -1)
 			{
 				j = gametype;
-				gametype = newgametype;
+				G_SetGametype(newgametype);
 				D_GameTypeChanged(j);
 			}
 		}

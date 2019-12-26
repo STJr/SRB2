@@ -452,8 +452,10 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing);
 void P_MovePlayerToStarpost(INT32 playernum);
 void P_AfterPlayerSpawn(INT32 playernum);
 
-void P_SpawnMapThing(mapthing_t *mthing);
-void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime);
+mobj_t *P_SpawnMapThing(mapthing_t *mthing);
+void P_SpawnHoop(mapthing_t *mthing);
+void P_SetBonusTime(mobj_t *mobj);
+void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime);
 void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, angle_t rotangle);
 void P_SpawnPrecipitation(void);
 void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, statenum_t nstate, angle_t rotangle, boolean spawncenter);
