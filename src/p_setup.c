@@ -2159,7 +2159,7 @@ static void P_LevelInitStuff(void)
 	{
 		G_PlayerReborn(i, true);
 
-		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
+		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (G_CompetitionGametype() || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
 			players[i].lives = cv_startinglives.value;

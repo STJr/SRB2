@@ -9491,7 +9491,7 @@ static void P_DeathThink(player_t *player)
 		INT32 i, deadtimercheck = INT32_MAX;
 
 		// In a net/multiplayer game, and out of lives
-		if (gametype == GT_COMPETITION)
+		if (G_CompetitionGametype())
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{

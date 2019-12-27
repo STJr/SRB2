@@ -3492,6 +3492,16 @@ boolean G_TagGametype(void)
 	return (gametyperules & GTR_TAG);
 }
 
+//
+// G_CompetitionGametype
+//
+// For gametypes that are race gametypes, and have lives.
+//
+boolean G_CompetitionGametype(void)
+{
+	return ((gametyperules & GTR_RACE) && (gametyperules & GTR_LIVES));
+}
+
 /** Get the typeoflevel flag needed to indicate support of a gametype.
   * In single-player, this always returns TOL_SP.
   * \param gametype The gametype for which support is desired.

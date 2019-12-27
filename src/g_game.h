@@ -223,6 +223,7 @@ boolean G_GametypeHasSpectators(void);
 boolean G_RingSlingerGametype(void);
 boolean G_PlatformGametype(void);
 boolean G_TagGametype(void);
+boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);
 void G_ExitLevel(void);
 void G_NextLevel(void);
