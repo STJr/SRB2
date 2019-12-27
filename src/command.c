@@ -106,7 +106,7 @@ static vsbuf_t com_text; // variable sized buffer
   *
   * \param s The text.
   * \param np Optionally a pointer to fill with the new string length.
-  * \return The new length.
+  * \return The text.
   * \sa COM_ExecuteString
   */
 static char *
