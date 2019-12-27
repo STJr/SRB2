@@ -2498,16 +2498,16 @@ static void Shittylogcopy(void)
 {
 	char buf[8192];
 	FILE *fp;
-	int n;
+	size_t r;
 	if (fseek(logstream, 0, SEEK_SET) == -1)
 	{
 		Shittycopyerror("fseek");
 	}
 	else if (( fp = fopen(logfilename, "wt") ))
 	{
-		while (( n = fread(buf, 1, sizeof buf, logstream) ))
+		while (( r = fread(buf, 1, sizeof buf, logstream) ))
 		{
-			if (fwrite(buf, 1, n, fp) < n)
+			if (fwrite(buf, 1, r, fp) < r)
 			{
 				Shittycopyerror("fwrite");
 				break;
