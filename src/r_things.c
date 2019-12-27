@@ -2841,7 +2841,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
 		|| (!skins[skinnum].availability)
-		|| ((playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
+		|| (((netgame || multiplayer) && playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
 		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.
