@@ -3763,9 +3763,9 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv, boolean ontop)
 
 	x = BASEVIDWIDTH - x - SLIDER_WIDTH;
 
-	V_DrawScaledPatch(x, y, 0, W_CachePatchName("M_SLIDEL", PU_CACHE));
+	V_DrawScaledPatch(x, y, 0, W_CachePatchName("M_SLIDEL", PU_PATCH));
 
-	p =  W_CachePatchName("M_SLIDEM", PU_CACHE);
+	p =  W_CachePatchName("M_SLIDEM", PU_PATCH);
 	for (i = 1; i < SLIDER_RANGE; i++)
 		V_DrawScaledPatch (x+i*8, y, 0,p);
 
@@ -3777,11 +3777,11 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv, boolean ontop)
 			'\x1D' | V_YELLOWMAP, false);
 	}
 
-	p = W_CachePatchName("M_SLIDER", PU_CACHE);
+	p = W_CachePatchName("M_SLIDER", PU_PATCH);
 	V_DrawScaledPatch(x+i*8, y, 0, p);
 
 	// draw the slider cursor
-	p = W_CachePatchName("M_SLIDEC", PU_CACHE);
+	p = W_CachePatchName("M_SLIDEC", PU_PATCH);
 
 	for (i = 0; cv->PossibleValue[i+1].strvalue; i++);
 
@@ -3878,7 +3878,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 	patch_t *patch;
 	fixed_t sw, pw;
 
-	patch = W_CachePatchName("LSSTATIC", PU_CACHE);
+	patch = W_CachePatchName("LSSTATIC", PU_PATCH);
 	pw = SHORT(patch->width) - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
 
 	/*if (pw > 0) -- model code for modders providing weird LSSTATIC
@@ -3907,15 +3907,15 @@ static void M_DrawSaveLoadBorder(INT32 x,INT32 y)
 {
 	INT32 i;
 
-	V_DrawScaledPatch (x-8,y+7,0,W_CachePatchName("M_LSLEFT",PU_CACHE));
+	V_DrawScaledPatch (x-8,y+7,0,W_CachePatchName("M_LSLEFT",PU_PATCH));
 
 	for (i = 0;i < 24;i++)
 	{
-		V_DrawScaledPatch (x,y+7,0,W_CachePatchName("M_LSCNTR",PU_CACHE));
+		V_DrawScaledPatch (x,y+7,0,W_CachePatchName("M_LSCNTR",PU_PATCH));
 		x += 8;
 	}
 
-	V_DrawScaledPatch (x,y+7,0,W_CachePatchName("M_LSRGHT",PU_CACHE));
+	V_DrawScaledPatch (x,y+7,0,W_CachePatchName("M_LSRGHT",PU_PATCH));
 }
 #endif
 
@@ -3958,10 +3958,10 @@ static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y)
 		lasttype = curtype;
 
 		if (emblem->collected)
-			V_DrawSmallMappedPatch(x, y, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_CACHE),
+			V_DrawSmallMappedPatch(x, y, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
 			                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 		else
-			V_DrawSmallScaledPatch(x, y, 0, W_CachePatchName("NEEDIT", PU_CACHE));
+			V_DrawSmallScaledPatch(x, y, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
 		emblem = M_GetLevelEmblems(-1);
 		x -= 12;
@@ -3972,7 +3972,7 @@ static void M_DrawMenuTitle(void)
 {
 	if (currentMenu->menutitlepic)
 	{
-		patch_t *p = W_CachePatchName(currentMenu->menutitlepic, PU_CACHE);
+		patch_t *p = W_CachePatchName(currentMenu->menutitlepic, PU_PATCH);
 
 		if (p->height > 24) // title is larger than normal
 		{
@@ -4024,13 +4024,13 @@ static void M_DrawGenericMenu(void)
 					if (currentMenu->menuitems[i].status & IT_CENTER)
 					{
 						patch_t *p;
-						p = W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE);
+						p = W_CachePatchName(currentMenu->menuitems[i].patch, PU_PATCH);
 						V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, y, 0, p);
 					}
 					else
 					{
 						V_DrawScaledPatch(x, y, 0,
-							W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE));
+							W_CachePatchName(currentMenu->menuitems[i].patch, PU_PATCH));
 					}
 				}
 				/* FALLTHRU */
@@ -4099,7 +4099,7 @@ static void M_DrawGenericMenu(void)
 			case IT_GRAYPATCH:
 				if (currentMenu->menuitems[i].patch && currentMenu->menuitems[i].patch[0])
 					V_DrawMappedPatch(x, y, 0,
-						W_CachePatchName(currentMenu->menuitems[i].patch,PU_CACHE), graymap);
+						W_CachePatchName(currentMenu->menuitems[i].patch,PU_PATCH), graymap);
 				y += LINEHEIGHT;
 				break;
 			case IT_TRANSTEXT:
@@ -4133,12 +4133,12 @@ static void M_DrawGenericMenu(void)
 		|| ((currentMenu->menuitems[itemOn].status & IT_DISPLAY) == IT_NOTHING))
 	{
 		V_DrawScaledPatch(currentMenu->x + SKULLXOFF, cursory - 5, 0,
-			W_CachePatchName("M_CURSOR", PU_CACHE));
+			W_CachePatchName("M_CURSOR", PU_PATCH));
 	}
 	else
 	{
 		V_DrawScaledPatch(currentMenu->x - 24, cursory, 0,
-			W_CachePatchName("M_CURSOR", PU_CACHE));
+			W_CachePatchName("M_CURSOR", PU_PATCH));
 		V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 	}
 }
@@ -4276,7 +4276,7 @@ static void M_DrawGenericScrollMenu(void)
 
 	// DRAW THE SKULL CURSOR
 	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0,
-		W_CachePatchName("M_CURSOR", PU_CACHE));
+		W_CachePatchName("M_CURSOR", PU_PATCH));
 }
 
 static void M_DrawPauseMenu(void)
@@ -4397,10 +4397,10 @@ static void M_DrawPauseMenu(void)
 				continue;
 
 			if (emblem->collected)
-				V_DrawSmallMappedPatch(40, 44 + (i*8), 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_CACHE),
+				V_DrawSmallMappedPatch(40, 44 + (i*8), 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 			else
-				V_DrawSmallScaledPatch(40, 44 + (i*8), 0, W_CachePatchName("NEEDIT", PU_CACHE));
+				V_DrawSmallScaledPatch(40, 44 + (i*8), 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
 			switch (emblem->type)
 			{
@@ -4446,13 +4446,13 @@ static void M_DrawCenteredMenu(void)
 					if (currentMenu->menuitems[i].status & IT_CENTER)
 					{
 						patch_t *p;
-						p = W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE);
+						p = W_CachePatchName(currentMenu->menuitems[i].patch, PU_PATCH);
 						V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, y, 0, p);
 					}
 					else
 					{
 						V_DrawScaledPatch(x, y, 0,
-							W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE));
+							W_CachePatchName(currentMenu->menuitems[i].patch, PU_PATCH));
 					}
 				}
 				/* FALLTHRU */
@@ -4527,7 +4527,7 @@ static void M_DrawCenteredMenu(void)
 			case IT_GRAYPATCH:
 				if (currentMenu->menuitems[i].patch && currentMenu->menuitems[i].patch[0])
 					V_DrawMappedPatch(x, y, 0,
-						W_CachePatchName(currentMenu->menuitems[i].patch,PU_CACHE), graymap);
+						W_CachePatchName(currentMenu->menuitems[i].patch,PU_PATCH), graymap);
 				y += LINEHEIGHT;
 				break;
 		}
@@ -4538,12 +4538,12 @@ static void M_DrawCenteredMenu(void)
 		|| ((currentMenu->menuitems[itemOn].status & IT_DISPLAY) == IT_NOTHING))
 	{
 		V_DrawScaledPatch(x + SKULLXOFF, cursory - 5, 0,
-			W_CachePatchName("M_CURSOR", PU_CACHE));
+			W_CachePatchName("M_CURSOR", PU_PATCH));
 	}
 	else
 	{
 		V_DrawScaledPatch(x - V_StringWidth(currentMenu->menuitems[itemOn].text, 0)/2 - 24, cursory, 0,
-			W_CachePatchName("M_CURSOR", PU_CACHE));
+			W_CachePatchName("M_CURSOR", PU_PATCH));
 		V_DrawCenteredString(x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 	}
 }
@@ -5169,7 +5169,7 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	else
 	{
 		if (W_CheckNumForName(va("%sW", G_BuildMapName(map))) != LUMPERROR)
-			patch = W_CachePatchName(va("%sW", G_BuildMapName(map)), PU_CACHE);
+			patch = W_CachePatchName(va("%sW", G_BuildMapName(map)), PU_PATCH);
 		else
 			patch = levselp[1][2]; // don't static to indicate that it's just a normal level
 
@@ -5200,7 +5200,7 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 	else
 	{
 		if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
-			patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_CACHE);
+			patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_PATCH);
 		else
 			patch = levselp[0][2]; // don't static to indicate that it's just a normal level
 
@@ -5260,8 +5260,8 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 // new menus
 static void M_DrawRecordAttackForeground(void)
 {
-	patch_t *fg = W_CachePatchName("RECATKFG", PU_CACHE);
-	patch_t *clock = W_CachePatchName("RECCLOCK", PU_CACHE);
+	patch_t *fg = W_CachePatchName("RECATKFG", PU_PATCH);
+	patch_t *clock = W_CachePatchName("RECCLOCK", PU_PATCH);
 	angle_t fa;
 
 	INT32 i;
@@ -5299,7 +5299,7 @@ static void M_DrawNightsAttackMountains(void)
 {
 	static INT32 bgscrollx;
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	patch_t *background = W_CachePatchName(curbgname, PU_CACHE);
+	patch_t *background = W_CachePatchName(curbgname, PU_PATCH);
 	INT32 x = FixedInt(bgscrollx) % SHORT(background->width);
 	INT32 y = BASEVIDHEIGHT - SHORT(background->height)*2;
 
@@ -5322,16 +5322,16 @@ static void M_DrawNightsAttackBackground(void)
 	INT32 i;
 
 	// top
-	patch_t *backtopfg = W_CachePatchName("NTSATKT1", PU_CACHE);
-	patch_t *fronttopfg = W_CachePatchName("NTSATKT2", PU_CACHE);
+	patch_t *backtopfg = W_CachePatchName("NTSATKT1", PU_PATCH);
+	patch_t *fronttopfg = W_CachePatchName("NTSATKT2", PU_PATCH);
 	INT32 backtopwidth = SHORT(backtopfg->width);
 	//INT32 backtopheight = SHORT(backtopfg->height);
 	INT32 fronttopwidth = SHORT(fronttopfg->width);
 	//INT32 fronttopheight = SHORT(fronttopfg->height);
 
 	// bottom
-	patch_t *backbottomfg = W_CachePatchName("NTSATKB1", PU_CACHE);
-	patch_t *frontbottomfg = W_CachePatchName("NTSATKB2", PU_CACHE);
+	patch_t *backbottomfg = W_CachePatchName("NTSATKB1", PU_PATCH);
+	patch_t *frontbottomfg = W_CachePatchName("NTSATKB2", PU_PATCH);
 	INT32 backbottomwidth = SHORT(backbottomfg->width);
 	INT32 backbottomheight = SHORT(backbottomfg->height);
 	INT32 frontbottomwidth = SHORT(frontbottomfg->width);
@@ -5475,7 +5475,7 @@ static void M_DrawLevelPlatterMenu(void)
 
 #if 0
 	if (levelselect.rows[lsrow].maplist[lscol] > 0)
-		V_DrawScaledPatch(lsbasex + cursorx-17, lsbasey+50+lsoffs[0], 0, W_CachePatchName("M_CURSOR", PU_CACHE));
+		V_DrawScaledPatch(lsbasex + cursorx-17, lsbasey+50+lsoffs[0], 0, W_CachePatchName("M_CURSOR", PU_PATCH));
 #endif
 
 	// handle movement of cursor box
@@ -5745,7 +5745,7 @@ static void M_DrawImageDef(void)
 		V_DrawScaledPic(0,0,0,W_GetNumForName(currentMenu->menuitems[itemOn].text));
 	else
 	{
-		patch_t *patch = W_CachePatchName(currentMenu->menuitems[itemOn].text,PU_CACHE);
+		patch_t *patch = W_CachePatchName(currentMenu->menuitems[itemOn].text,PU_PATCH);
 		if (patch->width <= BASEVIDWIDTH)
 			V_DrawScaledPatch(0,0,0,patch);
 		else
@@ -6947,13 +6947,13 @@ static void M_DrawEmblemHints(void)
 		if (emblem->collected)
 		{
 			collected = V_GREENMAP;
-			V_DrawMappedPatch(12, 12+(28*j), 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_CACHE),
+			V_DrawMappedPatch(12, 12+(28*j), 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
 				R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 		}
 		else
 		{
 			collected = 0;
-			V_DrawScaledPatch(12, 12+(28*j), 0, W_CachePatchName("NEEDIT", PU_CACHE));
+			V_DrawScaledPatch(12, 12+(28*j), 0, W_CachePatchName("NEEDIT", PU_PATCH));
 		}
 
 		if (emblem->hint[0])
@@ -7855,7 +7855,7 @@ skiplife:
 			if (colormap)
 				Z_Free(colormap);
 
-			patch = W_CachePatchName("STLIVEX", PU_CACHE);
+			patch = W_CachePatchName("STLIVEX", PU_PATCH);
 
 			V_DrawScaledPatch(tempx + 9, y + 2, 0, patch);
 			tempx += 16;
@@ -7871,14 +7871,14 @@ skiplife:
 			// continues
 			if (savegameinfo[savetodraw].continues > 0)
 			{
-				V_DrawSmallScaledPatch(tempx, y, 0, W_CachePatchName("CONTSAVE", PU_CACHE));
+				V_DrawSmallScaledPatch(tempx, y, 0, W_CachePatchName("CONTSAVE", PU_PATCH));
 				V_DrawScaledPatch(tempx + 9, y + 2, 0, patch);
 				V_DrawString(tempx + 16, y, 0, va("%d", savegameinfo[savetodraw].continues));
 			}
 			else
 			{
-				V_DrawSmallScaledPatch(tempx, y, 0, W_CachePatchName("CONTNONE", PU_CACHE));
-				V_DrawScaledPatch(tempx + 9, y + 2, 0, W_CachePatchName("STNONEX", PU_CACHE));
+				V_DrawSmallScaledPatch(tempx, y, 0, W_CachePatchName("CONTNONE", PU_PATCH));
+				V_DrawScaledPatch(tempx + 9, y + 2, 0, W_CachePatchName("STNONEX", PU_PATCH));
 				V_DrawString(tempx + 16, y, V_GRAYMAP, "0");
 			}
 		}
@@ -8352,7 +8352,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 							description[i].charpic = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 						}
 						else
-							description[i].charpic = W_CachePatchName("MISSING", PU_CACHE);
+							description[i].charpic = W_CachePatchName("MISSING", PU_PATCH);
 					}
 					else
 						description[i].charpic = W_CachePatchName(description[i].picname, PU_PATCH);
@@ -8362,7 +8362,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 						const char *nametag = description[i].nametag;
 						description[i].namepic = NULL;
 						if (W_LumpExists(nametag))
-							description[i].namepic = W_CachePatchName(nametag, PU_CACHE);
+							description[i].namepic = W_CachePatchName(nametag, PU_PATCH);
 					}
 				}
 				// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
@@ -8502,8 +8502,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	UINT8 *colormap = NULL;
 	INT32 prev = -1, next = -1;
 
-	patch_t *charbg = W_CachePatchName("CHARBG", PU_CACHE);
-	patch_t *charfg = W_CachePatchName("CHARFG", PU_CACHE);
+	patch_t *charbg = W_CachePatchName("CHARBG", PU_PATCH);
+	patch_t *charfg = W_CachePatchName("CHARFG", PU_PATCH);
 	INT16 bgheight = SHORT(charbg->height);
 	INT16 fgheight = SHORT(charfg->height);
 	INT16 bgwidth = SHORT(charbg->width);
@@ -8689,7 +8689,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Alternative menu header
 #ifdef CHOOSEPLAYER_DRAWHEADER
 	{
-		patch_t *header = W_CachePatchName("M_PICKP", PU_CACHE);
+		patch_t *header = W_CachePatchName("M_PICKP", PU_PATCH);
 		INT32 xtitle = 146;
 		INT32 ytitle = (35 - SHORT(header->height))/2;
 		V_DrawFixedPatch(xtitle<<FRACBITS, ytitle<<FRACBITS, FRACUNIT/2, 0, header, NULL);
@@ -8859,10 +8859,10 @@ static void M_DrawStatsMaps(int location)
 			exemblem = &extraemblems[i];
 
 			if (exemblem->collected)
-				V_DrawSmallMappedPatch(292, y, 0, W_CachePatchName(M_GetExtraEmblemPatch(exemblem, false), PU_CACHE),
+				V_DrawSmallMappedPatch(292, y, 0, W_CachePatchName(M_GetExtraEmblemPatch(exemblem, false), PU_PATCH),
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetExtraEmblemColor(exemblem), GTC_CACHE));
 			else
-				V_DrawSmallScaledPatch(292, y, 0, W_CachePatchName("NEEDIT", PU_CACHE));
+				V_DrawSmallScaledPatch(292, y, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
 			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, va("%s", exemblem->description));
 		}
@@ -9070,7 +9070,7 @@ void M_DrawTimeAttackMenu(void)
 	}
 
 	// DRAW THE SKULL CURSOR
-	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0, W_CachePatchName("M_CURSOR", PU_CACHE));
+	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0, W_CachePatchName("M_CURSOR", PU_PATCH));
 	V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 
 	// Character face!
@@ -9079,10 +9079,10 @@ void M_DrawTimeAttackMenu(void)
 		{
 			spritedef_t *sprdef = &skins[cv_chooseskin.value-1].sprites[SPR2_XTRA];
 			spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
-			PictureOfUrFace = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+			PictureOfUrFace = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 		}
 		else
-			PictureOfUrFace = W_CachePatchName("MISSING", PU_CACHE);
+			PictureOfUrFace = W_CachePatchName("MISSING", PU_PATCH);
 
 		if (PictureOfUrFace->width >= 256)
 			V_DrawTinyScaledPatch(224, 120, 0, PictureOfUrFace);
@@ -9110,9 +9110,9 @@ void M_DrawTimeAttackMenu(void)
 		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
 
 		if (lumpnum != LUMPERROR)
-			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_CACHE);
+			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_PATCH);
 		else
-			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
+			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
 
 		y = 32+lsheadingheight;
 		V_DrawSmallScaledPatch(216, y, 0, PictureOfLevel);
@@ -9157,7 +9157,7 @@ void M_DrawTimeAttackMenu(void)
 					goto skipThisOne;
 			}
 
-			empatch = W_CachePatchName(M_GetEmblemPatch(em, true), PU_CACHE);
+			empatch = W_CachePatchName(M_GetEmblemPatch(em, true), PU_PATCH);
 
 			empatx = SHORT(empatch->leftoffset)/2;
 			empaty = SHORT(empatch->topoffset)/2;
@@ -9166,7 +9166,7 @@ void M_DrawTimeAttackMenu(void)
 				V_DrawSmallMappedPatch(104+76+empatx, yHeight+lsheadingheight/2+empaty, 0, empatch,
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 			else
-				V_DrawSmallScaledPatch(104+76, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDITL", PU_CACHE));
+				V_DrawSmallScaledPatch(104+76, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDITL", PU_PATCH));
 
 			skipThisOne:
 			em = M_GetLevelEmblems(-1);
@@ -9346,7 +9346,7 @@ void M_DrawNightsAttackMenu(void)
 	}
 
 	// DRAW THE SKULL CURSOR
-	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0, W_CachePatchName("M_CURSOR", PU_CACHE));
+	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0, W_CachePatchName("M_CURSOR", PU_PATCH));
 	V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 
 	// Level record list
@@ -9370,9 +9370,9 @@ void M_DrawNightsAttackMenu(void)
 		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
 
 		if (lumpnum != LUMPERROR)
-			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_CACHE);
+			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_PATCH);
 		else
-			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
+			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
 
 		y = 32+lsheadingheight;
 		V_DrawSmallScaledPatch(208, y, 0, PictureOfLevel);
@@ -9444,10 +9444,10 @@ void M_DrawNightsAttackMenu(void)
 				}
 
 				if (em->collected)
-					V_DrawSmallMappedPatch(xpos, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em, false), PU_CACHE),
+					V_DrawSmallMappedPatch(xpos, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em, false), PU_PATCH),
 																 R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 				else
-					V_DrawSmallScaledPatch(xpos, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_CACHE));
+					V_DrawSmallScaledPatch(xpos, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
 				skipThisOne:
 				em = M_GetLevelEmblems(-1);
@@ -9483,8 +9483,8 @@ static void M_NightsAttack(INT32 choice)
 	// This is really just to make sure Sonic is the played character, just in case
 	M_PatchSkinNameTable();
 
-	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_CACHE);
-	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_CACHE);
+	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
+	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
@@ -10206,9 +10206,9 @@ static void M_DrawServerMenu(void)
 		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
 
 		if (lumpnum != LUMPERROR)
-			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_CACHE);
+			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_PATCH);
 		else
-			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
+			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
 
 		V_DrawSmallScaledPatch(319 - (currentMenu->x + (SHORT(PictureOfLevel->width)/2)), currentMenu->y + imgheight, 0, PictureOfLevel);
 	}
@@ -10617,7 +10617,7 @@ colordraw:
 		cursory = y;
 
 	V_DrawScaledPatch(x - 17, cursory, 0,
-		W_CachePatchName("M_CURSOR", PU_CACHE));
+		W_CachePatchName("M_CURSOR", PU_PATCH));
 }
 
 // Handle 1P/2P MP Setup
@@ -10943,7 +10943,7 @@ static void M_DrawJoystick(void)
 		if (i == itemOn)
 		{
 			V_DrawScaledPatch(currentMenu->x - 24, OP_JoystickSetDef.y+LINEHEIGHT*i-4, 0,
-				W_CachePatchName("M_CURSOR", PU_CACHE));
+				W_CachePatchName("M_CURSOR", PU_PATCH));
 		}
 	}
 }
@@ -11261,7 +11261,7 @@ static void M_DrawControl(void)
 	}
 
 	V_DrawScaledPatch(currentMenu->x - 20, cursory, 0,
-		W_CachePatchName("M_CURSOR", PU_CACHE));
+		W_CachePatchName("M_CURSOR", PU_PATCH));
 }
 
 #undef controlbuffer
@@ -11553,7 +11553,7 @@ static void M_DrawVideoMode(void)
 	j = OP_VideoModeDef.y + 14 + ((vidm_selected % vidm_column_size)*8);
 
 	V_DrawScaledPatch(i - 8, j, 0,
-		W_CachePatchName("M_CURSOR", PU_CACHE));
+		W_CachePatchName("M_CURSOR", PU_PATCH));
 }
 
 // Just M_DrawGenericScrollMenu but showing a backing behind the headers.
@@ -11681,7 +11681,7 @@ static void M_DrawColorMenu(void)
 
 	// DRAW THE SKULL CURSOR
 	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0,
-		W_CachePatchName("M_CURSOR", PU_CACHE));
+		W_CachePatchName("M_CURSOR", PU_PATCH));
 }
 
 // special menuitem key handler for video mode list
@@ -11844,7 +11844,7 @@ void M_QuitResponse(INT32 ch)
 		ptime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds Tails 03-26-2001
 		while (ptime > I_GetTime())
 		{
-			V_DrawScaledPatch(0, 0, 0, W_CachePatchName("GAMEQUIT", PU_CACHE)); // Demo 3 Quit Screen Tails 06-16-2001
+			V_DrawScaledPatch(0, 0, 0, W_CachePatchName("GAMEQUIT", PU_PATCH)); // Demo 3 Quit Screen Tails 06-16-2001
 			I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 			I_Sleep();
 		}
