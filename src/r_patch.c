@@ -1383,8 +1383,9 @@ void R_FreeSkinRotSprite(size_t skinnum)
 void R_FreeAllRotSprite(void)
 {
 	INT32 i;
-	for (i = 0; i < numsprites; i++)
-		R_FreeSingleRotSprite(&sprites[i]);
+	size_t s;
+	for (s = 0; s < numsprites; s++)
+		R_FreeSingleRotSprite(&sprites[s]);
 	for (i = 0; i < numskins; ++i)
 		R_FreeSkinRotSprite(i);
 }
