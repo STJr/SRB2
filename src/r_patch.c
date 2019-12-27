@@ -1135,7 +1135,7 @@ INT32 R_GetRollAngle(angle_t rollangle)
 	ra += (ROTANGDIFF/2);
 #endif
 	ra /= ROTANGDIFF;
-	return max(0, min(ra, ROTANGLES));
+	return ra;
 }
 
 //
