@@ -891,41 +891,51 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
 
-	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
+	// Split drawing loops for paper and non-paper to reduce conditional checks per sprite
+	if (vis->scalestep)
 	{
-		if (vis->scalestep)
+		// Papersprite drawing loop
+
+		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += vis->scalestep)
 		{
 			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
 			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / this_scale;
 
 			if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
-			{
-				spryscale += vis->scalestep;
 				continue;
-			}
 
-			if (vis->xiscale < 0)
+			if (vis->xiscale < 0) // Flipped sprite
 				texturecolumn = SHORT(patch->width) - 1 - texturecolumn;
 
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
+
+			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
+
+			if (vis->cut & SC_VFLIP)
+				R_DrawFlippedMaskedColumn(column, patch->height);
+			else
+				R_DrawMaskedColumn(column);
 		}
-		else
+	}
+	else
+	{
+		// Non-paper drawing loop
+		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
 		{
-			texturecolumn = frac>>FRACBITS;
 #ifdef RANGECHECK
+			texturecolumn = frac>>FRACBITS;
 			if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
 				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
+			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
+#else
+			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
 #endif
+			if (vis->cut & SC_VFLIP)
+				R_DrawFlippedMaskedColumn(column, patch->height);
+			else
+				R_DrawMaskedColumn(column);
 		}
-
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
-
-		if (vis->cut & SC_VFLIP)
-			R_DrawFlippedMaskedColumn(column, patch->height);
-		else
-			R_DrawMaskedColumn(column);
-		spryscale += vis->scalestep;
 	}
 
 	colfunc = colfuncs[BASEDRAWFUNC];
