@@ -888,10 +888,6 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 		I_Error("HWR_GetTexture: tex >= numtextures\n");
 #endif
 
-	// Lactozilla: Renderer switching
-	if (needpatchrecache && (!gr_textures))
-		HWR_LoadTextures(gr_numtextures);
-
 	// Every texture in memory, stored in the
 	// hardware renderer's bit depth format. Wow!
 	grtex = &gr_textures[tex];
