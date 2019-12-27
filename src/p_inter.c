@@ -3203,7 +3203,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	// Burst weapons and emeralds in Match/CTF only
 	if (source)
 	{
-		if (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF)
+		if ((gametyperules & GTR_RINGSLINGER) && !(gametyperules & GTR_TAG))
 			P_PlayerRingBurst(player, player->rings);
 		if (gametyperules & GTR_MATCHEMERALDS)
 			P_PlayerEmeraldBurst(player, false);
