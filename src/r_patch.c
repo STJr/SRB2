@@ -1374,4 +1374,18 @@ void R_FreeSkinRotSprite(size_t skinnum)
 		skinsprites++;
 	}
 }
+
+//
+// R_FreeAllRotSprite
+//
+// Free ALL sprite rotation data from memory.
+//
+void R_FreeAllRotSprite(void)
+{
+	INT32 i;
+	for (i = 0; i < numsprites; i++)
+		R_FreeSingleRotSprite(&sprites[i]);
+	for (i = 0; i < numskins; ++i)
+		R_FreeSkinRotSprite(i);
+}
 #endif

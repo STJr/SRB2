@@ -147,5 +147,6 @@ char *Z_StrDup(const char *in);
 extern boolean needpatchflush;
 extern boolean needpatchrecache;
 void Z_FlushCachedPatches(void);
+void Z_PreparePatchFlush(void);
 
 #endif

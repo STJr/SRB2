@@ -200,6 +200,7 @@ void SCR_SetMode(void)
 	// Lactozilla: Renderer switching
 	if (setrenderneeded)
 	{
+		Z_PreparePatchFlush();
 		needpatchflush = true;
 		needpatchrecache = true;
 		VID_CheckRenderer();
