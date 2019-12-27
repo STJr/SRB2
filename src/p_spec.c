@@ -2053,7 +2053,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 					return false;
 				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (linedef %d): bad trigger ID %d\n", triggerline - lines, trigid);
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (linedef %s): bad trigger ID %d\n", sizeu1(triggerline - lines), trigid);
 					return false;
 				}
 				else if (!(unlocktriggers & (1 << trigid)))
@@ -2068,7 +2068,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 					return false;
 				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (linedef %d): bad unlockable ID %d\n", triggerline - lines, unlockid);
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (linedef %s): bad unlockable ID %d\n", sizeu1(triggerline - lines), unlockid);
 					return false;
 				}
 				else if (!(unlockables[unlockid-1].unlocked))
