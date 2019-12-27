@@ -887,7 +887,7 @@ static void ST_drawLivesArea(void)
 		if (G_GametypeUsesLives())
 		{
 			// Handle cooplives here
-			if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 3)
+			if ((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 3)
 			{
 				INT32 i;
 				livescount = 0;
@@ -914,7 +914,7 @@ static void ST_drawLivesArea(void)
 			}
 			else
 			{
-				livescount = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? INFLIVES : stplyr->lives);
+				livescount = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? INFLIVES : stplyr->lives);
 				notgreyedout = true;
 			}
 		}
@@ -2246,7 +2246,7 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(M_GetText("\x82""Wait for the stage to end..."))
 		else if (G_PlatformGametype())
 		{
-			if (gametype == GT_COOP)
+			if (G_GametypeUsesCoopLives())
 			{
 				if (stplyr->lives <= 0
 				&& cv_cooplives.value == 2
@@ -2657,7 +2657,7 @@ static void ST_overlayDrawer(void)
 		INT32 i = MAXPLAYERS;
 		INT32 deadtimer = stplyr->spectator ? TICRATE : (stplyr->deadtimer-(TICRATE<<1));
 
-		if ((gametype == GT_COOP)
+		if (G_GametypeUsesCoopLives()
 		&& (netgame || multiplayer)
 		&& (cv_cooplives.value != 1))
 		{

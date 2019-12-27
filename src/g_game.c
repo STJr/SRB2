@@ -3440,6 +3440,20 @@ boolean G_GametypeUsesLives(void)
 }
 
 //
+// G_GametypeUsesCoopLives
+//
+// Returns true if the current gametype uses
+// the cooplives CVAR.  False otherwise.
+//
+boolean G_GametypeUsesCoopLives(void)
+{
+	// Preparing for the inevitable
+	// gametype rule that will
+	// handle cooplives...
+	return (gametype == GT_COOP);
+}
+
+//
 // G_GametypeHasTeams
 //
 // Returns true if the current gametype uses

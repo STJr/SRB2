@@ -1236,7 +1236,7 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 			return;
 		}
 
-		if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0)
+		if ((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0)
 		{
 			P_GivePlayerRings(player, 100*numlives);
 			if (player->lives - prevlives >= numlives)
@@ -1267,7 +1267,7 @@ docooprespawn:
 
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound)
 {
-	if (!((netgame || multiplayer) && gametype == GT_COOP))
+	if (!((netgame || multiplayer) && G_GametypeUsesCoopLives()))
 	{
 		P_GivePlayerLives(player, numlives);
 		if (sound)
@@ -9298,7 +9298,7 @@ boolean P_GetLives(player_t *player)
 {
 	INT32 i, maxlivesplayer = -1, livescheck = 1;
 	if (!(netgame || multiplayer)
-	|| (gametype != GT_COOP)
+	|| !G_GametypeUsesCoopLives()
 	|| (player->lives == INFLIVES))
 		return true;
 

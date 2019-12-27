@@ -3800,7 +3800,7 @@ static void CoopLives_OnChange(void)
 {
 	INT32 i;
 
-	if (!(netgame || multiplayer) || gametype != GT_COOP)
+	if (!(netgame || multiplayer) || !G_GametypeUsesCoopLives())
 		return;
 
 	switch (cv_cooplives.value)

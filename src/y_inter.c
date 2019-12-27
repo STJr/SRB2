@@ -1977,7 +1977,7 @@ static void Y_AwardCoopBonuses(void)
 
 		if (i == consoleplayer)
 		{
-			data.coop.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
+			data.coop.gotlife = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.coop.bonuses, &localbonuses, sizeof(data.coop.bonuses));
 		}
 	}
@@ -2032,7 +2032,7 @@ static void Y_AwardSpecialStageBonus(void)
 
 		if (i == consoleplayer)
 		{
-			data.spec.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
+			data.spec.gotlife = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.spec.bonuses, &localbonuses, sizeof(data.spec.bonuses));
 
 			// Continues related

@@ -2523,7 +2523,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		target->colorized = false;
 		G_GhostAddColor(GHC_NORMAL);
 
-		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
+		if ((target->player->lives <= 1) && (netgame || multiplayer) && G_GametypeUsesCoopLives() && (cv_cooplives.value == 0))
 			;
 		else if (!target->player->bot && !target->player->spectator && (target->player->lives != INFLIVES)
 		 && G_GametypeUsesLives())
@@ -2533,7 +2533,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
 				boolean gameovermus = false;
-				if ((netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value != 1))
+				if ((netgame || multiplayer) && G_GametypeUsesCoopLives() && (cv_cooplives.value != 1))
 				{
 					INT32 i;
 					for (i = 0; i < MAXPLAYERS; i++)
