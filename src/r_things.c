@@ -743,7 +743,8 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
-#ifdef RANGECHECK
+//#ifdef RANGECHECK
+#if 1
 	INT32 texturecolumn;
 #endif
 	fixed_t frac;
@@ -895,21 +896,34 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
 	{
-#ifdef RANGECHECK
-
-		texturecolumn = frac>>FRACBITS;
-
-		if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
-			I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
-#else
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
-#endif
 		if (vis->scalestep)
 		{
+			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
+			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) >> FRACBITS;
+
+			if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
+			{
+				spryscale += vis->scalestep;
+				continue;
+			}
+
+			if (vis->xiscale < 0)
+				texturecolumn = SHORT(patch->width) - 1 - texturecolumn;
+
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 		}
+		else
+		{
+			texturecolumn = frac>>FRACBITS;
+#ifdef RANGECHECK
+			if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
+				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
+#endif
+		}
+
+		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
+
 		if (vis->cut & SC_VFLIP)
 			R_DrawFlippedMaskedColumn(column, patch->height);
 		else
@@ -1073,8 +1087,6 @@ static void R_SplitSprite(vissprite_t *sprite)
 	}
 }
 
-//#define PROPERPAPER // This was reverted less than 7 hours before 2.2's release because of very strange, frequent crashes.
-
 //
 // R_ProjectSprite
 // Generates a vissprite for a thing
@@ -1111,7 +1123,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t iscale;
 	fixed_t scalestep;
 	fixed_t offset, offset2;
+
 	boolean papersprite = !!(thing->frame & FF_PAPERSPRITE);
+	fixed_t paperoffset = 0, paperdistance = 0; angle_t centerangle = 0;
 
 	INT32 dispoffset = thing->info->dispoffset;
 
@@ -1128,10 +1142,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	patch_t *rotsprite = NULL;
 	angle_t arollangle = thing->rollangle;
 	UINT32 rollangle = AngleFixed(arollangle)>>FRACBITS;
-#endif
-
-#ifndef PROPERPAPER
-	fixed_t ang_scale = FRACUNIT;
 #endif
 
 	// transform the origin point
@@ -1216,13 +1226,7 @@ static void R_ProjectSprite(mobj_t *thing)
 #endif
 
 	if (sprframe->rotate != SRF_SINGLE || papersprite)
-	{
 		ang = R_PointToAngle (thing->x, thing->y) - (thing->player ? thing->player->drawangle : thing->angle);
-#ifndef PROPERPAPER
-		if (papersprite)
-			ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
-#endif
-	}
 
 	if (sprframe->rotate == SRF_SINGLE)
 	{
@@ -1283,31 +1287,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 		offset = -spr_offset;
 	offset = FixedMul(offset, this_scale);
-#ifndef PROPERPAPER
-	tx += FixedMul(offset, ang_scale);
-	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
-
-	// off the right side?
-	if (x1 > viewwidth)
-		return;
-#endif
 	offset2 = FixedMul(spr_width, this_scale);
-#ifndef PROPERPAPER
-	tx += FixedMul(offset2, ang_scale);
-	x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - (papersprite ? 2 : 1);
-
-	// off the left side
-	if (x2 < 0)
-		return;
-#endif
 
 	if (papersprite)
 	{
-		fixed_t
-#ifdef PROPERPAPER
-			xscale2,
-#endif
-					yscale2, cosmul, sinmul, tz2;
+		fixed_t xscale2, yscale2, cosmul, sinmul, tz2;
 		INT32 range;
 
 		if (ang >= ANGLE_180)
@@ -1327,7 +1311,6 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale = FixedDiv(projectiony, tz);
 		if (yscale < 64) return; // Fix some funky visuals
 
-#ifdef PROPERPAPER
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
 		tx = -(gyt + gxt);
@@ -1337,7 +1320,16 @@ static void R_ProjectSprite(mobj_t *thing)
 		// off the right side?
 		if (x1 > viewwidth)
 			return;
-#endif
+
+		// Get paperoffset (offset) and paperoffset (distance)
+		paperoffset = -FixedMul(tr_x, cosmul) - FixedMul(tr_y, sinmul);
+		paperdistance = -FixedMul(tr_x, sinmul) + FixedMul(tr_y, cosmul);
+		if (paperdistance < 0)
+		{
+			paperoffset = -paperoffset;
+			paperdistance = -paperdistance;
+		}
+		centerangle = viewangle - thing->angle;
 
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
@@ -1347,36 +1339,25 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale2 = FixedDiv(projectiony, tz2);
 		if (yscale2 < 64) return; // ditto
 
-#ifdef PROPERPAPER
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
 		tx = -(gyt + gxt);
 		xscale2 = FixedDiv(projection, tz2);
-		x2 = (centerxfrac + FixedMul(tx,xscale2))>>FRACBITS; x2--;
+		x2 = ((centerxfrac + FixedMul(tx,xscale2))>>FRACBITS);
 
 		// off the left side
 		if (x2 < 0)
 			return;
-#endif
-
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
 
 		if ((range = x2 - x1) <= 0)
 			return;
 
-#ifdef PROPERPAPER
 		range++; // fencepost problem
-#endif
 
-		scalestep = (yscale2 - yscale)/range;
-		xscale =
-#ifdef PROPERPAPER
-		FixedDiv(range<<FRACBITS, abs(offset2))+1
-#else
-		FixedMul(xscale, ang_scale)
-#endif
-		;
+		scalestep = ((yscale2 - yscale)/range) ?: 1;
+		xscale = FixedDiv(range<<FRACBITS, abs(offset2));
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -1386,7 +1367,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		scalestep = 0;
 		yscale = sortscale;
-#ifdef PROPERPAPER
 		tx += offset;
 		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
@@ -1400,7 +1380,6 @@ static void R_ProjectSprite(mobj_t *thing)
 		// off the left side
 		if (x2 < 0)
 			return;
-#endif
 	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
@@ -1521,6 +1500,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
 	vis->scalestep = scalestep;
+	vis->paperoffset = paperoffset;
+	vis->paperdistance = paperdistance;
+	vis->centerangle = centerangle;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
