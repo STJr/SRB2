@@ -4785,6 +4785,22 @@ static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 }
 
 //
+// M_CacheLevelPlatter
+//
+// Cache every patch used by the level platter.
+//
+static void M_CacheLevelPlatter(void)
+{
+	levselp[0][0] = W_CachePatchName("SLCT1LVL", PU_PATCH);
+	levselp[0][1] = W_CachePatchName("SLCT2LVL", PU_PATCH);
+	levselp[0][2] = W_CachePatchName("BLANKLVL", PU_PATCH);
+
+	levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_PATCH);
+	levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_PATCH);
+	levselp[1][2] = W_CachePatchName("BLANKLVW", PU_PATCH);
+}
+
+//
 // M_PrepareLevelPlatter
 //
 // Prepares a tasty dish of zones and acts!
@@ -4933,13 +4949,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 	}
 #endif
 
-	levselp[0][0] = W_CachePatchName("SLCT1LVL", PU_PATCH);
-	levselp[0][1] = W_CachePatchName("SLCT2LVL", PU_PATCH);
-	levselp[0][2] = W_CachePatchName("BLANKLVL", PU_PATCH);
-
-	levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_PATCH);
-	levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_PATCH);
-	levselp[1][2] = W_CachePatchName("BLANKLVW", PU_PATCH);
+	M_CacheLevelPlatter();
 
 	return true;
 }
@@ -5160,6 +5170,9 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	if (map <= 0)
 		return;
 
+	if (needpatchrecache)
+		M_CacheLevelPlatter();
+
 	//  A 564x100 image of the level as entry MAPxxW
 	if (!(levelselect.rows[row].mapavailable[col]))
 	{
@@ -5190,6 +5203,9 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 	INT32 map = levelselect.rows[row].maplist[col];
 	if (map <= 0)
 		return;
+
+	if (needpatchrecache)
+		M_CacheLevelPlatter();
 
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
@@ -7626,6 +7642,17 @@ static INT32 saveSlotSelected = 1;
 static INT32 loadgamescroll = 0;
 static UINT8 loadgameoffset = 0;
 
+static void M_CacheLoadGameData(void)
+{
+	savselp[0] = W_CachePatchName("SAVEBACK", PU_PATCH);
+	savselp[1] = W_CachePatchName("SAVENONE", PU_PATCH);
+	savselp[2] = W_CachePatchName("ULTIMATE", PU_PATCH);
+
+	savselp[3] = W_CachePatchName("GAMEDONE", PU_PATCH);
+	savselp[4] = W_CachePatchName("BLACXLVL", PU_PATCH);
+	savselp[5] = W_CachePatchName("BLANKLVL", PU_PATCH);
+}
+
 static void M_DrawLoadGameData(void)
 {
 	INT32 i, savetodraw, x, y, hsep = 90;
@@ -7633,6 +7660,9 @@ static void M_DrawLoadGameData(void)
 
 	if (vid.width != BASEVIDWIDTH*vid.dupx)
 		hsep = (hsep*vid.width)/(BASEVIDWIDTH*vid.dupx);
+
+	if (needpatchrecache)
+		M_CacheLoadGameData();
 
 	for (i = -2; i <= 2; i++)
 	{
@@ -8110,13 +8140,7 @@ static void M_ReadSaveStrings(void)
 		M_ReadSavegameInfo(i);
 	}
 
-	savselp[0] = W_CachePatchName("SAVEBACK", PU_PATCH);
-	savselp[1] = W_CachePatchName("SAVENONE", PU_PATCH);
-	savselp[2] = W_CachePatchName("ULTIMATE", PU_PATCH);
-
-	savselp[3] = W_CachePatchName("GAMEDONE", PU_PATCH);
-	savselp[4] = W_CachePatchName("BLACXLVL", PU_PATCH);
-	savselp[5] = W_CachePatchName("BLANKLVL", PU_PATCH);
+	M_CacheLoadGameData();
 }
 
 //
