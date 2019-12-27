@@ -2064,6 +2064,9 @@ static boolean CV_Command(void)
 	if (!v)
 		return false;
 
+	if (( com_flags & COM_SAFE ) && ( v->flags & CV_NOLUA ))
+		return false;
+
 	// perform a variable print or set
 	if (COM_Argc() == 1)
 	{

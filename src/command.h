@@ -20,6 +20,11 @@
 // Command buffer & command execution
 //===================================
 
+enum
+{
+	COM_SAFE = 1,
+};
+
 typedef void (*com_func_t)(void);
 
 void COM_AddCommand(const char *name, com_func_t func);
@@ -103,7 +108,8 @@ typedef enum
 	CV_HIDEN = 1024, // variable is not part of the cvar list so cannot be accessed by the console
 	                 // can only be set when we have the pointer to it
                    // used on menus
-	CV_CHEAT = 2048 // Don't let this be used in multiplayer unless cheats are on.
+	CV_CHEAT = 2048, // Don't let this be used in multiplayer unless cheats are on.
+	CV_NOLUA = 4096,/* don't let this be called from Lua */
 } cvflags_t;
 
 typedef struct CV_PossibleValue_s
