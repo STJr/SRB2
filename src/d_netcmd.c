@@ -3745,7 +3745,7 @@ static void CoopStarposts_OnChange(void)
 {
 	INT32 i;
 
-	if (!(netgame || multiplayer) || gametype != GT_COOP)
+	if (!(netgame || multiplayer) || !G_GametypeUsesCoopStarposts())
 		return;
 
 	switch (cv_coopstarposts.value)
