@@ -62,11 +62,12 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 
 // Sprite rotation
 #ifdef ROTSPRITE
+INT32 R_GetRollAngle(angle_t rollangle);
 void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip);
 void R_FreeSingleRotSprite(spritedef_t *spritedef);
 void R_FreeSkinRotSprite(size_t skinnum);
-extern fixed_t cosang2rad[ROTANGLES];
-extern fixed_t sinang2rad[ROTANGLES];
+extern fixed_t rollcosang[ROTANGLES];
+extern fixed_t rollsinang[ROTANGLES];
 #endif
 
 #endif // __R_PATCH__
