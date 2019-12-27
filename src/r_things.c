@@ -1094,6 +1094,124 @@ static void R_SplitSprite(vissprite_t *sprite)
 	}
 }
 
+static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fixed_t tz)
+{
+	vissprite_t *shadow;
+	patch_t *patch;
+	fixed_t xscale, yscale, shadowxscale, shadowyscale, x1, x2;
+	INT32 light = 0;
+	fixed_t scalemul; UINT8 trans;
+	fixed_t floordiff;
+	fixed_t floorz;
+
+	// Get floorz as the first floor below the object that's visible
+	floorz = (vis->heightsec != -1) ? sectors[vis->heightsec].floorheight : thing->floorz;
+	if (vis->sector->ffloors)
+	{
+		ffloor_t *rover = vis->sector->ffloors;
+		fixed_t z;
+
+		for (; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES) || (rover->alpha < 90 && !(rover->flags & FF_SWIMMABLE)))
+				continue;
+
+			z = *rover->t_slope ? P_GetZAt(*rover->t_slope, thing->x, thing->y) : *rover->topheight;
+			if (z < thing->z+thing->height/3 && z > floorz)
+				floorz = z;
+		}
+	}
+
+	floordiff = abs(thing->z - floorz);
+
+	trans = floordiff / (100*FRACUNIT) + 3;
+	if (trans >= 9) return;
+
+	scalemul = FRACUNIT - floordiff/640;
+
+	patch = W_CachePatchNum(sprites[SPR_THOK].spriteframes[0].lumppat[0], PU_CACHE);
+	xscale = FixedDiv(projection, tz);
+	yscale = FixedDiv(projectiony, tz);
+	shadowxscale = FixedMul(thing->radius*2, scalemul) / patch->width;
+	shadowyscale = FixedMul(FixedMul(thing->radius*2 / patch->height, scalemul), FixedDiv(abs(floorz - viewz), tz));
+
+	tx -= patch->width * shadowxscale/2;
+	x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
+	if (x1 >= viewwidth) return;
+
+	tx += patch->width * shadowxscale;
+	x2 = ((centerxfrac + FixedMul(tx,xscale))>>FRACBITS); x2--;
+	if (x2 < 0 || x2 <= x1) return;
+
+	if (shadowyscale < FRACUNIT/patch->height) return; // fix some crashes?
+
+	shadow = R_NewVisSprite();
+	shadow->patch = patch;
+	shadow->heightsec = vis->heightsec;
+
+	shadow->thingheight = FRACUNIT;
+	shadow->pz = floorz;
+	shadow->pzt = shadow->pz + shadow->thingheight;
+
+	shadow->mobjflags = 0;
+	shadow->sortscale = vis->sortscale;
+	shadow->dispoffset = vis->dispoffset - 5;
+	shadow->gx = thing->x;
+	shadow->gy = thing->y;
+	shadow->gzt = shadow->pz + shadow->patch->height * shadowyscale / 2;
+	shadow->gz = shadow->gzt - shadow->patch->height * shadowyscale;
+	shadow->texturemid = FixedDiv(shadow->gzt - viewz, shadowyscale);
+	shadow->scalestep = 0;
+
+	shadow->mobj = thing; // Easy access! Tails 06-07-2002
+
+	shadow->x1 = x1 < 0 ? 0 : x1;
+	shadow->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
+
+	shadow->xscale = FixedMul(xscale, shadowxscale); //SoM: 4/17/2000
+	shadow->scale = FixedMul(yscale, shadowyscale);
+	shadow->sector = vis->sector;
+	shadow->szt = (INT16)((centeryfrac - FixedMul(shadow->gzt - viewz, yscale))>>FRACBITS);
+	shadow->sz = (INT16)((centeryfrac - FixedMul(shadow->gz - viewz, yscale))>>FRACBITS);
+	shadow->cut = SC_ISSCALED; //check this
+
+
+	shadow->startfrac = 0;
+	shadow->xiscale = 0x7fffff00 / (shadow->xscale/2);
+
+	if (shadow->x1 > x1)
+		shadow->startfrac += shadow->xiscale*(vis->x1-x1);
+
+	if (thing->subsector->sector->numlights)
+	{
+		INT32 lightnum;
+#ifdef ESLOPE // R_GetPlaneLight won't work on sloped lights!
+		light = thing->subsector->sector->numlights - 1;
+
+		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
+			fixed_t h = thing->subsector->sector->lightlist[lightnum].slope ? P_GetZAt(thing->subsector->sector->lightlist[lightnum].slope, thing->x, thing->y)
+			            : thing->subsector->sector->lightlist[lightnum].height;
+			if (h <= shadow->gzt) {
+				light = lightnum - 1;
+				break;
+			}
+		}
+#else
+		light = R_GetPlaneLight(thing->subsector->sector, shadow->gzt, false);
+#endif
+	}
+
+	if (thing->subsector->sector->numlights)
+		shadow->extra_colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
+	else
+		shadow->extra_colormap = thing->subsector->sector->extra_colormap;
+
+	shadow->transmap = transtables + (trans<<FF_TRANSSHIFT);
+	shadow->colormap = scalelight[0][0]; // full dark!
+
+	objectsdrawn++;
+}
+
 //
 // R_ProjectSprite
 // Generates a vissprite for a thing
@@ -1131,6 +1249,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t scalestep;
 	fixed_t offset, offset2;
 
+	fixed_t basetx; // drop shadows
+
 	boolean papersprite = !!(thing->frame & FF_PAPERSPRITE);
 	fixed_t paperoffset = 0, paperdistance = 0; angle_t centerangle = 0;
 
@@ -1166,7 +1286,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	gxt = -FixedMul(tr_x, viewsin);
 	gyt = FixedMul(tr_y, viewcos);
-	tx = -(gyt + gxt);
+	basetx = tx = -(gyt + gxt);
 
 	// too far off the side?
 	if (!papersprite && abs(tx) > tz<<2) // papersprite clipping is handled later
@@ -1622,6 +1742,17 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (thing->subsector->sector->numlights)
 		R_SplitSprite(vis);
+
+	// temporary: whitelist. eventually: MF/2/E flag?
+	if ((
+		oldthing->type == MT_PLAYER ||
+		(oldthing->state - states) == S_RING ||
+		oldthing->type == MT_ROLLOUTROCK ||
+		oldthing->flags & MF_ENEMY ||
+		oldthing->type == MT_EGGMOBILE4_MACE ||
+		(oldthing->type >= MT_SMALLMACE && oldthing->type <= MT_REDSPRINGBALL) // .W.
+	) && !papersprite)
+		R_ProjectDropShadow(oldthing, vis, basetx, tz);
 
 	// Debug
 	++objectsdrawn;
