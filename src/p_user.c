@@ -9463,7 +9463,7 @@ static void P_DeathThink(player_t *player)
 			if (cmd->buttons & BT_JUMP)
 			{
 				// You're a spectator, so respawn right away.
-				if (gametype != GT_COOP && player->spectator)
+				if ((gametyperules & GTR_SPECTATORS) && player->spectator)
 					player->playerstate = PST_REBORN;
 				else
 				{
