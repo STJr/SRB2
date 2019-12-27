@@ -7023,11 +7023,29 @@ static tic_t st_time = 0;
 static patch_t* st_radio[9];
 static patch_t* st_launchpad[4];
 
+static void M_CacheSoundTest(void)
+{
+	UINT8 i;
+	char buf[8];
+
+	STRBUFCPY(buf, "M_RADIOn");
+	for (i = 0; i < 9; i++)
+	{
+		buf[7] = (char)('0'+i);
+		st_radio[i] = W_CachePatchName(buf, PU_PATCH);
+	}
+
+	STRBUFCPY(buf, "M_LPADn");
+	for (i = 0; i < 4; i++)
+	{
+		buf[6] = (char)('0'+i);
+		st_launchpad[i] = W_CachePatchName(buf, PU_PATCH);
+	}
+}
+
 static void M_SoundTest(INT32 choice)
 {
 	INT32 ul = skyRoomMenuTranslations[choice-1];
-	UINT8 i;
-	char buf[8];
 
 	soundtestpage = (UINT8)(unlockables[ul].variable);
 	if (!soundtestpage)
@@ -7039,19 +7057,7 @@ static void M_SoundTest(INT32 choice)
 		return;
 	}
 
-	STRBUFCPY(buf, "M_RADIOn");
-	for (i = 0; i < 9; i++)
-	{
-		buf[7] = (char)('0'+i);
-		st_radio[i] = W_CachePatchName(buf, PU_STATIC);
-	}
-
-	STRBUFCPY(buf, "M_LPADn");
-	for (i = 0; i < 4; i++)
-	{
-		buf[6] = (char)('0'+i);
-		st_launchpad[i] = W_CachePatchName(buf, PU_STATIC);
-	}
+	M_CacheSoundTest();
 
 	curplaying = NULL;
 	st_time = 0;
@@ -7069,6 +7075,9 @@ static void M_DrawSoundTest(void)
 	INT32 x, y, i;
 	fixed_t hscale = FRACUNIT/2, vscale = FRACUNIT/2, bounce = 0;
 	UINT8 frame[4] = {0, 0, -1, SKINCOLOR_RUBY};
+
+	if (needpatchrecache)
+		M_CacheSoundTest();
 
 	// let's handle the ticker first. ideally we'd tick this somewhere else, BUT...
 	if (curplaying)
