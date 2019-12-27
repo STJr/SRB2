@@ -6792,8 +6792,7 @@ void P_ConvertBinaryLinedefs(void)
 			lines[i].special = 305;
 			break;
 			lines[i].args[1] = (lines[i].flags & ML_BOUNCY) ? 2 : 1;
-			int ability = (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS) / 10;
-			lines[i].args[2] = 1 << ability;
+			lines[i].args[2] = 1 << (int)((P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS) / 10);
 			lines[i].special = 305;
 			break;
 		case 308: //Trigger linedef executor: Race only - once
