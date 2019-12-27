@@ -2020,7 +2020,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			target = waypoint;
 			th->pointnum = target->health;
 			// Set the mobj as your target! -- Monster Iestyn 27/12/19
-			th->target = target;
+			P_SetTarget(&th->target, target);
 
 			// calculate MOMX/MOMY/MOMZ for next waypoint
 			// change slope
@@ -2648,7 +2648,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	// Set pointnum
 	th->pointnum = target->health;
 	// Set the mobj as your target! -- Monster Iestyn 27/12/19
-	th->target = target;
+	P_SetTarget(&th->target, target);
 
 	// We don't deal with the mirror crap here, we'll
 	// handle that in the T_Thinker function.
