@@ -1640,10 +1640,10 @@ static inline void P_InitTagLists(void)
 		{
 			taggroup_t* group = taglist_sec[i];
 			size_t j;
-			CONS_Printf("Tag list for %u :\n", i);
+			CONS_Printf("Tag list for %s :\n", sizeu1(i));
 			for (j = 0; j < group->size; j++)
 			{
-				CONS_Printf("Sector %d\n", group->list[j]);
+				CONS_Printf("Sector %s\n", sizeu1(group->list[j]));
 			}
 		}
 	}
