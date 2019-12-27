@@ -2447,7 +2447,7 @@ static void P_SetupCamera(void)
 	{
 		mapthing_t *thing;
 
-		if ((gametyperules & GTR_DEATHMATCHSTARTS) || (gametype == GT_MATCH || gametype == GT_TAG))
+		if (gametyperules & GTR_DEATHMATCHSTARTS)
 			thing = deathmatchstarts[0];
 		else
 			thing = playerstarts[0];
