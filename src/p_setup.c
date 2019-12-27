@@ -1196,10 +1196,10 @@ static void TextmapLine(UINT32 i, char *param)
 				CONS_Debug(DBG_SETUP, "Invalid linedef string argument number: %d\n", argnum);
 				return;
 			}
-			char* token = M_GetToken(NULL);
-			lines[i].stringargs[argnum] = Z_Malloc(strlen(token)+1, PU_LEVEL, NULL);
-			M_Memcpy(lines[i].stringargs[argnum], token, strlen(token) + 1);
-			Z_Free(token);
+			char* stoken = M_GetToken(NULL);
+			lines[i].stringargs[argnum] = Z_Malloc(strlen(stoken)+1, PU_LEVEL, NULL);
+			M_Memcpy(lines[i].stringargs[argnum], stoken, strlen(stoken) + 1);
+			Z_Free(stoken);
 		}
 		else
 		{
