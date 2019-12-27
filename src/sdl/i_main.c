@@ -142,7 +142,9 @@ int main(int argc, char **argv)
 		const char *reldir;
 		int left;
 		boolean fileabs;
+#ifdef __unix__
 		const char *link;
+#endif
 
 		logdir = D_Home();
 
