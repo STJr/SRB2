@@ -106,7 +106,7 @@ static vsbuf_t com_text; // variable sized buffer
   *
   * \param s The text.
   * \param np Optionally a pointer to fill with the new string length.
-  * \return The new length.
+  * \return The text.
   * \sa COM_ExecuteString
   */
 static char *
@@ -427,16 +427,17 @@ static void COM_TokenizeString(char *ptext)
 
 	com_argc = 0;
 	com_args = NULL;
-	com_flags = 0;
+
+	if (ptext[0] == '\033')
+	{
+		com_flags = (unsigned)ptext[1];
+		ptext += 2;
+	}
+	else
+		com_flags = 0;
 
 	while (com_argc < MAX_ARGS)
 	{
-		if (ptext[0] == '\033')
-		{
-			com_flags = (unsigned)ptext[1];
-			ptext += 2;
-		}
-
 		// Skip whitespace up to a newline.
 		while (*ptext != '\0' && *ptext <= ' ' && *ptext != '\n')
 			ptext++;
