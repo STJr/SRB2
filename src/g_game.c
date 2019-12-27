@@ -2890,11 +2890,11 @@ void G_DoReborn(INT32 playernum)
 
 	if (countdowntimeup || (!(netgame || multiplayer) && gametype == GT_COOP))
 		resetlevel = true;
-	else if (gametype == GT_COOP && (netgame || multiplayer) && !G_IsSpecialStage(gamemap))
+	else if ((G_GametypeUsesCoopLives() || G_GametypeUsesCoopStarposts()) && (netgame || multiplayer) && !G_IsSpecialStage(gamemap))
 	{
 		boolean notgameover = true;
 
-		if (cv_cooplives.value != 0 && player->lives <= 0) // consider game over first
+		if (G_GametypeUsesCoopLives() && (cv_cooplives.value != 0 && player->lives <= 0)) // consider game over first
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -2929,7 +2929,7 @@ void G_DoReborn(INT32 playernum)
 			}
 		}
 
-		if (notgameover && cv_coopstarposts.value == 2)
+		if (G_GametypeUsesCoopStarposts() && (notgameover && cv_coopstarposts.value == 2))
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -3005,7 +3005,7 @@ void G_DoReborn(INT32 playernum)
 			}
 
 			// restore time in netgame (see also p_setup.c)
-			if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+			if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 			{
 				// is this a hack? maybe
 				tic_t maxstarposttime = 0;
@@ -3076,7 +3076,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!players[i].exiting)
 				notexiting++;
 
-			if (!(cv_coopstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
+			if (!(cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (p->starpostnum < players[i].starpostnum)))
 				continue;
 
 			p->starpostscale = players[i].starpostscale;
@@ -3450,6 +3450,20 @@ boolean G_GametypeUsesCoopLives(void)
 	// Preparing for the inevitable
 	// gametype rule that will
 	// handle cooplives...
+	return (gametype == GT_COOP);
+}
+
+//
+// G_GametypeUsesCoopStarposts
+//
+// Returns true if the current gametype uses
+// the coopstarposts CVAR.  False otherwise.
+//
+boolean G_GametypeUsesCoopStarposts(void)
+{
+	// Preparing for the inevitable
+	// gametype rule that will
+	// handle coopstarposts...
 	return (gametype == GT_COOP);
 }
 

@@ -2141,7 +2141,7 @@ static void P_LevelInitStuff(void)
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
 
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -2848,7 +2848,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		}
 
 	// restore time in netgame (see also g_game.c)
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 	{
 		// is this a hack? maybe
 		tic_t maxstarposttime = 0;

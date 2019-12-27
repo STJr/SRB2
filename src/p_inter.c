@@ -1451,7 +1451,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->starpostnum >= special->health)
 				return; // Already hit this post
 
-			if (cv_coopstarposts.value && gametype == GT_COOP && (netgame || multiplayer))
+			if (cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (netgame || multiplayer))
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
 				{

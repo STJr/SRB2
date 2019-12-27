@@ -2862,6 +2862,14 @@ static int lib_gGametypeUsesCoopLives(lua_State *L)
 	return 1;
 }
 
+static int lib_gGametypeUsesCoopStarposts(lua_State *L)
+{
+	//HUDSAFE
+	INLEVEL
+	lua_pushboolean(L, G_GametypeUsesCoopStarposts());
+	return 1;
+}
+
 static int lib_gGametypeHasTeams(lua_State *L)
 {
 	//HUDSAFE
@@ -3156,6 +3164,7 @@ static luaL_Reg lib[] = {
 	{"G_IsSpecialStage",lib_gIsSpecialStage},
 	{"G_GametypeUsesLives",lib_gGametypeUsesLives},
 	{"G_GametypeUsesCoopLives",lib_gGametypeUsesCoopLives},
+	{"G_GametypeUsesCoopStarposts",lib_gGametypeUsesCoopStarposts},
 	{"G_GametypeHasTeams",lib_gGametypeHasTeams},
 	{"G_GametypeHasSpectators",lib_gGametypeHasSpectators},
 	{"G_RingSlingerGametype",lib_gRingSlingerGametype},

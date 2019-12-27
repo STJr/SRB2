@@ -9447,7 +9447,7 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	else if ((player->lives > 0 || j != MAXPLAYERS) && !(!(netgame || multiplayer) && G_IsSpecialStage(gamemap))) // Don't allow "click to respawn" in special stages!
 	{
-		if (gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
+		if (G_GametypeUsesCoopStarposts() && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		{
 			P_ConsiderAllGone();
 			if ((player->deadtimer > TICRATE<<1) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
@@ -11537,7 +11537,7 @@ void P_PlayerThink(player_t *player)
 #else
 	if (player->spectator &&
 #endif
-	gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
+	G_GametypeUsesCoopStarposts() && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		P_ConsiderAllGone();
 
 	if (player->playerstate == PST_DEAD)
