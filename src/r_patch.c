@@ -1135,6 +1135,7 @@ INT32 R_GetRollAngle(angle_t rollangle)
 	ra += (ROTANGDIFF/2);
 #endif
 	ra /= ROTANGDIFF;
+	ra %= ROTANGLES;
 	return ra;
 }
 
