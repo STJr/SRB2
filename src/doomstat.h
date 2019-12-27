@@ -423,6 +423,7 @@ enum GameTypeRules
 	GTR_OVERTIME         = 1<<26, // Allow overtime
 	GTR_HURTMESSAGES     = 1<<27, // Hit and death messages
 	GTR_SPAWNINVUL       = 1<<28, // Babysitting deterrent
+	GTR_RESPAWNDELAY     = 1<<29, // Respawn delay
 };
 
 // String names for gametypes

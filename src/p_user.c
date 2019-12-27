@@ -9462,19 +9462,22 @@ static void P_DeathThink(player_t *player)
 			// Respawn with jump button, force respawn time (3 second default, cheat protected) in shooter modes.
 			if (cmd->buttons & BT_JUMP)
 			{
+				// You're a spectator, so respawn right away.
 				if (gametype != GT_COOP && player->spectator)
 					player->playerstate = PST_REBORN;
-				else switch(gametype) {
-					case GT_COOP:
-					case GT_COMPETITION:
-					case GT_RACE:
-						if (player->deadtimer > TICRATE)
-							player->playerstate = PST_REBORN;
-						break;
-					default:
-						if (player->deadtimer > cv_respawntime.value*TICRATE)
-							player->playerstate = PST_REBORN;
-						break;
+				else
+				{
+					// Give me one second.
+					INT32 respawndelay = TICRATE;
+
+					// Non-platform gametypes
+					if (gametyperules & GTR_RESPAWNDELAY)
+						respawndelay = (cv_respawntime.value*TICRATE);
+
+					// You've been dead for enough time.
+					// You may now respawn.
+					if (player->deadtimer > respawndelay)
+						player->playerstate = PST_REBORN;
 				}
 			}
 

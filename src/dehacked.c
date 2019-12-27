@@ -8928,6 +8928,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"OVERTIME",
 	"HURTMESSAGES",
 	"SPAWNINVUL",
+	"RESPAWNDELAY",
 	NULL
 };
 

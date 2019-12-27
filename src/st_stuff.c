@@ -2202,7 +2202,7 @@ static void ST_drawTextHUD(void)
 			donef12 = true;
 		}
 	}
-	else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) // Death overrides spectator text.
+	else if ((gametyperules & GTR_RESPAWNDELAY) && stplyr->playerstate == PST_DEAD && stplyr->lives) // Death overrides spectator text.
 	{
 		INT32 respawntime = cv_respawntime.value - stplyr->deadtimer/TICRATE;
 
