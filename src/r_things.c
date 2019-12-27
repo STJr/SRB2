@@ -743,10 +743,7 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
-//#ifdef RANGECHECK
-#if 1
 	INT32 texturecolumn;
-#endif
 	fixed_t frac;
 	patch_t *patch = vis->patch;
 	fixed_t this_scale = vis->mobj->scale;
@@ -899,7 +896,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		if (vis->scalestep)
 		{
 			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
-			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) >> FRACBITS;
+			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / this_scale;
 
 			if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
 			{
@@ -1154,7 +1151,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tz = gxt-gyt;
 
 	// thing is behind view plane?
-	if (!(papersprite) && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
+	if (!papersprite && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
 		return;
 
 	gxt = -FixedMul(tr_x, viewsin);
@@ -1162,7 +1159,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tx = -(gyt + gxt);
 
 	// too far off the side?
-	if (abs(tx) > tz<<2)
+	if (!papersprite && abs(tx) > tz<<2) // papersprite clipping is handled later
 		return;
 
 	// aspect ratio stuff
@@ -1291,7 +1288,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (papersprite)
 	{
-		fixed_t xscale2, yscale2, cosmul, sinmul, tz2;
+		fixed_t xscale2, yscale2, cosmul, sinmul, tx2, tz2;
 		INT32 range;
 
 		if (ang >= ANGLE_180)
@@ -1309,17 +1306,13 @@ static void R_ProjectSprite(mobj_t *thing)
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
 		yscale = FixedDiv(projectiony, tz);
-		if (yscale < 64) return; // Fix some funky visuals
+		//if (yscale < 64) return; // Fix some funky visuals
 
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
 		tx = -(gyt + gxt);
 		xscale = FixedDiv(projection, tz);
 		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
-
-		// off the right side?
-		if (x1 > viewwidth)
-			return;
 
 		// Get paperoffset (offset) and paperoffset (distance)
 		paperoffset = -FixedMul(tr_x, cosmul) - FixedMul(tr_y, sinmul);
@@ -1337,18 +1330,43 @@ static void R_ProjectSprite(mobj_t *thing)
 		gyt = -FixedMul(tr_y, viewsin);
 		tz2 = gxt-gyt;
 		yscale2 = FixedDiv(projectiony, tz2);
-		if (yscale2 < 64) return; // ditto
+		//if (yscale2 < 64) return; // ditto
 
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
-		tx = -(gyt + gxt);
+		tx2 = -(gyt + gxt);
 		xscale2 = FixedDiv(projection, tz2);
-		x2 = ((centerxfrac + FixedMul(tx,xscale2))>>FRACBITS);
+		x2 = ((centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS);
+
+		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
+			return;
+
+		// Needs partially clipped
+		if (tz < FixedMul(MINZ, this_scale))
+		{
+			fixed_t div = FixedDiv(tz2-tz, FixedMul(MINZ, this_scale)-tz);
+			tx += FixedDiv(tx2-tx, div);
+			tz = FixedMul(MINZ, this_scale);
+			yscale = FixedDiv(projectiony, tz);
+			xscale = FixedDiv(projection, tz);
+			x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
+		}
+		else if (tz2 < FixedMul(MINZ, this_scale))
+		{
+			fixed_t div = FixedDiv(tz-tz2, FixedMul(MINZ, this_scale)-tz2);
+			tx2 += FixedDiv(tx-tx2, div);
+			tz2 = FixedMul(MINZ, this_scale);
+			yscale2 = FixedDiv(projectiony, tz2);
+			xscale2 = FixedDiv(projection, tz2);
+			x2 = (centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS;
+		}
+
+		// off the right side?
+		if (x1 > viewwidth)
+			return;
 
 		// off the left side
 		if (x2 < 0)
-			return;
-		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
 
 		if ((range = x2 - x1) <= 0)
