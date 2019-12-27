@@ -1190,7 +1190,7 @@ static void TextmapLine(UINT32 i, char *param)
 	{
 		if (fastcmp(param + 4, "str"))
 		{
-			size_t argnum = param[3] - '0';
+			int argnum = param[3] - '0';
 			if (argnum < 0 || argnum >= NUMLINESTRINGARGS)
 			{
 				CONS_Debug(DBG_SETUP, "Invalid linedef string argument number: %d\n", argnum);
@@ -1203,10 +1203,10 @@ static void TextmapLine(UINT32 i, char *param)
 		}
 		else
 		{
-			size_t argnum = atol(param + 3);
+			long argnum = atol(param + 3);
 			if (argnum < 0 || argnum >= NUMLINEARGS)
 			{
-				CONS_Debug(DBG_SETUP, "Invalid linedef argument number: %d\n", argnum);
+				CONS_Debug(DBG_SETUP, "Invalid linedef argument number: %ld\n", argnum);
 				return;
 			}
 			lines[i].args[argnum] = atol(dat = M_GetToken(NULL));
