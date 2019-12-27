@@ -3201,10 +3201,12 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	player->powers[pw_carry] = CR_NONE;
 
 	// Burst weapons and emeralds in Match/CTF only
-	if (source && (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
+	if (source)
 	{
-		P_PlayerRingBurst(player, player->rings);
-		P_PlayerEmeraldBurst(player, false);
+		if (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF)
+			P_PlayerRingBurst(player, player->rings);
+		if (gametyperules & GTR_MATCHEMERALDS)
+			P_PlayerEmeraldBurst(player, false);
 	}
 
 	// Get rid of shield
