@@ -4690,7 +4690,7 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 			if (gt == GT_RACE && (mapheaderinfo[mapnum]->typeoflevel & TOL_RACE))
 				return true;
 
-			if (gt > 0 && gt < gametypecount && (mapheaderinfo[mapnum]->typeoflevel & gametypetol[gt]))
+			if (gt >= 0 && gt < gametypecount && (mapheaderinfo[mapnum]->typeoflevel & gametypetol[gt]))
 				return true;
 
 			return false;
