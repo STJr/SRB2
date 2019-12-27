@@ -772,7 +772,7 @@ void Command_CauseCfail_f(void)
 	P_SetThingPosition(players[consoleplayer].mo);
 
 	// CTF consistency test
-	if (gametype == GT_CTF)
+	if (gametyperules & GTR_TEAMFLAGS)
 	{
 		if (blueflag) {
 			P_RemoveMobj(blueflag);

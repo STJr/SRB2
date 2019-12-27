@@ -611,11 +611,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 
 	rsp->health = LONG(players[i].mo->health);
 	rsp->angle = (angle_t)LONG(players[i].mo->angle);
-#ifdef ROTSPRITE
 	rsp->rollangle = (angle_t)LONG(players[i].mo->rollangle);
-#else
-	rsp->rollangle = 0;
-#endif
 	rsp->x = LONG(players[i].mo->x);
 	rsp->y = LONG(players[i].mo->y);
 	rsp->z = LONG(players[i].mo->z);
@@ -766,9 +762,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	//At this point, the player should have a body, whether they were respawned or not.
 	P_UnsetThingPosition(players[i].mo);
 	players[i].mo->angle = (angle_t)LONG(rsp->angle);
-#ifdef ROTSPRITE
 	players[i].mo->rollangle = (angle_t)LONG(rsp->rollangle);
-#endif
 	players[i].mo->eflags = (UINT16)SHORT(rsp->eflags);
 	players[i].mo->flags = LONG(rsp->flags);
 	players[i].mo->flags2 = LONG(rsp->flags2);
@@ -1025,7 +1019,7 @@ static void SV_SendResynch(INT32 node)
 		netbuffer->packettype = PT_RESYNCHEND;
 
 		netbuffer->u.resynchend.randomseed = P_GetRandSeed();
-		if (gametype == GT_CTF)
+		if (gametyperules & GTR_TEAMFLAGS)
 			resynch_write_ctf(&netbuffer->u.resynchend);
 		resynch_write_others(&netbuffer->u.resynchend);
 
@@ -2111,10 +2105,10 @@ static void CL_ConnectToServer(boolean viams)
 
 	if (i != -1)
 	{
-		UINT8 num = serverlist[i].info.gametype;
+		UINT16 num = serverlist[i].info.gametype;
 		const char *gametypestr = NULL;
 		CONS_Printf(M_GetText("Connecting to: %s\n"), serverlist[i].info.servername);
-		if (num < NUMGAMETYPES)
+		if (num < gametypecount)
 			gametypestr = Gametype_Names[num];
 		if (gametypestr)
 			CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
@@ -2430,7 +2424,7 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 		}
 	}
 
-	if (gametype == GT_CTF)
+	if (gametyperules & GTR_TEAMFLAGS)
 		P_PlayerFlagBurst(&players[playernum], false); // Don't take the flag with you!
 
 	// If in a special stage, redistribute the player's spheres across
@@ -2486,6 +2480,17 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 	(void)reason;
 #endif
 
+	// don't look through someone's view who isn't there
+	if (playernum == displayplayer)
+	{
+#ifdef HAVE_BLUA
+		// Call ViewpointSwitch hooks here.
+		// The viewpoint was forcibly changed.
+		LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], true);
+#endif
+		displayplayer = consoleplayer;
+	}
+
 	// Reset player data
 	CL_ClearPlayer(playernum);
 
@@ -2503,16 +2508,13 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 		RemoveAdminPlayer(playernum); // don't stay admin after you're gone
 	}
 
-	if (playernum == displayplayer)
-		displayplayer = consoleplayer; // don't look through someone's view who isn't there
-
 #ifdef HAVE_BLUA
 	LUA_InvalidatePlayer(&players[playernum]);
 #endif
 
 	if (G_TagGametype()) //Check if you still have a game. Location flexible. =P
 		P_CheckSurvivors();
-	else if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	else if (gametyperules & GTR_RACE)
 		P_CheckRacers();
 }
 
@@ -3461,7 +3463,7 @@ void SV_StartSinglePlayerServer(void)
 	server = true;
 	netgame = false;
 	multiplayer = false;
-	gametype = GT_COOP;
+	G_SetGametype(GT_COOP);
 
 	// no more tic the game with this settings!
 	SV_StopServer();
@@ -3740,7 +3742,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			if (client)
 			{
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
-				gametype = netbuffer->u.servercfg.gametype;
+				G_SetGametype(netbuffer->u.servercfg.gametype);
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
 				for (j = 0; j < MAXPLAYERS; j++)
 					adminplayers[j] = netbuffer->u.servercfg.adminplayers[j];
@@ -4124,7 +4126,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 
 			P_SetRandSeed(netbuffer->u.resynchend.randomseed);
 
-			if (gametype == GT_CTF)
+			if (gametyperules & GTR_TEAMFLAGS)
 				resynch_read_ctf(&netbuffer->u.resynchend);
 			resynch_read_others(&netbuffer->u.resynchend);
 

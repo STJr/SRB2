@@ -22,6 +22,7 @@
 #include "m_menu.h"
 #include "m_misc.h"
 #include "f_finale.h"
+#include "y_inter.h"
 #include "dehacked.h"
 #include "st_stuff.h"
 #include "i_system.h"
@@ -76,6 +77,7 @@ static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
 static hudnum_t get_huditem(const char *word);
 static menutype_t get_menutype(const char *word);
 #ifndef HAVE_BLUA
+static INT16 get_gametype(const char *word);
 static powertype_t get_power(const char *word);
 #endif
 
@@ -590,6 +592,16 @@ static void readfreeslots(MYFILE *f)
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
 			}
+			else if (fastcmp(type, "TOL"))
+			{
+				if (lastcustomtol > 31)
+					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				else
+				{
+					G_AddTOL((1<<lastcustomtol), word);
+					lastcustomtol++;
+				}
+			}
 			else
 				deh_warning("Freeslots: unknown enum class '%s' for '%s_%s'", type, type, word);
 		}
@@ -863,14 +875,12 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			strupr(word);
 			value = atoi(word2); // used for numerical settings
 
-#ifdef ROTSPRITE
 			if (fastcmp(word, "XPIVOT"))
 				sprinfo->pivot[frame].x = value;
 			else if (fastcmp(word, "YPIVOT"))
 				sprinfo->pivot[frame].y = value;
 			else if (fastcmp(word, "ROTAXIS"))
 				sprinfo->pivot[frame].rotaxis = value;
-#endif
 			else
 			{
 				f->curpos = lastline;
@@ -1095,10 +1105,10 @@ static void readsprite2(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-static const struct {
-	const char *name;
-	const UINT16 flag;
-} TYPEOFLEVEL[] = {
+INT32 numtolinfo = NUMBASETOL;
+UINT32 lastcustomtol = 13;
+
+tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
 	{"SOLO",TOL_SP},
 	{"SP",TOL_SP},
 	{"SINGLEPLAYER",TOL_SP},
@@ -1114,8 +1124,6 @@ static const struct {
 	{"TAG",TOL_TAG},
 	{"CTF",TOL_CTF},
 
-	{"CUSTOM",TOL_CUSTOM},
-
 	{"2D",TOL_2D},
 	{"MARIO",TOL_MARIO},
 	{"NIGHTS",TOL_NIGHTS},
@@ -1127,6 +1135,216 @@ static const struct {
 
 	{NULL, 0}
 };
+
+// copypasted from readPlayer :sleep:
+static const char *const GAMETYPERULE_LIST[];
+static void readgametype(MYFILE *f, char *gtname)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *word2, *word2lwr = NULL;
+	char *tmp;
+	INT32 i, j;
+
+	INT16 newgtidx = 0;
+	UINT32 newgtrules = 0;
+	UINT32 newgttol = 0;
+	INT32 newgtpointlimit = 0;
+	INT32 newgttimelimit = 0;
+	UINT8 newgtleftcolor = 0;
+	UINT8 newgtrightcolor = 0;
+	INT16 newgtrankingstype = -1;
+	int newgtinttype = 0;
+	char gtdescription[441];
+	char gtconst[MAXLINELEN];
+
+	// Empty strings.
+	gtdescription[0] = '\0';
+	gtconst[0] = '\0';
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			if (fastcmp(word, "DESCRIPTION"))
+			{
+				char *descr = NULL;
+
+				for (i = 0; i < MAXLINELEN-3; i++)
+				{
+					if (s[i] == '=')
+					{
+						descr = &s[i+2];
+						break;
+					}
+				}
+				if (descr)
+				{
+					strcpy(gtdescription, descr);
+					strcat(gtdescription, myhashfgets(descr, sizeof (gtdescription), f));
+				}
+				else
+					strcpy(gtdescription, "");
+
+				// For some reason, cutting the string did not work above. Most likely due to strcpy or strcat...
+				// It works down here, though.
+				{
+					INT32 numline = 0;
+					for (i = 0; i < MAXLINELEN-1; i++)
+					{
+						if (numline < 20 && gtdescription[i] == '\n')
+							numline++;
+
+						if (numline >= 20 || gtdescription[i] == '\0' || gtdescription[i] == '#')
+							break;
+					}
+				}
+				gtdescription[strlen(gtdescription)-1] = '\0';
+				gtdescription[i] = '\0';
+				continue;
+			}
+
+			word2 = strtok(NULL, " = ");
+			if (word2)
+			{
+				if (!word2lwr)
+					word2lwr = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+				strcpy(word2lwr, word2);
+				strupr(word2);
+			}
+			else
+				break;
+
+			if (word2[strlen(word2)-1] == '\n')
+				word2[strlen(word2)-1] = '\0';
+			i = atoi(word2);
+
+			// Game type rules
+			if (fastcmp(word, "RULES"))
+			{
+				// GTR_
+				newgtrules = (UINT32)get_number(word2);
+			}
+			// Identifier
+			else if (fastcmp(word, "IDENTIFIER"))
+			{
+				// GT_
+				strncpy(gtconst, word2, MAXLINELEN);
+			}
+			// Point and time limits
+			else if (fastcmp(word, "DEFAULTPOINTLIMIT"))
+				newgtpointlimit = (INT32)i;
+			else if (fastcmp(word, "DEFAULTTIMELIMIT"))
+				newgttimelimit = (INT32)i;
+			// Level platter
+			else if (fastcmp(word, "HEADERCOLOR") || fastcmp(word, "HEADERCOLOUR"))
+				newgtleftcolor = newgtrightcolor = (UINT8)get_number(word2);
+			else if (fastcmp(word, "HEADERLEFTCOLOR") || fastcmp(word, "HEADERLEFTCOLOUR"))
+				newgtleftcolor = (UINT8)get_number(word2);
+			else if (fastcmp(word, "HEADERRIGHTCOLOR") || fastcmp(word, "HEADERRIGHTCOLOUR"))
+				newgtrightcolor = (UINT8)get_number(word2);
+			// Rankings type
+			else if (fastcmp(word, "RANKINGTYPE"))
+			{
+				// Case insensitive
+				newgtrankingstype = (int)get_number(word2);
+			}
+			// Intermission type
+			else if (fastcmp(word, "INTERMISSIONTYPE"))
+			{
+				// Case sensitive
+				newgtinttype = (int)get_number(word2lwr);
+			}
+			// Type of level
+			else if (fastcmp(word, "TYPEOFLEVEL"))
+			{
+				if (i) // it's just a number
+					newgttol = (UINT32)i;
+				else
+				{
+					UINT16 tol = 0;
+					tmp = strtok(word2,",");
+					do {
+						for (i = 0; TYPEOFLEVEL[i].name; i++)
+							if (fasticmp(tmp, TYPEOFLEVEL[i].name))
+								break;
+						if (!TYPEOFLEVEL[i].name)
+							deh_warning("readgametype %s: unknown typeoflevel flag %s\n", gtname, tmp);
+						tol |= TYPEOFLEVEL[i].flag;
+					} while((tmp = strtok(NULL,",")) != NULL);
+					newgttol = tol;
+				}
+			}
+			// The SOC probably provided gametype rules as words,
+			// instead of using the RULES keyword.
+			// Like for example "NOSPECTATORSPAWN = TRUE".
+			// This is completely valid, and looks better anyway.
+			else
+			{
+				UINT32 wordgt = 0;
+				for (j = 0; GAMETYPERULE_LIST[j]; j++)
+					if (fastcmp(word, GAMETYPERULE_LIST[j])) {
+						if (!j) // GTR_CAMPAIGN
+							wordgt |= 1;
+						else
+							wordgt |= (1<<j);
+						if (i || word2[0] == 'T' || word2[0] == 'Y')
+							newgtrules |= wordgt;
+						break;
+					}
+				if (!wordgt)
+					deh_warning("readgametype %s: unknown word '%s'", gtname, word);
+			}
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	// Free strings.
+	Z_Free(s);
+	if (word2lwr)
+		Z_Free(word2lwr);
+
+	// Ran out of gametype slots
+	if (gametypecount == NUMGAMETYPEFREESLOTS)
+	{
+		CONS_Alert(CONS_WARNING, "Ran out of free gametype slots!\n");
+		return;
+	}
+
+	// Add the new gametype
+	newgtidx = G_AddGametype(newgtrules);
+	G_AddGametypeTOL(newgtidx, newgttol);
+	G_SetGametypeDescription(newgtidx, gtdescription, newgtleftcolor, newgtrightcolor);
+
+	// Not covered by G_AddGametype alone.
+	if (newgtrankingstype == -1)
+		newgtrankingstype = newgtidx;
+	gametyperankings[newgtidx] = newgtrankingstype;
+	intermissiontypes[newgtidx] = newgtinttype;
+	pointlimits[newgtidx] = newgtpointlimit;
+	timelimits[newgtidx] = newgttimelimit;
+
+	// Write the new gametype name.
+	Gametype_Names[newgtidx] = Z_StrDup((const char *)gtname);
+
+	// Write the constant name.
+	if (gtconst[0] == '\0')
+		strncpy(gtconst, gtname, MAXLINELEN);
+	G_AddGametypeConstant(newgtidx, (const char *)gtconst);
+
+	// Update gametype_cons_t accordingly.
+	G_UpdateGametypeSelections();
+
+	CONS_Printf("Added gametype %s\n", Gametype_Names[newgtidx]);
+}
 
 static const struct {
 	const char *name;
@@ -1395,7 +1613,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "TYPEOFLEVEL"))
 			{
 				if (i) // it's just a number
-					mapheaderinfo[num-1]->typeoflevel = (UINT16)i;
+					mapheaderinfo[num-1]->typeoflevel = (UINT32)i;
 				else
 				{
 					UINT16 tol = 0;
@@ -2690,11 +2908,9 @@ static actionpointer_t actionpointers[] =
 	{{A_SpawnObjectRelative},    "A_SPAWNOBJECTRELATIVE"},
 	{{A_ChangeAngleRelative},    "A_CHANGEANGLERELATIVE"},
 	{{A_ChangeAngleAbsolute},    "A_CHANGEANGLEABSOLUTE"},
-#ifdef ROTSPRITE
 	{{A_RollAngle},              "A_ROLLANGLE"},
 	{{A_ChangeRollAngleRelative},"A_CHANGEROLLANGLERELATIVE"},
 	{{A_ChangeRollAngleAbsolute},"A_CHANGEROLLANGLEABSOLUTE"},
-#endif
 	{{A_PlaySound},              "A_PLAYSOUND"},
 	{{A_FindTarget},             "A_FINDTARGET"},
 	{{A_FindTracer},             "A_FINDTRACER"},
@@ -4172,6 +4388,7 @@ static void ignorelines(MYFILE *f)
 static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char textline[MAXLINELEN];
 	char *word;
 	char *word2;
 	INT32 i;
@@ -4192,6 +4409,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 		char *traverse;
 
 		myfgets(s, MAXLINELEN, f);
+		memcpy(textline, s, MAXLINELEN);
 		if (s[0] == '\n' || s[0] == '#')
 			continue;
 
@@ -4378,6 +4596,36 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					{
 						deh_warning("Level number %d out of range (1 - %d)", i, NUMMAPS);
 						ignorelines(f);
+					}
+				}
+				else if (fastcmp(word, "GAMETYPE"))
+				{
+					// Get the gametype name from textline
+					// instead of word2, so that gametype names
+					// aren't allcaps
+					INT32 c;
+					for (c = 0; c < MAXLINELEN; c++)
+					{
+						if (textline[c] == '\0')
+							break;
+						if (textline[c] == ' ')
+						{
+							char *gtname = (textline+c+1);
+							if (gtname)
+							{
+								// remove funny characters
+								INT32 j;
+								for (j = 0; j < (MAXLINELEN - c); j++)
+								{
+									if (gtname[j] == '\0')
+										break;
+									if (gtname[j] < 32)
+										gtname[j] = '\0';
+								}
+								readgametype(f, gtname);
+							}
+							break;
+						}
 					}
 				}
 				else if (fastcmp(word, "CUTSCENE"))
@@ -8650,6 +8898,39 @@ static const char *const PLAYERFLAG_LIST[] = {
 	NULL // stop loop here.
 };
 
+static const char *const GAMETYPERULE_LIST[] = {
+	"CAMPAIGN",
+	"RINGSLINGER",
+	"SPECTATORS",
+	"FRIENDLYFIRE",
+	"LIVES",
+	"TEAMS",
+	"RACE",
+	"TAG",
+	"POINTLIMIT",
+	"TIMELIMIT",
+	"HIDETIME",
+	"HIDEFROZEN",
+	"BLINDFOLDED",
+	"FIRSTPERSON",
+	"MATCHEMERALDS",
+	"TEAMFLAGS",
+	"PITYSHIELD",
+	"DEATHPENALTY",
+	"NOSPECTATORSPAWN",
+	"DEATHMATCHSTARTS",
+	"SPECIALSTAGES",
+	"EMERALDTOKENS",
+	"EMERALDHUNT",
+	"SPAWNENEMIES",
+	"ALLOWEXIT",
+	"NOTITLECARD",
+	"OVERTIME",
+	"HURTMESSAGES",
+	"SPAWNINVUL",
+	NULL
+};
+
 #ifdef HAVE_BLUA
 // Linedef flags
 static const char *const ML_LIST[16] = {
@@ -9065,21 +9346,6 @@ struct {
 	{"tr_trans90",tr_trans90},
 	{"NUMTRANSMAPS",NUMTRANSMAPS},
 
-	// Type of levels
-	{"TOL_SP",TOL_SP},
-	{"TOL_COOP",TOL_COOP},
-	{"TOL_COMPETITION",TOL_COMPETITION},
-	{"TOL_RACE",TOL_RACE},
-	{"TOL_MATCH",TOL_MATCH},
-	{"TOL_TAG",TOL_TAG},
-	{"TOL_CTF",TOL_CTF},
-	{"TOL_CUSTOM",TOL_CUSTOM},
-	{"TOL_2D",TOL_2D},
-	{"TOL_MARIO",TOL_MARIO},
-	{"TOL_NIGHTS",TOL_NIGHTS},
-	{"TOL_ERZ3",TOL_ERZ3},
-	{"TOL_XMAS",TOL_XMAS},
-
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
 	{"LF_SPEEDMUSIC",LF_SPEEDMUSIC},
@@ -9262,15 +9528,16 @@ struct {
 	{"DMG_CANHURTSELF",DMG_CANHURTSELF},
 	{"DMG_DEATHMASK",DMG_DEATHMASK},
 
-	// Gametypes, for use with global var "gametype"
-	{"GT_COOP",GT_COOP},
-	{"GT_COMPETITION",GT_COMPETITION},
-	{"GT_RACE",GT_RACE},
-	{"GT_MATCH",GT_MATCH},
-	{"GT_TEAMMATCH",GT_TEAMMATCH},
-	{"GT_TAG",GT_TAG},
-	{"GT_HIDEANDSEEK",GT_HIDEANDSEEK},
-	{"GT_CTF",GT_CTF},
+	// Intermission types
+	{"int_none",int_none},
+	{"int_coop",int_coop},
+	{"int_match",int_match},
+	{"int_teammatch",int_teammatch},
+	//{"int_tag",int_tag},
+	{"int_ctf",int_ctf},
+	{"int_spec",int_spec},
+	{"int_race",int_race},
+	{"int_comp",int_comp},
 
 	// Jingles (jingletype_t)
 	{"JT_NONE",JT_NONE},
@@ -9443,12 +9710,10 @@ struct {
 	{"DI_SOUTHEAST",DI_SOUTHEAST},
 	{"NUMDIRS",NUMDIRS},
 
-#ifdef ROTSPRITE
 	// Sprite rotation axis (rotaxis_t)
 	{"ROTAXIS_X",ROTAXIS_X},
 	{"ROTAXIS_Y",ROTAXIS_Y},
 	{"ROTAXIS_Z",ROTAXIS_Z},
-#endif
 
 	// Buttons (ticcmd_t)
 	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.
@@ -9563,7 +9828,7 @@ struct {
 };
 
 static mobjtype_t get_mobjtype(const char *word)
-{ // Returns the vlaue of MT_ enumerations
+{ // Returns the value of MT_ enumerations
 	mobjtype_t i;
 	if (*word >= '0' && *word <= '9')
 		return atoi(word);
@@ -9715,8 +9980,22 @@ static menutype_t get_menutype(const char *word)
 }
 
 #ifndef HAVE_BLUA
+static INT16 get_gametype(const char *word)
+{ // Returns the value of GT_ enumerations
+	INT16 i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("GT_",word,3))
+		word += 3; // take off the GT_
+	for (i = 0; i < NUMGAMETYPES; i++)
+		if (fastcmp(word, Gametype_ConstantNames[i]+3))
+			return i;
+	deh_warning("Couldn't find gametype named 'GT_%s'",word);
+	return GT_COOP;
+}
+
 static powertype_t get_power(const char *word)
-{ // Returns the vlaue of pw_ enumerations
+{ // Returns the value of pw_ enumerations
 	powertype_t i;
 	if (*word >= '0' && *word <= '9')
 		return atoi(word);
@@ -9910,10 +10189,41 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-	else if (fastncmp("MN_",word,4)) {
+	else if (fastncmp("MN_",word,3)) {
 		r = get_menutype(word);
 		free(word);
 		return r;
+	}
+	else if (fastncmp("GT_",word,4)) {
+		r = get_gametype(word);
+		free(word);
+		return r;
+	}
+	else if (fastncmp("GTR_", word, 4)) {
+		char *p = word+4;
+		for (i = 0; GAMETYPERULE_LIST[i]; i++)
+			if (fastcmp(p, GAMETYPERULE_LIST[i])) {
+				free(word);
+				return (1<<i);
+			}
+
+		// Not found error
+		const_warning("game type rule",word);
+		free(word);
+		return 0;
+	}
+	else if (fastncmp("TOL_", word, 4)) {
+		char *p = word+4;
+		for (i = 0; TYPEOFLEVEL[i].name; i++)
+			if (fastcmp(p, TYPEOFLEVEL[i].name)) {
+				free(word);
+				return TYPEOFLEVEL[i].flag;
+			}
+
+		// Not found error
+		const_warning("typeoflevel",word);
+		free(word);
+		return 0;
 	}
 	else if (fastncmp("HUD_",word,4)) {
 		r = get_huditem(word);
@@ -10124,6 +10434,20 @@ static inline int lib_freeslot(lua_State *L)
 			}
 			r++;
 		}
+		else if (fastcmp(type, "TOL"))
+		{
+			if (lastcustomtol > 31)
+				CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+			else
+			{
+				UINT32 newtol = (1<<lastcustomtol);
+				CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
+				G_AddTOL(newtol, word);
+				lua_pushinteger(L, newtol);
+				lastcustomtol++;
+				r++;
+			}
+		}
 		Z_Free(s);
 		lua_remove(L, 1);
 		continue;
@@ -10226,6 +10550,36 @@ static inline int lib_getenum(lua_State *L)
 			return 1;
 		}
 		if (mathlib) return luaL_error(L, "playerflag '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("GT_", word, 3)) {
+		p = word;
+		for (i = 0; Gametype_ConstantNames[i]; i++)
+			if (fastcmp(p, Gametype_ConstantNames[i])) {
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "gametype '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("GTR_", word, 4)) {
+		p = word+4;
+		for (i = 0; GAMETYPERULE_LIST[i]; i++)
+			if (fastcmp(p, GAMETYPERULE_LIST[i])) {
+				lua_pushinteger(L, ((lua_Integer)1<<i));
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "game type rule '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("TOL_", word, 4)) {
+		p = word+4;
+		for (i = 0; TYPEOFLEVEL[i].name; i++)
+			if (fastcmp(p, TYPEOFLEVEL[i].name)) {
+				lua_pushinteger(L, TYPEOFLEVEL[i].flag);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "typeoflevel '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("ML_", word, 3)) {
@@ -10465,198 +10819,7 @@ static inline int lib_getenum(lua_State *L)
 	// DYNAMIC variables too!!
 	// Try not to add anything that would break netgames or timeattack replays here.
 	// You know, like consoleplayer, displayplayer, secondarydisplayplayer, or gametime.
-	if (fastcmp(word,"gamemap")) {
-		lua_pushinteger(L, gamemap);
-		return 1;
-	} else if (fastcmp(word,"maptol")) {
-		lua_pushinteger(L, maptol);
-		return 1;
-	} else if (fastcmp(word,"ultimatemode")) {
-		lua_pushboolean(L, ultimatemode != 0);
-		return 1;
-	} else if (fastcmp(word,"mariomode")) {
-		lua_pushboolean(L, mariomode != 0);
-		return 1;
-	} else if (fastcmp(word,"twodlevel")) {
-		lua_pushboolean(L, twodlevel != 0);
-		return 1;
-	} else if (fastcmp(word,"circuitmap")) {
-		lua_pushboolean(L, circuitmap);
-		return 1;
-	} else if (fastcmp(word,"netgame")) {
-		lua_pushboolean(L, netgame);
-		return 1;
-	} else if (fastcmp(word,"multiplayer")) {
-		lua_pushboolean(L, multiplayer);
-		return 1;
-	} else if (fastcmp(word,"modeattacking")) {
-		lua_pushboolean(L, modeattacking);
-		return 1;
-	} else if (fastcmp(word,"splitscreen")) {
-		lua_pushboolean(L, splitscreen);
-		return 1;
-	} else if (fastcmp(word,"gamecomplete")) {
-		lua_pushboolean(L, gamecomplete);
-		return 1;
-	} else if (fastcmp(word,"devparm")) {
-		lua_pushboolean(L, devparm);
-		return 1;
-	} else if (fastcmp(word,"modifiedgame")) {
-		lua_pushboolean(L, modifiedgame && !savemoddata);
-		return 1;
-	} else if (fastcmp(word,"menuactive")) {
-		lua_pushboolean(L, menuactive);
-		return 1;
-	} else if (fastcmp(word,"paused")) {
-		lua_pushboolean(L, paused);
-		return 1;
-	// begin map vars
-	} else if (fastcmp(word,"spstage_start")) {
-		lua_pushinteger(L, spstage_start);
-		return 1;
-	} else if (fastcmp(word,"sstage_start")) {
-		lua_pushinteger(L, sstage_start);
-		return 1;
-	} else if (fastcmp(word,"sstage_end")) {
-		lua_pushinteger(L, sstage_end);
-		return 1;
-	} else if (fastcmp(word,"smpstage_start")) {
-		lua_pushinteger(L, smpstage_start);
-		return 1;
-	} else if (fastcmp(word,"smpstage_end")) {
-		lua_pushinteger(L, smpstage_end);
-		return 1;
-	} else if (fastcmp(word,"titlemap")) {
-		lua_pushinteger(L, titlemap);
-		return 1;
-	} else if (fastcmp(word,"titlemapinaction")) {
-		lua_pushboolean(L, (titlemapinaction != TITLEMAP_OFF));
-		return 1;
-	} else if (fastcmp(word,"bootmap")) {
-		lua_pushinteger(L, bootmap);
-		return 1;
-	} else if (fastcmp(word,"tutorialmap")) {
-		lua_pushinteger(L, tutorialmap);
-		return 1;
-	} else if (fastcmp(word,"tutorialmode")) {
-		lua_pushboolean(L, tutorialmode);
-		return 1;
-	// end map vars
-	// begin CTF colors
-	} else if (fastcmp(word,"skincolor_redteam")) {
-		lua_pushinteger(L, skincolor_redteam);
-		return 1;
-	} else if (fastcmp(word,"skincolor_blueteam")) {
-		lua_pushinteger(L, skincolor_blueteam);
-		return 1;
-	} else if (fastcmp(word,"skincolor_redring")) {
-		lua_pushinteger(L, skincolor_redring);
-		return 1;
-	} else if (fastcmp(word,"skincolor_bluering")) {
-		lua_pushinteger(L, skincolor_bluering);
-		return 1;
-	// end CTF colors
-	// begin timers
-	} else if (fastcmp(word,"invulntics")) {
-		lua_pushinteger(L, invulntics);
-		return 1;
-	} else if (fastcmp(word,"sneakertics")) {
-		lua_pushinteger(L, sneakertics);
-		return 1;
-	} else if (fastcmp(word,"flashingtics")) {
-		lua_pushinteger(L, flashingtics);
-		return 1;
-	} else if (fastcmp(word,"tailsflytics")) {
-		lua_pushinteger(L, tailsflytics);
-		return 1;
-	} else if (fastcmp(word,"underwatertics")) {
-		lua_pushinteger(L, underwatertics);
-		return 1;
-	} else if (fastcmp(word,"spacetimetics")) {
-		lua_pushinteger(L, spacetimetics);
-		return 1;
-	} else if (fastcmp(word,"extralifetics")) {
-		lua_pushinteger(L, extralifetics);
-		return 1;
-	} else if (fastcmp(word,"nightslinktics")) {
-		lua_pushinteger(L, nightslinktics);
-		return 1;
-	} else if (fastcmp(word,"gameovertics")) {
-		lua_pushinteger(L, gameovertics);
-		return 1;
-	} else if (fastcmp(word,"ammoremovaltics")) {
-		lua_pushinteger(L, ammoremovaltics);
-		return 1;
-	// end timers
-	} else if (fastcmp(word,"gametype")) {
-		lua_pushinteger(L, gametype);
-		return 1;
-	} else if (fastcmp(word,"leveltime")) {
-		lua_pushinteger(L, leveltime);
-		return 1;
-	} else if (fastcmp(word,"curWeather")) {
-		lua_pushinteger(L, curWeather);
-		return 1;
-	} else if (fastcmp(word,"globalweather")) {
-		lua_pushinteger(L, globalweather);
-		return 1;
-	} else if (fastcmp(word,"levelskynum")) {
-		lua_pushinteger(L, levelskynum);
-		return 1;
-	} else if (fastcmp(word,"globallevelskynum")) {
-		lua_pushinteger(L, globallevelskynum);
-		return 1;
-	} else if (fastcmp(word,"mapmusname")) {
-		lua_pushstring(L, mapmusname);
-		return 1;
-	} else if (fastcmp(word,"mapmusflags")) {
-		lua_pushinteger(L, mapmusflags);
-		return 1;
-	} else if (fastcmp(word,"mapmusposition")) {
-		lua_pushinteger(L, mapmusposition);
-		return 1;
-	// local player variables, by popular request
-	} else if (fastcmp(word,"consoleplayer")) { // player controlling console (aka local player 1)
-		if (consoleplayer < 0 || !playeringame[consoleplayer])
-			return 0;
-		LUA_PushUserdata(L, &players[consoleplayer], META_PLAYER);
-		return 1;
-	} else if (fastcmp(word,"displayplayer")) { // player visible on screen (aka display player 1)
-		if (displayplayer < 0 || !playeringame[displayplayer])
-			return 0;
-		LUA_PushUserdata(L, &players[displayplayer], META_PLAYER);
-		return 1;
-	} else if (fastcmp(word,"secondarydisplayplayer")) { // local/display player 2, for splitscreen
-		if (!splitscreen || secondarydisplayplayer < 0 || !playeringame[secondarydisplayplayer])
-			return 0;
-		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
-		return 1;
-	// end local player variables
-	} else if (fastcmp(word,"server")) {
-		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
-			return 0;
-		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
-		return 1;
-	} else if (fastcmp(word,"admin")) { // BACKWARDS COMPATIBILITY HACK: This was replaced with IsPlayerAdmin(), but some 2.1 Lua scripts still use the admin variable. It now points to the first admin player in the array.
-		LUA_Deprecated(L, "admin", "IsPlayerAdmin(player)");
-		if (!playeringame[adminplayers[0]] || IsPlayerAdmin(serverplayer))
-			return 0;
-		LUA_PushUserdata(L, &players[adminplayers[0]], META_PLAYER);
-		return 1;
-	} else if (fastcmp(word,"emeralds")) {
-		lua_pushinteger(L, emeralds);
-		return 1;
-	} else if (fastcmp(word,"gravity")) {
-		lua_pushinteger(L, gravity);
-		return 1;
-	} else if (fastcmp(word,"VERSIONSTRING")) {
-		lua_pushstring(L, VERSIONSTRING);
-		return 1;
-	} else if (fastcmp(word, "token")) {
-		lua_pushinteger(L, token);
-		return 1;
-	}
-	return 0;
+	return LUA_PushGlobals(L, word);
 }
 
 int LUA_EnumLib(lua_State *L)
@@ -10722,6 +10885,8 @@ static int lib_getActionName(lua_State *L)
 
 	return luaL_typerror(L, 1, "action userdata or Lua function");
 }
+
+
 
 int LUA_SOCLib(lua_State *L)
 {

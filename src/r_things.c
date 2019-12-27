@@ -500,7 +500,7 @@ void R_InitSprites(void)
 {
 	size_t i;
 #ifdef ROTSPRITE
-	INT32 angle, realangle = 0;
+	INT32 angle, ra;
 	float fa;
 #endif
 
@@ -510,10 +510,12 @@ void R_InitSprites(void)
 #ifdef ROTSPRITE
 	for (angle = 0; angle < ROTANGLES; angle++)
 	{
-		fa = ANG2RAD(FixedAngle(realangle<<FRACBITS));
+		ra = (ROTANGDIFF * angle);
+		if (!ra)
+			ra = (ROTANGDIFF / 2) + 1;
+		fa = ANG2RAD(FixedAngle(ra<<FRACBITS));
 		cosang2rad[angle] = FLOAT_TO_FIXED(cos(-fa));
 		sinang2rad[angle] = FLOAT_TO_FIXED(sin(-fa));
-		realangle += ROTANGDIFF;
 	}
 #endif
 

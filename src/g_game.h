@@ -143,6 +143,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar,
 void G_DoLoadLevel(boolean resetplayer);
 void G_StartTitleCard(void);
 void G_PreLevelTitleCard(void);
+boolean G_IsTitleCardAvailable(void);
 void G_DeferedPlayDemo(const char *demo);
 
 // Can be called by the startup code or M_Responder, calls P_SetupLevel.
@@ -201,6 +202,18 @@ void G_StopMetalDemo(void);
 ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
+
+extern UINT32 gametypedefaultrules[NUMGAMETYPES];
+extern UINT32 gametypetol[NUMGAMETYPES];
+extern INT16 gametyperankings[NUMGAMETYPES];
+
+void G_SetGametype(INT16 gametype);
+INT16 G_AddGametype(UINT32 rules);
+void G_AddGametypeConstant(INT16 gtype, const char *newgtconst);
+void G_UpdateGametypeSelections(void);
+void G_AddTOL(UINT32 newtol, const char *tolname);
+void G_AddGametypeTOL(INT16 gtype, UINT32 newtol);
+void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolor, UINT8 rightcolor);
 
 INT32 G_GetGametypeByName(const char *gametypestr);
 boolean G_IsSpecialStage(INT32 mapnum);
