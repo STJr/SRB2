@@ -832,7 +832,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true;
 		}
 		else
-			return P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+		{
+			if (P_DamageMobj(thing, tmthing, tmthing, 1, 0))
+				return true;
+		}
 	}
 
 	// vectorise metal - done in a special case as at this point neither has the right flags for touching
