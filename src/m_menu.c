@@ -8296,6 +8296,43 @@ void M_ForceSaveSlotSelected(INT32 sslot)
 // CHARACTER SELECT
 // ================
 
+// lactozilla: sometimes the renderer changes and these patches don't exist anymore
+static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
+{
+	if (!(description[i].picname[0]))
+	{
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
+		{
+			spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+			spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
+			description[i].charpic = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+		}
+		else
+			description[i].charpic = W_CachePatchName("MISSING", PU_PATCH);
+	}
+	else
+		description[i].charpic = W_CachePatchName(description[i].picname, PU_PATCH);
+
+	if (description[i].nametag[0])
+		description[i].namepic = W_CachePatchName(description[i].nametag, PU_PATCH);
+}
+
+static void M_CacheCharacterSelect(void)
+{
+	INT32 i, skinnum;
+
+	for (i = 0; i < 32; i++)
+	{
+		if (!description[i].used)
+			continue;
+
+		// Already set in M_SetupChoosePlayer
+		skinnum = description[i].skinnum[0];
+		if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
+			M_CacheCharacterSelectEntry(i, skinnum);
+	}
+}
+
 static void M_SetupChoosePlayer(INT32 choice)
 {
 	INT32 skinnum;
@@ -8343,27 +8380,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 					if (i == char_on)
 						allowed = true;
 
-					if (!(description[i].picname[0]))
-					{
-						if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
-						{
-							spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
-							spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
-							description[i].charpic = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
-						}
-						else
-							description[i].charpic = W_CachePatchName("MISSING", PU_PATCH);
-					}
-					else
-						description[i].charpic = W_CachePatchName(description[i].picname, PU_PATCH);
-
-					if (description[i].nametag[0])
-					{
-						const char *nametag = description[i].nametag;
-						description[i].namepic = NULL;
-						if (W_LumpExists(nametag))
-							description[i].namepic = W_CachePatchName(nametag, PU_PATCH);
-					}
+					M_CacheCharacterSelectEntry(i, skinnum);
 				}
 				// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 			}
@@ -8510,6 +8527,10 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT16 fgwidth = SHORT(charfg->width);
 	INT32 x, y;
 	INT32 w = (vid.width/vid.dupx);
+
+	// lactozilla: the renderer changed so recache patches
+	if (needpatchrecache)
+		M_CacheCharacterSelect();
 
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
