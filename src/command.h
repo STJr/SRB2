@@ -36,10 +36,12 @@ size_t COM_FirstOption(void);
 const char *COM_CompleteCommand(const char *partial, INT32 skips);
 
 // insert at queu (at end of other command)
-void COM_BufAddText(const char *btext);
+#define COM_BufAddText(s) COM_BufAddTextEx(s, 0)
+void COM_BufAddTextEx(const char *btext, int flags);
 
 // insert in head (before other command)
-void COM_BufInsertText(const char *btext);
+#define COM_BufInsertText(s) COM_BufInsertTextEx(s, 0)
+void COM_BufInsertTextEx(const char *btext, int flags);
 
 // don't bother inserting, just do immediately
 void COM_ImmedExecute(const char *ptext);
@@ -71,6 +73,7 @@ void VS_Free(vsbuf_t *buf);
 void VS_Clear(vsbuf_t *buf);
 void *VS_GetSpace(vsbuf_t *buf, size_t length);
 void VS_Write(vsbuf_t *buf, const void *data, size_t length);
+void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, int flags);
 void VS_Print(vsbuf_t *buf, const char *data); // strcats onto the sizebuf
 
 //==================
