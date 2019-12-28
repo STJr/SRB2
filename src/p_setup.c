@@ -2206,12 +2206,8 @@ static void P_InitLevelSettings(void)
 		CV_SetValue(&cv_analog2, true);
 }
 
-//
-// P_LoadThingsOnly
-//
-// "Reloads" a level, but only reloads all of the mobjs.
-//
-void P_LoadThingsOnly(void)
+// Respawns all the mapthings and mobjs in the map from the already loaded map data.
+void P_RespawnThings(void)
 {
 	// Search through all the thinkers.
 	thinker_t *think;
