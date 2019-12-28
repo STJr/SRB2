@@ -1744,7 +1744,6 @@ static boolean P_LoadRawBlockMap(UINT8 *data, size_t count)
 	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 #endif
 	return true;
-#endif
 }
 
 //
