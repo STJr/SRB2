@@ -553,11 +553,8 @@ pslope_t *P_SlopeById(UINT16 id)
 }
 
 /// Reset slopes and read them from special lines.
-void P_ResetDynamicSlopes(const UINT32 fromsave) {
+void P_ResetDynamicSlopes(const boolean fromsave) {
 	size_t i;
-
-	boolean spawnthinkers = !(boolean)fromsave;
-
 	slopelist = NULL;
 	slopecount = 0;
 
@@ -574,14 +571,14 @@ void P_ResetDynamicSlopes(const UINT32 fromsave) {
 			case 711:
 			case 712:
 			case 713:
-				line_SpawnViaLine(i, spawnthinkers);
+				line_SpawnViaLine(i, !fromsave);
 				break;
 
 			case 704:
 			case 705:
 			case 714:
 			case 715:
-				line_SpawnViaVertexes(i, spawnthinkers);
+				line_SpawnViaVertexes(i, !fromsave);
 				break;
 
 			default:

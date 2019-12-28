@@ -2152,7 +2152,7 @@ lumpnum_t lastloadedmaplumpnum; // for comparative savegame
 //
 // Some player initialization for map start.
 //
-static void P_LevelInitStuff(void)
+static void P_InitLevelSettings(void)
 {
 	INT32 i;
 	boolean canresetlives = true;
@@ -2277,7 +2277,7 @@ void P_LoadThingsOnly(void)
 		P_RemoveMobj((mobj_t *)think);
 	}
 
-	P_LevelInitStuff();
+	P_InitLevelSettings();
 
 	P_SpawnMapThings(true);
 
@@ -2777,19 +2777,16 @@ static void P_InitGametype(void)
 
 /** Loads a level from a lump or external wad.
   *
-  * \param skipprecip If true, don't spawn precipitation.
+  * \param fromnetsave If true, skip some stuff because we're loading a netgame snapshot.
   * \todo Clean up, refactor, split up; get rid of the bloat.
   */
-boolean P_LoadLevel(boolean skipprecip)
+boolean P_LoadLevel(boolean fromnetsave)
 {
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	INT32 i, loadprecip = 1, ranspecialwipe = 0;
-	boolean spawnemblems = true;
-	INT32 fromnetsave = 0;
+	INT32 i, ranspecialwipe = 0;
 	sector_t *ss;
-	boolean chase;
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -2820,19 +2817,18 @@ boolean P_LoadLevel(boolean skipprecip)
 	if (cv_runscripts.value && mapheaderinfo[gamemap-1]->scriptname[0] != '#')
 		P_RunLevelScript(mapheaderinfo[gamemap-1]->scriptname);
 
-	P_LevelInitStuff();
+	P_InitLevelSettings();
 
 	postimgtype = postimgtype2 = postimg_none;
 
 	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
 		P_ForceCharacter(mapheaderinfo[gamemap-1]->forcecharacter);
 
-	// chasecam on in chaos, race, coop
-	// chasecam off in match, tag, capture the flag
-	chase = (!(gametyperules & GTR_FIRSTPERSON)) || (maptol & TOL_2D);
-
 	if (!dedicated)
 	{
+		// chasecam on in first-person gametypes and 2D
+		boolean chase = (!(gametyperules & GTR_FIRSTPERSON)) || (maptol & TOL_2D);
+
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_speed.changed)
 			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);*/
@@ -2943,14 +2939,7 @@ boolean P_LoadLevel(boolean skipprecip)
 	P_InitThinkers();
 	P_InitCachedActions();
 
-	/// \note for not spawning precipitation, etc. when loading netgame snapshots
-	if (skipprecip)
-	{
-		fromnetsave = 1;
-		loadprecip = 0;
-		spawnemblems = false;
-	}
-	else if (savedata.lives > 0)
+	if (!fromnetsave && savedata.lives > 0)
 	{
 		numgameovers = savedata.numgameovers;
 		players[consoleplayer].continues = savedata.continues;
@@ -2964,9 +2953,7 @@ boolean P_LoadLevel(boolean skipprecip)
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
-	//lastloadedmaplumpnum = LUMPERROR;
 	lastloadedmaplumpnum = W_CheckNumForName(maplumpname);
-
 	if (lastloadedmaplumpnum == INT16_MAX)
 		I_Error("Map %s not found.\n", maplumpname);
 
@@ -2991,7 +2978,7 @@ boolean P_LoadLevel(boolean skipprecip)
 	P_ResetDynamicSlopes(fromnetsave);
 #endif
 
-	P_SpawnMapThings(spawnemblems);
+	P_SpawnMapThings(!fromnetsave);
 	skyboxmo[0] = skyboxviewpnts[0];
 	skyboxmo[1] = skyboxcenterpnts[0];
 
@@ -3002,7 +2989,7 @@ boolean P_LoadLevel(boolean skipprecip)
 	// set up world state
 	P_SpawnSpecials(fromnetsave);
 
-	if (loadprecip) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
+	if (!fromnetsave) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
@@ -3068,7 +3055,7 @@ boolean P_LoadLevel(boolean skipprecip)
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
 
-	if (loadprecip) // uglier hack
+	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
 		INT32 buf = gametic % BACKUPTICS;
 		for (i = 0; i < MAXPLAYERS; i++)
