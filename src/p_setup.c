@@ -2350,6 +2350,26 @@ static void P_ForceCharacter(const char *forcecharskin)
 	}
 }
 
+static void P_ResetSpawnpoints(void)
+{
+	UINT8 i;
+
+	numdmstarts = numredctfstarts = numbluectfstarts = 0;
+
+	// reset the player starts
+	for (i = 0; i < MAXPLAYERS; i++)
+		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+	for (i = 0; i < MAX_DM_STARTS; i++)
+		deathmatchstarts[i] = NULL;
+
+	for (i = 0; i < 2; i++)
+		skyboxmo[i] = NULL;
+
+	for (i = 0; i < 16; i++)
+		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+}
+
 static void P_LoadRecordGhosts(void)
 {
 	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
@@ -2720,6 +2740,41 @@ static void P_WriteLetter(void)
 	Z_Free(buf);
 }
 
+static void P_InitGametype(void)
+{
+	UINT8 i;
+
+	P_InitPlayers();
+
+	// restore time in netgame (see also g_game.c)
+	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	{
+		// is this a hack? maybe
+		tic_t maxstarposttime = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].starposttime > maxstarposttime)
+				maxstarposttime = players[i].starposttime;
+		}
+		leveltime = maxstarposttime;
+	}
+
+	P_WriteLetter();
+
+	if (modeattacking == ATTACKING_RECORD && !demoplayback)
+		P_LoadRecordGhosts();
+	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
+		P_LoadNightsGhosts();
+
+	if (G_TagGametype())
+		P_InitTagGametype();
+	else if (gametype == GT_RACE && server)
+		CV_StealthSetValue(&cv_numlaps,
+		(cv_basenumlaps.value)
+			? cv_basenumlaps.value
+			: mapheaderinfo[gamemap - 1]->numlaps);
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param skipprecip If true, don't spawn precipitation.
@@ -2921,20 +2976,7 @@ boolean P_LoadLevel(boolean skipprecip)
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
 
-	numdmstarts = numredctfstarts = numbluectfstarts = 0;
-
-	// reset the player starts
-	for (i = 0; i < MAXPLAYERS; i++)
-		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
-
-	for (i = 0; i < MAX_DM_STARTS; i++)
-		deathmatchstarts[i] = NULL;
-
-	for (i = 0; i < 2; i++)
-		skyboxmo[i] = NULL;
-
-	for (i = 0; i < 16; i++)
-		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+	P_ResetSpawnpoints();
 
 	P_MapStart();
 
@@ -2988,43 +3030,8 @@ boolean P_LoadLevel(boolean skipprecip)
 	//  none of this needs to be done because it's not the beginning of the map when
 	//  a netgame save is being loaded, and could actively be harmful by messing with
 	//  the client's view of the data.)
-	if (fromnetsave)
-		goto netgameskip;
-	// ==========
-
-	P_InitPlayers();
-
-	// restore time in netgame (see also g_game.c)
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
-	{
-		// is this a hack? maybe
-		tic_t maxstarposttime = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i] && players[i].starposttime > maxstarposttime)
-				maxstarposttime = players[i].starposttime;
-		}
-		leveltime = maxstarposttime;
-	}
-
-	P_WriteLetter();
-
-	if (modeattacking == ATTACKING_RECORD && !demoplayback)
-		P_LoadRecordGhosts();
-	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
-		P_LoadNightsGhosts();
-
-	if (G_TagGametype())
-		P_InitTagGametype();
-	else if (gametype == GT_RACE && server)
-		CV_StealthSetValue(&cv_numlaps,
-			(cv_basenumlaps.value)
-			? cv_basenumlaps.value
-			: mapheaderinfo[gamemap - 1]->numlaps);
-
-	// ===========
-	// landing point for netgames.
-	netgameskip:
+	if (!fromnetsave)
+		P_InitGametype();
 
 	P_InitCamera();
 
