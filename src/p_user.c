@@ -638,9 +638,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->marebonuslap = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
-#ifdef ROTSPRITE
 	player->mo->rollangle = 0;
-#endif
 
 	P_SetTarget(&player->mo->target, NULL);
 	P_SetTarget(&player->axis1, P_SetTarget(&player->axis2, NULL));
@@ -768,9 +766,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->secondjump = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
-#ifdef ROTSPRITE
 	player->mo->rollangle = 0;
-#endif
 
 	player->powers[pw_shield] = SH_NONE;
 	player->powers[pw_super] = 0;
@@ -6820,7 +6816,6 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	}
 
-#ifdef ROTSPRITE
 	if (!(player->charflags & SF_NONIGHTSROTATION))
 	{
 		if ((player->mo->state == &states[S_PLAY_NIGHTS_PULL])
@@ -6829,7 +6824,6 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		else
 			player->mo->rollangle = 0;
 	}
-#endif
 
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
@@ -7092,9 +7086,7 @@ static void P_NiGHTSMovement(player_t *player)
 	INT32 i;
 	statenum_t flystate;
 	UINT16 visangle;
-#ifdef ROTSPRITE
 	angle_t rollangle = 0;
-#endif
 
 	player->pflags &= ~PF_DRILLING;
 
@@ -7279,9 +7271,7 @@ static void P_NiGHTSMovement(player_t *player)
 		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	{
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;
-#ifdef ROTSPRITE
 		player->mo->rollangle = 0;
-#endif
 		return;
 	}
 
@@ -7607,7 +7597,6 @@ static void P_NiGHTSMovement(player_t *player)
 			flystate += (visangle*2); // S_PLAY_NIGHTS_FLY0-C - the *2 is to skip over drill states
 #endif
 		}
-#ifdef ROTSPRITE
 		else
 		{
 			angle_t a = R_PointToAngle(player->mo->x, player->mo->y) - player->mo->angle;
@@ -7625,18 +7614,15 @@ static void P_NiGHTSMovement(player_t *player)
 
 			rollangle = FixedAngle(visangle<<FRACBITS);
 		}
-#endif
 	}
 
 	if (player->mo->state != &states[flystate])
 		P_SetPlayerMobjState(player->mo, flystate);
 
-#ifdef ROTSPRITE
 	if (player->charflags & SF_NONIGHTSROTATION)
 		player->mo->rollangle = 0;
 	else
 		player->mo->rollangle = rollangle;
-#endif
 
 	if (player == &players[consoleplayer])
 		localangle = player->mo->angle;
@@ -9585,6 +9571,7 @@ static void CV_CamRotate2_OnChange(void)
 static CV_PossibleValue_t CV_CamSpeed[] = {{0, "MIN"}, {1*FRACUNIT, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t rotation_cons_t[] = {{1, "MIN"}, {45, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t CV_CamRotate[] = {{-720, "MIN"}, {720, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t multiplier_cons_t[] = {{0, "MIN"}, {3*FRACUNIT, "MAX"}, {0, NULL}};
 
 consvar_t cv_cam_dist = {"cam_dist", "160", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_height = {"cam_height", "25", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -9592,6 +9579,7 @@ consvar_t cv_cam_still = {"cam_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 
 consvar_t cv_cam_speed = {"cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotate = {"cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotspeed = {"cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_turnmultiplier = {"cam_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_orbit = {"cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_adjust = {"cam_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_dist = {"cam2_dist", "160", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -9600,6 +9588,7 @@ consvar_t cv_cam2_still = {"cam2_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL
 consvar_t cv_cam2_speed = {"cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotate = {"cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotspeed = {"cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam2_turnmultiplier = {"cam2_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_orbit = {"cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_adjust = {"cam2_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 

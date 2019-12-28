@@ -875,14 +875,12 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			strupr(word);
 			value = atoi(word2); // used for numerical settings
 
-#ifdef ROTSPRITE
 			if (fastcmp(word, "XPIVOT"))
 				sprinfo->pivot[frame].x = value;
 			else if (fastcmp(word, "YPIVOT"))
 				sprinfo->pivot[frame].y = value;
 			else if (fastcmp(word, "ROTAXIS"))
 				sprinfo->pivot[frame].rotaxis = value;
-#endif
 			else
 			{
 				f->curpos = lastline;
@@ -2910,11 +2908,9 @@ static actionpointer_t actionpointers[] =
 	{{A_SpawnObjectRelative},    "A_SPAWNOBJECTRELATIVE"},
 	{{A_ChangeAngleRelative},    "A_CHANGEANGLERELATIVE"},
 	{{A_ChangeAngleAbsolute},    "A_CHANGEANGLEABSOLUTE"},
-#ifdef ROTSPRITE
 	{{A_RollAngle},              "A_ROLLANGLE"},
 	{{A_ChangeRollAngleRelative},"A_CHANGEROLLANGLERELATIVE"},
 	{{A_ChangeRollAngleAbsolute},"A_CHANGEROLLANGLEABSOLUTE"},
-#endif
 	{{A_PlaySound},              "A_PLAYSOUND"},
 	{{A_FindTarget},             "A_FINDTARGET"},
 	{{A_FindTracer},             "A_FINDTRACER"},
@@ -9714,12 +9710,10 @@ struct {
 	{"DI_SOUTHEAST",DI_SOUTHEAST},
 	{"NUMDIRS",NUMDIRS},
 
-#ifdef ROTSPRITE
 	// Sprite rotation axis (rotaxis_t)
 	{"ROTAXIS_X",ROTAXIS_X},
 	{"ROTAXIS_Y",ROTAXIS_Y},
 	{"ROTAXIS_Z",ROTAXIS_Z},
-#endif
 
 	// Buttons (ticcmd_t)
 	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.
