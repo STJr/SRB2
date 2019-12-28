@@ -3205,7 +3205,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	{
 		if ((gametyperules & GTR_RINGSLINGER) && !(gametyperules & GTR_TAG))
 			P_PlayerRingBurst(player, player->rings);
-		if (gametyperules & GTR_MATCHEMERALDS)
+		if (gametyperules & GTR_POWERSTONES)
 			P_PlayerEmeraldBurst(player, false);
 	}
 

@@ -408,7 +408,7 @@ enum GameTypeRules
 	GTR_HIDEFROZEN       = 1<<11, // Frozen after hide time (Hide and Seek, but not Tag)
 	GTR_BLINDFOLDED      = 1<<12, // Blindfolded view (Tag and Hide and Seek)
 	GTR_FIRSTPERSON      = 1<<13, // First person camera
-	GTR_MATCHEMERALDS    = 1<<14, // Ringslinger emeralds (Match and CTF)
+	GTR_POWERSTONES      = 1<<14, // Power stones (Match and CTF)
 	GTR_TEAMFLAGS        = 1<<15, // Gametype has team flags (CTF)
 	GTR_PITYSHIELD       = 1<<16, // Award pity shield
 	GTR_DEATHPENALTY     = 1<<17, // Death score penalty

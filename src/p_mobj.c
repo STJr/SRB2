@@ -11893,7 +11893,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		if (!cv_powerstones.value)
 			return false;
 
-		if (!(gametyperules & GTR_MATCHEMERALDS))
+		if (!(gametyperules & GTR_POWERSTONES))
 			return false;
 
 		runemeraldmanager = true;
