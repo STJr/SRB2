@@ -3193,7 +3193,7 @@ const char *Gametype_ConstantNames[NUMGAMETYPES] =
 UINT32 gametypedefaultrules[NUMGAMETYPES] =
 {
 	// Co-op
-	GTR_CAMPAIGN|GTR_LIVES|GTR_SPAWNENEMIES|GTR_ALLOWEXIT|GTR_EMERALDHUNT|GTR_EMERALDTOKENS|GTR_SPECIALSTAGES,
+	GTR_CAMPAIGN|GTR_LIVES|GTR_FRIENDLY|GTR_SPAWNENEMIES|GTR_ALLOWEXIT|GTR_EMERALDHUNT|GTR_EMERALDTOKENS|GTR_SPECIALSTAGES,
 	// Competition
 	GTR_RACE|GTR_LIVES|GTR_SPAWNENEMIES|GTR_EMERALDTOKENS|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
 	// Race
@@ -3447,10 +3447,7 @@ boolean G_GametypeUsesLives(void)
 //
 boolean G_GametypeUsesCoopLives(void)
 {
-	// Preparing for the inevitable
-	// gametype rule that will
-	// handle cooplives...
-	return (gametype == GT_COOP);
+	return (gametyperules & (GTR_LIVES|GTR_FRIENDLY)) == (GTR_LIVES|GTR_FRIENDLY);
 }
 
 //
@@ -3461,10 +3458,7 @@ boolean G_GametypeUsesCoopLives(void)
 //
 boolean G_GametypeUsesCoopStarposts(void)
 {
-	// Preparing for the inevitable
-	// gametype rule that will
-	// handle coopstarposts...
-	return (gametype == GT_COOP);
+	return (gametyperules & GTR_FRIENDLY);
 }
 
 //

@@ -8905,6 +8905,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"FRIENDLYFIRE",
 	"LIVES",
 	"TEAMS",
+	"FRIENDLY",
 	"RACE",
 	"TAG",
 	"POINTLIMIT",
