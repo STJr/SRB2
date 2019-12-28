@@ -1719,13 +1719,6 @@ static void P_ReadBlockMapLump(INT16 *wadblockmaplump, size_t count)
 // -- Monster Iestyn 09/01/18
 static boolean P_LoadRawBlockMap(UINT8 *data, size_t count)
 {
-#if 0
-	(void)data;
-	(void)count;
-	(void)lumpname;
-	return false;
-#else
-
 	if (!count || count >= 0x20000)
 		return false;
 
@@ -2084,43 +2077,6 @@ static void P_LoadMapFromFile(void)
 
 	vres_Free(virt);
 }
-
-#if 0
-static char *levellumps[] =
-{
-	"label",        // ML_LABEL,    A separator, name, MAPxx
-	"THINGS",       // ML_THINGS,   Enemies, items..
-	"LINEDEFS",     // ML_LINEDEFS, Linedefs, from editing
-	"SIDEDEFS",     // ML_SIDEDEFS, Sidedefs, from editing
-	"VERTEXES",     // ML_VERTEXES, Vertices, edited and BSP splits generated
-	"SEGS",         // ML_SEGS,     Linesegs, from linedefs split by BSP
-	"SSECTORS",     // ML_SSECTORS, Subsectors, list of linesegs
-	"NODES",        // ML_NODES,    BSP nodes
-	"SECTORS",      // ML_SECTORS,  Sectors, from editing
-	"REJECT",       // ML_REJECT,   LUT, sector-sector visibility
-};
-
-/** Checks a lump and returns whether it is a valid start-of-level marker.
-  *
-  * \param lumpnum Lump number to check.
-  * \return True if the lump is a valid level marker, false if not.
-  */
-static inline boolean P_CheckLevel(lumpnum_t lumpnum)
-{
-	UINT16 file, lump;
-	size_t i;
-
-	for (i = ML_THINGS; i <= ML_REJECT; i++)
-	{
-		file = WADFILENUM(lumpnum);
-		lump = LUMPNUM(lumpnum+1);
-		if (file > numwadfiles || lump < LUMPNUM(lumpnum) || lump > wadfiles[file]->numlumps ||
-			memcmp(wadfiles[file]->lumpinfo[lump].name, levellumps[i], 8) != 0)
-		return false;
-	}
-	return true; // all right
-}
-#endif
 
 /** Sets up a sky texture to use for the level.
   * The sky texture is used instead of F_SKY1.
