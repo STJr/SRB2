@@ -3251,50 +3251,64 @@ INT16 G_AddGametype(UINT32 rules)
 //
 void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
 {
-	char *gtconst = Z_Malloc(strlen(newgtconst) + 3, PU_STATIC, NULL);
-	// Copy GT_ and the gametype name.
-	strcpy(gtconst, "GT_");
-	strcat(gtconst, newgtconst);
+	size_t r = 0; // read
+	size_t w = 0; // write
+	char *gtconst = Z_Calloc(strlen(newgtconst) + 3, PU_STATIC, NULL);
+	char *tmpconst = Z_Calloc(strlen(newgtconst), PU_STATIC, NULL);
+
+	// Copy the gametype name.
+	strcpy(tmpconst, newgtconst);
+
 	// Make uppercase.
-	strupr(gtconst);
-	// Remove characters.
-#define REMOVECHAR(chr) \
-	{ \
-		char *chrfind = strchr(gtconst, chr); \
-		while (chrfind) \
-		{ \
-			*chrfind = '_'; \
-			chrfind = strchr(chrfind, chr); \
-		} \
+	strupr(tmpconst);
+
+	// Prepare to write the new constant string now.
+	strcpy(gtconst, "GT_");
+
+	// Remove characters that will not be allowed in the constant string.
+	for (; r < strlen(tmpconst); r++)
+	{
+		boolean writechar = true;
+		char rc = tmpconst[r];
+		switch (rc)
+		{
+			// Space
+			case ' ':
+			// Used for operations
+			case '+':
+			case '-':
+			case '*':
+			case '/':
+			case '%':
+			case '^':
+			// Part of Lua's syntax
+			case '#':
+			case '=':
+			case '~':
+			case '<':
+			case '>':
+			case '(':
+			case ')':
+			case '{':
+			case '}':
+			case '[':
+			case ']':
+			case ':':
+			case ';':
+			case ',':
+			case '.':
+				writechar = false;
+				break;
+		}
+		if (writechar)
+		{
+			gtconst[3 + w] = rc;
+			w++;
+		}
 	}
 
-	// Space
-	REMOVECHAR(' ')
-	// Used for operations
-	REMOVECHAR('+')
-	REMOVECHAR('-')
-	REMOVECHAR('*')
-	REMOVECHAR('/')
-	REMOVECHAR('%')
-	REMOVECHAR('^')
-	// Part of Lua's syntax
-	REMOVECHAR('#')
-	REMOVECHAR('=')
-	REMOVECHAR('~')
-	REMOVECHAR('<')
-	REMOVECHAR('>')
-	REMOVECHAR('(')
-	REMOVECHAR(')')
-	REMOVECHAR('{')
-	REMOVECHAR('}')
-	REMOVECHAR('[')
-	REMOVECHAR(']')
-	REMOVECHAR(':')
-	REMOVECHAR(';')
-	REMOVECHAR(',')
-	REMOVECHAR('.')
-
-#undef REMOVECHAR
+	// Free the temporary string.
+	Z_Free(tmpconst);
 
 	// Finally, set the constant string.
 	Gametype_ConstantNames[gtype] = gtconst;
