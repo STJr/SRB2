@@ -181,11 +181,9 @@ void A_SpawnObjectAbsolute(mobj_t *actor);
 void A_SpawnObjectRelative(mobj_t *actor);
 void A_ChangeAngleRelative(mobj_t *actor);
 void A_ChangeAngleAbsolute(mobj_t *actor);
-#ifdef ROTSPRITE
 void A_RollAngle(mobj_t *actor);
 void A_ChangeRollAngleRelative(mobj_t *actor);
 void A_ChangeRollAngleAbsolute(mobj_t *actor);
-#endif // ROTSPRITE
 void A_PlaySound(mobj_t *actor);
 void A_FindTarget(mobj_t *actor);
 void A_FindTracer(mobj_t *actor);
@@ -4985,7 +4983,7 @@ void A_ThrownRing(mobj_t *actor)
 				continue;
 
 			// Don't home in on teammates.
-			if (gametype == GT_CTF
+			if ((gametyperules & GTR_TEAMFLAGS)
 				&& actor->target->player->ctfteam == player->ctfteam)
 				continue;
 		}
@@ -6591,7 +6589,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 		if (changecolor)
 		{
-			if (gametype != GT_CTF)
+			if (!(gametyperules & GTR_TEAMFLAGS))
 				mo->color = actor->target->color; //copy color
 			else if (actor->target->player->ctfteam == 2)
 				mo->color = skincolor_bluering;
@@ -6607,7 +6605,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -6622,7 +6620,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -8627,7 +8625,6 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 	actor->angle = FixedAngle(P_RandomRange(amin, amax));
 }
 
-#ifdef ROTSPRITE
 // Function: A_RollAngle
 //
 // Description: Changes the roll angle.
@@ -8663,16 +8660,10 @@ void A_RollAngle(mobj_t *actor)
 //
 void A_ChangeRollAngleRelative(mobj_t *actor)
 {
-	// Oh god, the old code /sucked/. Changed this and the absolute version to get a random range using amin and amax instead of
-	//  getting a random angle from the _entire_ spectrum and then clipping. While we're at it, do the angle conversion to the result
-	//  rather than the ranges, so <0 and >360 work as possible values. -Red
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	//angle_t angle = (P_RandomByte()+1)<<24;
 	const fixed_t amin = locvar1*FRACUNIT;
 	const fixed_t amax = locvar2*FRACUNIT;
-	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ChangeRollAngleRelative", actor))
 		return;
@@ -8682,11 +8673,6 @@ void A_ChangeRollAngleRelative(mobj_t *actor)
 	if (amin > amax)
 		I_Error("A_ChangeRollAngleRelative: var1 is greater than var2");
 #endif
-/*
-	if (angle < amin)
-		angle = amin;
-	if (angle > amax)
-		angle = amax;*/
 
 	actor->rollangle += FixedAngle(P_RandomRange(amin, amax));
 }
@@ -8702,11 +8688,8 @@ void A_ChangeRollAngleAbsolute(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	//angle_t angle = (P_RandomByte()+1)<<24;
 	const fixed_t amin = locvar1*FRACUNIT;
 	const fixed_t amax = locvar2*FRACUNIT;
-	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ChangeRollAngleAbsolute", actor))
 		return;
@@ -8716,15 +8699,9 @@ void A_ChangeRollAngleAbsolute(mobj_t *actor)
 	if (amin > amax)
 		I_Error("A_ChangeRollAngleAbsolute: var1 is greater than var2");
 #endif
-/*
-	if (angle < amin)
-		angle = amin;
-	if (angle > amax)
-		angle = amax;*/
 
 	actor->rollangle = FixedAngle(P_RandomRange(amin, amax));
 }
-#endif // ROTSPRITE
 
 // Function: A_PlaySound
 //

@@ -12,6 +12,7 @@
 
 #include "doomdef.h"
 #ifdef HAVE_BLUA
+#include "fastcmp.h"
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
 #ifdef ESLOPE
@@ -23,6 +24,8 @@
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
+#include "m_menu.h"
+#include "y_inter.h"
 #include "hu_stuff.h"	// HU_AddChatText
 #include "console.h"
 #include "d_netcmd.h" // IsPlayerAdmin
@@ -144,10 +147,8 @@ static const struct {
 	{META_MOBJINFO,     "mobjinfo_t"},
 	{META_SFXINFO,      "sfxinfo_t"},
 	{META_SPRITEINFO,   "spriteinfo_t"},
-#ifdef ROTSPRITE
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
-#endif
 
 	{META_MOBJ,         "mobj_t"},
 	{META_MAPTHING,     "mapthing_t"},
@@ -2632,6 +2633,145 @@ static int lib_sStartMusicCaption(lua_State *L)
 // G_GAME
 ////////////
 
+// Copypasted from lib_cvRegisterVar :]
+static int lib_gAddGametype(lua_State *L)
+{
+	const char *k;
+	lua_Integer i;
+
+	const char *gtname = NULL;
+	const char *gtconst = NULL;
+	const char *gtdescription = NULL;
+	INT16 newgtidx = 0;
+	UINT32 newgtrules = 0;
+	UINT32 newgttol = 0;
+	INT32 newgtpointlimit = 0;
+	INT32 newgttimelimit = 0;
+	UINT8 newgtleftcolor = 0;
+	UINT8 newgtrightcolor = 0;
+	INT16 newgtrankingstype = -1;
+	int newgtinttype = 0;
+
+	luaL_checktype(L, 1, LUA_TTABLE);
+	lua_settop(L, 1); // Clear out all other possible arguments, leaving only the first one.
+
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+
+	// Ran out of gametype slots
+	if (gametypecount == NUMGAMETYPEFREESLOTS)
+		return luaL_error(L, "Ran out of free gametype slots!");
+
+#define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to " LUA_QL("G_AddGametype") " (%s)", e);
+#define TYPEERROR(f, t) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t), luaL_typename(L, -1)))
+
+	lua_pushnil(L);
+	while (lua_next(L, 1)) {
+		// stack: gametype table, key/index, value
+		//               1            2        3
+		i = 0;
+		k = NULL;
+		if (lua_isnumber(L, 2))
+			i = lua_tointeger(L, 2);
+		else if (lua_isstring(L, 2))
+			k = lua_tostring(L, 2);
+
+		// Sorry, no gametype rules as key names.
+		if (i == 1 || (k && fasticmp(k, "name"))) {
+			if (!lua_isstring(L, 3))
+				TYPEERROR("name", LUA_TSTRING)
+			gtname = Z_StrDup(lua_tostring(L, 3));
+		} else if (i == 2 || (k && fasticmp(k, "identifier"))) {
+			if (!lua_isstring(L, 3))
+				TYPEERROR("identifier", LUA_TSTRING)
+			gtconst = Z_StrDup(lua_tostring(L, 3));
+		} else if (i == 3 || (k && fasticmp(k, "rules"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("rules", LUA_TNUMBER)
+			newgtrules = (UINT32)lua_tointeger(L, 3);
+		} else if (i == 4 || (k && fasticmp(k, "typeoflevel"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("typeoflevel", LUA_TNUMBER)
+			newgttol = (UINT32)lua_tointeger(L, 3);
+		} else if (i == 5 || (k && fasticmp(k, "rankingtype"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("rankingtype", LUA_TNUMBER)
+			newgtrankingstype = (INT16)lua_tointeger(L, 3);
+		} else if (i == 6 || (k && fasticmp(k, "intermissiontype"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("intermissiontype", LUA_TNUMBER)
+			newgtinttype = (int)lua_tointeger(L, 3);
+		} else if (i == 7 || (k && fasticmp(k, "defaultpointlimit"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("defaultpointlimit", LUA_TNUMBER)
+			newgtpointlimit = (INT32)lua_tointeger(L, 3);
+		} else if (i == 8 || (k && fasticmp(k, "defaulttimelimit"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("defaulttimelimit", LUA_TNUMBER)
+			newgttimelimit = (INT32)lua_tointeger(L, 3);
+		} else if (i == 9 || (k && fasticmp(k, "description"))) {
+			if (!lua_isstring(L, 3))
+				TYPEERROR("description", LUA_TSTRING)
+			gtdescription = Z_StrDup(lua_tostring(L, 3));
+		} else if (i == 10 || (k && fasticmp(k, "headerleftcolor"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("headerleftcolor", LUA_TNUMBER)
+			newgtleftcolor = (UINT8)lua_tointeger(L, 3);
+		} else if (i == 11 || (k && fasticmp(k, "headerrightcolor"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("headerrightcolor", LUA_TNUMBER)
+			newgtrightcolor = (UINT8)lua_tointeger(L, 3);
+		// Key name specified
+		} else if ((!i) && (k && fasticmp(k, "headercolor"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("headercolor", LUA_TNUMBER)
+			newgtleftcolor = newgtrightcolor = (UINT8)lua_tointeger(L, 3);
+		}
+		lua_pop(L, 1);
+	}
+
+#undef FIELDERROR
+#undef TYPEERROR
+
+	// pop gametype table
+	lua_pop(L, 1);
+
+	// Set defaults
+	if (gtname == NULL)
+		gtname = Z_StrDup("Unnamed gametype");
+	if (gtdescription == NULL)
+		gtdescription = Z_StrDup("???");
+
+	// Add the new gametype
+	newgtidx = G_AddGametype(newgtrules);
+	G_AddGametypeTOL(newgtidx, newgttol);
+	G_SetGametypeDescription(newgtidx, NULL, newgtleftcolor, newgtrightcolor);
+	strncpy(gametypedesc[newgtidx].notes, gtdescription, 441);
+
+	// Not covered by G_AddGametype alone.
+	if (newgtrankingstype == -1)
+		newgtrankingstype = newgtidx;
+	gametyperankings[newgtidx] = newgtrankingstype;
+	intermissiontypes[newgtidx] = newgtinttype;
+	pointlimits[newgtidx] = newgtpointlimit;
+	timelimits[newgtidx] = newgttimelimit;
+
+	// Write the new gametype name.
+	Gametype_Names[newgtidx] = gtname;
+
+	// Write the constant name.
+	if (gtconst == NULL)
+		gtconst = gtname;
+	G_AddGametypeConstant(newgtidx, gtconst);
+
+	// Update gametype_cons_t accordingly.
+	G_UpdateGametypeSelections();
+
+	// done
+	CONS_Printf("Added gametype %s\n", Gametype_Names[newgtidx]);
+	return 0;
+}
+
 static int lib_gBuildMapName(lua_State *L)
 {
 	INT32 map = luaL_optinteger(L, 1, gamemap);
@@ -2991,6 +3131,7 @@ static luaL_Reg lib[] = {
 	{"S_StartMusicCaption", lib_sStartMusicCaption},
 
 	// g_game
+	{"G_AddGametype", lib_gAddGametype},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},

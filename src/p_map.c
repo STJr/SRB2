@@ -615,7 +615,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	// Why block opposing teams from tailsflying each other?
 	// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
 	/*
-	if (gametype == GT_RACE || gametype == GT_COMPETITION
+	if ((gametyperules & GTR_RACE)
 		|| (netgame && (tails->spectator || sonic->spectator))
 		|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
 		|| (gametype == GT_MATCH)

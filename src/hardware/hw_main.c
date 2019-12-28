@@ -5118,17 +5118,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	fixed_t spr_offset, spr_topoffset;
 #ifdef ROTSPRITE
 	patch_t *rotsprite = NULL;
-	angle_t arollangle;
-	UINT32 rollangle;
+	INT32 rollangle = 0;
 #endif
 
 	if (!thing)
 		return;
 
-#ifdef ROTSPRITE
-	arollangle = thing->rollangle;
-	rollangle = AngleFixed(arollangle)>>FRACBITS;
-#endif
 	this_scale = FIXED_TO_FLOAT(thing->scale);
 
 	// transform the origin point
@@ -5235,11 +5230,11 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
 #ifdef ROTSPRITE
-	if (rollangle > 0)
+	if (thing->rollangle)
 	{
+		rollangle = R_GetRollAngle(thing->rollangle);
 		if (!sprframe->rotsprite.cached[rot])
 			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rollangle /= ROTANGDIFF;
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
 		{

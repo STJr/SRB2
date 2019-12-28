@@ -664,6 +664,7 @@ static void P_LoadRawSectors(UINT8 *data)
 		ss->ceilingpic = P_AddLevelFlat(ms->ceilingpic, foundflats);
 
 		ss->lightlevel = SHORT(ms->lightlevel);
+		ss->spawn_lightlevel = ss->lightlevel;
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
 		ss->nexttag = ss->firsttag = -1;
@@ -2539,8 +2540,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// chasecam on in chaos, race, coop
 	// chasecam off in match, tag, capture the flag
-	chase = (gametype == GT_RACE || gametype == GT_COMPETITION || gametype == GT_COOP)
-		|| (maptol & TOL_2D);
+	chase = (!(gametyperules & GTR_FIRSTPERSON)) || (maptol & TOL_2D);
 
 	if (!dedicated)
 	{

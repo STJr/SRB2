@@ -2628,7 +2628,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
 	pglRotatef(pos->anglex, 1.0f, 0.0f, 0.0f);
 
-#ifdef ROTSPRITE
 	if (pos->roll)
 	{
 		float roll = (1.0f * pos->rollflip);
@@ -2641,7 +2640,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			pglRotatef(pos->rollangle, roll, 0.0f, 0.0f);
 		pglTranslatef(-pos->centerx, -pos->centery, 0);
 	}
-#endif
 
 	pglScalef(scalex, scaley, scalez);
 

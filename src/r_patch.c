@@ -49,8 +49,6 @@
 #endif
 
 static unsigned char imgbuf[1<<26];
-fixed_t cosang2rad[ROTANGLES];
-fixed_t sinang2rad[ROTANGLES];
 
 //
 // R_CheckIfPatch
@@ -789,11 +787,9 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 	size_t sprinfoTokenLength;
 	char *frameChar = NULL;
 	UINT8 frameFrame = 0xFF;
-#ifdef ROTSPRITE
 	INT16 frameXPivot = 0;
 	INT16 frameYPivot = 0;
 	rotaxis_t frameRotAxis = 0;
-#endif
 
 	// Sprite identifier
 	sprinfoToken = M_GetToken(NULL);
@@ -828,7 +824,6 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 			}
 			while (strcmp(sprinfoToken,"}")!=0)
 			{
-#ifdef ROTSPRITE
 				if (stricmp(sprinfoToken, "XPIVOT")==0)
 				{
 					Z_Free(sprinfoToken);
@@ -852,7 +847,6 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 					else if ((stricmp(sprinfoToken, "Z")==0) || (stricmp(sprinfoToken, "ZAXIS")==0) || (stricmp(sprinfoToken, "YAW")==0))
 						frameRotAxis = ROTAXIS_Z;
 				}
-#endif
 				Z_Free(sprinfoToken);
 
 				sprinfoToken = M_GetToken(NULL);
@@ -866,11 +860,9 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 	}
 
 	// set fields
-#ifdef ROTSPRITE
 	info->pivot[frameFrame].x = frameXPivot;
 	info->pivot[frameFrame].y = frameYPivot;
 	info->pivot[frameFrame].rotaxis = frameRotAxis;
-#endif
 }
 
 //
@@ -1093,16 +1085,60 @@ void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
 	for (i = 0; i < numlumps; i++, lumpinfo++)
 	{
 		name = lumpinfo->name;
-		// load SPRTINFO lumps
-		if (!stricmp(name, "SPRTINFO"))
+		// Load SPRTINFO and SPR_ lumps as SpriteInfo
+		if (!memcmp(name, "SPRTINFO", 8) || !memcmp(name, "SPR_", 4))
 			R_ParseSPRTINFOLump(wadnum, i);
-		// load SPR_ lumps (as DEHACKED lump)
-		else if (!memcmp(name, "SPR_", 4))
-			DEH_LoadDehackedLumpPwad(wadnum, i, false);
 	}
 }
 
+static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
+{
+	fixed_t ofs;
+	column_t *column;
+	UINT8 *source;
+
+	if (x >= 0 && x < SHORT(patch->width))
+	{
+		INT32 topdelta, prevdelta = -1;
+		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-x) : x]));
+		while (column->topdelta != 0xff)
+		{
+			topdelta = column->topdelta;
+			if (topdelta <= prevdelta)
+				topdelta += prevdelta;
+			prevdelta = topdelta;
+			source = (UINT8 *)(column) + 3;
+			for (ofs = 0; ofs < column->length; ofs++)
+			{
+				if ((topdelta + ofs) == y)
+					return source[ofs];
+			}
+			column = (column_t *)((UINT8 *)column + column->length + 4);
+		}
+	}
+
+	return 0xFF00;
+}
+
 #ifdef ROTSPRITE
+//
+// R_GetRollAngle
+//
+// Angles precalculated in R_InitSprites.
+//
+fixed_t rollcosang[ROTANGLES];
+fixed_t rollsinang[ROTANGLES];
+INT32 R_GetRollAngle(angle_t rollangle)
+{
+	INT32 ra = AngleFixed(rollangle)>>FRACBITS;
+#if (ROTANGDIFF > 1)
+	ra += (ROTANGDIFF/2);
+#endif
+	ra /= ROTANGDIFF;
+	ra %= ROTANGLES;
+	return ra;
+}
+
 //
 // R_CacheRotSprite
 //
@@ -1114,8 +1150,8 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 	INT32 angle;
 	patch_t *patch;
 	patch_t *newpatch;
-	UINT16 *rawsrc, *rawdst;
-	size_t size, size2;
+	UINT16 *rawdst;
+	size_t size;
 	INT32 bflip = (flip != 0x00);
 
 #define SPRITE_XCENTER (leftoffset)
@@ -1160,23 +1196,12 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			leftoffset = width - leftoffset;
 		}
 
-		// Draw the sprite to a temporary buffer.
-		size = (width*height);
-		rawsrc = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
-
-		// can't memset here
-		for (i = 0; i < size; i++)
-			rawsrc[i] = 0xFF00;
-
-		R_PatchToFlat_16bpp(patch, rawsrc, bflip);
-
-		// Don't cache angle = 0
 		for (angle = 1; angle < ROTANGLES; angle++)
 		{
 			INT32 newwidth, newheight;
 
-			ca = cosang2rad[angle];
-			sa = sinang2rad[angle];
+			ca = rollcosang[angle];
+			sa = rollsinang[angle];
 
 			// Find the dimensions of the rotated patch.
 			{
@@ -1237,17 +1262,15 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 #undef BOUNDARYADJUST
 			}
 
-			size2 = (newwidth * newheight);
-			if (!size2)
-				size2 = size;
+			// Draw the rotated sprite to a temporary buffer.
+			size = (newwidth * newheight);
+			if (!size)
+				size = (width * height);
 
-			rawdst = Z_Malloc(size2 * sizeof(UINT16), PU_STATIC, NULL);
-
-			// can't memset here
-			for (i = 0; i < size2; i++)
+			rawdst = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
+			for (i = 0; i < size; i++)
 				rawdst[i] = 0xFF00;
 
-			// Draw the rotated sprite to a temporary buffer.
 			for (dy = 0; dy < newheight; dy++)
 			{
 				for (dx = 0; dx < newwidth; dx++)
@@ -1259,7 +1282,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 					sx >>= FRACBITS;
 					sy >>= FRACBITS;
 					if (sx >= 0 && sy >= 0 && sx < width && sy < height)
-						rawdst[(dy*newwidth)+dx] = rawsrc[(sy*width)+sx];
+						rawdst[(dy*newwidth)+dx] = GetPatchPixel(patch, sx, sy, bflip);
 				}
 			}
 
@@ -1296,7 +1319,6 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		sprframe->rotsprite.cached[rot] = true;
 
 		// free image data
-		Z_Free(rawsrc);
 		Z_Free(patch);
 	}
 #undef SPRITE_XCENTER

@@ -4692,7 +4692,7 @@ DoneSection2:
 		}
 
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
-			if (player->bot || !G_PlatformGametype())
+			if (player->bot || !(gametyperules & GTR_ALLOWEXIT))
 				break;
 			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
 			{
@@ -4727,7 +4727,7 @@ DoneSection2:
 			break;
 
 		case 3: // Red Team's Base
-			if (gametype == GT_CTF && P_IsObjectOnGround(player->mo))
+			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
 			{
 				if (player->ctfteam == 1 && (player->gotflag & GF_BLUEFLAG))
 				{
@@ -4760,7 +4760,7 @@ DoneSection2:
 			break;
 
 		case 4: // Blue Team's Base
-			if (gametype == GT_CTF && P_IsObjectOnGround(player->mo))
+			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
 			{
 				if (player->ctfteam == 2 && (player->gotflag & GF_REDFLAG))
 				{
@@ -7224,14 +7224,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 308: // Race-only linedef executor. Triggers once.
-				if (gametype != GT_RACE && gametype != GT_COMPETITION)
+				if (!(gametyperules & GTR_RACE))
 					lines[i].special = 0;
 				break;
 
 			// Linedef executor triggers for CTF teams.
 			case 309:
 			case 311:
-				if (gametype != GT_CTF)
+				if (!(gametyperules & GTR_TEAMFLAGS))
 					lines[i].special = 0;
 				break;
 
