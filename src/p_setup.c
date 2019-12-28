@@ -844,7 +844,84 @@ static void P_LoadVertices(UINT8 *data)
 	{
 		v->x = SHORT(mv->x)<<FRACBITS;
 		v->y = SHORT(mv->y)<<FRACBITS;
+		v->z = 0;
 	}
+}
+
+static void P_InitializeSector(sector_t *ss)
+{
+	ss->nexttag = ss->firsttag = -1;
+
+	memset(&ss->soundorg, 0, sizeof(ss->soundorg));
+
+	ss->validcount = 0;
+
+	ss->thinglist = NULL;
+
+	ss->floordata = NULL;
+	ss->ceilingdata = NULL;
+	ss->lightingdata = NULL;
+	ss->fadecolormapdata = NULL;
+
+	ss->floor_xoffs = ss->floor_yoffs = 0;
+	ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
+
+	ss->floorpic_angle = ss->ceilingpic_angle = 0;
+
+	ss->heightsec = -1;
+	ss->camsec = -1;
+
+	ss->floorlightsec = ss->ceilinglightsec = -1;
+	ss->crumblestate = 0;
+
+	ss->touching_thinglist = NULL;
+
+	ss->linecount = 0;
+	ss->lines = NULL;
+	ss->tagline = NULL;
+
+	ss->ffloors = NULL;
+	ss->attached = NULL;
+	ss->attachedsolid = NULL;
+	ss->numattached = 0;
+	ss->maxattached = 1;
+	ss->lightlist = NULL;
+	ss->numlights = 0;
+	ss->moved = true;
+
+	ss->extra_colormap = NULL;
+
+#ifdef HWRENDER // ----- for special tricks with HW renderer -----
+	ss->pseudoSector = false;
+	ss->virtualFloor = false;
+	ss->virtualFloorheight = 0;
+	ss->virtualCeiling = false;
+	ss->virtualCeilingheight = 0;
+	ss->sectorLines = NULL;
+	ss->stackList = NULL;
+	ss->lineoutLength = -1.0l;
+#endif // ----- end special tricks -----
+
+	ss->gravity = NULL;
+	ss->verticalflip = false;
+	ss->flags = SF_FLIPSPECIAL_FLOOR;
+
+	ss->cullheight = NULL;
+
+	ss->floorspeed = ss->ceilspeed = 0;
+
+	ss->preciplist = NULL;
+	ss->touching_preciplist = NULL;
+
+#ifdef ESLOPE
+	ss->f_slope = NULL;
+	ss->c_slope = NULL;
+	ss->hasslope = false;
+#endif
+
+	ss->spawn_lightlevel = ss->lightlevel;
+
+	ss->spawn_extra_colormap = NULL;
 }
 
 static void P_LoadSectors(UINT8 *data)
@@ -863,62 +940,10 @@ static void P_LoadSectors(UINT8 *data)
 		ss->ceilingpic = P_AddLevelFlat(ms->ceilingpic, foundflats);
 
 		ss->lightlevel = SHORT(ms->lightlevel);
-		ss->spawn_lightlevel = ss->lightlevel;
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
-		ss->nexttag = ss->firsttag = -1;
 
-		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
-		ss->validcount = 0;
-
-		ss->thinglist = NULL;
-		ss->touching_thinglist = NULL;
-		ss->preciplist = NULL;
-		ss->touching_preciplist = NULL;
-
-		ss->floordata = NULL;
-		ss->ceilingdata = NULL;
-		ss->lightingdata = NULL;
-
-		ss->linecount = 0;
-		ss->lines = NULL;
-
-		ss->heightsec = -1;
-		ss->camsec = -1;
-		ss->floorlightsec = -1;
-		ss->ceilinglightsec = -1;
-		ss->crumblestate = 0;
-		ss->ffloors = NULL;
-		ss->lightlist = NULL;
-		ss->numlights = 0;
-		ss->attached = NULL;
-		ss->attachedsolid = NULL;
-		ss->numattached = 0;
-		ss->maxattached = 1;
-		ss->moved = true;
-
-		ss->extra_colormap = NULL;
-		ss->spawn_extra_colormap = NULL;
-
-		ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
-		ss->floorpic_angle = ss->ceilingpic_angle = 0;
-		ss->gravity = NULL;
-		ss->cullheight = NULL;
-		ss->verticalflip = false;
-		ss->flags = 0;
-		ss->flags |= SF_FLIPSPECIAL_FLOOR;
-
-		ss->floorspeed = 0;
-		ss->ceilspeed = 0;
-
-#ifdef HWRENDER // ----- for special tricks with HW renderer -----
-		ss->pseudoSector = false;
-		ss->virtualFloor = false;
-		ss->virtualCeiling = false;
-		ss->sectorLines = NULL;
-		ss->stackList = NULL;
-		ss->lineoutLength = -1.0l;
-#endif // ----- end special tricks -----
+		P_InitializeSector(ss);
 	}
 }
 
