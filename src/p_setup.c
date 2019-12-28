@@ -990,7 +990,7 @@ static void P_InitializeLinedef(line_t *ld)
 		if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
 		{
 			ld->sidenum[j] = 0xffff;
-			CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has out-of-range sidedef number\n", sizeu1((size_t)(ld - lines)));
+			CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has out-of-range sidedef number\n", sizeu1((size_t)(ld - lines)));
 		}
 
 	// killough 11/98: fix common wad errors (missing sidedefs):
@@ -998,14 +998,14 @@ static void P_InitializeLinedef(line_t *ld)
 	{
 		ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
 		// cph - print a warning about the bug
-		CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s missing first sidedef\n", sizeu1((size_t)(ld - lines)));
+		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s missing first sidedef\n", sizeu1((size_t)(ld - lines)));
 	}
 
 	if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
 	{
 		ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
 		// cph - print a warning about the bug
-		CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1((size_t)(ld - lines)));
+		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1((size_t)(ld - lines)));
 	}
 
 	if (ld->sidenum[0] != 0xffff && ld->special)
@@ -1052,7 +1052,7 @@ static void P_LoadSidedefs(UINT8 *data)
 		sector_num = SHORT(msd->sector);
 		if (sector_num >= numsectors)
 		{
-			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: sidedef %u has out-of-range sector num %u\n", i, sector_num);
+			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: sidedef %s has out-of-range sector num %u\n", sizeu1(i), sector_num);
 			sector_num = 0;
 		}
 		sd->sector = &sectors[sector_num];
