@@ -1909,11 +1909,11 @@ static void P_CompressSidedefs(void)
 }
 
 //
-// P_GroupLines
+// P_LinkMapData
 // Builds sector line lists and subsector sector numbers.
 // Finds block bounding boxes for sectors.
 //
-static void P_GroupLines(void)
+static void P_LinkMapData(void)
 {
 	size_t i, j;
 	line_t *li;
@@ -1927,20 +1927,20 @@ static void P_GroupLines(void)
 	for (i = 0; i < numsubsectors; i++, ss++)
 	{
 		if (ss->firstline >= numsegs)
-			CorruptMapError(va("P_GroupLines: ss->firstline invalid "
+			CorruptMapError(va("P_LinkMapData: ss->firstline invalid "
 				"(subsector %s, firstline refers to %d of %s)", sizeu1(i), ss->firstline,
 				sizeu2(numsegs)));
 		seg = &segs[ss->firstline];
 		sidei = (size_t)(seg->sidedef - sides);
 		if (!seg->sidedef)
-			CorruptMapError(va("P_GroupLines: seg->sidedef is NULL "
+			CorruptMapError(va("P_LinkMapData: seg->sidedef is NULL "
 				"(subsector %s, firstline is %d)", sizeu1(i), ss->firstline));
 		if (seg->sidedef - sides < 0 || seg->sidedef - sides > (UINT16)numsides)
-			CorruptMapError(va("P_GroupLines: seg->sidedef refers to sidedef %s of %s "
+			CorruptMapError(va("P_LinkMapData: seg->sidedef refers to sidedef %s of %s "
 				"(subsector %s, firstline is %d)", sizeu1(sidei), sizeu2(numsides),
 				sizeu3(i), ss->firstline));
 		if (!seg->sidedef->sector)
-			CorruptMapError(va("P_GroupLines: seg->sidedef->sector is NULL "
+			CorruptMapError(va("P_LinkMapData: seg->sidedef->sector is NULL "
 				"(subsector %s, firstline is %d, sidedef is %s)", sizeu1(i), ss->firstline,
 				sizeu1(sidei)));
 		ss->sector = seg->sidedef->sector;
@@ -1961,7 +1961,7 @@ static void P_GroupLines(void)
 		if (sector->linecount == 0) // no lines found?
 		{
 			sector->lines = NULL;
-			CONS_Debug(DBG_SETUP, "P_GroupLines: sector %s has no lines\n", sizeu1(i));
+			CONS_Debug(DBG_SETUP, "P_LinkMapData: sector %s has no lines\n", sizeu1(i));
 		}
 		else
 		{
@@ -2068,7 +2068,7 @@ static void P_LoadMapFromFile(void)
 	P_ProcessLinedefsWithSidedefs();
 	if (M_CheckParm("-compress"))
 		P_CompressSidedefs();
-	P_GroupLines();
+	P_LinkMapData();
 
 	P_MakeMapMD5(virt, &mapmd5);
 
