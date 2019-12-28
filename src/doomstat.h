@@ -404,7 +404,7 @@ enum GameTypeRules
 	GTR_TAG              = 1<<7,  // Tag and Hide and Seek
 	GTR_POINTLIMIT       = 1<<8,  // Ringslinger point limit
 	GTR_TIMELIMIT        = 1<<9,  // Ringslinger time limit
-	GTR_HIDETIME         = 1<<10, // Hide time (Tag and Hide and Seek)
+	GTR_STARTCOUNTDOWN   = 1<<10, // Hide time countdown (Tag and Hide and Seek)
 	GTR_HIDEFROZEN       = 1<<11, // Frozen after hide time (Hide and Seek, but not Tag)
 	GTR_BLINDFOLDED      = 1<<12, // Blindfolded view (Tag and Hide and Seek)
 	GTR_FIRSTPERSON      = 1<<13, // First person camera

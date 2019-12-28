@@ -694,7 +694,7 @@ static void ST_drawTime(void)
 	else
 	{
 		// Counting down the hidetime?
-		if ((gametyperules & GTR_HIDETIME) && (stplyr->realtime <= (hidetime*TICRATE)))
+		if ((gametyperules & GTR_STARTCOUNTDOWN) && (stplyr->realtime <= (hidetime*TICRATE)))
 		{
 			tics = (hidetime*TICRATE - stplyr->realtime);
 			if (tics < 3*TICRATE)
@@ -705,7 +705,7 @@ static void ST_drawTime(void)
 		else
 		{
 			// Hidetime finish!
-			if ((gametyperules & GTR_HIDETIME) && (stplyr->realtime < ((hidetime+1)*TICRATE)))
+			if ((gametyperules & GTR_STARTCOUNTDOWN) && (stplyr->realtime < ((hidetime+1)*TICRATE)))
 				ST_drawRaceNum(hidetime*TICRATE - stplyr->realtime);
 
 			// Time limit?
@@ -723,7 +723,7 @@ static void ST_drawTime(void)
 				downwards = true;
 			}
 			// Post-hidetime normal.
-			else if (gametyperules & GTR_HIDETIME)
+			else if (gametyperules & GTR_STARTCOUNTDOWN)
 				tics = stplyr->realtime - hidetime*TICRATE;
 			// "Shadow! What are you doing? Hurry and get back here
 			// right now before the island blows up with you on it!"
