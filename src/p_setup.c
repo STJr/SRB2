@@ -835,15 +835,15 @@ void P_WriteThings(lumpnum_t lumpnum)
 
 static void P_LoadVertices(UINT8 *data)
 {
-	mapvertex_t *ml = (mapvertex_t *)data;
-	vertex_t *li = vertexes;
+	mapvertex_t *mv = (mapvertex_t *)data;
+	vertex_t *v = vertexes;
 	size_t i;
 
 	// Copy and convert vertex coordinates, internal representation as fixed.
-	for (i = 0; i < numvertexes; i++, li++, ml++)
+	for (i = 0; i < numvertexes; i++, v++, mv++)
 	{
-		li->x = SHORT(ml->x)<<FRACBITS;
-		li->y = SHORT(ml->y)<<FRACBITS;
+		v->x = SHORT(mv->x)<<FRACBITS;
+		v->y = SHORT(mv->y)<<FRACBITS;
 	}
 }
 
@@ -1035,36 +1035,32 @@ static void P_SetupLines(void)
 
 static void P_LoadSidedefs(UINT8 *data)
 {
-	UINT16 i;
+	mapsidedef_t *msd = (mapsidedef_t*)data;
+	side_t *sd = sides;
+	size_t i;
 
-	for (i = 0; i < numsides; i++)
+	for (i = 0; i < numsides; i++, sd++, msd++)
 	{
-		register mapsidedef_t *msd = (mapsidedef_t *)data + i;
-		register side_t *sd = sides + i;
-		register sector_t *sec;
+		UINT16 sector_num;
 
 		sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
-		{ /* cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead */
-			UINT16 sector_num = SHORT(msd->sector);
-
-			if (sector_num >= numsectors)
-			{
-				CONS_Debug(DBG_SETUP, "P_LoadSidedefs: sidedef %u has out-of-range sector num %u\n", i, sector_num);
-				sector_num = 0;
-			}
-			sd->sector = sec = &sectors[sector_num];
+		// cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
+		sector_num = SHORT(msd->sector);
+		if (sector_num >= numsectors)
+		{
+			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: sidedef %u has out-of-range sector num %u\n", i, sector_num);
+			sector_num = 0;
 		}
-
-		sd->sector = sec = &sectors[SHORT(msd->sector)];
+		sd->sector = &sectors[sector_num];
 
 		sd->colormap_data = NULL;
 
-		// Colormaps!
+		// Special info stored in texture fields!
 		switch (sd->special)
 		{
-			case 63: // variable colormap via 242 linedef
+			case 63: // Fake floor/ceiling planes
 			case 606: //SoM: 4/4/2000: Just colormap transfer
 			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 			case 455: // Fade colormaps! mazmazz 9/12/2018 (:flag_us:)
