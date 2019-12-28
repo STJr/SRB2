@@ -8930,6 +8930,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"SPAWNENEMIES",
 	"ALLOWEXIT",
 	"NOTITLECARD",
+	"CUTSCENES",
 	NULL
 };
 

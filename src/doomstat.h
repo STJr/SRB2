@@ -425,6 +425,7 @@ enum GameTypeRules
 	GTR_SPAWNENEMIES     = 1<<28, // Spawn enemies
 	GTR_ALLOWEXIT        = 1<<29, // Allow exit sectors
 	GTR_NOTITLECARD      = 1<<30, // Don't show the title card
+	GTR_CUTSCENES        = 1<<31, // Play cutscenes, ending, credits, and evaluation
 };
 
 // String names for gametypes
