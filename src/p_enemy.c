@@ -2261,7 +2261,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		while (chain)
 		{
 			P_TeleportMove(chain, actor->target->x + idx, actor->target->y + idy, actor->target->z + idz);
-			chain->watertop = chain->z;
+			chain->movefactor = chain->z;
 			idx += dx;
 			idy += dy;
 			idz += dz;
