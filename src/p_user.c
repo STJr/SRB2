@@ -11700,12 +11700,13 @@ void P_PlayerThink(player_t *player)
 		P_MovePlayer(player);
 	}
 
-#ifdef HAVE_BLUA
-	LUAh_PlayerThink(player);
-#endif
-
 	if (!player->mo)
+	{
+#ifdef HAVE_BLUA
+		LUAh_PlayerThink(player);
+#endif
 		return; // P_MovePlayer removed player->mo.
+	}
 
 	// deez New User eXperiences.
 	{
@@ -12137,6 +12138,11 @@ void P_PlayerThink(player_t *player)
 		dashmode = 0;
 	}
 #undef dashmode
+
+#ifdef HAVE_BLUA
+	LUAh_PlayerThink(player);
+#endif
+
 /*
 //	Colormap verification
 	{
