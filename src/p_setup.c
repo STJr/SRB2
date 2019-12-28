@@ -1002,7 +1002,7 @@ static void P_SetupLines(void)
 				if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
 				{
 					ld->sidenum[j] = 0xffff;
-					CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
+					CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has out-of-range sidedef number\n", sizeu1(i));
 				}
 		}
 
@@ -1016,14 +1016,14 @@ static void P_SetupLines(void)
 		{
 			ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
 			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s missing first sidedef\n", sizeu1(numlines-i-1));
+			CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s missing first sidedef\n", sizeu1(i));
 		}
 
 		if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
 		{
 			ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
 			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
+			CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(i));
 		}
 
 		if (ld->sidenum[0] != 0xffff && ld->special)
