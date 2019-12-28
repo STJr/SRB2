@@ -922,6 +922,73 @@ static void P_LoadSectors(UINT8 *data)
 	}
 }
 
+static void P_InitializeLinedef(line_t *ld)
+{
+	vertex_t *v1 = ld->v1;
+	vertex_t *v2 = ld->v2;
+	UINT8 j;
+
+	ld->dx = v2->x - v1->x;
+	ld->dy = v2->y - v1->y;
+
+	ld->bbox[BOXLEFT] = min(v1->x, v2->x);
+	ld->bbox[BOXRIGHT] = max(v1->x, v2->x);
+	ld->bbox[BOXBOTTOM] = min(v1->y, v2->y);
+	ld->bbox[BOXTOP] = max(v1->y, v2->y);
+
+	if (!ld->dx)
+		ld->slopetype = ST_VERTICAL;
+	else if (!ld->dy)
+		ld->slopetype = ST_HORIZONTAL;
+	else if ((ld->dy > 0) == (ld->dx > 0))
+		ld->slopetype = ST_POSITIVE;
+	else
+		ld->slopetype = ST_NEGATIVE;
+
+	ld->frontsector = ld->backsector = NULL;
+
+	ld->validcount = 0;
+#ifdef WALLSPLATS
+	ld->splats = NULL;
+#endif
+	ld->firsttag = ld->nexttag = -1;
+#ifdef POLYOBJECTS
+	ld->polyobj = NULL;
+#endif
+
+	ld->text = NULL;
+	ld->callcount = 0;
+
+	// cph 2006/09/30 - fix sidedef errors right away.
+	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
+	for (j = 0; j < 2; j++)
+		if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
+		{
+			ld->sidenum[j] = 0xffff;
+			CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has out-of-range sidedef number\n", sizeu1((size_t)(ld - lines)));
+		}
+
+	// killough 11/98: fix common wad errors (missing sidedefs):
+	if (ld->sidenum[0] == 0xffff)
+	{
+		ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
+		// cph - print a warning about the bug
+		CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s missing first sidedef\n", sizeu1((size_t)(ld - lines)));
+	}
+
+	if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
+	{
+		ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
+		// cph - print a warning about the bug
+		CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1((size_t)(ld - lines)));
+	}
+
+	if (ld->sidenum[0] != 0xffff && ld->special)
+		sides[ld->sidenum[0]].special = ld->special;
+	if (ld->sidenum[1] != 0xffff && ld->special)
+		sides[ld->sidenum[1]].special = ld->special;
+}
+
 static void P_LoadLinedefs(UINT8 *data)
 {
 	maplinedef_t *mld = (maplinedef_t *)data;
@@ -938,98 +1005,8 @@ static void P_LoadLinedefs(UINT8 *data)
 
 		ld->sidenum[0] = SHORT(mld->sidenum[0]);
 		ld->sidenum[1] = SHORT(mld->sidenum[1]);
-	}
-}
 
-static void P_SetupLines(void)
-{
-	line_t *ld = lines;
-	size_t i;
-
-	for (i = 0; i < numlines; i++, ld++)
-	{
-		vertex_t *v1 = ld->v1;
-		vertex_t *v2 = ld->v2;
-
-#ifdef WALLSPLATS
-		ld->splats = NULL;
-#endif
-
-#ifdef POLYOBJECTS
-		ld->polyobj = NULL;
-#endif
-
-		ld->dx = v2->x - v1->x;
-		ld->dy = v2->y - v1->y;
-
-		if (!ld->dx)
-			ld->slopetype = ST_VERTICAL;
-		else if (!ld->dy)
-			ld->slopetype = ST_HORIZONTAL;
-		else if ((ld->dy > 0) == (ld->dx > 0))
-			ld->slopetype = ST_POSITIVE;
-		else
-			ld->slopetype = ST_NEGATIVE;
-
-		if (v1->x < v2->x)
-		{
-			ld->bbox[BOXLEFT] = v1->x;
-			ld->bbox[BOXRIGHT] = v2->x;
-		}
-		else
-		{
-			ld->bbox[BOXLEFT] = v2->x;
-			ld->bbox[BOXRIGHT] = v1->x;
-		}
-
-		if (v1->y < v2->y)
-		{
-			ld->bbox[BOXBOTTOM] = v1->y;
-			ld->bbox[BOXTOP] = v2->y;
-		}
-		else
-		{
-			ld->bbox[BOXBOTTOM] = v2->y;
-			ld->bbox[BOXTOP] = v1->y;
-		}
-
-		{
-			// cph 2006/09/30 - fix sidedef errors right away.
-			// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
-			UINT8 j;
-
-			for (j=0; j < 2; j++)
-				if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
-				{
-					ld->sidenum[j] = 0xffff;
-					CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has out-of-range sidedef number\n", sizeu1(i));
-				}
-		}
-
-		ld->frontsector = ld->backsector = NULL;
-		ld->validcount = 0;
-		ld->firsttag = ld->nexttag = -1;
-		ld->callcount = 0;
-
-		// killough 11/98: fix common wad errors (missing sidedefs):
-		if (ld->sidenum[0] == 0xffff)
-		{
-			ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
-			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s missing first sidedef\n", sizeu1(i));
-		}
-
-		if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
-		{
-			ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
-			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_SetupLines: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(i));
-		}
-
-		if (ld->sidenum[0] != 0xffff && ld->special)
-			sides[ld->sidenum[0]].special = ld->special;
-		if (ld->sidenum[1] != 0xffff && ld->special)
-			sides[ld->sidenum[1]].special = ld->special;
+		P_InitializeLinedef(ld);
 	}
 }
 
@@ -1293,7 +1270,6 @@ static void P_LoadMapData(const virtres_t *virt)
 		P_LoadVertices(virtvertexes->data);
 		P_LoadSectors(virtsectors->data);
 		P_LoadLinedefs(virtlinedefs->data);
-		P_SetupLines();
 		P_LoadSidedefs(virtsidedefs->data);
 		P_LoadThings(virtthings->data);
 	}
