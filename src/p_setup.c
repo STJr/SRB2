@@ -1522,6 +1522,46 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t *virtnodes)
 	return supported[nodetype] ? nodetype : NT_UNSUPPORTED;
 }
 
+// Extended node formats feature additional vertices; useful for OpenGL, but totally useless in gamelogic.
+static boolean P_LoadExtraVertices(UINT8 *data)
+{
+	UINT32 origvrtx = READUINT32(data);
+	UINT32 xtrvrtx = READUINT32(data);
+	line_t* ld = lines;
+	vertex_t *oldpos = vertexes;
+	ssize_t offset;
+	size_t i;
+
+	if (numvertexes != origvrtx) // If native vertex count doesn't match node original vertex count, bail out (broken data?).
+	{
+		CONS_Alert(CONS_WARNING, "Vertex count in map data and nodes differ!\n");
+		return false;
+	}
+
+	if (!xtrvrtx)
+		return true;
+
+	// If extra vertexes were generated, reallocate the vertex array and fix the pointers.
+	numvertexes += xtrvrtx;
+	vertexes = Z_Realloc(vertexes, numvertexes*sizeof(*vertexes), PU_LEVEL, NULL);
+	offset = (size_t)(vertexes - oldpos);
+
+	for (i = 0, ld = lines; i < numlines; i++, ld++)
+	{
+		ld->v1 += offset;
+		ld->v2 += offset;
+	}
+
+	// Read extra vertex data.
+	for (i = origvrtx; i < numvertexes; i++)
+	{
+		vertexes[i].x = READFIXED(data);
+		vertexes[i].y = READFIXED(data);
+	}
+
+	return true;
+}
+
 // Auxiliary function: Shrink node ID from 32-bit to 16-bit.
 static UINT16 ShrinkNodeID(UINT32 x) {
 	UINT16 mask = (x >> 16) & 0xC000;
@@ -1555,41 +1595,11 @@ static void P_LoadExtendedNodes(UINT8 *data, boolean xgl3)
 
 static void P_LoadExtendedBSP(UINT8 *data, nodetype_t nodetype)
 {
-	size_t i, j, k;
+	size_t i, k;
 	INT16 m;
 
-	// Extended node formats feature additional vertexes; useful for OpenGL, but totally useless in gamelogic.
-	UINT32 origvrtx = READUINT32(data);
-	UINT32 xtrvrtx = READUINT32(data);
-
-	if (numvertexes != origvrtx) // If native vertex count doesn't match node original vertex count, bail out (broken data?).
-	{
-		CONS_Alert(CONS_WARNING, "Vertex count in map data and nodes differ!\n");
+	if (!P_LoadExtraVertices(data))
 		return;
-	}
-
-	if (xtrvrtx) // If extra vertexes were generated, reallocate the vertex array and fix the pointers.
-	{
-		line_t *ld = lines;
-		size_t oldpos = (size_t)vertexes;
-		ssize_t	offset;
-		numvertexes += xtrvrtx;
-		vertexes = Z_Realloc(vertexes, numvertexes*sizeof(*vertexes), PU_LEVEL, NULL);
-		offset = ((size_t)vertexes) - oldpos;
-
-		for (i = 0, ld = lines; i < numlines; i++, ld++)
-		{
-			ld->v1 = (vertex_t*)((size_t)ld->v1 + offset);
-			ld->v2 = (vertex_t*)((size_t)ld->v2 + offset);
-		}
-	}
-
-	// Read vertex data.
-	for (i = origvrtx; i < numvertexes; i++)
-	{
-		vertexes[i].x = READFIXED(data);
-		vertexes[i].y = READFIXED(data);
-	}
 
 	// Subsectors
 	numsubsectors = READUINT32(data);
