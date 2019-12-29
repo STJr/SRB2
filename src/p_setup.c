@@ -1502,7 +1502,10 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t *virtnodes)
 		virtlump_t *virtssectors;
 
 		if (virtsegs && virtsegs->size)
+		{
+			virtnodes = vres_Find(virt, "NODES");
 			return NT_DOOM; // Traditional map format BSP tree.
+		}
 
 		virtssectors = vres_Find(virt, "SSECTORS");
 
