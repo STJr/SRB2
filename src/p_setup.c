@@ -1509,11 +1509,11 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t *virtnodes)
 			virtnodes = vres_Find(virt, "NODES");
 			supported[NT_XNOD] = supported[NT_ZNOD] = true;
 		}
-
-		M_Memcpy(signature, virtnodes->data, 4);
-		signature[4] = '\0';
-		virtnodes->data += 4;
 	}
+
+	M_Memcpy(signature, virtnodes->data, 4);
+	signature[4] = '\0';
+	virtnodes->data += 4;
 
 	if (!strcmp(signature, "XNOD"))
 		nodetype = NT_XNOD;
