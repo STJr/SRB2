@@ -130,6 +130,9 @@ INT32 G_FindMap(const char *query, char **foundmapnamep,
 		mapsearchfreq_t **freqp, INT32 *freqc);
 void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
 
+/* Match map name by search + 2 digit map code or map number. */
+INT32 G_FindMapByNameOrCode(const char *query, char **foundmapnamep);
+
 // XMOD spawning
 mapthing_t *G_FindCTFStart(INT32 playernum);
 mapthing_t *G_FindMatchStart(INT32 playernum);

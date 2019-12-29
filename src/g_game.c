@@ -4536,6 +4536,60 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc)
 	Z_Free(freq);
 }
 
+INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
+{
+	boolean usemapcode = false;
+
+	INT32 newmapnum;
+
+	size_t mapnamelen;
+
+	char *p;
+
+	mapnamelen = strlen(mapname);
+
+	if (mapnamelen == 2)/* maybe two digit code */
+	{
+		if (( newmapnum = M_MapNumber(mapname[0], mapname[1]) ))
+			usemapcode = true;
+	}
+	else if (mapnamelen == 5 && strnicmp(mapname, "MAP", 3) == 0)
+	{
+		if (( newmapnum = M_MapNumber(mapname[3], mapname[4]) ) == 0)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Invalid map code '%s'.\n"), mapname);
+			return 0;
+		}
+		usemapcode = true;
+	}
+
+	if (!usemapcode)
+	{
+		/* Now detect map number in base 10, which no one asked for. */
+		newmapnum = strtol(mapname, &p, 10);
+		if (*p == '\0')/* we got it */
+		{
+			if (newmapnum < 1 || newmapnum > NUMMAPS)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("Invalid map number %d.\n"), newmapnum);
+				return 0;
+			}
+			usemapcode = true;
+		}
+		else
+		{
+			newmapnum = G_FindMap(mapname, realmapnamep, NULL, NULL);
+		}
+	}
+
+	if (usemapcode)
+	{
+		(*realmapnamep) = G_BuildMapTitle(newmapnum);
+	}
+
+	return newmapnum;
+}
+
 //
 // DEMO RECORDING
 //
