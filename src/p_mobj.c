@@ -9434,7 +9434,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			SINT8 sign = ((mobj->tics & 1) ? mobj->tics : -(SINT8)(mobj->tics));
 			while (chain)
 			{
-				chain->z = chain->watertop + sign*mobj->scale;
+				chain->z = chain->movefactor + sign*mobj->scale;
 				sign = -sign;
 				chain = chain->target;
 			}

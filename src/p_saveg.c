@@ -4064,7 +4064,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	tokenlist = READUINT32(save_p);
 
-	if (!P_SetupLevel(true))
+	if (!P_LoadLevel(true))
 		return false;
 
 	// get the time
