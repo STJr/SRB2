@@ -6433,7 +6433,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 	INT32 j;
 	thinkerlist_t *secthinkers;
 	thinker_t *th;
-	virtres_t* virt = NULL;
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
 	(void)fromnetsave;
@@ -7408,9 +7407,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 		}
 	}
-
-	if (virt)
-		vres_Free(virt);
 
 	// Allocate each list
 	for (i = 0; i < numsectors; i++)
