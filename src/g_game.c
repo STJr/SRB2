@@ -3272,8 +3272,10 @@ void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
 		char rc = tmpconst[r];
 		switch (rc)
 		{
-			// Space
+			// Space, at sign and question mark
 			case ' ':
+			case '@':
+			case '?':
 			// Used for operations
 			case '+':
 			case '-':
@@ -3281,6 +3283,8 @@ void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
 			case '/':
 			case '%':
 			case '^':
+			case '&':
+			case '!':
 			// Part of Lua's syntax
 			case '#':
 			case '=':
