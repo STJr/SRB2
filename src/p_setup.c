@@ -1473,8 +1473,61 @@ typedef enum {
 	NT_ZGL2,
 	NT_XGL3,
 	NT_ZGL3,
-	NT_UNSUPPORTED
+	NT_UNSUPPORTED,
+	NUMNODETYPES
 } nodetype_t;
+
+// Find out the BSP format.
+static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t *virtnodes)
+{
+	boolean supported[NUMNODETYPES];
+	nodetype_t nodetype = NT_UNSUPPORTED;
+	char signature[4 + 1];
+
+	if (vres_Find(virt, "TEXTMAP"))
+	{
+		virtnodes = vres_Find(virt, "ZNODES");
+		supported[NT_XGLN] = supported[NT_XGL3] = true;
+	}
+	else
+	{
+		virtlump_t *virtsegs = vres_Find(virt, "SEGS");
+		virtlump_t *virtssectors;
+
+		if (virtsegs && virtsegs->size)
+			return NT_DOOM; // Traditional map format BSP tree.
+
+		virtssectors = vres_Find(virt, "SSECTORS");
+
+		if (virtssectors && virtssectors->size)
+		{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
+			virtnodes = virtssectors;
+			supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL3] = true;
+		}
+		else
+		{ // Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
+			virtnodes = vres_Find(virt, "NODES");
+			supported[NT_XNOD] = supported[NT_ZNOD] = true;
+		}
+
+		M_Memcpy(signature, virtnodes->data, 4);
+		signature[4] = '\0';
+		virtnodes->data += 4;
+	}
+
+	if (!strcmp(signature, "XNOD"))
+		nodetype = NT_XNOD;
+	else if (!strcmp(signature, "ZNOD"))
+		nodetype = NT_ZNOD;
+	else if (!strcmp(signature, "XGLN"))
+		nodetype = NT_XGLN;
+	else if (!strcmp(signature, "ZGLN"))
+		nodetype = NT_ZGLN;
+	else if (!strcmp(signature, "XGL3"))
+		nodetype = NT_XGL3;
+
+	return supported[nodetype] ? nodetype : NT_UNSUPPORTED;
+}
 
 static void P_LoadExtendedNodes(UINT8 *data, nodetype_t nodetype)
 {
@@ -1680,60 +1733,16 @@ static void P_LoadExtendedNodes(UINT8 *data, nodetype_t nodetype)
 
 static void P_LoadMapBSP(const virtres_t *virt)
 {
-	virtlump_t* virtssectors = vres_Find(virt, "SSECTORS");
-	virtlump_t* virtsegs     = vres_Find(virt, "SEGS");
-	virtlump_t* virtnodes    = vres_Find(virt, "NODES");
-
-	nodetype_t nodetype = NT_UNSUPPORTED;
-
-	// Find out the BSP format.
-	if (vres_Find(virt, "TEXTMAP"))
-	{
-		virtnodes = vres_Find(virt, "ZNODES");
-		if (!memcmp(virtnodes->data, "XGLN", 4))
-			nodetype = NT_XGLN;
-		else if (!memcmp(virtnodes->data, "XGL3", 4))
-			nodetype = NT_XGL3;
-	}
-	else
-	{
-		if (!virtsegs || !virtsegs->size)
-		{
-			// Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
-			if (!virtssectors || !virtssectors->size)
-			{
-				if (!memcmp(virtnodes->data, "XNOD", 4))
-					nodetype = NT_XNOD;
-				else if (!memcmp(virtnodes->data, "ZNOD", 4)) // Compressed variant.
-					nodetype = NT_ZNOD;
-			}
-			// Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
-			else
-			{
-				if (!memcmp(virtssectors->data, "XGLN", 4))
-				{
-					virtnodes = virtssectors;
-					nodetype = NT_XGLN;
-				}
-				else if (!memcmp(virtssectors->data, "ZGLN", 4)) // Compressed variant.
-				{
-					virtnodes = virtssectors;
-					nodetype = NT_ZGLN;
-				}
-				else if (!memcmp(virtssectors->data, "XGL3", 4)) // Compressed variant.
-				{
-					virtnodes = virtssectors;
-					nodetype = NT_XGL3;
-				}
-			}
-		}
-		else // Traditional map format BSP tree.
-			nodetype = NT_DOOM;
-	}
+	virtlump_t *virtnodes = NULL;
+	nodetype_t nodetype = P_GetNodetype(virt, virtnodes);
 
 	switch (nodetype)
 	{
 	case NT_DOOM:
+	{
+		virtlump_t *virtssectors = vres_Find(virt, "SSECTORS");
+		virtlump_t *virtsegs = vres_Find(virt, "SEGS");
+
 		numsubsectors = virtssectors->size / sizeof(mapsubsector_t);
 		numnodes      = virtnodes->size    / sizeof(mapnode_t);
 		numsegs       = virtsegs->size     / sizeof(mapseg_t);
@@ -1753,11 +1762,11 @@ static void P_LoadMapBSP(const virtres_t *virt)
 		P_LoadNodes(virtnodes->data);
 		P_LoadSegs(virtsegs->data);
 		break;
-
+	}
 	case NT_XNOD:
 	case NT_XGLN:
 	case NT_XGL3:
-		P_LoadExtendedNodes(virtnodes->data + 4, nodetype);
+		P_LoadExtendedNodes(virtnodes->data, nodetype);
 		break;
 	default:
 		CONS_Alert(CONS_WARNING, "Unsupported BSP format detected.\n");
