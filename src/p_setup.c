@@ -664,6 +664,7 @@ static void P_LoadRawSectors(UINT8 *data)
 		ss->ceilingpic = P_AddLevelFlat(ms->ceilingpic, foundflats);
 
 		ss->lightlevel = SHORT(ms->lightlevel);
+		ss->spawn_lightlevel = ss->lightlevel;
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
 		ss->nexttag = ss->firsttag = -1;
@@ -970,7 +971,7 @@ static void P_SpawnEmeraldHunt(void)
 		mobjinfo[MT_EMERHUNT].spawnstate+2);
 }
 
-static void P_LoadThings(boolean loademblems)
+static void P_SpawnMapThings(boolean spawnemblems)
 {
 	size_t i;
 	mapthing_t *mt;
@@ -1000,7 +1001,7 @@ static void P_LoadThings(boolean loademblems)
 			|| mt->type == 1702) // MT_AXISTRANSFERLINE
 			continue; // These were already spawned
 
-		if (!loademblems && mt->type == mobjinfo[MT_EMBLEM].doomednum)
+		if (!spawnemblems && mt->type == mobjinfo[MT_EMBLEM].doomednum)
 			continue;
 
 		mt->mobj = NULL;
@@ -2015,6 +2016,75 @@ static void P_LoadMapData(const virtres_t* virt)
 	memcpy(spawnsides, sides, numsides * sizeof (*sides));
 }
 
+/** Compute MD5 message digest for bytes read from memory source
+  *
+  * The resulting message digest number will be written into the 16 bytes
+  * beginning at RESBLOCK.
+  *
+  * \param filename path of file
+  * \param resblock resulting MD5 checksum
+  * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
+  */
+static INT32 P_MakeBufferMD5(const char* buffer, size_t len, void* resblock)
+{
+#ifdef NOMD5
+	(void)buffer;
+	(void)len;
+	memset(resblock, 0x00, 16);
+	return 1;
+#else
+	tic_t t = I_GetTime();
+	CONS_Debug(DBG_SETUP, "Making MD5\n");
+	if (md5_buffer(buffer, len, resblock) == NULL)
+		return 1;
+	CONS_Debug(DBG_SETUP, "MD5 calc took %f seconds\n", (float)(I_GetTime() - t)/NEWTICRATE);
+	return 0;
+#endif
+}
+
+static void P_MakeMapMD5(virtres_t* virt, void* dest)
+{
+	unsigned char linemd5[16];
+	unsigned char sectormd5[16];
+	unsigned char thingmd5[16];
+	unsigned char sidedefmd5[16];
+	unsigned char resmd5[16];
+	UINT8 i;
+
+	// Create a hash for the current map
+	// get the actual lumps!
+	virtlump_t *virtlines = vres_Find(virt, "LINEDEFS");
+	virtlump_t *virtsectors = vres_Find(virt, "SECTORS");
+	virtlump_t *virtmthings = vres_Find(virt, "THINGS");
+	virtlump_t *virtsides = vres_Find(virt, "SIDEDEFS");
+
+	P_MakeBufferMD5((char*)virtlines->data, virtlines->size, linemd5);
+	P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size, sectormd5);
+	P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size, thingmd5);
+	P_MakeBufferMD5((char*)virtsides->data, virtsides->size, sidedefmd5);
+
+	for (i = 0; i < 16; i++)
+		resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
+
+	M_Memcpy(dest, &resmd5, 16);
+}
+
+static void P_LoadMapFromFile(void)
+{
+	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
+
+	P_LoadMapData(virt);
+	P_LoadMapBSP(virt);
+	P_LoadMapLUT(virt);
+
+	P_LoadLineDefs2();
+	P_GroupLines();
+
+	P_MakeMapMD5(virt, &mapmd5);
+
+	vres_Free(virt);
+}
+
 #if 0
 static char *levellumps[] =
 {
@@ -2083,7 +2153,7 @@ lumpnum_t lastloadedmaplumpnum; // for comparative savegame
 //
 // Some player initialization for map start.
 //
-static void P_LevelInitStuff(void)
+static void P_InitLevelSettings(void)
 {
 	INT32 i;
 	boolean canresetlives = true;
@@ -2208,66 +2278,13 @@ void P_LoadThingsOnly(void)
 		P_RemoveMobj((mobj_t *)think);
 	}
 
-	P_LevelInitStuff();
+	P_InitLevelSettings();
 
-	P_LoadThings(true);
+	P_SpawnMapThings(true);
 
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
 	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
 	skyboxmo[1] = skyboxcenterpnts[(centerid >= 0) ? centerid : 0];
-}
-
-/** Compute MD5 message digest for bytes read from memory source
-  *
-  * The resulting message digest number will be written into the 16 bytes
-  * beginning at RESBLOCK.
-  *
-  * \param filename path of file
-  * \param resblock resulting MD5 checksum
-  * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
-  */
-static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
-{
-#ifdef NOMD5
-	(void)buffer;
-	(void)len;
-	memset(resblock, 0x00, 16);
-	return 1;
-#else
-	tic_t t = I_GetTime();
-	CONS_Debug(DBG_SETUP, "Making MD5\n");
-	if (md5_buffer(buffer, len, resblock) == NULL)
-		return 1;
-	CONS_Debug(DBG_SETUP, "MD5 calc took %f seconds\n", (float)(I_GetTime() - t)/NEWTICRATE);
-	return 0;
-#endif
-}
-
-static void P_MakeMapMD5(virtres_t* virt, void *dest)
-{
-	unsigned char linemd5[16];
-	unsigned char sectormd5[16];
-	unsigned char thingmd5[16];
-	unsigned char sidedefmd5[16];
-	unsigned char resmd5[16];
-	UINT8 i;
-
-	// Create a hash for the current map
-	// get the actual lumps!
-	virtlump_t* virtlines   = vres_Find(virt, "LINEDEFS");
-	virtlump_t* virtsectors = vres_Find(virt, "SECTORS");
-	virtlump_t* virtmthings = vres_Find(virt, "THINGS");
-	virtlump_t* virtsides   = vres_Find(virt, "SIDEDEFS");
-
-	P_MakeBufferMD5((char*)virtlines->data,   virtlines->size, linemd5);
-	P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size,  sectormd5);
-	P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size,   thingmd5);
-	P_MakeBufferMD5((char*)virtsides->data,   virtsides->size, sidedefmd5);
-
-	for (i = 0; i < 16; i++)
-		resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
-
-	M_Memcpy(dest, &resmd5, 16);
 }
 
 static void P_RunLevelScript(const char *scriptname)
@@ -2332,6 +2349,26 @@ static void P_ForceCharacter(const char *forcecharskin)
 			players[consoleplayer].skincolor = skins[players[consoleplayer].skin].prefcolor;
 		}
 	}
+}
+
+static void P_ResetSpawnpoints(void)
+{
+	UINT8 i;
+
+	numdmstarts = numredctfstarts = numbluectfstarts = 0;
+
+	// reset the player starts
+	for (i = 0; i < MAXPLAYERS; i++)
+		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+	for (i = 0; i < MAX_DM_STARTS; i++)
+		deathmatchstarts[i] = NULL;
+
+	for (i = 0; i < 2; i++)
+		skyboxmo[i] = NULL;
+
+	for (i = 0; i < 16; i++)
+		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
 }
 
 static void P_LoadRecordGhosts(void)
@@ -2433,6 +2470,45 @@ static void P_LoadNightsGhosts(void)
 	free(gpath);
 }
 
+static void P_InitTagGametype(void)
+{
+	UINT8 i;
+	INT32 realnumplayers = 0;
+	INT32 playersactive[MAXPLAYERS];
+
+	//I just realized how problematic this code can be.
+	//D_NumPlayers() will not always cover the scope of the netgame.
+	//What if one player is node 0 and the other node 31?
+	//The solution? Make a temp array of all players that are currently playing and pick from them.
+	//Future todo? When a player leaves, shift all nodes down so D_NumPlayers() can be used as intended?
+	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i] && !players[i].spectator)
+		{
+			playersactive[realnumplayers] = i; //stores the player's node in the array.
+			realnumplayers++;
+		}
+	}
+
+	if (!realnumplayers) //this should also fix the dedicated crash bug. You only pick a player if one exists to be picked.
+	{
+		CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
+		return;
+	}
+
+	i = P_RandomKey(realnumplayers);
+	players[playersactive[i]].pflags |= PF_TAGIT; //choose our initial tagger before map starts.
+
+	// Taken and modified from G_DoReborn()
+	// Remove the player so he can respawn elsewhere.
+	// first disassociate the corpse
+	if (players[playersactive[i]].mo)
+		P_RemoveMobj(players[playersactive[i]].mo);
+
+	G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
+}
+
 static void P_SetupCamera(void)
 {
 	if (players[displayplayer].mo && (server || addedtogame))
@@ -2463,6 +2539,52 @@ static void P_SetupCamera(void)
 	}
 }
 
+static void P_InitCamera(void)
+{
+	if (!dedicated)
+	{
+		P_SetupCamera();
+
+		// Salt: CV_ClearChangedFlags() messes with your settings :(
+		/*if (!cv_cam_height.changed)
+			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);
+		if (!cv_cam2_height.changed)
+			CV_Set(&cv_cam2_height, cv_cam2_height.defaultvalue);
+
+		if (!cv_cam_dist.changed)
+			CV_Set(&cv_cam_dist, cv_cam_dist.defaultvalue);
+		if (!cv_cam2_dist.changed)
+			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
+
+			// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
+		if (!cv_cam_rotate.changed)
+			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
+		if (!cv_cam2_rotate.changed)
+			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
+
+		if (!cv_analog.changed)
+			CV_SetValue(&cv_analog, 0);
+		if (!cv_analog2.changed)
+			CV_SetValue(&cv_analog2, 0);
+
+		displayplayer = consoleplayer; // Start with your OWN view, please!
+	}
+
+	if (twodlevel)
+	{
+		CV_SetValue(&cv_analog, false);
+		CV_SetValue(&cv_analog2, false);
+	}
+	else
+	{
+		if (cv_useranalog.value)
+			CV_SetValue(&cv_analog, true);
+
+		if ((splitscreen && cv_useranalog2.value) || botingame)
+			CV_SetValue(&cv_analog2, true);
+	}
+}
+
 static boolean CanSaveLevel(INT32 mapnum)
 {
 	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
@@ -2478,21 +2600,187 @@ static boolean CanSaveLevel(INT32 mapnum)
 	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
 }
 
+static void P_RunSpecialStageWipe(void)
+{
+	tic_t starttime = I_GetTime();
+	tic_t endtime = starttime + (3*TICRATE)/2;
+	tic_t nowtime;
+
+	S_StartSound(NULL, sfx_s3kaf);
+
+	// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
+	if (RESETMUSIC ||
+		strnicmp(S_MusicName(),
+		(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap - 1]->musname : mapmusname, 7))
+		S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
+
+	F_WipeStartScreen();
+	wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+
+#ifdef HWRENDER
+	// uh..........
+	if (rendermode == render_opengl)
+		F_WipeColorFill(0);
+#endif
+
+	F_WipeEndScreen();
+	F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+
+	I_OsPolling();
+	I_FinishUpdate(); // page flip or blit buffer
+	if (moviemode)
+		M_SaveFrame();
+
+	nowtime = lastwipetic;
+
+	// Hold on white for extra effect.
+	while (nowtime < endtime)
+	{
+		// wait loop
+		while (!((nowtime = I_GetTime()) - lastwipetic))
+			I_Sleep();
+		lastwipetic = nowtime;
+		if (moviemode) // make sure we save frames for the white hold too
+			M_SaveFrame();
+	}
+}
+
+static void P_RunLevelWipe(void)
+{
+	F_WipeStartScreen();
+	wipestyleflags |= WSF_FADEOUT;
+
+#ifdef HWRENDER
+	// uh..........
+	if (rendermode == render_opengl)
+		F_WipeColorFill(31);
+#endif
+
+	F_WipeEndScreen();
+	// for titlemap: run a specific wipe if specified
+	// needed for exiting time attack
+	if (wipetypepre != INT16_MAX)
+		F_RunWipe(
+		(wipetypepre >= 0 && F_WipeExists(wipetypepre)) ? wipetypepre : wipedefs[wipe_level_toblack],
+			false);
+	wipetypepre = -1;
+}
+
+static void P_InitPlayers(void)
+{
+	UINT8 i;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
+
+		// Start players with pity shields if possible
+		players[i].pity = -1;
+
+		players[i].mo = NULL;
+
+		if (!G_PlatformGametype())
+			G_DoReborn(i);
+		else // gametype is GT_COOP or GT_RACE
+		{
+			G_SpawnPlayer(i, players[i].starposttime);
+			if (players[i].starposttime)
+				P_ClearStarPost(players[i].starpostnum);
+		}
+	}
+}
+
+static void P_WriteLetter(void)
+{
+	char *buf, *b;
+
+	if (!unlockables[27].unlocked) // pandora's box
+		return;
+
+	if (modeattacking)
+		return;
+
+#ifndef DEVELOP
+	if (modifiedgame)
+		return;
+#endif
+
+	if (netgame || multiplayer)
+		return;
+
+	if (gamemap != 0x1d35 - 016464)
+		return;
+
+	P_SpawnMobj(0640370000, 0x11000000, 0x3180000, MT_LETTER)->angle = ANGLE_90;
+
+	if (textprompts[199]->page[1].backcolor == 259)
+		return;
+
+	buf = W_CacheLumpName("WATERMAP", PU_STATIC);
+	b = buf;
+
+	while ((*b != 65) && (b - buf < 256))
+	{
+		*b = (*b - 65) & 255;
+		b++;
+	}
+	*b = '\0';
+
+	Z_Free(textprompts[199]->page[1].text);
+	textprompts[199]->page[1].text = Z_StrDup(buf);
+	textprompts[199]->page[1].lines = 4;
+	textprompts[199]->page[1].backcolor = 259;
+	Z_Free(buf);
+}
+
+static void P_InitGametype(void)
+{
+	UINT8 i;
+
+	P_InitPlayers();
+
+	// restore time in netgame (see also g_game.c)
+	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
+	{
+		// is this a hack? maybe
+		tic_t maxstarposttime = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].starposttime > maxstarposttime)
+				maxstarposttime = players[i].starposttime;
+		}
+		leveltime = maxstarposttime;
+	}
+
+	P_WriteLetter();
+
+	if (modeattacking == ATTACKING_RECORD && !demoplayback)
+		P_LoadRecordGhosts();
+	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
+		P_LoadNightsGhosts();
+
+	if (G_TagGametype())
+		P_InitTagGametype();
+	else if (gametype == GT_RACE && server)
+		CV_StealthSetValue(&cv_numlaps,
+		(cv_basenumlaps.value)
+			? cv_basenumlaps.value
+			: mapheaderinfo[gamemap - 1]->numlaps);
+}
+
 /** Loads a level from a lump or external wad.
   *
-  * \param skipprecip If true, don't spawn precipitation.
+  * \param fromnetsave If true, skip some stuff because we're loading a netgame snapshot.
   * \todo Clean up, refactor, split up; get rid of the bloat.
   */
-boolean P_SetupLevel(boolean skipprecip)
+boolean P_LoadLevel(boolean fromnetsave)
 {
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	INT32 i, loadprecip = 1, ranspecialwipe = 0;
-	INT32 loademblems = 1;
-	INT32 fromnetsave = 0;
+	INT32 i, ranspecialwipe = 0;
 	sector_t *ss;
-	boolean chase;
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -2523,19 +2811,18 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (cv_runscripts.value && mapheaderinfo[gamemap-1]->scriptname[0] != '#')
 		P_RunLevelScript(mapheaderinfo[gamemap-1]->scriptname);
 
-	P_LevelInitStuff();
+	P_InitLevelSettings();
 
 	postimgtype = postimgtype2 = postimg_none;
 
 	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
 		P_ForceCharacter(mapheaderinfo[gamemap-1]->forcecharacter);
 
-	// chasecam on in chaos, race, coop
-	// chasecam off in match, tag, capture the flag
-	chase = (!(gametyperules & GTR_FIRSTPERSON)) || (maptol & TOL_2D);
-
 	if (!dedicated)
 	{
+		// chasecam on in first-person gametypes and 2D
+		boolean chase = (!(gametyperules & GTR_FIRSTPERSON)) || (maptol & TOL_2D);
+
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_speed.changed)
 			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);*/
@@ -2562,48 +2849,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		ranspecialwipe = 2;
 	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
 	{
-		tic_t starttime = I_GetTime();
-		tic_t endtime = starttime + (3*TICRATE)/2;
-		tic_t nowtime;
-
-		S_StartSound(NULL, sfx_s3kaf);
-
-		// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
-		if (RESETMUSIC ||
-			strnicmp(S_MusicName(),
-				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
-			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
-
-		F_WipeStartScreen();
-		wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
-
-#ifdef HWRENDER
-		// uh..........
-		if (rendermode == render_opengl)
-			F_WipeColorFill(0);
-#endif
-
-		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
-
-		I_OsPolling();
-		I_FinishUpdate(); // page flip or blit buffer
-		if (moviemode)
-			M_SaveFrame();
-
-		nowtime = lastwipetic;
-
-		// Hold on white for extra effect.
-		while (nowtime < endtime)
-		{
-			// wait loop
-			while (!((nowtime = I_GetTime()) - lastwipetic))
-				I_Sleep();
-			lastwipetic = nowtime;
-			if (moviemode) // make sure we save frames for the white hold too
-				M_SaveFrame();
-		}
-
+		P_RunSpecialStageWipe();
 		ranspecialwipe = 1;
 	}
 
@@ -2629,25 +2875,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
 	if (rendermode != render_none && !ranspecialwipe)
-	{
-		F_WipeStartScreen();
-		wipestyleflags |= WSF_FADEOUT;
-
-#ifdef HWRENDER
-		// uh..........
-		if (rendermode == render_opengl)
-			F_WipeColorFill(31);
-#endif
-
-		F_WipeEndScreen();
-		// for titlemap: run a specific wipe if specified
-		// needed for exiting time attack
-		if (wipetypepre != INT16_MAX)
-			F_RunWipe(
-				(wipetypepre >= 0 && F_WipeExists(wipetypepre)) ? wipetypepre : wipedefs[wipe_level_toblack],
-				false);
-		wipetypepre = -1;
-	}
+		P_RunLevelWipe();
 
 	if (!titlemapinaction)
 	{
@@ -2705,14 +2933,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_InitThinkers();
 	P_InitCachedActions();
 
-	/// \note for not spawning precipitation, etc. when loading netgame snapshots
-	if (skipprecip)
-	{
-		fromnetsave = 1;
-		loadprecip = 0;
-		loademblems = 0;
-	}
-	else if (savedata.lives > 0)
+	if (!fromnetsave && savedata.lives > 0)
 	{
 		numgameovers = savedata.numgameovers;
 		players[consoleplayer].continues = savedata.continues;
@@ -2726,9 +2947,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
-	//lastloadedmaplumpnum = LUMPERROR;
 	lastloadedmaplumpnum = W_CheckNumForName(maplumpname);
-
 	if (lastloadedmaplumpnum == INT16_MAX)
 		I_Error("Map %s not found.\n", maplumpname);
 
@@ -2738,38 +2957,12 @@ boolean P_SetupLevel(boolean skipprecip)
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
 
-	numdmstarts = numredctfstarts = numbluectfstarts = 0;
-
-	// reset the player starts
-	for (i = 0; i < MAXPLAYERS; i++)
-		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
-
-	for (i = 0; i < MAX_DM_STARTS; i++)
-		deathmatchstarts[i] = NULL;
-
-	for (i = 0; i < 2; i++)
-		skyboxmo[i] = NULL;
-
-	for (i = 0; i < 16; i++)
-		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+	P_ResetSpawnpoints();
 
 	P_MapStart();
 
 	if (lastloadedmaplumpnum)
-	{
-		virtres_t* virt = vres_GetMap(lastloadedmaplumpnum);
-
-		P_LoadMapData(virt);
-		P_LoadMapBSP(virt);
-		P_LoadMapLUT(virt);
-
-		P_LoadLineDefs2();
-		P_GroupLines();
-
-		P_MakeMapMD5(virt, &mapmd5);
-
-		vres_Free(virt);
-	}
+		P_LoadMapFromFile();
 
 	// init gravity, tag lists,
 	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
@@ -2779,7 +2972,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_ResetDynamicSlopes(fromnetsave);
 #endif
 
-	P_LoadThings(loademblems);
+	P_SpawnMapThings(!fromnetsave);
 	skyboxmo[0] = skyboxviewpnts[0];
 	skyboxmo[1] = skyboxcenterpnts[0];
 
@@ -2790,7 +2983,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// set up world state
 	P_SpawnSpecials(fromnetsave);
 
-	if (loadprecip) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
+	if (!fromnetsave) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
@@ -2818,161 +3011,10 @@ boolean P_SetupLevel(boolean skipprecip)
 	//  none of this needs to be done because it's not the beginning of the map when
 	//  a netgame save is being loaded, and could actively be harmful by messing with
 	//  the client's view of the data.)
-	if (fromnetsave)
-		goto netgameskip;
-	// ==========
+	if (!fromnetsave)
+		P_InitGametype();
 
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
-		{
-			// Start players with pity shields if possible
-			players[i].pity = -1;
-
-			if (!G_PlatformGametype())
-			{
-				players[i].mo = NULL;
-				G_DoReborn(i);
-			}
-			else // gametype is GT_COOP or GT_RACE
-			{
-				players[i].mo = NULL;
-
-				if (players[i].starposttime)
-				{
-					G_SpawnPlayer(i, true);
-					P_ClearStarPost(players[i].starpostnum);
-				}
-				else
-					G_SpawnPlayer(i, false);
-			}
-		}
-
-	// restore time in netgame (see also g_game.c)
-	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
-	{
-		// is this a hack? maybe
-		tic_t maxstarposttime = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i] && players[i].starposttime > maxstarposttime)
-				maxstarposttime = players[i].starposttime;
-		}
-		leveltime = maxstarposttime;
-	}
-
-	if (unlockables[27].unlocked && !modeattacking // pandora's box
-#ifndef DEVELOP
-	&& !modifiedgame
-#endif
-	&& !(netgame || multiplayer) && gamemap == 0x1d35-016464)
-	{
-		P_SpawnMobj(0640370000, 0x11000000, 0x3180000, MT_LETTER)->angle = ANGLE_90;
-		if (textprompts[199]->page[1].backcolor != 259)
-		{
-			char *buf = W_CacheLumpName("WATERMAP", PU_STATIC), *b = buf;
-			while ((*b != 65) && (b-buf < 256)) { *b = (*b - 65)&255; b++; } *b = '\0';
-			Z_Free(textprompts[199]->page[1].text);
-			textprompts[199]->page[1].text = Z_StrDup(buf);
-			textprompts[199]->page[1].lines = 4;
-			textprompts[199]->page[1].backcolor = 259;
-			Z_Free(buf);
-		}
-	}
-
-	if (modeattacking == ATTACKING_RECORD && !demoplayback)
-		P_LoadRecordGhosts();
-	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
-		P_LoadNightsGhosts();
-
-	if (G_TagGametype())
-	{
-		INT32 realnumplayers = 0;
-		INT32 playersactive[MAXPLAYERS];
-
-		//I just realized how problematic this code can be.
-		//D_NumPlayers() will not always cover the scope of the netgame.
-		//What if one player is node 0 and the other node 31?
-		//The solution? Make a temp array of all players that are currently playing and pick from them.
-		//Future todo? When a player leaves, shift all nodes down so D_NumPlayers() can be used as intended?
-		//Also, you'd never have to loop through all 32 players slots to find anything ever again.
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i] && !players[i].spectator)
-			{
-				playersactive[realnumplayers] = i; //stores the player's node in the array.
-				realnumplayers++;
-			}
-		}
-
-		if (realnumplayers) //this should also fix the dedicated crash bug. You only pick a player if one exists to be picked.
-		{
-			i = P_RandomKey(realnumplayers);
-			players[playersactive[i]].pflags |= PF_TAGIT; //choose our initial tagger before map starts.
-
-			// Taken and modified from G_DoReborn()
-			// Remove the player so he can respawn elsewhere.
-			// first dissasociate the corpse
-			if (players[playersactive[i]].mo)
-				P_RemoveMobj(players[playersactive[i]].mo);
-
-			G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
-		}
-		else
-			CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
-
-	}
-	else if (gametype == GT_RACE && server)
-		CV_StealthSetValue(&cv_numlaps,
-			(cv_basenumlaps.value)
-			? cv_basenumlaps.value
-			: mapheaderinfo[gamemap - 1]->numlaps);
-
-	// ===========
-	// landing point for netgames.
-	netgameskip:
-
-	if (!dedicated)
-	{
-		P_SetupCamera();
-
-		// Salt: CV_ClearChangedFlags() messes with your settings :(
-		/*if (!cv_cam_height.changed)
-			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);
-		if (!cv_cam2_height.changed)
-			CV_Set(&cv_cam2_height, cv_cam2_height.defaultvalue);
-
-		if (!cv_cam_dist.changed)
-			CV_Set(&cv_cam_dist, cv_cam_dist.defaultvalue);
-		if (!cv_cam2_dist.changed)
-			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
-
-		// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
-		if (!cv_cam_rotate.changed)
-			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
-		if (!cv_cam2_rotate.changed)
-			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
-
-		if (!cv_analog.changed)
-			CV_SetValue(&cv_analog, 0);
-		if (!cv_analog2.changed)
-			CV_SetValue(&cv_analog2, 0);
-
-		displayplayer = consoleplayer; // Start with your OWN view, please!
-	}
-
-	if (cv_useranalog.value)
-		CV_SetValue(&cv_analog, true);
-
-	if (splitscreen && cv_useranalog2.value)
-		CV_SetValue(&cv_analog2, true);
-	else if (botingame)
-		CV_SetValue(&cv_analog2, true);
-
-	if (twodlevel)
-	{
-		CV_SetValue(&cv_analog2, false);
-		CV_SetValue(&cv_analog, false);
-	}
+	P_InitCamera();
 
 	// clear special respawning que
 	iquehead = iquetail = 0;
@@ -3007,7 +3049,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
 
-	if (loadprecip) // uglier hack
+	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
 		INT32 buf = gametic % BACKUPTICS;
 		for (i = 0; i < MAXPLAYERS; i++)

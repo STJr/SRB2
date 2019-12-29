@@ -500,7 +500,7 @@ void R_InitSprites(void)
 {
 	size_t i;
 #ifdef ROTSPRITE
-	INT32 angle, ra;
+	INT32 angle;
 	float fa;
 #endif
 
@@ -508,14 +508,11 @@ void R_InitSprites(void)
 		negonearray[i] = -1;
 
 #ifdef ROTSPRITE
-	for (angle = 0; angle < ROTANGLES; angle++)
+	for (angle = 1; angle < ROTANGLES; angle++)
 	{
-		ra = (ROTANGDIFF * angle);
-		if (!ra)
-			ra = (ROTANGDIFF / 2) + 1;
-		fa = ANG2RAD(FixedAngle(ra<<FRACBITS));
-		cosang2rad[angle] = FLOAT_TO_FIXED(cos(-fa));
-		sinang2rad[angle] = FLOAT_TO_FIXED(sin(-fa));
+		fa = ANG2RAD(FixedAngle((ROTANGDIFF * angle)<<FRACBITS));
+		rollcosang[angle] = FLOAT_TO_FIXED(cos(-fa));
+		rollsinang[angle] = FLOAT_TO_FIXED(sin(-fa));
 	}
 #endif
 
@@ -1129,8 +1126,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t spr_offset, spr_topoffset;
 #ifdef ROTSPRITE
 	patch_t *rotsprite = NULL;
-	angle_t arollangle = thing->rollangle;
-	UINT32 rollangle = AngleFixed(arollangle)>>FRACBITS;
+	INT32 rollangle = 0;
 #endif
 
 #ifndef PROPERPAPER
@@ -1262,11 +1258,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lump].topoffset;
 
 #ifdef ROTSPRITE
-	if (rollangle > 0)
+	if (thing->rollangle)
 	{
+		rollangle = R_GetRollAngle(thing->rollangle);
 		if (!sprframe->rotsprite.cached[rot])
 			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rollangle /= ROTANGDIFF;
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
 		{
@@ -2841,7 +2837,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
 		|| (!skins[skinnum].availability)
-		|| ((playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
+		|| (((netgame || multiplayer) && playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
 		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.

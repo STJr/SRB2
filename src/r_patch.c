@@ -49,8 +49,6 @@
 #endif
 
 static unsigned char imgbuf[1<<26];
-fixed_t cosang2rad[ROTANGLES];
-fixed_t sinang2rad[ROTANGLES];
 
 //
 // R_CheckIfPatch
@@ -1124,6 +1122,24 @@ static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
 
 #ifdef ROTSPRITE
 //
+// R_GetRollAngle
+//
+// Angles precalculated in R_InitSprites.
+//
+fixed_t rollcosang[ROTANGLES];
+fixed_t rollsinang[ROTANGLES];
+INT32 R_GetRollAngle(angle_t rollangle)
+{
+	INT32 ra = AngleFixed(rollangle)>>FRACBITS;
+#if (ROTANGDIFF > 1)
+	ra += (ROTANGDIFF/2);
+#endif
+	ra /= ROTANGDIFF;
+	ra %= ROTANGLES;
+	return ra;
+}
+
+//
 // R_CacheRotSprite
 //
 // Create a rotated sprite.
@@ -1180,12 +1196,12 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			leftoffset = width - leftoffset;
 		}
 
-		for (angle = 0; angle < ROTANGLES; angle++)
+		for (angle = 1; angle < ROTANGLES; angle++)
 		{
 			INT32 newwidth, newheight;
 
-			ca = cosang2rad[angle];
-			sa = sinang2rad[angle];
+			ca = rollcosang[angle];
+			sa = rollsinang[angle];
 
 			// Find the dimensions of the rotated patch.
 			{
