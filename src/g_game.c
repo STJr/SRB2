@@ -4555,12 +4555,8 @@ INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
 	}
 	else if (mapnamelen == 5 && strnicmp(mapname, "MAP", 3) == 0)
 	{
-		if (( newmapnum = M_MapNumber(mapname[3], mapname[4]) ) == 0)
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Invalid map code '%s'.\n"), mapname);
-			return 0;
-		}
-		usemapcode = true;
+		if (( newmapnum = M_MapNumber(mapname[3], mapname[4]) ))
+			usemapcode = true;
 	}
 
 	if (!usemapcode)
