@@ -1343,6 +1343,15 @@ static void P_LoadMapData(const virtres_t *virt)
 	memcpy(spawnsides, sides, numsides * sizeof (*sides));
 }
 
+static void P_InitializeSubsector(subsector_t *ss)
+{
+	ss->sector = NULL;
+#ifdef FLOORSPLATS
+	ss->splats = NULL;
+#endif
+	ss->validcount = 0;
+}
+
 static inline void P_LoadSubsectors(UINT8 *data)
 {
 	mapsubsector_t *ms = (mapsubsector_t*)data;
@@ -1351,13 +1360,9 @@ static inline void P_LoadSubsectors(UINT8 *data)
 
 	for (i = 0; i < numsubsectors; i++, ss++, ms++)
 	{
-		ss->sector = NULL;
 		ss->numlines = SHORT(ms->numsegs);
 		ss->firstline = SHORT(ms->firstseg);
-#ifdef FLOORSPLATS
-		ss->splats = NULL;
-#endif
-		ss->validcount = 0;
+		P_InitializeSubsector(ss);
 	}
 }
 
@@ -1562,44 +1567,11 @@ static boolean P_LoadExtraVertices(UINT8 *data)
 	return true;
 }
 
-// Auxiliary function: Shrink node ID from 32-bit to 16-bit.
-static UINT16 ShrinkNodeID(UINT32 x) {
-	UINT16 mask = (x >> 16) & 0xC000;
-	UINT16 result = x;
-	return result | mask;
-}
-
-static void P_LoadExtendedNodes(UINT8 *data, boolean xgl3)
-{
-	node_t *mn;
-	size_t i, j, k;
-
-	for (i = 0, mn = nodes; i < numnodes; i++, mn++)
-	{
-		// Splitter
-		mn->x = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
-		mn->y = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
-		mn->dx = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
-		mn->dy = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
-
-		// Bounding boxes
-		for (j = 0; j < 2; j++)
-			for (k = 0; k < 4; k++)
-				mn->bbox[j][k] = READINT16(data) << FRACBITS;
-
-		//Children
-		mn->children[0] = ShrinkNodeID(READUINT32(data)); /// \todo Use UINT32 for node children in a future, instead?
-		mn->children[1] = ShrinkNodeID(READUINT32(data));
-	}
-}
-
-static void P_LoadExtendedBSP(UINT8 *data, nodetype_t nodetype)
+static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 *data, nodetype_t nodetype)
 {
 	size_t i, k;
 	INT16 m;
-
-	if (!P_LoadExtraVertices(data))
-		return;
+	seg_t *seg;
 
 	// Subsectors
 	numsubsectors = READUINT32(data);
@@ -1615,6 +1587,7 @@ static void P_LoadExtendedBSP(UINT8 *data, nodetype_t nodetype)
 	for (i = 0, k = 0; i < numsubsectors; i++)
 	{
 		subsectors[i].firstline = k;
+		P_InitializeSubsector(&subsectors[i]);
 
 		switch (nodetype)
 		{
@@ -1655,34 +1628,57 @@ static void P_LoadExtendedBSP(UINT8 *data, nodetype_t nodetype)
 		}
 	}
 
+	for (i = 0, seg = segs; i < numsegs; i++, seg++)
 	{
-		INT32 side;
-		seg_t *li;
+		vertex_t *v1 = seg->v1;
+		vertex_t *v2 = seg->v2;
+		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
+		seg->offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
+		seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
+		seg->frontsector = seg->sidedef->sector;
+		if (seg->linedef->flags & ML_TWOSIDED)
+			seg->backsector = sides[seg->linedef->sidenum[seg->side ^ 1]].sector;
+		else
+			seg->backsector = 0;
 
-		for (i = 0, li = segs; i < numsegs; i++, li++)
-		{
-			vertex_t *v1 = li->v1;
-			vertex_t *v2 = li->v2;
-			li->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
-			li->offset = FixedHypot(v1->x - li->linedef->v1->x, v1->y - li->linedef->v1->y);
-			side = li->side;
-			li->sidedef = &sides[li->linedef->sidenum[side]];
-
-			li->frontsector = sides[li->linedef->sidenum[side]].sector;
-			if (li->linedef->flags & ML_TWOSIDED)
-				li->backsector = sides[li->linedef->sidenum[side ^ 1]].sector;
-			else
-				li->backsector = 0;
-
-			segs[i].numlights = 0;
-			segs[i].rlights = NULL;
-		}
+		seg->numlights = 0;
+		seg->rlights = NULL;
 	}
+}
 
-	// Nodes
+// Auxiliary function: Shrink node ID from 32-bit to 16-bit.
+static UINT16 ShrinkNodeID(UINT32 x) {
+	UINT16 mask = (x >> 16) & 0xC000;
+	UINT16 result = x;
+	return result | mask;
+}
+
+static void P_LoadExtendedNodes(UINT8 *data, nodetype_t nodetype)
+{
+	node_t *mn;
+	size_t i, j, k;
+	boolean xgl3 = (nodetype == NT_XGL3);
+
 	numnodes = READINT32(data);
 	nodes = Z_Calloc(numnodes*sizeof(*nodes), PU_LEVEL, NULL);
-	P_LoadExtendedNodes(data, nodetype == NT_XGL3);
+
+	for (i = 0, mn = nodes; i < numnodes; i++, mn++)
+	{
+		// Splitter
+		mn->x = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
+		mn->y = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
+		mn->dx = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
+		mn->dy = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
+
+		// Bounding boxes
+		for (j = 0; j < 2; j++)
+			for (k = 0; k < 4; k++)
+				mn->bbox[j][k] = READINT16(data) << FRACBITS;
+
+		//Children
+		mn->children[0] = ShrinkNodeID(READUINT32(data)); /// \todo Use UINT32 for node children in a future, instead?
+		mn->children[1] = ShrinkNodeID(READUINT32(data));
+	}
 }
 
 static void P_LoadMapBSP(const virtres_t *virt)
@@ -1720,7 +1716,11 @@ static void P_LoadMapBSP(const virtres_t *virt)
 	case NT_XNOD:
 	case NT_XGLN:
 	case NT_XGL3:
-		P_LoadExtendedBSP(virtnodes->data, nodetype);
+		if (!P_LoadExtraVertices(virtnodes->data))
+			return;
+		if (!P_LoadExtendedSubsectorsAndSegs(virtnodes->data, nodetype))
+			return;
+		P_LoadExtendedNodes(virtnodes->data, nodetype);
 		break;
 	default:
 		CONS_Alert(CONS_WARNING, "Unsupported BSP format detected.\n");
