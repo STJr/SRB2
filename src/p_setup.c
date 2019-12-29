@@ -1179,6 +1179,20 @@ static void P_LoadSidedefs(UINT8 *data)
 				break;
 			}
 
+			case 259: // Custom FOF
+				if (!isfrontside)
+				{
+					if ((msd->toptexture[0] >= '0' && msd->toptexture[0] <= '9')
+						|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'F'))
+						sd->toptexture = axtoi(msd->toptexture);
+					else
+						I_Error("Custom FOF (tag %d) needs a value in the linedef's back side upper texture field.", sd->line->tag);
+
+					sd->midtexture = R_TextureNumForName(msd->midtexture);
+					sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+					break;
+				}
+				// FALLTHRU
 			default: // normal cases
 				if (msd->toptexture[0] == '#')
 				{
