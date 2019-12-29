@@ -4580,6 +4580,10 @@ INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
 
 	if (usemapcode)
 	{
+		/* we can't check mapheaderinfo for this hahahaha */
+		if (W_CheckNumForName(G_BuildMapName(newmapnum)) == LUMPERROR)
+			return 0;
+
 		if (realmapnamep)
 			(*realmapnamep) = G_BuildMapTitle(newmapnum);
 	}
