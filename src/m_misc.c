@@ -2474,6 +2474,8 @@ int M_PathParts(const char *path)
 	int n;
 	const char *p;
 	const char *t;
+	if (path == NULL)
+		return 0;
 	for (n = 0, p = path ;; ++n)
 	{
 		t = p;

@@ -6426,7 +6426,7 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
   *       as they'll just be erased by UnArchiveThinkers.
   * \sa P_SpawnPrecipitation, P_SpawnFriction, P_SpawnPushers, P_SpawnScrollers
   */
-void P_SpawnSpecials(INT32 fromnetsave)
+void P_SpawnSpecials(boolean fromnetsave)
 {
 	sector_t *sector;
 	size_t i;
