@@ -2493,7 +2493,7 @@ void F_StartTitleScreen(void)
 			camera.x = startpos->x << FRACBITS;
 			camera.y = startpos->y << FRACBITS;
 			camera.subsector = R_PointInSubsector(camera.x, camera.y);
-			camera.z = camera.subsector->sector->floorheight + ((startpos->options >> ZSHIFT) << FRACBITS);
+			camera.z = camera.subsector->sector->floorheight + (startpos->z << FRACBITS);
 			camera.angle = (startpos->angle % 360)*ANG1;
 			camera.aiming = 0;
 		}

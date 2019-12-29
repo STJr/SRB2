@@ -96,7 +96,7 @@ void P_SetupLevelSky(INT32 skynum, boolean global);
 #ifdef SCANTHINGS
 void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
 #endif
-void P_LoadThingsOnly(void);
+void P_RespawnThings(void);
 boolean P_LoadLevel(boolean fromnetsave);
 boolean P_AddWadFile(const char *wadfilename);
 boolean P_RunSOC(const char *socfilename);

@@ -8824,9 +8824,11 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"JUSTSTEPPEDDOWN", // used for ramp sectors
 	"VERTICALFLIP", // Vertically flip sprite/allow upside-down physics
 	"GOOWATER", // Goo water
+	"TOUCHLAVA", // The mobj is touching a lava block
 	"PUSHED", // Mobj was already pushed this tic
 	"SPRUNG", // Mobj was already sprung this tic
 	"APPLYPMOMZ", // Platform movement
+	"TRACERANGLE", // Compute and trigger on mobj angle relative to tracer
 	NULL
 };
 
