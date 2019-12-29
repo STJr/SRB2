@@ -1854,8 +1854,7 @@ void G_DoLoadLevel(boolean resetplayer)
 		return;
 	}
 
-	if (!resetplayer)
-		P_FindEmerald();
+	P_FindEmerald();
 
 	displayplayer = consoleplayer; // view the guy you are playing
 	if (!splitscreen && !botingame)
