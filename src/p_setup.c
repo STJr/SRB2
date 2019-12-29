@@ -1419,45 +1419,54 @@ static inline float P_SegLengthFloat(seg_t *seg)
 }
 #endif
 
-static void P_LoadSegs(UINT8 *data)
+static void P_InitializeSeg(seg_t *seg)
 {
-	INT32 linedef, side;
-	mapseg_t *ml = (mapseg_t*)data;
-	seg_t *li = segs;
-	line_t *ldef;
-	size_t i;
+	seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
 
-	for (i = 0; i < numsegs; i++, li++, ml++)
-	{
-		li->v1 = &vertexes[SHORT(ml->v1)];
-		li->v2 = &vertexes[SHORT(ml->v2)];
+	seg->frontsector = seg->sidedef->sector;
+	seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
 
-		li->length = P_SegLength(li);
 #ifdef HWRENDER
-		if (rendermode == render_opengl)
-		{
-			li->flength = P_SegLengthFloat(li);
-			//Hurdler: 04/12/2000: for now, only used in hardware mode
-			li->lightmaps = NULL; // list of static lightmap for this seg
-		}
-		li->pv1 = li->pv2 = NULL;
+	seg->pv1 = seg->pv2 = NULL;
+
+	//Hurdler: 04/12/2000: for now, only used in hardware mode
+	seg->lightmaps = NULL; // list of static lightmap for this seg
 #endif
 
-		li->angle = (SHORT(ml->angle))<<FRACBITS;
-		li->offset = (SHORT(ml->offset))<<FRACBITS;
-		linedef = SHORT(ml->linedef);
-		ldef = &lines[linedef];
-		li->linedef = ldef;
-		li->side = side = SHORT(ml->side);
-		li->sidedef = &sides[ldef->sidenum[side]];
-		li->frontsector = sides[ldef->sidenum[side]].sector;
-		if (ldef->flags & ML_TWOSIDED)
-			li->backsector = sides[ldef->sidenum[side^1]].sector;
-		else
-			li->backsector = 0;
+	seg->numlights = 0;
+	seg->rlights = NULL;
+#ifdef POLYOBJECTS
+	seg->polyseg = NULL;
+	seg->dontrenderme = false;
+#endif
+}
 
-		li->numlights = 0;
-		li->rlights = NULL;
+static void P_LoadSegs(UINT8 *data)
+{
+	mapseg_t *ms = (mapseg_t*)data;
+	seg_t *seg = segs;
+	size_t i;
+
+	for (i = 0; i < numsegs; i++, seg++, ms++)
+	{
+		seg->v1 = &vertexes[SHORT(ms->v1)];
+		seg->v2 = &vertexes[SHORT(ms->v2)];
+
+		seg->side = SHORT(ms->side);
+
+		seg->offset = (SHORT(ms->offset)) << FRACBITS;
+
+		seg->angle = (SHORT(ms->angle)) << FRACBITS;
+
+		seg->linedef = &lines[SHORT(ms->linedef)];
+
+		seg->length = P_SegLength(seg);
+#ifdef HWRENDER
+		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+#endif
+
+		seg->glseg = false;
+		P_InitializeSeg(seg);
 	}
 }
 
@@ -1596,16 +1605,18 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 *data, nodetype_t nodetype)
 			for (m = 0; m < subsectors[i].numlines; m++, k++)
 			{
 				UINT16 linenum;
-				UINT32 vert;
-				vert = READUINT32(data);
+				UINT32 vert = READUINT32(data);
+
 				segs[k].v1 = &vertexes[vert];
 				if (m == 0)
 					segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
 				else
 					segs[k - 1].v2 = segs[k].v1;
-				data += 4; // partner; can be ignored by software renderer;
+
+				data += 4; // partner, can be ignored by software renderer
 				if (nodetype == NT_XGL3)
 					data += 2; // Line number is 32-bit in XGL3, but we're limited to 16 bits.
+
 				linenum = READUINT16(data);
 				segs[k].glseg = (linenum == 0xFFFF);
 				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
@@ -1620,11 +1631,12 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 *data, nodetype_t nodetype)
 				segs[k].v2 = &vertexes[READUINT32(data)];
 				segs[k].linedef = &lines[READUINT16(data)];
 				segs[k].side = READUINT8(data);
+				segs[k].glseg = false;
 			}
 			break;
 
 		default:
-			return;
+			return false;
 		}
 	}
 
@@ -1632,18 +1644,12 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 *data, nodetype_t nodetype)
 	{
 		vertex_t *v1 = seg->v1;
 		vertex_t *v2 = seg->v2;
+		P_InitializeSeg(seg);
 		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
 		seg->offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
-		seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
-		seg->frontsector = seg->sidedef->sector;
-		if (seg->linedef->flags & ML_TWOSIDED)
-			seg->backsector = sides[seg->linedef->sidenum[seg->side ^ 1]].sector;
-		else
-			seg->backsector = 0;
-
-		seg->numlights = 0;
-		seg->rlights = NULL;
 	}
+
+	return true;
 }
 
 // Auxiliary function: Shrink node ID from 32-bit to 16-bit.
