@@ -45,9 +45,6 @@ static vertex_t segleft, segright;
 static fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
 #endif
 
-// for R_CalculateSegDistance
-#define SOFTWARE_USE_FLOATS
-
 //
 // regular wall
 //
