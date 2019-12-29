@@ -1485,7 +1485,7 @@ typedef enum {
 } nodetype_t;
 
 // Find out the BSP format.
-static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t *virtnodes)
+static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t **virtnodes)
 {
 	boolean supported[NUMNODETYPES];
 	nodetype_t nodetype = NT_UNSUPPORTED;
@@ -1493,7 +1493,7 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t *virtnodes)
 
 	if (vres_Find(virt, "TEXTMAP"))
 	{
-		virtnodes = vres_Find(virt, "ZNODES");
+		*virtnodes = vres_Find(virt, "ZNODES");
 		supported[NT_XGLN] = supported[NT_XGL3] = true;
 	}
 	else
@@ -1503,7 +1503,7 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t *virtnodes)
 
 		if (virtsegs && virtsegs->size)
 		{
-			virtnodes = vres_Find(virt, "NODES");
+			*virtnodes = vres_Find(virt, "NODES");
 			return NT_DOOM; // Traditional map format BSP tree.
 		}
 
@@ -1511,19 +1511,19 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t *virtnodes)
 
 		if (virtssectors && virtssectors->size)
 		{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
-			virtnodes = virtssectors;
+			*virtnodes = virtssectors;
 			supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL3] = true;
 		}
 		else
 		{ // Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
-			virtnodes = vres_Find(virt, "NODES");
+			*virtnodes = vres_Find(virt, "NODES");
 			supported[NT_XNOD] = supported[NT_ZNOD] = true;
 		}
 	}
 
-	M_Memcpy(signature, virtnodes->data, 4);
+	M_Memcpy(signature, (*virtnodes)->data, 4);
 	signature[4] = '\0';
-	virtnodes->data += 4;
+	(*virtnodes)->data += 4;
 
 	if (!strcmp(signature, "XNOD"))
 		nodetype = NT_XNOD;
@@ -1693,7 +1693,7 @@ static void P_LoadExtendedNodes(UINT8 *data, nodetype_t nodetype)
 static void P_LoadMapBSP(const virtres_t *virt)
 {
 	virtlump_t *virtnodes = NULL;
-	nodetype_t nodetype = P_GetNodetype(virt, virtnodes);
+	nodetype_t nodetype = P_GetNodetype(virt, &virtnodes);
 
 	switch (nodetype)
 	{
