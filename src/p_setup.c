@@ -1619,6 +1619,7 @@ static void P_LoadExtendedBSP(UINT8 *data, nodetype_t nodetype)
 		switch (nodetype)
 		{
 		case NT_XGLN:
+		case NT_XGL3:
 			for (m = 0; m < subsectors[i].numlines; m++, k++)
 			{
 				UINT16 linenum;
@@ -1630,44 +1631,11 @@ static void P_LoadExtendedBSP(UINT8 *data, nodetype_t nodetype)
 				else
 					segs[k - 1].v2 = segs[k].v1;
 				data += 4; // partner; can be ignored by software renderer;
+				if (nodetype == NT_XGL3)
+					data += 2; // Line number is 32-bit in XGL3, but we're limited to 16 bits.
 				linenum = READUINT16(data);
-				if (linenum == 0xFFFF)
-				{
-					segs[k].glseg = true;
-					segs[k].linedef = NULL;
-				}
-				else
-				{
-					segs[k].glseg = false;
-					segs[k].linedef = &lines[linenum];
-				}
-				segs[k].side = READUINT8(data);
-			}
-			break;
-
-		case NT_XGL3:
-			for (m = 0; m < subsectors[i].numlines; m++, k++)
-			{
-				UINT32 linenum;
-				UINT32 vert;
-				vert = READUINT32(data);
-				segs[k].v1 = &vertexes[vert];
-				if (m == 0)
-					segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
-				else
-					segs[k - 1].v2 = segs[k].v1;
-				data += 4; // partner; can be ignored by software renderer;
-				linenum = READUINT32(data);
-				if (linenum == 0xFFFFFFFF)
-				{
-					segs[k].glseg = true;
-					segs[k].linedef = NULL;
-				}
-				else
-				{
-					segs[k].glseg = false;
-					segs[k].linedef = &lines[linenum];
-				}
+				segs[k].glseg = (linenum == 0xFFFF);
+				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
 				segs[k].side = READUINT8(data);
 			}
 			break;
