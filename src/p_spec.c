@@ -6433,7 +6433,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 	INT32 j;
 	thinkerlist_t *secthinkers;
 	thinker_t *th;
-	virtres_t* virt = NULL;
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
 	(void)fromnetsave;
@@ -7179,38 +7178,14 @@ void P_SpawnSpecials(boolean fromnetsave)
 					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers);
 				break;
 
-			case 259: // Make-Your-Own FOF!
+			case 259: // Custom FOF
 				if (lines[i].sidenum[1] != 0xffff)
 				{
-					UINT8 *data;
-					UINT16 b;
-
-					if (!virt)
-						virt = vres_GetMap(lastloadedmaplumpnum);
-
-					data = (UINT8*) vres_Find(virt, "SIDEDEFS")->data;
-
-					for (b = 0; b < (INT16)numsides; b++)
-					{
-						register mapsidedef_t *msd = (mapsidedef_t *)data + b;
-
-						if (b == lines[i].sidenum[1])
-						{
-							if ((msd->toptexture[0] >= '0' && msd->toptexture[0] <= '9')
-								|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'F'))
-							{
-								ffloortype_e FOF_Flags = axtoi(msd->toptexture);
-
-								P_AddFakeFloorsByLine(i, FOF_Flags, secthinkers);
-								break;
-							}
-							else
-								I_Error("Make-Your-Own-FOF (tag %d) needs a value in the linedef's second side upper texture field.", lines[i].tag);
-						}
-					}
+					ffloortype_e fofflags = sides[lines[i].sidenum[1]].toptexture;
+					P_AddFakeFloorsByLine(i, fofflags, secthinkers);
 				}
 				else
-					I_Error("Make-Your-Own FOF (tag %d) found without a 2nd linedef side!", lines[i].tag);
+					I_Error("Custom FOF (tag %d) found without a linedef back side!", lines[i].tag);
 				break;
 
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
@@ -7432,9 +7407,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 		}
 	}
-
-	if (virt)
-		vres_Free(virt);
 
 	// Allocate each list
 	for (i = 0; i < numsectors; i++)

@@ -2965,7 +2965,7 @@ void G_DoReborn(INT32 playernum)
 		}
 		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD))
 		{
-			P_LoadThingsOnly();
+			P_RespawnThings();
 
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
