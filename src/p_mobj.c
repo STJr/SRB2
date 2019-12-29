@@ -9903,19 +9903,12 @@ static void P_FlagFuseThink(mobj_t *mobj)
 
 	x = mobj->spawnpoint->x << FRACBITS;
 	y = mobj->spawnpoint->y << FRACBITS;
+	z = mobj->spawnpoint->z << FRACBITS;
 	ss = R_PointInSubsector(x, y);
 	if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
-	{
-		z = ss->sector->ceilingheight - mobjinfo[mobj->type].height;
-		if (mobj->spawnpoint->options >> ZSHIFT)
-			z -= (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
-	}
+		z = ss->sector->ceilingheight - mobjinfo[mobj->type].height - z;
 	else
-	{
-		z = ss->sector->floorheight;
-		if (mobj->spawnpoint->options >> ZSHIFT)
-			z += (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
-	}
+		z = ss->sector->floorheight + z;
 	flagmo = P_SpawnMobj(x, y, z, mobj->type);
 	flagmo->spawnpoint = mobj->spawnpoint;
 	if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
@@ -11289,9 +11282,6 @@ static mobjtype_t P_GetMobjtype(UINT16 mthingtype)
 //
 void P_RespawnSpecials(void)
 {
-	fixed_t x, y, z;
-	subsector_t *ss;
-	mobj_t *mo = NULL;
 	mapthing_t *mthing = NULL;
 
 	// only respawn items when cv_itemrespawn is on
@@ -11321,63 +11311,8 @@ void P_RespawnSpecials(void)
 #endif
 
 	if (mthing)
-	{
-		mobjtype_t i = P_GetMobjtype(mthing->type);
-		x = mthing->x << FRACBITS;
-		y = mthing->y << FRACBITS;
-		ss = R_PointInSubsector(x, y);
+		P_SpawnMapThing(mthing);
 
-		if (i == MT_UNKNOWN) // prevent creation of objects with this type -- Monster Iestyn 17/12/17
-		{
-			// 3D Mode start Thing is unlikely to be added to the que,
-			// so don't bother checking for that specific type
-			CONS_Alert(CONS_WARNING, M_GetText("P_RespawnSpecials: Unknown thing type %d attempted to respawn at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
-			// pull it from the que
-			iquetail = (iquetail+1)&(ITEMQUESIZE-1);
-			return;
-		}
-
-		//CTF rings should continue to respawn as normal rings outside of CTF.
-		if (!(gametyperules & GTR_TEAMFLAGS))
-		{
-			if (i == MT_REDTEAMRING || i == MT_BLUETEAMRING)
-				i = MT_RING;
-		}
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
-#ifdef ESLOPE
-			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
-#endif
-			ss->sector->ceilingheight) - (mthing->options >> ZSHIFT) * FRACUNIT;
-			if (mthing->options & MTF_AMBUSH
-			&& (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN || i == MT_NIGHTSSTAR || P_WeaponOrPanel(i)))
-				z -= 24*FRACUNIT;
-			z -= mobjinfo[i].height; // Don't forget the height!
-		}
-		else
-		{
-			z = (
-#ifdef ESLOPE
-			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
-#endif
-			ss->sector->floorheight) + (mthing->options >> ZSHIFT) * FRACUNIT;
-			if (mthing->options & MTF_AMBUSH
-			&& (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN || i == MT_NIGHTSSTAR || P_WeaponOrPanel(i)))
-				z += 24*FRACUNIT;
-		}
-
-		mo = P_SpawnMobj(x, y, z, i);
-		mo->spawnpoint = mthing;
-		mo->angle = ANGLE_45 * (mthing->angle/45);
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mo->eflags |= MFE_VERTICALFLIP;
-			mo->flags2 |= MF2_OBJECTFLIP;
-		}
-	}
 	// pull it from the que
 	iquetail = (iquetail+1)&(ITEMQUESIZE-1);
 }
@@ -11563,7 +11498,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 
 	fixed_t z;
 	sector_t *sector;
-	fixed_t floor, ceiling;
+	fixed_t floor, ceiling, ceilingspawn;
 
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
@@ -11590,23 +11525,18 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 	sector->c_slope ? P_GetZAt(sector->c_slope, x, y) :
 #endif
 	sector->ceilingheight;
+	ceilingspawn = ceiling - mobjinfo[MT_PLAYER].height;
 
 	if (mthing)
 	{
+		fixed_t offset = mthing->z << FRACBITS;
+
 		// Flagging a player's ambush will make them start on the ceiling
 		// Objectflip inverts
 		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
-		{
-			z = ceiling - mobjinfo[MT_PLAYER].height;
-			if (mthing->options >> ZSHIFT)
-				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-		}
+			z = ceilingspawn - offset;
 		else
-		{
-			z = floor;
-			if (mthing->options >> ZSHIFT)
-				z += ((mthing->options >> ZSHIFT) << FRACBITS);
-		}
+			z = floor + offset;
 
 		if (mthing->options & MTF_OBJECTFLIP) // flip the player!
 		{
@@ -11623,8 +11553,8 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 
 	if (z < floor)
 		z = floor;
-	else if (z > ceiling - mobjinfo[MT_PLAYER].height)
-		z = ceiling - mobjinfo[MT_PLAYER].height;
+	else if (z > ceilingspawn)
+		z = ceilingspawn;
 
 	mobj->floorz = floor;
 	mobj->ceilingz = ceiling;
@@ -12465,7 +12395,7 @@ static boolean P_SetupParticleGen(mapthing_t *mthing, mobj_t *mobj)
 		|| (ticcount = (sides[lines[line].sidenum[1]].textureoffset >> FRACBITS)) < 1)
 		ticcount = 3;
 
-	numdivisions = (mthing->options >> ZSHIFT);
+	numdivisions = mthing->z;
 
 	if (numdivisions)
 	{
