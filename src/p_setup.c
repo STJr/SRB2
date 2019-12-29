@@ -1008,10 +1008,18 @@ static void P_InitializeLinedef(line_t *ld)
 		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1((size_t)(ld - lines)));
 	}
 
-	if (ld->sidenum[0] != 0xffff && ld->special)
+	if (ld->sidenum[0] != 0xffff)
+	{
 		sides[ld->sidenum[0]].special = ld->special;
-	if (ld->sidenum[1] != 0xffff && ld->special)
+		sides[ld->sidenum[0]].line = ld;
+
+	}
+	if (ld->sidenum[1] != 0xffff)
+	{
 		sides[ld->sidenum[1]].special = ld->special;
+		sides[ld->sidenum[1]].line = ld;
+
+	}
 }
 
 static void P_LoadLinedefs(UINT8 *data)
@@ -1044,6 +1052,7 @@ static void P_LoadSidedefs(UINT8 *data)
 	for (i = 0; i < numsides; i++, sd++, msd++)
 	{
 		UINT16 sector_num;
+		boolean isfrontside = !sd->line || sd->line->sidenum[0] == i;
 
 		sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
@@ -1092,9 +1101,8 @@ static void P_LoadSidedefs(UINT8 *data)
 					sd->midtexture = get_number(process);
 				}
 
-				// always process if back sidedef, because we need that - symbol
  				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
-				if (i == 1 || msd->toptexture[0] != '-' || msd->toptexture[1] != '\0')
+				if (isfrontside && !(msd->toptexture[0] == '-' && msd->toptexture[1] == '\0'))
 				{
 					M_Memcpy(process,msd->toptexture,8);
 					process[8] = '\0';
