@@ -1540,10 +1540,10 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, virtlump_t **virtnodes)
 }
 
 // Extended node formats feature additional vertices; useful for OpenGL, but totally useless in gamelogic.
-static boolean P_LoadExtraVertices(UINT8 *data)
+static boolean P_LoadExtraVertices(virtlump_t *virtnodes)
 {
-	UINT32 origvrtx = READUINT32(data);
-	UINT32 xtrvrtx = READUINT32(data);
+	UINT32 origvrtx = READUINT32(virtnodes->data);
+	UINT32 xtrvrtx = READUINT32(virtnodes->data);
 	line_t* ld = lines;
 	vertex_t *oldpos = vertexes;
 	ssize_t offset;
@@ -1572,28 +1572,28 @@ static boolean P_LoadExtraVertices(UINT8 *data)
 	// Read extra vertex data.
 	for (i = origvrtx; i < numvertexes; i++)
 	{
-		vertexes[i].x = READFIXED(data);
-		vertexes[i].y = READFIXED(data);
+		vertexes[i].x = READFIXED(virtnodes->data);
+		vertexes[i].y = READFIXED(virtnodes->data);
 	}
 
 	return true;
 }
 
-static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 *data, nodetype_t nodetype)
+static boolean P_LoadExtendedSubsectorsAndSegs(virtlump_t *virtnodes, nodetype_t nodetype)
 {
 	size_t i, k;
 	INT16 m;
 	seg_t *seg;
 
 	// Subsectors
-	numsubsectors = READUINT32(data);
+	numsubsectors = READUINT32(virtnodes->data);
 	subsectors = Z_Calloc(numsubsectors*sizeof(*subsectors), PU_LEVEL, NULL);
 
 	for (i = 0; i < numsubsectors; i++)
-		subsectors[i].numlines = READUINT32(data);
+		subsectors[i].numlines = READUINT32(virtnodes->data);
 
 	// Segs
-	numsegs = READUINT32(data);
+	numsegs = READUINT32(virtnodes->data);
 	segs = Z_Calloc(numsegs*sizeof(*segs), PU_LEVEL, NULL);
 
 	for (i = 0, k = 0; i < numsubsectors; i++)
@@ -1608,7 +1608,7 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 *data, nodetype_t nodetype)
 			for (m = 0; m < subsectors[i].numlines; m++, k++)
 			{
 				UINT16 linenum;
-				UINT32 vert = READUINT32(data);
+				UINT32 vert = READUINT32(virtnodes->data);
 
 				segs[k].v1 = &vertexes[vert];
 				if (m == 0)
@@ -1616,24 +1616,24 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 *data, nodetype_t nodetype)
 				else
 					segs[k - 1].v2 = segs[k].v1;
 
-				data += 4; // partner, can be ignored by software renderer
+				virtnodes->data += 4; // partner, can be ignored by software renderer
 				if (nodetype == NT_XGL3)
-					data += 2; // Line number is 32-bit in XGL3, but we're limited to 16 bits.
+					virtnodes->data += 2; // Line number is 32-bit in XGL3, but we're limited to 16 bits.
 
-				linenum = READUINT16(data);
+				linenum = READUINT16(virtnodes->data);
 				segs[k].glseg = (linenum == 0xFFFF);
 				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
-				segs[k].side = READUINT8(data);
+				segs[k].side = READUINT8(virtnodes->data);
 			}
 			break;
 
 		case NT_XNOD:
 			for (m = 0; m < subsectors[i].numlines; m++, k++)
 			{
-				segs[k].v1 = &vertexes[READUINT32(data)];
-				segs[k].v2 = &vertexes[READUINT32(data)];
-				segs[k].linedef = &lines[READUINT16(data)];
-				segs[k].side = READUINT8(data);
+				segs[k].v1 = &vertexes[READUINT32(virtnodes->data)];
+				segs[k].v2 = &vertexes[READUINT32(virtnodes->data)];
+				segs[k].linedef = &lines[READUINT16(virtnodes->data)];
+				segs[k].side = READUINT8(virtnodes->data);
 				segs[k].glseg = false;
 			}
 			break;
@@ -1662,31 +1662,31 @@ static UINT16 ShrinkNodeID(UINT32 x) {
 	return result | mask;
 }
 
-static void P_LoadExtendedNodes(UINT8 *data, nodetype_t nodetype)
+static void P_LoadExtendedNodes(virtlump_t *virtnodes, nodetype_t nodetype)
 {
 	node_t *mn;
 	size_t i, j, k;
 	boolean xgl3 = (nodetype == NT_XGL3);
 
-	numnodes = READINT32(data);
+	numnodes = READINT32(virtnodes->data);
 	nodes = Z_Calloc(numnodes*sizeof(*nodes), PU_LEVEL, NULL);
 
 	for (i = 0, mn = nodes; i < numnodes; i++, mn++)
 	{
 		// Splitter
-		mn->x = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
-		mn->y = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
-		mn->dx = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
-		mn->dy = xgl3 ? READINT32(data) : (READINT16(data) << FRACBITS);
+		mn->x = xgl3 ? READINT32(virtnodes->data) : (READINT16(virtnodes->data) << FRACBITS);
+		mn->y = xgl3 ? READINT32(virtnodes->data) : (READINT16(virtnodes->data) << FRACBITS);
+		mn->dx = xgl3 ? READINT32(virtnodes->data) : (READINT16(virtnodes->data) << FRACBITS);
+		mn->dy = xgl3 ? READINT32(virtnodes->data) : (READINT16(virtnodes->data) << FRACBITS);
 
 		// Bounding boxes
 		for (j = 0; j < 2; j++)
 			for (k = 0; k < 4; k++)
-				mn->bbox[j][k] = READINT16(data) << FRACBITS;
+				mn->bbox[j][k] = READINT16(virtnodes->data) << FRACBITS;
 
 		//Children
-		mn->children[0] = ShrinkNodeID(READUINT32(data)); /// \todo Use UINT32 for node children in a future, instead?
-		mn->children[1] = ShrinkNodeID(READUINT32(data));
+		mn->children[0] = ShrinkNodeID(READUINT32(virtnodes->data)); /// \todo Use UINT32 for node children in a future, instead?
+		mn->children[1] = ShrinkNodeID(READUINT32(virtnodes->data));
 	}
 }
 
@@ -1725,11 +1725,11 @@ static void P_LoadMapBSP(const virtres_t *virt)
 	case NT_XNOD:
 	case NT_XGLN:
 	case NT_XGL3:
-		if (!P_LoadExtraVertices(virtnodes->data))
+		if (!P_LoadExtraVertices(virtnodes))
 			return;
-		if (!P_LoadExtendedSubsectorsAndSegs(virtnodes->data, nodetype))
+		if (!P_LoadExtendedSubsectorsAndSegs(virtnodes, nodetype))
 			return;
-		P_LoadExtendedNodes(virtnodes->data, nodetype);
+		P_LoadExtendedNodes(virtnodes, nodetype);
 		break;
 	default:
 		CONS_Alert(CONS_WARNING, "Unsupported BSP format detected.\n");
