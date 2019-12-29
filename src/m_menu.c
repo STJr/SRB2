@@ -605,7 +605,7 @@ static menuitem_t MISC_ChangeTeamMenu[] =
 	{IT_WHITESTRING|IT_CALL,         NULL, "Confirm",           M_ConfirmTeamChange,    90},
 };
 
-static const gtdesc_t gametypedesc[] =
+gtdesc_t gametypedesc[NUMGAMETYPES] =
 {
 	{{ 54,  54}, "Play through the single-player campaign with your friends, teaming up to beat Dr Eggman's nefarious challenges!"},
 	{{103, 103}, "Speed your way through the main acts, competing in several different categories to see who's the best."},
@@ -1181,7 +1181,8 @@ static menuitem_t OP_CameraOptionsMenu[] =
 
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", &cv_cam_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Turning Speed", &cv_cam_turnmultiplier, 90},
 
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 100},
 };
@@ -1195,7 +1196,8 @@ static menuitem_t OP_Camera2OptionsMenu[] =
 
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
 	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", &cv_cam2_speed, 80},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Turning Speed", &cv_cam2_turnmultiplier, 90},
 
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 100},
 };
@@ -4686,6 +4688,9 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 				return true;
 
 			if (gt == GT_RACE && (mapheaderinfo[mapnum]->typeoflevel & TOL_RACE))
+				return true;
+
+			if (gt > 0 && gt < gametypecount && (mapheaderinfo[mapnum]->typeoflevel & gametypetol[gt]))
 				return true;
 
 			return false;
@@ -9936,7 +9941,7 @@ static void M_DrawConnectMenu(void)
 		                     va("Ping: %u", (UINT32)LONG(serverlist[slindex].info.time)));
 
 		gt = "Unknown";
-		if (serverlist[slindex].info.gametype < NUMGAMETYPES)
+		if (serverlist[slindex].info.gametype < gametypecount)
 			gt = Gametype_Names[serverlist[slindex].info.gametype];
 
 		V_DrawSmallString(currentMenu->x+46,S_LINEY(i)+8, globalflags,

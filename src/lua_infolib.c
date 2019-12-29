@@ -266,7 +266,6 @@ static int lib_getSpriteInfo(lua_State *L)
 #define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to spriteinfo[] (%s)", e);
 #define TYPEERROR(f, t1, t2) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t1), lua_typename(L, t2)))
 
-#ifdef ROTSPRITE
 static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, int idx)
 {
 	int okcool = 0;
@@ -360,7 +359,6 @@ static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
 
 	return 0;
 }
-#endif
 
 static int lib_setSpriteInfo(lua_State *L)
 {
@@ -393,14 +391,11 @@ static int lib_setSpriteInfo(lua_State *L)
 		if (lua_isnumber(L, 2))
 		{
 			i = lua_tointeger(L, 2);
-#ifndef ROTSPRITE
 			i++; // shift index in case of missing rotsprite support
-#endif
 		}
 		else
 			str = luaL_checkstring(L, 2);
 
-#ifdef ROTSPRITE
 		if (i == 1 || (str && fastcmp(str, "pivot")))
 		{
 			// pivot[] is a table
@@ -409,7 +404,6 @@ static int lib_setSpriteInfo(lua_State *L)
 			else
 				FIELDERROR("pivot", va("%s expected, got %s", lua_typename(L, LUA_TTABLE), luaL_typename(L, -1)))
 		}
-#endif
 
 		lua_pop(L, 1);
 	}
@@ -434,7 +428,6 @@ static int spriteinfo_get(lua_State *L)
 
 	I_Assert(sprinfo != NULL);
 
-#ifdef ROTSPRITE
 	// push spriteframepivot_t userdata
 	if (fastcmp(field, "pivot"))
 	{
@@ -448,7 +441,6 @@ static int spriteinfo_get(lua_State *L)
 		return 1;
 	}
 	else
-#endif
 		return luaL_error(L, LUA_QL("spriteinfo_t") " has no field named " LUA_QS, field);
 
 	return 0;
@@ -473,6 +465,7 @@ static int spriteinfo_set(lua_State *L)
 #ifdef ROTSPRITE
 	if (sprites != NULL)
 		R_FreeSingleRotSprite(&sprites[sprinfo-spriteinfo]);
+#endif
 
 	if (fastcmp(field, "pivot"))
 	{
@@ -488,7 +481,6 @@ static int spriteinfo_set(lua_State *L)
 		}
 	}
 	else
-#endif
 		return luaL_error(L, va("Field %s does not exist in spriteinfo_t", field));
 
 	return 0;
@@ -506,7 +498,6 @@ static int spriteinfo_num(lua_State *L)
 }
 
 // framepivot_t
-#ifdef ROTSPRITE
 static int pivotlist_get(lua_State *L)
 {
 	void **userdata;
@@ -616,7 +607,6 @@ static int framepivot_num(lua_State *L)
 	lua_pushinteger(L, 2);
 	return 1;
 }
-#endif
 
 ////////////////
 // STATE INFO //
@@ -1538,7 +1528,6 @@ int LUA_InfoLib(lua_State *L)
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
-#ifdef ROTSPRITE
 	luaL_newmetatable(L, META_PIVOTLIST);
 		lua_pushcfunction(L, pivotlist_get);
 		lua_setfield(L, -2, "__index");
@@ -1560,7 +1549,6 @@ int LUA_InfoLib(lua_State *L)
 		lua_pushcfunction(L, framepivot_num);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
-#endif
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);

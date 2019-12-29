@@ -39,7 +39,7 @@ extern UINT32 mapmusposition;
 #define MUSIC_FORCERESET  0x4000 // -*--------------
 // Use other bits if necessary.
 
-extern INT16 maptol;
+extern UINT32 maptol;
 extern UINT8 globalweather;
 extern INT32 curWeather;
 extern INT32 cursaveslot;
@@ -84,6 +84,9 @@ extern boolean addedtogame; // true after the server has added you
 extern boolean multiplayer;
 
 extern INT16 gametype;
+extern UINT32 gametyperules;
+extern INT16 gametypecount;
+
 extern boolean splitscreen;
 extern boolean circuitmap; // Does this level have 'circuit mode'?
 extern boolean fromlevelselect;
@@ -284,7 +287,7 @@ typedef struct
 	char lvlttl[22];       ///< Level name without "Zone". (21 character limit instead of 32, 21 characters can display on screen max anyway)
 	char subttl[33];       ///< Subtitle for level
 	UINT8 actnum;          ///< Act number or 0 for none.
-	UINT16 typeoflevel;    ///< Combination of typeoflevel flags.
+	UINT32 typeoflevel;    ///< Combination of typeoflevel flags.
 	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
 	char musname[7];       ///< Music track to play. "" for no music.
 	UINT16 mustrack;       ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
@@ -366,6 +369,70 @@ typedef struct
 
 extern mapheader_t* mapheaderinfo[NUMMAPS];
 
+// Gametypes
+#define NUMGAMETYPEFREESLOTS 128
+enum GameType
+{
+	GT_COOP = 0, // also used in single player
+	GT_COMPETITION, // Classic "Race"
+	GT_RACE,
+
+	GT_MATCH,
+	GT_TEAMMATCH,
+
+	GT_TAG,
+	GT_HIDEANDSEEK,
+
+	GT_CTF, // capture the flag
+
+	GT_FIRSTFREESLOT,
+	GT_LASTFREESLOT = GT_FIRSTFREESLOT + NUMGAMETYPEFREESLOTS - 1,
+	NUMGAMETYPES
+};
+// If you alter this list, update dehacked.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
+
+// Gametype rules
+enum GameTypeRules
+{
+	GTR_CAMPAIGN         = 1,     // Linear Co-op map progression, don't allow random maps
+	GTR_RINGSLINGER      = 1<<1,  // Outside of Co-op, Competition, and Race (overriden by cv_ringslinger)
+	GTR_SPECTATORS       = 1<<2,  // Outside of Co-op, Competition, and Race
+	GTR_FRIENDLYFIRE     = 1<<3,  // Always allow friendly fire
+	GTR_LIVES            = 1<<4,  // Co-op and Competition
+	GTR_TEAMS            = 1<<5,  // Team Match, CTF
+	GTR_RACE             = 1<<6,  // Race and Competition
+	GTR_TAG              = 1<<7,  // Tag and Hide and Seek
+	GTR_POINTLIMIT       = 1<<8,  // Ringslinger point limit
+	GTR_TIMELIMIT        = 1<<9,  // Ringslinger time limit
+	GTR_HIDETIME         = 1<<10, // Hide time (Tag and Hide and Seek)
+	GTR_HIDEFROZEN       = 1<<11, // Frozen after hide time (Hide and Seek, but not Tag)
+	GTR_BLINDFOLDED      = 1<<12, // Blindfolded view (Tag and Hide and Seek)
+	GTR_FIRSTPERSON      = 1<<13, // First person camera
+	GTR_MATCHEMERALDS    = 1<<14, // Ringslinger emeralds (Match and CTF)
+	GTR_TEAMFLAGS        = 1<<15, // Gametype has team flags (CTF)
+	GTR_PITYSHIELD       = 1<<16, // Award pity shield
+	GTR_DEATHPENALTY     = 1<<17, // Death score penalty
+	GTR_NOSPECTATORSPAWN = 1<<18, // Use with GTR_SPECTATORS, spawn in the map instead of with the spectators
+	GTR_DEATHMATCHSTARTS = 1<<19, // Use deathmatch starts
+	GTR_SPECIALSTAGES    = 1<<20, // Allow special stages
+	GTR_EMERALDTOKENS    = 1<<21, // Spawn emerald tokens
+	GTR_EMERALDHUNT      = 1<<22, // Emerald Hunt
+	GTR_SPAWNENEMIES     = 1<<23, // Spawn enemies
+	GTR_ALLOWEXIT        = 1<<24, // Allow exit sectors
+	GTR_NOTITLECARD      = 1<<25, // Don't show the title card
+	GTR_OVERTIME         = 1<<26, // Allow overtime
+	GTR_HURTMESSAGES     = 1<<27, // Hit and death messages
+	GTR_SPAWNINVUL       = 1<<28, // Babysitting deterrent
+};
+
+// String names for gametypes
+extern const char *Gametype_Names[NUMGAMETYPES];
+extern const char *Gametype_ConstantNames[NUMGAMETYPES];
+
+// Point and time limits for every gametype
+extern INT32 pointlimits[NUMGAMETYPES];
+extern INT32 timelimits[NUMGAMETYPES];
+
 enum TypeOfLevel
 {
 	TOL_SP          = 0x01, ///< Single Player
@@ -381,36 +448,26 @@ enum TypeOfLevel
 	TOL_CTF         = 0x40, ///< Capture the Flag
 // CTF default = 64
 
-	TOL_CUSTOM      = 0x80, ///< Custom (Lua-scripted, etc.)
+	// 0x80 was here
 
 	TOL_2D     = 0x0100, ///< 2D
 	TOL_MARIO  = 0x0200, ///< Mario
 	TOL_NIGHTS = 0x0400, ///< NiGHTS
 	TOL_ERZ3   = 0x0800, ///< ERZ3
-	TOL_XMAS   = 0x1000  ///< Christmas NiGHTS
+	TOL_XMAS   = 0x1000, ///< Christmas NiGHTS
 };
 
-// Gametypes
-enum GameType
+#define NUMBASETOL 18
+#define NUMMAXTOL (18 + NUMGAMETYPEFREESLOTS)
+
+typedef struct
 {
-	GT_COOP = 0, // also used in single player
-	GT_COMPETITION, // Classic "Race"
-	GT_RACE,
-
-	GT_MATCH,
-	GT_TEAMMATCH,
-
-	GT_TAG,
-	GT_HIDEANDSEEK,
-
-	GT_CTF, // capture the flag
-
-	NUMGAMETYPES
-};
-// If you alter this list, update dehacked.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
-
-// String names for gametypes
-extern const char *Gametype_Names[NUMGAMETYPES];
+	const char *name;
+	UINT32 flag;
+} tolinfo_t;
+extern tolinfo_t TYPEOFLEVEL[NUMMAXTOL];
+extern INT32 numtolinfo;
+extern UINT32 lastcustomtol;
 
 extern tic_t totalplaytime;
 

@@ -445,10 +445,9 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 			I_Error("MakeViaMapthings: Slope vertex %s (for linedef tag %d) not found!", sizeu1(i), tag1);
 		vx[i].x = mt->x << FRACBITS;
 		vx[i].y = mt->y << FRACBITS;
-		if (mt->extrainfo)
-			vx[i].z = mt->options << FRACBITS;
-		else
-			vx[i].z = (R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector->floorheight) + ((mt->options >> ZSHIFT) << FRACBITS);
+		vx[i].z = mt->z << FRACBITS;
+		if (!mt->extrainfo)
+			vx[i].z += R_PointInSubsector(vx[i].x, vx[i].y)->sector->floorheight;
 	}
 
 	ReconfigureViaVertexes(ret, vx[0], vx[1], vx[2]);
@@ -553,11 +552,8 @@ pslope_t *P_SlopeById(UINT16 id)
 }
 
 /// Reset slopes and read them from special lines.
-void P_ResetDynamicSlopes(const UINT32 fromsave) {
+void P_ResetDynamicSlopes(const boolean fromsave) {
 	size_t i;
-
-	boolean spawnthinkers = !(boolean)fromsave;
-
 	slopelist = NULL;
 	slopecount = 0;
 
@@ -574,14 +570,14 @@ void P_ResetDynamicSlopes(const UINT32 fromsave) {
 			case 711:
 			case 712:
 			case 713:
-				line_SpawnViaLine(i, spawnthinkers);
+				line_SpawnViaLine(i, !fromsave);
 				break;
 
 			case 704:
 			case 705:
 			case 714:
 			case 715:
-				line_SpawnViaVertexes(i, spawnthinkers);
+				line_SpawnViaVertexes(i, !fromsave);
 				break;
 
 			default:
