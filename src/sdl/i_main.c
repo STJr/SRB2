@@ -197,9 +197,12 @@ int main(int argc, char **argv)
 					format, timeinfo);
 		}
 
-		M_MkdirEachUntil(logfilename,
-				M_PathParts(logdir) - 1,
-				M_PathParts(logfilename) - 1, 0755);
+		if (logdir)
+		{
+			M_MkdirEachUntil(logfilename,
+					M_PathParts(logdir) - 1,
+					M_PathParts(logfilename) - 1, 0755);
+		}
 
 #ifdef __unix__
 		logstream = fopen(logfilename, "w");
