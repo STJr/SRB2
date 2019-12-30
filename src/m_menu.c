@@ -389,6 +389,7 @@ static void M_ResetCvars(void);
 
 // Consvar onchange functions
 static void Newgametype_OnChange(void);
+static void Newrenderer_OnChange(void);
 static void Dummymares_OnChange(void);
 
 // ==========================================================================
@@ -412,6 +413,9 @@ consvar_t cv_chooseskin = {"chooseskin", DEFAULTSKIN, CV_HIDEN|CV_CALL, skins_co
 CV_PossibleValue_t gametype_cons_t[NUMGAMETYPES+1];
 
 consvar_t cv_newgametype = {"newgametype", "Co-op", CV_HIDEN|CV_CALL, gametype_cons_t, Newgametype_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_newrenderer = {"newrenderer", "Software", CV_HIDEN|CV_CALL, cv_renderer_t, Newrenderer_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static int newrenderer_set = 1;/* Software doesn't need confirmation! */
 
 static CV_PossibleValue_t serversort_cons_t[] = {
 	{0,"Ping"},
@@ -1210,7 +1214,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",             &cv_fullscreen,         11},
 #endif
 	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
-	{IT_STRING | IT_CVAR, NULL, "Renderer",                     &cv_renderer,        21},
+	{IT_STRING | IT_CVAR, NULL, "Renderer",                     &cv_newrenderer,        21},
 
 	{IT_HEADER, NULL, "Color Profile", NULL, 30},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness (F11)", &cv_globalgamma,36},
@@ -2220,6 +2224,43 @@ static void Newgametype_OnChange(void)
 
 		if (!M_CanShowLevelOnPlatter(cv_nextmap.value-1, cv_newgametype.value))
 			CV_SetValue(&cv_nextmap, M_GetFirstLevelInList(cv_newgametype.value));
+	}
+}
+
+static void Newrenderer_AREYOUSURE(INT32 c)
+{
+	int n;
+	switch (c)
+	{
+		case 'y':
+		case KEY_ENTER:
+			n = cv_newrenderer.value;
+			newrenderer_set |= n;
+			CV_SetValue(&cv_renderer, n);
+			break;
+		default:
+			CV_StealthSetValue(&cv_newrenderer, cv_renderer.value);
+	}
+}
+
+static void Newrenderer_OnChange(void)
+{
+	/* Well this works for now because there's only two options. */
+	int n;
+	n = cv_newrenderer.value;
+	if (( newrenderer_set & n ))
+		CV_SetValue(&cv_renderer, n);
+	else
+	{
+		M_StartMessage(
+				"The OpenGL renderer is incomplete.\n"
+				"Some visuals may fail to appear, or\n"
+				"appear incorrectly.\n"
+				"Do you still want to switch to it?\n"
+				"\n"
+				"(Press 'y' or 'n')",
+				Newrenderer_AREYOUSURE, MM_YESNO
+		);
 	}
 }
 

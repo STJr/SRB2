@@ -64,7 +64,7 @@ consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NUL
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static void SCR_ActuallyChangeRenderer(void);
-static CV_PossibleValue_t cv_renderer_t[] = {{1, "Software"}, {2, "OpenGL"}, {0, NULL}};
+CV_PossibleValue_t cv_renderer_t[] = {{1, "Software"}, {2, "OpenGL"}, {0, NULL}};
 consvar_t cv_renderer = {"renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
 
 static void SCR_ChangeFullscreen(void);
@@ -477,6 +477,7 @@ void SCR_ChangeRendererCVars(INT32 mode)
 		CV_StealthSetValue(&cv_renderer, 1);
 	else if (mode == render_opengl)
 		CV_StealthSetValue(&cv_renderer, 2);
+	CV_StealthSetValue(&cv_newrenderer, cv_renderer.value);
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
