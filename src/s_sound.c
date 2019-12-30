@@ -1579,19 +1579,10 @@ skip_lump:
 				value++;
 
 				// Now skip funny whitespace.
-				for (;;)
-				{
-					char c = value[0];
-					if (c == '\0') // :NOTHING:
-					{
-						brokenline = true;
-						break;
-					}
-					else if (c == ' ' || c == '\t')
-						value++;
-					else
-						break;
-				}
+				if (value[0] == '\0') // :NOTHING:
+					brokenline = true;
+				else
+					value += strspn(value, "\t ");
 			}
 
 			// If the line is valid, copy the text line from the lump data.
