@@ -1245,63 +1245,71 @@ UINT32 sidesPos[UINT16_MAX];
 UINT32 vertexesPos[UINT16_MAX];
 UINT32 sectorsPos[UINT16_MAX];
 
-static boolean TextmapCount (UINT8 *data, size_t size)
+// Determine total amount of map data in TEXTMAP.
+static boolean TextmapCount(UINT8 *data, size_t size)
 {
-	char *nsp1 = M_GetToken((char *)data);
-	boolean ret = true;
+	char *tkn = M_GetToken((char *)data);
 
-	// Determine total amount of map data in TEXTMAP.
+	nummapthings = 0;
+	numlines = 0;
+	numsides = 0;
+	numvertexes = 0;
+	numsectors = 0;
+
 	// Look for namespace at the beginning.
-	if (fastcmp(nsp1, "namespace"))
+	if (!fastcmp(tkn, "namespace"))
 	{
-		char *nsp2 = M_GetToken(NULL);
-		char *tkn = M_GetToken(NULL);
+		Z_Free(tkn);
+		CONS_Alert(CONS_WARNING, "No namespace at beginning of lump!\n");
+		return false;
+	}
+	Z_Free(tkn);
 
-		// Check if namespace is valid.
-		if (!fastcmp(nsp2, "srb2"))
-			CONS_Alert(CONS_WARNING, "Invalid namespace '%s', only 'srb2' is supported.\n", nsp2);
-		Z_Free(nsp2);
+	// Check if namespace is valid.
+	tkn = M_GetToken(NULL);
+	if (!fastcmp(tkn, "srb2"))
+		CONS_Alert(CONS_WARNING, "Invalid namespace '%s', only 'srb2' is supported.\n", tkn);
+	Z_Free(tkn);
 
-		while (tkn != NULL && M_GetTokenPos() < size)
+	tkn = M_GetToken(NULL);
+	while (tkn && M_GetTokenPos() < size)
+	{
+		// Avoid anything inside bracketed stuff, only look for external keywords.
+		// Assuming there's only one level of bracket nesting.
+		if (fastcmp(tkn, "{"))
 		{
-			// Avoid anything inside bracketed stuff, only look for external keywords.
-			// Assuming there's only one level of bracket nesting.
-			if (fastcmp(tkn, "{"))
+			do
 			{
 				Z_Free(tkn);
 				tkn = M_GetToken(NULL);
-				while (!fastcmp(tkn, "}"))
+				if (!tkn || M_GetTokenPos() >= size)
 				{
 					Z_Free(tkn);
-					tkn = M_GetToken(NULL);
+					CONS_Alert(CONS_WARNING, "Opening bracket not closed!\n");
+					return false;
 				}
-			}
-			// Check for valid fields.
-			else if (fastcmp(tkn, "thing"))
-				mapthingsPos[nummapthings++] = M_GetTokenPos();
-			else if (fastcmp(tkn, "linedef"))
-				linesPos[numlines++] = M_GetTokenPos();
-			else if (fastcmp(tkn, "sidedef"))
-				sidesPos[numsides++] = M_GetTokenPos();
-			else if (fastcmp(tkn, "vertex"))
-				vertexesPos[numvertexes++] = M_GetTokenPos();
-			else if (fastcmp(tkn, "sector"))
-				sectorsPos[numsectors++] = M_GetTokenPos();
-			else
-				CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", tkn);
-
-			Z_Free(tkn);
-			tkn = M_GetToken(NULL);
+			} while (!fastcmp(tkn, "}"));
 		}
-	}
-	else
-	{
-		CONS_Alert(CONS_WARNING, "No namespace at beginning of lump!\n");
-		ret = false;
+		// Check for valid fields.
+		else if (fastcmp(tkn, "thing"))
+			mapthingsPos[nummapthings++] = M_GetTokenPos();
+		else if (fastcmp(tkn, "linedef"))
+			linesPos[numlines++] = M_GetTokenPos();
+		else if (fastcmp(tkn, "sidedef"))
+			sidesPos[numsides++] = M_GetTokenPos();
+		else if (fastcmp(tkn, "vertex"))
+			vertexesPos[numvertexes++] = M_GetTokenPos();
+		else if (fastcmp(tkn, "sector"))
+			sectorsPos[numsectors++] = M_GetTokenPos();
+		else
+			CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", tkn);
+
+		Z_Free(tkn);
+		tkn = M_GetToken(NULL);
 	}
 
-	Z_Free(nsp1);
-	return ret;
+	Z_Free(tkn);
+	return true;
 }
 
 static char* dat;
@@ -1593,21 +1601,12 @@ static void P_LoadTextmap (void)
 
 static void P_LoadMapData(const virtres_t *virt)
 {
-	virtlump_t* virtvertexes = NULL, * virtsectors = NULL, * virtsidedefs = NULL, * virtlinedefs = NULL, * virtthings = NULL;
-	virtlump_t* textmap = vres_Find(virt, "TEXTMAP");
+	virtlump_t *virtvertexes = NULL, *virtsectors = NULL, *virtsidedefs = NULL, *virtlinedefs = NULL, *virtthings = NULL;
+	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 
 	// Count map data.
-	if (textmap)
-	{
-		nummapthings = 0;
-		numlines = 0;
-		numsides = 0;
-		numvertexes = 0;
-		numsectors = 0;
-
-		// Count how many entries for each type we got in textmap.
+	if (textmap) // Count how many entries for each type we got in textmap.
 		TextmapCount(textmap->data, textmap->size);
-	}
 	else
 	{
 		virtthings   = vres_Find(virt, "THINGS");
@@ -2659,7 +2658,7 @@ static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 
 static void P_MakeMapMD5(virtres_t *virt, void *dest)
 {
-	virtlump_t* textmap   = vres_Find(virt, "TEXTMAP");
+	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 	unsigned char resmd5[16];
 
 	if (textmap)
