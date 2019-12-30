@@ -1231,7 +1231,8 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	shadow->cut = SC_ISSCALED|SC_SHADOW; //check this
 
 	shadow->startfrac = 0;
-	shadow->xiscale = 0x7ffffff0 / (shadow->xscale/2);
+	//shadow->xiscale = 0x7ffffff0 / (shadow->xscale/2);
+	shadow->xiscale = (patch->width<<FRACBITS)/(x2-x1+1); // fuck it
 
 	if (shadow->x1 > x1)
 		shadow->startfrac += shadow->xiscale*(shadow->x1-x1);
