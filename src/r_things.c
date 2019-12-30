@@ -876,6 +876,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (!(vis->scalestep))
 	{
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+		sprtopscreen += vis->paperdistance * vis->paperoffset;
 		dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	}
 
@@ -921,7 +922,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	else
 	{
 		// Non-paper drawing loop
-		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
+		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->paperdistance)
 		{
 #ifdef RANGECHECK
 			texturecolumn = frac>>FRACBITS;
@@ -1098,29 +1099,58 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 {
 	vissprite_t *shadow;
 	patch_t *patch;
-	fixed_t xscale, yscale, shadowxscale, shadowyscale, x1, x2;
+	fixed_t xscale, yscale, shadowxscale, shadowyscale, shadowskew, x1, x2;
 	INT32 light = 0;
 	fixed_t scalemul; UINT8 trans;
 	fixed_t floordiff;
 	fixed_t floorz;
+	pslope_t *floorslope;
 
 	// Get floorz as the first floor below the object that's visible
 	floorz = (vis->heightsec != -1) ? sectors[vis->heightsec].floorheight : thing->floorz;
-	if (vis->sector->ffloors)
+	floorslope = (vis->heightsec != -1) ? NULL : thing->standingslope;
+
 	{
-		ffloor_t *rover = vis->sector->ffloors;
+		boolean original = true;
 		fixed_t z;
 
-		for (; rover; rover = rover->next)
+		if (vis->sector->ffloors)
 		{
-			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES) || (rover->alpha < 90 && !(rover->flags & FF_SWIMMABLE)))
-				continue;
+			ffloor_t *rover = vis->sector->ffloors;
 
-			z = *rover->t_slope ? P_GetZAt(*rover->t_slope, thing->x, thing->y) : *rover->topheight;
-			if (z < thing->z+thing->height/3 && z > floorz)
+			for (; rover; rover = rover->next)
+			{
+				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES) || (rover->alpha < 90 && !(rover->flags & FF_SWIMMABLE)))
+					continue;
+
+				z = *rover->t_slope ? P_GetZAt(*rover->t_slope, thing->x, thing->y) : *rover->topheight;
+				if (z < thing->z+thing->height/3 && z > floorz)
+				{
+					floorz = z;
+					floorslope = *rover->t_slope;
+					original = false;
+				}
+				else if (original && (*rover->t_slope) && z < thing->z+thing->height/3 && z > floorz - FixedMul(abs((*rover->t_slope)->zdelta), thing->radius*2))
+				{
+					// Guesstimated to be a usable floor. This is here to handle floorslope of non-grounded things, I guess.
+					floorz = z;
+					floorslope = *rover->t_slope;
+					original = false;
+				}
+			}
+		}
+
+		if (original && vis->sector->f_slope)
+		{
+			z = P_GetZAt(vis->sector->f_slope, thing->x, thing->y);
+			if (z < thing->z+thing->height/3 && z > floorz - FixedMul(abs(vis->sector->f_slope->zdelta), thing->radius*2))
+			{
 				floorz = z;
+				floorslope = vis->sector->f_slope;
+			}
 		}
 	}
+
 
 	if (abs(floorz-viewz)/tz > 4) return; // Prevent stretchy shadows and possible crashes
 
@@ -1136,6 +1166,28 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	yscale = FixedDiv(projectiony, tz);
 	shadowxscale = FixedMul(thing->radius*2, scalemul) / patch->width;
 	shadowyscale = FixedMul(FixedMul(thing->radius*2 / patch->height, scalemul), FixedDiv(abs(floorz - viewz), tz));
+	shadowskew = 0;
+
+	if (floorslope)
+	{
+		// haha let's try some dumb stuff
+		fixed_t xslope, zslope;
+		angle_t sloperelang = (R_PointToAngle(thing->x, thing->y) - floorslope->xydirection) >> ANGLETOFINESHIFT;
+
+		xslope = FixedMul(FINESINE(sloperelang), floorslope->zdelta);
+		zslope = FixedMul(FINECOSINE(sloperelang), floorslope->zdelta);
+
+		//CONS_Printf("Shadow is sloped by %d %d\n", xslope, zslope);
+
+		if (viewz < floorz)
+			shadowyscale += FixedMul(FixedMul(thing->radius*2 / patch->height, scalemul), zslope);
+		else
+			shadowyscale -= FixedMul(FixedMul(thing->radius*2 / patch->height, scalemul), zslope);
+
+		shadowyscale = abs(shadowyscale);
+
+		shadowskew = xslope;
+	}
 
 	tx -= patch->width * shadowxscale/2;
 	x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
@@ -1164,6 +1216,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	shadow->gz = shadow->gzt - shadow->patch->height * shadowyscale;
 	shadow->texturemid = FixedDiv(shadow->gzt - viewz, shadowyscale);
 	shadow->scalestep = 0;
+	shadow->paperdistance = shadowskew; // repurposed variable
 
 	shadow->mobj = thing; // Easy access! Tails 06-07-2002
 
@@ -1182,6 +1235,10 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 
 	if (shadow->x1 > x1)
 		shadow->startfrac += shadow->xiscale*(shadow->x1-x1);
+
+	// reusing x1 variable
+	x1 += (x2-x1)/2;
+	shadow->paperoffset = (vis->x1-x1)/2;
 
 	if (thing->subsector->sector->numlights)
 	{
@@ -1878,6 +1935,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
 	vis->scalestep = 0;
+	vis->paperdistance = 0;
 
 	vis->x1 = x1 < 0 ? 0 : x1;
 	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
