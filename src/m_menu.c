@@ -10424,13 +10424,15 @@ static void M_HandleConnectIP(INT32 choice)
 			break;
 
 		case KEY_DEL:
-			if (setupm_ip[0])
+			if (setupm_ip[0] && !shiftdown) // Shift+Delete is used for something else.
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_ip[0] = 0;
 			}
-			break;
-
+			if (!shiftdown) // Shift+Delete is used for something else.
+				break;
+			
+			/* FALLTHRU */
 		default:
 			l = strlen(setupm_ip);
 
@@ -10438,18 +10440,17 @@ static void M_HandleConnectIP(INT32 choice)
 				switch (choice) {
 					case 'v':
 					case 'V': // ctrl+v, pasting
-						;
-						char *paste = (char *)I_ClipboardPaste(); // Paste clipboard into char
-
+					{
+						const char *paste = I_ClipboardPaste();
+						
 						if (paste != NULL) {
-							if (strlen(paste) + l >= 28-1)
-								paste[28-1 - l] = 0;
-							strcat(setupm_ip, paste); // Concat the ip field with clipboard
+							strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
 							if (strlen(paste) != 0) // Don't play sound if nothing was pasted
 								S_StartSound(NULL,sfx_menu1); // Tails
 						}
+
 						break;
-						
+					}
 					case 'c':
 					case 'C': // ctrl+c, copying
 						I_ClipboardCopy(setupm_ip, l);
@@ -10464,6 +10465,31 @@ static void M_HandleConnectIP(INT32 choice)
 						break;
 
 					default: // otherwise do nothing
+						break;
+				}
+				break; // don't check for typed keys
+			}
+
+			if ( shiftdown ) {
+				switch (choice) {
+					case KEY_INS:
+						{
+							const char *paste = I_ClipboardPaste();
+							
+							if (paste != NULL) {
+								strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
+								if (strlen(paste) != 0) // Don't play sound if nothing was pasted
+									S_StartSound(NULL,sfx_menu1); // Tails
+							}
+
+							break;
+						}
+					case KEY_DEL: // shift+delete, cutting
+						I_ClipboardCopy(setupm_ip, l);
+						S_StartSound(NULL,sfx_menu1); // Tails
+						setupm_ip[0] = 0;
+						break;
+					default: // otherwise do nothing.
 						break;
 				}
 				break; // don't check for typed keys
