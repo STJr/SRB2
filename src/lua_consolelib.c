@@ -130,6 +130,7 @@ void COM_Lua_f(void)
 			lua_pop(gL, 1); // pop command info table
 			return; // can't execute splitscreen command without player 2!
 		}
+		playernum = secondarydisplayplayer;
 	}
 
 	if (netgame && !( flags & COM_LOCAL ))/* don't send local commands */
@@ -157,7 +158,10 @@ void COM_Lua_f(void)
 		WRITEUINT8(p, argc);
 		for (i = 0; i < argc; i++)
 			WRITESTRINGN(p, COM_Argv(i), 255);
-		SendNetXCmd(XD_LUACMD, buf, p-buf);
+		if (flags & COM_SPLITSCREEN)
+			SendNetXCmd2(XD_LUACMD, buf, p-buf);
+		else
+			SendNetXCmd(XD_LUACMD, buf, p-buf);
 		free(buf);
 		return;
 	}
