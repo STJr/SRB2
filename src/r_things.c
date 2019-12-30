@@ -1122,6 +1122,8 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 		}
 	}
 
+	if (abs(floorz-viewz)/tz > 4) return; // Prevent stretchy shadows and possible crashes
+
 	floordiff = abs(thing->z - floorz);
 
 	trans = floordiff / (100*FRACUNIT) + 3;
@@ -1173,7 +1175,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	shadow->sector = vis->sector;
 	shadow->szt = (INT16)((centeryfrac - FixedMul(shadow->gzt - viewz, yscale))>>FRACBITS);
 	shadow->sz = (INT16)((centeryfrac - FixedMul(shadow->gz - viewz, yscale))>>FRACBITS);
-	shadow->cut = SC_ISSCALED; //check this
+	shadow->cut = SC_ISSCALED|SC_SHADOW; //check this
 
 
 	shadow->startfrac = 0;
@@ -2069,11 +2071,18 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 		if (!(ds->cut & SC_LINKDRAW))
 			continue;
 
+		if (ds->cut & SC_SHADOW)
+			continue;
+
 		// reuse dsfirst...
 		for (dsfirst = unsorted.prev; dsfirst != &unsorted; dsfirst = dsfirst->prev)
 		{
 			// don't connect if it's also a link
 			if (dsfirst->cut & SC_LINKDRAW)
+				continue;
+
+			// don't connect to your shadow!
+			if (dsfirst->cut & SC_SHADOW)
 				continue;
 
 			// don't connect if it's not the tracer
