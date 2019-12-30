@@ -19,6 +19,16 @@
 #include "tables.h"
 #include "d_player.h"
 
+/*
+The 'packet version' may be used with packets whose
+format is expected to change between versions.
+
+This version is independent of the mod name, and standard
+version and subversion. It should only account for the
+basic fields of the packet, and change infrequently.
+*/
+#define PACKETVERSION 0
+
 // Network play related stuff.
 // There is a data struct that stores network
 //  communication related stuff, and another
@@ -320,8 +330,13 @@ typedef struct {
 #pragma warning(default : 4200)
 #endif
 
+#define MAXAPPLICATION 16
+
 typedef struct
 {
+	UINT8 _255;/* see serverinfo_pak */
+	UINT8 packetversion;
+	char application[MAXAPPLICATION];
 	UINT8 version; // Different versions don't work
 	UINT8 subversion; // Contains build version
 	UINT8 localplayers;
@@ -334,6 +349,14 @@ typedef struct
 // This packet is too large
 typedef struct
 {
+	/*
+	In the old packet, 'version' is the first field. Now that field is set
+	to 255 always, so older versions won't be confused with the new
+	versions or vice-versa.
+	*/
+	UINT8 _255;
+	UINT8 packetversion;
+	char  application[MAXAPPLICATION];
 	UINT8 version;
 	UINT8 subversion;
 	UINT8 numberofplayer;
