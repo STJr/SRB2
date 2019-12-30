@@ -1038,7 +1038,7 @@ static menuitem_t OP_P1ControlsMenu[] =
 
 	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_CameraOptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  70},
+	//{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar[0],  70},
 	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  70},
 	{IT_CALL    | IT_STRING, NULL, "Play Style...", M_Setup1PPlaystyleMenu, 80},
 	//{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[0],  90},
@@ -1052,7 +1052,7 @@ static menuitem_t OP_P2ControlsMenu[] =
 
 	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_Camera2OptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  70},
+	//{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar[1],  70},
 	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  70},
 	{IT_CALL    | IT_STRING, NULL, "Play Style...", M_Setup2PPlaystyleMenu, 80},
 	//{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[1],  90},
@@ -4318,7 +4318,7 @@ static void M_DrawControlsDefMenu(void)
 
 	if (currentMenu == &OP_P1ControlsDef)
 	{
-		opt = cv_useranalog.value ? 3 : (cv_abilitydirection[0].value ? 2 : cv_directionchar.value);
+		opt = cv_useranalog[0].value ? 3 : (cv_abilitydirection[0].value ? 2 : cv_directionchar[0].value);
 
 		if (opt == 2)
 		{
@@ -4333,7 +4333,7 @@ static void M_DrawControlsDefMenu(void)
 	}
 	else
 	{
-		opt = cv_useranalog2.value ? 3 : (cv_abilitydirection[1].value ? 2 : cv_directionchar2.value);
+		opt = cv_useranalog[1].value ? 3 : (cv_abilitydirection[1].value ? 2 : cv_directionchar[1].value);
 
 		if (opt == 2)
 		{
@@ -7773,7 +7773,7 @@ void M_TutorialSaveControlResponse(INT32 ch)
 		CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
 		CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
 		CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
-		CV_Set(&cv_analog, cv_analog.defaultvalue);
+		CV_Set(&cv_analog[0], cv_analog[0].defaultvalue);
 		S_StartSound(NULL, sfx_itemup);
 	}
 	else
@@ -7791,13 +7791,13 @@ static void M_TutorialControlResponse(INT32 ch)
 			tutorialusemouse = cv_usemouse.value;
 			tutorialfreelook = cv_alwaysfreelook.value;
 			tutorialmousemove = cv_mousemove.value;
-			tutorialanalog = cv_analog.value;
+			tutorialanalog = cv_analog[0].value;
 
 			G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gcl_tutorial_full, num_gcl_tutorial_full);
 			CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
 			CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
 			CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
-			CV_Set(&cv_analog, cv_analog.defaultvalue);
+			CV_Set(&cv_analog[0], cv_analog[0].defaultvalue);
 
 			//S_StartSound(NULL, sfx_itemup);
 		}
@@ -11619,7 +11619,7 @@ static void M_Setup1PPlaystyleMenu(INT32 choice)
 	(void)choice;
 
 	playstyle_activeplayer = 0;
-	playstyle_currentchoice = cv_useranalog.value ? 3 : (cv_abilitydirection[0].value ? 2 : cv_directionchar.value);
+	playstyle_currentchoice = cv_useranalog[0].value ? 3 : (cv_abilitydirection[0].value ? 2 : cv_directionchar[0].value);
 	OP_PlaystyleDef.prevMenu = &OP_P1ControlsDef;
 	M_SetupNextMenu(&OP_PlaystyleDef);
 }
@@ -11629,7 +11629,7 @@ static void M_Setup2PPlaystyleMenu(INT32 choice)
 	(void)choice;
 
 	playstyle_activeplayer = 1;
-	playstyle_currentchoice = cv_useranalog2.value ? 3 : (cv_abilitydirection[1].value ? 2 : cv_directionchar2.value);
+	playstyle_currentchoice = cv_useranalog[1].value ? 3 : (cv_abilitydirection[1].value ? 2 : cv_directionchar[1].value);
 	OP_PlaystyleDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_PlaystyleDef);
 }
@@ -11670,8 +11670,8 @@ static void M_HandlePlaystyleMenu(INT32 choice)
 			else
 				CV_UpdateCamDist();
 		}
-		CV_SetValue((playstyle_activeplayer ? &cv_directionchar2 : &cv_directionchar), playstyle_currentchoice ? 1 : 0);
-		CV_SetValue((playstyle_activeplayer ? &cv_useranalog2 : &cv_useranalog), 0);
+		CV_SetValue((playstyle_activeplayer ? &cv_directionchar[1] : &cv_directionchar[0]), playstyle_currentchoice ? 1 : 0);
+		CV_SetValue((playstyle_activeplayer ? &cv_useranalog[1] : &cv_useranalog[0]), 0);
 
 		M_SetupNextMenu(currentMenu->prevMenu);
 		break;

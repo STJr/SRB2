@@ -139,7 +139,7 @@ INT32 tutorialgcs = gcs_custom; // which control scheme is loaded?
 INT32 tutorialusemouse = 0; // store cv_usemouse user value
 INT32 tutorialfreelook = 0; // store cv_alwaysfreelook user value
 INT32 tutorialmousemove = 0; // store cv_mousemove user value
-INT32 tutorialanalog = 0; // store cv_analog user value
+INT32 tutorialanalog = 0; // store cv_analog[0] user value
 
 boolean looptitle = false;
 
@@ -388,15 +388,21 @@ consvar_t cv_mousemove2 = {"mousemove2", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL
 
 // previously "analog", "analog2", "useranalog", and "useranalog2", invalidating 2.1-era copies of config.cfg
 // changed because it'd be nice to see people try out our actually good controls with gamepads now autobrake exists
-consvar_t cv_analog = {"sessionanalog", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, Analog_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_analog2 = {"sessionanalog2", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, Analog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_useranalog = {"configanalog", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_useranalog2 = {"configanalog2", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_analog[2] = {
+	{"sessionanalog", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, Analog_OnChange, 0, NULL, NULL, 0, 0, NULL},
+	{"sessionanalog2", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, Analog2_OnChange, 0, NULL, NULL, 0, 0, NULL}
+};
+consvar_t cv_useranalog[2] = {
+	{"configanalog", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL},
+	{"configanalog2", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL}
+};
 
 // deez New User eXperiences
 static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {0, NULL}};
-consvar_t cv_directionchar = {"directionchar", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_directionchar2 = {"directionchar2", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_directionchar[2] = {
+	{"directionchar", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar_OnChange, 0, NULL, NULL, 0, 0, NULL},
+	{"directionchar2", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar2_OnChange, 0, NULL, NULL, 0, 0, NULL}
+};
 consvar_t cv_autobrake = {"autobrake", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_autobrake2 = {"autobrake2", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
@@ -1159,7 +1165,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		chasefreelook = cv_chasefreelook.value;
 		alwaysfreelook = cv_alwaysfreelook.value;
 		usejoystick = cv_usejoystick.value;
-		analog = cv_analog.value;
+		analog = cv_analog[0].value;
 		invertmouse = cv_invertmouse.value;
 		mousemove = cv_mousemove.value;
 		mx = &mousex;
@@ -1173,7 +1179,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		chasefreelook = cv_chasefreelook2.value;
 		alwaysfreelook = cv_alwaysfreelook2.value;
 		usejoystick = cv_usejoystick2.value;
-		analog = cv_analog2.value;
+		analog = cv_analog[1].value;
 		invertmouse = cv_invertmouse2.value;
 		mousemove = cv_mousemove2.value;
 		mx = &mouse2x;
@@ -1412,7 +1418,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		if (abilitydirection && !ticcmd_centerviewdown[forplayer] && !G_RingSlingerGametype())
 		{
-			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 0);
+			CV_SetValue((ssplayer == 1 ? &cv_directionchar[0] : &cv_directionchar[1]), 0);
 			*myangle = player->mo->angle;
 			*myaiming = 0;
 
@@ -1427,7 +1433,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (abilitydirection)
 		{
 			P_SetTarget(&ticcmd_ztargetfocus[forplayer], NULL);
-			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 1);
+			CV_SetValue((ssplayer == 1 ? &cv_directionchar[0] : &cv_directionchar[1]), 1);
 		}
 
 		ticcmd_centerviewdown[forplayer] = false;
@@ -1606,7 +1612,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (!player->powers[pw_tailsfly] && (cmd->forwardmove || cmd->sidemove || cmd->buttons))
 		{
 			player->bot = 2; // A player-controlled bot. Returns to AI when it respawns.
-			CV_SetValue(&cv_analog2, true);
+			CV_SetValue(&cv_analog[1], true);
 		}
 		else
 		{
@@ -1726,20 +1732,20 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 // fudging with it.
 static void UserAnalog_OnChange(void)
 {
-	if (cv_useranalog.value)
-		CV_SetValue(&cv_analog, 1);
+	if (cv_useranalog[0].value)
+		CV_SetValue(&cv_analog[0], 1);
 	else
-		CV_SetValue(&cv_analog, 0);
+		CV_SetValue(&cv_analog[0], 0);
 }
 
 static void UserAnalog2_OnChange(void)
 {
 	if (botingame)
 		return;
-	if (cv_useranalog2.value)
-		CV_SetValue(&cv_analog2, 1);
+	if (cv_useranalog[1].value)
+		CV_SetValue(&cv_analog[1], 1);
 	else
-		CV_SetValue(&cv_analog2, 0);
+		CV_SetValue(&cv_analog[1], 0);
 }
 
 static void Analog_OnChange(void)
@@ -1749,8 +1755,8 @@ static void Analog_OnChange(void)
 
 	// cameras are not initialized at this point
 
-	if (!cv_chasecam.value && cv_analog.value) {
-		CV_SetValue(&cv_analog, 0);
+	if (!cv_chasecam.value && cv_analog[0].value) {
+		CV_SetValue(&cv_analog[0], 0);
 		return;
 	}
 
@@ -1764,8 +1770,8 @@ static void Analog2_OnChange(void)
 
 	// cameras are not initialized at this point
 
-	if (!cv_chasecam2.value && cv_analog2.value) {
-		CV_SetValue(&cv_analog2, 0);
+	if (!cv_chasecam2.value && cv_analog[1].value) {
+		CV_SetValue(&cv_analog[1], 0);
 		return;
 	}
 
@@ -5956,12 +5962,12 @@ void G_BeginRecording(void)
 			buf |= 0x01;
 			pflags |= PF_FLIPCAM;
 		}
-		if (cv_analog.value)
+		if (cv_analog[0].value)
 		{
 			buf |= 0x02;
 			pflags |= PF_ANALOGMODE;
 		}
-		if (cv_directionchar.value)
+		if (cv_directionchar[0].value)
 		{
 			buf |= 0x04;
 			pflags |= PF_DIRECTIONCHAR;

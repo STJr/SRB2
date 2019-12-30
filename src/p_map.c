@@ -632,7 +632,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
 	{
 		if (sonic-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, false);
+			CV_SetValue(&cv_analog[1], false);
 		P_ResetPlayer(sonic);
 		P_SetTarget(&sonic->mo->tracer, tails->mo);
 		sonic->powers[pw_carry] = CR_PLAYER;
@@ -644,7 +644,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	}
 	else {
 		if (sonic-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, true);
+			CV_SetValue(&cv_analog[1], true);
 		P_SetTarget(&sonic->mo->tracer, NULL);
 		sonic->powers[pw_carry] = CR_NONE;
 	}
@@ -1621,7 +1621,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 	else if (thing->player) {
 		if (thing->player-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, true);
+			CV_SetValue(&cv_analog[1], true);
 		if (thing->player->powers[pw_carry] == CR_PLAYER)
 		{
 			P_SetTarget(&thing->tracer, NULL);

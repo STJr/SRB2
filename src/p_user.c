@@ -1064,7 +1064,7 @@ void P_ResetPlayer(player_t *player)
 	player->onconveyor = 0;
 	player->skidtime = 0;
 	if (player-players == consoleplayer && botingame)
-		CV_SetValue(&cv_analog2, true);
+		CV_SetValue(&cv_analog[1], true);
 }
 
 // P_PlayerCanDamage
@@ -4438,7 +4438,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			player->powers[pw_carry] = CR_NONE;
 			P_SetTarget(&player->mo->tracer, NULL);
 			if (player-players == consoleplayer && botingame)
-				CV_SetValue(&cv_analog2, true);
+				CV_SetValue(&cv_analog[1], true);
 		}
 		else if (player->powers[pw_carry] == CR_GENERIC)
 		{
@@ -9823,8 +9823,8 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 		thiscam->angle = (thiscam == &camera) ? localangle : localangle2;
 		thiscam->aiming = (thiscam == &camera) ? localaiming : localaiming2;
 	}
-	else if (!(thiscam == &camera && (cv_cam_still.value || cv_analog.value))
-	&& !(thiscam == &camera2 && (cv_cam2_still.value || cv_analog2.value)))
+	else if (!(thiscam == &camera && (cv_cam_still.value || cv_analog[0].value))
+	&& !(thiscam == &camera2 && (cv_cam2_still.value || cv_analog[1].value)))
 	{
 		thiscam->angle = player->mo->angle;
 		thiscam->aiming = 0;
@@ -10029,14 +10029,14 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	else
 		angle = focusangle + FixedAngle(camrotate*FRACUNIT);
 
-	if (!resetcalled && (cv_analog.value || demoplayback) && ((thiscam == &camera && t_cam_rotate != -42) || (thiscam == &camera2
+	if (!resetcalled && (cv_analog[0].value || demoplayback) && ((thiscam == &camera && t_cam_rotate != -42) || (thiscam == &camera2
 		&& t_cam2_rotate != -42)))
 	{
 		angle = FixedAngle(camrotate*FRACUNIT);
 		thiscam->angle = angle;
 	}
 
-	if ((((thiscam == &camera) && cv_analog.value) || ((thiscam != &camera) && cv_analog2.value) || demoplayback) && !sign && !objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
+	if ((((thiscam == &camera) && cv_analog[0].value) || ((thiscam != &camera) && cv_analog[1].value) || demoplayback) && !sign && !objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
 	{
 #ifdef REDSANALOG
 		if ((player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)); else
@@ -12625,7 +12625,7 @@ void P_PlayerAfterThink(player_t *player)
 					P_SetTarget(&player->mo->tracer, NULL);
 
 				if (player-players == consoleplayer && botingame)
-					CV_SetValue(&cv_analog2, (player->powers[pw_carry] != CR_PLAYER));
+					CV_SetValue(&cv_analog[1], (player->powers[pw_carry] != CR_PLAYER));
 				break;
 			}
 			case CR_GENERIC: // being carried by some generic item

@@ -2304,7 +2304,7 @@ static void P_LevelInitStuff(void)
 	}
 
 	if (botingame)
-		CV_SetValue(&cv_analog2, true);
+		CV_SetValue(&cv_analog[1], true);
 }
 
 //
@@ -3180,26 +3180,26 @@ boolean P_SetupLevel(boolean skipprecip)
 		if (!cv_cam2_rotate.changed)
 			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
 
-		if (!cv_analog.changed)
-			CV_SetValue(&cv_analog, 0);
-		if (!cv_analog2.changed)
-			CV_SetValue(&cv_analog2, 0);
+		if (!cv_analog[0].changed)
+			CV_SetValue(&cv_analog[0], 0);
+		if (!cv_analog[1].changed)
+			CV_SetValue(&cv_analog[1], 0);
 
 		displayplayer = consoleplayer; // Start with your OWN view, please!
 	}
 
-	if (cv_useranalog.value)
-		CV_SetValue(&cv_analog, true);
+	if (cv_useranalog[0].value)
+		CV_SetValue(&cv_analog[0], true);
 
-	if (splitscreen && cv_useranalog2.value)
-		CV_SetValue(&cv_analog2, true);
+	if (splitscreen && cv_useranalog[1].value)
+		CV_SetValue(&cv_analog[1], true);
 	else if (botingame)
-		CV_SetValue(&cv_analog2, true);
+		CV_SetValue(&cv_analog[1], true);
 
 	if (twodlevel)
 	{
-		CV_SetValue(&cv_analog2, false);
-		CV_SetValue(&cv_analog, false);
+		CV_SetValue(&cv_analog[1], false);
+		CV_SetValue(&cv_analog[0], false);
 	}
 
 	// clear special respawning que

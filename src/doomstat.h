@@ -137,7 +137,7 @@ extern INT32 tutorialgcs; // which control scheme is loaded?
 extern INT32 tutorialusemouse; // store cv_usemouse user value
 extern INT32 tutorialfreelook; // store cv_alwaysfreelook user value
 extern INT32 tutorialmousemove; // store cv_mousemove user value
-extern INT32 tutorialanalog; // store cv_analog user value
+extern INT32 tutorialanalog; // store cv_analog[0] user value
 
 extern boolean looptitle;
 

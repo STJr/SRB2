@@ -816,14 +816,14 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_joyscale2);
 
 	// Analog Control
-	CV_RegisterVar(&cv_analog);
-	CV_RegisterVar(&cv_analog2);
-	CV_RegisterVar(&cv_useranalog);
-	CV_RegisterVar(&cv_useranalog2);
+	CV_RegisterVar(&cv_analog[0]);
+	CV_RegisterVar(&cv_analog[1]);
+	CV_RegisterVar(&cv_useranalog[0]);
+	CV_RegisterVar(&cv_useranalog[1]);
 
 	// deez New User eXperiences
-	CV_RegisterVar(&cv_directionchar);
-	CV_RegisterVar(&cv_directionchar2);
+	CV_RegisterVar(&cv_directionchar[0]);
+	CV_RegisterVar(&cv_directionchar[1]);
 	CV_RegisterVar(&cv_autobrake);
 	CV_RegisterVar(&cv_autobrake2);
 
@@ -1510,9 +1510,9 @@ void SendWeaponPref(void)
 	buf[0] = 0;
 	if (cv_flipcam.value)
 		buf[0] |= 1;
-	if (cv_analog.value)
+	if (cv_analog[0].value)
 		buf[0] |= 2;
-	if (cv_directionchar.value)
+	if (cv_directionchar[0].value)
 		buf[0] |= 4;
 	if (cv_autobrake.value)
 		buf[0] |= 8;
@@ -1526,9 +1526,9 @@ void SendWeaponPref2(void)
 	buf[0] = 0;
 	if (cv_flipcam2.value)
 		buf[0] |= 1;
-	if (cv_analog2.value)
+	if (cv_analog[1].value)
 		buf[0] |= 2;
-	if (cv_directionchar2.value)
+	if (cv_directionchar[1].value)
 		buf[0] |= 4;
 	if (cv_autobrake2.value)
 		buf[0] |= 8;
@@ -2036,7 +2036,7 @@ static void Command_Map_f(void)
 		CV_SetValue(&cv_usemouse, tutorialusemouse);
 		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
 		CV_SetValue(&cv_mousemove, tutorialmousemove);
-		CV_SetValue(&cv_analog, tutorialanalog);
+		CV_SetValue(&cv_analog[0], tutorialanalog);
 	}
 	tutorialmode = false; // warping takes us out of tutorial mode
 
