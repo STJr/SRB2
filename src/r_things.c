@@ -1161,6 +1161,10 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 
 	scalemul = FRACUNIT - floordiff/640;
 
+	//@TODO make this configurable instead of hardcoding to the ring
+	if (thing->type == MT_RING)
+		scalemul = scalemul*2/3;
+
 	patch = W_CachePatchNum(sprites[SPR_THOK].spriteframes[0].lumppat[0], PU_CACHE);
 	xscale = FixedDiv(projection, tz);
 	yscale = FixedDiv(projectiony, tz);
@@ -1214,7 +1218,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	shadow->gy = thing->y;
 	shadow->gzt = shadow->pz + shadow->patch->height * shadowyscale / 2;
 	shadow->gz = shadow->gzt - shadow->patch->height * shadowyscale;
-	shadow->texturemid = FixedDiv(shadow->gzt - viewz, shadowyscale);
+	shadow->texturemid = FixedMul(thing->scale, FixedDiv(shadow->gzt - viewz, shadowyscale));
 	shadow->scalestep = 0;
 	shadow->paperdistance = shadowskew; // repurposed variable
 
