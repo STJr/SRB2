@@ -118,12 +118,12 @@ void COM_Lua_f(void)
 
 	lua_rawgeti(gL, -1, 2); // push flags from command info table
 	if (lua_isboolean(gL, -1))
-		flags = (lua_toboolean(gL, -1) ? 1 : 0);
+		flags = (lua_toboolean(gL, -1) ? COM_ADMIN : 0);
 	else
 		flags = (UINT8)lua_tointeger(gL, -1);
 	lua_pop(gL, 1); // pop flags
 
-	if (flags & 2) // flag 2: splitscreen player command.
+	if (flags & COM_SPLITSCREEN) // flag 2: splitscreen player command.
 	{
 		if (!splitscreen)
 		{
@@ -137,7 +137,7 @@ void COM_Lua_f(void)
 		UINT8 argc;
 		lua_pop(gL, 1); // pop command info table
 
-		if (flags & 1 && !server && !IsPlayerAdmin(playernum)) // flag 1: only server/admin can use this command.
+		if (flags & COM_ADMIN && !server && !IsPlayerAdmin(playernum)) // flag 1: only server/admin can use this command.
 		{
 			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 			return;
@@ -191,7 +191,14 @@ static int lib_comAddCommand(lua_State *L)
 	if (lua_gettop(L) >= 3)
 	{ // For the third argument, only take a boolean or a number.
 		lua_settop(L, 3);
-		if (lua_type(L, 3) != LUA_TBOOLEAN)
+		if (lua_type(L, 3) == LUA_TBOOLEAN)
+		{
+			CONS_Alert(CONS_WARNING,
+					"Using a boolean is deprecated and will be removed.\n"
+					"Use \"COM_\" flags instead.\n"
+			);
+		}
+		else
 			luaL_checktype(L, 3, LUA_TNUMBER);
 	}
 	else

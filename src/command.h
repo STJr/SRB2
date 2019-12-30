@@ -20,6 +20,13 @@
 // Command buffer & command execution
 //===================================
 
+/* Lua command registration flags. */
+enum
+{
+	COM_ADMIN       = 1,
+	COM_SPLITSCREEN = 2,
+};
+
 typedef void (*com_func_t)(void);
 
 void COM_AddCommand(const char *name, com_func_t func);
