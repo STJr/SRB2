@@ -586,6 +586,7 @@ typedef struct seg_s
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 #endif
+	boolean glseg;
 } seg_t;
 
 //
