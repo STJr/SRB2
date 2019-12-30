@@ -1338,6 +1338,18 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param)
 		sectors[i].special = atol(dat = M_GetToken(NULL));
 	else if (fastcmp(param, "id"))
 		sectors[i].tag = atol(dat = M_GetToken(NULL));
+	else if (fastcmp(param, "xpanningfloor"))
+		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(dat = M_GetToken(NULL)));
+	else if (fastcmp(param, "ypanningfloor"))
+		sectors[i].floor_yoffs = FLOAT_TO_FIXED(atof(dat = M_GetToken(NULL)));
+	else if (fastcmp(param, "xpanningceiling"))
+		sectors[i].ceiling_xoffs = FLOAT_TO_FIXED(atof(dat = M_GetToken(NULL)));
+	else if (fastcmp(param, "ypanningceiling"))
+		sectors[i].ceiling_yoffs = FLOAT_TO_FIXED(atof(dat = M_GetToken(NULL)));
+	else if (fastcmp(param, "rotationfloor"))
+		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(dat = M_GetToken(NULL))));
+	else if (fastcmp(param, "rotationceiling"))
+		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(dat = M_GetToken(NULL))));
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param)
@@ -1536,12 +1548,8 @@ static void P_LoadTextmap(void)
 		sc->special = 0;
 		sc->tag = 0;
 
-		sc->floor_xoffs = sc->floor_yoffs = sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
-		sc->floorpic_angle = sc->ceilingpic_angle = 0;
-
-		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
-
 		P_InitializeSector(sc);
+		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
 		TextmapFixFlatOffsets(sc);
 	}
 
