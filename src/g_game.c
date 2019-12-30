@@ -1400,6 +1400,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			if (down && !last_centerviewdown[forplayer])
 				centerviewhold[forplayer] = !centerviewhold[forplayer];
 			last_centerviewdown[forplayer] = down;
+
+			if (cv_cam_centertoggle[forplayer].value == 2 && !down && !ticcmd_ztargetfocus[forplayer])
+				centerviewhold[forplayer] = false;
+
 			centerviewdown = centerviewhold[forplayer];
 		}
 	}
