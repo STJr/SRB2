@@ -1464,9 +1464,9 @@ static UINT16 W_CheckForMusicDefInPwad(UINT16 wadid)
 
 void S_LoadMusicDefs(UINT16 wadnum)
 {
-	UINT16 lump;
-	char *buf;
-	char *buf2;
+	UINT16 lumpnum;
+	char *lump, *buf;
+	char *musdeftext;
 	char *stoken;
 	char *value;
 	char *textline;
@@ -1475,21 +1475,27 @@ void S_LoadMusicDefs(UINT16 wadnum)
 	musicdef_t *def = NULL;
 	UINT16 line = 1; // for better error msgs
 
-	lump = W_CheckForMusicDefInPwad(wadnum);
-	if (lump == INT16_MAX)
+	lumpnum = W_CheckForMusicDefInPwad(wadnum);
+	if (lumpnum == INT16_MAX)
 		return;
 
-	buf = W_CacheLumpNumPwad(wadnum, lump, PU_CACHE);
-	size = W_LumpLengthPwad(wadnum, lump);
+	lump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+	size = W_LumpLengthPwad(wadnum, lumpnum);
+
+	// Null-terminated MUSICDEF lump.
+	musdeftext = malloc(size+1);
+	if (!musdeftext)
+		I_Error("S_LoadMusicDefs: No more free memory for the parser\n");
+	M_Memcpy(musdeftext, lump, size);
+	musdeftext[size] = '\0';
 
 	// for strtok
-	buf2 = malloc(size+1);
-	if (!buf2)
-		I_Error("S_LoadMusicDefs: No more free memory\n");
-	M_Memcpy(buf2,buf,size);
-	buf2[size] = '\0';
+	buf = malloc(size+1);
+	if (!buf)
+		I_Error("S_LoadMusicDefs: No more free memory for the parser\n");
+	M_Memcpy(buf, musdeftext, size+1);
 
-	stoken = strtok (buf2, "\r\n ");
+	stoken = strtok(buf, "\r\n ");
 	// Find music def
 	while (stoken)
 	{
@@ -1589,17 +1595,10 @@ skip_lump:
 			if (!brokenline)
 			{
 				// strtok returns memory that already belongs to the input string.
-				value = buf + (value - buf2);
+				value = musdeftext + (value - buf);
 
 				// Find the length of the line.
-				size = 0;
-				for (;;)
-				{
-					char c = value[size];
-					if (c == '\n' || c == '\r' || c == '\0')
-						break;
-					size++;
-				}
+				size = strcspn(value, "\r\n");
 
 				// Copy the line.
 				textline = malloc(size+1);
@@ -1619,7 +1618,8 @@ skip_lump:
 			{
 				CONS_Alert(CONS_ERROR, "MUSICDEF: No music definition before field '%s'. (file %s, line %d)\n", stoken, wadfiles[wadnum]->filename, line);
 				free(textline);
-				free(buf2);
+				free(buf);
+				free(musdeftext);
 				return;
 			}
 
@@ -1663,7 +1663,7 @@ skip_lump:
 				CONS_Alert(CONS_WARNING, "MUSICDEF: Invalid field '%s'. (file %s, line %d)\n", stoken, wadfiles[wadnum]->filename, line);
 			}
 
-			// Free the temporary line from memory.
+			// Free the temporary text line from memory.
 			free(textline);
 
 skip_field:
@@ -1672,7 +1672,8 @@ skip_field:
 		}
 	}
 
-	free(buf2);
+	free(buf);
+	free(musdeftext);
 	return;
 }
 
