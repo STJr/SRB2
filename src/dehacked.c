@@ -9735,6 +9735,7 @@ struct {
 	// Lua command registration flags
 	{"COM_ADMIN",COM_ADMIN},
 	{"COM_SPLITSCREEN",COM_SPLITSCREEN},
+	{"COM_LOCAL",COM_LOCAL},
 
 	// cvflags_t
 	{"CV_SAVE",CV_SAVE},

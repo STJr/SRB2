@@ -25,6 +25,7 @@ enum
 {
 	COM_ADMIN       = 1,
 	COM_SPLITSCREEN = 2,
+	COM_LOCAL       = 4,
 };
 
 typedef void (*com_func_t)(void);
