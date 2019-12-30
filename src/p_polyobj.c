@@ -400,6 +400,8 @@ static void Polyobj_findSegs(polyobj_t *po, seg_t *seg)
 		// Find backfacings
 		for (s = 0;  s < numsegs; s++)
 		{
+			if (segs[s].glseg)
+				continue;
 			if (segs[s].linedef == seg->linedef
 				&& segs[s].side == 1)
 			{
@@ -436,6 +438,8 @@ newseg:
 	// seg's ending vertex.
 	for (i = 0; i < numsegs; ++i)
 	{
+		if (segs[i].glseg)
+			continue;
 		if (segs[i].side != 0) // needs to be frontfacing
 			continue;
 		if (segs[i].v1->x == seg->v2->x && segs[i].v1->y == seg->v2->y)
@@ -460,6 +464,9 @@ newseg:
 				// Find backfacings
 				for (q = 0;  q < numsegs; q++)
 				{
+					if (segs[q].glseg)
+						continue;
+
 					if (segs[q].linedef == segs[i].linedef
 						&& segs[q].side == 1)
 					{
@@ -605,6 +612,9 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		seg_t *seg = &segs[i];
 		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 		INT32 parentID = 0, potrans = 0;
+
+		if (seg->glseg)
+			continue;
 
 		if (seg->side != 0) // needs to be frontfacing
 			continue;

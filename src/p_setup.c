@@ -1343,6 +1343,15 @@ static void P_LoadMapData(const virtres_t *virt)
 	memcpy(spawnsides, sides, numsides * sizeof (*sides));
 }
 
+static void P_InitializeSubsector(subsector_t *ss)
+{
+	ss->sector = NULL;
+#ifdef FLOORSPLATS
+	ss->splats = NULL;
+#endif
+	ss->validcount = 0;
+}
+
 static inline void P_LoadSubsectors(UINT8 *data)
 {
 	mapsubsector_t *ms = (mapsubsector_t*)data;
@@ -1351,13 +1360,9 @@ static inline void P_LoadSubsectors(UINT8 *data)
 
 	for (i = 0; i < numsubsectors; i++, ss++, ms++)
 	{
-		ss->sector = NULL;
 		ss->numlines = SHORT(ms->numsegs);
 		ss->firstline = SHORT(ms->firstseg);
-#ifdef FLOORSPLATS
-		ss->splats = NULL;
-#endif
-		ss->validcount = 0;
+		P_InitializeSubsector(ss);
 	}
 }
 
@@ -1414,73 +1419,324 @@ static inline float P_SegLengthFloat(seg_t *seg)
 }
 #endif
 
-static void P_LoadSegs(UINT8 *data)
+static void P_InitializeSeg(seg_t *seg)
 {
-	INT32 linedef, side;
-	mapseg_t *ml = (mapseg_t*)data;
-	seg_t *li = segs;
-	line_t *ldef;
-	size_t i;
+	seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
 
-	for (i = 0; i < numsegs; i++, li++, ml++)
-	{
-		li->v1 = &vertexes[SHORT(ml->v1)];
-		li->v2 = &vertexes[SHORT(ml->v2)];
+	seg->frontsector = seg->sidedef->sector;
+	seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
 
-		li->length = P_SegLength(li);
 #ifdef HWRENDER
-		if (rendermode == render_opengl)
-		{
-			li->flength = P_SegLengthFloat(li);
-			//Hurdler: 04/12/2000: for now, only used in hardware mode
-			li->lightmaps = NULL; // list of static lightmap for this seg
-		}
-		li->pv1 = li->pv2 = NULL;
+	seg->pv1 = seg->pv2 = NULL;
+
+	//Hurdler: 04/12/2000: for now, only used in hardware mode
+	seg->lightmaps = NULL; // list of static lightmap for this seg
 #endif
 
-		li->angle = (SHORT(ml->angle))<<FRACBITS;
-		li->offset = (SHORT(ml->offset))<<FRACBITS;
-		linedef = SHORT(ml->linedef);
-		ldef = &lines[linedef];
-		li->linedef = ldef;
-		li->side = side = SHORT(ml->side);
-		li->sidedef = &sides[ldef->sidenum[side]];
-		li->frontsector = sides[ldef->sidenum[side]].sector;
-		if (ldef->flags & ML_TWOSIDED)
-			li->backsector = sides[ldef->sidenum[side^1]].sector;
-		else
-			li->backsector = 0;
+	seg->numlights = 0;
+	seg->rlights = NULL;
+#ifdef POLYOBJECTS
+	seg->polyseg = NULL;
+	seg->dontrenderme = false;
+#endif
+}
 
-		li->numlights = 0;
-		li->rlights = NULL;
+static void P_LoadSegs(UINT8 *data)
+{
+	mapseg_t *ms = (mapseg_t*)data;
+	seg_t *seg = segs;
+	size_t i;
+
+	for (i = 0; i < numsegs; i++, seg++, ms++)
+	{
+		seg->v1 = &vertexes[SHORT(ms->v1)];
+		seg->v2 = &vertexes[SHORT(ms->v2)];
+
+		seg->side = SHORT(ms->side);
+
+		seg->offset = (SHORT(ms->offset)) << FRACBITS;
+
+		seg->angle = (SHORT(ms->angle)) << FRACBITS;
+
+		seg->linedef = &lines[SHORT(ms->linedef)];
+
+		seg->length = P_SegLength(seg);
+#ifdef HWRENDER
+		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+#endif
+
+		seg->glseg = false;
+		P_InitializeSeg(seg);
+	}
+}
+
+typedef enum {
+	NT_DOOM,
+	NT_XNOD,
+	NT_ZNOD,
+	NT_XGLN,
+	NT_ZGLN,
+	NT_XGL2,
+	NT_ZGL2,
+	NT_XGL3,
+	NT_ZGL3,
+	NT_UNSUPPORTED,
+	NUMNODETYPES
+} nodetype_t;
+
+// Find out the BSP format.
+static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
+{
+	boolean supported[NUMNODETYPES] = {0};
+	nodetype_t nodetype = NT_UNSUPPORTED;
+	char signature[4 + 1];
+
+	if (vres_Find(virt, "TEXTMAP"))
+	{
+		*nodedata = vres_Find(virt, "ZNODES")->data;
+		supported[NT_XGLN] = supported[NT_XGL3] = true;
+	}
+	else
+	{
+		virtlump_t *virtsegs = vres_Find(virt, "SEGS");
+		virtlump_t *virtssectors;
+
+		if (virtsegs && virtsegs->size)
+		{
+			*nodedata = vres_Find(virt, "NODES")->data;
+			return NT_DOOM; // Traditional map format BSP tree.
+		}
+
+		virtssectors = vres_Find(virt, "SSECTORS");
+
+		if (virtssectors && virtssectors->size)
+		{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
+			*nodedata = virtssectors->data;
+			supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL3] = true;
+		}
+		else
+		{ // Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
+			*nodedata = vres_Find(virt, "NODES")->data;
+			supported[NT_XNOD] = supported[NT_ZNOD] = true;
+		}
+	}
+
+	M_Memcpy(signature, *nodedata, 4);
+	signature[4] = '\0';
+	(*nodedata) += 4;
+
+	if (!strcmp(signature, "XNOD"))
+		nodetype = NT_XNOD;
+	else if (!strcmp(signature, "ZNOD"))
+		nodetype = NT_ZNOD;
+	else if (!strcmp(signature, "XGLN"))
+		nodetype = NT_XGLN;
+	else if (!strcmp(signature, "ZGLN"))
+		nodetype = NT_ZGLN;
+	else if (!strcmp(signature, "XGL3"))
+		nodetype = NT_XGL3;
+
+	return supported[nodetype] ? nodetype : NT_UNSUPPORTED;
+}
+
+// Extended node formats feature additional vertices; useful for OpenGL, but totally useless in gamelogic.
+static boolean P_LoadExtraVertices(UINT8 **data)
+{
+	UINT32 origvrtx = READUINT32((*data));
+	UINT32 xtrvrtx = READUINT32((*data));
+	line_t* ld = lines;
+	vertex_t *oldpos = vertexes;
+	ssize_t offset;
+	size_t i;
+
+	if (numvertexes != origvrtx) // If native vertex count doesn't match node original vertex count, bail out (broken data?).
+	{
+		CONS_Alert(CONS_WARNING, "Vertex count in map data and nodes differ!\n");
+		return false;
+	}
+
+	if (!xtrvrtx)
+		return true;
+
+	// If extra vertexes were generated, reallocate the vertex array and fix the pointers.
+	numvertexes += xtrvrtx;
+	vertexes = Z_Realloc(vertexes, numvertexes*sizeof(*vertexes), PU_LEVEL, NULL);
+	offset = (size_t)(vertexes - oldpos);
+
+	for (i = 0, ld = lines; i < numlines; i++, ld++)
+	{
+		ld->v1 += offset;
+		ld->v2 += offset;
+	}
+
+	// Read extra vertex data.
+	for (i = origvrtx; i < numvertexes; i++)
+	{
+		vertexes[i].x = READFIXED((*data));
+		vertexes[i].y = READFIXED((*data));
+	}
+
+	return true;
+}
+
+static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype)
+{
+	size_t i, k;
+	INT16 m;
+	seg_t *seg;
+
+	// Subsectors
+	numsubsectors = READUINT32((*data));
+	subsectors = Z_Calloc(numsubsectors*sizeof(*subsectors), PU_LEVEL, NULL);
+
+	for (i = 0; i < numsubsectors; i++)
+		subsectors[i].numlines = READUINT32((*data));
+
+	// Segs
+	numsegs = READUINT32((*data));
+	segs = Z_Calloc(numsegs*sizeof(*segs), PU_LEVEL, NULL);
+
+	for (i = 0, k = 0; i < numsubsectors; i++)
+	{
+		subsectors[i].firstline = k;
+		P_InitializeSubsector(&subsectors[i]);
+
+		switch (nodetype)
+		{
+		case NT_XGLN:
+		case NT_XGL3:
+			for (m = 0; m < subsectors[i].numlines; m++, k++)
+			{
+				UINT16 linenum;
+				UINT32 vert = READUINT32((*data));
+
+				segs[k].v1 = &vertexes[vert];
+				if (m == 0)
+					segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
+				else
+					segs[k - 1].v2 = segs[k].v1;
+
+				(*data) += 4; // partner, can be ignored by software renderer
+				if (nodetype == NT_XGL3)
+					(*data) += 2; // Line number is 32-bit in XGL3, but we're limited to 16 bits.
+
+				linenum = READUINT16((*data));
+				segs[k].glseg = (linenum == 0xFFFF);
+				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
+				segs[k].side = READUINT8((*data));
+			}
+			break;
+
+		case NT_XNOD:
+			for (m = 0; m < subsectors[i].numlines; m++, k++)
+			{
+				segs[k].v1 = &vertexes[READUINT32((*data))];
+				segs[k].v2 = &vertexes[READUINT32((*data))];
+				segs[k].linedef = &lines[READUINT16((*data))];
+				segs[k].side = READUINT8((*data));
+				segs[k].glseg = false;
+			}
+			break;
+
+		default:
+			return false;
+		}
+	}
+
+	for (i = 0, seg = segs; i < numsegs; i++, seg++)
+	{
+		vertex_t *v1 = seg->v1;
+		vertex_t *v2 = seg->v2;
+		P_InitializeSeg(seg);
+		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
+		seg->offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
+	}
+
+	return true;
+}
+
+// Auxiliary function: Shrink node ID from 32-bit to 16-bit.
+static UINT16 ShrinkNodeID(UINT32 x) {
+	UINT16 mask = (x >> 16) & 0xC000;
+	UINT16 result = x;
+	return result | mask;
+}
+
+static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
+{
+	node_t *mn;
+	size_t i, j, k;
+	boolean xgl3 = (nodetype == NT_XGL3);
+
+	numnodes = READINT32((*data));
+	nodes = Z_Calloc(numnodes*sizeof(*nodes), PU_LEVEL, NULL);
+
+	for (i = 0, mn = nodes; i < numnodes; i++, mn++)
+	{
+		// Splitter
+		mn->x = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+		mn->y = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+		mn->dx = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+		mn->dy = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+
+		// Bounding boxes
+		for (j = 0; j < 2; j++)
+			for (k = 0; k < 4; k++)
+				mn->bbox[j][k] = READINT16((*data)) << FRACBITS;
+
+		//Children
+		mn->children[0] = ShrinkNodeID(READUINT32((*data))); /// \todo Use UINT32 for node children in a future, instead?
+		mn->children[1] = ShrinkNodeID(READUINT32((*data)));
 	}
 }
 
 static void P_LoadMapBSP(const virtres_t *virt)
 {
-	virtlump_t* virtssectors = vres_Find(virt, "SSECTORS");
-	virtlump_t* virtsegs     = vres_Find(virt, "SEGS");
-	virtlump_t* virtnodes    = vres_Find(virt, "NODES");
+	UINT8 *nodedata = NULL;
+	nodetype_t nodetype = P_GetNodetype(virt, &nodedata);
 
-	numsubsectors = virtssectors->size / sizeof(mapsubsector_t);
-	numnodes      = virtnodes->size    / sizeof(mapnode_t);
-	numsegs       = virtsegs->size     / sizeof(mapseg_t);
+	switch (nodetype)
+	{
+	case NT_DOOM:
+	{
+		virtlump_t *virtssectors = vres_Find(virt, "SSECTORS");
+		virtlump_t* virtnodes = vres_Find(virt, "NODES");
+		virtlump_t *virtsegs = vres_Find(virt, "SEGS");
 
-	if (numsubsectors <= 0)
-		I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
-	if (numnodes <= 0)
-		I_Error("Level has no nodes");
-	if (numsegs <= 0)
-		I_Error("Level has no segs");
+		numsubsectors = virtssectors->size / sizeof(mapsubsector_t);
+		numnodes      = virtnodes->size    / sizeof(mapnode_t);
+		numsegs       = virtsegs->size     / sizeof(mapseg_t);
 
-	subsectors = Z_Calloc(numsubsectors * sizeof(*subsectors), PU_LEVEL, NULL);
-	nodes      = Z_Calloc(numnodes * sizeof(*nodes), PU_LEVEL, NULL);
-	segs       = Z_Calloc(numsegs * sizeof(*segs), PU_LEVEL, NULL);
+		if (numsubsectors <= 0)
+			I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
+		if (numnodes <= 0)
+			I_Error("Level has no nodes");
+		if (numsegs <= 0)
+			I_Error("Level has no segs");
 
-	// Nodes
-	P_LoadSubsectors(virtssectors->data);
-	P_LoadNodes(virtnodes->data);
-	P_LoadSegs(virtsegs->data);
+		subsectors = Z_Calloc(numsubsectors * sizeof(*subsectors), PU_LEVEL, NULL);
+		nodes      = Z_Calloc(numnodes * sizeof(*nodes), PU_LEVEL, NULL);
+		segs       = Z_Calloc(numsegs * sizeof(*segs), PU_LEVEL, NULL);
+
+		P_LoadSubsectors(virtssectors->data);
+		P_LoadNodes(virtnodes->data);
+		P_LoadSegs(virtsegs->data);
+		break;
+	}
+	case NT_XNOD:
+	case NT_XGLN:
+	case NT_XGL3:
+		if (!P_LoadExtraVertices(&nodedata))
+			return;
+		if (!P_LoadExtendedSubsectorsAndSegs(&nodedata, nodetype))
+			return;
+		P_LoadExtendedNodes(&nodedata, nodetype);
+		break;
+	default:
+		CONS_Alert(CONS_WARNING, "Unsupported BSP format detected.\n");
+		return;
+	}
+	return;
 }
 
 // Split from P_LoadBlockMap for convenience
