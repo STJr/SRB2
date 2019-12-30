@@ -1314,12 +1314,7 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 
 static char* dat;
 
-/** Auxiliary function for TextmapParse.
-  *
-  * \param Vertex number.
-  * \param Parameter string.
-  */
-static void TextmapVertex(UINT32 i, char *param)
+static void ParseTextmapVertexParameter(UINT32 i, char *param)
 {
 	if (fastcmp(param, "x"))
 		vertexes[i].x = FLOAT_TO_FIXED(atof(dat = M_GetToken(NULL)));
@@ -1327,12 +1322,7 @@ static void TextmapVertex(UINT32 i, char *param)
 		vertexes[i].y = FLOAT_TO_FIXED(atof(dat = M_GetToken(NULL)));
 }
 
-/** Auxiliary function for TextmapParse.
-  *
-  * \param Sector number.
-  * \param Parameter string.
-  */
-static void TextmapSector(UINT32 i, char *param)
+static void ParseTextmapSectorParameter(UINT32 i, char *param)
 {
 	if (fastcmp(param, "heightfloor"))
 		sectors[i].floorheight = atol(dat = M_GetToken(NULL)) << FRACBITS;
@@ -1350,12 +1340,7 @@ static void TextmapSector(UINT32 i, char *param)
 		sectors[i].tag = atol(dat = M_GetToken(NULL));
 }
 
-/** Auxiliary function for TextmapParse.
-  *
-  * \param Side number.
-  * \param Parameter string.
-  */
-static void TextmapSide(UINT32 i, char *param)
+static void ParseTextmapSidedefParameter(UINT32 i, char *param)
 {
 	if (fastcmp(param, "offsetx"))
 		sides[i].textureoffset = atol(dat = M_GetToken(NULL))<<FRACBITS;
@@ -1373,12 +1358,7 @@ static void TextmapSide(UINT32 i, char *param)
 		sides[i].repeatcnt = atol(dat = M_GetToken(NULL));
 }
 
-/** Auxiliary function for TextmapParse.
-  *
-  * \param Line number.
-  * \param Parameter string.
-  */
-static void TextmapLine(UINT32 i, char *param)
+static void ParseTextmapLinedefParameter(UINT32 i, char *param)
 {
 	if (fastcmp(param, "id"))
 		lines[i].tag = atol(dat = M_GetToken(NULL));
@@ -1428,9 +1408,7 @@ static void TextmapLine(UINT32 i, char *param)
 		lines[i].flags |= ML_TFERLINE;
 }
 
-/** Auxiliary function for TextmapParse.
-  */
-static void TextmapThing(UINT32 i, char *param)
+static void ParseTextmapThingParameter(UINT32 i, char *param)
 {
 	if (fastcmp(param, "x"))
 		mapthings[i].x = atol(dat = M_GetToken(NULL));
@@ -1445,7 +1423,7 @@ static void TextmapThing(UINT32 i, char *param)
 
 	// Flags
 	else if (fastcmp(param, "extra") && fastcmp("true", dat = M_GetToken(NULL)))
-		mapthings[i].options |= 1;
+		mapthings[i].options |= MTF_EXTRA;
 	else if (fastcmp(param, "flip") && fastcmp("true", dat = M_GetToken(NULL)))
 		mapthings[i].options |= MTF_OBJECTFLIP;
 	else if (fastcmp(param, "special") && fastcmp("true", dat = M_GetToken(NULL)))
@@ -1488,6 +1466,8 @@ static void TextmapParse(UINT32 dataPos, size_t num, void (*parser)(UINT32, char
 	Z_Free(tkn);
 }
 
+#define MAXFLATSIZE (2048<<FRACBITS)
+
 /** Provides a fix to the flat alignment coordinate transform from standard Textmaps.
  */
 static void TextmapFixFlatOffsets(sector_t *sec)
@@ -1498,10 +1478,8 @@ static void TextmapFixFlatOffsets(sector_t *sec)
 		fixed_t ps = FINESINE  (sec->floorpic_angle>>ANGLETOFINESHIFT);
 		fixed_t xoffs = sec->floor_xoffs;
 		fixed_t yoffs = sec->floor_yoffs;
-		#define MAXFLATSIZE (2048<<FRACBITS)
 		sec->floor_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
 		sec->floor_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
-		#undef MAXFLATSIZE
 	}
 
 	if (sec->ceilingpic_angle)
@@ -1510,12 +1488,12 @@ static void TextmapFixFlatOffsets(sector_t *sec)
 		fixed_t ps = FINESINE  (sec->ceilingpic_angle>>ANGLETOFINESHIFT);
 		fixed_t xoffs = sec->ceiling_xoffs;
 		fixed_t yoffs = sec->ceiling_yoffs;
-		#define MAXFLATSIZE (2048<<FRACBITS)
 		sec->ceiling_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
 		sec->ceiling_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
-		#undef MAXFLATSIZE
 	}
 }
+
+#undef MAXFLATSIZE
 
 /** Loads the textmap data, after obtaining the elements count and allocating their respective space.
   */
@@ -1532,7 +1510,7 @@ static void P_LoadTextmap(void)
 	CONS_Alert(CONS_NOTICE, "UDMF support is still a work-in-progress; its specs and features are prone to change until it is fully implemented.\n");
 
 	/// Given the UDMF specs, some fields are given a default value.
-	/// If an element's field has a default value set, it is ommited
+	/// If an element's field has a default value set, it is omitted
 	/// from the textmap, and therefore we have to account for it by
 	/// preemptively setting that value beforehand.
 
@@ -1541,7 +1519,7 @@ static void P_LoadTextmap(void)
 		// Defaults.
 		vt->z = 0;
 
-		TextmapParse(vertexesPos[i], i, TextmapVertex);
+		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
 	}
 
 	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
@@ -1561,7 +1539,7 @@ static void P_LoadTextmap(void)
 		sc->floor_xoffs = sc->floor_yoffs = sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
 		sc->floorpic_angle = sc->ceilingpic_angle = 0;
 
-		TextmapParse(sectorsPos[i], i, TextmapSector);
+		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
 
 		P_InitializeSector(sc);
 		TextmapFixFlatOffsets(sc);
@@ -1574,7 +1552,7 @@ static void P_LoadTextmap(void)
 		ld->special = 0;
 		ld->sidenum[1] = 0xffff;
 
-		TextmapParse(linesPos[i], i, TextmapLine);
+		TextmapParse(linesPos[i], i, ParseTextmapLinedefParameter);
 
 		P_InitializeLinedef(ld);
 	}
@@ -1590,7 +1568,7 @@ static void P_LoadTextmap(void)
 		sd->bottomtexture = R_TextureNumForName("-");
 		sd->repeatcnt = 0;
 
-		TextmapParse(sidesPos[i], i, TextmapSide);
+		TextmapParse(sidesPos[i], i, ParseTextmapSidedefParameter);
 	}
 
 	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
@@ -1599,7 +1577,7 @@ static void P_LoadTextmap(void)
 		mt->z = 0;
 		mt->angle = 0;
 
-		TextmapParse(mapthingsPos[i], i, TextmapThing);
+		TextmapParse(mapthingsPos[i], i, ParseTextmapThingParameter);
 	}
 }
 
