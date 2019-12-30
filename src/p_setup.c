@@ -1523,6 +1523,7 @@ static void P_LoadTextmap (void)
 		TextmapParse(sectorsPos[i], i, TextmapSector);
 
 		P_InitializeSector(sc);
+		TextmapFixFlatOffsets(sc);
 	}
 
 	for (i = 0, ld = lines; i < numlines; i++, ld++)
@@ -1563,37 +1564,30 @@ static void P_LoadTextmap (void)
 
 /** Provides a fix to the flat alignment coordinate transform from standard Textmaps.
  */
-static void TextmapFixFlatOffsets (void)
+static void TextmapFixFlatOffsets (sector_t* sec)
 {
-	fixed_t pc, ps;
-	fixed_t xoffs, yoffs;
-	size_t i;
-	sector_t* sec = sectors;
-	for (i = 0; i < numsectors; i++, sec++)
+	if (sec->floorpic_angle)
 	{
-		if (sec->floorpic_angle)
-		{
-			pc = FINECOSINE(sec->floorpic_angle>>ANGLETOFINESHIFT);
-			ps = FINESINE  (sec->floorpic_angle>>ANGLETOFINESHIFT);
-			xoffs = sec->floor_xoffs;
-			yoffs = sec->floor_yoffs;
-			#define MAXFLATSIZE (2048<<FRACBITS)
-			sec->floor_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
-			sec->floor_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
-			#undef MAXFLATSIZE
-		}
+		fixed_t pc = FINECOSINE(sec->floorpic_angle>>ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE  (sec->floorpic_angle>>ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->floor_xoffs;
+		fixed_t yoffs = sec->floor_yoffs;
+		#define MAXFLATSIZE (2048<<FRACBITS)
+		sec->floor_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		sec->floor_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		#undef MAXFLATSIZE
+	}
 
-		if (sec->ceilingpic_angle)
-		{
-			pc = FINECOSINE(sec->ceilingpic_angle>>ANGLETOFINESHIFT);
-			ps = FINESINE  (sec->ceilingpic_angle>>ANGLETOFINESHIFT);
-			xoffs = sec->ceiling_xoffs;
-			yoffs = sec->ceiling_yoffs;
-			#define MAXFLATSIZE (2048<<FRACBITS)
-			sec->ceiling_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
-			sec->ceiling_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
-			#undef MAXFLATSIZE
-		}
+	if (sec->ceilingpic_angle)
+	{
+		fixed_t pc = FINECOSINE(sec->ceilingpic_angle>>ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE  (sec->ceilingpic_angle>>ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->ceiling_xoffs;
+		fixed_t yoffs = sec->ceiling_yoffs;
+		#define MAXFLATSIZE (2048<<FRACBITS)
+		sec->ceiling_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		sec->ceiling_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		#undef MAXFLATSIZE
 	}
 }
 
@@ -1666,10 +1660,7 @@ static void P_LoadMapData(const virtres_t *virt)
 
 	// Load map data.
 	if (textmap)
-	{
 		P_LoadTextmap();
-		TextmapFixFlatOffsets();
-	}
 	else
 	{
 		P_LoadVertices(virtvertexes->data);
