@@ -157,10 +157,7 @@ void COM_Lua_f(void)
 		WRITEUINT8(p, argc);
 		for (i = 0; i < argc; i++)
 			WRITESTRINGN(p, COM_Argv(i), 255);
-		if (flags & 2)
-			SendNetXCmd2(XD_LUACMD, buf, p-buf);
-		else
-			SendNetXCmd(XD_LUACMD, buf, p-buf);
+		SendNetXCmd(XD_LUACMD, buf, p-buf);
 		free(buf);
 		return;
 	}
