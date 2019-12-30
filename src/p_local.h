@@ -192,11 +192,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate);
-#if 0
-boolean P_AnalogMove(player_t *player);
-#else
-#define P_AnalogMove(player) (player->pflags & PF_ANALOGMODE)
-#endif
+#define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)
 boolean P_TransferToNextMare(player_t *player);
 UINT8 P_FindLowestMare(void);
 void P_FindEmerald(void);

@@ -3579,7 +3579,7 @@ static void P_DoClimbing(player_t *player)
 	}
 
 #define CLIMBCONEMAX FixedAngle(90*FRACUNIT)
-	if (!demoplayback || P_AnalogMove(player))
+	if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 	{
 		if (player == &players[consoleplayer])
 		{
@@ -4394,7 +4394,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 		player->drawangle = player->mo->angle = player->mo->angle - ANGLE_180; // Turn around from the wall you were climbing.
 
-		if (!demoplayback || P_AnalogMove(player))
+		if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 		{
 			if (player == &players[consoleplayer])
 				localangle = player->mo->angle; // Adjust the local control angle.
@@ -4719,7 +4719,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 							{
 								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 								bullet = P_SpawnPointMissile(player->mo, lockon->x, lockon->y, zpos(lockon), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
-								if (!demoplayback || P_AnalogMove(player))
+								if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 								{
 									if (player == &players[consoleplayer])
 										localangle = player->mo->angle;
@@ -5616,13 +5616,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	}
 }
 
-#if 0
-boolean P_AnalogMove(player_t *player)
-{
-	return player->pflags & PF_ANALOGMODE;
-}
-#endif
-
 //
 // P_GetPlayerControlDirection
 //
@@ -5661,7 +5654,7 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 		origtempangle = tempangle = 0; // relative to the axis rather than the player!
 		controlplayerdirection = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
 	}
-	else if (P_AnalogMove(player) && thiscam->chase)
+	else if ((P_ControlStyle(player) & CS_LMAOGALOG) && thiscam->chase)
 	{
 		if (player->awayviewtics)
 			origtempangle = tempangle = player->awayviewmobj->angle;
@@ -5887,7 +5880,7 @@ static void P_3dMovement(player_t *player)
 	INT32 mforward = 0, mbackward = 0;
 	angle_t dangle; // replaces old quadrants bits
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
-	boolean analogmove = false;
+	controlstyle_e controlstyle;
 	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && (player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
 	fixed_t oldMagnitude, newMagnitude;
 #ifdef ESLOPE
@@ -5900,7 +5893,7 @@ static void P_3dMovement(player_t *player)
 	// Get the old momentum; this will be needed at the end of the function! -SH
 	oldMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
 
-	analogmove = P_AnalogMove(player);
+	controlstyle = P_ControlStyle(player);
 
 	cmd = &player->cmd;
 
@@ -5927,7 +5920,7 @@ static void P_3dMovement(player_t *player)
 		}
 	}
 
-	if (analogmove)
+	if (controlstyle & CS_LMAOGALOG)
 	{
 		movepushangle = (cmd->angleturn<<16 /* not FRACBITS */);
 	}
@@ -6073,7 +6066,7 @@ static void P_3dMovement(player_t *player)
 				P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 15*FRACUNIT>>1), false);
 		}
 	}
-	else if (!analogmove
+	else if (!(controlstyle == CS_LMAOGALOG)
 		&& cmd->forwardmove != 0 && !(player->pflags & PF_GLIDING || player->exiting
 		|| (P_PlayerInPain(player) && !onground)))
 	{
@@ -6112,7 +6105,7 @@ static void P_3dMovement(player_t *player)
 			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 15*FRACUNIT>>1));
 	}
 	// Analog movement control
-	else if (analogmove)
+	else if (controlstyle == CS_LMAOGALOG)
 	{
 		if (!(player->pflags & PF_GLIDING || player->exiting || P_PlayerInPain(player)))
 		{
@@ -8132,8 +8125,33 @@ static void P_MovePlayer(player_t *player)
 		P_2dMovement(player);
 	else
 	{
-		if (!player->climbing && (!P_AnalogMove(player)))
-			player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
+		if (!player->climbing)
+		{
+			switch (P_ControlStyle(player))
+			{
+			case CS_LEGACY:
+			case CS_STANDARD:
+				player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
+				break;
+
+			case CS_LMAOGALOG:
+				break; // handled elsewhere
+
+			case CS_SIMPLE:
+				if (cmd->forwardmove || cmd->sidemove)
+				{
+					angle_t controlangle = R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
+					player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */) + controlangle;
+				}
+				else
+				{
+					angle_t drawangleoffset = (player->powers[pw_carry] == CR_ROLLOUT) ? ANGLE_180 : 0;
+					player->mo->angle = player->drawangle + drawangleoffset;
+				}
+
+				break;
+			}
+		}
 
 		ticruned++;
 		if ((cmd->angleturn & TICCMD_RECEIVED) == 0)
@@ -8259,7 +8277,7 @@ static void P_MovePlayer(player_t *player)
 	if (player->pflags & PF_GLIDING)
 	{
 		mobj_t *mo = player->mo; // seriously why isn't this at the top of the function hngngngng
-		fixed_t leeway = !P_AnalogMove(player) ? FixedAngle(cmd->sidemove*(FRACUNIT)) : 0;
+		fixed_t leeway = (P_ControlStyle(player) != CS_LMAOGALOG) ? FixedAngle(cmd->sidemove*(FRACUNIT)) : 0;
 		fixed_t glidespeed = player->actionspd;
 		fixed_t momx = mo->momx - player->cmomx, momy = mo->momy - player->cmomy;
 		angle_t angle, moveangle = R_PointToAngle2(0, 0, momx, momy);
@@ -8531,7 +8549,7 @@ static void P_MovePlayer(player_t *player)
 	//////////////////
 
 	// This really looks like it should be moved to P_3dMovement. -Red
-	if (P_AnalogMove(player)
+	if (P_ControlStyle(player) == CS_LMAOGALOG
 		&& (cmd->forwardmove != 0 || cmd->sidemove != 0) && !player->climbing && !twodlevel && !(player->mo->flags2 & MF2_TWOD))
 	{
 		// If travelling slow enough, face the way the controls
@@ -9376,7 +9394,7 @@ boolean P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	if (source->player)
 	{
 		source->player->drawangle = source->angle;
-		if (!demoplayback || P_AnalogMove(source->player))
+		if (!demoplayback || P_ControlStyle(source->player) == CS_LMAOGALOG)
 		{
 			if (source->player == &players[consoleplayer])
 				localangle = source->angle;
@@ -9982,7 +10000,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camheight = FixedMul(camheight, player->camerascale);
 
 #ifdef REDSANALOG
-	if (P_AnalogMove(player) && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
+	if (P_ControlStyle(player) == CS_LMAOGALOG && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
 		camstill = true;
 
 		if (camspeed < 4*FRACUNIT/5)
@@ -10012,7 +10030,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
 		}
 	}
-	else if (P_AnalogMove(player) && !sign) // Analog
+	else if (P_ControlStyle(player) == CS_LMAOGALOG && !sign) // Analog
 		angle = R_PointToAngle2(thiscam->x, thiscam->y, mo->x, mo->y);
 	else if (demoplayback)
 	{
@@ -10102,7 +10120,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			camheight = mo->scale << 7;
 			camspeed = FRACUNIT/12;
 		}
-		else if (P_AnalogMove(player)) // x1.2 dist for analog
+		else if (P_ControlStyle(player) == CS_LMAOGALOG) // x1.2 dist for analog
 		{
 			dist = FixedMul(dist, 6*FRACUNIT/5);
 			camheight = FixedMul(camheight, 6*FRACUNIT/5);
@@ -10995,7 +11013,7 @@ static void P_MinecartThink(player_t *player)
 		else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
 			player->mo->angle = minecart->angle - MINECARTCONEMAX;
 
-		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_AnalogMove(player)))
+		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))
 		{
 			if (player == &players[consoleplayer])
 				localangle = player->mo->angle;
@@ -11074,7 +11092,7 @@ static void P_MinecartThink(player_t *player)
 			else
 				minecart->angle = targetangle + ANGLE_180;
 			angdiff = (minecart->angle - prevangle);
-			if (angdiff && (!demoplayback || P_AnalogMove(player)))  // maintain relative angle on turns
+			if (angdiff && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))  // maintain relative angle on turns
 			{
 				player->mo->angle += angdiff;
 				if (player == &players[consoleplayer])
@@ -11840,7 +11858,7 @@ void P_PlayerThink(player_t *player)
 		player->mo->reactiontime--;
 	else if (player->powers[pw_carry] == CR_MINECART)
 	{
-		if (!P_AnalogMove(player))
+		if (P_ControlStyle(player) != CS_LMAOGALOG)
 			player->mo->angle = (cmd->angleturn << 16 /* not FRACBITS */);
 
 		ticruned++;
@@ -11853,7 +11871,7 @@ void P_PlayerThink(player_t *player)
 	{
 		if (player->powers[pw_carry] == CR_ROPEHANG)
 		{
-			if (!P_AnalogMove(player))
+			if (P_ControlStyle(player) != CS_LMAOGALOG)
 				player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
 
 			ticruned++;
@@ -11901,7 +11919,7 @@ void P_PlayerThink(player_t *player)
 			;
 		else if (!(player->pflags & PF_DIRECTIONCHAR)
 		|| (player->climbing) // stuff where the direction is forced at all times
-		|| (P_AnalogMove(player) || twodlevel || player->mo->flags2 & MF2_TWOD) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
+		|| (twodlevel || player->mo->flags2 & MF2_TWOD) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
 		|| G_RingSlingerGametype()) // no firing rings in directions your player isn't aiming
 			player->drawangle = player->mo->angle;
 		else if (P_PlayerInPain(player))
@@ -11932,7 +11950,7 @@ void P_PlayerThink(player_t *player)
 				case CR_ROLLOUT:
 					if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 					{ // inverse direction!
-						diff = ((player->mo->angle + R_PointToAngle2(0, 0, -cmd->forwardmove<<FRACBITS, cmd->sidemove<<FRACBITS)) - player->drawangle);
+						diff = (((player->cmd.angleturn<<16) + R_PointToAngle2(0, 0, -cmd->forwardmove<<FRACBITS, cmd->sidemove<<FRACBITS)) - player->drawangle);
 						factor = 4;
 					}
 					break;
@@ -11989,7 +12007,7 @@ void P_PlayerThink(player_t *player)
 			}
 			else if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 			{
-				diff = ((player->mo->angle + R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS)) - player->drawangle);
+				diff = ((player->mo->angle + ((player->pflags & PF_ANALOGMODE) ? 0 : R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS))) - player->drawangle);
 				factor = 4;
 			}
 			else if (player->rmomx || player->rmomy)
@@ -12602,7 +12620,7 @@ void P_PlayerAfterThink(player_t *player)
 				{
 					player->mo->angle = tails->angle;
 
-					if (!demoplayback || P_AnalogMove(player))
+					if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 					{
 						if (player == &players[consoleplayer])
 							localangle = player->mo->angle;
@@ -12691,7 +12709,7 @@ void P_PlayerAfterThink(player_t *player)
 						macecenter->angle += cmd->sidemove<<ANGLETOFINESHIFT;
 						player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 
-						if (!demoplayback || P_AnalogMove(player))
+						if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 						{
 							if (player == &players[consoleplayer])
 								localangle = player->mo->angle; // Adjust the local control angle.

@@ -1144,7 +1144,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
 	angle_t drawangleoffset = (player->powers[pw_carry] == CR_ROLLOUT) ? ANGLE_180 : 0;
-	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, analog, invertmouse, mousemove, abilitydirection;
+	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, invertmouse, mousemove;
+	controlstyle_e controlstyle = G_ControlStyle(ssplayer);
 	INT32 *mx; INT32 *my; INT32 *mly;
 
 	static INT32 turnheld[2]; // for accelerative turning
@@ -1165,7 +1166,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		chasefreelook = cv_chasefreelook.value;
 		alwaysfreelook = cv_alwaysfreelook.value;
 		usejoystick = cv_usejoystick.value;
-		analog = cv_analog[0].value;
 		invertmouse = cv_invertmouse.value;
 		mousemove = cv_mousemove.value;
 		mx = &mousex;
@@ -1179,7 +1179,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		chasefreelook = cv_chasefreelook2.value;
 		alwaysfreelook = cv_alwaysfreelook2.value;
 		usejoystick = cv_usejoystick2.value;
-		analog = cv_analog[1].value;
 		invertmouse = cv_invertmouse2.value;
 		mousemove = cv_mousemove2.value;
 		mx = &mouse2x;
@@ -1187,9 +1186,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		mly = &mlook2y;
 		G_CopyTiccmd(cmd, I_BaseTiccmd2(), 1); // empty, or external driver
 	}
-	abilitydirection = cv_abilitydirection[player->bot ? 0 : forplayer].value;
 
-	strafeisturn = abilitydirection && ticcmd_centerviewdown[forplayer] &&
+	strafeisturn = controlstyle == CS_SIMPLE && ticcmd_centerviewdown[forplayer] &&
 		((cv_cam_lockedinput[forplayer].value && !ticcmd_ztargetfocus[forplayer]) || (player->pflags & PF_STARTDASH)) &&
 		!player->climbing && player->powers[pw_carry] != CR_MINECART;
 
@@ -1259,7 +1257,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		tspeed = speed;
 
 	// let movement keys cancel each other out
-	if (analog) // Analog
+	if (controlstyle == CS_LMAOGALOG) // Analog
 	{
 		if (turnright)
 			cmd->angleturn = (INT16)(cmd->angleturn - angleturn[tspeed]);
@@ -1288,7 +1286,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			side += ((lookjoystickvector.xaxis * sidemove[1]) >> 10);
 		}
 	}
-	else if (analog) // Analog
+	else if (controlstyle == CS_LMAOGALOG) // Analog
 	{
 		if (turnright)
 			cmd->buttons |= BT_CAMRIGHT;
@@ -1399,7 +1397,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
 		boolean down = PLAYERINPUTDOWN(ssplayer, gc_centerview);
 
-		if (!(abilitydirection && cv_cam_centertoggle[forplayer].value))
+		if (!(controlstyle == CS_SIMPLE && cv_cam_centertoggle[forplayer].value))
 			centerviewdown = down;
 		else
 		{
@@ -1416,9 +1414,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	if (centerviewdown)
 	{
-		if (abilitydirection && !ticcmd_centerviewdown[forplayer] && !G_RingSlingerGametype())
+		if (controlstyle == CS_SIMPLE && !ticcmd_centerviewdown[forplayer] && !G_RingSlingerGametype())
 		{
-			CV_SetValue((ssplayer == 1 ? &cv_directionchar[0] : &cv_directionchar[1]), 0);
+			CV_SetValue(&cv_directionchar[forplayer], 0); ///@TODO will break things
 			*myangle = player->mo->angle;
 			*myaiming = 0;
 
@@ -1430,10 +1428,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	}
 	else if (ticcmd_centerviewdown[forplayer])
 	{
-		if (abilitydirection)
+		if (controlstyle == CS_SIMPLE)
 		{
 			P_SetTarget(&ticcmd_ztargetfocus[forplayer], NULL);
-			CV_SetValue((ssplayer == 1 ? &cv_directionchar[0] : &cv_directionchar[1]), 1);
+			CV_SetValue(&cv_directionchar[forplayer], 1);
 		}
 
 		ticcmd_centerviewdown[forplayer] = false;
@@ -1562,7 +1560,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	if ((!demoplayback && (player->pflags & PF_SLIDING))) // Analog for mouse
 		side += *mx*2;
-	else if (analog)
+	else if (controlstyle == CS_LMAOGALOG)
 	{
 		if (*mx)
 		{
@@ -1622,7 +1620,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		}
 	}
 
-	if (analog) {
+	if (controlstyle == CS_LMAOGALOG) {
 		if (player->awayviewtics)
 			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
 		else
@@ -1634,7 +1632,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->angleturn = (INT16)(*myangle >> 16);
 
 		// Adjust camera angle by player input
-		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
+		if (controlstyle == CS_SIMPLE && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value;
 
@@ -1654,30 +1652,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				cmd->sidemove = 0;
 		}
 
-		if (abilitydirection && camera.chase && !ticcmd_centerviewdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
-		{
-			///@TODO This block of code is a hack to get the desired abilitydirection and player angle behaviors while remaining netplay-compatible with EXEs without those features.
-			// This has side effects like making F12 spectate look kind of weird, and making the input viewer inaccurate.
-			// In a perfect world, this will be removed and player behavior would use facing direction in a way that mimics this.
-			// But that's a lot more work and I want to A) have this out quickly B) be netplay-compatible.
-
-			if (cmd->forwardmove || cmd->sidemove)
-			{
-				angle_t controlangle = R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
-				cmd->angleturn += (controlangle>>16);
-
-				cmd->forwardmove = R_PointToDist2(0, 0, cmd->forwardmove, cmd->sidemove);
-				if (cmd->forwardmove > MAXPLMOVE)
-					cmd->forwardmove = MAXPLMOVE;
-				cmd->sidemove = 0;
-			}
-			else
-				cmd->angleturn = (player->drawangle+drawangleoffset)>>16;
-		}
-
 		// Adjust camera angle to face player direction, depending on circumstances
 		// Nothing happens if cam left/right are held, so you can hold both to lock the camera in one direction
-		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && player->powers[pw_carry] != CR_MINECART)
+		if (controlstyle == CS_SIMPLE && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor;
 			boolean alt = false; // Reduce intensity on diagonals and prevent backwards movement from turning the camera
@@ -1703,7 +1680,15 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 			if (camadjustfactor)
 			{
-				INT32 anglediff = ((player->pflags & PF_SPINNING) ? player->drawangle + drawangleoffset : (cmd->angleturn<<16)) - *myangle;
+				angle_t controlangle;
+				INT32 anglediff;
+
+				if ((cmd->forwardmove || cmd->sidemove) && !(player->pflags & PF_SPINNING))
+					controlangle = (cmd->angleturn<<16) + R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
+				else
+					controlangle = player->drawangle + drawangleoffset;
+
+				anglediff = controlangle - *myangle;
 
 				if (alt)
 				{

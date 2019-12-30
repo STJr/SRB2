@@ -68,8 +68,19 @@ extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime,
 extern consvar_t cv_crosshair, cv_crosshair2;
 extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_chasefreelook, cv_mousemove;
 extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_chasefreelook2, cv_mousemove2;
+
 extern consvar_t cv_useranalog[2], cv_analog[2];
 extern consvar_t cv_directionchar[2];
+
+typedef enum {
+	CS_LEGACY,
+	CS_LMAOGALOG,
+	CS_STANDARD,
+	CS_SIMPLE = CS_LMAOGALOG|CS_STANDARD,
+} controlstyle_e;
+#define G_ControlStyle(ssplayer) ((cv_analog[(ssplayer)-1].value ? CS_LMAOGALOG : 0) | (cv_directionchar[(ssplayer)-1].value ? CS_STANDARD : 0))
+#define P_ControlStyle(player) ((((player)->pflags & PF_ANALOGMODE) ? CS_LMAOGALOG : 0) | (((player)->pflags & PF_DIRECTIONCHAR) ? CS_STANDARD : 0))
+
 extern consvar_t cv_autobrake, cv_autobrake2;
 extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis,cv_deadzone,cv_digitaldeadzone;
 extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2,cv_deadzone2,cv_digitaldeadzone2;

@@ -4619,7 +4619,7 @@ DoneSection2:
 
 				player->mo->angle = player->drawangle = lineangle;
 
-				if (!demoplayback || P_AnalogMove(player))
+				if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 				{
 					if (player == &players[consoleplayer])
 						localangle = player->mo->angle;
@@ -9176,7 +9176,7 @@ void T_Pusher(pusher_t *p)
 				thing->player->pflags |= PF_SLIDING;
 				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
 
-				if (!demoplayback || P_AnalogMove(thing->player))
+				if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 				{
 					if (thing->player == &players[consoleplayer])
 					{

@@ -377,7 +377,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		{
 			object->angle = object->player->drawangle = spring->angle;
 
-			if (!demoplayback || P_AnalogMove(object->player))
+			if (!demoplayback || P_ControlStyle(object->player) == CS_LMAOGALOG)
 			{
 				if (object->player == &players[consoleplayer])
 					localangle = spring->angle;
@@ -1322,7 +1322,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			thing->angle = tmthing->angle;
 
-			if (!demoplayback || P_AnalogMove(thing->player))
+			if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 			{
 				if (thing->player == &players[consoleplayer])
 					localangle = thing->angle;
@@ -3491,7 +3491,7 @@ isblocking:
 			&& canclimb)
 			{
 				slidemo->angle = climbangle;
-				/*if (!demoplayback || P_AnalogMove(slidemo->player))
+				/*if (!demoplayback || P_ControlStyle(slidemo->player) == CS_LMAOGALOG)
 				{
 					if (slidemo->player == &players[consoleplayer])
 						localangle = slidemo->angle;
