@@ -865,11 +865,6 @@ static void P_InitializeSector(sector_t *ss)
 	ss->lightingdata = NULL;
 	ss->fadecolormapdata = NULL;
 
-	ss->floor_xoffs = ss->floor_yoffs = 0;
-	ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
-
-	ss->floorpic_angle = ss->ceilingpic_angle = 0;
-
 	ss->heightsec = -1;
 	ss->camsec = -1;
 
@@ -944,6 +939,11 @@ static void P_LoadSectors(UINT8 *data)
 		ss->lightlevel = SHORT(ms->lightlevel);
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
+
+		ss->floor_xoffs = ss->floor_yoffs = 0;
+		ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
+
+		ss->floorpic_angle = ss->ceilingpic_angle = 0;
 
 		P_InitializeSector(ss);
 	}
@@ -1235,6 +1235,8 @@ static void P_LoadThings(UINT8 *data)
 			mt->z = mt->options; // NiGHTS Hoops use the full flags bits to set the height.
 		else
 			mt->z = mt->options >> ZSHIFT;
+
+		mt->mobj = NULL;
 	}
 }
 
@@ -1529,7 +1531,7 @@ static void P_LoadTextmap(void)
 	for (i = 0, vt = vertexes; i < numvertexes; i++, vt++)
 	{
 		// Defaults.
-		vt->z = 0;
+		vt->x = vt->y = vt->z = 0;
 
 		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
 	}
@@ -1548,8 +1550,13 @@ static void P_LoadTextmap(void)
 		sc->special = 0;
 		sc->tag = 0;
 
-		P_InitializeSector(sc);
+		sc->floor_xoffs = sc->floor_yoffs = 0;
+		sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
+
+		sc->floorpic_angle = sc->ceilingpic_angle = 0;
+
 		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
+		P_InitializeSector(sc);
 		TextmapFixFlatOffsets(sc);
 	}
 
@@ -1582,8 +1589,13 @@ static void P_LoadTextmap(void)
 	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
 		// Defaults.
-		mt->z = 0;
+		mt->x = mt->y = 0;
 		mt->angle = 0;
+		mt->type = 0;
+		mt->options = 0;
+		mt->z = 0;
+		mt->extrainfo = 0;
+		mt->mobj = NULL;
 
 		TextmapParse(mapthingsPos[i], i, ParseTextmapThingParameter);
 	}
