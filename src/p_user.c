@@ -9960,7 +9960,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		focusangle = mo->angle;
+		focusangle = player->cmd.angleturn << 16;
 		focusaiming = player->aiming;
 	}
 
