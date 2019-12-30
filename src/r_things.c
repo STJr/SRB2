@@ -125,10 +125,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		sprtemp[frame].rotsprite.cached[r] = false;
 		for (ang = 0; ang < ROTANGLES; ang++)
 			sprtemp[frame].rotsprite.patch[r][ang] = NULL;
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
-			sprtemp[frame].rotsprite.hardware_patch[r] = M_AATreeAlloc(AATREE_ZUSER);
-#endif // HWRENDER
+		sprtemp[frame].rotsprite.hardware_patch[r] = M_AATreeAlloc(AATREE_ZUSER);
 	}
 #endif
 
