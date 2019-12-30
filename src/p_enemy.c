@@ -14248,7 +14248,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	fixed_t c = FINECOSINE(fa)*locvar2;
 	fixed_t s = FINESINE(fa)*locvar2;
 	mobj_t *door;
-	mobjflag2_t ambush = (actor->flags & MF2_AMBUSH);
+	mobjflag2_t ambush = (actor->flags2 & MF2_AMBUSH);
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SaloonDoorSpawn", actor))
