@@ -436,13 +436,9 @@ typedef struct line_s
 	polyobj_t *polyobj; // Belongs to a polyobject?
 #endif
 
-	char *text; // a concatination of all front and back texture names, for linedef specials that require a string.
+	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 } line_t;
-
-//
-// The SideDef.
-//
 
 typedef struct
 {
@@ -456,13 +452,16 @@ typedef struct
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;
 
-	// Sector the SideDef is facing.
+	// Linedef the sidedef belongs to
+	line_t *line;
+
+	// Sector the sidedef is facing.
 	sector_t *sector;
 
 	INT16 special; // the special of the linedef this side belongs to
 	INT16 repeatcnt; // # of times to repeat midtexture
 
-	char *text; // a concatination of all top, bottom, and mid texture names, for linedef specials that require a string.
+	char *text; // a concatenation of all top, bottom, and mid texture names, for linedef specials that require a string.
 
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
@@ -587,6 +586,7 @@ typedef struct seg_s
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 #endif
+	boolean glseg;
 } seg_t;
 
 //
