@@ -1508,9 +1508,9 @@ void SendWeaponPref(void)
 	buf[0] = 0;
 	if (cv_flipcam.value)
 		buf[0] |= 1;
-	if (cv_analog[0].value)
+	if (cv_analog[0].value && cv_directionchar[0].value != 2)
 		buf[0] |= 2;
-	if (cv_directionchar[0].value)
+	if (cv_directionchar[0].value == 1)
 		buf[0] |= 4;
 	if (cv_autobrake.value)
 		buf[0] |= 8;
@@ -1524,9 +1524,9 @@ void SendWeaponPref2(void)
 	buf[0] = 0;
 	if (cv_flipcam2.value)
 		buf[0] |= 1;
-	if (cv_analog[1].value)
+	if (cv_analog[1].value && cv_directionchar[1].value != 2)
 		buf[0] |= 2;
-	if (cv_directionchar[1].value)
+	if (cv_directionchar[1].value == 1)
 		buf[0] |= 4;
 	if (cv_autobrake2.value)
 		buf[0] |= 8;

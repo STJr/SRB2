@@ -4306,6 +4306,8 @@ const char *PlaystyleDesc[4] = {
 	"instead!"
 };
 
+static UINT8 playstyle_activeplayer = 0, playstyle_currentchoice = 0;
+
 static void M_DrawControlsDefMenu(void)
 {
 	UINT8 opt = 0;
@@ -4314,7 +4316,8 @@ static void M_DrawControlsDefMenu(void)
 
 	if (currentMenu == &OP_P1ControlsDef)
 	{
-		opt = cv_useranalog[0].value ? 3 - cv_directionchar[0].value : cv_directionchar[0].value;
+		opt = cv_directionchar[0].value ? 1 : 0;
+		opt = playstyle_currentchoice = cv_useranalog[0].value ? 3 - opt : opt;
 
 		if (opt == 2)
 		{
@@ -4329,7 +4332,8 @@ static void M_DrawControlsDefMenu(void)
 	}
 	else
 	{
-		opt = cv_useranalog[1].value ? 3 - cv_directionchar[1].value : cv_directionchar[1].value;
+		opt = cv_directionchar[1].value ? 1 : 0;
+		opt = playstyle_currentchoice = cv_useranalog[1].value ? 3 - opt : opt;
 
 		if (opt == 2)
 		{
@@ -11608,14 +11612,11 @@ static void M_ChangeControl(INT32 choice)
 	M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
 }
 
-static UINT8 playstyle_activeplayer = 0, playstyle_currentchoice = 0;
-
 static void M_Setup1PPlaystyleMenu(INT32 choice)
 {
 	(void)choice;
 
 	playstyle_activeplayer = 0;
-	playstyle_currentchoice = cv_useranalog[0].value ? 3 - cv_directionchar[0].value : cv_directionchar[0].value;
 	OP_PlaystyleDef.prevMenu = &OP_P1ControlsDef;
 	M_SetupNextMenu(&OP_PlaystyleDef);
 }
@@ -11625,7 +11626,6 @@ static void M_Setup2PPlaystyleMenu(INT32 choice)
 	(void)choice;
 
 	playstyle_activeplayer = 1;
-	playstyle_currentchoice = cv_useranalog[1].value ? 3 - cv_directionchar[1].value : cv_directionchar[1].value;
 	OP_PlaystyleDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_PlaystyleDef);
 }

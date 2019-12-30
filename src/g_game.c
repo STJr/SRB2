@@ -398,7 +398,7 @@ consvar_t cv_useranalog[2] = {
 };
 
 // deez New User eXperiences
-static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {0, NULL}};
+static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {2, "Simple Locked"}, {0, NULL}};
 consvar_t cv_directionchar[2] = {
 	{"directionchar", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar_OnChange, 0, NULL, NULL, 0, 0, NULL},
 	{"directionchar2", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar2_OnChange, 0, NULL, NULL, 0, 0, NULL}
@@ -1412,7 +1412,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		if (controlstyle == CS_SIMPLE && !ticcmd_centerviewdown[forplayer] && !G_RingSlingerGametype())
 		{
-			CV_SetValue(&cv_directionchar[forplayer], 0); ///@TODO will break things
+			CV_SetValue(&cv_directionchar[forplayer], 2);
 			*myangle = player->mo->angle;
 			*myaiming = 0;
 
@@ -1486,6 +1486,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			}
 		}
 	}
+
+	if (ticcmd_centerviewdown[forplayer] && controlstyle == CS_SIMPLE)
+		controlstyle = CS_LEGACY;
 
 	if (PLAYERINPUTDOWN(ssplayer, gc_camreset))
 	{
