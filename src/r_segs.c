@@ -3287,8 +3287,8 @@ static void R_ThickStepping(drawseg_t *ds, INT32 range)
 	// using INT64 to avoid 32bit overflow
 	rw.top_frac =    (INT64)centeryfrac - (((INT64)rw.left_top     * ds->scale1) >> FRACBITS);
 	rw.bottom_frac = (INT64)centeryfrac - (((INT64)rw.left_bottom  * ds->scale1) >> FRACBITS);
-	rw.top_step =    (INT64)centeryfrac - (((INT64)right_top    * ds->scale2) >> FRACBITS);
-	rw.bottom_step = (INT64)centeryfrac - (((INT64)right_bottom * ds->scale2) >> FRACBITS);
+	rw.top_step =    (INT64)centeryfrac - (((INT64)right_top       * ds->scale2) >> FRACBITS);
+	rw.bottom_step = (INT64)centeryfrac - (((INT64)right_bottom    * ds->scale2) >> FRACBITS);
 
 	rw.top_step = (rw.top_step-rw.top_frac)/(range);
 	rw.bottom_step = (rw.bottom_step-rw.bottom_frac)/(range);
