@@ -2692,6 +2692,9 @@ boolean P_SetupLevel(boolean skipprecip)
 		/*if (!cv_cam_speed.changed)
 			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);*/
 
+		CV_UpdateCamDist();
+		CV_UpdateCam2Dist();
+
 		if (!cv_chasecam.changed)
 			CV_SetValue(&cv_chasecam, chase);
 
