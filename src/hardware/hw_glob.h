@@ -100,6 +100,7 @@ void HWR_FreePolyPool(void);
 // --------
 void HWR_InitTextureCache(void);
 void HWR_FreeTextureCache(void);
+void HWR_FreeMipmapCache(void);
 void HWR_FreeExtraSubsectors(void);
 
 void HWR_GetLevelFlat(levelflat_t *levelflat);
@@ -127,6 +128,5 @@ extern consvar_t cv_grrounddown; // on/off
 
 extern INT32 patchformat;
 extern INT32 textureformat;
-extern boolean firetranslucent;
 
 #endif //_HW_GLOB_

@@ -275,6 +275,12 @@ static UINT8 *metalbuffer = NULL;
 static UINT8 *metal_p;
 static UINT16 metalversion;
 
+typedef struct joystickvector2_s
+{
+	INT32 xaxis;
+	INT32 yaxis;
+} joystickvector2_t;
+
 // extra data stuff (events registered this frame while recording)
 static struct {
 	UINT8 flags; // EZT flags
@@ -453,7 +459,6 @@ typedef enum
 	AXISMOVE,
 	AXISLOOK,
 	AXISSTRAFE,
-	AXISDEAD, //Axises that don't want deadzones
 	AXISJUMP,
 	AXISSPIN,
 	AXISFIRE,
@@ -938,12 +943,14 @@ static INT32 JoyAxis(axis_input_e axissel)
 		retaxis = -JOYAXISRANGE;
 	if (retaxis > (+JOYAXISRANGE))
 		retaxis = +JOYAXISRANGE;
-	if (!Joystick.bGamepadStyle)
+
+	if (!Joystick.bGamepadStyle && axissel > AXISDIGITAL)
 	{
-		const INT32 jdeadzone = ((JOYAXISRANGE-1) * ((axissel < AXISDEAD) ? cv_deadzone.value : cv_digitaldeadzone.value)) >> FRACBITS;
+		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_digitaldeadzone.value) >> FRACBITS;
 		if (-jdeadzone < retaxis && retaxis < jdeadzone)
 			return 0;
 	}
+
 	if (flp) retaxis = -retaxis; //flip it around
 	return retaxis;
 }
@@ -1011,17 +1018,86 @@ static INT32 Joy2Axis(axis_input_e axissel)
 		retaxis = -JOYAXISRANGE;
 	if (retaxis > (+JOYAXISRANGE))
 		retaxis = +JOYAXISRANGE;
-	if (!Joystick2.bGamepadStyle)
+
+	if (!Joystick2.bGamepadStyle && axissel > AXISDIGITAL)
 	{
-		const INT32 jdeadzone = ((JOYAXISRANGE-1) * ((axissel < AXISDEAD) ? cv_deadzone2.value : cv_digitaldeadzone2.value)) >> FRACBITS;
+		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_digitaldeadzone2.value) >> FRACBITS;
 		if (-jdeadzone < retaxis && retaxis < jdeadzone)
 			return 0;
 	}
+
 	if (flp) retaxis = -retaxis; //flip it around
 	return retaxis;
 }
 
+
 #define PlayerJoyAxis(p, ax) ((p) == 1 ? JoyAxis(ax) : Joy2Axis(ax))
+
+// Take a magnitude of two axes, and adjust it to take out the deadzone
+// Will return a value between 0 and JOYAXISRANGE
+static INT32 G_BasicDeadZoneCalculation(INT32 magnitude, fixed_t deadZone)
+{
+	const INT32 jdeadzone = (JOYAXISRANGE * deadZone) / FRACUNIT;
+	INT32 deadzoneAppliedValue = 0;
+
+	if (jdeadzone > 0)
+	{
+		if (magnitude > jdeadzone)
+		{
+			INT32 adjustedMagnitude = abs(magnitude);
+			adjustedMagnitude = min(adjustedMagnitude, JOYAXISRANGE);
+
+			adjustedMagnitude -= jdeadzone;
+
+			deadzoneAppliedValue = (adjustedMagnitude * JOYAXISRANGE) / (JOYAXISRANGE - jdeadzone);
+		}
+	}
+
+	return deadzoneAppliedValue;
+}
+
+// Get the actual sensible radial value for a joystick axis when accounting for a deadzone
+static void G_HandleAxisDeadZone(UINT8 splitnum, joystickvector2_t *joystickvector)
+{
+	INT32 gamepadStyle = Joystick.bGamepadStyle;
+	fixed_t deadZone = cv_deadzone.value;
+
+	if (splitnum == 1)
+	{
+		gamepadStyle = Joystick2.bGamepadStyle;
+		deadZone = cv_deadzone2.value;
+	}
+
+	// When gamepadstyle is "true" the values are just -1, 0, or 1. This is done in the interface code.
+	if (!gamepadStyle)
+	{
+		// Get the total magnitude of the 2 axes
+		INT32 magnitude = (joystickvector->xaxis * joystickvector->xaxis) + (joystickvector->yaxis * joystickvector->yaxis);
+		INT32 normalisedXAxis;
+		INT32 normalisedYAxis;
+		INT32 normalisedMagnitude;
+		double dMagnitude = sqrt((double)magnitude);
+		magnitude = (INT32)dMagnitude;
+
+		// Get the normalised xy values from the magnitude
+		normalisedXAxis = (joystickvector->xaxis * magnitude) / JOYAXISRANGE;
+		normalisedYAxis = (joystickvector->yaxis * magnitude) / JOYAXISRANGE;
+
+		// Apply the deadzone to the magnitude to give a correct value between 0 and JOYAXISRANGE
+		normalisedMagnitude = G_BasicDeadZoneCalculation(magnitude, deadZone);
+
+		// Apply the deadzone to the xy axes
+		joystickvector->xaxis = (normalisedXAxis * normalisedMagnitude) / JOYAXISRANGE;
+		joystickvector->yaxis = (normalisedYAxis * normalisedMagnitude) / JOYAXISRANGE;
+
+		// Cap the values so they don't go above the correct maximum
+		joystickvector->xaxis = min(joystickvector->xaxis, JOYAXISRANGE);
+		joystickvector->xaxis = max(joystickvector->xaxis, -JOYAXISRANGE);
+		joystickvector->yaxis = min(joystickvector->yaxis, JOYAXISRANGE);
+		joystickvector->yaxis = max(joystickvector->yaxis, -JOYAXISRANGE);
+	}
+}
+
 
 
 //
@@ -1045,7 +1121,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 {
 	boolean forcestrafe = false;
 	boolean forcefullinput = false;
-	INT32 tspeed, forward, side, axis, altaxis, i;
+	INT32 tspeed, forward, side, axis, strafeaxis, moveaxis, turnaxis, lookaxis, i;
+
+	joystickvector2_t movejoystickvector, lookjoystickvector;
+
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
 	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
@@ -1143,13 +1222,18 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		*myaiming = 0;
 	joyaiming[forplayer] = thisjoyaiming;
 
-	axis = PlayerJoyAxis(ssplayer, AXISTURN);
+	turnaxis = JPlayerJoyAxis(ssplayer, AXISTURN);
 	if (strafeisturn)
-		axis += PlayerJoyAxis(ssplayer, AXISSTRAFE);
-	if (gamepadjoystickmove && axis != 0)
+		turnaxis += PlayerJoyAxis(ssplayer, AXISSTRAFE);
+	lookaxis = PlayerJoyAxis(ssplayer, AXISLOOK);
+	lookjoystickvector.xaxis = turnaxis;
+	lookjoystickvector.yaxis = lookaxis;
+	G_HandleAxisDeadZone(forplayer, &lookjoystickvector);
+
+	if (gamepadjoystickmove && lookjoystickvector.xaxis != 0)
 	{
-		turnright = turnright || (axis > 0);
-		turnleft = turnleft || (axis < 0);
+		turnright = turnright || (lookjoystickvector.xaxis > 0);
+		turnleft = turnleft || (lookjoystickvector.xaxis < 0);
 	}
 	forward = side = 0;
 
@@ -1189,10 +1273,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (turnleft)
 			side -= sidemove[speed];
 
-		if (analogjoystickmove && axis != 0)
+		if (analogjoystickmove && lookjoystickvector.xaxis != 0)
 		{
 			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-			side += ((axis * sidemove[1]) >> 10);
+			side += ((lookjoystickvector.xaxis * sidemove[1]) >> 10);
 		}
 	}
 	else if (analog) // Analog
@@ -1205,14 +1289,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	else
 	{
 		if (turnright)
-			cmd->angleturn = (INT16)(cmd->angleturn - angleturn[tspeed]);
-		if (turnleft)
-			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
+			cmd->angleturn = (INT16)(cmd->angleturn - ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
+		else if (turnleft)
+			cmd->angleturn = (INT16)(cmd->angleturn + ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
 
-		if (analogjoystickmove && axis != 0)
+		if (analogjoystickmove && lookjoystickvector.xaxis != 0)
 		{
 			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - ((axis * angleturn[1]) >> 10)); // ANALOG!
+			cmd->angleturn = (INT16)(cmd->angleturn - ((((lookjoystickvector.xaxis * angleturn[1]) >> 10) * cv_cam_turnmultiplier.value)>>FRACBITS)); // ANALOG!
 		}
 
 		if (turnright || turnleft || abs(cmd->angleturn) > angleturn[2])
@@ -1222,34 +1306,37 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->angleturn = (cmd->angleturn * (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value)) / 10;
 	}
 
-	axis = strafeisturn ? 0 : PlayerJoyAxis(ssplayer, AXISSTRAFE);
-	if (gamepadjoystickmove && axis != 0)
+	strafeaxis = strafeisturn ? 0 : PlayerJoyAxis(ssplayer, AXISSTRAFE);
+	moveaxis = PlayerJoyAxis(ssplayer, AXISMOVE);
+	movejoystickvector.xaxis = strafeaxis;
+	movejoystickvector.yaxis = moveaxis;
+	G_HandleAxisDeadZone(forplayer, &movejoystickvector);
+
+	if (gamepadjoystickmove && movejoystickvector.xaxis != 0)
 	{
-		if (axis < 0)
+		if (movejoystickvector.xaxis > 0)
 			side += sidemove[speed];
-		else if (axis > 0)
+		else if (movejoystickvector.xaxis < 0)
 			side -= sidemove[speed];
 	}
-	else if (analogjoystickmove && axis != 0)
+	else if (analogjoystickmove && movejoystickvector.xaxis != 0)
 	{
 		// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-		side += ((axis * sidemove[1]) >> 10);
+		side += ((movejoystickvector.xaxis * sidemove[1]) >> 10);
 	}
 
 	// forward with key or button
-	axis = PlayerJoyAxis(ssplayer, AXISMOVE);
-	altaxis = PlayerJoyAxis(ssplayer, AXISLOOK);
-	if (movefkey || (gamepadjoystickmove && axis < 0)
+	if (movefkey || (gamepadjoystickmove && movejoystickvector.yaxis < 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))))
 		forward = forwardmove[speed];
-	if (movebkey || (gamepadjoystickmove && axis > 0)
+	if (movebkey || (gamepadjoystickmove && movejoystickvector.yaxis > 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))))
 		forward -= forwardmove[speed];
 
-	if (analogjoystickmove && axis != 0)
-		forward -= ((axis * forwardmove[1]) >> 10); // ANALOG!
+	if (analogjoystickmove && movejoystickvector.yaxis != 0)
+		forward -= ((movejoystickvector.yaxis * forwardmove[1]) >> 10); // ANALOG!
 
 	// some people strafe left & right with mouse buttons
 	// those people are weird
@@ -1430,9 +1517,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			*myaiming += (*mly<<19)*player_invert*screen_invert;
 		}
 
-		axis = PlayerJoyAxis(ssplayer, AXISLOOK);
-		if (analogjoystickmove && joyaiming[forplayer] && axis != 0 && lookaxis != 0)
-			*myaiming += (axis<<16) * screen_invert;
+		if (analogjoystickmove && joyaiming[forplayer] && lookjoystickvector.yaxis != 0 && lookaxis != 0)
+			*myaiming += (lookjoystickvector.yaxis<<16) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
 		if (!keyboard_look[forplayer] && lookaxis == 0 && !joyaiming[forplayer] && !mouseaiming)
@@ -1440,12 +1526,12 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
-			if (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && axis < 0))
+			if (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))
 			{
 				*myaiming += KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
 			}
-			else if (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && axis > 0))
+			else if (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))
 			{
 				*myaiming -= KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
@@ -1787,9 +1873,6 @@ void G_DoLoadLevel(boolean resetplayer)
 //
 void G_StartTitleCard(void)
 {
-	wipestyleflags |= WSF_FADEIN;
-	wipestyleflags &= ~WSF_FADEOUT;
-
 	// The title card has been disabled for this map.
 	// Oh well.
 	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
@@ -1833,6 +1916,8 @@ void G_PreLevelTitleCard(void)
 		if (takescreenshot) // Only take screenshots after drawing.
 			M_DoScreenShot();
 	}
+	if (!cv_showhud.value)
+		wipestyleflags = WSF_CROSSFADE;
 }
 
 INT32 pausedelay = 0;

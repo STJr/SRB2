@@ -37,6 +37,18 @@ cv_allcaps;
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
 
+// Taken from my videos-in-SRB2 project
+// Generates a color look-up table
+// which has up to 64 colors at each channel
+
+#define COLORBITS 6
+#define SHIFTCOLORBITS (8-COLORBITS)
+#define CLUTSIZE (1<<COLORBITS)
+
+extern UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
+
+void InitColorLUT(RGBA_t *palette);
+
 // Set the current RGB palette lookup to use for palettized graphics
 void V_SetPalette(INT32 palettenum);
 
@@ -47,6 +59,8 @@ const char *GetPalette(void);
 
 extern RGBA_t *pLocalPalette;
 extern RGBA_t *pMasterPalette;
+
+void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue);
 
 // Retrieve the ARGB value from a palette color index
 #define V_GetColor(color) (pLocalPalette[color&0xFF])

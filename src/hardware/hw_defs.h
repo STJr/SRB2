@@ -42,7 +42,7 @@ typedef unsigned char   FBOOLEAN;
 
 // byte value for paletted graphics, which represent the transparent color
 #define HWR_PATCHES_CHROMAKEY_COLORINDEX   255
-#define HWR_CHROMAKEY_EQUIVALENTCOLORINDEX 130
+//#define HWR_CHROMAKEY_EQUIVALENTCOLORINDEX 130
 
 // the chroma key color shows on border sprites, set it to black
 #define HWR_PATCHES_CHROMAKEY_COLORVALUE     (0x00000000)    //RGBA format as in grSstWinOpen()
@@ -220,11 +220,10 @@ typedef struct FSurfaceInfo FSurfaceInfo;
 //Hurdler: added for backward compatibility
 enum hwdsetspecialstate
 {
-	HWD_SET_FOG_TABLE = 1,
+	HWD_SET_MODEL_LIGHTING = 1,
 	HWD_SET_FOG_MODE,
 	HWD_SET_FOG_COLOR,
 	HWD_SET_FOG_DENSITY,
-	HWD_SET_FOV,
 	HWD_SET_TEXTUREFILTERMODE,
 	HWD_SET_TEXTUREANISOTROPICMODE,
 	HWD_NUMSTATE

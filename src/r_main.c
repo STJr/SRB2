@@ -1008,11 +1008,13 @@ static void R_PortalFrame(portal_t *portal)
 	if (portal->clipline != -1)
 	{
 		portalclipline = &lines[portal->clipline];
+		portalcullsector = portalclipline->frontsector;
 		viewsector = portalclipline->frontsector;
 	}
 	else
 	{
 		portalclipline = NULL;
+		portalcullsector = NULL;
 		viewsector = R_PointInSubsector(viewx, viewy)->sector;
 	}
 }
@@ -1190,6 +1192,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam_speed);
 	CV_RegisterVar(&cv_cam_rotate);
 	CV_RegisterVar(&cv_cam_rotspeed);
+	CV_RegisterVar(&cv_cam_turnmultiplier);
 	CV_RegisterVar(&cv_cam_orbit);
 	CV_RegisterVar(&cv_cam_adjust);
 
@@ -1199,6 +1202,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam2_speed);
 	CV_RegisterVar(&cv_cam2_rotate);
 	CV_RegisterVar(&cv_cam2_rotspeed);
+	CV_RegisterVar(&cv_cam2_turnmultiplier);
 	CV_RegisterVar(&cv_cam2_orbit);
 	CV_RegisterVar(&cv_cam2_adjust);
 
@@ -1208,30 +1212,4 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_maxportals);
 
 	CV_RegisterVar(&cv_movebob);
-
-#ifdef HWRENDER
-	// GL-specific Commands
-	CV_RegisterVar(&cv_grgammablue);
-	CV_RegisterVar(&cv_grgammagreen);
-	CV_RegisterVar(&cv_grgammared);
-	CV_RegisterVar(&cv_grfovchange);
-	CV_RegisterVar(&cv_grfog);
-	CV_RegisterVar(&cv_grfogcolor);
-	CV_RegisterVar(&cv_grsoftwarefog);
-#ifdef ALAM_LIGHTING
-	CV_RegisterVar(&cv_grstaticlighting);
-	CV_RegisterVar(&cv_grdynamiclighting);
-	CV_RegisterVar(&cv_grcoronas);
-	CV_RegisterVar(&cv_grcoronasize);
-#endif
-	CV_RegisterVar(&cv_grmodelinterpolation);
-	CV_RegisterVar(&cv_grmodels);
-	CV_RegisterVar(&cv_grspritebillboarding);
-	CV_RegisterVar(&cv_grskydome);
-#endif
-
-#ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
-		HWR_AddCommands();
-#endif
 }

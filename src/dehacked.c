@@ -242,6 +242,7 @@ INT32 flags;         Bits = 3232              MF_SOLID|MF_SHOOTABLE|MF_DROPOFF|M
 INT32 raisestate;    Respawn frame = 32       S_NULL          // raisestate
                                          }, */
 
+#ifdef HWRENDER
 static INT32 searchvalue(const char *s)
 {
 	while (s[0] != '=' && s[0])
@@ -255,7 +256,6 @@ static INT32 searchvalue(const char *s)
 	}
 }
 
-#ifdef HWRENDER
 static float searchfvalue(const char *s)
 {
 	while (s[0] != '=' && s[0])
@@ -886,7 +886,9 @@ static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word, *word2;
 	char *tmp;
+#ifdef HWRENDER
 	INT32 value;
+#endif
 	char *lastline;
 	INT32 skinnumbers[MAXSKINS];
 	INT32 foundskins = 0;
@@ -947,9 +949,9 @@ static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 					break;
 			}
 			strupr(word);
+#ifdef HWRENDER
 			value = atoi(word2); // used for numerical settings
 
-#ifdef HWRENDER
 			if (fastcmp(word, "LIGHTTYPE"))
 			{
 				if (sprite2)
@@ -4460,20 +4462,34 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 						ignorelines(f);
 					}
 				}
-				// Last I heard this crashes the game if you try to use it
-				// so this is disabled for now
-				// -- Monster Iestyn
-/*				else if (fastcmp(word, "SRB2"))
+				else if (fastcmp(word, "SRB2"))
 				{
-					INT32 ver = searchvalue(strtok(NULL, "\n"));
-					if (ver != PATCHVERSION)
-						deh_warning("Patch is for SRB2 version %d,\nonly version %d is supported", ver, PATCHVERSION);
+					if (isdigit(word2[0]))
+					{
+						i = atoi(word2);
+						if (i != PATCHVERSION)
+						{
+							deh_warning(
+									"Patch is for SRB2 version %d, "
+									"only version %d is supported",
+									i,
+									PATCHVERSION
+							);
+						}
+					}
+					else
+					{
+						deh_warning(
+								"SRB2 version definition has incorrect format, "
+								"use \"SRB2 %d\"",
+								PATCHVERSION
+						);
+					}
 				}
 				// Clear all data in certain locations (mostly for unlocks)
 				// Unless you REALLY want to piss people off,
 				// define a custom gamedata /before/ doing this!!
 				// (then again, modifiedgame will prevent game data saving anyway)
-*/
 				else if (fastcmp(word, "CLEAR"))
 				{
 					boolean clearall = (fastcmp(word2, "ALL"));

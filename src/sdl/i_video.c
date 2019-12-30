@@ -1441,6 +1441,7 @@ INT32 VID_SetMode(INT32 modeNum)
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 
 	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
+	Impl_VideoSetupBuffer();
 
 	if (rendermode == render_soft)
 	{
@@ -1449,8 +1450,6 @@ INT32 VID_SetMode(INT32 modeNum)
 			SDL_FreeSurface(bufSurface);
 			bufSurface = NULL;
 		}
-
-		Impl_VideoSetupBuffer();
 	}
 
 	return SDL_TRUE;
@@ -1573,7 +1572,7 @@ static void Impl_VideoSetupSDLBuffer(void)
 static void Impl_VideoSetupBuffer(void)
 {
 	// Set up game's software render buffer
-	if (rendermode == render_soft)
+	//if (rendermode == render_soft)
 	{
 		vid.rowbytes = vid.width * vid.bpp;
 		vid.direct = NULL;

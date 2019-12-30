@@ -837,6 +837,9 @@
     <ClCompile Include="..\r_draw8.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
+    <ClCompile Include="..\r_draw8_npo2.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
     <ClCompile Include="..\r_main.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
