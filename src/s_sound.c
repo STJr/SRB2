@@ -1469,6 +1469,7 @@ void S_LoadMusicDefs(UINT16 wadnum)
 	char *buf2;
 	char *stoken;
 	char *value;
+	char *textline;
 	size_t size;
 	INT32 i;
 	musicdef_t *def = NULL;
@@ -1560,9 +1561,63 @@ skip_lump:
 		}
 		else
 		{
-			value = strtok(NULL, "\r\n= ");
+			// If this is set true, the line was invalid.
+			boolean brokenline = false;
 
+			// Delimit only by line break.
+			value = strtok(NULL, "\r\n");
+
+			// Find the equals sign.
+			value = strchr(value, '=');
+
+			// It's not there?!
 			if (!value)
+				brokenline = true;
+			else
+			{
+				// Skip the equals sign.
+				value++;
+
+				// Now skip funny whitespace.
+				for (;;)
+				{
+					char c = value[0];
+					if (c == '\0') // :NOTHING:
+					{
+						brokenline = true;
+						break;
+					}
+					else if (c == ' ' || c == '\t')
+						value++;
+					else
+						break;
+				}
+			}
+
+			// If the line is valid, copy the text line from the lump data.
+			if (!brokenline)
+			{
+				// strtok returns memory that already belongs to the input string.
+				value = buf + (value - buf2);
+
+				// Find the length of the line.
+				size = 0;
+				for (;;)
+				{
+					char c = value[size];
+					if (c == '\n' || c == '\r' || c == '\0')
+						break;
+					size++;
+				}
+
+				// Copy the line.
+				textline = malloc(size+1);
+				if (!textline)
+					I_Error("S_LoadMusicDefs: No more free memory for text line\n");
+				M_Memcpy(textline, value, size);
+				textline[size] = '\0';
+			}
+			else
 			{
 				CONS_Alert(CONS_WARNING, "MUSICDEF: Field '%s' is missing value. (file %s, line %d)\n", stoken, wadfiles[wadnum]->filename, line);
 				stoken = strtok(NULL, "\r\n"); // skip end of line
@@ -1572,59 +1627,53 @@ skip_lump:
 			if (!def)
 			{
 				CONS_Alert(CONS_ERROR, "MUSICDEF: No music definition before field '%s'. (file %s, line %d)\n", stoken, wadfiles[wadnum]->filename, line);
+				free(textline);
 				free(buf2);
 				return;
 			}
 
-			i = atoi(value);
+			i = atoi(textline);
 
 			if (!stricmp(stoken, "usage")) {
 #if 0 // Ignore for now
-				STRBUFCPY(def->usage, value);
-				for (value = def->usage; *value; value++)
-					if (*value == '_') *value = ' '; // turn _ into spaces.
+				STRBUFCPY(def->usage, textline);
 				//CONS_Printf("S_LoadMusicDefs: Set usage to '%s'\n", def->usage);
 #endif
 			} else if (!stricmp(stoken, "source")) {
 #if 0 // Ignore for now
-				STRBUFCPY(def->source, value);
-				for (value = def->source; *value; value++)
-					if (*value == '_') *value = ' '; // turn _ into spaces.
+				STRBUFCPY(def->source, textline);
 				//CONS_Printf("S_LoadMusicDefs: Set source to '%s'\n", def->usage);
 #endif
 			} else if (!stricmp(stoken, "title")) {
-				STRBUFCPY(def->title, value);
-				for (value = def->title; *value; value++)
-					if (*value == '_') *value = ' '; // turn _ into spaces.
+				STRBUFCPY(def->title, textline);
 				//CONS_Printf("S_LoadMusicDefs: Set title to '%s'\n", def->source);
 			} else if (!stricmp(stoken, "alttitle")) {
-				STRBUFCPY(def->alttitle, value);
-				for (value = def->alttitle; *value; value++)
-					if (*value == '_') *value = ' '; // turn _ into spaces.
+				STRBUFCPY(def->alttitle, textline);
 				//CONS_Printf("S_LoadMusicDefs: Set alttitle to '%s'\n", def->source);
 			} else if (!stricmp(stoken, "authors")) {
-				STRBUFCPY(def->authors, value);
-				for (value = def->authors; *value; value++)
-					if (*value == '_') *value = ' '; // turn _ into spaces.
+				STRBUFCPY(def->authors, textline);
 				//CONS_Printf("S_LoadMusicDefs: Set authors to '%s'\n", def->source);
 			} else if (!stricmp(stoken, "soundtestpage")) {
 				def->soundtestpage = (UINT8)i;
 			} else if (!stricmp(stoken, "soundtestcond")) {
 				// Convert to map number
-				if (value[0] >= 'A' && value[0] <= 'Z' && value[2] == '\0')
-					i = M_MapNumber(value[0], value[1]);
+				if (textline[0] >= 'A' && textline[0] <= 'Z' && textline[2] == '\0')
+					i = M_MapNumber(textline[0], textline[1]);
 				def->soundtestcond = (INT16)i;
 			} else if (!stricmp(stoken, "stoppingtime")) {
-				double stoppingtime = atof(value)*TICRATE;
+				double stoppingtime = atof(textline)*TICRATE;
 				def->stoppingtics = (tic_t)stoppingtime;
 			} else if (!stricmp(stoken, "bpm")) {
-				double bpm = atof(value);
+				double bpm = atof(textline);
 				fixed_t bpmf = FLOAT_TO_FIXED(bpm);
 				if (bpmf > 0)
 					def->bpm = FixedDiv((60*TICRATE)<<FRACBITS, bpmf);
 			} else {
 				CONS_Alert(CONS_WARNING, "MUSICDEF: Invalid field '%s'. (file %s, line %d)\n", stoken, wadfiles[wadnum]->filename, line);
 			}
+
+			// Free the temporary line from memory.
+			free(textline);
 
 skip_field:
 			stoken = strtok(NULL, "\r\n= ");
