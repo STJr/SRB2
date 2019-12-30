@@ -1410,7 +1410,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	if (centerviewdown)
 	{
-		if (abilitydirection && !ticcmd_centerviewdown[forplayer])
+		if (abilitydirection && !ticcmd_centerviewdown[forplayer] && !G_RingSlingerGametype())
 		{
 			CV_SetValue((ssplayer == 1 ? &cv_directionchar : &cv_directionchar2), 0);
 			*myangle = player->mo->angle;
