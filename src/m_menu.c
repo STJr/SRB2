@@ -10436,7 +10436,8 @@ static void M_HandleConnectIP(INT32 choice)
 
 			if ( ctrldown ) {
 				switch (choice) {
-					case 118: // ctrl+v, pasting
+					case 'v':
+					case 'V': // ctrl+v, pasting
 						;
 						char *paste = (char *)I_ClipboardPaste(); // Paste clipboard into char
 
@@ -10448,13 +10449,15 @@ static void M_HandleConnectIP(INT32 choice)
 								S_StartSound(NULL,sfx_menu1); // Tails
 						}
 						break;
-
-					case 99: // ctrl+c, copying
+						
+					case 'c':
+					case 'C': // ctrl+c, copying
 						I_ClipboardCopy(setupm_ip, l);
 						S_StartSound(NULL,sfx_menu1); // Tails
 						break;
 
-					case 120: // ctrl+x, cutting
+					case 'x':
+					case 'X': // ctrl+x, cutting
 						I_ClipboardCopy(setupm_ip, l);
 						S_StartSound(NULL,sfx_menu1); // Tails
 						setupm_ip[0] = 0;
