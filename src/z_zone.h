@@ -43,6 +43,7 @@ enum
 	PU_SOUND                 = 11, // static while playing
 	PU_MUSIC                 = 12, // static while playing
 	PU_HUDGFX                = 13, // static until WAD added
+	PU_PATCH                 = 14, // static until renderer change
 
 	PU_HWRPATCHINFO          = 21, // Hardware GLPatch_t struct for OpenGL texture cache
 	PU_HWRPATCHCOLMIPMAP     = 22, // Hardware GLMipmap_t struct colormap variation of patch
@@ -141,5 +142,11 @@ size_t Z_TagsUsage(INT32 lowtag, INT32 hightag);
 //
 char *Z_StrDup(const char *in);
 #define Z_Unlock(p) (void)p // TODO: remove this now that NDS code has been removed
+
+// For renderer switching
+extern boolean needpatchflush;
+extern boolean needpatchrecache;
+void Z_FlushCachedPatches(void);
+void Z_PreparePatchFlush(void);
 
 #endif

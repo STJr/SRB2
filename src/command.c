@@ -61,6 +61,8 @@ static consvar_t *consvar_vars; // list of registered console variables
 static char com_token[1024];
 static char *COM_Parse(char *data);
 
+static char * COM_Purge (char *text, int *lenp);
+
 CV_PossibleValue_t CV_OnOff[] = {{0, "Off"}, {1, "On"}, {0, NULL}};
 CV_PossibleValue_t CV_YesNo[] = {{0, "No"}, {1, "Yes"}, {0, NULL}};
 CV_PossibleValue_t CV_Unsigned[] = {{0, "MIN"}, {999999999, "MAX"}, {0, NULL}};
@@ -100,31 +102,61 @@ static cmdalias_t *com_alias; // aliases list
 
 static vsbuf_t com_text; // variable sized buffer
 
+/** Purges control characters out of some text.
+  *
+  * \param s The text.
+  * \param np Optionally a pointer to fill with the new string length.
+  * \return The text.
+  * \sa COM_ExecuteString
+  */
+static char *
+COM_Purge (char *s, int *np)
+{
+	char *t;
+	char *p;
+	int n;
+	n = strlen(s);
+	t = s + n + 1;
+	p = s;
+	while (( p = strchr(p, '\033') ))
+	{
+		memmove(p, &p[1], t - p - 1);
+		n--;
+	}
+	if (np)
+		(*np) = n;
+	return s;
+}
+
 /** Adds text into the command buffer for later execution.
   *
   * \param ptext The text to add.
-  * \sa COM_BufInsertText
+  * \sa COM_BufInsertTextEx
   */
-void COM_BufAddText(const char *ptext)
+void COM_BufAddTextEx(const char *ptext, int flags)
 {
-	size_t l;
+	int l;
+	char *text;
 
-	l = strlen(ptext);
+	text = COM_Purge(Z_StrDup(ptext), &l);
 
-	if (com_text.cursize + l >= com_text.maxsize)
+	if (com_text.cursize + 2 + l >= com_text.maxsize)
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Command buffer full!\n"));
 		return;
 	}
-	VS_Write(&com_text, ptext, l);
+
+	VS_WriteEx(&com_text, text, l, flags);
+
+	Z_Free(text);
 }
 
 /** Adds command text and executes it immediately.
   *
   * \param ptext The text to execute. A newline is automatically added.
-  * \sa COM_BufAddText
+  * \sa COM_BufAddTextEx
   */
-void COM_BufInsertText(const char *ptext)
+void COM_BufInsertTextEx(const char *ptext, int flags)
 {
 	char *temp = NULL;
 	size_t templen;
@@ -138,7 +170,7 @@ void COM_BufInsertText(const char *ptext)
 	}
 
 	// add the entire text of the file (or alias)
-	COM_BufAddText(ptext);
+	COM_BufAddTextEx(ptext, flags);
 	COM_BufExecute(); // do it right away
 
 	// add the copied off data
@@ -272,6 +304,7 @@ static size_t com_argc;
 static char *com_argv[MAX_ARGS];
 static const char *com_null_string = "";
 static char *com_args = NULL; // current command args or NULL
+static int com_flags;
 
 static void Got_NetVar(UINT8 **p, INT32 playernum);
 
@@ -394,6 +427,14 @@ static void COM_TokenizeString(char *ptext)
 
 	com_argc = 0;
 	com_args = NULL;
+
+	if (ptext[0] == '\033')
+	{
+		com_flags = (unsigned)ptext[1];
+		ptext += 2;
+	}
+	else
+		com_flags = 0;
 
 	while (com_argc < MAX_ARGS)
 	{
@@ -1014,6 +1055,15 @@ void *VS_GetSpace(vsbuf_t *buf, size_t length)
 void VS_Write(vsbuf_t *buf, const void *data, size_t length)
 {
 	M_Memcpy(VS_GetSpace(buf, length), data, length);
+}
+
+void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, int flags)
+{
+	char *p;
+	p = VS_GetSpace(buf, 2 + length);
+	p[0] = '\033';
+	p[1] = flags;
+	M_Memcpy(&p[2], data, length);
 }
 
 /** Prints text in a variable buffer. Like VS_Write() plus a
@@ -2013,6 +2063,9 @@ static boolean CV_Command(void)
 	// check variables
 	v = CV_FindVar(COM_Argv(0));
 	if (!v)
+		return false;
+
+	if (( com_flags & COM_SAFE ) && ( v->flags & CV_NOLUA ))
 		return false;
 
 	// perform a variable print or set

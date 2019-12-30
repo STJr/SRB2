@@ -253,7 +253,7 @@ static int lib_comBufAddText(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	if (plr != &players[consoleplayer])
 		return 0;
-	COM_BufAddText(va("%s\n", luaL_checkstring(L, 2)));
+	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
 }
 
@@ -270,7 +270,7 @@ static int lib_comBufInsertText(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	if (plr != &players[consoleplayer])
 		return 0;
-	COM_BufInsertText(va("%s\n", luaL_checkstring(L, 2)));
+	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
 }
 
