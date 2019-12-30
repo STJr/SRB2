@@ -1227,6 +1227,15 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	shadow->x1 = x1 < 0 ? 0 : x1;
 	shadow->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
 
+	// PORTAL SEMI-CLIPPING
+	if (portalrender)
+	{
+		if (shadow->x1 < portalclipstart)
+			shadow->x1 = portalclipstart;
+		if (shadow->x2 >= portalclipend)
+			shadow->x2 = portalclipend-1;
+	}
+
 	shadow->xscale = FixedMul(xscale, shadowxscale); //SoM: 4/17/2000
 	shadow->scale = FixedMul(yscale, shadowyscale);
 	shadow->sector = vis->sector;
