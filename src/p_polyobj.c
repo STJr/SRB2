@@ -2647,6 +2647,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// Set pointnum
 	th->pointnum = target->health;
+	th->target = NULL; // set to NULL first so the below doesn't go wrong
 	// Set the mobj as your target! -- Monster Iestyn 27/12/19
 	P_SetTarget(&th->target, target);
 
