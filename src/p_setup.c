@@ -1487,7 +1487,7 @@ typedef enum {
 // Find out the BSP format.
 static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
 {
-	boolean supported[NUMNODETYPES];
+	boolean supported[NUMNODETYPES] = {0};
 	nodetype_t nodetype = NT_UNSUPPORTED;
 	char signature[4 + 1];
 
