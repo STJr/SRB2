@@ -2248,6 +2248,7 @@ static void Newrenderer_OnChange(void)
 	/* Well this works for now because there's only two options. */
 	int n;
 	n = cv_newrenderer.value;
+	newrenderer_set |= cv_renderer.value;
 	if (( newrenderer_set & n ))
 		CV_SetValue(&cv_renderer, n);
 	else
