@@ -1269,6 +1269,7 @@ static boolean TextmapCount (UINT8 *data, size_t size)
 			if (fastcmp(tkn, "{"))
 			{
 				Z_Free(tkn);
+				tkn = M_GetToken(NULL);
 				while (!fastcmp(tkn, "}"))
 				{
 					Z_Free(tkn);
