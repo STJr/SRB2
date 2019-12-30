@@ -1455,33 +1455,35 @@ static void TextmapThing(UINT32 i, char *param)
   */
 static void TextmapParse(UINT32 dataPos, size_t num, void (*parser)(UINT32, char *))
 {
-	char *open;
+	char *tkn;
 
 	M_SetTokenPos(dataPos);
-	open = M_GetToken(NULL);
-	if (fastcmp(open, "{"))
+	tkn = M_GetToken(NULL);
+	if (!fastcmp(tkn, "{"))
 	{
-		char *tkn = M_GetToken(NULL);
-		while (!fastcmp(tkn, "}"))
-		{
-			dat = NULL;
-			parser(num, tkn);
-			if (dat)
-				Z_Free(dat);
-
-			Z_Free(tkn);
-			tkn = M_GetToken(NULL);
-		}
 		Z_Free(tkn);
-	}
-	else
 		CONS_Alert(CONS_WARNING, "Invalid UDMF data capsule!\n");
-	Z_Free(open);
+		return;
+	}
+
+	Z_Free(tkn);
+	tkn = M_GetToken(NULL);
+	while (!fastcmp(tkn, "}"))
+	{
+		dat = NULL;
+		parser(num, tkn);
+		if (dat)
+			Z_Free(dat);
+
+		Z_Free(tkn);
+		tkn = M_GetToken(NULL);
+	}
+	Z_Free(tkn);
 }
 
 /** Provides a fix to the flat alignment coordinate transform from standard Textmaps.
  */
-static void TextmapFixFlatOffsets (sector_t* sec)
+static void TextmapFixFlatOffsets(sector_t *sec)
 {
 	if (sec->floorpic_angle)
 	{
@@ -1510,7 +1512,7 @@ static void TextmapFixFlatOffsets (sector_t* sec)
 
 /** Loads the textmap data, after obtaining the elements count and allocating their respective space.
   */
-static void P_LoadTextmap (void)
+static void P_LoadTextmap(void)
 {
 	UINT32 i;
 
