@@ -646,6 +646,10 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
+		#ifdef HAVE_BLUA
+		LUAh_PreThinkFrame();
+		#endif
+
 		P_RunThinkers();
 
 		// Run any "after all the other thinkers" stuff
@@ -654,7 +658,7 @@ void P_Ticker(boolean run)
 				P_PlayerAfterThink(&players[i]);
 
 #ifdef HAVE_BLUA
-		LUAh_ThinkFrame();
+		LUAh_PostThinkFrame();
 #endif
 	}
 
@@ -769,7 +773,7 @@ void P_PreTicker(INT32 frames)
 				P_PlayerAfterThink(&players[i]);
 
 #ifdef HAVE_BLUA
-		LUAh_ThinkFrame();
+		LUAh_PostThinkFrame();
 #endif
 
 		// Run shield positioning

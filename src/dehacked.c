@@ -9824,6 +9824,9 @@ struct {
 	{"TC_RAINBOW",TC_RAINBOW},
 	{"TC_BLINK",TC_BLINK},
 	{"TC_DASHMODE",TC_DASHMODE},
+
+	{"OPT_LINES", 1},
+	{"OPT_MOBJS", 1<<1},
 #endif
 
 	{NULL,0}
