@@ -9781,7 +9781,13 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	thiscam->y = y;
 	thiscam->z = z;
 
-	if (!(thiscam == &camera && (cv_cam_still.value || cv_analog.value))
+	if ((thiscam == &camera && cv_abilitydirection[0].value)
+	|| (thiscam == &camera2 && cv_abilitydirection[1].value))
+	{
+		thiscam->angle = (thiscam == &camera) ? localangle : localangle2;
+		thiscam->aiming = (thiscam == &camera) ? localaiming : localaiming2;
+	}
+	else if (!(thiscam == &camera && (cv_cam_still.value || cv_analog.value))
 	&& !(thiscam == &camera2 && (cv_cam2_still.value || cv_analog2.value)))
 	{
 		thiscam->angle = player->mo->angle;
