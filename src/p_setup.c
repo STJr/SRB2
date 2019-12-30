@@ -1249,6 +1249,7 @@ UINT32 sectorsPos[UINT16_MAX];
 static boolean TextmapCount(UINT8 *data, size_t size)
 {
 	char *tkn = M_GetToken((char *)data);
+	UINT8 brackets = 0;
 
 	nummapthings = 0;
 	numlines = 0;
@@ -1275,21 +1276,13 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 	while (tkn && M_GetTokenPos() < size)
 	{
 		// Avoid anything inside bracketed stuff, only look for external keywords.
-		// Assuming there's only one level of bracket nesting.
-		if (fastcmp(tkn, "{"))
+		if (brackets)
 		{
-			do
-			{
-				Z_Free(tkn);
-				tkn = M_GetToken(NULL);
-				if (!tkn || M_GetTokenPos() >= size)
-				{
-					Z_Free(tkn);
-					CONS_Alert(CONS_WARNING, "Opening bracket not closed!\n");
-					return false;
-				}
-			} while (!fastcmp(tkn, "}"));
+			if (fastcmp(tkn, "}"))
+				brackets--;
 		}
+		else if (fastcmp(tkn, "{"))
+			brackets++;
 		// Check for valid fields.
 		else if (fastcmp(tkn, "thing"))
 			mapthingsPos[nummapthings++] = M_GetTokenPos();
