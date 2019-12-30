@@ -1942,6 +1942,8 @@ void vres_Free(virtres_t* vres)
 		Z_Free(vres->vlumps[vres->numlumps].data);
 	Z_Free(vres->vlumps);
 	Z_Free(vres);
+
+	CONS_Printf("A A A\n");
 }
 
 /** (Debug) Prints lumps from a virtual resource into console.
