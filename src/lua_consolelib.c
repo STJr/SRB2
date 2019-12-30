@@ -191,8 +191,9 @@ static int lib_comAddCommand(lua_State *L)
 		if (lua_type(L, 3) == LUA_TBOOLEAN)
 		{
 			CONS_Alert(CONS_WARNING,
-					"Using a boolean is deprecated and will be removed.\n"
-					"Use \"COM_\" flags instead.\n"
+					"Using a boolean for admin commands is "
+					"deprecated and will be removed.\n"
+					"Use \"COM_ADMIN\" instead.\n"
 			);
 		}
 		else
