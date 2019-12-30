@@ -1177,12 +1177,11 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	shadow->sz = (INT16)((centeryfrac - FixedMul(shadow->gz - viewz, yscale))>>FRACBITS);
 	shadow->cut = SC_ISSCALED|SC_SHADOW; //check this
 
-
 	shadow->startfrac = 0;
-	shadow->xiscale = 0x7fffff00 / (shadow->xscale/2);
+	shadow->xiscale = 0x7ffffff0 / (shadow->xscale/2);
 
 	if (shadow->x1 > x1)
-		shadow->startfrac += shadow->xiscale*(vis->x1-x1);
+		shadow->startfrac += shadow->xiscale*(shadow->x1-x1);
 
 	if (thing->subsector->sector->numlights)
 	{
