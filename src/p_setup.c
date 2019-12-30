@@ -1261,7 +1261,7 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 	if (!fastcmp(tkn, "namespace"))
 	{
 		Z_Free(tkn);
-		CONS_Alert(CONS_WARNING, "No namespace at beginning of lump!\n");
+		CONS_Alert(CONS_ERROR, "No namespace at beginning of lump!\n");
 		return false;
 	}
 	Z_Free(tkn);
@@ -1302,6 +1302,13 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 	}
 
 	Z_Free(tkn);
+
+	if (brackets)
+	{
+		CONS_Alert(CONS_ERROR, "Unclosed brackets detected in textmap lump.\n");
+		return false;
+	}
+
 	return true;
 }
 
@@ -1594,14 +1601,17 @@ static void P_LoadTextmap (void)
 	}
 }
 
-static void P_LoadMapData(const virtres_t *virt)
+static boolean P_LoadMapData(const virtres_t *virt)
 {
 	virtlump_t *virtvertexes = NULL, *virtsectors = NULL, *virtsidedefs = NULL, *virtlinedefs = NULL, *virtthings = NULL;
 	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 
 	// Count map data.
 	if (textmap) // Count how many entries for each type we got in textmap.
-		TextmapCount(textmap->data, textmap->size);
+	{
+		if (!TextmapCount(textmap->data, textmap->size))
+			return false;
+	}
 	else
 	{
 		virtthings   = vres_Find(virt, "THINGS");
@@ -1684,6 +1694,8 @@ static void P_LoadMapData(const virtres_t *virt)
 	memcpy(spawnsectors, sectors, numsectors * sizeof (*sectors));
 	memcpy(spawnlines, lines, numlines * sizeof (*lines));
 	memcpy(spawnsides, sides, numsides * sizeof (*sides));
+
+	return true;
 }
 
 static void P_InitializeSubsector(subsector_t *ss)
@@ -2685,11 +2697,12 @@ static void P_MakeMapMD5(virtres_t *virt, void *dest)
 	M_Memcpy(dest, &resmd5, 16);
 }
 
-static void P_LoadMapFromFile(void)
+static boolean P_LoadMapFromFile(void)
 {
 	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
 
-	P_LoadMapData(virt);
+	if (!P_LoadMapData(virt))
+		return false;
 	P_LoadMapBSP(virt);
 	P_LoadMapLUT(virt);
 
@@ -2701,6 +2714,7 @@ static void P_LoadMapFromFile(void)
 	P_MakeMapMD5(virt, &mapmd5);
 
 	vres_Free(virt);
+	return true;
 }
 
 //
@@ -3549,8 +3563,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_MapStart();
 
-	if (lastloadedmaplumpnum)
-		P_LoadMapFromFile();
+	if (!P_LoadMapFromFile())
+		return false;
 
 	// init gravity, tag lists,
 	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
