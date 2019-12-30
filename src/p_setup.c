@@ -3536,7 +3536,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
 	lastloadedmaplumpnum = W_CheckNumForName(maplumpname);
-	if (lastloadedmaplumpnum == INT16_MAX)
+	if (lastloadedmaplumpnum == LUMPERROR)
 		I_Error("Map %s not found.\n", maplumpname);
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
