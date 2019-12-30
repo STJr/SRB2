@@ -3218,23 +3218,14 @@ boolean P_LoadLevel(boolean fromnetsave)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
+	// Lactozilla: Free extrasubsectors regardless of renderer.
+	// Maybe we're not in OpenGL anymore.
+	if (extrasubsectors)
+		free(extrasubsectors);
+	extrasubsectors = NULL;
+	// stuff like HWR_CreatePlanePolygons is called there
 	if (rendermode == render_opengl)
-	{
-		// Lactozilla (December 8, 2019)
-		// Level setup used to free EVERY mipmap from memory.
-		// Even mipmaps that aren't related to level textures.
-		// Presumably, the hardware render code used to store textures as level data.
-		// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
-		// Level textures are only reloaded after R_LoadTextures, which is
-		// when the texture list is loaded.
-#ifdef ALAM_LIGHTING
-		// BP: reset light between levels (we draw preview frame lights on current frame)
-		HWR_ResetLights();
-#endif
-		// Correct missing sidedefs & deep water trick
-		HWR_CorrectSWTricks();
-		HWR_CreatePlanePolygons((INT32)numnodes - 1);
-	}
+		HWR_SetupLevel();
 #endif
 
 	// oh god I hope this helps
@@ -3313,6 +3304,26 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	return true;
 }
+
+#ifdef HWRENDER
+void HWR_SetupLevel(void)
+{
+	// Lactozilla (December 8, 2019)
+	// Level setup used to free EVERY mipmap from memory.
+	// Even mipmaps that aren't related to level textures.
+	// Presumably, the hardware render code used to store textures as level data.
+	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
+	// Level textures are only reloaded after R_LoadTextures, which is
+	// when the texture list is loaded.
+#ifdef ALAM_LIGHTING
+	// BP: reset light between levels (we draw preview frame lights on current frame)
+	HWR_ResetLights();
+#endif
+	// Correct missing sidedefs & deep water trick
+	HWR_CorrectSWTricks();
+	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+}
+#endif
 
 //
 // P_RunSOC

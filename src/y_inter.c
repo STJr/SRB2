@@ -161,6 +161,7 @@ typedef struct
 
 boolean usebuffer = false;
 static boolean useinterpic;
+static boolean safetorender = true;
 static y_buffer_t *y_buffer;
 
 static INT32 intertic;
@@ -177,6 +178,7 @@ static void Y_CalculateCompetitionWinners(void);
 static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
 static void Y_UnloadData(void);
+static void Y_CleanupData(void);
 
 // Stuff copy+pasted from st_stuff.c
 #define ST_DrawNumFromHud(h,n)        V_DrawTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, n)
@@ -335,7 +337,18 @@ void Y_IntermissionDrawer(void)
 	}
 
 	if (!usebuffer)
+	// Lactozilla: Renderer switching
+	if (needpatchrecache)
+	{
+		Y_CleanupData();
+		safetorender = false;
+	}
+
+	if (!usebuffer || !safetorender)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+
+	if (!safetorender)
+		goto dontdrawbg;
 
 	if (useinterpic)
 		V_DrawScaledPatch(0, 0, 0, interpic);
@@ -377,6 +390,7 @@ void Y_IntermissionDrawer(void)
 		goto skiptallydrawer;
 #endif
 
+dontdrawbg:
 	if (intertype == int_coop)
 	{
 		INT32 bonusy;
@@ -426,14 +440,17 @@ void Y_IntermissionDrawer(void)
 
 		bonusy = 150;
 		// Total
-		V_DrawScaledPatch(152, bonusy, 0, data.coop.ptotal);
-		V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.total);
+		if (safetorender)
+		{
+			V_DrawScaledPatch(152, bonusy, 0, data.coop.ptotal);
+			V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.total);
+		}
 		bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
 
 		// Draw bonuses
 		for (i = 3; i >= 0; --i)
 		{
-			if (data.coop.bonuses[i].display)
+			if (data.coop.bonuses[i].display && safetorender)
 			{
 				V_DrawScaledPatch(152, bonusy, 0, data.coop.bonuspatches[i]);
 				V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.bonuses[i].points);
@@ -662,7 +679,8 @@ void Y_IntermissionDrawer(void)
 		char strtime[10];
 
 		// draw the header
-		V_DrawScaledPatch(112, 2, 0, data.match.result);
+		if (safetorender)
+			V_DrawScaledPatch(112, 2, 0, data.match.result);
 
 		// draw the level name
 		V_DrawCenteredString(BASEVIDWIDTH/2, 20, 0, data.match.levelstring);
@@ -1194,6 +1212,8 @@ void Y_StartIntermission(void)
 		I_Error("endtic is dirty");
 #endif
 
+	safetorender = true;
+
 	if (!multiplayer)
 	{
 		timer = 0;
@@ -1249,20 +1269,20 @@ void Y_StartIntermission(void)
 			data.coop.tics = players[consoleplayer].realtime;
 
 			for (i = 0; i < 4; ++i)
-				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_STATIC);
-			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_STATIC);
+				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
 
 			// get act number
 			data.coop.actnum = mapheaderinfo[gamemap-1]->actnum;
 
 			// get background patches
-			widebgpatch = W_CachePatchName("INTERSCW", PU_STATIC);
-			bgpatch = W_CachePatchName("INTERSCR", PU_STATIC);
+			widebgpatch = W_CachePatchName("INTERSCW", PU_PATCH);
+			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 			{
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_STATIC);
+				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
 				useinterpic = true;
 				usebuffer = false;
 			}
@@ -1320,18 +1340,18 @@ void Y_StartIntermission(void)
 			Y_AwardSpecialStageBonus();
 
 			for (i = 0; i < 2; ++i)
-				data.spec.bonuspatches[i] = W_CachePatchName(data.spec.bonuses[i].patch, PU_STATIC);
+				data.spec.bonuspatches[i] = W_CachePatchName(data.spec.bonuses[i].patch, PU_PATCH);
 
-			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_STATIC);
-			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_STATIC);
+			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_PATCH);
+			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_PATCH);
 
 			// get background tile
-			bgtile = W_CachePatchName("SPECTILE", PU_STATIC);
+			bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
 
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 			{
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_STATIC);
+				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
 				useinterpic = true;
 			}
 			else
@@ -1343,14 +1363,14 @@ void Y_StartIntermission(void)
 			// get special stage specific patches
 /*			if (!stagefailed && ALL7EMERALDS(emeralds))
 			{
-				data.spec.cemerald = W_CachePatchName("GOTEMALL", PU_STATIC);
+				data.spec.cemerald = W_CachePatchName("GOTEMALL", PU_PATCH);
 				data.spec.headx = 70;
 				data.spec.nowsuper = players[consoleplayer].skin
-					? NULL : W_CachePatchName("NOWSUPER", PU_STATIC);
+					? NULL : W_CachePatchName("NOWSUPER", PU_PATCH);
 			}
 			else
 			{
-				data.spec.cemerald = W_CachePatchName("CEMERALD", PU_STATIC);
+				data.spec.cemerald = W_CachePatchName("CEMERALD", PU_PATCH);
 				data.spec.headx = 48;
 				data.spec.nowsuper = NULL;
 			} */
@@ -1428,9 +1448,9 @@ void Y_StartIntermission(void)
 
 			// get RESULT header
 			data.match.result =
-				W_CachePatchName("RESULT", PU_STATIC);
+				W_CachePatchName("RESULT", PU_PATCH);
 
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1456,9 +1476,9 @@ void Y_StartIntermission(void)
 			data.match.levelstring[sizeof data.match.levelstring - 1] = '\0';
 
 			// get RESULT header
-			data.match.result = W_CachePatchName("RESULT", PU_STATIC);
+			data.match.result = W_CachePatchName("RESULT", PU_PATCH);
 
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1495,7 +1515,7 @@ void Y_StartIntermission(void)
 				data.match.blueflag = bmatcico;
 			}
 
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1521,7 +1541,7 @@ void Y_StartIntermission(void)
 			data.competition.levelstring[sizeof data.competition.levelstring - 1] = '\0';
 
 			// get background tile
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -2059,7 +2079,8 @@ void Y_EndIntermission(void)
 	usebuffer = false;
 }
 
-#define UNLOAD(x) Z_ChangeTag(x, PU_CACHE); x = NULL
+#define UNLOAD(x) if (x) {Z_ChangeTag(x, PU_CACHE);} x = NULL;
+#define CLEANUP(x) x = NULL;
 
 //
 // Y_UnloadData
@@ -2110,5 +2131,47 @@ static void Y_UnloadData(void)
 			//are not handled
 			break;
 	}
+}
 
+static void Y_CleanupData(void)
+{
+	// unload the background patches
+	CLEANUP(bgpatch);
+	CLEANUP(widebgpatch);
+	CLEANUP(bgtile);
+	CLEANUP(interpic);
+
+	switch (intertype)
+	{
+		case int_coop:
+			// unload the coop and single player patches
+			CLEANUP(data.coop.bonuspatches[3]);
+			CLEANUP(data.coop.bonuspatches[2]);
+			CLEANUP(data.coop.bonuspatches[1]);
+			CLEANUP(data.coop.bonuspatches[0]);
+			CLEANUP(data.coop.ptotal);
+			break;
+		case int_spec:
+			// unload the special stage patches
+			//CLEANUP(data.spec.cemerald);
+			//CLEANUP(data.spec.nowsuper);
+			CLEANUP(data.spec.bonuspatches[1]);
+			CLEANUP(data.spec.bonuspatches[0]);
+			CLEANUP(data.spec.pscore);
+			CLEANUP(data.spec.pcontinues);
+			break;
+		case int_match:
+		case int_race:
+			CLEANUP(data.match.result);
+			break;
+		case int_ctf:
+			CLEANUP(data.match.blueflag);
+			CLEANUP(data.match.redflag);
+			break;
+		default:
+			//without this default,
+			//int_none, int_tag, int_chaos, and int_classicrace
+			//are not handled
+			break;
+	}
 }

@@ -130,6 +130,9 @@ extern FILE *logstream;
 extern char logfilename[1024];
 #endif
 
+/* A mod name to further distinguish versions. */
+#define SRB2APPLICATION "SRB2"
+
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
 #define VERSION    0 // Game version
@@ -623,6 +626,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// \note	SRB2CB port.
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
+
+/// Cache patches in Lua in a way that renderer switching will work flawlessly.
+//#define LUA_PATCH_SAFETY
 
 /// Sprite rotation
 #define ROTSPRITE

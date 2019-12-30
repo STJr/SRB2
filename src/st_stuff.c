@@ -2786,6 +2786,9 @@ static void ST_overlayDrawer(void)
 
 void ST_Drawer(void)
 {
+	if (needpatchrecache)
+		R_ReloadHUDGraphics();
+
 #ifdef SEENAMES
 	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
 	{
