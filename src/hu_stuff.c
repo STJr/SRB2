@@ -2195,12 +2195,12 @@ void HU_Drawer(void)
 
 	// draw the crosshair, not when viewing demos nor with chasecam
 	if (!automapactive && cv_crosshair.value && !demoplayback &&
-		(!camera.chase || (cv_abilitydirection[0].value && ticcmd_centerviewdown[0] && ticcmd_ztargetfocus[0]))
+		(!camera.chase || ticcmd_ztargetfocus[0])
 	&& !players[displayplayer].spectator)
 		HU_DrawCrosshair();
 
 	if (!automapactive && cv_crosshair2.value && !demoplayback &&
-		(!camera2.chase || (cv_abilitydirection[1].value && ticcmd_centerviewdown[1] && ticcmd_ztargetfocus[1]))
+		(!camera2.chase || ticcmd_ztargetfocus[1])
 	&& !players[secondarydisplayplayer].spectator)
 		HU_DrawCrosshair2();
 

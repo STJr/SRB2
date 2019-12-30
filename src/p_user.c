@@ -9792,14 +9792,14 @@ consvar_t cv_cam_saveheight[2][2] = {
 
 void CV_UpdateCamDist(void)
 {
-	CV_Set(&cv_cam_dist, va("%f", FIXED_TO_FLOAT(cv_cam_savedist[cv_abilitydirection[0].value][0].value)));
-	CV_Set(&cv_cam_height, va("%f", FIXED_TO_FLOAT(cv_cam_saveheight[cv_abilitydirection[0].value][0].value)));
+	CV_Set(&cv_cam_dist, va("%f", FIXED_TO_FLOAT(cv_cam_savedist[cv_useranalog[0].value][0].value)));
+	CV_Set(&cv_cam_height, va("%f", FIXED_TO_FLOAT(cv_cam_saveheight[cv_useranalog[0].value][0].value)));
 }
 
 void CV_UpdateCam2Dist(void)
 {
-	CV_Set(&cv_cam2_dist, va("%f", FIXED_TO_FLOAT(cv_cam_savedist[cv_abilitydirection[1].value][1].value)));
-	CV_Set(&cv_cam2_height, va("%f", FIXED_TO_FLOAT(cv_cam_saveheight[cv_abilitydirection[1].value][1].value)));
+	CV_Set(&cv_cam2_dist, va("%f", FIXED_TO_FLOAT(cv_cam_savedist[cv_useranalog[1].value][1].value)));
+	CV_Set(&cv_cam2_height, va("%f", FIXED_TO_FLOAT(cv_cam_saveheight[cv_useranalog[1].value][1].value)));
 }
 
 fixed_t t_cam_dist = -42;
@@ -9835,8 +9835,8 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	thiscam->y = y;
 	thiscam->z = z;
 
-	if ((thiscam == &camera && cv_abilitydirection[0].value)
-	|| (thiscam == &camera2 && cv_abilitydirection[1].value))
+	if ((thiscam == &camera && G_ControlStyle(1) == CS_SIMPLE)
+	|| (thiscam == &camera2 && G_ControlStyle(2) == CS_SIMPLE))
 	{
 		thiscam->angle = (thiscam == &camera) ? localangle : localangle2;
 		thiscam->aiming = (thiscam == &camera) ? localaiming : localaiming2;
@@ -10075,7 +10075,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 	}
 
-	if (cv_abilitydirection[(thiscam == &camera) ? 0 : 1].value && !sign)
+	if (G_ControlStyle((thiscam == &camera) ? 1 : 2) == CS_SIMPLE && !sign)
 	{
 		// Shift the camera slightly to the sides depending on the player facing direction
 		UINT8 forplayer = (thiscam == &camera) ? 0 : 1;

@@ -1038,10 +1038,8 @@ static menuitem_t OP_P1ControlsMenu[] =
 
 	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_CameraOptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar[0],  70},
 	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  70},
 	{IT_CALL    | IT_STRING, NULL, "Play Style...", M_Setup1PPlaystyleMenu, 80},
-	//{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[0],  90},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1052,10 +1050,8 @@ static menuitem_t OP_P2ControlsMenu[] =
 
 	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_Camera2OptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar[1],  70},
 	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  70},
 	{IT_CALL    | IT_STRING, NULL, "Play Style...", M_Setup2PPlaystyleMenu, 80},
-	//{IT_STRING  | IT_CVAR, NULL, "Ability angle", &cv_abilitydirection[1],  90},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
@@ -4318,7 +4314,7 @@ static void M_DrawControlsDefMenu(void)
 
 	if (currentMenu == &OP_P1ControlsDef)
 	{
-		opt = cv_useranalog[0].value ? 3 : (cv_abilitydirection[0].value ? 2 : cv_directionchar[0].value);
+		opt = cv_useranalog[0].value ? 3 - cv_directionchar[0].value : cv_directionchar[0].value;
 
 		if (opt == 2)
 		{
@@ -4333,7 +4329,7 @@ static void M_DrawControlsDefMenu(void)
 	}
 	else
 	{
-		opt = cv_useranalog[1].value ? 3 : (cv_abilitydirection[1].value ? 2 : cv_directionchar[1].value);
+		opt = cv_useranalog[1].value ? 3 - cv_directionchar[1].value : cv_directionchar[1].value;
 
 		if (opt == 2)
 		{
@@ -11619,7 +11615,7 @@ static void M_Setup1PPlaystyleMenu(INT32 choice)
 	(void)choice;
 
 	playstyle_activeplayer = 0;
-	playstyle_currentchoice = cv_useranalog[0].value ? 3 : (cv_abilitydirection[0].value ? 2 : cv_directionchar[0].value);
+	playstyle_currentchoice = cv_useranalog[0].value ? 3 - cv_directionchar[0].value : cv_directionchar[0].value;
 	OP_PlaystyleDef.prevMenu = &OP_P1ControlsDef;
 	M_SetupNextMenu(&OP_PlaystyleDef);
 }
@@ -11629,7 +11625,7 @@ static void M_Setup2PPlaystyleMenu(INT32 choice)
 	(void)choice;
 
 	playstyle_activeplayer = 1;
-	playstyle_currentchoice = cv_useranalog[1].value ? 3 : (cv_abilitydirection[1].value ? 2 : cv_directionchar[1].value);
+	playstyle_currentchoice = cv_useranalog[1].value ? 3 - cv_directionchar[1].value : cv_directionchar[1].value;
 	OP_PlaystyleDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_PlaystyleDef);
 }
@@ -11662,16 +11658,13 @@ static void M_HandlePlaystyleMenu(INT32 choice)
 
 	case KEY_ENTER:
 		S_StartSound(NULL, sfx_menu1);
-		if (cv_abilitydirection[playstyle_activeplayer].value != (playstyle_currentchoice/2))
-		{
-			CV_SetValue(&cv_abilitydirection[playstyle_activeplayer], playstyle_currentchoice/2);
-			if (playstyle_activeplayer)
-				CV_UpdateCam2Dist();
-			else
-				CV_UpdateCamDist();
-		}
 		CV_SetValue((playstyle_activeplayer ? &cv_directionchar[1] : &cv_directionchar[0]), playstyle_currentchoice ? 1 : 0);
-		CV_SetValue((playstyle_activeplayer ? &cv_useranalog[1] : &cv_useranalog[0]), 0);
+		CV_SetValue((playstyle_activeplayer ? &cv_useranalog[1] : &cv_useranalog[0]), playstyle_currentchoice/2);
+
+		if (playstyle_activeplayer)
+			CV_UpdateCam2Dist();
+		else
+			CV_UpdateCamDist();
 
 		M_SetupNextMenu(currentMenu->prevMenu);
 		break;

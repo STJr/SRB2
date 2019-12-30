@@ -407,10 +407,6 @@ consvar_t cv_autobrake = {"autobrake", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrak
 consvar_t cv_autobrake2 = {"autobrake2", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // hi here's some new controls
-consvar_t cv_abilitydirection[2] = {
-	{"abilitydirection", "Movement", CV_SAVE, directionchar_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
-	{"abilitydirection2", "Movement", CV_SAVE, directionchar_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
-};
 static CV_PossibleValue_t zerotoone_cons_t[] = {{0, "MIN"}, {FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_cam_shiftfacing[2] = {
 	{"cam_shiftfacingchar", "0.33", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL},
