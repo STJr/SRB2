@@ -459,6 +459,9 @@ typedef enum
 	AXISMOVE,
 	AXISLOOK,
 	AXISSTRAFE,
+
+	AXISDIGITAL, // axes below this use digital deadzone
+
 	AXISJUMP,
 	AXISSPIN,
 	AXISFIRE,
@@ -1222,7 +1225,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		*myaiming = 0;
 	joyaiming[forplayer] = thisjoyaiming;
 
-	turnaxis = JPlayerJoyAxis(ssplayer, AXISTURN);
+	turnaxis = PlayerJoyAxis(ssplayer, AXISTURN);
 	if (strafeisturn)
 		turnaxis += PlayerJoyAxis(ssplayer, AXISSTRAFE);
 	lookaxis = PlayerJoyAxis(ssplayer, AXISLOOK);
@@ -1301,9 +1304,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		if (turnright || turnleft || abs(cmd->angleturn) > angleturn[2])
 			tta_factor[forplayer] = 0; // suspend turn to angle
-
-		// Make rotspeed affect turning speed :)
-		cmd->angleturn = (cmd->angleturn * (ssplayer == 1 ? cv_cam_rotspeed.value : cv_cam2_rotspeed.value)) / 10;
 	}
 
 	strafeaxis = strafeisturn ? 0 : PlayerJoyAxis(ssplayer, AXISSTRAFE);
