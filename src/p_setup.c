@@ -2668,27 +2668,34 @@ static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 
 static void P_MakeMapMD5(virtres_t *virt, void *dest)
 {
-	unsigned char linemd5[16];
-	unsigned char sectormd5[16];
-	unsigned char thingmd5[16];
-	unsigned char sidedefmd5[16];
+	virtlump_t* textmap   = vres_Find(virt, "TEXTMAP");
 	unsigned char resmd5[16];
-	UINT8 i;
 
-	// Create a hash for the current map
-	// get the actual lumps!
-	virtlump_t *virtlines = vres_Find(virt, "LINEDEFS");
-	virtlump_t *virtsectors = vres_Find(virt, "SECTORS");
-	virtlump_t *virtmthings = vres_Find(virt, "THINGS");
-	virtlump_t *virtsides = vres_Find(virt, "SIDEDEFS");
+	if (textmap)
+		P_MakeBufferMD5((char*)textmap->data, textmap->size, resmd5);
+	else
+	{
+		unsigned char linemd5[16];
+		unsigned char sectormd5[16];
+		unsigned char thingmd5[16];
+		unsigned char sidedefmd5[16];
+		UINT8 i;
 
-	P_MakeBufferMD5((char*)virtlines->data, virtlines->size, linemd5);
-	P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size, sectormd5);
-	P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size, thingmd5);
-	P_MakeBufferMD5((char*)virtsides->data, virtsides->size, sidedefmd5);
+		// Create a hash for the current map
+		// get the actual lumps!
+		virtlump_t* virtlines   = vres_Find(virt, "LINEDEFS");
+		virtlump_t* virtsectors = vres_Find(virt, "SECTORS");
+		virtlump_t* virtmthings = vres_Find(virt, "THINGS");
+		virtlump_t* virtsides   = vres_Find(virt, "SIDEDEFS");
 
-	for (i = 0; i < 16; i++)
-		resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
+		P_MakeBufferMD5((char*)virtlines->data,   virtlines->size, linemd5);
+		P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size,  sectormd5);
+		P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size,   thingmd5);
+		P_MakeBufferMD5((char*)virtsides->data,   virtsides->size, sidedefmd5);
+
+		for (i = 0; i < 16; i++)
+			resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
+	}
 
 	M_Memcpy(dest, &resmd5, 16);
 }
