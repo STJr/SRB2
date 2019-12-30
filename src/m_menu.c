@@ -10431,7 +10431,7 @@ static void M_HandleConnectIP(INT32 choice)
 			}
 			if (!shiftdown) // Shift+Delete is used for something else.
 				break;
-			
+
 			/* FALLTHRU */
 		default:
 			l = strlen(setupm_ip);
@@ -10451,8 +10451,9 @@ static void M_HandleConnectIP(INT32 choice)
 
 						break;
 					}
+					case KEY_INS:
 					case 'c':
-					case 'C': // ctrl+c, copying
+					case 'C': // ctrl+c, ctrl+insert, copying
 						I_ClipboardCopy(setupm_ip, l);
 						S_StartSound(NULL,sfx_menu1); // Tails
 						break;
@@ -10472,7 +10473,7 @@ static void M_HandleConnectIP(INT32 choice)
 
 			if ( shiftdown ) {
 				switch (choice) {
-					case KEY_INS:
+					case KEY_INS: // shift+insert, pasting
 						{
 							const char *paste = I_ClipboardPaste();
 							
