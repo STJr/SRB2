@@ -1293,7 +1293,8 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
 	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
-	netbuffer->u.serverinfo.gametype = (UINT8)gametype;
+	strncpy(netbuffer->u.serverinfo.gametypename, Gametype_Names[gametype],
+			sizeof netbuffer->u.serverinfo.gametypename);
 	netbuffer->u.serverinfo.modifiedgame = (UINT8)modifiedgame;
 	netbuffer->u.serverinfo.cheatsenabled = CV_CheatsEnabled();
 	netbuffer->u.serverinfo.isdedicated = (UINT8)dedicated;
@@ -2122,13 +2123,10 @@ static void CL_ConnectToServer(boolean viams)
 
 	if (i != -1)
 	{
-		UINT16 num = serverlist[i].info.gametype;
-		const char *gametypestr = NULL;
+		char *gametypestr = serverlist[i].info.gametypename;
 		CONS_Printf(M_GetText("Connecting to: %s\n"), serverlist[i].info.servername);
-		if (num < gametypecount)
-			gametypestr = Gametype_Names[num];
-		if (gametypestr)
-			CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
+		gametypestr[sizeof serverlist[i].info.gametypename - 1] = '\0';
+		CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
 		CONS_Printf(M_GetText("Version: %d.%d.%u\n"), serverlist[i].info.version/100,
 		 serverlist[i].info.version%100, serverlist[i].info.subversion);
 	}
@@ -3656,6 +3654,8 @@ static void HandleServerInfo(SINT8 node)
 	netbuffer->u.serverinfo.servername[MAXSERVERNAME-1] = 0;
 	netbuffer->u.serverinfo.application
 		[sizeof netbuffer->u.serverinfo.application - 1] = '\0';
+	netbuffer->u.serverinfo.gametypename
+		[sizeof netbuffer->u.serverinfo.gametypename - 1] = '\0';
 
 	SL_InsertServer(&netbuffer->u.serverinfo, node);
 }

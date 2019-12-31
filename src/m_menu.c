@@ -9971,7 +9971,7 @@ static void M_DrawRoomMenu(void)
 static void M_DrawConnectMenu(void)
 {
 	UINT16 i;
-	const char *gt = "Unknown";
+	char *gt;
 	INT32 numPages = (serverlistcount+(SERVERS_PER_PAGE-1))/SERVERS_PER_PAGE;
 
 	for (i = FIRSTSERVERLINE; i < min(localservercount, SERVERS_PER_PAGE)+FIRSTSERVERLINE; i++)
@@ -10015,9 +10015,7 @@ static void M_DrawConnectMenu(void)
 		V_DrawSmallString(currentMenu->x, S_LINEY(i)+8, globalflags,
 		                     va("Ping: %u", (UINT32)LONG(serverlist[slindex].info.time)));
 
-		gt = "Unknown";
-		if (serverlist[slindex].info.gametype < gametypecount)
-			gt = Gametype_Names[serverlist[slindex].info.gametype];
+		gt = serverlist[slindex].info.gametypename;
 
 		V_DrawSmallString(currentMenu->x+46,S_LINEY(i)+8, globalflags,
 		                         va("Players: %02d/%02d", serverlist[slindex].info.numberofplayer, serverlist[slindex].info.maxplayer));
@@ -10063,7 +10061,15 @@ SERVER_LIST_ENTRY_COMPARATOR(time)
 SERVER_LIST_ENTRY_COMPARATOR(numberofplayer)
 SERVER_LIST_ENTRY_COMPARATOR_REVERSE(numberofplayer)
 SERVER_LIST_ENTRY_COMPARATOR_REVERSE(maxplayer)
-SERVER_LIST_ENTRY_COMPARATOR(gametype)
+
+static int ServerListEntryComparator_gametypename(const void *entry1, const void *entry2)
+{
+	const serverelem_t *sa = (const serverelem_t*)entry1, *sb = (const serverelem_t*)entry2;
+	int c;
+	if (( c = strcasecmp(sa->info.gametypename, sb->info.gametypename) ))
+		return c;
+	return strcmp(sa->info.servername, sb->info.servername); \
+}
 
 // Special one for modified state.
 static int ServerListEntryComparator_modified(const void *entry1, const void *entry2)
@@ -10103,7 +10109,7 @@ void M_SortServerList(void)
 		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_maxplayer_reverse);
 		break;
 	case 5:		// Gametype.
-		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_gametype);
+		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_gametypename);
 		break;
 	}
 #endif
