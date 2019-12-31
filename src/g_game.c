@@ -3397,7 +3397,7 @@ INT32 G_GetGametypeByName(const char *gametypestr)
 {
 	INT32 i;
 
-	for (i = 0; i < NUMGAMETYPES; i++)
+	for (i = 0; i < gametypecount; i++)
 		if (!stricmp(gametypestr, Gametype_Names[i]))
 			return i;
 
