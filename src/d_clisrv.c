@@ -611,11 +611,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 
 	rsp->health = LONG(players[i].mo->health);
 	rsp->angle = (angle_t)LONG(players[i].mo->angle);
-#ifdef ROTSPRITE
 	rsp->rollangle = (angle_t)LONG(players[i].mo->rollangle);
-#else
-	rsp->rollangle = 0;
-#endif
 	rsp->x = LONG(players[i].mo->x);
 	rsp->y = LONG(players[i].mo->y);
 	rsp->z = LONG(players[i].mo->z);
@@ -766,9 +762,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	//At this point, the player should have a body, whether they were respawned or not.
 	P_UnsetThingPosition(players[i].mo);
 	players[i].mo->angle = (angle_t)LONG(rsp->angle);
-#ifdef ROTSPRITE
 	players[i].mo->rollangle = (angle_t)LONG(rsp->rollangle);
-#endif
 	players[i].mo->eflags = (UINT16)SHORT(rsp->eflags);
 	players[i].mo->flags = LONG(rsp->flags);
 	players[i].mo->flags2 = LONG(rsp->flags2);
@@ -1025,7 +1019,7 @@ static void SV_SendResynch(INT32 node)
 		netbuffer->packettype = PT_RESYNCHEND;
 
 		netbuffer->u.resynchend.randomseed = P_GetRandSeed();
-		if (gametype == GT_CTF)
+		if (gametyperules & GTR_TEAMFLAGS)
 			resynch_write_ctf(&netbuffer->u.resynchend);
 		resynch_write_others(&netbuffer->u.resynchend);
 
@@ -1271,8 +1265,12 @@ static boolean CL_SendJoin(void)
 	if (splitscreen || botingame)
 		localplayers++;
 	netbuffer->u.clientcfg.localplayers = localplayers;
+	netbuffer->u.clientcfg._255 = 255;
+	netbuffer->u.clientcfg.packetversion = PACKETVERSION;
 	netbuffer->u.clientcfg.version = VERSION;
 	netbuffer->u.clientcfg.subversion = SUBVERSION;
+	strncpy(netbuffer->u.clientcfg.application, SRB2APPLICATION,
+			sizeof netbuffer->u.clientcfg.application);
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
 	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
@@ -1283,8 +1281,12 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	UINT8 *p;
 
 	netbuffer->packettype = PT_SERVERINFO;
+	netbuffer->u.serverinfo._255 = 255;
+	netbuffer->u.serverinfo.packetversion = PACKETVERSION;
 	netbuffer->u.serverinfo.version = VERSION;
 	netbuffer->u.serverinfo.subversion = SUBVERSION;
+	strncpy(netbuffer->u.serverinfo.application, SRB2APPLICATION,
+			sizeof netbuffer->u.serverinfo.application);
 	// return back the time value so client can compute their ping
 	netbuffer->u.serverinfo.time = (tic_t)LONG(servertime);
 	netbuffer->u.serverinfo.leveltime = (tic_t)LONG(leveltime);
@@ -1718,11 +1720,20 @@ static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
 		if (serverlistcount >= MAXSERVERLIST)
 			return; // list full
 
+		if (info->_255 != 255)
+			return;/* old packet format */
+
+		if (info->packetversion != PACKETVERSION)
+			return;/* old new packet format */
+
 		if (info->version != VERSION)
 			return; // Not same version.
 
 		if (info->subversion != SUBVERSION)
 			return; // Close, but no cigar.
+
+		if (strcmp(info->application, SRB2APPLICATION))
+			return;/* that's a different mod */
 
 		i = serverlistcount++;
 	}
@@ -2111,10 +2122,10 @@ static void CL_ConnectToServer(boolean viams)
 
 	if (i != -1)
 	{
-		UINT8 num = serverlist[i].info.gametype;
+		UINT16 num = serverlist[i].info.gametype;
 		const char *gametypestr = NULL;
 		CONS_Printf(M_GetText("Connecting to: %s\n"), serverlist[i].info.servername);
-		if (num < NUMGAMETYPES)
+		if (num < gametypecount)
 			gametypestr = Gametype_Names[num];
 		if (gametypestr)
 			CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
@@ -2430,7 +2441,7 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 		}
 	}
 
-	if (gametype == GT_CTF)
+	if (gametyperules & GTR_TEAMFLAGS)
 		P_PlayerFlagBurst(&players[playernum], false); // Don't take the flag with you!
 
 	// If in a special stage, redistribute the player's spheres across
@@ -2486,6 +2497,17 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 	(void)reason;
 #endif
 
+	// don't look through someone's view who isn't there
+	if (playernum == displayplayer)
+	{
+#ifdef HAVE_BLUA
+		// Call ViewpointSwitch hooks here.
+		// The viewpoint was forcibly changed.
+		LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], true);
+#endif
+		displayplayer = consoleplayer;
+	}
+
 	// Reset player data
 	CL_ClearPlayer(playernum);
 
@@ -2503,16 +2525,13 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 		RemoveAdminPlayer(playernum); // don't stay admin after you're gone
 	}
 
-	if (playernum == displayplayer)
-		displayplayer = consoleplayer; // don't look through someone's view who isn't there
-
 #ifdef HAVE_BLUA
 	LUA_InvalidatePlayer(&players[playernum]);
 #endif
 
 	if (G_TagGametype()) //Check if you still have a game. Location flexible. =P
 		P_CheckSurvivors();
-	else if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	else if (gametyperules & GTR_RACE)
 		P_CheckRacers();
 }
 
@@ -3461,7 +3480,7 @@ void SV_StartSinglePlayerServer(void)
 	server = true;
 	netgame = false;
 	multiplayer = false;
-	gametype = GT_COOP;
+	G_SetGametype(GT_COOP);
 
 	// no more tic the game with this settings!
 	SV_StopServer();
@@ -3507,6 +3526,12 @@ static void HandleConnect(SINT8 node)
 
 	if (bannednode && bannednode[node])
 		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server"));
+	else if (netbuffer->u.clientcfg._255 != 255 ||
+			netbuffer->u.clientcfg.packetversion != PACKETVERSION)
+		SV_SendRefuse(node, "Incompatible packet formats.");
+	else if (strncmp(netbuffer->u.clientcfg.application, SRB2APPLICATION,
+				sizeof netbuffer->u.clientcfg.application))
+		SV_SendRefuse(node, "Different SRB2 modifications\nare not compatible.");
 	else if (netbuffer->u.clientcfg.version != VERSION
 		|| netbuffer->u.clientcfg.subversion != SUBVERSION)
 		SV_SendRefuse(node, va(M_GetText("Different SRB2 versions cannot\nplay a netgame!\n(server version %d.%d.%d)"), VERSION/100, VERSION%100, SUBVERSION));
@@ -3629,6 +3654,8 @@ static void HandleServerInfo(SINT8 node)
 	const tic_t ticdiff = (ticnow - ticthen)*1000/NEWTICRATE;
 	netbuffer->u.serverinfo.time = (tic_t)LONG(ticdiff);
 	netbuffer->u.serverinfo.servername[MAXSERVERNAME-1] = 0;
+	netbuffer->u.serverinfo.application
+		[sizeof netbuffer->u.serverinfo.application - 1] = '\0';
 
 	SL_InsertServer(&netbuffer->u.serverinfo, node);
 }
@@ -3740,7 +3767,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			if (client)
 			{
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
-				gametype = netbuffer->u.servercfg.gametype;
+				G_SetGametype(netbuffer->u.servercfg.gametype);
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
 				for (j = 0; j < MAXPLAYERS; j++)
 					adminplayers[j] = netbuffer->u.servercfg.adminplayers[j];
@@ -4124,7 +4151,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 
 			P_SetRandSeed(netbuffer->u.resynchend.randomseed);
 
-			if (gametype == GT_CTF)
+			if (gametyperules & GTR_TEAMFLAGS)
 				resynch_read_ctf(&netbuffer->u.resynchend);
 			resynch_read_others(&netbuffer->u.resynchend);
 

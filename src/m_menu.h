@@ -373,6 +373,7 @@ typedef struct
 	UINT8 col[2];
 	char notes[441];
 } gtdesc_t;
+extern gtdesc_t gametypedesc[NUMGAMETYPES];
 
 // mode descriptions for video mode menu
 typedef struct

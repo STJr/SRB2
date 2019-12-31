@@ -103,6 +103,9 @@ node_t *nodes;
 line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
+sector_t *spawnsectors;
+line_t *spawnlines;
+side_t *spawnsides;
 INT32 numstarposts;
 UINT16 bossdisabled;
 boolean stoppedclock;
@@ -210,6 +213,9 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->lvlttl[0] = '\0';
 	mapheaderinfo[num]->selectheading[0] = '\0';
 	mapheaderinfo[num]->subttl[0] = '\0';
+	mapheaderinfo[num]->ltzzpatch[0] = '\0';
+	mapheaderinfo[num]->ltzztext[0] = '\0';
+	mapheaderinfo[num]->ltactdiamond[0] = '\0';
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
@@ -367,171 +373,6 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade)
 	return mapheaderinfo[map-1]->grades[mare].grade[grade-1];
 }
 
-/** Loads the vertexes for a level.
-  *
-  * \param lump VERTEXES lump number.
-  * \sa ML_VERTEXES
-  */
-
-static inline void P_LoadRawVertexes(UINT8 *data, size_t i)
-{
-	mapvertex_t *ml;
-	vertex_t *li;
-
-	numvertexes = i / sizeof (mapvertex_t);
-
-	if (numvertexes <= 0)
-		I_Error("Level has no vertices"); // instead of crashing
-
-	// Allocate zone memory for buffer.
-	vertexes = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
-
-	ml = (mapvertex_t *)data;
-	li = vertexes;
-
-	// Copy and convert vertex coordinates, internal representation as fixed.
-	for (i = 0; i < numvertexes; i++, li++, ml++)
-	{
-		li->x = SHORT(ml->x)<<FRACBITS;
-		li->y = SHORT(ml->y)<<FRACBITS;
-	}
-}
-
-static inline void P_LoadVertexes(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawVertexes(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
-/** Computes the length of a seg in fracunits.
-  *
-  * \param seg Seg to compute length for.
-  * \return Length in fracunits.
-  */
-fixed_t P_SegLength(seg_t *seg)
-{
-	INT64 dx = (seg->v2->x - seg->v1->x)>>1;
-	INT64 dy = (seg->v2->y - seg->v1->y)>>1;
-	return FixedHypot(dx, dy)<<1;
-}
-
-#ifdef HWRENDER
-/** Computes the length of a seg as a float.
-  * This is needed for OpenGL.
-  *
-  * \param seg Seg to compute length for.
-  * \return Length as a float.
-  */
-static inline float P_SegLengthFloat(seg_t *seg)
-{
-	float dx, dy;
-
-	// make a vector (start at origin)
-	dx = FIXED_TO_FLOAT(seg->v2->x - seg->v1->x);
-	dy = FIXED_TO_FLOAT(seg->v2->y - seg->v1->y);
-
-	return (float)hypot(dx, dy);
-}
-#endif
-
-/** Loads the SEGS resource from a level.
-  *
-  * \param lump Lump number of the SEGS resource.
-  * \sa ::ML_SEGS
-  */
-static void P_LoadRawSegs(UINT8 *data, size_t i)
-{
-	INT32 linedef, side;
-	mapseg_t *ml;
-	seg_t *li;
-	line_t *ldef;
-
-	numsegs = i / sizeof (mapseg_t);
-	if (numsegs <= 0)
-		I_Error("Level has no segs"); // instead of crashing
-	segs = Z_Calloc(numsegs * sizeof (*segs), PU_LEVEL, NULL);
-
-	ml = (mapseg_t *)data;
-	li = segs;
-	for (i = 0; i < numsegs; i++, li++, ml++)
-	{
-		li->v1 = &vertexes[SHORT(ml->v1)];
-		li->v2 = &vertexes[SHORT(ml->v2)];
-
-		li->length = P_SegLength(li);
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
-		{
-			li->flength = P_SegLengthFloat(li);
-			//Hurdler: 04/12/2000: for now, only used in hardware mode
-			li->lightmaps = NULL; // list of static lightmap for this seg
-		}
-		li->pv1 = li->pv2 = NULL;
-#endif
-
-		li->angle = (SHORT(ml->angle))<<FRACBITS;
-		li->offset = (SHORT(ml->offset))<<FRACBITS;
-		linedef = SHORT(ml->linedef);
-		ldef = &lines[linedef];
-		li->linedef = ldef;
-		li->side = side = SHORT(ml->side);
-		li->sidedef = &sides[ldef->sidenum[side]];
-		li->frontsector = sides[ldef->sidenum[side]].sector;
-		if (ldef-> flags & ML_TWOSIDED)
-			li->backsector = sides[ldef->sidenum[side^1]].sector;
-		else
-			li->backsector = 0;
-
-		li->numlights = 0;
-		li->rlights = NULL;
-	}
-}
-
-static void P_LoadSegs(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawSegs(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
-
-/** Loads the SSECTORS resource from a level.
-  *
-  * \param lump Lump number of the SSECTORS resource.
-  * \sa ::ML_SSECTORS
-  */
-static inline void P_LoadRawSubsectors(void *data, size_t i)
-{
-	mapsubsector_t *ms;
-	subsector_t *ss;
-
-	numsubsectors = i / sizeof (mapsubsector_t);
-	if (numsubsectors <= 0)
-		I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
-	ss = subsectors = Z_Calloc(numsubsectors * sizeof (*subsectors), PU_LEVEL, NULL);
-
-	ms = (mapsubsector_t *)data;
-
-	for (i = 0; i < numsubsectors; i++, ss++, ms++)
-	{
-		ss->sector = NULL;
-		ss->numlines = SHORT(ms->numsegs);
-		ss->firstline = SHORT(ms->firstseg);
-#ifdef FLOORSPLATS
-		ss->splats = NULL;
-#endif
-		ss->validcount = 0;
-	}
-}
-
-static void P_LoadSubsectors(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawSubsectors(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
 //
 // levelflats
 //
@@ -539,6 +380,7 @@ static void P_LoadSubsectors(lumpnum_t lumpnum)
 
 size_t numlevelflats;
 levelflat_t *levelflats;
+levelflat_t *foundflats;
 
 //SoM: Other files want this info.
 size_t P_PrecacheLevelFlats(void)
@@ -697,163 +539,9 @@ INT32 P_CheckLevelFlat(const char *flatname)
 	return (INT32)i;
 }
 
-// Sets up the ingame sectors structures.
-// Lumpnum is the lumpnum of a SECTORS lump.
-static void P_LoadRawSectors(UINT8 *data, size_t i)
-{
-	mapsector_t *ms;
-	sector_t *ss;
-	levelflat_t *foundflats;
-
-	// We count how many sectors we got.
-	numsectors = i / sizeof (mapsector_t);
-	if (numsectors <= 0)
-		I_Error("Level has no sectors");
-
-	// Allocate as much memory as we need into the global sectors table.
-	sectors = Z_Calloc(numsectors*sizeof (*sectors), PU_LEVEL, NULL);
-
-	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
-	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
-	foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
-	if (foundflats == NULL)
-		I_Error("Ran out of memory while loading sectors\n");
-
-	numlevelflats = 0;
-
-	// For each counted sector, copy the sector raw data from our cache pointer ms, to the global table pointer ss.
-	ms = (mapsector_t *)data;
-	ss = sectors;
-	for (i = 0; i < numsectors; i++, ss++, ms++)
-	{
-		ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
-		ss->ceilingheight = SHORT(ms->ceilingheight)<<FRACBITS;
-
-		ss->floorpic = P_AddLevelFlat(ms->floorpic, foundflats);
-		ss->ceilingpic = P_AddLevelFlat(ms->ceilingpic, foundflats);
-
-		ss->lightlevel = SHORT(ms->lightlevel);
-		ss->spawn_lightlevel = SHORT(ms->lightlevel);
-		ss->special = SHORT(ms->special);
-		ss->tag = SHORT(ms->tag);
-		ss->nexttag = ss->firsttag = -1;
-		ss->spawn_nexttag = ss->spawn_firsttag = -1;
-
-		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
-		ss->validcount = 0;
-
-		ss->thinglist = NULL;
-		ss->touching_thinglist = NULL;
-		ss->preciplist = NULL;
-		ss->touching_preciplist = NULL;
-
-		ss->floordata = NULL;
-		ss->ceilingdata = NULL;
-		ss->lightingdata = NULL;
-
-		ss->linecount = 0;
-		ss->lines = NULL;
-
-		ss->heightsec = -1;
-		ss->camsec = -1;
-		ss->floorlightsec = -1;
-		ss->ceilinglightsec = -1;
-		ss->crumblestate = 0;
-		ss->ffloors = NULL;
-		ss->lightlist = NULL;
-		ss->numlights = 0;
-		ss->attached = NULL;
-		ss->attachedsolid = NULL;
-		ss->numattached = 0;
-		ss->maxattached = 1;
-		ss->moved = true;
-
-		ss->extra_colormap = NULL;
-		ss->spawn_extra_colormap = NULL;
-
-		ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
-		ss->spawn_flr_xoffs = ss->spawn_ceil_xoffs = ss->spawn_flr_yoffs = ss->spawn_ceil_yoffs = 0;
-		ss->floorpic_angle = ss->ceilingpic_angle = 0;
-		ss->spawn_flrpic_angle = ss->spawn_ceilpic_angle = 0;
-		ss->gravity = NULL;
-		ss->cullheight = NULL;
-		ss->verticalflip = false;
-		ss->flags = 0;
-		ss->flags |= SF_FLIPSPECIAL_FLOOR;
-
-		ss->floorspeed = 0;
-		ss->ceilspeed = 0;
-
-#ifdef HWRENDER // ----- for special tricks with HW renderer -----
-		ss->pseudoSector = false;
-		ss->virtualFloor = false;
-		ss->virtualCeiling = false;
-		ss->sectorLines = NULL;
-		ss->stackList = NULL;
-		ss->lineoutLength = -1.0l;
-#endif // ----- end special tricks -----
-	}
-
-	// set the sky flat num
-	skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
-
-	// copy table for global usage
-	levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
-	free(foundflats);
-
-	// search for animated flats and set up
-	P_SetupLevelFlatAnims();
-}
-
-static void P_LoadSectors(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawSectors(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
-//
-// P_LoadNodes
-//
-static void P_LoadRawNodes(UINT8 *data, size_t i)
-{
-	UINT8 j, k;
-	mapnode_t *mn;
-	node_t *no;
-
-	numnodes = i / sizeof (mapnode_t);
-	if (numnodes <= 0)
-		I_Error("Level has no nodes");
-	nodes = Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
-
-	mn = (mapnode_t *)data;
-	no = nodes;
-
-	for (i = 0; i < numnodes; i++, no++, mn++)
-	{
-		no->x = SHORT(mn->x)<<FRACBITS;
-		no->y = SHORT(mn->y)<<FRACBITS;
-		no->dx = SHORT(mn->dx)<<FRACBITS;
-		no->dy = SHORT(mn->dy)<<FRACBITS;
-		for (j = 0; j < 2; j++)
-		{
-			no->children[j] = SHORT(mn->children[j]);
-			for (k = 0; k < 4; k++)
-				no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
-		}
-	}
-}
-
-static void P_LoadNodes(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawNodes(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
 //
 // P_ReloadRings
-// Used by NiGHTS, clears all ring/wing/etc items and respawns them
+// Used by NiGHTS, clears all ring/sphere/hoop/etc items and respawns them
 //
 void P_ReloadRings(void)
 {
@@ -900,22 +588,21 @@ void P_ReloadRings(void)
 	{
 		// Notice an omission? We handle hoops differently.
 		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
-		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
-		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
-		 || (mt->type >= 600 && mt->type <= 609)) // circles and diagonals
+			|| mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
+			|| mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum)
 		{
 			mt->mobj = NULL;
-
-			// Z for objects Tails 05-26-2002
-			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-				->sector->floorheight>>FRACBITS);
-
-			P_SpawnHoopsAndRings(mt, true);
+			P_SetBonusTime(P_SpawnMapThing(mt));
+		}
+		else if (mt->type >= 600 && mt->type <= 609) // Item patterns
+		{
+			mt->mobj = NULL;
+			P_SpawnItemPattern(mt, true);
 		}
 	}
 	for (i = 0; i < numHoops; i++)
 	{
-		P_SpawnHoopsAndRings(hoopsToRespawn[i], false);
+		P_SpawnHoop(hoopsToRespawn[i]);
 	}
 }
 
@@ -1006,27 +693,59 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 }
 #endif
 
-static void P_PrepareRawThings(UINT8 *data, size_t i)
+static void P_SpawnEmeraldHunt(void)
 {
+	INT32 emer1, emer2, emer3;
+	INT32 timeout = 0; // keeps from getting stuck
+
+	emer1 = emer2 = emer3 = 0;
+
+	//increment spawn numbers because zero is valid.
+	emer1 = (P_RandomKey(numhuntemeralds)) + 1;
+	while (timeout++ < 100)
+	{
+		emer2 = (P_RandomKey(numhuntemeralds)) + 1;
+
+		if (emer2 != emer1)
+			break;
+	}
+
+	timeout = 0;
+	while (timeout++ < 100)
+	{
+		emer3 = (P_RandomKey(numhuntemeralds)) + 1;
+
+		if (emer3 != emer2 && emer3 != emer1)
+			break;
+	}
+
+	//decrement spawn values to the actual number because zero is valid.
+	if (emer1--)
+		P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
+			huntemeralds[emer1]->y<<FRACBITS,
+			huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
+
+	if (emer2--)
+		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
+			huntemeralds[emer2]->y<<FRACBITS,
+			huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
+		mobjinfo[MT_EMERHUNT].spawnstate+1);
+
+	if (emer3--)
+		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
+			huntemeralds[emer3]->y<<FRACBITS,
+			huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
+		mobjinfo[MT_EMERHUNT].spawnstate+2);
+}
+
+static void P_SpawnMapThings(boolean spawnemblems)
+{
+	size_t i;
 	mapthing_t *mt;
 
-	nummapthings = i / (5 * sizeof (INT16));
-	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
-
-	// Spawn axis points first so they are
-	// at the front of the list for fast searching.
-	mt = mapthings;
-	for (i = 0; i < nummapthings; i++, mt++)
+        // Spawn axis points first so they are at the front of the list for fast searching.
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
-		mt->x = READINT16(data);
-		mt->y = READINT16(data);
-		mt->angle = READINT16(data);
-		mt->type = READUINT16(data);
-		mt->options = READUINT16(data);
-		mt->extrainfo = (UINT8)(mt->type >> 12);
-
-		mt->type &= 4095;
-
 		switch (mt->type)
 		{
 			case 1700: // MT_AXIS
@@ -1039,115 +758,32 @@ static void P_PrepareRawThings(UINT8 *data, size_t i)
 				break;
 		}
 	}
-}
 
-static void P_PrepareThings(lumpnum_t lumpnum)
-{
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_PrepareRawThings(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
-
-static void P_LoadThings(boolean loademblems)
-{
-	size_t i;
-	mapthing_t *mt;
-
-	// Loading the things lump itself into memory is now handled in P_PrepareThings, above
-
-	mt = mapthings;
 	numhuntemeralds = 0;
-	for (i = 0; i < nummapthings; i++, mt++)
+
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
-		sector_t *mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
-
-		// Z for objects
-		mt->z = (INT16)(
-#ifdef ESLOPE
-				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
-#endif
-				mtsector->floorheight)>>FRACBITS;
-
 		if (mt->type == 1700 // MT_AXIS
 			|| mt->type == 1701 // MT_AXISTRANSFER
 			|| mt->type == 1702) // MT_AXISTRANSFERLINE
 			continue; // These were already spawned
 
-		if (!loademblems && mt->type == mobjinfo[MT_EMBLEM].doomednum)
+		if (!spawnemblems && mt->type == mobjinfo[MT_EMBLEM].doomednum)
 			continue;
 
 		mt->mobj = NULL;
-		P_SpawnMapThing(mt);
+
+		if (mt->type >= 600 && mt->type <= 609) // item patterns
+			P_SpawnItemPattern(mt, false);
+		else if (mt->type == 1705 || mt->type == 1713) // hoops
+			P_SpawnHoop(mt);
+		else // Everything else
+			P_SpawnMapThing(mt);
 	}
 
 	// random emeralds for hunt
 	if (numhuntemeralds)
-	{
-		INT32 emer1, emer2, emer3;
-		INT32 timeout = 0; // keeps from getting stuck
-
-		emer1 = emer2 = emer3 = 0;
-
-		//increment spawn numbers because zero is valid.
-		emer1 = (P_RandomKey(numhuntemeralds)) + 1;
-		while (timeout++ < 100)
-		{
-			emer2 = (P_RandomKey(numhuntemeralds)) + 1;
-
-			if (emer2 != emer1)
-				break;
-		}
-
-		timeout = 0;
-		while (timeout++ < 100)
-		{
-			emer3 = (P_RandomKey(numhuntemeralds)) + 1;
-
-			if (emer3 != emer2 && emer3 != emer1)
-				break;
-		}
-
-		//decrement spawn values to the actual number because zero is valid.
-		if (emer1--)
-			P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
-				huntemeralds[emer1]->y<<FRACBITS,
-				huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
-
-		if (emer2--)
-			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
-				huntemeralds[emer2]->y<<FRACBITS,
-				huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
-			mobjinfo[MT_EMERHUNT].spawnstate+1);
-
-		if (emer3--)
-			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
-				huntemeralds[emer3]->y<<FRACBITS,
-				huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
-			mobjinfo[MT_EMERHUNT].spawnstate+2);
-	}
-
-	if (metalrecording) // Metal Sonic gets no rings to distract him.
-		return;
-
-	// Run through the list of mapthings again to spawn hoops and rings
-	mt = mapthings;
-	for (i = 0; i < nummapthings; i++, mt++)
-	{
-		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
-		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
-		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
-		 || (mt->type >= 600 && mt->type <= 609) // circles and diagonals
-		 || mt->type == 1705 || mt->type == 1713) // hoops
-		{
-			mt->mobj = NULL;
-
-			// Z for objects Tails 05-26-2002
-			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-				->sector->floorheight>>FRACBITS);
-
-			P_SpawnHoopsAndRings(mt, false);
-		}
-	}
+		P_SpawnEmeraldHunt();
 }
 
 // Experimental groovy write function!
@@ -1193,270 +829,249 @@ void P_WriteThings(lumpnum_t lumpnum)
 	CONS_Printf(M_GetText("newthings%d.lmp saved.\n"), gamemap);
 }
 
-static void P_LoadRawLineDefs(UINT8 *data, size_t i)
+//
+// MAP LOADING FUNCTIONS
+//
+
+static void P_LoadVertices(UINT8 *data)
 {
-	maplinedef_t *mld;
-	line_t *ld;
-	vertex_t *v1, *v2;
+	mapvertex_t *mv = (mapvertex_t *)data;
+	vertex_t *v = vertexes;
+	size_t i;
 
-	numlines = i / sizeof (maplinedef_t);
-	if (numlines <= 0)
-		I_Error("Level has no linedefs");
-	lines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+	// Copy and convert vertex coordinates, internal representation as fixed.
+	for (i = 0; i < numvertexes; i++, v++, mv++)
+	{
+		v->x = SHORT(mv->x)<<FRACBITS;
+		v->y = SHORT(mv->y)<<FRACBITS;
+		v->z = 0;
+	}
+}
 
-	mld = (maplinedef_t *)data;
-	ld = lines;
+static void P_InitializeSector(sector_t *ss)
+{
+	ss->nexttag = ss->firsttag = -1;
+
+	memset(&ss->soundorg, 0, sizeof(ss->soundorg));
+
+	ss->validcount = 0;
+
+	ss->thinglist = NULL;
+
+	ss->floordata = NULL;
+	ss->ceilingdata = NULL;
+	ss->lightingdata = NULL;
+	ss->fadecolormapdata = NULL;
+
+	ss->floor_xoffs = ss->floor_yoffs = 0;
+	ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
+
+	ss->floorpic_angle = ss->ceilingpic_angle = 0;
+
+	ss->heightsec = -1;
+	ss->camsec = -1;
+
+	ss->floorlightsec = ss->ceilinglightsec = -1;
+	ss->crumblestate = 0;
+
+	ss->touching_thinglist = NULL;
+
+	ss->linecount = 0;
+	ss->lines = NULL;
+	ss->tagline = NULL;
+
+	ss->ffloors = NULL;
+	ss->attached = NULL;
+	ss->attachedsolid = NULL;
+	ss->numattached = 0;
+	ss->maxattached = 1;
+	ss->lightlist = NULL;
+	ss->numlights = 0;
+	ss->moved = true;
+
+	ss->extra_colormap = NULL;
+
+#ifdef HWRENDER // ----- for special tricks with HW renderer -----
+	ss->pseudoSector = false;
+	ss->virtualFloor = false;
+	ss->virtualFloorheight = 0;
+	ss->virtualCeiling = false;
+	ss->virtualCeilingheight = 0;
+	ss->sectorLines = NULL;
+	ss->stackList = NULL;
+	ss->lineoutLength = -1.0l;
+#endif // ----- end special tricks -----
+
+	ss->gravity = NULL;
+	ss->verticalflip = false;
+	ss->flags = SF_FLIPSPECIAL_FLOOR;
+
+	ss->cullheight = NULL;
+
+	ss->floorspeed = ss->ceilspeed = 0;
+
+	ss->preciplist = NULL;
+	ss->touching_preciplist = NULL;
+
+#ifdef ESLOPE
+	ss->f_slope = NULL;
+	ss->c_slope = NULL;
+	ss->hasslope = false;
+#endif
+
+	ss->spawn_lightlevel = ss->lightlevel;
+
+	ss->spawn_extra_colormap = NULL;
+}
+
+static void P_LoadSectors(UINT8 *data)
+{
+	mapsector_t *ms = (mapsector_t *)data;
+	sector_t *ss = sectors;
+	size_t i;
+
+	// For each counted sector, copy the sector raw data from our cache pointer ms, to the global table pointer ss.
+	for (i = 0; i < numsectors; i++, ss++, ms++)
+	{
+		ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
+		ss->ceilingheight = SHORT(ms->ceilingheight)<<FRACBITS;
+
+		ss->floorpic = P_AddLevelFlat(ms->floorpic, foundflats);
+		ss->ceilingpic = P_AddLevelFlat(ms->ceilingpic, foundflats);
+
+		ss->lightlevel = SHORT(ms->lightlevel);
+		ss->special = SHORT(ms->special);
+		ss->tag = SHORT(ms->tag);
+
+		P_InitializeSector(ss);
+	}
+}
+
+static void P_InitializeLinedef(line_t *ld)
+{
+	vertex_t *v1 = ld->v1;
+	vertex_t *v2 = ld->v2;
+	UINT8 j;
+
+	ld->dx = v2->x - v1->x;
+	ld->dy = v2->y - v1->y;
+
+	ld->bbox[BOXLEFT] = min(v1->x, v2->x);
+	ld->bbox[BOXRIGHT] = max(v1->x, v2->x);
+	ld->bbox[BOXBOTTOM] = min(v1->y, v2->y);
+	ld->bbox[BOXTOP] = max(v1->y, v2->y);
+
+	if (!ld->dx)
+		ld->slopetype = ST_VERTICAL;
+	else if (!ld->dy)
+		ld->slopetype = ST_HORIZONTAL;
+	else if ((ld->dy > 0) == (ld->dx > 0))
+		ld->slopetype = ST_POSITIVE;
+	else
+		ld->slopetype = ST_NEGATIVE;
+
+	ld->frontsector = ld->backsector = NULL;
+
+	ld->validcount = 0;
+#ifdef WALLSPLATS
+	ld->splats = NULL;
+#endif
+	ld->firsttag = ld->nexttag = -1;
+#ifdef POLYOBJECTS
+	ld->polyobj = NULL;
+#endif
+
+	ld->text = NULL;
+	ld->callcount = 0;
+
+	// cph 2006/09/30 - fix sidedef errors right away.
+	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
+	for (j = 0; j < 2; j++)
+		if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
+		{
+			ld->sidenum[j] = 0xffff;
+			CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has out-of-range sidedef number\n", sizeu1((size_t)(ld - lines)));
+		}
+
+	// killough 11/98: fix common wad errors (missing sidedefs):
+	if (ld->sidenum[0] == 0xffff)
+	{
+		ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
+		// cph - print a warning about the bug
+		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s missing first sidedef\n", sizeu1((size_t)(ld - lines)));
+	}
+
+	if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
+	{
+		ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
+		// cph - print a warning about the bug
+		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1((size_t)(ld - lines)));
+	}
+
+	if (ld->sidenum[0] != 0xffff)
+	{
+		sides[ld->sidenum[0]].special = ld->special;
+		sides[ld->sidenum[0]].line = ld;
+
+	}
+	if (ld->sidenum[1] != 0xffff)
+	{
+		sides[ld->sidenum[1]].special = ld->special;
+		sides[ld->sidenum[1]].line = ld;
+
+	}
+}
+
+static void P_LoadLinedefs(UINT8 *data)
+{
+	maplinedef_t *mld = (maplinedef_t *)data;
+	line_t *ld = lines;
+	size_t i;
+
 	for (i = 0; i < numlines; i++, mld++, ld++)
 	{
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
-		v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
-		v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
-		ld->dx = v2->x - v1->x;
-		ld->dy = v2->y - v1->y;
-
-#ifdef WALLSPLATS
-		ld->splats = NULL;
-#endif
-
-		if (!ld->dx)
-			ld->slopetype = ST_VERTICAL;
-		else if (!ld->dy)
-			ld->slopetype = ST_HORIZONTAL;
-		else if ((ld->dy > 0) == (ld->dx > 0))
-			ld->slopetype = ST_POSITIVE;
-		else
-			ld->slopetype = ST_NEGATIVE;
-
-		if (v1->x < v2->x)
-		{
-			ld->bbox[BOXLEFT] = v1->x;
-			ld->bbox[BOXRIGHT] = v2->x;
-		}
-		else
-		{
-			ld->bbox[BOXLEFT] = v2->x;
-			ld->bbox[BOXRIGHT] = v1->x;
-		}
-
-		if (v1->y < v2->y)
-		{
-			ld->bbox[BOXBOTTOM] = v1->y;
-			ld->bbox[BOXTOP] = v2->y;
-		}
-		else
-		{
-			ld->bbox[BOXBOTTOM] = v2->y;
-			ld->bbox[BOXTOP] = v1->y;
-		}
+		ld->v1 = &vertexes[SHORT(mld->v1)];
+		ld->v2 = &vertexes[SHORT(mld->v2)];
 
 		ld->sidenum[0] = SHORT(mld->sidenum[0]);
 		ld->sidenum[1] = SHORT(mld->sidenum[1]);
 
-		{
-			// cph 2006/09/30 - fix sidedef errors right away.
-			// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
-			UINT8 j;
-
-			for (j=0; j < 2; j++)
-			{
-				if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
-				{
-					ld->sidenum[j] = 0xffff;
-					CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
-				}
-			}
-		}
-
-		ld->frontsector = ld->backsector = NULL;
-		ld->validcount = 0;
-		ld->firsttag = ld->nexttag = -1;
-		ld->callcount = 0;
-		// killough 11/98: fix common wad errors (missing sidedefs):
-
-		if (ld->sidenum[0] == 0xffff)
-		{
-			ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
-			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s missing first sidedef\n", sizeu1(numlines-i-1));
-		}
-
-		if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
-		{
-			ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
-			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
-		}
-
-		if (ld->sidenum[0] != 0xffff && ld->special)
-			sides[ld->sidenum[0]].special = ld->special;
-		if (ld->sidenum[1] != 0xffff && ld->special)
-			sides[ld->sidenum[1]].special = ld->special;
-
-#ifdef POLYOBJECTS
-		ld->polyobj = NULL;
-#endif
+		P_InitializeLinedef(ld);
 	}
 }
 
-static void P_LoadLineDefs(lumpnum_t lumpnum)
+static void P_LoadSidedefs(UINT8 *data)
 {
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawLineDefs(data, W_LumpLength(lumpnum));
-	Z_Free(data);
-}
+	mapsidedef_t *msd = (mapsidedef_t*)data;
+	side_t *sd = sides;
+	size_t i;
 
-static void P_LoadLineDefs2(void)
-{
-	size_t i = numlines;
-	register line_t *ld = lines;
-	for (;i--;ld++)
+	for (i = 0; i < numsides; i++, sd++, msd++)
 	{
-		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
-		ld->backsector  = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
-
-		// Repeat count for midtexture
-		if ((ld->flags & ML_EFFECT5) && (ld->sidenum[1] != 0xffff)
-			&& !(ld->special >= 300 && ld->special < 500)) // exempt linedef exec specials
-		{
-			sides[ld->sidenum[0]].repeatcnt = (INT16)(((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) >> 12);
-			sides[ld->sidenum[0]].textureoffset = (((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) & 2047) << FRACBITS;
-			sides[ld->sidenum[1]].repeatcnt = (INT16)(((unsigned)sides[ld->sidenum[1]].textureoffset >> FRACBITS) >> 12);
-			sides[ld->sidenum[1]].textureoffset = (((unsigned)sides[ld->sidenum[1]].textureoffset >> FRACBITS) & 2047) << FRACBITS;
-		}
-
-		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
-		switch(ld->special)
-		{
-		case 331: // Trigger linedef executor: Skin - Continuous
-		case 332: // Trigger linedef executor: Skin - Each time
-		case 333: // Trigger linedef executor: Skin - Once
-		case 443: // Calls a named Lua function
-			if (sides[ld->sidenum[0]].text)
-			{
-				size_t len = strlen(sides[ld->sidenum[0]].text)+1;
-				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					len += strlen(sides[ld->sidenum[1]].text);
-				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
-				M_Memcpy(ld->text, sides[ld->sidenum[0]].text, strlen(sides[ld->sidenum[0]].text)+1);
-				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					M_Memcpy(ld->text+strlen(ld->text)+1, sides[ld->sidenum[1]].text, strlen(sides[ld->sidenum[1]].text)+1);
-			}
-			break;
-		}
-	}
-
-	// Optimize sidedefs
-	if (M_CheckParm("-compress"))
-	{
-		side_t *newsides;
-		size_t numnewsides = 0;
-		size_t z;
-
-		for (i = 0; i < numsides; i++)
-		{
-			size_t j, k;
-			if (sides[i].sector == NULL)
-				continue;
-
-			for (k = numlines, ld = lines; k--; ld++)
-			{
-				if (ld->sidenum[0] == i)
-					ld->sidenum[0] = (UINT16)numnewsides;
-
-				if (ld->sidenum[1] == i)
-					ld->sidenum[1] = (UINT16)numnewsides;
-			}
-
-			for (j = i+1; j < numsides; j++)
-			{
-				if (sides[j].sector == NULL)
-					continue;
-
-				if (!memcmp(&sides[i], &sides[j], sizeof(side_t)))
-				{
-					// Find the linedefs that belong to this one
-					for (k = numlines, ld = lines; k--; ld++)
-					{
-						if (ld->sidenum[0] == j)
-							ld->sidenum[0] = (UINT16)numnewsides;
-
-						if (ld->sidenum[1] == j)
-							ld->sidenum[1] = (UINT16)numnewsides;
-					}
-					sides[j].sector = NULL; // Flag for deletion
-				}
-			}
-			numnewsides++;
-		}
-
-		// We're loading crap into this block anyhow, so no point in zeroing it out.
-		newsides = Z_Malloc(numnewsides * sizeof(*newsides), PU_LEVEL, NULL);
-
-		// Copy the sides to their new block of memory.
-		for (i = 0, z = 0; i < numsides; i++)
-		{
-			if (sides[i].sector != NULL)
-				M_Memcpy(&newsides[z++], &sides[i], sizeof(side_t));
-		}
-
-		CONS_Debug(DBG_SETUP, "Old sides is %s, new sides is %s\n", sizeu1(numsides), sizeu1(numnewsides));
-
-		Z_Free(sides);
-		sides = newsides;
-		numsides = numnewsides;
-	}
-}
-
-
-
-static inline void P_LoadRawSideDefs(size_t i)
-{
-	numsides = i / sizeof (mapsidedef_t);
-	if (numsides <= 0)
-		I_Error("Level has no sidedefs");
-	sides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
-}
-
-static inline void P_LoadSideDefs(lumpnum_t lumpnum)
-{
-	P_LoadRawSideDefs(W_LumpLength(lumpnum));
-}
-
-
-static void P_LoadRawSideDefs2(void *data)
-{
-	UINT16 i;
-
-	for (i = 0; i < numsides; i++)
-	{
-		register mapsidedef_t *msd = (mapsidedef_t *)data + i;
-		register side_t *sd = sides + i;
-		register sector_t *sec;
+		UINT16 sector_num;
+		boolean isfrontside = !sd->line || sd->line->sidenum[0] == i;
 
 		sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
-		{ /* cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead */
-			UINT16 sector_num = SHORT(msd->sector);
-
-			if (sector_num >= numsectors)
-			{
-				CONS_Debug(DBG_SETUP, "P_LoadRawSideDefs2: sidedef %u has out-of-range sector num %u\n", i, sector_num);
-				sector_num = 0;
-			}
-			sd->sector = sec = &sectors[sector_num];
+		// cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
+		sector_num = SHORT(msd->sector);
+		if (sector_num >= numsectors)
+		{
+			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: sidedef %s has out-of-range sector num %u\n", sizeu1(i), sector_num);
+			sector_num = 0;
 		}
-
-		sd->sector = sec = &sectors[SHORT(msd->sector)];
+		sd->sector = &sectors[sector_num];
 
 		sd->colormap_data = NULL;
 
-		// Colormaps!
+		// Special info stored in texture fields!
 		switch (sd->special)
 		{
-			case 63: // variable colormap via 242 linedef
+			case 63: // Fake floor/ceiling planes
 			case 606: //SoM: 4/4/2000: Just colormap transfer
 			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 			case 455: // Fade colormaps! mazmazz 9/12/2018 (:flag_us:)
@@ -1486,9 +1101,8 @@ static void P_LoadRawSideDefs2(void *data)
 					sd->midtexture = get_number(process);
 				}
 
-				// always process if back sidedef, because we need that - symbol
  				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
-				if (i == 1 || msd->toptexture[0] != '-' || msd->toptexture[1] != '\0')
+				if (isfrontside && !(msd->toptexture[0] == '-' && msd->toptexture[1] == '\0'))
 				{
 					M_Memcpy(process,msd->toptexture,8);
 					process[8] = '\0';
@@ -1565,6 +1179,20 @@ static void P_LoadRawSideDefs2(void *data)
 				break;
 			}
 
+			case 259: // Custom FOF
+				if (!isfrontside)
+				{
+					if ((msd->toptexture[0] >= '0' && msd->toptexture[0] <= '9')
+						|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'F'))
+						sd->toptexture = axtoi(msd->toptexture);
+					else
+						I_Error("Custom FOF (tag %d) needs a value in the linedef's back side upper texture field.", sd->line->tag);
+
+					sd->midtexture = R_TextureNumForName(msd->midtexture);
+					sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+					break;
+				}
+				// FALLTHRU
 			default: // normal cases
 				if (msd->toptexture[0] == '#')
 				{
@@ -1582,17 +1210,591 @@ static void P_LoadRawSideDefs2(void *data)
 				break;
 		}
 	}
-	R_ClearTextureNumCache(true);
 }
 
-// Delay loading texture names until after loaded linedefs.
-static void P_LoadSideDefs2(lumpnum_t lumpnum)
+static void P_LoadThings(UINT8 *data)
 {
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	P_LoadRawSideDefs2(data);
-	Z_Free(data);
+	mapthing_t *mt;
+	size_t i;
+
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	{
+		mt->x = READINT16(data);
+		mt->y = READINT16(data);
+
+		mt->angle = READINT16(data);
+		mt->type = READUINT16(data);
+		mt->options = READUINT16(data);
+		mt->extrainfo = (UINT8)(mt->type >> 12);
+
+		mt->type &= 4095;
+
+		if (mt->type == 1705 || (mt->type == 750 && mt->extrainfo))
+			mt->z = mt->options; // NiGHTS Hoops use the full flags bits to set the height.
+		else
+			mt->z = mt->options >> ZSHIFT;
+	}
 }
 
+static void P_LoadMapData(const virtres_t *virt)
+{
+	virtlump_t* virtvertexes = NULL, * virtsectors = NULL, * virtsidedefs = NULL, * virtlinedefs = NULL, * virtthings = NULL;
+#ifdef UDMF
+	virtlump_t* textmap = vres_Find(virt, "TEXTMAP");
+
+	// Count map data.
+	if (textmap)
+	{
+		nummapthings = 0;
+		numlines = 0;
+		numsides = 0;
+		numvertexes = 0;
+		numsectors = 0;
+
+		// Count how many entries for each type we got in textmap.
+		//TextmapCount(vtextmap->data, vtextmap->size);
+	}
+	else
+#endif
+	{
+		virtthings   = vres_Find(virt, "THINGS");
+		virtvertexes = vres_Find(virt, "VERTEXES");
+		virtsectors  = vres_Find(virt, "SECTORS");
+		virtsidedefs = vres_Find(virt, "SIDEDEFS");
+		virtlinedefs = vres_Find(virt, "LINEDEFS");
+
+		if (!virtthings)
+			I_Error("THINGS lump not found");
+		if (!virtvertexes)
+			I_Error("VERTEXES lump not found");
+		if (!virtsectors)
+			I_Error("SECTORS lump not found");
+		if (!virtsidedefs)
+			I_Error("SIDEDEFS lump not found");
+		if (!virtlinedefs)
+			I_Error("LINEDEFS lump not found");
+
+		// Traditional doom map format just assumes the number of elements from the lump sizes.
+		numvertexes  = virtvertexes->size / sizeof (mapvertex_t);
+		numsectors   = virtsectors->size  / sizeof (mapsector_t);
+		numsides     = virtsidedefs->size / sizeof (mapsidedef_t);
+		numlines     = virtlinedefs->size / sizeof (maplinedef_t);
+		nummapthings = virtthings->size   / (5 * sizeof (INT16));
+	}
+
+	if (numvertexes <= 0)
+		I_Error("Level has no vertices");
+	if (numsectors <= 0)
+		I_Error("Level has no sectors");
+	if (numsides <= 0)
+		I_Error("Level has no sidedefs");
+	if (numlines <= 0)
+		I_Error("Level has no linedefs");
+
+	vertexes  = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
+	sectors   = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
+	sides     = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
+	lines     = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+
+	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
+	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
+	foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
+	if (foundflats == NULL)
+		I_Error("Ran out of memory while loading sectors\n");
+
+	numlevelflats = 0;
+
+#ifdef UDMF
+	if (textmap)
+	{
+
+	}
+	else
+#endif
+	{
+		// Strict map data
+		P_LoadVertices(virtvertexes->data);
+		P_LoadSectors(virtsectors->data);
+		P_LoadLinedefs(virtlinedefs->data);
+		P_LoadSidedefs(virtsidedefs->data);
+		P_LoadThings(virtthings->data);
+	}
+
+	R_ClearTextureNumCache(true);
+
+	// set the sky flat num
+	skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
+
+	// copy table for global usage
+	levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
+	free(foundflats);
+
+	// search for animated flats and set up
+	P_SetupLevelFlatAnims();
+
+	// Copy relevant map data for NetArchive purposes.
+	spawnsectors = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
+	spawnlines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+	spawnsides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
+
+	memcpy(spawnsectors, sectors, numsectors * sizeof (*sectors));
+	memcpy(spawnlines, lines, numlines * sizeof (*lines));
+	memcpy(spawnsides, sides, numsides * sizeof (*sides));
+}
+
+static void P_InitializeSubsector(subsector_t *ss)
+{
+	ss->sector = NULL;
+#ifdef FLOORSPLATS
+	ss->splats = NULL;
+#endif
+	ss->validcount = 0;
+}
+
+static inline void P_LoadSubsectors(UINT8 *data)
+{
+	mapsubsector_t *ms = (mapsubsector_t*)data;
+	subsector_t *ss = subsectors;
+	size_t i;
+
+	for (i = 0; i < numsubsectors; i++, ss++, ms++)
+	{
+		ss->numlines = SHORT(ms->numsegs);
+		ss->firstline = SHORT(ms->firstseg);
+		P_InitializeSubsector(ss);
+	}
+}
+
+static void P_LoadNodes(UINT8 *data)
+{
+	UINT8 j, k;
+	mapnode_t *mn = (mapnode_t*)data;
+	node_t *no = nodes;
+	size_t i;
+
+	for (i = 0; i < numnodes; i++, no++, mn++)
+	{
+		no->x = SHORT(mn->x)<<FRACBITS;
+		no->y = SHORT(mn->y)<<FRACBITS;
+		no->dx = SHORT(mn->dx)<<FRACBITS;
+		no->dy = SHORT(mn->dy)<<FRACBITS;
+		for (j = 0; j < 2; j++)
+		{
+			no->children[j] = SHORT(mn->children[j]);
+			for (k = 0; k < 4; k++)
+				no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
+		}
+	}
+}
+
+/** Computes the length of a seg in fracunits.
+  *
+  * \param seg Seg to compute length for.
+  * \return Length in fracunits.
+  */
+fixed_t P_SegLength(seg_t *seg)
+{
+	INT64 dx = (seg->v2->x - seg->v1->x)>>1;
+	INT64 dy = (seg->v2->y - seg->v1->y)>>1;
+	return FixedHypot(dx, dy)<<1;
+}
+
+#ifdef HWRENDER
+/** Computes the length of a seg as a float.
+  * This is needed for OpenGL.
+  *
+  * \param seg Seg to compute length for.
+  * \return Length as a float.
+  */
+static inline float P_SegLengthFloat(seg_t *seg)
+{
+	float dx, dy;
+
+	// make a vector (start at origin)
+	dx = FIXED_TO_FLOAT(seg->v2->x - seg->v1->x);
+	dy = FIXED_TO_FLOAT(seg->v2->y - seg->v1->y);
+
+	return (float)hypot(dx, dy);
+}
+#endif
+
+static void P_InitializeSeg(seg_t *seg)
+{
+	seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
+
+	seg->frontsector = seg->sidedef->sector;
+	seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
+
+#ifdef HWRENDER
+	seg->pv1 = seg->pv2 = NULL;
+
+	//Hurdler: 04/12/2000: for now, only used in hardware mode
+	seg->lightmaps = NULL; // list of static lightmap for this seg
+#endif
+
+	seg->numlights = 0;
+	seg->rlights = NULL;
+#ifdef POLYOBJECTS
+	seg->polyseg = NULL;
+	seg->dontrenderme = false;
+#endif
+}
+
+static void P_LoadSegs(UINT8 *data)
+{
+	mapseg_t *ms = (mapseg_t*)data;
+	seg_t *seg = segs;
+	size_t i;
+
+	for (i = 0; i < numsegs; i++, seg++, ms++)
+	{
+		seg->v1 = &vertexes[SHORT(ms->v1)];
+		seg->v2 = &vertexes[SHORT(ms->v2)];
+
+		seg->side = SHORT(ms->side);
+
+		seg->offset = (SHORT(ms->offset)) << FRACBITS;
+
+		seg->angle = (SHORT(ms->angle)) << FRACBITS;
+
+		seg->linedef = &lines[SHORT(ms->linedef)];
+
+		seg->length = P_SegLength(seg);
+#ifdef HWRENDER
+		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+#endif
+
+		seg->glseg = false;
+		P_InitializeSeg(seg);
+	}
+}
+
+typedef enum {
+	NT_DOOM,
+	NT_XNOD,
+	NT_ZNOD,
+	NT_XGLN,
+	NT_ZGLN,
+	NT_XGL2,
+	NT_ZGL2,
+	NT_XGL3,
+	NT_ZGL3,
+	NT_UNSUPPORTED,
+	NUMNODETYPES
+} nodetype_t;
+
+// Find out the BSP format.
+static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
+{
+	boolean supported[NUMNODETYPES] = {0};
+	nodetype_t nodetype = NT_UNSUPPORTED;
+	char signature[4 + 1];
+
+	if (vres_Find(virt, "TEXTMAP"))
+	{
+		*nodedata = vres_Find(virt, "ZNODES")->data;
+		supported[NT_XGLN] = supported[NT_XGL3] = true;
+	}
+	else
+	{
+		virtlump_t *virtsegs = vres_Find(virt, "SEGS");
+		virtlump_t *virtssectors;
+
+		if (virtsegs && virtsegs->size)
+		{
+			*nodedata = vres_Find(virt, "NODES")->data;
+			return NT_DOOM; // Traditional map format BSP tree.
+		}
+
+		virtssectors = vres_Find(virt, "SSECTORS");
+
+		if (virtssectors && virtssectors->size)
+		{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
+			*nodedata = virtssectors->data;
+			supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL3] = true;
+		}
+		else
+		{ // Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
+			*nodedata = vres_Find(virt, "NODES")->data;
+			supported[NT_XNOD] = supported[NT_ZNOD] = true;
+		}
+	}
+
+	M_Memcpy(signature, *nodedata, 4);
+	signature[4] = '\0';
+	(*nodedata) += 4;
+
+	if (!strcmp(signature, "XNOD"))
+		nodetype = NT_XNOD;
+	else if (!strcmp(signature, "ZNOD"))
+		nodetype = NT_ZNOD;
+	else if (!strcmp(signature, "XGLN"))
+		nodetype = NT_XGLN;
+	else if (!strcmp(signature, "ZGLN"))
+		nodetype = NT_ZGLN;
+	else if (!strcmp(signature, "XGL3"))
+		nodetype = NT_XGL3;
+
+	return supported[nodetype] ? nodetype : NT_UNSUPPORTED;
+}
+
+// Extended node formats feature additional vertices; useful for OpenGL, but totally useless in gamelogic.
+static boolean P_LoadExtraVertices(UINT8 **data)
+{
+	UINT32 origvrtx = READUINT32((*data));
+	UINT32 xtrvrtx = READUINT32((*data));
+	line_t* ld = lines;
+	vertex_t *oldpos = vertexes;
+	ssize_t offset;
+	size_t i;
+
+	if (numvertexes != origvrtx) // If native vertex count doesn't match node original vertex count, bail out (broken data?).
+	{
+		CONS_Alert(CONS_WARNING, "Vertex count in map data and nodes differ!\n");
+		return false;
+	}
+
+	if (!xtrvrtx)
+		return true;
+
+	// If extra vertexes were generated, reallocate the vertex array and fix the pointers.
+	numvertexes += xtrvrtx;
+	vertexes = Z_Realloc(vertexes, numvertexes*sizeof(*vertexes), PU_LEVEL, NULL);
+	offset = (size_t)(vertexes - oldpos);
+
+	for (i = 0, ld = lines; i < numlines; i++, ld++)
+	{
+		ld->v1 += offset;
+		ld->v2 += offset;
+	}
+
+	// Read extra vertex data.
+	for (i = origvrtx; i < numvertexes; i++)
+	{
+		vertexes[i].x = READFIXED((*data));
+		vertexes[i].y = READFIXED((*data));
+	}
+
+	return true;
+}
+
+static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype)
+{
+	size_t i, k;
+	INT16 m;
+	seg_t *seg;
+
+	// Subsectors
+	numsubsectors = READUINT32((*data));
+	subsectors = Z_Calloc(numsubsectors*sizeof(*subsectors), PU_LEVEL, NULL);
+
+	for (i = 0; i < numsubsectors; i++)
+		subsectors[i].numlines = READUINT32((*data));
+
+	// Segs
+	numsegs = READUINT32((*data));
+	segs = Z_Calloc(numsegs*sizeof(*segs), PU_LEVEL, NULL);
+
+	for (i = 0, k = 0; i < numsubsectors; i++)
+	{
+		subsectors[i].firstline = k;
+		P_InitializeSubsector(&subsectors[i]);
+
+		switch (nodetype)
+		{
+		case NT_XGLN:
+		case NT_XGL3:
+			for (m = 0; m < subsectors[i].numlines; m++, k++)
+			{
+				UINT16 linenum;
+				UINT32 vert = READUINT32((*data));
+
+				segs[k].v1 = &vertexes[vert];
+				if (m == 0)
+					segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
+				else
+					segs[k - 1].v2 = segs[k].v1;
+
+				(*data) += 4; // partner, can be ignored by software renderer
+				if (nodetype == NT_XGL3)
+					(*data) += 2; // Line number is 32-bit in XGL3, but we're limited to 16 bits.
+
+				linenum = READUINT16((*data));
+				segs[k].glseg = (linenum == 0xFFFF);
+				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
+				segs[k].side = READUINT8((*data));
+			}
+			break;
+
+		case NT_XNOD:
+			for (m = 0; m < subsectors[i].numlines; m++, k++)
+			{
+				segs[k].v1 = &vertexes[READUINT32((*data))];
+				segs[k].v2 = &vertexes[READUINT32((*data))];
+				segs[k].linedef = &lines[READUINT16((*data))];
+				segs[k].side = READUINT8((*data));
+				segs[k].glseg = false;
+			}
+			break;
+
+		default:
+			return false;
+		}
+	}
+
+	for (i = 0, seg = segs; i < numsegs; i++, seg++)
+	{
+		vertex_t *v1 = seg->v1;
+		vertex_t *v2 = seg->v2;
+		P_InitializeSeg(seg);
+		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
+		seg->offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
+	}
+
+	return true;
+}
+
+// Auxiliary function: Shrink node ID from 32-bit to 16-bit.
+static UINT16 ShrinkNodeID(UINT32 x) {
+	UINT16 mask = (x >> 16) & 0xC000;
+	UINT16 result = x;
+	return result | mask;
+}
+
+static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
+{
+	node_t *mn;
+	size_t i, j, k;
+	boolean xgl3 = (nodetype == NT_XGL3);
+
+	numnodes = READINT32((*data));
+	nodes = Z_Calloc(numnodes*sizeof(*nodes), PU_LEVEL, NULL);
+
+	for (i = 0, mn = nodes; i < numnodes; i++, mn++)
+	{
+		// Splitter
+		mn->x = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+		mn->y = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+		mn->dx = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+		mn->dy = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+
+		// Bounding boxes
+		for (j = 0; j < 2; j++)
+			for (k = 0; k < 4; k++)
+				mn->bbox[j][k] = READINT16((*data)) << FRACBITS;
+
+		//Children
+		mn->children[0] = ShrinkNodeID(READUINT32((*data))); /// \todo Use UINT32 for node children in a future, instead?
+		mn->children[1] = ShrinkNodeID(READUINT32((*data)));
+	}
+}
+
+static void P_LoadMapBSP(const virtres_t *virt)
+{
+	UINT8 *nodedata = NULL;
+	nodetype_t nodetype = P_GetNodetype(virt, &nodedata);
+
+	switch (nodetype)
+	{
+	case NT_DOOM:
+	{
+		virtlump_t *virtssectors = vres_Find(virt, "SSECTORS");
+		virtlump_t* virtnodes = vres_Find(virt, "NODES");
+		virtlump_t *virtsegs = vres_Find(virt, "SEGS");
+
+		numsubsectors = virtssectors->size / sizeof(mapsubsector_t);
+		numnodes      = virtnodes->size    / sizeof(mapnode_t);
+		numsegs       = virtsegs->size     / sizeof(mapseg_t);
+
+		if (numsubsectors <= 0)
+			I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
+		if (numnodes <= 0)
+			I_Error("Level has no nodes");
+		if (numsegs <= 0)
+			I_Error("Level has no segs");
+
+		subsectors = Z_Calloc(numsubsectors * sizeof(*subsectors), PU_LEVEL, NULL);
+		nodes      = Z_Calloc(numnodes * sizeof(*nodes), PU_LEVEL, NULL);
+		segs       = Z_Calloc(numsegs * sizeof(*segs), PU_LEVEL, NULL);
+
+		P_LoadSubsectors(virtssectors->data);
+		P_LoadNodes(virtnodes->data);
+		P_LoadSegs(virtsegs->data);
+		break;
+	}
+	case NT_XNOD:
+	case NT_XGLN:
+	case NT_XGL3:
+		if (!P_LoadExtraVertices(&nodedata))
+			return;
+		if (!P_LoadExtendedSubsectorsAndSegs(&nodedata, nodetype))
+			return;
+		P_LoadExtendedNodes(&nodedata, nodetype);
+		break;
+	default:
+		CONS_Alert(CONS_WARNING, "Unsupported BSP format detected.\n");
+		return;
+	}
+	return;
+}
+
+// Split from P_LoadBlockMap for convenience
+// -- Monster Iestyn 08/01/18
+static void P_ReadBlockMapLump(INT16 *wadblockmaplump, size_t count)
+{
+	size_t i;
+	blockmaplump = Z_Calloc(sizeof (*blockmaplump) * count, PU_LEVEL, NULL);
+
+	// killough 3/1/98: Expand wad blockmap into larger internal one,
+	// by treating all offsets except -1 as unsigned and zero-extending
+	// them. This potentially doubles the size of blockmaps allowed,
+	// because Doom originally considered the offsets as always signed.
+
+	blockmaplump[0] = SHORT(wadblockmaplump[0]);
+	blockmaplump[1] = SHORT(wadblockmaplump[1]);
+	blockmaplump[2] = (INT32)(SHORT(wadblockmaplump[2])) & 0xffff;
+	blockmaplump[3] = (INT32)(SHORT(wadblockmaplump[3])) & 0xffff;
+
+	for (i = 4; i < count; i++)
+	{
+		INT16 t = SHORT(wadblockmaplump[i]);          // killough 3/1/98
+		blockmaplump[i] = t == -1 ? (INT32)-1 : (INT32) t & 0xffff;
+	}
+}
+
+// This needs to be a separate function
+// because making both the WAD and PK3 loading code use
+// the same functions is trickier than it looks for blockmap
+// -- Monster Iestyn 09/01/18
+static boolean P_LoadBlockMap(UINT8 *data, size_t count)
+{
+	if (!count || count >= 0x20000)
+		return false;
+
+	//CONS_Printf("Reading blockmap lump for pk3...\n");
+
+	// no need to malloc anything, assume the data is uncompressed for now
+	count /= 2;
+	P_ReadBlockMapLump((INT16 *)data, count);
+
+	bmaporgx = blockmaplump[0]<<FRACBITS;
+	bmaporgy = blockmaplump[1]<<FRACBITS;
+	bmapwidth = blockmaplump[2];
+	bmapheight = blockmaplump[3];
+
+	// clear out mobj chains
+	count = sizeof (*blocklinks)* bmapwidth*bmapheight;
+	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
+	blockmap = blockmaplump+4;
+
+#ifdef POLYOBJECTS
+	// haleyjd 2/22/06: setup polyobject blockmap
+	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
+	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
+#endif
+	return true;
+}
 
 static boolean LineInBlock(fixed_t cx1, fixed_t cy1, fixed_t cx2, fixed_t cy2, fixed_t bx1, fixed_t by1)
 {
@@ -1849,156 +2051,147 @@ static void P_CreateBlockMap(void)
 	}
 }
 
-// Split from P_LoadBlockMap for convenience
-// -- Monster Iestyn 08/01/18
-static void P_ReadBlockMapLump(INT16 *wadblockmaplump, size_t count)
-{
-	size_t i;
-	blockmaplump = Z_Calloc(sizeof (*blockmaplump) * count, PU_LEVEL, NULL);
-
-	// killough 3/1/98: Expand wad blockmap into larger internal one,
-	// by treating all offsets except -1 as unsigned and zero-extending
-	// them. This potentially doubles the size of blockmaps allowed,
-	// because Doom originally considered the offsets as always signed.
-
-	blockmaplump[0] = SHORT(wadblockmaplump[0]);
-	blockmaplump[1] = SHORT(wadblockmaplump[1]);
-	blockmaplump[2] = (INT32)(SHORT(wadblockmaplump[2])) & 0xffff;
-	blockmaplump[3] = (INT32)(SHORT(wadblockmaplump[3])) & 0xffff;
-
-	for (i = 4; i < count; i++)
-	{
-		INT16 t = SHORT(wadblockmaplump[i]);          // killough 3/1/98
-		blockmaplump[i] = t == -1 ? (INT32)-1 : (INT32) t & 0xffff;
-	}
-}
-
-//
-// P_LoadBlockMap
-//
-// Levels might not have a blockmap, so if one does not exist
-// this should return false.
-static boolean P_LoadBlockMap(lumpnum_t lumpnum)
-{
-#if 0
-	(void)lumpnum;
-	return false;
-#else
-	size_t count;
-	const char *lumpname = W_CheckNameForNum(lumpnum);
-
-	// Check if the lump exists, and if it's named "BLOCKMAP"
-	if (!lumpname || memcmp(lumpname, "BLOCKMAP", 8) != 0)
-	{
-		return false;
-	}
-
-	count = W_LumpLength(lumpnum);
-
-	if (!count || count >= 0x20000)
-		return false;
-
-	{
-		INT16 *wadblockmaplump = malloc(count); //INT16 *wadblockmaplump = W_CacheLumpNum (lump, PU_LEVEL);
-		if (!wadblockmaplump)
-			return false;
-		W_ReadLump(lumpnum, wadblockmaplump);
-		count /= 2;
-		P_ReadBlockMapLump(wadblockmaplump, count);
-		free(wadblockmaplump);
-	}
-
-	bmaporgx = blockmaplump[0]<<FRACBITS;
-	bmaporgy = blockmaplump[1]<<FRACBITS;
-	bmapwidth = blockmaplump[2];
-	bmapheight = blockmaplump[3];
-
-	// clear out mobj chains
-	count = sizeof (*blocklinks)* bmapwidth*bmapheight;
-	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-	blockmap = blockmaplump+4;
-
-#ifdef POLYOBJECTS
-	// haleyjd 2/22/06: setup polyobject blockmap
-	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
-	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
-	return true;
-/* Original
-		blockmaplump = W_CacheLumpNum(lump, PU_LEVEL);
-		blockmap = blockmaplump+4;
-		count = W_LumpLength (lump)/2;
-
-		for (i = 0; i < count; i++)
-			blockmaplump[i] = SHORT(blockmaplump[i]);
-
-		bmaporgx = blockmaplump[0]<<FRACBITS;
-		bmaporgy = blockmaplump[1]<<FRACBITS;
-		bmapwidth = blockmaplump[2];
-		bmapheight = blockmaplump[3];
-	}
-
-	// clear out mobj chains
-	count = sizeof (*blocklinks)*bmapwidth*bmapheight;
-	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-	return true;
-	*/
-#endif
-}
-
-// This needs to be a separate function
-// because making both the WAD and PK3 loading code use
-// the same functions is trickier than it looks for blockmap
+// PK3 version
 // -- Monster Iestyn 09/01/18
-static boolean P_LoadRawBlockMap(UINT8 *data, size_t count, const char *lumpname)
+static void P_LoadReject(UINT8 *data, size_t count)
 {
-#if 0
-	(void)data;
-	(void)count;
-	(void)lumpname;
-	return false;
-#else
-	// Check if the lump is named "BLOCKMAP"
-	if (!lumpname || memcmp(lumpname, "BLOCKMAP", 8) != 0)
+	if (!count) // zero length, someone probably used ZDBSP
 	{
-		CONS_Printf("No blockmap lump found for pk3!\n");
-		return false;
+		rejectmatrix = NULL;
+		CONS_Debug(DBG_SETUP, "P_LoadReject: REJECT lump has size 0, will not be loaded\n");
+	}
+	else
+	{
+		rejectmatrix = Z_Malloc(count, PU_LEVEL, NULL); // allocate memory for the reject matrix
+		M_Memcpy(rejectmatrix, data, count); // copy the data into it
+	}
+}
+
+static void P_LoadMapLUT(const virtres_t *virt)
+{
+	virtlump_t* virtblockmap = vres_Find(virt, "BLOCKMAP");
+	virtlump_t* virtreject   = vres_Find(virt, "REJECT");
+
+	// Lookup tables
+	if (virtreject)
+		P_LoadReject(virtreject->data, virtreject->size);
+	else
+		rejectmatrix = NULL;
+
+	if (!(virtblockmap && P_LoadBlockMap(virtblockmap->data, virtblockmap->size)))
+		P_CreateBlockMap();
+}
+
+static void P_ProcessLinedefsWithSidedefs(void)
+{
+	size_t i = numlines;
+	register line_t *ld = lines;
+	for (;i--;ld++)
+	{
+		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
+		ld->backsector  = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
+
+		// Repeat count for midtexture
+		if ((ld->flags & ML_EFFECT5) && (ld->sidenum[1] != 0xffff)
+			&& !(ld->special >= 300 && ld->special < 500)) // exempt linedef exec specials
+		{
+			sides[ld->sidenum[0]].repeatcnt = (INT16)(((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) >> 12);
+			sides[ld->sidenum[0]].textureoffset = (((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) & 2047) << FRACBITS;
+			sides[ld->sidenum[1]].repeatcnt = (INT16)(((unsigned)sides[ld->sidenum[1]].textureoffset >> FRACBITS) >> 12);
+			sides[ld->sidenum[1]].textureoffset = (((unsigned)sides[ld->sidenum[1]].textureoffset >> FRACBITS) & 2047) << FRACBITS;
+		}
+
+		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
+		switch(ld->special)
+		{
+		case 331: // Trigger linedef executor: Skin - Continuous
+		case 332: // Trigger linedef executor: Skin - Each time
+		case 333: // Trigger linedef executor: Skin - Once
+		case 443: // Calls a named Lua function
+			if (sides[ld->sidenum[0]].text)
+			{
+				size_t len = strlen(sides[ld->sidenum[0]].text)+1;
+				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
+					len += strlen(sides[ld->sidenum[1]].text);
+				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
+				M_Memcpy(ld->text, sides[ld->sidenum[0]].text, strlen(sides[ld->sidenum[0]].text)+1);
+				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
+					M_Memcpy(ld->text+strlen(ld->text)+1, sides[ld->sidenum[1]].text, strlen(sides[ld->sidenum[1]].text)+1);
+			}
+			break;
+		}
+	}
+}
+
+static void P_CompressSidedefs(void)
+{
+	side_t *newsides;
+	size_t numnewsides = 0;
+	size_t z;
+	size_t i;
+
+	for (i = 0; i < numsides; i++)
+	{
+		size_t j, k;
+		line_t *ld;
+
+		if (!sides[i].sector)
+			continue;
+
+		for (k = numlines, ld = lines; k--; ld++)
+		{
+			if (ld->sidenum[0] == i)
+				ld->sidenum[0] = (UINT16)numnewsides;
+
+			if (ld->sidenum[1] == i)
+				ld->sidenum[1] = (UINT16)numnewsides;
+		}
+
+		for (j = i + 1; j < numsides; j++)
+		{
+			if (!sides[j].sector)
+				continue;
+
+			if (!memcmp(&sides[i], &sides[j], sizeof(side_t)))
+			{
+				// Find the linedefs that belong to this one
+				for (k = numlines, ld = lines; k--; ld++)
+				{
+					if (ld->sidenum[0] == j)
+						ld->sidenum[0] = (UINT16)numnewsides;
+
+					if (ld->sidenum[1] == j)
+						ld->sidenum[1] = (UINT16)numnewsides;
+				}
+				sides[j].sector = NULL; // Flag for deletion
+			}
+		}
+		numnewsides++;
 	}
 
-	if (!count || count >= 0x20000)
-		return false;
+	// We're loading crap into this block anyhow, so no point in zeroing it out.
+	newsides = Z_Malloc(numnewsides*sizeof(*newsides), PU_LEVEL, NULL);
 
-	//CONS_Printf("Reading blockmap lump for pk3...\n");
+	// Copy the sides to their new block of memory.
+	for (i = 0, z = 0; i < numsides; i++)
+	{
+		if (sides[i].sector)
+			M_Memcpy(&newsides[z++], &sides[i], sizeof(side_t));
+	}
 
-	// no need to malloc anything, assume the data is uncompressed for now
-	count /= 2;
-	P_ReadBlockMapLump((INT16 *)data, count);
+	CONS_Debug(DBG_SETUP, "P_CompressSidedefs: Old sides is %s, new sides is %s\n", sizeu1(numsides), sizeu1(numnewsides));
 
-	bmaporgx = blockmaplump[0]<<FRACBITS;
-	bmaporgy = blockmaplump[1]<<FRACBITS;
-	bmapwidth = blockmaplump[2];
-	bmapheight = blockmaplump[3];
-
-	// clear out mobj chains
-	count = sizeof (*blocklinks)* bmapwidth*bmapheight;
-	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-	blockmap = blockmaplump+4;
-
-#ifdef POLYOBJECTS
-	// haleyjd 2/22/06: setup polyobject blockmap
-	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
-	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
-	return true;
-#endif
+	Z_Free(sides);
+	sides = newsides;
+	numsides = numnewsides;
 }
 
 //
-// P_GroupLines
+// P_LinkMapData
 // Builds sector line lists and subsector sector numbers.
 // Finds block bounding boxes for sectors.
 //
-static void P_GroupLines(void)
+static void P_LinkMapData(void)
 {
 	size_t i, j;
 	line_t *li;
@@ -2012,20 +2205,20 @@ static void P_GroupLines(void)
 	for (i = 0; i < numsubsectors; i++, ss++)
 	{
 		if (ss->firstline >= numsegs)
-			CorruptMapError(va("P_GroupLines: ss->firstline invalid "
+			CorruptMapError(va("P_LinkMapData: ss->firstline invalid "
 				"(subsector %s, firstline refers to %d of %s)", sizeu1(i), ss->firstline,
 				sizeu2(numsegs)));
 		seg = &segs[ss->firstline];
 		sidei = (size_t)(seg->sidedef - sides);
 		if (!seg->sidedef)
-			CorruptMapError(va("P_GroupLines: seg->sidedef is NULL "
+			CorruptMapError(va("P_LinkMapData: seg->sidedef is NULL "
 				"(subsector %s, firstline is %d)", sizeu1(i), ss->firstline));
 		if (seg->sidedef - sides < 0 || seg->sidedef - sides > (UINT16)numsides)
-			CorruptMapError(va("P_GroupLines: seg->sidedef refers to sidedef %s of %s "
+			CorruptMapError(va("P_LinkMapData: seg->sidedef refers to sidedef %s of %s "
 				"(subsector %s, firstline is %d)", sizeu1(sidei), sizeu2(numsides),
 				sizeu3(i), ss->firstline));
 		if (!seg->sidedef->sector)
-			CorruptMapError(va("P_GroupLines: seg->sidedef->sector is NULL "
+			CorruptMapError(va("P_LinkMapData: seg->sidedef->sector is NULL "
 				"(subsector %s, firstline is %d, sidedef is %s)", sizeu1(i), ss->firstline,
 				sizeu1(sidei)));
 		ss->sector = seg->sidedef->sector;
@@ -2046,7 +2239,7 @@ static void P_GroupLines(void)
 		if (sector->linecount == 0) // no lines found?
 		{
 			sector->lines = NULL;
-			CONS_Debug(DBG_SETUP, "P_GroupLines: sector %s has no lines\n", sizeu1(i));
+			CONS_Debug(DBG_SETUP, "P_LinkMapData: sector %s has no lines\n", sizeu1(i));
 		}
 		else
 		{
@@ -2089,95 +2282,80 @@ static void P_GroupLines(void)
 	}
 }
 
-//
-// P_LoadReject
-//
-// Detect if the REJECT lump is valid,
-// if not, rejectmatrix will be NULL
-static void P_LoadReject(lumpnum_t lumpnum)
-{
-	size_t count;
-	const char *lumpname = W_CheckNameForNum(lumpnum);
-
-	// Check if the lump exists, and if it's named "REJECT"
-	if (!lumpname || memcmp(lumpname, "REJECT\0\0", 8) != 0)
-	{
-		rejectmatrix = NULL;
-		CONS_Debug(DBG_SETUP, "P_LoadReject: No valid REJECT lump found\n");
-		return;
-	}
-
-	count = W_LumpLength(lumpnum);
-
-	if (!count) // zero length, someone probably used ZDBSP
-	{
-		rejectmatrix = NULL;
-		CONS_Debug(DBG_SETUP, "P_LoadReject: REJECT lump has size 0, will not be loaded\n");
-	}
-	else
-		rejectmatrix = W_CacheLumpNum(lumpnum, PU_LEVEL);
-}
-
-// PK3 version
-// -- Monster Iestyn 09/01/18
-static void P_LoadRawReject(UINT8 *data, size_t count, const char *lumpname)
-{
-	// Check if the lump is named "REJECT"
-	if (!lumpname || memcmp(lumpname, "REJECT\0\0", 8) != 0)
-	{
-		rejectmatrix = NULL;
-		CONS_Debug(DBG_SETUP, "P_LoadRawReject: No valid REJECT lump found\n");
-		return;
-	}
-
-	if (!count) // zero length, someone probably used ZDBSP
-	{
-		rejectmatrix = NULL;
-		CONS_Debug(DBG_SETUP, "P_LoadRawReject: REJECT lump has size 0, will not be loaded\n");
-	}
-	else
-	{
-		rejectmatrix = Z_Malloc(count, PU_LEVEL, NULL); // allocate memory for the reject matrix
-		M_Memcpy(rejectmatrix, data, count); // copy the data into it
-	}
-}
-
-#if 0
-static char *levellumps[] =
-{
-	"label",        // ML_LABEL,    A separator, name, MAPxx
-	"THINGS",       // ML_THINGS,   Enemies, items..
-	"LINEDEFS",     // ML_LINEDEFS, Linedefs, from editing
-	"SIDEDEFS",     // ML_SIDEDEFS, Sidedefs, from editing
-	"VERTEXES",     // ML_VERTEXES, Vertices, edited and BSP splits generated
-	"SEGS",         // ML_SEGS,     Linesegs, from linedefs split by BSP
-	"SSECTORS",     // ML_SSECTORS, Subsectors, list of linesegs
-	"NODES",        // ML_NODES,    BSP nodes
-	"SECTORS",      // ML_SECTORS,  Sectors, from editing
-	"REJECT",       // ML_REJECT,   LUT, sector-sector visibility
-};
-
-/** Checks a lump and returns whether it is a valid start-of-level marker.
+/** Compute MD5 message digest for bytes read from memory source
   *
-  * \param lumpnum Lump number to check.
-  * \return True if the lump is a valid level marker, false if not.
+  * The resulting message digest number will be written into the 16 bytes
+  * beginning at RESBLOCK.
+  *
+  * \param filename path of file
+  * \param resblock resulting MD5 checksum
+  * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
-static inline boolean P_CheckLevel(lumpnum_t lumpnum)
+static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 {
-	UINT16 file, lump;
-	size_t i;
-
-	for (i = ML_THINGS; i <= ML_REJECT; i++)
-	{
-		file = WADFILENUM(lumpnum);
-		lump = LUMPNUM(lumpnum+1);
-		if (file > numwadfiles || lump < LUMPNUM(lumpnum) || lump > wadfiles[file]->numlumps ||
-			memcmp(wadfiles[file]->lumpinfo[lump].name, levellumps[i], 8) != 0)
-		return false;
-	}
-	return true; // all right
-}
+#ifdef NOMD5
+	(void)buffer;
+	(void)len;
+	memset(resblock, 0x00, 16);
+	return 1;
+#else
+	tic_t t = I_GetTime();
+	CONS_Debug(DBG_SETUP, "Making MD5\n");
+	if (md5_buffer(buffer, len, resblock) == NULL)
+		return 1;
+	CONS_Debug(DBG_SETUP, "MD5 calc took %f seconds\n", (float)(I_GetTime() - t)/NEWTICRATE);
+	return 0;
 #endif
+}
+
+static void P_MakeMapMD5(virtres_t *virt, void *dest)
+{
+	unsigned char linemd5[16];
+	unsigned char sectormd5[16];
+	unsigned char thingmd5[16];
+	unsigned char sidedefmd5[16];
+	unsigned char resmd5[16];
+	UINT8 i;
+
+	// Create a hash for the current map
+	// get the actual lumps!
+	virtlump_t *virtlines = vres_Find(virt, "LINEDEFS");
+	virtlump_t *virtsectors = vres_Find(virt, "SECTORS");
+	virtlump_t *virtmthings = vres_Find(virt, "THINGS");
+	virtlump_t *virtsides = vres_Find(virt, "SIDEDEFS");
+
+	P_MakeBufferMD5((char*)virtlines->data, virtlines->size, linemd5);
+	P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size, sectormd5);
+	P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size, thingmd5);
+	P_MakeBufferMD5((char*)virtsides->data, virtsides->size, sidedefmd5);
+
+	for (i = 0; i < 16; i++)
+		resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
+
+	M_Memcpy(dest, &resmd5, 16);
+}
+
+static void P_LoadMapFromFile(void)
+{
+	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
+
+	P_LoadMapData(virt);
+	P_LoadMapBSP(virt);
+	P_LoadMapLUT(virt);
+
+	P_ProcessLinedefsWithSidedefs();
+	if (M_CheckParm("-compress"))
+		P_CompressSidedefs();
+	P_LinkMapData();
+
+	P_MakeMapMD5(virt, &mapmd5);
+
+	vres_Free(virt);
+}
+
+//
+// LEVEL INITIALIZATION FUNCTIONS
+//
 
 /** Sets up a sky texture to use for the level.
   * The sky texture is used instead of F_SKY1.
@@ -2210,7 +2388,7 @@ lumpnum_t lastloadedmaplumpnum; // for comparative savegame
 //
 // Some player initialization for map start.
 //
-static void P_LevelInitStuff(void)
+static void P_InitLevelSettings(void)
 {
 	INT32 i;
 	boolean canresetlives = true;
@@ -2307,12 +2485,8 @@ static void P_LevelInitStuff(void)
 		CV_SetValue(&cv_analog[1], true);
 }
 
-//
-// P_LoadThingsOnly
-//
-// "Reloads" a level, but only reloads all of the mobjs.
-//
-void P_LoadThingsOnly(void)
+// Respawns all the mapthings and mobjs in the map from the already loaded map data.
+void P_RespawnThings(void)
 {
 	// Search through all the thinkers.
 	thinker_t *think;
@@ -2328,7 +2502,6 @@ void P_LoadThingsOnly(void)
 				centerid = i; // save id just in case
 		}
 
-
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
 		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
@@ -2336,81 +2509,13 @@ void P_LoadThingsOnly(void)
 		P_RemoveMobj((mobj_t *)think);
 	}
 
-	P_LevelInitStuff();
+	P_InitLevelSettings();
 
-	if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
-	{ // HACK: Open wad file rather quickly so we can use the things lump
-		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
-		fileinfo += ML_THINGS; // we only need the THINGS lump
-		P_PrepareRawThings(wadData + fileinfo->filepos, fileinfo->size);
-		Z_Free(wadData); // we're done with this now
-	}
-	else // phew it's just a WAD
-		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
-	P_LoadThings(true);
+	P_SpawnMapThings(true);
 
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
 	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
 	skyboxmo[1] = skyboxcenterpnts[(centerid >= 0) ? centerid : 0];
-}
-
-/** Compute MD5 message digest for bytes read from memory source
-  *
-  * The resulting message digest number will be written into the 16 bytes
-  * beginning at RESBLOCK.
-  *
-  * \param filename path of file
-  * \param resblock resulting MD5 checksum
-  * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
-  */
-static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
-{
-#ifdef NOMD5
-	(void)buffer;
-	(void)len;
-	memset(resblock, 0x00, 16);
-	return 1;
-#else
-	tic_t t = I_GetTime();
-	CONS_Debug(DBG_SETUP, "Making MD5\n");
-	if (md5_buffer(buffer, len, resblock) == NULL)
-		return 1;
-	CONS_Debug(DBG_SETUP, "MD5 calc took %f seconds\n", (float)(I_GetTime() - t)/NEWTICRATE);
-	return 0;
-#endif
-}
-
-static void P_MakeMapMD5(lumpnum_t maplumpnum, void *dest)
-{
-	unsigned char linemd5[16];
-	unsigned char sectormd5[16];
-	unsigned char thingmd5[16];
-	unsigned char sidedefmd5[16];
-	unsigned char resmd5[16];
-	UINT8 i;
-
-	// Create a hash for the current map
-	// get the actual lumps!
-	UINT8 *datalines   = W_CacheLumpNum(maplumpnum + ML_LINEDEFS, PU_CACHE);
-	UINT8 *datasectors = W_CacheLumpNum(maplumpnum + ML_SECTORS, PU_CACHE);
-	UINT8 *datathings  = W_CacheLumpNum(maplumpnum + ML_THINGS, PU_CACHE);
-	UINT8 *datasides   = W_CacheLumpNum(maplumpnum + ML_SIDEDEFS, PU_CACHE);
-
-	P_MakeBufferMD5((char*)datalines,   W_LumpLength(maplumpnum + ML_LINEDEFS), linemd5);
-	P_MakeBufferMD5((char*)datasectors, W_LumpLength(maplumpnum + ML_SECTORS),  sectormd5);
-	P_MakeBufferMD5((char*)datathings,  W_LumpLength(maplumpnum + ML_THINGS),   thingmd5);
-	P_MakeBufferMD5((char*)datasides,   W_LumpLength(maplumpnum + ML_SIDEDEFS), sidedefmd5);
-
-	Z_Free(datalines);
-	Z_Free(datasectors);
-	Z_Free(datathings);
-	Z_Free(datasides);
-
-	for (i = 0; i < 16; i++)
-		resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
-
-	M_Memcpy(dest, &resmd5, 16);
 }
 
 static void P_RunLevelScript(const char *scriptname)
@@ -2475,6 +2580,26 @@ static void P_ForceCharacter(const char *forcecharskin)
 			players[consoleplayer].skincolor = skins[players[consoleplayer].skin].prefcolor;
 		}
 	}
+}
+
+static void P_ResetSpawnpoints(void)
+{
+	UINT8 i;
+
+	numdmstarts = numredctfstarts = numbluectfstarts = 0;
+
+	// reset the player starts
+	for (i = 0; i < MAXPLAYERS; i++)
+		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+	for (i = 0; i < MAX_DM_STARTS; i++)
+		deathmatchstarts[i] = NULL;
+
+	for (i = 0; i < 2; i++)
+		skyboxmo[i] = NULL;
+
+	for (i = 0; i < 16; i++)
+		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
 }
 
 static void P_LoadRecordGhosts(void)
@@ -2576,6 +2701,45 @@ static void P_LoadNightsGhosts(void)
 	free(gpath);
 }
 
+static void P_InitTagGametype(void)
+{
+	UINT8 i;
+	INT32 realnumplayers = 0;
+	INT32 playersactive[MAXPLAYERS];
+
+	//I just realized how problematic this code can be.
+	//D_NumPlayers() will not always cover the scope of the netgame.
+	//What if one player is node 0 and the other node 31?
+	//The solution? Make a temp array of all players that are currently playing and pick from them.
+	//Future todo? When a player leaves, shift all nodes down so D_NumPlayers() can be used as intended?
+	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i] && !players[i].spectator)
+		{
+			playersactive[realnumplayers] = i; //stores the player's node in the array.
+			realnumplayers++;
+		}
+	}
+
+	if (!realnumplayers) //this should also fix the dedicated crash bug. You only pick a player if one exists to be picked.
+	{
+		CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
+		return;
+	}
+
+	i = P_RandomKey(realnumplayers);
+	players[playersactive[i]].pflags |= PF_TAGIT; //choose our initial tagger before map starts.
+
+	// Taken and modified from G_DoReborn()
+	// Remove the player so he can respawn elsewhere.
+	// first disassociate the corpse
+	if (players[playersactive[i]].mo)
+		P_RemoveMobj(players[playersactive[i]].mo);
+
+	G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
+}
+
 static void P_SetupCamera(void)
 {
 	if (players[displayplayer].mo && (server || addedtogame))
@@ -2613,6 +2777,52 @@ static void P_SetupCamera(void)
 	}
 }
 
+static void P_InitCamera(void)
+{
+	if (!dedicated)
+	{
+		P_SetupCamera();
+
+		// Salt: CV_ClearChangedFlags() messes with your settings :(
+		/*if (!cv_cam_height.changed)
+			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);
+		if (!cv_cam2_height.changed)
+			CV_Set(&cv_cam2_height, cv_cam2_height.defaultvalue);
+
+		if (!cv_cam_dist.changed)
+			CV_Set(&cv_cam_dist, cv_cam_dist.defaultvalue);
+		if (!cv_cam2_dist.changed)
+			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
+
+			// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
+		if (!cv_cam_rotate.changed)
+			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
+		if (!cv_cam2_rotate.changed)
+			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
+
+		if (!cv_analog[0].changed)
+			CV_SetValue(&cv_analog[0], 0);
+		if (!cv_analog[1].changed)
+			CV_SetValue(&cv_analog[1], 0);
+
+		displayplayer = consoleplayer; // Start with your OWN view, please!
+	}
+
+	if (twodlevel)
+	{
+		CV_SetValue(&cv_analog[0], false);
+		CV_SetValue(&cv_analog[1], false);
+	}
+	else
+	{
+		if (cv_useranalog[0].value)
+			CV_SetValue(&cv_analog[0], true);
+
+		if ((splitscreen && cv_useranalog[1].value) || botingame)
+			CV_SetValue(&cv_analog[1], true);
+	}
+}
+
 static boolean CanSaveLevel(INT32 mapnum)
 {
 	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
@@ -2628,22 +2838,187 @@ static boolean CanSaveLevel(INT32 mapnum)
 	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
 }
 
+static void P_RunSpecialStageWipe(void)
+{
+	tic_t starttime = I_GetTime();
+	tic_t endtime = starttime + (3*TICRATE)/2;
+	tic_t nowtime;
+
+	S_StartSound(NULL, sfx_s3kaf);
+
+	// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
+	if (RESETMUSIC ||
+		strnicmp(S_MusicName(),
+		(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap - 1]->musname : mapmusname, 7))
+		S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
+
+	F_WipeStartScreen();
+	wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+
+#ifdef HWRENDER
+	// uh..........
+	if (rendermode == render_opengl)
+		F_WipeColorFill(0);
+#endif
+
+	F_WipeEndScreen();
+	F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+
+	I_OsPolling();
+	I_FinishUpdate(); // page flip or blit buffer
+	if (moviemode)
+		M_SaveFrame();
+
+	nowtime = lastwipetic;
+
+	// Hold on white for extra effect.
+	while (nowtime < endtime)
+	{
+		// wait loop
+		while (!((nowtime = I_GetTime()) - lastwipetic))
+			I_Sleep();
+		lastwipetic = nowtime;
+		if (moviemode) // make sure we save frames for the white hold too
+			M_SaveFrame();
+	}
+}
+
+static void P_RunLevelWipe(void)
+{
+	F_WipeStartScreen();
+	wipestyleflags |= WSF_FADEOUT;
+
+#ifdef HWRENDER
+	// uh..........
+	if (rendermode == render_opengl)
+		F_WipeColorFill(31);
+#endif
+
+	F_WipeEndScreen();
+	// for titlemap: run a specific wipe if specified
+	// needed for exiting time attack
+	if (wipetypepre != INT16_MAX)
+		F_RunWipe(
+		(wipetypepre >= 0 && F_WipeExists(wipetypepre)) ? wipetypepre : wipedefs[wipe_level_toblack],
+			false);
+	wipetypepre = -1;
+}
+
+static void P_InitPlayers(void)
+{
+	UINT8 i;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
+
+		// Start players with pity shields if possible
+		players[i].pity = -1;
+
+		players[i].mo = NULL;
+
+		if (!G_PlatformGametype())
+			G_DoReborn(i);
+		else // gametype is GT_COOP or GT_RACE
+		{
+			G_SpawnPlayer(i, players[i].starposttime);
+			if (players[i].starposttime)
+				P_ClearStarPost(players[i].starpostnum);
+		}
+	}
+}
+
+static void P_WriteLetter(void)
+{
+	char *buf, *b;
+
+	if (!unlockables[27].unlocked) // pandora's box
+		return;
+
+	if (modeattacking)
+		return;
+
+#ifndef DEVELOP
+	if (modifiedgame)
+		return;
+#endif
+
+	if (netgame || multiplayer)
+		return;
+
+	if (gamemap != 0x1d35 - 016464)
+		return;
+
+	P_SpawnMobj(0640370000, 0x11000000, 0x3180000, MT_LETTER)->angle = ANGLE_90;
+
+	if (textprompts[199]->page[1].backcolor == 259)
+		return;
+
+	buf = W_CacheLumpName("WATERMAP", PU_STATIC);
+	b = buf;
+
+	while ((*b != 65) && (b - buf < 256))
+	{
+		*b = (*b - 65) & 255;
+		b++;
+	}
+	*b = '\0';
+
+	Z_Free(textprompts[199]->page[1].text);
+	textprompts[199]->page[1].text = Z_StrDup(buf);
+	textprompts[199]->page[1].lines = 4;
+	textprompts[199]->page[1].backcolor = 259;
+	Z_Free(buf);
+}
+
+static void P_InitGametype(void)
+{
+	UINT8 i;
+
+	P_InitPlayers();
+
+	// restore time in netgame (see also g_game.c)
+	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	{
+		// is this a hack? maybe
+		tic_t maxstarposttime = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].starposttime > maxstarposttime)
+				maxstarposttime = players[i].starposttime;
+		}
+		leveltime = maxstarposttime;
+	}
+
+	P_WriteLetter();
+
+	if (modeattacking == ATTACKING_RECORD && !demoplayback)
+		P_LoadRecordGhosts();
+	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
+		P_LoadNightsGhosts();
+
+	if (G_TagGametype())
+		P_InitTagGametype();
+	else if (gametype == GT_RACE && server)
+		CV_StealthSetValue(&cv_numlaps,
+		(cv_basenumlaps.value)
+			? cv_basenumlaps.value
+			: mapheaderinfo[gamemap - 1]->numlaps);
+}
+
 /** Loads a level from a lump or external wad.
   *
-  * \param skipprecip If true, don't spawn precipitation.
+  * \param fromnetsave If true, skip some stuff because we're loading a netgame snapshot.
   * \todo Clean up, refactor, split up; get rid of the bloat.
   */
-boolean P_SetupLevel(boolean skipprecip)
+boolean P_LoadLevel(boolean fromnetsave)
 {
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	INT32 i, loadprecip = 1, ranspecialwipe = 0;
-	INT32 loademblems = 1;
-	INT32 fromnetsave = 0;
-	boolean loadedbm = false;
+	INT32 i, ranspecialwipe = 0;
 	sector_t *ss;
-	boolean chase;
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -2674,20 +3049,18 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (cv_runscripts.value && mapheaderinfo[gamemap-1]->scriptname[0] != '#')
 		P_RunLevelScript(mapheaderinfo[gamemap-1]->scriptname);
 
-	P_LevelInitStuff();
+	P_InitLevelSettings();
 
 	postimgtype = postimgtype2 = postimg_none;
 
 	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
 		P_ForceCharacter(mapheaderinfo[gamemap-1]->forcecharacter);
 
-	// chasecam on in chaos, race, coop
-	// chasecam off in match, tag, capture the flag
-	chase = (gametype == GT_RACE || gametype == GT_COMPETITION || gametype == GT_COOP)
-		|| (maptol & TOL_2D);
-
 	if (!dedicated)
 	{
+		// chasecam on in first-person gametypes and 2D
+		boolean chase = (!(gametyperules & GTR_FIRSTPERSON)) || (maptol & TOL_2D);
+
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_speed.changed)
 			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);*/
@@ -2717,48 +3090,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		ranspecialwipe = 2;
 	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
 	{
-		tic_t starttime = I_GetTime();
-		tic_t endtime = starttime + (3*TICRATE)/2;
-		tic_t nowtime;
-
-		S_StartSound(NULL, sfx_s3kaf);
-
-		// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
-		if (RESETMUSIC ||
-			strnicmp(S_MusicName(),
-				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
-			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
-
-		F_WipeStartScreen();
-		wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
-
-#ifdef HWRENDER
-		// uh..........
-		if (rendermode == render_opengl)
-			F_WipeColorFill(0);
-#endif
-
-		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
-
-		I_OsPolling();
-		I_FinishUpdate(); // page flip or blit buffer
-		if (moviemode)
-			M_SaveFrame();
-
-		nowtime = lastwipetic;
-
-		// Hold on white for extra effect.
-		while (nowtime < endtime)
-		{
-			// wait loop
-			while (!((nowtime = I_GetTime()) - lastwipetic))
-				I_Sleep();
-			lastwipetic = nowtime;
-			if (moviemode) // make sure we save frames for the white hold too
-				M_SaveFrame();
-		}
-
+		P_RunSpecialStageWipe();
 		ranspecialwipe = 1;
 	}
 
@@ -2784,25 +3116,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
 	if (rendermode != render_none && !ranspecialwipe)
-	{
-		F_WipeStartScreen();
-		wipestyleflags |= WSF_FADEOUT;
-
-#ifdef HWRENDER
-		// uh..........
-		if (rendermode == render_opengl)
-			F_WipeColorFill(31);
-#endif
-
-		F_WipeEndScreen();
-		// for titlemap: run a specific wipe if specified
-		// needed for exiting time attack
-		if (wipetypepre != INT16_MAX)
-			F_RunWipe(
-				(wipetypepre >= 0 && F_WipeExists(wipetypepre)) ? wipetypepre : wipedefs[wipe_level_toblack],
-				false);
-		wipetypepre = -1;
-	}
+		P_RunLevelWipe();
 
 	if (!titlemapinaction)
 	{
@@ -2860,14 +3174,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_InitThinkers();
 	P_InitCachedActions();
 
-	/// \note for not spawning precipitation, etc. when loading netgame snapshots
-	if (skipprecip)
-	{
-		fromnetsave = 1;
-		loadprecip = 0;
-		loademblems = 0;
-	}
-	else if (savedata.lives > 0)
+	if (!fromnetsave && savedata.lives > 0)
 	{
 		numgameovers = savedata.numgameovers;
 		players[consoleplayer].continues = savedata.continues;
@@ -2881,9 +3188,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
-	//lastloadedmaplumpnum = LUMPERROR;
 	lastloadedmaplumpnum = W_CheckNumForName(maplumpname);
-
 	if (lastloadedmaplumpnum == INT16_MAX)
 		I_Error("Map %s not found.\n", maplumpname);
 
@@ -2893,111 +3198,12 @@ boolean P_SetupLevel(boolean skipprecip)
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
 
-	P_MakeMapMD5(lastloadedmaplumpnum, &mapmd5);
+	P_ResetSpawnpoints();
 
-	// HACK ALERT: Cache the WAD, get the map data into the tables, free memory.
-	// As it is implemented right now, we're assuming an uncompressed WAD.
-	// (As in, a normal PWAD, not ZWAD or anything. The lump itself can be compressed.)
-	// We're not accounting for extra lumps and scrambled lump positions. Any additional data will cause an error.
-	if (W_IsLumpWad(lastloadedmaplumpnum))
-	{
-		// Remember that we're assuming that the WAD will have a specific set of lumps in a specific order.
-		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-		//filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
-		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
-		UINT32 numlumps = ((wadinfo_t *)wadData)->numlumps;
+	P_MapStart();
 
-		if (numlumps < ML_REJECT) // at least 9 lumps should be in the wad for a map to be loaded
-		{
-			I_Error("Bad WAD file for map %s!\n", maplumpname);
-		}
-
-		if (numlumps > ML_BLOCKMAP) // enough room for a BLOCKMAP lump at least
-		{
-			loadedbm = P_LoadRawBlockMap(
-							wadData + (fileinfo + ML_BLOCKMAP)->filepos,
-							(fileinfo + ML_BLOCKMAP)->size,
-							(fileinfo + ML_BLOCKMAP)->name);
-		}
-		P_LoadRawVertexes(wadData + (fileinfo + ML_VERTEXES)->filepos, (fileinfo + ML_VERTEXES)->size);
-		P_LoadRawSectors(wadData + (fileinfo + ML_SECTORS)->filepos, (fileinfo + ML_SECTORS)->size);
-		P_LoadRawSideDefs((fileinfo + ML_SIDEDEFS)->size);
-		P_LoadRawLineDefs(wadData + (fileinfo + ML_LINEDEFS)->filepos, (fileinfo + ML_LINEDEFS)->size);
-		P_LoadRawSideDefs2(wadData + (fileinfo + ML_SIDEDEFS)->filepos);
-		P_LoadRawSubsectors(wadData + (fileinfo + ML_SSECTORS)->filepos, (fileinfo + ML_SSECTORS)->size);
-		P_LoadRawNodes(wadData + (fileinfo + ML_NODES)->filepos, (fileinfo + ML_NODES)->size);
-		P_LoadRawSegs(wadData + (fileinfo + ML_SEGS)->filepos, (fileinfo + ML_SEGS)->size);
-		if (numlumps > ML_REJECT) // enough room for a REJECT lump at least
-		{
-			P_LoadRawReject(
-					wadData + (fileinfo + ML_REJECT)->filepos,
-					(fileinfo + ML_REJECT)->size,
-					(fileinfo + ML_REJECT)->name);
-		}
-
-		// Important: take care of the ordering of the next functions.
-		if (!loadedbm)
-			P_CreateBlockMap(); // Graue 02-29-2004
-		P_LoadLineDefs2();
-		P_GroupLines();
-		numdmstarts = numredctfstarts = numbluectfstarts = 0;
-
-		// reset the player starts
-		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
-
-		for (i = 0; i < MAX_DM_STARTS; i++)
-			deathmatchstarts[i] = NULL;
-
-		for (i = 0; i < 2; i++)
-			skyboxmo[i] = NULL;
-
-		for (i = 0; i < 16; i++)
-			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
-
-		P_MapStart();
-
-		P_PrepareRawThings(wadData + (fileinfo + ML_THINGS)->filepos, (fileinfo + ML_THINGS)->size);
-		Z_Free(wadData);
-	}
-	else
-	{
-		// Important: take care of the ordering of the next functions.
-		loadedbm = P_LoadBlockMap(lastloadedmaplumpnum + ML_BLOCKMAP);
-		P_LoadVertexes(lastloadedmaplumpnum + ML_VERTEXES);
-		P_LoadSectors(lastloadedmaplumpnum + ML_SECTORS);
-		P_LoadSideDefs(lastloadedmaplumpnum + ML_SIDEDEFS);
-		P_LoadLineDefs(lastloadedmaplumpnum + ML_LINEDEFS);
-		P_LoadSideDefs2(lastloadedmaplumpnum + ML_SIDEDEFS);
-		P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
-		P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
-		P_LoadSegs(lastloadedmaplumpnum + ML_SEGS);
-		P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
-
-		// Important: take care of the ordering of the next functions.
-		if (!loadedbm)
-			P_CreateBlockMap(); // Graue 02-29-2004
-		P_LoadLineDefs2();
-		P_GroupLines();
-		numdmstarts = numredctfstarts = numbluectfstarts = 0;
-
-		// reset the player starts
-		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
-
-		for (i = 0; i < MAX_DM_STARTS; i++)
-			deathmatchstarts[i] = NULL;
-
-		for (i = 0; i < 2; i++)
-			skyboxmo[i] = NULL;
-
-		for (i = 0; i < 16; i++)
-			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
-
-		P_MapStart();
-
-		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
-	}
+	if (lastloadedmaplumpnum)
+		P_LoadMapFromFile();
 
 	// init gravity, tag lists,
 	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
@@ -3007,7 +3213,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_ResetDynamicSlopes(fromnetsave);
 #endif
 
-	P_LoadThings(loademblems);
+	P_SpawnMapThings(!fromnetsave);
 	skyboxmo[0] = skyboxviewpnts[0];
 	skyboxmo[1] = skyboxcenterpnts[0];
 
@@ -3018,27 +3224,18 @@ boolean P_SetupLevel(boolean skipprecip)
 	// set up world state
 	P_SpawnSpecials(fromnetsave);
 
-	if (loadprecip) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
+	if (!fromnetsave) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
+	// Lactozilla: Free extrasubsectors regardless of renderer.
+	// Maybe we're not in OpenGL anymore.
+	if (extrasubsectors)
+		free(extrasubsectors);
+	extrasubsectors = NULL;
+	// stuff like HWR_CreatePlanePolygons is called there
 	if (rendermode == render_opengl)
-	{
-		// Lactozilla (December 8, 2019)
-		// Level setup used to free EVERY mipmap from memory.
-		// Even mipmaps that aren't related to level textures.
-		// Presumably, the hardware render code used to store textures as level data.
-		// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
-		// Level textures are only reloaded after R_LoadTextures, which is
-		// when the texture list is loaded.
-#ifdef ALAM_LIGHTING
-		// BP: reset light between levels (we draw preview frame lights on current frame)
-		HWR_ResetLights();
-#endif
-		// Correct missing sidedefs & deep water trick
-		HWR_CorrectSWTricks();
-		HWR_CreatePlanePolygons((INT32)numnodes - 1);
-	}
+		HWR_SetupLevel();
 #endif
 
 	// oh god I hope this helps
@@ -3046,161 +3243,10 @@ boolean P_SetupLevel(boolean skipprecip)
 	//  none of this needs to be done because it's not the beginning of the map when
 	//  a netgame save is being loaded, and could actively be harmful by messing with
 	//  the client's view of the data.)
-	if (fromnetsave)
-		goto netgameskip;
-	// ==========
+	if (!fromnetsave)
+		P_InitGametype();
 
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
-		{
-			// Start players with pity shields if possible
-			players[i].pity = -1;
-
-			if (!G_PlatformGametype())
-			{
-				players[i].mo = NULL;
-				G_DoReborn(i);
-			}
-			else // gametype is GT_COOP or GT_RACE
-			{
-				players[i].mo = NULL;
-
-				if (players[i].starposttime)
-				{
-					G_SpawnPlayer(i, true);
-					P_ClearStarPost(players[i].starpostnum);
-				}
-				else
-					G_SpawnPlayer(i, false);
-			}
-		}
-
-	// restore time in netgame (see also g_game.c)
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
-	{
-		// is this a hack? maybe
-		tic_t maxstarposttime = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i] && players[i].starposttime > maxstarposttime)
-				maxstarposttime = players[i].starposttime;
-		}
-		leveltime = maxstarposttime;
-	}
-
-	if (unlockables[27].unlocked && !modeattacking // pandora's box
-#ifndef DEVELOP
-	&& !modifiedgame
-#endif
-	&& !(netgame || multiplayer) && gamemap == 0x1d35-016464)
-	{
-		P_SpawnMobj(0640370000, 0x11000000, 0x3180000, MT_LETTER)->angle = ANGLE_90;
-		if (textprompts[199]->page[1].backcolor != 259)
-		{
-			char *buf = W_CacheLumpName("WATERMAP", PU_STATIC), *b = buf;
-			while ((*b != 65) && (b-buf < 256)) { *b = (*b - 65)&255; b++; } *b = '\0';
-			Z_Free(textprompts[199]->page[1].text);
-			textprompts[199]->page[1].text = Z_StrDup(buf);
-			textprompts[199]->page[1].lines = 4;
-			textprompts[199]->page[1].backcolor = 259;
-			Z_Free(buf);
-		}
-	}
-
-	if (modeattacking == ATTACKING_RECORD && !demoplayback)
-		P_LoadRecordGhosts();
-	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
-		P_LoadNightsGhosts();
-
-	if (G_TagGametype())
-	{
-		INT32 realnumplayers = 0;
-		INT32 playersactive[MAXPLAYERS];
-
-		//I just realized how problematic this code can be.
-		//D_NumPlayers() will not always cover the scope of the netgame.
-		//What if one player is node 0 and the other node 31?
-		//The solution? Make a temp array of all players that are currently playing and pick from them.
-		//Future todo? When a player leaves, shift all nodes down so D_NumPlayers() can be used as intended?
-		//Also, you'd never have to loop through all 32 players slots to find anything ever again.
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i] && !players[i].spectator)
-			{
-				playersactive[realnumplayers] = i; //stores the player's node in the array.
-				realnumplayers++;
-			}
-		}
-
-		if (realnumplayers) //this should also fix the dedicated crash bug. You only pick a player if one exists to be picked.
-		{
-			i = P_RandomKey(realnumplayers);
-			players[playersactive[i]].pflags |= PF_TAGIT; //choose our initial tagger before map starts.
-
-			// Taken and modified from G_DoReborn()
-			// Remove the player so he can respawn elsewhere.
-			// first dissasociate the corpse
-			if (players[playersactive[i]].mo)
-				P_RemoveMobj(players[playersactive[i]].mo);
-
-			G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
-		}
-		else
-			CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
-
-	}
-	else if (gametype == GT_RACE && server)
-		CV_StealthSetValue(&cv_numlaps,
-			(cv_basenumlaps.value)
-			? cv_basenumlaps.value
-			: mapheaderinfo[gamemap - 1]->numlaps);
-
-	// ===========
-	// landing point for netgames.
-	netgameskip:
-
-	if (!dedicated)
-	{
-		P_SetupCamera();
-
-		// Salt: CV_ClearChangedFlags() messes with your settings :(
-		/*if (!cv_cam_height.changed)
-			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);
-		if (!cv_cam2_height.changed)
-			CV_Set(&cv_cam2_height, cv_cam2_height.defaultvalue);
-
-		if (!cv_cam_dist.changed)
-			CV_Set(&cv_cam_dist, cv_cam_dist.defaultvalue);
-		if (!cv_cam2_dist.changed)
-			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
-
-		// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
-		if (!cv_cam_rotate.changed)
-			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
-		if (!cv_cam2_rotate.changed)
-			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
-
-		if (!cv_analog[0].changed)
-			CV_SetValue(&cv_analog[0], 0);
-		if (!cv_analog[1].changed)
-			CV_SetValue(&cv_analog[1], 0);
-
-		displayplayer = consoleplayer; // Start with your OWN view, please!
-	}
-
-	if (cv_useranalog[0].value)
-		CV_SetValue(&cv_analog[0], true);
-
-	if (splitscreen && cv_useranalog[1].value)
-		CV_SetValue(&cv_analog[1], true);
-	else if (botingame)
-		CV_SetValue(&cv_analog[1], true);
-
-	if (twodlevel)
-	{
-		CV_SetValue(&cv_analog[1], false);
-		CV_SetValue(&cv_analog[0], false);
-	}
+	P_InitCamera();
 
 	// clear special respawning que
 	iquehead = iquetail = 0;
@@ -3235,7 +3281,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
 
-	if (loadprecip) // uglier hack
+	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
 		INT32 buf = gametic % BACKUPTICS;
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -3268,6 +3314,26 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	return true;
 }
+
+#ifdef HWRENDER
+void HWR_SetupLevel(void)
+{
+	// Lactozilla (December 8, 2019)
+	// Level setup used to free EVERY mipmap from memory.
+	// Even mipmaps that aren't related to level textures.
+	// Presumably, the hardware render code used to store textures as level data.
+	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
+	// Level textures are only reloaded after R_LoadTextures, which is
+	// when the texture list is loaded.
+#ifdef ALAM_LIGHTING
+	// BP: reset light between levels (we draw preview frame lights on current frame)
+	HWR_ResetLights();
+#endif
+	// Correct missing sidedefs & deep water trick
+	HWR_CorrectSWTricks();
+	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+}
+#endif
 
 //
 // P_RunSOC

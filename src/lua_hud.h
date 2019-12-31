@@ -21,6 +21,7 @@ enum hud {
 	// Match / CTF / Tag / Ringslinger
 	hud_weaponrings,
 	hud_powerstones,
+	hud_teamscores,
 	// NiGHTS mode
 	hud_nightslink,
 	hud_nightsdrill,
@@ -33,6 +34,9 @@ enum hud {
 	hud_coopemeralds,
 	hud_tokens,
 	hud_tabemblems,
+	// Intermission
+	hud_intermissiontally,
+	hud_intermissionmessages,
 	hud_MAX
 };
 
@@ -43,4 +47,5 @@ boolean LUA_HudEnabled(enum hud option);
 void LUAh_GameHUD(player_t *stplyr);
 void LUAh_ScoresHUD(void);
 void LUAh_TitleHUD(void);
-void LUAh_TitleCardHUD(player_t *stplyr);
+void LUAh_TitleCardHUD(player_t *stplayr);
+void LUAh_IntermissionHUD(void);

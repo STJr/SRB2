@@ -161,6 +161,8 @@ typedef struct polywaypoint_s
 	fixed_t diffx;
 	fixed_t diffy;
 	fixed_t diffz;
+
+	mobj_t *target; // next waypoint mobj
 } polywaypoint_t;
 
 typedef struct polyslidedoor_s

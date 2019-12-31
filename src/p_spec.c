@@ -1603,8 +1603,6 @@ static inline void P_InitTagLists(void)
 		size_t j = (unsigned)sectors[i].tag % numsectors;
 		sectors[i].nexttag = sectors[j].firsttag;
 		sectors[j].firsttag = (INT32)i;
-		sectors[i].spawn_nexttag = sectors[i].nexttag;
-		sectors[j].spawn_firsttag = sectors[j].firsttag;
 	}
 
 	for (i = numlines - 1; i != (size_t)-1; i--)
@@ -4694,7 +4692,7 @@ DoneSection2:
 		}
 
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
-			if (player->bot || !G_PlatformGametype())
+			if (player->bot || !(gametyperules & GTR_ALLOWEXIT))
 				break;
 			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
 			{
@@ -4729,7 +4727,7 @@ DoneSection2:
 			break;
 
 		case 3: // Red Team's Base
-			if (gametype == GT_CTF && P_IsObjectOnGround(player->mo))
+			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
 			{
 				if (player->ctfteam == 1 && (player->gotflag & GF_BLUEFLAG))
 				{
@@ -4762,7 +4760,7 @@ DoneSection2:
 			break;
 
 		case 4: // Blue Team's Base
-			if (gametype == GT_CTF && P_IsObjectOnGround(player->mo))
+			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
 			{
 				if (player->ctfteam == 2 && (player->gotflag & GF_REDFLAG))
 				{
@@ -6405,22 +6403,16 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
 {
 	if (!(master->flags & ML_NETONLY)) // Modify floor flat alignment unless ML_NETONLY flag is set
 	{
-		sector->spawn_flrpic_angle = sector->floorpic_angle = flatangle;
+		sector->floorpic_angle = flatangle;
 		sector->floor_xoffs += xoffs;
 		sector->floor_yoffs += yoffs;
-		// saved for netgames
-		sector->spawn_flr_xoffs = sector->floor_xoffs;
-		sector->spawn_flr_yoffs = sector->floor_yoffs;
 	}
 
 	if (!(master->flags & ML_NONET)) // Modify ceiling flat alignment unless ML_NONET flag is set
 	{
-		sector->spawn_ceilpic_angle = sector->ceilingpic_angle = flatangle;
+		sector->ceilingpic_angle = flatangle;
 		sector->ceiling_xoffs += xoffs;
 		sector->ceiling_yoffs += yoffs;
-		// saved for netgames
-		sector->spawn_ceil_xoffs = sector->ceiling_xoffs;
-		sector->spawn_ceil_yoffs = sector->ceiling_yoffs;
 	}
 
 }
@@ -6434,14 +6426,13 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
   *       as they'll just be erased by UnArchiveThinkers.
   * \sa P_SpawnPrecipitation, P_SpawnFriction, P_SpawnPushers, P_SpawnScrollers
   */
-void P_SpawnSpecials(INT32 fromnetsave)
+void P_SpawnSpecials(boolean fromnetsave)
 {
 	sector_t *sector;
 	size_t i;
 	INT32 j;
 	thinkerlist_t *secthinkers;
 	thinker_t *th;
-
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
 	(void)fromnetsave;
@@ -7187,46 +7178,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers);
 				break;
 
-			case 259: // Make-Your-Own FOF!
+			case 259: // Custom FOF
 				if (lines[i].sidenum[1] != 0xffff)
 				{
-					UINT8 *data;
-					UINT16 b;
-
-					if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
-					{ // HACK: Open wad file rather quickly so we can get the data from the sidedefs lump
-						UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-						filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
-						fileinfo += ML_SIDEDEFS; // we only need the SIDEDEFS lump
-						data = Z_Malloc(fileinfo->size, PU_STATIC, NULL);
-						M_Memcpy(data, wadData + fileinfo->filepos, fileinfo->size); // copy data
-						Z_Free(wadData); // we're done with this now
-					}
-					else // phew it's just a WAD
-						data = W_CacheLumpNum(lastloadedmaplumpnum + ML_SIDEDEFS,PU_STATIC);
-
-					for (b = 0; b < (INT16)numsides; b++)
-					{
-						register mapsidedef_t *msd = (mapsidedef_t *)data + b;
-
-						if (b == lines[i].sidenum[1])
-						{
-							if ((msd->toptexture[0] >= '0' && msd->toptexture[0] <= '9')
-								|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'F'))
-							{
-								ffloortype_e FOF_Flags = axtoi(msd->toptexture);
-
-								P_AddFakeFloorsByLine(i, FOF_Flags, secthinkers);
-								break;
-							}
-							else
-								I_Error("Make-Your-Own-FOF (tag %d) needs a value in the linedef's second side upper texture field.", lines[i].tag);
-						}
-					}
-					Z_Free(data);
+					ffloortype_e fofflags = sides[lines[i].sidenum[1]].toptexture;
+					P_AddFakeFloorsByLine(i, fofflags, secthinkers);
 				}
 				else
-					I_Error("Make-Your-Own FOF (tag %d) found without a 2nd linedef side!", lines[i].tag);
+					I_Error("Custom FOF (tag %d) found without a linedef back side!", lines[i].tag);
 				break;
 
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
@@ -7240,14 +7199,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 308: // Race-only linedef executor. Triggers once.
-				if (gametype != GT_RACE && gametype != GT_COMPETITION)
+				if (!(gametyperules & GTR_RACE))
 					lines[i].special = 0;
 				break;
 
 			// Linedef executor triggers for CTF teams.
 			case 309:
 			case 311:
-				if (gametype != GT_CTF)
+				if (!(gametyperules & GTR_TEAMFLAGS))
 					lines[i].special = 0;
 				break;
 

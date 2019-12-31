@@ -384,17 +384,6 @@ typedef struct sector_s
 	// for fade thinker
 	INT16 spawn_lightlevel;
 
-	// these are saved for netgames, so do not let Lua touch these!
-	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
-
-	// offsets sector spawned with (via linedef type 7)
-	fixed_t spawn_flr_xoffs, spawn_flr_yoffs;
-	fixed_t spawn_ceil_xoffs, spawn_ceil_yoffs;
-
-	// flag angles sector spawned with (via linedef type 7)
-	angle_t spawn_flrpic_angle;
-	angle_t spawn_ceilpic_angle;
-
 	// colormap structure
 	extracolormap_t *spawn_extra_colormap;
 } sector_t;
@@ -447,13 +436,9 @@ typedef struct line_s
 	polyobj_t *polyobj; // Belongs to a polyobject?
 #endif
 
-	char *text; // a concatination of all front and back texture names, for linedef specials that require a string.
+	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 } line_t;
-
-//
-// The SideDef.
-//
 
 typedef struct
 {
@@ -467,13 +452,16 @@ typedef struct
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;
 
-	// Sector the SideDef is facing.
+	// Linedef the sidedef belongs to
+	line_t *line;
+
+	// Sector the sidedef is facing.
 	sector_t *sector;
 
 	INT16 special; // the special of the linedef this side belongs to
 	INT16 repeatcnt; // # of times to repeat midtexture
 
-	char *text; // a concatination of all top, bottom, and mid texture names, for linedef specials that require a string.
+	char *text; // a concatenation of all top, bottom, and mid texture names, for linedef specials that require a string.
 
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
@@ -598,6 +586,7 @@ typedef struct seg_s
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 #endif
+	boolean glseg;
 } seg_t;
 
 //
@@ -742,9 +731,9 @@ typedef struct
 	boolean cached[8];
 #ifdef HWRENDER
 	aatree_t *hardware_patch[8];
-#endif
+#endif/*HWRENDER*/
 } rotsprite_t;
-#endif
+#endif/*ROTSPRITE*/
 
 typedef enum
 {
@@ -755,6 +744,24 @@ typedef enum
 	SRF_2D          = SRF_LEFT|SRF_RIGHT, // 6
 	SRF_NONE        = 0xff // Initial value
 } spriterotateflags_t;     // SRF's up!
+
+// Same as a patch_t, except just the header
+// and the wadnum/lumpnum combination that points
+// to wherever the patch is in memory.
+struct patchinfo_s
+{
+	INT16 width;          // bounding box size
+	INT16 height;
+	INT16 leftoffset;     // pixels to the left of origin
+	INT16 topoffset;      // pixels below the origin
+
+	UINT16 wadnum;        // the software patch lump num for when the patch
+	UINT16 lumpnum;       // was flushed, and we need to re-create it
+
+	// next patchinfo_t in memory
+	struct patchinfo_s *next;
+};
+typedef struct patchinfo_s patchinfo_t;
 
 //
 // Sprites are patches with a special naming convention so they can be

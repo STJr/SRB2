@@ -108,6 +108,8 @@ boolean devparm = false; // started game with -devparm
 boolean singletics = false; // timedemo
 boolean lastdraw = false;
 
+static void D_CheckRendererState(void);
+
 postimg_t postimgtype = postimg_none;
 INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
@@ -212,6 +214,7 @@ INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
+	INT32 setrenderstillneeded = 0;
 	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
@@ -222,11 +225,38 @@ static void D_Display(void)
 	if (nodrawers)
 		return; // for comparative timing/profiling
 
-	// check for change of screen size (video mode)
-	if (setmodeneeded && !wipe)
-		SCR_SetMode(); // change video mode
+	// Lactozilla: Switching renderers works by checking
+	// if the game has to do it right when the frame
+	// needs to render. If so, five things will happen:
+	// 1. Interface functions will be called so
+	//    that switching to OpenGL creates a
+	//    GL context, and switching to Software
+	//    allocates screen buffers.
+	// 2. Software will set drawer functions,
+	//    and OpenGL will load textures and
+	//    create plane polygons, if necessary.
+	// 3. Functions related to switching video
+	//    modes (resolution) are called.
+	// 4. Patch data is freed from memory,
+	//    and recached if necessary.
+	// 5. The frame is ready to be drawn!
 
-	if (vid.recalc)
+	// stop movie if needs to change renderer
+	if (setrenderneeded && (moviemode == MM_APNG))
+		M_StopMovie();
+
+	// check for change of renderer or screen size (video mode)
+	if ((setrenderneeded || setmodeneeded) && !wipe)
+	{
+		if (setrenderneeded)
+		{
+			CONS_Debug(DBG_RENDER, "setrenderneeded set (%d)\n", setrenderneeded);
+			setrenderstillneeded = setrenderneeded;
+		}
+		SCR_SetMode(); // change video mode
+	}
+
+	if (vid.recalc || setrenderstillneeded)
 	{
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
 #ifdef HWRENDER
@@ -237,11 +267,14 @@ static void D_Display(void)
 	}
 
 	// change the view size if needed
-	if (setsizeneeded)
+	if (setsizeneeded || setrenderstillneeded)
 	{
 		R_ExecuteSetViewSize();
 		forcerefresh = true; // force background redraw
 	}
+
+	// Lactozilla: Renderer switching
+	D_CheckRendererState();
 
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
@@ -457,7 +490,7 @@ static void D_Display(void)
 			py = 4;
 		else
 			py = viewwindowy + 4;
-		patch = W_CachePatchName("M_PAUSE", PU_CACHE);
+		patch = W_CachePatchName("M_PAUSE", PU_PATCH);
 		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - SHORT(patch->width))/2, py, 0, patch);
 #else
 		INT32 y = ((automapactive) ? (32) : (BASEVIDHEIGHT/2));
@@ -557,6 +590,25 @@ static void D_Display(void)
 
 		I_FinishUpdate(); // page flip or blit buffer
 	}
+
+	needpatchflush = false;
+	needpatchrecache = false;
+}
+
+// Lactozilla: Check the renderer's state
+// after a possible renderer switch.
+void D_CheckRendererState(void)
+{
+	// flush all patches from memory
+	// (also frees memory tagged with PU_CACHE)
+	// (which are not necessarily patches but I don't care)
+	if (needpatchflush)
+		Z_FlushCachedPatches();
+
+	// some patches have been freed,
+	// so cache them again
+	if (needpatchrecache)
+		R_ReloadHUDGraphics();
 }
 
 // =========================================================================
@@ -600,8 +652,7 @@ void D_SRB2Loop(void)
 	// hack to start on a nice clear console screen.
 	COM_ImmedExecute("cls;version");
 
-	if (rendermode == render_soft)
-		V_DrawScaledPatch(0, 0, 0, (patch_t *)W_CacheLumpNum(W_GetNumForName("CONSBACK"), PU_CACHE));
+	V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
 	I_FinishUpdate(); // page flip or blit buffer
 
 	for (;;)
@@ -762,7 +813,7 @@ void D_StartTitle(void)
 
 	gameaction = ga_nothing;
 	displayplayer = consoleplayer = 0;
-	gametype = GT_COOP;
+	G_SetGametype(GT_COOP);
 	paused = false;
 	advancedemo = false;
 	F_InitMenuPresValues();
@@ -1239,6 +1290,16 @@ void D_SRB2Main(void)
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
 
+	// Lactozilla: Does the render mode need to change?
+	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
+	{
+		needpatchflush = true;
+		needpatchrecache = true;
+		VID_CheckRenderer();
+		SCR_ChangeRendererCVars(setrenderneeded);
+	}
+	D_CheckRendererState();
+
 	wipegamestate = gamestate;
 
 	savedata.lives = 0; // flag this as not-used
@@ -1419,14 +1480,14 @@ void D_SRB2Main(void)
 			if (newgametype == -1) // reached end of the list with no match
 			{
 				j = atoi(sgametype); // assume they gave us a gametype number, which is okay too
-				if (j >= 0 && j < NUMGAMETYPES)
+				if (j >= 0 && j < gametypecount)
 					newgametype = (INT16)j;
 			}
 
 			if (newgametype != -1)
 			{
 				j = gametype;
-				gametype = newgametype;
+				G_SetGametype(newgametype);
 				D_GameTypeChanged(j);
 			}
 		}
@@ -1462,7 +1523,7 @@ void D_SRB2Main(void)
 	{
 		levelstarttic = gametic;
 		G_SetGamestate(GS_LEVEL);
-		if (!P_SetupLevel(false))
+		if (!P_LoadLevel(false))
 			I_Quit(); // fail so reset game stuff
 	}
 }

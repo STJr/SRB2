@@ -79,7 +79,7 @@ UINT16 mapmusflags; // Track and reset bit
 UINT32 mapmusposition; // Position to jump to
 
 INT16 gamemap = 1;
-INT16 maptol;
+UINT32 maptol;
 UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
 INT32 cursaveslot = 0; // Auto-save 1p savegame slot
@@ -1190,7 +1190,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
 	// ...OR if we're blindfolded. No looking into the floor.
-	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
 	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{//@TODO splitscreen player
 		cmd->angleturn = (INT16)(*myangle >> 16);
@@ -1709,7 +1709,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	//Reset away view if a command is given.
 	if (ssplayer == 1 && (cmd->forwardmove || cmd->sidemove || cmd->buttons)
 		&& displayplayer != consoleplayer)
+	{
+#ifdef HAVE_BLUA
+		// Call ViewpointSwitch hooks here.
+		// The viewpoint was forcibly changed.
+		LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+#endif
 		displayplayer = consoleplayer;
+	}
 }
 
 // User has designated that they want
@@ -1826,15 +1833,14 @@ void G_DoLoadLevel(boolean resetplayer)
 	}
 
 	// Setup the level.
-	if (!P_SetupLevel(false)) // this never returns false?
+	if (!P_LoadLevel(false)) // this never returns false?
 	{
 		// fail so reset game stuff
 		Command_ExitGame_f();
 		return;
 	}
 
-	if (!resetplayer)
-		P_FindEmerald();
+	P_FindEmerald();
 
 	displayplayer = consoleplayer; // view the guy you are playing
 	if (!splitscreen && !botingame)
@@ -1871,7 +1877,7 @@ void G_StartTitleCard(void)
 {
 	// The title card has been disabled for this map.
 	// Oh well.
-	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+	if (!G_IsTitleCardAvailable())
 	{
 		WipeStageTitle = false;
 		return;
@@ -1914,6 +1920,23 @@ void G_PreLevelTitleCard(void)
 	}
 	if (!cv_showhud.value)
 		wipestyleflags = WSF_CROSSFADE;
+}
+
+//
+// Returns true if the current level has a title card.
+//
+boolean G_IsTitleCardAvailable(void)
+{
+	// The current level header explicitly disabled the title card.
+	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+		return false;
+
+	// The current gametype doesn't have a title card.
+	if (gametyperules & GTR_NOTITLECARD)
+		return false;
+
+	// The title card is available.
+	return true;
 }
 
 INT32 pausedelay = 0;
@@ -2006,6 +2029,11 @@ boolean G_Responder(event_t *ev)
 	if (gamestate == GS_LEVEL && ev->type == ev_keydown
 		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
 	{
+		// ViewpointSwitch Lua hook.
+#ifdef HAVE_BLUA
+		UINT8 canSwitchView = 0;
+#endif
+
 		if (splitscreen || !netgame)
 			displayplayer = consoleplayer;
 		else
@@ -2019,6 +2047,15 @@ boolean G_Responder(event_t *ev)
 
 				if (!playeringame[displayplayer])
 					continue;
+
+#ifdef HAVE_BLUA
+				// Call ViewpointSwitch hooks here.
+				canSwitchView = LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
+				if (canSwitchView == 1) // Set viewpoint to this player
+					break;
+				else if (canSwitchView == 2) // Skip this player
+					continue;
+#endif
 
 				if (players[displayplayer].spectator)
 					continue;
@@ -2628,7 +2665,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 
 	// -- CTF --
 	// Order: CTF->DM->Coop
-	if (gametype == GT_CTF && players[playernum].ctfteam)
+	if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
 	{
 		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
 		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
@@ -2637,7 +2674,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 
 	// -- DM/Tag/CTF-spectator/etc --
 	// Order: DM->CTF->Coop
-	else if (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF
+	else if ((gametyperules & GTR_DEATHMATCHSTARTS) || gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF
 	 || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && !(players[playernum].pflags & PF_TAGIT)))
 	{
 		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
@@ -2684,7 +2721,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 
 	if (!numredctfstarts && !numbluectfstarts) //why even bother, eh?
 	{
-		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
+		if ((gametyperules & GTR_TEAMFLAGS) && (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer)))
 			CONS_Alert(CONS_WARNING, M_GetText("No CTF starts in this map!\n"));
 		return NULL;
 	}
@@ -2913,7 +2950,7 @@ void G_DoReborn(INT32 playernum)
 		}
 		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD))
 		{
-			P_LoadThingsOnly();
+			P_RespawnThings();
 
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -3090,7 +3127,7 @@ void G_ExitLevel(void)
 				CV_SetValue(&cv_teamscramble, cv_scrambleonchange.value);
 		}
 
-		if (gametype != GT_COOP)
+		if (!(gametyperules & GTR_CAMPAIGN))
 			CONS_Printf(M_GetText("The round has ended.\n"));
 
 		// Remove CEcho text on round end.
@@ -3122,6 +3159,221 @@ const char *Gametype_Names[NUMGAMETYPES] =
 	"CTF" // GT_CTF
 };
 
+// For dehacked
+const char *Gametype_ConstantNames[NUMGAMETYPES] =
+{
+	"GT_COOP", // GT_COOP
+	"GT_COMPETITION", // GT_COMPETITION
+	"GT_RACE", // GT_RACE
+
+	"GT_MATCH", // GT_MATCH
+	"GT_TEAMMATCH", // GT_TEAMMATCH
+
+	"GT_TAG", // GT_TAG
+	"GT_HIDEANDSEEK", // GT_HIDEANDSEEK
+
+	"GT_CTF" // GT_CTF
+};
+
+// Gametype rules
+UINT32 gametypedefaultrules[NUMGAMETYPES] =
+{
+	// Co-op
+	GTR_CAMPAIGN|GTR_LIVES|GTR_SPAWNENEMIES|GTR_ALLOWEXIT|GTR_EMERALDHUNT|GTR_EMERALDTOKENS|GTR_SPECIALSTAGES,
+	// Competition
+	GTR_RACE|GTR_LIVES|GTR_SPAWNENEMIES|GTR_EMERALDTOKENS|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
+	// Race
+	GTR_RACE|GTR_SPAWNENEMIES|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
+
+	// Match
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_MATCHEMERALDS|GTR_SPAWNINVUL|GTR_PITYSHIELD|GTR_DEATHPENALTY,
+	// Team Match
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_SPAWNINVUL|GTR_PITYSHIELD,
+
+	// Tag
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_HIDETIME|GTR_BLINDFOLDED|GTR_SPAWNINVUL,
+	// Hide and Seek
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_HIDETIME|GTR_BLINDFOLDED|GTR_SPAWNINVUL,
+
+	// CTF
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_TEAMFLAGS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_MATCHEMERALDS|GTR_SPAWNINVUL|GTR_PITYSHIELD,
+};
+
+//
+// G_SetGametype
+//
+// Set a new gametype, also setting gametype rules accordingly. Yay!
+//
+void G_SetGametype(INT16 gtype)
+{
+	gametype = gtype;
+	gametyperules = gametypedefaultrules[gametype];
+}
+
+//
+// G_AddGametype
+//
+// Add a gametype. Returns the new gametype number.
+//
+INT16 G_AddGametype(UINT32 rules)
+{
+	INT16 newgtype = gametypecount;
+	gametypecount++;
+
+	// Set gametype rules.
+	gametypedefaultrules[newgtype] = rules;
+	Gametype_Names[newgtype] = "???";
+
+	// Update gametype_cons_t accordingly.
+	G_UpdateGametypeSelections();
+
+	return newgtype;
+}
+
+//
+// G_AddGametypeConstant
+//
+// Self-explanatory. Filters out "bad" characters.
+//
+void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
+{
+	char *gtconst = Z_Malloc(strlen(newgtconst) + 3, PU_STATIC, NULL);
+	// Copy GT_ and the gametype name.
+	strcpy(gtconst, "GT_");
+	strcat(gtconst, newgtconst);
+	// Make uppercase.
+	strupr(gtconst);
+	// Remove characters.
+#define REMOVECHAR(chr) \
+	{ \
+		char *chrfind = strchr(gtconst, chr); \
+		while (chrfind) \
+		{ \
+			*chrfind = '_'; \
+			chrfind = strchr(chrfind, chr); \
+		} \
+	}
+
+	// Space
+	REMOVECHAR(' ')
+	// Used for operations
+	REMOVECHAR('+')
+	REMOVECHAR('-')
+	REMOVECHAR('*')
+	REMOVECHAR('/')
+	REMOVECHAR('%')
+	REMOVECHAR('^')
+	// Part of Lua's syntax
+	REMOVECHAR('#')
+	REMOVECHAR('=')
+	REMOVECHAR('~')
+	REMOVECHAR('<')
+	REMOVECHAR('>')
+	REMOVECHAR('(')
+	REMOVECHAR(')')
+	REMOVECHAR('{')
+	REMOVECHAR('}')
+	REMOVECHAR('[')
+	REMOVECHAR(']')
+	REMOVECHAR(':')
+	REMOVECHAR(';')
+	REMOVECHAR(',')
+	REMOVECHAR('.')
+
+#undef REMOVECHAR
+
+	// Finally, set the constant string.
+	Gametype_ConstantNames[gtype] = gtconst;
+}
+
+//
+// G_UpdateGametypeSelections
+//
+// Updates gametype_cons_t.
+//
+void G_UpdateGametypeSelections(void)
+{
+	INT32 i;
+	for (i = 0; i < gametypecount; i++)
+	{
+		gametype_cons_t[i].value = i;
+		gametype_cons_t[i].strvalue = Gametype_Names[i];
+	}
+	gametype_cons_t[NUMGAMETYPES].value = 0;
+	gametype_cons_t[NUMGAMETYPES].strvalue = NULL;
+}
+
+//
+// G_SetGametypeDescription
+//
+// Set a description for the specified gametype.
+// (Level platter)
+//
+void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolor, UINT8 rightcolor)
+{
+	if (descriptiontext != NULL)
+		strncpy(gametypedesc[gtype].notes, descriptiontext, 441);
+	gametypedesc[gtype].col[0] = leftcolor;
+	gametypedesc[gtype].col[1] = rightcolor;
+}
+
+// Gametype rankings
+INT16 gametyperankings[NUMGAMETYPES] =
+{
+	GT_COOP,
+	GT_COMPETITION,
+	GT_RACE,
+
+	GT_MATCH,
+	GT_TEAMMATCH,
+
+	GT_TAG,
+	GT_HIDEANDSEEK,
+
+	GT_CTF,
+};
+
+// Gametype to TOL (Type Of Level)
+UINT32 gametypetol[NUMGAMETYPES] =
+{
+	TOL_COOP, // Co-op
+	TOL_COMPETITION, // Competition
+	TOL_RACE, // Race
+
+	TOL_MATCH, // Match
+	TOL_MATCH, // Team Match
+
+	TOL_TAG, // Tag
+	TOL_TAG, // Hide and Seek
+
+	TOL_CTF, // CTF
+};
+
+//
+// G_AddTOL
+//
+// Adds a type of level.
+//
+void G_AddTOL(UINT32 newtol, const char *tolname)
+{
+	TYPEOFLEVEL[numtolinfo].name = Z_StrDup(tolname);
+	TYPEOFLEVEL[numtolinfo].flag = newtol;
+	numtolinfo++;
+
+	TYPEOFLEVEL[numtolinfo].name = NULL;
+	TYPEOFLEVEL[numtolinfo].flag = 0;
+}
+
+//
+// G_AddTOL
+//
+// Assigns a type of level to a gametype.
+//
+void G_AddGametypeTOL(INT16 gtype, UINT32 newtol)
+{
+	gametypetol[gtype] = newtol;
+}
+
 //
 // G_GetGametypeByName
 //
@@ -3131,7 +3383,7 @@ INT32 G_GetGametypeByName(const char *gametypestr)
 {
 	INT32 i;
 
-	for (i = 0; i < NUMGAMETYPES; i++)
+	for (i = 0; i < gametypecount; i++)
 		if (!stricmp(gametypestr, Gametype_Names[i]))
 			return i;
 
@@ -3164,8 +3416,8 @@ boolean G_IsSpecialStage(INT32 mapnum)
 //
 boolean G_GametypeUsesLives(void)
 {
-	 // Coop, Competitive
-	if ((gametype == GT_COOP || gametype == GT_COMPETITION)
+	// Coop, Competitive
+	if ((gametyperules & GTR_LIVES)
 	 && !(modeattacking || metalrecording) // No lives in Time Attack
 	 && !G_IsSpecialStage(gamemap)
 	 && !(maptol & TOL_NIGHTS)) // No lives in NiGHTS
@@ -3181,7 +3433,7 @@ boolean G_GametypeUsesLives(void)
 //
 boolean G_GametypeHasTeams(void)
 {
-	return (gametype == GT_TEAMMATCH || gametype == GT_CTF);
+	return (gametyperules & GTR_TEAMS);
 }
 
 //
@@ -3192,7 +3444,7 @@ boolean G_GametypeHasTeams(void)
 //
 boolean G_GametypeHasSpectators(void)
 {
-	return (gametype != GT_COOP && gametype != GT_COMPETITION && gametype != GT_RACE);
+	return (gametyperules & GTR_SPECTATORS);
 }
 
 //
@@ -3203,7 +3455,7 @@ boolean G_GametypeHasSpectators(void)
 //
 boolean G_RingSlingerGametype(void)
 {
-	return ((gametype != GT_COOP && gametype != GT_COMPETITION && gametype != GT_RACE) || (cv_ringslinger.value));
+	return ((gametyperules & GTR_RINGSLINGER) || (cv_ringslinger.value));
 }
 
 //
@@ -3213,7 +3465,7 @@ boolean G_RingSlingerGametype(void)
 //
 boolean G_PlatformGametype(void)
 {
-	return (gametype == GT_COOP || gametype == GT_RACE || gametype == GT_COMPETITION);
+	return (!(gametyperules & GTR_RINGSLINGER));
 }
 
 //
@@ -3223,7 +3475,7 @@ boolean G_PlatformGametype(void)
 //
 boolean G_TagGametype(void)
 {
-	return (gametype == GT_TAG || gametype == GT_HIDEANDSEEK);
+	return (gametyperules & GTR_TAG);
 }
 
 /** Get the typeoflevel flag needed to indicate support of a gametype.
@@ -3234,18 +3486,9 @@ boolean G_TagGametype(void)
   */
 INT16 G_TOLFlag(INT32 pgametype)
 {
-	if (!multiplayer)                 return TOL_SP;
-	if (pgametype == GT_COOP)         return TOL_COOP;
-	if (pgametype == GT_COMPETITION)  return TOL_COMPETITION;
-	if (pgametype == GT_RACE)         return TOL_RACE;
-	if (pgametype == GT_MATCH)        return TOL_MATCH;
-	if (pgametype == GT_TEAMMATCH)    return TOL_MATCH;
-	if (pgametype == GT_TAG)          return TOL_TAG;
-	if (pgametype == GT_HIDEANDSEEK)  return TOL_TAG;
-	if (pgametype == GT_CTF)          return TOL_CTF;
-
-	CONS_Alert(CONS_ERROR, M_GetText("Unknown gametype! %d\n"), pgametype);
-	return INT16_MAX;
+	if (!multiplayer)
+		return TOL_SP;
+	return gametypetol[pgametype];
 }
 
 /** Select a random map with the given typeoflevel flags.
@@ -3256,7 +3499,7 @@ INT16 G_TOLFlag(INT32 pgametype)
   *         has those flags.
   * \author Graue <graue@oceanbase.org>
   */
-static INT16 RandMap(INT16 tolflags, INT16 pprevmap)
+static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 {
 	INT16 *okmaps = Z_Malloc(NUMMAPS * sizeof(INT16), PU_STATIC, NULL);
 	INT32 numokmaps = 0;
@@ -3414,10 +3657,10 @@ static void G_DoCompleted(void)
 		I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
 
 	// wrap around in race
-	if (nextmap >= 1100-1 && nextmap <= 1102-1 && (gametype == GT_RACE || gametype == GT_COMPETITION))
+	if (nextmap >= 1100-1 && nextmap <= 1102-1 && !(gametyperules & GTR_CAMPAIGN))
 		nextmap = (INT16)(spstage_start-1);
 
-	if ((gottoken = (gametype == GT_COOP && token)))
+	if ((gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)))
 	{
 		token--;
 
@@ -3437,7 +3680,7 @@ static void G_DoCompleted(void)
 
 	automapactive = false;
 
-	if (gametype != GT_COOP)
+	if (!(gametyperules & GTR_CAMPAIGN))
 	{
 		if (cv_advancemap.value == 0) // Stay on same map.
 			nextmap = prevmap;
@@ -6615,23 +6858,20 @@ void G_AddGhost(char *defdemoname)
 	I_Assert(mthing);
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
 		fixed_t z,f,c;
+		fixed_t offset = mthing->z << FRACBITS;
 		gh->mo = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST);
-		gh->mo->angle = FixedAngle(mthing->angle*FRACUNIT);
+		gh->mo->angle = FixedAngle(mthing->angle << FRACBITS);
 		f = gh->mo->floorz;
 		c = gh->mo->ceilingz - mobjinfo[MT_PLAYER].height;
 		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
 		{
-			z = c;
-			if (mthing->options >> ZSHIFT)
-				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			z = c - offset;
 			if (z < f)
 				z = f;
 		}
 		else
 		{
-			z = f;
-			if (mthing->options >> ZSHIFT)
-				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+			z = f + offset;
 			if (z > c)
 				z = c;
 		}
