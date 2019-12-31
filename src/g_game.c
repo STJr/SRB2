@@ -1718,6 +1718,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 			G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
 			B_BuildTiccmd(player, cmd);
 		}
+		B_HandleFlightIndicator(player);
 	}
 
 	if (cv_analog2.value) {

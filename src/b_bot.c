@@ -335,27 +335,6 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	jump_last = jump;
 	spin_last = spin;
 
-	// ********
-	// Thinkfly overlay
-	if (thinkfly)
-	{
-		if (!tails->hnext)
-		{
-			P_SetTarget(&tails->hnext, P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY));
-			if (tails->hnext)
-			{
-				P_SetTarget(&tails->hnext->target, tails);
-				P_SetTarget(&tails->hnext->hprev, tails);
-				P_SetMobjState(tails->hnext, S_FLIGHTINDICATOR);
-			}
-		}
-	}
-	else if (tails->hnext && tails->hnext->type == MT_OVERLAY && tails->hnext->state == states+S_FLIGHTINDICATOR)
-	{
-		P_RemoveMobj(tails->hnext);
-		P_SetTarget(&tails->hnext, NULL);
-	}
-
 	// Turn the virtual keypresses into ticcmd_t.
 	B_KeysToTiccmd(tails, cmd, forward, backward, left, right, false, false, jump, spin);
 
@@ -564,4 +543,31 @@ void B_RespawnBot(INT32 playernum)
 		P_SetPlayerMobjState(tails, S_PLAY_FALL);
 	P_SetScale(tails, sonic->scale);
 	tails->destscale = sonic->destscale;
+}
+
+void B_HandleFlightIndicator(player_t *player)
+{
+	mobj_t *tails = player->mo
+
+	if (!tails)
+		return;
+
+	if (thinkfly && player->bot == 1)
+	{
+		if (!tails->hnext)
+		{
+			P_SetTarget(&tails->hnext, P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY));
+			if (tails->hnext)
+			{
+				P_SetTarget(&tails->hnext->target, tails);
+				P_SetTarget(&tails->hnext->hprev, tails);
+				P_SetMobjState(tails->hnext, S_FLIGHTINDICATOR);
+			}
+		}
+	}
+	else if (tails->hnext && tails->hnext->type == MT_OVERLAY && tails->hnext->state == states+S_FLIGHTINDICATOR)
+	{
+		P_RemoveMobj(tails->hnext);
+		P_SetTarget(&tails->hnext, NULL);
+	}
 }
