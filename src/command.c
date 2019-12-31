@@ -2169,8 +2169,13 @@ skipwhite:
 				com_token[len] = 0;
 				return data;
 			}
-			com_token[len] = c;
-			len++;
+			if (c == '\033')
+				data += 2;
+			else
+			{
+				com_token[len] = c;
+				len++;
+			}
 		}
 	}
 
@@ -2186,10 +2191,22 @@ skipwhite:
 	// parse a regular word
 	do
 	{
-		com_token[len] = c;
-		data++;
-		len++;
-		c = *data;
+		if (c == '\033')
+		{
+			do
+			{
+				data += 2;
+				c = *data;
+			}
+			while (c == '\033') ;
+		}
+		else
+		{
+			com_token[len] = c;
+			data++;
+			len++;
+			c = *data;
+		}
 		if (c == '{' || c == '}' || c == ')'|| c == '(' || c == '\'')
 			break;
 	} while (c > 32);
