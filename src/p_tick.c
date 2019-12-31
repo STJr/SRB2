@@ -629,6 +629,10 @@ void P_Ticker(boolean run)
 		if (demoplayback)
 			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
 
+		#ifdef HAVE_BLUA
+		LUAh_PreThinkFrame();
+		#endif
+
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerThink(&players[i]);
@@ -753,6 +757,9 @@ void P_PreTicker(INT32 frames)
 	{
 		P_MapStart();
 
+#ifdef HAVE_BLUA
+		LUAh_PreThinkFrame();
+#endif
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 			{
@@ -768,9 +775,7 @@ void P_PreTicker(INT32 frames)
 
 				memcpy(&players[i].cmd, &temptic, sizeof(ticcmd_t));
 			}
-#ifdef HAVE_BLUA
-		LUAh_PreThinkFrame();
-#endif
+
 		P_RunThinkers();
 
 		// Run any "after all the other thinkers" stuff
