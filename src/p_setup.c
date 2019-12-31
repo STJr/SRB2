@@ -416,7 +416,9 @@ fixed_t P_SegLength(seg_t *seg)
 	return FixedHypot(dx, dy)<<1;
 }
 
+#ifdef HWRENDER
 /** Computes the length of a seg as a float.
+  * This is needed for OpenGL.
   *
   * \param seg Seg to compute length for.
   * \return Length as a float.
@@ -431,6 +433,7 @@ static inline float P_SegLengthFloat(seg_t *seg)
 
 	return (float)hypot(dx, dy);
 }
+#endif
 
 /** Loads the SEGS resource from a level.
   *
@@ -457,10 +460,10 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 		li->v2 = &vertexes[SHORT(ml->v2)];
 
 		li->length = P_SegLength(li);
-		li->flength = P_SegLengthFloat(li);
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
 		{
+			li->flength = P_SegLengthFloat(li);
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
 			li->lightmaps = NULL; // list of static lightmap for this seg
 		}
