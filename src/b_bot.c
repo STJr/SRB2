@@ -552,7 +552,7 @@ void B_HandleFlightIndicator(player_t *player)
 	if (!tails)
 		return;
 
-	if (thinkfly && player->bot == 1)
+	if (thinkfly && player->bot == 1 && tails->health)
 	{
 		if (!tails->hnext)
 		{
