@@ -650,10 +650,6 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-#ifdef HAVE_BLUA
-		LUAh_PreThinkFrame();
-#endif
-
 		P_RunThinkers();
 
 		// Run any "after all the other thinkers" stuff
