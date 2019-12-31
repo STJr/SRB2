@@ -1215,24 +1215,25 @@ static void CL_HandleSnake(INT32 key)
 	snake->time++;
 
 	// Update direction
-	switch (key)
+	if (gamekeydown[KEY_LEFTARROW])
 	{
-		case KEY_LEFTARROW:
-			if (snake->snakeprevdir != 2)
-				snake->snakedir = 1;
-			break;
-		case KEY_RIGHTARROW:
-			if (snake->snakeprevdir != 1)
-				snake->snakedir = 2;
-			break;
-		case KEY_UPARROW:
-			if (snake->snakeprevdir != 4)
-				snake->snakedir = 3;
-			break;
-		case KEY_DOWNARROW:
-			if (snake->snakeprevdir != 3)
-				snake->snakedir = 4;
-			break;
+		if (snake->snakeprevdir != 2)
+			snake->snakedir = 1;
+	}
+	else if (gamekeydown[KEY_RIGHTARROW])
+	{
+		if (snake->snakeprevdir != 1)
+			snake->snakedir = 2;
+	}
+	else if (gamekeydown[KEY_UPARROW])
+	{
+		if (snake->snakeprevdir != 4)
+			snake->snakedir = 3;
+	}
+	else if (gamekeydown[KEY_DOWNARROW])
+	{
+		if (snake->snakeprevdir != 3)
+			snake->snakedir = 4;
 	}
 
 	snake->nextupdate--;
@@ -2281,11 +2282,11 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 	// Call it only once by tic
 	if (*oldtic != I_GetTime())
 	{
-		INT32 key;
-
 		I_OsPolling();
-		key = I_GetKey();
-		if (key == KEY_ESCAPE || key == KEY_JOY1+1)
+		for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
+			G_MapEventsToControls(&events[eventtail]);
+
+		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1])
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 //				M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
@@ -2299,6 +2300,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 			D_QuitNetGame();
 			CL_Reset();
 			D_StartTitle();
+			memset(gamekeydown, 0, NUMKEYS);
 			return false;
 		}
 		else if (cl_mode == CL_DOWNLOADFILES && snake)
