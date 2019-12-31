@@ -349,7 +349,7 @@ void P_GiveEmerald(boolean spawnObj)
 			P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
 			
 			// Make sure we're not being carried before our tracer is changed
-			if (players[i].powers[pw_carry] == CR_PLAYER)
+			if (players[i].powers[pw_carry] != CR_NIGHTSMODE)
 				players[i].powers[pw_carry] = CR_NONE;
 			
 			P_SetTarget(&players[i].mo->tracer, emmo);
