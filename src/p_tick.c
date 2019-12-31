@@ -646,9 +646,9 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		#ifdef HAVE_BLUA
+#ifdef HAVE_BLUA
 		LUAh_PreThinkFrame();
-		#endif
+#endif
 
 		P_RunThinkers();
 
@@ -658,7 +658,7 @@ void P_Ticker(boolean run)
 				P_PlayerAfterThink(&players[i]);
 
 #ifdef HAVE_BLUA
-		LUAh_PostThinkFrame();
+		LUAh_ThinkFrame();
 #endif
 	}
 
@@ -730,6 +730,10 @@ void P_Ticker(boolean run)
 			G_ConsGhostTic();
 		if (modeattacking)
 			G_GhostTicker();
+
+#ifdef HAVE_BLUA
+		LUAh_PostThinkFrame();
+#endif
 	}
 
 	P_MapEnd();
@@ -764,7 +768,9 @@ void P_PreTicker(INT32 frames)
 
 				memcpy(&players[i].cmd, &temptic, sizeof(ticcmd_t));
 			}
-
+#ifdef HAVE_BLUA
+		LUAh_PreThinkFrame();
+#endif
 		P_RunThinkers();
 
 		// Run any "after all the other thinkers" stuff
@@ -773,7 +779,7 @@ void P_PreTicker(INT32 frames)
 				P_PlayerAfterThink(&players[i]);
 
 #ifdef HAVE_BLUA
-		LUAh_PostThinkFrame();
+		LUAh_ThinkFrame();
 #endif
 
 		// Run shield positioning
@@ -782,6 +788,10 @@ void P_PreTicker(INT32 frames)
 
 		P_UpdateSpecials();
 		P_RespawnSpecials();
+
+#ifdef HAVE_BLUA
+		LUAh_PostThinkFrame();
+#endif
 
 		P_MapEnd();
 	}

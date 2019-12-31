@@ -21,6 +21,7 @@ enum hook {
 	hook_MapLoad,
 	hook_PlayerJoin,
 	hook_PreThinkFrame,
+	hook_ThinkFrame,
 	hook_PostThinkFrame,
 	hook_MobjSpawn,
 	hook_MobjCollide,
@@ -63,7 +64,8 @@ void LUAh_MapChange(INT16 mapnumber); // Hook for map change (before load)
 void LUAh_MapLoad(void); // Hook for map load
 void LUAh_PlayerJoin(int playernum); // Hook for Got_AddPlayer
 void LUAh_PreThinkFrame(void); // Hook for frame (before mobj and player thinkers)
-void LUAh_PostThinkFrame(void); // Hook for frame (after mobj and player thinkers)
+void LUAh_ThinkFrame(void); // Hook for frame (after mobj and player thinkers)
+void LUAh_PostThinkFrame(void); // Hook for frame (at end of tick, ie after overlays, precipitation, specials)
 boolean LUAh_MobjHook(mobj_t *mo, enum hook which);
 boolean LUAh_PlayerHook(player_t *plr, enum hook which);
 #define LUAh_MobjSpawn(mo) LUAh_MobjHook(mo, hook_MobjSpawn) // Hook for P_SpawnMobj by mobj type

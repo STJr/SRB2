@@ -18,6 +18,11 @@
 #include "lua_libs.h"
 //#include "lua_hud.h" // hud_running errors
 
+static const char *const search_opt[] = {
+	"objects",
+	"lines",
+	NULL};
+
 // a quickly-made function pointer typedef used by lib_searchBlockmap...
 // return values:
 // 0 - normal, no interruptions
@@ -174,17 +179,28 @@ static UINT8 lib_searchBlockmap_Lines(lua_State *L, INT32 x, INT32 y, mobj_t *th
 //   false = searching of at least one block stopped mid-way (including if the whole search was stopped)
 static int lib_searchBlockmap(lua_State *L)
 {
+	int searchtype = luaL_checkoption(L, 1, "objects", search_opt);
 	int n;
 	mobj_t *mobj;
 	INT32 xl, xh, yl, yh, bx, by;
 	fixed_t x1, x2, y1, y2;
 	boolean retval = true;
-	boolean repeat = false;
 	UINT8 funcret = 0;
+	blockmap_func searchFunc;
 
-	UINT32 flags = luaL_checkinteger(L, 1);
-	lua_remove(L, 1); // remove flags, stack is now function, mobj, [x1, x2, y1, y2]
+	lua_remove(L, 1); // remove searchtype, stack is now function, mobj, [x1, x2, y1, y2]
 	luaL_checktype(L, 1, LUA_TFUNCTION);
+
+	switch (searchtype)
+	{
+		case 0: // "objects"
+		default:
+			searchFunc = lib_searchBlockmap_Objects;
+			break;
+		case 1: // "lines"
+			searchFunc = lib_searchBlockmap_Lines;
+			break;
+	}
 
 	// the mobj we are searching around, the "calling" mobj we could say
 	mobj = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
@@ -224,14 +240,8 @@ static int lib_searchBlockmap(lua_State *L)
 	validcount++;
 	for (bx = xl; bx <= xh; bx++)
 		for (by = yl; by <= yh; by++)
-		{	
-			if (flags & (OPT_LINES|OPT_MOBJS))
-				repeat = true;
-			if (flags & OPT_LINES)
-				funcret = lib_searchBlockmap_Lines(L, bx, by, mobj);
-			else
-				funcret = lib_searchBlockmap_Objects(L, bx, by, mobj);
-			doitagain:
+		{
+			funcret = searchFunc(L, bx, by, mobj);
 			// return value of searchFunc determines searchFunc's return value and/or when to stop
 			if (funcret == 2){ // stop whole search
 				lua_pushboolean(L, false); // return false
@@ -243,12 +253,6 @@ static int lib_searchBlockmap(lua_State *L)
 			if (P_MobjWasRemoved(mobj)){ // ...unless the original object was removed
 				lua_pushboolean(L, false); // in which case we have to stop now regardless
 				return 1;
-			}
-			if (repeat)
-			{
-				funcret = lib_searchBlockmap_Objects(L, bx, by, mobj);
-				repeat = false;
-				goto doitagain;
 			}
 		}
 	lua_pushboolean(L, retval);
