@@ -624,6 +624,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
+/// Cache patches in Lua in a way that renderer switching will work flawlessly.
+//#define LUA_PATCH_SAFETY
+
 /// Sprite rotation
 #define ROTSPRITE
 #define ROTANGLES 24	// Needs to be a divisor of 360 (45, 60, 90, 120...)
