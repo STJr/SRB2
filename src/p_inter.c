@@ -1807,23 +1807,27 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_MINECARTSPAWNER:
-			if (!player->bot && (special->fuse < TICRATE || player->powers[pw_carry] != CR_MINECART))
-			{
-				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
-				P_SetTarget(&mcart->target, toucher);
-				mcart->angle = toucher->angle = player->drawangle = special->angle;
-				mcart->friction = FRACUNIT;
+			if (player->bot)
+				return;
+			if (special->fuse > TICRATE)
+				return;
+			if (player->powers[pw_carry] == CR_MINECART)
+				return;
+				
+			mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
+			P_SetTarget(&mcart->target, toucher);
+			mcart->angle = toucher->angle = player->drawangle = special->angle;
+			mcart->friction = FRACUNIT;
 
-				P_ResetPlayer(player);
-				player->pflags |= PF_JUMPDOWN;
-				player->powers[pw_carry] = CR_MINECART;
-				player->pflags &= ~PF_APPLYAUTOBRAKE;
-				P_SetTarget(&toucher->tracer, mcart);
-				toucher->momx = toucher->momy = toucher->momz = 0;
+			P_ResetPlayer(player);
+			player->pflags |= PF_JUMPDOWN;
+			player->powers[pw_carry] = CR_MINECART;
+			player->pflags &= ~PF_APPLYAUTOBRAKE;
+			P_SetTarget(&toucher->tracer, mcart);
+			toucher->momx = toucher->momy = toucher->momz = 0;
 
-				special->fuse = 3*TICRATE;
-				special->flags2 |= MF2_DONTDRAW;
-			}
+			special->fuse = 3*TICRATE;
+			special->flags2 |= MF2_DONTDRAW;
 			return;
 
 		case MT_MINECARTEND:
