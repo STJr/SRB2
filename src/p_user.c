@@ -11250,7 +11250,10 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 		if (panim == PA_WALK)
 		{
 			if (stat != fume->info->spawnstate)
+			{
+				fume->threshold = 0;
 				P_SetMobjState(fume, fume->info->spawnstate);
+			}
 			return;
 		}
 	}
@@ -11281,6 +11284,12 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 		if (underwater)
 		{
 			fume->frame = (fume->frame & FF_FRAMEMASK) | FF_ANIMATE | (P_RandomRange(0, 9) * FF_TRANS10);
+			fume->threshold = 1;
+		}
+		else if (fume->threshold)
+		{
+			fume->frame = (fume->frame & FF_FRAMEMASK) | fume->state->frame;
+			fume->threshold = 0;
 		}
 	}
 
