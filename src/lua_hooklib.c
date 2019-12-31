@@ -36,6 +36,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"PostThinkFrame",
 	"MobjSpawn",
 	"MobjCollide",
+	"MobjLineCollide",
 	"MobjMoveCollide",
 	"TouchSpecial",
 	"MobjFuse",
@@ -125,6 +126,7 @@ static int lib_addHook(lua_State *L)
 	// Take a mobjtype enum which this hook is specifically for.
 	case hook_MobjSpawn:
 	case hook_MobjCollide:
+	case hook_MobjLineCollide:
 	case hook_MobjMoveCollide:
 	case hook_TouchSpecial:
 	case hook_MobjFuse:
@@ -184,6 +186,7 @@ static int lib_addHook(lua_State *L)
 		lastp = &mobjthinkerhooks[hook.s.mt];
 		break;
 	case hook_MobjCollide:
+	case hook_MobjLineCollide:
 	case hook_MobjMoveCollide:
 		lastp = &mobjcollidehooks[hook.s.mt];
 		break;
@@ -536,6 +539,84 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 		{
 			LUA_PushUserdata(gL, thing1, META_MOBJ);
 			LUA_PushUserdata(gL, thing2, META_MOBJ);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{ // if nil, leave shouldCollide = 0.
+			if (lua_toboolean(gL, -1))
+				shouldCollide = 1; // Force yes
+			else
+				shouldCollide = 2; // Force no
+		}
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return shouldCollide;
+}
+
+UINT8 LUAh_MobjLineCollideHook(mobj_t *thing, line_t *line, enum hook which)
+{
+	hook_p hookp;
+	UINT8 shouldCollide = 0; // 0 = default, 1 = force yes, 2 = force no.
+	if (!gL || !(hooksAvailable[which/8] & (1<<(which%8))))
+		return 0;
+
+	I_Assert(thing->type < NUMMOBJTYPES);
+
+	lua_settop(gL, 0);
+
+	// Look for all generic mobj collision hooks
+	for (hookp = mobjcollidehooks[MT_NULL]; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != which)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, thing, META_MOBJ);
+			LUA_PushUserdata(gL, line, META_LINE);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{ // if nil, leave shouldCollide = 0.
+			if (lua_toboolean(gL, -1))
+				shouldCollide = 1; // Force yes
+			else
+				shouldCollide = 2; // Force no
+		}
+		lua_pop(gL, 1);
+	}
+
+	for (hookp = mobjcollidehooks[thing->type]; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != which)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, thing, META_MOBJ);
+			LUA_PushUserdata(gL, line, META_LINE);
 		}
 		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 		lua_gettable(gL, LUA_REGISTRYINDEX);

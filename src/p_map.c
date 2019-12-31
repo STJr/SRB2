@@ -1988,6 +1988,17 @@ static boolean PIT_CheckLine(line_t *ld)
 	if (lowfloor < tmdropoffz)
 		tmdropoffz = lowfloor;
 
+#ifdef HAVE_BLUA
+	{
+		UINT8 shouldCollide = LUAh_MobjLineCollide(tmthing, ld); // checks hook for thing's type
+		if (P_MobjWasRemoved(tmthing))
+			return true; // one of them was removed???
+		if (shouldCollide == 1)
+			return false; // force collide
+		else if (shouldCollide == 2)
+			return true; // force no collide
+	}
+#endif
 	return true;
 }
 

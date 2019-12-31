@@ -25,6 +25,7 @@ enum hook {
 	hook_PostThinkFrame,
 	hook_MobjSpawn,
 	hook_MobjCollide,
+	hook_MobjLineCollide,
 	hook_MobjMoveCollide,
 	hook_TouchSpecial,
 	hook_MobjFuse,
@@ -70,7 +71,9 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which);
 boolean LUAh_PlayerHook(player_t *plr, enum hook which);
 #define LUAh_MobjSpawn(mo) LUAh_MobjHook(mo, hook_MobjSpawn) // Hook for P_SpawnMobj by mobj type
 UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which);
+UINT8 LUAh_MobjLineCollideHook(mobj_t *thing, line_t *line, enum hook which);
 #define LUAh_MobjCollide(thing1, thing2) LUAh_MobjCollideHook(thing1, thing2, hook_MobjCollide) // Hook for PIT_CheckThing by (thing) mobj type
+#define LUAh_MobjLineCollide(thing, line) LUAh_MobjLineCollideHook(thing, line, hook_MobjLineCollide) // Hook for PIT_CheckThing by (thing) mobj type
 #define LUAh_MobjMoveCollide(thing1, thing2) LUAh_MobjCollideHook(thing1, thing2, hook_MobjMoveCollide) // Hook for PIT_CheckThing by (tmthing) mobj type
 boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher); // Hook for P_TouchSpecialThing by mobj type
 #define LUAh_MobjFuse(mo) LUAh_MobjHook(mo, hook_MobjFuse) // Hook for mobj->fuse == 0 by mobj type
