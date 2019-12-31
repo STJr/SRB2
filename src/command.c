@@ -427,20 +427,21 @@ static void COM_TokenizeString(char *ptext)
 
 	com_argc = 0;
 	com_args = NULL;
-
-	if (ptext[0] == '\033')
-	{
-		com_flags = (unsigned)ptext[1];
-		ptext += 2;
-	}
-	else
-		com_flags = 0;
+	com_flags = 0;
 
 	while (com_argc < MAX_ARGS)
 	{
 		// Skip whitespace up to a newline.
 		while (*ptext != '\0' && *ptext <= ' ' && *ptext != '\n')
-			ptext++;
+		{
+			if (ptext[0] == '\033')
+			{
+				com_flags = (unsigned)ptext[1];
+				ptext += 2;
+			}
+			else
+				ptext++;
+		}
 
 		// A newline means end of command in buffer,
 		// thus end of this command's args too.
