@@ -93,10 +93,41 @@ extern angle_t doubleclipangle;
 extern INT32 viewangletox[FINEANGLES/2];
 extern angle_t xtoviewangle[MAXVIDWIDTH+1];
 
-extern fixed_t rw_distance;
-extern angle_t rw_normalangle;
+// Wall rendering
+typedef struct
+{
+	INT32 x, stopx;
+	angle_t centerangle;
+	fixed_t offset;
+	fixed_t offset2; // for splats
+	fixed_t scale, scalestep;
+	fixed_t midtexturemid, toptexturemid, bottomtexturemid;
+#ifdef ESLOPE
+	fixed_t toptextureslide, midtextureslide, bottomtextureslide; // Defines how to adjust Y offsets along the wall for slopes
+	fixed_t midtextureback, midtexturebackslide; // Values for masked midtexture height calculation
+#endif
+	fixed_t distance;
+	angle_t normalangle;
+	angle_t angle1; // angle to line origin
 
-// angle to line origin
-extern angle_t rw_angle1;
+	// for masked segs and thick sides
+	INT32 texnum;
+	void (*colfunc_2s) (column_t *);
+	INT32 column2s_length; // column->length : for multi-patch on 2sided wall = texture->height
+
+	// masked segs
+	INT32 maskedrepeat;
+
+	// thick sides
+	ffloor_t *pfloor;
+#ifdef ESLOPE
+	// Render FOF sides kinda like normal sides, with the frac and step and everything
+	// NOTE: INT64 instead of fixed_t because overflow concerns
+	INT64 top_frac, top_step, bottom_frac, bottom_step;
+	fixed_t ffloortextureslide;
+	fixed_t left_top, left_bottom; // needed here for slope skewing
+#endif
+} renderwall_t;
+extern renderwall_t rw;
 
 #endif
