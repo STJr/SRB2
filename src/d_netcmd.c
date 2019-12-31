@@ -842,7 +842,9 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_fullscreen);
 	CV_RegisterVar(&cv_renderview);
 	CV_RegisterVar(&cv_renderer);
+#ifdef HWRENDER
 	CV_RegisterVar(&cv_newrenderer);
+#endif
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);
 	CV_RegisterVar(&cv_scr_height);

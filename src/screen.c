@@ -486,7 +486,9 @@ void SCR_ChangeRendererCVars(INT32 mode)
 		CV_StealthSetValue(&cv_renderer, 1);
 	else if (mode == render_opengl)
 		CV_StealthSetValue(&cv_renderer, 2);
+#ifdef HWRENDER
 	CV_StealthSetValue(&cv_newrenderer, cv_renderer.value);
+#endif
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)

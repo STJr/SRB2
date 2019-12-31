@@ -184,7 +184,9 @@ extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 extern CV_PossibleValue_t cv_renderer_t[];
 
 extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
+#ifdef HWRENDER
 extern consvar_t cv_newrenderer;
+#endif
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 
