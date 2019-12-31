@@ -64,6 +64,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"IntermissionThinker",
 	"TeamSwitch",
 	"ViewpointSwitch",
+	"SeenPlayer",
 	NULL
 };
 
@@ -207,6 +208,7 @@ static int lib_addHook(lua_State *L)
 	case hook_PlayerCanDamage:
 	case hook_TeamSwitch:
 	case hook_ViewpointSwitch:
+	case hook_SeenPlayer:
 	case hook_ShieldSpawn:
 	case hook_ShieldSpecial:
 		lastp = &playerhooks;
@@ -1412,7 +1414,7 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 		return 0;
 
 	lua_settop(gL, 0);
-	hud_running = true;
+	hud_running = true; // local hook
 
 	for (hookp = playerhooks; hookp; hookp = hookp->next)
 	{
@@ -1452,5 +1454,50 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 
 	return canSwitchView;
 }
+
+// Hook for MT_NAMECHECK
+#ifdef SEENAMES
+boolean LUAh_SeenPlayer(player_t *player, player_t *seenplayer)
+{
+	hook_p hookp;
+	boolean hasSeenPlayer = true;
+	if (!gL || !(hooksAvailable[hook_SeenPlayer/8] & (1<<(hook_SeenPlayer%8))))
+		return 0;
+
+	lua_settop(gL, 0);
+	hud_running = true; // local hook
+
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_SeenPlayer)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			LUA_PushUserdata(gL, seenplayer, META_PLAYER);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1) && !lua_toboolean(gL, -1))
+			hasSeenPlayer = false; // Hasn't seen player
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	hud_running = false;
+
+	return hasSeenPlayer;
+}
+#endif // SEENAMES
 
 #endif

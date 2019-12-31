@@ -53,6 +53,7 @@ enum hook {
 	hook_IntermissionThinker,
 	hook_TeamSwitch,
 	hook_ViewpointSwitch,
+	hook_SeenPlayer,
 
 	hook_MAX // last hook
 };
@@ -97,5 +98,8 @@ void LUAh_PlayerQuit(player_t *plr, int reason); // Hook for player quitting
 void LUAh_IntermissionThinker(void); // Hook for Y_Ticker
 boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, boolean tryingautobalance, boolean tryingscramble); // Hook for team switching in... uh....
 UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean forced); // Hook for spy mode
+#ifdef SEENAMES
+boolean LUAh_SeenPlayer(player_t *player, player_t *seenplayer); // Hook for MT_NAMECHECK
+#endif
 
 #endif
