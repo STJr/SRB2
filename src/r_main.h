@@ -84,6 +84,7 @@ extern conscar_t cv_shadowoffs;
 #endif //#ifdef GLBADSHADOWS
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
+extern consvar_t cv_fov;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
