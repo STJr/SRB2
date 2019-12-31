@@ -2973,7 +2973,7 @@ static void M_NextOpt(void)
 			itemOn = 0;
 		else
 			itemOn++;
-	} while (oldItemOn != itemOn && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_SPACE);
+	} while (oldItemOn != itemOn && ( (currentMenu->menuitems[itemOn].status & IT_TYPE) & IT_SPACE ));
 }
 
 static void M_PrevOpt(void)
@@ -2985,7 +2985,7 @@ static void M_PrevOpt(void)
 			itemOn = currentMenu->numitems - 1;
 		else
 			itemOn--;
-	} while (oldItemOn != itemOn && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_SPACE);
+	} while (oldItemOn != itemOn && ( (currentMenu->menuitems[itemOn].status & IT_TYPE) & IT_SPACE ));
 }
 
 // lock out further input in a tic when important buttons are pressed
@@ -3619,11 +3619,11 @@ void M_SetupNextMenu(menu_t *menudef)
 
 	// the curent item can be disabled,
 	// this code go up until an enabled item found
-	if ((currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_SPACE)
+	if (( (currentMenu->menuitems[itemOn].status & IT_TYPE) & IT_SPACE ))
 	{
 		for (i = 0; i < currentMenu->numitems; i++)
 		{
-			if ((currentMenu->menuitems[i].status & IT_TYPE) != IT_SPACE)
+			if (!( (currentMenu->menuitems[i].status & IT_TYPE) & IT_SPACE ))
 			{
 				itemOn = i;
 				break;
@@ -4306,7 +4306,18 @@ static void M_DrawGenericScrollMenu(void)
 					}
 					break;
 			case IT_TRANSTEXT:
-				V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
+				switch (currentMenu->menuitems[i].status & IT_TYPE)
+				{
+					case IT_PAIR:
+						V_DrawString(x, y,
+								V_TRANSLUCENT, currentMenu->menuitems[i].patch);
+						V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+								V_TRANSLUCENT, currentMenu->menuitems[i].text);
+						break;
+					default:
+						V_DrawString(x, y,
+								V_TRANSLUCENT, currentMenu->menuitems[i].text);
+				}
 				break;
 			case IT_QUESTIONMARKS:
 				V_DrawString(x, y, V_TRANSLUCENT|V_OLDSPACING, M_CreateSecretMenuOption(currentMenu->menuitems[i].text));
