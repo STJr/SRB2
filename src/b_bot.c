@@ -547,7 +547,7 @@ void B_RespawnBot(INT32 playernum)
 
 void B_HandleFlightIndicator(player_t *player)
 {
-	mobj_t *tails = player->mo
+	mobj_t *tails = player->mo;
 
 	if (!tails)
 		return;
