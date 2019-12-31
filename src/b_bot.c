@@ -127,13 +127,17 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	}
 
 	// Orientation
-	if ((bot->pflags & (PF_SPINNING|PF_STARTDASH)) || flymode == 2)
+	if (bot->pflags & (PF_SPINNING|PF_STARTDASH))
 	{
-		cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
+		cmd->angleturn = (sonic->angle - tails->angle) >> 16; // NOT FRACBITS DAMNIT
+	}
+	else if (flymode == 2)
+	{
+		cmd->angleturn = sonic->player->cmd.angleturn - (tails->angle >> 16);
 	}
 	else
 	{
-		cmd->angleturn = (ang - tails->angle) >> FRACBITS;
+		cmd->angleturn = (ang - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 	}
 
 	// ********
@@ -222,7 +226,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			{
 				if (dist < followthres && dist > touchdist) // Do positioning
 				{
-					cmd->angleturn = (ang - tails->angle) >> FRACBITS;
+					cmd->angleturn = (ang - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 					cmd->forwardmove = 50;
 					spinmode = true;
 				}
@@ -230,7 +234,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 				{
 					if (!bmom && (!(bot->pflags & PF_SPINNING) || (bot->dashspeed && bot->pflags & PF_SPINNING)))
 					{
-						cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
+						cmd->angleturn = (sonic->angle - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 						spin = true;
 					}
 					spinmode = true;
@@ -244,7 +248,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 				if (bot->pflags & PF_SPINNING || !spin_last)
 				{
 					spin = true;
-					cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
+					cmd->angleturn = (sonic->angle - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 					cmd->forwardmove = MAXPLMOVE;
 					spinmode = true;
 				}
@@ -290,7 +294,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		else if (dist < followmin)
 		{
 			// Copy inputs
-			cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
+			cmd->angleturn = (sonic->angle - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 			bot->drawangle = ang;
 			cmd->forwardmove = 8 * pcmd->forwardmove / 10;
 			cmd->sidemove = 8 * pcmd->sidemove / 10;

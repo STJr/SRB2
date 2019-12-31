@@ -1615,9 +1615,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		{
 			G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
 			B_BuildTiccmd(player, cmd);
-
 		}
 	}
+	else if (player->bot == 2)
+		*myangle = localangle; // Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
 
 	if (controlstyle == CS_LMAOGALOG) {
 		if (player->awayviewtics)
