@@ -10020,7 +10020,12 @@ static void M_DrawConnectMenu(void)
 		V_DrawSmallString(currentMenu->x+46,S_LINEY(i)+8, globalflags,
 		                         va("Players: %02d/%02d", serverlist[slindex].info.numberofplayer, serverlist[slindex].info.maxplayer));
 
-		V_DrawSmallString(currentMenu->x+112, S_LINEY(i)+8, globalflags, va("Gametype: %s", gt));
+		if (strlen(gt) > 11)
+			gt = va("Gametype: %.11s...", gt);
+		else
+			gt = va("Gametype: %s", gt);
+
+		V_DrawSmallString(currentMenu->x+112, S_LINEY(i)+8, globalflags, gt);
 
 		MP_ConnectMenu[i+FIRSTSERVERLINE].status = IT_STRING | IT_CALL;
 	}
