@@ -7786,6 +7786,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->fuse = TICRATE*7; // takes about an extra second to hit the ground
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
+			flame->flags2 = (flame->flags2 & ~MF2_OBJECTFLIP)|(player->mo->flags2 & MF2_OBJECTFLIP);
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
 			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
