@@ -829,13 +829,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
 				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(iter, tmthing, tmthing, 0);
+			return true;
 		}
 		else
 		{
-			thing->health = 0;
-			P_KillMobj(thing, tmthing, tmthing, 0);
+			if (P_DamageMobj(thing, tmthing, tmthing, 1, 0))
+				return true;
 		}
-		return true;
 	}
 
 	// vectorise metal - done in a special case as at this point neither has the right flags for touching
