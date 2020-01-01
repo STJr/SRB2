@@ -1078,7 +1078,7 @@ static void P_InitializeSidedef(side_t *sd)
 {
 	if (!sd->line)
 	{
-		CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1(i));
+		CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1((size_t)(sd - sides)));
 		sd->line = &lines[0];
 		sd->special = sd->line->special;
 	}
