@@ -733,7 +733,7 @@ UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size)
 //
 // Convert a PNG to a patch.
 //
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency)
+patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize)
 {
 	UINT16 width, height;
 	INT16 topoffset = 0, leftoffset = 0;

@@ -1540,7 +1540,7 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 			if (R_IsLumpPNG((UINT8 *)lumpdata, len))
 			{
 				size_t newlen;
-				srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen, true);
+				srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
 				ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
 				M_Memcpy(ptr, srcdata, newlen);
 				Z_Free(srcdata);

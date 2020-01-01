@@ -654,7 +654,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL);
 		else
 #endif
 #ifdef WALLFLATS
@@ -698,7 +698,7 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 	// lump is a png so convert it
 	size_t len = W_LumpLengthPwad(grPatch->wadnum, grPatch->lumpnum);
 	if ((patch != NULL) && R_IsLumpPNG((const UINT8 *)patch, len))
-		patch = R_PNGToPatch((const UINT8 *)patch, len, NULL, true);
+		patch = R_PNGToPatch((const UINT8 *)patch, len, NULL);
 #endif
 
 	// don't do it twice (like a cache)

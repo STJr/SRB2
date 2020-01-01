@@ -55,7 +55,7 @@ boolean R_IsLumpPNG(const UINT8 *d, size_t s);
 
 #ifndef NO_PNG_LUMPS
 UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size);
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency);
+patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize);
 boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
 #endif
 
