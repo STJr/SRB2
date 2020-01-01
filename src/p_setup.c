@@ -1074,6 +1074,19 @@ static void P_SetSidedefSector(size_t i, UINT16 sector_num)
 	sides[i].sector = &sectors[sector_num];
 }
 
+static void P_InitializeSidedef(side_t *sd)
+{
+	if (!sd->line)
+	{
+		CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1(i));
+		sd->line = &lines[0];
+		sd->special = sd->line->special;
+	}
+
+	sd->text = NULL;
+	sd->colormap_data = NULL;
+}
+
 static void P_LoadSidedefs(UINT8 *data)
 {
 	mapsidedef_t *msd = (mapsidedef_t*)data;
@@ -1085,11 +1098,7 @@ static void P_LoadSidedefs(UINT8 *data)
 		INT16 textureoffset = SHORT(msd->textureoffset);
 		boolean isfrontside;
 
-		if (!sd->line)
-		{
-			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1(i));
-			sd->line = &lines[0];
-		}
+		P_InitializeSidedef(sd);
 
 		isfrontside = sd->line->sidenum[0] == i;
 
@@ -1108,8 +1117,6 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
 		P_SetSidedefSector(i, SHORT(msd->sector));
-
-		sd->colormap_data = NULL;
 
 		// Special info stored in texture fields!
 		switch (sd->special)
@@ -1643,6 +1650,7 @@ static void P_LoadTextmap(void)
 			CONS_Debug(DBG_SETUP, "P_LoadTextmap: sidedef %s has no sector set; defaulting to 0\n", sizeu1(i));
 			sd->sector = &sectors[0];
 		}
+		P_InitializeSidedef(sd);
 	}
 
 	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
