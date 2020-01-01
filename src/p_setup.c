@@ -1014,13 +1014,11 @@ static void P_InitializeLinedef(line_t *ld)
 	{
 		sides[ld->sidenum[0]].special = ld->special;
 		sides[ld->sidenum[0]].line = ld;
-
 	}
 	if (ld->sidenum[1] != 0xffff)
 	{
 		sides[ld->sidenum[1]].special = ld->special;
 		sides[ld->sidenum[1]].line = ld;
-
 	}
 }
 
@@ -1053,10 +1051,30 @@ static void P_LoadSidedefs(UINT8 *data)
 
 	for (i = 0; i < numsides; i++, sd++, msd++)
 	{
+		INT16 textureoffset = SHORT(msd->textureoffset);
 		UINT16 sector_num;
-		boolean isfrontside = !sd->line || sd->line->sidenum[0] == i;
+		boolean isfrontside;
 
-		sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
+		if (!sd->line)
+		{
+			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1((size_t)(sd - sides)));
+			sd->line = &lines[0];
+		}
+
+		isfrontside = sd->line->sidenum[0] == i;
+
+		// Repeat count for midtexture
+		if (((sd->line->flags & (ML_TWOSIDED|ML_EFFECT5)) == (ML_TWOSIDED|ML_EFFECT5))
+			&& !(sd->special >= 300 && sd->special < 500)) // exempt linedef exec specials
+		{
+			sd->repeatcnt = (INT16)(((unsigned)textureoffset) >> 12);
+			sd->textureoffset = (((unsigned)textureoffset) & 2047) << FRACBITS;
+		}
+		else
+		{
+			sd->repeatcnt = 0;
+			sd->textureoffset = textureoffset << FRACBITS;
+		}
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
 		// cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
@@ -2448,16 +2466,6 @@ static void P_ProcessLinedefsWithSidedefs(void)
 	{
 		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
 		ld->backsector  = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
-
-		// Repeat count for midtexture
-		if ((ld->flags & ML_EFFECT5) && (ld->sidenum[1] != 0xffff)
-			&& !(ld->special >= 300 && ld->special < 500)) // exempt linedef exec specials
-		{
-			sides[ld->sidenum[0]].repeatcnt = (INT16)(((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) >> 12);
-			sides[ld->sidenum[0]].textureoffset = (((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) & 2047) << FRACBITS;
-			sides[ld->sidenum[1]].repeatcnt = (INT16)(((unsigned)sides[ld->sidenum[1]].textureoffset >> FRACBITS) >> 12);
-			sides[ld->sidenum[1]].textureoffset = (((unsigned)sides[ld->sidenum[1]].textureoffset >> FRACBITS) & 2047) << FRACBITS;
-		}
 
 		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
 		switch(ld->special)
