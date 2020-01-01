@@ -427,20 +427,21 @@ static void COM_TokenizeString(char *ptext)
 
 	com_argc = 0;
 	com_args = NULL;
-
-	if (ptext[0] == '\033')
-	{
-		com_flags = (unsigned)ptext[1];
-		ptext += 2;
-	}
-	else
-		com_flags = 0;
+	com_flags = 0;
 
 	while (com_argc < MAX_ARGS)
 	{
 		// Skip whitespace up to a newline.
 		while (*ptext != '\0' && *ptext <= ' ' && *ptext != '\n')
-			ptext++;
+		{
+			if (ptext[0] == '\033')
+			{
+				com_flags = (unsigned)ptext[1];
+				ptext += 2;
+			}
+			else
+				ptext++;
+		}
 
 		// A newline means end of command in buffer,
 		// thus end of this command's args too.
@@ -2169,8 +2170,13 @@ skipwhite:
 				com_token[len] = 0;
 				return data;
 			}
-			com_token[len] = c;
-			len++;
+			if (c == '\033')
+				data += 2;
+			else
+			{
+				com_token[len] = c;
+				len++;
+			}
 		}
 	}
 
@@ -2186,10 +2192,22 @@ skipwhite:
 	// parse a regular word
 	do
 	{
-		com_token[len] = c;
-		data++;
-		len++;
-		c = *data;
+		if (c == '\033')
+		{
+			do
+			{
+				data += 2;
+				c = *data;
+			}
+			while (c == '\033') ;
+		}
+		else
+		{
+			com_token[len] = c;
+			data++;
+			len++;
+			c = *data;
+		}
 		if (c == '{' || c == '}' || c == ')'|| c == '(' || c == '\'')
 			break;
 	} while (c > 32);
