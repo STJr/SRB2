@@ -201,11 +201,15 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat)
 }
 
 //
-// R_PatchToFlat_16bpp
+// R_PatchToMaskedFlat
 //
-// Convert a patch to a 16-bit flat.
+// Convert a patch to a masked flat.
+// Now, what is a "masked" flat anyway?
+// It means the flat uses two bytes to store image data.
+// The upper byte is used to store the transparent pixel,
+// and the lower byte stores a palette index.
 //
-void R_PatchToFlat_16bpp(patch_t *patch, UINT16 *raw, boolean flip)
+void R_PatchToMaskedFlat(patch_t *patch, UINT16 *raw, boolean flip)
 {
 	fixed_t col, ofs;
 	column_t *column;
@@ -352,11 +356,12 @@ patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffse
 }
 
 //
-// R_FlatToPatch_16bpp
+// R_MaskedFlatToPatch
 //
-// Convert a 16-bit flat to a patch.
+// Convert a masked flat to a patch.
+// Explanation of "masked" flats in R_PatchToMaskedFlat.
 //
-patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize)
+patch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize)
 {
 	UINT32 x, y;
 	UINT8 *img;
@@ -684,7 +689,7 @@ static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topo
 }
 
 // Convert a PNG with transparency to a raw image.
-static UINT16 *PNG_RawConvert_16bpp(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+static UINT16 *PNG_MaskedRawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	UINT16 *flat;
 	png_uint_32 x, y;
@@ -693,7 +698,7 @@ static UINT16 *PNG_RawConvert_16bpp(const UINT8 *png, UINT16 *w, UINT16 *h, INT1
 	size_t flatsize, i;
 
 	if (!row_pointers)
-		I_Error("PNG_RawConvert_16bpp: conversion failed");
+		I_Error("PNG_MaskedRawConvert: conversion failed");
 
 	// Convert the image to 16bpp
 	flatsize = (width * height);
@@ -737,12 +742,12 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize)
 {
 	UINT16 width, height;
 	INT16 topoffset = 0, leftoffset = 0;
-	UINT16 *raw = PNG_RawConvert_16bpp(png, &width, &height, &topoffset, &leftoffset, size);
+	UINT16 *raw = PNG_MaskedRawConvert(png, &width, &height, &topoffset, &leftoffset, size);
 
 	if (!raw)
 		I_Error("R_PNGToPatch: conversion failed");
 
-	return R_FlatToPatch_16bpp(raw, width, height, leftoffset, topoffset, destsize);
+	return R_MaskedFlatToPatch(raw, width, height, leftoffset, topoffset, destsize);
 }
 
 //
@@ -1209,7 +1214,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		for (i = 0; i < size; i++)
 			rawsrc[i] = 0xFF00;
 
-		R_PatchToFlat_16bpp(patch, rawsrc, bflip);
+		R_PatchToMaskedFlat(patch, rawsrc, bflip);
 
 		// Don't cache angle = 0
 		for (angle = 1; angle < ROTANGLES; angle++)
@@ -1305,7 +1310,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			}
 
 			// make patch
-			newpatch = R_FlatToPatch_16bpp(rawdst, newwidth, newheight, 0, 0, &size);
+			newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
 			{
 				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
 				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
