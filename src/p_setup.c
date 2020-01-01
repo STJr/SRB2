@@ -1563,8 +1563,11 @@ static void P_LoadTextmap(void)
 	for (i = 0, ld = lines; i < numlines; i++, ld++)
 	{
 		// Defaults.
-		ld->tag = 0;
+		ld->v1 = ld->v2 = NULL;
+		ld->flags = 0;
 		ld->special = 0;
+		ld->tag = 0;
+		ld->sidenum[0] = 0xffff;
 		ld->sidenum[1] = 0xffff;
 
 		TextmapParse(linesPos[i], i, ParseTextmapLinedefParameter);
@@ -1575,12 +1578,12 @@ static void P_LoadTextmap(void)
 	for (i = 0, sd = sides; i < numsides; i++, sd++)
 	{
 		// Defaults.
-		sd->rowoffset = 0;
 		sd->textureoffset = 0;
-
+		sd->rowoffset = 0;
 		sd->toptexture = R_TextureNumForName("-");
 		sd->midtexture = R_TextureNumForName("-");
 		sd->bottomtexture = R_TextureNumForName("-");
+		sd->sector = NULL;
 		sd->repeatcnt = 0;
 
 		TextmapParse(sidesPos[i], i, ParseTextmapSidedefParameter);
