@@ -4631,6 +4631,12 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						S_StartSound(player->mo, sfx_spin);
 						break;
 					}
+					if (player->dashspeed < player->mindash)
+						player->dashspeed = player->mindash;
+
+					if (player->dashspeed > player->maxdash)
+						player->dashspeed = player->maxdash;
+					
 					if (player->dashspeed < player->maxdash && player->mindash != player->maxdash)
 					{
 #define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
@@ -7780,6 +7786,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->fuse = TICRATE*7; // takes about an extra second to hit the ground
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
+			flame->flags2 = (flame->flags2 & ~MF2_OBJECTFLIP)|(player->mo->flags2 & MF2_OBJECTFLIP);
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
 			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
@@ -11244,7 +11251,10 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 		if (panim == PA_WALK)
 		{
 			if (stat != fume->info->spawnstate)
+			{
+				fume->threshold = 0;
 				P_SetMobjState(fume, fume->info->spawnstate);
+			}
 			return;
 		}
 	}
@@ -11275,6 +11285,12 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 		if (underwater)
 		{
 			fume->frame = (fume->frame & FF_FRAMEMASK) | FF_ANIMATE | (P_RandomRange(0, 9) * FF_TRANS10);
+			fume->threshold = 1;
+		}
+		else if (fume->threshold)
+		{
+			fume->frame = (fume->frame & FF_FRAMEMASK) | fume->state->frame;
+			fume->threshold = 0;
 		}
 	}
 

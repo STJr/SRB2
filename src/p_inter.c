@@ -1807,7 +1807,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_MINECARTSPAWNER:
-			if (!player->bot && (special->fuse < TICRATE || player->powers[pw_carry] != CR_MINECART))
+			if (!player->bot && special->fuse <= TICRATE && player->powers[pw_carry] != CR_MINECART)
 			{
 				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
 				P_SetTarget(&mcart->target, toucher);
@@ -2481,9 +2481,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 					P_SetMobjState(scoremobj, scorestate);
 
-					// On ground? No chain starts.
-					if (source->player->powers[pw_invulnerability] || !P_IsObjectOnGround(source))
-						source->player->scoreadd = locscoreadd;
+					source->player->scoreadd = locscoreadd;
 				}
 			}
 
