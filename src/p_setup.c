@@ -1574,9 +1574,15 @@ static void P_LoadTextmap(void)
 	for (i = 0, vt = vertexes; i < numvertexes; i++, vt++)
 	{
 		// Defaults.
-		vt->x = vt->y = vt->z = 0;
+		vt->x = vt->y = INT32_MAX;
+		vt->z = 0;
 
 		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
+
+		if (vt->x == INT32_MAX)
+			I_Error("P_LoadTextmap: vertex %s has no x value set!\n", sizeu1(i));
+		if (vt->y == INT32_MAX)
+			I_Error("P_LoadTextmap: vertex %s has no y value set!\n", sizeu1(i));
 	}
 
 	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
@@ -1614,16 +1620,14 @@ static void P_LoadTextmap(void)
 		ld->sidenum[1] = 0xffff;
 
 		TextmapParse(linesPos[i], i, ParseTextmapLinedefParameter);
+
 		if (!ld->v1)
-		{
-			CONS_Debug(DBG_SETUP, "P_LoadTextmap: linedef %s has no v1 set; defaulting to 0\n", sizeu1(i));
-			ld->v1 = &vertexes[0];
-		}
+			I_Error("P_LoadTextmap: linedef %s has no v1 value set!\n", sizeu1(i));
 		if (!ld->v2)
-		{
-			CONS_Debug(DBG_SETUP, "P_LoadTextmap: linedef %s has no v2 set; defaulting to 0\n", sizeu1(i));
-			ld->v2 = &vertexes[0];
-		}
+			I_Error("P_LoadTextmap: linedef %s has no v2 value set!\n", sizeu1(i));
+		if (ld->sidenum[0] == 0xffff)
+			I_Error("P_LoadTextmap: linedef %s has no sidefront value set!\n", sizeu1(i));
+
 		P_InitializeLinedef(ld);
 	}
 
@@ -1641,10 +1645,8 @@ static void P_LoadTextmap(void)
 		TextmapParse(sidesPos[i], i, ParseTextmapSidedefParameter);
 
 		if (!sd->sector)
-		{
-			CONS_Debug(DBG_SETUP, "P_LoadTextmap: sidedef %s has no sector set; defaulting to 0\n", sizeu1(i));
-			sd->sector = &sectors[0];
-		}
+			I_Error("P_LoadTextmap: sidedef %s has no sector value set!\n", sizeu1(i));
+
 		P_InitializeSidedef(sd);
 	}
 
