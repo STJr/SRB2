@@ -1022,6 +1022,26 @@ static void P_InitializeLinedef(line_t *ld)
 	}
 }
 
+static void P_SetLinedefV1(size_t i, UINT16 vertex_num)
+{
+	if (vertex_num >= numvertexes)
+	{
+		CONS_Debug(DBG_SETUP, "P_SetLinedefV1: linedef %s has out-of-range v1 num %u\n", sizeu1(i), vertex_num);
+		vertex_num = 0;
+	}
+	lines[i].v1 = &vertexes[vertex_num];
+}
+
+static void P_SetLinedefV2(size_t i, UINT16 vertex_num)
+{
+	if (vertex_num >= numvertexes)
+	{
+		CONS_Debug(DBG_SETUP, "P_SetLinedefV2: linedef %s has out-of-range v2 num %u\n", sizeu1(i), vertex_num);
+		vertex_num = 0;
+	}
+	lines[i].v2 = &vertexes[vertex_num];
+}
+
 static void P_LoadLinedefs(UINT8 *data)
 {
 	maplinedef_t *mld = (maplinedef_t *)data;
@@ -1033,14 +1053,25 @@ static void P_LoadLinedefs(UINT8 *data)
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
-		ld->v1 = &vertexes[SHORT(mld->v1)];
-		ld->v2 = &vertexes[SHORT(mld->v2)];
+		P_SetLinedefV1(i, SHORT(mld->v1));
+		P_SetLinedefV2(i, SHORT(mld->v2));
 
 		ld->sidenum[0] = SHORT(mld->sidenum[0]);
 		ld->sidenum[1] = SHORT(mld->sidenum[1]);
 
 		P_InitializeLinedef(ld);
 	}
+}
+
+static void P_SetSidedefSector(size_t i, UINT16 sector_num)
+{
+	// cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
+	if (sector_num >= numsectors)
+	{
+		CONS_Debug(DBG_SETUP, "P_SetSidedefSector: sidedef %s has out-of-range sector num %u\n", sizeu1(i), sector_num);
+		sector_num = 0;
+	}
+	sides[i].sector = &sectors[sector_num];
 }
 
 static void P_LoadSidedefs(UINT8 *data)
@@ -1052,12 +1083,11 @@ static void P_LoadSidedefs(UINT8 *data)
 	for (i = 0; i < numsides; i++, sd++, msd++)
 	{
 		INT16 textureoffset = SHORT(msd->textureoffset);
-		UINT16 sector_num;
 		boolean isfrontside;
 
 		if (!sd->line)
 		{
-			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1((size_t)(sd - sides)));
+			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1(i));
 			sd->line = &lines[0];
 		}
 
@@ -1077,14 +1107,7 @@ static void P_LoadSidedefs(UINT8 *data)
 		}
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
-		// cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
-		sector_num = SHORT(msd->sector);
-		if (sector_num >= numsectors)
-		{
-			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: sidedef %s has out-of-range sector num %u\n", sizeu1(i), sector_num);
-			sector_num = 0;
-		}
-		sd->sector = &sectors[sector_num];
+		P_SetSidedefSector(i, SHORT(msd->sector));
 
 		sd->colormap_data = NULL;
 
@@ -1385,7 +1408,7 @@ static void ParseTextmapSidedefParameter(UINT32 i, char *param)
 	else if (fastcmp(param, "texturemiddle"))
 		sides[i].midtexture = R_TextureNumForName(dat = M_GetToken(NULL));
 	else if (fastcmp(param, "sector"))
-		sides[i].sector = &sectors[atol(dat = M_GetToken(NULL))];
+		P_SetSidedefSector(i, atol(dat = M_GetToken(NULL)));
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(dat = M_GetToken(NULL));
 }
@@ -1397,9 +1420,9 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param)
 	else if (fastcmp(param, "special"))
 		lines[i].special = atol(dat = M_GetToken(NULL));
 	else if (fastcmp(param, "v1"))
-		lines[i].v1 = &vertexes[atol(dat = M_GetToken(NULL))];
+		P_SetLinedefV1(i, atol(dat = M_GetToken(NULL)));
 	else if (fastcmp(param, "v2"))
-		lines[i].v2 = &vertexes[atol(dat = M_GetToken(NULL))];
+		P_SetLinedefV2(i, atol(dat = M_GetToken(NULL)));
 	else if (fastcmp(param, "sidefront"))
 		lines[i].sidenum[0] = atol(dat = M_GetToken(NULL));
 	else if (fastcmp(param, "sideback"))
@@ -1589,7 +1612,16 @@ static void P_LoadTextmap(void)
 		ld->sidenum[1] = 0xffff;
 
 		TextmapParse(linesPos[i], i, ParseTextmapLinedefParameter);
-
+		if (!ld->v1)
+		{
+			CONS_Debug(DBG_SETUP, "P_LoadTextmap: linedef %s has no v1 set; defaulting to 0\n", sizeu1(i));
+			ld->v1 = &vertexes[0];
+		}
+		if (!ld->v2)
+		{
+			CONS_Debug(DBG_SETUP, "P_LoadTextmap: linedef %s has no v2 set; defaulting to 0\n", sizeu1(i));
+			ld->v2 = &vertexes[0];
+		}
 		P_InitializeLinedef(ld);
 	}
 
@@ -1605,6 +1637,12 @@ static void P_LoadTextmap(void)
 		sd->repeatcnt = 0;
 
 		TextmapParse(sidesPos[i], i, ParseTextmapSidedefParameter);
+
+		if (!sd->sector)
+		{
+			CONS_Debug(DBG_SETUP, "P_LoadTextmap: sidedef %s has no sector set; defaulting to 0\n", sizeu1(i));
+			sd->sector = &sectors[0];
+		}
 	}
 
 	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
