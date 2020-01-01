@@ -766,7 +766,7 @@ void D_StartTitle(void)
 
 	if (netgame)
 	{
-		if (gametype == GT_COOP)
+		if (gametyperules & GTR_CAMPAIGN)
 		{
 			G_SetGamestate(GS_WAITINGPLAYERS); // hack to prevent a command repeat
 

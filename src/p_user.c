@@ -1230,13 +1230,13 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 
 	if (gamestate == GS_LEVEL)
 	{
-		if (player->lives == INFLIVES || (gametype != GT_COOP && gametype != GT_COMPETITION))
+		if (player->lives == INFLIVES || !(gametyperules & GTR_LIVES))
 		{
 			P_GivePlayerRings(player, 100*numlives);
 			return;
 		}
 
-		if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0)
+		if ((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0)
 		{
 			P_GivePlayerRings(player, 100*numlives);
 			if (player->lives - prevlives >= numlives)
@@ -1267,7 +1267,7 @@ docooprespawn:
 
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound)
 {
-	if (!((netgame || multiplayer) && gametype == GT_COOP))
+	if (!((netgame || multiplayer) && G_GametypeUsesCoopLives()))
 	{
 		P_GivePlayerLives(player, numlives);
 		if (sound)
@@ -1395,7 +1395,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 		player->score = MAXSCORE;
 
 	// check for extra lives every 50000 pts
-	if (!ultimatemode && !modeattacking && player->score > oldscore && player->score % 50000 < amount && (gametype == GT_COMPETITION || gametype == GT_COOP))
+	if (!ultimatemode && !modeattacking && player->score > oldscore && player->score % 50000 < amount && (gametyperules & GTR_LIVES))
 	{
 		P_GivePlayerLives(player, (player->score/50000) - (oldscore/50000));
 		P_PlayLivesJingle(player);
@@ -9305,7 +9305,7 @@ boolean P_GetLives(player_t *player)
 {
 	INT32 i, maxlivesplayer = -1, livescheck = 1;
 	if (!(netgame || multiplayer)
-	|| (gametype != GT_COOP)
+	|| !G_GametypeUsesCoopLives()
 	|| (player->lives == INFLIVES))
 		return true;
 
@@ -9454,7 +9454,7 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	else if ((player->lives > 0 || j != MAXPLAYERS) && !(!(netgame || multiplayer) && G_IsSpecialStage(gamemap))) // Don't allow "click to respawn" in special stages!
 	{
-		if (gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
+		if (G_GametypeUsesCoopStarposts() && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		{
 			P_ConsiderAllGone();
 			if ((player->deadtimer > TICRATE<<1) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
@@ -9469,19 +9469,22 @@ static void P_DeathThink(player_t *player)
 			// Respawn with jump button, force respawn time (3 second default, cheat protected) in shooter modes.
 			if (cmd->buttons & BT_JUMP)
 			{
-				if (gametype != GT_COOP && player->spectator)
+				// You're a spectator, so respawn right away.
+				if ((gametyperules & GTR_SPECTATORS) && player->spectator)
 					player->playerstate = PST_REBORN;
-				else switch(gametype) {
-					case GT_COOP:
-					case GT_COMPETITION:
-					case GT_RACE:
-						if (player->deadtimer > TICRATE)
-							player->playerstate = PST_REBORN;
-						break;
-					default:
-						if (player->deadtimer > cv_respawntime.value*TICRATE)
-							player->playerstate = PST_REBORN;
-						break;
+				else
+				{
+					// Give me one second.
+					INT32 respawndelay = TICRATE;
+
+					// Non-platform gametypes
+					if (gametyperules & GTR_RESPAWNDELAY)
+						respawndelay = (cv_respawntime.value*TICRATE);
+
+					// You've been dead for enough time.
+					// You may now respawn.
+					if (player->deadtimer > respawndelay)
+						player->playerstate = PST_REBORN;
 				}
 			}
 
@@ -9495,7 +9498,7 @@ static void P_DeathThink(player_t *player)
 		INT32 i, deadtimercheck = INT32_MAX;
 
 		// In a net/multiplayer game, and out of lives
-		if (gametype == GT_COMPETITION)
+		if (G_CompetitionGametype())
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -11550,7 +11553,7 @@ void P_PlayerThink(player_t *player)
 #else
 	if (player->spectator &&
 #endif
-	gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
+	G_GametypeUsesCoopStarposts() && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		P_ConsiderAllGone();
 
 	if (player->playerstate == PST_DEAD)
