@@ -849,7 +849,9 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_fullscreen);
 	CV_RegisterVar(&cv_renderview);
 	CV_RegisterVar(&cv_renderer);
+#ifdef HWRENDER
 	CV_RegisterVar(&cv_newrenderer);
+#endif
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);
 	CV_RegisterVar(&cv_scr_height);
@@ -1811,18 +1813,15 @@ static void Command_Map_f(void)
 	boolean newresetplayers;
 
 	boolean mustmodifygame;
-	boolean usemapcode = false;
 
 	INT32 newmapnum;
 
 	char   *    mapname;
-	size_t      mapnamelen;
 	char   *realmapname = NULL;
 
 	INT32 newgametype = gametype;
 
 	INT32 d;
-	char *p;
 
 	if (client && !IsPlayerAdmin(consoleplayer))
 	{
@@ -1882,54 +1881,14 @@ static void Command_Map_f(void)
 	}
 
 	mapname = ConcatCommandArgv(1, first_option);
-	mapnamelen = strlen(mapname);
 
-	if (mapnamelen == 2)/* maybe two digit code */
-	{
-		if (( newmapnum = M_MapNumber(mapname[0], mapname[1]) ))
-			usemapcode = true;
-	}
-	else if (mapnamelen == 5 && strnicmp(mapname, "MAP", 3) == 0)
-	{
-		if (( newmapnum = M_MapNumber(mapname[3], mapname[4]) ) == 0)
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Invalid map code '%s'.\n"), mapname);
-			Z_Free(mapname);
-			return;
-		}
-		usemapcode = true;
-	}
-
-	if (!usemapcode)
-	{
-		/* Now detect map number in base 10, which no one asked for. */
-		newmapnum = strtol(mapname, &p, 10);
-		if (*p == '\0')/* we got it */
-		{
-			if (newmapnum < 1 || newmapnum > NUMMAPS)
-			{
-				CONS_Alert(CONS_ERROR, M_GetText("Invalid map number %d.\n"), newmapnum);
-				Z_Free(mapname);
-				return;
-			}
-			usemapcode = true;
-		}
-		else
-		{
-			newmapnum = G_FindMap(mapname, &realmapname, NULL, NULL);
-		}
-	}
+	newmapnum = G_FindMapByNameOrCode(mapname, &realmapname);
 
 	if (newmapnum == 0)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Could not find any map described as '%s'.\n"), mapname);
 		Z_Free(mapname);
 		return;
-	}
-
-	if (usemapcode)
-	{
-		realmapname = G_BuildMapTitle(newmapnum);
 	}
 
 	if (mustmodifygame && option_force)
