@@ -2171,7 +2171,7 @@ skipwhite:
 				return data;
 			}
 			if (c == '\033')
-				data += 2;
+				data++;
 			else
 			{
 				com_token[len] = c;
