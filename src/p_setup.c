@@ -2027,13 +2027,8 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 			for (m = 0; m < subsectors[i].numlines; m++, k++)
 			{
 				UINT16 linenum;
-				UINT32 vert = READUINT32((*data));
 
-				segs[k].v1 = &vertexes[vert];
-				if (m == 0)
-					segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
-				else
-					segs[k - 1].v2 = segs[k].v1;
+				segs[k - 1 + ((m == 0) ? 0 : subsectors[i].numlines)].v2 = segs[k].v1 = &vertexes[READUINT32((*data))];
 
 				(*data) += 4; // partner, can be ignored by software renderer
 				if (nodetype == NT_XGL3)
