@@ -1451,7 +1451,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->starpostnum >= special->health)
 				return; // Already hit this post
 
-			if (cv_coopstarposts.value && gametype == GT_COOP && (netgame || multiplayer))
+			if (cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (netgame || multiplayer))
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
@@ -2521,7 +2521,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		target->colorized = false;
 		G_GhostAddColor(GHC_NORMAL);
 
-		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
+		if ((target->player->lives <= 1) && (netgame || multiplayer) && G_GametypeUsesCoopLives() && (cv_cooplives.value == 0))
 			;
 		else if (!target->player->bot && !target->player->spectator && (target->player->lives != INFLIVES)
 		 && G_GametypeUsesLives())
@@ -2531,7 +2531,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
 				boolean gameovermus = false;
-				if ((netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value != 1))
+				if ((netgame || multiplayer) && G_GametypeUsesCoopLives() && (cv_cooplives.value != 1))
 				{
 					INT32 i;
 					for (i = 0; i < MAXPLAYERS; i++)
@@ -3199,10 +3199,12 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	player->powers[pw_carry] = CR_NONE;
 
 	// Burst weapons and emeralds in Match/CTF only
-	if (source && (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
+	if (source)
 	{
-		P_PlayerRingBurst(player, player->rings);
-		P_PlayerEmeraldBurst(player, false);
+		if ((gametyperules & GTR_RINGSLINGER) && !(gametyperules & GTR_TAG))
+			P_PlayerRingBurst(player, player->rings);
+		if (gametyperules & GTR_POWERSTONES)
+			P_PlayerEmeraldBurst(player, false);
 	}
 
 	// Get rid of shield

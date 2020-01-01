@@ -745,9 +745,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
   // So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
 	if (tmthing->type == MT_NAMECHECK)
 	{
-	  // Ignore things that aren't players, ignore spectators, ignore yourself.
-		// (also don't bother to check that tmthing->target->player is non-NULL because we're not actually using it here.)
-		if (!thing->player || thing->player->spectator || (tmthing->target && thing->player == tmthing->target->player))
+		// Ignore things that aren't players, ignore spectators, ignore yourself.
+		if (!thing->player || !(tmthing->target && tmthing->target->player) || thing->player->spectator || (tmthing->target && thing->player == tmthing->target->player))
 			return true;
 
 		// Now check that you actually hit them.
@@ -759,6 +758,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
+
+#ifdef HAVE_BLUA
+		// REX HAS SEEN YOU
+		if (!LUAh_SeenPlayer(tmthing->target->player, thing->player))
+			return false;
+#endif
 
 		seenplayer = thing->player;
 		return false;
