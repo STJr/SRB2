@@ -47,7 +47,7 @@ void R_TextureToFlat(size_t tex, UINT8 *flat);
 void R_PatchToFlat(patch_t *patch, UINT8 *flat);
 void R_PatchToFlat_16bpp(patch_t *patch, UINT16 *raw, boolean flip);
 patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
-patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *size);
+patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize);
 
 // Portable Network Graphics
 boolean R_IsLumpPNG(const UINT8 *d, size_t s);

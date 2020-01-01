@@ -250,6 +250,9 @@ patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffse
 	UINT8 *colpointers, *startofspan;
 	size_t size = 0;
 
+	if (!raw)
+		return NULL;
+
 	// Write image size and offset
 	WRITEINT16(imgptr, width);
 	WRITEINT16(imgptr, height);
@@ -353,12 +356,13 @@ patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffse
 //
 // Convert a 16-bit flat to a patch.
 //
-patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
+patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize)
 {
 	UINT32 x, y;
 	UINT8 *img;
 	UINT8 *imgptr = imgbuf;
 	UINT8 *colpointers, *startofspan;
+	size_t size = 0;
 
 	if (!raw)
 		return NULL;
@@ -366,9 +370,8 @@ patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *s
 	// Write image size and offset
 	WRITEINT16(imgptr, width);
 	WRITEINT16(imgptr, height);
-	// no offsets
-	WRITEINT16(imgptr, 0);
-	WRITEINT16(imgptr, 0);
+	WRITEINT16(imgptr, leftoffset);
+	WRITEINT16(imgptr, topoffset);
 
 	// Leave placeholder to column pointers
 	colpointers = imgptr;
@@ -452,9 +455,12 @@ patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *s
 		WRITEUINT8(imgptr, 0xFF);
 	}
 
-	*size = imgptr-imgbuf;
-	img = Z_Malloc(*size, PU_STATIC, NULL);
-	memcpy(img, imgbuf, *size);
+	size = imgptr-imgbuf;
+	img = Z_Malloc(size, PU_STATIC, NULL);
+	memcpy(img, imgbuf, size);
+
+	if (destsize != NULL)
+		*destsize = size;
 	return (patch_t *)img;
 }
 
@@ -677,6 +683,41 @@ static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topo
 	return flat;
 }
 
+// Convert a PNG with transparency to a raw image.
+static UINT16 *PNG_RawConvert_16bpp(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+{
+	UINT16 *flat;
+	png_uint_32 x, y;
+	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, size);
+	png_uint_32 width = *w, height = *h;
+	size_t flatsize, i;
+
+	if (!row_pointers)
+		I_Error("PNG_RawConvert_16bpp: conversion failed");
+
+	// Convert the image to 16bpp
+	flatsize = (width * height);
+	flat = Z_Malloc(flatsize * sizeof(UINT16), PU_LEVEL, NULL);
+
+	// can't memset here
+	for (i = 0; i < flatsize; i++)
+		flat[i] = 0xFF00;
+
+	for (y = 0; y < height; y++)
+	{
+		png_bytep row = row_pointers[y];
+		for (x = 0; x < width; x++)
+		{
+			png_bytep px = &(row[x * 4]);
+			if ((UINT8)px[3])
+				flat[((y * width) + x)] = NearestColor((UINT8)px[0], (UINT8)px[1], (UINT8)px[2]);
+		}
+	}
+	free(row_pointers);
+
+	return flat;
+}
+
 //
 // R_PNGToFlat
 //
@@ -696,12 +737,12 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 {
 	UINT16 width, height;
 	INT16 topoffset = 0, leftoffset = 0;
-	UINT8 *raw = PNG_RawConvert(png, &width, &height, &topoffset, &leftoffset, size);
+	UINT16 *raw = PNG_RawConvert_16bpp(png, &width, &height, &topoffset, &leftoffset, size);
 
 	if (!raw)
 		I_Error("R_PNGToPatch: conversion failed");
 
-	return R_FlatToPatch(raw, width, height, leftoffset, topoffset, destsize, transparency);
+	return R_FlatToPatch_16bpp(raw, width, height, leftoffset, topoffset, destsize);
 }
 
 //
@@ -1264,7 +1305,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			}
 
 			// make patch
-			newpatch = R_FlatToPatch_16bpp(rawdst, newwidth, newheight, &size);
+			newpatch = R_FlatToPatch_16bpp(rawdst, newwidth, newheight, 0, 0, &size);
 			{
 				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
 				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
