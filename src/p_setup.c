@@ -1527,8 +1527,6 @@ static void TextmapParse(UINT32 dataPos, size_t num, void (*parser)(UINT32, char
 	}
 }
 
-#define MAXFLATSIZE (2048<<FRACBITS)
-
 /** Provides a fix to the flat alignment coordinate transform from standard Textmaps.
  */
 static void TextmapFixFlatOffsets(sector_t *sec)
@@ -1553,8 +1551,6 @@ static void TextmapFixFlatOffsets(sector_t *sec)
 		sec->ceiling_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
 	}
 }
-
-#undef MAXFLATSIZE
 
 /** Loads the textmap data, after obtaining the elements count and allocating their respective space.
   */

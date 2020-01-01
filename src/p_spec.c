@@ -52,9 +52,6 @@ mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
 
-// This must be updated whenever we up the max flat size - quicker to assume rather than figuring out the sqrt of the specific flat's filesize.
-#define MAXFLATSIZE (2048<<FRACBITS)
-
 /** Animated texture descriptor
   * This keeps track of an animated texture or an animated flat.
   * \sa P_UpdateSpecials, P_InitPicAnims, animdef_t
