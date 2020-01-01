@@ -694,7 +694,7 @@ static void ST_drawTime(void)
 	else
 	{
 		// Counting down the hidetime?
-		if ((gametyperules & GTR_HIDETIME) && (stplyr->realtime <= (hidetime*TICRATE)))
+		if ((gametyperules & GTR_STARTCOUNTDOWN) && (stplyr->realtime <= (hidetime*TICRATE)))
 		{
 			tics = (hidetime*TICRATE - stplyr->realtime);
 			if (tics < 3*TICRATE)
@@ -705,7 +705,7 @@ static void ST_drawTime(void)
 		else
 		{
 			// Hidetime finish!
-			if ((gametyperules & GTR_HIDETIME) && (stplyr->realtime < ((hidetime+1)*TICRATE)))
+			if ((gametyperules & GTR_STARTCOUNTDOWN) && (stplyr->realtime < ((hidetime+1)*TICRATE)))
 				ST_drawRaceNum(hidetime*TICRATE - stplyr->realtime);
 
 			// Time limit?
@@ -723,7 +723,7 @@ static void ST_drawTime(void)
 				downwards = true;
 			}
 			// Post-hidetime normal.
-			else if (gametyperules & GTR_TAG)
+			else if (gametyperules & GTR_STARTCOUNTDOWN)
 				tics = stplyr->realtime - hidetime*TICRATE;
 			// "Shadow! What are you doing? Hurry and get back here
 			// right now before the island blows up with you on it!"
@@ -845,68 +845,12 @@ static void ST_drawLivesArea(void)
 			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, faceprefix[stplyr->skin], colormap);
 	}
 
-	// Lives number
+	// Metal Sonic recording
 	if (metalrecording)
 	{
 		if (((2*leveltime)/TICRATE) & 1)
 			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
 				hudinfo[HUD_LIVES].f|V_PERPLAYER|V_REDMAP|V_HUDTRANS, "REC");
-	}
-	else if (G_GametypeUsesLives() || gametype == GT_RACE)
-	{
-		// x
-		V_DrawScaledPatch(hudinfo[HUD_LIVES].x+22, hudinfo[HUD_LIVES].y+10,
-			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, stlivex);
-
-		// lives number
-		if (gametype == GT_RACE)
-		{
-			livescount = INFLIVES;
-			notgreyedout = true;
-		}
-		else if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 3)
-		{
-			INT32 i;
-			livescount = 0;
-			notgreyedout = (stplyr->lives > 0);
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i])
-					continue;
-
-				if (players[i].lives < 1)
-					continue;
-
-				if (players[i].lives > 1)
-					notgreyedout = true;
-
-				if (players[i].lives == INFLIVES)
-				{
-					livescount = INFLIVES;
-					break;
-				}
-				else if (livescount < 99)
-					livescount += (players[i].lives);
-			}
-		}
-		else
-		{
-			livescount = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? INFLIVES : stplyr->lives);
-			notgreyedout = true;
-		}
-
-		if (livescount == INFLIVES)
-			V_DrawCharacter(hudinfo[HUD_LIVES].x+50, hudinfo[HUD_LIVES].y+8,
-				'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
-		else
-		{
-			if (stplyr->playerstate == PST_DEAD && !(stplyr->spectator) && (livescount || stplyr->deadtimer < (TICRATE<<1)))
-				livescount++;
-			if (livescount > 99)
-				livescount = 99;
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
-				hudinfo[HUD_LIVES].f|V_PERPLAYER|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF), va("%d",livescount));
-		}
 	}
 	// Spectator
 	else if (stplyr->spectator)
@@ -933,6 +877,82 @@ static void ST_drawLivesArea(void)
 			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "BLUE");
 			v_colmap = V_BLUEMAP;
 		}
+	}
+	// Lives number
+	else
+	{
+		boolean candrawlives = true;
+
+		// Co-op and Competition, normal life counter
+		if (G_GametypeUsesLives())
+		{
+			// Handle cooplives here
+			if ((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 3)
+			{
+				INT32 i;
+				livescount = 0;
+				notgreyedout = (stplyr->lives > 0);
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (!playeringame[i])
+						continue;
+
+					if (players[i].lives < 1)
+						continue;
+
+					if (players[i].lives > 1)
+						notgreyedout = true;
+
+					if (players[i].lives == INFLIVES)
+					{
+						livescount = INFLIVES;
+						break;
+					}
+					else if (livescount < 99)
+						livescount += (players[i].lives);
+				}
+			}
+			else
+			{
+				livescount = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? INFLIVES : stplyr->lives);
+				notgreyedout = true;
+			}
+		}
+		// Infinity symbol (Race)
+		else if (G_PlatformGametype() && !(gametyperules & GTR_LIVES))
+		{
+			livescount = INFLIVES;
+			notgreyedout = true;
+		}
+		// Otherwise nothing, sorry.
+		// Special Stages keep not showing lives,
+		// as G_GametypeUsesLives() returns false in
+		// Special Stages, and the infinity symbol
+		// cannot show up because Special Stages
+		// still have the GTR_LIVES gametype rule
+		// by default.
+		else
+			candrawlives = false;
+
+		// Draw the lives counter here.
+		if (candrawlives)
+		{
+			// x
+			V_DrawScaledPatch(hudinfo[HUD_LIVES].x+22, hudinfo[HUD_LIVES].y+10, hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, stlivex);
+			if (livescount == INFLIVES)
+				V_DrawCharacter(hudinfo[HUD_LIVES].x+50, hudinfo[HUD_LIVES].y+8,
+					'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
+			else
+			{
+				if (stplyr->playerstate == PST_DEAD && !(stplyr->spectator) && (livescount || stplyr->deadtimer < (TICRATE<<1)))
+					livescount++;
+				if (livescount > 99)
+					livescount = 99;
+				V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
+					hudinfo[HUD_LIVES].f|V_PERPLAYER|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF), va("%d",livescount));
+			}
+		}
+#undef ST_drawLivesX
 	}
 
 	// name
@@ -2202,7 +2222,7 @@ static void ST_drawTextHUD(void)
 			donef12 = true;
 		}
 	}
-	else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) // Death overrides spectator text.
+	else if ((gametyperules & GTR_RESPAWNDELAY) && stplyr->playerstate == PST_DEAD && stplyr->lives) // Death overrides spectator text.
 	{
 		INT32 respawntime = cv_respawntime.value - stplyr->deadtimer/TICRATE;
 
@@ -2226,7 +2246,7 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(M_GetText("\x82""Wait for the stage to end..."))
 		else if (G_PlatformGametype())
 		{
-			if (gametype == GT_COOP)
+			if (G_GametypeUsesCoopLives())
 			{
 				if (stplyr->lives <= 0
 				&& cv_cooplives.value == 2
@@ -2637,7 +2657,7 @@ static void ST_overlayDrawer(void)
 		INT32 i = MAXPLAYERS;
 		INT32 deadtimer = stplyr->spectator ? TICRATE : (stplyr->deadtimer-(TICRATE<<1));
 
-		if ((gametype == GT_COOP)
+		if (G_GametypeUsesCoopLives()
 		&& (netgame || multiplayer)
 		&& (cv_cooplives.value != 1))
 		{

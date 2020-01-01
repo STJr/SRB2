@@ -2446,7 +2446,7 @@ static void P_InitLevelSettings(void)
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
 
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -2464,7 +2464,7 @@ static void P_InitLevelSettings(void)
 	{
 		G_PlayerReborn(i, true);
 
-		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
+		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (G_CompetitionGametype() || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
 			players[i].lives = cv_startinglives.value;
@@ -2754,17 +2754,10 @@ static void P_SetupCamera(void)
 	{
 		mapthing_t *thing;
 
-		switch (gametype)
-		{
-		case GT_MATCH:
-		case GT_TAG:
+		if (gametyperules & GTR_DEATHMATCHSTARTS)
 			thing = deathmatchstarts[0];
-			break;
-
-		default:
+		else
 			thing = playerstarts[0];
-			break;
-		}
 
 		if (thing)
 		{
@@ -2979,7 +2972,7 @@ static void P_InitGametype(void)
 	P_InitPlayers();
 
 	// restore time in netgame (see also g_game.c)
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 	{
 		// is this a hack? maybe
 		tic_t maxstarposttime = 0;
@@ -3023,6 +3016,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	// This is needed. Don't touch.
 	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
+	gametyperules = gametypedefaultrules[gametype];
 
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
