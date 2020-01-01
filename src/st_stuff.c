@@ -939,6 +939,8 @@ static void ST_drawLivesArea(void)
 	v_colmap |= (V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER);
 	if (strlen(skins[stplyr->skin].hudname) <= 5)
 		V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
+	else if (V_StringWidth(skins[stplyr->skin].hudname, v_colmap) <= 48)
+		V_DrawString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
 	else if (V_ThinStringWidth(skins[stplyr->skin].hudname, v_colmap) <= 40)
 		V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
 	else
