@@ -2867,6 +2867,7 @@ static void M_GoBack(INT32 choice)
 
 			menuactive = false;
 			wipetypepre = menupres[M_GetYoungestChildMenu()].exitwipe;
+			I_UpdateMouseGrab();
 			D_StartTitle();
 		}
 		else
@@ -3592,6 +3593,8 @@ void M_ClearMenus(boolean callexitmenufunc)
 		currentMenu = &MainDef; // Not like it matters
 	menuactive = false;
 	hidetitlemap = false;
+
+	I_UpdateMouseGrab();
 }
 
 //

@@ -150,6 +150,8 @@ void I_GetJoystick2Events(void){}
 
 void I_GetMouseEvents(void){}
 
+void I_UpdateMouseGrab(void){}
+
 char *I_GetEnv(const char *name)
 {
 	(void)name;
