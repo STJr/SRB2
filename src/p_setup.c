@@ -1053,6 +1053,7 @@ static void P_LoadLinedefs(UINT8 *data)
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
+		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		P_SetLinedefV1(i, SHORT(mld->v1));
 		P_SetLinedefV2(i, SHORT(mld->v2));
 
@@ -1428,6 +1429,13 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		P_SetLinedefV1(i, atol(val));
 	else if (fastcmp(param, "v2"))
 		P_SetLinedefV2(i, atol(val));
+	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
+	{
+		size_t argnum = atol(param + 3);
+		if (argnum >= NUMLINEARGS)
+			return;
+		lines[i].args[argnum] = atol(val);
+	}
 	else if (fastcmp(param, "sidefront"))
 		lines[i].sidenum[0] = atol(val);
 	else if (fastcmp(param, "sideback"))
@@ -1616,6 +1624,7 @@ static void P_LoadTextmap(void)
 		ld->flags = 0;
 		ld->special = 0;
 		ld->tag = 0;
+		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		ld->sidenum[0] = 0xffff;
 		ld->sidenum[1] = 0xffff;
 

@@ -175,6 +175,7 @@ static const struct {
 
 	{META_SECTORLINES,  "sector_t.lines"},
 	{META_SIDENUM,      "line_t.sidenum"},
+	{META_LINEARGS,     "line_t.args"},
 #ifdef HAVE_LUA_SEGS
 	{META_NODEBBOX,     "node_t.bbox"},
 	{META_NODECHILDREN, "node_t.children"},

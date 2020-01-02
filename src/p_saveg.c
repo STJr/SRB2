@@ -768,6 +768,17 @@ static void P_NetUnArchiveColormaps(void)
 #define LD_S2TOPTEX 0x02
 #define LD_S2BOTTEX 0x04
 #define LD_S2MIDTEX 0x08
+#define LD_ARGS     0x10
+
+static boolean P_AreArgsEqual(const INT32 args[NUMLINEARGS], const INT32 spawnargs[NUMLINEARGS])
+{
+	UINT8 i;
+	for (i = 0; i < NUMLINEARGS; i++)
+		if (args[i] != spawnargs[i])
+			return false;
+
+	return true;
+}
 
 //
 // P_NetArchiveWorld
@@ -944,6 +955,9 @@ static void P_NetArchiveWorld(void)
 		if (spawnli->special == 321 || spawnli->special == 322) // only reason li->callcount would be non-zero is if either of these are involved
 			diff |= LD_CLLCOUNT;
 
+		if (!P_AreArgsEqual(li->args, spawnli->args))
+			diff2 |= LD_ARGS;
+
 		if (li->sidenum[0] != 0xffff)
 		{
 			si = &sides[li->sidenum[0]];
@@ -970,9 +984,10 @@ static void P_NetArchiveWorld(void)
 				diff2 |= LD_S2BOTTEX;
 			if (si->midtexture != spawnsi->midtexture)
 				diff2 |= LD_S2MIDTEX;
-			if (diff2)
-				diff |= LD_DIFF2;
 		}
+
+		if (diff2)
+			diff |= LD_DIFF2;
 
 		if (diff)
 		{
@@ -1007,6 +1022,12 @@ static void P_NetArchiveWorld(void)
 				WRITEINT32(put, si->bottomtexture);
 			if (diff2 & LD_S2MIDTEX)
 				WRITEINT32(put, si->midtexture);
+			if (diff2 & LD_ARGS)
+			{
+				UINT8 j;
+				for (j = 0; j < NUMLINEARGS; j++)
+					WRITEINT32(put, li->args[j]);
+			}
 		}
 	}
 	WRITEUINT16(put, 0xffff);
@@ -1190,6 +1211,13 @@ static void P_NetUnArchiveWorld(void)
 			si->bottomtexture = READINT32(get);
 		if (diff2 & LD_S2MIDTEX)
 			si->midtexture = READINT32(get);
+		if (diff2 & LD_ARGS)
+		{
+			UINT8 j;
+			for (j = 0; j < NUMLINEARGS; j++)
+				li->args[j] = READINT32(get);
+		}
+
 	}
 
 	save_p = get;

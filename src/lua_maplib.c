@@ -94,6 +94,7 @@ enum line_e {
 	line_flags,
 	line_special,
 	line_tag,
+	line_args,
 	line_sidenum,
 	line_frontside,
 	line_backside,
@@ -115,6 +116,7 @@ static const char *const line_opt[] = {
 	"flags",
 	"special",
 	"tag",
+	"args",
 	"sidenum",
 	"frontside",
 	"backside",
@@ -703,6 +705,24 @@ static int subsector_num(lua_State *L)
 // line_t //
 ////////////
 
+// args, i -> args[i]
+static int lineargs_get(lua_State *L)
+{
+	INT32 *args = *((INT32**)luaL_checkudata(L, 1, META_LINEARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMLINEARGS)
+		return luaL_error(L, LUA_QL("line_t.args") " index cannot be %d", i);
+	lua_pushinteger(L, args[i]);
+	return 1;
+}
+
+// #args -> NUMLINEARGS
+static int lineargs_len(lua_State* L)
+{
+	lua_pushinteger(L, NUMLINEARGS);
+	return 1;
+}
+
 static int line_get(lua_State *L)
 {
 	line_t *line = *((line_t **)luaL_checkudata(L, 1, META_LINE));
@@ -742,6 +762,9 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_tag:
 		lua_pushinteger(L, line->tag);
+		return 1;
+	case line_args:
+		LUA_PushUserdata(L, line->args, META_LINEARGS);
 		return 1;
 	case line_sidenum:
 		LUA_PushUserdata(L, line->sidenum, META_SIDENUM);
@@ -2139,6 +2162,14 @@ int LUA_MapLib(lua_State *L)
 		lua_setfield(L, -2, "__index");
 
 		lua_pushcfunction(L, line_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_LINEARGS);
+		lua_pushcfunction(L, lineargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, lineargs_len);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
