@@ -109,7 +109,7 @@ static SDL_bool disable_fullscreen = SDL_FALSE;
 #define USE_FULLSCREEN (disable_fullscreen||!allow_fullscreen)?0:cv_fullscreen.value
 static SDL_bool disable_mouse = SDL_FALSE;
 #define USE_MOUSEINPUT (!disable_mouse && cv_usemouse.value && havefocus)
-#define IGNORE_MOUSE (menuactive || paused || con_destlines || chat_on || demoplayback || gamestate != GS_LEVEL)
+#define IGNORE_MOUSE (menuactive || paused || con_destlines || chat_on || gamestate != GS_LEVEL)
 #define MOUSE_MENU false //(!disable_mouse && cv_usemouse.value && menuactive && !USE_FULLSCREEN)
 #define MOUSEBUTTONS_MAX MOUSEBUTTONS
 
