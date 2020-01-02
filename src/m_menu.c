@@ -2877,6 +2877,7 @@ static void M_GoBack(INT32 choice)
 
 			menuactive = false;
 			wipetypepre = menupres[M_GetYoungestChildMenu()].exitwipe;
+			I_UpdateMouseGrab();
 			D_StartTitle();
 		}
 		else
@@ -3221,10 +3222,7 @@ boolean M_Responder(event_t *ev)
 
 			case KEY_ESCAPE: // Pop up menu
 				if (chat_on)
-				{
 					HU_clearChatChars();
-					chat_on = false;
-				}
 				else
 					M_StartControlPanel();
 				return true;
@@ -3602,6 +3600,8 @@ void M_ClearMenus(boolean callexitmenufunc)
 		currentMenu = &MainDef; // Not like it matters
 	menuactive = false;
 	hidetitlemap = false;
+
+	I_UpdateMouseGrab();
 }
 
 //
