@@ -1840,10 +1840,13 @@ static inline float P_SegLengthFloat(seg_t *seg)
 
 static void P_InitializeSeg(seg_t *seg)
 {
-	seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
+	if (seg->linedef)
+	{
+		seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
 
-	seg->frontsector = seg->sidedef->sector;
-	seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
+		seg->frontsector = seg->sidedef->sector;
+		seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
+	}
 
 #ifdef HWRENDER
 	seg->pv1 = seg->pv2 = NULL;
@@ -2026,15 +2029,21 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		case NT_XGL3:
 			for (m = 0; m < subsectors[i].numlines; m++, k++)
 			{
+				UINT32 vertexnum = READUINT32((*data));
 				UINT16 linenum;
 
-				segs[k - 1 + ((m == 0) ? 0 : subsectors[i].numlines)].v2 = segs[k].v1 = &vertexes[READUINT32((*data))];
+				if (vertexnum >= numvertexes)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %d in subsector %d has invalid vertex %d!\n", k, m, vertexnum);
 
-				(*data) += 4; // partner, can be ignored by software renderer
+				segs[k - 1 + ((m == 0) ? subsectors[i].numlines : 0)].v2 = segs[k].v1 = &vertexes[vertexnum];
+
+				READUINT32((*data)); // partner, can be ignored by software renderer
 				if (nodetype == NT_XGL3)
-					(*data) += 2; // Line number is 32-bit in XGL3, but we're limited to 16 bits.
+					READUINT16((*data)); // Line number is 32-bit in XGL3, but we're limited to 16 bits.
 
 				linenum = READUINT16((*data));
+				if (linenum != 0xFFFF && linenum >= numlines)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %d in subsector %d has invalid linedef %d!\n", k, m, linenum);
 				segs[k].glseg = (linenum == 0xFFFF);
 				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
 				segs[k].side = READUINT8((*data));
@@ -2044,9 +2053,20 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		case NT_XNOD:
 			for (m = 0; m < subsectors[i].numlines; m++, k++)
 			{
-				segs[k].v1 = &vertexes[READUINT32((*data))];
-				segs[k].v2 = &vertexes[READUINT32((*data))];
-				segs[k].linedef = &lines[READUINT16((*data))];
+				UINT32 v1num = READUINT32((*data));
+				UINT32 v2num = READUINT32((*data));
+				UINT16 linenum = READUINT16((*data));
+
+				if (v1num >= numvertexes)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %d in subsector %d has invalid v1 %d!\n", k, m, v1num);
+				if (v2num >= numvertexes)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %d in subsector %d has invalid v2 %d!\n", k, m, v2num);
+				if (linenum >= numlines)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %d in subsector %d has invalid linedef %d!\n", k, m, linenum);
+
+				segs[k].v1 = &vertexes[v1num];
+				segs[k].v2 = &vertexes[v2num];
+				segs[k].linedef = &lines[linenum];
 				segs[k].side = READUINT8((*data));
 				segs[k].glseg = false;
 			}
@@ -2063,7 +2083,8 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		vertex_t *v2 = seg->v2;
 		P_InitializeSeg(seg);
 		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
-		seg->offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
+		if (seg->linedef)
+			segs[i].offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
 	}
 
 	return true;
