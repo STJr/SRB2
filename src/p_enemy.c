@@ -5177,6 +5177,8 @@ void A_SignPlayer(mobj_t *actor)
 
 		if (signcolor)
 			;
+		else if (!skin->sprites[SPR2_SIGN].numframes)
+			signcolor = facecolor;
 		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
 			signcolor = skin->prefoppositecolor;
 		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
@@ -5221,21 +5223,33 @@ void A_SignPlayer(mobj_t *actor)
 		facecolor = skin->prefcolor;
 		if (signcolor)
 			;
+		else if (!skin->sprites[SPR2_SIGN].numframes)
+			signcolor = facecolor;
 		else if (skin->prefoppositecolor)
 			signcolor = skin->prefoppositecolor;
 		else if (facecolor)
 			signcolor = Color_Opposite[facecolor - 1][0];
 	}
 
-	if (skin && skin->sprites[SPR2_SIGN].numframes) // player face
+	if (skin)
 	{
-		ov->color = facecolor;
-		ov->skin = skin;
-		P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+		if (skin->sprites[SPR2_SIGN].numframes) // player face
+		{
+			ov->color = facecolor;
+			ov->skin = skin;
+			P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+		}
+		else // CLEAR! sign
+		{
+			ov->color = SKINCOLOR_NONE;
+			ov->skin = NULL; // needs to be NULL in the case of SF_HIRES characters
+			P_SetMobjState(ov, actor->info->missilestate); // S_CLEARSIGN
+		}
 	}
 	else // Eggman face
 	{
 		ov->color = SKINCOLOR_NONE;
+		ov->skin = NULL;
 		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		if (!signcolor)
 			signcolor = SKINCOLOR_CARBON;

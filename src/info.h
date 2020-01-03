@@ -2021,6 +2021,7 @@ typedef enum state
 	S_SIGNSTOP,
 	S_SIGNBOARD,
 	S_EGGMANSIGN,
+	S_CLEARSIGN,
 
 	// Spike Ball
 	S_SPIKEBALL1,
