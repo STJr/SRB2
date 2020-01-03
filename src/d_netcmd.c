@@ -2170,6 +2170,8 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 		else
 			S_ResumeAudio();
 	}
+
+	I_UpdateMouseGrab();
 }
 
 // Command for stuck characters in netgames, griefing, etc.
