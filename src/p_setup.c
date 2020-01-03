@@ -2548,69 +2548,6 @@ static void P_ProcessLinedefsWithSidedefs(void)
 	}
 }
 
-static void P_CompressSidedefs(void)
-{
-	side_t *newsides;
-	size_t numnewsides = 0;
-	size_t z;
-	size_t i;
-
-	for (i = 0; i < numsides; i++)
-	{
-		size_t j, k;
-		line_t *ld;
-
-		if (!sides[i].sector)
-			continue;
-
-		for (k = numlines, ld = lines; k--; ld++)
-		{
-			if (ld->sidenum[0] == i)
-				ld->sidenum[0] = (UINT16)numnewsides;
-
-			if (ld->sidenum[1] == i)
-				ld->sidenum[1] = (UINT16)numnewsides;
-		}
-
-		for (j = i + 1; j < numsides; j++)
-		{
-			if (!sides[j].sector)
-				continue;
-
-			if (!memcmp(&sides[i], &sides[j], sizeof(side_t)))
-			{
-				// Find the linedefs that belong to this one
-				for (k = numlines, ld = lines; k--; ld++)
-				{
-					if (ld->sidenum[0] == j)
-						ld->sidenum[0] = (UINT16)numnewsides;
-
-					if (ld->sidenum[1] == j)
-						ld->sidenum[1] = (UINT16)numnewsides;
-				}
-				sides[j].sector = NULL; // Flag for deletion
-			}
-		}
-		numnewsides++;
-	}
-
-	// We're loading crap into this block anyhow, so no point in zeroing it out.
-	newsides = Z_Malloc(numnewsides*sizeof(*newsides), PU_LEVEL, NULL);
-
-	// Copy the sides to their new block of memory.
-	for (i = 0, z = 0; i < numsides; i++)
-	{
-		if (sides[i].sector)
-			M_Memcpy(&newsides[z++], &sides[i], sizeof(side_t));
-	}
-
-	CONS_Debug(DBG_SETUP, "P_CompressSidedefs: Old sides is %s, new sides is %s\n", sizeu1(numsides), sizeu1(numnewsides));
-
-	Z_Free(sides);
-	sides = newsides;
-	numsides = numnewsides;
-}
-
 //
 // P_LinkMapData
 // Builds sector line lists and subsector sector numbers.
@@ -2777,8 +2714,6 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_ProcessLinedefsWithSidedefs();
-	if (M_CheckParm("-compress"))
-		P_CompressSidedefs();
 	P_LinkMapData();
 
 	P_MakeMapMD5(virt, &mapmd5);
