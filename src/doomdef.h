@@ -640,4 +640,8 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Render flats on walls
 #define WALLFLATS
 
+/* THE CODE IN ST_STUFF SUCKS WTF */
+/// Show dimensions of drawing in batched mode
+//#define BATCHTEST
+
 #endif // __DOOMDEF__

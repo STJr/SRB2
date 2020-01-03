@@ -493,6 +493,51 @@ blending translucent pixels. This is for overlapping translucent drawing.
 
 static UINT8 *v_blendscreen;
 
+#ifdef BATCHTEST
+static int v_batchtest;
+static int v_batchx1;
+static int v_batchx2;
+static int v_batchy1;
+static int v_batchy2;
+
+void
+V_TestBatch (void)
+{
+	v_batchx1 = 0;
+	v_batchx2 = 0;
+	v_batchy1 = 0;
+	v_batchy2 = 0;
+	v_batchtest = 1;
+}
+
+static void
+Vstatbatch (int x, int y, int w, int h)
+{
+	switch (v_batchtest)
+	{
+		case 1:
+			v_batchx1 = x;
+			v_batchx2 = x + w;
+			v_batchy1 = y;
+			v_batchy2 = y + h;
+			v_batchtest = 2;
+			break;
+		case 2:
+			if (x < v_batchx1)
+				v_batchx1 = x;
+			if (y < v_batchy1)
+				v_batchy1 = y;
+			x = x + w;
+			if (x > v_batchx2)
+				v_batchx2 = x;
+			y = y + h;
+			if (y > v_batchy2)
+				v_batchy2 = y;
+			break;
+	}
+}
+#endif/*BATCHTEST*/
+
 void
 V_LockBlend (
 		int x,
@@ -531,6 +576,39 @@ V_LockBlend (
 void
 V_UnlockBlend (void)
 {
+#ifdef BATCHTEST
+	int w;
+	int h;
+	if (v_batchtest)
+	{
+		w = ( v_batchx2 - v_batchx1 );
+		h = ( v_batchy2 - v_batchy1 );
+		if (!(
+					v_batchx1 % vid.dupx ||
+					w         % vid.dupx ||
+					v_batchy1 % vid.dupy ||
+					h         % vid.dupy )
+		){
+			CONS_Printf(
+					"%dx%d+%d+%d(u)\n",
+					w         / vid.dupx,
+					h         / vid.dupy,
+					v_batchx1 / vid.dupx,
+					v_batchy1 / vid.dupy
+			);
+		}
+		else
+		{
+			CONS_Printf(
+					"%dx%d+%d+%d\n",
+					w,
+					h,
+					v_batchx1,
+					v_batchy1
+			);
+		}
+	}
+#endif/*BATCHTEST*/
 	v_blendscreen = screens[0];
 }
 

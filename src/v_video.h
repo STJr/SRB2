@@ -246,5 +246,8 @@ void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT3
 
 void V_LockBlend (int x, int y, int w, int h, int flags);
 void V_UnlockBlend (void);
+#ifdef BATCHTEST
+void V_TestBatch (void);
+#endif
 
 #endif
