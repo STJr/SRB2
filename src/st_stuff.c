@@ -998,6 +998,10 @@ static void ST_drawInput(void)
 	if (F_GetPromptHideHud(y))
 		return;
 
+	//V_TestBatch();
+	/* I'm a lazy shit so these stay magic. haha... */
+	V_LockBlend(88, 172, 43, 22, 0);
+
 	// O backing
 	V_DrawFillMaybeFade(x, y-1, 16, 16, hudinfo[HUD_LIVES].f|flags|20, translucency);
 	V_DrawFillMaybeFade(x, y+15, 16, 1, hudinfo[HUD_LIVES].f|flags|29, translucency);
@@ -1177,6 +1181,8 @@ static void ST_drawInput(void)
 	}
 	if (!demosynced) // should always be last, so it doesn't push anything else around
 		V_DrawThinString(x, y, hudinfo[HUD_LIVES].f|flags|((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
+
+	V_UnlockBlend();
 }
 
 static patch_t *lt_patches[3];
