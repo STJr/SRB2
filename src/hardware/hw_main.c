@@ -832,7 +832,7 @@ static void HWR_DrawSegsSplats(FSurfaceInfo * pSurf)
 		if (!M_PointInBox(segbbox,splat->v1.x,splat->v1.y) && !M_PointInBox(segbbox,splat->v2.x,splat->v2.y))
 			continue;
 
-		gpatch = W_CachePatchNum(splat->patch, PU_CACHE);
+		gpatch = W_CachePatchNum(splat->patch, PU_PATCH);
 		HWR_GetPatch(gpatch);
 
 		wallVerts[0].x = wallVerts[3].x = FIXED_TO_FLOAT(splat->v1.x);
@@ -2714,6 +2714,8 @@ static void HWR_AddLine(seg_t * line)
 	static sector_t tempsec;
 
 	fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
+	if (line->glseg)
+		return;
 #ifdef POLYOBJECTS
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
@@ -6654,7 +6656,13 @@ void HWR_AddCommands(void)
 
 void HWR_AddSessionCommands(void)
 {
+	static boolean alreadycalled = false;
+	if (alreadycalled)
+		return;
+
 	CV_RegisterVar(&cv_granisotropicmode);
+
+	alreadycalled = true;
 }
 
 // --------------------------------------------------------------------------
@@ -6690,6 +6698,17 @@ void HWR_Startup(void)
 	startupdone = true;
 }
 
+// --------------------------------------------------------------------------
+// Called after switching to the hardware renderer
+// --------------------------------------------------------------------------
+void HWR_Switch(void)
+{
+	// Set special states from CVARs
+	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_grmodellighting.value);
+	HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, cv_grfogdensity.value);
+	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_grfiltermode.value);
+	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_granisotropicmode.value);
+}
 
 // --------------------------------------------------------------------------
 // Free resources allocated by the hardware renderer

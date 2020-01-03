@@ -196,6 +196,7 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag); // return a patch
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag); // return a patch_t
 
 void W_UnlockCachedPatch(void *patch);
+void W_FlushCachedPatches(void);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);
 

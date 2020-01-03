@@ -165,7 +165,7 @@ static void R_DrawWallSplats(void)
 		mfloorclip = floorclip;
 		mceilingclip = ceilingclip;
 
-		patch = W_CachePatchNum(splat->patch, PU_CACHE);
+		patch = W_CachePatchNum(splat->patch, PU_PATCH);
 
 		dc_texturemid = splat->top + (SHORT(patch->height)<<(FRACBITS-1)) - viewz;
 		if (splat->yoffset)
@@ -308,6 +308,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	//   for horizontal / vertical / diagonal. Diagonal?
 	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 	curline = ds->curline;
+
+	if (curline->glseg)
+		return;
+
 	frontsector = curline->frontsector;
 	backsector = curline->backsector;
 	texnum = R_GetTextureNum(curline->sidedef->midtexture);

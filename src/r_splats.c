@@ -147,7 +147,7 @@ void R_AddWallSplat(line_t *wallline, INT16 sectorside, const char *patchname, f
 	splat->flags = flags;
 
 	// bad.. but will be needed for drawing anyway..
-	patch = W_CachePatchNum(splat->patch, PU_CACHE);
+	patch = W_CachePatchNum(splat->patch, PU_PATCH);
 
 	// offset needed by draw code for texture mapping
 	linelength = P_SegLength((seg_t *)wallline);
