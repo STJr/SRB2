@@ -849,10 +849,18 @@ state_t states[NUMSTATES] =
 	{SPR_JETG, 3, 1, {NULL}, 0, 0, S_JETGZOOM1},         // S_JETGSHOOT2
 
 	// Crawla Commander
-	{SPR_CCOM, 0, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND2}, // S_CCOMMAND1
-	{SPR_CCOM, 1, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND1}, // S_CCOMMAND2
-	{SPR_CCOM, 2, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND4}, // S_CCOMMAND3
-	{SPR_CCOM, 3, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND3}, // S_CCOMMAND4
+	{SPR_CCOM,  0, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_RED2}, // S_CCOMMAND_RED1
+	{SPR_CCOM,  1, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_RED3}, // S_CCOMMAND_RED2
+	{SPR_CCOM,  2, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_RED4}, // S_CCOMMAND_RED3
+	{SPR_CCOM,  3, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_RED5}, // S_CCOMMAND_RED4
+	{SPR_CCOM,  4, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_RED6}, // S_CCOMMAND_RED5
+	{SPR_CCOM,  5, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_RED1}, // S_CCOMMAND_RED6
+	{SPR_CCOM,  6, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_YELLOW2}, // S_CCOMMAND_YELLOW1
+	{SPR_CCOM,  7, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_YELLOW3}, // S_CCOMMAND_YELLOW2
+	{SPR_CCOM,  8, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_YELLOW4}, // S_CCOMMAND_YELLOW3
+	{SPR_CCOM,  9, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_YELLOW5}, // S_CCOMMAND_YELLOW4
+	{SPR_CCOM, 10, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_YELLOW6}, // S_CCOMMAND_YELLOW5
+	{SPR_CCOM, 11, 1, {A_CrawlaCommanderThink}, 0, 15*FRACUNIT, S_CCOMMAND_YELLOW1}, // S_CCOMMAND_YELLOW6
 
 	// Deton
 	{SPR_DETN, 0, 35, {A_Look}, 0, 0, S_DETON1},       // S_DETON1
@@ -4255,13 +4263,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_CRAWLACOMMANDER
 		107,            // doomednum
-		S_CCOMMAND1,    // spawnstate
+		S_CCOMMAND_RED1,// spawnstate
 		2,              // spawnhealth
-		S_CCOMMAND3,    // seestate
+		S_CCOMMAND_YELLOW1, // seestate
 		sfx_None,       // seesound
 		2*TICRATE,      // reactiontime
 		sfx_s3k60,      // attacksound
-		S_CCOMMAND3,    // painstate
+		S_CCOMMAND_YELLOW1, // painstate
 		200,            // painchance
 		sfx_dmpain,     // painsound
 		S_NULL,         // meleestate

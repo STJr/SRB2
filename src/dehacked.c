@@ -5032,10 +5032,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_JETGSHOOT2",
 
 	// Crawla Commander
-	"S_CCOMMAND1",
-	"S_CCOMMAND2",
-	"S_CCOMMAND3",
-	"S_CCOMMAND4",
+	"S_CCOMMAND_RED1",
+	"S_CCOMMAND_RED2",
+	"S_CCOMMAND_RED3",
+	"S_CCOMMAND_RED4",
+	"S_CCOMMAND_RED5",
+	"S_CCOMMAND_RED6",
+	"S_CCOMMAND_YELLOW1",
+	"S_CCOMMAND_YELLOW2",
+	"S_CCOMMAND_YELLOW3",
+	"S_CCOMMAND_YELLOW4",
+	"S_CCOMMAND_YELLOW5",
+	"S_CCOMMAND_YELLOW6",
 
 	// Deton
 	"S_DETON1",
