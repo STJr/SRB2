@@ -988,7 +988,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 //
 // R_SplitSprite
-// runs through a sector's lightlist and
+// runs through a sector's lightlist and Knuckles
 static void R_SplitSprite(vissprite_t *sprite)
 {
 	INT32 i, lightnum, lindex;
