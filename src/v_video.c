@@ -546,9 +546,83 @@ V_LockBlend (
 		int h,
 		int flags
 ){
+	UINT8 perplayershuffle = 0;
+
+	int dupx;
+	int dupy;
+
 	/* Now I too can say I picked on OpenGL at school today... */
 	if (rendermode == render_soft)
 	{
+		/* I see this copy pasted everywhere holy shit */
+		if (splitscreen && (flags & V_PERPLAYER))
+		{
+			fixed_t adjusty = ((flags & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+			h >>= 1;
+			y >>= 1;
+#ifdef QUADS
+			if (splitscreen > 1) // 3 or 4 players
+			{
+				fixed_t adjustx = ((flags & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+				w >>= 1;
+				x >>= 1;
+				if (stplyr == &players[displayplayer])
+				{
+					if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+						perplayershuffle |= 1;
+					if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+						perplayershuffle |= 4;
+					flags &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+				}
+				else if (stplyr == &players[secondarydisplayplayer])
+				{
+					if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+						perplayershuffle |= 1;
+					if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+						perplayershuffle |= 8;
+					x += adjustx;
+					flags &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+				}
+				else if (stplyr == &players[thirddisplayplayer])
+				{
+					if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+						perplayershuffle |= 2;
+					if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+						perplayershuffle |= 4;
+					y += adjusty;
+					flags &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+				}
+				else //if (stplyr == &players[fourthdisplayplayer])
+				{
+					if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+						perplayershuffle |= 2;
+					if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+						perplayershuffle |= 8;
+					x += adjustx;
+					y += adjusty;
+					flags &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+				}
+			}
+			else
+#endif
+			// 2 players
+			{
+				if (stplyr == &players[displayplayer])
+				{
+					if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+						perplayershuffle |= 1;
+					flags &= ~V_SNAPTOBOTTOM;
+				}
+				else //if (stplyr == &players[secondarydisplayplayer])
+				{
+					if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+						perplayershuffle |= 2;
+					y += adjusty;
+					flags &= ~V_SNAPTOTOP;
+				}
+			}
+		}
+
 		/*
 		This used to be a bunch of fucking shit until
 		I realized screens[1] can probably be used.
@@ -559,7 +633,43 @@ V_LockBlend (
 			w *= vid.dupx;
 			y *= vid.dupy;
 			h *= vid.dupy;
+
+			dupx = vid.dupx;
+			dupy = vid.dupy;
 		}
+		else
+		{
+			dupx = 1;
+			dupy = 1;
+		}
+
+		// Center it if necessary
+		if (vid.width != BASEVIDWIDTH * dupx)
+		{
+			// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
+			// so center this imaginary screen
+			if (flags & V_SNAPTORIGHT)
+				x += (vid.width - (BASEVIDWIDTH * dupx));
+			else if (!(flags & V_SNAPTOLEFT))
+				x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+			if (perplayershuffle & 4)
+				x -= (vid.width - (BASEVIDWIDTH * dupx)) / 4;
+			else if (perplayershuffle & 8)
+				x += (vid.width - (BASEVIDWIDTH * dupx)) / 4;
+		}
+		if (vid.height != BASEVIDHEIGHT * dupy)
+		{
+			// same thing here
+			if (flags & V_SNAPTOBOTTOM)
+				y += (vid.height - (BASEVIDHEIGHT * dupy));
+			else if (!(flags & V_SNAPTOTOP))
+				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+			if (perplayershuffle & 1)
+				y -= (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
+			else if (perplayershuffle & 2)
+				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 4;
+		}
+
 		x = y * vid.width + x;
 		VID_BlitLinearScreen(
 				screens[0] + x,
