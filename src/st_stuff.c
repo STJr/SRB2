@@ -2689,7 +2689,7 @@ static void ST_overlayDrawer(void)
 
 	if (!(netgame || multiplayer) || !hu_showscores)
 	{
-		if (! modeattacking && cv_alwaysdisplayinput.value)
+		if (!( modeattacking || chat_on ) && cv_alwaysdisplayinput.value)
 			ST_drawInput();
 #ifdef HAVE_BLUA
 		LUAh_GameHUD(stplyr);
