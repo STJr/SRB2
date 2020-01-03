@@ -3342,6 +3342,8 @@ void V_Init(void)
 	if (vid.direct)
 		screens[0] = vid.direct;
 
+	v_blendscreen = screens[0];
+
 #ifdef DEBUG
 	CONS_Debug(DBG_RENDER, "V_Init done:\n");
 	for (i = 0; i < NUMSCREENS+1; i++)
