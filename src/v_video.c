@@ -484,6 +484,56 @@ void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT3
 #endif
 }
 
+/*
+Blend Locking
+
+This is a fancy name for something really simple; Use a secondary buffer for
+blending translucent pixels. This is for overlapping translucent drawing.
+*/
+
+static UINT8 *v_blendscreen;
+
+void
+V_LockBlend (
+		int x,
+		int y,
+		int w,
+		int h,
+		int flags
+){
+	/* Now I too can say I picked on OpenGL at school today... */
+	if (rendermode == render_soft)
+	{
+		/*
+		This used to be a bunch of fucking shit until
+		I realized screens[1] can probably be used.
+		 */
+		if (!( flags & V_NOSCALESTART ))
+		{
+			x *= vid.dupx;
+			w *= vid.dupx;
+			y *= vid.dupy;
+			h *= vid.dupy;
+		}
+		x = y * vid.width + x;
+		VID_BlitLinearScreen(
+				screens[0] + x,
+				screens[1] + x,
+				w,
+				h,
+				vid.width,
+				vid.width
+		);
+		v_blendscreen = screens[1];
+	}
+}
+
+void
+V_UnlockBlend (void)
+{
+	v_blendscreen = screens[0];
+}
+
 static UINT8 hudplusalpha[11]  = { 10,  8,  6,  4,  2,  0,  0,  0,  0,  0,  0};
 static UINT8 hudminusalpha[11] = { 10,  9,  9,  8,  8,  7,  7,  6,  6,  5,  5};
 

@@ -244,4 +244,7 @@ void V_DrawPatchFill(patch_t *pat);
 void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT32 height, size_t srcrowbytes,
 	size_t destrowbytes);
 
+void V_LockBlend (int x, int y, int w, int h, int flags);
+void V_UnlockBlend (void);
+
 #endif
