@@ -981,9 +981,8 @@ static void ST_drawInput(void)
 	INT32 x = hudinfo[HUD_LIVES].x, y = hudinfo[HUD_LIVES].y;
 
 	if (! modeattacking)
-		x = 2 * x + 58;/* right side of lives count */
-
-	if (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
+		y -= 24;
+	else if (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 		y -= 16;
 
 	if (F_GetPromptHideHud(y))
