@@ -1305,7 +1305,7 @@ void ST_drawTitleCard(void)
 	const UINT8 *colormap;
 	stplyr = &players[consoleplayer];
 	
-	if (stplyr)
+	if (stplyr->skincolor)
 		colornum = stplyr->skincolor;
 	else
 		colornum = cv_playercolor.value;
