@@ -4804,11 +4804,13 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 		if (introchanged)
 		{
 			menuactive = false;
+			I_UpdateMouseGrab();
 			COM_BufAddText("playintro");
 		}
 		else if (titlechanged)
 		{
 			menuactive = false;
+			I_UpdateMouseGrab();
 			COM_BufAddText("exitgame"); // Command_ExitGame_f() but delayed
 		}
 	}

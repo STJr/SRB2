@@ -1840,6 +1840,7 @@ void G_DoLoadLevel(boolean resetplayer)
 		titlemapinaction = TITLEMAP_OFF;
 
 	G_SetGamestate(GS_LEVEL);
+	I_UpdateMouseGrab();
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
