@@ -1011,6 +1011,10 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	else
 		pwidth = SHORT(patch->width) * dupx;
 
+#ifdef BATCHTEST
+	Vstatbatch(x, y, pwidth, dupy * (( pscale * SHORT (patch->height) )>>FRACBITS ));
+#endif
+
 	deststart = desttop;
 	destend = desttop + pwidth;
 
@@ -1550,6 +1554,10 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	if (y + h > vid.height)
 		h = vid.height - y;
 
+#ifdef BATCHTEST
+	Vstatbatch(x, y, w, h);
+#endif
+
 	dest = screens[0] + y*vid.width + x;
 	deststop = screens[0] + vid.rowbytes * vid.height;
 
@@ -1945,6 +1953,10 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 		w = vid.width-x;
 	if (y + h > vid.height)
 		h = vid.height-y;
+
+#ifdef BATCHTEST
+	Vstatbatch(x, y, w, h);
+#endif
 
 	x = y * vid.width + x;
 
