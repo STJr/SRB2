@@ -1388,23 +1388,6 @@ GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum)
 	return HWR_GetCachedGLPatchPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
 
-#ifdef ROTSPRITE
-GLPatch_t *HWR_GetCachedGLRotSprite(aatree_t *hwrcache, UINT16 rollangle, patch_t *rawpatch)
-{
-	GLPatch_t *grpatch;
-
-	if (!(grpatch = M_AATreeGet(hwrcache, rollangle)))
-	{
-		grpatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
-		grpatch->rawpatch = rawpatch;
-		grpatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
-		M_AATreeSet(hwrcache, rollangle, grpatch);
-	}
-
-	return grpatch;
-}
-#endif
-
 // Need to do this because they aren't powers of 2
 static void HWR_DrawFadeMaskInCache(GLMipmap_t *mipmap, INT32 pblockwidth, INT32 pblockheight,
 	lumpnum_t fademasklumpnum, UINT16 fmwidth, UINT16 fmheight)
