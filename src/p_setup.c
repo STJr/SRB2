@@ -2557,69 +2557,6 @@ static void P_ProcessLinedefsWithSidedefs(void)
 	}
 }
 
-static void P_CompressSidedefs(void)
-{
-	side_t *newsides;
-	size_t numnewsides = 0;
-	size_t z;
-	size_t i;
-
-	for (i = 0; i < numsides; i++)
-	{
-		size_t j, k;
-		line_t *ld;
-
-		if (!sides[i].sector)
-			continue;
-
-		for (k = numlines, ld = lines; k--; ld++)
-		{
-			if (ld->sidenum[0] == i)
-				ld->sidenum[0] = (UINT16)numnewsides;
-
-			if (ld->sidenum[1] == i)
-				ld->sidenum[1] = (UINT16)numnewsides;
-		}
-
-		for (j = i + 1; j < numsides; j++)
-		{
-			if (!sides[j].sector)
-				continue;
-
-			if (!memcmp(&sides[i], &sides[j], sizeof(side_t)))
-			{
-				// Find the linedefs that belong to this one
-				for (k = numlines, ld = lines; k--; ld++)
-				{
-					if (ld->sidenum[0] == j)
-						ld->sidenum[0] = (UINT16)numnewsides;
-
-					if (ld->sidenum[1] == j)
-						ld->sidenum[1] = (UINT16)numnewsides;
-				}
-				sides[j].sector = NULL; // Flag for deletion
-			}
-		}
-		numnewsides++;
-	}
-
-	// We're loading crap into this block anyhow, so no point in zeroing it out.
-	newsides = Z_Malloc(numnewsides*sizeof(*newsides), PU_LEVEL, NULL);
-
-	// Copy the sides to their new block of memory.
-	for (i = 0, z = 0; i < numsides; i++)
-	{
-		if (sides[i].sector)
-			M_Memcpy(&newsides[z++], &sides[i], sizeof(side_t));
-	}
-
-	CONS_Debug(DBG_SETUP, "P_CompressSidedefs: Old sides is %s, new sides is %s\n", sizeu1(numsides), sizeu1(numnewsides));
-
-	Z_Free(sides);
-	sides = newsides;
-	numsides = numnewsides;
-}
-
 //
 // P_LinkMapData
 // Builds sector line lists and subsector sector numbers.
@@ -2786,8 +2723,6 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_ProcessLinedefsWithSidedefs();
-	if (M_CheckParm("-compress"))
-		P_CompressSidedefs();
 	P_LinkMapData();
 
 	P_MakeMapMD5(virt, &mapmd5);
@@ -2889,7 +2824,7 @@ static void P_InitLevelSettings(void)
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
 
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -2907,7 +2842,7 @@ static void P_InitLevelSettings(void)
 	{
 		G_PlayerReborn(i, true);
 
-		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
+		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (G_CompetitionGametype() || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
 			players[i].lives = cv_startinglives.value;
@@ -3197,17 +3132,10 @@ static void P_SetupCamera(void)
 	{
 		mapthing_t *thing;
 
-		switch (gametype)
-		{
-		case GT_MATCH:
-		case GT_TAG:
+		if (gametyperules & GTR_DEATHMATCHSTARTS)
 			thing = deathmatchstarts[0];
-			break;
-
-		default:
+		else
 			thing = playerstarts[0];
-			break;
-		}
 
 		if (thing)
 		{
@@ -3422,7 +3350,7 @@ static void P_InitGametype(void)
 	P_InitPlayers();
 
 	// restore time in netgame (see also g_game.c)
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 	{
 		// is this a hack? maybe
 		tic_t maxstarposttime = 0;
@@ -3466,6 +3394,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	// This is needed. Don't touch.
 	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
+	gametyperules = gametypedefaultrules[gametype];
 
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
@@ -3668,23 +3597,14 @@ boolean P_LoadLevel(boolean fromnetsave)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
+	// Lactozilla: Free extrasubsectors regardless of renderer.
+	// Maybe we're not in OpenGL anymore.
+	if (extrasubsectors)
+		free(extrasubsectors);
+	extrasubsectors = NULL;
+	// stuff like HWR_CreatePlanePolygons is called there
 	if (rendermode == render_opengl)
-	{
-		// Lactozilla (December 8, 2019)
-		// Level setup used to free EVERY mipmap from memory.
-		// Even mipmaps that aren't related to level textures.
-		// Presumably, the hardware render code used to store textures as level data.
-		// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
-		// Level textures are only reloaded after R_LoadTextures, which is
-		// when the texture list is loaded.
-#ifdef ALAM_LIGHTING
-		// BP: reset light between levels (we draw preview frame lights on current frame)
-		HWR_ResetLights();
-#endif
-		// Correct missing sidedefs & deep water trick
-		HWR_CorrectSWTricks();
-		HWR_CreatePlanePolygons((INT32)numnodes - 1);
-	}
+		HWR_SetupLevel();
 #endif
 
 	// oh god I hope this helps
@@ -3763,6 +3683,26 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	return true;
 }
+
+#ifdef HWRENDER
+void HWR_SetupLevel(void)
+{
+	// Lactozilla (December 8, 2019)
+	// Level setup used to free EVERY mipmap from memory.
+	// Even mipmaps that aren't related to level textures.
+	// Presumably, the hardware render code used to store textures as level data.
+	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
+	// Level textures are only reloaded after R_LoadTextures, which is
+	// when the texture list is loaded.
+#ifdef ALAM_LIGHTING
+	// BP: reset light between levels (we draw preview frame lights on current frame)
+	HWR_ResetLights();
+#endif
+	// Correct missing sidedefs & deep water trick
+	HWR_CorrectSWTricks();
+	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+}
+#endif
 
 //
 // P_RunSOC

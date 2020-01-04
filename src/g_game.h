@@ -130,6 +130,9 @@ INT32 G_FindMap(const char *query, char **foundmapnamep,
 		mapsearchfreq_t **freqp, INT32 *freqc);
 void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
 
+/* Match map name by search + 2 digit map code or map number. */
+INT32 G_FindMapByNameOrCode(const char *query, char **foundmapnamep);
+
 // XMOD spawning
 mapthing_t *G_FindCTFStart(INT32 playernum);
 mapthing_t *G_FindMatchStart(INT32 playernum);
@@ -218,11 +221,14 @@ void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolo
 INT32 G_GetGametypeByName(const char *gametypestr);
 boolean G_IsSpecialStage(INT32 mapnum);
 boolean G_GametypeUsesLives(void);
+boolean G_GametypeUsesCoopLives(void);
+boolean G_GametypeUsesCoopStarposts(void);
 boolean G_GametypeHasTeams(void);
 boolean G_GametypeHasSpectators(void);
 boolean G_RingSlingerGametype(void);
 boolean G_PlatformGametype(void);
 boolean G_TagGametype(void);
+boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);
 void G_ExitLevel(void);
 void G_NextLevel(void);

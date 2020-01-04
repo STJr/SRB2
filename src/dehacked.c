@@ -4804,11 +4804,13 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 		if (introchanged)
 		{
 			menuactive = false;
+			I_UpdateMouseGrab();
 			COM_BufAddText("playintro");
 		}
 		else if (titlechanged)
 		{
 			menuactive = false;
+			I_UpdateMouseGrab();
 			COM_BufAddText("exitgame"); // Command_ExitGame_f() but delayed
 		}
 	}
@@ -8904,32 +8906,35 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"CAMPAIGN",
 	"RINGSLINGER",
 	"SPECTATORS",
-	"FRIENDLYFIRE",
 	"LIVES",
 	"TEAMS",
+	"FIRSTPERSON",
+	"POWERSTONES",
+	"TEAMFLAGS",
+	"FRIENDLY",
+	"SPECIALSTAGES",
+	"EMERALDTOKENS",
+	"EMERALDHUNT",
 	"RACE",
 	"TAG",
 	"POINTLIMIT",
 	"TIMELIMIT",
-	"HIDETIME",
+	"OVERTIME",
+	"HURTMESSAGES",
+	"FRIENDLYFIRE",
+	"STARTCOUNTDOWN",
 	"HIDEFROZEN",
 	"BLINDFOLDED",
-	"FIRSTPERSON",
-	"MATCHEMERALDS",
-	"TEAMFLAGS",
+	"RESPAWNDELAY",
 	"PITYSHIELD",
 	"DEATHPENALTY",
 	"NOSPECTATORSPAWN",
 	"DEATHMATCHSTARTS",
-	"SPECIALSTAGES",
-	"EMERALDTOKENS",
-	"EMERALDHUNT",
+	"SPAWNINVUL",
 	"SPAWNENEMIES",
 	"ALLOWEXIT",
 	"NOTITLECARD",
-	"OVERTIME",
-	"HURTMESSAGES",
-	"SPAWNINVUL",
+	"CUTSCENES",
 	NULL
 };
 
@@ -9746,6 +9751,7 @@ struct {
 	{"CV_HIDEN",CV_HIDEN},
 	{"CV_HIDDEN",CV_HIDEN},
 	{"CV_CHEAT",CV_CHEAT},
+	{"CV_NOLUA",CV_NOLUA},
 
 	// v_video flags
 	{"V_NOSCALEPATCH",V_NOSCALEPATCH},

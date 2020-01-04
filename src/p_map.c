@@ -745,9 +745,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
   // So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
 	if (tmthing->type == MT_NAMECHECK)
 	{
-	  // Ignore things that aren't players, ignore spectators, ignore yourself.
-		// (also don't bother to check that tmthing->target->player is non-NULL because we're not actually using it here.)
-		if (!thing->player || thing->player->spectator || (tmthing->target && thing->player == tmthing->target->player))
+		// Ignore things that aren't players, ignore spectators, ignore yourself.
+		if (!thing->player || !(tmthing->target && tmthing->target->player) || thing->player->spectator || (tmthing->target && thing->player == tmthing->target->player))
 			return true;
 
 		// Now check that you actually hit them.
@@ -759,6 +758,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
+
+#ifdef HAVE_BLUA
+		// REX HAS SEEN YOU
+		if (!LUAh_SeenPlayer(tmthing->target->player, thing->player))
+			return false;
+#endif
 
 		seenplayer = thing->player;
 		return false;
@@ -829,13 +834,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
 				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(iter, tmthing, tmthing, 0);
+			return true;
 		}
 		else
 		{
-			thing->health = 0;
-			P_KillMobj(thing, tmthing, tmthing, 0);
+			if (P_DamageMobj(thing, tmthing, tmthing, 1, 0))
+				return true;
 		}
-		return true;
 	}
 
 	// vectorise metal - done in a special case as at this point neither has the right flags for touching

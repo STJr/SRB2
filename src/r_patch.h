@@ -68,6 +68,7 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef);
 void R_FreeSkinRotSprite(size_t skinnum);
 extern fixed_t rollcosang[ROTANGLES];
 extern fixed_t rollsinang[ROTANGLES];
+void R_FreeAllRotSprite(void);
 #endif
 
 #endif // __R_PATCH__

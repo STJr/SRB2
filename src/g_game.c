@@ -1718,6 +1718,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 			G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
 			B_BuildTiccmd(player, cmd);
 		}
+		B_HandleFlightIndicator(player);
 	}
 
 	if (cv_analog2.value) {
@@ -1839,6 +1840,7 @@ void G_DoLoadLevel(boolean resetplayer)
 		titlemapinaction = TITLEMAP_OFF;
 
 	G_SetGamestate(GS_LEVEL);
+	I_UpdateMouseGrab();
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -1854,8 +1856,7 @@ void G_DoLoadLevel(boolean resetplayer)
 		return;
 	}
 
-	if (!resetplayer)
-		P_FindEmerald();
+	P_FindEmerald();
 
 	displayplayer = consoleplayer; // view the guy you are playing
 	if (!splitscreen && !botingame)
@@ -2689,8 +2690,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 
 	// -- DM/Tag/CTF-spectator/etc --
 	// Order: DM->CTF->Coop
-	else if ((gametyperules & GTR_DEATHMATCHSTARTS) || gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF
-	 || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && !(players[playernum].pflags & PF_TAGIT)))
+	else if ((gametyperules & GTR_DEATHMATCHSTARTS) && !(players[playernum].pflags & PF_TAGIT))
 	{
 		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
 		&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
@@ -2891,11 +2891,11 @@ void G_DoReborn(INT32 playernum)
 
 	if (countdowntimeup || (!(netgame || multiplayer) && gametype == GT_COOP))
 		resetlevel = true;
-	else if (gametype == GT_COOP && (netgame || multiplayer) && !G_IsSpecialStage(gamemap))
+	else if ((G_GametypeUsesCoopLives() || G_GametypeUsesCoopStarposts()) && (netgame || multiplayer) && !G_IsSpecialStage(gamemap))
 	{
 		boolean notgameover = true;
 
-		if (cv_cooplives.value != 0 && player->lives <= 0) // consider game over first
+		if (G_GametypeUsesCoopLives() && (cv_cooplives.value != 0 && player->lives <= 0)) // consider game over first
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -2930,7 +2930,7 @@ void G_DoReborn(INT32 playernum)
 			}
 		}
 
-		if (notgameover && cv_coopstarposts.value == 2)
+		if (G_GametypeUsesCoopStarposts() && (notgameover && cv_coopstarposts.value == 2))
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -3006,7 +3006,7 @@ void G_DoReborn(INT32 playernum)
 			}
 
 			// restore time in netgame (see also p_setup.c)
-			if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+			if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 			{
 				// is this a hack? maybe
 				tic_t maxstarposttime = 0;
@@ -3077,7 +3077,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!players[i].exiting)
 				notexiting++;
 
-			if (!(cv_coopstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
+			if (!(cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (p->starpostnum < players[i].starpostnum)))
 				continue;
 
 			p->starpostscale = players[i].starpostscale;
@@ -3194,24 +3194,24 @@ const char *Gametype_ConstantNames[NUMGAMETYPES] =
 UINT32 gametypedefaultrules[NUMGAMETYPES] =
 {
 	// Co-op
-	GTR_CAMPAIGN|GTR_LIVES|GTR_SPAWNENEMIES|GTR_ALLOWEXIT|GTR_EMERALDHUNT|GTR_EMERALDTOKENS|GTR_SPECIALSTAGES,
+	GTR_CAMPAIGN|GTR_LIVES|GTR_FRIENDLY|GTR_SPAWNENEMIES|GTR_ALLOWEXIT|GTR_EMERALDHUNT|GTR_EMERALDTOKENS|GTR_SPECIALSTAGES|GTR_CUTSCENES,
 	// Competition
 	GTR_RACE|GTR_LIVES|GTR_SPAWNENEMIES|GTR_EMERALDTOKENS|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
 	// Race
 	GTR_RACE|GTR_SPAWNENEMIES|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
 
 	// Match
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_MATCHEMERALDS|GTR_SPAWNINVUL|GTR_PITYSHIELD|GTR_DEATHPENALTY,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD|GTR_DEATHPENALTY,
 	// Team Match
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_SPAWNINVUL|GTR_PITYSHIELD,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
 
 	// Tag
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_HIDETIME|GTR_BLINDFOLDED|GTR_SPAWNINVUL,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
 	// Hide and Seek
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_HIDETIME|GTR_BLINDFOLDED|GTR_SPAWNINVUL,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
 
 	// CTF
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_TEAMFLAGS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_MATCHEMERALDS|GTR_SPAWNINVUL|GTR_PITYSHIELD,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_TEAMFLAGS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
 };
 
 //
@@ -3252,50 +3252,68 @@ INT16 G_AddGametype(UINT32 rules)
 //
 void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
 {
-	char *gtconst = Z_Malloc(strlen(newgtconst) + 3, PU_STATIC, NULL);
-	// Copy GT_ and the gametype name.
-	strcpy(gtconst, "GT_");
-	strcat(gtconst, newgtconst);
+	size_t r = 0; // read
+	size_t w = 0; // write
+	char *gtconst = Z_Calloc(strlen(newgtconst) + 3, PU_STATIC, NULL);
+	char *tmpconst = Z_Calloc(strlen(newgtconst), PU_STATIC, NULL);
+
+	// Copy the gametype name.
+	strcpy(tmpconst, newgtconst);
+
 	// Make uppercase.
-	strupr(gtconst);
-	// Remove characters.
-#define REMOVECHAR(chr) \
-	{ \
-		char *chrfind = strchr(gtconst, chr); \
-		while (chrfind) \
-		{ \
-			*chrfind = '_'; \
-			chrfind = strchr(chrfind, chr); \
-		} \
+	strupr(tmpconst);
+
+	// Prepare to write the new constant string now.
+	strcpy(gtconst, "GT_");
+
+	// Remove characters that will not be allowed in the constant string.
+	for (; r < strlen(tmpconst); r++)
+	{
+		boolean writechar = true;
+		char rc = tmpconst[r];
+		switch (rc)
+		{
+			// Space, at sign and question mark
+			case ' ':
+			case '@':
+			case '?':
+			// Used for operations
+			case '+':
+			case '-':
+			case '*':
+			case '/':
+			case '%':
+			case '^':
+			case '&':
+			case '!':
+			// Part of Lua's syntax
+			case '#':
+			case '=':
+			case '~':
+			case '<':
+			case '>':
+			case '(':
+			case ')':
+			case '{':
+			case '}':
+			case '[':
+			case ']':
+			case ':':
+			case ';':
+			case ',':
+			case '.':
+				writechar = false;
+				break;
+		}
+		if (writechar)
+		{
+			gtconst[3 + w] = rc;
+			w++;
+		}
 	}
 
-	// Space
-	REMOVECHAR(' ')
-	// Used for operations
-	REMOVECHAR('+')
-	REMOVECHAR('-')
-	REMOVECHAR('*')
-	REMOVECHAR('/')
-	REMOVECHAR('%')
-	REMOVECHAR('^')
-	// Part of Lua's syntax
-	REMOVECHAR('#')
-	REMOVECHAR('=')
-	REMOVECHAR('~')
-	REMOVECHAR('<')
-	REMOVECHAR('>')
-	REMOVECHAR('(')
-	REMOVECHAR(')')
-	REMOVECHAR('{')
-	REMOVECHAR('}')
-	REMOVECHAR('[')
-	REMOVECHAR(']')
-	REMOVECHAR(':')
-	REMOVECHAR(';')
-	REMOVECHAR(',')
-	REMOVECHAR('.')
-
-#undef REMOVECHAR
+	// Free the temporary string.
+	Z_Free(tmpconst);
 
 	// Finally, set the constant string.
 	Gametype_ConstantNames[gtype] = gtconst;
@@ -3398,7 +3416,7 @@ INT32 G_GetGametypeByName(const char *gametypestr)
 {
 	INT32 i;
 
-	for (i = 0; i < NUMGAMETYPES; i++)
+	for (i = 0; i < gametypecount; i++)
 		if (!stricmp(gametypestr, Gametype_Names[i]))
 			return i;
 
@@ -3438,6 +3456,28 @@ boolean G_GametypeUsesLives(void)
 	 && !(maptol & TOL_NIGHTS)) // No lives in NiGHTS
 		return true;
 	return false;
+}
+
+//
+// G_GametypeUsesCoopLives
+//
+// Returns true if the current gametype uses
+// the cooplives CVAR.  False otherwise.
+//
+boolean G_GametypeUsesCoopLives(void)
+{
+	return (gametyperules & (GTR_LIVES|GTR_FRIENDLY)) == (GTR_LIVES|GTR_FRIENDLY);
+}
+
+//
+// G_GametypeUsesCoopStarposts
+//
+// Returns true if the current gametype uses
+// the coopstarposts CVAR.  False otherwise.
+//
+boolean G_GametypeUsesCoopStarposts(void)
+{
+	return (gametyperules & GTR_FRIENDLY);
 }
 
 //
@@ -3491,6 +3531,16 @@ boolean G_PlatformGametype(void)
 boolean G_TagGametype(void)
 {
 	return (gametyperules & GTR_TAG);
+}
+
+//
+// G_CompetitionGametype
+//
+// For gametypes that are race gametypes, and have lives.
+//
+boolean G_CompetitionGametype(void)
+{
+	return ((gametyperules & GTR_RACE) && (gametyperules & GTR_LIVES));
 }
 
 /** Get the typeoflevel flag needed to indicate support of a gametype.
@@ -3734,7 +3784,7 @@ void G_AfterIntermission(void)
 
 	HU_ClearCEcho();
 
-	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1) // Start a custom cutscene.
+	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
 	else
 	{
@@ -3844,7 +3894,7 @@ static void G_DoContinued(void)
 void G_EndGame(void)
 {
 	// Only do evaluation and credits in coop games.
-	if (gametype == GT_COOP)
+	if (gametyperules & GTR_CUTSCENES)
 	{
 		if (nextmap == 1103-1) // end game with ending
 		{
@@ -4547,7 +4597,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	automapactive = false;
 	imcontinuing = false;
 
-	if (!skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking) // Start a custom cutscene.
+	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer);
 	else
 		G_DoLoadLevel(resetplayer);
@@ -4778,6 +4828,61 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc)
 		Z_Free(freq[i].matchd);
 	}
 	Z_Free(freq);
+}
+
+INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
+{
+	boolean usemapcode = false;
+
+	INT32 newmapnum;
+
+	size_t mapnamelen;
+
+	char *p;
+
+	mapnamelen = strlen(mapname);
+
+	if (mapnamelen == 2)/* maybe two digit code */
+	{
+		if (( newmapnum = M_MapNumber(mapname[0], mapname[1]) ))
+			usemapcode = true;
+	}
+	else if (mapnamelen == 5 && strnicmp(mapname, "MAP", 3) == 0)
+	{
+		if (( newmapnum = M_MapNumber(mapname[3], mapname[4]) ))
+			usemapcode = true;
+	}
+
+	if (!usemapcode)
+	{
+		/* Now detect map number in base 10, which no one asked for. */
+		newmapnum = strtol(mapname, &p, 10);
+		if (*p == '\0')/* we got it */
+		{
+			if (newmapnum < 1 || newmapnum > NUMMAPS)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("Invalid map number %d.\n"), newmapnum);
+				return 0;
+			}
+			usemapcode = true;
+		}
+		else
+		{
+			newmapnum = G_FindMap(mapname, realmapnamep, NULL, NULL);
+		}
+	}
+
+	if (usemapcode)
+	{
+		/* we can't check mapheaderinfo for this hahahaha */
+		if (W_CheckNumForName(G_BuildMapName(newmapnum)) == LUMPERROR)
+			return 0;
+
+		if (realmapnamep)
+			(*realmapnamep) = G_BuildMapTitle(newmapnum);
+	}
+
+	return newmapnum;
 }
 
 //
