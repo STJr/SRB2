@@ -978,13 +978,19 @@ static void ST_drawInput(void)
 	INT32 col;
 	UINT8 offs;
 	int translucency;
+	INT32 flags = 0;
 
 	INT32 x = hudinfo[HUD_LIVES].x, y = hudinfo[HUD_LIVES].y;
 
 	if (modeattacking)/* no translucency in time attack */
 		translucency = 10;
-	else if (!( translucency = st_translucency ))/* nothing to see here */
-		return;
+	else
+	{
+		if (!( translucency = st_translucency ))/* nothing to see here */
+			return;
+
+		flags |= V_HUDTRANS;
+	}
 
 	if (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 		y -= 16;
@@ -1111,7 +1117,7 @@ static void ST_drawInput(void)
 		V_DrawFillMaybeFade(x+16+(xoffs), y+9+(yoffs), 10, 1, hudinfo[HUD_LIVES].f|29, translucency);\
 	}\
 	V_DrawFillMaybeFade(x+16+(xoffs), y+(yoffs)-offs, 10, 10, col, translucency);\
-	V_DrawCharacter(x+16+1+(xoffs), y+1+(yoffs)-offs, hudinfo[HUD_LIVES].f|symb, false)
+	V_DrawCharacter(x+16+1+(xoffs), y+1+(yoffs)-offs, hudinfo[HUD_LIVES].f|flags|symb, false)
 
 	drawbutt( 4,-3, BT_JUMP, 'J');
 	drawbutt(15,-3, BT_USE,  'S');
@@ -1153,7 +1159,7 @@ static void ST_drawInput(void)
 		if (stplyr->pflags & PF_AUTOBRAKE)
 		{
 			V_DrawThinString(x, y,
-				hudinfo[HUD_LIVES].f|
+				hudinfo[HUD_LIVES].f|flags|
 				((!stplyr->powers[pw_carry]
 				&& (stplyr->pflags & PF_APPLYAUTOBRAKE)
 				&& !(stplyr->cmd.sidemove || stplyr->cmd.forwardmove)
@@ -1165,12 +1171,12 @@ static void ST_drawInput(void)
 		}
 		if (stplyr->pflags & PF_ANALOGMODE)
 		{
-			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "ANALOG");
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f|flags, "ANALOG");
 			y -= 8;
 		}
 	}
 	if (!demosynced) // should always be last, so it doesn't push anything else around
-		V_DrawThinString(x, y, hudinfo[HUD_LIVES].f|((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
+		V_DrawThinString(x, y, hudinfo[HUD_LIVES].f|flags|((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
 }
 
 static patch_t *lt_patches[3];
