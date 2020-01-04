@@ -846,6 +846,8 @@ static void P_LoadVertices(UINT8 *data)
 	{
 		v->x = SHORT(mv->x)<<FRACBITS;
 		v->y = SHORT(mv->y)<<FRACBITS;
+		vt->floorzset = vt->ceilingzset = false;
+		vt->floorz = vt->ceilingz = 0;
 	}
 }
 
