@@ -1291,7 +1291,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	}
 	else
 	{
-		if (turnright)
+		if (turnright && turnleft);
+		else if (turnright)
 			cmd->angleturn = (INT16)(cmd->angleturn - ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
 		else if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
