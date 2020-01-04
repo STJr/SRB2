@@ -755,6 +755,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	INT32 dupx, dupy;
 	const column_t *column;
 	UINT8 *desttop, *dest, *deststart, *destend;
+	UINT8 *sauctop, *sauc, *saucstart, *saucend;
 	const UINT8 *source, *deststop;
 	fixed_t pwidth; // patch width
 	fixed_t offx = 0; // x offset
@@ -1004,6 +1005,10 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	deststart = desttop;
 	destend = desttop + pwidth;
 
+	sauctop = v_blendscreen + y * vid.width + x;
+	saucstart = sauctop;
+	saucend = sauctop + pwidth;
+
 	for (col = 0; (col>>FRACBITS) < SHORT(patch->width); col += colfrac, ++offx, desttop++)
 	{
 		INT32 topdelta, prevdelta = -1;
@@ -1031,18 +1036,26 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 			prevdelta = topdelta;
 			source = (const UINT8 *)(column) + 3;
 			dest = desttop;
+			sauc = sauctop;
 			if (scrn & V_FLIP)
+			{
 				dest = deststart + (destend - desttop);
+				sauc = saucstart + (saucend - sauctop);
+			}
 			dest += FixedInt(FixedMul(topdelta<<FRACBITS,vdup))*vid.width;
+			sauc += FixedInt(FixedMul(topdelta<<FRACBITS,vdup))*vid.width;
 
 			for (ofs = 0; dest < deststop && (ofs>>FRACBITS) < column->length; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
-					*dest = patchdrawfunc(dest, source, ofs);
+					*dest = patchdrawfunc(sauc, source, ofs);
 				dest += vid.width;
+				sauc += vid.width;
 			}
 			column = (const column_t *)((const UINT8 *)column + column->length + 4);
 		}
+
+		sauctop++;
 	}
 }
 
