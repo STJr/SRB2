@@ -69,6 +69,7 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip);
 void R_FreeSingleRotSprite(spritedef_t *spritedef);
 void R_FreeSkinRotSprite(size_t skinnum);
+void R_FreeAllRotSprite(void);
 extern fixed_t cosang2rad[ROTANGLES];
 extern fixed_t sinang2rad[ROTANGLES];
 #endif
