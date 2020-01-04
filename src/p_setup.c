@@ -3582,7 +3582,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	P_InitSpecials();
 
 #ifdef ESLOPE
-	P_ResetDynamicSlopes(fromnetsave);
+	P_SpawnSlopes(fromnetsave);
 #endif
 
 	P_SpawnMapThings(!fromnetsave);
