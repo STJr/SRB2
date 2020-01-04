@@ -1000,7 +1000,7 @@ static void ST_drawInput(void)
 
 	//V_TestBatch();
 	/* I'm a lazy shit so these stay magic. haha... */
-	V_LockBlend(88, 172, 43, 22, 0);
+	V_LockBlend(88, 172, 43, 22, flags);
 
 	// O backing
 	V_DrawFillMaybeFade(x, y-1, 16, 16, hudinfo[HUD_LIVES].f|flags|20, translucency);
