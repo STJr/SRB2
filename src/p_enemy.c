@@ -5189,33 +5189,25 @@ void A_SignPlayer(mobj_t *actor)
 	else if (locvar1 != -3) // set to a defined skin
 	{
 		// I turned this function into a fucking mess. I'm so sorry. -Lach
-		if (locvar1 == -2) // next skin
+		if (locvar1 == -2) // random skin
 		{
+#define skincheck(num) (player ? !R_SkinUsable(player-players, num) : skins[num].availability > 0)
 			player_t *player = actor->target ? actor->target->player : NULL;
 			UINT8 skinnum;
-#define skincheck(num) (player ? !R_SkinUsable(player-players, num) : skins[num].availability > 0)
-			if (ov->skin == NULL) // pick a random skin to start with!
+			UINT8 skincount = 0;
+			for (skincount = 0; skincount < numskins; skincount++)
+				if (!skincheck(skincount))
+					skincount++;
+			skinnum = P_RandomKey(skincount);
+			for (skincount = 0; skincount < numskins; skincount++)
 			{
-				UINT8 skincount = 0;
-				for (skincount = 0; skincount < numskins; skincount++)
-					if (!skincheck(skincount))
-						skincount++;
-				skinnum = P_RandomKey(skincount);
-				for (skincount = 0; skincount < numskins; skincount++)
-				{
-					if (skincount > skinnum)
-						break;
-					if (skincheck(skincount))
-						skinnum++;
-				}
+				if (skincount > skinnum)
+					break;
+				if (skincheck(skincount))
+					skinnum++;
 			}
-			else // otherwise, advance 1 skin
-			{
-				skinnum = (skin_t*)ov->skin-skins;
-				while ((skinnum = (skinnum + 1) % numskins) && skincheck(skinnum));
-			}
-#undef skincheck
 			skin = &skins[skinnum];
+#undef skincheck
 		}
 		else // specific skin
 			skin = &skins[locvar1];
