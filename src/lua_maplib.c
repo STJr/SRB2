@@ -158,7 +158,6 @@ enum vertex_e {
 	vertex_valid = 0,
 	vertex_x,
 	vertex_y,
-	vertex_z,
 	vertex_floorz,
 	vertex_floorzset,
 	vertex_ceilingz,
@@ -169,7 +168,6 @@ static const char *const vertex_opt[] = {
 	"valid",
 	"x",
 	"y",
-	"z",
 	"floorz",
 	"floorzset",
 	"ceilingz",
@@ -977,9 +975,6 @@ static int vertex_get(lua_State *L)
 		return 1;
 	case vertex_y:
 		lua_pushfixed(L, vertex->y);
-		return 1;
-	case vertex_z:
-		lua_pushfixed(L, vertex->z);
 		return 1;
 	case vertex_floorzset:
 		lua_pushboolean(L, vertex->floorzset);
