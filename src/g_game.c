@@ -1291,7 +1291,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	}
 	else
 	{
-		if (turnright)
+		if (turnright && turnleft);
+		else if (turnright)
 			cmd->angleturn = (INT16)(cmd->angleturn - ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
 		else if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
@@ -1489,8 +1490,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	if (PLAYERINPUTDOWN(ssplayer, gc_camreset))
 	{
-		if (camera.chase && !resetdown[forplayer])
-			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], &camera);
+		if (thiscam->chase && !resetdown[forplayer])
+			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], thiscam);
 
 		resetdown[forplayer] = true;
 	}
@@ -1508,7 +1509,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		INT32 player_invert = invertmouse ? -1 : 1;
 		INT32 screen_invert =
 			(player->mo && (player->mo->eflags & MFE_VERTICALFLIP)
-			 && (!camera.chase || player->pflags & PF_FLIPCAM)) //because chasecam's not inverted
+			 && (!thiscam->chase || player->pflags & PF_FLIPCAM)) //because chasecam's not inverted
 			 ? -1 : 1; // set to -1 or 1 to multiply
 		 INT32 lookaxis = ssplayer == 1 ? cv_lookaxis.value : cv_lookaxis2.value;
 
@@ -1592,7 +1593,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	}
 
 	//Silly hack to make 2d mode *somewhat* playable with no chasecam.
-	if ((twodlevel || (player->mo && player->mo->flags2 & MF2_TWOD)) && !camera.chase)
+	if ((twodlevel || (player->mo && player->mo->flags2 & MF2_TWOD)) && !thiscam->chase)
 	{
 		INT32 temp = forward;
 		forward = side;
@@ -1628,7 +1629,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->angleturn = (INT16)(*myangle >> 16);
 
 		// Adjust camera angle by player input
-		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
+		if (abilitydirection && !forcestrafe && thiscam->chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor = cv_cam_turnfacinginput[forplayer].value;
 
@@ -1648,7 +1649,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				cmd->sidemove = 0;
 		}
 
-		if (abilitydirection && camera.chase && !ticcmd_centerviewdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
+		if (abilitydirection && thiscam->chase && !ticcmd_centerviewdown[forplayer] && !player->climbing && !forcestrafe && (player->pflags & PF_DIRECTIONCHAR) && player->powers[pw_carry] != CR_MINECART)
 		{
 			///@TODO This block of code is a hack to get the desired abilitydirection and player angle behaviors while remaining netplay-compatible with EXEs without those features.
 			// This has side effects like making F12 spectate look kind of weird, and making the input viewer inaccurate.
@@ -1671,7 +1672,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		// Adjust camera angle to face player direction, depending on circumstances
 		// Nothing happens if cam left/right are held, so you can hold both to lock the camera in one direction
-		if (abilitydirection && !forcestrafe && camera.chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && player->powers[pw_carry] != CR_MINECART)
+		if (abilitydirection && !forcestrafe && thiscam->chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && player->powers[pw_carry] != CR_MINECART)
 		{
 			fixed_t camadjustfactor;
 			boolean alt = false; // Reduce intensity on diagonals and prevent backwards movement from turning the camera
