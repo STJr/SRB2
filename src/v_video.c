@@ -719,7 +719,16 @@ V_UnlockBlend (void)
 		}
 	}
 #endif/*BATCHTEST*/
-	v_blendscreen = screens[0];
+	v_blendscreen = 0;
+}
+
+static UINT8 *
+Vblendscreen (int n)
+{
+	if (v_blendscreen && n == 0)
+		return v_blendscreen;
+	else
+		return screens[n];
 }
 
 static UINT8 hudplusalpha[11]  = { 10,  8,  6,  4,  2,  0,  0,  0,  0,  0,  0};
@@ -1005,7 +1014,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	deststart = desttop;
 	destend = desttop + pwidth;
 
-	sauctop = v_blendscreen + y * vid.width + x;
+	sauctop = Vblendscreen(scrn&V_PARAMMASK) + y * vid.width + x;
 	saucstart = sauctop;
 	saucend = sauctop + pwidth;
 
@@ -1942,7 +1951,7 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 	dest = screens[0] + x;
 	deststop = screens[0] + vid.rowbytes * vid.height;
 
-	sauc = v_blendscreen + x;
+	sauc = Vblendscreen(0) + x;
 
 	c &= 255;
 
@@ -3556,8 +3565,6 @@ void V_Init(void)
 
 	if (vid.direct)
 		screens[0] = vid.direct;
-
-	v_blendscreen = screens[0];
 
 #ifdef DEBUG
 	CONS_Debug(DBG_RENDER, "V_Init done:\n");
