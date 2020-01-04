@@ -1784,6 +1784,7 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 {
 	UINT8 *dest;
 	const UINT8 *deststop;
+	UINT8 *sauc;
 	INT32 u;
 	UINT8 *fadetable;
 	UINT8 perplayershuffle = 0;
@@ -1923,8 +1924,12 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 	if (y + h > vid.height)
 		h = vid.height-y;
 
-	dest = screens[0] + y*vid.width + x;
+	x = y * vid.width + x;
+
+	dest = screens[0] + x;
 	deststop = screens[0] + vid.rowbytes * vid.height;
+
+	sauc = v_blendscreen + x;
 
 	c &= 255;
 
@@ -1936,9 +1941,10 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 		u = 0;
 		while (u < w)
 		{
-			dest[u] = fadetable[dest[u]];
+			dest[u] = fadetable[sauc[u]];
 			u++;
 		}
+		sauc += vid.width;
 	}
 }
 
