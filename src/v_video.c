@@ -1764,6 +1764,14 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	}
 }
 
+void V_DrawFillMaybeFade (INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT8 strength)
+{
+	if (strength > 9)
+		V_DrawFill(x, y, w, h, c);
+	else
+		V_DrawFadeFill(x, y, w, h, c, ( c & 255 ), strength);
+}
+
 //
 // If color is 0x00 to 0xFF, draw transtable (strength range 0-9).
 // Else, use COLORMAP lump (strength range 0-31).

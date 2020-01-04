@@ -180,6 +180,8 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum);
 void V_DrawFadeScreen(UINT16 color, UINT8 strength);
 // available to lua over my dead body, which will probably happen in this heat
 void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, UINT8 strength);
+/* Do you ever hate life? */
+void V_DrawFillMaybeFade(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT8 strength);
 
 void V_DrawFadeConsBack(INT32 plines);
 void V_DrawPromptBack(INT32 boxheight, INT32 color);
