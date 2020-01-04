@@ -2854,6 +2854,22 @@ static int lib_gGametypeUsesLives(lua_State *L)
 	return 1;
 }
 
+static int lib_gGametypeUsesCoopLives(lua_State *L)
+{
+	//HUDSAFE
+	INLEVEL
+	lua_pushboolean(L, G_GametypeUsesCoopLives());
+	return 1;
+}
+
+static int lib_gGametypeUsesCoopStarposts(lua_State *L)
+{
+	//HUDSAFE
+	INLEVEL
+	lua_pushboolean(L, G_GametypeUsesCoopStarposts());
+	return 1;
+}
+
 static int lib_gGametypeHasTeams(lua_State *L)
 {
 	//HUDSAFE
@@ -2891,6 +2907,14 @@ static int lib_gTagGametype(lua_State *L)
 	//HUDSAFE
 	INLEVEL
 	lua_pushboolean(L, G_TagGametype());
+	return 1;
+}
+
+static int lib_gCompetitionGametype(lua_State *L)
+{
+	//HUDSAFE
+	INLEVEL
+	lua_pushboolean(L, G_CompetitionGametype());
 	return 1;
 }
 
@@ -3139,11 +3163,14 @@ static luaL_Reg lib[] = {
 	{"G_ExitLevel",lib_gExitLevel},
 	{"G_IsSpecialStage",lib_gIsSpecialStage},
 	{"G_GametypeUsesLives",lib_gGametypeUsesLives},
+	{"G_GametypeUsesCoopLives",lib_gGametypeUsesCoopLives},
+	{"G_GametypeUsesCoopStarposts",lib_gGametypeUsesCoopStarposts},
 	{"G_GametypeHasTeams",lib_gGametypeHasTeams},
 	{"G_GametypeHasSpectators",lib_gGametypeHasSpectators},
 	{"G_RingSlingerGametype",lib_gRingSlingerGametype},
 	{"G_PlatformGametype",lib_gPlatformGametype},
 	{"G_TagGametype",lib_gTagGametype},
+	{"G_CompetitionGametype",lib_gCompetitionGametype},
 	{"G_TicsToHours",lib_gTicsToHours},
 	{"G_TicsToMinutes",lib_gTicsToMinutes},
 	{"G_TicsToSeconds",lib_gTicsToSeconds},

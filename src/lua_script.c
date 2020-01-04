@@ -299,9 +299,7 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 // See the above.
 int LUA_CheckGlobals(lua_State *L, const char *word)
 {
-	if (fastcmp(word, "gametyperules"))
-		gametyperules = (UINT32)luaL_checkinteger(L, 2);
-	else if (fastcmp(word, "redscore"))
+	if (fastcmp(word, "redscore"))
 		redscore = (UINT32)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "bluescore"))
 		bluescore = (UINT32)luaL_checkinteger(L, 2);
