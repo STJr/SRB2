@@ -50,10 +50,10 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 	// Set some defaults for a non-sloped "slope"
 	if (vec1.z == 0 && vec2.z == 0)
 	{
-		/// \todo Fix fully flat cases.
-
 		slope->zangle = slope->xydirection = 0;
 		slope->zdelta = slope->d.x = slope->d.y = 0;
+		slope->normal.x = slope->normal.y = 0;
+		slope->normal.z = FRACUNIT;
 	}
 	else
 	{
@@ -653,7 +653,9 @@ void P_ReverseQuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 // Handles slope ejection for objects
 void P_SlopeLaunch(mobj_t *mo)
 {
-	if (!(mo->standingslope->flags & SL_NOPHYSICS)) // If there's physics, time for launching.
+	if (!(mo->standingslope->flags & SL_NOPHYSICS) // If there's physics, time for launching.
+		&& (mo->standingslope->normal.x != 0
+		||  mo->standingslope->normal.y != 0))
 	{
 		// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
 		// vertical launch given from slopes while increasing the horizontal launch
@@ -710,8 +712,7 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 {
 	vector3_t mom; // Ditto.
-
-	if (slope->flags & SL_NOPHYSICS) { // No physics, no need to make anything complicated.
+	if (slope->flags & SL_NOPHYSICS || (slope->normal.x == 0 && slope->normal.y == 0)) { // No physics, no need to make anything complicated.
 		if (P_MobjFlip(thing)*(thing->momz) < 0) // falling, land on slope
 		{
 			thing->standingslope = slope;
