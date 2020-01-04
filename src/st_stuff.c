@@ -981,7 +981,9 @@ static void ST_drawInput(void)
 
 	INT32 x = hudinfo[HUD_LIVES].x, y = hudinfo[HUD_LIVES].y;
 
-	if (!( translucency = st_translucency ))/* nothing to see here */
+	if (modeattacking)/* no translucency in time attack */
+		translucency = 10;
+	else if (!( translucency = st_translucency ))/* nothing to see here */
 		return;
 
 	if (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
