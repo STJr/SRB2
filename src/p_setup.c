@@ -2646,6 +2646,46 @@ static void P_LinkMapData(void)
 	}
 }
 
+//For maps in binary format, converts setup of specials to UDMF format.
+static void P_ConvertBinaryMap(void)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		switch (lines[i].special)
+		{
+		case 700: //Slope front sector floor
+		case 701: //Slope front sector ceiling
+		case 702: //Slope front sector floor and ceiling
+		case 703: //Slope front sector floor and back sector ceiling
+		case 710: //Slope back sector floor
+		case 711: //Slope back sector ceiling
+		case 712: //Slope back sector floor and ceiling
+		case 713: //Slope back sector floor and front sector ceiling
+		{
+			boolean frontfloor = (lines[i].special == 700 || lines[i].special == 702 || lines[i].special == 703);
+			boolean backfloor = (lines[i].special == 710 || lines[i].special == 712 || lines[i].special == 713);
+			boolean frontceil = (lines[i].special == 701 || lines[i].special == 702 || lines[i].special == 713);
+			boolean backceil = (lines[i].special == 711 || lines[i].special == 712 || lines[i].special == 703);
+
+			lines[i].args[0] = backfloor ? 2 : (frontfloor ? 1 : 0);
+			lines[i].args[1] = backceil ? 2 : (frontceil ? 1 : 0);
+
+			if (lines[i].flags & ML_NETONLY)
+				lines[i].args[2] |= SL_NOPHYSICS;
+			if (lines[i].flags & ML_NONET)
+				lines[i].args[2] |= SL_DYNAMIC;
+
+			lines[i].special = 700;
+			break;
+		}
+		default:
+			break;
+		}
+	}
+}
+
 /** Compute MD5 message digest for bytes read from memory source
   *
   * The resulting message digest number will be written into the 16 bytes
@@ -2709,6 +2749,7 @@ static void P_MakeMapMD5(virtres_t *virt, void *dest)
 static boolean P_LoadMapFromFile(void)
 {
 	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
+	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 
 	if (!P_LoadMapData(virt))
 		return false;
@@ -2716,6 +2757,9 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_LinkMapData();
+
+	if (!textmap)
+		P_ConvertBinaryMap();
 
 	// Copy relevant map data for NetArchive purposes.
 	spawnsectors = Z_Calloc(numsectors * sizeof(*sectors), PU_LEVEL, NULL);

@@ -247,32 +247,26 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 	// because checking to see if a slope had changed will waste more memory than
 	// if the slope was just updated when called
 	line_t *line = lines + linenum;
-	INT16 special = line->special;
 	pslope_t *fslope = NULL, *cslope = NULL;
 	vector3_t origin, point;
 	vector2_t direction;
 	fixed_t nx, ny, dz, extent;
 
-	boolean frontfloor = (special == 700 || special == 702 || special == 703);
-	boolean backfloor  = (special == 710 || special == 712 || special == 713);
-	boolean frontceil  = (special == 701 || special == 702 || special == 713);
-	boolean backceil   = (special == 711 || special == 712 || special == 703);
-
-	UINT8 flags = 0; // Slope flags
-	if (line->flags & ML_NETONLY)
-		flags |= SL_NOPHYSICS;
-	if (line->flags & ML_NONET)
-		flags |= SL_DYNAMIC;
+	boolean frontfloor = line->args[0] == 1;
+	boolean backfloor = line->args[0] == 2;
+	boolean frontceil = line->args[1] == 1;
+	boolean backceil = line->args[1] == 2;
+	UINT8 flags = line->args[2]; // Slope flags
 
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
 	{
-		CONS_Printf("P_SpawnSlope_Line called with non-slope line special.\n");
+		CONS_Printf("line_SpawnViaLine: Slope special with nothing to do.\n");
 		return;
 	}
 
 	if(!line->frontsector || !line->backsector)
 	{
-		CONS_Debug(DBG_SETUP, "P_SpawnSlope_Line used on a line without two sides. (line number %i)\n", linenum);
+		CONS_Debug(DBG_SETUP, "line_SpawnViaLine: Slope special used on a line without two sides. (line number %i)\n", linenum);
 		return;
 	}
 
@@ -299,7 +293,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 
 		if(extent < 0)
 		{
-			CONS_Printf("P_SpawnSlope_Line failed to get frontsector extent on line number %i\n", linenum);
+			CONS_Printf("line_SpawnViaLine failed to get frontsector extent on line number %i\n", linenum);
 			return;
 		}
 
@@ -365,7 +359,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 
 		if(extent < 0)
 		{
-			CONS_Printf("P_SpawnSlope_Line failed to get backsector extent on line number %i\n", linenum);
+			CONS_Printf("line_SpawnViaLine failed to get backsector extent on line number %i\n", linenum);
 			return;
 		}
 
@@ -563,13 +557,6 @@ void P_ResetDynamicSlopes(const boolean fromsave) {
 		switch (lines[i].special)
 		{
 			case 700:
-			case 701:
-			case 702:
-			case 703:
-			case 710:
-			case 711:
-			case 712:
-			case 713:
 				line_SpawnViaLine(i, !fromsave);
 				break;
 
