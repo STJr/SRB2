@@ -846,7 +846,6 @@ static void P_LoadVertices(UINT8 *data)
 	{
 		v->x = SHORT(mv->x)<<FRACBITS;
 		v->y = SHORT(mv->y)<<FRACBITS;
-		v->z = 0;
 	}
 }
 
@@ -1575,7 +1574,6 @@ static void P_LoadTextmap(void)
 	{
 		// Defaults.
 		vt->x = vt->y = INT32_MAX;
-		vt->z = 0;
 
 		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
 
