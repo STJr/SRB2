@@ -639,7 +639,7 @@ flatfound:
 		/* This could be a flat, patch, or PNG. */
 		flatpatch = W_CacheLumpNum(flatnum, PU_STATIC);
 		lumplength = W_LumpLength(flatnum);
-		if (R_CheckIfPatch(flatpatch, lumplength))
+		if (Picture_CheckIfPatch(flatpatch, lumplength))
 			levelflat->type = LEVELFLAT_PATCH;
 		else
 		{
@@ -651,7 +651,7 @@ flatfound:
 			if (flatpatch)
 				Z_Free(flatpatch);
 			W_ReadLumpHeader(flatnum, buffer, 8, 0);
-			if (R_IsLumpPNG(buffer, lumplength))
+			if (Picture_IsLumpPNG(buffer, lumplength))
 				levelflat->type = LEVELFLAT_PNG;
 			else
 #endif/*NO_PNG_LUMPS*/

@@ -473,7 +473,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		realpatch = (patch_t *)pdata;
 
 #ifndef NO_PNG_LUMPS
-		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
 			goto multipatch;
 #endif
 #ifdef WALLFLATS
@@ -570,13 +570,17 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		dealloc = true;
 
 #ifndef NO_PNG_LUMPS
-		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
+			// Dummy variables.
+			INT32 pngwidth, pngheight;
+			realpatch = (patch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
+		}
 		else
 #endif
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
-			realpatch = R_FlatToPatch(pdata, texture->width, texture->height, 0, 0, NULL, false);
+			realpatch = (patch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
 #endif
 		{
@@ -896,10 +900,10 @@ countflats:
 			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
 
 #ifndef NO_PNG_LUMPS
-			if (R_IsLumpPNG((UINT8 *)patchlump, lumplength))
+			if (Picture_IsLumpPNG((UINT8 *)patchlump, lumplength))
 			{
-				INT16 width, height;
-				R_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
+				INT16 width = 0, height = 0;
+				Picture_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
 				texture->width = width;
 				texture->height = height;
 			}
@@ -999,10 +1003,10 @@ checkflats:
 			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
 
 #ifndef NO_PNG_LUMPS
-			if (R_IsLumpPNG((UINT8 *)flatlump, lumplength))
+			if (Picture_IsLumpPNG((UINT8 *)flatlump, lumplength))
 			{
-				INT16 width, height;
-				R_PNGDimensions((UINT8 *)flatlump, &width, &height, lumplength);
+				INT16 width = 0, height = 0;
+				Picture_PNGDimensions((UINT8 *)flatlump, &width, &height, lumplength);
 				texture->width = width;
 				texture->height = height;
 			}

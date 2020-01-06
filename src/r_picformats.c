@@ -59,7 +59,7 @@ fixed_t sinang2rad[ROTANGLES];
   * \param picture Input picture data.
   * \param outformat Output picture format.
   * \param insize Input picture size.
-  * \param outsize Output picture size.
+  * \param outsize Output picture size, as a pointer.
   * \param inwidth Input picture width.
   * \param inheight Input picture height.
   * \param inleftoffset Input picture left offset, for patches.
@@ -73,8 +73,12 @@ void *Picture_Convert(
 	INT32 inwidth, INT32 inheight, INT32 inleftoffset, INT32 intopoffset,
 	pictureflags_t flags)
 {
-	if (informat == outformat) // wut?
-		I_Error("Picture_Convert: input and output formats are the same!");
+	if (informat == PICFMT_NONE)
+		I_Error("Picture_Convert: input format was PICFMT_NONE!");
+	else if (outformat == PICFMT_NONE)
+		I_Error("Picture_Convert: output format was PICFMT_NONE!");
+	else if (informat == outformat)
+		I_Error("Picture_Convert: input and output formats were the same!");
 
 	if (Picture_IsPatchFormat(outformat))
 		return Picture_PatchConvert(informat, picture, outformat, insize, outsize, inwidth, inheight, inleftoffset, intopoffset, flags);
@@ -92,7 +96,7 @@ void *Picture_Convert(
   * \param picture Input picture data.
   * \param outformat Output picture format.
   * \param insize Input picture size.
-  * \param outsize Output picture size.
+  * \param outsize Output picture size, as a pointer.
   * \param inwidth Input picture width.
   * \param inheight Input picture height.
   * \param inleftoffset Input picture left offset, for patches.
@@ -116,8 +120,12 @@ void *Picture_PatchConvert(
 
 	(void)insize; // ignore
 
-	if (informat == outformat)
-		I_Error("Picture_PatchConvert: input and output formats are the same!");
+	if (informat == PICFMT_NONE)
+		I_Error("Picture_PatchConvert: input format was PICFMT_NONE!");
+	else if (outformat == PICFMT_NONE)
+		I_Error("Picture_PatchConvert: output format was PICFMT_NONE!");
+	else if (informat == outformat)
+		I_Error("Picture_PatchConvert: input and output formats were the same!");
 
 	if (!inbpp)
 		I_Error("Picture_PatchConvert: unknown input bits per pixel?!");
@@ -334,7 +342,7 @@ void *Picture_PatchConvert(
   * \param picture Input picture data.
   * \param outformat Output picture format.
   * \param insize Input picture size.
-  * \param outsize Output picture size.
+  * \param outsize Output picture size, as a pointer.
   * \param inwidth Input picture width.
   * \param inheight Input picture height.
   * \param inleftoffset Input picture left offset, for patches.
@@ -359,8 +367,12 @@ void *Picture_FlatConvert(
 	(void)inleftoffset; // ignore
 	(void)intopoffset; // ignore
 
-	if (informat == outformat)
-		I_Error("Picture_FlatConvert: input and output formats are the same!");
+	if (informat == PICFMT_NONE)
+		I_Error("Picture_FlatConvert: input format was PICFMT_NONE!");
+	else if (outformat == PICFMT_NONE)
+		I_Error("Picture_FlatConvert: output format was PICFMT_NONE!");
+	else if (informat == outformat)
+		I_Error("Picture_FlatConvert: input and output formats were the same!");
 
 	if (!inbpp)
 		I_Error("Picture_FlatConvert: unknown input bits per pixel?!");
@@ -587,7 +599,7 @@ boolean Picture_IsFlatFormat(pictureformat_t format)
   * \param picture Input patch size.
   * \return True if the input patch is valid.
   */
-boolean R_CheckIfPatch(patch_t *patch, size_t size)
+boolean Picture_CheckIfPatch(patch_t *patch, size_t size)
 {
 	INT16 width, height;
 	boolean result;
@@ -624,26 +636,40 @@ boolean R_CheckIfPatch(patch_t *patch, size_t size)
 	return result;
 }
 
-//
-// R_TextureToFlat
-//
-// Convert a texture to a flat.
-//
-void R_TextureToFlat(size_t tex, UINT8 *flat)
+/** Converts a texture to a flat.
+  *
+  * \param trickytex The texture number.
+  * \return The converted flat.
+  */
+void *Picture_TextureToFlat(size_t trickytex)
 {
-	texture_t *texture = textures[tex];
+	texture_t *texture;
+	size_t tex;
 
+	UINT8 *converted;
+	size_t flatsize;
 	fixed_t col, ofs;
 	column_t *column;
 	UINT8 *desttop, *dest, *deststop;
 	UINT8 *source;
 
-	// yea
+	if (trickytex >= (unsigned)numtextures)
+		I_Error("Picture_TextureToFlat: invalid texture number!");
+
+	// Check the texture cache
+	// If the texture's not there, it'll be generated right now
+	tex = trickytex;
+	texture = textures[tex];
 	R_CheckTextureCache(tex);
 
-	desttop = flat;
-	deststop = desttop + (texture->width * texture->height);
+	// Allocate the flat
+	flatsize = (texture->width * texture->height);
+	converted = Z_Malloc(flatsize, PU_STATIC, NULL);
+	memset(converted, TRANSPARENTPIXEL, flatsize);
 
+	// Now we're gonna write to it
+	desttop = converted;
+	deststop = desttop + flatsize;
 	for (col = 0; col < texture->width; col++, desttop++)
 	{
 		// no post_t info
@@ -682,61 +708,17 @@ void R_TextureToFlat(size_t tex, UINT8 *flat)
 			}
 		}
 	}
+
+	return converted;
 }
 
-//
-// R_PatchToFlat
-//
-// Convert a patch to a flat.
-//
-void R_PatchToFlat(patch_t *patch, UINT8 *flat)
-{
-	size_t outsize = 0;
-	UINT8 *converted = Picture_FlatConvert(PICFMT_PATCH, patch, PICFMT_FLAT, 0, &outsize, 0, 0, 0, 0, 0);
-	M_Memcpy(flat, converted, outsize);
-	Z_Free(converted);
-}
-
-//
-// R_PatchToFlat_16bpp
-//
-// Convert a patch to a 16-bit flat.
-//
-void R_PatchToFlat_16bpp(patch_t *patch, UINT16 *raw, boolean flip)
-{
-	size_t outsize = 0;
-	UINT16 *converted = Picture_FlatConvert(PICFMT_PATCH, patch, PICFMT_FLAT16, 0, &outsize, 0, 0, 0, 0, (flip) ? PICFLAGS_XFLIP : 0);
-	M_Memcpy(raw, converted, outsize);
-	Z_Free(converted);
-}
-
-//
-// R_FlatToPatch
-//
-// Convert a flat to a patch.
-//
-patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency)
-{
-	(void)transparency;
-	return (patch_t *)Picture_Convert(PICFMT_FLAT, raw, PICFMT_PATCH, 0, destsize, width, height, leftoffset, topoffset, 0);
-}
-
-//
-// R_FlatToPatch_16bpp
-//
-// Convert a 16-bit flat to a patch.
-//
-patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
-{
-	return (patch_t *)Picture_Convert(PICFMT_FLAT16, raw, PICFMT_PATCH, 0, size, width, height, 0, 0, 0);
-}
-
-//
-// R_IsLumpPNG
-//
-// Returns true if the lump is a valid PNG.
-//
-boolean R_IsLumpPNG(const UINT8 *d, size_t s)
+/** Returns true if the lump is a valid PNG.
+  *
+  * \param d The lump to be checked.
+  * \param s The lump size.
+  * \return True if the lump is a PNG image.
+  */
+boolean Picture_IsLumpPNG(const UINT8 *d, size_t s)
 {
 	if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
 		return false;
@@ -803,7 +785,7 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+static png_bytep *PNG_Read(const UINT8 *png, INT32 *w, INT32 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -824,17 +806,13 @@ static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoff
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
-	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
-		return NULL;
-	}
+		I_Error("PNG_Load: Couldn't initialize libpng!");
 
 	png_info_ptr = png_create_info_struct(png_ptr);
 	if (!png_info_ptr)
 	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on allocate for libpng\n");
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		return NULL;
+		I_Error("PNG_Load: libpng couldn't allocate memory!");
 	}
 
 #ifdef USE_FAR_KEYWORD
@@ -921,22 +899,44 @@ static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoff
 	return row_pointers;
 }
 
-// Convert a PNG to a raw image.
-static void *PNG_Convert(const UINT8 *png, INT32 outbpp, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+/** Converts a PNG to a picture.
+  *
+  * \param png The PNG image.
+  * \param outformat The output picture's format.
+  * \param w The output picture's width, as a pointer.
+  * \param h The output picture's height, as a pointer.
+  * \param topoffset The output picture's top offset, for sprites, as a pointer.
+  * \param leftoffset The output picture's left offset, for sprites, as a pointer.
+  * \param insize The input picture's size.
+  * \param outsize A pointer to the output picture's size.
+  * \param flags Input picture flags.
+  * \return A pointer to the converted picture.
+  */
+void *Picture_PNGConvert(
+	const UINT8 *png, pictureformat_t outformat,
+	INT32 *w, INT32 *h,
+	INT16 *topoffset, INT16 *leftoffset,
+	size_t insize, size_t *outsize,
+	pictureflags_t flags)
 {
 	void *flat;
+	INT32 outbpp;
+	size_t flatsize;
 	png_uint_32 x, y;
-	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, size);
+	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, insize);
 	png_uint_32 width = *w, height = *h;
 
+	outbpp = Picture_FormatBPP(outformat);
 	if (!outbpp)
-		I_Error("PNG_Convert: unknown output bits per pixel?!");
+		I_Error("Picture_PNGConvert: unknown output bits per pixel?!");
 
-	if (!row_pointers)
-		I_Error("PNG_Convert: conversion failed!");
+	// Figure out the size
+	flatsize = (width * height) * (outbpp / 8);
+	if (outsize)
+		*outsize = flatsize;
 
 	// Convert the image
-	flat = Z_Malloc((width * height) * (outbpp / 8), PU_STATIC, NULL);
+	flat = Z_Malloc(flatsize, PU_STATIC, NULL);
 	if (outbpp == 8)
 		memset(flat, TRANSPARENTPIXEL, (width * height));
 
@@ -979,48 +979,55 @@ static void *PNG_Convert(const UINT8 *png, INT32 outbpp, UINT16 *w, UINT16 *h, I
 			}
 		}
 	}
+
+	// Free the row pointers that libpng allocated.
 	free(row_pointers);
+
+	// But wait, there's more!
+	if (Picture_IsPatchFormat(outformat))
+	{
+		void *converted;
+		pictureformat_t informat = PICFMT_NONE;
+		INT16 patleftoffset = 0, pattopoffset = 0;
+
+		// Figure out the input format, from the bitdepth of the input format
+		switch (outbpp)
+		{
+			case 32:
+				informat = PICFMT_FLAT32;
+				break;
+			case 16:
+				informat = PICFMT_FLAT16;
+				break;
+			default:
+				informat = PICFMT_FLAT; // Assumed 8bpp
+				break;
+		}
+
+		// Also find out if leftoffset and topoffset aren't pointing to NULL.
+		if (leftoffset)
+			patleftoffset = *leftoffset;
+		if (topoffset)
+			pattopoffset = *topoffset;
+
+		// Now, convert it!
+		converted = Picture_PatchConvert(informat, flat, outformat, insize, outsize, (INT16)width, (INT16)height, patleftoffset, pattopoffset, flags);
+		Z_Free(flat);
+		return converted;
+	}
 
 	return flat;
 }
 
-//
-// R_PNGToFlat
-//
-// Convert a PNG to a flat.
-//
-UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size)
-{
-	return PNG_Convert(png, 8, width, height, NULL, NULL, size);
-}
-
-//
-// R_PNGToPatch
-//
-// Convert a PNG to a patch.
-//
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency)
-{
-	UINT16 width, height;
-	INT16 topoffset = 0, leftoffset = 0;
-	UINT8 *raw = PNG_Convert(png, 32, &width, &height, &topoffset, &leftoffset, size);
-	patch_t *output;
-
-	(void)transparency;
-	if (!raw)
-		I_Error("R_PNGToPatch: conversion failed");
-
-	output = Picture_Convert(PICFMT_FLAT32, raw, PICFMT_PATCH, 0, destsize, width, height, leftoffset, topoffset, 0);
-	Z_Free(raw);
-	return output;
-}
-
-//
-// R_PNGDimensions
-//
-// Get the dimensions of a PNG file.
-//
-boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
+/** Returns the dimensions of a PNG image, but doesn't perform any conversions.
+  *
+  * \param png The PNG image.
+  * \param width A pointer to the input picture's width.
+  * \param height A pointer to the input picture's height.
+  * \param size The input picture's size.
+  * \return True if reading the file succeeded, false if it failed.
+  */
+boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -1449,7 +1456,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		lumplength = W_LumpLength(lump);
 
 		// Because there's something wrong with SPR_DFLM, I guess
-		if (!R_CheckIfPatch(patch, lumplength))
+		if (!Picture_CheckIfPatch(patch, lumplength))
 			return;
 
 		width = patch->width;
@@ -1567,7 +1574,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			}
 
 			// make patch
-			newpatch = R_FlatToPatch_16bpp(rawdst, newwidth, newheight, &size);
+			newpatch = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
 			{
 				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
 				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);

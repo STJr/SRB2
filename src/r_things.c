@@ -282,10 +282,14 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 				patch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
 				size_t len = W_LumpLengthPwad(wadnum, l);
 				// lump is a png so convert it
-				if (R_IsLumpPNG((UINT8 *)png, len))
+				if (Picture_IsLumpPNG((UINT8 *)png, len))
 				{
-					png = R_PNGToPatch((UINT8 *)png, len, NULL, true);
-					M_Memcpy(&patch, png, sizeof(INT16)*4);
+					// Dummy variables.
+					INT32 pngwidth, pngheight;
+					INT16 topoffset, leftoffset;
+					patch_t *converted = (patch_t *)Picture_PNGConvert((UINT8 *)png, PICFMT_PATCH, &pngwidth, &pngheight, &topoffset, &leftoffset, len, NULL, 0);
+					M_Memcpy(&patch, converted, sizeof(INT16)*4); // only copy the header because that's all we need
+					Z_Free(converted);
 				}
 				Z_Free(png);
 			}

@@ -653,13 +653,17 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 		realpatch = (patch_t *)pdata;
 
 #ifndef NO_PNG_LUMPS
-		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
+			// Dummy variables.
+			INT32 pngwidth, pngheight;
+			realpatch = (patch_t *)Picture_PNGConvert(pdata, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
+		}
 		else
 #endif
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
-			realpatch = R_FlatToPatch(pdata, texture->width, texture->height, 0, 0, NULL, false);
+			realpatch = (patch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
 #endif
 		{
@@ -697,8 +701,12 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 #ifndef NO_PNG_LUMPS
 	// lump is a png so convert it
 	size_t len = W_LumpLengthPwad(grPatch->wadnum, grPatch->lumpnum);
-	if ((patch != NULL) && R_IsLumpPNG((const UINT8 *)patch, len))
-		patch = R_PNGToPatch((const UINT8 *)patch, len, NULL, true);
+	if ((patch != NULL) && Picture_IsLumpPNG((const UINT8 *)patch, len))
+	{
+		// Dummy variables.
+		INT32 pngwidth, pngheight;
+		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, len, NULL, 0);
+	}
 #endif
 
 	// don't do it twice (like a cache)
@@ -956,6 +964,8 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 {
 	UINT8 *flat;
+	UINT8 *converted;
+	size_t size;
 
 	if (needpatchflush)
 		W_FlushCachedPatches();
@@ -971,11 +981,12 @@ static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 
 	grMipmap->width  = (UINT16)textures[texturenum]->width;
 	grMipmap->height = (UINT16)textures[texturenum]->height;
+	size = (grMipmap->width * grMipmap->height);
 
-	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data);
-	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
-
-	R_TextureToFlat(texturenum, flat);
+	flat = Z_Malloc(size, PU_HWRCACHE, &grMipmap->grInfo.data);
+	converted = (UINT8 *)Picture_TextureToFlat(texturenum);
+	M_Memcpy(flat, converted, size);
+	Z_Free(converted);
 }
 
 // Download a Doom 'flat' to the hardware cache and make it ready for use

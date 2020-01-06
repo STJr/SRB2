@@ -64,9 +64,12 @@ void *Picture_GetPatchPixel(
 	INT32 x, INT32 y,
 	pictureflags_t flags);
 
+void *Picture_TextureToFlat(size_t trickytex);
+
 INT32 Picture_FormatBPP(pictureformat_t format);
 boolean Picture_IsPatchFormat(pictureformat_t format);
 boolean Picture_IsFlatFormat(pictureformat_t format);
+boolean Picture_CheckIfPatch(patch_t *patch, size_t size);
 
 // Structs
 #ifdef ROTSPRITE
@@ -92,22 +95,18 @@ typedef struct
 	boolean available;
 } spriteinfo_t;
 
-// Conversions between patches / flats / textures...
-boolean R_CheckIfPatch(patch_t *patch, size_t size);
-void R_TextureToFlat(size_t tex, UINT8 *flat);
-void R_PatchToFlat(patch_t *patch, UINT8 *flat);
-void R_PatchToFlat_16bpp(patch_t *patch, UINT16 *raw, boolean flip);
-patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
-patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *size);
-
 // Portable Network Graphics
-boolean R_IsLumpPNG(const UINT8 *d, size_t s);
-#define W_ThrowPNGError(lumpname, wadfilename) I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", lumpname, wadfilename); // Fears Of LJ Sonic
+boolean Picture_IsLumpPNG(const UINT8 *d, size_t s);
+#define Picture_ThrowPNGError(lumpname, wadfilename) I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", lumpname, wadfilename); // Fears Of LJ Sonic
 
 #ifndef NO_PNG_LUMPS
-UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size);
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency);
-boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
+void *Picture_PNGConvert(
+	const UINT8 *png, pictureformat_t outformat,
+	INT32 *w, INT32 *h,
+	INT16 *topoffset, INT16 *leftoffset,
+	size_t insize, size_t *outsize,
+	pictureflags_t flags);
+boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
 #endif
 
 // SpriteInfo

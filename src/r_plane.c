@@ -765,18 +765,6 @@ void R_CheckFlatLength(size_t size)
 }
 
 //
-// R_GenerateFlat
-//
-// Generate a flat from specified width and height.
-//
-static UINT8 *R_GenerateFlat(UINT16 width, UINT16 height)
-{
-	UINT8 *flat = Z_Malloc(width * height, PU_LEVEL, NULL);
-	memset(flat, TRANSPARENTPIXEL, width * height);
-	return flat;
-}
-
-//
 // R_GetTextureFlat
 //
 // Convert a texture or patch to a flat.
@@ -810,12 +798,17 @@ static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boo
 		// Level texture
 		if (leveltexture)
 		{
+			UINT8 *converted;
+			size_t size;
 			texture_t *texture = textures[levelflat->u.texture.num];
 			texflat->width = ds_flatwidth = texture->width;
 			texflat->height = ds_flatheight = texture->height;
 
-			texflat->flat = R_GenerateFlat(ds_flatwidth, ds_flatheight);
-			R_TextureToFlat(levelflat->u.texture.num, texflat->flat);
+			size = (texflat->width * texflat->height);
+			texflat->flat = Z_Malloc(size, PU_LEVEL, NULL);
+			converted = (UINT8 *)Picture_TextureToFlat(levelflat->u.texture.num);
+			M_Memcpy(texflat->flat, converted, size);
+			Z_Free(converted);
 			flat = texflat->flat;
 
 			levelflat->flatpatch = flat;
@@ -829,22 +822,31 @@ static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boo
 #ifndef NO_PNG_LUMPS
 			if (ispng)
 			{
-				levelflat->flatpatch = R_PNGToFlat(&levelflat->width, &levelflat->height, ds_source, W_LumpLength(levelflat->u.flat.lumpnum));
+				INT32 pngwidth, pngheight;
+
+				levelflat->flatpatch = Picture_PNGConvert(ds_source, PICFMT_FLAT32, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
 				levelflat->topoffset = levelflat->leftoffset = 0;
+				levelflat->width = (UINT16)pngwidth;
+				levelflat->height = (UINT16)pngheight;
+
 				ds_flatwidth = levelflat->width;
 				ds_flatheight = levelflat->height;
 			}
 			else
 #endif
 			{
+				UINT8 *converted;
+				size_t size;
 				levelflat->width = ds_flatwidth = SHORT(patch->width);
 				levelflat->height = ds_flatheight = SHORT(patch->height);
 
 				levelflat->topoffset = patch->topoffset * FRACUNIT;
 				levelflat->leftoffset = patch->leftoffset * FRACUNIT;
 
-				levelflat->flatpatch = R_GenerateFlat(ds_flatwidth, ds_flatheight);
-				R_PatchToFlat(patch, levelflat->flatpatch);
+				levelflat->flatpatch = Z_Malloc(levelflat->width * levelflat->height, PU_LEVEL, NULL);
+				converted = Picture_FlatConvert(PICFMT_PATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, patch->topoffset, patch->leftoffset, 0);
+				M_Memcpy(levelflat->flatpatch, converted, size);
+				Z_Free(converted);
 			}
 			flat = levelflat->flatpatch;
 		}
