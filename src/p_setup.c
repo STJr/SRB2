@@ -1663,6 +1663,37 @@ static void P_LoadTextmap(void)
 	}
 }
 
+static void P_ProcessLinedefsAfterSidedefs(void)
+{
+	size_t i = numlines;
+	register line_t *ld = lines;
+	for (; i--; ld++)
+	{
+		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
+		ld->backsector = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
+
+		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
+		switch (ld->special)
+		{
+		case 331: // Trigger linedef executor: Skin - Continuous
+		case 332: // Trigger linedef executor: Skin - Each time
+		case 333: // Trigger linedef executor: Skin - Once
+		case 443: // Calls a named Lua function
+			if (sides[ld->sidenum[0]].text)
+			{
+				size_t len = strlen(sides[ld->sidenum[0]].text) + 1;
+				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
+					len += strlen(sides[ld->sidenum[1]].text);
+				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
+				M_Memcpy(ld->text, sides[ld->sidenum[0]].text, strlen(sides[ld->sidenum[0]].text) + 1);
+				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
+					M_Memcpy(ld->text + strlen(ld->text) + 1, sides[ld->sidenum[1]].text, strlen(sides[ld->sidenum[1]].text) + 1);
+			}
+			break;
+		}
+	}
+}
+
 static boolean P_LoadMapData(const virtres_t *virt)
 {
 	virtlump_t *virtvertexes = NULL, *virtsectors = NULL, *virtsidedefs = NULL, *virtlinedefs = NULL, *virtthings = NULL;
@@ -1736,6 +1767,8 @@ static boolean P_LoadMapData(const virtres_t *virt)
 		P_LoadThings(virtthings->data);
 	}
 
+	P_ProcessLinedefsAfterSidedefs();
+
 	R_ClearTextureNumCache(true);
 
 	// set the sky flat num
@@ -1747,15 +1780,6 @@ static boolean P_LoadMapData(const virtres_t *virt)
 
 	// search for animated flats and set up
 	P_SetupLevelFlatAnims();
-
-	// Copy relevant map data for NetArchive purposes.
-	spawnsectors = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
-	spawnlines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
-	spawnsides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
-
-	memcpy(spawnsectors, sectors, numsectors * sizeof (*sectors));
-	memcpy(spawnlines, lines, numlines * sizeof (*lines));
-	memcpy(spawnsides, sides, numsides * sizeof (*sides));
 
 	return true;
 }
@@ -2515,37 +2539,6 @@ static void P_LoadMapLUT(const virtres_t *virt)
 		P_CreateBlockMap();
 }
 
-static void P_ProcessLinedefsWithSidedefs(void)
-{
-	size_t i = numlines;
-	register line_t *ld = lines;
-	for (;i--;ld++)
-	{
-		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
-		ld->backsector  = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
-
-		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
-		switch(ld->special)
-		{
-		case 331: // Trigger linedef executor: Skin - Continuous
-		case 332: // Trigger linedef executor: Skin - Each time
-		case 333: // Trigger linedef executor: Skin - Once
-		case 443: // Calls a named Lua function
-			if (sides[ld->sidenum[0]].text)
-			{
-				size_t len = strlen(sides[ld->sidenum[0]].text)+1;
-				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					len += strlen(sides[ld->sidenum[1]].text);
-				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
-				M_Memcpy(ld->text, sides[ld->sidenum[0]].text, strlen(sides[ld->sidenum[0]].text)+1);
-				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					M_Memcpy(ld->text+strlen(ld->text)+1, sides[ld->sidenum[1]].text, strlen(sides[ld->sidenum[1]].text)+1);
-			}
-			break;
-		}
-	}
-}
-
 //
 // P_LinkMapData
 // Builds sector line lists and subsector sector numbers.
@@ -2711,8 +2704,16 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapBSP(virt);
 	P_LoadMapLUT(virt);
 
-	P_ProcessLinedefsWithSidedefs();
 	P_LinkMapData();
+
+	// Copy relevant map data for NetArchive purposes.
+	spawnsectors = Z_Calloc(numsectors * sizeof(*sectors), PU_LEVEL, NULL);
+	spawnlines = Z_Calloc(numlines * sizeof(*lines), PU_LEVEL, NULL);
+	spawnsides = Z_Calloc(numsides * sizeof(*sides), PU_LEVEL, NULL);
+
+	memcpy(spawnsectors, sectors, numsectors * sizeof(*sectors));
+	memcpy(spawnlines, lines, numlines * sizeof(*lines));
+	memcpy(spawnsides, sides, numsides * sizeof(*sides));
 
 	P_MakeMapMD5(virt, &mapmd5);
 
