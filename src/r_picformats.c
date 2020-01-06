@@ -106,7 +106,7 @@ void *Picture_PatchConvert(
 	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
 	pictureflags_t flags)
 {
-	UINT32 x, y;
+	INT16 x, y;
 	UINT8 *img;
 	UINT8 *imgptr = imgbuf;
 	UINT8 *colpointers, *startofspan;
@@ -114,13 +114,13 @@ void *Picture_PatchConvert(
 	patch_t *inpatch = NULL;
 	INT32 inbpp = Picture_FormatBPP(informat);
 
+	(void)insize; // ignore
+
 	if (informat == outformat)
 		I_Error("Picture_PatchConvert: input and output formats are the same!");
 
 	if (!inbpp)
 		I_Error("Picture_PatchConvert: unknown input bits per pixel?!");
-
-	(void)insize; // ignore
 
 	// If it's a patch, you can just figure out
 	// the dimensions from the header.
@@ -168,13 +168,13 @@ void *Picture_PatchConvert(
 				switch (informat)
 				{
 					case PICFMT_FLAT32:
-						input = picture + (offs * 4);
+						input = (UINT32 *)picture + offs;
 						break;
 					case PICFMT_FLAT16:
-						input = picture + (offs * 2);
+						input = (UINT16 *)picture + offs;
 						break;
 					case PICFMT_FLAT:
-						input = picture + offs;
+						input = (UINT8 *)picture + offs;
 						break;
 					default:
 						I_Error("Picture_PatchConvert: unsupported flat input format!");
@@ -355,6 +355,10 @@ void *Picture_FlatConvert(
 	INT32 x, y;
 	size_t size;
 
+	(void)insize; // ignore
+	(void)inleftoffset; // ignore
+	(void)intopoffset; // ignore
+
 	if (informat == outformat)
 		I_Error("Picture_FlatConvert: input and output formats are the same!");
 
@@ -370,8 +374,6 @@ void *Picture_FlatConvert(
 		inpatch = (patch_t *)picture;
 		inwidth = SHORT(inpatch->width);
 		inheight = SHORT(inpatch->height);
-		inleftoffset = SHORT(inpatch->leftoffset);
-		intopoffset = SHORT(inpatch->topoffset);
 	}
 
 	size = (inwidth * inheight) * (outbpp / 8);
@@ -393,7 +395,7 @@ void *Picture_FlatConvert(
 			if (Picture_IsPatchFormat(informat))
 				input = Picture_GetPatchPixel(inpatch, informat, x, y, flags);
 			else if (Picture_IsFlatFormat(informat))
-				input = picture + (offs * (inbpp / 8));
+				input = (UINT8 *)picture + (offs * (inbpp / 8));
 			else
 				I_Error("Picture_FlatConvert: unsupported input format!");
 
@@ -489,15 +491,15 @@ void *Picture_GetPatchPixel(
 	if (x >= 0 && x < SHORT(patch->width))
 	{
 		INT32 topdelta, prevdelta = -1;
-		INT32 columnofs = 0;
+		INT32 colofs = 0;
 
 		if (flags & PICFLAGS_XFLIP)
-			columnofs = LONG(patch->columnofs[(SHORT(patch->width)-1)-x]);
+			colofs = LONG(patch->columnofs[(SHORT(patch->width)-1)-x]);
 		else
-			columnofs = LONG(patch->columnofs[x]);
+			colofs = LONG(patch->columnofs[x]);
 
 		// Column offsets are pointers so no casting required
-		column = (column_t *)((UINT8 *)patch + columnofs);
+		column = (column_t *)((UINT8 *)patch + colofs);
 
 		while (column->topdelta != 0xff)
 		{
