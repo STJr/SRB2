@@ -458,43 +458,31 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 	line_t *line = lines + linenum;
 	side_t *side;
 	pslope_t **slopetoset;
-	UINT16 tag1, tag2, tag3;
+	UINT16 tag1 = line->args[1];
+	UINT16 tag2 = line->args[2];
+	UINT16 tag3 = line->args[3];
+	UINT8 flags = line->args[4];
 
-	UINT8 flags = 0;
-	if (line->flags & ML_NETONLY)
-		flags |= SL_NOPHYSICS;
-	if (line->flags & ML_NONET)
-		flags |= SL_DYNAMIC;
-
-	switch(line->special)
+	switch(line->args[0])
 	{
-	case 704:
+	case 0:
 		slopetoset = &line->frontsector->f_slope;
 		side = &sides[line->sidenum[0]];
 		break;
-	case 705:
+	case 1:
 		slopetoset = &line->frontsector->c_slope;
 		side = &sides[line->sidenum[0]];
 		break;
-	case 714:
+	case 2:
 		slopetoset = &line->backsector->f_slope;
 		side = &sides[line->sidenum[1]];
 		break;
-	case 715:
+	case 3:
 		slopetoset = &line->backsector->c_slope;
 		side = &sides[line->sidenum[1]];
 	default:
 		return;
 	}
-
-	if (line->flags & ML_EFFECT6)
-	{
-		tag1 = line->tag;
-		tag2 = side->textureoffset >> FRACBITS;
-		tag3 = side->rowoffset >> FRACBITS;
-	}
-	else
-		tag1 = tag2 = tag3 = line->tag;
 
 	*slopetoset = MakeViaMapthings(tag1, tag2, tag3, flags, spawnthinker);
 
@@ -561,9 +549,6 @@ void P_ResetDynamicSlopes(const boolean fromsave) {
 				break;
 
 			case 704:
-			case 705:
-			case 714:
-			case 715:
 				line_SpawnViaVertexes(i, !fromsave);
 				break;
 

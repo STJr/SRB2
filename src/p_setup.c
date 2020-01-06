@@ -2678,6 +2678,48 @@ static void P_ConvertBinaryMap(void)
 			lines[i].special = 700;
 			break;
 		}
+		case 704: //Slope front sector floor by 3 tagged vertices
+		case 705: //Slope front sector ceiling by 3 tagged vertices
+		case 714: //Slope back sector floor by 3 tagged vertices
+		case 715: //Slope back sector ceiling  by 3 tagged vertices
+		{
+			if (lines[i].special == 704)
+				lines[i].args[0] = 0;
+			else if (lines[i].special == 705)
+				lines[i].args[0] = 1;
+			else if (lines[i].special == 714)
+				lines[i].args[0] = 2;
+			else if (lines[i].special == 715)
+				lines[i].args[0] = 3;
+
+			lines[i].args[1] = lines[i].tag;
+
+			if (lines[i].flags & ML_EFFECT6)
+			{
+				UINT8 side = lines[i].special >= 714;
+
+				if (side == 1 && lines[i].sidenum[1] == 0xffff)
+					CONS_Debug(DBG_GAMELOGIC, "P_ConvertBinaryMap: Line special %d (line #%s) missing 2nd side!\n", lines[i].special, sizeu1(i));
+				else
+				{
+					lines[i].args[2] = sides[lines[i].sidenum[side]].textureoffset >> FRACBITS;
+					lines[i].args[3] = sides[lines[i].sidenum[side]].rowoffset >> FRACBITS;
+				}
+			}
+			else
+			{
+				lines[i].args[2] = lines[i].args[1];
+				lines[i].args[3] = lines[i].args[1];
+			}
+
+			if (lines[i].flags & ML_NETONLY)
+				lines[i].args[4] |= SL_NOPHYSICS;
+			if (lines[i].flags & ML_NONET)
+				lines[i].args[4] |= SL_DYNAMIC;
+
+			lines[i].special = 704;
+			break;
+		}
 		default:
 			break;
 		}
