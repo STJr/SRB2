@@ -7978,7 +7978,6 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		mobj->y = mobj->extravalue2 + P_ReturnThrustY(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
 		P_SetThingPosition(mobj);
 		
-		// :amybruh:
 		if (!mobj->fuse)
 			{
 #ifdef HAVE_BLUA
