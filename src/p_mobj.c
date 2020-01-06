@@ -7986,6 +7986,8 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 					P_RemoveMobj(mobj);
 				return;
 			}
+		if (mobj->fuse < 0)
+			return;
 		if ((--mobj->fuse) < 6)
 			mobj->frame = (mobj->frame & ~FF_TRANSMASK) | ((10 - (mobj->fuse*2)) << (FF_TRANSSHIFT));
 	}
