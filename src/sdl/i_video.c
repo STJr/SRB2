@@ -388,7 +388,7 @@ void I_UpdateMouseGrab(void)
 {
 	if (SDL_WasInit(SDL_INIT_VIDEO) == SDL_INIT_VIDEO && window != NULL
 	&& SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window
-	&& !IGNORE_MOUSE)
+	&& USE_MOUSEINPUT && !IGNORE_MOUSE)
 		SDLdoGrabMouse();
 }
 

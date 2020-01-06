@@ -9,7 +9,7 @@ environment:
  # c:\mingw-w64 i686 has gcc 6.3.0, so use c:\msys64 7.3.0 instead
  MINGW_SDK: c:\msys64\mingw32
  # c:\msys64 x86_64 has gcc 8.2.0, so use c:\mingw-w64 7.3.0 instead
- MINGW_SDK_64: C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64
+ MINGW_SDK_64: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64
  CFLAGS: -Wall -W -Werror -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3 -Wno-tautological-compare -Wno-error=suggest-attribute=noreturn
  NASM_ZIP: nasm-2.12.01
  NASM_URL: http://www.nasm.us/pub/nasm/releasebuilds/2.12.01/win64/nasm-2.12.01-win64.zip
@@ -83,8 +83,8 @@ before_build:
 - ccache -V
 - ccache -s
 - if [%NOUPX%] == [1] ( set "NOUPX=NOUPX=1" ) else ( set "NOUPX=" )
-- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 GCC73=1 NOOBJDUMP=1 %NOUPX%"
-- if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1" ) else ( set "MINGW_FLAGS=MINGW=1 GCC91=1" )
+- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 NOOBJDUMP=1 %NOUPX%"
+- if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1 GCC81=1" ) else ( set "MINGW_FLAGS=MINGW=1 GCC91=1" )
 - set "SRB2_MFLAGS=%SRB2_MFLAGS% %MINGW_FLAGS% %CONFIGURATION%=1"
 
 build_script:
