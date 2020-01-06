@@ -1948,6 +1948,19 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	// this line is out of the if so upper and lower textures can be hit by a splat
 	blockingline = ld;
+
+#ifdef HAVE_BLUA
+	{
+		UINT8 shouldCollide = LUAh_MobjLineCollide(tmthing, blockingline); // checks hook for thing's type
+		if (P_MobjWasRemoved(tmthing))
+			return true; // one of them was removed???
+		if (shouldCollide == 1)
+			return false; // force collide
+		else if (shouldCollide == 2)
+			return true; // force no collide
+	}
+#endif
+
 	if (!ld->backsector) // one sided line
 	{
 		if (P_PointOnLineSide(tmthing->x, tmthing->y, ld))
@@ -1992,7 +2005,7 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	if (lowfloor < tmdropoffz)
 		tmdropoffz = lowfloor;
-
+	
 	return true;
 }
 

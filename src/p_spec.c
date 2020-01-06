@@ -5038,8 +5038,7 @@ DoneSection2:
 				mobj_t *waypointlow = NULL;
 				mobj_t *mo2;
 				mobj_t *closest = NULL;
-				line_t junk;
-				vertex_t v1, v2, resulthigh, resultlow;
+				vector3_t p, line[2], resulthigh, resultlow;
 				mobj_t *highest = NULL;
 
 				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
@@ -5186,38 +5185,34 @@ DoneSection2:
 				// Next, we need to find the closest point on the line between each set, and determine which one we're
 				// closest to.
 
+				p.x = player->mo->x;
+				p.y = player->mo->y;
+				p.z = player->mo->z;
+
 				// Waypointmid and Waypointlow:
 				if (waypointlow)
 				{
-					v1.x = waypointmid->x;
-					v1.y = waypointmid->y;
-					v1.z = waypointmid->z;
-					v2.x = waypointlow->x;
-					v2.y = waypointlow->y;
-					v2.z = waypointlow->z;
-					junk.v1 = &v1;
-					junk.v2 = &v2;
-					junk.dx = v2.x - v1.x;
-					junk.dy = v2.y - v1.y;
+					line[0].x = waypointmid->x;
+					line[0].y = waypointmid->y;
+					line[0].z = waypointmid->z;
+					line[1].x = waypointlow->x;
+					line[1].y = waypointlow->y;
+					line[1].z = waypointlow->z;
 
-					P_ClosestPointOnLine3D(player->mo->x, player->mo->y, player->mo->z, &junk, &resultlow);
+					P_ClosestPointOnLine3D(&p, line, &resultlow);
 				}
 
 				// Waypointmid and Waypointhigh:
 				if (waypointhigh)
 				{
-					v1.x = waypointmid->x;
-					v1.y = waypointmid->y;
-					v1.z = waypointmid->z;
-					v2.x = waypointhigh->x;
-					v2.y = waypointhigh->y;
-					v2.z = waypointhigh->z;
-					junk.v1 = &v1;
-					junk.v2 = &v2;
-					junk.dx = v2.x - v1.x;
-					junk.dy = v2.y - v1.y;
+					line[0].x = waypointmid->x;
+					line[0].y = waypointmid->y;
+					line[0].z = waypointmid->z;
+					line[1].x = waypointhigh->x;
+					line[1].y = waypointhigh->y;
+					line[1].z = waypointhigh->z;
 
-					P_ClosestPointOnLine3D(player->mo->x, player->mo->y, player->mo->z, &junk, &resulthigh);
+					P_ClosestPointOnLine3D(&p, line, &resulthigh);
 				}
 
 				// 3D support now available. Disregard the previous notice here. -Red
