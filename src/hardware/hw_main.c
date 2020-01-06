@@ -3774,11 +3774,13 @@ static void HWR_Subsector(size_t num)
 
 			if (!line->glseg
 #ifdef POLYOBJECTS
-				&& !line->polyseg // ignore segs that belong to polyobjects
+			    && !line->polyseg // ignore segs that belong to polyobjects
 #endif
-				)
+			)
+			{
 				HWR_AddLine(line);
-				line++;
+			}
+			line++;
 		}
 	}
 
