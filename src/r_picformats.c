@@ -493,9 +493,9 @@ void *Picture_GetPatchPixel(
 {
 	fixed_t ofs;
 	column_t *column;
-	UINT8 *s8;
-	UINT16 *s16;
-	UINT32 *s32;
+	UINT8 *s8 = NULL;
+	UINT16 *s16 = NULL;
+	UINT32 *s32 = NULL;
 
 	if (patch == NULL)
 		I_Error("Picture_GetPatchPixel: patch == NULL");
