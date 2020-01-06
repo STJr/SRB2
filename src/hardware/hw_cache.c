@@ -30,7 +30,7 @@
 #include "../z_zone.h"
 #include "../v_video.h"
 #include "../r_draw.h"
-#include "../r_patch.h"
+#include "../r_picformats.h"
 #include "../p_setup.h"
 
 // Values set after a call to HWR_ResizeBlock()

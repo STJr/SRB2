@@ -28,7 +28,7 @@
 
 #include "r_data.h"
 #include "r_things.h"
-#include "r_patch.h"
+#include "r_picformats.h"
 #include "r_sky.h"
 #include "r_draw.h"
 
@@ -574,6 +574,8 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 
 	lumpnum_t    flatnum;
 	int       texturenum;
+	patch_t   *flatpatch;
+	size_t    lumplength;
 
 	size_t i;
 
@@ -635,7 +637,9 @@ texturefound:
 	{
 flatfound:
 		/* This could be a flat, patch, or PNG. */
-		if (R_CheckIfPatch(flatnum))
+		flatpatch = W_CacheLumpNum(flatnum, PU_STATIC);
+		lumplength = W_LumpLength(flatnum);
+		if (R_CheckIfPatch(flatpatch, lumplength))
 			levelflat->type = LEVELFLAT_PATCH;
 		else
 		{
@@ -644,8 +648,10 @@ flatfound:
 			Only need eight bytes for PNG headers.
 			FIXME: Put this elsewhere.
 			*/
+			if (flatpatch)
+				Z_Free(flatpatch);
 			W_ReadLumpHeader(flatnum, buffer, 8, 0);
-			if (R_IsLumpPNG(buffer, W_LumpLength(flatnum)))
+			if (R_IsLumpPNG(buffer, lumplength))
 				levelflat->type = LEVELFLAT_PNG;
 			else
 #endif/*NO_PNG_LUMPS*/

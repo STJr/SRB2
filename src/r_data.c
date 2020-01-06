@@ -19,7 +19,7 @@
 #include "p_local.h"
 #include "m_misc.h"
 #include "r_data.h"
-#include "r_patch.h"
+#include "r_picformats.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_setup.h" // levelflats

@@ -123,7 +123,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_sky.c
 	r_splats.c
 	r_things.c
-	r_patch.c
+	r_picformats.c
 	r_portal.c
 
 	r_bsp.h
@@ -138,7 +138,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_splats.h
 	r_state.h
 	r_things.h
-	r_patch.h
+	r_picformats.h
 	r_portal.h
 )
 

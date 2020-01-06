@@ -1,14 +1,14 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2018-2019 by Jaime "Lactozilla" Passos.
-// Copyright (C) 2019      by Sonic Team Junior.
+// Copyright (C) 2018-2020 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2019-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file  r_patch.h
+/// \file  r_picformats.h
 /// \brief Patch generation.
 
 #ifndef __R_PATCH__
@@ -16,6 +16,57 @@
 
 #include "r_defs.h"
 #include "doomdef.h"
+
+typedef enum
+{
+	PICFMT_NONE = 0,
+
+	// Doom formats
+	PICFMT_PATCH,
+	PICFMT_FLAT,
+
+	// PNG
+	PICFMT_PNG,
+
+	// 16bpp
+	PICFMT_PATCH16,
+	PICFMT_FLAT16,
+
+	// 32bpp
+	PICFMT_PATCH32,
+	PICFMT_FLAT32
+} pictureformat_t;
+
+typedef enum
+{
+	PICFLAGS_XFLIP = 1,
+	PICFLAGS_YFLIP = 1<<1
+} pictureflags_t;
+
+void *Picture_Convert(
+	pictureformat_t informat, void *picture, pictureformat_t outformat,
+	size_t insize, size_t *outsize,
+	INT32 inwidth, INT32 inheight, INT32 inleftoffset, INT32 intopoffset,
+	pictureflags_t flags);
+
+void *Picture_PatchConvert(
+	pictureformat_t informat, void *picture, pictureformat_t outformat,
+	size_t insize, size_t *outsize,
+	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
+	pictureflags_t flags);
+void *Picture_FlatConvert(
+	pictureformat_t informat, void *picture, pictureformat_t outformat,
+	size_t insize, size_t *outsize,
+	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
+	pictureflags_t flags);
+void *Picture_GetPatchPixel(
+	patch_t *patch, pictureformat_t informat,
+	INT32 x, INT32 y,
+	pictureflags_t flags);
+
+INT32 Picture_FormatBPP(pictureformat_t format);
+boolean Picture_IsPatchFormat(pictureformat_t format);
+boolean Picture_IsFlatFormat(pictureformat_t format);
 
 // Structs
 #ifdef ROTSPRITE
@@ -42,7 +93,7 @@ typedef struct
 } spriteinfo_t;
 
 // Conversions between patches / flats / textures...
-boolean R_CheckIfPatch(lumpnum_t lump);
+boolean R_CheckIfPatch(patch_t *patch, size_t size);
 void R_TextureToFlat(size_t tex, UINT8 *flat);
 void R_PatchToFlat(patch_t *patch, UINT8 *flat);
 void R_PatchToFlat_16bpp(patch_t *patch, UINT16 *raw, boolean flip);
