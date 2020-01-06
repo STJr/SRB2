@@ -806,13 +806,13 @@ static png_bytep *PNG_Read(const UINT8 *png, INT32 *w, INT32 *h, INT16 *topoffse
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
-		I_Error("PNG_Load: Couldn't initialize libpng!");
+		I_Error("PNG_Read: Couldn't initialize libpng!");
 
 	png_info_ptr = png_create_info_struct(png_ptr);
 	if (!png_info_ptr)
 	{
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		I_Error("PNG_Load: libpng couldn't allocate memory!");
+		I_Error("PNG_Read: libpng couldn't allocate memory!");
 	}
 
 #ifdef USE_FAR_KEYWORD
@@ -821,9 +821,8 @@ static png_bytep *PNG_Read(const UINT8 *png, INT32 *w, INT32 *h, INT16 *topoffse
 	if (setjmp(png_jmpbuf(png_ptr)))
 #endif
 	{
-		//CONS_Debug(DBG_RENDER, "libpng load error on %s\n", filename);
 		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-		return NULL;
+		I_Error("PNG_Read: libpng load error!");
 	}
 #ifdef USE_FAR_KEYWORD
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
@@ -1053,17 +1052,13 @@ boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t si
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
 		PNG_error, PNG_warn);
 	if (!png_ptr)
-	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
-		return false;
-	}
+		I_Error("Picture_PNGDimensions: Couldn't initialize libpng!");
 
 	png_info_ptr = png_create_info_struct(png_ptr);
 	if (!png_info_ptr)
 	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on allocate for libpng\n");
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		return false;
+		I_Error("Picture_PNGDimensions: libpng couldn't allocate memory!");
 	}
 
 #ifdef USE_FAR_KEYWORD
@@ -1072,9 +1067,8 @@ boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t si
 	if (setjmp(png_jmpbuf(png_ptr)))
 #endif
 	{
-		//CONS_Debug(DBG_RENDER, "libpng load error on %s\n", filename);
 		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-		return false;
+		I_Error("Picture_PNGDimensions: libpng load error!");
 	}
 #ifdef USE_FAR_KEYWORD
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
