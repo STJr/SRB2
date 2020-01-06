@@ -122,11 +122,11 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			if (mipmap->colormap)
 				texel = mipmap->colormap[texel];
 
-			// transparent pixel
-			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX)
+			// If the mipmap is chromakeyed, check if the texel's color
+			// is equivalent to the chroma key's color index.
+			alpha = 0xff;
+			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
 				alpha = 0x00;
-			else
-				alpha = 0xff;
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
