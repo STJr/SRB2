@@ -10524,7 +10524,7 @@ static void M_HandleConnectIP(INT32 choice)
 					case 'V': // ctrl+v, pasting
 					{
 						const char *paste = I_ClipboardPaste();
-						
+
 						if (paste != NULL) {
 							strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
 							if (strlen(paste) != 0) // Don't play sound if nothing was pasted
@@ -10558,7 +10558,7 @@ static void M_HandleConnectIP(INT32 choice)
 					case KEY_INS: // shift+insert, pasting
 						{
 							const char *paste = I_ClipboardPaste();
-							
+
 							if (paste != NULL) {
 								strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
 								if (strlen(paste) != 0) // Don't play sound if nothing was pasted
