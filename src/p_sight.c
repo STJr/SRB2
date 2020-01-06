@@ -222,6 +222,9 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		fixed_t fracx, fracy;
 #endif
 
+		if (seg->glseg)
+			continue;
+
 		// already checked other side?
 		if (line->validcount == validcount)
 			continue;
