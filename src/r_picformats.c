@@ -926,9 +926,15 @@ void *Picture_PNGConvert(
 	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, insize);
 	png_uint_32 width = *w, height = *h;
 
-	outbpp = Picture_FormatBPP(outformat);
-	if (!outbpp)
-		I_Error("Picture_PNGConvert: unknown output bits per pixel?!");
+	// Hack for patches because you'll want to preserve transparency.
+	if (Picture_IsPatchFormat(outformat))
+		outbpp = 16;
+	else
+	{
+		outbpp = Picture_FormatBPP(outformat);
+		if (!outbpp)
+			I_Error("Picture_PNGConvert: unknown output bits per pixel?!");
+	}
 
 	// Figure out the size
 	flatsize = (width * height) * (outbpp / 8);
@@ -936,7 +942,9 @@ void *Picture_PNGConvert(
 		*outsize = flatsize;
 
 	// Convert the image
-	flat = Z_Malloc(flatsize, PU_STATIC, NULL);
+	flat = Z_Calloc(flatsize, PU_STATIC, NULL);
+
+	// Set transparency
 	if (outbpp == 8)
 		memset(flat, TRANSPARENTPIXEL, (width * height));
 
@@ -980,7 +988,7 @@ void *Picture_PNGConvert(
 		}
 	}
 
-	// Free the row pointers that libpng allocated.
+	// Free the row pointers that we allocated for libpng.
 	free(row_pointers);
 
 	// But wait, there's more!
@@ -990,7 +998,7 @@ void *Picture_PNGConvert(
 		pictureformat_t informat = PICFMT_NONE;
 		INT16 patleftoffset = 0, pattopoffset = 0;
 
-		// Figure out the input format, from the bitdepth of the input format
+		// Figure out the format of the flat, from the bit depth of the output format
 		switch (outbpp)
 		{
 			case 32:
@@ -1000,7 +1008,7 @@ void *Picture_PNGConvert(
 				informat = PICFMT_FLAT16;
 				break;
 			default:
-				informat = PICFMT_FLAT; // Assumed 8bpp
+				informat = PICFMT_FLAT;
 				break;
 		}
 
@@ -1016,6 +1024,7 @@ void *Picture_PNGConvert(
 		return converted;
 	}
 
+	// Return the converted flat!
 	return flat;
 }
 

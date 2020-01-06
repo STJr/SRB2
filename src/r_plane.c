@@ -824,7 +824,7 @@ static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boo
 			{
 				INT32 pngwidth, pngheight;
 
-				levelflat->flatpatch = Picture_PNGConvert(ds_source, PICFMT_FLAT32, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
+				levelflat->flatpatch = Picture_PNGConvert(ds_source, PICFMT_FLAT, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
 				levelflat->topoffset = levelflat->leftoffset = 0;
 				levelflat->width = (UINT16)pngwidth;
 				levelflat->height = (UINT16)pngheight;
