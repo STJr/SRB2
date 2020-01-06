@@ -2720,6 +2720,15 @@ static void P_ConvertBinaryMap(void)
 			lines[i].special = 704;
 			break;
 		}
+		case 720: //Copy front side floor slope
+		case 721: //Copy front side ceiling slope
+		case 722: //Copy front side floor and ceiling slope
+			if (lines[i].special != 721)
+				lines[i].args[0] = lines[i].tag;
+			if (lines[i].special != 720)
+				lines[i].args[1] = lines[i].tag;
+			lines[i].special = 720;
+			break;
 		default:
 			break;
 		}

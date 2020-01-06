@@ -489,6 +489,46 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 	side->sector->hasslope = true;
 }
 
+static boolean P_SetSlopeFromTag(sector_t *sec, INT32 tag, boolean ceiling)
+{
+	INT32 i;
+	pslope_t **secslope = ceiling ? &sec->c_slope : &sec->f_slope;
+
+	if (!tag || *secslope)
+		return false;
+
+	for (i = -1; (i = P_FindSectorFromTag(tag, i)) >= 0;)
+	{
+		pslope_t *srcslope = ceiling ? sectors[i].c_slope : sectors[i].f_slope;
+		if (srcslope)
+		{
+			*secslope = srcslope;
+			return true;
+		}
+	}
+	return false;
+}
+
+static boolean P_CopySlope(pslope_t **toslope, pslope_t *fromslope)
+{
+	if (*toslope || !fromslope)
+		return true;
+
+	*toslope = fromslope;
+	return true;
+}
+
+static void P_UpdateHasSlope(sector_t *sec)
+{
+	size_t i;
+
+	sec->hasslope = true;
+
+	// if this is an FOF control sector, make sure any target sectors also are marked as having slopes
+	if (sec->numattached)
+		for (i = 0; i < sec->numattached; i++)
+			sectors[sec->attached[i]].hasslope = true;
+}
 
 //
 // P_CopySectorSlope
@@ -498,25 +538,31 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 void P_CopySectorSlope(line_t *line)
 {
 	sector_t *fsec = line->frontsector;
-	int i, special = line->special;
+	sector_t *bsec = line->backsector;
+	boolean setfront = false;
+	boolean setback = false;
 
-	// Check for copy linedefs
-	for (i = -1; (i = P_FindSectorFromLineTag(line, i)) >= 0;)
+	setfront |= P_SetSlopeFromTag(fsec, line->args[0], false);
+	setfront |= P_SetSlopeFromTag(fsec, line->args[1], true);
+	if (bsec)
 	{
-		sector_t *srcsec = sectors + i;
+		setback |= P_SetSlopeFromTag(bsec, line->args[2], false);
+		setback |= P_SetSlopeFromTag(bsec, line->args[3], true);
 
-		if ((special - 719) & 1 && !fsec->f_slope && srcsec->f_slope)
-			fsec->f_slope = srcsec->f_slope; //P_CopySlope(srcsec->f_slope);
-		if ((special - 719) & 2 && !fsec->c_slope && srcsec->c_slope)
-			fsec->c_slope = srcsec->c_slope; //P_CopySlope(srcsec->c_slope);
+		if (line->args[4] & 1)
+			setback |= P_CopySlope(&bsec->f_slope, fsec->f_slope);
+		if (line->args[4] & 2)
+			setfront |= P_CopySlope(&fsec->f_slope, bsec->f_slope);
+		if (line->args[4] & 4)
+			setback |= P_CopySlope(&bsec->c_slope, fsec->c_slope);
+		if (line->args[4] & 8)
+			setfront |= P_CopySlope(&fsec->c_slope, bsec->c_slope);
 	}
 
-	fsec->hasslope = true;
-
-	// if this is an FOF control sector, make sure any target sectors also are marked as having slopes
-	if (fsec->numattached)
-		for (i = 0; i < (int)fsec->numattached; i++)
-			sectors[fsec->attached[i]].hasslope = true;
+	if (setfront)
+		P_UpdateHasSlope(fsec);
+	if (setback)
+		P_UpdateHasSlope(bsec);
 
 	line->special = 0; // Linedef was use to set slopes, it finished its job, so now make it a normal linedef
 }
@@ -563,8 +609,6 @@ void P_ResetDynamicSlopes(const boolean fromsave) {
 		switch (lines[i].special)
 		{
 			case 720:
-			case 721:
-			case 722:
 				P_CopySectorSlope(&lines[i]);
 			default:
 				break;
