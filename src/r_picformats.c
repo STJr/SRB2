@@ -1578,7 +1578,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 					{
 						void *input = Picture_GetPatchPixel(patch, PICFMT_PATCH, sx, sy, bflip);
 						if (input != NULL)
-							rawdst[(dy*newwidth)+dx] = *(UINT16 *)input;
+							rawdst[(dy*newwidth)+dx] = (0xFF00 | (*(UINT8 *)input));
 					}
 				}
 			}
