@@ -7979,13 +7979,13 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		P_SetThingPosition(mobj);
 		
 		if (!mobj->fuse)
-			{
+		{
 #ifdef HAVE_BLUA
-				if (!LUAh_MobjFuse(mobj))
+			if (!LUAh_MobjFuse(mobj))
 #endif
-					P_RemoveMobj(mobj);
-				return;
-			}
+				P_RemoveMobj(mobj);
+			return;
+		}
 		if (mobj->fuse < 0)
 			return;
 		if ((--mobj->fuse) < 6)
