@@ -96,6 +96,9 @@ UINT8 *R_GetColumn(fixed_t tex, INT32 col);
 UINT8 *R_GetFlat(lumpnum_t flatnum);
 UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boolean ispng);
 
+boolean R_CheckPowersOfTwo(void);
+void R_CheckFlatLength(size_t size);
+
 // Returns the texture number for the texture name.
 INT32 R_TextureNumForName(const char *name);
 INT32 R_CheckTextureNumForName(const char *name);
