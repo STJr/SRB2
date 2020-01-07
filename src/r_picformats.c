@@ -925,15 +925,20 @@ void *Picture_PNGConvert(
 	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, insize);
 	png_uint_32 width = *w, height = *h;
 
+	// Find the output format's bits per pixel amount
+	outbpp = Picture_FormatBPP(outformat);
+
 	// Hack for patches because you'll want to preserve transparency.
 	if (Picture_IsPatchFormat(outformat))
-		outbpp = 16;
-	else
 	{
-		outbpp = Picture_FormatBPP(outformat);
-		if (!outbpp)
-			I_Error("Picture_PNGConvert: unknown output bits per pixel?!");
+		// Force a higher bit depth
+		if (outbpp == 8)
+			outbpp = 16;
 	}
+
+	// Shouldn't happen.
+	if (!outbpp)
+		I_Error("Picture_PNGConvert: unknown output bits per pixel?!");
 
 	// Figure out the size
 	flatsize = (width * height) * (outbpp / 8);
