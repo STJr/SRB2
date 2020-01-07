@@ -99,9 +99,9 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 		position = originy + topdelta;
 
 		source = (const UINT8 *)patchcol + 3;
-		if (sourcebpp == 32)
+		if (sourcebpp == PICDEPTH_32BPP)
 			sourceu32 = (const UINT32 *)source;
-		else if (sourcebpp == 16)
+		else if (sourcebpp == PICDEPTH_16BPP)
 			sourceu16 = (const UINT16 *)source;
 
 		yfrac = 0;
@@ -127,7 +127,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			count--;
 
 			// Read the texel
-			if (sourcebpp == 32)
+			if (sourcebpp == PICDEPTH_32BPP)
 			{
 				UINT32 s32 = sourceu32[yfrac>>FRACBITS];
 				texelu32.rgba = s32;
@@ -139,7 +139,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			}
 			else
 			{
-				if (sourcebpp == 16)
+				if (sourcebpp == PICDEPTH_16BPP)
 				{
 					UINT16 px = sourceu16[yfrac>>FRACBITS];
 					texel = (px & 0xFF);
@@ -208,9 +208,9 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			dest += blockmodulo;
 			yfrac += yfracstep;
 		}
-		if (sourcebpp == 32)
+		if (sourcebpp == PICDEPTH_32BPP)
 			patchcol = (const column_t *)((const UINT32 *)patchcol + patchcol->length);
-		else if (sourcebpp == 16)
+		else if (sourcebpp == PICDEPTH_16BPP)
 			patchcol = (const column_t *)((const UINT16 *)patchcol + patchcol->length);
 		else
 			patchcol = (const column_t *)((const UINT8 *)patchcol + patchcol->length);
@@ -254,9 +254,9 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 		position = originy + topdelta;
 
 		source = (const UINT8 *)patchcol + 3;
-		if (sourcebpp == 32)
+		if (sourcebpp == PICDEPTH_32BPP)
 			sourceu32 = (const UINT32 *)source;
-		else if (sourcebpp == 16)
+		else if (sourcebpp == PICDEPTH_16BPP)
 			sourceu16 = (const UINT16 *)source;
 
 		yfrac = (patchcol->length-1) << FRACBITS;
@@ -282,7 +282,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			count--;
 
 			// Read the texel
-			if (sourcebpp == 32)
+			if (sourcebpp == PICDEPTH_32BPP)
 			{
 				UINT32 s32 = sourceu32[yfrac>>FRACBITS];
 				texelu32.rgba = s32;
@@ -294,7 +294,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			}
 			else
 			{
-				if (sourcebpp == 16)
+				if (sourcebpp == PICDEPTH_16BPP)
 				{
 					UINT16 px = sourceu16[yfrac>>FRACBITS];
 					texel = (px & 0xFF);
@@ -363,9 +363,9 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			dest += blockmodulo;
 			yfrac -= yfracstep;
 		}
-		if (sourcebpp == 32)
+		if (sourcebpp == PICDEPTH_32BPP)
 			patchcol = (const column_t *)((const UINT32 *)patchcol + patchcol->length);
-		else if (sourcebpp == 16)
+		else if (sourcebpp == PICDEPTH_16BPP)
 			patchcol = (const column_t *)((const UINT16 *)patchcol + patchcol->length);
 		else
 			patchcol = (const column_t *)((const UINT8 *)patchcol + patchcol->length);
@@ -1186,7 +1186,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		if (mipmap == NULL)
 		{
 			mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_LEVEL, NULL);
-			mipmap->grInfo.format = (fmtbpp == 32 ? GR_RGBA : GR_TEXFMT_P_8);
+			mipmap->grInfo.format = (fmtbpp == PICDEPTH_32BPP ? GR_RGBA : GR_TEXFMT_P_8);
 			mipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
 #ifdef GLIDE_API_COMPATIBILITY
 			mipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;

@@ -128,9 +128,9 @@ void *Picture_PatchConvert(
 	else if (informat == outformat)
 		I_Error("Picture_PatchConvert: input and output formats were the same!");
 
-	if (!inbpp)
+	if (inbpp == PICDEPTH_NONE)
 		I_Error("Picture_PatchConvert: unknown input bits per pixel?!");
-	if (!Picture_FormatBPP(outformat))
+	if (Picture_FormatBPP(outformat) == PICDEPTH_NONE)
 		I_Error("Picture_PatchConvert: unknown output bits per pixel?!");
 
 	// If it's a patch, you can just figure out
@@ -199,17 +199,17 @@ void *Picture_PatchConvert(
 			if (input != NULL)
 			{
 				UINT8 alpha = 0xFF;
-				if (inbpp == 32)
+				if (inbpp == PICDEPTH_32BPP)
 				{
 					RGBA_t px = *(RGBA_t *)input;
 					alpha = px.s.alpha;
 				}
-				else if (inbpp == 16)
+				else if (inbpp == PICDEPTH_16BPP)
 				{
 					UINT16 px = *(UINT16 *)input;
 					alpha = (px & 0xFF00) >> 8;
 				}
-				else if (inbpp == 8)
+				else if (inbpp == PICDEPTH_8BPP)
 				{
 					UINT8 px = *(UINT8 *)input;
 					if (px == TRANSPARENTPIXEL)
@@ -272,12 +272,12 @@ void *Picture_PatchConvert(
 			{
 				case PICFMT_PATCH32:
 				{
-					if (inbpp == 32)
+					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t out = *(RGBA_t *)input;
 						WRITEUINT32(imgptr, out.rgba);
 					}
-					else if (inbpp == 16)
+					else if (inbpp == PICDEPTH_16BPP)
 					{
 						RGBA_t out = pMasterPalette[*((UINT16 *)input) & 0xFF];
 						WRITEUINT32(imgptr, out.rgba);
@@ -290,26 +290,26 @@ void *Picture_PatchConvert(
 					break;
 				}
 				case PICFMT_PATCH16:
-					if (inbpp == 32)
+					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t in = *(RGBA_t *)input;
 						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
 						WRITEUINT16(imgptr, (0xFF00 | out));
 					}
-					else if (inbpp == 16)
+					else if (inbpp == PICDEPTH_16BPP)
 						WRITEUINT16(imgptr, *(UINT16 *)input);
 					else // PICFMT_PATCH
 						WRITEUINT16(imgptr, (0xFF00 | (*(UINT8 *)input)));
 					break;
 				default: // PICFMT_PATCH
 				{
-					if (inbpp == 32)
+					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t in = *(RGBA_t *)input;
 						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
 						WRITEUINT8(imgptr, out);
 					}
-					else if (inbpp == 16)
+					else if (inbpp == PICDEPTH_16BPP)
 					{
 						UINT16 out = *(UINT16 *)input;
 						WRITEUINT8(imgptr, (out & 0xFF));
@@ -377,9 +377,9 @@ void *Picture_FlatConvert(
 	else if (informat == outformat)
 		I_Error("Picture_FlatConvert: input and output formats were the same!");
 
-	if (!inbpp)
+	if (inbpp == PICDEPTH_NONE)
 		I_Error("Picture_FlatConvert: unknown input bits per pixel?!");
-	if (!outbpp)
+	if (outbpp == PICDEPTH_NONE)
 		I_Error("Picture_FlatConvert: unknown output bits per pixel?!");
 
 	// If it's a patch, you can just figure out
@@ -397,7 +397,7 @@ void *Picture_FlatConvert(
 		*outsize = size;
 
 	// Set transparency
-	if (outbpp == 8)
+	if (outbpp == PICDEPTH_8BPP)
 		memset(outflat, TRANSPARENTPIXEL, size);
 
 	for (y = 0; y < inheight; y++)
@@ -422,12 +422,12 @@ void *Picture_FlatConvert(
 				case PICFMT_FLAT32:
 				{
 					UINT32 *f32 = (UINT32 *)outflat;
-					if (inbpp == 32)
+					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t out = *(RGBA_t *)input;
 						f32[offs] = out.rgba;
 					}
-					else if (inbpp == 16)
+					else if (inbpp == PICDEPTH_16BPP)
 					{
 						RGBA_t out = pMasterPalette[*((UINT16 *)input) & 0xFF];
 						f32[offs] = out.rgba;
@@ -442,13 +442,13 @@ void *Picture_FlatConvert(
 				case PICFMT_FLAT16:
 				{
 					UINT16 *f16 = (UINT16 *)outflat;
-					if (inbpp == 32)
+					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t in = *(RGBA_t *)input;
 						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
 						f16[offs] = (0xFF00 | out);
 					}
-					else if (inbpp == 16)
+					else if (inbpp == PICDEPTH_16BPP)
 						f16[offs] = *(UINT16 *)input;
 					else // PICFMT_PATCH
 						f16[offs] = (0xFF00 | *((UINT8 *)input));
@@ -457,13 +457,13 @@ void *Picture_FlatConvert(
 				case PICFMT_FLAT:
 				{
 					UINT8 *f8 = (UINT8 *)outflat;
-					if (inbpp == 32)
+					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t in = *(RGBA_t *)input;
 						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
 						f8[offs] = out;
 					}
-					else if (inbpp == 16)
+					else if (inbpp == PICDEPTH_16BPP)
 					{
 						UINT16 out = *(UINT16 *)input;
 						f8[offs] = (out & 0xFF);
@@ -553,21 +553,21 @@ void *Picture_GetPatchPixel(
   */
 INT32 Picture_FormatBPP(pictureformat_t format)
 {
-	INT32 bpp = 0;
+	INT32 bpp = PICDEPTH_NONE;
 	switch (format)
 	{
 		case PICFMT_PATCH32:
 		case PICFMT_FLAT32:
 		case PICFMT_PNG:
-			bpp = 32;
+			bpp = PICDEPTH_32BPP;
 			break;
 		case PICFMT_PATCH16:
 		case PICFMT_FLAT16:
-			bpp = 16;
+			bpp = PICDEPTH_16BPP;
 			break;
 		case PICFMT_PATCH:
 		case PICFMT_FLAT:
-			bpp = 8;
+			bpp = PICDEPTH_8BPP;
 			break;
 		default:
 			break;
@@ -938,12 +938,12 @@ void *Picture_PNGConvert(
 	if (Picture_IsPatchFormat(outformat))
 	{
 		// Force a higher bit depth
-		if (outbpp == 8)
-			outbpp = 16;
+		if (outbpp == PICDEPTH_8BPP)
+			outbpp = PICDEPTH_16BPP;
 	}
 
 	// Shouldn't happen.
-	if (!outbpp)
+	if (outbpp == PICDEPTH_NONE)
 		I_Error("Picture_PNGConvert: unknown output bits per pixel?!");
 
 	// Figure out the size
@@ -955,7 +955,7 @@ void *Picture_PNGConvert(
 	flat = Z_Calloc(flatsize, PU_STATIC, NULL);
 
 	// Set transparency
-	if (outbpp == 8)
+	if (outbpp == PICDEPTH_8BPP)
 		memset(flat, TRANSPARENTPIXEL, (width * height));
 
 	for (y = 0; y < height; y++)
@@ -970,7 +970,7 @@ void *Picture_PNGConvert(
 				UINT8 green = (UINT8)px[1];
 				UINT8 blue = (UINT8)px[2];
 				UINT8 alpha = (UINT8)px[3];
-				if (outbpp == 32)
+				if (outbpp == PICDEPTH_32BPP)
 				{
 					UINT32 *outflat = (UINT32 *)flat;
 					RGBA_t out;
@@ -983,7 +983,7 @@ void *Picture_PNGConvert(
 				else
 				{
 					UINT8 palidx = NearestColor(red, green, blue);
-					if (outbpp == 16)
+					if (outbpp == PICDEPTH_16BPP)
 					{
 						UINT16 *outflat = (UINT16 *)flat;
 						outflat[((y * width) + x)] = (alpha << 8) | palidx;
