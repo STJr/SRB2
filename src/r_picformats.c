@@ -532,14 +532,20 @@ void *Picture_GetPatchPixel(
 				if ((topdelta + ofs) == y)
 				{
 					if (informat == PICFMT_PATCH32)
-						return (s32 + ofs);
+						return &s32[ofs];
 					else if (informat == PICFMT_PATCH16)
-						return (s16 + ofs);
+						return &s16[ofs];
 					else // PICFMT_PATCH
-						return (s8 + ofs);
+						return &s8[ofs];
 				}
 			}
-			column = (column_t *)((UINT8 *)column + column->length + 4);
+			if (informat == PICFMT_PATCH32)
+				column = (column_t *)((UINT32 *)column + column->length);
+			else if (informat == PICFMT_PATCH16)
+				column = (column_t *)((UINT16 *)column + column->length);
+			else
+				column = (column_t *)((UINT8 *)column + column->length);
+			column = (column_t *)((UINT8 *)column + 4);
 		}
 	}
 
