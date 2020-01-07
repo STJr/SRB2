@@ -427,6 +427,26 @@ static int lib_cvRegisterVar(lua_State *L)
 	return 1;
 }
 
+static int lib_cvFindVar(lua_State *L)
+{
+	consvar_t *cv;
+	if (( cv = CV_FindVar(luaL_checkstring(L,1)) ))
+	{
+		lua_settop(L,1);/* We only want one argument in the stack. */
+		lua_pushlightuserdata(L, cv);/* Now the second value on stack. */
+		luaL_getmetatable(L, META_CVAR);
+		/*
+		The metatable is the last value on the stack, so this
+		applies it to the second value, which is the cvar.
+		*/
+		lua_setmetatable(L,2);
+		lua_pushvalue(L,2);
+		return 1;
+	}
+	else
+		return 0;
+}
+
 // CONS_Printf for a single player
 // Use 'print' in baselib for a global message.
 static int lib_consPrintf(lua_State *L)
@@ -466,6 +486,7 @@ static luaL_Reg lib[] = {
 	{"COM_BufAddText", lib_comBufAddText},
 	{"COM_BufInsertText", lib_comBufInsertText},
 	{"CV_RegisterVar", lib_cvRegisterVar},
+	{"CV_FindVar", lib_cvFindVar},
 	{"CONS_Printf", lib_consPrintf},
 	{NULL, NULL}
 };

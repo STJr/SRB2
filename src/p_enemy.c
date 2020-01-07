@@ -181,11 +181,9 @@ void A_SpawnObjectAbsolute(mobj_t *actor);
 void A_SpawnObjectRelative(mobj_t *actor);
 void A_ChangeAngleRelative(mobj_t *actor);
 void A_ChangeAngleAbsolute(mobj_t *actor);
-#ifdef ROTSPRITE
 void A_RollAngle(mobj_t *actor);
 void A_ChangeRollAngleRelative(mobj_t *actor);
 void A_ChangeRollAngleAbsolute(mobj_t *actor);
-#endif // ROTSPRITE
 void A_PlaySound(mobj_t *actor);
 void A_FindTarget(mobj_t *actor);
 void A_FindTracer(mobj_t *actor);
@@ -2263,7 +2261,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		while (chain)
 		{
 			P_TeleportMove(chain, actor->target->x + idx, actor->target->y + idy, actor->target->z + idz);
-			chain->watertop = chain->z;
+			chain->movefactor = chain->z;
 			idx += dx;
 			idy += dy;
 			idz += dz;
@@ -4985,7 +4983,7 @@ void A_ThrownRing(mobj_t *actor)
 				continue;
 
 			// Don't home in on teammates.
-			if (gametype == GT_CTF
+			if ((gametyperules & GTR_TEAMFLAGS)
 				&& actor->target->player->ctfteam == player->ctfteam)
 				continue;
 		}
@@ -6591,7 +6589,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 		if (changecolor)
 		{
-			if (gametype != GT_CTF)
+			if (!(gametyperules & GTR_TEAMFLAGS))
 				mo->color = actor->target->color; //copy color
 			else if (actor->target->player->ctfteam == 2)
 				mo->color = skincolor_bluering;
@@ -6607,7 +6605,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -6622,7 +6620,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -8627,7 +8625,6 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 	actor->angle = FixedAngle(P_RandomRange(amin, amax));
 }
 
-#ifdef ROTSPRITE
 // Function: A_RollAngle
 //
 // Description: Changes the roll angle.
@@ -8663,16 +8660,10 @@ void A_RollAngle(mobj_t *actor)
 //
 void A_ChangeRollAngleRelative(mobj_t *actor)
 {
-	// Oh god, the old code /sucked/. Changed this and the absolute version to get a random range using amin and amax instead of
-	//  getting a random angle from the _entire_ spectrum and then clipping. While we're at it, do the angle conversion to the result
-	//  rather than the ranges, so <0 and >360 work as possible values. -Red
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	//angle_t angle = (P_RandomByte()+1)<<24;
 	const fixed_t amin = locvar1*FRACUNIT;
 	const fixed_t amax = locvar2*FRACUNIT;
-	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ChangeRollAngleRelative", actor))
 		return;
@@ -8682,11 +8673,6 @@ void A_ChangeRollAngleRelative(mobj_t *actor)
 	if (amin > amax)
 		I_Error("A_ChangeRollAngleRelative: var1 is greater than var2");
 #endif
-/*
-	if (angle < amin)
-		angle = amin;
-	if (angle > amax)
-		angle = amax;*/
 
 	actor->rollangle += FixedAngle(P_RandomRange(amin, amax));
 }
@@ -8702,11 +8688,8 @@ void A_ChangeRollAngleAbsolute(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	//angle_t angle = (P_RandomByte()+1)<<24;
 	const fixed_t amin = locvar1*FRACUNIT;
 	const fixed_t amax = locvar2*FRACUNIT;
-	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ChangeRollAngleAbsolute", actor))
 		return;
@@ -8716,15 +8699,9 @@ void A_ChangeRollAngleAbsolute(mobj_t *actor)
 	if (amin > amax)
 		I_Error("A_ChangeRollAngleAbsolute: var1 is greater than var2");
 #endif
-/*
-	if (angle < amin)
-		angle = amin;
-	if (angle > amax)
-		angle = amax;*/
 
 	actor->rollangle = FixedAngle(P_RandomRange(amin, amax));
 }
-#endif // ROTSPRITE
 
 // Function: A_PlaySound
 //
@@ -13614,12 +13591,12 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 		}
 		else
 		{ //Player on the top of the tornado.
+			P_ResetPlayer(player);
 			thing->z = dustdevil->z + dustdevil->height;
 			thrust = 20 * FRACUNIT;
 			player->powers[pw_nocontrol] = 0;
 			S_StartSound(thing, sfx_wdjump);
 			P_SetPlayerMobjState(thing, S_PLAY_FALL);
-			player->pflags &= ~PF_JUMPED;
 		}
 
 		thing->momz = thrust;
@@ -14248,7 +14225,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	fixed_t c = FINECOSINE(fa)*locvar2;
 	fixed_t s = FINESINE(fa)*locvar2;
 	mobj_t *door;
-	mobjflag2_t ambush = (actor->flags & MF2_AMBUSH);
+	mobjflag2_t ambush = (actor->flags2 & MF2_AMBUSH);
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SaloonDoorSpawn", actor))
@@ -14712,19 +14689,34 @@ void A_DragonWing(mobj_t *actor)
 void A_DragonSegment(mobj_t *actor)
 {
 	mobj_t *target = actor->target;
-	fixed_t dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
-	fixed_t radius = actor->radius + target->radius;
-	angle_t hangle = R_PointToAngle2(target->x, target->y, actor->x, actor->y);
-	angle_t zangle = R_PointToAngle2(0, target->z, dist, actor->z);
-	fixed_t hdist = P_ReturnThrustX(target, zangle, radius);
-	fixed_t xdist = P_ReturnThrustX(target, hangle, hdist);
-	fixed_t ydist = P_ReturnThrustY(target, hangle, hdist);
-	fixed_t zdist = P_ReturnThrustY(target, zangle, radius);
+	fixed_t dist;
+	fixed_t radius;
+	angle_t hangle;
+	angle_t zangle;
+	fixed_t hdist;
+	fixed_t xdist;
+	fixed_t ydist;
+	fixed_t zdist;
 
 	#ifdef HAVE_BLUA
 		if (LUA_CallAction("A_DragonSegment", actor))
 			return;
 	#endif
+
+	if (target == NULL || !target->health)
+	{
+		P_RemoveMobj(actor);
+		return;
+	}
+
+	dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
+	radius = actor->radius + target->radius;
+	hangle = R_PointToAngle2(target->x, target->y, actor->x, actor->y);
+	zangle = R_PointToAngle2(0, target->z, dist, actor->z);
+	hdist = P_ReturnThrustX(target, zangle, radius);
+	xdist = P_ReturnThrustX(target, hangle, hdist);
+	ydist = P_ReturnThrustY(target, hangle, hdist);
+	zdist = P_ReturnThrustY(target, zangle, radius);
 
 	actor->angle = hangle;
 	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);

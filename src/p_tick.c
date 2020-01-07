@@ -629,6 +629,10 @@ void P_Ticker(boolean run)
 		if (demoplayback)
 			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
 
+		#ifdef HAVE_BLUA
+		LUAh_PreThinkFrame();
+		#endif
+
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerThink(&players[i]);
@@ -726,6 +730,10 @@ void P_Ticker(boolean run)
 			G_ConsGhostTic();
 		if (modeattacking)
 			G_GhostTicker();
+
+#ifdef HAVE_BLUA
+		LUAh_PostThinkFrame();
+#endif
 	}
 
 	P_MapEnd();
@@ -745,6 +753,9 @@ void P_PreTicker(INT32 frames)
 	{
 		P_MapStart();
 
+#ifdef HAVE_BLUA
+		LUAh_PreThinkFrame();
+#endif
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 			{
@@ -778,6 +789,10 @@ void P_PreTicker(INT32 frames)
 
 		P_UpdateSpecials();
 		P_RespawnSpecials();
+
+#ifdef HAVE_BLUA
+		LUAh_PostThinkFrame();
+#endif
 
 		P_MapEnd();
 	}

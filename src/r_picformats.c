@@ -51,8 +51,6 @@
 #endif
 
 static unsigned char imgbuf[1<<26];
-fixed_t cosang2rad[ROTANGLES];
-fixed_t sinang2rad[ROTANGLES];
 
 /** Converts a picture between two formats.
   *
@@ -1123,11 +1121,9 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 	size_t sprinfoTokenLength;
 	char *frameChar = NULL;
 	UINT8 frameFrame = 0xFF;
-#ifdef ROTSPRITE
 	INT16 frameXPivot = 0;
 	INT16 frameYPivot = 0;
 	rotaxis_t frameRotAxis = 0;
-#endif
 
 	// Sprite identifier
 	sprinfoToken = M_GetToken(NULL);
@@ -1162,7 +1158,6 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 			}
 			while (strcmp(sprinfoToken,"}")!=0)
 			{
-#ifdef ROTSPRITE
 				if (stricmp(sprinfoToken, "XPIVOT")==0)
 				{
 					Z_Free(sprinfoToken);
@@ -1186,7 +1181,6 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 					else if ((stricmp(sprinfoToken, "Z")==0) || (stricmp(sprinfoToken, "ZAXIS")==0) || (stricmp(sprinfoToken, "YAW")==0))
 						frameRotAxis = ROTAXIS_Z;
 				}
-#endif
 				Z_Free(sprinfoToken);
 
 				sprinfoToken = M_GetToken(NULL);
@@ -1200,11 +1194,9 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 	}
 
 	// set fields
-#ifdef ROTSPRITE
 	info->pivot[frameFrame].x = frameXPivot;
 	info->pivot[frameFrame].y = frameYPivot;
 	info->pivot[frameFrame].rotaxis = frameRotAxis;
-#endif
 }
 
 //
@@ -1427,16 +1419,31 @@ void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
 	for (i = 0; i < numlumps; i++, lumpinfo++)
 	{
 		name = lumpinfo->name;
-		// load SPRTINFO lumps
-		if (!stricmp(name, "SPRTINFO"))
+		// Load SPRTINFO and SPR_ lumps as SpriteInfo
+		if (!memcmp(name, "SPRTINFO", 8) || !memcmp(name, "SPR_", 4))
 			R_ParseSPRTINFOLump(wadnum, i);
-		// load SPR_ lumps (as DEHACKED lump)
-		else if (!memcmp(name, "SPR_", 4))
-			DEH_LoadDehackedLumpPwad(wadnum, i, false);
 	}
 }
 
 #ifdef ROTSPRITE
+//
+// R_GetRollAngle
+//
+// Angles precalculated in R_InitSprites.
+//
+fixed_t rollcosang[ROTANGLES];
+fixed_t rollsinang[ROTANGLES];
+INT32 R_GetRollAngle(angle_t rollangle)
+{
+	INT32 ra = AngleFixed(rollangle)>>FRACBITS;
+#if (ROTANGDIFF > 1)
+	ra += (ROTANGDIFF/2);
+#endif
+	ra /= ROTANGDIFF;
+	ra %= ROTANGLES;
+	return ra;
+}
+
 //
 // R_CacheRotSprite
 //
@@ -1502,8 +1509,8 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		{
 			INT32 newwidth, newheight;
 
-			ca = cosang2rad[angle];
-			sa = sinang2rad[angle];
+			ca = rollcosang[angle];
+			sa = rollsinang[angle];
 
 			// Find the dimensions of the rotated patch.
 			{

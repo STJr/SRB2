@@ -449,8 +449,12 @@ static poly_t *CutOutSubsecPoly(seg_t *lseg, INT32 count, poly_t *poly)
 	// for each seg of the subsector
 	for (; count--; lseg++)
 	{
-		//x,y,dx,dy (like a divline)
 		line_t *line = lseg->linedef;
+
+		if (lseg->glseg)
+			continue;
+
+		//x,y,dx,dy (like a divline)
 		p1.x = FIXED_TO_FLOAT(lseg->side ? line->v2->x : line->v1->x);
 		p1.y = FIXED_TO_FLOAT(lseg->side ? line->v2->y : line->v1->y);
 		p2.x = FIXED_TO_FLOAT(lseg->side ? line->v1->x : line->v2->x);

@@ -155,11 +155,9 @@ void A_SpawnObjectAbsolute();
 void A_SpawnObjectRelative();
 void A_ChangeAngleRelative();
 void A_ChangeAngleAbsolute();
-#ifdef ROTSPRITE
 void A_RollAngle();
 void A_ChangeRollAngleRelative();
 void A_ChangeRollAngleAbsolute();
-#endif
 void A_PlaySound();
 void A_FindTarget();
 void A_FindTracer();
