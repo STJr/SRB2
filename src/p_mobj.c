@@ -7977,15 +7977,19 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		mobj->x = mobj->extravalue1 + P_ReturnThrustX(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
 		mobj->y = mobj->extravalue2 + P_ReturnThrustY(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
 		P_SetThingPosition(mobj);
-		if ((--mobj->fuse) < 6)
+		
+		if (!mobj->fuse)
 		{
-			if (!mobj->fuse)
-			{
+#ifdef HAVE_BLUA
+			if (!LUAh_MobjFuse(mobj))
+#endif
 				P_RemoveMobj(mobj);
-				return;
-			}
-			mobj->frame = (mobj->frame & ~FF_TRANSMASK) | ((10 - (mobj->fuse*2)) << (FF_TRANSSHIFT));
+			return;
 		}
+		if (mobj->fuse < 0)
+			return;
+		if ((--mobj->fuse) < 6)
+			mobj->frame = (mobj->frame & ~FF_TRANSMASK) | ((10 - (mobj->fuse*2)) << (FF_TRANSSHIFT));
 	}
 	break;
 	case MT_VWREF:
