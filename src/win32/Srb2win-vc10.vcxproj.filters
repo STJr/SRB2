@@ -892,6 +892,9 @@
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
     <ClInclude Include="..\apng.h" />
+    <ClInclude Include="..\r_textures.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
     <ClInclude Include="..\r_picformats.h">
       <Filter>R_Rend</Filter>
     </ClInclude>

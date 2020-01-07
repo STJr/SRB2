@@ -28,6 +28,7 @@
 #include "p_local.h" // for var1 and var2, and some constants
 #include "p_setup.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "r_draw.h"
 #include "r_picformats.h"
 #include "r_sky.h"

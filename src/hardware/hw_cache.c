@@ -26,6 +26,7 @@
 #include "../doomstat.h"    //gamemode
 #include "../i_video.h"     //rendermode
 #include "../r_data.h"
+#include "../r_textures.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
 #include "../v_video.h"

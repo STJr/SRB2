@@ -20,6 +20,7 @@
 #include "p_local.h"
 #include "p_setup.h" // levelflats for flat animation
 #include "r_data.h"
+#include "r_textures.h"
 #include "m_random.h"
 #include "p_mobj.h"
 #include "i_system.h"

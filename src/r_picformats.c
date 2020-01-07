@@ -16,6 +16,7 @@
 #include "dehacked.h"
 #include "i_video.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "r_draw.h"
 #include "r_picformats.h"
 #include "r_things.h"
@@ -66,6 +67,8 @@ fixed_t sinang2rad[ROTANGLES];
   * \param intopoffset Input picture top offset, for patches.
   * \param flags Input picture flags.
   * \return A pointer to the converted picture.
+  * \sa Picture_PatchConvert
+  * \sa Picture_FlatConvert
   */
 void *Picture_Convert(
 	pictureformat_t informat, void *picture, pictureformat_t outformat,

@@ -31,6 +31,7 @@
 #include "r_plane.h"
 #include "r_sky.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "r_things.h"
 #include "r_draw.h"
 

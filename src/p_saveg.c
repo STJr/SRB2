@@ -22,6 +22,7 @@
 #include "p_setup.h"
 #include "p_saveg.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "r_things.h"
 #include "r_state.h"
 #include "w_wad.h"

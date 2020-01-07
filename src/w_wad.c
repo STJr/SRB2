@@ -56,6 +56,7 @@
 #include "d_clisrv.h"
 #include "r_defs.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "i_system.h"
 #include "md5.h"
 #include "lua_script.h"
@@ -65,7 +66,6 @@
 #include "m_misc.h" // M_MapNumber
 
 #ifdef HWRENDER
-#include "r_data.h"
 #include "hardware/hw_main.h"
 #include "hardware/hw_glob.h"
 #endif
