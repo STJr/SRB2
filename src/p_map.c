@@ -426,7 +426,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				object->player->pflags |= pflags;
 				object->player->secondjump = secondjump;
 			}
-			else if (object->player->dashmode >= 3*TICRATE)
+			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
 				P_SetPlayerMobjState(object, S_PLAY_DASH);
 			else if (P_IsObjectOnGround(object) && horizspeed >= FixedMul(object->player->runspeed, object->scale))
 				P_SetPlayerMobjState(object, S_PLAY_RUN);
@@ -806,7 +806,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	// SF_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
 	if ((tmthing->player)
-		&& (((tmthing->player->charflags & SF_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& ((((tmthing->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)) && (tmthing->player->dashmode >= DASHMODE_THRESHOLD)
 		&& (thing->flags & (MF_MONITOR)
 		|| (thing->type == MT_SPIKE
 		|| thing->type == MT_WALLSPIKE)))
