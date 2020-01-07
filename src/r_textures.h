@@ -47,8 +47,8 @@ enum
 #endif
 };
 
-// A maptexturedef_t describes a rectangular texture,
-//  which is composed of one or more mappatch_t structures
+// A texture_t describes a rectangular texture,
+//  which is composed of one or more texpatch_t structures
 //  that arrange graphic patches.
 typedef struct
 {
@@ -58,21 +58,15 @@ typedef struct
 	INT16 width, height;
 	boolean holes;
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
+	void *flat; // The texture, as a flat.
 
 	// All the patches[patchcount] are drawn back to front into the cached texture.
 	INT16 patchcount;
 	texpatch_t patches[0];
 } texture_t;
 
-typedef struct
-{
-	UINT8 *flat;
-	INT16 width, height;
-} textureflat_t;
-
 // all loaded and prepared textures from the start of the game
 extern texture_t **textures;
-extern textureflat_t *texflats;
 
 extern INT32 *texturewidth;
 extern fixed_t *textureheight; // needed for texture pegging
@@ -86,14 +80,15 @@ void R_FlushTextureCache(void);
 
 // Texture generation
 UINT8 *R_GenerateTexture(size_t texnum);
+UINT8 *R_GenerateTextureAsFlat(size_t texnum);
 INT32 R_GetTextureNum(INT32 texnum);
 void R_CheckTextureCache(INT32 tex);
 void R_ClearTextureNumCache(boolean btell);
 
 // Retrieve texture data.
+void *R_GetLevelFlat(levelflat_t *levelflat);
 UINT8 *R_GetColumn(fixed_t tex, INT32 col);
 void *R_GetFlat(lumpnum_t flatnum);
-void *R_GetLevelFlat(levelflat_t *levelflat);
 
 boolean R_CheckPowersOfTwo(void);
 void R_CheckFlatLength(size_t size);

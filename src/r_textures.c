@@ -39,7 +39,7 @@
 #include <errno.h>
 
 //
-// MAPTEXTURE_T CACHING
+// TEXTURE_T CACHING
 // When a texture is first needed, it counts the number of composite columns
 //  required in the texture and allocates space for a column directory and
 //  any new columns.
@@ -52,7 +52,6 @@ INT32 numtextures = 0; // total number of textures found,
 // size of following tables
 
 texture_t **textures = NULL;
-textureflat_t *texflats = NULL;
 UINT32 **texturecolumnofs; // column offset lookup table for each texture
 UINT8 **texturecache; // graphics data for each generated full-size texture
 
@@ -452,6 +451,32 @@ done:
 }
 
 //
+// R_GenerateTextureAsFlat
+//
+// Generates a flat picture for a texture.
+//
+UINT8 *R_GenerateTextureAsFlat(size_t texnum)
+{
+	texture_t *texture = textures[texnum];
+	UINT8 *converted = NULL;
+	size_t size = (texture->width * texture->height);
+
+	// The flat picture for this texture was not generated yet.
+	if (!texture->flat)
+	{
+		// Well, let's do it now, then.
+		texture->flat = Z_Malloc(size, PU_STATIC, NULL);
+
+		// Picture_TextureToFlat handles everything for us.
+		converted = (UINT8 *)Picture_TextureToFlat(texnum);
+		M_Memcpy(texture->flat, converted, size);
+		Z_Free(converted);
+	}
+
+	return texture->flat;
+}
+
+//
 // R_GetTextureNum
 //
 // Returns the actual texture id that we should use.
@@ -509,46 +534,34 @@ void *R_GetFlat(lumpnum_t flatlumpnum)
 //
 void *R_GetLevelFlat(levelflat_t *levelflat)
 {
+	boolean isleveltexture = (levelflat->type == LEVELFLAT_TEXTURE);
+	texture_t *texture = (isleveltexture ? textures[levelflat->u.texture.num] : NULL);
+	boolean texturechanged = (isleveltexture ? (levelflat->u.texture.num != levelflat->u.texture.lastnum) : false);
 	UINT8 *flatdata = NULL;
-	boolean leveltexture = (levelflat->type == LEVELFLAT_TEXTURE);
-	textureflat_t *texflat = &texflats[levelflat->u.texture.num];
-	boolean texturechanged = (leveltexture ? (levelflat->u.texture.num != levelflat->u.texture.lastnum) : false);
 
 	// Check if the texture changed.
-	if (leveltexture && (!texturechanged))
+	if (isleveltexture && (!texturechanged))
 	{
-		if (texflat != NULL && texflat->flat)
+		if (texture->flat)
 		{
-			flatdata = texflat->flat;
-			ds_flatwidth = texflat->width;
-			ds_flatheight = texflat->height;
+			flatdata = texture->flat;
+			ds_flatwidth = texture->width;
+			ds_flatheight = texture->height;
 			texturechanged = false;
 		}
 		else
 			texturechanged = true;
 	}
 
-	// If the texture changed, or the patch doesn't exist, convert either of them to a flat.
+	// If the texture changed, or the flat wasn't generated, convert.
 	if (levelflat->picture == NULL || texturechanged)
 	{
 		// Level texture
-		if (leveltexture)
+		if (isleveltexture)
 		{
-			UINT8 *converted;
-			size_t size;
-			texture_t *texture = textures[levelflat->u.texture.num];
-			texflat->width = ds_flatwidth = texture->width;
-			texflat->height = ds_flatheight = texture->height;
-
-			size = (texflat->width * texflat->height);
-			texflat->flat = Z_Malloc(size, PU_LEVEL, NULL);
-			converted = (UINT8 *)Picture_TextureToFlat(levelflat->u.texture.num);
-			M_Memcpy(texflat->flat, converted, size);
-			Z_Free(converted);
-
-			levelflat->picture = texflat->flat;
-			levelflat->width = ds_flatwidth;
-			levelflat->height = ds_flatheight;
+			levelflat->picture = R_GenerateTextureAsFlat(levelflat->u.texture.num);
+			ds_flatwidth = levelflat->width = texture->width;
+			ds_flatheight = levelflat->height = texture->height;
 		}
 		else
 		{
@@ -714,12 +727,13 @@ void R_LoadTextures(void)
 	{
 		for (i = 0; i < numtextures; i++)
 		{
+			if (textures[i]->flat)
+				Z_Free(textures[i]->flat);
 			Z_Free(textures[i]);
 			Z_Free(texturecache[i]);
 		}
 		Z_Free(texturetranslation);
 		Z_Free(textures);
-		Z_Free(texflats);
 	}
 
 	// Load patches and textures.
@@ -816,7 +830,6 @@ countflats:
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
 	// There are actually 5 buffers allocated in one for convenience.
 	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
-	texflats = Z_Calloc((numtextures * sizeof(*texflats)), PU_STATIC, NULL);
 
 	// Allocate texture column offset table.
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
