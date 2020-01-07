@@ -17,6 +17,8 @@
 #include "r_defs.h"
 #include "doomdef.h"
 
+#define PICTURES_ALLOWDEPTH
+
 typedef enum
 {
 	PICFMT_NONE = 0,
