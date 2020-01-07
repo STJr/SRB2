@@ -81,10 +81,11 @@ struct GLPatch_s
 	INT16               leftoffset;     // pixels to the left of origin
 	INT16               topoffset;      // pixels below the origin
 	//
+	int                 picfmt;         // pictureformat_t
 	float               max_s,max_t;
-	UINT16              wadnum;      // the software patch lump num for when the hardware patch
-	UINT16              lumpnum;     // was flushed, and we need to re-create it
-	void                *rawpatch;   // :^)
+	UINT16              wadnum;         // the software patch lump num for when the hardware patch
+	UINT16              lumpnum;        // was flushed, and we need to re-create it
+	void                *rawpatch;      // :^)
 	GLMipmap_t          *mipmap;
 } ATTRPACK;
 typedef struct GLPatch_s GLPatch_t;

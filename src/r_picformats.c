@@ -1674,6 +1674,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			{
 				GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
 				grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
+				grPatch->picfmt = format;
 				grPatch->rawpatch = newpatch;
 				sprframe->rotsprite.patch[rot][angle] = (patch_t *)grPatch;
 				HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);

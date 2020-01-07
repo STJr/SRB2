@@ -784,7 +784,6 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap)
 {
 	INT32 newwidth, newheight;
-	pictureformat_t format = PICFMT_PATCH;
 
 #ifndef NO_PNG_LUMPS
 	// lump is a png so convert it
@@ -794,9 +793,9 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 		INT32 pngwidth, pngheight;
 		INT16 topoffset, leftoffset;
 #ifdef PICTURES_ALLOWDEPTH
-		format = PICFMT_PATCH32;
+		grPatch->picfmt = PICFMT_PATCH32;
 #endif
-		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, format, &pngwidth, &pngheight, &topoffset, &leftoffset, len, NULL, 0);
+		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, grPatch->picfmt, &pngwidth, &pngheight, &topoffset, &leftoffset, len, NULL, 0);
 	}
 #endif
 
@@ -851,7 +850,7 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 		HWR_DrawPatchInCache(grMipmap,
 			newwidth, newheight,
 			grPatch->width, grPatch->height,
-			patch, format);
+			patch, grPatch->picfmt);
 	}
 
 	grPatch->max_s = (float)newwidth / (float)blockwidth;
@@ -1492,6 +1491,7 @@ GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum)
 		grpatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
 		grpatch->wadnum = wadnum;
 		grpatch->lumpnum = lumpnum;
+		grpatch->picfmt = PICFMT_PATCH;
 		grpatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
 		M_AATreeSet(hwrcache, lumpnum, grpatch);
 	}
