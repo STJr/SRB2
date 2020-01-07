@@ -529,7 +529,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 	}
 
 	// If the texture changed, or the patch doesn't exist, convert either of them to a flat.
-	if (levelflat->flatpatch == NULL || texturechanged)
+	if (levelflat->picture == NULL || texturechanged)
 	{
 		// Level texture
 		if (leveltexture)
@@ -546,7 +546,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 			M_Memcpy(texflat->flat, converted, size);
 			Z_Free(converted);
 
-			levelflat->flatpatch = texflat->flat;
+			levelflat->picture = texflat->flat;
 			levelflat->width = ds_flatwidth;
 			levelflat->height = ds_flatheight;
 		}
@@ -557,7 +557,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 			{
 				INT32 pngwidth, pngheight;
 
-				levelflat->flatpatch = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), PICFMT_FLAT, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
+				levelflat->picture = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), PICFMT_FLAT, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
 				levelflat->width = (UINT16)pngwidth;
 				levelflat->height = (UINT16)pngheight;
 
@@ -575,9 +575,9 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 				levelflat->width = ds_flatwidth = SHORT(patch->width);
 				levelflat->height = ds_flatheight = SHORT(patch->height);
 
-				levelflat->flatpatch = Z_Malloc(levelflat->width * levelflat->height, PU_LEVEL, NULL);
+				levelflat->picture = Z_Malloc(levelflat->width * levelflat->height, PU_LEVEL, NULL);
 				converted = Picture_FlatConvert(PICFMT_PATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, patch->topoffset, patch->leftoffset, 0);
-				M_Memcpy(levelflat->flatpatch, converted, size);
+				M_Memcpy(levelflat->picture, converted, size);
 				Z_Free(converted);
 			}
 		}
@@ -591,7 +591,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 	levelflat->u.texture.lastnum = levelflat->u.texture.num;
 
 	if (flatdata == NULL)
-		flatdata = levelflat->flatpatch;
+		flatdata = levelflat->picture;
 	return flatdata;
 }
 

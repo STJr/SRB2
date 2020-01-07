@@ -37,9 +37,7 @@ enum
 	LEVELFLAT_NONE,/* HOM time my friend */
 	LEVELFLAT_FLAT,
 	LEVELFLAT_PATCH,
-#ifndef NO_PNG_LUMPS
 	LEVELFLAT_PNG,
-#endif
 	LEVELFLAT_TEXTURE,
 };
 
@@ -78,8 +76,11 @@ typedef struct
 	INT32 numpics;
 	INT32 speed;
 
-	// for patchflats
-	UINT8 *flatpatch;
+	// for textures
+	UINT8 *picture;
+#ifdef HWRENDER
+	void *mipmap;
+#endif
 } levelflat_t;
 
 extern size_t numlevelflats;

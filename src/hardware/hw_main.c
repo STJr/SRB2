@@ -480,7 +480,6 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
 	INT32 flatflag = 63;
 	boolean texflat = false;
-	size_t len;
 	float scrollx = 0.0f, scrolly = 0.0f;
 	angle_t angle = 0;
 	FSurfaceInfo    Surf;
@@ -546,16 +545,9 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	// set texture for polygon
 	if (levelflat != NULL)
 	{
-		if (levelflat->type == LEVELFLAT_TEXTURE)
+		if (levelflat->type == LEVELFLAT_FLAT)
 		{
-			fflatwidth = textures[levelflat->u.texture.num]->width;
-			fflatheight = textures[levelflat->u.texture.num]->height;
-			texflat = true;
-		}
-		else if (levelflat->type == LEVELFLAT_FLAT)
-		{
-			len = W_LumpLength(levelflat->u.flat.lumpnum);
-
+			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
 			switch (len)
 			{
 				case 4194304: // 2048x2048 lump
@@ -580,8 +572,21 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 					fflatwidth = fflatheight = 64.0f;
 					break;
 			}
-
 			flatflag = ((INT32)fflatwidth)-1;
+		}
+		else
+		{
+			if (levelflat->type == LEVELFLAT_TEXTURE)
+			{
+				fflatwidth = textures[levelflat->u.texture.num]->width;
+				fflatheight = textures[levelflat->u.texture.num]->height;
+			}
+			else if (levelflat->type == LEVELFLAT_PATCH || levelflat->type == LEVELFLAT_PNG)
+			{
+				fflatwidth = levelflat->width;
+				fflatheight = levelflat->height;
+			}
+			texflat = true;
 		}
 	}
 	else // set no texture
@@ -3142,7 +3147,6 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
 	INT32 flatflag = 63;
 	boolean texflat = false;
-	size_t len;
 	float scrollx = 0.0f, scrolly = 0.0f;
 	angle_t angle = 0;
 	FSurfaceInfo    Surf;
@@ -3176,16 +3180,9 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	// set texture for polygon
 	if (levelflat != NULL)
 	{
-		if (levelflat->type == LEVELFLAT_TEXTURE)
+		if (levelflat->type == LEVELFLAT_FLAT)
 		{
-			fflatwidth = textures[levelflat->u.texture.num]->width;
-			fflatheight = textures[levelflat->u.texture.num]->height;
-			texflat = true;
-		}
-		else if (levelflat->type == LEVELFLAT_FLAT)
-		{
-			len = W_LumpLength(levelflat->u.flat.lumpnum);
-
+			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
 			switch (len)
 			{
 				case 4194304: // 2048x2048 lump
@@ -3210,8 +3207,21 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 					fflatwidth = fflatheight = 64.0f;
 					break;
 			}
-
 			flatflag = ((INT32)fflatwidth)-1;
+		}
+		else
+		{
+			if (levelflat->type == LEVELFLAT_TEXTURE)
+			{
+				fflatwidth = textures[levelflat->u.texture.num]->width;
+				fflatheight = textures[levelflat->u.texture.num]->height;
+			}
+			else if (levelflat->type == LEVELFLAT_PATCH || levelflat->type == LEVELFLAT_PNG)
+			{
+				fflatwidth = levelflat->width;
+				fflatheight = levelflat->height;
+			}
+			texflat = true;
 		}
 	}
 	else // set no texture

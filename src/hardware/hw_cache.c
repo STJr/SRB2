@@ -1024,7 +1024,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		INT32 texturenum = levelflat->u.texture.num;
 #ifdef PARANOIA
 		if ((unsigned)texturenum >= gr_numtextures)
-			I_Error("HWR_GetLevelFlat: texturenum >= numtextures\n");
+			I_Error("HWR_GetLevelFlat: texturenum >= numtextures");
 #endif
 
 		// Who knows?
@@ -1044,6 +1044,58 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		// The system-memory data can be purged now.
 		Z_ChangeTag(grtex->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
 	}
+	else if (levelflat->type == LEVELFLAT_PATCH)
+	{
+		GLPatch_t *patch = W_CachePatchNum(levelflat->u.flat.lumpnum, PU_CACHE);
+		levelflat->width = (UINT16)SHORT(patch->width);
+		levelflat->height = (UINT16)SHORT(patch->height);
+		HWR_GetPatch(patch);
+	}
+#ifndef NO_PNG_LUMPS
+	else if (levelflat->type == LEVELFLAT_PNG)
+	{
+		INT32 pngwidth, pngheight;
+		GLMipmap_t *mipmap = levelflat->mipmap;
+		UINT8 *flat;
+		size_t size;
+
+		// Cache the picture.
+		if (!levelflat->picture)
+		{
+			levelflat->picture = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), PICFMT_FLAT, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
+			levelflat->width = (UINT16)pngwidth;
+			levelflat->height = (UINT16)pngheight;
+		}
+
+		// Make the mipmap.
+		if (mipmap == NULL)
+		{
+			mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_LEVEL, NULL);
+			mipmap->grInfo.format = GR_TEXFMT_P_8;
+			mipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
+#ifdef GLIDE_API_COMPATIBILITY
+			mipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
+			mipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
+			mipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+#endif
+			levelflat->mipmap = mipmap;
+		}
+
+		if (!mipmap->grInfo.data && !mipmap->downloaded)
+		{
+			mipmap->width = levelflat->width;
+			mipmap->height = levelflat->height;
+			size = (mipmap->width * mipmap->height);
+			flat = Z_Malloc(size, PU_LEVEL, &mipmap->grInfo.data);
+			if (levelflat->picture == NULL)
+				I_Error("HWR_GetLevelFlat: levelflat->picture == NULL");
+			M_Memcpy(flat, levelflat->picture, size);
+		}
+
+		// Tell the hardware driver to bind the current texture to the flat's mipmap
+		HWD.pfnSetTexture(mipmap);
+	}
+#endif
 	else // set no texture
 		HWD.pfnSetTexture(NULL);
 }

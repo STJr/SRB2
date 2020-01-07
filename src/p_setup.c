@@ -649,8 +649,6 @@ flatfound:
 			Only need eight bytes for PNG headers.
 			FIXME: Put this elsewhere.
 			*/
-			if (flatpatch)
-				Z_Free(flatpatch);
 			W_ReadLumpHeader(flatnum, buffer, 8, 0);
 			if (Picture_IsLumpPNG(buffer, lumplength))
 				levelflat->type = LEVELFLAT_PNG;
@@ -658,6 +656,8 @@ flatfound:
 #endif/*NO_PNG_LUMPS*/
 				levelflat->type = LEVELFLAT_FLAT;/* phew */
 		}
+		if (flatpatch)
+			Z_Free(flatpatch);
 
 		levelflat->u.flat.    lumpnum = flatnum;
 		levelflat->u.flat.baselumpnum = LUMPERROR;
