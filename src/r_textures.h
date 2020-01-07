@@ -18,7 +18,6 @@
 #include "r_state.h"
 #include "p_setup.h" // levelflats
 #include "r_data.h"
-#include "r_textures.h"
 
 #ifdef __GNUG__
 #pragma interface
