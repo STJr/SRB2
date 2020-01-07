@@ -129,6 +129,8 @@ void *Picture_PatchConvert(
 
 	if (!inbpp)
 		I_Error("Picture_PatchConvert: unknown input bits per pixel?!");
+	if (!Picture_FormatBPP(outformat))
+		I_Error("Picture_PatchConvert: unknown output bits per pixel?!");
 
 	// If it's a patch, you can just figure out
 	// the dimensions from the header.
