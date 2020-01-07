@@ -1478,6 +1478,15 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
 		lumplength = W_LumpLength(lump);
 
+#ifndef NO_PNG_LUMPS
+		if (Picture_IsLumpPNG((const UINT8 *)patch, lumplength))
+		{
+			INT32 pngwidth, pngheight;
+			INT16 topoffset, leftoffset;
+			patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, &pngwidth, &pngheight, &topoffset, &leftoffset, lumplength, NULL, 0);
+		}
+		else
+#endif
 		// Because there's something wrong with SPR_DFLM, I guess
 		if (!Picture_CheckIfPatch(patch, lumplength))
 			return;

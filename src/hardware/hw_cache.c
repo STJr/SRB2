@@ -792,10 +792,11 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 	if ((patch != NULL) && Picture_IsLumpPNG((const UINT8 *)patch, len))
 	{
 		INT32 pngwidth, pngheight;
+		INT16 topoffset, leftoffset;
 #ifdef PICTURES_ALLOWDEPTH
 		format = PICFMT_PATCH32;
 #endif
-		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, format, &pngwidth, &pngheight, NULL, NULL, len, NULL, 0);
+		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, format, &pngwidth, &pngheight, &topoffset, &leftoffset, len, NULL, 0);
 	}
 #endif
 
