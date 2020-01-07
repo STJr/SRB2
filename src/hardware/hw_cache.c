@@ -89,6 +89,8 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 	if (originPatch) // originPatch can be NULL here, unlike in the software version
 		originy = originPatch->originy;
 
+	memset(&texelu32, 0x00, sizeof(RGBA_t));
+
 	while (patchcol->topdelta != 0xff)
 	{
 		topdelta = patchcol->topdelta;
@@ -242,6 +244,8 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 
 	if (originPatch) // originPatch can be NULL here, unlike in the software version
 		originy = originPatch->originy;
+
+	memset(&texelu32, 0x00, sizeof(RGBA_t));
 
 	while (patchcol->topdelta != 0xff)
 	{
