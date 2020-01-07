@@ -708,7 +708,8 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 	{
 		// Dummy variables.
 		INT32 pngwidth, pngheight;
-		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, len, NULL, 0);
+		INT16 topoffset, leftoffset;
+		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, &pngwidth, &pngheight, &topoffset, &leftoffset, len, NULL, 0);
 	}
 #endif
 
