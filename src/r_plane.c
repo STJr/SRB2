@@ -1127,7 +1127,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		case LEVELFLAT_NONE:
 			return;
 		case LEVELFLAT_FLAT:
-			ds_source = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE);
+			ds_source = R_GetFlat(levelflat->u.flat.lumpnum);
 			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
 			// Raw flats always have dimensions that are powers-of-two numbers.
 			ds_powersoftwo = true;
@@ -1140,7 +1140,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 					ds_source = R_GetTextureFlat(levelflat, true, false);
 					break;
 				default:
-					ds_source = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_STATIC);
+					ds_source = R_GetFlat(levelflat->u.flat.lumpnum);
 					flat      = R_GetTextureFlat(levelflat, false,
 #ifndef NO_PNG_LUMPS
 							( type == LEVELFLAT_PNG )

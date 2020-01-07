@@ -85,24 +85,20 @@ extern UINT8 **texturecache; // graphics data for each generated full-size textu
 void R_LoadTextures(void);
 void R_FlushTextureCache(void);
 
+// Texture generation
 UINT8 *R_GenerateTexture(size_t texnum);
 INT32 R_GetTextureNum(INT32 texnum);
 void R_CheckTextureCache(INT32 tex);
+void R_ClearTextureNumCache(boolean btell);
 
-// Retrieve column data for span blitting.
+// Retrieve texture data.
 UINT8 *R_GetColumn(fixed_t tex, INT32 col);
 UINT8 *R_GetFlat(lumpnum_t flatnum);
 
-// Retrieval.
-// Floor/ceiling opaque texture tiles,
-// lookup by name. For animation?
-lumpnum_t R_GetFlatNumForName(const char *name);
-
-// Called by P_Ticker for switches and animations,
-// returns the texture number for the texture name.
-void R_ClearTextureNumCache(boolean btell);
+// Returns the texture number for the texture name.
 INT32 R_TextureNumForName(const char *name);
 INT32 R_CheckTextureNumForName(const char *name);
+lumpnum_t R_GetFlatNumForName(const char *name);
 
 extern INT32 numtextures;
 
