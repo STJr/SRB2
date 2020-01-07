@@ -93,8 +93,8 @@ void R_ClearTextureNumCache(boolean btell);
 
 // Retrieve texture data.
 UINT8 *R_GetColumn(fixed_t tex, INT32 col);
-UINT8 *R_GetFlat(lumpnum_t flatnum);
-UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boolean ispng);
+void *R_GetFlat(lumpnum_t flatnum);
+void *R_GetLevelFlat(levelflat_t *levelflat);
 
 boolean R_CheckPowersOfTwo(void);
 void R_CheckFlatLength(size_t size);

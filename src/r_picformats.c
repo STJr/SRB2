@@ -615,7 +615,7 @@ boolean Picture_CheckIfPatch(patch_t *patch, size_t size)
 
 	width = SHORT(patch->width);
 	height = SHORT(patch->height);
-	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < (INT16)(size / 4));
+	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384);
 
 	if (result)
 	{
@@ -929,6 +929,9 @@ void *Picture_PNGConvert(
 	png_uint_32 x, y;
 	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, insize);
 	png_uint_32 width = *w, height = *h;
+
+	if (png == NULL)
+		I_Error("Picture_PNGConvert: picture was NULL!");
 
 	// Find the output format's bits per pixel amount
 	outbpp = Picture_FormatBPP(outformat);

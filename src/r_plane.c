@@ -777,12 +777,11 @@ d.z = (v1.x * v2.y) - (v1.y * v2.x)
 
 void R_DrawSinglePlane(visplane_t *pl)
 {
-	UINT8 *flat;
+	levelflat_t *levelflat;
 	INT32 light = 0;
 	INT32 x;
 	INT32 stop, angle;
 	ffloor_t *rover;
-	levelflat_t *levelflat;
 	int type;
 	int spanfunctype = BASEDRAWFUNC;
 
@@ -943,30 +942,15 @@ void R_DrawSinglePlane(visplane_t *pl)
 		case LEVELFLAT_NONE:
 			return;
 		case LEVELFLAT_FLAT:
-			ds_source = R_GetFlat(levelflat->u.flat.lumpnum);
+			ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
 			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
 			// Raw flats always have dimensions that are powers-of-two numbers.
 			ds_powersoftwo = true;
 			break;
 		default:
-			switch (type)
-			{
-				case LEVELFLAT_TEXTURE:
-					/* Textures get cached differently and don't need ds_source */
-					ds_source = R_GetTextureFlat(levelflat, true, false);
-					break;
-				default:
-					ds_source = R_GetFlat(levelflat->u.flat.lumpnum);
-					flat      = R_GetTextureFlat(levelflat, false,
-#ifndef NO_PNG_LUMPS
-							( type == LEVELFLAT_PNG )
-#else
-							false
-#endif
-					);
-					Z_ChangeTag(ds_source, PU_CACHE);
-					ds_source = flat;
-			}
+			ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
+			if (!ds_source)
+				return;
 			// Check if this texture or patch has power-of-two dimensions.
 			if (R_CheckPowersOfTwo())
 				R_CheckFlatLength(ds_flatwidth * ds_flatheight);

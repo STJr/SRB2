@@ -72,7 +72,6 @@ typedef struct
 	u;
 
 	UINT16 width, height;
-	fixed_t topoffset, leftoffset;
 
 	// for flat animation
 	INT32 animseq; // start pos. in the anim sequence

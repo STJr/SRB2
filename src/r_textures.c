@@ -497,31 +497,29 @@ UINT8 *R_GetColumn(fixed_t tex, INT32 col)
 	return data + LONG(texturecolumnofs[tex][col]);
 }
 
-UINT8 *R_GetFlat(lumpnum_t flatlumpnum)
+void *R_GetFlat(lumpnum_t flatlumpnum)
 {
 	return W_CacheLumpNum(flatlumpnum, PU_CACHE);
 }
 
 //
-// R_GetTextureFlat
+// R_GetLevelFlat
 //
-// Convert a texture or patch to a flat.
+// If needed, convert a texture or patch to a flat.
 //
-UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boolean ispng)
+void *R_GetLevelFlat(levelflat_t *levelflat)
 {
-	UINT8 *flat;
+	UINT8 *flatdata = NULL;
+	boolean leveltexture = (levelflat->type == LEVELFLAT_TEXTURE);
 	textureflat_t *texflat = &texflats[levelflat->u.texture.num];
-	patch_t *patch = NULL;
 	boolean texturechanged = (leveltexture ? (levelflat->u.texture.num != levelflat->u.texture.lastnum) : false);
-
-	(void)ispng;
 
 	// Check if the texture changed.
 	if (leveltexture && (!texturechanged))
 	{
 		if (texflat != NULL && texflat->flat)
 		{
-			flat = texflat->flat;
+			flatdata = texflat->flat;
 			ds_flatwidth = texflat->width;
 			ds_flatheight = texflat->height;
 			texturechanged = false;
@@ -547,23 +545,19 @@ UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boolean is
 			converted = (UINT8 *)Picture_TextureToFlat(levelflat->u.texture.num);
 			M_Memcpy(texflat->flat, converted, size);
 			Z_Free(converted);
-			flat = texflat->flat;
 
-			levelflat->flatpatch = flat;
+			levelflat->flatpatch = texflat->flat;
 			levelflat->width = ds_flatwidth;
 			levelflat->height = ds_flatheight;
 		}
-		// Patch (never happens yet)
 		else
 		{
-			patch = (patch_t *)ds_source;
 #ifndef NO_PNG_LUMPS
-			if (ispng)
+			if (levelflat->type == LEVELFLAT_PNG)
 			{
 				INT32 pngwidth, pngheight;
 
-				levelflat->flatpatch = Picture_PNGConvert(ds_source, PICFMT_FLAT, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
-				levelflat->topoffset = levelflat->leftoffset = 0;
+				levelflat->flatpatch = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), PICFMT_FLAT, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
 				levelflat->width = (UINT16)pngwidth;
 				levelflat->height = (UINT16)pngheight;
 
@@ -572,35 +566,33 @@ UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boolean is
 			}
 			else
 #endif
+			if (levelflat->type == LEVELFLAT_PATCH)
 			{
 				UINT8 *converted;
 				size_t size;
+				patch_t *patch = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE);
+
 				levelflat->width = ds_flatwidth = SHORT(patch->width);
 				levelflat->height = ds_flatheight = SHORT(patch->height);
-
-				levelflat->topoffset = patch->topoffset * FRACUNIT;
-				levelflat->leftoffset = patch->leftoffset * FRACUNIT;
 
 				levelflat->flatpatch = Z_Malloc(levelflat->width * levelflat->height, PU_LEVEL, NULL);
 				converted = Picture_FlatConvert(PICFMT_PATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, patch->topoffset, patch->leftoffset, 0);
 				M_Memcpy(levelflat->flatpatch, converted, size);
 				Z_Free(converted);
 			}
-			flat = levelflat->flatpatch;
 		}
 	}
 	else
 	{
-		flat = levelflat->flatpatch;
 		ds_flatwidth = levelflat->width;
 		ds_flatheight = levelflat->height;
 	}
 
-	//xoffs += levelflat->leftoffset;
-	//yoffs += levelflat->topoffset;
-
 	levelflat->u.texture.lastnum = levelflat->u.texture.num;
-	return flat;
+
+	if (flatdata == NULL)
+		flatdata = levelflat->flatpatch;
+	return flatdata;
 }
 
 //
