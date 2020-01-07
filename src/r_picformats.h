@@ -43,6 +43,14 @@ typedef enum
 	PICFLAGS_YFLIP = 1<<1
 } pictureflags_t;
 
+enum
+{
+	PICDEPTH_NONE = 0,
+	PICDEPTH_8BPP = 8,
+	PICDEPTH_16BPP = 16,
+	PICDEPTH_32BPP = 32
+};
+
 void *Picture_Convert(
 	pictureformat_t informat, void *picture, pictureformat_t outformat,
 	size_t insize, size_t *outsize,

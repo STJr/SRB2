@@ -118,6 +118,10 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			count--;
 
 			texel = source[yfrac>>FRACBITS];
+			alpha = 0xFF;
+			// Make pixel transparent if chroma keyed
+			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
+				alpha = 0x00;
 
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (mipmap->colormap)
@@ -230,16 +234,14 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			count--;
 
 			texel = source[yfrac>>FRACBITS];
+			alpha = 0xFF;
+			// Make pixel transparent if chroma keyed
+			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
+				alpha = 0x00;
 
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (mipmap->colormap)
 				texel = mipmap->colormap[texel];
-
-			// transparent pixel
-			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX)
-				alpha = 0x00;
-			else
-				alpha = 0xff;
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
