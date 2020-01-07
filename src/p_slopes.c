@@ -256,7 +256,11 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 	boolean backfloor = line->args[0] == 2;
 	boolean frontceil = line->args[1] == 1;
 	boolean backceil = line->args[1] == 2;
-	UINT8 flags = line->args[2]; // Slope flags
+	UINT8 flags = 0; // Slope flags
+	if (line->args[2] & 1)
+		flags |= SL_NOPHYSICS;
+	if (line->args[2] & 2)
+		flags |= SL_DYNAMIC;
 
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
 	{
@@ -461,7 +465,11 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 	UINT16 tag1 = line->args[1];
 	UINT16 tag2 = line->args[2];
 	UINT16 tag3 = line->args[3];
-	UINT8 flags = line->args[4];
+	UINT8 flags = 0; // Slope flags
+	if (line->args[4] & 1)
+		flags |= SL_NOPHYSICS;
+	if (line->args[4] & 2)
+		flags |= SL_DYNAMIC;
 
 	switch(line->args[0])
 	{
