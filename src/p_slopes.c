@@ -50,10 +50,10 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 	// Set some defaults for a non-sloped "slope"
 	if (vec1.z == 0 && vec2.z == 0)
 	{
-		/// \todo Fix fully flat cases.
-
 		slope->zangle = slope->xydirection = 0;
 		slope->zdelta = slope->d.x = slope->d.y = 0;
+		slope->normal.x = slope->normal.y = 0;
+		slope->normal.z = FRACUNIT;
 	}
 	else
 	{
@@ -445,10 +445,9 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 			I_Error("MakeViaMapthings: Slope vertex %s (for linedef tag %d) not found!", sizeu1(i), tag1);
 		vx[i].x = mt->x << FRACBITS;
 		vx[i].y = mt->y << FRACBITS;
-		if (mt->extrainfo)
-			vx[i].z = mt->options << FRACBITS;
-		else
-			vx[i].z = (R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector->floorheight) + ((mt->options >> ZSHIFT) << FRACBITS);
+		vx[i].z = mt->z << FRACBITS;
+		if (!mt->extrainfo)
+			vx[i].z += R_PointInSubsector(vx[i].x, vx[i].y)->sector->floorheight;
 	}
 
 	ReconfigureViaVertexes(ret, vx[0], vx[1], vx[2]);
@@ -654,7 +653,9 @@ void P_ReverseQuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 // Handles slope ejection for objects
 void P_SlopeLaunch(mobj_t *mo)
 {
-	if (!(mo->standingslope->flags & SL_NOPHYSICS)) // If there's physics, time for launching.
+	if (!(mo->standingslope->flags & SL_NOPHYSICS) // If there's physics, time for launching.
+		&& (mo->standingslope->normal.x != 0
+		||  mo->standingslope->normal.y != 0))
 	{
 		// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
 		// vertical launch given from slopes while increasing the horizontal launch
@@ -711,8 +712,7 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 {
 	vector3_t mom; // Ditto.
-
-	if (slope->flags & SL_NOPHYSICS) { // No physics, no need to make anything complicated.
+	if (slope->flags & SL_NOPHYSICS || (slope->normal.x == 0 && slope->normal.y == 0)) { // No physics, no need to make anything complicated.
 		if (P_MobjFlip(thing)*(thing->momz) < 0) // falling, land on slope
 		{
 			thing->standingslope = slope;

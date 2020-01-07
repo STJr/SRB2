@@ -31,9 +31,12 @@ const char *const hookNames[hook_MAX+1] = {
 	"MapChange",
 	"MapLoad",
 	"PlayerJoin",
+	"PreThinkFrame",
 	"ThinkFrame",
+	"PostThinkFrame",
 	"MobjSpawn",
 	"MobjCollide",
+	"MobjLineCollide",
 	"MobjMoveCollide",
 	"TouchSpecial",
 	"MobjFuse",
@@ -64,6 +67,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"IntermissionThinker",
 	"TeamSwitch",
 	"ViewpointSwitch",
+	"SeenPlayer",
 	NULL
 };
 
@@ -123,6 +127,7 @@ static int lib_addHook(lua_State *L)
 	// Take a mobjtype enum which this hook is specifically for.
 	case hook_MobjSpawn:
 	case hook_MobjCollide:
+	case hook_MobjLineCollide:
 	case hook_MobjMoveCollide:
 	case hook_TouchSpecial:
 	case hook_MobjFuse:
@@ -182,6 +187,7 @@ static int lib_addHook(lua_State *L)
 		lastp = &mobjthinkerhooks[hook.s.mt];
 		break;
 	case hook_MobjCollide:
+	case hook_MobjLineCollide:
 	case hook_MobjMoveCollide:
 		lastp = &mobjcollidehooks[hook.s.mt];
 		break;
@@ -207,6 +213,7 @@ static int lib_addHook(lua_State *L)
 	case hook_PlayerCanDamage:
 	case hook_TeamSwitch:
 	case hook_ViewpointSwitch:
+	case hook_SeenPlayer:
 	case hook_ShieldSpawn:
 	case hook_ShieldSpecial:
 		lastp = &playerhooks;
@@ -411,6 +418,29 @@ void LUAh_PlayerJoin(int playernum)
 	lua_settop(gL, 0);
 }
 
+// Hook for frame (before mobj and player thinkers)
+void LUAh_PreThinkFrame(void)
+{
+	hook_p hookp;
+	if (!gL || !(hooksAvailable[hook_PreThinkFrame/8] & (1<<(hook_PreThinkFrame%8))))
+		return;
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_PreThinkFrame)
+			continue;
+
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		if (lua_pcall(gL, 0, 0, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+		}
+	}
+}
+
 // Hook for frame (after mobj and player thinkers)
 void LUAh_ThinkFrame(void)
 {
@@ -421,6 +451,30 @@ void LUAh_ThinkFrame(void)
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_ThinkFrame)
+			continue;
+
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		if (lua_pcall(gL, 0, 0, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+		}
+	}
+}
+
+
+// Hook for frame (at end of tick, ie after overlays, precipitation, specials)
+void LUAh_PostThinkFrame(void)
+{
+	hook_p hookp;
+	if (!gL || !(hooksAvailable[hook_PostThinkFrame/8] & (1<<(hook_PostThinkFrame%8))))
+		return;
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_PostThinkFrame)
 			continue;
 
 		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
@@ -487,6 +541,84 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 		{
 			LUA_PushUserdata(gL, thing1, META_MOBJ);
 			LUA_PushUserdata(gL, thing2, META_MOBJ);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{ // if nil, leave shouldCollide = 0.
+			if (lua_toboolean(gL, -1))
+				shouldCollide = 1; // Force yes
+			else
+				shouldCollide = 2; // Force no
+		}
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return shouldCollide;
+}
+
+UINT8 LUAh_MobjLineCollideHook(mobj_t *thing, line_t *line, enum hook which)
+{
+	hook_p hookp;
+	UINT8 shouldCollide = 0; // 0 = default, 1 = force yes, 2 = force no.
+	if (!gL || !(hooksAvailable[which/8] & (1<<(which%8))))
+		return 0;
+
+	I_Assert(thing->type < NUMMOBJTYPES);
+
+	lua_settop(gL, 0);
+
+	// Look for all generic mobj collision hooks
+	for (hookp = mobjcollidehooks[MT_NULL]; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != which)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, thing, META_MOBJ);
+			LUA_PushUserdata(gL, line, META_LINE);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{ // if nil, leave shouldCollide = 0.
+			if (lua_toboolean(gL, -1))
+				shouldCollide = 1; // Force yes
+			else
+				shouldCollide = 2; // Force no
+		}
+		lua_pop(gL, 1);
+	}
+
+	for (hookp = mobjcollidehooks[thing->type]; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != which)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, thing, META_MOBJ);
+			LUA_PushUserdata(gL, line, META_LINE);
 		}
 		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 		lua_gettable(gL, LUA_REGISTRYINDEX);
@@ -1412,7 +1544,7 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 		return 0;
 
 	lua_settop(gL, 0);
-	hud_running = true;
+	hud_running = true; // local hook
 
 	for (hookp = playerhooks; hookp; hookp = hookp->next)
 	{
@@ -1452,5 +1584,50 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 
 	return canSwitchView;
 }
+
+// Hook for MT_NAMECHECK
+#ifdef SEENAMES
+boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
+{
+	hook_p hookp;
+	boolean hasSeenPlayer = true;
+	if (!gL || !(hooksAvailable[hook_SeenPlayer/8] & (1<<(hook_SeenPlayer%8))))
+		return 0;
+
+	lua_settop(gL, 0);
+	hud_running = true; // local hook
+
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_SeenPlayer)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			LUA_PushUserdata(gL, seenfriend, META_PLAYER);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1) && !lua_toboolean(gL, -1))
+			hasSeenPlayer = false; // Hasn't seen player
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	hud_running = false;
+
+	return hasSeenPlayer;
+}
+#endif // SEENAMES
 
 #endif

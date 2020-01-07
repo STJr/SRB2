@@ -61,7 +61,9 @@ static void GameMIDIMusic_OnChange(void);
 static void GameSounds_OnChange(void);
 static void GameDigiMusic_OnChange(void);
 
+#ifdef HAVE_OPENMPT
 static void ModFilter_OnChange(void);
+#endif
 
 static lumpnum_t S_GetMusicLumpNum(const char *mname);
 

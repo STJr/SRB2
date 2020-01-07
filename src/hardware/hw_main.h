@@ -29,6 +29,7 @@
 
 // Startup & Shutdown the hardware mode renderer
 void HWR_Startup(void);
+void HWR_Switch(void);
 void HWR_Shutdown(void);
 
 void HWR_drawAMline(const fline_t *fl, INT32 color);

@@ -134,6 +134,7 @@ enum side_e {
 	side_toptexture,
 	side_bottomtexture,
 	side_midtexture,
+	side_line,
 	side_sector,
 	side_special,
 	side_repeatcnt,
@@ -156,15 +157,13 @@ static const char *const side_opt[] = {
 enum vertex_e {
 	vertex_valid = 0,
 	vertex_x,
-	vertex_y,
-	vertex_z
+	vertex_y
 };
 
 static const char *const vertex_opt[] = {
 	"valid",
 	"x",
 	"y",
-	"z",
 	NULL};
 
 enum ffloor_e {
@@ -869,6 +868,9 @@ static int side_get(lua_State *L)
 	case side_midtexture:
 		lua_pushinteger(L, side->midtexture);
 		return 1;
+	case side_line:
+		LUA_PushUserdata(L, side->line, META_LINE);
+		return 1;
 	case side_sector:
 		LUA_PushUserdata(L, side->sector, META_SECTOR);
 		return 1;
@@ -902,6 +904,7 @@ static int side_set(lua_State *L)
 	switch(field)
 	{
 	case side_valid: // valid
+	case side_line:
 	case side_sector:
 	case side_special:
 	case side_text:
@@ -964,9 +967,6 @@ static int vertex_get(lua_State *L)
 		return 1;
 	case vertex_y:
 		lua_pushfixed(L, vertex->y);
-		return 1;
-	case vertex_z:
-		lua_pushfixed(L, vertex->z);
 		return 1;
 	}
 	return 0;

@@ -400,6 +400,8 @@ static void Polyobj_findSegs(polyobj_t *po, seg_t *seg)
 		// Find backfacings
 		for (s = 0;  s < numsegs; s++)
 		{
+			if (segs[s].glseg)
+				continue;
 			if (segs[s].linedef == seg->linedef
 				&& segs[s].side == 1)
 			{
@@ -436,6 +438,8 @@ newseg:
 	// seg's ending vertex.
 	for (i = 0; i < numsegs; ++i)
 	{
+		if (segs[i].glseg)
+			continue;
 		if (segs[i].side != 0) // needs to be frontfacing
 			continue;
 		if (segs[i].v1->x == seg->v2->x && segs[i].v1->y == seg->v2->y)
@@ -460,6 +464,9 @@ newseg:
 				// Find backfacings
 				for (q = 0;  q < numsegs; q++)
 				{
+					if (segs[q].glseg)
+						continue;
+
 					if (segs[q].linedef == segs[i].linedef
 						&& segs[q].side == 1)
 					{
@@ -605,6 +612,9 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		seg_t *seg = &segs[i];
 		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 		INT32 parentID = 0, potrans = 0;
+
+		if (seg->glseg)
+			continue;
 
 		if (seg->side != 0) // needs to be frontfacing
 			continue;
@@ -1815,6 +1825,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	if (po->thinker == NULL)
 		po->thinker = &th->thinker;
 
+/*
 	// Find out target first.
 	// We redo this each tic to make savegame compatibility easier.
 	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
@@ -1833,6 +1844,9 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			break;
 		}
 	}
+*/
+
+	target = th->target;
 
 	if (!target)
 	{
@@ -2015,6 +2029,8 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 			target = waypoint;
 			th->pointnum = target->health;
+			// Set the mobj as your target! -- Monster Iestyn 27/12/19
+			P_SetTarget(&th->target, target);
 
 			// calculate MOMX/MOMY/MOMZ for next waypoint
 			// change slope
@@ -2641,6 +2657,9 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// Set pointnum
 	th->pointnum = target->health;
+	th->target = NULL; // set to NULL first so the below doesn't go wrong
+	// Set the mobj as your target! -- Monster Iestyn 27/12/19
+	P_SetTarget(&th->target, target);
 
 	// We don't deal with the mirror crap here, we'll
 	// handle that in the T_Thinker function.

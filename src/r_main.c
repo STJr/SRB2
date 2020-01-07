@@ -19,6 +19,7 @@
 #include "r_local.h"
 #include "r_splats.h" // faB(21jan): testing
 #include "r_sky.h"
+#include "hu_stuff.h"
 #include "st_stuff.h"
 #include "p_local.h"
 #include "keys.h"
@@ -28,6 +29,7 @@
 #include "d_main.h"
 #include "v_video.h"
 #include "p_spec.h" // skyboxmo
+#include "p_setup.h"
 #include "z_zone.h"
 #include "m_random.h" // quake camera shake
 #include "r_portal.h"
@@ -691,6 +693,7 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 	INT32 side, i;
 	size_t nodenum;
 	subsector_t *ret;
+	seg_t *seg;
 
 	// single subsector is a special case
 	if (numnodes == 0)
@@ -706,10 +709,15 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 	}
 
 	ret = &subsectors[nodenum & ~NF_SUBSECTOR];
-	for (i = 0; i < ret->numlines; i++)
-		//if (R_PointOnSegSide(x, y, &segs[ret->firstline + i])) -- breaks in ogl because polyvertex_t cast over vertex pointers
-		if (P_PointOnLineSide(x, y, segs[ret->firstline + i].linedef) != segs[ret->firstline + i].side)
+	for (i = 0, seg = &segs[ret->firstline]; i < ret->numlines; i++, seg++)
+	{
+		if (seg->glseg)
+			continue;
+
+		//if (R_PointOnSegSide(x, y, seg)) -- breaks in ogl because polyvertex_t cast over vertex pointers
+		if (P_PointOnLineSide(x, y, seg->linedef) != seg->side)
 			return 0;
+	}
 
 	return ret;
 }
@@ -1152,6 +1160,26 @@ void R_RenderPlayerView(player_t *player)
 	R_DrawMasked(masks, nummasks);
 
 	free(masks);
+}
+
+// Lactozilla: Renderer switching
+#ifdef HWRENDER
+void R_InitHardwareMode(void)
+{
+	HWR_AddSessionCommands();
+	HWR_Switch();
+	HWR_LoadTextures(numtextures);
+	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
+		HWR_SetupLevel();
+}
+#endif
+
+void R_ReloadHUDGraphics(void)
+{
+	CONS_Debug(DBG_RENDER, "R_ReloadHUDGraphics()...\n");
+	ST_LoadGraphics();
+	HU_LoadGraphics();
+	ST_ReloadSkinFaceGraphics();
 }
 
 // =========================================================================

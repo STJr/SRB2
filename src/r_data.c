@@ -324,8 +324,8 @@ UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 al
 	else if (style != AST_TRANSLUCENT)
 	{
 		RGBA_t texel;
-		RGBA_t bg = V_GetColor(background);
-		RGBA_t fg = V_GetColor(foreground);
+		RGBA_t bg = V_GetMasterColor(background);
+		RGBA_t fg = V_GetMasterColor(foreground);
 		texel.rgba = ASTBlendPixel(bg, fg, style, alpha);
 		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
 	}
@@ -1664,7 +1664,7 @@ static void R_CreateFadeColormaps(void)
 #define GETCOLOR \
 	px = colormaps[i%256]; \
 	fade = (i/256) * (256 / FADECOLORMAPROWS); \
-	rgba = V_GetColor(px);
+	rgba = V_GetMasterColor(px);
 
 	// to black
 	makeblack:
@@ -2095,7 +2095,6 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	/////////////////////
 	// This code creates the colormap array used by software renderer
 	/////////////////////
-	if (rendermode == render_soft)
 	{
 		double r, g, b, cbrightness;
 		int p;
@@ -2717,7 +2716,7 @@ void R_PrecacheLevel(void)
 				lump = sf->lumppat[k];
 				if (devparm)
 					spritememory += W_LumpLength(lump);
-				W_CachePatchNum(lump, PU_CACHE);
+				W_CachePatchNum(lump, PU_PATCH);
 			}
 		}
 	}

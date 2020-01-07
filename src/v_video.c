@@ -1045,13 +1045,13 @@ void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skin
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CONTINUE];
-		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 		const UINT8 *colormap = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
 
 		V_DrawMappedPatch(x, y, flags, patch, colormap);
 	}
 	else
-		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
+		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_PATCH));
 }
 
 //

@@ -517,6 +517,7 @@ void Command_Teleport_f(void)
 		if (!starpostnum) // spawnpoints...
 		{
 			mapthing_t *mt;
+			fixed_t offset;
 
 			if (starpostpath >= numcoopstarts)
 			{
@@ -527,6 +528,7 @@ void Command_Teleport_f(void)
 			mt = playerstarts[starpostpath]; // Given above check, should never be NULL.
 			intx = mt->x<<FRACBITS;
 			inty = mt->y<<FRACBITS;
+			offset = mt->z<<FRACBITS;
 
 			ss = R_IsPointInSubsector(intx, inty);
 			if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
@@ -538,17 +540,9 @@ void Command_Teleport_f(void)
 			// Flagging a player's ambush will make them start on the ceiling
 			// Objectflip inverts
 			if (!!(mt->options & MTF_AMBUSH) ^ !!(mt->options & MTF_OBJECTFLIP))
-			{
-				intz = ss->sector->ceilingheight - p->mo->height;
-				if (mt->options >> ZSHIFT)
-					intz -= ((mt->options >> ZSHIFT) << FRACBITS);
-			}
+				intz = ss->sector->ceilingheight - p->mo->height - offset;
 			else
-			{
-				intz = ss->sector->floorheight;
-				if (mt->options >> ZSHIFT)
-					intz += ((mt->options >> ZSHIFT) << FRACBITS);
-			}
+				intz = ss->sector->floorheight + offset;
 
 			if (mt->options & MTF_OBJECTFLIP) // flip the player!
 			{
@@ -1193,14 +1187,14 @@ void OP_NightsObjectplace(player_t *player)
 	if (cmd->buttons & BT_TOSSFLAG)
 	{
 		UINT16 vertangle = (UINT16)(player->anotherflyangle % 360);
-		UINT16 newflags, newz;
+		UINT16 newflags;
 
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))
 			return;
 
 		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_NIGHTSBUMPER].doomednum, false);
-		newz = min((mt->options >> ZSHIFT) - (mobjinfo[MT_NIGHTSBUMPER].height/4), 0);
+		mt->z = min(mt->z - (mobjinfo[MT_NIGHTSBUMPER].height/4), 0);
 			// height offset: from P_TouchSpecialThing case MT_NIGHTSBUMPER
 
 		// clockwise
@@ -1231,7 +1225,7 @@ void OP_NightsObjectplace(player_t *player)
 		else // forward
 			newflags = 0;
 
-		mt->options = (newz << ZSHIFT) | newflags;
+		mt->options = (mt->z << ZSHIFT) | newflags;
 
 		// if NiGHTS is facing backwards, orient the Thing angle forwards so that the sprite angle
 		// displays correctly. Backwards movement via the Thing flags is unaffected.
@@ -1439,7 +1433,7 @@ void OP_ObjectplaceMovement(player_t *player)
 		else
 			P_SpawnMapThing(mt);
 
-		CONS_Printf(M_GetText("Placed object type %d at %d, %d, %d, %d\n"), mt->type, mt->x, mt->y, mt->options>>ZSHIFT, mt->angle);
+		CONS_Printf(M_GetText("Placed object type %d at %d, %d, %d, %d\n"), mt->type, mt->x, mt->y, mt->z, mt->angle);
 	}
 }
 

@@ -1265,8 +1265,12 @@ static boolean CL_SendJoin(void)
 	if (splitscreen || botingame)
 		localplayers++;
 	netbuffer->u.clientcfg.localplayers = localplayers;
+	netbuffer->u.clientcfg._255 = 255;
+	netbuffer->u.clientcfg.packetversion = PACKETVERSION;
 	netbuffer->u.clientcfg.version = VERSION;
 	netbuffer->u.clientcfg.subversion = SUBVERSION;
+	strncpy(netbuffer->u.clientcfg.application, SRB2APPLICATION,
+			sizeof netbuffer->u.clientcfg.application);
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
 	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
@@ -1277,15 +1281,20 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	UINT8 *p;
 
 	netbuffer->packettype = PT_SERVERINFO;
+	netbuffer->u.serverinfo._255 = 255;
+	netbuffer->u.serverinfo.packetversion = PACKETVERSION;
 	netbuffer->u.serverinfo.version = VERSION;
 	netbuffer->u.serverinfo.subversion = SUBVERSION;
+	strncpy(netbuffer->u.serverinfo.application, SRB2APPLICATION,
+			sizeof netbuffer->u.serverinfo.application);
 	// return back the time value so client can compute their ping
 	netbuffer->u.serverinfo.time = (tic_t)LONG(servertime);
 	netbuffer->u.serverinfo.leveltime = (tic_t)LONG(leveltime);
 
 	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
 	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
-	netbuffer->u.serverinfo.gametype = (UINT8)gametype;
+	strncpy(netbuffer->u.serverinfo.gametypename, Gametype_Names[gametype],
+			sizeof netbuffer->u.serverinfo.gametypename);
 	netbuffer->u.serverinfo.modifiedgame = (UINT8)modifiedgame;
 	netbuffer->u.serverinfo.cheatsenabled = CV_CheatsEnabled();
 	netbuffer->u.serverinfo.isdedicated = (UINT8)dedicated;
@@ -1712,11 +1721,20 @@ static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
 		if (serverlistcount >= MAXSERVERLIST)
 			return; // list full
 
+		if (info->_255 != 255)
+			return;/* old packet format */
+
+		if (info->packetversion != PACKETVERSION)
+			return;/* old new packet format */
+
 		if (info->version != VERSION)
 			return; // Not same version.
 
 		if (info->subversion != SUBVERSION)
 			return; // Close, but no cigar.
+
+		if (strcmp(info->application, SRB2APPLICATION))
+			return;/* that's a different mod */
 
 		i = serverlistcount++;
 	}
@@ -2105,13 +2123,10 @@ static void CL_ConnectToServer(boolean viams)
 
 	if (i != -1)
 	{
-		UINT16 num = serverlist[i].info.gametype;
-		const char *gametypestr = NULL;
+		char *gametypestr = serverlist[i].info.gametypename;
 		CONS_Printf(M_GetText("Connecting to: %s\n"), serverlist[i].info.servername);
-		if (num < gametypecount)
-			gametypestr = Gametype_Names[num];
-		if (gametypestr)
-			CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
+		gametypestr[sizeof serverlist[i].info.gametypename - 1] = '\0';
+		CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
 		CONS_Printf(M_GetText("Version: %d.%d.%u\n"), serverlist[i].info.version/100,
 		 serverlist[i].info.version%100, serverlist[i].info.subversion);
 	}
@@ -2987,8 +3002,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		CL_RemovePlayer(pnum, kickreason);
 }
 
-consvar_t cv_allownewplayer = {"allowjoin", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
-consvar_t cv_joinnextround = {"joinnextround", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; /// \todo not done
+consvar_t cv_allownewplayer = {"allowjoin", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
+consvar_t cv_joinnextround = {"joinnextround", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
 consvar_t cv_maxplayers = {"maxplayers", "8", CV_SAVE, maxplayers_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static CV_PossibleValue_t resynchattempts_cons_t[] = {{1, "MIN"}, {20, "MAX"}, {0, "No"}, {0, NULL}};
@@ -3509,6 +3524,12 @@ static void HandleConnect(SINT8 node)
 
 	if (bannednode && bannednode[node])
 		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server"));
+	else if (netbuffer->u.clientcfg._255 != 255 ||
+			netbuffer->u.clientcfg.packetversion != PACKETVERSION)
+		SV_SendRefuse(node, "Incompatible packet formats.");
+	else if (strncmp(netbuffer->u.clientcfg.application, SRB2APPLICATION,
+				sizeof netbuffer->u.clientcfg.application))
+		SV_SendRefuse(node, "Different SRB2 modifications\nare not compatible.");
 	else if (netbuffer->u.clientcfg.version != VERSION
 		|| netbuffer->u.clientcfg.subversion != SUBVERSION)
 		SV_SendRefuse(node, va(M_GetText("Different SRB2 versions cannot\nplay a netgame!\n(server version %d.%d.%d)"), VERSION/100, VERSION%100, SUBVERSION));
@@ -3631,6 +3652,10 @@ static void HandleServerInfo(SINT8 node)
 	const tic_t ticdiff = (ticnow - ticthen)*1000/NEWTICRATE;
 	netbuffer->u.serverinfo.time = (tic_t)LONG(ticdiff);
 	netbuffer->u.serverinfo.servername[MAXSERVERNAME-1] = 0;
+	netbuffer->u.serverinfo.application
+		[sizeof netbuffer->u.serverinfo.application - 1] = '\0';
+	netbuffer->u.serverinfo.gametypename
+		[sizeof netbuffer->u.serverinfo.gametypename - 1] = '\0';
 
 	SL_InsertServer(&netbuffer->u.serverinfo, node);
 }
