@@ -1454,7 +1454,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 	INT32 angle;
 	patch_t *patch;
 	patch_t *newpatch;
-	UINT16 *rawdst;
+	void *rawdst;
 	size_t size;
 	pictureflags_t bflip = (flip) ? PICFLAGS_XFLIP : 0;
 
@@ -1471,6 +1471,8 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
 		size_t lumplength;
+		pictureformat_t format = PICFMT_PATCH;
+		INT32 fmtbpp = PICDEPTH_NONE;
 
 		if (lump == LUMPERROR)
 			return;
@@ -1483,7 +1485,11 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		{
 			INT32 pngwidth, pngheight;
 			INT16 topoffset, leftoffset;
-			patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, &pngwidth, &pngheight, &topoffset, &leftoffset, lumplength, NULL, 0);
+#ifdef PICTURES_ALLOWDEPTH
+			if (rendermode == render_opengl)
+				format = PICFMT_PATCH32;
+#endif
+			patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, format, &pngwidth, &pngheight, &topoffset, &leftoffset, lumplength, NULL, 0);
 		}
 		else
 #endif
@@ -1494,6 +1500,9 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		width = patch->width;
 		height = patch->height;
 		leftoffset = patch->leftoffset;
+		fmtbpp = Picture_FormatBPP(format);
+		if (fmtbpp < PICDEPTH_16BPP)
+			fmtbpp = PICDEPTH_16BPP;
 
 		// rotation pivot
 		px = SPRITE_XCENTER;
@@ -1584,7 +1593,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			size = (newwidth * newheight);
 			if (!size)
 				size = (width * height);
-			rawdst = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
+			rawdst = Z_Calloc(size * (fmtbpp / 8), PU_STATIC, NULL);
 
 			for (dy = 0; dy < newheight; dy++)
 			{
@@ -1598,15 +1607,50 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 					sy >>= FRACBITS;
 					if (sx >= 0 && sy >= 0 && sx < width && sy < height)
 					{
-						void *input = Picture_GetPatchPixel(patch, PICFMT_PATCH, sx, sy, bflip);
-						if (input != NULL)
-							rawdst[(dy*newwidth)+dx] = (0xFF00 | (*(UINT8 *)input));
+						void *input = Picture_GetPatchPixel(patch, format, sx, sy, bflip);
+						if (input)
+						{
+							size_t offs = (dy*newwidth)+dx;
+							switch (fmtbpp)
+							{
+								case PICDEPTH_32BPP:
+								{
+									UINT32 *f32 = (UINT32 *)rawdst;
+									if (format == PICFMT_PATCH32)
+									{
+										RGBA_t out = *(RGBA_t *)input;
+										f32[offs] = out.rgba;
+									}
+									else // PICFMT_PATCH
+									{
+										RGBA_t out = pMasterPalette[*((UINT8 *)input) & 0xFF];
+										f32[offs] = out.rgba;
+									}
+									break;
+								}
+								case PICDEPTH_16BPP:
+								{
+									UINT16 *f16 = (UINT16 *)rawdst;
+									if (format == PICFMT_PATCH32)
+									{
+										RGBA_t in = *(RGBA_t *)input;
+										UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
+										f16[offs] = (0xFF00 | out);
+									}
+									else // PICFMT_PATCH
+										f16[offs] = (0xFF00 | *((UINT8 *)input));
+									break;
+								}
+								default: // ???????
+									break;
+							}
+						}
 					}
 				}
 			}
 
 			// make patch
-			newpatch = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
+			newpatch = (patch_t *)Picture_Convert((fmtbpp == PICDEPTH_32BPP) ? PICFMT_FLAT32 : PICFMT_FLAT16, rawdst, format, 0, &size, newwidth, newheight, 0, 0, 0);
 			{
 				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
 				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
