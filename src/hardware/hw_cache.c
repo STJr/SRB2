@@ -122,11 +122,11 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			if (mipmap->colormap)
 				texel = mipmap->colormap[texel];
 
-			// transparent pixel
-			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX)
+			// If the mipmap is chromakeyed, check if the texel's color
+			// is equivalent to the chroma key's color index.
+			alpha = 0xff;
+			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
 				alpha = 0x00;
-			else
-				alpha = 0xff;
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
@@ -654,7 +654,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL);
 		else
 #endif
 #ifdef WALLFLATS
@@ -698,7 +698,7 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 	// lump is a png so convert it
 	size_t len = W_LumpLengthPwad(grPatch->wadnum, grPatch->lumpnum);
 	if ((patch != NULL) && R_IsLumpPNG((const UINT8 *)patch, len))
-		patch = R_PNGToPatch((const UINT8 *)patch, len, NULL, true);
+		patch = R_PNGToPatch((const UINT8 *)patch, len, NULL);
 #endif
 
 	// don't do it twice (like a cache)
@@ -1323,23 +1323,6 @@ GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum)
 {
 	return HWR_GetCachedGLPatchPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
-
-#ifdef ROTSPRITE
-GLPatch_t *HWR_GetCachedGLRotSprite(aatree_t *hwrcache, UINT16 rollangle, patch_t *rawpatch)
-{
-	GLPatch_t *grpatch;
-
-	if (!(grpatch = M_AATreeGet(hwrcache, rollangle)))
-	{
-		grpatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
-		grpatch->rawpatch = rawpatch;
-		grpatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
-		M_AATreeSet(hwrcache, rollangle, grpatch);
-	}
-
-	return grpatch;
-}
-#endif
 
 // Need to do this because they aren't powers of 2
 static void HWR_DrawFadeMaskInCache(GLMipmap_t *mipmap, INT32 pblockwidth, INT32 pblockheight,

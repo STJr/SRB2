@@ -2275,14 +2275,30 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 
 EXPORT INT32  HWRAPI(GetTextureUsed) (void)
 {
-	FTextureInfo*   tmp = gr_cachehead;
-	INT32             res = 0;
+	FTextureInfo *tmp = gr_cachehead;
+	INT32 res = 0;
 
 	while (tmp)
 	{
-		res += tmp->height*tmp->width*(screen_depth/8);
+		// Figure out the correct bytes-per-pixel for this texture
+		// I don't know which one the game actually _uses_ but this
+		// follows format2bpp in hw_cache.c
+		int bpp = 1;
+		int format = tmp->grInfo.format;
+		if (format == GR_RGBA)
+			bpp = 4;
+		else if (format == GR_TEXFMT_RGB_565
+			|| format == GR_TEXFMT_ARGB_1555
+			|| format == GR_TEXFMT_ARGB_4444
+			|| format == GR_TEXFMT_ALPHA_INTENSITY_88
+			|| format == GR_TEXFMT_AP_88)
+			bpp = 2;
+
+		// Add it up!
+		res += tmp->height*tmp->width*bpp;
 		tmp = tmp->nextmipmap;
 	}
+
 	return res;
 }
 
