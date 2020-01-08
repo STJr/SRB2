@@ -1120,7 +1120,6 @@ static void P_LoadSidedefs(UINT8 *data)
 		// Special info stored in texture fields!
 		switch (sd->special)
 		{
-			case 63: // Fake floor/ceiling planes
 			case 606: //SoM: 4/4/2000: Just colormap transfer
 			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 			case 455: // Fade colormaps! mazmazz 9/12/2018 (:flag_us:)
