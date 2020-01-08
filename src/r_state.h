@@ -40,6 +40,9 @@ extern sprcache_t *spritecachedinfo;
 extern lighttable_t *colormaps;
 extern lighttable_t *fadecolormap;
 
+extern lighttable_u32_t *colormaps_u32;
+extern lighttable_u32_t *fadecolormap_u32;
+
 // Boom colormaps.
 extern extracolormap_t *extra_colormaps;
 

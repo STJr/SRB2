@@ -773,8 +773,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 	//
 	// set up caching
 	//
-	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
-	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
+	W_InitFileCache(wadfile, numlumps);
 
 #ifdef HWRENDER
 	// allocates GLPatch info structures and store them in a tree
@@ -812,6 +811,26 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
+}
+
+// Initialize lump cache.
+void W_InitFileCache(wadfile_t *wadfile, UINT16 numlumps)
+{
+	// Init lump cache
+	size_t size = numlumps * sizeof(lumpcache_t);
+	Z_Calloc(size, PU_STATIC, &wadfile->lumpcache);
+
+	// Init patch cache
+	wadfile->patchcache = Z_Calloc(sizeof(patchcache_t), PU_STATIC, NULL);
+	Z_Calloc(size, PU_STATIC, &wadfile->patchcache->lumps);
+
+	// Init picture format list
+	wadfile->patchcache->picfmt = Z_Calloc(numlumps * sizeof(UINT8), PU_STATIC, NULL);
+
+#ifdef HWRENDER
+	// allocates GLPatch info structures and store them in a tree
+	wadfile->hwrcache = M_AATreeAlloc(AATREE_ZUSER);
+#endif
 }
 
 /** Tries to load a series of files.
@@ -1447,7 +1466,9 @@ static inline boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 	if (!TestValidLump(wad, lump))
 		return false;
 
-	lcache = wadfiles[wad]->patchcache[lump];
+	if (!wadfiles[wad]->patchcache)
+		return false;
+	lcache = wadfiles[wad]->patchcache->lumps[lump];
 
 	if (ptr)
 	{
@@ -1521,7 +1542,10 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	if (rendermode == render_soft || rendermode == render_none)
 #endif
 	{
-		lumpcache_t *lumpcache = wadfiles[wad]->patchcache;
+		lumpcache_t *lumpcache;
+		if (!wadfiles[wad]->patchcache)
+			return NULL;
+		lumpcache = wadfiles[wad]->patchcache->lumps;
 		if (!lumpcache[lump])
 		{
 			size_t len = W_LumpLengthPwad(wad, lump);

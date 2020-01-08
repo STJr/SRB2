@@ -222,6 +222,7 @@ static void F_DoWipe(fademask_t *fademask)
 	// look a little messy; sorry!) but it simultaneously runs at twice the speed.
 	// In addition, we precalculate all the X and Y positions that we need to draw
 	// from and to, so it uses a little extra memory, but again, helps it run faster.
+	if (false)
 	{
 		// wipe screen, start, end
 		UINT8       *w = wipe_scr;
@@ -324,6 +325,7 @@ static void F_DoWipe(fademask_t *fademask)
 static void F_DoColormapWipe(fademask_t *fademask, UINT8 *colormap)
 {
 	// Lactozilla: F_DoWipe for WIPESTYLE_COLORMAP
+	if (false)
 	{
 		// wipe screen, start, end
 		UINT8       *w = wipe_scr;

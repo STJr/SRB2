@@ -21,6 +21,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "i_video.h"
 #include "r_data.h"
 #include "r_textures.h"
 #include "r_things.h"
@@ -693,10 +694,14 @@ static void P_NetUnArchiveColormaps(void)
 		if (existing_exc)
 			exc->colormap = existing_exc->colormap;
 		else
+		{
 			// CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
 			// 	R_GetRgbaR(rgba), R_GetRgbaG(rgba), R_GetRgbaB(rgba), R_GetRgbaA(rgba),
 			//	R_GetRgbaR(fadergba), R_GetRgbaG(fadergba), R_GetRgbaB(fadergba), R_GetRgbaA(fadergba));
 			exc->colormap = R_CreateLightTable(exc);
+			if (truecolor)
+				exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+		}
 
 		// HACK: If this dummy is a duplicate, we're going to add it
 		// to the extra_colormaps list anyway. I think this is faster

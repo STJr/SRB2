@@ -25,6 +25,7 @@
 #include "keys.h"
 #include "i_video.h"
 #include "m_menu.h"
+#include "m_misc.h"
 #include "am_map.h"
 #include "d_main.h"
 #include "v_video.h"
@@ -89,8 +90,10 @@ INT32 viewangletox[FINEANGLES/2];
 angle_t xtoviewangle[MAXVIDWIDTH+1];
 
 lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
-lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
+
+lighttable_u32_t *scalelight_u32[LIGHTLEVELS][MAXLIGHTSCALE];
+lighttable_u32_t *zlight_u32[LIGHTLEVELS][MAXLIGHTZ];
 
 // Hack to support extra boom colormaps.
 extracolormap_t *extra_colormaps = NULL;
@@ -535,6 +538,7 @@ static inline void R_InitLightTables(void)
 				level = NUMCOLORMAPS-1;
 
 			zlight[i][j] = colormaps + level*256;
+			zlight_u32[i][j] = colormaps_u32 + level*256;
 		}
 	}
 }
@@ -619,6 +623,7 @@ void R_ExecuteSetViewSize(void)
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
+	M_Memset32(scalelight_u32, 0xFF, sizeof(scalelight_u32));
 
 	// Calculate the light levels to use for each level/scale combination.
 	for (i = 0; i< LIGHTLEVELS; i++)
@@ -635,6 +640,7 @@ void R_ExecuteSetViewSize(void)
 				level = NUMCOLORMAPS - 1;
 
 			scalelight[i][j] = colormaps + level*256;
+			scalelight_u32[i][j] = colormaps_u32 + level*256;
 		}
 	}
 

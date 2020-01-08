@@ -16,6 +16,7 @@
 #include "doomdef.h"
 #include "console.h"
 #include "g_game.h"
+#include "i_video.h"
 #include "p_setup.h" // levelflats
 #include "p_slopes.h"
 #include "r_data.h"
@@ -87,6 +88,7 @@ static INT32 spanstart[MAXVIDHEIGHT];
 // texture mapping
 //
 lighttable_t **planezlight;
+lighttable_u32_t **planezlight_u32;
 static fixed_t planeheight;
 
 //added : 10-02-98: yslopetab is what yslope used to be,
@@ -233,13 +235,40 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 
 #ifdef ESLOPE
 	if (currentplane->slope)
-		ds_colormap = colormaps;
+	{
+		if (truecolor)
+		{
+			ds_colormap = (lighttable_t*)colormaps_u32;
+			ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
+		}
+		else
+		{
+			ds_colormap = colormaps;
+			ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
+		}
+	}
 	else
 #endif
-	ds_colormap = planezlight[pindex];
+	{
+		if (truecolor)
+		{
+			ds_colormap = (UINT8 *)(planezlight_u32[pindex]);
+			ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
+		}
+		else
+		{
+			ds_colormap = planezlight[pindex];
+			ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
+		}
+	}
 
 	if (currentplane->extra_colormap)
-		ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
+	{
+		if (truecolor)
+			ds_colormap = (UINT8 *)(currentplane->extra_colormap->colormap_u32 + ((UINT32*)ds_colormap - colormaps_u32));
+		else
+			ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
+	}
 
 	ds_y = y;
 	ds_x1 = x1;
@@ -618,6 +647,7 @@ void R_DrawPlanes(void)
 	// Note: are these two lines really needed?
 	// R_DrawSinglePlane and R_DrawSkyPlane do span/column drawer resets themselves anyway
 	spanfunc = spanfuncs[BASEDRAWFUNC];
+	ds_picfmt = PICFMT_FLAT;
 
 	for (i = 0; i < MAXVISPLANES; i++, pl++)
 	{
@@ -652,6 +682,10 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
 	colfunc = colfuncs[BASEDRAWFUNC];
+
+	// set drawer vars
+	dc_colmapstyle = TC_COLORMAPSTYLE_8BPP;
+	dc_picfmt = textures[skytexture]->format;
 
 	// use correct aspect ratio scale
 	dc_iscale = skyscale;
@@ -809,7 +843,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 		if (pl->polyobj->translucency >= 10)
 			return; // Don't even draw it
 		else if (pl->polyobj->translucency > 0)
-			ds_transmap = transtables + ((pl->polyobj->translucency-1)<<FF_TRANSSHIFT);
+		{
+			int transval = pl->polyobj->translucency-1;
+			if (truecolor)
+				ds_alpha = transval;
+			else
+				ds_transmap = transtables + (transval<<FF_TRANSSHIFT);
+		}
 		else // Opaque, but allow transparent flat pixels
 			spanfunctype = SPANDRAWFUNC_SPLAT;
 
@@ -847,29 +887,41 @@ void R_DrawSinglePlane(visplane_t *pl)
 		{
 			spanfunctype = SPANDRAWFUNC_TRANS;
 
-			// Hacked up support for alpha value in software mode Tails 09-24-2002
-			if (pl->ffloor->alpha < 12)
-				return; // Don't even draw it
-			else if (pl->ffloor->alpha < 38)
-				ds_transmap = transtables + ((tr_trans90-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 64)
-				ds_transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 89)
-				ds_transmap = transtables + ((tr_trans70-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 115)
-				ds_transmap = transtables + ((tr_trans60-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 140)
-				ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 166)
-				ds_transmap = transtables + ((tr_trans40-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 192)
-				ds_transmap = transtables + ((tr_trans30-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 217)
-				ds_transmap = transtables + ((tr_trans20-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 243)
-				ds_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
-			else // Opaque, but allow transparent flat pixels
-				spanfunctype = SPANDRAWFUNC_SPLAT;
+			if (truecolor)
+			{
+				if (pl->ffloor->alpha == 255) // Opaque, but allow transparent flat pixels
+					spanfunctype = SPANDRAWFUNC_SPLAT;
+				else if (pl->ffloor->alpha < 1)
+					return; // Don't even draw it
+				else
+					ds_alpha = pl->ffloor->alpha;
+			}
+			else
+			{
+				// Hacked up support for alpha value in software mode Tails 09-24-2002
+				if (pl->ffloor->alpha < 12)
+					return; // Don't even draw it
+				else if (pl->ffloor->alpha < 38)
+					ds_transmap = transtables + ((tr_trans90-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 64)
+					ds_transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 89)
+					ds_transmap = transtables + ((tr_trans70-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 115)
+					ds_transmap = transtables + ((tr_trans60-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 140)
+					ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 166)
+					ds_transmap = transtables + ((tr_trans40-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 192)
+					ds_transmap = transtables + ((tr_trans30-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 217)
+					ds_transmap = transtables + ((tr_trans20-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 243)
+					ds_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
+				else // Opaque, but allow transparent flat pixels
+					spanfunctype = SPANDRAWFUNC_SPLAT;
+			}
 
 #ifdef SHITPLANESPARENCY
 			if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
@@ -907,9 +959,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 					bottom = vid.height;
 
 				// Only copy the part of the screen we need
-				VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.width : screens[0]+((top)*vid.width), screens[1]+((top)*vid.width),
-				                     vid.width, bottom-top,
-				                     vid.width, vid.width);
+				VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.rowbytes : screens[0]+((top)*vid.rowbytes), screens[1]+((top)*vid.rowbytes),
+				                     vid.rowbytes, bottom-top,
+				                     vid.rowbytes, vid.rowbytes);
 			}
 		}
 #endif
@@ -942,9 +994,18 @@ void R_DrawSinglePlane(visplane_t *pl)
 		case LEVELFLAT_NONE:
 			return;
 		case LEVELFLAT_FLAT:
-			ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
-			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
+#ifdef PICTURES_ALLOWDEPTH
+			if (truecolor)
+			{
+				ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
+				if (!ds_source)
+					return;
+			}
+			else
+#endif
+				ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
 			// Raw flats always have dimensions that are powers-of-two numbers.
+			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
 			ds_powersoftwo = true;
 			break;
 		default:
@@ -1061,15 +1122,26 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else
 			spanfunctype = SPANDRAWFUNC_TILTED;
 
-		planezlight = scalelight[light];
+		if (truecolor)
+			planezlight_u32 = scalelight_u32[light];
+		else
+			planezlight = scalelight[light];
 	} else
 #endif // ESLOPE
-
-	planezlight = zlight[light];
+	{
+		if (truecolor)
+			planezlight_u32 = zlight_u32[light];
+		else
+			planezlight = zlight[light];
+	}
 
 	// Use the correct span drawer depending on the powers-of-twoness
 	if (!ds_powersoftwo)
 	{
+#if 1
+		if (truecolor) // sorry nothing
+			return;
+#endif
 		if (spanfuncs_npo2[spanfunctype])
 			spanfunc = spanfuncs_npo2[spanfunctype];
 		else

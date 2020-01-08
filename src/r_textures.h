@@ -59,6 +59,7 @@ typedef struct
 	boolean holes;
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 	void *flat; // The texture, as a flat.
+	INT32 format; // The format of the texture.
 
 	// All the patches[patchcount] are drawn back to front into the cached texture.
 	INT16 patchcount;

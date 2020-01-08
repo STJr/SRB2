@@ -52,6 +52,7 @@ typedef struct
 // from darkening PLAYPAL to all black.
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
+typedef UINT32 lighttable_u32_t;
 
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s
@@ -65,6 +66,7 @@ typedef struct extracolormap_s
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+	lighttable_u32_t *colormap_u32;
 
 #ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR

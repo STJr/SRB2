@@ -2047,6 +2047,14 @@ char *sizeu5(size_t num)
 	return sizeu5_buf;
 }
 
+// 32-bit memset
+void M_Memset32(void *dest, UINT64 value, uintptr_t size)
+{
+	uintptr_t i;
+	for (i = 0; i < size; i++)
+		((char*)dest)[i] = ((char*)&value)[i & 3];
+}
+
 #if defined (__GNUC__) && defined (__i386__) // from libkwave, under GPL
 // Alam: note libkwave memcpy code comes from mplayer's libvo/aclib_template.c, r699
 

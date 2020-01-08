@@ -189,6 +189,12 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	realwidth = vid.width;
 	realheight = vid.height;
 
+	if (truecolor)
+	{
+		bpp = 32;
+		sw_texture_format = SDL_PIXELFORMAT_RGBA32;
+	}
+
 	if (window)
 	{
 		if (fullscreen)
@@ -242,14 +248,17 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			SDL_DestroyTexture(texture);
 		}
 
-		if (!usesdl2soft)
+		if (!truecolor)
 		{
-			sw_texture_format = SDL_PIXELFORMAT_RGB565;
-		}
-		else
-		{
-			bpp = 32;
-			sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
+			if (!usesdl2soft)
+			{
+				sw_texture_format = SDL_PIXELFORMAT_RGB565;
+			}
+			else
+			{
+				bpp = 32;
+				sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
+			}
 		}
 
 		texture = SDL_CreateTexture(renderer, sw_texture_format, SDL_TEXTUREACCESS_STREAMING, width, height);
@@ -1501,6 +1510,8 @@ INT32 VID_SetMode(INT32 modeNum)
 
 	vid.recalc = 1;
 	vid.bpp = 1;
+	if (truecolor)
+		vid.bpp = 4;
 
 	if (modeNum < 0)
 		modeNum = 0;
@@ -1670,6 +1681,7 @@ void I_StartupGraphics(void)
 
 	usesdl2soft = M_CheckParm("-softblit");
 	borderlesswindow = M_CheckParm("-borderless");
+	truecolor = M_CheckParm("-truecolor");
 
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	VID_Command_ModeList_f();
@@ -1689,8 +1701,10 @@ void I_StartupGraphics(void)
 	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's
 	vid.recalc = true; // Set up the console stufff
 	vid.direct = NULL; // Maybe direct access?
-	vid.bpp = 1; // This is the game engine's Bpp
 	vid.WndParent = NULL; //For the window?
+	vid.bpp = 1; // This is the game engine's Bpp
+	if (truecolor)
+		vid.bpp = 4;
 
 #ifdef HAVE_TTF
 	I_ShutdownTTF();

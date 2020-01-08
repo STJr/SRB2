@@ -69,6 +69,7 @@ fixed_t dc_iscale, dc_texturemid;
 UINT8 dc_hires; // under MSVC boolean is a byte, while on other systems, it a bit,
                // soo lets make it a byte on all system for the ASM code
 UINT8 dc_picfmt = PICFMT_PATCH;
+UINT8 dc_colmapstyle = TC_COLORMAPSTYLE_8BPP;
 UINT8 *dc_source;
 
 // -----------------------
@@ -105,6 +106,7 @@ fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 UINT16 ds_flatwidth, ds_flatheight;
 boolean ds_powersoftwo;
 UINT8 ds_picfmt = PICFMT_FLAT;
+UINT8 ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
 
 UINT8 *ds_source; // start of a 64*64 tile image
 UINT8 *ds_transmap; // one of the translucency tables
