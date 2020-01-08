@@ -7286,7 +7286,7 @@ static void P_FlameJetSceneryThink(mobj_t *mobj)
 	if (!(mobj->flags2 & MF2_FIRING))
 		return;
 
-	if ((leveltime & 3) == 0)
+	if ((leveltime & 3) != 0)
 		return;
 
 	// Wave the flames back and forth. Reactiontime determines which direction it's going.
@@ -7325,7 +7325,7 @@ static void P_VerticalFlameJetSceneryThink(mobj_t *mobj)
 	if (!(mobj->flags2 & MF2_FIRING))
 		return;
 
-	if ((leveltime & 3) == 0)
+	if ((leveltime & 3) != 0)
 		return;
 
 	// Wave the flames back and forth. Reactiontime determines which direction it's going.
