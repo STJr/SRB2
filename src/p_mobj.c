@@ -3298,7 +3298,7 @@ boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 		*rover->topheight;
 
 	if (!player->powers[pw_carry] && !player->homing
-		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= 3*TICRATE) && player->mo->ceilingz-topheight >= player->mo->height)
+		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= DASHMODE_THRESHOLD) && player->mo->ceilingz-topheight >= player->mo->height)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
 		&& abs(player->mo->z - topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
