@@ -1723,8 +1723,6 @@ void I_StartupHardwareGraphics(void)
 	static boolean glstartup = false;
 	if (!glstartup)
 	{
-		if (rendermode == render_opengl)
-	{
 		HWD.pfnInit             = hwSym("Init",NULL);
 		HWD.pfnFinishUpdate     = NULL;
 		HWD.pfnDraw2DLine       = hwSym("Draw2DLine",NULL);
@@ -1760,10 +1758,7 @@ void I_StartupHardwareGraphics(void)
 		HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
 		HWD.pfnInitCustomShaders = hwSym("InitCustomShaders",NULL);
 
-		// check gl renderer lib
-		if (HWD.pfnGetRenderVersion() != VERSION)
-			I_Error("%s", M_GetText("The version of the renderer doesn't match the version of the executable\nBe sure you have installed SRB2 properly.\n"));
-		if (!HWD.pfnInit(I_Error)) // let load the OpenGL library
+		if (!HWD.pfnInit()) // let load the OpenGL library
 			rendermode = render_soft;
 		else
 			glstartup = true;
