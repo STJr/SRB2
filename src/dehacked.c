@@ -1629,6 +1629,11 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->typeoflevel = tol;
 				}
 			}
+			else if (fastcmp(word, "KEYWORD"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->keyword, word2,
+						sizeof(mapheaderinfo[num-1]->keyword), va("Level header %d: keyword", num));
+			}
 			else if (fastcmp(word, "MUSIC"))
 			{
 				if (fastcmp(word2, "NONE"))
