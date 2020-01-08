@@ -5493,7 +5493,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spriteinfo_t *sprinfo;
 	size_t lumpoff;
 	unsigned rot;
-	UINT8 flip;
+	UINT16 flip;
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
 
 	angle_t ang;
@@ -5579,12 +5579,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		flip = sprframe->flip; // Will only be 0x00 or 0xFF
 
 		if (papersprite && ang < ANGLE_180)
-		{
-			if (flip)
-				flip = 0;
-			else
-				flip = 255;
-		}
+			flip ^= 0xFFFF;
 	}
 	else
 	{
@@ -5593,6 +5588,11 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			rot = 6; // F7 slot
 		else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
 			rot = 2; // F3 slot
+		else if (sprframe->rotate & SRF_3DGE) // 16-angle mode
+		{
+			rot = (ang+ANGLE_180+ANGLE_11hh)>>28;
+			rot = ((rot & 1)<<3)|(rot>>1);
+		}
 		else // Normal behaviour
 			rot = (ang+ANGLE_202h)>>29;
 
@@ -5601,12 +5601,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		flip = sprframe->flip & (1<<rot);
 
 		if (papersprite && ang < ANGLE_180)
-		{
-			if (flip)
-				flip = 0;
-			else
-				flip = 1<<rot;
-		}
+			flip ^= (1<<rot);
 	}
 
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
@@ -5621,7 +5616,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->rollangle)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
-		if (!sprframe->rotsprite.cached[rot])
+		if (!(sprframe->rotsprite.cached & (1<<rot)))
 			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
