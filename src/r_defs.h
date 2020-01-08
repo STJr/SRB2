@@ -83,7 +83,7 @@ typedef struct extracolormap_s
   */
 typedef struct
 {
-	fixed_t x, y, z;
+	fixed_t x, y;
 } vertex_t;
 
 // Forward of linedefs, for sectors.
@@ -729,9 +729,6 @@ typedef struct
 {
 	patch_t *patch[8][ROTANGLES];
 	boolean cached[8];
-#ifdef HWRENDER
-	aatree_t *hardware_patch[8];
-#endif/*HWRENDER*/
 } rotsprite_t;
 #endif/*ROTSPRITE*/
 

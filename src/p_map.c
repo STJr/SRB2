@@ -377,7 +377,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		{
 			object->angle = object->player->drawangle = spring->angle;
 
-			if (!demoplayback || P_AnalogMove(object->player))
+			if (!demoplayback || P_ControlStyle(object->player) == CS_LMAOGALOG)
 			{
 				if (object->player == &players[consoleplayer])
 					localangle = spring->angle;
@@ -426,7 +426,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				object->player->pflags |= pflags;
 				object->player->secondjump = secondjump;
 			}
-			else if (object->player->dashmode >= 3*TICRATE)
+			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
 				P_SetPlayerMobjState(object, S_PLAY_DASH);
 			else if (P_IsObjectOnGround(object) && horizspeed >= FixedMul(object->player->runspeed, object->scale))
 				P_SetPlayerMobjState(object, S_PLAY_RUN);
@@ -632,7 +632,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
 	{
 		if (sonic-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, false);
+			CV_SetValue(&cv_analog[1], false);
 		P_ResetPlayer(sonic);
 		P_SetTarget(&sonic->mo->tracer, tails->mo);
 		sonic->powers[pw_carry] = CR_PLAYER;
@@ -644,7 +644,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	}
 	else {
 		if (sonic-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, true);
+			CV_SetValue(&cv_analog[1], true);
 		P_SetTarget(&sonic->mo->tracer, NULL);
 		sonic->powers[pw_carry] = CR_NONE;
 	}
@@ -806,7 +806,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	// SF_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
 	if ((tmthing->player)
-		&& (((tmthing->player->charflags & SF_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& ((((tmthing->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)) && (tmthing->player->dashmode >= DASHMODE_THRESHOLD)
 		&& (thing->flags & (MF_MONITOR)
 		|| (thing->type == MT_SPIKE
 		|| thing->type == MT_WALLSPIKE)))
@@ -1327,7 +1327,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			thing->angle = tmthing->angle;
 
-			if (!demoplayback || P_AnalogMove(thing->player))
+			if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 			{
 				if (thing->player == &players[consoleplayer])
 					localangle = thing->angle;
@@ -1626,7 +1626,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 	else if (thing->player) {
 		if (thing->player-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, true);
+			CV_SetValue(&cv_analog[1], true);
 		if (thing->player->powers[pw_carry] == CR_PLAYER)
 		{
 			P_SetTarget(&thing->tracer, NULL);
@@ -1948,6 +1948,19 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	// this line is out of the if so upper and lower textures can be hit by a splat
 	blockingline = ld;
+
+#ifdef HAVE_BLUA
+	{
+		UINT8 shouldCollide = LUAh_MobjLineCollide(tmthing, blockingline); // checks hook for thing's type
+		if (P_MobjWasRemoved(tmthing))
+			return true; // one of them was removed???
+		if (shouldCollide == 1)
+			return false; // force collide
+		else if (shouldCollide == 2)
+			return true; // force no collide
+	}
+#endif
+
 	if (!ld->backsector) // one sided line
 	{
 		if (P_PointOnLineSide(tmthing->x, tmthing->y, ld))
@@ -1992,7 +2005,7 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	if (lowfloor < tmdropoffz)
 		tmdropoffz = lowfloor;
-
+	
 	return true;
 }
 
@@ -3496,7 +3509,7 @@ isblocking:
 			&& canclimb)
 			{
 				slidemo->angle = climbangle;
-				/*if (!demoplayback || P_AnalogMove(slidemo->player))
+				/*if (!demoplayback || P_ControlStyle(slidemo->player) == CS_LMAOGALOG)
 				{
 					if (slidemo->player == &players[consoleplayer])
 						localangle = slidemo->angle;

@@ -20,6 +20,15 @@
 // Command buffer & command execution
 //===================================
 
+/* Lua command registration flags. */
+enum
+{
+	COM_ADMIN       = 1,
+	COM_SPLITSCREEN = 2,
+	COM_LOCAL       = 4,
+};
+
+/* Command buffer flags. */
 enum
 {
 	COM_SAFE = 1,
@@ -148,6 +157,9 @@ void CV_ToggleExecVersion(boolean enable);
 
 // register a variable for use at the console
 void CV_RegisterVar(consvar_t *variable);
+
+// returns a console variable by name
+consvar_t *CV_FindVar(const char *name);
 
 // sets changed to 0 for every console variable
 void CV_ClearChangedFlags(void);

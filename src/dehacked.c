@@ -4804,11 +4804,13 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 		if (introchanged)
 		{
 			menuactive = false;
+			I_UpdateMouseGrab();
 			COM_BufAddText("playintro");
 		}
 		else if (titlechanged)
 		{
 			menuactive = false;
+			I_UpdateMouseGrab();
 			COM_BufAddText("exitgame"); // Command_ExitGame_f() but delayed
 		}
 	}
@@ -9459,6 +9461,10 @@ struct {
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
 	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
 
+	// Dashmode constants
+	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
+	{"DASHMODE_MAX",DASHMODE_MAX},
+
 	// Character abilities!
 	// Primary
 	{"CA_NONE",CA_NONE}, // now slot 0!
@@ -9734,6 +9740,11 @@ struct {
 	{"BT_CUSTOM1",BT_CUSTOM1}, // Lua customizable
 	{"BT_CUSTOM2",BT_CUSTOM2}, // Lua customizable
 	{"BT_CUSTOM3",BT_CUSTOM3}, // Lua customizable
+
+	// Lua command registration flags
+	{"COM_ADMIN",COM_ADMIN},
+	{"COM_SPLITSCREEN",COM_SPLITSCREEN},
+	{"COM_LOCAL",COM_LOCAL},
 
 	// cvflags_t
 	{"CV_SAVE",CV_SAVE},

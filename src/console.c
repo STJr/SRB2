@@ -592,6 +592,8 @@ void CON_ToggleOff(void)
 	CON_ClearHUD();
 	con_forcepic = 0;
 	con_clipviewtop = -1; // remove console clipping of view
+
+	I_UpdateMouseGrab();
 }
 
 boolean CON_Ready(void)
@@ -616,6 +618,7 @@ void CON_Ticker(void)
 		consoletoggle = false;
 		con_destlines = 0;
 		CON_ClearHUD();
+		I_UpdateMouseGrab();
 	}
 
 	// console key was pushed
@@ -628,6 +631,7 @@ void CON_Ticker(void)
 		{
 			con_destlines = 0;
 			CON_ClearHUD();
+			I_UpdateMouseGrab();
 		}
 		else
 			CON_ChangeHeight();
