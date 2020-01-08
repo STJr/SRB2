@@ -1887,7 +1887,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		while (node)
 		{
 			mo = node->m_thing;
-			if (mo->flags & MF_PUSHABLE)
+			if ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse))
 				numpush++;
 			node = node->m_thinglist_next;
 		}
@@ -8974,7 +8974,8 @@ void T_Pusher(pusher_t *p)
 			|| thing->type == MT_EXTRALARGEBUBBLE))
 			continue;
 
-		if (!(thing->flags & MF_PUSHABLE) && !(thing->type == MT_PLAYER
+		if (!((thing->flags & MF_PUSHABLE) || ((thing->info->flags & MF_PUSHABLE) && thing->fuse))
+			&& !(thing->type == MT_PLAYER
 			|| thing->type == MT_SMALLBUBBLE
 			|| thing->type == MT_MEDIUMBUBBLE
 			|| thing->type == MT_EXTRALARGEBUBBLE

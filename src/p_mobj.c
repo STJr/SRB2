@@ -1892,7 +1892,7 @@ void P_XYMovement(mobj_t *mo)
 #endif
 
 	// Pushables can break some blocks
-	if (CheckForBustableBlocks && mo->flags & MF_PUSHABLE)
+	if (CheckForBustableBlocks && ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse)))
 		P_PushableCheckBustables(mo);
 
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true)
