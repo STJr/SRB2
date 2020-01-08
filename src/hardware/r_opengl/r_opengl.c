@@ -31,6 +31,7 @@
 #include <math.h>
 #include "r_opengl.h"
 #include "r_vbo.h"
+#include "../../p_tick.h" // for leveltime (NOTE: THIS IS BAD, FIGURE OUT HOW TO PROPERLY IMPLEMENT gl_leveltime)
 
 #if defined (HWRENDER) && !defined (NOROPENGL)
 
@@ -595,19 +596,6 @@ static gl_shaderprogram_t gl_shaderprograms[MAXSHADERPROGRAMS];
 // GLSL Software fragment shader
 //
 
-
-#if 0
-// Old ZDoom style
-#define GLSL_DOOM_COLORMAP \
-	"float R_DoomColormap(float light, float z)\n" \
-	"{\n" \
-		"float vis = min(29.0 / z, 24.0 / 32.0);\n" \
-		"float shade = 2.0 - (light + 12.0) / 128.0;\n" \
-		"float lightscale = shade - vis;\n" \
-		"return lightscale * 31.0;\n" \
-	"}\n"
-#else
-// TODO: This is R_PlaneColormap, need a way to get polygon normal to add R_WallColormap
 #define GLSL_DOOM_COLORMAP \
 	"float R_DoomColormap(float light, float z)\n" \
 	"{\n" \
@@ -617,7 +605,6 @@ static gl_shaderprogram_t gl_shaderprograms[MAXSHADERPROGRAMS];
 		"float scale = 160.0 / (lightz + 1.0);\n" \
 		"return startmap - scale * 0.5;\n" \
 	"}\n"
-#endif
 
 #define GLSL_DOOM_LIGHT_EQUATION \
 	"float R_DoomLightingEquation(float light)\n" \
@@ -666,6 +653,21 @@ static gl_shaderprogram_t gl_shaderprograms[MAXSHADERPROGRAMS];
 		"gl_FragColor = final_color;\n" \
 	"}\0"
 
+#define GLSL_FOG_FRAGMENT_SHADER \
+	"uniform vec4 tint_color;\n" \
+	"uniform vec4 fade_color;\n" \
+	"uniform float lighting;\n" \
+	"uniform float fade_start;\n" \
+	"uniform float fade_end;\n" \
+	GLSL_DOOM_COLORMAP \
+	GLSL_DOOM_LIGHT_EQUATION \
+	"void main(void) {\n" \
+		"vec4 base_color = gl_Color;\n" \
+		"vec4 final_color = base_color;\n" \
+		GLSL_SOFTWARE_TINT_EQUATION \
+		GLSL_SOFTWARE_FADE_EQUATION \
+		"gl_FragColor = final_color;\n" \
+	"}\0"
 
 //
 // GLSL generic fragment shader
@@ -698,9 +700,7 @@ static const char *fragment_shaders[] = {
 	GLSL_SOFTWARE_FRAGMENT_SHADER,
 
 	// Fog fragment shader
-	"void main(void) {\n"
-		"gl_FragColor = gl_Color;\n"
-	"}\0",
+	GLSL_FOG_FRAGMENT_SHADER,
 
 	// Sky fragment shader
 	"uniform sampler2D tex;\n"
@@ -1812,12 +1812,12 @@ static void load_shaders(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *
 				UNIFORM_1(shader->uniforms[gluniform_lighting], Surface->LightInfo.light_level, pglUniform1f);
 				UNIFORM_1(shader->uniforms[gluniform_fade_start], Surface->LightInfo.fade_start, pglUniform1f);
 				UNIFORM_1(shader->uniforms[gluniform_fade_end], Surface->LightInfo.fade_end, pglUniform1f);
+				UNIFORM_1(shader->uniforms[gluniform_leveltime], ((float)leveltime) / TICRATE, pglUniform1f);
 
 				// Custom shader uniforms
-				if (custom)
-				{
-					UNIFORM_1(shader->uniforms[gluniform_leveltime], (float)gl_leveltime, pglUniform1f);
-				}
+				//if (custom) { }
+				(void)custom;
+
 				#undef UNIFORM_1
 				#undef UNIFORM_2
 				#undef UNIFORM_3

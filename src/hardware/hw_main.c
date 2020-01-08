@@ -216,20 +216,27 @@ UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap) // Let's see if 
 	RGBA_t realcolor, surfcolor;
 	INT32 alpha;
 
-	light = light - (255 - light);
-
-	// Don't go out of bounds
-	if (light < 0)
-		light = 0;
-	else if (light > 255)
-		light = 255;
-
 	realcolor.rgba = (colormap != NULL) ? colormap->rgba : GL_DEFAULTMIX;
 
-	alpha = (realcolor.s.alpha*255)/25;
+	if (cv_grshaders.value)
+	{
+		surfcolor.s.alpha = (255 - light);
+	}
+	else
+	{
+		light = light - (255 - light);
 
-	// at 255 brightness, alpha is between 0 and 127, at 0 brightness alpha will always be 255
-	surfcolor.s.alpha = (alpha*light)/(2*256)+255-light;
+		// Don't go out of bounds
+		if (light < 0)
+			light = 0;
+		else if (light > 255)
+			light = 255;
+
+		alpha = (realcolor.s.alpha*255)/25;
+
+		// at 255 brightness, alpha is between 0 and 127, at 0 brightness alpha will always be 255
+		surfcolor.s.alpha = (alpha*light) / (2*256) + 255-light;
+	}
 
 	return surfcolor.s.alpha;
 }
