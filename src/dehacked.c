@@ -9461,6 +9461,10 @@ struct {
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
 	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
 
+	// Dashmode constants
+	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
+	{"DASHMODE_MAX",DASHMODE_MAX},
+
 	// Character abilities!
 	// Primary
 	{"CA_NONE",CA_NONE}, // now slot 0!
