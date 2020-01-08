@@ -729,9 +729,6 @@ typedef struct
 {
 	patch_t *patch[16][ROTANGLES];
 	UINT16 cached;
-#ifdef HWRENDER
-	aatree_t *hardware_patch[16];
-#endif/*HWRENDER*/
 } rotsprite_t;
 #endif/*ROTSPRITE*/
 

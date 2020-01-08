@@ -781,6 +781,10 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_fireaxis2);
 	CV_RegisterVar(&cv_firenaxis);
 	CV_RegisterVar(&cv_firenaxis2);
+	CV_RegisterVar(&cv_deadzone);
+	CV_RegisterVar(&cv_deadzone2);
+	CV_RegisterVar(&cv_digitaldeadzone);
+	CV_RegisterVar(&cv_digitaldeadzone2);
 
 	// filesrch.c
 	CV_RegisterVar(&cv_addons_option);
@@ -819,20 +823,34 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_joyscale2);
 
 	// Analog Control
-	CV_RegisterVar(&cv_analog);
-	CV_RegisterVar(&cv_analog2);
-	CV_RegisterVar(&cv_useranalog);
-	CV_RegisterVar(&cv_useranalog2);
+	CV_RegisterVar(&cv_analog[0]);
+	CV_RegisterVar(&cv_analog[1]);
+	CV_RegisterVar(&cv_useranalog[0]);
+	CV_RegisterVar(&cv_useranalog[1]);
 
 	// deez New User eXperiences
-	CV_RegisterVar(&cv_directionchar);
-	CV_RegisterVar(&cv_directionchar2);
+	CV_RegisterVar(&cv_directionchar[0]);
+	CV_RegisterVar(&cv_directionchar[1]);
 	CV_RegisterVar(&cv_autobrake);
 	CV_RegisterVar(&cv_autobrake2);
 
-	// Ported from kart
-	CV_RegisterVar(&cv_deadzone);
-	CV_RegisterVar(&cv_deadzone2);
+	// hi here's some new controls
+	CV_RegisterVar(&cv_cam_shiftfacing[0]);
+	CV_RegisterVar(&cv_cam_shiftfacing[1]);
+	CV_RegisterVar(&cv_cam_turnfacing[0]);
+	CV_RegisterVar(&cv_cam_turnfacing[1]);
+	CV_RegisterVar(&cv_cam_turnfacingability[0]);
+	CV_RegisterVar(&cv_cam_turnfacingability[1]);
+	CV_RegisterVar(&cv_cam_turnfacingspindash[0]);
+	CV_RegisterVar(&cv_cam_turnfacingspindash[1]);
+	CV_RegisterVar(&cv_cam_turnfacinginput[0]);
+	CV_RegisterVar(&cv_cam_turnfacinginput[1]);
+	CV_RegisterVar(&cv_cam_centertoggle[0]);
+	CV_RegisterVar(&cv_cam_centertoggle[1]);
+	CV_RegisterVar(&cv_cam_lockedinput[0]);
+	CV_RegisterVar(&cv_cam_lockedinput[1]);
+	CV_RegisterVar(&cv_cam_lockonboss[0]);
+	CV_RegisterVar(&cv_cam_lockonboss[1]);
 
 	// s_sound.c
 	CV_RegisterVar(&cv_soundvolume);
@@ -1501,9 +1519,9 @@ void SendWeaponPref(void)
 	buf[0] = 0;
 	if (cv_flipcam.value)
 		buf[0] |= 1;
-	if (cv_analog.value)
+	if (cv_analog[0].value && cv_directionchar[0].value != 2)
 		buf[0] |= 2;
-	if (cv_directionchar.value)
+	if (cv_directionchar[0].value == 1)
 		buf[0] |= 4;
 	if (cv_autobrake.value)
 		buf[0] |= 8;
@@ -1517,9 +1535,9 @@ void SendWeaponPref2(void)
 	buf[0] = 0;
 	if (cv_flipcam2.value)
 		buf[0] |= 1;
-	if (cv_analog2.value)
+	if (cv_analog[1].value && cv_directionchar[1].value != 2)
 		buf[0] |= 2;
-	if (cv_directionchar2.value)
+	if (cv_directionchar[1].value == 1)
 		buf[0] |= 4;
 	if (cv_autobrake2.value)
 		buf[0] |= 8;
@@ -1984,7 +2002,7 @@ static void Command_Map_f(void)
 		CV_SetValue(&cv_usemouse, tutorialusemouse);
 		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
 		CV_SetValue(&cv_mousemove, tutorialmousemove);
-		CV_SetValue(&cv_analog, tutorialanalog);
+		CV_SetValue(&cv_analog[0], tutorialanalog);
 	}
 	tutorialmode = false; // warping takes us out of tutorial mode
 

@@ -122,9 +122,6 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	{
 		for (ang = 0; ang < ROTANGLES; ang++)
 			sprtemp[frame].rotsprite.patch[r][ang] = NULL;
-#ifdef HWRENDER
-		sprtemp[frame].rotsprite.hardware_patch[r] = M_AATreeAlloc(AATREE_ZUSER);
-#endif/*HWRENDER*/
 	}
 #endif/*ROTSPRITE*/
 
@@ -294,7 +291,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 				// lump is a png so convert it
 				if (R_IsLumpPNG((UINT8 *)png, len))
 				{
-					png = R_PNGToPatch((UINT8 *)png, len, NULL, true);
+					png = R_PNGToPatch((UINT8 *)png, len, NULL);
 					M_Memcpy(&patch, png, sizeof(INT16)*4);
 				}
 				Z_Free(png);

@@ -571,7 +571,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL);
 		else
 #endif
 #ifdef WALLFLATS
