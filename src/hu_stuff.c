@@ -17,6 +17,7 @@
 
 #include "m_menu.h" // gametype_cons_t
 #include "m_cond.h" // emblems
+#include "m_misc.h" // word jumping
 
 #include "d_clisrv.h"
 
@@ -1349,9 +1350,19 @@ boolean HU_Responder(event_t *ev)
 			chat_scrolltime = 4;
 		}
 		else if (c == KEY_LEFTARROW && c_input != 0 && !OLDCHAT) // i said go back
-			c_input--;
+		{
+			if (ctrldown)
+				c_input = M_JumpWordReverse(w_chat, c_input);
+			else
+				c_input--;
+		}
 		else if (c == KEY_RIGHTARROW && c_input < strlen(w_chat) && !OLDCHAT) // don't need to check for admin or w/e here since the chat won't ever contain anything if it's muted.
-			c_input++;
+		{
+			if (ctrldown)
+				c_input += M_JumpWord(&w_chat[c_input]);
+			else
+				c_input++;
+		}
 		return true;
 	}
 #endif
