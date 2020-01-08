@@ -411,6 +411,8 @@ static void D_Display(void)
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+					if (truecolor)
+						topleft_u32 = (UINT32 *)screens[0] + viewwindowy*vid.width + viewwindowx;
 					objectsdrawn = 0;
 	#ifdef HWRENDER
 					if (rendermode != render_soft)
@@ -435,6 +437,8 @@ static void D_Display(void)
 						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
 
 						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+						if (truecolor)
+							topleft_u32 = (UINT32 *)screens[0] + viewwindowy*vid.width + viewwindowx;
 
 						R_RenderPlayerView(&players[secondarydisplayplayer]);
 

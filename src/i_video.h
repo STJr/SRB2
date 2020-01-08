@@ -41,6 +41,10 @@ extern rendermode_t rendermode;
 */
 extern boolean highcolor;
 
+/**	\brief use truecolor modes if true
+*/
+extern boolean truecolor;
+
 /**	\brief setup video mode
 */
 void I_StartupGraphics(void);

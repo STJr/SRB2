@@ -56,6 +56,7 @@ UINT8 *ylookup2[MAXVIDHEIGHT*4];
 INT32 columnofs[MAXVIDWIDTH*4];
 
 UINT8 *topleft;
+UINT32 *topleft_u32;
 
 // =========================================================================
 //                      COLUMN DRAWING CODE STUFF
@@ -67,6 +68,7 @@ INT32 dc_x = 0, dc_yl = 0, dc_yh = 0;
 fixed_t dc_iscale, dc_texturemid;
 UINT8 dc_hires; // under MSVC boolean is a byte, while on other systems, it a bit,
                // soo lets make it a byte on all system for the ASM code
+UINT8 dc_picfmt = PICFMT_PATCH;
 UINT8 *dc_source;
 
 // -----------------------
@@ -79,6 +81,7 @@ UINT8 *transtables; // translucency tables
 /**	\brief R_DrawTransColumn uses this
 */
 UINT8 *dc_transmap; // one of the translucency tables
+UINT8 dc_alpha; // column alpha
 
 // ----------------------
 // translation stuff here
@@ -101,9 +104,11 @@ lighttable_t *ds_colormap;
 fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 UINT16 ds_flatwidth, ds_flatheight;
 boolean ds_powersoftwo;
+UINT8 ds_picfmt = PICFMT_FLAT;
 
 UINT8 *ds_source; // start of a 64*64 tile image
 UINT8 *ds_transmap; // one of the translucency tables
+UINT8 ds_alpha; // span alpha
 
 #ifdef ESLOPE
 pslope_t *ds_slope; // Current slope being used
@@ -963,10 +968,10 @@ void R_DrawViewBorder(void)
 #include "r_draw8.c"
 #include "r_draw8_npo2.c"
 
+
 // ==========================================================================
-//                   INCLUDE 16bpp DRAWING CODE HERE
+//                   INCLUDE 32bpp DRAWING CODE HERE
 // ==========================================================================
 
-#ifdef HIGHCOLOR
-#include "r_draw16.c"
-#endif
+#include "r_draw32.c"
+#include "r_draw32_npo2.c"

@@ -48,6 +48,7 @@ static unsigned long dascreen;
 static int gfx_use_vesa1;
 
 boolean    highcolor;
+boolean    truecolor;
 
 #define SCREENDEPTH   1     // bytes per pixel, do NOT change.
 

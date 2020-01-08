@@ -11,6 +11,7 @@
 rendermode_t rendermode = render_soft;
 
 boolean highcolor = false;
+boolean truecolor = false;
 
 boolean allow_fullscreen = false;
 

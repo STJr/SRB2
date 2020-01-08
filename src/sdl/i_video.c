@@ -96,6 +96,7 @@ static char vidModeName[33][32]; // allow 33 different modes
 rendermode_t rendermode=render_soft;
 
 boolean highcolor = false;
+boolean truecolor = false;
 
 // synchronize page flipping with screen refresh
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -1587,9 +1588,16 @@ static void Impl_VideoSetupSDLBuffer(void)
 		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,15,
 			(int)vid.rowbytes,0x00007C00,0x000003E0,0x0000001F,0x00000000); // 555 mode
 	}
+	else if (vid.bpp == 4)
+	{
+		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,32,
+			(int)vid.rowbytes,0x000000FF,0x0000FF00,0x00FF0000,0xFF000000);
+	}
+
 	if (bufSurface)
 	{
-		SDL_SetPaletteColors(bufSurface->format->palette, localPalette, 0, 256);
+		if (vid.bpp == 1)
+			SDL_SetPaletteColors(bufSurface->format->palette, localPalette, 0, 256);
 	}
 	else
 	{
