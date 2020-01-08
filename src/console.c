@@ -820,7 +820,31 @@ boolean CON_Responder(event_t *ev)
 	if (key == KEY_LEFTARROW)
 	{
 		if (input_cur != 0)
-			--input_cur;
+		{
+			if (ctrldown)
+			{
+				int (*is)(int);
+				char *line;
+				int c;
+				line = inputlines[inputline];
+				c = line[--input_cur];
+				if (isspace(c))
+					is = isspace;
+				else if (ispunct(c))
+					is = ispunct;
+				else
+					is = isalnum;
+				c = (*is)(line[input_cur]);
+				while (input_cur > 0 &&
+						(*is)(line[input_cur - 1]) == c)
+					input_cur--;
+			}
+			else
+			{
+				--input_cur;
+			}
+		}
+
 		if (!shiftdown)
 			input_sel = input_cur;
 		return true;
