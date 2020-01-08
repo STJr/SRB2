@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -108,6 +108,8 @@ boolean devparm = false; // started game with -devparm
 boolean singletics = false; // timedemo
 boolean lastdraw = false;
 
+static void D_CheckRendererState(void);
+
 postimg_t postimgtype = postimg_none;
 INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
@@ -212,6 +214,7 @@ INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
+	INT32 setrenderstillneeded = 0;
 	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
@@ -222,11 +225,38 @@ static void D_Display(void)
 	if (nodrawers)
 		return; // for comparative timing/profiling
 
-	// check for change of screen size (video mode)
-	if (setmodeneeded && !wipe)
-		SCR_SetMode(); // change video mode
+	// Lactozilla: Switching renderers works by checking
+	// if the game has to do it right when the frame
+	// needs to render. If so, five things will happen:
+	// 1. Interface functions will be called so
+	//    that switching to OpenGL creates a
+	//    GL context, and switching to Software
+	//    allocates screen buffers.
+	// 2. Software will set drawer functions,
+	//    and OpenGL will load textures and
+	//    create plane polygons, if necessary.
+	// 3. Functions related to switching video
+	//    modes (resolution) are called.
+	// 4. Patch data is freed from memory,
+	//    and recached if necessary.
+	// 5. The frame is ready to be drawn!
 
-	if (vid.recalc)
+	// stop movie if needs to change renderer
+	if (setrenderneeded && (moviemode == MM_APNG))
+		M_StopMovie();
+
+	// check for change of renderer or screen size (video mode)
+	if ((setrenderneeded || setmodeneeded) && !wipe)
+	{
+		if (setrenderneeded)
+		{
+			CONS_Debug(DBG_RENDER, "setrenderneeded set (%d)\n", setrenderneeded);
+			setrenderstillneeded = setrenderneeded;
+		}
+		SCR_SetMode(); // change video mode
+	}
+
+	if (vid.recalc || setrenderstillneeded)
 	{
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
 #ifdef HWRENDER
@@ -237,11 +267,14 @@ static void D_Display(void)
 	}
 
 	// change the view size if needed
-	if (setsizeneeded)
+	if (setsizeneeded || setrenderstillneeded)
 	{
 		R_ExecuteSetViewSize();
 		forcerefresh = true; // force background redraw
 	}
+
+	// Lactozilla: Renderer switching
+	D_CheckRendererState();
 
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
@@ -274,7 +307,10 @@ static void D_Display(void)
 			 && wipetypepre != UINT8_MAX)
 			{
 				F_WipeStartScreen();
-				F_WipeColorFill(31);
+				// Check for Mega Genesis fade
+				wipestyleflags = WSF_FADEOUT;
+				if (F_TryColormapFade(31))
+					wipetypepost = -1; // Don't run the fade below this one
 				F_WipeEndScreen();
 				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 			}
@@ -291,8 +327,11 @@ static void D_Display(void)
 	switch (gamestate)
 	{
 		case GS_TITLESCREEN:
-			F_TitleScreenDrawer();
-			break;
+			if (!titlemapinaction || !curbghide) {
+				F_TitleScreenDrawer();
+				break;
+			}
+			/* FALLTHRU */
 		case GS_LEVEL:
 			if (!gametic)
 				break;
@@ -363,11 +402,56 @@ static void D_Display(void)
 
 		// clean up border stuff
 		// see if the border needs to be initially drawn
-		if (gamestate == GS_LEVEL)
+		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap)))
 		{
 			// draw the view directly
 
-			D_Render();
+			if (!automapactive && !dedicated && cv_renderview.value)
+			{
+				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
+				{
+					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+					objectsdrawn = 0;
+	#ifdef HWRENDER
+					if (rendermode != render_soft)
+						HWR_RenderPlayerView(0, &players[displayplayer]);
+					else
+	#endif
+					if (rendermode != render_none)
+						R_RenderPlayerView(&players[displayplayer]);
+				}
+
+				// render the second screen
+				if (splitscreen && players[secondarydisplayplayer].mo)
+				{
+	#ifdef HWRENDER
+					if (rendermode != render_soft)
+						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
+					else
+	#endif
+					if (rendermode != render_none)
+					{
+						viewwindowy = vid.height / 2;
+						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
+
+						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+
+						R_RenderPlayerView(&players[secondarydisplayplayer]);
+
+						viewwindowy = 0;
+						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+					}
+				}
+
+				// Image postprocessing effect
+				if (rendermode == render_soft)
+				{
+					if (postimgtype)
+						V_DoPostProcessor(0, postimgtype, postimgparam);
+					if (postimgtype2)
+						V_DoPostProcessor(1, postimgtype2, postimgparam2);
+				}
+			}
 
 			if (lastdraw)
 			{
@@ -380,9 +464,14 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
-			ST_Drawer();
-			F_TextPromptDrawer();
-			HU_Drawer();
+			if (gamestate == GS_LEVEL)
+			{
+				ST_Drawer();
+				F_TextPromptDrawer();
+				HU_Drawer();
+			}
+			else
+				F_TitleScreenDrawer();
 		}
 	}
 
@@ -401,7 +490,7 @@ static void D_Display(void)
 			py = 4;
 		else
 			py = viewwindowy + 4;
-		patch = W_CachePatchName("M_PAUSE", PU_CACHE);
+		patch = W_CachePatchName("M_PAUSE", PU_PATCH);
 		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - SHORT(patch->width))/2, py, 0, patch);
 #else
 		INT32 y = ((automapactive) ? (32) : (BASEVIDHEIGHT/2));
@@ -435,15 +524,24 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			F_WipeEndScreen();
+
 			// Funny.
 			if (WipeStageTitle && st_overlay)
 			{
 				lt_ticker--;
 				lt_lasttic = lt_ticker;
-				ST_preLevelTitleCardDrawer(0, false);
+				ST_preLevelTitleCardDrawer();
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 				F_WipeStartScreen();
 			}
+
+			// Check for Mega Genesis fade
+			if (F_ShouldColormapFade())
+			{
+				wipestyleflags |= WSF_FADEIN;
+				wipestyleflags &= ~WSF_FADEOUT;
+			}
+
 			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
 
@@ -492,56 +590,25 @@ static void D_Display(void)
 
 		I_FinishUpdate(); // page flip or blit buffer
 	}
+
+	needpatchflush = false;
+	needpatchrecache = false;
 }
 
-void D_Render(void)
+// Lactozilla: Check the renderer's state
+// after a possible renderer switch.
+void D_CheckRendererState(void)
 {
-	if (!automapactive && !dedicated && cv_renderview.value)
-	{
-		if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
-		{
-			topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-			objectsdrawn = 0;
-#ifdef HWRENDER
-			if (rendermode != render_soft)
-				HWR_RenderPlayerView(0, &players[displayplayer]);
-			else
-#endif
-			if (rendermode != render_none)
-				R_RenderPlayerView(&players[displayplayer]);
-		}
+	// flush all patches from memory
+	// (also frees memory tagged with PU_CACHE)
+	// (which are not necessarily patches but I don't care)
+	if (needpatchflush)
+		Z_FlushCachedPatches();
 
-		// render the second screen
-		if (splitscreen && players[secondarydisplayplayer].mo)
-		{
-#ifdef HWRENDER
-			if (rendermode != render_soft)
-				HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
-			else
-#endif
-			if (rendermode != render_none)
-			{
-				viewwindowy = vid.height / 2;
-				M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
-
-				topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-
-				R_RenderPlayerView(&players[secondarydisplayplayer]);
-
-				viewwindowy = 0;
-				M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
-			}
-		}
-
-		// Image postprocessing effect
-		if (rendermode == render_soft)
-		{
-			if (postimgtype)
-				V_DoPostProcessor(0, postimgtype, postimgparam);
-			if (postimgtype2)
-				V_DoPostProcessor(1, postimgtype2, postimgparam2);
-		}
-	}
+	// some patches have been freed,
+	// so cache them again
+	if (needpatchrecache)
+		R_ReloadHUDGraphics();
 }
 
 // =========================================================================
@@ -558,9 +625,6 @@ void D_SRB2Loop(void)
 		server = true;
 
 	// Pushing of + parameters is now done back in D_SRB2Main, not here.
-
-	CONS_Printf("I_StartupKeyboard()...\n");
-	I_StartupKeyboard();
 
 #ifdef _WINDOWS
 	CONS_Printf("I_StartupMouse()...\n");
@@ -588,8 +652,7 @@ void D_SRB2Loop(void)
 	// hack to start on a nice clear console screen.
 	COM_ImmedExecute("cls;version");
 
-	if (rendermode == render_soft)
-		V_DrawScaledPatch(0, 0, 0, (patch_t *)W_CacheLumpNum(W_GetNumForName("CONSBACK"), PU_CACHE));
+	V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
 	I_FinishUpdate(); // page flip or blit buffer
 
 	for (;;)
@@ -664,6 +727,7 @@ void D_SRB2Loop(void)
 
 		// consoleplayer -> displayplayer (hear sounds from viewpoint)
 		S_UpdateSounds(); // move positional sounds
+		S_UpdateClosedCaptions();
 
 		// check for media change, loop music..
 		I_UpdateCD();
@@ -702,7 +766,7 @@ void D_StartTitle(void)
 
 	if (netgame)
 	{
-		if (gametype == GT_COOP)
+		if (gametyperules & GTR_CAMPAIGN)
 		{
 			G_SetGamestate(GS_WAITINGPLAYERS); // hack to prevent a command repeat
 
@@ -729,6 +793,8 @@ void D_StartTitle(void)
 	for (i = 0; i < MAXPLAYERS; i++)
 		CL_ClearPlayer(i);
 
+	players[consoleplayer].availabilities = players[1].availabilities = R_GetSkinAvailabilities(); // players[1] is supposed to be for 2p
+
 	splitscreen = false;
 	SplitScreen_OnChange();
 	botingame = false;
@@ -747,7 +813,7 @@ void D_StartTitle(void)
 
 	gameaction = ga_nothing;
 	displayplayer = consoleplayer = 0;
-	gametype = GT_COOP;
+	G_SetGametype(GT_COOP);
 	paused = false;
 	advancedemo = false;
 	F_InitMenuPresValues();
@@ -963,7 +1029,7 @@ void D_SRB2Main(void)
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2018 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2019 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1103,26 +1169,6 @@ void D_SRB2Main(void)
 	if (M_CheckParm("-server") || dedicated)
 		netgame = server = true;
 
-	if (M_CheckParm("-warp") && M_IsNextParm())
-	{
-		const char *word = M_GetNextParm();
-		char ch; // use this with sscanf to catch non-digits with
-		if (fastncmp(word, "MAP", 3)) // MAPxx name
-			pstartmap = M_MapNumber(word[3], word[4]);
-		else if (sscanf(word, "%d%c", &pstartmap, &ch) != 1) // a plain number
-			I_Error("Cannot warp to map %s (invalid map name)\n", word);
-		// Don't check if lump exists just yet because the wads haven't been loaded!
-		// Just do a basic range check here.
-		if (pstartmap < 1 || pstartmap > NUMMAPS)
-			I_Error("Cannot warp to map %d (out of range)\n", pstartmap);
-		else
-		{
-			if (!M_CheckParm("-server"))
-				G_SetGameModified(true);
-			autostart = true;
-		}
-	}
-
 	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
 	Z_Init();
 
@@ -1149,31 +1195,10 @@ void D_SRB2Main(void)
 	// Have to be done here before files are loaded
 	M_InitCharacterTables();
 
-	mainwads = 0;
-
-#ifndef DEVELOP // md5s last updated 12/14/14
-
-	// Check MD5s of autoloaded files
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_SRB2_PK3); // srb2.pk3
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_PK3); // zones.pk3
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_PLAYER_DTA); // player.dta
+	mainwads = 3; // doesn't include music.dta
 #ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.pk3
+	mainwads++;
 #endif
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
-	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
-	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
-	//mainwads++; // neither does music_new.dta
-#else
-
-	mainwads++;	// srb2.pk3
-	mainwads++; // zones.pk3
-	mainwads++; // player.dta
-#ifdef USE_PATCH_DTA
-	mainwads++; // patch.dta
-#endif
-	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
-	//mainwads++; // neither does music_new.dta
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
@@ -1185,11 +1210,34 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
+#ifndef DEVELOP // md5s last updated 06/12/19 (ddmmyy)
+
+	// Check MD5s of autoloaded files
+	W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3
+	W_VerifyFileMD5(1, ASSET_HASH_ZONES_PK3); // zones.pk3
+	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
+#ifdef USE_PATCH_DTA
+	W_VerifyFileMD5(3, ASSET_HASH_PATCH_DTA); // patch.pk3
+#endif
+	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif //ifndef DEVELOP
 
-	mainwadstally = packetsizetally;
+	mainwadstally = packetsizetally; // technically not accurate atm, remember to port the two-stage -file process from kart in 2.2.x
 
-	mainwadstally = packetsizetally;
+	if (M_CheckParm("-warp") && M_IsNextParm())
+	{
+		const char *word = M_GetNextParm();
+		pstartmap = G_FindMapByNameOrCode(word, 0);
+		if (! pstartmap)
+			I_Error("Cannot find a map remotely named '%s'\n", word);
+		else
+		{
+			if (!M_CheckParm("-server"))
+				G_SetGameModified(true);
+			autostart = true;
+		}
+	}
 
 	cht_Init();
 
@@ -1198,6 +1246,13 @@ void D_SRB2Main(void)
 
 	CONS_Printf("I_StartupGraphics()...\n");
 	I_StartupGraphics();
+
+#ifdef HWRENDER
+	// Lactozilla: Add every hardware mode CVAR and CCMD.
+	// Has to be done before the configuration file loads,
+	// but after the OpenGL library loads.
+	HWR_AddCommands();
+#endif
 
 	//--------------------------------------------------------- CONSOLE
 	// setup loading screen
@@ -1228,6 +1283,16 @@ void D_SRB2Main(void)
 
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
+
+	// Lactozilla: Does the render mode need to change?
+	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
+	{
+		needpatchflush = true;
+		needpatchrecache = true;
+		VID_CheckRenderer();
+		SCR_ChangeRendererCVars(setrenderneeded);
+	}
+	D_CheckRendererState();
 
 	wipegamestate = gamestate;
 
@@ -1287,8 +1352,9 @@ void D_SRB2Main(void)
 		I_StartupSound();
 		I_InitMusic();
 		S_InitSfxChannels(cv_soundvolume.value);
-		S_InitMusicDefs();
 	}
+
+	S_InitMusicDefs();
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
@@ -1408,14 +1474,14 @@ void D_SRB2Main(void)
 			if (newgametype == -1) // reached end of the list with no match
 			{
 				j = atoi(sgametype); // assume they gave us a gametype number, which is okay too
-				if (j >= 0 && j < NUMGAMETYPES)
+				if (j >= 0 && j < gametypecount)
 					newgametype = (INT16)j;
 			}
 
 			if (newgametype != -1)
 			{
 				j = gametype;
-				gametype = newgametype;
+				G_SetGametype(newgametype);
 				D_GameTypeChanged(j);
 			}
 		}
@@ -1451,7 +1517,7 @@ void D_SRB2Main(void)
 	{
 		levelstarttic = gametic;
 		G_SetGamestate(GS_LEVEL);
-		if (!P_SetupLevel(false))
+		if (!P_LoadLevel(false))
 			I_Quit(); // fail so reset game stuff
 	}
 }

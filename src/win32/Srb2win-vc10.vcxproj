@@ -295,6 +295,9 @@
     <ClCompile Include="..\r_draw8.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\r_draw8_npo2.c">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\r_main.c" />
     <ClCompile Include="..\r_plane.c" />
     <ClCompile Include="..\r_patch.c" />

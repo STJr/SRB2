@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -37,6 +37,18 @@ cv_allcaps;
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
 
+// Taken from my videos-in-SRB2 project
+// Generates a color look-up table
+// which has up to 64 colors at each channel
+
+#define COLORBITS 6
+#define SHIFTCOLORBITS (8-COLORBITS)
+#define CLUTSIZE (1<<COLORBITS)
+
+extern UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
+
+void InitColorLUT(RGBA_t *palette);
+
 // Set the current RGB palette lookup to use for palettized graphics
 void V_SetPalette(INT32 palettenum);
 
@@ -48,8 +60,11 @@ const char *GetPalette(void);
 extern RGBA_t *pLocalPalette;
 extern RGBA_t *pMasterPalette;
 
+void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue);
+
 // Retrieve the ARGB value from a palette color index
 #define V_GetColor(color) (pLocalPalette[color&0xFF])
+#define V_GetMasterColor(color) (pMasterPalette[color&0xFF])
 
 // Bottom 8 bits are used for parameter (screen or character)
 #define V_PARAMMASK          0x000000FF
@@ -137,7 +152,7 @@ extern RGBA_t *pMasterPalette;
 #define V_DrawMappedPatch(x,y,s,p,c) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s, p, c)
 #define V_DrawSmallMappedPatch(x,y,s,p,c) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, s, p, c)
 #define V_DrawTinyMappedPatch(x,y,s,p,c) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/4, s, p, c)
-#define V_DrawScaledPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s, p, NULL)
+#define V_DrawScaledPatch(x,y,s,p) V_DrawFixedPatch((x)*FRACUNIT, (y)<<FRACBITS, FRACUNIT, s, p, NULL)
 #define V_DrawSmallScaledPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, s, p, NULL)
 #define V_DrawTinyScaledPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/4, s, p, NULL)
 #define V_DrawTranslucentPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s, p, NULL)

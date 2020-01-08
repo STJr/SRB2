@@ -518,10 +518,6 @@ add_definitions(-DCMAKECONFIG)
 
 add_subdirectory(sdl)
 
-if(${CMAKE_SYSTEM} MATCHES Windows)
-	add_subdirectory(win32)
-endif()
-
-if(NOT ${SRB2_SDL2_AVAILABLE} AND NOT ${SRB2_WIN32_AVAILABLE})
+if(NOT ${SRB2_SDL2_AVAILABLE})
 	message(FATAL_ERROR "There are no targets available to build an SRB2 executable. :(")
 endif()

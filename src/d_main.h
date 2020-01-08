@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -53,8 +53,5 @@ const char *D_Home(void);
 //
 void D_AdvanceDemo(void);
 void D_StartTitle(void);
-
-/* Here for title maps */
-void D_Render(void);
 
 #endif //__D_MAIN__

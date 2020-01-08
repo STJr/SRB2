@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -115,10 +115,10 @@ typedef struct camera_s
 
 extern camera_t camera, camera2;
 extern consvar_t cv_cam_dist, cv_cam_still, cv_cam_height;
-extern consvar_t cv_cam_speed, cv_cam_rotate, cv_cam_rotspeed, cv_cam_orbit, cv_cam_adjust;
+extern consvar_t cv_cam_speed, cv_cam_rotate, cv_cam_rotspeed, cv_cam_turnmultiplier, cv_cam_orbit, cv_cam_adjust;
 
 extern consvar_t cv_cam2_dist, cv_cam2_still, cv_cam2_height;
-extern consvar_t cv_cam2_speed, cv_cam2_rotate, cv_cam2_rotspeed, cv_cam2_orbit, cv_cam2_adjust;
+extern consvar_t cv_cam2_speed, cv_cam2_rotate, cv_cam2_rotspeed, cv_cam2_turnmultiplier, cv_cam2_orbit, cv_cam2_adjust;
 
 extern fixed_t t_cam_dist, t_cam_height, t_cam_rotate;
 extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
@@ -323,6 +323,7 @@ SINT8 P_MobjFlip(mobj_t *mobj);
 fixed_t P_GetMobjGravity(mobj_t *mo);
 FUNCMATH boolean P_WeaponOrPanel(mobjtype_t type);
 
+void P_CalcChasePostImg(player_t *player, camera_t *thiscam);
 boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled);
 
 void P_Attract(mobj_t *source, mobj_t *enemy, boolean nightsgrab);

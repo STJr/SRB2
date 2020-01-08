@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -181,11 +181,9 @@ void A_SpawnObjectAbsolute(mobj_t *actor);
 void A_SpawnObjectRelative(mobj_t *actor);
 void A_ChangeAngleRelative(mobj_t *actor);
 void A_ChangeAngleAbsolute(mobj_t *actor);
-#ifdef ROTSPRITE
 void A_RollAngle(mobj_t *actor);
 void A_ChangeRollAngleRelative(mobj_t *actor);
 void A_ChangeRollAngleAbsolute(mobj_t *actor);
-#endif // ROTSPRITE
 void A_PlaySound(mobj_t *actor);
 void A_FindTarget(mobj_t *actor);
 void A_FindTracer(mobj_t *actor);
@@ -1731,6 +1729,7 @@ void A_HoodThink(mobj_t *actor)
 	// Target dangerously close to robohood, retreat then.
 	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS))
 	{
+		S_StartSound(actor, actor->info->attacksound);
 		P_SetMobjState(actor, actor->info->raisestate);
 		return;
 	}
@@ -2262,7 +2261,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		while (chain)
 		{
 			P_TeleportMove(chain, actor->target->x + idx, actor->target->y + idy, actor->target->z + idz);
-			chain->watertop = chain->z;
+			chain->movefactor = chain->z;
 			idx += dx;
 			idy += dy;
 			idz += dz;
@@ -2476,12 +2475,8 @@ void A_VultureBlast(mobj_t *actor)
 void A_VultureFly(mobj_t *actor)
 {
 	fixed_t speedmax = 18*FRACUNIT;
-	angle_t angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
-	fixed_t dx = actor->target->x - actor->x;
-	fixed_t dy = actor->target->y - actor->y;
-	fixed_t dz = actor->target->z - actor->z;
-	fixed_t dxy = FixedHypot(dx, dy);
-	fixed_t dm;
+	angle_t angledif;
+	fixed_t dx, dy, dz, dxy, dm;
 	mobj_t *dust;
 	fixed_t momm;
 
@@ -2489,6 +2484,18 @@ void A_VultureFly(mobj_t *actor)
 	if (LUA_CallAction("A_VultureFly", actor))
 		return;
 #endif
+
+	if (!actor->target || P_MobjWasRemoved(actor->target))
+	{
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
+	dx = actor->target->x - actor->x;
+	dy = actor->target->y - actor->y;
+	dz = actor->target->z - actor->z;
+	dxy = FixedHypot(dx, dy);
 
 	if (leveltime % 4 == 0)
 		S_StartSound(actor, actor->info->activesound);
@@ -3333,7 +3340,7 @@ void A_SkullAttack(mobj_t *actor)
 		INT32 i, j;
 		static INT32 k;/* static for (at least) GCC 9.1 weirdness */
 		boolean allow;
-		angle_t testang;
+		angle_t testang = 0;
 
 		mobjinfo[MT_NULL].spawnstate = S_INVISIBLE;
 		mobjinfo[MT_NULL].flags = MF_NOGRAVITY|MF_NOTHINK|MF_NOCLIPTHING|MF_NOBLOCKMAP;
@@ -3449,8 +3456,8 @@ void A_BossZoom(mobj_t *actor)
 // Description: Spawns explosions and plays appropriate sounds around the defeated boss.
 //
 // var1:
-//		0 - Use movecount to spawn explosions evenly
-//		1 - Use P_Random to spawn explosions at complete random
+//		& 1 - Use P_Random to spawn explosions at complete random
+//		& 2 - Use entire vertical range of object to spawn
 // var2 = Object to spawn. Default is MT_SONIC3KBOSSEXPLODE.
 //
 void A_BossScream(mobj_t *actor)
@@ -3466,17 +3473,13 @@ void A_BossScream(mobj_t *actor)
 	if (LUA_CallAction("A_BossScream", actor))
 		return;
 #endif
-	switch (locvar1)
+	if (locvar1 & 1)
+		fa = (FixedAngle(P_RandomKey(360)*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
+	else
 	{
-	default:
-	case 0:
 		actor->movecount += 4*16;
 		actor->movecount %= 360;
 		fa = (FixedAngle(actor->movecount*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
-		break;
-	case 1:
-		fa = (FixedAngle(P_RandomKey(360)*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
-		break;
 	}
 	x = actor->x + FixedMul(FINECOSINE(fa),actor->radius);
 	y = actor->y + FixedMul(FINESINE(fa),actor->radius);
@@ -3487,7 +3490,9 @@ void A_BossScream(mobj_t *actor)
 	else
 		explodetype = (mobjtype_t)locvar2;
 
-	if (actor->eflags & MFE_VERTICALFLIP)
+	if (locvar1 & 2)
+		z = actor->z + (P_RandomKey((actor->height - mobjinfo[explodetype].height)>>FRACBITS)<<FRACBITS);
+	else if (actor->eflags & MFE_VERTICALFLIP)
 		z = actor->z + actor->height - mobjinfo[explodetype].height - FixedMul((P_RandomByte()<<(FRACBITS-2)) - 8*FRACUNIT, actor->scale);
 	else
 		z = actor->z + FixedMul((P_RandomByte()<<(FRACBITS-2)) - 8*FRACUNIT, actor->scale);
@@ -4040,12 +4045,25 @@ bossjustdie:
 	switch (mo->type)
 	{
 		case MT_BLACKEGGMAN:
-		case MT_CYBRAKDEMON:
 		{
 			mo->flags |= MF_NOCLIP;
 			mo->flags &= ~MF_SPECIAL;
 
 			S_StartSound(NULL, sfx_befall);
+			break;
+		}
+		case MT_CYBRAKDEMON:
+		{
+			mo->flags |= MF_NOCLIP;
+			mo->flags &= ~(MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
+
+			S_StartSound(NULL, sfx_bedie2);
+			P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
+			mo->z += P_MobjFlip(mo);
+			P_SetObjectMomZ(mo, 12*FRACUNIT, false);
+			S_StartSound(mo, sfx_bgxpld);
+			if (mo->spawnpoint && !(mo->spawnpoint->options & MTF_EXTRA))
+				P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->x, mo->y), 14*FRACUNIT);
 			break;
 		}
 		case MT_KOOPA:
@@ -4965,7 +4983,7 @@ void A_ThrownRing(mobj_t *actor)
 				continue;
 
 			// Don't home in on teammates.
-			if (gametype == GT_CTF
+			if ((gametyperules & GTR_TEAMFLAGS)
 				&& actor->target->player->ctfteam == player->ctfteam)
 				continue;
 		}
@@ -5664,10 +5682,10 @@ void A_MinusPopup(mobj_t *actor)
 	S_StartSound(actor, sfx_s3k82);
 	for (i = 1; i <= num; i++)
 	{
-		mobj_t *rock = P_SpawnMobj(actor->x, actor->y, actor->z + actor->height/4, MT_ROCKCRUMBLE1);
+		mobj_t *rock = P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_ROCKCRUMBLE1);
 		P_Thrust(rock, ani*i, FRACUNIT);
-		rock->momz = 3*FRACUNIT;
-		P_SetScale(rock, FRACUNIT/3);
+		P_SetObjectMomZ(rock, 3*FRACUNIT, false);
+		P_SetScale(rock, rock->scale/3);
 	}
 	P_RadiusAttack(actor, actor, 2*actor->radius, 0);
 	if (actor->tracer)
@@ -5681,11 +5699,12 @@ void A_MinusPopup(mobj_t *actor)
 // Description: If the minus hits the floor, dig back into the ground.
 //
 // var1 = State to switch to (if 0, use seestate).
-// var2 = unused
+// var2 = If not 0, spawn debris when hitting the floor.
 //
 void A_MinusCheck(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusCheck", actor))
@@ -5696,6 +5715,18 @@ void A_MinusCheck(mobj_t *actor)
 	{
 		P_SetMobjState(actor, locvar1 ? (statenum_t)locvar1 : actor->info->seestate);
 		actor->flags = actor->info->flags;
+		if (locvar2)
+		{
+			INT32 i, num = 6;
+			angle_t ani = FixedAngle(FRACUNIT*360/num);
+			for (i = 1; i <= num; i++)
+			{
+				mobj_t *rock = P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_ROCKCRUMBLE1);
+				P_Thrust(rock, ani*i, FRACUNIT);
+				P_SetObjectMomZ(rock, 3*FRACUNIT, false);
+				P_SetScale(rock, rock->scale/3);
+			}
+		}
 	}
 }
 
@@ -6558,7 +6589,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 		if (changecolor)
 		{
-			if (gametype != GT_CTF)
+			if (!(gametyperules & GTR_TEAMFLAGS))
 				mo->color = actor->target->color; //copy color
 			else if (actor->target->player->ctfteam == 2)
 				mo->color = skincolor_bluering;
@@ -6574,7 +6605,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -6589,7 +6620,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (gametype != GT_CTF)
+		if (!(gametyperules & GTR_TEAMFLAGS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -8594,7 +8625,6 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 	actor->angle = FixedAngle(P_RandomRange(amin, amax));
 }
 
-#ifdef ROTSPRITE
 // Function: A_RollAngle
 //
 // Description: Changes the roll angle.
@@ -8630,16 +8660,10 @@ void A_RollAngle(mobj_t *actor)
 //
 void A_ChangeRollAngleRelative(mobj_t *actor)
 {
-	// Oh god, the old code /sucked/. Changed this and the absolute version to get a random range using amin and amax instead of
-	//  getting a random angle from the _entire_ spectrum and then clipping. While we're at it, do the angle conversion to the result
-	//  rather than the ranges, so <0 and >360 work as possible values. -Red
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	//angle_t angle = (P_RandomByte()+1)<<24;
 	const fixed_t amin = locvar1*FRACUNIT;
 	const fixed_t amax = locvar2*FRACUNIT;
-	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ChangeRollAngleRelative", actor))
 		return;
@@ -8649,11 +8673,6 @@ void A_ChangeRollAngleRelative(mobj_t *actor)
 	if (amin > amax)
 		I_Error("A_ChangeRollAngleRelative: var1 is greater than var2");
 #endif
-/*
-	if (angle < amin)
-		angle = amin;
-	if (angle > amax)
-		angle = amax;*/
 
 	actor->rollangle += FixedAngle(P_RandomRange(amin, amax));
 }
@@ -8669,11 +8688,8 @@ void A_ChangeRollAngleAbsolute(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	//angle_t angle = (P_RandomByte()+1)<<24;
 	const fixed_t amin = locvar1*FRACUNIT;
 	const fixed_t amax = locvar2*FRACUNIT;
-	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ChangeRollAngleAbsolute", actor))
 		return;
@@ -8683,15 +8699,9 @@ void A_ChangeRollAngleAbsolute(mobj_t *actor)
 	if (amin > amax)
 		I_Error("A_ChangeRollAngleAbsolute: var1 is greater than var2");
 #endif
-/*
-	if (angle < amin)
-		angle = amin;
-	if (angle > amax)
-		angle = amax;*/
 
 	actor->rollangle = FixedAngle(P_RandomRange(amin, amax));
 }
-#endif // ROTSPRITE
 
 // Function: A_PlaySound
 //
@@ -13346,7 +13356,7 @@ void A_Boss5MakeJunk(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	mobj_t *broked;
+	mobj_t *broked = NULL;
 	angle_t ang;
 	INT32 i = ((locvar2 & 1) ? 8 : 1);
 #ifdef HAVE_BLUA
@@ -13581,12 +13591,12 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 		}
 		else
 		{ //Player on the top of the tornado.
+			P_ResetPlayer(player);
 			thing->z = dustdevil->z + dustdevil->height;
 			thrust = 20 * FRACUNIT;
 			player->powers[pw_nocontrol] = 0;
 			S_StartSound(thing, sfx_wdjump);
 			P_SetPlayerMobjState(thing, S_PLAY_FALL);
-			player->pflags &= ~PF_JUMPED;
 		}
 
 		thing->momz = thrust;
@@ -14215,7 +14225,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	fixed_t c = FINECOSINE(fa)*locvar2;
 	fixed_t s = FINESINE(fa)*locvar2;
 	mobj_t *door;
-	mobjflag2_t ambush = (actor->flags & MF2_AMBUSH);
+	mobjflag2_t ambush = (actor->flags2 & MF2_AMBUSH);
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SaloonDoorSpawn", actor))
@@ -14590,6 +14600,9 @@ void A_RolloutRock(mobj_t *actor)
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
 
+	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		actor->flags |= MF_PUSHABLE;
+
 	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
 		actor->fuse = 0;
 	else if (!actor->fuse && actor->movecount == 1) // otherwise if rock has moved, set its fuse
@@ -14676,19 +14689,34 @@ void A_DragonWing(mobj_t *actor)
 void A_DragonSegment(mobj_t *actor)
 {
 	mobj_t *target = actor->target;
-	fixed_t dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
-	fixed_t radius = actor->radius + target->radius;
-	angle_t hangle = R_PointToAngle2(target->x, target->y, actor->x, actor->y);
-	angle_t zangle = R_PointToAngle2(0, target->z, dist, actor->z);
-	fixed_t hdist = P_ReturnThrustX(target, zangle, radius);
-	fixed_t xdist = P_ReturnThrustX(target, hangle, hdist);
-	fixed_t ydist = P_ReturnThrustY(target, hangle, hdist);
-	fixed_t zdist = P_ReturnThrustY(target, zangle, radius);
+	fixed_t dist;
+	fixed_t radius;
+	angle_t hangle;
+	angle_t zangle;
+	fixed_t hdist;
+	fixed_t xdist;
+	fixed_t ydist;
+	fixed_t zdist;
 
 	#ifdef HAVE_BLUA
 		if (LUA_CallAction("A_DragonSegment", actor))
 			return;
 	#endif
+
+	if (target == NULL || !target->health)
+	{
+		P_RemoveMobj(actor);
+		return;
+	}
+
+	dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
+	radius = actor->radius + target->radius;
+	hangle = R_PointToAngle2(target->x, target->y, actor->x, actor->y);
+	zangle = R_PointToAngle2(0, target->z, dist, actor->z);
+	hdist = P_ReturnThrustX(target, zangle, radius);
+	xdist = P_ReturnThrustX(target, hangle, hdist);
+	ydist = P_ReturnThrustY(target, hangle, hdist);
+	zdist = P_ReturnThrustY(target, zangle, radius);
 
 	actor->angle = hangle;
 	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);

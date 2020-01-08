@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -61,7 +61,9 @@ static void GameMIDIMusic_OnChange(void);
 static void GameSounds_OnChange(void);
 static void GameDigiMusic_OnChange(void);
 
+#ifdef HAVE_OPENMPT
 static void ModFilter_OnChange(void);
+#endif
 
 static lumpnum_t S_GetMusicLumpNum(const char *mname);
 
@@ -860,7 +862,6 @@ static INT32 actualmidimusicvolume;
 void S_UpdateSounds(void)
 {
 	INT32 audible, cnum, volume, sep, pitch;
-	UINT8 i;
 	channel_t *c;
 
 	listener_t listener;
@@ -1017,28 +1018,30 @@ void S_UpdateSounds(void)
 
 notinlevel:
 	I_UpdateSound();
+}
 
+void S_UpdateClosedCaptions(void)
+{
+	UINT8 i;
+	boolean gamestopped = (paused || P_AutoPause());
+	for (i = 0; i < NUMCAPTIONS; i++) // update captions
 	{
-		boolean gamestopped = (paused || P_AutoPause());
-		for (i = 0; i < NUMCAPTIONS; i++) // update captions
+		if (!closedcaptions[i].s)
+			continue;
+
+		if (i == 0 && (closedcaptions[0].s-S_sfx == sfx_None) && gamestopped)
+			continue;
+
+		if (!(--closedcaptions[i].t))
 		{
-			if (!closedcaptions[i].s)
-				continue;
-
-			if (i == 0 && (closedcaptions[0].s-S_sfx == sfx_None) && gamestopped)
-				continue;
-
-			if (!(--closedcaptions[i].t))
-			{
-				closedcaptions[i].c = NULL;
-				closedcaptions[i].s = NULL;
-			}
-			else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
-			{
-				closedcaptions[i].c = NULL;
-				if (closedcaptions[i].t > CAPTIONFADETICS)
-					closedcaptions[i].t = CAPTIONFADETICS;
-			}
+			closedcaptions[i].c = NULL;
+			closedcaptions[i].s = NULL;
+		}
+		else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
+		{
+			closedcaptions[i].c = NULL;
+			if (closedcaptions[i].t > CAPTIONFADETICS)
+				closedcaptions[i].t = CAPTIONFADETICS;
 		}
 	}
 }
@@ -2094,21 +2097,8 @@ static lumpnum_t S_GetMusicLumpNum(const char *mname)
 		return W_GetNumForName(va("o_%s", mname));
 	else if (!S_MIDIMusicDisabled() && S_MIDIExists(mname))
 		return W_GetNumForName(va("d_%s", mname));
-	else if (S_DigMusicDisabled() && S_DigExists(mname))
-	{
-		//CONS_Alert(CONS_NOTICE, "Digital music is disabled!\n");
-		return LUMPERROR;
-	}
-	else if (S_MIDIMusicDisabled() && S_MIDIExists(mname))
-	{
-		//CONS_Alert(CONS_NOTICE, "MIDI music is disabled!\n");
-		return LUMPERROR;
-	}
 	else
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mname);
 		return LUMPERROR;
-	}
 }
 
 static boolean S_LoadMusic(const char *mname)
@@ -2122,7 +2112,10 @@ static boolean S_LoadMusic(const char *mname)
 	mlumpnum = S_GetMusicLumpNum(mname);
 
 	if (mlumpnum == LUMPERROR)
+	{
+		CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded: lump not found!\n", mname);
 		return false;
+	}
 
 	// load & register it
 	mdata = W_CacheLumpNum(mlumpnum, PU_MUSIC);
@@ -2147,7 +2140,10 @@ static boolean S_LoadMusic(const char *mname)
 		return true;
 	}
 	else
+	{
+		CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded: engine failure!\n", mname);
 		return false;
+	}
 }
 
 static void S_UnloadMusic(void)
@@ -2172,6 +2168,7 @@ static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 	if ((!fadeinms && !I_PlaySong(looping)) ||
 		(fadeinms && !I_FadeInPlaySong(fadeinms, looping)))
 	{
+		CONS_Alert(CONS_ERROR, "Music %.6s could not be played: engine failure!\n", music_name);
 		S_UnloadMusic();
 		return false;
 	}
@@ -2248,19 +2245,13 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		S_StopMusic();
 
 		if (!S_LoadMusic(newmusic))
-		{
-			CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded!\n", newmusic);
 			return;
-		}
 
 		music_flags = mflags;
 		music_looping = looping;
 
 		if (!S_PlayMusic(looping, fadeinms))
- 		{
-			CONS_Alert(CONS_ERROR, "Music %.6s could not be played!\n", newmusic);
 			return;
-		}
 
 		if (position)
 			I_SetSongPosition(position);

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,9 +43,11 @@ enum
 	PU_SOUND                 = 11, // static while playing
 	PU_MUSIC                 = 12, // static while playing
 	PU_HUDGFX                = 13, // static until WAD added
+	PU_PATCH                 = 14, // static until renderer change
 
 	PU_HWRPATCHINFO          = 21, // Hardware GLPatch_t struct for OpenGL texture cache
 	PU_HWRPATCHCOLMIPMAP     = 22, // Hardware GLMipmap_t struct colormap variation of patch
+	PU_HWRMODELTEXTURE       = 23, // Hardware model texture
 
 	PU_HWRCACHE              = 48, // static until unlocked
 	PU_CACHE                 = 49, // static until unlocked
@@ -140,5 +142,11 @@ size_t Z_TagsUsage(INT32 lowtag, INT32 hightag);
 //
 char *Z_StrDup(const char *in);
 #define Z_Unlock(p) (void)p // TODO: remove this now that NDS code has been removed
+
+// For renderer switching
+extern boolean needpatchflush;
+extern boolean needpatchrecache;
+void Z_FlushCachedPatches(void);
+void Z_PreparePatchFlush(void);
 
 #endif

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -343,13 +343,20 @@ void P_GiveEmerald(boolean spawnObj)
 				continue;
 
 			emmo = P_SpawnMobjFromMobj(players[i].mo, 0, 0, players[i].mo->height, MT_GOTEMERALD);
+			if (!emmo)
+				continue;
 			P_SetTarget(&emmo->target, players[i].mo);
 			P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
+			
+			// Make sure we're not being carried before our tracer is changed
+			if (players[i].powers[pw_carry] != CR_NIGHTSMODE)
+				players[i].powers[pw_carry] = CR_NONE;
+			
 			P_SetTarget(&players[i].mo->tracer, emmo);
 
 			if (pnum == 255)
 			{
-				i = pnum;
+				pnum = i;
 				continue;
 			}
 
@@ -385,7 +392,7 @@ UINT8 P_FindLowestMare(void)
 	mobj_t *mo2;
 	UINT8 mare = UINT8_MAX;
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 		return 0;
 
 	// scan the thinkers
@@ -636,9 +643,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->marebonuslap = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
-#ifdef ROTSPRITE
 	player->mo->rollangle = 0;
-#endif
 
 	P_SetTarget(&player->mo->target, NULL);
 	P_SetTarget(&player->axis1, P_SetTarget(&player->axis2, NULL));
@@ -766,9 +771,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->secondjump = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
-#ifdef ROTSPRITE
 	player->mo->rollangle = 0;
-#endif
 
 	player->powers[pw_shield] = SH_NONE;
 	player->powers[pw_super] = 0;
@@ -791,7 +794,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		P_RestoreMusic(player);
 	}
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 	{
 		if (player->drillmeter < 48*20)
 			player->drillmeter = 48*20;
@@ -1223,6 +1226,7 @@ void P_GivePlayerSpheres(player_t *player, INT32 num_spheres)
 //
 void P_GivePlayerLives(player_t *player, INT32 numlives)
 {
+	UINT8 prevlives = player->lives;
 	if (!player)
 		return;
 
@@ -1231,18 +1235,17 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 
 	if (gamestate == GS_LEVEL)
 	{
-		if (player->lives == INFLIVES || (gametype != GT_COOP && gametype != GT_COMPETITION))
+		if (player->lives == INFLIVES || !(gametyperules & GTR_LIVES))
 		{
 			P_GivePlayerRings(player, 100*numlives);
 			return;
 		}
 
-		if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0)
+		if ((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0)
 		{
-			UINT8 prevlives = player->lives;
 			P_GivePlayerRings(player, 100*numlives);
 			if (player->lives - prevlives >= numlives)
-				return;
+				goto docooprespawn;
 
 			numlives = (numlives + prevlives - player->lives);
 		}
@@ -1256,11 +1259,20 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 		player->lives = 99;
 	else if (player->lives < 1)
 		player->lives = 1;
+
+docooprespawn:
+	if (cv_coopstarposts.value)
+		return;
+	if (prevlives > 0)
+		return;
+	if (!player->spectator)
+		return;
+	P_SpectatorJoinGame(player);
 }
 
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound)
 {
-	if (!((netgame || multiplayer) && gametype == GT_COOP))
+	if (!((netgame || multiplayer) && G_GametypeUsesCoopLives()))
 	{
 		P_GivePlayerLives(player, numlives);
 		if (sound)
@@ -1388,7 +1400,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 		player->score = MAXSCORE;
 
 	// check for extra lives every 50000 pts
-	if (!ultimatemode && !modeattacking && player->score > oldscore && player->score % 50000 < amount && (gametype == GT_COMPETITION || gametype == GT_COOP))
+	if (!ultimatemode && !modeattacking && player->score > oldscore && player->score % 50000 < amount && (gametyperules & GTR_LIVES))
 	{
 		P_GivePlayerLives(player, (player->score/50000) - (oldscore/50000));
 		P_PlayLivesJingle(player);
@@ -1589,7 +1601,7 @@ void P_RestoreMusic(player_t *player)
 		P_PlayJingle(player, JT_SUPER);
 
 	// Invulnerability
-	else if (player->powers[pw_invulnerability] > 1)
+	else if (player->powers[pw_invulnerability] > 1 && !player->powers[pw_super])
 	{
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
@@ -2153,6 +2165,10 @@ void P_DoPlayerFinish(player_t *player)
 
 	if (netgame)
 		CONS_Printf(M_GetText("%s has completed the level.\n"), player_names[player-players]);
+
+	player->powers[pw_underwater] = 0;
+	player->powers[pw_spacetime] = 0;
+	P_RestoreMusic(player);
 }
 
 //
@@ -2166,7 +2182,7 @@ void P_DoPlayerExit(player_t *player)
 
 	if (cv_allowexitlevel.value == 0 && !G_PlatformGametype())
 		return;
-	else if (gametype == GT_RACE || gametype == GT_COMPETITION) // If in Race Mode, allow
+	else if (gametyperules & GTR_RACE) // If in Race Mode, allow
 	{
 		if (!countdown) // a 60-second wait ala Sonic 2.
 			countdown = (cv_countdowntime.value - 1)*TICRATE + 1; // Use cv_countdowntime
@@ -2296,7 +2312,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				else if (!player->skidtime)
 					player->pflags &= ~PF_GLIDING;
 			}
-			else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_THOKKED && !(player->pflags & PF_SHIELDABILITY) && player->mo->state-states == S_PLAY_FALL)
+			else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_THOKKED && !(player->pflags & (PF_JUMPED|PF_SHIELDABILITY)) && player->mo->state-states == S_PLAY_FALL)
 			{
 				if (player->mo->state-states != S_PLAY_GLIDE_LANDING)
 				{
@@ -2872,7 +2888,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 {
 	tic_t timeleft = (player->powers[pw_spacetime]) ? player->powers[pw_spacetime] : player->powers[pw_underwater];
 
-	if (player->exiting)
+	if (player->exiting || (player->pflags & PF_FINISHED))
 		player->powers[pw_underwater] = player->powers[pw_spacetime] = 0;
 
 	timeleft--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
@@ -3095,7 +3111,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 			}
 		}
 	}
-	else if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))) // If you have the flag (duh).
+	else if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))) // If you have the flag (duh).
 	{
 		// Spawn a got-flag message over the head of the player that
 		// has it (but not on your own screen if you have the flag).
@@ -3523,7 +3539,7 @@ static void P_DoClimbing(player_t *player)
 			{
 				P_SetObjectMomZ(player->mo, 2*FRACUNIT, true);
 				if (cmd->forwardmove)
-					P_SetObjectMomZ(player->mo, 2*player->mo->momz/3, false);
+					player->mo->momz = 2*player->mo->momz/3;
 			}
 			if (thrust)
 				P_Thrust(player->mo, player->mo->angle, FixedMul(4*FRACUNIT, player->mo->scale)); // Lil' boost up.
@@ -4608,18 +4624,31 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					player->dashspeed = player->mindash;
 					P_SetPlayerMobjState(player->mo, S_PLAY_SPINDASH);
 					if (!player->spectator)
-						S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
+						S_StartSound(player->mo, sfx_spndsh); // Make the rev sound!
 				}
 				 // Revving
 				else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
 				{
-					if (player->dashspeed < player->maxdash)
+					if (player->speed > 5*player->mo->scale)
+					{
+						player->pflags &= ~PF_STARTDASH;
+						P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+						S_StartSound(player->mo, sfx_spin);
+						break;
+					}
+					if (player->dashspeed < player->mindash)
+						player->dashspeed = player->mindash;
+
+					if (player->dashspeed > player->maxdash)
+						player->dashspeed = player->maxdash;
+					
+					if (player->dashspeed < player->maxdash && player->mindash != player->maxdash)
 					{
 #define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
 						fixed_t soundcalculation = chargecalculation;
 						player->dashspeed += FRACUNIT;
 						if (!player->spectator && soundcalculation != chargecalculation)
-							S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
+							S_StartSound(player->mo, sfx_spndsh); // Make the rev sound!
 #undef chargecalculation
 					}
 					if (player->revitem && !(leveltime % 5)) // Now spawn the color thok circle.
@@ -4628,7 +4657,6 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						G_GhostAddRev();
 					}
 				}
-
 				// If not moving up or down, and travelling faster than a speed of five while not holding
 				// down the spin button and not spinning.
 				// AKA Just go into a spin on the ground, you idiot. ;)
@@ -4649,7 +4677,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (player->powers[pw_carry] == CR_BRAKGOOP)
 						player->dashspeed = 0;
 
-					if (!((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE))
+					if (!((gametyperules & GTR_RACE) && leveltime < 4*TICRATE))
 					{
 						if (player->dashspeed)
 						{
@@ -4717,7 +4745,6 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 							player->drawangle = player->mo->angle;
 #undef zpos
 
-							P_SetTarget(&player->mo->tracer, NULL);
 							player->mo->momx >>= 1;
 							player->mo->momy >>= 1;
 							player->pflags |= PF_USEDOWN;
@@ -4780,10 +4807,10 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 	// Rolling normally
 	if (onground && player->pflags & PF_SPINNING && !(player->pflags & PF_STARTDASH)
-		&& player->speed < FixedMul(5*FRACUNIT,player->mo->scale) && canstand)
+		&& player->speed < 5*player->mo->scale && canstand)
 	{
 		if (GETSECSPECIAL(player->mo->subsector->sector->special, 4) == 7 || (player->mo->ceilingz - player->mo->floorz < P_GetPlayerHeight(player)))
-			P_InstaThrust(player->mo, player->mo->angle, FixedMul(10*FRACUNIT, player->mo->scale));
+			P_InstaThrust(player->mo, player->mo->angle, 10*player->mo->scale);
 		else
 		{
 			player->skidtime = 0;
@@ -5028,7 +5055,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	{
 		if (onground || player->climbing || player->powers[pw_carry])
 			;
-		else if (gametype == GT_CTF && player->gotflag)
+		else if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag)
 			;
 		else if (player->pflags & (PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player has used an ability previously
 			;
@@ -5108,11 +5135,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 									boolean elem = ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL);
 									player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 									if (elem)
-									{
-										player->pflags |= PF_NOJUMPDAMAGE;
-										P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 										S_StartSound(player->mo, sfx_s3k43);
-									}
 									else
 									{
 										player->pflags &= ~PF_NOJUMPDAMAGE;
@@ -5253,7 +5276,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
-		else if (player->pflags & PF_SLIDING || (gametype == GT_CTF && player->gotflag))
+		else if (player->pflags & PF_SLIDING || ((gametyperules & GTR_TEAMFLAGS) && player->gotflag) || player->pflags & PF_SHIELDABILITY)
 			;
 		/*else if (P_SuperReady(player))
 		{
@@ -5540,7 +5563,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	{
 		player->pflags |= PF_JUMPDOWN;
 
-		if ((gametype != GT_CTF || !player->gotflag) && !player->exiting)
+		if ((!(gametyperules & GTR_TEAMFLAGS) || !player->gotflag) && !player->exiting)
 		{
 			if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP)
 			{
@@ -5550,7 +5573,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				else
 					potentialmomz = ((player->speed < 10*player->mo->scale)
 					? (player->speed - 10*player->mo->scale)/5
-					: 0);
+					: -1); // Should be 0, but made negative to ensure P_PlayerHitFloor runs upon touching ground
 				if (P_MobjFlip(player->mo)*player->mo->momz < potentialmomz)
 					player->mo->momz = P_MobjFlip(player->mo)*potentialmomz;
 				player->pflags &= ~PF_SPINNING;
@@ -5945,6 +5968,8 @@ static void P_3dMovement(player_t *player)
 	// When sliding, don't allow forward/back
 	if (player->pflags & PF_SLIDING)
 		cmd->forwardmove = 0;
+	else if (onground && player->mo->state == states+S_PLAY_PAIN)
+		P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 
 	player->aiming = cmd->aiming<<FRACBITS;
 
@@ -6089,7 +6114,7 @@ static void P_3dMovement(player_t *player)
 			// (Why was it so complicated before? ~Red)
 			controldirection = R_PointToAngle2(0, 0, cmd->forwardmove*FRACUNIT, -cmd->sidemove*FRACUNIT)+movepushangle;
 
-			movepushforward = max(abs(cmd->sidemove), abs(cmd->forwardmove)) * (thrustfactor * acceleration);
+			movepushforward = FixedHypot(cmd->sidemove, cmd->forwardmove) * (thrustfactor * acceleration);
 
 			// Allow a bit of movement while spinning
 			if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
@@ -6802,7 +6827,6 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	}
 
-#ifdef ROTSPRITE
 	if (!(player->charflags & SF_NONIGHTSROTATION))
 	{
 		if ((player->mo->state == &states[S_PLAY_NIGHTS_PULL])
@@ -6811,7 +6835,6 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		else
 			player->mo->rollangle = 0;
 	}
-#endif
 
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
@@ -7074,9 +7097,7 @@ static void P_NiGHTSMovement(player_t *player)
 	INT32 i;
 	statenum_t flystate;
 	UINT16 visangle;
-#ifdef ROTSPRITE
 	angle_t rollangle = 0;
-#endif
 
 	player->pflags &= ~PF_DRILLING;
 
@@ -7115,7 +7136,7 @@ static void P_NiGHTSMovement(player_t *player)
 		&& !player->exiting)
 			player->nightstime--;
 	}
-	else if (gametype != GT_RACE && gametype != GT_COMPETITION
+	else if (!(gametyperules & GTR_RACE)
 	&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	&& !(player->capsule && player->capsule->reactiontime)
@@ -7261,9 +7282,7 @@ static void P_NiGHTSMovement(player_t *player)
 		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	{
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;
-#ifdef ROTSPRITE
 		player->mo->rollangle = 0;
-#endif
 		return;
 	}
 
@@ -7271,7 +7290,7 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		player->mo->momx = player->mo->momy = 0;
 
-		if (gametype != GT_RACE && gametype != GT_COMPETITION)
+		if (!(gametyperules & GTR_RACE))
 			P_SetObjectMomZ(player->mo, FRACUNIT/2, (P_MobjFlip(player->mo)*player->mo->momz >= 0));
 		else
 			player->mo->momz = 0;
@@ -7589,7 +7608,6 @@ static void P_NiGHTSMovement(player_t *player)
 			flystate += (visangle*2); // S_PLAY_NIGHTS_FLY0-C - the *2 is to skip over drill states
 #endif
 		}
-#ifdef ROTSPRITE
 		else
 		{
 			angle_t a = R_PointToAngle(player->mo->x, player->mo->y) - player->mo->angle;
@@ -7607,18 +7625,15 @@ static void P_NiGHTSMovement(player_t *player)
 
 			rollangle = FixedAngle(visangle<<FRACBITS);
 		}
-#endif
 	}
 
 	if (player->mo->state != &states[flystate])
 		P_SetPlayerMobjState(player->mo, flystate);
 
-#ifdef ROTSPRITE
 	if (player->charflags & SF_NONIGHTSROTATION)
 		player->mo->rollangle = 0;
 	else
 		player->mo->rollangle = rollangle;
-#endif
 
 	if (player == &players[consoleplayer])
 		localangle = player->mo->angle;
@@ -7776,6 +7791,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->fuse = TICRATE*7; // takes about an extra second to hit the ground
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
+			flame->flags2 = (flame->flags2 & ~MF2_OBJECTFLIP)|(player->mo->flags2 & MF2_OBJECTFLIP);
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
 			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
@@ -8225,7 +8241,7 @@ static void P_MovePlayer(player_t *player)
 	if (player->pflags & PF_GLIDING)
 	{
 		mobj_t *mo = player->mo; // seriously why isn't this at the top of the function hngngngng
-		fixed_t leeway;
+		fixed_t leeway = !P_AnalogMove(player) ? FixedAngle(cmd->sidemove*(FRACUNIT)) : 0;
 		fixed_t glidespeed = player->actionspd;
 		fixed_t momx = mo->momx - player->cmomx, momy = mo->momy - player->cmomy;
 		angle_t angle, moveangle = R_PointToAngle2(0, 0, momx, momy);
@@ -8245,7 +8261,6 @@ static void P_MovePlayer(player_t *player)
 		}
 
 		// Strafing while gliding.
-		leeway = FixedAngle(cmd->sidemove*(FRACUNIT));
 		angle = mo->angle - leeway;
 
 		if (!player->skidtime) // TODO: make sure this works in 2D!
@@ -9295,7 +9310,7 @@ boolean P_GetLives(player_t *player)
 {
 	INT32 i, maxlivesplayer = -1, livescheck = 1;
 	if (!(netgame || multiplayer)
-	|| (gametype != GT_COOP)
+	|| !G_GametypeUsesCoopLives()
 	|| (player->lives == INFLIVES))
 		return true;
 
@@ -9444,7 +9459,7 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	else if ((player->lives > 0 || j != MAXPLAYERS) && !(!(netgame || multiplayer) && G_IsSpecialStage(gamemap))) // Don't allow "click to respawn" in special stages!
 	{
-		if (gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
+		if (G_GametypeUsesCoopStarposts() && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		{
 			P_ConsiderAllGone();
 			if ((player->deadtimer > TICRATE<<1) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
@@ -9459,19 +9474,22 @@ static void P_DeathThink(player_t *player)
 			// Respawn with jump button, force respawn time (3 second default, cheat protected) in shooter modes.
 			if (cmd->buttons & BT_JUMP)
 			{
-				if (gametype != GT_COOP && player->spectator)
+				// You're a spectator, so respawn right away.
+				if ((gametyperules & GTR_SPECTATORS) && player->spectator)
 					player->playerstate = PST_REBORN;
-				else switch(gametype) {
-					case GT_COOP:
-					case GT_COMPETITION:
-					case GT_RACE:
-						if (player->deadtimer > TICRATE)
-							player->playerstate = PST_REBORN;
-						break;
-					default:
-						if (player->deadtimer > cv_respawntime.value*TICRATE)
-							player->playerstate = PST_REBORN;
-						break;
+				else
+				{
+					// Give me one second.
+					INT32 respawndelay = TICRATE;
+
+					// Non-platform gametypes
+					if (gametyperules & GTR_RESPAWNDELAY)
+						respawndelay = (cv_respawntime.value*TICRATE);
+
+					// You've been dead for enough time.
+					// You may now respawn.
+					if (player->deadtimer > respawndelay)
+						player->playerstate = PST_REBORN;
 				}
 			}
 
@@ -9482,11 +9500,10 @@ static void P_DeathThink(player_t *player)
 	}
 	else if ((netgame || multiplayer) && player->deadtimer >= 8*TICRATE)
 	{
-
 		INT32 i, deadtimercheck = INT32_MAX;
 
 		// In a net/multiplayer game, and out of lives
-		if (gametype == GT_COMPETITION)
+		if (G_CompetitionGametype())
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -9515,12 +9532,12 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	}
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION || (gametype == GT_COOP && (multiplayer || netgame)))
+	if ((gametyperules & GTR_RACE) || (gametype == GT_COOP && (multiplayer || netgame)))
 	{
 		// Keep time rolling in race mode
 		if (!(countdown2 && !countdown) && !player->exiting && !(player->pflags & PF_GAMETYPEOVER) && !stoppedclock)
 		{
-			if (gametype == GT_RACE || gametype == GT_COMPETITION)
+			if (gametyperules & GTR_RACE)
 			{
 				if (leveltime >= 4*TICRATE)
 					player->realtime = leveltime - 4*TICRATE;
@@ -9569,6 +9586,7 @@ static void CV_CamRotate2_OnChange(void)
 static CV_PossibleValue_t CV_CamSpeed[] = {{0, "MIN"}, {1*FRACUNIT, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t rotation_cons_t[] = {{1, "MIN"}, {45, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t CV_CamRotate[] = {{-720, "MIN"}, {720, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t multiplier_cons_t[] = {{0, "MIN"}, {3*FRACUNIT, "MAX"}, {0, NULL}};
 
 consvar_t cv_cam_dist = {"cam_dist", "160", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_height = {"cam_height", "25", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -9576,6 +9594,7 @@ consvar_t cv_cam_still = {"cam_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 
 consvar_t cv_cam_speed = {"cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotate = {"cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotspeed = {"cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_turnmultiplier = {"cam_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_orbit = {"cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_adjust = {"cam_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_dist = {"cam2_dist", "160", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -9584,6 +9603,7 @@ consvar_t cv_cam2_still = {"cam2_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL
 consvar_t cv_cam2_speed = {"cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotate = {"cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotspeed = {"cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam2_turnmultiplier = {"cam2_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_orbit = {"cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_adjust = {"cam2_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -9652,17 +9672,28 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	mo = player->mo;
 
+	if (player->playerstate == PST_REBORN)
+	{
+		P_CalcChasePostImg(player, thiscam);
+		return true;
+	}
+
 	if (player->exiting)
 	{
-		if (mo->target && mo->target->type == MT_SIGN && mo->target->spawnpoint)
+		if (mo->target && mo->target->type == MT_SIGN && mo->target->spawnpoint
+		&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value)
+		&& !(twodlevel || (mo->flags2 & MF2_TWOD)))
 			sign = mo->target;
 		else if ((player->powers[pw_carry] == CR_NIGHTSMODE)
 		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6]))
+		{
+			P_CalcChasePostImg(player, thiscam);
 			return true;
+		}
 	}
 
-	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
+	cameranoclip = (sign || player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
 	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || tutorialmode))
 	{
@@ -9740,7 +9771,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camorbit = (!stricmp(cv_cam_orbit.defaultvalue, "off")) ? false : true;
 		camrotate = atoi(cv_cam_rotate.defaultvalue);
 		camdist = FixedMul((INT32)(atof(cv_cam_dist.defaultvalue) * FRACUNIT), mo->scale);
-		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), mo->scale);
 	}
 	else if (thiscam == &camera)
 	{
@@ -9749,7 +9780,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camorbit = cv_cam_orbit.value;
 		camrotate = cv_cam_rotate.value;
 		camdist = FixedMul(cv_cam_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam_height.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam_height.value, mo->scale);
 	}
 	else // Camera 2
 	{
@@ -9758,8 +9789,11 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camorbit = cv_cam2_orbit.value;
 		camrotate = cv_cam2_rotate.value;
 		camdist = FixedMul(cv_cam2_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam2_height.value, mo->scale);
 	}
+
+	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
+		camheight = FixedMul(camheight, player->camerascale);
 
 #ifdef REDSANALOG
 	if (P_AnalogMove(player) && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
@@ -9792,7 +9826,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
 		}
 	}
-	else if (P_AnalogMove(player)) // Analog
+	else if (P_AnalogMove(player) && !sign) // Analog
 		angle = R_PointToAngle2(thiscam->x, thiscam->y, mo->x, mo->y);
 	else if (demoplayback)
 	{
@@ -9816,7 +9850,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		thiscam->angle = angle;
 	}
 
-	if ((((thiscam == &camera) && cv_analog.value) || ((thiscam != &camera) && cv_analog2.value) || demoplayback) && !objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
+	if ((((thiscam == &camera) && cv_analog.value) || ((thiscam != &camera) && cv_analog2.value) || demoplayback) && !sign && !objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
 	{
 #ifdef REDSANALOG
 		if ((player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)); else
@@ -9854,26 +9888,25 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			camheight = FixedMul(camheight, 3*FRACUNIT/2);
 		}
 
-		// x1.2 dist for analog
-		if (P_AnalogMove(player))
-		{
-			dist = FixedMul(dist, 6*FRACUNIT/5);
-			camheight = FixedMul(camheight, 6*FRACUNIT/5);
-		}
-
-		if (sign)
+		if (sign) // signpost camera has specific placement
 		{
 			camheight = mo->scale << 7;
 			camspeed = FRACUNIT/12;
+		}
+		else if (P_AnalogMove(player)) // x1.2 dist for analog
+		{
+			dist = FixedMul(dist, 6*FRACUNIT/5);
+			camheight = FixedMul(camheight, 6*FRACUNIT/5);
 		}
 
 		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_GENERIC || player->powers[pw_carry] == CR_MACESPIN))
 			dist <<= 1;
 	}
 
+	if (!sign && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
+		dist = FixedMul(dist, player->camerascale);
 
-
-	checkdist = (dist = FixedMul(dist, player->camerascale));
+	checkdist = dist;
 
 	if (checkdist < 128*FRACUNIT)
 		checkdist = 128*FRACUNIT;
@@ -9960,7 +9993,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (sign)
 	{
-		if (mo->eflags & MFE_VERTICALFLIP)
+		if (sign->eflags & MFE_VERTICALFLIP)
 			z = sign->ceilingz - pviewheight - camheight;
 		else
 			z = sign->floorz + pviewheight + camheight;
@@ -10331,6 +10364,11 @@ boolean P_SpectatorJoinGame(player_t *player)
 		else
 			changeto = (P_RandomFixed() & 1) + 1;
 
+#ifdef HAVE_BLUA
+		if (!LUAh_TeamSwitch(player, changeto, true, false, false))
+			return false;
+#endif
+
 		if (player->mo)
 		{
 			P_RemoveMobj(player->mo);
@@ -10342,7 +10380,14 @@ boolean P_SpectatorJoinGame(player_t *player)
 
 		//Reset away view
 		if (P_IsLocalPlayer(player) && displayplayer != consoleplayer)
+		{
+#ifdef HAVE_BLUA
+			// Call ViewpointSwitch hooks here.
+			// The viewpoint was forcibly changed.
+			LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+#endif
 			displayplayer = consoleplayer;
+		}
 
 		if (changeto == 1)
 			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x85', M_GetText("Red team"), '\x80');
@@ -10356,8 +10401,12 @@ boolean P_SpectatorJoinGame(player_t *player)
 	{
 		// Exception for hide and seek. Don't join a game when you simply
 		// respawn in place and sit there for the rest of the round.
-		if (!(gametype == GT_HIDEANDSEEK && leveltime > (hidetime * TICRATE)))
+		if (!((gametyperules & GTR_HIDEFROZEN) && leveltime > (hidetime * TICRATE)))
 		{
+#ifdef HAVE_BLUA
+			if (!LUAh_TeamSwitch(player, 3, true, false, false))
+				return false;
+#endif
 			if (player->mo)
 			{
 				P_RemoveMobj(player->mo);
@@ -10380,7 +10429,14 @@ boolean P_SpectatorJoinGame(player_t *player)
 
 			//Reset away view
 			if (P_IsLocalPlayer(player) && displayplayer != consoleplayer)
+			{
+#ifdef HAVE_BLUA
+				// Call ViewpointSwitch hooks here.
+				// The viewpoint was forcibly changed.
+				LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+#endif
 				displayplayer = consoleplayer;
+			}
 
 			if (gametype != GT_COOP)
 				CONS_Printf(M_GetText("%s entered the game.\n"), player_names[player-players]);
@@ -10396,6 +10452,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 	return false;
 }
 
+// the below is first person only, if you're curious. check out P_CalcChasePostImg in p_mobj.c for chasecam
 static void P_CalcPostImg(player_t *player)
 {
 	sector_t *sector = player->mo->subsector->sector;
@@ -10505,7 +10562,7 @@ void P_DoPityCheck(player_t *player)
 {
 	// No pity outside of match or CTF.
 	if (player->spectator
-		|| !(gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
+		|| !(gametyperules & GTR_PITYSHIELD))
 		return;
 
 	// Apply pity shield if available.
@@ -11202,7 +11259,10 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 		if (panim == PA_WALK)
 		{
 			if (stat != fume->info->spawnstate)
+			{
+				fume->threshold = 0;
 				P_SetMobjState(fume, fume->info->spawnstate);
+			}
 			return;
 		}
 	}
@@ -11233,6 +11293,12 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 		if (underwater)
 		{
 			fume->frame = (fume->frame & FF_FRAMEMASK) | FF_ANIMATE | (P_RandomRange(0, 9) * FF_TRANS10);
+			fume->threshold = 1;
+		}
+		else if (fume->threshold)
+		{
+			fume->frame = (fume->frame & FF_FRAMEMASK) | fume->state->frame;
+			fume->threshold = 0;
 		}
 	}
 
@@ -11338,7 +11404,7 @@ void P_PlayerThink(player_t *player)
 		I_Error("player %s is in PST_REBORN\n", sizeu1(playeri));
 #endif
 
-	if (gametype == GT_RACE || gametype == GT_COMPETITION)
+	if (gametyperules & GTR_RACE)
 	{
 		INT32 i;
 
@@ -11401,7 +11467,7 @@ void P_PlayerThink(player_t *player)
 		player->exiting > 0 && player->exiting <= 1*TICRATE &&
 		(!multiplayer || gametype == GT_COOP ? !mapheaderinfo[gamemap-1]->musinterfadeout : true) &&
 			// don't fade if we're fading during intermission. follows Y_StartIntermission intertype = int_coop
-		(gametype == GT_RACE || gametype == GT_COMPETITION ? countdown2 == 0 : true) && // don't fade on timeout
+		((gametyperules & GTR_RACE) ? countdown2 == 0 : true) && // don't fade on timeout
 		player->lives > 0 && // don't fade on game over (competition)
 		P_IsLocalPlayer(player))
 	{
@@ -11470,7 +11536,7 @@ void P_PlayerThink(player_t *player)
 
 	if (player->pflags & PF_FINISHED)
 	{
-		if (cv_exitmove.value && !G_EnoughPlayersFinished())
+		if ((gametype == GT_COOP && cv_exitmove.value) && !G_EnoughPlayersFinished())
 			player->exiting = 0;
 		else
 			P_DoPlayerExit(player);
@@ -11492,7 +11558,7 @@ void P_PlayerThink(player_t *player)
 #else
 	if (player->spectator &&
 #endif
-	gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
+	G_GametypeUsesCoopStarposts() && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		P_ConsiderAllGone();
 
 	if (player->playerstate == PST_DEAD)
@@ -11516,7 +11582,7 @@ void P_PlayerThink(player_t *player)
 		player->lives = cv_startinglives.value;
 	}
 
-	if ((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE)
+	if ((gametyperules & GTR_RACE) && leveltime < 4*TICRATE)
 	{
 		cmd->buttons &= BT_USE; // Remove all buttons except BT_USE
 		cmd->forwardmove = 0;
@@ -11526,7 +11592,7 @@ void P_PlayerThink(player_t *player)
 	// Synchronizes the "real" amount of time spent in the level.
 	if (!player->exiting && !stoppedclock)
 	{
-		if (gametype == GT_RACE || gametype == GT_COMPETITION)
+		if (gametyperules & GTR_RACE)
 		{
 			if (leveltime >= 4*TICRATE)
 				player->realtime = leveltime - 4*TICRATE;

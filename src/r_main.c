@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,6 +19,7 @@
 #include "r_local.h"
 #include "r_splats.h" // faB(21jan): testing
 #include "r_sky.h"
+#include "hu_stuff.h"
 #include "st_stuff.h"
 #include "p_local.h"
 #include "keys.h"
@@ -28,6 +29,7 @@
 #include "d_main.h"
 #include "v_video.h"
 #include "p_spec.h" // skyboxmo
+#include "p_setup.h"
 #include "z_zone.h"
 #include "m_random.h" // quake camera shake
 #include "r_portal.h"
@@ -696,6 +698,7 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 	INT32 side, i;
 	size_t nodenum;
 	subsector_t *ret;
+	seg_t *seg;
 
 	// single subsector is a special case
 	if (numnodes == 0)
@@ -711,10 +714,15 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 	}
 
 	ret = &subsectors[nodenum & ~NF_SUBSECTOR];
-	for (i = 0; i < ret->numlines; i++)
-		//if (R_PointOnSegSide(x, y, &segs[ret->firstline + i])) -- breaks in ogl because polyvertex_t cast over vertex pointers
-		if (P_PointOnLineSide(x, y, segs[ret->firstline + i].linedef) != segs[ret->firstline + i].side)
+	for (i = 0, seg = &segs[ret->firstline]; i < ret->numlines; i++, seg++)
+	{
+		if (seg->glseg)
+			continue;
+
+		//if (R_PointOnSegSide(x, y, seg)) -- breaks in ogl because polyvertex_t cast over vertex pointers
+		if (P_PointOnLineSide(x, y, seg->linedef) != seg->side)
 			return 0;
+	}
 
 	return ret;
 }
@@ -1008,11 +1016,13 @@ static void R_PortalFrame(portal_t *portal)
 	if (portal->clipline != -1)
 	{
 		portalclipline = &lines[portal->clipline];
+		portalcullsector = portalclipline->frontsector;
 		viewsector = portalclipline->frontsector;
 	}
 	else
 	{
 		portalclipline = NULL;
+		portalcullsector = NULL;
 		viewsector = R_PointInSubsector(viewx, viewy)->sector;
 	}
 }
@@ -1152,6 +1162,26 @@ void R_RenderPlayerView(player_t *player)
 	free(masks);
 }
 
+// Lactozilla: Renderer switching
+#ifdef HWRENDER
+void R_InitHardwareMode(void)
+{
+	HWR_AddSessionCommands();
+	HWR_Switch();
+	HWR_LoadTextures(numtextures);
+	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
+		HWR_SetupLevel();
+}
+#endif
+
+void R_ReloadHUDGraphics(void)
+{
+	CONS_Debug(DBG_RENDER, "R_ReloadHUDGraphics()...\n");
+	ST_LoadGraphics();
+	HU_LoadGraphics();
+	ST_ReloadSkinFaceGraphics();
+}
+
 // =========================================================================
 //                    ENGINE COMMANDS & VARS
 // =========================================================================
@@ -1190,6 +1220,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam_speed);
 	CV_RegisterVar(&cv_cam_rotate);
 	CV_RegisterVar(&cv_cam_rotspeed);
+	CV_RegisterVar(&cv_cam_turnmultiplier);
 	CV_RegisterVar(&cv_cam_orbit);
 	CV_RegisterVar(&cv_cam_adjust);
 
@@ -1199,6 +1230,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam2_speed);
 	CV_RegisterVar(&cv_cam2_rotate);
 	CV_RegisterVar(&cv_cam2_rotspeed);
+	CV_RegisterVar(&cv_cam2_turnmultiplier);
 	CV_RegisterVar(&cv_cam2_orbit);
 	CV_RegisterVar(&cv_cam2_adjust);
 
@@ -1208,30 +1240,4 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_maxportals);
 
 	CV_RegisterVar(&cv_movebob);
-
-#ifdef HWRENDER
-	// GL-specific Commands
-	CV_RegisterVar(&cv_grgammablue);
-	CV_RegisterVar(&cv_grgammagreen);
-	CV_RegisterVar(&cv_grgammared);
-	CV_RegisterVar(&cv_grfovchange);
-	CV_RegisterVar(&cv_grfog);
-	CV_RegisterVar(&cv_grfogcolor);
-	CV_RegisterVar(&cv_grsoftwarefog);
-#ifdef ALAM_LIGHTING
-	CV_RegisterVar(&cv_grstaticlighting);
-	CV_RegisterVar(&cv_grdynamiclighting);
-	CV_RegisterVar(&cv_grcoronas);
-	CV_RegisterVar(&cv_grcoronasize);
-#endif
-	CV_RegisterVar(&cv_grmodelinterpolation);
-	CV_RegisterVar(&cv_grmodels);
-	CV_RegisterVar(&cv_grspritebillboarding);
-	CV_RegisterVar(&cv_grskydome);
-#endif
-
-#ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
-		HWR_AddCommands();
-#endif
 }

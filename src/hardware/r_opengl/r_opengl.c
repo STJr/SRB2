@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-// Copyright (C) 1998-2018 by Sonic Team Junior.
+// Copyright (C) 1998-2019 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -85,7 +85,7 @@ static GLboolean MipMap = GL_FALSE;
 static GLint min_filter = GL_LINEAR;
 static GLint mag_filter = GL_LINEAR;
 static GLint anisotropic_filter = 0;
-static FTransform  md2_transform;
+static boolean model_lighting = true;
 
 const GLubyte *gl_extensions = NULL;
 
@@ -221,11 +221,6 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglDrawElements glDrawElements
 #define pglEnableClientState glEnableClientState
 #define pglDisableClientState glDisableClientState
-#define pglClientActiveTexture glClientActiveTexture
-#define pglGenBuffers glGenBuffers
-#define pglBindBuffer glBindBuffer
-#define pglBufferData glBufferData
-#define pglDeleteBuffers glDeleteBuffers
 
 /* Lighting */
 #define pglShadeModel glShadeModel
@@ -331,15 +326,6 @@ typedef void (APIENTRY * PFNglEnableClientState) (GLenum cap);
 static PFNglEnableClientState pglEnableClientState;
 typedef void (APIENTRY * PFNglDisableClientState) (GLenum cap);
 static PFNglDisableClientState pglDisableClientState;
-typedef void (APIENTRY * PFNglGenBuffers) (GLsizei n, GLuint *buffers);
-static PFNglGenBuffers pglGenBuffers;
-typedef void (APIENTRY * PFNglBindBuffer) (GLenum target, GLuint buffer);
-static PFNglBindBuffer pglBindBuffer;
-typedef void (APIENTRY * PFNglBufferData) (GLenum target, GLsizei size, const GLvoid *data, GLenum usage);
-static PFNglBufferData pglBufferData;
-typedef void (APIENTRY * PFNglDeleteBuffers) (GLsizei n, const GLuint *buffers);
-static PFNglDeleteBuffers pglDeleteBuffers;
-
 
 /* Lighting */
 typedef void (APIENTRY * PFNglShadeModel) (GLenum mode);
@@ -397,6 +383,17 @@ static PFNglMultiTexCoord2fv pglMultiTexCoord2fv;
 typedef void (APIENTRY *PFNglClientActiveTexture) (GLenum);
 static PFNglClientActiveTexture pglClientActiveTexture;
 
+/* 1.5 functions for buffers */
+typedef void (APIENTRY * PFNglGenBuffers) (GLsizei n, GLuint *buffers);
+static PFNglGenBuffers pglGenBuffers;
+typedef void (APIENTRY * PFNglBindBuffer) (GLenum target, GLuint buffer);
+static PFNglBindBuffer pglBindBuffer;
+typedef void (APIENTRY * PFNglBufferData) (GLenum target, GLsizei size, const GLvoid *data, GLenum usage);
+static PFNglBufferData pglBufferData;
+typedef void (APIENTRY * PFNglDeleteBuffers) (GLsizei n, const GLuint *buffers);
+static PFNglDeleteBuffers pglDeleteBuffers;
+
+
 /* 1.2 Parms */
 /* GL_CLAMP_TO_EDGE_EXT */
 #ifndef GL_CLAMP_TO_EDGE
@@ -415,6 +412,14 @@ static PFNglClientActiveTexture pglClientActiveTexture;
 #endif
 #ifndef GL_TEXTURE1
 #define GL_TEXTURE1 0x84C1
+#endif
+
+/* 1.5 Parms */
+#ifndef GL_ARRAY_BUFFER
+#define GL_ARRAY_BUFFER 0x8892
+#endif
+#ifndef GL_STATIC_DRAW
+#define GL_STATIC_DRAW 0x88E4
 #endif
 
 boolean SetupGLfunc(void)
@@ -504,6 +509,8 @@ boolean SetupGLFunc13(void)
 	pglMultiTexCoord2f = GetGLFunc("glMultiTexCoord2f");
 	pglClientActiveTexture = GetGLFunc("glClientActiveTexture");
 	pglMultiTexCoord2fv = GetGLFunc("glMultiTexCoord2fv");
+
+	/* 1.5 funcs */
 	pglGenBuffers = GetGLFunc("glGenBuffers");
 	pglBindBuffer = GetGLFunc("glBindBuffer");
 	pglBufferData = GetGLFunc("glBufferData");
@@ -716,8 +723,8 @@ void Flush(void)
 
 	while (gr_cachehead)
 	{
-		// ceci n'est pas du tout necessaire vu que tu les a charger normalement et
-		// donc il sont dans ta liste !
+		// this is not necessary at all, because you have loaded them normally,
+		// and so they already are in your list!
 #if 0
 		//Hurdler: 25/04/2000: now support colormap in hardware mode
 		FTextureInfo    *tmp = gr_cachehead->nextskin;
@@ -1289,11 +1296,11 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 
 		pTexInfo->nextmipmap = NULL;
 		if (gr_cachetail)
-		{ // insertion en fin de liste
+		{ // insertion at the tail
 			gr_cachetail->nextmipmap = pTexInfo;
 			gr_cachetail = pTexInfo;
 		}
-		else // initialisation de la liste
+		else // initialization of the linked list
 			gr_cachetail = gr_cachehead =  pTexInfo;
 	}
 }
@@ -1427,7 +1434,7 @@ static const boolean gl_ext_arb_vertex_buffer_object = true;
 
 // The texture offset to be applied to the texture coordinates in SkyVertex().
 static int rows, columns;
-static boolean yflip;
+static signed char yflip;
 static int texw, texh;
 static boolean foglayer;
 static float delta = 0.0f;
@@ -1440,17 +1447,17 @@ static INT32 lasttex = -1;
 
 static void SkyVertex(vbo_vertex_t *vbo, int r, int c)
 {
-	const float radians = (M_PIl / 180.0f);
+	const float radians = (float)(M_PIl / 180.0f);
 	const float scale = 10000.0f;
 	const float maxSideAngle = 60.0f;
 
 	float topAngle = (c / (float)columns * 360.0f);
 	float sideAngle = (maxSideAngle * (rows - r) / rows);
-	float height = sin(sideAngle * radians);
-	float realRadius = scale * cos(sideAngle * radians);
-	float x = realRadius * cos(topAngle * radians);
+	float height = (float)(sin(sideAngle * radians));
+	float realRadius = (float)(scale * cos(sideAngle * radians));
+	float x = (float)(realRadius * cos(topAngle * radians));
 	float y = (!yflip) ? scale * height : -scale * height;
-	float z = realRadius * sin(topAngle * radians);
+	float z = (float)(realRadius * sin(topAngle * radians));
 	float timesRepeat = (4 * (256.0f / texw));
 	if (fpclassify(timesRepeat) == FP_ZERO)
 		timesRepeat = 1.0f;
@@ -1652,16 +1659,9 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 {
 	switch (IdState)
 	{
-
-#if 0
-		case 77:
-		{
-			//08/01/00: Hurdler this is a test for mirror
-			if (!Value)
-				ClearBuffer(false, true, 0); // clear depth buffer
+		case HWD_SET_MODEL_LIGHTING:
+			model_lighting = Value;
 			break;
-		}
-#endif
 
 		case HWD_SET_FOG_COLOR:
 		{
@@ -1674,6 +1674,7 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 			pglFogfv(GL_FOG_COLOR, fogcolor);
 			break;
 		}
+
 		case HWD_SET_FOG_DENSITY:
 			pglFogf(GL_FOG_DENSITY, Value*1200/(500*1000000.0f));
 			break;
@@ -2038,16 +2039,25 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	}
 #endif
 
-	pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+	if (model_lighting)
+	{
+		pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+		pglShadeModel(GL_SMOOTH);
+	}
 
-	pglShadeModel(GL_SMOOTH);
 	if (color)
 	{
 #ifdef GL_LIGHT_MODEL_AMBIENT
-		pglEnable(GL_LIGHTING);
-		pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
-		pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+		if (model_lighting)
+		{
+			pglEnable(GL_LIGHTING);
+			pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
+			pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+		}
+		else
 #endif
+			pglColor4ubv((GLubyte*)color);
+
 		if (color[3] < 255)
 			SetBlend(PF_Translucent|PF_Modulated|PF_Clip);
 		else
@@ -2066,7 +2076,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
 	pglRotatef(pos->anglex, 1.0f, 0.0f, 0.0f);
 
-#ifdef ROTSPRITE
 	if (pos->roll)
 	{
 		float roll = (1.0f * pos->rollflip);
@@ -2079,7 +2088,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			pglRotatef(pos->rollangle, roll, 0.0f, 0.0f);
 		pglTranslatef(-pos->centerx, -pos->centery, 0);
 	}
-#endif
 
 	pglScalef(scalex, scaley, scalez);
 
@@ -2218,8 +2226,6 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 	if (stransform)
 	{
 		boolean fovx90;
-		// keep a trace of the transformation for md2
-		memcpy(&md2_transform, stransform, sizeof (md2_transform));
 
 #ifdef USE_FTRANSFORM_MIRROR
 		// mirroring from Kart

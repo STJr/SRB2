@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -44,6 +44,7 @@ extern boolean highcolor;
 /**	\brief setup video mode
 */
 void I_StartupGraphics(void);
+void I_StartupHardwareGraphics(void);
 
 /**	\brief restore old video mode
 */
@@ -84,6 +85,7 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h);
 	\return	currect video mode
 */
 INT32 VID_SetMode(INT32 modenum);
+void VID_CheckRenderer(void);
 
 /**	\brief	The VID_GetModeName function
 

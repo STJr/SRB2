@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -222,13 +222,14 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 
 // flags for items in the menu
 // menu handle (what we do when key is pressed
-#define IT_TYPE             14     // (2+4+8)
+#define IT_TYPE             15     // (1+2+4+8)
 #define IT_CALL              0     // call the function
+#define IT_SPACE             1     // no handling
 #define IT_ARROWS            2     // call function with 0 for left arrow and 1 for right arrow in param
 #define IT_KEYHANDLER        4     // call with the key in param
 #define IT_SUBMENU           6     // go to sub menu
 #define IT_CVAR              8     // handle as a cvar
-#define IT_SPACE            10     // no handling
+#define IT_PAIR             11     // no handling, define both sides of text
 #define IT_MSGHANDLER       12     // same as key but with event and sometime can handle y/n key (special for message)
 
 #define IT_DISPLAY   (48+64+128)    // 16+32+64+128
@@ -255,8 +256,8 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_CV_NOPRINT     1536
 #define IT_CV_NOMOD       2048
 #define IT_CV_INVISSLIDER 2560
-#define IT_CV_INTEGERSTEP 4096			// if IT_CV_NORMAL and cvar is CV_FLOAT, modify it by 1 instead of 0.0625
-#define IT_CV_FLOATSLIDER	4608			// IT_CV_SLIDER, value modified by 0.0625 instead of 1 (for CV_FLOAT cvars)
+#define IT_CV_INTEGERSTEP 4096      // if IT_CV_NORMAL and cvar is CV_FLOAT, modify it by 1 instead of 0.0625
+#define IT_CV_FLOATSLIDER 4608      // IT_CV_SLIDER, value modified by 0.0625 instead of 1 (for CV_FLOAT cvars)
 
 //call/submenu specific
 // There used to be a lot more here but ...
@@ -371,6 +372,7 @@ typedef struct
 	UINT8 col[2];
 	char notes[441];
 } gtdesc_t;
+extern gtdesc_t gametypedesc[NUMGAMETYPES];
 
 // mode descriptions for video mode menu
 typedef struct

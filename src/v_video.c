@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -84,39 +84,6 @@ static CV_PossibleValue_t constextsize_cons_t[] = {
 static void CV_constextsize_OnChange(void);
 consvar_t cv_constextsize = {"con_textsize", "Medium", CV_SAVE|CV_CALL, constextsize_cons_t, CV_constextsize_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-#ifdef HWRENDER
-static void CV_Gammaxxx_ONChange(void);
-// Saved hardware mode variables
-// - You can change them in software,
-// but they won't do anything.
-static CV_PossibleValue_t grgamma_cons_t[] = {{1, "MIN"}, {255, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t grsoftwarefog_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "LightPlanes"}, {0, NULL}};
-static CV_PossibleValue_t grmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
-
-consvar_t cv_grfovchange = {"gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grfog = {"gr_fog", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grfogcolor = {"gr_fogcolor", "AAAAAA", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grsoftwarefog = {"gr_softwarefog", "Off", CV_SAVE, grsoftwarefog_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grgammared = {"gr_gammared", "127", CV_SAVE|CV_CALL, grgamma_cons_t,
-                           CV_Gammaxxx_ONChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grgammagreen = {"gr_gammagreen", "127", CV_SAVE|CV_CALL, grgamma_cons_t,
-                             CV_Gammaxxx_ONChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grgammablue = {"gr_gammablue", "127", CV_SAVE|CV_CALL, grgamma_cons_t,
-                            CV_Gammaxxx_ONChange, 0, NULL, NULL, 0, 0, NULL};
-#ifdef ALAM_LIGHTING
-consvar_t cv_grdynamiclighting = {"gr_dynamiclighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grstaticlighting  = {"gr_staticlighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grcoronas = {"gr_coronas", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grcoronasize = {"gr_coronasize", "1", CV_SAVE| CV_FLOAT, 0, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
-
-consvar_t cv_grmodels = {"gr_models", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grmodelinterpolation = {"gr_modelinterpolation", "Sometimes", CV_SAVE, grmodelinterpolation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-consvar_t cv_grspritebillboarding = {"gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grskydome = {"gr_skydome", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
-
 // local copy of the palette for V_GetColor()
 RGBA_t *pLocalPalette = NULL;
 RGBA_t *pMasterPalette = NULL;
@@ -128,6 +95,7 @@ Please check it out if you're trying to maintain this.
 toast 18/04/17
 */
 float Cubepal[2][2][2][3];
+boolean Cubeapply = false;
 
 // returns whether to apply cube, selectively avoiding expensive operations
 static boolean InitCube(void)
@@ -343,10 +311,11 @@ const UINT8 correctiontable[256] =
 // keep a copy of the palette so that we can get the RGB value for a color index at any time.
 static void LoadPalette(const char *lumpname)
 {
-	boolean cube = InitCube();
 	lumpnum_t lumpnum = W_GetNumForName(lumpname);
 	size_t i, palsize = W_LumpLength(lumpnum)/3;
 	UINT8 *pal;
+
+	Cubeapply = InitCube();
 
 	Z_Free(pLocalPalette);
 	Z_Free(pMasterPalette);
@@ -369,43 +338,49 @@ static void LoadPalette(const char *lumpname)
 		pMasterPalette[i].s.alpha = pLocalPalette[i].s.alpha = 0xFF;
 
 		// lerp of colour cubing! if you want, make it smoother yourself
-		if (cube)
-		{
-			float working[4][3];
-			float linear;
-			UINT8 q;
+		if (Cubeapply)
+			V_CubeApply(&pLocalPalette[i].s.red, &pLocalPalette[i].s.green, &pLocalPalette[i].s.blue);
+	}
+}
 
-			linear = (pLocalPalette[i].s.red/255.0);
+void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue)
+{
+	float working[4][3];
+	float linear;
+	UINT8 q;
+
+	if (!Cubeapply)
+		return;
+
+	linear = (*red/255.0);
 #define dolerp(e1, e2) ((1 - linear)*e1 + linear*e2)
-			for (q = 0; q < 3; q++)
-			{
-				working[0][q] = dolerp(Cubepal[0][0][0][q], Cubepal[1][0][0][q]);
-				working[1][q] = dolerp(Cubepal[0][1][0][q], Cubepal[1][1][0][q]);
-				working[2][q] = dolerp(Cubepal[0][0][1][q], Cubepal[1][0][1][q]);
-				working[3][q] = dolerp(Cubepal[0][1][1][q], Cubepal[1][1][1][q]);
-			}
-			linear = (pLocalPalette[i].s.green/255.0);
-			for (q = 0; q < 3; q++)
-			{
-				working[0][q] = dolerp(working[0][q], working[1][q]);
-				working[1][q] = dolerp(working[2][q], working[3][q]);
-			}
-			linear = (pLocalPalette[i].s.blue/255.0);
-			for (q = 0; q < 3; q++)
-			{
-				working[0][q] = 255*dolerp(working[0][q], working[1][q]);
-				if (working[0][q] > 255.0)
-					working[0][q] = 255.0;
-				else if (working[0][q]  < 0.0)
-					working[0][q] = 0.0;
-			}
+	for (q = 0; q < 3; q++)
+	{
+		working[0][q] = dolerp(Cubepal[0][0][0][q], Cubepal[1][0][0][q]);
+		working[1][q] = dolerp(Cubepal[0][1][0][q], Cubepal[1][1][0][q]);
+		working[2][q] = dolerp(Cubepal[0][0][1][q], Cubepal[1][0][1][q]);
+		working[3][q] = dolerp(Cubepal[0][1][1][q], Cubepal[1][1][1][q]);
+	}
+	linear = (*green/255.0);
+	for (q = 0; q < 3; q++)
+	{
+		working[0][q] = dolerp(working[0][q], working[1][q]);
+		working[1][q] = dolerp(working[2][q], working[3][q]);
+	}
+	linear = (*blue/255.0);
+	for (q = 0; q < 3; q++)
+	{
+		working[0][q] = 255*dolerp(working[0][q], working[1][q]);
+		if (working[0][q] > 255.0)
+			working[0][q] = 255.0;
+		else if (working[0][q]  < 0.0)
+			working[0][q] = 0.0;
+	}
 #undef dolerp
 
-			pLocalPalette[i].s.red = (UINT8)(working[0][0]);
-			pLocalPalette[i].s.green = (UINT8)(working[0][1]);
-			pLocalPalette[i].s.blue = (UINT8)(working[0][2]);
-		}
-	}
+	*red = (UINT8)(working[0][0]);
+	*green = (UINT8)(working[0][1]);
+	*blue = (UINT8)(working[0][2]);
 }
 
 const char *R_GetPalname(UINT16 num)
@@ -472,16 +447,6 @@ static void CV_palette_OnChange(void)
 	LoadMapPalette();
 	V_SetPalette(0);
 }
-
-// change the palette directly to see the change
-#ifdef HWRENDER
-static void CV_Gammaxxx_ONChange(void)
-{
-	if (rendermode != render_soft && rendermode != render_none)
-		V_SetPalette(0);
-}
-#endif
-
 
 #if defined (__GNUC__) && defined (__i386__) && !defined (NOASM) && !defined (__APPLE__) && !defined (NORUSEASM)
 void VID_BlitLinearScreen_ASM(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT32 height, size_t srcrowbytes,
@@ -1076,17 +1041,17 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 //
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor)
 {
-	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes >= 4)
+	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_CONTINUE)
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CONTINUE];
-		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 		const UINT8 *colormap = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
 
 		V_DrawMappedPatch(x, y, flags, patch, colormap);
 	}
 	else
-		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
+		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_PATCH));
 }
 
 //
@@ -1902,13 +1867,14 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 {
 	UINT8 *deststop, *buf;
 
-	boxheight = ((boxheight * 4) + (boxheight/2)*5);
-
 	if (color >= 256 && color < 512)
 	{
+		boxheight = ((boxheight * 4) + (boxheight/2)*5);
 		V_DrawFill((BASEVIDWIDTH-(vid.width/vid.dupx))/2, BASEVIDHEIGHT-boxheight, (vid.width/vid.dupx),boxheight, (color-256)|V_SNAPTOBOTTOM);
 		return;
 	}
+
+	boxheight *= vid.dupy;
 
 	if (color == INT32_MAX)
 		color = cons_backcolor.value;
@@ -1951,7 +1917,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 	// heavily simplified -- we don't need to know x or y position,
 	// just the start and stop positions
 	deststop = screens[0] + vid.rowbytes * vid.height;
-	buf = deststop - vid.rowbytes * boxheight * vid.dupy; // 4 lines of space plus gaps between and some leeway
+	buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
 	for (; buf < deststop; ++buf)
 		*buf = promptbgmap[*buf];
 }
@@ -2083,7 +2049,7 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 	for (i = 0; i < slen; ++i)
 	{
 		c = newstring[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+		if ((UINT8)c & 0x80) //color parsing! -Inuyasha 2.16.09
 			continue;
 
 		if (c == '\n')
@@ -2450,6 +2416,8 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 	fixed_t cx = x, cy = y;
 	INT32 w, c, dupx, dupy, scrwidth, center = 0, left = 0;
 	const char *ch = string;
+	INT32 charflags = 0;
+	const UINT8 *colormap = NULL;
 	INT32 spacewidth = 4, charwidth = 0;
 
 	INT32 lowercase = (option & V_ALLOWLOWERCASE);
@@ -2468,6 +2436,8 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
 	{
@@ -2488,7 +2458,12 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		if (!*ch)
 			break;
 		if (*ch & 0x80) //color ignoring
+		{
+			// manually set flags override color codes
+			if (!(option & V_CHARCOLORMASK))
+				charflags = ((*ch & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
 			continue;
+		}
 		if (*ch == '\n')
 		{
 			cx = x;
@@ -2529,7 +2504,8 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 			continue;
 		}
 
-		V_DrawSciencePatch(cx + (center<<FRACBITS), cy, option, hu_font[c], FRACUNIT);
+		colormap = V_GetStringColormap(charflags);
+		V_DrawFixedPatch(cx + (center<<FRACBITS), cy, FRACUNIT, option, hu_font[c], colormap);
 
 		cx += w<<FRACBITS;
 	}
@@ -3268,6 +3244,29 @@ Unoptimized version
 #endif
 }
 
+// Taken from my videos-in-SRB2 project
+// Generates a color look-up table
+// which has up to 64 colors at each channel
+// (see the defines in v_video.h)
+
+UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
+
+void InitColorLUT(RGBA_t *palette)
+{
+	UINT8 r, g, b;
+	static boolean clutinit = false;
+	static RGBA_t *lastpalette = NULL;
+	if ((!clutinit) || (lastpalette != palette))
+	{
+		for (r = 0; r < CLUTSIZE; r++)
+			for (g = 0; g < CLUTSIZE; g++)
+				for (b = 0; b < CLUTSIZE; b++)
+					colorlookup[r][g][b] = NearestColor(r << SHIFTCOLORBITS, g << SHIFTCOLORBITS, b << SHIFTCOLORBITS);
+		clutinit = true;
+		lastpalette = palette;
+	}
+}
+
 // V_Init
 // old software stuff, buffers are allocated at video mode setup
 // here we set the screens[x] pointers accordingly
@@ -3279,13 +3278,9 @@ void V_Init(void)
 	const INT32 screensize = vid.rowbytes * vid.height;
 
 	LoadMapPalette();
-	// hardware modes do not use screens[] pointers
+
 	for (i = 0; i < NUMSCREENS; i++)
 		screens[i] = NULL;
-	if (rendermode != render_soft)
-	{
-		return; // be sure to cause a NULL read/write error so we detect it, in case of..
-	}
 
 	// start address of NUMSCREENS * width*height vidbuffers
 	if (base)

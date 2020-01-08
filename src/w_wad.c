@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -10,6 +10,24 @@
 //-----------------------------------------------------------------------------
 /// \file  w_wad.c
 /// \brief Handles WAD file header, directory, lump I/O
+
+#ifdef HAVE_ZLIB
+#ifndef _MSC_VER
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
+#endif
+
+#ifndef _LFS64_LARGEFILE
+#define _LFS64_LARGEFILE
+#endif
+
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 0
+#endif
+
+#include <zlib.h>
+#endif
 
 #ifdef __GNUC__
 #include <unistd.h>
@@ -21,22 +39,6 @@
 #include <errno.h>
 #include "lzf.h"
 #endif
-
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 0
-#endif
-
-#ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE64_SOURCE
-#endif
-
-#ifndef _LFS64_LARGEFILE
-#define _LFS64_LARGEFILE
-#endif
-
-//#ifdef HAVE_ZLIB
-#include "zlib.h"
-//#endif // HAVE_ZLIB
 
 #include "doomdef.h"
 #include "doomstat.h"
@@ -53,6 +55,7 @@
 #include "dehacked.h"
 #include "d_clisrv.h"
 #include "r_defs.h"
+#include "r_data.h"
 #include "i_system.h"
 #include "md5.h"
 #include "lua_script.h"
@@ -75,24 +78,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 
 #ifndef O_BINARY
 #define O_BINARY 0
-#endif
-
-#ifdef HAVE_ZLIB
-#ifndef _MSC_VER
-#ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE64_SOURCE
-#endif
-#endif
-
-#ifndef _LFS64_LARGEFILE
-#define _LFS64_LARGEFILE
-#endif
-
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 0
-#endif
-
-#include "zlib.h"
 #endif
 
 
@@ -1229,7 +1214,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 		{
 			size_t bytesread = fread(dest, 1, size, handle);
 			if (R_IsLumpPNG((UINT8 *)dest, bytesread))
-				I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", l->name2, wadfiles[wad]->filename);
+				W_ThrowPNGError(l->name2, wadfiles[wad]->filename);
 			return bytesread;
 		}
 #else
@@ -1270,7 +1255,8 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			Z_Free(rawData);
 			Z_Free(decData);
 #ifdef NO_PNG_LUMPS
-			ErrorIfPNG(dest, size, wadfiles[wad]->filename, l->name2);
+			if (R_IsLumpPNG((UINT8 *)dest, size))
+				W_ThrowPNGError(l->name2, wadfiles[wad]->filename);
 #endif
 			return size;
 #else
@@ -1332,7 +1318,8 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			Z_Free(decData);
 
 #ifdef NO_PNG_LUMPS
-			ErrorIfPNG(dest, size, wadfiles[wad]->filename, l->name2);
+			if (R_IsLumpPNG((UINT8 *)dest, size))
+				W_ThrowPNGError(l->name2, wadfiles[wad]->filename);
 #endif
 			return size;
 		}
@@ -1389,7 +1376,6 @@ void *W_CacheLumpNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 void *W_CacheLumpNum(lumpnum_t lumpnum, INT32 tag)
 {
-
 	return W_CacheLumpNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
 }
 
@@ -1502,11 +1488,30 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 // Cache a patch into heap memory, convert the patch format as necessary
 //
 
+void W_FlushCachedPatches(void)
+{
+	if (needpatchflush)
+	{
+		Z_FreeTag(PU_CACHE);
+		Z_FreeTag(PU_PATCH);
+		Z_FreeTag(PU_HUDGFX);
+		Z_FreeTag(PU_HWRPATCHINFO);
+		Z_FreeTag(PU_HWRMODELTEXTURE);
+		Z_FreeTag(PU_HWRCACHE);
+		Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRPATCHINFO_UNLOCKED);
+	}
+	needpatchflush = false;
+}
+
+// Software-only compile cache the data without conversion
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
 #ifdef HWRENDER
 	GLPatch_t *grPatch;
 #endif
+
+	if (needpatchflush)
+		W_FlushCachedPatches();
 
 	if (!TestValidLump(wad, lump))
 		return NULL;
@@ -1514,8 +1519,8 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 #ifdef HWRENDER
 	// Software-only compile cache the data without conversion
 	if (rendermode == render_soft || rendermode == render_none)
-	{
 #endif
+	{
 		lumpcache_t *lumpcache = wadfiles[wad]->patchcache;
 		if (!lumpcache[lump])
 		{
@@ -1549,8 +1554,8 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 			Z_ChangeTag(lumpcache[lump], tag);
 
 		return lumpcache[lump];
-#ifdef HWRENDER
 	}
+#ifdef HWRENDER
 
 	grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
 
@@ -1668,12 +1673,12 @@ void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 	{
 		char actualmd5text[2*MD5_LEN+1];
 		PrintMD5String(wadfiles[wadfilenum]->md5sum, actualmd5text);
-/*#ifdef _DEBUG
+#ifdef _DEBUG
 		CONS_Printf
 #else
 		I_Error
 #endif
-			(M_GetText("File is corrupt or has been modified: %s (found md5: %s, wanted: %s)\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);*/
+			(M_GetText("File is corrupt or has been modified: %s (found md5: %s, wanted: %s)\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);
 	}
 #endif
 }
@@ -1885,4 +1890,102 @@ int W_VerifyNMUSlumps(const char *filename)
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);
+}
+
+/** \brief Generates a virtual resource used for level data loading.
+ *
+ * \param lumpnum_t reference
+ * \return Virtual resource
+ *
+ */
+virtres_t* vres_GetMap(lumpnum_t lumpnum)
+{
+	UINT32 i;
+	virtres_t* vres = NULL;
+	virtlump_t* vlumps = NULL;
+	size_t numlumps = 0;
+
+	if (W_IsLumpWad(lumpnum))
+	{
+		// Remember that we're assuming that the WAD will have a specific set of lumps in a specific order.
+		UINT8 *wadData = W_CacheLumpNum(lumpnum, PU_LEVEL);
+		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
+		numlumps = ((wadinfo_t *)wadData)->numlumps;
+		vlumps = Z_Malloc(sizeof(virtlump_t)*numlumps, PU_LEVEL, NULL);
+
+		// Build the lumps.
+		for (i = 0; i < numlumps; i++)
+		{
+			vlumps[i].size = (size_t)(((filelump_t *)(fileinfo + i))->size);
+			// Play it safe with the name in this case.
+			memcpy(vlumps[i].name, (fileinfo + i)->name, 8);
+			vlumps[i].name[8] = '\0';
+			vlumps[i].data = Z_Malloc(vlumps[i].size, PU_LEVEL, NULL); // This is memory inefficient, sorry about that.
+			memcpy(vlumps[i].data, wadData + (fileinfo + i)->filepos, vlumps[i].size);
+		}
+
+		Z_Free(wadData);
+	}
+	else
+	{
+		// Count number of lumps until the end of resource OR up until next "MAPXX" lump.
+		lumpnum_t lumppos = lumpnum + 1;
+		for (i = LUMPNUM(lumppos); i < wadfiles[WADFILENUM(lumpnum)]->numlumps; i++, lumppos++, numlumps++)
+			if (memcmp(W_CheckNameForNum(lumppos), "MAP", 3) == 0)
+				break;
+		numlumps++;
+
+		vlumps = Z_Malloc(sizeof(virtlump_t)*numlumps, PU_LEVEL, NULL);
+		for (i = 0; i < numlumps; i++, lumpnum++)
+		{
+			vlumps[i].size = W_LumpLength(lumpnum);
+			memcpy(vlumps[i].name, W_CheckNameForNum(lumpnum), 8);
+			vlumps[i].name[8] = '\0';
+			vlumps[i].data = W_CacheLumpNum(lumpnum, PU_LEVEL);
+		}
+	}
+	vres = Z_Malloc(sizeof(virtres_t), PU_LEVEL, NULL);
+	vres->vlumps = vlumps;
+	vres->numlumps = numlumps;
+
+	return vres;
+}
+
+/** \brief Frees zone memory for a given virtual resource.
+ *
+ * \param Virtual resource
+ */
+void vres_Free(virtres_t* vres)
+{
+	while (vres->numlumps--)
+		Z_Free(vres->vlumps[vres->numlumps].data);
+	Z_Free(vres->vlumps);
+	Z_Free(vres);
+}
+
+/** (Debug) Prints lumps from a virtual resource into console.
+ */
+/*
+static void vres_Diag(const virtres_t* vres)
+{
+	UINT32 i;
+	for (i = 0; i < vres->numlumps; i++)
+		CONS_Printf("%s\n", vres->vlumps[i].name);
+}
+*/
+
+/** \brief Finds a lump in a given virtual resource.
+ *
+ * \param Virtual resource
+ * \param Lump name to look for
+ * \return Virtual lump if found, NULL otherwise
+ *
+ */
+virtlump_t* vres_Find(const virtres_t* vres, const char* name)
+{
+	UINT32 i;
+	for (i = 0; i < vres->numlumps; i++)
+		if (fastcmp(name, vres->vlumps[i].name))
+			return &vres->vlumps[i];
+	return NULL;
 }

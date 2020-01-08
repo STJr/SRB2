@@ -23,13 +23,6 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define SWAP( a, b ) \
-(\
-		(a) ^= (b),\
-		(b) ^= (a),\
-		(a) ^= (b)\
-)
-
 static inline int
 trycmp (char **pp, char *cp,
 		const char *q, size_t qn)
@@ -45,8 +38,16 @@ trycmp (char **pp, char *cp,
 static inline void
 swapp (char ***ppap, char ***ppbp, char **cpap, char **cpbp)
 {
-	SWAP(*(intptr_t *)ppap, *(intptr_t *)ppbp);
-	SWAP(*(intptr_t *)cpap, *(intptr_t *)cpbp);
+	char **pp;
+	char  *p;
+
+	pp    = *ppap;
+	*ppap = *ppbp;
+	*ppbp =  pp;
+
+	p     = *cpap;
+	*cpap = *cpbp;
+	*cpbp =   p;
 }
 
 char *

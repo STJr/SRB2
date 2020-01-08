@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 2012-2018 by Sonic Team Junior.
+// Copyright (C) 2012-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -284,6 +284,8 @@ void M_SilentUpdateUnlockablesAndEmblems(void)
 			continue;
 		unlockables[i].unlocked = M_Achieved(unlockables[i].conditionset - 1);
 	}
+
+	players[consoleplayer].availabilities = players[1].availabilities = R_GetSkinAvailabilities(); // players[1] is supposed to be for 2p
 }
 
 // Emblem unlocking shit
