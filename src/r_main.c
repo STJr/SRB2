@@ -698,6 +698,7 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 	INT32 side, i;
 	size_t nodenum;
 	subsector_t *ret;
+	seg_t *seg;
 
 	// single subsector is a special case
 	if (numnodes == 0)
@@ -713,10 +714,15 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 	}
 
 	ret = &subsectors[nodenum & ~NF_SUBSECTOR];
-	for (i = 0; i < ret->numlines; i++)
-		//if (R_PointOnSegSide(x, y, &segs[ret->firstline + i])) -- breaks in ogl because polyvertex_t cast over vertex pointers
-		if (P_PointOnLineSide(x, y, segs[ret->firstline + i].linedef) != segs[ret->firstline + i].side)
+	for (i = 0, seg = &segs[ret->firstline]; i < ret->numlines; i++, seg++)
+	{
+		if (seg->glseg)
+			continue;
+
+		//if (R_PointOnSegSide(x, y, seg)) -- breaks in ogl because polyvertex_t cast over vertex pointers
+		if (P_PointOnLineSide(x, y, seg->linedef) != seg->side)
 			return 0;
+	}
 
 	return ret;
 }

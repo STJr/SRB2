@@ -10730,15 +10730,78 @@ static void M_HandleConnectIP(INT32 choice)
 			break;
 
 		case KEY_DEL:
-			if (setupm_ip[0])
+			if (setupm_ip[0] && !shiftdown) // Shift+Delete is used for something else.
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_ip[0] = 0;
 			}
-			break;
+			if (!shiftdown) // Shift+Delete is used for something else.
+				break;
 
+			/* FALLTHRU */
 		default:
 			l = strlen(setupm_ip);
+
+			if ( ctrldown ) {
+				switch (choice) {
+					case 'v':
+					case 'V': // ctrl+v, pasting
+					{
+						const char *paste = I_ClipboardPaste();
+
+						if (paste != NULL) {
+							strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
+							if (strlen(paste) != 0) // Don't play sound if nothing was pasted
+								S_StartSound(NULL,sfx_menu1); // Tails
+						}
+
+						break;
+					}
+					case KEY_INS:
+					case 'c':
+					case 'C': // ctrl+c, ctrl+insert, copying
+						I_ClipboardCopy(setupm_ip, l);
+						S_StartSound(NULL,sfx_menu1); // Tails
+						break;
+
+					case 'x':
+					case 'X': // ctrl+x, cutting
+						I_ClipboardCopy(setupm_ip, l);
+						S_StartSound(NULL,sfx_menu1); // Tails
+						setupm_ip[0] = 0;
+						break;
+
+					default: // otherwise do nothing
+						break;
+				}
+				break; // don't check for typed keys
+			}
+
+			if ( shiftdown ) {
+				switch (choice) {
+					case KEY_INS: // shift+insert, pasting
+						{
+							const char *paste = I_ClipboardPaste();
+
+							if (paste != NULL) {
+								strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
+								if (strlen(paste) != 0) // Don't play sound if nothing was pasted
+									S_StartSound(NULL,sfx_menu1); // Tails
+							}
+
+							break;
+						}
+					case KEY_DEL: // shift+delete, cutting
+						I_ClipboardCopy(setupm_ip, l);
+						S_StartSound(NULL,sfx_menu1); // Tails
+						setupm_ip[0] = 0;
+						break;
+					default: // otherwise do nothing.
+						break;
+				}
+				break; // don't check for typed keys
+			}
+
 			if (l >= 28-1)
 				break;
 
