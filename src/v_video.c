@@ -1253,7 +1253,7 @@ void V_DrawBlock(INT32 x, INT32 y, INT32 scrn, INT32 width, INT32 height, const 
 		I_Error("Bad V_DrawBlock");
 #endif
 
-	dest = screens[scrn] + y*vid.rowbytes + x;
+	dest = screens[scrn] + y*vid.rowbytes + (x * vid.bpp);
 	deststop = screens[scrn] + vid.rowbytes * vid.height;
 
 	while (height--)

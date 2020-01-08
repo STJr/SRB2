@@ -1261,7 +1261,7 @@ void I_ReadScreen(UINT8 *scr)
 		I_Error ("I_ReadScreen: called while in non-software mode");
 	else
 		VID_BlitLinearScreen(screens[0], scr,
-			vid.width*vid.bpp, vid.height,
+			vid.rowbytes, vid.height,
 			vid.rowbytes, vid.rowbytes);
 }
 

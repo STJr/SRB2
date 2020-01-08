@@ -49,8 +49,8 @@ sprcache_t *spritecachedinfo;
 lighttable_t *colormaps;
 lighttable_t *fadecolormap;
 
-lighttable_u32_t *colormaps_u32;
-lighttable_u32_t *fadecolormap_u32;
+// truecolor
+lighttable_u32_t *colormaps_u32 = NULL;
 
 // for debugging/info purposes
 size_t flatmemory, spritememory, texturememory;
@@ -240,7 +240,6 @@ static void R_InitSpriteLumps(void)
 //
 // R_CreateFadeColormaps
 //
-
 static void R_CreateFadeColormaps(void)
 {
 	UINT8 px, fade;
@@ -330,14 +329,24 @@ static void R_CreateFadeColormaps(void)
 //
 static void R_InitColormaps32(void)
 {
+	lighttable_u32_t *lighttable;
+	size_t size;
+
 	extracolormap_t *exc = Z_Calloc(sizeof(*exc), PU_STATIC, NULL);
 	exc->fadestart = 0;
 	exc->fadeend = 31;
 	exc->fog = 0;
 	exc->rgba = 0;
 	exc->fadergba = 0xFF000000;
-	colormaps_u32 = R_CreateTrueColorLightTable(exc);
+
+	lighttable = R_CreateTrueColorLightTable(exc);
+	size = ((256 * 34) + 10) * sizeof(UINT32); // from R_CreateTrueColorLightTable
 	Z_Free(exc);
+
+	if (!colormaps_u32)
+		colormaps_u32 = Z_Calloc(size, PU_STATIC, NULL);
+	M_Memcpy(colormaps_u32, lighttable, size);
+	Z_Free(lighttable);
 }
 
 //
@@ -359,7 +368,8 @@ static void R_InitColormaps(void)
 		R_InitColormaps32();
 
 	// Make colormap for fades
-	R_CreateFadeColormaps();
+	if (!truecolor)
+		R_CreateFadeColormaps();
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
@@ -394,9 +404,13 @@ void R_ReInitColormaps(UINT16 num)
 	if (truecolor)
 		R_InitColormaps32();
 
-	if (fadecolormap)
-		Z_Free(fadecolormap);
-	R_CreateFadeColormaps();
+	// Make colormap for fades
+	if (!truecolor)
+	{
+		if (fadecolormap)
+			Z_Free(fadecolormap);
+		R_CreateFadeColormaps();
+	}
 
 	// Init Boom colormaps.
 	R_ClearColormaps();

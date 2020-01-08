@@ -61,8 +61,8 @@ void R_DrawColumn_32(void)
 	{
 		register const UINT8 *source = dc_source;
 		register const UINT32 *sourceu32 = (UINT32 *)dc_source;
-		register const lighttable_t *colormap = dc_colormap;
-		register const lighttable_u32_t *colormapu32 = NULL;
+		register lighttable_t *colormap = dc_colormap;
+		register lighttable_u32_t *colormapu32 = NULL;
 		register INT32 heightmask = dc_texheight-1;
 		if (dc_texheight & heightmask)   // not a power of 2 -- killough
 		{
@@ -228,8 +228,8 @@ void R_Draw2sMultiPatchColumn_32(void)
 	{
 		register const UINT8 *source = dc_source;
 		register const UINT32 *sourceu32 = (UINT32 *)dc_source;
-		register const lighttable_t *colormap = dc_colormap;
-		register const lighttable_u32_t *colormapu32 = NULL;
+		register lighttable_t *colormap = dc_colormap;
+		register lighttable_u32_t *colormapu32 = NULL;
 		register INT32 heightmask = dc_texheight-1;
 		register UINT8 val;
 		register UINT32 valu32;
@@ -433,8 +433,8 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 	{
 		register const UINT8 *source = dc_source;
 		register const UINT32 *sourceu32 = (UINT32 *)dc_source;
-		register const lighttable_t *colormap = dc_colormap;
-		register const lighttable_u32_t *colormapu32 = NULL;
+		register lighttable_t *colormap = dc_colormap;
+		register lighttable_u32_t *colormapu32 = NULL;
 		register INT32 heightmask = dc_texheight-1;
 		register UINT8 val;
 		register UINT32 valu32;
@@ -679,8 +679,8 @@ void R_DrawTranslucentColumn_32(void)
 	{
 		register const UINT8 *source = dc_source;
 		register const UINT32 *sourceu32 = (UINT32 *)dc_source;
-		register const lighttable_t *colormap = dc_colormap;
-		register const lighttable_u32_t *colormapu32 = NULL;
+		register lighttable_t *colormap = dc_colormap;
+		register lighttable_u32_t *colormapu32 = NULL;
 		register INT32 heightmask = dc_texheight - 1;
 		if (dc_texheight & heightmask)
 		{
@@ -822,8 +822,8 @@ void R_DrawTranslatedTranslucentColumn_32(void)
 	{
 		register const UINT8 *source = dc_source;
 		register const UINT32 *sourceu32 = (UINT32 *)dc_source;
-		register const lighttable_t *colormap = dc_colormap;
-		register const lighttable_u32_t *colormapu32 = NULL;
+		register lighttable_t *colormap = dc_colormap;
+		register lighttable_u32_t *colormapu32 = NULL;
 		register INT32 heightmask = dc_texheight - 1;
 		if (dc_texheight & heightmask)
 		{
@@ -948,8 +948,8 @@ void R_DrawTranslatedColumn_32(void)
 	register fixed_t frac, fracstep;
 	register const UINT8 *source = dc_source;
 	register const UINT32 *sourceu32 = (UINT32 *)dc_source;
-	register const lighttable_t *colormap = dc_colormap;
-	register const lighttable_u32_t *colormapu32 = NULL;
+	register lighttable_t *colormap = dc_colormap;
+	register lighttable_u32_t *colormapu32 = NULL;
 
 	count = dc_yh - dc_yl;
 	if (count < 0)
