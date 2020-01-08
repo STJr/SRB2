@@ -3565,7 +3565,7 @@ state_t states[NUMSTATES] =
 	{SPR_PUMA, FF_FULLBRIGHT|FF_TRANS60|8, 3,       {NULL},        0, 0, S_NULL},         // S_PUMATRAIL4
 
 	// Hammer
-	{SPR_HAMM, FF_ANIMATE, -1, {NULL}, 4, 3, S_NULL}, // S_HAMMER
+	{SPR_HAMM, FF_ANIMATE, -1, {NULL}, 3, 3, S_NULL}, // S_HAMMER
 
 	// Koopa
 	{SPR_KOOP, 0, -1, {NULL}, 0, 0, S_NULL},   // S_KOOPA1
