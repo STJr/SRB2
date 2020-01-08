@@ -653,6 +653,48 @@ static gl_shaderprogram_t gl_shaderprograms[MAXSHADERPROGRAMS];
 		"gl_FragColor = final_color;\n" \
 	"}\0"
 
+//
+// Water surface shader
+//
+// Mostly guesstimated, rather than the rest being built off Software science.
+// Still needs to distort things underneath/around the water...
+//
+
+#define GLSL_WATER_FRAGMENT_SHADER \
+	"uniform sampler2D tex;\n" \
+	"uniform vec4 poly_color;\n" \
+	"uniform vec4 tint_color;\n" \
+	"uniform vec4 fade_color;\n" \
+	"uniform float lighting;\n" \
+	"uniform float fade_start;\n" \
+	"uniform float fade_end;\n" \
+	"uniform float leveltime;\n" \
+	"const float freq = 0.025;\n" \
+	"const float amp = 0.025;\n" \
+	"const float speed = 2.0;\n" \
+	"const float pi = 3.14159;\n" \
+	GLSL_DOOM_COLORMAP \
+	GLSL_DOOM_LIGHT_EQUATION \
+	"void main(void) {\n" \
+		"float z = gl_FragCoord.z / gl_FragCoord.w;\n" \
+		"float input = -pi * (z * freq) + (leveltime * speed);\n" \
+		"float sdistort = sin(input) * amp;\n" \
+		"float cdistort = cos(input) * amp;\n" \
+		"vec4 texel = texture2D(tex, vec2(gl_TexCoord[0].s - sdistort, gl_TexCoord[0].t - cdistort));\n" \
+		"vec4 base_color = texel * poly_color;\n" \
+		"vec4 final_color = base_color;\n" \
+		GLSL_SOFTWARE_TINT_EQUATION \
+		GLSL_SOFTWARE_FADE_EQUATION \
+		"final_color.a = texel.a * poly_color.a;\n" \
+		"gl_FragColor = final_color;\n" \
+	"}\0"
+
+//
+// Fog block shader
+//
+// Alpha of the planes themselves are still slightly off -- see HWR_FogBlockAlpha
+//
+
 #define GLSL_FOG_FRAGMENT_SHADER \
 	"uniform vec4 tint_color;\n" \
 	"uniform vec4 fade_color;\n" \
@@ -697,7 +739,7 @@ static const char *fragment_shaders[] = {
 	GLSL_SOFTWARE_FRAGMENT_SHADER,
 
 	// Water fragment shader
-	GLSL_SOFTWARE_FRAGMENT_SHADER,
+	GLSL_WATER_FRAGMENT_SHADER,
 
 	// Fog fragment shader
 	GLSL_FOG_FRAGMENT_SHADER,
@@ -705,7 +747,7 @@ static const char *fragment_shaders[] = {
 	// Sky fragment shader
 	"uniform sampler2D tex;\n"
 	"void main(void) {\n"
-		"gl_FragColor = texture2D(tex, gl_TexCoord[0].st);\n" \
+		"gl_FragColor = texture2D(tex, gl_TexCoord[0].st);\n"
 	"}\0",
 
 	NULL,
