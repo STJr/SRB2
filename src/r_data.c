@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,6 +30,10 @@
 
 #ifdef _WIN32
 #include <malloc.h> // alloca(sizeof)
+#endif
+
+#ifdef HWRENDER
+#include "hardware/hw_main.h" // HWR_LoadTextures
 #endif
 
 #if defined(_MSC_VER)
@@ -320,8 +324,8 @@ UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 al
 	else if (style != AST_TRANSLUCENT)
 	{
 		RGBA_t texel;
-		RGBA_t bg = V_GetColor(background);
-		RGBA_t fg = V_GetColor(foreground);
+		RGBA_t bg = V_GetMasterColor(background);
+		RGBA_t fg = V_GetMasterColor(foreground);
 		texel.rgba = ASTBlendPixel(bg, fg, style, alpha);
 		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
 	}
@@ -437,7 +441,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
-	boolean dealloc = false;
+	UINT8 *pdata;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
@@ -465,10 +469,15 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		wadnum = patch->wad;
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE); // can't use W_CachePatchNumPwad because OpenGL
+		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		realpatch = (patch_t *)pdata;
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+			goto multipatch;
+#endif
+#ifdef WALLFLATS
+		if (texture->type == TEXTURETYPE_FLAT)
 			goto multipatch;
 #endif
 
@@ -527,9 +536,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	}
 
 	// multi-patch textures (or 'composite')
-#ifndef NO_PNG_LUMPS
 	multipatch:
-#endif
 	texture->holes = false;
 	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
@@ -548,6 +555,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+		boolean dealloc = true;
 		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
 		if (patch->style != AST_COPY)
 			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawBlendFlippedColumnInCache : R_DrawBlendColumnInCache;
@@ -556,17 +564,25 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 		wadnum = patch->wad;
 		lumpnum = patch->lump;
+		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-		dealloc = false;
+		realpatch = (patch_t *)pdata;
+		dealloc = true;
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-		{
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
-			dealloc = true;
-		}
+		else
 #endif
+#ifdef WALLFLATS
+		if (texture->type == TEXTURETYPE_FLAT)
+			realpatch = R_FlatToPatch(pdata, texture->width, texture->height, 0, 0, NULL, false);
+		else
+#endif
+		{
+			(void)lumplength;
+			dealloc = false;
+		}
 
 		x1 = patch->originx;
 		width = SHORT(realpatch->width);
@@ -721,7 +737,6 @@ void R_LoadTextures(void)
 	for (w = 0, numtextures = 0; w < numwadfiles; w++)
 	{
 		// Count the textures from TEXTURES lumps
-
 		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 		while (texturesLumpPos != INT16_MAX)
 		{
@@ -730,7 +745,6 @@ void R_LoadTextures(void)
 		}
 
 		// Count single-patch textures
-
 		if (wadfiles[w]->type == RET_PK3)
 		{
 			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
@@ -743,7 +757,11 @@ void R_LoadTextures(void)
 		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
+#ifdef WALLFLATS
+			goto countflats;
+#else
 			continue;
+#endif
 
 		texstart++; // Do not count the first marker
 
@@ -760,6 +778,40 @@ void R_LoadTextures(void)
 		{
 			numtextures += (UINT32)(texend - texstart);
 		}
+
+#ifdef WALLFLATS
+countflats:
+		// Count flats
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
+			texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
+		}
+		else
+		{
+			texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
+			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
+		}
+
+		if (texstart == INT16_MAX || texend == INT16_MAX)
+			continue;
+
+		texstart++; // Do not count the first marker
+
+		// PK3s have subfolders, so we can't just make a simple sum
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			for (j = texstart; j < texend; j++)
+			{
+				if (!W_IsLumpFolder((UINT16)w, j)) // Check if lump is a folder; if not, then count it
+					numtextures++;
+			}
+		}
+		else // Add all the textures between F_START and F_END
+		{
+			numtextures += (UINT32)(texend - texstart);
+		}
+#endif
 	}
 
 	// If no textures found by this point, bomb out
@@ -809,7 +861,11 @@ void R_LoadTextures(void)
 		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
+#ifdef WALLFLATS
+			goto checkflats;
+#else
 			continue;
+#endif
 
 		texstart++; // Do not count the first marker
 
@@ -853,6 +909,8 @@ void R_LoadTextures(void)
 				texture->width = SHORT(patchlump->width);
 				texture->height = SHORT(patchlump->height);
 			}
+
+			texture->type = TEXTURETYPE_SINGLEPATCH;
 			texture->patchcount = 1;
 			texture->holes = false;
 			texture->flip = 0;
@@ -871,7 +929,113 @@ void R_LoadTextures(void)
 			textureheight[i] = texture->height << FRACBITS;
 			i++;
 		}
+
+#ifdef WALLFLATS
+checkflats:
+		// Yes
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
+			texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
+		}
+		else
+		{
+			texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
+			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
+		}
+
+		if (texstart == INT16_MAX || texend == INT16_MAX)
+			continue;
+
+		texstart++; // Do not count the first marker
+
+		// Work through each lump between the markers in the WAD.
+		for (j = 0; j < (texend - texstart); j++)
+		{
+			UINT8 *flatlump;
+			UINT16 wadnum = (UINT16)w;
+			lumpnum_t lumpnum = texstart + j;
+			size_t lumplength;
+			size_t flatsize = 0;
+
+			if (wadfiles[w]->type == RET_PK3)
+			{
+				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
+					continue; // If it is then SKIP IT
+			}
+
+			flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+
+			switch (lumplength)
+			{
+				case 4194304: // 2048x2048 lump
+					flatsize = 2048;
+					break;
+				case 1048576: // 1024x1024 lump
+					flatsize = 1024;
+					break;
+				case 262144:// 512x512 lump
+					flatsize = 512;
+					break;
+				case 65536: // 256x256 lump
+					flatsize = 256;
+					break;
+				case 16384: // 128x128 lump
+					flatsize = 128;
+					break;
+				case 1024: // 32x32 lump
+					flatsize = 32;
+					break;
+				default: // 64x64 lump
+					flatsize = 64;
+					break;
+			}
+
+			//CONS_Printf("\n\"%s\" is a flat, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),flatsize,flatsize);
+			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
+
+			// Set texture properties.
+			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+
+#ifndef NO_PNG_LUMPS
+			if (R_IsLumpPNG((UINT8 *)flatlump, lumplength))
+			{
+				INT16 width, height;
+				R_PNGDimensions((UINT8 *)flatlump, &width, &height, lumplength);
+				texture->width = width;
+				texture->height = height;
+			}
+			else
+#endif
+				texture->width = texture->height = flatsize;
+
+			texture->type = TEXTURETYPE_FLAT;
+			texture->patchcount = 1;
+			texture->holes = false;
+			texture->flip = 0;
+
+			// Allocate information for the texture's patches.
+			patch = &texture->patches[0];
+
+			patch->originx = patch->originy = 0;
+			patch->wad = (UINT16)w;
+			patch->lump = texstart + j;
+			patch->flip = 0;
+
+			Z_Unlock(flatlump);
+
+			texturewidth[i] = texture->width;
+			textureheight[i] = texture->height << FRACBITS;
+			i++;
+		}
+#endif
 	}
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		HWR_LoadTextures(numtextures);
+#endif
 }
 
 static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
@@ -1182,6 +1346,7 @@ static texture_t *R_ParseTexture(boolean actuallyLoadTexture)
 			M_Memcpy(resultTexture->name, newTextureName, 8);
 			resultTexture->width = newTextureWidth;
 			resultTexture->height = newTextureHeight;
+			resultTexture->type = TEXTURETYPE_COMPOSITE;
 		}
 		Z_Free(texturesToken);
 		texturesToken = M_GetToken(NULL);
@@ -1499,7 +1664,7 @@ static void R_CreateFadeColormaps(void)
 #define GETCOLOR \
 	px = colormaps[i%256]; \
 	fade = (i/256) * (256 / FADECOLORMAPROWS); \
-	rgba = V_GetColor(px);
+	rgba = V_GetMasterColor(px);
 
 	// to black
 	makeblack:
@@ -1930,7 +2095,6 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	/////////////////////
 	// This code creates the colormap array used by software renderer
 	/////////////////////
-	if (rendermode == render_soft)
 	{
 		double r, g, b, cbrightness;
 		int p;
@@ -2552,7 +2716,7 @@ void R_PrecacheLevel(void)
 				lump = sf->lumppat[k];
 				if (devparm)
 					spritememory += W_LumpLength(lump);
-				W_CachePatchNum(lump, PU_CACHE);
+				W_CachePatchNum(lump, PU_PATCH);
 			}
 		}
 	}

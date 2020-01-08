@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2016 by Iestyn "Monster Iestyn" Jealous.
-// Copyright (C) 2016 by Sonic Team Junior.
+// Copyright (C) 2016-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.

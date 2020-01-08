@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -126,11 +126,10 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		for (ang = 0; ang < ROTANGLES; ang++)
 			sprtemp[frame].rotsprite.patch[r][ang] = NULL;
 #ifdef HWRENDER
-		if (rendermode == render_opengl)
-			sprtemp[frame].rotsprite.hardware_patch[r] = M_AATreeAlloc(AATREE_ZUSER);
-#endif // HWRENDER
+		sprtemp[frame].rotsprite.hardware_patch[r] = M_AATreeAlloc(AATREE_ZUSER);
+#endif/*HWRENDER*/
 	}
-#endif
+#endif/*ROTSPRITE*/
 
 	if (rotation == 0)
 	{
@@ -500,7 +499,7 @@ void R_InitSprites(void)
 {
 	size_t i;
 #ifdef ROTSPRITE
-	INT32 angle, realangle = 0;
+	INT32 angle;
 	float fa;
 #endif
 
@@ -508,12 +507,11 @@ void R_InitSprites(void)
 		negonearray[i] = -1;
 
 #ifdef ROTSPRITE
-	for (angle = 0; angle < ROTANGLES; angle++)
+	for (angle = 1; angle < ROTANGLES; angle++)
 	{
-		fa = ANG2RAD(FixedAngle(realangle<<FRACBITS));
-		cosang2rad[angle] = FLOAT_TO_FIXED(cos(-fa));
-		sinang2rad[angle] = FLOAT_TO_FIXED(sin(-fa));
-		realangle += ROTANGDIFF;
+		fa = ANG2RAD(FixedAngle((ROTANGDIFF * angle)<<FRACBITS));
+		rollcosang[angle] = FLOAT_TO_FIXED(cos(-fa));
+		rollsinang[angle] = FLOAT_TO_FIXED(sin(-fa));
 	}
 #endif
 
@@ -653,11 +651,7 @@ void R_DrawMaskedColumn(column_t *column)
 			// quick fix... something more proper should be done!!!
 			if (ylookup[dc_yl])
 				colfunc();
-			else if (colfunc == R_DrawColumn_8
-#ifdef USEASM
-			|| colfunc == R_DrawColumn_8_ASM || colfunc == R_DrawColumn_8_MMX
-#endif
-			)
+			else if (colfunc == colfuncs[COLDRAWFUNC_BASE])
 			{
 				static INT32 first = 1;
 				if (first)
@@ -724,11 +718,7 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 			// Still drawn by R_DrawColumn.
 			if (ylookup[dc_yl])
 				colfunc();
-			else if (colfunc == R_DrawColumn_8
-#ifdef USEASM
-			|| colfunc == R_DrawColumn_8_ASM || colfunc == R_DrawColumn_8_MMX
-#endif
-			)
+			else if (colfunc == colfuncs[COLDRAWFUNC_BASE])
 			{
 				static INT32 first = 1;
 				if (first)
@@ -776,12 +766,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // ditto
 	}
 
-	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
+	colfunc = colfuncs[BASEDRAWFUNC]; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
 	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 	{
 		// translate certain pixels to white
-		colfunc = transcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
@@ -791,7 +781,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 	else if (vis->mobj->color && vis->transmap) // Color mapping
 	{
-		colfunc = transtransfunc;
+		colfunc = colfuncs[COLDRAWFUNC_TRANSTRANS];
 		dc_transmap = vis->transmap;
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
@@ -815,13 +805,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 	else if (vis->transmap)
 	{
-		colfunc = fuzzcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 	else if (vis->mobj->color)
 	{
 		// translate green skin to another color
-		colfunc = transcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 
 		// New colormap stuff for skins Tails 06-07-2002
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
@@ -846,7 +836,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 	{
-		colfunc = transcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 		dc_translation = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
 	}
 
@@ -926,7 +916,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		spryscale += vis->scalestep;
 	}
 
-	colfunc = basecolfunc;
+	colfunc = colfuncs[BASEDRAWFUNC];
 	dc_hires = 0;
 
 	vis->x1 = x1;
@@ -956,7 +946,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	if (vis->transmap)
 	{
-		colfunc = fuzzcolfunc;
+		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 
@@ -992,12 +982,12 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 		R_DrawMaskedColumn(column);
 	}
 
-	colfunc = basecolfunc;
+	colfunc = colfuncs[BASEDRAWFUNC];
 }
 
 //
 // R_SplitSprite
-// runs through a sector's lightlist and
+// runs through a sector's lightlist and Knuckles
 static void R_SplitSprite(vissprite_t *sprite)
 {
 	INT32 i, lightnum, lindex;
@@ -1082,6 +1072,8 @@ static void R_SplitSprite(vissprite_t *sprite)
 	}
 }
 
+//#define PROPERPAPER // This was reverted less than 7 hours before 2.2's release because of very strange, frequent crashes.
+
 //
 // R_ProjectSprite
 // Generates a vissprite for a thing
@@ -1133,8 +1125,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t spr_offset, spr_topoffset;
 #ifdef ROTSPRITE
 	patch_t *rotsprite = NULL;
-	angle_t arollangle = thing->rollangle;
-	UINT32 rollangle = AngleFixed(arollangle)>>FRACBITS;
+	INT32 rollangle = 0;
+#endif
+
+#ifndef PROPERPAPER
+	fixed_t ang_scale = FRACUNIT;
 #endif
 
 	// transform the origin point
@@ -1221,6 +1216,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (sprframe->rotate != SRF_SINGLE || papersprite)
 	{
 		ang = R_PointToAngle (thing->x, thing->y) - (thing->player ? thing->player->drawangle : thing->angle);
+#ifndef PROPERPAPER
+		if (papersprite)
+			ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
+#endif
 	}
 
 	if (sprframe->rotate == SRF_SINGLE)
@@ -1258,11 +1257,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lump].topoffset;
 
 #ifdef ROTSPRITE
-	if (rollangle > 0)
+	if (thing->rollangle)
 	{
+		rollangle = R_GetRollAngle(thing->rollangle);
 		if (!sprframe->rotsprite.cached[rot])
 			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rollangle /= ROTANGDIFF;
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
 		{
@@ -1282,11 +1281,31 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 		offset = -spr_offset;
 	offset = FixedMul(offset, this_scale);
+#ifndef PROPERPAPER
+	tx += FixedMul(offset, ang_scale);
+	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
+
+	// off the right side?
+	if (x1 > viewwidth)
+		return;
+#endif
 	offset2 = FixedMul(spr_width, this_scale);
+#ifndef PROPERPAPER
+	tx += FixedMul(offset2, ang_scale);
+	x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - (papersprite ? 2 : 1);
+
+	// off the left side
+	if (x2 < 0)
+		return;
+#endif
 
 	if (papersprite)
 	{
-		fixed_t xscale2, yscale2, cosmul, sinmul, tz2;
+		fixed_t
+#ifdef PROPERPAPER
+			xscale2,
+#endif
+					yscale2, cosmul, sinmul, tz2;
 		INT32 range;
 
 		if (ang >= ANGLE_180)
@@ -1306,6 +1325,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale = FixedDiv(projectiony, tz);
 		if (yscale < 64) return; // Fix some funky visuals
 
+#ifdef PROPERPAPER
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
 		tx = -(gyt + gxt);
@@ -1315,6 +1335,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		// off the right side?
 		if (x1 > viewwidth)
 			return;
+#endif
 
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
@@ -1324,6 +1345,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale2 = FixedDiv(projectiony, tz2);
 		if (yscale2 < 64) return; // ditto
 
+#ifdef PROPERPAPER
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
 		tx = -(gyt + gxt);
@@ -1333,6 +1355,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		// off the left side
 		if (x2 < 0)
 			return;
+#endif
 
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
@@ -1340,9 +1363,18 @@ static void R_ProjectSprite(mobj_t *thing)
 		if ((range = x2 - x1) <= 0)
 			return;
 
+#ifdef PROPERPAPER
+		range++; // fencepost problem
+#endif
+
 		scalestep = (yscale2 - yscale)/range;
-		scalestep = scalestep ? scalestep : 1;
-		xscale = FixedDiv(range<<FRACBITS, abs(offset2))+1;
+		xscale =
+#ifdef PROPERPAPER
+		FixedDiv(range<<FRACBITS, abs(offset2))+1
+#else
+		FixedMul(xscale, ang_scale)
+#endif
+		;
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -1352,6 +1384,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		scalestep = 0;
 		yscale = sortscale;
+#ifdef PROPERPAPER
 		tx += offset;
 		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
@@ -1365,6 +1398,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		// off the left side
 		if (x2 < 0)
 			return;
+#endif
 	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
@@ -2802,7 +2836,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
 		|| (!skins[skinnum].availability)
-		|| ((playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
+		|| (((netgame || multiplayer) && playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
 		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.

@@ -26,14 +26,14 @@
 #else
 
 /* Manually defined asset hashes for non-CMake builds
- * Last updated 2015 / 05 / 03 - v2.1.15 - main assets
- * Last updated 2018 / ?? / ?? - v2.2 - patch.pk3
+ * Last updated 2019 / 12 / 06 - v2.2.0 - main assets
+ * Last updated 20?? / ?? / ?? - v2.2.? - patch.pk3
  */
-#define ASSET_HASH_SRB2_PK3   "c1b9577687f8a795104aef4600720ea7"
-#define ASSET_HASH_ZONES_PK3  "303838c6c534d9540288360fa49cca60"
-#define ASSET_HASH_PLAYER_DTA "cfca0f1c73023cbbd8f844f45480f799"
+#define ASSET_HASH_SRB2_PK3   "51419a33b4982d840c6772c159ba7c0a"
+#define ASSET_HASH_ZONES_PK3  "df74843919fd51af26a0baa8e21e4c19"
+#define ASSET_HASH_PLAYER_DTA "56a247e074dd0dc794b6617efef1e918"
 #ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_PK3  "dbbf8bc6121618ee3be2d5b14650429b"
+#define ASSET_HASH_PATCH_PK3  "there is no patch.pk3, only zuul"
 #endif
 
 #endif

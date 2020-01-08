@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -89,6 +89,10 @@ extern consvar_t cv_tailspickup;
 
 // Called by startup code.
 void R_Init(void);
+#ifdef HWRENDER
+void R_InitHardwareMode(void);
+#endif
+void R_ReloadHUDGraphics(void);
 
 // just sets setsizeneeded true
 extern boolean setsizeneeded;

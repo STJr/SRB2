@@ -29,6 +29,7 @@
 
 // Startup & Shutdown the hardware mode renderer
 void HWR_Startup(void);
+void HWR_Switch(void);
 void HWR_Shutdown(void);
 
 void HWR_drawAMline(const fline_t *fl, INT32 color);
@@ -47,7 +48,7 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale
 void HWR_MakePatch(const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap);
 void HWR_CreatePlanePolygons(INT32 bspnum);
 void HWR_CreateStaticLightmaps(INT32 bspnum);
-void HWR_PrepLevelCache(size_t pnumtextures);
+void HWR_LoadTextures(size_t pnumtextures);
 void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color);
 void HWR_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT16 actualcolor, UINT8 strength);
 void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT32 actualcolor);	// Lat: separate flags from color since color needs to be an uint to work right.
@@ -57,6 +58,7 @@ UINT8 *HWR_GetScreenshot(void);
 boolean HWR_Screenshot(const char *pathname);
 
 void HWR_AddCommands(void);
+void HWR_AddSessionCommands(void);
 void HWR_CorrectSWTricks(void);
 void transform(float *cx, float *cy, float *cz);
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
@@ -85,13 +87,11 @@ extern consvar_t cv_grcoronasize;
 extern consvar_t cv_grfov;
 extern consvar_t cv_grmodels;
 extern consvar_t cv_grmodelinterpolation;
+extern consvar_t cv_grmodellighting;
 extern consvar_t cv_grfog;
 extern consvar_t cv_grfogcolor;
 extern consvar_t cv_grfogdensity;
 extern consvar_t cv_grsoftwarefog;
-extern consvar_t cv_grgammared;
-extern consvar_t cv_grgammagreen;
-extern consvar_t cv_grgammablue;
 extern consvar_t cv_grfiltermode;
 extern consvar_t cv_granisotropicmode;
 extern consvar_t cv_grcorrecttricks;

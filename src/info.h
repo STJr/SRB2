@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -155,11 +155,9 @@ void A_SpawnObjectAbsolute();
 void A_SpawnObjectRelative();
 void A_ChangeAngleRelative();
 void A_ChangeAngleAbsolute();
-#ifdef ROTSPRITE
 void A_RollAngle();
 void A_ChangeRollAngleRelative();
 void A_ChangeRollAngleAbsolute();
-#endif
 void A_PlaySound();
 void A_FindTarget();
 void A_FindTracer();

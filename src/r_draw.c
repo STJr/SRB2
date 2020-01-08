@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -107,7 +107,8 @@ UINT8 *ds_transmap; // one of the translucency tables
 
 #ifdef ESLOPE
 pslope_t *ds_slope; // Current slope being used
-floatv3_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
+floatv3_t ds_su[MAXVIDHEIGHT], ds_sv[MAXVIDHEIGHT], ds_sz[MAXVIDHEIGHT]; // Vectors for... stuff?
+floatv3_t *ds_sup, *ds_svp, *ds_szp;
 float focallengthf, zeroheight;
 #endif
 
@@ -960,6 +961,7 @@ void R_DrawViewBorder(void)
 // ==========================================================================
 
 #include "r_draw8.c"
+#include "r_draw8_npo2.c"
 
 // ==========================================================================
 //                   INCLUDE 16bpp DRAWING CODE HERE

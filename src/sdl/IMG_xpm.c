@@ -1012,7 +1012,7 @@ static SDL_Surface *load_xpm(const char **xpm, SDL_RWops *src)
     size_t index;
     int x, y;
     int w, h, cpp;
-    size_t ncolors;
+    long unsigned int ncolors;
     size_t indexed;
     Uint8 *dst;
     struct color_hash *colors = NULL;

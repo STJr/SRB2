@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by Graue.
-// Copyright (C) 2006-2018 by Sonic Team Junior.
+// Copyright (C) 2006-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,6 +27,7 @@
 
 #include "doomdef.h"
 #include "doomstat.h"
+#include "r_patch.h"
 #include "i_system.h" // I_GetFreeMem
 #include "i_video.h" // rendermode
 #include "z_zone.h"
@@ -496,6 +497,35 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 // -----------------
 // Utility functions
 // -----------------
+
+// for renderer switching, free a bunch of stuff
+boolean needpatchflush = false;
+boolean needpatchrecache = false;
+
+// flush all patches from memory
+// (also frees memory tagged with PU_CACHE)
+// (which are not necessarily patches but I don't care)
+void Z_FlushCachedPatches(void)
+{
+	CONS_Debug(DBG_RENDER, "Z_FlushCachedPatches()...\n");
+	Z_FreeTag(PU_CACHE);
+	Z_FreeTag(PU_PATCH);
+	Z_FreeTag(PU_HUDGFX);
+	Z_FreeTag(PU_HWRPATCHINFO);
+	Z_FreeTag(PU_HWRMODELTEXTURE);
+	Z_FreeTag(PU_HWRCACHE);
+	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
+	Z_FreeTag(PU_HWRPATCHINFO_UNLOCKED);
+}
+
+// happens before a renderer switch
+void Z_PreparePatchFlush(void)
+{
+	CONS_Debug(DBG_RENDER, "Z_PreparePatchFlush()...\n");
+#ifdef ROTSPRITE
+	R_FreeAllRotSprite();
+#endif
+}
 
 // starting value of nextcleanup
 #define CLEANUPCOUNT 2000

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2018 by Sonic Team Junior.
+// Copyright (C) 2012-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -245,7 +245,7 @@ static int lib_comBufAddText(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	if (plr != &players[consoleplayer])
 		return 0;
-	COM_BufAddText(va("%s\n", luaL_checkstring(L, 2)));
+	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
 }
 
@@ -262,7 +262,7 @@ static int lib_comBufInsertText(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	if (plr != &players[consoleplayer])
 		return 0;
-	COM_BufInsertText(va("%s\n", luaL_checkstring(L, 2)));
+	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
 }
 
@@ -427,6 +427,26 @@ static int lib_cvRegisterVar(lua_State *L)
 	return 1;
 }
 
+static int lib_cvFindVar(lua_State *L)
+{
+	consvar_t *cv;
+	if (( cv = CV_FindVar(luaL_checkstring(L,1)) ))
+	{
+		lua_settop(L,1);/* We only want one argument in the stack. */
+		lua_pushlightuserdata(L, cv);/* Now the second value on stack. */
+		luaL_getmetatable(L, META_CVAR);
+		/*
+		The metatable is the last value on the stack, so this
+		applies it to the second value, which is the cvar.
+		*/
+		lua_setmetatable(L,2);
+		lua_pushvalue(L,2);
+		return 1;
+	}
+	else
+		return 0;
+}
+
 // CONS_Printf for a single player
 // Use 'print' in baselib for a global message.
 static int lib_consPrintf(lua_State *L)
@@ -466,6 +486,7 @@ static luaL_Reg lib[] = {
 	{"COM_BufAddText", lib_comBufAddText},
 	{"COM_BufInsertText", lib_comBufInsertText},
 	{"CV_RegisterVar", lib_cvRegisterVar},
+	{"CV_FindVar", lib_cvFindVar},
 	{"CONS_Printf", lib_consPrintf},
 	{NULL, NULL}
 };
