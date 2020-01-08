@@ -541,6 +541,8 @@ INT32 I_GetKey(void);
 	#define PATHSEP "/"
 #endif
 
+#define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
 // Compile date and time and revision.
 extern const char *compdate, *comptime, *comprevision, *compbranch;
 

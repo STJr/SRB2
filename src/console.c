@@ -32,6 +32,7 @@
 #include "d_main.h"
 #include "m_menu.h"
 #include "filesrch.h"
+#include "m_misc.h"
 
 #ifdef _WINDOWS
 #include "win32/win_main.h"
@@ -40,8 +41,6 @@
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #endif
-
-#define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 #define MAXHUDLINES 20
 
@@ -822,61 +821,23 @@ boolean CON_Responder(event_t *ev)
 		if (input_cur != 0)
 		{
 			if (ctrldown)
-			{
-				int (*is)(int);
-				char *line;
-				int c;
-				line = inputlines[inputline];
-				c = line[--input_cur];
-				if (isspace(c))
-					is = isspace;
-				else if (ispunct(c))
-					is = ispunct;
-				else
-					is = isalnum;
-				c = (*is)(line[input_cur]);
-				while (input_cur > 0 &&
-						(*is)(line[input_cur - 1]) == c)
-					input_cur--;
-			}
+				input_cur = M_JumpWordReverse(inputlines[inputline], input_cur);
 			else
-			{
 				--input_cur;
-			}
 		}
-
 		if (!shiftdown)
 			input_sel = input_cur;
 		return true;
 	}
 	else if (key == KEY_RIGHTARROW)
 	{
-		if (ctrldown)
+		if (input_cur < input_len)
 		{
-			char *line;
-			int c;
-
-			line = &inputlines[inputline][input_cur];
-			c = line[0];
-
-			if (isspace(c))
-				input_cur += strspn(line, " ");
-			else if (ispunct(c))
-				input_cur += strspn(line, PUNCTUATION);
+			if (ctrldown)
+				input_cur += M_JumpWord(&inputlines[inputline][input_cur]);
 			else
-			{
-				if (isspace(line[1]))
-					input_cur += 1 + strspn(&line[1], " ");
-				else
-					input_cur += strcspn(line, " "PUNCTUATION);
-			}
-		}
-		else
-		{
-			if (input_cur < input_len)
 				++input_cur;
 		}
-
 		if (!shiftdown)
 			input_sel = input_cur;
 		return true;
