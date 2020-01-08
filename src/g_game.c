@@ -4763,7 +4763,7 @@ INT32 G_FindMap(const char *mapname, char **foundmapnamep,
 						realmapname, mapname, wanttable);
 				measurekeywords(&freq[freqc],
 						&freq[freqc].keywhd, &freq[freqc].keywhc,
-						mapheaderinfo[i]->keyword, mapname, wanttable);
+						mapheaderinfo[i]->keywords, mapname, wanttable);
 				if (freq[freqc].total)
 					freqc++;
 			}
