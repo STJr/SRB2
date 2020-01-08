@@ -41,6 +41,8 @@
 #include "hardware/hw_main.h"
 #endif
 
+#define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
 #define MAXHUDLINES 20
 
 static boolean con_started = false; // console has been initialised
@@ -815,6 +817,47 @@ boolean CON_Responder(event_t *ev)
 	 || key == KEY_LALT || key == KEY_RALT)
 		return true;
 
+	if (key == KEY_LEFTARROW)
+	{
+		if (input_cur != 0)
+			--input_cur;
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+	else if (key == KEY_RIGHTARROW)
+	{
+		if (ctrldown)
+		{
+			char *line;
+			int c;
+
+			line = &inputlines[inputline][input_cur];
+			c = line[0];
+
+			if (isspace(c))
+				input_cur += strspn(line, " ");
+			else if (ispunct(c))
+				input_cur += strspn(line, PUNCTUATION);
+			else
+			{
+				if (isspace(line[1]))
+					input_cur += 1 + strspn(&line[1], " ");
+				else
+					input_cur += strcspn(line, " "PUNCTUATION);
+			}
+		}
+		else
+		{
+			if (input_cur < input_len)
+				++input_cur;
+		}
+
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+
 	// ctrl modifier -- changes behavior, adds shortcuts
 	if (ctrldown)
 	{
@@ -965,23 +1008,6 @@ boolean CON_Responder(event_t *ev)
 	{
 		if (con_scrollup > 0)
 			con_scrollup--;
-		return true;
-	}
-
-	if (key == KEY_LEFTARROW)
-	{
-		if (input_cur != 0)
-			--input_cur;
-		if (!shiftdown)
-			input_sel = input_cur;
-		return true;
-	}
-	else if (key == KEY_RIGHTARROW)
-	{
-		if (input_cur < input_len)
-			++input_cur;
-		if (!shiftdown)
-			input_sel = input_cur;
 		return true;
 	}
 	else if (key == KEY_HOME)
