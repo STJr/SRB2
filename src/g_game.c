@@ -1514,7 +1514,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			(player->mo && (player->mo->eflags & MFE_VERTICALFLIP)
 			 && (!thiscam->chase || player->pflags & PF_FLIPCAM)) //because chasecam's not inverted
 			 ? -1 : 1; // set to -1 or 1 to multiply
-		 INT32 lookaxis = ssplayer == 1 ? cv_lookaxis.value : cv_lookaxis2.value;
+		 INT32 configlookaxis = ssplayer == 1 ? cv_lookaxis.value : cv_lookaxis2.value;
 
 		// mouse look stuff (mouse look is not the same as mouse aim)
 		if (mouseaiming)
@@ -1525,11 +1525,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			*myaiming += (*mly<<19)*player_invert*screen_invert;
 		}
 
-		if (analogjoystickmove && joyaiming[forplayer] && lookjoystickvector.yaxis != 0 && lookaxis != 0)
+		if (analogjoystickmove && joyaiming[forplayer] && lookjoystickvector.yaxis != 0 && configlookaxis != 0)
 			*myaiming += (lookjoystickvector.yaxis<<16) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look[forplayer] && lookaxis == 0 && !joyaiming[forplayer] && !mouseaiming)
+		if (!keyboard_look[forplayer] && configlookaxis == 0 && !joyaiming[forplayer] && !mouseaiming)
 			*myaiming = 0;
 
 		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
