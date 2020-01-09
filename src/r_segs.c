@@ -645,7 +645,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						if (rlight->extra_colormap)
 						{
 							if (truecolor)
-								rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + (((UINT32 *)xwalllights[pindex]) - colormaps_u32));
+								rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + ((((UINT32 **)xwalllights)[pindex]) - colormaps_u32));
 							else
 								rlight->rcolormap = rlight->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 						}
@@ -1046,12 +1046,24 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
-		if (lightnum < 0)
-			walllights = scalelight[0];
-		else if (lightnum >= LIGHTLEVELS)
-			walllights = scalelight[LIGHTLEVELS-1];
+		if (truecolor)
+		{
+			if (lightnum < 0)
+				walllights_u32 = scalelight_u32[0];
+			else if (lightnum >= LIGHTLEVELS)
+				walllights_u32 = scalelight_u32[LIGHTLEVELS-1];
+			else
+				walllights_u32 = scalelight_u32[lightnum];
+		}
 		else
-			walllights = scalelight[lightnum];
+		{
+			if (lightnum < 0)
+				walllights = scalelight[0];
+			else if (lightnum >= LIGHTLEVELS)
+				walllights = scalelight[LIGHTLEVELS-1];
+			else
+				walllights = scalelight[lightnum];
+		}
 	}
 
 	maskedtexturecol = ds->thicksidecol;
@@ -1277,7 +1289,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 							if (pfloor->master->frontsector->extra_colormap)
 							{
 								if (truecolor)
-									rlight->rcolormap = (UINT8 *)(pfloor->master->frontsector->extra_colormap->colormap_u32 + ((UINT32 *)xwalllights[pindex] - colormaps_u32));
+									rlight->rcolormap = (UINT8 *)(pfloor->master->frontsector->extra_colormap->colormap_u32 + ((((UINT32 **)xwalllights)[pindex]) - colormaps_u32));
 								else
 									rlight->rcolormap = pfloor->master->frontsector->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 							}
@@ -1294,7 +1306,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 							if (rlight->extra_colormap)
 							{
 								if (truecolor)
-									rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + ((UINT32 *)xwalllights[pindex] - colormaps_u32));
+									rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + ((((UINT32 **)xwalllights)[pindex]) - colormaps_u32));
 								else
 									rlight->rcolormap = rlight->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 							}
@@ -1381,7 +1393,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 			// calculate lighting
 			pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
 
@@ -1400,7 +1411,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			else if (frontsector->extra_colormap)
 			{
 				if (truecolor)
-					dc_colormap = (UINT8 *)(frontsector->extra_colormap->colormap + ((UINT32 *)dc_colormap - colormaps_u32));
+					dc_colormap = (UINT8 *)(frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
 				else
 					dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 			}
@@ -1662,7 +1673,7 @@ static void R_RenderSegLoop (void)
 				if (dc_lightlist[i].extra_colormap)
 				{
 					if (truecolor)
-						dc_lightlist[i].rcolormap = (UINT8 *)(dc_lightlist[i].extra_colormap->colormap_u32 + ((UINT32 *)xwalllights[pindex] - colormaps_u32));
+						dc_lightlist[i].rcolormap = (UINT8 *)(dc_lightlist[i].extra_colormap->colormap_u32 + ((((UINT32 **)xwalllights)[pindex]) - colormaps_u32));
 					else
 						dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 				}
