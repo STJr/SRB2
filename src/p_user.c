@@ -10293,7 +10293,13 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			vy = player->awayviewmobj->y;
 		}
 
-		if (P_AproxDistance(vx - mo->x, vy - mo->y) < FixedMul(48*FRACUNIT, mo->scale))
+		/*
+		When the orbital camera looks straight down, its distance
+		will be very close to the player. So give it a threshold...
+		*/
+		if (( !( camorbit && rendermode == render_opengl ) ||
+					focusaiming < ANGLE_90 || focusaiming > ANGLE_292h ) &&
+				P_AproxDistance(vx - mo->x, vy - mo->y) < FixedMul(48*FRACUNIT, mo->scale))
 			mo->flags2 |= MF2_SHADOW;
 		else
 			mo->flags2 &= ~MF2_SHADOW;
