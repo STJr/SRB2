@@ -1095,6 +1095,120 @@ static void R_SplitSprite(vissprite_t *sprite)
 	}
 }
 
+//
+// R_GetShadowZ(thing, shadowslope)
+// Get the first visible floor below the object for shadows
+// shadowslope is filled with the floor's slope, if provided
+//
+fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
+{
+	fixed_t z, floorz = INT32_MIN;
+	pslope_t *slope, *floorslope = NULL;
+	msecnode_t *node;
+	sector_t *sector;
+	ffloor_t *rover;
+
+	for (node = thing->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		sector = node->m_sector;
+
+		slope = (sector->heightsec != -1) ? NULL : sector->f_slope;
+		z = slope ? P_GetZAt(slope, thing->x, thing->y) : (
+			(sector->heightsec != -1) ? sectors[sector->heightsec].floorheight : sector->floorheight
+		);
+
+		if (z < thing->z+thing->height/2 && z > floorz)
+		{
+			floorz = z;
+			floorslope = slope;
+		}
+
+		if (sector->ffloors)
+			for (rover = sector->ffloors; rover; rover = rover->next)
+			{
+				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES) || (rover->alpha < 90 && !(rover->flags & FF_SWIMMABLE)))
+					continue;
+
+				z = *rover->t_slope ? P_GetZAt(*rover->t_slope, thing->x, thing->y) : *rover->topheight;
+				if (z < thing->z+thing->height/2 && z > floorz)
+				{
+					floorz = z;
+					floorslope = *rover->t_slope;
+				}
+			}
+	}
+
+	if (thing->floorz > floorz + (!floorslope ? 0 : FixedMul(abs(floorslope->zdelta), thing->radius*3/2)))
+	{
+		floorz = thing->floorz;
+		floorslope = NULL;
+	}
+
+#if 0 // Unfortunately, this drops CEZ2 down to sub-17 FPS on my i7.
+//#ifdef POLYOBJECTS
+	// Check polyobjects and see if floorz needs to be altered, for rings only because they don't update floorz
+	if (thing->type == MT_RING)
+	{
+		INT32 xl, xh, yl, yh, bx, by;
+
+		xl = (unsigned)(thing->x - thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		xh = (unsigned)(thing->x + thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		yl = (unsigned)(thing->y - thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		yh = (unsigned)(thing->y + thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
+
+		BMBOUNDFIX(xl, xh, yl, yh);
+
+		validcount++;
+
+		for (by = yl; by <= yh; by++)
+			for (bx = xl; bx <= xh; bx++)
+			{
+				INT32 offset;
+				polymaplink_t *plink; // haleyjd 02/22/06
+
+				if (bx < 0 || by < 0 || bx >= bmapwidth || by >= bmapheight)
+					continue;
+
+				offset = by*bmapwidth + bx;
+
+				// haleyjd 02/22/06: consider polyobject lines
+				plink = polyblocklinks[offset];
+
+				while (plink)
+				{
+					polyobj_t *po = plink->po;
+
+					if (po->validcount != validcount) // if polyobj hasn't been checked
+					{
+						po->validcount = validcount;
+
+						if (!P_MobjInsidePolyobj(po, thing) || !(po->flags & POF_RENDERPLANES))
+						{
+							plink = (polymaplink_t *)(plink->link.next);
+							continue;
+						}
+
+						// We're inside it! Yess...
+						z = po->lines[0]->backsector->ceilingheight;
+
+						if (z < thing->z+thing->height/2 && z > floorz)
+						{
+							floorz = z;
+							floorslope = NULL;
+						}
+					}
+					plink = (polymaplink_t *)(plink->link.next);
+				}
+			}
+	}
+#endif
+
+	if (shadowslope != NULL)
+		*shadowslope = floorslope;
+
+	return floorz;
+}
+
 static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fixed_t tz)
 {
 	vissprite_t *shadow;
@@ -1106,51 +1220,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	fixed_t floorz;
 	pslope_t *floorslope;
 
-	// Get floorz as the first floor below the object that's visible
-	floorz = (vis->heightsec != -1) ? sectors[vis->heightsec].floorheight : thing->floorz;
-	floorslope = (vis->heightsec != -1) ? NULL : thing->standingslope;
-
-	{
-		boolean original = true;
-		fixed_t z;
-
-		if (vis->sector->ffloors)
-		{
-			ffloor_t *rover = vis->sector->ffloors;
-
-			for (; rover; rover = rover->next)
-			{
-				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES) || (rover->alpha < 90 && !(rover->flags & FF_SWIMMABLE)))
-					continue;
-
-				z = *rover->t_slope ? P_GetZAt(*rover->t_slope, thing->x, thing->y) : *rover->topheight;
-				if (z < thing->z+thing->height/3 && z > floorz)
-				{
-					floorz = z;
-					floorslope = *rover->t_slope;
-					original = false;
-				}
-				else if (original && (*rover->t_slope) && z < thing->z+thing->height/3 && z > floorz - FixedMul(abs((*rover->t_slope)->zdelta), thing->radius*2))
-				{
-					// Guesstimated to be a usable floor. This is here to handle floorslope of non-grounded things, I guess.
-					floorz = z;
-					floorslope = *rover->t_slope;
-					original = false;
-				}
-			}
-		}
-
-		if (original && vis->sector->f_slope)
-		{
-			z = P_GetZAt(vis->sector->f_slope, thing->x, thing->y);
-			if (z < thing->z+thing->height/3 && z > floorz - FixedMul(abs(vis->sector->f_slope->zdelta), thing->radius*2))
-			{
-				floorz = z;
-				floorslope = vis->sector->f_slope;
-			}
-		}
-	}
-
+	floorz = R_GetShadowZ(thing, &floorslope);
 
 	if (abs(floorz-viewz)/tz > 4) return; // Prevent stretchy shadows and possible crashes
 

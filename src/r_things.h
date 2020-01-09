@@ -55,6 +55,8 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
 
+fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope);
+
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
