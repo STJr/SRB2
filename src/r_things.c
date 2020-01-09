@@ -1209,7 +1209,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 	return floorz;
 }
 
-static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fixed_t tz)
+static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, fixed_t tx, fixed_t tz)
 {
 	vissprite_t *shadow;
 	patch_t *patch;
@@ -1229,11 +1229,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	trans = floordiff / (100*FRACUNIT) + 3;
 	if (trans >= 9) return;
 
-	scalemul = FRACUNIT - floordiff/640;
-
-	//@TODO make this configurable instead of hardcoding to the ring
-	if (thing->type == MT_RING)
-		scalemul = scalemul*2/3;
+	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
 
 	patch = W_CachePatchNum(sprites[SPR_THOK].spriteframes[0].lumppat[0], PU_CACHE);
 	xscale = FixedDiv(projection, tz);
@@ -1887,7 +1883,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 		R_SplitSprite(vis);
 
-	// temporary: whitelist. eventually: MF/2/E flag?
+	///@TODO temporary: whitelist. eventually: MF/2/E flag?
 	if ((
 		oldthing->type == MT_PLAYER ||
 		(oldthing->state - states) == S_RING ||
@@ -1896,7 +1892,10 @@ static void R_ProjectSprite(mobj_t *thing)
 		oldthing->type == MT_EGGMOBILE4_MACE ||
 		(oldthing->type >= MT_SMALLMACE && oldthing->type <= MT_REDSPRINGBALL) // .W.
 	) && !papersprite)
-		R_ProjectDropShadow(oldthing, vis, basetx, tz);
+		R_ProjectDropShadow(oldthing, vis,
+			///@TODO make this scale configurable!
+			((oldthing->state - states) == S_RING) ? 2*FRACUNIT/3 : FRACUNIT,
+		basetx, tz);
 
 	// Debug
 	++objectsdrawn;
