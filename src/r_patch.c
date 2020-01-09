@@ -1205,7 +1205,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 #define ROTSPRITE_XCENTER (newwidth / 2)
 #define ROTSPRITE_YCENTER (newheight / 2)
 
-	if (!sprframe->rotsprite.cached[rot])
+	if (!(sprframe->rotsprite.cached & (1<<rot)))
 	{
 		INT32 dx, dy;
 		INT32 px, py;
@@ -1375,7 +1375,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		}
 
 		// This rotation is cached now
-		sprframe->rotsprite.cached[rot] = true;
+		sprframe->rotsprite.cached |= (1<<rot);
 
 		// free image data
 		Z_Free(patch);
@@ -1399,9 +1399,9 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 	for (frame = 0; frame < spritedef->numframes; frame++)
 	{
 		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
-		for (rot = 0; rot < 8; rot++)
+		for (rot = 0; rot < 16; rot++)
 		{
-			if (sprframe->rotsprite.cached[rot])
+			if (sprframe->rotsprite.cached & (1<<rot))
 			{
 				for (ang = 0; ang < ROTANGLES; ang++)
 				{
@@ -1432,7 +1432,7 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 						Z_Free(rotsprite);
 					}
 				}
-				sprframe->rotsprite.cached[rot] = false;
+				sprframe->rotsprite.cached &= ~(1<<rot);
 			}
 		}
 	}

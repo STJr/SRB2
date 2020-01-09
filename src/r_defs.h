@@ -727,8 +727,8 @@ typedef struct
 #ifdef ROTSPRITE
 typedef struct
 {
-	patch_t *patch[8][ROTANGLES];
-	boolean cached[8];
+	patch_t *patch[16][ROTANGLES];
+	UINT16 cached;
 } rotsprite_t;
 #endif/*ROTSPRITE*/
 
@@ -736,9 +736,11 @@ typedef enum
 {
 	SRF_SINGLE      = 0,   // 0-angle for all rotations
 	SRF_3D          = 1,   // Angles 1-8
-	SRF_LEFT        = 2,   // Left side uses single patch
-	SRF_RIGHT       = 4,   // Right side uses single patch
-	SRF_2D          = SRF_LEFT|SRF_RIGHT, // 6
+	SRF_3DGE        = 2,   // 3DGE, ZDoom and Doom Legacy all have 16-angle support. Why not us?
+	SRF_3DMASK      = SRF_3D|SRF_3DGE, // 3
+	SRF_LEFT        = 4,   // Left side uses single patch
+	SRF_RIGHT       = 8,   // Right side uses single patch
+	SRF_2D          = SRF_LEFT|SRF_RIGHT, // 12
 	SRF_NONE        = 0xff // Initial value
 } spriterotateflags_t;     // SRF's up!
 
@@ -764,7 +766,7 @@ typedef struct patchinfo_s patchinfo_t;
 // Sprites are patches with a special naming convention so they can be
 //  recognized by R_InitSprites.
 // The base name is NNNNFx or NNNNFxFx, with x indicating the rotation,
-//  x = 0, 1-8, L/R
+//  x = 0, 1-8, 9+A-G, L/R
 // The sprite and frame specified by a thing_t is range checked at run time.
 // A sprite is a patch_t that is assumed to represent a three dimensional
 //  object and may have multiple rotations predrawn.
@@ -781,12 +783,12 @@ typedef struct
 	//  name eight times.
 	UINT8 rotate; // see spriterotateflags_t above
 
-	// Lump to use for view angles 0-7.
-	lumpnum_t lumppat[8]; // lump number 16 : 16 wad : lump
-	size_t lumpid[8]; // id in the spriteoffset, spritewidth, etc. tables
+	// Lump to use for view angles 0-7/15.
+	lumpnum_t lumppat[16]; // lump number 16 : 16 wad : lump
+	size_t lumpid[16]; // id in the spriteoffset, spritewidth, etc. tables
 
-	// Flip bits (1 = flip) to use for view angles 0-7.
-	UINT8 flip;
+	// Flip bits (1 = flip) to use for view angles 0-7/15.
+	UINT16 flip;
 
 #ifdef ROTSPRITE
 	rotsprite_t rotsprite;
