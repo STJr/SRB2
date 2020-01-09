@@ -493,7 +493,7 @@ static void F_DoWipe32(fademask_t *fademask)
 					relativepos += vid.width;
 				}
 			}
-			else if (*mask >= 10)
+			else if (*mask >= 255)
 			{
 				// shortcut - memcpy target to work
 				while (draw_linestogo--)
@@ -595,7 +595,7 @@ static void F_DoColormapWipe32(fademask_t *fademask)
 					relativepos += vid.width;
 				}
 			}
-			else if (*mask >= 10)
+			else if (*mask >= 255)
 			{
 				// shortcut - memcpy target to work
 				while (draw_linestogo--)
