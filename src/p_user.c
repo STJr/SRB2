@@ -347,11 +347,11 @@ void P_GiveEmerald(boolean spawnObj)
 				continue;
 			P_SetTarget(&emmo->target, players[i].mo);
 			P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
-			
+
 			// Make sure we're not being carried before our tracer is changed
 			if (players[i].powers[pw_carry] != CR_NIGHTSMODE)
 				players[i].powers[pw_carry] = CR_NONE;
-			
+
 			P_SetTarget(&players[i].mo->tracer, emmo);
 
 			if (pnum == 255)
@@ -4641,7 +4641,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 					if (player->dashspeed > player->maxdash)
 						player->dashspeed = player->maxdash;
-					
+
 					if (player->dashspeed < player->maxdash && player->mindash != player->maxdash)
 					{
 #define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
