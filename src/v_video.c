@@ -2214,9 +2214,8 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 
 			if (color & 0xFF00) // Color is not palette index?
 			{
-				alphaval = V_AlphaTrans(strength*8);
 				for (; buf32 < deststop32; ++buf32)
-					*buf32 = BlendTrueColor(*buf32, 0xFF000000, alphaval);
+					*buf32 = BlendTrueColor(*buf32, 0xFF000000, strength*8);
 			}
 			else
 			{
