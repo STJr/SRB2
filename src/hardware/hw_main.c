@@ -2714,8 +2714,6 @@ static void HWR_AddLine(seg_t * line)
 	static sector_t tempsec;
 
 	fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
-	if (line->glseg)
-		return;
 #ifdef POLYOBJECTS
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
@@ -3773,11 +3771,16 @@ static void HWR_Subsector(size_t num)
 
 		while (count--)
 		{
+
+			if (!line->glseg
 #ifdef POLYOBJECTS
-				if (!line->polyseg) // ignore segs that belong to polyobjects
+			    && !line->polyseg // ignore segs that belong to polyobjects
 #endif
+			)
+			{
 				HWR_AddLine(line);
-				line++;
+			}
+			line++;
 		}
 	}
 
