@@ -803,9 +803,9 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 #endif
 			{
 				if (truecolor)
-					F_DoWipe(fmask);
-				else
 					F_DoWipe32(fmask);
+				else
+					F_DoWipe(fmask);
 			}
 		}
 
