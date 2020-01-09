@@ -7977,7 +7977,7 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		mobj->x = mobj->extravalue1 + P_ReturnThrustX(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
 		mobj->y = mobj->extravalue2 + P_ReturnThrustY(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
 		P_SetThingPosition(mobj);
-		
+
 		if (!mobj->fuse)
 		{
 #ifdef HAVE_BLUA

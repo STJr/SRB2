@@ -2005,7 +2005,7 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	if (lowfloor < tmdropoffz)
 		tmdropoffz = lowfloor;
-	
+
 	return true;
 }
 
