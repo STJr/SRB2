@@ -1076,7 +1076,7 @@ void R_RenderPlayerView(player_t *player)
 	}
 
 	// lactokaiju: truecolor
-	tc_colormap = (!!cv_tccolormap.value);
+	tc_colormap = (truecolor && (!!cv_tccolormap.value));
 
 	R_SetupFrame(player);
 	framecount++;
