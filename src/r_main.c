@@ -145,6 +145,9 @@ consvar_t cv_drawdist_nights = {"drawdist_nights", "2048", CV_SAVE, drawdist_con
 consvar_t cv_drawdist_precip = {"drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 //consvar_t cv_precipdensity = {"precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+// lactokaiju: truecolor
+consvar_t cv_tccolormap = {"tc_colormap", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 // Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = {"homremoval", "No", CV_SAVE, homremoval_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -1072,6 +1075,9 @@ void R_RenderPlayerView(player_t *player)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 32+(timeinmap&15));
 	}
 
+	// lactokaiju: truecolor
+	tc_colormap = (!!cv_tccolormap.value);
+
 	R_SetupFrame(player);
 	framecount++;
 	validcount++;
@@ -1219,6 +1225,9 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_shadowoffs);
 #endif //#ifdef GLBADSHADOWS
 	CV_RegisterVar(&cv_skybox);
+
+	// lactokaiju: truecolor
+	CV_RegisterVar(&cv_tccolormap);
 
 	CV_RegisterVar(&cv_cam_dist);
 	CV_RegisterVar(&cv_cam_still);

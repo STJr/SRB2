@@ -269,6 +269,12 @@ void R_DrawTiltedSplat_NPO2_32(void);
 void R_DrawTranslucentWaterSpan_NPO2_32(void);
 #endif
 
+//
+// truecolor states
+//
+
+extern boolean tc_colormap;
+
 #define TC_CalcScaleLight(light_p) (((scalelight_u32[0][0] - light_p) / 256) * 8);
 
 enum

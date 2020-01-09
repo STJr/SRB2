@@ -3435,7 +3435,6 @@ void R_DrawColumnShadowed_32(void)
 		if (height <= dc_yl)
 		{
 			dc_colormap = dc_lightlist[i].rcolormap;
-			// lactokaiju: truecolor
 			dp_extracolormap = dc_lightlist[i].extra_colormap;
 			dp_lighting = dc_lightlist[i].blendlight;
 			if (solid && dc_yl < bheight)
@@ -3454,7 +3453,6 @@ void R_DrawColumnShadowed_32(void)
 			dc_yl = dc_yh + 1;
 
 		dc_colormap = dc_lightlist[i].rcolormap;
-		// lactokaiju: truecolor
 		dp_extracolormap = dc_lightlist[i].extra_colormap;
 		dp_lighting = dc_lightlist[i].blendlight;
 	}

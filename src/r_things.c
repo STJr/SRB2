@@ -852,7 +852,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (vis->extra_colormap)
 	{
 		dp_extracolormap = vis->extra_colormap;
-		if (truecolor)
+		if (tc_colormap)
 		{
 			if (!dc_colormap)
 				dc_colormap = (UINT8 *)vis->extra_colormap->colormap_u32;
@@ -872,7 +872,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	if (!dc_colormap)
 	{
-		if (truecolor)
+		if (tc_colormap)
 			dc_colormap = (UINT8 *)colormaps_u32;
 		else
 			dc_colormap = colormaps;
@@ -978,7 +978,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 
-	if (truecolor)
+	if (tc_colormap)
 		vis->colormap = (UINT8 *)colormaps_u32;
 	else
 		vis->colormap = colormaps;
@@ -1080,7 +1080,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 		{
 			lightnum = (*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT);
 
-			if (truecolor)
+			if (tc_colormap)
 			{
 				if (lightnum < 0)
 					spritelights_u32 = scalelight_u32[0];
@@ -1109,7 +1109,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
 
-				if (truecolor)
+				if (tc_colormap)
 					newsprite->colormap = (UINT8 *)(spritelights_u32[lindex]);
 				else
 					newsprite->colormap = spritelights[lindex];
@@ -1524,7 +1524,7 @@ static void R_ProjectSprite(mobj_t *thing)
 #endif
 		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 
-		if (truecolor)
+		if (tc_colormap)
 		{
 			if (lightnum < 0)
 				spritelights_u32 = scalelight_u32[0];
@@ -1651,7 +1651,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		&& (!vis->extra_colormap || !(vis->extra_colormap->fog & 1)))
 	{
 		// full bright: goggles
-		if (truecolor)
+		if (tc_colormap)
 			vis->colormap = (UINT8 *)colormaps_u32;
 		else
 			vis->colormap = colormaps;
@@ -1664,7 +1664,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
 
-		if (truecolor)
+		if (tc_colormap)
 			vis->colormap = (UINT8 *)(spritelights_u32[lindex]);
 		else
 			vis->colormap = spritelights[lindex];
@@ -1842,7 +1842,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->heightsec = thing->subsector->sector->heightsec;
 
 	// Fullbright
-	if (truecolor)
+	if (tc_colormap)
 		vis->colormap = (UINT8 *)colormaps_u32;
 	else
 		vis->colormap = colormaps;
@@ -1888,7 +1888,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 		lightnum = (lightlevel >> LIGHTSEGSHIFT);
 
-		if (truecolor)
+		if (tc_colormap)
 		{
 			if (lightnum < 0)
 				spritelights_u32 = scalelight_u32[0];
@@ -2438,7 +2438,7 @@ void R_InitDrawNodes(void)
 static void R_DrawSprite(vissprite_t *spr)
 {
 	dc_picfmt = PICFMT_PATCH;
-	dc_colmapstyle = TC_COLORMAPSTYLE_32BPP;
+	dc_colmapstyle = (tc_colormap) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 	mfloorclip = spr->clipbot;
 	mceilingclip = spr->cliptop;
 	R_DrawVisSprite(spr);

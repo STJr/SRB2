@@ -313,9 +313,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	// Use different light tables
 	//   for horizontal / vertical / diagonal. Diagonal?
 	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
-	dc_colmapstyle = TC_COLORMAPSTYLE_32BPP;
-	curline = ds->curline;
+	dc_colmapstyle = (tc_colormap) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 
+	curline = ds->curline;
 	frontsector = curline->frontsector;
 	backsector = curline->backsector;
 	texnum = R_GetTextureNum(curline->sidedef->midtexture);
@@ -470,7 +470,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
-		if (truecolor)
+		if (tc_colormap)
 		{
 			if (lightnum < 0)
 				walllights_u32 = scalelight_u32[0];
@@ -619,7 +619,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						if ((rlight->flags & FF_NOSHADE))
 							continue;
 
-						if (truecolor)
+						if (tc_colormap)
 						{
 							if (rlight->lightnum < 0)
 								xwalllights = (UINT8 **)(scalelight_u32[0]);
@@ -644,7 +644,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 						if (rlight->extra_colormap)
 						{
-							if (truecolor)
+							if (tc_colormap)
 							{
 								UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
 								rlight->blendlight = TC_CalcScaleLight(wlight);
@@ -655,7 +655,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						}
 						else
 						{
-							if (truecolor)
+							if (tc_colormap)
 							{
 								UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
 								rlight->blendlight = TC_CalcScaleLight(wlight);
@@ -706,7 +706,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				if (pindex >= MAXLIGHTSCALE)
 					pindex = MAXLIGHTSCALE - 1;
 
-				if (truecolor)
+				if (tc_colormap)
 				{
 					dc_colormap = (UINT8 *)(walllights_u32[pindex]);
 					if (frontsector->extra_colormap)
@@ -844,19 +844,18 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 #endif
 
 	void (*colfunc_2s) (column_t *);
+	colfunc = colfuncs[BASEDRAWFUNC];
 
 	// Calculate light table.
 	// Use different light tables
 	//   for horizontal / vertical / diagonal. Diagonal?
 	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
+	dc_colmapstyle = (tc_colormap) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 
 	curline = ds->curline;
 	backsector = pfloor->target;
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
 	texnum = R_GetTextureNum(sides[pfloor->master->sidenum[0]].midtexture);
-
-	colfunc = colfuncs[BASEDRAWFUNC];
-	dc_colmapstyle = TC_COLORMAPSTYLE_32BPP;
 
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
@@ -1056,7 +1055,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
-		if (truecolor)
+		if (tc_colormap)
 		{
 			if (lightnum < 0)
 				walllights_u32 = scalelight_u32[0];
@@ -1271,7 +1270,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					{
 						lightnum = rlight->lightnum;
 
-						if (truecolor)
+						if (tc_colormap)
 						{
 							if (lightnum < 0)
 								xwalllights = (UINT8 **)(scalelight_u32[0]);
@@ -1298,7 +1297,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						{
 							if (pfloor->master->frontsector->extra_colormap)
 							{
-								if (truecolor)
+								if (tc_colormap)
 								{
 									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
 									rlight->blendlight = TC_CalcScaleLight(wlight);
@@ -1309,7 +1308,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 							}
 							else
 							{
-								if (truecolor)
+								if (tc_colormap)
 								{
 									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
 									rlight->blendlight = TC_CalcScaleLight(wlight);
@@ -1323,7 +1322,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						{
 							if (rlight->extra_colormap)
 							{
-								if (truecolor)
+								if (tc_colormap)
 								{
 									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
 									rlight->blendlight = TC_CalcScaleLight(wlight);
@@ -1334,7 +1333,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 							}
 							else
 							{
-								if (truecolor)
+								if (tc_colormap)
 								{
 									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
 									rlight->blendlight = TC_CalcScaleLight(wlight);
@@ -1428,7 +1427,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
 
-			if (truecolor)
+			if (tc_colormap)
 				dc_colormap = (UINT8 *)(walllights_u32[pindex]);
 			else
 				dc_colormap = walllights[pindex];
@@ -1436,7 +1435,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			if (pfloor->flags & FF_FOG && pfloor->master->frontsector->extra_colormap)
 			{
 				dp_extracolormap = pfloor->master->frontsector->extra_colormap;
-				if (truecolor)
+				if (tc_colormap)
 					dc_colormap = (UINT8 *)(pfloor->master->frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
 				else
 					dc_colormap = pfloor->master->frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
@@ -1444,7 +1443,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			else if (frontsector->extra_colormap)
 			{
 				dp_extracolormap = frontsector->extra_colormap;
-				if (truecolor)
+				if (tc_colormap)
 					dc_colormap = (UINT8 *)(frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
 				else
 					dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
@@ -1649,7 +1648,7 @@ static void R_RenderSegLoop (void)
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE-1;
 
-			if (truecolor)
+			if (tc_colormap)
 				dc_colormap = (UINT8 *)(walllights_u32[pindex]);
 			else
 				dc_colormap = walllights[pindex];
@@ -1660,7 +1659,7 @@ static void R_RenderSegLoop (void)
 			if (frontsector->extra_colormap)
 			{
 				dp_extracolormap = frontsector->extra_colormap;
-				if (truecolor)
+				if (tc_colormap)
 				{
 					dp_lighting = TC_CalcScaleLight((UINT32 *)dc_colormap);
 					dc_colormap = (UINT8 *)(frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
@@ -1690,7 +1689,7 @@ static void R_RenderSegLoop (void)
 				else if (curline->v1->x == curline->v2->x)
 					lightnum++;
 
-				if (truecolor)
+				if (tc_colormap)
 				{
 					if (lightnum < 0)
 						xwalllights = (UINT8 **)(scalelight_u32[0]);
@@ -1715,7 +1714,7 @@ static void R_RenderSegLoop (void)
 
 				if (dc_lightlist[i].extra_colormap)
 				{
-					if (truecolor)
+					if (tc_colormap)
 					{
 						UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
 						dc_lightlist[i].blendlight = TC_CalcScaleLight(wlight);
@@ -1726,7 +1725,7 @@ static void R_RenderSegLoop (void)
 				}
 				else
 				{
-					if (truecolor)
+					if (tc_colormap)
 					{
 						UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
 						dc_lightlist[i].blendlight = TC_CalcScaleLight(wlight);
@@ -1946,7 +1945,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #endif
 
 	colfunc = colfuncs[BASEDRAWFUNC];
-	dc_colmapstyle = TC_COLORMAPSTYLE_32BPP;
+	dc_colmapstyle = (tc_colormap) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 
 	if (ds_p == drawsegs+maxdrawsegs)
 	{
@@ -2865,7 +2864,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
-		if (truecolor)
+		if (tc_colormap)
 		{
 			if (lightnum < 0)
 				walllights_u32 = scalelight_u32[0];

@@ -90,6 +90,9 @@ extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
+// lactokaiju: truecolor
+extern consvar_t cv_tccolormap;
+
 // Called by startup code.
 void R_Init(void);
 #ifdef HWRENDER

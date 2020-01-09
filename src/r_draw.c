@@ -58,7 +58,14 @@ INT32 columnofs[MAXVIDWIDTH*4];
 UINT8 *topleft;
 UINT32 *topleft_u32;
 
-// Truecolor blending
+// =========================================================================
+//                              TRUECOLOR STUFF
+// =========================================================================
+
+// Renderer states
+boolean tc_colormap;
+
+// Column / span drawer states
 UINT8 dp_lighting;
 extracolormap_t *dp_extracolormap;
 extracolormap_t *defaultextracolormap;

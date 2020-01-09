@@ -236,7 +236,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #ifdef ESLOPE
 	if (currentplane->slope)
 	{
-		if (truecolor)
+		if (tc_colormap)
 		{
 			ds_colormap = (lighttable_t*)colormaps_u32;
 			ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
@@ -251,7 +251,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	else
 #endif
 	{
-		if (truecolor)
+		if (tc_colormap)
 		{
 			ds_colormap = (UINT8 *)(planezlight_u32[pindex]);
 			ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
@@ -267,7 +267,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	if (currentplane->extra_colormap)
 	{
 		dp_extracolormap = currentplane->extra_colormap;
-		if (truecolor)
+		if (tc_colormap)
 			ds_colormap = (UINT8 *)(currentplane->extra_colormap->colormap_u32 + ((UINT32*)ds_colormap - colormaps_u32));
 		else
 			ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
@@ -1127,14 +1127,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else
 			spanfunctype = SPANDRAWFUNC_TILTED;
 
-		if (truecolor)
+		if (tc_colormap)
 			planezlight_u32 = scalelight_u32[light];
 		else
 			planezlight = scalelight[light];
 	} else
 #endif // ESLOPE
 	{
-		if (truecolor)
+		if (tc_colormap)
 			planezlight_u32 = zlight_u32[light];
 		else
 			planezlight = zlight[light];
