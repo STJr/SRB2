@@ -876,7 +876,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (!(vis->scalestep))
 	{
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-		sprtopscreen += vis->paperdistance * vis->paperoffset;
+		sprtopscreen += vis->shear.tan * vis->shear.offset;
 		dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	}
 
@@ -922,7 +922,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	else
 	{
 		// Non-paper drawing loop
-		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->paperdistance)
+		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
 #ifdef RANGECHECK
 			texturecolumn = frac>>FRACBITS;
@@ -1220,7 +1220,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 	shadow->gz = shadow->gzt - shadow->patch->height * shadowyscale;
 	shadow->texturemid = FixedMul(thing->scale, FixedDiv(shadow->gzt - viewz, shadowyscale));
 	shadow->scalestep = 0;
-	shadow->paperdistance = shadowskew; // repurposed variable
+	shadow->shear.tan = shadowskew; // repurposed variable
 
 	shadow->mobj = thing; // Easy access! Tails 06-07-2002
 
@@ -1252,7 +1252,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t tx, fix
 
 	// reusing x1 variable
 	x1 += (x2-x1)/2;
-	shadow->paperoffset = (vis->x1-x1)/2;
+	shadow->shear.offset = (vis->x1-x1)/2;
 
 	if (thing->subsector->sector->numlights)
 	{
@@ -1723,6 +1723,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->paperoffset = paperoffset;
 	vis->paperdistance = paperdistance;
 	vis->centerangle = centerangle;
+	vis->shear.tan = 0;
+	vis->shear.offset = 0;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
@@ -1950,6 +1952,8 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->texturemid = vis->gzt - viewz;
 	vis->scalestep = 0;
 	vis->paperdistance = 0;
+	vis->shear.tan = 0;
+	vis->shear.offset = 0;
 
 	vis->x1 = x1 < 0 ? 0 : x1;
 	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;

@@ -187,6 +187,11 @@ typedef struct vissprite_s
 
 	angle_t centerangle; // for paper sprites
 
+	struct {
+		fixed_t tan; // The amount to shear the sprite vertically per row
+		INT32 offset; // The center of the shearing location offset from x1
+	} shear;
+
 	fixed_t texturemid;
 	patch_t *patch;
 
