@@ -663,6 +663,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						if (height <= windowtop)
 						{
 							dc_colormap = rlight->rcolormap;
+							dp_extracolormap = rlight->extra_colormap;
 							continue;
 						}
 
@@ -682,6 +683,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						colfunc_2s(col);
 						windowtop = windowbottom + 1;
 						dc_colormap = rlight->rcolormap;
+						dp_extracolormap = rlight->extra_colormap;
 					}
 					windowbottom = realbot;
 					if (windowtop < windowbottom)
@@ -1352,7 +1354,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					if (height <= windowtop)
 					{
 						if (lighteffect)
+						{
 							dc_colormap = rlight->rcolormap;
+							dp_extracolormap = rlight->extra_colormap;
+						}
 						if (solid && windowtop < bheight)
 							windowtop = bheight;
 						continue;
@@ -1380,7 +1385,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					else
 						windowtop = windowbottom + 1;
 					if (lighteffect)
+					{
 						dc_colormap = rlight->rcolormap;
+						dp_extracolormap = rlight->extra_colormap;
+					}
 				}
 				windowbottom = sprbotscreen;
 				// draw the texture, if there is any space left
@@ -1403,6 +1411,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 			if (pfloor->flags & FF_FOG && pfloor->master->frontsector->extra_colormap)
 			{
+				dp_extracolormap = pfloor->master->frontsector->extra_colormap;
 				if (truecolor)
 					dc_colormap = (UINT8 *)(pfloor->master->frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
 				else
@@ -1410,11 +1419,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			}
 			else if (frontsector->extra_colormap)
 			{
+				dp_extracolormap = frontsector->extra_colormap;
 				if (truecolor)
 					dc_colormap = (UINT8 *)(frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
 				else
 					dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 			}
+			else
+				dp_extracolormap = defaultextracolormap;
 
 			// draw the texture
 			colfunc_2s (col);
@@ -1624,11 +1636,14 @@ static void R_RenderSegLoop (void)
 
 			if (frontsector->extra_colormap)
 			{
+				dp_extracolormap = frontsector->extra_colormap;
 				if (truecolor)
 					dc_colormap = (UINT8 *)(frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
 				else
 					dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 			}
+			else
+				dp_extracolormap = defaultextracolormap;
 		}
 
 		if (dc_numlights)

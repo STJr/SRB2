@@ -240,6 +240,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		{
 			ds_colormap = (lighttable_t*)colormaps_u32;
 			ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
+			dp_lighting = 0xFF;
 		}
 		else
 		{
@@ -254,6 +255,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		{
 			ds_colormap = (UINT8 *)(planezlight_u32[pindex]);
 			ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
+			dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[pindex]) / 256) * 8;
 		}
 		else
 		{
@@ -264,11 +266,14 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 
 	if (currentplane->extra_colormap)
 	{
+		dp_extracolormap = currentplane->extra_colormap;
 		if (truecolor)
 			ds_colormap = (UINT8 *)(currentplane->extra_colormap->colormap_u32 + ((UINT32*)ds_colormap - colormaps_u32));
 		else
 			ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
 	}
+	else
+		dp_extracolormap = defaultextracolormap;
 
 	ds_y = y;
 	ds_x1 = x1;

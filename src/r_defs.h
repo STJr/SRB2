@@ -61,7 +61,7 @@ typedef struct extracolormap_s
 	UINT8 fog; // categorical value, not boolean
 
 	// store rgba values in combined bitwise
-	// also used in OpenGL instead lighttables
+	// also used in OpenGL instead of lighttables
 	INT32 rgba; // similar to maskcolor in sw mode
 	INT32 fadergba; // The colour the colourmaps fade to
 

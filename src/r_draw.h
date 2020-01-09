@@ -26,6 +26,11 @@ extern INT32 columnofs[MAXVIDWIDTH*4];
 extern UINT8 *topleft;
 extern UINT32 *topleft_u32;
 
+// Truecolor blending
+extern UINT8 dp_lighting; // dp_ = draw pixel
+extern extracolormap_t *dp_extracolormap;
+extern extracolormap_t *defaultextracolormap;
+
 // -------------------------
 // COLUMN DRAWING CODE STUFF
 // -------------------------
@@ -45,7 +50,6 @@ extern UINT8 *dc_transmap;
 extern UINT8 dc_alpha;
 
 // translation stuff here
-
 extern UINT8 *dc_translation;
 
 extern struct r_lightlist_s *dc_lightlist;

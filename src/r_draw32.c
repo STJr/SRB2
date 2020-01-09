@@ -126,7 +126,7 @@ void R_DrawColumn_32(void)
 					// Re-map color indices from wall texture column
 					//  using a lighting/special effects LUT.
 					// heightmask is the Tutti-Frutti fix
-					*dest = sourceu32[frac>>FRACBITS];
+					*dest = TC_ColorMix(sourceu32[frac>>FRACBITS], *dest);
 					dest += vid.width;
 
 					// Avoid overflow.
@@ -178,15 +178,15 @@ void R_DrawColumn_32(void)
 			{
 				while ((count -= 2) >= 0) // texture height is a power of 2
 				{
-					*dest = sourceu32[(frac>>FRACBITS) & heightmask];
+					*dest = TC_ColorMix(sourceu32[(frac>>FRACBITS) & heightmask], *dest);
 					dest += vid.width;
 					frac += fracstep;
-					*dest = sourceu32[(frac>>FRACBITS) & heightmask];
+					*dest = TC_ColorMix(sourceu32[(frac>>FRACBITS) & heightmask], *dest);
 					dest += vid.width;
 					frac += fracstep;
 				}
 				if (count & 1)
-					*dest = sourceu32[(frac>>FRACBITS) & heightmask];
+					*dest = TC_ColorMix(sourceu32[(frac>>FRACBITS) & heightmask], *dest);
 			}
 		}
 	}
@@ -306,7 +306,7 @@ void R_Draw2sMultiPatchColumn_32(void)
 					valu32 = sourceu32[frac>>FRACBITS];
 
 					if (R_GetRgbaA(valu32))
-						*dest = valu32;
+						*dest = TC_ColorMix(valu32, *dest);
 
 					dest += vid.width;
 
@@ -377,12 +377,12 @@ void R_Draw2sMultiPatchColumn_32(void)
 				{
 					valu32 = sourceu32[(frac>>FRACBITS) & heightmask];
 					if (R_GetRgbaA(valu32))
-						*dest = valu32;
+						*dest = TC_ColorMix(valu32, *dest);
 					dest += vid.width;
 					frac += fracstep;
 					valu32 = sourceu32[(frac>>FRACBITS) & heightmask];
 					if (R_GetRgbaA(valu32))
-						*dest = valu32;
+						*dest = TC_ColorMix(valu32, *dest);
 					dest += vid.width;
 					frac += fracstep;
 				}
@@ -390,7 +390,7 @@ void R_Draw2sMultiPatchColumn_32(void)
 				{
 					valu32 = sourceu32[(frac>>FRACBITS) & heightmask];
 					if (R_GetRgbaA(valu32))
-						*dest = valu32;
+						*dest = TC_ColorMix(valu32, *dest);
 				}
 			}
 		}
@@ -511,7 +511,7 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 					valu32 = sourceu32[frac>>FRACBITS];
 
 					if (R_GetRgbaA(valu32))
-						WriteTranslucentColumn32(valu32);
+						*dest = TC_TranslucentColorMix(valu32, *dest, dc_alpha);
 
 					dest += vid.width;
 
@@ -582,12 +582,12 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 				{
 					valu32 = sourceu32[(frac>>FRACBITS) & heightmask];
 					if (R_GetRgbaA(valu32))
-						WriteTranslucentColumn32(valu32);
+						*dest = TC_TranslucentColorMix(valu32, *dest, dc_alpha);
 					dest += vid.width;
 					frac += fracstep;
 					valu32 = sourceu32[(frac>>FRACBITS) & heightmask];
 					if (R_GetRgbaA(valu32))
-						WriteTranslucentColumn32(valu32);
+						*dest = TC_TranslucentColorMix(valu32, *dest, dc_alpha);
 					dest += vid.width;
 					frac += fracstep;
 				}
@@ -595,7 +595,7 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 				{
 					valu32 = sourceu32[(frac>>FRACBITS) & heightmask];
 					if (R_GetRgbaA(valu32))
-						WriteTranslucentColumn32(valu32);
+						*dest = TC_TranslucentColorMix(valu32, *dest, dc_alpha);
 				}
 			}
 		}
@@ -733,7 +733,7 @@ void R_DrawTranslucentColumn_32(void)
 					// Re-map color indices from wall texture column
 					// using a lighting/special effects LUT.
 					// heightmask is the Tutti-Frutti fix
-					WriteTranslucentColumn32(sourceu32[frac>>FRACBITS]);
+					*dest = TC_TranslucentColorMix(sourceu32[frac>>FRACBITS], *dest, dc_alpha);
 					dest += vid.width;
 					if ((frac += fracstep) >= heightmask)
 						frac -= heightmask;
@@ -779,15 +779,15 @@ void R_DrawTranslucentColumn_32(void)
 			{
 				while ((count -= 2) >= 0) // texture height is a power of 2
 				{
-					WriteTranslucentColumn32(sourceu32[(frac>>FRACBITS)&heightmask]);
+					*dest = TC_TranslucentColorMix(sourceu32[(frac>>FRACBITS)&heightmask], *dest, dc_alpha);
 					dest += vid.width;
 					frac += fracstep;
-					WriteTranslucentColumn32(sourceu32[(frac>>FRACBITS)&heightmask]);
+					*dest = TC_TranslucentColorMix(sourceu32[(frac>>FRACBITS)&heightmask], *dest, dc_alpha);
 					dest += vid.width;
 					frac += fracstep;
 				}
 				if (count & 1)
-					WriteTranslucentColumn32(sourceu32[(frac>>FRACBITS)&heightmask]);
+					*dest = TC_TranslucentColorMix(sourceu32[(frac>>FRACBITS)&heightmask], *dest, dc_alpha);
 			}
 		}
 	}
@@ -876,7 +876,7 @@ void R_DrawTranslatedTranslucentColumn_32(void)
 					// Re-map color indices from wall texture column
 					//  using a lighting/special effects LUT.
 					// heightmask is the Tutti-Frutti fix
-					WriteTranslucentColumn32(sourceu32[frac>>FRACBITS]);
+					*dest = TC_TranslucentColorMix(sourceu32[frac>>FRACBITS], *dest, dc_alpha);
 					dest += vid.width;
 					if ((frac += fracstep) >= heightmask)
 						frac -= heightmask;
@@ -922,15 +922,15 @@ void R_DrawTranslatedTranslucentColumn_32(void)
 			{
 				while ((count -= 2) >= 0) // texture height is a power of 2
 				{
-					WriteTranslucentColumn32(sourceu32[(frac>>FRACBITS)&heightmask]);
+					*dest = TC_TranslucentColorMix(sourceu32[(frac>>FRACBITS)&heightmask], *dest, dc_alpha);
 					dest += vid.width;
 					frac += fracstep;
-					WriteTranslucentColumn32(sourceu32[(frac>>FRACBITS)&heightmask]);
+					*dest = TC_TranslucentColorMix(sourceu32[(frac>>FRACBITS)&heightmask], *dest, dc_alpha);
 					dest += vid.width;
 					frac += fracstep;
 				}
 				if (count & 1)
-					WriteTranslucentColumn32(sourceu32[(frac>>FRACBITS)&heightmask]);
+					*dest = TC_TranslucentColorMix(sourceu32[(frac>>FRACBITS)&heightmask], *dest, dc_alpha);
 			}
 		}
 	}
@@ -1011,7 +1011,7 @@ void R_DrawTranslatedColumn_32(void)
 			//  used with PLAY sprites.
 			// Thus the "green" ramp of the player 0 sprite
 			//  is mapped to gray, red, black/indigo.
-			*dest = sourceu32[frac>>FRACBITS];
+			*dest = TC_ColorMix(sourceu32[frac>>FRACBITS], *dest);
 			dest += vid.width;
 			frac += fracstep;
 		} while (count--);
@@ -1182,35 +1182,35 @@ void R_DrawSpan_32 (void)
 			// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
 			// have the uber complicated math to calculate it now, so that was a memory write we didn't
 			// need!
-			dest[0] = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+			dest[0] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[0]);
 			xposition += xstep;
 			yposition += ystep;
 
-			dest[1] = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+			dest[1] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[1]);
 			xposition += xstep;
 			yposition += ystep;
 
-			dest[2] = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+			dest[2] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[2]);
 			xposition += xstep;
 			yposition += ystep;
 
-			dest[3] = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+			dest[3] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[3]);
 			xposition += xstep;
 			yposition += ystep;
 
-			dest[4] = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+			dest[4] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[4]);
 			xposition += xstep;
 			yposition += ystep;
 
-			dest[5] = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+			dest[5] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[5]);
 			xposition += xstep;
 			yposition += ystep;
 
-			dest[6] = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+			dest[6] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[6]);
 			xposition += xstep;
 			yposition += ystep;
 
-			dest[7] = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+			dest[7] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[7]);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -1219,7 +1219,7 @@ void R_DrawSpan_32 (void)
 		}
 		while (count-- && dest <= deststop)
 		{
-			*dest = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+			*dest = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], *dest);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -1454,8 +1454,8 @@ void R_DrawTiltedSpan_32(void)
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
-				//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				*dest = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				*dest = TC_ColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest);
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -1470,8 +1470,8 @@ void R_DrawTiltedSpan_32(void)
 			{
 				u = (INT64)(startu);
 				v = (INT64)(startv);
-				//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				*dest = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				*dest = TC_ColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest);
 			}
 			else
 			{
@@ -1491,8 +1491,8 @@ void R_DrawTiltedSpan_32(void)
 
 				for (; width != 0; width--)
 				{
-					//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-					*dest = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+					dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+					*dest = TC_ColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -1728,8 +1728,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
-				//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				WriteTranslucentSpan32(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]);
+				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest, ds_alpha);
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -1744,8 +1744,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 			{
 				u = (INT64)(startu);
 				v = (INT64)(startv);
-				//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				WriteTranslucentSpan32(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]);
+				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest, ds_alpha);
 			}
 			else
 			{
@@ -1765,8 +1765,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 
 				for (; width != 0; width--)
 				{
-					//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-					WriteTranslucentSpan32(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]);
+					dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+					*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest, ds_alpha);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -2011,8 +2011,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
-				//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				WriteTranslucentWaterSpan32(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]);
+				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dsrc++, ds_alpha);
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -2027,8 +2027,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 			{
 				u = (INT64)(startu);
 				v = (INT64)(startv);
-				//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				WriteTranslucentWaterSpan32(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]);
+				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dsrc++, ds_alpha);
 			}
 			else
 			{
@@ -2048,8 +2048,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 
 				for (; width != 0; width--)
 				{
-					//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-					WriteTranslucentWaterSpan32(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]);
+					dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+					*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dsrc++, ds_alpha);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -2302,10 +2302,10 @@ void R_DrawTiltedSplat_32(void)
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
-				//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
 				valu32 = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (R_GetRgbaA(valu32))
-					*dest = valu32;
+					*dest = TC_TranslucentColorMix(valu32, *dest, ds_alpha);
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -2320,10 +2320,10 @@ void R_DrawTiltedSplat_32(void)
 			{
 				u = (INT64)(startu);
 				v = (INT64)(startv);
-				//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
 				valu32 = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (R_GetRgbaA(valu32))
-					*dest = valu32;
+					*dest = TC_TranslucentColorMix(valu32, *dest, ds_alpha);
 			}
 			else
 			{
@@ -2343,10 +2343,10 @@ void R_DrawTiltedSplat_32(void)
 
 				for (; width != 0; width--)
 				{
-					//colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+					dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
 					valu32 = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (R_GetRgbaA(valu32))
-						*dest = valu32;
+						*dest = TC_TranslucentColorMix(valu32, *dest, ds_alpha);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -2590,7 +2590,7 @@ void R_DrawSplat_32 (void)
 			val &= 4194303;
 			val = sourceu32[val];
 			if (R_GetRgbaA(val))
-				dest[0] = val;
+				dest[0] = TC_ColorMix(val, dest[0]);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -2598,7 +2598,7 @@ void R_DrawSplat_32 (void)
 			val &= 4194303;
 			val = sourceu32[val];
 			if (R_GetRgbaA(val))
-				dest[1] = val;
+				dest[1] = TC_ColorMix(val, dest[1]);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -2606,7 +2606,7 @@ void R_DrawSplat_32 (void)
 			val &= 4194303;
 			val = sourceu32[val];
 			if (R_GetRgbaA(val))
-				dest[2] = val;
+				dest[2] = TC_ColorMix(val, dest[2]);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -2614,7 +2614,7 @@ void R_DrawSplat_32 (void)
 			val &= 4194303;
 			val = sourceu32[val];
 			if (R_GetRgbaA(val))
-				dest[3] = val;
+				dest[3] = TC_ColorMix(val, dest[3]);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -2622,7 +2622,7 @@ void R_DrawSplat_32 (void)
 			val &= 4194303;
 			val = sourceu32[val];
 			if (R_GetRgbaA(val))
-				dest[4] = val;
+				dest[4] = TC_ColorMix(val, dest[4]);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -2630,7 +2630,7 @@ void R_DrawSplat_32 (void)
 			val &= 4194303;
 			val = sourceu32[val];
 			if (R_GetRgbaA(val))
-				dest[5] = val;
+				dest[5] = TC_ColorMix(val, dest[5]);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -2638,7 +2638,7 @@ void R_DrawSplat_32 (void)
 			val &= 4194303;
 			val = sourceu32[val];
 			if (R_GetRgbaA(val))
-				dest[6] = val;
+				dest[6] = TC_ColorMix(val, dest[6]);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -2646,7 +2646,7 @@ void R_DrawSplat_32 (void)
 			val &= 4194303;
 			val = sourceu32[val];
 			if (R_GetRgbaA(val))
-				dest[7] = val;
+				dest[7] = TC_ColorMix(val, dest[7]);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -2657,7 +2657,7 @@ void R_DrawSplat_32 (void)
 		{
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				*dest = val;
+				*dest = TC_ColorMix(val, *dest);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -2857,49 +2857,49 @@ void R_DrawTranslucentSplat_32 (void)
 			// need!
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				WriteTranslucentSpanIdx32(val, 0);
+				dest[0] = TC_TranslucentColorMix(val, dest[0], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				WriteTranslucentSpanIdx32(val, 1);
+				dest[1] = TC_TranslucentColorMix(val, dest[1], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				WriteTranslucentSpanIdx32(val, 2);
+				dest[2] = TC_TranslucentColorMix(val, dest[2], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				WriteTranslucentSpanIdx32(val, 3);
+				dest[3] = TC_TranslucentColorMix(val, dest[3], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				WriteTranslucentSpanIdx32(val, 4);
+				dest[4] = TC_TranslucentColorMix(val, dest[4], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				WriteTranslucentSpanIdx32(val, 5);
+				dest[5] = TC_TranslucentColorMix(val, dest[5], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				WriteTranslucentSpanIdx32(val, 6);
+				dest[6] = TC_TranslucentColorMix(val, dest[6], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				WriteTranslucentSpanIdx32(val, 7);
+				dest[7] = TC_TranslucentColorMix(val, dest[7], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -2910,7 +2910,7 @@ void R_DrawTranslucentSplat_32 (void)
 		{
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 			if (R_GetRgbaA(val))
-				WriteTranslucentSpan32(val);
+				*dest = TC_TranslucentColorMix(val, *dest, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -3074,35 +3074,35 @@ void R_DrawTranslucentSpan_32 (void)
 			// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
 			// have the uber complicated math to calculate it now, so that was a memory write we didn't
 			// need!
-			WriteTranslucentSpanIdx32(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], 0);
+			dest[0] = TC_TranslucentColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[0], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentSpanIdx32(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], 1);
+			dest[1] = TC_TranslucentColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[1], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentSpanIdx32(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], 2);
+			dest[2] = TC_TranslucentColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[2], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentSpanIdx32(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], 3);
+			dest[3] = TC_TranslucentColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[3], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentSpanIdx32(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], 4);
+			dest[4] = TC_TranslucentColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[4], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentSpanIdx32(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], 5);
+			dest[5] = TC_TranslucentColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[5], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentSpanIdx32(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], 6);
+			dest[6] = TC_TranslucentColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[6], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentSpanIdx32(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], 7);
+			dest[7] = TC_TranslucentColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[7], ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -3112,7 +3112,7 @@ void R_DrawTranslucentSpan_32 (void)
 		while (count-- && dest <= deststop)
 		{
 			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-			WriteTranslucentSpan32(sourceu32[val]);
+			*dest = TC_TranslucentColorMix(sourceu32[val], *dest, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -3270,35 +3270,35 @@ void R_DrawTranslucentWaterSpan_32(void)
 			// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
 			// have the uber complicated math to calculate it now, so that was a memory write we didn't
 			// need!
-			WriteTranslucentWaterSpanIdx32(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], 0);
+			dest[0] = TC_TranslucentColorMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentWaterSpanIdx32(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], 1);
+			dest[1] = TC_TranslucentColorMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentWaterSpanIdx32(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], 2);
+			dest[2] = TC_TranslucentColorMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentWaterSpanIdx32(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], 3);
+			dest[3] = TC_TranslucentColorMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentWaterSpanIdx32(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], 4);
+			dest[4] = TC_TranslucentColorMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentWaterSpanIdx32(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], 5);
+			dest[5] = TC_TranslucentColorMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentWaterSpanIdx32(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], 6);
+			dest[6] = TC_TranslucentColorMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
-			WriteTranslucentWaterSpanIdx32(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], 7);
+			dest[7] = TC_TranslucentColorMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
 			xposition += xstep;
 			yposition += ystep;
 
@@ -3307,7 +3307,7 @@ void R_DrawTranslucentWaterSpan_32(void)
 		}
 		while (count--)
 		{
-			WriteTranslucentWaterSpan32(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]);
+			*dest = TC_TranslucentColorMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -3435,6 +3435,7 @@ void R_DrawColumnShadowed_32(void)
 		if (height <= dc_yl)
 		{
 			dc_colormap = dc_lightlist[i].rcolormap;
+			dp_extracolormap = dc_lightlist[i].extra_colormap;
 			if (solid && dc_yl < bheight)
 				dc_yl = bheight;
 			continue;
@@ -3451,6 +3452,7 @@ void R_DrawColumnShadowed_32(void)
 			dc_yl = dc_yh + 1;
 
 		dc_colormap = dc_lightlist[i].rcolormap;
+		dp_extracolormap = dc_lightlist[i].extra_colormap;
 	}
 	dc_yh = realyh;
 	if (dc_yl <= realyh)

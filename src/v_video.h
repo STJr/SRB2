@@ -60,6 +60,7 @@ const char *GetPalette(void);
 extern RGBA_t *pLocalPalette;
 extern RGBA_t *pMasterPalette;
 
+FUNCMATH UINT32 TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt);
 void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue);
 UINT8 V_AlphaTrans(INT32 num);
 

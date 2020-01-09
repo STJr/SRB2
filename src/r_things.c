@@ -851,6 +851,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	if (vis->extra_colormap)
 	{
+		dp_extracolormap = vis->extra_colormap;
 		if (truecolor)
 		{
 			if (!dc_colormap)
@@ -866,6 +867,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 				dc_colormap = &vis->extra_colormap->colormap[dc_colormap - colormaps];
 		}
 	}
+	else
+		dp_extracolormap = defaultextracolormap;
+
 	if (!dc_colormap)
 	{
 		if (truecolor)

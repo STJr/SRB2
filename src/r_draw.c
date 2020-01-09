@@ -58,6 +58,11 @@ INT32 columnofs[MAXVIDWIDTH*4];
 UINT8 *topleft;
 UINT32 *topleft_u32;
 
+// Truecolor blending
+UINT8 dp_lighting;
+extracolormap_t *dp_extracolormap;
+extracolormap_t *defaultextracolormap;
+
 // =========================================================================
 //                      COLUMN DRAWING CODE STUFF
 // =========================================================================
@@ -87,7 +92,6 @@ UINT8 dc_alpha; // column alpha
 // ----------------------
 // translation stuff here
 // ----------------------
-
 
 /**	\brief R_DrawTranslatedColumn uses this
 */
@@ -974,6 +978,43 @@ void R_DrawViewBorder(void)
 // ==========================================================================
 //                   INCLUDE 32bpp DRAWING CODE HERE
 // ==========================================================================
+
+static UINT32 TC_ColorMix(UINT32 fg, UINT32 bg)
+{
+	RGBA_t rgba;
+	UINT8 tint;
+	UINT32 pixel, origpixel;
+
+	// fg is the graphic's pixel
+	// bg is the background pixel
+	// blendcolor is the colormap
+	// fadecolor is the fade color
+	pixel = origpixel = rgba.rgba = fg;
+	tint = R_GetRgbaA(dp_extracolormap->rgba) * 10;
+
+	// mix pixel with blend color
+	if (tint > 0)
+		pixel = TintTrueColor(rgba, (UINT32)(dp_extracolormap->rgba), tint);
+
+	// mix pixel with fade color
+	fg = BlendTrueColor(pixel, (UINT32)(dp_extracolormap->fadergba), (0xFF - dp_lighting));
+
+	// mix background with the pixel's alpha value
+	fg = BlendTrueColor(bg, fg, R_GetRgbaA(origpixel));
+
+	return (0xFF000000 | fg);
+}
+
+static UINT32 TC_TranslucentColorMix(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	// do full alpha mix
+	fg = TC_ColorMix(fg, bg);
+
+	// mix pixel with the translucency value
+	fg = BlendTrueColor(bg, fg, alpha);
+
+	return (0xFF000000 | fg);
+}
 
 #include "r_draw32.c"
 #include "r_draw32_npo2.c"

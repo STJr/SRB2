@@ -365,7 +365,16 @@ static void R_InitColormaps(void)
 
 	// Make 32bpp colormap
 	if (truecolor)
+	{
 		R_InitColormaps32();
+		// Colormap blending
+		defaultextracolormap = Z_Calloc(sizeof(extracolormap_t), PU_STATIC, NULL);
+		defaultextracolormap->fadestart = 0;
+		defaultextracolormap->fadeend = 31;
+		defaultextracolormap->fog = 0;
+		defaultextracolormap->rgba = 0;
+		defaultextracolormap->fadergba = 0x19000000;
+	}
 
 	// Make colormap for fades
 	if (!truecolor)

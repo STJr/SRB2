@@ -484,6 +484,65 @@ void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT3
 #endif
 }
 
+FUNCMATH UINT32 TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt)
+{
+#ifndef TINTFLOATS
+	fixed_t r, g, b;
+	fixed_t cmaskr, cmaskg, cmaskb;
+	fixed_t cbrightness;
+	fixed_t maskamt, othermask;
+	UINT32 origpixel = rgba.rgba;
+
+	r = cmaskr = (rgba.s.red<<FRACBITS);
+	g = cmaskg = (rgba.s.green<<FRACBITS);
+	b = cmaskb = (rgba.s.blue<<FRACBITS);
+
+	cbrightness = (FixedMul(r, 19595) + FixedMul(g, 38469) + FixedMul(b, 7471));
+	maskamt = FixedDiv((tintamt<<FRACBITS), 0xFF<<FRACBITS);
+	othermask = FixedDiv((0xFF-tintamt)<<FRACBITS, 0xFF<<FRACBITS);
+
+	maskamt = FixedDiv(maskamt, (0xFF<<FRACBITS));
+	cmaskr = FixedMul(cmaskr, maskamt);
+	cmaskg = FixedMul(cmaskg, maskamt);
+	cmaskb = FixedMul(cmaskb, maskamt);
+
+	rgba.s.red = (FixedMul(cbrightness, cmaskr)>>FRACBITS) + (FixedMul(r, othermask)>>FRACBITS);
+	rgba.s.green = (FixedMul(cbrightness, cmaskg)>>FRACBITS) + (FixedMul(g, othermask)>>FRACBITS);
+	rgba.s.blue = (FixedMul(cbrightness, cmaskb)>>FRACBITS) + (FixedMul(b, othermask)>>FRACBITS);
+
+	return BlendTrueColor(origpixel, BlendTrueColor(rgba.rgba, blendcolor, (cbrightness>>FRACBITS)), tintamt);
+#else
+	double r, g, b;
+	double cmaskr, cmaskg, cmaskb;
+	double cbrightness;
+	double maskamt, othermask;
+	UINT32 origpixel = rgba.rgba;
+
+	r = cmaskr = (rgba.s.red/256.0f);
+	g = cmaskg = (rgba.s.green/256.0f);
+	b = cmaskb = (rgba.s.blue/256.0f);
+
+	cbrightness = (0.299*r + 0.587*g + 0.114*b);	// sqrt((r*r) + (g*g) + (b*b))
+	r = rgba.s.red;
+	g = rgba.s.green;
+	b = rgba.s.blue;
+
+	maskamt = (tintamt/256.0f);
+	othermask = 1 - maskamt;
+
+	maskamt /= 0xFF;
+	cmaskr *= maskamt;
+	cmaskg *= maskamt;
+	cmaskb *= maskamt;
+
+	rgba.s.red = (cbrightness * cmaskr) + (r * othermask);
+	rgba.s.green = (cbrightness * cmaskg) + (g * othermask);
+	rgba.s.blue = (cbrightness * cmaskb) + (b * othermask);
+
+	return BlendTrueColor(origpixel, BlendTrueColor(rgba.rgba, blendcolor, llrint(cbrightness*256.0f)), tintamt);
+#endif
+}
+
 static UINT8 hudplusalpha[11]  = { 10,  8,  6,  4,  2,  0,  0,  0,  0,  0,  0};
 static UINT8 hudminusalpha[11] = { 10,  9,  9,  8,  8,  7,  7,  6,  6,  5,  5};
 
