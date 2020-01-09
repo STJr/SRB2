@@ -19760,14 +19760,14 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_FLINGNIGHTSCHIP
 		-1,             // doomednum
-		S_NIGHTSCHIP,         // spawnstate
+		S_NIGHTSCHIP,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
-		MT_FLINGNIGHTSCHIP,   // reactiontime
+		MT_FLINGNIGHTSCHIP, // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		MT_NIGHTSCHIP,        // painchance
+		MT_NIGHTSCHIP,  // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
@@ -19791,7 +19791,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1000,           // spawnhealth
 		S_NIGHTSSTARXMAS, // seestate
 		sfx_None,       // seesound
-		MT_FLINGNIGHTSSTAR,              // reactiontime
+		MT_FLINGNIGHTSSTAR, // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -19818,21 +19818,21 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1000,           // spawnhealth
 		S_NIGHTSSTARXMAS, // seestate
 		sfx_None,       // seesound
-		MT_FLINGNIGHTSSTAR,              // reactiontime
+		MT_FLINGNIGHTSSTAR, // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		MT_NIGHTSSTAR,              // painchance
+		MT_NIGHTSSTAR,  // painchance
 		sfx_s3k33,      // painsound
 		S_RING,         // meleestate
 		S_NULL,         // missilestate
 		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncitem,     // deathsound
-		38*FRACUNIT,              // speed
+		38*FRACUNIT,    // speed
 		16*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
-		100,              // mass
+		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SLIDEME|MF_SPECIAL, // flags
