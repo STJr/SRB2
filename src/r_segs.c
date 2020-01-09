@@ -645,14 +645,22 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						if (rlight->extra_colormap)
 						{
 							if (truecolor)
-								rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + ((((UINT32 **)xwalllights)[pindex]) - colormaps_u32));
+							{
+								UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+								rlight->blendlight = TC_CalcScaleLight(wlight);
+								rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + (wlight - colormaps_u32));
+							}
 							else
 								rlight->rcolormap = rlight->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 						}
 						else
 						{
 							if (truecolor)
-								rlight->rcolormap = (UINT8 *)(((UINT32 **)xwalllights)[pindex]);
+							{
+								UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+								rlight->blendlight = TC_CalcScaleLight(wlight);
+								rlight->rcolormap = (UINT8 *)wlight;
+							}
 							else
 								rlight->rcolormap = xwalllights[pindex];
 						}
@@ -1291,14 +1299,22 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 							if (pfloor->master->frontsector->extra_colormap)
 							{
 								if (truecolor)
-									rlight->rcolormap = (UINT8 *)(pfloor->master->frontsector->extra_colormap->colormap_u32 + ((((UINT32 **)xwalllights)[pindex]) - colormaps_u32));
+								{
+									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+									rlight->blendlight = TC_CalcScaleLight(wlight);
+									rlight->rcolormap = (UINT8 *)(pfloor->master->frontsector->extra_colormap->colormap_u32 + (wlight - colormaps_u32));
+								}
 								else
 									rlight->rcolormap = pfloor->master->frontsector->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 							}
 							else
 							{
 								if (truecolor)
-									rlight->rcolormap = (UINT8 *)(((UINT32 **)xwalllights)[pindex]);
+								{
+									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+									rlight->blendlight = TC_CalcScaleLight(wlight);
+									rlight->rcolormap = (UINT8 *)wlight;
+								}
 								else
 									rlight->rcolormap = xwalllights[pindex];
 							}
@@ -1308,14 +1324,22 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 							if (rlight->extra_colormap)
 							{
 								if (truecolor)
-									rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + ((((UINT32 **)xwalllights)[pindex]) - colormaps_u32));
+								{
+									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+									rlight->blendlight = TC_CalcScaleLight(wlight);
+									rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + (wlight - colormaps_u32));
+								}
 								else
 									rlight->rcolormap = rlight->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 							}
 							else
 							{
 								if (truecolor)
-									rlight->rcolormap = (UINT8 *)(((UINT32 **)xwalllights)[pindex]);
+								{
+									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+									rlight->blendlight = TC_CalcScaleLight(wlight);
+									rlight->rcolormap = (UINT8 *)wlight;
+								}
 								else
 									rlight->rcolormap = xwalllights[pindex];
 							}
@@ -1622,8 +1646,7 @@ static void R_RenderSegLoop (void)
 		{
 			// calculate lighting
 			pindex = FixedMul(rw_scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
-			if (pindex >=  MAXLIGHTSCALE)
+			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE-1;
 
 			if (truecolor)
@@ -1638,12 +1661,18 @@ static void R_RenderSegLoop (void)
 			{
 				dp_extracolormap = frontsector->extra_colormap;
 				if (truecolor)
+				{
+					dp_lighting = TC_CalcScaleLight((UINT32 *)dc_colormap);
 					dc_colormap = (UINT8 *)(frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
+				}
 				else
 					dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 			}
 			else
+			{
+				dp_lighting = TC_CalcScaleLight((UINT32 *)dc_colormap);
 				dp_extracolormap = defaultextracolormap;
+			}
 		}
 
 		if (dc_numlights)
@@ -1681,21 +1710,28 @@ static void R_RenderSegLoop (void)
 				}
 
 				pindex = FixedMul(rw_scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
-				if (pindex >=  MAXLIGHTSCALE)
+				if (pindex >= MAXLIGHTSCALE)
 					pindex = MAXLIGHTSCALE-1;
 
 				if (dc_lightlist[i].extra_colormap)
 				{
 					if (truecolor)
-						dc_lightlist[i].rcolormap = (UINT8 *)(dc_lightlist[i].extra_colormap->colormap_u32 + ((((UINT32 **)xwalllights)[pindex]) - colormaps_u32));
+					{
+						UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+						dc_lightlist[i].blendlight = TC_CalcScaleLight(wlight);
+						dc_lightlist[i].rcolormap = (UINT8 *)(dc_lightlist[i].extra_colormap->colormap_u32 + (wlight - colormaps_u32));
+					}
 					else
 						dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 				}
 				else
 				{
 					if (truecolor)
-						dc_lightlist[i].rcolormap = (UINT8 *)(((UINT32 **)xwalllights)[pindex]);
+					{
+						UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+						dc_lightlist[i].blendlight = TC_CalcScaleLight(wlight);
+						dc_lightlist[i].rcolormap = (UINT8 *)wlight;
+					}
 					else
 						dc_lightlist[i].rcolormap = xwalllights[pindex];
 				}

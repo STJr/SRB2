@@ -269,17 +269,20 @@ void R_DrawTiltedSplat_NPO2_32(void);
 void R_DrawTranslucentWaterSpan_NPO2_32(void);
 #endif
 
+#define TC_CalcScaleLight(light_p) (((scalelight_u32[0][0] - light_p) / 256) * 8);
+
 enum
 {
 	TC_COLORMAPSTYLE_8BPP,
 	TC_COLORMAPSTYLE_32BPP
 };
 
+//
+// color blending math
+//
+
 #define GetTrueColor(c) ((st_palette > 0) ? V_GetPalNumColor(c,st_palette) : V_GetColor(c)).rgba
 
-#define ABGR_RED(c) (c)
-#define ABGR_GREEN(c) R_GetRgbaG(c)
-#define ABGR_BLUE(c) R_GetRgbaB(c)
 #define MIX_ALPHA(a) (0xff-(a))
 
 #define BlendTrueColor(bg, fg, alpha) \

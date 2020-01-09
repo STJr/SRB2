@@ -222,6 +222,7 @@ typedef struct r_lightlist_s
 	INT16 lightlevel;
 	extracolormap_t *extra_colormap;
 	lighttable_t *rcolormap;
+	UINT8 blendlight; // lactokaiju: truecolor
 	ffloortype_e flags;
 	INT32 lightnum;
 } r_lightlist_t;

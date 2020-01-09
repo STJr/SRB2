@@ -255,7 +255,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		{
 			ds_colormap = (UINT8 *)(planezlight_u32[pindex]);
 			ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
-			dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[pindex]) / 256) * 8;
+			dp_lighting = TC_CalcScaleLight(planezlight_u32[pindex]);
 		}
 		else
 		{

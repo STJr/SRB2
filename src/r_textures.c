@@ -471,21 +471,24 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	{
 		texture->format = PICFMT_PATCH;
 #if defined (PICTURES_ALLOWDEPTH) && !defined (NO_PNG_LUMPS)
-		for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
+		if (truecolor)
 		{
-			wadnum = patch->wad;
-			lumpnum = patch->lump;
-			pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_STATIC);
-			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-			if (Picture_IsLumpPNG(pdata, lumplength))
+			for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 			{
-				// Your clown ass decided to use a PNG,
-				// so now the entire fucking texture has
-				// to be 32bpp. I hope you're happy with yourself.
-				// Enjoy your performance. Fuck you.
-				texture->format = PICFMT_PATCH32;
-				Z_Free(pdata);
-				break;
+				wadnum = patch->wad;
+				lumpnum = patch->lump;
+				pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_STATIC);
+				lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+				if (Picture_IsLumpPNG(pdata, lumplength))
+				{
+					// Your clown ass decided to use a PNG,
+					// so now the entire fucking texture has
+					// to be 32bpp. I hope you're happy with yourself.
+					// Enjoy your performance. Fuck you.
+					texture->format = PICFMT_PATCH32;
+					Z_Free(pdata);
+					break;
+				}
 			}
 		}
 #endif
@@ -1110,7 +1113,8 @@ countflats:
 				// so now the entire fucking texture has
 				// to be 32bpp. I hope you're happy with yourself.
 				// Enjoy your performance. Fuck you.
-				texture->format = PICFMT_PATCH32;
+				if (truecolor)
+					texture->format = PICFMT_PATCH32;
 #endif
 			}
 			else
@@ -1221,7 +1225,8 @@ checkflats:
 				// so now the entire fucking texture has
 				// to be 32bpp. I hope you're happy with yourself.
 				// Enjoy your performance. Fuck you.
-				texture->format = PICFMT_PATCH32;
+				if (truecolor)
+					texture->format = PICFMT_PATCH32;
 #endif
 			}
 			else

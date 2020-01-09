@@ -1454,7 +1454,7 @@ void R_DrawTiltedSpan_32(void)
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
-				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				*dest = TC_ColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest);
 				dest++;
 				u += stepu;
@@ -1470,7 +1470,7 @@ void R_DrawTiltedSpan_32(void)
 			{
 				u = (INT64)(startu);
 				v = (INT64)(startv);
-				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				*dest = TC_ColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest);
 			}
 			else
@@ -1491,7 +1491,7 @@ void R_DrawTiltedSpan_32(void)
 
 				for (; width != 0; width--)
 				{
-					dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+					dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 					*dest = TC_ColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest);
 					dest++;
 					u += stepu;
@@ -1728,7 +1728,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
-				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest, ds_alpha);
 				dest++;
 				u += stepu;
@@ -1744,7 +1744,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 			{
 				u = (INT64)(startu);
 				v = (INT64)(startv);
-				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest, ds_alpha);
 			}
 			else
@@ -1765,7 +1765,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 
 				for (; width != 0; width--)
 				{
-					dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+					dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 					*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dest, ds_alpha);
 					dest++;
 					u += stepu;
@@ -2011,7 +2011,7 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
-				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dsrc++, ds_alpha);
 				dest++;
 				u += stepu;
@@ -2027,7 +2027,7 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 			{
 				u = (INT64)(startu);
 				v = (INT64)(startv);
-				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dsrc++, ds_alpha);
 			}
 			else
@@ -2048,7 +2048,7 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 
 				for (; width != 0; width--)
 				{
-					dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+					dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 					*dest = TC_TranslucentColorMix(sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)], *dsrc++, ds_alpha);
 					dest++;
 					u += stepu;
@@ -2302,7 +2302,7 @@ void R_DrawTiltedSplat_32(void)
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
-				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				valu32 = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (R_GetRgbaA(valu32))
 					*dest = TC_TranslucentColorMix(valu32, *dest, ds_alpha);
@@ -2320,7 +2320,7 @@ void R_DrawTiltedSplat_32(void)
 			{
 				u = (INT64)(startu);
 				v = (INT64)(startv);
-				dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				valu32 = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (R_GetRgbaA(valu32))
 					*dest = TC_TranslucentColorMix(valu32, *dest, ds_alpha);
@@ -2343,7 +2343,7 @@ void R_DrawTiltedSplat_32(void)
 
 				for (; width != 0; width--)
 				{
-					dp_lighting = ((scalelight_u32[0][0] - planezlight_u32[tiltlighting[ds_x1++]]) / 256) * 8;
+					dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 					valu32 = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (R_GetRgbaA(valu32))
 						*dest = TC_TranslucentColorMix(valu32, *dest, ds_alpha);
@@ -3435,7 +3435,9 @@ void R_DrawColumnShadowed_32(void)
 		if (height <= dc_yl)
 		{
 			dc_colormap = dc_lightlist[i].rcolormap;
+			// lactokaiju: truecolor
 			dp_extracolormap = dc_lightlist[i].extra_colormap;
+			dp_lighting = dc_lightlist[i].blendlight;
 			if (solid && dc_yl < bheight)
 				dc_yl = bheight;
 			continue;
@@ -3452,7 +3454,9 @@ void R_DrawColumnShadowed_32(void)
 			dc_yl = dc_yh + 1;
 
 		dc_colormap = dc_lightlist[i].rcolormap;
+		// lactokaiju: truecolor
 		dp_extracolormap = dc_lightlist[i].extra_colormap;
+		dp_lighting = dc_lightlist[i].blendlight;
 	}
 	dc_yh = realyh;
 	if (dc_yl <= realyh)
