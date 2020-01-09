@@ -792,7 +792,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 	{
 		ds_flatwidth = levelflat->width;
 		ds_flatheight = levelflat->height;
-		ds_picfmt = texture->format;
+		ds_picfmt = levelflat->format;
 	}
 
 	levelflat->u.texture.lastnum = levelflat->u.texture.num;
