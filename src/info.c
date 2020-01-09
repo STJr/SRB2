@@ -19791,7 +19791,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1000,           // spawnhealth
 		S_NIGHTSSTARXMAS, // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		MT_FLINGNIGHTSSTAR,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -19809,6 +19809,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
+		S_NULL          // raisestate
+	},
+	
+	{           // MT_FLINGNIGHTSSTAR
+		-1,             // doomednum
+		S_NIGHTSSTAR,   // spawnstate
+		1000,           // spawnhealth
+		S_NIGHTSSTARXMAS, // seestate
+		sfx_None,       // seesound
+		MT_FLINGNIGHTSSTAR,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		MT_NIGHTSSTAR,              // painchance
+		sfx_s3k33,      // painsound
+		S_RING,         // meleestate
+		S_NULL,         // missilestate
+		S_SPRK1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_ncitem,     // deathsound
+		38*FRACUNIT,              // speed
+		16*FRACUNIT,    // radius
+		24*FRACUNIT,    // height
+		0,              // display offset
+		100,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SLIDEME|MF_SPECIAL, // flags
 		S_NULL          // raisestate
 	},
 

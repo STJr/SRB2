@@ -8669,6 +8669,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_NIGHTSCHIP", // NiGHTS Chip
 	"MT_FLINGNIGHTSCHIP", // Lost NiGHTS Chip
 	"MT_NIGHTSSTAR", // NiGHTS Star
+	"MT_FLINGNIGHTSSTAR", // Lost NiGHTS Star
 	"MT_NIGHTSSUPERLOOP",
 	"MT_NIGHTSDRILLREFILL",
 	"MT_NIGHTSHELPER",
