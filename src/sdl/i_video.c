@@ -191,10 +191,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 
 #ifdef TRUECOLOR
 	if (truecolor)
-	{
 		bpp = 32;
-		sw_texture_format = SDL_PIXELFORMAT_RGBA32;
-	}
 #endif
 
 	if (window)
@@ -250,7 +247,9 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			SDL_DestroyTexture(texture);
 		}
 
+#ifdef TRUECOLOR
 		if (!truecolor)
+#endif
 		{
 			if (!usesdl2soft)
 			{

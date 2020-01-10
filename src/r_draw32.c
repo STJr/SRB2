@@ -1039,8 +1039,8 @@ void R_DrawSpan_32 (void)
 	UINT8 *source;
 	UINT32 *sourceu32;
 
-	UINT8 *colormap;
-	UINT32 *colormapu32;
+	UINT8 *colormap = NULL;
+	UINT32 *colormapu32 = NULL;
 
 	UINT32 *dest;
 	const UINT32 *deststop = (UINT32 *)screens[0] + vid.width * vid.height;
@@ -1242,8 +1242,8 @@ void R_DrawTiltedSpan_32(void)
 	UINT8 *source;
 	UINT32 *sourceu32;
 
-	UINT8 *colormap;
-	UINT32 *colormapu32;
+	UINT8 *colormap = NULL;
+	UINT32 *colormapu32 = NULL;
 
 	UINT32 *dest;
 
@@ -1517,8 +1517,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 	UINT8 *source;
 	UINT32 *sourceu32;
 
-	UINT8 *colormap;
-	UINT32 *colormapu32;
+	UINT8 *colormap = NULL;
+	UINT32 *colormapu32 = NULL;
 
 	UINT32 *dest;
 
@@ -1798,8 +1798,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 	UINT8 *source;
 	UINT32 *sourceu32;
 
-	UINT8 *colormap;
-	UINT32 *colormapu32;
+	UINT8 *colormap = NULL;
+	UINT32 *colormapu32 = NULL;
 
 	UINT32 *dest;
 	UINT32 *dsrc;
@@ -2072,8 +2072,8 @@ void R_DrawTiltedSplat_32(void)
 	UINT8 *source;
 	UINT32 *sourceu32;
 
-	UINT8 *colormap;
-	UINT32 *colormapu32;
+	UINT8 *colormap = NULL;
+	UINT32 *colormapu32 = NULL;
 
 	UINT32 *dest;
 
@@ -2370,8 +2370,8 @@ void R_DrawSplat_32 (void)
 	UINT8 *source;
 	UINT32 *sourceu32;
 
-	UINT8 *colormap;
-	UINT32 *colormapu32;
+	UINT8 *colormap = NULL;
+	UINT32 *colormapu32 = NULL;
 
 	UINT32 *dest;
 	const UINT32 *deststop = (UINT32 *)screens[0] + vid.width * vid.height;
@@ -2677,8 +2677,8 @@ void R_DrawTranslucentSplat_32 (void)
 	UINT8 *source;
 	UINT32 *sourceu32;
 
-	UINT8 *colormap;
-	UINT32 *colormapu32;
+	UINT8 *colormap = NULL;
+	UINT32 *colormapu32 = NULL;
 
 	UINT32 *dest;
 	const UINT32 *deststop = (UINT32 *)screens[0] + vid.width * vid.height;
@@ -2930,8 +2930,8 @@ void R_DrawTranslucentSpan_32 (void)
 	UINT8 *source;
 	UINT32 *sourceu32;
 
-	UINT8 *colormap;
-	UINT32 *colormapu32;
+	UINT8 *colormap = NULL;
+	UINT32 *colormapu32 = NULL;
 
 	UINT32 *dest;
 	const UINT32 *deststop = (UINT32 *)screens[0] + vid.width * vid.height;
@@ -3130,8 +3130,8 @@ void R_DrawTranslucentWaterSpan_32(void)
 	UINT8 *source;
 	UINT32 *sourceu32;
 
-	UINT8 *colormap;
-	UINT32 *colormapu32;
+	UINT8 *colormap = NULL;
+	UINT32 *colormapu32 = NULL;
 
 	UINT32 *dest;
 	UINT32 *dsrc;
