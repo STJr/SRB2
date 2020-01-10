@@ -1644,7 +1644,6 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	UINT32 alphalevel = 0;
 	INT16 alphaval = 128;
 	UINT8 perplayershuffle = 0;
-	UINT32 fadecolor = 0;
 
 	if (rendermode == render_none)
 		return;
@@ -1798,29 +1797,29 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	if (y + h > vid.height)
 		h = vid.height-y;
 
-	dest = screens[0] + y*vid.rowbytes + x;
+	dest = screens[0] + y*vid.rowbytes + (x * vid.bpp);
 	deststop = screens[0] + vid.rowbytes * vid.height;
 
 	c &= 255;
 
-	// Jimita (12-04-2018)
-	if (alphalevel)
+	if (truecolor)
 	{
-		if (truecolor)
+		UINT32 fadecolor = V_GetConsBackColor(cons_backcolor.value);
+		for (;(--h >= 0) && dest < deststop; dest += vid.rowbytes)
 		{
 			UINT32 *d32 = (UINT32 *)dest;
-			fadecolor = V_GetConsBackColor(cons_backcolor.value);
-			for (;(--h >= 0) && dest < deststop; dest += vid.rowbytes)
+			u = 0;
+			while (u < w)
 			{
-				u = 0;
-				while (u < w)
-				{
-					*(d32+u) = fadecolor;
-					u++;
-				}
+				*(d32+u) = BlendTrueColor(*(d32+u), fadecolor, alphaval);
+				u++;
 			}
 		}
-		else
+	}
+	else
+	{
+		// Jimita (12-04-2018)
+		if (alphalevel)
 		{
 			fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
 			for (;(--h >= 0) && dest < deststop; dest += vid.width)
@@ -1829,23 +1828,6 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 				while (u < w)
 				{
 					dest[u] = fadetable[consolebgmap[dest[u]]];
-					u++;
-				}
-			}
-		}
-	}
-	else
-	{
-		if (truecolor)
-		{
-			UINT32 *d32 = (UINT32 *)dest;
-			fadecolor = V_GetConsBackColor(cons_backcolor.value);
-			for (;(--h >= 0) && dest < deststop; dest += vid.rowbytes)
-			{
-				u = 0;
-				while (u < w)
-				{
-					*(d32+u) = BlendTrueColor(*(d32+u), fadecolor, alphaval);
 					u++;
 				}
 			}
