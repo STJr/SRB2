@@ -352,6 +352,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			break;
 		default:
 			colfunc = colfuncs[BASEDRAWFUNC];
+			dc_alpha = 0xFF;
 			break;
 	}
 
@@ -888,7 +889,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		if (truecolor)
 		{
 			if (pfloor->alpha == 255) // Opaque
+			{
 				fuzzy = false;
+				dc_alpha = 0xFF;
+			}
 			else if (pfloor->alpha < 1)
 				return; // Don't even draw it
 			else

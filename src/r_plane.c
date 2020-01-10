@@ -862,7 +862,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			INT32 transval = pl->polyobj->translucency-1;
 #ifdef TRUECOLOR
 			if (truecolor)
-				ds_alpha = transval;
+				ds_alpha = V_AlphaTrans(transval);
 			else
 #endif
 				ds_transmap = transtables + (transval<<FF_TRANSSHIFT);
@@ -908,7 +908,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 			if (truecolor)
 			{
 				if (pl->ffloor->alpha == 255) // Opaque, but allow transparent flat pixels
+				{
 					spanfunctype = SPANDRAWFUNC_SPLAT;
+					ds_alpha = 0xFF;
+				}
 				else if (pl->ffloor->alpha < 1)
 					return; // Don't even draw it
 				else
