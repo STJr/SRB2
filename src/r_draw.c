@@ -1002,13 +1002,13 @@ static UINT32 TC_ColorMix(UINT32 fg, UINT32 bg)
 
 	// mix pixel with blend color
 	if (tint > 0)
-		pixel = TintTrueColor(rgba, (UINT32)(dp_extracolormap->rgba), tint);
+		pixel = TC_TintTrueColor(rgba, (UINT32)(dp_extracolormap->rgba), tint);
 
 	// mix pixel with fade color
-	fg = BlendTrueColor(pixel, (UINT32)(dp_extracolormap->fadergba), (0xFF - dp_lighting));
+	fg = TC_BlendTrueColor(pixel, (UINT32)(dp_extracolormap->fadergba), (0xFF - dp_lighting));
 
 	// mix background with the pixel's alpha value
-	fg = BlendTrueColor(bg, fg, R_GetRgbaA(origpixel));
+	fg = TC_BlendTrueColor(bg, fg, R_GetRgbaA(origpixel));
 
 	return (0xFF000000 | fg);
 }
@@ -1019,9 +1019,68 @@ static UINT32 TC_TranslucentColorMix(UINT32 fg, UINT32 bg, UINT8 alpha)
 	fg = TC_ColorMix(fg, bg);
 
 	// mix pixel with the translucency value
-	fg = BlendTrueColor(bg, fg, alpha);
+	fg = TC_BlendTrueColor(bg, fg, alpha);
 
 	return (0xFF000000 | fg);
+}
+
+FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt)
+{
+#ifndef TINTFLOATS
+	fixed_t r, g, b;
+	fixed_t cmaskr, cmaskg, cmaskb;
+	fixed_t cbrightness;
+	fixed_t maskamt, othermask;
+	UINT32 origpixel = rgba.rgba;
+
+	r = cmaskr = (rgba.s.red<<FRACBITS);
+	g = cmaskg = (rgba.s.green<<FRACBITS);
+	b = cmaskb = (rgba.s.blue<<FRACBITS);
+
+	cbrightness = (FixedMul(r, 19595) + FixedMul(g, 38469) + FixedMul(b, 7471));
+	maskamt = FixedDiv((tintamt<<FRACBITS), 0xFF<<FRACBITS);
+	othermask = FixedDiv((0xFF-tintamt)<<FRACBITS, 0xFF<<FRACBITS);
+
+	maskamt = FixedDiv(maskamt, (0xFF<<FRACBITS));
+	cmaskr = FixedMul(cmaskr, maskamt);
+	cmaskg = FixedMul(cmaskg, maskamt);
+	cmaskb = FixedMul(cmaskb, maskamt);
+
+	rgba.s.red = (FixedMul(cbrightness, cmaskr)>>FRACBITS) + (FixedMul(r, othermask)>>FRACBITS);
+	rgba.s.green = (FixedMul(cbrightness, cmaskg)>>FRACBITS) + (FixedMul(g, othermask)>>FRACBITS);
+	rgba.s.blue = (FixedMul(cbrightness, cmaskb)>>FRACBITS) + (FixedMul(b, othermask)>>FRACBITS);
+
+	return TC_BlendTrueColor(origpixel, TC_BlendTrueColor(rgba.rgba, blendcolor, (cbrightness>>FRACBITS)), tintamt);
+#else
+	double r, g, b;
+	double cmaskr, cmaskg, cmaskb;
+	double cbrightness;
+	double maskamt, othermask;
+	UINT32 origpixel = rgba.rgba;
+
+	r = cmaskr = (rgba.s.red/256.0f);
+	g = cmaskg = (rgba.s.green/256.0f);
+	b = cmaskb = (rgba.s.blue/256.0f);
+
+	cbrightness = (0.299*r + 0.587*g + 0.114*b);	// sqrt((r*r) + (g*g) + (b*b))
+	r = rgba.s.red;
+	g = rgba.s.green;
+	b = rgba.s.blue;
+
+	maskamt = (tintamt/256.0f);
+	othermask = 1 - maskamt;
+
+	maskamt /= 0xFF;
+	cmaskr *= maskamt;
+	cmaskg *= maskamt;
+	cmaskb *= maskamt;
+
+	rgba.s.red = (cbrightness * cmaskr) + (r * othermask);
+	rgba.s.green = (cbrightness * cmaskg) + (g * othermask);
+	rgba.s.blue = (cbrightness * cmaskb) + (b * othermask);
+
+	return TC_BlendTrueColor(origpixel, TC_BlendTrueColor(rgba.rgba, blendcolor, llrint(cbrightness*256.0f)), tintamt);
+#endif
 }
 
 #include "r_draw32.c"

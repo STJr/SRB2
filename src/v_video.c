@@ -484,65 +484,6 @@ void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT3
 #endif
 }
 
-FUNCMATH UINT32 TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt)
-{
-#ifndef TINTFLOATS
-	fixed_t r, g, b;
-	fixed_t cmaskr, cmaskg, cmaskb;
-	fixed_t cbrightness;
-	fixed_t maskamt, othermask;
-	UINT32 origpixel = rgba.rgba;
-
-	r = cmaskr = (rgba.s.red<<FRACBITS);
-	g = cmaskg = (rgba.s.green<<FRACBITS);
-	b = cmaskb = (rgba.s.blue<<FRACBITS);
-
-	cbrightness = (FixedMul(r, 19595) + FixedMul(g, 38469) + FixedMul(b, 7471));
-	maskamt = FixedDiv((tintamt<<FRACBITS), 0xFF<<FRACBITS);
-	othermask = FixedDiv((0xFF-tintamt)<<FRACBITS, 0xFF<<FRACBITS);
-
-	maskamt = FixedDiv(maskamt, (0xFF<<FRACBITS));
-	cmaskr = FixedMul(cmaskr, maskamt);
-	cmaskg = FixedMul(cmaskg, maskamt);
-	cmaskb = FixedMul(cmaskb, maskamt);
-
-	rgba.s.red = (FixedMul(cbrightness, cmaskr)>>FRACBITS) + (FixedMul(r, othermask)>>FRACBITS);
-	rgba.s.green = (FixedMul(cbrightness, cmaskg)>>FRACBITS) + (FixedMul(g, othermask)>>FRACBITS);
-	rgba.s.blue = (FixedMul(cbrightness, cmaskb)>>FRACBITS) + (FixedMul(b, othermask)>>FRACBITS);
-
-	return BlendTrueColor(origpixel, BlendTrueColor(rgba.rgba, blendcolor, (cbrightness>>FRACBITS)), tintamt);
-#else
-	double r, g, b;
-	double cmaskr, cmaskg, cmaskb;
-	double cbrightness;
-	double maskamt, othermask;
-	UINT32 origpixel = rgba.rgba;
-
-	r = cmaskr = (rgba.s.red/256.0f);
-	g = cmaskg = (rgba.s.green/256.0f);
-	b = cmaskb = (rgba.s.blue/256.0f);
-
-	cbrightness = (0.299*r + 0.587*g + 0.114*b);	// sqrt((r*r) + (g*g) + (b*b))
-	r = rgba.s.red;
-	g = rgba.s.green;
-	b = rgba.s.blue;
-
-	maskamt = (tintamt/256.0f);
-	othermask = 1 - maskamt;
-
-	maskamt /= 0xFF;
-	cmaskr *= maskamt;
-	cmaskg *= maskamt;
-	cmaskb *= maskamt;
-
-	rgba.s.red = (cbrightness * cmaskr) + (r * othermask);
-	rgba.s.green = (cbrightness * cmaskg) + (g * othermask);
-	rgba.s.blue = (cbrightness * cmaskb) + (b * othermask);
-
-	return BlendTrueColor(origpixel, BlendTrueColor(rgba.rgba, blendcolor, llrint(cbrightness*256.0f)), tintamt);
-#endif
-}
-
 static UINT8 hudplusalpha[11]  = { 10,  8,  6,  4,  2,  0,  0,  0,  0,  0,  0};
 static UINT8 hudminusalpha[11] = { 10,  9,  9,  8,  8,  7,  7,  6,  6,  5,  5};
 
@@ -600,7 +541,7 @@ static inline UINT32 mappedpdraw_u32(void *dest, void *source, fixed_t ofs)
 }
 static inline UINT32 translucentpdraw_u32(void *dest, void *source, fixed_t ofs)
 {
-	return BlendTrueColor(*(UINT32 *)dest, ((UINT8 *)source)[ofs>>FRACBITS], *v_translevel);
+	return TC_BlendTrueColor(*(UINT32 *)dest, ((UINT8 *)source)[ofs>>FRACBITS], *v_translevel);
 }
 static inline UINT32 transmappedpdraw_u32(void *dest, void *source, fixed_t ofs)
 {
@@ -620,11 +561,11 @@ static inline UINT32 mappedpdraw_u32_palsrc(void *dest, void *source, fixed_t of
 }
 static inline UINT32 translucentpdraw_u32_palsrc(void *dest, void *source, fixed_t ofs)
 {
-	return BlendTrueColor(*(UINT32 *)dest, GetTrueColor(((UINT8 *)source)[ofs>>FRACBITS]), *v_translevel);
+	return TC_BlendTrueColor(*(UINT32 *)dest, GetTrueColor(((UINT8 *)source)[ofs>>FRACBITS]), *v_translevel);
 }
 static inline UINT32 transmappedpdraw_u32_palsrc(void *dest, void *source, fixed_t ofs)
 {
-	return BlendTrueColor(*(UINT32 *)dest, GetTrueColor(*(v_colormap + ((UINT8 *)source)[ofs>>FRACBITS])), *v_translevel);
+	return TC_BlendTrueColor(*(UINT32 *)dest, GetTrueColor(*(v_colormap + ((UINT8 *)source)[ofs>>FRACBITS])), *v_translevel);
 }
 #endif
 
@@ -1828,7 +1769,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 			u = 0;
 			while (u < w)
 			{
-				*(d32+u) = BlendTrueColor(*(d32+u), fadecolor, alphaval);
+				*(d32+u) = TC_BlendTrueColor(*(d32+u), fadecolor, alphaval);
 				u++;
 			}
 		}
@@ -2046,7 +1987,7 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 			line = 0;
 			while (count > 0)
 			{
-				*(d32+line) = BlendTrueColor(*(d32+line), rgb_color, alphaval);
+				*(d32+line) = TC_BlendTrueColor(*(d32+line), rgb_color, alphaval);
 				count--; line++;
 			}
 		}
@@ -2218,13 +2159,13 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 			if (color & 0xFF00) // Color is not palette index?
 			{
 				for (; buf32 < deststop32; ++buf32)
-					*buf32 = BlendTrueColor(*buf32, 0xFF000000, strength*8);
+					*buf32 = TC_BlendTrueColor(*buf32, 0xFF000000, strength*8);
 			}
 			else
 			{
 				alphaval = V_AlphaTrans(9-strength);
 				for (; buf32 < deststop32; ++buf32)
-					*buf32 = BlendTrueColor(*buf32, color, alphaval);
+					*buf32 = TC_BlendTrueColor(*buf32, color, alphaval);
 			}
 		}
 		else
@@ -2260,7 +2201,7 @@ void V_DrawFadeConsBack(INT32 plines)
 		const UINT32 *deststop32 = buf32 + vid.width * min(plines, vid.height);
 		UINT32 fadecolor = V_GetConsBackColor(cons_backcolor.value);
 		for (; buf32 < deststop32; ++buf32)
-			*buf32 = BlendTrueColor(*buf32, fadecolor, 128);
+			*buf32 = TC_BlendTrueColor(*buf32, fadecolor, 128);
 	}
 	else
 #endif
@@ -2332,7 +2273,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 		UINT32 *buf32 = deststop32 - vid.width * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
 		UINT32 fadecolor = V_GetConsBackColor(color);
 		for (; buf32 < deststop32; ++buf)
-			*buf32 = BlendTrueColor(*buf32, fadecolor, 128);
+			*buf32 = TC_BlendTrueColor(*buf32, fadecolor, 128);
 	}
 	else
 #endif

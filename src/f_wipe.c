@@ -517,7 +517,7 @@ static void F_DoWipe32(fademask_t *fademask)
 
 					while (draw_rowstogo--)
 					{
-						*w = BlendTrueColor(*s, *e, *mask);
+						*w = TC_BlendTrueColor(*s, *e, *mask);
 						w++;
 						e++;
 						s++;
@@ -620,7 +620,7 @@ static void F_DoColormapWipe32(fademask_t *fademask)
 
 					while (draw_rowstogo--)
 					{
-						*w = BlendTrueColor(*s, *e, *mask);
+						*w = TC_BlendTrueColor(*s, *e, *mask);
 						w++;
 						e++;
 						s++;

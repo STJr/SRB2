@@ -275,6 +275,7 @@ void R_DrawTranslucentWaterSpan_NPO2_32(void);
 
 extern boolean tc_colormap;
 
+FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt);
 #define TC_CalcScaleLight(light_p) (((scalelight_u32[0][0] - light_p) / 256) * 8);
 
 enum
@@ -289,9 +290,9 @@ enum
 
 #define GetTrueColor(c) ((st_palette > 0) ? V_GetPalNumColor(c,st_palette) : V_GetColor(c)).rgba
 
-#define MIX_ALPHA(a) (0xff-(a))
+#define MIX_ALPHA(a) (0xFF-(a))
 
-#define BlendTrueColor(bg, fg, alpha) \
+#define TC_BlendTrueColor(bg, fg, alpha) \
 	(!(alpha)) ? (bg) : ( ((alpha)==0xFF) ? (fg) \
 	:( ( (R_GetRgbaR(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaR(fg) * (alpha)) ) >> 8) \
 	|( ( (R_GetRgbaG(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaG(fg) * (alpha)) ) >> 8) << 8 \
