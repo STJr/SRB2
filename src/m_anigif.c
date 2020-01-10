@@ -459,11 +459,8 @@ const UINT8 gifframe_gchead[4] = {0x21,0xF9,0x04,0x04}; // GCE, bytes, packed by
 static UINT8 *gifframe_data = NULL;
 static size_t gifframe_size = 8192;
 
-#ifdef HWRENDER
-static void hwrconvert(void)
+static void GIF_rgbconvert(UINT8 *src, UINT8 *dest, size_t bpp)
 {
-	UINT8 *linear = HWR_GetScreenshot();
-	UINT8 *dest = screens[2];
 	UINT8 r, g, b;
 	INT32 x, y;
 	size_t i = 0;
@@ -472,18 +469,15 @@ static void hwrconvert(void)
 
 	for (y = 0; y < vid.height; y++)
 	{
-		for (x = 0; x < vid.width; x++, i += 3)
+		for (x = 0; x < vid.width; x++, i += bpp)
 		{
-			r = (UINT8)linear[i];
-			g = (UINT8)linear[i + 1];
-			b = (UINT8)linear[i + 2];
+			r = (UINT8)src[i];
+			g = (UINT8)src[i + 1];
+			b = (UINT8)src[i + 2];
 			dest[(y * vid.width) + x] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
 		}
 	}
-
-	free(linear);
 }
-#endif
 
 //
 // GIF_framewrite
@@ -507,14 +501,32 @@ static void GIF_framewrite(void)
 	{
 		// before blit movie_screen points to last frame, cur_screen points to this frame
 		UINT8 *cur_screen = screens[0];
+#ifdef TRUECOLOR
+		if ((rendermode == render_soft) && (truecolor))
+		{
+			cur_screen = screens[2] + (vid.width * vid.height);
+			GIF_rgbconvert(screens[0], cur_screen, 4);
+		}
+#endif
 		GIF_optimizeregion(cur_screen, movie_screen, &blitx, &blity, &blitw, &blith);
 
 		// blit to temp screen
 		if (rendermode == render_soft)
-			I_ReadScreen(movie_screen);
+		{
+#ifdef TRUECOLOR
+			if (truecolor)
+				GIF_rgbconvert(screens[0], movie_screen, 4);
+			else
+#endif
+				I_ReadScreen(movie_screen);
+		}
 #ifdef HWRENDER
 		else if (rendermode == render_opengl)
-			hwrconvert();
+		{
+			UINT8 *sshot = HWR_GetScreenshot();
+			GIF_rgbconvert(sshot, screens[2], 3);
+			free(sshot);
+		}
 #endif
 	}
 	else
@@ -525,18 +537,35 @@ static void GIF_framewrite(void)
 
 		if (gif_frames == 0)
 		{
-			if (rendermode == render_soft)
-				I_ReadScreen(movie_screen);
 #ifdef HWRENDER
-			else if (rendermode == render_opengl)
+			if (rendermode == render_opengl)
 			{
-				hwrconvert();
-				VID_BlitLinearScreen(screens[2], screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+				UINT8 *sshot = HWR_GetScreenshot();
+				GIF_rgbconvert(sshot, screens[0], 3);
+				free(sshot);
 			}
+			else
 #endif
+			if (rendermode == render_soft)
+			{
+#ifdef TRUECOLOR
+				if (truecolor)
+					GIF_rgbconvert(screens[0], movie_screen, 4);
+				else
+#endif
+					I_ReadScreen(movie_screen);
+			}
 		}
 
 		movie_screen = screens[0];
+#ifdef TRUECOLOR
+		if ((rendermode == render_soft) && (truecolor))
+		{
+			UINT8 *blit = screens[2] + (vid.width * vid.height);
+			GIF_rgbconvert(screens[0], blit, 4);
+			movie_screen = blit;
+		}
+#endif
 	}
 
 	// screen regions are handled in GIF_lzw
