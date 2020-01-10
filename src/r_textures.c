@@ -608,7 +608,15 @@ UINT8 *R_GenerateTextureAsFlat(size_t texnum)
 {
 	texture_t *texture = textures[texnum];
 	UINT8 *converted = NULL;
-	size_t size = (texture->width * texture->height);
+	size_t size;
+	pictureformat_t format;
+	INT32 fmtbpp;
+
+	// Generate the texture.
+	R_CheckTextureCache(texnum);
+	format = texture->format;
+	fmtbpp = Picture_FormatBPP(format) / 8;
+	size = (texture->width * texture->height) * fmtbpp;
 
 	// The flat picture for this texture was not generated yet.
 	if (!texture->flat)
@@ -752,6 +760,12 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 			levelflat->picture = R_GenerateTextureAsFlat(levelflat->u.texture.num);
 			ds_flatwidth = levelflat->width = texture->width;
 			ds_flatheight = levelflat->height = texture->height;
+			// detect format
+			if (texture->format == PICFMT_PATCH32)
+				levelflat->format = PICFMT_FLAT32;
+			else // must be 8bpp right??
+				levelflat->format = PICFMT_FLAT;
+			ds_picfmt = levelflat->format;
 		}
 		else
 		{
