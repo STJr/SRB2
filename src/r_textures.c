@@ -827,11 +827,16 @@ void R_ClearLevelFlats(void)
 	for (i = 0; i < numlevelflats; i++)
 	{
 		levelflat_t *levelflat = &levelflats[i];
+
 		if (levelflat->picture)
 		{
-			Z_Free(levelflat->picture);
+			// Texture levelflat picture data already
+			// points to somwehere inside the texture cache.
+			if (levelflat->type != LEVELFLAT_TEXTURE)
+				Z_Free(levelflat->picture);
 			levelflat->picture = NULL;
 		}
+
 #ifdef HWRENDER
 		// Is this safe? I don't know.
 		if (levelflat->mipmap)
