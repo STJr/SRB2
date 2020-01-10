@@ -3644,11 +3644,11 @@ Unoptimized version
 			if (heatshifter[heatindex[view]++])
 			{
 				// Shift this row of pixels to the right by 2
-				tmpscr[y*vid.width] = srcscr[y*vid.width];
-				M_Memcpy(&tmpscr[y*vid.width+vid.dupx], &srcscr[y*vid.width], vid.width-vid.dupx);
+				M_Memcpy(&tmpscr[y*vid.rowbytes], &srcscr[y*vid.rowbytes], vid.bpp);
+				M_Memcpy(&tmpscr[y*vid.rowbytes+(vid.dupx*vid.bpp)], &srcscr[y*vid.rowbytes], vid.rowbytes-(vid.dupx*vid.bpp));
 			}
 			else
-				M_Memcpy(&tmpscr[y*vid.width], &srcscr[y*vid.width], vid.width);
+				M_Memcpy(&tmpscr[y*vid.rowbytes], &srcscr[y*vid.rowbytes], vid.rowbytes);
 
 			heatindex[view] %= height;
 		}
@@ -3656,8 +3656,8 @@ Unoptimized version
 		heatindex[view]++;
 		heatindex[view] %= vid.height;
 
-		VID_BlitLinearScreen(tmpscr+vid.width*vid.bpp*yoffset, screens[0]+vid.width*vid.bpp*yoffset,
-				vid.width*vid.bpp, height, vid.width*vid.bpp, vid.width);
+		VID_BlitLinearScreen(tmpscr+vid.rowbytes*yoffset, screens[0]+vid.rowbytes*yoffset,
+				vid.rowbytes, height, vid.rowbytes, vid.rowbytes);
 	}
 #endif
 }
