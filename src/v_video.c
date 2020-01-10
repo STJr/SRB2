@@ -1582,8 +1582,8 @@ static UINT32 V_GetConsBackColor(INT32 consbackcolor)
 	// OpenGL uses RGBA, but Software
 	// uses ABGR, so swap the byte order.
 	if (rendermode != render_opengl)
-		color = (0xFF000000 | BIGENDIAN_LONG(color));
 #endif
+		color = (0xFF000000 | BIGENDIAN_LONG(color));
 
 	return color;
 }
@@ -2216,6 +2216,7 @@ void V_DrawFadeConsBack(INT32 plines)
 void V_DrawPromptBack(INT32 boxheight, INT32 color)
 {
 	UINT8 *deststop, *buf;
+	UINT32 fadecolor = 0x00000000;
 
 	if (color >= 256 && color < 512)
 	{
@@ -2229,40 +2230,44 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 	if (color == INT32_MAX)
 		color = cons_backcolor.value;
 
+	switch (color)
+	{
+		case 0:		fadecolor = 0xffffff00;	break; 	// White
+		case 1:		fadecolor = 0x00000000;	break; 	// Black // Note this is different from V_DrawFadeConsBack
+		case 2:		fadecolor = 0xdeb88700;	break;	// Sepia
+		case 3:		fadecolor = 0x40201000;	break; 	// Brown
+		case 4:		fadecolor = 0xfa807200;	break; 	// Pink
+		case 5:		fadecolor = 0xff69b400;	break; 	// Raspberry
+		case 6:		fadecolor = 0xff000000;	break; 	// Red
+		case 7:		fadecolor = 0xffd68300;	break;	// Creamsicle
+		case 8:		fadecolor = 0xff800000;	break; 	// Orange
+		case 9:		fadecolor = 0xdaa52000;	break; 	// Gold
+		case 10:	fadecolor = 0x80800000;	break; 	// Yellow
+		case 11:	fadecolor = 0x00ff0000;	break; 	// Emerald
+		case 12:	fadecolor = 0x00800000;	break; 	// Green
+		case 13:	fadecolor = 0x4080ff00;	break; 	// Cyan
+		case 14:	fadecolor = 0x4682b400;	break; 	// Steel
+		case 15:	fadecolor = 0x1e90ff00;	break;	// Periwinkle
+		case 16:	fadecolor = 0x0000ff00;	break; 	// Blue
+		case 17:	fadecolor = 0xff00ff00;	break; 	// Purple
+		case 18:	fadecolor = 0xee82ee00;	break; 	// Lavender
+		// Default green
+		default:	fadecolor = 0x00800000;	break;
+	}
+
 #ifdef HWRENDER
 	if (rendermode != render_soft && rendermode != render_none)
 	{
-		UINT32 hwcolor;
-		switch (color)
-		{
-			case 0:		hwcolor = 0xffffff00;	break; 	// White
-			case 1:		hwcolor = 0x00000000;	break; 	// Black // Note this is different from V_DrawFadeConsBack
-			case 2:		hwcolor = 0xdeb88700;	break;	// Sepia
-			case 3:		hwcolor = 0x40201000;	break; 	// Brown
-			case 4:		hwcolor = 0xfa807200;	break; 	// Pink
-			case 5:		hwcolor = 0xff69b400;	break; 	// Raspberry
-			case 6:		hwcolor = 0xff000000;	break; 	// Red
-			case 7:		hwcolor = 0xffd68300;	break;	// Creamsicle
-			case 8:		hwcolor = 0xff800000;	break; 	// Orange
-			case 9:		hwcolor = 0xdaa52000;	break; 	// Gold
-			case 10:	hwcolor = 0x80800000;	break; 	// Yellow
-			case 11:	hwcolor = 0x00ff0000;	break; 	// Emerald
-			case 12:	hwcolor = 0x00800000;	break; 	// Green
-			case 13:	hwcolor = 0x4080ff00;	break; 	// Cyan
-			case 14:	hwcolor = 0x4682b400;	break; 	// Steel
-			case 15:	hwcolor = 0x1e90ff00;	break;	// Periwinkle
-			case 16:	hwcolor = 0x0000ff00;	break; 	// Blue
-			case 17:	hwcolor = 0xff00ff00;	break; 	// Purple
-			case 18:	hwcolor = 0xee82ee00;	break; 	// Lavender
-			// Default green
-			default:	hwcolor = 0x00800000;	break;
-		}
-		HWR_DrawTutorialBack(hwcolor, boxheight);
+		HWR_DrawTutorialBack(fadecolor, boxheight);
 		return;
 	}
+	else
 #endif
-
-	CON_SetupBackColormapEx(color, true);
+	{
+		// OpenGL uses RGBA, but Software
+		// uses ABGR, so swap the byte order.
+		fadecolor = (0xFF000000 | BIGENDIAN_LONG(fadecolor));
+	}
 
 	// heavily simplified -- we don't need to know x or y position,
 	// just the start and stop positions
@@ -2271,13 +2276,13 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 	{
 		UINT32 *deststop32 = ((UINT32 *)screens[0]) + vid.width * vid.height;
 		UINT32 *buf32 = deststop32 - vid.width * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
-		UINT32 fadecolor = V_GetConsBackColor(color);
-		for (; buf32 < deststop32; ++buf)
+		for (; buf32 < deststop32; ++buf32)
 			*buf32 = TC_BlendTrueColor(*buf32, fadecolor, 128);
 	}
 	else
 #endif
 	{
+		CON_SetupBackColormapEx(color, true);
 		deststop = screens[0] + vid.rowbytes * vid.height;
 		buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
 		for (; buf < deststop; ++buf)
