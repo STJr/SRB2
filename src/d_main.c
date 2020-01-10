@@ -108,8 +108,6 @@ boolean devparm = false; // started game with -devparm
 boolean singletics = false; // timedemo
 boolean lastdraw = false;
 
-static void D_CheckRendererState(void);
-
 postimg_t postimgtype = postimg_none;
 INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
@@ -613,6 +611,40 @@ void D_CheckRendererState(void)
 	// so cache them again
 	if (needpatchrecache)
 		R_ReloadHUDGraphics();
+}
+
+void D_CheckColorDepth(INT32 newbitdepth, INT32 oldbitdepth)
+{
+	if (oldbitdepth == 0) // Video init
+		return;
+
+	// The bitdepth changed :)
+	if (newbitdepth != oldbitdepth)
+	{
+		size_t i;
+
+		// Reload every texture.
+		R_LoadTextures();
+
+		// Also free levelflat pictures.
+		for (i = 0; i < numlevelflats; i++)
+		{
+			levelflat_t *levelflat = &levelflats[i];
+			if (levelflat->picture)
+			{
+				Z_Free(levelflat->picture);
+				levelflat->picture = NULL;
+			}
+#ifdef HWRENDER
+			// Is this safe? I don't know.
+			if (levelflat->mipmap)
+			{
+				Z_Free(levelflat->mipmap);
+				levelflat->mipmap = NULL;
+			}
+#endif
+		}
+	}
 }
 
 // =========================================================================

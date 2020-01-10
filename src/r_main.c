@@ -95,6 +95,8 @@ lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 lighttable_u32_t *scalelight_u32[LIGHTLEVELS][MAXLIGHTSCALE];
 lighttable_u32_t *zlight_u32[LIGHTLEVELS][MAXLIGHTZ];
 
+static void TrueColor_OnChange(void);
+
 // Hack to support extra boom colormaps.
 extracolormap_t *extra_colormaps = NULL;
 
@@ -146,7 +148,14 @@ consvar_t cv_drawdist_precip = {"drawdist_precip", "1024", CV_SAVE, drawdist_pre
 //consvar_t cv_precipdensity = {"precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // lactokaiju: truecolor
+consvar_t cv_tcstate = {"tc_state", "Off", CV_CALL|CV_NOINIT, CV_OnOff, TrueColor_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_tccolormap = {"tc_colormap", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static void TrueColor_OnChange(void)
+{
+	truecolor = (!!cv_tcstate.value);
+	setmodeneeded = vid.modenum + 1;
+}
 
 // Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = {"homremoval", "No", CV_SAVE, homremoval_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -1228,6 +1237,7 @@ void R_RegisterEngineStuff(void)
 
 	// lactokaiju: truecolor
 	CV_RegisterVar(&cv_tccolormap);
+	CV_RegisterVar(&cv_tcstate);
 
 	CV_RegisterVar(&cv_cam_dist);
 	CV_RegisterVar(&cv_cam_still);

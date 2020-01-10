@@ -91,6 +91,7 @@ extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
 // lactokaiju: truecolor
+extern consvar_t cv_tcstate;
 extern consvar_t cv_tccolormap;
 
 // Called by startup code.

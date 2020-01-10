@@ -49,6 +49,12 @@ void D_ProcessEvents(void);
 const char *D_Home(void);
 
 //
+// RENDERER STATE
+//
+void D_CheckRendererState(void);
+void D_CheckColorDepth(INT32 newbitdepth, INT32 oldbitdepth);
+
+//
 // BASE LEVEL
 //
 void D_AdvanceDemo(void);

@@ -1506,12 +1506,16 @@ void VID_CheckRenderer(void)
 
 INT32 VID_SetMode(INT32 modeNum)
 {
+	INT32 oldbitdepth = vid.bpp;
 	SDLdoUngrabMouse();
 
 	vid.recalc = 1;
 	vid.bpp = 1;
 	if (truecolor)
 		vid.bpp = 4;
+
+	// lactokaiju: truecolor
+	D_CheckColorDepth(vid.bpp, oldbitdepth);
 
 	if (modeNum < 0)
 		modeNum = 0;
