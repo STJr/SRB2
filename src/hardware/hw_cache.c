@@ -154,7 +154,8 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 				if (sourcebpp == 8)
 				{
 					alpha = 0xFF;
-					// Make pixel transparent if chroma keyed
+					// If the mipmap is chromakeyed, check if the texel's color
+					// is equivalent to the chroma key's color index.
 					if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
 						alpha = 0x00;
 				}
