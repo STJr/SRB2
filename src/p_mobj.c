@@ -3127,7 +3127,7 @@ nightsdone:
 						{
 							// DO THE MARIO!
 							if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
-								EV_CrumbleChain(NULL, rover); // node->m_sector
+								EV_CrumbleChain(node->m_sector, rover);
 							else // Question block!
 								EV_MarioBlock(rover, node->m_sector, mo);
 						}
