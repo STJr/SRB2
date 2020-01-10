@@ -409,8 +409,10 @@ static void D_Display(void)
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+#ifdef TRUECOLOR
 					if (truecolor)
 						topleft_u32 = (UINT32 *)screens[0] + viewwindowy*vid.width + viewwindowx;
+#endif
 					objectsdrawn = 0;
 	#ifdef HWRENDER
 					if (rendermode != render_soft)
@@ -435,8 +437,10 @@ static void D_Display(void)
 						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
 
 						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+#ifdef TRUECOLOR
 						if (truecolor)
 							topleft_u32 = (UINT32 *)screens[0] + viewwindowy*vid.width + viewwindowx;
+#endif
 
 						R_RenderPlayerView(&players[secondarydisplayplayer]);
 
@@ -615,6 +619,7 @@ void D_CheckRendererState(void)
 
 void D_CheckColorDepth(INT32 newbitdepth, INT32 oldbitdepth)
 {
+#ifdef TRUECOLOR
 	if (oldbitdepth == 0) // Video init
 		return;
 
@@ -645,6 +650,10 @@ void D_CheckColorDepth(INT32 newbitdepth, INT32 oldbitdepth)
 #endif
 		}
 	}
+#else
+	(void)newbitdepth;
+	(void)oldbitdepth;
+#endif
 }
 
 // =========================================================================

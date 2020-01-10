@@ -699,8 +699,9 @@ static void P_NetUnArchiveColormaps(void)
 			// 	R_GetRgbaR(rgba), R_GetRgbaG(rgba), R_GetRgbaB(rgba), R_GetRgbaA(rgba),
 			//	R_GetRgbaR(fadergba), R_GetRgbaG(fadergba), R_GetRgbaB(fadergba), R_GetRgbaA(fadergba));
 			exc->colormap = R_CreateLightTable(exc);
-			if (truecolor)
-				exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#ifdef TRUECOLOR
+			exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#endif
 		}
 
 		// HACK: If this dummy is a duplicate, we're going to add it

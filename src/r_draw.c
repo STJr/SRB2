@@ -986,6 +986,7 @@ void R_DrawViewBorder(void)
 //                   INCLUDE 32bpp DRAWING CODE HERE
 // ==========================================================================
 
+#ifdef TRUECOLOR
 static UINT32 TC_ColorMix(UINT32 fg, UINT32 bg)
 {
 	RGBA_t rgba;
@@ -1025,3 +1026,4 @@ static UINT32 TC_TranslucentColorMix(UINT32 fg, UINT32 bg, UINT8 alpha)
 
 #include "r_draw32.c"
 #include "r_draw32_npo2.c"
+#endif

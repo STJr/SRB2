@@ -384,8 +384,10 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	I_Assert(texture != NULL);
 
 	// allocate texture column offset lookup
+#ifdef TRUECOLOR
 	if (truecolor)
 		goto multipatch;
+#endif
 
 	// single-patch textures can have holes in them and may be used on
 	// 2sided lines so they need to be kept in 'packed' format
@@ -470,7 +472,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	if (texture->format == PICFMT_NONE)
 	{
 		texture->format = PICFMT_PATCH;
-#if defined (PICTURES_ALLOWDEPTH) && !defined (NO_PNG_LUMPS)
+#if defined (PICTURES_ALLOWDEPTH) && !defined (NO_PNG_LUMPS) && defined(TRUECOLOR)
 		if (truecolor)
 		{
 			for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
@@ -716,7 +718,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 
 			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
 
-#ifdef PICTURES_FORCEFLATDEPTH
+#if defined(PICTURES_FORCEFLATDEPTH) && defined(TRUECOLOR)
 			if (truecolor)
 			{
 				format = PICFMT_FLAT32;
@@ -759,7 +761,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 				INT32 pngwidth, pngheight;
 				pictureformat_t format = PICFMT_FLAT;
 
-#ifdef PICTURES_ALLOWDEPTH
+#if defined(PICTURES_ALLOWDEPTH) && defined(TRUECOLOR)
 				if (truecolor)
 					format = PICFMT_FLAT32;
 #endif
@@ -1108,7 +1110,7 @@ countflats:
 				Picture_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
 				texture->width = width;
 				texture->height = height;
-#ifdef PICTURES_ALLOWDEPTH
+#if defined(PICTURES_ALLOWDEPTH) && defined(TRUECOLOR)
 				// Your clown ass decided to use a PNG,
 				// so now the entire fucking texture has
 				// to be 32bpp. I hope you're happy with yourself.
@@ -1220,7 +1222,7 @@ checkflats:
 				Picture_PNGDimensions((UINT8 *)flatlump, &width, &height, lumplength);
 				texture->width = width;
 				texture->height = height;
-#ifdef PICTURES_ALLOWDEPTH
+#if defined(PICTURES_ALLOWDEPTH) && defined(TRUECOLOR)
 				// Your clown ass decided to use a PNG,
 				// so now the entire fucking texture has
 				// to be 32bpp. I hope you're happy with yourself.

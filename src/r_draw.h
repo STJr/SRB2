@@ -26,7 +26,7 @@ extern INT32 columnofs[MAXVIDWIDTH*4];
 extern UINT8 *topleft;
 extern UINT32 *topleft_u32;
 
-// Truecolor blending
+// Color blending
 extern UINT8 dp_lighting; // dp_ = draw pixel
 extern extracolormap_t *dp_extracolormap;
 extern extracolormap_t *defaultextracolormap;

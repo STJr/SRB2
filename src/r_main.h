@@ -49,8 +49,10 @@ extern size_t validcount, linecount, loopcount, framecount;
 extern lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 extern lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 
+#ifdef TRUECOLOR
 extern lighttable_u32_t *scalelight_u32[LIGHTLEVELS][MAXLIGHTSCALE];
 extern lighttable_u32_t *zlight_u32[LIGHTLEVELS][MAXLIGHTZ];
+#endif
 
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
@@ -91,8 +93,10 @@ extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
 // lactokaiju: truecolor
+#ifdef TRUECOLOR
 extern consvar_t cv_tcstate;
 extern consvar_t cv_tccolormap;
+#endif
 
 // Called by startup code.
 void R_Init(void);

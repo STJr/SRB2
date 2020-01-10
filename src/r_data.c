@@ -327,6 +327,7 @@ static void R_CreateFadeColormaps(void)
 //
 // R_InitColormaps32
 //
+#ifdef TRUECOLOR
 static void R_InitColormaps32(void)
 {
 	lighttable_u32_t *lighttable;
@@ -348,6 +349,7 @@ static void R_InitColormaps32(void)
 	M_Memcpy(colormaps_u32, lighttable, size);
 	Z_Free(lighttable);
 }
+#endif
 
 //
 // R_InitColormaps
@@ -363,18 +365,19 @@ static void R_InitColormaps(void)
 	colormaps = Z_MallocAlign(len, PU_STATIC, NULL, 8);
 	W_ReadLump(lump, colormaps);
 
+
+#ifdef TRUECOLOR
 	// Make 32bpp colormap
-	if (truecolor)
-	{
-		R_InitColormaps32();
-		// Colormap blending
-		defaultextracolormap = Z_Calloc(sizeof(extracolormap_t), PU_STATIC, NULL);
-		defaultextracolormap->fadestart = 0;
-		defaultextracolormap->fadeend = 31;
-		defaultextracolormap->fog = 0;
-		defaultextracolormap->rgba = 0;
-		defaultextracolormap->fadergba = 0x19000000;
-	}
+	R_InitColormaps32();
+
+	// Colormap blending
+	defaultextracolormap = Z_Calloc(sizeof(extracolormap_t), PU_STATIC, NULL);
+	defaultextracolormap->fadestart = 0;
+	defaultextracolormap->fadeend = 31;
+	defaultextracolormap->fog = 0;
+	defaultextracolormap->rgba = 0;
+	defaultextracolormap->fadergba = 0x19000000;
+#endif
 
 	// Make colormap for fades
 	if (!truecolor)
@@ -410,8 +413,9 @@ void R_ReInitColormaps(UINT16 num)
 	W_ReadLumpHeader(lump, colormaps, W_LumpLength(basecolormaplump), 0U);
 
 	// Make 32bpp colormap
-	if (truecolor)
-		R_InitColormaps32();
+#ifdef TRUECOLOR
+	R_InitColormaps32();
+#endif
 
 	// Make colormap for fades
 	if (!truecolor)
@@ -506,8 +510,9 @@ extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lightta
 	if (lighttable)
 	{
 		exc->colormap = R_CreateLightTable(exc);
-		if (truecolor)
-			exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#ifdef TRUECOLOR
+		exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#endif
 	}
 	else
 	{
@@ -1139,8 +1144,9 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	// but if there happens to be a matching rgba entry that is NOT alpha-only (but has same rgb values),
 	// then it needs this lighttable because we share matching entries.
 	extra_colormap->colormap = R_CreateLightTable(extra_colormap);
-	if (truecolor)
-		extra_colormap->colormap_u32 = R_CreateTrueColorLightTable(extra_colormap);
+#ifdef TRUECOLOR
+	extra_colormap->colormap_u32 = R_CreateTrueColorLightTable(extra_colormap);
+#endif
 
 	R_AddColormapToList(extra_colormap);
 

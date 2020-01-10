@@ -161,9 +161,11 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	{
 		// Determine pixel to use from fademask
 		pcolor = &pMasterPalette[*lump++];
+#ifdef TRUECOLOR
 		if (truecolor)
 			*mask++ = pcolor->s.red;
 		else
+#endif
 		{
 			if (wipestyle == WIPESTYLE_COLORMAP)
 				*mask++ = pcolor->s.red / FADECOLORMAPDIV;
@@ -431,9 +433,10 @@ static void F_DoColormapWipe(fademask_t *fademask, UINT8 *colormap)
 	}
 }
 
+#ifdef TRUECOLOR
 static void F_DoWipe32(fademask_t *fademask)
 {
-	// Lactozilla: 32-bit
+	// Lactozilla: Truecolor
 	{
 		// wipe screen, start, end
 		UINT32       *w = (UINT32 *)wipe_scr;
@@ -636,6 +639,7 @@ static void F_DoColormapWipe32(fademask_t *fademask)
 		free(scrypos);
 	}
 }
+#endif // TRUECOLOR
 #endif
 
 /** Save the "before" screen of a wipe.
@@ -719,10 +723,11 @@ boolean F_TryColormapFade(UINT8 wipecolor)
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
 			F_WipeColorFill(wipecolor);
-		else
 #endif
-		if (truecolor)
+#ifdef TRUECOLOR
+		if ((rendermode == render_soft) && truecolor)
 			F_WipeColorFill(wipecolor);
+#endif
 		return true;
 	}
 	else
@@ -779,9 +784,11 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			else
 #endif
 			{
+#ifdef TRUECOLOR
 				if (truecolor)
 					F_DoColormapWipe32(fmask);
 				else
+#endif
 				{
 					UINT8 *colormap = fadecolormap;
 					if (wipestyleflags & WSF_TOWHITE)
@@ -804,9 +811,11 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			else
 #endif
 			{
+#ifdef TRUECOLOR
 				if (truecolor)
 					F_DoWipe32(fmask);
 				else
+#endif
 					F_DoWipe(fmask);
 			}
 		}

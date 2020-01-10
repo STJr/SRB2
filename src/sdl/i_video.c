@@ -189,11 +189,13 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	realwidth = vid.width;
 	realheight = vid.height;
 
+#ifdef TRUECOLOR
 	if (truecolor)
 	{
 		bpp = 32;
 		sw_texture_format = SDL_PIXELFORMAT_RGBA32;
 	}
+#endif
 
 	if (window)
 	{
@@ -1506,16 +1508,23 @@ void VID_CheckRenderer(void)
 
 INT32 VID_SetMode(INT32 modeNum)
 {
+#ifdef TRUECOLOR
 	INT32 oldbitdepth = vid.bpp;
+#endif
 	SDLdoUngrabMouse();
 
 	vid.recalc = 1;
 	vid.bpp = 1;
+
+#ifdef TRUECOLOR
 	if (truecolor)
 		vid.bpp = 4;
+#endif
 
 	// lactokaiju: truecolor
+#ifdef TRUECOLOR
 	D_CheckColorDepth(vid.bpp, oldbitdepth);
+#endif
 
 	if (modeNum < 0)
 		modeNum = 0;
@@ -1603,11 +1612,13 @@ static void Impl_VideoSetupSDLBuffer(void)
 		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,15,
 			(int)vid.rowbytes,0x00007C00,0x000003E0,0x0000001F,0x00000000); // 555 mode
 	}
+#ifdef TRUECOLOR
 	else if (vid.bpp == 4)
 	{
 		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,32,
 			(int)vid.rowbytes,0x000000FF,0x0000FF00,0x00FF0000,0xFF000000);
 	}
+#endif
 
 	if (bufSurface)
 	{
@@ -1685,7 +1696,11 @@ void I_StartupGraphics(void)
 
 	usesdl2soft = M_CheckParm("-softblit");
 	borderlesswindow = M_CheckParm("-borderless");
+
+	// lactokaiju: truecolor
+#ifdef TRUECOLOR
 	truecolor = M_CheckParm("-truecolor");
+#endif
 
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	VID_Command_ModeList_f();
@@ -1707,8 +1722,11 @@ void I_StartupGraphics(void)
 	vid.direct = NULL; // Maybe direct access?
 	vid.WndParent = NULL; //For the window?
 	vid.bpp = 1; // This is the game engine's Bpp
+
+#ifdef TRUECOLOR
 	if (truecolor)
 		vid.bpp = 4;
+#endif
 
 #ifdef HAVE_TTF
 	I_ShutdownTTF();

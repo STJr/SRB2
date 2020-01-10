@@ -88,7 +88,9 @@ static INT32 spanstart[MAXVIDHEIGHT];
 // texture mapping
 //
 lighttable_t **planezlight;
+#ifdef TRUECOLOR
 lighttable_u32_t **planezlight_u32;
+#endif
 static fixed_t planeheight;
 
 //added : 10-02-98: yslopetab is what yslope used to be,
@@ -236,6 +238,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #ifdef ESLOPE
 	if (currentplane->slope)
 	{
+#ifdef TRUECOLOR
 		if (tc_colormap)
 		{
 			ds_colormap = (lighttable_t*)colormaps_u32;
@@ -243,6 +246,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 			dp_lighting = 0xFF;
 		}
 		else
+#endif
 		{
 			ds_colormap = colormaps;
 			ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
@@ -251,6 +255,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	else
 #endif
 	{
+#ifdef TRUECOLOR
 		if (tc_colormap)
 		{
 			ds_colormap = (UINT8 *)(planezlight_u32[pindex]);
@@ -258,6 +263,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 			dp_lighting = TC_CalcScaleLight(planezlight_u32[pindex]);
 		}
 		else
+#endif
 		{
 			ds_colormap = planezlight[pindex];
 			ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
@@ -266,14 +272,18 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 
 	if (currentplane->extra_colormap)
 	{
+#ifdef TRUECOLOR
 		dp_extracolormap = currentplane->extra_colormap;
 		if (tc_colormap)
 			ds_colormap = (UINT8 *)(currentplane->extra_colormap->colormap_u32 + ((UINT32*)ds_colormap - colormaps_u32));
 		else
+#endif
 			ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
 	}
+#ifdef TRUECOLOR
 	else
 		dp_extracolormap = defaultextracolormap;
+#endif
 
 	ds_y = y;
 	ds_x1 = x1;
@@ -849,10 +859,12 @@ void R_DrawSinglePlane(visplane_t *pl)
 			return; // Don't even draw it
 		else if (pl->polyobj->translucency > 0)
 		{
-			int transval = pl->polyobj->translucency-1;
+			INT32 transval = pl->polyobj->translucency-1;
+#ifdef TRUECOLOR
 			if (truecolor)
 				ds_alpha = transval;
 			else
+#endif
 				ds_transmap = transtables + (transval<<FF_TRANSSHIFT);
 		}
 		else // Opaque, but allow transparent flat pixels
@@ -892,6 +904,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		{
 			spanfunctype = SPANDRAWFUNC_TRANS;
 
+#ifdef TRUECOLOR
 			if (truecolor)
 			{
 				if (pl->ffloor->alpha == 255) // Opaque, but allow transparent flat pixels
@@ -902,6 +915,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 					ds_alpha = pl->ffloor->alpha;
 			}
 			else
+#endif
 			{
 				// Hacked up support for alpha value in software mode Tails 09-24-2002
 				if (pl->ffloor->alpha < 12)
@@ -999,7 +1013,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		case LEVELFLAT_NONE:
 			return;
 		case LEVELFLAT_FLAT:
-#ifdef PICTURES_ALLOWDEPTH
+#if defined(PICTURES_ALLOWDEPTH) && defined(TRUECOLOR)
 			if (truecolor)
 			{
 				ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
@@ -1127,23 +1141,27 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else
 			spanfunctype = SPANDRAWFUNC_TILTED;
 
+#ifdef TRUECOLOR
 		if (tc_colormap)
 			planezlight_u32 = scalelight_u32[light];
 		else
+#endif
 			planezlight = scalelight[light];
 	} else
 #endif // ESLOPE
 	{
+#ifdef TRUECOLOR
 		if (tc_colormap)
 			planezlight_u32 = zlight_u32[light];
 		else
+#endif
 			planezlight = zlight[light];
 	}
 
 	// Use the correct span drawer depending on the powers-of-twoness
 	if (!ds_powersoftwo)
 	{
-#if 1
+#ifdef TRUECOLOR
 		if (truecolor) // sorry nothing
 			return;
 #endif

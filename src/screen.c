@@ -175,6 +175,7 @@ void SCR_SetDrawFuncs(void)
 		}
 #endif
 	}
+#ifdef TRUECOLOR
 	else if (vid.bpp == 4)
 	{
 		colfuncs[BASEDRAWFUNC] = R_DrawColumn_32;
@@ -226,6 +227,7 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_32;
 #endif
 	}
+#endif
 	else
 		I_Error("unknown bytes per pixel mode %d\n", vid.bpp);
 /*

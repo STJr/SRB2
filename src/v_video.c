@@ -586,6 +586,7 @@ static inline UINT8 transmappedpdraw(void *dest, void *source, fixed_t ofs)
 	return *(v_translevel + (((*(v_colormap + ((UINT8 *)source)[ofs>>FRACBITS]))<<8)&0xff00) + (*(UINT8 *)dest&0xff));
 }
 
+#ifdef TRUECOLOR
 // 32bpp
 static inline UINT32 standardpdraw_u32(void *dest, void *source, fixed_t ofs)
 {
@@ -625,12 +626,15 @@ static inline UINT32 transmappedpdraw_u32_palsrc(void *dest, void *source, fixed
 {
 	return BlendTrueColor(*(UINT32 *)dest, GetTrueColor(*(v_colormap + ((UINT8 *)source)[ofs>>FRACBITS])), *v_translevel);
 }
+#endif
 
 // Draws a patch scaled to arbitrary size.
 void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
 {
 	UINT8 (*patchdrawfunc)(void*, void*, fixed_t) = NULL;
+#ifdef TRUECOLOR
 	UINT32 (*patchdrawfunc_u32)(void*, void*, fixed_t) = NULL;
+#endif
 	UINT32 alphalevel = 0;
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
@@ -638,11 +642,14 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	column_t *column;
 	UINT8 *desttop, *dest, *deststart, *destend;
 	UINT8 *source, *deststop;
-	UINT32 *s32;
 	fixed_t pwidth; // patch width
 	fixed_t offx = 0; // x offset
+
+#ifdef TRUECOLOR
+	UINT32 *s32;
 	pictureformat_t picfmt = PICFMT_PATCH;
 	UINT8 alphaval = 0;
+#endif
 
 	UINT8 perplayershuffle = 0;
 
@@ -658,9 +665,11 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	}
 #endif
 
+#ifdef TRUECOLOR
 	if (truecolor)
 		patchdrawfunc_u32 = standardpdraw_u32;
 	else
+#endif
 		patchdrawfunc = standardpdraw;
 
 	v_translevel = NULL;
@@ -679,6 +688,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 		if (alphalevel)
 		{
 			v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
+#ifdef TRUECOLOR
 			if (truecolor)
 			{
 				patchdrawfunc_u32 = translucentpdraw_u32;
@@ -686,6 +696,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 				v_translevel = &alphaval;
 			}
 			else
+#endif
 				patchdrawfunc = translucentpdraw;
 		}
 	}
@@ -694,12 +705,15 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	if (colormap)
 	{
 		v_colormap = colormap;
+#ifdef TRUECOLOR
 		if (truecolor)
 			patchdrawfunc_u32 = (v_translevel) ? transmappedpdraw_u32 : mappedpdraw_u32;
 		else
+#endif
 			patchdrawfunc = (v_translevel) ? transmappedpdraw : mappedpdraw;
 	}
 
+#ifdef TRUECOLOR
 	if (truecolor)
 	{
 		if (Picture_FormatBPP(picfmt) == PICDEPTH_8BPP)
@@ -714,6 +728,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 				patchdrawfunc_u32 = transmappedpdraw_u32_palsrc;
 		}
 	}
+#endif
 
 	dupx = vid.dupx;
 	dupy = vid.dupy;
@@ -944,14 +959,17 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 			prevdelta = topdelta;
 
 			source = (UINT8 *)(column) + 3;
+#ifdef TRUECOLOR
 			if (picfmt == PICFMT_PATCH32)
 				s32 = (UINT32 *)source;
+#endif
 
 			dest = desttop;
 			if (scrn & V_FLIP)
 				dest = deststart + (destend - desttop);
 			dest += FixedInt(FixedMul(topdelta<<FRACBITS,vdup))*vid.rowbytes;
 
+#ifdef TRUECOLOR
 			if (truecolor)
 			{
 				UINT32 *destu32 = (UINT32 *)dest;
@@ -979,6 +997,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 				}
 			}
 			else
+#endif
 			{
 				for (ofs = 0; dest < deststop && (ofs>>FRACBITS) < column->length; ofs += rowfrac)
 				{
@@ -997,10 +1016,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
 	UINT8 (*patchdrawfunc)(void*, void*, fixed_t) = NULL;
-	UINT32 (*patchdrawfunc_u32)(void*, void*, fixed_t) = NULL;
-	pictureformat_t picfmt = PICFMT_PATCH;
 	UINT32 alphalevel = 0;
-	UINT8 alphaval = 0;
 	// boolean flip = false;
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup;
@@ -1008,7 +1024,13 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 	column_t *column;
 	UINT8 *desttop, *dest;
 	UINT8 *source, *deststop;
+
+#ifdef TRUECOLOR
+	UINT32 (*patchdrawfunc_u32)(void*, void*, fixed_t) = NULL;
 	UINT32 *s32;
+	pictureformat_t picfmt = PICFMT_PATCH;
+	UINT8 alphaval = 0;
+#endif
 
 	UINT8 perplayershuffle = 0;
 
@@ -1024,9 +1046,11 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 	}
 #endif
 
+#ifdef TRUECOLOR
 	if (truecolor)
 		patchdrawfunc_u32 = standardpdraw_u32;
 	else
+#endif
 		patchdrawfunc = standardpdraw;
 
 	v_translevel = NULL;
@@ -1045,6 +1069,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		if (alphalevel)
 		{
 			v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
+#ifdef TRUECOLOR
 			if (truecolor)
 			{
 				patchdrawfunc_u32 = translucentpdraw_u32;
@@ -1052,10 +1077,12 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				v_translevel = &alphaval;
 			}
 			else
+#endif
 				patchdrawfunc = translucentpdraw;
 		}
 	}
 
+#ifdef TRUECOLOR
 	if (truecolor)
 	{
 		if (Picture_FormatBPP(picfmt) == PICDEPTH_8BPP)
@@ -1070,6 +1097,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				patchdrawfunc_u32 = transmappedpdraw_u32_palsrc;
 		}
 	}
+#endif
 
 	// only use one dup, to avoid stretching (har har)
 	dupx = dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
@@ -1229,6 +1257,10 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				topdelta += prevdelta;
 			prevdelta = topdelta;
 			source = (UINT8 *)(column) + 3;
+#ifdef TRUECOLOR
+			if (picfmt == PICFMT_PATCH32)
+				s32 = (UINT32 *)source;
+#endif
 			dest = desttop;
 			if (topdelta-sy > 0)
 			{
@@ -1238,6 +1270,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			else
 				ofs = (sy-topdelta)<<FRACBITS;
 
+#ifdef TRUECOLOR
 			if (truecolor)
 			{
 				UINT32 *destu32 = (UINT32 *)dest;
@@ -1265,6 +1298,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				}
 			}
 			else
+#endif
 			{
 				for (; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
 				{
@@ -1391,7 +1425,9 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 {
 	UINT8 *dest;
 	const UINT8 *deststop;
+#ifdef TRUECOLOR
 	int count = w, line = 0;
+#endif
 
 	UINT8 perplayershuffle = 0;
 
@@ -1481,9 +1517,11 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
 		{ // Clear the entire screen, from dest to deststop. Yes, this really works.
+#ifdef TRUECOLOR
 			if (truecolor)
 				M_Memset32(screens[0], GetTrueColor(c), vid.width * vid.height * vid.bpp);
 			else
+#endif
 				memset(screens[0], (c&255), vid.width * vid.height * vid.bpp);
 			return;
 		}
@@ -1546,6 +1584,7 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	c &= 255;
 
+#ifdef TRUECOLOR
 	if (truecolor)
 	{
 		UINT32 rgb_color = GetTrueColor(c);
@@ -1562,12 +1601,14 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		}
 	}
 	else
+#endif
 	{
 		for (;(--h >= 0) && dest < deststop; dest += vid.width)
 			memset(dest, c, w * vid.bpp);
 	}
 }
 
+#ifdef TRUECOLOR
 static UINT32 V_GetConsBackColor(INT32 backcolor)
 {
 	UINT8 palindex;
@@ -1597,6 +1638,7 @@ static UINT32 V_GetConsBackColor(INT32 backcolor)
 	}
 	return GetTrueColor(palindex);
 }
+#endif
 
 #ifdef HWRENDER
 // This is now a function since it's otherwise repeated 2 times and honestly looks retarded:
@@ -1802,6 +1844,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	c &= 255;
 
+#ifdef TRUECOLOR
 	if (truecolor)
 	{
 		UINT32 fadecolor = V_GetConsBackColor(cons_backcolor.value);
@@ -1817,6 +1860,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		}
 	}
 	else
+#endif
 	{
 		// Jimita (12-04-2018)
 		if (alphalevel)
@@ -2003,6 +2047,7 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 
 	c &= 255;
 
+#ifdef TRUECOLOR
 	if (truecolor)
 	{
 		UINT32 rgb_color;
@@ -2033,6 +2078,7 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 		}
 	}
 	else
+#endif
 	{
 		fadetable = ((color & 0xFF00) // Color is not palette index?
 			? ((UINT8 *)colormaps + strength*256) // Do COLORMAP fade.
@@ -2188,6 +2234,7 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 
 		// heavily simplified -- we don't need to know x or y
 		// position when we're doing a full screen fade
+#ifdef TRUECOLOR
 		if (truecolor)
 		{
 			UINT32 *buf32 = (UINT32 *)buf;
@@ -2207,6 +2254,7 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 			}
 		}
 		else
+#endif
 		{
 			const UINT8 *deststop = screens[0] + vid.width * vid.height;
 			for (; buf < deststop; ++buf)
@@ -2219,7 +2267,6 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 void V_DrawFadeConsBack(INT32 plines)
 {
 	UINT8 *deststop, *buf;
-	UINT32 fadecolor = 0;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode != render_soft && rendermode != render_none)
@@ -2232,15 +2279,17 @@ void V_DrawFadeConsBack(INT32 plines)
 
 	// heavily simplified -- we don't need to know x or y position,
 	// just the stop position
+#ifdef TRUECOLOR
 	if (truecolor)
 	{
 		UINT32 *buf32 = (UINT32 *)screens[0];
 		const UINT32 *deststop32 = buf32 + vid.width * min(plines, vid.height);
-		fadecolor = V_GetConsBackColor(cons_backcolor.value);
+		UINT32 fadecolor = V_GetConsBackColor(cons_backcolor.value);
 		for (; buf32 < deststop32; ++buf32)
 			*buf32 = BlendTrueColor(*buf32, fadecolor, 128);
 	}
 	else
+#endif
 	{
 		deststop = screens[0] + vid.rowbytes * min(plines, vid.height);
 		for (buf = screens[0]; buf < deststop; ++buf)
@@ -2302,6 +2351,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 
 	// heavily simplified -- we don't need to know x or y position,
 	// just the start and stop positions
+#ifdef TRUECOLOR
 	if (truecolor)
 	{
 		UINT32 *deststop32 = ((UINT32 *)screens[0]) + vid.width * vid.height;
@@ -2311,6 +2361,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 			*buf32 = BlendTrueColor(*buf32, fadecolor, 128);
 	}
 	else
+#endif
 	{
 		deststop = screens[0] + vid.rowbytes * vid.height;
 		buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
