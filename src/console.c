@@ -1551,9 +1551,14 @@ static void CON_DrawConsole(void)
 	if (cons_backpic.value || con_forcepic)
 	{
 		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
+		int h;
+
+		h = con_curlines/vid.dupy;
 
 		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
-		V_DrawScaledPatch(0, 0, 0, con_backpic);
+		//V_DrawScaledPatch(0, 0, 0, con_backpic);
+		V_DrawCroppedPatch(0, 0, FRACUNIT, 0, con_backpic,
+				0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
 
 		W_UnlockCachedPatch(con_backpic);
 	}
