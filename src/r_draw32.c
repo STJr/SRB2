@@ -3321,35 +3321,35 @@ void R_DrawTranslucentWaterSpan_32(void)
 */
 void R_DrawFogSpan_32(void)
 {
-#if 0
-	UINT8 *colormap;
 	UINT32 *dest;
+	RGBA_t pack;
 
 	size_t count;
 
-	colormap = ds_colormap;
 	//dest = ylookup[ds_y] + columnofs[ds_x1];
 	dest = &topleft_u32[ds_y *vid.width + ds_x1];
 
 	count = ds_x2 - ds_x1 + 1;
 
+#define doblend(idx) pack.rgba = dest[idx]; dest[idx] = (0xFF000000 | TC_TintTrueColor(pack, (0xFF000000 | (UINT32)dp_extracolormap->rgba), R_GetRgbaA(dp_extracolormap->rgba) * 10));
 	while (count >= 4)
 	{
-		dest[0] = colormap[dest[0]];
-		dest[1] = colormap[dest[1]];
-		dest[2] = colormap[dest[2]];
-		dest[3] = colormap[dest[3]];
+		doblend(0)
+		doblend(1)
+		doblend(2)
+		doblend(3)
 
 		dest += 4;
 		count -= 4;
 	}
+#undef doblend
 
 	while (count--)
 	{
-		*dest = colormap[*dest];
+		pack.rgba = *dest;
+		*dest = (0xFF000000 | TC_TintTrueColor(pack, (0xFF000000 | (UINT32)dp_extracolormap->rgba), R_GetRgbaA(dp_extracolormap->rgba) * 10));
 		dest++;
 	}
-#endif
 }
 
 /**	\brief The R_DrawFogColumn_32 function
@@ -3357,9 +3357,9 @@ void R_DrawFogSpan_32(void)
 */
 void R_DrawFogColumn_32(void)
 {
-#if 0
 	INT32 count;
 	UINT32 *dest;
+	RGBA_t pack;
 
 	count = dc_yh - dc_yl;
 
@@ -3382,10 +3382,10 @@ void R_DrawFogColumn_32(void)
 	do
 	{
 		// Simple. Apply the colormap to what's already on the screen.
-		*dest = dc_colormap[*dest];
+		pack.rgba = *dest;
+		*dest = (0xFF000000 | TC_TintTrueColor(pack, (0xFF000000 | (UINT32)dp_extracolormap->rgba), R_GetRgbaA(dp_extracolormap->rgba) * 10));
 		dest += vid.width;
 	} while (count--);
-#endif
 }
 
 /**	\brief The R_DrawShadeColumn_32 function
@@ -3436,6 +3436,8 @@ void R_DrawColumnShadowed_32(void)
 		{
 			dc_colormap = dc_lightlist[i].rcolormap;
 			dp_extracolormap = dc_lightlist[i].extra_colormap;
+			if (!dp_extracolormap)
+				dp_extracolormap = defaultextracolormap;
 			dp_lighting = dc_lightlist[i].blendlight;
 			if (solid && dc_yl < bheight)
 				dc_yl = bheight;
@@ -3454,6 +3456,8 @@ void R_DrawColumnShadowed_32(void)
 
 		dc_colormap = dc_lightlist[i].rcolormap;
 		dp_extracolormap = dc_lightlist[i].extra_colormap;
+		if (!dp_extracolormap)
+			dp_extracolormap = defaultextracolormap;
 		dp_lighting = dc_lightlist[i].blendlight;
 	}
 	dc_yh = realyh;
