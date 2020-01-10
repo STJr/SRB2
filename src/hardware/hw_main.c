@@ -5486,6 +5486,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	spriteinfo_t *sprinfo;
+	md2_t *md2;
 	size_t lumpoff;
 	unsigned rot;
 	UINT8 flip;
@@ -5522,8 +5523,21 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	tz = (tr_x * gr_viewcos) + (tr_y * gr_viewsin);
 
 	// thing is behind view plane?
-	if (tz < ZCLIP_PLANE && !papersprite && (!cv_grmodels.value || md2_models[thing->sprite].notfound == true)) //Yellow: Only MD2's dont disappear
-		return;
+	if (tz < ZCLIP_PLANE && !papersprite)
+	{
+		if (cv_grmodels.value) //Yellow: Only MD2's dont disappear
+		{
+			if (thing->skin && thing->sprite == SPR_PLAY)
+				md2 = &md2_playermodels[( (skin_t *)thing->skin - skins )];
+			else
+				md2 = &md2_models[thing->sprite];
+
+			if (md2->notfound || md2->scale < 0.0f)
+				return;
+		}
+		else
+			return;
+	}
 
 	// The above can stay as it works for cutting sprites that are too close
 	tr_x = FIXED_TO_FLOAT(thing->x);
