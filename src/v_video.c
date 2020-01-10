@@ -3610,10 +3610,10 @@ Unoptimized version
 		INT32 y, y2;
 
 		for (y = yoffset, y2 = yoffset+height - 1; y < yoffset+height; y++, y2--)
-			M_Memcpy(&tmpscr[y2*vid.width], &srcscr[y*vid.width], vid.width);
+			M_Memcpy(&tmpscr[y2*vid.rowbytes], &srcscr[y*vid.rowbytes], vid.rowbytes);
 
-		VID_BlitLinearScreen(tmpscr+vid.width*vid.bpp*yoffset, screens[0]+vid.width*vid.bpp*yoffset,
-				vid.width*vid.bpp, height, vid.width*vid.bpp, vid.width);
+		VID_BlitLinearScreen(tmpscr+vid.rowbytes*yoffset, screens[0]+vid.rowbytes*yoffset,
+				vid.rowbytes, height, vid.rowbytes, vid.rowbytes);
 	}
 	else if (type == postimg_heat) // Heat wave
 	{
