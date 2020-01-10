@@ -84,7 +84,6 @@ extern consvar_t cv_grstaticlighting;
 extern consvar_t cv_grcoronas;
 extern consvar_t cv_grcoronasize;
 #endif
-extern consvar_t cv_grfov;
 extern consvar_t cv_grmodels;
 extern consvar_t cv_grmodelinterpolation;
 extern consvar_t cv_grmodellighting;
@@ -95,7 +94,7 @@ extern consvar_t cv_grsoftwarefog;
 extern consvar_t cv_grfiltermode;
 extern consvar_t cv_granisotropicmode;
 extern consvar_t cv_grcorrecttricks;
-extern consvar_t cv_grfovchange;
+extern consvar_t cv_fovchange;
 extern consvar_t cv_grsolvetjoin;
 extern consvar_t cv_grspritebillboarding;
 extern consvar_t cv_grskydome;
