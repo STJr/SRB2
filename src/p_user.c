@@ -10287,19 +10287,17 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
 		fixed_t vx = thiscam->x, vy = thiscam->y;
+		fixed_t vz = thiscam->z + thiscam->height / 2;
 		if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))		// Camera must obviously exist
 		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
+			vz = player->awayviewmobj->z + player->awayviewmobj->height / 2;
 		}
 
-		/*
-		When the orbital camera looks straight down, its distance
-		will be very close to the player. So give it a threshold...
-		*/
-		if (( !( camorbit && rendermode == render_opengl ) ||
-					focusaiming < ANGLE_90 || focusaiming > ANGLE_292h ) &&
-				P_AproxDistance(vx - mo->x, vy - mo->y) < FixedMul(48*FRACUNIT, mo->scale))
+		/* check z distance too for orbital camera */
+		if (P_AproxDistance(P_AproxDistance(vx - mo->x, vy - mo->y),
+					vz - ( mo->z + mo->height / 2 )) < FixedMul(48*FRACUNIT, mo->scale))
 			mo->flags2 |= MF2_SHADOW;
 		else
 			mo->flags2 &= ~MF2_SHADOW;
