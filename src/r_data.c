@@ -380,8 +380,7 @@ static void R_InitColormaps(void)
 #endif
 
 	// Make colormap for fades
-	if (!truecolor)
-		R_CreateFadeColormaps();
+	R_CreateFadeColormaps();
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
@@ -418,12 +417,9 @@ void R_ReInitColormaps(UINT16 num)
 #endif
 
 	// Make colormap for fades
-	if (!truecolor)
-	{
-		if (fadecolormap)
-			Z_Free(fadecolormap);
-		R_CreateFadeColormaps();
-	}
+	if (fadecolormap)
+		Z_Free(fadecolormap);
+	R_CreateFadeColormaps();
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
