@@ -328,7 +328,7 @@ static void R_CreateFadeColormaps(void)
 // R_InitColormaps32
 //
 #ifdef TRUECOLOR
-static void R_InitColormaps32(void)
+static void R_InitColormaps32(UINT32 lastcolor)
 {
 	lighttable_u32_t *lighttable;
 	size_t size;
@@ -338,7 +338,7 @@ static void R_InitColormaps32(void)
 	exc->fadeend = 31;
 	exc->fog = 0;
 	exc->rgba = 0;
-	exc->fadergba = 0xFF000000;
+	exc->fadergba = lastcolor;
 
 	lighttable = R_CreateTrueColorLightTable(exc);
 	size = ((256 * 34) + 10) * sizeof(UINT32); // from R_CreateTrueColorLightTable
@@ -368,7 +368,7 @@ static void R_InitColormaps(void)
 
 #ifdef TRUECOLOR
 	// Make 32bpp colormap
-	R_InitColormaps32();
+	R_InitColormaps32(0xFF000000);
 
 	// Colormap blending
 	defaultextracolormap = Z_Calloc(sizeof(extracolormap_t), PU_STATIC, NULL);
@@ -411,9 +411,16 @@ void R_ReInitColormaps(UINT16 num)
 
 	W_ReadLumpHeader(lump, colormaps, W_LumpLength(basecolormaplump), 0U);
 
-	// Make 32bpp colormap
 #ifdef TRUECOLOR
-	R_InitColormaps32();
+	// Make 32bpp colormap
+	{
+		size_t offs = (256*31) + 31;
+		UINT32 lastcolor = 0xFF000000;
+		// custom colormap lump
+		if ((lump != basecolormaplump) && (offs < W_LumpLength(lump)))
+			lastcolor = V_GetMasterColor(colormaps[offs]).rgba;
+		R_InitColormaps32(lastcolor);
+	}
 #endif
 
 	// Make colormap for fades
