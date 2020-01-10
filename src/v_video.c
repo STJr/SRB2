@@ -491,17 +491,17 @@ UINT8 V_AlphaTrans(INT32 num)
 {
 	switch (num)
 	{
-		case tr_trans10: return 0xe6;
-		case tr_trans20: return 0xcc;
-		case tr_trans30: return 0xb3;
+		case tr_trans10: return 0xE6;
+		case tr_trans20: return 0xCC;
+		case tr_trans30: return 0xB3;
 		case tr_trans40: return 0x99;
 		case tr_trans50: return 0x80;
 		case tr_trans60: return 0x66;
-		case tr_trans70: return 0x4c;
+		case tr_trans70: return 0x4C;
 		case tr_trans80: return 0x33;
 		case tr_trans90: return 0x19;
 	}
-	return 0;
+	return 0xFF;
 }
 
 static const UINT8 *v_colormap = NULL;
@@ -1972,7 +1972,7 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 		if (color & 0xFF00) // Color is not palette index?
 		{
 			rgb_color = 0xFF000000;
-			alphaval = V_AlphaTrans(strength*8);
+			alphaval = strength*8;
 		}
 		else
 		{
@@ -2165,7 +2165,7 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 			{
 				alphaval = V_AlphaTrans(9-strength);
 				for (; buf32 < deststop32; ++buf32)
-					*buf32 = TC_BlendTrueColor(*buf32, color, alphaval);
+					*buf32 = TC_BlendTrueColor(*buf32, GetTrueColor(color), alphaval);
 			}
 		}
 		else
