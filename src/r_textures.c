@@ -807,6 +807,34 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 	return flatdata;
 }
 
+void R_ClearLevelFlats(void)
+{
+	size_t i;
+	for (i = 0; i < numlevelflats; i++)
+	{
+		levelflat_t *levelflat = &levelflats[i];
+		if (levelflat->picture)
+		{
+			Z_Free(levelflat->picture);
+			levelflat->picture = NULL;
+		}
+#ifdef HWRENDER
+		// Is this safe? I don't know.
+		if (levelflat->mipmap)
+		{
+			GLMipmap_t *mipmap = levelflat->mipmap;
+			if (mipmap->grInfo.data)
+			{
+				Z_Free(mipmap->grInfo.data);
+				mipmap->grInfo.data = NULL;
+			}
+			Z_Free(mipmap);
+			levelflat->mipmap = NULL;
+		}
+#endif
+	}
+}
+
 //
 // R_CheckPowersOfTwo
 //

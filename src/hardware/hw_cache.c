@@ -1202,12 +1202,12 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 
 		if (!mipmap->grInfo.data && !mipmap->downloaded)
 		{
+			if (levelflat->picture == NULL)
+				I_Error("HWR_GetLevelFlat: levelflat->picture == NULL");
 			mipmap->width = levelflat->width;
 			mipmap->height = levelflat->height;
 			size = (mipmap->width * mipmap->height) * (fmtbpp / 8);
 			flat = Z_Malloc(size, PU_LEVEL, &mipmap->grInfo.data);
-			if (levelflat->picture == NULL)
-				I_Error("HWR_GetLevelFlat: levelflat->picture == NULL");
 			M_Memcpy(flat, levelflat->picture, size);
 		}
 

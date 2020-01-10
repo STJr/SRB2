@@ -626,29 +626,11 @@ void D_CheckColorDepth(INT32 newbitdepth, INT32 oldbitdepth)
 	// The bitdepth changed :)
 	if (newbitdepth != oldbitdepth)
 	{
-		size_t i;
-
 		// Reload every texture.
 		R_LoadTextures();
 
 		// Also free levelflat pictures.
-		for (i = 0; i < numlevelflats; i++)
-		{
-			levelflat_t *levelflat = &levelflats[i];
-			if (levelflat->picture)
-			{
-				Z_Free(levelflat->picture);
-				levelflat->picture = NULL;
-			}
-#ifdef HWRENDER
-			// Is this safe? I don't know.
-			if (levelflat->mipmap)
-			{
-				Z_Free(levelflat->mipmap);
-				levelflat->mipmap = NULL;
-			}
-#endif
-		}
+		R_ClearLevelFlats();
 	}
 #else
 	(void)newbitdepth;

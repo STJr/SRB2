@@ -85,6 +85,7 @@ UINT8 *R_GenerateTextureAsFlat(size_t texnum);
 INT32 R_GetTextureNum(INT32 texnum);
 void R_CheckTextureCache(INT32 tex);
 void R_ClearTextureNumCache(boolean btell);
+void R_ClearLevelFlats(void);
 
 // Retrieve texture data.
 void *R_GetLevelFlat(levelflat_t *levelflat);
