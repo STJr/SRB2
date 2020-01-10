@@ -3227,7 +3227,10 @@ static void P_RunSpecialStageWipe(void)
 	// uh..........
 	if (rendermode == render_opengl)
 		F_WipeColorFill(0);
+	else
 #endif
+	if (truecolor)
+		F_WipeColorFill(0);
 
 	F_WipeEndScreen();
 	F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
@@ -3260,7 +3263,10 @@ static void P_RunLevelWipe(void)
 	// uh..........
 	if (rendermode == render_opengl)
 		F_WipeColorFill(31);
+	else
 #endif
+	if (truecolor)
+		F_WipeColorFill(31);
 
 	F_WipeEndScreen();
 	// for titlemap: run a specific wipe if specified

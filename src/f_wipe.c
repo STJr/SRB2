@@ -517,6 +517,7 @@ static void F_DoWipe32(fademask_t *fademask)
 						*w = BlendTrueColor(*s, *e, *mask);
 						w++;
 						e++;
+						s++;
 					}
 
 					relativepos += vid.width;
@@ -619,6 +620,7 @@ static void F_DoColormapWipe32(fademask_t *fademask)
 						*w = BlendTrueColor(*s, *e, *mask);
 						w++;
 						e++;
+						s++;
 					}
 
 					relativepos += vid.width;
