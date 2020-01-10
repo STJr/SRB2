@@ -540,6 +540,8 @@ static void F_DoWipe32(fademask_t *fademask)
 static void F_DoColormapWipe32(fademask_t *fademask)
 {
 	// Lactozilla: F_DoWipe32 for WIPESTYLE_COLORMAP
+	RGBA_t pack;
+	INT16 r, g, b;
 	{
 		// wipe screen, start, end
 		UINT32       *w = (UINT32 *)wipe_scr;
@@ -613,17 +615,172 @@ static void F_DoColormapWipe32(fademask_t *fademask)
 				// DRAWING LOOP
 				while (draw_linestogo--)
 				{
+					UINT8 alpha = *mask;
+					const UINT32 *sauce = NULL;
 					w = w_base + relativepos;
 					s = s_base + relativepos;
 					e = e_base + relativepos;
 					draw_rowstogo = draw_rowend - draw_rowstart;
 
+					if (wipestyleflags & WSF_FADEIN)
+					{
+						alpha = 0xFF - alpha;
+						sauce = e;
+					}
+					else
+						sauce = s;
+
+					// This is gonna be mad slow...
 					while (draw_rowstogo--)
 					{
-						*w = TC_BlendTrueColor(*s, *e, *mask);
+						// subtractive color blending
+						pack.rgba = *sauce;
+						r = pack.s.red - FADEREDFACTOR*alpha/10;
+						g = pack.s.green - FADEGREENFACTOR*alpha/10;
+						b = pack.s.blue - FADEBLUEFACTOR*alpha/10;
+
+						// clamp values
+						if (r < 0) r = 0;
+						if (g < 0) g = 0;
+						if (b < 0) b = 0;
+
+						// pack into rgba
+						pack.s.red = r;
+						pack.s.green = g;
+						pack.s.blue = b;
+						*w = pack.rgba;
 						w++;
-						e++;
-						s++;
+						sauce++;
+					}
+
+					relativepos += vid.width;
+				}
+				// END DRAWING LOOP
+			}
+
+			if (++maskx >= fademask->width)
+				++masky, maskx = 0;
+		} while (++mask < maskend);
+
+		free(scrxpos);
+		free(scrypos);
+	}
+}
+
+static void F_DoWhiteColormapWipe32(fademask_t *fademask)
+{
+	// Lactozilla: F_DoWipe32 for WIPESTYLE_COLORMAP and WSF_TOWHITE
+	RGBA_t pack;
+	INT16 r, g, b;
+	{
+		// wipe screen, start, end
+		UINT32       *w = (UINT32 *)wipe_scr;
+		const UINT32 *s = (UINT32 *)wipe_scr_start;
+		const UINT32 *e = (UINT32 *)wipe_scr_end;
+
+		// first pixel for each screen
+		UINT32       *w_base = w;
+		const UINT32 *s_base = s;
+		const UINT32 *e_base = e;
+
+		// mask data, end
+		const UINT8 *mask    = fademask->mask;
+		const UINT8 *maskend = mask + fademask->size;
+
+		// rectangle draw hints
+		UINT32 draw_linestart, draw_rowstart;
+		UINT32 draw_lineend,   draw_rowend;
+		UINT32 draw_linestogo, draw_rowstogo;
+
+		// rectangle coordinates, etc.
+		UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
+		UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
+		UINT16 maskx, masky;
+		UINT32 relativepos;
+
+		// ---
+		// Screw it, we do the fixed point math ourselves up front.
+		scrxpos[0] = 0;
+		for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
+			scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
+		scrxpos[fademask->width] = vid.width;
+
+		scrypos[0] = 0;
+		for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
+			scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
+		scrypos[fademask->height] = vid.height;
+		// ---
+
+		maskx = masky = 0;
+		do
+		{
+			draw_rowstart = scrxpos[maskx];
+			draw_rowend   = scrxpos[maskx + 1];
+			draw_linestart = scrypos[masky];
+			draw_lineend   = scrypos[masky + 1];
+
+			relativepos = (draw_linestart * vid.width) + draw_rowstart;
+			draw_linestogo = draw_lineend - draw_linestart;
+
+			if (*mask == 0)
+			{
+				// shortcut - memcpy source to work
+				while (draw_linestogo--)
+				{
+					M_Memcpy(w_base+relativepos, s_base+relativepos, (draw_rowend-draw_rowstart) * vid.bpp);
+					relativepos += vid.width;
+				}
+			}
+			else if (*mask >= 255)
+			{
+				// shortcut - memcpy target to work
+				while (draw_linestogo--)
+				{
+					M_Memcpy(w_base+relativepos, e_base+relativepos, (draw_rowend-draw_rowstart) * vid.bpp);
+					relativepos += vid.width;
+				}
+			}
+			else
+			{
+				// DRAWING LOOP
+				while (draw_linestogo--)
+				{
+					UINT8 alpha = *mask;
+					const UINT32 *sauce = NULL;
+					w = w_base + relativepos;
+					s = s_base + relativepos;
+					e = e_base + relativepos;
+					draw_rowstogo = draw_rowend - draw_rowstart;
+
+					if (wipestyleflags & WSF_FADEIN)
+					{
+						alpha = 0xFF - alpha;
+						sauce = e;
+					}
+					else
+						sauce = s;
+
+					// This is gonna be mad slow...
+					while (draw_rowstogo--)
+					{
+						// additive color blending
+						pack.rgba = *sauce;
+						r = pack.s.red + FADEREDFACTOR*alpha/10;
+						g = pack.s.green + FADEGREENFACTOR*alpha/10;
+						b = pack.s.blue + FADEBLUEFACTOR*alpha/10;
+
+						// clamp values
+						if (r > 255) r = 255;
+						if (g > 255) g = 255;
+						if (b > 255) b = 255;
+
+						// pack into rgba
+						pack.s.red = r;
+						pack.s.green = g;
+						pack.s.blue = b;
+						*w = pack.rgba;
+						w++;
+						sauce++;
 					}
 
 					relativepos += vid.width;
@@ -786,7 +943,12 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			{
 #ifdef TRUECOLOR
 				if (truecolor)
-					F_DoColormapWipe32(fmask);
+				{
+					if (wipestyleflags & WSF_TOWHITE)
+						F_DoWhiteColormapWipe32(fmask);
+					else
+						F_DoColormapWipe32(fmask);
+				}
 				else
 #endif
 				{
