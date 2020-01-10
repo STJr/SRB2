@@ -66,7 +66,9 @@ typedef struct extracolormap_s
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+#ifdef TRUECOLOR
 	lighttable_u32_t *colormap_u32;
+#endif
 
 #ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR

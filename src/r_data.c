@@ -453,7 +453,9 @@ extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
 	exc->rgba = 0;
 	exc->fadergba = 0x19000000;
 	exc->colormap = lighttable ? R_CreateLightTable(exc) : NULL;
+#ifdef TRUECOLOR
 	exc->colormap_u32 = lighttable ? R_CreateTrueColorLightTable(exc) : NULL;
+#endif
 #ifdef EXTRACOLORMAPLUMPS
 	exc->lump = LUMPERROR;
 	exc->lumpname[0] = 0;
@@ -517,7 +519,9 @@ extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lightta
 	else
 	{
 		exc->colormap = NULL;
+#ifdef TRUECOLOR
 		exc->colormap_u32 = NULL;
+#endif
 	}
 
 	return exc;
@@ -844,6 +848,7 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	return lighttable;
 }
 
+#ifdef TRUECOLOR
 lighttable_u32_t *R_CreateTrueColorLightTable(extracolormap_t *extra_colormap)
 {
 	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
@@ -978,6 +983,7 @@ lighttable_u32_t *R_CreateTrueColorLightTable(extracolormap_t *extra_colormap)
 
 	return lighttable;
 }
+#endif
 
 extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 {
