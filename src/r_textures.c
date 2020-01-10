@@ -126,7 +126,7 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT32 *s32 = NULL, *dest32;
+	UINT32 *s32 = NULL, *dest32 = NULL;
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -195,7 +195,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT32 *s32 = NULL, *dest32;
+	UINT32 *s32 = NULL, *dest32 = NULL;
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -276,7 +276,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT32 *s32 = NULL, *dest32;
+	UINT32 *s32 = NULL, *dest32 = NULL;
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 

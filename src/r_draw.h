@@ -293,7 +293,7 @@ enum
 #define MIX_ALPHA(a) (0xFF-(a))
 
 #define TC_BlendTrueColor(bg, fg, alpha) \
-	(!(alpha)) ? (bg) : ( ((alpha)==0xFF) ? (fg) \
+	((alpha) == 0) ? (bg) : ( ((alpha)==0xFF) ? (fg) \
 	:( ( (R_GetRgbaR(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaR(fg) * (alpha)) ) >> 8) \
 	|( ( (R_GetRgbaG(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaG(fg) * (alpha)) ) >> 8) << 8 \
 	|( ( (R_GetRgbaB(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaB(fg) * (alpha)) ) >> 8) << 16 \
