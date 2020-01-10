@@ -20,6 +20,15 @@
 // Command buffer & command execution
 //===================================
 
+/* Lua command registration flags. */
+enum
+{
+	COM_ADMIN       = 1,
+	COM_SPLITSCREEN = 2,
+	COM_LOCAL       = 4,
+};
+
+/* Command buffer flags. */
 enum
 {
 	COM_SAFE = 1,

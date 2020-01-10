@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
 // Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
@@ -80,6 +80,8 @@ typedef enum
 	MN_OP_P2MOUSE,
 	MN_OP_P2JOYSTICK,
 	MN_OP_P2CAMERA,
+
+	MN_OP_PLAYSTYLE,
 
 	MN_OP_VIDEO,
 	MN_OP_VIDEOMODE,
