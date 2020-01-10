@@ -104,7 +104,6 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 typedef struct
 {
 	lumpcache_t *lumps;
-	UINT8 *picfmt;
 } patchcache_t;
 
 #ifdef HWRENDER

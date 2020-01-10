@@ -824,9 +824,6 @@ void W_InitFileCache(wadfile_t *wadfile, UINT16 numlumps)
 	wadfile->patchcache = Z_Calloc(sizeof(patchcache_t), PU_STATIC, NULL);
 	Z_Calloc(size, PU_STATIC, &wadfile->patchcache->lumps);
 
-	// Init picture format list
-	wadfile->patchcache->picfmt = Z_Calloc(numlumps * sizeof(UINT8), PU_STATIC, NULL);
-
 #ifdef HWRENDER
 	// allocates GLPatch info structures and store them in a tree
 	wadfile->hwrcache = M_AATreeAlloc(AATREE_ZUSER);
