@@ -3578,7 +3578,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 		return false;
 
 	// init gravity, tag lists,
-	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
+	// anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
 #ifdef ESLOPE
