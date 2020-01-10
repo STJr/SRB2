@@ -550,7 +550,8 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		{
 			if (format == PICFMT_PATCH32)
 				realpatch = (patch_t *)Picture_Convert(PICFMT_PATCH, pdata, PICFMT_PATCH32, lumplength, NULL, SHORT(realpatch->width), SHORT(realpatch->height), SHORT(realpatch->leftoffset), SHORT(realpatch->topoffset), 0);
-			dealloc = false;
+			else
+				dealloc = false;
 		}
 
 		x1 = patch->originx;

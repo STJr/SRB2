@@ -736,6 +736,9 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 		}
 	}
 
+	if (texture->format == PICFMT_NONE)
+		texture->format = PICFMT_PATCH;
+
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{

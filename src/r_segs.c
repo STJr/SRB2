@@ -686,7 +686,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						if (height <= windowtop)
 						{
 							dc_colormap = rlight->rcolormap;
+#ifdef TRUECOLOR
 							dp_extracolormap = rlight->extra_colormap;
+#endif
 							continue;
 						}
 
@@ -706,7 +708,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						colfunc_2s(col);
 						windowtop = windowbottom + 1;
 						dc_colormap = rlight->rcolormap;
+#ifdef TRUECOLOR
 						dp_extracolormap = rlight->extra_colormap;
+#endif
 					}
 					windowbottom = realbot;
 					if (windowtop < windowbottom)
@@ -1413,7 +1417,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						if (lighteffect)
 						{
 							dc_colormap = rlight->rcolormap;
+#ifdef TRUECOLOR
 							dp_extracolormap = rlight->extra_colormap;
+#endif
 						}
 						if (solid && windowtop < bheight)
 							windowtop = bheight;
@@ -1444,7 +1450,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					if (lighteffect)
 					{
 						dc_colormap = rlight->rcolormap;
+#ifdef TRUECOLOR
 						dp_extracolormap = rlight->extra_colormap;
+#endif
 					}
 				}
 				windowbottom = sprbotscreen;
