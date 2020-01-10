@@ -6897,6 +6897,8 @@ static void M_HandleChecklist(INT32 choice)
 						continue;
 					if (unlockables[j].conditionset > MAXCONDITIONSETS)
 						continue;
+					if (!unlockables[j].unlocked && unlockables[j].showconditionset && !M_Achieved(unlockables[j].showconditionset))
+						continue;
 					if (unlockables[j].conditionset == unlockables[check_on].conditionset)
 						continue;
 					break;
@@ -6919,6 +6921,8 @@ static void M_HandleChecklist(INT32 choice)
 					if (!unlockables[j].conditionset)
 						continue;
 					if (unlockables[j].conditionset > MAXCONDITIONSETS)
+						continue;
+					if (!unlockables[j].unlocked && unlockables[j].showconditionset && !M_Achieved(unlockables[j].showconditionset))
 						continue;
 					if (j && unlockables[j].conditionset == unlockables[j-1].conditionset)
 						continue;
@@ -6957,7 +6961,8 @@ static void M_DrawChecklist(void)
 	while (i < MAXUNLOCKABLES)
 	{
 		if (unlockables[i].name[0] == 0 //|| unlockables[i].nochecklist
-		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS)
+		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS
+		|| (!unlockables[i].unlocked && unlockables[i].showconditionset && !M_Achieved(unlockables[i].showconditionset)))
 		{
 			i += 1;
 			continue;
@@ -6983,10 +6988,11 @@ static void M_DrawChecklist(void)
 
 				if (unlockables[i].objective[0] != '/')
 				{
-					addy(8);
-					V_DrawString(currentMenu->x, y,
+					addy(16);
+					V_DrawString(currentMenu->x, y-8,
 						V_ALLOWLOWERCASE,
 						va("\x1E %s", unlockables[i].objective));
+					y -= 8;
 				}
 				else
 				{
@@ -9218,7 +9224,10 @@ static void M_DrawStatsMaps(int location)
 			else
 				V_DrawSmallScaledPatch(292, y, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
-			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, va("%s", exemblem->description));
+			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE,
+				(!exemblem->collected && exemblem->showconditionset && !M_Achieved(exemblem->showconditionset))
+				? M_CreateSecretMenuOption(exemblem->description)
+				: exemblem->description);
 		}
 
 		y += 8;
