@@ -203,11 +203,19 @@ INT32 st_translucency = 10;
 void ST_doPaletteStuff(void)
 {
 	INT32 palette;
+#ifdef TRUECOLOR
+	INT32 flashpal = 0;
+#endif
 
 	if (paused || P_AutoPause())
 		palette = 0;
 	else if (stplyr && stplyr->flashcount)
+	{
 		palette = stplyr->flashpal;
+#ifdef TRUECOLOR
+		flashpal = palette;
+#endif
+	}
 	else
 		palette = 0;
 
@@ -229,6 +237,27 @@ void ST_doPaletteStuff(void)
 				V_SetPalette(palette);
 		}
 	}
+
+#ifdef TRUECOLOR
+	if ((rendermode == render_soft) && (truecolor) && (flashpal > 0))
+	{
+		UINT32 *buf32 = (UINT32 *)screens[0];
+		const UINT32 *deststop32 = buf32 + vid.width * vid.height;
+
+		// set flash color
+		UINT32 flashcolor;
+
+		// Look in HWR_DoPostProcessor for the reference colors
+		if (flashpal == PAL_NUKE)
+			flashcolor = 0xFF7F7FFF;
+		else
+			flashcolor = 0xFFFFFFFF;
+
+		// blend with the entire screen
+		for (; buf32 < deststop32; ++buf32)
+			*buf32 = TC_BlendTrueColor(*buf32, flashcolor, 0xC0);
+	}
+#endif
 }
 
 void ST_UnloadGraphics(void)
