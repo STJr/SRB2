@@ -3544,7 +3544,7 @@ void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param)
 				// Cleanup edge
 				while (newpix)
 				{
-					tmpscr[y*vid.rowbytes+(newpix*vid.bpp)] = srcscr[y*vid.rowbytes];
+					M_Memcpy(&tmpscr[y*vid.rowbytes+(newpix*vid.bpp)], &srcscr[y*vid.rowbytes], vid.bpp);
 					newpix--;
 				}
 			}
@@ -3555,7 +3555,7 @@ void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param)
 				// Cleanup edge
 				while (newpix)
 				{
-					tmpscr[y*vid.rowbytes+vid.rowbytes-(newpix*vid.bpp)] = srcscr[y*vid.rowbytes+(vid.rowbytes-1)];
+					M_Memcpy(&tmpscr[y*vid.rowbytes+vid.rowbytes-(newpix*vid.bpp)], &srcscr[y*vid.rowbytes+(vid.rowbytes-vid.bpp)], vid.bpp);
 					newpix--;
 				}
 			}
