@@ -1608,71 +1608,45 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	}
 }
 
-#ifdef TRUECOLOR
-static UINT32 V_GetConsBackColor(INT32 backcolor)
+#if defined (TRUECOLOR) || defined (HWRENDER)
+static UINT32 V_GetConsBackColor(INT32 consbackcolor)
 {
-	UINT8 palindex;
-	switch (backcolor)
+	UINT32 color = 0x00000000;
+	switch (consbackcolor)
 	{
-		case 0:		palindex = 15;	break; 	// White
-		case 1:		palindex = 31;	break; 	// Black
-		case 2:		palindex = 251;	break;	// Sepia
-		case 3:		palindex = 239;	break; 	// Brown
-		case 4:		palindex = 215;	break; 	// Pink
-		case 5:		palindex = 37;	break; 	// Raspberry
-		case 6:		palindex = 47;	break; 	// Red
-		case 7:		palindex = 53;	break;	// Creamsicle
-		case 8:		palindex = 63;	break; 	// Orange
-		case 9:		palindex = 56;	break; 	// Gold
-		case 10:	palindex = 79;	break; 	// Yellow
-		case 11:	palindex = 119;	break; 	// Emerald
-		case 12:	palindex = 111;	break; 	// Green
-		case 13:	palindex = 136;	break; 	// Cyan
-		case 14:	palindex = 175;	break; 	// Steel
-		case 15:	palindex = 166;	break; 	// Periwinkle
-		case 16:	palindex = 159;	break; 	// Blue
-		case 17:	palindex = 187;	break; 	// Purple
-		case 18:	palindex = 199;	break; 	// Lavender
+		case 0:		color = 0xffffff00;	break; 	// White
+		case 1:		color = 0x80808000;	break; 	// Black
+		case 2:		color = 0xdeb88700;	break;	// Sepia
+		case 3:		color = 0x40201000;	break; 	// Brown
+		case 4:		color = 0xfa807200;	break; 	// Pink
+		case 5:		color = 0xff69b400;	break; 	// Raspberry
+		case 6:		color = 0xff000000;	break; 	// Red
+		case 7:		color = 0xffd68300;	break;	// Creamsicle
+		case 8:		color = 0xff800000;	break; 	// Orange
+		case 9:		color = 0xdaa52000;	break; 	// Gold
+		case 10:	color = 0x80800000;	break; 	// Yellow
+		case 11:	color = 0x00ff0000;	break; 	// Emerald
+		case 12:	color = 0x00800000;	break; 	// Green
+		case 13:	color = 0x4080ff00;	break; 	// Cyan
+		case 14:	color = 0x4682b400;	break; 	// Steel
+		case 15:	color = 0x1e90ff00;	break;	// Periwinkle
+		case 16:	color = 0x0000ff00;	break; 	// Blue
+		case 17:	color = 0xff00ff00;	break; 	// Purple
+		case 18:	color = 0xee82ee00;	break; 	// Lavender
 		// Default green
-		default:	palindex = 111;	break;
+		default:	color = 0x00800000;	break;
 	}
-	return GetTrueColor(palindex);
-}
-#endif
 
 #ifdef HWRENDER
-// This is now a function since it's otherwise repeated 2 times and honestly looks retarded:
-static UINT32 V_GetHWConsBackColor(void)
-{
-	UINT32 hwcolor;
-	switch (cons_backcolor.value)
-	{
-		case 0:		hwcolor = 0xffffff00;	break; 	// White
-		case 1:		hwcolor = 0x80808000;	break; 	// Black
-		case 2:		hwcolor = 0xdeb88700;	break;	// Sepia
-		case 3:		hwcolor = 0x40201000;	break; 	// Brown
-		case 4:		hwcolor = 0xfa807200;	break; 	// Pink
-		case 5:		hwcolor = 0xff69b400;	break; 	// Raspberry
-		case 6:		hwcolor = 0xff000000;	break; 	// Red
-		case 7:		hwcolor = 0xffd68300;	break;	// Creamsicle
-		case 8:		hwcolor = 0xff800000;	break; 	// Orange
-		case 9:		hwcolor = 0xdaa52000;	break; 	// Gold
-		case 10:	hwcolor = 0x80800000;	break; 	// Yellow
-		case 11:	hwcolor = 0x00ff0000;	break; 	// Emerald
-		case 12:	hwcolor = 0x00800000;	break; 	// Green
-		case 13:	hwcolor = 0x4080ff00;	break; 	// Cyan
-		case 14:	hwcolor = 0x4682b400;	break; 	// Steel
-		case 15:	hwcolor = 0x1e90ff00;	break;	// Periwinkle
-		case 16:	hwcolor = 0x0000ff00;	break; 	// Blue
-		case 17:	hwcolor = 0xff00ff00;	break; 	// Purple
-		case 18:	hwcolor = 0xee82ee00;	break; 	// Lavender
-		// Default green
-		default:	hwcolor = 0x00800000;	break;
-	}
-	return hwcolor;
-}
+	// OpenGL uses RGBA, but Software
+	// uses ABGR, so swap the byte order.
+	if (rendermode != render_opengl)
+		color = (0xFF000000 | BIGENDIAN_LONG(color));
 #endif
 
+	return color;
+}
+#endif
 
 // THANK YOU MPC!!!
 // and thanks toaster for cleaning it up.
@@ -1693,7 +1667,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 #ifdef HWRENDER
 	if (rendermode != render_soft && rendermode != render_none)
 	{
-		UINT32 hwcolor = V_GetHWConsBackColor();
+		UINT32 hwcolor = V_GetConsBackColor(cons_backcolor.value);
 		HWR_DrawConsoleFill(x, y, w, h, c, hwcolor);	// we still use the regular color stuff but only for flags. actual draw color is "hwcolor" for this.
 		return;
 	}
@@ -2271,7 +2245,7 @@ void V_DrawFadeConsBack(INT32 plines)
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode != render_soft && rendermode != render_none)
 	{
-		UINT32 hwcolor = V_GetHWConsBackColor();
+		UINT32 hwcolor = V_GetConsBackColor(cons_backcolor.value);
 		HWR_DrawConsoleBack(hwcolor, plines);
 		return;
 	}
