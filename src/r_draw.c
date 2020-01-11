@@ -1083,6 +1083,22 @@ FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt)
 #endif
 }
 
+// You like macros, don't you?
+#define WriteTranslucentColumn(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, GetTrueColor(idx), dc_alpha)
+#define WriteTranslucentColumn32(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, idx, dc_alpha)
+
+#define WriteTranslucentSpan(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, GetTrueColor(idx), ds_alpha)
+#define WriteTranslucentSpan32(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, idx, ds_alpha)
+#define WriteTranslucentSpanIdx(idx, destidx) dest[destidx] = TC_BlendTrueColor(dest[destidx], GetTrueColor(idx), ds_alpha)
+#define WriteTranslucentSpanIdx32(idx, destidx) dest[destidx] = TC_BlendTrueColor(dest[destidx], idx, ds_alpha)
+
+#ifndef NOWATER
+#define WriteTranslucentWaterSpan(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dsrc, GetTrueColor(idx), ds_alpha); dsrc++;
+#define WriteTranslucentWaterSpan32(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dsrc, idx, ds_alpha); dsrc++;
+#define WriteTranslucentWaterSpanIdx(idx, destidx) dest[destidx] = TC_BlendTrueColor(*(UINT32 *)dsrc, GetTrueColor(idx), ds_alpha); dsrc++;
+#define WriteTranslucentWaterSpanIdx32(idx, destidx) dest[destidx] = TC_BlendTrueColor(*(UINT32 *)dsrc, idx, ds_alpha); dsrc++;
+#endif
+
 #include "r_draw32.c"
 #include "r_draw32_npo2.c"
 #endif

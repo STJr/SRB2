@@ -1164,10 +1164,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	// Use the correct span drawer depending on the powers-of-twoness
 	if (!ds_powersoftwo)
 	{
-#ifdef TRUECOLOR
-		if (truecolor) // sorry nothing
-			return;
-#endif
 		if (spanfuncs_npo2[spanfunctype])
 			spanfunc = spanfuncs_npo2[spanfunctype];
 		else

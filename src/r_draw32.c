@@ -19,9 +19,6 @@
 // a has a constant z depth from top to bottom.
 //
 
-#define WriteTranslucentColumn(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, GetTrueColor(idx), dc_alpha)
-#define WriteTranslucentColumn32(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, idx, dc_alpha)
-
 /**	\brief The R_DrawColumn_32 function
 	Experiment to make software go faster. Taken from the Boom source
 */
@@ -1022,11 +1019,6 @@ void R_DrawTranslatedColumn_32(void)
 // SPANS
 // ==========================================================================
 
-#define WriteTranslucentSpan(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, GetTrueColor(idx), ds_alpha)
-#define WriteTranslucentSpan32(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, idx, ds_alpha)
-#define WriteTranslucentSpanIdx(idx, destidx) dest[destidx] = TC_BlendTrueColor(dest[destidx], GetTrueColor(idx), ds_alpha)
-#define WriteTranslucentSpanIdx32(idx, destidx) dest[destidx] = TC_BlendTrueColor(dest[destidx], idx, ds_alpha)
-
 /**	\brief The R_DrawSpan_32 function
 	Draws the actual span.
 */
@@ -1778,12 +1770,6 @@ void R_DrawTiltedTranslucentSpan_32(void)
 }
 
 #ifndef NOWATER
-
-#define WriteTranslucentWaterSpan(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dsrc, GetTrueColor(idx), ds_alpha); dsrc++;
-#define WriteTranslucentWaterSpan32(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dsrc, idx, ds_alpha); dsrc++;
-#define WriteTranslucentWaterSpanIdx(idx, destidx) dest[destidx] = TC_BlendTrueColor(*(UINT32 *)dsrc, GetTrueColor(idx), ds_alpha); dsrc++;
-#define WriteTranslucentWaterSpanIdx32(idx, destidx) dest[destidx] = TC_BlendTrueColor(*(UINT32 *)dsrc, idx, ds_alpha); dsrc++;
-
 /**	\brief The R_DrawTiltedTranslucentWaterSpan_32 function
 	Like DrawTiltedTranslucentSpan, but for water
 */
@@ -2305,7 +2291,7 @@ void R_DrawTiltedSplat_32(void)
 				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				valu32 = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (R_GetRgbaA(valu32))
-					*dest = TC_TranslucentColorMix(valu32, *dest, ds_alpha);
+					*dest = TC_ColorMix(valu32, *dest);
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -2323,7 +2309,7 @@ void R_DrawTiltedSplat_32(void)
 				dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 				valu32 = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (R_GetRgbaA(valu32))
-					*dest = TC_TranslucentColorMix(valu32, *dest, ds_alpha);
+					*dest = TC_ColorMix(valu32, *dest);
 			}
 			else
 			{
@@ -2346,7 +2332,7 @@ void R_DrawTiltedSplat_32(void)
 					dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
 					valu32 = sourceu32[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (R_GetRgbaA(valu32))
-						*dest = TC_TranslucentColorMix(valu32, *dest, ds_alpha);
+						*dest = TC_ColorMix(valu32, *dest);
 					dest++;
 					u += stepu;
 					v += stepv;
