@@ -2665,6 +2665,15 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (lines[i].special)
 		{
+		case 443: //Call Lua function
+			if (lines[i].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(lines[i].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], lines[i].text, strlen(lines[i].text) + 1);
+			}
+			else
+				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in the front texture fields)\n", sizeu1(i));
+			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
 		case 702: //Slope front sector floor and ceiling
