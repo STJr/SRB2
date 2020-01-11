@@ -83,6 +83,8 @@
 #include "p_slopes.h"
 #endif
 
+#include "fastcmp.h" // textmap parsing
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -844,7 +846,6 @@ static void P_LoadVertices(UINT8 *data)
 	{
 		v->x = SHORT(mv->x)<<FRACBITS;
 		v->y = SHORT(mv->y)<<FRACBITS;
-		v->z = 0;
 	}
 }
 
@@ -862,11 +863,6 @@ static void P_InitializeSector(sector_t *ss)
 	ss->ceilingdata = NULL;
 	ss->lightingdata = NULL;
 	ss->fadecolormapdata = NULL;
-
-	ss->floor_xoffs = ss->floor_yoffs = 0;
-	ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
-
-	ss->floorpic_angle = ss->ceilingpic_angle = 0;
 
 	ss->heightsec = -1;
 	ss->camsec = -1;
@@ -943,6 +939,11 @@ static void P_LoadSectors(UINT8 *data)
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
 
+		ss->floor_xoffs = ss->floor_yoffs = 0;
+		ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
+
+		ss->floorpic_angle = ss->ceilingpic_angle = 0;
+
 		P_InitializeSector(ss);
 	}
 }
@@ -1012,14 +1013,32 @@ static void P_InitializeLinedef(line_t *ld)
 	{
 		sides[ld->sidenum[0]].special = ld->special;
 		sides[ld->sidenum[0]].line = ld;
-
 	}
 	if (ld->sidenum[1] != 0xffff)
 	{
 		sides[ld->sidenum[1]].special = ld->special;
 		sides[ld->sidenum[1]].line = ld;
-
 	}
+}
+
+static void P_SetLinedefV1(size_t i, UINT16 vertex_num)
+{
+	if (vertex_num >= numvertexes)
+	{
+		CONS_Debug(DBG_SETUP, "P_SetLinedefV1: linedef %s has out-of-range v1 num %u\n", sizeu1(i), vertex_num);
+		vertex_num = 0;
+	}
+	lines[i].v1 = &vertexes[vertex_num];
+}
+
+static void P_SetLinedefV2(size_t i, UINT16 vertex_num)
+{
+	if (vertex_num >= numvertexes)
+	{
+		CONS_Debug(DBG_SETUP, "P_SetLinedefV2: linedef %s has out-of-range v2 num %u\n", sizeu1(i), vertex_num);
+		vertex_num = 0;
+	}
+	lines[i].v2 = &vertexes[vertex_num];
 }
 
 static void P_LoadLinedefs(UINT8 *data)
@@ -1033,14 +1052,38 @@ static void P_LoadLinedefs(UINT8 *data)
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
-		ld->v1 = &vertexes[SHORT(mld->v1)];
-		ld->v2 = &vertexes[SHORT(mld->v2)];
+		P_SetLinedefV1(i, SHORT(mld->v1));
+		P_SetLinedefV2(i, SHORT(mld->v2));
 
 		ld->sidenum[0] = SHORT(mld->sidenum[0]);
 		ld->sidenum[1] = SHORT(mld->sidenum[1]);
 
 		P_InitializeLinedef(ld);
 	}
+}
+
+static void P_SetSidedefSector(size_t i, UINT16 sector_num)
+{
+	// cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
+	if (sector_num >= numsectors)
+	{
+		CONS_Debug(DBG_SETUP, "P_SetSidedefSector: sidedef %s has out-of-range sector num %u\n", sizeu1(i), sector_num);
+		sector_num = 0;
+	}
+	sides[i].sector = &sectors[sector_num];
+}
+
+static void P_InitializeSidedef(side_t *sd)
+{
+	if (!sd->line)
+	{
+		CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1((size_t)(sd - sides)));
+		sd->line = &lines[0];
+		sd->special = sd->line->special;
+	}
+
+	sd->text = NULL;
+	sd->colormap_data = NULL;
 }
 
 static void P_LoadSidedefs(UINT8 *data)
@@ -1051,27 +1094,32 @@ static void P_LoadSidedefs(UINT8 *data)
 
 	for (i = 0; i < numsides; i++, sd++, msd++)
 	{
-		UINT16 sector_num;
-		boolean isfrontside = !sd->line || sd->line->sidenum[0] == i;
+		INT16 textureoffset = SHORT(msd->textureoffset);
+		boolean isfrontside;
 
-		sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
+		P_InitializeSidedef(sd);
+
+		isfrontside = sd->line->sidenum[0] == i;
+
+		// Repeat count for midtexture
+		if (((sd->line->flags & (ML_TWOSIDED|ML_EFFECT5)) == (ML_TWOSIDED|ML_EFFECT5))
+			&& !(sd->special >= 300 && sd->special < 500)) // exempt linedef exec specials
+		{
+			sd->repeatcnt = (INT16)(((unsigned)textureoffset) >> 12);
+			sd->textureoffset = (((unsigned)textureoffset) & 2047) << FRACBITS;
+		}
+		else
+		{
+			sd->repeatcnt = 0;
+			sd->textureoffset = textureoffset << FRACBITS;
+		}
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
-		// cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
-		sector_num = SHORT(msd->sector);
-		if (sector_num >= numsectors)
-		{
-			CONS_Debug(DBG_SETUP, "P_LoadSidedefs: sidedef %s has out-of-range sector num %u\n", sizeu1(i), sector_num);
-			sector_num = 0;
-		}
-		sd->sector = &sectors[sector_num];
-
-		sd->colormap_data = NULL;
+		P_SetSidedefSector(i, SHORT(msd->sector));
 
 		// Special info stored in texture fields!
 		switch (sd->special)
 		{
-			case 63: // Fake floor/ceiling planes
 			case 606: //SoM: 4/4/2000: Just colormap transfer
 			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 			case 455: // Fade colormaps! mazmazz 9/12/2018 (:flag_us:)
@@ -1233,29 +1281,430 @@ static void P_LoadThings(UINT8 *data)
 			mt->z = mt->options; // NiGHTS Hoops use the full flags bits to set the height.
 		else
 			mt->z = mt->options >> ZSHIFT;
+
+		mt->mobj = NULL;
 	}
 }
 
-static void P_LoadMapData(const virtres_t *virt)
+// Stores positions for relevant map data spread through a TEXTMAP.
+UINT32 mapthingsPos[UINT16_MAX];
+UINT32 linesPos[UINT16_MAX];
+UINT32 sidesPos[UINT16_MAX];
+UINT32 vertexesPos[UINT16_MAX];
+UINT32 sectorsPos[UINT16_MAX];
+
+// Determine total amount of map data in TEXTMAP.
+static boolean TextmapCount(UINT8 *data, size_t size)
 {
-	virtlump_t* virtvertexes = NULL, * virtsectors = NULL, * virtsidedefs = NULL, * virtlinedefs = NULL, * virtthings = NULL;
-#ifdef UDMF
-	virtlump_t* textmap = vres_Find(virt, "TEXTMAP");
+	char *tkn = M_GetToken((char *)data);
+	UINT8 brackets = 0;
+
+	nummapthings = 0;
+	numlines = 0;
+	numsides = 0;
+	numvertexes = 0;
+	numsectors = 0;
+
+	// Look for namespace at the beginning.
+	if (!fastcmp(tkn, "namespace"))
+	{
+		Z_Free(tkn);
+		CONS_Alert(CONS_ERROR, "No namespace at beginning of lump!\n");
+		return false;
+	}
+	Z_Free(tkn);
+
+	// Check if namespace is valid.
+	tkn = M_GetToken(NULL);
+	if (!fastcmp(tkn, "srb2"))
+		CONS_Alert(CONS_WARNING, "Invalid namespace '%s', only 'srb2' is supported.\n", tkn);
+	Z_Free(tkn);
+
+	tkn = M_GetToken(NULL);
+	while (tkn && M_GetTokenPos() < size)
+	{
+		// Avoid anything inside bracketed stuff, only look for external keywords.
+		if (brackets)
+		{
+			if (fastcmp(tkn, "}"))
+				brackets--;
+		}
+		else if (fastcmp(tkn, "{"))
+			brackets++;
+		// Check for valid fields.
+		else if (fastcmp(tkn, "thing"))
+			mapthingsPos[nummapthings++] = M_GetTokenPos();
+		else if (fastcmp(tkn, "linedef"))
+			linesPos[numlines++] = M_GetTokenPos();
+		else if (fastcmp(tkn, "sidedef"))
+			sidesPos[numsides++] = M_GetTokenPos();
+		else if (fastcmp(tkn, "vertex"))
+			vertexesPos[numvertexes++] = M_GetTokenPos();
+		else if (fastcmp(tkn, "sector"))
+			sectorsPos[numsectors++] = M_GetTokenPos();
+		else
+			CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", tkn);
+
+		Z_Free(tkn);
+		tkn = M_GetToken(NULL);
+	}
+
+	Z_Free(tkn);
+
+	if (brackets)
+	{
+		CONS_Alert(CONS_ERROR, "Unclosed brackets detected in textmap lump.\n");
+		return false;
+	}
+
+	return true;
+}
+
+static void ParseTextmapVertexParameter(UINT32 i, char *param, char *val)
+{
+	if (fastcmp(param, "x"))
+		vertexes[i].x = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "y"))
+		vertexes[i].y = FLOAT_TO_FIXED(atof(val));
+}
+
+static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
+{
+	if (fastcmp(param, "heightfloor"))
+		sectors[i].floorheight = atol(val) << FRACBITS;
+	else if (fastcmp(param, "heightceiling"))
+		sectors[i].ceilingheight = atol(val) << FRACBITS;
+	if (fastcmp(param, "texturefloor"))
+		sectors[i].floorpic = P_AddLevelFlat(val, foundflats);
+	else if (fastcmp(param, "textureceiling"))
+		sectors[i].ceilingpic = P_AddLevelFlat(val, foundflats);
+	else if (fastcmp(param, "lightlevel"))
+		sectors[i].lightlevel = atol(val);
+	else if (fastcmp(param, "special"))
+		sectors[i].special = atol(val);
+	else if (fastcmp(param, "id"))
+		sectors[i].tag = atol(val);
+	else if (fastcmp(param, "xpanningfloor"))
+		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "ypanningfloor"))
+		sectors[i].floor_yoffs = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "xpanningceiling"))
+		sectors[i].ceiling_xoffs = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "ypanningceiling"))
+		sectors[i].ceiling_yoffs = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "rotationfloor"))
+		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+	else if (fastcmp(param, "rotationceiling"))
+		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+}
+
+static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
+{
+	if (fastcmp(param, "offsetx"))
+		sides[i].textureoffset = atol(val)<<FRACBITS;
+	else if (fastcmp(param, "offsety"))
+		sides[i].rowoffset = atol(val)<<FRACBITS;
+	else if (fastcmp(param, "texturetop"))
+		sides[i].toptexture = R_TextureNumForName(val);
+	else if (fastcmp(param, "texturebottom"))
+		sides[i].bottomtexture = R_TextureNumForName(val);
+	else if (fastcmp(param, "texturemiddle"))
+		sides[i].midtexture = R_TextureNumForName(val);
+	else if (fastcmp(param, "sector"))
+		P_SetSidedefSector(i, atol(val));
+	else if (fastcmp(param, "repeatcnt"))
+		sides[i].repeatcnt = atol(val);
+}
+
+static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
+{
+	if (fastcmp(param, "id"))
+		lines[i].tag = atol(val);
+	else if (fastcmp(param, "special"))
+		lines[i].special = atol(val);
+	else if (fastcmp(param, "v1"))
+		P_SetLinedefV1(i, atol(val));
+	else if (fastcmp(param, "v2"))
+		P_SetLinedefV2(i, atol(val));
+	else if (fastcmp(param, "sidefront"))
+		lines[i].sidenum[0] = atol(val);
+	else if (fastcmp(param, "sideback"))
+		lines[i].sidenum[1] = atol(val);
+
+	// Flags
+	else if (fastcmp(param, "blocking") && fastcmp("true", val))
+		lines[i].flags |= ML_IMPASSIBLE;
+	else if (fastcmp(param, "blockmonsters") && fastcmp("true", val))
+		lines[i].flags |= ML_BLOCKMONSTERS;
+	else if (fastcmp(param, "twosided") && fastcmp("true", val))
+		lines[i].flags |= ML_TWOSIDED;
+	else if (fastcmp(param, "dontpegtop") && fastcmp("true", val))
+		lines[i].flags |= ML_DONTPEGTOP;
+	else if (fastcmp(param, "dontpegbottom") && fastcmp("true", val))
+		lines[i].flags |= ML_DONTPEGBOTTOM;
+	else if (fastcmp(param, "skewtd") && fastcmp("true", val))
+		lines[i].flags |= ML_EFFECT1;
+	else if (fastcmp(param, "noclimb") && fastcmp("true", val))
+		lines[i].flags |= ML_NOCLIMB;
+	else if (fastcmp(param, "noskew") && fastcmp("true", val))
+		lines[i].flags |= ML_EFFECT2;
+	else if (fastcmp(param, "midpeg") && fastcmp("true", val))
+		lines[i].flags |= ML_EFFECT3;
+	else if (fastcmp(param, "midsolid") && fastcmp("true", val))
+		lines[i].flags |= ML_EFFECT4;
+	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", val))
+		lines[i].flags |= ML_EFFECT5;
+	else if (fastcmp(param, "effect6") && fastcmp("true", val))
+		lines[i].flags |= ML_EFFECT6;
+	else if (fastcmp(param, "nonet") && fastcmp("true", val))
+		lines[i].flags |= ML_NONET;
+	else if (fastcmp(param, "netonly") && fastcmp("true", val))
+		lines[i].flags |= ML_NETONLY;
+	else if (fastcmp(param, "bouncy") && fastcmp("true", val))
+		lines[i].flags |= ML_BOUNCY;
+	else if (fastcmp(param, "transfer") && fastcmp("true", val))
+		lines[i].flags |= ML_TFERLINE;
+}
+
+static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
+{
+	if (fastcmp(param, "x"))
+		mapthings[i].x = atol(val);
+	else if (fastcmp(param, "y"))
+		mapthings[i].y = atol(val);
+	else if (fastcmp(param, "height"))
+		mapthings[i].z = atol(val);
+	else if (fastcmp(param, "angle"))
+		mapthings[i].angle = atol(val);
+	else if (fastcmp(param, "type"))
+		mapthings[i].type = atol(val);
+
+	// Flags
+	else if (fastcmp(param, "extra") && fastcmp("true", val))
+		mapthings[i].options |= MTF_EXTRA;
+	else if (fastcmp(param, "flip") && fastcmp("true", val))
+		mapthings[i].options |= MTF_OBJECTFLIP;
+	else if (fastcmp(param, "special") && fastcmp("true", val))
+		mapthings[i].options |= MTF_OBJECTSPECIAL;
+	else if (fastcmp(param, "ambush") && fastcmp("true", val))
+		mapthings[i].options |= MTF_AMBUSH;
+}
+
+/** From a given position table, run a specified parser function through a {}-encapsuled text.
+  *
+  * \param Position of the data to parse, in the textmap.
+  * \param Structure number (mapthings, sectors, ...).
+  * \param Parser function pointer.
+  */
+static void TextmapParse(UINT32 dataPos, size_t num, void (*parser)(UINT32, char *, char *))
+{
+	char *param, *val;
+
+	M_SetTokenPos(dataPos);
+	param = M_GetToken(NULL);
+	if (!fastcmp(param, "{"))
+	{
+		Z_Free(param);
+		CONS_Alert(CONS_WARNING, "Invalid UDMF data capsule!\n");
+		return;
+	}
+	Z_Free(param);
+
+	while (true)
+	{
+		param = M_GetToken(NULL);
+		if (fastcmp(param, "}"))
+		{
+			Z_Free(param);
+			break;
+		}
+		val = M_GetToken(NULL);
+		parser(num, param, val);
+		Z_Free(param);
+		Z_Free(val);
+	}
+}
+
+/** Provides a fix to the flat alignment coordinate transform from standard Textmaps.
+ */
+static void TextmapFixFlatOffsets(sector_t *sec)
+{
+	if (sec->floorpic_angle)
+	{
+		fixed_t pc = FINECOSINE(sec->floorpic_angle>>ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE  (sec->floorpic_angle>>ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->floor_xoffs;
+		fixed_t yoffs = sec->floor_yoffs;
+		sec->floor_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		sec->floor_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+	}
+
+	if (sec->ceilingpic_angle)
+	{
+		fixed_t pc = FINECOSINE(sec->ceilingpic_angle>>ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE  (sec->ceilingpic_angle>>ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->ceiling_xoffs;
+		fixed_t yoffs = sec->ceiling_yoffs;
+		sec->ceiling_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		sec->ceiling_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+	}
+}
+
+/** Loads the textmap data, after obtaining the elements count and allocating their respective space.
+  */
+static void P_LoadTextmap(void)
+{
+	UINT32 i;
+
+	vertex_t   *vt;
+	sector_t   *sc;
+	line_t     *ld;
+	side_t     *sd;
+	mapthing_t *mt;
+
+	CONS_Alert(CONS_NOTICE, "UDMF support is still a work-in-progress; its specs and features are prone to change until it is fully implemented.\n");
+
+	/// Given the UDMF specs, some fields are given a default value.
+	/// If an element's field has a default value set, it is omitted
+	/// from the textmap, and therefore we have to account for it by
+	/// preemptively setting that value beforehand.
+
+	for (i = 0, vt = vertexes; i < numvertexes; i++, vt++)
+	{
+		// Defaults.
+		vt->x = vt->y = INT32_MAX;
+
+		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
+
+		if (vt->x == INT32_MAX)
+			I_Error("P_LoadTextmap: vertex %s has no x value set!\n", sizeu1(i));
+		if (vt->y == INT32_MAX)
+			I_Error("P_LoadTextmap: vertex %s has no y value set!\n", sizeu1(i));
+	}
+
+	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
+	{
+		// Defaults.
+		sc->floorheight = 0;
+		sc->ceilingheight = 0;
+
+		sc->floorpic = 0;
+		sc->ceilingpic = 0;
+
+		sc->lightlevel = 255;
+
+		sc->special = 0;
+		sc->tag = 0;
+
+		sc->floor_xoffs = sc->floor_yoffs = 0;
+		sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
+
+		sc->floorpic_angle = sc->ceilingpic_angle = 0;
+
+		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
+		P_InitializeSector(sc);
+		TextmapFixFlatOffsets(sc);
+	}
+
+	for (i = 0, ld = lines; i < numlines; i++, ld++)
+	{
+		// Defaults.
+		ld->v1 = ld->v2 = NULL;
+		ld->flags = 0;
+		ld->special = 0;
+		ld->tag = 0;
+		ld->sidenum[0] = 0xffff;
+		ld->sidenum[1] = 0xffff;
+
+		TextmapParse(linesPos[i], i, ParseTextmapLinedefParameter);
+
+		if (!ld->v1)
+			I_Error("P_LoadTextmap: linedef %s has no v1 value set!\n", sizeu1(i));
+		if (!ld->v2)
+			I_Error("P_LoadTextmap: linedef %s has no v2 value set!\n", sizeu1(i));
+		if (ld->sidenum[0] == 0xffff)
+			I_Error("P_LoadTextmap: linedef %s has no sidefront value set!\n", sizeu1(i));
+
+		P_InitializeLinedef(ld);
+	}
+
+	for (i = 0, sd = sides; i < numsides; i++, sd++)
+	{
+		// Defaults.
+		sd->textureoffset = 0;
+		sd->rowoffset = 0;
+		sd->toptexture = R_TextureNumForName("-");
+		sd->midtexture = R_TextureNumForName("-");
+		sd->bottomtexture = R_TextureNumForName("-");
+		sd->sector = NULL;
+		sd->repeatcnt = 0;
+
+		TextmapParse(sidesPos[i], i, ParseTextmapSidedefParameter);
+
+		if (!sd->sector)
+			I_Error("P_LoadTextmap: sidedef %s has no sector value set!\n", sizeu1(i));
+
+		P_InitializeSidedef(sd);
+	}
+
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	{
+		// Defaults.
+		mt->x = mt->y = 0;
+		mt->angle = 0;
+		mt->type = 0;
+		mt->options = 0;
+		mt->z = 0;
+		mt->extrainfo = 0;
+		mt->mobj = NULL;
+
+		TextmapParse(mapthingsPos[i], i, ParseTextmapThingParameter);
+	}
+}
+
+static void P_ProcessLinedefsAfterSidedefs(void)
+{
+	size_t i = numlines;
+	register line_t *ld = lines;
+	for (; i--; ld++)
+	{
+		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
+		ld->backsector = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
+
+		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
+		switch (ld->special)
+		{
+		case 331: // Trigger linedef executor: Skin - Continuous
+		case 332: // Trigger linedef executor: Skin - Each time
+		case 333: // Trigger linedef executor: Skin - Once
+		case 443: // Calls a named Lua function
+			if (sides[ld->sidenum[0]].text)
+			{
+				size_t len = strlen(sides[ld->sidenum[0]].text) + 1;
+				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
+					len += strlen(sides[ld->sidenum[1]].text);
+				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
+				M_Memcpy(ld->text, sides[ld->sidenum[0]].text, strlen(sides[ld->sidenum[0]].text) + 1);
+				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
+					M_Memcpy(ld->text + strlen(ld->text) + 1, sides[ld->sidenum[1]].text, strlen(sides[ld->sidenum[1]].text) + 1);
+			}
+			break;
+		}
+	}
+}
+
+static boolean P_LoadMapData(const virtres_t *virt)
+{
+	virtlump_t *virtvertexes = NULL, *virtsectors = NULL, *virtsidedefs = NULL, *virtlinedefs = NULL, *virtthings = NULL;
+	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 
 	// Count map data.
-	if (textmap)
+	if (textmap) // Count how many entries for each type we got in textmap.
 	{
-		nummapthings = 0;
-		numlines = 0;
-		numsides = 0;
-		numvertexes = 0;
-		numsectors = 0;
-
-		// Count how many entries for each type we got in textmap.
-		//TextmapCount(vtextmap->data, vtextmap->size);
+		if (!TextmapCount(textmap->data, textmap->size))
+			return false;
 	}
 	else
-#endif
 	{
 		virtthings   = vres_Find(virt, "THINGS");
 		virtvertexes = vres_Find(virt, "VERTEXES");
@@ -1305,21 +1754,19 @@ static void P_LoadMapData(const virtres_t *virt)
 
 	numlevelflats = 0;
 
-#ifdef UDMF
+	// Load map data.
 	if (textmap)
-	{
-
-	}
+		P_LoadTextmap();
 	else
-#endif
 	{
-		// Strict map data
 		P_LoadVertices(virtvertexes->data);
 		P_LoadSectors(virtsectors->data);
 		P_LoadLinedefs(virtlinedefs->data);
 		P_LoadSidedefs(virtsidedefs->data);
 		P_LoadThings(virtthings->data);
 	}
+
+	P_ProcessLinedefsAfterSidedefs();
 
 	R_ClearTextureNumCache(true);
 
@@ -1333,14 +1780,7 @@ static void P_LoadMapData(const virtres_t *virt)
 	// search for animated flats and set up
 	P_SetupLevelFlatAnims();
 
-	// Copy relevant map data for NetArchive purposes.
-	spawnsectors = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
-	spawnlines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
-	spawnsides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
-
-	memcpy(spawnsectors, sectors, numsectors * sizeof (*sectors));
-	memcpy(spawnlines, lines, numlines * sizeof (*lines));
-	memcpy(spawnsides, sides, numsides * sizeof (*sides));
+	return true;
 }
 
 static void P_InitializeSubsector(subsector_t *ss)
@@ -1421,10 +1861,13 @@ static inline float P_SegLengthFloat(seg_t *seg)
 
 static void P_InitializeSeg(seg_t *seg)
 {
-	seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
+	if (seg->linedef)
+	{
+		seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
 
-	seg->frontsector = seg->sidedef->sector;
-	seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
+		seg->frontsector = seg->sidedef->sector;
+		seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
+	}
 
 #ifdef HWRENDER
 	seg->pv1 = seg->pv2 = NULL;
@@ -1607,20 +2050,21 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		case NT_XGL3:
 			for (m = 0; m < subsectors[i].numlines; m++, k++)
 			{
+				UINT32 vertexnum = READUINT32((*data));
 				UINT16 linenum;
-				UINT32 vert = READUINT32((*data));
 
-				segs[k].v1 = &vertexes[vert];
-				if (m == 0)
-					segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
-				else
-					segs[k - 1].v2 = segs[k].v1;
+				if (vertexnum >= numvertexes)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid vertex %d!\n", sizeu1(k), m, vertexnum);
 
-				(*data) += 4; // partner, can be ignored by software renderer
+				segs[k - 1 + ((m == 0) ? subsectors[i].numlines : 0)].v2 = segs[k].v1 = &vertexes[vertexnum];
+
+				READUINT32((*data)); // partner, can be ignored by software renderer
 				if (nodetype == NT_XGL3)
-					(*data) += 2; // Line number is 32-bit in XGL3, but we're limited to 16 bits.
+					READUINT16((*data)); // Line number is 32-bit in XGL3, but we're limited to 16 bits.
 
 				linenum = READUINT16((*data));
+				if (linenum != 0xFFFF && linenum >= numlines)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), m, linenum);
 				segs[k].glseg = (linenum == 0xFFFF);
 				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
 				segs[k].side = READUINT8((*data));
@@ -1630,9 +2074,20 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		case NT_XNOD:
 			for (m = 0; m < subsectors[i].numlines; m++, k++)
 			{
-				segs[k].v1 = &vertexes[READUINT32((*data))];
-				segs[k].v2 = &vertexes[READUINT32((*data))];
-				segs[k].linedef = &lines[READUINT16((*data))];
+				UINT32 v1num = READUINT32((*data));
+				UINT32 v2num = READUINT32((*data));
+				UINT16 linenum = READUINT16((*data));
+
+				if (v1num >= numvertexes)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid v1 %d!\n", sizeu1(k), m, v1num);
+				if (v2num >= numvertexes)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid v2 %d!\n", sizeu1(k), m, v2num);
+				if (linenum >= numlines)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), m, linenum);
+
+				segs[k].v1 = &vertexes[v1num];
+				segs[k].v2 = &vertexes[v2num];
+				segs[k].linedef = &lines[linenum];
 				segs[k].side = READUINT8((*data));
 				segs[k].glseg = false;
 			}
@@ -1649,7 +2104,8 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		vertex_t *v2 = seg->v2;
 		P_InitializeSeg(seg);
 		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
-		seg->offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
+		if (seg->linedef)
+			segs[i].offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
 	}
 
 	return true;
@@ -2082,110 +2538,6 @@ static void P_LoadMapLUT(const virtres_t *virt)
 		P_CreateBlockMap();
 }
 
-static void P_ProcessLinedefsWithSidedefs(void)
-{
-	size_t i = numlines;
-	register line_t *ld = lines;
-	for (;i--;ld++)
-	{
-		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
-		ld->backsector  = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
-
-		// Repeat count for midtexture
-		if ((ld->flags & ML_EFFECT5) && (ld->sidenum[1] != 0xffff)
-			&& !(ld->special >= 300 && ld->special < 500)) // exempt linedef exec specials
-		{
-			sides[ld->sidenum[0]].repeatcnt = (INT16)(((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) >> 12);
-			sides[ld->sidenum[0]].textureoffset = (((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) & 2047) << FRACBITS;
-			sides[ld->sidenum[1]].repeatcnt = (INT16)(((unsigned)sides[ld->sidenum[1]].textureoffset >> FRACBITS) >> 12);
-			sides[ld->sidenum[1]].textureoffset = (((unsigned)sides[ld->sidenum[1]].textureoffset >> FRACBITS) & 2047) << FRACBITS;
-		}
-
-		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
-		switch(ld->special)
-		{
-		case 331: // Trigger linedef executor: Skin - Continuous
-		case 332: // Trigger linedef executor: Skin - Each time
-		case 333: // Trigger linedef executor: Skin - Once
-		case 443: // Calls a named Lua function
-			if (sides[ld->sidenum[0]].text)
-			{
-				size_t len = strlen(sides[ld->sidenum[0]].text)+1;
-				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					len += strlen(sides[ld->sidenum[1]].text);
-				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
-				M_Memcpy(ld->text, sides[ld->sidenum[0]].text, strlen(sides[ld->sidenum[0]].text)+1);
-				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					M_Memcpy(ld->text+strlen(ld->text)+1, sides[ld->sidenum[1]].text, strlen(sides[ld->sidenum[1]].text)+1);
-			}
-			break;
-		}
-	}
-}
-
-static void P_CompressSidedefs(void)
-{
-	side_t *newsides;
-	size_t numnewsides = 0;
-	size_t z;
-	size_t i;
-
-	for (i = 0; i < numsides; i++)
-	{
-		size_t j, k;
-		line_t *ld;
-
-		if (!sides[i].sector)
-			continue;
-
-		for (k = numlines, ld = lines; k--; ld++)
-		{
-			if (ld->sidenum[0] == i)
-				ld->sidenum[0] = (UINT16)numnewsides;
-
-			if (ld->sidenum[1] == i)
-				ld->sidenum[1] = (UINT16)numnewsides;
-		}
-
-		for (j = i + 1; j < numsides; j++)
-		{
-			if (!sides[j].sector)
-				continue;
-
-			if (!memcmp(&sides[i], &sides[j], sizeof(side_t)))
-			{
-				// Find the linedefs that belong to this one
-				for (k = numlines, ld = lines; k--; ld++)
-				{
-					if (ld->sidenum[0] == j)
-						ld->sidenum[0] = (UINT16)numnewsides;
-
-					if (ld->sidenum[1] == j)
-						ld->sidenum[1] = (UINT16)numnewsides;
-				}
-				sides[j].sector = NULL; // Flag for deletion
-			}
-		}
-		numnewsides++;
-	}
-
-	// We're loading crap into this block anyhow, so no point in zeroing it out.
-	newsides = Z_Malloc(numnewsides*sizeof(*newsides), PU_LEVEL, NULL);
-
-	// Copy the sides to their new block of memory.
-	for (i = 0, z = 0; i < numsides; i++)
-	{
-		if (sides[i].sector)
-			M_Memcpy(&newsides[z++], &sides[i], sizeof(side_t));
-	}
-
-	CONS_Debug(DBG_SETUP, "P_CompressSidedefs: Old sides is %s, new sides is %s\n", sizeu1(numsides), sizeu1(numnewsides));
-
-	Z_Free(sides);
-	sides = newsides;
-	numsides = numnewsides;
-}
-
 //
 // P_LinkMapData
 // Builds sector line lists and subsector sector numbers.
@@ -2310,47 +2662,62 @@ static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 
 static void P_MakeMapMD5(virtres_t *virt, void *dest)
 {
-	unsigned char linemd5[16];
-	unsigned char sectormd5[16];
-	unsigned char thingmd5[16];
-	unsigned char sidedefmd5[16];
+	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 	unsigned char resmd5[16];
-	UINT8 i;
 
-	// Create a hash for the current map
-	// get the actual lumps!
-	virtlump_t *virtlines = vres_Find(virt, "LINEDEFS");
-	virtlump_t *virtsectors = vres_Find(virt, "SECTORS");
-	virtlump_t *virtmthings = vres_Find(virt, "THINGS");
-	virtlump_t *virtsides = vres_Find(virt, "SIDEDEFS");
+	if (textmap)
+		P_MakeBufferMD5((char*)textmap->data, textmap->size, resmd5);
+	else
+	{
+		unsigned char linemd5[16];
+		unsigned char sectormd5[16];
+		unsigned char thingmd5[16];
+		unsigned char sidedefmd5[16];
+		UINT8 i;
 
-	P_MakeBufferMD5((char*)virtlines->data, virtlines->size, linemd5);
-	P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size, sectormd5);
-	P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size, thingmd5);
-	P_MakeBufferMD5((char*)virtsides->data, virtsides->size, sidedefmd5);
+		// Create a hash for the current map
+		// get the actual lumps!
+		virtlump_t* virtlines   = vres_Find(virt, "LINEDEFS");
+		virtlump_t* virtsectors = vres_Find(virt, "SECTORS");
+		virtlump_t* virtmthings = vres_Find(virt, "THINGS");
+		virtlump_t* virtsides   = vres_Find(virt, "SIDEDEFS");
 
-	for (i = 0; i < 16; i++)
-		resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
+		P_MakeBufferMD5((char*)virtlines->data,   virtlines->size, linemd5);
+		P_MakeBufferMD5((char*)virtsectors->data, virtsectors->size,  sectormd5);
+		P_MakeBufferMD5((char*)virtmthings->data, virtmthings->size,   thingmd5);
+		P_MakeBufferMD5((char*)virtsides->data,   virtsides->size, sidedefmd5);
+
+		for (i = 0; i < 16; i++)
+			resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
+	}
 
 	M_Memcpy(dest, &resmd5, 16);
 }
 
-static void P_LoadMapFromFile(void)
+static boolean P_LoadMapFromFile(void)
 {
 	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
 
-	P_LoadMapData(virt);
+	if (!P_LoadMapData(virt))
+		return false;
 	P_LoadMapBSP(virt);
 	P_LoadMapLUT(virt);
 
-	P_ProcessLinedefsWithSidedefs();
-	if (M_CheckParm("-compress"))
-		P_CompressSidedefs();
 	P_LinkMapData();
+
+	// Copy relevant map data for NetArchive purposes.
+	spawnsectors = Z_Calloc(numsectors * sizeof(*sectors), PU_LEVEL, NULL);
+	spawnlines = Z_Calloc(numlines * sizeof(*lines), PU_LEVEL, NULL);
+	spawnsides = Z_Calloc(numsides * sizeof(*sides), PU_LEVEL, NULL);
+
+	memcpy(spawnsectors, sectors, numsectors * sizeof(*sectors));
+	memcpy(spawnlines, lines, numlines * sizeof(*lines));
+	memcpy(spawnsides, sides, numsides * sizeof(*sides));
 
 	P_MakeMapMD5(virt, &mapmd5);
 
 	vres_Free(virt);
+	return true;
 }
 
 //
@@ -2446,7 +2813,7 @@ static void P_InitLevelSettings(void)
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
 
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -2464,7 +2831,7 @@ static void P_InitLevelSettings(void)
 	{
 		G_PlayerReborn(i, true);
 
-		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
+		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (G_CompetitionGametype() || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
 			players[i].lives = cv_startinglives.value;
@@ -2482,7 +2849,7 @@ static void P_InitLevelSettings(void)
 	}
 
 	if (botingame)
-		CV_SetValue(&cv_analog2, true);
+		CV_SetValue(&cv_analog[1], true);
 }
 
 // Respawns all the mapthings and mobjs in the map from the already loaded map data.
@@ -2754,17 +3121,10 @@ static void P_SetupCamera(void)
 	{
 		mapthing_t *thing;
 
-		switch (gametype)
-		{
-		case GT_MATCH:
-		case GT_TAG:
+		if (gametyperules & GTR_DEATHMATCHSTARTS)
 			thing = deathmatchstarts[0];
-			break;
-
-		default:
+		else
 			thing = playerstarts[0];
-			break;
-		}
 
 		if (thing)
 		{
@@ -2800,26 +3160,26 @@ static void P_InitCamera(void)
 		if (!cv_cam2_rotate.changed)
 			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
 
-		if (!cv_analog.changed)
-			CV_SetValue(&cv_analog, 0);
-		if (!cv_analog2.changed)
-			CV_SetValue(&cv_analog2, 0);
+		if (!cv_analog[0].changed)
+			CV_SetValue(&cv_analog[0], 0);
+		if (!cv_analog[1].changed)
+			CV_SetValue(&cv_analog[1], 0);
 
 		displayplayer = consoleplayer; // Start with your OWN view, please!
 	}
 
 	if (twodlevel)
 	{
-		CV_SetValue(&cv_analog, false);
-		CV_SetValue(&cv_analog2, false);
+		CV_SetValue(&cv_analog[0], false);
+		CV_SetValue(&cv_analog[1], false);
 	}
 	else
 	{
-		if (cv_useranalog.value)
-			CV_SetValue(&cv_analog, true);
+		if (cv_useranalog[0].value)
+			CV_SetValue(&cv_analog[0], true);
 
-		if ((splitscreen && cv_useranalog2.value) || botingame)
-			CV_SetValue(&cv_analog2, true);
+		if ((splitscreen && cv_useranalog[1].value) || botingame)
+			CV_SetValue(&cv_analog[1], true);
 	}
 }
 
@@ -2979,7 +3339,7 @@ static void P_InitGametype(void)
 	P_InitPlayers();
 
 	// restore time in netgame (see also g_game.c)
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 	{
 		// is this a hack? maybe
 		tic_t maxstarposttime = 0;
@@ -3023,6 +3383,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	// This is needed. Don't touch.
 	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
+	gametyperules = gametypedefaultrules[gametype];
 
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
@@ -3064,6 +3425,9 @@ boolean P_LoadLevel(boolean fromnetsave)
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_speed.changed)
 			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);*/
+
+		CV_UpdateCamDist();
+		CV_UpdateCam2Dist();
 
 		if (!cv_chasecam.changed)
 			CV_SetValue(&cv_chasecam, chase);
@@ -3186,7 +3550,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
 	lastloadedmaplumpnum = W_CheckNumForName(maplumpname);
-	if (lastloadedmaplumpnum == INT16_MAX)
+	if (lastloadedmaplumpnum == LUMPERROR)
 		I_Error("Map %s not found.\n", maplumpname);
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
@@ -3199,8 +3563,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_MapStart();
 
-	if (lastloadedmaplumpnum)
-		P_LoadMapFromFile();
+	if (!P_LoadMapFromFile())
+		return false;
 
 	// init gravity, tag lists,
 	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
@@ -3225,23 +3589,14 @@ boolean P_LoadLevel(boolean fromnetsave)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
+	// Lactozilla: Free extrasubsectors regardless of renderer.
+	// Maybe we're not in OpenGL anymore.
+	if (extrasubsectors)
+		free(extrasubsectors);
+	extrasubsectors = NULL;
+	// stuff like HWR_CreatePlanePolygons is called there
 	if (rendermode == render_opengl)
-	{
-		// Lactozilla (December 8, 2019)
-		// Level setup used to free EVERY mipmap from memory.
-		// Even mipmaps that aren't related to level textures.
-		// Presumably, the hardware render code used to store textures as level data.
-		// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
-		// Level textures are only reloaded after R_LoadTextures, which is
-		// when the texture list is loaded.
-#ifdef ALAM_LIGHTING
-		// BP: reset light between levels (we draw preview frame lights on current frame)
-		HWR_ResetLights();
-#endif
-		// Correct missing sidedefs & deep water trick
-		HWR_CorrectSWTricks();
-		HWR_CreatePlanePolygons((INT32)numnodes - 1);
-	}
+		HWR_SetupLevel();
 #endif
 
 	// oh god I hope this helps
@@ -3320,6 +3675,26 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	return true;
 }
+
+#ifdef HWRENDER
+void HWR_SetupLevel(void)
+{
+	// Lactozilla (December 8, 2019)
+	// Level setup used to free EVERY mipmap from memory.
+	// Even mipmaps that aren't related to level textures.
+	// Presumably, the hardware render code used to store textures as level data.
+	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
+	// Level textures are only reloaded after R_LoadTextures, which is
+	// when the texture list is loaded.
+#ifdef ALAM_LIGHTING
+	// BP: reset light between levels (we draw preview frame lights on current frame)
+	HWR_ResetLights();
+#endif
+	// Correct missing sidedefs & deep water trick
+	HWR_CorrectSWTricks();
+	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+}
+#endif
 
 //
 // P_RunSOC

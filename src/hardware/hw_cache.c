@@ -122,11 +122,11 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			if (mipmap->colormap)
 				texel = mipmap->colormap[texel];
 
-			// transparent pixel
-			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX)
+			// If the mipmap is chromakeyed, check if the texel's color
+			// is equivalent to the chroma key's color index.
+			alpha = 0xff;
+			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
 				alpha = 0x00;
-			else
-				alpha = 0xff;
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
@@ -654,7 +654,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL);
 		else
 #endif
 #ifdef WALLFLATS
@@ -698,7 +698,7 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 	// lump is a png so convert it
 	size_t len = W_LumpLengthPwad(grPatch->wadnum, grPatch->lumpnum);
 	if ((patch != NULL) && R_IsLumpPNG((const UINT8 *)patch, len))
-		patch = R_PNGToPatch((const UINT8 *)patch, len, NULL, true);
+		patch = R_PNGToPatch((const UINT8 *)patch, len, NULL);
 #endif
 
 	// don't do it twice (like a cache)
@@ -764,13 +764,12 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 //             CACHING HANDLING
 // =================================================
 
-static size_t gr_numtextures; // Texture count
+static size_t gr_numtextures = 0; // Texture count
 static GLTexture_t *gr_textures; // For all textures
 static GLTexture_t *gr_flats; // For all (texture) flats, as normal flats don't need to be cached
 
 void HWR_InitTextureCache(void)
 {
-	gr_numtextures = 0;
 	gr_textures = NULL;
 	gr_flats = NULL;
 }
@@ -958,6 +957,9 @@ static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 {
 	UINT8 *flat;
 
+	if (needpatchflush)
+		W_FlushCachedPatches();
+
 	// setup the texture info
 #ifdef GLIDE_API_COMPATIBILITY
 	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
@@ -982,6 +984,9 @@ void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 	GLMipmap_t *grmip;
 	if (flatlumpnum == LUMPERROR)
 		return;
+
+	if (needpatchflush)
+		W_FlushCachedPatches();
 
 	grmip = HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
 	if (!grmip->downloaded && !grmip->grInfo.data)
@@ -1061,6 +1066,9 @@ static void HWR_LoadMappedPatch(GLMipmap_t *grmip, GLPatch_t *gpatch)
 // -----------------+
 void HWR_GetPatch(GLPatch_t *gpatch)
 {
+	if (needpatchflush)
+		W_FlushCachedPatches();
+
 	// is it in hardware cache
 	if (!gpatch->mipmap->downloaded && !gpatch->mipmap->grInfo.data)
 	{
@@ -1090,6 +1098,9 @@ void HWR_GetPatch(GLPatch_t *gpatch)
 void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap)
 {
 	GLMipmap_t *grmip, *newmip;
+
+	if (needpatchflush)
+		W_FlushCachedPatches();
 
 	if (colormap == colormaps || colormap == NULL)
 	{
@@ -1216,6 +1227,9 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 {
 	GLPatch_t *grpatch;
 
+	if (needpatchflush)
+		W_FlushCachedPatches();
+
 	grpatch = HWR_GetCachedGLPatch(lumpnum);
 
 	if (!grpatch->mipmap->downloaded && !grpatch->mipmap->grInfo.data)
@@ -1310,23 +1324,6 @@ GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum)
 	return HWR_GetCachedGLPatchPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
 
-#ifdef ROTSPRITE
-GLPatch_t *HWR_GetCachedGLRotSprite(aatree_t *hwrcache, UINT16 rollangle, patch_t *rawpatch)
-{
-	GLPatch_t *grpatch;
-
-	if (!(grpatch = M_AATreeGet(hwrcache, rollangle)))
-	{
-		grpatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
-		grpatch->rawpatch = rawpatch;
-		grpatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
-		M_AATreeSet(hwrcache, rollangle, grpatch);
-	}
-
-	return grpatch;
-}
-#endif
-
 // Need to do this because they aren't powers of 2
 static void HWR_DrawFadeMaskInCache(GLMipmap_t *mipmap, INT32 pblockwidth, INT32 pblockheight,
 	lumpnum_t fademasklumpnum, UINT16 fmwidth, UINT16 fmheight)
@@ -1418,6 +1415,9 @@ static void HWR_CacheFadeMask(GLMipmap_t *grMipmap, lumpnum_t fademasklumpnum)
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum)
 {
 	GLMipmap_t *grmip;
+
+	if (needpatchflush)
+		W_FlushCachedPatches();
 
 	grmip = HWR_GetCachedGLPatch(fademasklumpnum)->mipmap;
 

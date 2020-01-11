@@ -1892,7 +1892,7 @@ void P_XYMovement(mobj_t *mo)
 #endif
 
 	// Pushables can break some blocks
-	if (CheckForBustableBlocks && mo->flags & MF_PUSHABLE)
+	if (CheckForBustableBlocks && ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse)))
 		P_PushableCheckBustables(mo);
 
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true)
@@ -3127,7 +3127,7 @@ nightsdone:
 						{
 							// DO THE MARIO!
 							if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
-								EV_CrumbleChain(NULL, rover); // node->m_sector
+								EV_CrumbleChain(node->m_sector, rover);
 							else // Question block!
 								EV_MarioBlock(rover, node->m_sector, mo);
 						}
@@ -3298,7 +3298,7 @@ boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 		*rover->topheight;
 
 	if (!player->powers[pw_carry] && !player->homing
-		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= 3*TICRATE) && player->mo->ceilingz-topheight >= player->mo->height)
+		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= DASHMODE_THRESHOLD) && player->mo->ceilingz-topheight >= player->mo->height)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
 		&& abs(player->mo->z - topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
@@ -7286,7 +7286,7 @@ static void P_FlameJetSceneryThink(mobj_t *mobj)
 	if (!(mobj->flags2 & MF2_FIRING))
 		return;
 
-	if ((leveltime & 3) == 0)
+	if ((leveltime & 3) != 0)
 		return;
 
 	// Wave the flames back and forth. Reactiontime determines which direction it's going.
@@ -7325,7 +7325,7 @@ static void P_VerticalFlameJetSceneryThink(mobj_t *mobj)
 	if (!(mobj->flags2 & MF2_FIRING))
 		return;
 
-	if ((leveltime & 3) == 0)
+	if ((leveltime & 3) != 0)
 		return;
 
 	// Wave the flames back and forth. Reactiontime determines which direction it's going.
@@ -7977,15 +7977,19 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		mobj->x = mobj->extravalue1 + P_ReturnThrustX(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
 		mobj->y = mobj->extravalue2 + P_ReturnThrustY(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
 		P_SetThingPosition(mobj);
-		if ((--mobj->fuse) < 6)
+
+		if (!mobj->fuse)
 		{
-			if (!mobj->fuse)
-			{
+#ifdef HAVE_BLUA
+			if (!LUAh_MobjFuse(mobj))
+#endif
 				P_RemoveMobj(mobj);
-				return;
-			}
-			mobj->frame = (mobj->frame & ~FF_TRANSMASK) | ((10 - (mobj->fuse*2)) << (FF_TRANSSHIFT));
+			return;
 		}
+		if (mobj->fuse < 0)
+			return;
+		if ((--mobj->fuse) < 6)
+			mobj->frame = (mobj->frame & ~FF_TRANSMASK) | ((10 - (mobj->fuse*2)) << (FF_TRANSSHIFT));
 	}
 	break;
 	case MT_VWREF:
@@ -11823,7 +11827,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		if (!cv_powerstones.value)
 			return false;
 
-		if (!(gametyperules & GTR_MATCHEMERALDS))
+		if (!(gametyperules & GTR_POWERSTONES))
 			return false;
 
 		runemeraldmanager = true;

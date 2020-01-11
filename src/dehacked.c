@@ -3430,6 +3430,8 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 					sizeof (extraemblems[num-1].description), va("Extra emblem %d: objective", num));
 			else if (fastcmp(word, "CONDITIONSET"))
 				extraemblems[num-1].conditionset = (UINT8)value;
+			else if (fastcmp(word, "SHOWCONDITIONSET"))
+				extraemblems[num-1].showconditionset = (UINT8)value;
 			else
 			{
 				strupr(word2);
@@ -3516,6 +3518,8 @@ static void readunlockable(MYFILE *f, INT32 num)
 					unlockables[num].height = (UINT16)i;
 				else if (fastcmp(word, "CONDITIONSET"))
 					unlockables[num].conditionset = (UINT8)i;
+				else if (fastcmp(word, "SHOWCONDITIONSET"))
+					unlockables[num].showconditionset = (UINT8)i;
 				else if (fastcmp(word, "NOCECHO"))
 					unlockables[num].nocecho = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
 				else if (fastcmp(word, "NOCHECKLIST"))
@@ -4804,11 +4808,13 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 		if (introchanged)
 		{
 			menuactive = false;
+			I_UpdateMouseGrab();
 			COM_BufAddText("playintro");
 		}
 		else if (titlechanged)
 		{
 			menuactive = false;
+			I_UpdateMouseGrab();
 			COM_BufAddText("exitgame"); // Command_ExitGame_f() but delayed
 		}
 	}
@@ -8667,6 +8673,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_NIGHTSCHIP", // NiGHTS Chip
 	"MT_FLINGNIGHTSCHIP", // Lost NiGHTS Chip
 	"MT_NIGHTSSTAR", // NiGHTS Star
+	"MT_FLINGNIGHTSSTAR", // Lost NiGHTS Star
 	"MT_NIGHTSSUPERLOOP",
 	"MT_NIGHTSDRILLREFILL",
 	"MT_NIGHTSHELPER",
@@ -8904,32 +8911,35 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"CAMPAIGN",
 	"RINGSLINGER",
 	"SPECTATORS",
-	"FRIENDLYFIRE",
 	"LIVES",
 	"TEAMS",
+	"FIRSTPERSON",
+	"POWERSTONES",
+	"TEAMFLAGS",
+	"FRIENDLY",
+	"SPECIALSTAGES",
+	"EMERALDTOKENS",
+	"EMERALDHUNT",
 	"RACE",
 	"TAG",
 	"POINTLIMIT",
 	"TIMELIMIT",
-	"HIDETIME",
+	"OVERTIME",
+	"HURTMESSAGES",
+	"FRIENDLYFIRE",
+	"STARTCOUNTDOWN",
 	"HIDEFROZEN",
 	"BLINDFOLDED",
-	"FIRSTPERSON",
-	"MATCHEMERALDS",
-	"TEAMFLAGS",
+	"RESPAWNDELAY",
 	"PITYSHIELD",
 	"DEATHPENALTY",
 	"NOSPECTATORSPAWN",
 	"DEATHMATCHSTARTS",
-	"SPECIALSTAGES",
-	"EMERALDTOKENS",
-	"EMERALDHUNT",
+	"SPAWNINVUL",
 	"SPAWNENEMIES",
 	"ALLOWEXIT",
 	"NOTITLECARD",
-	"OVERTIME",
-	"HURTMESSAGES",
-	"SPAWNINVUL",
+	"CUTSCENES",
 	NULL
 };
 
@@ -9456,6 +9466,10 @@ struct {
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
 	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
 
+	// Dashmode constants
+	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
+	{"DASHMODE_MAX",DASHMODE_MAX},
+
 	// Character abilities!
 	// Primary
 	{"CA_NONE",CA_NONE}, // now slot 0!
@@ -9732,6 +9746,11 @@ struct {
 	{"BT_CUSTOM2",BT_CUSTOM2}, // Lua customizable
 	{"BT_CUSTOM3",BT_CUSTOM3}, // Lua customizable
 
+	// Lua command registration flags
+	{"COM_ADMIN",COM_ADMIN},
+	{"COM_SPLITSCREEN",COM_SPLITSCREEN},
+	{"COM_LOCAL",COM_LOCAL},
+
 	// cvflags_t
 	{"CV_SAVE",CV_SAVE},
 	{"CV_CALL",CV_CALL},
@@ -9746,6 +9765,7 @@ struct {
 	{"CV_HIDEN",CV_HIDEN},
 	{"CV_HIDDEN",CV_HIDEN},
 	{"CV_CHEAT",CV_CHEAT},
+	{"CV_NOLUA",CV_NOLUA},
 
 	// v_video flags
 	{"V_NOSCALEPATCH",V_NOSCALEPATCH},

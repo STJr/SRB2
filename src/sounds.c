@@ -187,6 +187,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"shield", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pity Shield"}, // generic GET!
   {"wirlsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Whirlwind Shield"}, // Whirlwind GET!
   {"forcsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Force Shield"}, // Force GET!
+  {"frcssg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Weak Force Shield"}, // Force GET...? (consider making a custom shield with this instead of a single-hit force shield!)
   {"elemsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Elemental Shield"}, // Elemental GET!
   {"armasg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Armageddon Shield"}, // Armaggeddon GET!
   {"attrsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Attraction Shield"}, // Attract GET!
@@ -220,6 +221,9 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"sprong", false, 112,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power spring"},
   {"lvfal1",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rumble"},
   {"pscree", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "SCREE!"},
+  {"iceb",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ice crack"},
+  {"shattr",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Shattering"},
+  {"antiri",  true, 255,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Depletion"},
 
   // Menu, interface
   {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score"},
@@ -233,6 +237,9 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"wepchg",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Weapon change"}, // Weapon switch is identical to menu for now
   {"wtrdng",  true, 212,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aquaphobia"}, // make sure you can hear the DING DING! Tails 03-08-2000
   {"zelda",  false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Discovery"},
+  {"adderr",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Error"},
+  {"notadd",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Reject"},
+  {"addfil",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Accept"},
 
   // NiGHTS
   {"ideya",  false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Success"},
@@ -427,24 +434,9 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s25e",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s25f",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s260",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s261",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s262",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s263",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s264",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s265",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s266",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s267",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s268",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s269",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s26a",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s26b",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s26c",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s26d",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s26e",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s26f",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s270",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
 
   // S3&K sounds
+  {"s3k2b",   true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Emerald"}, // Got Emerald!
   {"s3k33",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Sparkle"}, // stereo in original game, identical to latter
   {"s3k34",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Sparkle"}, // mono in original game, identical to previous
   {"s3k35",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hurt"},
@@ -566,6 +558,21 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3ka9",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aquaphobia"},
   {"s3kaa",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bumper"},
   {"s3kab",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kab1", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kab2", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kab3", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kab4", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kab5", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kab6", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kab7", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kab8", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kab9", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kaba", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kabb", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kabc", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kabd", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kabe", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
+  {"s3kabf", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash"},
   {"s3kac",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Continue"},
   {"s3kad",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "GO!"},
   {"s3kae",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pinball flipper"},
@@ -604,7 +611,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kc5l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Revving up"}, // ditto
   {"s3kc6s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Orbiting"},
   {"s3kc6l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Orbiting"}, // ditto
-  {"s3kc7",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aiming"},
+  {"s3kc7s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aiming"},
+  {"s3kc7l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aiming"}, // ditto
   {"s3kc8s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Sliding"},
   {"s3kc8l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Sliding"}, // ditto
   {"s3kc9s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Swinging"},

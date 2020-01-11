@@ -27,6 +27,9 @@ extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 //
 #define GETSECSPECIAL(i,j) ((i >> ((j-1)*4))&15)
 
+// This must be updated whenever we up the max flat size - quicker to assume rather than figuring out the sqrt of the specific flat's filesize.
+#define MAXFLATSIZE (2048<<FRACBITS)
+
 // at game start
 void P_InitPicAnims(void);
 

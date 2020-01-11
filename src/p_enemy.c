@@ -14225,7 +14225,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	fixed_t c = FINECOSINE(fa)*locvar2;
 	fixed_t s = FINESINE(fa)*locvar2;
 	mobj_t *door;
-	mobjflag2_t ambush = (actor->flags & MF2_AMBUSH);
+	mobjflag2_t ambush = (actor->flags2 & MF2_AMBUSH);
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SaloonDoorSpawn", actor))
@@ -14603,12 +14603,9 @@ void A_RolloutRock(mobj_t *actor)
 	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
 		actor->flags |= MF_PUSHABLE;
 
-	if (!(actor->flags & MF_PUSHABLE)) // if being ridden, don't disappear
-		actor->fuse = 0;
-	else if (!actor->fuse && actor->movecount == 1) // otherwise if rock has moved, set its fuse
+	if (!(actor->flags & MF_PUSHABLE) || (actor->movecount != 1)) // if being ridden or haven't moved, don't disappear
 		actor->fuse = actor->info->painchance;
-
-	if (actor->fuse && actor->fuse < 2*TICRATE)
+	else if (actor->fuse < 2*TICRATE)
 		actor->flags2 ^= MF2_DONTDRAW;
 
 }

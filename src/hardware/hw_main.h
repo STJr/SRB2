@@ -29,6 +29,7 @@
 
 // Startup & Shutdown the hardware mode renderer
 void HWR_Startup(void);
+void HWR_Switch(void);
 void HWR_Shutdown(void);
 
 void HWR_drawAMline(const fline_t *fl, INT32 color);
@@ -98,6 +99,7 @@ extern consvar_t cv_grfovchange;
 extern consvar_t cv_grsolvetjoin;
 extern consvar_t cv_grspritebillboarding;
 extern consvar_t cv_grskydome;
+extern consvar_t cv_grfakecontrast;
 
 extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
 

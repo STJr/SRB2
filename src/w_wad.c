@@ -55,6 +55,7 @@
 #include "dehacked.h"
 #include "d_clisrv.h"
 #include "r_defs.h"
+#include "r_data.h"
 #include "i_system.h"
 #include "md5.h"
 #include "lua_script.h"
@@ -1375,7 +1376,6 @@ void *W_CacheLumpNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 void *W_CacheLumpNum(lumpnum_t lumpnum, INT32 tag)
 {
-
 	return W_CacheLumpNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
 }
 
@@ -1465,6 +1465,21 @@ boolean W_IsPatchCached(lumpnum_t lumpnum, void *ptr)
 	return W_IsPatchCachedPWAD(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
 }
 
+void W_FlushCachedPatches(void)
+{
+	if (needpatchflush)
+	{
+		Z_FreeTag(PU_CACHE);
+		Z_FreeTag(PU_PATCH);
+		Z_FreeTag(PU_HUDGFX);
+		Z_FreeTag(PU_HWRPATCHINFO);
+		Z_FreeTag(PU_HWRMODELTEXTURE);
+		Z_FreeTag(PU_HWRCACHE);
+		Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRPATCHINFO_UNLOCKED);
+	}
+	needpatchflush = false;
+}
+
 // ==========================================================================
 // W_CacheLumpName
 // ==========================================================================
@@ -1494,6 +1509,9 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	GLPatch_t *grPatch;
 #endif
 
+	if (needpatchflush)
+		W_FlushCachedPatches();
+
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
@@ -1522,7 +1540,7 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 			if (R_IsLumpPNG((UINT8 *)lumpdata, len))
 			{
 				size_t newlen;
-				srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen, true);
+				srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
 				ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
 				M_Memcpy(ptr, srcdata, newlen);
 				Z_Free(srcdata);
