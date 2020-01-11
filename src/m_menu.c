@@ -7234,7 +7234,7 @@ static void M_EmblemHints(INT32 choice)
 static void M_DrawEmblemHints(void)
 {
 	INT32 i, j = 0, x, y;
-	UINT32 collected = 0, local = 0;
+	UINT32 collected = 0, local = 0, left_hints = NUMHINTS;
 	emblem_t *emblem;
 	const char *hint;
 
@@ -7249,6 +7249,11 @@ static void M_DrawEmblemHints(void)
 
 	x = (local > NUMHINTS ? 4 : 12);
 	y = 8;
+
+	// If there are more than 1 page's but less than 2 pages' worth of emblems,
+	// put half (rounded up) of the hints on the left, and half (rounded down) on the right
+	if (local > NUMHINTS && local < (NUMHINTS*2)-1)
+		left_hints = (local + 1) / 2;
 
 	if (!local)
 		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
@@ -7282,7 +7287,7 @@ static void M_DrawEmblemHints(void)
 
 		y += 28;
 
-		if (++j == NUMHINTS)
+		if (++j == left_hints)
 		{
 			x = 4+(BASEVIDWIDTH/2);
 			y = 8;
