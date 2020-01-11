@@ -641,10 +641,10 @@ void R_DrawMaskedColumn(column_t *column)
 			dc_yl = mceilingclip[dc_x]+1;
 		if (dc_yl < 0)
 			dc_yl = 0;
-		if (dc_yh >= vid.height)
+		if (dc_yh >= vid.height) // dc_yl must be < vid.height, so reduces number of checks in tight loop
 			dc_yh = vid.height - 1;
 
-		if (dc_yl <= dc_yh && dc_yl < vid.height && dc_yh > 0)
+		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
 			dc_source = (UINT8 *)column + 3;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
@@ -655,15 +655,10 @@ void R_DrawMaskedColumn(column_t *column)
 			// quick fix... something more proper should be done!!!
 			if (ylookup[dc_yl])
 				colfunc();
-			else if (colfunc == colfuncs[COLDRAWFUNC_BASE])
-			{
-				static INT32 first = 1;
-				if (first)
-				{
-					CONS_Debug(DBG_RENDER, "WARNING: avoiding a crash in %s %d\n", __FILE__, __LINE__);
-					first = 0;
-				}
-			}
+#ifdef PARANOIA
+			else
+				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
+#endif
 		}
 		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}
@@ -671,7 +666,9 @@ void R_DrawMaskedColumn(column_t *column)
 	dc_texturemid = basetexturemid;
 }
 
-void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
+INT32 lengthcol; // column->length : for flipped column function pointers and multi-patch on 2sided wall = texture->height
+
+void R_DrawFlippedMaskedColumn(column_t *column)
 {
 	INT32 topscreen;
 	INT32 bottomscreen;
@@ -687,7 +684,7 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 		if (topdelta <= prevdelta)
 			topdelta += prevdelta;
 		prevdelta = topdelta;
-		topdelta = texheight-column->length-topdelta;
+		topdelta = lengthcol-column->length-topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
 		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*column->length
 		                                      : sprbotscreen + spryscale*column->length;
@@ -709,10 +706,10 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 			dc_yl = mceilingclip[dc_x]+1;
 		if (dc_yl < 0)
 			dc_yl = 0;
-		if (dc_yh >= vid.height)
+		if (dc_yh >= vid.height) // dc_yl must be < vid.height, so reduces number of checks in tight loop
 			dc_yh = vid.height - 1;
 
-		if (dc_yl <= dc_yh && dc_yl < vid.height && dc_yh > 0)
+		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
 			dc_source = ZZ_Alloc(column->length);
 			for (s = (UINT8 *)column+2+column->length, d = dc_source; d < dc_source+column->length; --s)
@@ -722,15 +719,10 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 			// Still drawn by R_DrawColumn.
 			if (ylookup[dc_yl])
 				colfunc();
-			else if (colfunc == colfuncs[COLDRAWFUNC_BASE])
-			{
-				static INT32 first = 1;
-				if (first)
-				{
-					CONS_Debug(DBG_RENDER, "WARNING: avoiding a crash in %s %d\n", __FILE__, __LINE__);
-					first = 0;
-				}
-			}
+#ifdef PARANOIA
+			else
+				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
+#endif
 			Z_Free(dc_source);
 		}
 		column = (column_t *)((UINT8 *)column + column->length + 4);
@@ -746,7 +738,9 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
+	void (*localcolfunc)(column_t *);
 	INT32 texturecolumn;
+	INT32 pwidth;
 	fixed_t frac;
 	patch_t *patch = vis->patch;
 	fixed_t this_scale = vis->mobj->scale;
@@ -895,50 +889,52 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
 
+	localcolfunc = (vis->cut & SC_VFLIP) ? R_DrawFlippedMaskedColumn : R_DrawMaskedColumn;
+	lengthcol = patch->height;
+
 	// Split drawing loops for paper and non-paper to reduce conditional checks per sprite
 	if (vis->scalestep)
 	{
-		// Papersprite drawing loop
+		pwidth = SHORT(patch->width);
 
+		// Papersprite drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += vis->scalestep)
 		{
 			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
 			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / this_scale;
 
-			if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
+			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				continue;
 
 			if (vis->xiscale < 0) // Flipped sprite
-				texturecolumn = SHORT(patch->width) - 1 - texturecolumn;
+				texturecolumn = pwidth - 1 - texturecolumn;
 
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
 			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
 
-			if (vis->cut & SC_VFLIP)
-				R_DrawFlippedMaskedColumn(column, patch->height);
-			else
-				R_DrawMaskedColumn(column);
+			localcolfunc (column);
 		}
 	}
 	else
 	{
+#ifdef RANGECHECK
+		pwidth = SHORT(patch->width);
+#endif
+
 		// Non-paper drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
 #ifdef RANGECHECK
 			texturecolumn = frac>>FRACBITS;
-			if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
+			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
 			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
 #else
 			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
 #endif
-			if (vis->cut & SC_VFLIP)
-				R_DrawFlippedMaskedColumn(column, patch->height);
-			else
-				R_DrawMaskedColumn(column);
+			localcolfunc (column);
 		}
 	}
 
