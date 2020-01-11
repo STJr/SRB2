@@ -3424,31 +3424,6 @@ boolean P_CheckMoveBlocked(line_t *li, mobj_t *mo)
 	return true;
 }
 
-	if (!(mo->flags & MF_MISSILE))
-	{
-		if (li->flags & ML_IMPASSIBLE)
-			return false;
-
-		if ((mo->flags & (MF_ENEMY|MF_BOSS)) && li->flags & ML_BLOCKMONSTERS)
-			return false;
-	}
-
-	// set openrange, opentop, openbottom
-	P_LineOpening(li, mo);
-
-	if (openrange < mo->height)
-		return false; // doesn't fit
-
-	if (opentop - mo->z < mo->height)
-		return false; // mobj is too high
-
-	if (openbottom - mo->z > FixedMul(MAXSTEPMOVE, mo->scale))
-		return false; // too big a step up
-
-	// this line doesn't block movement
-	return true;
-}
-
 //
 // PTR_SlideTraverse
 //
