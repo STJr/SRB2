@@ -6353,7 +6353,7 @@ static void P_RunLevelLoadExecutors(void)
 }
 
 /** Before things are loaded, initialises certain stuff in case they're needed
-  * by P_ResetDynamicSlopes or P_LoadThings. This was split off from
+  * by P_SpawnSlopes or P_LoadThings. This was split off from
   * P_SpawnSpecials, in case you couldn't tell.
   *
   * \sa P_SpawnSpecials, P_InitTagLists
