@@ -1470,6 +1470,21 @@ boolean W_IsPatchCached(lumpnum_t lumpnum, void *ptr)
 	return W_IsPatchCachedPWAD(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
 }
 
+void W_FlushCachedPatches(void)
+{
+	if (needpatchflush)
+	{
+		Z_FreeTag(PU_CACHE);
+		Z_FreeTag(PU_PATCH);
+		Z_FreeTag(PU_HUDGFX);
+		Z_FreeTag(PU_HWRPATCHINFO);
+		Z_FreeTag(PU_HWRMODELTEXTURE);
+		Z_FreeTag(PU_HWRCACHE);
+		Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRPATCHINFO_UNLOCKED);
+	}
+	needpatchflush = false;
+}
+
 // ==========================================================================
 // W_CacheLumpName
 // ==========================================================================
@@ -1493,22 +1508,6 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 // Cache a patch into heap memory, convert the patch format as necessary
 //
 
-void W_FlushCachedPatches(void)
-{
-	if (needpatchflush)
-	{
-		Z_FreeTag(PU_CACHE);
-		Z_FreeTag(PU_PATCH);
-		Z_FreeTag(PU_HUDGFX);
-		Z_FreeTag(PU_HWRPATCHINFO);
-		Z_FreeTag(PU_HWRMODELTEXTURE);
-		Z_FreeTag(PU_HWRCACHE);
-		Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRPATCHINFO_UNLOCKED);
-	}
-	needpatchflush = false;
-}
-
-// Software-only compile cache the data without conversion
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
 #ifdef HWRENDER
@@ -1546,7 +1545,7 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 			if (R_IsLumpPNG((UINT8 *)lumpdata, len))
 			{
 				size_t newlen;
-				srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen, true);
+				srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
 				ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
 				M_Memcpy(ptr, srcdata, newlen);
 				Z_Free(srcdata);

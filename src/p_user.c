@@ -42,6 +42,8 @@
 #include "b_bot.h"
 // Objectplace
 #include "m_cheat.h"
+// Thok camera snap (ctrl-f "chalupa")
+#include "g_input.h"
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -347,11 +349,11 @@ void P_GiveEmerald(boolean spawnObj)
 				continue;
 			P_SetTarget(&emmo->target, players[i].mo);
 			P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
-			
+
 			// Make sure we're not being carried before our tracer is changed
 			if (players[i].powers[pw_carry] != CR_NIGHTSMODE)
 				players[i].powers[pw_carry] = CR_NONE;
-			
+
 			P_SetTarget(&players[i].mo->tracer, emmo);
 
 			if (pnum == 255)
@@ -1063,7 +1065,7 @@ void P_ResetPlayer(player_t *player)
 	player->onconveyor = 0;
 	player->skidtime = 0;
 	if (player-players == consoleplayer && botingame)
-		CV_SetValue(&cv_analog2, true);
+		CV_SetValue(&cv_analog[1], true);
 }
 
 // P_PlayerCanDamage
@@ -3578,7 +3580,7 @@ static void P_DoClimbing(player_t *player)
 	}
 
 #define CLIMBCONEMAX FixedAngle(90*FRACUNIT)
-	if (!demoplayback || P_AnalogMove(player))
+	if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 	{
 		if (player == &players[consoleplayer])
 		{
@@ -4393,7 +4395,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 		player->drawangle = player->mo->angle = player->mo->angle - ANGLE_180; // Turn around from the wall you were climbing.
 
-		if (!demoplayback || P_AnalogMove(player))
+		if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 		{
 			if (player == &players[consoleplayer])
 				localangle = player->mo->angle; // Adjust the local control angle.
@@ -4437,7 +4439,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			player->powers[pw_carry] = CR_NONE;
 			P_SetTarget(&player->mo->tracer, NULL);
 			if (player-players == consoleplayer && botingame)
-				CV_SetValue(&cv_analog2, true);
+				CV_SetValue(&cv_analog[1], true);
 		}
 		else if (player->powers[pw_carry] == CR_GENERIC)
 		{
@@ -4641,7 +4643,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 					if (player->dashspeed > player->maxdash)
 						player->dashspeed = player->maxdash;
-					
+
 					if (player->dashspeed < player->maxdash && player->mindash != player->maxdash)
 					{
 #define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
@@ -4724,7 +4726,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 							{
 								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 								bullet = P_SpawnPointMissile(player->mo, lockon->x, lockon->y, zpos(lockon), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
-								if (!demoplayback || P_AnalogMove(player))
+								if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 								{
 									if (player == &players[consoleplayer])
 										localangle = player->mo->angle;
@@ -5353,6 +5355,16 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 						player->pflags |= PF_THOKKED;
+
+						// Change localangle to match for simple controls? (P.S. chalupa)
+						// disabled because it seemed to disorient people and Z-targeting exists now
+						/*if (!demoplayback)
+						{
+							if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(PLAYER1INPUTDOWN(gc_turnleft) || PLAYER1INPUTDOWN(gc_turnright)))
+								localangle = player->mo->angle;
+							else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(PLAYER2INPUTDOWN(gc_turnleft) || PLAYER2INPUTDOWN(gc_turnright)))
+								localangle2 = player->mo->angle;
+						}*/
 					}
 					break;
 
@@ -5607,13 +5619,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	}
 }
 
-#if 0
-boolean P_AnalogMove(player_t *player)
-{
-	return player->pflags & PF_ANALOGMODE;
-}
-#endif
-
 //
 // P_GetPlayerControlDirection
 //
@@ -5652,7 +5657,7 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 		origtempangle = tempangle = 0; // relative to the axis rather than the player!
 		controlplayerdirection = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
 	}
-	else if (P_AnalogMove(player) && thiscam->chase)
+	else if ((P_ControlStyle(player) & CS_LMAOGALOG) && thiscam->chase)
 	{
 		if (player->awayviewtics)
 			origtempangle = tempangle = player->awayviewmobj->angle;
@@ -5878,7 +5883,7 @@ static void P_3dMovement(player_t *player)
 	INT32 mforward = 0, mbackward = 0;
 	angle_t dangle; // replaces old quadrants bits
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
-	boolean analogmove = false;
+	controlstyle_e controlstyle;
 	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && (player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
 	fixed_t oldMagnitude, newMagnitude;
 #ifdef ESLOPE
@@ -5891,7 +5896,7 @@ static void P_3dMovement(player_t *player)
 	// Get the old momentum; this will be needed at the end of the function! -SH
 	oldMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
 
-	analogmove = P_AnalogMove(player);
+	controlstyle = P_ControlStyle(player);
 
 	cmd = &player->cmd;
 
@@ -5918,7 +5923,7 @@ static void P_3dMovement(player_t *player)
 		}
 	}
 
-	if (analogmove)
+	if (controlstyle & CS_LMAOGALOG)
 	{
 		movepushangle = (cmd->angleturn<<16 /* not FRACBITS */);
 	}
@@ -6064,7 +6069,7 @@ static void P_3dMovement(player_t *player)
 				P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 15*FRACUNIT>>1), false);
 		}
 	}
-	else if (!analogmove
+	else if (!(controlstyle == CS_LMAOGALOG)
 		&& cmd->forwardmove != 0 && !(player->pflags & PF_GLIDING || player->exiting
 		|| (P_PlayerInPain(player) && !onground)))
 	{
@@ -6103,7 +6108,7 @@ static void P_3dMovement(player_t *player)
 			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 15*FRACUNIT>>1));
 	}
 	// Analog movement control
-	else if (analogmove)
+	else if (controlstyle == CS_LMAOGALOG)
 	{
 		if (!(player->pflags & PF_GLIDING || player->exiting || P_PlayerInPain(player)))
 		{
@@ -8114,8 +8119,33 @@ static void P_MovePlayer(player_t *player)
 		P_2dMovement(player);
 	else
 	{
-		if (!player->climbing && (!P_AnalogMove(player)))
-			player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
+		if (!player->climbing)
+		{
+			switch (P_ControlStyle(player))
+			{
+			case CS_LEGACY:
+			case CS_STANDARD:
+				player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
+				break;
+
+			case CS_LMAOGALOG:
+				break; // handled elsewhere
+
+			case CS_SIMPLE:
+				if (cmd->forwardmove || cmd->sidemove)
+				{
+					angle_t controlangle = R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
+					player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */) + controlangle;
+				}
+				else
+				{
+					angle_t drawangleoffset = (player->powers[pw_carry] == CR_ROLLOUT) ? ANGLE_180 : 0;
+					player->mo->angle = player->drawangle + drawangleoffset;
+				}
+
+				break;
+			}
+		}
 
 		ticruned++;
 		if ((cmd->angleturn & TICCMD_RECEIVED) == 0)
@@ -8241,7 +8271,7 @@ static void P_MovePlayer(player_t *player)
 	if (player->pflags & PF_GLIDING)
 	{
 		mobj_t *mo = player->mo; // seriously why isn't this at the top of the function hngngngng
-		fixed_t leeway = !P_AnalogMove(player) ? FixedAngle(cmd->sidemove*(FRACUNIT)) : 0;
+		fixed_t leeway = (P_ControlStyle(player) != CS_LMAOGALOG) ? FixedAngle(cmd->sidemove*(FRACUNIT)) : 0;
 		fixed_t glidespeed = player->actionspd;
 		fixed_t momx = mo->momx - player->cmomx, momy = mo->momy - player->cmomy;
 		angle_t angle, moveangle = R_PointToAngle2(0, 0, momx, momy);
@@ -8513,7 +8543,7 @@ static void P_MovePlayer(player_t *player)
 	//////////////////
 
 	// This really looks like it should be moved to P_3dMovement. -Red
-	if (P_AnalogMove(player)
+	if (P_ControlStyle(player) == CS_LMAOGALOG
 		&& (cmd->forwardmove != 0 || cmd->sidemove != 0) && !player->climbing && !twodlevel && !(player->mo->flags2 & MF2_TWOD))
 	{
 		// If travelling slow enough, face the way the controls
@@ -9118,6 +9148,132 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 }
 
 //
+// P_LookForFocusTarget
+// Looks for a target for a player to focus on, for Z-targeting etc.
+// exclude would be the current focus target, to ignore.
+// direction, if set, requires the target to be to the left (1) or right (-1) of the angle
+// mobjflags can be used to limit the flags of objects that can be focused
+//
+mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction, UINT8 lockonflags)
+{
+	mobj_t *mo;
+	thinker_t *think;
+	mobj_t *closestmo = NULL;
+	const fixed_t maxdist = 2560*player->mo->scale;
+	const angle_t span = ANGLE_45;
+	fixed_t dist, closestdist = 0;
+	angle_t dangle, closestdangle = 0;
+
+	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
+	{
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
+		mo = (mobj_t *)think;
+
+		if (mo->flags & MF_NOCLIPTHING)
+			continue;
+
+		if (mo == player->mo || mo == exclude)
+			continue;
+
+		if (mo->health <= 0) // dead
+			continue;
+
+		switch (mo->type)
+		{
+		case MT_TNTBARREL:
+			if (lockonflags & LOCK_INTERESTS)
+				break;
+			/*fallthru*/
+		case MT_PLAYER: // Don't chase other players!
+		case MT_DETON:
+			continue; // Don't be STUPID, Sonic!
+
+		case MT_FAKEMOBILE:
+			if (!(lockonflags & LOCK_BOSS))
+				continue;
+			break;
+
+		case MT_EGGSHIELD:
+			if (!(lockonflags & LOCK_ENEMY))
+				continue;
+			break;
+
+		case MT_EGGSTATUE:
+			if (tutorialmode)
+				break; // Always focus egg statue in the tutorial
+			/*fallthru*/
+		default:
+
+			if ((lockonflags & LOCK_BOSS) && ((mo->flags & (MF_BOSS|MF_SHOOTABLE)) == (MF_BOSS|MF_SHOOTABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
+			{
+				if (mo->flags2 & MF2_FRET)
+					continue;
+				break;
+			}
+
+			if ((lockonflags & LOCK_ENEMY) && (!((mo->flags & (MF_ENEMY|MF_SHOOTABLE)) == (MF_ENEMY|MF_SHOOTABLE)) != !(mo->flags2 & MF2_INVERTAIMABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
+				break;
+
+			if ((lockonflags & LOCK_INTERESTS) && (mo->flags & (MF_PUSHABLE|MF_MONITOR))) // allows if it has the flags desired XOR it has the invert aimable flag
+				break;
+
+			continue; // not a valid object
+		}
+
+		{
+			fixed_t zdist = (player->mo->z + player->mo->height/2) - (mo->z + mo->height/2);
+			dist = P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y);
+
+			if (abs(zdist) > dist)
+				continue; // Don't home outside of desired angle!
+
+			dist = P_AproxDistance(dist, zdist);
+			if (dist > maxdist)
+				continue; // out of range
+		}
+
+		if ((twodlevel || player->mo->flags2 & MF2_TWOD)
+		&& abs(player->mo->y-mo->y) > player->mo->radius)
+			continue; // not in your 2d plane
+
+		dangle = R_PointToAngle2(player->mo->x, player->mo->y, mo->x, mo->y) - (
+			!exclude ? player->mo->angle : R_PointToAngle2(player->mo->x, player->mo->y, exclude->x, exclude->y)
+		);
+
+		if (direction)
+		{
+			if (direction == 1 && dangle > ANGLE_180)
+				continue; // To the right of the player
+			if (direction == -1 && dangle < ANGLE_180)
+				continue; // To the left of the player
+		}
+
+		if (dangle > ANGLE_180)
+			dangle = InvAngle(dangle);
+
+		if (dangle > span)
+			continue; // behind back
+
+		// Inflate dist by angle difference to bias toward objects at a closer angle
+		dist = FixedDiv(dist, FINECOSINE(dangle>>ANGLETOFINESHIFT)*3);
+
+		if (closestmo && (exclude ? (dangle > closestdangle) : (dist > closestdist)))
+			continue;
+
+		if (!P_CheckSight(player->mo, mo))
+			continue; // out of sight
+
+		closestmo = mo;
+		closestdist = dist;
+		closestdangle = dangle;
+	}
+
+	return closestmo;
+}
+
+//
 // P_LookForEnemies
 // Looks for something you can hit - Used for homing attack
 // If nonenemies is true, includes monitors and springs!
@@ -9232,7 +9388,7 @@ boolean P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	if (source->player)
 	{
 		source->player->drawangle = source->angle;
-		if (!demoplayback || P_AnalogMove(source->player))
+		if (!demoplayback || P_ControlStyle(source->player) == CS_LMAOGALOG)
 		{
 			if (source->player == &players[consoleplayer])
 				localangle = source->angle;
@@ -9584,12 +9740,12 @@ static void CV_CamRotate2_OnChange(void)
 }
 
 static CV_PossibleValue_t CV_CamSpeed[] = {{0, "MIN"}, {1*FRACUNIT, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t rotation_cons_t[] = {{1, "MIN"}, {45, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t rotation_cons_t[] = {{1, "MIN"}, {25, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t CV_CamRotate[] = {{-720, "MIN"}, {720, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t multiplier_cons_t[] = {{0, "MIN"}, {3*FRACUNIT, "MAX"}, {0, NULL}};
 
-consvar_t cv_cam_dist = {"cam_dist", "160", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_height = {"cam_height", "25", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_dist = {"cam_curdist", "160", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_height = {"cam_curheight", "25", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_still = {"cam_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_speed = {"cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotate = {"cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -9597,8 +9753,8 @@ consvar_t cv_cam_rotspeed = {"cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NUL
 consvar_t cv_cam_turnmultiplier = {"cam_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_orbit = {"cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_adjust = {"cam_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_dist = {"cam2_dist", "160", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_height = {"cam2_height", "25", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam2_dist = {"cam2_curdist", "160", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam2_height = {"cam2_curheight", "25", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_still = {"cam2_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_speed = {"cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotate = {"cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -9606,6 +9762,42 @@ consvar_t cv_cam2_rotspeed = {"cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, N
 consvar_t cv_cam2_turnmultiplier = {"cam2_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_orbit = {"cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_adjust = {"cam2_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// [standard vs simple][p1 or p2]
+consvar_t cv_cam_savedist[2][2] = {
+	{ // standard
+		{"cam_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
+		{"cam2_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+	},
+	{ // simple
+		{"cam_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
+		{"cam2_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+
+	}
+};
+consvar_t cv_cam_saveheight[2][2] = {
+	{ // standard
+		{"cam_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
+		{"cam2_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+	},
+	{ // simple
+		{"cam_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
+		{"cam2_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+
+	}
+};
+
+void CV_UpdateCamDist(void)
+{
+	CV_Set(&cv_cam_dist, va("%f", FIXED_TO_FLOAT(cv_cam_savedist[cv_useranalog[0].value][0].value)));
+	CV_Set(&cv_cam_height, va("%f", FIXED_TO_FLOAT(cv_cam_saveheight[cv_useranalog[0].value][0].value)));
+}
+
+void CV_UpdateCam2Dist(void)
+{
+	CV_Set(&cv_cam2_dist, va("%f", FIXED_TO_FLOAT(cv_cam_savedist[cv_useranalog[1].value][1].value)));
+	CV_Set(&cv_cam2_height, va("%f", FIXED_TO_FLOAT(cv_cam_saveheight[cv_useranalog[1].value][1].value)));
+}
 
 fixed_t t_cam_dist = -42;
 fixed_t t_cam_height = -42;
@@ -9640,8 +9832,14 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	thiscam->y = y;
 	thiscam->z = z;
 
-	if (!(thiscam == &camera && (cv_cam_still.value || cv_analog.value))
-	&& !(thiscam == &camera2 && (cv_cam2_still.value || cv_analog2.value)))
+	if ((thiscam == &camera && G_ControlStyle(1) == CS_SIMPLE)
+	|| (thiscam == &camera2 && G_ControlStyle(2) == CS_SIMPLE))
+	{
+		thiscam->angle = (thiscam == &camera) ? localangle : localangle2;
+		thiscam->aiming = (thiscam == &camera) ? localaiming : localaiming2;
+	}
+	else if (!(thiscam == &camera && (cv_cam_still.value || cv_analog[0].value))
+	&& !(thiscam == &camera2 && (cv_cam2_still.value || cv_analog[1].value)))
 	{
 		thiscam->angle = player->mo->angle;
 		thiscam->aiming = 0;
@@ -9665,6 +9863,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	mobj_t *mo, *sign = NULL;
 	subsector_t *newsubsec;
 	fixed_t f1, f2;
+
+	static fixed_t camsideshift[2] = {0, 0};
+	fixed_t shiftx = 0, shifty = 0;
 
 	// We probably shouldn't move the camera if there is no player or player mobj somehow
 	if (!player || !player->mo)
@@ -9756,7 +9957,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		focusangle = mo->angle;
+		focusangle = player->cmd.angleturn << 16;
 		focusaiming = player->aiming;
 	}
 
@@ -9796,7 +9997,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camheight = FixedMul(camheight, player->camerascale);
 
 #ifdef REDSANALOG
-	if (P_AnalogMove(player) && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
+	if (P_ControlStyle(player) == CS_LMAOGALOG && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
 		camstill = true;
 
 		if (camspeed < 4*FRACUNIT/5)
@@ -9826,7 +10027,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
 		}
 	}
-	else if (P_AnalogMove(player) && !sign) // Analog
+	else if (P_ControlStyle(player) == CS_LMAOGALOG && !sign) // Analog
 		angle = R_PointToAngle2(thiscam->x, thiscam->y, mo->x, mo->y);
 	else if (demoplayback)
 	{
@@ -9843,14 +10044,14 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	else
 		angle = focusangle + FixedAngle(camrotate*FRACUNIT);
 
-	if (!resetcalled && (cv_analog.value || demoplayback) && ((thiscam == &camera && t_cam_rotate != -42) || (thiscam == &camera2
+	if (!resetcalled && (cv_analog[0].value || demoplayback) && ((thiscam == &camera && t_cam_rotate != -42) || (thiscam == &camera2
 		&& t_cam2_rotate != -42)))
 	{
 		angle = FixedAngle(camrotate*FRACUNIT);
 		thiscam->angle = angle;
 	}
 
-	if ((((thiscam == &camera) && cv_analog.value) || ((thiscam != &camera) && cv_analog2.value) || demoplayback) && !sign && !objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
+	if ((((thiscam == &camera) && cv_analog[0].value) || ((thiscam != &camera) && cv_analog[1].value) || demoplayback) && !sign && !objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
 	{
 #ifdef REDSANALOG
 		if ((player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)); else
@@ -9869,6 +10070,29 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			else
 				angle += FixedAngle(cv_cam2_rotspeed.value*FRACUNIT);
 		}
+	}
+
+	if (G_ControlStyle((thiscam == &camera) ? 1 : 2) == CS_SIMPLE && !sign)
+	{
+		// Shift the camera slightly to the sides depending on the player facing direction
+		UINT8 forplayer = (thiscam == &camera) ? 0 : 1;
+		fixed_t shift = FixedMul(FINESINE((player->mo->angle - angle) >> ANGLETOFINESHIFT), cv_cam_shiftfacing[forplayer].value);
+
+		if (player->powers[pw_carry] == CR_NIGHTSMODE)
+		{
+			fixed_t cos = FINECOSINE((angle_t) (player->flyangle * ANG1)>>ANGLETOFINESHIFT);
+			shift = FixedMul(shift, min(FRACUNIT, player->speed*abs(cos)/6000));
+			shift += FixedMul(camsideshift[forplayer] - shift, FRACUNIT-(camspeed>>2));
+		}
+		else if (ticcmd_centerviewdown[(thiscam == &camera) ? 0 : 1])
+			shift = FixedMul(camsideshift[forplayer], FRACUNIT-camspeed);
+		else
+			shift += FixedMul(camsideshift[forplayer] - shift, FRACUNIT-(camspeed>>3));
+		camsideshift[forplayer] = shift;
+
+		shift = FixedMul(shift, camdist);
+		shiftx = -FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), shift);
+		shifty = FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT), shift);
 	}
 
 	// sets ideal cam pos
@@ -9893,7 +10117,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			camheight = mo->scale << 7;
 			camspeed = FRACUNIT/12;
 		}
-		else if (P_AnalogMove(player)) // x1.2 dist for analog
+		else if (P_ControlStyle(player) == CS_LMAOGALOG) // x1.2 dist for analog
 		{
 			dist = FixedMul(dist, 6*FRACUNIT/5);
 			camheight = FixedMul(camheight, 6*FRACUNIT/5);
@@ -10217,8 +10441,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		viewpointx = mo->x + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-		viewpointy = mo->y + FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
+		viewpointx = mo->x + shiftx + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
+		viewpointy = mo->y + shifty + FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
 	}
 
 	if (!camstill && !resetcalled && !paused)
@@ -10259,6 +10483,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 		else
 			thiscam->momz = FixedMul(z - thiscam->z, camspeed);
+
+		thiscam->momx += FixedMul(shiftx, camspeed);
+		thiscam->momy += FixedMul(shifty, camspeed);
 	}
 
 	// compute aming to look the viewed point
@@ -10806,7 +11033,7 @@ static void P_MinecartThink(player_t *player)
 		else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
 			player->mo->angle = minecart->angle - MINECARTCONEMAX;
 
-		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_AnalogMove(player)))
+		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))
 		{
 			if (player == &players[consoleplayer])
 				localangle = player->mo->angle;
@@ -10885,7 +11112,7 @@ static void P_MinecartThink(player_t *player)
 			else
 				minecart->angle = targetangle + ANGLE_180;
 			angdiff = (minecart->angle - prevangle);
-			if (angdiff && (!demoplayback || P_AnalogMove(player)))  // maintain relative angle on turns
+			if (angdiff && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))  // maintain relative angle on turns
 			{
 				player->mo->angle += angdiff;
 				if (player == &players[consoleplayer])
@@ -11345,7 +11572,12 @@ void P_PlayerThink(player_t *player)
 				player->playerstate = PST_REBORN;
 		}
 		if (player->playerstate == PST_REBORN)
+		{
+#ifdef HAVE_BLUA
+			LUAh_PlayerThink(player);
+#endif
 			return;
+		}
 	}
 
 #ifdef SEENAMES
@@ -11446,7 +11678,12 @@ void P_PlayerThink(player_t *player)
 			player->lives = 0;
 
 			if (player->playerstate == PST_DEAD)
+			{
+#ifdef HAVE_BLUA
+				LUAh_PlayerThink(player);
+#endif
 				return;
+			}
 		}
 	}
 
@@ -11565,7 +11802,9 @@ void P_PlayerThink(player_t *player)
 	{
 		player->mo->flags2 &= ~MF2_SHADOW;
 		P_DeathThink(player);
-
+#ifdef HAVE_BLUA
+		LUAh_PlayerThink(player);
+#endif
 		return;
 	}
 
@@ -11606,7 +11845,12 @@ void P_PlayerThink(player_t *player)
 	if (player->spectator && cmd->buttons & BT_ATTACK && !player->powers[pw_flashing] && G_GametypeHasSpectators())
 	{
 		if (P_SpectatorJoinGame(player))
+		{
+#ifdef HAVE_BLUA
+			LUAh_PlayerThink(player);
+#endif
 			return; // player->mo was removed.
+		}
 	}
 
 	// Even if not NiGHTS, pull in nearby objects when walking around as John Q. Elliot.
@@ -11660,7 +11904,7 @@ void P_PlayerThink(player_t *player)
 		player->mo->reactiontime--;
 	else if (player->powers[pw_carry] == CR_MINECART)
 	{
-		if (!P_AnalogMove(player))
+		if (P_ControlStyle(player) != CS_LMAOGALOG)
 			player->mo->angle = (cmd->angleturn << 16 /* not FRACBITS */);
 
 		ticruned++;
@@ -11673,7 +11917,7 @@ void P_PlayerThink(player_t *player)
 	{
 		if (player->powers[pw_carry] == CR_ROPEHANG)
 		{
-			if (!P_AnalogMove(player))
+			if (P_ControlStyle(player) != CS_LMAOGALOG)
 				player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
 
 			ticruned++;
@@ -11708,7 +11952,12 @@ void P_PlayerThink(player_t *player)
 	}
 
 	if (!player->mo)
+	{
+#ifdef HAVE_BLUA
+		LUAh_PlayerThink(player);
+#endif
 		return; // P_MovePlayer removed player->mo.
+	}
 
 	// deez New User eXperiences.
 	{
@@ -11721,7 +11970,7 @@ void P_PlayerThink(player_t *player)
 			;
 		else if (!(player->pflags & PF_DIRECTIONCHAR)
 		|| (player->climbing) // stuff where the direction is forced at all times
-		|| (P_AnalogMove(player) || twodlevel || player->mo->flags2 & MF2_TWOD) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
+		|| (twodlevel || player->mo->flags2 & MF2_TWOD) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
 		|| G_RingSlingerGametype()) // no firing rings in directions your player isn't aiming
 			player->drawangle = player->mo->angle;
 		else if (P_PlayerInPain(player))
@@ -11752,7 +12001,7 @@ void P_PlayerThink(player_t *player)
 				case CR_ROLLOUT:
 					if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 					{ // inverse direction!
-						diff = ((player->mo->angle + R_PointToAngle2(0, 0, -cmd->forwardmove<<FRACBITS, cmd->sidemove<<FRACBITS)) - player->drawangle);
+						diff = (((player->cmd.angleturn<<16) + R_PointToAngle2(0, 0, -cmd->forwardmove<<FRACBITS, cmd->sidemove<<FRACBITS)) - player->drawangle);
 						factor = 4;
 					}
 					break;
@@ -11809,7 +12058,7 @@ void P_PlayerThink(player_t *player)
 			}
 			else if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 			{
-				diff = ((player->mo->angle + R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS)) - player->drawangle);
+				diff = ((player->mo->angle + ((player->pflags & PF_ANALOGMODE) ? 0 : R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS))) - player->drawangle);
 				factor = 4;
 			}
 			else if (player->rmomx || player->rmomy)
@@ -12140,6 +12389,11 @@ void P_PlayerThink(player_t *player)
 		dashmode = 0;
 	}
 #undef dashmode
+
+#ifdef HAVE_BLUA
+	LUAh_PlayerThink(player);
+#endif
+
 /*
 //	Colormap verification
 	{
@@ -12422,7 +12676,7 @@ void P_PlayerAfterThink(player_t *player)
 				{
 					player->mo->angle = tails->angle;
 
-					if (!demoplayback || P_AnalogMove(player))
+					if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 					{
 						if (player == &players[consoleplayer])
 							localangle = player->mo->angle;
@@ -12445,7 +12699,7 @@ void P_PlayerAfterThink(player_t *player)
 					P_SetTarget(&player->mo->tracer, NULL);
 
 				if (player-players == consoleplayer && botingame)
-					CV_SetValue(&cv_analog2, (player->powers[pw_carry] != CR_PLAYER));
+					CV_SetValue(&cv_analog[1], (player->powers[pw_carry] != CR_PLAYER));
 				break;
 			}
 			case CR_GENERIC: // being carried by some generic item
@@ -12511,7 +12765,7 @@ void P_PlayerAfterThink(player_t *player)
 						macecenter->angle += cmd->sidemove<<ANGLETOFINESHIFT;
 						player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 
-						if (!demoplayback || P_AnalogMove(player))
+						if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 						{
 							if (player == &players[consoleplayer])
 								localangle = player->mo->angle; // Adjust the local control angle.

@@ -1184,7 +1184,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
 		UINT8 lightlevel = 255;
-		extracolormap_t *colormap = sector->extra_colormap;
+		extracolormap_t *colormap = NULL;
 
 		if (sector->numlights)
 		{
@@ -1218,6 +1218,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		INT32 durs = spr->mobj->state->tics;
 		INT32 tics = spr->mobj->tics;
 		//mdlframe_t *next = NULL;
+		const boolean papersprite = (spr->mobj->frame & FF_PAPERSPRITE);
 		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
@@ -1428,14 +1429,12 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 
 		sprframe = &sprdef->spriteframes[spr->mobj->frame & FF_FRAMEMASK];
 
-		if (sprframe->rotate)
+		if (sprframe->rotate || papersprite)
 		{
 			fixed_t anglef = AngleFixed(spr->mobj->angle);
 
 			if (spr->mobj->player)
 				anglef = AngleFixed(spr->mobj->player->drawangle);
-			else
-				anglef = AngleFixed(spr->mobj->angle);
 
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}

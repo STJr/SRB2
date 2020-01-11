@@ -1179,10 +1179,20 @@ static void ST_drawInput(void)
 				"AUTOBRAKE");
 			y -= 8;
 		}
-		if (stplyr->pflags & PF_ANALOGMODE)
+		switch (P_ControlStyle(stplyr))
 		{
+		case CS_LMAOGALOG:
 			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "ANALOG");
 			y -= 8;
+			break;
+
+		case CS_SIMPLE:
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "SIMPLE");
+			y -= 8;
+			break;
+
+		default:
+			break;
 		}
 	}
 	if (!demosynced) // should always be last, so it doesn't push anything else around
@@ -2198,7 +2208,7 @@ static void ST_drawTextHUD(void)
 
 #define textHUDdraw(str) \
 {\
-	V_DrawThinString(16, y, V_PERPLAYER|V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM, str);\
+	V_DrawThinString(16, y, V_PERPLAYER|V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP, str);\
 	y += 8;\
 }
 

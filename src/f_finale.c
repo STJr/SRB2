@@ -3790,7 +3790,7 @@ void F_ContinueDrawer(void)
 								sprdef = &contskins[n]->sprites[cont_spr2[n][0]];\
 								sprframe = &sprdef->spriteframes[cont_spr2[n][1]];\
 								patch = W_CachePatchNum(sprframe->lumppat[cont_spr2[n][2]], PU_PATCH);\
-								V_DrawFixedPatch((dx), (dy), FRACUNIT, (sprframe->flip & (1<<cont_spr2[n][2])) ? V_FLIP : 0, patch, contcolormaps[n]);\
+								V_DrawFixedPatch((dx), (dy), contskins[n]->highresscale, (sprframe->flip & (1<<cont_spr2[n][2])) ? V_FLIP : 0, patch, contcolormaps[n]);\
 							}
 
 	if (offsy < 0)
