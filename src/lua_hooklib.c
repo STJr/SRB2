@@ -68,6 +68,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"TeamSwitch",
 	"ViewpointSwitch",
 	"SeenPlayer",
+	"PlayerThink",
 	NULL
 };
 
@@ -216,6 +217,7 @@ static int lib_addHook(lua_State *L)
 	case hook_SeenPlayer:
 	case hook_ShieldSpawn:
 	case hook_ShieldSpecial:
+	case hook_PlayerThink:
 		lastp = &playerhooks;
 		break;
 	case hook_LinedefExecute:

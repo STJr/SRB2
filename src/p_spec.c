@@ -1887,7 +1887,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		while (node)
 		{
 			mo = node->m_thing;
-			if (mo->flags & MF_PUSHABLE)
+			if ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse))
 				numpush++;
 			node = node->m_thinglist_next;
 		}
@@ -4614,7 +4614,7 @@ DoneSection2:
 
 				player->mo->angle = player->drawangle = lineangle;
 
-				if (!demoplayback || P_AnalogMove(player))
+				if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 				{
 					if (player == &players[consoleplayer])
 						localangle = player->mo->angle;
@@ -8974,7 +8974,8 @@ void T_Pusher(pusher_t *p)
 			|| thing->type == MT_EXTRALARGEBUBBLE))
 			continue;
 
-		if (!(thing->flags & MF_PUSHABLE) && !(thing->type == MT_PLAYER
+		if (!((thing->flags & MF_PUSHABLE) || ((thing->info->flags & MF_PUSHABLE) && thing->fuse))
+			&& !(thing->type == MT_PLAYER
 			|| thing->type == MT_SMALLBUBBLE
 			|| thing->type == MT_MEDIUMBUBBLE
 			|| thing->type == MT_EXTRALARGEBUBBLE
@@ -9127,7 +9128,7 @@ void T_Pusher(pusher_t *p)
 				thing->player->pflags |= PF_SLIDING;
 				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
 
-				if (!demoplayback || P_AnalogMove(thing->player))
+				if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 				{
 					if (thing->player == &players[consoleplayer])
 					{

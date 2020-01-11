@@ -1107,8 +1107,8 @@ static void P_LoadSidedefs(UINT8 *data)
 		if (((sd->line->flags & (ML_TWOSIDED|ML_EFFECT5)) == (ML_TWOSIDED|ML_EFFECT5))
 			&& !(sd->special >= 300 && sd->special < 500)) // exempt linedef exec specials
 		{
-			sd->repeatcnt = (INT16)(((unsigned)textureoffset) >> 12);
-			sd->textureoffset = (((unsigned)textureoffset) & 2047) << FRACBITS;
+			sd->repeatcnt = (INT16)(((UINT16)textureoffset) >> 12);
+			sd->textureoffset = (((UINT16)textureoffset) & 2047) << FRACBITS;
 		}
 		else
 		{
@@ -2975,7 +2975,7 @@ static void P_InitLevelSettings(void)
 	}
 
 	if (botingame)
-		CV_SetValue(&cv_analog2, true);
+		CV_SetValue(&cv_analog[1], true);
 }
 
 // Respawns all the mapthings and mobjs in the map from the already loaded map data.
@@ -3286,26 +3286,26 @@ static void P_InitCamera(void)
 		if (!cv_cam2_rotate.changed)
 			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
 
-		if (!cv_analog.changed)
-			CV_SetValue(&cv_analog, 0);
-		if (!cv_analog2.changed)
-			CV_SetValue(&cv_analog2, 0);
+		if (!cv_analog[0].changed)
+			CV_SetValue(&cv_analog[0], 0);
+		if (!cv_analog[1].changed)
+			CV_SetValue(&cv_analog[1], 0);
 
 		displayplayer = consoleplayer; // Start with your OWN view, please!
 	}
 
 	if (twodlevel)
 	{
-		CV_SetValue(&cv_analog, false);
-		CV_SetValue(&cv_analog2, false);
+		CV_SetValue(&cv_analog[0], false);
+		CV_SetValue(&cv_analog[1], false);
 	}
 	else
 	{
-		if (cv_useranalog.value)
-			CV_SetValue(&cv_analog, true);
+		if (cv_useranalog[0].value)
+			CV_SetValue(&cv_analog[0], true);
 
-		if ((splitscreen && cv_useranalog2.value) || botingame)
-			CV_SetValue(&cv_analog2, true);
+		if ((splitscreen && cv_useranalog[1].value) || botingame)
+			CV_SetValue(&cv_analog[1], true);
 	}
 }
 
@@ -3551,6 +3551,9 @@ boolean P_LoadLevel(boolean fromnetsave)
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_speed.changed)
 			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);*/
+
+		CV_UpdateCamDist();
+		CV_UpdateCam2Dist();
 
 		if (!cv_chasecam.changed)
 			CV_SetValue(&cv_chasecam, chase);

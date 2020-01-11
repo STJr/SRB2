@@ -1892,7 +1892,7 @@ void P_XYMovement(mobj_t *mo)
 #endif
 
 	// Pushables can break some blocks
-	if (CheckForBustableBlocks && mo->flags & MF_PUSHABLE)
+	if (CheckForBustableBlocks && ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse)))
 		P_PushableCheckBustables(mo);
 
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true)
@@ -3127,7 +3127,7 @@ nightsdone:
 						{
 							// DO THE MARIO!
 							if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
-								EV_CrumbleChain(NULL, rover); // node->m_sector
+								EV_CrumbleChain(node->m_sector, rover);
 							else // Question block!
 								EV_MarioBlock(rover, node->m_sector, mo);
 						}
@@ -7977,7 +7977,7 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		mobj->x = mobj->extravalue1 + P_ReturnThrustX(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
 		mobj->y = mobj->extravalue2 + P_ReturnThrustY(mobj, mobj->movedir, mobj->cvmem*mobj->scale);
 		P_SetThingPosition(mobj);
-		
+
 		if (!mobj->fuse)
 		{
 #ifdef HAVE_BLUA
