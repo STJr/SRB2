@@ -458,8 +458,8 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 	return ret;
 }
 
-/// Create vertex based slopes.
-static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
+/// Create vertex based slopes using tagged mapthings.
+static void line_SpawnViaMapthingVertexes(const int linenum, const boolean spawnthinker)
 {
 	line_t *line = lines + linenum;
 	side_t *side;
@@ -630,7 +630,7 @@ void P_SpawnSlopes(const boolean fromsave) {
 			case 705:
 			case 714:
 			case 715:
-				line_SpawnViaVertexes(i, !fromsave); // Mapthing-based vertex slopes.
+				line_SpawnViaMapthingVertexes(i, !fromsave);
 				break;
 
 			default:
