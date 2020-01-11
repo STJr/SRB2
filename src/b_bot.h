@@ -15,3 +15,4 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 boolean B_CheckRespawn(player_t *player);
 void B_MoveBlocked(player_t *player);
 void B_RespawnBot(INT32 playernum);
+void B_HandleFlightIndicator(player_t *player);

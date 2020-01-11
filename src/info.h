@@ -155,11 +155,9 @@ void A_SpawnObjectAbsolute();
 void A_SpawnObjectRelative();
 void A_ChangeAngleRelative();
 void A_ChangeAngleAbsolute();
-#ifdef ROTSPRITE
 void A_RollAngle();
 void A_ChangeRollAngleRelative();
 void A_ChangeRollAngleAbsolute();
-#endif
 void A_PlaySound();
 void A_FindTarget();
 void A_FindTracer();
@@ -4704,6 +4702,7 @@ typedef enum mobj_type
 	MT_NIGHTSCHIP, // NiGHTS Chip
 	MT_FLINGNIGHTSCHIP, // Lost NiGHTS Chip
 	MT_NIGHTSSTAR, // NiGHTS Star
+	MT_FLINGNIGHTSSTAR, // Lost NiGHTS Star
 	MT_NIGHTSSUPERLOOP,
 	MT_NIGHTSDRILLREFILL,
 	MT_NIGHTSHELPER,

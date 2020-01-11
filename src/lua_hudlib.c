@@ -53,6 +53,7 @@ static const char *const hud_disable_options[] = {
 
 	"weaponrings",
 	"powerstones",
+	"teamscores",
 
 	"nightslink",
 	"nightsdrill",
@@ -65,6 +66,9 @@ static const char *const hud_disable_options[] = {
 	"coopemeralds",
 	"tokens",
 	"tabemblems",
+
+	"intermissiontally",
+	"intermissionmessages",
 	NULL};
 
 enum hudinfo {
@@ -97,12 +101,14 @@ static const char *const patch_opt[] = {
 enum hudhook {
 	hudhook_game = 0,
 	hudhook_scores,
+	hudhook_intermission,
 	hudhook_title,
 	hudhook_titlecard
 };
 static const char *const hudhook_opt[] = {
 	"game",
 	"scores",
+	"intermission",
 	"title",
 	"titlecard",
 	NULL};
@@ -462,11 +468,11 @@ static int libd_getSpritePatch(lua_State *L)
 
 	// convert WAD editor angle numbers (1-8) to internal angle numbers (0-7)
 	// keep 0 the same since we'll make it default to angle 1 (which is internally 0)
-	// in case somebody didn't know that angle 0 really just maps all 8 angles to the same patch
+	// in case somebody didn't know that angle 0 really just maps all 8/16 angles to the same patch
 	if (angle != 0)
 		angle--;
 
-	if (angle >= 8) // out of range?
+	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
 
 	// push both the patch and it's "flip" value
@@ -557,11 +563,11 @@ static int libd_getSprite2Patch(lua_State *L)
 
 	// convert WAD editor angle numbers (1-8) to internal angle numbers (0-7)
 	// keep 0 the same since we'll make it default to angle 1 (which is internally 0)
-	// in case somebody didn't know that angle 0 really just maps all 8 angles to the same patch
+	// in case somebody didn't know that angle 0 really just maps all 8/16 angles to the same patch
 	if (angle != 0)
 		angle--;
 
-	if (angle >= 8) // out of range?
+	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
 
 	// push both the patch and it's "flip" value
@@ -1135,13 +1141,16 @@ int LUA_HudLib(lua_State *L)
 		lua_rawseti(L, -2, 2); // HUD[2] = game rendering functions array
 
 		lua_newtable(L);
-		lua_rawseti(L, -2, 3); // HUD[2] = scores rendering functions array
+		lua_rawseti(L, -2, 3); // HUD[3] = scores rendering functions array
 
 		lua_newtable(L);
-		lua_rawseti(L, -2, 4); // HUD[3] = title rendering functions array
+		lua_rawseti(L, -2, 4); // HUD[4] = intermission rendering functions array
 
 		lua_newtable(L);
-		lua_rawseti(L, -2, 5); // HUD[4] = title card rendering functions array
+		lua_rawseti(L, -2, 5); // HUD[5] = title rendering functions array
+
+		lua_newtable(L);
+		lua_rawseti(L, -2, 6); // HUD[6] = title card rendering functions array
 	lua_setfield(L, LUA_REGISTRYINDEX, "HUD");
 
 	luaL_newmetatable(L, META_HUDINFO);
@@ -1309,6 +1318,31 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 		LUA_Call(gL, 4);
 	}
 
+	lua_pop(gL, -1);
+	hud_running = false;
+}
+
+void LUAh_IntermissionHUD(void)
+{
+	if (!gL || !(hudAvailable & (1<<hudhook_intermission)))
+		return;
+
+	hud_running = true;
+	lua_pop(gL, -1);
+
+	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
+	I_Assert(lua_istable(gL, -1));
+	lua_rawgeti(gL, -1, 4); // HUD[4] = rendering funcs
+	I_Assert(lua_istable(gL, -1));
+
+	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
+	I_Assert(lua_istable(gL, -1));
+	lua_remove(gL, -3); // pop HUD
+	lua_pushnil(gL);
+	while (lua_next(gL, -3) != 0) {
+		lua_pushvalue(gL, -3); // graphics library (HUD[1])
+		LUA_Call(gL, 1);
+	}
 	lua_pop(gL, -1);
 	hud_running = false;
 }

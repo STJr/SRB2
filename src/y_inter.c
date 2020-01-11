@@ -37,6 +37,10 @@
 #include "m_cond.h" // condition sets
 #include "lua_hook.h" // IntermissionThinker hook
 
+#ifdef HAVE_BLUA
+#include "lua_hud.h"
+#endif
+
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #endif
@@ -165,6 +169,7 @@ static INT32 tallydonetic = -1;
 static INT32 endtic = -1;
 
 intertype_t intertype = int_none;
+intertype_t intermissiontypes[NUMGAMETYPES];
 
 static void Y_RescaleScreenBuffer(void);
 static void Y_AwardCoopBonuses(void);
@@ -320,9 +325,18 @@ void Y_IntermissionDrawer(void)
 	// Bonus loops
 	INT32 i;
 
-	if (intertype == int_none || rendermode == render_none)
+	if (rendermode == render_none)
 		return;
 
+	if (intertype == int_none)
+	{
+#ifdef HAVE_BLUA
+		LUAh_IntermissionHUD();
+#endif
+		return;
+	}
+
+	if (!usebuffer)
 	// Lactozilla: Renderer switching
 	if (needpatchrecache)
 	{
@@ -369,6 +383,12 @@ void Y_IntermissionDrawer(void)
 	}
 	else
 		V_DrawPatchFill(bgtile);
+
+#ifdef HAVE_BLUA
+	LUAh_IntermissionHUD();
+	if (!LUA_HudEnabled(hud_intermissiontally))
+		goto skiptallydrawer;
+#endif
 
 dontdrawbg:
 	if (intertype == int_coop)
@@ -924,6 +944,12 @@ dontdrawbg:
 		}
 	}
 
+#ifdef HAVE_BLUA
+skiptallydrawer:
+	if (!LUA_HudEnabled(hud_intermissionmessages))
+		return;
+#endif
+
 	if (timer)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
 			va("start in %d seconds", timer/TICRATE));
@@ -1206,7 +1232,9 @@ void Y_StartIntermission(void)
 				timer = 1;
 		}
 
-		if (gametype == GT_COOP)
+		if (intermissiontypes[gametype] != int_none)
+			intertype = intermissiontypes[gametype];
+		else if (gametype == GT_COOP)
 			intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
 		else if (gametype == GT_TEAMMATCH)
 			intertype = int_teammatch;
@@ -1969,7 +1997,7 @@ static void Y_AwardCoopBonuses(void)
 
 		if (i == consoleplayer)
 		{
-			data.coop.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
+			data.coop.gotlife = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.coop.bonuses, &localbonuses, sizeof(data.coop.bonuses));
 		}
 	}
@@ -2024,7 +2052,7 @@ static void Y_AwardSpecialStageBonus(void)
 
 		if (i == consoleplayer)
 		{
-			data.spec.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
+			data.spec.gotlife = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.spec.bonuses, &localbonuses, sizeof(data.spec.bonuses));
 
 			// Continues related

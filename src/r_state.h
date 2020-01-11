@@ -63,6 +63,7 @@ extern seg_t *segs;
 
 extern size_t numsectors;
 extern sector_t *sectors;
+extern sector_t *spawnsectors;
 
 extern size_t numsubsectors;
 extern subsector_t *subsectors;
@@ -72,9 +73,11 @@ extern node_t *nodes;
 
 extern size_t numlines;
 extern line_t *lines;
+extern line_t *spawnlines;
 
 extern size_t numsides;
 extern side_t *sides;
+extern side_t *spawnsides;
 
 //
 // POV data.

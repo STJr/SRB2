@@ -20,10 +20,6 @@
 #include "r_portal.h"
 #include "r_defs.h"
 
-// "Left" and "Right" character symbols for additional rotation functionality
-#define ROT_L ('L' - '0')
-#define ROT_R ('R' - '0')
-
 // number of sprite lumps for spritewidth,offset,topoffset lookup tables
 // Fab: this is a hack : should allocate the lookup tables per sprite
 #define MAXVISSPRITES 2048 // added 2-2-98 was 128
@@ -281,7 +277,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 	if (cn == '+') return '\\' - 'A'; // PK3 can't use backslash, so use + instead
 	return cn - 'A';
 #else
-	if (cn >= 'A' && cn <= 'Z') return cn - 'A';
+	if (cn >= 'A' && cn <= 'Z') return (cn - 'A');
 	if (cn >= '0' && cn <= '9') return (cn - '0') + 26;
 	if (cn >= 'a' && cn <= 'z') return (cn - 'a') + 36;
 	if (cn == '!') return 62;
@@ -290,9 +286,26 @@ FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 #endif
 }
 
-FUNCMATH FUNCINLINE static ATTRINLINE boolean R_ValidSpriteAngle(UINT8 rotation)
+// "Left" and "Right" character symbols for additional rotation functionality
+#define ROT_L 17
+#define ROT_R 18
+
+FUNCMATH FUNCINLINE static ATTRINLINE char R_Rotation2Char(UINT8 rot)
 {
-	return ((rotation <= 8) || (rotation == ROT_L) || (rotation == ROT_R));
+	if (rot <=     9) return '0' + rot;
+	if (rot <=    16) return 'A' + (rot - 10);
+	if (rot == ROT_L) return 'L';
+	if (rot == ROT_R) return 'R';
+	return '\xFF';
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Rotation(char cn)
+{
+	if (cn >= '0' && cn <= '9') return (cn - '0');
+	if (cn >= 'A' && cn <= 'G') return (cn - 'A') + 10;
+	if (cn == 'L') return ROT_L;
+	if (cn == 'R') return ROT_R;
+	return 255;
 }
 
 #endif //__R_THINGS__

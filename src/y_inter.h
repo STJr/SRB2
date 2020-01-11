@@ -31,3 +31,4 @@ typedef enum
 	int_comp,     // Competition
 } intertype_t;
 extern intertype_t intertype;
+extern intertype_t intermissiontypes[NUMGAMETYPES];
