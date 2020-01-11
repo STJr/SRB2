@@ -1046,10 +1046,8 @@ void D_SRB2Main(void)
 		I_OutputMsg("setvbuf didnt work\n");
 #endif
 
-#ifdef GETTEXT
 	// initialise locale code
 	M_StartupLocale();
-#endif
 
 	// get parameters from a response file (eg: srb2 @parms.txt)
 	M_FindResponseFile();

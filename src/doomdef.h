@@ -98,8 +98,8 @@
 
 #ifdef GETTEXT
 #include <libintl.h>
-#include <locale.h>
 #endif
+#include <locale.h> // locale should not be dependent on GETTEXT -- 11/01/20 Monster Iestyn
 
 #include <sys/types.h>
 #include <sys/stat.h>
