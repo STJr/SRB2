@@ -1105,8 +1105,8 @@ static void P_LoadSidedefs(UINT8 *data)
 		if (((sd->line->flags & (ML_TWOSIDED|ML_EFFECT5)) == (ML_TWOSIDED|ML_EFFECT5))
 			&& !(sd->special >= 300 && sd->special < 500)) // exempt linedef exec specials
 		{
-			sd->repeatcnt = (INT16)(((unsigned)textureoffset) >> 12);
-			sd->textureoffset = (((unsigned)textureoffset) & 2047) << FRACBITS;
+			sd->repeatcnt = (INT16)(((UINT16)textureoffset) >> 12);
+			sd->textureoffset = (((UINT16)textureoffset) & 2047) << FRACBITS;
 		}
 		else
 		{
