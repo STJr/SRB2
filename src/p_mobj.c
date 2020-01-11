@@ -3902,11 +3902,15 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 			mobj->z += mobj->momz;
 			P_SetThingPosition(mobj);
 			P_CheckPosition(mobj, mobj->x, mobj->y);
+			mobj->floorz = tmfloorz;
+			mobj->ceilingz = tmceilingz;
 			goto animonly;
 		}
 		else if (mobj->player->powers[pw_carry] == CR_MACESPIN)
 		{
 			P_CheckPosition(mobj, mobj->x, mobj->y);
+			mobj->floorz = tmfloorz;
+			mobj->ceilingz = tmceilingz;
 			goto animonly;
 		}
 	}
