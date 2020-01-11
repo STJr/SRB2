@@ -845,6 +845,8 @@ static void P_LoadVertices(UINT8 *data)
 	{
 		v->x = SHORT(mv->x)<<FRACBITS;
 		v->y = SHORT(mv->y)<<FRACBITS;
+		v->floorzset = v->ceilingzset = false;
+		v->floorz = v->ceilingz = 0;
 	}
 }
 
@@ -1104,8 +1106,8 @@ static void P_LoadSidedefs(UINT8 *data)
 		if (((sd->line->flags & (ML_TWOSIDED|ML_EFFECT5)) == (ML_TWOSIDED|ML_EFFECT5))
 			&& !(sd->special >= 300 && sd->special < 500)) // exempt linedef exec specials
 		{
-			sd->repeatcnt = (INT16)(((unsigned)textureoffset) >> 12);
-			sd->textureoffset = (((unsigned)textureoffset) & 2047) << FRACBITS;
+			sd->repeatcnt = (INT16)(((UINT16)textureoffset) >> 12);
+			sd->textureoffset = (((UINT16)textureoffset) & 2047) << FRACBITS;
 		}
 		else
 		{
@@ -1119,7 +1121,6 @@ static void P_LoadSidedefs(UINT8 *data)
 		// Special info stored in texture fields!
 		switch (sd->special)
 		{
-			case 63: // Fake floor/ceiling planes
 			case 606: //SoM: 4/4/2000: Just colormap transfer
 			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 			case 455: // Fade colormaps! mazmazz 9/12/2018 (:flag_us:)
@@ -1366,6 +1367,16 @@ static void ParseTextmapVertexParameter(UINT32 i, char *param, char *val)
 		vertexes[i].x = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "y"))
 		vertexes[i].y = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "zfloor"))
+	{
+		vertexes[i].floorz = FLOAT_TO_FIXED(atof(val));
+		vertexes[i].floorzset = true;
+	}
+	else if (fastcmp(param, "zceiling"))
+	{
+		vertexes[i].ceilingz = FLOAT_TO_FIXED(atof(val));
+		vertexes[i].ceilingzset = true;
+	}
 }
 
 static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
@@ -1573,6 +1584,8 @@ static void P_LoadTextmap(void)
 	{
 		// Defaults.
 		vt->x = vt->y = INT32_MAX;
+		vt->floorzset = vt->ceilingzset = false;
+		vt->floorz = vt->ceilingz = 0;
 
 		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
 
@@ -3567,11 +3580,11 @@ boolean P_LoadLevel(boolean fromnetsave)
 		return false;
 
 	// init gravity, tag lists,
-	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
+	// anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
 #ifdef ESLOPE
-	P_ResetDynamicSlopes(fromnetsave);
+	P_SpawnSlopes(fromnetsave);
 #endif
 
 	P_SpawnMapThings(!fromnetsave);

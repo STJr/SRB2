@@ -105,24 +105,21 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
                                 UINT8 rotation,
                                 UINT8 flipped)
 {
-	char cn = R_Frame2Char(frame); // for debugging
+	char cn = R_Frame2Char(frame), cr = R_Rotation2Char(rotation); // for debugging
 
 	INT32 r, ang;
 	lumpnum_t lumppat = wad;
 	lumppat <<= 16;
 	lumppat += lump;
 
-	if (frame >= 64 || !(R_ValidSpriteAngle(rotation)))
-		I_Error("R_InstallSpriteLump: Bad frame characters in lump %s", W_CheckNameForNum(lumppat));
-
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
 
 	// rotsprite
 #ifdef ROTSPRITE
-	for (r = 0; r < 8; r++)
+	sprtemp[frame].rotsprite.cached = 0;
+	for (r = 0; r < 16; r++)
 	{
-		sprtemp[frame].rotsprite.cached[r] = false;
 		for (ang = 0; ang < ROTANGLES; ang++)
 			sprtemp[frame].rotsprite.patch[r][ang] = NULL;
 	}
@@ -133,16 +130,16 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		// the lump should be used for all rotations
 		if (sprtemp[frame].rotate == SRF_SINGLE)
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple rot = 0 lump\n", spritename, cn);
-		else if (sprtemp[frame].rotate != SRF_NONE) // Let's bundle 1-8 and L/R rotations into one debug message.
+		else if (sprtemp[frame].rotate != SRF_NONE) // Let's bundle 1-8/16 and L/R rotations into one debug message.
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, cn);
 
 		sprtemp[frame].rotate = SRF_SINGLE;
-		for (r = 0; r < 8; r++)
+		for (r = 0; r < 16; r++)
 		{
 			sprtemp[frame].lumppat[r] = lumppat;
 			sprtemp[frame].lumpid[r] = lumpid;
 		}
-		sprtemp[frame].flip = flipped ? 0xFF : 0; // 11111111 in binary
+		sprtemp[frame].flip = flipped ? 0xFFFF : 0; // 1111111111111111 in binary
 		return;
 	}
 
@@ -151,54 +148,67 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		UINT8 rightfactor = ((rotation == ROT_R) ? 4 : 0);
 
 		// the lump should be used for half of all rotations
-		if (sprtemp[frame].rotate == SRF_SINGLE)
+		if (sprtemp[frame].rotate == SRF_NONE)
+			sprtemp[frame].rotate = SRF_SINGLE;
+		else if (sprtemp[frame].rotate == SRF_SINGLE)
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has L/R rotations and a rot = 0 lump\n", spritename, cn);
 		else if (sprtemp[frame].rotate == SRF_3D)
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8 rotations\n", spritename, cn);
+		else if (sprtemp[frame].rotate == SRF_3DGE)
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-G rotations\n", spritename, cn);
 		else if ((sprtemp[frame].rotate & SRF_LEFT) && (rotation == ROT_L))
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple L rotations\n", spritename, cn);
 		else if ((sprtemp[frame].rotate & SRF_RIGHT) && (rotation == ROT_R))
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple R rotations\n", spritename, cn);
 
-		if (sprtemp[frame].rotate == SRF_NONE)
-			sprtemp[frame].rotate = SRF_SINGLE;
-
 		sprtemp[frame].rotate |= ((rotation == ROT_R) ? SRF_RIGHT : SRF_LEFT);
-		if (sprtemp[frame].rotate == (SRF_3D|SRF_2D))
-			sprtemp[frame].rotate = SRF_2D; // SRF_3D|SRF_2D being enabled at the same time doesn't HURT in the current sprite angle implementation, but it DOES mean more to check in some of the helper functions. Let's not allow this scenario to happen.
+		if ((sprtemp[frame].rotate & SRF_2D) == SRF_2D)
+			sprtemp[frame].rotate &= ~SRF_3DMASK; // SRF_3D|SRF_2D being enabled at the same time doesn't HURT in the current sprite angle implementation, but it DOES mean more to check in some of the helper functions. Let's not allow this scenario to happen.
 
-		for (r = 0; r < 4; r++) // Thanks to R_PrecacheLevel, we can't leave sprtemp[*].lumppat[*] == LUMPERROR... so we load into the front/back angle too.
+		// load into every relevant angle, including the front one
+		for (r = 0; r < 4; r++)
 		{
 			sprtemp[frame].lumppat[r + rightfactor] = lumppat;
 			sprtemp[frame].lumpid[r + rightfactor] = lumpid;
+			sprtemp[frame].lumppat[r + rightfactor + 8] = lumppat;
+			sprtemp[frame].lumpid[r + rightfactor + 8] = lumpid;
+
 		}
 
 		if (flipped)
-			sprtemp[frame].flip |= (0x0F<<rightfactor); // 00001111 or 11110000 in binary, depending on rotation being ROT_L or ROT_R
+			sprtemp[frame].flip |= (0x0F0F<<rightfactor); // 0000111100001111 or 1111000011110000 in binary, depending on rotation being ROT_L or ROT_R
 		else
-			sprtemp[frame].flip &= ~(0x0F<<rightfactor); // ditto
+			sprtemp[frame].flip &= ~(0x0F0F<<rightfactor); // ditto
 
 		return;
 	}
 
-	// the lump is only used for one rotation
-	if (sprtemp[frame].rotate == SRF_SINGLE)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has 1-8 rotations and a rot = 0 lump\n", spritename, cn);
-	else if ((sprtemp[frame].rotate != SRF_3D) && (sprtemp[frame].rotate != SRF_NONE))
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8 rotations\n", spritename, cn);
+	if (sprtemp[frame].rotate == SRF_NONE)
+		sprtemp[frame].rotate = SRF_SINGLE;
+	else if (sprtemp[frame].rotate == SRF_SINGLE)
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has 1-8/G rotations and a rot = 0 lump\n", spritename, cn);
+	else if (sprtemp[frame].rotate & SRF_2D)
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8/G rotations\n", spritename, cn);
 
 	// make 0 based
 	rotation--;
 
-	if (rotation == 0 || rotation == 4) // Front or back...
-		sprtemp[frame].rotate = SRF_3D; // Prevent L and R changeover
-	else if (rotation > 3) // Right side
-		sprtemp[frame].rotate = (SRF_3D | (sprtemp[frame].rotate & SRF_LEFT)); // Continue allowing L frame changeover
-	else // if (rotation <= 3) // Left side
-		sprtemp[frame].rotate = (SRF_3D | (sprtemp[frame].rotate & SRF_RIGHT)); // Continue allowing R frame changeover
+	{
+		// SRF_3D|SRF_3DGE being enabled at the same time doesn't HURT in the current sprite angle implementation, but it DOES mean more to check in some of the helper functions. Let's not allow this scenario to happen.
+		UINT8 threedrot = (rotation > 7) ? SRF_3DGE : (sprtemp[frame].rotate & SRF_3DMASK);
+		if (!threedrot)
+			threedrot = SRF_3D;
+
+		if (rotation == 0 || rotation == 4) // Front or back...
+			sprtemp[frame].rotate = threedrot; // Prevent L and R changeover
+		else if ((rotation & 7) > 3) // Right side
+			sprtemp[frame].rotate = (threedrot | (sprtemp[frame].rotate & SRF_LEFT)); // Continue allowing L frame changeover
+		else // if ((rotation & 7) <= 3) // Left side
+			sprtemp[frame].rotate = (threedrot | (sprtemp[frame].rotate & SRF_RIGHT)); // Continue allowing R frame changeover
+	}
 
 	if (sprtemp[frame].lumppat[rotation] != LUMPERROR)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %c%c has two lumps mapped to it\n", spritename, cn, '1'+rotation);
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %c%c has two lumps mapped to it\n", spritename, cn, cr);
 
 	// lumppat & lumpid are the same for original Doom, but different
 	// when using sprites in pwad : the lumppat points the new graphics
@@ -259,9 +269,9 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 		if (memcmp(lumpinfo[l].name,sprname,4)==0)
 		{
 			frame = R_Char2Frame(lumpinfo[l].name[4]);
-			rotation = (UINT8)(lumpinfo[l].name[5] - '0');
+			rotation = R_Char2Rotation(lumpinfo[l].name[5]);
 
-			if (frame >= 64 || !(R_ValidSpriteAngle(rotation))) // Give an actual NAME error -_-...
+			if (frame >= 64 || rotation == 255) // Give an actual NAME error -_-...
 			{
 				CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
 				continue;
@@ -308,7 +318,13 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			if (lumpinfo[l].name[6])
 			{
 				frame = R_Char2Frame(lumpinfo[l].name[6]);
-				rotation = (UINT8)(lumpinfo[l].name[7] - '0');
+				rotation = R_Char2Rotation(lumpinfo[l].name[7]);
+
+				if (frame >= 64 || rotation == 255) // Give an actual NAME error -_-...
+				{
+					CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
+					continue;
+				}
 				R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 1);
 			}
 
@@ -369,18 +385,19 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			case SRF_2D: // both Left and Right rotations
 			// we test to see whether the left and right slots are present
 			if ((sprtemp[frame].lumppat[2] == LUMPERROR) || (sprtemp[frame].lumppat[6] == LUMPERROR))
-				I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
+				I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations (L-R mode)",
 				sprname, R_Frame2Char(frame));
 			break;
 
 			default:
-			// must have all 8 frames
-			for (rotation = 0; rotation < 8; rotation++)
+			// must have all 8/16 frames
+				rotation = ((sprtemp[frame].rotate & SRF_3DGE) ? 16 : 8);
+				while (rotation--)
 				// we test the patch lump, or the id lump whatever
 				// if it was not loaded the two are LUMPERROR
 				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
-					        sprname, R_Frame2Char(frame));
+					I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations (1-%c mode)",
+					        sprname, R_Frame2Char(frame), ((sprtemp[frame].rotate & SRF_3DGE) ? 'G' : '8'));
 			break;
 		}
 	}
@@ -739,9 +756,7 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
-#ifdef RANGECHECK
 	INT32 texturecolumn;
-#endif
 	fixed_t frac;
 	patch_t *patch = vis->patch;
 	fixed_t this_scale = vis->mobj->scale;
@@ -889,28 +904,51 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
 
-	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
+	// Split drawing loops for paper and non-paper to reduce conditional checks per sprite
+	if (vis->scalestep)
 	{
-#ifdef RANGECHECK
+		// Papersprite drawing loop
 
-		texturecolumn = frac>>FRACBITS;
-
-		if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
-			I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
-#else
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
-#endif
-		if (vis->scalestep)
+		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += vis->scalestep)
 		{
+			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
+			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / this_scale;
+
+			if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
+				continue;
+
+			if (vis->xiscale < 0) // Flipped sprite
+				texturecolumn = SHORT(patch->width) - 1 - texturecolumn;
+
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
+
+			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
+
+			if (vis->cut & SC_VFLIP)
+				R_DrawFlippedMaskedColumn(column, patch->height);
+			else
+				R_DrawMaskedColumn(column);
 		}
-		if (vis->cut & SC_VFLIP)
-			R_DrawFlippedMaskedColumn(column, patch->height);
-		else
-			R_DrawMaskedColumn(column);
-		spryscale += vis->scalestep;
+	}
+	else
+	{
+		// Non-paper drawing loop
+		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
+		{
+#ifdef RANGECHECK
+			texturecolumn = frac>>FRACBITS;
+			if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
+				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
+			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
+#else
+			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
+#endif
+			if (vis->cut & SC_VFLIP)
+				R_DrawFlippedMaskedColumn(column, patch->height);
+			else
+				R_DrawMaskedColumn(column);
+		}
 	}
 
 	colfunc = colfuncs[BASEDRAWFUNC];
@@ -1069,8 +1107,6 @@ static void R_SplitSprite(vissprite_t *sprite)
 	}
 }
 
-//#define PROPERPAPER // This was reverted less than 7 hours before 2.2's release because of very strange, frequent crashes.
-
 //
 // R_ProjectSprite
 // Generates a vissprite for a thing
@@ -1094,7 +1130,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	size_t lump;
 
 	size_t rot;
-	UINT8 flip;
+	UINT16 flip;
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
 
 	INT32 lindex;
@@ -1107,7 +1143,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t iscale;
 	fixed_t scalestep;
 	fixed_t offset, offset2;
+
 	boolean papersprite = !!(thing->frame & FF_PAPERSPRITE);
+	fixed_t paperoffset = 0, paperdistance = 0; angle_t centerangle = 0;
 
 	INT32 dispoffset = thing->info->dispoffset;
 
@@ -1125,10 +1163,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	INT32 rollangle = 0;
 #endif
 
-#ifndef PROPERPAPER
-	fixed_t ang_scale = FRACUNIT;
-#endif
-
 	// transform the origin point
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;
@@ -1139,7 +1173,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tz = gxt-gyt;
 
 	// thing is behind view plane?
-	if (!(papersprite) && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
+	if (!papersprite && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
 		return;
 
 	gxt = -FixedMul(tr_x, viewsin);
@@ -1147,7 +1181,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tx = -(gyt + gxt);
 
 	// too far off the side?
-	if (abs(tx) > tz<<2)
+	if (!papersprite && abs(tx) > tz<<2) // papersprite clipping is handled later
 		return;
 
 	// aspect ratio stuff
@@ -1211,20 +1245,14 @@ static void R_ProjectSprite(mobj_t *thing)
 #endif
 
 	if (sprframe->rotate != SRF_SINGLE || papersprite)
-	{
 		ang = R_PointToAngle (thing->x, thing->y) - (thing->player ? thing->player->drawangle : thing->angle);
-#ifndef PROPERPAPER
-		if (papersprite)
-			ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
-#endif
-	}
 
 	if (sprframe->rotate == SRF_SINGLE)
 	{
 		// use single rotation for all views
 		rot = 0;                        //Fab: for vis->patch below
 		lump = sprframe->lumpid[0];     //Fab: see note above
-		flip = sprframe->flip; // Will only be 0x00 or 0xFF
+		flip = sprframe->flip; 			// Will only be 0 or 0xFFFF
 	}
 	else
 	{
@@ -1235,6 +1263,11 @@ static void R_ProjectSprite(mobj_t *thing)
 			rot = 6; // F7 slot
 		else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
 			rot = 2; // F3 slot
+		else if (sprframe->rotate & SRF_3DGE) // 16-angle mode
+		{
+			rot = (ang+ANGLE_180+ANGLE_11hh)>>28;
+			rot = ((rot & 1)<<3)|(rot>>1);
+		}
 		else // Normal behaviour
 			rot = (ang+ANGLE_202h)>>29;
 
@@ -1257,7 +1290,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->rollangle)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
-		if (!sprframe->rotsprite.cached[rot])
+		if (!(sprframe->rotsprite.cached & (1<<rot)))
 			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
@@ -1278,31 +1311,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 		offset = -spr_offset;
 	offset = FixedMul(offset, this_scale);
-#ifndef PROPERPAPER
-	tx += FixedMul(offset, ang_scale);
-	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
-
-	// off the right side?
-	if (x1 > viewwidth)
-		return;
-#endif
 	offset2 = FixedMul(spr_width, this_scale);
-#ifndef PROPERPAPER
-	tx += FixedMul(offset2, ang_scale);
-	x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - (papersprite ? 2 : 1);
-
-	// off the left side
-	if (x2 < 0)
-		return;
-#endif
 
 	if (papersprite)
 	{
-		fixed_t
-#ifdef PROPERPAPER
-			xscale2,
-#endif
-					yscale2, cosmul, sinmul, tz2;
+		fixed_t xscale2, yscale2, cosmul, sinmul, tx2, tz2;
 		INT32 range;
 
 		if (ang >= ANGLE_180)
@@ -1320,19 +1333,23 @@ static void R_ProjectSprite(mobj_t *thing)
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
 		yscale = FixedDiv(projectiony, tz);
-		if (yscale < 64) return; // Fix some funky visuals
+		//if (yscale < 64) return; // Fix some funky visuals
 
-#ifdef PROPERPAPER
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
 		tx = -(gyt + gxt);
 		xscale = FixedDiv(projection, tz);
 		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
-		// off the right side?
-		if (x1 > viewwidth)
-			return;
-#endif
+		// Get paperoffset (offset) and paperoffset (distance)
+		paperoffset = -FixedMul(tr_x, cosmul) - FixedMul(tr_y, sinmul);
+		paperdistance = -FixedMul(tr_x, sinmul) + FixedMul(tr_y, cosmul);
+		if (paperdistance < 0)
+		{
+			paperoffset = -paperoffset;
+			paperdistance = -paperdistance;
+		}
+		centerangle = viewangle - thing->angle;
 
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
@@ -1340,38 +1357,52 @@ static void R_ProjectSprite(mobj_t *thing)
 		gyt = -FixedMul(tr_y, viewsin);
 		tz2 = gxt-gyt;
 		yscale2 = FixedDiv(projectiony, tz2);
-		if (yscale2 < 64) return; // ditto
+		//if (yscale2 < 64) return; // ditto
 
-#ifdef PROPERPAPER
 		gxt = -FixedMul(tr_x, viewsin);
 		gyt = FixedMul(tr_y, viewcos);
-		tx = -(gyt + gxt);
+		tx2 = -(gyt + gxt);
 		xscale2 = FixedDiv(projection, tz2);
-		x2 = (centerxfrac + FixedMul(tx,xscale2))>>FRACBITS; x2--;
+		x2 = ((centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS);
+
+		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
+			return;
+
+		// Needs partially clipped
+		if (tz < FixedMul(MINZ, this_scale))
+		{
+			fixed_t div = FixedDiv(tz2-tz, FixedMul(MINZ, this_scale)-tz);
+			tx += FixedDiv(tx2-tx, div);
+			tz = FixedMul(MINZ, this_scale);
+			yscale = FixedDiv(projectiony, tz);
+			xscale = FixedDiv(projection, tz);
+			x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
+		}
+		else if (tz2 < FixedMul(MINZ, this_scale))
+		{
+			fixed_t div = FixedDiv(tz-tz2, FixedMul(MINZ, this_scale)-tz2);
+			tx2 += FixedDiv(tx-tx2, div);
+			tz2 = FixedMul(MINZ, this_scale);
+			yscale2 = FixedDiv(projectiony, tz2);
+			xscale2 = FixedDiv(projection, tz2);
+			x2 = (centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS;
+		}
+
+		// off the right side?
+		if (x1 > viewwidth)
+			return;
 
 		// off the left side
 		if (x2 < 0)
-			return;
-#endif
-
-		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
 
 		if ((range = x2 - x1) <= 0)
 			return;
 
-#ifdef PROPERPAPER
 		range++; // fencepost problem
-#endif
 
-		scalestep = (yscale2 - yscale)/range;
-		xscale =
-#ifdef PROPERPAPER
-		FixedDiv(range<<FRACBITS, abs(offset2))+1
-#else
-		FixedMul(xscale, ang_scale)
-#endif
-		;
+		scalestep = ((yscale2 - yscale)/range) ?: 1;
+		xscale = FixedDiv(range<<FRACBITS, abs(offset2));
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -1381,7 +1412,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		scalestep = 0;
 		yscale = sortscale;
-#ifdef PROPERPAPER
 		tx += offset;
 		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
@@ -1395,7 +1425,6 @@ static void R_ProjectSprite(mobj_t *thing)
 		// off the left side
 		if (x2 < 0)
 			return;
-#endif
 	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
@@ -1516,6 +1545,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
 	vis->scalestep = scalestep;
+	vis->paperoffset = paperoffset;
+	vis->paperdistance = paperdistance;
+	vis->centerangle = centerangle;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 

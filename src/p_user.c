@@ -349,11 +349,11 @@ void P_GiveEmerald(boolean spawnObj)
 				continue;
 			P_SetTarget(&emmo->target, players[i].mo);
 			P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
-			
+
 			// Make sure we're not being carried before our tracer is changed
 			if (players[i].powers[pw_carry] != CR_NIGHTSMODE)
 				players[i].powers[pw_carry] = CR_NONE;
-			
+
 			P_SetTarget(&players[i].mo->tracer, emmo);
 
 			if (pnum == 255)
@@ -8672,7 +8672,7 @@ static void P_MovePlayer(player_t *player)
 	}
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none && cv_grfovchange.value)
+	if (rendermode != render_soft && rendermode != render_none && cv_fovchange.value)
 	{
 		fixed_t speed;
 		const fixed_t runnyspeed = 20*FRACUNIT;
@@ -10105,13 +10105,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	{
 		dist = camdist;
 
-		// x1.5 dist for splitscreen
-		if (splitscreen)
-		{
-			dist = FixedMul(dist, 3*FRACUNIT/2);
-			camheight = FixedMul(camheight, 3*FRACUNIT/2);
-		}
-
 		if (sign) // signpost camera has specific placement
 		{
 			camheight = mo->scale << 7;
@@ -10511,13 +10504,17 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
 		fixed_t vx = thiscam->x, vy = thiscam->y;
+		fixed_t vz = thiscam->z + thiscam->height / 2;
 		if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))		// Camera must obviously exist
 		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
+			vz = player->awayviewmobj->z + player->awayviewmobj->height / 2;
 		}
 
-		if (P_AproxDistance(vx - mo->x, vy - mo->y) < FixedMul(48*FRACUNIT, mo->scale))
+		/* check z distance too for orbital camera */
+		if (P_AproxDistance(P_AproxDistance(vx - mo->x, vy - mo->y),
+					vz - ( mo->z + mo->height / 2 )) < FixedMul(48*FRACUNIT, mo->scale))
 			mo->flags2 |= MF2_SHADOW;
 		else
 			mo->flags2 &= ~MF2_SHADOW;
@@ -11572,7 +11569,12 @@ void P_PlayerThink(player_t *player)
 				player->playerstate = PST_REBORN;
 		}
 		if (player->playerstate == PST_REBORN)
+		{
+#ifdef HAVE_BLUA
+			LUAh_PlayerThink(player);
+#endif
 			return;
+		}
 	}
 
 #ifdef SEENAMES
@@ -11673,7 +11675,12 @@ void P_PlayerThink(player_t *player)
 			player->lives = 0;
 
 			if (player->playerstate == PST_DEAD)
+			{
+#ifdef HAVE_BLUA
+				LUAh_PlayerThink(player);
+#endif
 				return;
+			}
 		}
 	}
 
@@ -11792,7 +11799,9 @@ void P_PlayerThink(player_t *player)
 	{
 		player->mo->flags2 &= ~MF2_SHADOW;
 		P_DeathThink(player);
-
+#ifdef HAVE_BLUA
+		LUAh_PlayerThink(player);
+#endif
 		return;
 	}
 
@@ -11833,7 +11842,12 @@ void P_PlayerThink(player_t *player)
 	if (player->spectator && cmd->buttons & BT_ATTACK && !player->powers[pw_flashing] && G_GametypeHasSpectators())
 	{
 		if (P_SpectatorJoinGame(player))
+		{
+#ifdef HAVE_BLUA
+			LUAh_PlayerThink(player);
+#endif
 			return; // player->mo was removed.
+		}
 	}
 
 	// Even if not NiGHTS, pull in nearby objects when walking around as John Q. Elliot.
@@ -11935,7 +11949,12 @@ void P_PlayerThink(player_t *player)
 	}
 
 	if (!player->mo)
+	{
+#ifdef HAVE_BLUA
+		LUAh_PlayerThink(player);
+#endif
 		return; // P_MovePlayer removed player->mo.
+	}
 
 	// deez New User eXperiences.
 	{
@@ -12367,6 +12386,11 @@ void P_PlayerThink(player_t *player)
 		dashmode = 0;
 	}
 #undef dashmode
+
+#ifdef HAVE_BLUA
+	LUAh_PlayerThink(player);
+#endif
+
 /*
 //	Colormap verification
 	{

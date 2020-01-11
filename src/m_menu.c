@@ -1397,7 +1397,7 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_STRING|IT_CVAR,         NULL, "Model lighting",      &cv_grmodellighting, 32},
 
 	{IT_HEADER, NULL, "General", NULL, 51},
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            63},
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_fov,            63},
 	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        73},
 	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     83},
 	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,93},
@@ -6897,6 +6897,8 @@ static void M_HandleChecklist(INT32 choice)
 						continue;
 					if (unlockables[j].conditionset > MAXCONDITIONSETS)
 						continue;
+					if (!unlockables[j].unlocked && unlockables[j].showconditionset && !M_Achieved(unlockables[j].showconditionset))
+						continue;
 					if (unlockables[j].conditionset == unlockables[check_on].conditionset)
 						continue;
 					break;
@@ -6919,6 +6921,8 @@ static void M_HandleChecklist(INT32 choice)
 					if (!unlockables[j].conditionset)
 						continue;
 					if (unlockables[j].conditionset > MAXCONDITIONSETS)
+						continue;
+					if (!unlockables[j].unlocked && unlockables[j].showconditionset && !M_Achieved(unlockables[j].showconditionset))
 						continue;
 					if (j && unlockables[j].conditionset == unlockables[j-1].conditionset)
 						continue;
@@ -6957,7 +6961,8 @@ static void M_DrawChecklist(void)
 	while (i < MAXUNLOCKABLES)
 	{
 		if (unlockables[i].name[0] == 0 //|| unlockables[i].nochecklist
-		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS)
+		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS
+		|| (!unlockables[i].unlocked && unlockables[i].showconditionset && !M_Achieved(unlockables[i].showconditionset)))
 		{
 			i += 1;
 			continue;
@@ -6983,10 +6988,11 @@ static void M_DrawChecklist(void)
 
 				if (unlockables[i].objective[0] != '/')
 				{
-					addy(8);
-					V_DrawString(currentMenu->x, y,
+					addy(16);
+					V_DrawString(currentMenu->x, y-8,
 						V_ALLOWLOWERCASE,
 						va("\x1E %s", unlockables[i].objective));
+					y -= 8;
 				}
 				else
 				{
@@ -7227,8 +7233,8 @@ static void M_EmblemHints(INT32 choice)
 
 static void M_DrawEmblemHints(void)
 {
-	INT32 i, j = 0;
-	UINT32 collected = 0;
+	INT32 i, j = 0, x, y;
+	UINT32 collected = 0, local = 0;
 	emblem_t *emblem;
 	const char *hint;
 
@@ -7237,31 +7243,53 @@ static void M_DrawEmblemHints(void)
 		emblem = &emblemlocations[i];
 		if (emblem->level != gamemap || emblem->type > ET_SKIN)
 			continue;
+		if (++local >= NUMHINTS*2)
+			break;
+	}
+
+	x = (local > NUMHINTS ? 4 : 12);
+	y = 8;
+
+	if (!local)
+		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
+	else for (i = 0; i < numemblems; i++)
+	{
+		emblem = &emblemlocations[i];
+		if (emblem->level != gamemap || emblem->type > ET_SKIN)
+			continue;
 
 		if (emblem->collected)
 		{
 			collected = V_GREENMAP;
-			V_DrawMappedPatch(12, 12+(28*j), 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
+			V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
 				R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 		}
 		else
 		{
 			collected = 0;
-			V_DrawScaledPatch(12, 12+(28*j), 0, W_CachePatchName("NEEDIT", PU_PATCH));
+			V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 		}
 
 		if (emblem->hint[0])
 			hint = emblem->hint;
 		else
-			hint = M_GetText("No hints available.");
+			hint = M_GetText("No hint available for this emblem.");
 		hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
-		V_DrawString(40, 8+(28*j), V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+		if (local > NUMHINTS)
+			V_DrawThinString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+		else
+			V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
 
-		if (++j >= NUMHINTS)
+		y += 28;
+
+		if (++j == NUMHINTS)
+		{
+			x = 4+(BASEVIDWIDTH/2);
+			y = 8;
+		}
+		else if (j >= NUMHINTS*2)
 			break;
 	}
-	if (!j)
-		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
 
 	M_DrawGenericMenu();
 }
@@ -9196,7 +9224,10 @@ static void M_DrawStatsMaps(int location)
 			else
 				V_DrawSmallScaledPatch(292, y, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
-			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, va("%s", exemblem->description));
+			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE,
+				(!exemblem->collected && exemblem->showconditionset && !M_Achieved(exemblem->showconditionset))
+				? M_CreateSecretMenuOption(exemblem->description)
+				: exemblem->description);
 		}
 
 		y += 8;
