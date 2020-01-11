@@ -159,13 +159,21 @@ static const char *const side_opt[] = {
 enum vertex_e {
 	vertex_valid = 0,
 	vertex_x,
-	vertex_y
+	vertex_y,
+	vertex_floorz,
+	vertex_floorzset,
+	vertex_ceilingz,
+	vertex_ceilingzset
 };
 
 static const char *const vertex_opt[] = {
 	"valid",
 	"x",
 	"y",
+	"floorz",
+	"floorzset",
+	"ceilingz",
+	"ceilingzset",
 	NULL};
 
 enum ffloor_e {
@@ -990,6 +998,18 @@ static int vertex_get(lua_State *L)
 		return 1;
 	case vertex_y:
 		lua_pushfixed(L, vertex->y);
+		return 1;
+	case vertex_floorzset:
+		lua_pushboolean(L, vertex->floorzset);
+		return 1;
+	case vertex_ceilingzset:
+		lua_pushboolean(L, vertex->ceilingzset);
+		return 1;
+	case vertex_floorz:
+		lua_pushfixed(L, vertex->floorz);
+		return 1;
+	case vertex_ceilingz:
+		lua_pushfixed(L, vertex->ceilingz);
 		return 1;
 	}
 	return 0;
