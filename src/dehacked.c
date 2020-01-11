@@ -2918,6 +2918,7 @@ static actionpointer_t actionpointers[] =
 	{{A_SetRandomTics},          "A_SETRANDOMTICS"},
 	{{A_ChangeColorRelative},    "A_CHANGECOLORRELATIVE"},
 	{{A_ChangeColorAbsolute},    "A_CHANGECOLORABSOLUTE"},
+	{{A_Dye},                    "A_DYE"},
 	{{A_MoveRelative},           "A_MOVERELATIVE"},
 	{{A_MoveAbsolute},           "A_MOVEABSOLUTE"},
 	{{A_Thrust},                 "A_THRUST"},
@@ -9129,7 +9130,10 @@ static const char *const POWERS_LIST[] = {
 	"NIGHTS_LINKFREEZE",
 
 	//for linedef exec 427
-	"NOCONTROL"
+	"NOCONTROL",
+	
+	//for dyes
+	"DYE"
 };
 
 static const char *const HUDITEMS_LIST[] = {

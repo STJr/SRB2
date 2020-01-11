@@ -2034,6 +2034,17 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin].name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
 				return false;
 			break;
+		case 334: // object dye - continuous
+		case 335: // object dye - each time
+		case 336: // object dye - once
+			{
+				INT32 triggercolor = (INT32)sides[triggerline->sidenum[0]].toptexture;
+				UINT8 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
+				boolean invert = (triggerline->flags & ML_NOCLIMB ? true : false);
+				
+				if (invert ^ (triggercolor != color))
+					return false;
+			}
 		default:
 			break;
 	}
@@ -2167,6 +2178,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 328 // Nights lap - Once
 	 || specialtype == 330 // Nights Bonus Time - Once
 	 || specialtype == 333 // Skin - Once
+	 || specialtype == 336 // Dye - Once
 	 || specialtype == 399) // Level Load
 		triggerline->special = 0; // Clear it out
 
@@ -2208,7 +2220,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		 || lines[masterline].special == 310 // CTF Red team - Each time
 		 || lines[masterline].special == 312 // CTF Blue team - Each time
 		 || lines[masterline].special == 322 // Trigger on X calls - Each Time
-		 || lines[masterline].special == 332)// Skin - Each time
+		 || lines[masterline].special == 332 // Skin - Each time
+		 || lines[masterline].special == 335)// Dye - Each time
 			continue;
 
 		if (lines[masterline].special < 300
@@ -4041,7 +4054,23 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 			}
 			break;
-
+		
+		case 463: // Dye object
+			{
+				INT32 color = sides[line->sidenum[0]].toptexture;
+				
+				if (mo)
+				{
+					if (color < 0 || color > MAXSKINCOLORS)
+						return;
+					
+					var1 = 0;
+					var2 = color;
+					A_Dye(mo);
+				}
+			}
+			break;
+		
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
@@ -7208,6 +7237,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 310:
 			case 312:
 			case 332:
+			case 335:
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				P_AddEachTimeThinker(&sectors[sec], &lines[i]);
 				break;
@@ -7259,6 +7289,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 			// Skin trigger executors
 			case 331:
 			case 333:
+				break;
+			
+			// Object dye executors
+			case 334:
+			case 336:
 				break;
 
 			case 399: // Linedef execute on map load

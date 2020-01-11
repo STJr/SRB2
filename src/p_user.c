@@ -12270,7 +12270,18 @@ void P_PlayerThink(player_t *player)
 		player->powers[pw_nocontrol]--;
 	else
 		player->powers[pw_nocontrol] = 0;
-
+	
+	if (player->powers[pw_dye])
+	{
+		player->mo->colorized = true;
+		player->mo->color = player->powers[pw_dye];
+	}
+	else
+	{
+		player->mo->colorized = false;
+		player->mo->color = player->skincolor;
+	}
+	
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]
 	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]

@@ -191,6 +191,7 @@ void A_SetTics(mobj_t *actor);
 void A_SetRandomTics(mobj_t *actor);
 void A_ChangeColorRelative(mobj_t *actor);
 void A_ChangeColorAbsolute(mobj_t *actor);
+void A_Dye(mobj_t *actor);
 void A_MoveRelative(mobj_t *actor);
 void A_MoveAbsolute(mobj_t *actor);
 void A_Thrust(mobj_t *actor);
@@ -8947,6 +8948,39 @@ void A_ChangeColorAbsolute(mobj_t *actor)
 	}
 	else
 		actor->color = (UINT8)locvar2;
+}
+
+// Function: A_Dye
+//
+// Description: Colorizes an object.
+//
+// var1 = if (var1 > 0), dye your target instead of yourself
+// var2 = if (var1 = 0), color value to dye
+//
+void A_Dye(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Dye", actor))
+		return;
+#endif
+	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
+	UINT8 color = (UINT8)locvar2;
+	
+	// What if it's a player?
+	if (target->player)
+	{
+		target->player->powers[pw_dye] = color;
+		return;
+	}
+	
+	target->color = color;
+	
+	if (!color)
+		target->colorized = false;
+	else
+		target->colorized = true;
 }
 
 // Function: A_MoveRelative

@@ -278,6 +278,8 @@ typedef enum
 	pw_nights_linkfreeze,
 
 	pw_nocontrol, //for linedef exec 427
+	
+	pw_dye, // for dyes
 
 	NUMPOWERS
 } powertype_t;
