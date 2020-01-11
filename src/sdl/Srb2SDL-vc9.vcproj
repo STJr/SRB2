@@ -1096,10 +1096,6 @@
 				RelativePath="..\win32\win_dbg.h"
 				>
 			</File>
-			<File
-				RelativePath="..\win32\win_main.h"
-				>
-			</File>
 			<Filter
 				Name="filter"
 				>

@@ -57,34 +57,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dx_error.c">
-      <Filter>Win32app</Filter>
-    </ClCompile>
-    <ClCompile Include="fabdxlib.c">
-      <Filter>Win32app</Filter>
-    </ClCompile>
-    <ClCompile Include="win_cd.c">
-      <Filter>Win32app</Filter>
-    </ClCompile>
     <ClCompile Include="win_dbg.c">
-      <Filter>Win32app</Filter>
-    </ClCompile>
-    <ClCompile Include="win_dll.c">
-      <Filter>Win32app</Filter>
-    </ClCompile>
-    <ClCompile Include="win_main.c">
-      <Filter>Win32app</Filter>
-    </ClCompile>
-    <ClCompile Include="win_net.c">
-      <Filter>Win32app</Filter>
-    </ClCompile>
-    <ClCompile Include="win_snd.c">
-      <Filter>Win32app</Filter>
-    </ClCompile>
-    <ClCompile Include="win_sys.c">
-      <Filter>Win32app</Filter>
-    </ClCompile>
-    <ClCompile Include="win_vid.c">
       <Filter>Win32app</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\hw_bsp.c">
@@ -483,22 +456,10 @@
     <ClInclude Include="afxres.h">
       <Filter>Win32app</Filter>
     </ClInclude>
-    <ClInclude Include="dx_error.h">
-      <Filter>Win32app</Filter>
-    </ClInclude>
-    <ClInclude Include="fabdxlib.h">
-      <Filter>Win32app</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Win32app</Filter>
     </ClInclude>
     <ClInclude Include="win_dbg.h">
-      <Filter>Win32app</Filter>
-    </ClInclude>
-    <ClInclude Include="win_dll.h">
-      <Filter>Win32app</Filter>
-    </ClInclude>
-    <ClInclude Include="win_main.h">
       <Filter>Win32app</Filter>
     </ClInclude>
     <ClInclude Include="..\hardware\hw_clip.h">

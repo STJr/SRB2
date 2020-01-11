@@ -327,16 +327,7 @@
     <ClCompile Include="..\w_wad.c" />
     <ClCompile Include="..\y_inter.c" />
     <ClCompile Include="..\z_zone.c" />
-    <ClCompile Include="dx_error.c" />
-    <ClCompile Include="fabdxlib.c" />
-    <ClCompile Include="win_cd.c" />
     <ClCompile Include="win_dbg.c" />
-    <ClCompile Include="win_dll.c" />
-    <ClCompile Include="win_main.c" />
-    <ClCompile Include="win_net.c" />
-    <ClCompile Include="win_snd.c" />
-    <ClCompile Include="win_sys.c" />
-    <ClCompile Include="win_vid.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\am_map.h" />
@@ -472,12 +463,8 @@
     <ClInclude Include="..\y_inter.h" />
     <ClInclude Include="..\z_zone.h" />
     <ClInclude Include="afxres.h" />
-    <ClInclude Include="dx_error.h" />
-    <ClInclude Include="fabdxlib.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="win_dbg.h" />
-    <ClInclude Include="win_dll.h" />
-    <ClInclude Include="win_main.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Srb2win.ico" />
