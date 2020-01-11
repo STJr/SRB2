@@ -2110,20 +2110,15 @@ void CV_SaveVariables(FILE *f)
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
 		if (cvar->flags & CV_SAVE)
 		{
-			char stringtrite[MAXTEXTCMD+1];
+			char stringtowrite[MAXTEXTCMD+1];
 
 			// Silly hack for Min/Max vars
 			if (!strcmp(cvar->string, "MAX") || !strcmp(cvar->string, "MIN"))
-			{
-				if (cvar->flags & CV_FLOAT)
-					sprintf(stringtowrite, "%f", FIXED_TO_FLOAT(cvar->value));
-				else
-					sprintf(stringtowrite, "%d", cvar->value);
-			}
+				sprintf(stringtowrite, "%d", cvar->value);
 			else
-				strcpy(stringtrite, cvar->string);
+				strcpy(stringtowrite, cvar->string);
 
-			fprintf(f, "%s \"%s\"\n", cvar->name, stringtrite);
+			fprintf(f, "%s \"%s\"\n", cvar->name, stringtowrite);
 		}
 }
 
