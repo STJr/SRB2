@@ -88,7 +88,6 @@
   <ImportGroup Label="Shared">
     <Import Project="..\..\SRB2_common.props" />
     <Import Project="..\..\comptime.props" />
-    <Import Project="..\..\libs\FMOD.props" />
     <Import Project="..\..\libs\zlib.props" />
     <Import Project="..\..\libs\libpng.props" />
     <Import Project="..\..\libs\libgme.props" />

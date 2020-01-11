@@ -36,12 +36,8 @@
 #       Pure Mingw only, compile OpenGL HW render DLL
 #     ds3d_dll
 #       Pure Mingw only, compile DirectX DirectSound HW sound DLL
-#     fmod_dll
-#       Pure Mingw only, compile FMOD HW sound DLL
 #     openal_dll
 #       Pure Mingw only, compile OpenAL HW sound DLL
-#     fmod_so
-#       Non-Mingw, compile FMOD HW sound SO
 #     openal_so
 #       Non-Mingw, compile OpenAL HW sound SO
 #
@@ -75,7 +71,6 @@
 #     Compile without IPX/SPX, add 'NOIPX=1'
 #     Compile Mingw/SDL with S_DS3S, add 'DS3D=1'
 #     Compile without libopenmpt, add 'NOOPENMPT=1'
-#     Compile with S_FMOD3D, add 'FMOD=1' (WIP)
 #     Compile with S_OPENAL, add 'OPENAL=1' (WIP)
 #     To link with the whole SDL_Image lib to load Icons, add 'SDL_IMAGE=1' but it isn't not realy needed
 #     To link with SDLMain to hide console or make on a console-less binary, add 'SDLMAIN=1'
@@ -586,7 +581,7 @@ else
 dll : opengl_dll
 endif
 ifdef MINGW
-all_dll: opengl_dll ds3d_dll fmod_dll openal_dll
+all_dll: opengl_dll ds3d_dll openal_dll
 
 opengl_dll: $(BIN)/r_opengl.dll
 $(BIN)/r_opengl.dll: $(OBJDIR)/ogl_win.o $(OBJDIR)/r_opengl.o
@@ -602,25 +597,13 @@ $(BIN)/s_ds3d.dll: $(OBJDIR)/s_ds3d.o
 	@echo Linking S_DS3d.dll...
 	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -ldsound -luuid
 
-fmod_dll: $(BIN)/s_fmod.dll
-$(BIN)/s_fmod.dll: $(OBJDIR)/s_fmod.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_FMOD.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lfmod
-
 openal_dll: $(BIN)/s_openal.dll
 $(BIN)/s_openal.dll: $(OBJDIR)/s_openal.o
 	-$(MKDIR) $(BIN)
 	@echo Linking S_OpenAL.dll...
 	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lopenal32
 else
-all_dll: fmod_so openal_so
-
-fmod_so: $(BIN)/s_fmod.so
-$(BIN)/s_fmod.so: $(OBJDIR)/s_fmod.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_FMOD.so...
-	$(CC) --shared $^ -o $@ -g --nostartfiles -lm -lfmod
+all_dll: openal_so
 
 openal_so: $(BIN)/s_openal.so
 $(BIN)/s_openal.so: $(OBJDIR)/s_openal.o
@@ -745,10 +728,6 @@ $(OBJDIR)/s_ds3d.o: hardware/s_ds3d/s_ds3d.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
 	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_ds3d.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_ds3d/s_ds3d.c
 
-$(OBJDIR)/s_fmod.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
- hardware/hw_dll.h
-	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_fmod/s_fmod.c
-
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
 	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_openal/s_openal.c
@@ -768,20 +747,12 @@ $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
-$(OBJDIR)/s_fmod.o: hardware/s_fmod/s_fmod.c hardware/hw3dsdrv.h \
- hardware/hw_dll.h
-	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
-
 ifdef MINGW
 $(OBJDIR)/s_ds3d.o: hardware/s_ds3d/s_ds3d.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 endif
 else
-
-$(OBJDIR)/s_fmod.o: hardware/s_fmod/s_fmod.c hardware/hw3dsdrv.h \
- hardware/hw_dll.h
-	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_fmod/s_fmod.c
 
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h

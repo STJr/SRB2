@@ -1238,23 +1238,13 @@ void I_StartupSound(void)
 		hws_mode = HWS_DS3D;
 		sdrv_name = "s_ds3d.dll";
 	}
-	else if (M_CheckParm("-fmod3d"))
-	{
-		hws_mode = HWS_FMOD3D;
-		sdrv_name = "s_fmod.dll";
-	}
 	else if (M_CheckParm("-openal"))
 	{
 		hws_mode = HWS_OPENAL;
 		sdrv_name = "s_openal.dll";
 	}
 #else
-	if (M_CheckParm("-fmod3d"))
-	{
-		hws_mode = HWS_FMOD3D;
-		sdrv_name = "./s_fmod.so";
-	}
-	else if (M_CheckParm("-openal"))
+	if (M_CheckParm("-openal"))
 	{
 		hws_mode = HWS_OPENAL;
 		sdrv_name = "./s_openal.so";
