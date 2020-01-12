@@ -1247,8 +1247,10 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	patch = W_CachePatchName("DSHADOW", PU_CACHE);
 	xscale = FixedDiv(projection, tz);
 	yscale = FixedDiv(projectiony, tz);
-	shadowxscale = FixedMul(thing->radius*2, scalemul) / patch->width;
-	shadowyscale = FixedMul(FixedMul(thing->radius*2 / patch->height, scalemul), FixedDiv(abs(floorz - viewz), tz));
+	shadowxscale = FixedMul(thing->radius*2, scalemul);
+	shadowyscale = FixedMul(FixedMul(thing->radius*2, scalemul), FixedDiv(abs(floorz - viewz), tz));
+	shadowyscale = min(shadowyscale, shadowxscale) / patch->height;
+	shadowxscale /= patch->width;
 	shadowskew = 0;
 
 	if (floorslope)
