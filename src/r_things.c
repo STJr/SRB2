@@ -1902,19 +1902,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 		R_SplitSprite(vis);
 
-	///@TODO temporary: whitelist. eventually: MF/2/E flag?
-	if ((
-		oldthing->type == MT_PLAYER ||
-		(oldthing->state - states) == S_RING ||
-		oldthing->type == MT_ROLLOUTROCK ||
-		oldthing->flags & MF_ENEMY ||
-		oldthing->type == MT_EGGMOBILE4_MACE ||
-		(oldthing->type >= MT_SMALLMACE && oldthing->type <= MT_REDSPRINGBALL) // .W.
-	) && !papersprite)
-		R_ProjectDropShadow(oldthing, vis,
-			///@TODO make this scale configurable!
-			((oldthing->state - states) == S_RING) ? 2*FRACUNIT/3 : FRACUNIT,
-		basetx, tz);
+	if (oldthing->shadowscale && !papersprite)
+		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, tz);
 
 	// Debug
 	++objectsdrawn;

@@ -10557,6 +10557,22 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	else
 		mobj->z = z;
 
+	// Set shadowscale here, before spawn hook so that Lua can change it
+	if (
+		type == MT_PLAYER ||
+		type == MT_ROLLOUTROCK ||
+		type == MT_EGGMOBILE4_MACE ||
+		(type >= MT_SMALLMACE && type <= MT_REDSPRINGBALL) ||
+		(mobj->flags & MF_ENEMY)
+	)
+		mobj->shadowscale = FRACUNIT;
+	else if (
+		type >= MT_RING && type <= MT_FLINGEMERALD && type != MT_EMERALDSPAWN
+	)
+		mobj->shadowscale = 2*FRACUNIT/3;
+	else
+		mobj->shadowscale = 0;
+
 #ifdef HAVE_BLUA
 	// DANGER! This can cause P_SpawnMobj to return NULL!
 	// Avoid using P_RemoveMobj on the newly created mobj in "MobjSpawn" Lua hooks!

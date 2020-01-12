@@ -1869,6 +1869,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 	S_StartSound(toucher, special->info->deathsound); // was NULL, but changed to player so you could hear others pick up rings
 	P_KillMobj(special, NULL, toucher, 0);
+	special->shadowscale = 0;
 }
 
 /** Prints death messages relating to a dying or hit player.
