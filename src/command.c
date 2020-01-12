@@ -2034,7 +2034,7 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 
 		// JOYSTICK DEFAULTS
 		// use_joystick was changed from 0 to 1 to automatically use a joystick if available
-#if defined(HAVE_SDL) || defined(_WINDOWS)
+#if defined(HAVE_SDL)
 		if ((!stricmp(v->name, "use_joystick")
 			|| !stricmp(v->name, "use_joystick2"))
 			&& atoi(valstr) == 0)

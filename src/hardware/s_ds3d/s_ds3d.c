@@ -125,49 +125,6 @@ enum {IS_2DSOURCE = 0, IS_3DSOURCE = 1};
 
 #define NEW_HANDLE  -1
 
-#ifdef _WINDOWS
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, // handle to DLL module
-                    DWORD fdwReason,    // reason for calling function
-                    LPVOID lpvReserved) // reserved
-{
-	// Perform actions based on the reason for calling
-	UNREFERENCED_PARAMETER(lpvReserved);
-	switch ( fdwReason )
-	{
-		case DLL_PROCESS_ATTACH:
-			// Initialize once for each new process.
-			// Return FALSE to fail DLL load.
-#ifdef DEBUG_TO_FILE
-			logstream = fopen("s_ds3d.log", "wt");
-			if (logstream == NULL)
-				return FALSE;
-#endif
-			DisableThreadLibraryCalls(hinstDLL);
-			break;
-
-		case DLL_THREAD_ATTACH:
-			// Do thread-specific initialization.
-			break;
-
-		case DLL_THREAD_DETACH:
-			// Do thread-specific cleanup.
-			break;
-
-		case DLL_PROCESS_DETACH:
-			// Perform any necessary cleanup.
-#ifdef DEBUG_TO_FILE
-			if (logstream)
-			{
-				fclose(logstream);
-				logstream = NULL;
-			}
-#endif
-			break;
-	}
-	return TRUE;  // Successful DLL_PROCESS_ATTACH.
-}
-#endif
-
 // **************************************************************************
 //                                                                  FUNCTIONS
 // **************************************************************************

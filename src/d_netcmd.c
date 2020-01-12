@@ -3557,8 +3557,6 @@ static void Command_Version_f(void)
 	// Base library
 #if defined( HAVE_SDL)
 	CONS_Printf("SDL ");
-#elif defined(_WINDOWS)
-	CONS_Printf("DD ");
 #endif
 
 	// OS
