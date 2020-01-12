@@ -1441,8 +1441,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 			}
 
-			// We could technically have 91.1 Star Posts. 90 is cleaner.
-			if (special->health > 90)
+			// With the parameter + angle setup, we can go up to 1365 star posts. Who needs that many?
+			if (special->health > 1365)
 			{
 				CONS_Debug(DBG_GAMELOGIC, "Bad Starpost Number!\n");
 				return;
