@@ -1453,6 +1453,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if (cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (netgame || multiplayer))
 			{
+				mobj_t *checkbase = (special->spawnpoint && (special->spawnpoint->options & MTF_AMBUSH)) ? special : toucher;
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
 					if (playeringame[i])
@@ -1461,8 +1462,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 							continue;
 
 						players[i].starposttime = leveltime;
-						players[i].starpostx = player->mo->x>>FRACBITS;
-						players[i].starposty = player->mo->y>>FRACBITS;
+						players[i].starpostx = checkbase->x>>FRACBITS;
+						players[i].starposty = checkbase->y>>FRACBITS;
 						players[i].starpostz = special->z>>FRACBITS;
 						players[i].starpostangle = special->angle;
 						players[i].starpostscale = player->mo->destscale;
@@ -1483,8 +1484,16 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				// Save the player's time and position.
 				player->starposttime = leveltime;
-				player->starpostx = toucher->x>>FRACBITS;
-				player->starposty = toucher->y>>FRACBITS;
+				if (special->spawnpoint && (special->spawnpoint->options & MTF_AMBUSH))
+				{
+					player->starpostx = special->x>>FRACBITS;
+					player->starposty = special->y>>FRACBITS;
+				}
+				else
+				{
+					player->starpostx = toucher->x>>FRACBITS;
+					player->starposty = toucher->y>>FRACBITS;
+				}
 				player->starpostz = special->z>>FRACBITS;
 				player->starpostangle = special->angle;
 				player->starpostscale = player->mo->destscale;
