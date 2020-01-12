@@ -1055,6 +1055,7 @@ static void P_LoadLinedefs(UINT8 *data)
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
+		memset(ld->stringargs, (int)NULL, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		P_SetLinedefV1(i, SHORT(mld->v1));
 		P_SetLinedefV2(i, SHORT(mld->v2));
 
@@ -1441,10 +1442,21 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		P_SetLinedefV2(i, atol(val));
 	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
 	{
-		size_t argnum = atol(param + 3);
-		if (argnum >= NUMLINEARGS)
-			return;
-		lines[i].args[argnum] = atol(val);
+		if (fastcmp(param + 4, "str"))
+		{
+			size_t argnum = param[3] - '0';
+			if (argnum >= NUMLINESTRINGARGS)
+				return;
+			lines[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+			M_Memcpy(lines[i].stringargs[argnum], val, strlen(val) + 1);
+		}
+		else
+		{
+			size_t argnum = atol(param + 3);
+			if (argnum >= NUMLINEARGS)
+				return;
+			lines[i].args[argnum] = atol(val);
+		}
 	}
 	else if (fastcmp(param, "sidefront"))
 		lines[i].sidenum[0] = atol(val);
@@ -1636,6 +1648,7 @@ static void P_LoadTextmap(void)
 		ld->special = 0;
 		ld->tag = 0;
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
+		memset(ld->stringargs, (int)NULL, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->sidenum[0] = 0xffff;
 		ld->sidenum[1] = 0xffff;
 
@@ -2666,6 +2679,15 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (lines[i].special)
 		{
+		case 443: //Call Lua function
+			if (lines[i].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(lines[i].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], lines[i].text, strlen(lines[i].text) + 1);
+			}
+			else
+				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in the front texture fields)\n", sizeu1(i));
+			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
 		case 702: //Slope front sector floor and ceiling

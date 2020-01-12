@@ -95,6 +95,7 @@ enum line_e {
 	line_special,
 	line_tag,
 	line_args,
+	line_stringargs,
 	line_sidenum,
 	line_frontside,
 	line_backside,
@@ -117,6 +118,7 @@ static const char *const line_opt[] = {
 	"special",
 	"tag",
 	"args",
+	"stringargs",
 	"sidenum",
 	"frontside",
 	"backside",
@@ -729,6 +731,24 @@ static int lineargs_len(lua_State* L)
 	return 1;
 }
 
+// stringargs, i -> stringargs[i]
+static int linestringargs_get(lua_State *L)
+{
+	char **stringargs = *((char***)luaL_checkudata(L, 1, META_LINESTRINGARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMLINESTRINGARGS)
+		return luaL_error(L, LUA_QL("line_t.stringargs") " index cannot be %d", i);
+	lua_pushstring(L, stringargs[i]);
+	return 1;
+}
+
+// #stringargs -> NUMLINESTRINGARGS
+static int linestringargs_len(lua_State *L)
+{
+	lua_pushinteger(L, NUMLINESTRINGARGS);
+	return 1;
+}
+
 static int line_get(lua_State *L)
 {
 	line_t *line = *((line_t **)luaL_checkudata(L, 1, META_LINE));
@@ -771,6 +791,9 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_args:
 		LUA_PushUserdata(L, line->args, META_LINEARGS);
+		return 1;
+	case line_stringargs:
+		LUA_PushUserdata(L, line->stringargs, META_LINESTRINGARGS);
 		return 1;
 	case line_sidenum:
 		LUA_PushUserdata(L, line->sidenum, META_SIDENUM);
@@ -2185,6 +2208,14 @@ int LUA_MapLib(lua_State *L)
 		lua_setfield(L, -2, "__index");
 
 		lua_pushcfunction(L, lineargs_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_LINESTRINGARGS);
+		lua_pushcfunction(L, linestringargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, linestringargs_len);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 

@@ -764,17 +764,28 @@ static void P_NetUnArchiveColormaps(void)
 #define LD_DIFF2    0x80
 
 // diff2 flags
-#define LD_S2TEXOFF 0x01
-#define LD_S2TOPTEX 0x02
-#define LD_S2BOTTEX 0x04
-#define LD_S2MIDTEX 0x08
-#define LD_ARGS     0x10
+#define LD_S2TEXOFF   0x01
+#define LD_S2TOPTEX   0x02
+#define LD_S2BOTTEX   0x04
+#define LD_S2MIDTEX   0x08
+#define LD_ARGS       0x10
+#define LD_STRINGARGS 0x20
 
-static boolean P_AreArgsEqual(const INT32 args[NUMLINEARGS], const INT32 spawnargs[NUMLINEARGS])
+static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
 {
 	UINT8 i;
 	for (i = 0; i < NUMLINEARGS; i++)
-		if (args[i] != spawnargs[i])
+		if (li->args[i] != spawnli->args[i])
+			return false;
+
+	return true;
+}
+
+static boolean P_AreStringArgsEqual(const line_t *li, const line_t *spawnli)
+{
+	UINT8 i;
+	for (i = 0; i < NUMLINESTRINGARGS; i++)
+		if (strcmp(li->stringargs[i], spawnli->stringargs[i]))
 			return false;
 
 	return true;
@@ -955,8 +966,11 @@ static void P_NetArchiveWorld(void)
 		if (spawnli->special == 321 || spawnli->special == 322) // only reason li->callcount would be non-zero is if either of these are involved
 			diff |= LD_CLLCOUNT;
 
-		if (!P_AreArgsEqual(li->args, spawnli->args))
+		if (!P_AreArgsEqual(li, spawnli))
 			diff2 |= LD_ARGS;
+
+		if (!P_AreStringArgsEqual(li, spawnli))
+			diff2 |= LD_STRINGARGS;
 
 		if (li->sidenum[0] != 0xffff)
 		{
@@ -1027,6 +1041,25 @@ static void P_NetArchiveWorld(void)
 				UINT8 j;
 				for (j = 0; j < NUMLINEARGS; j++)
 					WRITEINT32(put, li->args[j]);
+			}
+			if (diff2 & LD_STRINGARGS)
+			{
+				UINT8 j;
+				for (j = 0; j < NUMLINESTRINGARGS; j++)
+				{
+					size_t len, k;
+
+					if (!li->stringargs[j])
+					{
+						WRITEINT32(put, 0);
+						continue;
+					}
+
+					len = strlen(li->stringargs[j]);
+					WRITEINT32(put, len);
+					for (k = 0; k < len; k++)
+						WRITECHAR(put, li->stringargs[j][k]);
+				}
 			}
 		}
 	}
@@ -1217,7 +1250,27 @@ static void P_NetUnArchiveWorld(void)
 			for (j = 0; j < NUMLINEARGS; j++)
 				li->args[j] = READINT32(get);
 		}
+		if (diff2 & LD_STRINGARGS)
+		{
+			UINT8 j;
+			for (j = 0; j < NUMLINESTRINGARGS; j++)
+			{
+				size_t len = READINT32(get);
+				size_t k;
 
+				if (!len)
+				{
+					Z_Free(li->stringargs[j]);
+					li->stringargs[j] = NULL;
+					continue;
+				}
+
+				li->stringargs[j] = Z_Realloc(li->stringargs[j], len + 1, PU_LEVEL, NULL);
+				for (k = 0; k < len; k++)
+					li->stringargs[j][k] = READCHAR(get);
+				li->stringargs[j][len] = '\0';
+			}
+		}
 	}
 
 	save_p = get;

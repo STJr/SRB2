@@ -404,6 +404,7 @@ typedef enum
 #define HORIZONSPECIAL 41
 
 #define NUMLINEARGS 6
+#define NUMLINESTRINGARGS 2
 
 typedef struct line_s
 {
@@ -418,6 +419,7 @@ typedef struct line_s
 	INT16 special;
 	INT16 tag;
 	INT32 args[NUMLINEARGS];
+	char *stringargs[NUMLINESTRINGARGS];
 
 	// Visual appearance: sidedefs.
 	UINT16 sidenum[2]; // sidenum[1] will be 0xffff if one-sided
