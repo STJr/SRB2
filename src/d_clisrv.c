@@ -1622,6 +1622,7 @@ static void CL_LoadReceivedSavegame(void)
 
 	paused = false;
 	demoplayback = false;
+	titlemapinaction = TITLEMAP_OFF;
 	titledemo = false;
 	automapactive = false;
 
