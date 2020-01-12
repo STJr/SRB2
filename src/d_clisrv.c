@@ -1343,11 +1343,11 @@ static void SV_SendPlayerInfo(INT32 node)
 	{
 		if (!playeringame[i])
 		{
-			netbuffer->u.playerinfo[i].node = 255; // This slot is empty.
+			netbuffer->u.playerinfo[i].num = 255; // This slot is empty.
 			continue;
 		}
 
-		netbuffer->u.playerinfo[i].node = i;
+		netbuffer->u.playerinfo[i].num = i;
 		strncpy(netbuffer->u.playerinfo[i].name, (const char *)&player_names[i], MAXPLAYERNAME+1);
 		netbuffer->u.playerinfo[i].name[MAXPLAYERNAME] = '\0';
 
@@ -4113,7 +4113,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 				if (server)
 				{
 					UINT8 buf[2];
-					buf[0] = (UINT8)node;
+					buf[0] = (UINT8)netconsole;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
 				}
@@ -4138,7 +4138,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 				if (server)
 				{
 					UINT8 buf[2];
-					buf[0] = (UINT8)node;
+					buf[0] = (UINT8)netconsole;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
 				}
@@ -4204,8 +4204,8 @@ static void HandlePacketFromPlayer(SINT8 node)
 
 				if (server)
 				{
-					char buf[2];
-					buf[0] = (char)node;
+					UINT8 buf[2];
+					buf[0] = (UINT8)netconsole;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
 				}
@@ -4223,8 +4223,8 @@ static void HandlePacketFromPlayer(SINT8 node)
 
 				if (server)
 				{
-					char buf[2];
-					buf[0] = (char)node;
+					UINT8 buf[2];
+					buf[0] = (UINT8)netconsole;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
 				}
@@ -4255,7 +4255,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 				if (server)
 				{
 					UINT8 buf[2];
-					buf[0] = (UINT8)node;
+					buf[0] = (UINT8)netconsole;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
 				}
@@ -4806,11 +4806,11 @@ static inline void PingUpdate(void)
 					if (pingtimeout[i] > cv_pingtimeout.value)
 // ok your net has been bad for too long, you deserve to die.
 					{
-						char buf[2];
+						UINT8 buf[2];
 
 						pingtimeout[i] = 0;
 
-						buf[0] = (char)i;
+						buf[0] = (UINT8)i;
 						buf[1] = KICK_MSG_PING_HIGH;
 						SendNetXCmd(XD_KICK, &buf, 2);
 					}
