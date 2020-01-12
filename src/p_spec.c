@@ -4061,7 +4061,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				
 				if (mo)
 				{
-					if (color < 0 || color > MAXSKINCOLORS)
+					if (color < 0 || color >= MAXTRANSLATIONS)
 						return;
 					
 					var1 = 0;

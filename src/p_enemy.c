@@ -8954,8 +8954,8 @@ void A_ChangeColorAbsolute(mobj_t *actor)
 //
 // Description: Colorizes an object.
 //
-// var1 = if (var1 > 0), dye your target instead of yourself
-// var2 = if (var1 = 0), color value to dye
+// var1 = if (var1 != 0), dye your target instead of yourself
+// var2 = color value to dye
 //
 void A_Dye(mobj_t *actor)
 {
@@ -8967,6 +8967,9 @@ void A_Dye(mobj_t *actor)
 #endif
 	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
 	UINT8 color = (UINT8)locvar2;
+	
+	if (color >= MAXTRANSLATIONS)
+		return;
 	
 	// What if it's a player?
 	if (target->player)
