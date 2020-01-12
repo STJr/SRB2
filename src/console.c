@@ -777,7 +777,7 @@ boolean CON_Responder(event_t *ev)
 	// check for console toggle key
 	if (ev->type != ev_console)
 	{
-		if (modeattacking || metalrecording)
+		if (modeattacking || metalrecording || menuactive)
 			return false;
 
 		if (key == gamecontrol[gc_console][0] || key == gamecontrol[gc_console][1])
