@@ -42,7 +42,6 @@
 #else // No SDL.
     // No more interfaces. :(
     #define SOUND SOUND_DUMMY
-#endif
 
 #endif
 #endif
