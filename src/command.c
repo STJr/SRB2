@@ -1457,15 +1457,8 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 	{
 		// not from server or remote admin, must be hacked/buggy client
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal netvar command received from %s\n"), player_names[playernum]);
-
 		if (server)
-		{
-			UINT8 buf[2];
-
-			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
-			SendNetXCmd(XD_KICK, &buf, 2);
-		}
+			SendKick(playernum, KICK_MSG_CON_FAIL);
 		return;
 	}
 	netid = READUINT16(*p);
