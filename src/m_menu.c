@@ -7233,8 +7233,8 @@ static void M_EmblemHints(INT32 choice)
 
 static void M_DrawEmblemHints(void)
 {
-	INT32 i, j = 0, x, y;
-	UINT32 collected = 0, local = 0, left_hints = NUMHINTS;
+	INT32 i, j = 0, x, y, left_hints = NUMHINTS;
+	UINT32 collected = 0, local = 0;
 	emblem_t *emblem;
 	const char *hint;
 
