@@ -1451,59 +1451,54 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->starpostnum >= special->health)
 				return; // Already hit this post
 
-			if (cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (netgame || multiplayer))
 			{
 				mobj_t *checkbase = (special->spawnpoint && (special->spawnpoint->options & MTF_AMBUSH)) ? special : toucher;
-				for (i = 0; i < MAXPLAYERS; i++)
+
+				if (cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (netgame || multiplayer))
 				{
-					if (playeringame[i])
+					for (i = 0; i < MAXPLAYERS; i++)
 					{
-						if (players[i].bot) // ignore dumb, stupid tails
-							continue;
-
-						players[i].starposttime = leveltime;
-						players[i].starpostx = checkbase->x>>FRACBITS;
-						players[i].starposty = checkbase->y>>FRACBITS;
-						players[i].starpostz = special->z>>FRACBITS;
-						players[i].starpostangle = special->angle;
-						players[i].starpostscale = player->mo->destscale;
-						if (special->flags2 & MF2_OBJECTFLIP)
+						if (playeringame[i])
 						{
-							players[i].starpostscale *= -1;
-							players[i].starpostz += special->height>>FRACBITS;
-						}
-						players[i].starpostnum = special->health;
+							if (players[i].bot) // ignore dumb, stupid tails
+								continue;
 
-						if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
-							P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
+							players[i].starposttime = leveltime;
+							players[i].starpostx = checkbase->x>>FRACBITS;
+							players[i].starposty = checkbase->y>>FRACBITS;
+							players[i].starpostz = special->z>>FRACBITS;
+							players[i].starpostangle = special->angle;
+							players[i].starpostscale = player->mo->destscale;
+							if (special->flags2 & MF2_OBJECTFLIP)
+							{
+								players[i].starpostscale *= -1;
+								players[i].starpostz += special->height>>FRACBITS;
+							}
+							players[i].starpostnum = special->health;
+
+							if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
+								P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
+						}
 					}
-				}
-				S_StartSound(NULL, special->info->painsound);
-			}
-			else
-			{
-				// Save the player's time and position.
-				player->starposttime = leveltime;
-				if (special->spawnpoint && (special->spawnpoint->options & MTF_AMBUSH))
-				{
-					player->starpostx = special->x>>FRACBITS;
-					player->starposty = special->y>>FRACBITS;
+					S_StartSound(NULL, special->info->painsound);
 				}
 				else
 				{
-					player->starpostx = toucher->x>>FRACBITS;
-					player->starposty = toucher->y>>FRACBITS;
+					// Save the player's time and position.
+					player->starposttime = leveltime;
+					player->starpostx = checkbase->x>>FRACBITS;
+					player->starposty = checkbase->y>>FRACBITS;
+					player->starpostz = special->z>>FRACBITS;
+					player->starpostangle = special->angle;
+					player->starpostscale = player->mo->destscale;
+					if (special->flags2 & MF2_OBJECTFLIP)
+					{
+						player->starpostscale *= -1;
+						player->starpostz += special->height>>FRACBITS;
+					}
+					player->starpostnum = special->health;
+					S_StartSound(toucher, special->info->painsound);
 				}
-				player->starpostz = special->z>>FRACBITS;
-				player->starpostangle = special->angle;
-				player->starpostscale = player->mo->destscale;
-				if (special->flags2 & MF2_OBJECTFLIP)
-				{
-					player->starpostscale *= -1;
-					player->starpostz += special->height>>FRACBITS;
-				}
-				player->starpostnum = special->health;
-				S_StartSound(toucher, special->info->painsound);
 			}
 
 			P_ClearStarPost(special->health);
