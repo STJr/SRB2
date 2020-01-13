@@ -8971,6 +8971,9 @@ void A_Dye(mobj_t *actor)
 	if (color >= MAXTRANSLATIONS)
 		return;
 	
+	if (!color)
+		target->colorized = false;
+	
 	// What if it's a player?
 	if (target->player)
 	{
@@ -8979,11 +8982,7 @@ void A_Dye(mobj_t *actor)
 	}
 	
 	target->color = color;
-	
-	if (!color)
-		target->colorized = false;
-	else
-		target->colorized = true;
+	target->colorized = true;
 }
 
 // Function: A_MoveRelative

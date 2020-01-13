@@ -12922,11 +12922,6 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->colorized = true;
 		player->mo->color = player->powers[pw_dye];
 	}
-	else
-	{
-		player->mo->colorized = false;
-		player->mo->color = player->skincolor;
-	}
 
 	if (player->followmobj && (player->spectator || player->mo->health <= 0 || player->followmobj->type != player->followitem))
 	{
