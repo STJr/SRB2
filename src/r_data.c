@@ -1042,10 +1042,10 @@ void R_LoadTextures(void)
 
 	for (i = 0, w = 0; w < numwadfiles; w++)
 	{
-		i = Rloadtextures(i, w);
 #ifdef WALLFLATS
 		i = Rloadflats(i, w);
 #endif
+		i = Rloadtextures(i, w);
 	}
 
 #ifdef HWRENDER
