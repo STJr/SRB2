@@ -27,7 +27,7 @@ This version is independent of the mod name, and standard
 version and subversion. It should only account for the
 basic fields of the packet, and change infrequently.
 */
-#define PACKETVERSION 1
+#define PACKETVERSION 2
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -366,7 +366,6 @@ typedef struct
 	UINT8 cheatsenabled;
 	UINT8 isdedicated;
 	UINT8 fileneedednum;
-	SINT8 adminplayer;
 	tic_t time;
 	tic_t leveltime;
 	char servername[MAXSERVERNAME];
