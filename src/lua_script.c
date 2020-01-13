@@ -337,10 +337,11 @@ static int setglobals(lua_State *L)
 		return 0;
 	}
 
+	Z_Free(name);
+
 	if (LUA_CheckGlobals(L, csname))
 		return 0;
 
-	Z_Free(name);
 	return luaL_error(L, "Implicit global " LUA_QS " prevented. Create a local variable instead.", csname);
 }
 
