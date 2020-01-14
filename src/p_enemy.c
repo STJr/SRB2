@@ -8973,7 +8973,9 @@ void A_Dye(mobj_t *actor)
 	
 	if (!color)
 		target->colorized = false;
-	
+	else
+		target->colorized = true;
+		
 	// What if it's a player?
 	if (target->player)
 	{
@@ -8982,7 +8984,6 @@ void A_Dye(mobj_t *actor)
 	}
 	
 	target->color = color;
-	target->colorized = true;
 }
 
 // Function: A_MoveRelative
