@@ -564,7 +564,7 @@ static struct {
 void R_CheckViewMorph(void)
 {
 	float zoomfactor, rollcos, rollsin;
-	float x1, y1, x2, y2, fisheyef;
+	float x1, y1, x2, y2;
 	fixed_t temp;
 	size_t end, vx, vy, pos, usedpos;
 	INT32 usedx, usedy, halfwidth = vid.width/2, halfheight = vid.height/2;
@@ -574,14 +574,14 @@ void R_CheckViewMorph(void)
 
 	// temp values
 	//angle_t rollangle = leveltime << (ANGLETOFINESHIFT);
-	fixed_t fisheye = FRACUNIT;
+	fixed_t fisheye = 0;
 
 	rollangle >>= ANGLETOFINESHIFT;
 	rollangle = (((rollangle+1)/2)*2) & FINEMASK; // Limit the distinct number of angles to reduce recalcs from angles changing a lot.
 
 	fisheye &= ~0xFF; // Same limiter logic for fisheye
 
-	if (rollangle == viewmorph.rollangle && fisheye == viewmorph.fisheye && viewmorph.scrmapsize == vid.width*vid.height)
+	if (rollangle == viewmorph.rollangle && fisheye == viewmorph.fisheye)
 		return; // No change
 
 	viewmorph.rollangle = rollangle;
@@ -613,13 +613,6 @@ void R_CheckViewMorph(void)
 	// Calculate maximum zoom needed
 	x1 = (vid.width*fabsf(rollcos) + vid.height*fabsf(rollsin)) / vid.width;
 	y1 = (vid.height*fabsf(rollcos) + vid.width*fabsf(rollsin)) / vid.height;
-
-	if (fisheye)
-	{
-		float dist = powf(2, (fisheyef = FIXED_TO_FLOAT(fisheye))/2);
-		x1 *= dist;
-		y1 *= dist;
-	}
 
 	temp = max(x1, y1)*FRACUNIT;
 	if (temp < FRACUNIT)
@@ -659,20 +652,8 @@ void R_CheckViewMorph(void)
 
 		for (vx = 0; vx < vid.width; vx++)
 		{
-			if (fisheye)
-			{
-				float dist = sqrtf(x2*x2 + y2*y2) * zoomfactor / sqrtf(halfwidth*halfwidth + halfheight*halfheight);
-				dist += (1 - sqrtf(1 - dist*dist)) / dist;
-				dist = powf(dist, fisheyef);
-				usedx = halfwidth+x2*dist;
-				usedy = halfheight+y2*dist;
-
-			}
-			else
-			{
-				usedx = halfwidth+x2;
-				usedy = halfheight+y2;
-			}
+			usedx = halfwidth+x2;
+			usedy = halfheight+y2;
 
 			if (usedx < 0) usedx = 0;
 			else if (usedx >= vid.width) usedx = vid.width-1;
