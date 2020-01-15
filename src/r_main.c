@@ -553,13 +553,12 @@ static inline void R_InitLightTables(void)
 
 static struct {
 	angle_t rollangle; // pre-shifted by fineshift
-	fixed_t fisheye;
 
 	fixed_t zoomneeded;
 	INT32 *scrmap;
 	size_t scrmapsize;
 	boolean use;
-} viewmorph = {0, 0, FRACUNIT, NULL, 0, false};
+} viewmorph = {0, FRACUNIT, NULL, 0, false};
 
 void R_CheckViewMorph(void)
 {
@@ -570,24 +569,16 @@ void R_CheckViewMorph(void)
 	INT32 usedx, usedy, halfwidth = vid.width/2, halfheight = vid.height/2;
 
 	angle_t rollangle = players[displayplayer].viewrollangle;
-	//fixed_t fisheye = players[displayplayer].viewfisheye;
-
-	// temp values
-	//angle_t rollangle = leveltime << (ANGLETOFINESHIFT);
-	fixed_t fisheye = 0;
 
 	rollangle >>= ANGLETOFINESHIFT;
 	rollangle = (((rollangle+1)/2)*2) & FINEMASK; // Limit the distinct number of angles to reduce recalcs from angles changing a lot.
 
-	fisheye &= ~0xFF; // Same limiter logic for fisheye
-
-	if (rollangle == viewmorph.rollangle && fisheye == viewmorph.fisheye)
+	if (rollangle == viewmorph.rollangle && viewmorph.scrmapsize == vid.width*vid.height)
 		return; // No change
 
 	viewmorph.rollangle = rollangle;
-	viewmorph.fisheye = fisheye;
 
-	if (viewmorph.rollangle == 0 && viewmorph.fisheye == 0)
+	if (viewmorph.rollangle == 0)
 	{
 		viewmorph.use = false;
 		if (viewmorph.zoomneeded != FRACUNIT)
@@ -654,11 +645,6 @@ void R_CheckViewMorph(void)
 		{
 			usedx = halfwidth+x2;
 			usedy = halfheight+y2;
-
-			if (usedx < 0) usedx = 0;
-			else if (usedx >= vid.width) usedx = vid.width-1;
-			if (usedy < 0) usedy = 0;
-			else if (usedy >= vid.height) usedy = vid.height-1;
 
 			usedpos = usedx + usedy*vid.width;
 
