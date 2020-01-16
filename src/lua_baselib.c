@@ -2802,6 +2802,31 @@ Lpushdim (lua_State *L, int c, struct searchdim *v)
 I decided to make this return a table because userdata
 is scary and tables let the user set their own fields.
 */
+/*
+Returns:
+
+[1] => map number
+[2] => map title
+[3] => search frequency table
+
+The frequency table is unsorted. It has the following format:
+
+{
+	['mapnum'],
+
+	['matchd'] => matches in map title string
+	['keywhd'] => matches in map keywords
+
+	The above two tables have the following format:
+
+	{
+		['pos'] => offset from start of string
+		['siz'] => length of match
+	}...
+
+	['total'] => the total matches
+}...
+*/
 static int lib_gFindMap(lua_State *L)
 {
 	const char *query = luaL_checkstring(L, 1);
