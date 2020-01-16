@@ -2869,6 +2869,29 @@ static int lib_gFindMap(lua_State *L)
 	return 3;
 }
 
+/*
+Returns:
+
+[1] => map number
+[2] => map title
+*/
+static int lib_gFindMapByNameOrCode(lua_State *L)
+{
+	const char *query = luaL_checkstring(L, 1);
+	INT32 map;
+	char *realname;
+	map = G_FindMapByNameOrCode(query, &realname);
+	lua_pushnumber(L, map);
+	if (map)
+	{
+		lua_pushstring(L, realname);
+		Z_Free(realname);
+		return 2;
+	}
+	else
+		return 1;
+}
+
 static int lib_gDoReborn(lua_State *L)
 {
 	INT32 playernum = luaL_checkinteger(L, 1);
@@ -3246,6 +3269,7 @@ static luaL_Reg lib[] = {
 	{"G_AddGametype", lib_gAddGametype},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_FindMap",lib_gFindMap},
+	{"G_FindMapByNameOrCode",lib_gFindMapByNameOrCode},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
 	{"G_EnoughPlayersFinished",lib_gEnoughPlayersFinished},
