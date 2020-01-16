@@ -98,8 +98,8 @@
 
 #ifdef GETTEXT
 #include <libintl.h>
-#include <locale.h>
 #endif
+#include <locale.h> // locale should not be dependent on GETTEXT -- 11/01/20 Monster Iestyn
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -451,12 +451,12 @@ char savegamename[256];
 // m_misc.h
 #ifdef GETTEXT
 #define M_GetText(String) gettext(String)
-void M_StartupLocale(void);
 #else
 // If no translations are to be used, make a stub
 // M_GetText function that just returns the string.
 #define M_GetText(x) (x)
 #endif
+void M_StartupLocale(void);
 extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
