@@ -31,7 +31,9 @@
 #include <math.h>
 #include "r_opengl.h"
 #include "r_vbo.h"
+
 #include "../../p_tick.h" // for leveltime (NOTE: THIS IS BAD, FIGURE OUT HOW TO PROPERLY IMPLEMENT gl_leveltime)
+#include "../../r_main.h" // AIMINGTODY (ALSO BAD)
 
 #if defined (HWRENDER) && !defined (NOROPENGL)
 
@@ -2817,15 +2819,13 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 {
 	static boolean special_splitscreen;
 	boolean shearing = false;
+	float used_fov;
 
 	pglLoadIdentity();
 
 	if (stransform)
 	{
-		boolean fovx90;
-
-		shearing = stransform->shearing;
-
+		used_fov = stransform->fovxangle;
 #ifdef USE_FTRANSFORM_MIRROR
 		// mirroring from Kart
 		if (stransform->mirror)
@@ -2837,48 +2837,45 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 		else
 			pglScalef(stransform->scalex, stransform->scaley, -stransform->scalez);
 
-		pglMatrixMode(GL_MODELVIEW);
-		pglRotatef(stransform->anglex, 1.0f, 0.0f, 0.0f);
+		pglRotatef(stransform->anglex       , 1.0f, 0.0f, 0.0f);
 		pglRotatef(stransform->angley+270.0f, 0.0f, 1.0f, 0.0f);
 		pglTranslatef(-stransform->x, -stransform->z, -stransform->y);
 
-		pglMatrixMode(GL_PROJECTION);
-		pglLoadIdentity();
-
-		// jimita 14042019
-		// Simulate Software's y-shearing
-		// https://zdoom.org/wiki/Y-shearing
-		if (shearing)
-		{
-			float dy = FIXED_TO_FLOAT(AIMINGTODY(stransform->viewaiming)) * 2; //screen_width/BASEVIDWIDTH;
-			pglTranslatef(0.0f, -dy/BASEVIDHEIGHT, 0.0f);
-		}
-
-		fovx90 = stransform->fovxangle > 0.0f && fabsf(stransform->fovxangle - 90.0f) < 0.5f;
-		special_splitscreen = (stransform->splitscreen && fovx90);
-		if (special_splitscreen)
-			GLPerspective(53.13f, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
-		else
-			GLPerspective(stransform->fovxangle, ASPECT_RATIO);
-		pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
-		pglMatrixMode(GL_MODELVIEW);
+		special_splitscreen = stransform->splitscreen;
+		shearing = stransform->shearing;
 	}
 	else
 	{
+		used_fov = fov;
 		pglScalef(1.0f, 1.0f, -1.0f);
-
-		pglMatrixMode(GL_PROJECTION);
-		pglLoadIdentity();
-		if (special_splitscreen)
-			GLPerspective(53.13f, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
-		else
-			//Hurdler: is "fov" correct?
-			GLPerspective(fov, ASPECT_RATIO);
-		pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
-		pglMatrixMode(GL_MODELVIEW);
 	}
 
+	pglMatrixMode(GL_PROJECTION);
+	pglLoadIdentity();
+
+	// jimita 14042019
+	// Simulate Software's y-shearing
+	// https://zdoom.org/wiki/Y-shearing
+	if (shearing)
+	{
+		fixed_t dy = AIMINGTODY(stransform->viewaiming);
+		float fdy = FIXED_TO_FLOAT(dy) * 2; //screen_width/BASEVIDWIDTH;
+		pglTranslatef(0.0f, -fdy/BASEVIDHEIGHT, 0.0f);
+	}
+
+	if (special_splitscreen)
+	{
+		used_fov = atan(tan(used_fov*M_PI/360)*0.8)*360/M_PI;
+		GLPerspective(used_fov, 2*ASPECT_RATIO);
+	}
+	else
+		GLPerspective(used_fov, ASPECT_RATIO);
+
+	pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
+	pglMatrixMode(GL_MODELVIEW);
+
 	pglGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix); // added for new coronas' code (without depth buffer)
+
 }
 
 EXPORT INT32  HWRAPI(GetTextureUsed) (void)
