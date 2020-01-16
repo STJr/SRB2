@@ -2781,6 +2781,69 @@ static int lib_gBuildMapName(lua_State *L)
 	return 1;
 }
 
+static void
+Lpushdim (lua_State *L, int c, struct searchdim *v)
+{
+	int i;
+	lua_createtable(L, c, 0);/* I guess narr is numeric indices??? */
+	for (i = 0; i < c; ++i)
+	{
+		lua_createtable(L, 0, 2);/* and hashed indices (field)... */
+			lua_pushnumber(L, v[i].pos);
+			lua_setfield(L, -2, "pos");
+
+			lua_pushnumber(L, v[i].siz);
+			lua_setfield(L, -2, "siz");
+		lua_rawseti(L, -2, 1 + i);
+	}
+}
+
+/*
+I decided to make this return a table because userdata
+is scary and tables let the user set their own fields.
+*/
+static int lib_gFindMap(lua_State *L)
+{
+	const char *query = luaL_checkstring(L, 1);
+
+	INT32 map;
+	char *realname;
+	INT32 frc;
+	mapsearchfreq_t *frv;
+
+	INT32 i;
+
+	map = G_FindMap(query, &realname, &frv, &frc);
+
+	lua_settop(L, 0);
+
+	lua_pushnumber(L, map);
+	lua_pushstring(L, realname);
+
+	lua_createtable(L, frc, 0);
+	for (i = 0; i < frc; ++i)
+	{
+		lua_createtable(L, 0, 4);
+			lua_pushnumber(L, frv[i].mapnum);
+			lua_setfield(L, -2, "mapnum");
+
+			Lpushdim(L, frv[i].matchc, frv[i].matchd);
+			lua_setfield(L, -2, "matchd");
+
+			Lpushdim(L, frv[i].keywhc, frv[i].keywhd);
+			lua_setfield(L, -2, "keywhd");
+
+			lua_pushnumber(L, frv[i].total);
+			lua_setfield(L, -2, "total");
+		lua_rawseti(L, -2, 1 + i);
+	}
+
+	G_FreeMapSearch(frv, frc);
+	Z_Free(realname);
+
+	return 3;
+}
+
 static int lib_gDoReborn(lua_State *L)
 {
 	INT32 playernum = luaL_checkinteger(L, 1);
@@ -3157,6 +3220,7 @@ static luaL_Reg lib[] = {
 	// g_game
 	{"G_AddGametype", lib_gAddGametype},
 	{"G_BuildMapName",lib_gBuildMapName},
+	{"G_FindMap",lib_gFindMap},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
 	{"G_EnoughPlayersFinished",lib_gEnoughPlayersFinished},
