@@ -1375,8 +1375,9 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 114},
 	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 124},
+	{IT_STRING | IT_CVAR, NULL, "Default 1-Up sound", &cv_1upsound, 134},
 
-	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 144},
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 154},
 };
 
 #ifdef HAVE_OPENMPT
