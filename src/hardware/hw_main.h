@@ -104,6 +104,7 @@ extern consvar_t cv_grshearing;
 extern consvar_t cv_grspritebillboarding;
 extern consvar_t cv_grskydome;
 extern consvar_t cv_grfakecontrast;
+extern consvar_t cv_grslopecontrast;
 
 extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
 
