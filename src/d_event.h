@@ -34,6 +34,7 @@ typedef struct
 {
 	evtype_t type;
 	INT32 data1; // keys / mouse/joystick buttons
+	INT32 keycode; // Name of the key that was used
 	INT32 data2; // mouse/joystick x move
 	INT32 data3; // mouse/joystick y move
 } event_t;
