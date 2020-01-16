@@ -5422,7 +5422,8 @@ static void HWR_AddSprites(sector_t *sec)
 	{
 		for (thing = sec->thinglist; thing; thing = thing->snext)
 		{
-			if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
+			if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW ||
+					thing == r_viewmobj)
 				continue;
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
@@ -5445,7 +5446,8 @@ static void HWR_AddSprites(sector_t *sec)
 	{
 		// Draw everything in sector, no checks
 		for (thing = sec->thinglist; thing; thing = thing->snext)
-			if (!(thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW))
+			if (!(thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW ||
+						thing == r_viewmobj))
 				HWR_ProjectSprite(thing);
 	}
 

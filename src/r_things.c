@@ -1845,7 +1845,8 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	{
 		for (thing = sec->thinglist; thing; thing = thing->snext)
 		{
-			if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
+			if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW ||
+					thing == r_viewmobj)
 				continue;
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
@@ -1868,7 +1869,8 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	{
 		// Draw everything in sector, no checks
 		for (thing = sec->thinglist; thing; thing = thing->snext)
-			if (!(thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW))
+			if (!(thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW ||
+						thing == r_viewmobj))
 				R_ProjectSprite(thing);
 	}
 
