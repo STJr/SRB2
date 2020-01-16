@@ -1233,6 +1233,7 @@ static const char *credits[] = {
 	"Thomas \"Shadow Hog\" Igoe",
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"\"Kaito Sinclaire\"",
+	"\"QueenDelta\"",
 	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",
@@ -1240,7 +1241,7 @@ static const char *credits[] = {
 	"\"Torgo\"",
 	"Jarrett \"JEV3\" Voight",
 	"Johnny \"Sonikku\" Wallbank",
-	"Marco \"mazmazz\" Zafra",
+	"Marco \"mazmazz\" Zafra"
 	"",
 	"\1Boss Design",
 	"Ben \"Mystic\" Geyer",
