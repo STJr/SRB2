@@ -1241,7 +1241,7 @@ static const char *credits[] = {
 	"\"Torgo\"",
 	"Jarrett \"JEV3\" Voight",
 	"Johnny \"Sonikku\" Wallbank",
-	"Marco \"mazmazz\" Zafra"
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Boss Design",
 	"Ben \"Mystic\" Geyer",
