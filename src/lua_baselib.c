@@ -2772,11 +2772,28 @@ static int lib_gAddGametype(lua_State *L)
 	return 0;
 }
 
+static int Lcheckmapnumber (lua_State *L, int idx)
+{
+	if (ISINLEVEL)
+		return luaL_optinteger(L, idx, gamemap);
+	else
+	{
+		if (lua_isnoneornil(L, idx))
+		{
+			return luaL_error(L,
+					"G_BuildMapName can only be used "
+					"without a parameter while in a level."
+			);
+		}
+		else
+			return luaL_checkinteger(L, idx);
+	}
+}
+
 static int lib_gBuildMapName(lua_State *L)
 {
-	INT32 map = luaL_optinteger(L, 1, gamemap);
+	INT32 map = Lcheckmapnumber(L, 1);
 	//HUDSAFE
-	INLEVEL
 	lua_pushstring(L, G_BuildMapName(map));
 	return 1;
 }

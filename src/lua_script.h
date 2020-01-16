@@ -100,7 +100,10 @@ void COM_Lua_f(void);
 // uncomment if you want seg_t/node_t in Lua
 // #define HAVE_LUA_SEGS
 
-#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
+#define ISINLEVEL \
+	(gamestate == GS_LEVEL || titlemapinaction)
+
+#define INLEVEL if (! ISINLEVEL)\
 return luaL_error(L, "This can only be used in a level!");
 
 #endif
