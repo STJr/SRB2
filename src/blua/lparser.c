@@ -24,6 +24,7 @@
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
+#include "lvm.h"
 
 
 
@@ -1006,11 +1007,33 @@ static void poplhs (FuncState *fs) {
 }
 
 
-static void assignment (LexState *ls) {
+static void implicitlocal (LexState *ls, expdesc *v, int *nvarsp) {
+  TValue *name;
+  int n;
+  if (v->k == VGLOBAL) {
+    /* Overwriting this shouldn't matter as long as
+       I put it back, right? Right? :sweat_drops: */
+    StkId old = ls->L->base;
+    /* I tried to optimize this down as far as I could... */
+    name = &ls->fs->f->k[v->u.s.info];/* global's name from singlevar */
+    luaV_gettable(ls->L, gt(ls->L), name, (TValue *)ls->L->base);
+    if (ttisnil(ls->L->base)) {/* james: if global don't exist, make local */
+      n = (*nvarsp)++;
+      new_localvar(ls, rawtsvalue(name), n);
+      /* can't forget to enumerate it as local! */
+      v->k = VLOCAL;
+      v->u.s.info = ls->fs->nactvar + n;
+    }
+    ls->L->base = old;
+  }
+}
+
+static void assignment (LexState *ls, int nvars) {
   expdesc e;
   expdesc_list *lh = ls->fs->lhs;
   check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXED,
                       "syntax error");
+  implicitlocal(ls, &lh->v, &nvars);
   if (testnext(ls, ',')) {  /* assignment -> `,' primaryexp assignment */
     expdesc_list nv;
     nv.prev = lh;
@@ -1020,11 +1043,12 @@ static void assignment (LexState *ls) {
     luaY_checklimit(ls->fs, ls->fs->nrhs, LUAI_MAXCCALLS - ls->L->nCcalls,
                     "variables in assignment");
     pushlhs(ls->fs, &nv);
-    assignment(ls);
+    assignment(ls, nvars);
     poplhs(ls->fs);
   }
   else {  /* assignment -> `=' explist1 */
 //    int nexps;
+    adjustlocalvars(ls, nvars);
     checknext(ls, '=');
     ls->fs->nrhs = 1;
     expr(ls, &e);
@@ -1382,7 +1406,7 @@ static void exprstat (LexState *ls) {
     v.prev = NULL;
     lua_assert(ls->fs->lhs == NULL && ls->fs->nlhs == 0 && ls->fs->nrhs == 0);
     pushlhs(ls->fs, &v);
-    assignment(ls);
+    assignment(ls, 0);
     poplhs(ls->fs);
     ls->fs->nrhs = 0;
     lua_assert(ls->fs->lhs == NULL && ls->fs->nlhs == 0);
