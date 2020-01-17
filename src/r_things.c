@@ -1335,7 +1335,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	// reusing x1 variable
 	x1 += (x2-x1)/2;
-	shadow->shear.offset = (vis->x1-x1)/2;
+	shadow->shear.offset = (shadow->x1-x1)/2;
 
 	if (thing->subsector->sector->numlights)
 	{
