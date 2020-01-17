@@ -764,7 +764,11 @@ boolean CON_Responder(event_t *ev)
 		return false;
 	}
 
-	key = ev->data1;
+	key = ev->keycode;
+	if (key == 0) {
+		// Keycode is undefined
+		key = ev->data1;
+	}
 
 	// check for console toggle key
 	if (ev->type != ev_console)

@@ -1233,7 +1233,11 @@ boolean HU_Responder(event_t *ev)
 		 || ev->data1 == KEY_LALT || ev->data1 == KEY_RALT)
 			return true;
 
-		c = (INT32)ev->data1;
+		c = (INT32)ev->keycode;
+		if (c == 0) {
+			// Keycode is undefined
+			c = ev->data1;
+		}
 
 		// I know this looks very messy but this works. If it ain't broke, don't fix it!
 		// shift LETTERS to uppercase if we have capslock or are holding shift

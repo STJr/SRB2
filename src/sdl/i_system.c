@@ -472,7 +472,7 @@ static void I_StartupConsole(void)
 void I_GetConsoleEvents(void)
 {
 	// we use this when sending back commands
-	event_t ev = {0,0,0,0};
+	event_t ev = {0,0,0,0,0};
 	char key = 0;
 	ssize_t d;
 
@@ -926,7 +926,7 @@ void I_ShutdownJoystick(void)
 
 void I_GetJoystickEvents(void)
 {
-	static event_t event = {0,0,0,0};
+	static event_t event = {0,0,0,0,0};
 	INT32 i = 0;
 	UINT64 joyhats = 0;
 #if 0
@@ -1196,7 +1196,7 @@ void I_ShutdownJoystick2(void)
 
 void I_GetJoystick2Events(void)
 {
-	static event_t event = {0,0,0,0};
+	static event_t event = {0,0,0,0,0};
 	INT32 i = 0;
 	UINT64 joyhats = 0;
 #if 0
