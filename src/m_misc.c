@@ -2575,3 +2575,40 @@ void M_MkdirEach(const char *path, int start, int mode)
 {
 	M_MkdirEachUntil(path, start, -1, mode);
 }
+
+int M_JumpWord(const char *line)
+{
+	int c;
+
+	c = line[0];
+
+	if (isspace(c))
+		return strspn(line, " ");
+	else if (ispunct(c))
+		return strspn(line, PUNCTUATION);
+	else
+	{
+		if (isspace(line[1]))
+			return 1 + strspn(&line[1], " ");
+		else
+			return strcspn(line, " "PUNCTUATION);
+	}
+}
+
+int M_JumpWordReverse(const char *line, int offset)
+{
+	int (*is)(int);
+	int c;
+	c = line[--offset];
+	if (isspace(c))
+		is = isspace;
+	else if (ispunct(c))
+		is = ispunct;
+	else
+		is = isalnum;
+	c = (*is)(line[offset]);
+	while (offset > 0 &&
+			(*is)(line[offset - 1]) == c)
+		offset--;
+	return offset;
+}
