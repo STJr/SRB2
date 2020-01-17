@@ -323,13 +323,9 @@ static INT32 GetServersList(void)
 //
 // MS_Connect()
 //
+#ifndef NONET
 static INT32 MS_SubConnect(const char *ip_addr, const char *str_port, INT32 async, struct sockaddr *bindaddr, socklen_t bindaddrlen)
 {
-#ifdef NONET
-	(void)ip_addr;
-	(void)str_port;
-	(void)async;
-#else
 	struct my_addrinfo *ai, *runp, hints;
 	int gaie;
 
@@ -402,12 +398,18 @@ static INT32 MS_SubConnect(const char *ip_addr, const char *str_port, INT32 asyn
 		runp = runp->ai_next;
 	}
 	I_freeaddrinfo(ai);
-#endif
 	return MS_CONNECT_ERROR;
 }
+#endif/*NONET xd*/
 
 static INT32 MS_Connect(const char *ip_addr, const char *str_port, INT32 async)
 {
+#ifdef NONET
+	(void)ip_addr;
+	(void)str_port;
+	(void)async;
+	return MS_CONNECT_ERROR;
+#else
 	const char *lhost;
 	struct my_addrinfo hints;
 	struct my_addrinfo *ai, *aip;
@@ -443,6 +445,7 @@ static INT32 MS_Connect(const char *ip_addr, const char *str_port, INT32 async)
 	}
 	else
 		return MS_SubConnect(ip_addr, str_port, async, 0, 0);
+#endif/*NONET xd*/
 }
 
 #define NUM_LIST_SERVER MAXSERVERLIST
