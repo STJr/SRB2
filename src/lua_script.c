@@ -316,20 +316,19 @@ static int setglobals(lua_State *L)
 	const char *csname;
 	char *name;
 
-	lua_remove(L, 1); // we're not gonna be using _G
-	csname = lua_tostring(L, 1);
+	csname = lua_tostring(L, 2);
 
 	// make an uppercase copy of the name
 	name = Z_StrDup(csname);
 	strupr(name);
 
-	if (fastncmp(name, "A_", 2) && lua_isfunction(L, 2))
+	if (fastncmp(name, "A_", 3) && lua_isfunction(L, 3))
 	{
 		// Accept new A_Action functions
 		// Add the action to Lua actions refrence table
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_ACTIONS);
 		lua_pushstring(L, name); // "A_ACTION"
-		lua_pushvalue(L, 2); // function
+		lua_pushvalue(L, 3); // function
 		lua_rawset(L, -3); // rawset doesn't trigger this metatable again.
 		// otherwise we would've used setfield, obviously.
 
@@ -339,10 +338,13 @@ static int setglobals(lua_State *L)
 
 	Z_Free(name);
 
-	if (LUA_CheckGlobals(L, csname))
-		return 0;
+	if (! LUA_CheckGlobals(L, csname))
+	{
+		lua_settop(L, 3);
+		lua_rawset(L, 1);
+	}
 
-	return luaL_error(L, "Implicit global " LUA_QS " prevented. Create a local variable instead.", csname);
+	return 0;
 }
 
 // Clear and create a new Lua state, laddo!
