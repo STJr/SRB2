@@ -1349,6 +1349,16 @@ static void localfunc (LexState *ls) {
 }
 
 
+static void globalfunc (LexState *ls) {
+  expdesc v, b;
+  FuncState *fs = ls->fs;
+  init_exp(&v, VGLOBAL, NO_REG);
+  v.u.s.info = luaK_stringK(fs, str_checkname(ls));
+  body(ls, &b, 0, ls->linenumber);
+  luaK_storevar(fs, &v, &b);
+}
+
+
 static void localstat (LexState *ls) {
   /* stat -> LOCAL NAME {`,' NAME} [`=' explist1] */
   int nvars = 0;
@@ -1483,6 +1493,12 @@ static int statement (LexState *ls) {
         localfunc(ls);
       else
         localstat(ls);
+      return 0;
+    }
+    case TK_GLOBAL: {  /* stat -> globalstat */
+      luaX_next(ls);   /* skip GLOBAL */
+      if (testnext(ls, TK_FUNCTION))
+        globalfunc(ls);
       return 0;
     }
     case TK_RETURN: {  /* stat -> retstat */
