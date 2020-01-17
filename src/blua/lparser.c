@@ -1028,12 +1028,12 @@ static void implicitlocal (LexState *ls, expdesc *v, int *nvarsp) {
   }
 }
 
-static void assignment (LexState *ls, int nvars) {
+static void assignment (LexState *ls, int *nvarsp) {
   expdesc e;
   expdesc_list *lh = ls->fs->lhs;
   check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXED,
                       "syntax error");
-  implicitlocal(ls, &lh->v, &nvars);
+  implicitlocal(ls, &lh->v, nvarsp);
   if (testnext(ls, ',')) {  /* assignment -> `,' primaryexp assignment */
     expdesc_list nv;
     nv.prev = lh;
@@ -1043,12 +1043,11 @@ static void assignment (LexState *ls, int nvars) {
     luaY_checklimit(ls->fs, ls->fs->nrhs, LUAI_MAXCCALLS - ls->L->nCcalls,
                     "variables in assignment");
     pushlhs(ls->fs, &nv);
-    assignment(ls, nvars);
+    assignment(ls, nvarsp);
     poplhs(ls->fs);
   }
   else {  /* assignment -> `=' explist1 */
 //    int nexps;
-    adjustlocalvars(ls, nvars);
     checknext(ls, '=');
     ls->fs->nrhs = 1;
     expr(ls, &e);
@@ -1399,6 +1398,7 @@ static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
   expdesc_list v;
+  int nvars = 0;
   primaryexp(ls, &v.v);
   if (v.v.k == VCALL)  /* stat -> func */
     SETARG_C(getcode(fs, &v.v), 1);  /* call statement uses no results */
@@ -1406,10 +1406,11 @@ static void exprstat (LexState *ls) {
     v.prev = NULL;
     lua_assert(ls->fs->lhs == NULL && ls->fs->nlhs == 0 && ls->fs->nrhs == 0);
     pushlhs(ls->fs, &v);
-    assignment(ls, 0);
+    assignment(ls, &nvars);
     poplhs(ls->fs);
     ls->fs->nrhs = 0;
     lua_assert(ls->fs->lhs == NULL && ls->fs->nlhs == 0);
+    adjustlocalvars(ls, nvars);
   }
 }
 
