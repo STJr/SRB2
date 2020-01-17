@@ -1904,7 +1904,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 		R_SplitSprite(vis);
 
-	if (oldthing->shadowscale && !papersprite)
+	if (oldthing->shadowscale)
 		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, tz);
 
 	// Debug
