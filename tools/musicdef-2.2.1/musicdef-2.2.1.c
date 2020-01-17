@@ -55,6 +55,7 @@ main (int ac, char **av)
 		{
 			if (!(
 						strcasecmp(var, "TITLE") &&
+						strcasecmp(var, "ALTTITLE") &&
 						strcasecmp(var, "AUTHORS")
 			)){
 				if (( val = strtok(0, "") ))
