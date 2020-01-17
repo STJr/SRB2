@@ -1381,6 +1381,7 @@ static void localstat (LexState *ls) {
 static int funcname (LexState *ls, expdesc *v) {
   /* funcname -> NAME {field} [`:' NAME] */
   int needself = 0;
+  int nvars = 0;
   singlevar(ls, v);
   while (ls->t.token == '.')
     field(ls, v);
@@ -1388,6 +1389,8 @@ static int funcname (LexState *ls, expdesc *v) {
     needself = 1;
     field(ls, v);
   }
+  implicitlocal(ls, v, &nvars);
+  adjustlocalvars(ls, nvars);
   return needself;
 }
 
