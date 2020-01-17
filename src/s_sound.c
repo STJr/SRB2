@@ -120,8 +120,7 @@ consvar_t cv_resetmusicbyheader = {"resetmusicbyheader", "Yes", CV_SAVE, CV_YesN
 static CV_PossibleValue_t cons_1upsound_t[] = {
 	{0, "Jingle"},
 	{1, "Sound"},
-
-	{0}
+	{0, NULL}
 };
 consvar_t cv_1upsound = {"1upsound", "Jingle", CV_SAVE, cons_1upsound_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
