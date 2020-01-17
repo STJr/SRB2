@@ -1,5 +1,5 @@
 /*
-Copyright 2019 James R.
+Copyright 2020 James R.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@ main (int ac, char **av)
 	(void)ac;
 	(void)av;
 	fputs(
-			"Copyright 2019 James R.\n"
+			"Copyright 2020 James R.\n"
 			"All rights reserved.\n"
 			"\n"
 			"Usage: musicdef-2.2.1 < old-MUSICDEF > new-MUSICDEF\n"
