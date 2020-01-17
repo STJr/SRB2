@@ -128,9 +128,7 @@ consvar_t cv_chasecam2 = {"chasecam2", "On", CV_CALL, CV_OnOff, ChaseCam2_OnChan
 consvar_t cv_flipcam = {"flipcam", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_flipcam2 = {"flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
-consvar_t cv_shadow = {"shadow", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif //#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
+consvar_t cv_shadow = {"shadow", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 #ifdef GLBADSHADOWS
 consvar_t cv_shadowoffs = {"offsetshadows", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif //#ifdef GLBADSHADOWS
@@ -1223,9 +1221,7 @@ void R_RegisterEngineStuff(void)
 
 	CV_RegisterVar(&cv_chasecam);
 	CV_RegisterVar(&cv_chasecam2);
-#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
 	CV_RegisterVar(&cv_shadow);
-#endif //#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
 #ifdef GLBADSHADOWS
 	CV_RegisterVar(&cv_shadowoffs);
 #endif //#ifdef GLBADSHADOWS

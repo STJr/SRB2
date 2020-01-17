@@ -51,6 +51,8 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
 
+fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope);
+
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
@@ -149,7 +151,8 @@ typedef enum
 	SC_LINKDRAW = 1<<3,
 	SC_FULLBRIGHT = 1<<4,
 	SC_VFLIP = 1<<5,
-	SC_ISSCALED = 1>>6,
+	SC_ISSCALED = 1<<6,
+	SC_SHADOW = 1<<7,
 	// masks
 	SC_CUTMASK = SC_TOP|SC_BOTTOM,
 	SC_FLAGMASK = ~SC_CUTMASK
@@ -181,6 +184,11 @@ typedef struct vissprite_s
 	fixed_t xiscale; // negative if flipped
 
 	angle_t centerangle; // for paper sprites
+
+	struct {
+		fixed_t tan; // The amount to shear the sprite vertically per row
+		INT32 offset; // The center of the shearing location offset from x1
+	} shear;
 
 	fixed_t texturemid;
 	patch_t *patch;
