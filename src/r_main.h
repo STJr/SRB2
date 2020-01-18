@@ -26,6 +26,7 @@ extern INT32 centerx, centery;
 
 extern fixed_t centerxfrac, centeryfrac;
 extern fixed_t projection, projectiony;
+extern fixed_t fovtan; // field of view
 
 extern size_t validcount, linecount, loopcount, framecount;
 
