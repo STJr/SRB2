@@ -46,6 +46,8 @@ extern size_t validcount, linecount, loopcount, framecount;
 #define MAXLIGHTZ 128
 #define LIGHTZSHIFT 20
 
+#define LIGHTRESOLUTIONFIX (640*fovtan/vid.width)
+
 extern lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 extern lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 extern lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
