@@ -669,7 +669,7 @@ void R_CheckViewMorph(void)
 	if (temp < FRACUNIT)
 		temp = FRACUNIT;
 	else
-		temp |= 0xFFF; // Limit how many times the viewport needs to be recalculated
+		temp |= 0x3FFF; // Limit how many times the viewport needs to be recalculated
 
 	//CONS_Printf("Setting zoom to %f\n", FIXED_TO_FLOAT(temp));
 
@@ -712,7 +712,7 @@ void R_CheckViewMorph(void)
 	{
 		INT16 xa, ya, xb, yb;
 		xa = x2+halfwidth;
-		ya = y2+halfheight;
+		ya = y2+halfheight-1;
 		xb = vid.width-1-xa;
 		yb = vid.height-1-ya;
 
