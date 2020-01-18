@@ -561,6 +561,7 @@ static struct {
 	fixed_t zoomneeded;
 	INT32 *scrmap;
 	INT32 scrmapsize;
+	INT32 x1; // clip rendering horizontally for efficiency
 	boolean use;
 } viewmorph = {
 	0,
@@ -569,6 +570,7 @@ static struct {
 #endif
 	FRACUNIT,
 	NULL,
+	0,
 	0,
 	false
 };
@@ -615,6 +617,7 @@ void R_CheckViewMorph(void)
 	 )
 	{
 		viewmorph.use = false;
+		viewmorph.x1 = 0;
 		if (viewmorph.zoomneeded != FRACUNIT)
 			R_SetViewSize();
 		viewmorph.zoomneeded = FRACUNIT;
@@ -681,6 +684,14 @@ void R_CheckViewMorph(void)
 
 	x1 = -(halfwidth * rollcos - halfheight * rollsin);
 	y1 = -(halfheight * rollcos + halfwidth * rollsin);
+
+#ifdef WOUGHMP_WOUGHMP
+	if (fisheye)
+		viewmorph.x1 = (INT32)(halfwidth - (halfwidth * fabsf(rollcos) + halfheight * fabsf(rollsin)) * fisheyemap[halfwidth]);
+	else
+#endif
+	viewmorph.x1 = (INT32)(halfwidth - (halfwidth * fabsf(rollcos) + halfheight * fabsf(rollsin)));
+	//CONS_Printf("saving %d cols\n", viewmorph.x1);
 
 	//CONS_Printf("Top left corner is %f %f\n", x1, y1);
 
@@ -1316,7 +1327,18 @@ void R_RenderPlayerView(player_t *player)
 	validcount++;
 
 	// Clear buffers.
-	R_ClearClipSegs();
+	if (viewmorph.use)
+	{
+		portalclipstart = viewmorph.x1;
+		portalclipend = viewwidth-viewmorph.x1-1;
+		R_PortalClearClipSegs(portalclipstart, portalclipend);
+	}
+	else
+	{
+		portalclipstart = 0;
+		portalclipend = viewwidth-1;
+		R_ClearClipSegs();
+	}
 	R_ClearDrawSegs();
 	R_ClearPlanes();
 	R_ClearSprites();
