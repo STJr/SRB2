@@ -560,7 +560,7 @@ static struct {
 
 	fixed_t zoomneeded;
 	INT32 *scrmap;
-	size_t scrmapsize;
+	INT32 scrmapsize;
 	boolean use;
 } viewmorph = {
 	0,
@@ -578,7 +578,7 @@ void R_CheckViewMorph(void)
 	float zoomfactor, rollcos, rollsin;
 	float x1, y1, x2, y2;
 	fixed_t temp;
-	size_t end, vx, vy, pos, usedpos;
+	INT32 end, vx, vy, pos, usedpos;
 	INT32 usedx, usedy, halfwidth = vid.width/2, halfheight = vid.height/2;
 #ifdef WOUGHMP_WOUGHMP
 	float fisheyemap[MAXVIDWIDTH/2 + 1];
