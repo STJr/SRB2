@@ -5283,7 +5283,7 @@ static void HWR_DrawSprites(void)
 			else
 #endif
 			{
-				if (spr->mobj && spr->mobj->shadowscale && !(spr->mobj->frame & FF_PAPERSPRITE))
+				if (spr->mobj && spr->mobj->shadowscale && cv_shadow.value)
 				{
 					HWR_DrawDropShadow(spr->mobj, spr, spr->mobj->shadowscale);
 				}
