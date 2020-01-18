@@ -678,10 +678,10 @@ static gl_shaderprogram_t gl_shaderprograms[MAXSHADERPROGRAMS];
 	GLSL_DOOM_COLORMAP \
 	GLSL_DOOM_LIGHT_EQUATION \
 	"void main(void) {\n" \
-		"float z = gl_FragCoord.z / gl_FragCoord.w;\n" \
-		"float input = -pi * (z * freq) + (leveltime * speed);\n" \
-		"float sdistort = sin(input) * amp;\n" \
-		"float cdistort = cos(input) * amp;\n" \
+		"float z = (gl_FragCoord.z / gl_FragCoord.w) / 2;\n" \
+		"float a = -pi * (z * freq) + (leveltime * speed);\n" \
+		"float sdistort = sin(a) * amp;\n" \
+		"float cdistort = cos(a) * amp;\n" \
 		"vec4 texel = texture2D(tex, vec2(gl_TexCoord[0].s - sdistort, gl_TexCoord[0].t - cdistort));\n" \
 		"vec4 base_color = texel * poly_color;\n" \
 		"vec4 final_color = base_color;\n" \
