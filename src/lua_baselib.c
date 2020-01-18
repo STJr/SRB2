@@ -2800,7 +2800,7 @@ static int lib_gBuildMapName(lua_State *L)
 
 static int lib_gBuildMapTitle(lua_State *L)
 {
-	INT32 map = Lcheckmapnumber(L, 1, "G_BuoldMapTitle");
+	INT32 map = Lcheckmapnumber(L, 1, "G_BuildMapTitle");
 	char *name;
 	if (map < 1 || map > NUMMAPS)
 	{
