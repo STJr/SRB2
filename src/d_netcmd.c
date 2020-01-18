@@ -1199,7 +1199,7 @@ static INT32 snacpending = 0, snac2pending = 0, chmappending = 0;
 //
 static void SendNameAndColor(void)
 {
-	char buf[MAXPLAYERNAME+2];
+	char buf[MAXPLAYERNAME+6];
 	char *p;
 
 	p = buf;
