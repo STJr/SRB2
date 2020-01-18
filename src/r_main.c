@@ -770,7 +770,11 @@ void R_CheckViewMorph(void)
 		}
 	}
 	else
+	{
 #endif
+	x1 += halfwidth;
+	y1 += halfheight;
+
 	for (vy = 0; vy < halfheight; vy++)
 	{
 		x2 = x1;
@@ -780,8 +784,8 @@ void R_CheckViewMorph(void)
 
 		for (vx = 0; vx < vid.width; vx++)
 		{
-			usedx = halfwidth+x2;
-			usedy = halfheight+y2;
+			usedx = x2;
+			usedy = y2;
 
 			usedpos = usedx + usedy*vid.width;
 
@@ -793,6 +797,9 @@ void R_CheckViewMorph(void)
 			pos++;
 		}
 	}
+#ifdef WOUGHMP_WOUGHMP
+	}
+#endif
 
 	viewmorph.use = true;
 }
