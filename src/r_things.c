@@ -1413,7 +1413,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		thing = thing->tracer;
 
-		if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
+		if (! R_ThingVisible(thing))
 			return;
 
 		tr_x = thing->x - viewx;

@@ -5695,7 +5695,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer)
 	{
 		// bodge support - not nearly as comprehensive as r_things.c, but better than nothing
-		if (thing->tracer->sprite == SPR_NULL || thing->tracer->flags2 & MF2_DONTDRAW)
+		if (! R_ThingVisible(thing->tracer))
 			return;
 	}
 
