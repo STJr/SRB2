@@ -10563,7 +10563,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		type == MT_ROLLOUTROCK ||
 		type == MT_EGGMOBILE4_MACE ||
 		(type >= MT_SMALLMACE && type <= MT_REDSPRINGBALL) ||
-		(mobj->flags & MF_ENEMY)
+		(mobj->flags & (MF_ENEMY|MF_BOSS))
 	)
 		mobj->shadowscale = FRACUNIT;
 	else if (

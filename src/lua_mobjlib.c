@@ -726,6 +726,7 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_shadowscale:
 		mo->shadowscale = luaL_checkfixed(L, 3);
+		break;
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
