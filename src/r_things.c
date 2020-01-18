@@ -1335,7 +1335,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	// reusing x1 variable
 	x1 += (x2-x1)/2;
-	shadow->shear.offset = (vis->x1-x1)/2;
+	shadow->shear.offset = shadow->x1-x1;
 
 	if (thing->subsector->sector->numlights)
 	{
@@ -1904,7 +1904,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 		R_SplitSprite(vis);
 
-	if (oldthing->shadowscale && !papersprite)
+	if (oldthing->shadowscale && cv_shadow.value)
 		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, tz);
 
 	// Debug

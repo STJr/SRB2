@@ -1629,6 +1629,11 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->typeoflevel = tol;
 				}
 			}
+			else if (fastcmp(word, "KEYWORDS"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->keywords, word2,
+						sizeof(mapheaderinfo[num-1]->keywords), va("Level header %d: keywords", num));
+			}
 			else if (fastcmp(word, "MUSIC"))
 			{
 				if (fastcmp(word2, "NONE"))
@@ -6015,6 +6020,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SIGNSTOP",
 	"S_SIGNBOARD",
 	"S_EGGMANSIGN",
+	"S_CLEARSIGN",
 
 	// Spike Ball
 	"S_SPIKEBALL1",
@@ -9664,7 +9670,7 @@ struct {
 	{"FF_QUICKSAND",FF_QUICKSAND},             ///< Quicksand!
 	{"FF_PLATFORM",FF_PLATFORM},               ///< You can jump up through this to the top.
 	{"FF_REVERSEPLATFORM",FF_REVERSEPLATFORM}, ///< A fall-through floor in normal gravity, a platform in reverse gravity.
-	{"FF_INTANGABLEFLATS",FF_INTANGABLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
+	{"FF_INTANGIBLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangible, but the sides are still solid.
 	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Bustable on mere touch.
 	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
 	{"FF_STRONGBUST",FF_STRONGBUST },          ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
