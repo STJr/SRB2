@@ -116,6 +116,7 @@ static void P_NetArchivePlayers(void)
 
 		WRITEANGLE(save_p, players[i].aiming);
 		WRITEANGLE(save_p, players[i].drawangle);
+		WRITEANGLE(save_p, players[i].viewrollangle);
 		WRITEANGLE(save_p, players[i].awayviewaiming);
 		WRITEINT32(save_p, players[i].awayviewtics);
 		WRITEINT16(save_p, players[i].rings);
@@ -325,6 +326,7 @@ static void P_NetUnArchivePlayers(void)
 
 		players[i].aiming = READANGLE(save_p);
 		players[i].drawangle = READANGLE(save_p);
+		players[i].viewrollangle = READANGLE(save_p);
 		players[i].awayviewaiming = READANGLE(save_p);
 		players[i].awayviewtics = READINT32(save_p);
 		players[i].rings = READINT16(save_p);
