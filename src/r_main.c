@@ -599,7 +599,7 @@ void R_CheckViewMorph(void)
 #endif
 
 	rollangle >>= ANGLETOFINESHIFT;
-	rollangle = (((rollangle+1)/2)*2) & FINEMASK; // Limit the distinct number of angles to reduce recalcs from angles changing a lot.
+	rollangle = ((rollangle+2) & ~3) & FINEMASK; // Limit the distinct number of angles to reduce recalcs from angles changing a lot.
 
 #ifdef WOUGHMP_WOUGHMP
 	fisheye &= ~0x7FF; // Same
