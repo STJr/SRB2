@@ -549,14 +549,29 @@ static inline void R_InitLightTables(void)
 	}
 }
 
+//#define WOUGHMP_WOUGHMP // I got a fish-eye lens - I'll make a rap video with a couple of friends
+// it's kinda laggy sometimes
+
 static struct {
 	angle_t rollangle; // pre-shifted by fineshift
+#ifdef WOUGHMP_WOUGHMP
+	fixed_t fisheye;
+#endif
 
 	fixed_t zoomneeded;
 	INT32 *scrmap;
 	size_t scrmapsize;
 	boolean use;
-} viewmorph = {0, FRACUNIT, NULL, 0, false};
+} viewmorph = {
+	0,
+#ifdef WOUGHMP_WOUGHMP
+	0,
+#endif
+	FRACUNIT,
+	NULL,
+	0,
+	false
+};
 
 void R_CheckViewMorph(void)
 {
@@ -565,18 +580,39 @@ void R_CheckViewMorph(void)
 	fixed_t temp;
 	size_t end, vx, vy, pos, usedpos;
 	INT32 usedx, usedy, halfwidth = vid.width/2, halfheight = vid.height/2;
+#ifdef WOUGHMP_WOUGHMP
+	float fisheyemap[MAXVIDWIDTH/2 + 1];
+#endif
 
 	angle_t rollangle = players[displayplayer].viewrollangle;
+#ifdef WOUGHMP_WOUGHMP
+	fixed_t fisheye = cv_cam2_turnmultiplier.value; // temporary test value
+#endif
 
 	rollangle >>= ANGLETOFINESHIFT;
 	rollangle = (((rollangle+1)/2)*2) & FINEMASK; // Limit the distinct number of angles to reduce recalcs from angles changing a lot.
 
-	if (rollangle == viewmorph.rollangle && viewmorph.scrmapsize == vid.width*vid.height)
+#ifdef WOUGHMP_WOUGHMP
+	fisheye &= ~0x7FF; // Same
+#endif
+
+	if (rollangle == viewmorph.rollangle &&
+#ifdef WOUGHMP_WOUGHMP
+		fisheye == viewmorph.fisheye &&
+#endif
+		viewmorph.scrmapsize == vid.width*vid.height)
 		return; // No change
 
 	viewmorph.rollangle = rollangle;
+#ifdef WOUGHMP_WOUGHMP
+	viewmorph.fisheye = fisheye;
+#endif
 
-	if (viewmorph.rollangle == 0)
+	if (viewmorph.rollangle == 0
+#ifdef WOUGHMP_WOUGHMP
+		 && viewmorph.fisheye == 0
+#endif
+	 )
 	{
 		viewmorph.use = false;
 		if (viewmorph.zoomneeded != FRACUNIT)
@@ -602,6 +638,22 @@ void R_CheckViewMorph(void)
 	// Calculate maximum zoom needed
 	x1 = (vid.width*fabsf(rollcos) + vid.height*fabsf(rollsin)) / vid.width;
 	y1 = (vid.height*fabsf(rollcos) + vid.width*fabsf(rollsin)) / vid.height;
+
+#ifdef WOUGHMP_WOUGHMP
+	if (fisheye)
+	{
+		float f = FIXED_TO_FLOAT(fisheye);
+		for (vx = 0; vx <= halfwidth; vx++)
+			fisheyemap[vx] = 1.0f / cos(atan(vx * f / halfwidth));
+
+		f = cos(atan(f));
+		if (f < 1.0f)
+		{
+			x1 /= f;
+			y1 /= f;
+		}
+	}
+#endif
 
 	temp = max(x1, y1)*FRACUNIT;
 	if (temp < FRACUNIT)
@@ -632,6 +684,34 @@ void R_CheckViewMorph(void)
 
 	//CONS_Printf("Top left corner is %f %f\n", x1, y1);
 
+#ifdef WOUGHMP_WOUGHMP
+	if (fisheye)
+	{
+		for (vy = 0; vy < halfheight; vy++)
+		{
+			x2 = x1;
+			y2 = y1;
+			x1 -= rollsin;
+			y1 += rollcos;
+
+			for (vx = 0; vx < vid.width; vx++)
+			{
+				usedx = halfwidth + x2*fisheyemap[(int) floorf(fabsf(y2*zoomfactor))];
+				usedy = halfheight + y2*fisheyemap[(int) floorf(fabsf(x2*zoomfactor))];
+
+				usedpos = usedx + usedy*vid.width;
+
+				viewmorph.scrmap[pos] = usedpos;
+				viewmorph.scrmap[end-pos] = end-usedpos;
+
+				x2 += rollcos;
+				y2 += rollsin;
+				pos++;
+			}
+		}
+	}
+	else
+#endif
 	for (vy = 0; vy < halfheight; vy++)
 	{
 		x2 = x1;
