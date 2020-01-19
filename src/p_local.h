@@ -159,6 +159,7 @@ void P_GivePlayerLives(player_t *player, INT32 numlives);
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound);
 UINT8 P_GetNextEmerald(void);
 void P_GiveEmerald(boolean spawnObj);
+void P_GiveFinishFlags(player_t *player);
 #if 0
 void P_ResetScore(player_t *player);
 #else

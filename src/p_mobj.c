@@ -8006,6 +8006,32 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		if (strength < 10)
 			mobj->frame |= ((10 - strength) << (FF_TRANSSHIFT));
 	}
+	case MT_FINISHFLAG:
+	{
+		if (!mobj->target || mobj->target->player->playerstate == PST_DEAD || !cv_exitmove.value)
+		{
+			P_RemoveMobj(mobj);
+			return;
+		}
+		
+		if (!camera.chase)
+			mobj->flags2 |= MF2_DONTDRAW;
+		else
+			mobj->flags2 &= ~MF2_DONTDRAW;
+		
+		fixed_t radius = FixedMul(10*mobj->info->speed, mobj->target->scale);
+		mobj->angle += FixedAngle(mobj->info->speed);
+		angle_t fa = mobj->angle >> ANGLETOFINESHIFT;
+		
+		P_UnsetThingPosition(mobj);
+		
+		mobj->x = mobj->target->x + FixedMul(FINECOSINE(fa),radius);
+		mobj->y = mobj->target->y + FixedMul(FINESINE(fa),radius);
+		mobj->z = mobj->target->z + mobj->target->height/2;
+		
+		P_SetThingPosition(mobj);
+		P_SetScale(mobj, mobj->target->scale);
+	}		
 	/* FALLTHRU */
 	default:
 		if (mobj->fuse)
@@ -11512,6 +11538,9 @@ void P_AfterPlayerSpawn(INT32 playernum)
 
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
+	
+	if (p->pflags & PF_FINISHED)
+		P_GiveFinishFlags(p);
 }
 
 // spawn it at a playerspawn mapthing

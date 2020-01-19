@@ -3736,9 +3736,15 @@ static void ExitMove_OnChange(void)
 	if (cv_exitmove.value)
 	{
 		for (i = 0; i < MAXPLAYERS; ++i)
-			if (playeringame[i] && players[i].mo
-				&& players[i].mo->target && players[i].mo->target->type == MT_SIGN)
-				P_SetTarget(&players[i].mo->target, NULL);
+			if (playeringame[i] && players[i].mo)
+			{
+				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
+					P_SetTarget(&players[i].mo->target, NULL);
+				
+				if (players[i].pflags & PF_FINISHED)
+					P_GiveFinishFlags(&players[i]);
+			}
+			
 		CONS_Printf(M_GetText("Players can now move after completing the level.\n"));
 	}
 	else
