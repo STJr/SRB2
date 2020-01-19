@@ -1441,6 +1441,12 @@ static tic_t     pause_starttic;
 /// Music Definitions
 /// ------------------------
 
+enum
+{
+	MUSICDEF_220,
+	MUSICDEF_221,
+};
+
 musicdef_t soundtestsfx = {
 	"_STSFX", // prevents exactly one valid track name from being used on the sound test
 	"Sound Effects",
@@ -1472,10 +1478,27 @@ static UINT16 W_CheckForMusicDefInPwad(UINT16 wadid)
 	return INT16_MAX; // not found
 }
 
+static void
+MusicDefStrcpy (char *p, const char *s, size_t n, int version)
+{
+	strlcpy(p, s, n);
+	if (version == MUSICDEF_220)
+	{
+		while (( p = strchr(p, '_') ))
+		{
+			n = strspn(p, "_");
+			memset(p, ' ', n); // turn _ into spaces.
+			p += n;
+		}
+	}
+}
+
 static boolean
-ReadMusicDefFields (UINT16 wadnum, int line, char *stoken, musicdef_t **defp)
+ReadMusicDefFields (UINT16 wadnum, int line, boolean fields, char *stoken,
+		musicdef_t **defp, int *versionp)
 {
 	musicdef_t *def;
+	int version;
 
 	char *value;
 	char *textline;
@@ -1525,14 +1548,47 @@ ReadMusicDefFields (UINT16 wadnum, int line, char *stoken, musicdef_t **defp)
 			(*defp) = def;
 		}
 	}
+	else if (!stricmp(stoken, "version"))
+	{
+		if (fields)/* is this not the first field? */
+		{
+			CONS_Alert(CONS_WARNING,
+					"MUSICDEF: Field '%s' must come first. (file %s, line %d)\n",
+					stoken, wadfiles[wadnum]->filename, line);
+			return false;
+		}
+		else
+		{
+			value = strtok(NULL, " ");
+			if (!value)
+			{
+				CONS_Alert(CONS_WARNING,
+						"MUSICDEF: Field '%s' is missing version. (file %s, line %d)\n",
+						stoken, wadfiles[wadnum]->filename, line);
+				return false;
+			}
+			else
+			{
+				if (strcasecmp(value, "2.2.0"))
+					(*versionp) = MUSICDEF_221;
+			}
+		}
+	}
 	else
 	{
-		value = strtok(NULL, "");
+		version = (*versionp);
 
-		if (value)
+		if (version == MUSICDEF_220)
+			value = strtok(NULL, " =");
+		else
 		{
-			// Find the equals sign.
-			value = strchr(value, '=');
+			value = strtok(NULL, "");
+
+			if (value)
+			{
+				// Find the equals sign.
+				value = strchr(value, '=');
+			}
 		}
 
 		if (!value)
@@ -1554,11 +1610,14 @@ ReadMusicDefFields (UINT16 wadnum, int line, char *stoken, musicdef_t **defp)
 				return false;
 			}
 
-			// Skip the equals sign.
-			value++;
+			if (version != MUSICDEF_220)
+			{
+				// Skip the equals sign.
+				value++;
 
-			// Now skip funny whitespace.
-			value += strspn(value, "\t ");
+				// Now skip funny whitespace.
+				value += strspn(value, "\t ");
+			}
 
 			textline = value;
 			i = atoi(value);
@@ -1573,11 +1632,14 @@ ReadMusicDefFields (UINT16 wadnum, int line, char *stoken, musicdef_t **defp)
 				STRBUFCPY(def->source, textline);
 #endif
 			} else if (!stricmp(stoken, "title")) {
-				STRBUFCPY(def->title, textline);
+				MusicDefStrcpy(def->title, textline,
+						sizeof def->title, version);
 			} else if (!stricmp(stoken, "alttitle")) {
-				STRBUFCPY(def->alttitle, textline);
+				MusicDefStrcpy(def->alttitle, textline,
+						sizeof def->alttitle, version);
 			} else if (!stricmp(stoken, "authors")) {
-				STRBUFCPY(def->authors, textline);
+				MusicDefStrcpy(def->authors, textline,
+						sizeof def->authors, version);
 			} else if (!stricmp(stoken, "soundtestpage")) {
 				def->soundtestpage = (UINT8)i;
 			} else if (!stricmp(stoken, "soundtestcond")) {
@@ -1618,7 +1680,9 @@ void S_LoadMusicDefs(UINT16 wadnum)
 	size_t ncr;
 
 	musicdef_t *def = NULL;
+	int version = MUSICDEF_220;
 	int line = 1; // for better error msgs
+	boolean fields = false;
 
 	lumpnum = W_CheckForMusicDefInPwad(wadnum);
 	if (lumpnum == INT16_MAX)
@@ -1651,8 +1715,10 @@ void S_LoadMusicDefs(UINT16 wadnum)
 		stoken = strtok(stoken, " ");
 		if (stoken)
 		{
-			if (! ReadMusicDefFields(wadnum, line, stoken, &def))
+			if (! ReadMusicDefFields(wadnum, line, fields, stoken,
+						&def, &version))
 				break;
+			fields = true;
 		}
 
 		if (lf)
