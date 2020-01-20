@@ -971,9 +971,6 @@ static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 	UINT8 *converted;
 	size_t size;
 
-	if (needpatchflush)
-		W_FlushCachedPatches();
-
 	// setup the texture info
 #ifdef GLIDE_API_COMPATIBILITY
 	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
@@ -999,9 +996,6 @@ void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 	GLMipmap_t *grmip;
 	if (flatlumpnum == LUMPERROR)
 		return;
-
-	if (needpatchflush)
-		W_FlushCachedPatches();
 
 	grmip = HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
 	if (!grmip->downloaded && !grmip->grInfo.data)
@@ -1133,9 +1127,6 @@ static void HWR_LoadMappedPatch(GLMipmap_t *grmip, GLPatch_t *gpatch)
 // -----------------+
 void HWR_GetPatch(GLPatch_t *gpatch)
 {
-	if (needpatchflush)
-		W_FlushCachedPatches();
-
 	// is it in hardware cache
 	if (!gpatch->mipmap->downloaded && !gpatch->mipmap->grInfo.data)
 	{
@@ -1165,9 +1156,6 @@ void HWR_GetPatch(GLPatch_t *gpatch)
 void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap)
 {
 	GLMipmap_t *grmip, *newmip;
-
-	if (needpatchflush)
-		W_FlushCachedPatches();
 
 	if (colormap == colormaps || colormap == NULL)
 	{
@@ -1292,13 +1280,7 @@ static void HWR_DrawPicInCache(UINT8 *block, INT32 pblockwidth, INT32 pblockheig
 // -----------------+
 GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 {
-	GLPatch_t *grpatch;
-
-	if (needpatchflush)
-		W_FlushCachedPatches();
-
-	grpatch = HWR_GetCachedGLPatch(lumpnum);
-
+	GLPatch_t *grpatch = HWR_GetCachedGLPatch(lumpnum);
 	if (!grpatch->mipmap->downloaded && !grpatch->mipmap->grInfo.data)
 	{
 		pic_t *pic;
@@ -1481,13 +1463,7 @@ static void HWR_CacheFadeMask(GLMipmap_t *grMipmap, lumpnum_t fademasklumpnum)
 
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum)
 {
-	GLMipmap_t *grmip;
-
-	if (needpatchflush)
-		W_FlushCachedPatches();
-
-	grmip = HWR_GetCachedGLPatch(fademasklumpnum)->mipmap;
-
+	GLMipmap_t *grmip = HWR_GetCachedGLPatch(fademasklumpnum)->mipmap;
 	if (!grmip->downloaded && !grmip->grInfo.data)
 		HWR_CacheFadeMask(grmip, fademasklumpnum);
 

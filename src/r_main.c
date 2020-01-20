@@ -1176,7 +1176,6 @@ void R_RenderPlayerView(player_t *player)
 	free(masks);
 }
 
-// Lactozilla: Renderer switching
 #ifdef HWRENDER
 void R_InitHardwareMode(void)
 {
@@ -1190,7 +1189,6 @@ void R_InitHardwareMode(void)
 
 void R_ReloadHUDGraphics(void)
 {
-	CONS_Debug(DBG_RENDER, "R_ReloadHUDGraphics()...\n");
 	ST_LoadGraphics();
 	HU_LoadGraphics();
 	ST_ReloadSkinFaceGraphics();

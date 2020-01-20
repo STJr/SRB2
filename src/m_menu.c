@@ -8641,8 +8641,6 @@ void M_ForceSaveSlotSelected(INT32 sslot)
 // ================
 // CHARACTER SELECT
 // ================
-
-// lactozilla: sometimes the renderer changes and these patches don't exist anymore
 static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 {
 	if (!(description[i].picname[0]))
@@ -8874,7 +8872,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT32 x, y;
 	INT32 w = (vid.width/vid.dupx);
 
-	// lactozilla: the renderer changed so recache patches
 	if (needpatchrecache)
 		M_CacheCharacterSelect();
 
