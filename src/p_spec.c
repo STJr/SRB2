@@ -6354,7 +6354,7 @@ static void P_RunLevelLoadExecutors(void)
 }
 
 /** Before things are loaded, initialises certain stuff in case they're needed
-  * by P_ResetDynamicSlopes or P_LoadThings. This was split off from
+  * by P_SpawnSlopes or P_LoadThings. This was split off from
   * P_SpawnSpecials, in case you couldn't tell.
   *
   * \sa P_SpawnSpecials, P_InitTagLists
@@ -6932,7 +6932,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 146: // Intangible floor/ceiling with solid sides (fences/hoops maybe?)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_ALLSIDES|FF_INTANGABLEFLATS, secthinkers);
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_ALLSIDES|FF_INTANGIBLEFLATS, secthinkers);
 				break;
 
 			case 150: // Air bobbing platform

@@ -77,14 +77,13 @@ extern consvar_t cv_showhud, cv_translucenthud;
 extern consvar_t cv_homremoval;
 extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
-#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
 extern consvar_t cv_shadow;
-#endif
 #ifdef GLBADSHADOWS
 extern conscar_t cv_shadowoffs;
 #endif //#ifdef GLBADSHADOWS
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
+extern consvar_t cv_fov;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 

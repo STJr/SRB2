@@ -644,7 +644,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
-				if (delta1 >= delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_PLATFORM) // thing is below FOF
+				if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
 				{
 					if (bottomheight < opentop) {
 						opentop = bottomheight;
@@ -657,7 +657,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 						highceiling = bottomheight;
 				}
 
-				if (delta1 < delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+				if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
 				{
 					if (topheight > openbottom) {
 						openbottom = topheight;
@@ -690,7 +690,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
-				if (delta1 >= delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_PLATFORM) // thing is below FOF
+				if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
 				{
 					if (bottomheight < opentop) {
 						opentop = bottomheight;
@@ -703,7 +703,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 						highceiling = bottomheight;
 				}
 
-				if (delta1 < delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+				if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
 				{
 					if (topheight > openbottom) {
 						openbottom = topheight;

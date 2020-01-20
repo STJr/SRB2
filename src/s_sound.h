@@ -35,6 +35,8 @@ extern consvar_t cv_numChannels;
 extern consvar_t cv_resetmusic;
 extern consvar_t cv_resetmusicbyheader;
 
+extern consvar_t cv_1upsound;
+
 #define RESETMUSIC (!modeattacking && \
 	(cv_resetmusicbyheader.value ? \
 		(mapheaderinfo[gamemap-1]->musforcereset != -1 ? mapheaderinfo[gamemap-1]->musforcereset : cv_resetmusic.value) \
