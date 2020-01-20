@@ -1485,11 +1485,7 @@ MusicDefStrcpy (char *p, const char *s, size_t n, int version)
 	if (version == MUSICDEF_220)
 	{
 		while (( p = strchr(p, '_') ))
-		{
-			n = strspn(p, "_");
-			memset(p, ' ', n); // turn _ into spaces.
-			p += n;
-		}
+			*p++ = ' '; // turn _ into spaces.
 	}
 }
 
