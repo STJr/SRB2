@@ -591,9 +591,12 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 
 	if (!(tails->pflags & PF_CANCARRY))
 		return;
-
+	
+#if 0
+	// To prevent finished players from being thrown into pits. Not that it matters much
 	if (sonic->pflags & PF_FINISHED)
 		return;
+#endif
 
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
