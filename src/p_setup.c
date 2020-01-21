@@ -672,7 +672,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	return Ploadflat(levelflats, flatname);
+	return Ploadflat(0, flatname);
 }
 
 // help function for $$$.sav checking
