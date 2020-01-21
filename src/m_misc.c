@@ -2581,3 +2581,20 @@ int M_JumpWordReverse(const char *line, int offset)
 		offset--;
 	return offset;
 }
+
+const char * M_Ftrim (double f)
+{
+	static char dig[9];/* "0." + 6 digits (6 is printf's default) */
+	int i;
+	/* I know I said it's the default, but just in case... */
+	sprintf(dig, "%.6g", modf(f, &f));
+	if (dig[0])
+	{
+		for (i = strlen(dig); dig[i] == '0'; --i)
+			;
+		dig[i + 1] = '\0';
+		return &dig[1];/* skip the 0 */
+	}
+	else
+		return "";
+}
