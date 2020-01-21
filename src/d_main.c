@@ -651,8 +651,12 @@ void D_SRB2Loop(void)
 	// hack to start on a nice clear console screen.
 	COM_ImmedExecute("cls;version");
 
-	V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
 	I_FinishUpdate(); // page flip or blit buffer
+	/*
+	LMFAO this was showing garbage under OpenGL
+	because I_FinishUpdate was called afterward
+	*/
+	V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
 
 	for (;;)
 	{
