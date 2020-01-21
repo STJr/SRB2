@@ -656,7 +656,9 @@ void D_SRB2Loop(void)
 	LMFAO this was showing garbage under OpenGL
 	because I_FinishUpdate was called afterward
 	*/
-	V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
+	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
+	if (gamestate != GS_TITLESCREEN)
+		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
 
 	for (;;)
 	{
