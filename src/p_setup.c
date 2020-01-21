@@ -585,14 +585,10 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 			if (strnicmp(levelflat[i].name, flatname, 8) == 0)
 				return i;
 		}
+
+		if (numlevelflats >= MAXLEVELFLATS)
+			I_Error("Too many flats in level\n");
 	}
-
-#ifndef ZDEBUG
-	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-	if (numlevelflats >= MAXLEVELFLATS)
-		I_Error("Too many flats in level\n");
 
 	if (levelflat)
 		levelflat += numlevelflats;
@@ -655,6 +651,10 @@ flatfound:
 		levelflat->u.flat.    lumpnum = flatnum;
 		levelflat->u.flat.baselumpnum = LUMPERROR;
 	}
+
+#ifndef ZDEBUG
+	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
 
 	return ( numlevelflats++ );
 }
