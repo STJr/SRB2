@@ -1140,7 +1140,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
 	angle_t drawangleoffset = (player->powers[pw_carry] == CR_ROLLOUT) ? ANGLE_180 : 0;
-	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, invertmouse, mousemove;
+	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, invertmouse, turnmultiplier, mousemove;
 	controlstyle_e controlstyle = G_ControlStyle(ssplayer);
 	INT32 *mx; INT32 *my; INT32 *mly;
 
@@ -1163,6 +1163,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		alwaysfreelook = cv_alwaysfreelook.value;
 		usejoystick = cv_usejoystick.value;
 		invertmouse = cv_invertmouse.value;
+		turnmultiplier = cv_cam_turnmultiplier.value;
 		mousemove = cv_mousemove.value;
 		mx = &mousex;
 		my = &mousey;
@@ -1176,6 +1177,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		alwaysfreelook = cv_alwaysfreelook2.value;
 		usejoystick = cv_usejoystick2.value;
 		invertmouse = cv_invertmouse2.value;
+		turnmultiplier = cv_cam2_turnmultiplier.value;
 		mousemove = cv_mousemove2.value;
 		mx = &mouse2x;
 		my = &mouse2y;
@@ -1293,14 +1295,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		if (turnright && turnleft);
 		else if (turnright)
-			cmd->angleturn = (INT16)(cmd->angleturn - ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
+			cmd->angleturn = (INT16)(cmd->angleturn - ((angleturn[tspeed] * turnmultiplier)>>FRACBITS));
 		else if (turnleft)
-			cmd->angleturn = (INT16)(cmd->angleturn + ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
+			cmd->angleturn = (INT16)(cmd->angleturn + ((angleturn[tspeed] * turnmultiplier)>>FRACBITS));
 
 		if (analogjoystickmove && lookjoystickvector.xaxis != 0)
 		{
 			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - ((((lookjoystickvector.xaxis * angleturn[1]) >> 10) * cv_cam_turnmultiplier.value)>>FRACBITS)); // ANALOG!
+			cmd->angleturn = (INT16)(cmd->angleturn - ((((lookjoystickvector.xaxis * angleturn[1]) >> 10) * turnmultiplier)>>FRACBITS)); // ANALOG!
 		}
 
 		if (turnright || turnleft || abs(cmd->angleturn) > angleturn[2])
