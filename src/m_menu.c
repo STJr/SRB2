@@ -7285,7 +7285,7 @@ static void M_DrawEmblemHints(void)
 		if (itemOn == 0){
 			pageflag = V_YELLOWMAP;
 		}
-		V_DrawString(currentMenu->x + 40, currentMenu->y + 10, pageflag, va("%d",hintpage));
+		V_DrawString(currentMenu->x + 40, currentMenu->y + 10, pageflag, va("%d of %d",hintpage, local/(NUMHINTS*2) + 1));
 	}
 
 	// If there are more than 1 page's but less than 2 pages' worth of emblems on the last possible page,
