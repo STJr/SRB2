@@ -231,8 +231,8 @@ static void M_Credits(INT32 choice);
 static void M_SoundTest(INT32 choice);
 static void M_PandorasBox(INT32 choice);
 static void M_EmblemHints(INT32 choice);
-static void M_EmblemHintsFull(INT32 choice);
 static void M_HandleEmblemHints(INT32 choice);
+UINT32 hintpage = 1;
 static void M_HandleChecklist(INT32 choice);
 menu_t SR_MainDef, SR_UnlockChecklistDef;
 
@@ -344,7 +344,6 @@ static void M_DrawAddons(void);
 static void M_DrawChecklist(void);
 static void M_DrawSoundTest(void);
 static void M_DrawEmblemHints(void);
-static void M_DrawEmblemHintsFull(void);
 static void M_DrawPauseMenu(void);
 static void M_DrawServerMenu(void);
 static void M_DrawLevelPlatterMenu(void);
@@ -730,14 +729,9 @@ static menuitem_t SR_SoundTestMenu[] =
 
 static menuitem_t SR_EmblemHintMenu[] =
 {
-	{IT_STRING | IT_CALL,       NULL, "Check All Hints", M_EmblemHintsFull, 10},
+	{IT_STRING | IT_ARROWS,       NULL, "Page", M_HandleEmblemHints, 10},
 	{IT_STRING|IT_CVAR,         NULL, "Emblem Radar", &cv_itemfinder, 20},
 	{IT_WHITESTRING|IT_SUBMENU, NULL, "Back",         &SPauseDef,     30}
-};
-
-static menuitem_t SR_EmblemHintFullMenu[] =
-{
-	{IT_KEYHANDLER | IT_STRING, NULL, "", M_HandleEmblemHints, 0},
 };
 
 // --------------------------------
@@ -1743,19 +1737,6 @@ menu_t SR_EmblemHintDef =
 	SR_EmblemHintMenu,
 	M_DrawEmblemHints,
 	60, 150,
-	0,
-	NULL
-};
-
-menu_t SR_EmblemHintFullDef =
-{
-	MN_SR_MAIN + (MN_SR_EMBLEMHINT << 6),
-	NULL,
-	sizeof (SR_EmblemHintFullMenu)/sizeof (menuitem_t),
-	&SR_EmblemHintDef,
-	SR_EmblemHintFullMenu,
-	M_DrawEmblemHintsFull,
-	0, 150,
 	0,
 	NULL
 };
@@ -7247,6 +7228,7 @@ finishchecklist:
 }
 
 #define NUMHINTS 5
+
 static void M_EmblemHints(INT32 choice)
 {
 	INT32 i;
@@ -7262,16 +7244,17 @@ static void M_EmblemHints(INT32 choice)
 	}
 
 	(void)choice;
-	SR_EmblemHintMenu[0].status = (local > NUMHINTS*2) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+	SR_EmblemHintMenu[0].status = (local > NUMHINTS*2) ? (IT_STRING | IT_ARROWS) : (IT_DISABLED);
 	SR_EmblemHintMenu[1].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
+	hintpage = 1;
 	M_SetupNextMenu(&SR_EmblemHintDef);
 	itemOn = 2; // always start on back.
 }
 
 static void M_DrawEmblemHints(void)
 {
-	INT32 i, j = 0, x, y, left_hints = NUMHINTS;
-	UINT32 collected = 0, local = 0;
+	INT32 i, j = 0, x, y, left_hints = NUMHINTS, pageflag = 0;
+	UINT32 collected = 0, totalemblems = 0, local = 0;
 	emblem_t *emblem;
 	const char *hint;
 
@@ -7280,17 +7263,34 @@ static void M_DrawEmblemHints(void)
 		emblem = &emblemlocations[i];
 		if (emblem->level != gamemap || emblem->type > ET_SKIN)
 			continue;
-		if (++local >= NUMHINTS*2)
-			break;
+
+		local++;
 	}
 
 	x = (local > NUMHINTS ? 4 : 12);
 	y = 8;
 
-	// If there are more than 1 page's but less than 2 pages' worth of emblems,
+	if (local > NUMHINTS){
+		if (local > ((hintpage-1)*NUMHINTS*2) && local < ((hintpage)*NUMHINTS*2)){
+			if (NUMHINTS % 2 == 1)
+				left_hints = (local - ((hintpage-1)*NUMHINTS*2)  + 1) / 2;
+			else
+				left_hints = (local - ((hintpage-1)*NUMHINTS*2)) / 2;
+		}else{
+			left_hints = NUMHINTS;
+		}
+	}
+
+	if (local > NUMHINTS*2){
+		if (itemOn == 0){
+			pageflag = V_YELLOWMAP;
+		}
+		V_DrawString(currentMenu->x + 40, currentMenu->y + 10, pageflag, va("%d",hintpage));
+	}
+
+	// If there are more than 1 page's but less than 2 pages' worth of emblems on the last possible page,
 	// put half (rounded up) of the hints on the left, and half (rounded down) on the right
-	if (local > NUMHINTS && local < (NUMHINTS*2)-1)
-		left_hints = (local + 1) / 2;
+
 
 	if (!local)
 		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
@@ -7300,43 +7300,51 @@ static void M_DrawEmblemHints(void)
 		if (emblem->level != gamemap || emblem->type > ET_SKIN)
 			continue;
 
-		if (emblem->collected)
-		{
-			collected = V_GREENMAP;
-			V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
-				R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
-		}
-		else
-		{
-			collected = 0;
-			V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_PATCH));
-		}
+		totalemblems++;
 
-		if (emblem->hint[0])
-			hint = emblem->hint;
-		else
-			hint = M_GetText("No hint available for this emblem.");
-		hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
-		if (local > NUMHINTS)
-			V_DrawThinString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
-		else
-			V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+		if (totalemblems >= ((hintpage-1)*(NUMHINTS*2) + 1) && totalemblems < (hintpage*NUMHINTS*2)+1){
 
-		y += 28;
+			if (emblem->collected)
+			{
+				collected = V_GREENMAP;
+				V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
+					R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
+			}
+			else
+			{
+				collected = 0;
+				V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_PATCH));
+			}
 
-		if (++j == left_hints)
-		{
-			x = 4+(BASEVIDWIDTH/2);
-			y = 8;
+			if (emblem->hint[0])
+				hint = emblem->hint;
+			else
+				hint = M_GetText("No hint available for this emblem.");
+			hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
+			//always draw tiny if we have more than NUMHINTS*2, visually more appealing
+			if (local > NUMHINTS)
+				V_DrawThinString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+			else
+				V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+
+			y += 28;
+
+			// If there are more than 1 page's but less than 2 pages' worth of emblems on the last possible page,
+			// put half (rounded up) of the hints on the left, and half (rounded down) on the right
+
+			if (++j == left_hints)
+			{
+				x = 4+(BASEVIDWIDTH/2);
+				y = 8;
+			}
+			else if (j >= NUMHINTS*2)
+				break;
 		}
-		else if (j >= NUMHINTS*2)
-			break;
 	}
 
 	M_DrawGenericMenu();
 }
 
-UINT32 check_on_hint = 0;
 
 static void M_HandleEmblemHints(INT32 choice)
 {
@@ -7354,109 +7362,16 @@ static void M_HandleEmblemHints(INT32 choice)
 	}
 
 
-	UINT32 j = check_on_hint;
-	switch (choice)
-	{
-		case KEY_DOWNARROW:
-			S_StartSound(NULL, sfx_menu1);
-			if ((check_on_hint != stageemblems))
-			{
-				if (++j <= stageemblems - NUMHINTS)
-					check_on_hint = j;
-			}
-			return;
-
-		case KEY_UPARROW:
-			S_StartSound(NULL, sfx_menu1);
-			if (check_on_hint)
-			{
-				if (--j != -1)
-					check_on_hint = j;
-			}
-			return;
-
-		case KEY_ESCAPE:
-			if (currentMenu->prevMenu){
-				check_on_hint = 0;
-				M_SetupNextMenu(currentMenu->prevMenu);
-			}else
-				M_ClearMenus(true);
-			return;
-		default:
-			break;
-	}
-
-}
-
-static void M_EmblemHintsFull(INT32 choice)
-{
-	(void)choice;
-	M_SetupNextMenu(&SR_EmblemHintFullDef);
-	itemOn = 0;
-}
-
-
-static void M_DrawEmblemHintsFull(void)
-{
-	INT32 i, x, y = currentMenu->y, drawnemblems = 0;
-	UINT32 collected = 0, local = 0;
-	emblem_t *emblem;
-	const char *hint;
-
-	for (i = 0; i < numemblems; i++)
-	{
-		emblem = &emblemlocations[i];
-		if (emblem->level != gamemap || emblem->type > ET_SKIN)
-			continue;
-		local++;
-	}
-
-	if (!local)
-		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
-	else{ 
-
-		if (check_on_hint > 0)
-			V_DrawString(310, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A");
-		if(check_on_hint < local - NUMHINTS)
-			V_DrawString(310, y+8+(skullAnimCounter/5), V_YELLOWMAP, "\x1B");
-
-		x = 4;
-		y = 16;
-
-		for (i = 0; i < numemblems; i++)
-		{
-			emblem = &emblemlocations[i];
-			if (emblem->level != gamemap || emblem->type > ET_SKIN)
-				continue;
-
-			drawnemblems++;
-
-			if (drawnemblems > check_on_hint && drawnemblems <= (check_on_hint+NUMHINTS)){
-				if (emblem->collected)
-				{
-					collected = V_GREENMAP;
-					V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
-						R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
-				}
-				else
-				{
-					collected = 0;
-					V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_PATCH));
-				}
-
-				if (emblem->hint[0])
-					hint = emblem->hint;
-				else
-					hint = M_GetText("No hint available for this emblem.");
-				hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
-				V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
-
-				y += 32;
-			}
+	if (choice == 0){
+		if (hintpage > 1){
+			hintpage--;
+		}
+	}else{
+		if (hintpage < (stageemblems/(NUMHINTS*2) + 1)){
+			hintpage++;
 		}
 	}
 
-	//M_DrawGenericMenu();
 }
 
 /*static void M_DrawSkyRoom(void)
