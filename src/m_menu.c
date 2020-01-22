@@ -7367,7 +7367,7 @@ static void M_HandleEmblemHints(INT32 choice)
 			hintpage--;
 		}
 	}else{
-		if (hintpage < (stageemblems/(NUMHINTS*2) + 1)){
+		if (hintpage < ((stageemblems-1)/(NUMHINTS*2) + 1)){
 			hintpage++;
 		}
 	}
