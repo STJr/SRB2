@@ -77,6 +77,7 @@ char motd[254], server_context[8]; // Message of the Day, Unique Context (even w
 
 // Server specific vars
 UINT8 playernode[MAXPLAYERS];
+char playeraddress[MAXPLAYERS][64];
 
 // Minimum timeout for sending the savegame
 // The actual timeout will be longer depending on the savegame length
