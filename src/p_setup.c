@@ -566,7 +566,7 @@ levelflat refers to an array of level flats,
 or NULL if we want to allocate it now.
 */
 static INT32
-Ploadflat (levelflat_t *levelflat, const char *flatname)
+Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 {
 #ifndef NO_PNG_LUMPS
 	UINT8         buffer[8];
@@ -577,26 +577,25 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 
 	size_t i;
 
-	if (levelflat)
+	// Scan through the already found flats, return if it matches.
+	for (i = 0; i < numlevelflats; i++)
 	{
-		// Scan through the already found flats, return if it matches.
-		for (i = 0; i < numlevelflats; i++)
-		{
-			if (strnicmp(levelflat[i].name, flatname, 8) == 0)
-				return i;
-		}
-
-		if (numlevelflats >= MAXLEVELFLATS)
-			I_Error("Too many flats in level\n");
+		if (strnicmp(levelflat[i].name, flatname, 8) == 0)
+			return i;
 	}
 
-	if (levelflat)
-		levelflat += numlevelflats;
-	else
+	if (resize)
 	{
 		// allocate new flat memory
 		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
 		levelflat  = levelflats + numlevelflats;
+	}
+	else
+	{
+		if (numlevelflats >= MAXLEVELFLATS)
+			I_Error("Too many flats in level\n");
+
+		levelflat += numlevelflats;
 	}
 
 	// Store the name.
@@ -663,7 +662,7 @@ flatfound:
 // allocate an id for it, and set the levelflat (to speedup search)
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 {
-	return Ploadflat(levelflat, flatname);
+	return Ploadflat(levelflat, flatname, false);
 }
 
 // help function for Lua and $$$.sav reading
@@ -672,7 +671,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	return Ploadflat(0, flatname);
+	return Ploadflat(levelflats, flatname, true);
 }
 
 // help function for $$$.sav checking
