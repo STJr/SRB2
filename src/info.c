@@ -720,7 +720,7 @@ state_t states[NUMSTATES] =
 
 	// CA_GLIDEANDCLIMB
 	{SPR_PLAY, SPR2_GLID,                 2, {NULL}, 0,  0, S_PLAY_GLIDE}, // S_PLAY_GLIDE
-	{SPR_PLAY, SPR2_LAND,                 9, {NULL}, 0,  0, S_PLAY_STND},  // S_PLAY_GLIDE_LANDING
+	{SPR_PLAY, SPR2_LAND,                 7, {NULL}, 0,  0, S_PLAY_STND},  // S_PLAY_GLIDE_LANDING
 	{SPR_PLAY, SPR2_CLNG|FF_ANIMATE,     -1, {NULL}, 0,  4, S_NULL},       // S_PLAY_CLING
 	{SPR_PLAY, SPR2_CLMB,                 5, {NULL}, 0,  0, S_PLAY_CLIMB}, // S_PLAY_CLIMB
 

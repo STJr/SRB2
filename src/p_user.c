@@ -2329,8 +2329,10 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
 					S_StartSound(player->mo, sfx_s3k4c);
 					player->pflags |= PF_STASIS;
-					player->mo->momx = ((player->mo->momx - player->cmomx)/3) + player->cmomx;
-					player->mo->momy = ((player->mo->momy - player->cmomy)/3) + player->cmomy;
+					if (player->speed > FixedMul(player->runspeed, player->mo->scale))
+						player->skidtime += player->mo->tics;
+					player->mo->momx = ((player->mo->momx - player->cmomx) >> 1) + player->cmomx;
+					player->mo->momy = ((player->mo->momy - player->cmomy) >> 1) + player->cmomy;
 				}
 			}
 			else if (player->charability2 == CA2_MELEE
@@ -2380,6 +2382,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					}
 				}
 			}
+			else if (player->charability == CA_GLIDEANDCLIMB && (player->mo->state-states == S_PLAY_GLIDE_LANDING))
+				;
 			else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
 				;
 			else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
@@ -7852,6 +7856,36 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 	}
 }
 
+//
+// P_SpawnSkidDust
+//
+// Spawns spindash dust randomly around the mobj using its radius as a bound
+//
+static void P_SpawnSkidDust(player_t *player, fixed_t radius, boolean sound)
+{
+	mobj_t *mo = player->mo;
+	mobj_t *particle;
+
+	radius >>= FRACBITS;
+	if (radius)
+		particle = P_SpawnMobjFromMobj(mo, P_RandomRange(-radius, radius) << FRACBITS, P_RandomRange(-radius, radius) << FRACBITS, 0, MT_SPINDUST);
+	else
+		particle = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_SPINDUST);
+	particle->tics = 10;
+
+	particle->destscale = (2*mo->scale)/3;
+	P_SetScale(particle, particle->destscale);
+	P_SetObjectMomZ(particle, FRACUNIT, false);
+
+	if (mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) // overrides fire version
+		P_SetMobjState(particle, S_SPINDUST_BUBBLE1);
+	else if (player->powers[pw_shield] == SH_ELEMENTAL)
+		P_SetMobjState(particle, S_SPINDUST_FIRE1);
+
+	if (sound)
+		S_StartSound(mo, sfx_s3k7e); // the proper "Knuckles eats dirt" sfx.
+}
+
 static void P_SkidStuff(player_t *player)
 {
 	fixed_t pmx = player->rmomx + player->cmomx;
@@ -7874,8 +7908,10 @@ static void P_SkidStuff(player_t *player)
 			P_ResetPlayer(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
 			player->pflags |= PF_STASIS;
-			player->mo->momx = ((player->mo->momx - player->cmomx)/3) + player->cmomx;
-			player->mo->momy = ((player->mo->momy - player->cmomy)/3) + player->cmomy;
+			if (player->speed > FixedMul(player->runspeed, player->mo->scale))
+				player->skidtime += player->mo->tics;
+			player->mo->momx = ((player->mo->momx - player->cmomx) >> 1) + player->cmomx;
+			player->mo->momy = ((player->mo->momy - player->cmomy) >> 1) + player->cmomy;
 		}
 		// Didn't stop yet? Skid FOREVER!
 		else if (player->skidtime == 1)
@@ -7883,20 +7919,7 @@ static void P_SkidStuff(player_t *player)
 		// Spawn a particle every 3 tics.
 		else if (!(player->skidtime % 3))
 		{
-			fixed_t radius = player->mo->radius >> FRACBITS;
-			mobj_t *particle = P_SpawnMobjFromMobj(player->mo, P_RandomRange(-radius, radius) << FRACBITS, P_RandomRange(-radius, radius) << FRACBITS, 0, MT_SPINDUST);
-			particle->tics = 10;
-
-			particle->destscale = (2*player->mo->scale)/3;
-			P_SetScale(particle, particle->destscale);
-			P_SetObjectMomZ(particle, FRACUNIT, false);
-
-			if (player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) // overrides fire version
-				P_SetMobjState(particle, S_SPINDUST_BUBBLE1);
-			else if (player->powers[pw_shield] == SH_ELEMENTAL)
-				P_SetMobjState(particle, S_SPINDUST_FIRE1);
-
-			S_StartSound(player->mo, sfx_s3k7e); // the proper "Knuckles eats dirt" sfx.
+			P_SpawnSkidDust(player, player->mo->radius, true);
 		}
 	}
 	// Skidding!
@@ -7907,17 +7930,10 @@ static void P_SkidStuff(player_t *player)
 			// Spawn a particle every 3 tics.
 			if (!(player->skidtime % 3))
 			{
-				mobj_t *particle = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_SPINDUST);
-				particle->tics = 10;
-
-				particle->destscale = (2*player->mo->scale)/3;
-				P_SetScale(particle, particle->destscale);
-				P_SetObjectMomZ(particle, FRACUNIT, false);
-
-				if (player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) // overrides fire version
-					P_SetMobjState(particle, S_SPINDUST_BUBBLE1);
-				else if (player->powers[pw_shield] == SH_ELEMENTAL)
-					P_SetMobjState(particle, S_SPINDUST_FIRE1);
+				if (player->mo->state-states == S_PLAY_GLIDE_LANDING)
+					P_SpawnSkidDust(player, player->mo->radius, true);
+				else
+					P_SpawnSkidDust(player, 0, false);
 			}
 		}
 		else if (P_AproxDistance(pmx, pmy) >= FixedMul(player->runspeed/2, player->mo->scale) // if you were moving faster than half your run speed last frame
