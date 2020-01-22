@@ -231,6 +231,8 @@ static void M_Credits(INT32 choice);
 static void M_SoundTest(INT32 choice);
 static void M_PandorasBox(INT32 choice);
 static void M_EmblemHints(INT32 choice);
+static void M_EmblemHintsFull(INT32 choice);
+static void M_HandleEmblemHints(INT32 choice);
 static void M_HandleChecklist(INT32 choice);
 menu_t SR_MainDef, SR_UnlockChecklistDef;
 
@@ -342,6 +344,7 @@ static void M_DrawAddons(void);
 static void M_DrawChecklist(void);
 static void M_DrawSoundTest(void);
 static void M_DrawEmblemHints(void);
+static void M_DrawEmblemHintsFull(void);
 static void M_DrawPauseMenu(void);
 static void M_DrawServerMenu(void);
 static void M_DrawLevelPlatterMenu(void);
@@ -727,8 +730,14 @@ static menuitem_t SR_SoundTestMenu[] =
 
 static menuitem_t SR_EmblemHintMenu[] =
 {
-	{IT_STRING|IT_CVAR,         NULL, "Emblem Radar", &cv_itemfinder, 10},
-	{IT_WHITESTRING|IT_SUBMENU, NULL, "Back",         &SPauseDef,     20}
+	{IT_STRING | IT_CALL,       NULL, "Check All Hints", M_EmblemHintsFull, 10},
+	{IT_STRING|IT_CVAR,         NULL, "Emblem Radar", &cv_itemfinder, 20},
+	{IT_WHITESTRING|IT_SUBMENU, NULL, "Back",         &SPauseDef,     30}
+};
+
+static menuitem_t SR_EmblemHintFullMenu[] =
+{
+	{IT_KEYHANDLER | IT_STRING, NULL, "", M_HandleEmblemHints, 0},
 };
 
 // --------------------------------
@@ -1734,6 +1743,19 @@ menu_t SR_EmblemHintDef =
 	SR_EmblemHintMenu,
 	M_DrawEmblemHints,
 	60, 150,
+	0,
+	NULL
+};
+
+menu_t SR_EmblemHintFullDef =
+{
+	MN_SR_MAIN + (MN_SR_EMBLEMHINT << 6),
+	NULL,
+	sizeof (SR_EmblemHintFullMenu)/sizeof (menuitem_t),
+	&SR_EmblemHintDef,
+	SR_EmblemHintFullMenu,
+	M_DrawEmblemHintsFull,
+	0, 150,
 	0,
 	NULL
 };
@@ -7227,10 +7249,23 @@ finishchecklist:
 #define NUMHINTS 5
 static void M_EmblemHints(INT32 choice)
 {
+	INT32 i;
+	UINT32 local = 0;
+	emblem_t *emblem;
+	for (i = 0; i < numemblems; i++)
+	{
+		emblem = &emblemlocations[i];
+		if (emblem->level != gamemap || emblem->type > ET_SKIN)
+			continue;
+		if (++local > NUMHINTS*2)
+			break;
+	}
+
 	(void)choice;
-	SR_EmblemHintMenu[0].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
+	SR_EmblemHintMenu[0].status = (local > NUMHINTS*2) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+	SR_EmblemHintMenu[1].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
 	M_SetupNextMenu(&SR_EmblemHintDef);
-	itemOn = 1; // always start on back.
+	itemOn = 2; // always start on back.
 }
 
 static void M_DrawEmblemHints(void)
@@ -7299,6 +7334,129 @@ static void M_DrawEmblemHints(void)
 	}
 
 	M_DrawGenericMenu();
+}
+
+UINT32 check_on_hint = 0;
+
+static void M_HandleEmblemHints(INT32 choice)
+{
+	INT32 i;
+	emblem_t *emblem;
+	UINT32 stageemblems = 0;
+
+	for (i = 0; i < numemblems; i++)
+	{
+		emblem = &emblemlocations[i];
+		if (emblem->level != gamemap || emblem->type > ET_SKIN)
+			continue;
+
+		stageemblems++;
+	}
+
+
+	UINT32 j = check_on_hint;
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			if ((check_on_hint != stageemblems))
+			{
+				if (++j <= stageemblems - NUMHINTS)
+					check_on_hint = j;
+			}
+			return;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			if (check_on_hint)
+			{
+				if (--j != -1)
+					check_on_hint = j;
+			}
+			return;
+
+		case KEY_ESCAPE:
+			if (currentMenu->prevMenu){
+				check_on_hint = 0;
+				M_SetupNextMenu(currentMenu->prevMenu);
+			}else
+				M_ClearMenus(true);
+			return;
+		default:
+			break;
+	}
+
+}
+
+static void M_EmblemHintsFull(INT32 choice)
+{
+	(void)choice;
+	M_SetupNextMenu(&SR_EmblemHintFullDef);
+	itemOn = 0;
+}
+
+
+static void M_DrawEmblemHintsFull(void)
+{
+	INT32 i, x, y = currentMenu->y, drawnemblems = 0;
+	UINT32 collected = 0, local = 0;
+	emblem_t *emblem;
+	const char *hint;
+
+	for (i = 0; i < numemblems; i++)
+	{
+		emblem = &emblemlocations[i];
+		if (emblem->level != gamemap || emblem->type > ET_SKIN)
+			continue;
+		local++;
+	}
+
+	if (!local)
+		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
+	else{ 
+
+		if (check_on_hint > 0)
+			V_DrawString(310, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A");
+		if(check_on_hint < local - NUMHINTS)
+			V_DrawString(310, y+8+(skullAnimCounter/5), V_YELLOWMAP, "\x1B");
+
+		x = 4;
+		y = 16;
+
+		for (i = 0; i < numemblems; i++)
+		{
+			emblem = &emblemlocations[i];
+			if (emblem->level != gamemap || emblem->type > ET_SKIN)
+				continue;
+
+			drawnemblems++;
+
+			if (drawnemblems > check_on_hint && drawnemblems <= (check_on_hint+NUMHINTS)){
+				if (emblem->collected)
+				{
+					collected = V_GREENMAP;
+					V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
+						R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
+				}
+				else
+				{
+					collected = 0;
+					V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_PATCH));
+				}
+
+				if (emblem->hint[0])
+					hint = emblem->hint;
+				else
+					hint = M_GetText("No hint available for this emblem.");
+				hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
+				V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+
+				y += 32;
+			}
+		}
+	}
+
+	//M_DrawGenericMenu();
 }
 
 /*static void M_DrawSkyRoom(void)
