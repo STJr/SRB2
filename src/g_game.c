@@ -2999,6 +2999,8 @@ boolean G_EnoughPlayersFinished(void)
 	{
 		if (!playeringame[i] || players[i].spectator || players[i].bot)
 			continue;
+		if (players[i].quittime > 30 * TICRATE)
+			continue;
 		if (players[i].lives <= 0)
 			continue;
 
