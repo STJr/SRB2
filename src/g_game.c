@@ -2307,6 +2307,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	INT32 skin;
 	UINT32 availabilities;
 	tic_t jointime;
+	tic_t quittime;
 	boolean spectator;
 	boolean outofcoop;
 	INT16 bot;
@@ -2320,6 +2321,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	ctfteam = players[player].ctfteam;
 	exiting = players[player].exiting;
 	jointime = players[player].jointime;
+	quittime = players[player].quittime;
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
@@ -2391,6 +2393,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->pflags = pflags;
 	p->ctfteam = ctfteam;
 	p->jointime = jointime;
+	p->quittime = quittime;
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
 
@@ -2974,7 +2977,6 @@ void G_AddPlayer(INT32 playernum)
 		}
 	}
 
-	p->jointime = 0;
 	p->playerstate = PST_REBORN;
 
 	p->height = mobjinfo[MT_PLAYER].height;

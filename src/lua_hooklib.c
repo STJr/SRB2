@@ -1295,7 +1295,7 @@ UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj)
 	return shouldCollide;
 }
 
-void LUAh_PlayerQuit(player_t *plr, int reason)
+void LUAh_PlayerQuit(player_t *plr, kickreason_t reason)
 {
 	hook_p hookp;
 	if (!gL || !(hooksAvailable[hook_PlayerQuit/8] & (1<<(hook_PlayerQuit%8))))

@@ -91,7 +91,7 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 
 boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing); // Hook for P_SpawnMapThing by mobj type
 boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj); // Hook for P_PlayerAfterThink Smiles mobj-following
 UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj); // Hook for P_PlayerCanDamage
-void LUAh_PlayerQuit(player_t *plr, int reason); // Hook for player quitting
+void LUAh_PlayerQuit(player_t *plr, kickreason_t reason); // Hook for player quitting
 void LUAh_IntermissionThinker(void); // Hook for Y_Ticker
 
 #endif
