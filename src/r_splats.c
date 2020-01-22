@@ -147,7 +147,7 @@ void R_AddWallSplat(line_t *wallline, INT16 sectorside, const char *patchname, f
 	splat->flags = flags;
 
 	// bad.. but will be needed for drawing anyway..
-	patch = W_CachePatchNum(splat->patch, PU_CACHE);
+	patch = W_CachePatchNum(splat->patch, PU_PATCH);
 
 	// offset needed by draw code for texture mapping
 	linelength = P_SegLength((seg_t *)wallline);
@@ -512,7 +512,7 @@ static void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, UINT8 *pTe
 			ds_x1 = x1;
 			ds_x2 = x2;
 			ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
-			splatfunc();
+			(spanfuncs[SPANDRAWFUNC_SPLAT])();
 		}
 
 		// reset for next calls to edge rasterizer

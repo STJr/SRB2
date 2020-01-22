@@ -52,9 +52,6 @@ mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
 
-// This must be updated whenever we up the max flat size - quicker to assume rather than figuring out the sqrt of the specific flat's filesize.
-#define MAXFLATSIZE (2048<<FRACBITS)
-
 /** Animated texture descriptor
   * This keeps track of an animated texture or an animated flat.
   * \sa P_UpdateSpecials, P_InitPicAnims, animdef_t
@@ -137,6 +134,13 @@ static size_t maxanims;
 // - now called at level loading P_SetupLevel()
 
 static animdef_t *animdefs = NULL;
+
+// Increase the size of animdefs to make room for a new animation definition
+static void GrowAnimDefs(void)
+{
+	maxanims++;
+	animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
+}
 
 // A prototype; here instead of p_spec.h, so they're "private"
 void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum);
@@ -347,8 +351,7 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 	if (i == maxanims)
 	{
 		// Increase the size to make room for the new animation definition
-		maxanims++;
-		animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
+		GrowAnimDefs();
 		strncpy(animdefs[i].startname, animdefsToken, 9);
 	}
 
@@ -434,8 +437,17 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 	}
 	animdefs[i].speed = animSpeed;
 	Z_Free(animdefsToken);
-}
 
+#ifdef WALLFLATS
+	// hehe... uhh.....
+	if (!istexture)
+	{
+		GrowAnimDefs();
+		M_Memcpy(&animdefs[maxanims-1], &animdefs[i], sizeof(animdef_t));
+		animdefs[maxanims-1].istexture = 1;
+	}
+#endif
+}
 
 /** Checks for flats in levelflats that are part of a flat animation sequence
   * and sets them up for animation.
@@ -476,7 +488,8 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
 					foundflats->numpics,foundflats->speed);
 		}
-		else if (foundflats->u.flat.lumpnum >= startflatnum && foundflats->u.flat.lumpnum <= endflatnum)
+		else if ((!anims[animnum].istexture) && (foundflats->type == LEVELFLAT_FLAT)
+			&& (foundflats->u.flat.lumpnum >= startflatnum && foundflats->u.flat.lumpnum <= endflatnum))
 		{
 			foundflats->u.flat.baselumpnum = startflatnum;
 			foundflats->animseq = foundflats->u.flat.lumpnum - startflatnum;
@@ -1587,8 +1600,6 @@ static inline void P_InitTagLists(void)
 		size_t j = (unsigned)sectors[i].tag % numsectors;
 		sectors[i].nexttag = sectors[j].firsttag;
 		sectors[j].firsttag = (INT32)i;
-		sectors[i].spawn_nexttag = sectors[i].nexttag;
-		sectors[j].spawn_firsttag = sectors[j].firsttag;
 	}
 
 	for (i = numlines - 1; i != (size_t)-1; i--)
@@ -1876,7 +1887,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		while (node)
 		{
 			mo = node->m_thing;
-			if (mo->flags & MF_PUSHABLE)
+			if ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse))
 				numpush++;
 			node = node->m_thinglist_next;
 		}
@@ -4611,7 +4622,7 @@ DoneSection2:
 
 				player->mo->angle = player->drawangle = lineangle;
 
-				if (!demoplayback || P_AnalogMove(player))
+				if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 				{
 					if (player == &players[consoleplayer])
 						localangle = player->mo->angle;
@@ -4686,7 +4697,7 @@ DoneSection2:
 		}
 
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
-			if (player->bot || !G_PlatformGametype())
+			if (player->bot || !(gametyperules & GTR_ALLOWEXIT))
 				break;
 			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
 			{
@@ -4721,7 +4732,7 @@ DoneSection2:
 			break;
 
 		case 3: // Red Team's Base
-			if (gametype == GT_CTF && P_IsObjectOnGround(player->mo))
+			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
 			{
 				if (player->ctfteam == 1 && (player->gotflag & GF_BLUEFLAG))
 				{
@@ -4754,7 +4765,7 @@ DoneSection2:
 			break;
 
 		case 4: // Blue Team's Base
-			if (gametype == GT_CTF && P_IsObjectOnGround(player->mo))
+			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
 			{
 				if (player->ctfteam == 2 && (player->gotflag & GF_REDFLAG))
 				{
@@ -5035,8 +5046,7 @@ DoneSection2:
 				mobj_t *waypointlow = NULL;
 				mobj_t *mo2;
 				mobj_t *closest = NULL;
-				line_t junk;
-				vertex_t v1, v2, resulthigh, resultlow;
+				vector3_t p, line[2], resulthigh, resultlow;
 				mobj_t *highest = NULL;
 
 				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
@@ -5183,38 +5193,34 @@ DoneSection2:
 				// Next, we need to find the closest point on the line between each set, and determine which one we're
 				// closest to.
 
+				p.x = player->mo->x;
+				p.y = player->mo->y;
+				p.z = player->mo->z;
+
 				// Waypointmid and Waypointlow:
 				if (waypointlow)
 				{
-					v1.x = waypointmid->x;
-					v1.y = waypointmid->y;
-					v1.z = waypointmid->z;
-					v2.x = waypointlow->x;
-					v2.y = waypointlow->y;
-					v2.z = waypointlow->z;
-					junk.v1 = &v1;
-					junk.v2 = &v2;
-					junk.dx = v2.x - v1.x;
-					junk.dy = v2.y - v1.y;
+					line[0].x = waypointmid->x;
+					line[0].y = waypointmid->y;
+					line[0].z = waypointmid->z;
+					line[1].x = waypointlow->x;
+					line[1].y = waypointlow->y;
+					line[1].z = waypointlow->z;
 
-					P_ClosestPointOnLine3D(player->mo->x, player->mo->y, player->mo->z, &junk, &resultlow);
+					P_ClosestPointOnLine3D(&p, line, &resultlow);
 				}
 
 				// Waypointmid and Waypointhigh:
 				if (waypointhigh)
 				{
-					v1.x = waypointmid->x;
-					v1.y = waypointmid->y;
-					v1.z = waypointmid->z;
-					v2.x = waypointhigh->x;
-					v2.y = waypointhigh->y;
-					v2.z = waypointhigh->z;
-					junk.v1 = &v1;
-					junk.v2 = &v2;
-					junk.dx = v2.x - v1.x;
-					junk.dy = v2.y - v1.y;
+					line[0].x = waypointmid->x;
+					line[0].y = waypointmid->y;
+					line[0].z = waypointmid->z;
+					line[1].x = waypointhigh->x;
+					line[1].y = waypointhigh->y;
+					line[1].z = waypointhigh->z;
 
-					P_ClosestPointOnLine3D(player->mo->x, player->mo->y, player->mo->z, &junk, &resulthigh);
+					P_ClosestPointOnLine3D(&p, line, &resulthigh);
 				}
 
 				// 3D support now available. Disregard the previous notice here. -Red
@@ -5634,7 +5640,7 @@ void P_UpdateSpecials(void)
 		if (foundflats->speed) // it is an animated flat
 		{
 			// update the levelflat texture number
-			if (foundflats->type == LEVELFLAT_TEXTURE)
+			if ((foundflats->type == LEVELFLAT_TEXTURE) && (foundflats->u.texture.basenum != -1))
 				foundflats->u.texture.num = foundflats->u.texture.basenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 			// update the levelflat lump number
 			else if ((foundflats->type == LEVELFLAT_FLAT) && (foundflats->u.flat.baselumpnum != LUMPERROR))
@@ -6355,7 +6361,7 @@ static void P_RunLevelLoadExecutors(void)
 }
 
 /** Before things are loaded, initialises certain stuff in case they're needed
-  * by P_ResetDynamicSlopes or P_LoadThings. This was split off from
+  * by P_SpawnSlopes or P_LoadThings. This was split off from
   * P_SpawnSpecials, in case you couldn't tell.
   *
   * \sa P_SpawnSpecials, P_InitTagLists
@@ -6397,22 +6403,16 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
 {
 	if (!(master->flags & ML_NETONLY)) // Modify floor flat alignment unless ML_NETONLY flag is set
 	{
-		sector->spawn_flrpic_angle = sector->floorpic_angle = flatangle;
+		sector->floorpic_angle = flatangle;
 		sector->floor_xoffs += xoffs;
 		sector->floor_yoffs += yoffs;
-		// saved for netgames
-		sector->spawn_flr_xoffs = sector->floor_xoffs;
-		sector->spawn_flr_yoffs = sector->floor_yoffs;
 	}
 
 	if (!(master->flags & ML_NONET)) // Modify ceiling flat alignment unless ML_NONET flag is set
 	{
-		sector->spawn_ceilpic_angle = sector->ceilingpic_angle = flatangle;
+		sector->ceilingpic_angle = flatangle;
 		sector->ceiling_xoffs += xoffs;
 		sector->ceiling_yoffs += yoffs;
-		// saved for netgames
-		sector->spawn_ceil_xoffs = sector->ceiling_xoffs;
-		sector->spawn_ceil_yoffs = sector->ceiling_yoffs;
 	}
 
 }
@@ -6426,14 +6426,13 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
   *       as they'll just be erased by UnArchiveThinkers.
   * \sa P_SpawnPrecipitation, P_SpawnFriction, P_SpawnPushers, P_SpawnScrollers
   */
-void P_SpawnSpecials(INT32 fromnetsave)
+void P_SpawnSpecials(boolean fromnetsave)
 {
 	sector_t *sector;
 	size_t i;
 	INT32 j;
 	thinkerlist_t *secthinkers;
 	thinker_t *th;
-
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
 	(void)fromnetsave;
@@ -6940,7 +6939,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 146: // Intangible floor/ceiling with solid sides (fences/hoops maybe?)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_ALLSIDES|FF_INTANGABLEFLATS, secthinkers);
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_ALLSIDES|FF_INTANGIBLEFLATS, secthinkers);
 				break;
 
 			case 150: // Air bobbing platform
@@ -7179,46 +7178,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers);
 				break;
 
-			case 259: // Make-Your-Own FOF!
+			case 259: // Custom FOF
 				if (lines[i].sidenum[1] != 0xffff)
 				{
-					UINT8 *data;
-					UINT16 b;
-
-					if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
-					{ // HACK: Open wad file rather quickly so we can get the data from the sidedefs lump
-						UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-						filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
-						fileinfo += ML_SIDEDEFS; // we only need the SIDEDEFS lump
-						data = Z_Malloc(fileinfo->size, PU_STATIC, NULL);
-						M_Memcpy(data, wadData + fileinfo->filepos, fileinfo->size); // copy data
-						Z_Free(wadData); // we're done with this now
-					}
-					else // phew it's just a WAD
-						data = W_CacheLumpNum(lastloadedmaplumpnum + ML_SIDEDEFS,PU_STATIC);
-
-					for (b = 0; b < (INT16)numsides; b++)
-					{
-						register mapsidedef_t *msd = (mapsidedef_t *)data + b;
-
-						if (b == lines[i].sidenum[1])
-						{
-							if ((msd->toptexture[0] >= '0' && msd->toptexture[0] <= '9')
-								|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'F'))
-							{
-								ffloortype_e FOF_Flags = axtoi(msd->toptexture);
-
-								P_AddFakeFloorsByLine(i, FOF_Flags, secthinkers);
-								break;
-							}
-							else
-								I_Error("Make-Your-Own-FOF (tag %d) needs a value in the linedef's second side upper texture field.", lines[i].tag);
-						}
-					}
-					Z_Free(data);
+					ffloortype_e fofflags = sides[lines[i].sidenum[1]].toptexture;
+					P_AddFakeFloorsByLine(i, fofflags, secthinkers);
 				}
 				else
-					I_Error("Make-Your-Own FOF (tag %d) found without a 2nd linedef side!", lines[i].tag);
+					I_Error("Custom FOF (tag %d) found without a linedef back side!", lines[i].tag);
 				break;
 
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
@@ -7232,14 +7199,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 308: // Race-only linedef executor. Triggers once.
-				if (gametype != GT_RACE && gametype != GT_COMPETITION)
+				if (!(gametyperules & GTR_RACE))
 					lines[i].special = 0;
 				break;
 
 			// Linedef executor triggers for CTF teams.
 			case 309:
 			case 311:
-				if (gametype != GT_CTF)
+				if (!(gametyperules & GTR_TEAMFLAGS))
 					lines[i].special = 0;
 				break;
 
@@ -9015,7 +8982,8 @@ void T_Pusher(pusher_t *p)
 			|| thing->type == MT_EXTRALARGEBUBBLE))
 			continue;
 
-		if (!(thing->flags & MF_PUSHABLE) && !(thing->type == MT_PLAYER
+		if (!((thing->flags & MF_PUSHABLE) || ((thing->info->flags & MF_PUSHABLE) && thing->fuse))
+			&& !(thing->type == MT_PLAYER
 			|| thing->type == MT_SMALLBUBBLE
 			|| thing->type == MT_MEDIUMBUBBLE
 			|| thing->type == MT_EXTRALARGEBUBBLE
@@ -9168,7 +9136,7 @@ void T_Pusher(pusher_t *p)
 				thing->player->pflags |= PF_SLIDING;
 				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
 
-				if (!demoplayback || P_AnalogMove(thing->player))
+				if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 				{
 					if (thing->player == &players[consoleplayer])
 					{

@@ -12,18 +12,22 @@ ENDFUNCTION(PREPEND)
 set(SRB2_ASSET_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/installer"
 	CACHE STRING "Path to directory that contains all asset files for the installer.")
 
+####################
+# POST-V2.2 NOTE: Do not forget to add patch.pk3 to the end of this list!
+####################
+
 set(SRB2_ASSET_HASHED
 "srb2.pk3;\
 player.dta;\
-zones.pk3;\
-patch.pk3"
+zones.pk3"
 	CACHE STRING "Asset filenames to apply MD5 checks. No spaces between entries!"
 )
 
 set(SRB2_ASSET_DOCS
 "README.txt;\
 LICENSE.txt;\
-LICENSE-3RD-PARTY.txt"
+LICENSE-3RD-PARTY.txt;\
+README-SDL.txt"
 	CACHE STRING "Documentation filenames. In OS X, these are packaged separately from other assets. No spaces between entries!"
 )
 

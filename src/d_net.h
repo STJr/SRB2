@@ -40,6 +40,8 @@ extern SINT8 nodetoplayer2[MAXNETNODES]; // Say the numplayer for this node if a
 extern UINT8 playerpernode[MAXNETNODES]; // Used specially for splitscreen
 extern boolean nodeingame[MAXNETNODES]; // Set false as nodes leave game
 
+extern boolean serverrunning;
+
 INT32 Net_GetFreeAcks(boolean urgent);
 void Net_AckTicker(void);
 

@@ -73,6 +73,25 @@ typedef struct
 } lumpinfo_t;
 
 // =========================================================================
+//                         'VIRTUAL' RESOURCES
+// =========================================================================
+
+typedef struct {
+	char name[9];
+	UINT8* data;
+	size_t size;
+} virtlump_t;
+
+typedef struct {
+	size_t numlumps;
+	virtlump_t* vlumps;
+} virtres_t;
+
+virtres_t* vres_GetMap(lumpnum_t);
+void vres_Free(virtres_t*);
+virtlump_t* vres_Find(const virtres_t*, const char*);
+
+// =========================================================================
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
@@ -177,6 +196,7 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag); // return a patch
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag); // return a patch_t
 
 void W_UnlockCachedPatch(void *patch);
+void W_FlushCachedPatches(void);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);
 

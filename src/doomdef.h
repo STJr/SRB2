@@ -98,8 +98,8 @@
 
 #ifdef GETTEXT
 #include <libintl.h>
-#include <locale.h>
 #endif
+#include <locale.h> // locale should not be dependent on GETTEXT -- 11/01/20 Monster Iestyn
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -127,7 +127,11 @@
 
 #ifdef LOGMESSAGES
 extern FILE *logstream;
+extern char logfilename[1024];
 #endif
+
+/* A mod name to further distinguish versions. */
+#define SRB2APPLICATION "SRB2"
 
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
@@ -450,16 +454,18 @@ char savegamename[256];
 // m_misc.h
 #ifdef GETTEXT
 #define M_GetText(String) gettext(String)
-void M_StartupLocale(void);
 #else
 // If no translations are to be used, make a stub
 // M_GetText function that just returns the string.
 #define M_GetText(x) (x)
 #endif
+void M_StartupLocale(void);
 extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
 void M_UnGetToken(void);
+UINT32 M_GetTokenPos(void);
+void M_SetTokenPos(UINT32 newPos);
 char *sizeu1(size_t num);
 char *sizeu2(size_t num);
 char *sizeu3(size_t num);
@@ -539,6 +545,8 @@ INT32 I_GetKey(void);
 #else
 	#define PATHSEP "/"
 #endif
+
+#define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 // Compile date and time and revision.
 extern const char *compdate, *comptime, *comprevision, *compbranch;
@@ -623,13 +631,20 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
+/// Cache patches in Lua in a way that renderer switching will work flawlessly.
+//#define LUA_PATCH_SAFETY
+
 /// Sprite rotation
 #define ROTSPRITE
-#define ROTANGLES 24	// Needs to be a divisor of 360 (45, 60, 90, 120...)
+#define ROTANGLES 72 // Needs to be a divisor of 360 (45, 60, 90, 120...)
 #define ROTANGDIFF (360 / ROTANGLES)
 
+/// PNG support
 #ifndef HAVE_PNG
 #define NO_PNG_LUMPS
 #endif
+
+/// Render flats on walls
+#define WALLFLATS
 
 #endif // __DOOMDEF__
