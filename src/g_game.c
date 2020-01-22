@@ -2547,74 +2547,24 @@ static boolean G_CheckSpot(INT32 playernum, mapthing_t *mthing)
 // or a not-so-appropriate spot, if it initially fails
 // due to a lack of starts open or something.
 //
-void G_SpawnPlayer(INT32 playernum, boolean starpost)
+void G_SpawnPlayer(INT32 playernum)
 {
-	mapthing_t *spawnpoint;
-
 	if (!playeringame[playernum])
 		return;
 
 	P_SpawnPlayer(playernum);
-
-	if (starpost) //Don't even bother with looking for a place to spawn.
-	{
-		P_MovePlayerToStarpost(playernum);
-#ifdef HAVE_BLUA
-		LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
-#endif
-		return;
-	}
-
-	// -- CTF --
-	// Order: CTF->DM->Coop
-	if (gametype == GT_CTF && players[playernum].ctfteam)
-	{
-		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
-		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-			spawnpoint = G_FindCoopStart(playernum); // fallback
-	}
-
-	// -- DM/Tag/CTF-spectator/etc --
-	// Order: DM->CTF->Coop
-	else if (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF
-	 || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && !(players[playernum].pflags & PF_TAGIT)))
-	{
-		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
-		&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
-			spawnpoint = G_FindCoopStart(playernum); // fallback
-	}
-
-	// -- Other game modes --
-	// Order: Coop->DM->CTF
-	else
-	{
-		if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
-		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-			spawnpoint = G_FindCTFStart(playernum); // fallback
-	}
-
-	//No spawns found.  ANYWHERE.
-	if (!spawnpoint)
-	{
-		if (nummapthings)
-		{
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the first mapthing!\n"));
-			spawnpoint = &mapthings[0];
-		}
-		else
-		{
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the origin!\n"));
-			//P_MovePlayerToSpawn handles this fine if the spawnpoint is NULL.
-		}
-	}
-	P_MovePlayerToSpawn(playernum, spawnpoint);
-
+	G_MovePlayerToSpawnOrStarpost(playernum);
 #ifdef HAVE_BLUA
 	LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
 #endif
+}
 
+void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
+{
+	if (players[playernum].starposttime)
+		P_MovePlayerToStarpost(playernum);
+	else
+		P_MovePlayerToSpawn(playernum, G_FindMapStart(playernum));
 }
 
 mapthing_t *G_FindCTFStart(INT32 playernum)
@@ -2709,6 +2659,60 @@ mapthing_t *G_FindCoopStart(INT32 playernum)
 	if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 		CONS_Alert(CONS_WARNING, M_GetText("No Co-op starts in this map!\n"));
 	return NULL;
+}
+
+mapthing_t *G_FindMapStart(INT32 playernum)
+{
+	mapthing_t *spawnpoint;
+
+	if (!playeringame[playernum])
+		return NULL;
+
+	// -- CTF --
+	// Order: CTF->DM->Coop
+	if (gametype == GT_CTF && players[playernum].ctfteam)
+	{
+		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
+		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
+			spawnpoint = G_FindCoopStart(playernum); // fallback
+	}
+
+	// -- DM/Tag/CTF-spectator/etc --
+	// Order: DM->CTF->Coop
+	else if (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF
+	 || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && !(players[playernum].pflags & PF_TAGIT)))
+	{
+		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
+		&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
+			spawnpoint = G_FindCoopStart(playernum); // fallback
+	}
+
+	// -- Other game modes --
+	// Order: Coop->DM->CTF
+	else
+	{
+		if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
+		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
+			spawnpoint = G_FindCTFStart(playernum); // fallback
+	}
+
+	//No spawns found. ANYWHERE.
+	if (!spawnpoint)
+	{
+		if (nummapthings)
+		{
+			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
+				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the first mapthing!\n"));
+			spawnpoint = &mapthings[0];
+		}
+		else
+		{
+			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
+				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the origin!\n"));
+		}
+	}
+
+	return spawnpoint;
 }
 
 // Go back through all the projectiles and remove all references to the old
@@ -2889,7 +2893,7 @@ void G_DoReborn(INT32 playernum)
 			{
 				if (!playeringame[i])
 					continue;
-				G_SpawnPlayer(i, (players[i].starposttime));
+				G_SpawnPlayer(i);
 			}
 
 			// restore time in netgame (see also p_setup.c)
@@ -2935,7 +2939,7 @@ void G_DoReborn(INT32 playernum)
 			P_RemoveMobj(player->mo);
 		}
 
-		G_SpawnPlayer(playernum, (player->starposttime));
+		G_SpawnPlayer(playernum);
 		if (oldmo)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
 	}

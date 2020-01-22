@@ -133,7 +133,9 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
 mapthing_t *G_FindCTFStart(INT32 playernum);
 mapthing_t *G_FindMatchStart(INT32 playernum);
 mapthing_t *G_FindCoopStart(INT32 playernum);
-void G_SpawnPlayer(INT32 playernum, boolean starpost);
+mapthing_t *G_FindMapStart(INT32 playernum);
+void G_MovePlayerToSpawnOrStarpost(INT32 playernum);
+void G_SpawnPlayer(INT32 playernum);
 
 // Can be called by the startup code or M_Responder.
 // A normal game starts at map 1, but a warp test can start elsewhere

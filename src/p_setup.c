@@ -3057,11 +3057,11 @@ boolean P_SetupLevel(boolean skipprecip)
 
 				if (players[i].starposttime)
 				{
-					G_SpawnPlayer(i, true);
+					G_SpawnPlayer(i);
 					P_ClearStarPost(players[i].starpostnum);
 				}
 				else
-					G_SpawnPlayer(i, false);
+					G_SpawnPlayer(i);
 			}
 		}
 
@@ -3133,7 +3133,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			if (players[playersactive[i]].mo)
 				P_RemoveMobj(players[playersactive[i]].mo);
 
-			G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
+			G_SpawnPlayer(playersactive[i]); //respawn the lucky player in his dedicated spawn location.
 		}
 		else
 			CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
