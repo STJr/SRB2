@@ -2858,8 +2858,7 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 	// https://zdoom.org/wiki/Y-shearing
 	if (shearing)
 	{
-		fixed_t dy = AIMINGTODY(stransform->viewaiming);
-		float fdy = FIXED_TO_FLOAT(dy) * 2; //screen_width/BASEVIDWIDTH;
+		float fdy = stransform->viewaiming * 2;
 		pglTranslatef(0.0f, -fdy/BASEVIDHEIGHT, 0.0f);
 	}
 

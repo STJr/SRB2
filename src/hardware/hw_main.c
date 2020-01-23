@@ -149,9 +149,11 @@ static float gr_viewx, gr_viewy, gr_viewz;
 static float gr_viewsin, gr_viewcos;
 
 // Maybe not necessary with the new T&L code (needs to be checked!)
-static angle_t gr_aimingangle;
 static float gr_viewludsin, gr_viewludcos; // look up down kik test
 static float gr_fovlud;
+
+static angle_t gr_aimingangle;
+static void HWR_SetTransformAiming(FTransform *trans);
 
 // ==========================================================================
 // Lighting
@@ -5478,7 +5480,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 		//04/01/2000: Hurdler: added for T&L
 		//                     It should replace all other gr_viewxxx when finished
-		dometransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+		HWR_SetTransformAiming(&dometransform);
 		dometransform.angley = (float)((viewangle-ANGLE_270)>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
 		if (*type == postimg_flip)
@@ -5641,6 +5643,25 @@ void HWR_SetViewSize(void)
 	HWD.pfnFlushScreenTextures();
 }
 
+// Set view aiming, for the sky dome, the skybox,
+// and the normal view, all with a single function.
+static void HWR_SetTransformAiming(FTransform *trans)
+{
+	if (cv_grshearing.value)
+	{
+		fixed_t fixedaiming = AIMINGTODY(aimingangle);
+		trans->viewaiming = FIXED_TO_FLOAT(fixedaiming);
+		trans->shearing = true;
+		gr_aimingangle = 0;
+	}
+	else
+	{
+		trans->shearing = false;
+		gr_aimingangle = aimingangle;
+	}
+	trans->anglex = (float)(gr_aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+}
+
 // ==========================================================================
 // Same as rendering the player view, but from the skybox object
 // ==========================================================================
@@ -5693,15 +5714,15 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	gr_viewsin = FIXED_TO_FLOAT(viewsin);
 	gr_viewcos = FIXED_TO_FLOAT(viewcos);
 
-	gr_viewludsin = FIXED_TO_FLOAT(FINECOSINE(aimingangle>>ANGLETOFINESHIFT));
-	gr_viewludcos = FIXED_TO_FLOAT(-FINESINE(aimingangle>>ANGLETOFINESHIFT));
-
 	//04/01/2000: Hurdler: added for T&L
 	//                     It should replace all other gr_viewxxx when finished
 	memset(&atransform, 0x00, sizeof(FTransform));
 
-	atransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+	HWR_SetTransformAiming(&atransform);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+
+	gr_viewludsin = FIXED_TO_FLOAT(FINECOSINE(gr_aimingangle>>ANGLETOFINESHIFT));
+	gr_viewludcos = FIXED_TO_FLOAT(-FINESINE(gr_aimingangle>>ANGLETOFINESHIFT));
 
 	if (*type == postimg_flip)
 		atransform.flip = true;
@@ -5714,17 +5735,6 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	atransform.scalex = 1;
 	atransform.scaley = (float)vid.width/vid.height;
 	atransform.scalez = 1;
-
-	// 14042019
-	gr_aimingangle = aimingangle;
-	atransform.shearing = false;
-	atransform.viewaiming = aimingangle;
-
-	if (cv_grshearing.value)
-	{
-		gr_aimingangle = 0;
-		atransform.shearing = true;
-	}
 
 	atransform.fovxangle = fpov; // Tails
 	atransform.fovyangle = fpov; // Tails
@@ -5787,14 +5797,14 @@ if (0)
 		viewangle = localaiming2;
 
 	// Handle stuff when you are looking farther up or down.
-	if ((aimingangle || cv_fov.value+player->fovadd > 90*FRACUNIT))
+	if ((gr_aimingangle || cv_fov.value+player->fovadd > 90*FRACUNIT))
 	{
 		dup_viewangle += ANGLE_90;
 		HWR_ClearClipSegs();
 		HWR_RenderBSPNode((INT32)numnodes-1); //left
 
 		dup_viewangle += ANGLE_90;
-		if (((INT32)aimingangle > ANGLE_45 || (INT32)aimingangle<-ANGLE_45))
+		if (((INT32)gr_aimingangle > ANGLE_45 || (INT32)gr_aimingangle<-ANGLE_45))
 		{
 			HWR_ClearClipSegs();
 			HWR_RenderBSPNode((INT32)numnodes-1); //back
@@ -5914,15 +5924,15 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	gr_viewsin = FIXED_TO_FLOAT(viewsin);
 	gr_viewcos = FIXED_TO_FLOAT(viewcos);
 
-	gr_viewludsin = FIXED_TO_FLOAT(FINECOSINE(aimingangle>>ANGLETOFINESHIFT));
-	gr_viewludcos = FIXED_TO_FLOAT(-FINESINE(aimingangle>>ANGLETOFINESHIFT));
-
 	//04/01/2000: Hurdler: added for T&L
 	//                     It should replace all other gr_viewxxx when finished
 	memset(&atransform, 0x00, sizeof(FTransform));
 
-	atransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+	HWR_SetTransformAiming(&atransform);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+
+	gr_viewludsin = FIXED_TO_FLOAT(FINECOSINE(gr_aimingangle>>ANGLETOFINESHIFT));
+	gr_viewludcos = FIXED_TO_FLOAT(-FINESINE(gr_aimingangle>>ANGLETOFINESHIFT));
 
 	if (*type == postimg_flip)
 		atransform.flip = true;
@@ -5935,17 +5945,6 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	atransform.scalex = 1;
 	atransform.scaley = (float)vid.width/vid.height;
 	atransform.scalez = 1;
-
-	// 14042019
-	gr_aimingangle = aimingangle;
-	atransform.shearing = false;
-	atransform.viewaiming = aimingangle;
-
-	if (cv_grshearing.value)
-	{
-		gr_aimingangle = 0;
-		atransform.shearing = true;
-	}
 
 	atransform.fovxangle = fpov; // Tails
 	atransform.fovyangle = fpov; // Tails
@@ -6008,14 +6007,14 @@ if (0)
 		viewangle = localaiming2;
 
 	// Handle stuff when you are looking farther up or down.
-	if ((aimingangle || cv_fov.value+player->fovadd > 90*FRACUNIT))
+	if ((gr_aimingangle || cv_fov.value+player->fovadd > 90*FRACUNIT))
 	{
 		dup_viewangle += ANGLE_90;
 		HWR_ClearClipSegs();
 		HWR_RenderBSPNode((INT32)numnodes-1); //left
 
 		dup_viewangle += ANGLE_90;
-		if (((INT32)aimingangle > ANGLE_45 || (INT32)aimingangle<-ANGLE_45))
+		if (((INT32)gr_aimingangle > ANGLE_45 || (INT32)gr_aimingangle<-ANGLE_45))
 		{
 			HWR_ClearClipSegs();
 			HWR_RenderBSPNode((INT32)numnodes-1); //back
