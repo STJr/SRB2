@@ -3521,7 +3521,7 @@ static void HWR_RenderBSPNode(INT32 bspnum)
 		// Decide which side the view point is on
 		INT32 side = R_PointOnSide(dup_viewx, dup_viewy, bsp);
 
-		// Recursively divide front space (tard the viewer)
+		// Recursively divide front space (toward the viewer)
 		HWR_RenderBSPNode(bsp->children[side]);
 
 		// Possibly divide back space (away from viewer)
@@ -3979,7 +3979,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		baseWallVerts[0].t = baseWallVerts[1].t = gpatch->max_t;
 	}
 
-	// if it has a dispoffset, push it a little tards the camera
+	// if it has a dispoffset, push it a little towards the camera
 	if (spr->dispoffset) {
 		float co = -gr_viewcos*(0.05f*spr->dispoffset);
 		float si = -gr_viewsin*(0.05f*spr->dispoffset);

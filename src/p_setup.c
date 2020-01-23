@@ -2367,7 +2367,7 @@ static void P_CreateBlockMap(void)
 	//
 	//     If current block is the same as the ending vertex's block, exit loop.
 	//
-	//     Move to an adjacent block by moving tards the ending block in
+	//     Move to an adjacent block by moving towards the ending block in
 	//     either the x or y direction, to the block which contains the linedef.
 
 	{

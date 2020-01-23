@@ -1033,7 +1033,7 @@ void A_Chase(mobj_t *actor)
 			actor->threshold--;
 	}
 
-	// turn tards movement direction if not there yet
+	// turn towards movement direction if not there yet
 	if (actor->movedir < NUMDIRS)
 	{
 		actor->angle &= (7<<29);
@@ -1090,7 +1090,7 @@ nomissile:
 		&& P_LookForPlayers(actor, true, false, 0))
 		return; // got a new target
 
-	// chase tards player
+	// chase towards player
 	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 		P_NewChaseDir(actor);
 }
@@ -1123,7 +1123,7 @@ void A_FaceStabChase(mobj_t *actor)
 			actor->threshold--;
 	}
 
-	// turn tards movement direction if not there yet
+	// turn towards movement direction if not there yet
 	if (actor->movedir < NUMDIRS)
 	{
 		actor->angle &= (7<<29);
@@ -1180,7 +1180,7 @@ nomissile:
 		&& P_LookForPlayers(actor, true, false, 0))
 		return; // got a new target
 
-	// chase tards player
+	// chase towards player
 	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 		P_NewChaseDir(actor);
 }
@@ -1491,7 +1491,7 @@ void A_JetJawChomp(mobj_t *actor)
 		return;
 #endif
 
-	// turn tards movement direction if not there yet
+	// turn towards movement direction if not there yet
 	if (actor->movedir < NUMDIRS)
 	{
 		actor->angle &= (7<<29);
@@ -1511,7 +1511,7 @@ void A_JetJawChomp(mobj_t *actor)
 		return;
 	}
 
-	// chase tards player
+	// chase towards player
 	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 		P_NewChaseDir(actor);
 }
@@ -1913,7 +1913,7 @@ void A_SharpChase(mobj_t *actor)
 
 		actor->reactiontime--;
 
-		// turn tards movement direction if not there yet
+		// turn towards movement direction if not there yet
 		if (actor->movedir < NUMDIRS)
 		{
 			actor->angle &= (7<<29);
@@ -1935,7 +1935,7 @@ void A_SharpChase(mobj_t *actor)
 			return;
 		}
 
-		// chase tards player
+		// chase towards player
 		if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 			P_NewChaseDir(actor);
 	}
@@ -2467,7 +2467,7 @@ void A_VultureBlast(mobj_t *actor)
 
 // Function: A_VultureFly
 //
-// Description: Vulture charging tards target.
+// Description: Vulture charging towards target.
 //
 // var1 = unused
 // var2 = unused
@@ -2590,7 +2590,7 @@ void A_SkimChase(mobj_t *actor)
 			actor->threshold--;
 	}
 
-	// turn tards movement direction if not there yet
+	// turn towards movement direction if not there yet
 	if (actor->movedir < NUMDIRS)
 	{
 		actor->angle &= (7<<29);
@@ -2647,14 +2647,14 @@ nomissile:
 		&& P_LookForPlayers(actor, true, false, 0))
 		return; // got a new target
 
-	// chase tards player
+	// chase towards player
 	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 		P_NewChaseDir(actor);
 }
 
 // Function: A_FaceTarget
 //
-// Description: Immediately turn to face tards your target.
+// Description: Immediately turn to face towards your target.
 //
 // var1 = unused
 // var2 = unused
@@ -2673,7 +2673,7 @@ void A_FaceTarget(mobj_t *actor)
 
 // Function: A_FaceTracer
 //
-// Description: Immediately turn to face tards your tracer.
+// Description: Immediately turn to face towards your tracer.
 //
 // var1 = unused
 // var2 = unused
@@ -5375,7 +5375,7 @@ void A_JetChase(mobj_t *actor)
 			actor->threshold--;
 	}
 
-	// turn tards movement direction if not there yet
+	// turn towards movement direction if not there yet
 	actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
 
 	if ((multiplayer || netgame) && !actor->threshold && (actor->target->health <= 0 || !P_CheckSight(actor, actor->target)))
@@ -5389,7 +5389,7 @@ void A_JetChase(mobj_t *actor)
 		return; // got a new target
 	}
 
-	// chase tards player
+	// chase towards player
 	if (ultimatemode)
 		P_Thrust(actor, actor->angle, FixedMul(actor->info->speed/2, actor->scale));
 	else
@@ -5942,7 +5942,7 @@ void A_DetonChase(mobj_t *actor)
 		}
 	}
 
-	// chase tards player
+	// chase towards player
 	if ((dist = P_AproxDistance(xydist, actor->tracer->z-actor->z))
 		> FixedMul((actor->info->painchance << FRACBITS), actor->scale))
 	{
@@ -7081,7 +7081,7 @@ void A_Boss1Chase(mobj_t *actor)
 	if (actor->reactiontime)
 		actor->reactiontime--;
 
-	// turn tards movement direction if not there yet
+	// turn towards movement direction if not there yet
 	if (actor->movedir < NUMDIRS)
 	{
 		actor->angle &= (7<<29);
@@ -7154,7 +7154,7 @@ nomissile:
 			actor->momz = FixedMul(actor->momz,7*FRACUNIT/8);
 	}
 
-	// chase tards player
+	// chase towards player
 	if (P_AproxDistance(actor->target->x-actor->x, actor->target->y-actor->y) > actor->radius+actor->target->radius)
 	{
 		if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
@@ -7409,7 +7409,7 @@ void A_Boss7Chase(mobj_t *actor)
 		return;
 	}
 
-	// turn tards movement direction if not there yet
+	// turn towards movement direction if not there yet
 	if (actor->movedir < NUMDIRS)
 	{
 		actor->angle &= (7<<29);
@@ -7503,7 +7503,7 @@ void A_Boss7Chase(mobj_t *actor)
 
 	if (leveltime & 1)
 	{
-		// chase tards player
+		// chase towards player
 		if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 			P_NewChaseDir(actor);
 	}
@@ -7644,7 +7644,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
 		P_InstaThrust(actor, actor->angle, FixedDiv(P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y), airtime));
 	}
-	// Wander semi-randomly tards the player to get closer.
+	// Wander semi-randomly towards the player to get closer.
 	else
 	{
 		UINT8 prandom = P_RandomByte();
@@ -7864,7 +7864,7 @@ void A_BuzzFly(mobj_t *actor)
 		return;
 	}
 
-	// turn tards movement direction if not there yet
+	// turn towards movement direction if not there yet
 	actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
 
 	if (actor->target->health <= 0 || (!actor->threshold && !P_CheckSight(actor, actor->target)))
@@ -7887,7 +7887,7 @@ void A_BuzzFly(mobj_t *actor)
 		return;
 	}
 
-	// chase tards player
+	// chase towards player
 	{
 		INT32 dist, realspeed;
 		const fixed_t mf = 5*(FRACUNIT/4);
@@ -7979,7 +7979,7 @@ void A_GuardChase(mobj_t *actor)
 	}
 	else // Break ranks!
 	{
-		// turn tards movement direction if not there yet
+		// turn towards movement direction if not there yet
 		if (actor->movedir < NUMDIRS)
 		{
 			actor->angle &= (7<<29);
@@ -8006,7 +8006,7 @@ void A_GuardChase(mobj_t *actor)
 			&& P_LookForPlayers(actor, true, false, 0))
 			return; // got a new target
 
-		// chase tards player
+		// chase towards player
 		if (--actor->movecount < 0 || !P_Move(actor, (actor->flags2 & MF2_AMBUSH) ? actor->info->speed * 2 : actor->info->speed))
 		{
 			P_NewChaseDir(actor);
@@ -10923,7 +10923,7 @@ void A_RemoteDamage(mobj_t *actor)
 
 // Function: A_HomingChase
 //
-// Description: Actor chases directly tards its destination object
+// Description: Actor chases directly towards its destination object
 //
 // var1 = speed multiple
 // var2 = destination: 0 = target, 1 = tracer
@@ -11383,7 +11383,7 @@ void A_BrakChase(mobj_t *actor)
 			actor->threshold--;
 	}
 
-	// turn tards movement direction if not there yet
+	// turn towards movement direction if not there yet
 	if (actor->movedir < NUMDIRS)
 	{
 		actor->angle &= (7<<29);
@@ -11441,7 +11441,7 @@ void A_BrakChase(mobj_t *actor)
 		&& P_LookForPlayers(actor, true, false, 0))
 		return; // got a new target
 
-	// chase tards player
+	// chase towards player
 	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 		P_NewChaseDir(actor);
 
@@ -11502,7 +11502,7 @@ void A_BrakFireShot(mobj_t *actor)
 
 // Function: A_BrakLobShot
 //
-// Description: Lobs an object at the floor about a third of the way tard your target.
+// Description: Lobs an object at the floor about a third of the way toward your target.
 //				Implication is it'll bounce the rest of the way.
 //				(You can also just aim straight at the target, but whatever)
 //				Formula grabbed from http://en.wikipedia.org/wiki/Trajectory_of_a_projectile#Angle_required_to_hit_coordinate_.28x.2Cy.29

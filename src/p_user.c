@@ -5205,7 +5205,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					if (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || (player->charflags & SF_MULTIABILITY))
 					{
 						P_Telekinesis(player,
-							-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling tards player)
+							-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
 							FixedMul(384*FRACUNIT, player->mo->scale));
 					}
 					break;
@@ -6196,7 +6196,7 @@ static void P_3dMovement(player_t *player)
 		// The rest is unaffected.
 		angle_t thrustangle = R_PointToAngle2(0, 0, totalthrust.x, totalthrust.y)-player->mo->standingslope->xydirection;
 
-		if (player->mo->standingslope->zdelta < 0) { // Direction goes down, so thrustangle needs to face tard
+		if (player->mo->standingslope->zdelta < 0) { // Direction goes down, so thrustangle needs to face toward
 			if (thrustangle < ANGLE_90 || thrustangle > ANGLE_270) {
 				P_QuantizeMomentumToSlope(&totalthrust, player->mo->standingslope);
 			}
