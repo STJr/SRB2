@@ -12211,7 +12211,8 @@ void P_PlayerThink(player_t *player)
 	}
 
 	// IF PLAYER NOT HERE THEN FLASH END IF
-	if (player->quittime && player->powers[pw_flashing] < flashingtics - 1)
+	if (player->quittime && player->powers[pw_flashing] < flashingtics - 1
+	&& !(G_TagGametype() && !(player->pflags & PF_TAGIT)) && !player->gotflag)
 		player->powers[pw_flashing] = flashingtics - 1;
 
 	// Counters, time dependent power ups.
