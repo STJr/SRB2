@@ -222,8 +222,6 @@ endif
 ifdef NOHW
 	OPTS+=-DNOHW
 else
-	#Hurdler: not really supported and not tested recently
-	#OPTS+=-DUSE_PALETTED_TEXTURE
 	OPTS+=-DHWRENDER
 	OBJS+=$(OBJDIR)/hw_bsp.o $(OBJDIR)/hw_draw.o $(OBJDIR)/hw_light.o \
 		 $(OBJDIR)/hw_main.o $(OBJDIR)/hw_clip.o $(OBJDIR)/hw_md2.o $(OBJDIR)/hw_cache.o $(OBJDIR)/hw_trick.o \

@@ -87,11 +87,6 @@ static GLfloat modelMatrix[16];
 static GLfloat projMatrix[16];
 static GLint   viewport[4];
 
-#ifdef USE_PALETTED_TEXTURE
-	PFNGLCOLORTABLEEXTPROC  glColorTableEXT = NULL;
-	GLubyte                 palette_tex[256*3];
-#endif
-
 // Yay for arbitrary  numbers! NextTexAvail is buggy for some reason.
 // Sryder:	NextTexAvail is broken for these because palette changes or changes to the texture filter or antialiasing
 //			flush all of the stored textures, leaving them unavailable at times such as between levels
@@ -1615,16 +1610,6 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 		w = pTexInfo->width;
 		h = pTexInfo->height;
 
-#ifdef USE_PALETTED_TEXTURE
-		if (glColorTableEXT &&
-			(pTexInfo->grInfo.format == GR_TEXFMT_P_8) &&
-			!(pTexInfo->flags & TF_CHROMAKEYED))
-		{
-			// do nothing here.
-			// Not a problem with MiniGL since we don't use paletted texture
-		}
-		else
-#endif
 		if ((pTexInfo->grInfo.format == GR_TEXFMT_P_8) ||
 			(pTexInfo->grInfo.format == GR_TEXFMT_AP_88))
 		{
@@ -1724,17 +1709,6 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
 		}
 
-#ifdef USE_PALETTED_TEXTURE
-			//Hurdler: not really supported and not tested recently
-		if (glColorTableEXT &&
-			(pTexInfo->grInfo.format == GR_TEXFMT_P_8) &&
-			!(pTexInfo->flags & TF_CHROMAKEYED))
-		{
-			glColorTableEXT(GL_TEXTURE_2D, GL_RGB8, 256, GL_RGB, GL_UNSIGNED_BYTE, palette_tex);
-			pglTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, w, h, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, pTexInfo->grInfo.data);
-		}
-		else
-#endif
 		if (pTexInfo->grInfo.format == GR_TEXFMT_ALPHA_INTENSITY_88)
 		{
 			//pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
