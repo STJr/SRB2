@@ -667,8 +667,7 @@ INT32 G_KeyStringtoNum(const char *keystr)
 		j = atoi(&keystr[3]);
 		if (j < NUMINPUTS)
 			return j;
-		else
-			return 0;
+		return 0;
 	}
 
 	for (j = 0; j < NUMKEYNAMES; j++)
