@@ -36,11 +36,13 @@
 
 static const char *const fnames[] = {"input", "output"};
 static const char *whitelist[] = { // Allow scripters to write files of these types to SRB2's folder
-	".txt",
-	".sav2",
+	".bmp",
 	".cfg",
+	".csv",
+	".dat",
 	".png",
-	".bmp"
+	".sav2",
+	".txt",
 };
 
 
