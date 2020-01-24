@@ -858,12 +858,19 @@ EXPORT void HWRAPI(LoadShaders) (void)
 		if (i >= MAXSHADERPROGRAMS)
 			break;
 
+		shader = &gl_shaderprograms[i];
+		shader->program = 0;
+		shader->custom = custom;
+
 		//
 		// Load and compile vertex shader
 		//
 		gl_vertShader = pglCreateShader(GL_VERTEX_SHADER);
 		if (!gl_vertShader)
-			I_Error("Hardware driver: Error creating vertex shader %d", i);
+		{
+			CONS_Alert(CONS_ERROR, "LoadShaders: Error creating vertex shader %d", i);
+			continue;
+		}
 
 		pglShaderSource(gl_vertShader, 1, &vert_shader, NULL);
 		pglCompileShader(gl_vertShader);
@@ -880,7 +887,8 @@ EXPORT void HWRAPI(LoadShaders) (void)
 			infoLog = malloc(logLength);
 			pglGetShaderInfoLog(gl_vertShader, logLength, NULL, infoLog);
 
-			I_Error("Hardware driver: Error compiling vertex shader %d\n%s", i, infoLog);
+			CONS_Alert(CONS_ERROR, "LoadShaders: Error compiling vertex shader %d\n%s", i, infoLog);
+			continue;
 		}
 
 		//
@@ -888,7 +896,10 @@ EXPORT void HWRAPI(LoadShaders) (void)
 		//
 		gl_fragShader = pglCreateShader(GL_FRAGMENT_SHADER);
 		if (!gl_fragShader)
-			I_Error("Hardware driver: Error creating fragment shader %d", i);
+		{
+			CONS_Alert(CONS_ERROR, "LoadShaders: Error creating fragment shader %d", i);
+			continue;
+		}
 
 		pglShaderSource(gl_fragShader, 1, &frag_shader, NULL);
 		pglCompileShader(gl_fragShader);
@@ -905,24 +916,30 @@ EXPORT void HWRAPI(LoadShaders) (void)
 			infoLog = malloc(logLength);
 			pglGetShaderInfoLog(gl_fragShader, logLength, NULL, infoLog);
 
-			I_Error("Hardware driver: Error compiling fragment shader %d\n%s", i, infoLog);
+			CONS_Alert(CONS_ERROR, "LoadShaders: Error compiling fragment shader %d\n%s", i, infoLog);
+			continue;
 		}
 
-		shader = &gl_shaderprograms[i];
 		shader->program = pglCreateProgram();
-		shader->custom = custom;
 		pglAttachShader(shader->program, gl_vertShader);
 		pglAttachShader(shader->program, gl_fragShader);
 		pglLinkProgram(shader->program);
 
 		// check link status
 		pglGetProgramiv(shader->program, GL_LINK_STATUS, &result);
-		if (result != GL_TRUE)
-			I_Error("Hardware driver: Error linking shader program %d", i);
 
 		// delete the shader objects
 		pglDeleteShader(gl_vertShader);
 		pglDeleteShader(gl_fragShader);
+
+		// couldn't link?
+		if (result != GL_TRUE)
+		{
+			shader->program = 0;
+			shader->custom = false;
+			CONS_Alert(CONS_ERROR, "LoadShaders: Error linking shader program %d", i);
+			continue;
+		}
 
 		// 13062019
 #define GETUNI(uniform) pglGetUniformLocation(shader->program, uniform);
