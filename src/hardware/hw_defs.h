@@ -74,6 +74,12 @@ typedef struct
 	FLOAT x,y;
 } F2DCoord, v2d_t;
 
+// Simple 3D vector
+typedef struct FVector
+{
+	FLOAT x,y,z;
+} FVector;
+
 // ======================
 //      wallVert3D
 // ----------------------

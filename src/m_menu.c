@@ -314,7 +314,10 @@ menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 #ifdef HWRENDER
 static void M_OpenGLOptionsMenu(void);
 menu_t OP_OpenGLOptionsDef;
-#endif
+#ifdef ALAM_LIGHTING
+menu_t OP_OpenGLLightingDef;
+#endif // ALAM_LIGHTING
+#endif // HWRENDER
 menu_t OP_SoundOptionsDef;
 menu_t OP_SoundAdvancedDef;
 
