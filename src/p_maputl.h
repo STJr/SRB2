@@ -60,7 +60,7 @@ extern pslope_t *opentopslope, *openbottomslope;
 #endif
 extern ffloor_t *openfloorrover, *openceilingrover;
 
-void P_LineOpening(line_t *linedef, mobj_t *mobj);
+void P_LineOpening(line_t *plinedef, mobj_t *mobj);
 
 boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean(*func)(line_t *));
 boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean(*func)(mobj_t *));

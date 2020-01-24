@@ -681,17 +681,6 @@ static int lib_pSpawnPlayerMissile(lua_State *L)
 	return 1;
 }
 
-static int lib_pRailThinker(lua_State *L)
-{
-	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	NOHUD
-	INLEVEL
-	if (!mobj)
-		return LUA_ErrInvalid(L, "mobj_t");
-	lua_pushboolean(L, P_RailThinker(mobj));
-	return 1;
-}
-
 static int lib_pMobjFlip(lua_State *L)
 {
 	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -1415,19 +1404,6 @@ static int lib_pTeleportMove(lua_State *L)
 	LUA_PushUserdata(L, tmthing, META_MOBJ);
 	P_SetTarget(&tmthing, ptmthing);
 	return 2;
-}
-
-static int lib_pCheckMoveBlocked(lua_State *L)
-{
-	line_t *li = luaL_checkudata(L, 1, META_LINE);
-	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
-	INLEVEL
-	if (!li)
-		return LUA_ErrInvalid(L, "line_t");
-	if (!mo)
-		return LUA_ErrInvalid(L, "mobj_t");
-	lua_pushboolean(L, P_CheckMoveBlocked(li, mo));
-	return 1;
 }
 
 static int lib_pSlideMove(lua_State *L)
@@ -3041,7 +3017,6 @@ static luaL_Reg lib[] = {
 	{"P_ColorTeamMissile",lib_pColorTeamMissile},
 	{"P_SPMAngle",lib_pSPMAngle},
 	{"P_SpawnPlayerMissile",lib_pSpawnPlayerMissile},
-	{"P_RailThinker",lib_pRailThinker},
 	{"P_MobjFlip",lib_pMobjFlip},
 	{"P_GetMobjGravity",lib_pGetMobjGravity},
 	{"P_WeaponOrPanel",lib_pWeaponOrPanel},
@@ -3104,7 +3079,6 @@ static luaL_Reg lib[] = {
 	{"P_TryMove",lib_pTryMove},
 	{"P_Move",lib_pMove},
 	{"P_TeleportMove",lib_pTeleportMove},
-	{"P_CheckMoveBlocked",lib_pCheckMoveBlocked},
 	{"P_SlideMove",lib_pSlideMove},
 	{"P_BounceMove",lib_pBounceMove},
 	{"P_CheckSight", lib_pCheckSight},
