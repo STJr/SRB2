@@ -788,11 +788,6 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_LoadShaders(numwadfiles - 1, (wadfile->type == RET_PK3));
-#endif
-
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	switch (wadfile->type)
 	{
