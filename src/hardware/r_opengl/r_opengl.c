@@ -868,7 +868,7 @@ EXPORT void HWRAPI(LoadShaders) (void)
 		gl_vertShader = pglCreateShader(GL_VERTEX_SHADER);
 		if (!gl_vertShader)
 		{
-			GL_DBG_Printf("LoadShaders: Error creating vertex shader %d", i);
+			GL_DBG_Printf("LoadShaders: Error creating vertex shader %d\n", i);
 			continue;
 		}
 
@@ -897,7 +897,7 @@ EXPORT void HWRAPI(LoadShaders) (void)
 		gl_fragShader = pglCreateShader(GL_FRAGMENT_SHADER);
 		if (!gl_fragShader)
 		{
-			GL_DBG_Printf("LoadShaders: Error creating fragment shader %d", i);
+			GL_DBG_Printf("LoadShaders: Error creating fragment shader %d\n", i);
 			continue;
 		}
 
@@ -937,7 +937,7 @@ EXPORT void HWRAPI(LoadShaders) (void)
 		{
 			shader->program = 0;
 			shader->custom = false;
-			GL_DBG_Printf("LoadShaders: Error linking shader program %d", i);
+			GL_DBG_Printf("LoadShaders: Error linking shader program %d\n", i);
 			continue;
 		}
 
