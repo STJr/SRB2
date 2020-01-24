@@ -433,7 +433,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					  || special->state == &states[S_FANG_BOUNCE4]
 					  || special->state == &states[S_FANG_PINCHBOUNCE3]
 					  || special->state == &states[S_FANG_PINCHBOUNCE4])
-					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z - toucher->height/2)) > (special->height/4))
+					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z + toucher->height/2)) > (toucher->height/2))
 					{
 						P_DamageMobj(toucher, special, special, 1, 0);
 						P_SetTarget(&special->tracer, toucher);
@@ -1869,6 +1869,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 	S_StartSound(toucher, special->info->deathsound); // was NULL, but changed to player so you could hear others pick up rings
 	P_KillMobj(special, NULL, toucher, 0);
+	special->shadowscale = 0;
 }
 
 /** Prints death messages relating to a dying or hit player.

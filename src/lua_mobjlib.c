@@ -88,7 +88,8 @@ enum mobj_e {
 #ifdef ESLOPE
 	mobj_standingslope,
 #endif
-	mobj_colorized
+	mobj_colorized,
+	mobj_shadowscale
 };
 
 static const char *const mobj_opt[] = {
@@ -156,6 +157,7 @@ static const char *const mobj_opt[] = {
 	"standingslope",
 #endif
 	"colorized",
+	"shadowscale",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("mobj_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", mobj_opt[field])
@@ -389,6 +391,9 @@ static int mobj_get(lua_State *L)
 #endif
 	case mobj_colorized:
 		lua_pushboolean(L, mo->colorized);
+		break;
+	case mobj_shadowscale:
+		lua_pushfixed(L, mo->shadowscale);
 		break;
 	default: // extra custom variables in Lua memory
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
@@ -718,6 +723,9 @@ static int mobj_set(lua_State *L)
 #endif
 	case mobj_colorized:
 		mo->colorized = luaL_checkboolean(L, 3);
+		break;
+	case mobj_shadowscale:
+		mo->shadowscale = luaL_checkfixed(L, 3);
 		break;
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);

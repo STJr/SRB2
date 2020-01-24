@@ -1629,6 +1629,11 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->typeoflevel = tol;
 				}
 			}
+			else if (fastcmp(word, "KEYWORDS"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->keywords, word2,
+						sizeof(mapheaderinfo[num-1]->keywords), va("Level header %d: keywords", num));
+			}
 			else if (fastcmp(word, "MUSIC"))
 			{
 				if (fastcmp(word2, "NONE"))
@@ -6015,6 +6020,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SIGNSTOP",
 	"S_SIGNBOARD",
 	"S_EGGMANSIGN",
+	"S_CLEARSIGN",
 
 	// Spike Ball
 	"S_SPIKEBALL1",
@@ -8841,7 +8847,7 @@ static const char *const MOBJEFLAG_LIST[] = {
 
 #ifdef HAVE_BLUA
 static const char *const MAPTHINGFLAG_LIST[4] = {
-	NULL,
+	"EXTRA", // Extra flag for objects.
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
 	"AMBUSH" // Deaf monsters/do not react to sound.
@@ -9421,7 +9427,7 @@ struct {
 	{"SH_FORCE",SH_FORCE},
 	{"SH_FORCEHP",SH_FORCEHP}, // to be used as a bitmask only
 	// Mostly for use with Mario mode.
-	{"SH_FIREFLOWER", SH_FIREFLOWER},
+	{"SH_FIREFLOWER",SH_FIREFLOWER},
 	{"SH_STACK",SH_STACK},
 	{"SH_NOSTACK",SH_NOSTACK},
 
@@ -9436,7 +9442,7 @@ struct {
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
 	{"CR_MINECART",CR_MINECART},
-	{"CR_ROLLOUT", CR_ROLLOUT},
+	{"CR_ROLLOUT",CR_ROLLOUT},
 	{"CR_PTERABYTE",CR_PTERABYTE},
 
 	// Ring weapons (ringweapons_t)
@@ -9603,7 +9609,7 @@ struct {
 	{"NUM_WEAPONS",NUM_WEAPONS},
 
 	// Value for infinite lives
-	{"INFLIVES", INFLIVES},
+	{"INFLIVES",INFLIVES},
 
 	// Got Flags, for player->gotflag!
 	// Used to be MF_ for some stupid reason, now they're GF_ to stop them looking like mobjflags
@@ -9664,10 +9670,11 @@ struct {
 	{"FF_QUICKSAND",FF_QUICKSAND},             ///< Quicksand!
 	{"FF_PLATFORM",FF_PLATFORM},               ///< You can jump up through this to the top.
 	{"FF_REVERSEPLATFORM",FF_REVERSEPLATFORM}, ///< A fall-through floor in normal gravity, a platform in reverse gravity.
-	{"FF_INTANGABLEFLATS",FF_INTANGABLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
+	{"FF_INTANGIBLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangible, but the sides are still solid.
+	{"FF_INTANGABLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
 	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Bustable on mere touch.
 	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
-	{"FF_STRONGBUST",FF_STRONGBUST },          ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
+	{"FF_STRONGBUST",FF_STRONGBUST},           ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.

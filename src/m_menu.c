@@ -1397,7 +1397,7 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_STRING|IT_CVAR,         NULL, "Model lighting",      &cv_grmodellighting, 32},
 
 	{IT_HEADER, NULL, "General", NULL, 51},
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_grfov,            63},
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_fov,            63},
 	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        73},
 	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     83},
 	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,93},
@@ -1446,8 +1446,9 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 114},
 	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 124},
+	{IT_STRING | IT_CVAR, NULL, "Default 1-Up sound", &cv_1upsound, 134},
 
-	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 144},
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 154},
 };
 
 #ifdef HAVE_OPENMPT
@@ -1583,32 +1584,33 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},
 	{IT_STRING | IT_CVAR,    NULL, "Starposts",                        &cv_coopstarposts,      101},
 	{IT_STRING | IT_CVAR,    NULL, "Life sharing",                     &cv_cooplives,          106},
+	{IT_STRING | IT_CVAR,    NULL, "Post-goal free roaming",           &cv_exitmove,           111},
 
-	{IT_HEADER, NULL, "Race, Competition", NULL, 115},
-	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      121},
-	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_competitionboxes,   126},
+	{IT_HEADER, NULL, "Race, Competition", NULL, 120},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      126},
+	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_competitionboxes,   131},
 
-	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 135},
-	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          141},
-	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         146},
-	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           151},
-	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        156},
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 140},
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          146},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         151},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           156},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        161},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_matchboxes,         166},
-	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       171},
-	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        176},
+	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_matchboxes,         171},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       176},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        181},
 
-	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           186},
-	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           191},
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           191},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           196},
 
-	{IT_HEADER, NULL, "Teams", NULL, 200},
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        206},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble on Map Change",           &cv_scrambleonchange,   211},
+	{IT_HEADER, NULL, "Teams", NULL, 205},
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        211},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble on Map Change",           &cv_scrambleonchange,   216},
 
 #ifndef NONET
-	{IT_HEADER, NULL, "Advanced", NULL, 220},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        226},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     240},
+	{IT_HEADER, NULL, "Advanced", NULL, 225},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        231},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     245},
 #endif
 };
 
@@ -7233,7 +7235,7 @@ static void M_EmblemHints(INT32 choice)
 
 static void M_DrawEmblemHints(void)
 {
-	INT32 i, j = 0, x, y;
+	INT32 i, j = 0, x, y, left_hints = NUMHINTS;
 	UINT32 collected = 0, local = 0;
 	emblem_t *emblem;
 	const char *hint;
@@ -7249,6 +7251,11 @@ static void M_DrawEmblemHints(void)
 
 	x = (local > NUMHINTS ? 4 : 12);
 	y = 8;
+
+	// If there are more than 1 page's but less than 2 pages' worth of emblems,
+	// put half (rounded up) of the hints on the left, and half (rounded down) on the right
+	if (local > NUMHINTS && local < (NUMHINTS*2)-1)
+		left_hints = (local + 1) / 2;
 
 	if (!local)
 		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
@@ -7282,7 +7289,7 @@ static void M_DrawEmblemHints(void)
 
 		y += 28;
 
-		if (++j == NUMHINTS)
+		if (++j == left_hints)
 		{
 			x = 4+(BASEVIDWIDTH/2);
 			y = 8;
@@ -10626,8 +10633,8 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 2].status = IT_GRAYEDOUT; // Max players
 		OP_ServerOptionsMenu[ 3].status = IT_GRAYEDOUT; // Allow add-on downloading
 		OP_ServerOptionsMenu[ 4].status = IT_GRAYEDOUT; // Allow players to join
-		OP_ServerOptionsMenu[34].status = IT_GRAYEDOUT; // Master server
-		OP_ServerOptionsMenu[35].status = IT_GRAYEDOUT; // Attempts to resynchronise
+		OP_ServerOptionsMenu[35].status = IT_GRAYEDOUT; // Master server
+		OP_ServerOptionsMenu[36].status = IT_GRAYEDOUT; // Attempts to resynchronise
 	}
 	else
 	{
@@ -10635,10 +10642,10 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 2].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 3].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 4].status = IT_STRING | IT_CVAR;
-		OP_ServerOptionsMenu[34].status = (netgame
+		OP_ServerOptionsMenu[35].status = (netgame
 			? IT_GRAYEDOUT
 			: (IT_STRING | IT_CVAR | IT_CV_STRING));
-		OP_ServerOptionsMenu[35].status = IT_STRING | IT_CVAR;
+		OP_ServerOptionsMenu[36].status = IT_STRING | IT_CVAR;
 	}
 #endif
 
