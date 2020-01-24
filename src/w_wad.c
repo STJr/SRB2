@@ -1890,11 +1890,8 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"M_", 2}, // As does menu stuff
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
-
-#ifdef HWRENDER
-		{"SHADERS", 7},
-		{"SH_", 3},
-#endif
+		{"SHADERS", 7}, // Shader definitions
+		{"SH_", 3}, // GLSL shader
 
 		{NULL, 0},
 	};
