@@ -108,9 +108,6 @@ GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
 GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 
-// hardware driver
-extern INT32 gl_leveltime;
-
 // --------
 // hw_draw.c
 // --------

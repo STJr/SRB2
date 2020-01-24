@@ -107,6 +107,7 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(SetShader);
 	GETFUNC(UnSetShader);
 
+	GETFUNC(SetShaderInfo);
 	GETFUNC(LoadCustomShader);
 	GETFUNC(InitCustomShaders);
 

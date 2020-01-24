@@ -1750,13 +1750,14 @@ void I_StartupHardwareGraphics(void)
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 
-		HWD.pfnLoadShaders = hwSym("LoadShaders",NULL);
-		HWD.pfnKillShaders = hwSym("KillShaders",NULL);
-		HWD.pfnSetShader = hwSym("SetShader",NULL);
-		HWD.pfnUnSetShader = hwSym("UnSetShader",NULL);
+		HWD.pfnLoadShaders      = hwSym("LoadShaders",NULL);
+		HWD.pfnKillShaders      = hwSym("KillShaders",NULL);
+		HWD.pfnSetShader        = hwSym("SetShader",NULL);
+		HWD.pfnUnSetShader      = hwSym("UnSetShader",NULL);
 
+		HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
 		HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
-		HWD.pfnInitCustomShaders = hwSym("InitCustomShaders",NULL);
+		HWD.pfnInitCustomShaders= hwSym("InitCustomShaders",NULL);
 
 		if (!HWD.pfnInit()) // let load the OpenGL library
 			rendermode = render_soft;

@@ -24,7 +24,7 @@
 #include "r_opengl.h"
 #include "r_vbo.h"
 
-#include "../../p_tick.h" // for leveltime (NOTE: THIS IS BAD, FIGURE OUT HOW TO PROPERLY IMPLEMENT gl_leveltime)
+//#include "../../p_tick.h" // for leveltime (NOTE: THIS IS BAD, FIGURE OUT HOW TO PROPERLY IMPLEMENT gl_leveltime)
 #include "../../r_main.h" // AIMINGTODY (ALSO BAD)
 
 #if defined (HWRENDER) && !defined (NOROPENGL)
@@ -496,8 +496,6 @@ boolean SetupGLfunc(void)
 	return true;
 }
 
-INT32 gl_leveltime = 0;
-
 #ifdef GL_SHADERS
 typedef GLuint 	(APIENTRY *PFNglCreateShader)		(GLenum);
 typedef void 	(APIENTRY *PFNglShaderSource)		(GLuint, GLsizei, const GLchar**, GLint*);
@@ -576,6 +574,9 @@ typedef struct gl_shaderprogram_s
 	GLint uniforms[gluniform_max+1];
 } gl_shaderprogram_t;
 static gl_shaderprogram_t gl_shaderprograms[MAXSHADERPROGRAMS];
+
+// Shader info
+static INT32 shader_leveltime = 0;
 
 // ========================
 //  Fragment shader macros
@@ -942,6 +943,31 @@ EXPORT void HWRAPI(LoadShaders) (void)
 #endif
 }
 
+//
+// Shader info
+// Those are given to the uniforms.
+//
+
+EXPORT void HWRAPI(SetShaderInfo) (hwdshaderinfo_t info, INT32 value)
+{
+#ifdef GL_SHADERS
+	switch (info)
+	{
+		case HWD_SHADERINFO_LEVELTIME:
+			shader_leveltime = value;
+			break;
+		default:
+			break;
+	}
+#else
+	(void)info;
+	(void)value;
+#endif
+}
+
+//
+// Custom shader loading
+//
 EXPORT void HWRAPI(LoadCustomShader) (int number, char *shader, size_t size, boolean fragment)
 {
 #ifdef GL_SHADERS
@@ -960,6 +986,11 @@ EXPORT void HWRAPI(LoadCustomShader) (int number, char *shader, size_t size, boo
 		strncpy(gl_customvertexshaders[number], shader, size);
 		gl_customvertexshaders[number][size] = 0;
 	}
+#else
+	(void)number;
+	(void)shader;
+	(void)size;
+	(void)fragment;
 #endif
 }
 
@@ -978,10 +1009,12 @@ EXPORT void HWRAPI(SetShader) (int shader)
 	{
 		gl_shadersenabled = true;
 		gl_currentshaderprogram = shader;
+		return;
 	}
-	else
+#else
+	(void)shader;
 #endif
-		gl_shadersenabled = false;
+	gl_shadersenabled = false;
 }
 
 EXPORT void HWRAPI(UnSetShader) (void)
@@ -1822,7 +1855,7 @@ static void load_shaders(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *
 				UNIFORM_1(shader->uniforms[gluniform_lighting], Surface->LightInfo.light_level, pglUniform1f);
 				UNIFORM_1(shader->uniforms[gluniform_fade_start], Surface->LightInfo.fade_start, pglUniform1f);
 				UNIFORM_1(shader->uniforms[gluniform_fade_end], Surface->LightInfo.fade_end, pglUniform1f);
-				UNIFORM_1(shader->uniforms[gluniform_leveltime], ((float)leveltime) / TICRATE, pglUniform1f);
+				UNIFORM_1(shader->uniforms[gluniform_leveltime], ((float)shader_leveltime) / TICRATE, pglUniform1f);
 
 				// Custom shader uniforms
 				//if (custom) { }
