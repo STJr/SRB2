@@ -868,7 +868,7 @@ EXPORT void HWRAPI(LoadShaders) (void)
 		gl_vertShader = pglCreateShader(GL_VERTEX_SHADER);
 		if (!gl_vertShader)
 		{
-			CONS_Alert(CONS_ERROR, "LoadShaders: Error creating vertex shader %d", i);
+			GL_DBG_Printf("LoadShaders: Error creating vertex shader %d", i);
 			continue;
 		}
 
@@ -887,7 +887,7 @@ EXPORT void HWRAPI(LoadShaders) (void)
 			infoLog = malloc(logLength);
 			pglGetShaderInfoLog(gl_vertShader, logLength, NULL, infoLog);
 
-			CONS_Alert(CONS_ERROR, "LoadShaders: Error compiling vertex shader %d\n%s", i, infoLog);
+			GL_DBG_Printf("LoadShaders: Error compiling vertex shader %d\n%s", i, infoLog);
 			continue;
 		}
 
@@ -897,7 +897,7 @@ EXPORT void HWRAPI(LoadShaders) (void)
 		gl_fragShader = pglCreateShader(GL_FRAGMENT_SHADER);
 		if (!gl_fragShader)
 		{
-			CONS_Alert(CONS_ERROR, "LoadShaders: Error creating fragment shader %d", i);
+			GL_DBG_Printf("LoadShaders: Error creating fragment shader %d", i);
 			continue;
 		}
 
@@ -916,7 +916,7 @@ EXPORT void HWRAPI(LoadShaders) (void)
 			infoLog = malloc(logLength);
 			pglGetShaderInfoLog(gl_fragShader, logLength, NULL, infoLog);
 
-			CONS_Alert(CONS_ERROR, "LoadShaders: Error compiling fragment shader %d\n%s", i, infoLog);
+			GL_DBG_Printf("LoadShaders: Error compiling fragment shader %d\n%s", i, infoLog);
 			continue;
 		}
 
@@ -937,7 +937,7 @@ EXPORT void HWRAPI(LoadShaders) (void)
 		{
 			shader->program = 0;
 			shader->custom = false;
-			CONS_Alert(CONS_ERROR, "LoadShaders: Error linking shader program %d", i);
+			GL_DBG_Printf("LoadShaders: Error linking shader program %d", i);
 			continue;
 		}
 
