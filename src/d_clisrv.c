@@ -2557,6 +2557,7 @@ void CL_Reset(void)
 	multiplayer = false;
 	servernode = 0;
 	server = true;
+	resynch_local_inprogress = false;
 	doomcom->numnodes = 1;
 	doomcom->numslots = 1;
 	SV_StopServer();
