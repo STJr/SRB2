@@ -2257,9 +2257,9 @@ void P_CheckSurvivors(void)
 		{
 			if (players[i].spectator)
 				spectators++;
-			else if (players[i].pflags & PF_TAGIT)
+			else if ((players[i].pflags & PF_TAGIT) && players[i].quittime < 30 * TICRATE)
 				taggers++;
-			else if (!(players[i].pflags & PF_GAMETYPEOVER))
+			else if (!(players[i].pflags & PF_GAMETYPEOVER) && players[i].quittime < 30 * TICRATE)
 			{
 				survivorarray[survivors] = i;
 				survivors++;
