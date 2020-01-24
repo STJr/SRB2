@@ -3160,7 +3160,7 @@ static void P_DoClimbing(player_t *player)
 	platx = P_ReturnThrustX(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 	platy = P_ReturnThrustY(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 
-	glidesector = R_IsPointInSubsector(player->mo->x + platx, player->mo->y + platy);
+	glidesector = R_PointInSubsectorOrNull(player->mo->x + platx, player->mo->y + platy);
 
 	{
 		boolean floorclimb = false;
@@ -10235,7 +10235,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	// move camera down to move under lower ceilings
-	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
+	newsubsec = R_PointInSubsectorOrNull(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
 
 	if (!newsubsec)
 		newsubsec = thiscam->subsector;

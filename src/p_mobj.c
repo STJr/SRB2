@@ -11114,7 +11114,7 @@ void P_SpawnPrecipitation(void)
 		x = basex + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
 		y = basey + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
 
-		precipsector = R_IsPointInSubsector(x, y);
+		precipsector = R_PointInSubsectorOrNull(x, y);
 
 		// No sector? Stop wasting time,
 		// move on to the next entry in the blockmap
