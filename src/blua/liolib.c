@@ -137,6 +137,14 @@ static int aux_close (lua_State *L) {
 }
 
 
+static int io_close (lua_State *L) {
+  if (lua_isnone(L, 1))
+    lua_rawgeti(L, LUA_ENVIRONINDEX, IO_OUTPUT);
+  tofile(L);  /* make sure argument is a file */
+  return aux_close(L);
+}
+
+
 static int io_gc (lua_State *L) {
   FILE *f = *tofilep(L);
   /* ignore closed files */
@@ -172,14 +180,11 @@ void MakePathDirs(char *path)
 }
 
 
-static int io_open (lua_State *L) {
-	FILE **pf;
-	const char *filename = luaL_checkstring(L, 1);
+static int CheckFileName(lua_State *L, const char *filename)
+{
+	int length = strlen(filename);
 	boolean pass = false;
 	size_t i;
-	int length = strlen(filename);
-	const char *mode = luaL_optstring(L, 2, "r");
-	luafiletransfer_t *filetransfer;
 
 	if (strchr(filename, '\\'))
 	{
@@ -202,67 +207,60 @@ static int io_open (lua_State *L) {
 		return pushresult(L,0,filename);
 	}
 
-	luaL_checktype(L, 4, LUA_TFUNCTION);
+	return 0;
+}
 
-	if (lua_isnil(L, 3) && (strchr(mode, 'r') || strchr(mode, '+'))) // Synched reading
-	{
-		AddLuaFileTransfer(filename, mode);
+static int io_open (lua_State *L) {
+	const char *filename = luaL_checkstring(L, 1);
+	const char *mode = luaL_optstring(L, 2, "r");
+	int checkresult;
 
-		/*pf = newfile(L);
-		*pf = fopen(realfilename, mode);
-		return (*pf == NULL) ? pushresult(L, 0, filename) : 1;*/
-	}
-	else // Local I/O
-	{
-		char *realfilename = va("%s" PATHSEP "%s", luafiledir, filename);
-		player_t *player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+	checkresult = CheckFileName(L, filename);
+	if (checkresult)
+		return checkresult;
 
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
+	luaL_checktype(L, 3, LUA_TFUNCTION);
 
-		if (player != &players[consoleplayer])
-			return 0;
+	if (!(strchr(mode, 'r') || strchr(mode, '+')))
+		luaL_error(L, "open() is only for reading, use openlocal() for writing");
 
-		if (client && strnicmp(filename, "shared/", strlen("shared/")))
+	AddLuaFileTransfer(filename, mode);
+
+	return 0;
+}
+
+
+static int io_openlocal (lua_State *L) {
+	FILE **pf;
+	const char *filename = luaL_checkstring(L, 1);
+	const char *mode = luaL_optstring(L, 2, "r");
+	luafiletransfer_t *filetransfer;
+	int checkresult;
+
+	checkresult = CheckFileName(L, filename);
+	if (checkresult)
+		return checkresult;
+
+	char *realfilename = va("%s" PATHSEP "%s", luafiledir, filename);
+
+	if (client && strnicmp(filename, "shared/", strlen("shared/")))
+		I_Error("Access denied to %s\n"
+		        "Clients can only access files stored in luafiles/shared/\n",
+		        filename);
+
+	// Prevent access if the file is being downloaded
+	for (filetransfer = luafiletransfers; filetransfer; filetransfer = filetransfer->next)
+		if (!stricmp(filetransfer->filename, filename))
 			I_Error("Access denied to %s\n"
-					"Clients can only access files stored in luafiles/shared/\n",
-					filename);
+			        "Files can't be opened while being downloaded\n",
+			        filename);
 
-		// Prevent access if the file is being downloaded
-		for (filetransfer = luafiletransfers; filetransfer; filetransfer = filetransfer->next)
-			if (!stricmp(filetransfer->filename, filename))
-				I_Error("Access denied to %s\n"
-						"Files can't be opened while being downloaded\n",
-						filename);
+	MakePathDirs(realfilename);
 
-		MakePathDirs(realfilename);
-
-		// The callback is the last argument, no need to push it again
-
-		// Push the first argument (file handle) on the stack
-		pf = newfile(gL); // Create and push the file handle
-		*pf = fopen(realfilename, mode); // Open the file
-		if (!*pf)
-		{
-			lua_pop(gL, 1);
-			lua_pushnil(gL);
-		}
-
-		// Push the second argument (file name) on the stack
-		lua_pushstring(gL, filename);
-
-		// Call the callback
-		LUA_Call(gL, 2);
-
-		// Close the file
-		if (*pf)
-		{
-			fclose(*pf);
-			*pf = NULL;
-		}
-	}
-
-	return 0; // !!! Todo: error handling?
+	// Open and return the file
+	pf = newfile(L);
+	*pf = fopen(realfilename, mode);
+	return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 }
 
 
@@ -335,7 +333,7 @@ void Got_LuaFile(UINT8 **cp, INT32 playernum)
 void StoreLuaFileCallback(INT32 id)
 {
 	lua_pushfstring(gL, FMT_FILECALLBACKID, id);
-	lua_pushvalue(gL, 4); // Parameter 4 is the callback
+	lua_pushvalue(gL, 3); // Parameter 3 is the callback
 	lua_settable(gL, LUA_REGISTRYINDEX); // registry[callbackid] = callback
 }
 
@@ -346,6 +344,7 @@ void RemoveLuaFileCallback(INT32 id)
 	lua_pushnil(gL);
 	lua_settable(gL, LUA_REGISTRYINDEX); // registry[callbackid] = nil
 }
+
 
 static int io_tmpfile (lua_State *L) {
   FILE **pf = newfile(L);
@@ -649,10 +648,12 @@ static int f_flush (lua_State *L) {
 
 
 static const luaL_Reg iolib[] = {
+  {"close", io_close},
   {"flush", io_flush},
   {"input", io_input},
   {"lines", io_lines},
   {"open", io_open},
+  {"openlocal", io_openlocal},
   {"output", io_output},
   {"read", io_read},
   {"tmpfile", io_tmpfile},
@@ -663,6 +664,7 @@ static const luaL_Reg iolib[] = {
 
 
 static const luaL_Reg flib[] = {
+  {"close", io_close},
   {"flush", f_flush},
   {"lines", f_lines},
   {"read", f_read},
