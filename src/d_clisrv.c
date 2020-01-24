@@ -2918,7 +2918,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	switch (msg)
 	{
 		case KICK_MSG_GO_AWAY:
-			HU_AddChatText(va("\x82*%s has been kicked (Go away)", player_names[pnum]), false);
+			if (!players[pnum].quittime)
+				HU_AddChatText(va("\x82*%s has been kicked (Go away)", player_names[pnum]), false);
 			kickreason = KR_KICK;
 			break;
 		case KICK_MSG_PING_HIGH:
