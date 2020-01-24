@@ -325,7 +325,7 @@ void Got_LuaFile(UINT8 **cp, INT32 playernum)
 		else
 		{
 			// Send a net command with 0 as its first byte to indicate the file couldn't be opened
-			UINT8 success = 0;
+			success = 0;
 			SendNetXCmd(XD_LUAFILE, &success, 1);
 		}
 	}
