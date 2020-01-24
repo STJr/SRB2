@@ -1871,8 +1871,13 @@ static void load_shaders(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *
 			pglUseProgram(0);
 	}
 	else
-#endif
 		pglUseProgram(0);
+#else
+	(void)Surface;
+	(void)poly;
+	(void)tint;
+	(void)fade;
+#endif
 }
 
 // -----------------+

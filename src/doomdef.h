@@ -620,7 +620,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
-/// Hardware renderer: OpenGL
+/// OpenGL shaders
 #define GL_SHADERS
 
 /// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
