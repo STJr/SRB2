@@ -243,9 +243,9 @@ static int io_openlocal (lua_State *L) {
 
 	char *realfilename = va("%s" PATHSEP "%s", luafiledir, filename);
 
-	if (client && strnicmp(filename, "shared/", strlen("shared/")))
+	if (client && strnicmp(filename, "client/", strlen("client/")))
 		I_Error("Access denied to %s\n"
-		        "Clients can only access files stored in luafiles/shared/\n",
+		        "Clients can only access files stored in luafiles/client/\n",
 		        filename);
 
 	// Prevent access if the file is being downloaded

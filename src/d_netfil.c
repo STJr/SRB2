@@ -489,7 +489,7 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 		filetransfer->realfilename = strdup(va("%s" PATHSEP "%s",
 												luafiledir, filename));
 	else
-		filetransfer->realfilename = strdup(va("%s" PATHSEP "shared" PATHSEP "$$$%d%d.tmp",
+		filetransfer->realfilename = strdup(va("%s" PATHSEP "client" PATHSEP "$$$%d%d.tmp",
 												luafiledir, rand(), rand()));
     if (!filetransfer->realfilename)
 		I_Error("AddLuaFileTransfer: Out of memory\n");
