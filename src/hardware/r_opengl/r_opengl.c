@@ -76,7 +76,7 @@ static GLboolean MipMap = GL_FALSE;
 static GLint min_filter = GL_LINEAR;
 static GLint mag_filter = GL_LINEAR;
 static GLint anisotropic_filter = 0;
-static boolean model_lighting = true;
+static boolean model_lighting = false;
 
 const GLubyte *gl_version = NULL;
 const GLubyte *gl_renderer = NULL;
@@ -2583,8 +2583,12 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 
 	int i;
 
-	// Because Otherwise, scaling the screen negatively vertically breaks the lighting
+	// Because otherwise, scaling the screen negatively vertically breaks the lighting
 	GLfloat LightPos[] = {0.0f, 1.0f, 0.0f, 0.0f};
+#ifdef GL_LIGHT_MODEL_AMBIENT
+	GLfloat ambient[4];
+	GLfloat diffuse[4];
+#endif
 
 	// Affect input model scaling
 	scale *= 0.5f;
@@ -2610,9 +2614,38 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	poly.blue   = byte2float[Surface->PolyColor.s.blue];
 	poly.alpha  = byte2float[Surface->PolyColor.s.alpha];
 
-	SetBlend((poly.alpha < 1 ? PF_Translucent : (PF_Masked|PF_Occlude))|PF_Modulated);
+#ifdef GL_LIGHT_MODEL_AMBIENT
+	if (model_lighting && (!gl_shadersenabled)) // doesn't work with shaders anyway
+	{
+		ambient[0] = poly.red;
+		ambient[1] = poly.green;
+		ambient[2] = poly.blue;
+		ambient[3] = poly.alpha;
 
-	pglColor4ubv((GLubyte*)&Surface->PolyColor.s);
+		diffuse[0] = poly.red;
+		diffuse[1] = poly.green;
+		diffuse[2] = poly.blue;
+		diffuse[3] = poly.alpha;
+
+		if (ambient[0] > 0.75f)
+			ambient[0] = 0.75f;
+		if (ambient[1] > 0.75f)
+			ambient[1] = 0.75f;
+		if (ambient[2] > 0.75f)
+			ambient[2] = 0.75f;
+
+		pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+		pglShadeModel(GL_SMOOTH);
+
+		pglEnable(GL_LIGHTING);
+		pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
+		pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+	}
+#endif
+	else
+		pglColor4ubv((GLubyte*)&Surface->PolyColor.s);
+
+	SetBlend((poly.alpha < 1 ? PF_Translucent : (PF_Masked|PF_Occlude))|PF_Modulated);
 
 	tint.red   = byte2float[Surface->TintColor.s.red];
 	tint.green = byte2float[Surface->TintColor.s.green];
@@ -2652,12 +2685,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 		pglCullFace(GL_BACK);
 	}
 #endif
-
-	if (model_lighting)
-	{
-		pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
-		pglShadeModel(GL_SMOOTH);
-	}
 
 	pglPushMatrix(); // should be the same as glLoadIdentity
 	//Hurdler: now it seems to work
@@ -2797,6 +2824,14 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	pglPopMatrix(); // should be the same as glLoadIdentity
 	pglDisable(GL_CULL_FACE);
 	pglDisable(GL_NORMALIZE);
+
+#ifdef GL_LIGHT_MODEL_AMBIENT
+	if (model_lighting && (!gl_shadersenabled))
+	{
+		pglDisable(GL_LIGHTING);
+		pglShadeModel(GL_FLAT);
+	}
+#endif
 
 #ifdef GL_SHADERS
 	pglUseProgram(0);
