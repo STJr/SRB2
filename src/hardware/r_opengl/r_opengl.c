@@ -496,6 +496,9 @@ boolean SetupGLfunc(void)
 	return true;
 }
 
+static boolean gl_allowshaders = false;
+static boolean gl_shadersenabled = false;
+
 #ifdef GL_SHADERS
 typedef GLuint 	(APIENTRY *PFNglCreateShader)		(GLenum);
 typedef void 	(APIENTRY *PFNglShaderSource)		(GLuint, GLsizei, const GLchar**, GLint*);
@@ -545,9 +548,6 @@ static PFNglGetUniformLocation pglGetUniformLocation;
 // 18032019
 static char *gl_customvertexshaders[MAXSHADERS];
 static char *gl_customfragmentshaders[MAXSHADERS];
-
-static boolean gl_allowshaders = false;
-static boolean gl_shadersenabled = false;
 static GLuint gl_currentshaderprogram = 0;
 
 // 13062019
