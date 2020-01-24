@@ -87,7 +87,7 @@ before_build:
 - cmd: git rev-parse --short %COMMIT%>%TMP%/gitshort.txt
 - cmd: set /P GITSHORT=<%TMP%/gitshort.txt
 # for pull requests, take the owner's name only, if this isn't the same repo of course
-- if [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [%APPVEYOR_REPO_NAME%] ( set "REPO=%APPVEYOR_REPO_BRANCH" ) else ( for /f "delims=/" %%a in ("%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%") do set "REPO=%%a:%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH" )
+- if [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [%APPVEYOR_REPO_NAME%] ( set "REPO=%APPVEYOR_REPO_BRANCH%" ) else ( for /f "delims=/" %%a in ("%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%") do set "REPO=%%a:%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" )
 - set "EXENAME=EXENAME=srb2win-%REPO%-%GITSHORT%.exe"
 - set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 NOOBJDUMP=1 %NOUPX% %EXENAME%"
 - if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1 GCC81=1" ) else ( set "MINGW_FLAGS=MINGW=1 GCC91=1" )
