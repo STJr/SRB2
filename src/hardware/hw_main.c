@@ -69,9 +69,6 @@ void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boo
 void HWR_AddTransparentPolyobjectFloor(levelflat_t *levelflat, polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
                              INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, extracolormap_t *planecolormap);
 
-static void HWR_FoggingOn(void);
-static UINT32 atohex(const char *s);
-
 boolean drawsky = true;
 
 // ==========================================================================
@@ -152,8 +149,6 @@ static void HWR_SetTransformAiming(FTransform *trans);
 // ==========================================================================
 // Lighting
 // ==========================================================================
-
-#define CALCLIGHT(x,y) ((float)(x)*((y)/255.0f))
 
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap)
 {
@@ -5742,14 +5737,6 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	//------------------------------------------------------------------------
 	HWR_ClearView();
 
-if (0)
-{ // I don't think this is ever used.
-	if (cv_grfog.value)
-		HWR_FoggingOn(); // First of all, turn it on, set the default user settings too
-	else
-		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0); // Turn it off
-}
-
 	if (drawsky)
 		HWR_DrawSkyBackground(player);
 
@@ -5840,10 +5827,6 @@ if (0)
 
 	HWD.pfnSetTransform(NULL);
 	HWD.pfnUnSetShader();
-
-	// put it off for menus etc
-	if (cv_grfog.value)
-		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0);
 
 	// Check for new console commands.
 	NetUpdate();
@@ -5955,14 +5938,6 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	//------------------------------------------------------------------------
 	HWR_ClearView(); // Clears the depth buffer and resets the view I believe
 
-if (0)
-{ // I don't think this is ever used.
-	if (cv_grfog.value)
-		HWR_FoggingOn(); // First of all, turn it on, set the default user settings too
-	else
-		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0); // Turn it off
-}
-
 	if (!skybox && drawsky) // Don't draw the regular sky if there's a skybox
 		HWR_DrawSkyBackground(player);
 
@@ -6054,10 +6029,6 @@ if (0)
 	HWD.pfnSetTransform(NULL);
 	HWD.pfnUnSetShader();
 
-	// put it off for menus etc
-	if (cv_grfog.value)
-		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0);
-
 	HWR_DoPostProcessor(player);
 
 	// Check for new console commands.
@@ -6069,59 +6040,14 @@ if (0)
 }
 
 // ==========================================================================
-//                                                                        FOG
-// ==========================================================================
-
-/// \author faB
-
-static UINT32 atohex(const char *s)
-{
-	INT32 iCol;
-	const char *sCol;
-	char cCol;
-	INT32 i;
-
-	if (strlen(s)<6)
-		return 0;
-
-	iCol = 0;
-	sCol = s;
-	for (i = 0; i < 6; i++, sCol++)
-	{
-		iCol <<= 4;
-		cCol = *sCol;
-		if (cCol >= '0' && cCol <= '9')
-			iCol |= cCol - '0';
-		else
-		{
-			if (cCol >= 'F')
-				cCol -= 'a' - 'A';
-			if (cCol >= 'A' && cCol <= 'F')
-				iCol = iCol | (cCol - 'A' + 10);
-		}
-	}
-	//CONS_Debug(DBG_RENDER, "col %x\n", iCol);
-	return iCol;
-}
-
-static void HWR_FoggingOn(void)
-{
-	HWD.pfnSetSpecialState(HWD_SET_FOG_COLOR, atohex(cv_grfogcolor.string));
-	HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, cv_grfogdensity.value);
-	HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 1);
-}
-
-// ==========================================================================
 //                                                         3D ENGINE COMMANDS
 // ==========================================================================
 
-static CV_PossibleValue_t grsoftwarefog_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "LightPlanes"}, {0, NULL}};
 static CV_PossibleValue_t grmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
 static CV_PossibleValue_t grfakecontrast_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Smooth"}, {0, NULL}};
 
 static void CV_grfiltermode_OnChange(void);
 static void CV_granisotropic_OnChange(void);
-static void CV_grfogdensity_OnChange(void);
 
 static CV_PossibleValue_t grfiltermode_cons_t[]= {{HWD_SET_TEXTUREFILTER_POINTSAMPLED, "Nearest"},
 	{HWD_SET_TEXTUREFILTER_BILINEAR, "Bilinear"}, {HWD_SET_TEXTUREFILTER_TRILINEAR, "Trilinear"},
@@ -6133,9 +6059,6 @@ CV_PossibleValue_t granisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NU
 
 consvar_t cv_grshaders = {"gr_shaders", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_fovchange = {"gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grfog = {"gr_fog", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grfogcolor = {"gr_fogcolor", "AAAAAA", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grsoftwarefog = {"gr_softwarefog", "Off", CV_SAVE, grsoftwarefog_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef ALAM_LIGHTING
 consvar_t cv_grdynamiclighting = {"gr_dynamiclighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -6155,8 +6078,6 @@ consvar_t cv_grfakecontrast = {"gr_fakecontrast", "Smooth", CV_SAVE, grfakecontr
 consvar_t cv_grslopecontrast = {"gr_slopecontrast", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_grrounddown = {"gr_rounddown", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_grfogdensity = {"gr_fogdensity", "150", CV_CALL|CV_NOINIT, CV_Unsigned,
-                             CV_grfogdensity_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_grfiltermode = {"gr_filtermode", "Nearest", CV_SAVE|CV_CALL, grfiltermode_cons_t,
                              CV_grfiltermode_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -6165,12 +6086,6 @@ consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotro
 
 consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-static void CV_grfogdensity_OnChange(void)
-{
-	if (rendermode == render_opengl)
-		HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, cv_grfogdensity.value);
-}
 
 static void CV_grfiltermode_OnChange(void)
 {
@@ -6188,11 +6103,6 @@ static void CV_granisotropic_OnChange(void)
 void HWR_AddCommands(void)
 {
 	CV_RegisterVar(&cv_fovchange);
-
-	CV_RegisterVar(&cv_grfogdensity);
-	CV_RegisterVar(&cv_grfogcolor);
-	CV_RegisterVar(&cv_grfog);
-	CV_RegisterVar(&cv_grsoftwarefog);
 
 #ifdef ALAM_LIGHTING
 	CV_RegisterVar(&cv_grstaticlighting);
@@ -6268,7 +6178,6 @@ void HWR_Startup(void)
 void HWR_Switch(void)
 {
 	// Set special states from CVARs
-	HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, cv_grfogdensity.value);
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_grfiltermode.value);
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_granisotropicmode.value);
 }

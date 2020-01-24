@@ -1206,10 +1206,7 @@ void SetStates(void)
 	//pglEnable(GL_CULL_FACE);
 	//pglCullFace(GL_FRONT);
 
-	//glFogi(GL_FOG_MODE, GL_EXP);
-	//pglHint(GL_FOG_HINT, GL_FASTEST);
-	//pglFogfv(GL_FOG_COLOR, fogcolor);
-	//pglFogf(GL_FOG_DENSITY, 0.0005f);
+	pglDisable(GL_FOG);
 
 	// Lighting for models
 #ifdef GL_LIGHT_MODEL_AMBIENT
@@ -2265,48 +2262,6 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 	{
 		case HWD_SET_MODEL_LIGHTING:
 			model_lighting = Value;
-			break;
-
-		case HWD_SET_FOG_COLOR:
-		{
-			GLfloat fogcolor[4];
-
-			fogcolor[0] = byte2float[((Value>>16)&0xff)];
-			fogcolor[1] = byte2float[((Value>>8)&0xff)];
-			fogcolor[2] = byte2float[((Value)&0xff)];
-			fogcolor[3] = 0x0;
-			pglFogfv(GL_FOG_COLOR, fogcolor);
-			break;
-		}
-
-		case HWD_SET_FOG_DENSITY:
-			pglFogf(GL_FOG_DENSITY, Value*1200/(500*1000000.0f));
-			break;
-
-		case HWD_SET_FOG_MODE:
-			if (Value)
-			{
-				pglEnable(GL_FOG);
-				// experimental code
-				/*
-				switch (Value)
-				{
-					case 1:
-						glFogi(GL_FOG_MODE, GL_LINEAR);
-						pglFogf(GL_FOG_START, -1000.0f);
-						pglFogf(GL_FOG_END, 2000.0f);
-						break;
-					case 2:
-						glFogi(GL_FOG_MODE, GL_EXP);
-						break;
-					case 3:
-						glFogi(GL_FOG_MODE, GL_EXP2);
-						break;
-				}
-				*/
-			}
-			else
-				pglDisable(GL_FOG);
 			break;
 
 		case HWD_SET_SHADERS:
