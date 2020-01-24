@@ -83,9 +83,9 @@ before_build:
 - ccache -V
 - ccache -s
 - if [%NOUPX%] == [1] ( set "NOUPX=NOUPX=1" ) else ( set "NOUPX=" )
-# get abbreviated (7 char) commit hash
-- set "COMMIT=%APPVEYOR_REPO_COMMIT:~0,7%"
-- set "EXENAME=EXENAME=srb2win-%APPVEYOR_REPO_BRANCH%-%COMMIT%.exe"
+- cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
+- cmd: set /P GITSHORT=<%TMP%/gitshort.txt
+- set "EXENAME=EXENAME=srb2win-%APPVEYOR_REPO_BRANCH%-%GITSHORT%.exe"
 - set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 NOOBJDUMP=1 %NOUPX% %EXENAME%"
 - if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1 GCC81=1" ) else ( set "MINGW_FLAGS=MINGW=1 GCC91=1" )
 - set "SRB2_MFLAGS=%SRB2_MFLAGS% %MINGW_FLAGS% %CONFIGURATION%=1"
@@ -102,8 +102,6 @@ after_build:
   )
 - if [%X86_64%] == [1] ( set "CONFIGURATION=%CONFIGURATION%64" )
 - ccache -s
-- cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
-- cmd: set /P GITSHORT=<%TMP%/gitshort.txt
 - set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%-%CONFIGURATION%.7z
 - set BUILDSARCHIVE=%APPVEYOR_REPO_BRANCH%-%CONFIGURATION%.7z
 - cmd: 7z a %BUILD_ARCHIVE% %BUILD_PATH% -xr!.gitignore
