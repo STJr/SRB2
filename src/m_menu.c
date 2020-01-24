@@ -1394,21 +1394,23 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_HEADER, NULL, "3D Models", NULL, 0},
 	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             12},
 	{IT_STRING|IT_CVAR,         NULL, "Model interpolation", &cv_grmodelinterpolation, 22},
-	{IT_STRING|IT_CVAR,         NULL, "Model lighting",      &cv_grmodellighting, 32},
+	{IT_STRING|IT_CVAR,         NULL, "Model lighting",      &cv_grmodellighting,      32},
 
 	{IT_HEADER, NULL, "General", NULL, 51},
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",   &cv_fov,            63},
-	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        73},
-	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     83},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,93},
+	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_grshaders,            63},
+	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_grshearing,           73},
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  83},
+	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,            93},
+	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_grfiltermode,        103},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_granisotropicmode,   113},
 
-	{IT_HEADER, NULL, "Miscellaneous", NULL, 112},
-	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          124},
+	{IT_HEADER, NULL, "Miscellaneous", NULL, 132},
+	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,          144},
 #ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     134},
+	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     154},
 #endif
 #if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,            144},
+	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,            164},
 #endif
 };
 
