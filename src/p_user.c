@@ -12916,7 +12916,7 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->flags2 |= MF2_DONTDRAW;
 		player->mo->flags |= MF_NOGRAVITY;
 	}
-	
+
 	if (player->powers[pw_dye])
 	{
 		player->mo->colorized = true;
