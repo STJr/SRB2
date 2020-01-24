@@ -666,7 +666,7 @@ static INT32 shader_leveltime = 0;
 	GLSL_DOOM_COLORMAP \
 	GLSL_DOOM_LIGHT_EQUATION \
 	"void main(void) {\n" \
-		"float z = (gl_FragCoord.z / gl_FragCoord.w) / 2;\n" \
+		"float z = (gl_FragCoord.z / gl_FragCoord.w) / 2.0;\n" \
 		"float a = -pi * (z * freq) + (leveltime * speed);\n" \
 		"float sdistort = sin(a) * amp;\n" \
 		"float cdistort = cos(a) * amp;\n" \
