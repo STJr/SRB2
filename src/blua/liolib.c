@@ -64,12 +64,6 @@ static int pushresult (lua_State *L, int i, const char *filename) {
 }
 
 
-static void fileerror (lua_State *L, int arg, const char *filename) {
-  lua_pushfstring(L, "%s: %s", filename, strerror(errno));
-  luaL_argerror(L, arg, lua_tostring(L, -1));
-}
-
-
 #define tofilep(L)	((FILE **)luaL_checkudata(L, 1, LUA_FILEHANDLE))
 
 
@@ -355,47 +349,6 @@ static int io_tmpfile (lua_State *L) {
 }
 
 
-static FILE *getiofile (lua_State *L, int findex) {
-  FILE *f;
-  lua_rawgeti(L, LUA_ENVIRONINDEX, findex);
-  f = *(FILE **)lua_touserdata(L, -1);
-  if (f == NULL)
-    luaL_error(L, "standard %s file is closed", fnames[findex - 1]);
-  return f;
-}
-
-
-static int g_iofile (lua_State *L, int f, const char *mode) {
-  if (!lua_isnoneornil(L, 1)) {
-    const char *filename = lua_tostring(L, 1);
-    if (filename) {
-      FILE **pf = newfile(L);
-      *pf = fopen(filename, mode);
-      if (*pf == NULL)
-        fileerror(L, 1, filename);
-    }
-    else {
-      tofile(L);  /* check that it's a valid file handle */
-      lua_pushvalue(L, 1);
-    }
-    lua_rawseti(L, LUA_ENVIRONINDEX, f);
-  }
-  /* return current value */
-  lua_rawgeti(L, LUA_ENVIRONINDEX, f);
-  return 1;
-}
-
-
-static int io_input (lua_State *L) {
-  return g_iofile(L, IO_INPUT, "r");
-}
-
-
-static int io_output (lua_State *L) {
-  return g_iofile(L, IO_OUTPUT, "w");
-}
-
-
 static int io_readline (lua_State *L);
 
 
@@ -410,24 +363,6 @@ static int f_lines (lua_State *L) {
   tofile(L);  /* check that it's a valid file handle */
   aux_lines(L, 1, 0);
   return 1;
-}
-
-
-static int io_lines (lua_State *L) {
-  if (lua_isnoneornil(L, 1)) {  /* no arguments? */
-    /* will iterate over default input */
-    lua_rawgeti(L, LUA_ENVIRONINDEX, IO_INPUT);
-    return f_lines(L);
-  }
-  else {
-    const char *filename = luaL_checkstring(L, 1);
-    FILE **pf = newfile(L);
-    *pf = fopen(filename, "r");
-    if (*pf == NULL)
-      fileerror(L, 1, filename);
-    aux_lines(L, lua_gettop(L), 1);
-    return 1;
-  }
 }
 
 
@@ -543,11 +478,6 @@ static int g_read (lua_State *L, FILE *f, int first) {
 }
 
 
-static int io_read (lua_State *L) {
-  return g_read(L, getiofile(L, IO_INPUT), 1);
-}
-
-
 static int f_read (lua_State *L) {
   return g_read(L, tofile(L), 2);
 }
@@ -601,11 +531,6 @@ static int g_write (lua_State *L, FILE *f, int arg) {
 }
 
 
-static int io_write (lua_State *L) {
-  return g_write(L, getiofile(L, IO_OUTPUT), 1);
-}
-
-
 static int f_write (lua_State *L) {
   return g_write(L, tofile(L), 2);
 }
@@ -638,12 +563,6 @@ static int f_setvbuf (lua_State *L) {
 }
 
 
-
-static int io_flush (lua_State *L) {
-  return pushresult(L, fflush(getiofile(L, IO_OUTPUT)) == 0, NULL);
-}
-
-
 static int f_flush (lua_State *L) {
   return pushresult(L, fflush(tofile(L)) == 0, NULL);
 }
@@ -651,16 +570,10 @@ static int f_flush (lua_State *L) {
 
 static const luaL_Reg iolib[] = {
   {"close", io_close},
-  {"flush", io_flush},
-  {"input", io_input},
-  {"lines", io_lines},
   {"open", io_open},
   {"openlocal", io_openlocal},
-  {"output", io_output},
-  {"read", io_read},
   {"tmpfile", io_tmpfile},
   {"type", io_type},
-  {"write", io_write},
   {NULL, NULL}
 };
 
