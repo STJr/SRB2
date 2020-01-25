@@ -1443,21 +1443,18 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		P_SetLinedefV2(i, atol(val));
 	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
 	{
-		if (fastcmp(param + 4, "str"))
-		{
-			size_t argnum = param[3] - '0';
-			if (argnum >= NUMLINESTRINGARGS)
-				return;
-			lines[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
-			M_Memcpy(lines[i].stringargs[argnum], val, strlen(val) + 1);
-		}
-		else
-		{
-			size_t argnum = atol(param + 3);
-			if (argnum >= NUMLINEARGS)
-				return;
-			lines[i].args[argnum] = atol(val);
-		}
+		size_t argnum = atol(param + 3);
+		if (argnum >= NUMLINEARGS)
+			return;
+		lines[i].args[argnum] = atol(val);
+	}
+	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
+	{
+		size_t argnum = param[9] - '0';
+		if (argnum >= NUMLINESTRINGARGS)
+			return;
+		lines[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(lines[i].stringargs[argnum], val, strlen(val) + 1);
 	}
 	else if (fastcmp(param, "sidefront"))
 		lines[i].sidenum[0] = atol(val);
@@ -1517,7 +1514,7 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 		mapthings[i].options |= MTF_EXTRA;
 	else if (fastcmp(param, "flip") && fastcmp("true", val))
 		mapthings[i].options |= MTF_OBJECTFLIP;
-	else if (fastcmp(param, "special") && fastcmp("true", val))
+	else if (fastcmp(param, "objectspecial") && fastcmp("true", val))
 		mapthings[i].options |= MTF_OBJECTSPECIAL;
 	else if (fastcmp(param, "ambush") && fastcmp("true", val))
 		mapthings[i].options |= MTF_AMBUSH;
