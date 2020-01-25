@@ -12650,9 +12650,9 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
-			skyboxcenterpnts[mthing->tag % 16] = mobj;
+			skyboxcenterpnts[mthing->tag] = mobj;
 		else
-			skyboxviewpnts[mthing->tag % 16] = mobj;
+			skyboxviewpnts[mthing->tag] = mobj;
 		break;
 	case MT_EGGSTATUE:
 		if (mthing->options & MTF_EXTRA)
