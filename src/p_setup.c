@@ -1279,6 +1279,7 @@ static void P_LoadThings(UINT8 *data)
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
+		mt->tag = 0;
 
 		mt->type &= 4095;
 
@@ -1498,6 +1499,8 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 
 static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 {
+	if (fastcmp(param, "id"))
+		mapthings[i].tag = atol(val);
 	if (fastcmp(param, "x"))
 		mapthings[i].x = atol(val);
 	else if (fastcmp(param, "y"))
@@ -1690,6 +1693,7 @@ static void P_LoadTextmap(void)
 		mt->options = 0;
 		mt->z = 0;
 		mt->extrainfo = 0;
+		mt->tag = 0;
 		mt->mobj = NULL;
 
 		TextmapParse(mapthingsPos[i], i, ParseTextmapThingParameter);
