@@ -708,9 +708,9 @@ static void Polyobj_moveToSpawnSpot(mapthing_t *anchor)
 	vertex_t  dist, sspot;
 	size_t i;
 
-	if (!(po = Polyobj_GetForNum(anchor->angle)))
+	if (!(po = Polyobj_GetForNum(anchor->tag)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", anchor->angle);
+		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", anchor->tag);
 		return;
 	}
 
@@ -1562,7 +1562,7 @@ void Polyobj_InitLevel(void)
 		{
 			qitem = (mobjqitem_t *)M_QueueIterator(&spawnqueue);
 
-			Polyobj_spawnPolyObj(i, qitem->mo, qitem->mo->spawnpoint->angle);
+			Polyobj_spawnPolyObj(i, qitem->mo, qitem->mo->spawnpoint->tag);
 		}
 
 		// move polyobjects to spawn points

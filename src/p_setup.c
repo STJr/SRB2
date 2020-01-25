@@ -2776,6 +2776,9 @@ static void P_ConvertBinaryMap(void)
 		switch (mapthings[i].type)
 		{
 		case 750:
+		case 760:
+		case 761:
+		case 762:
 			mapthings[i].tag = mapthings[i].angle;
 			break;
 		default:
