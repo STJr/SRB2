@@ -1869,6 +1869,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 	S_StartSound(toucher, special->info->deathsound); // was NULL, but changed to player so you could hear others pick up rings
 	P_KillMobj(special, NULL, toucher, 0);
+	special->shadowscale = 0;
 }
 
 /** Prints death messages relating to a dying or hit player.
@@ -2256,9 +2257,9 @@ void P_CheckSurvivors(void)
 		{
 			if (players[i].spectator)
 				spectators++;
-			else if (players[i].pflags & PF_TAGIT)
+			else if ((players[i].pflags & PF_TAGIT) && players[i].quittime < 30 * TICRATE)
 				taggers++;
-			else if (!(players[i].pflags & PF_GAMETYPEOVER))
+			else if (!(players[i].pflags & PF_GAMETYPEOVER) && players[i].quittime < 30 * TICRATE)
 			{
 				survivorarray[survivors] = i;
 				survivors++;

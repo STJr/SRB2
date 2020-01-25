@@ -1165,6 +1165,7 @@ static const char *credits[] = {
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
 	"Wessel \"sphere\" Smit",
 	"Ben \"Cue\" Woodford",
+	"Ikaro \"Tatsuru\" Vinhas",
 	// Git contributors with 5+ approved merges of substantive quality,
 	// or contributors with at least one groundbreaking merge, may be named.
 	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
@@ -1233,6 +1234,7 @@ static const char *credits[] = {
 	"Thomas \"Shadow Hog\" Igoe",
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"\"Kaito Sinclaire\"",
+	"\"QueenDelta\"",
 	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",

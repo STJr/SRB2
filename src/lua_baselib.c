@@ -2193,6 +2193,20 @@ static int lib_rPointInSubsector(lua_State *L)
 	return 1;
 }
 
+static int lib_rPointInSubsectorOrNil(lua_State *L)
+{
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
+	subsector_t *sub = R_PointInSubsectorOrNull(x, y);
+	//HUDSAFE
+	INLEVEL
+	if (sub)
+		LUA_PushUserdata(L, sub, META_SUBSECTOR);
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
 // R_THINGS
 ////////////
 
@@ -3127,6 +3141,7 @@ static luaL_Reg lib[] = {
 	{"R_PointToDist",lib_rPointToDist},
 	{"R_PointToDist2",lib_rPointToDist2},
 	{"R_PointInSubsector",lib_rPointInSubsector},
+	{"R_PointInSubsectorOrNil",lib_rPointInSubsectorOrNil},
 
 	// r_things (sprite)
 	{"R_Char2Frame",lib_rChar2Frame},

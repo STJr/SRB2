@@ -746,6 +746,9 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if (player->bot)
 			continue; // ignore bots
 
+		if (player->quittime)
+			continue; // Ignore uncontrolled bodies
+
 		if (dist > 0
 			&& P_AproxDistance(P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
 			continue; // Too far away
@@ -5177,6 +5180,8 @@ void A_SignPlayer(mobj_t *actor)
 
 		if (signcolor)
 			;
+		else if (!skin->sprites[SPR2_SIGN].numframes)
+			signcolor = facecolor;
 		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
 			signcolor = skin->prefoppositecolor;
 		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
@@ -5187,33 +5192,25 @@ void A_SignPlayer(mobj_t *actor)
 	else if (locvar1 != -3) // set to a defined skin
 	{
 		// I turned this function into a fucking mess. I'm so sorry. -Lach
-		if (locvar1 == -2) // next skin
+		if (locvar1 == -2) // random skin
 		{
+#define skincheck(num) (player ? !R_SkinUsable(player-players, num) : skins[num].availability > 0)
 			player_t *player = actor->target ? actor->target->player : NULL;
 			UINT8 skinnum;
-#define skincheck(num) (player ? !R_SkinUsable(player-players, num) : skins[num].availability > 0)
-			if (ov->skin == NULL) // pick a random skin to start with!
+			UINT8 skincount = 0;
+			for (skincount = 0; skincount < numskins; skincount++)
+				if (!skincheck(skincount))
+					skincount++;
+			skinnum = P_RandomKey(skincount);
+			for (skincount = 0; skincount < numskins; skincount++)
 			{
-				UINT8 skincount = 0;
-				for (skincount = 0; skincount < numskins; skincount++)
-					if (!skincheck(skincount))
-						skincount++;
-				skinnum = P_RandomKey(skincount);
-				for (skincount = 0; skincount < numskins; skincount++)
-				{
-					if (skincount > skinnum)
-						break;
-					if (skincheck(skincount))
-						skinnum++;
-				}
+				if (skincount > skinnum)
+					break;
+				if (skincheck(skincount))
+					skinnum++;
 			}
-			else // otherwise, advance 1 skin
-			{
-				skinnum = (skin_t*)ov->skin-skins;
-				while ((skinnum = (skinnum + 1) % numskins) && skincheck(skinnum));
-			}
-#undef skincheck
 			skin = &skins[skinnum];
+#undef skincheck
 		}
 		else // specific skin
 			skin = &skins[locvar1];
@@ -5221,21 +5218,33 @@ void A_SignPlayer(mobj_t *actor)
 		facecolor = skin->prefcolor;
 		if (signcolor)
 			;
+		else if (!skin->sprites[SPR2_SIGN].numframes)
+			signcolor = facecolor;
 		else if (skin->prefoppositecolor)
 			signcolor = skin->prefoppositecolor;
 		else if (facecolor)
 			signcolor = Color_Opposite[facecolor - 1][0];
 	}
 
-	if (skin && skin->sprites[SPR2_SIGN].numframes) // player face
+	if (skin)
 	{
-		ov->color = facecolor;
-		ov->skin = skin;
-		P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+		if (skin->sprites[SPR2_SIGN].numframes) // player face
+		{
+			ov->color = facecolor;
+			ov->skin = skin;
+			P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+		}
+		else // CLEAR! sign
+		{
+			ov->color = SKINCOLOR_NONE;
+			ov->skin = NULL; // needs to be NULL in the case of SF_HIRES characters
+			P_SetMobjState(ov, actor->info->missilestate); // S_CLEARSIGN
+		}
 	}
 	else // Eggman face
 	{
 		ov->color = SKINCOLOR_NONE;
+		ov->skin = NULL;
 		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		if (!signcolor)
 			signcolor = SKINCOLOR_CARBON;

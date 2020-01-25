@@ -3400,7 +3400,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 		if (!((p->powers[pw_super]) || (p->powers[pw_invulnerability])))
 		{
 			boolean electric = !!(p->powers[pw_shield] & SH_PROTECTELECTRIC);
-			if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER)))
+			if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER) && !(mobj->eflags & MFE_TOUCHLAVA)))
 			{ // Water removes electric and non-water fire shields...
 				P_FlashPal(p,
 				electric
@@ -3906,11 +3906,15 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 			mobj->z += mobj->momz;
 			P_SetThingPosition(mobj);
 			P_CheckPosition(mobj, mobj->x, mobj->y);
+			mobj->floorz = tmfloorz;
+			mobj->ceilingz = tmceilingz;
 			goto animonly;
 		}
 		else if (mobj->player->powers[pw_carry] == CR_MACESPIN)
 		{
 			P_CheckPosition(mobj, mobj->x, mobj->y);
+			mobj->floorz = tmfloorz;
+			mobj->ceilingz = tmceilingz;
 			goto animonly;
 		}
 	}
@@ -10557,6 +10561,22 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	else
 		mobj->z = z;
 
+	// Set shadowscale here, before spawn hook so that Lua can change it
+	if (
+		type == MT_PLAYER ||
+		type == MT_ROLLOUTROCK ||
+		type == MT_EGGMOBILE4_MACE ||
+		(type >= MT_SMALLMACE && type <= MT_REDSPRINGBALL) ||
+		(mobj->flags & (MF_ENEMY|MF_BOSS))
+	)
+		mobj->shadowscale = FRACUNIT;
+	else if (
+		type >= MT_RING && type <= MT_FLINGEMERALD && type != MT_EMERALDSPAWN
+	)
+		mobj->shadowscale = 2*FRACUNIT/3;
+	else
+		mobj->shadowscale = 0;
+
 #ifdef HAVE_BLUA
 	// DANGER! This can cause P_SpawnMobj to return NULL!
 	// Avoid using P_RemoveMobj on the newly created mobj in "MobjSpawn" Lua hooks!
@@ -11098,7 +11118,7 @@ void P_SpawnPrecipitation(void)
 		x = basex + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
 		y = basey + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
 
-		precipsector = R_IsPointInSubsector(x, y);
+		precipsector = R_PointInSubsectorOrNull(x, y);
 
 		// No sector? Stop wasting time,
 		// move on to the next entry in the blockmap

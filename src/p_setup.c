@@ -222,6 +222,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
 	mapheaderinfo[num]->startrings = 0;
+	mapheaderinfo[num]->keywords[0] = '\0';
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
 	mapheaderinfo[num]->mustrack = 0;
@@ -3096,7 +3097,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !players[i].spectator)
+		if (playeringame[i] && !(players[i].spectator && players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -3118,7 +3119,7 @@ static void P_InitTagGametype(void)
 	if (players[playersactive[i]].mo)
 		P_RemoveMobj(players[playersactive[i]].mo);
 
-	G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
+	G_SpawnPlayer(playersactive[i]); //respawn the lucky player in his dedicated spawn location.
 }
 
 static void P_SetupCamera(void)
@@ -3296,7 +3297,7 @@ static void P_InitPlayers(void)
 			G_DoReborn(i);
 		else // gametype is GT_COOP or GT_RACE
 		{
-			G_SpawnPlayer(i, players[i].starposttime);
+			G_SpawnPlayer(i);
 			if (players[i].starposttime)
 				P_ClearStarPost(players[i].starpostnum);
 		}
