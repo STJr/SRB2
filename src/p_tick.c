@@ -603,7 +603,7 @@ void P_Ticker(boolean run)
 				if (players[i].quittime == 30 * TICRATE)
 					P_CheckSurvivors();
 
-				if (server && players[i].quittime >= FixedMul(cv_rejointimeout.value, 60 * TICRATE)
+				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
 				&& !(players[i].quittime % TICRATE))
 					SendKick(i, KICK_MSG_PLAYER_QUIT);
 			}
