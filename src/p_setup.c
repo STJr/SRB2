@@ -2770,6 +2770,18 @@ static void P_ConvertBinaryMap(void)
 			break;
 		}
 	}
+
+	for (i = 0; i < nummapthings; i++)
+	{
+		switch (mapthings[i].type)
+		{
+		case 750:
+			mapthings[i].tag = mapthings[i].angle;
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 /** Compute MD5 message digest for bytes read from memory source
