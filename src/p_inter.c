@@ -1428,102 +1428,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 // Misc touchables //
 // *************** //
 		case MT_STARPOST:
-			if (player->bot)
-				return;
-			// In circuit, player must have touched all previous starposts
-			if (circuitmap
-				&& special->health - player->starpostnum > 1)
-			{
-				// blatant reuse of a variable that's normally unused in circuit
-				if (!player->tossdelay)
-					S_StartSound(toucher, sfx_lose);
-				player->tossdelay = 3;
-				return;
-			}
-
-			// With the parameter + angle setup, we can go up to 1365 star posts. Who needs that many?
-			if (special->health > 1365)
-			{
-				CONS_Debug(DBG_GAMELOGIC, "Bad Starpost Number!\n");
-				return;
-			}
-
-			if (player->starpostnum >= special->health)
-				return; // Already hit this post
-
-			{
-				mobj_t *checkbase = (special->spawnpoint && (special->spawnpoint->options & MTF_AMBUSH)) ? special : toucher;
-
-				if (cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (netgame || multiplayer))
-				{
-					for (i = 0; i < MAXPLAYERS; i++)
-					{
-						if (playeringame[i])
-						{
-							if (players[i].bot) // ignore dumb, stupid tails
-								continue;
-
-							players[i].starposttime = leveltime;
-							players[i].starpostx = checkbase->x>>FRACBITS;
-							players[i].starposty = checkbase->y>>FRACBITS;
-							players[i].starpostz = special->z>>FRACBITS;
-							players[i].starpostangle = special->angle;
-							players[i].starpostscale = player->mo->destscale;
-							if (special->flags2 & MF2_OBJECTFLIP)
-							{
-								players[i].starpostscale *= -1;
-								players[i].starpostz += special->height>>FRACBITS;
-							}
-							players[i].starpostnum = special->health;
-
-							if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
-								P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
-						}
-					}
-					S_StartSound(NULL, special->info->painsound);
-				}
-				else
-				{
-					// Save the player's time and position.
-					player->starposttime = leveltime;
-					player->starpostx = checkbase->x>>FRACBITS;
-					player->starposty = checkbase->y>>FRACBITS;
-					player->starpostz = special->z>>FRACBITS;
-					player->starpostangle = special->angle;
-					player->starpostscale = player->mo->destscale;
-					if (special->flags2 & MF2_OBJECTFLIP)
-					{
-						player->starpostscale *= -1;
-						player->starpostz += special->height>>FRACBITS;
-					}
-					player->starpostnum = special->health;
-					S_StartSound(toucher, special->info->painsound);
-				}
-			}
-
-			P_ClearStarPost(special->health);
-
-			// Find all starposts in the level with this value - INCLUDING this one!
-			if (!(netgame && circuitmap && player != &players[consoleplayer]))
-			{
-				thinker_t *th;
-				mobj_t *mo2;
-
-				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
-
-					mo2 = (mobj_t *)th;
-
-					if (mo2->type != MT_STARPOST)
-						continue;
-					if (mo2->health != special->health)
-						continue;
-
-					P_SetMobjState(mo2, mo2->info->painstate);
-				}
-			}
+			P_TouchStarPost(special, player, special->spawnpoint && (special->spawnpoint->options & MTF_OBJECTSPECIAL));
 			return;
 
 		case MT_FAKEMOBILE:
@@ -1873,6 +1778,112 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 	S_StartSound(toucher, special->info->deathsound); // was NULL, but changed to player so you could hear others pick up rings
 	P_KillMobj(special, NULL, toucher, 0);
+}
+
+/** Saves a player's level progress at a star post
+  *
+  * \param post The star post to trigger
+  * \param player The player that should receive the checkpoint
+  * \param snaptopost If true, the respawn point will use the star post's position, otherwise player x/y and star post z
+  */
+void P_TouchStarPost(mobj_t *post, player_t *player, boolean snaptopost)
+{
+	size_t i;
+	mobj_t *toucher = player->mo;
+	mobj_t *checkbase = snaptopost ? post : toucher;
+
+	if (player->bot)
+		return;
+	// In circuit, player must have touched all previous starposts
+	if (circuitmap
+		&& post->health - player->starpostnum > 1)
+	{
+		// blatant reuse of a variable that's normally unused in circuit
+		if (!player->tossdelay)
+			S_StartSound(toucher, sfx_lose);
+		player->tossdelay = 3;
+		return;
+	}
+
+	// With the parameter + angle setup, we can go up to 1365 star posts. Who needs that many?
+	if (post->health > 1365)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Bad Starpost Number!\n");
+		return;
+	}
+
+	if (player->starpostnum >= post->health)
+		return; // Already hit this post
+
+	if (cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (netgame || multiplayer))
+	{
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i])
+			{
+				if (players[i].bot) // ignore dumb, stupid tails
+					continue;
+
+				players[i].starposttime = leveltime;
+				players[i].starpostx = checkbase->x>>FRACBITS;
+				players[i].starposty = checkbase->y>>FRACBITS;
+				players[i].starpostz = post->z>>FRACBITS;
+				players[i].starpostangle = post->angle;
+				players[i].starpostscale = player->mo->destscale;
+				if (post->flags2 & MF2_OBJECTFLIP)
+				{
+					players[i].starpostscale *= -1;
+					players[i].starpostz += post->height>>FRACBITS;
+				}
+				players[i].starpostnum = post->health;
+
+				if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
+					P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
+			}
+		}
+		S_StartSound(NULL, post->info->painsound);
+	}
+	else
+	{
+		// Save the player's time and position.
+		player->starposttime = leveltime;
+		player->starpostx = checkbase->x>>FRACBITS;
+		player->starposty = checkbase->y>>FRACBITS;
+		player->starpostz = post->z>>FRACBITS;
+		player->starpostangle = post->angle;
+		player->starpostscale = player->mo->destscale;
+		if (post->flags2 & MF2_OBJECTFLIP)
+		{
+			player->starpostscale *= -1;
+			player->starpostz += post->height>>FRACBITS;
+		}
+		player->starpostnum = post->health;
+		S_StartSound(toucher, post->info->painsound);
+	}
+
+	P_ClearStarPost(post->health);
+
+	// Find all starposts in the level with this value - INCLUDING this one!
+	if (!(netgame && circuitmap && player != &players[consoleplayer]))
+	{
+		thinker_t *th;
+		mobj_t *mo2;
+
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
+			mo2 = (mobj_t *)th;
+
+			if (mo2->type != MT_STARPOST)
+				continue;
+			if (mo2->health != post->health)
+				continue;
+
+			P_SetMobjState(mo2, mo2->info->painstate);
+		}
+	}
 }
 
 /** Prints death messages relating to a dying or hit player.
