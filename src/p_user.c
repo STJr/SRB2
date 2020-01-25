@@ -7917,7 +7917,7 @@ static void P_SkidStuff(player_t *player)
 		else if (player->skidtime == 1)
 			player->skidtime = 3*TICRATE+1;
 		// Spawn a particle every 3 tics.
-		else if (!(player->skidtime % 3))
+		else if (!(player->skidtime % 3) && !(player->charflags & SF_NOSKID))
 		{
 			P_SpawnSkidDust(player, player->mo->radius, true);
 		}
