@@ -7859,7 +7859,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 //
 // P_SpawnSkidDust
 //
-// Spawns spindash dust randomly around the mobj using its radius as a bound
+// Spawns spindash dust randomly around the player within a certain radius.
 //
 static void P_SpawnSkidDust(player_t *player, fixed_t radius, boolean sound)
 {
