@@ -6490,7 +6490,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		DMG_FIRE,       // mass
 		1,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		MF_NOBLOCKMAP|MF_MISSILE|MF_PAIN|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 
