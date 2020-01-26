@@ -24,9 +24,6 @@
 #include "r_opengl.h"
 #include "r_vbo.h"
 
-//#include "../../p_tick.h" // for leveltime (NOTE: THIS IS BAD, FIGURE OUT HOW TO PROPERLY IMPLEMENT gl_leveltime)
-#include "../../r_main.h" // AIMINGTODY (ALSO BAD)
-
 #if defined (HWRENDER) && !defined (NOROPENGL)
 
 struct GLRGBAFloat
