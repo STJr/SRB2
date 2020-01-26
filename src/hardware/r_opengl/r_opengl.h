@@ -57,6 +57,15 @@
 #undef DEBUG_TO_FILE            // maybe defined in previous *.h
 #define DEBUG_TO_FILE           // output debugging msgs to ogllog.txt
 
+// todo: find some way of getting SDL to log to ogllog.txt, without
+// interfering with r_opengl.dll
+#ifdef HAVE_SDL
+#undef DEBUG_TO_FILE
+#endif
+//#if defined(HAVE_SDL) && !defined(_DEBUG)
+//#undef DEBUG_TO_FILE
+//#endif
+
 #ifdef DEBUG_TO_FILE
 extern FILE             *gllogstream;
 #endif
