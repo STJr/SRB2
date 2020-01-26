@@ -93,16 +93,10 @@ static GLfloat    modelMatrix[16];
 static GLfloat    projMatrix[16];
 static GLint       viewport[4];
 
-// Yay for arbitrary  numbers! NextTexAvail is buggy for some reason.
 // Sryder:	NextTexAvail is broken for these because palette changes or changes to the texture filter or antialiasing
 //			flush all of the stored textures, leaving them unavailable at times such as between levels
 //			These need to start at 0 and be set to their number, and be reset to 0 when deleted so that intel GPUs
 //			can know when the textures aren't there, as textures are always considered resident in their virtual memory
-// TODO:	Store them in a more normal way
-#define SCRTEX_SCREENTEXTURE 4294967295U
-#define SCRTEX_STARTSCREENWIPE 4294967294U
-#define SCRTEX_ENDSCREENWIPE 4294967293U
-#define SCRTEX_FINALSCREENTEXTURE 4294967292U
 static GLuint screentexture = 0;
 static GLuint startScreenWipe = 0;
 static GLuint endScreenWipe = 0;
@@ -2404,7 +2398,7 @@ EXPORT void HWRAPI(StartScreenWipe) (void)
 
 	// Create screen texture
 	if (firstTime)
-		startScreenWipe = SCRTEX_STARTSCREENWIPE;
+		pglGenTextures(1, &startScreenWipe);
 	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
 
 	if (firstTime)
@@ -2435,7 +2429,7 @@ EXPORT void HWRAPI(EndScreenWipe)(void)
 
 	// Create screen texture
 	if (firstTime)
-		endScreenWipe = SCRTEX_ENDSCREENWIPE;
+		pglGenTextures(1, &endScreenWipe);
 	pglBindTexture(GL_TEXTURE_2D, endScreenWipe);
 
 	if (firstTime)
@@ -2606,7 +2600,7 @@ EXPORT void HWRAPI(MakeScreenTexture) (void)
 
 	// Create screen texture
 	if (firstTime)
-		screentexture = SCRTEX_SCREENTEXTURE;
+		pglGenTextures(1, &screentexture);
 	pglBindTexture(GL_TEXTURE_2D, screentexture);
 
 	if (firstTime)
@@ -2636,7 +2630,7 @@ EXPORT void HWRAPI(MakeScreenFinalTexture) (void)
 
 	// Create screen texture
 	if (firstTime)
-		finalScreenTexture = SCRTEX_FINALSCREENTEXTURE;
+		pglGenTextures(1, &finalScreenTexture);
 	pglBindTexture(GL_TEXTURE_2D, finalScreenTexture);
 
 	if (firstTime)
