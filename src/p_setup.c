@@ -960,6 +960,8 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->dx = v2->x - v1->x;
 	ld->dy = v2->y - v1->y;
 
+	ld->alpha = FRACUNIT;
+
 	ld->bbox[BOXLEFT] = min(v1->x, v2->x);
 	ld->bbox[BOXRIGHT] = max(v1->x, v2->x);
 	ld->bbox[BOXBOTTOM] = min(v1->y, v2->y);
@@ -1461,6 +1463,8 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].sidenum[0] = atol(val);
 	else if (fastcmp(param, "sideback"))
 		lines[i].sidenum[1] = atol(val);
+	else if (fastcmp(param, "alpha"))
+		lines[i].alpha = FLOAT_TO_FIXED(atof(val));
 
 	// Flags
 	else if (fastcmp(param, "blocking") && fastcmp("true", val))
@@ -2765,6 +2769,17 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].special != 720)
 				lines[i].args[1] = lines[i].tag;
 			lines[i].special = 720;
+			break;
+		case 900: //Translucent wall (10%)
+		case 901: //Translucent wall (20%)
+		case 902: //Translucent wall (30%)
+		case 903: //Translucent wall (40%)
+		case 904: //Translucent wall (50%)
+		case 905: //Translucent wall (60%)
+		case 906: //Translucent wall (70%)
+		case 907: //Translucent wall (80%)
+		case 908: //Translucent wall (90%)
+			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
 			break;
 		default:
 			break;
