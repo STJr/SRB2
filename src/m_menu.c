@@ -3758,6 +3758,12 @@ void M_SetupNextMenu(menu_t *menudef)
 	hidetitlemap = false;
 }
 
+// Guess I'll put this here, idk
+boolean M_MouseNeeded(void)
+{
+	return (currentMenu == &MessageDef && currentMenu->prevMenu == &OP_ChangeControlsDef);
+}
+
 //
 // M_Ticker
 //
