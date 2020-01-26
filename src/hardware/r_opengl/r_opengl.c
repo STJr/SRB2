@@ -41,7 +41,7 @@ static const GLubyte white[4] = { 255, 255, 255, 255 };
 // ==========================================================================
 
 // With OpenGL 1.1+, the first texture should be 1
-#define NOTEXTURE_NUM     0     // small white texture
+#define NOTEXTURE_NUM     1     // small white texture
 #define FIRST_TEX_AVAIL   (NOTEXTURE_NUM + 1)
 
 #define      N_PI_DEMI               (M_PIl/2.0f) //(1.5707963268f)
