@@ -41,8 +41,7 @@ static const GLubyte white[4] = { 255, 255, 255, 255 };
 // ==========================================================================
 
 // With OpenGL 1.1+, the first texture should be 1
-#define NOTEXTURE_NUM     1     // small white texture
-#define FIRST_TEX_AVAIL   (NOTEXTURE_NUM + 1)
+static GLuint NOTEXTURE_NUM = 0;
 
 #define      N_PI_DEMI               (M_PIl/2.0f) //(1.5707963268f)
 
@@ -1095,6 +1094,8 @@ static void SetNoTexture(void)
 	// Disable texture.
 	if (tex_downloaded != NOTEXTURE_NUM)
 	{
+		if (NOTEXTURE_NUM == 0)
+			pglGenTextures(1, &NOTEXTURE_NUM);
 		pglBindTexture(GL_TEXTURE_2D, NOTEXTURE_NUM);
 		tex_downloaded = NOTEXTURE_NUM;
 	}
@@ -1209,11 +1210,6 @@ void SetModelView(GLint w, GLint h)
 // -----------------+
 void SetStates(void)
 {
-	// Bind little white RGBA texture to ID NOTEXTURE_NUM.
-	/*
-	FUINT Data[8*8];
-	INT32 i;
-	*/
 #ifdef GL_LIGHT_MODEL_AMBIENT
 	GLfloat LightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
 #endif
@@ -1247,16 +1243,8 @@ void SetStates(void)
 	CurrentPolyFlags = 0xffffffff;
 	SetBlend(0);
 
-	/*
-	for (i = 0; i < 64; i++)
-		Data[i] = 0xffFFffFF;       // white pixel
-	*/
-
-	tex_downloaded = (GLuint)-1;
+	tex_downloaded = 0;
 	SetNoTexture();
-	//pglBindTexture(GL_TEXTURE_2D, NOTEXTURE_NUM);
-	//tex_downloaded = NOTEXTURE_NUM;
-	//pglTexImage2D(GL_TEXTURE_2D, 0, 4, 8, 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, Data);
 
 	pglPolygonOffset(-1.0f, -1.0f);
 
