@@ -205,6 +205,7 @@ static boolean followplayer = true; // specifies whether to follow the player ar
 typedef void (*AMDRAWFLINEFUNC) (const fline_t *fl, INT32 color);
 static AMDRAWFLINEFUNC AM_drawFline;
 
+static void AM_drawPixel(INT32 xx, INT32 yy, INT32 cc);
 static void AM_drawFline_soft(const fline_t *fl, INT32 color);
 
 static void AM_activateNewScale(void)
@@ -713,6 +714,17 @@ static boolean AM_clipMline(const mline_t *ml, fline_t *fl)
 #undef DOOUTCODE
 
 //
+// Draws a pixel.
+//
+static void AM_drawPixel(INT32 xx, INT32 yy, INT32 cc)
+{
+	UINT8 *dest = screens[0];
+	if (xx < 0 || yy < 0 || xx >= vid.width || yy >= vid.height)
+		return; // off the screen
+	dest[(yy*vid.rowbytes) + (xx * vid.bpp)] = (cc & 0xFF);
+}
+
+//
 // Classic Bresenham w/ whatever optimizations needed for speed
 //
 static void AM_drawFline_soft(const fline_t *fl, INT32 color)
@@ -733,8 +745,6 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 	}
 #endif
 
-	#define PUTDOT(xx,yy,cc) V_DrawFill(xx,yy,1,1,cc|V_NOSCALESTART);
-
 	dx = fl->b.x - fl->a.x;
 	ax = 2 * (dx < 0 ? -dx : dx);
 	sx = dx < 0 ? -1 : 1;
@@ -751,7 +761,7 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 		d = ay - ax/2;
 		for (;;)
 		{
-			PUTDOT(x, y, color)
+			AM_drawPixel(x, y, color);
 			if (x == fl->b.x)
 				return;
 			if (d >= 0)
@@ -768,7 +778,7 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 		d = ax - ay/2;
 		for (;;)
 		{
-			PUTDOT(x, y, color)
+			AM_drawPixel(x, y, color);
 			if (y == fl->b.y)
 				return;
 			if (d >= 0)
@@ -780,8 +790,6 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 			d += ax;
 		}
 	}
-
-	#undef PUTDOT
 }
 
 //
