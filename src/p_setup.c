@@ -411,7 +411,7 @@ levelflat refers to an array of level flats,
 or NULL if we want to allocate it now.
 */
 static INT32
-Ploadflat (levelflat_t *levelflat, const char *flatname)
+Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 {
 #ifndef NO_PNG_LUMPS
 	UINT8         buffer[8];
@@ -422,30 +422,25 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 
 	size_t i;
 
-	if (levelflat)
+	// Scan through the already found flats, return if it matches.
+	for (i = 0; i < numlevelflats; i++)
 	{
-		// Scan through the already found flats, return if it matches.
-		for (i = 0; i < numlevelflats; i++)
-		{
-			if (strnicmp(levelflat[i].name, flatname, 8) == 0)
-				return i;
-		}
+		if (strnicmp(levelflat[i].name, flatname, 8) == 0)
+			return i;
 	}
 
-#ifndef ZDEBUG
-	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-	if (numlevelflats >= MAXLEVELFLATS)
-		I_Error("Too many flats in level\n");
-
-	if (levelflat)
-		levelflat += numlevelflats;
-	else
+	if (resize)
 	{
 		// allocate new flat memory
 		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
 		levelflat  = levelflats + numlevelflats;
+	}
+	else
+	{
+		if (numlevelflats >= MAXLEVELFLATS)
+			I_Error("Too many flats in level\n");
+
+		levelflat += numlevelflats;
 	}
 
 	// Store the name.
@@ -501,6 +496,10 @@ flatfound:
 		levelflat->u.flat.baselumpnum = LUMPERROR;
 	}
 
+#ifndef ZDEBUG
+	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
 	return ( numlevelflats++ );
 }
 
@@ -508,7 +507,7 @@ flatfound:
 // allocate an id for it, and set the levelflat (to speedup search)
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 {
-	return Ploadflat(levelflat, flatname);
+	return Ploadflat(levelflat, flatname, false);
 }
 
 // help function for Lua and $$$.sav reading
@@ -517,7 +516,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	return Ploadflat(levelflats, flatname);
+	return Ploadflat(levelflats, flatname, true);
 }
 
 // help function for $$$.sav checking
@@ -3097,7 +3096,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !players[i].spectator)
+		if (playeringame[i] && !(players[i].spectator && players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -3119,7 +3118,7 @@ static void P_InitTagGametype(void)
 	if (players[playersactive[i]].mo)
 		P_RemoveMobj(players[playersactive[i]].mo);
 
-	G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
+	G_SpawnPlayer(playersactive[i]); //respawn the lucky player in his dedicated spawn location.
 }
 
 static void P_SetupCamera(void)
@@ -3297,7 +3296,7 @@ static void P_InitPlayers(void)
 			G_DoReborn(i);
 		else // gametype is GT_COOP or GT_RACE
 		{
-			G_SpawnPlayer(i, players[i].starposttime);
+			G_SpawnPlayer(i);
 			if (players[i].starposttime)
 				P_ClearStarPost(players[i].starpostnum);
 		}

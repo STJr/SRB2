@@ -364,6 +364,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->bot);
 	else if (fastcmp(field,"jointime"))
 		lua_pushinteger(L, plr->jointime);
+	else if (fastcmp(field,"quittime"))
+		lua_pushinteger(L, plr->quittime);
 #ifdef HWRENDER
 	else if (fastcmp(field,"fovadd"))
 		lua_pushfixed(L, plr->fovadd);
@@ -705,6 +707,8 @@ static int player_set(lua_State *L)
 		return NOSET;
 	else if (fastcmp(field,"jointime"))
 		plr->jointime = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"quittime"))
+		plr->quittime = (tic_t)luaL_checkinteger(L, 3);
 #ifdef HWRENDER
 	else if (fastcmp(field,"fovadd"))
 		plr->fovadd = luaL_checkfixed(L, 3);

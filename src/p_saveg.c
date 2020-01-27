@@ -256,6 +256,7 @@ static void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].onconveyor);
 
 		WRITEUINT32(save_p, players[i].jointime);
+		WRITEUINT32(save_p, players[i].quittime);
 
 		WRITEUINT16(save_p, flags);
 
@@ -448,6 +449,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].onconveyor = READINT32(save_p);
 
 		players[i].jointime = READUINT32(save_p);
+		players[i].quittime = READUINT32(save_p);
 
 		flags = READUINT16(save_p);
 
