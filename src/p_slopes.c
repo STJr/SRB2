@@ -428,11 +428,11 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 		if (mt->type != 750) // Haha, I'm hijacking the old Chaos Spawn thingtype for something!
 			continue;
 
-		if (!vertices[0] && mt->angle == tag1)
+		if (!vertices[0] && mt->tag == tag1)
 			vertices[0] = mt;
-		else if (!vertices[1] && mt->angle == tag2)
+		else if (!vertices[1] && mt->tag == tag2)
 			vertices[1] = mt;
-		else if (!vertices[2] && mt->angle == tag3)
+		else if (!vertices[2] && mt->tag == tag3)
 			vertices[2] = mt;
 	}
 
