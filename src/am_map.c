@@ -354,12 +354,6 @@ static void AM_LevelInit(void)
 	f_w = vid.width;
 	f_h = vid.height;
 
-	AM_drawFline = AM_drawFline_soft;
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		AM_drawFline = HWR_drawAMline;
-#endif
-
 	AM_findMinMaxBoundaries();
 	scale_mtof = FixedDiv(min_scale_mtof*10, 7*FRACUNIT);
 	if (scale_mtof > max_scale_mtof)
@@ -1099,6 +1093,12 @@ void AM_Drawer(void)
 {
 	if (!automapactive)
 		return;
+
+	AM_drawFline = AM_drawFline_soft;
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		AM_drawFline = HWR_drawAMline;
+#endif
 
 	AM_clearFB(BACKGROUND);
 	if (draw_grid) AM_drawGrid(GRIDCOLORS);
