@@ -346,15 +346,21 @@ static void AM_initVariables(void)
 }
 
 //
+// Called when the screen size changed.
+//
+static void AM_FrameBufferInit(void)
+{
+	f_x = f_y = 0;
+	f_w = vid.width;
+	f_h = vid.height;
+}
+
+//
 // should be called at the start of every level
 // right now, i figure it out myself
 //
 static void AM_LevelInit(void)
 {
-	f_x = f_y = 0;
-	f_w = vid.width;
-	f_h = vid.height;
-
 	AM_findMinMaxBoundaries();
 	scale_mtof = FixedDiv(min_scale_mtof*10, 7*FRACUNIT);
 	if (scale_mtof > max_scale_mtof)
@@ -376,7 +382,7 @@ void AM_Stop(void)
   *
   * \sa AM_Stop
   */
-static inline void AM_Start(void)
+void AM_Start(void)
 {
 	static INT32 lastlevel = -1;
 
@@ -385,8 +391,12 @@ static inline void AM_Start(void)
 	am_stopped = false;
 	if (lastlevel != gamemap || am_recalc) // screen size changed
 	{
-		AM_LevelInit();
-		lastlevel = gamemap;
+		AM_FrameBufferInit();
+		if (lastlevel != gamemap)
+		{
+			AM_LevelInit();
+			lastlevel = gamemap;
+		}
 		am_recalc = false;
 	}
 	AM_initVariables();
