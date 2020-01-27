@@ -69,7 +69,8 @@ void HWR_DrawScreenFinalTexture(int width, int height);
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
 
-void HWR_LoadShaders(UINT16 wadnum, boolean PK3);
+void HWR_ReadShaders(UINT16 wadnum, boolean PK3);
+void HWR_LoadShaders(void);
 
 extern CV_PossibleValue_t granisotropicmode_cons_t[];
 
