@@ -464,7 +464,7 @@ void SCR_ChangeRenderer(void)
 	{
 		target_renderer = cv_renderer.value;
 #ifdef HWRENDER
-		if (M_CheckParm("-opengl"))
+		if (M_CheckParm("-opengl") && hwrenderloaded)
 			target_renderer = rendermode = render_opengl;
 		else
 #endif
