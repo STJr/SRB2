@@ -533,6 +533,7 @@ boolean AM_Responder(event_t *ev)
 					}
 					else
 						AM_restoreScaleAndLoc();
+					AM_setWindowPanning();
 					break;
 				case AM_FOLLOWKEY:
 					followplayer = !followplayer;
