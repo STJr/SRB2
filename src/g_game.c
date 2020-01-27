@@ -1941,6 +1941,10 @@ boolean G_IsTitleCardAvailable(void)
 	if (gametyperules & GTR_NOTITLECARD)
 		return false;
 
+	// The current level has no name.
+	if (!mapheaderinfo[gamemap-1]->lvlttl[0])
+		return false;
+
 	// The title card is available.
 	return true;
 }
