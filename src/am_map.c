@@ -347,7 +347,7 @@ static void AM_initVariables(void)
 }
 
 //
-// Called when the screen size changed.
+// Called when the screen size changes.
 //
 static void AM_FrameBufferInit(void)
 {
