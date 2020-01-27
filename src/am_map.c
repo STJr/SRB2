@@ -160,6 +160,7 @@ static boolean am_stopped = true;
 static INT32 f_x, f_y;	// location of window on screen (always zero for both)
 static INT32 f_w, f_h;	// size of window on screen (always the screen width and height respectively)
 
+static boolean m_keydown[4]; // which window panning keys are being pressed down?
 static mpoint_t m_paninc; // how far the window pans each tic (map coords)
 static fixed_t mtof_zoommul; // how far the window zooms in each tic (map coords)
 static fixed_t ftom_zoommul; // how far the window zooms in each tic (fb coords)
@@ -422,6 +423,28 @@ static void AM_maxOutWindowScale(void)
 	AM_activateNewScale();
 }
 
+//
+// set window panning
+//
+static void AM_setWindowPanning(void)
+{
+	// up and down
+	if (m_keydown[2]) // pan up
+		m_paninc.y = FTOM(F_PANINC);
+	else if (m_keydown[3]) // pan down
+		m_paninc.y = -FTOM(F_PANINC);
+	else
+		m_paninc.y = 0;
+
+	// left and right
+	if (m_keydown[0]) // pan right
+		m_paninc.x = FTOM(F_PANINC);
+	else if (m_keydown[1]) // pan left
+		m_paninc.x = -FTOM(F_PANINC);
+	else
+		m_paninc.x = 0;
+}
+
 /** Responds to user inputs in automap mode.
   *
   * \param ev Event to possibly respond to.
@@ -454,35 +477,49 @@ boolean AM_Responder(event_t *ev)
 			{
 				case AM_PANRIGHTKEY: // pan right
 					if (!followplayer)
-						m_paninc.x = FTOM(F_PANINC);
+					{
+						m_keydown[0] = true;
+						AM_setWindowPanning();
+					}
 					else
 						rc = false;
 					break;
 				case AM_PANLEFTKEY: // pan left
 					if (!followplayer)
-						m_paninc.x = -FTOM(F_PANINC);
+					{
+						m_keydown[1] = true;
+						AM_setWindowPanning();
+					}
 					else
 						rc = false;
 					break;
 				case AM_PANUPKEY: // pan up
 					if (!followplayer)
-						m_paninc.y = FTOM(F_PANINC);
+					{
+						m_keydown[2] = true;
+						AM_setWindowPanning();
+					}
 					else
 						rc = false;
 					break;
 				case AM_PANDOWNKEY: // pan down
 					if (!followplayer)
-						m_paninc.y = -FTOM(F_PANINC);
+					{
+						m_keydown[3] = true;
+						AM_setWindowPanning();
+					}
 					else
 						rc = false;
 					break;
 				case AM_ZOOMOUTKEY: // zoom out
 					mtof_zoommul = M_ZOOMOUT;
 					ftom_zoommul = M_ZOOMIN;
+					AM_setWindowPanning();
 					break;
 				case AM_ZOOMINKEY: // zoom in
 					mtof_zoommul = M_ZOOMIN;
 					ftom_zoommul = M_ZOOMOUT;
+					AM_setWindowPanning();
 					break;
 				case AM_TOGGLEKEY:
 					AM_Stop();
@@ -515,14 +552,32 @@ boolean AM_Responder(event_t *ev)
 			switch (ev->data1)
 			{
 				case AM_PANRIGHTKEY:
+					if (!followplayer)
+					{
+						m_keydown[0] = false;
+						AM_setWindowPanning();
+					}
+					break;
 				case AM_PANLEFTKEY:
 					if (!followplayer)
-						m_paninc.x = 0;
+					{
+						m_keydown[1] = false;
+						AM_setWindowPanning();
+					}
 					break;
 				case AM_PANUPKEY:
+					if (!followplayer)
+					{
+						m_keydown[2] = false;
+						AM_setWindowPanning();
+					}
+					break;
 				case AM_PANDOWNKEY:
 					if (!followplayer)
-						m_paninc.y = 0;
+					{
+						m_keydown[3] = false;
+						AM_setWindowPanning();
+					}
 					break;
 				case AM_ZOOMOUTKEY:
 				case AM_ZOOMINKEY:
