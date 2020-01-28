@@ -515,7 +515,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglTexEnvi, glTexEnvi)
 	GETOPENGLFUNC(pglTexParameteri, glTexParameteri)
 	GETOPENGLFUNC(pglTexImage2D, glTexImage2D)
-	GETOPENGLFUNC(pglTexSubImage2D , glTexSubImage2D)
+	GETOPENGLFUNC(pglTexSubImage2D, glTexSubImage2D)
 
 	GETOPENGLFUNC(pglGenTextures, glGenTextures)
 	GETOPENGLFUNC(pglDeleteTextures, glDeleteTextures)
@@ -1181,9 +1181,6 @@ void SetModelView(GLint w, GLint h)
 	screen_height = h;
 
 	pglViewport(0, 0, w, h);
-#ifdef GL_ACCUM_BUFFER_BIT
-	pglClear(GL_ACCUM_BUFFER_BIT);
-#endif
 
 	pglMatrixMode(GL_PROJECTION);
 	pglLoadIdentity();
