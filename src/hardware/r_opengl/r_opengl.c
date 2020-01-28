@@ -91,6 +91,10 @@ static GLuint startScreenWipe = 0;
 static GLuint endScreenWipe = 0;
 static GLuint finalScreenTexture = 0;
 
+// Lactozilla: Set shader programs and uniforms
+static void *Shader_Load(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade);
+static void Shader_SetUniforms(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade);
+
 // shortcut for ((float)1/i)
 static const GLfloat byte2float[256] = {
 	0.000000f, 0.003922f, 0.007843f, 0.011765f, 0.015686f, 0.019608f, 0.023529f, 0.027451f,
@@ -1871,7 +1875,7 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 	}
 }
 
-static void load_shaders(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade)
+static void *Shader_Load(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade)
 {
 #ifdef GL_SHADERS
 	if (gl_shadersenabled)
@@ -1879,56 +1883,66 @@ static void load_shaders(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *
 		gl_shaderprogram_t *shader = &gl_shaderprograms[gl_currentshaderprogram];
 		if (shader->program)
 		{
-			boolean custom = (gl_shaderprograms[gl_currentshaderprogram].custom);
-			// 13062019
-			// Check for fog
-			//if (changed)
-			{
-				pglUseProgram(gl_shaderprograms[gl_currentshaderprogram].program);
-			}
-
-			// set uniforms
-			{
-				#define UNIFORM_1(uniform, a, function) \
-					if (uniform != -1) \
-						function (uniform, a);
-
-				#define UNIFORM_2(uniform, a, b, function) \
-					if (uniform != -1) \
-						function (uniform, a, b);
-
-				#define UNIFORM_3(uniform, a, b, c, function) \
-					if (uniform != -1) \
-						function (uniform, a, b, c);
-
-				#define UNIFORM_4(uniform, a, b, c, d, function) \
-					if (uniform != -1) \
-						function (uniform, a, b, c, d);
-
-				// polygon
-				UNIFORM_4(shader->uniforms[gluniform_poly_color], poly->red, poly->green, poly->blue, poly->alpha, pglUniform4f);
-				UNIFORM_4(shader->uniforms[gluniform_tint_color], tint->red, tint->green, tint->blue, tint->alpha, pglUniform4f);
-				UNIFORM_4(shader->uniforms[gluniform_fade_color], fade->red, fade->green, fade->blue, fade->alpha, pglUniform4f);
-				UNIFORM_1(shader->uniforms[gluniform_lighting], Surface->LightInfo.light_level, pglUniform1f);
-				UNIFORM_1(shader->uniforms[gluniform_fade_start], Surface->LightInfo.fade_start, pglUniform1f);
-				UNIFORM_1(shader->uniforms[gluniform_fade_end], Surface->LightInfo.fade_end, pglUniform1f);
-				UNIFORM_1(shader->uniforms[gluniform_leveltime], ((float)shader_leveltime) / TICRATE, pglUniform1f);
-
-				// Custom shader uniforms
-				//if (custom) { }
-				(void)custom;
-
-				#undef UNIFORM_1
-				#undef UNIFORM_2
-				#undef UNIFORM_3
-				#undef UNIFORM_4
-			}
+			pglUseProgram(gl_shaderprograms[gl_currentshaderprogram].program);
+			Shader_SetUniforms(Surface, poly, tint, fade);
+			return shader;
 		}
 		else
 			pglUseProgram(0);
 	}
 	else
 		pglUseProgram(0);
+#else
+	(void)Surface;
+	(void)poly;
+	(void)tint;
+	(void)fade;
+#endif
+	return NULL;
+}
+
+static void Shader_SetUniforms(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade)
+{
+#ifdef GL_SHADERS
+	if (gl_shadersenabled)
+	{
+		gl_shaderprogram_t *shader = &gl_shaderprograms[gl_currentshaderprogram];
+		if (!shader->program)
+			return;
+
+		#define UNIFORM_1(uniform, a, function) \
+			if (uniform != -1) \
+				function (uniform, a);
+
+		#define UNIFORM_2(uniform, a, b, function) \
+			if (uniform != -1) \
+				function (uniform, a, b);
+
+		#define UNIFORM_3(uniform, a, b, c, function) \
+			if (uniform != -1) \
+				function (uniform, a, b, c);
+
+		#define UNIFORM_4(uniform, a, b, c, d, function) \
+			if (uniform != -1) \
+				function (uniform, a, b, c, d);
+
+		// polygon
+		UNIFORM_4(shader->uniforms[gluniform_poly_color], poly->red, poly->green, poly->blue, poly->alpha, pglUniform4f);
+		UNIFORM_4(shader->uniforms[gluniform_tint_color], tint->red, tint->green, tint->blue, tint->alpha, pglUniform4f);
+		UNIFORM_4(shader->uniforms[gluniform_fade_color], fade->red, fade->green, fade->blue, fade->alpha, pglUniform4f);
+		if (Surface != NULL)
+		{
+			UNIFORM_1(shader->uniforms[gluniform_lighting], Surface->LightInfo.light_level, pglUniform1f);
+			UNIFORM_1(shader->uniforms[gluniform_fade_start], Surface->LightInfo.fade_start, pglUniform1f);
+			UNIFORM_1(shader->uniforms[gluniform_fade_end], Surface->LightInfo.fade_end, pglUniform1f);
+		}
+		UNIFORM_1(shader->uniforms[gluniform_leveltime], ((float)shader_leveltime) / TICRATE, pglUniform1f);
+
+		#undef UNIFORM_1
+		#undef UNIFORM_2
+		#undef UNIFORM_3
+		#undef UNIFORM_4
+	}
 #else
 	(void)Surface;
 	(void)poly;
@@ -2042,7 +2056,7 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUI
 		pglColor4ubv(c);
 	}
 
-	load_shaders(pSurf, &poly, &tint, &fade);
+	Shader_Load(pSurf, &poly, &tint, &fade);
 
 	pglVertexPointer(3, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].x);
 	pglTexCoordPointer(2, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].s);
@@ -2677,7 +2691,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	fade.blue  = byte2float[Surface->FadeColor.s.blue];
 	fade.alpha = byte2float[Surface->FadeColor.s.alpha];
 
-	load_shaders(Surface, &poly, &tint, &fade);
+	Shader_Load(Surface, &poly, &tint, &fade);
 
 	pglEnable(GL_CULL_FACE);
 	pglEnable(GL_NORMALIZE);
