@@ -273,10 +273,6 @@ static void GL_MSG_Error(const char *format, ...)
 #define pglTexImage2D glTexImage2D
 #define pglTexSubImage2D glTexSubImage2D
 
-/* Fog */
-#define pglFogf glFogf
-#define pglFogfv glFogfv
-
 /* 1.1 functions */
 /* texture objects */ //GL_EXT_texture_object
 #define pglGenTextures glGenTextures
@@ -388,12 +384,6 @@ typedef void (APIENTRY * PFNglTexImage2D) (GLenum target, GLint level, GLint int
 static PFNglTexImage2D pglTexImage2D;
 typedef void (APIENTRY * PFNglTexSubImage2D) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
 static PFNglTexSubImage2D pglTexSubImage2D;
-
-/* Fog */
-typedef void (APIENTRY * PFNglFogf) (GLenum pname, GLfloat param);
-static PFNglFogf pglFogf;
-typedef void (APIENTRY * PFNglFogfv) (GLenum pname, const GLfloat *params);
-static PFNglFogfv pglFogfv;
 
 /* 1.1 functions */
 /* texture objects */ //GL_EXT_texture_object
@@ -526,9 +516,6 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglTexParameteri, glTexParameteri)
 	GETOPENGLFUNC(pglTexImage2D, glTexImage2D)
 	GETOPENGLFUNC(pglTexSubImage2D , glTexSubImage2D)
-
-	GETOPENGLFUNC(pglFogf, glFogf)
-	GETOPENGLFUNC(pglFogfv, glFogfv)
 
 	GETOPENGLFUNC(pglGenTextures, glGenTextures)
 	GETOPENGLFUNC(pglDeleteTextures, glDeleteTextures)
