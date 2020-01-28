@@ -600,7 +600,7 @@ void P_Ticker(boolean run)
 			{
 				players[i].quittime++;
 
-				if (players[i].quittime == 30 * TICRATE)
+				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
 					P_CheckSurvivors();
 
 				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
