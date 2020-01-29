@@ -19,6 +19,7 @@
 #include "v_video.h"
 #include "i_video.h"
 #include "m_misc.h"
+#include "st_stuff.h" // st_palette
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -29,10 +30,12 @@
 
 consvar_t cv_gif_optimize = {"gif_optimize", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gif_downscale =  {"gif_downscale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_localcolortable =  {"gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
 static boolean gif_downscale = false; // like changing cvars mid output
+static boolean gif_localcolortable = false;
 static RGBA_t *gif_palette = NULL;
 
 static FILE *gif_out = NULL;
@@ -393,6 +396,41 @@ const UINT8 gifhead_nsid[19] = {0x21,0xFF,0x0B, // extension block + size
 	0x4E,0x45,0x54,0x53,0x43,0x41,0x50,0x45,0x32,0x2E,0x30, // NETSCAPE2.0
 	0x03,0x01,0xFF,0xFF,0x00}; // sub-block, repetitions
 
+
+//
+// GIF_setpalette
+// determine the gif palette.
+//
+static void GIF_setpalette(void)
+{
+	// In hardware mode, uses the master palette
+	size_t palnum = (rendermode == render_soft) ? ((gif_localcolortable) ? max(st_palette, 0) : 0) : 0;
+	gif_palette = ((cv_screenshot_colorprofile.value
+#ifdef HWRENDER
+	&& (rendermode == render_soft)
+#endif
+	) ? &pLocalPalette[palnum*256]
+	: &pMasterPalette[palnum*256]);
+}
+
+//
+// GIF_palwrite
+// writes the gif palette.
+// used both for the header and the local color table.
+//
+static UINT8 *GIF_palwrite(UINT8 *p)
+{
+	INT32 i;
+	RGBA_t *pal = gif_palette;
+	for (i = 0; i < 256; i++)
+	{
+		WRITEUINT8(p, pal[i].s.red);
+		WRITEUINT8(p, pal[i].s.green);
+		WRITEUINT8(p, pal[i].s.blue);
+	}
+	return p;
+}
+
 //
 // GIF_headwrite
 // writes the gif header to the currently open output file.
@@ -402,8 +440,10 @@ static void GIF_headwrite(void)
 {
 	UINT8 *gifhead = Z_Malloc(800, PU_STATIC, NULL);
 	UINT8 *p = gifhead;
-	INT32 i;
+	UINT8 *last_p;
 	UINT16 rwidth, rheight;
+	size_t totalbytes;
+	INT32 i;
 
 	if (!gif_out)
 		return;
@@ -423,30 +463,37 @@ static void GIF_headwrite(void)
 		rwidth = vid.width;
 		rheight = vid.height;
 	}
+
+	last_p = p;
 	WRITEUINT16(p, rwidth);
 	WRITEUINT16(p, rheight);
 
 	// colors, aspect, etc
-	WRITEUINT8(p, 0xF7);
+	WRITEUINT8(p, (gif_localcolortable ? 0xF0 : 0xF7)); // (0xF7 = 1111 0111)
 	WRITEUINT8(p, 0x00);
 	WRITEUINT8(p, 0x00);
 
+	// Lactozilla: should be 800 without a local color table
+	totalbytes = sizeof(gifhead_base) + sizeof(gifhead_nsid) + (p - last_p);
+
 	// write color table
+	if (!gif_localcolortable)
 	{
-		RGBA_t *pal = gif_palette;
-		for (i = 0; i < 256; i++)
-		{
-			WRITEUINT8(p, pal[i].s.red);
-			WRITEUINT8(p, pal[i].s.green);
-			WRITEUINT8(p, pal[i].s.blue);
-		}
+		p = GIF_palwrite(p);
+		totalbytes += (256 * 3);
+	}
+	else
+	{
+		// write a dummy palette
+		for (i = 0; i < 6; i++, totalbytes++)
+			WRITEUINT8(p, 0);
 	}
 
 	// write extension block
 	WRITEMEM(p, gifhead_nsid, sizeof(gifhead_nsid));
 
 	// write to file and be done with it!
-	fwrite(gifhead, 1, 800, gif_out);
+	fwrite(gifhead, 1, totalbytes, gif_out);
 	Z_Free(gifhead);
 }
 
@@ -566,7 +613,15 @@ static void GIF_framewrite(void)
 		WRITEUINT16(p, (UINT16)(blity / scrbuf_downscaleamt));
 		WRITEUINT16(p, (UINT16)(blitw / scrbuf_downscaleamt));
 		WRITEUINT16(p, (UINT16)(blith / scrbuf_downscaleamt));
-		WRITEUINT8(p, 0); // no local table of colors
+
+		if (!gif_localcolortable)
+			WRITEUINT8(p, 0); // no local table of colors
+		else
+		{
+			WRITEUINT8(p, 0x87);  // (0x87 = 1000 0111)
+			GIF_setpalette();
+			p = GIF_palwrite(p);
+		}
 
 		scrbuf_pos = movie_screen + blitx + (blity * vid.width);
 		scrbuf_writeend = scrbuf_pos + (blitw - 1) + ((blith - 1) * vid.width);
@@ -638,15 +693,9 @@ INT32 GIF_open(const char *filename)
 
 	gif_optimize = (!!cv_gif_optimize.value);
 	gif_downscale = (!!cv_gif_downscale.value);
-
-	// GIF color table
-	// In hardware mode, uses the master palette
-	gif_palette = ((cv_screenshot_colorprofile.value
-#ifdef HWRENDER
-	&& (rendermode == render_soft)
-#endif
-	) ? pLocalPalette
-	: pMasterPalette);
+	gif_localcolortable = (!!cv_gif_localcolortable.value);
+	if (!gif_localcolortable)
+		GIF_setpalette();
 
 	GIF_headwrite();
 	gif_frames = 0;
