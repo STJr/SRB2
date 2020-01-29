@@ -434,7 +434,6 @@ static UINT8 *GIF_palwrite(UINT8 *p)
 //
 // GIF_headwrite
 // writes the gif header to the currently open output file.
-// NOTE that this code does not accomodate for palette changes.
 //
 static void GIF_headwrite(void)
 {
