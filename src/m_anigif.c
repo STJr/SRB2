@@ -35,8 +35,12 @@ consvar_t cv_gif_localcolortable =  {"gif_localcolortable", "On", CV_SAVE, CV_On
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
 static boolean gif_downscale = false; // like changing cvars mid output
+
+// Palette handling
 static boolean gif_localcolortable = false;
-static RGBA_t *gif_palette = NULL;
+static boolean gif_colorprofile = false;
+static RGBA_t *gif_headerpalette = NULL;
+static RGBA_t *gif_framepalette = NULL;
 
 static FILE *gif_out = NULL;
 static INT32 gif_frames = 0;
@@ -398,14 +402,13 @@ const UINT8 gifhead_nsid[19] = {0x21,0xFF,0x0B, // extension block + size
 
 
 //
-// GIF_setpalette
-// determine the gif palette.
+// GIF_getpalette
+// determine the palette for the current frame.
 //
-static void GIF_setpalette(void)
+static RGBA_t *GIF_getpalette(size_t palnum)
 {
 	// In hardware mode, uses the master palette
-	size_t palnum = (rendermode == render_soft) ? ((gif_localcolortable) ? max(st_palette, 0) : 0) : 0;
-	gif_palette = ((cv_screenshot_colorprofile.value
+	return ((gif_colorprofile
 #ifdef HWRENDER
 	&& (rendermode == render_soft)
 #endif
@@ -416,12 +419,11 @@ static void GIF_setpalette(void)
 //
 // GIF_palwrite
 // writes the gif palette.
-// used both for the header and the local color table.
+// used both for the header and local color tables.
 //
-static UINT8 *GIF_palwrite(UINT8 *p)
+static UINT8 *GIF_palwrite(UINT8 *p, RGBA_t *pal)
 {
 	INT32 i;
-	RGBA_t *pal = gif_palette;
 	for (i = 0; i < 256; i++)
 	{
 		WRITEUINT8(p, pal[i].s.red);
@@ -439,10 +441,7 @@ static void GIF_headwrite(void)
 {
 	UINT8 *gifhead = Z_Malloc(800, PU_STATIC, NULL);
 	UINT8 *p = gifhead;
-	UINT8 *last_p;
 	UINT16 rwidth, rheight;
-	size_t totalbytes;
-	INT32 i;
 
 	if (!gif_out)
 		return;
@@ -463,36 +462,22 @@ static void GIF_headwrite(void)
 		rheight = vid.height;
 	}
 
-	last_p = p;
 	WRITEUINT16(p, rwidth);
 	WRITEUINT16(p, rheight);
 
 	// colors, aspect, etc
-	WRITEUINT8(p, (gif_localcolortable ? 0xF0 : 0xF7)); // (0xF7 = 1111 0111)
+	WRITEUINT8(p, 0xF7); // (0xF7 = 1111 0111)
 	WRITEUINT8(p, 0x00);
 	WRITEUINT8(p, 0x00);
-
-	// Lactozilla: should be 800 without a local color table
-	totalbytes = sizeof(gifhead_base) + sizeof(gifhead_nsid) + (p - last_p);
 
 	// write color table
-	if (!gif_localcolortable)
-	{
-		p = GIF_palwrite(p);
-		totalbytes += (256 * 3);
-	}
-	else
-	{
-		// write a dummy palette
-		for (i = 0; i < 6; i++, totalbytes++)
-			WRITEUINT8(p, 0);
-	}
+	p = GIF_palwrite(p, gif_headerpalette);
 
 	// write extension block
 	WRITEMEM(p, gifhead_nsid, sizeof(gifhead_nsid));
 
 	// write to file and be done with it!
-	fwrite(gifhead, 1, totalbytes, gif_out);
+	fwrite(gifhead, 1, 800, gif_out);
 	Z_Free(gifhead);
 }
 
@@ -514,7 +499,7 @@ static void hwrconvert(void)
 	INT32 x, y;
 	size_t i = 0;
 
-	InitColorLUT(gif_palette);
+	InitColorLUT(gif_framepalette);
 
 	for (y = 0; y < vid.height; y++)
 	{
@@ -540,6 +525,7 @@ static void GIF_framewrite(void)
 	UINT8 *p;
 	UINT8 *movie_screen = screens[2];
 	INT32 blitx, blity, blitw, blith;
+	boolean palchanged;
 
 	if (!gifframe_data)
 		gifframe_data = Z_Malloc(gifframe_size, PU_STATIC, NULL);
@@ -548,8 +534,18 @@ static void GIF_framewrite(void)
 	if (!gif_out)
 		return;
 
+	// Lactozilla: Compare the header's palette with the current frame's palette and see if it changed.
+	if (gif_localcolortable)
+	{
+		gif_framepalette = GIF_getpalette((rendermode == render_soft) ? ((gif_localcolortable) ? max(st_palette, 0) : 0) : 0);
+		palchanged = memcmp(gif_headerpalette, gif_framepalette, sizeof(RGBA_t) * 256);
+	}
+	else
+		palchanged = false;
+
 	// Compare image data (for optimizing GIF)
-	if (gif_optimize && gif_frames > 0)
+	// If the palette has changed, the entire frame is considered to be different.
+	if (gif_optimize && gif_frames > 0 && (!palchanged))
 	{
 		// before blit movie_screen points to last frame, cur_screen points to this frame
 		UINT8 *cur_screen = screens[0];
@@ -617,9 +613,14 @@ static void GIF_framewrite(void)
 			WRITEUINT8(p, 0); // no local table of colors
 		else
 		{
-			WRITEUINT8(p, 0x87);  // (0x87 = 1000 0111)
-			GIF_setpalette();
-			p = GIF_palwrite(p);
+			if (palchanged)
+			{
+				// The palettes are different, so write the Local Color Table!
+				WRITEUINT8(p, 0x87); // (0x87 = 1000 0111)
+				p = GIF_palwrite(p, gif_framepalette);
+			}
+			else
+				WRITEUINT8(p, 0); // They are equal, no Local Color Table needed.
 		}
 
 		scrbuf_pos = movie_screen + blitx + (blity * vid.width);
@@ -693,8 +694,8 @@ INT32 GIF_open(const char *filename)
 	gif_optimize = (!!cv_gif_optimize.value);
 	gif_downscale = (!!cv_gif_downscale.value);
 	gif_localcolortable = (!!cv_gif_localcolortable.value);
-	if (!gif_localcolortable)
-		GIF_setpalette();
+	gif_colorprofile = (!!cv_screenshot_colorprofile.value);
+	gif_headerpalette = GIF_getpalette(0);
 
 	GIF_headwrite();
 	gif_frames = 0;
