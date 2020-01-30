@@ -322,6 +322,9 @@ typedef struct menu_s
 void M_SetupNextMenu(menu_t *menudef);
 void M_ClearMenus(boolean callexitmenufunc);
 
+// Maybe this goes here????? Who knows.
+boolean M_MouseNeeded(void);
+
 extern menu_t *currentMenu;
 
 extern menu_t MainDef;

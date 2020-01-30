@@ -9143,6 +9143,7 @@ static const char *const HUDITEMS_LIST[] = {
 
 	"RINGS",
 	"RINGSNUM",
+	"RINGSNUMTICS",
 
 	"SCORE",
 	"SCORENUM",
@@ -9162,8 +9163,7 @@ static const char *const HUDITEMS_LIST[] = {
 	"TIMELEFTNUM",
 	"TIMEUP",
 	"HUNTPICS",
-	"POWERUPS",
-	"LAP"
+	"POWERUPS"
 };
 
 static const char *const MENUTYPES_LIST[] = {
