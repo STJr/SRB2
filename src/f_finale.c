@@ -3628,7 +3628,6 @@ void F_StartContinue(void)
 	}
 
 	wipestyleflags = WSF_FADEOUT;
-	F_TryColormapFade(31);
 	G_SetGamestate(GS_CONTINUING);
 	gameaction = ga_nothing;
 
