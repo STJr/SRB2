@@ -1746,6 +1746,18 @@ W_VerifyWAD (FILE *fp, lumpchecklist_t *checklist, boolean status)
 	return true;
 }
 
+// List of blacklisted folders to use when checking the PK3
+static lumpchecklist_t folderblacklist[] =
+{
+	{"Lua/", 4},
+	{"SOC/", 4},
+	{"Sprites/",  8},
+	{"Textures/", 9},
+	{"Patches/", 8},
+	{"Flats/", 6},
+	{"Fades/", 6}
+};
+
 static int
 W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 {
@@ -1790,6 +1802,13 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		fullname = malloc(zentry.namelen + 1);
 		if (fgets(fullname, zentry.namelen + 1, fp) != fullname)
 			return true;
+
+		// Check for folders first, if it's blacklisted it will return false
+		if (W_VerifyName(fullname, folderblacklist, status))
+		{
+			CONS_Printf("Blacklisted folder found - %s\n", fullname);
+			return false;
+		}
 
 		// Strip away file address and extension for the 8char name.
 		if ((trimname = strrchr(fullname, '/')) != 0)
