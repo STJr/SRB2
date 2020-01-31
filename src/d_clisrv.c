@@ -1117,40 +1117,6 @@ static void GetPackets(void);
 
 static cl_mode_t cl_mode = CL_SEARCHING;
 
-// Player name send/load
-
-static void CV_SavePlayerNames(UINT8 **p)
-{
-	INT32 i = 0;
-	// Players in game only.
-	for (; i < MAXPLAYERS; ++i)
-	{
-		if (!playeringame[i])
-		{
-			WRITEUINT8(*p, 0);
-			continue;
-		}
-		WRITESTRING(*p, player_names[i]);
-	}
-}
-
-static void CV_LoadPlayerNames(UINT8 **p)
-{
-	INT32 i = 0;
-	char tmp_name[MAXPLAYERNAME+1];
-	tmp_name[MAXPLAYERNAME] = 0;
-
-	for (; i < MAXPLAYERS; ++i)
-	{
-		READSTRING(*p, tmp_name);
-		if (tmp_name[0] == 0)
-			continue;
-		if (tmp_name[MAXPLAYERNAME]) // overflow detected
-			I_Error("Received bad server config packet when trying to join");
-		memcpy(player_names[i], tmp_name, MAXPLAYERNAME+1);
-	}
-}
-
 #ifdef CLIENT_LOADINGSCREEN
 //
 // CL_DrawConnectionStatus
@@ -1412,8 +1378,6 @@ static void SV_SendPlayerInfo(INT32 node)
   */
 static boolean SV_SendServerConfig(INT32 node)
 {
-	INT32 i;
-	UINT8 *p, *op;
 	boolean waspacketsent;
 
 	netbuffer->packettype = PT_SERVERCFG;
@@ -1429,32 +1393,10 @@ static boolean SV_SendServerConfig(INT32 node)
 	netbuffer->u.servercfg.gametype = (UINT8)gametype;
 	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
 
-	// we fill these structs with FFs so that any players not in game get sent as 0xFFFF
-	// which is nice and easy for us to detect
-	memset(netbuffer->u.servercfg.playerskins, 0xFF, sizeof(netbuffer->u.servercfg.playerskins));
-	memset(netbuffer->u.servercfg.playercolor, 0xFF, sizeof(netbuffer->u.servercfg.playercolor));
-	memset(netbuffer->u.servercfg.playeravailabilities, 0xFF, sizeof(netbuffer->u.servercfg.playeravailabilities));
-
-	memset(netbuffer->u.servercfg.adminplayers, -1, sizeof(netbuffer->u.servercfg.adminplayers));
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		netbuffer->u.servercfg.adminplayers[i] = (SINT8)adminplayers[i];
-
-		if (!playeringame[i])
-			continue;
-		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
-		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
-		netbuffer->u.servercfg.playeravailabilities[i] = (UINT32)LONG(players[i].availabilities);
-	}
-
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
-	op = p = netbuffer->u.servercfg.varlengthinputs;
 
-	CV_SavePlayerNames(&p);
-	CV_SaveNetVars(&p);
 	{
-		const size_t len = sizeof (serverconfig_pak) + (size_t)(p - op);
+		const size_t len = sizeof (serverconfig_pak);
 
 #ifdef DEBUGFILE
 		if (debugfile)
@@ -3813,9 +3755,6 @@ static void HandlePacketFromAwayNode(SINT8 node)
 
 		case PT_SERVERCFG: // Positive response of client join request
 		{
-			INT32 j;
-			UINT8 *scp;
-
 			if (server && serverrunning && node != servernode)
 			{ // but wait I thought I'm the server?
 				Net_CloseConnection(node);
@@ -3831,8 +3770,6 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
 				G_SetGametype(netbuffer->u.servercfg.gametype);
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
-				for (j = 0; j < MAXPLAYERS; j++)
-					adminplayers[j] = netbuffer->u.servercfg.adminplayers[j];
 				memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 			}
 
@@ -3851,23 +3788,6 @@ static void HandlePacketFromAwayNode(SINT8 node)
 #endif
 			DEBFILE(va("Server accept join gametic=%u mynode=%d\n", gametic, mynode));
 
-			memset(playeringame, 0, sizeof(playeringame));
-			for (j = 0; j < MAXPLAYERS; j++)
-			{
-				if (netbuffer->u.servercfg.playerskins[j] == 0xFF
-				 && netbuffer->u.servercfg.playercolor[j] == 0xFF
-				 && netbuffer->u.servercfg.playeravailabilities[j] == 0xFFFFFFFF)
-					continue; // not in game
-
-				playeringame[j] = true;
-				players[j].availabilities = (UINT32)LONG(netbuffer->u.servercfg.playeravailabilities[j]);
-				SetPlayerSkinByNum(j, (INT32)netbuffer->u.servercfg.playerskins[j]);
-				players[j].skincolor = netbuffer->u.servercfg.playercolor[j];
-			}
-
-			scp = netbuffer->u.servercfg.varlengthinputs;
-			CV_LoadPlayerNames(&scp);
-			CV_LoadNetVars(&scp);
 #ifdef JOININGAME
 			/// \note Wait. What if a Lua script uses some global custom variables synched with the NetVars hook?
 			///       Shouldn't them be downloaded even at intermission time?
