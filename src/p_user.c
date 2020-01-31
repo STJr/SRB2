@@ -11043,10 +11043,21 @@ static void P_MinecartThink(player_t *player)
 
 		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))
 		{
+			angle_t *ang = NULL;
+
 			if (player == &players[consoleplayer])
-				localangle = player->mo->angle;
+				ang = &localangle;
 			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
+				ang = &localangle2;
+
+			if (ang)
+			{
+				angdiff = *ang - minecart->angle;
+				if (angdiff < ANGLE_180 && angdiff > MINECARTCONEMAX)
+					*ang = minecart->angle + MINECARTCONEMAX;
+				else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
+					*ang = minecart->angle - MINECARTCONEMAX;
+			}
 		}
 	}
 
