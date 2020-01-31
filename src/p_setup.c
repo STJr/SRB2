@@ -2777,8 +2777,6 @@ static void P_InitLevelSettings(void)
 
 	leveltime = 0;
 
-	localaiming = 0;
-	localaiming2 = 0;
 	modulothing = 0;
 
 	// special stage tokens, emeralds, and ring total
@@ -2892,6 +2890,9 @@ void P_RespawnThings(void)
 	}
 
 	P_InitLevelSettings();
+
+	localaiming = 0;
+	localaiming2 = 0;
 
 	P_SpawnMapThings(true);
 
@@ -3387,7 +3388,7 @@ static void P_InitGametype(void)
   * \param fromnetsave If true, skip some stuff because we're loading a netgame snapshot.
   * \todo Clean up, refactor, split up; get rid of the bloat.
   */
-boolean P_LoadLevel(boolean fromnetsave)
+boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 {
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
@@ -3457,7 +3458,10 @@ boolean P_LoadLevel(boolean fromnetsave)
 	players[consoleplayer].viewz = 1;
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
-	wipegamestate = FORCEWIPEOFF;
+	if (reloadinggamestate)
+		wipegamestate = gamestate; // Don't fade if reloading the gamestate
+	else
+		wipegamestate = FORCEWIPEOFF;
 	wipestyleflags = 0;
 
 	// Special stage fade to white
@@ -3491,7 +3495,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
-	if (rendermode != render_none && !ranspecialwipe)
+	if (rendermode != render_none && !(ranspecialwipe || reloadinggamestate))
 		P_RunLevelWipe();
 
 	if (!titlemapinaction)
@@ -3622,7 +3626,12 @@ boolean P_LoadLevel(boolean fromnetsave)
 	if (!fromnetsave)
 		P_InitGametype();
 
-	P_InitCamera();
+	if (!reloadinggamestate)
+	{
+		P_InitCamera();
+		localaiming = 0;
+		localaiming2 = 0;
+	}
 
 	// clear special respawning que
 	iquehead = iquetail = 0;
@@ -3633,7 +3642,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	P_MapEnd();
 
 	// Remove the loading shit from the screen
-	if (rendermode != render_none && !titlemapinaction)
+	if (rendermode != render_none && !(titlemapinaction || reloadinggamestate))
 		F_WipeColorFill(levelfadecol);
 
 	if (precache || dedicated)
@@ -3671,8 +3680,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 #endif
 	}
 
-	// No render mode, stop here.
-	if (rendermode == render_none)
+	// No render mode or reloading gamestate, stop here.
+	if (rendermode == render_none || reloadinggamestate)
 		return true;
 
 	// Title card!

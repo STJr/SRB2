@@ -121,6 +121,7 @@ static ticcmd_t localcmds2;
 static boolean cl_packetmissed;
 // here it is for the secondary local player (splitscreen)
 static UINT8 mynode; // my address pointofview server
+static boolean cl_redownloadinggamestate = false;
 
 static UINT8 localtextcmd[MAXTEXTCMD];
 static UINT8 localtextcmd2[MAXTEXTCMD]; // splitscreen
@@ -1429,7 +1430,7 @@ static boolean SV_SendServerConfig(INT32 node)
 #ifdef JOININGAME
 #define SAVEGAMESIZE (768*1024)
 
-static void SV_SendSaveGame(INT32 node)
+static void SV_SendSaveGame(INT32 node, boolean resending)
 {
 	size_t length, compressedlen;
 	UINT8 *savebuffer;
@@ -1447,7 +1448,7 @@ static void SV_SendSaveGame(INT32 node)
 	// Leave room for the uncompressed length.
 	save_p = savebuffer + sizeof(UINT32);
 
-	P_SaveNetGame();
+	P_SaveNetGame(resending);
 
 	length = save_p - savebuffer;
 	if (length > SAVEGAMESIZE)
@@ -1520,7 +1521,7 @@ static void SV_SavedGame(void)
 		return;
 	}
 
-	P_SaveNetGame();
+	P_SaveNetGame(false);
 
 	length = save_p - savebuffer;
 	if (length > SAVEGAMESIZE)
@@ -1543,7 +1544,7 @@ static void SV_SavedGame(void)
 #define TMPSAVENAME "$$$.sav"
 
 
-static void CL_LoadReceivedSavegame(void)
+static void CL_LoadReceivedSavegame(boolean reloading)
 {
 	UINT8 *savebuffer = NULL;
 	size_t length, decompressedlen;
@@ -1579,7 +1580,7 @@ static void CL_LoadReceivedSavegame(void)
 	automapactive = false;
 
 	// load a base level
-	if (P_LoadNetGame())
+	if (P_LoadNetGame(reloading))
 	{
 		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
 		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
@@ -1610,6 +1611,32 @@ static void CL_LoadReceivedSavegame(void)
 		CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
 	consistancy[gametic%BACKUPTICS] = Consistancy();
 	CON_ToggleOff();
+}
+
+static void CL_ReloadReceivedSavegame(void)
+{
+	INT32 i;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+#ifdef HAVE_BLUA
+		LUA_InvalidatePlayer(&players[i]);
+#endif
+		sprintf(player_names[i], "Player %d", i + 1);
+	}
+
+	CL_LoadReceivedSavegame(true);
+
+	if (neededtic < gametic)
+		neededtic = gametic;
+	maketic = neededtic;
+
+	camera.subsector = R_PointInSubsector(camera.x, camera.y);
+	camera2.subsector = R_PointInSubsector(camera2.x, camera2.y);
+
+	cl_redownloadinggamestate = false;
+
+	CONS_Printf(M_GetText("Game state reloaded\n"));
 }
 #endif
 
@@ -1950,7 +1977,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 			if (fileneeded[0].status == FS_FOUND)
 			{
 				// Gamestate is now handled within CL_LoadReceivedSavegame()
-				CL_LoadReceivedSavegame();
+				CL_LoadReceivedSavegame(false);
 				cl_mode = CL_CONNECTED;
 			} // don't break case continue to CL_CONNECTED
 			else
@@ -2974,6 +3001,32 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		CL_RemovePlayer(pnum, kickreason);
 }
 
+static void Command_ResendGamestate(void)
+{
+	if (COM_Argc() == 1)
+	{
+		CONS_Printf(M_GetText("resendgamestate <playername/playernum>: resend the game state to a player\n"));
+		return;
+	}
+	else if (client)
+	{
+		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	const SINT8 playernum = nametonum(COM_Argv(1));
+	if (playernum == -1 || playernum == 0)
+		return;
+
+	// Send a PT_WILLRESENDGAMESTATE packet to the client so they know what's going on
+	netbuffer->packettype = PT_WILLRESENDGAMESTATE;
+	if (!HSendPacket(playernode[playernum], true, 0, 0))
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("A problem occured, please try again.\n"));
+		return;
+	}
+}
+
 consvar_t cv_allownewplayer = {"allowjoin", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
 consvar_t cv_joinnextround = {"joinnextround", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
@@ -3012,6 +3065,7 @@ void D_ClientServerInit(void)
 	COM_AddCommand("reloadbans", Command_ReloadBan);
 	COM_AddCommand("connect", Command_connect);
 	COM_AddCommand("nodes", Command_Nodes);
+	COM_AddCommand("resendgamestate", Command_ResendGamestate);
 #ifdef PACKETDROP
 	COM_AddCommand("drop", Command_Drop);
 	COM_AddCommand("droprate", Command_Droprate);
@@ -3082,6 +3136,7 @@ void SV_ResetServer(void)
 
 	mynode = 0;
 	cl_packetmissed = false;
+	cl_redownloadinggamestate = false;
 
 	if (dedicated)
 	{
@@ -3598,7 +3653,7 @@ static void HandleConnect(SINT8 node)
 		{
 			if ((gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) && newnode)
 			{
-				SV_SendSaveGame(node); // send a complete game state
+				SV_SendSaveGame(node, false); // send a complete game state
 				DEBFILE("send savegame\n");
 			}
 			SV_AddWaitingPlayers(names[0], names[1]);
@@ -3664,6 +3719,42 @@ static void HandleServerInfo(SINT8 node)
 	SL_InsertServer(&netbuffer->u.serverinfo, node);
 }
 #endif
+
+static void PT_WillResendGamestate(void)
+{
+	char tmpsave[256];
+
+	if (server || cl_redownloadinggamestate)
+		return;
+
+	// Send back a PT_CANRESENDGAMESTATE packet to the server
+	// so they know they can start sending the game state
+	netbuffer->packettype = PT_CANRESENDGAMESTATE;
+	if (!HSendPacket(servernode, true, 0, 0))
+		return;
+
+	CONS_Printf(M_GetText("Reloading game state...\n"));
+
+	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
+
+	// Don't get a corrupt savegame error because tmpsave already exists
+	if (FIL_FileExists(tmpsave) && unlink(tmpsave) == -1)
+		I_Error("Can't delete %s\n", tmpsave);
+
+	CL_PrepareDownloadSaveGame(tmpsave);
+
+	cl_redownloadinggamestate = true;
+}
+
+static void PT_CanResendGamestate(SINT8 node)
+{
+	if (client || sendingsavegame[node])
+		return;
+
+	CONS_Printf(M_GetText("Resending game state to %s...\n"), player_names[nodetoplayer[node]]);
+
+	SV_SendSaveGame(node, true); // Resend a complete game state
+}
 
 /** Handles a packet received from a node that isn't in game
   *
@@ -4107,6 +4198,9 @@ static void HandlePacketFromPlayer(SINT8 node)
 			Net_CloseConnection(node);
 			nodeingame[node] = false;
 			break;
+		case PT_CANRESENDGAMESTATE:
+			PT_CanResendGamestate(node);
+			break;
 // -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_RESYNCHEND:
 			// Only accept PT_RESYNCHEND from the server.
@@ -4135,6 +4229,9 @@ static void HandlePacketFromPlayer(SINT8 node)
 					SendKick(netconsole, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 				break;
 			}
+
+			if (cl_redownloadinggamestate)
+				break;
 
 			realstart = ExpandTics(netbuffer->u.serverpak.starttic);
 			realend = realstart + netbuffer->u.serverpak.numtics;
@@ -4233,6 +4330,9 @@ static void HandlePacketFromPlayer(SINT8 node)
 			}
 			if (client)
 				Got_Filetxpak();
+			break;
+		case PT_WILLRESENDGAMESTATE:
+			PT_WillResendGamestate();
 			break;
 		default:
 			DEBFILE(va("UNKNOWN PACKET TYPE RECEIVED %d from host %d\n",
@@ -4876,7 +4976,11 @@ void NetUpdate(void)
 
 	if (client)
 	{
-		if (!resynch_local_inprogress)
+		// If the client just finished redownloading the game state, load it
+		if (cl_redownloadinggamestate && fileneeded[0].status == FS_FOUND)
+			CL_ReloadReceivedSavegame();
+
+		if (!(resynch_local_inprogress || cl_redownloadinggamestate))
 			CL_SendClientCmd(); // Send tic cmd
 		hu_resynching = resynch_local_inprogress;
 	}
