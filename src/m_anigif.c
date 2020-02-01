@@ -624,14 +624,6 @@ static void GIF_framewrite(void)
 //
 INT32 GIF_open(const char *filename)
 {
-#if 0
-	if (rendermode != render_soft)
-	{
-		CONS_Alert(CONS_WARNING, M_GetText("GIFs cannot be taken in non-software modes!\n"));
-		return 0;
-	}
-#endif
-
 	gif_out = fopen(filename, "wb");
 	if (!gif_out)
 		return 0;
@@ -640,13 +632,13 @@ INT32 GIF_open(const char *filename)
 	gif_downscale = (!!cv_gif_downscale.value);
 
 	// GIF color table
-	// In hardware mode, uses the master palette
-	gif_palette = ((cv_screenshot_colorprofile.value
+	// In hardware mode, forces the local palette
 #ifdef HWRENDER
-	&& (rendermode == render_soft)
+	if (rendermode == render_opengl)
+		gif_palette = pLocalPalette;
+	else
 #endif
-	) ? pLocalPalette
-	: pMasterPalette);
+		gif_palette = ((cv_screenshot_colorprofile.value) ? pLocalPalette : pMasterPalette);
 
 	GIF_headwrite();
 	gif_frames = 0;
