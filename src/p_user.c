@@ -8485,7 +8485,8 @@ static void P_MovePlayer(player_t *player)
 			if (cmd->buttons & BT_USE && !(player->pflags & PF_STASIS) && !player->exiting && !(player->mo->eflags & MFE_GOOWATER))
 				if (P_MobjFlip(player->mo)*player->mo->momz > -FixedMul(5*actionspd, player->mo->scale))
 				{
-					player->fly1 = 0;
+					if (player->fly1 > 2)
+						player->fly1 = 2;
 					P_SetObjectMomZ(player->mo, -actionspd/2, true);
 				}
 
