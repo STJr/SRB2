@@ -4678,6 +4678,7 @@ static void Local_Maketic(INT32 realtics)
 		G_BuildTiccmd(&localcmds2, realtics, 2);
 
 	localcmds.angleturn |= TICCMD_RECEIVED;
+	localcmds2.angleturn |= TICCMD_RECEIVED;
 }
 
 // This function is utter bullshit and is responsible for
