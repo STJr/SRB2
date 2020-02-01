@@ -2961,7 +2961,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 		}
 #endif
 
-		if (P_MobjFlip(mo)*mo->momz < 0) // falling
+		if (P_MobjFlip(mo)*mo->momz <= 0) // falling
 		{
 			boolean clipmomz = !(P_CheckDeathPitCollide(mo));
 
@@ -3874,6 +3874,8 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 static void P_PlayerMobjThinker(mobj_t *mobj)
 {
 	msecnode_t *node;
+	fixed_t oldz;
+	boolean wasonground;
 
 	I_Assert(mobj != NULL);
 	I_Assert(mobj->player != NULL);
@@ -3914,6 +3916,9 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 			goto animonly;
 		}
 	}
+
+	oldz = mobj->z;
+	wasonground = P_IsObjectOnGround(mobj);
 
 	// Needed for gravity boots
 	P_CheckGravity(mobj, false);
@@ -4002,7 +4007,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 
 	// always do the gravity bit now, that's simpler
 	// BUT CheckPosition only if wasn't done before.
-	if (!(mobj->eflags & MFE_ONGROUND) || mobj->momz
+	if (!(mobj->eflags & MFE_ONGROUND) || mobj->momz || (oldz != mobj->z && !wasonground)
 		|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z + mobj->height != mobj->ceilingz)
 		|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z != mobj->floorz)
 		|| P_IsObjectInGoop(mobj))
