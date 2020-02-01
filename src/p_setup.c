@@ -3684,8 +3684,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 		return true;
 
 	// If so...
-	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
-		G_PreLevelTitleCard();
+	G_PreLevelTitleCard();
 
 	return true;
 }
