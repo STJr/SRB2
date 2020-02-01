@@ -1691,7 +1691,7 @@ W_VerifyName (const char *name, lumpchecklist_t *checklist, boolean status)
 	size_t j;
 	for (j = 0; checklist[j].len && checklist[j].name; ++j)
 	{
-		if (( strncmp(name, checklist[j].name,
+		if (( strncasecmp(name, checklist[j].name,
 						checklist[j].len) != false ) == status)
 		{
 			return true;
@@ -1803,20 +1803,13 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		if (fgets(fullname, zentry.namelen + 1, fp) != fullname)
 			return true;
 
-		// Check for folders first, if it's blacklisted it will return false
-		if (W_VerifyName(fullname, folderblacklist, status))
-		{
-			CONS_Printf("Blacklisted folder found - %s\n", fullname);
-			return false;
-		}
-
 		// Strip away file address and extension for the 8char name.
 		if ((trimname = strrchr(fullname, '/')) != 0)
 			trimname++;
 		else
 			trimname = fullname; // Care taken for root files.
 
-		if (*trimname) // Ignore directories
+		if (*trimname) // Ignore directories, well kinda
 		{
 			if ((dotpos = strrchr(trimname, '.')) == 0)
 				dotpos = fullname + strlen(fullname); // Watch for files without extension.
@@ -1825,6 +1818,10 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 			strncpy(lumpname, trimname, min(8, dotpos - trimname));
 
 			if (! W_VerifyName(lumpname, checklist, status))
+				return false;
+
+			// Check for directories next, if it's blacklisted it will return false
+			if (W_VerifyName(fullname, folderblacklist, status))
 				return false;
 		}
 
