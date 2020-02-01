@@ -3874,7 +3874,6 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 static void P_PlayerMobjThinker(mobj_t *mobj)
 {
 	msecnode_t *node;
-	fixed_t oldz;
 	boolean wasonground;
 
 	I_Assert(mobj != NULL);
@@ -3917,7 +3916,6 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		}
 	}
 
-	oldz = mobj->z;
 	wasonground = P_IsObjectOnGround(mobj);
 
 	// Needed for gravity boots
@@ -4007,7 +4005,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 
 	// always do the gravity bit now, that's simpler
 	// BUT CheckPosition only if wasn't done before.
-	if (!(mobj->eflags & MFE_ONGROUND) || mobj->momz || (oldz != mobj->z && !wasonground)
+	if (!(mobj->eflags & MFE_ONGROUND) || mobj->momz || (!wasonground && P_IsObjectOnGround(mobj))
 		|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z + mobj->height != mobj->ceilingz)
 		|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z != mobj->floorz)
 		|| P_IsObjectInGoop(mobj))
