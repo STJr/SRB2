@@ -38,6 +38,9 @@ void AM_Ticker(void);
 // Called by main loop, instead of view drawer if automap is active.
 void AM_Drawer(void);
 
+// Enables the automap.
+void AM_Start(void);
+
 // Called to force the automap to quit if the level is completed while it is up.
 void AM_Stop(void);
 
