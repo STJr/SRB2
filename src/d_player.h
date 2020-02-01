@@ -510,6 +510,7 @@ typedef struct player_s
 	UINT8 bot;
 
 	tic_t jointime; // Timer when player joins game to change skin/color
+	tic_t quittime; // Time elapsed since user disconnected, zero if connected
 #ifdef HWRENDER
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
