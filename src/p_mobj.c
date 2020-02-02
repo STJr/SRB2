@@ -10484,14 +10484,6 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 		case MT_EMBLEM:
 
 		case MT_TOKEN:
-		case MT_EMERALD1:
-		case MT_EMERALD2:
-		case MT_EMERALD3:
-		case MT_EMERALD4:
-		case MT_EMERALD5:
-		case MT_EMERALD6:
-		case MT_EMERALD7:
-		case MT_EMERHUNT:
 		case MT_FLINGEMERALD:
 
 			return 2*FRACUNIT/3;
