@@ -10476,15 +10476,12 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 			return FRACUNIT;
 
-		case MT_RING:
 		case MT_FLINGRING:
 
 		case MT_BLUESPHERE:
 		case MT_FLINGBLUESPHERE:
 		case MT_BOMBSPHERE:
 
-		case MT_REDTEAMRING:
-		case MT_BLUETEAMRING:
 		case MT_REDFLAG:
 		case MT_BLUEFLAG:
 
