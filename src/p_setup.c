@@ -3701,10 +3701,15 @@ void HWR_SetupLevel(void)
 	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
 	// Level textures are only reloaded after R_LoadTextures, which is
 	// when the texture list is loaded.
+
+	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
+	HWR_FreeMipmapCache();
+
 #ifdef ALAM_LIGHTING
 	// BP: reset light between levels (we draw preview frame lights on current frame)
 	HWR_ResetLights();
 #endif
+
 	// Correct missing sidedefs & deep water trick
 	HWR_CorrectSWTricks();
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
