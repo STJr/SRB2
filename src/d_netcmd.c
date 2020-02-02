@@ -1010,6 +1010,17 @@ static void CleanupPlayerName(INT32 playernum, const char *newname)
 
 		tmpname = p;
 
+		do
+		{
+			/* from EnsurePlayerNameIsGood */
+			if (!isprint(*p) || *p == ';' || (UINT8)*p >= 0x80)
+				break;
+		}
+		while (*++p) ;
+
+		if (*p)/* bad char found */
+			break;
+
 		// Remove trailing spaces.
 		p = &tmpname[strlen(tmpname)-1]; // last character
 		while (*p == ' ' && p >= tmpname)
