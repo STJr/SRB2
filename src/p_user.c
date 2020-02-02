@@ -5503,10 +5503,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						; // Can't do anything if you're a fish out of water!
 					else if (player->powers[pw_tailsfly]) // If currently flying, give an ascend boost.
 					{
-						if (!player->fly1)
-							player->fly1 = 20;
-						else
-							player->fly1 = 2;
+						player->fly1 = 20;
 
 						if (player->charability == CA_SWIM)
 							player->fly1 /= 2;
@@ -8487,7 +8484,11 @@ static void P_MovePlayer(player_t *player)
 			// Descend
 			if (cmd->buttons & BT_USE && !(player->pflags & PF_STASIS) && !player->exiting && !(player->mo->eflags & MFE_GOOWATER))
 				if (P_MobjFlip(player->mo)*player->mo->momz > -FixedMul(5*actionspd, player->mo->scale))
+				{
+					if (player->fly1 > 2)
+						player->fly1 = 2;
 					P_SetObjectMomZ(player->mo, -actionspd/2, true);
+				}
 
 		}
 		else
