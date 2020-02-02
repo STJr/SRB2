@@ -1275,8 +1275,14 @@ static boolean CL_SendJoin(void)
 	netbuffer->u.clientcfg.localplayers = localplayers;
 	netbuffer->u.clientcfg.version = VERSION;
 	netbuffer->u.clientcfg.subversion = SUBVERSION;
+
+	CleanupPlayerName(consoleplayer, cv_playername.zstring);
+	if (splitscreen)
+		CleanupPlayerName(1, cv_playername2.zstring);/* 1 is a HACK? oh no */
+
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
 	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
+
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
 
