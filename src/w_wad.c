@@ -637,6 +637,21 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 	return lumpinfo;
 }
 
+static UINT16 W_InitFileError (const char *filename, boolean exitworthy)
+{
+	if (exitworthy)
+	{
+#ifdef _DEBUG
+		CONS_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+#else
+		I_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+#endif
+	}
+	else
+		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), filename);
+	return INT16_MAX;
+}
+
 //  Allocate a wadfile, setup the lumpinfo (directory) and
 //  lumpcache, add the wadfile to the current active wadfiles
 //
@@ -648,7 +663,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 //
 // Can now load dehacked files (.soc)
 //
-UINT16 W_InitFile(const char *filename, boolean mainfile)
+UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 {
 	FILE *handle;
 	lumpinfo_t *lumpinfo = NULL;
@@ -681,12 +696,12 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
 		refreshdirmenu |= REFRESHDIR_MAX;
-		return INT16_MAX;
+		return W_InitFileError(filename, startup);
 	}
 
 	// open wad file
 	if ((handle = W_OpenWadFile(&filename, true)) == NULL)
-		return INT16_MAX;
+		return W_InitFileError(filename, startup);
 
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
@@ -701,7 +716,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 			refreshdirmenu |= REFRESHDIR_MAX;
 			if (handle)
 				fclose(handle);
-			return INT16_MAX;
+			return W_InitFileError(filename, startup);
 		}
 
 		packetsizetally = packetsize;
@@ -722,7 +737,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
 			if (handle)
 				fclose(handle);
-			return INT16_MAX;
+			return W_InitFileError(filename, false);
 		}
 	}
 #endif
@@ -750,7 +765,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 	if (lumpinfo == NULL)
 	{
 		fclose(handle);
-		return INT16_MAX;
+		return W_InitFileError(filename, startup);
 	}
 
 	//
@@ -822,10 +837,8 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
   * backwards, so a later file overrides all earlier ones.
   *
   * \param filenames A null-terminated list of files to use.
-  * \return 1 if base files were loaded, 0 if at least one was missing or
-  *           invalid.
   */
-INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
+void W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
 {
 	// open all the files, load headers, and count lumps
 	numwadfiles = 0;
@@ -834,15 +847,8 @@ INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
 	for (; *filenames; filenames++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		if (W_InitFile(*filenames, numwadfiles < mainfiles) == INT16_MAX)
-		{
-			CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), *filenames);
-			if (numwadfiles < mainfiles)
-				return 0;
-		}
+		W_InitFile(*filenames, numwadfiles < mainfiles, true);
 	}
-
-	return 1;
 }
 
 /** Make sure a lump number is valid.
