@@ -900,11 +900,19 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 
 					blendcolor = V_GetColor(translation[firsti]);
 
+					if (secondi >= translen)
+						mul = 0;
+
 					if (mul > 0) // If it's 0, then we only need the first color.
 					{
-						if (secondi >= translen) // blend to black
+#if 0
+						if (secondi >= translen)
+						{
+							// blend to black
 							nextcolor = V_GetColor(31);
+						}
 						else
+#endif
 							nextcolor = V_GetColor(translation[secondi]);
 
 						// Find difference between points
