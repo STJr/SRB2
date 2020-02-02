@@ -3742,13 +3742,12 @@ static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float v
 	return false;
 }
 
-static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale)
+static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 {
 	GLPatch_t *gpatch;
 	FOutVector shadowVerts[4];
 	FSurfaceInfo sSurf;
 	float fscale; float fx; float fy; float offset;
-	UINT8 lightlevel = 255;
 	extracolormap_t *colormap = NULL;
 	UINT8 i;
 
@@ -3791,10 +3790,18 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	else
 		offset = (float)(gpatch->height/2);
 
-	shadowVerts[0].x = shadowVerts[3].x = fx - offset;
-	shadowVerts[2].x = shadowVerts[1].x = fx + offset;
-	shadowVerts[0].z = shadowVerts[1].z = fy - offset;
-	shadowVerts[3].z = shadowVerts[2].z = fy + offset;
+	shadowVerts[2].x = shadowVerts[3].x = fx + offset;
+	shadowVerts[1].x = shadowVerts[0].x = fx - offset;
+	shadowVerts[1].z = shadowVerts[2].z = fy - offset;
+	shadowVerts[0].z = shadowVerts[3].z = fy + offset;
+
+	for (i = 0; i < 4; i++)
+	{
+		float oldx = shadowVerts[i].x;
+		float oldy = shadowVerts[i].z;
+		shadowVerts[i].x = fx + ((oldx - fx) * gr_viewcos) - ((oldy - fy) * gr_viewsin);
+		shadowVerts[i].z = fy + ((oldx - fx) * gr_viewsin) + ((oldy - fy) * gr_viewcos);
+	}
 
 	if (floorslope)
 	{
@@ -3810,47 +3817,25 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 			shadowVerts[i].y = FIXED_TO_FLOAT(floorz) + 0.05f;
 	}
 
-	if (spr->flip)
-	{
-		shadowVerts[0].s = shadowVerts[3].s = gpatch->max_s;
-		shadowVerts[2].s = shadowVerts[1].s = 0;
-	}
-	else
-	{
-		shadowVerts[0].s = shadowVerts[3].s = 0;
-		shadowVerts[2].s = shadowVerts[1].s = gpatch->max_s;
-	}
+	shadowVerts[0].s = shadowVerts[3].s = 0;
+	shadowVerts[2].s = shadowVerts[1].s = gpatch->max_s;
 
-	// flip the texture coords (look familiar?)
-	if (spr->vflip)
-	{
-		shadowVerts[3].t = shadowVerts[2].t = gpatch->max_t;
-		shadowVerts[0].t = shadowVerts[1].t = 0;
-	}
-	else
-	{
-		shadowVerts[3].t = shadowVerts[2].t = 0;
-		shadowVerts[0].t = shadowVerts[1].t = gpatch->max_t;
-	}
+	shadowVerts[3].t = shadowVerts[2].t = 0;
+	shadowVerts[0].t = shadowVerts[1].t = gpatch->max_t;
 
 	if (thing->subsector->sector->numlights)
 	{
 		light = R_GetPlaneLight(thing->subsector->sector, floorz, false); // Always use the light at the top instead of whatever I was doing before
-
-		lightlevel = *thing->subsector->sector->lightlist[light].lightlevel;
-
 		if (*thing->subsector->sector->lightlist[light].extra_colormap)
 			colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
 	}
 	else
 	{
-		lightlevel = thing->subsector->sector->lightlevel;
-
 		if (thing->subsector->sector->extra_colormap)
 			colormap = thing->subsector->sector->extra_colormap;
 	}
 
-	HWR_Lighting(&sSurf, lightlevel, colormap);
+	HWR_Lighting(&sSurf, 0, colormap);
 	sSurf.PolyColor.s.alpha = alpha;
 
 	HWD.pfnSetShader(3); // sprite shader
@@ -4918,7 +4903,7 @@ static void HWR_DrawSprites(void)
 			{
 				if (spr->mobj && spr->mobj->shadowscale && cv_shadow.value)
 				{
-					HWR_DrawDropShadow(spr->mobj, spr, spr->mobj->shadowscale);
+					HWR_DrawDropShadow(spr->mobj, spr->mobj->shadowscale);
 				}
 
 				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
