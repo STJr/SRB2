@@ -1755,7 +1755,8 @@ static lumpchecklist_t folderblacklist[] =
 	{"Textures/", 9},
 	{"Patches/", 8},
 	{"Flats/", 6},
-	{"Fades/", 6}
+	{"Fades/", 6},
+	{NULL, 0},
 };
 
 static int
