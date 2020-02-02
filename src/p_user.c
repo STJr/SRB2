@@ -3160,7 +3160,7 @@ static void P_DoClimbing(player_t *player)
 	platx = P_ReturnThrustX(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 	platy = P_ReturnThrustY(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 
-	glidesector = R_IsPointInSubsector(player->mo->x + platx, player->mo->y + platy);
+	glidesector = R_PointInSubsectorOrNull(player->mo->x + platx, player->mo->y + platy);
 
 	{
 		boolean floorclimb = false;
@@ -10237,7 +10237,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	// move camera down to move under lower ceilings
-	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
+	newsubsec = R_PointInSubsectorOrNull(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
 
 	if (!newsubsec)
 		newsubsec = thiscam->subsector;
@@ -11045,10 +11045,21 @@ static void P_MinecartThink(player_t *player)
 
 		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))
 		{
+			angle_t *ang = NULL;
+
 			if (player == &players[consoleplayer])
-				localangle = player->mo->angle;
+				ang = &localangle;
 			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
+				ang = &localangle2;
+
+			if (ang)
+			{
+				angdiff = *ang - minecart->angle;
+				if (angdiff < ANGLE_180 && angdiff > MINECARTCONEMAX)
+					*ang = minecart->angle + MINECARTCONEMAX;
+				else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
+					*ang = minecart->angle - MINECARTCONEMAX;
+			}
 		}
 	}
 
@@ -11758,6 +11769,8 @@ void P_PlayerThink(player_t *player)
 			{
 				if (!playeringame[i] || players[i].spectator || players[i].bot)
 					continue;
+				if (players[i].quittime > 30 * TICRATE)
+					continue;
 				if (players[i].lives <= 0)
 					continue;
 
@@ -12210,6 +12223,11 @@ void P_PlayerThink(player_t *player)
 			player->pflags &= ~PF_USEDOWN;
 	}
 
+	// IF PLAYER NOT HERE THEN FLASH END IF
+	if (player->quittime && player->powers[pw_flashing] < flashingtics - 1
+	&& !(G_TagGametype() && !(player->pflags & PF_TAGIT)) && !player->gotflag)
+		player->powers[pw_flashing] = flashingtics - 1;
+
 	// Counters, time dependent power ups.
 	// Time Bonus & Ring Bonus count settings
 
@@ -12253,12 +12271,12 @@ void P_PlayerThink(player_t *player)
 		else
 			player->powers[pw_underwater] = 0;
 	}
-	else if (player->powers[pw_underwater] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && player->spectator)) // underwater timer
+	else if (player->powers[pw_underwater] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && (player->spectator || player->quittime))) // underwater timer
 		player->powers[pw_underwater]--;
 
 	if (player->powers[pw_spacetime] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_PROTECTWATER)))
 		player->powers[pw_spacetime] = 0;
-	else if (player->powers[pw_spacetime] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && player->spectator)) // underwater timer
+	else if (player->powers[pw_spacetime] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && (player->spectator || player->quittime))) // underwater timer
 		player->powers[pw_spacetime]--;
 
 	if (player->powers[pw_gravityboots] && player->powers[pw_gravityboots] < UINT16_MAX)
