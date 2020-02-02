@@ -12935,7 +12935,16 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		thinker_t* th;
 		mobj_t* mo2;
 		boolean foundanother = false;
-		mobj->health = (mthing->angle/360) + 1;
+
+		if (mthing->extrainfo)
+			// Allow thing Parameter to define star post num too!
+			// For starposts above param 15 (the 16th), add 360 to the angle like before and start parameter from 1 (NOT 0)!
+			// So the 16th starpost is angle=0 param=15, the 17th would be angle=360 param=1.
+			// This seems more intuitive for mappers to use until UDMF is ready, since most SP maps won't have over 16 consecutive star posts.
+			mobj->health = mthing->extrainfo + (mthing->angle/360)*15 + 1;
+		else
+			// Old behavior if Parameter is 0; add 360 to the angle for each consecutive star post.
+			mobj->health = (mthing->angle/360) + 1;
 
 		// See if other starposts exist in this level that have the same value.
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
