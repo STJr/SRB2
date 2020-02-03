@@ -537,7 +537,7 @@ static void GIF_framewrite(void)
 	// Lactozilla: Compare the header's palette with the current frame's palette and see if it changed.
 	if (gif_localcolortable)
 	{
-		gif_framepalette = GIF_getpalette(gif_localcolortable ? max(st_palette, 0) : 0);
+		gif_framepalette = GIF_getpalette(max(st_palette, 0));
 		palchanged = memcmp(gif_headerpalette, gif_framepalette, sizeof(RGBA_t) * 256);
 	}
 	else
