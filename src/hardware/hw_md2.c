@@ -900,11 +900,19 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 
 					blendcolor = V_GetColor(translation[firsti]);
 
+					if (secondi >= translen)
+						mul = 0;
+
 					if (mul > 0) // If it's 0, then we only need the first color.
 					{
-						if (secondi >= translen) // blend to black
+#if 0
+						if (secondi >= translen)
+						{
+							// blend to black
 							nextcolor = V_GetColor(31);
+						}
 						else
+#endif
 							nextcolor = V_GetColor(translation[secondi]);
 
 						// Find difference between points
@@ -999,31 +1007,12 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	// mostly copied from HWR_GetMappedPatch, hence the similarities and comment
 	GLMipmap_t *grmip, *newmip;
 
-	if ((colormap == colormaps || colormap == NULL) && (skinnum > TC_DEFAULT))
+	if (colormap == colormaps || colormap == NULL)
 	{
 		// Don't do any blending
 		HWD.pfnSetTexture(gpatch->mipmap);
 		return;
 	}
-
-	// search for the mipmap
-	// skip the first (no colormap translated)
-	for (grmip = gpatch->mipmap; grmip->nextcolormap; )
-	{
-		grmip = grmip->nextcolormap;
-		if (grmip->colormap == colormap || (skinnum < TC_DEFAULT && grmip->tcindex == skinnum))
-		{
-			if (grmip->downloaded && grmip->grInfo.data)
-			{
-				HWD.pfnSetTexture(grmip); // found the colormap, set it to the correct texture
-				Z_ChangeTag(grmip->grInfo.data, PU_HWRMODELTEXTURE);
-				return;
-			}
-		}
-	}
-
-	// If here, the blended texture has not been created
-	// So we create it
 
 	if ((blendgpatch && blendgpatch->mipmap->grInfo.format)
 		&& (gpatch->width != blendgpatch->width || gpatch->height != blendgpatch->height))
@@ -1033,21 +1022,39 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 		return;
 	}
 
+	// search for the mipmap
+	// skip the first (no colormap translated)
+	for (grmip = gpatch->mipmap; grmip->nextcolormap; )
+	{
+		grmip = grmip->nextcolormap;
+		if (grmip->colormap == colormap)
+		{
+			if (grmip->downloaded && grmip->grInfo.data)
+			{
+				HWD.pfnSetTexture(grmip); // found the colormap, set it to the correct texture
+				Z_ChangeTag(grmip->grInfo.data, PU_HWRMODELTEXTURE_UNLOCKED);
+				return;
+			}
+		}
+	}
+
+	// If here, the blended texture has not been created
+	// So we create it
+
 	//BP: WARNING: don't free it manually without clearing the cache of harware renderer
 	//              (it have a liste of mipmap)
 	//    this malloc is cleared in HWR_FreeTextureCache
 	//    (...) unfortunately z_malloc fragment alot the memory :(so malloc is better
 	newmip = calloc(1, sizeof (*newmip));
 	if (newmip == NULL)
-		I_Error("%s: Out of memory", "HWR_GetMappedPatch");
+		I_Error("%s: Out of memory", "HWR_GetBlendedTexture");
 	grmip->nextcolormap = newmip;
 	newmip->colormap = colormap;
-	newmip->tcindex = skinnum;
 
 	HWR_CreateBlendedTexture(gpatch, blendgpatch, newmip, skinnum, color);
 
 	HWD.pfnSetTexture(newmip);
-	Z_ChangeTag(newmip->grInfo.data, PU_HWRMODELTEXTURE);
+	Z_ChangeTag(newmip->grInfo.data, PU_HWRMODELTEXTURE_UNLOCKED);
 }
 
 #define NORMALFOG 0x00000000
@@ -1273,7 +1280,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 
 		if (gpatch && gpatch->mipmap->grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
-			INT32 skinnum = INT32_MAX;
+			INT32 skinnum = TC_DEFAULT;
 
 			if ((spr->mobj->flags & (MF_ENEMY|MF_BOSS)) && (spr->mobj->flags2 & MF2_FRET) && !(spr->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 			{
@@ -1304,15 +1311,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 			}
 
 			// Translation or skin number found
-			if (skinnum != INT32_MAX)
-			{
-				HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, skinnum, spr->colormap, (skincolors_t)spr->mobj->color);
-			}
-			else
-			{
-				// Sorry nothing
-				HWD.pfnSetTexture(gpatch->mipmap);
-			}
+			HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, skinnum, spr->colormap, (skincolors_t)spr->mobj->color);
 		}
 		else
 		{

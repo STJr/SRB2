@@ -516,6 +516,7 @@ void Z_FlushCachedPatches(void)
 	Z_FreeTag(PU_HWRCACHE);
 	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
 	Z_FreeTag(PU_HWRPATCHINFO_UNLOCKED);
+	Z_FreeTag(PU_HWRMODELTEXTURE_UNLOCKED);
 }
 
 // happens before a renderer switch
@@ -813,6 +814,7 @@ static void Command_Memfree_f(void)
 		CONS_Printf(M_GetText("HW Texture cache  : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRCACHE)>>10));
 		CONS_Printf(M_GetText("Plane polygons    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPLANE)>>10));
 		CONS_Printf(M_GetText("HW Texture used   : %7d KB\n"), HWR_GetTextureUsed()>>10);
+		CONS_Printf(M_GetText("HW model textures : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRMODELTEXTURE)>>10));
 	}
 #endif
 
