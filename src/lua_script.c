@@ -584,7 +584,6 @@ void LUA_PushLightUserdata (lua_State *L, void *data, const char *meta)
 		applies it to the second value, which is the userdata.
 		*/
 		lua_setmetatable(L, -2);
-		lua_pushvalue(L, -1);
 	}
 	else
 		lua_pushnil(L);
