@@ -1691,7 +1691,7 @@ W_VerifyName (const char *name, lumpchecklist_t *checklist, boolean status)
 	size_t j;
 	for (j = 0; checklist[j].len && checklist[j].name; ++j)
 	{
-		if (( strncmp(name, checklist[j].name,
+		if (( strncasecmp(name, checklist[j].name,
 						checklist[j].len) != false ) == status)
 		{
 			return true;
@@ -1746,6 +1746,19 @@ W_VerifyWAD (FILE *fp, lumpchecklist_t *checklist, boolean status)
 	return true;
 }
 
+// List of blacklisted folders to use when checking the PK3
+static lumpchecklist_t folderblacklist[] =
+{
+	{"Lua/", 4},
+	{"SOC/", 4},
+	{"Sprites/",  8},
+	{"Textures/", 9},
+	{"Patches/", 8},
+	{"Flats/", 6},
+	{"Fades/", 6},
+	{NULL, 0},
+};
+
 static int
 W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 {
@@ -1797,7 +1810,7 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		else
 			trimname = fullname; // Care taken for root files.
 
-		if (*trimname) // Ignore directories
+		if (*trimname) // Ignore directories, well kinda
 		{
 			if ((dotpos = strrchr(trimname, '.')) == 0)
 				dotpos = fullname + strlen(fullname); // Watch for files without extension.
@@ -1806,6 +1819,10 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 			strncpy(lumpname, trimname, min(8, dotpos - trimname));
 
 			if (! W_VerifyName(lumpname, checklist, status))
+				return false;
+
+			// Check for directories next, if it's blacklisted it will return false
+			if (W_VerifyName(fullname, folderblacklist, status))
 				return false;
 		}
 
