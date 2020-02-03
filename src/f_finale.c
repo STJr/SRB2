@@ -2693,8 +2693,18 @@ static void F_FigureActiveTtScale(void)
 	SINT8 newttscale = max(1, min(6, vid.dupx));
 	SINT8 oldttscale = activettscale;
 
-	if (newttscale == testttscale)
-		return;
+	if (needpatchrecache)
+		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = 0;
+	else
+	{
+		if (newttscale == testttscale)
+			return;
+
+		// We have a new ttscale, so load gfx
+		if(oldttscale > 0)
+			F_UnloadAlacroixGraphics(oldttscale);
+	}
+
 	testttscale = newttscale;
 
 	// If ttscale is unavailable: look for lower scales, then higher scales.
@@ -2711,10 +2721,6 @@ static void F_FigureActiveTtScale(void)
 	}
 
 	activettscale = (newttscale >= 1 && newttscale <= 6) ? newttscale : 0;
-
-	// We have a new ttscale, so load gfx
-	if(oldttscale > 0)
-		F_UnloadAlacroixGraphics(oldttscale);
 
 	if(activettscale > 0)
 		F_LoadAlacroixGraphics(activettscale);
@@ -2756,12 +2762,6 @@ void F_TitleScreenDrawer(void)
 #else
 		return;
 #endif
-
-	if (needpatchrecache && (curttmode == TTMODE_ALACROIX))
-	{
-		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = 0;
-		F_LoadAlacroixGraphics(activettscale);
-	}
 
 	switch(curttmode)
 	{
@@ -3628,7 +3628,6 @@ void F_StartContinue(void)
 	}
 
 	wipestyleflags = WSF_FADEOUT;
-	F_TryColormapFade(31);
 	G_SetGamestate(GS_CONTINUING);
 	gameaction = ga_nothing;
 

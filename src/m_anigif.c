@@ -407,13 +407,13 @@ const UINT8 gifhead_nsid[19] = {0x21,0xFF,0x0B, // extension block + size
 //
 static RGBA_t *GIF_getpalette(size_t palnum)
 {
-	// In hardware mode, uses the master palette
-	return ((gif_colorprofile
+	// In hardware mode, always returns the local palette
 #ifdef HWRENDER
-	&& (rendermode == render_soft)
+	if (rendermode == render_opengl)
+		return pLocalPalette;
+	else
 #endif
-	) ? &pLocalPalette[palnum*256]
-	: &pMasterPalette[palnum*256]);
+		return (gif_colorprofile ? &pLocalPalette[palnum*256] : &pMasterPalette[palnum*256]);
 }
 
 //
@@ -537,7 +537,7 @@ static void GIF_framewrite(void)
 	// Lactozilla: Compare the header's palette with the current frame's palette and see if it changed.
 	if (gif_localcolortable)
 	{
-		gif_framepalette = GIF_getpalette((rendermode == render_soft) ? ((gif_localcolortable) ? max(st_palette, 0) : 0) : 0);
+		gif_framepalette = GIF_getpalette(gif_localcolortable ? max(st_palette, 0) : 0);
 		palchanged = memcmp(gif_headerpalette, gif_framepalette, sizeof(RGBA_t) * 256);
 	}
 	else
@@ -679,14 +679,6 @@ static void GIF_framewrite(void)
 //
 INT32 GIF_open(const char *filename)
 {
-#if 0
-	if (rendermode != render_soft)
-	{
-		CONS_Alert(CONS_WARNING, M_GetText("GIFs cannot be taken in non-software modes!\n"));
-		return 0;
-	}
-#endif
-
 	gif_out = fopen(filename, "wb");
 	if (!gif_out)
 		return 0;
