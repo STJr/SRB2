@@ -1234,7 +1234,7 @@ static const char *credits[] = {
 	"Thomas \"Shadow Hog\" Igoe",
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"\"Kaito Sinclaire\"",
-	"\"QueenDelta\"",
+	"Anna \"QueenDelta\" Sandlin",
 	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",
