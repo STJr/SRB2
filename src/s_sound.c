@@ -1456,6 +1456,7 @@ musicdef_t soundtestsfx = {
 	0, // with no conditions
 	0,
 	0,
+	0,
 	false,
 	NULL
 };
@@ -1651,6 +1652,8 @@ ReadMusicDefFields (UINT16 wadnum, int line, boolean fields, char *stoken,
 				fixed_t bpmf = FLOAT_TO_FIXED(bpm);
 				if (bpmf > 0)
 					def->bpm = FixedDiv((60*TICRATE)<<FRACBITS, bpmf);
+			} else if (!stricmp(stoken, "loopms")) {
+				def->loop_ms = atoi(textline);
 			} else {
 				CONS_Alert(CONS_WARNING,
 						"MUSICDEF: Invalid field '%s'. (file %s, line %d)\n",
@@ -2262,6 +2265,8 @@ static void S_UnloadMusic(void)
 
 static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 {
+	musicdef_t *def;
+
 	if (S_MusicDisabled())
 		return false;
 
@@ -2271,6 +2276,16 @@ static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 		CONS_Alert(CONS_ERROR, "Music %.6s could not be played: engine failure!\n", music_name);
 		S_UnloadMusic();
 		return false;
+	}
+
+	/* set loop point from MUSICDEF */
+	for (def = musicdefstart; def; def = def->next)
+	{
+		if (strcasecmp(def->name, music_name) == 0)
+		{
+			S_SetMusicLoopPoint(def->loop_ms);
+			break;
+		}
 	}
 
 	S_InitMusicVolume(); // switch between digi and sequence volume
