@@ -1819,6 +1819,10 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		}
 
 		free(fullname);
+
+		// skip and ignore comments/extra fields
+		if (fseek(fp, zentry->xtralen + zentry->commlen, SEEK_CUR) != 0)
+			return true;
 	}
 
 	return true;
