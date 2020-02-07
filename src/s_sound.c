@@ -2283,7 +2283,8 @@ static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 	{
 		if (strcasecmp(def->name, music_name) == 0)
 		{
-			S_SetMusicLoopPoint(def->loop_ms);
+			if (def->loop_ms)
+				S_SetMusicLoopPoint(def->loop_ms);
 			break;
 		}
 	}
