@@ -498,13 +498,11 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 // Utility functions
 // -----------------
 
-// for renderer switching, free a bunch of stuff
+// for renderer switching
 boolean needpatchflush = false;
 boolean needpatchrecache = false;
 
 // flush all patches from memory
-// (also frees memory tagged with PU_CACHE)
-// (which are not necessarily patches but I don't care)
 void Z_FlushCachedPatches(void)
 {
 	CONS_Debug(DBG_RENDER, "Z_FlushCachedPatches()...\n");
