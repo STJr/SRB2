@@ -529,6 +529,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
     zend_t zend;
     zentry_t* zentries;
     zentry_t* zentry;
+    zlentry_t zlentry;
 
 	UINT16 numlumps = *nlmp;
 	lumpinfo_t* lumpinfo;
@@ -580,7 +581,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			return NULL;
 		}
 
-		lump_p->position = zentry->offset + zentry->namelen + sizeof(zlentry_t);
+		lump_p->position = zentry->offset; // NOT ACCURATE YET: we still need to read the local entry to find our true position
 		lump_p->disksize = zentry->compsize;
 		lump_p->size = zentry->size;
 
@@ -641,6 +642,20 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 	}
 
 	free(zentries);
+
+	// Adjust lump position values properly
+	for (i = 0, lump_p = lumpinfo; i < numlumps; i++, lump_p++)
+	{
+		// skip and ignore comments/extra fields
+		if ((fseek(handle, lump_p->position, SEEK_SET) != 0) || (fread(&zlentry, 1, sizeof(zlentry_t), handle) < sizeof(zlentry_t)))
+		{
+			CONS_Alert(CONS_ERROR, "Local headers for lump %s are corrupt\n", lump_p->name2);
+			Z_Free(lumpinfo);
+			return NULL;
+		}
+
+		lump_p->position += sizeof(zlentry_t) + zlentry.namelen + zlentry.xtralen;
+	}
 
 	*nlmp = numlumps;
 	return lumpinfo;
