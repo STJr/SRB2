@@ -1011,9 +1011,10 @@ void R_SkyboxFrame(player_t *player)
 	R_SetupFreelook();
 }
 
-boolean R_IsViewpointFirstPerson(player_t *player, boolean skybox)
+boolean R_ViewpointHasChasecam(player_t *player)
 {
 	boolean chasecam = false;
+
 	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
 		chasecam = (cv_chasecam2.value != 0);
 	else
@@ -1023,6 +1024,13 @@ boolean R_IsViewpointFirstPerson(player_t *player, boolean skybox)
 		chasecam = true; // force chasecam on
 	else if (player->spectator) // no spectator chasecam
 		chasecam = false; // force chasecam off
+
+	return chasecam;
+}
+
+boolean R_IsViewpointFirstPerson(player_t *player, boolean skybox)
+{
+	boolean chasecam = R_ViewpointHasChasecam(player);
 
 	// cut-away view stuff
 	if (player->awayviewtics || skybox)

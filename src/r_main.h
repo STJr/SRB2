@@ -104,6 +104,8 @@ void R_ExecuteSetViewSize(void);
 
 void R_SetupFrame(player_t *player);
 void R_SkyboxFrame(player_t *player);
+
+boolean R_ViewpointHasChasecam(player_t *player);
 boolean R_IsViewpointFirstPerson(player_t *player, boolean skybox);
 
 // Called by D_Display.
