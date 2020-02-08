@@ -1028,7 +1028,7 @@ boolean R_ViewpointHasChasecam(player_t *player)
 	return chasecam;
 }
 
-boolean R_IsViewpointFirstPerson(player_t *player, boolean skybox)
+boolean R_IsViewpointThirdPerson(player_t *player, boolean skybox)
 {
 	boolean chasecam = R_ViewpointHasChasecam(player);
 

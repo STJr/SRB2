@@ -5594,7 +5594,7 @@ static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean 
 {
 	// 1 = always on
 	// 2 = chasecam only
-	if (cv_grshearing.value == 1 || (cv_grshearing.value == 2 && R_IsViewpointFirstPerson(player, skybox)))
+	if (cv_grshearing.value == 1 || (cv_grshearing.value == 2 && R_IsViewpointThirdPerson(player, skybox)))
 	{
 		fixed_t fixedaiming = AIMINGTODY(aimingangle);
 		trans->viewaiming = FIXED_TO_FLOAT(fixedaiming);
