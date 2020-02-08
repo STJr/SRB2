@@ -633,7 +633,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		// skip and ignore comments/extra fields
 		if (fseek(handle, zentry->xtralen + zentry->commlen, SEEK_CUR) != 0)
 		{
-			CONS_Alert(CONS_ERROR, "Central directory %d is corrupt (%02x%02x%02x%02x)\n", i, zentry->signature[0], zentry->signature[1], zentry->signature[2], zentry->signature[3]);
+			CONS_Alert(CONS_ERROR, "Central directory is corrupt\n");
 			Z_Free(lumpinfo);
 			free(zentries);
 			return NULL;
@@ -1821,7 +1821,7 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		free(fullname);
 
 		// skip and ignore comments/extra fields
-		if (fseek(fp, zentry->xtralen + zentry->commlen, SEEK_CUR) != 0)
+		if (fseek(fp, zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
 			return true;
 	}
 
