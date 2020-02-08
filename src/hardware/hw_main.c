@@ -144,7 +144,7 @@ static float gr_viewludsin, gr_viewludcos; // look up down kik test
 static float gr_fovlud;
 
 static angle_t gr_aimingangle;
-static void HWR_SetTransformAiming(FTransform *trans);
+static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox);
 
 // ==========================================================================
 // Lighting
@@ -5425,7 +5425,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 		//04/01/2000: Hurdler: added for T&L
 		//                     It should replace all other gr_viewxxx when finished
-		HWR_SetTransformAiming(&dometransform);
+		HWR_SetTransformAiming(&dometransform, player, false);
 		dometransform.angley = (float)((viewangle-ANGLE_270)>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
 		if (*type == postimg_flip)
@@ -5590,9 +5590,11 @@ void HWR_SetViewSize(void)
 
 // Set view aiming, for the sky dome, the skybox,
 // and the normal view, all with a single function.
-static void HWR_SetTransformAiming(FTransform *trans)
+static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox)
 {
-	if (cv_grshearing.value)
+	// 1 = always on
+	// 2 = chasecam only
+	if (cv_grshearing.value == 1 || (cv_grshearing.value == 2 && R_IsViewpointFirstPerson(player, skybox)))
 	{
 		fixed_t fixedaiming = AIMINGTODY(aimingangle);
 		trans->viewaiming = FIXED_TO_FLOAT(fixedaiming);
@@ -5604,6 +5606,7 @@ static void HWR_SetTransformAiming(FTransform *trans)
 		trans->shearing = false;
 		gr_aimingangle = aimingangle;
 	}
+
 	trans->anglex = (float)(gr_aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 }
 
@@ -5663,7 +5666,7 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	//                     It should replace all other gr_viewxxx when finished
 	memset(&atransform, 0x00, sizeof(FTransform));
 
-	HWR_SetTransformAiming(&atransform);
+	HWR_SetTransformAiming(&atransform, player, true);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
 	gr_viewludsin = FIXED_TO_FLOAT(FINECOSINE(gr_aimingangle>>ANGLETOFINESHIFT));
@@ -5864,7 +5867,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	//                     It should replace all other gr_viewxxx when finished
 	memset(&atransform, 0x00, sizeof(FTransform));
 
-	HWR_SetTransformAiming(&atransform);
+	HWR_SetTransformAiming(&atransform, player, false);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
 	gr_viewludsin = FIXED_TO_FLOAT(FINECOSINE(gr_aimingangle>>ANGLETOFINESHIFT));
@@ -5998,6 +6001,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 static CV_PossibleValue_t grmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
 static CV_PossibleValue_t grfakecontrast_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Smooth"}, {0, NULL}};
+static CV_PossibleValue_t grshearing_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Third-person"}, {0, NULL}};
 
 static void CV_grfiltermode_OnChange(void);
 static void CV_granisotropic_OnChange(void);
@@ -6024,7 +6028,7 @@ consvar_t cv_grmodels = {"gr_models", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, N
 consvar_t cv_grmodelinterpolation = {"gr_modelinterpolation", "Sometimes", CV_SAVE, grmodelinterpolation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grmodellighting = {"gr_modellighting", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_grshearing = {"gr_shearing", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grshearing = {"gr_shearing", "Third-person", CV_SAVE, grshearing_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grspritebillboarding = {"gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grskydome = {"gr_skydome", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grfakecontrast = {"gr_fakecontrast", "Smooth", CV_SAVE, grfakecontrast_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};

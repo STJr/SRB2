@@ -102,10 +102,11 @@ void R_SetViewSize(void);
 // do it (sometimes explicitly called)
 void R_ExecuteSetViewSize(void);
 
-void R_SkyboxFrame(player_t *player);
-
 void R_SetupFrame(player_t *player);
-// Called by G_Drawer.
+void R_SkyboxFrame(player_t *player);
+boolean R_IsViewpointFirstPerson(player_t *player, boolean skybox);
+
+// Called by D_Display.
 void R_RenderPlayerView(player_t *player);
 
 // add commands related to engine, at game startup
