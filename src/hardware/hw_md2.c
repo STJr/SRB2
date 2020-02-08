@@ -500,15 +500,10 @@ void HWR_InitModels(void)
 		{
 			if (stricmp(name, sprnames[i]) == 0)
 			{
-				//if (stricmp(name, "PLAY") == 0)
-					//continue;
-
-				//CONS_Debug(DBG_RENDER, "  Found: %s %s %f %f\n", name, filename, scale, offset);
 				md2_models[i].scale = scale;
 				md2_models[i].offset = offset;
 				md2_models[i].notfound = false;
 				strcpy(md2_models[i].filename, filename);
-				goto md2found;
 			}
 		}
 
@@ -516,18 +511,14 @@ void HWR_InitModels(void)
 		{
 			if (stricmp(name, skins[s].name) == 0)
 			{
-				//CONS_Printf("  Found: %s %s %f %f\n", name, filename, scale, offset);
 				md2_playermodels[s].skin = s;
 				md2_playermodels[s].scale = scale;
 				md2_playermodels[s].offset = offset;
 				md2_playermodels[s].notfound = false;
 				strcpy(md2_playermodels[s].filename, filename);
-				goto md2found;
 			}
 		}
-		// no sprite/player skin name found?!?
-		//CONS_Printf("Unknown sprite/player skin %s detected in models.dat\n", name);
-md2found:
+
 		// move on to next line...
 		continue;
 	}
@@ -570,7 +561,6 @@ void HWR_AddPlayerModel(int skin) // For skins that were added after startup
 		}
 	}
 
-	//CONS_Printf("Model for player skin %s not found\n", skins[skin].name);
 	md2_playermodels[skin].notfound = true;
 playermd2found:
 	fclose(f);
@@ -614,7 +604,6 @@ void HWR_AddSpriteModel(size_t spritenum) // For sprites that were added after s
 		}
 	}
 
-	//CONS_Printf("MD2 for sprite %s not found\n", sprnames[spritenum]);
 	md2_models[spritenum].notfound = true;
 spritemd2found:
 	fclose(f);
