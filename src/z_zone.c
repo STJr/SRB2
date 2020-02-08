@@ -506,7 +506,6 @@ boolean needpatchrecache = false;
 void Z_FlushCachedPatches(void)
 {
 	CONS_Debug(DBG_RENDER, "Z_FlushCachedPatches()...\n");
-	Z_FreeTag(PU_CACHE);
 	Z_FreeTag(PU_PATCH);
 	Z_FreeTag(PU_HUDGFX);
 	Z_FreeTag(PU_HWRPATCHINFO);
