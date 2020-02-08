@@ -1295,6 +1295,7 @@ void D_SRB2Main(void)
 		needpatchrecache = true;
 		VID_CheckRenderer();
 		SCR_ChangeRendererCVars(setrenderneeded);
+		setrenderneeded = 0;
 	}
 	D_CheckRendererState();
 
