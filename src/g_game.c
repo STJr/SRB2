@@ -1938,7 +1938,7 @@ boolean G_IsTitleCardAvailable(void)
 	// The current level header explicitly disabled the title card.
 	UINT16 titleflag = LF_NOTITLECARDFIRST;
 
-	if (modeattacking)
+	if (modeattacking != ATTACKING_NONE)
 		titleflag = LF_NOTITLECARDRECORDATTACK;
 	else if (titlecardforreload)
 		titleflag = LF_NOTITLECARDRESPAWN;

@@ -351,18 +351,18 @@ typedef struct
 } mapheader_t;
 
 // level flags
-#define LF_SCRIPTISFILE       1<<0 ///< True if the script is a file, not a lump.
-#define LF_SPEEDMUSIC         1<<1 ///< Speed up act music for super sneakers
-#define LF_NOSSMUSIC          1<<2 ///< Disable Super Sonic music
-#define LF_NORELOAD           1<<3 ///< Don't reload level on death
-#define LF_NOZONE             1<<4 ///< Don't include "ZONE" on level title
-#define LF_SAVEGAME           1<<5 ///< Save the game upon loading this level
-#define LF_MIXNIGHTSCOUNTDOWN 1<<6 ///< Play sfx_timeup instead of music change for NiGHTS countdown
-#define LF_WARNINGTITLE       1<<7 ///< WARNING! WARNING! WARNING! WARNING!
+#define LF_SCRIPTISFILE       (1<<0) ///< True if the script is a file, not a lump.
+#define LF_SPEEDMUSIC         (1<<1) ///< Speed up act music for super sneakers
+#define LF_NOSSMUSIC          (1<<2) ///< Disable Super Sonic music
+#define LF_NORELOAD           (1<<3) ///< Don't reload level on death
+#define LF_NOZONE             (1<<4) ///< Don't include "ZONE" on level title
+#define LF_SAVEGAME           (1<<5) ///< Save the game upon loading this level
+#define LF_MIXNIGHTSCOUNTDOWN (1<<6) ///< Play sfx_timeup instead of music change for NiGHTS countdown
+#define LF_WARNINGTITLE       (1<<7) ///< WARNING! WARNING! WARNING! WARNING!
 
-#define LF_NOTITLECARDFIRST        1<<8
-#define LF_NOTITLECARDRESPAWN      1<<9
-#define LF_NOTITLECARDRECORDATTACK 1<<10
+#define LF_NOTITLECARDFIRST        (1<<8)
+#define LF_NOTITLECARDRESPAWN      (1<<9)
+#define LF_NOTITLECARDRECORDATTACK (1<<10)
 #define LF_NOTITLECARD  (LF_NOTITLECARDFIRST|LF_NOTITLECARDRESPAWN|LF_NOTITLECARDRECORDATTACK) ///< Don't start the title card at all
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
