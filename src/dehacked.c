@@ -585,17 +585,26 @@ static void readfreeslots(MYFILE *f)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
-					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
 					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
-					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
+					deh_warning("Ran out of free SPR2 slots!\n");
 			}
 			else if (fastcmp(type, "TOL"))
 			{
-				if (lastcustomtol > 31)
-					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				// Search if we already have a typeoflevel by that name...
+				for (i = 0; i < numtolinfo; i++)
+					if (fastcmp(word, TYPEOFLEVEL[i].name))
+						break;
+
+				// We found it? Then don't allocate another one.
+				if (i < numtolinfo)
+					continue;
+
+				// We don't, so freeslot it.
+				if (lastcustomtol > 31) // Unless you have way too many, since they're flags.
+					deh_warning("Ran out of free typeoflevel slots!\n");
 				else
 				{
 					G_AddTOL((1<<lastcustomtol), word);
@@ -10465,16 +10474,24 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "TOL"))
 		{
-			if (lastcustomtol > 31)
-				CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
-			else
-			{
-				UINT32 newtol = (1<<lastcustomtol);
-				CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
-				G_AddTOL(newtol, word);
-				lua_pushinteger(L, newtol);
-				lastcustomtol++;
-				r++;
+			// Search if we already have a typeoflevel by that name...
+			int i;
+			for (i = 0; i < numtolinfo; i++)
+				if (fastcmp(word, TYPEOFLEVEL[i].name))
+					break;
+
+			// We don't, so allocate a new one.
+			if (i >= numtolinfo) {
+				if (lastcustomtol > 31) // Unless you have way too many, since they're flags.
+					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				else {
+					UINT32 newtol = (1<<lastcustomtol);
+					CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
+					G_AddTOL(newtol, word);
+					lua_pushinteger(L, newtol);
+					lastcustomtol++;
+					r++;
+				}
 			}
 		}
 		Z_Free(s);
