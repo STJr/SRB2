@@ -6502,6 +6502,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TNTBARREL_EXPL4",
 	"S_TNTBARREL_EXPL5",
 	"S_TNTBARREL_EXPL6",
+	"S_TNTBARREL_EXPL7",
 	"S_TNTBARREL_FLYING",
 
 	// TNT proximity shell
