@@ -337,6 +337,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
 
 	ldef = curline->linedef;
+	if (!ldef->alpha)
+		return;
+
 	if (ldef->alpha > 0 && ldef->alpha < FRACUNIT)
 	{
 		dc_transmap = transtables + ((R_GetLinedefTransTable(ldef->alpha) - 1) << FF_TRANSSHIFT);

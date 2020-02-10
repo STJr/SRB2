@@ -895,6 +895,7 @@ FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
 {
 	switch (transtablenum)
 	{
+		case 0          : pSurf->FlatColor.s.alpha = 0x00;return  PF_Masked;
 		case tr_trans10 : pSurf->FlatColor.s.alpha = 0xe6;return  PF_Translucent;
 		case tr_trans20 : pSurf->FlatColor.s.alpha = 0xcc;return  PF_Translucent;
 		case tr_trans30 : pSurf->FlatColor.s.alpha = 0xb3;return  PF_Translucent;
@@ -1842,7 +1843,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					blendmode = PF_Translucent;
 					break;
 				default:
-					if (gr_linedef->alpha > 0 && gr_linedef->alpha < FRACUNIT)
+					if (gr_linedef->alpha >= 0 && gr_linedef->alpha < FRACUNIT)
 						blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gr_linedef->alpha), &Surf);
 					else
 						blendmode = PF_Masked;

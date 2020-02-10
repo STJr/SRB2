@@ -960,8 +960,6 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->dx = v2->x - v1->x;
 	ld->dy = v2->y - v1->y;
 
-	ld->alpha = FRACUNIT;
-
 	ld->bbox[BOXLEFT] = min(v1->x, v2->x);
 	ld->bbox[BOXRIGHT] = max(v1->x, v2->x);
 	ld->bbox[BOXBOTTOM] = min(v1->y, v2->y);
@@ -1059,6 +1057,7 @@ static void P_LoadLinedefs(UINT8 *data)
 		ld->tag = SHORT(mld->tag);
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
+		ld->alpha = FRACUNIT;
 		P_SetLinedefV1(i, SHORT(mld->v1));
 		P_SetLinedefV2(i, SHORT(mld->v2));
 
@@ -1654,6 +1653,7 @@ static void P_LoadTextmap(void)
 		ld->tag = 0;
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
+		ld->alpha = FRACUNIT;
 		ld->sidenum[0] = 0xffff;
 		ld->sidenum[1] = 0xffff;
 
