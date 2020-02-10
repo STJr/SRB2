@@ -822,13 +822,11 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
   * backwards, so a later file overrides all earlier ones.
   *
   * \param filenames A null-terminated list of files to use.
-  * \return 1 if all files were loaded, 0 if at least one was missing or
+  * \return 1 if base files were loaded, 0 if at least one was missing or
   *           invalid.
   */
 INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
 {
-	INT32 rc = 1;
-
 	// open all the files, load headers, and count lumps
 	numwadfiles = 0;
 
@@ -836,13 +834,15 @@ INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
 	for (; *filenames; filenames++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		rc &= (W_InitFile(*filenames, numwadfiles < mainfiles) != INT16_MAX) ? 1 : 0;
+		if (W_InitFile(*filenames, numwadfiles < mainfiles) == INT16_MAX)
+		{
+			CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), *filenames);
+			if (numwadfiles < mainfiles)
+				return 0;
+		}
 	}
 
-	if (!numwadfiles)
-		I_Error("W_InitMultipleFiles: no files found");
-
-	return rc;
+	return 1;
 }
 
 /** Make sure a lump number is valid.

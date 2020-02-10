@@ -2380,6 +2380,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					}
 				}
 			}
+			else if (player->charability == CA_GLIDEANDCLIMB && (player->mo->state-states == S_PLAY_GLIDE_LANDING))
+				;
 			else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
 				;
 			else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
@@ -4537,16 +4539,14 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		player->mo->z--;
 		if (player->mo->pmomz < 0)
 			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
-		else
-			player->mo->pmomz = 0;
+		player->mo->pmomz = 0;
 	}
 	else
 	{
 		player->mo->z++;
 		if (player->mo->pmomz > 0)
 			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
-		else
-			player->mo->pmomz = 0;
+		player->mo->pmomz = 0;
 	}
 	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
@@ -5503,10 +5503,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						; // Can't do anything if you're a fish out of water!
 					else if (player->powers[pw_tailsfly]) // If currently flying, give an ascend boost.
 					{
-						if (!player->fly1)
-							player->fly1 = 20;
-						else
-							player->fly1 = 2;
+						player->fly1 = 20;
 
 						if (player->charability == CA_SWIM)
 							player->fly1 /= 2;
@@ -8487,7 +8484,11 @@ static void P_MovePlayer(player_t *player)
 			// Descend
 			if (cmd->buttons & BT_USE && !(player->pflags & PF_STASIS) && !player->exiting && !(player->mo->eflags & MFE_GOOWATER))
 				if (P_MobjFlip(player->mo)*player->mo->momz > -FixedMul(5*actionspd, player->mo->scale))
+				{
+					if (player->fly1 > 2)
+						player->fly1 = 2;
 					P_SetObjectMomZ(player->mo, -actionspd/2, true);
+				}
 
 		}
 		else
