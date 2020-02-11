@@ -2395,7 +2395,7 @@ state_t states[NUMSTATES] =
 
 	// Minecart
 	{SPR_NULL, 0,                            1, {NULL},                 0, 0, S_MINECART_IDLE},   // S_MINECART_IDLE
-	{SPR_NULL, 0,                            0, {A_KillSegments},       0, 0, S_TNTBARREL_EXPL3}, // S_MINECART_DTH1
+	{SPR_NULL, 0,                            0, {A_KillSegments},       0, 0, S_TNTBARREL_EXPL4}, // S_MINECART_DTH1
 	{SPR_MCRT, 8|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},            // S_MINECARTEND
 	{SPR_MCRT, 0|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},            // S_MINECARTSEG_FRONT
 	{SPR_MCRT, 1|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},            // S_MINECARTSEG_BACK
