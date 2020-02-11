@@ -762,7 +762,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_LIFE, 20, {NULL}, 0,  4, S_NULL},       // S_PLAY_ICON3
 
 	// Level end sign (uses player sprite)
-	{SPR_PLAY, SPR2_SIGN|FF_PAPERSPRITE, -1, {NULL}, 0, 29, S_PLAY_SIGN},         // S_PLAY_SIGN
+	{SPR_PLAY, SPR2_SIGN|FF_PAPERSPRITE, 2, {NULL}, 0, 29, S_PLAY_SIGN},         // S_PLAY_SIGN
 
 	// NiGHTS Player, transforming
 	{SPR_PLAY, SPR2_TRNS|FF_ANIMATE,     7, {NULL},          0, 4, S_PLAY_NIGHTS_TRANS2}, // S_PLAY_NIGHTS_TRANS1
