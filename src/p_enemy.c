@@ -5232,14 +5232,14 @@ void A_SignPlayer(mobj_t *actor)
 		{
 			ov->color = facecolor;
 			ov->skin = skin;
-			if (ov->state-states != actor->info->seestate)
+			if ((statenum_t)(ov->state-states) != actor->info->seestate)
 				P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
 		}
 		else // CLEAR! sign
 		{
 			ov->color = SKINCOLOR_NONE;
 			ov->skin = NULL; // needs to be NULL in the case of SF_HIRES characters
-			if (ov->state-states != actor->info->missilestate)
+			if ((statenum_t)(ov->state-states) != actor->info->missilestate)
 				P_SetMobjState(ov, actor->info->missilestate); // S_CLEARSIGN
 		}
 	}
@@ -5247,7 +5247,7 @@ void A_SignPlayer(mobj_t *actor)
 	{
 		ov->color = SKINCOLOR_NONE;
 		ov->skin = NULL;
-		if (ov->state-states != actor->info->meleestate)
+		if ((statenum_t)(ov->state-states) != actor->info->meleestate)
 			P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		if (!signcolor)
 			signcolor = SKINCOLOR_CARBON;
