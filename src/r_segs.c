@@ -288,24 +288,7 @@ static void R_DrawFlippedMaskedSegColumn(column_t *column)
 
 transnum_t R_GetLinedefTransTable(fixed_t alpha)
 {
-	if (alpha < 9830)
-		return tr_trans90;
-	else if (alpha < 16384)
-		return tr_trans80;
-	else if (alpha < 22937)
-		return tr_trans70;
-	else if (alpha < 29491)
-		return tr_trans60;
-	else if (alpha < 36044)
-		return tr_trans50;
-	else if (alpha < 42598)
-		return tr_trans40;
-	else if (alpha < 49152)
-		return tr_trans30;
-	else if (alpha < 55705)
-		return tr_trans20;
-	else
-		return tr_trans10;
+	return (20*(FRACUNIT - alpha - 1) + FRACUNIT) >> (FRACBITS+1);
 }
 
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
