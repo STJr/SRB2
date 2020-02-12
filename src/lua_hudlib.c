@@ -268,8 +268,7 @@ static int patch_get(lua_State *L)
 #endif
 	enum patch field = luaL_checkoption(L, 2, NULL, patch_opt);
 
-	// patches are CURRENTLY always valid, expected to be cached with PU_STATIC
-	// this may change in the future, so patch.valid still exists
+	// patches are invalidated when switching renderers
 	if (!patch) {
 		if (field == patch_valid) {
 			lua_pushboolean(L, 0);
