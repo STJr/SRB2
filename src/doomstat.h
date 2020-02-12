@@ -437,6 +437,7 @@ extern const char *Gametype_ConstantNames[NUMGAMETYPES];
 extern INT32 pointlimits[NUMGAMETYPES];
 extern INT32 timelimits[NUMGAMETYPES];
 
+// TypeOfLevel things
 enum TypeOfLevel
 {
 	TOL_SP          = 0x01, ///< Single Player
@@ -461,16 +462,16 @@ enum TypeOfLevel
 	TOL_XMAS   = 0x1000, ///< Christmas NiGHTS
 };
 
-#define NUMBASETOL 18
-#define NUMMAXTOL (18 + NUMGAMETYPEFREESLOTS)
+#define MAXTOL             (1<<31)
+#define NUMBASETOLNAMES    (19)
+#define NUMTOLNAMES        (NUMBASETOLNAMES + NUMGAMETYPEFREESLOTS)
 
 typedef struct
 {
 	const char *name;
 	UINT32 flag;
 } tolinfo_t;
-extern tolinfo_t TYPEOFLEVEL[NUMMAXTOL];
-extern INT32 numtolinfo;
+extern tolinfo_t TYPEOFLEVEL[NUMTOLNAMES];
 extern UINT32 lastcustomtol;
 
 extern tic_t totalplaytime;
