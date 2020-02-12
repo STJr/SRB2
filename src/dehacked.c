@@ -603,7 +603,7 @@ static void readfreeslots(MYFILE *f)
 					continue;
 
 				// We don't, so freeslot it.
-				if (lastcustomtol == MAXTOL) // Unless you have way too many, since they're flags.
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
 					deh_warning("Ran out of free typeoflevel slots!\n");
 				else
 				{
@@ -10454,7 +10454,7 @@ static inline int lib_freeslot(lua_State *L)
 
 			// We don't, so allocate a new one.
 			if (TYPEOFLEVEL[i].name == NULL) {
-				if (lastcustomtol == MAXTOL) // Unless you have way too many, since they're flags.
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
 					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
 				else {
 					CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
