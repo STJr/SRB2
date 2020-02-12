@@ -270,8 +270,13 @@ static int patch_get(lua_State *L)
 
 	// patches are CURRENTLY always valid, expected to be cached with PU_STATIC
 	// this may change in the future, so patch.valid still exists
-	if (!patch)
+	if (!patch) {
+		if (field == patch_valid) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
 		return LUA_ErrInvalid(L, "patch_t");
+	}
 
 	switch (field)
 	{
