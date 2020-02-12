@@ -1214,7 +1214,7 @@ void LUAh_GameHUD(player_t *stplayr)
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 2); // HUD[2] = rendering funcs
+	lua_rawgeti(gL, -1, 2+hudhook_game); // HUD[2] = rendering funcs
 	I_Assert(lua_istable(gL, -1));
 
 	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
@@ -1248,7 +1248,7 @@ void LUAh_ScoresHUD(void)
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 3); // HUD[3] = rendering funcs
+	lua_rawgeti(gL, -1, 2+hudhook_scores); // HUD[3] = rendering funcs
 	I_Assert(lua_istable(gL, -1));
 
 	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
@@ -1273,7 +1273,7 @@ void LUAh_TitleHUD(void)
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 4); // HUD[4] = rendering funcs
+	lua_rawgeti(gL, -1, 2+hudhook_title); // HUD[5] = rendering funcs
 	I_Assert(lua_istable(gL, -1));
 
 	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
@@ -1298,7 +1298,7 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 5); // HUD[5] = rendering funcs
+	lua_rawgeti(gL, -1, 2+hudhook_titlecard); // HUD[6] = rendering funcs
 	I_Assert(lua_istable(gL, -1));
 
 	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
@@ -1332,7 +1332,7 @@ void LUAh_IntermissionHUD(void)
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 4); // HUD[4] = rendering funcs
+	lua_rawgeti(gL, -1, 2+hudhook_intermission); // HUD[4] = rendering funcs
 	I_Assert(lua_istable(gL, -1));
 
 	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
