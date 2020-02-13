@@ -99,6 +99,7 @@ enum line_e {
 	line_sidenum,
 	line_frontside,
 	line_backside,
+	line_alpha,
 	line_slopetype,
 	line_frontsector,
 	line_backsector,
@@ -122,6 +123,7 @@ static const char *const line_opt[] = {
 	"sidenum",
 	"frontside",
 	"backside",
+	"alpha",
 	"slopetype",
 	"frontsector",
 	"backsector",
@@ -805,6 +807,9 @@ static int line_get(lua_State *L)
 		if (line->sidenum[1] == 0xffff)
 			return 0;
 		LUA_PushUserdata(L, &sides[line->sidenum[1]], META_SIDE);
+		return 1;
+	case line_alpha:
+		lua_pushfixed(L, line->alpha);
 		return 1;
 	case line_slopetype:
 		switch(line->slopetype)

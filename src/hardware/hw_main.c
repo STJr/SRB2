@@ -895,6 +895,7 @@ FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
 {
 	switch (transtablenum)
 	{
+		case 0          : pSurf->FlatColor.s.alpha = 0x00;return  PF_Masked;
 		case tr_trans10 : pSurf->FlatColor.s.alpha = 0xe6;return  PF_Translucent;
 		case tr_trans20 : pSurf->FlatColor.s.alpha = 0xcc;return  PF_Translucent;
 		case tr_trans30 : pSurf->FlatColor.s.alpha = 0xb3;return  PF_Translucent;
@@ -1818,37 +1819,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			}
 #endif
 
-			// set alpha for transparent walls (new boom and legacy linedef types)
+			// set alpha for transparent walls
 			// ooops ! this do not work at all because render order we should render it in backtofront order
 			switch (gr_linedef->special)
 			{
-				case 900:
-					blendmode = HWR_TranstableToAlpha(tr_trans10, &Surf);
-					break;
-				case 901:
-					blendmode = HWR_TranstableToAlpha(tr_trans20, &Surf);
-					break;
-				case 902:
-					blendmode = HWR_TranstableToAlpha(tr_trans30, &Surf);
-					break;
-				case 903:
-					blendmode = HWR_TranstableToAlpha(tr_trans40, &Surf);
-					break;
-				case 904:
-					blendmode = HWR_TranstableToAlpha(tr_trans50, &Surf);
-					break;
-				case 905:
-					blendmode = HWR_TranstableToAlpha(tr_trans60, &Surf);
-					break;
-				case 906:
-					blendmode = HWR_TranstableToAlpha(tr_trans70, &Surf);
-					break;
-				case 907:
-					blendmode = HWR_TranstableToAlpha(tr_trans80, &Surf);
-					break;
-				case 908:
-					blendmode = HWR_TranstableToAlpha(tr_trans90, &Surf);
-					break;
 				//  Translucent
 				case 102:
 				case 121:
@@ -1869,7 +1843,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					blendmode = PF_Translucent;
 					break;
 				default:
-					blendmode = PF_Masked;
+					if (gr_linedef->alpha >= 0 && gr_linedef->alpha < FRACUNIT)
+						blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gr_linedef->alpha), &Surf);
+					else
+						blendmode = PF_Masked;
 					break;
 			}
 
