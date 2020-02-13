@@ -8040,7 +8040,7 @@ static void P_MovePlayer(player_t *player)
 			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6]))) // Note the < instead of <=
 		{
 			skin_t *skin = ((skin_t *)(player->mo->skin));
-			if (skin->flags & SF_SUPER)
+			if (( skin->flags & (SF_SUPER|SF_NONIGHTSSUPER) ) == SF_SUPER)
 			{
 				player->mo->color = skin->supercolor
 					+ ((player->nightstime == player->startedtime)

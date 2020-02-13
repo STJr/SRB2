@@ -3463,6 +3463,7 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(DASHMODE)
 	GETFLAG(FASTEDGE)
 	GETFLAG(MULTIABILITY)
+	GETFLAG(NONIGHTSSUPER)
 #undef GETFLAG
 
 	else // let's check if it's a sound, otherwise error out
