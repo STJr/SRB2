@@ -1803,6 +1803,7 @@ void I_StartupHardwareGraphics(void)
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 
+		// check gl renderer lib
 		if (HWD.pfnGetRenderVersion() != VERSION)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("The version of the renderer doesn't match the version of the executable\nBe sure you have installed SRB2 properly.\n"));
