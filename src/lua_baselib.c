@@ -2335,6 +2335,8 @@ static int lib_rGetNameByColor(lua_State *L)
 	return 1;
 }
 
+// S_SOUND
+////////////
 static int lib_sStartSound(lua_State *L)
 {
 	const void *origin = NULL;
