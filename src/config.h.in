@@ -30,8 +30,8 @@
  * Last updated 20?? / ?? / ?? - v2.2.? - patch.pk3
  */
 #define ASSET_HASH_SRB2_PK3   "0277c9416756627004e83cbb5b2e3e28"
-#define ASSET_HASH_ZONES_PK3  "89627822f5a5c7fb022d836b138144b2"
-#define ASSET_HASH_PLAYER_DTA "129fa7d4b273a4b3dcacaa44eccead4f"
+#define ASSET_HASH_ZONES_PK3  "04fcff3b888ebb4970139166e75c08e9"
+#define ASSET_HASH_PLAYER_DTA "ad49e07b17cc662f1ad70c454910b4ae"
 #ifdef USE_PATCH_DTA
 #define ASSET_HASH_PATCH_PK3  "there is no patch.pk3, only zuul"
 #endif
