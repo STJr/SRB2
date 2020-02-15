@@ -37,8 +37,9 @@ typedef enum
 extern rendermode_t rendermode;
 
 /**	\brief hardware renderer loaded
+	0 = never loaded, 1 = loaded successfully, -1 = failed loading
 */
-extern boolean hwrenderloaded;
+extern INT32 hwrenderloaded;
 
 /**	\brief use highcolor modes if true
 */
