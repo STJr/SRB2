@@ -1803,13 +1803,19 @@ void I_StartupHardwareGraphics(void)
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 
-		if (!HWD.pfnInit(I_Error)) // let load the OpenGL library
+		if (HWD.pfnGetRenderVersion() != VERSION)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("The version of the renderer doesn't match the version of the executable\nBe sure you have installed SRB2 properly.\n"));
+			hwrenderloaded = false;
+		}
+		else
+			hwrenderloaded = HWD.pfnInit(I_Error); // let load the OpenGL library
+
+		if (!hwrenderloaded)
 		{
 			rendermode = render_soft;
 			setrenderneeded = 0;
 		}
-		else
-			hwrenderloaded = true;
 		glstartup = true;
 	}
 #endif
