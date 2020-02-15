@@ -459,8 +459,8 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"skincolor"))
 	{
 		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
-		if (newcolor >= MAXSKINCOLORS)
-			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, MAXSKINCOLORS-1);
+		if (newcolor >= numskincolors)
+			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, numskincolors-1);
 		plr->skincolor = newcolor;
 	}
 	else if (fastcmp(field,"score"))

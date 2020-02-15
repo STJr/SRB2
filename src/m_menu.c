@@ -3860,6 +3860,8 @@ void M_Init(void)
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
 #endif
+
+	M_InitPlayerSetupColors();
 }
 
 void M_InitCharacterTables(void)
@@ -7489,7 +7491,7 @@ static void M_DrawSoundTest(void)
 			{
 				frame[1] = (2-st_time);
 				frame[2] = ((cv_soundtest.value - 1) % 9);
-				frame[3] += (((cv_soundtest.value - 1) / 9) % (MAXSKINCOLORS - frame[3]));
+				frame[3] += (((cv_soundtest.value - 1) / 9) % (FIRSTSUPERCOLOR - frame[3]));
 				if (st_time < 2)
 					st_time++;
 			}
@@ -8149,13 +8151,13 @@ static void M_DrawLoadGameData(void)
 				{
 					if (charskin->prefoppositecolor)
 					{
-						col = charskin->prefoppositecolor - 1;
-						col = Color_Index[col][Color_Opposite[Color_Opposite[col][0] - 1][1]];
+						col = charskin->prefoppositecolor;
+						col = skincolors[col].ramp[skincolors[skincolors[col].invcolor].invshade];
 					}
 					else
 					{
-						col = charskin->prefcolor - 1;
-						col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
+						col = charskin->prefcolor;
+						col = skincolors[skincolors[col].invcolor].ramp[skincolors[col].invshade];
 					}
 				}
 
@@ -8996,7 +8998,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Use the opposite of the character's skincolor
 	col = description[char_on].oppositecolor;
 	if (!col)
-		col = Color_Opposite[charskin->prefcolor - 1][0];
+		col = skincolors[charskin->prefcolor].invcolor;
 
 	// Make the translation colormap
 	colormap = R_GetTranslationColormap(TC_DEFAULT, col, 0);
@@ -9059,7 +9061,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		if (!curtextcolor)
 			curtextcolor = charskin->prefcolor;
 		if (!curoutlinecolor)
-			curoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
+			curoutlinecolor = col = skincolors[charskin->prefcolor].invcolor;
 
 		txsh = oxsh;
 		ox = 8 + SHORT((description[char_on].charpic)->width)/2;
@@ -9098,7 +9100,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				if (!prevtextcolor)
 					prevtextcolor = charskin->prefcolor;
 				if (!prevoutlinecolor)
-					prevoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
+					prevoutlinecolor = col = skincolors[charskin->prefcolor].invcolor;
 
 				x = (ox - txsh) - w;
 				if (prevpatch)
@@ -9128,7 +9130,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				if (!nexttextcolor)
 					nexttextcolor = charskin->prefcolor;
 				if (!nextoutlinecolor)
-					nextoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
+					nextoutlinecolor = col = skincolors[charskin->prefcolor].invcolor;
 
 				x = (ox - txsh) + w;
 				if (nextpatch)
@@ -10979,15 +10981,15 @@ static UINT8      multi_spr2;
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
-static char       setupm_name[MAXPLAYERNAME+1];
-static player_t  *setupm_player;
-static consvar_t *setupm_cvskin;
-static consvar_t *setupm_cvcolor;
-static consvar_t *setupm_cvname;
-static consvar_t *setupm_cvdefaultskin;
-static consvar_t *setupm_cvdefaultcolor;
-static INT32      setupm_fakeskin;
-static INT32      setupm_fakecolor;
+static char         setupm_name[MAXPLAYERNAME+1];
+static player_t    *setupm_player;
+static consvar_t   *setupm_cvskin;
+static consvar_t   *setupm_cvcolor;
+static consvar_t   *setupm_cvname;
+static consvar_t   *setupm_cvdefaultskin;
+static consvar_t   *setupm_cvdefaultcolor;
+static INT32        setupm_fakeskin;
+static menucolor_t *setupm_fakecolor;
 
 static void M_DrawSetupMultiPlayerMenu(void)
 {
@@ -11054,11 +11056,11 @@ static void M_DrawSetupMultiPlayerMenu(void)
 
 	sprdef = &skins[setupm_fakeskin].sprites[multi_spr2];
 
-	if (!setupm_fakecolor || !sprdef->numframes) // should never happen but hey, who knows
+	if (!setupm_fakecolor->color || !sprdef->numframes) // should never happen but hey, who knows
 		goto faildraw;
 
 	// ok, draw player sprite for sure now
-	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor, 0);
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, 0);
 
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
@@ -11104,11 +11106,11 @@ colordraw:
 	// draw color string
 	V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
 	             ((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 2 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
-	             Color_Names[setupm_fakecolor]);
+	             skincolors[setupm_fakecolor->color].name);
 
 	if (itemOn == 2 && (MP_PlayerSetupMenu[2].status & IT_TYPE) != IT_SPACE)
 	{
-		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(Color_Names[setupm_fakecolor], V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
+		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skincolors[setupm_fakecolor->color].name, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
 			'\x1C' | V_YELLOWMAP, false);
 		V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
 			'\x1D' | V_YELLOWMAP, false);
@@ -11118,25 +11120,39 @@ colordraw:
 
 #define indexwidth 8
 	{
-		const INT32 colwidth = (282-charw)/(2*indexwidth);
-		INT32 i = -colwidth;
-		INT16 col = setupm_fakecolor - colwidth;
-		INT32 w = indexwidth;
+		const INT32 numcolors = (282-charw)/(2*indexwidth); // Number of colors per side
+		INT32 w = indexwidth; // Width of a singular color block
+		menucolor_t *mc = setupm_fakecolor->prev; // Last accessed color
 		UINT8 h;
+		INT16 i;
 
-		while (col < 1)
-			col += MAXSKINCOLORS-1;
-		while (i <= colwidth)
-		{
-			if (!(i++))
-				w = charw;
-			else
-				w = indexwidth;
+		// Draw color in the middle
+		x += numcolors*w;
+		for (h = 0; h < 16; h++)
+			V_DrawFill(x, y+h, charw, 1, skincolors[setupm_fakecolor->color].ramp[h]);
+
+		//Draw colors from middle to left
+		for (i=0; i<numcolors; i++) {
+			x -= w;
+			// Find accessible color before this one
+			while (!skincolors[mc->color].accessible)
+				mc = mc->prev;
 			for (h = 0; h < 16; h++)
-				V_DrawFill(x, y+h, w, 1, Color_Index[col-1][h]);
-			if (++col >= MAXSKINCOLORS)
-				col -= MAXSKINCOLORS-1;
+				V_DrawFill(x, y+h, w, 1, skincolors[mc->color].ramp[h]);
+			mc = mc->prev;
+		}
+
+		// Draw colors from middle to right
+		mc = setupm_fakecolor->next;
+		x += numcolors*w + charw;
+		for (i=0; i<numcolors; i++) {
+			// Find accessible color after this one
+			while (!skincolors[mc->color].accessible)
+				mc = mc->next;
+			for (h = 0; h < 16; h++)
+				V_DrawFill(x, y+h, w, 1, skincolors[mc->color].ramp[h]);
 			x += w;
+			mc = mc->next;
 		}
 	}
 #undef charw
@@ -11147,7 +11163,7 @@ colordraw:
 
 	V_DrawString(x, y,
 		((R_SkinAvailable(setupm_cvdefaultskin->string) != setupm_fakeskin
-		|| setupm_cvdefaultcolor->value != setupm_fakecolor)
+		|| setupm_cvdefaultcolor->value != setupm_fakecolor->color)
 			? 0
 			: V_TRANSLUCENT)
 		| ((itemOn == 3) ? V_YELLOWMAP : 0),
@@ -11195,19 +11211,19 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			else if (itemOn == 2) // player color
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_fakecolor--;
+				setupm_fakecolor = setupm_fakecolor->prev;
 			}
 			break;
 
 		case KEY_ENTER:
 			if (itemOn == 3
 			&& (R_SkinAvailable(setupm_cvdefaultskin->string) != setupm_fakeskin
-			|| setupm_cvdefaultcolor->value != setupm_fakecolor))
+			|| setupm_cvdefaultcolor->value != setupm_fakecolor->color))
 			{
 				S_StartSound(NULL,sfx_strpst);
 				// you know what? always putting these in the buffer won't hurt anything.
 				COM_BufAddText (va("%s \"%s\"\n",setupm_cvdefaultskin->name,skins[setupm_fakeskin].name));
-				COM_BufAddText (va("%s %d\n",setupm_cvdefaultcolor->name,setupm_fakecolor));
+				COM_BufAddText (va("%s %d\n",setupm_cvdefaultcolor->name,setupm_fakecolor->color));
 				break;
 			}
 			/* FALLTHRU */
@@ -11228,7 +11244,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			else if (itemOn == 2) // player color
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_fakecolor++;
+				setupm_fakecolor = setupm_fakecolor->next;
 			}
 			break;
 
@@ -11245,10 +11261,12 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			else if (itemOn == 2)
 			{
 				UINT8 col = skins[setupm_fakeskin].prefcolor;
-				if (setupm_fakecolor != col)
+				if ((setupm_fakecolor->color != col) && skincolors[col].accessible)
 				{
 					S_StartSound(NULL,sfx_menu1); // Tails
-					setupm_fakecolor = col;
+					for (setupm_fakecolor=menucolorhead;;setupm_fakecolor=setupm_fakecolor->next)
+						if (setupm_fakecolor->color == col || setupm_fakecolor == menucolortail)
+							break;
 				}
 			}
 			break;
@@ -11276,10 +11294,14 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 	}
 
 	// check color
-	if (setupm_fakecolor < 1)
-		setupm_fakecolor = MAXSKINCOLORS-1;
-	if (setupm_fakecolor > MAXSKINCOLORS-1)
-		setupm_fakecolor = 1;
+	if (itemOn == 2 && !skincolors[setupm_fakecolor->color].accessible) {
+		if (choice == KEY_LEFTARROW)
+			while (!skincolors[setupm_fakecolor->color].accessible)
+				setupm_fakecolor = setupm_fakecolor->prev;
+		else if (choice == KEY_RIGHTARROW || choice == KEY_ENTER)
+			while (!skincolors[setupm_fakecolor->color].accessible)
+				setupm_fakecolor = setupm_fakecolor->next;
+	}
 
 	if (exitmenu)
 	{
@@ -11311,7 +11333,10 @@ static void M_SetupMultiPlayer(INT32 choice)
 	setupm_fakeskin = R_SkinAvailable(setupm_cvskin->string);
 	if (setupm_fakeskin == -1)
 		setupm_fakeskin = 0;
-	setupm_fakecolor = setupm_cvcolor->value;
+
+	for (setupm_fakecolor=menucolorhead;;setupm_fakecolor=setupm_fakecolor->next)
+		if (setupm_fakecolor->color == setupm_cvcolor->value || setupm_fakecolor == menucolortail)
+			break;
 
 	// disable skin changes if we can't actually change skins
 	if (!CanChangeSkin(consoleplayer))
@@ -11352,7 +11377,10 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	setupm_fakeskin = R_SkinAvailable(setupm_cvskin->string);
 	if (setupm_fakeskin == -1)
 		setupm_fakeskin = 0;
-	setupm_fakecolor = setupm_cvcolor->value;
+
+	for (setupm_fakecolor=menucolorhead;;setupm_fakecolor=setupm_fakecolor->next)
+		if (setupm_fakecolor->color == setupm_cvcolor->value || setupm_fakecolor == menucolortail)
+			break;
 
 	// disable skin changes if we can't actually change skins
 	if (splitscreen && !CanChangeSkin(secondarydisplayplayer))
@@ -11384,10 +11412,178 @@ static boolean M_QuitMultiPlayerMenu(void)
 			setupm_name[l] =0;
 		COM_BufAddText (va("%s \"%s\"\n",setupm_cvname->name,setupm_name));
 	}
-	// you know what? always putting these in the buffer won't hurt anything.
 	COM_BufAddText (va("%s \"%s\"\n",setupm_cvskin->name,skins[setupm_fakeskin].name));
-	COM_BufAddText (va("%s %d\n",setupm_cvcolor->name,setupm_fakecolor));
+	// send color if changed
+	if (setupm_fakecolor->color != setupm_cvcolor->value)
+		COM_BufAddText (va("%s %d\n",setupm_cvcolor->name,setupm_fakecolor->color));
 	return true;
+}
+
+void M_AddMenuColor(UINT8 color) {
+	menucolor_t *c;
+
+	if (color >= numskincolors) {
+		CONS_Printf("M_AddMenuColor: color %d does not exist.",color);
+		return;
+	}
+
+	c = (menucolor_t *)Z_Malloc(sizeof(menucolor_t), PU_STATIC, NULL);
+	c->color = color;
+	if (menucolorhead == NULL) {
+		c->next = c;
+		c->prev = c;
+		menucolorhead = c;
+		menucolortail = c;
+	} else {
+		c->next = menucolorhead;
+		c->prev = menucolortail;
+		menucolortail->next = c;
+		menucolorhead->prev = c;
+		menucolortail = c;
+	}
+}
+
+void M_MoveColorBefore(UINT8 color, UINT8 targ) {
+	menucolor_t *look, *c = NULL, *t = NULL;
+
+	if (color == targ)
+		return;
+	if (color >= numskincolors) {
+		CONS_Printf("M_MoveColorBefore: color %d does not exist.",color);
+		return;
+	}
+	if (targ >= numskincolors) {
+		CONS_Printf("M_MoveColorBefore: target color %d does not exist.",targ);
+		return;
+	}
+
+	for (look=menucolorhead;;look=look->next) {
+		if (look->color == color)
+			c = look;
+		else if (look->color == targ)
+			t = look;
+		if (c != NULL && t != NULL)
+			break;
+		if (look==menucolortail)
+			return;
+	}
+
+	if (c == t->prev)
+		return;
+
+	if (t==menucolorhead)
+		menucolorhead = c;
+	if (c==menucolortail)
+		menucolortail = c->prev;
+
+	c->prev->next = c->next;
+	c->next->prev = c->prev;
+
+	c->prev = t->prev;
+	c->next = t;
+	t->prev->next = c;
+	t->prev = c;
+}
+
+void M_MoveColorAfter(UINT8 color, UINT8 targ) {
+	menucolor_t *look, *c = NULL, *t = NULL;
+
+	if (color == targ)
+		return;
+	if (color >= numskincolors) {
+		CONS_Printf("M_MoveColorAfter: color %d does not exist.\n",color);
+		return;
+	}
+	if (targ >= numskincolors) {
+		CONS_Printf("M_MoveColorAfter: target color %d does not exist.\n",targ);
+		return;
+	}
+
+	for (look=menucolorhead;;look=look->next) {
+		if (look->color == color)
+			c = look;
+		else if (look->color == targ)
+			t = look;
+		if (c != NULL && t != NULL)
+			break;
+		if (look==menucolortail)
+			return;
+	}
+
+	if (t == c->prev)
+		return;
+
+	if (t==menucolortail)
+		menucolortail = c;
+	else if (c==menucolortail)
+		menucolortail = c->prev;
+
+	c->prev->next = c->next;
+	c->next->prev = c->prev;
+
+	c->next = t->next;
+	c->prev = t;
+	t->next->prev = c;
+	t->next = c;
+}
+
+UINT8 M_GetColorBefore(UINT8 color) {
+	menucolor_t *look;
+
+	if (color >= numskincolors) {
+		CONS_Printf("M_GetColorBefore: color %d does not exist.\n",color);
+		return 0;
+	}
+
+	for (look=menucolorhead;;look=look->next) {
+		if (look->color == color)
+			return look->prev->color;
+		if (look==menucolortail)
+			return 0;
+	}
+}
+
+UINT8 M_GetColorAfter(UINT8 color) {
+	menucolor_t *look;
+
+	if (color >= numskincolors) {
+		CONS_Printf("M_GetColorAfter: color %d does not exist.\n",color);
+		return 0;
+	}
+
+	for (look=menucolorhead;;look=look->next) {
+		if (look->color == color)
+			return look->next->color;
+		if (look==menucolortail)
+			return 0;
+	}
+}
+
+void M_InitPlayerSetupColors(void) {
+	UINT8 i;
+	menucolorhead = menucolortail = NULL;
+	for (i=0; i<numskincolors; i++)
+		M_AddMenuColor(i);
+}
+
+void M_FreePlayerSetupColors(void) {
+	menucolor_t *look = menucolorhead, *tmp;
+
+	if (menucolorhead==NULL)
+		return;
+
+	while (true) {
+		if (look != menucolortail) {
+			tmp = look;
+			look = look->next;
+			Z_Free(tmp);
+		} else {
+			Z_Free(look);
+			return;
+		}
+	}
+
+	menucolorhead = menucolortail = NULL;
 }
 
 // =================

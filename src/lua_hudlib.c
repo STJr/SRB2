@@ -967,7 +967,7 @@ static int libd_nameTagWidth(lua_State *L)
 static int libd_getColormap(lua_State *L)
 {
 	INT32 skinnum = TC_DEFAULT;
-	skincolors_t color = luaL_optinteger(L, 2, 0);
+	skincolornum_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
 	HUDONLY
 	if (lua_isnoneornil(L, 1))

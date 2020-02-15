@@ -5727,7 +5727,7 @@ void G_GhostTicker(void)
 			g->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
-			g->mo->color = (UINT8)(SKINCOLOR_RUBY + (leveltime % (MAXSKINCOLORS - SKINCOLOR_RUBY))); // Passes through all saturated colours
+			g->mo->color = (UINT8)(SKINCOLOR_RUBY + (leveltime % (FIRSTSUPERCOLOR - SKINCOLOR_RUBY))); // Passes through all saturated colours
 			break;
 		default:
 			break;
@@ -6814,8 +6814,8 @@ void G_DoPlayDemo(char *defdemoname)
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 
 	// Set color
-	for (i = 0; i < MAXSKINCOLORS; i++)
-		if (!stricmp(Color_Names[i],color))
+	for (i = 0; i < numskincolors; i++)
+		if (!stricmp(skincolors[i].name,color))
 		{
 			players[0].skincolor = i;
 			break;
@@ -7063,8 +7063,8 @@ void G_AddGhost(char *defdemoname)
 
 	// Set color
 	gh->mo->color = ((skin_t*)gh->mo->skin)->prefcolor;
-	for (i = 0; i < MAXSKINCOLORS; i++)
-		if (!stricmp(Color_Names[i],color))
+	for (i = 0; i < numskincolors; i++)
+		if (!stricmp(skincolors[i].name,color))
 		{
 			gh->mo->color = (UINT8)i;
 			break;

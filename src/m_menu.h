@@ -436,6 +436,23 @@ void Addons_option_Onchange(void);
 // Moviemode menu updating
 void Moviemode_option_Onchange(void);
 
+// Player Setup menu colors linked list
+typedef struct menucolor_s {
+	struct menucolor_s *next;
+	struct menucolor_s *prev;
+	UINT8 color;
+} menucolor_t;
+
+menucolor_t *menucolorhead, *menucolortail;
+
+void M_AddMenuColor(UINT8 color);
+void M_MoveColorBefore(UINT8 color, UINT8 targ);
+void M_MoveColorAfter(UINT8 color, UINT8 targ);
+UINT8 M_GetColorBefore(UINT8 color);
+UINT8 M_GetColorAfter(UINT8 color);
+void M_InitPlayerSetupColors(void);
+void M_FreePlayerSetupColors(void);
+
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\
 {\

@@ -30,6 +30,7 @@
 #include "hu_stuff.h"	// HU_AddChatText
 #include "console.h"
 #include "d_netcmd.h" // IsPlayerAdmin
+#include "m_menu.h" // Player Setup menu color stuff
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -147,6 +148,8 @@ static const struct {
 	{META_STATE,        "state_t"},
 	{META_MOBJINFO,     "mobjinfo_t"},
 	{META_SFXINFO,      "sfxinfo_t"},
+	{META_SKINCOLOR,    "sfxinfo_t"},
+	{META_COLORRAMP,    "skincolor_t.ramp"},
 	{META_SPRITEINFO,   "spriteinfo_t"},
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
@@ -246,6 +249,43 @@ static int lib_reserveLuabanks(lua_State *L)
 		return luaL_error(L, "luabanks[] has already been reserved! Only one savedata-enabled mod at a time may use this feature.");
 	reserved = true;
 	LUA_PushUserdata(L, &luabanks, META_LUABANKS);
+	return 1;
+}
+
+// M_MENU
+//////////////
+
+static int lib_pMoveColorBefore(lua_State *L)
+{
+	UINT16 color = (UINT16)luaL_checkinteger(L, 1);
+	UINT16 targ = (UINT16)luaL_checkinteger(L, 2);
+
+	NOHUD
+	M_MoveColorBefore(color, targ);
+	return 0;
+}
+
+static int lib_pMoveColorAfter(lua_State *L)
+{
+	UINT16 color = (UINT16)luaL_checkinteger(L, 1);
+	UINT16 targ = (UINT16)luaL_checkinteger(L, 2);
+
+	NOHUD
+	M_MoveColorAfter(color, targ);
+	return 0;
+}
+
+static int lib_pGetColorBefore(lua_State *L)
+{
+	UINT16 color = (UINT16)luaL_checkinteger(L, 1);
+	lua_pushinteger(L, M_GetColorBefore(color));
+	return 1;
+}
+
+static int lib_pGetColorAfter(lua_State *L)
+{
+	UINT16 color = (UINT16)luaL_checkinteger(L, 1);
+	lua_pushinteger(L, M_GetColorAfter(color));
 	return 1;
 }
 
@@ -2324,17 +2364,6 @@ static int lib_rGetColorByName(lua_State *L)
 	return 1;
 }
 
-// Lua exclusive function, returns the name of a color from the SKINCOLOR_ constant.
-// SKINCOLOR_GREEN > "Green" for example
-static int lib_rGetNameByColor(lua_State *L)
-{
-	UINT8 colornum = (UINT8)luaL_checkinteger(L, 1);
-	if (!colornum || colornum >= MAXSKINCOLORS)
-		return luaL_error(L, "skincolor %d out of range (1 - %d).", colornum, MAXSKINCOLORS-1);
-	lua_pushstring(L, Color_Names[colornum]);
-	return 1;
-}
-
 // S_SOUND
 ////////////
 static int lib_sStartSound(lua_State *L)
@@ -3002,6 +3031,12 @@ static luaL_Reg lib[] = {
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
 	{"reserveLuabanks", lib_reserveLuabanks},
 
+	// m_menu
+	{"M_MoveColorAfter",lib_pMoveColorAfter},
+	{"M_MoveColorBefore",lib_pMoveColorBefore},
+	{"M_GetColorAfter",lib_pGetColorAfter},
+	{"M_GetColorBefore",lib_pGetColorBefore},
+
 	// m_random
 	{"P_RandomFixed",lib_pRandomFixed},
 	{"P_RandomByte",lib_pRandomByte},
@@ -3176,7 +3211,6 @@ static luaL_Reg lib[] = {
 
 	// r_draw
 	{"R_GetColorByName", lib_rGetColorByName},
-	{"R_GetNameByColor", lib_rGetNameByColor},
 
 	// s_sound
 	{"S_StartSound",lib_sStartSound},

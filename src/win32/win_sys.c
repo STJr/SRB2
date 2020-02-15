@@ -54,6 +54,8 @@
 
 #include "../screen.h"
 
+#include "../m_menu.h"
+
 // Wheel support for Win95/WinNT3.51
 #include <zmouse.h>
 
@@ -650,6 +652,7 @@ void I_Error(const char *error, ...)
 		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
+	M_FreePlayerSetupColors();
 
 	// shutdown everything that was started
 	I_ShutdownSystem();
@@ -745,6 +748,8 @@ void I_Quit(void)
 	// or something else that will be finished by I_ShutdownSystem(),
 	// so do it before.
 	D_QuitNetGame();
+
+	M_FreePlayerSetupColors();
 
 	// shutdown everything that was started
 	I_ShutdownSystem();

@@ -458,7 +458,7 @@ boolean st_overlay;
 //
 // Supports different colors! woo!
 static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fixed_t s, INT32 a,
-	UINT32 num, patch_t **numpat, skincolors_t colornum)
+	UINT32 num, patch_t **numpat, skincolornum_t colornum)
 {
 	fixed_t w = SHORT(numpat[0]->width)*s;
 	const UINT8 *colormap;
@@ -998,7 +998,7 @@ static void ST_drawLivesArea(void)
 
 static void ST_drawInput(void)
 {
-	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(stplyr->skincolor ? Color_Index[stplyr->skincolor-1][4] : 0);
+	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(stplyr->skincolor ? skincolors[stplyr->skincolor].ramp[4] : 0);
 	INT32 col;
 	UINT8 offs;
 
@@ -1700,14 +1700,14 @@ static void ST_drawNightsRecords(void)
 
 // 2.0-1: [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
 /*#define NUMLINKCOLORS 14
-static skincolors_t linkColor[NUMLINKCOLORS] =
+static skincolornum_t linkColor[NUMLINKCOLORS] =
 {SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_AZURE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
  SKINCOLOR_MAGENTA, SKINCOLOR_SILVER, SKINCOLOR_SUPERGOLD4, SKINCOLOR_PINK,  SKINCOLOR_RED,
  SKINCOLOR_BLUE, SKINCOLOR_GREEN, SKINCOLOR_CYAN, SKINCOLOR_GOLD};*/
 
 // 2.2 indev list: (unix time 1470866042) <Rob> Emerald, Aqua, Cyan, Blue, Pastel, Purple, Magenta, Rosy, Red, Orange, Gold, Yellow, Peridot
 /*#define NUMLINKCOLORS 13
-static skincolors_t linkColor[NUMLINKCOLORS] =
+static skincolornum_t linkColor[NUMLINKCOLORS] =
 {SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_BLUE, SKINCOLOR_PASTEL,
  SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA, SKINCOLOR_ROSY, SKINCOLOR_RED,  SKINCOLOR_ORANGE,
  SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT};*/
@@ -1716,7 +1716,7 @@ static skincolors_t linkColor[NUMLINKCOLORS] =
 // [20:00:25] <baldobo> Also Icy for the link freeze text color
 // [20:04:03] <baldobo> I would start it on lime
 /*#define NUMLINKCOLORS 18
-static skincolors_t linkColor[NUMLINKCOLORS] =
+static skincolornum_t linkColor[NUMLINKCOLORS] =
 {SKINCOLOR_LIME, SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_SKY,
  SKINCOLOR_SAPPHIRE, SKINCOLOR_PASTEL, SKINCOLOR_PURPLE, SKINCOLOR_BUBBLEGUM, SKINCOLOR_MAGENTA,
  SKINCOLOR_ROSY, SKINCOLOR_RUBY, SKINCOLOR_RED, SKINCOLOR_FLAME, SKINCOLOR_SUNSET,
@@ -1724,7 +1724,7 @@ static skincolors_t linkColor[NUMLINKCOLORS] =
 
 // 2.2+ list for real this time: https://wiki.srb2.org/wiki/User:Rob/Sandbox (check history around 31/10/17, spoopy)
 #define NUMLINKCOLORS 12
-static skincolors_t linkColor[2][NUMLINKCOLORS] = {
+static skincolornum_t linkColor[2][NUMLINKCOLORS] = {
 {SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
  SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
 {SKINCOLOR_SEAFOAM, SKINCOLOR_CYAN, SKINCOLOR_WAVE, SKINCOLOR_SAPPHIRE, SKINCOLOR_VAPOR, SKINCOLOR_BUBBLEGUM,
@@ -1735,7 +1735,7 @@ static void ST_drawNiGHTSLink(void)
 	static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
 	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
 	INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? 1 : 0);
-	skincolors_t colornum;
+	skincolornum_t colornum;
 	fixed_t x, y, scale;
 
 	if (sel != prevsel[q])

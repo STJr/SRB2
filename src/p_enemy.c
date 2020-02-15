@@ -5154,7 +5154,7 @@ void A_SignPlayer(mobj_t *actor)
 		return;
 #endif
 
-	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins || signcolor >= MAXTRANSLATIONS)
+	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins || signcolor >= numskincolors)
 		return;
 
 	// if no face overlay, spawn one
@@ -5185,7 +5185,7 @@ void A_SignPlayer(mobj_t *actor)
 		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
 			signcolor = skin->prefoppositecolor;
 		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
-			signcolor = Color_Opposite[actor->target->player->skincolor - 1][0];
+			signcolor = skincolors[actor->target->player->skincolor].invcolor;
 		else
 			signcolor = SKINCOLOR_NONE;
 	}
@@ -5223,7 +5223,7 @@ void A_SignPlayer(mobj_t *actor)
 		else if (skin->prefoppositecolor)
 			signcolor = skin->prefoppositecolor;
 		else if (facecolor)
-			signcolor = Color_Opposite[facecolor - 1][0];
+			signcolor = skincolors[facecolor].invcolor;
 	}
 
 	if (skin)
@@ -5265,8 +5265,8 @@ void A_SignPlayer(mobj_t *actor)
 	of in the name. If you have a better idea, feel free
 	to let me know. ~toast 2016/07/20
 	*/
-	if (signcolor && signcolor < MAXSKINCOLORS)
-		signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+	if (signcolor && signcolor < numskincolors)
+		signframe += (15 - skincolors[skincolors[signcolor].invcolor].invshade);
 	actor->tracer->frame = signframe;
 }
 
