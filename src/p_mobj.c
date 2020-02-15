@@ -10461,6 +10461,61 @@ void P_SceneryThinker(mobj_t *mobj)
 // GAME SPAWN FUNCTIONS
 //
 
+static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
+{
+	switch (thing->type)
+	{
+		case MT_PLAYER:
+		case MT_ROLLOUTROCK:
+
+		case MT_EGGMOBILE4_MACE:
+		case MT_SMALLMACE:
+		case MT_BIGMACE:
+
+		case MT_SMALLGRABCHAIN:
+		case MT_BIGGRABCHAIN:
+
+		case MT_YELLOWSPRINGBALL:
+		case MT_REDSPRINGBALL:
+
+			return FRACUNIT;
+
+		case MT_RING:
+		case MT_FLINGRING:
+
+		case MT_BLUESPHERE:
+		case MT_FLINGBLUESPHERE:
+		case MT_BOMBSPHERE:
+
+		case MT_REDTEAMRING:
+		case MT_BLUETEAMRING:
+		case MT_REDFLAG:
+		case MT_BLUEFLAG:
+
+		case MT_EMBLEM:
+
+		case MT_TOKEN:
+		case MT_EMERALD1:
+		case MT_EMERALD2:
+		case MT_EMERALD3:
+		case MT_EMERALD4:
+		case MT_EMERALD5:
+		case MT_EMERALD6:
+		case MT_EMERALD7:
+		case MT_EMERHUNT:
+		case MT_FLINGEMERALD:
+
+			return 2*FRACUNIT/3;
+
+		default:
+
+			if (thing->flags & (MF_ENEMY|MF_BOSS))
+				return FRACUNIT;
+			else
+				return 0;
+	}
+}
+
 //
 // P_SpawnMobj
 //
@@ -10562,20 +10617,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		mobj->z = z;
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
-	if (
-		type == MT_PLAYER ||
-		type == MT_ROLLOUTROCK ||
-		type == MT_EGGMOBILE4_MACE ||
-		(type >= MT_SMALLMACE && type <= MT_REDSPRINGBALL) ||
-		(mobj->flags & (MF_ENEMY|MF_BOSS))
-	)
-		mobj->shadowscale = FRACUNIT;
-	else if (
-		type >= MT_RING && type <= MT_FLINGEMERALD && type != MT_EMERALDSPAWN
-	)
-		mobj->shadowscale = 2*FRACUNIT/3;
-	else
-		mobj->shadowscale = 0;
+	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
 
 #ifdef HAVE_BLUA
 	// DANGER! This can cause P_SpawnMobj to return NULL!
