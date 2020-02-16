@@ -505,8 +505,7 @@ static void D_Display(void)
 	M_Drawer(); // menu is drawn even on top of everything
 	// focus lost moved to M_Drawer
 
-	if (gamestate != GS_TIMEATTACK)
-		CON_Drawer();
+	CON_Drawer();
 
 	//
 	// wipe update
