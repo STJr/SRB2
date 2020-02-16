@@ -176,7 +176,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
 //static void Impl_SetWindowName(const char *title);
 static void Impl_SetWindowIcon(void);
 
-static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
+static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool reposition)
 {
 	static SDL_bool wasfullscreen = SDL_FALSE;
 	Uint32 rmask;
@@ -205,10 +205,13 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window,
-				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window)),
-				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window))
-			);
+			if (reposition)
+			{
+				SDL_SetWindowPosition(window,
+					SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window)),
+					SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window))
+				);
+			}
 		}
 	}
 	else
@@ -1491,6 +1494,7 @@ static void VID_CheckGLLoaded(rendermode_t oldrender)
 
 void VID_CheckRenderer(void)
 {
+	SDL_bool rendererchanged = SDL_FALSE;
 	rendermode_t oldrenderer = rendermode;
 
 	if (dedicated)
@@ -1504,6 +1508,8 @@ void VID_CheckRenderer(void)
 	if (setrenderneeded)
 	{
 		rendermode = setrenderneeded;
+		rendererchanged = SDL_TRUE;
+
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
 		{
@@ -1511,12 +1517,15 @@ void VID_CheckRenderer(void)
 			// Initialise OpenGL before calling SDLSetMode!!!
 			if (hwrenderloaded != 1)
 				I_StartupHardwareGraphics();
+			else if (hwrenderloaded == -1)
+				rendererchanged = SDL_FALSE;
 		}
 #endif
+
 		Impl_CreateContext();
 	}
 
-	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, (rendererchanged ? SDL_FALSE : SDL_TRUE));
 	Impl_VideoSetupBuffer();
 
 	if (rendermode == render_soft)
