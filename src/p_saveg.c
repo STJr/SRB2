@@ -609,7 +609,7 @@ static void P_NetArchiveColormaps(void)
 
 		WRITEUINT8(save_p, exc->fadestart);
 		WRITEUINT8(save_p, exc->fadeend);
-		WRITEUINT8(save_p, exc->fog);
+		WRITEUINT8(save_p, exc->flags);
 
 		WRITEINT32(save_p, exc->rgba);
 		WRITEINT32(save_p, exc->fadergba);
@@ -639,7 +639,7 @@ static void P_NetUnArchiveColormaps(void)
 
 	for (exc = net_colormaps; i < num_net_colormaps; i++, exc = exc_next)
 	{
-		UINT8 fadestart, fadeend, fog;
+		UINT8 fadestart, fadeend, flags;
 		INT32 rgba, fadergba;
 #ifdef EXTRACOLORMAPLUMPS
 		char lumpname[9];
@@ -647,7 +647,7 @@ static void P_NetUnArchiveColormaps(void)
 
 		fadestart = READUINT8(save_p);
 		fadeend = READUINT8(save_p);
-		fog = READUINT8(save_p);
+		flags = READUINT8(save_p);
 
 		rgba = READINT32(save_p);
 		fadergba = READINT32(save_p);
@@ -679,7 +679,7 @@ static void P_NetUnArchiveColormaps(void)
 
 		exc->fadestart = fadestart;
 		exc->fadeend = fadeend;
-		exc->fog = fog;
+		exc->flags = flags;
 
 		exc->rgba = rgba;
 		exc->fadergba = fadergba;
@@ -689,7 +689,7 @@ static void P_NetUnArchiveColormaps(void)
 		exc->lumpname[0] = 0;
 #endif
 
-		existing_exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
+		existing_exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags);
 
 		if (existing_exc)
 			exc->colormap = existing_exc->colormap;
