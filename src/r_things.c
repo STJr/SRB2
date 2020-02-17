@@ -1094,8 +1094,8 @@ static void R_SplitSprite(vissprite_t *sprite)
 
 			newsprite->extra_colormap = *sector->lightlist[i].extra_colormap;
 
-			if (!((newsprite->cut & SC_FULLBRIGHT)
-				&& (!newsprite->extra_colormap || !(newsprite->extra_colormap->fog & 1))))
+			if (!(newsprite->cut & SC_FULLBRIGHT)
+				|| (newsprite->extra_colormap && (newsprite->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 			{
 				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
@@ -1882,7 +1882,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->cut |= SC_FULLBRIGHT;
 
 	if (vis->cut & SC_FULLBRIGHT
-		&& (!vis->extra_colormap || !(vis->extra_colormap->fog & 1)))
+		&& (!vis->extra_colormap || !(vis->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 	{
 		// full bright: goggles
 		vis->colormap = colormaps;
