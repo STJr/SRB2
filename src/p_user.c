@@ -12174,7 +12174,9 @@ void P_PlayerThink(player_t *player)
 
 #ifdef POLYOBJECTS
 	if (player->onconveyor == 1)
-			player->cmomy = player->cmomx = 0;
+		player->onconveyor = 3;
+	else if (player->onconveyor == 3)
+		player->cmomy = player->cmomx = 0;
 #endif
 
 	P_DoSuperStuff(player);
