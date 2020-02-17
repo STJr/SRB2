@@ -1440,7 +1440,7 @@ static SDL_bool Impl_CreateContext(void)
 {
 	// Renderer-specific stuff
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if ((rendermode == render_opengl) && (hwrenderloaded != -1))
 	{
 		if (!sdlglcontext)
 			sdlglcontext = SDL_GL_CreateContext(window);
@@ -1478,7 +1478,6 @@ static void VID_CheckGLLoaded(rendermode_t oldrender)
 {
 	if (hwrenderloaded == -1) // Well, it didn't work the first time anyway.
 	{
-		CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
 		rendermode = oldrender;
 		if (chosenrendermode == render_opengl) // fallback to software
 			rendermode = render_soft;
@@ -1587,7 +1586,8 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		flags |= SDL_WINDOW_BORDERLESS;
 
 #ifdef HWRENDER
-	flags |= SDL_WINDOW_OPENGL;
+	if (hwrenderloaded != -1)
+		flags |= SDL_WINDOW_OPENGL;
 #endif
 
 	// Create a window
@@ -1721,7 +1721,10 @@ void I_StartupGraphics(void)
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	VID_Command_ModeList_f();
 #ifdef HWRENDER
-	I_StartupHardwareGraphics();
+	if (M_CheckParm("-nogl"))
+		hwrenderloaded = -1; // Don't call SDL_GL_LoadLibrary
+	else
+		I_StartupHardwareGraphics();
 #endif
 
 	// Fury: we do window initialization after GL setup to allow
