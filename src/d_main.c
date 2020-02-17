@@ -1291,12 +1291,14 @@ void D_SRB2Main(void)
 	// Lactozilla: Does the render mode need to change?
 	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
 	{
+		CONS_Printf("Switching the renderer...\n");
 		needpatchflush = true;
 		needpatchrecache = true;
 		VID_CheckRenderer();
 		SCR_ChangeRendererCVars(setrenderneeded);
+		D_CheckRendererState();
+		setrenderneeded = 0;
 	}
-	D_CheckRendererState();
 
 	wipegamestate = gamestate;
 
