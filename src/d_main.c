@@ -188,13 +188,13 @@ void D_ProcessEvents(void)
 				continue;
 		}
 
-		// console input
-		if (CON_Responder(ev))
-			continue; // ate the event
-
 		// Menu input
 		if (M_Responder(ev))
 			continue; // menu ate the event
+
+		// console input
+		if (CON_Responder(ev))
+			continue; // ate the event
 
 		G_Responder(ev);
 	}
@@ -502,11 +502,12 @@ static void D_Display(void)
 	// vid size change is now finished if it was on...
 	vid.recalc = 0;
 
-	M_Drawer(); // menu is drawn even on top of everything
-	// focus lost moved to M_Drawer
-
+	// FIXME: draw either console or menu, not the two
 	if (gamestate != GS_TIMEATTACK)
 		CON_Drawer();
+
+	M_Drawer(); // menu is drawn even on top of everything
+	// focus lost moved to M_Drawer
 
 	//
 	// wipe update
@@ -1213,7 +1214,7 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#ifndef DEVELOP // md5s last updated 09/02/20 (ddmmyy)
+#ifndef DEVELOP // md5s last updated 16/02/20 (ddmmyy)
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3

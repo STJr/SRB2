@@ -3739,7 +3739,10 @@ static void G_DoCompleted(void)
 			}
 
 		if (i == 7)
+		{
 			gottoken = false;
+			token = 0;
+		}
 	}
 
 	if (spec && !gottoken)
