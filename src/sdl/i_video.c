@@ -1719,8 +1719,7 @@ void I_StartupGraphics(void)
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	VID_Command_ModeList_f();
 #ifdef HWRENDER
-	if (chosenrendermode == render_opengl)
-		I_StartupHardwareGraphics();
+	I_StartupHardwareGraphics();
 #endif
 
 	// Fury: we do window initialization after GL setup to allow
