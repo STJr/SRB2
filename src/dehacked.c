@@ -1841,7 +1841,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRECORDATTACK;
 					else if (fastcmp(tmp, "ALL"))
 						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
-					else
+					else if (!fastcmp(tmp, "NONE"))
 						deh_warning("Level header %d: unknown titlecard show option %s\n", num, tmp);
 
 				} while((tmp = strtok(NULL,",")) != NULL);
