@@ -109,6 +109,12 @@ int M_JumpWord (const char *s);
 /* E.g. cursor = M_JumpWordReverse(line, cursor); */
 int M_JumpWordReverse (const char *line, int offset);
 
+/*
+Return dot and then the fractional part of a float, without
+trailing zeros, or "" if the fractional part is zero.
+*/
+const char * M_Ftrim (double);
+
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
 

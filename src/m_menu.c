@@ -3030,7 +3030,8 @@ static void M_ChangeCvar(INT32 choice)
 			|| !(currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP))
 		{
 			char s[20];
-			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
+			float n = FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f);
+			sprintf(s,"%ld%s",(long)n,M_Ftrim(n));
 			CV_Set(cv,s);
 		}
 		else
