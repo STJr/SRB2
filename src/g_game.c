@@ -3256,8 +3256,8 @@ void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
 {
 	size_t r = 0; // read
 	size_t w = 0; // write
-	char *gtconst = Z_Calloc(strlen(newgtconst) + 3, PU_STATIC, NULL);
-	char *tmpconst = Z_Calloc(strlen(newgtconst), PU_STATIC, NULL);
+	char *gtconst = Z_Calloc(strlen(newgtconst) + 4, PU_STATIC, NULL);
+	char *tmpconst = Z_Calloc(strlen(newgtconst) + 1, PU_STATIC, NULL);
 
 	// Copy the gametype name.
 	strcpy(tmpconst, newgtconst);
@@ -3384,6 +3384,36 @@ UINT32 gametypetol[NUMGAMETYPES] =
 	TOL_CTF, // CTF
 };
 
+tolinfo_t TYPEOFLEVEL[NUMTOLNAMES] = {
+	{"SOLO",TOL_SP},
+	{"SP",TOL_SP},
+	{"SINGLEPLAYER",TOL_SP},
+	{"SINGLE",TOL_SP},
+
+	{"COOP",TOL_COOP},
+	{"CO-OP",TOL_COOP},
+
+	{"COMPETITION",TOL_COMPETITION},
+	{"RACE",TOL_RACE},
+
+	{"MATCH",TOL_MATCH},
+	{"TAG",TOL_TAG},
+	{"CTF",TOL_CTF},
+
+	{"2D",TOL_2D},
+	{"MARIO",TOL_MARIO},
+	{"NIGHTS",TOL_NIGHTS},
+	{"OLDBRAK",TOL_ERZ3},
+
+	{"XMAS",TOL_XMAS},
+	{"CHRISTMAS",TOL_XMAS},
+	{"WINTER",TOL_XMAS},
+
+	{NULL, 0}
+};
+
+UINT32 lastcustomtol = (TOL_XMAS<<1);
+
 //
 // G_AddTOL
 //
@@ -3391,16 +3421,16 @@ UINT32 gametypetol[NUMGAMETYPES] =
 //
 void G_AddTOL(UINT32 newtol, const char *tolname)
 {
-	TYPEOFLEVEL[numtolinfo].name = Z_StrDup(tolname);
-	TYPEOFLEVEL[numtolinfo].flag = newtol;
-	numtolinfo++;
+	INT32 i;
+	for (i = 0; TYPEOFLEVEL[i].name; i++)
+		;
 
-	TYPEOFLEVEL[numtolinfo].name = NULL;
-	TYPEOFLEVEL[numtolinfo].flag = 0;
+	TYPEOFLEVEL[i].name = Z_StrDup(tolname);
+	TYPEOFLEVEL[i].flag = newtol;
 }
 
 //
-// G_AddTOL
+// G_AddGametypeTOL
 //
 // Assigns a type of level to a gametype.
 //
@@ -3739,7 +3769,10 @@ static void G_DoCompleted(void)
 			}
 
 		if (i == 7)
+		{
 			gottoken = false;
+			token = 0;
+		}
 	}
 
 	if (spec && !gottoken)

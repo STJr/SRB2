@@ -455,8 +455,9 @@ void HWR_InitModels(void)
 	size_t i;
 	INT32 s;
 	FILE *f;
-	char name[18], filename[32];
+	char name[24], filename[32];
 	float scale, offset;
+	size_t prefixlen;
 
 	CONS_Printf("HWR_InitModels()...\n");
 	for (s = 0; s < MAXSKINS; s++)
@@ -488,37 +489,54 @@ void HWR_InitModels(void)
 		nomd2s = true;
 		return;
 	}
-	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
+
+	// length of the player model prefix
+	prefixlen = strlen(PLAYERMODELPREFIX);
+
+	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
-		if (stricmp(name, "PLAY") == 0)
+		char *skinname = name;
+		size_t len = strlen(name);
+
+		// check for the player model prefix.
+		if (!strnicmp(name, PLAYERMODELPREFIX, prefixlen) && (len > prefixlen))
 		{
-			CONS_Printf("Model for sprite PLAY detected in models.dat, use a player skin instead!\n");
-			continue;
+			skinname += prefixlen;
+			goto addskinmodel;
 		}
 
-		for (i = 0; i < NUMSPRITES; i++)
+		// add sprite model
+		if (len == 4) // must be 4 characters long exactly. otherwise it's not a sprite name.
 		{
-			if (stricmp(name, sprnames[i]) == 0)
+			for (i = 0; i < NUMSPRITES; i++)
 			{
-				md2_models[i].scale = scale;
-				md2_models[i].offset = offset;
-				md2_models[i].notfound = false;
-				strcpy(md2_models[i].filename, filename);
+				if (stricmp(name, sprnames[i]) == 0)
+				{
+					md2_models[i].scale = scale;
+					md2_models[i].offset = offset;
+					md2_models[i].notfound = false;
+					strcpy(md2_models[i].filename, filename);
+					goto modelfound;
+				}
 			}
 		}
 
+addskinmodel:
+		// add player model
 		for (s = 0; s < MAXSKINS; s++)
 		{
-			if (stricmp(name, skins[s].name) == 0)
+			if (stricmp(skinname, skins[s].name) == 0)
 			{
 				md2_playermodels[s].skin = s;
 				md2_playermodels[s].scale = scale;
 				md2_playermodels[s].offset = offset;
 				md2_playermodels[s].notfound = false;
 				strcpy(md2_playermodels[s].filename, filename);
+				goto modelfound;
 			}
 		}
 
+modelfound:
 		// move on to next line...
 		continue;
 	}
@@ -528,8 +546,9 @@ void HWR_InitModels(void)
 void HWR_AddPlayerModel(int skin) // For skins that were added after startup
 {
 	FILE *f;
-	char name[18], filename[32];
+	char name[24], filename[32];
 	float scale, offset;
+	size_t prefixlen;
 
 	if (nomd2s)
 		return;
@@ -547,31 +566,42 @@ void HWR_AddPlayerModel(int skin) // For skins that were added after startup
 		return;
 	}
 
-	// Check for any model that match the names of player skins!
-	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
+	// length of the player model prefix
+	prefixlen = strlen(PLAYERMODELPREFIX);
+
+	// Check for any models that match the names of player skins!
+	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
-		if (stricmp(name, skins[skin].name) == 0)
+		char *skinname = name;
+		size_t len = strlen(name);
+
+		// ignore the player model prefix.
+		if (!strnicmp(name, PLAYERMODELPREFIX, prefixlen) && (len > prefixlen))
+			skinname += prefixlen;
+
+		if (stricmp(skinname, skins[skin].name) == 0)
 		{
 			md2_playermodels[skin].skin = skin;
 			md2_playermodels[skin].scale = scale;
 			md2_playermodels[skin].offset = offset;
 			md2_playermodels[skin].notfound = false;
 			strcpy(md2_playermodels[skin].filename, filename);
-			goto playermd2found;
+			goto playermodelfound;
 		}
 	}
 
 	md2_playermodels[skin].notfound = true;
-playermd2found:
+playermodelfound:
 	fclose(f);
 }
 
 void HWR_AddSpriteModel(size_t spritenum) // For sprites that were added after startup
 {
 	FILE *f;
-	// name[18] is used to check for names in the models.dat file that match with sprites or player skins
+	// name[24] is used to check for names in the models.dat file that match with sprites or player skins
 	// sprite names are always 4 characters long, and names is for player skins can be up to 19 characters long
-	char name[18], filename[32];
+	// PLAYERMODELPREFIX is 6 characters long
+	char name[24], filename[32];
 	float scale, offset;
 
 	if (nomd2s)
@@ -591,21 +621,30 @@ void HWR_AddSpriteModel(size_t spritenum) // For sprites that were added after s
 		return;
 	}
 
-	// Check for any MD2s that match the names of sprite names!
-	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
+	// Check for any models that match the names of sprite names!
+	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
+		// length of the sprite name
+		size_t len = strlen(name);
+		if (len != 4) // must be 4 characters long exactly. otherwise it's not a sprite name.
+			continue;
+
+		// check for the player model prefix.
+		if (!strnicmp(name, PLAYERMODELPREFIX, strlen(PLAYERMODELPREFIX)))
+			continue; // that's not a sprite...
+
 		if (stricmp(name, sprnames[spritenum]) == 0)
 		{
 			md2_models[spritenum].scale = scale;
 			md2_models[spritenum].offset = offset;
 			md2_models[spritenum].notfound = false;
 			strcpy(md2_models[spritenum].filename, filename);
-			goto spritemd2found;
+			goto spritemodelfound;
 		}
 	}
 
 	md2_models[spritenum].notfound = true;
-spritemd2found:
+spritemodelfound:
 	fclose(f);
 }
 
