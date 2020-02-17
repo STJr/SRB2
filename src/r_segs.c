@@ -199,7 +199,7 @@ static void R_DrawWallSplats(void)
 		// draw the columns
 		for (dc_x = x1; dc_x <= x2; dc_x++, spryscale += rw_scalestep)
 		{
-			pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+			pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
 			dc_colormap = walllights[pindex];
@@ -595,7 +595,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						else
 							xwalllights = scalelight[rlight->lightnum];
 
-						pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+						pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 						if (pindex >= MAXLIGHTSCALE)
 							pindex = MAXLIGHTSCALE - 1;
@@ -640,7 +640,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				}
 
 				// calculate lighting
-				pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+				pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 				if (pindex >= MAXLIGHTSCALE)
 					pindex = MAXLIGHTSCALE - 1;
@@ -1184,7 +1184,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						else
 							xwalllights = scalelight[lightnum];
 
-						pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+						pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 						if (pindex >= MAXLIGHTSCALE)
 							pindex = MAXLIGHTSCALE-1;
@@ -1277,7 +1277,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			}
 
 			// calculate lighting
-			pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+			pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
@@ -1482,7 +1482,7 @@ static void R_RenderSegLoop (void)
 		if (segtextured)
 		{
 			// calculate lighting
-			pindex = FixedMul(rw_scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+			pindex = FixedMul(rw_scale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 			if (pindex >=  MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE-1;
@@ -1517,7 +1517,7 @@ static void R_RenderSegLoop (void)
 				else
 					xwalllights = scalelight[lightnum];
 
-				pindex = FixedMul(rw_scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+				pindex = FixedMul(rw_scale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 				if (pindex >=  MAXLIGHTSCALE)
 					pindex = MAXLIGHTSCALE-1;

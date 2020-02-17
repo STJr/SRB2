@@ -1097,7 +1097,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 			if (!(newsprite->cut & SC_FULLBRIGHT)
 				|| (newsprite->extra_colormap && (newsprite->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 			{
-				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
+				lindex = FixedMul(sprite->xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
@@ -1307,17 +1307,8 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->mobj = thing; // Easy access! Tails 06-07-2002
 
-	shadow->x1 = x1 < 0 ? 0 : x1;
-	shadow->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-
-	// PORTAL SEMI-CLIPPING
-	if (portalrender)
-	{
-		if (shadow->x1 < portalclipstart)
-			shadow->x1 = portalclipstart;
-		if (shadow->x2 >= portalclipend)
-			shadow->x2 = portalclipend-1;
-	}
+	shadow->x1 = x1 < portalclipstart ? portalclipstart : x1;
+	shadow->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
 	shadow->xscale = FixedMul(xscale, shadowxscale); //SoM: 4/17/2000
 	shadow->scale = FixedMul(yscale, shadowyscale);
@@ -1815,17 +1806,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
-	vis->x1 = x1 < 0 ? 0 : x1;
-	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-
-	// PORTAL SEMI-CLIPPING
-	if (portalrender)
-	{
-		if (vis->x1 < portalclipstart)
-			vis->x1 = portalclipstart;
-		if (vis->x2 >= portalclipend)
-			vis->x2 = portalclipend-1;
-	}
+	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
+	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
 	vis->xscale = xscale; //SoM: 4/17/2000
 	vis->sector = thing->subsector->sector;
@@ -1890,7 +1872,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// diminished light
-		lindex = FixedMul(xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
+		lindex = FixedMul(xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
 
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
@@ -2034,17 +2016,8 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->shear.tan = 0;
 	vis->shear.offset = 0;
 
-	vis->x1 = x1 < 0 ? 0 : x1;
-	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-
-	// PORTAL SEMI-CLIPPING
-	if (portalrender)
-	{
-		if (vis->x1 < portalclipstart)
-			vis->x1 = portalclipstart;
-		if (vis->x2 >= portalclipend)
-			vis->x2 = portalclipend-1;
-	}
+	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
+	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
 	vis->xscale = xscale; //SoM: 4/17/2000
 	vis->sector = thing->subsector->sector;
