@@ -438,7 +438,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	else
 	{
 		if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
-			|| frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG))
+			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 		else
 			lightnum = LIGHTLEVELS - 1;
