@@ -10846,7 +10846,6 @@ static void M_HandleConnectIP(INT32 choice)
 					default: // otherwise do nothing.
 						break;
 				}
-				break; // don't check for typed keys
 			}
 
 			if (l >= 28-1)
