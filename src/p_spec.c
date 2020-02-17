@@ -4692,7 +4692,7 @@ DoneSection2:
 			if (!post)
 				break;
 
-			P_TouchSpecialThing(post, player->mo, false);
+			P_TouchStarPost(post, player, false);
 			break;
 		}
 

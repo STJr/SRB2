@@ -1941,6 +1941,10 @@ boolean G_IsTitleCardAvailable(void)
 	if (gametyperules & GTR_NOTITLECARD)
 		return false;
 
+	// The current level has no name.
+	if (!mapheaderinfo[gamemap-1]->lvlttl[0])
+		return false;
+
 	// The title card is available.
 	return true;
 }
@@ -3252,8 +3256,8 @@ void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
 {
 	size_t r = 0; // read
 	size_t w = 0; // write
-	char *gtconst = Z_Calloc(strlen(newgtconst) + 3, PU_STATIC, NULL);
-	char *tmpconst = Z_Calloc(strlen(newgtconst), PU_STATIC, NULL);
+	char *gtconst = Z_Calloc(strlen(newgtconst) + 4, PU_STATIC, NULL);
+	char *tmpconst = Z_Calloc(strlen(newgtconst) + 1, PU_STATIC, NULL);
 
 	// Copy the gametype name.
 	strcpy(tmpconst, newgtconst);
@@ -3735,7 +3739,10 @@ static void G_DoCompleted(void)
 			}
 
 		if (i == 7)
+		{
 			gottoken = false;
+			token = 0;
+		}
 	}
 
 	if (spec && !gottoken)

@@ -5602,7 +5602,8 @@ static void M_DrawNightsAttackMountains(void)
 	static INT32 bgscrollx;
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	patch_t *background = W_CachePatchName(curbgname, PU_PATCH);
-	INT32 x = FixedInt(bgscrollx) % SHORT(background->width);
+	INT16 w = SHORT(background->width);
+	INT32 x = FixedInt(-bgscrollx) % w;
 	INT32 y = BASEVIDHEIGHT - SHORT(background->height)*2;
 
 	if (vid.height != BASEVIDHEIGHT * dupz)
@@ -5610,11 +5611,13 @@ static void M_DrawNightsAttackMountains(void)
 	V_DrawFill(0, y+50, vid.width, BASEVIDHEIGHT, V_SNAPTOLEFT|31);
 
 	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
-	x += SHORT(background->width);
+	x += w;
 	if (x < BASEVIDWIDTH)
 		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
 
-	bgscrollx -= (FRACUNIT/2);
+	bgscrollx += (FRACUNIT/2);
+	if (bgscrollx > w<<FRACBITS)
+		bgscrollx &= 0xFFFF;
 }
 
 // NiGHTS Attack foreground.
@@ -10843,7 +10846,6 @@ static void M_HandleConnectIP(INT32 choice)
 					default: // otherwise do nothing.
 						break;
 				}
-				break; // don't check for typed keys
 			}
 
 			if (l >= 28-1)

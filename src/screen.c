@@ -360,10 +360,13 @@ void SCR_Recalc(void)
 	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
 #endif
 
-	// toggle off automap because some screensize-dependent values will
+	// toggle off (then back on) the automap because some screensize-dependent values will
 	// be calculated next time the automap is activated.
 	if (automapactive)
-		AM_Stop();
+	{
+		am_recalc = true;
+		AM_Start();
+	}
 
 	// set the screen[x] ptrs on the new vidbuffers
 	V_Init();

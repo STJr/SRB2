@@ -1196,7 +1196,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 	INT32 angle;
 	patch_t *patch;
 	patch_t *newpatch;
-	UINT16 *rawsrc, *rawdst;
+	UINT16 *rawdst;
 	size_t size;
 	INT32 bflip = (flip != 0x00);
 
@@ -1241,16 +1241,6 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			px = width - px;
 			leftoffset = width - leftoffset;
 		}
-
-		// Draw the sprite to a temporary buffer.
-		size = (width*height);
-		rawsrc = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
-
-		// can't memset here
-		for (i = 0; i < size; i++)
-			rawsrc[i] = 0xFF00;
-
-		R_PatchToMaskedFlat(patch, rawsrc, bflip);
 
 		// Don't cache angle = 0
 		for (angle = 1; angle < ROTANGLES; angle++)

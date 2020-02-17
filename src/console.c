@@ -613,6 +613,15 @@ void CON_Ticker(void)
 	con_tick++;
 	con_tick &= 7;
 
+	// if the menu is open then close the console.
+	if (menuactive && con_destlines)
+	{
+		consoletoggle = false;
+		con_destlines = 0;
+		CON_ClearHUD();
+		I_UpdateMouseGrab();
+	}
+
 	// console key was pushed
 	if (consoletoggle)
 	{
@@ -769,7 +778,7 @@ boolean CON_Responder(event_t *ev)
 	// check for console toggle key
 	if (ev->type != ev_console)
 	{
-		if (modeattacking || metalrecording || menuactive)
+		if (modeattacking || metalrecording)
 			return false;
 
 		if (key == gamecontrol[gc_console][0] || key == gamecontrol[gc_console][1])
@@ -784,7 +793,7 @@ boolean CON_Responder(event_t *ev)
 		// check other keys only if console prompt is active
 		if (!consoleready && key < NUMINPUTS) // metzgermeister: boundary check!!
 		{
-			if (! menuactive && bindtable[key])
+			if (bindtable[key])
 			{
 				COM_BufAddText(bindtable[key]);
 				COM_BufAddText("\n");

@@ -5325,7 +5325,7 @@ static void HWR_AddSprites(sector_t *sec)
 #ifdef HWPRECIP
 	precipmobj_t *precipthing;
 #endif
-	fixed_t approx_dist, limit_dist, hoop_limit_dist;
+	fixed_t limit_dist, hoop_limit_dist;
 
 	// BSP is traversed by subsector.
 	// A sector might have been split into several
@@ -5344,35 +5344,10 @@ static void HWR_AddSprites(sector_t *sec)
 	// If a limit exists, handle things a tiny bit different.
 	limit_dist = (fixed_t)(cv_drawdist.value) << FRACBITS;
 	hoop_limit_dist = (fixed_t)(cv_drawdist_nights.value) << FRACBITS;
-	if (limit_dist || hoop_limit_dist)
+	for (thing = sec->thinglist; thing; thing = thing->snext)
 	{
-		for (thing = sec->thinglist; thing; thing = thing->snext)
-		{
-			if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
-				continue;
-
-			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
-
-			if (thing->sprite == SPR_HOOP)
-			{
-				if (hoop_limit_dist && approx_dist > hoop_limit_dist)
-					continue;
-			}
-			else
-			{
-				if (limit_dist && approx_dist > limit_dist)
-					continue;
-			}
-
+		if (R_ThingVisibleWithinDist(thing, limit_dist, hoop_limit_dist))
 			HWR_ProjectSprite(thing);
-		}
-	}
-	else
-	{
-		// Draw everything in sector, no checks
-		for (thing = sec->thinglist; thing; thing = thing->snext)
-			if (!(thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW))
-				HWR_ProjectSprite(thing);
 	}
 
 #ifdef HWPRECIP
@@ -5381,15 +5356,8 @@ static void HWR_AddSprites(sector_t *sec)
 	{
 		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
 		{
-			if (precipthing->precipflags & PCF_INVISIBLE)
-				continue;
-
-			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
-
-			if (approx_dist > limit_dist)
-				continue;
-
-			HWR_ProjectPrecipitationSprite(precipthing);
+			if (R_PrecipThingVisible(precipthing, limit_dist))
+				HWR_ProjectPrecipitationSprite(precipthing);
 		}
 	}
 #endif
@@ -5643,7 +5611,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer)
 	{
 		// bodge support - not nearly as comprehensive as r_things.c, but better than nothing
-		if (thing->tracer->sprite == SPR_NULL || thing->tracer->flags2 & MF2_DONTDRAW)
+		if (! R_ThingVisible(thing->tracer))
 			return;
 	}
 

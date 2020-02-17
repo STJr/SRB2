@@ -3244,7 +3244,6 @@ Unoptimized version
 #endif
 }
 
-// Taken from my videos-in-SRB2 project
 // Generates a color look-up table
 // which has up to 64 colors at each channel
 // (see the defines in v_video.h)
@@ -3261,7 +3260,7 @@ void InitColorLUT(RGBA_t *palette)
 		for (r = 0; r < CLUTSIZE; r++)
 			for (g = 0; g < CLUTSIZE; g++)
 				for (b = 0; b < CLUTSIZE; b++)
-					colorlookup[r][g][b] = NearestColor(r << SHIFTCOLORBITS, g << SHIFTCOLORBITS, b << SHIFTCOLORBITS);
+					colorlookup[r][g][b] = NearestPaletteColor(r << SHIFTCOLORBITS, g << SHIFTCOLORBITS, b << SHIFTCOLORBITS, palette);
 		clutinit = true;
 		lastpalette = palette;
 	}

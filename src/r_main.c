@@ -71,6 +71,7 @@ angle_t viewangle, aimingangle;
 fixed_t viewcos, viewsin;
 sector_t *viewsector;
 player_t *viewplayer;
+mobj_t *r_viewmobj;
 
 //
 // precalculated math tables
@@ -1039,8 +1040,6 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 // R_SetupFrame
 //
 
-static mobj_t *viewmobj;
-
 // WARNING: a should be unsigned but to add with 2048, it isn't!
 #define AIMINGTODY(a) ((FINETANGENT((2048+(((INT32)a)>>ANGLETOFINESHIFT)) & FINEMASK)*160)/fovtan)
 
@@ -1097,16 +1096,16 @@ void R_SetupFrame(player_t *player)
 	if (player->awayviewtics)
 	{
 		// cut-away view stuff
-		viewmobj = player->awayviewmobj; // should be a MT_ALTVIEWMAN
-		I_Assert(viewmobj != NULL);
-		viewz = viewmobj->z + 20*FRACUNIT;
+		r_viewmobj = player->awayviewmobj; // should be a MT_ALTVIEWMAN
+		I_Assert(r_viewmobj != NULL);
+		viewz = r_viewmobj->z + 20*FRACUNIT;
 		aimingangle = player->awayviewaiming;
-		viewangle = viewmobj->angle;
+		viewangle = r_viewmobj->angle;
 	}
 	else if (!player->spectator && chasecam)
 	// use outside cam view
 	{
-		viewmobj = NULL;
+		r_viewmobj = NULL;
 		viewz = thiscam->z + (thiscam->height>>1);
 		aimingangle = thiscam->aiming;
 		viewangle = thiscam->angle;
@@ -1116,11 +1115,11 @@ void R_SetupFrame(player_t *player)
 	{
 		viewz = player->viewz;
 
-		viewmobj = player->mo;
-		I_Assert(viewmobj != NULL);
+		r_viewmobj = player->mo;
+		I_Assert(r_viewmobj != NULL);
 
 		aimingangle = player->aiming;
-		viewangle = viewmobj->angle;
+		viewangle = r_viewmobj->angle;
 
 		if (!demoplayback && player->playerstate != PST_DEAD)
 		{
@@ -1154,13 +1153,13 @@ void R_SetupFrame(player_t *player)
 	}
 	else
 	{
-		viewx = viewmobj->x;
-		viewy = viewmobj->y;
+		viewx = r_viewmobj->x;
+		viewy = r_viewmobj->y;
 		viewx += quake.x;
 		viewy += quake.y;
 
-		if (viewmobj->subsector)
-			viewsector = viewmobj->subsector->sector;
+		if (r_viewmobj->subsector)
+			viewsector = r_viewmobj->subsector->sector;
 		else
 			viewsector = R_PointInSubsector(viewx, viewy)->sector;
 	}
@@ -1182,12 +1181,12 @@ void R_SkyboxFrame(player_t *player)
 		thiscam = &camera;
 
 	// cut-away view stuff
-	viewmobj = skyboxmo[0];
+	r_viewmobj = skyboxmo[0];
 #ifdef PARANOIA
-	if (!viewmobj)
+	if (!r_viewmobj)
 	{
 		const size_t playeri = (size_t)(player - players);
-		I_Error("R_SkyboxFrame: viewmobj null (player %s)", sizeu1(playeri));
+		I_Error("R_SkyboxFrame: r_viewmobj null (player %s)", sizeu1(playeri));
 	}
 #endif
 	if (player->awayviewtics)
@@ -1218,13 +1217,13 @@ void R_SkyboxFrame(player_t *player)
 			}
 		}
 	}
-	viewangle += viewmobj->angle;
+	viewangle += r_viewmobj->angle;
 
 	viewplayer = player;
 
-	viewx = viewmobj->x;
-	viewy = viewmobj->y;
-	viewz = viewmobj->z; // 26/04/17: use actual Z position instead of spawnpoint angle!
+	viewx = r_viewmobj->x;
+	viewy = r_viewmobj->y;
+	viewz = r_viewmobj->z; // 26/04/17: use actual Z position instead of spawnpoint angle!
 
 	if (mapheaderinfo[gamemap-1])
 	{
@@ -1264,29 +1263,29 @@ void R_SkyboxFrame(player_t *player)
 			else if (mh->skybox_scaley < 0)
 				y = (campos.y - skyboxmo[1]->y) * -mh->skybox_scaley;
 
-			if (viewmobj->angle == 0)
+			if (r_viewmobj->angle == 0)
 			{
 				viewx += x;
 				viewy += y;
 			}
-			else if (viewmobj->angle == ANGLE_90)
+			else if (r_viewmobj->angle == ANGLE_90)
 			{
 				viewx -= y;
 				viewy += x;
 			}
-			else if (viewmobj->angle == ANGLE_180)
+			else if (r_viewmobj->angle == ANGLE_180)
 			{
 				viewx -= x;
 				viewy -= y;
 			}
-			else if (viewmobj->angle == ANGLE_270)
+			else if (r_viewmobj->angle == ANGLE_270)
 			{
 				viewx += y;
 				viewy -= x;
 			}
 			else
 			{
-				angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
+				angle_t ang = r_viewmobj->angle>>ANGLETOFINESHIFT;
 				viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
 				viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
 			}
@@ -1297,8 +1296,8 @@ void R_SkyboxFrame(player_t *player)
 			viewz += campos.z * -mh->skybox_scalez;
 	}
 
-	if (viewmobj->subsector)
-		viewsector = viewmobj->subsector->sector;
+	if (r_viewmobj->subsector)
+		viewsector = r_viewmobj->subsector->sector;
 	else
 		viewsector = R_PointInSubsector(viewx, viewy)->sector;
 
