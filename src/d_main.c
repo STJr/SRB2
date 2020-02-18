@@ -266,6 +266,9 @@ static void D_Display(void)
 #endif
 	}
 
+	if (rendermode == render_soft && !splitscreen)
+		R_CheckViewMorph();
+
 	// change the view size if needed
 	if (setsizeneeded || setrenderstillneeded)
 	{
@@ -446,6 +449,9 @@ static void D_Display(void)
 				// Image postprocessing effect
 				if (rendermode == render_soft)
 				{
+					if (!splitscreen)
+						R_ApplyViewMorph();
+
 					if (postimgtype)
 						V_DoPostProcessor(0, postimgtype, postimgparam);
 					if (postimgtype2)

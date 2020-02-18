@@ -92,36 +92,21 @@ const char *M_GetNextParm(void)
 void M_PushSpecialParameters(void)
 {
 	INT32 i;
-	char s[256];
-	boolean onetime = false;
-
 	for (i = 1; i < myargc; i++)
 	{
 		if (myargv[i][0] == '+')
 		{
-			strcpy(s, &myargv[i][1]);
+			COM_BufAddText(&myargv[i][1]);
 			i++;
 
 			// get the parameters of the command too
 			for (; i < myargc && myargv[i][0] != '+' && myargv[i][0] != '-'; i++)
 			{
-				strcat(s, " ");
-				if (!onetime)
-				{
-					strcat(s, "\"");
-					onetime = true;
-				}
-				strcat(s, myargv[i]);
+				COM_BufAddText(va(" \"%s\"", myargv[i]));
 			}
-			if (onetime)
-			{
-				strcat(s, "\"");
-				onetime = false;
-			}
-			strcat(s, "\n");
 
 			// push it
-			COM_BufAddText(s);
+			COM_BufAddText("\n");
 			i--;
 		}
 	}

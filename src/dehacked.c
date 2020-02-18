@@ -585,21 +585,30 @@ static void readfreeslots(MYFILE *f)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
-					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
 					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
-					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
+					deh_warning("Ran out of free SPR2 slots!\n");
 			}
 			else if (fastcmp(type, "TOL"))
 			{
-				if (lastcustomtol > 31)
-					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				// Search if we already have a typeoflevel by that name...
+				for (i = 0; TYPEOFLEVEL[i].name; i++)
+					if (fastcmp(word, TYPEOFLEVEL[i].name))
+						break;
+
+				// We found it? Then don't allocate another one.
+				if (TYPEOFLEVEL[i].name)
+					continue;
+
+				// We don't, so freeslot it.
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
+					deh_warning("Ran out of free typeoflevel slots!\n");
 				else
 				{
-					G_AddTOL((1<<lastcustomtol), word);
-					lastcustomtol++;
+					G_AddTOL(lastcustomtol, word);
+					lastcustomtol <<= 1;
 				}
 			}
 			else
@@ -1105,38 +1114,7 @@ static void readsprite2(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-INT32 numtolinfo = NUMBASETOL;
-UINT32 lastcustomtol = 13;
-
-tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
-	{"SOLO",TOL_SP},
-	{"SP",TOL_SP},
-	{"SINGLEPLAYER",TOL_SP},
-	{"SINGLE",TOL_SP},
-
-	{"COOP",TOL_COOP},
-	{"CO-OP",TOL_COOP},
-
-	{"COMPETITION",TOL_COMPETITION},
-	{"RACE",TOL_RACE},
-
-	{"MATCH",TOL_MATCH},
-	{"TAG",TOL_TAG},
-	{"CTF",TOL_CTF},
-
-	{"2D",TOL_2D},
-	{"MARIO",TOL_MARIO},
-	{"NIGHTS",TOL_NIGHTS},
-	{"OLDBRAK",TOL_ERZ3},
-
-	{"XMAS",TOL_XMAS},
-	{"CHRISTMAS",TOL_XMAS},
-	{"WINTER",TOL_XMAS},
-
-	{NULL, 0}
-};
-
-// copypasted from readPlayer :sleep:
+// copypasted from readPlayer :]
 static const char *const GAMETYPERULE_LIST[];
 static void readgametype(MYFILE *f, char *gtname)
 {
@@ -10474,16 +10452,23 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "TOL"))
 		{
-			if (lastcustomtol > 31)
-				CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
-			else
-			{
-				UINT32 newtol = (1<<lastcustomtol);
-				CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
-				G_AddTOL(newtol, word);
-				lua_pushinteger(L, newtol);
-				lastcustomtol++;
-				r++;
+			// Search if we already have a typeoflevel by that name...
+			int i;
+			for (i = 0; TYPEOFLEVEL[i].name; i++)
+				if (fastcmp(word, TYPEOFLEVEL[i].name))
+					break;
+
+			// We don't, so allocate a new one.
+			if (TYPEOFLEVEL[i].name == NULL) {
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
+					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				else {
+					CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
+					G_AddTOL(lastcustomtol, word);
+					lua_pushinteger(L, lastcustomtol);
+					lastcustomtol <<= 1;
+					r++;
+				}
 			}
 		}
 		Z_Free(s);
