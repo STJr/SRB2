@@ -1574,7 +1574,10 @@ void VID_CheckRenderer(void)
 	else if (rendermode == render_opengl)
 	{
 		if (rendererchanged)
+		{
 			R_InitHardwareMode();
+			V_SetPalette(0);
+		}
 	}
 #else
 	(void)oldrenderer;
