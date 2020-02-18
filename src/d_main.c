@@ -188,13 +188,13 @@ void D_ProcessEvents(void)
 				continue;
 		}
 
-		// Menu input
-		if (M_Responder(ev))
-			continue; // menu ate the event
-
 		// console input
 		if (CON_Responder(ev))
 			continue; // ate the event
+
+		// Menu input
+		if (M_Responder(ev))
+			continue; // menu ate the event
 
 		G_Responder(ev);
 	}
@@ -502,12 +502,11 @@ static void D_Display(void)
 	// vid size change is now finished if it was on...
 	vid.recalc = 0;
 
-	// FIXME: draw either console or menu, not the two
-	if (gamestate != GS_TIMEATTACK)
-		CON_Drawer();
-
 	M_Drawer(); // menu is drawn even on top of everything
 	// focus lost moved to M_Drawer
+
+	if (gamestate != GS_TIMEATTACK)
+		CON_Drawer();
 
 	//
 	// wipe update
