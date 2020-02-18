@@ -188,13 +188,13 @@ void D_ProcessEvents(void)
 				continue;
 		}
 
-		// console input
-		if (CON_Responder(ev))
-			continue; // ate the event
-
 		// Menu input
 		if (M_Responder(ev))
 			continue; // menu ate the event
+
+		// console input
+		if (CON_Responder(ev))
+			continue; // ate the event
 
 		G_Responder(ev);
 	}
