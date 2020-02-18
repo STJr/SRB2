@@ -1,4 +1,4 @@
-version: 2.2.0.{branch}-{build}
+version: 2.2.1.{branch}-{build}
 os: MinGW
 
 environment:
@@ -83,7 +83,14 @@ before_build:
 - ccache -V
 - ccache -s
 - if [%NOUPX%] == [1] ( set "NOUPX=NOUPX=1" ) else ( set "NOUPX=" )
-- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 NOOBJDUMP=1 %NOUPX%"
+- if defined [%APPVEYOR_PULL_REQUEST_HEAD_COMMIT%] ( set "COMMIT=%APPVEYOR_PULL_REQUEST_HEAD_COMMIT%" ) else ( set "COMMIT=%APPVEYOR_REPO_COMMIT%" )
+- cmd: git rev-parse --short %COMMIT%>%TMP%/gitshort.txt
+- cmd: set /P GITSHORT=<%TMP%/gitshort.txt
+# for pull requests, take the owner's name only, if this isn't the same repo of course
+- set "REPO=%APPVEYOR_REPO_BRANCH%"
+- if not [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [] ( if not [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [%APPVEYOR_REPO_NAME%] (  for /f "delims=/" %%a in ("%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%") do set "REPO=%%a-%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" ) )
+- set "EXENAME=EXENAME=srb2win-%REPO%-%GITSHORT%.exe"
+- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 NOOBJDUMP=1 %NOUPX% %EXENAME%"
 - if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1 GCC81=1" ) else ( set "MINGW_FLAGS=MINGW=1 GCC91=1" )
 - set "SRB2_MFLAGS=%SRB2_MFLAGS% %MINGW_FLAGS% %CONFIGURATION%=1"
 
@@ -99,10 +106,8 @@ after_build:
   )
 - if [%X86_64%] == [1] ( set "CONFIGURATION=%CONFIGURATION%64" )
 - ccache -s
-- cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
-- cmd: set /P GITSHORT=<%TMP%/gitshort.txt
-- set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%-%CONFIGURATION%.7z
-- set BUILDSARCHIVE=%APPVEYOR_REPO_BRANCH%-%CONFIGURATION%.7z
+- set BUILD_ARCHIVE=%REPO%-%GITSHORT%-%CONFIGURATION%.7z
+- set BUILDSARCHIVE=%REPO%-%CONFIGURATION%.7z
 - cmd: 7z a %BUILD_ARCHIVE% %BUILD_PATH% -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
 - cmd: copy %BUILD_ARCHIVE% %BUILDSARCHIVE%

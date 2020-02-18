@@ -746,6 +746,9 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if (player->bot)
 			continue; // ignore bots
 
+		if (player->quittime)
+			continue; // Ignore uncontrolled bodies
+
 		if (dist > 0
 			&& P_AproxDistance(P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
 			continue; // Too far away
@@ -5195,8 +5198,8 @@ void A_SignPlayer(mobj_t *actor)
 			player_t *player = actor->target ? actor->target->player : NULL;
 			UINT8 skinnum;
 			UINT8 skincount = 0;
-			for (skincount = 0; skincount < numskins; skincount++)
-				if (!skincheck(skincount))
+			for (skinnum = 0; skinnum < numskins; skinnum++)
+				if (!skincheck(skinnum))
 					skincount++;
 			skinnum = P_RandomKey(skincount);
 			for (skincount = 0; skincount < numskins; skincount++)
@@ -5229,20 +5232,23 @@ void A_SignPlayer(mobj_t *actor)
 		{
 			ov->color = facecolor;
 			ov->skin = skin;
-			P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+			if ((statenum_t)(ov->state-states) != actor->info->seestate)
+				P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
 		}
 		else // CLEAR! sign
 		{
 			ov->color = SKINCOLOR_NONE;
 			ov->skin = NULL; // needs to be NULL in the case of SF_HIRES characters
-			P_SetMobjState(ov, actor->info->missilestate); // S_CLEARSIGN
+			if ((statenum_t)(ov->state-states) != actor->info->missilestate)
+				P_SetMobjState(ov, actor->info->missilestate); // S_CLEARSIGN
 		}
 	}
 	else // Eggman face
 	{
 		ov->color = SKINCOLOR_NONE;
 		ov->skin = NULL;
-		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
+		if ((statenum_t)(ov->state-states) != actor->info->meleestate)
+			P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		if (!signcolor)
 			signcolor = SKINCOLOR_CARBON;
 	}

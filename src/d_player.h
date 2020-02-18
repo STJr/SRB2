@@ -324,6 +324,8 @@ typedef struct player_s
 	// bounded/scaled total momentum.
 	fixed_t bob;
 
+	angle_t viewrollangle;
+
 	// Mouse aiming, where the guy is looking at!
 	// It is updated with cmd->aiming.
 	angle_t aiming;
@@ -510,6 +512,7 @@ typedef struct player_s
 	UINT8 bot;
 
 	tic_t jointime; // Timer when player joins game to change skin/color
+	tic_t quittime; // Time elapsed since user disconnected, zero if connected
 #ifdef HWRENDER
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
