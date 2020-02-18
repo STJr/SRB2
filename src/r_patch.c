@@ -1212,14 +1212,23 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		INT32 width, height, leftoffset;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
+		size_t lumplength;
 
 		if (lump == LUMPERROR)
 			return;
+
+		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
+		lumplength = W_LumpLength(lump);
+
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)patch, lumplength))
+			patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL);
+		else
+#endif
 		// Because there's something wrong with SPR_DFLM, I guess
 		if (!R_CheckIfPatch(lump))
 			return;
 
-		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
 		width = patch->width;
 		height = patch->height;
 		leftoffset = patch->leftoffset;
