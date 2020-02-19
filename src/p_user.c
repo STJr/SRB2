@@ -7436,6 +7436,8 @@ static void P_NiGHTSMovement(player_t *player)
 		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axises.
 			newangle = (INT16)FixedInt(AngleFixed(R_PointToAngle2(0,0, cmd->sidemove*FRACUNIT, cmd->forwardmove*FRACUNIT)));
 
+		newangle -= player->viewrollangle / ANG1;
+
 		if (newangle < 0 && moved)
 			newangle = (INT16)(360+newangle);
 	}
@@ -12174,7 +12176,9 @@ void P_PlayerThink(player_t *player)
 
 #ifdef POLYOBJECTS
 	if (player->onconveyor == 1)
-			player->cmomy = player->cmomx = 0;
+		player->onconveyor = 3;
+	else if (player->onconveyor == 3)
+		player->cmomy = player->cmomx = 0;
 #endif
 
 	P_DoSuperStuff(player);

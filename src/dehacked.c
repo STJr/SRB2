@@ -1293,10 +1293,7 @@ static void readgametype(MYFILE *f, char *gtname)
 				UINT32 wordgt = 0;
 				for (j = 0; GAMETYPERULE_LIST[j]; j++)
 					if (fastcmp(word, GAMETYPERULE_LIST[j])) {
-						if (!j) // GTR_CAMPAIGN
-							wordgt |= 1;
-						else
-							wordgt |= (1<<j);
+						wordgt |= (1<<j);
 						if (i || word2[0] == 'T' || word2[0] == 'Y')
 							newgtrules |= wordgt;
 						break;
