@@ -1594,7 +1594,7 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 	hook_p hookp;
 	boolean hasSeenPlayer = true;
 	if (!gL || !(hooksAvailable[hook_SeenPlayer/8] & (1<<(hook_SeenPlayer%8))))
-		return 0;
+		return true;
 
 	lua_settop(gL, 0);
 	hud_running = true; // local hook

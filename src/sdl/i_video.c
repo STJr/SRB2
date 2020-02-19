@@ -1526,12 +1526,7 @@ void VID_CheckRenderer(void)
 	else if (rendermode == render_opengl)
 	{
 		I_StartupHardwareGraphics();
-		// Needs to check if switching failed somehow, too.
-		if (rendermode == render_opengl)
-		{
-			R_InitHardwareMode();
-			HWR_Switch();
-		}
+		R_InitHardwareMode();
 	}
 #else
 	(void)oldrenderer;
