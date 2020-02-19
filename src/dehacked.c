@@ -7477,6 +7477,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Got Flag Sign
 	"S_GOTFLAG",
+	
+	// Finish flag
+	"S_FINISHFLAG",
 
 	"S_CORK",
 	"S_LHRT",
@@ -8598,6 +8601,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LOCKONINF", // In-level Target
 	"MT_TAG", // Tag Sign
 	"MT_GOTFLAG", // Got Flag sign
+	"MT_FINISHFLAG", // Finish flag
 
 	// Ambient Sounds
 	"MT_AWATERA", // Ambient Water Sound 1

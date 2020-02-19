@@ -8005,6 +8005,37 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 			mobj->frame = (mobj->frame & ~FF_TRANSMASK) | ((10 - (mobj->fuse*2)) << (FF_TRANSSHIFT));
 	}
 	break;
+	case MT_FINISHFLAG:
+	{
+		if (!mobj->target || mobj->target->player->playerstate == PST_DEAD || !cv_exitmove.value)
+		{
+			P_RemoveMobj(mobj);
+			return;
+		}
+
+		if (!camera.chase)
+			mobj->flags2 |= MF2_DONTDRAW;
+		else
+			mobj->flags2 &= ~MF2_DONTDRAW;
+
+		P_UnsetThingPosition(mobj);
+		{
+			fixed_t radius = FixedMul(10*mobj->info->speed, mobj->target->scale);
+			angle_t fa;
+
+			mobj->angle += FixedAngle(mobj->info->speed);
+
+			fa = mobj->angle >> ANGLETOFINESHIFT;
+
+			mobj->x = mobj->target->x + FixedMul(FINECOSINE(fa),radius);
+			mobj->y = mobj->target->y + FixedMul(FINESINE(fa),radius);
+			mobj->z = mobj->target->z + mobj->target->height/2;
+		}
+		P_SetThingPosition(mobj);
+
+		P_SetScale(mobj, mobj->target->scale);
+	}
+	break;
 	case MT_VWREF:
 	case MT_VWREB:
 	{
@@ -11563,6 +11594,9 @@ void P_AfterPlayerSpawn(INT32 playernum)
 
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
+	
+	if (p->pflags & PF_FINISHED)
+		P_GiveFinishFlags(p);
 }
 
 // spawn it at a playerspawn mapthing
