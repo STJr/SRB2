@@ -1997,8 +1997,12 @@ void P_XYMovement(mobj_t *mo)
 				{
 					mo->momz = transfermomz;
 					mo->standingslope = NULL;
-					if (player && (player->pflags & PF_SPINNING))
-						player->pflags |= PF_THOKKED;
+					if (player)
+					{
+						player->powers[pw_justlaunched] = 2;
+						if (player->pflags & PF_SPINNING)
+							player->pflags |= PF_THOKKED;
+					}
 				}
 			}
 #endif
@@ -3922,6 +3926,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	// Needed for gravity boots
 	P_CheckGravity(mobj, false);
 
+	mobj->player->powers[pw_justlaunched] = 0;
 	if (mobj->momx || mobj->momy)
 	{
 		P_XYMovement(mobj);

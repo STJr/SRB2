@@ -9134,7 +9134,8 @@ static const char *const POWERS_LIST[] = {
 	"NIGHTS_LINKFREEZE",
 
 	//for linedef exec 427
-	"NOCONTROL"
+	"NOCONTROL",
+	"JUSTLAUNCHED",
 };
 
 static const char *const HUDITEMS_LIST[] = {
