@@ -1928,13 +1928,22 @@ void G_PreLevelTitleCard(void)
 		wipestyleflags = WSF_CROSSFADE;
 }
 
+static boolean titlecardforreload = false;
+
 //
 // Returns true if the current level has a title card.
 //
 boolean G_IsTitleCardAvailable(void)
 {
 	// The current level header explicitly disabled the title card.
-	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+	UINT16 titleflag = LF_NOTITLECARDFIRST;
+
+	if (modeattacking != ATTACKING_NONE)
+		titleflag = LF_NOTITLECARDRECORDATTACK;
+	else if (titlecardforreload)
+		titleflag = LF_NOTITLECARDRESPAWN;
+
+	if (mapheaderinfo[gamemap-1]->levelflags & titleflag)
 		return false;
 
 	// The current gametype doesn't have a title card.
@@ -3024,7 +3033,9 @@ void G_DoReborn(INT32 playernum)
 #ifdef HAVE_BLUA
 			LUAh_MapChange(gamemap);
 #endif
+			titlecardforreload = true;
 			G_DoLoadLevel(true);
+			titlecardforreload = false;
 			if (metalrecording)
 				G_BeginMetal();
 			return;

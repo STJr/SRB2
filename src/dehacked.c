@@ -1806,6 +1806,24 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
 			}
+			else if (fastcmp(word, "SHOWTITLECARDFOR"))
+			{
+				mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
+				tmp = strtok(word2,",");
+				do {
+					if (fastcmp(tmp, "FIRST"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDFIRST;
+					else if (fastcmp(tmp, "RESPAWN"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRESPAWN;
+					else if (fastcmp(tmp, "RECORDATTACK"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRECORDATTACK;
+					else if (fastcmp(tmp, "ALL"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
+					else if (!fastcmp(tmp, "NONE"))
+						deh_warning("Level header %d: unknown titlecard show option %s\n", num, tmp);
+
+				} while((tmp = strtok(NULL,",")) != NULL);
+			}
 
 			// Individual triggers for menu flags
 			else if (fastcmp(word, "HIDDEN"))
@@ -9353,6 +9371,9 @@ struct {
 	{"LF_NOZONE",LF_NOZONE},
 	{"LF_SAVEGAME",LF_SAVEGAME},
 	{"LF_MIXNIGHTSCOUNTDOWN",LF_MIXNIGHTSCOUNTDOWN},
+	{"LF_NOTITLECARDFIRST",LF_NOTITLECARDFIRST},
+	{"LF_NOTITLECARDRESPAWN",LF_NOTITLECARDRESPAWN},
+	{"LF_NOTITLECARDRECORDATTACK",LF_NOTITLECARDRECORDATTACK},
 	{"LF_NOTITLECARD",LF_NOTITLECARD},
 	{"LF_WARNINGTITLE",LF_WARNINGTITLE},
 	// And map flags
