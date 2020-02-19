@@ -379,11 +379,12 @@ void P_GiveEmerald(boolean spawnObj)
 void P_GiveFinishFlags(player_t *player)
 {
 	angle_t angle = FixedAngle(player->mo->angle << FRACBITS);
+	UINT8 i;
 
 	if (!player->mo)
 		return;
 
-	for (UINT8 i = 0; i < 3; i++)
+	for (i = 0; i < 3; i++)
 	{
 		angle_t fa = (angle >> ANGLETOFINESHIFT) & FINEMASK;
 		fixed_t xoffs = FINECOSINE(fa);
