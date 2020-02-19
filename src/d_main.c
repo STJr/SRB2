@@ -1292,10 +1292,7 @@ void D_SRB2Main(void)
 		needpatchrecache = true;
 		VID_CheckRenderer();
 		SCR_ChangeRendererCVars(setrenderneeded);
-<<<<<<< HEAD
-=======
 		D_CheckRendererState();
->>>>>>> origin/master
 		setrenderneeded = 0;
 	}
 
