@@ -278,8 +278,10 @@ typedef enum
 	pw_nights_linkfreeze,
 
 	pw_nocontrol, //for linedef exec 427
-	
+
 	pw_dye, // for dyes
+
+	pw_justlaunched, // Launched off a slope this tic (0=none, 1=standard launch, 2=half-pipe launch)
 
 	NUMPOWERS
 } powertype_t;

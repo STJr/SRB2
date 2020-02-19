@@ -1212,12 +1212,7 @@ void D_SRB2Main(void)
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
-	if (!W_InitMultipleFiles(startupwadfiles, mainwads))
-#ifdef _DEBUG
-		CONS_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
-#else
-		I_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
-#endif
+	W_InitMultipleFiles(startupwadfiles, mainwads);
 	D_CleanFile();
 
 #ifndef DEVELOP // md5s last updated 16/02/20 (ddmmyy)
@@ -1297,12 +1292,14 @@ void D_SRB2Main(void)
 	// Lactozilla: Does the render mode need to change?
 	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
 	{
+		CONS_Printf("Switching the renderer...\n");
 		needpatchflush = true;
 		needpatchrecache = true;
 		VID_CheckRenderer();
 		SCR_ChangeRendererCVars(setrenderneeded);
+		D_CheckRendererState();
+		setrenderneeded = 0;
 	}
-	D_CheckRendererState();
 
 	wipegamestate = gamestate;
 

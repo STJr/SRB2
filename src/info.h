@@ -671,6 +671,7 @@ typedef enum sprite
 	SPR_LCKN, // Target
 	SPR_TTAG, // Tag Sign
 	SPR_GFLG, // Got Flag sign
+	SPR_FNSF, // Finish flag
 
 	SPR_CORK,
 	SPR_LHRT,
@@ -3486,6 +3487,9 @@ typedef enum state
 
 	// Got Flag Sign
 	S_GOTFLAG,
+	
+	// Finish flag
+	S_FINISHFLAG,
 
 	S_CORK,
 	S_LHRT,
@@ -4627,6 +4631,7 @@ typedef enum mobj_type
 	MT_LOCKONINF, // In-level Target
 	MT_TAG, // Tag Sign
 	MT_GOTFLAG, // Got Flag sign
+	MT_FINISHFLAG, // Finish flag
 
 	// Ambient Sounds
 	MT_AWATERA, // Ambient Water Sound 1
