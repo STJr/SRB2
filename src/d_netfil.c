@@ -477,21 +477,21 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 	if (!filetransfer)
 		I_Error("AddLuaFileTransfer: Out of memory\n");
 	*prevnext = filetransfer;
-    filetransfer->next = NULL;
+	filetransfer->next = NULL;
 
-    // Allocate the file name
-    filetransfer->filename = strdup(filename);
-    if (!filetransfer->filename)
+	// Allocate the file name
+	filetransfer->filename = strdup(filename);
+	if (!filetransfer->filename)
 		I_Error("AddLuaFileTransfer: Out of memory\n");
 
-    // Create and allocate the real file name
+	// Create and allocate the real file name
 	if (server)
 		filetransfer->realfilename = strdup(va("%s" PATHSEP "%s",
 												luafiledir, filename));
 	else
 		filetransfer->realfilename = strdup(va("%s" PATHSEP "client" PATHSEP "$$$%d%d.tmp",
 												luafiledir, rand(), rand()));
-    if (!filetransfer->realfilename)
+	if (!filetransfer->realfilename)
 		I_Error("AddLuaFileTransfer: Out of memory\n");
 
 	strlcpy(filetransfer->mode, mode, sizeof(filetransfer->mode));
@@ -556,7 +556,7 @@ void SV_PrepareSendLuaFileToNextNode(void)
 void SV_HandleLuaFileSent(UINT8 node)
 {
 	luafiletransfers->nodestatus[node] = LFTNS_SENT;
-    SV_PrepareSendLuaFileToNextNode();
+	SV_PrepareSendLuaFileToNextNode();
 }
 
 void RemoveLuaFileTransfer(void)
@@ -1036,7 +1036,7 @@ void Got_Filetxpak(void)
 			CONS_Printf(M_GetText("Downloading %s...(done)\n"),
 				filename);
 #ifdef HAVE_BLUA
-            if (luafiletransfers)
+			if (luafiletransfers)
 			{
                 // Tell the server we have received the file
                 netbuffer->packettype = PT_HASLUAFILE;
