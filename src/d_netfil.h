@@ -101,7 +101,7 @@ boolean SV_SendLuaFile(INT32 node, const char *filename, boolean textmode);
 void SV_PrepareSendLuaFile(const char *filename);
 void SV_HandleLuaFileSent(UINT8 node);
 void RemoveLuaFileTransfer(void);
-void RemoveLuaFileTransfers(void);
+void RemoveAllLuaFileTransfers(void);
 void SV_AbortLuaFileTransfer(INT32 node);
 void CL_PrepareDownloadLuaFile(void);
 void Got_LuaFile(UINT8 **cp, INT32 playernum);

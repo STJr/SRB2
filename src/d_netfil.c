@@ -506,7 +506,7 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 
 		if (!luafiletransfers->next) // Only if there is no transfer already going on
 		{
-			if (FIL_FileOK(filetransfer->realfilename))
+			if (FIL_ReadFileOK(filetransfer->realfilename))
 				SV_PrepareSendLuaFileToNextNode();
 			else
 			{
@@ -572,7 +572,7 @@ void RemoveLuaFileTransfer(void)
 	free(filetransfer);
 }
 
-void RemoveLuaFileTransfers(void)
+void RemoveAllLuaFileTransfers(void)
 {
 	while (luafiletransfers)
 		RemoveLuaFileTransfer();

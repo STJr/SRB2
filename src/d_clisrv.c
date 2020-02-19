@@ -3164,7 +3164,7 @@ void D_QuitNetGame(void)
 
 	// abort send/receive of files
 	CloseNetFile();
-	RemoveLuaFileTransfers();
+	RemoveAllLuaFileTransfers();
 	waitingforluafiletransfer = false;
 
 	if (server)
