@@ -47,7 +47,7 @@ extern const char *superactions[MAXRECURSION];
 extern UINT8 superstack;
 
 // If the dehacked patch does not match this version, we throw a warning
-#define PATCHVERSION 210
+#define PATCHVERSION 220
 
 #define MAXLINELEN 1024
 

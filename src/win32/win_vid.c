@@ -239,6 +239,11 @@ void I_StartupGraphics(void)
 	if (!dedicated) graphics_started = true;
 }
 
+void I_StartupHardwareGraphics(void)
+{
+	// oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo y
+}
+
 // ------------------
 // I_ShutdownGraphics
 // Close the screen, restore previous video mode.
@@ -951,6 +956,11 @@ INT32 VID_SetResolution(INT32 width, INT32 height)
 	(void)width;
 	(void)height;
 	return 0;
+}
+
+void VID_CheckRenderer(void)
+{
+	// ..............
 }
 
 // ========================================================================

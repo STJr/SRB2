@@ -184,10 +184,6 @@ void I_StartupMouse(void);
 */
 void I_StartupMouse2(void);
 
-/**	\brief keyboard startup, shutdown, handler
-*/
-void I_StartupKeyboard(void);
-
 /**	\brief  setup timer irq and user timer routine.
 */
 void I_StartupTimer(void);
@@ -291,6 +287,10 @@ void I_GetJoystick2Events(void);
 /**	\brief Mouses events
 */
 void I_GetMouseEvents(void);
+
+/**	\brief Checks if the mouse needs to be grabbed
+*/
+void I_UpdateMouseGrab(void);
 
 char *I_GetEnv(const char *name);
 

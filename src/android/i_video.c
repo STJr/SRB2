@@ -19,6 +19,7 @@ boolean allow_fullscreen = false;
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 void I_StartupGraphics(void){}
+void I_StartupHardwareGraphics(void){}
 
 void I_ShutdownGraphics(void){}
 
@@ -56,6 +57,11 @@ INT32 VID_SetResolution(INT32 width, INT32 height)
   (void)width;
   (void)height;
   return 0;
+}
+
+void VID_CheckRenderer(void)
+{
+	// ..............
 }
 
 const char *VID_GetModeName(INT32 modenum)

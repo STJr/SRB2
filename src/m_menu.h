@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
 // Copyright (C) 1999-2019 by Sonic Team Junior.
 //
 // This program is free software distributed under the
@@ -80,6 +80,8 @@ typedef enum
 	MN_OP_P2MOUSE,
 	MN_OP_P2JOYSTICK,
 	MN_OP_P2CAMERA,
+
+	MN_OP_PLAYSTYLE,
 
 	MN_OP_VIDEO,
 	MN_OP_VIDEOMODE,
@@ -222,13 +224,14 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 
 // flags for items in the menu
 // menu handle (what we do when key is pressed
-#define IT_TYPE             14     // (2+4+8)
+#define IT_TYPE             15     // (1+2+4+8)
 #define IT_CALL              0     // call the function
+#define IT_SPACE             1     // no handling
 #define IT_ARROWS            2     // call function with 0 for left arrow and 1 for right arrow in param
 #define IT_KEYHANDLER        4     // call with the key in param
 #define IT_SUBMENU           6     // go to sub menu
 #define IT_CVAR              8     // handle as a cvar
-#define IT_SPACE            10     // no handling
+#define IT_PAIR             11     // no handling, define both sides of text
 #define IT_MSGHANDLER       12     // same as key but with event and sometime can handle y/n key (special for message)
 
 #define IT_DISPLAY   (48+64+128)    // 16+32+64+128
@@ -319,6 +322,9 @@ typedef struct menu_s
 void M_SetupNextMenu(menu_t *menudef);
 void M_ClearMenus(boolean callexitmenufunc);
 
+// Maybe this goes here????? Who knows.
+boolean M_MouseNeeded(void);
+
 extern menu_t *currentMenu;
 
 extern menu_t MainDef;
@@ -371,6 +377,7 @@ typedef struct
 	UINT8 col[2];
 	char notes[441];
 } gtdesc_t;
+extern gtdesc_t gametypedesc[NUMGAMETYPES];
 
 // mode descriptions for video mode menu
 typedef struct

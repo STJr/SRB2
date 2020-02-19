@@ -385,6 +385,11 @@ INT32 VID_SetResolution(INT32 width, INT32 height)
 	return 1;
 }
 
+void VID_CheckRenderer(void)
+{
+	// ..............
+}
+
 
 
 // converts a segm:offs 32bit pair to a 32bit flat ptr

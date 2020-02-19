@@ -20,10 +20,6 @@
 #include "r_portal.h"
 #include "r_defs.h"
 
-// "Left" and "Right" character symbols for additional rotation functionality
-#define ROT_L ('L' - '0')
-#define ROT_R ('R' - '0')
-
 // number of sprite lumps for spritewidth,offset,topoffset lookup tables
 // Fab: this is a hack : should allocate the lookup tables per sprite
 #define MAXVISSPRITES 2048 // added 2-2-98 was 128
@@ -55,11 +51,22 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
 
+fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope);
+
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
+
+boolean R_ThingVisible (mobj_t *thing);
+
+boolean R_ThingVisibleWithinDist (mobj_t *thing,
+		fixed_t        draw_dist,
+		fixed_t nights_draw_dist);
+
+boolean R_PrecipThingVisible (precipmobj_t *precipthing,
+		fixed_t precip_draw_dist);
 
 /** Used to count the amount of masked elements
  * per portal to later group them in separate
@@ -153,7 +160,8 @@ typedef enum
 	SC_LINKDRAW = 1<<3,
 	SC_FULLBRIGHT = 1<<4,
 	SC_VFLIP = 1<<5,
-	SC_ISSCALED = 1>>6,
+	SC_ISSCALED = 1<<6,
+	SC_SHADOW = 1<<7,
 	// masks
 	SC_CUTMASK = SC_TOP|SC_BOTTOM,
 	SC_FLAGMASK = ~SC_CUTMASK
@@ -181,7 +189,15 @@ typedef struct vissprite_s
 	fixed_t startfrac; // horizontal position of x1
 	fixed_t scale, sortscale; // sortscale only differs from scale for paper sprites and MF2_LINKDRAW
 	fixed_t scalestep; // only for paper sprites, 0 otherwise
+	fixed_t paperoffset, paperdistance; // for paper sprites, offset/dist relative to the angle
 	fixed_t xiscale; // negative if flipped
+
+	angle_t centerangle; // for paper sprites
+
+	struct {
+		fixed_t tan; // The amount to shear the sprite vertically per row
+		INT32 offset; // The center of the shearing location offset from x1
+	} shear;
 
 	fixed_t texturemid;
 	patch_t *patch;
@@ -270,7 +286,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 	if (cn == '+') return '\\' - 'A'; // PK3 can't use backslash, so use + instead
 	return cn - 'A';
 #else
-	if (cn >= 'A' && cn <= 'Z') return cn - 'A';
+	if (cn >= 'A' && cn <= 'Z') return (cn - 'A');
 	if (cn >= '0' && cn <= '9') return (cn - '0') + 26;
 	if (cn >= 'a' && cn <= 'z') return (cn - 'a') + 36;
 	if (cn == '!') return 62;
@@ -279,9 +295,26 @@ FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 #endif
 }
 
-FUNCMATH FUNCINLINE static ATTRINLINE boolean R_ValidSpriteAngle(UINT8 rotation)
+// "Left" and "Right" character symbols for additional rotation functionality
+#define ROT_L 17
+#define ROT_R 18
+
+FUNCMATH FUNCINLINE static ATTRINLINE char R_Rotation2Char(UINT8 rot)
 {
-	return ((rotation <= 8) || (rotation == ROT_L) || (rotation == ROT_R));
+	if (rot <=     9) return '0' + rot;
+	if (rot <=    16) return 'A' + (rot - 10);
+	if (rot == ROT_L) return 'L';
+	if (rot == ROT_R) return 'R';
+	return '\xFF';
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Rotation(char cn)
+{
+	if (cn >= '0' && cn <= '9') return (cn - '0');
+	if (cn >= 'A' && cn <= 'G') return (cn - 'A') + 10;
+	if (cn == 'L') return ROT_L;
+	if (cn == 'R') return ROT_R;
+	return 255;
 }
 
 #endif //__R_THINGS__

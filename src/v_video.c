@@ -1045,13 +1045,13 @@ void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skin
 	{
 		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CONTINUE];
-		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 		const UINT8 *colormap = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
 
 		V_DrawMappedPatch(x, y, flags, patch, colormap);
 	}
 	else
-		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
+		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_PATCH));
 }
 
 //
@@ -3244,6 +3244,28 @@ Unoptimized version
 #endif
 }
 
+// Generates a color look-up table
+// which has up to 64 colors at each channel
+// (see the defines in v_video.h)
+
+UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
+
+void InitColorLUT(RGBA_t *palette)
+{
+	UINT8 r, g, b;
+	static boolean clutinit = false;
+	static RGBA_t *lastpalette = NULL;
+	if ((!clutinit) || (lastpalette != palette))
+	{
+		for (r = 0; r < CLUTSIZE; r++)
+			for (g = 0; g < CLUTSIZE; g++)
+				for (b = 0; b < CLUTSIZE; b++)
+					colorlookup[r][g][b] = NearestPaletteColor(r << SHIFTCOLORBITS, g << SHIFTCOLORBITS, b << SHIFTCOLORBITS, palette);
+		clutinit = true;
+		lastpalette = palette;
+	}
+}
+
 // V_Init
 // old software stuff, buffers are allocated at video mode setup
 // here we set the screens[x] pointers accordingly
@@ -3255,13 +3277,9 @@ void V_Init(void)
 	const INT32 screensize = vid.rowbytes * vid.height;
 
 	LoadMapPalette();
-	// hardware modes do not use screens[] pointers
+
 	for (i = 0; i < NUMSCREENS; i++)
 		screens[i] = NULL;
-	if (rendermode != render_soft)
-	{
-		return; // be sure to cause a NULL read/write error so we detect it, in case of..
-	}
 
 	// start address of NUMSCREENS * width*height vidbuffers
 	if (base)

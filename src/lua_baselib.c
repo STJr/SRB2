@@ -12,6 +12,7 @@
 
 #include "doomdef.h"
 #ifdef HAVE_BLUA
+#include "fastcmp.h"
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
 #ifdef ESLOPE
@@ -23,6 +24,8 @@
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
+#include "m_menu.h"
+#include "y_inter.h"
 #include "hu_stuff.h"	// HU_AddChatText
 #include "console.h"
 #include "d_netcmd.h" // IsPlayerAdmin
@@ -144,10 +147,8 @@ static const struct {
 	{META_MOBJINFO,     "mobjinfo_t"},
 	{META_SFXINFO,      "sfxinfo_t"},
 	{META_SPRITEINFO,   "spriteinfo_t"},
-#ifdef ROTSPRITE
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
-#endif
 
 	{META_MOBJ,         "mobj_t"},
 	{META_MAPTHING,     "mapthing_t"},
@@ -2192,6 +2193,20 @@ static int lib_rPointInSubsector(lua_State *L)
 	return 1;
 }
 
+static int lib_rPointInSubsectorOrNil(lua_State *L)
+{
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
+	subsector_t *sub = R_PointInSubsectorOrNull(x, y);
+	//HUDSAFE
+	INLEVEL
+	if (sub)
+		LUA_PushUserdata(L, sub, META_SUBSECTOR);
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
 // R_THINGS
 ////////////
 
@@ -2632,6 +2647,145 @@ static int lib_sStartMusicCaption(lua_State *L)
 // G_GAME
 ////////////
 
+// Copypasted from lib_cvRegisterVar :]
+static int lib_gAddGametype(lua_State *L)
+{
+	const char *k;
+	lua_Integer i;
+
+	const char *gtname = NULL;
+	const char *gtconst = NULL;
+	const char *gtdescription = NULL;
+	INT16 newgtidx = 0;
+	UINT32 newgtrules = 0;
+	UINT32 newgttol = 0;
+	INT32 newgtpointlimit = 0;
+	INT32 newgttimelimit = 0;
+	UINT8 newgtleftcolor = 0;
+	UINT8 newgtrightcolor = 0;
+	INT16 newgtrankingstype = -1;
+	int newgtinttype = 0;
+
+	luaL_checktype(L, 1, LUA_TTABLE);
+	lua_settop(L, 1); // Clear out all other possible arguments, leaving only the first one.
+
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+
+	// Ran out of gametype slots
+	if (gametypecount == NUMGAMETYPEFREESLOTS)
+		return luaL_error(L, "Ran out of free gametype slots!");
+
+#define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to " LUA_QL("G_AddGametype") " (%s)", e);
+#define TYPEERROR(f, t) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t), luaL_typename(L, -1)))
+
+	lua_pushnil(L);
+	while (lua_next(L, 1)) {
+		// stack: gametype table, key/index, value
+		//               1            2        3
+		i = 0;
+		k = NULL;
+		if (lua_isnumber(L, 2))
+			i = lua_tointeger(L, 2);
+		else if (lua_isstring(L, 2))
+			k = lua_tostring(L, 2);
+
+		// Sorry, no gametype rules as key names.
+		if (i == 1 || (k && fasticmp(k, "name"))) {
+			if (!lua_isstring(L, 3))
+				TYPEERROR("name", LUA_TSTRING)
+			gtname = Z_StrDup(lua_tostring(L, 3));
+		} else if (i == 2 || (k && fasticmp(k, "identifier"))) {
+			if (!lua_isstring(L, 3))
+				TYPEERROR("identifier", LUA_TSTRING)
+			gtconst = Z_StrDup(lua_tostring(L, 3));
+		} else if (i == 3 || (k && fasticmp(k, "rules"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("rules", LUA_TNUMBER)
+			newgtrules = (UINT32)lua_tointeger(L, 3);
+		} else if (i == 4 || (k && fasticmp(k, "typeoflevel"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("typeoflevel", LUA_TNUMBER)
+			newgttol = (UINT32)lua_tointeger(L, 3);
+		} else if (i == 5 || (k && fasticmp(k, "rankingtype"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("rankingtype", LUA_TNUMBER)
+			newgtrankingstype = (INT16)lua_tointeger(L, 3);
+		} else if (i == 6 || (k && fasticmp(k, "intermissiontype"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("intermissiontype", LUA_TNUMBER)
+			newgtinttype = (int)lua_tointeger(L, 3);
+		} else if (i == 7 || (k && fasticmp(k, "defaultpointlimit"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("defaultpointlimit", LUA_TNUMBER)
+			newgtpointlimit = (INT32)lua_tointeger(L, 3);
+		} else if (i == 8 || (k && fasticmp(k, "defaulttimelimit"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("defaulttimelimit", LUA_TNUMBER)
+			newgttimelimit = (INT32)lua_tointeger(L, 3);
+		} else if (i == 9 || (k && fasticmp(k, "description"))) {
+			if (!lua_isstring(L, 3))
+				TYPEERROR("description", LUA_TSTRING)
+			gtdescription = Z_StrDup(lua_tostring(L, 3));
+		} else if (i == 10 || (k && fasticmp(k, "headerleftcolor"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("headerleftcolor", LUA_TNUMBER)
+			newgtleftcolor = (UINT8)lua_tointeger(L, 3);
+		} else if (i == 11 || (k && fasticmp(k, "headerrightcolor"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("headerrightcolor", LUA_TNUMBER)
+			newgtrightcolor = (UINT8)lua_tointeger(L, 3);
+		// Key name specified
+		} else if ((!i) && (k && fasticmp(k, "headercolor"))) {
+			if (!lua_isnumber(L, 3))
+				TYPEERROR("headercolor", LUA_TNUMBER)
+			newgtleftcolor = newgtrightcolor = (UINT8)lua_tointeger(L, 3);
+		}
+		lua_pop(L, 1);
+	}
+
+#undef FIELDERROR
+#undef TYPEERROR
+
+	// pop gametype table
+	lua_pop(L, 1);
+
+	// Set defaults
+	if (gtname == NULL)
+		gtname = Z_StrDup("Unnamed gametype");
+	if (gtdescription == NULL)
+		gtdescription = Z_StrDup("???");
+
+	// Add the new gametype
+	newgtidx = G_AddGametype(newgtrules);
+	G_AddGametypeTOL(newgtidx, newgttol);
+	G_SetGametypeDescription(newgtidx, NULL, newgtleftcolor, newgtrightcolor);
+	strncpy(gametypedesc[newgtidx].notes, gtdescription, 441);
+
+	// Not covered by G_AddGametype alone.
+	if (newgtrankingstype == -1)
+		newgtrankingstype = newgtidx;
+	gametyperankings[newgtidx] = newgtrankingstype;
+	intermissiontypes[newgtidx] = newgtinttype;
+	pointlimits[newgtidx] = newgtpointlimit;
+	timelimits[newgtidx] = newgttimelimit;
+
+	// Write the new gametype name.
+	Gametype_Names[newgtidx] = gtname;
+
+	// Write the constant name.
+	if (gtconst == NULL)
+		gtconst = gtname;
+	G_AddGametypeConstant(newgtidx, gtconst);
+
+	// Update gametype_cons_t accordingly.
+	G_UpdateGametypeSelections();
+
+	// done
+	CONS_Printf("Added gametype %s\n", Gametype_Names[newgtidx]);
+	return 0;
+}
+
 static int lib_gBuildMapName(lua_State *L)
 {
 	INT32 map = luaL_optinteger(L, 1, gamemap);
@@ -2664,23 +2818,17 @@ static int lib_gSetCustomExitVars(lua_State *L)
 	// Supported:
 	//	G_SetCustomExitVars();			[reset to defaults]
 	//	G_SetCustomExitVars(int)		[nextmap override only]
-	//	G_SetCustomExitVars(bool)		[skipstats only]
-	//	G_SetCustomExitVars(int, bool)	[both of the above]
+	//	G_SetCustomExitVars(nil, int)	[skipstats only]
+	//	G_SetCustomExitVars(int, int)	[both of the above]
+
+	nextmapoverride = 0;
+	skipstats = 0;
+
 	if (n >= 1)
 	{
-		if (lua_isnumber(L, 1) || n >= 2)
-		{
-			nextmapoverride = (INT16)luaL_checknumber(L, 1);
-			lua_remove(L, 1); // remove nextmapoverride; skipstats now 1 if available
-		}
-		skipstats = luaL_optinteger(L, 2, 0);
+		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
+		skipstats = (INT16)luaL_optinteger(L, 2, 0);
 	}
-	else
-	{
-		nextmapoverride = 0;
-		skipstats = 0;
-	}
-	// ---
 
 	return 0;
 }
@@ -2717,6 +2865,22 @@ static int lib_gGametypeUsesLives(lua_State *L)
 	//HUDSAFE
 	INLEVEL
 	lua_pushboolean(L, G_GametypeUsesLives());
+	return 1;
+}
+
+static int lib_gGametypeUsesCoopLives(lua_State *L)
+{
+	//HUDSAFE
+	INLEVEL
+	lua_pushboolean(L, G_GametypeUsesCoopLives());
+	return 1;
+}
+
+static int lib_gGametypeUsesCoopStarposts(lua_State *L)
+{
+	//HUDSAFE
+	INLEVEL
+	lua_pushboolean(L, G_GametypeUsesCoopStarposts());
 	return 1;
 }
 
@@ -2757,6 +2921,14 @@ static int lib_gTagGametype(lua_State *L)
 	//HUDSAFE
 	INLEVEL
 	lua_pushboolean(L, G_TagGametype());
+	return 1;
+}
+
+static int lib_gCompetitionGametype(lua_State *L)
+{
+	//HUDSAFE
+	INLEVEL
+	lua_pushboolean(L, G_CompetitionGametype());
 	return 1;
 }
 
@@ -2969,6 +3141,7 @@ static luaL_Reg lib[] = {
 	{"R_PointToDist",lib_rPointToDist},
 	{"R_PointToDist2",lib_rPointToDist2},
 	{"R_PointInSubsector",lib_rPointInSubsector},
+	{"R_PointInSubsectorOrNil",lib_rPointInSubsectorOrNil},
 
 	// r_things (sprite)
 	{"R_Char2Frame",lib_rChar2Frame},
@@ -2997,6 +3170,7 @@ static luaL_Reg lib[] = {
 	{"S_StartMusicCaption", lib_sStartMusicCaption},
 
 	// g_game
+	{"G_AddGametype", lib_gAddGametype},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
@@ -3004,11 +3178,14 @@ static luaL_Reg lib[] = {
 	{"G_ExitLevel",lib_gExitLevel},
 	{"G_IsSpecialStage",lib_gIsSpecialStage},
 	{"G_GametypeUsesLives",lib_gGametypeUsesLives},
+	{"G_GametypeUsesCoopLives",lib_gGametypeUsesCoopLives},
+	{"G_GametypeUsesCoopStarposts",lib_gGametypeUsesCoopStarposts},
 	{"G_GametypeHasTeams",lib_gGametypeHasTeams},
 	{"G_GametypeHasSpectators",lib_gGametypeHasSpectators},
 	{"G_RingSlingerGametype",lib_gRingSlingerGametype},
 	{"G_PlatformGametype",lib_gPlatformGametype},
 	{"G_TagGametype",lib_gTagGametype},
+	{"G_CompetitionGametype",lib_gCompetitionGametype},
 	{"G_TicsToHours",lib_gTicsToHours},
 	{"G_TicsToMinutes",lib_gTicsToMinutes},
 	{"G_TicsToSeconds",lib_gTicsToSeconds},

@@ -64,7 +64,7 @@ fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 
 fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
-subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y);
+subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y);
 
 boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph);
 
@@ -76,19 +76,20 @@ extern consvar_t cv_showhud, cv_translucenthud;
 extern consvar_t cv_homremoval;
 extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
-#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
+
 extern consvar_t cv_shadow;
-#endif
-#ifdef GLBADSHADOWS
-extern conscar_t cv_shadowoffs;
-#endif //#ifdef GLBADSHADOWS
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
+extern consvar_t cv_fov;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
 // Called by startup code.
 void R_Init(void);
+#ifdef HWRENDER
+void R_InitHardwareMode(void);
+#endif
+void R_ReloadHUDGraphics(void);
 
 // just sets setsizeneeded true
 extern boolean setsizeneeded;

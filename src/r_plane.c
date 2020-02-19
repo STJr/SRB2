@@ -788,6 +788,8 @@ static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boo
 	patch_t *patch = NULL;
 	boolean texturechanged = (leveltexture ? (levelflat->u.texture.num != levelflat->u.texture.lastnum) : false);
 
+	(void)ispng;
+
 	// Check if the texture changed.
 	if (leveltexture && (!texturechanged))
 	{

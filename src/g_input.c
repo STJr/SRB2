@@ -662,7 +662,13 @@ INT32 G_KeyStringtoNum(const char *keystr)
 		return keystr[0];
 
 	if (!strncmp(keystr, "KEY", 3) && keystr[3] >= '0' && keystr[3] <= '9')
-		return atoi(&keystr[3]);
+	{
+		/* what if we out of range bruh? */
+		j = atoi(&keystr[3]);
+		if (j < NUMINPUTS)
+			return j;
+		return 0;
+	}
 
 	for (j = 0; j < NUMKEYNAMES; j++)
 		if (!stricmp(keynames[j].name, keystr))

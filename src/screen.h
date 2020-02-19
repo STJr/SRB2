@@ -170,14 +170,24 @@ extern boolean R_SSE2;
 // ----------------
 // screen variables
 // ----------------
+
 extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
 extern INT32 setresneeded[3]; // if setresneeded[2] is > 0, set resolution
 
+void SCR_ChangeRenderer(void);
+void SCR_ChangeRendererCVars(INT32 mode);
+extern UINT8 setrenderneeded;
+
 extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
-extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_fullscreen;
+extern CV_PossibleValue_t cv_renderer_t[];
+
+extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
+#ifdef HWRENDER
+extern consvar_t cv_newrenderer;
+#endif
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 
@@ -185,6 +195,10 @@ extern consvar_t cv_vidwait;
 void SCR_SetMode(void);
 // Change resolution
 void SCR_SetResolution(void);
+// Change render mode
+void SCR_SetRenderer(void);
+// Set drawer functions
+void SCR_SetDrawFuncs(void);
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);
 // Check parms once at startup
