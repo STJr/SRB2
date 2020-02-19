@@ -8961,13 +8961,13 @@ void A_Dye(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+
+	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
+	UINT8 color = (UINT8)locvar2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Dye", actor))
 		return;
 #endif
-	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
-	UINT8 color = (UINT8)locvar2;
-	
 	if (color >= MAXTRANSLATIONS)
 		return;
 	
