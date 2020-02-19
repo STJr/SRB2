@@ -20,6 +20,7 @@
 #endif
 #include "z_zone.h"
 #include "r_main.h"
+#include "r_draw.h"
 #include "r_things.h"
 #include "m_random.h"
 #include "s_sound.h"
@@ -2193,11 +2194,11 @@ static int lib_rPointInSubsector(lua_State *L)
 	return 1;
 }
 
-static int lib_rIsPointInSubsector(lua_State *L)
+static int lib_rPointInSubsectorOrNil(lua_State *L)
 {
 	fixed_t x = luaL_checkfixed(L, 1);
 	fixed_t y = luaL_checkfixed(L, 2);
-	subsector_t *sub = R_IsPointInSubsector(x, y);
+	subsector_t *sub = R_PointInSubsectorOrNull(x, y);
 	//HUDSAFE
 	INLEVEL
 	if (sub)
@@ -2313,9 +2314,29 @@ static int lib_rTextureNumForName(lua_State *L)
 	return 1;
 }
 
+// R_DRAW
+////////////
+static int lib_rGetColorByName(lua_State *L)
+{
+	const char* colorname = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushinteger(L, R_GetColorByName(colorname));
+	return 1;
+}
+
+// Lua exclusive function, returns the name of a color from the SKINCOLOR_ constant.
+// SKINCOLOR_GREEN > "Green" for example
+static int lib_rGetNameByColor(lua_State *L)
+{
+	UINT8 colornum = (UINT8)luaL_checkinteger(L, 1);
+	if (!colornum || colornum >= MAXSKINCOLORS)
+		return luaL_error(L, "skincolor %d out of range (1 - %d).", colornum, MAXSKINCOLORS-1);
+	lua_pushstring(L, Color_Names[colornum]);
+	return 1;
+}
+
 // S_SOUND
 ////////////
-
 static int lib_sStartSound(lua_State *L)
 {
 	const void *origin = NULL;
@@ -3141,7 +3162,7 @@ static luaL_Reg lib[] = {
 	{"R_PointToDist",lib_rPointToDist},
 	{"R_PointToDist2",lib_rPointToDist2},
 	{"R_PointInSubsector",lib_rPointInSubsector},
-	{"R_IsPointInSubsector",lib_rIsPointInSubsector},
+	{"R_PointInSubsectorOrNil",lib_rPointInSubsectorOrNil},
 
 	// r_things (sprite)
 	{"R_Char2Frame",lib_rChar2Frame},
@@ -3152,6 +3173,10 @@ static luaL_Reg lib[] = {
 	// r_data
 	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
 	{"R_TextureNumForName",lib_rTextureNumForName},
+
+	// r_draw
+	{"R_GetColorByName", lib_rGetColorByName},
+	{"R_GetNameByColor", lib_rGetNameByColor},
 
 	// s_sound
 	{"S_StartSound",lib_sStartSound},

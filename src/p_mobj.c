@@ -1997,8 +1997,12 @@ void P_XYMovement(mobj_t *mo)
 				{
 					mo->momz = transfermomz;
 					mo->standingslope = NULL;
-					if (player && (player->pflags & PF_SPINNING))
-						player->pflags |= PF_THOKKED;
+					if (player)
+					{
+						player->powers[pw_justlaunched] = 2;
+						if (player->pflags & PF_SPINNING)
+							player->pflags |= PF_THOKKED;
+					}
 				}
 			}
 #endif
@@ -2350,6 +2354,7 @@ static void P_RingZMovement(mobj_t *mo)
 	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
+		mo->pmomz = 0;
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
@@ -2419,6 +2424,7 @@ static boolean P_ZMovement(mobj_t *mo)
 	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
+		mo->pmomz = 0;
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
@@ -2907,6 +2913,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
+		mo->pmomz = 0;
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 
@@ -3157,6 +3164,7 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
+		mo->pmomz = 0;
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
@@ -3396,7 +3404,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 		if (!((p->powers[pw_super]) || (p->powers[pw_invulnerability])))
 		{
 			boolean electric = !!(p->powers[pw_shield] & SH_PROTECTELECTRIC);
-			if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER)))
+			if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER) && !(mobj->eflags & MFE_TOUCHLAVA)))
 			{ // Water removes electric and non-water fire shields...
 				P_FlashPal(p,
 				electric
@@ -3918,6 +3926,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	// Needed for gravity boots
 	P_CheckGravity(mobj, false);
 
+	mobj->player->powers[pw_justlaunched] = 0;
 	if (mobj->momx || mobj->momy)
 	{
 		P_XYMovement(mobj);
@@ -7996,6 +8005,37 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 			mobj->frame = (mobj->frame & ~FF_TRANSMASK) | ((10 - (mobj->fuse*2)) << (FF_TRANSSHIFT));
 	}
 	break;
+	case MT_FINISHFLAG:
+	{
+		if (!mobj->target || mobj->target->player->playerstate == PST_DEAD || !cv_exitmove.value)
+		{
+			P_RemoveMobj(mobj);
+			return;
+		}
+
+		if (!camera.chase)
+			mobj->flags2 |= MF2_DONTDRAW;
+		else
+			mobj->flags2 &= ~MF2_DONTDRAW;
+
+		P_UnsetThingPosition(mobj);
+		{
+			fixed_t radius = FixedMul(10*mobj->info->speed, mobj->target->scale);
+			angle_t fa;
+
+			mobj->angle += FixedAngle(mobj->info->speed);
+
+			fa = mobj->angle >> ANGLETOFINESHIFT;
+
+			mobj->x = mobj->target->x + FixedMul(FINECOSINE(fa),radius);
+			mobj->y = mobj->target->y + FixedMul(FINESINE(fa),radius);
+			mobj->z = mobj->target->z + mobj->target->height/2;
+		}
+		P_SetThingPosition(mobj);
+
+		P_SetScale(mobj, mobj->target->scale);
+	}
+	break;
 	case MT_VWREF:
 	case MT_VWREB:
 	{
@@ -10457,6 +10497,61 @@ void P_SceneryThinker(mobj_t *mobj)
 // GAME SPAWN FUNCTIONS
 //
 
+static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
+{
+	switch (thing->type)
+	{
+		case MT_PLAYER:
+		case MT_ROLLOUTROCK:
+
+		case MT_EGGMOBILE4_MACE:
+		case MT_SMALLMACE:
+		case MT_BIGMACE:
+
+		case MT_SMALLGRABCHAIN:
+		case MT_BIGGRABCHAIN:
+
+		case MT_YELLOWSPRINGBALL:
+		case MT_REDSPRINGBALL:
+
+			return FRACUNIT;
+
+		case MT_RING:
+		case MT_FLINGRING:
+
+		case MT_BLUESPHERE:
+		case MT_FLINGBLUESPHERE:
+		case MT_BOMBSPHERE:
+
+		case MT_REDTEAMRING:
+		case MT_BLUETEAMRING:
+		case MT_REDFLAG:
+		case MT_BLUEFLAG:
+
+		case MT_EMBLEM:
+
+		case MT_TOKEN:
+		case MT_EMERALD1:
+		case MT_EMERALD2:
+		case MT_EMERALD3:
+		case MT_EMERALD4:
+		case MT_EMERALD5:
+		case MT_EMERALD6:
+		case MT_EMERALD7:
+		case MT_EMERHUNT:
+		case MT_FLINGEMERALD:
+
+			return 2*FRACUNIT/3;
+
+		default:
+
+			if (thing->flags & (MF_ENEMY|MF_BOSS))
+				return FRACUNIT;
+			else
+				return 0;
+	}
+}
+
 //
 // P_SpawnMobj
 //
@@ -10558,20 +10653,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		mobj->z = z;
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
-	if (
-		type == MT_PLAYER ||
-		type == MT_ROLLOUTROCK ||
-		type == MT_EGGMOBILE4_MACE ||
-		(type >= MT_SMALLMACE && type <= MT_REDSPRINGBALL) ||
-		(mobj->flags & (MF_ENEMY|MF_BOSS))
-	)
-		mobj->shadowscale = FRACUNIT;
-	else if (
-		type >= MT_RING && type <= MT_FLINGEMERALD && type != MT_EMERALDSPAWN
-	)
-		mobj->shadowscale = 2*FRACUNIT/3;
-	else
-		mobj->shadowscale = 0;
+	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
 
 #ifdef HAVE_BLUA
 	// DANGER! This can cause P_SpawnMobj to return NULL!
@@ -11114,7 +11196,7 @@ void P_SpawnPrecipitation(void)
 		x = basex + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
 		y = basey + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
 
-		precipsector = R_IsPointInSubsector(x, y);
+		precipsector = R_PointInSubsectorOrNull(x, y);
 
 		// No sector? Stop wasting time,
 		// move on to the next entry in the blockmap
@@ -11512,6 +11594,9 @@ void P_AfterPlayerSpawn(INT32 playernum)
 
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
+	
+	if (p->pflags & PF_FINISHED)
+		P_GiveFinishFlags(p);
 }
 
 // spawn it at a playerspawn mapthing
@@ -12931,7 +13016,16 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		thinker_t* th;
 		mobj_t* mo2;
 		boolean foundanother = false;
-		mobj->health = (mthing->angle/360) + 1;
+
+		if (mthing->extrainfo)
+			// Allow thing Parameter to define star post num too!
+			// For starposts above param 15 (the 16th), add 360 to the angle like before and start parameter from 1 (NOT 0)!
+			// So the 16th starpost is angle=0 param=15, the 17th would be angle=360 param=1.
+			// This seems more intuitive for mappers to use until UDMF is ready, since most SP maps won't have over 16 consecutive star posts.
+			mobj->health = mthing->extrainfo + (mthing->angle/360)*15 + 1;
+		else
+			// Old behavior if Parameter is 0; add 360 to the angle for each consecutive star post.
+			mobj->health = (mthing->angle/360) + 1;
 
 		// See if other starposts exist in this level that have the same value.
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)

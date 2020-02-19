@@ -117,6 +117,7 @@ static void P_NetArchivePlayers(void)
 
 		WRITEANGLE(save_p, players[i].aiming);
 		WRITEANGLE(save_p, players[i].drawangle);
+		WRITEANGLE(save_p, players[i].viewrollangle);
 		WRITEANGLE(save_p, players[i].awayviewaiming);
 		WRITEINT32(save_p, players[i].awayviewtics);
 		WRITEINT16(save_p, players[i].rings);
@@ -256,6 +257,7 @@ static void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].onconveyor);
 
 		WRITEUINT32(save_p, players[i].jointime);
+		WRITEUINT32(save_p, players[i].quittime);
 
 		WRITEUINT16(save_p, flags);
 
@@ -326,6 +328,7 @@ static void P_NetUnArchivePlayers(void)
 
 		players[i].aiming = READANGLE(save_p);
 		players[i].drawangle = READANGLE(save_p);
+		players[i].viewrollangle = READANGLE(save_p);
 		players[i].awayviewaiming = READANGLE(save_p);
 		players[i].awayviewtics = READINT32(save_p);
 		players[i].rings = READINT16(save_p);
@@ -447,6 +450,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].onconveyor = READINT32(save_p);
 
 		players[i].jointime = READUINT32(save_p);
+		players[i].quittime = READUINT32(save_p);
 
 		flags = READUINT16(save_p);
 
@@ -608,7 +612,7 @@ static void P_NetArchiveColormaps(void)
 
 		WRITEUINT8(save_p, exc->fadestart);
 		WRITEUINT8(save_p, exc->fadeend);
-		WRITEUINT8(save_p, exc->fog);
+		WRITEUINT8(save_p, exc->flags);
 
 		WRITEINT32(save_p, exc->rgba);
 		WRITEINT32(save_p, exc->fadergba);
@@ -638,7 +642,7 @@ static void P_NetUnArchiveColormaps(void)
 
 	for (exc = net_colormaps; i < num_net_colormaps; i++, exc = exc_next)
 	{
-		UINT8 fadestart, fadeend, fog;
+		UINT8 fadestart, fadeend, flags;
 		INT32 rgba, fadergba;
 #ifdef EXTRACOLORMAPLUMPS
 		char lumpname[9];
@@ -646,7 +650,7 @@ static void P_NetUnArchiveColormaps(void)
 
 		fadestart = READUINT8(save_p);
 		fadeend = READUINT8(save_p);
-		fog = READUINT8(save_p);
+		flags = READUINT8(save_p);
 
 		rgba = READINT32(save_p);
 		fadergba = READINT32(save_p);
@@ -678,7 +682,7 @@ static void P_NetUnArchiveColormaps(void)
 
 		exc->fadestart = fadestart;
 		exc->fadeend = fadeend;
-		exc->fog = fog;
+		exc->flags = flags;
 
 		exc->rgba = rgba;
 		exc->fadergba = fadergba;
@@ -688,7 +692,7 @@ static void P_NetUnArchiveColormaps(void)
 		exc->lumpname[0] = 0;
 #endif
 
-		existing_exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
+		existing_exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags);
 
 		if (existing_exc)
 			exc->colormap = existing_exc->colormap;
@@ -1254,6 +1258,7 @@ typedef enum
 #endif
 	MD2_COLORIZED    = 1<<12,
 	MD2_ROLLANGLE    = 1<<13,
+	MD2_SHADOWSCALE  = 1<<14,
 } mobj_diff2_t;
 
 typedef enum
@@ -1475,6 +1480,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_COLORIZED;
 	if (mobj->rollangle)
 		diff2 |= MD2_ROLLANGLE;
+	if (mobj->shadowscale)
+		diff2 |= MD2_SHADOWSCALE;
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1641,6 +1648,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT8(save_p, mobj->colorized);
 	if (diff2 & MD2_ROLLANGLE)
 		WRITEANGLE(save_p, mobj->rollangle);
+	if (diff2 & MD2_SHADOWSCALE)
+		WRITEFIXED(save_p, mobj->shadowscale);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2720,6 +2729,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->colorized = READUINT8(save_p);
 	if (diff2 & MD2_ROLLANGLE)
 		mobj->rollangle = READANGLE(save_p);
+	if (diff2 & MD2_SHADOWSCALE)
+		mobj->shadowscale = READFIXED(save_p);
 
 	if (diff & MD_REDFLAG)
 	{

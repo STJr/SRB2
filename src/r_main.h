@@ -27,6 +27,7 @@ extern INT32 centerx, centery;
 
 extern fixed_t centerxfrac, centeryfrac;
 extern fixed_t projection, projectiony;
+extern fixed_t fovtan; // field of view
 
 extern size_t validcount, linecount, loopcount, framecount;
 
@@ -45,6 +46,8 @@ extern size_t validcount, linecount, loopcount, framecount;
 #define LIGHTSCALESHIFT 12
 #define MAXLIGHTZ 128
 #define LIGHTZSHIFT 20
+
+#define LIGHTRESOLUTIONFIX (640*fovtan/vid.width)
 
 extern lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 extern lighttable_t *scalelightfixed[MAXLIGHTSCALE];
@@ -65,7 +68,7 @@ fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 
 fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
-subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y);
+subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y);
 
 boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph);
 
@@ -77,10 +80,8 @@ extern consvar_t cv_showhud, cv_translucenthud;
 extern consvar_t cv_homremoval;
 extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
+
 extern consvar_t cv_shadow;
-#ifdef GLBADSHADOWS
-extern conscar_t cv_shadowoffs;
-#endif //#ifdef GLBADSHADOWS
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_fov;
@@ -93,6 +94,9 @@ void R_Init(void);
 void R_InitHardwareMode(void);
 #endif
 void R_ReloadHUDGraphics(void);
+
+void R_CheckViewMorph(void);
+void R_ApplyViewMorph(void);
 
 // just sets setsizeneeded true
 extern boolean setsizeneeded;

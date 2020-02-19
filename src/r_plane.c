@@ -45,9 +45,6 @@
 // Quincunx antialiasing of flats!
 //#define QUINCUNX
 
-// good night sweet prince
-#define SHITPLANESPARENCY
-
 //SoM: 3/23/2000: Use Boom visplane hashing.
 
 visplane_t *visplanes[MAXVISPLANES];
@@ -813,11 +810,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else // Opaque, but allow transparent flat pixels
 			spanfunctype = SPANDRAWFUNC_SPLAT;
 
-#ifdef SHITPLANESPARENCY
-		if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
-#else
-		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
+		if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
@@ -871,11 +864,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else // Opaque, but allow transparent flat pixels
 				spanfunctype = SPANDRAWFUNC_SPLAT;
 
-#ifdef SHITPLANESPARENCY
-			if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
-#else
-			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
+			if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			else
 				light = LIGHTLEVELS-1;

@@ -192,8 +192,7 @@ void F_WipeStageTitle(void)
 	// draw level title
 	if ((WipeStageTitle && st_overlay)
 	&& (wipestyle == WIPESTYLE_COLORMAP)
-	&& !(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
-	&& *mapheaderinfo[gamemap-1]->lvlttl != '\0')
+	&& G_IsTitleCardAvailable())
 	{
 		ST_runTitleCard();
 		ST_drawWipeTitleCard();
