@@ -1439,7 +1439,7 @@ UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj)
 	return shouldCollide;
 }
 
-void LUAh_PlayerQuit(player_t *plr, int reason)
+void LUAh_PlayerQuit(player_t *plr, kickreason_t reason)
 {
 	hook_p hookp;
 	if (!gL || !(hooksAvailable[hook_PlayerQuit/8] & (1<<(hook_PlayerQuit%8))))
@@ -1594,7 +1594,7 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 	hook_p hookp;
 	boolean hasSeenPlayer = true;
 	if (!gL || !(hooksAvailable[hook_SeenPlayer/8] & (1<<(hook_SeenPlayer%8))))
-		return 0;
+		return true;
 
 	lua_settop(gL, 0);
 	hud_running = true; // local hook

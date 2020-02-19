@@ -637,6 +637,21 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 	return lumpinfo;
 }
 
+static UINT16 W_InitFileError (const char *filename, boolean exitworthy)
+{
+	if (exitworthy)
+	{
+#ifdef _DEBUG
+		CONS_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+#else
+		I_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+#endif
+	}
+	else
+		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), filename);
+	return INT16_MAX;
+}
+
 //  Allocate a wadfile, setup the lumpinfo (directory) and
 //  lumpcache, add the wadfile to the current active wadfiles
 //
@@ -648,7 +663,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 //
 // Can now load dehacked files (.soc)
 //
-UINT16 W_InitFile(const char *filename, boolean mainfile)
+UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 {
 	FILE *handle;
 	lumpinfo_t *lumpinfo = NULL;
@@ -681,12 +696,12 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
 		refreshdirmenu |= REFRESHDIR_MAX;
-		return INT16_MAX;
+		return W_InitFileError(filename, startup);
 	}
 
 	// open wad file
 	if ((handle = W_OpenWadFile(&filename, true)) == NULL)
-		return INT16_MAX;
+		return W_InitFileError(filename, startup);
 
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
@@ -701,7 +716,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 			refreshdirmenu |= REFRESHDIR_MAX;
 			if (handle)
 				fclose(handle);
-			return INT16_MAX;
+			return W_InitFileError(filename, startup);
 		}
 
 		packetsizetally = packetsize;
@@ -722,7 +737,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
 			if (handle)
 				fclose(handle);
-			return INT16_MAX;
+			return W_InitFileError(filename, false);
 		}
 	}
 #endif
@@ -750,7 +765,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 	if (lumpinfo == NULL)
 	{
 		fclose(handle);
-		return INT16_MAX;
+		return W_InitFileError(filename, startup);
 	}
 
 	//
@@ -822,13 +837,9 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
   * backwards, so a later file overrides all earlier ones.
   *
   * \param filenames A null-terminated list of files to use.
-  * \return 1 if all files were loaded, 0 if at least one was missing or
-  *           invalid.
   */
-INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
+void W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
 {
-	INT32 rc = 1;
-
 	// open all the files, load headers, and count lumps
 	numwadfiles = 0;
 
@@ -836,13 +847,8 @@ INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
 	for (; *filenames; filenames++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		rc &= (W_InitFile(*filenames, numwadfiles < mainfiles) != INT16_MAX) ? 1 : 0;
+		W_InitFile(*filenames, numwadfiles < mainfiles, true);
 	}
-
-	if (!numwadfiles)
-		I_Error("W_InitMultipleFiles: no files found");
-
-	return rc;
 }
 
 /** Make sure a lump number is valid.
@@ -1691,7 +1697,7 @@ W_VerifyName (const char *name, lumpchecklist_t *checklist, boolean status)
 	size_t j;
 	for (j = 0; checklist[j].len && checklist[j].name; ++j)
 	{
-		if (( strncmp(name, checklist[j].name,
+		if (( strncasecmp(name, checklist[j].name,
 						checklist[j].len) != false ) == status)
 		{
 			return true;
@@ -1746,6 +1752,19 @@ W_VerifyWAD (FILE *fp, lumpchecklist_t *checklist, boolean status)
 	return true;
 }
 
+// List of blacklisted folders to use when checking the PK3
+static lumpchecklist_t folderblacklist[] =
+{
+	{"Lua/", 4},
+	{"SOC/", 4},
+	{"Sprites/",  8},
+	{"Textures/", 9},
+	{"Patches/", 8},
+	{"Flats/", 6},
+	{"Fades/", 6},
+	{NULL, 0},
+};
+
 static int
 W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 {
@@ -1797,7 +1816,7 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		else
 			trimname = fullname; // Care taken for root files.
 
-		if (*trimname) // Ignore directories
+		if (*trimname) // Ignore directories, well kinda
 		{
 			if ((dotpos = strrchr(trimname, '.')) == 0)
 				dotpos = fullname + strlen(fullname); // Watch for files without extension.
@@ -1806,6 +1825,10 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 			strncpy(lumpname, trimname, min(8, dotpos - trimname));
 
 			if (! W_VerifyName(lumpname, checklist, status))
+				return false;
+
+			// Check for directories next, if it's blacklisted it will return false
+			if (W_VerifyName(fullname, folderblacklist, status))
 				return false;
 		}
 

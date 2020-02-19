@@ -1094,10 +1094,10 @@ static void R_SplitSprite(vissprite_t *sprite)
 
 			newsprite->extra_colormap = *sector->lightlist[i].extra_colormap;
 
-			if (!((newsprite->cut & SC_FULLBRIGHT)
-				&& (!newsprite->extra_colormap || !(newsprite->extra_colormap->fog & 1))))
+			if (!(newsprite->cut & SC_FULLBRIGHT)
+				|| (newsprite->extra_colormap && (newsprite->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 			{
-				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
+				lindex = FixedMul(sprite->xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
@@ -1307,17 +1307,8 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->mobj = thing; // Easy access! Tails 06-07-2002
 
-	shadow->x1 = x1 < 0 ? 0 : x1;
-	shadow->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-
-	// PORTAL SEMI-CLIPPING
-	if (portalrender)
-	{
-		if (shadow->x1 < portalclipstart)
-			shadow->x1 = portalclipstart;
-		if (shadow->x2 >= portalclipend)
-			shadow->x2 = portalclipend-1;
-	}
+	shadow->x1 = x1 < portalclipstart ? portalclipstart : x1;
+	shadow->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
 	shadow->xscale = FixedMul(xscale, shadowxscale); //SoM: 4/17/2000
 	shadow->scale = FixedMul(yscale, shadowyscale);
@@ -1695,7 +1686,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		thing = thing->tracer;
 
-		if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
+		if (! R_ThingVisible(thing))
 			return;
 
 		tr_x = thing->x - viewx;
@@ -1815,17 +1806,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
-	vis->x1 = x1 < 0 ? 0 : x1;
-	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-
-	// PORTAL SEMI-CLIPPING
-	if (portalrender)
-	{
-		if (vis->x1 < portalclipstart)
-			vis->x1 = portalclipstart;
-		if (vis->x2 >= portalclipend)
-			vis->x2 = portalclipend-1;
-	}
+	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
+	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
 	vis->xscale = xscale; //SoM: 4/17/2000
 	vis->sector = thing->subsector->sector;
@@ -1882,7 +1864,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->cut |= SC_FULLBRIGHT;
 
 	if (vis->cut & SC_FULLBRIGHT
-		&& (!vis->extra_colormap || !(vis->extra_colormap->fog & 1)))
+		&& (!vis->extra_colormap || !(vis->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 	{
 		// full bright: goggles
 		vis->colormap = colormaps;
@@ -1890,7 +1872,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// diminished light
-		lindex = FixedMul(xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
+		lindex = FixedMul(xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
 
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
@@ -2034,17 +2016,8 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->shear.tan = 0;
 	vis->shear.offset = 0;
 
-	vis->x1 = x1 < 0 ? 0 : x1;
-	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-
-	// PORTAL SEMI-CLIPPING
-	if (portalrender)
-	{
-		if (vis->x1 < portalclipstart)
-			vis->x1 = portalclipstart;
-		if (vis->x2 >= portalclipend)
-			vis->x2 = portalclipend-1;
-	}
+	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
+	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
 	vis->xscale = xscale; //SoM: 4/17/2000
 	vis->sector = thing->subsector->sector;
@@ -2098,7 +2071,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	mobj_t *thing;
 	precipmobj_t *precipthing; // Tails 08-25-2002
 	INT32 lightnum;
-	fixed_t approx_dist, limit_dist, hoop_limit_dist;
+	fixed_t limit_dist, hoop_limit_dist;
 
 	if (rendermode != render_soft)
 		return;
@@ -2131,35 +2104,10 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	// If a limit exists, handle things a tiny bit different.
 	limit_dist = (fixed_t)(cv_drawdist.value) << FRACBITS;
 	hoop_limit_dist = (fixed_t)(cv_drawdist_nights.value) << FRACBITS;
-	if (limit_dist || hoop_limit_dist)
+	for (thing = sec->thinglist; thing; thing = thing->snext)
 	{
-		for (thing = sec->thinglist; thing; thing = thing->snext)
-		{
-			if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
-				continue;
-
-			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
-
-			if (thing->sprite == SPR_HOOP)
-			{
-				if (hoop_limit_dist && approx_dist > hoop_limit_dist)
-					continue;
-			}
-			else
-			{
-				if (limit_dist && approx_dist > limit_dist)
-					continue;
-			}
-
+		if (R_ThingVisibleWithinDist(thing, limit_dist, hoop_limit_dist))
 			R_ProjectSprite(thing);
-		}
-	}
-	else
-	{
-		// Draw everything in sector, no checks
-		for (thing = sec->thinglist; thing; thing = thing->snext)
-			if (!(thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW))
-				R_ProjectSprite(thing);
 	}
 
 	// no, no infinite draw distance for precipitation. this option at zero is supposed to turn it off
@@ -2167,15 +2115,8 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	{
 		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
 		{
-			if (precipthing->precipflags & PCF_INVISIBLE)
-				continue;
-
-			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
-
-			if (approx_dist > limit_dist)
-				continue;
-
-			R_ProjectPrecipitationSprite(precipthing);
+			if (R_PrecipThingVisible(precipthing, limit_dist))
+				R_ProjectPrecipitationSprite(precipthing);
 		}
 	}
 }
@@ -2877,6 +2818,55 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 	}
 }
 
+/* Check if thing may be drawn from our current view. */
+boolean R_ThingVisible (mobj_t *thing)
+{
+	return (!(
+				thing->sprite == SPR_NULL ||
+				( thing->flags2 & (MF2_DONTDRAW) ) ||
+				thing == r_viewmobj
+	));
+}
+
+boolean R_ThingVisibleWithinDist (mobj_t *thing,
+		fixed_t      limit_dist,
+		fixed_t hoop_limit_dist)
+{
+	fixed_t approx_dist;
+
+	if (! R_ThingVisible(thing))
+		return false;
+
+	approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
+
+	if (thing->sprite == SPR_HOOP)
+	{
+		if (hoop_limit_dist && approx_dist > hoop_limit_dist)
+			return false;
+	}
+	else
+	{
+		if (limit_dist && approx_dist > limit_dist)
+			return false;
+	}
+
+	return true;
+}
+
+/* Check if precipitation may be drawn from our current view. */
+boolean R_PrecipThingVisible (precipmobj_t *precipthing,
+		fixed_t limit_dist)
+{
+	fixed_t approx_dist;
+
+	if (( precipthing->precipflags & PCF_INVISIBLE ))
+		return false;
+
+	approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
+
+	return ( approx_dist <= limit_dist );
+}
+
 //
 // R_DrawMasked
 //
@@ -3446,6 +3436,7 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(DASHMODE)
 	GETFLAG(FASTEDGE)
 	GETFLAG(MULTIABILITY)
+	GETFLAG(NONIGHTSROTATION)
 #undef GETFLAG
 
 	else // let's check if it's a sound, otherwise error out

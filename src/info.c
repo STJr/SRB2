@@ -407,6 +407,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"LCKN", // Target
 	"TTAG", // Tag Sign
 	"GFLG", // Got Flag sign
+	"FNSF", // Finish flag
 
 	"CORK",
 	"LHRT",
@@ -762,7 +763,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_LIFE, 20, {NULL}, 0,  4, S_NULL},       // S_PLAY_ICON3
 
 	// Level end sign (uses player sprite)
-	{SPR_PLAY, SPR2_SIGN|FF_PAPERSPRITE, -1, {NULL}, 0, 29, S_PLAY_SIGN},         // S_PLAY_SIGN
+	{SPR_PLAY, SPR2_SIGN|FF_PAPERSPRITE, 2, {NULL}, 0, 29, S_PLAY_SIGN},         // S_PLAY_SIGN
 
 	// NiGHTS Player, transforming
 	{SPR_PLAY, SPR2_TRNS|FF_ANIMATE,     7, {NULL},          0, 4, S_PLAY_NIGHTS_TRANS2}, // S_PLAY_NIGHTS_TRANS1
@@ -2343,12 +2344,13 @@ state_t states[NUMSTATES] =
 
 	// TNT barrel
 	{SPR_BARR, 0, -1, {NULL}, 0, 0, S_NULL}, // S_TNTBARREL_STND1
-	{SPR_BARX, 0|FF_FULLBRIGHT, 3, {A_SetObjectFlags}, MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP, 0, S_TNTBARREL_EXPL2}, // S_TNTBARREL_EXPL1
-	{SPR_BARX, 1|FF_FULLBRIGHT, 2, {A_TNTExplode}, MT_TNTDUST, 0, S_TNTBARREL_EXPL3}, // S_TNTBARREL_EXPL2
-	{SPR_BARX, 1|FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_TNTBARREL_EXPL4}, // S_TNTBARREL_EXPL3
-	{SPR_BARX, 2|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL5}, // S_TNTBARREL_EXPL4
-	{SPR_BARX, 3|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL6}, // S_TNTBARREL_EXPL5
-	{SPR_NULL, 0, 35, {NULL}, 0, 0, S_NULL}, // S_TNTBARREL_EXPL6
+	{SPR_BARX, 0, 0, {A_RollAngle}, 0, 1, S_TNTBARREL_EXPL2}, // S_TNTBARREL_EXPL1
+	{SPR_BARX, 0|FF_FULLBRIGHT, 3, {A_SetObjectFlags}, MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP, 0, S_TNTBARREL_EXPL3}, // S_TNTBARREL_EXPL2
+	{SPR_BARX, 1|FF_FULLBRIGHT, 2, {A_TNTExplode}, MT_TNTDUST, 0, S_TNTBARREL_EXPL4}, // S_TNTBARREL_EXPL3
+	{SPR_BARX, 1|FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_TNTBARREL_EXPL5}, // S_TNTBARREL_EXPL4
+	{SPR_BARX, 2|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL6}, // S_TNTBARREL_EXPL5
+	{SPR_BARX, 3|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL7}, // S_TNTBARREL_EXPL6
+	{SPR_NULL, 0, 35, {NULL}, 0, 0, S_NULL}, // S_TNTBARREL_EXPL7
 #ifndef ROTSPRITE
 	{SPR_BARR, 1|FF_ANIMATE, -1, {NULL}, 7, 2, S_NULL}, // S_TNTBARREL_FLYING
 #else
@@ -2394,7 +2396,7 @@ state_t states[NUMSTATES] =
 
 	// Minecart
 	{SPR_NULL, 0,                            1, {NULL},                 0, 0, S_MINECART_IDLE},   // S_MINECART_IDLE
-	{SPR_NULL, 0,                            0, {A_KillSegments},       0, 0, S_TNTBARREL_EXPL3}, // S_MINECART_DTH1
+	{SPR_NULL, 0,                            0, {A_KillSegments},       0, 0, S_TNTBARREL_EXPL4}, // S_MINECART_DTH1
 	{SPR_MCRT, 8|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},            // S_MINECARTEND
 	{SPR_MCRT, 0|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},            // S_MINECARTSEG_FRONT
 	{SPR_MCRT, 1|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},            // S_MINECARTSEG_BACK
@@ -3348,7 +3350,10 @@ state_t states[NUMSTATES] =
 	{SPR_TTAG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_TTAG
 
 	// CTF Sign
-	{SPR_GFLG,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
+	{SPR_GFLG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
+	
+	// Finish flag
+	{SPR_FNSF,    FF_TRANS30, -1, {NULL}, 0, 0, S_NULL}, // S_FINISHFLAG
 
 	{SPR_CORK,             0, -1, {NULL}, 0, 0, S_NULL}, // S_CORK
 	{SPR_LHRT, FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_LHRT
@@ -6487,10 +6492,10 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		24*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
-		0,              // mass
+		DMG_FIRE,       // mass
 		1,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		MF_NOBLOCKMAP|MF_MISSILE|MF_PAIN|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -17992,6 +17997,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+	
+	{           // MT_FINISHFLAG
+		-1,             // doomednum
+		S_FINISHFLAG,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		4*FRACUNIT,     // speed
+		8*FRACUNIT,     // radius
+		8*FRACUNIT,     // height
+		1,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 

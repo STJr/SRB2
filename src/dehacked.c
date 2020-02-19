@@ -585,21 +585,30 @@ static void readfreeslots(MYFILE *f)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
-					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
 					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
-					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
+					deh_warning("Ran out of free SPR2 slots!\n");
 			}
 			else if (fastcmp(type, "TOL"))
 			{
-				if (lastcustomtol > 31)
-					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				// Search if we already have a typeoflevel by that name...
+				for (i = 0; TYPEOFLEVEL[i].name; i++)
+					if (fastcmp(word, TYPEOFLEVEL[i].name))
+						break;
+
+				// We found it? Then don't allocate another one.
+				if (TYPEOFLEVEL[i].name)
+					continue;
+
+				// We don't, so freeslot it.
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
+					deh_warning("Ran out of free typeoflevel slots!\n");
 				else
 				{
-					G_AddTOL((1<<lastcustomtol), word);
-					lastcustomtol++;
+					G_AddTOL(lastcustomtol, word);
+					lastcustomtol <<= 1;
 				}
 			}
 			else
@@ -1105,38 +1114,7 @@ static void readsprite2(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-INT32 numtolinfo = NUMBASETOL;
-UINT32 lastcustomtol = 13;
-
-tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
-	{"SOLO",TOL_SP},
-	{"SP",TOL_SP},
-	{"SINGLEPLAYER",TOL_SP},
-	{"SINGLE",TOL_SP},
-
-	{"COOP",TOL_COOP},
-	{"CO-OP",TOL_COOP},
-
-	{"COMPETITION",TOL_COMPETITION},
-	{"RACE",TOL_RACE},
-
-	{"MATCH",TOL_MATCH},
-	{"TAG",TOL_TAG},
-	{"CTF",TOL_CTF},
-
-	{"2D",TOL_2D},
-	{"MARIO",TOL_MARIO},
-	{"NIGHTS",TOL_NIGHTS},
-	{"OLDBRAK",TOL_ERZ3},
-
-	{"XMAS",TOL_XMAS},
-	{"CHRISTMAS",TOL_XMAS},
-	{"WINTER",TOL_XMAS},
-
-	{NULL, 0}
-};
-
-// copypasted from readPlayer :sleep:
+// copypasted from readPlayer :]
 static const char *const GAMETYPERULE_LIST[];
 static void readgametype(MYFILE *f, char *gtname)
 {
@@ -1293,10 +1271,7 @@ static void readgametype(MYFILE *f, char *gtname)
 				UINT32 wordgt = 0;
 				for (j = 0; GAMETYPERULE_LIST[j]; j++)
 					if (fastcmp(word, GAMETYPERULE_LIST[j])) {
-						if (!j) // GTR_CAMPAIGN
-							wordgt |= 1;
-						else
-							wordgt |= (1<<j);
+						wordgt |= (1<<j);
 						if (i || word2[0] == 'T' || word2[0] == 'Y')
 							newgtrules |= wordgt;
 						break;
@@ -1830,6 +1805,24 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
+			}
+			else if (fastcmp(word, "SHOWTITLECARDFOR"))
+			{
+				mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
+				tmp = strtok(word2,",");
+				do {
+					if (fastcmp(tmp, "FIRST"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDFIRST;
+					else if (fastcmp(tmp, "RESPAWN"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRESPAWN;
+					else if (fastcmp(tmp, "RECORDATTACK"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRECORDATTACK;
+					else if (fastcmp(tmp, "ALL"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
+					else if (!fastcmp(tmp, "NONE"))
+						deh_warning("Level header %d: unknown titlecard show option %s\n", num, tmp);
+
+				} while((tmp = strtok(NULL,",")) != NULL);
 			}
 
 			// Individual triggers for menu flags
@@ -4945,19 +4938,19 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SUPER_TRANS3",
 	"S_PLAY_SUPER_TRANS4",
 	"S_PLAY_SUPER_TRANS5",
-	"S_PLAY_SUPER_TRANS6", // This has special significance in the code. If you add more frames, search for it and make the appropriate changes.
+	"S_PLAY_SUPER_TRANS6",
 
 	// technically the player goes here but it's an infinite tic state
 	"S_OBJPLACE_DUMMY",
 
-	// 1-Up Box Sprites (uses player sprite)
+	// 1-Up Box Sprites overlay (uses player sprite)
 	"S_PLAY_BOX1",
 	"S_PLAY_BOX2",
 	"S_PLAY_ICON1",
 	"S_PLAY_ICON2",
 	"S_PLAY_ICON3",
 
-	// Level end sign (uses player sprite)
+	// Level end sign overlay (uses player sprite)
 	"S_PLAY_SIGN",
 
 	// NiGHTS character (uses player sprite)
@@ -5205,7 +5198,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROBOHOOD_JUMP2",
 	"S_ROBOHOOD_JUMP3",
 
-	// CastleBot FaceStabber
+	// Castlebot Facestabber
 	"S_FACESTABBER_STND1",
 	"S_FACESTABBER_STND2",
 	"S_FACESTABBER_STND3",
@@ -5425,6 +5418,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_FLEE2",
 	"S_EGGMOBILE_BALL",
 	"S_EGGMOBILE_TARGET",
+
 	"S_BOSSEGLZ1",
 	"S_BOSSEGLZ2",
 
@@ -5477,7 +5471,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE3_FLEE1",
 	"S_EGGMOBILE3_FLEE2",
 
-	// Boss 3 pinch
+	// Boss 3 Pinch
 	"S_FAKEMOBILE_INIT",
 	"S_FAKEMOBILE",
 	"S_FAKEMOBILE_ATK1",
@@ -5493,7 +5487,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BOSSSEBH2",
 
 	// Boss 3 Shockwave
-
 	"S_SHOCKWAVE1",
 	"S_SHOCKWAVE2",
 
@@ -5530,9 +5523,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_JETFLAME",
 
 	// Boss 4 Spectator Eggrobo
-	"S_EGGROBO1_IDLE",
+	"S_EGGROBO1_STND",
 	"S_EGGROBO1_BSLAP1",
-	"S_EGGROBO2_BSLAP2",
+	"S_EGGROBO1_BSLAP2",
 	"S_EGGROBO1_PISSED",
 
 	// Boss 4 Spectator Eggrobo jet flame
@@ -5776,7 +5769,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CYBRAKDEMON_NAPALM_ATTACK1",
 	"S_CYBRAKDEMON_NAPALM_ATTACK2",
 	"S_CYBRAKDEMON_NAPALM_ATTACK3",
-	"S_CYBRAKDEMON_FINISH_ATTACK", // If just attacked, remove MF2_FRET w/out going back to spawnstate
+	"S_CYBRAKDEMON_FINISH_ATTACK1", // If just attacked, remove MF2_FRET w/out going back to spawnstate
 	"S_CYBRAKDEMON_FINISH_ATTACK2", // Force a delay between attacks so you don't get bombarded with them back-to-back
 	"S_CYBRAKDEMON_PAIN1",
 	"S_CYBRAKDEMON_PAIN2",
@@ -6470,7 +6463,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LITTLETUMBLEWEED_ROLL7",
 	"S_LITTLETUMBLEWEED_ROLL8",
 
-	// Cacti Sprites
+	// Cacti
 	"S_CACTI1",
 	"S_CACTI2",
 	"S_CACTI3",
@@ -6485,7 +6478,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTITINYSEG",
 	"S_CACTISMALLSEG",
 
-	// Warning signs sprites
+	// Warning signs
 	"S_ARIDSIGN_CAUTION",
 	"S_ARIDSIGN_CACTI",
 	"S_ARIDSIGN_SHARPTURN",
@@ -6502,6 +6495,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TNTBARREL_EXPL4",
 	"S_TNTBARREL_EXPL5",
 	"S_TNTBARREL_EXPL6",
+	"S_TNTBARREL_EXPL7",
 	"S_TNTBARREL_FLYING",
 
 	// TNT proximity shell
@@ -7047,7 +7041,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ZAPSB10",
 	"S_ZAPSB11", // blank frame
 
-	// Thunder spark
+	//Thunder spark
 	"S_THUNDERCOIN_SPARK",
 
 	// Invincibility Sparkles
@@ -7348,6 +7342,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BHORIZ7",
 	"S_BHORIZ8",
 
+	// Booster
 	"S_BOOSTERSOUND",
 	"S_YELLOWBOOSTERROLLER",
 	"S_YELLOWBOOSTERSEG_LEFT",
@@ -7378,7 +7373,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPLISH8",
 	"S_SPLISH9",
 
-	// Lava splish
+	// Lava Splish
 	"S_LAVASPLISH",
 
 	// added water splash
@@ -7482,6 +7477,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Got Flag Sign
 	"S_GOTFLAG",
+	
+	// Finish flag
+	"S_FINISHFLAG",
 
 	"S_CORK",
 	"S_LHRT",
@@ -7974,6 +7972,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROCKCRUMBLEN",
 	"S_ROCKCRUMBLEO",
 	"S_ROCKCRUMBLEP",
+
+	// Level debris
 	"S_GFZDEBRIS",
 	"S_BRICKDEBRIS",
 	"S_WOODDEBRIS",
@@ -7993,7 +7993,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_THOK", // Thok! mobj
 	"MT_PLAYER",
 	"MT_TAILSOVERLAY", // c:
-	"MT_METALJETFUME", // [:
+	"MT_METALJETFUME",
 
 	// Enemies
 	"MT_BLUECRAWLA", // Crawla (Blue)
@@ -8110,7 +8110,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CYBRAKDEMON_NAPALM_FLAMES",
 	"MT_CYBRAKDEMON_VILE_EXPLOSION",
 
-	// Metal Sonic
+	// Metal Sonic (Boss 9)
 	"MT_METALSONIC_RACE",
 	"MT_METALSONIC_BATTLE",
 	"MT_MSSHIELD_FRONT",
@@ -8124,7 +8124,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BOMBSPHERE",
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
-	"MT_TOKEN", // Special Stage Token
+	"MT_TOKEN", // Special Stage token for special stage
 	"MT_REDFLAG", // Red CTF Flag
 	"MT_BLUEFLAG", // Blue CTF Flag
 	"MT_EMBLEM",
@@ -8350,22 +8350,22 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Arid Canyon Scenery
 	"MT_BIGTUMBLEWEED",
 	"MT_LITTLETUMBLEWEED",
-	"MT_CACTI1",
-	"MT_CACTI2",
-	"MT_CACTI3",
-	"MT_CACTI4",
-	"MT_CACTI5",
-	"MT_CACTI6",
-	"MT_CACTI7",
-	"MT_CACTI8",
-	"MT_CACTI9",
-	"MT_CACTI10",
-	"MT_CACTI11",
-	"MT_CACTITINYSEG",
-	"MT_CACTISMALLSEG",
-	"MT_ARIDSIGN_CAUTION",
-	"MT_ARIDSIGN_CACTI",
-	"MT_ARIDSIGN_SHARPTURN",
+	"MT_CACTI1", // Tiny Red Flower Cactus
+	"MT_CACTI2", // Small Red Flower Cactus
+	"MT_CACTI3", // Tiny Blue Flower Cactus
+	"MT_CACTI4", // Small Blue Flower Cactus
+	"MT_CACTI5", // Prickly Pear
+	"MT_CACTI6", // Barrel Cactus
+	"MT_CACTI7", // Tall Barrel Cactus
+	"MT_CACTI8", // Armed Cactus
+	"MT_CACTI9", // Ball Cactus
+	"MT_CACTI10", // Tiny Cactus
+	"MT_CACTI11", // Small Cactus
+	"MT_CACTITINYSEG", // Tiny Cactus Segment
+	"MT_CACTISMALLSEG", // Small Cactus Segment
+	"MT_ARIDSIGN_CAUTION", // Caution Sign
+	"MT_ARIDSIGN_CACTI", // Cacti Sign
+	"MT_ARIDSIGN_SHARPTURN", // Sharp Turn Sign
 	"MT_OILLAMP",
 	"MT_TNTBARREL",
 	"MT_PROXIMITYTNT",
@@ -8420,7 +8420,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GLAREGOYLEUP",
 	"MT_GLAREGOYLEDOWN",
 	"MT_GLAREGOYLELONG",
-	"MT_TARGET",
+	"MT_TARGET", // AKA Red Crystal
 	"MT_GREENFLAME",
 	"MT_BLUEGARGOYLE",
 
@@ -8471,7 +8471,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_HHZSTALAGMITE_TALL",
 	"MT_HHZSTALAGMITE_SHORT",
 
-	// Botanic Serenity
+	// Botanic Serenity scenery
 	"MT_BSZTALLFLOWER_RED",
 	"MT_BSZTALLFLOWER_PURPLE",
 	"MT_BSZTALLFLOWER_BLUE",
@@ -8601,6 +8601,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LOCKONINF", // In-level Target
 	"MT_TAG", // Tag Sign
 	"MT_GOTFLAG", // Got Flag sign
+	"MT_FINISHFLAG", // Finish flag
 
 	// Ambient Sounds
 	"MT_AWATERA", // Ambient Water Sound 1
@@ -8751,6 +8752,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ROCKCRUMBLE14",
 	"MT_ROCKCRUMBLE15",
 	"MT_ROCKCRUMBLE16",
+
+	// Level debris
 	"MT_GFZDEBRIS",
 	"MT_BRICKDEBRIS",
 	"MT_WOODDEBRIS",
@@ -8989,9 +8992,11 @@ static const char *COLOR_ENUMS[] = {
 	// Desaturated
 	"AETHER",     	// SKINCOLOR_AETHER,
 	"SLATE",     	// SKINCOLOR_SLATE,
+	"BLUEBELL",   	// SKINCOLOR_BLUEBELL,
 	"PINK",     	// SKINCOLOR_PINK,
 	"YOGURT",     	// SKINCOLOR_YOGURT,
 	"BROWN",     	// SKINCOLOR_BROWN,
+	"BRONZE",     	// SKINCOLOR_BRONZE,
 	"TAN",     		// SKINCOLOR_TAN,
 	"BEIGE",     	// SKINCOLOR_BEIGE,
 	"MOSS",     	// SKINCOLOR_MOSS,
@@ -9004,9 +9009,11 @@ static const char *COLOR_ENUMS[] = {
 	"RED",     		// SKINCOLOR_RED,
 	"CRIMSON",     	// SKINCOLOR_CRIMSON,
 	"FLAME",     	// SKINCOLOR_FLAME,
+	"KETCHUP",     	// SKINCOLOR_KETCHUP,
 	"PEACHY",     	// SKINCOLOR_PEACHY,
 	"QUAIL",     	// SKINCOLOR_QUAIL,
 	"SUNSET",     	// SKINCOLOR_SUNSET,
+	"COPPER",     	// SKINCOLOR_COPPER,
 	"APRICOT",     	// SKINCOLOR_APRICOT,
 	"ORANGE",     	// SKINCOLOR_ORANGE,
 	"RUST",     	// SKINCOLOR_RUST,
@@ -9016,6 +9023,7 @@ static const char *COLOR_ENUMS[] = {
 	"OLIVE",     	// SKINCOLOR_OLIVE,
 	"LIME",     	// SKINCOLOR_LIME,
 	"PERIDOT",     	// SKINCOLOR_PERIDOT,
+	"APPLE",     	// SKINCOLOR_APPLE,
 	"GREEN",     	// SKINCOLOR_GREEN,
 	"FOREST",     	// SKINCOLOR_FOREST,
 	"EMERALD",     	// SKINCOLOR_EMERALD,
@@ -9042,6 +9050,7 @@ static const char *COLOR_ENUMS[] = {
 	"VIOLET",     	// SKINCOLOR_VIOLET,
 	"LILAC",     	// SKINCOLOR_LILAC,
 	"PLUM",     	// SKINCOLOR_PLUM,
+	"RASPBERRY",  	// SKINCOLOR_RASPBERRY,
 	"ROSY",     	// SKINCOLOR_ROSY,
 
 	// Super special awesome Super flashing colors!
@@ -9135,7 +9144,8 @@ static const char *const POWERS_LIST[] = {
 	"NIGHTS_LINKFREEZE",
 
 	//for linedef exec 427
-	"NOCONTROL"
+	"NOCONTROL",
+	"JUSTLAUNCHED",
 };
 
 static const char *const HUDITEMS_LIST[] = {
@@ -9143,6 +9153,7 @@ static const char *const HUDITEMS_LIST[] = {
 
 	"RINGS",
 	"RINGSNUM",
+	"RINGSNUMTICS",
 
 	"SCORE",
 	"SCORENUM",
@@ -9162,8 +9173,7 @@ static const char *const HUDITEMS_LIST[] = {
 	"TIMELEFTNUM",
 	"TIMEUP",
 	"HUNTPICS",
-	"POWERUPS",
-	"LAP"
+	"POWERUPS"
 };
 
 static const char *const MENUTYPES_LIST[] = {
@@ -9372,6 +9382,9 @@ struct {
 	{"LF_NOZONE",LF_NOZONE},
 	{"LF_SAVEGAME",LF_SAVEGAME},
 	{"LF_MIXNIGHTSCOUNTDOWN",LF_MIXNIGHTSCOUNTDOWN},
+	{"LF_NOTITLECARDFIRST",LF_NOTITLECARDFIRST},
+	{"LF_NOTITLECARDRESPAWN",LF_NOTITLECARDRESPAWN},
+	{"LF_NOTITLECARDRECORDATTACK",LF_NOTITLECARDRECORDATTACK},
 	{"LF_NOTITLECARD",LF_NOTITLECARD},
 	{"LF_WARNINGTITLE",LF_WARNINGTITLE},
 	// And map flags
@@ -10465,16 +10478,23 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "TOL"))
 		{
-			if (lastcustomtol > 31)
-				CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
-			else
-			{
-				UINT32 newtol = (1<<lastcustomtol);
-				CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
-				G_AddTOL(newtol, word);
-				lua_pushinteger(L, newtol);
-				lastcustomtol++;
-				r++;
+			// Search if we already have a typeoflevel by that name...
+			int i;
+			for (i = 0; TYPEOFLEVEL[i].name; i++)
+				if (fastcmp(word, TYPEOFLEVEL[i].name))
+					break;
+
+			// We don't, so allocate a new one.
+			if (TYPEOFLEVEL[i].name == NULL) {
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
+					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				else {
+					CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
+					G_AddTOL(lastcustomtol, word);
+					lua_pushinteger(L, lastcustomtol);
+					lastcustomtol <<= 1;
+					r++;
+				}
 			}
 		}
 		Z_Free(s);

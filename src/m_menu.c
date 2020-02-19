@@ -231,6 +231,8 @@ static void M_Credits(INT32 choice);
 static void M_SoundTest(INT32 choice);
 static void M_PandorasBox(INT32 choice);
 static void M_EmblemHints(INT32 choice);
+static void M_HandleEmblemHints(INT32 choice);
+UINT32 hintpage = 1;
 static void M_HandleChecklist(INT32 choice);
 menu_t SR_MainDef, SR_UnlockChecklistDef;
 
@@ -323,6 +325,7 @@ menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
 menu_t OP_ServerOptionsDef;
 menu_t OP_MonitorToggleDef;
 static void M_ScreenshotOptions(INT32 choice);
+static void M_SetupScreenshotMenu(void);
 static void M_EraseData(INT32 choice);
 
 static void M_Addons(INT32 choice);
@@ -364,7 +367,6 @@ static void M_DrawMonitorToggles(void);
 static void M_OGL_DrawFogMenu(void);
 #endif
 #ifndef NONET
-static void M_DrawScreenshotMenu(void);
 static void M_DrawConnectMenu(void);
 static void M_DrawMPMainMenu(void);
 static void M_DrawRoomMenu(void);
@@ -727,8 +729,9 @@ static menuitem_t SR_SoundTestMenu[] =
 
 static menuitem_t SR_EmblemHintMenu[] =
 {
-	{IT_STRING|IT_CVAR,         NULL, "Emblem Radar", &cv_itemfinder, 10},
-	{IT_WHITESTRING|IT_SUBMENU, NULL, "Back",         &SPauseDef,     20}
+	{IT_STRING | IT_ARROWS,       NULL, "Page", M_HandleEmblemHints, 10},
+	{IT_STRING|IT_CVAR,         NULL, "Emblem Radar", &cv_itemfinder, 20},
+	{IT_WHITESTRING|IT_SUBMENU, NULL, "Back",         &SPauseDef,     30}
 };
 
 // --------------------------------
@@ -1514,6 +1517,7 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 
 	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              95},
 	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,             100},
+	{IT_STRING|IT_CVAR, NULL, "Local Color Table", &cv_gif_localcolortable,       105},
 
 	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              95},
 	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,               100},
@@ -1524,13 +1528,14 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 enum
 {
 	op_screenshot_colorprofile = 1,
+	op_screenshot_storagelocation = 3,
 	op_screenshot_folder = 4,
 	op_movie_folder = 11,
 	op_screenshot_capture = 12,
 	op_screenshot_gif_start = 13,
-	op_screenshot_gif_end = 14,
-	op_screenshot_apng_start = 15,
-	op_screenshot_apng_end = 18,
+	op_screenshot_gif_end = 15,
+	op_screenshot_apng_start = 16,
+	op_screenshot_apng_end = 19,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
@@ -3028,7 +3033,8 @@ static void M_ChangeCvar(INT32 choice)
 			|| !(currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP))
 		{
 			char s[20];
-			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
+			float n = FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f);
+			sprintf(s,"%ld%s",(long)n,M_Ftrim(n));
 			CV_Set(cv,s);
 		}
 		else
@@ -3758,6 +3764,12 @@ void M_SetupNextMenu(menu_t *menudef)
 	hidetitlemap = false;
 }
 
+// Guess I'll put this here, idk
+boolean M_MouseNeeded(void)
+{
+	return (currentMenu == &MessageDef && currentMenu->prevMenu == &OP_ChangeControlsDef);
+}
+
 //
 // M_Ticker
 //
@@ -3779,6 +3791,9 @@ void M_Ticker(void)
 		if (--vidm_testingmode == 0)
 			setmodeneeded = vidm_previousmode + 1;
 	}
+
+	if (currentMenu == &OP_ScreenshotOptionsDef)
+		M_SetupScreenshotMenu();
 }
 
 //
@@ -5596,7 +5611,8 @@ static void M_DrawNightsAttackMountains(void)
 	static INT32 bgscrollx;
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	patch_t *background = W_CachePatchName(curbgname, PU_PATCH);
-	INT32 x = FixedInt(bgscrollx) % SHORT(background->width);
+	INT16 w = SHORT(background->width);
+	INT32 x = FixedInt(-bgscrollx) % w;
 	INT32 y = BASEVIDHEIGHT - SHORT(background->height)*2;
 
 	if (vid.height != BASEVIDHEIGHT * dupz)
@@ -5604,11 +5620,13 @@ static void M_DrawNightsAttackMountains(void)
 	V_DrawFill(0, y+50, vid.width, BASEVIDHEIGHT, V_SNAPTOLEFT|31);
 
 	V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
-	x += SHORT(background->width);
+	x += w;
 	if (x < BASEVIDWIDTH)
 		V_DrawScaledPatch(x, y, V_SNAPTOLEFT, background);
 
-	bgscrollx -= (FRACUNIT/2);
+	bgscrollx += (FRACUNIT/2);
+	if (bgscrollx > w<<FRACBITS)
+		bgscrollx &= 0xFFFF;
 }
 
 // NiGHTS Attack foreground.
@@ -7225,18 +7243,33 @@ finishchecklist:
 }
 
 #define NUMHINTS 5
+
 static void M_EmblemHints(INT32 choice)
 {
+	INT32 i;
+	UINT32 local = 0;
+	emblem_t *emblem;
+	for (i = 0; i < numemblems; i++)
+	{
+		emblem = &emblemlocations[i];
+		if (emblem->level != gamemap || emblem->type > ET_SKIN)
+			continue;
+		if (++local > NUMHINTS*2)
+			break;
+	}
+
 	(void)choice;
-	SR_EmblemHintMenu[0].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
+	SR_EmblemHintMenu[0].status = (local > NUMHINTS*2) ? (IT_STRING | IT_ARROWS) : (IT_DISABLED);
+	SR_EmblemHintMenu[1].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
+	hintpage = 1;
 	M_SetupNextMenu(&SR_EmblemHintDef);
-	itemOn = 1; // always start on back.
+	itemOn = 2; // always start on back.
 }
 
 static void M_DrawEmblemHints(void)
 {
-	INT32 i, j = 0, x, y, left_hints = NUMHINTS;
-	UINT32 collected = 0, local = 0;
+	INT32 i, j = 0, x, y, left_hints = NUMHINTS, pageflag = 0;
+	UINT32 collected = 0, totalemblems = 0, local = 0;
 	emblem_t *emblem;
 	const char *hint;
 
@@ -7245,17 +7278,34 @@ static void M_DrawEmblemHints(void)
 		emblem = &emblemlocations[i];
 		if (emblem->level != gamemap || emblem->type > ET_SKIN)
 			continue;
-		if (++local >= NUMHINTS*2)
-			break;
+
+		local++;
 	}
 
 	x = (local > NUMHINTS ? 4 : 12);
 	y = 8;
 
-	// If there are more than 1 page's but less than 2 pages' worth of emblems,
+	if (local > NUMHINTS){
+		if (local > ((hintpage-1)*NUMHINTS*2) && local < ((hintpage)*NUMHINTS*2)){
+			if (NUMHINTS % 2 == 1)
+				left_hints = (local - ((hintpage-1)*NUMHINTS*2)  + 1) / 2;
+			else
+				left_hints = (local - ((hintpage-1)*NUMHINTS*2)) / 2;
+		}else{
+			left_hints = NUMHINTS;
+		}
+	}
+
+	if (local > NUMHINTS*2){
+		if (itemOn == 0){
+			pageflag = V_YELLOWMAP;
+		}
+		V_DrawString(currentMenu->x + 40, currentMenu->y + 10, pageflag, va("%d of %d",hintpage, local/(NUMHINTS*2) + 1));
+	}
+
+	// If there are more than 1 page's but less than 2 pages' worth of emblems on the last possible page,
 	// put half (rounded up) of the hints on the left, and half (rounded down) on the right
-	if (local > NUMHINTS && local < (NUMHINTS*2)-1)
-		left_hints = (local + 1) / 2;
+
 
 	if (!local)
 		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
@@ -7265,40 +7315,78 @@ static void M_DrawEmblemHints(void)
 		if (emblem->level != gamemap || emblem->type > ET_SKIN)
 			continue;
 
-		if (emblem->collected)
-		{
-			collected = V_GREENMAP;
-			V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
-				R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
-		}
-		else
-		{
-			collected = 0;
-			V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_PATCH));
-		}
+		totalemblems++;
 
-		if (emblem->hint[0])
-			hint = emblem->hint;
-		else
-			hint = M_GetText("No hint available for this emblem.");
-		hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
-		if (local > NUMHINTS)
-			V_DrawThinString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
-		else
-			V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+		if (totalemblems >= ((hintpage-1)*(NUMHINTS*2) + 1) && totalemblems < (hintpage*NUMHINTS*2)+1){
 
-		y += 28;
+			if (emblem->collected)
+			{
+				collected = V_GREENMAP;
+				V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
+					R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
+			}
+			else
+			{
+				collected = 0;
+				V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_PATCH));
+			}
 
-		if (++j == left_hints)
-		{
-			x = 4+(BASEVIDWIDTH/2);
-			y = 8;
+			if (emblem->hint[0])
+				hint = emblem->hint;
+			else
+				hint = M_GetText("No hint available for this emblem.");
+			hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
+			//always draw tiny if we have more than NUMHINTS*2, visually more appealing
+			if (local > NUMHINTS)
+				V_DrawThinString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+			else
+				V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+
+			y += 28;
+
+			// If there are more than 1 page's but less than 2 pages' worth of emblems on the last possible page,
+			// put half (rounded up) of the hints on the left, and half (rounded down) on the right
+
+			if (++j == left_hints)
+			{
+				x = 4+(BASEVIDWIDTH/2);
+				y = 8;
+			}
+			else if (j >= NUMHINTS*2)
+				break;
 		}
-		else if (j >= NUMHINTS*2)
-			break;
 	}
 
 	M_DrawGenericMenu();
+}
+
+
+static void M_HandleEmblemHints(INT32 choice)
+{
+	INT32 i;
+	emblem_t *emblem;
+	UINT32 stageemblems = 0;
+
+	for (i = 0; i < numemblems; i++)
+	{
+		emblem = &emblemlocations[i];
+		if (emblem->level != gamemap || emblem->type > ET_SKIN)
+			continue;
+
+		stageemblems++;
+	}
+
+
+	if (choice == 0){
+		if (hintpage > 1){
+			hintpage--;
+		}
+	}else{
+		if (hintpage < ((stageemblems-1)/(NUMHINTS*2) + 1)){
+			hintpage++;
+		}
+	}
+
 }
 
 /*static void M_DrawSkyRoom(void)
@@ -8059,8 +8147,16 @@ static void M_DrawLoadGameData(void)
 					col = 134;
 				else
 				{
-					col = charskin->prefcolor - 1;
-					col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
+					if (charskin->prefoppositecolor)
+					{
+						col = charskin->prefoppositecolor - 1;
+						col = Color_Index[col][Color_Opposite[Color_Opposite[col][0] - 1][1]];
+					}
+					else
+					{
+						col = charskin->prefcolor - 1;
+						col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
+					}
 				}
 
 				V_DrawFill(x+6, y+64, 72, 50, col);
@@ -10837,7 +10933,6 @@ static void M_HandleConnectIP(INT32 choice)
 					default: // otherwise do nothing.
 						break;
 				}
-				break; // don't check for typed keys
 			}
 
 			if (l >= 28-1)
@@ -11341,7 +11436,25 @@ static void M_ScreenshotOptions(INT32 choice)
 	Screenshot_option_Onchange();
 	Moviemode_mode_Onchange();
 
+	M_SetupScreenshotMenu();
 	M_SetupNextMenu(&OP_ScreenshotOptionsDef);
+}
+
+static void M_SetupScreenshotMenu(void)
+{
+	menuitem_t *item = &OP_ScreenshotOptionsMenu[op_screenshot_colorprofile];
+
+#ifdef HWRENDER
+	// Hide some options based on render mode
+	if (rendermode == render_opengl)
+	{
+		item->status = IT_GRAYEDOUT;
+		if ((currentMenu == &OP_ScreenshotOptionsDef) && (itemOn == op_screenshot_colorprofile)) // Can't select that
+			itemOn = op_screenshot_storagelocation;
+	}
+	else
+#endif
+		item->status = (IT_STRING | IT_CVAR);
 }
 
 // =============
@@ -12286,6 +12399,15 @@ static void M_HandleVideoMode(INT32 ch)
 static void M_DrawScreenshotMenu(void)
 {
 	M_DrawGenericScrollMenu();
+#ifdef HWRENDER
+	if ((rendermode == render_opengl) && (itemOn < 7)) // where it starts to go offscreen; change this number if you change the layout of the screenshot menu
+	{
+		INT32 y = currentMenu->y+currentMenu->menuitems[op_screenshot_colorprofile].alphaKey*2;
+		if (itemOn == 6)
+			y -= 10;
+		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y, V_REDMAP, "Yes");
+	}
+#endif
 }
 
 // ===============
