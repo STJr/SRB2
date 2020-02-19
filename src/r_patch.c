@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 2005-2009 by Andrey "entryway" Budko.
 // Copyright (C) 2018-2020 by Jaime "Lactozilla" Passos.
-// Copyright (C) 2019-2020 by Sonic Team Junior.
+// Copyright (C) 2020-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
