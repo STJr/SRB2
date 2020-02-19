@@ -98,8 +98,8 @@
 
 #ifdef GETTEXT
 #include <libintl.h>
-#include <locale.h>
 #endif
+#include <locale.h> // locale should not be dependent on GETTEXT -- 11/01/20 Monster Iestyn
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -143,9 +143,9 @@ extern char logfilename[1024];
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    202 // Game version
-#define SUBVERSION 0  // more precise version number
-#define VERSIONSTRING "v2.2.0"
-#define VERSIONSTRINGW L"v2.2.0"
+#define SUBVERSION 1  // more precise version number
+#define VERSIONSTRING "v2.2.1"
+#define VERSIONSTRINGW L"v2.2.1"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -210,7 +210,7 @@ extern char logfilename[1024];
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
-#define MODVERSION 40
+#define MODVERSION 41
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
@@ -454,12 +454,12 @@ char savegamename[256];
 // m_misc.h
 #ifdef GETTEXT
 #define M_GetText(String) gettext(String)
-void M_StartupLocale(void);
 #else
 // If no translations are to be used, make a stub
 // M_GetText function that just returns the string.
 #define M_GetText(x) (x)
 #endif
+void M_StartupLocale(void);
 extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
@@ -490,6 +490,7 @@ extern INT32 cv_debug;
 #define DBG_SETUP       0x0400
 #define DBG_LUA         0x0800
 #define DBG_RANDOMIZER  0x1000
+#define DBG_VIEWMORPH   0x2000
 
 // =======================
 // Misc stuff for later...
@@ -545,6 +546,8 @@ INT32 I_GetKey(void);
 #else
 	#define PATHSEP "/"
 #endif
+
+#define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 // Compile date and time and revision.
 extern const char *compdate, *comptime, *comprevision, *compbranch;

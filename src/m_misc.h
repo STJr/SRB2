@@ -101,6 +101,20 @@ boolean M_IsPathAbsolute (const char *path);
 void    M_MkdirEach      (const char *path, int start, int mode);
 void    M_MkdirEachUntil (const char *path, int start, int end, int mode);
 
+/* Return offset to the first word in a string. */
+/* E.g. cursor += M_JumpWord(line + cursor); */
+int M_JumpWord (const char *s);
+
+/* Return index of the last word behind offset bytes in a string. */
+/* E.g. cursor = M_JumpWordReverse(line, cursor); */
+int M_JumpWordReverse (const char *line, int offset);
+
+/*
+Return dot and then the fractional part of a float, without
+trailing zeros, or "" if the fractional part is zero.
+*/
+const char * M_Ftrim (double);
+
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
 

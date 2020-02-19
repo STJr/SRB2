@@ -2022,6 +2022,7 @@ typedef enum state
 	S_SIGNSTOP,
 	S_SIGNBOARD,
 	S_EGGMANSIGN,
+	S_CLEARSIGN,
 
 	// Spike Ball
 	S_SPIKEBALL1,
@@ -2503,6 +2504,7 @@ typedef enum state
 	S_TNTBARREL_EXPL4,
 	S_TNTBARREL_EXPL5,
 	S_TNTBARREL_EXPL6,
+	S_TNTBARREL_EXPL7,
 	S_TNTBARREL_FLYING,
 
 	// TNT proximity shell

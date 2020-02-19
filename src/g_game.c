@@ -352,8 +352,8 @@ static CV_PossibleValue_t chattime_cons_t[] = {{5, "MIN"}, {999, "MAX"}, {0, NUL
 consvar_t cv_chattime = {"chattime", "8", CV_SAVE, chattime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // chatwidth
-static CV_PossibleValue_t chatwidth_cons_t[] = {{64, "MIN"}, {150, "MAX"}, {0, NULL}};
-consvar_t cv_chatwidth = {"chatwidth", "128", CV_SAVE, chatwidth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t chatwidth_cons_t[] = {{64, "MIN"}, {300, "MAX"}, {0, NULL}};
+consvar_t cv_chatwidth = {"chatwidth", "150", CV_SAVE, chatwidth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // chatheight
 static CV_PossibleValue_t chatheight_cons_t[] = {{6, "MIN"}, {22, "MAX"}, {0, NULL}};
@@ -1140,7 +1140,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
 	angle_t drawangleoffset = (player->powers[pw_carry] == CR_ROLLOUT) ? ANGLE_180 : 0;
-	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, invertmouse, mousemove;
+	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, invertmouse, turnmultiplier, mousemove;
 	controlstyle_e controlstyle = G_ControlStyle(ssplayer);
 	INT32 *mx; INT32 *my; INT32 *mly;
 
@@ -1163,6 +1163,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		alwaysfreelook = cv_alwaysfreelook.value;
 		usejoystick = cv_usejoystick.value;
 		invertmouse = cv_invertmouse.value;
+		turnmultiplier = cv_cam_turnmultiplier.value;
 		mousemove = cv_mousemove.value;
 		mx = &mousex;
 		my = &mousey;
@@ -1176,6 +1177,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		alwaysfreelook = cv_alwaysfreelook2.value;
 		usejoystick = cv_usejoystick2.value;
 		invertmouse = cv_invertmouse2.value;
+		turnmultiplier = cv_cam2_turnmultiplier.value;
 		mousemove = cv_mousemove2.value;
 		mx = &mouse2x;
 		my = &mouse2y;
@@ -1293,14 +1295,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		if (turnright && turnleft);
 		else if (turnright)
-			cmd->angleturn = (INT16)(cmd->angleturn - ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
+			cmd->angleturn = (INT16)(cmd->angleturn - ((angleturn[tspeed] * turnmultiplier)>>FRACBITS));
 		else if (turnleft)
-			cmd->angleturn = (INT16)(cmd->angleturn + ((angleturn[tspeed] * cv_cam_turnmultiplier.value)>>FRACBITS));
+			cmd->angleturn = (INT16)(cmd->angleturn + ((angleturn[tspeed] * turnmultiplier)>>FRACBITS));
 
 		if (analogjoystickmove && lookjoystickvector.xaxis != 0)
 		{
 			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - ((((lookjoystickvector.xaxis * angleturn[1]) >> 10) * cv_cam_turnmultiplier.value)>>FRACBITS)); // ANALOG!
+			cmd->angleturn = (INT16)(cmd->angleturn - ((((lookjoystickvector.xaxis * angleturn[1]) >> 10) * turnmultiplier)>>FRACBITS)); // ANALOG!
 		}
 
 		if (turnright || turnleft || abs(cmd->angleturn) > angleturn[2])
@@ -1939,6 +1941,10 @@ boolean G_IsTitleCardAvailable(void)
 	if (gametyperules & GTR_NOTITLECARD)
 		return false;
 
+	// The current level has no name.
+	if (!mapheaderinfo[gamemap-1]->lvlttl[0])
+		return false;
+
 	// The title card is available.
 	return true;
 }
@@ -2412,6 +2418,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	INT32 skin;
 	UINT32 availabilities;
 	tic_t jointime;
+	tic_t quittime;
 	boolean spectator;
 	boolean outofcoop;
 	INT16 bot;
@@ -2425,6 +2432,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	ctfteam = players[player].ctfteam;
 	exiting = players[player].exiting;
 	jointime = players[player].jointime;
+	quittime = players[player].quittime;
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
@@ -2496,6 +2504,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->pflags = pflags;
 	p->ctfteam = ctfteam;
 	p->jointime = jointime;
+	p->quittime = quittime;
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
 
@@ -2649,73 +2658,24 @@ static boolean G_CheckSpot(INT32 playernum, mapthing_t *mthing)
 // or a not-so-appropriate spot, if it initially fails
 // due to a lack of starts open or something.
 //
-void G_SpawnPlayer(INT32 playernum, boolean starpost)
+void G_SpawnPlayer(INT32 playernum)
 {
-	mapthing_t *spawnpoint;
-
 	if (!playeringame[playernum])
 		return;
 
 	P_SpawnPlayer(playernum);
-
-	if (starpost) //Don't even bother with looking for a place to spawn.
-	{
-		P_MovePlayerToStarpost(playernum);
-#ifdef HAVE_BLUA
-		LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
-#endif
-		return;
-	}
-
-	// -- CTF --
-	// Order: CTF->DM->Coop
-	if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
-	{
-		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
-		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-			spawnpoint = G_FindCoopStart(playernum); // fallback
-	}
-
-	// -- DM/Tag/CTF-spectator/etc --
-	// Order: DM->CTF->Coop
-	else if ((gametyperules & GTR_DEATHMATCHSTARTS) && !(players[playernum].pflags & PF_TAGIT))
-	{
-		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
-		&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
-			spawnpoint = G_FindCoopStart(playernum); // fallback
-	}
-
-	// -- Other game modes --
-	// Order: Coop->DM->CTF
-	else
-	{
-		if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
-		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-			spawnpoint = G_FindCTFStart(playernum); // fallback
-	}
-
-	//No spawns found.  ANYWHERE.
-	if (!spawnpoint)
-	{
-		if (nummapthings)
-		{
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the first mapthing!\n"));
-			spawnpoint = &mapthings[0];
-		}
-		else
-		{
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the origin!\n"));
-			//P_MovePlayerToSpawn handles this fine if the spawnpoint is NULL.
-		}
-	}
-	P_MovePlayerToSpawn(playernum, spawnpoint);
-
+	G_MovePlayerToSpawnOrStarpost(playernum);
 #ifdef HAVE_BLUA
 	LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
 #endif
+}
 
+void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
+{
+	if (players[playernum].starposttime)
+		P_MovePlayerToStarpost(playernum);
+	else
+		P_MovePlayerToSpawn(playernum, G_FindMapStart(playernum));
 }
 
 mapthing_t *G_FindCTFStart(INT32 playernum)
@@ -2810,6 +2770,59 @@ mapthing_t *G_FindCoopStart(INT32 playernum)
 	if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 		CONS_Alert(CONS_WARNING, M_GetText("No Co-op starts in this map!\n"));
 	return NULL;
+}
+
+mapthing_t *G_FindMapStart(INT32 playernum)
+{
+	mapthing_t *spawnpoint;
+
+	if (!playeringame[playernum])
+		return NULL;
+
+	// -- CTF --
+	// Order: CTF->DM->Coop
+	if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
+	{
+		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
+		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
+			spawnpoint = G_FindCoopStart(playernum); // fallback
+	}
+
+	// -- DM/Tag/CTF-spectator/etc --
+	// Order: DM->CTF->Coop
+	else if ((gametyperules & GTR_DEATHMATCHSTARTS) && !(players[playernum].pflags & PF_TAGIT))
+	{
+		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
+		&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
+			spawnpoint = G_FindCoopStart(playernum); // fallback
+	}
+
+	// -- Other game modes --
+	// Order: Coop->DM->CTF
+	else
+	{
+		if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
+		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
+			spawnpoint = G_FindCTFStart(playernum); // fallback
+	}
+
+	//No spawns found. ANYWHERE.
+	if (!spawnpoint)
+	{
+		if (nummapthings)
+		{
+			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
+				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the first mapthing!\n"));
+			spawnpoint = &mapthings[0];
+		}
+		else
+		{
+			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
+				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the origin!\n"));
+		}
+	}
+
+	return spawnpoint;
 }
 
 // Go back through all the projectiles and remove all references to the old
@@ -2990,7 +3003,7 @@ void G_DoReborn(INT32 playernum)
 			{
 				if (!playeringame[i])
 					continue;
-				G_SpawnPlayer(i, (players[i].starposttime));
+				G_SpawnPlayer(i);
 			}
 
 			// restore time in netgame (see also p_setup.c)
@@ -3036,7 +3049,7 @@ void G_DoReborn(INT32 playernum)
 			P_RemoveMobj(player->mo);
 		}
 
-		G_SpawnPlayer(playernum, (player->starposttime));
+		G_SpawnPlayer(playernum);
 		if (oldmo)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
 	}
@@ -3078,7 +3091,6 @@ void G_AddPlayer(INT32 playernum)
 		}
 	}
 
-	p->jointime = 0;
 	p->playerstate = PST_REBORN;
 
 	p->height = mobjinfo[MT_PLAYER].height;
@@ -3100,6 +3112,8 @@ boolean G_EnoughPlayersFinished(void)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (!playeringame[i] || players[i].spectator || players[i].bot)
+			continue;
+		if (players[i].quittime > 30 * TICRATE)
 			continue;
 		if (players[i].lives <= 0)
 			continue;
@@ -3189,17 +3203,17 @@ UINT32 gametypedefaultrules[NUMGAMETYPES] =
 	GTR_RACE|GTR_SPAWNENEMIES|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
 
 	// Match
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD|GTR_DEATHPENALTY,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD|GTR_DEATHPENALTY,
 	// Team Match
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
 
 	// Tag
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
 	// Hide and Seek
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
 
 	// CTF
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_TEAMFLAGS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_TEAMFLAGS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
 };
 
 //
@@ -3242,8 +3256,8 @@ void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
 {
 	size_t r = 0; // read
 	size_t w = 0; // write
-	char *gtconst = Z_Calloc(strlen(newgtconst) + 3, PU_STATIC, NULL);
-	char *tmpconst = Z_Calloc(strlen(newgtconst), PU_STATIC, NULL);
+	char *gtconst = Z_Calloc(strlen(newgtconst) + 4, PU_STATIC, NULL);
+	char *tmpconst = Z_Calloc(strlen(newgtconst) + 1, PU_STATIC, NULL);
 
 	// Copy the gametype name.
 	strcpy(tmpconst, newgtconst);
@@ -3370,6 +3384,36 @@ UINT32 gametypetol[NUMGAMETYPES] =
 	TOL_CTF, // CTF
 };
 
+tolinfo_t TYPEOFLEVEL[NUMTOLNAMES] = {
+	{"SOLO",TOL_SP},
+	{"SP",TOL_SP},
+	{"SINGLEPLAYER",TOL_SP},
+	{"SINGLE",TOL_SP},
+
+	{"COOP",TOL_COOP},
+	{"CO-OP",TOL_COOP},
+
+	{"COMPETITION",TOL_COMPETITION},
+	{"RACE",TOL_RACE},
+
+	{"MATCH",TOL_MATCH},
+	{"TAG",TOL_TAG},
+	{"CTF",TOL_CTF},
+
+	{"2D",TOL_2D},
+	{"MARIO",TOL_MARIO},
+	{"NIGHTS",TOL_NIGHTS},
+	{"OLDBRAK",TOL_ERZ3},
+
+	{"XMAS",TOL_XMAS},
+	{"CHRISTMAS",TOL_XMAS},
+	{"WINTER",TOL_XMAS},
+
+	{NULL, 0}
+};
+
+UINT32 lastcustomtol = (TOL_XMAS<<1);
+
 //
 // G_AddTOL
 //
@@ -3377,16 +3421,16 @@ UINT32 gametypetol[NUMGAMETYPES] =
 //
 void G_AddTOL(UINT32 newtol, const char *tolname)
 {
-	TYPEOFLEVEL[numtolinfo].name = Z_StrDup(tolname);
-	TYPEOFLEVEL[numtolinfo].flag = newtol;
-	numtolinfo++;
+	INT32 i;
+	for (i = 0; TYPEOFLEVEL[i].name; i++)
+		;
 
-	TYPEOFLEVEL[numtolinfo].name = NULL;
-	TYPEOFLEVEL[numtolinfo].flag = 0;
+	TYPEOFLEVEL[i].name = Z_StrDup(tolname);
+	TYPEOFLEVEL[i].flag = newtol;
 }
 
 //
-// G_AddTOL
+// G_AddGametypeTOL
 //
 // Assigns a type of level to a gametype.
 //
@@ -3725,7 +3769,10 @@ static void G_DoCompleted(void)
 			}
 
 		if (i == 7)
+		{
 			gottoken = false;
+			token = 0;
+		}
 	}
 
 	if (spec && !gottoken)
@@ -4761,6 +4808,9 @@ INT32 G_FindMap(const char *mapname, char **foundmapnamep,
 				measurekeywords(&freq[freqc],
 						&freq[freqc].matchd, &freq[freqc].matchc,
 						realmapname, mapname, wanttable);
+				measurekeywords(&freq[freqc],
+						&freq[freqc].keywhd, &freq[freqc].keywhc,
+						mapheaderinfo[i]->keywords, mapname, wanttable);
 				if (freq[freqc].total)
 					freqc++;
 			}

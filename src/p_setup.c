@@ -222,6 +222,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
 	mapheaderinfo[num]->startrings = 0;
+	mapheaderinfo[num]->keywords[0] = '\0';
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
 	mapheaderinfo[num]->mustrack = 0;
@@ -410,7 +411,7 @@ levelflat refers to an array of level flats,
 or NULL if we want to allocate it now.
 */
 static INT32
-Ploadflat (levelflat_t *levelflat, const char *flatname)
+Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 {
 #ifndef NO_PNG_LUMPS
 	UINT8         buffer[8];
@@ -421,30 +422,25 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 
 	size_t i;
 
-	if (levelflat)
+	// Scan through the already found flats, return if it matches.
+	for (i = 0; i < numlevelflats; i++)
 	{
-		// Scan through the already found flats, return if it matches.
-		for (i = 0; i < numlevelflats; i++)
-		{
-			if (strnicmp(levelflat[i].name, flatname, 8) == 0)
-				return i;
-		}
+		if (strnicmp(levelflat[i].name, flatname, 8) == 0)
+			return i;
 	}
 
-#ifndef ZDEBUG
-	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-	if (numlevelflats >= MAXLEVELFLATS)
-		I_Error("Too many flats in level\n");
-
-	if (levelflat)
-		levelflat += numlevelflats;
-	else
+	if (resize)
 	{
 		// allocate new flat memory
 		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
 		levelflat  = levelflats + numlevelflats;
+	}
+	else
+	{
+		if (numlevelflats >= MAXLEVELFLATS)
+			I_Error("Too many flats in level\n");
+
+		levelflat += numlevelflats;
 	}
 
 	// Store the name.
@@ -500,6 +496,10 @@ flatfound:
 		levelflat->u.flat.baselumpnum = LUMPERROR;
 	}
 
+#ifndef ZDEBUG
+	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
 	return ( numlevelflats++ );
 }
 
@@ -507,7 +507,7 @@ flatfound:
 // allocate an id for it, and set the levelflat (to speedup search)
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 {
-	return Ploadflat(levelflat, flatname);
+	return Ploadflat(levelflat, flatname, false);
 }
 
 // help function for Lua and $$$.sav reading
@@ -516,7 +516,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	return Ploadflat(levelflats, flatname);
+	return Ploadflat(levelflats, flatname, true);
 }
 
 // help function for $$$.sav checking
@@ -846,6 +846,8 @@ static void P_LoadVertices(UINT8 *data)
 	{
 		v->x = SHORT(mv->x)<<FRACBITS;
 		v->y = SHORT(mv->y)<<FRACBITS;
+		v->floorzset = v->ceilingzset = false;
+		v->floorz = v->ceilingz = 0;
 	}
 }
 
@@ -1370,6 +1372,16 @@ static void ParseTextmapVertexParameter(UINT32 i, char *param, char *val)
 		vertexes[i].x = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "y"))
 		vertexes[i].y = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "zfloor"))
+	{
+		vertexes[i].floorz = FLOAT_TO_FIXED(atof(val));
+		vertexes[i].floorzset = true;
+	}
+	else if (fastcmp(param, "zceiling"))
+	{
+		vertexes[i].ceilingz = FLOAT_TO_FIXED(atof(val));
+		vertexes[i].ceilingzset = true;
+	}
 }
 
 static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
@@ -1577,6 +1589,8 @@ static void P_LoadTextmap(void)
 	{
 		// Defaults.
 		vt->x = vt->y = INT32_MAX;
+		vt->floorzset = vt->ceilingzset = false;
+		vt->floorz = vt->ceilingz = 0;
 
 		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
 
@@ -3086,7 +3100,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !players[i].spectator)
+		if (playeringame[i] && !(players[i].spectator && players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -3108,7 +3122,7 @@ static void P_InitTagGametype(void)
 	if (players[playersactive[i]].mo)
 		P_RemoveMobj(players[playersactive[i]].mo);
 
-	G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
+	G_SpawnPlayer(playersactive[i]); //respawn the lucky player in his dedicated spawn location.
 }
 
 static void P_SetupCamera(void)
@@ -3286,7 +3300,7 @@ static void P_InitPlayers(void)
 			G_DoReborn(i);
 		else // gametype is GT_COOP or GT_RACE
 		{
-			G_SpawnPlayer(i, players[i].starposttime);
+			G_SpawnPlayer(i);
 			if (players[i].starposttime)
 				P_ClearStarPost(players[i].starpostnum);
 		}
@@ -3571,11 +3585,11 @@ boolean P_LoadLevel(boolean fromnetsave)
 		return false;
 
 	// init gravity, tag lists,
-	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
+	// anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
 #ifdef ESLOPE
-	P_ResetDynamicSlopes(fromnetsave);
+	P_SpawnSlopes(fromnetsave);
 #endif
 
 	P_SpawnMapThings(!fromnetsave);
@@ -3674,8 +3688,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 		return true;
 
 	// If so...
-	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
-		G_PreLevelTitleCard();
+	G_PreLevelTitleCard();
 
 	return true;
 }

@@ -87,13 +87,7 @@ deny:
 
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
-	{
-		UINT8 bufn[2];
-
-		bufn[0] = (UINT8)playernum;
-		bufn[1] = KICK_MSG_CON_FAIL;
-		SendNetXCmd(XD_KICK, &bufn, 2);
-	}
+		SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 }
 
 // Wrapper for COM_AddCommand commands

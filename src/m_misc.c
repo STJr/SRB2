@@ -1594,16 +1594,19 @@ boolean M_ScreenshotResponder(event_t *ev)
 // M_StartupLocale.
 // Sets up gettext to translate SRB2's strings.
 #ifdef GETTEXT
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#define GETTEXTDOMAIN1 "/usr/share/locale"
-#define GETTEXTDOMAIN2 "/usr/local/share/locale"
-#elif defined (_WIN32)
-#define GETTEXTDOMAIN1 "."
-#endif
+	#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+		#define GETTEXTDOMAIN1 "/usr/share/locale"
+		#define GETTEXTDOMAIN2 "/usr/local/share/locale"
+	#elif defined (_WIN32)
+		#define GETTEXTDOMAIN1 "."
+	#endif
+#endif // GETTEXT
 
 void M_StartupLocale(void)
 {
+#ifdef GETTEXT
 	char *textdomhandle = NULL;
+#endif //GETTEXT
 
 	CONS_Printf("M_StartupLocale...\n");
 
@@ -1612,6 +1615,7 @@ void M_StartupLocale(void)
 	// Do not set numeric locale as that affects atof
 	setlocale(LC_NUMERIC, "C");
 
+#ifdef GETTEXT
 	// FIXME: global name define anywhere?
 #ifdef GETTEXTDOMAIN1
 	textdomhandle = bindtextdomain("srb2", GETTEXTDOMAIN1);
@@ -1632,8 +1636,8 @@ void M_StartupLocale(void)
 		textdomain("srb2");
 	else
 		CONS_Printf("Could not find locale text domain!\n");
+#endif //GETTEXT
 }
-#endif
 
 // ==========================================================================
 //                        MISC STRING FUNCTIONS
@@ -2570,4 +2574,59 @@ void M_MkdirEachUntil(const char *cpath, int start, int end, int mode)
 void M_MkdirEach(const char *path, int start, int mode)
 {
 	M_MkdirEachUntil(path, start, -1, mode);
+}
+
+int M_JumpWord(const char *line)
+{
+	int c;
+
+	c = line[0];
+
+	if (isspace(c))
+		return strspn(line, " ");
+	else if (ispunct(c))
+		return strspn(line, PUNCTUATION);
+	else
+	{
+		if (isspace(line[1]))
+			return 1 + strspn(&line[1], " ");
+		else
+			return strcspn(line, " "PUNCTUATION);
+	}
+}
+
+int M_JumpWordReverse(const char *line, int offset)
+{
+	int (*is)(int);
+	int c;
+	c = line[--offset];
+	if (isspace(c))
+		is = isspace;
+	else if (ispunct(c))
+		is = ispunct;
+	else
+		is = isalnum;
+	c = (*is)(line[offset]);
+	while (offset > 0 &&
+			(*is)(line[offset - 1]) == c)
+		offset--;
+	return offset;
+}
+
+const char * M_Ftrim (double f)
+{
+	static char dig[9];/* "0." + 6 digits (6 is printf's default) */
+	int i;
+	/* I know I said it's the default, but just in case... */
+	sprintf(dig, "%.6f", fabs(modf(f, &f)));
+	/* trim trailing zeroes */
+	for (i = strlen(dig)-1; dig[i] == '0'; --i)
+		;
+	if (dig[i] == '.')/* :NOTHING: */
+		return "";
+	else
+	{
+		dig[i + 1] = '\0';
+		return &dig[1];/* skip the 0 */
+	}
 }

@@ -72,6 +72,7 @@
 #include "../v_video.h"
 #include "hw_clip.h"
 #include "hw_glob.h"
+#include "../r_main.h"
 #include "../r_state.h"
 #include "../tables.h"
 #include "r_opengl/r_opengl.h"
@@ -328,7 +329,7 @@ angle_t gld_FrustumAngle(void)
 
 	// NEWCLIP TODO: SRB2CBTODO: make a global render_fov for this function
 
-	float render_fov = FIXED_TO_FLOAT(cv_grfov.value);
+	float render_fov = FIXED_TO_FLOAT(cv_fov.value);
 	float render_fovratio = (float)BASEVIDWIDTH / (float)BASEVIDHEIGHT; // SRB2CBTODO: NEWCLIPTODO: Is this right?
 	float render_multiplier = 64.0f / render_fovratio / RMUL;
 

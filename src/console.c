@@ -32,6 +32,7 @@
 #include "d_main.h"
 #include "m_menu.h"
 #include "filesrch.h"
+#include "m_misc.h"
 
 #ifdef _WINDOWS
 #include "win32/win_main.h"
@@ -815,6 +816,33 @@ boolean CON_Responder(event_t *ev)
 	 || key == KEY_LALT || key == KEY_RALT)
 		return true;
 
+	if (key == KEY_LEFTARROW)
+	{
+		if (input_cur != 0)
+		{
+			if (ctrldown)
+				input_cur = M_JumpWordReverse(inputlines[inputline], input_cur);
+			else
+				--input_cur;
+		}
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+	else if (key == KEY_RIGHTARROW)
+	{
+		if (input_cur < input_len)
+		{
+			if (ctrldown)
+				input_cur += M_JumpWord(&inputlines[inputline][input_cur]);
+			else
+				++input_cur;
+		}
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+
 	// ctrl modifier -- changes behavior, adds shortcuts
 	if (ctrldown)
 	{
@@ -965,23 +993,6 @@ boolean CON_Responder(event_t *ev)
 	{
 		if (con_scrollup > 0)
 			con_scrollup--;
-		return true;
-	}
-
-	if (key == KEY_LEFTARROW)
-	{
-		if (input_cur != 0)
-			--input_cur;
-		if (!shiftdown)
-			input_sel = input_cur;
-		return true;
-	}
-	else if (key == KEY_RIGHTARROW)
-	{
-		if (input_cur < input_len)
-			++input_cur;
-		if (!shiftdown)
-			input_sel = input_cur;
 		return true;
 	}
 	else if (key == KEY_HOME)
@@ -1551,9 +1562,14 @@ static void CON_DrawConsole(void)
 	if (cons_backpic.value || con_forcepic)
 	{
 		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
+		int h;
+
+		h = con_curlines/vid.dupy;
 
 		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
-		V_DrawScaledPatch(0, 0, 0, con_backpic);
+		//V_DrawScaledPatch(0, 0, 0, con_backpic);
+		V_DrawCroppedPatch(0, 0, FRACUNIT, 0, con_backpic,
+				0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
 
 		W_UnlockCachedPatch(con_backpic);
 	}

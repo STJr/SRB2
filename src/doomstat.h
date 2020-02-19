@@ -289,6 +289,7 @@ typedef struct
 	UINT8 actnum;          ///< Act number or 0 for none.
 	UINT32 typeoflevel;    ///< Combination of typeoflevel flags.
 	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
+	char keywords[33];     ///< Keywords separated by space to search for. 32 characters.
 	char musname[7];       ///< Music track to play. "" for no music.
 	UINT16 mustrack;       ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	UINT32 muspos;    ///< Music position to jump to.
@@ -436,6 +437,7 @@ extern const char *Gametype_ConstantNames[NUMGAMETYPES];
 extern INT32 pointlimits[NUMGAMETYPES];
 extern INT32 timelimits[NUMGAMETYPES];
 
+// TypeOfLevel things
 enum TypeOfLevel
 {
 	TOL_SP          = 0x01, ///< Single Player
@@ -460,16 +462,16 @@ enum TypeOfLevel
 	TOL_XMAS   = 0x1000, ///< Christmas NiGHTS
 };
 
-#define NUMBASETOL 18
-#define NUMMAXTOL (18 + NUMGAMETYPEFREESLOTS)
+#define MAXTOL             (1<<31)
+#define NUMBASETOLNAMES    (19)
+#define NUMTOLNAMES        (NUMBASETOLNAMES + NUMGAMETYPEFREESLOTS)
 
 typedef struct
 {
 	const char *name;
 	UINT32 flag;
 } tolinfo_t;
-extern tolinfo_t TYPEOFLEVEL[NUMMAXTOL];
-extern INT32 numtolinfo;
+extern tolinfo_t TYPEOFLEVEL[NUMTOLNAMES];
 extern UINT32 lastcustomtol;
 
 extern tic_t totalplaytime;

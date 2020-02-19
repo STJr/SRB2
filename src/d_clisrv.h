@@ -27,7 +27,7 @@ This version is independent of the mod name, and standard
 version and subversion. It should only account for the
 basic fields of the packet, and change infrequently.
 */
-#define PACKETVERSION 1
+#define PACKETVERSION 2
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -366,7 +366,6 @@ typedef struct
 	UINT8 cheatsenabled;
 	UINT8 isdedicated;
 	UINT8 fileneedednum;
-	SINT8 adminplayer;
 	tic_t time;
 	tic_t leveltime;
 	char servername[MAXSERVERNAME];
@@ -398,7 +397,7 @@ typedef struct
 // Shorter player information for external use.
 typedef struct
 {
-	UINT8 node;
+	UINT8 num;
 	char name[MAXPLAYERNAME+1];
 	UINT8 address[4]; // sending another string would run us up against MAXPACKETLENGTH
 	UINT8 team;
@@ -486,6 +485,7 @@ extern consvar_t cv_playbackspeed;
 #define KICK_MSG_PING_HIGH   6
 #define KICK_MSG_CUSTOM_KICK 7
 #define KICK_MSG_CUSTOM_BAN  8
+#define KICK_MSG_KEEP_BODY   0x80
 
 typedef enum
 {
@@ -513,7 +513,9 @@ extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 extern tic_t servermaxping;
 
-extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_resynchattempts, cv_blamecfail, cv_maxsend, cv_noticedownload, cv_downloadspeed;
+extern consvar_t cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_rejointimeout;
+extern consvar_t cv_resynchattempts, cv_blamecfail;
+extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
 // Used in d_net, the only dependence
 tic_t ExpandTics(INT32 low);
@@ -523,6 +525,7 @@ void D_ClientServerInit(void);
 void RegisterNetXCmd(netxcmd_t id, void (*cmd_f)(UINT8 **p, INT32 playernum));
 void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam);
 void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam); // splitsreen player
+void SendKick(UINT8 playernum, UINT8 msg);
 
 // Create any new ticcmds and broadcast to other players.
 void NetUpdate(void);

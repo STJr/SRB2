@@ -1278,13 +1278,15 @@ void ST_preDrawTitleCard(void)
 //
 void ST_runTitleCard(void)
 {
+	boolean run = !(paused || P_AutoPause());
+
 	if (!G_IsTitleCardAvailable())
 		return;
 
 	if (lt_ticker >= (lt_endtime + TICRATE))
 		return;
 
-	if (!(paused || P_AutoPause()))
+	if (run || (lt_ticker < PRELEVELTIME))
 	{
 		// tick
 		lt_ticker++;

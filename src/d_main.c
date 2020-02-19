@@ -266,6 +266,9 @@ static void D_Display(void)
 #endif
 	}
 
+	if (rendermode == render_soft && !splitscreen)
+		R_CheckViewMorph();
+
 	// change the view size if needed
 	if (setsizeneeded || setrenderstillneeded)
 	{
@@ -446,6 +449,9 @@ static void D_Display(void)
 				// Image postprocessing effect
 				if (rendermode == render_soft)
 				{
+					if (!splitscreen)
+						R_ApplyViewMorph();
+
 					if (postimgtype)
 						V_DoPostProcessor(0, postimgtype, postimgparam);
 					if (postimgtype2)
@@ -652,8 +658,14 @@ void D_SRB2Loop(void)
 	// hack to start on a nice clear console screen.
 	COM_ImmedExecute("cls;version");
 
-	V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
 	I_FinishUpdate(); // page flip or blit buffer
+	/*
+	LMFAO this was showing garbage under OpenGL
+	because I_FinishUpdate was called afterward
+	*/
+	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
+	if (gamestate != GS_TITLESCREEN)
+		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
 
 	for (;;)
 	{
@@ -1046,10 +1058,8 @@ void D_SRB2Main(void)
 		I_OutputMsg("setvbuf didnt work\n");
 #endif
 
-#ifdef GETTEXT
 	// initialise locale code
 	M_StartupLocale();
-#endif
 
 	// get parameters from a response file (eg: srb2 @parms.txt)
 	M_FindResponseFile();
@@ -1210,7 +1220,7 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#ifndef DEVELOP // md5s last updated 06/12/19 (ddmmyy)
+#ifndef DEVELOP // md5s last updated 16/02/20 (ddmmyy)
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3

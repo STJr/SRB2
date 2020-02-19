@@ -51,11 +51,22 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
 
+fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope);
+
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
+
+boolean R_ThingVisible (mobj_t *thing);
+
+boolean R_ThingVisibleWithinDist (mobj_t *thing,
+		fixed_t        draw_dist,
+		fixed_t nights_draw_dist);
+
+boolean R_PrecipThingVisible (precipmobj_t *precipthing,
+		fixed_t precip_draw_dist);
 
 /** Used to count the amount of masked elements
  * per portal to later group them in separate
@@ -149,7 +160,8 @@ typedef enum
 	SC_LINKDRAW = 1<<3,
 	SC_FULLBRIGHT = 1<<4,
 	SC_VFLIP = 1<<5,
-	SC_ISSCALED = 1>>6,
+	SC_ISSCALED = 1<<6,
+	SC_SHADOW = 1<<7,
 	// masks
 	SC_CUTMASK = SC_TOP|SC_BOTTOM,
 	SC_FLAGMASK = ~SC_CUTMASK
@@ -177,7 +189,15 @@ typedef struct vissprite_s
 	fixed_t startfrac; // horizontal position of x1
 	fixed_t scale, sortscale; // sortscale only differs from scale for paper sprites and MF2_LINKDRAW
 	fixed_t scalestep; // only for paper sprites, 0 otherwise
+	fixed_t paperoffset, paperdistance; // for paper sprites, offset/dist relative to the angle
 	fixed_t xiscale; // negative if flipped
+
+	angle_t centerangle; // for paper sprites
+
+	struct {
+		fixed_t tan; // The amount to shear the sprite vertically per row
+		INT32 offset; // The center of the shearing location offset from x1
+	} shear;
 
 	fixed_t texturemid;
 	patch_t *patch;

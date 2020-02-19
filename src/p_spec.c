@@ -3529,7 +3529,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
 						false,                     // subtract FadeStart (we ran out of flags)
 						false,                     // subtract FadeEnd (we ran out of flags)
-						false,                     // ignore Fog (we ran out of flags)
+						false,                     // ignore Flags (we ran out of flags)
 						line->flags & ML_DONTPEGBOTTOM,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
@@ -3896,7 +3896,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
 						false,                     // subtract FadeStart (we ran out of flags)
 						false,                     // subtract FadeEnd (we ran out of flags)
-						false,                     // ignore Fog (we ran out of flags)
+						false,                     // ignore Flags (we ran out of flags)
 						line->flags & ML_DONTPEGBOTTOM,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
@@ -4455,10 +4455,18 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 6: // Death Pit (Camera Mod)
 		case 7: // Death Pit (No Camera Mod)
 			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DEATHPIT);
+			{
+				if (player->quittime)
+					G_MovePlayerToSpawnOrStarpost(player - players);
+				else
+					P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DEATHPIT);
+			}
 			break;
 		case 8: // Instant Kill
-			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
+			if (player->quittime)
+				G_MovePlayerToSpawnOrStarpost(player - players);
+			else
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
 			break;
 		case 9: // Ring Drainer (Floor Touch)
 		case 10: // Ring Drainer (No Floor Touch)
@@ -4713,7 +4721,7 @@ DoneSection2:
 			if (!post)
 				break;
 
-			P_TouchSpecialThing(post, player->mo, false);
+			P_TouchStarPost(post, player, false);
 			break;
 		}
 
@@ -6382,7 +6390,7 @@ static void P_RunLevelLoadExecutors(void)
 }
 
 /** Before things are loaded, initialises certain stuff in case they're needed
-  * by P_ResetDynamicSlopes or P_LoadThings. This was split off from
+  * by P_SpawnSlopes or P_LoadThings. This was split off from
   * P_SpawnSpecials, in case you couldn't tell.
   *
   * \sa P_SpawnSpecials, P_InitTagLists
@@ -6960,7 +6968,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 146: // Intangible floor/ceiling with solid sides (fences/hoops maybe?)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_ALLSIDES|FF_INTANGABLEFLATS, secthinkers);
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_ALLSIDES|FF_INTANGIBLEFLATS, secthinkers);
 				break;
 
 			case 150: // Air bobbing platform
@@ -7102,10 +7110,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 202: // Fog
 				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_FOG|FF_BOTHPLANES|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				// SoM: Because it's fog, check for an extra colormap and set
-				// the fog flag...
+				// SoM: Because it's fog, check for an extra colormap and set the fog flag...
 				if (sectors[sec].extra_colormap)
-					sectors[sec].extra_colormap->fog = 1;
+					sectors[sec].extra_colormap->flags = CMF_FOG;
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
@@ -8499,7 +8506,7 @@ void T_FadeColormap(fadecolormap_t *d)
 		extracolormap_t *exc;
 		INT32 duration = d->ticbased ? d->duration : 256;
 		fixed_t factor = min(FixedDiv(duration - d->timer, duration), 1*FRACUNIT);
-		INT16 cr, cg, cb, ca, fadestart, fadeend, fog;
+		INT16 cr, cg, cb, ca, fadestart, fadeend, flags;
 		INT32 rgba, fadergba;
 
 		// NULL failsafes (or intentionally set to signify default)
@@ -8548,7 +8555,7 @@ void T_FadeColormap(fadecolormap_t *d)
 
 		fadestart = APPLYFADE(d->dest_exc->fadestart, d->source_exc->fadestart, d->sector->extra_colormap->fadestart);
 		fadeend = APPLYFADE(d->dest_exc->fadeend, d->source_exc->fadeend, d->sector->extra_colormap->fadeend);
-		fog = abs(factor) > FRACUNIT/2 ? d->dest_exc->fog : d->source_exc->fog; // set new fog flag halfway through fade
+		flags = abs(factor) > FRACUNIT/2 ? d->dest_exc->flags : d->source_exc->flags; // set new flags halfway through fade
 
 #undef APPLYFADE
 
@@ -8556,12 +8563,12 @@ void T_FadeColormap(fadecolormap_t *d)
 		// setup new colormap
 		//////////////////
 
-		if (!(d->sector->extra_colormap = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog)))
+		if (!(d->sector->extra_colormap = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags)))
 		{
 			exc = R_CreateDefaultColormap(false);
 			exc->fadestart = fadestart;
 			exc->fadeend = fadeend;
-			exc->fog = (boolean)fog;
+			exc->flags = flags;
 			exc->rgba = rgba;
 			exc->fadergba = fadergba;
 			exc->colormap = R_CreateLightTable(exc);
