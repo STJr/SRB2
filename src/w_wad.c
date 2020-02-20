@@ -122,8 +122,19 @@ void W_ShutdownFile(wadfile_t *wadfile)
 	fclose(wadfile->handle);
 	Z_Free(wadfile->filename);
 	while (wadfile->numlumps--)
-		Z_Free(wadfile->lumpinfo[wadfile->numlumps].name2);
+	{
+		lumpcache_t *lumpcache = wadfile->lumpcache;
+		lumpcache_t *patchcache = wadfile->patchcache;
 
+		if (lumpcache[wadfile->numlumps])
+			Z_Free(lumpcache[wadfile->numlumps]);
+		if (patchcache[wadfile->numlumps])
+			Z_Free(patchcache[wadfile->numlumps]);
+
+		Z_Free(wadfile->lumpcache[wadfile->numlumps]);
+	}
+	Z_Free(wadfile->lumpcache);
+	Z_Free(wadfile->patchcache);
 	Z_Free(wadfile->lumpinfo);
 	Z_Free(wadfile);
 }

@@ -3790,6 +3790,12 @@ void R_DelSkins(void)
 
 	for (i = 0; i < MAXSKINS; i++)
 	{
+		if (!skins[i].name[0])
+		{
+			numskins--;
+			continue;
+		}
+
 		ST_UnLoadFaceGraphics(i);
 
 		for (j = 0; j < 32; j++)
@@ -3813,7 +3819,6 @@ void R_DelSkins(void)
 		}
 
 		numskins--;
-		CONS_Printf(M_GetText("Removed skin '%s'\n"), skins[i].name);
 	}
 
 	M_InitCharacterTables();
