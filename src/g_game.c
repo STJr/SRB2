@@ -95,15 +95,15 @@ boolean modifiedgame; // Set if homebrew PWAD stuff has been added.
 boolean savemoddata = false;
 UINT8 paused;
 UINT8 modeattacking = ATTACKING_NONE;
-boolean disableSpeedAdjust = false;
+boolean disableSpeedAdjust;
 boolean imcontinuing = false;
 boolean runemeraldmanager = false;
-UINT16 emeraldspawndelay = 60*TICRATE;
+UINT16 emeraldspawndelay;
 
 // menu demo things
-UINT8  numDemos      = 0;
-UINT32 demoDelayTime = 15*TICRATE;
-UINT32 demoIdleTime  = 3*TICRATE;
+UINT8  numDemos;
+UINT32 demoDelayTime;
+UINT32 demoIdleTime;
 
 boolean timingdemo; // if true, exit with report on completion
 boolean nodrawers; // for comparative timing purposes
@@ -129,8 +129,8 @@ tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 INT16 spstage_start;
 INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
 
-INT16 titlemap = 0;
-boolean hidetitlepics = false;
+INT16 titlemap;
+boolean hidetitlepics;
 INT16 bootmap; //bootmap for loading a map on startup
 
 INT16 tutorialmap = 0; // map to load for tutorial
@@ -141,12 +141,12 @@ INT32 tutorialfreelook = 0; // store cv_alwaysfreelook user value
 INT32 tutorialmousemove = 0; // store cv_mousemove user value
 INT32 tutorialanalog = 0; // store cv_analog[0] user value
 
-boolean looptitle = false;
+boolean looptitle;
 
-UINT8 skincolor_redteam = SKINCOLOR_RED;
-UINT8 skincolor_blueteam = SKINCOLOR_BLUE;
-UINT8 skincolor_redring = SKINCOLOR_SALMON;
-UINT8 skincolor_bluering = SKINCOLOR_CORNFLOWER;
+UINT8 skincolor_redteam;
+UINT8 skincolor_blueteam;
+UINT8 skincolor_redring;
+UINT8 skincolor_bluering;
 
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
@@ -212,21 +212,21 @@ boolean CheckForFloatBob;
 boolean CheckForReverseGravity;
 
 // Powerup durations
-UINT16 invulntics = 20*TICRATE;
-UINT16 sneakertics = 20*TICRATE;
-UINT16 flashingtics = 3*TICRATE;
-UINT16 tailsflytics = 8*TICRATE;
-UINT16 underwatertics = 30*TICRATE;
-UINT16 spacetimetics = 11*TICRATE + (TICRATE/2);
-UINT16 extralifetics = 4*TICRATE;
-UINT16 nightslinktics = 2*TICRATE;
+UINT16 invulntics;
+UINT16 sneakertics;
+UINT16 flashingtics;
+UINT16 tailsflytics;
+UINT16 underwatertics;
+UINT16 spacetimetics;
+UINT16 extralifetics;
+UINT16 nightslinktics;
 
-INT32 gameovertics = 11*TICRATE;
+INT32 gameovertics;
 
-UINT8 ammoremovaltics = 2*TICRATE;
+UINT8 ammoremovaltics;
 
-UINT8 use1upSound = 0;
-UINT8 maxXtraLife = 2; // Max extra lives from rings
+UINT8 use1upSound;
+UINT8 maxXtraLife; // Max extra lives from rings
 
 UINT8 introtoplay;
 UINT8 creditscutscene;
@@ -3966,6 +3966,41 @@ void G_LoadGameSettings(void)
 	smpstage_start = 60;
 	smpstage_end = 66; // 7 multiplayer special stages too
 
+	emeraldspawndelay = 60*TICRATE;
+	disableSpeedAdjust = false;
+
+	// menu demo things
+	numDemos = 0;
+	demoDelayTime = 15*TICRATE;
+	demoIdleTime = 3*TICRATE;
+
+	// team modes skincolors
+	skincolor_redteam = SKINCOLOR_RED;
+	skincolor_blueteam = SKINCOLOR_BLUE;
+	skincolor_redring = SKINCOLOR_SALMON;
+	skincolor_bluering = SKINCOLOR_CORNFLOWER;
+
+	// Powerup durations
+	invulntics = 20*TICRATE;
+	sneakertics = 20*TICRATE;
+	flashingtics = 3*TICRATE;
+	tailsflytics = 8*TICRATE;
+	underwatertics = 30*TICRATE;
+	spacetimetics = 11*TICRATE + (TICRATE/2);
+	extralifetics = 4*TICRATE;
+	nightslinktics = 2*TICRATE;
+
+	gameovertics = 11*TICRATE;
+	ammoremovaltics = 2*TICRATE;
+
+	startchar = 0;
+	use1upSound = 0;
+	maxXtraLife = 2; // Max extra lives from rings
+
+	titlemap = 0;
+	hidetitlepics = false;
+	looptitle = false;
+
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();
 }
@@ -4262,7 +4297,7 @@ void G_SaveGameData(void)
 #define VERSIONSIZE 16
 
 //
-// G_InitFromSavegame
+// G_LoadGame
 // Can be called by the startup code or the menu task.
 //
 void G_LoadGame(UINT32 slot, INT16 mapoverride)
