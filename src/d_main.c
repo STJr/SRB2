@@ -1555,9 +1555,17 @@ void D_InitialState(void)
 	LUA_Shutdown();
 #endif
 
-	// clear level headers
-	for (i = 0; i < NUMMAPS; i++)
-		P_ClearSingleMapHeaderInfo(i);
+	// Clear unlockables and emblems
+	memset(&unlockables, 0, sizeof(unlockables));
+	memset(&emblemlocations, 0, sizeof(emblemlocations));
+	memset(&extraemblems, 0, sizeof(extraemblems));
+
+	numemblems = 0;
+	numextraemblems = 0;
+
+	// Clear condition sets and level headers
+	P_ClearConditionSets();
+	P_ClearLevels();
 
 	// reload default dehacked-editable variables
 	G_LoadGameSettings();

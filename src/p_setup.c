@@ -279,6 +279,43 @@ void P_AllocMapHeader(INT16 i)
 	P_ClearSingleMapHeaderInfo(i + 1);
 }
 
+/** Clears condition sets.
+  */
+void P_ClearConditionSets(void)
+{
+	UINT8 i;
+	for (i = 0; i < MAXCONDITIONSETS; ++i)
+		M_ClearConditionSet(i+1);
+}
+
+/** Clears levels headers.
+  */
+void P_ClearLevels(void)
+{
+	INT16 i;
+
+	// This is potentially dangerous but if we're resetting these headers,
+	// we may as well try to save some memory, right?
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		if (!mapheaderinfo[i] || i == (tutorialmap-1))
+			continue;
+
+		// Custom map header info
+		// (no need to set num to 0, we're freeing the entire header shortly)
+		Z_Free(mapheaderinfo[i]->customopts);
+
+		P_DeleteFlickies(i);
+		P_DeleteGrades(i);
+
+		Z_Free(mapheaderinfo[i]);
+		mapheaderinfo[i] = NULL;
+	}
+
+	// Realloc the one for the current gamemap as a safeguard
+	P_AllocMapHeader(gamemap-1);
+}
+
 /** NiGHTS Grades are a special structure,
   * we initialize them here.
   *
@@ -3993,5 +4030,13 @@ boolean P_AddWadFile(const char *wadfilename)
 			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
+	return true;
+}
+
+boolean P_DelWadFile(const UINT16 wadnum)
+{
+	if (wadnum == 0)		// can't delete the IWAD
+		return false;
+	W_UnloadWadFile(wadnum);
 	return true;
 }

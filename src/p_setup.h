@@ -102,13 +102,18 @@ boolean P_LoadLevel(boolean fromnetsave);
 void HWR_SetupLevel(void);
 #endif
 boolean P_AddWadFile(const char *wadfilename);
+boolean P_DelWadFile(const UINT16 wadnum);
 boolean P_RunSOC(const char *socfilename);
 void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num);
 void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num);
 void P_WriteThings(lumpnum_t lump);
 size_t P_PrecacheLevelFlats(void);
+
 void P_AllocMapHeader(INT16 i);
 void P_ClearSingleMapHeaderInfo(INT16 i);
+
+void P_ClearConditionSets(void);
+void P_ClearLevels(void);
 
 void P_SetDemoFlickies(INT16 i);
 void P_DeleteFlickies(INT16 i);
