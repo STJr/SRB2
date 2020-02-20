@@ -55,6 +55,7 @@
 #include "dehacked.h"
 #include "d_clisrv.h"
 #include "d_main.h"
+#include "g_game.h"
 #include "r_defs.h"
 #include "r_data.h"
 #include "i_system.h"
@@ -923,7 +924,7 @@ void W_UnloadWadFile(UINT16 num)
 
 	// Set the initial state and reload files.
 	D_ReloadFiles();
-	D_FollowFileDeletion();
+	G_AfterFileDeletion();
 }
 
 /** Make sure a lump number is valid.

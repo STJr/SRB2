@@ -44,9 +44,6 @@ void D_ResetSRB2(void);
 // Set the initial state and reload files.
 void D_ReloadFiles(void);
 
-// Restarts or exits the level after file deletion.
-void D_FollowFileDeletion(void);
-
 // Save the current configuration file, and the gamedata.
 void D_SaveUserPrefs(void);
 

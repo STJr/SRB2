@@ -4022,6 +4022,48 @@ void G_InitialState(void)
 	P_ResetData(0xFF);
 }
 
+// Restarts or exits the level after file deletion.
+void G_AfterFileDeletion(void)
+{
+	// Load the default game data.
+	G_LoadGameData();
+
+	if (!Playing())
+	{
+		if (gamestate == GS_TITLESCREEN)
+			F_CacheTitleScreen();
+		return;
+	}
+
+	// reset the map
+	if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION)
+	{
+		ST_Start();
+		// load MAP01 if the current map doesn't exist anymore
+		if (W_CheckNumForName(G_BuildMapName(gamemap)) == LUMPERROR)
+			gamemap = 1;
+		// same deal for nextmap
+		if (W_CheckNumForName(G_BuildMapName(nextmap+1)) == LUMPERROR)
+			nextmap = 0;
+		// ...and nextmapoverride
+		if (W_CheckNumForName(G_BuildMapName(nextmapoverride)) == LUMPERROR)
+			nextmapoverride = 1;
+		if (gamestate == GS_INTERMISSION)
+		{
+			Y_EndIntermission();
+			G_AfterIntermission();
+		}
+		else
+			G_DoLoadLevel(true);
+		return;
+	}
+
+	if (!(netgame || splitscreen))
+		F_StartIntro();
+	else if (server)
+		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+}
+
 //
 // G_LoadGameSettings
 //
