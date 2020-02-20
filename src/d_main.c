@@ -1572,6 +1572,7 @@ void D_InitialState(void)
 
 	// reload default dehacked-editable variables
 	G_LoadGameSettings();
+	G_DefaultDataStrings();
 
 	// clear game data stuff
 	gamedataloaded = false;

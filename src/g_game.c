@@ -65,9 +65,13 @@ JoyType_t Joystick2;
 // 1024 bytes is plenty for a savegame
 #define SAVEGAMESIZE (1024)
 
-char gamedatafilename[64] = "gamedata.dat";
-char timeattackfolder[64] = "main";
-char customversionstring[32] = "\0";
+#define DEFAULTGAMEDATAFILENAME "gamedata.dat"
+#define DEFAULTTIMEATTACKFOLDER "main"
+#define DEFAULTCUSTOMVERSIONSTR "\0"
+
+char gamedatafilename[64] = DEFAULTGAMEDATAFILENAME;
+char timeattackfolder[64] = DEFAULTTIMEATTACKFOLDER;
+char customversionstring[32] = DEFAULTCUSTOMVERSIONSTR;
 
 static void G_DoCompleted(void);
 static void G_DoStartContinue(void);
@@ -4003,6 +4007,17 @@ void G_LoadGameSettings(void)
 
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();
+}
+
+//
+// G_DefaultDataStrings
+// Sets the gamedata filename and time attack folder to default.
+//
+void G_DefaultDataStrings(void)
+{
+	strcpy(gamedatafilename, DEFAULTGAMEDATAFILENAME);
+	strcpy(timeattackfolder, DEFAULTTIMEATTACKFOLDER);
+	strcpy(customversionstring, DEFAULTCUSTOMVERSIONSTR);
 }
 
 // G_LoadGameData

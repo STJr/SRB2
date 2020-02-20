@@ -282,6 +282,7 @@ boolean G_GetModeAttackRetryFlag(void);
 
 void G_LoadGameData(void);
 void G_LoadGameSettings(void);
+void G_DefaultDataStrings(void);
 
 void G_SetGameModified(boolean silent);
 
