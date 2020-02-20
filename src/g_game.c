@@ -4017,9 +4017,6 @@ void G_InitialState(void)
 	G_ClearRecords();
 	M_ClearSecrets();
 
-	// load the default game data
-	G_LoadGameData();
-
 	// Reset DeHackEd (SOC)
 	DEH_Init();
 	P_ResetData(0xFF);

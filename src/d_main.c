@@ -1572,12 +1572,18 @@ void D_ResetSRB2(void)
 	// Put everything back on its place
 	D_ReloadFiles();
 
+	// Load the default game data.
+	G_LoadGameData();
+
 	// Done. Start the intro.
 	F_StartIntro();
 }
 
 void D_FollowFileDeletion(void)
 {
+	// Load the default game data.
+	G_LoadGameData();
+
 	if (!Playing())
 	{
 		if (gamestate == GS_TITLESCREEN)
