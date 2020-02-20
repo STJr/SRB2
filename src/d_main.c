@@ -1293,7 +1293,8 @@ void D_SRB2Main(void)
 
 	//------------------------------------------------ COMMAND LINE PARAMS
 
-	// this must be done after loading gamedata, to avoid setting off the corrupted gamedata flag in G_LoadGameData
+	// this must be done after loading gamedata,
+	// to avoid setting off the corrupted gamedata code in G_LoadGameData if a SOC with custom gamedata is added
 	// -- Monster Iestyn 20/02/20
 	if (M_CheckParm("-warp") && M_IsNextParm())
 	{
