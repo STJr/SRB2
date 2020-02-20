@@ -81,7 +81,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // 3D View Rendering
-#include "hardware/hw_glob.h"
 #endif
 
 #ifdef _WINDOWS
@@ -1524,76 +1523,13 @@ void D_SRB2Main(void)
 	}
 }
 
-void D_InitialState(void)
-{
-	INT32 i;
-
-#ifdef DELFILE
-	// Delete all skins.
-	R_DelSkins();
-#endif
-
-	// Stop all sound effects.
-	for (i = 0; i < NUMSFX; i++)
-	{
-		if (S_sfx[i].lumpnum != LUMPERROR)
-		{
-			S_StopSoundByNum(i);
-			S_RemoveSoundFx(i);
-			I_FreeSfx(&S_sfx[i]);
-		}
-	}
-
-#ifdef HWRENDER
-	// free OpenGL's texture cache
-	if (rendermode == render_opengl)
-		HWR_FreeTextureCache();
-#endif
-
-#ifdef HAVE_BLUA
-	// delete Lua-added console commands and variables
-	COM_RemoveLuaCommands();
-
-	// Shutdown Lua
-	LUA_Shutdown();
-#endif
-
-	// Clear unlockables and emblems
-	memset(&unlockables, 0, sizeof(unlockables));
-	memset(&emblemlocations, 0, sizeof(emblemlocations));
-	memset(&extraemblems, 0, sizeof(extraemblems));
-
-	numemblems = 0;
-	numextraemblems = 0;
-
-	// Clear condition sets and level headers
-	P_ClearConditionSets();
-	P_ClearLevels();
-
-	// reload default dehacked-editable variables
-	G_LoadGameSettings();
-	G_DefaultDataStrings();
-
-	// clear game data stuff
-	gamedataloaded = false;
-	G_ClearRecords();
-	M_ClearSecrets();
-
-	// load the default game data
-	G_LoadGameData();
-
-	// Reset DeHackEd (SOC)
-	DEH_Init();
-	P_ResetData(0xFF);
-}
-
 // Reload all files.
 void D_ReloadFiles(void)
 {
 	INT32 i;
 
 	// Set the initial state.
-	D_InitialState();
+	G_InitialState();
 
 	// Load SOC and Lua.
 	for (i = 0; i < numwadfiles; i++)

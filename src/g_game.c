@@ -48,7 +48,12 @@
 #include "md5.h" // demo checksums
 
 #ifdef HAVE_BLUA
+#include "lua_script.h"
 #include "lua_hud.h"
+#endif
+
+#ifdef HWRENDER
+#include "hardware/hw_glob.h"
 #endif
 
 gameaction_t gameaction;
@@ -3954,6 +3959,70 @@ void G_EndGame(void)
 
 	// 1100 or competitive multiplayer, so go back to title screen.
 	D_StartTitle();
+}
+
+// Set the game to its initial state.
+void G_InitialState(void)
+{
+	INT32 i;
+
+	// Delete all skins.
+	R_DelSkins();
+
+	// Stop all sound effects.
+	for (i = 0; i < NUMSFX; i++)
+	{
+		if (S_sfx[i].lumpnum != LUMPERROR)
+		{
+			S_StopSoundByNum(i);
+			S_RemoveSoundFx(i);
+			I_FreeSfx(&S_sfx[i]);
+		}
+	}
+
+#ifdef HWRENDER
+	// free OpenGL's texture cache
+	if (rendermode == render_opengl)
+		HWR_FreeTextureCache();
+#endif
+
+#ifdef HAVE_BLUA
+	// delete Lua-added console commands and variables
+	COM_RemoveLuaCommands();
+
+	// Shutdown Lua
+	LUA_Shutdown();
+#endif
+
+	// Clear unlockables and emblems
+	memset(&unlockables, 0, sizeof(unlockables));
+	memset(&emblemlocations, 0, sizeof(emblemlocations));
+	memset(&extraemblems, 0, sizeof(extraemblems));
+
+	numemblems = 0;
+	numextraemblems = 0;
+
+	// Clear condition sets and level headers
+	P_ClearConditionSets();
+	P_ClearLevels();
+
+	// reload default dehacked-editable variables
+	G_LoadGameSettings();
+	G_DefaultDataStrings();
+
+	// clear game data stuff
+	gamedataloaded = false;
+	modifiedgame = false;
+	savemoddata = false;
+	G_ClearRecords();
+	M_ClearSecrets();
+
+	// load the default game data
+	G_LoadGameData();
+
+	// Reset DeHackEd (SOC)
+	DEH_Init();
+	P_ResetData(0xFF);
 }
 
 //

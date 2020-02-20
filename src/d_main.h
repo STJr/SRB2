@@ -41,9 +41,6 @@ void D_SRB2Main(void);
 // Restart the game
 void D_ResetSRB2(void);
 
-// Set the game to its initial state.
-void D_InitialState(void);
-
 // Set the initial state and reload files.
 void D_ReloadFiles(void);
 

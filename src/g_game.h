@@ -280,6 +280,7 @@ void G_SetModeAttackRetryFlag(void);
 void G_ClearModeAttackRetryFlag(void);
 boolean G_GetModeAttackRetryFlag(void);
 
+void G_InitialState(void);
 void G_LoadGameData(void);
 void G_LoadGameSettings(void);
 void G_DefaultDataStrings(void);
