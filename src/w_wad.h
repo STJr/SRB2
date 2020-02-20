@@ -146,13 +146,21 @@ void W_ShutdownFile(wadfile_t *wadfile);
 
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
+
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
 UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
 
 // W_InitMultipleFiles exits if a file was not found, but not if all is okay.
 void W_InitMultipleFiles(char **filenames, UINT16 mainfiles);
 
+// Checks if a file exists in the specified slot.
 boolean W_IsFilePresent(UINT16 wadnum);
+
+// Loads all SOC and Lua scripts from a file.
+void W_LoadFileScripts(UINT16 wadfilenum, boolean mainfile);
+
+// Unloads a file.
+void W_UnloadWadFile(UINT16 num);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);

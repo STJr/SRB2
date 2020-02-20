@@ -54,6 +54,7 @@
 #include "d_netfil.h"
 #include "dehacked.h"
 #include "d_clisrv.h"
+#include "d_main.h"
 #include "r_defs.h"
 #include "r_data.h"
 #include "i_system.h"
@@ -673,6 +674,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	wadfile_t *wadfile;
 	restype_t type;
 	UINT16 numlumps = 0;
+	UINT16 wadfileslot = UINT16_MAX;
 	size_t i;
 	size_t packetsize;
 	UINT8 md5sum[16];
@@ -725,6 +727,16 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		packetsizetally = packetsize;
 	}
 
+	// Find unoccupied file slot
+	for (i = 0; i < numwadfiles; i++)
+	{
+		if (!W_IsFilePresent(i))
+		{
+			wadfileslot = i;
+			break;
+		}
+	}
+
 #ifndef NOMD5
 	//
 	// w-waiiiit!
@@ -735,6 +747,8 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 	for (i = 0; i < numwadfiles; i++)
 	{
+		if (i == wadfileslot)
+			continue;
 		if (!W_IsFilePresent(i))
 			continue;
 		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
@@ -805,32 +819,17 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// add the wadfile
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
-	wadfiles[numwadfiles] = wadfile;
-	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
+	if (wadfileslot == UINT16_MAX)
+	{
+		wadfileslot = numwadfiles;
+		numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
+	}
+	wadfiles[wadfileslot] = wadfile;
 
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
-	switch (wadfile->type)
-	{
-	case RET_WAD:
-		W_LoadDehackedLumps(numwadfiles - 1, mainfile);
-		break;
-	case RET_PK3:
-		W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
-		break;
-	case RET_SOC:
-		CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
-		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0, mainfile);
-		break;
-#ifdef HAVE_BLUA
-	case RET_LUA:
-		LUA_LoadLump(numwadfiles - 1, 0);
-		break;
-#endif
-	default:
-		break;
-	}
-
+	W_LoadFileScripts(numwadfiles - 1, mainfile);
 	W_InvalidateLumpnumCache();
+
 	return wadfile->numlumps;
 }
 
@@ -859,6 +858,60 @@ void W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
 		W_InitFile(*filenames, numwadfiles < mainfiles, true);
 	}
+}
+
+/** Loads all Lua and SOC scripts from a file.
+  *
+  * \sa W_InitFile
+  * \sa D_ReloadFiles
+  */
+void W_LoadFileScripts(UINT16 wadfilenum, boolean mainfile)
+{
+	wadfile_t *wadfile = wadfiles[wadfilenum];
+	switch (wadfile->type)
+	{
+		case RET_WAD:
+			W_LoadDehackedLumps(wadfilenum, mainfile);
+			break;
+		case RET_PK3:
+			W_LoadDehackedLumpsPK3(wadfilenum, mainfile);
+			break;
+		case RET_SOC:
+			CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
+			DEH_LoadDehackedLumpPwad(wadfilenum, 0, mainfile);
+			break;
+#ifdef HAVE_BLUA
+		case RET_LUA:
+			LUA_LoadLump(wadfilenum, 0);
+			break;
+#endif
+		default:
+			break;
+	}
+}
+
+/** Unloads a file.
+  */
+void W_UnloadWadFile(UINT16 num)
+{
+	char wadname[MAX_WADPATH];
+
+	if (num == numwadfiles-1)
+		numwadfiles--;
+
+	nameonly(strcpy(wadname, wadfiles[num]->filename));
+	CONS_Printf(M_GetText("Removing file %s...\n"), wadname);
+
+	// Save the current configuration file, and the gamedata.
+	D_SaveUserPrefs();
+
+	// Delete the file
+	W_ShutdownFile(wadfiles[num]);
+	W_InvalidateLumpnumCache();
+
+	// Set the initial state and reload files.
+	D_ReloadFiles();
+	D_FollowFileDeletion();
 }
 
 /** Make sure a lump number is valid.

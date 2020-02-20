@@ -209,7 +209,7 @@ void P_DeleteFlickies(INT16 i)
   * \param i Map number to clear header for.
   * \sa P_ClearMapHeaderInfo
   */
-static void P_ClearSingleMapHeaderInfo(INT16 i)
+void P_ClearSingleMapHeaderInfo(INT16 i)
 {
 	const INT16 num = (INT16)(i-1);
 	mapheaderinfo[num]->lvlttl[0] = '\0';

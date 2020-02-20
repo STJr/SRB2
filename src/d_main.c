@@ -81,6 +81,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // 3D View Rendering
+#include "hardware/hw_glob.h"
 #endif
 
 #ifdef _WINDOWS
@@ -1521,6 +1522,154 @@ void D_SRB2Main(void)
 		if (!P_LoadLevel(false))
 			I_Quit(); // fail so reset game stuff
 	}
+}
+
+void D_InitialState(void)
+{
+	INT32 i;
+
+#ifdef DELFILE
+	// Delete all skins.
+	R_DelSkins();
+#endif
+
+	// Stop all sound effects.
+	for (i = 0; i < NUMSFX; i++)
+	{
+		if (S_sfx[i].lumpnum != LUMPERROR)
+		{
+			S_StopSoundByNum(i);
+			S_RemoveSoundFx(i);
+			I_FreeSfx(&S_sfx[i]);
+		}
+	}
+
+#ifdef HWRENDER
+	// free OpenGL's texture cache
+	if (rendermode == render_opengl)
+		HWR_FreeTextureCache();
+#endif
+
+#ifdef HAVE_BLUA
+	// shutdown Lua
+	LUA_Shutdown();
+#endif
+
+	// clear level headers
+	for (i = 0; i < NUMMAPS; i++)
+		P_ClearSingleMapHeaderInfo(i);
+
+	// reload default dehacked-editable variables
+	G_LoadGameSettings();
+
+	// clear game data stuff
+	gamedataloaded = false;
+	G_ClearRecords();
+	M_ClearSecrets();
+
+	// load the default game data
+	G_LoadGameData();
+
+	// Reset DeHackEd (SOC)
+	DEH_Init();
+	P_ResetData(0xFF);
+}
+
+// Reload all files.
+void D_ReloadFiles(void)
+{
+	INT32 i;
+
+	// Set the initial state.
+	D_InitialState();
+
+	// Load SOC and Lua.
+	for (i = 0; i < numwadfiles; i++)
+		W_LoadFileScripts(i, (i < mainwads));
+
+	// Reload textures and sprites.
+	R_LoadTextures();
+	R_InitSprites();
+	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
+
+	// Reload ANIMATED / ANIMDEFS
+	P_InitPicAnims();
+
+	// Flush and reload HUD graphics
+	ST_UnloadGraphics();
+	HU_LoadGraphics();
+	ST_LoadGraphics();
+	ST_ReloadSkinFaceGraphics();
+}
+
+void D_ResetSRB2(void)
+{
+	if (netgame)
+	{
+		CONS_Printf(M_GetText("You can't restart the game while in a netgame.\n"));
+		return;
+	}
+
+	// Save the current configuration file, and the gamedata.
+	D_SaveUserPrefs();
+
+	// We're deleting some files
+	while (numwadfiles > mainwads + 1) // don't delete music.dta
+	{
+		W_ShutdownFile(wadfiles[numwadfiles - 1]);
+		numwadfiles--;
+	}
+
+	// Put everything back on its place
+	D_ReloadFiles();
+
+	// Done. Start the intro.
+	F_StartIntro();
+}
+
+void D_FollowFileDeletion(void)
+{
+	if (!Playing())
+	{
+		if (gamestate == GS_TITLESCREEN)
+			F_CacheTitleScreen();
+		return;
+	}
+
+	// reset the map
+	if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION)
+	{
+		ST_Start();
+		// load MAP01 if the current map doesn't exist anymore
+		if (W_CheckNumForName(G_BuildMapName(gamemap)) == LUMPERROR)
+			gamemap = 1;
+		// same deal for nextmap
+		if (W_CheckNumForName(G_BuildMapName(nextmap+1)) == LUMPERROR)
+			nextmap = 0;
+		// ...and nextmapoverride
+		if (W_CheckNumForName(G_BuildMapName(nextmapoverride)) == LUMPERROR)
+			nextmapoverride = 1;
+		if (gamestate == GS_INTERMISSION)
+		{
+			Y_EndIntermission();
+			G_AfterIntermission();
+		}
+		else
+			G_DoLoadLevel(true);
+		return;
+	}
+
+	if (!(netgame || splitscreen))
+		F_StartIntro();
+	else if (server)
+		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+}
+
+// Save the current configuration file, and the gamedata.
+void D_SaveUserPrefs(void)
+{
+	M_SaveConfig(NULL);
+	G_SaveGameData();
 }
 
 const char *D_Home(void)
