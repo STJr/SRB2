@@ -30,6 +30,7 @@ typedef enum
 void DEH_LoadDehackedLump(lumpnum_t lumpnum);
 void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile);
 
+void DEH_Init(void);
 void DEH_Check(void);
 
 fixed_t get_number(const char *word);

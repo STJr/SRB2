@@ -58,11 +58,6 @@ int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 static char *FREE_STATES[NUMSTATEFREESLOTS];
 static char *FREE_MOBJS[NUMMOBJFREESLOTS];
 static UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
-#define initfreeslots() {\
-memset(FREE_STATES,0,sizeof(char *) * NUMSTATEFREESLOTS);\
-memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);\
-memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));\
-}
 
 // Crazy word-reading stuff
 /// \todo Put these in a seperate file or something.
@@ -4378,7 +4373,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	INT32 i;
 
 	if (!deh_loaded)
-		initfreeslots();
+		DEH_Init();
 
 	deh_num_warning = 0;
 
@@ -4832,6 +4827,14 @@ void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile)
 void DEH_LoadDehackedLump(lumpnum_t lumpnum)
 {
 	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum), false);
+}
+
+void DEH_Init(void)
+{
+	deh_loaded = false;
+	memset(FREE_STATES,0,sizeof(char *) * NUMSTATEFREESLOTS);
+	memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);
+	memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
