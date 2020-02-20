@@ -113,15 +113,18 @@ wadfile_t *wadfiles[MAX_WADFILES]; // 0 to numwadfiles-1 are valid
 void W_Shutdown(void)
 {
 	while (numwadfiles--)
-	{
-		fclose(wadfiles[numwadfiles]->handle);
-		Z_Free(wadfiles[numwadfiles]->filename);
-		while (wadfiles[numwadfiles]->numlumps--)
-			Z_Free(wadfiles[numwadfiles]->lumpinfo[wadfiles[numwadfiles]->numlumps].name2);
+		W_ShutdownFile(wadfiles[numwadfiles]);
+}
 
-		Z_Free(wadfiles[numwadfiles]->lumpinfo);
-		Z_Free(wadfiles[numwadfiles]);
-	}
+void W_ShutdownFile(wadfile_t *wadfile)
+{
+	fclose(wadfile->handle);
+	Z_Free(wadfile->filename);
+	while (wadfile->numlumps--)
+		Z_Free(wadfile->lumpinfo[wadfiles[numwadfiles]->numlumps].name2);
+
+	Z_Free(wadfile->lumpinfo);
+	Z_Free(wadfile);
 }
 
 //===========================================================================
