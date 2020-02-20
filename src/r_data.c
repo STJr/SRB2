@@ -944,6 +944,9 @@ void R_LoadTextures(void)
 	// but the alternative is to spend a ton of time checking and re-checking all previous entries just to skip any potentially patched textures.
 	for (w = 0, numtextures = 0; w < numwadfiles; w++)
 	{
+		if (!W_IsFilePresent(w))
+			continue;
+
 #ifdef WALLFLATS
 		// Count flats
 		if (wadfiles[w]->type == RET_PK3)
@@ -1042,6 +1045,8 @@ void R_LoadTextures(void)
 
 	for (i = 0, w = 0; w < numwadfiles; w++)
 	{
+		if (!W_IsFilePresent(w))
+			continue;
 #ifdef WALLFLATS
 		i = Rloadflats(i, w);
 #endif
@@ -1547,6 +1552,9 @@ static void R_InitExtraColormaps(void)
 
 	for (cfile = clump = 0; cfile < numwadfiles; cfile++, clump = 0)
 	{
+		if (!W_IsFilePresent(cfile))
+			continue;
+
 		startnum = W_CheckNumForNamePwad("C_START", cfile, clump);
 		if (startnum == INT16_MAX)
 			continue;
@@ -1584,6 +1592,8 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 	// Scan wad files backwards so patched flats take preference.
 	for (i = numwadfiles - 1; i >= 0; i--)
 	{
+		if (!W_IsFilePresent(i))
+			continue;
 		switch (wadfiles[i]->type)
 		{
 		case RET_WAD:

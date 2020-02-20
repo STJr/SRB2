@@ -109,6 +109,9 @@ UINT8 *PutFileNeeded(void)
 
 	for (i = 0; i < numwadfiles; i++)
 	{
+		if (!W_IsFilePresent(i))
+			continue;
+
 		// If it has only music/sound lumps, don't put it in the list
 		if (!wadfiles[i]->important)
 			continue;
@@ -341,6 +344,12 @@ INT32 CL_CheckFiles(void)
 		CONS_Debug(DBG_NETPLAY, "game is modified; only doing basic checks\n");
 		for (i = 1, j = 1; i < fileneedednum || j < numwadfiles;)
 		{
+			if (!W_IsFilePresent(j))
+			{
+				++j;
+				continue;
+			}
+
 			if (j < numwadfiles && !wadfiles[j]->important)
 			{
 				// Unimportant on our side.
@@ -376,6 +385,8 @@ INT32 CL_CheckFiles(void)
 		// Check in already loaded files
 		for (j = 1; wadfiles[j]; j++)
 		{
+			if (!W_IsFilePresent(j))
+				continue;
 			nameonly(strcpy(wadfilename, wadfiles[j]->filename));
 			if (!stricmp(wadfilename, fileneeded[i].filename) &&
 				!memcmp(wadfiles[j]->md5sum, fileneeded[i].md5sum, 16))

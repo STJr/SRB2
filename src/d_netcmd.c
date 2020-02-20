@@ -3318,6 +3318,8 @@ static void Command_Addfile(void)
 
 		for (i = 0; i < numwadfiles; i++)
 		{
+			if (!W_IsFilePresent(i))
+				continue;
 			if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 			{
 				CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
@@ -3453,6 +3455,8 @@ static void Command_ListWADS_f(void)
 	CONS_Printf(M_GetText("There are %d wads loaded:\n"),numwadfiles);
 	for (i--; i >= 0; i--)
 	{
+		if (!W_IsFilePresent(i))
+			continue;
 		nameonly(tempname = va("%s", wadfiles[i]->filename));
 		if (!i)
 			CONS_Printf("\x82 IWAD\x80: %s\n", tempname);
