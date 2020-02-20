@@ -4110,7 +4110,10 @@ void G_LoadGameSettings(void)
 	maxXtraLife = 2; // Max extra lives from rings
 
 	titlemap = 0;
+	titlescrollxspeed = 20;
+	titlescrollyspeed = 0;
 	ttmode = TTMODE_OLD;
+
 	hidetitlepics = false;
 	looptitle = false;
 	introtoplay = 0;
