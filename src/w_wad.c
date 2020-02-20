@@ -122,7 +122,7 @@ void W_ShutdownFile(wadfile_t *wadfile)
 	fclose(wadfile->handle);
 	Z_Free(wadfile->filename);
 	while (wadfile->numlumps--)
-		Z_Free(wadfile->lumpinfo[wadfiles[numwadfiles]->numlumps].name2);
+		Z_Free(wadfile->lumpinfo[wadfile->numlumps].name2);
 
 	Z_Free(wadfile->lumpinfo);
 	Z_Free(wadfile);
@@ -908,6 +908,7 @@ void W_UnloadWadFile(UINT16 num)
 	// Delete the file
 	W_ShutdownFile(wadfiles[num]);
 	W_InvalidateLumpnumCache();
+	wadfiles[num] = NULL;
 
 	// Set the initial state and reload files.
 	D_ReloadFiles();

@@ -1565,6 +1565,7 @@ void D_ResetSRB2(void)
 	while (numwadfiles > mainwads + 1) // don't delete music.dta
 	{
 		W_ShutdownFile(wadfiles[numwadfiles - 1]);
+		wadfiles[numwadfiles - 1] = NULL;
 		numwadfiles--;
 	}
 
