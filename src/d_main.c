@@ -1230,20 +1230,6 @@ void D_SRB2Main(void)
 
 	mainwadstally = packetsizetally; // technically not accurate atm, remember to port the two-stage -file process from kart in 2.2.x
 
-	if (M_CheckParm("-warp") && M_IsNextParm())
-	{
-		const char *word = M_GetNextParm();
-		pstartmap = G_FindMapByNameOrCode(word, 0);
-		if (! pstartmap)
-			I_Error("Cannot find a map remotely named '%s'\n", word);
-		else
-		{
-			if (!M_CheckParm("-server"))
-				G_SetGameModified(true);
-			autostart = true;
-		}
-	}
-
 	cht_Init();
 
 	//---------------------------------------------------- READY SCREEN
@@ -1306,6 +1292,22 @@ void D_SRB2Main(void)
 	savedata.lives = 0; // flag this as not-used
 
 	//------------------------------------------------ COMMAND LINE PARAMS
+
+	// this must be done after loading gamedata, to avoid setting off the corrupted gamedata flag in G_LoadGameData
+	// -- Monster Iestyn 20/02/20
+	if (M_CheckParm("-warp") && M_IsNextParm())
+	{
+		const char *word = M_GetNextParm();
+		pstartmap = G_FindMapByNameOrCode(word, 0);
+		if (! pstartmap)
+			I_Error("Cannot find a map remotely named '%s'\n", word);
+		else
+		{
+			if (!M_CheckParm("-server"))
+				G_SetGameModified(true);
+			autostart = true;
+		}
+	}
 
 	// Initialize CD-Audio
 	if (M_CheckParm("-usecd") && !dedicated)
