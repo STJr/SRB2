@@ -1551,7 +1551,10 @@ void D_InitialState(void)
 #endif
 
 #ifdef HAVE_BLUA
-	// shutdown Lua
+	// delete Lua-added console commands and variables
+	COM_RemoveLuaCommands();
+
+	// Shutdown Lua
 	LUA_Shutdown();
 #endif
 

@@ -38,6 +38,7 @@ typedef void (*com_func_t)(void);
 
 void COM_AddCommand(const char *name, com_func_t func);
 int COM_AddLuaCommand(const char *name);
+void COM_RemoveLuaCommands(void);
 
 size_t COM_Argc(void);
 const char *COM_Argv(size_t arg); // if argv > argc, returns empty string
@@ -118,7 +119,8 @@ typedef enum
 	                 // can only be set when we have the pointer to it
                    // used on menus
 	CV_CHEAT = 2048, // Don't let this be used in multiplayer unless cheats are on.
-	CV_NOLUA = 4096,/* don't let this be called from Lua */
+	CV_NOLUA = 4096, // Don't let this be called from Lua
+	CV_LUAVAR = 8192, // Lua console variable
 } cvflags_t;
 
 typedef struct CV_PossibleValue_s

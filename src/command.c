@@ -295,6 +295,9 @@ typedef struct xcommand_s
 	const char *name;
 	struct xcommand_s *next;
 	com_func_t function;
+	com_func_t basefunction;
+	boolean luacmd;
+	boolean replaced;
 } xcommand_t;
 
 static xcommand_t *com_commands = NULL; // current commands
@@ -497,7 +500,10 @@ void COM_AddCommand(const char *name, com_func_t func)
 	cmd = ZZ_Alloc(sizeof *cmd);
 	cmd->name = name;
 	cmd->function = func;
+	cmd->basefunction = func;
 	cmd->next = com_commands;
+	cmd->luacmd = false;
+	cmd->replaced = false;
 	com_commands = cmd;
 }
 
@@ -522,6 +528,8 @@ int COM_AddLuaCommand(const char *name)
 		{
 			// replace the built in command.
 			cmd->function = COM_Lua_f;
+			cmd->replaced = true;
+			cmd->luacmd = true;
 			return 1;
 		}
 	}
@@ -533,6 +541,92 @@ int COM_AddLuaCommand(const char *name)
 	cmd->next = com_commands;
 	com_commands = cmd;
 	return 0;
+}
+
+/** Delete Lua-defined CCMDs and CVARs.
+  */
+void COM_RemoveLuaCommands(void)
+{
+	consvar_t *cvar, *prevcvar = NULL;
+	xcommand_t *cmd, *prevcmd = NULL;
+
+	cvar = consvar_vars;
+	while (cvar)
+	{
+		if (cvar->flags & CV_LUAVAR)
+		{
+			// head
+			if (cvar == consvar_vars)
+				consvar_vars = cvar->next;
+			if (prevcvar && prevcvar->next == cvar)
+				prevcvar->next = cvar->next;
+		}
+		prevcvar = cvar;
+		cvar = cvar->next;
+	}
+
+	// Fix the tail
+	if (prevcvar->flags & CV_LUAVAR)
+	{
+		cvar = consvar_vars;
+		while (cvar)
+		{
+			if (cvar->next == prevcvar)
+			{
+				cvar->next = NULL;
+				break;
+			}
+			cvar = cvar->next;
+		}
+	}
+
+	cmd = com_commands;
+	while (cmd)
+	{
+		if (cmd->luacmd)
+		{
+			if (cmd->replaced)
+			{
+				cmd->function = cmd->basefunction;
+				cmd->luacmd = false;
+				cmd->replaced = false;
+			}
+			else
+			{
+				// head
+				if (cmd == com_commands)
+					com_commands = cmd->next;
+				if (prevcmd && prevcmd->next == cmd)
+					prevcmd->next = cmd->next;
+			}
+		}
+		prevcmd = cmd;
+		cmd = cmd->next;
+	}
+
+	// Fix the tail
+	if (prevcmd->luacmd)
+	{
+		if (prevcmd->replaced)
+		{
+			prevcmd->function = prevcmd->basefunction;
+			prevcmd->luacmd = false;
+			prevcmd->replaced = false;
+		}
+		else
+		{
+			cmd = com_commands;
+			while (cmd)
+			{
+				if (cmd->next == prevcmd)
+				{
+					cmd->next = NULL;
+					break;
+				}
+				cmd = cmd->next;
+			}
+		}
+	}
 }
 #endif
 
