@@ -44,6 +44,7 @@ void ST_LoadGraphics(void);
 // face load graphics, called when skin changes
 void ST_LoadFaceGraphics(INT32 playernum);
 void ST_ReloadSkinFaceGraphics(void);
+void ST_UnLoadFaceGraphics(INT32 skinnum);
 
 void ST_doPaletteStuff(void);
 

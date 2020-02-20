@@ -380,6 +380,12 @@ void ST_ReloadSkinFaceGraphics(void)
 		ST_LoadFaceGraphics(i);
 }
 
+void ST_UnLoadFaceGraphics(INT32 skinnum)
+{
+	W_UnlockCachedPatch(faceprefix[skinnum]);
+	W_UnlockCachedPatch(superprefix[skinnum]);
+}
+
 static inline void ST_InitData(void)
 {
 	// 'link' the statusbar display to a player, which could be

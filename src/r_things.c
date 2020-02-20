@@ -3783,3 +3783,38 @@ next_token:
 
 #undef HUDNAMEWRITE
 #undef SYMBOLCONVERT
+
+void R_DelSkins(void)
+{
+	size_t i, j;
+
+	for (i = 0; i < MAXSKINS; i++)
+	{
+		ST_UnLoadFaceGraphics(i);
+
+		for (j = 0; j < 32; j++)
+		{
+			if (!stricmp(skins[i].name, description[j].skinname))
+			{
+				memset(description[j].skinname, 0, SKINNAMESIZE*2+2);
+				break;
+			}
+		}
+
+		for (j = 0; j < MAXPLAYERS; j++)
+		{
+			if (playeringame[j])
+			{
+				player_t *player = &players[j];
+				skin_t *skin = player->mo->skin;
+				if (!stricmp(skins[i].name, skin->name))
+					SetPlayerSkinByNum(j, 0);
+			}
+		}
+
+		numskins--;
+		CONS_Printf(M_GetText("Removed skin '%s'\n"), skins[i].name);
+	}
+
+	M_InitCharacterTables();
+}
