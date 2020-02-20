@@ -1038,9 +1038,9 @@ void Got_Filetxpak(void)
 #ifdef HAVE_BLUA
 			if (luafiletransfers)
 			{
-                // Tell the server we have received the file
-                netbuffer->packettype = PT_HASLUAFILE;
-                HSendPacket(servernode, true, 0, 0);
+				// Tell the server we have received the file
+				netbuffer->packettype = PT_HASLUAFILE;
+				HSendPacket(servernode, true, 0, 0);
 			}
 #endif
 		}
