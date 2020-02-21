@@ -26,6 +26,7 @@ extern INT32 centerx, centery;
 
 extern fixed_t centerxfrac, centeryfrac;
 extern fixed_t projection, projectiony;
+extern fixed_t fovtan; // field of view
 
 extern size_t validcount, linecount, loopcount, framecount;
 
@@ -44,6 +45,8 @@ extern size_t validcount, linecount, loopcount, framecount;
 #define LIGHTSCALESHIFT 12
 #define MAXLIGHTZ 128
 #define LIGHTZSHIFT 20
+
+#define LIGHTRESOLUTIONFIX (640*fovtan/vid.width)
 
 extern lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 extern lighttable_t *scalelightfixed[MAXLIGHTSCALE];
@@ -90,6 +93,9 @@ void R_Init(void);
 void R_InitHardwareMode(void);
 #endif
 void R_ReloadHUDGraphics(void);
+
+void R_CheckViewMorph(void);
+void R_ApplyViewMorph(void);
 
 // just sets setsizeneeded true
 extern boolean setsizeneeded;

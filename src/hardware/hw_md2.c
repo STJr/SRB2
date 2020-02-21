@@ -476,8 +476,9 @@ void HWR_InitModels(void)
 	size_t i;
 	INT32 s;
 	FILE *f;
-	char name[18], filename[32];
+	char name[24], filename[32];
 	float scale, offset;
+	size_t prefixlen;
 
 	CONS_Printf("HWR_InitModels()...\n");
 	for (s = 0; s < MAXSKINS; s++)
@@ -509,46 +510,54 @@ void HWR_InitModels(void)
 		nomd2s = true;
 		return;
 	}
-	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
+
+	// length of the player model prefix
+	prefixlen = strlen(PLAYERMODELPREFIX);
+
+	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
-		if (stricmp(name, "PLAY") == 0)
+		char *skinname = name;
+		size_t len = strlen(name);
+
+		// check for the player model prefix.
+		if (!strnicmp(name, PLAYERMODELPREFIX, prefixlen) && (len > prefixlen))
 		{
-			CONS_Printf("Model for sprite PLAY detected in models.dat, use a player skin instead!\n");
-			continue;
+			skinname += prefixlen;
+			goto addskinmodel;
 		}
 
-		for (i = 0; i < NUMSPRITES; i++)
+		// add sprite model
+		if (len == 4) // must be 4 characters long exactly. otherwise it's not a sprite name.
 		{
-			if (stricmp(name, sprnames[i]) == 0)
+			for (i = 0; i < NUMSPRITES; i++)
 			{
-				//if (stricmp(name, "PLAY") == 0)
-					//continue;
-
-				//CONS_Debug(DBG_RENDER, "  Found: %s %s %f %f\n", name, filename, scale, offset);
-				md2_models[i].scale = scale;
-				md2_models[i].offset = offset;
-				md2_models[i].notfound = false;
-				strcpy(md2_models[i].filename, filename);
-				goto md2found;
+				if (stricmp(name, sprnames[i]) == 0)
+				{
+					md2_models[i].scale = scale;
+					md2_models[i].offset = offset;
+					md2_models[i].notfound = false;
+					strcpy(md2_models[i].filename, filename);
+					goto modelfound;
+				}
 			}
 		}
 
+addskinmodel:
+		// add player model
 		for (s = 0; s < MAXSKINS; s++)
 		{
-			if (stricmp(name, skins[s].name) == 0)
+			if (stricmp(skinname, skins[s].name) == 0)
 			{
-				//CONS_Printf("  Found: %s %s %f %f\n", name, filename, scale, offset);
 				md2_playermodels[s].skin = s;
 				md2_playermodels[s].scale = scale;
 				md2_playermodels[s].offset = offset;
 				md2_playermodels[s].notfound = false;
 				strcpy(md2_playermodels[s].filename, filename);
-				goto md2found;
+				goto modelfound;
 			}
 		}
-		// no sprite/player skin name found?!?
-		//CONS_Printf("Unknown sprite/player skin %s detected in models.dat\n", name);
-md2found:
+
+modelfound:
 		// move on to next line...
 		continue;
 	}
@@ -558,8 +567,9 @@ md2found:
 void HWR_AddPlayerModel(int skin) // For skins that were added after startup
 {
 	FILE *f;
-	char name[18], filename[32];
+	char name[24], filename[32];
 	float scale, offset;
+	size_t prefixlen;
 
 	if (nomd2s)
 		return;
@@ -577,32 +587,42 @@ void HWR_AddPlayerModel(int skin) // For skins that were added after startup
 		return;
 	}
 
-	// Check for any model that match the names of player skins!
-	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
+	// length of the player model prefix
+	prefixlen = strlen(PLAYERMODELPREFIX);
+
+	// Check for any models that match the names of player skins!
+	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
-		if (stricmp(name, skins[skin].name) == 0)
+		char *skinname = name;
+		size_t len = strlen(name);
+
+		// ignore the player model prefix.
+		if (!strnicmp(name, PLAYERMODELPREFIX, prefixlen) && (len > prefixlen))
+			skinname += prefixlen;
+
+		if (stricmp(skinname, skins[skin].name) == 0)
 		{
 			md2_playermodels[skin].skin = skin;
 			md2_playermodels[skin].scale = scale;
 			md2_playermodels[skin].offset = offset;
 			md2_playermodels[skin].notfound = false;
 			strcpy(md2_playermodels[skin].filename, filename);
-			goto playermd2found;
+			goto playermodelfound;
 		}
 	}
 
-	//CONS_Printf("Model for player skin %s not found\n", skins[skin].name);
 	md2_playermodels[skin].notfound = true;
-playermd2found:
+playermodelfound:
 	fclose(f);
 }
 
 void HWR_AddSpriteModel(size_t spritenum) // For sprites that were added after startup
 {
 	FILE *f;
-	// name[18] is used to check for names in the models.dat file that match with sprites or player skins
+	// name[24] is used to check for names in the models.dat file that match with sprites or player skins
 	// sprite names are always 4 characters long, and names is for player skins can be up to 19 characters long
-	char name[18], filename[32];
+	// PLAYERMODELPREFIX is 6 characters long
+	char name[24], filename[32];
 	float scale, offset;
 
 	if (nomd2s)
@@ -622,22 +642,30 @@ void HWR_AddSpriteModel(size_t spritenum) // For sprites that were added after s
 		return;
 	}
 
-	// Check for any MD2s that match the names of sprite names!
-	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
+	// Check for any models that match the names of sprite names!
+	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
+		// length of the sprite name
+		size_t len = strlen(name);
+		if (len != 4) // must be 4 characters long exactly. otherwise it's not a sprite name.
+			continue;
+
+		// check for the player model prefix.
+		if (!strnicmp(name, PLAYERMODELPREFIX, strlen(PLAYERMODELPREFIX)))
+			continue; // that's not a sprite...
+
 		if (stricmp(name, sprnames[spritenum]) == 0)
 		{
 			md2_models[spritenum].scale = scale;
 			md2_models[spritenum].offset = offset;
 			md2_models[spritenum].notfound = false;
 			strcpy(md2_models[spritenum].filename, filename);
-			goto spritemd2found;
+			goto spritemodelfound;
 		}
 	}
 
-	//CONS_Printf("MD2 for sprite %s not found\n", sprnames[spritenum]);
 	md2_models[spritenum].notfound = true;
-spritemd2found:
+spritemodelfound:
 	fclose(f);
 }
 
@@ -1020,31 +1048,12 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	// mostly copied from HWR_GetMappedPatch, hence the similarities and comment
 	GLMipmap_t *grmip, *newmip;
 
-	if ((colormap == colormaps || colormap == NULL) && (skinnum > TC_DEFAULT))
+	if (colormap == colormaps || colormap == NULL)
 	{
 		// Don't do any blending
 		HWD.pfnSetTexture(gpatch->mipmap);
 		return;
 	}
-
-	// search for the mipmap
-	// skip the first (no colormap translated)
-	for (grmip = gpatch->mipmap; grmip->nextcolormap; )
-	{
-		grmip = grmip->nextcolormap;
-		if (grmip->colormap == colormap || (skinnum < TC_DEFAULT && grmip->tcindex == skinnum))
-		{
-			if (grmip->downloaded && grmip->grInfo.data)
-			{
-				HWD.pfnSetTexture(grmip); // found the colormap, set it to the correct texture
-				Z_ChangeTag(grmip->grInfo.data, PU_HWRMODELTEXTURE);
-				return;
-			}
-		}
-	}
-
-	// If here, the blended texture has not been created
-	// So we create it
 
 	if ((blendgpatch && blendgpatch->mipmap->grInfo.format)
 		&& (gpatch->width != blendgpatch->width || gpatch->height != blendgpatch->height))
@@ -1054,21 +1063,39 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 		return;
 	}
 
+	// search for the mipmap
+	// skip the first (no colormap translated)
+	for (grmip = gpatch->mipmap; grmip->nextcolormap; )
+	{
+		grmip = grmip->nextcolormap;
+		if (grmip->colormap == colormap)
+		{
+			if (grmip->downloaded && grmip->grInfo.data)
+			{
+				HWD.pfnSetTexture(grmip); // found the colormap, set it to the correct texture
+				Z_ChangeTag(grmip->grInfo.data, PU_HWRMODELTEXTURE_UNLOCKED);
+				return;
+			}
+		}
+	}
+
+	// If here, the blended texture has not been created
+	// So we create it
+
 	//BP: WARNING: don't free it manually without clearing the cache of harware renderer
 	//              (it have a liste of mipmap)
 	//    this malloc is cleared in HWR_FreeTextureCache
 	//    (...) unfortunately z_malloc fragment alot the memory :(so malloc is better
 	newmip = calloc(1, sizeof (*newmip));
 	if (newmip == NULL)
-		I_Error("%s: Out of memory", "HWR_GetMappedPatch");
+		I_Error("%s: Out of memory", "HWR_GetBlendedTexture");
 	grmip->nextcolormap = newmip;
 	newmip->colormap = colormap;
-	newmip->tcindex = skinnum;
 
 	HWR_CreateBlendedTexture(gpatch, blendgpatch, newmip, skinnum, color);
 
 	HWD.pfnSetTexture(newmip);
-	Z_ChangeTag(newmip->grInfo.data, PU_HWRMODELTEXTURE);
+	Z_ChangeTag(newmip->grInfo.data, PU_HWRMODELTEXTURE_UNLOCKED);
 }
 
 #define NORMALFOG 0x00000000
@@ -1298,7 +1325,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 
 		if (gpatch && gpatch->mipmap->grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
-			INT32 skinnum = INT32_MAX;
+			INT32 skinnum = TC_DEFAULT;
 
 			if ((spr->mobj->flags & (MF_ENEMY|MF_BOSS)) && (spr->mobj->flags2 & MF2_FRET) && !(spr->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 			{
@@ -1329,15 +1356,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 			}
 
 			// Translation or skin number found
-			if (skinnum != INT32_MAX)
-			{
-				HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, skinnum, spr->colormap, (skincolors_t)spr->mobj->color);
-			}
-			else
-			{
-				// Sorry nothing
-				HWD.pfnSetTexture(gpatch->mipmap);
-			}
+			HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, skinnum, spr->colormap, (skincolors_t)spr->mobj->color);
 		}
 		else
 		{

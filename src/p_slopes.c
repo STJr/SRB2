@@ -726,6 +726,9 @@ void P_SlopeLaunch(mobj_t *mo)
 
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
+
+	if (mo->player)
+		mo->player->powers[pw_justlaunched] = 1;
 }
 
 //

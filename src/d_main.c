@@ -188,13 +188,13 @@ void D_ProcessEvents(void)
 				continue;
 		}
 
-		// console input
-		if (CON_Responder(ev))
-			continue; // ate the event
-
 		// Menu input
 		if (M_Responder(ev))
 			continue; // menu ate the event
+
+		// console input
+		if (CON_Responder(ev))
+			continue; // ate the event
 
 		G_Responder(ev);
 	}
@@ -265,6 +265,9 @@ static void D_Display(void)
 			usebuffer = false;
 #endif
 	}
+
+	if (rendermode == render_soft && !splitscreen)
+		R_CheckViewMorph();
 
 	// change the view size if needed
 	if (setsizeneeded || setrenderstillneeded)
@@ -446,6 +449,9 @@ static void D_Display(void)
 				// Image postprocessing effect
 				if (rendermode == render_soft)
 				{
+					if (!splitscreen)
+						R_ApplyViewMorph();
+
 					if (postimgtype)
 						V_DoPostProcessor(0, postimgtype, postimgparam);
 					if (postimgtype2)
@@ -502,11 +508,12 @@ static void D_Display(void)
 	// vid size change is now finished if it was on...
 	vid.recalc = 0;
 
-	M_Drawer(); // menu is drawn even on top of everything
-	// focus lost moved to M_Drawer
-
+	// FIXME: draw either console or menu, not the two
 	if (gamestate != GS_TIMEATTACK)
 		CON_Drawer();
+
+	M_Drawer(); // menu is drawn even on top of everything
+	// focus lost moved to M_Drawer
 
 	//
 	// wipe update
@@ -1205,15 +1212,10 @@ void D_SRB2Main(void)
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
-	if (!W_InitMultipleFiles(startupwadfiles, mainwads))
-#ifdef _DEBUG
-		CONS_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
-#else
-		I_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
-#endif
+	W_InitMultipleFiles(startupwadfiles, mainwads);
 	D_CleanFile();
 
-#ifndef DEVELOP // md5s last updated 06/12/19 (ddmmyy)
+#ifndef DEVELOP // md5s last updated 16/02/20 (ddmmyy)
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3
@@ -1290,12 +1292,14 @@ void D_SRB2Main(void)
 	// Lactozilla: Does the render mode need to change?
 	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
 	{
+		CONS_Printf("Switching the renderer...\n");
 		needpatchflush = true;
 		needpatchrecache = true;
 		VID_CheckRenderer();
 		SCR_ChangeRendererCVars(setrenderneeded);
+		D_CheckRendererState();
+		setrenderneeded = 0;
 	}
-	D_CheckRendererState();
 
 	wipegamestate = gamestate;
 

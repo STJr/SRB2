@@ -53,11 +53,14 @@ typedef struct
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
 
+#define CMF_FADEFULLBRIGHTSPRITES  1
+#define CMF_FOG 4
+
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s
 {
 	UINT8 fadestart, fadeend;
-	UINT8 fog; // categorical value, not boolean
+	UINT8 flags;
 
 	// store rgba values in combined bitwise
 	// also used in OpenGL instead lighttables

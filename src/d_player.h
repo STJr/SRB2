@@ -278,6 +278,7 @@ typedef enum
 	pw_nights_linkfreeze,
 
 	pw_nocontrol, //for linedef exec 427
+	pw_justlaunched, // Launched off a slope this tic (0=none, 1=standard launch, 2=half-pipe launch)
 
 	NUMPOWERS
 } powertype_t;
@@ -323,6 +324,8 @@ typedef struct player_s
 	fixed_t deltaviewheight;
 	// bounded/scaled total momentum.
 	fixed_t bob;
+
+	angle_t viewrollangle;
 
 	// Mouse aiming, where the guy is looking at!
 	// It is updated with cmd->aiming.
