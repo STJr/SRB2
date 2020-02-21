@@ -98,7 +98,7 @@ INT32 lastfilenum = -1;
 #ifdef HAVE_BLUA
 luafiletransfer_t *luafiletransfers = NULL;
 boolean waitingforluafiletransfer = false;
-char luafiledir[MAX_WADPATH] = "luafiles";
+char luafiledir[256 + 16] = "luafiles";
 #endif
 
 
