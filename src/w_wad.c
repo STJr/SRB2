@@ -1481,7 +1481,7 @@ void W_FlushCachedPatches(void)
 		Z_FreeTag(PU_HWRPATCHINFO);
 		Z_FreeTag(PU_HWRMODELTEXTURE);
 		Z_FreeTag(PU_HWRCACHE);
-		Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRPATCHINFO_UNLOCKED);
+		Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRMODELTEXTURE_UNLOCKED);
 	}
 	needpatchflush = false;
 }
