@@ -803,9 +803,11 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"RESYNCHEND",
 	"RESYNCHGET",
 
+#ifdef HAVE_BLUA
 	"SENDINGLUAFILE",
 	"ASKLUAFILE",
 	"HASLUAFILE",
+#endif
 
 	"FILEFRAGMENT",
 	"TEXTCMD",
