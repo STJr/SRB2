@@ -1129,7 +1129,7 @@ void D_SRB2Main(void)
 #ifdef HAVE_BLUA
 			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", srb2home);
 #endif
-#else/*DEFAULTDIR*/
+#else // DEFAULTDIR
 			snprintf(srb2home, sizeof srb2home, "%s", userhome);
 			snprintf(downloaddir, sizeof downloaddir, "%s", userhome);
 			if (dedicated)
@@ -1143,7 +1143,7 @@ void D_SRB2Main(void)
 #ifdef HAVE_BLUA
 			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", userhome);
 #endif
-#endif/*DEFAULTDIR*/
+#endif // DEFAULTDIR
 		}
 
 		configfile[sizeof configfile - 1] = '\0';
