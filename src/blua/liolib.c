@@ -34,7 +34,6 @@
 #define FMT_FILECALLBACKID "file_callback_%d"
 
 
-static const char *const fnames[] = {"input", "output"};
 static const char *whitelist[] = { // Allow scripters to write files of these types to SRB2's folder
 	".bmp",
 	".cfg",
@@ -230,6 +229,7 @@ static int io_openlocal (lua_State *L) {
 	FILE **pf;
 	const char *filename = luaL_checkstring(L, 1);
 	const char *mode = luaL_optstring(L, 2, "r");
+	char *realfilename;
 	luafiletransfer_t *filetransfer;
 	int checkresult;
 
@@ -237,7 +237,7 @@ static int io_openlocal (lua_State *L) {
 	if (checkresult)
 		return checkresult;
 
-	char *realfilename = va("%s" PATHSEP "%s", luafiledir, filename);
+	realfilename = va("%s" PATHSEP "%s", luafiledir, filename);
 
 	if (client && strnicmp(filename, "client/", strlen("client/")))
 		I_Error("Access denied to %s\n"
