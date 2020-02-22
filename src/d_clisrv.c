@@ -4925,13 +4925,7 @@ void NetUpdate(void)
 
 	if (realtics <= 0) // nothing new to update
 		return;
-	if (realtics > 5)
-	{
-		if (server)
-			realtics = 1;
-		else
-			realtics = 5;
-	}
+	realtics = 1;
 
 	gametime = nowtime;
 
