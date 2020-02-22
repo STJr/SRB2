@@ -670,7 +670,9 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	wadfile_t *wadfile;
 	restype_t type;
 	UINT16 numlumps = 0;
+#ifndef NOMD5
 	size_t i;
+#endif
 	size_t packetsize;
 	UINT8 md5sum[16];
 	boolean important;
