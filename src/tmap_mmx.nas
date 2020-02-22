@@ -1,7 +1,7 @@
 ;; SONIC ROBO BLAST 2
 ;;-----------------------------------------------------------------------------
 ;; Copyright (C) 1998-2000 by DOSDOOM.
-;; Copyright (C) 2010-2019 by Sonic Team Junior.
+;; Copyright (C) 2010-2020 by Sonic Team Junior.
 ;;
 ;; This program is free software distributed under the
 ;; terms of the GNU General Public License, version 2.
