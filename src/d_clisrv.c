@@ -1289,6 +1289,37 @@ static boolean CL_SendJoin(void)
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
 
+static INT32 FindRejoinerNum(SINT8 node)
+{
+	char strippednodeaddress[64];
+	const char *nodeaddress;
+	char *port;
+	INT32 i;
+
+	// Make sure there is no dead dress before proceeding to the stripping
+	if (!I_GetNodeAddress)
+		return -1;
+	nodeaddress = I_GetNodeAddress(node);
+	if (!nodeaddress)
+		return -1;
+
+	// Strip the address of its port
+	strcpy(strippednodeaddress, nodeaddress);
+	port = strchr(strippednodeaddress, ':');
+	if (port)
+		*port = '\0';
+
+	// Check if any player matches the stripped address
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i] && playeraddress[i][0] && playernode[i] == UINT8_MAX
+		&& !strcmp(playeraddress[i], strippednodeaddress))
+			return i;
+	}
+
+	return -1;
+}
+
 static void SV_SendServerInfo(INT32 node, tic_t servertime)
 {
 	UINT8 *p;
@@ -1306,6 +1337,16 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
 	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
+
+	if (FindRejoinerNum(node) != -1)
+		netbuffer->u.serverinfo.refusereason = 0;
+	else if (!cv_allownewplayer.value)
+		netbuffer->u.serverinfo.refusereason = 1;
+	else if (D_NumPlayers() >= cv_maxplayers.value)
+		netbuffer->u.serverinfo.refusereason = 2;
+	else
+		netbuffer->u.serverinfo.refusereason = 0;
+
 	strncpy(netbuffer->u.serverinfo.gametypename, Gametype_Names[gametype],
 			sizeof netbuffer->u.serverinfo.gametypename);
 	netbuffer->u.serverinfo.modifiedgame = (UINT8)modifiedgame;
@@ -1863,12 +1904,17 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 		}
 
 		// Quit here rather than downloading files and being refused later.
-		if (serverlist[i].info.numberofplayer >= serverlist[i].info.maxplayer)
+		if (serverlist[i].info.refusereason)
 		{
 			D_QuitNetGame();
 			CL_Reset();
 			D_StartTitle();
-			M_StartMessage(va(M_GetText("Maximum players reached: %d\n\nPress ESC\n"), serverlist[i].info.maxplayer), NULL, MM_NOTHING);
+			if (serverlist[i].info.refusereason == 1)
+				M_StartMessage(M_GetText("The server is not accepting\njoins for the moment.\n\nPress ESC\n"), NULL, MM_NOTHING);
+			else if (serverlist[i].info.refusereason == 2)
+				M_StartMessage(va(M_GetText("Maximum players reached: %d\n\nPress ESC\n"), serverlist[i].info.maxplayer), NULL, MM_NOTHING);
+			else
+				M_StartMessage(M_GetText("You can't join.\nI don't know why,\nbut you can't join.\n\nPress ESC\n"), NULL, MM_NOTHING);
 			return false;
 		}
 
@@ -3228,37 +3274,6 @@ void D_QuitNetGame(void)
 		debugfile = NULL;
 	}
 #endif
-}
-
-static INT32 FindRejoinerNum(SINT8 node)
-{
-	char strippednodeaddress[64];
-	const char *nodeaddress;
-	char *port;
-	INT32 i;
-
-	// Make sure there is no dead dress before proceeding to the stripping
-	if (!I_GetNodeAddress)
-		return -1;
-	nodeaddress = I_GetNodeAddress(node);
-	if (!nodeaddress)
-		return -1;
-
-	// Strip the address of its port
-	strcpy(strippednodeaddress, nodeaddress);
-	port = strchr(strippednodeaddress, ':');
-	if (port)
-		*port = '\0';
-
-	// Check if any player matches the stripped address
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (playeringame[i] && playeraddress[i][0] && playernode[i] == UINT8_MAX
-		&& !strcmp(playeraddress[i], strippednodeaddress))
-			return i;
-	}
-
-	return -1;
 }
 
 // Adds a node to the game (player will follow at map change or at savegame....)
