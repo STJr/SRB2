@@ -2485,14 +2485,14 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 	if (!playeringame[playernum])
 		return;
 
-	if (server && !demoplayback)
+	if (server && !demoplayback && playernode[playernum] != UINT8_MAX)
 	{
 		INT32 node = playernode[playernum];
 		playerpernode[node]--;
 		if (playerpernode[node] <= 0)
 		{
-			nodeingame[playernode[playernum]] = false;
-			Net_CloseConnection(playernode[playernum]);
+			nodeingame[node] = false;
+			Net_CloseConnection(node);
 			ResetNode(node);
 		}
 	}
@@ -2838,16 +2838,13 @@ static void Command_Kick(void)
 		if (pn == -1 || pn == 0)
 			return;
 
-		if (server)
+		// Special case if we are trying to kick a player who is downloading the game state:
+		// trigger a timeout instead of kicking them, because a kick would only
+		// take effect after they have finished downloading
+		if (server && playernode[pn] != UINT8_MAX && sendingsavegame[playernode[pn]])
 		{
-			// Special case if we are trying to kick a player who is downloading the game state:
-			// trigger a timeout instead of kicking them, because a kick would only
-			// take effect after they have finished downloading
-			if (sendingsavegame[playernode[pn]])
-			{
-				Net_ConnectionTimeout(playernode[pn]);
-				return;
-			}
+			Net_ConnectionTimeout(playernode[pn]);
+			return;
 		}
 
 		WRITESINT8(p, pn);
@@ -2905,7 +2902,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	// Is playernum authorized to make this kick?
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum)
-		&& !(playerpernode[playernode[playernum]] == 2
+		&& !(playernode[playernum] != UINT8_MAX && playerpernode[playernode[playernum]] == 2
 		&& nodetoplayer2[playernode[playernum]] == pnum))
 	{
 		// We received a kick command from someone who isn't the
@@ -3064,7 +3061,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	}
 	else if (keepbody)
 	{
-		if (server && !demoplayback)
+		if (server && !demoplayback && playernode[pnum] != UINT8_MAX)
 		{
 			INT32 node = playernode[pnum];
 			playerpernode[node]--;
@@ -4956,7 +4953,7 @@ void NetUpdate(void)
 			PingUpdate();
 		// update node latency values so we can take an average later.
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (playeringame[i] && playernode[i] != UINT8_MAX)
 				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
