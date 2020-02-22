@@ -3606,7 +3606,7 @@ static void HandleConnect(SINT8 node)
 	rejoinernum = FindRejoinerNum(node);
 
 	if (bannednode && bannednode[node])
-		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server"));
+		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server."));
 	else if (netbuffer->u.clientcfg._255 != 255 ||
 			netbuffer->u.clientcfg.packetversion != PACKETVERSION)
 		SV_SendRefuse(node, "Incompatible packet formats.");
@@ -3617,7 +3617,7 @@ static void HandleConnect(SINT8 node)
 		|| netbuffer->u.clientcfg.subversion != SUBVERSION)
 		SV_SendRefuse(node, va(M_GetText("Different SRB2 versions cannot\nplay a netgame!\n(server version %d.%d.%d)"), VERSION/100, VERSION%100, SUBVERSION));
 	else if (!cv_allownewplayer.value && node && rejoinernum == -1)
-		SV_SendRefuse(node, M_GetText("The server is not accepting\njoins for the moment"));
+		SV_SendRefuse(node, M_GetText("The server is not accepting\njoins for the moment."));
 	else if (D_NumPlayers() >= cv_maxplayers.value && rejoinernum == -1)
 		SV_SendRefuse(node, va(M_GetText("Maximum players reached: %d"), cv_maxplayers.value));
 	else if (netgame && netbuffer->u.clientcfg.localplayers > 1) // Hacked client?
