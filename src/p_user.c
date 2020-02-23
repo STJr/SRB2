@@ -2344,6 +2344,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				if (dorollstuff)
 				{
 					player->skidtime = TICRATE;
+					P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 					player->mo->tics = -1;
 				}
 				else if (!player->skidtime)
@@ -8583,6 +8584,32 @@ static void P_MovePlayer(player_t *player)
 
 		if (!player->skidtime) // TODO: make sure this works in 2D!
 		{
+			/*angle_t anglediff = angle - moveangle;
+			fixed_t scale = mo->scale;
+			fixed_t accelfactor = 4*FRACUNIT - 3*FINECOSINE(((angle-moveangle) >> ANGLETOFINESHIFT) & FINEMASK); // mamgic number BAD but this feels right
+			fixed_t speed = FixedHypot(momx, momy);
+			fixed_t minspeed;
+
+			if (anglediff > ANGLE_180)
+				anglediff = InvAngle(InvAngle(anglediff) >> 4);
+			else
+				anglediff = anglediff >> 4;
+
+			if (mo->eflags & MFE_UNDERWATER)
+				minspeed = FixedMul((glidespeed>>1) + player->glidetime*750, scale);
+			else
+				minspeed = FixedMul(glidespeed + player->glidetime*1500, scale);
+
+			if (speed < minspeed)
+			{
+				momx += P_ReturnThrustX(mo, angle, FixedMul(accelfactor, scale));
+				momy += P_ReturnThrustY(mo, angle, FixedMul(accelfactor, scale));
+				speed = FixedHypot(momx, momy); // recalculate speed
+			}
+
+			mo->momx = P_ReturnThrustX(mo, moveangle + anglediff, speed) + player->cmomx;
+			mo->momy = P_ReturnThrustY(mo, moveangle + anglediff, speed) + player->cmomy;*/
+
 			fixed_t speed, scale = mo->scale;
 			fixed_t newMagnitude, oldMagnitude = R_PointToDist2(momx, momy, 0, 0);
 			fixed_t accelfactor = 4*FRACUNIT - 3*FINECOSINE(((angle-moveangle) >> ANGLETOFINESHIFT) & FINEMASK); // mamgic number BAD but this feels right
