@@ -3096,7 +3096,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !(players[i].spectator && players[i].quittime))
+		if (playeringame[i] && !(players[i].spectator || players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
