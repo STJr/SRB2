@@ -1158,7 +1158,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 	// Server has skin change restrictions.
 	if (cv_restrictskinchange.value)
 	{
-		if (gametype == GT_COOP)
+		if (gametyperules & GTR_FRIENDLY)
 			return true;
 
 		// Can change skin during initial countdown.
@@ -3753,11 +3753,11 @@ static void ExitMove_OnChange(void)
 			{
 				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
 					P_SetTarget(&players[i].mo->target, NULL);
-				
+
 				if (players[i].pflags & PF_FINISHED)
 					P_GiveFinishFlags(&players[i]);
 			}
-			
+
 		CONS_Printf(M_GetText("Players can now move after completing the level.\n"));
 	}
 	else
