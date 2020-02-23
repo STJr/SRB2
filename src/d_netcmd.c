@@ -1979,7 +1979,7 @@ static void Command_Map_f(void)
 			fromlevelselect =
 				( netgame || multiplayer ) &&
 				newgametype == gametype    &&
-				newgametype == GT_COOP;
+				gametypedefaultrules[newgametype] & GTR_CAMPAIGN;
 		}
 	}
 
