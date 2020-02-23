@@ -2603,7 +2603,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			// allow them to try again, rather than sitting the whole thing out.
 			if (leveltime >= hidetime * TICRATE)
 			{
-				if (gametype == GT_TAG)//suiciding in survivor makes you IT.
+				if (!(gametyperules & GTR_HIDEFROZEN))//suiciding in survivor makes you IT.
 				{
 					target->player->pflags |= PF_TAGIT;
 					CONS_Printf(M_GetText("%s is now IT!\n"), player_names[target->player-players]); // Tell everyone who is it!
@@ -3097,7 +3097,7 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 		P_AddPlayerScore(source->player, 100); //award points to tagger.
 		P_HitDeathMessages(player, inflictor, source, 0);
 
-		if (gametype == GT_TAG) //survivor
+		if (!(gametyperules & GTR_HIDEFROZEN)) //survivor
 		{
 			player->pflags |= PF_TAGIT; //in survivor, the player becomes IT and helps hunt down the survivors.
 			CONS_Printf(M_GetText("%s is now IT!\n"), player_names[player-players]); // Tell everyone who is it!

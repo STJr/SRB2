@@ -2368,7 +2368,7 @@ static void ST_drawTextHUD(void)
 			else
 				textHUDdraw(M_GetText("Flee before you are hunted!"))
 		}
-		else if ((gametyperules & GTR_HIDEFROZEN) && !(stplyr->pflags & PF_TAGIT))
+		else if (gametype == GT_HIDEANDSEEK && !(stplyr->pflags & PF_TAGIT))
 		{
 			if (!splitscreen && !donef12)
 			{

@@ -2781,6 +2781,26 @@ mapthing_t *G_FindCoopStart(INT32 playernum)
 	return NULL;
 }
 
+// Find a Co-op start, or fallback into other types of starts.
+static inline mapthing_t *G_FindCoopStartOrFallback(INT32 playernum)
+{
+	mapthing_t *spawnpoint = NULL;
+	if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
+	&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
+		spawnpoint = G_FindCTFStart(playernum); // fallback
+	return spawnpoint;
+}
+
+// Find a Match start, or fallback into other types of starts.
+static inline mapthing_t *G_FindMatchStartOrFallback(INT32 playernum)
+{
+	mapthing_t *spawnpoint = NULL;
+	if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
+	&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
+		spawnpoint = G_FindCoopStart(playernum); // fallback
+	return spawnpoint;
+}
+
 mapthing_t *G_FindMapStart(INT32 playernum)
 {
 	mapthing_t *spawnpoint;
@@ -2788,9 +2808,22 @@ mapthing_t *G_FindMapStart(INT32 playernum)
 	if (!playeringame[playernum])
 		return NULL;
 
+	// -- Spectators --
+	// Order in platform gametypes: Coop->DM->CTF
+	// And, with deathmatch starts: DM->CTF->Coop
+	if (players[playernum].spectator)
+	{
+		// In platform gametypes, spawn in Co-op starts first
+		// Overriden by GTR_DEATHMATCHSTARTS.
+		if (G_PlatformGametype() && !(gametyperules & GTR_DEATHMATCHSTARTS))
+			spawnpoint = G_FindCoopStartOrFallback(playernum);
+		else
+			spawnpoint = G_FindMatchStartOrFallback(playernum);
+	}
+
 	// -- CTF --
 	// Order: CTF->DM->Coop
-	if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
+	else if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
 	{
 		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
 		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
@@ -2799,21 +2832,13 @@ mapthing_t *G_FindMapStart(INT32 playernum)
 
 	// -- DM/Tag/CTF-spectator/etc --
 	// Order: DM->CTF->Coop
-	else if ((gametyperules & GTR_DEATHMATCHSTARTS) && !(players[playernum].pflags & PF_TAGIT))
-	{
-		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
-		&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
-			spawnpoint = G_FindCoopStart(playernum); // fallback
-	}
+	else if (G_TagGametype() ? (!(players[playernum].pflags & PF_TAGIT)) : (gametyperules & GTR_DEATHMATCHSTARTS))
+		spawnpoint = G_FindMatchStartOrFallback(playernum);
 
 	// -- Other game modes --
 	// Order: Coop->DM->CTF
 	else
-	{
-		if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
-		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-			spawnpoint = G_FindCTFStart(playernum); // fallback
-	}
+		spawnpoint = G_FindCoopStartOrFallback(playernum);
 
 	//No spawns found. ANYWHERE.
 	if (!spawnpoint)

@@ -1048,7 +1048,8 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 
 	// Point penalty for hitting a hazard during tag.
 	// Discourages players from intentionally hurting themselves to avoid being tagged.
-	if (gametype == GT_TAG && (!(player->pflags & PF_GAMETYPEOVER) && !(player->pflags & PF_TAGIT)))
+	if (((gametyperules & (GTR_TAG|GTR_HIDEFROZEN)) == GTR_TAG)
+	&& (!(player->pflags & PF_GAMETYPEOVER) && !(player->pflags & PF_TAGIT)))
 	{
 		if (player->score >= 50)
 			player->score -= 50;
@@ -10681,7 +10682,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 			player->spectator = player->outofcoop = false;
 			player->playerstate = PST_REBORN;
 
-			if (gametype == GT_TAG)
+			if ((gametyperules & (GTR_TAG|GTR_HIDEFROZEN)) == GTR_TAG)
 			{
 				//Make joining players "it" after hidetime.
 				if (leveltime > (hidetime * TICRATE))
