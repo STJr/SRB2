@@ -1674,11 +1674,15 @@ static int lib_pPlayVictorySound(lua_State *L)
 
 static int lib_pPlayLivesJingle(lua_State *L)
 {
-	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	player_t *player = NULL;
 	//NOHUD
 	//INLEVEL
-	if (!player)
-		return LUA_ErrInvalid(L, "player_t");
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
 	P_PlayLivesJingle(player);
 	return 0;
 }

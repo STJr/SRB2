@@ -392,7 +392,7 @@ void P_GiveFinishFlags(player_t *player)
 		mobj_t* flag = P_SpawnMobjFromMobj(player->mo, xoffs, yoffs, 0, MT_FINISHFLAG);
 		flag->angle = angle;
 		angle += FixedAngle(120*FRACUNIT);
-		
+
 		P_SetTarget(&flag->target, player->mo);
 	}
 }
@@ -1533,7 +1533,7 @@ void P_PlayJingle(player_t *player, jingletype_t jingletype)
 void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, boolean looping, UINT16 status)
 {
 	// If gamestate != GS_LEVEL, always play the jingle (1-up intermission)
-	if (gamestate == GS_LEVEL && !P_IsLocalPlayer(player))
+	if (gamestate == GS_LEVEL && player && !P_IsLocalPlayer(player))
 		return;
 
 	S_RetainMusic(musname, musflags, looping, 0, status);
