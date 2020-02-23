@@ -1,8 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by Graue.
-// Copyright (C) 2006-2019 by Sonic Team Junior.
-// Copyright (C) 2019      by James R.
+// Copyright (C) 2006-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
