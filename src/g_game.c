@@ -2899,7 +2899,7 @@ void G_DoReborn(INT32 playernum)
 		return;
 	}
 
-	if (countdowntimeup || (!(netgame || multiplayer) && gametype == GT_COOP))
+	if (countdowntimeup || (!(netgame || multiplayer) && (gametyperules & GTR_CAMPAIGN)))
 		resetlevel = true;
 	else if ((G_GametypeUsesCoopLives() || G_GametypeUsesCoopStarposts()) && (netgame || multiplayer) && !G_IsSpecialStage(gamemap))
 	{
