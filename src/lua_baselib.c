@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,6 +20,7 @@
 #endif
 #include "z_zone.h"
 #include "r_main.h"
+#include "r_draw.h"
 #include "r_things.h"
 #include "m_random.h"
 #include "s_sound.h"
@@ -2313,9 +2314,29 @@ static int lib_rTextureNumForName(lua_State *L)
 	return 1;
 }
 
+// R_DRAW
+////////////
+static int lib_rGetColorByName(lua_State *L)
+{
+	const char* colorname = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushinteger(L, R_GetColorByName(colorname));
+	return 1;
+}
+
+// Lua exclusive function, returns the name of a color from the SKINCOLOR_ constant.
+// SKINCOLOR_GREEN > "Green" for example
+static int lib_rGetNameByColor(lua_State *L)
+{
+	UINT8 colornum = (UINT8)luaL_checkinteger(L, 1);
+	if (!colornum || colornum >= MAXSKINCOLORS)
+		return luaL_error(L, "skincolor %d out of range (1 - %d).", colornum, MAXSKINCOLORS-1);
+	lua_pushstring(L, Color_Names[colornum]);
+	return 1;
+}
+
 // S_SOUND
 ////////////
-
 static int lib_sStartSound(lua_State *L)
 {
 	const void *origin = NULL;
@@ -3152,6 +3173,10 @@ static luaL_Reg lib[] = {
 	// r_data
 	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
 	{"R_TextureNumForName",lib_rTextureNumForName},
+
+	// r_draw
+	{"R_GetColorByName", lib_rGetColorByName},
+	{"R_GetNameByColor", lib_rGetNameByColor},
 
 	// s_sound
 	{"S_StartSound",lib_sStartSound},
