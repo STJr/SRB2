@@ -2045,7 +2045,7 @@ static musicstack_t *S_GetMusicStackEntry(UINT16 status, boolean fromfirst, INT1
 
 		if (!status || mst->status == status)
 		{
-			if (P_EvaluateMusicStatus(mst->status))
+			if (P_EvaluateMusicStatus(mst->status, mst->musname))
 			{
 				if (!S_MusicExists(mst->musname, !midi_disabled, !digital_disabled)) // paranoia
 					S_RemoveMusicStackEntry(mst); // then continue

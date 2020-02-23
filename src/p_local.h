@@ -250,7 +250,7 @@ extern jingle_t jingleinfo[NUMJINGLES];
 #define JINGLEPOSTFADE 1000
 
 void P_PlayJingle(player_t *player, jingletype_t jingletype);
-boolean P_EvaluateMusicStatus(UINT16 status);
+boolean P_EvaluateMusicStatus(UINT16 status, const char *musname);
 void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, boolean looping, UINT16 status);
 
 //

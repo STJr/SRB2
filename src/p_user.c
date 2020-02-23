@@ -1541,7 +1541,7 @@ void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, b
 	S_ChangeMusicInternal(musname, looping);
 }
 
-boolean P_EvaluateMusicStatus(UINT16 status)
+boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 {
 	// \todo lua hook
 	int i;
@@ -1598,8 +1598,11 @@ boolean P_EvaluateMusicStatus(UINT16 status)
 				result = (players[i].nightstime && players[i].nightstime <= 10*TICRATE);
 				break;
 
-			case JT_NONE:   // Null state
 			case JT_OTHER:  // Other state
+				result = LUAh_JingleStatus(&players[i], musname);
+				break;
+
+			case JT_NONE:   // Null state
 			case JT_MASTER: // Main level music
 			default:
 				result = true;
