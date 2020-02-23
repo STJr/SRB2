@@ -1040,11 +1040,60 @@ static int lib_pSetObjectMomZ(lua_State *L)
 	return 0;
 }
 
+static int lib_pPlayJingle(lua_State *L)
+{
+	player_t *player = NULL;
+	jingletype_t jingletype = (jingletype_t)luaL_checkinteger(L, 2);
+	//NOHUD
+	//INLEVEL
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (jingletype >= NUMJINGLES)
+		return luaL_error(L, "jingletype %d out of range (0 - %d)", jingletype, NUMJINGLES-1);
+	P_PlayJingle(player, jingletype);
+	return 0;
+}
+
+static int lib_pPlayJingleMusic(lua_State *L)
+{
+	player_t *player = NULL;
+	const char *musnamearg = luaL_checkstring(L, 2);
+	char musname[7], *p = musname;
+	UINT16 musflags = luaL_optinteger(L, 3, 0);
+	boolean looping = lua_opttrueboolean(L, 4);
+	jingletype_t jingletype = (jingletype_t)luaL_optinteger(L, 5, JT_OTHER);
+	//NOHUD
+	//INLEVEL
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (jingletype >= NUMJINGLES)
+		return luaL_error(L, "jingletype %d out of range (0 - %d)", jingletype, NUMJINGLES-1);
+
+	musname[6] = '\0';
+	strncpy(musname, musnamearg, 6);
+
+	while (*p) {
+		*p = tolower(*p);
+		++p;
+	}
+
+	P_PlayJingleMusic(player, musname, musflags, looping, jingletype);
+	return 0;
+}
+
 static int lib_pRestoreMusic(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	NOHUD
-	INLEVEL
+	//NOHUD
+	//INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	if (P_IsLocalPlayer(player))
@@ -3071,6 +3120,8 @@ static luaL_Reg lib[] = {
 	{"P_InSpaceSector",lib_pInSpaceSector},
 	{"P_InQuicksand",lib_pInQuicksand},
 	{"P_SetObjectMomZ",lib_pSetObjectMomZ},
+	{"P_PlayJingle",lib_pPlayJingle},
+	{"P_PlayJingleMusic",lib_pPlayJingleMusic},
 	{"P_RestoreMusic",lib_pRestoreMusic},
 	{"P_SpawnShieldOrb",lib_pSpawnShieldOrb},
 	{"P_SpawnGhostMobj",lib_pSpawnGhostMobj},
