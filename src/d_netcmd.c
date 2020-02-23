@@ -1737,7 +1737,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	}
 	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d gametype=%d ultmode=%d resetplayers=%d delay=%d skipprecutscene=%d\n",
 	           mapnum, newgametype, pultmode, resetplayers, delay, skipprecutscene);
-	if ((netgame || multiplayer) && !((gametype == newgametype) && (newgametype == GT_COOP)))
+	if ((netgame || multiplayer) && !((gametype == newgametype) && (gametypedefaultrules[newgametype] & GTR_CAMPAIGN)))
 		FLS = false;
 
 	if (delay != 2)
