@@ -392,7 +392,7 @@ void P_GiveFinishFlags(player_t *player)
 		mobj_t* flag = P_SpawnMobjFromMobj(player->mo, xoffs, yoffs, 0, MT_FINISHFLAG);
 		flag->angle = angle;
 		angle += FixedAngle(120*FRACUNIT);
-		
+
 		P_SetTarget(&flag->target, player->mo);
 	}
 }
@@ -10650,7 +10650,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 #ifdef HAVE_BLUA
 			// Call ViewpointSwitch hooks here.
 			// The viewpoint was forcibly changed.
-			LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+			LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 #endif
 			displayplayer = consoleplayer;
 		}
@@ -10699,7 +10699,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 #ifdef HAVE_BLUA
 				// Call ViewpointSwitch hooks here.
 				// The viewpoint was forcibly changed.
-				LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+				LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 #endif
 				displayplayer = consoleplayer;
 			}

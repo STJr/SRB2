@@ -2843,7 +2843,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
 		if (displayplayer != consoleplayer) // You're already viewing yourself. No big deal.
-			LUAh_ViewpointSwitch(&players[playernum], &players[displayplayer], true);
+			LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 #endif
 		displayplayer = consoleplayer;
 	}
@@ -3753,11 +3753,11 @@ static void ExitMove_OnChange(void)
 			{
 				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
 					P_SetTarget(&players[i].mo->target, NULL);
-				
+
 				if (players[i].pflags & PF_FINISHED)
 					P_GiveFinishFlags(&players[i]);
 			}
-			
+
 		CONS_Printf(M_GetText("Players can now move after completing the level.\n"));
 	}
 	else

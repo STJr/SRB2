@@ -2513,7 +2513,7 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 #ifdef HAVE_BLUA
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
-		LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], true);
+		LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 #endif
 		displayplayer = consoleplayer;
 	}
