@@ -2611,7 +2611,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 	}
 
-	if (gametype == GT_COOP)
+	if (gametyperules & GTR_EMERALDHUNT)
 		P_FindEmerald(); // scan for emeralds to hunt for
 
 	// If NiGHTS, find lowest mare to start with.
