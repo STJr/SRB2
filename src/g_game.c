@@ -3856,7 +3856,7 @@ static void G_DoWorldDone(void)
 {
 	if (server)
 	{
-		if (gametype == GT_COOP)
+		if (gametyperules & GTR_CAMPAIGN)
 			// don't reset player between maps
 			D_MapChange(nextmap+1, gametype, ultimatemode, false, 0, false, false);
 		else
