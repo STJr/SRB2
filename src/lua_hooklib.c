@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1594,7 +1594,7 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 	hook_p hookp;
 	boolean hasSeenPlayer = true;
 	if (!gL || !(hooksAvailable[hook_SeenPlayer/8] & (1<<(hook_SeenPlayer%8))))
-		return 0;
+		return true;
 
 	lua_settop(gL, 0);
 	hud_running = true; // local hook

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3699,10 +3699,15 @@ void HWR_SetupLevel(void)
 	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
 	// Level textures are only reloaded after R_LoadTextures, which is
 	// when the texture list is loaded.
+
+	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
+	HWR_FreeMipmapCache();
+
 #ifdef ALAM_LIGHTING
 	// BP: reset light between levels (we draw preview frame lights on current frame)
 	HWR_ResetLights();
 #endif
+
 	// Correct missing sidedefs & deep water trick
 	HWR_CorrectSWTricks();
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
@@ -3826,10 +3831,9 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
-	if ((numlumps = W_InitFile(wadfilename, false)) == INT16_MAX)
+	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
 	else

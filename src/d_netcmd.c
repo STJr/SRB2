@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -370,7 +370,7 @@ consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, N
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "1/4"}, {2, "Half"}, {3, "3/4"}, {4, "All"}, {0, NULL}};
 consvar_t cv_playersforexit = {"playersforexit", "All", CV_NETVAR, playersforexit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_exitmove = {"exitmove", "Off", CV_NETVAR|CV_CALL, CV_OnOff, ExitMove_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_exitmove = {"exitmove", "On", CV_NETVAR|CV_CALL, CV_OnOff, ExitMove_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_runscripts = {"runscripts", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -3749,9 +3749,15 @@ static void ExitMove_OnChange(void)
 	if (cv_exitmove.value)
 	{
 		for (i = 0; i < MAXPLAYERS; ++i)
-			if (playeringame[i] && players[i].mo
-				&& players[i].mo->target && players[i].mo->target->type == MT_SIGN)
-				P_SetTarget(&players[i].mo->target, NULL);
+			if (playeringame[i] && players[i].mo)
+			{
+				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
+					P_SetTarget(&players[i].mo->target, NULL);
+				
+				if (players[i].pflags & PF_FINISHED)
+					P_GiveFinishFlags(&players[i]);
+			}
+			
 		CONS_Printf(M_GetText("Players can now move after completing the level.\n"));
 	}
 	else

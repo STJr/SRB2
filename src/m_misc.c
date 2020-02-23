@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2618,14 +2618,15 @@ const char * M_Ftrim (double f)
 	static char dig[9];/* "0." + 6 digits (6 is printf's default) */
 	int i;
 	/* I know I said it's the default, but just in case... */
-	sprintf(dig, "%.6g", modf(f, &f));
-	if (dig[0])
+	sprintf(dig, "%.6f", fabs(modf(f, &f)));
+	/* trim trailing zeroes */
+	for (i = strlen(dig)-1; dig[i] == '0'; --i)
+		;
+	if (dig[i] == '.')/* :NOTHING: */
+		return "";
+	else
 	{
-		for (i = strlen(dig); dig[i] == '0'; --i)
-			;
 		dig[i + 1] = '\0';
 		return &dig[1];/* skip the 0 */
 	}
-	else
-		return "";
 }

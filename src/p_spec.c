@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3516,7 +3516,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
 						false,                     // subtract FadeStart (we ran out of flags)
 						false,                     // subtract FadeEnd (we ran out of flags)
-						false,                     // ignore Fog (we ran out of flags)
+						false,                     // ignore Flags (we ran out of flags)
 						line->flags & ML_DONTPEGBOTTOM,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
@@ -3883,7 +3883,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
 						false,                     // subtract FadeStart (we ran out of flags)
 						false,                     // subtract FadeEnd (we ran out of flags)
-						false,                     // ignore Fog (we ran out of flags)
+						false,                     // ignore Flags (we ran out of flags)
 						line->flags & ML_DONTPEGBOTTOM,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
@@ -7081,10 +7081,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 202: // Fog
 				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_FOG|FF_BOTHPLANES|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				// SoM: Because it's fog, check for an extra colormap and set
-				// the fog flag...
+				// SoM: Because it's fog, check for an extra colormap and set the fog flag...
 				if (sectors[sec].extra_colormap)
-					sectors[sec].extra_colormap->fog = 1;
+					sectors[sec].extra_colormap->flags = CMF_FOG;
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
@@ -8472,7 +8471,7 @@ void T_FadeColormap(fadecolormap_t *d)
 		extracolormap_t *exc;
 		INT32 duration = d->ticbased ? d->duration : 256;
 		fixed_t factor = min(FixedDiv(duration - d->timer, duration), 1*FRACUNIT);
-		INT16 cr, cg, cb, ca, fadestart, fadeend, fog;
+		INT16 cr, cg, cb, ca, fadestart, fadeend, flags;
 		INT32 rgba, fadergba;
 
 		// NULL failsafes (or intentionally set to signify default)
@@ -8521,7 +8520,7 @@ void T_FadeColormap(fadecolormap_t *d)
 
 		fadestart = APPLYFADE(d->dest_exc->fadestart, d->source_exc->fadestart, d->sector->extra_colormap->fadestart);
 		fadeend = APPLYFADE(d->dest_exc->fadeend, d->source_exc->fadeend, d->sector->extra_colormap->fadeend);
-		fog = abs(factor) > FRACUNIT/2 ? d->dest_exc->fog : d->source_exc->fog; // set new fog flag halfway through fade
+		flags = abs(factor) > FRACUNIT/2 ? d->dest_exc->flags : d->source_exc->flags; // set new flags halfway through fade
 
 #undef APPLYFADE
 
@@ -8529,12 +8528,12 @@ void T_FadeColormap(fadecolormap_t *d)
 		// setup new colormap
 		//////////////////
 
-		if (!(d->sector->extra_colormap = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog)))
+		if (!(d->sector->extra_colormap = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags)))
 		{
 			exc = R_CreateDefaultColormap(false);
 			exc->fadestart = fadestart;
 			exc->fadeend = fadeend;
-			exc->fog = (boolean)fog;
+			exc->flags = flags;
 			exc->rgba = rgba;
 			exc->fadergba = fadergba;
 			exc->colormap = R_CreateLightTable(exc);

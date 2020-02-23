@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -143,16 +143,16 @@ extern char logfilename[1024];
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    202 // Game version
-#define SUBVERSION 1  // more precise version number
-#define VERSIONSTRING "v2.2.1"
-#define VERSIONSTRINGW L"v2.2.1"
+#define SUBVERSION 2  // more precise version number
+#define VERSIONSTRING "v2.2.2"
+#define VERSIONSTRINGW L"v2.2.2"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
 
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-//#define USE_PATCH_DTA
+#define USE_PATCH_DTA
 
 // Use .kart extension addons
 //#define USE_KART
@@ -210,7 +210,7 @@ extern char logfilename[1024];
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
-#define MODVERSION 41
+#define MODVERSION 42
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
@@ -253,9 +253,11 @@ typedef enum
 	// Desaturated
 	SKINCOLOR_AETHER,
 	SKINCOLOR_SLATE,
+	SKINCOLOR_BLUEBELL,
 	SKINCOLOR_PINK,
 	SKINCOLOR_YOGURT,
 	SKINCOLOR_BROWN,
+	SKINCOLOR_BRONZE,
 	SKINCOLOR_TAN,
 	SKINCOLOR_BEIGE,
 	SKINCOLOR_MOSS,
@@ -268,9 +270,11 @@ typedef enum
 	SKINCOLOR_RED,
 	SKINCOLOR_CRIMSON,
 	SKINCOLOR_FLAME,
+	SKINCOLOR_KETCHUP,
 	SKINCOLOR_PEACHY,
 	SKINCOLOR_QUAIL,
 	SKINCOLOR_SUNSET,
+	SKINCOLOR_COPPER,
 	SKINCOLOR_APRICOT,
 	SKINCOLOR_ORANGE,
 	SKINCOLOR_RUST,
@@ -280,6 +284,7 @@ typedef enum
 	SKINCOLOR_OLIVE,
 	SKINCOLOR_LIME,
 	SKINCOLOR_PERIDOT,
+	SKINCOLOR_APPLE,
 	SKINCOLOR_GREEN,
 	SKINCOLOR_FOREST,
 	SKINCOLOR_EMERALD,
@@ -306,6 +311,7 @@ typedef enum
 	SKINCOLOR_VIOLET,
 	SKINCOLOR_LILAC,
 	SKINCOLOR_PLUM,
+	SKINCOLOR_RASPBERRY,
 	SKINCOLOR_ROSY,
 
 	// SKINCOLOR_? - one left before we bump up against 0x39, which isn't a HARD limit anymore but would be excessive
@@ -490,6 +496,7 @@ extern INT32 cv_debug;
 #define DBG_SETUP       0x0400
 #define DBG_LUA         0x0800
 #define DBG_RANDOMIZER  0x1000
+#define DBG_VIEWMORPH   0x2000
 
 // =======================
 // Misc stuff for later...

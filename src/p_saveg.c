@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -116,6 +116,7 @@ static void P_NetArchivePlayers(void)
 
 		WRITEANGLE(save_p, players[i].aiming);
 		WRITEANGLE(save_p, players[i].drawangle);
+		WRITEANGLE(save_p, players[i].viewrollangle);
 		WRITEANGLE(save_p, players[i].awayviewaiming);
 		WRITEINT32(save_p, players[i].awayviewtics);
 		WRITEINT16(save_p, players[i].rings);
@@ -326,6 +327,7 @@ static void P_NetUnArchivePlayers(void)
 
 		players[i].aiming = READANGLE(save_p);
 		players[i].drawangle = READANGLE(save_p);
+		players[i].viewrollangle = READANGLE(save_p);
 		players[i].awayviewaiming = READANGLE(save_p);
 		players[i].awayviewtics = READINT32(save_p);
 		players[i].rings = READINT16(save_p);
@@ -609,7 +611,7 @@ static void P_NetArchiveColormaps(void)
 
 		WRITEUINT8(save_p, exc->fadestart);
 		WRITEUINT8(save_p, exc->fadeend);
-		WRITEUINT8(save_p, exc->fog);
+		WRITEUINT8(save_p, exc->flags);
 
 		WRITEINT32(save_p, exc->rgba);
 		WRITEINT32(save_p, exc->fadergba);
@@ -639,7 +641,7 @@ static void P_NetUnArchiveColormaps(void)
 
 	for (exc = net_colormaps; i < num_net_colormaps; i++, exc = exc_next)
 	{
-		UINT8 fadestart, fadeend, fog;
+		UINT8 fadestart, fadeend, flags;
 		INT32 rgba, fadergba;
 #ifdef EXTRACOLORMAPLUMPS
 		char lumpname[9];
@@ -647,7 +649,7 @@ static void P_NetUnArchiveColormaps(void)
 
 		fadestart = READUINT8(save_p);
 		fadeend = READUINT8(save_p);
-		fog = READUINT8(save_p);
+		flags = READUINT8(save_p);
 
 		rgba = READINT32(save_p);
 		fadergba = READINT32(save_p);
@@ -679,7 +681,7 @@ static void P_NetUnArchiveColormaps(void)
 
 		exc->fadestart = fadestart;
 		exc->fadeend = fadeend;
-		exc->fog = fog;
+		exc->flags = flags;
 
 		exc->rgba = rgba;
 		exc->fadergba = fadergba;
@@ -689,7 +691,7 @@ static void P_NetUnArchiveColormaps(void)
 		exc->lumpname[0] = 0;
 #endif
 
-		existing_exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
+		existing_exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags);
 
 		if (existing_exc)
 			exc->colormap = existing_exc->colormap;

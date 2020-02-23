@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1799,7 +1799,7 @@ extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
 	extracolormap_t *exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
 	exc->fadestart = 0;
 	exc->fadeend = 31;
-	exc->fog = 0;
+	exc->flags = 0;
 	exc->rgba = 0;
 	exc->fadergba = 0x19000000;
 	exc->colormap = lighttable ? R_CreateLightTable(exc) : NULL;
@@ -1903,17 +1903,17 @@ void R_AddColormapToList(extracolormap_t *extra_colormap)
 //
 #ifdef EXTRACOLORMAPLUMPS
 boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
-	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags, lumpnum_t lump)
 #else
 boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
-	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags)
 #endif
 {
 	return (
 		(!checkparams ? true :
 			(fadestart == 0
 				&& fadeend == 31
-				&& !fog)
+				&& !flags)
 			)
 		&& (!checkrgba ? true : rgba == 0)
 		&& (!checkfadergba ? true : fadergba == 0x19000000)
@@ -1930,9 +1930,9 @@ boolean R_CheckDefaultColormap(extracolormap_t *extra_colormap, boolean checkrgb
 		return true;
 
 #ifdef EXTRACOLORMAPLUMPS
-	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->flags, extra_colormap->lump);
 #else
-	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->flags);
 #endif
 }
 
@@ -1952,7 +1952,7 @@ boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, bo
 		(!checkparams ? true :
 			(exc_a->fadestart == exc_b->fadestart
 				&& exc_a->fadeend == exc_b->fadeend
-				&& exc_a->fog == exc_b->fog)
+				&& exc_a->flags == exc_b->flags)
 			)
 		&& (!checkrgba ? true : exc_a->rgba == exc_b->rgba)
 		&& (!checkfadergba ? true : exc_a->fadergba == exc_b->fadergba)
@@ -1968,9 +1968,9 @@ boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, bo
 // NOTE: Returns NULL if no match is found
 //
 #ifdef EXTRACOLORMAPLUMPS
-extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags, lumpnum_t lump)
 #else
-extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags)
 #endif
 {
 	extracolormap_t *exc;
@@ -1982,7 +1982,7 @@ extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8
 			&& fadergba == exc->fadergba
 			&& fadestart == exc->fadestart
 			&& fadeend == exc->fadeend
-			&& fog == exc->fog
+			&& flags == exc->flags
 #ifdef EXTRACOLORMAPLUMPS
 			&& (lump != LUMPERROR && lump == exc->lump)
 #endif
@@ -2001,9 +2001,9 @@ extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8
 extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap)
 {
 #ifdef EXTRACOLORMAPLUMPS
-	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->flags, extra_colormap->lump);
 #else
-	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->flags);
 #endif
 }
 
@@ -2035,7 +2035,7 @@ extracolormap_t *R_ColormapForName(char *name)
 	// is no real way to tell how GL should handle a colormap lump anyway..
 	exc->fadestart = 0;
 	exc->fadeend = 31;
-	exc->fog = 0;
+	exc->flags = 0;
 	exc->rgba = 0;
 	exc->fadergba = 0x19000000;
 
@@ -2192,7 +2192,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	// default values
 	UINT8 cr = 0, cg = 0, cb = 0, ca = 0, cfr = 0, cfg = 0, cfb = 0, cfa = 25;
 	UINT32 fadestart = 0, fadeend = 31;
-	UINT8 fog = 0;
+	UINT8 flags = 0;
 	INT32 rgba = 0, fadergba = 0x19000000;
 
 #define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
@@ -2241,12 +2241,12 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 #define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
 
-	// Get parameters like fadestart, fadeend, and the fogflag
+	// Get parameters like fadestart, fadeend, and flags
 	if (p2[0] == '#')
 	{
 		if (p2[1])
 		{
-			fog = NUMFROMCHAR(p2[1]);
+			flags = NUMFROMCHAR(p2[1]);
 			if (p2[2] && p2[3])
 			{
 				fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
@@ -2313,18 +2313,18 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	// Did we just make a default colormap?
 #ifdef EXTRACOLORMAPLUMPS
-	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog, LUMPERROR))
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, flags, LUMPERROR))
 		return NULL;
 #else
-	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog))
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, flags))
 		return NULL;
 #endif
 
 	// Look for existing colormaps
 #ifdef EXTRACOLORMAPLUMPS
-	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog, LUMPERROR);
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags, LUMPERROR);
 #else
-	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags);
 #endif
 	if (exc)
 		return exc;
@@ -2336,7 +2336,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	extra_colormap->fadestart = (UINT16)fadestart;
 	extra_colormap->fadeend = (UINT16)fadeend;
-	extra_colormap->fog = fog;
+	extra_colormap->flags = flags;
 
 	extra_colormap->rgba = rgba;
 	extra_colormap->fadergba = fadergba;
@@ -2363,7 +2363,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *exc_addend,
 	boolean subR, boolean subG, boolean subB, boolean subA,
 	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
-	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFog,
+	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFlags,
 	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
 	boolean lighttable)
 {
@@ -2451,8 +2451,8 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 				// HACK: fadeend defaults to 31, so don't add anything in this case
 		, 31), 0);
 
-	if (!ignoreFog) // overwrite fog with new value
-		exc_augend->fog = exc_addend->fog;
+	if (!ignoreFlags) // overwrite flags with new value
+		exc_augend->flags = exc_addend->flags;
 
 	///////////////////
 	// put it together

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1805,6 +1805,24 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
+			}
+			else if (fastcmp(word, "SHOWTITLECARDFOR"))
+			{
+				mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
+				tmp = strtok(word2,",");
+				do {
+					if (fastcmp(tmp, "FIRST"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDFIRST;
+					else if (fastcmp(tmp, "RESPAWN"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRESPAWN;
+					else if (fastcmp(tmp, "RECORDATTACK"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRECORDATTACK;
+					else if (fastcmp(tmp, "ALL"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
+					else if (!fastcmp(tmp, "NONE"))
+						deh_warning("Level header %d: unknown titlecard show option %s\n", num, tmp);
+
+				} while((tmp = strtok(NULL,",")) != NULL);
 			}
 
 			// Individual triggers for menu flags
@@ -7459,6 +7477,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Got Flag Sign
 	"S_GOTFLAG",
+	
+	// Finish flag
+	"S_FINISHFLAG",
 
 	"S_CORK",
 	"S_LHRT",
@@ -8580,6 +8601,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LOCKONINF", // In-level Target
 	"MT_TAG", // Tag Sign
 	"MT_GOTFLAG", // Got Flag sign
+	"MT_FINISHFLAG", // Finish flag
 
 	// Ambient Sounds
 	"MT_AWATERA", // Ambient Water Sound 1
@@ -8970,9 +8992,11 @@ static const char *COLOR_ENUMS[] = {
 	// Desaturated
 	"AETHER",     	// SKINCOLOR_AETHER,
 	"SLATE",     	// SKINCOLOR_SLATE,
+	"BLUEBELL",   	// SKINCOLOR_BLUEBELL,
 	"PINK",     	// SKINCOLOR_PINK,
 	"YOGURT",     	// SKINCOLOR_YOGURT,
 	"BROWN",     	// SKINCOLOR_BROWN,
+	"BRONZE",     	// SKINCOLOR_BRONZE,
 	"TAN",     		// SKINCOLOR_TAN,
 	"BEIGE",     	// SKINCOLOR_BEIGE,
 	"MOSS",     	// SKINCOLOR_MOSS,
@@ -8985,9 +9009,11 @@ static const char *COLOR_ENUMS[] = {
 	"RED",     		// SKINCOLOR_RED,
 	"CRIMSON",     	// SKINCOLOR_CRIMSON,
 	"FLAME",     	// SKINCOLOR_FLAME,
+	"KETCHUP",     	// SKINCOLOR_KETCHUP,
 	"PEACHY",     	// SKINCOLOR_PEACHY,
 	"QUAIL",     	// SKINCOLOR_QUAIL,
 	"SUNSET",     	// SKINCOLOR_SUNSET,
+	"COPPER",     	// SKINCOLOR_COPPER,
 	"APRICOT",     	// SKINCOLOR_APRICOT,
 	"ORANGE",     	// SKINCOLOR_ORANGE,
 	"RUST",     	// SKINCOLOR_RUST,
@@ -8997,6 +9023,7 @@ static const char *COLOR_ENUMS[] = {
 	"OLIVE",     	// SKINCOLOR_OLIVE,
 	"LIME",     	// SKINCOLOR_LIME,
 	"PERIDOT",     	// SKINCOLOR_PERIDOT,
+	"APPLE",     	// SKINCOLOR_APPLE,
 	"GREEN",     	// SKINCOLOR_GREEN,
 	"FOREST",     	// SKINCOLOR_FOREST,
 	"EMERALD",     	// SKINCOLOR_EMERALD,
@@ -9023,6 +9050,7 @@ static const char *COLOR_ENUMS[] = {
 	"VIOLET",     	// SKINCOLOR_VIOLET,
 	"LILAC",     	// SKINCOLOR_LILAC,
 	"PLUM",     	// SKINCOLOR_PLUM,
+	"RASPBERRY",  	// SKINCOLOR_RASPBERRY,
 	"ROSY",     	// SKINCOLOR_ROSY,
 
 	// Super special awesome Super flashing colors!
@@ -9116,7 +9144,8 @@ static const char *const POWERS_LIST[] = {
 	"NIGHTS_LINKFREEZE",
 
 	//for linedef exec 427
-	"NOCONTROL"
+	"NOCONTROL",
+	"JUSTLAUNCHED",
 };
 
 static const char *const HUDITEMS_LIST[] = {
@@ -9353,6 +9382,9 @@ struct {
 	{"LF_NOZONE",LF_NOZONE},
 	{"LF_SAVEGAME",LF_SAVEGAME},
 	{"LF_MIXNIGHTSCOUNTDOWN",LF_MIXNIGHTSCOUNTDOWN},
+	{"LF_NOTITLECARDFIRST",LF_NOTITLECARDFIRST},
+	{"LF_NOTITLECARDRESPAWN",LF_NOTITLECARDRESPAWN},
+	{"LF_NOTITLECARDRECORDATTACK",LF_NOTITLECARDRECORDATTACK},
 	{"LF_NOTITLECARD",LF_NOTITLECARD},
 	{"LF_WARNINGTITLE",LF_WARNINGTITLE},
 	// And map flags
