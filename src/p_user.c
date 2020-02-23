@@ -392,7 +392,7 @@ void P_GiveFinishFlags(player_t *player)
 		mobj_t* flag = P_SpawnMobjFromMobj(player->mo, xoffs, yoffs, 0, MT_FINISHFLAG);
 		flag->angle = angle;
 		angle += FixedAngle(120*FRACUNIT);
-		
+
 		P_SetTarget(&flag->target, player->mo);
 	}
 }
@@ -3679,7 +3679,7 @@ static boolean PIT_CheckSolidsTeeter(mobj_t *thing)
 	if (thing == teeterer)
 		return true;
 
-	if (thing->player && cv_tailspickup.value && gametype != GT_HIDEANDSEEK)
+	if (thing->player && cv_tailspickup.value && !(gametyperules & GTR_HIDEFROZEN))
 		return true;
 
 	blockdist = teeterer->radius + thing->radius;
@@ -8034,7 +8034,7 @@ static void P_MovePlayer(player_t *player)
 			if (player->pflags & PF_TAGIT)
 				forcestasis = true;
 		}
-		else if (gametype == GT_HIDEANDSEEK)
+		else if (gametyperules & GTR_HIDEFROZEN)
 		{
 			if (!(player->pflags & PF_TAGIT))
 			{

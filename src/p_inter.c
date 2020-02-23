@@ -2285,7 +2285,7 @@ void P_CheckSurvivors(void)
 	if (!taggers) //If there are no taggers, pick a survivor at random to be it.
 	{
 		// Exception for hide and seek. If a round has started and the IT player leaves, end the round.
-		if (gametype == GT_HIDEANDSEEK && (leveltime >= (hidetime * TICRATE)))
+		if ((gametyperules & GTR_HIDEFROZEN) && (leveltime >= (hidetime * TICRATE)))
 		{
 			CONS_Printf(M_GetText("The IT player has left the game.\n"));
 			if (server)
