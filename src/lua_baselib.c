@@ -2656,6 +2656,25 @@ static int lib_sFadeOutStopMusic(lua_State *L)
 	return 1;
 }
 
+static int lib_sGetMusicLength(lua_State *L)
+{
+	lua_pushinteger(L, S_GetMusicLength());
+	return 1;
+}
+
+static int lib_sGetMusicPosition(lua_State *L)
+{
+	lua_pushinteger(L, S_GetMusicPosition());
+	return 1;
+}
+
+static int lib_sSetMusicPosition(lua_State *L)
+{
+	UINT32 pos = (UINT32)luaL_checkinteger(L, 1);
+	lua_pushboolean(L, S_SetMusicPosition(pos));
+	return 1;
+}
+
 static int lib_sOriginPlaying(lua_State *L)
 {
 	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -3242,6 +3261,9 @@ static luaL_Reg lib[] = {
 	{"S_StopFadingMusic",lib_sStopFadingMusic},
 	{"S_FadeMusic",lib_sFadeMusic},
 	{"S_FadeOutStopMusic",lib_sFadeOutStopMusic},
+	{"S_GetMusicLength",lib_sGetMusicLength},
+	{"S_GetMusicPosition",lib_sGetMusicPosition},
+	{"S_SetMusicPosition",lib_sSetMusicPosition},
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},
