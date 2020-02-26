@@ -384,6 +384,9 @@ void P_GiveFinishFlags(player_t *player)
 	if (!player->mo)
 		return;
 
+	if (!(netgame||multiplayer))
+		return;
+
 	for (i = 0; i < 3; i++)
 	{
 		angle_t fa = (angle >> ANGLETOFINESHIFT) & FINEMASK;
