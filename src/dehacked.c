@@ -10236,7 +10236,7 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-	else if (fastncmp("GT_",word,4)) {
+	else if (fastncmp("GT_",word,3)) {
 		r = get_gametype(word);
 		free(word);
 		return r;
