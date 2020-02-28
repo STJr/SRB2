@@ -3003,6 +3003,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 static void Command_ResendGamestate(void)
 {
+	SINT8 playernum;
+
 	if (COM_Argc() == 1)
 	{
 		CONS_Printf(M_GetText("resendgamestate <playername/playernum>: resend the game state to a player\n"));
@@ -3014,7 +3016,7 @@ static void Command_ResendGamestate(void)
 		return;
 	}
 
-	const SINT8 playernum = nametonum(COM_Argv(1));
+	playernum = nametonum(COM_Argv(1));
 	if (playernum == -1 || playernum == 0)
 		return;
 
