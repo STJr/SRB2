@@ -3729,9 +3729,9 @@ static void PT_WillResendGamestate(void)
 	if (server || cl_redownloadinggamestate)
 		return;
 
-	// Send back a PT_CANRESENDGAMESTATE packet to the server
+	// Send back a PT_CANRECEIVEGAMESTATE packet to the server
 	// so they know they can start sending the game state
-	netbuffer->packettype = PT_CANRESENDGAMESTATE;
+	netbuffer->packettype = PT_CANRECEIVEGAMESTATE;
 	if (!HSendPacket(servernode, true, 0, 0))
 		return;
 
@@ -3748,7 +3748,7 @@ static void PT_WillResendGamestate(void)
 	cl_redownloadinggamestate = true;
 }
 
-static void PT_CanResendGamestate(SINT8 node)
+static void PT_CanReceiveGamestate(SINT8 node)
 {
 	if (client || sendingsavegame[node])
 		return;
@@ -4200,8 +4200,8 @@ static void HandlePacketFromPlayer(SINT8 node)
 			Net_CloseConnection(node);
 			nodeingame[node] = false;
 			break;
-		case PT_CANRESENDGAMESTATE:
-			PT_CanResendGamestate(node);
+		case PT_CANRECEIVEGAMESTATE:
+			PT_CanReceiveGamestate(node);
 			break;
 // -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_RESYNCHEND:
