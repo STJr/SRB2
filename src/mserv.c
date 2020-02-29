@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,7 +18,7 @@
 
 #include <time.h>
 
-#if (defined (NOMD5) || defined (NOMSERV)) && !defined (NONET)
+#if (defined (NOMSERV)) && !defined (NONET)
 #define NONET
 #endif
 

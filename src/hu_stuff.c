@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -787,10 +787,12 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				case SKINCOLOR_RED:
 				case SKINCOLOR_CRIMSON:
 				case SKINCOLOR_FLAME:
+				case SKINCOLOR_KETCHUP:
 					cstart = "\x85"; // V_REDMAP
 					break;
 				case SKINCOLOR_YOGURT:
 				case SKINCOLOR_BROWN:
+				case SKINCOLOR_BRONZE:
 				case SKINCOLOR_TAN:
 				case SKINCOLOR_BEIGE:
 				case SKINCOLOR_QUAIL:
@@ -818,6 +820,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 					cstart = "\x8e"; // V_ROSYMAP
 					break;
 				case SKINCOLOR_SUNSET:
+				case SKINCOLOR_COPPER:
 				case SKINCOLOR_APRICOT:
 				case SKINCOLOR_ORANGE:
 				case SKINCOLOR_RUST:
@@ -831,6 +834,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 					break;
 				case SKINCOLOR_LIME:
 				case SKINCOLOR_PERIDOT:
+				case SKINCOLOR_APPLE:
 					cstart = "\x8b"; // V_PERIDOTMAP
 					break;
 				case SKINCOLOR_SEAFOAM:
@@ -851,12 +855,14 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				case SKINCOLOR_BLUE:
 				case SKINCOLOR_COBALT:
 				case SKINCOLOR_DUSK:
+				case SKINCOLOR_BLUEBELL:
 					cstart = "\x84"; // V_BLUEMAP
 					break;
 				case SKINCOLOR_BUBBLEGUM:
 				case SKINCOLOR_MAGENTA:
 				case SKINCOLOR_NEON:
 				case SKINCOLOR_VIOLET:
+				case SKINCOLOR_RASPBERRY:
 					cstart = "\x81"; // V_MAGENTAMAP
 					break;
 			}
@@ -1437,7 +1443,7 @@ static void HU_drawMiniChat(void)
 
 	for (; i>0; i--)
 	{
-		const char *msg = CHAT_WordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i-1]);
+		char *msg = CHAT_WordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i-1]);
 		size_t j = 0;
 		INT32 linescount = 0;
 
@@ -1479,6 +1485,9 @@ static void HU_drawMiniChat(void)
 		dy = 0;
 		dx = 0;
 		msglines += linescount+1;
+
+		if (msg)
+			Z_Free(msg);
 	}
 
 	y = chaty - charheight*(msglines+1);
@@ -1501,7 +1510,7 @@ static void HU_drawMiniChat(void)
 		INT32 timer = ((cv_chattime.value*TICRATE)-chat_timers[i]) - cv_chattime.value*TICRATE+9; // see below...
 		INT32 transflag = (timer >= 0 && timer <= 9) ? (timer*V_10TRANS) : 0; // you can make bad jokes out of this one.
 		size_t j = 0;
-		const char *msg = CHAT_WordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i]); // get the current message, and word wrap it.
+		char *msg = CHAT_WordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
 
 		while(msg[j]) // iterate through msg
@@ -1547,6 +1556,9 @@ static void HU_drawMiniChat(void)
 		}
 		dy += charheight;
 		dx = 0;
+
+		if (msg)
+			Z_Free(msg);
 	}
 
 	// decrement addy and make that shit smooth:
@@ -1598,7 +1610,7 @@ static void HU_drawChatLog(INT32 offset)
 	{
 		INT32 clrflag = 0;
 		INT32 j = 0;
-		const char *msg = CHAT_WordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_log[i]); // get the current message, and word wrap it.
+		char *msg = CHAT_WordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_log[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
 		while(msg[j]) // iterate through msg
 		{
@@ -1638,6 +1650,9 @@ static void HU_drawChatLog(INT32 offset)
 		}
 		dy += charheight;
 		dx = 0;
+
+		if (msg)
+			Z_Free(msg);
 	}
 
 

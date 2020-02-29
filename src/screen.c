@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -360,10 +360,13 @@ void SCR_Recalc(void)
 	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
 #endif
 
-	// toggle off automap because some screensize-dependent values will
+	// toggle off (then back on) the automap because some screensize-dependent values will
 	// be calculated next time the automap is activated.
 	if (automapactive)
-		AM_Stop();
+	{
+		am_recalc = true;
+		AM_Start();
+	}
 
 	// set the screen[x] ptrs on the new vidbuffers
 	V_Init();

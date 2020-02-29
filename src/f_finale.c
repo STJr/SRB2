@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1120,6 +1120,9 @@ static const char *credits[] = {
 	"\1Sonic Robo Blast II",
 	"\1Credits",
 	"",
+	"\1Producer",
+	"Rob Tisdell",
+	"",
 	"\1Game Design",
 	"Ben \"Mystic\" Geyer",
 	"\"SSNTails\"",
@@ -1234,7 +1237,7 @@ static const char *credits[] = {
 	"Thomas \"Shadow Hog\" Igoe",
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"\"Kaito Sinclaire\"",
-	"\"QueenDelta\"",
+	"Anna \"QueenDelta\" Sandlin",
 	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",
@@ -1258,7 +1261,7 @@ static const char *credits[] = {
 	"Cody \"SRB2 Playah\" Koester",
 	"Skye \"OmegaVelocity\" Meredith",
 	"Stephen \"HEDGESMFG\" Moellering",
-	"Nick \"ST218\" Molina",
+	"Rosalie \"ST218\" Molina",
 	"Samuel \"Prime 2.0\" Peters",
 	"Colin \"Sonict\" Pfaff",
 	"Bill \"Tets\" Reed",
@@ -2695,8 +2698,18 @@ static void F_FigureActiveTtScale(void)
 	SINT8 newttscale = max(1, min(6, vid.dupx));
 	SINT8 oldttscale = activettscale;
 
-	if (newttscale == testttscale)
-		return;
+	if (needpatchrecache)
+		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = 0;
+	else
+	{
+		if (newttscale == testttscale)
+			return;
+
+		// We have a new ttscale, so load gfx
+		if(oldttscale > 0)
+			F_UnloadAlacroixGraphics(oldttscale);
+	}
+
 	testttscale = newttscale;
 
 	// If ttscale is unavailable: look for lower scales, then higher scales.
@@ -2713,10 +2726,6 @@ static void F_FigureActiveTtScale(void)
 	}
 
 	activettscale = (newttscale >= 1 && newttscale <= 6) ? newttscale : 0;
-
-	// We have a new ttscale, so load gfx
-	if(oldttscale > 0)
-		F_UnloadAlacroixGraphics(oldttscale);
 
 	if(activettscale > 0)
 		F_LoadAlacroixGraphics(activettscale);
@@ -2758,12 +2767,6 @@ void F_TitleScreenDrawer(void)
 #else
 		return;
 #endif
-
-	if (needpatchrecache && (curttmode == TTMODE_ALACROIX))
-	{
-		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = 0;
-		F_LoadAlacroixGraphics(activettscale);
-	}
 
 	switch(curttmode)
 	{
@@ -3630,7 +3633,6 @@ void F_StartContinue(void)
 	}
 
 	wipestyleflags = WSF_FADEOUT;
-	F_TryColormapFade(31);
 	G_SetGamestate(GS_CONTINUING);
 	gameaction = ga_nothing;
 

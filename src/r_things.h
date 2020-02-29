@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -58,6 +58,15 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
+
+boolean R_ThingVisible (mobj_t *thing);
+
+boolean R_ThingVisibleWithinDist (mobj_t *thing,
+		fixed_t        draw_dist,
+		fixed_t nights_draw_dist);
+
+boolean R_PrecipThingVisible (precipmobj_t *precipthing,
+		fixed_t precip_draw_dist);
 
 /** Used to count the amount of masked elements
  * per portal to later group them in separate

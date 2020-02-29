@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -5198,8 +5198,8 @@ void A_SignPlayer(mobj_t *actor)
 			player_t *player = actor->target ? actor->target->player : NULL;
 			UINT8 skinnum;
 			UINT8 skincount = 0;
-			for (skincount = 0; skincount < numskins; skincount++)
-				if (!skincheck(skincount))
+			for (skinnum = 0; skinnum < numskins; skinnum++)
+				if (!skincheck(skinnum))
 					skincount++;
 			skinnum = P_RandomKey(skincount);
 			for (skincount = 0; skincount < numskins; skincount++)
@@ -5232,20 +5232,23 @@ void A_SignPlayer(mobj_t *actor)
 		{
 			ov->color = facecolor;
 			ov->skin = skin;
-			P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+			if ((statenum_t)(ov->state-states) != actor->info->seestate)
+				P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
 		}
 		else // CLEAR! sign
 		{
 			ov->color = SKINCOLOR_NONE;
 			ov->skin = NULL; // needs to be NULL in the case of SF_HIRES characters
-			P_SetMobjState(ov, actor->info->missilestate); // S_CLEARSIGN
+			if ((statenum_t)(ov->state-states) != actor->info->missilestate)
+				P_SetMobjState(ov, actor->info->missilestate); // S_CLEARSIGN
 		}
 	}
 	else // Eggman face
 	{
 		ov->color = SKINCOLOR_NONE;
 		ov->skin = NULL;
-		P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
+		if ((statenum_t)(ov->state-states) != actor->info->meleestate)
+			P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		if (!signcolor)
 			signcolor = SKINCOLOR_CARBON;
 	}

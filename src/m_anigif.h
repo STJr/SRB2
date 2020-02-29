@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2013-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 2013-2019 by Sonic Team Junior.
+// Copyright (C) 2013-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,6 +27,6 @@ void GIF_frame(void);
 INT32 GIF_close(void);
 #endif
 
-extern consvar_t cv_gif_optimize, cv_gif_downscale;
+extern consvar_t cv_gif_optimize, cv_gif_downscale, cv_gif_localcolortable;
 
 #endif
