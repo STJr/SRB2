@@ -242,10 +242,9 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 				fullalpha = 0xFF;
 			alpha = (UINT8)fullalpha;
 
-			// if the background pixel is empty,
-			// match software and don't blend anything
+			// if the background pixel is empty, match software and don't blend anything
 			if (!background.s.alpha)
-				output.s.alpha = 0;
+				output.rgba = 0;
 			else
 			{
 				UINT8 beta = (0xFF - alpha);
