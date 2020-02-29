@@ -4100,7 +4100,7 @@ void P_SetupSignExit(player_t *player)
 
 		if (!numfound
 			&& !(player->mo->target && player->mo->target->type == MT_SIGN)
-			&& !(G_CoopGametype() && (netgame || multiplayer) && cv_exitmove.value))
+			&& !((gametyperules & GTR_FRIENDLY) && (netgame || multiplayer) && cv_exitmove.value))
 				P_SetTarget(&player->mo->target, thing);
 
 		if (thing->state != &states[thing->info->spawnstate])
@@ -4131,7 +4131,7 @@ void P_SetupSignExit(player_t *player)
 
 		if (!numfound
 			&& !(player->mo->target && player->mo->target->type == MT_SIGN)
-			&& !(G_CoopGametype() && (netgame || multiplayer) && cv_exitmove.value))
+			&& !((gametyperules & GTR_FRIENDLY) && (netgame || multiplayer) && cv_exitmove.value))
 				P_SetTarget(&player->mo->target, thing);
 
 		if (thing->state != &states[thing->info->spawnstate])

@@ -3180,7 +3180,7 @@ void G_ExitLevel(void)
 				CV_SetValue(&cv_teamscramble, cv_scrambleonchange.value);
 		}
 
-		if (!(gametyperules & GTR_CAMPAIGN))
+		if (!(gametyperules & (GTR_FRIENDLY|GTR_CAMPAIGN)))
 			CONS_Printf(M_GetText("The round has ended.\n"));
 
 		// Remove CEcho text on round end.
@@ -3840,7 +3840,10 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed))
+	// If the current gametype has no intermission screen set, then don't start it.
+	Y_DetermineIntermissionType();
+
+	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed) || (intertype == int_none))
 	{
 		G_UpdateVisited();
 		G_AfterIntermission();

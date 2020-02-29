@@ -9925,7 +9925,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (player->exiting)
 	{
 		if (mo->target && mo->target->type == MT_SIGN && mo->target->spawnpoint
-		&& !(G_CoopGametype() && (netgame || multiplayer) && cv_exitmove.value)
+		&& !((gametyperules & GTR_FRIENDLY) && (netgame || multiplayer) && cv_exitmove.value)
 		&& !(twodlevel || (mo->flags2 & MF2_TWOD)))
 			sign = mo->target;
 		else if ((player->powers[pw_carry] == CR_NIGHTSMODE)
@@ -11826,7 +11826,7 @@ void P_PlayerThink(player_t *player)
 
 	if (player->pflags & PF_FINISHED)
 	{
-		if ((G_CoopGametype() && cv_exitmove.value) && !G_EnoughPlayersFinished())
+		if (((gametyperules & GTR_FRIENDLY) && cv_exitmove.value) && !G_EnoughPlayersFinished())
 			player->exiting = 0;
 		else
 			P_DoPlayerExit(player);
