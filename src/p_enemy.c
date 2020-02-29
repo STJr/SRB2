@@ -6601,7 +6601,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 		if (changecolor)
 		{
-			if (!(gametyperules & GTR_TEAMFLAGS))
+			if (!(gametyperules & GTR_TEAMS))
 				mo->color = actor->target->color; //copy color
 			else if (actor->target->player->ctfteam == 2)
 				mo->color = skincolor_bluering;
@@ -6617,7 +6617,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (!(gametyperules & GTR_TEAMFLAGS))
+		if (!(gametyperules & GTR_TEAMS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -6632,7 +6632,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (!(gametyperules & GTR_TEAMFLAGS))
+		if (!(gametyperules & GTR_TEAMS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
