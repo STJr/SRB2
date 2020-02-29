@@ -4986,7 +4986,7 @@ void A_ThrownRing(mobj_t *actor)
 				continue;
 
 			// Don't home in on teammates.
-			if ((gametyperules & GTR_TEAMFLAGS)
+			if ((gametyperules & GTR_TEAMS)
 				&& actor->target->player->ctfteam == player->ctfteam)
 				continue;
 		}
