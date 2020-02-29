@@ -1437,7 +1437,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 	}
 
 	// In team match, all awarded points are incremented to the team's running score.
-	if (gametype == GT_TEAMMATCH)
+	if ((gametyperules & (GTR_TEAMS|GTR_TEAMFLAGS)) == GTR_TEAMS)
 	{
 		if (player->ctfteam == 1)
 			redscore += amount;
@@ -1471,7 +1471,7 @@ void P_StealPlayerScore(player_t *player, UINT32 amount)
 	if (stolen > 0)
 	{
 		// In team match, all stolen points are removed from the enemy team's running score.
-		if (gametype == GT_TEAMMATCH)
+		if ((gametyperules & (GTR_TEAMS|GTR_TEAMFLAGS)) == GTR_TEAMS)
 		{
 			if (player->ctfteam == 1)
 				bluescore -= amount;
