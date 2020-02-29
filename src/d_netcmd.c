@@ -3629,7 +3629,7 @@ static void PointLimit_OnChange(void)
 static void NumLaps_OnChange(void)
 {
 	// Just don't be verbose
-	if (gametype == GT_RACE)
+	if ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)
 		CONS_Printf(M_GetText("Number of laps set to %d\n"), cv_numlaps.value);
 }
 
@@ -4608,7 +4608,7 @@ static void Command_ShowTime_f(void)
 
 static void BaseNumLaps_OnChange(void)
 {
-	if (gametype == GT_RACE)
+	if ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)
 	{
 		if (cv_basenumlaps.value)
 			CONS_Printf(M_GetText("Number of laps will be changed to map defaults next round.\n"));
