@@ -2085,7 +2085,7 @@ boolean G_Responder(event_t *ev)
 					 && players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
 						continue;
 				}
-				else if (gametype == GT_HIDEANDSEEK)
+				else if (gametyperules & GTR_HIDEFROZEN)
 				{
 					if (players[consoleplayer].pflags & PF_TAGIT)
 						continue;

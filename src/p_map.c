@@ -1613,7 +1613,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 
 	// Force solid players in hide and seek to avoid corner stacking.
-	if (cv_tailspickup.value && gametype != GT_HIDEANDSEEK)
+	if (cv_tailspickup.value && !(gametyperules & GTR_HIDEFROZEN))
 	{
 		if (tmthing->player && thing->player)
 		{
