@@ -11440,7 +11440,7 @@ void P_SpawnPlayer(INT32 playernum)
 	if (!G_GametypeHasSpectators())
 	{
 		p->spectator = p->outofcoop =
-		(((multiplayer || netgame) && gametype == GT_COOP) // only question status in coop
+		(((multiplayer || netgame) && G_CoopGametype()) // only question status in coop
 		&& ((leveltime > 0
 		&& ((G_IsSpecialStage(gamemap)) // late join special stage
 		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->outofcoop)))) // late join or die in new coop
@@ -11594,7 +11594,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
-	
+
 	if (p->pflags & PF_FINISHED)
 		P_GiveFinishFlags(p);
 }
@@ -11918,7 +11918,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 	case MT_EMERALD5:
 	case MT_EMERALD6:
 	case MT_EMERALD7:
-		if (gametype != GT_COOP) // Don't place emeralds in non-coop modes
+		if (!G_CoopGametype()) // Don't place emeralds in non-coop modes
 			return false;
 
 		if (metalrecording)
@@ -11938,7 +11938,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		runemeraldmanager = true;
 		break;
 	case MT_ROSY:
-		if (!(gametype == GT_COOP || (mthing->options & MTF_EXTRA)))
+		if (!(G_CoopGametype() || (mthing->options & MTF_EXTRA)))
 			return false; // she doesn't hang out here
 
 		if (!mariomode && !(netgame || multiplayer) && players[consoleplayer].skin == 3)
@@ -12053,7 +12053,7 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 			}
 		}
 		// Set powerup boxes to user settings for other netplay modes
-		else if (gametype != GT_COOP)
+		else if (!G_CoopGametype())
 		{
 			switch (cv_matchboxes.value)
 			{

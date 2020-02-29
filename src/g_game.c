@@ -3131,7 +3131,7 @@ void G_AddPlayer(INT32 playernum)
 
 	p->height = mobjinfo[MT_PLAYER].height;
 
-	if (G_GametypeUsesLives() || ((netgame || multiplayer) && gametype == GT_COOP))
+	if (G_GametypeUsesLives() || ((netgame || multiplayer) && (gametyperules & GTR_FRIENDLY)))
 		p->lives = cv_startinglives.value;
 
 	if ((countplayers && !notexiting) || G_IsSpecialStage(gamemap))
@@ -3589,6 +3589,16 @@ boolean G_RingSlingerGametype(void)
 boolean G_PlatformGametype(void)
 {
 	return (!(gametyperules & GTR_RINGSLINGER));
+}
+
+//
+// G_CoopGametype
+//
+// Returns true if a gametype is a Co-op gametype.
+//
+boolean G_CoopGametype(void)
+{
+	return ((gametyperules & (GTR_FRIENDLY|GTR_CAMPAIGN)) == (GTR_FRIENDLY|GTR_CAMPAIGN));
 }
 
 //

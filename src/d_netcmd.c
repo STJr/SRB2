@@ -3743,7 +3743,7 @@ static void ExitMove_OnChange(void)
 {
 	UINT8 i;
 
-	if (!(netgame || multiplayer) || gametype != GT_COOP)
+	if (!(netgame || multiplayer) || !G_CoopGametype())
 		return;
 
 	if (cv_exitmove.value)

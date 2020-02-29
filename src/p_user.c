@@ -1351,7 +1351,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 		player->powers[pw_sneakers] = 0;
 	}
 
-	if (gametype != GT_COOP)
+	if (!G_CoopGametype())
 	{
 		HU_SetCEchoFlags(0);
 		HU_SetCEchoDuration(5);
@@ -1418,7 +1418,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 			}
 		}
 
-		if (gametype == GT_COOP)
+		if (G_CoopGametype())
 			return;
 	}
 
@@ -4305,7 +4305,7 @@ static void P_DoSuperStuff(player_t *player)
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
-			if (gametype != GT_COOP)
+			if (!G_CoopGametype())
 			{
 				HU_SetCEchoFlags(0);
 				HU_SetCEchoDuration(5);
@@ -4355,14 +4355,14 @@ static void P_DoSuperStuff(player_t *player)
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
-			if (gametype != GT_COOP)
+			if (!G_CoopGametype())
 				player->powers[pw_flashing] = flashingtics-1;
 
 			if (player->mo->sprite2 & FF_SPR2SUPER)
 				P_SetPlayerMobjState(player->mo, player->mo->state-states);
 
 			// Inform the netgame that the champion has fallen in the heat of battle.
-			if (gametype != GT_COOP)
+			if (!G_CoopGametype())
 			{
 				S_StartSound(NULL, sfx_s3k66); //let all players hear it.
 				HU_SetCEchoFlags(0);
@@ -9639,7 +9639,7 @@ static void P_DeathThink(player_t *player)
 	}
 
 	if ((cv_cooplives.value != 1)
-	&& (gametype == GT_COOP)
+	&& (G_GametypeUsesCoopLives())
 	&& (netgame || multiplayer)
 	&& (player->lives <= 0))
 	{
@@ -9721,17 +9721,17 @@ static void P_DeathThink(player_t *player)
 					countdown2 = 1*TICRATE;
 			}
 		}
-		//else if (gametype == GT_COOP) -- moved to G_DoReborn
+		//else if (G_CoopGametype()) -- moved to G_DoReborn
 	}
 
-	if (gametype == GT_COOP && (multiplayer || netgame) && (player->lives <= 0) && (player->deadtimer >= 8*TICRATE || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE))))
+	if (G_CoopGametype() && (multiplayer || netgame) && (player->lives <= 0) && (player->deadtimer >= 8*TICRATE || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE))))
 	{
 		//player->spectator = true;
 		player->outofcoop = true;
 		player->playerstate = PST_REBORN;
 	}
 
-	if ((gametyperules & GTR_RACE) || (gametype == GT_COOP && (multiplayer || netgame)))
+	if ((gametyperules & GTR_RACE) || (G_CoopGametype() && (multiplayer || netgame)))
 	{
 		// Keep time rolling in race mode
 		if (!(countdown2 && !countdown) && !player->exiting && !(player->pflags & PF_GAMETYPEOVER) && !stoppedclock)
@@ -9748,7 +9748,7 @@ static void P_DeathThink(player_t *player)
 		}
 
 		// Return to level music
-		if (gametype != GT_COOP && player->lives <= 0 && player->deadtimer == gameovertics)
+		if (!G_CoopGametype() && player->lives <= 0 && player->deadtimer == gameovertics)
 			P_RestoreMultiMusic(player);
 	}
 
@@ -9925,7 +9925,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (player->exiting)
 	{
 		if (mo->target && mo->target->type == MT_SIGN && mo->target->spawnpoint
-		&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value)
+		&& !(G_CoopGametype() && (netgame || multiplayer) && cv_exitmove.value)
 		&& !(twodlevel || (mo->flags2 & MF2_TWOD)))
 			sign = mo->target;
 		else if ((player->powers[pw_carry] == CR_NIGHTSMODE)
@@ -10594,7 +10594,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 boolean P_SpectatorJoinGame(player_t *player)
 {
-	if (gametype != GT_COOP && !cv_allowteamchange.value)
+	if (!G_CoopGametype() && !cv_allowteamchange.value)
 	{
 		if (P_IsLocalPlayer(player))
 			CONS_Printf(M_GetText("Server does not allow team change.\n"));
@@ -10705,7 +10705,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 				displayplayer = consoleplayer;
 			}
 
-			if (gametype != GT_COOP)
+			if (!G_CoopGametype())
 				CONS_Printf(M_GetText("%s entered the game.\n"), player_names[player-players]);
 			return true; // no more player->mo, cannot continue.
 		}
@@ -11753,7 +11753,7 @@ void P_PlayerThink(player_t *player)
 	// so we can fade music
 	if (!exitfadestarted &&
 		player->exiting > 0 && player->exiting <= 1*TICRATE &&
-		(!multiplayer || gametype == GT_COOP ? !mapheaderinfo[gamemap-1]->musinterfadeout : true) &&
+		(!multiplayer || G_CoopGametype() ? !mapheaderinfo[gamemap-1]->musinterfadeout : true) &&
 			// don't fade if we're fading during intermission. follows Y_StartIntermission intertype = int_coop
 		((gametyperules & GTR_RACE) ? countdown2 == 0 : true) && // don't fade on timeout
 		player->lives > 0 && // don't fade on game over (competition)
@@ -11826,7 +11826,7 @@ void P_PlayerThink(player_t *player)
 
 	if (player->pflags & PF_FINISHED)
 	{
-		if ((gametype == GT_COOP && cv_exitmove.value) && !G_EnoughPlayersFinished())
+		if ((G_CoopGametype() && cv_exitmove.value) && !G_EnoughPlayersFinished())
 			player->exiting = 0;
 		else
 			P_DoPlayerExit(player);
@@ -11864,10 +11864,10 @@ void P_PlayerThink(player_t *player)
 	// Make sure spectators always have a score and ring count of 0.
 	if (player->spectator)
 	{
-		if (gametype != GT_COOP)
+		if (!(gametyperules & GTR_CAMPAIGN))
 			player->score = 0;
 	}
-	else if ((netgame || multiplayer) && player->lives <= 0 && gametype != GT_COOP)
+	else if ((netgame || multiplayer) && player->lives <= 0 && !G_CoopGametype())
 	{
 		// Outside of Co-Op, replenish a user's lives if they are depleted.
 		// of course, this is just a cheap hack, meh...
@@ -12732,7 +12732,7 @@ void P_PlayerAfterThink(player_t *player)
 					player->mo->momz = tails->momz;
 				}
 
-				if (gametype == GT_COOP && (!tails->player || tails->player->bot != 1))
+				if (G_CoopGametype() && (!tails->player || tails->player->bot != 1))
 				{
 					player->mo->angle = tails->angle;
 

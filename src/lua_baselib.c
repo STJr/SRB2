@@ -2937,6 +2937,14 @@ static int lib_gPlatformGametype(lua_State *L)
 	return 1;
 }
 
+static int lib_gCoopGametype(lua_State *L)
+{
+	//HUDSAFE
+	INLEVEL
+	lua_pushboolean(L, G_CoopGametype());
+	return 1;
+}
+
 static int lib_gTagGametype(lua_State *L)
 {
 	//HUDSAFE
@@ -3209,6 +3217,7 @@ static luaL_Reg lib[] = {
 	{"G_GametypeHasSpectators",lib_gGametypeHasSpectators},
 	{"G_RingSlingerGametype",lib_gRingSlingerGametype},
 	{"G_PlatformGametype",lib_gPlatformGametype},
+	{"G_CoopGametype",lib_gCoopGametype},
 	{"G_TagGametype",lib_gTagGametype},
 	{"G_CompetitionGametype",lib_gCompetitionGametype},
 	{"G_TicsToHours",lib_gTicsToHours},

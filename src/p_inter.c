@@ -2525,7 +2525,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			}
 			P_RestoreMusic(target->player);
 
-			if (gametype != GT_COOP)
+			if (!G_CoopGametype())
 			{
 				HU_SetCEchoFlags(0);
 				HU_SetCEchoDuration(5);
@@ -3257,7 +3257,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	}
 
 	// If the player was super, tell them he/she ain't so super nomore.
-	if (gametype != GT_COOP && player->powers[pw_super])
+	if (!G_CoopGametype() && player->powers[pw_super])
 	{
 		S_StartSound(NULL, sfx_s3k66); //let all players hear it.
 		HU_SetCEchoFlags(0);
@@ -3627,7 +3627,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				if (source == target)
 					return false; // Don't hit yourself with your own paraloop, baka
 				if (source && source->player && !(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE))
-				&& (gametype == GT_COOP
+				&& ((gametyperules & GTR_FRIENDLY)
 				|| (G_GametypeHasTeams() && player->ctfteam == source->player->ctfteam)))
 					return false; // Don't run eachother over in special stages and team games and such
 			}

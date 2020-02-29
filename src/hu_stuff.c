@@ -2175,7 +2175,7 @@ void HU_Drawer(void)
 			if (LUA_HudEnabled(hud_rankings))
 #endif
 			HU_DrawRankings();
-			if (gametype == GT_COOP)
+			if (gametyperules & GTR_CAMPAIGN)
 				HU_DrawNetplayCoopOverlay();
 		}
 		else
