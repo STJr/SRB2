@@ -320,6 +320,8 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 			section_end = strstr(p, "\n\n");
 			room = strtok(p, "\n");
 			p = strtok(0, "");
+			if (! p)
+				break;
 			for (; i < MAXSERVERLIST && ( end = strchr(p, '\n') ); ++i)
 			{
 				*end = '\0';
