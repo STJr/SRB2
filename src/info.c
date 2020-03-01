@@ -21773,7 +21773,6 @@ void P_PatchInfoTables(void)
 		skincolors[i].accessible = false;
 		skincolors[i].name[0] = '\0';
 	}
-	numskincolors = SKINCOLOR_FIRSTFREESLOT;
 	for (i = MT_FIRSTFREESLOT; i <= MT_LASTFREESLOT; i++)
 		mobjinfo[i].doomednum = -1;
 }

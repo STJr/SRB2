@@ -3860,8 +3860,6 @@ void M_Init(void)
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
 #endif
-
-	M_InitPlayerSetupColors();
 }
 
 void M_InitCharacterTables(void)
@@ -11427,7 +11425,7 @@ void M_AddMenuColor(UINT8 color) {
 		return;
 	}
 
-	c = (menucolor_t *)Z_Malloc(sizeof(menucolor_t), PU_STATIC, NULL);
+	c = (menucolor_t *)malloc(sizeof(menucolor_t));
 	c->color = color;
 	if (menucolorhead == NULL) {
 		c->next = c;
@@ -11561,6 +11559,7 @@ UINT8 M_GetColorAfter(UINT8 color) {
 
 void M_InitPlayerSetupColors(void) {
 	UINT8 i;
+	numskincolors = SKINCOLOR_FIRSTFREESLOT;
 	menucolorhead = menucolortail = NULL;
 	for (i=0; i<numskincolors; i++)
 		M_AddMenuColor(i);
@@ -11576,9 +11575,9 @@ void M_FreePlayerSetupColors(void) {
 		if (look != menucolortail) {
 			tmp = look;
 			look = look->next;
-			Z_Free(tmp);
+			free(tmp);
 		} else {
-			Z_Free(look);
+			free(look);
 			return;
 		}
 	}

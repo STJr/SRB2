@@ -1516,8 +1516,8 @@ static int lib_setSkinColor(lua_State *L)
 	lua_remove(L, 1); // don't care about skincolors[] userdata.
 	{
 		cnum = (UINT8)luaL_checkinteger(L, 1);
-		if (!cnum || cnum >= numskincolors)
-			return luaL_error(L, "skincolors[] index %d out of range (1 - %d)", cnum, numskincolors-1);
+		if (cnum < SKINCOLOR_FIRSTFREESLOT || cnum >= numskincolors)
+			return luaL_error(L, "skincolors[] index %d out of range (%d - %d)", cnum, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
 		info = &skincolors[cnum]; // get the skincolor to assign to.
 	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
@@ -1615,8 +1615,8 @@ static int skincolor_set(lua_State *L)
 	I_Assert(info != NULL);
 	I_Assert(info >= skincolors);
 
-	if (info-skincolors >= numskincolors)
-		return luaL_error(L, "skincolors[] index %d does not exist", info-skincolors);
+	if (info-skincolors < SKINCOLOR_FIRSTFREESLOT || info-skincolors >= numskincolors)
+		return luaL_error(L, "skincolors[] index %d out of range (%d - %d)", info-skincolors, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
 
 	if (fastcmp(field,"name")) {
 		const char* n = luaL_checkstring(L, 3);
@@ -1640,13 +1640,9 @@ static int skincolor_set(lua_State *L)
 		info->invshade = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"chatcolor"))
 		info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"accessible")) {
-		boolean v = lua_isboolean(L,3) ? lua_toboolean(L, 3) : true;
-		if (info-skincolors < FIRSTSUPERCOLOR && v != info->accessible)
-			return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", info-skincolors);
-		else
-			info->accessible = v;
-	} else
+	else if (fastcmp(field,"accessible"))
+		info->accessible = lua_isboolean(L,3);
+	else
 		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
 	return 1;
 }
@@ -1678,8 +1674,11 @@ static int colorramp_get(lua_State *L)
 static int colorramp_set(lua_State *L)
 {
 	UINT8 *colorramp = *((UINT8 **)luaL_checkudata(L, 1, META_COLORRAMP));
+	UINT16 cnum = (UINT16)(((uint8_t*)colorramp - (uint8_t*)(skincolors[0].ramp))/sizeof(skincolor_t));
 	UINT32 n = luaL_checkinteger(L, 2);
 	UINT8 i = (UINT8)luaL_checkinteger(L, 3);
+	if (cnum < SKINCOLOR_FIRSTFREESLOT || cnum >= numskincolors)
+		return luaL_error(L, "skincolors[] index %d out of range (%d - %d)", cnum, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
 	if (n >= COLORRAMPSIZE)
 		return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' index %d out of range (0 - %d)", n, COLORRAMPSIZE-1);
 	if (hud_running)

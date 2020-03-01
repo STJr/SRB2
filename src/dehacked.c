@@ -4629,11 +4629,11 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_skincolor(word2); // find a skincolor by name
-					if (i < numskincolors && i > 0)
+					if (i < numskincolors && i >= (INT32)SKINCOLOR_FIRSTFREESLOT)
 						readskincolor(f, i);
 					else
 					{
-						deh_warning("Skincolor %d out of range (1 - %d)", i, numskincolors-1);
+						deh_warning("Skincolor %d out of range (%d - %d)", i, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
 						ignorelines(f);
 					}
 				}
