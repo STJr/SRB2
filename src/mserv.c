@@ -70,7 +70,7 @@
 
 /* HTTP */
 int  HMS_in_use (void);
-void HMS_fetch_rooms (void);
+void HMS_fetch_rooms (int joining);
 int  HMS_register (void);
 void HMS_unlist (void);
 void HMS_update (void);
@@ -515,7 +515,7 @@ INT32 GetRoomsList(boolean hosting)
 
 	if (HMS_in_use())
 	{
-		HMS_fetch_rooms();
+		HMS_fetch_rooms( ! hosting );
 		return 1;
 	}
 

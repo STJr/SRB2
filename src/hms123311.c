@@ -143,7 +143,7 @@ HMS_in_use (void)
 }
 
 void
-HMS_fetch_rooms (void)
+HMS_fetch_rooms (int joining)
 {
 	struct HMS_buffer *hms;
 	char *p;
@@ -179,12 +179,17 @@ HMS_fetch_rooms (void)
 				break;
 		}
 
-		room_list[i].header.buffer[0] = 1;
-		room_list[i].id = 0;
-		strcpy(room_list[i].name, "All");
-		strcpy(room_list[i].motd, "Wildcard.");
+		if (joining)
+		{
+			room_list[i].header.buffer[0] = 1;
+			room_list[i].id = 0;
+			strcpy(room_list[i].name, "All");
+			strcpy(room_list[i].motd, "Wildcard.");
 
-		room_list[i + 1].header.buffer[0] = 0;
+			i++;
+		}
+
+		room_list[i].header.buffer[0] = 0;
 	}
 	HMS_end(hms);
 }
