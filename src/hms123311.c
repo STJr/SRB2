@@ -32,6 +32,11 @@ consvar_t cv_masterserver_token = {
 	NULL, NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
 };
 
+consvar_t cv_masterserver_debug = {
+	"masterserver_debug", "Off", CV_SAVE, CV_OnOff,
+	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
+};
+
 static int hms_started;
 
 static char hms_server_token[sizeof "xxx.xxx.xxx.xxx/xxxxx"];
@@ -97,6 +102,8 @@ HMS_connect (const char *format, ...)
 	buffer->buffer = malloc(buffer->end);
 	buffer->needle = 0;
 
+	if (cv_masterserver_debug.value)
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 	curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
