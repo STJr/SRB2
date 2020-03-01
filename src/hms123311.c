@@ -265,8 +265,8 @@ HMS_list_servers (void)
 {
 	struct HMS_buffer *hms;
 	hms = HMS_connect("servers?token=%s", cv_masterserver_token.string);
-	HMS_do(hms);
-	CONS_Printf("%s", hms->buffer);
+	if (HMS_do(hms))
+		CONS_Printf("%s", hms->buffer);
 	HMS_end(hms);
 }
 
