@@ -67,6 +67,12 @@ typedef enum
 	PT_RESYNCHEND,    // Player is now resynched and is being requested to remake the gametic
 	PT_RESYNCHGET,    // Player got resynch packet
 
+#ifdef HAVE_BLUA
+	PT_SENDINGLUAFILE, // Server telling a client Lua needs to open a file
+	PT_ASKLUAFILE,     // Client telling the server they don't have the file
+	PT_HASLUAFILE,     // Client telling the server they have the file
+#endif
+
 	// Add non-PT_CANFAIL packet types here to avoid breaking MS compatibility.
 
 	PT_CANFAIL,       // This is kind of a priority. Anything bigger than CANFAIL
