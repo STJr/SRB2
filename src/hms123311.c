@@ -18,7 +18,7 @@
 
 consvar_t cv_http_masterserver = {
 	"http_masterserver",
-	"http://www.jameds.org/MS/0",
+	"http://www.jameds.org/SRB2/MS/0",
 	CV_SAVE,
 
 	NULL, NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
