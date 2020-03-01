@@ -1249,7 +1249,7 @@ static void readgametype(MYFILE *f, char *gtname)
 					newgttol = (UINT32)i;
 				else
 				{
-					UINT16 tol = 0;
+					UINT32 tol = 0;
 					tmp = strtok(word2,",");
 					do {
 						for (i = 0; TYPEOFLEVEL[i].name; i++)
@@ -1591,7 +1591,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->typeoflevel = (UINT32)i;
 				else
 				{
-					UINT16 tol = 0;
+					UINT32 tol = 0;
 					tmp = strtok(word2,",");
 					do {
 						for (i = 0; TYPEOFLEVEL[i].name; i++)
@@ -7477,7 +7477,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Got Flag Sign
 	"S_GOTFLAG",
-	
+
 	// Finish flag
 	"S_FINISHFLAG",
 
@@ -10236,7 +10236,7 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-	else if (fastncmp("GT_",word,4)) {
+	else if (fastncmp("GT_",word,3)) {
 		r = get_gametype(word);
 		free(word);
 		return r;
