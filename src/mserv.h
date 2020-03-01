@@ -64,6 +64,8 @@ typedef struct
 // ================================ GLOBALS ===============================
 
 extern consvar_t cv_masterserver, cv_servername;
+extern consvar_t cv_http_masterserver;
+extern consvar_t cv_masterserver_token;
 
 // < 0 to not connect (usually -1) (offline mode)
 // == 0 to show all rooms, not a valid hosting room

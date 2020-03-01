@@ -324,6 +324,8 @@ else
 NOPNG=1
 endif
 
+LIBS+=-lcurl
+
 ifdef STATIC
 LIBS:=-static $(LIBS)
 endif
@@ -480,6 +482,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/w_wad.o    \
 		$(OBJDIR)/filesrch.o \
 		$(OBJDIR)/mserv.o    \
+		$(OBJDIR)/hms123311.o\
 		$(OBJDIR)/i_tcp.o    \
 		$(OBJDIR)/lzf.o	     \
 		$(OBJDIR)/vid_copy.o \
