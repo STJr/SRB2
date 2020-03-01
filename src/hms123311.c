@@ -103,7 +103,10 @@ HMS_connect (const char *format, ...)
 	buffer->needle = 0;
 
 	if (cv_masterserver_debug.value)
+	{
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+		curl_easy_setopt(curl, CURLOPT_STDERR, logstream);
+	}
 	curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
