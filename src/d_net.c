@@ -715,6 +715,10 @@ void Net_CloseConnection(INT32 node)
 
 	InitNode(&nodes[node]);
 	SV_AbortSendFiles(node);
+#ifdef HAVE_BLUA
+	if (server)
+		SV_AbortLuaFileTransfer(node);
+#endif
 	I_NetFreeNodenum(node);
 #endif
 }
@@ -799,6 +803,12 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"WILLRESENDGAMESTATE",
 	"CANRECEIVEGAMESTATE",
 	"RECEIVEDGAMESTATE",
+
+#ifdef HAVE_BLUA
+	"SENDINGLUAFILE",
+	"ASKLUAFILE",
+	"HASLUAFILE",
+#endif
 
 	"FILEFRAGMENT",
 	"TEXTCMD",
