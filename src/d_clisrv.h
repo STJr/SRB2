@@ -64,11 +64,10 @@ typedef enum
 	PT_REQUESTFILE,   // Client requests a file transfer
 	PT_ASKINFOVIAMS,  // Packet from the MS requesting info be sent to new client.
 	                  // If this ID changes, update masterserver definition.
-	PT_RESYNCHEND,    // Player is now resynched and is being requested to remake the gametic
-	PT_RESYNCHGET,    // Player got resynch packet
 
 	PT_WILLRESENDGAMESTATE, // Hey Client, I am about to resend you the gamestate!
-	PT_CANRECEIVEGAMESTATE,  // Okay Server, I'm ready to receive it, you can go ahead.
+	PT_CANRECEIVEGAMESTATE, // Okay Server, I'm ready to receive it, you can go ahead.
+	PT_RECEIVEDGAMESTATE,   // Thank you Server, I am ready to play again!
 
 	// Add non-PT_CANFAIL packet types here to avoid breaking MS compatibility.
 
@@ -82,8 +81,6 @@ typedef enum
 	PT_TEXTCMD2,      // Splitscreen text commands.
 	PT_CLIENTJOIN,    // Client wants to join; used in start game.
 	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
-	PT_RESYNCHING,    // Packet sent to resync players.
-	                  // Blocks game advance until synched.
 
 	PT_LOGIN,         // Login attempt from the client.
 
@@ -135,165 +132,6 @@ typedef struct
 	UINT8 numslots; // "Slots filled": Highest player number in use plus one.
 	ticcmd_t cmds[45]; // Normally [BACKUPTIC][MAXPLAYERS] but too large
 } ATTRPACK servertics_pak;
-
-// Sent to client when all consistency data
-// for players has been restored
-typedef struct
-{
-	UINT32 randomseed;
-
-	// CTF flag stuff
-	SINT8 flagplayer[2];
-	INT32 flagloose[2];
-	INT32 flagflags[2];
-	fixed_t flagx[2];
-	fixed_t flagy[2];
-	fixed_t flagz[2];
-
-	UINT32 ingame;  // Spectator bit for each player
-	UINT32 outofcoop;  // outofcoop bit for each player
-	INT32 ctfteam[MAXPLAYERS]; // Which team? (can't be 1 bit, since in regular Match there are no teams)
-
-	// Resynch game scores and the like all at once
-	UINT32 score[MAXPLAYERS]; // Everyone's score
-	INT16 numboxes[MAXPLAYERS];
-	INT16 totalring[MAXPLAYERS];
-	tic_t realtime[MAXPLAYERS];
-	UINT8 laps[MAXPLAYERS];
-} ATTRPACK resynchend_pak;
-
-typedef struct
-{
-	// Player stuff
-	UINT8 playernum;
-
-	// Do not send anything visual related.
-	// Only send data that we need to know for physics.
-	UINT8 playerstate; // playerstate_t
-	UINT32 pflags; // pflags_t
-	UINT8 panim; // panim_t
-
-	angle_t aiming;
-	INT32 currentweapon;
-	INT32 ringweapons;
-	UINT16 ammoremoval;
-	tic_t ammoremovaltimer;
-	INT32 ammoremovalweapon;
-	UINT16 powers[NUMPOWERS];
-
-	// Score is resynched in the confirm resync packet
-	INT16 rings;
-	INT16 spheres;
-	SINT8 lives;
-	SINT8 continues;
-	UINT8 scoreadd;
-	SINT8 xtralife;
-	SINT8 pity;
-
-	UINT8 skincolor;
-	INT32 skin;
-	UINT32 availabilities;
-	// Just in case Lua does something like
-	// modify these at runtime
-	fixed_t camerascale;
-	fixed_t shieldscale;
-	fixed_t normalspeed;
-	fixed_t runspeed;
-	UINT8 thrustfactor;
-	UINT8 accelstart;
-	UINT8 acceleration;
-	UINT8 charability;
-	UINT8 charability2;
-	UINT32 charflags;
-	UINT32 thokitem; // mobjtype_t
-	UINT32 spinitem; // mobjtype_t
-	UINT32 revitem; // mobjtype_t
-	UINT32 followitem; // mobjtype_t
-	fixed_t actionspd;
-	fixed_t mindash;
-	fixed_t maxdash;
-	fixed_t jumpfactor;
-	fixed_t playerheight;
-	fixed_t playerspinheight;
-
-	fixed_t speed;
-	UINT8 secondjump;
-	UINT8 fly1;
-	tic_t glidetime;
-	UINT8 climbing;
-	INT32 deadtimer;
-	tic_t exiting;
-	UINT8 homing;
-	tic_t dashmode;
-	tic_t skidtime;
-	fixed_t cmomx;
-	fixed_t cmomy;
-	fixed_t rmomx;
-	fixed_t rmomy;
-
-	INT32 weapondelay;
-	INT32 tossdelay;
-
-	INT16 starpostx;
-	INT16 starposty;
-	INT16 starpostz;
-	INT32 starpostnum;
-	tic_t starposttime;
-	angle_t starpostangle;
-	fixed_t starpostscale;
-
-	INT32 maxlink;
-	fixed_t dashspeed;
-	angle_t angle_pos;
-	angle_t old_angle_pos;
-	tic_t bumpertime;
-	INT32 flyangle;
-	tic_t drilltimer;
-	INT32 linkcount;
-	tic_t linktimer;
-	INT32 anotherflyangle;
-	tic_t nightstime;
-	INT32 drillmeter;
-	UINT8 drilldelay;
-	UINT8 bonustime;
-	UINT8 mare;
-	INT16 lastsidehit, lastlinehit;
-
-	tic_t losstime;
-	UINT8 timeshit;
-	INT32 onconveyor;
-
-	//player->mo stuff
-	UINT8 hasmo; // Boolean
-
-	INT32 health;
-	angle_t angle;
-	angle_t rollangle;
-	fixed_t x;
-	fixed_t y;
-	fixed_t z;
-	fixed_t momx;
-	fixed_t momy;
-	fixed_t momz;
-	fixed_t friction;
-	fixed_t movefactor;
-
-	spritenum_t sprite;
-	UINT32 frame;
-	UINT8 sprite2;
-	UINT16 anim_duration;
-	INT32 tics;
-	statenum_t statenum;
-	UINT32 flags;
-	UINT32 flags2;
-	UINT16 eflags;
-
-	fixed_t radius;
-	fixed_t height;
-	fixed_t scale;
-	fixed_t destscale;
-	fixed_t scalespeed;
-} ATTRPACK resynch_pak;
 
 typedef struct
 {
@@ -430,9 +268,6 @@ typedef struct
 		client2cmd_pak client2pak;          //         200 bytes
 		servertics_pak serverpak;           //      132495 bytes (more around 360, no?)
 		serverconfig_pak servercfg;         //         773 bytes
-		resynchend_pak resynchend;          //
-		resynch_pak resynchpak;             //
-		UINT8 resynchgot;                   //
 		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
 		filetx_pak filetxpak;               //         139 bytes
 		clientconfig_pak clientcfg;         //         136 bytes
@@ -567,7 +402,7 @@ UINT8 GetFreeXCmdSize(void);
 
 void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
 
-extern UINT8 hu_resynching;
+extern UINT8 hu_redownloadinggamestate;
 
 extern UINT8 adminpassmd5[16];
 extern boolean adminpasswordset;

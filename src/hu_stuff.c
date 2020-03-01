@@ -2206,7 +2206,7 @@ void HU_Drawer(void)
 		HU_DrawCrosshair2();
 
 	// draw desynch text
-	if (hu_resynching)
+	if (hu_redownloadinggamestate)
 	{
 		static UINT32 resynch_ticker = 0;
 		char resynch_text[14];
