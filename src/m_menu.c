@@ -3153,6 +3153,9 @@ boolean M_Responder(event_t *ev)
 	if (gamestate == GS_TITLESCREEN && finalecount < TICRATE)
 		return false;
 
+	if (CON_Ready())
+		return false;
+
 	if (noFurtherInput)
 	{
 		// Ignore input after enter/escape/other buttons
@@ -3512,6 +3515,7 @@ boolean M_Responder(event_t *ev)
 			return false;
 
 		default:
+			CON_Responder(ev);
 			break;
 	}
 
