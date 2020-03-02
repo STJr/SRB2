@@ -34,7 +34,8 @@
 #define FMT_FILECALLBACKID "file_callback_%d"
 
 
-static const char *whitelist[] = { // Allow scripters to write files of these types to SRB2's folder
+// Allow scripters to write files of these types to SRB2's folder
+static const char *whitelist[] = {
 	".bmp",
 	".cfg",
 	".csv",
@@ -508,7 +509,6 @@ static int io_readline (lua_State *L) {
 static int g_write (lua_State *L, FILE *f, int arg) {
   int nargs = lua_gettop(L) - 1;
   int status = 1;
-  size_t count;
   for (; nargs--; arg++) {
     if (lua_type(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
@@ -518,12 +518,10 @@ static int g_write (lua_State *L, FILE *f, int arg) {
     else {
       size_t l;
       const char *s = luaL_checklstring(L, arg, &l);
-	  count += l;
-	  if (ftell(f) + l > FILELIMIT)
-	  {
-		luaL_error(L,"write limit bypassed in file. Changes have been discarded.");
-		break;
-	  }
+      if (ftell(f) + l > FILELIMIT) {
+          luaL_error(L,"write limit bypassed in file. Changes have been discarded.");
+          break;
+      }
       status = status && (fwrite(s, sizeof(char), l, f) == l);
     }
   }
