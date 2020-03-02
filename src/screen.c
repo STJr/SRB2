@@ -450,6 +450,20 @@ static int target_renderer = 0;
 void SCR_ActuallyChangeRenderer(void)
 {
 	setrenderneeded = target_renderer;
+
+#ifdef HWRENDER
+	// Well, it didn't even load anyway.
+	if ((hwrenderloaded == -1) && (setrenderneeded == render_opengl))
+	{
+		if (M_CheckParm("-nogl"))
+			CONS_Alert(CONS_ERROR, "OpenGL rendering was disabled!\n");
+		else
+			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
+		setrenderneeded = 0;
+		return;
+	}
+#endif
+
 	// setting the same renderer twice WILL crash your game, so let's not, please
 	if (rendermode == setrenderneeded)
 		setrenderneeded = 0;
@@ -464,7 +478,7 @@ void SCR_ChangeRenderer(void)
 	{
 		target_renderer = cv_renderer.value;
 #ifdef HWRENDER
-		if (M_CheckParm("-opengl"))
+		if (M_CheckParm("-opengl") && (hwrenderloaded == 1))
 			target_renderer = rendermode = render_opengl;
 		else
 #endif
