@@ -36,7 +36,7 @@ basic fields of the packet, and change infrequently.
 //  be transmitted.
 
 // Networking and tick handling related.
-#define BACKUPTICS 32
+#define BACKUPTICS 96
 #define MAXTEXTCMD 256
 //
 // Packet structure
