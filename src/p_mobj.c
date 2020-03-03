@@ -9393,8 +9393,11 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
 				&& P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z - mobj->z) <= mobj->radius*16)
 			{
+				var1 = mobj->info->speed;
+				var2 = 1;
+
 				// Home in on the target.
-				P_HomingAttack(mobj, mobj->tracer);
+				A_HomingChase(mobj);
 
 				if (mobj->z < mobj->floorz)
 					mobj->z = mobj->floorz;
