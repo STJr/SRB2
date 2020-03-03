@@ -3592,7 +3592,7 @@ boolean G_CompetitionGametype(void)
   * \return The typeoflevel flag to check for that gametype.
   * \author Graue <graue@oceanbase.org>
   */
-INT16 G_TOLFlag(INT32 pgametype)
+UINT32 G_TOLFlag(INT32 pgametype)
 {
 	if (!multiplayer)
 		return TOL_SP;
@@ -3723,7 +3723,7 @@ static void G_DoCompleted(void)
 		&& (nextmap >= 0 && nextmap < NUMMAPS))
 	{
 		register INT16 cm = nextmap;
-		INT16 tolflag = G_TOLFlag(gametype);
+		UINT32 tolflag = G_TOLFlag(gametype);
 		UINT8 visitedmap[(NUMMAPS+7)/8];
 
 		memset(visitedmap, 0, sizeof (visitedmap));
