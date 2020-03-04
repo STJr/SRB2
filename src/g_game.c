@@ -1045,17 +1045,14 @@ static INT32 G_BasicDeadZoneCalculation(INT32 magnitude, fixed_t deadZone)
 	const INT32 jdeadzone = (JOYAXISRANGE * deadZone) / FRACUNIT;
 	INT32 deadzoneAppliedValue = 0;
 
-	if (jdeadzone > 0)
+	if (jdeadzone > 0 && magnitude > jdeadzone && deadZone < FRACUNIT)
 	{
-		if (magnitude > jdeadzone)
-		{
-			INT32 adjustedMagnitude = abs(magnitude);
-			adjustedMagnitude = min(adjustedMagnitude, JOYAXISRANGE);
+		INT32 adjustedMagnitude = abs(magnitude);
+		adjustedMagnitude = min(adjustedMagnitude, JOYAXISRANGE);
 
-			adjustedMagnitude -= jdeadzone;
+		adjustedMagnitude -= jdeadzone;
 
-			deadzoneAppliedValue = (adjustedMagnitude * JOYAXISRANGE) / (JOYAXISRANGE - jdeadzone);
-		}
+		deadzoneAppliedValue = (adjustedMagnitude * JOYAXISRANGE) / (JOYAXISRANGE - jdeadzone);
 	}
 
 	return deadzoneAppliedValue;
