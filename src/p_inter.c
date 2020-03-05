@@ -3456,7 +3456,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 			return;
 	}
 
-	if (inflictor->type == MT_LHRT)
+	if (inflictor && inflictor->type == MT_LHRT)
 		return;
 
 	if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
