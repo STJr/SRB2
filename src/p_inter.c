@@ -3441,7 +3441,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
 		return;
 
-	if (!cv_friendlyfire.value && source->player)
+	if (!cv_friendlyfire.value && source && source->player)
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
