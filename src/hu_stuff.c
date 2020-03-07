@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -787,10 +787,12 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				case SKINCOLOR_RED:
 				case SKINCOLOR_CRIMSON:
 				case SKINCOLOR_FLAME:
+				case SKINCOLOR_KETCHUP:
 					cstart = "\x85"; // V_REDMAP
 					break;
 				case SKINCOLOR_YOGURT:
 				case SKINCOLOR_BROWN:
+				case SKINCOLOR_BRONZE:
 				case SKINCOLOR_TAN:
 				case SKINCOLOR_BEIGE:
 				case SKINCOLOR_QUAIL:
@@ -818,6 +820,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 					cstart = "\x8e"; // V_ROSYMAP
 					break;
 				case SKINCOLOR_SUNSET:
+				case SKINCOLOR_COPPER:
 				case SKINCOLOR_APRICOT:
 				case SKINCOLOR_ORANGE:
 				case SKINCOLOR_RUST:
@@ -831,6 +834,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 					break;
 				case SKINCOLOR_LIME:
 				case SKINCOLOR_PERIDOT:
+				case SKINCOLOR_APPLE:
 					cstart = "\x8b"; // V_PERIDOTMAP
 					break;
 				case SKINCOLOR_SEAFOAM:
@@ -851,12 +855,14 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				case SKINCOLOR_BLUE:
 				case SKINCOLOR_COBALT:
 				case SKINCOLOR_DUSK:
+				case SKINCOLOR_BLUEBELL:
 					cstart = "\x84"; // V_BLUEMAP
 					break;
 				case SKINCOLOR_BUBBLEGUM:
 				case SKINCOLOR_MAGENTA:
 				case SKINCOLOR_NEON:
 				case SKINCOLOR_VIOLET:
+				case SKINCOLOR_RASPBERRY:
 					cstart = "\x81"; // V_MAGENTAMAP
 					break;
 			}

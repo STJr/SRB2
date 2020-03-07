@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -508,12 +508,10 @@ static void D_Display(void)
 	// vid size change is now finished if it was on...
 	vid.recalc = 0;
 
-	// FIXME: draw either console or menu, not the two
-	if (gamestate != GS_TIMEATTACK)
-		CON_Drawer();
-
 	M_Drawer(); // menu is drawn even on top of everything
 	// focus lost moved to M_Drawer
+
+	CON_Drawer();
 
 	//
 	// wipe update
@@ -1033,7 +1031,7 @@ void D_SRB2Main(void)
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2019 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2020 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1118,7 +1116,10 @@ void D_SRB2Main(void)
 			// can't use sprintf since there is %u in savegamename
 			strcatbf(savegamename, srb2home, PATHSEP);
 
-#else
+#ifdef HAVE_BLUA
+			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", srb2home);
+#endif
+#else // DEFAULTDIR
 			snprintf(srb2home, sizeof srb2home, "%s", userhome);
 			snprintf(downloaddir, sizeof downloaddir, "%s", userhome);
 			if (dedicated)
@@ -1128,7 +1129,11 @@ void D_SRB2Main(void)
 
 			// can't use sprintf since there is %u in savegamename
 			strcatbf(savegamename, userhome, PATHSEP);
+
+#ifdef HAVE_BLUA
+			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", userhome);
 #endif
+#endif // DEFAULTDIR
 		}
 
 		configfile[sizeof configfile - 1] = '\0';
@@ -1207,34 +1212,20 @@ void D_SRB2Main(void)
 	W_InitMultipleFiles(startupwadfiles, mainwads);
 	D_CleanFile();
 
-#ifndef DEVELOP // md5s last updated 16/02/20 (ddmmyy)
+#ifndef DEVELOP // md5s last updated 22/02/20 (ddmmyy)
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3
 	W_VerifyFileMD5(1, ASSET_HASH_ZONES_PK3); // zones.pk3
 	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
 #ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(3, ASSET_HASH_PATCH_DTA); // patch.pk3
+	W_VerifyFileMD5(3, ASSET_HASH_PATCH_PK3); // patch.pk3
 #endif
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif //ifndef DEVELOP
 
 	mainwadstally = packetsizetally; // technically not accurate atm, remember to port the two-stage -file process from kart in 2.2.x
-
-	if (M_CheckParm("-warp") && M_IsNextParm())
-	{
-		const char *word = M_GetNextParm();
-		pstartmap = G_FindMapByNameOrCode(word, 0);
-		if (! pstartmap)
-			I_Error("Cannot find a map remotely named '%s'\n", word);
-		else
-		{
-			if (!M_CheckParm("-server"))
-				G_SetGameModified(true);
-			autostart = true;
-		}
-	}
 
 	cht_Init();
 
@@ -1284,11 +1275,18 @@ void D_SRB2Main(void)
 	// Lactozilla: Does the render mode need to change?
 	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
 	{
-		CONS_Printf("Switching the renderer...\n");
+		CONS_Printf(M_GetText("Switching the renderer...\n"));
+		Z_PreparePatchFlush();
+
+		// set needpatchflush / needpatchrecache true for D_CheckRendererState
 		needpatchflush = true;
 		needpatchrecache = true;
+
+		// Set cv_renderer to the new render mode
 		VID_CheckRenderer();
 		SCR_ChangeRendererCVars(setrenderneeded);
+
+		// check the renderer's state, and then clear setrenderneeded
 		D_CheckRendererState();
 		setrenderneeded = 0;
 	}
@@ -1298,6 +1296,23 @@ void D_SRB2Main(void)
 	savedata.lives = 0; // flag this as not-used
 
 	//------------------------------------------------ COMMAND LINE PARAMS
+
+	// this must be done after loading gamedata,
+	// to avoid setting off the corrupted gamedata code in G_LoadGameData if a SOC with custom gamedata is added
+	// -- Monster Iestyn 20/02/20
+	if (M_CheckParm("-warp") && M_IsNextParm())
+	{
+		const char *word = M_GetNextParm();
+		pstartmap = G_FindMapByNameOrCode(word, 0);
+		if (! pstartmap)
+			I_Error("Cannot find a map remotely named '%s'\n", word);
+		else
+		{
+			if (!M_CheckParm("-server"))
+				G_SetGameModified(true);
+			autostart = true;
+		}
+	}
 
 	// Initialize CD-Audio
 	if (M_CheckParm("-usecd") && !dedicated)

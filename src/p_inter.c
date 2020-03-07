@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3441,7 +3441,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
 		return;
 
-	if (!cv_friendlyfire.value)
+	if (!cv_friendlyfire.value && source && source->player)
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
@@ -3456,7 +3456,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 			return;
 	}
 
-	if (inflictor->type == MT_LHRT)
+	if (inflictor && inflictor->type == MT_LHRT)
 		return;
 
 	if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield

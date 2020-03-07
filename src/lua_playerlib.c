@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -97,6 +97,10 @@ static int player_get(lua_State *L)
 		lua_pushboolean(L, true);
 	else if (fastcmp(field,"name"))
 		lua_pushstring(L, player_names[plr-players]);
+	else if (fastcmp(field,"realmo"))
+		LUA_PushUserdata(L, plr->mo, META_MOBJ);
+	// Kept for backward-compatibility
+	// Should be fixed to work like "realmo" later
 	else if (fastcmp(field,"mo"))
 	{
 		if (plr->spectator)
@@ -398,7 +402,7 @@ static int player_set(lua_State *L)
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
 
-	if (fastcmp(field,"mo")) {
+	if (fastcmp(field,"mo") || fastcmp(field,"realmo")) {
 		mobj_t *newmo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 		plr->mo->player = NULL; // remove player pointer from old mobj
 		(newmo->player = plr)->mo = newmo; // set player pointer for new mobj, and set new mobj as the player's mobj

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -417,7 +417,8 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"SUICIDE",
 #ifdef HAVE_BLUA
 	"LUACMD",
-	"LUAVAR"
+	"LUAVAR",
+	"LUAFILE"
 #endif
 };
 
@@ -453,6 +454,7 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_RUNSOC, Got_RunSOCcmd);
 #ifdef HAVE_BLUA
 	RegisterNetXCmd(XD_LUACMD, Got_Luacmd);
+	RegisterNetXCmd(XD_LUAFILE, Got_LuaFile);
 #endif
 
 	// Remote Administration

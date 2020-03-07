@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -143,16 +143,16 @@ extern char logfilename[1024];
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    202 // Game version
-#define SUBVERSION 1  // more precise version number
-#define VERSIONSTRING "v2.2.1"
-#define VERSIONSTRINGW L"v2.2.1"
+#define SUBVERSION 2  // more precise version number
+#define VERSIONSTRING "v2.2.2"
+#define VERSIONSTRINGW L"v2.2.2"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
 
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-//#define USE_PATCH_DTA
+#define USE_PATCH_DTA
 
 // Use .kart extension addons
 //#define USE_KART
@@ -210,7 +210,7 @@ extern char logfilename[1024];
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
-#define MODVERSION 41
+#define MODVERSION 42
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond

@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -312,6 +312,7 @@ static void M_AssignJoystick(INT32 choice);
 static void M_ChangeControl(INT32 choice);
 
 // Video & Sound
+static void M_VideoOptions(INT32 choice);
 menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 #ifdef HWRENDER
 static void M_OpenGLOptionsMenu(void);
@@ -1034,7 +1035,7 @@ static menuitem_t OP_MainMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Player 2 Controls...", &OP_P2ControlsDef,   20},
 	{IT_CVAR    | IT_STRING, NULL, "Controls per key",     &cv_controlperkey,   30},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Video Options...",     &OP_VideoOptionsDef, 50},
+	{IT_CALL    | IT_STRING, NULL, "Video Options...",     M_VideoOptions,      50},
 	{IT_SUBMENU | IT_STRING, NULL, "Sound Options...",     &OP_SoundOptionsDef, 60},
 
 	{IT_CALL    | IT_STRING, NULL, "Server Options...",    M_ServerOptions,     80},
@@ -1283,6 +1284,16 @@ static menuitem_t OP_Camera2ExtendedOptionsMenu[] =
 
 	{IT_HEADER,            NULL, "Display Options", NULL, 120},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 126},
+};
+
+enum
+{
+	op_video_resolution = 1,
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+	op_video_fullscreen,
+#endif
+	op_video_vsync,
+	op_video_renderer,
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -2083,6 +2094,20 @@ menu_t OP_PlaystyleDef = {
 	0, 0, 0, NULL
 };
 
+static void M_VideoOptions(INT32 choice)
+{
+	(void)choice;
+#ifdef HWRENDER
+	if (hwrenderloaded == -1)
+	{
+		OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
+		OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
+		OP_VideoOptionsMenu[op_video_renderer].text = "Software";
+	}
+
+#endif
+	M_SetupNextMenu(&OP_VideoOptionsDef);
+}
 
 menu_t OP_VideoOptionsDef =
 {
@@ -3153,6 +3178,9 @@ boolean M_Responder(event_t *ev)
 	if (gamestate == GS_TITLESCREEN && finalecount < TICRATE)
 		return false;
 
+	if (CON_Ready())
+		return false;
+
 	if (noFurtherInput)
 	{
 		// Ignore input after enter/escape/other buttons
@@ -3512,6 +3540,7 @@ boolean M_Responder(event_t *ev)
 			return false;
 
 		default:
+			CON_Responder(ev);
 			break;
 	}
 
@@ -12107,7 +12136,6 @@ static void M_VideoModeMenu(INT32 choice)
 
 static void M_DrawMainVideoMenu(void)
 {
-
 	M_DrawGenericScrollMenu();
 	if (itemOn < 8) // where it starts to go offscreen; change this number if you change the layout of the video menu
 	{

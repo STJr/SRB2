@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -142,6 +142,7 @@ static int lib_addHook(lua_State *L)
 	case hook_HurtMsg:
 	case hook_MobjMoveBlocked:
 	case hook_MapThingSpawn:
+	case hook_FollowMobj:
 		hook.s.mt = MT_NULL;
 		if (lua_isnumber(L, 2))
 			hook.s.mt = lua_tonumber(L, 2);
@@ -203,6 +204,7 @@ static int lib_addHook(lua_State *L)
 	case hook_MobjRemoved:
 	case hook_MobjMoveBlocked:
 	case hook_MapThingSpawn:
+	case hook_FollowMobj:
 		lastp = &mobjhooks[hook.s.mt];
 		break;
 	case hook_JumpSpecial:
@@ -210,7 +212,6 @@ static int lib_addHook(lua_State *L)
 	case hook_SpinSpecial:
 	case hook_JumpSpinSpecial:
 	case hook_PlayerSpawn:
-	case hook_FollowMobj:
 	case hook_PlayerCanDamage:
 	case hook_TeamSwitch:
 	case hook_ViewpointSwitch:
@@ -1364,7 +1365,34 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 
 	lua_settop(gL, 0);
 
-	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	// Look for all generic mobj follow item hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_FollowMobj)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			LUA_PushUserdata(gL, mobj, META_MOBJ);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			hooked = true;
+		lua_pop(gL, 1);
+	}
+
+	for (hookp = mobjhooks[mobj->type]; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_FollowMobj)
 			continue;

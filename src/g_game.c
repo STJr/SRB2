@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3592,7 +3592,7 @@ boolean G_CompetitionGametype(void)
   * \return The typeoflevel flag to check for that gametype.
   * \author Graue <graue@oceanbase.org>
   */
-INT16 G_TOLFlag(INT32 pgametype)
+UINT32 G_TOLFlag(INT32 pgametype)
 {
 	if (!multiplayer)
 		return TOL_SP;
@@ -3723,7 +3723,7 @@ static void G_DoCompleted(void)
 		&& (nextmap >= 0 && nextmap < NUMMAPS))
 	{
 		register INT16 cm = nextmap;
-		INT16 tolflag = G_TOLFlag(gametype);
+		UINT32 tolflag = G_TOLFlag(gametype);
 		UINT8 visitedmap[(NUMMAPS+7)/8];
 
 		memset(visitedmap, 0, sizeof (visitedmap));

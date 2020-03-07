@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -8001,8 +8001,9 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		}
 		if (mobj->fuse < 0)
 			return;
-		if ((--mobj->fuse) < 6)
+		if (mobj->fuse < 6)
 			mobj->frame = (mobj->frame & ~FF_TRANSMASK) | ((10 - (mobj->fuse*2)) << (FF_TRANSSHIFT));
+		mobj->fuse--;
 	}
 	break;
 	case MT_FINISHFLAG:
@@ -11594,7 +11595,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
-	
+
 	if (p->pflags & PF_FINISHED)
 		P_GiveFinishFlags(p);
 }
