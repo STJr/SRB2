@@ -3604,6 +3604,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 			break;
 		case PT_CANRECEIVEGAMESTATE:
 			PT_CanReceiveGamestate(node);
+			break;
 #ifdef HAVE_BLUA
 		case PT_ASKLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
