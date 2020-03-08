@@ -1033,10 +1033,13 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 #ifdef TRUECOLOR
 	if (tc_colormap)
-		vis->colormap = (UINT8 *)colormaps_u32;
+	{
+		dc_colormap = (UINT8 *)colormaps_u32;
+		dp_extracolormap = defaultextracolormap;
+	}
 	else
 #endif
-		vis->colormap = colormaps;
+		dc_colormap = colormaps;
 
 	dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	dc_texturemid = vis->texturemid;
@@ -2735,7 +2738,7 @@ static void R_DrawSprite(vissprite_t *spr)
 static void R_DrawPrecipitationSprite(vissprite_t *spr)
 {
 	dc_picfmt = PICFMT_PATCH;
-	dc_colmapstyle = TC_COLORMAPSTYLE_32BPP;
+	dc_colmapstyle = (tc_colormap) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 	mfloorclip = spr->clipbot;
 	mceilingclip = spr->cliptop;
 	R_DrawPrecipitationVisSprite(spr);
