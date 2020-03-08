@@ -18,21 +18,23 @@
 #include "r_patch.h"
 #include "r_portal.h"
 #include "r_defs.h"
+#include "r_skins.h"
 
-// number of sprite lumps for spritewidth,offset,topoffset lookup tables
-// Fab: this is a hack : should allocate the lookup tables per sprite
-#define MAXVISSPRITES 2048 // added 2-2-98 was 128
-
-#define VISSPRITECHUNKBITS 6	// 2^6 = 64 sprites per chunk
-#define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
-#define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
+// --------------
+// SPRITE LOADING
+// --------------
 
 #define FEETADJUST (4<<FRACBITS) // R_AddSingleSpriteDef
 
-// Constant arrays used for psprite clipping
-//  and initializing clipping.
-extern INT16 negonearray[MAXVIDWIDTH];
-extern INT16 screenheightarray[MAXVIDWIDTH];
+boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump);
+
+//faB: find sprites in wadfile, replace existing, add new ones
+//     (only sprites from namelist are added or replaced)
+void R_AddSpriteDefs(UINT16 wadnum);
+
+// ---------------------
+// MASKED COLUMN DRAWING
+// ---------------------
 
 // vars for R_DrawMaskedColumn
 extern INT16 *mfloorclip;
@@ -46,9 +48,14 @@ extern fixed_t windowbottom;
 void R_DrawMaskedColumn(column_t *column);
 void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 
-//faB: find sprites in wadfile, replace existing, add new ones
-//     (only sprites from namelist are added or replaced)
-void R_AddSpriteDefs(UINT16 wadnum);
+// ----------------
+// SPRITE RENDERING
+// ----------------
+
+// Constant arrays used for psprite clipping
+//  and initializing clipping.
+extern INT16 negonearray[MAXVIDWIDTH];
+extern INT16 screenheightarray[MAXVIDWIDTH];
 
 fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope);
 
@@ -67,6 +74,9 @@ boolean R_ThingVisibleWithinDist (mobj_t *thing,
 boolean R_PrecipThingVisible (precipmobj_t *precipthing,
 		fixed_t precip_draw_dist);
 
+// --------------
+// MASKED DRAWING
+// --------------
 /** Used to count the amount of masked elements
  * per portal to later group them in separate
  * drawnode lists.
@@ -81,21 +91,18 @@ typedef struct
 
 void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
 
-// --------------
-// SPRITE LOADING
-// --------------
+// ----------
+// VISSPRITES
+// ----------
 
-boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump);
+// number of sprite lumps for spritewidth,offset,topoffset lookup tables
+// Fab: this is a hack : should allocate the lookup tables per sprite
+#define MAXVISSPRITES 2048 // added 2-2-98 was 128
 
-// -----------
-// SKINS STUFF
-// -----------
+#define VISSPRITECHUNKBITS 6	// 2^6 = 64 sprites per chunk
+#define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
+#define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
 
-#include "r_skins.h"
-
-// -----------
-// NOT SKINS STUFF !
-// -----------
 typedef enum
 {
 	// actual cuts
@@ -174,6 +181,12 @@ typedef struct vissprite_s
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
+extern UINT32 visspritecount;
+
+// ----------
+// DRAW NODES
+// ----------
+
 // A drawnode is something that points to a 3D floor, 3D side, or masked
 // middle texture. This is used for sorting with sprites.
 typedef struct drawnode_s
@@ -188,9 +201,11 @@ typedef struct drawnode_s
 	struct drawnode_s *prev;
 } drawnode_t;
 
-extern UINT32 visspritecount;
-
 void R_InitDrawNodes(void);
+
+// -----------------------
+// SPRITE FRAME CHARACTERS
+// -----------------------
 
 // Functions to go from sprite character ID to frame number
 // for 2.1 compatibility this still uses the old 'A' + frame code
