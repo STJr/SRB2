@@ -234,6 +234,8 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	memset(sprtemp,0xFF, sizeof (sprtemp));
 	maxframe = (size_t)-1;
 
+	spritename = sprname;
+
 	// are we 'patching' a sprite already loaded ?
 	// if so, it might patch only certain frames, not all
 	if (spritedef->numframes) // (then spriteframes is not null)
@@ -465,11 +467,10 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	//
 	for (i = 0; i < numsprites; i++)
 	{
-		spritename = sprnames[i];
-		if (spritename[4] && wadnum >= (UINT16)spritename[4])
+		if (sprnames[i][4] && wadnum >= (UINT16)sprnames[i][4])
 			continue;
 
-		if (R_AddSingleSpriteDef(spritename, &sprites[i], wadnum, start, end))
+		if (R_AddSingleSpriteDef(sprnames[i], &sprites[i], wadnum, start, end))
 		{
 #ifdef HWRENDER
 			if (rendermode == render_opengl)
@@ -478,7 +479,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 			// if a new sprite was added (not just replaced)
 			addsprites++;
 #ifndef ZDEBUG
-			CONS_Debug(DBG_SETUP, "sprite %s set in pwad %d\n", spritename, wadnum);
+			CONS_Debug(DBG_SETUP, "sprite %s set in pwad %d\n", sprnames[i], wadnum);
 #endif
 		}
 	}

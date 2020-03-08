@@ -410,7 +410,7 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 		newlastlump++;
 		// load all sprite sets we are aware of... for super!
 		for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
-			R_AddSingleSpriteDef((spritename = spr2names[sprite2]), &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, *lastlump);
+			R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, *lastlump);
 
 		newlastlump--;
 		*lastlump = newlastlump; // okay, make the normal sprite set loading end there
@@ -418,7 +418,7 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 
 	// load all sprite sets we are aware of... for normal stuff.
 	for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
-		R_AddSingleSpriteDef((spritename = spr2names[sprite2]), &skin->sprites[sprite2], wadnum, *lump, *lastlump);
+		R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, *lump, *lastlump);
 
 	if (skin->sprites[0].numframes == 0)
 		I_Error("R_LoadSkinSprites: no frames found for sprite SPR2_%s\n", spr2names[0]);
