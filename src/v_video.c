@@ -1205,7 +1205,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			dest = desttop;
 			if (topdelta-sy > 0)
 			{
-				dest += FixedInt(FixedMul((topdelta-sy)<<FRACBITS,fdup))*vid.width;
+				dest += FixedInt(FixedMul((topdelta-sy)<<FRACBITS,fdup))*vid.rowbytes;
 				ofs = 0;
 			}
 			else
