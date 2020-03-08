@@ -1423,7 +1423,14 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 		shadow->extra_colormap = thing->subsector->sector->extra_colormap;
 
 	shadow->transmap = transtables + (trans<<FF_TRANSSHIFT);
-	shadow->colormap = scalelight[0][0]; // full dark!
+
+	// full dark!
+#ifdef TRUECOLOR
+	if (tc_colormap)
+		shadow->colormap = (UINT8 *)(scalelight_u32[0][0]);
+	else
+#endif
+		shadow->colormap = scalelight[0][0];
 
 	objectsdrawn++;
 }
