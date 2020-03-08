@@ -685,6 +685,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 							dc_colormap = rlight->rcolormap;
 #ifdef TRUECOLOR
 							dp_extracolormap = rlight->extra_colormap;
+							if (!dp_extracolormap)
+								dp_extracolormap = defaultextracolormap;
 #endif
 							continue;
 						}
@@ -707,6 +709,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						dc_colormap = rlight->rcolormap;
 #ifdef TRUECOLOR
 						dp_extracolormap = rlight->extra_colormap;
+						if (!dp_extracolormap)
+							dp_extracolormap = defaultextracolormap;
 #endif
 					}
 					windowbottom = realbot;
@@ -1418,6 +1422,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 							dc_colormap = rlight->rcolormap;
 #ifdef TRUECOLOR
 							dp_extracolormap = rlight->extra_colormap;
+							if (!dp_extracolormap)
+								dp_extracolormap = defaultextracolormap;
 #endif
 						}
 						if (solid && windowtop < bheight)
@@ -1451,6 +1457,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						dc_colormap = rlight->rcolormap;
 #ifdef TRUECOLOR
 						dp_extracolormap = rlight->extra_colormap;
+						if (!dp_extracolormap)
+							dp_extracolormap = defaultextracolormap;
 #endif
 					}
 				}
