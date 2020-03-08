@@ -4186,10 +4186,10 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	{
 		light = R_GetPlaneLight(thing->subsector->sector, floorz, false); // Always use the light at the top instead of whatever I was doing before
 
-        if (*thing->subsector->sector->lightlist[light].lightlevel > 255)
-            lightlevel = 255;
-        else
-            lightlevel = *thing->subsector->sector->lightlist[light].lightlevel;
+		if (*thing->subsector->sector->lightlist[light].lightlevel > 255)
+			lightlevel = 255;
+		else
+			lightlevel = *thing->subsector->sector->lightlist[light].lightlevel;
 
 		if (*thing->subsector->sector->lightlist[light].extra_colormap)
 			colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
