@@ -27,7 +27,7 @@ This version is independent of the mod name, and standard
 version and subversion. It should only account for the
 basic fields of the packet, and change infrequently.
 */
-#define PACKETVERSION 2
+#define PACKETVERSION 3
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -367,6 +367,7 @@ typedef struct
 	UINT8 subversion;
 	UINT8 numberofplayer;
 	UINT8 maxplayer;
+	UINT8 refusereason; // 0: joinable, 1: joins disabled, 2: full
 	char gametypename[24];
 	UINT8 modifiedgame;
 	UINT8 cheatsenabled;
