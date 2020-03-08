@@ -865,7 +865,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 				ds_transmap = transtables + (transval<<FF_TRANSSHIFT);
 		}
 		else // Opaque, but allow transparent flat pixels
+		{
 			spanfunctype = SPANDRAWFUNC_SPLAT;
+			ds_alpha = 0xFF;
+		}
 
 		if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
@@ -900,7 +903,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 #ifdef TRUECOLOR
 			if (truecolor)
 			{
-				if (pl->ffloor->alpha == 255) // Opaque, but allow transparent flat pixels
+				if (pl->ffloor->alpha >= 255) // Opaque, but allow transparent flat pixels
 				{
 					spanfunctype = SPANDRAWFUNC_SPLAT;
 					ds_alpha = 0xFF;

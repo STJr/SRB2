@@ -894,7 +894,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 #ifdef TRUECOLOR
 		if (truecolor)
 		{
-			if (pfloor->alpha == 255) // Opaque
+			if (pfloor->alpha >= 255) // Opaque
 			{
 				fuzzy = false;
 				dc_alpha = 0xFF;
