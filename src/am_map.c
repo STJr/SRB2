@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -160,6 +160,7 @@ static boolean am_stopped = true;
 static INT32 f_x, f_y;	// location of window on screen (always zero for both)
 static INT32 f_w, f_h;	// size of window on screen (always the screen width and height respectively)
 
+static boolean m_keydown[4]; // which window panning keys are being pressed down?
 static mpoint_t m_paninc; // how far the window pans each tic (map coords)
 static fixed_t mtof_zoommul; // how far the window zooms in each tic (map coords)
 static fixed_t ftom_zoommul; // how far the window zooms in each tic (fb coords)
@@ -205,6 +206,7 @@ static boolean followplayer = true; // specifies whether to follow the player ar
 typedef void (*AMDRAWFLINEFUNC) (const fline_t *fl, INT32 color);
 static AMDRAWFLINEFUNC AM_drawFline;
 
+static void AM_drawPixel(INT32 xx, INT32 yy, INT32 cc);
 static void AM_drawFline_soft(const fline_t *fl, INT32 color);
 
 static void AM_activateNewScale(void)
@@ -345,21 +347,21 @@ static void AM_initVariables(void)
 }
 
 //
+// Called when the screen size changes.
+//
+static void AM_FrameBufferInit(void)
+{
+	f_x = f_y = 0;
+	f_w = vid.width;
+	f_h = vid.height;
+}
+
+//
 // should be called at the start of every level
 // right now, i figure it out myself
 //
 static void AM_LevelInit(void)
 {
-	f_x = f_y = 0;
-	f_w = vid.width;
-	f_h = vid.height;
-
-	AM_drawFline = AM_drawFline_soft;
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		AM_drawFline = HWR_drawAMline;
-#endif
-
 	AM_findMinMaxBoundaries();
 	scale_mtof = FixedDiv(min_scale_mtof*10, 7*FRACUNIT);
 	if (scale_mtof > max_scale_mtof)
@@ -381,7 +383,7 @@ void AM_Stop(void)
   *
   * \sa AM_Stop
   */
-static inline void AM_Start(void)
+void AM_Start(void)
 {
 	static INT32 lastlevel = -1;
 
@@ -390,8 +392,12 @@ static inline void AM_Start(void)
 	am_stopped = false;
 	if (lastlevel != gamemap || am_recalc) // screen size changed
 	{
-		AM_LevelInit();
-		lastlevel = gamemap;
+		AM_FrameBufferInit();
+		if (lastlevel != gamemap)
+		{
+			AM_LevelInit();
+			lastlevel = gamemap;
+		}
 		am_recalc = false;
 	}
 	AM_initVariables();
@@ -415,6 +421,28 @@ static void AM_maxOutWindowScale(void)
 	scale_mtof = max_scale_mtof;
 	scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
 	AM_activateNewScale();
+}
+
+//
+// set window panning
+//
+static void AM_setWindowPanning(void)
+{
+	// up and down
+	if (m_keydown[2]) // pan up
+		m_paninc.y = FTOM(F_PANINC);
+	else if (m_keydown[3]) // pan down
+		m_paninc.y = -FTOM(F_PANINC);
+	else
+		m_paninc.y = 0;
+
+	// left and right
+	if (m_keydown[0]) // pan right
+		m_paninc.x = FTOM(F_PANINC);
+	else if (m_keydown[1]) // pan left
+		m_paninc.x = -FTOM(F_PANINC);
+	else
+		m_paninc.x = 0;
 }
 
 /** Responds to user inputs in automap mode.
@@ -449,35 +477,49 @@ boolean AM_Responder(event_t *ev)
 			{
 				case AM_PANRIGHTKEY: // pan right
 					if (!followplayer)
-						m_paninc.x = FTOM(F_PANINC);
+					{
+						m_keydown[0] = true;
+						AM_setWindowPanning();
+					}
 					else
 						rc = false;
 					break;
 				case AM_PANLEFTKEY: // pan left
 					if (!followplayer)
-						m_paninc.x = -FTOM(F_PANINC);
+					{
+						m_keydown[1] = true;
+						AM_setWindowPanning();
+					}
 					else
 						rc = false;
 					break;
 				case AM_PANUPKEY: // pan up
 					if (!followplayer)
-						m_paninc.y = FTOM(F_PANINC);
+					{
+						m_keydown[2] = true;
+						AM_setWindowPanning();
+					}
 					else
 						rc = false;
 					break;
 				case AM_PANDOWNKEY: // pan down
 					if (!followplayer)
-						m_paninc.y = -FTOM(F_PANINC);
+					{
+						m_keydown[3] = true;
+						AM_setWindowPanning();
+					}
 					else
 						rc = false;
 					break;
 				case AM_ZOOMOUTKEY: // zoom out
 					mtof_zoommul = M_ZOOMOUT;
 					ftom_zoommul = M_ZOOMIN;
+					AM_setWindowPanning();
 					break;
 				case AM_ZOOMINKEY: // zoom in
 					mtof_zoommul = M_ZOOMIN;
 					ftom_zoommul = M_ZOOMOUT;
+					AM_setWindowPanning();
 					break;
 				case AM_TOGGLEKEY:
 					AM_Stop();
@@ -491,6 +533,7 @@ boolean AM_Responder(event_t *ev)
 					}
 					else
 						AM_restoreScaleAndLoc();
+					AM_setWindowPanning();
 					break;
 				case AM_FOLLOWKEY:
 					followplayer = !followplayer;
@@ -510,14 +553,32 @@ boolean AM_Responder(event_t *ev)
 			switch (ev->data1)
 			{
 				case AM_PANRIGHTKEY:
+					if (!followplayer)
+					{
+						m_keydown[0] = false;
+						AM_setWindowPanning();
+					}
+					break;
 				case AM_PANLEFTKEY:
 					if (!followplayer)
-						m_paninc.x = 0;
+					{
+						m_keydown[1] = false;
+						AM_setWindowPanning();
+					}
 					break;
 				case AM_PANUPKEY:
+					if (!followplayer)
+					{
+						m_keydown[2] = false;
+						AM_setWindowPanning();
+					}
+					break;
 				case AM_PANDOWNKEY:
 					if (!followplayer)
-						m_paninc.y = 0;
+					{
+						m_keydown[3] = false;
+						AM_setWindowPanning();
+					}
 					break;
 				case AM_ZOOMOUTKEY:
 				case AM_ZOOMINKEY:
@@ -719,6 +780,17 @@ static boolean AM_clipMline(const mline_t *ml, fline_t *fl)
 #undef DOOUTCODE
 
 //
+// Draws a pixel.
+//
+static void AM_drawPixel(INT32 xx, INT32 yy, INT32 cc)
+{
+	UINT8 *dest = screens[0];
+	if (xx < 0 || yy < 0 || xx >= vid.width || yy >= vid.height)
+		return; // off the screen
+	dest[(yy*vid.width) + xx] = cc;
+}
+
+//
 // Classic Bresenham w/ whatever optimizations needed for speed
 //
 static void AM_drawFline_soft(const fline_t *fl, INT32 color)
@@ -739,8 +811,6 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 	}
 #endif
 
-	#define PUTDOT(xx,yy,cc) V_DrawFill(xx,yy,1,1,cc|V_NOSCALESTART);
-
 	dx = fl->b.x - fl->a.x;
 	ax = 2 * (dx < 0 ? -dx : dx);
 	sx = dx < 0 ? -1 : 1;
@@ -757,7 +827,7 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 		d = ay - ax/2;
 		for (;;)
 		{
-			PUTDOT(x, y, color)
+			AM_drawPixel(x, y, color);
 			if (x == fl->b.x)
 				return;
 			if (d >= 0)
@@ -774,7 +844,7 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 		d = ax - ay/2;
 		for (;;)
 		{
-			PUTDOT(x, y, color)
+			AM_drawPixel(x, y, color);
 			if (y == fl->b.y)
 				return;
 			if (d >= 0)
@@ -786,8 +856,6 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 			d += ax;
 		}
 	}
-
-	#undef PUTDOT
 }
 
 //
@@ -1099,6 +1167,12 @@ void AM_Drawer(void)
 {
 	if (!automapactive)
 		return;
+
+	AM_drawFline = AM_drawFline_soft;
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		AM_drawFline = HWR_drawAMline;
+#endif
 
 	AM_clearFB(BACKGROUND);
 	if (draw_grid) AM_drawGrid(GRIDCOLORS);

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -161,7 +161,9 @@ INT32 G_FindMapByNameOrCode(const char *query, char **foundmapnamep);
 mapthing_t *G_FindCTFStart(INT32 playernum);
 mapthing_t *G_FindMatchStart(INT32 playernum);
 mapthing_t *G_FindCoopStart(INT32 playernum);
-void G_SpawnPlayer(INT32 playernum, boolean starpost);
+mapthing_t *G_FindMapStart(INT32 playernum);
+void G_MovePlayerToSpawnOrStarpost(INT32 playernum);
+void G_SpawnPlayer(INT32 playernum);
 
 // Can be called by the startup code or M_Responder.
 // A normal game starts at map 1, but a warp test can start elsewhere
@@ -307,6 +309,6 @@ FUNCMATH INT32 G_TicsToCentiseconds(tic_t tics);
 FUNCMATH INT32 G_TicsToMilliseconds(tic_t tics);
 
 // Don't split up TOL handling
-INT16 G_TOLFlag(INT32 pgametype);
+UINT32 G_TOLFlag(INT32 pgametype);
 
 #endif

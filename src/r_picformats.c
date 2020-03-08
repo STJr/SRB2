@@ -1502,17 +1502,19 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		INT32 width, height, leftoffset;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
-		size_t lumplength;
 		pictureformat_t format = PICFMT_PATCH;
 		INT32 fmtbpp = PICDEPTH_NONE;
+#ifndef NO_PNG_LUMPS
+		size_t lumplength;
+#endif
 
 		if (lump == LUMPERROR)
 			return;
 
 		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
+#ifndef NO_PNG_LUMPS
 		lumplength = W_LumpLength(lump);
 
-#ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((const UINT8 *)patch, lumplength))
 		{
 			INT32 pngwidth, pngheight;

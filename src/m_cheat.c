@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -452,7 +452,7 @@ void Command_RTeleport_f(void)
 	else
 		inty = 0;
 
-	ss = R_IsPointInSubsector(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
+	ss = R_PointInSubsectorOrNull(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
 	if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));
@@ -530,7 +530,7 @@ void Command_Teleport_f(void)
 			inty = mt->y<<FRACBITS;
 			offset = mt->z<<FRACBITS;
 
-			ss = R_IsPointInSubsector(intx, inty);
+			ss = R_PointInSubsectorOrNull(intx, inty);
 			if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
 			{
 				CONS_Alert(CONS_NOTICE, M_GetText("Spawnpoint not in a valid location.\n"));
@@ -597,7 +597,7 @@ void Command_Teleport_f(void)
 				return;
 			}
 
-			ss = R_IsPointInSubsector(mo2->x, mo2->y);
+			ss = R_PointInSubsectorOrNull(mo2->x, mo2->y);
 			if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
 			{
 				CONS_Alert(CONS_NOTICE, M_GetText("Starpost not in a valid location.\n"));
@@ -653,7 +653,7 @@ void Command_Teleport_f(void)
 			}
 		}
 
-		ss = R_IsPointInSubsector(intx, inty);
+		ss = R_PointInSubsectorOrNull(intx, inty);
 		if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
 		{
 			CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));

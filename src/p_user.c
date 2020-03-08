@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -367,6 +367,36 @@ void P_GiveEmerald(boolean spawnObj)
 
 			emmo->flags2 |= MF2_DONTDRAW;
 		}
+	}
+}
+
+//
+// P_GiveFinishFlags
+//
+// Give the player visual indicators
+// that they've finished the map.
+//
+void P_GiveFinishFlags(player_t *player)
+{
+	angle_t angle = FixedAngle(player->mo->angle << FRACBITS);
+	UINT8 i;
+
+	if (!player->mo)
+		return;
+
+	if (!(netgame||multiplayer))
+		return;
+
+	for (i = 0; i < 3; i++)
+	{
+		angle_t fa = (angle >> ANGLETOFINESHIFT) & FINEMASK;
+		fixed_t xoffs = FINECOSINE(fa);
+		fixed_t yoffs = FINESINE(fa);
+		mobj_t* flag = P_SpawnMobjFromMobj(player->mo, xoffs, yoffs, 0, MT_FINISHFLAG);
+		flag->angle = angle;
+		angle += FixedAngle(120*FRACUNIT);
+		
+		P_SetTarget(&flag->target, player->mo);
 	}
 }
 
@@ -1466,6 +1496,13 @@ void P_PlayLivesJingle(player_t *player)
 		S_StartSound(NULL, sfx_oneup);
 	else if (mariomode)
 		S_StartSound(NULL, sfx_marioa);
+	else if (cv_1upsound.value)
+	{
+		if (S_sfx[sfx_oneup].lumpnum != LUMPERROR)
+			S_StartSound(NULL, sfx_oneup);
+		else
+			S_StartSound(NULL, sfx_chchng);/* at least play something! */
+	}
 	else
 	{
 		P_PlayJingle(player, JT_1UP);
@@ -2164,6 +2201,7 @@ void P_DoPlayerFinish(player_t *player)
 		return;
 
 	player->pflags |= PF_FINISHED;
+	P_GiveFinishFlags(player);
 
 	if (netgame)
 		CONS_Printf(M_GetText("%s has completed the level.\n"), player_names[player-players]);
@@ -2373,6 +2411,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					}
 				}
 			}
+			else if (player->charability == CA_GLIDEANDCLIMB && (player->mo->state-states == S_PLAY_GLIDE_LANDING))
+				;
 			else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
 				;
 			else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
@@ -3153,7 +3193,7 @@ static void P_DoClimbing(player_t *player)
 	platx = P_ReturnThrustX(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 	platy = P_ReturnThrustY(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 
-	glidesector = R_IsPointInSubsector(player->mo->x + platx, player->mo->y + platy);
+	glidesector = R_PointInSubsectorOrNull(player->mo->x + platx, player->mo->y + platy);
 
 	{
 		boolean floorclimb = false;
@@ -4530,16 +4570,14 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		player->mo->z--;
 		if (player->mo->pmomz < 0)
 			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
-		else
-			player->mo->pmomz = 0;
+		player->mo->pmomz = 0;
 	}
 	else
 	{
 		player->mo->z++;
 		if (player->mo->pmomz > 0)
 			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
-		else
-			player->mo->pmomz = 0;
+		player->mo->pmomz = 0;
 	}
 	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
@@ -5496,10 +5534,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						; // Can't do anything if you're a fish out of water!
 					else if (player->powers[pw_tailsfly]) // If currently flying, give an ascend boost.
 					{
-						if (!player->fly1)
-							player->fly1 = 20;
-						else
-							player->fly1 = 2;
+						player->fly1 = 20;
 
 						if (player->charability == CA_SWIM)
 							player->fly1 /= 2;
@@ -7432,6 +7467,8 @@ static void P_NiGHTSMovement(player_t *player)
 		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axises.
 			newangle = (INT16)FixedInt(AngleFixed(R_PointToAngle2(0,0, cmd->sidemove*FRACUNIT, cmd->forwardmove*FRACUNIT)));
 
+		newangle -= player->viewrollangle / ANG1;
+
 		if (newangle < 0 && moved)
 			newangle = (INT16)(360+newangle);
 	}
@@ -8480,7 +8517,11 @@ static void P_MovePlayer(player_t *player)
 			// Descend
 			if (cmd->buttons & BT_USE && !(player->pflags & PF_STASIS) && !player->exiting && !(player->mo->eflags & MFE_GOOWATER))
 				if (P_MobjFlip(player->mo)*player->mo->momz > -FixedMul(5*actionspd, player->mo->scale))
+				{
+					if (player->fly1 > 2)
+						player->fly1 = 2;
 					P_SetObjectMomZ(player->mo, -actionspd/2, true);
+				}
 
 		}
 		else
@@ -8672,7 +8713,7 @@ static void P_MovePlayer(player_t *player)
 	}
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none && cv_grfovchange.value)
+	if (rendermode != render_soft && rendermode != render_none && cv_fovchange.value)
 	{
 		fixed_t speed;
 		const fixed_t runnyspeed = 20*FRACUNIT;
@@ -9185,7 +9226,7 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 		case MT_TNTBARREL:
 			if (lockonflags & LOCK_INTERESTS)
 				break;
-			/*fallthru*/
+			/*FALLTHRU*/
 		case MT_PLAYER: // Don't chase other players!
 		case MT_DETON:
 			continue; // Don't be STUPID, Sonic!
@@ -9203,7 +9244,7 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 		case MT_EGGSTATUE:
 			if (tutorialmode)
 				break; // Always focus egg statue in the tutorial
-			/*fallthru*/
+			/*FALLTHRU*/
 		default:
 
 			if ((lockonflags & LOCK_BOSS) && ((mo->flags & (MF_BOSS|MF_SHOOTABLE)) == (MF_BOSS|MF_SHOOTABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
@@ -9279,6 +9320,7 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 // If nonenemies is true, includes monitors and springs!
 // If bullet is true, you can look up and the distance is further,
 // but your total angle span you can look is limited to compensate. (Also, allows monitors.)
+// If you modify this, please also modify P_HomingAttack.
 //
 mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 {
@@ -9374,13 +9416,16 @@ boolean P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	if (!enemy)
 		return false;
 
-	if (!enemy->health)
+	if (enemy->flags & MF_NOCLIPTHING)
+		return false;
+
+	if (enemy->health <= 0) // dead
+		return false;
+
+	if (!((enemy->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR) && (enemy->flags & MF_SHOOTABLE)) || (enemy->flags & MF_SPRING)) == !(enemy->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
 		return false;
 
 	if (enemy->flags2 & MF2_FRET)
-		return false;
-
-	if (!(enemy->flags & (MF_SHOOTABLE|MF_SPRING)) == !(enemy->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
 		return false;
 
 	// change angle
@@ -10105,13 +10150,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	{
 		dist = camdist;
 
-		// x1.5 dist for splitscreen
-		if (splitscreen)
-		{
-			dist = FixedMul(dist, 3*FRACUNIT/2);
-			camheight = FixedMul(camheight, 3*FRACUNIT/2);
-		}
-
 		if (sign) // signpost camera has specific placement
 		{
 			camheight = mo->scale << 7;
@@ -10231,7 +10269,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	// move camera down to move under lower ceilings
-	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
+	newsubsec = R_PointInSubsectorOrNull(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
 
 	if (!newsubsec)
 		newsubsec = thiscam->subsector;
@@ -10511,13 +10549,17 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
 		fixed_t vx = thiscam->x, vy = thiscam->y;
+		fixed_t vz = thiscam->z + thiscam->height / 2;
 		if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))		// Camera must obviously exist
 		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
+			vz = player->awayviewmobj->z + player->awayviewmobj->height / 2;
 		}
 
-		if (P_AproxDistance(vx - mo->x, vy - mo->y) < FixedMul(48*FRACUNIT, mo->scale))
+		/* check z distance too for orbital camera */
+		if (P_AproxDistance(P_AproxDistance(vx - mo->x, vy - mo->y),
+					vz - ( mo->z + mo->height / 2 )) < FixedMul(48*FRACUNIT, mo->scale))
 			mo->flags2 |= MF2_SHADOW;
 		else
 			mo->flags2 &= ~MF2_SHADOW;
@@ -11035,10 +11077,21 @@ static void P_MinecartThink(player_t *player)
 
 		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))
 		{
+			angle_t *ang = NULL;
+
 			if (player == &players[consoleplayer])
-				localangle = player->mo->angle;
+				ang = &localangle;
 			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
+				ang = &localangle2;
+
+			if (ang)
+			{
+				angdiff = *ang - minecart->angle;
+				if (angdiff < ANGLE_180 && angdiff > MINECARTCONEMAX)
+					*ang = minecart->angle + MINECARTCONEMAX;
+				else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
+					*ang = minecart->angle - MINECARTCONEMAX;
+			}
 		}
 	}
 
@@ -11572,7 +11625,12 @@ void P_PlayerThink(player_t *player)
 				player->playerstate = PST_REBORN;
 		}
 		if (player->playerstate == PST_REBORN)
+		{
+#ifdef HAVE_BLUA
+			LUAh_PlayerThink(player);
+#endif
 			return;
+		}
 	}
 
 #ifdef SEENAMES
@@ -11673,7 +11731,12 @@ void P_PlayerThink(player_t *player)
 			player->lives = 0;
 
 			if (player->playerstate == PST_DEAD)
+			{
+#ifdef HAVE_BLUA
+				LUAh_PlayerThink(player);
+#endif
 				return;
+			}
 		}
 	}
 
@@ -11738,6 +11801,8 @@ void P_PlayerThink(player_t *player)
 			{
 				if (!playeringame[i] || players[i].spectator || players[i].bot)
 					continue;
+				if (players[i].quittime > 30 * TICRATE)
+					continue;
 				if (players[i].lives <= 0)
 					continue;
 
@@ -11792,7 +11857,9 @@ void P_PlayerThink(player_t *player)
 	{
 		player->mo->flags2 &= ~MF2_SHADOW;
 		P_DeathThink(player);
-
+#ifdef HAVE_BLUA
+		LUAh_PlayerThink(player);
+#endif
 		return;
 	}
 
@@ -11833,7 +11900,12 @@ void P_PlayerThink(player_t *player)
 	if (player->spectator && cmd->buttons & BT_ATTACK && !player->powers[pw_flashing] && G_GametypeHasSpectators())
 	{
 		if (P_SpectatorJoinGame(player))
+		{
+#ifdef HAVE_BLUA
+			LUAh_PlayerThink(player);
+#endif
 			return; // player->mo was removed.
+		}
 	}
 
 	// Even if not NiGHTS, pull in nearby objects when walking around as John Q. Elliot.
@@ -11935,7 +12007,12 @@ void P_PlayerThink(player_t *player)
 	}
 
 	if (!player->mo)
+	{
+#ifdef HAVE_BLUA
+		LUAh_PlayerThink(player);
+#endif
 		return; // P_MovePlayer removed player->mo.
+	}
 
 	// deez New User eXperiences.
 	{
@@ -12130,7 +12207,9 @@ void P_PlayerThink(player_t *player)
 
 #ifdef POLYOBJECTS
 	if (player->onconveyor == 1)
-			player->cmomy = player->cmomx = 0;
+		player->onconveyor = 3;
+	else if (player->onconveyor == 3)
+		player->cmomy = player->cmomx = 0;
 #endif
 
 	P_DoSuperStuff(player);
@@ -12178,6 +12257,11 @@ void P_PlayerThink(player_t *player)
 			player->pflags &= ~PF_USEDOWN;
 	}
 
+	// IF PLAYER NOT HERE THEN FLASH END IF
+	if (player->quittime && player->powers[pw_flashing] < flashingtics - 1
+	&& !(G_TagGametype() && !(player->pflags & PF_TAGIT)) && !player->gotflag)
+		player->powers[pw_flashing] = flashingtics - 1;
+
 	// Counters, time dependent power ups.
 	// Time Bonus & Ring Bonus count settings
 
@@ -12221,12 +12305,12 @@ void P_PlayerThink(player_t *player)
 		else
 			player->powers[pw_underwater] = 0;
 	}
-	else if (player->powers[pw_underwater] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && player->spectator)) // underwater timer
+	else if (player->powers[pw_underwater] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && (player->spectator || player->quittime))) // underwater timer
 		player->powers[pw_underwater]--;
 
 	if (player->powers[pw_spacetime] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_PROTECTWATER)))
 		player->powers[pw_spacetime] = 0;
-	else if (player->powers[pw_spacetime] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && player->spectator)) // underwater timer
+	else if (player->powers[pw_spacetime] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && (player->spectator || player->quittime))) // underwater timer
 		player->powers[pw_spacetime]--;
 
 	if (player->powers[pw_gravityboots] && player->powers[pw_gravityboots] < UINT16_MAX)
@@ -12367,6 +12451,11 @@ void P_PlayerThink(player_t *player)
 		dashmode = 0;
 	}
 #undef dashmode
+
+#ifdef HAVE_BLUA
+	LUAh_PlayerThink(player);
+#endif
+
 /*
 //	Colormap verification
 	{

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -375,6 +375,7 @@ typedef struct mobj_s
 #endif
 
 	boolean colorized; // Whether the mobj uses the rainbow colormap
+	fixed_t shadowscale; // If this object casts a shadow, and the size relative to radius
 
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;

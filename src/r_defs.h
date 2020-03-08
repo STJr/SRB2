@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,11 +54,14 @@ typedef struct
 typedef UINT8 lighttable_t;
 typedef UINT32 lighttable_u32_t;
 
+#define CMF_FADEFULLBRIGHTSPRITES  1
+#define CMF_FOG 4
+
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s
 {
 	UINT8 fadestart, fadeend;
-	UINT8 fog; // categorical value, not boolean
+	UINT8 flags;
 
 	// store rgba values in combined bitwise
 	// also used in OpenGL instead of lighttables
@@ -88,6 +91,8 @@ typedef struct extracolormap_s
 typedef struct
 {
 	fixed_t x, y;
+	boolean floorzset, ceilingzset;
+	fixed_t floorz, ceilingz;
 } vertex_t;
 
 // Forward of linedefs, for sectors.
@@ -146,7 +151,7 @@ typedef enum
 	FF_QUICKSAND         = 0x1000000,  ///< Quicksand!
 	FF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
 	FF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
-	FF_INTANGABLEFLATS   = 0x6000000,  ///< Both flats are intangable, but the sides are still solid.
+	FF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
 	FF_SHATTER           = 0x8000000,  ///< Used with ::FF_BUSTUP. Bustable on mere touch.
 	FF_SPINBUST          = 0x10000000, ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
 	FF_STRONGBUST        = 0x20000000, ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -45,9 +45,6 @@
 
 // Quincunx antialiasing of flats!
 //#define QUINCUNX
-
-// good night sweet prince
-#define SHITPLANESPARENCY
 
 //SoM: 3/23/2000: Use Boom visplane hashing.
 
@@ -870,11 +867,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else // Opaque, but allow transparent flat pixels
 			spanfunctype = SPANDRAWFUNC_SPLAT;
 
-#ifdef SHITPLANESPARENCY
-		if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
-#else
-		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
+		if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
@@ -945,11 +938,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 					spanfunctype = SPANDRAWFUNC_SPLAT;
 			}
 
-#ifdef SHITPLANESPARENCY
-			if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
-#else
-			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
+			if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			else
 				light = LIGHTLEVELS-1;

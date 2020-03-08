@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -87,13 +87,7 @@ deny:
 
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
-	{
-		UINT8 bufn[2];
-
-		bufn[0] = (UINT8)playernum;
-		bufn[1] = KICK_MSG_CON_FAIL;
-		SendNetXCmd(XD_KICK, &bufn, 2);
-	}
+		SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 }
 
 // Wrapper for COM_AddCommand commands
