@@ -38,7 +38,7 @@
 #include "byteptr.h"
 #include "i_joy.h"
 #include "r_local.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "y_inter.h"
 #include "v_video.h"
 #include "dehacked.h" // get_number (for ghost thok)

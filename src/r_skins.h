@@ -16,6 +16,7 @@
 
 #include "info.h"
 #include "sounds.h"
+#include "d_player.h" // skinflags
 #include "r_patch.h" // spriteinfo_t
 #include "r_defs.h" // spritedef_t
 
