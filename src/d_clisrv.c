@@ -3966,7 +3966,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_RESYNCHGET:
 			if (client)
 				break;
-			SV_AcknowledgeResynchAck(netconsole, netbuffer->u.resynchgot);
+			SV_AcknowledgeResynchAck(node, netbuffer->u.resynchgot);
 			break;
 		case PT_CLIENTCMD:
 		case PT_CLIENT2CMD:
