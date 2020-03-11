@@ -5857,9 +5857,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		else th = th->next;
 	}
 
-
 	if (flags & FF_TRANSLUCENT)
-		fflr->alpha = sides[master->sidenum[0]].toptexture > 0 ? (master->alpha * 0xff) >> FRACBITS : 0x80;
+		fflr->alpha = master->alpha > 0 ? (master->alpha * 0xff) >> FRACBITS : 0x80;
 	else
 		fflr->alpha = 0xff;
 
