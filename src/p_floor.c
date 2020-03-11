@@ -1887,10 +1887,7 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].bottomtexture;
 		/// \note this should only have to be done once, but is already done repeatedly, above
 
-		if (thwomp->sourceline->flags & ML_EFFECT5)
-			thwomp->speed = thwomp->sourceline->dx/8;
-		else
-			thwomp->speed = 2*FRACUNIT;
+		thwomp->speed = thwomp->sourceline->args[2]/8;
 
 		res = T_MovePlane
 		(
@@ -1926,10 +1923,7 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		// Set the texture from the upper one (angry)
 		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].toptexture;
 
-		if (thwomp->sourceline->flags & ML_EFFECT5)
-			thwomp->speed = thwomp->sourceline->dy/8;
-		else
-			thwomp->speed = 10*FRACUNIT;
+		thwomp->speed = thwomp->sourceline->args[1]/8;
 
 		res = T_MovePlane
 		(
@@ -2432,7 +2426,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 	if (raise->sector->crumblestate >= 3 || raise->sector->ceilingdata)
 		return;
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->args[0], i)) >= 0 ;)
 	{
 		sector = &sectors[i];
 

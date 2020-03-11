@@ -395,7 +395,7 @@ void P_GiveFinishFlags(player_t *player)
 		mobj_t* flag = P_SpawnMobjFromMobj(player->mo, xoffs, yoffs, 0, MT_FINISHFLAG);
 		flag->angle = angle;
 		angle += FixedAngle(120*FRACUNIT);
-		
+
 		P_SetTarget(&flag->target, player->mo);
 	}
 }
@@ -2670,7 +2670,7 @@ static void P_CheckBustableBlocks(player_t *player)
 					EV_CrumbleChain(NULL, rover); // node->m_sector
 
 					// Run a linedef executor??
-					if (rover->master->flags & ML_EFFECT5)
+					if (rover->master->args[4] & 2)
 						P_LinedefExecute((INT16)(P_AproxDistance(rover->master->dx, rover->master->dy)>>FRACBITS), player->mo, node->m_sector);
 
 					goto bustupdone;
@@ -2870,7 +2870,7 @@ static void P_CheckQuicksand(player_t *player)
 
 		if (topheight >= player->mo->z && bottomheight < player->mo->z + player->mo->height)
 		{
-			sinkspeed = abs(rover->master->v1->x - rover->master->v2->x)>>1;
+			sinkspeed = rover->master->args[2]>>1;
 
 			sinkspeed = FixedDiv(sinkspeed,TICRATE*FRACUNIT);
 
@@ -2899,7 +2899,7 @@ static void P_CheckQuicksand(player_t *player)
 					P_PlayerHitFloor(player, false);
 			}
 
-			friction = abs(rover->master->v1->y - rover->master->v2->y)>>6;
+			friction = rover->master->args[3]>>6;
 
 			player->mo->momx = FixedMul(player->mo->momx, friction);
 			player->mo->momy = FixedMul(player->mo->momy, friction);

@@ -2793,6 +2793,227 @@ static void P_ConvertBinaryMap(void)
 
 			lines[i].special = 100;
 			break;
+		case 150: //FOF: air bobbing
+		case 151: //FOF: air bobbing (adjustable)
+		case 152: //FOF: reverse air bobbing (adjustable)
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].special == 150) ? 16 : P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			if (lines[i].special == 152)
+				lines[i].args[1] = -lines[i].args[1];
+			lines[i].args[2] = (lines[i].flags & ML_NOCLIMB) == ML_NOCLIMB;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] |= 4;
+			lines[i].special = 150;
+			break;
+		case 160: //FOF: floating, bobbing
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[1] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[1] |= 4;
+			break;
+		case 170: //FOF: crumbling, respawn
+		case 171: //FOF: crumbling, no respawn
+		case 172: //FOF: crumbling, respawn, intangible from bottom
+		case 173: //FOF: crumbling, no respawn, intangible from bottom
+		case 174: //FOF: crumbling, respawn, intangible from bottom, translucent
+		case 175: //FOF: crumbling, no respawn, intangible from bottom, translucent
+		case 176: //FOF: crumbling, respawn, floating, bobbing
+		case 177: //FOF: crumbling, no respawn, floating, bobbing
+		case 178: //FOF: crumbling, respawn, floating
+		case 179: //FOF: crumbling, no respawn, floating
+		case 180: //FOF: crumbling, respawn, air bobbing
+			lines[i].args[0] = lines[i].tag;
+
+			//Intangible from below?
+			if (lines[i].special >= 172 && lines[i].special <= 175)
+			{
+				lines[i].args[1] = 2;
+				if (lines[i].flags & ML_NOCLIMB)
+					lines[i].args[2] |= 32;
+			}
+			else
+				lines[i].args[1] = 0;
+
+			//Block players/others?
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[1] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[1] |= 4;
+
+			//No respawn?
+			if (lines[i].special % 2 == 1)
+				lines[i].args[2] |= 1;
+
+			//Translucent?
+			if (lines[i].special == 174 || lines[i].special == 175)
+			{
+				lines[i].args[2] |= 2;
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+			}
+
+			//Bobbing?
+			if (lines[i].special == 176 || lines[i].special == 177 || lines[i].special == 180)
+			{
+				lines[i].args[2] |= 4;
+				lines[i].args[3] = 16;
+				if (lines[i].flags & ML_NOCLIMB)
+					lines[i].args[2] |= 8;
+			}
+
+			//Float on water?
+			if (lines[i].special >= 176 && lines[i].special <= 179)
+				lines[i].args[2] |= 16;
+
+			lines[i].special = 170;
+			break;
+		case 190: //FOF: rising platform, solid, opaque, shadowcasting
+		case 191: //FOF: rising platform, solid, opaque, non-shadowcasting
+		case 192: //FOF: rising platform, solid, translucent
+		case 193: //FOF: rising platform, solid, invisible
+		case 194: //FOF: rising platform, intangible from bottom, opaque
+		case 195: //FOF: rising platform, intangible from bottom, translucent
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			lines[i].args[2] = (lines[i].flags & ML_NOCLIMB) == ML_NOCLIMB;
+
+			//Tangibility
+			if (lines[i].special == 194 || lines[i].special == 195)
+				lines[i].args[3] |= 2;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] |= 4;
+
+			//Visibility
+			if (lines[i].special == 193)
+				lines[i].args[4] = 2;
+			else if (lines[i].special == 192 || lines[i].special == 195)
+			{
+				lines[i].args[4] = 1;
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+			}
+			else
+				lines[i].args[4] = 0;
+
+			//Shadow?
+			if (lines[i].special == 190)
+				lines[i].args[5] = 0;
+			else if (lines[i].special == 194 || lines[i].special == 195)
+				lines[i].args[5] = (lines[i].flags & ML_NOCLIMB) == ML_NOCLIMB;
+			else
+				lines[i].args[5] = 1;
+
+			lines[i].special = 190;
+			break;
+		case 200: //FOF: Light block
+		case 201: //FOF: Half light block
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].special == 201) ? 1 : 0;
+			lines[i].special = 200;
+			break;
+		case 202: //FOF: Fog block
+		case 223: //FOF: intangible, invisible
+			lines[i].args[0] = lines[i].tag;
+			break;
+		case 220: //FOF: intangible, opaque
+		case 221: //FOF: intangible, translucent
+		case 222: //FOF: intangible, sides only
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].special == 221)
+			{
+				lines[i].args[1] |= 1;
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+			}
+			if (lines[i].special != 220 && !(lines[i].flags & ML_NOCLIMB))
+				lines[i].args[1] |= 2;
+			if (lines[i].special == 222)
+				lines[i].args[2] |= 4;
+			lines[i].special = 220;
+			break;
+		case 250: //FOF: Mario block
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] |= 1;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[1] |= 2;
+			break;
+		case 251: //FOF: Thwomp block
+			//TODO: Crushing sound
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].flags == ML_EFFECT5) ? (lines[i].dy >> FRACBITS) : 80;
+			lines[i].args[2] = (lines[i].flags == ML_EFFECT5) ? (lines[i].dx >> FRACBITS) : 16;
+			break;
+		case 252: //FOF: Shatter block
+		case 253: //FOF: Shatter block, translucent
+		case 254: //FOF: Bustable block
+		case 255: //FOF: Spin-bustable block
+		case 256: //FOF: Spin-bustable block, translucent
+			lines[i].args[0] = lines[i].tag;
+
+			//Busted by?
+			if (lines[i].special == 252 || lines[i].special == 253)
+				lines[i].args[1] = 0;
+			else if (lines[i].special == 254)
+				lines[i].args[1] = (lines[i].flags == ML_NOCLIMB) ? 3 : 2;
+			else
+				lines[i].args[1] = 1;
+
+			//Translucent?
+			if (lines[i].special == 253 || lines[i].special == 256)
+			{
+				lines[i].args[2] = 1;
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+			}
+			else
+				lines[i].args[2] = 0;
+
+			//Tangibility
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] |= 4;
+
+			//Flags
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[4] |= 1;
+			if (lines[i].flags & ML_EFFECT5)
+				lines[i].args[4] |= 2;
+			if (lines[i].special == 252 && lines[i].flags & ML_NOCLIMB)
+				lines[i].args[4] |= 4;
+
+			//Linedef executor tag
+			lines[i].args[5] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+
+			lines[i].special = 254;
+			break;
+		case 257: //FOF: Quicksand
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].flags & ML_EFFECT5) != ML_EFFECT5;
+			lines[i].args[2] = lines[i].dx >> FRACBITS;
+			lines[i].args[3] = lines[i].dy >> FRACBITS;
+			break;
+		case 258: //FOF: Laser
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].flags & ML_EFFECT1) == ML_EFFECT1;
+			break;
+		case 259: //FOF: Custom
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].sidenum[1] == 0xffff)
+				I_Error("Custom FOF (tag %d) found without a linedef back side!", lines[i].args[0]);
+			lines[i].args[1] = sides[lines[i].sidenum[1]].toptexture;
+			lines[i].args[2] = lines[i].dx >> FRACBITS;
+			lines[i].args[3] = lines[i].dy >> FRACBITS;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[4] |= 1;
+			if (lines[i].flags & ML_EFFECT5)
+				lines[i].args[4] |= 2;
+			lines[i].args[5] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+			break;
+
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
