@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -128,6 +128,7 @@ static patch_t *minus5sec;
 static patch_t *minicaps;
 static patch_t *gotrflag;
 static patch_t *gotbflag;
+static patch_t *fnshico;
 
 static boolean facefreed[MAXPLAYERS];
 
@@ -310,6 +311,7 @@ void ST_LoadGraphics(void)
 	bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
 	gotrflag = W_CachePatchName("GOTRFLAG", PU_HUDGFX);
 	gotbflag = W_CachePatchName("GOTBFLAG", PU_HUDGFX);
+	fnshico = W_CachePatchName("FNSHICO", PU_HUDGFX);
 	nonicon = W_CachePatchName("NONICON", PU_HUDGFX);
 	nonicon2 = W_CachePatchName("NONICON2", PU_HUDGFX);
 
@@ -944,7 +946,7 @@ static void ST_drawLivesArea(void)
 					'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
 			else
 			{
-				if (stplyr->playerstate == PST_DEAD && !(stplyr->spectator) && (livescount || stplyr->deadtimer < (TICRATE<<1)))
+				if (stplyr->playerstate == PST_DEAD && !(stplyr->spectator) && (livescount || stplyr->deadtimer < (TICRATE<<1)) && !(stplyr->pflags & PF_FINISHED))
 					livescount++;
 				if (livescount > 99)
 					livescount = 99;
@@ -1434,7 +1436,7 @@ static void ST_drawPowerupHUD(void)
 	UINT16 invulntime = 0;
 	INT32 offs = hudinfo[HUD_POWERUPS].x;
 	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
-	static INT32 flagoffs[2] = {0, 0}, shieldoffs[2] = {0, 0};
+	static INT32 flagoffs[2] = {0, 0}, shieldoffs[2] = {0, 0}, finishoffs[2] = {0, 0};
 #define ICONSEP (16+4) // matches weapon rings HUD
 
 	if (F_GetPromptHideHud(hudinfo[HUD_POWERUPS].y))
@@ -1442,6 +1444,26 @@ static void ST_drawPowerupHUD(void)
 
 	if (stplyr->spectator || stplyr->playerstate != PST_LIVE)
 		return;
+	
+// ---------
+// Finish icon
+// ---------
+
+	// Let's have a power-like icon to represent finishing the level!
+	if (stplyr->pflags & PF_FINISHED && cv_exitmove.value)
+	{
+		finishoffs[q] = ICONSEP;
+		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, fnshico);
+	}
+	else if (finishoffs[q])
+	{
+		if (finishoffs[q] > 1)
+			finishoffs[q] = 2*finishoffs[q]/3;
+		else
+			finishoffs[q] = 0;
+	}
+
+	offs -= finishoffs[q];
 
 // -------
 // Shields
@@ -2625,7 +2647,7 @@ static void ST_overlayDrawer(void)
 	// Check for a valid level title
 	// If the HUD is enabled
 	// And, if Lua is running, if the HUD library has the stage title enabled
-	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD) && *mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer)))
+	if (G_IsTitleCardAvailable() && *mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer)))
 	{
 		stagetitle = true;
 		ST_preDrawTitleCard();

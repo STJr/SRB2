@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1928,13 +1928,22 @@ void G_PreLevelTitleCard(void)
 		wipestyleflags = WSF_CROSSFADE;
 }
 
+static boolean titlecardforreload = false;
+
 //
 // Returns true if the current level has a title card.
 //
 boolean G_IsTitleCardAvailable(void)
 {
 	// The current level header explicitly disabled the title card.
-	if (mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
+	UINT16 titleflag = LF_NOTITLECARDFIRST;
+
+	if (modeattacking != ATTACKING_NONE)
+		titleflag = LF_NOTITLECARDRECORDATTACK;
+	else if (titlecardforreload)
+		titleflag = LF_NOTITLECARDRESPAWN;
+
+	if (mapheaderinfo[gamemap-1]->levelflags & titleflag)
 		return false;
 
 	// The current gametype doesn't have a title card.
@@ -3024,7 +3033,9 @@ void G_DoReborn(INT32 playernum)
 #ifdef HAVE_BLUA
 			LUAh_MapChange(gamemap);
 #endif
+			titlecardforreload = true;
 			G_DoLoadLevel(true);
+			titlecardforreload = false;
 			if (metalrecording)
 				G_BeginMetal();
 			return;
@@ -3384,6 +3395,36 @@ UINT32 gametypetol[NUMGAMETYPES] =
 	TOL_CTF, // CTF
 };
 
+tolinfo_t TYPEOFLEVEL[NUMTOLNAMES] = {
+	{"SOLO",TOL_SP},
+	{"SP",TOL_SP},
+	{"SINGLEPLAYER",TOL_SP},
+	{"SINGLE",TOL_SP},
+
+	{"COOP",TOL_COOP},
+	{"CO-OP",TOL_COOP},
+
+	{"COMPETITION",TOL_COMPETITION},
+	{"RACE",TOL_RACE},
+
+	{"MATCH",TOL_MATCH},
+	{"TAG",TOL_TAG},
+	{"CTF",TOL_CTF},
+
+	{"2D",TOL_2D},
+	{"MARIO",TOL_MARIO},
+	{"NIGHTS",TOL_NIGHTS},
+	{"OLDBRAK",TOL_ERZ3},
+
+	{"XMAS",TOL_XMAS},
+	{"CHRISTMAS",TOL_XMAS},
+	{"WINTER",TOL_XMAS},
+
+	{NULL, 0}
+};
+
+UINT32 lastcustomtol = (TOL_XMAS<<1);
+
 //
 // G_AddTOL
 //
@@ -3391,16 +3432,16 @@ UINT32 gametypetol[NUMGAMETYPES] =
 //
 void G_AddTOL(UINT32 newtol, const char *tolname)
 {
-	TYPEOFLEVEL[numtolinfo].name = Z_StrDup(tolname);
-	TYPEOFLEVEL[numtolinfo].flag = newtol;
-	numtolinfo++;
+	INT32 i;
+	for (i = 0; TYPEOFLEVEL[i].name; i++)
+		;
 
-	TYPEOFLEVEL[numtolinfo].name = NULL;
-	TYPEOFLEVEL[numtolinfo].flag = 0;
+	TYPEOFLEVEL[i].name = Z_StrDup(tolname);
+	TYPEOFLEVEL[i].flag = newtol;
 }
 
 //
-// G_AddTOL
+// G_AddGametypeTOL
 //
 // Assigns a type of level to a gametype.
 //
@@ -3551,7 +3592,7 @@ boolean G_CompetitionGametype(void)
   * \return The typeoflevel flag to check for that gametype.
   * \author Graue <graue@oceanbase.org>
   */
-INT16 G_TOLFlag(INT32 pgametype)
+UINT32 G_TOLFlag(INT32 pgametype)
 {
 	if (!multiplayer)
 		return TOL_SP;
@@ -3682,7 +3723,7 @@ static void G_DoCompleted(void)
 		&& (nextmap >= 0 && nextmap < NUMMAPS))
 	{
 		register INT16 cm = nextmap;
-		INT16 tolflag = G_TOLFlag(gametype);
+		UINT32 tolflag = G_TOLFlag(gametype);
 		UINT8 visitedmap[(NUMMAPS+7)/8];
 
 		memset(visitedmap, 0, sizeof (visitedmap));
