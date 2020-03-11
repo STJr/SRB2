@@ -2684,6 +2684,115 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (lines[i].special)
 		{
+		case 100: //FOF: solid, opaque, shadowcasting
+		case 101: //FOF: solid, opaque, non-shadowcasting
+		case 102: //FOF: solid, translucent
+		case 103: //FOF: solid, sides only
+		case 104: //FOF: solid, no sides
+		case 105: //FOF: solid, invisible
+			lines[i].args[0] = lines[i].tag;
+
+			//Visibility
+			if (lines[i].special == 105)
+				lines[i].args[1] = 3;
+			else if (lines[i].special == 104)
+				lines[i].args[1] = 2;
+			else if (lines[i].special == 103)
+				lines[i].args[1] = 1;
+			else
+				lines[i].args[1] = 0;
+
+			//Translucency
+			if (lines[i].special == 102)
+			{
+				lines[i].args[2] = (lines[i].flags & ML_NOCLIMB) ? 2 : 1;
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+			}
+			else
+				lines[i].args[2] = 0;
+
+			//Tangibility
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] |= 4;
+
+			//Shadow?
+			lines[i].args[4] = (lines[i].special == 100) ? 0 : 1;
+
+			lines[i].special = 100;
+			break;
+		case 120: //FOF: water, opaque
+		case 121: //FOF: water, translucent
+		case 122: //FOF: water, opaque, no sides
+		case 123: //FOF: water, translucent, no sides
+		case 124: //FOF: goo water, translucent
+		case 125: //FOF: goo water, translucent, no sides
+			lines[i].args[0] = lines[i].tag;
+
+			//Opaque?
+			if (lines[i].special == 120 || lines[i].special == 122)
+				lines[i].args[1] |= 1;
+			else
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+
+			//No sides?
+			if (lines[i].special == 122 || lines[i].special == 123 || lines[i].special == 125)
+				lines[i].args[1] |= 2;
+
+			//Flags
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] |= 4;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[1] |= 8;
+			if (!(lines[i].flags & ML_EFFECT5))
+				lines[i].args[1] |= 16;
+
+			//Goo?
+			if (lines[i].special >= 124)
+				lines[i].args[1] |= 32;
+
+			lines[i].special = 120;
+			break;
+		case 140: //FOF: intangible from bottom, opaque
+		case 141: //FOF: intangible from bottom, translucent
+		case 142: //FOF: intangible from bottom, translucent, no sides
+		case 143: //FOF: intangible from top, opaque
+		case 144: //FOF: intangible from top, translucent
+		case 145: //FOF: intangible from top, translucent, no sides
+		case 146: //FOF: only tangible from sides
+			lines[i].args[0] = lines[i].tag;
+
+			//Visibility
+			if (lines[i].special == 142 || lines[i].special == 145)
+				lines[i].args[1] = 2;
+			else if (lines[i].special == 146)
+				lines[i].args[1] = 1;
+			else
+				lines[i].args[1] = 0;
+
+			//Translucency
+			if (lines[i].special == 141 || lines[i].special == 142 || lines[i].special == 144 || lines[i].special == 145)
+			{
+				lines[i].args[2] = (lines[i].flags & ML_EFFECT2) ? 2 : 1;
+				lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS) / 255;
+			}
+			else
+				lines[i].args[2] = 0;
+
+			//Tangibility
+			if (lines[i].special <= 142)
+				lines[i].args[3] |= 2;
+			else if (lines[i].special <= 145)
+				lines[i].args[3] |= 1;
+			else
+				lines[i].args[3] |= 3;
+
+			//Shadow?
+			lines[i].args[4] = (lines[i].special != 146 && lines[i].flags & ML_NOCLIMB) ? 1 : 0;
+
+			lines[i].special = 100;
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
