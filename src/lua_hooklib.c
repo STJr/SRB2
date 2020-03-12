@@ -69,6 +69,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"ViewpointSwitch",
 	"SeenPlayer",
 	"PlayerThink",
+	"GameQuit",
 	NULL
 };
 
@@ -1659,5 +1660,28 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 	return hasSeenPlayer;
 }
 #endif // SEENAMES
+
+// Hook for game quitting
+void LUAh_GameQuit(void)
+{
+	hook_p hookp;
+	if (!gL || !(hooksAvailable[hook_GameQuit/8] & (1<<(hook_GameQuit%8))))
+		return;
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_GameQuit)
+			continue;
+
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		if (lua_pcall(gL, 0, 0, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+		}
+	}
+}
 
 #endif

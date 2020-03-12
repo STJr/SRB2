@@ -58,6 +58,7 @@ enum hook {
 	hook_ViewpointSwitch,
 	hook_SeenPlayer,
 	hook_PlayerThink,
+	hook_GameQuit,
 
 	hook_MAX // last hook
 };
@@ -110,5 +111,6 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend); // Hook for MT_NAMECHECK
 #endif
 #define LUAh_PlayerThink(player) LUAh_PlayerHook(player, hook_PlayerThink) // Hook for P_PlayerThink
+void LUAh_GameQuit(void); // Hook for game quitting
 
 #endif
