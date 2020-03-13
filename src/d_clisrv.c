@@ -3188,10 +3188,6 @@ static inline void SV_GenContext(void)
 //
 void D_QuitNetGame(void)
 {
-#ifdef HAVE_BLUA
-	LUAh_GameQuit();
-#endif
-	
 	if (!netgame || !netbuffer)
 		return;
 
