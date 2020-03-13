@@ -4235,6 +4235,10 @@ void Command_ExitGame_f(void)
 {
 	INT32 i;
 
+#ifdef HAVE_BLUA
+	LUAh_GameQuit();
+#endif
+
 	D_QuitNetGame();
 	CL_Reset();
 	CV_ClearChangedFlags();
