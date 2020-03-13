@@ -4236,8 +4236,7 @@ void Command_ExitGame_f(void)
 	INT32 i;
 
 #ifdef HAVE_BLUA
-	if (!multiplayer)
-		LUAh_GameQuit();
+	LUAh_GameQuit();
 #endif
 
 	D_QuitNetGame();
