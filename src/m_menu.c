@@ -3612,6 +3612,7 @@ void M_StartControlPanel(void)
 	else if (modeattacking)
 	{
 		currentMenu = &MAPauseDef;
+		MAPauseMenu[mapause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 		itemOn = mapause_continue;
 	}
 	else if (!(netgame || multiplayer)) // Single Player
