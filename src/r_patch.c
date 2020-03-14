@@ -1212,15 +1212,17 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		INT32 width, height, leftoffset;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
+#ifndef NO_PNG_LUMPS
 		size_t lumplength;
+#endif
 
 		if (lump == LUMPERROR)
 			return;
 
 		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
+#ifndef NO_PNG_LUMPS
 		lumplength = W_LumpLength(lump);
 
-#ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)patch, lumplength))
 			patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL);
 		else

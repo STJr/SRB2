@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -670,7 +670,9 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	wadfile_t *wadfile;
 	restype_t type;
 	UINT16 numlumps = 0;
+#ifndef NOMD5
 	size_t i;
+#endif
 	size_t packetsize;
 	UINT8 md5sum[16];
 	boolean important;
@@ -805,7 +807,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 #ifdef HWRENDER
 	// Read shaders from file
-	if (rendermode == render_opengl && hwrenderloaded)
+	if (rendermode == render_opengl && (hwrenderloaded == 1))
 	{
 		HWR_ReadShaders(numwadfiles - 1, (type == RET_PK3));
 		HWR_LoadShaders();

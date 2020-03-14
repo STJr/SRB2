@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -199,7 +199,7 @@ static void R_DrawWallSplats(void)
 		// draw the columns
 		for (dc_x = x1; dc_x <= x2; dc_x++, spryscale += rw_scalestep)
 		{
-			pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+			pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
 			dc_colormap = walllights[pindex];
@@ -418,14 +418,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			rlight->extra_colormap = *light->extra_colormap;
 			rlight->flags = light->flags;
 
-			if (rlight->flags & FF_FOG || (rlight->extra_colormap && rlight->extra_colormap->fog))
+			if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
+				|| (rlight->flags & FF_FOG)
+				|| (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG)))
 				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
-			else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
-				lightnum = LIGHTLEVELS - 1;
 			else
-				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
+				lightnum = LIGHTLEVELS - 1;
 
-			if (rlight->extra_colormap && rlight->extra_colormap->fog)
+			if (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG))
 				;
 			else if (curline->v1->y == curline->v2->y)
 				lightnum--;
@@ -437,18 +437,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 	{
-		if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
-		{
-			if (frontsector->extra_colormap && frontsector->extra_colormap->fog)
-				lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
-			else
-				lightnum = LIGHTLEVELS - 1;
-		}
-		else
+		if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
+			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+		else
+			lightnum = LIGHTLEVELS - 1;
 
 		if (colfunc == colfuncs[COLDRAWFUNC_FOG]
-			|| (frontsector->extra_colormap && frontsector->extra_colormap->fog))
+			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			;
 		else if (curline->v1->y == curline->v2->y)
 			lightnum--;
@@ -599,7 +595,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						else
 							xwalllights = scalelight[rlight->lightnum];
 
-						pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+						pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 						if (pindex >= MAXLIGHTSCALE)
 							pindex = MAXLIGHTSCALE - 1;
@@ -644,7 +640,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				}
 
 				// calculate lighting
-				pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+				pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 				if (pindex >= MAXLIGHTSCALE)
 					pindex = MAXLIGHTSCALE - 1;
@@ -947,7 +943,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			else
 				rlight->lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
 
-			if (pfloor->flags & FF_FOG || rlight->flags & FF_FOG || (rlight->extra_colormap && rlight->extra_colormap->fog))
+			if (pfloor->flags & FF_FOG || rlight->flags & FF_FOG || (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG)))
 				;
 			else if (curline->v1->y == curline->v2->y)
 				rlight->lightnum--;
@@ -962,7 +958,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	else
 	{
 		// Get correct light level!
-		if ((frontsector->extra_colormap && frontsector->extra_colormap->fog))
+		if ((frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 		else if (pfloor->flags & FF_FOG)
 			lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
@@ -972,7 +968,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
 				->lightlevel >> LIGHTSEGSHIFT;
 
-		if (pfloor->flags & FF_FOG || (frontsector->extra_colormap && frontsector->extra_colormap->fog));
+		if (pfloor->flags & FF_FOG || (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)));
 			else if (curline->v1->y == curline->v2->y)
 		lightnum--;
 		else if (curline->v1->x == curline->v2->x)
@@ -1188,7 +1184,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						else
 							xwalllights = scalelight[lightnum];
 
-						pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+						pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 						if (pindex >= MAXLIGHTSCALE)
 							pindex = MAXLIGHTSCALE-1;
@@ -1281,7 +1277,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			}
 
 			// calculate lighting
-			pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+			pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
@@ -1486,7 +1482,7 @@ static void R_RenderSegLoop (void)
 		if (segtextured)
 		{
 			// calculate lighting
-			pindex = FixedMul(rw_scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+			pindex = FixedMul(rw_scale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 			if (pindex >=  MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE-1;
@@ -1521,7 +1517,7 @@ static void R_RenderSegLoop (void)
 				else
 					xwalllights = scalelight[lightnum];
 
-				pindex = FixedMul(rw_scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+				pindex = FixedMul(rw_scale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 				if (pindex >=  MAXLIGHTSCALE)
 					pindex = MAXLIGHTSCALE-1;

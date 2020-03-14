@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2299,6 +2299,13 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 	}
 }
 
+void V_DrawCenteredSmallString(INT32 x, INT32 y, INT32 option, const char *string)
+{
+	x -= V_SmallStringWidth(string, option)/2;
+	V_DrawSmallString(x, y, option, string);
+}
+
+
 void V_DrawRightAlignedSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 {
 	x -= V_SmallStringWidth(string, option);
@@ -2404,10 +2411,42 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 	}
 }
 
+void V_DrawCenteredThinString(INT32 x, INT32 y, INT32 option, const char *string)
+{
+	x -= V_ThinStringWidth(string, option)/2;
+	V_DrawThinString(x, y, option, string);
+}
+
 void V_DrawRightAlignedThinString(INT32 x, INT32 y, INT32 option, const char *string)
 {
 	x -= V_ThinStringWidth(string, option);
 	V_DrawThinString(x, y, option, string);
+}
+
+//
+// Write a string using the tny_font, 0.5x scale
+// NOTE: the text is centered for screens larger than the base width
+//
+// Literally a wrapper. ~Golden
+void V_DrawSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
+{
+	x <<= FRACBITS;
+	y <<= FRACBITS;
+	V_DrawSmallThinStringAtFixed((fixed_t)x, (fixed_t)y, option, string);
+}
+
+void V_DrawCenteredSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
+{
+	x <<= FRACBITS;
+	y <<= FRACBITS;
+	V_DrawCenteredSmallThinStringAtFixed((fixed_t)x, (fixed_t)y, option, string);
+}
+
+void V_DrawRightAlignedSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
+{
+	x <<= FRACBITS;
+	y <<= FRACBITS;
+	V_DrawRightAlignedSmallThinStringAtFixed((fixed_t)x, (fixed_t)y, option, string);
 }
 
 // Draws a string at a fixed_t location.
@@ -2509,6 +2548,360 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 
 		cx += w<<FRACBITS;
 	}
+}
+
+void V_DrawCenteredStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= (V_StringWidth(string, option) / 2)<<FRACBITS;
+	V_DrawStringAtFixed(x, y, option, string);
+}
+
+void V_DrawRightAlignedStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= V_StringWidth(string, option)<<FRACBITS;
+	V_DrawStringAtFixed(x, y, option, string);
+}
+
+// Draws a small string at a fixed_t location.
+void V_DrawSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	fixed_t cx = x, cy = y;
+	INT32 w, c, dupx, dupy, scrwidth, center = 0, left = 0;
+	const char *ch = string;
+	INT32 charflags = 0;
+	const UINT8 *colormap = NULL;
+	INT32 spacewidth = 2, charwidth = 0;
+
+	INT32 lowercase = (option & V_ALLOWLOWERCASE);
+	option &= ~V_FLIP; // which is also shared with V_ALLOWLOWERCASE...
+
+	if (option & V_NOSCALESTART)
+	{
+		dupx = vid.dupx;
+		dupy = vid.dupy;
+		scrwidth = vid.width;
+	}
+	else
+	{
+		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
+	}
+
+	charflags = (option & V_CHARCOLORMASK);
+
+	switch (option & V_SPACINGMASK)
+	{
+		case V_MONOSPACE:
+			spacewidth = 4;
+			/* FALLTHRU */
+		case V_OLDSPACING:
+			charwidth = 4;
+			break;
+		case V_6WIDTHSPACE:
+			spacewidth = 3;
+		default:
+			break;
+	}
+
+	for (;;ch++)
+	{
+		if (!*ch)
+			break;
+		if (*ch & 0x80) //color parsing -x 2.16.09
+		{
+			// manually set flags override color codes
+			if (!(option & V_CHARCOLORMASK))
+				charflags = ((*ch & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
+			continue;
+		}
+		if (*ch == '\n')
+		{
+			cx = x;
+
+			if (option & V_RETURN8)
+				cy += (4*dupy)<<FRACBITS;
+			else
+				cy += (6*dupy)<<FRACBITS;
+
+			continue;
+		}
+
+		c = *ch;
+		if (!lowercase)
+			c = toupper(c);
+		c -= HU_FONTSTART;
+
+		// character does not exist or is a space
+		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+		{
+			cx += (spacewidth * dupx)<<FRACBITS;
+			continue;
+		}
+
+		if (charwidth)
+		{
+			w = charwidth * dupx;
+			center = w/2 - SHORT(hu_font[c]->width)*(dupx/4);
+		}
+		else
+			w = SHORT(hu_font[c]->width) * dupx / 2;
+
+		if ((cx>>FRACBITS) > scrwidth)
+			break;
+		if ((cx>>FRACBITS)+left + w < 0) //left boundary check
+		{
+			cx += w<<FRACBITS;
+			continue;
+		}
+
+		colormap = V_GetStringColormap(charflags);
+
+		V_DrawFixedPatch(cx + (center<<FRACBITS), cy, FRACUNIT/2, option, hu_font[c], colormap);
+
+		cx += w<<FRACBITS;
+	}
+}
+
+void V_DrawCenteredSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= (V_SmallStringWidth(string, option) / 2)<<FRACBITS;
+	V_DrawSmallStringAtFixed(x, y, option, string);
+}
+
+void V_DrawRightAlignedSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= V_SmallStringWidth(string, option)<<FRACBITS;
+	V_DrawSmallStringAtFixed(x, y, option, string);
+}
+
+// Draws a thin string at a fixed_t location.
+void V_DrawThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	fixed_t cx = x, cy = y;
+	INT32 w, c, dupx, dupy, scrwidth, center = 0, left = 0;
+	const char *ch = string;
+	INT32 charflags = 0;
+	const UINT8 *colormap = NULL;
+	INT32 spacewidth = 2, charwidth = 0;
+
+	INT32 lowercase = (option & V_ALLOWLOWERCASE);
+	option &= ~V_FLIP; // which is also shared with V_ALLOWLOWERCASE...
+
+	if (option & V_NOSCALESTART)
+	{
+		dupx = vid.dupx;
+		dupy = vid.dupy;
+		scrwidth = vid.width;
+	}
+	else
+	{
+		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
+	}
+
+	charflags = (option & V_CHARCOLORMASK);
+
+	switch (option & V_SPACINGMASK)
+	{
+		case V_MONOSPACE:
+			spacewidth = 8;
+			/* FALLTHRU */
+		case V_OLDSPACING:
+			charwidth = 8;
+			break;
+		case V_6WIDTHSPACE:
+			spacewidth = 6;
+		default:
+			break;
+	}
+
+	for (;;ch++)
+	{
+		if (!*ch)
+			break;
+		if (*ch & 0x80) //color parsing -x 2.16.09
+		{
+			// manually set flags override color codes
+			if (!(option & V_CHARCOLORMASK))
+				charflags = ((*ch & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
+			continue;
+		}
+		if (*ch == '\n')
+		{
+			cx = x;
+
+			if (option & V_RETURN8)
+				cy += (8*dupy)<<FRACBITS;
+			else
+				cy += (12*dupy)<<FRACBITS;
+
+			continue;
+		}
+
+		c = *ch;
+		if (!lowercase || !tny_font[c-HU_FONTSTART])
+			c = toupper(c);
+		c -= HU_FONTSTART;
+
+		// character does not exist or is a space
+		if (c < 0 || c >= HU_FONTSIZE || !tny_font[c])
+		{
+			cx += (spacewidth * dupx)<<FRACBITS;
+			continue;
+		}
+
+		if (charwidth)
+		{
+			w = charwidth * dupx;
+			center = w/2 - SHORT(tny_font[c]->width)*(dupx/2);
+		}
+		else
+			w = SHORT(tny_font[c]->width) * dupx;
+
+		if ((cx>>FRACBITS) > scrwidth)
+			break;
+		if ((cx>>FRACBITS)+left + w < 0) //left boundary check
+		{
+			cx += w<<FRACBITS;
+			continue;
+		}
+
+		colormap = V_GetStringColormap(charflags);
+
+		V_DrawFixedPatch(cx + (center<<FRACBITS), cy, FRACUNIT, option, tny_font[c], colormap);
+
+		cx += w<<FRACBITS;
+	}
+}
+
+void V_DrawCenteredThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= (V_ThinStringWidth(string, option) / 2)<<FRACBITS;
+	V_DrawThinStringAtFixed(x, y, option, string);
+}
+
+void V_DrawRightAlignedThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= V_ThinStringWidth(string, option)<<FRACBITS;
+	V_DrawThinStringAtFixed(x, y, option, string);
+}
+
+// Draws a small string at a fixed_t location.
+void V_DrawSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	fixed_t cx = x, cy = y;
+	INT32 w, c, dupx, dupy, scrwidth, center = 0, left = 0;
+	const char *ch = string;
+	INT32 charflags = 0;
+	const UINT8 *colormap = NULL;
+	INT32 spacewidth = 2<<FRACBITS, charwidth = 0;
+
+	INT32 lowercase = (option & V_ALLOWLOWERCASE);
+	option &= ~V_FLIP; // which is also shared with V_ALLOWLOWERCASE...
+
+	if (option & V_NOSCALESTART)
+	{
+		dupx = vid.dupx<<FRACBITS;
+		dupy = vid.dupy<<FRACBITS;
+		scrwidth = vid.width;
+	}
+	else
+	{
+		dupx = dupy = FRACUNIT;
+		scrwidth = FixedDiv(vid.width<<FRACBITS, vid.dupx);
+		left = ((scrwidth - (BASEVIDWIDTH<<FRACBITS))/2);
+		scrwidth -= left;
+	}
+
+	charflags = (option & V_CHARCOLORMASK);
+
+	switch (option & V_SPACINGMASK)
+	{
+		case V_MONOSPACE:
+			spacewidth = 4<<FRACBITS;
+			/* FALLTHRU */
+		case V_OLDSPACING:
+			charwidth = 4<<FRACBITS;
+			break;
+		case V_6WIDTHSPACE:
+			spacewidth = 3<<FRACBITS;
+		default:
+			break;
+	}
+
+	for (;;ch++)
+	{
+		if (!*ch)
+			break;
+		if (*ch & 0x80) //color parsing -x 2.16.09
+		{
+			// manually set flags override color codes
+			if (!(option & V_CHARCOLORMASK))
+				charflags = ((*ch & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
+			continue;
+		}
+		if (*ch == '\n')
+		{
+			cx = x;
+
+			if (option & V_RETURN8)
+				cy += 4*dupy;
+			else
+				cy += 6*dupy;
+
+			continue;
+		}
+
+		c = *ch;
+		if (!lowercase)
+			c = toupper(c);
+		c -= HU_FONTSTART;
+
+		// character does not exist or is a space
+		if (c < 0 || c >= HU_FONTSIZE || !tny_font[c])
+		{
+			cx += FixedMul(spacewidth, dupx);
+			continue;
+		}
+
+		if (charwidth)
+		{
+			w = FixedMul(charwidth, dupx);
+			center = w/2 - SHORT(tny_font[c]->width)*(dupx/4);
+		}
+		else
+			w = SHORT(tny_font[c]->width) * dupx / 2;
+
+		if (cx > scrwidth)
+			break;
+		if (cx+left + w < 0) //left boundary check
+		{
+			cx += w;
+			continue;
+		}
+
+		colormap = V_GetStringColormap(charflags);
+
+		V_DrawFixedPatch(cx + center, cy, FRACUNIT/2, option, tny_font[c], colormap);
+
+		cx += w;
+	}
+}
+
+void V_DrawCenteredSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= V_SmallThinStringWidth(string, option)/4;
+	V_DrawSmallThinStringAtFixed(x, y, option, string);
+}
+
+void V_DrawRightAlignedSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= V_SmallThinStringWidth(string, option)/2;
+	V_DrawSmallThinStringAtFixed(x, y, option, string);
 }
 
 // Draws a tallnum.  Replaces two functions in y_inter and st_stuff
@@ -3066,6 +3459,15 @@ INT32 V_ThinStringWidth(const char *string, INT32 option)
 	}
 
 	return w;
+}
+
+//
+// Find string width from tny_font chars, 0.5x scale
+//
+INT32 V_SmallThinStringWidth(const char *string, INT32 option)
+{
+	INT32 w = V_ThinStringWidth(string, option)<<FRACBITS;
+	return w/2 + FRACUNIT; // +FRACUNIT because otherwise it's offset wrong.
 }
 
 boolean *heatshifter = NULL;

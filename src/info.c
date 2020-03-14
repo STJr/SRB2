@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -407,6 +407,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"LCKN", // Target
 	"TTAG", // Tag Sign
 	"GFLG", // Got Flag sign
+	"FNSF", // Finish flag
 
 	"CORK",
 	"LHRT",
@@ -3349,7 +3350,10 @@ state_t states[NUMSTATES] =
 	{SPR_TTAG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_TTAG
 
 	// CTF Sign
-	{SPR_GFLG,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
+	{SPR_GFLG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
+	
+	// Finish flag
+	{SPR_FNSF,    FF_TRANS30, -1, {NULL}, 0, 0, S_NULL}, // S_FINISHFLAG
 
 	{SPR_CORK,             0, -1, {NULL}, 0, 0, S_NULL}, // S_CORK
 	{SPR_LHRT, FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_LHRT
@@ -17993,6 +17997,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+	
+	{           // MT_FINISHFLAG
+		-1,             // doomednum
+		S_FINISHFLAG,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		4*FRACUNIT,     // speed
+		8*FRACUNIT,     // radius
+		8*FRACUNIT,     // height
+		1,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 

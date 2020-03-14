@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2019 by Sonic Team Junior.
+// Copyright (C) 2014-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -119,9 +119,25 @@ enum align {
 	align_center,
 	align_right,
 	align_fixed,
+	align_fixedcenter,
+	align_fixedright,
 	align_small,
+	align_smallfixed,
+	align_smallfixedcenter,
+	align_smallfixedright,
+	align_smallcenter,
 	align_smallright,
+	align_smallthin,
+	align_smallthincenter,
+	align_smallthinright,
+	align_smallthinfixed,
+	align_smallthinfixedcenter,
+	align_smallthinfixedright,
 	align_thin,
+	align_thinfixed,
+	align_thinfixedcenter,
+	align_thinfixedright,
+	align_thincenter,
 	align_thinright
 };
 static const char *const align_opt[] = {
@@ -129,9 +145,25 @@ static const char *const align_opt[] = {
 	"center",
 	"right",
 	"fixed",
+	"fixed-center",
+	"fixed-right",
 	"small",
+	"small-fixed",
+	"small-fixed-center",
+	"small-fixed-right",
+	"small-center",
 	"small-right",
+	"small-thin",
+	"small-thin-center",
+	"small-thin-right",
+	"small-thin-fixed",
+	"small-thin-fixed-center",
+	"small-thin-fixed-right",
 	"thin",
+	"thin-fixed",
+	"thin-fixed-center",
+	"thin-fixed-right",
+	"thin-center",
 	"thin-right",
 	NULL};
 
@@ -428,7 +460,7 @@ static int libd_cachePatch(lua_State *L)
 	return 1;
 }
 
-// v.getSpritePatch(sprite, [frame, [angle]])
+// v.getSpritePatch(sprite, [frame, [angle, [rollangle]]])
 static int libd_getSpritePatch(lua_State *L)
 {
 	UINT32 i; // sprite prefix
@@ -479,13 +511,31 @@ static int libd_getSpritePatch(lua_State *L)
 	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
 
+#ifdef ROTSPRITE
+	if (lua_isnumber(L, 4))
+	{
+		// rotsprite?????
+		angle_t rollangle = luaL_checkangle(L, 4);
+		INT32 rot = R_GetRollAngle(rollangle);
+
+		if (rot) {
+			if (!(sprframe->rotsprite.cached & (1<<angle)))
+				R_CacheRotSprite(i, frame, NULL, sprframe, angle, sprframe->flip & (1<<angle));
+			LUA_PushUserdata(L, sprframe->rotsprite.patch[angle][rot], META_PATCH);
+			lua_pushboolean(L, false);
+			lua_pushboolean(L, true);
+			return 3;
+		}
+	}
+#endif
+
 	// push both the patch and it's "flip" value
 	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_PATCH), META_PATCH);
 	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
 	return 2;
 }
 
-// v.getSprite2Patch(skin, sprite, [super?,] [frame, [angle]])
+// v.getSprite2Patch(skin, sprite, [super?,] [frame, [angle, [rollangle]]])
 static int libd_getSprite2Patch(lua_State *L)
 {
 	INT32 i; // skin number
@@ -573,6 +623,24 @@ static int libd_getSprite2Patch(lua_State *L)
 
 	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
+
+#ifdef ROTSPRITE
+	if (lua_isnumber(L, 4))
+	{
+		// rotsprite?????
+		angle_t rollangle = luaL_checkangle(L, 4);
+		INT32 rot = R_GetRollAngle(rollangle);
+
+		if (rot) {
+			if (!(sprframe->rotsprite.cached & (1<<angle)))
+				R_CacheRotSprite(SPR_PLAY, frame, &skins[i].sprinfo[j], sprframe, angle, sprframe->flip & (1<<angle));
+			LUA_PushUserdata(L, sprframe->rotsprite.patch[angle][rot], META_PATCH);
+			lua_pushboolean(L, false);
+			lua_pushboolean(L, true);
+			return 3;
+		}
+	}
+#endif
 
 	// push both the patch and it's "flip" value
 	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_PATCH), META_PATCH);
@@ -739,19 +807,67 @@ static int libd_drawString(lua_State *L)
 	case align_fixed:
 		V_DrawStringAtFixed(x, y, flags, str);
 		break;
+	case align_fixedcenter:
+		V_DrawCenteredStringAtFixed(x, y, flags, str);
+		break;
+	case align_fixedright:
+		V_DrawRightAlignedStringAtFixed(x, y, flags, str);
+		break;
 	// hu_font, 0.5x scale
 	case align_small:
 		V_DrawSmallString(x, y, flags, str);
 		break;
+	case align_smallfixed:
+		V_DrawSmallStringAtFixed(x, y, flags, str);
+		break;
+	case align_smallfixedcenter:
+		V_DrawCenteredSmallStringAtFixed(x, y, flags, str);
+		break;
+	case align_smallfixedright:
+		V_DrawRightAlignedSmallStringAtFixed(x, y, flags, str);
+		break;
+	case align_smallcenter:
+		V_DrawCenteredSmallString(x, y, flags, str);
+		break;
 	case align_smallright:
 		V_DrawRightAlignedSmallString(x, y, flags, str);
+		break;
+	case align_smallthin:
+		V_DrawSmallThinString(x, y, flags, str);
+		break;
+	case align_smallthincenter:
+		V_DrawCenteredSmallThinString(x, y, flags, str);
+		break;
+	case align_smallthinright:
+		V_DrawRightAlignedSmallThinString(x, y, flags, str);
+		break;
+	case align_smallthinfixed:
+		V_DrawSmallThinStringAtFixed(x, y, flags, str);
+		break;
+	case align_smallthinfixedcenter:
+		V_DrawCenteredSmallThinStringAtFixed(x, y, flags, str);
+		break;
+	case align_smallthinfixedright:
+		V_DrawRightAlignedSmallThinStringAtFixed(x, y, flags, str);
 		break;
 	// tny_font
 	case align_thin:
 		V_DrawThinString(x, y, flags, str);
 		break;
+	case align_thincenter:
+		V_DrawCenteredThinString(x, y, flags, str);
+		break;
 	case align_thinright:
 		V_DrawRightAlignedThinString(x, y, flags, str);
+		break;
+	case align_thinfixed:
+		V_DrawThinStringAtFixed(x, y, flags, str);
+		break;
+	case align_thinfixedcenter:
+		V_DrawCenteredThinStringAtFixed(x, y, flags, str);
+		break;
+	case align_thinfixedright:
+		V_DrawRightAlignedThinStringAtFixed(x, y, flags, str);
 		break;
 	}
 	return 0;

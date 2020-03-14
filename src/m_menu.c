@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -231,6 +231,8 @@ static void M_Credits(INT32 choice);
 static void M_SoundTest(INT32 choice);
 static void M_PandorasBox(INT32 choice);
 static void M_EmblemHints(INT32 choice);
+static void M_HandleEmblemHints(INT32 choice);
+UINT32 hintpage = 1;
 static void M_HandleChecklist(INT32 choice);
 menu_t SR_MainDef, SR_UnlockChecklistDef;
 
@@ -310,6 +312,7 @@ static void M_AssignJoystick(INT32 choice);
 static void M_ChangeControl(INT32 choice);
 
 // Video & Sound
+static void M_VideoOptions(INT32 choice);
 menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 #ifdef HWRENDER
 static void M_OpenGLOptionsMenu(void);
@@ -724,8 +727,9 @@ static menuitem_t SR_SoundTestMenu[] =
 
 static menuitem_t SR_EmblemHintMenu[] =
 {
-	{IT_STRING|IT_CVAR,         NULL, "Emblem Radar", &cv_itemfinder, 10},
-	{IT_WHITESTRING|IT_SUBMENU, NULL, "Back",         &SPauseDef,     20}
+	{IT_STRING | IT_ARROWS,       NULL, "Page", M_HandleEmblemHints, 10},
+	{IT_STRING|IT_CVAR,         NULL, "Emblem Radar", &cv_itemfinder, 20},
+	{IT_WHITESTRING|IT_SUBMENU, NULL, "Back",         &SPauseDef,     30}
 };
 
 // --------------------------------
@@ -1028,7 +1032,7 @@ static menuitem_t OP_MainMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Player 2 Controls...", &OP_P2ControlsDef,   20},
 	{IT_CVAR    | IT_STRING, NULL, "Controls per key",     &cv_controlperkey,   30},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Video Options...",     &OP_VideoOptionsDef, 50},
+	{IT_CALL    | IT_STRING, NULL, "Video Options...",     M_VideoOptions,      50},
 	{IT_SUBMENU | IT_STRING, NULL, "Sound Options...",     &OP_SoundOptionsDef, 60},
 
 	{IT_CALL    | IT_STRING, NULL, "Server Options...",    M_ServerOptions,     80},
@@ -1277,6 +1281,16 @@ static menuitem_t OP_Camera2ExtendedOptionsMenu[] =
 
 	{IT_HEADER,            NULL, "Display Options", NULL, 120},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 126},
+};
+
+enum
+{
+	op_video_resolution = 1,
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+	op_video_fullscreen,
+#endif
+	op_video_vsync,
+	op_video_renderer,
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -2071,6 +2085,20 @@ menu_t OP_PlaystyleDef = {
 	0, 0, 0, NULL
 };
 
+static void M_VideoOptions(INT32 choice)
+{
+	(void)choice;
+#ifdef HWRENDER
+	if (hwrenderloaded == -1)
+	{
+		OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
+		OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
+		OP_VideoOptionsMenu[op_video_renderer].text = "Software";
+	}
+
+#endif
+	M_SetupNextMenu(&OP_VideoOptionsDef);
+}
 
 menu_t OP_VideoOptionsDef =
 {
@@ -3130,6 +3158,9 @@ boolean M_Responder(event_t *ev)
 	if (gamestate == GS_TITLESCREEN && finalecount < TICRATE)
 		return false;
 
+	if (CON_Ready())
+		return false;
+
 	if (noFurtherInput)
 	{
 		// Ignore input after enter/escape/other buttons
@@ -3489,6 +3520,7 @@ boolean M_Responder(event_t *ev)
 			return false;
 
 		default:
+			CON_Responder(ev);
 			break;
 	}
 
@@ -7220,18 +7252,33 @@ finishchecklist:
 }
 
 #define NUMHINTS 5
+
 static void M_EmblemHints(INT32 choice)
 {
+	INT32 i;
+	UINT32 local = 0;
+	emblem_t *emblem;
+	for (i = 0; i < numemblems; i++)
+	{
+		emblem = &emblemlocations[i];
+		if (emblem->level != gamemap || emblem->type > ET_SKIN)
+			continue;
+		if (++local > NUMHINTS*2)
+			break;
+	}
+
 	(void)choice;
-	SR_EmblemHintMenu[0].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
+	SR_EmblemHintMenu[0].status = (local > NUMHINTS*2) ? (IT_STRING | IT_ARROWS) : (IT_DISABLED);
+	SR_EmblemHintMenu[1].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
+	hintpage = 1;
 	M_SetupNextMenu(&SR_EmblemHintDef);
-	itemOn = 1; // always start on back.
+	itemOn = 2; // always start on back.
 }
 
 static void M_DrawEmblemHints(void)
 {
-	INT32 i, j = 0, x, y, left_hints = NUMHINTS;
-	UINT32 collected = 0, local = 0;
+	INT32 i, j = 0, x, y, left_hints = NUMHINTS, pageflag = 0;
+	UINT32 collected = 0, totalemblems = 0, local = 0;
 	emblem_t *emblem;
 	const char *hint;
 
@@ -7240,17 +7287,34 @@ static void M_DrawEmblemHints(void)
 		emblem = &emblemlocations[i];
 		if (emblem->level != gamemap || emblem->type > ET_SKIN)
 			continue;
-		if (++local >= NUMHINTS*2)
-			break;
+
+		local++;
 	}
 
 	x = (local > NUMHINTS ? 4 : 12);
 	y = 8;
 
-	// If there are more than 1 page's but less than 2 pages' worth of emblems,
+	if (local > NUMHINTS){
+		if (local > ((hintpage-1)*NUMHINTS*2) && local < ((hintpage)*NUMHINTS*2)){
+			if (NUMHINTS % 2 == 1)
+				left_hints = (local - ((hintpage-1)*NUMHINTS*2)  + 1) / 2;
+			else
+				left_hints = (local - ((hintpage-1)*NUMHINTS*2)) / 2;
+		}else{
+			left_hints = NUMHINTS;
+		}
+	}
+
+	if (local > NUMHINTS*2){
+		if (itemOn == 0){
+			pageflag = V_YELLOWMAP;
+		}
+		V_DrawString(currentMenu->x + 40, currentMenu->y + 10, pageflag, va("%d of %d",hintpage, local/(NUMHINTS*2) + 1));
+	}
+
+	// If there are more than 1 page's but less than 2 pages' worth of emblems on the last possible page,
 	// put half (rounded up) of the hints on the left, and half (rounded down) on the right
-	if (local > NUMHINTS && local < (NUMHINTS*2)-1)
-		left_hints = (local + 1) / 2;
+
 
 	if (!local)
 		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
@@ -7260,40 +7324,78 @@ static void M_DrawEmblemHints(void)
 		if (emblem->level != gamemap || emblem->type > ET_SKIN)
 			continue;
 
-		if (emblem->collected)
-		{
-			collected = V_GREENMAP;
-			V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
-				R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
-		}
-		else
-		{
-			collected = 0;
-			V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_PATCH));
-		}
+		totalemblems++;
 
-		if (emblem->hint[0])
-			hint = emblem->hint;
-		else
-			hint = M_GetText("No hint available for this emblem.");
-		hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
-		if (local > NUMHINTS)
-			V_DrawThinString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
-		else
-			V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+		if (totalemblems >= ((hintpage-1)*(NUMHINTS*2) + 1) && totalemblems < (hintpage*NUMHINTS*2)+1){
 
-		y += 28;
+			if (emblem->collected)
+			{
+				collected = V_GREENMAP;
+				V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
+					R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
+			}
+			else
+			{
+				collected = 0;
+				V_DrawScaledPatch(x, y+4, 0, W_CachePatchName("NEEDIT", PU_PATCH));
+			}
 
-		if (++j == left_hints)
-		{
-			x = 4+(BASEVIDWIDTH/2);
-			y = 8;
+			if (emblem->hint[0])
+				hint = emblem->hint;
+			else
+				hint = M_GetText("No hint available for this emblem.");
+			hint = V_WordWrap(40, BASEVIDWIDTH-12, 0, hint);
+			//always draw tiny if we have more than NUMHINTS*2, visually more appealing
+			if (local > NUMHINTS)
+				V_DrawThinString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+			else
+				V_DrawString(x+28, y, V_RETURN8|V_ALLOWLOWERCASE|collected, hint);
+
+			y += 28;
+
+			// If there are more than 1 page's but less than 2 pages' worth of emblems on the last possible page,
+			// put half (rounded up) of the hints on the left, and half (rounded down) on the right
+
+			if (++j == left_hints)
+			{
+				x = 4+(BASEVIDWIDTH/2);
+				y = 8;
+			}
+			else if (j >= NUMHINTS*2)
+				break;
 		}
-		else if (j >= NUMHINTS*2)
-			break;
 	}
 
 	M_DrawGenericMenu();
+}
+
+
+static void M_HandleEmblemHints(INT32 choice)
+{
+	INT32 i;
+	emblem_t *emblem;
+	UINT32 stageemblems = 0;
+
+	for (i = 0; i < numemblems; i++)
+	{
+		emblem = &emblemlocations[i];
+		if (emblem->level != gamemap || emblem->type > ET_SKIN)
+			continue;
+
+		stageemblems++;
+	}
+
+
+	if (choice == 0){
+		if (hintpage > 1){
+			hintpage--;
+		}
+	}else{
+		if (hintpage < ((stageemblems-1)/(NUMHINTS*2) + 1)){
+			hintpage++;
+		}
+	}
+
 }
 
 /*static void M_DrawSkyRoom(void)
@@ -8054,8 +8156,16 @@ static void M_DrawLoadGameData(void)
 					col = 134;
 				else
 				{
-					col = charskin->prefcolor - 1;
-					col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
+					if (charskin->prefoppositecolor)
+					{
+						col = charskin->prefoppositecolor - 1;
+						col = Color_Index[col][Color_Opposite[Color_Opposite[col][0] - 1][1]];
+					}
+					else
+					{
+						col = charskin->prefcolor - 1;
+						col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
+					}
 				}
 
 				V_DrawFill(x+6, y+64, 72, 50, col);
@@ -12009,7 +12119,6 @@ static void M_VideoModeMenu(INT32 choice)
 
 static void M_DrawMainVideoMenu(void)
 {
-
 	M_DrawGenericScrollMenu();
 	if (itemOn < 8) // where it starts to go offscreen; change this number if you change the layout of the video menu
 	{
