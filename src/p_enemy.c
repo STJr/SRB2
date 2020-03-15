@@ -21,7 +21,7 @@
 #include "s_sound.h"
 #include "m_random.h"
 #include "m_misc.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "i_video.h"
 #include "z_zone.h"
 #include "lua_hook.h"

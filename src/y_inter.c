@@ -19,7 +19,7 @@
 #include "i_video.h"
 #include "p_tick.h"
 #include "r_defs.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "s_sound.h"
 #include "st_stuff.h"
 #include "v_video.h"
