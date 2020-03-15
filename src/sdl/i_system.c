@@ -190,6 +190,8 @@ static char returnWadPath[256];
 #include "../byteptr.h"
 #endif
 
+#include "../lua_hook.h"
+
 /**	\brief	The JoyReset function
 
 	\param	JoySet	Joystick info to reset
@@ -2279,6 +2281,9 @@ void I_Quit(void)
 	if (quiting) goto death;
 	SDLforceUngrabMouse();
 	quiting = SDL_FALSE;
+#ifdef HAVE_BLUA
+	LUAh_GameQuit();
+#endif
 	M_SaveConfig(NULL); //save game config, cvars..
 #ifndef NONET
 	D_SaveBan(); // save the ban list
