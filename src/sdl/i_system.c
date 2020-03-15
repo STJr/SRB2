@@ -171,6 +171,7 @@ static char returnWadPath[256];
 #include "../d_net.h"
 #include "../g_game.h"
 #include "../filesrch.h"
+#include "../lua_hook.h"
 #include "endtxt.h"
 #include "sdlmain.h"
 
@@ -303,6 +304,9 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 
 FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 {
+#ifdef HAVE_BLUA
+	LUAh_GameQuit();
+#endif
 	signal(num, SIG_DFL); //default signal action
 	raise(num);
 	I_Quit();
