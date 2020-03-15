@@ -3574,6 +3574,10 @@ static void Command_Playintro_f(void)
   */
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void)
 {
+#ifdef HAVE_BLUA
+	if (Playing())
+		LUAh_GameQuit();
+#endif
 	I_Quit();
 }
 
@@ -4236,7 +4240,7 @@ void Command_ExitGame_f(void)
 	INT32 i;
 
 #ifdef HAVE_BLUA
-	if (maptol)
+	if (Playing())
 		LUAh_GameQuit();
 #endif
 
