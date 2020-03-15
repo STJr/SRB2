@@ -96,6 +96,7 @@ unsigned char mapmd5[16];
 // Store VERTEXES, LINEDEFS, SIDEDEFS, etc.
 //
 
+boolean udmf;
 size_t numvertexes, numsegs, numsectors, numsubsectors, numnodes, numlines, numsides, nummapthings;
 vertex_t *vertexes;
 seg_t *segs;
@@ -1811,11 +1812,11 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 static boolean P_LoadMapData(const virtres_t *virt)
 {
 	virtlump_t *virtvertexes = NULL, *virtsectors = NULL, *virtsidedefs = NULL, *virtlinedefs = NULL, *virtthings = NULL;
-	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 
 	// Count map data.
-	if (textmap) // Count how many entries for each type we got in textmap.
+	if (udmf) // Count how many entries for each type we got in textmap.
 	{
+		virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 		if (!TextmapCount(textmap->data, textmap->size))
 			return false;
 	}
@@ -1870,7 +1871,7 @@ static boolean P_LoadMapData(const virtres_t *virt)
 	numlevelflats = 0;
 
 	// Load map data.
-	if (textmap)
+	if (udmf)
 		P_LoadTextmap();
 	else
 	{
@@ -2049,7 +2050,7 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
 	nodetype_t nodetype = NT_UNSUPPORTED;
 	char signature[4 + 1];
 
-	if (vres_Find(virt, "TEXTMAP"))
+	if (udmf)
 	{
 		*nodedata = vres_Find(virt, "ZNODES")->data;
 		supported[NT_XGLN] = supported[NT_XGL3] = true;
@@ -2906,11 +2907,13 @@ static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 
 static void P_MakeMapMD5(virtres_t *virt, void *dest)
 {
-	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 	unsigned char resmd5[16];
 
-	if (textmap)
+	if (udmf)
+	{
+		virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 		P_MakeBufferMD5((char*)textmap->data, textmap->size, resmd5);
+	}
 	else
 	{
 		unsigned char linemd5[16];
@@ -2942,6 +2945,7 @@ static boolean P_LoadMapFromFile(void)
 {
 	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
 	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
+	udmf = textmap != NULL;
 
 	if (!P_LoadMapData(virt))
 		return false;
@@ -2950,7 +2954,7 @@ static boolean P_LoadMapFromFile(void)
 
 	P_LinkMapData();
 
-	if (!textmap)
+	if (!udmf)
 		P_ConvertBinaryMap();
 
 	// Copy relevant map data for NetArchive purposes.
