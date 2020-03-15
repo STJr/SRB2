@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -312,6 +312,7 @@ static void M_AssignJoystick(INT32 choice);
 static void M_ChangeControl(INT32 choice);
 
 // Video & Sound
+static void M_VideoOptions(INT32 choice);
 menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 #ifdef HWRENDER
 static void M_OpenGLOptionsMenu(void);
@@ -325,6 +326,7 @@ menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
 menu_t OP_ServerOptionsDef;
 menu_t OP_MonitorToggleDef;
 static void M_ScreenshotOptions(INT32 choice);
+static void M_SetupScreenshotMenu(void);
 static void M_EraseData(INT32 choice);
 
 static void M_Addons(INT32 choice);
@@ -366,7 +368,6 @@ static void M_DrawMonitorToggles(void);
 static void M_OGL_DrawFogMenu(void);
 #endif
 #ifndef NONET
-static void M_DrawScreenshotMenu(void);
 static void M_DrawConnectMenu(void);
 static void M_DrawMPMainMenu(void);
 static void M_DrawRoomMenu(void);
@@ -1034,7 +1035,7 @@ static menuitem_t OP_MainMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Player 2 Controls...", &OP_P2ControlsDef,   20},
 	{IT_CVAR    | IT_STRING, NULL, "Controls per key",     &cv_controlperkey,   30},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Video Options...",     &OP_VideoOptionsDef, 50},
+	{IT_CALL    | IT_STRING, NULL, "Video Options...",     M_VideoOptions,      50},
 	{IT_SUBMENU | IT_STRING, NULL, "Sound Options...",     &OP_SoundOptionsDef, 60},
 
 	{IT_CALL    | IT_STRING, NULL, "Server Options...",    M_ServerOptions,     80},
@@ -1285,6 +1286,16 @@ static menuitem_t OP_Camera2ExtendedOptionsMenu[] =
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 126},
 };
 
+enum
+{
+	op_video_resolution = 1,
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+	op_video_fullscreen,
+#endif
+	op_video_vsync,
+	op_video_renderer,
+};
+
 static menuitem_t OP_VideoOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "Screen", NULL, 0},
@@ -1517,6 +1528,7 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 
 	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              95},
 	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,             100},
+	{IT_STRING|IT_CVAR, NULL, "Local Color Table", &cv_gif_localcolortable,       105},
 
 	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              95},
 	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,               100},
@@ -1527,13 +1539,14 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 enum
 {
 	op_screenshot_colorprofile = 1,
+	op_screenshot_storagelocation = 3,
 	op_screenshot_folder = 4,
 	op_movie_folder = 11,
 	op_screenshot_capture = 12,
 	op_screenshot_gif_start = 13,
-	op_screenshot_gif_end = 14,
-	op_screenshot_apng_start = 15,
-	op_screenshot_apng_end = 18,
+	op_screenshot_gif_end = 15,
+	op_screenshot_apng_start = 16,
+	op_screenshot_apng_end = 19,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
@@ -2081,6 +2094,20 @@ menu_t OP_PlaystyleDef = {
 	0, 0, 0, NULL
 };
 
+static void M_VideoOptions(INT32 choice)
+{
+	(void)choice;
+#ifdef HWRENDER
+	if (hwrenderloaded == -1)
+	{
+		OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
+		OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
+		OP_VideoOptionsMenu[op_video_renderer].text = "Software";
+	}
+
+#endif
+	M_SetupNextMenu(&OP_VideoOptionsDef);
+}
 
 menu_t OP_VideoOptionsDef =
 {
@@ -3031,7 +3058,8 @@ static void M_ChangeCvar(INT32 choice)
 			|| !(currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP))
 		{
 			char s[20];
-			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
+			float n = FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f);
+			sprintf(s,"%ld%s",(long)n,M_Ftrim(n));
 			CV_Set(cv,s);
 		}
 		else
@@ -3148,6 +3176,9 @@ boolean M_Responder(event_t *ev)
 		return false;
 
 	if (gamestate == GS_TITLESCREEN && finalecount < TICRATE)
+		return false;
+
+	if (CON_Ready())
 		return false;
 
 	if (noFurtherInput)
@@ -3509,6 +3540,7 @@ boolean M_Responder(event_t *ev)
 			return false;
 
 		default:
+			CON_Responder(ev);
 			break;
 	}
 
@@ -3788,6 +3820,9 @@ void M_Ticker(void)
 		if (--vidm_testingmode == 0)
 			setmodeneeded = vidm_previousmode + 1;
 	}
+
+	if (currentMenu == &OP_ScreenshotOptionsDef)
+		M_SetupScreenshotMenu();
 }
 
 //
@@ -5705,6 +5740,8 @@ static void M_DrawNightsAttackSuperSonic(void)
 	const UINT8 *colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_YELLOW, GTC_CACHE);
 	INT32 timer = (ntsatkdrawtimer/4) % 2;
 	angle_t fa = (FixedAngle(((ntsatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
+	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
+	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
 	V_DrawFixedPatch(235<<FRACBITS, (120<<FRACBITS) - (8*FINESINE(fa)), FRACUNIT, 0, ntssupersonic[timer], colormap);
 }
 
@@ -8141,8 +8178,16 @@ static void M_DrawLoadGameData(void)
 					col = 134;
 				else
 				{
-					col = charskin->prefcolor - 1;
-					col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
+					if (charskin->prefoppositecolor)
+					{
+						col = charskin->prefoppositecolor - 1;
+						col = Color_Index[col][Color_Opposite[Color_Opposite[col][0] - 1][1]];
+					}
+					else
+					{
+						col = charskin->prefcolor - 1;
+						col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
+					}
 				}
 
 				V_DrawFill(x+6, y+64, 72, 50, col);
@@ -9935,9 +9980,6 @@ static void M_NightsAttack(INT32 choice)
 	// This is really just to make sure Sonic is the played character, just in case
 	M_PatchSkinNameTable();
 
-	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
-	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
-
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	M_SetupNextMenu(&SP_NightsAttackDef);
@@ -11422,7 +11464,25 @@ static void M_ScreenshotOptions(INT32 choice)
 	Screenshot_option_Onchange();
 	Moviemode_mode_Onchange();
 
+	M_SetupScreenshotMenu();
 	M_SetupNextMenu(&OP_ScreenshotOptionsDef);
+}
+
+static void M_SetupScreenshotMenu(void)
+{
+	menuitem_t *item = &OP_ScreenshotOptionsMenu[op_screenshot_colorprofile];
+
+#ifdef HWRENDER
+	// Hide some options based on render mode
+	if (rendermode == render_opengl)
+	{
+		item->status = IT_GRAYEDOUT;
+		if ((currentMenu == &OP_ScreenshotOptionsDef) && (itemOn == op_screenshot_colorprofile)) // Can't select that
+			itemOn = op_screenshot_storagelocation;
+	}
+	else
+#endif
+		item->status = (IT_STRING | IT_CVAR);
 }
 
 // =============
@@ -12078,7 +12138,6 @@ static void M_VideoModeMenu(INT32 choice)
 
 static void M_DrawMainVideoMenu(void)
 {
-
 	M_DrawGenericScrollMenu();
 	if (itemOn < 8) // where it starts to go offscreen; change this number if you change the layout of the video menu
 	{
@@ -12367,6 +12426,15 @@ static void M_HandleVideoMode(INT32 ch)
 static void M_DrawScreenshotMenu(void)
 {
 	M_DrawGenericScrollMenu();
+#ifdef HWRENDER
+	if ((rendermode == render_opengl) && (itemOn < 7)) // where it starts to go offscreen; change this number if you change the layout of the screenshot menu
+	{
+		INT32 y = currentMenu->y+currentMenu->menuitems[op_screenshot_colorprofile].alphaKey*2;
+		if (itemOn == 6)
+			y -= 10;
+		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y, V_REDMAP, "Yes");
+	}
+#endif
 }
 
 // ===============
