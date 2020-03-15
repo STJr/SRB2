@@ -73,7 +73,6 @@
 #include "../console.h"
 #include "../command.h"
 #include "../r_main.h"
-#include "../lua_hook.h"
 #include "sdlmain.h"
 #ifdef HWRENDER
 #include "../hardware/hw_main.h"
@@ -1060,9 +1059,6 @@ void I_GetEvent(void)
 					M_SetupJoystickMenu(0);
 			 	break;
 			case SDL_QUIT:
-#ifdef HAVE_BLUA
-				LUAh_GameQuit();
-#endif
 				I_Quit();
 				M_QuitResponse('y');
 				break;
