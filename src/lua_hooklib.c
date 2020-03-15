@@ -15,7 +15,7 @@
 #include "doomstat.h"
 #include "p_mobj.h"
 #include "g_game.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "b_bot.h"
 #include "z_zone.h"
 

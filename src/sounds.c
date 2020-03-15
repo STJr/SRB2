@@ -15,7 +15,7 @@
 #include "i_sound.h"
 #include "sounds.h"
 #include "r_defs.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "z_zone.h"
 #include "w_wad.h"
 #include "lua_script.h"
