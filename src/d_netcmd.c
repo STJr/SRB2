@@ -4236,7 +4236,7 @@ void Command_ExitGame_f(void)
 	INT32 i;
 
 #ifdef HAVE_BLUA
-	if ((maptol) && (!dedicated))
+	if (maptol)
 		LUAh_GameQuit();
 #endif
 
