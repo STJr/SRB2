@@ -1130,8 +1130,7 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 455: // Fade colormaps! mazmazz 9/12/2018 (:flag_us:)
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
-				sd->colormap_data = R_CreateColormap(msd->toptexture, msd->midtexture,
-					msd->bottomtexture);
+				sd->colormap_data = R_CreateColormapFromLinedef(msd->toptexture, msd->midtexture, msd->bottomtexture);
 				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
 				break;
 
@@ -1384,6 +1383,19 @@ static void ParseTextmapVertexParameter(UINT32 i, char *param, char *val)
 	}
 }
 
+typedef struct textmap_colormap_s {
+	boolean used;
+	INT32 lightcolor;
+	UINT8 lightalpha;
+	INT32 fadecolor;
+	UINT8 fadealpha;
+	UINT8 fadestart;
+	UINT8 fadeend;
+	UINT8 flags;
+} textmap_colormap_t;
+
+textmap_colormap_t textmap_colormap = { false, 0, 25, 0, 25, 0, 31, 0 };
+
 static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "heightfloor"))
@@ -1412,6 +1424,46 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
 		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+	else if (fastcmp(param, "lightcolor"))
+	{
+		textmap_colormap.used = true;
+		textmap_colormap.lightcolor = atol(val);
+	}
+	else if (fastcmp(param, "lightalpha"))
+	{
+		textmap_colormap.used = true;
+		textmap_colormap.lightalpha = atol(val);
+	}
+	else if (fastcmp(param, "fadecolor"))
+	{
+		textmap_colormap.used = true;
+		textmap_colormap.fadecolor = atol(val);
+	}
+	else if (fastcmp(param, "fadealpha"))
+	{
+		textmap_colormap.used = true;
+		textmap_colormap.fadealpha = atol(val);
+	}
+	else if (fastcmp(param, "fadestart"))
+	{
+		textmap_colormap.used = true;
+		textmap_colormap.fadestart = atol(val);
+	}
+	else if (fastcmp(param, "fadeend"))
+	{
+		textmap_colormap.used = true;
+		textmap_colormap.fadeend = atol(val);
+	}
+	else if (fastcmp(param, "colormapfog") && fastcmp("true", val))
+	{
+		textmap_colormap.used = true;
+		textmap_colormap.flags |= CMF_FOG;
+	}
+	else if (fastcmp(param, "colormapfadesprites") && fastcmp("true", val))
+	{
+		textmap_colormap.used = true;
+		textmap_colormap.flags |= CMF_FADEFULLBRIGHTSPRITES;
+	}
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
@@ -1585,6 +1637,14 @@ static void TextmapFixFlatOffsets(sector_t *sec)
 	}
 }
 
+static INT32 P_ColorToRGBA(INT32 color, UINT8 alpha)
+{
+	UINT8 r = (color >> 16) & 0xFF;
+	UINT8 g = (color >> 8) & 0xFF;
+	UINT8 b = color & 0xFF;
+	return R_PutRgbaRGBA(r, g, b, alpha);
+}
+
 /** Loads the textmap data, after obtaining the elements count and allocating their respective space.
   */
 static void P_LoadTextmap(void)
@@ -1638,8 +1698,22 @@ static void P_LoadTextmap(void)
 
 		sc->floorpic_angle = sc->ceilingpic_angle = 0;
 
+		textmap_colormap.used = false;
+		textmap_colormap.lightcolor = 0;
+		textmap_colormap.lightalpha = 25;
+		textmap_colormap.fadecolor = 0;
+		textmap_colormap.fadealpha = 25;
+		textmap_colormap.fadestart = 0;
+		textmap_colormap.fadeend = 31;
+		textmap_colormap.flags = 0;
 		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
 		P_InitializeSector(sc);
+		if (textmap_colormap.used)
+		{
+			INT32 rgba = P_ColorToRGBA(textmap_colormap.lightcolor, textmap_colormap.lightalpha);
+			INT32 fadergba = P_ColorToRGBA(textmap_colormap.fadecolor, textmap_colormap.fadealpha);
+			sc->extra_colormap = R_CreateColormap(rgba, fadergba, textmap_colormap.fadestart, textmap_colormap.fadeend, textmap_colormap.flags);
+		}
 		TextmapFixFlatOffsets(sc);
 	}
 
