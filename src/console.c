@@ -1553,13 +1553,28 @@ static void CON_DrawConsole(void)
 	if (cons_backpic.value || con_forcepic)
 	{
 		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
-		int h;
+		int x, w, h;
 
+		w = (con_backpic->width * vid.dupx);
+		x = (vid.width / 2) - (w / 2);
 		h = con_curlines/vid.dupy;
 
-		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
-		//V_DrawScaledPatch(0, 0, 0, con_backpic);
-		V_DrawCroppedPatch(0, 0, FRACUNIT, 0, con_backpic,
+		// Lactozilla: If the patch doesn't fill the entire screen,
+		// then fill the sides with a solid color.
+		if (x > 0)
+		{
+			column_t *column = (column_t *)((UINT8 *)(con_backpic) + LONG(con_backpic->columnofs[0]));
+			if (!column->topdelta)
+			{
+				UINT8 *source = (UINT8 *)(column) + 3;
+				INT32 color = (source[0] | V_NOSCALESTART);
+				// left side
+				V_DrawFill(0, 0, x, con_curlines, color);
+				// right side
+				V_DrawFill((x + w), 0, (vid.width - w), con_curlines, color);
+			}
+		}
+		V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
 				0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
 
 		W_UnlockCachedPatch(con_backpic);
