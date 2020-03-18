@@ -2204,7 +2204,7 @@ menu_t OP_DataOptionsDef = DEFAULTMENUSTYLE(
 menu_t OP_ScreenshotOptionsDef =
 {
 	MN_OP_MAIN + (MN_OP_DATA << 6) + (MN_OP_SCREENSHOTS << 12),
-	"M_DATA",
+	"M_SCREEN",
 	sizeof (OP_ScreenshotOptionsMenu)/sizeof (menuitem_t),
 	&OP_DataOptionsDef,
 	OP_ScreenshotOptionsMenu,
