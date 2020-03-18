@@ -1718,7 +1718,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 #ifdef HAVE_BLUA
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
-		LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+		LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 #endif
 		displayplayer = consoleplayer;
 	}
