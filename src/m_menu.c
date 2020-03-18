@@ -10099,13 +10099,13 @@ static void M_ReplayTimeAttack(INT32 choice)
 static void M_EraseGuest(INT32 choice)
 {
 	const char *rguest = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
-	(void)choice;
-	if (FIL_FileExists(rguest))
-		remove(rguest);
-	if (currentMenu == &SP_NightsGuestReplayDef)
-		M_SetupNextMenu(&SP_NightsAttackDef);
-	else
-		M_SetupNextMenu(&SP_TimeAttackDef);
+
+	if (choice == 'y' || choice == KEY_ENTER)
+	{
+		if (FIL_FileExists(rguest))
+			remove(rguest);
+	}
+	M_SetupNextMenu(currentMenu->prevMenu->prevMenu);
 	Nextmap_OnChange();
 	M_StartMessage(M_GetText("Guest replay data erased.\n"),NULL,MM_NOTHING);
 }
