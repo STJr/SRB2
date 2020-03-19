@@ -1043,7 +1043,7 @@ static int lib_pSetObjectMomZ(lua_State *L)
 static int lib_pPlayJingle(lua_State *L)
 {
 	player_t *player = NULL;
-	jingletype_t jingletype = (jingletype_t)luaL_checkinteger(L, 2);
+	jingletype_t jingletype = luaL_checkinteger(L, 2);
 	//NOHUD
 	//INLEVEL
 	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
@@ -1065,7 +1065,7 @@ static int lib_pPlayJingleMusic(lua_State *L)
 	char musname[7], *p = musname;
 	UINT16 musflags = luaL_optinteger(L, 3, 0);
 	boolean looping = lua_opttrueboolean(L, 4);
-	jingletype_t jingletype = (jingletype_t)luaL_optinteger(L, 5, JT_OTHER);
+	jingletype_t jingletype = luaL_optinteger(L, 5, JT_OTHER);
 	//NOHUD
 	//INLEVEL
 	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
