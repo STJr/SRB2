@@ -69,7 +69,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"ViewpointSwitch",
 	"SeenPlayer",
 	"PlayerThink",
-	"JingleStatus",
+	"ShouldJingleContinue",
 	NULL
 };
 
@@ -81,7 +81,7 @@ struct hook_s
 	UINT16 id;
 	union {
 		mobjtype_t mt;
-		char *skinname; // also used as musname for JingleStatus... I'm lazy
+		char *skinname; // also used as musname for ShouldJingleContinue... I'm lazy
 		char *funcname;
 	} s;
 	boolean error;
@@ -149,7 +149,7 @@ static int lib_addHook(lua_State *L)
 		luaL_argcheck(L, hook.s.mt < NUMMOBJTYPES, 2, "invalid mobjtype_t");
 		break;
 	case hook_BotAI:
-	case hook_JingleStatus:
+	case hook_ShouldJingleContinue:
 		hook.s.skinname = NULL;
 		if (lua_isstring(L, 2))
 		{ // lowercase copy
@@ -1634,11 +1634,11 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 }
 #endif // SEENAMES
 
-boolean LUAh_JingleStatus(player_t *player, const char *musname)
+boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 {
 	hook_p hookp;
 	boolean keepplaying = false;
-	if (!gL || !(hooksAvailable[hook_JingleStatus/8] & (1<<(hook_JingleStatus%8))))
+	if (!gL || !(hooksAvailable[hook_ShouldJingleContinue/8] & (1<<(hook_ShouldJingleContinue%8))))
 		return true;
 
 	lua_settop(gL, 0);
@@ -1646,9 +1646,9 @@ boolean LUAh_JingleStatus(player_t *player, const char *musname)
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
-		if (hookp->type == hook_JingleStatus) CONS_Printf("jingle status hook for %s vs %s\n", hookp->s.skinname, musname);
+		if (hookp->type == hook_ShouldJingleContinue) CONS_Printf("jingle status hook for %s vs %s\n", hookp->s.skinname, musname);
 
-		if (hookp->type != hook_JingleStatus
+		if (hookp->type != hook_ShouldJingleContinue
 			|| (hookp->s.skinname && strcmp(hookp->s.skinname, musname)))
 			continue;
 

@@ -1599,7 +1599,7 @@ boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 				break;
 
 			case JT_OTHER:  // Other state
-				result = LUAh_JingleStatus(&players[i], musname);
+				result = LUAh_ShouldJingleContinue(&players[i], musname);
 				break;
 
 			case JT_NONE:   // Null state
