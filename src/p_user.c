@@ -1599,8 +1599,10 @@ boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 				break;
 
 			case JT_OTHER:  // Other state
+#ifdef HAVE_BLUA
 				result = LUAh_ShouldJingleContinue(&players[i], musname);
 				break;
+#endif
 
 			case JT_NONE:   // Null state
 			case JT_MASTER: // Main level music
