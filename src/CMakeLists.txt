@@ -16,6 +16,7 @@ set(SRB2_CORE_SOURCES
 	f_finale.c
 	f_wipe.c
 	filesrch.c
+	g_demo.c
 	g_game.c
 	g_input.c
 	hu_stuff.c
@@ -71,6 +72,7 @@ set(SRB2_CORE_HEADERS
 	f_finale.h
 	fastcmp.h
 	filesrch.h
+	g_demo.h
 	g_game.h
 	g_input.h
 	g_state.h
