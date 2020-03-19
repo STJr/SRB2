@@ -155,25 +155,13 @@ static int lib_addHook(lua_State *L)
 		hook.s.skinname = NULL;
 		if (lua_isstring(L, 2))
 		{ // lowercase copy
-			const char *s = lua_tostring(L, 2);
-			char *p = hook.s.skinname = ZZ_Alloc(strlen(s)+1);
-			do {
-				*p = tolower(*s);
-				++p;
-			} while(*(++s));
-			*p = 0;
+			hook.s.skinname = Z_StrDup(lua_tostring(L, 2));
+			strlwr(hook.s.skinname);
 		}
 		break;
 	case hook_LinedefExecute: // Linedef executor functions
-		{ // uppercase copy
-			const char *s = luaL_checkstring(L, 2);
-			char *p = hook.s.funcname = ZZ_Alloc(strlen(s)+1);
-			do {
-				*p = toupper(*s);
-				++p;
-			} while(*(++s));
-			*p = 0;
-		}
+		hook.s.skinname = Z_StrDup(luaL_checkstring(L, 2));
+		strupr(hook.s.skinname);
 		break;
 	default:
 		break;
