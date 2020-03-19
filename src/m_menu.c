@@ -5373,9 +5373,10 @@ static void M_HandleLevelPlatter(INT32 choice)
 		case KEY_RIGHTARROW:
 			if (levellistmode == LLM_CREATESERVER && !lsrow)
 			{
+				INT32 startinggametype = cv_newgametype.value;
 				do
 					CV_AddValue(&cv_newgametype, 1);
-				while (!M_GametypeHasLevels(cv_newgametype.value));
+				while (cv_newgametype.value != startinggametype && !M_GametypeHasLevels(cv_newgametype.value));
 				S_StartSound(NULL,sfx_menu1);
 				lscol = 0;
 
