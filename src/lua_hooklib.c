@@ -81,7 +81,8 @@ struct hook_s
 	UINT16 id;
 	union {
 		mobjtype_t mt;
-		char *skinname; // also used as musname for ShouldJingleContinue... I'm lazy
+		char *skinname;
+		char *musname;
 		char *funcname;
 	} s;
 	boolean error;
@@ -1647,7 +1648,7 @@ boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_ShouldJingleContinue
-			|| (hookp->s.skinname && strcmp(hookp->s.skinname, musname)))
+			|| (hookp->s.musname && strcmp(hookp->s.musname, musname)))
 			continue;
 
 		if (lua_gettop(gL) == 0)
