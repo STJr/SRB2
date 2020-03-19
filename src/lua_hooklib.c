@@ -81,9 +81,7 @@ struct hook_s
 	UINT16 id;
 	union {
 		mobjtype_t mt;
-		char *skinname;
-		char *musname;
-		char *funcname;
+		char *str;
 	} s;
 	boolean error;
 };
@@ -152,16 +150,16 @@ static int lib_addHook(lua_State *L)
 		break;
 	case hook_BotAI:
 	case hook_ShouldJingleContinue:
-		hook.s.skinname = NULL;
+		hook.s.str = NULL;
 		if (lua_isstring(L, 2))
 		{ // lowercase copy
-			hook.s.skinname = Z_StrDup(lua_tostring(L, 2));
-			strlwr(hook.s.skinname);
+			hook.s.str = Z_StrDup(lua_tostring(L, 2));
+			strlwr(hook.s.str);
 		}
 		break;
 	case hook_LinedefExecute: // Linedef executor functions
-		hook.s.skinname = Z_StrDup(luaL_checkstring(L, 2));
-		strupr(hook.s.skinname);
+		hook.s.str = Z_StrDup(luaL_checkstring(L, 2));
+		strupr(hook.s.str);
 		break;
 	default:
 		break;
@@ -1064,7 +1062,7 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_BotAI
-		|| (hookp->s.skinname && strcmp(hookp->s.skinname, ((skin_t*)tails->skin)->name)))
+		|| (hookp->s.str && strcmp(hookp->s.str, ((skin_t*)tails->skin)->name)))
 			continue;
 
 		if (lua_gettop(gL) == 0)
@@ -1126,7 +1124,7 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 
 	for (hookp = linedefexecutorhooks; hookp; hookp = hookp->next)
 	{
-		if (strcmp(hookp->s.funcname, line->text))
+		if (strcmp(hookp->s.str, line->text))
 			continue;
 
 		if (lua_gettop(gL) == 0)
@@ -1664,7 +1662,7 @@ boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_ShouldJingleContinue
-			|| (hookp->s.musname && strcmp(hookp->s.musname, musname)))
+			|| (hookp->s.str && strcmp(hookp->s.str, musname)))
 			continue;
 
 		if (lua_gettop(gL) == 0)
