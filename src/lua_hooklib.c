@@ -1646,8 +1646,6 @@ boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
-		if (hookp->type == hook_ShouldJingleContinue) CONS_Printf("jingle status hook for %s vs %s\n", hookp->s.skinname, musname);
-
 		if (hookp->type != hook_ShouldJingleContinue
 			|| (hookp->s.skinname && strcmp(hookp->s.skinname, musname)))
 			continue;
