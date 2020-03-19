@@ -40,7 +40,7 @@ extern INT32 msg_id;
 #include "m_misc.h" // for tunes command
 #include "m_cond.h" // for conditionsets
 
-#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+#ifdef HAVE_LUA_MUSICPLUS
 #include "lua_hook.h" // MusicChange hook
 #endif
 
@@ -2314,7 +2314,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, 7);
-#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+#ifdef HAVE_LUA_MUSICPLUS
 	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
 		return;
 #endif

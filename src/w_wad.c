@@ -189,7 +189,7 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 posStart, posEnd;
-#ifdef HAVE_BLUA
+
 	posStart = W_CheckNumForFolderStartPK3("Lua/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
@@ -198,7 +198,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 		for (; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
-#endif
+
 	posStart = W_CheckNumForFolderStartPK3("SOC/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
@@ -224,7 +224,6 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 lump;
 
-#ifdef HAVE_BLUA
 	// Find Lua scripts before SOCs to allow new A_Actions in SOC editing.
 	{
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
@@ -232,7 +231,6 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 			if (memcmp(lump_p->name,"LUA_",4)==0)
 				LUA_LoadLump(wadnum, lump);
 	}
-#endif
 
 	{
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
@@ -749,11 +747,9 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	case RET_SOC:
 		lumpinfo = ResGetLumpsStandalone(handle, &numlumps, "OBJCTCFG");
 		break;
-#ifdef HAVE_BLUA
 	case RET_LUA:
 		lumpinfo = ResGetLumpsStandalone(handle, &numlumps, "LUA_INIT");
 		break;
-#endif
 	case RET_PK3:
 		lumpinfo = ResGetLumpsZip(handle, &numlumps);
 		break;
@@ -818,11 +814,9 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
 		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0, mainfile);
 		break;
-#ifdef HAVE_BLUA
 	case RET_LUA:
 		LUA_LoadLump(numwadfiles - 1, 0);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -1860,10 +1854,7 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
 	{
 		// detect wad file by the absence of the other supported extensions
 		if (stricmp(&filename[strlen(filename) - 4], ".soc")
-#ifdef HAVE_BLUA
-		&& stricmp(&filename[strlen(filename) - 4], ".lua")
-#endif
-		)
+		&& stricmp(&filename[strlen(filename) - 4], ".lua"))
 		{
 			goodfile = W_VerifyWAD(handle, checklist, status);
 		}

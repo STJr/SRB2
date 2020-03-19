@@ -10,8 +10,6 @@
 /// \file  lua_hook.h
 /// \brief hooks for Lua scripting
 
-#ifdef HAVE_BLUA
-
 #include "r_defs.h"
 #include "d_player.h"
 
@@ -112,5 +110,3 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend); // Hook for MT_
 #endif
 #define LUAh_PlayerThink(player) LUAh_PlayerHook(player, hook_PlayerThink) // Hook for P_PlayerThink
 boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname); // Hook for whether a jingle of the given music should continue playing
-
-#endif

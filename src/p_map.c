@@ -756,11 +756,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
 
-#ifdef HAVE_BLUA
 		// REX HAS SEEN YOU
 		if (!LUAh_SeenPlayer(tmthing->target->player, thing->player))
 			return false;
-#endif
 
 		seenplayer = thing->player;
 		return false;
@@ -948,7 +946,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // the line doesn't cross between either pair of opposite corners
 	}
 
-#ifdef HAVE_BLUA
 	{
 		UINT8 shouldCollide = LUAh_MobjCollide(thing, tmthing); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
@@ -957,9 +954,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return false; // force collide
 		else if (shouldCollide == 2)
 			return true; // force no collide
-	}
-	{
-		UINT8 shouldCollide = LUAh_MobjMoveCollide(tmthing, thing); // checks hook for tmthing's type
+
+		shouldCollide = LUAh_MobjMoveCollide(tmthing, thing); // checks hook for tmthing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -967,7 +963,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (shouldCollide == 2)
 			return true; // force no collide
 	}
-#endif
 
 	if (tmthing->type == MT_LAVAFALL_LAVA && (thing->type == MT_RING || thing->type == MT_REDTEAMRING || thing->type == MT_BLUETEAMRING || thing->type == MT_FLINGRING))
 	{
@@ -1946,7 +1941,6 @@ static boolean PIT_CheckLine(line_t *ld)
 	// this line is out of the if so upper and lower textures can be hit by a splat
 	blockingline = ld;
 
-#ifdef HAVE_BLUA
 	{
 		UINT8 shouldCollide = LUAh_MobjLineCollide(tmthing, blockingline); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing))
@@ -1956,7 +1950,6 @@ static boolean PIT_CheckLine(line_t *ld)
 		else if (shouldCollide == 2)
 			return true; // force no collide
 	}
-#endif
 
 	if (!ld->backsector) // one sided line
 	{

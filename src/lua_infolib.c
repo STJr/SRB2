@@ -11,7 +11,6 @@
 /// \brief infotable editing library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "info.h"
 #include "dehacked.h"
@@ -1651,5 +1650,3 @@ int LUA_InfoLib(lua_State *L)
 
 	return 0;
 }
-
-#endif

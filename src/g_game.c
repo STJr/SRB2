@@ -47,9 +47,7 @@
 #include "m_cond.h" // condition sets
 #include "md5.h" // demo checksums
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
-#endif
 
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
@@ -177,7 +175,7 @@ static boolean retryingmodeattack = false;
 UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
 
 UINT16 emeralds;
-INT32 luabanks[NUM_LUABANKS]; // yes, even in non HAVE_BLUA
+INT32 luabanks[NUM_LUABANKS];
 UINT32 token; // Number of tokens collected in a level
 UINT32 tokenlist; // List of tokens collected
 boolean gottoken; // Did you get a token? Used for end of act
@@ -1714,11 +1712,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (ssplayer == 1 && (cmd->forwardmove || cmd->sidemove || cmd->buttons)
 		&& displayplayer != consoleplayer)
 	{
-#ifdef HAVE_BLUA
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
 		LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
-#endif
 		displayplayer = consoleplayer;
 	}
 }
@@ -2048,9 +2044,7 @@ boolean G_Responder(event_t *ev)
 		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
 	{
 		// ViewpointSwitch Lua hook.
-#ifdef HAVE_BLUA
 		UINT8 canSwitchView = 0;
-#endif
 
 		if (splitscreen || !netgame)
 			displayplayer = consoleplayer;
@@ -2066,14 +2060,12 @@ boolean G_Responder(event_t *ev)
 				if (!playeringame[displayplayer])
 					continue;
 
-#ifdef HAVE_BLUA
 				// Call ViewpointSwitch hooks here.
 				canSwitchView = LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
 				if (canSwitchView == 1) // Set viewpoint to this player
 					break;
 				else if (canSwitchView == 2) // Skip this player
 					continue;
-#endif
 
 				if (players[displayplayer].spectator)
 					continue;
@@ -2673,9 +2665,7 @@ void G_SpawnPlayer(INT32 playernum)
 
 	P_SpawnPlayer(playernum);
 	G_MovePlayerToSpawnOrStarpost(playernum);
-#ifdef HAVE_BLUA
 	LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
-#endif
 }
 
 void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
@@ -3029,9 +3019,7 @@ void G_DoReborn(INT32 playernum)
 		}
 		else
 		{
-#ifdef HAVE_BLUA
 			LUAh_MapChange(gamemap);
-#endif
 			titlecardforreload = true;
 			G_DoLoadLevel(true);
 			titlecardforreload = false;
@@ -6803,9 +6791,7 @@ void G_DoPlayDemo(char *defdemoname)
 	// Set skin
 	SetPlayerSkin(0, skin);
 
-#ifdef HAVE_BLUA
 	LUAh_MapChange(gamemap);
-#endif
 	displayplayer = consoleplayer = 0;
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;

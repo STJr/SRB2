@@ -11,7 +11,6 @@
 /// \brief hooks for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "doomstat.h"
 #include "p_mobj.h"
 #include "g_game.h"
@@ -1705,5 +1704,3 @@ boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 
 	return keepplaying;
 }
-
-#endif

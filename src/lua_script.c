@@ -11,7 +11,6 @@
 /// \brief Lua scripting basics
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "dehacked.h"
 #include "z_zone.h"
@@ -1423,5 +1422,3 @@ int Lua_optoption(lua_State *L, int narg,
 			return i;
 	return -1;
 }
-
-#endif // HAVE_BLUA
