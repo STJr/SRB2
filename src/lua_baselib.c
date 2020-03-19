@@ -21,7 +21,7 @@
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_draw.h"
-#include "r_things.h"
+#include "r_things.h" // R_Frame2Char etc
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"

@@ -38,7 +38,7 @@
 #include "byteptr.h"
 #include "i_joy.h"
 #include "r_local.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "y_inter.h"
 #include "v_video.h"
 #include "dehacked.h" // get_number (for ghost thok)
@@ -1044,18 +1044,17 @@ static INT32 G_BasicDeadZoneCalculation(INT32 magnitude, fixed_t deadZone)
 {
 	const INT32 jdeadzone = (JOYAXISRANGE * deadZone) / FRACUNIT;
 	INT32 deadzoneAppliedValue = 0;
+	INT32 adjustedMagnitude = abs(magnitude);
 
-	if (jdeadzone > 0)
+	if (jdeadzone >= JOYAXISRANGE && adjustedMagnitude >= JOYAXISRANGE) // If the deadzone and magnitude are both 100%...
+		return JOYAXISRANGE; // ...return 100% input directly, to avoid dividing by 0
+	else if (adjustedMagnitude > jdeadzone) // Otherwise, calculate how much the magnitude exceeds the deadzone
 	{
-		if (magnitude > jdeadzone)
-		{
-			INT32 adjustedMagnitude = abs(magnitude);
-			adjustedMagnitude = min(adjustedMagnitude, JOYAXISRANGE);
+		adjustedMagnitude = min(adjustedMagnitude, JOYAXISRANGE);
 
-			adjustedMagnitude -= jdeadzone;
+		adjustedMagnitude -= jdeadzone;
 
-			deadzoneAppliedValue = (adjustedMagnitude * JOYAXISRANGE) / (JOYAXISRANGE - jdeadzone);
-		}
+		deadzoneAppliedValue = (adjustedMagnitude * JOYAXISRANGE) / (JOYAXISRANGE - jdeadzone);
 	}
 
 	return deadzoneAppliedValue;
@@ -1718,7 +1717,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 #ifdef HAVE_BLUA
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
-		LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+		LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 #endif
 		displayplayer = consoleplayer;
 	}
@@ -3592,7 +3591,7 @@ boolean G_CompetitionGametype(void)
   * \return The typeoflevel flag to check for that gametype.
   * \author Graue <graue@oceanbase.org>
   */
-INT16 G_TOLFlag(INT32 pgametype)
+UINT32 G_TOLFlag(INT32 pgametype)
 {
 	if (!multiplayer)
 		return TOL_SP;
@@ -3723,7 +3722,7 @@ static void G_DoCompleted(void)
 		&& (nextmap >= 0 && nextmap < NUMMAPS))
 	{
 		register INT16 cm = nextmap;
-		INT16 tolflag = G_TOLFlag(gametype);
+		UINT32 tolflag = G_TOLFlag(gametype);
 		UINT8 visitedmap[(NUMMAPS+7)/8];
 
 		memset(visitedmap, 0, sizeof (visitedmap));

@@ -22,7 +22,7 @@
 #include "p_local.h"
 #include "r_main.h"
 #include "s_sound.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "d_think.h"
 #include "r_sky.h"
 #include "p_setup.h"
@@ -382,6 +382,9 @@ void P_GiveFinishFlags(player_t *player)
 	UINT8 i;
 
 	if (!player->mo)
+		return;
+
+	if (!(netgame||multiplayer))
 		return;
 
 	for (i = 0; i < 3; i++)
@@ -10655,7 +10658,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 #ifdef HAVE_BLUA
 			// Call ViewpointSwitch hooks here.
 			// The viewpoint was forcibly changed.
-			LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+			LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 #endif
 			displayplayer = consoleplayer;
 		}
@@ -10704,7 +10707,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 #ifdef HAVE_BLUA
 				// Call ViewpointSwitch hooks here.
 				// The viewpoint was forcibly changed.
-				LUAh_ViewpointSwitch(player, &players[displayplayer], true);
+				LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 #endif
 				displayplayer = consoleplayer;
 			}

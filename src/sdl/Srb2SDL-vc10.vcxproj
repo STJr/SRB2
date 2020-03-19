@@ -284,6 +284,7 @@
     <ClInclude Include="..\r_patch.h" />
     <ClInclude Include="..\r_portal.h" />
     <ClInclude Include="..\r_segs.h" />
+    <ClInclude Include="..\r_skins.h" />
     <ClInclude Include="..\r_sky.h" />
     <ClInclude Include="..\r_splats.h" />
     <ClInclude Include="..\r_state.h" />
@@ -446,6 +447,7 @@
 	<ClCompile Include="..\r_patch.c" />
     <ClCompile Include="..\r_portal.c" />
     <ClCompile Include="..\r_segs.c" />
+    <ClCompile Include="..\r_skins.c" />
     <ClCompile Include="..\r_sky.c" />
     <ClCompile Include="..\r_splats.c" />
     <ClCompile Include="..\r_things.c" />

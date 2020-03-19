@@ -145,6 +145,7 @@ typedef enum
 #ifdef HAVE_BLUA
 	XD_LUACMD,      // 22
 	XD_LUAVAR,      // 23
+	XD_LUAFILE,     // 24
 #endif
 	MAXNETXCMD
 } netxcmd_t;

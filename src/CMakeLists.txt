@@ -120,6 +120,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_main.c
 	r_plane.c
 	r_segs.c
+	r_skins.c
 	r_sky.c
 	r_splats.c
 	r_things.c
@@ -134,6 +135,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_main.h
 	r_plane.h
 	r_segs.h
+	r_skins.h
 	r_sky.h
 	r_splats.h
 	r_state.h
@@ -279,6 +281,7 @@ if(${SRB2_CONFIG_HAVE_BLUA})
 		blua/lfunc.c
 		blua/lgc.c
 		blua/linit.c
+		blua/liolib.c
 		blua/llex.c
 		blua/lmem.c
 		blua/lobject.c

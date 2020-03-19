@@ -95,10 +95,10 @@ boolean LoadGL(void)
 
 	if (SDL_GL_LoadLibrary(OGLLibname) != 0)
 	{
-		I_OutputMsg("Could not load OpenGL Library: %s\n"
+		CONS_Alert(CONS_ERROR, "Could not load OpenGL Library: %s\n"
 					"Falling back to Software mode.\n", SDL_GetError());
 		if (!M_CheckParm ("-OGLlib"))
-			I_OutputMsg("If you know what is the OpenGL library's name, use -OGLlib\n");
+			CONS_Alert(CONS_ERROR, "If you know what is the OpenGL library's name, use -OGLlib\n");
 		return 0;
 	}
 
@@ -128,15 +128,15 @@ boolean LoadGL(void)
 			return SetupGLfunc();
 		else
 		{
-			I_OutputMsg("Could not load GLU Library: %s\n", GLULibname);
+			CONS_Alert(CONS_ERROR, "Could not load GLU Library: %s\n", GLULibname);
 			if (!M_CheckParm ("-GLUlib"))
-				I_OutputMsg("If you know what is the GLU library's name, use -GLUlib\n");
+				CONS_Alert(CONS_ERROR, "If you know what is the GLU library's name, use -GLUlib\n");
 		}
 	}
 	else
 	{
-		I_OutputMsg("Could not load GLU Library\n");
-		I_OutputMsg("If you know what is the GLU library's name, use -GLUlib\n");
+		CONS_Alert(CONS_ERROR, "Could not load GLU Library\n");
+		CONS_Alert(CONS_ERROR, "If you know what is the GLU library's name, use -GLUlib\n");
 	}
 #endif
 	return SetupGLfunc();

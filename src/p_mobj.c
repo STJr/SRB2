@@ -19,7 +19,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "r_main.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "r_sky.h"
 #include "r_splats.h"
 #include "s_sound.h"
@@ -8001,8 +8001,9 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		}
 		if (mobj->fuse < 0)
 			return;
-		if ((--mobj->fuse) < 6)
+		if (mobj->fuse < 6)
 			mobj->frame = (mobj->frame & ~FF_TRANSMASK) | ((10 - (mobj->fuse*2)) << (FF_TRANSSHIFT));
+		mobj->fuse--;
 	}
 	break;
 	case MT_FINISHFLAG:
@@ -11594,7 +11595,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
-	
+
 	if (p->pflags & PF_FINISHED)
 		P_GiveFinishFlags(p);
 }

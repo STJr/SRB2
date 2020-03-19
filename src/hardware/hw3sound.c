@@ -28,7 +28,7 @@
 #include "../tables.h"
 #include "../sounds.h"
 #include "../r_main.h"
-#include "../r_things.h"
+#include "../r_skins.h"
 #include "../m_random.h"
 #include "../p_local.h"
 #include "hw3dsdrv.h"

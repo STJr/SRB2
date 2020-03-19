@@ -22,7 +22,7 @@
 #include "g_input.h"
 #include "m_menu.h"
 #include "r_local.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "p_local.h"
 #include "p_setup.h"
 #include "s_sound.h"
@@ -417,7 +417,8 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"SUICIDE",
 #ifdef HAVE_BLUA
 	"LUACMD",
-	"LUAVAR"
+	"LUAVAR",
+	"LUAFILE"
 #endif
 };
 
@@ -453,6 +454,7 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_RUNSOC, Got_RunSOCcmd);
 #ifdef HAVE_BLUA
 	RegisterNetXCmd(XD_LUACMD, Got_Luacmd);
+	RegisterNetXCmd(XD_LUAFILE, Got_LuaFile);
 #endif
 
 	// Remote Administration
@@ -2843,7 +2845,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
 		if (displayplayer != consoleplayer) // You're already viewing yourself. No big deal.
-			LUAh_ViewpointSwitch(&players[playernum], &players[displayplayer], true);
+			LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 #endif
 		displayplayer = consoleplayer;
 	}
@@ -3342,10 +3344,6 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	boolean kick = false;
 	boolean toomany = false;
 	INT32 i,j;
-	serverinfo_pak *dummycheck = NULL;
-
-	// Shut the compiler up.
-	(void)dummycheck;
 
 	READSTRINGN(*cp, filename, 240);
 	READMEM(*cp, md5sum, 16);
@@ -3753,11 +3751,11 @@ static void ExitMove_OnChange(void)
 			{
 				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
 					P_SetTarget(&players[i].mo->target, NULL);
-				
+
 				if (players[i].pflags & PF_FINISHED)
 					P_GiveFinishFlags(&players[i]);
 			}
-			
+
 		CONS_Printf(M_GetText("Players can now move after completing the level.\n"));
 	}
 	else

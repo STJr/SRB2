@@ -468,6 +468,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_main.o   \
 		$(OBJDIR)/r_plane.o  \
 		$(OBJDIR)/r_segs.o   \
+		$(OBJDIR)/r_skins.o  \
 		$(OBJDIR)/r_sky.o    \
 		$(OBJDIR)/r_splats.o \
 		$(OBJDIR)/r_things.o \

@@ -230,25 +230,30 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
+	INT16 fullalpha = (alpha - (0xFF - foreground.s.alpha));
 	if (style == AST_TRANSLUCENT)
 	{
-		if (alpha == 0)
+		if (fullalpha <= 0)
 			output.rgba = background.rgba;
-		else if (alpha == 0xFF)
-			output.rgba = foreground.rgba;
-		else if (alpha < 0xFF)
-		{
-			UINT8 beta = (0xFF - alpha);
-			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
-			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
-			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
-		}
-		// write foreground pixel alpha
-		// if there's no pixel in here
-		if (!background.rgba)
-			output.s.alpha = foreground.s.alpha;
 		else
-			output.s.alpha = 0xFF;
+		{
+			// don't go too high
+			if (fullalpha >= 0xFF)
+				fullalpha = 0xFF;
+			alpha = (UINT8)fullalpha;
+
+			// if the background pixel is empty, match software and don't blend anything
+			if (!background.s.alpha)
+				output.rgba = 0;
+			else
+			{
+				UINT8 beta = (0xFF - alpha);
+				output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+				output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+				output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+				output.s.alpha = 0xFF;
+			}
+		}
 		return output.rgba;
 	}
 #define clamp(c) max(min(c, 0xFF), 0x00);

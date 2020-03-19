@@ -22,7 +22,7 @@
 #include "p_setup.h"
 #include "p_saveg.h"
 #include "r_data.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "r_state.h"
 #include "w_wad.h"
 #include "y_inter.h"
@@ -1406,7 +1406,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_TICS;
 	if (mobj->sprite != mobj->state->sprite)
 		diff |= MD_SPRITE;
-	if (mobj->sprite == SPR_PLAY && mobj->sprite2 != 0)
+	if (mobj->sprite == SPR_PLAY && mobj->sprite2 != (mobj->state->frame&FF_FRAMEMASK))
 		diff |= MD_SPRITE;
 	if (mobj->frame != mobj->state->frame)
 		diff |= MD_FRAME;
