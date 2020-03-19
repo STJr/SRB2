@@ -4490,7 +4490,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 
 	if (demoplayback)
 		COM_BufAddText("stopdemo\n");
-	ghosts = NULL;
+	G_FreeGhosts(); // TODO: do we actually need to do this?
 
 	// this leave the actual game if needed
 	SV_StartSinglePlayerServer();

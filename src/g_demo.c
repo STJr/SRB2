@@ -2223,6 +2223,18 @@ void G_AddGhost(char *defdemoname)
 	Z_Free(pdemoname);
 }
 
+// Clean up all ghosts
+void G_FreeGhosts(void)
+{
+	while (ghosts)
+	{
+		demoghost *next = ghosts->next;
+		Z_Free(ghosts);
+		ghosts = next;
+	}
+	ghosts = NULL;
+}
+
 //
 // G_TimeDemo
 // NOTE: name is a full filename for external demos
@@ -2389,14 +2401,7 @@ boolean G_CheckDemoStatus(void)
 {
 	boolean saved;
 
-	while (ghosts)
-	{
-		demoghost *next = ghosts->next;
-		Z_Free(ghosts);
-		ghosts = next;
-	}
-	ghosts = NULL;
-
+	G_FreeGhosts();
 
 	// DO NOT end metal sonic demos here
 
