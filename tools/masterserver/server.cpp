@@ -86,7 +86,7 @@ typedef struct
 
 //=============================================================================
 
-#define HOSTNAME "loopback"
+#define HOSTNAME "localhost"
 #define USER "srb2_ms"
 #define PASSWORD "gLRDRb7WgLRDRb7W"
 #define DATABASE "srb2_ms"
@@ -841,6 +841,10 @@ static void addServer(int id, char *buffer, bool firstadd)
 	info->port[sizeof (info->port)-1] = '\0';
 	info->name[sizeof (info->name)-1] = '\0';
 	info->version[sizeof (info->version)-1] = '\0';
+
+	logPrintf(logfile, "addServer(): Version = \"%s\"\n", info->version);
+	logPrintf(logfile, "addServer(): Key = \"%s\"\n", info->key);
+
 	// retrieve the true ip of the server
 	strcpy(info->ip, server_socket.getClientIP(id));
 	//strcpy(info->port, server_socket.getClientPort(id));
@@ -995,7 +999,7 @@ int main(int argc, char *argv[])
 
 	if (server_socket.listen(argv[1]) < 0)
 	{
-		fprintf(stderr, "Error while initializing the server\n");
+		fprintf(stderr, "Error while initializing the server; port being used! Try killing the other Master Server.\n");
 		exit(2);
 	}
 
