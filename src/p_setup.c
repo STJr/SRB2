@@ -2803,6 +2803,44 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (lines[i].special)
 		{
+		case 100: //FOF: solid, opaque, shadowcasting
+		case 101: //FOF: solid, opaque, non-shadowcasting
+		case 102: //FOF: solid, translucent
+		case 103: //FOF: solid, sides only
+		case 104: //FOF: solid, no sides
+		case 105: //FOF: solid, invisible
+			lines[i].args[0] = lines[i].tag;
+
+			//Visibility
+			if (lines[i].special == 105)
+				lines[i].args[1] = 3;
+			else if (lines[i].special == 104)
+				lines[i].args[1] = 2;
+			else if (lines[i].special == 103)
+				lines[i].args[1] = 1;
+
+			//Translucency
+			if (lines[i].special == 102)
+			{
+				lines[i].args[2] = (lines[i].flags & ML_NOCLIMB) ? 2 : 1;
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+				else
+					lines[i].alpha = FRACUNIT/2;
+			}
+
+			//Tangibility
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] |= 4;
+
+			//Shadow?
+			if (lines[i].special != 100 && (lines[i].special != 104 || !(lines[i].flags & ML_NOCLIMB)))
+				lines[i].args[4] = 1;
+
+			lines[i].special = 100;
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
@@ -2942,6 +2980,15 @@ static void P_ConvertBinaryMap(void)
 			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
 			break;
 		default:
+			// \todo Remove once all FOF types are converted
+			if (lines[i].special >= 100 && lines[i].special < 300)
+			{
+				lines[i].args[0] = lines[i].tag;
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+				else
+					lines[i].alpha = FRACUNIT/2;
+			}
 			break;
 		}
 	}

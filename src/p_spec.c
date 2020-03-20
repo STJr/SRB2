@@ -5760,7 +5760,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	{
 		fixed_t tempceiling = sec2->ceilingheight;
 		//flip the sector around and print an error instead of crashing 12.1.08 -Inuyasha
-		CONS_Alert(CONS_ERROR, M_GetText("A FOF tagged %d has a top height below its bottom.\n"), master->tag);
+		CONS_Alert(CONS_ERROR, M_GetText("A FOF tagged %d has a top height below its bottom.\n"), master->args[0]);
 		sec2->ceilingheight = sec2->floorheight;
 		sec2->floorheight = tempceiling;
 	}
@@ -5820,6 +5820,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		sec->hasslope = true;
 #endif
 
+	// \todo Remove once all FOFs are adapted
 	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT1)) // Block player only
 		flags &= ~FF_BLOCKOTHERS;
 
@@ -5881,17 +5882,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		else th = th->next;
 	}
 
-
-	if (flags & FF_TRANSLUCENT)
-	{
-		if (sides[master->sidenum[0]].toptexture > 0)
-			fflr->alpha = sides[master->sidenum[0]].toptexture; // for future reference, "#0" is 1, and "#255" is 256. Be warned
-		else
-			fflr->alpha = 0x80;
-	}
-	else
-		fflr->alpha = 0xff;
-
+	fflr->alpha = (flags & FF_TRANSLUCENT) ? (master->alpha * 0xff) >> FRACBITS : 0xff;
 	fflr->spawnalpha = fflr->alpha; // save for netgames
 
 	if (flags & FF_QUICKSAND)
@@ -6772,42 +6763,48 @@ void P_SpawnSpecials(boolean fromnetsave)
 					P_AddPlaneDisplaceThinker(pd_both, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
-			case 100: // FOF (solid, opaque, shadows)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				break;
+			case 100: // FOF (solid)
+				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
-			case 101: // FOF (solid, opaque, no shadows)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_CUTLEVEL, secthinkers);
-				break;
+				//Visibility settings
+				if (lines[i].args[1] & 1)
+					ffloorflags &= ~FF_RENDERPLANES;
+				if (lines[i].args[1] & 2)
+					ffloorflags &= ~FF_RENDERSIDES;
 
-			case 102: // TL block: FOF (solid, translucent)
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_NOCLIMB)
+				//Translucency settings are irrelevant for invisible FOFs
+				if (lines[i].args[1] != 3)
 				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
+					if (lines[i].args[2] == 0) //Opaque
+					{
+						if (lines[i].args[3] & 7)
+						{
+							//At least partially intangible: You can see it from the inside
+							ffloorflags |= FF_ALLSIDES;
+							//Unless the planes are invisible, render both sides.
+							if (!(lines[i].args[1] & 1))
+								ffloorflags |= FF_BOTHPLANES;
+						}
+						else
+							ffloorflags |= FF_CUTLEVEL;
+					}
+					if (lines[i].args[2] == 1) //Translucent, don't render insides
+						ffloorflags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
+					if (lines[i].args[2] == 2) //Translucent, render insides
+						ffloorflags |= FF_TRANSLUCENT|FF_CUTEXTRA|FF_BOTHPLANES|FF_ALLSIDES;
 				}
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 103: // Solid FOF with no floor/ceiling (quite possibly useless)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_NOSHADE|FF_CUTLEVEL, secthinkers);
-				break;
-
-			case 104: // 3D Floor type that doesn't draw sides
-				// If line has no-climb set, give it shadows, otherwise don't
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERPLANES|FF_CUTLEVEL;
-				if (!(lines[i].flags & ML_NOCLIMB))
+				if (lines[i].args[3] & 1)
+					ffloorflags |= FF_REVERSEPLATFORM;
+				if (lines[i].args[3] & 2)
+					ffloorflags |= FF_PLATFORM;
+				if (lines[i].args[3] & 4)
+					ffloorflags &= ~FF_BLOCKPLAYER;
+				if (lines[i].args[3] & 8)
+					ffloorflags &= ~FF_BLOCKOTHERS;
+				if (lines[i].args[4])
 					ffloorflags |= FF_NOSHADE;
-
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 105: // FOF (solid, invisible)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_NOSHADE, secthinkers);
 				break;
 
 			case 120: // Opaque water
@@ -7495,7 +7492,7 @@ static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinker
 	INT32 s;
 	size_t sec = sides[*lines[line].sidenum].sector-sectors;
 
-	for (s = -1; (s = P_FindSectorFromLineTag(lines+line, s)) >= 0 ;)
+	for (s = -1; (s = P_FindSectorFromTag(lines[line].args[0], s)) >= 0 ;)
 		P_AddFakeFloor(&sectors[s], &sectors[sec], lines+line, ffloorflags, secthinkers);
 }
 
