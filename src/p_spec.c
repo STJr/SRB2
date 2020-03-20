@@ -6807,69 +6807,20 @@ void P_SpawnSpecials(boolean fromnetsave)
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
-			case 120: // Opaque water
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 121: // TL water
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 122: // Opaque water, no sides
+			case 120: // FOF (water)
 				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
+				if (!(lines[i].args[1] & 1))
+					ffloorflags |= FF_TRANSLUCENT;
+				if (!(lines[i].args[1] & 2))
+					ffloorflags |= FF_RENDERSIDES|FF_ALLSIDES;
+				if (lines[i].args[1] & 4)
 					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
+				if (lines[i].args[1] & 8)
 					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
+				if (!(lines[i].args[1] & 16))
 					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 123: // TL water, no sides
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 124: // goo water
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_GOOWATER|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 125: // goo water, no sides
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_TRANSLUCENT|FF_SWIMMABLE|FF_GOOWATER|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
+				if (lines[i].args[1] & 32)
+					ffloorflags |= FF_GOOWATER;
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 

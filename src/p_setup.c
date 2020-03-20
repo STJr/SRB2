@@ -2841,6 +2841,43 @@ static void P_ConvertBinaryMap(void)
 
 			lines[i].special = 100;
 			break;
+		case 120: //FOF: water, opaque
+		case 121: //FOF: water, translucent
+		case 122: //FOF: water, opaque, no sides
+		case 123: //FOF: water, translucent, no sides
+		case 124: //FOF: goo water, translucent
+		case 125: //FOF: goo water, translucent, no sides
+			lines[i].args[0] = lines[i].tag;
+
+			//Opaque?
+			if (lines[i].special == 120 || lines[i].special == 122)
+				lines[i].args[1] |= 1;
+			else
+			{
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+				else
+					lines[i].alpha = FRACUNIT/2;
+			}
+
+			//No sides?
+			if (lines[i].special == 122 || lines[i].special == 123 || lines[i].special == 125)
+				lines[i].args[1] |= 2;
+
+			//Flags
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] |= 4;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[1] |= 8;
+			if (!(lines[i].flags & ML_EFFECT5))
+				lines[i].args[1] |= 16;
+
+			//Goo?
+			if (lines[i].special >= 124)
+				lines[i].args[1] |= 32;
+
+			lines[i].special = 120;
+			break;
 		case 140: //FOF: intangible from bottom, opaque
 		case 141: //FOF: intangible from bottom, translucent
 		case 142: //FOF: intangible from bottom, translucent, no sides
