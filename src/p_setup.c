@@ -2841,6 +2841,45 @@ static void P_ConvertBinaryMap(void)
 
 			lines[i].special = 100;
 			break;
+		case 140: //FOF: intangible from bottom, opaque
+		case 141: //FOF: intangible from bottom, translucent
+		case 142: //FOF: intangible from bottom, translucent, no sides
+		case 143: //FOF: intangible from top, opaque
+		case 144: //FOF: intangible from top, translucent
+		case 145: //FOF: intangible from top, translucent, no sides
+		case 146: //FOF: only tangible from sides
+			lines[i].args[0] = lines[i].tag;
+
+			//Visibility
+			if (lines[i].special == 142 || lines[i].special == 145)
+				lines[i].args[1] = 2;
+			else if (lines[i].special == 146)
+				lines[i].args[1] = 1;
+
+			//Translucency
+			if (lines[i].special == 141 || lines[i].special == 142 || lines[i].special == 144 || lines[i].special == 145)
+			{
+				lines[i].args[2] = (lines[i].flags & ML_EFFECT2) ? 2 : 1;
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+				else
+					lines[i].alpha = FRACUNIT/2;
+			}
+
+			//Tangibility
+			if (lines[i].special <= 142)
+				lines[i].args[3] |= 2;
+			else if (lines[i].special <= 145)
+				lines[i].args[3] |= 1;
+			else
+				lines[i].args[3] |= 3;
+
+			//Shadow?
+			if (lines[i].special != 146 && (lines[i].flags & ML_NOCLIMB))
+				lines[i].args[4] = 1;
+
+			lines[i].special = 100;
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
