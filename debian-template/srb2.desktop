@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=${PROGRAM_NAME}
+Comment=${PROGRAM_DESCRIPTION}
+Encoding=UTF-8
+Exec=${PACKAGE_INSTALL_PATH}/${PROGRAM_FILENAME}
+Icon=/usr/share/pixmaps/${PROGRAM_FILENAME}.png
+Terminal=false
+Type=Application
+StartupNotify=false
+Categories=Application;Game;

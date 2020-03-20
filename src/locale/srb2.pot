@@ -1362,11 +1362,6 @@ msgstr ""
 msgid "No CHEAT-marked variables are changed -- Cheats are disabled.\n"
 msgstr ""
 
-#: d_netcmd.c:4439
-#, c-format
-msgid "Valid skin numbers are 0 to %d (-1 disables)\n"
-msgstr ""
-
 #: d_netcmd.c:4457 d_netcmd.c:4469
 msgid "You may not change your name when chat is muted.\n"
 msgstr ""
@@ -4026,7 +4021,7 @@ msgid "Music lump is not MID music format\n"
 msgstr ""
 
 #: win32/win_snd.c:2126
-msgid "I_RegisterSong: StreamBufferSetup FAILED"
+msgid "I_LoadSong: StreamBufferSetup FAILED"
 msgstr ""
 
 #: win32/win_sys.c:894

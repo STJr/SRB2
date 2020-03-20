@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,8 +15,19 @@
 
 #include "d_ticcmd.h"
 #include "d_netcmd.h"
+#include "d_net.h"
 #include "tables.h"
 #include "d_player.h"
+
+/*
+The 'packet version' may be used with packets whose
+format is expected to change between versions.
+
+This version is independent of the mod name, and standard
+version and subversion. It should only account for the
+basic fields of the packet, and change infrequently.
+*/
+#define PACKETVERSION 3
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -25,7 +36,7 @@
 //  be transmitted.
 
 // Networking and tick handling related.
-#define BACKUPTICS 32
+#define BACKUPTICS 96
 #define MAXTEXTCMD 256
 //
 // Packet structure
@@ -56,6 +67,10 @@ typedef enum
 	PT_RESYNCHEND,    // Player is now resynched and is being requested to remake the gametic
 	PT_RESYNCHGET,    // Player got resynch packet
 
+	PT_SENDINGLUAFILE, // Server telling a client Lua needs to open a file
+	PT_ASKLUAFILE,     // Client telling the server they don't have the file
+	PT_HASLUAFILE,     // Client telling the server they have the file
+
 	// Add non-PT_CANFAIL packet types here to avoid breaking MS compatibility.
 
 	PT_CANFAIL,       // This is kind of a priority. Anything bigger than CANFAIL
@@ -70,9 +85,10 @@ typedef enum
 	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
 	PT_RESYNCHING,    // Packet sent to resync players.
 	                  // Blocks game advance until synched.
-#ifdef NEWPING
+
+	PT_LOGIN,         // Login attempt from the client.
+
 	PT_PING,          // Packet sent to tell clients the other client's latency to server.
-#endif
 	NUMPACKETTYPE
 } packettype_t;
 
@@ -136,6 +152,7 @@ typedef struct
 	fixed_t flagz[2];
 
 	UINT32 ingame;  // Spectator bit for each player
+	UINT32 outofcoop;  // outofcoop bit for each player
 	INT32 ctfteam[MAXPLAYERS]; // Which team? (can't be 1 bit, since in regular Match there are no teams)
 
 	// Resynch game scores and the like all at once
@@ -160,10 +177,14 @@ typedef struct
 	angle_t aiming;
 	INT32 currentweapon;
 	INT32 ringweapons;
+	UINT16 ammoremoval;
+	tic_t ammoremovaltimer;
+	INT32 ammoremovalweapon;
 	UINT16 powers[NUMPOWERS];
 
 	// Score is resynched in the confirm resync packet
-	INT32 health;
+	INT16 rings;
+	INT16 spheres;
 	SINT8 lives;
 	SINT8 continues;
 	UINT8 scoreadd;
@@ -172,8 +193,11 @@ typedef struct
 
 	UINT8 skincolor;
 	INT32 skin;
+	UINT32 availabilities;
 	// Just in case Lua does something like
 	// modify these at runtime
+	fixed_t camerascale;
+	fixed_t shieldscale;
 	fixed_t normalspeed;
 	fixed_t runspeed;
 	UINT8 thrustfactor;
@@ -185,13 +209,15 @@ typedef struct
 	UINT32 thokitem; // mobjtype_t
 	UINT32 spinitem; // mobjtype_t
 	UINT32 revitem; // mobjtype_t
+	UINT32 followitem; // mobjtype_t
 	fixed_t actionspd;
 	fixed_t mindash;
 	fixed_t maxdash;
 	fixed_t jumpfactor;
+	fixed_t playerheight;
+	fixed_t playerspinheight;
 
 	fixed_t speed;
-	UINT8 jumping;
 	UINT8 secondjump;
 	UINT8 fly1;
 	tic_t glidetime;
@@ -199,6 +225,7 @@ typedef struct
 	INT32 deadtimer;
 	tic_t exiting;
 	UINT8 homing;
+	tic_t dashmode;
 	tic_t skidtime;
 	fixed_t cmomx;
 	fixed_t cmomy;
@@ -214,10 +241,10 @@ typedef struct
 	INT32 starpostnum;
 	tic_t starposttime;
 	angle_t starpostangle;
+	fixed_t starpostscale;
 
 	INT32 maxlink;
 	fixed_t dashspeed;
-	INT32 dashtime;
 	angle_t angle_pos;
 	angle_t old_angle_pos;
 	tic_t bumpertime;
@@ -240,7 +267,9 @@ typedef struct
 	//player->mo stuff
 	UINT8 hasmo; // Boolean
 
+	INT32 health;
 	angle_t angle;
+	angle_t rollangle;
 	fixed_t x;
 	fixed_t y;
 	fixed_t z;
@@ -250,6 +279,10 @@ typedef struct
 	fixed_t friction;
 	fixed_t movefactor;
 
+	spritenum_t sprite;
+	UINT32 frame;
+	UINT8 sprite2;
+	UINT16 anim_duration;
 	INT32 tics;
 	statenum_t statenum;
 	UINT32 flags;
@@ -279,6 +312,7 @@ typedef struct
 	// 0xFF == not in game; else player skin num
 	UINT8 playerskins[MAXPLAYERS];
 	UINT8 playercolor[MAXPLAYERS];
+	UINT32 playeravailabilities[MAXPLAYERS];
 
 	UINT8 gametype;
 	UINT8 modifiedgame;
@@ -300,12 +334,18 @@ typedef struct {
 #pragma warning(default : 4200)
 #endif
 
+#define MAXAPPLICATION 16
+
 typedef struct
 {
+	UINT8 _255;/* see serverinfo_pak */
+	UINT8 packetversion;
+	char application[MAXAPPLICATION];
 	UINT8 version; // Different versions don't work
 	UINT8 subversion; // Contains build version
 	UINT8 localplayers;
 	UINT8 mode;
+	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME];
 } ATTRPACK clientconfig_pak;
 
 #define MAXSERVERNAME 32
@@ -313,16 +353,24 @@ typedef struct
 // This packet is too large
 typedef struct
 {
+	/*
+	In the old packet, 'version' is the first field. Now that field is set
+	to 255 always, so older versions won't be confused with the new
+	versions or vice-versa.
+	*/
+	UINT8 _255;
+	UINT8 packetversion;
+	char  application[MAXAPPLICATION];
 	UINT8 version;
 	UINT8 subversion;
 	UINT8 numberofplayer;
 	UINT8 maxplayer;
-	UINT8 gametype;
+	UINT8 refusereason; // 0: joinable, 1: joins disabled, 2: full
+	char gametypename[24];
 	UINT8 modifiedgame;
 	UINT8 cheatsenabled;
 	UINT8 isdedicated;
 	UINT8 fileneedednum;
-	SINT8 adminplayer;
 	tic_t time;
 	tic_t leveltime;
 	char servername[MAXSERVERNAME];
@@ -354,7 +402,7 @@ typedef struct
 // Shorter player information for external use.
 typedef struct
 {
-	UINT8 node;
+	UINT8 num;
 	char name[MAXPLAYERNAME+1];
 	UINT8 address[4]; // sending another string would run us up against MAXPACKETLENGTH
 	UINT8 team;
@@ -398,15 +446,14 @@ typedef struct
 		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
 		filetx_pak filetxpak;               //         139 bytes
 		clientconfig_pak clientcfg;         //         136 bytes
+		UINT8 md5sum[16];
 		serverinfo_pak serverinfo;          //        1024 bytes
 		serverrefuse_pak serverrefuse;      //       65025 bytes (somehow I feel like those values are garbage...)
 		askinfo_pak askinfo;                //          61 bytes
 		msaskinfo_pak msaskinfo;            //          22 bytes
-		plrinfo playerinfo[MAXPLAYERS];     //        1152 bytes (I'd say 36~38)
-		plrconfig playerconfig[MAXPLAYERS]; // (up to) 896 bytes (welp they ARE)
-#ifdef NEWPING
-		UINT32 pingtable[MAXPLAYERS];       //         128 bytes
-#endif
+		plrinfo playerinfo[MAXPLAYERS];     //         576 bytes(?)
+		plrconfig playerconfig[MAXPLAYERS]; // (up to) 528 bytes(?)
+		UINT32 pingtable[MAXPLAYERS+1];     //          68 bytes
 	} u; // This is needed to pack diff packet types data together
 } ATTRPACK doomdata_t;
 
@@ -428,6 +475,7 @@ extern INT32 mapchangepending;
 // Points inside doomcom
 extern doomdata_t *netbuffer;
 
+extern consvar_t cv_showjoinaddress;
 extern consvar_t cv_playbackspeed;
 
 #define BASEPACKETSIZE      offsetof(doomdata_t, u)
@@ -439,11 +487,10 @@ extern consvar_t cv_playbackspeed;
 #define KICK_MSG_PLAYER_QUIT 3
 #define KICK_MSG_TIMEOUT     4
 #define KICK_MSG_BANNED      5
-#ifdef NEWPING
 #define KICK_MSG_PING_HIGH   6
-#endif
 #define KICK_MSG_CUSTOM_KICK 7
 #define KICK_MSG_CUSTOM_BAN  8
+#define KICK_MSG_KEEP_BODY   0x80
 
 typedef enum
 {
@@ -466,13 +513,14 @@ extern SINT8 servernode;
 void Command_Ping_f(void);
 extern tic_t connectiontimeout;
 extern tic_t jointimeout;
-#ifdef NEWPING
 extern UINT16 pingmeasurecount;
 extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
-#endif
+extern tic_t servermaxping;
 
-extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_resynchattempts, cv_blamecfail, cv_maxsend, cv_noticedownload, cv_downloadspeed;
+extern consvar_t cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_rejointimeout;
+extern consvar_t cv_resynchattempts, cv_blamecfail;
+extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
 // Used in d_net, the only dependence
 tic_t ExpandTics(INT32 low);
@@ -482,6 +530,7 @@ void D_ClientServerInit(void);
 void RegisterNetXCmd(netxcmd_t id, void (*cmd_f)(UINT8 **p, INT32 playernum));
 void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam);
 void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam); // splitsreen player
+void SendKick(UINT8 playernum, UINT8 msg);
 
 // Create any new ticcmds and broadcast to other players.
 void NetUpdate(void);
@@ -526,5 +575,10 @@ void D_ResetTiccmds(void);
 tic_t GetLag(INT32 node);
 UINT8 GetFreeXCmdSize(void);
 
+void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
+
 extern UINT8 hu_resynching;
+
+extern UINT8 adminpassmd5[16];
+extern boolean adminpasswordset;
 #endif

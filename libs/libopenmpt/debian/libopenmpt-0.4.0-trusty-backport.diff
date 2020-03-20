@@ -1,0 +1,550 @@
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/changelog ./debian/changelog
+--- ../../orig/libopenmpt-0.4.0/debian/changelog	2018-12-24 16:43:58.000000000 -0500
++++ ./debian/changelog	2019-01-04 17:56:35.024725537 -0500
+@@ -1,3 +1,38 @@
++libopenmpt (0.4.0-ubuntu14.04.1~ppa14) trusty; urgency=medium
++
++  * Remove debian symbols files due to gcc 4.8 - 5 C++ abi incompatibility
++
++ -- Sonic Team Junior <stjr@srb2.org>  Fri, 04 Jan 2019 17:56:01 -0500
++
++libopenmpt (0.4.0-ubuntu14.04.1~ppa13) trusty; urgency=medium
++
++  * autoreconf libtool
++
++ -- Sonic Team Junior <stjr@srb2.org>  Fri, 04 Jan 2019 17:10:45 -0500
++
++libopenmpt (0.4.0-ubuntu14.04.1~ppa12) trusty; urgency=medium
++
++  * debian/rules autoreconf
++
++ -- Sonic Team Junior <stjr@srb2.org>  Fri, 04 Jan 2019 17:03:19 -0500
++
++libopenmpt (0.4.0-ubuntu14.04.1~ppa11) trusty; urgency=medium
++
++  * debian/rules autoreconf
++
++ -- Sonic Team Junior <stjr@srb2.org>  Fri, 04 Jan 2019 16:59:08 -0500
++
++libopenmpt (0.4.0-ubuntu14.04.1~ppa10) trusty; urgency=medium
++
++  * Backport to trusty
++  * Added automake build depend
++  * Adjusted debhelper depend to >= 9.0~
++  * Adjusted dpkg-dev depend to >= 1.17.0
++  * Adjusted debian/compat to 10
++  * autoreconf --force --install
++
++ -- Sonic Team Junior <stjr@srb2.org>  Fri, 04 Jan 2019 16:54:04 -0500
++
+ libopenmpt (0.4.0-1) unstable; urgency=medium
+ 
+   * New upstream release.
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/compat ./debian/compat
+--- ../../orig/libopenmpt-0.4.0/debian/compat	2018-12-24 16:43:58.000000000 -0500
++++ ./debian/compat	2019-01-04 16:39:17.613976357 -0500
+@@ -1 +1 @@
+-11
++10
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/control ./debian/control
+--- ../../orig/libopenmpt-0.4.0/debian/control	2018-12-24 16:43:58.000000000 -0500
++++ ./debian/control	2019-01-04 17:10:42.008523333 -0500
+@@ -4,10 +4,12 @@
+ Maintainer: Debian Multimedia Maintainers <debian-multimedia@lists.debian.org>
+ Uploaders: James Cowgill <jcowgill@debian.org>
+ Build-Depends:
+- debhelper (>= 11.1~),
++ automake,
++ libtool,
++ debhelper (>= 9.0~),
+  dh-exec,
+  doxygen,
+- dpkg-dev (>= 1.18.0),
++ dpkg-dev (>= 1.17.0),
+  libflac-dev,
+  libmpg123-dev,
+  libogg-dev,
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/files ./debian/files
+--- ../../orig/libopenmpt-0.4.0/debian/files	1969-12-31 19:00:00.000000000 -0500
++++ ./debian/files	2019-01-04 17:56:47.813250880 -0500
+@@ -0,0 +1 @@
++libopenmpt_0.4.0-ubuntu14.04.1~ppa14_source.buildinfo libs optional
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/libopenmpt0.symbols ./debian/libopenmpt0.symbols
+--- ../../orig/libopenmpt-0.4.0/debian/libopenmpt0.symbols	2018-12-24 16:43:58.000000000 -0500
++++ ./debian/libopenmpt0.symbols	1969-12-31 19:00:00.000000000 -0500
+@@ -1,256 +0,0 @@
+-libopenmpt.so.0 libopenmpt0 #MINVER#
+-* Build-Depends-Package: libopenmpt-dev
+-# Ignore std:: template instantiations
+- (regex|optional)"^_ZN?K?S" 0.2.7025~beta20.1
+- _ZN7openmpt10module_ext13get_interfaceERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt10module_extC1EPKcjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt10module_extC1EPKcmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt10module_extC1EPKvjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt10module_extC1EPKvmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extC1ERKS0_@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extC1ERKSt6vectorIcSaIcEERSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcES2_EESC_St4lessISC_ESaISt4pairIKSC_SC_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extC1ERSiRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES9_St4lessIS9_ESaISt4pairIKS9_S9_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt10module_extC2EPKcjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt10module_extC2EPKcmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt10module_extC2EPKvjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt10module_extC2EPKvmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extC2ERKS0_@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extC2ERKSt6vectorIcSaIcEERSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcES2_EESC_St4lessISC_ESaISt4pairIKSC_SC_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extC2ERSiRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES9_St4lessIS9_ESaISt4pairIKS9_S9_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extD0Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extD1Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extD2Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt10module_extaSERKS0_@Base 0.2.7025~beta20.1
+- _ZN7openmpt16get_core_versionEv@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt17probe_file_headerEyPKhj@Base 0.3.0
+- (arch-bits=64)_ZN7openmpt17probe_file_headerEmPKhm@Base 0.3.0
+- (arch-bits=32)_ZN7openmpt17probe_file_headerEyPKhjy@Base 0.3.0
+- (arch-bits=64)_ZN7openmpt17probe_file_headerEmPKhmm@Base 0.3.0
+- (arch-bits=32)_ZN7openmpt17probe_file_headerEyRSi@Base 0.3.0
+- (arch-bits=64)_ZN7openmpt17probe_file_headerEmRSi@Base 0.3.0
+- _ZN7openmpt19get_library_versionEv@Base 0.2.7025~beta20.1
+- _ZN7openmpt22could_open_probabilityERSidRSo@Base 0.3.0
+- _ZN7openmpt22could_open_propabilityERSidRSo@Base 0.2.7025~beta20.1
+- _ZN7openmpt22is_extension_supportedERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt24get_supported_extensionsB5cxx11Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt38probe_file_header_get_recommended_sizeEv@Base 0.3.0
+- _ZN7openmpt6module14select_subsongEi@Base 0.2.7025~beta20.1
+- _ZN7openmpt6module16set_render_paramEii@Base 0.2.7025~beta20.1
+- _ZN7openmpt6module16set_repeat_countEi@Base 0.2.7025~beta20.1
+- _ZN7openmpt6module20set_position_secondsEd@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module21read_interleaved_quadEijPf@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module21read_interleaved_quadEimPf@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module21read_interleaved_quadEijPs@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module21read_interleaved_quadEimPs@Base 0.2.7025~beta20.1
+- _ZN7openmpt6module22set_position_order_rowEii@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module23read_interleaved_stereoEijPf@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module23read_interleaved_stereoEimPf@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module23read_interleaved_stereoEijPs@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module23read_interleaved_stereoEimPs@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module4readEijPf@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module4readEimPf@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module4readEijPfS1_@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module4readEimPfS1_@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module4readEijPfS1_S1_S1_@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module4readEimPfS1_S1_S1_@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module4readEijPs@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module4readEimPs@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module4readEijPsS1_@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module4readEimPsS1_@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6module4readEijPsS1_S1_S1_@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6module4readEimPsS1_S1_S1_@Base 0.2.7025~beta20.1
+- _ZN7openmpt6module7ctl_setERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES8_@Base 0.2.7025~beta20.1
+- _ZN7openmpt6module8set_implEPNS_11module_implE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC1EPKcS2_RSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6moduleC1EPKcjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6moduleC1EPKcmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC1EPKhS2_RSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6moduleC1EPKhjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6moduleC1EPKhmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6moduleC1EPKvjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6moduleC1EPKvmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC1ERKS0_@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC1ERKSt6vectorIcSaIcEERSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcES2_EESC_St4lessISC_ESaISt4pairIKSC_SC_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC1ERKSt6vectorIhSaIhEERSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESD_St4lessISD_ESaISt4pairIKSD_SD_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC1ERSiRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES9_St4lessIS9_ESaISt4pairIKS9_S9_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC1Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC2EPKcS2_RSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6moduleC2EPKcjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6moduleC2EPKcmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC2EPKhS2_RSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6moduleC2EPKhjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6moduleC2EPKhmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZN7openmpt6moduleC2EPKvjRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZN7openmpt6moduleC2EPKvmRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_St4lessISA_ESaISt4pairIKSA_SA_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC2ERKS0_@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC2ERKSt6vectorIcSaIcEERSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcES2_EESC_St4lessISC_ESaISt4pairIKSC_SC_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC2ERKSt6vectorIhSaIhEERSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESD_St4lessISD_ESaISt4pairIKSD_SD_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC2ERSiRSoRKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES9_St4lessIS9_ESaISt4pairIKS9_S9_EEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleC2Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleD0Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleD1Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleD2Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt6moduleaSERKS0_@Base 0.2.7025~beta20.1
+- _ZN7openmpt6string3getERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt9exceptionC1EOS0_@Base 0.3.0
+- _ZN7openmpt9exceptionC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt9exceptionC1ERKS0_@Base 0.3.0
+- _ZN7openmpt9exceptionC2EOS0_@Base 0.3.0
+- _ZN7openmpt9exceptionC2ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@Base 0.2.7025~beta20.1
+- _ZN7openmpt9exceptionC2ERKS0_@Base 0.3.0
+- _ZN7openmpt9exceptionD0Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt9exceptionD1Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt9exceptionD2Ev@Base 0.2.7025~beta20.1
+- _ZN7openmpt9exceptionaSEOS0_@Base 0.3.0
+- _ZN7openmpt9exceptionaSERKS0_@Base 0.3.0
+- _ZNK7openmpt6module12get_metadataERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module14get_num_ordersEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module15get_current_rowEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module15get_num_samplesEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module15get_order_namesB5cxx11Ev@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module16get_num_channelsEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module16get_num_patternsEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module16get_num_subsongsEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module16get_render_paramEi@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module16get_repeat_countEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module16get_sample_namesB5cxx11Ev@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module17get_channel_namesB5cxx11Ev@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module17get_current_orderEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module17get_current_speedEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module17get_current_tempoEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module17get_metadata_keysB5cxx11Ev@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module17get_order_patternEi@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module17get_pattern_namesB5cxx11Ev@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module17get_subsong_namesB5cxx11Ev@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module19get_current_patternEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module19get_num_instrumentsEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module20get_duration_secondsEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module20get_instrument_namesB5cxx11Ev@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module20get_pattern_num_rowsEi@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module20get_position_secondsEv@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module20get_selected_subsongEv@Base 0.3.0
+- (arch-bits=32)_ZNK7openmpt6module26format_pattern_row_channelB5cxx11Eiiijb@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZNK7openmpt6module26format_pattern_row_channelB5cxx11Eiiimb@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module27get_current_channel_vu_leftEi@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module27get_current_channel_vu_monoEi@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module28get_current_channel_vu_rightEi@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module28get_current_playing_channelsEv@Base 0.2.7025~beta20.1
+- (arch-bits=32)_ZNK7openmpt6module29highlight_pattern_row_channelB5cxx11Eiiijb@Base 0.2.7025~beta20.1
+- (arch-bits=64)_ZNK7openmpt6module29highlight_pattern_row_channelB5cxx11Eiiimb@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module31get_pattern_row_channel_commandEiiii@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module32get_current_channel_vu_rear_leftEi@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module33get_current_channel_vu_rear_rightEi@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module34format_pattern_row_channel_commandB5cxx11Eiiii@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module37highlight_pattern_row_channel_commandB5cxx11Eiiii@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module7ctl_getERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@Base 0.2.7025~beta20.1
+- _ZNK7openmpt6module8get_ctlsB5cxx11Ev@Base 0.2.7025~beta20.1
+- _ZNK7openmpt9exception4whatEv@Base 0.2.7025~beta20.1
+- _ZTIN7openmpt10module_extE@Base 0.2.7025~beta20.1
+- _ZTIN7openmpt6moduleE@Base 0.2.7025~beta20.1
+- _ZTIN7openmpt9exceptionE@Base 0.2.7025~beta20.1
+- (optional=weak)_ZTISt11_Mutex_baseILN9__gnu_cxx12_Lock_policyE2EE@Base 0.2.7025~beta20.1
+- (optional=weak)_ZTISt16_Sp_counted_baseILN9__gnu_cxx12_Lock_policyE2EE@Base 0.2.7025~beta20.1
+- _ZTSN7openmpt10module_extE@Base 0.2.7025~beta20.1
+- _ZTSN7openmpt6moduleE@Base 0.2.7025~beta20.1
+- _ZTSN7openmpt9exceptionE@Base 0.2.7025~beta20.1
+- (optional=weak)_ZTSSt11_Mutex_baseILN9__gnu_cxx12_Lock_policyE2EE@Base 0.2.7025~beta20.1
+- (optional=weak)_ZTSSt16_Sp_counted_baseILN9__gnu_cxx12_Lock_policyE2EE@Base 0.2.7025~beta20.1
+- (optional=weak)_ZTSSt19_Sp_make_shared_tag@Base 0.2.7025~beta20.1
+- _ZTVN7openmpt10module_extE@Base 0.2.7025~beta20.1
+- _ZTVN7openmpt6moduleE@Base 0.2.7025~beta20.1
+- _ZTVN7openmpt9exceptionE@Base 0.2.7025~beta20.1
+- (optional=weak)_ZZNSt19_Sp_make_shared_tag5_S_tiEvE5__tag@Base 0.4.0
+- openmpt_could_open_probability2@Base 0.3.0
+- openmpt_could_open_probability@Base 0.3.0
+- openmpt_could_open_propability@Base 0.2.7025~beta20.1
+- openmpt_error_func_default@Base 0.3.0
+- openmpt_error_func_errno@Base 0.3.0
+- openmpt_error_func_errno_userdata@Base 0.3.0
+- openmpt_error_func_ignore@Base 0.3.0
+- openmpt_error_func_log@Base 0.3.0
+- openmpt_error_func_store@Base 0.3.0
+- openmpt_error_is_transient@Base 0.3.0
+- openmpt_error_string@Base 0.3.0
+- openmpt_free_string@Base 0.2.7025~beta20.1
+- openmpt_get_core_version@Base 0.2.7025~beta20.1
+- openmpt_get_library_version@Base 0.2.7025~beta20.1
+- openmpt_get_string@Base 0.2.7025~beta20.1
+- openmpt_get_supported_extensions@Base 0.2.7025~beta20.1
+- openmpt_is_extension_supported@Base 0.2.7025~beta20.1
+- openmpt_log_func_default@Base 0.2.7025~beta20.1
+- openmpt_log_func_silent@Base 0.2.7025~beta20.1
+- openmpt_module_create2@Base 0.3.0
+- openmpt_module_create@Base 0.2.7025~beta20.1
+- openmpt_module_create_from_memory2@Base 0.3.0
+- openmpt_module_create_from_memory@Base 0.2.7025~beta20.1
+- openmpt_module_ctl_get@Base 0.2.7025~beta20.1
+- openmpt_module_ctl_set@Base 0.2.7025~beta20.1
+- openmpt_module_destroy@Base 0.2.7025~beta20.1
+- openmpt_module_error_clear@Base 0.3.0
+- openmpt_module_error_get_last@Base 0.3.0
+- openmpt_module_error_get_last_message@Base 0.3.0
+- openmpt_module_error_set_last@Base 0.3.0
+- openmpt_module_ext_create@Base 0.3.0
+- openmpt_module_ext_create_from_memory@Base 0.3.0
+- openmpt_module_ext_destroy@Base 0.3.0
+- openmpt_module_ext_get_interface@Base 0.3.0
+- openmpt_module_ext_get_module@Base 0.3.0
+- openmpt_module_format_pattern_row_channel@Base 0.2.7025~beta20.1
+- openmpt_module_format_pattern_row_channel_command@Base 0.2.7025~beta20.1
+- openmpt_module_get_channel_name@Base 0.2.7025~beta20.1
+- openmpt_module_get_ctls@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_channel_vu_left@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_channel_vu_mono@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_channel_vu_rear_left@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_channel_vu_rear_right@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_channel_vu_right@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_order@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_pattern@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_playing_channels@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_row@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_speed@Base 0.2.7025~beta20.1
+- openmpt_module_get_current_tempo@Base 0.2.7025~beta20.1
+- openmpt_module_get_duration_seconds@Base 0.2.7025~beta20.1
+- openmpt_module_get_instrument_name@Base 0.2.7025~beta20.1
+- openmpt_module_get_metadata@Base 0.2.7025~beta20.1
+- openmpt_module_get_metadata_keys@Base 0.2.7025~beta20.1
+- openmpt_module_get_num_channels@Base 0.2.7025~beta20.1
+- openmpt_module_get_num_instruments@Base 0.2.7025~beta20.1
+- openmpt_module_get_num_orders@Base 0.2.7025~beta20.1
+- openmpt_module_get_num_patterns@Base 0.2.7025~beta20.1
+- openmpt_module_get_num_samples@Base 0.2.7025~beta20.1
+- openmpt_module_get_num_subsongs@Base 0.2.7025~beta20.1
+- openmpt_module_get_order_name@Base 0.2.7025~beta20.1
+- openmpt_module_get_order_pattern@Base 0.2.7025~beta20.1
+- openmpt_module_get_pattern_name@Base 0.2.7025~beta20.1
+- openmpt_module_get_pattern_num_rows@Base 0.2.7025~beta20.1
+- openmpt_module_get_pattern_row_channel_command@Base 0.2.7025~beta20.1
+- openmpt_module_get_position_seconds@Base 0.2.7025~beta20.1
+- openmpt_module_get_render_param@Base 0.2.7025~beta20.1
+- openmpt_module_get_repeat_count@Base 0.2.7025~beta20.1
+- openmpt_module_get_sample_name@Base 0.2.7025~beta20.1
+- openmpt_module_get_selected_subsong@Base 0.3.0
+- openmpt_module_get_subsong_name@Base 0.2.7025~beta20.1
+- openmpt_module_highlight_pattern_row_channel@Base 0.2.7025~beta20.1
+- openmpt_module_highlight_pattern_row_channel_command@Base 0.2.7025~beta20.1
+- openmpt_module_read_float_mono@Base 0.2.7025~beta20.1
+- openmpt_module_read_float_quad@Base 0.2.7025~beta20.1
+- openmpt_module_read_float_stereo@Base 0.2.7025~beta20.1
+- openmpt_module_read_interleaved_float_quad@Base 0.2.7025~beta20.1
+- openmpt_module_read_interleaved_float_stereo@Base 0.2.7025~beta20.1
+- openmpt_module_read_interleaved_quad@Base 0.2.7025~beta20.1
+- openmpt_module_read_interleaved_stereo@Base 0.2.7025~beta20.1
+- openmpt_module_read_mono@Base 0.2.7025~beta20.1
+- openmpt_module_read_quad@Base 0.2.7025~beta20.1
+- openmpt_module_read_stereo@Base 0.2.7025~beta20.1
+- openmpt_module_select_subsong@Base 0.2.7025~beta20.1
+- openmpt_module_set_error_func@Base 0.3.0
+- openmpt_module_set_log_func@Base 0.3.0
+- openmpt_module_set_position_order_row@Base 0.2.7025~beta20.1
+- openmpt_module_set_position_seconds@Base 0.2.7025~beta20.1
+- openmpt_module_set_render_param@Base 0.2.7025~beta20.1
+- openmpt_module_set_repeat_count@Base 0.2.7025~beta20.1
+- openmpt_probe_file_header@Base 0.3.0
+- openmpt_probe_file_header_from_stream@Base 0.3.0
+- openmpt_probe_file_header_get_recommended_size@Base 0.3.0
+- openmpt_probe_file_header_without_filesize@Base 0.3.0
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/libopenmpt-modplug1.symbols ./debian/libopenmpt-modplug1.symbols
+--- ../../orig/libopenmpt-0.4.0/debian/libopenmpt-modplug1.symbols	2018-12-24 16:43:58.000000000 -0500
++++ ./debian/libopenmpt-modplug1.symbols	1969-12-31 19:00:00.000000000 -0500
+@@ -1,200 +0,0 @@
+-libopenmpt_modplug.so.1 libopenmpt-modplug1 #MINVER#
+-* Build-Depends-Package: libopenmpt-modplug-dev
+- LIBOPENMPT_MODPLUG1@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_ExportIT@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_ExportMOD@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_ExportS3M@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_ExportXM@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetCurrentOrder@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetCurrentPattern@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetCurrentRow@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetCurrentSpeed@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetCurrentTempo@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetLength@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetMasterVolume@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetMessage@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetModuleType@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetName@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetPattern@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetPlayingChannels@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_GetSettings@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_InitMixerCallback@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_InstrumentName@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_Load@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_NumChannels@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_NumInstruments@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_NumPatterns@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_NumSamples@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_Read@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_SampleName@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_Seek@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_SeekOrder@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_SetMasterVolume@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_SetSettings@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_Unload@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- ModPlug_UnloadMixerCallback@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile10FreeSampleEPv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile10InitPlayerEb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile10NoteChangeEjibb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile10PackSampleERii@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile10ProcessAGCEi@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile10ProcessRowEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile10ReadSampleEP14_MODINSTRUMENTjPKcj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile10RetrigNoteEjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile10gdwSysInfoE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile10gnCPUUsageE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile10gnChannelsE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile11DoFreqSlideEP11_MODCHANNELi@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile11FineVibratoEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile11FreePatternEPv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile11InitSysInfoEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile11LoopPatternEii@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile11PatternLoopEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile11VolumeSlideEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile12FineVolumeUpEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile12ITInstrToMPTEPKvP17_INSTRUMENTHEADERj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile12IsSampleUsedEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile12PanningSlideEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile12PortamentoUpEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile12ResetMidiCfgEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile12SetMixConfigEjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile12gnReverbTypeE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile12gpSndMixHookE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile13CanPackSampleEPcjjPh@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile13CheckCPUUsageEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile13DestroySampleEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile13ResetChannelsEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile13SetCurrentPosEj@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile13SetWaveConfigEjjjb@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile13gdwMixingFreqE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile13gdwSoundSetupE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile13m_nXBassDepthE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile13m_nXBassRangeE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile14AllocateSampleEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14FineVolumeDownEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14GlobalFadeSongEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14GlobalVolSlideEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14LoadMixPluginsEPKvj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14PortamentoDownEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14ProcessEffectsEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14SaveMixPluginsEP8_IO_FILEb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14SetPatternNameEjPKc@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14TonePortamentoEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile14m_nReverbDelayE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile14m_nReverbDepthE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile15AllocatePatternEjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile15ChannelVolSlideEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile15CreateStereoMixEi@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile15GetSongCommentsEPcjj@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile15SetCurrentOrderEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile15SetMasterVolumeEjb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile15SetWaveConfigExEbbbbbbb@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile15gnBitsPerSampleE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile15m_nStreamVolumeE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile16AdjustSampleLoopEP14_MODINSTRUMENT@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile16FinePortamentoUpEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile16InstrumentChangeEP11_MODCHANNELjbbb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile16IsInstrumentUsedEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile16ProcessMidiMacroEjPKcj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile16m_nProLogicDelayE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile16m_nProLogicDepthE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile17DestroyInstrumentEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile17MapMidiInstrumentEjjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile17SetResamplingModeEj@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile17m_nMaxMixChannelsE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile18FinePortamentoDownEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile18GetRawSongCommentsEPcjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile18ReadSampleFromSongEjPS_j@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile18SetXBassParametersEjj@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile19DetectUnusedSamplesEPb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile19ExtendedMODCommandsEjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile19ExtendedS3MCommandsEjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile19SetReverbParametersEjj@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile19gnVolumeRampSamplesE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile19m_nStereoSeparationE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile20FrequencyToTransposeEP14_MODINSTRUMENT@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile20FrequencyToTransposeEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile20Normalize24BitBufferEPhjjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile20TransposeToFrequencyEii@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile21ExtendedChannelEffectEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile21ExtraFinePortamentoUpEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile21RemoveSelectedSamplesEPb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile21SetSurroundParametersEjj@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile21gpMixPluginCreateProcE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile22ReadInstrumentFromSongEjPS_j@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile23ExtraFinePortamentoDownEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile23RemoveInstrumentSamplesEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile4ReadEPvj@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile5gnAGCE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile6CreateEPKhj@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile6KeyOffEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile6ReadITEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile6ReadXMEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile6SetAGCEb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7DestroyEv@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile7NoteCutEjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7Read669EPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadABCEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadAMFEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadAMSEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadDBMEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadDMFEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadDSMEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadFAREPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadJ2BEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadMDLEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadMIDEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadMT2EPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadMTMEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadMedEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadModEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadOKTEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadPATEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadPSMEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadPTMEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadS3MEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadSTMEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadUMXEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadUltEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7ReadWavEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7TestABCEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7TestMIDEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7TestPATEPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7TremoloEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile7VibratoEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile8CheckNNAEjjib@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile8FadeSongEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile8ReadAMS2EPKhj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile8ReadNoteEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile8ResetAGCEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile8SetSpeedEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile8SetTempoEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile9GetLengthEbb@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFile9PanbrelloEP11_MODCHANNELj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZN10CSoundFile9gnVUMeterE@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFileC1Ev@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFileC2Ev@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFileD1Ev@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZN10CSoundFileD2Ev@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZNK10CSoundFile10S3MConvertEP11_MODCOMMANDb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile13GetCurrentPosEv@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZNK10CSoundFile13GetNNAChannelEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile13GetSampleNameEjPc@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile14GetMaxPositionEv@LIBOPENMPT_MODPLUG1 0.2.7386~beta20.3
+- _ZNK10CSoundFile14GetNumChannelsEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile14GetNumPatternsEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile14GetPatternNameEjPcj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile14GetSaveFormatsEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile14IsSongFinishedEjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile14ModSaveCommandEPK11_MODCOMMANDb@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile14S3MSaveConvertEPjS0_b@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile17ConvertModCommandEP11_MODCOMMAND@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile17CutOffToFrequencyEji@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile17GetBestSaveFormatEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile17GetFreqFromPeriodEjji@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile17GetInstrumentNameEjPc@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile17GetNoteFromPeriodEj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile17GetNumInstrumentsEv@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile17GetPeriodFromNoteEjij@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile18SetupChannelFilterEP11_MODCHANNELbi@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+- _ZNK10CSoundFile19IsValidBackwardJumpEjjjj@LIBOPENMPT_MODPLUG1 0.2.7561~beta20.5
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/rules ./debian/rules
+--- ../../orig/libopenmpt-0.4.0/debian/rules	2018-12-24 16:43:58.000000000 -0500
++++ ./debian/rules	2019-01-04 17:03:16.206691071 -0500
+@@ -11,9 +11,10 @@
+ 	dh $@
+ 
+ override_dh_autoreconf:
+-	dh_autoreconf --as-needed
++	autoreconf --force --install
+ 
+ override_dh_auto_configure:
++	debian/rules override_dh_autoreconf
+ 	dh_auto_configure -- --disable-static --enable-libopenmpt_modplug
+ 
+ override_dh_auto_build:

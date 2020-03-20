@@ -1,6 +1,6 @@
 /*
   SDL_image:  An example image loading library for use with SDL
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -34,7 +34,7 @@
  *
  * Besides the standard API, also provides
  *
- *     SDL_Surface *IMG_ReadXPMFromArray(char **xpm)
+ *     SDL_Surface *IMG_ReadXPMFromArray(const char **xpm)
  *
  * that reads the image data from an XPM file included in the C source.
  *
@@ -88,8 +88,8 @@ struct color_hash {
     struct hash_entry **table;
     struct hash_entry *entries; /* array of all entries */
     struct hash_entry *next_free;
-    int size;
-    int maxnum;
+    size_t size;
+    size_t maxnum;
 };
 
 static int hash_key(const char *key, int cpp, int size)
@@ -103,14 +103,14 @@ static int hash_key(const char *key, int cpp, int size)
     return hash & (size - 1);
 }
 
-static struct color_hash *create_colorhash(int maxnum)
+static struct color_hash *create_colorhash(size_t maxnum)
 {
-    int bytes, s;
+    size_t bytes, s;
     struct color_hash *hash;
 
     /* we know how many entries we need, so we can allocate
        everything here */
-    hash = (struct color_hash *)SDL_malloc(sizeof *hash);
+    hash = (struct color_hash *)SDL_calloc(1, sizeof(*hash));
     if (!hash)
         return NULL;
 
@@ -119,15 +119,29 @@ static struct color_hash *create_colorhash(int maxnum)
         ;
     hash->size = s;
     hash->maxnum = maxnum;
+
     bytes = hash->size * sizeof(struct hash_entry **);
-    hash->entries = NULL;   /* in case malloc fails */
-    hash->table = (struct hash_entry **)SDL_malloc(bytes);
+    /* Check for overflow */
+    if ((bytes / sizeof(struct hash_entry **)) != hash->size) {
+        IMG_SetError("memory allocation overflow");
+        SDL_free(hash);
+        return NULL;
+    }
+    hash->table = (struct hash_entry **)SDL_calloc(1, bytes);
     if (!hash->table) {
         SDL_free(hash);
         return NULL;
     }
-    SDL_memset(hash->table, 0, bytes);
-    hash->entries = (struct hash_entry *)SDL_malloc(maxnum * sizeof(struct hash_entry));
+
+    bytes = maxnum * sizeof(struct hash_entry);
+    /* Check for overflow */
+    if ((bytes / sizeof(struct hash_entry)) != maxnum) {
+        IMG_SetError("memory allocation overflow");
+        SDL_free(hash->table);
+        SDL_free(hash);
+        return NULL;
+    }
+    hash->entries = (struct hash_entry *)SDL_calloc(1, bytes);
     if (!hash->entries) {
         SDL_free(hash->table);
         SDL_free(hash);
@@ -138,7 +152,7 @@ static struct color_hash *create_colorhash(int maxnum)
 }
 
 static int add_colorhash(struct color_hash *hash,
-                         char *key, int cpp, Uint32 color)
+                         const char *key, int cpp, Uint32 color)
 {
     int index = hash_key(key, cpp, hash->size);
     struct hash_entry *e = hash->next_free++;
@@ -995,10 +1009,11 @@ static SDL_Surface *load_xpm(const char **xpm, SDL_RWops *src)
 {
     Sint64 start = 0;
     SDL_Surface *image = NULL;
-    int index;
+    size_t index;
     int x, y;
-    int w, h, ncolors, cpp;
-    int indexed;
+    int w, h, cpp;
+    long unsigned int ncolors;
+    size_t indexed;
     Uint8 *dst;
     struct color_hash *colors = NULL;
     SDL_Color *im_colors = NULL;
@@ -1029,12 +1044,17 @@ static SDL_Surface *load_xpm(const char **xpm, SDL_RWops *src)
      * Right now we don't use the hotspots but it should be handled
      * one day.
      */
-    if (SDL_sscanf(line, "%d %d %d %d", &w, &h, &ncolors, &cpp) != 4
+    if (SDL_sscanf(line, "%d %d %lu %d", &w, &h, &ncolors, &cpp) != 4
        || w <= 0 || h <= 0 || ncolors <= 0 || cpp <= 0) {
         error = "Invalid format description";
         goto done;
     }
 
+    /* Check for allocation overflow */
+    if ((size_t)(ncolors * cpp)/cpp != ncolors) {
+        error = "Invalid color specification";
+        goto done;
+    }
     keystrings = (char *)SDL_malloc(ncolors * cpp);
     if (!keystrings) {
         error = "Out of memory";
@@ -1102,8 +1122,9 @@ static SDL_Surface *load_xpm(const char **xpm, SDL_RWops *src)
                 c->g = (Uint8)(rgb >> 8);
                 c->b = (Uint8)(rgb);
                 pixel = index;
-            } else
+            } else {
                 pixel = rgb;
+            }
             add_colorhash(colors, nextkey, cpp, pixel);
             nextkey += cpp;
             if (rgb == 0xffffffff)
@@ -1192,7 +1213,7 @@ SDL_Surface *IMG_LoadXPM_RW(SDL_RWops *src)
     return(NULL);
 }
 
-SDL_Surface *IMG_ReadXPMFromArray(char **xpm)
+SDL_Surface *IMG_ReadXPMFromArray(const char **xpm)
 {
     return NULL;
 }

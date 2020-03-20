@@ -1,0 +1,40 @@
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/changelog ./debian/changelog
+--- ../../orig/libopenmpt-0.4.0/debian/changelog	2018-12-24 16:43:58.000000000 -0500
++++ ./debian/changelog	2019-01-04 16:37:08.788775423 -0500
+@@ -1,3 +1,12 @@
++libopenmpt (0.4.0-ubuntu16.04.1~ppa10) xenial; urgency=medium
++
++  * Backport to Xenial
++  * automake build depend added
++  * debhelper depend adjusted to >= 9.0~
++  * deb compat level adjusted to 10
++
++ -- Sonic Team Junior <stjr@srb2.org>  Fri, 04 Jan 2019 16:35:08 -0500
++
+ libopenmpt (0.4.0-1) unstable; urgency=medium
+ 
+   * New upstream release.
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/compat ./debian/compat
+--- ../../orig/libopenmpt-0.4.0/debian/compat	2018-12-24 16:43:58.000000000 -0500
++++ ./debian/compat	2019-01-04 16:34:31.830370437 -0500
+@@ -1 +1 @@
+-11
++10
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/control ./debian/control
+--- ../../orig/libopenmpt-0.4.0/debian/control	2018-12-24 16:43:58.000000000 -0500
++++ ./debian/control	2019-01-04 16:34:59.339499384 -0500
+@@ -4,7 +4,8 @@
+ Maintainer: Debian Multimedia Maintainers <debian-multimedia@lists.debian.org>
+ Uploaders: James Cowgill <jcowgill@debian.org>
+ Build-Depends:
+- debhelper (>= 11.1~),
++ automake,
++ debhelper (>= 9.0~),
+  dh-exec,
+  doxygen,
+  dpkg-dev (>= 1.18.0),
+diff -uraN ../../orig/libopenmpt-0.4.0/debian/files ./debian/files
+--- ../../orig/libopenmpt-0.4.0/debian/files	1969-12-31 19:00:00.000000000 -0500
++++ ./debian/files	2019-01-04 16:37:20.001229883 -0500
+@@ -0,0 +1 @@
++libopenmpt_0.4.0-ubuntu16.04.1~ppa10_source.buildinfo libs optional

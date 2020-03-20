@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,6 +23,10 @@
 #include "p_mobj.h"
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
+
+#ifdef HWRENDER
+#include "m_aatree.h"
+#endif
 
 #define POLYOBJECTS
 
@@ -49,19 +53,29 @@ typedef struct
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
 
-// ExtraColormap type. Use for extra_colormaps from now on.
-typedef struct
-{
-	UINT16 maskcolor, fadecolor;
-	double maskamt;
-	UINT16 fadestart, fadeend;
-	INT32 fog;
+#define CMF_FADEFULLBRIGHTSPRITES  1
+#define CMF_FOG 4
 
-	// rgba is used in hw mode for colored sector lighting
+// ExtraColormap type. Use for extra_colormaps from now on.
+typedef struct extracolormap_s
+{
+	UINT8 fadestart, fadeend;
+	UINT8 flags;
+
+	// store rgba values in combined bitwise
+	// also used in OpenGL instead lighttables
 	INT32 rgba; // similar to maskcolor in sw mode
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+
+#ifdef EXTRACOLORMAPLUMPS
+	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
+	char lumpname[9]; // for netsyncing
+#endif
+
+	struct extracolormap_s *next;
+	struct extracolormap_s *prev;
 } extracolormap_t;
 
 //
@@ -72,7 +86,9 @@ typedef struct
   */
 typedef struct
 {
-	fixed_t x, y, z;
+	fixed_t x, y;
+	boolean floorzset, ceilingzset;
+	fixed_t floorz, ceilingz;
 } vertex_t;
 
 // Forward of linedefs, for sectors.
@@ -131,10 +147,10 @@ typedef enum
 	FF_QUICKSAND         = 0x1000000,  ///< Quicksand!
 	FF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
 	FF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
-	FF_INTANGABLEFLATS   = 0x6000000,  ///< Both flats are intangable, but the sides are still solid.
-	FF_SHATTER           = 0x8000000,  ///< Used with ::FF_BUSTUP. Thinks everyone's Knuckles.
-	FF_SPINBUST          = 0x10000000, ///< Used with ::FF_BUSTUP. Jump or fall onto it while curled in a ball.
-	FF_ONLYKNUX          = 0x20000000, ///< Used with ::FF_BUSTUP. Only Knuckles can break this rock.
+	FF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
+	FF_SHATTER           = 0x8000000,  ///< Used with ::FF_BUSTUP. Bustable on mere touch.
+	FF_SPINBUST          = 0x10000000, ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
+	FF_STRONGBUST        = 0x20000000, ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
 	FF_RIPPLE            = 0x40000000, ///< Ripple the flats
 	FF_COLORMAPONLY      = 0x80000000, ///< Only copy the colormap, not the lightlevel
 	FF_GOOWATER          = FF_SHATTERBOTTOM, ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
@@ -177,6 +193,8 @@ typedef struct ffloor_s
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with
 	INT32 spawnalpha; // alpha the 3D floor spawned with
+
+	void *fadingdata; // fading FOF thinker
 } ffloor_t;
 
 
@@ -187,7 +205,7 @@ typedef struct lightlist_s
 {
 	fixed_t height;
 	INT16 *lightlevel;
-	extracolormap_t *extra_colormap;
+	extracolormap_t **extra_colormap; // pointer-to-a-pointer, so we can react to colormap changes
 	INT32 flags;
 	ffloor_t *caster;
 #ifdef ESLOPE
@@ -228,55 +246,41 @@ typedef struct linechain_s
 // Slopes
 #ifdef ESLOPE
 typedef enum {
-	SL_NOPHYSICS = 1, // Don't do momentum adjustment with this slope
-	SL_NODYNAMIC = 1<<1, // Slope will never need to move during the level, so don't fuss with recalculating it
-	SL_ANCHORVERTEX = 1<<2, // Slope is using a Slope Vertex Thing to anchor its position
-	SL_VERTEXSLOPE = 1<<3, // Slope is built from three Slope Vertex Things
+	SL_NOPHYSICS = 1, /// This plane will have no physics applied besides the positioning.
+	SL_DYNAMIC = 1<<1, /// This plane slope will be assigned a thinker to make it dynamic.
 } slopeflags_t;
 
 typedef struct pslope_s
 {
 	UINT16 id; // The number of the slope, mostly used for netgame syncing purposes
+	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
 
-	// --- Information used in clipping/projection ---
-	// Origin vector for the plane
-	vector3_t o;
+	// The plane's definition.
+	vector3_t o;		/// Plane origin.
+	vector3_t normal;	/// Plane normal.
 
-	// 2-Dimentional vector (x, y) normalized. Used to determine distance from
-	// the origin in 2d mapspace. (Basically a thrust of FRACUNIT in xydirection angle)
-	vector2_t d;
-
-	// The rate at which z changes based on distance from the origin plane.
-	fixed_t zdelta;
-
-	// The normal of the slope; will always point upward, and thus be inverted on ceilings. I think it's only needed for physics? -Red
-	vector3_t normal;
-
-	// For comparing when a slope should be rendered
-	fixed_t lowz;
-	fixed_t highz;
+	vector2_t d;		/// Precomputed normalized projection of the normal over XY.
+	fixed_t zdelta;		/// Precomputed Z unit increase per XY unit.
 
 	// This values only check and must be updated if the slope itself is modified
-	angle_t zangle; // Angle of the plane going up from the ground (not mesured in degrees)
-	angle_t xydirection; // The direction the slope is facing (north, west, south, etc.)
-
-	struct line_s *sourceline; // The line that generated the slope
-	fixed_t extent; // Distance value used for recalculating zdelta
-	UINT8 refpos; // 1=front floor 2=front ceiling 3=back floor 4=back ceiling (used for dynamic sloping)
+	angle_t zangle;		/// Precomputed angle of the plane going up from the ground (not measured in degrees).
+	angle_t xydirection;/// Precomputed angle of the normal's projection on the XY plane.
 
 	UINT8 flags; // Slope options
-	mapthing_t **vertices; // List should be three long for slopes made by vertex things, or one long for slopes using one vertex thing to anchor
-
-	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
 } pslope_t;
 #endif
 
 typedef enum
 {
-	SF_FLIPSPECIAL_FLOOR    =  1,
-	SF_FLIPSPECIAL_CEILING  =  2,
-	SF_FLIPSPECIAL_BOTH     =  3,
-	SF_TRIGGERSPECIAL_TOUCH =  4,
+	// flipspecial - planes with effect
+	SF_FLIPSPECIAL_FLOOR       =  1,
+	SF_FLIPSPECIAL_CEILING     =  1<<1,
+	SF_FLIPSPECIAL_BOTH        =  (SF_FLIPSPECIAL_FLOOR|SF_FLIPSPECIAL_CEILING),
+	// triggerspecial - conditions under which plane touch causes effect
+	SF_TRIGGERSPECIAL_TOUCH    =  1<<2,
+	SF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
+	// invertprecip - inverts presence of precipitation
+	SF_INVERTPRECIP            =  1<<4,
 } sectorflags_t;
 
 //
@@ -308,6 +312,7 @@ typedef struct sector_s
 	void *floordata; // floor move thinker
 	void *ceilingdata; // ceiling move thinker
 	void *lightingdata; // lighting change thinker
+	void *fadecolormapdata; // fade colormap thinker
 
 	// floor and ceiling texture offsets
 	fixed_t floor_xoffs, floor_yoffs;
@@ -322,8 +327,6 @@ typedef struct sector_s
 
 	INT32 floorlightsec, ceilinglightsec;
 	INT32 crumblestate; // used for crumbling and bobbing
-
-	INT32 bottommap, midmap, topmap; // dynamic colormaps
 
 	// list of mobjs that are at least partially in the sector
 	// thinglist is a subset of touching_thinglist
@@ -383,16 +386,11 @@ typedef struct sector_s
 	boolean hasslope; // The sector, or one of its visible FOFs, contains a slope
 #endif
 
-	// these are saved for netgames, so do not let Lua touch these!
-	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
+	// for fade thinker
+	INT16 spawn_lightlevel;
 
-	// offsets sector spawned with (via linedef type 7)
-	fixed_t spawn_flr_xoffs, spawn_flr_yoffs;
-	fixed_t spawn_ceil_xoffs, spawn_ceil_yoffs;
-
-	// flag angles sector spawned with (via linedef type 7)
-	angle_t spawn_flrpic_angle;
-	angle_t spawn_ceilpic_angle;
+	// colormap structure
+	extracolormap_t *spawn_extra_colormap;
 } sector_t;
 
 //
@@ -405,6 +403,8 @@ typedef enum
 	ST_POSITIVE,
 	ST_NEGATIVE
 } slopetype_t;
+
+#define HORIZONSPECIAL 41
 
 typedef struct line_s
 {
@@ -441,13 +441,9 @@ typedef struct line_s
 	polyobj_t *polyobj; // Belongs to a polyobject?
 #endif
 
-	char *text; // a concatination of all front and back texture names, for linedef specials that require a string.
+	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 } line_t;
-
-//
-// The SideDef.
-//
 
 typedef struct
 {
@@ -461,13 +457,18 @@ typedef struct
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;
 
-	// Sector the SideDef is facing.
+	// Linedef the sidedef belongs to
+	line_t *line;
+
+	// Sector the sidedef is facing.
 	sector_t *sector;
 
 	INT16 special; // the special of the linedef this side belongs to
 	INT16 repeatcnt; // # of times to repeat midtexture
 
-	char *text; // a concatination of all top, bottom, and mid texture names, for linedef specials that require a string.
+	char *text; // a concatenation of all top, bottom, and mid texture names, for linedef specials that require a string.
+
+	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
 
 //
@@ -590,6 +591,7 @@ typedef struct seg_s
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 #endif
+	boolean glseg;
 } seg_t;
 
 //
@@ -689,7 +691,7 @@ typedef enum
 // Patches.
 // A patch holds one or more columns.
 // Patches are used for sprites and all masked pictures, and we compose
-// textures from the TEXTURE1 list of patches.
+// textures from the TEXTURES list of patches.
 //
 // WARNING: this structure is cloned in GLPatch_t
 typedef struct
@@ -726,30 +728,76 @@ typedef struct
 #pragma pack()
 #endif
 
+// rotsprite
+#ifdef ROTSPRITE
+typedef struct
+{
+	patch_t *patch[16][ROTANGLES];
+	UINT16 cached;
+} rotsprite_t;
+#endif/*ROTSPRITE*/
+
+typedef enum
+{
+	SRF_SINGLE      = 0,   // 0-angle for all rotations
+	SRF_3D          = 1,   // Angles 1-8
+	SRF_3DGE        = 2,   // 3DGE, ZDoom and Doom Legacy all have 16-angle support. Why not us?
+	SRF_3DMASK      = SRF_3D|SRF_3DGE, // 3
+	SRF_LEFT        = 4,   // Left side uses single patch
+	SRF_RIGHT       = 8,   // Right side uses single patch
+	SRF_2D          = SRF_LEFT|SRF_RIGHT, // 12
+	SRF_NONE        = 0xff // Initial value
+} spriterotateflags_t;     // SRF's up!
+
+// Same as a patch_t, except just the header
+// and the wadnum/lumpnum combination that points
+// to wherever the patch is in memory.
+struct patchinfo_s
+{
+	INT16 width;          // bounding box size
+	INT16 height;
+	INT16 leftoffset;     // pixels to the left of origin
+	INT16 topoffset;      // pixels below the origin
+
+	UINT16 wadnum;        // the software patch lump num for when the patch
+	UINT16 lumpnum;       // was flushed, and we need to re-create it
+
+	// next patchinfo_t in memory
+	struct patchinfo_s *next;
+};
+typedef struct patchinfo_s patchinfo_t;
+
 //
 // Sprites are patches with a special naming convention so they can be
 //  recognized by R_InitSprites.
 // The base name is NNNNFx or NNNNFxFx, with x indicating the rotation,
-//  x = 0, 1-7.
+//  x = 0, 1-8, 9+A-G, L/R
 // The sprite and frame specified by a thing_t is range checked at run time.
 // A sprite is a patch_t that is assumed to represent a three dimensional
 //  object and may have multiple rotations predrawn.
 // Horizontal flipping is used to save space, thus NNNNF2F5 defines a mirrored patch.
 // Some sprites will only have one picture used for all views: NNNNF0
+// Some sprites will take the entirety of the left side: NNNNFL
+// Or the right side: NNNNFR
+// Or both, mirrored: NNNNFLFR
 //
 typedef struct
 {
 	// If false use 0 for any position.
 	// Note: as eight entries are available, we might as well insert the same
 	//  name eight times.
-	UINT8 rotate;
+	UINT8 rotate; // see spriterotateflags_t above
 
-	// Lump to use for view angles 0-7.
-	lumpnum_t lumppat[8]; // lump number 16 : 16 wad : lump
-	size_t lumpid[8]; // id in the spriteoffset, spritewidth, etc. tables
+	// Lump to use for view angles 0-7/15.
+	lumpnum_t lumppat[16]; // lump number 16 : 16 wad : lump
+	size_t lumpid[16]; // id in the spriteoffset, spritewidth, etc. tables
 
-	// Flip bits (1 = flip) to use for view angles 0-7.
-	UINT8 flip;
+	// Flip bits (1 = flip) to use for view angles 0-7/15.
+	UINT16 flip;
+
+#ifdef ROTSPRITE
+	rotsprite_t rotsprite;
+#endif
 } spriteframe_t;
 
 //

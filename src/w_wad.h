@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -73,6 +73,25 @@ typedef struct
 } lumpinfo_t;
 
 // =========================================================================
+//                         'VIRTUAL' RESOURCES
+// =========================================================================
+
+typedef struct {
+	char name[9];
+	UINT8* data;
+	size_t size;
+} virtlump_t;
+
+typedef struct {
+	size_t numlumps;
+	virtlump_t* vlumps;
+} virtres_t;
+
+virtres_t* vres_GetMap(lumpnum_t);
+void vres_Free(virtres_t*);
+virtlump_t* vres_Find(const virtres_t*, const char*);
+
+// =========================================================================
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
@@ -96,13 +115,13 @@ typedef enum restype
 	RET_UNKNOWN,
 } restype_t;
 
-
 typedef struct wadfile_s
 {
 	char *filename;
 	restype_t type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
+	lumpcache_t *patchcache;
 #ifdef HWRENDER
 	aatree_t *hwrcache; // patches are cached in renderer's native format
 #endif
@@ -110,7 +129,8 @@ typedef struct wadfile_s
 	FILE *handle;
 	UINT32 filesize; // for network
 	UINT8 md5sum[16];
-	boolean important;
+
+	boolean important; // also network - !W_VerifyNMUSlumps
 } wadfile_t;
 
 #define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad flumpnum>>16) // wad file number in upper word
@@ -126,14 +146,10 @@ void W_Shutdown(void);
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
-UINT16 W_InitFile(const char *filename);
-#ifdef DELFILE
-void W_UnloadWadFile(UINT16 num);
-#endif
+UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
 
-// W_InitMultipleFiles returns 1 if all is okay, 0 otherwise,
-// so that it stops with a message if a file was not found, but not if all is okay.
-INT32 W_InitMultipleFiles(char **filenames);
+// W_InitMultipleFiles exits if a file was not found, but not if all is okay.
+void W_InitMultipleFiles(char **filenames, UINT16 mainfiles);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);
@@ -154,6 +170,7 @@ size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump);
 size_t W_LumpLength(lumpnum_t lumpnum);
 
 boolean W_IsLumpWad(lumpnum_t lumpnum); // for loading maps from WADs in PK3s
+boolean W_IsLumpFolder(UINT16 wad, UINT16 lump); // for detecting folder "lumps"
 
 #ifdef HAVE_ZLIB
 void zerr(int ret); // zlib error checking
@@ -169,19 +186,16 @@ void *W_CacheLumpNum(lumpnum_t lump, INT32 tag);
 void *W_CacheLumpNumForce(lumpnum_t lumpnum, INT32 tag);
 
 boolean W_IsLumpCached(lumpnum_t lump, void *ptr);
+boolean W_IsPatchCached(lumpnum_t lump, void *ptr);
 
 void *W_CacheLumpName(const char *name, INT32 tag);
 void *W_CachePatchName(const char *name, INT32 tag);
 
-#ifdef HWRENDER
-//void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag); // return a patch_t
+void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag); // return a patch_t
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag); // return a patch_t
-#else
-//#define W_CachePatchNumPwad(wad, lump, tag) W_CacheLumpNumPwad(wad, lump, tag)
-#define W_CachePatchNum(lumpnum, tag) W_CacheLumpNum(lumpnum, tag)
-#endif
 
 void W_UnlockCachedPatch(void *patch);
+void W_FlushCachedPatches(void);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);
 

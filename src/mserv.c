@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,11 +16,9 @@
 #include <errno.h>
 #endif
 
-#if !defined (UNDER_CE)
 #include <time.h>
-#endif
 
-#if (defined (NOMD5) || defined (NOMSERV)) && !defined (NONET)
+#if (defined (NOMSERV)) && !defined (NONET)
 #define NONET
 #endif
 
@@ -30,23 +28,13 @@
 #define HAVE_IPV6
 #endif
 
-#if (defined (_WIN32) || defined (_WIN32_WCE)) && !defined (_XBOX)
+#ifdef _WIN32
 #define RPC_NO_WINDOWS_H
 #ifdef HAVE_IPV6
 #include <ws2tcpip.h>
 #else
 #include <winsock.h>     // socket(),...
 #endif //!HAVE_IPV6
-#else
-#ifdef __OS2__
-#include <sys/types.h>
-#endif // __OS2__
-
-#ifdef HAVE_LWIP
-#include <lwip/inet.h>
-#include <kos/net.h>
-#include <lwip/lwip.h>
-#define ioctl lwip_ioctl
 #else
 #include <arpa/inet.h>
 #ifdef __APPLE_CC__
@@ -56,25 +44,12 @@
 #endif
 #include <sys/socket.h> // socket(),...
 #include <netinet/in.h> // sockaddr_in
-#ifdef _PS3
-#include <net/select.h>
-#elif !defined(_arch_dreamcast)
 #include <netdb.h> // getaddrinfo(),...
 #include <sys/ioctl.h>
-#endif
-#endif
-
-#ifdef _arch_dreamcast
-#include "sdl12/SRB2DC/dchelp.h"
-#endif
 
 #include <sys/time.h> // timeval,... (TIMEOUT)
 #include <errno.h>
-#endif // _WIN32/_WIN32_WCE
-
-#ifdef __OS2__
-#include <errno.h>
-#endif // __OS2__
+#endif // _WIN32
 #endif // !NONET
 
 #include "doomstat.h"
@@ -90,10 +65,6 @@
 #include "m_menu.h"
 #include "m_argv.h" // Alam is going to kill me <3
 #include "m_misc.h" //  GetRevisionString()
-
-#ifdef _WIN32_WCE
-#include "sdl12/SRB2CE/cehelp.h"
-#endif
 
 #include "i_addrinfo.h"
 
@@ -183,13 +154,13 @@ typedef struct
 #endif
 
 // win32 or djgpp
-#if defined (_WIN32) || defined (_WIN32_WCE) || defined (__DJGPP__)
+#if defined (_WIN32) || defined (__DJGPP__)
 #define ioctl ioctlsocket
 #define close closesocket
 #ifdef WATTCP
 #define strerror strerror_s
 #endif
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #undef errno
 #define errno h_errno // some very strange things happen when not using h_error
 #endif
@@ -215,11 +186,11 @@ static enum { MSCS_NONE, MSCS_WAITING, MSCS_REGISTERED, MSCS_FAILED } con_state 
 static INT32 msnode = -1;
 UINT16 current_port = 0;
 
-#if (defined (_WIN32) || defined (_WIN32_WCE) || defined (_WIN32)) && !defined (NONET)
+#if defined (_WIN32) && !defined (NONET)
 typedef SOCKET SOCKET_TYPE;
 #define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__) || defined (_PS3)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
 typedef int SOCKET_TYPE;
 #else
 typedef unsigned long SOCKET_TYPE;
@@ -352,13 +323,9 @@ static INT32 GetServersList(void)
 //
 // MS_Connect()
 //
-static INT32 MS_Connect(const char *ip_addr, const char *str_port, INT32 async)
+#ifndef NONET
+static INT32 MS_SubConnect(const char *ip_addr, const char *str_port, INT32 async, struct sockaddr *bindaddr, socklen_t bindaddrlen)
 {
-#ifdef NONET
-	(void)ip_addr;
-	(void)str_port;
-	(void)async;
-#else
 	struct my_addrinfo *ai, *runp, hints;
 	int gaie;
 
@@ -385,50 +352,100 @@ static INT32 MS_Connect(const char *ip_addr, const char *str_port, INT32 async)
 		socket_fd = socket(runp->ai_family, runp->ai_socktype, runp->ai_protocol);
 		if (socket_fd != (SOCKET_TYPE)ERRSOCKET)
 		{
-			if (async) // do asynchronous connection
+			if (!bindaddr || bind(socket_fd, bindaddr, bindaddrlen) == 0)
 			{
+				if (async) // do asynchronous connection
+				{
 #ifdef FIONBIO
 #ifdef WATTCP
-				char res = 1;
+					char res = 1;
 #else
-				unsigned long res = 1;
+					unsigned long res = 1;
 #endif
 
-				ioctl(socket_fd, FIONBIO, &res);
+					ioctl(socket_fd, FIONBIO, &res);
 #endif
 
-				if (connect(socket_fd, runp->ai_addr, (socklen_t)runp->ai_addrlen) == ERRSOCKET)
-				{
-#ifdef _WIN32 // humm, on win32/win64 it doesn't work with EINPROGRESS (stupid windows)
-					if (WSAGetLastError() != WSAEWOULDBLOCK)
-#else
-					if (errno != EINPROGRESS)
-#endif
+					if (connect(socket_fd, runp->ai_addr, (socklen_t)runp->ai_addrlen) == ERRSOCKET)
 					{
-						con_state = MSCS_FAILED;
-						CloseConnection();
-						I_freeaddrinfo(ai);
-						return MS_CONNECT_ERROR;
+#ifdef _WIN32 // humm, on win32/win64 it doesn't work with EINPROGRESS (stupid windows)
+						if (WSAGetLastError() != WSAEWOULDBLOCK)
+#else
+							if (errno != EINPROGRESS)
+#endif
+							{
+								con_state = MSCS_FAILED;
+								CloseConnection();
+								I_freeaddrinfo(ai);
+								return MS_CONNECT_ERROR;
+							}
 					}
+					con_state = MSCS_WAITING;
+					FD_ZERO(&wset);
+					FD_SET(socket_fd, &wset);
+					select_timeout.tv_sec = 0, select_timeout.tv_usec = 0;
+					I_freeaddrinfo(ai);
+					return 0;
 				}
-				con_state = MSCS_WAITING;
-				FD_ZERO(&wset);
-				FD_SET(socket_fd, &wset);
-				select_timeout.tv_sec = 0, select_timeout.tv_usec = 0;
-				I_freeaddrinfo(ai);
-				return 0;
+				else if (connect(socket_fd, runp->ai_addr, (socklen_t)runp->ai_addrlen) != ERRSOCKET)
+				{
+					I_freeaddrinfo(ai);
+					return 0;
+				}
 			}
-			else if (connect(socket_fd, runp->ai_addr, (socklen_t)runp->ai_addrlen) != ERRSOCKET)
+			close(socket_fd);
+		}
+		runp = runp->ai_next;
+	}
+	I_freeaddrinfo(ai);
+	return MS_CONNECT_ERROR;
+}
+#endif/*NONET xd*/
+
+static INT32 MS_Connect(const char *ip_addr, const char *str_port, INT32 async)
+{
+#ifdef NONET
+	(void)ip_addr;
+	(void)str_port;
+	(void)async;
+	return MS_CONNECT_ERROR;
+#else
+	const char *lhost;
+	struct my_addrinfo hints;
+	struct my_addrinfo *ai, *aip;
+	int c;
+	if (M_CheckParm("-bindaddr") && ( lhost = M_GetNextParm() ))
+	{
+		memset (&hints, 0x00, sizeof(hints));
+#ifdef AI_ADDRCONFIG
+		hints.ai_flags = AI_ADDRCONFIG;
+#endif
+		hints.ai_family = AF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_protocol = IPPROTO_TCP;
+		if (( c = I_getaddrinfo(lhost, 0, &hints, &ai) ) != 0)
+		{
+			CONS_Printf(
+					"mserv.c: bind to %s: %s\n",
+					lhost,
+					gai_strerror(c));
+			return MS_GETHOSTBYNAME_ERROR;
+		}
+		for (aip = ai; aip; aip = aip->ai_next)
+		{
+			c = MS_SubConnect(ip_addr, str_port, async, aip->ai_addr, aip->ai_addrlen);
+			if (c == 0)
 			{
 				I_freeaddrinfo(ai);
 				return 0;
 			}
 		}
-		runp = runp->ai_next;
+		I_freeaddrinfo(ai);
+		return c;
 	}
-	I_freeaddrinfo(ai);
-#endif
-	return MS_CONNECT_ERROR;
+	else
+		return MS_SubConnect(ip_addr, str_port, async, 0, 0);
+#endif/*NONET xd*/
 }
 
 #define NUM_LIST_SERVER MAXSERVERLIST

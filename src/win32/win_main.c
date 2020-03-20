@@ -42,7 +42,7 @@
 #include "fabdxlib.h"
 #include "win_main.h"
 #include "win_dbg.h"
-#include "../i_sound.h" // midi pause/unpause
+#include "../s_sound.h" // pause sound with handling
 #include "../g_input.h" // KEY_MOUSEWHEELxxx
 #include "../screen.h" // for BASEVID*
 
@@ -110,9 +110,9 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
 			// pause music when alt-tab
 			if (appActive  && !paused)
-				I_ResumeSong();
+				S_ResumeAudio();
 			else if (!paused)
-				I_PauseSong();
+				S_PauseAudio();
 			{
 				HANDLE ci = GetStdHandle(STD_INPUT_HANDLE);
 				DWORD mode;

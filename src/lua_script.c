@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2018 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,14 +11,15 @@
 /// \brief Lua scripting basics
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "dehacked.h"
 #include "z_zone.h"
 #include "w_wad.h"
 #include "p_setup.h"
 #include "r_state.h"
+#include "r_sky.h"
 #include "g_game.h"
+#include "f_finale.h"
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "p_local.h"
@@ -79,8 +80,234 @@ FUNCNORETURN static int LUA_Panic(lua_State *L)
 #endif
 }
 
+// Moved here from lib_getenum.
+int LUA_PushGlobals(lua_State *L, const char *word)
+{
+	if (fastcmp(word,"gamemap")) {
+		lua_pushinteger(L, gamemap);
+		return 1;
+	} else if (fastcmp(word,"maptol")) {
+		lua_pushinteger(L, maptol);
+		return 1;
+	} else if (fastcmp(word,"ultimatemode")) {
+		lua_pushboolean(L, ultimatemode != 0);
+		return 1;
+	} else if (fastcmp(word,"mariomode")) {
+		lua_pushboolean(L, mariomode != 0);
+		return 1;
+	} else if (fastcmp(word,"twodlevel")) {
+		lua_pushboolean(L, twodlevel != 0);
+		return 1;
+	} else if (fastcmp(word,"circuitmap")) {
+		lua_pushboolean(L, circuitmap);
+		return 1;
+	} else if (fastcmp(word,"stoppedclock")) {
+		lua_pushboolean(L, stoppedclock);
+		return 1;
+	} else if (fastcmp(word,"netgame")) {
+		lua_pushboolean(L, netgame);
+		return 1;
+	} else if (fastcmp(word,"multiplayer")) {
+		lua_pushboolean(L, multiplayer);
+		return 1;
+	} else if (fastcmp(word,"modeattacking")) {
+		lua_pushboolean(L, modeattacking);
+		return 1;
+	} else if (fastcmp(word,"splitscreen")) {
+		lua_pushboolean(L, splitscreen);
+		return 1;
+	} else if (fastcmp(word,"gamecomplete")) {
+		lua_pushboolean(L, gamecomplete);
+		return 1;
+	} else if (fastcmp(word,"devparm")) {
+		lua_pushboolean(L, devparm);
+		return 1;
+	} else if (fastcmp(word,"modifiedgame")) {
+		lua_pushboolean(L, modifiedgame && !savemoddata);
+		return 1;
+	} else if (fastcmp(word,"menuactive")) {
+		lua_pushboolean(L, menuactive);
+		return 1;
+	} else if (fastcmp(word,"paused")) {
+		lua_pushboolean(L, paused);
+		return 1;
+	} else if (fastcmp(word,"bluescore")) {
+		lua_pushinteger(L, bluescore);
+		return 1;
+	} else if (fastcmp(word,"redscore")) {
+		lua_pushinteger(L, redscore);
+		return 1;
+	} else if (fastcmp(word,"timelimit")) {
+		lua_pushinteger(L, cv_timelimit.value);
+		return 1;
+	} else if (fastcmp(word,"pointlimit")) {
+		lua_pushinteger(L, cv_pointlimit.value);
+		return 1;
+	// begin map vars
+	} else if (fastcmp(word,"spstage_start")) {
+		lua_pushinteger(L, spstage_start);
+		return 1;
+	} else if (fastcmp(word,"sstage_start")) {
+		lua_pushinteger(L, sstage_start);
+		return 1;
+	} else if (fastcmp(word,"sstage_end")) {
+		lua_pushinteger(L, sstage_end);
+		return 1;
+	} else if (fastcmp(word,"smpstage_start")) {
+		lua_pushinteger(L, smpstage_start);
+		return 1;
+	} else if (fastcmp(word,"smpstage_end")) {
+		lua_pushinteger(L, smpstage_end);
+		return 1;
+	} else if (fastcmp(word,"titlemap")) {
+		lua_pushinteger(L, titlemap);
+		return 1;
+	} else if (fastcmp(word,"titlemapinaction")) {
+		lua_pushboolean(L, (titlemapinaction != TITLEMAP_OFF));
+		return 1;
+	} else if (fastcmp(word,"bootmap")) {
+		lua_pushinteger(L, bootmap);
+		return 1;
+	} else if (fastcmp(word,"tutorialmap")) {
+		lua_pushinteger(L, tutorialmap);
+		return 1;
+	} else if (fastcmp(word,"tutorialmode")) {
+		lua_pushboolean(L, tutorialmode);
+		return 1;
+	// end map vars
+	// begin CTF colors
+	} else if (fastcmp(word,"skincolor_redteam")) {
+		lua_pushinteger(L, skincolor_redteam);
+		return 1;
+	} else if (fastcmp(word,"skincolor_blueteam")) {
+		lua_pushinteger(L, skincolor_blueteam);
+		return 1;
+	} else if (fastcmp(word,"skincolor_redring")) {
+		lua_pushinteger(L, skincolor_redring);
+		return 1;
+	} else if (fastcmp(word,"skincolor_bluering")) {
+		lua_pushinteger(L, skincolor_bluering);
+		return 1;
+	// end CTF colors
+	// begin timers
+	} else if (fastcmp(word,"invulntics")) {
+		lua_pushinteger(L, invulntics);
+		return 1;
+	} else if (fastcmp(word,"sneakertics")) {
+		lua_pushinteger(L, sneakertics);
+		return 1;
+	} else if (fastcmp(word,"flashingtics")) {
+		lua_pushinteger(L, flashingtics);
+		return 1;
+	} else if (fastcmp(word,"tailsflytics")) {
+		lua_pushinteger(L, tailsflytics);
+		return 1;
+	} else if (fastcmp(word,"underwatertics")) {
+		lua_pushinteger(L, underwatertics);
+		return 1;
+	} else if (fastcmp(word,"spacetimetics")) {
+		lua_pushinteger(L, spacetimetics);
+		return 1;
+	} else if (fastcmp(word,"extralifetics")) {
+		lua_pushinteger(L, extralifetics);
+		return 1;
+	} else if (fastcmp(word,"nightslinktics")) {
+		lua_pushinteger(L, nightslinktics);
+		return 1;
+	} else if (fastcmp(word,"gameovertics")) {
+		lua_pushinteger(L, gameovertics);
+		return 1;
+	} else if (fastcmp(word,"ammoremovaltics")) {
+		lua_pushinteger(L, ammoremovaltics);
+		return 1;
+	// end timers
+	} else if (fastcmp(word,"gametype")) {
+		lua_pushinteger(L, gametype);
+		return 1;
+	} else if (fastcmp(word,"gametyperules")) {
+		lua_pushinteger(L, gametyperules);
+		return 1;
+	} else if (fastcmp(word,"leveltime")) {
+		lua_pushinteger(L, leveltime);
+		return 1;
+	} else if (fastcmp(word,"sstimer")) {
+		lua_pushinteger(L, sstimer);
+		return 1;
+	} else if (fastcmp(word,"curWeather")) {
+		lua_pushinteger(L, curWeather);
+		return 1;
+	} else if (fastcmp(word,"globalweather")) {
+		lua_pushinteger(L, globalweather);
+		return 1;
+	} else if (fastcmp(word,"levelskynum")) {
+		lua_pushinteger(L, levelskynum);
+		return 1;
+	} else if (fastcmp(word,"globallevelskynum")) {
+		lua_pushinteger(L, globallevelskynum);
+		return 1;
+	} else if (fastcmp(word,"mapmusname")) {
+		lua_pushstring(L, mapmusname);
+		return 1;
+	} else if (fastcmp(word,"mapmusflags")) {
+		lua_pushinteger(L, mapmusflags);
+		return 1;
+	} else if (fastcmp(word,"mapmusposition")) {
+		lua_pushinteger(L, mapmusposition);
+		return 1;
+	// local player variables, by popular request
+	} else if (fastcmp(word,"consoleplayer")) { // player controlling console (aka local player 1)
+		if (consoleplayer < 0 || !playeringame[consoleplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[consoleplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"displayplayer")) { // player visible on screen (aka display player 1)
+		if (displayplayer < 0 || !playeringame[displayplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[displayplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"secondarydisplayplayer")) { // local/display player 2, for splitscreen
+		if (!splitscreen || secondarydisplayplayer < 0 || !playeringame[secondarydisplayplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
+		return 1;
+	// end local player variables
+	} else if (fastcmp(word,"server")) {
+		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"emeralds")) {
+		lua_pushinteger(L, emeralds);
+		return 1;
+	} else if (fastcmp(word,"gravity")) {
+		lua_pushinteger(L, gravity);
+		return 1;
+	} else if (fastcmp(word,"VERSIONSTRING")) {
+		lua_pushstring(L, VERSIONSTRING);
+		return 1;
+	} else if (fastcmp(word, "token")) {
+		lua_pushinteger(L, token);
+		return 1;
+	}
+	return 0;
+}
+
+// See the above.
+int LUA_CheckGlobals(lua_State *L, const char *word)
+{
+	if (fastcmp(word, "redscore"))
+		redscore = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "bluescore"))
+		bluescore = (UINT32)luaL_checkinteger(L, 2);
+	else
+		return 0;
+
+	// Global variable set, so return and don't error.
+	return 1;
+}
+
 // This function decides which global variables you are allowed to set.
-static int noglobals(lua_State *L)
+static int setglobals(lua_State *L)
 {
 	const char *csname;
 	char *name;
@@ -105,6 +332,9 @@ static int noglobals(lua_State *L)
 		Z_Free(name);
 		return 0;
 	}
+
+	if (LUA_CheckGlobals(L, csname))
+		return 0;
 
 	Z_Free(name);
 	return luaL_error(L, "Implicit global " LUA_QS " prevented. Create a local variable instead.", csname);
@@ -144,7 +374,7 @@ static void LUA_ClearState(void)
 
 	// lock the global namespace
 	lua_getmetatable(L, LUA_GLOBALSINDEX);
-		lua_pushcfunction(L, noglobals);
+		lua_pushcfunction(L, setglobals);
 		lua_setfield(L, -2, "__newindex");
 		lua_newtable(L);
 		lua_setfield(L, -2, "__metatable");
@@ -164,6 +394,11 @@ void LUA_ClearExtVars(void)
 }
 #endif
 
+// Use this variable to prevent certain functions from running
+// if they were not called on lump load
+// (i.e. they were called in hooks or coroutines etc)
+boolean lua_lumploading = false;
+
 // Load a script from a MYFILE
 static inline void LUA_LoadFile(MYFILE *f, char *name)
 {
@@ -175,11 +410,15 @@ static inline void LUA_LoadFile(MYFILE *f, char *name)
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
 
+	lua_lumploading = true; // turn on loading flag
+
 	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, 0)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
 	lua_gc(gL, LUA_GCCOLLECT, 0);
+
+	lua_lumploading = false; // turn off again
 }
 
 // Load a script from a lump
@@ -408,18 +647,27 @@ void LUA_InvalidateLevel(void)
 {
 	thinker_t *th;
 	size_t i;
+	ffloor_t *rover = NULL;
 	if (!gL)
 		return;
-
-	for (th = thinkercap.next; th && th != &thinkercap; th = th->next)
-		LUA_InvalidateUserdata(th);
+	for (i = 0; i < NUM_THINKERLISTS; i++)
+		for (th = thlist[i].next; th && th != &thlist[i]; th = th->next)
+			LUA_InvalidateUserdata(th);
 
 	LUA_InvalidateMapthings();
 
 	for (i = 0; i < numsubsectors; i++)
 		LUA_InvalidateUserdata(&subsectors[i]);
 	for (i = 0; i < numsectors; i++)
+	{
 		LUA_InvalidateUserdata(&sectors[i]);
+		LUA_InvalidateUserdata(&sectors[i].lines);
+		if (sectors[i].ffloors)
+		{
+			for (rover = sectors[i].ffloors; rover; rover = rover->next)
+				LUA_InvalidateUserdata(rover);
+		}
+	}
 	for (i = 0; i < numlines; i++)
 	{
 		LUA_InvalidateUserdata(&lines[i]);
@@ -429,6 +677,16 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&sides[i]);
 	for (i = 0; i < numvertexes; i++)
 		LUA_InvalidateUserdata(&vertexes[i]);
+#ifdef HAVE_LUA_SEGS
+	for (i = 0; i < numsegs; i++)
+		LUA_InvalidateUserdata(&segs[i]);
+	for (i = 0; i < numnodes; i++)
+	{
+		LUA_InvalidateUserdata(&nodes[i]);
+		LUA_InvalidateUserdata(nodes[i].bbox);
+		LUA_InvalidateUserdata(nodes[i].children);
+	}
+#endif
 }
 
 void LUA_InvalidateMapthings(void)
@@ -468,6 +726,11 @@ enum
 	ARCH_SIDE,
 	ARCH_SUBSECTOR,
 	ARCH_SECTOR,
+#ifdef HAVE_LUA_SEGS
+	ARCH_SEG,
+	ARCH_NODE,
+#endif
+	ARCH_FFLOOR,
 #ifdef ESLOPE
 	ARCH_SLOPE,
 #endif
@@ -490,6 +753,11 @@ static const struct {
 	{META_SIDE,     ARCH_SIDE},
 	{META_SUBSECTOR,ARCH_SUBSECTOR},
 	{META_SECTOR,   ARCH_SECTOR},
+#ifdef HAVE_LUA_SEGS
+	{META_SEG,      ARCH_SEG},
+	{META_NODE,     ARCH_NODE},
+#endif
+	{META_FFLOOR,	ARCH_FFLOOR},
 #ifdef ESLOPE
 	{META_SLOPE,    ARCH_SLOPE},
 #endif
@@ -694,6 +962,56 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			else {
 				WRITEUINT8(save_p, ARCH_SECTOR);
 				WRITEUINT16(save_p, sector - sectors);
+			}
+			break;
+		}
+#ifdef HAVE_LUA_SEGS
+		case ARCH_SEG:
+		{
+			seg_t *seg = *((seg_t **)lua_touserdata(gL, myindex));
+			if (!seg)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_SEG);
+				WRITEUINT16(save_p, seg - segs);
+			}
+			break;
+		}
+		case ARCH_NODE:
+		{
+			node_t *node = *((node_t **)lua_touserdata(gL, myindex));
+			if (!node)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_NODE);
+				WRITEUINT16(save_p, node - nodes);
+			}
+			break;
+		}
+#endif
+		case ARCH_FFLOOR:
+		{
+			ffloor_t *rover = *((ffloor_t **)lua_touserdata(gL, myindex));
+			if (!rover)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				ffloor_t *r2;
+				UINT16 i = 0;
+				// search for id
+				for (r2 = rover->target->ffloors; r2; r2 = r2->next)
+				{
+					if (r2 == rover)
+						break;
+					i++;
+				}
+				if (!r2)
+					WRITEUINT8(save_p, ARCH_NULL);
+				else
+				{
+					WRITEUINT8(save_p, ARCH_FFLOOR);
+					WRITEUINT16(save_p, rover->target - sectors);
+					WRITEUINT16(save_p, i);
+				}
 			}
 			break;
 		}
@@ -914,6 +1232,23 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_SECTOR:
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
 		break;
+#ifdef HAVE_LUA_SEGS
+	case ARCH_SEG:
+		LUA_PushUserdata(gL, &segs[READUINT16(save_p)], META_SEG);
+		break;
+	case ARCH_NODE:
+		LUA_PushUserdata(gL, &nodes[READUINT16(save_p)], META_NODE);
+		break;
+#endif
+	case ARCH_FFLOOR:
+	{
+		sector_t *sector = &sectors[READUINT16(save_p)];
+		UINT16 id = READUINT16(save_p);
+		ffloor_t *rover = P_GetFFloorByID(sector, id);
+		if (rover)
+			LUA_PushUserdata(gL, rover, META_FFLOOR);
+		break;
+	}
 #ifdef ESLOPE
 	case ARCH_SLOPE:
 		LUA_PushUserdata(gL, P_SlopeById(READUINT16(save_p)), META_SLOPE);
@@ -1016,19 +1351,22 @@ void LUA_Archive(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!playeringame[i] && i > 0) // dedicated servers...
 			continue;
 		// all players in game will be archived, even if they just add a 0.
 		ArchiveExtVars(&players[i], "player");
 	}
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
-		{
-			// archive function will determine when to skip mobjs,
-			// and write mobjnum in otherwise.
-			ArchiveExtVars(th, "mobj");
-		}
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
+		// archive function will determine when to skip mobjs,
+		// and write mobjnum in otherwise.
+		ArchiveExtVars(th, "mobj");
+	}
+
 	WRITEUINT32(save_p, UINT32_MAX); // end of mobjs marker, replaces mobjnum.
 
 	LUAh_NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
@@ -1049,17 +1387,21 @@ void LUA_UnArchive(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!playeringame[i] && i > 0) // dedicated servers...
 			continue;
 		UnArchiveExtVars(&players[i]);
 	}
 
 	do {
 		mobjnum = READUINT32(save_p); // read a mobjnum
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
-			if (th->function.acp1 == (actionf_p1)P_MobjThinker
-			&& ((mobj_t *)th)->mobjnum == mobjnum) // find matching mobj
-				UnArchiveExtVars(th); // apply variables
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+			if (((mobj_t *)th)->mobjnum != mobjnum) // find matching mobj
+				continue;
+			UnArchiveExtVars(th); // apply variables
+		}
 	} while(mobjnum != UINT32_MAX); // repeat until end of mobjs marker.
 
 	LUAh_NetArchiveHook(NetUnArchive); // call the NetArchive hook in unarchive mode
@@ -1080,5 +1422,3 @@ int Lua_optoption(lua_State *L, int narg,
 			return i;
 	return -1;
 }
-
-#endif // HAVE_BLUA

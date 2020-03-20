@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by Graue.
-// Copyright (C) 2006-2018 by Sonic Team Junior.
+// Copyright (C) 2006-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -50,3 +50,5 @@ size_t strlcpy(char *dst, const char *src, size_t siz)
 }
 
 #endif
+
+#include "strcasestr.c"

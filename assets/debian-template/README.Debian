@@ -1,0 +1,73 @@
+srb2 for Debian
+---------------
+
+SRB2 Debian package!
+Hi there, to rebuild this package just use the SRB2 Makefile system, or, optionally, run
+dpkg-buildpackage in the in /assets directory. You can build these with or without a key
+if you want, but if you want to put these on a repo, generate your own GnuPG key as per the
+https://help.ubuntu.com/community/GnuPrivacyGuardHowto instructions and pass the -k<keyid>
+command to debuild. Make sure you export the key footprint and give them to your users to install
+with apt-key add. Thanks!
+
+ -- Callum Dickinson <gcfreak_ag20@hotmail.com>  Fri, 26 Nov 2010 18:25:31 +1300
+
+
+---------------
+
+
+Templating
+
+Note that you MUST run [repo-root]/debian_template.sh before running debuild
+on these scripts! debian_template.sh fills these template files with working values.
+
+You should also set PACKAGE_NAME_EMAIL="John Doe <jdoe@example.com>" to match
+the identity of the key you will use to sign the package.
+
+
+Building for Launchpad PPA
+
+Run this step first:
+
+    1. source [repo-root]/debian_template.sh
+       * Initializes defaults for the package variables and fills in templates.
+
+Use these steps to prepare building a source package for Launchpad:
+
+    1. cd [repo-root]/assets/
+    2. debuild -T clean-all (optional; if you already have asset files, this clears them)
+
+Build the source package:
+
+    1. debuild -T build (this downloads the asset files from srb2.org if necessary)
+    2. debuild -S (builds the source package for Launchpad, including the asset files)
+
+
+Signing for Launchpad PPA
+
+First, follow Callum's instructions to generate a GnuPG key with your identity. You will need
+to publish the fingerprint of that key to Ubuntu's key server.
+
+    https://help.ubuntu.com/community/GnuPrivacyGuardHowto#Uploading_the_key_to_Ubuntu_keyserver
+
+Next, you will have to add that key fingerprint to your Launchpad account. Go to your Launchpad
+profile and click the yellow Edit button next to "OpenPGP keys". Once you add the key, you can
+upload signed source packages and publish them onto your PPA.
+
+IF YOU UPLOAD A PACKAGE and Launchpad does NOT send you a confirmation or rejection email, that
+means your key is not set up correctly with your Launchpad account.
+
+Finally, if your packages have not already been signed, follow these steps:
+
+    1. cd ..
+       * Packages are located in the parent folder of where debuild was called
+    2. debsign "srb2-data_[version]_source.changes"
+       * You may need to specify -k [key-fingerprint]
+
+
+Uploading for Launchpad PPA
+
+Follow the instructions at <https://help.launchpad.net/Packaging/PPA/Uploading> to upload
+to your PPA and have Launchpad build your binary deb packages.
+
+
+ -- Marco Zafra <marco.a.zafra@gmail.com>  Mon, 26 Nov 2018 21:13:00 -0500

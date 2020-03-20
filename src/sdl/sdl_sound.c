@@ -2,6 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
+// Copyright (C) 2014-2020 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -32,7 +33,7 @@
 #endif
 
 #ifdef HAVE_MIXER
-#include "SDL_mixer.h"
+#include <SDL_mixer.h>
 /* This is the version number macro for the current SDL_mixer version: */
 #ifndef SDL_MIXER_COMPILEDVERSION
 #define SDL_MIXER_COMPILEDVERSION \
@@ -1376,6 +1377,37 @@ boolean I_SetSongSpeed(float speed)
 }
 
 /// ------------------------
+//  MUSIC SEEKING
+/// ------------------------
+
+UINT32 I_GetSongLength(void)
+{
+	return 0;
+}
+
+boolean I_SetSongLoopPoint(UINT32 looppoint)
+{
+	(void)looppoint;
+	return false;
+}
+
+UINT32 I_GetSongLoopPoint(void)
+{
+	return 0;
+}
+
+boolean I_SetSongPosition(UINT32 position)
+{
+	(void)position;
+	return false;
+}
+
+UINT32 I_GetSongPosition(void)
+{
+	return 0;
+}
+
+/// ------------------------
 //  MUSIC PLAYBACK
 /// ------------------------
 
@@ -1400,6 +1432,8 @@ static void I_ResumeGME(void)
 
 boolean I_LoadSong(char *data, size_t len)
 {
+	(void)data;
+	(void)len;
 	return false;
 }
 
@@ -1441,6 +1475,49 @@ boolean I_SetSongTrack(int track)
 {
 	(void)track;
 	return false;
+}
+
+/// ------------------------
+/// MUSIC FADING
+/// ------------------------
+
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}
+
+void I_StopFadingSong(void)
+{
+}
+
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))
+{
+	(void)target_volume;
+	(void)source_volume;
+	(void)ms;
+	(void)callback;
+	return false;
+}
+
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void))
+{
+	(void)target_volume;
+	(void)ms;
+	(void)callback;
+	return false;
+}
+
+boolean I_FadeOutStopSong(UINT32 ms)
+{
+	(void)ms;
+	return false;
+}
+
+boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
+{
+        (void)ms;
+        (void)looping;
+        return false;
 }
 
 /// ------------------------

@@ -1,5 +1,5 @@
 /*
-Copyright 2019, James R.
+Copyright 2019-2020, James R.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -24,10 +24,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define APNG_H
 
 #ifndef _MSC_VER
-#ifndef _WII
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
-#endif
 #endif
 #endif
 

@@ -12,6 +12,7 @@
 - SDL2-Mixer (Linux/OS X only)
 - libupnp (Linux/OS X only)
 - libgme (Linux/OS X only)
+- libopenmpt (Linux/OS X only)
 
 ## Compiling
 

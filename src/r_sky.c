@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -64,10 +64,6 @@ void R_SetupSkyDraw(void)
 	// the horizon line in a 256x128 sky texture
 	skytexturemid = (textures[skytexture]->height/2)<<FRACBITS;
 
-	// get the right drawer, it was set by screen.c, depending on the
-	// current video mode bytes per pixel (quick fix)
-	wallcolfunc = walldrawerfunc;
-
 	R_SetSkyScale();
 }
 
@@ -80,5 +76,5 @@ void R_SetupSkyDraw(void)
 void R_SetSkyScale(void)
 {
 	fixed_t difference = vid.fdupx-(vid.dupx<<FRACBITS);
-	skyscale = FixedDiv(FRACUNIT, vid.fdupx+difference);
+	skyscale = FixedDiv(fovtan, vid.fdupx+difference);
 }

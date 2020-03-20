@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,20 +15,16 @@
 
 #include "command.h"
 
-#if (defined (_WIN32) || defined (_WIN32_WCE)) && !defined (__CYGWIN__) && !defined (_XBOX)
-#if defined (_WIN32_WCE) && defined (__GNUC__)
-#include <sys/wcetypes.h>
-#else
+#if defined (_WIN32) && !defined (__CYGWIN__)
 #define RPC_NO_WINDOWS_H
 #include <windows.h>
-#endif
 #define DNWH HWND
 #else
 #define DNWH void * // unused in DOS version
 #endif
 
 // quickhack for V_Init()... to be cleaned up
-#if defined (DC) || defined (_WIN32_WCE) || defined (PSP) || defined (NOPOSTPROCESSING)
+#ifdef NOPOSTPROCESSING
 #define NUMSCREENS 2
 #else
 #define NUMSCREENS 5
@@ -43,19 +39,8 @@
 // we try to re-allocate a minimum of buffers for stability of the memory,
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
-#if defined (_WIN32_WCE) || defined (DC) || defined (_PSP) || defined (_NDS)
-#define MAXVIDWIDTH 320
-#define MAXVIDHEIGHT 200
-#elif defined (GP2X)
-#define MAXVIDWIDTH 320 //720
-#define MAXVIDHEIGHT 240 //576
-#elif defined (WII) // Wii, VGA/640x480
-#define MAXVIDWIDTH 640
-#define MAXVIDHEIGHT 480
-#else
 #define MAXVIDWIDTH 1920 // don't set this too high because actually
 #define MAXVIDHEIGHT 1200 // lots of tables are allocated with the MAX size.
-#endif
 #define BASEVIDWIDTH 320 // NEVER CHANGE THIS! This is the original
 #define BASEVIDHEIGHT 200 // resolution of the graphics.
 
@@ -110,7 +95,7 @@ typedef struct vmode_s
 	INT32 windowed; // if true this is a windowed mode
 	INT32 numpages;
 	vesa_extra_t *pextradata; // vesa mode extra data
-#if defined (_WIN32) && !defined (_XBOX)
+#ifdef _WIN32
 	INT32 (WINAPI *setmode)(viddef_t *lvid, struct vmode_s *pcurrentmode);
 #else
 	INT32 (*setmode)(viddef_t *lvid, struct vmode_s *pcurrentmode);
@@ -125,18 +110,51 @@ extern vmode_t specialmodes[NUMSPECIALMODES];
 // color mode dependent drawer function pointers
 // ---------------------------------------------
 
-extern void (*wallcolfunc)(void);
+#define BASEDRAWFUNC 0
+
+enum
+{
+	COLDRAWFUNC_BASE = BASEDRAWFUNC,
+	COLDRAWFUNC_FUZZY,
+	COLDRAWFUNC_TRANS,
+	COLDRAWFUNC_SHADE,
+	COLDRAWFUNC_SHADOWED,
+	COLDRAWFUNC_TRANSTRANS,
+	COLDRAWFUNC_TWOSMULTIPATCH,
+	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
+	COLDRAWFUNC_FOG,
+
+	COLDRAWFUNC_MAX
+};
+
 extern void (*colfunc)(void);
-extern void (*basecolfunc)(void);
-extern void (*fuzzcolfunc)(void);
-extern void (*transcolfunc)(void);
-extern void (*shadecolfunc)(void);
+extern void (*colfuncs[COLDRAWFUNC_MAX])(void);
+
+enum
+{
+	SPANDRAWFUNC_BASE = BASEDRAWFUNC,
+	SPANDRAWFUNC_TRANS,
+	SPANDRAWFUNC_SPLAT,
+	SPANDRAWFUNC_TRANSSPLAT,
+	SPANDRAWFUNC_FOG,
+#ifndef NOWATER
+	SPANDRAWFUNC_WATER,
+#endif
+#ifdef ESLOPE
+	SPANDRAWFUNC_TILTED,
+	SPANDRAWFUNC_TILTEDTRANS,
+	SPANDRAWFUNC_TILTEDSPLAT,
+#ifndef NOWATER
+	SPANDRAWFUNC_TILTEDWATER,
+#endif
+#endif
+
+	SPANDRAWFUNC_MAX
+};
+
 extern void (*spanfunc)(void);
-extern void (*basespanfunc)(void);
-extern void (*splatfunc)(void);
-extern void (*transtransfunc)(void);
-extern void (*twosmultipatchfunc)(void);
-extern void (*twosmultipatchtransfunc)(void);
+extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
+extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
 // -----
 // CPUID
@@ -152,21 +170,29 @@ extern boolean R_SSE2;
 // ----------------
 // screen variables
 // ----------------
+
 extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
+
+void SCR_ChangeRenderer(void);
+void SCR_ChangeRendererCVars(INT32 mode);
+extern UINT8 setrenderneeded;
 
 extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
-extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_fullscreen;
+extern CV_PossibleValue_t cv_renderer_t[];
+
+extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
+#ifdef HWRENDER
+extern consvar_t cv_newrenderer;
+#endif
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 
-// quick fix for tall/short skies, depending on bytesperpixel
-extern void (*walldrawerfunc)(void);
-
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);
+void SCR_SetDrawFuncs(void);
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);
 // Check parms once at startup
@@ -180,5 +206,7 @@ FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 
 // move out to main code for consistency
 void SCR_DisplayTicRate(void);
+void SCR_ClosedCaptions(void);
+void SCR_DisplayLocalPing(void);
 #undef DNWH
 #endif //__SCREEN_H__

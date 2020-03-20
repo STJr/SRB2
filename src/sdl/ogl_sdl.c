@@ -2,6 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 2014-2020 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -94,10 +95,10 @@ boolean LoadGL(void)
 
 	if (SDL_GL_LoadLibrary(OGLLibname) != 0)
 	{
-		I_OutputMsg("Could not load OpenGL Library: %s\n"
+		CONS_Alert(CONS_ERROR, "Could not load OpenGL Library: %s\n"
 					"Falling back to Software mode.\n", SDL_GetError());
 		if (!M_CheckParm ("-OGLlib"))
-			I_OutputMsg("If you know what is the OpenGL library's name, use -OGLlib\n");
+			CONS_Alert(CONS_ERROR, "If you know what is the OpenGL library's name, use -OGLlib\n");
 		return 0;
 	}
 
@@ -127,15 +128,15 @@ boolean LoadGL(void)
 			return SetupGLfunc();
 		else
 		{
-			I_OutputMsg("Could not load GLU Library: %s\n", GLULibname);
+			CONS_Alert(CONS_ERROR, "Could not load GLU Library: %s\n", GLULibname);
 			if (!M_CheckParm ("-GLUlib"))
-				I_OutputMsg("If you know what is the GLU library's name, use -GLUlib\n");
+				CONS_Alert(CONS_ERROR, "If you know what is the GLU library's name, use -GLUlib\n");
 		}
 	}
 	else
 	{
-		I_OutputMsg("Could not load GLU Library\n");
-		I_OutputMsg("If you know what is the GLU library's name, use -GLUlib\n");
+		CONS_Alert(CONS_ERROR, "Could not load GLU Library\n");
+		CONS_Alert(CONS_ERROR, "If you know what is the GLU library's name, use -GLUlib\n");
 	}
 #endif
 	return SetupGLfunc();
@@ -221,20 +222,15 @@ void OglSdlFinishUpdate(boolean waitvbl)
 	HWR_DrawScreenFinalTexture(realwidth, realheight);
 }
 
-EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette, RGBA_t *pgamma)
+EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette)
 {
-	INT32 i = -1;
-	UINT32 redgamma = pgamma->s.red, greengamma = pgamma->s.green,
-		bluegamma = pgamma->s.blue;
-
-	for (i = 0; i < 256; i++)
+	size_t palsize = (sizeof(RGBA_t) * 256);
+	// on a palette change, you have to reload all of the textures
+	if (memcmp(&myPaletteData, palette, palsize))
 	{
-		myPaletteData[i].s.red   = (UINT8)MIN((palette[i].s.red   * redgamma)  /127, 255);
-		myPaletteData[i].s.green = (UINT8)MIN((palette[i].s.green * greengamma)/127, 255);
-		myPaletteData[i].s.blue  = (UINT8)MIN((palette[i].s.blue  * bluegamma) /127, 255);
-		myPaletteData[i].s.alpha = palette[i].s.alpha;
+		memcpy(&myPaletteData, palette, palsize);
+		Flush();
 	}
-	Flush();
 }
 
 #endif //HWRENDER
