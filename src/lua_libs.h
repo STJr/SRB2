@@ -10,8 +10,6 @@
 /// \file  lua_libs.h
 /// \brief libraries for Lua scripting
 
-#ifdef HAVE_BLUA
-
 extern lua_State *gL;
 
 #define LREG_VALID "VALID_USERDATA"
@@ -88,5 +86,3 @@ int LUA_ThinkerLib(lua_State *L);
 int LUA_MapLib(lua_State *L);
 int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);
-
-#endif

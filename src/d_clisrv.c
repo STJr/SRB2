@@ -2547,20 +2547,14 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		}
 	}
 
-#ifdef HAVE_BLUA
 	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
-#else
-	(void)reason;
-#endif
 
 	// don't look through someone's view who isn't there
 	if (playernum == displayplayer)
 	{
-#ifdef HAVE_BLUA
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
 		LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
-#endif
 		displayplayer = consoleplayer;
 	}
 
@@ -2581,9 +2575,7 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		RemoveAdminPlayer(playernum); // don't stay admin after you're gone
 	}
 
-#ifdef HAVE_BLUA
 	LUA_InvalidatePlayer(&players[playernum]);
-#endif
 
 	if (G_TagGametype()) //Check if you still have a game. Location flexible. =P
 		P_CheckSurvivors();
@@ -3177,9 +3169,7 @@ void SV_ResetServer(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-#ifdef HAVE_BLUA
 		LUA_InvalidatePlayer(&players[i]);
-#endif
 		playeringame[i] = false;
 		playernode[i] = UINT8_MAX;
 		memset(playeraddress[i], 0, sizeof(*playeraddress));
@@ -3240,10 +3230,8 @@ void D_QuitNetGame(void)
 
 	// abort send/receive of files
 	CloseNetFile();
-#ifdef HAVE_BLUA
 	RemoveAllLuaFileTransfers();
 	waitingforluafiletransfer = false;
-#endif
 
 	if (server)
 	{
@@ -3414,10 +3402,8 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	if (server && multiplayer && motd[0] != '\0')
 		COM_BufAddText(va("sayto %d %s\n", newplayernum, motd));
 
-#ifdef HAVE_BLUA
 	if (!rejoined)
 		LUAh_PlayerJoin(newplayernum);
-#endif
 }
 
 static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
@@ -3625,10 +3611,8 @@ static void HandleConnect(SINT8 node)
 		SV_SendRefuse(node, M_GetText("Too many players from\nthis node."));
 	else if (netgame && !netbuffer->u.clientcfg.localplayers) // Stealth join?
 		SV_SendRefuse(node, M_GetText("No players from\nthis node."));
-#ifdef HAVE_BLUA
 	else if (luafiletransfers)
 		SV_SendRefuse(node, M_GetText("The server is broadcasting a file\nrequested by a Lua script.\nPlease wait a bit and then\ntry rejoining."));
-#endif
 	else
 	{
 #ifndef NONET
@@ -4215,7 +4199,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 			Net_CloseConnection(node);
 			nodeingame[node] = false;
 			break;
-#ifdef HAVE_BLUA
 		case PT_ASKLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
 			{
@@ -4228,7 +4211,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_SENDING)
 				SV_HandleLuaFileSent(node);
 			break;
-#endif
 // -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_RESYNCHEND:
 			// Only accept PT_RESYNCHEND from the server.
@@ -4356,12 +4338,10 @@ static void HandlePacketFromPlayer(SINT8 node)
 			if (client)
 				Got_Filetxpak();
 			break;
-#ifdef HAVE_BLUA
 		case PT_SENDINGLUAFILE:
 			if (client)
 				CL_PrepareDownloadLuaFile();
 			break;
-#endif
 		default:
 			DEBFILE(va("UNKNOWN PACKET TYPE RECEIVED %d from host %d\n",
 				netbuffer->packettype, node));
