@@ -61,8 +61,6 @@ void R_DrawSpan_NPO2_8 (void)
 	}
 }
 
-#ifdef ESLOPE
-
 #define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f * FIXED_TO_FLOAT(fovtan))
 
 /**	\brief The R_DrawTiltedSpan_NPO2_8 function
@@ -661,7 +659,6 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	}
 #endif
 }
-#endif // ESLOPE
 
 /**	\brief The R_DrawSplat_NPO2_8 function
 	Just like R_DrawSpan_NPO2_8, but skips transparent pixels.
@@ -846,7 +843,6 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 	}
 }
 
-#ifdef ESLOPE
 /**	\brief The R_DrawTiltedTranslucentWaterSpan_NPO2_8 function
 	Like DrawTiltedTranslucentSpan_NPO2, but for water
 */
@@ -1043,5 +1039,4 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	}
 #endif
 }
-#endif // ESLOPE
 #endif // NOWATER

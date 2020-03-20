@@ -77,9 +77,7 @@
 #include "hardware/hw_model.h"
 #endif
 
-#ifdef ESLOPE
 #include "p_slopes.h"
-#endif
 
 #include "fastcmp.h" // textmap parsing
 
@@ -909,11 +907,9 @@ static void P_InitializeSector(sector_t *ss)
 	ss->preciplist = NULL;
 	ss->touching_preciplist = NULL;
 
-#ifdef ESLOPE
 	ss->f_slope = NULL;
 	ss->c_slope = NULL;
 	ss->hasslope = false;
-#endif
 
 	ss->spawn_lightlevel = ss->lightlevel;
 
@@ -3580,9 +3576,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
-#ifdef ESLOPE
 	P_SpawnSlopes(fromnetsave);
-#endif
 
 	P_SpawnMapThings(!fromnetsave);
 	skyboxmo[0] = skyboxviewpnts[0];

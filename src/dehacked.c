@@ -9678,11 +9678,10 @@ struct {
 	// Node flags
 	{"NF_SUBSECTOR",NF_SUBSECTOR}, // Indicate a leaf.
 #endif
-#ifdef ESLOPE
+
 	// Slope flags
 	{"SL_NOPHYSICS",SL_NOPHYSICS},
 	{"SL_DYNAMIC",SL_DYNAMIC},
-#endif
 
 	// Angles
 	{"ANG1",ANG1},
