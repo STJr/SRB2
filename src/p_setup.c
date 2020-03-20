@@ -947,6 +947,8 @@ static void P_LoadSectors(UINT8 *data)
 
 		ss->floorpic_angle = ss->ceilingpic_angle = 0;
 
+		ss->colormap_protected = false;
+
 		P_InitializeSector(ss);
 	}
 }
@@ -1468,6 +1470,8 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		textmap_colormap.used = true;
 		textmap_colormap.flags |= CMF_FADEFULLBRIGHTSPRITES;
 	}
+	else if (fastcmp(param, "colormapprotected") && fastcmp("true", val))
+		sectors[i].colormap_protected = true;
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
@@ -1701,6 +1705,8 @@ static void P_LoadTextmap(void)
 		sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
 
 		sc->floorpic_angle = sc->ceilingpic_angle = 0;
+
+		sc->colormap_protected = false;
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;

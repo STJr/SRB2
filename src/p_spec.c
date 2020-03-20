@@ -3518,6 +3518,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(line->args[0], secnum)) >= 0;)
 			{
+				if (sectors[secnum].colormap_protected)
+					continue;
+
 				P_ResetColormapFader(&sectors[secnum]);
 
 				if (line->args[2] & 1) // relative calc
@@ -3851,6 +3854,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			for (secnum = -1; (secnum = P_FindSectorFromTag(line->args[0], secnum)) >= 0;)
 			{
 				extracolormap_t *source_exc, *dest_exc, *exc;
+
+				if (sectors[secnum].colormap_protected)
+					continue;
 
 				// Don't interrupt ongoing fade
 				if (!(line->args[3] & 8192)
@@ -7413,6 +7419,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0;)
 				{
 					extracolormap_t *exc;
+
+					if (sectors[s].colormap_protected)
+						continue;
+
 					if (!udmf)
 						exc = sides[lines[i].sidenum[0]].colormap_data;
 					else
@@ -8370,7 +8380,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 		d->destlightlevel = -1;
 
 	// Set a separate thinker for colormap fading
-	if (docolormap && !(rover->flags & FF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap)
+	if (docolormap && !(rover->flags & FF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap && !sectors[rover->secnum].colormap_protected)
 	{
 		extracolormap_t *dest_exc,
 			*source_exc = sectors[rover->secnum].extra_colormap ? sectors[rover->secnum].extra_colormap : R_GetDefaultColormap();
