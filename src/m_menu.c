@@ -6657,12 +6657,6 @@ static void M_HandleAddons(INT32 choice)
 							M_AddonExec(KEY_ENTER);
 							break;
 						case EXT_LUA:
-#ifndef HAVE_BLUA
-							S_StartSound(NULL, sfx_lose);
-							M_StartMessage(va("%c%s\x80\nThis copy of SRB2 was compiled\nwithout support for .lua files.\n\n(Press a key)\n", ('\x80' + (highlightflags>>V_CHARCOLORSHIFT)), dirmenu[dir_on[menudepthleft]]+DIR_STRING),NULL,MM_NOTHING);
-							break;
-#endif
-						/* FALLTHRU */
 						case EXT_SOC:
 						case EXT_WAD:
 #ifdef USE_KART
@@ -10394,7 +10388,7 @@ static void M_DrawConnectMenu(void)
 	for (i = 0; i < min(serverlistcount - serverlistpage * SERVERS_PER_PAGE, SERVERS_PER_PAGE); i++)
 	{
 		INT32 slindex = i + serverlistpage * SERVERS_PER_PAGE;
-		UINT32 globalflags = ((serverlist[slindex].info.numberofplayer >= serverlist[slindex].info.maxplayer) ? V_TRANSLUCENT : 0)
+		UINT32 globalflags = (serverlist[slindex].info.refusereason ? V_TRANSLUCENT : 0)
 			|((itemOn == FIRSTSERVERLINE+i) ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE;
 
 		V_DrawString(currentMenu->x, S_LINEY(i), globalflags, serverlist[slindex].info.servername);

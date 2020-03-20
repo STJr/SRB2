@@ -11,7 +11,6 @@
 /// \brief hooks for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "doomstat.h"
 #include "p_mobj.h"
 #include "g_game.h"
@@ -69,6 +68,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"ViewpointSwitch",
 	"SeenPlayer",
 	"PlayerThink",
+	"ShouldJingleContinue",
 	NULL
 };
 
@@ -81,6 +81,7 @@ struct hook_s
 	union {
 		mobjtype_t mt;
 		char *skinname;
+		char *musname;
 		char *funcname;
 	} s;
 	boolean error;
@@ -142,12 +143,14 @@ static int lib_addHook(lua_State *L)
 	case hook_HurtMsg:
 	case hook_MobjMoveBlocked:
 	case hook_MapThingSpawn:
+	case hook_FollowMobj:
 		hook.s.mt = MT_NULL;
 		if (lua_isnumber(L, 2))
 			hook.s.mt = lua_tonumber(L, 2);
 		luaL_argcheck(L, hook.s.mt < NUMMOBJTYPES, 2, "invalid mobjtype_t");
 		break;
 	case hook_BotAI:
+	case hook_ShouldJingleContinue:
 		hook.s.skinname = NULL;
 		if (lua_isstring(L, 2))
 		{ // lowercase copy
@@ -203,6 +206,7 @@ static int lib_addHook(lua_State *L)
 	case hook_MobjRemoved:
 	case hook_MobjMoveBlocked:
 	case hook_MapThingSpawn:
+	case hook_FollowMobj:
 		lastp = &mobjhooks[hook.s.mt];
 		break;
 	case hook_JumpSpecial:
@@ -210,7 +214,6 @@ static int lib_addHook(lua_State *L)
 	case hook_SpinSpecial:
 	case hook_JumpSpinSpecial:
 	case hook_PlayerSpawn:
-	case hook_FollowMobj:
 	case hook_PlayerCanDamage:
 	case hook_TeamSwitch:
 	case hook_ViewpointSwitch:
@@ -1364,7 +1367,34 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 
 	lua_settop(gL, 0);
 
-	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	// Look for all generic mobj follow item hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_FollowMobj)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			LUA_PushUserdata(gL, mobj, META_MOBJ);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			hooked = true;
+		lua_pop(gL, 1);
+	}
+
+	for (hookp = mobjhooks[mobj->type]; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_FollowMobj)
 			continue;
@@ -1632,4 +1662,45 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 }
 #endif // SEENAMES
 
-#endif
+boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
+{
+	hook_p hookp;
+	boolean keepplaying = false;
+	if (!gL || !(hooksAvailable[hook_ShouldJingleContinue/8] & (1<<(hook_ShouldJingleContinue%8))))
+		return true;
+
+	lua_settop(gL, 0);
+	hud_running = true; // local hook
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_ShouldJingleContinue
+			|| (hookp->s.musname && strcmp(hookp->s.musname, musname)))
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			lua_pushstring(gL, musname);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1) && lua_toboolean(gL, -1))
+			keepplaying = true; // Keep playing this boolean
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	hud_running = false;
+
+	return keepplaying;
+}

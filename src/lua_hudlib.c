@@ -11,7 +11,6 @@
 /// \brief custom HUD rendering library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "r_defs.h"
 #include "r_local.h"
@@ -1466,5 +1465,3 @@ void LUAh_IntermissionHUD(void)
 	lua_pop(gL, -1);
 	hud_running = false;
 }
-
-#endif

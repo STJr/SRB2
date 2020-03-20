@@ -33,9 +33,7 @@
 
 #include "doomstat.h"
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h" // level title
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"

@@ -57,9 +57,7 @@
 
 #include "filesrch.h" // refreshdirmenu
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h" // level title
-#endif
 
 #include "f_finale.h" // wipes
 
@@ -3096,7 +3094,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !(players[i].spectator && players[i].quittime))
+		if (playeringame[i] && !(players[i].spectator || players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -3526,9 +3524,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
 
-#ifdef HAVE_BLUA
 	LUA_InvalidateLevel();
-#endif
 
 	for (ss = sectors; sectors+numsectors != ss; ss++)
 	{
@@ -3665,9 +3661,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
-#ifdef HAVE_BLUA
 		LUAh_MapLoad();
-#endif
 	}
 
 	// No render mode, stop here.
@@ -3859,10 +3853,8 @@ boolean P_AddWadFile(const char *wadfilename)
 
 		// Update the detected resources.
 		// Note: ALWAYS load Lua scripts first, SOCs right after, and the remaining resources afterwards.
-#ifdef HAVE_BLUA
 //		if (luaNum) // Lua scripts.
 //			P_LoadLuaScrRange(wadnum, luaPos, luaNum);
-#endif
 //		if (socNum) // SOCs.
 //			P_LoadDehackRange(wadnum, socPos, socNum);
 		if (sfxNum) // Sounds. TODO: Function currently only updates already existing sounds, the rest is handled somewhere else.

@@ -395,7 +395,7 @@ void P_GiveFinishFlags(player_t *player)
 		mobj_t* flag = P_SpawnMobjFromMobj(player->mo, xoffs, yoffs, 0, MT_FINISHFLAG);
 		flag->angle = angle;
 		angle += FixedAngle(120*FRACUNIT);
-		
+
 		P_SetTarget(&flag->target, player->mo);
 	}
 }
@@ -1109,7 +1109,6 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 	if (!player->mo || player->spectator || !thing || P_MobjWasRemoved(thing))
 		return false;
 
-#ifdef HAVE_BLUA
 	{
 		UINT8 shouldCollide = LUAh_PlayerCanDamage(player, thing);
 		if (P_MobjWasRemoved(thing))
@@ -1119,7 +1118,6 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 		else if (shouldCollide == 2)
 			return false; // force no
 	}
-#endif
 
 	// Invinc/super. Not for Monitors.
 	if (!(thing->flags & MF_MONITOR) && (player->powers[pw_invulnerability] || player->powers[pw_super]))
@@ -1521,7 +1519,7 @@ void P_PlayJingle(player_t *player, jingletype_t jingletype)
 
 	char newmusic[7];
 	strncpy(newmusic, musname, 7);
-#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+#ifdef HAVE_LUA_MUSICPLUS
  	if(LUAh_MusicJingle(jingletype, newmusic, &musflags, &looping))
  		return;
 #endif
@@ -1536,7 +1534,7 @@ void P_PlayJingle(player_t *player, jingletype_t jingletype)
 void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, boolean looping, UINT16 status)
 {
 	// If gamestate != GS_LEVEL, always play the jingle (1-up intermission)
-	if (gamestate == GS_LEVEL && !P_IsLocalPlayer(player))
+	if (gamestate == GS_LEVEL && player && !P_IsLocalPlayer(player))
 		return;
 
 	S_RetainMusic(musname, musflags, looping, 0, status);
@@ -1544,7 +1542,7 @@ void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, b
 	S_ChangeMusicInternal(musname, looping);
 }
 
-boolean P_EvaluateMusicStatus(UINT16 status)
+boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 {
 	// \todo lua hook
 	int i;
@@ -1601,8 +1599,11 @@ boolean P_EvaluateMusicStatus(UINT16 status)
 				result = (players[i].nightstime && players[i].nightstime <= 10*TICRATE);
 				break;
 
-			case JT_NONE:   // Null state
 			case JT_OTHER:  // Other state
+				result = LUAh_ShouldJingleContinue(&players[i], musname);
+				break;
+
+			case JT_NONE:   // Null state
 			case JT_MASTER: // Main level music
 			default:
 				result = true;
@@ -1865,10 +1866,8 @@ void P_SpawnShieldOrb(player_t *player)
 		I_Error("P_SpawnShieldOrb: player->mo is NULL!\n");
 #endif
 
-#ifdef HAVE_BLUA
 	if (LUAh_ShieldSpawn(player))
 		return;
-#endif
 
 	if (player->powers[pw_shield] & SH_FORCE)
 		orbtype = MT_FORCE_ORB;
@@ -4633,13 +4632,11 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 		&& (player->pflags & PF_JUMPSTASIS || player->mo->state-states != S_PLAY_GLIDE_LANDING))
 		return;
 
-#ifdef HAVE_BLUA
 	if (cmd->buttons & BT_USE)
 	{
 		if (LUAh_SpinSpecial(player))
 			return;
 	}
-#endif
 
 #ifdef ESLOPE
 	canstand = (!player->mo->standingslope || (player->mo->standingslope->flags & SL_NOPHYSICS) || abs(player->mo->standingslope->zdelta) < FRACUNIT/2);
@@ -5125,11 +5122,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 				}
 			}
-			if (cmd->buttons & BT_USE // Spin button effects
-	#ifdef HAVE_BLUA
-			&& !LUAh_ShieldSpecial(player)
-	#endif
-				)
+			if (cmd->buttons & BT_USE && !LUAh_ShieldSpecial(player)) // Spin button effects
 			{
 				// Force stop
 				if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
@@ -5207,51 +5200,48 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				// and you don't have a shield, do it!
 				P_DoSuperTransformation(player, false);
 			}
-			else
-#ifdef HAVE_BLUA
-			if (!LUAh_JumpSpinSpecial(player))
-#endif
-			switch (player->charability)
-			{
-				case CA_THOK:
-					if (player->powers[pw_super]) // Super Sonic float
-					{
-						if ((player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
-						&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
+			else if (!LUAh_JumpSpinSpecial(player))
+				switch (player->charability)
+				{
+					case CA_THOK:
+						if (player->powers[pw_super]) // Super Sonic float
 						{
-							if (player->panim != PA_RUN && player->panim != PA_WALK)
+							if ((player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
+							&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
 							{
-								if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
-									P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
-								else
-									P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
-							}
+								if (player->panim != PA_RUN && player->panim != PA_WALK)
+								{
+									if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
+										P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
+									else
+										P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
+								}
 
-							player->mo->momz = 0;
-							player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
+								player->mo->momz = 0;
+								player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
+							}
 						}
-					}
-					break;
-				case CA_TELEKINESIS:
-					if (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || (player->charflags & SF_MULTIABILITY))
-					{
-						P_Telekinesis(player,
-							-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
-							FixedMul(384*FRACUNIT, player->mo->scale));
-					}
-					break;
-				case CA_TWINSPIN:
-					if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || player->charflags & SF_MULTIABILITY))
-					{
-						player->pflags |= PF_THOKKED;
-						S_StartSound(player->mo, sfx_s3k42);
-						player->mo->frame = 0;
-						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
-					}
-					break;
-				default:
-					break;
-			}
+						break;
+					case CA_TELEKINESIS:
+						if (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || (player->charflags & SF_MULTIABILITY))
+						{
+							P_Telekinesis(player,
+								-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
+								FixedMul(384*FRACUNIT, player->mo->scale));
+						}
+						break;
+					case CA_TWINSPIN:
+						if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || player->charflags & SF_MULTIABILITY))
+						{
+							player->pflags |= PF_THOKKED;
+							S_StartSound(player->mo, sfx_s3k42);
+							player->mo->frame = 0;
+							P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
+						}
+						break;
+					default:
+						break;
+				}
 		}
 	}
 
@@ -5287,16 +5277,13 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 	if (cmd->buttons & BT_JUMP && !player->exiting && !P_PlayerInPain(player))
 	{
-#ifdef HAVE_BLUA
 		if (LUAh_JumpSpecial(player))
 			;
-		else
-#endif
-		if (player->pflags & PF_JUMPDOWN) // all situations below this require jump button not to be pressed already
+		// all situations below this require jump button not to be pressed already
+		else if (player->pflags & PF_JUMPDOWN)
 			;
-		else
 		// Jump S3&K style while in quicksand.
-		if (P_InQuicksand(player->mo))
+		else if (P_InQuicksand(player->mo))
 		{
 			P_DoJump(player, true);
 			player->secondjump = 0;
@@ -5308,9 +5295,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			P_SetTarget(&player->mo->tracer, NULL);
 			player->powers[pw_flashing] = TICRATE/4;
 		}
-		else
 		// can't jump while in air, can't jump while jumping
-		if (onground || player->climbing || player->powers[pw_carry])
+		else if (onground || player->climbing || player->powers[pw_carry])
 		{
 			P_DoJump(player, true);
 			player->secondjump = 0;
@@ -5326,9 +5312,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		}*/
 		else if (player->pflags & PF_JUMPED)
 		{
-#ifdef HAVE_BLUA
 			if (!LUAh_AbilitySpecial(player))
-#endif
 			switch (player->charability)
 			{
 				case CA_THOK:
@@ -5523,30 +5507,28 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		}
 		else if (player->pflags & PF_THOKKED)
 		{
-#ifdef HAVE_BLUA
 			if (!LUAh_AbilitySpecial(player))
-#endif
-			switch (player->charability)
-			{
-				case CA_FLY:
-				case CA_SWIM: // Swim
-					if (player->charability == CA_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
-						; // Can't do anything if you're a fish out of water!
-					else if (player->powers[pw_tailsfly]) // If currently flying, give an ascend boost.
-					{
-						player->fly1 = 20;
+				switch (player->charability)
+				{
+					case CA_FLY:
+					case CA_SWIM: // Swim
+						if (player->charability == CA_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
+							; // Can't do anything if you're a fish out of water!
+						else if (player->powers[pw_tailsfly]) // If currently flying, give an ascend boost.
+						{
+							player->fly1 = 20;
 
-						if (player->charability == CA_SWIM)
-							player->fly1 /= 2;
+							if (player->charability == CA_SWIM)
+								player->fly1 /= 2;
 
-						// Slow down!
-						if (player->speed > FixedMul(8*FRACUNIT, player->mo->scale) && player->speed > FixedMul(player->normalspeed>>1, player->mo->scale))
-							P_Thrust(player->mo, R_PointToAngle2(0,0,player->mo->momx,player->mo->momy), FixedMul(-4*FRACUNIT, player->mo->scale));
-					}
-					break;
-				default:
-					break;
-			}
+							// Slow down!
+							if (player->speed > FixedMul(8*FRACUNIT, player->mo->scale) && player->speed > FixedMul(player->normalspeed>>1, player->mo->scale))
+								P_Thrust(player->mo, R_PointToAngle2(0,0,player->mo->momx,player->mo->momy), FixedMul(-4*FRACUNIT, player->mo->scale));
+						}
+						break;
+					default:
+						break;
+				}
 		}
 		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND && !player->powers[pw_super])
 			P_DoJumpShield(player);
@@ -10633,10 +10615,8 @@ boolean P_SpectatorJoinGame(player_t *player)
 		else
 			changeto = (P_RandomFixed() & 1) + 1;
 
-#ifdef HAVE_BLUA
 		if (!LUAh_TeamSwitch(player, changeto, true, false, false))
 			return false;
-#endif
 
 		if (player->mo)
 		{
@@ -10650,11 +10630,9 @@ boolean P_SpectatorJoinGame(player_t *player)
 		//Reset away view
 		if (P_IsLocalPlayer(player) && displayplayer != consoleplayer)
 		{
-#ifdef HAVE_BLUA
 			// Call ViewpointSwitch hooks here.
 			// The viewpoint was forcibly changed.
-			LUAh_ViewpointSwitch(player, &players[displayplayer], true);
-#endif
+			LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 			displayplayer = consoleplayer;
 		}
 
@@ -10672,10 +10650,8 @@ boolean P_SpectatorJoinGame(player_t *player)
 		// respawn in place and sit there for the rest of the round.
 		if (!((gametyperules & GTR_HIDEFROZEN) && leveltime > (hidetime * TICRATE)))
 		{
-#ifdef HAVE_BLUA
 			if (!LUAh_TeamSwitch(player, 3, true, false, false))
 				return false;
-#endif
 			if (player->mo)
 			{
 				P_RemoveMobj(player->mo);
@@ -10699,11 +10675,9 @@ boolean P_SpectatorJoinGame(player_t *player)
 			//Reset away view
 			if (P_IsLocalPlayer(player) && displayplayer != consoleplayer)
 			{
-#ifdef HAVE_BLUA
 				// Call ViewpointSwitch hooks here.
 				// The viewpoint was forcibly changed.
-				LUAh_ViewpointSwitch(player, &players[displayplayer], true);
-#endif
+				LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 				displayplayer = consoleplayer;
 			}
 
@@ -11626,9 +11600,7 @@ void P_PlayerThink(player_t *player)
 		}
 		if (player->playerstate == PST_REBORN)
 		{
-#ifdef HAVE_BLUA
 			LUAh_PlayerThink(player);
-#endif
 			return;
 		}
 	}
@@ -11732,9 +11704,7 @@ void P_PlayerThink(player_t *player)
 
 			if (player->playerstate == PST_DEAD)
 			{
-#ifdef HAVE_BLUA
 				LUAh_PlayerThink(player);
-#endif
 				return;
 			}
 		}
@@ -11857,9 +11827,7 @@ void P_PlayerThink(player_t *player)
 	{
 		player->mo->flags2 &= ~MF2_SHADOW;
 		P_DeathThink(player);
-#ifdef HAVE_BLUA
 		LUAh_PlayerThink(player);
-#endif
 		return;
 	}
 
@@ -11901,9 +11869,7 @@ void P_PlayerThink(player_t *player)
 	{
 		if (P_SpectatorJoinGame(player))
 		{
-#ifdef HAVE_BLUA
 			LUAh_PlayerThink(player);
-#endif
 			return; // player->mo was removed.
 		}
 	}
@@ -12008,9 +11974,7 @@ void P_PlayerThink(player_t *player)
 
 	if (!player->mo)
 	{
-#ifdef HAVE_BLUA
 		LUAh_PlayerThink(player);
-#endif
 		return; // P_MovePlayer removed player->mo.
 	}
 
@@ -12452,9 +12416,7 @@ void P_PlayerThink(player_t *player)
 	}
 #undef dashmode
 
-#ifdef HAVE_BLUA
 	LUAh_PlayerThink(player);
-#endif
 
 /*
 //	Colormap verification
@@ -13004,11 +12966,9 @@ void P_PlayerAfterThink(player_t *player)
 
 		if (player->followmobj)
 		{
-#ifdef HAVE_BLUA
 			if (LUAh_FollowMobj(player, player->followmobj) || P_MobjWasRemoved(player->followmobj))
 				{;}
 			else
-#endif
 			{
 				switch (player->followmobj->type)
 				{

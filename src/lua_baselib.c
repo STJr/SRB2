@@ -11,7 +11,6 @@
 /// \brief basic functions for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
@@ -1040,11 +1039,60 @@ static int lib_pSetObjectMomZ(lua_State *L)
 	return 0;
 }
 
+static int lib_pPlayJingle(lua_State *L)
+{
+	player_t *player = NULL;
+	jingletype_t jingletype = luaL_checkinteger(L, 2);
+	//NOHUD
+	//INLEVEL
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (jingletype >= NUMJINGLES)
+		return luaL_error(L, "jingletype %d out of range (0 - %d)", jingletype, NUMJINGLES-1);
+	P_PlayJingle(player, jingletype);
+	return 0;
+}
+
+static int lib_pPlayJingleMusic(lua_State *L)
+{
+	player_t *player = NULL;
+	const char *musnamearg = luaL_checkstring(L, 2);
+	char musname[7], *p = musname;
+	UINT16 musflags = luaL_optinteger(L, 3, 0);
+	boolean looping = lua_opttrueboolean(L, 4);
+	jingletype_t jingletype = luaL_optinteger(L, 5, JT_OTHER);
+	//NOHUD
+	//INLEVEL
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (jingletype >= NUMJINGLES)
+		return luaL_error(L, "jingletype %d out of range (0 - %d)", jingletype, NUMJINGLES-1);
+
+	musname[6] = '\0';
+	strncpy(musname, musnamearg, 6);
+
+	while (*p) {
+		*p = tolower(*p);
+		++p;
+	}
+
+	P_PlayJingleMusic(player, musname, musflags, looping, jingletype);
+	return 0;
+}
+
 static int lib_pRestoreMusic(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	NOHUD
-	INLEVEL
+	//NOHUD
+	//INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	if (P_IsLocalPlayer(player))
@@ -1674,11 +1722,15 @@ static int lib_pPlayVictorySound(lua_State *L)
 
 static int lib_pPlayLivesJingle(lua_State *L)
 {
-	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	NOHUD
-	INLEVEL
-	if (!player)
-		return LUA_ErrInvalid(L, "player_t");
+	player_t *player = NULL;
+	//NOHUD
+	//INLEVEL
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
 	P_PlayLivesJingle(player);
 	return 0;
 }
@@ -2342,7 +2394,7 @@ static int lib_sStartSound(lua_State *L)
 	const void *origin = NULL;
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	player_t *player = NULL;
-	//NOHUD // kys @whoever did this.
+	//NOHUD
 	if (sound_id >= NUMSFX)
 		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
 	if (!lua_isnil(L, 1))
@@ -2373,7 +2425,7 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	INT32 volume = (INT32)luaL_checkinteger(L, 3);
 	player_t *player = NULL;
-	NOHUD
+	//NOHUD
 
 	if (!lua_isnil(L, 1))
 	{
@@ -2397,7 +2449,7 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 static int lib_sStopSound(lua_State *L)
 {
 	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	NOHUD
+	//NOHUD
 	if (!origin)
 		return LUA_ErrInvalid(L, "mobj_t");
 	S_StopSound(origin);
@@ -2414,7 +2466,7 @@ static int lib_sChangeMusic(lua_State *L)
 	boolean looping;
 	player_t *player = NULL;
 	UINT16 music_flags = 0;
-	NOHUD
+	//NOHUD
 
 	if (lua_isnumber(L, 1))
 	{
@@ -2443,7 +2495,7 @@ static int lib_sChangeMusic(lua_State *L)
 	boolean looping = (boolean)lua_opttrueboolean(L, 2);
 	player_t *player = NULL;
 	UINT16 music_flags = 0;
-	NOHUD
+	//NOHUD
 
 #endif
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
@@ -2474,7 +2526,7 @@ static int lib_sSpeedMusic(lua_State *L)
 	fixed_t fixedspeed = luaL_checkfixed(L, 1);
 	float speed = FIXED_TO_FLOAT(fixedspeed);
 	player_t *player = NULL;
-	NOHUD
+	//NOHUD
 	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
 	{
 		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
@@ -2489,7 +2541,7 @@ static int lib_sSpeedMusic(lua_State *L)
 static int lib_sStopMusic(lua_State *L)
 {
 	player_t *player = NULL;
-	NOHUD
+	//NOHUD
 	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 	{
 		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -2505,7 +2557,7 @@ static int lib_sSetInternalMusicVolume(lua_State *L)
 {
 	UINT32 volume = (UINT32)luaL_checkinteger(L, 1);
 	player_t *player = NULL;
-	NOHUD
+	//NOHUD
 	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
 	{
 		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
@@ -2525,7 +2577,7 @@ static int lib_sSetInternalMusicVolume(lua_State *L)
 static int lib_sStopFadingMusic(lua_State *L)
 {
 	player_t *player = NULL;
-	NOHUD
+	//NOHUD
 	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 	{
 		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -2548,7 +2600,7 @@ static int lib_sFadeMusic(lua_State *L)
 	UINT32 ms;
 	INT32 source_volume;
 	player_t *player = NULL;
-	NOHUD
+	//NOHUD
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 	{
 		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
@@ -2576,8 +2628,6 @@ static int lib_sFadeMusic(lua_State *L)
 		ms = (UINT32)luaL_checkinteger(L, 3);
 	}
 
-	NOHUD
-
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_FadeMusicFromVolume(target_volume, source_volume, ms));
 	else
@@ -2589,7 +2639,7 @@ static int lib_sFadeOutStopMusic(lua_State *L)
 {
 	UINT32 ms = (UINT32)luaL_checkinteger(L, 1);
 	player_t *player = NULL;
-	NOHUD
+	//NOHUD
 	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
 	{
 		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
@@ -2605,10 +2655,29 @@ static int lib_sFadeOutStopMusic(lua_State *L)
 	return 1;
 }
 
+static int lib_sGetMusicLength(lua_State *L)
+{
+	lua_pushinteger(L, S_GetMusicLength());
+	return 1;
+}
+
+static int lib_sGetMusicPosition(lua_State *L)
+{
+	lua_pushinteger(L, S_GetMusicPosition());
+	return 1;
+}
+
+static int lib_sSetMusicPosition(lua_State *L)
+{
+	UINT32 pos = (UINT32)luaL_checkinteger(L, 1);
+	lua_pushboolean(L, S_SetMusicPosition(pos));
+	return 1;
+}
+
 static int lib_sOriginPlaying(lua_State *L)
 {
 	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	NOHUD
+	//NOHUD
 	INLEVEL
 	if (!origin)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -2619,7 +2688,7 @@ static int lib_sOriginPlaying(lua_State *L)
 static int lib_sIdPlaying(lua_State *L)
 {
 	sfxenum_t id = luaL_checkinteger(L, 1);
-	NOHUD
+	//NOHUD
 	if (id >= NUMSFX)
 		return luaL_error(L, "sfx %d out of range (0 - %d)", id, NUMSFX-1);
 	lua_pushboolean(L, S_IdPlaying(id));
@@ -2630,7 +2699,7 @@ static int lib_sSoundPlaying(lua_State *L)
 {
 	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	sfxenum_t id = luaL_checkinteger(L, 2);
-	NOHUD
+	//NOHUD
 	INLEVEL
 	if (!origin)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -2648,7 +2717,7 @@ static int lib_sStartMusicCaption(lua_State *L)
 	const char *caption = luaL_checkstring(L, 1);
 	UINT16 lifespan = (UINT16)luaL_checkinteger(L, 2);
 	//HUDSAFE
-	INLEVEL
+	//INLEVEL
 
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 	{
@@ -3069,6 +3138,8 @@ static luaL_Reg lib[] = {
 	{"P_InSpaceSector",lib_pInSpaceSector},
 	{"P_InQuicksand",lib_pInQuicksand},
 	{"P_SetObjectMomZ",lib_pSetObjectMomZ},
+	{"P_PlayJingle",lib_pPlayJingle},
+	{"P_PlayJingleMusic",lib_pPlayJingleMusic},
 	{"P_RestoreMusic",lib_pRestoreMusic},
 	{"P_SpawnShieldOrb",lib_pSpawnShieldOrb},
 	{"P_SpawnGhostMobj",lib_pSpawnGhostMobj},
@@ -3189,6 +3260,9 @@ static luaL_Reg lib[] = {
 	{"S_StopFadingMusic",lib_sStopFadingMusic},
 	{"S_FadeMusic",lib_sFadeMusic},
 	{"S_FadeOutStopMusic",lib_sFadeOutStopMusic},
+	{"S_GetMusicLength",lib_sGetMusicLength},
+	{"S_GetMusicPosition",lib_sGetMusicPosition},
+	{"S_SetMusicPosition",lib_sSetMusicPosition},
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},
@@ -3237,5 +3311,3 @@ int LUA_BaseLib(lua_State *L)
 	luaL_register(L, NULL, lib);
 	return 0;
 }
-
-#endif

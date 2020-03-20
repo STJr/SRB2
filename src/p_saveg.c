@@ -4183,8 +4183,6 @@ void P_SaveGame(void)
 {
 	P_ArchiveMisc();
 	P_ArchivePlayer();
-
-	// yes, even in non HAVE_BLUA
 	P_ArchiveLuabanksAndConsistency();
 }
 
@@ -4220,9 +4218,7 @@ void P_SaveNetGame(void)
 		P_NetArchiveSpecials();
 		P_NetArchiveColormaps();
 	}
-#ifdef HAVE_BLUA
 	LUA_Archive();
-#endif
 
 	P_ArchiveLuabanksAndConsistency();
 }
@@ -4264,9 +4260,7 @@ boolean P_LoadNetGame(void)
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}
-#ifdef HAVE_BLUA
 	LUA_UnArchive();
-#endif
 
 	// This is stupid and hacky, but maybe it'll work!
 	P_SetRandSeed(P_GetInitSeed());

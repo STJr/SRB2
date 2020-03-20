@@ -11,7 +11,6 @@
 /// \brief mobj/thing library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "r_skins.h"
 #include "p_local.h"
@@ -915,5 +914,3 @@ int LUA_MobjLib(lua_State *L)
 	lua_setglobal(L, "mapthings");
 	return 0;
 }
-
-#endif

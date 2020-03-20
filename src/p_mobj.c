@@ -62,9 +62,7 @@ void P_RunCachedActions(void)
 	{
 		var1 = states[ac->statenum].var1;
 		var2 = states[ac->statenum].var2;
-#ifdef HAVE_BLUA
 		astate = &states[ac->statenum];
-#endif
 		if (ac->mobj && !P_MobjWasRemoved(ac->mobj)) // just in case...
 			states[ac->statenum].action.acp1(ac->mobj);
 		next = ac->next;
@@ -459,9 +457,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 			var1 = st->var1;
 			var2 = st->var2;
-#ifdef HAVE_BLUA
 			astate = st;
-#endif
 			st->action.acp1(mobj);
 
 			// woah. a player was removed by an action.
@@ -585,9 +581,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		{
 			var1 = st->var1;
 			var2 = st->var2;
-#ifdef HAVE_BLUA
 			astate = st;
-#endif
 			st->action.acp1(mobj);
 			if (P_MobjWasRemoved(mobj))
 				return false;
@@ -1906,15 +1900,12 @@ void P_XYMovement(mobj_t *mo)
 				B_MoveBlocked(player);
 		}
 
-#ifdef HAVE_BLUA
 		if (LUAh_MobjMoveBlocked(mo))
 		{
 			if (P_MobjWasRemoved(mo))
 				return;
 		}
-		else
-#endif
-		if (P_MobjWasRemoved(mo))
+		else if (P_MobjWasRemoved(mo))
 			return;
 		else if (mo->flags & MF_BOUNCE)
 		{
@@ -7643,12 +7634,10 @@ static void P_RosySceneryThink(mobj_t *mobj)
 
 static void P_MobjSceneryThink(mobj_t *mobj)
 {
-#ifdef HAVE_BLUA
 	if (LUAh_MobjThinker(mobj))
 		return;
 	if (P_MobjWasRemoved(mobj))
 		return;
-#endif
 
 	if ((mobj->flags2 & MF2_SHIELD) && !P_AddShield(mobj))
 		return;
@@ -7993,9 +7982,7 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 
 		if (!mobj->fuse)
 		{
-#ifdef HAVE_BLUA
 			if (!LUAh_MobjFuse(mobj))
-#endif
 				P_RemoveMobj(mobj);
 			return;
 		}
@@ -8054,9 +8041,7 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 			mobj->fuse--;
 			if (!mobj->fuse)
 			{
-#ifdef HAVE_BLUA
 				if (!LUAh_MobjFuse(mobj))
-#endif
 					P_RemoveMobj(mobj);
 				return;
 			}
@@ -8085,7 +8070,6 @@ static boolean P_MobjPushableThink(mobj_t *mobj)
 
 static boolean P_MobjBossThink(mobj_t *mobj)
 {
-#ifdef HAVE_BLUA
 	if (LUAh_BossThinker(mobj))
 	{
 		if (P_MobjWasRemoved(mobj))
@@ -8094,7 +8078,6 @@ static boolean P_MobjBossThink(mobj_t *mobj)
 	else if (P_MobjWasRemoved(mobj))
 		return false;
 	else
-#endif
 		switch (mobj->type)
 		{
 		case MT_EGGMOBILE:
@@ -10004,113 +9987,110 @@ static boolean P_FuseThink(mobj_t *mobj)
 	if (mobj->fuse)
 		return true;
 
-#ifdef HAVE_BLUA
 	if (LUAh_MobjFuse(mobj) || P_MobjWasRemoved(mobj))
 		;
-	else
-#endif
-		if (mobj->info->flags & MF_MONITOR)
+	else if (mobj->info->flags & MF_MONITOR)
+	{
+		P_MonitorFuseThink(mobj);
+		return false;
+	}
+	else switch (mobj->type)
+	{
+		// gargoyle and snowman handled in P_PushableThinker, not here
+	case MT_THROWNGRENADE:
+	case MT_CYBRAKDEMON_NAPALM_BOMB_LARGE:
+		P_SetMobjState(mobj, mobj->info->deathstate);
+		break;
+	case MT_LHRT:
+		P_KillMobj(mobj, NULL, NULL, 0);
+		break;
+	case MT_BLUEFLAG:
+	case MT_REDFLAG:
+		P_FlagFuseThink(mobj);
+		P_RemoveMobj(mobj);
+		return false;
+	case MT_FANG:
+		if (mobj->flags2 & MF2_SLIDEPUSH)
 		{
-			P_MonitorFuseThink(mobj);
+			var1 = 0;
+			var2 = 0;
+			A_BossDeath(mobj);
 			return false;
 		}
-		else switch (mobj->type)
+		P_SetMobjState(mobj, mobj->state->nextstate);
+		if (P_MobjWasRemoved(mobj))
+			return false;
+		break;
+	case MT_METALSONIC_BATTLE:
+		break; // don't remove
+	case MT_SPIKE:
+		P_SetMobjState(mobj, mobj->state->nextstate);
+		mobj->fuse = mobj->info->speed;
+		if (mobj->spawnpoint)
+			mobj->fuse += mobj->spawnpoint->angle;
+		break;
+	case MT_WALLSPIKE:
+		P_SetMobjState(mobj, mobj->state->nextstate);
+		mobj->fuse = mobj->info->speed;
+		if (mobj->spawnpoint)
+			mobj->fuse += (mobj->spawnpoint->angle / 360);
+		break;
+	case MT_NIGHTSCORE:
+		P_RemoveMobj(mobj);
+		return false;
+	case MT_LAVAFALL:
+		if (mobj->state - states == S_LAVAFALL_DORMANT)
 		{
-			// gargoyle and snowman handled in P_PushableThinker, not here
-		case MT_THROWNGRENADE:
-		case MT_CYBRAKDEMON_NAPALM_BOMB_LARGE:
-			P_SetMobjState(mobj, mobj->info->deathstate);
+			mobj->fuse = 30;
+			P_SetMobjState(mobj, S_LAVAFALL_TELL);
+			S_StartSound(mobj, mobj->info->seesound);
+		}
+		else if (mobj->state - states == S_LAVAFALL_TELL)
+		{
+			mobj->fuse = 40;
+			P_SetMobjState(mobj, S_LAVAFALL_SHOOT);
+			S_StopSound(mobj);
+			S_StartSound(mobj, mobj->info->attacksound);
+		}
+		else
+		{
+			mobj->fuse = 30;
+			P_SetMobjState(mobj, S_LAVAFALL_DORMANT);
+			S_StopSound(mobj);
+		}
+		return false;
+	case MT_PYREFLY:
+		if (mobj->health <= 0)
 			break;
-		case MT_LHRT:
-			P_KillMobj(mobj, NULL, NULL, 0);
-			break;
-		case MT_BLUEFLAG:
-		case MT_REDFLAG:
-			P_FlagFuseThink(mobj);
-			P_RemoveMobj(mobj);
-			return false;
-		case MT_FANG:
-			if (mobj->flags2 & MF2_SLIDEPUSH)
-			{
-				var1 = 0;
-				var2 = 0;
-				A_BossDeath(mobj);
-				return false;
-			}
-			P_SetMobjState(mobj, mobj->state->nextstate);
-			if (P_MobjWasRemoved(mobj))
-				return false;
-			break;
-		case MT_METALSONIC_BATTLE:
-			break; // don't remove
-		case MT_SPIKE:
-			P_SetMobjState(mobj, mobj->state->nextstate);
-			mobj->fuse = mobj->info->speed;
-			if (mobj->spawnpoint)
-				mobj->fuse += mobj->spawnpoint->angle;
-			break;
-		case MT_WALLSPIKE:
-			P_SetMobjState(mobj, mobj->state->nextstate);
-			mobj->fuse = mobj->info->speed;
-			if (mobj->spawnpoint)
-				mobj->fuse += (mobj->spawnpoint->angle / 360);
-			break;
-		case MT_NIGHTSCORE:
-			P_RemoveMobj(mobj);
-			return false;
-		case MT_LAVAFALL:
-			if (mobj->state - states == S_LAVAFALL_DORMANT)
-			{
-				mobj->fuse = 30;
-				P_SetMobjState(mobj, S_LAVAFALL_TELL);
-				S_StartSound(mobj, mobj->info->seesound);
-			}
-			else if (mobj->state - states == S_LAVAFALL_TELL)
-			{
-				mobj->fuse = 40;
-				P_SetMobjState(mobj, S_LAVAFALL_SHOOT);
-				S_StopSound(mobj);
-				S_StartSound(mobj, mobj->info->attacksound);
-			}
-			else
-			{
-				mobj->fuse = 30;
-				P_SetMobjState(mobj, S_LAVAFALL_DORMANT);
-				S_StopSound(mobj);
-			}
-			return false;
-		case MT_PYREFLY:
-			if (mobj->health <= 0)
-				break;
 
-			mobj->extravalue2 = (mobj->extravalue2 + 1) % 3;
-			if (mobj->extravalue2 == 0)
-			{
-				P_SetMobjState(mobj, mobj->info->spawnstate);
-				mobj->fuse = 100;
-				S_StopSound(mobj);
-				S_StartSound(mobj, sfx_s3k8c);
-			}
-			else if (mobj->extravalue2 == 1)
-			{
-				mobj->fuse = 50;
-				S_StartSound(mobj, sfx_s3ka3);
-			}
-			else
-			{
-				P_SetMobjState(mobj, mobj->info->meleestate);
-				mobj->fuse = 100;
-				S_StopSound(mobj);
-				S_StartSound(mobj, sfx_s3kc2l);
-			}
-			return false;
-		case MT_PLAYER:
-			break; // don't remove
-		default:
-			P_SetMobjState(mobj, mobj->info->xdeathstate); // will remove the mobj if S_NULL.
-			break;
-			// Looking for monitors? They moved to a special condition above.
+		mobj->extravalue2 = (mobj->extravalue2 + 1) % 3;
+		if (mobj->extravalue2 == 0)
+		{
+			P_SetMobjState(mobj, mobj->info->spawnstate);
+			mobj->fuse = 100;
+			S_StopSound(mobj);
+			S_StartSound(mobj, sfx_s3k8c);
 		}
+		else if (mobj->extravalue2 == 1)
+		{
+			mobj->fuse = 50;
+			S_StartSound(mobj, sfx_s3ka3);
+		}
+		else
+		{
+			P_SetMobjState(mobj, mobj->info->meleestate);
+			mobj->fuse = 100;
+			S_StopSound(mobj);
+			S_StartSound(mobj, sfx_s3kc2l);
+		}
+		return false;
+	case MT_PLAYER:
+		break; // don't remove
+	default:
+		P_SetMobjState(mobj, mobj->info->xdeathstate); // will remove the mobj if S_NULL.
+		break;
+		// Looking for monitors? They moved to a special condition above.
+	}
 
 	return !P_MobjWasRemoved(mobj);
 }
@@ -10179,7 +10159,6 @@ void P_MobjThinker(mobj_t *mobj)
 		return;
 	}
 
-#ifdef HAVE_BLUA
 	// Check for a Lua thinker first
 	if (!mobj->player)
 	{
@@ -10193,7 +10172,7 @@ void P_MobjThinker(mobj_t *mobj)
 		if (P_MobjWasRemoved(mobj))
 			return;
 	}
-#endif
+
 	// if it's pushable, or if it would be pushable other than temporary disablement, use the
 	// separate thinker
 	if (mobj->flags & MF_PUSHABLE || (mobj->info->flags & MF_PUSHABLE && mobj->fuse))
@@ -10656,7 +10635,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	// Set shadowscale here, before spawn hook so that Lua can change it
 	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
 
-#ifdef HAVE_BLUA
 	// DANGER! This can cause P_SpawnMobj to return NULL!
 	// Avoid using P_RemoveMobj on the newly created mobj in "MobjSpawn" Lua hooks!
 	if (LUAh_MobjSpawn(mobj))
@@ -10667,7 +10645,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	else if (P_MobjWasRemoved(mobj))
 		return NULL;
 	else
-#endif
 	switch (mobj->type)
 	{
 		case MT_ALTVIEWMAN:
@@ -10937,9 +10914,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		{
 			var1 = st->var1;
 			var2 = st->var2;
-#ifdef HAVE_BLUA
 			astate = st;
-#endif
 			st->action.acp1(mobj);
 			// DANGER! This can cause P_SpawnMobj to return NULL!
 			// Avoid using MF_RUNSPAWNFUNC on mobjs whose spawn state expects target or tracer to already be set!
@@ -11037,16 +11012,12 @@ size_t iquehead, iquetail;
 void P_RemoveMobj(mobj_t *mobj)
 {
 	I_Assert(mobj != NULL);
-#ifdef HAVE_BLUA
 	if (P_MobjWasRemoved(mobj))
 		return; // something already removing this mobj.
 
 	mobj->thinker.function.acp1 = (actionf_p1)P_RemoveThinkerDelayed; // shh. no recursing.
 	LUAh_MobjRemoved(mobj);
 	mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker; // needed for P_UnsetThingPosition, etc. to work.
-#else
-	I_Assert(!P_MobjWasRemoved(mobj));
-#endif
 
 	// Rings only, please!
 	if (mobj->spawnpoint &&
@@ -12710,7 +12681,6 @@ static boolean P_SetupBooster(mapthing_t* mthing, mobj_t* mobj, boolean strong)
 
 static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 {
-#ifdef HAVE_BLUA
 	boolean override = LUAh_MapThingSpawn(mobj, mthing);
 
 	if (P_MobjWasRemoved(mobj))
@@ -12718,7 +12688,6 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 
 	if (override)
 		return true;
-#endif
 
 	switch (mobj->type)
 	{
