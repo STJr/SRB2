@@ -1131,8 +1131,11 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 455: // Fade colormaps! mazmazz 9/12/2018 (:flag_us:)
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
-				sd->colormap_data = R_CreateColormapFromLinedef(msd->toptexture, msd->midtexture, msd->bottomtexture);
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				if (!udmf)
+				{
+					sd->colormap_data = R_CreateColormapFromLinedef(msd->toptexture, msd->midtexture, msd->bottomtexture);
+					sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				}
 				break;
 
 			case 413: // Change music
@@ -1713,7 +1716,7 @@ static void P_LoadTextmap(void)
 		{
 			INT32 rgba = P_ColorToRGBA(textmap_colormap.lightcolor, textmap_colormap.lightalpha);
 			INT32 fadergba = P_ColorToRGBA(textmap_colormap.fadecolor, textmap_colormap.fadealpha);
-			sc->extra_colormap = R_CreateColormap(rgba, fadergba, textmap_colormap.fadestart, textmap_colormap.fadeend, textmap_colormap.flags);
+			sc->extra_colormap = sc->spawn_extra_colormap = R_CreateColormap(rgba, fadergba, textmap_colormap.fadestart, textmap_colormap.fadeend, textmap_colormap.flags);
 		}
 		TextmapFixFlatOffsets(sc);
 	}
@@ -1787,9 +1790,9 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
 		ld->backsector = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
 
-		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
 		switch (ld->special)
 		{
+		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
 		case 331: // Trigger linedef executor: Skin - Continuous
 		case 332: // Trigger linedef executor: Skin - Each time
 		case 333: // Trigger linedef executor: Skin - Once
@@ -1803,6 +1806,41 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 				M_Memcpy(ld->text, sides[ld->sidenum[0]].text, strlen(sides[ld->sidenum[0]].text) + 1);
 				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
 					M_Memcpy(ld->text + strlen(ld->text) + 1, sides[ld->sidenum[1]].text, strlen(sides[ld->sidenum[1]].text) + 1);
+			}
+			break;
+		case 447: // Change colormap
+		case 455: // Fade colormap
+			if (udmf)
+				break;
+			if (ld->flags & ML_DONTPEGBOTTOM) // alternate alpha (by texture offsets)
+			{
+				extracolormap_t *exc = R_CopyColormap(sides[ld->sidenum[0]].colormap_data, false);
+				INT16 alpha = max(min(sides[ld->sidenum[0]].textureoffset >> FRACBITS, 25), -25);
+				INT16 fadealpha = max(min(sides[ld->sidenum[0]].rowoffset >> FRACBITS, 25), -25);
+
+				// If alpha is negative, set "subtract alpha" flag and store absolute value
+				if (alpha < 0)
+				{
+					alpha *= -1;
+					ld->args[2] |= 16;
+				}
+				if (fadealpha < 0)
+				{
+					fadealpha *= -1;
+					ld->args[2] |= 256;
+				}
+
+				exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(alpha);
+				exc->fadergba = R_GetRgbaRGB(exc->fadergba) + R_PutRgbaA(fadealpha);
+
+				if (!(sides[ld->sidenum[0]].colormap_data = R_GetColormapFromList(exc)))
+				{
+					exc->colormap = R_CreateLightTable(exc);
+					R_AddColormapToList(exc);
+					sides[ld->sidenum[0]].colormap_data = exc;
+				}
+				else
+					Z_Free(exc);
 			}
 			break;
 		}
@@ -2767,6 +2805,48 @@ static void P_ConvertBinaryMap(void)
 			}
 			else
 				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in the front texture fields)\n", sizeu1(i));
+			break;
+		case 447: //Change colormap
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].flags & ML_EFFECT3)
+				lines[i].args[2] |= 1;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[2] |= 34;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] |= 68;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[2] |= 136;
+			break;
+		case 455: //Fade colormap
+		{
+			INT32 speed = (INT32)((((lines[i].flags & ML_DONTPEGBOTTOM) || !sides[lines[i].sidenum[0]].rowoffset) && lines[i].sidenum[1] != 0xFFFF) ?
+				abs(sides[lines[i].sidenum[1]].rowoffset >> FRACBITS)
+				: abs(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS));
+
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[2] = speed;
+			else
+				lines[i].args[2] = (256 + speed - 1)/speed;
+			if (lines[i].flags & ML_EFFECT3)
+				lines[i].args[3] |= 1;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= 34;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[3] |= 68;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] |= 136;
+			if (lines[i].flags & ML_BOUNCY)
+				lines[i].args[3] |= 4096;
+			if (lines[i].flags & ML_EFFECT5)
+				lines[i].args[3] |= 8192;
+			break;
+		}
+		case 456: //Stop fading colormap
+			lines[i].args[0] = lines[i].tag;
+			break;
+		case 606: //Colormap
+			lines[i].args[0] = lines[i].tag;
 			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling

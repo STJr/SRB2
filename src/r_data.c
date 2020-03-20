@@ -2373,7 +2373,6 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 	boolean subR, boolean subG, boolean subB, boolean subA,
 	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
 	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFlags,
-	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
 	boolean lighttable)
 {
 	INT16 red, green, blue, alpha;
@@ -2409,7 +2408,7 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 			* R_GetRgbaB(exc_addend->rgba)
 		, 255), 0);
 
-	alpha = useAltAlpha ? altAlpha : R_GetRgbaA(exc_addend->rgba);
+	alpha = R_GetRgbaA(exc_addend->rgba);
 	alpha = max(min(R_GetRgbaA(exc_augend->rgba) + (subA ? -1 : 1) * alpha, 25), 0);
 
 	exc_augend->rgba = R_PutRgbaRGBA(red, green, blue, alpha);
@@ -2436,8 +2435,8 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 			* R_GetRgbaB(exc_addend->fadergba)
 		, 255), 0);
 
-	alpha = useAltAlpha ? altFadeAlpha : R_GetRgbaA(exc_addend->fadergba);
-	if (alpha == 25 && !useAltAlpha && !R_GetRgbaRGB(exc_addend->fadergba))
+	alpha = R_GetRgbaA(exc_addend->fadergba);
+	if (alpha == 25 && !R_GetRgbaRGB(exc_addend->fadergba))
 		alpha = 0; // HACK: fadergba A defaults at 25, so don't add anything in this case
 	alpha = max(min(R_GetRgbaA(exc_augend->fadergba) + (subFadeA ? -1 : 1) * alpha, 25), 0);
 
