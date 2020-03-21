@@ -39,9 +39,7 @@
 #include "fastcmp.h"
 #include "console.h"
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
-#endif
 
 // Stage of animation:
 // 0 = text, 1 = art screen
@@ -2762,11 +2760,7 @@ void F_TitleScreenDrawer(void)
 	// rei|miru: use title pics?
 	hidepics = curhidepics;
 	if (hidepics)
-#ifdef HAVE_BLUA
 		goto luahook;
-#else
-		return;
-#endif
 
 	switch(curttmode)
 	{
@@ -3488,10 +3482,8 @@ void F_TitleScreenDrawer(void)
 			break;
 	}
 
-#ifdef HAVE_BLUA
 luahook:
 	LUAh_TitleHUD();
-#endif
 }
 
 // separate animation timer for backgrounds, since we also count

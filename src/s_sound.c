@@ -27,7 +27,7 @@ extern INT32 msg_id;
 #include "g_game.h"
 #include "m_argv.h"
 #include "r_main.h" // R_PointToAngle2() used to calc stereo sep.
-#include "r_things.h" // for skins
+#include "r_skins.h" // for skins
 #include "i_system.h"
 #include "i_sound.h"
 #include "s_sound.h"
@@ -40,7 +40,7 @@ extern INT32 msg_id;
 #include "m_misc.h" // for tunes command
 #include "m_cond.h" // for conditionsets
 
-#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+#ifdef HAVE_LUA_MUSICPLUS
 #include "lua_hook.h" // MusicChange hook
 #endif
 
@@ -2045,7 +2045,7 @@ static musicstack_t *S_GetMusicStackEntry(UINT16 status, boolean fromfirst, INT1
 
 		if (!status || mst->status == status)
 		{
-			if (P_EvaluateMusicStatus(mst->status))
+			if (P_EvaluateMusicStatus(mst->status, mst->musname))
 			{
 				if (!S_MusicExists(mst->musname, !midi_disabled, !digital_disabled)) // paranoia
 					S_RemoveMusicStackEntry(mst); // then continue
@@ -2314,7 +2314,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, 7);
-#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+#ifdef HAVE_LUA_MUSICPLUS
 	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
 		return;
 #endif

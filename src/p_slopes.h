@@ -15,8 +15,6 @@
 
 #include "m_fixed.h" // Vectors
 
-#ifdef ESLOPE
-
 extern pslope_t *slopelist;
 extern UINT16 slopecount;
 
@@ -74,5 +72,4 @@ typedef struct
 
 void T_DynamicSlopeLine (dynplanethink_t* th);
 void T_DynamicSlopeVert (dynplanethink_t* th);
-#endif // #ifdef ESLOPE
 #endif // #ifndef P_SLOPES_H__

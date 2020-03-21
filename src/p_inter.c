@@ -365,10 +365,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	if (special->flags & (MF_ENEMY|MF_BOSS) && special->flags2 & MF2_FRET)
 		return;
 
-#ifdef HAVE_BLUA
 	if (LUAh_TouchSpecial(special, toucher) || P_MobjWasRemoved(special))
 		return;
-#endif
 
 	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
 	elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY)
@@ -1919,10 +1917,8 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	if (!netgame)
 		return; // Presumably it's obvious what's happening in splitscreen.
 
-#ifdef HAVE_BLUA
 	if (LUAh_HurtMsg(player, inflictor, source, damagetype))
 		return;
-#endif
 
 	deadtarget = (player->mo->health <= 0);
 
@@ -2395,10 +2391,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	target->flags2 &= ~(MF2_SKULLFLY|MF2_NIGHTSPULL);
 	target->health = 0; // This makes it easy to check if something's dead elsewhere.
 
-#ifdef HAVE_BLUA
 	if (LUAh_MobjDeath(target, inflictor, source, damagetype) || P_MobjWasRemoved(target))
 		return;
-#endif
 
 	// Let EVERYONE know what happened to a player! 01-29-2002 Tails
 	if (target->player && !target->player->spectator)
@@ -3511,11 +3505,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	player_t *player;
-#ifdef HAVE_BLUA
 	boolean force = false;
-#else
-	static const boolean force = false;
-#endif
 
 	if (objectplacing)
 		return false;
@@ -3533,7 +3523,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return false;
 	}
 
-#ifdef HAVE_BLUA
 	// Everything above here can't be forced.
 	if (!metalrecording)
 	{
@@ -3545,7 +3534,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else if (shouldForce == 2)
 			return false;
 	}
-#endif
 
 	if (!force)
 	{
@@ -3579,10 +3567,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (!force && target->flags2 & MF2_FRET) // Currently flashing from being hit
 			return false;
 
-#ifdef HAVE_BLUA
 		if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
 			return true;
-#endif
 
 		if (target->health > 1)
 			target->flags2 |= MF2_FRET;
@@ -3631,10 +3617,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				|| (G_GametypeHasTeams() && player->ctfteam == source->player->ctfteam)))
 					return false; // Don't run eachother over in special stages and team games and such
 			}
-#ifdef HAVE_BLUA
 			if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 				return true;
-#endif
 			P_NiGHTSDamage(target, source); // -5s :(
 			return true;
 		}
@@ -3687,18 +3671,14 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (force
 			|| (inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE)) // Super Sonic is stunned!
 			{
-#ifdef HAVE_BLUA
 				if (!LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
-#endif
 					P_SuperDamage(player, inflictor, source, damage);
 				return true;
 			}
 			return false;
 		}
-#ifdef HAVE_BLUA
 		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 			return true;
-#endif
 		else if (player->powers[pw_shield] || (player->bot && !ultimatemode))  //If One-Hit Shield
 		{
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);

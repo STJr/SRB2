@@ -72,7 +72,6 @@ boolean CL_CheckDownloadable(void);
 boolean CL_SendRequestFile(void);
 boolean Got_RequestFilePak(INT32 node);
 
-#ifdef HAVE_BLUA
 typedef enum
 {
 	LFTNS_WAITING, // This node is waiting for the server to send the file
@@ -108,7 +107,6 @@ void Got_LuaFile(UINT8 **cp, INT32 playernum);
 void StoreLuaFileCallback(INT32 id);
 void RemoveLuaFileCallback(INT32 id);
 void MakePathDirs(char *path);
-#endif
 
 void SV_AbortSendFiles(INT32 node);
 void CloseNetFile(void);

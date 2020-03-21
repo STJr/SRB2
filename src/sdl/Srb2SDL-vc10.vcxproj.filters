@@ -417,6 +417,9 @@
     <ClInclude Include="..\r_segs.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
+    <ClInclude Include="..\r_skins.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
     <ClInclude Include="..\r_sky.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
@@ -847,6 +850,9 @@
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_segs.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_skins.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_sky.c">
