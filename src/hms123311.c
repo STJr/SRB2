@@ -18,7 +18,7 @@
 
 consvar_t cv_http_masterserver = {
 	"http_masterserver",
-	"https://www.jameds.org/SRB2/MS/0",
+	"https://mb.srb2.org/MS/0",
 	CV_SAVE,
 
 	NULL, NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
@@ -166,7 +166,7 @@ HMS_fetch_rooms (int joining)
 
 	int i;
 
-	hms = HMS_connect("rooms?token=%s&verbose", cv_masterserver_token.string);
+	hms = HMS_connect("rooms");
 	if (HMS_do(hms))
 	{
 		p = hms->buffer;
@@ -190,16 +190,6 @@ HMS_fetch_rooms (int joining)
 				break;
 		}
 
-		if (joining)
-		{
-			room_list[i].header.buffer[0] = 1;
-			room_list[i].id = 0;
-			strcpy(room_list[i].name, "All");
-			strcpy(room_list[i].motd, "Wildcard.");
-
-			i++;
-		}
-
 		room_list[i].header.buffer[0] = 0;
 	}
 	HMS_end(hms);
@@ -213,15 +203,15 @@ HMS_register (void)
 	char *title;
 	int ok;
 
-	hms = HMS_connect("rooms/%d/register?token=%s",
-			ms_RoomId,
-			cv_masterserver_token.string
-	);
+	hms = HMS_connect("rooms/%d/register", ms_RoomId);
 	title = curl_easy_escape(hms->curl, cv_servername.string, 0);
 	sprintf(post,
-			"port=%d&title=%s",
+			"port=%d&title=%s&version=%d.%d.%d",
 			current_port,
-			title
+			title,
+			VERSION/100,
+			VERSION%100,
+			SUBVERSION
 	);
 	curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
 
@@ -243,10 +233,7 @@ void
 HMS_unlist (void)
 {
 	struct HMS_buffer *hms;
-	hms = HMS_connect("servers/%s/unlist?token=%s",
-			hms_server_token,
-			cv_masterserver_token.string
-	);
+	hms = HMS_connect("servers/%s/unlist", hms_server_token);
 	curl_easy_setopt(hms->curl, CURLOPT_CUSTOMREQUEST, "POST");
 	/*curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS,
 			cv_masterserver_token.string);*/
@@ -261,10 +248,7 @@ HMS_update (void)
 	struct HMS_buffer *hms;
 	char *title;
 
-	hms = HMS_connect("servers/%s/update?token=%s",
-			hms_server_token,
-			cv_masterserver_token.string
-	);
+	hms = HMS_connect("servers/%s/update", hms_server_token);
 
 	title = curl_easy_escape(hms->curl, cv_servername.string, 0);
 	sprintf(post, "title=%s", title);
@@ -280,7 +264,7 @@ void
 HMS_list_servers (void)
 {
 	struct HMS_buffer *hms;
-	hms = HMS_connect("servers?token=%s", cv_masterserver_token.string);
+	hms = HMS_connect("servers");
 	if (HMS_do(hms))
 		CONS_Printf("%s", hms->buffer);
 	HMS_end(hms);
@@ -303,13 +287,10 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 
 	if (room_number > 0)
 	{
-		hms = HMS_connect("rooms/%d/servers?token=%s",
-				room_number,
-				cv_masterserver_token.string
-		);
+		hms = HMS_connect("rooms/%d/servers", room_number);
 	}
 	else
-		hms = HMS_connect("servers?token=%s", cv_masterserver_token.string);
+		hms = HMS_connect("servers");
 
 	if (HMS_do(hms))
 	{
