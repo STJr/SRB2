@@ -41,12 +41,13 @@ static INT32 found;
 const char *M_GetUrlProtocolArg(void)
 {
 	INT32 i;
+	const size_t len = strlen(SERVER_URL_PROTOCOL);
 
 	for (i = 1; i < myargc; i++)
 	{
-		if (!strnicmp(myargv[i], "srb2://", 7))
+		if (strlen(myargv[i]) > len && !strnicmp(myargv[i], SERVER_URL_PROTOCOL, len))
 		{
-			return &myargv[i][7];
+			return &myargv[i][len];
 		}
 	}
 

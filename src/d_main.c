@@ -895,7 +895,7 @@ static void IdentifyVersion(void)
 	{
 		size_t i;
 
-		CONS_Printf("srb2:// connect links load game files from the SRB2 application's stored directory. Switching to ");
+		CONS_Printf("%s connect links load game files from the SRB2 application's stored directory. Switching to ", SERVER_URL_PROTOCOL);
 		strlcpy(srb2path, myargv[0], sizeof(srb2path));
 
 		// Get just the directory, minus the EXE name
