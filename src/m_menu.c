@@ -5074,6 +5074,17 @@ static boolean M_SetNextMapOnPlatter(void)
 }
 #endif
 
+static boolean M_GametypeHasLevels(INT32 gt)
+{
+	INT32 mapnum;
+
+	for (mapnum = 0; mapnum < NUMMAPS; mapnum++)
+		if (M_CanShowLevelOnPlatter(mapnum, gt))
+			return true;
+
+	return false;
+}
+
 static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 {
 	INT32 mapnum = 0, prevmapnum = 0, col = 0, rows = 0;
@@ -5391,7 +5402,10 @@ static void M_HandleLevelPlatter(INT32 choice)
 		case KEY_RIGHTARROW:
 			if (levellistmode == LLM_CREATESERVER && !lsrow)
 			{
-				CV_AddValue(&cv_newgametype, 1);
+				INT32 startinggametype = cv_newgametype.value;
+				do
+					CV_AddValue(&cv_newgametype, 1);
+				while (cv_newgametype.value != startinggametype && !M_GametypeHasLevels(cv_newgametype.value));
 				S_StartSound(NULL,sfx_menu1);
 				lscol = 0;
 
@@ -5420,7 +5434,10 @@ static void M_HandleLevelPlatter(INT32 choice)
 		case KEY_LEFTARROW:
 			if (levellistmode == LLM_CREATESERVER && !lsrow)
 			{
-				CV_AddValue(&cv_newgametype, -1);
+				INT32 startinggametype = cv_newgametype.value;
+				do
+					CV_AddValue(&cv_newgametype, -1);
+				while (cv_newgametype.value != startinggametype && !M_GametypeHasLevels(cv_newgametype.value));
 				S_StartSound(NULL,sfx_menu1);
 				lscol = 0;
 
