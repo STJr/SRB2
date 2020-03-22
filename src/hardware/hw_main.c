@@ -20,6 +20,7 @@
 
 #include "../doomstat.h"
 
+#define HWRENDER
 #ifdef HWRENDER
 #include "hw_glob.h"
 #include "hw_light.h"
@@ -469,7 +470,7 @@ static UINT8 HWR_FogBlockAlpha(INT32 light, UINT32 color) // Let's see if this c
 // -----------------+
 // HWR_RenderPlane  : Render a floor or ceiling convex polygon
 // -----------------+
-static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight,
+static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight,
                            FBITFIELD PolyFlags, INT32 lightlevel, levelflat_t *levelflat, sector_t *FOFsector, UINT8 alpha, boolean fogplane, extracolormap_t *planecolormap)
 {
 	polyvertex_t *  pv;
@@ -492,8 +493,6 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
-
-	(void)sector; ///@TODO remove shitty unused variable
 
 	// no convex poly were generated for this subsector
 	if (!xsub->planepoly)
@@ -593,8 +592,6 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	flatyref = (float)(((fixed_t)pv->y & (~flatflag)) / fflatheight);
 
 	// transform
-	v3d = planeVerts;
-
 	if (FOFsector != NULL)
 	{
 		if (!isceiling) // it's a floor
@@ -637,46 +634,43 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 		flatyref = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));
 	}
 
-	for (i = 0; i < nrPlaneVerts; i++,v3d++,pv++)
-	{
-		// Hurdler: add scrolling texture on floor/ceiling
-		if (texflat)
-		{
-			v3d->sow = (float)(pv->x / fflatwidth) + scrollx;
-			v3d->tow = -(float)(pv->y / fflatheight) + scrolly;
-		}
-		else
-		{
-			v3d->sow = (float)((pv->x / fflatwidth) - flatxref + scrollx);
-			v3d->tow = (float)(flatyref - (pv->y / fflatheight) + scrolly);
-		}
+#define SETUP3DVERT(vert, vx, vy) {\
+		/* Hurdler: add scrolling texture on floor/ceiling */\
+		if (texflat)\
+		{\
+			vert->sow = (float)((vx) / fflatwidth) + scrollx;\
+			vert->tow = -(float)((vy) / fflatheight) + scrolly;\
+		}\
+		else\
+		{\
+			vert->sow = (float)(((vx) / fflatwidth) - flatxref + scrollx);\
+			vert->tow = (float)(flatyref - ((vy) / fflatheight) + scrolly);\
+		}\
+\
+		/* Need to rotate before translate */\
+		if (angle) /* Only needs to be done if there's an altered angle */\
+		{\
+			tempxsow = FLOAT_TO_FIXED(vert->sow);\
+			tempytow = FLOAT_TO_FIXED(vert->tow);\
+			if (texflat)\
+				tempytow = -tempytow;\
+			vert->sow = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));\
+			vert->tow = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));\
+		}\
+\
+		vert->x = (vx);\
+		vert->y = height;\
+		vert->z = (vy);\
+\
+		if (slope)\
+		{\
+			fixedheight = P_GetZAt(slope, FLOAT_TO_FIXED((vx)), FLOAT_TO_FIXED((vy)));\
+			vert->y = FIXED_TO_FLOAT(fixedheight);\
+		}\
+}
 
-		// Need to rotate before translate
-		if (angle) // Only needs to be done if there's an altered angle
-		{
-			tempxsow = FLOAT_TO_FIXED(v3d->sow);
-			tempytow = FLOAT_TO_FIXED(v3d->tow);
-			if (texflat)
-				tempytow = -tempytow;
-			v3d->sow = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));
-			v3d->tow = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));
-		}
-
-		//v3d->sow = (float)(v3d->sow - flatxref + scrollx);
-		//v3d->tow = (float)(flatyref - v3d->tow + scrolly);
-
-		v3d->x = pv->x;
-		v3d->y = height;
-		v3d->z = pv->y;
-
-#ifdef ESLOPE
-		if (slope)
-		{
-			fixedheight = P_GetZAt(slope, FLOAT_TO_FIXED(pv->x), FLOAT_TO_FIXED(pv->y));
-			v3d->y = FIXED_TO_FLOAT(fixedheight);
-		}
-#endif
-	}
+	for (i = 0, v3d = planeVerts; i < nrPlaneVerts; i++,v3d++,pv++)
+		SETUP3DVERT(v3d, pv->x, pv->y);
 
 	// only useful for flat coloured triangles
 	//Surf.FlatColor = 0xff804020;
@@ -686,38 +680,6 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	// note: try to get the same visual feel as the original
 	Surf.FlatColor.s.red = Surf.FlatColor.s.green =
 	Surf.FlatColor.s.blue = LightLevelToLum(lightlevel); //  Don't take from the frontsector, or the game will crash
-
-#if 0 // no colormap test
-	// colormap test
-	if (gr_frontsector)
-	{
-		sector_t *psector = gr_frontsector;
-
-#ifdef ESLOPE
-		if (slope)
-			fixedheight = P_GetZAt(slope, psector->soundorg.x, psector->soundorg.y);
-#endif
-
-		if (psector->ffloors)
-		{
-			ffloor_t *caster = psector->lightlist[R_GetPlaneLight(psector, fixedheight, false)].caster;
-			psector = caster ? &sectors[caster->secnum] : psector;
-
-			if (caster)
-			{
-				lightlevel = psector->lightlevel;
-				Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = LightLevelToLum(lightlevel);
-			}
-		}
-		if (psector->extra_colormap)
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel,psector->extra_colormap->rgba,psector->extra_colormap->fadergba, false, true);
-		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel,NORMALFOG,FADEFOG, false, true);
-	}
-	else
-		Surf.FlatColor.rgba = HWR_Lighting(lightlevel,NORMALFOG,FADEFOG, false, true);
-
-#endif // NOPE
 
 	if (planecolormap)
 	{
@@ -743,6 +705,56 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 		PolyFlags |= PF_Masked|PF_Modulated|PF_Clip;
 
 	HWD.pfnDrawPolygon(&Surf, planeVerts, nrPlaneVerts, PolyFlags);
+
+	if (subsector)
+	{
+		// Horizon lines
+		FOutVector horizonpts[5];
+		float dist, vx, vy;
+		const float renderdist = 60000.0f; // Well past the Z cutoff plane, but needed to fill out to that point at a wider angle
+
+		seg_t *line = &segs[subsector->firstline];
+
+		for (i = 0; i < subsector->numlines; i++, line++)
+		{
+			if (!line->glseg && line->linedef->special == HORIZONSPECIAL && R_PointOnSegSide(dup_viewx, dup_viewy, line) == 0)
+			{
+				//SETUP3DVERT(horizonpts[1], FIXED_TO_FLOAT(line->v1->x), FIXED_TO_FLOAT(line->v1->y));
+				//SETUP3DVERT(horizonpts[2], FIXED_TO_FLOAT(line->v2->x), FIXED_TO_FLOAT(line->v2->y));
+
+				// Left side
+				vx = ((polyvertex_t *)line->pv1)->x;
+				vy = ((polyvertex_t *)line->pv1)->y;
+				SETUP3DVERT((&horizonpts[1]), vx, vy);
+
+				dist = sqrtf(powf(vx - gr_viewx, 2) + powf(vy - gr_viewy, 2));
+				vx = (vx - gr_viewx) * renderdist / dist + gr_viewx;
+				vy = (vy - gr_viewy) * renderdist / dist + gr_viewy;
+				SETUP3DVERT((&horizonpts[0]), vx, vy);
+
+				// Right side
+				vx = ((polyvertex_t *)line->pv2)->x;
+				vy = ((polyvertex_t *)line->pv2)->y;
+				SETUP3DVERT((&horizonpts[2]), vx, vy);
+
+				dist = sqrtf(powf(vx - gr_viewx, 2) + powf(vy - gr_viewy, 2));
+				vx = (vx - gr_viewx) * renderdist / dist + gr_viewx;
+				vy = (vy - gr_viewy) * renderdist / dist + gr_viewy;
+				SETUP3DVERT((&horizonpts[3]), vx, vy);
+
+				// Midpoint for better filling
+				vx = (horizonpts[0].x + horizonpts[3].x)/2;
+				vy = (horizonpts[0].z + horizonpts[3].z)/2;
+				dist = sqrtf(powf(vx - gr_viewx, 2) + powf(vy - gr_viewy, 2));
+				vx = (vx - gr_viewx) * renderdist / dist + gr_viewx;
+				vy = (vy - gr_viewy) * renderdist / dist + gr_viewy;
+				SETUP3DVERT((&horizonpts[4]), vx, vy);
+
+				// Draw
+				HWD.pfnDrawPolygon(&Surf, horizonpts, 5, PolyFlags);
+			}
+		}
+	}
 
 #ifdef ALAM_LIGHTING
 	// add here code for dynamic lighting on planes
@@ -3561,7 +3573,7 @@ static void HWR_Subsector(size_t num)
 			if (sub->validcount != validcount)
 			{
 				HWR_GetLevelFlat(&levelflats[gr_frontsector->floorpic]);
-				HWR_RenderPlane(gr_frontsector, &extrasubsectors[num], false,
+				HWR_RenderPlane(sub, &extrasubsectors[num], false,
 					// Hack to make things continue to work around slopes.
 					locFloorHeight == cullFloorHeight ? locFloorHeight : gr_frontsector->floorheight,
 					// We now return you to your regularly scheduled rendering.
@@ -3583,7 +3595,7 @@ static void HWR_Subsector(size_t num)
 			if (sub->validcount != validcount)
 			{
 				HWR_GetLevelFlat(&levelflats[gr_frontsector->ceilingpic]);
-				HWR_RenderPlane(NULL, &extrasubsectors[num], true,
+				HWR_RenderPlane(sub, &extrasubsectors[num], true,
 					// Hack to make things continue to work around slopes.
 					locCeilingHeight == cullCeilingHeight ? locCeilingHeight : gr_frontsector->ceilingheight,
 					// We now return you to your regularly scheduled rendering.
@@ -3677,7 +3689,7 @@ static void HWR_Subsector(size_t num)
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->bottompic]);
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-					HWR_RenderPlane(NULL, &extrasubsectors[num], false, *rover->bottomheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, &levelflats[*rover->bottompic],
+					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, &levelflats[*rover->bottompic],
 					                rover->master->frontsector, 255, false, *gr_frontsector->lightlist[light].extra_colormap);
 				}
 			}
@@ -3741,7 +3753,7 @@ static void HWR_Subsector(size_t num)
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->toppic]);
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-					HWR_RenderPlane(NULL, &extrasubsectors[num], true, *rover->topheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, &levelflats[*rover->toppic],
+					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, &levelflats[*rover->toppic],
 					                  rover->master->frontsector, 255, false, *gr_frontsector->lightlist[light].extra_colormap);
 				}
 			}
