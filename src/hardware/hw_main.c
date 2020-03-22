@@ -709,9 +709,10 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	if (subsector)
 	{
 		// Horizon lines
-		FOutVector horizonpts[5];
+		FOutVector horizonpts[6];
 		float dist, vx, vy;
-		const float renderdist = 60000.0f; // Well past the Z cutoff plane, but needed to fill out to that point at a wider angle
+		const float renderdist = 30000.0f; // How far out to properly render the plane
+		const float farrenderdist = 32768.0f; // From here, raise plane to horizon level to fill in the line with some texture distortion
 
 		seg_t *line = &segs[subsector->firstline];
 
@@ -742,16 +743,19 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 				vy = (vy - gr_viewy) * renderdist / dist + gr_viewy;
 				SETUP3DVERT((&horizonpts[3]), vx, vy);
 
-				// Midpoint for better filling
-				vx = (horizonpts[0].x + horizonpts[3].x)/2;
-				vy = (horizonpts[0].z + horizonpts[3].z)/2;
-				dist = sqrtf(powf(vx - gr_viewx, 2) + powf(vy - gr_viewy, 2));
-				vx = (vx - gr_viewx) * renderdist / dist + gr_viewx;
-				vy = (vy - gr_viewy) * renderdist / dist + gr_viewy;
+				// Horizon fills
+				vx = (horizonpts[0].x - gr_viewx) * farrenderdist / renderdist + gr_viewx;
+				vy = (horizonpts[0].z - gr_viewy) * farrenderdist / renderdist + gr_viewy;
+				SETUP3DVERT((&horizonpts[5]), vx, vy);
+				horizonpts[5].y = gr_viewz;
+
+				vx = (horizonpts[3].x - gr_viewx) * farrenderdist / renderdist + gr_viewx;
+				vy = (horizonpts[3].z - gr_viewy) * farrenderdist / renderdist + gr_viewy;
 				SETUP3DVERT((&horizonpts[4]), vx, vy);
+				horizonpts[4].y = gr_viewz;
 
 				// Draw
-				HWD.pfnDrawPolygon(&Surf, horizonpts, 5, PolyFlags);
+				HWD.pfnDrawPolygon(&Surf, horizonpts, 6, PolyFlags);
 			}
 		}
 	}
