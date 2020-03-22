@@ -388,10 +388,7 @@ static int lib_setSpriteInfo(lua_State *L)
 		lua_Integer i = 0;
 		const char *str = NULL;
 		if (lua_isnumber(L, 2))
-		{
 			i = lua_tointeger(L, 2);
-			i++; // shift index in case of missing rotsprite support
-		}
 		else
 			str = luaL_checkstring(L, 2);
 
