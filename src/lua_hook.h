@@ -10,8 +10,6 @@
 /// \file  lua_hook.h
 /// \brief hooks for Lua scripting
 
-#ifdef HAVE_BLUA
-
 #include "r_defs.h"
 #include "d_player.h"
 
@@ -58,6 +56,7 @@ enum hook {
 	hook_ViewpointSwitch,
 	hook_SeenPlayer,
 	hook_PlayerThink,
+	hook_ShouldJingleContinue,
 
 	hook_MAX // last hook
 };
@@ -110,5 +109,4 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend); // Hook for MT_NAMECHECK
 #endif
 #define LUAh_PlayerThink(player) LUAh_PlayerHook(player, hook_PlayerThink) // Hook for P_PlayerThink
-
-#endif
+boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname); // Hook for whether a jingle of the given music should continue playing

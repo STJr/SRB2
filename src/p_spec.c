@@ -36,7 +36,7 @@
 #include "m_cond.h" //unlock triggers
 #include "lua_hook.h" // LUAh_LinedefExecute
 #include "f_finale.h" // control text prompt
-#include "r_things.h" // skins
+#include "r_skins.h" // skins
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -3366,14 +3366,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		}
 
 		case 443: // Calls a named Lua function
-#ifdef HAVE_BLUA
 			if (line->stringargs[0])
 				LUAh_LinedefExecute(line, mo, callsec);
 			else
 				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in arg0str)\n", sizeu1(line-lines));
-#else
-			CONS_Alert(CONS_ERROR, "The map is trying to run a Lua script, but this exe was not compiled with Lua support!\n");
-#endif
 			break;
 
 		case 444: // Earthquake camera
@@ -5810,7 +5806,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	fflr->topyoffs = &sec2->ceiling_yoffs;
 	fflr->topangle = &sec2->ceilingpic_angle;
 
-#ifdef ESLOPE
 	// Add slopes
 	fflr->t_slope = &sec2->c_slope;
 	fflr->b_slope = &sec2->f_slope;
@@ -5818,7 +5813,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	// (this fixes FOF slopes glitching initially at level load in software mode)
 	if (sec2->hasslope)
 		sec->hasslope = true;
-#endif
 
 	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT1)) // Block player only
 		flags &= ~FF_BLOCKOTHERS;
@@ -6296,15 +6290,11 @@ void T_LaserFlash(laserthink_t *flash)
 
 	sourcesec = fflr->master->frontsector; // Less to type!
 
-#ifdef ESLOPE
 	top = (*fflr->t_slope) ? P_GetZAt(*fflr->t_slope, sector->soundorg.x, sector->soundorg.y)
 			: *fflr->topheight;
 	bottom = (*fflr->b_slope) ? P_GetZAt(*fflr->b_slope, sector->soundorg.x, sector->soundorg.y)
 			: *fflr->bottomheight;
 	sector->soundorg.z = (top + bottom)/2;
-#else
-	sector->soundorg.z = (*fflr->topheight + *fflr->bottomheight)/2;
-#endif
 	S_StartSound(&sector->soundorg, sfx_laser);
 
 	// Seek out objects to DESTROY! MUAHAHHAHAHAA!!!*cough*
@@ -7973,12 +7963,10 @@ void T_Disappear(disappear_t *d)
 
 					if (!(lines[d->sourceline].flags & ML_NOCLIMB))
 					{
-#ifdef ESLOPE
 						if (*rover->t_slope)
 							sectors[s].soundorg.z = P_GetZAt(*rover->t_slope, sectors[s].soundorg.x, sectors[s].soundorg.y);
 						else
-#endif
-						sectors[s].soundorg.z = *rover->topheight;
+							sectors[s].soundorg.z = *rover->topheight;
 						S_StartSound(&sectors[s].soundorg, sfx_appear);
 					}
 				}
