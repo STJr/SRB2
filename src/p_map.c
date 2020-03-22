@@ -3206,64 +3206,53 @@ isblocking:
 static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 {
 	fixed_t platx, platy;
-	subsector_t *glidesector;
+	sector_t *glidesector;
 	fixed_t floorz, ceilingz;
+	mobj_t *mo = player->mo;
 
-	platx = P_ReturnThrustX(player->mo, angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
-	platy = P_ReturnThrustY(player->mo, angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
+	platx = P_ReturnThrustX(mo, angle, mo->radius + FixedMul(8*FRACUNIT, mo->scale));
+	platy = P_ReturnThrustY(mo, angle, mo->radius + FixedMul(8*FRACUNIT, mo->scale));
 
-	glidesector = R_PointInSubsector(player->mo->x + platx, player->mo->y + platy);
+	glidesector = R_PointInSubsector(mo->x + platx, mo->y + platy)->sector;
 
-	floorz   = P_GetSectorFloorZAt  (glidesector->sector, player->mo->x, player->mo->y);
-	ceilingz = P_GetSectorCeilingZAt(glidesector->sector, player->mo->x, player->mo->y);
+	floorz   = P_GetSectorFloorZAt  (glidesector, mo->x, mo->y);
+	ceilingz = P_GetSectorCeilingZAt(glidesector, mo->x, mo->y);
 
-	if (glidesector->sector != player->mo->subsector->sector)
+	if (glidesector != mo->subsector->sector)
 	{
 		boolean floorclimb = false;
 		fixed_t topheight, bottomheight;
 
-		if (glidesector->sector->ffloors)
+		if (glidesector->ffloors)
 		{
 			ffloor_t *rover;
-			for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
+			for (rover = glidesector->ffloors; rover; rover = rover->next)
 			{
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER))
 					continue;
 
-				topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
-				bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
+				topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
+				bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
 
 				floorclimb = true;
 
-				if (player->mo->eflags & MFE_VERTICALFLIP)
+				if (mo->eflags & MFE_VERTICALFLIP)
 				{
-					if ((topheight < player->mo->z + player->mo->height) && ((player->mo->z + player->mo->height + player->mo->momz) < topheight))
-					{
+					if ((topheight < mo->z + mo->height) && ((mo->z + mo->height + mo->momz) < topheight))
 						floorclimb = true;
-					}
-					if (topheight < player->mo->z) // Waaaay below the ledge.
-					{
+					if (topheight < mo->z) // Waaaay below the ledge.
 						floorclimb = false;
-					}
-					if (bottomheight > player->mo->z + player->mo->height - FixedMul(16*FRACUNIT,player->mo->scale))
-					{
+					if (bottomheight > mo->z + mo->height - FixedMul(16*FRACUNIT,mo->scale))
 						floorclimb = false;
-					}
 				}
 				else
 				{
-					if ((bottomheight > player->mo->z) && ((player->mo->z - player->mo->momz) > bottomheight))
-					{
+					if ((bottomheight > mo->z) && ((mo->z - mo->momz) > bottomheight))
 						floorclimb = true;
-					}
-					if (bottomheight > player->mo->z + player->mo->height) // Waaaay below the ledge.
-					{
+					if (bottomheight > mo->z + mo->height) // Waaaay below the ledge.
 						floorclimb = false;
-					}
-					if (topheight < player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale))
-					{
+					if (topheight < mo->z + FixedMul(16*FRACUNIT,mo->scale))
 						floorclimb = false;
-					}
 				}
 
 				if (floorclimb)
@@ -3271,32 +3260,32 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 			}
 		}
 
-		if (player->mo->eflags & MFE_VERTICALFLIP)
+		if (mo->eflags & MFE_VERTICALFLIP)
 		{
-			if ((floorz <= player->mo->z + player->mo->height)
-				&& ((player->mo->z + player->mo->height - player->mo->momz) <= floorz))
+			if ((floorz <= mo->z + mo->height)
+				&& ((mo->z + mo->height - mo->momz) <= floorz))
 				floorclimb = true;
 
-			if ((floorz > player->mo->z)
-				&& glidesector->sector->floorpic == skyflatnum)
+			if ((floorz > mo->z)
+				&& glidesector->floorpic == skyflatnum)
 				return false;
 
-			if ((player->mo->z + player->mo->height - FixedMul(16*FRACUNIT,player->mo->scale) > ceilingz)
-				|| (player->mo->z + player->mo->height <= floorz))
+			if ((mo->z + mo->height - FixedMul(16*FRACUNIT,mo->scale) > ceilingz)
+				|| (mo->z + mo->height <= floorz))
 				floorclimb = true;
 		}
 		else
 		{
-			if ((ceilingz >= player->mo->z)
-				&& ((player->mo->z - player->mo->momz) >= ceilingz))
+			if ((ceilingz >= mo->z)
+				&& ((mo->z - mo->momz) >= ceilingz))
 				floorclimb = true;
 
-			if ((ceilingz < player->mo->z+player->mo->height)
-				&& glidesector->sector->ceilingpic == skyflatnum)
+			if ((ceilingz < mo->z+mo->height)
+				&& glidesector->ceilingpic == skyflatnum)
 				return false;
 
-			if ((player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale) < floorz)
-				|| (player->mo->z >= ceilingz))
+			if ((mo->z + FixedMul(16*FRACUNIT,mo->scale) < floorz)
+				|| (mo->z >= ceilingz))
 				floorclimb = true;
 		}
 
