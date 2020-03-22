@@ -20,7 +20,6 @@
 
 #include "../doomstat.h"
 
-#define HWRENDER
 #ifdef HWRENDER
 #include "hw_glob.h"
 #include "hw_light.h"
@@ -711,6 +710,10 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		// Horizon lines
 		FOutVector horizonpts[6];
 		float dist, vx, vy;
+		float x1, y1, xd, yd;
+		UINT8 numplanes, j;
+		vertex_t v; // For determining the closest distance from the line to the camera, to split render planes for minimum distortion;
+
 		const float renderdist = 30000.0f; // How far out to properly render the plane
 		const float farrenderdist = 32768.0f; // From here, raise plane to horizon level to fill in the line with some texture distortion
 
@@ -720,42 +723,57 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		{
 			if (!line->glseg && line->linedef->special == HORIZONSPECIAL && R_PointOnSegSide(dup_viewx, dup_viewy, line) == 0)
 			{
-				//SETUP3DVERT(horizonpts[1], FIXED_TO_FLOAT(line->v1->x), FIXED_TO_FLOAT(line->v1->y));
-				//SETUP3DVERT(horizonpts[2], FIXED_TO_FLOAT(line->v2->x), FIXED_TO_FLOAT(line->v2->y));
+				P_ClosestPointOnLine(viewx, viewy, line->linedef, &v);
+				dist = FIXED_TO_FLOAT(R_PointToDist(v.x, v.y));
 
-				// Left side
-				vx = ((polyvertex_t *)line->pv1)->x;
-				vy = ((polyvertex_t *)line->pv1)->y;
-				SETUP3DVERT((&horizonpts[1]), vx, vy);
+				x1 = ((polyvertex_t *)line->pv1)->x;
+				y1 = ((polyvertex_t *)line->pv1)->y;
+				xd = ((polyvertex_t *)line->pv2)->x - x1;
+				yd = ((polyvertex_t *)line->pv2)->y - y1;
 
-				dist = sqrtf(powf(vx - gr_viewx, 2) + powf(vy - gr_viewy, 2));
-				vx = (vx - gr_viewx) * renderdist / dist + gr_viewx;
-				vy = (vy - gr_viewy) * renderdist / dist + gr_viewy;
-				SETUP3DVERT((&horizonpts[0]), vx, vy);
+				// Based on the seg length and the distance from the line, split horizon into multiple poly sets to reduce distortion
+				dist = sqrtf((xd*xd) + (yd*yd)) / dist / 16.0f;
+				if (dist > 100.0f)
+					numplanes = 100;
+				else
+					numplanes = (UINT8)dist + 1;
 
-				// Right side
-				vx = ((polyvertex_t *)line->pv2)->x;
-				vy = ((polyvertex_t *)line->pv2)->y;
-				SETUP3DVERT((&horizonpts[2]), vx, vy);
+				for (j = 0; j < numplanes; j++)
+				{
+					// Left side
+					vx = x1 + xd * j / numplanes;
+					vy = y1 + yd * j / numplanes;
+					SETUP3DVERT((&horizonpts[1]), vx, vy);
 
-				dist = sqrtf(powf(vx - gr_viewx, 2) + powf(vy - gr_viewy, 2));
-				vx = (vx - gr_viewx) * renderdist / dist + gr_viewx;
-				vy = (vy - gr_viewy) * renderdist / dist + gr_viewy;
-				SETUP3DVERT((&horizonpts[3]), vx, vy);
+					dist = sqrtf(powf(vx - gr_viewx, 2) + powf(vy - gr_viewy, 2));
+					vx = (vx - gr_viewx) * renderdist / dist + gr_viewx;
+					vy = (vy - gr_viewy) * renderdist / dist + gr_viewy;
+					SETUP3DVERT((&horizonpts[0]), vx, vy);
 
-				// Horizon fills
-				vx = (horizonpts[0].x - gr_viewx) * farrenderdist / renderdist + gr_viewx;
-				vy = (horizonpts[0].z - gr_viewy) * farrenderdist / renderdist + gr_viewy;
-				SETUP3DVERT((&horizonpts[5]), vx, vy);
-				horizonpts[5].y = gr_viewz;
+					// Right side
+					vx = x1 + xd * (j+1) / numplanes;
+					vy = y1 + yd * (j+1) / numplanes;
+					SETUP3DVERT((&horizonpts[2]), vx, vy);
 
-				vx = (horizonpts[3].x - gr_viewx) * farrenderdist / renderdist + gr_viewx;
-				vy = (horizonpts[3].z - gr_viewy) * farrenderdist / renderdist + gr_viewy;
-				SETUP3DVERT((&horizonpts[4]), vx, vy);
-				horizonpts[4].y = gr_viewz;
+					dist = sqrtf(powf(vx - gr_viewx, 2) + powf(vy - gr_viewy, 2));
+					vx = (vx - gr_viewx) * renderdist / dist + gr_viewx;
+					vy = (vy - gr_viewy) * renderdist / dist + gr_viewy;
+					SETUP3DVERT((&horizonpts[3]), vx, vy);
 
-				// Draw
-				HWD.pfnDrawPolygon(&Surf, horizonpts, 6, PolyFlags);
+					// Horizon fills
+					vx = (horizonpts[0].x - gr_viewx) * farrenderdist / renderdist + gr_viewx;
+					vy = (horizonpts[0].z - gr_viewy) * farrenderdist / renderdist + gr_viewy;
+					SETUP3DVERT((&horizonpts[5]), vx, vy);
+					horizonpts[5].y = gr_viewz;
+
+					vx = (horizonpts[3].x - gr_viewx) * farrenderdist / renderdist + gr_viewx;
+					vy = (horizonpts[3].z - gr_viewy) * farrenderdist / renderdist + gr_viewy;
+					SETUP3DVERT((&horizonpts[4]), vx, vy);
+					horizonpts[4].y = gr_viewz;
+
+					// Draw
+					HWD.pfnDrawPolygon(&Surf, horizonpts, 6, PolyFlags);
+				}
 			}
 		}
 	}
