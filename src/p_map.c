@@ -3209,6 +3209,7 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 	sector_t *glidesector;
 	fixed_t floorz, ceilingz;
 	mobj_t *mo = player->mo;
+	ffloor_t *rover;
 
 	platx = P_ReturnThrustX(mo, angle, mo->radius + FixedMul(8*FRACUNIT, mo->scale));
 	platy = P_ReturnThrustY(mo, angle, mo->radius + FixedMul(8*FRACUNIT, mo->scale));
@@ -3223,41 +3224,37 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 		boolean floorclimb = false;
 		fixed_t topheight, bottomheight;
 
-		if (glidesector->ffloors)
+		for (rover = glidesector->ffloors; rover; rover = rover->next)
 		{
-			ffloor_t *rover;
-			for (rover = glidesector->ffloors; rover; rover = rover->next)
+			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER))
+				continue;
+
+			topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
+
+			floorclimb = true;
+
+			if (mo->eflags & MFE_VERTICALFLIP)
 			{
-				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER))
-					continue;
-
-				topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
-				bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
-
-				floorclimb = true;
-
-				if (mo->eflags & MFE_VERTICALFLIP)
-				{
-					if ((topheight < mo->z + mo->height) && ((mo->z + mo->height + mo->momz) < topheight))
-						floorclimb = true;
-					if (topheight < mo->z) // Waaaay below the ledge.
-						floorclimb = false;
-					if (bottomheight > mo->z + mo->height - FixedMul(16*FRACUNIT,mo->scale))
-						floorclimb = false;
-				}
-				else
-				{
-					if ((bottomheight > mo->z) && ((mo->z - mo->momz) > bottomheight))
-						floorclimb = true;
-					if (bottomheight > mo->z + mo->height) // Waaaay below the ledge.
-						floorclimb = false;
-					if (topheight < mo->z + FixedMul(16*FRACUNIT,mo->scale))
-						floorclimb = false;
-				}
-
-				if (floorclimb)
-					break;
+				if ((topheight < mo->z + mo->height) && ((mo->z + mo->height + mo->momz) < topheight))
+					floorclimb = true;
+				if (topheight < mo->z) // Waaaay below the ledge.
+					floorclimb = false;
+				if (bottomheight > mo->z + mo->height - FixedMul(16*FRACUNIT,mo->scale))
+					floorclimb = false;
 			}
+			else
+			{
+				if ((bottomheight > mo->z) && ((mo->z - mo->momz) > bottomheight))
+					floorclimb = true;
+				if (bottomheight > mo->z + mo->height) // Waaaay below the ledge.
+					floorclimb = false;
+				if (topheight < mo->z + FixedMul(16*FRACUNIT,mo->scale))
+					floorclimb = false;
+			}
+
+			if (floorclimb)
+				break;
 		}
 
 		if (mo->eflags & MFE_VERTICALFLIP)
