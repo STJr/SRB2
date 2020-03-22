@@ -23,8 +23,6 @@
 #include "p_maputl.h"
 #include "w_wad.h"
 
-#ifdef ESLOPE
-
 pslope_t *slopelist = NULL;
 UINT16 slopecount = 0;
 
@@ -869,6 +867,3 @@ void P_ButteredSlope(mobj_t *mo)
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
-
-// EOF
-#endif // #ifdef ESLOPE

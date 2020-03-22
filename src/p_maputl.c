@@ -277,9 +277,7 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 // OPTIMIZE: keep this precalculated
 //
 fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
-#ifdef ESLOPE
 pslope_t *opentopslope, *openbottomslope;
-#endif
 ffloor_t *openfloorrover, *openceilingrover;
 
 // P_CameraLineOpening
@@ -307,24 +305,20 @@ void P_CameraLineOpening(line_t *linedef)
 	{
 		frontfloor = sectors[front->camsec].floorheight;
 		frontceiling = sectors[front->camsec].ceilingheight;
-#ifdef ESLOPE
 		if (sectors[front->camsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
 			frontfloor = P_GetZAt(sectors[front->camsec].f_slope, camera.x, camera.y);
 		if (sectors[front->camsec].c_slope)
 			frontceiling = P_GetZAt(sectors[front->camsec].c_slope, camera.x, camera.y);
-#endif
 
 	}
 	else if (front->heightsec >= 0)
 	{
 		frontfloor = sectors[front->heightsec].floorheight;
 		frontceiling = sectors[front->heightsec].ceilingheight;
-#ifdef ESLOPE
 		if (sectors[front->heightsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
 			frontfloor = P_GetZAt(sectors[front->heightsec].f_slope, camera.x, camera.y);
 		if (sectors[front->heightsec].c_slope)
 			frontceiling = P_GetZAt(sectors[front->heightsec].c_slope, camera.x, camera.y);
-#endif
 	}
 	else
 	{
@@ -335,23 +329,19 @@ void P_CameraLineOpening(line_t *linedef)
 	{
 		backfloor = sectors[back->camsec].floorheight;
 		backceiling = sectors[back->camsec].ceilingheight;
-#ifdef ESLOPE
 		if (sectors[back->camsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
 			frontfloor = P_GetZAt(sectors[back->camsec].f_slope, camera.x, camera.y);
 		if (sectors[back->camsec].c_slope)
 			frontceiling = P_GetZAt(sectors[back->camsec].c_slope, camera.x, camera.y);
-#endif
 	}
 	else if (back->heightsec >= 0)
 	{
 		backfloor = sectors[back->heightsec].floorheight;
 		backceiling = sectors[back->heightsec].ceilingheight;
-#ifdef ESLOPE
 		if (sectors[back->heightsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
 			frontfloor = P_GetZAt(sectors[back->heightsec].f_slope, camera.x, camera.y);
 		if (sectors[back->heightsec].c_slope)
 			frontceiling = P_GetZAt(sectors[back->heightsec].c_slope, camera.x, camera.y);
-#endif
 	}
 	else
 	{
@@ -469,9 +459,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		openbottom = INT32_MIN;
 		highceiling = INT32_MIN;
 		lowfloor = INT32_MAX;
-#ifdef ESLOPE
 		opentopslope = openbottomslope = NULL;
-#endif
 	}
 	else
 #endif
@@ -485,17 +473,13 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		{
 			opentop = frontheight;
 			highceiling = backheight;
-#ifdef ESLOPE
 			opentopslope = front->c_slope;
-#endif
 		}
 		else
 		{
 			opentop = backheight;
 			highceiling = frontheight;
-#ifdef ESLOPE
 			opentopslope = back->c_slope;
-#endif
 		}
 
 		frontheight = P_GetFloorZ(mobj, front, tmx, tmy, linedef);
@@ -505,17 +489,13 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		{
 			openbottom = frontheight;
 			lowfloor = backheight;
-#ifdef ESLOPE
 			openbottomslope = front->f_slope;
-#endif
 		}
 		else
 		{
 			openbottom = backheight;
 			lowfloor = frontheight;
-#ifdef ESLOPE
 			openbottomslope = back->f_slope;
-#endif
 		}
 	}
 
@@ -647,9 +627,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				{
 					if (bottomheight < opentop) {
 						opentop = bottomheight;
-#ifdef ESLOPE
 						opentopslope = *rover->b_slope;
-#endif
 						openceilingrover = rover;
 					}
 					else if (bottomheight < highceiling)
@@ -660,9 +638,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				{
 					if (topheight > openbottom) {
 						openbottom = topheight;
-#ifdef ESLOPE
 						openbottomslope = *rover->t_slope;
-#endif
 						openfloorrover = rover;
 					}
 					else if (topheight > lowfloor)
@@ -693,9 +669,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				{
 					if (bottomheight < opentop) {
 						opentop = bottomheight;
-#ifdef ESLOPE
 						opentopslope = *rover->b_slope;
-#endif
 						openceilingrover = rover;
 					}
 					else if (bottomheight < highceiling)
@@ -706,9 +680,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				{
 					if (topheight > openbottom) {
 						openbottom = topheight;
-#ifdef ESLOPE
 						openbottomslope = *rover->t_slope;
-#endif
 						openfloorrover = rover;
 					}
 					else if (topheight > lowfloor)

@@ -340,9 +340,7 @@ CFLAGS+=-DHAVE_MINIUPNPC
 endif
 endif
 
-ifndef NO_LUA
-	include blua/Makefile.cfg
-endif
+include blua/Makefile.cfg
 
 ifdef NOMD5
 	OPTS+=-DNOMD5
@@ -468,6 +466,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_main.o   \
 		$(OBJDIR)/r_plane.o  \
 		$(OBJDIR)/r_segs.o   \
+		$(OBJDIR)/r_skins.o  \
 		$(OBJDIR)/r_sky.o    \
 		$(OBJDIR)/r_splats.o \
 		$(OBJDIR)/r_things.o \
@@ -682,9 +681,7 @@ $(OBJDIR)/depend.dep:
 ifndef NOHW
 	$(CC) $(CFLAGS) -MM hardware/*.c >> $(OBJDIR)/depend.ped
 endif
-ifndef NO_LUA
 	$(CC) $(CFLAGS) -MM blua/*.c >> $(OBJDIR)/depend.ped
-endif
 	@sed -e 's,\(.*\)\.o: ,$(subst /,\/,$(OBJDIR))\/&,g' < $(OBJDIR)/depend.ped > $(OBJDIR)/depend.dep
 	$(REMOVE) $(OBJDIR)/depend.ped
 	@echo "Created dependency file, depend.dep"

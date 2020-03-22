@@ -11,11 +11,10 @@
 /// \brief hooks for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "doomstat.h"
 #include "p_mobj.h"
 #include "g_game.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "b_bot.h"
 #include "z_zone.h"
 
@@ -69,6 +68,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"ViewpointSwitch",
 	"SeenPlayer",
 	"PlayerThink",
+	"ShouldJingleContinue",
 	NULL
 };
 
@@ -81,6 +81,7 @@ struct hook_s
 	union {
 		mobjtype_t mt;
 		char *skinname;
+		char *musname;
 		char *funcname;
 	} s;
 	boolean error;
@@ -149,6 +150,7 @@ static int lib_addHook(lua_State *L)
 		luaL_argcheck(L, hook.s.mt < NUMMOBJTYPES, 2, "invalid mobjtype_t");
 		break;
 	case hook_BotAI:
+	case hook_ShouldJingleContinue:
 		hook.s.skinname = NULL;
 		if (lua_isstring(L, 2))
 		{ // lowercase copy
@@ -1660,4 +1662,45 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 }
 #endif // SEENAMES
 
-#endif
+boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
+{
+	hook_p hookp;
+	boolean keepplaying = false;
+	if (!gL || !(hooksAvailable[hook_ShouldJingleContinue/8] & (1<<(hook_ShouldJingleContinue%8))))
+		return true;
+
+	lua_settop(gL, 0);
+	hud_running = true; // local hook
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_ShouldJingleContinue
+			|| (hookp->s.musname && strcmp(hookp->s.musname, musname)))
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			lua_pushstring(gL, musname);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1) && lua_toboolean(gL, -1))
+			keepplaying = true; // Keep playing this boolean
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	hud_running = false;
+
+	return keepplaying;
+}

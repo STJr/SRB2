@@ -50,9 +50,7 @@ typedef struct visplane_s
 #ifdef POLYOBJECTS_PLANES
 	polyobj_t *polyobj;
 #endif
-#ifdef ESLOPE
 	pslope_t *slope;
-#endif
 } visplane_t;
 
 extern visplane_t *visplanes[MAXVISPLANES];
@@ -86,10 +84,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t 
 #ifdef POLYOBJECTS_PLANES
 	, polyobj_t *polyobj
 #endif
-#ifdef ESLOPE
-	, pslope_t *slope
-#endif
-	);
+	, pslope_t *slope);
 visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_PlaneBounds(visplane_t *plane);
@@ -110,13 +105,11 @@ typedef struct planemgr_s
 	INT16 f_clip[MAXVIDWIDTH];
 	INT16 c_clip[MAXVIDWIDTH];
 
-#ifdef ESLOPE
 	// For slope rendering; the height at the other end
 	fixed_t f_pos_slope;
 	fixed_t b_pos_slope;
 
 	struct pslope_s *slope;
-#endif
 
 	struct ffloor_s *ffloor;
 #ifdef POLYOBJECTS_PLANES

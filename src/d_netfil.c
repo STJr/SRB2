@@ -95,11 +95,9 @@ char downloaddir[512] = "DOWNLOAD";
 INT32 lastfilenum = -1;
 #endif
 
-#ifdef HAVE_BLUA
 luafiletransfer_t *luafiletransfers = NULL;
 boolean waitingforluafiletransfer = false;
 char luafiledir[256 + 16] = "luafiles";
-#endif
 
 
 /** Fills a serverinfo packet with information about wad files loaded.
@@ -458,7 +456,6 @@ void CL_LoadServerFiles(void)
 	}
 }
 
-#ifdef HAVE_BLUA
 void AddLuaFileTransfer(const char *filename, const char *mode)
 {
 	luafiletransfer_t **prevnext; // A pointer to the "next" field of the last transfer in the list
@@ -614,7 +611,6 @@ void CL_PrepareDownloadLuaFile(void)
 	// Make sure all directories in the file path exist
 	MakePathDirs(fileneeded[0].filename);
 }
-#endif
 
 // Number of files to send
 // Little optimization to quickly test if there is a file in the queue
@@ -749,7 +745,6 @@ void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UI
 	filestosend++;
 }
 
-#ifdef HAVE_BLUA
 /** Adds a file requested by Lua to the file list for a node
   *
   * \param node The node to send the file to
@@ -798,7 +793,6 @@ boolean SV_SendLuaFile(INT32 node, const char *filename, boolean textmode)
 	filestosend++;
 	return true;
 }
-#endif
 
 /** Stops sending a file for a node, and removes the file request from the list,
   * either because the file has been fully sent or because the node was disconnected
@@ -1035,14 +1029,12 @@ void Got_Filetxpak(void)
 			file->status = FS_FOUND;
 			CONS_Printf(M_GetText("Downloading %s...(done)\n"),
 				filename);
-#ifdef HAVE_BLUA
 			if (luafiletransfers)
 			{
 				// Tell the server we have received the file
 				netbuffer->packettype = PT_HASLUAFILE;
 				HSendPacket(servernode, true, 0, 0);
 			}
-#endif
 		}
 	}
 	else
