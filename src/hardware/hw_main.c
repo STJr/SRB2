@@ -1126,26 +1126,16 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		else
 			solid = false;
 
-		if (list[i].slope)
-		{
-			temp = P_GetZAt(list[i].slope, v1x, v1y);
-			height = FIXED_TO_FLOAT(temp);
-			temp = P_GetZAt(list[i].slope, v2x, v2y);
-			endheight = FIXED_TO_FLOAT(temp);
-		}
-		else
-			height = endheight = FIXED_TO_FLOAT(list[i].height);
+		temp = P_GetLightZAt(&list[i], v1x, v1y);
+		height = FIXED_TO_FLOAT(temp);
+		temp = P_GetLightZAt(&list[i], v2x, v2y);
+		endheight = FIXED_TO_FLOAT(temp);
 		if (solid)
 		{
-			if (*list[i].caster->b_slope)
-			{
-				temp = P_GetZAt(*list[i].caster->b_slope, v1x, v1y);
-				bheight = FIXED_TO_FLOAT(temp);
-				temp = P_GetZAt(*list[i].caster->b_slope, v2x, v2y);
-				endbheight = FIXED_TO_FLOAT(temp);
-			}
-			else
-				bheight = endbheight = FIXED_TO_FLOAT(*list[i].caster->bottomheight);
+			temp = P_GetFFloorBottomZAt(list[i].caster, v1x, v1y);
+			bheight = FIXED_TO_FLOAT(temp);
+			temp = P_GetFFloorBottomZAt(list[i].caster, v2x, v2y);
+			endbheight = FIXED_TO_FLOAT(temp);
 		}
 
 		if (endheight >= endtop && height >= top)
@@ -1158,15 +1148,10 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 
 		if (i + 1 < sector->numlights)
 		{
-			if (list[i+1].slope)
-			{
-				temp = P_GetZAt(list[i+1].slope, v1x, v1y);
-				bheight = FIXED_TO_FLOAT(temp);
-				temp = P_GetZAt(list[i+1].slope, v2x, v2y);
-				endbheight = FIXED_TO_FLOAT(temp);
-			}
-			else
-				bheight = endbheight = FIXED_TO_FLOAT(list[i+1].height);
+			temp = P_GetLightZAt(&list[i+1], v1x, v1y);
+			bheight = FIXED_TO_FLOAT(temp);
+			temp = P_GetLightZAt(&list[i+1], v2x, v2y);
+			endbheight = FIXED_TO_FLOAT(temp);
 		}
 		else
 		{
@@ -1305,11 +1290,8 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	v2y = FLOAT_TO_FIXED(ve.y);
 
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-	if (slope) { \
-		end1 = P_GetZAt(slope, v1x, v1y); \
-		end2 = P_GetZAt(slope, v2x, v2y); \
-	} else \
-		end1 = end2 = normalheight;
+	end1 = P_GetZAt2(slope, v1x, v1y, normalheight); \
+	end2 = P_GetZAt2(slope, v2x, v2y, normalheight);
 
 	SLOPEPARAMS(gr_frontsector->c_slope, worldtop,    worldtopslope,    gr_frontsector->ceilingheight)
 	SLOPEPARAMS(gr_frontsector->f_slope, worldbottom, worldbottomslope, gr_frontsector->floorheight)
@@ -1916,10 +1898,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
 
-				h  = *rover->t_slope ? P_GetZAt(*rover->t_slope, v1x, v1y) : *rover->topheight;
-				hS = *rover->t_slope ? P_GetZAt(*rover->t_slope, v2x, v2y) : *rover->topheight;
-				l  = *rover->b_slope ? P_GetZAt(*rover->b_slope, v1x, v1y) : *rover->bottomheight;
-				lS = *rover->b_slope ? P_GetZAt(*rover->b_slope, v2x, v2y) : *rover->bottomheight;
+				h  = P_GetFFloorTopZAt   (rover, v1x, v1y);
+				hS = P_GetFFloorTopZAt   (rover, v2x, v2y);
+				l  = P_GetFFloorBottomZAt(rover, v1x, v1y);
+				lS = P_GetFFloorBottomZAt(rover, v2x, v2y);
 				if (!(*rover->t_slope) && !gr_frontsector->c_slope && !gr_backsector->c_slope && h > highcut)
 					h = hS = highcut;
 				if (!(*rover->b_slope) && !gr_frontsector->f_slope && !gr_backsector->f_slope && l < lowcut)
@@ -2055,10 +2037,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					newline = rover->master->frontsector->lines[0] + linenum;
 					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
-				h  = *rover->t_slope ? P_GetZAt(*rover->t_slope, v1x, v1y) : *rover->topheight;
-				hS = *rover->t_slope ? P_GetZAt(*rover->t_slope, v2x, v2y) : *rover->topheight;
-				l  = *rover->b_slope ? P_GetZAt(*rover->b_slope, v1x, v1y) : *rover->bottomheight;
-				lS = *rover->b_slope ? P_GetZAt(*rover->b_slope, v2x, v2y) : *rover->bottomheight;
+				h  = P_GetFFloorTopZAt   (rover, v1x, v1y);
+				hS = P_GetFFloorTopZAt   (rover, v2x, v2y);
+				l  = P_GetFFloorBottomZAt(rover, v1x, v1y);
+				lS = P_GetFFloorBottomZAt(rover, v2x, v2y);
 				if (!(*rover->t_slope) && !gr_frontsector->c_slope && !gr_backsector->c_slope && h > highcut)
 					h = hS = highcut;
 				if (!(*rover->b_slope) && !gr_frontsector->f_slope && !gr_backsector->f_slope && l < lowcut)
@@ -2176,24 +2158,21 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x);
 		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y);
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-		if (slope) { \
-			end1 = P_GetZAt(slope, v1x, v1y); \
-			end2 = P_GetZAt(slope, v2x, v2y); \
-		} else \
-			end1 = end2 = normalheight;
+		end1 = P_GetZAt2(slope, v1x, v1y, normalheight); \
+		end2 = P_GetZAt2(slope, v2x, v2y, normalheight);
 
-		SLOPEPARAMS(afrontsector->f_slope, frontf1, frontf2, afrontsector->floorheight)
+		SLOPEPARAMS(afrontsector->f_slope, frontf1, frontf2, afrontsector->  floorheight)
 		SLOPEPARAMS(afrontsector->c_slope, frontc1, frontc2, afrontsector->ceilingheight)
-		SLOPEPARAMS( abacksector->f_slope, backf1,  backf2,  abacksector->floorheight)
-		SLOPEPARAMS( abacksector->c_slope, backc1,  backc2,  abacksector->ceilingheight)
+		SLOPEPARAMS( abacksector->f_slope,  backf1,  backf2,  abacksector->  floorheight)
+		SLOPEPARAMS( abacksector->c_slope,  backc1,  backc2,  abacksector->ceilingheight)
 #undef SLOPEPARAMS
 	}
 	else
 	{
-		frontf1 = frontf2 = afrontsector->floorheight;
+		frontf1 = frontf2 = afrontsector->  floorheight;
 		frontc1 = frontc2 = afrontsector->ceilingheight;
-		backf1 = backf2 = abacksector->floorheight;
-		backc1 = backc2 = abacksector->ceilingheight;
+		backf1  =  backf2 =  abacksector->  floorheight;
+		backc1  =  backc2 =  abacksector->ceilingheight;
 	}
 	// properly render skies (consider door "open" if both ceilings are sky)
 	// same for floors
@@ -2735,16 +2714,13 @@ static void HWR_AddLine(seg_t * line)
 		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
 
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-		if (slope) { \
-			end1 = P_GetZAt(slope, v1x, v1y); \
-			end2 = P_GetZAt(slope, v2x, v2y); \
-		} else \
-			end1 = end2 = normalheight;
+		end1 = P_GetZAt2(slope, v1x, v1y, normalheight); \
+		end2 = P_GetZAt2(slope, v2x, v2y, normalheight);
 
-		SLOPEPARAMS(gr_frontsector->f_slope, frontf1, frontf2, gr_frontsector->floorheight)
+		SLOPEPARAMS(gr_frontsector->f_slope, frontf1, frontf2, gr_frontsector->  floorheight)
 		SLOPEPARAMS(gr_frontsector->c_slope, frontc1, frontc2, gr_frontsector->ceilingheight)
-		SLOPEPARAMS( gr_backsector->f_slope, backf1,  backf2,  gr_backsector->floorheight)
-		SLOPEPARAMS( gr_backsector->c_slope, backc1,  backc2,  gr_backsector->ceilingheight)
+		SLOPEPARAMS( gr_backsector->f_slope,  backf1,  backf2,  gr_backsector->  floorheight)
+		SLOPEPARAMS( gr_backsector->c_slope,  backc1,  backc2,  gr_backsector->ceilingheight)
 #undef SLOPEPARAMS
 		// if both ceilings are skies, consider it always "open"
 		// same for floors
@@ -3307,20 +3283,10 @@ static void HWR_Subsector(size_t num)
 	}
 	else
 	{
-		cullFloorHeight   = locFloorHeight   = gr_frontsector->floorheight;
-		cullCeilingHeight = locCeilingHeight = gr_frontsector->ceilingheight;
-
-		if (gr_frontsector->f_slope)
-		{
-			cullFloorHeight = P_GetZAt(gr_frontsector->f_slope, viewx, viewy);
-			locFloorHeight = P_GetZAt(gr_frontsector->f_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
-		}
-
-		if (gr_frontsector->c_slope)
-		{
-			cullCeilingHeight = P_GetZAt(gr_frontsector->c_slope, viewx, viewy);
-			locCeilingHeight = P_GetZAt(gr_frontsector->c_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
-		}
+		cullFloorHeight   = P_GetSectorFloorZAt  (gr_frontsector, viewx, viewy);
+		cullCeilingHeight = P_GetSectorCeilingZAt(gr_frontsector, viewx, viewy);
+		locFloorHeight    = P_GetSectorFloorZAt  (gr_frontsector, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
+		locCeilingHeight  = P_GetSectorCeilingZAt(gr_frontsector, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
 	}
 // ----- end special tricks -----
 
@@ -3412,13 +3378,8 @@ static void HWR_Subsector(size_t num)
 			fixed_t cullHeight, centerHeight;
 
             // bottom plane
-			if (*rover->b_slope)
-			{
-				cullHeight = P_GetZAt(*rover->b_slope, viewx, viewy);
-				centerHeight = P_GetZAt(*rover->b_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
-			}
-			else
-				cullHeight = centerHeight = *rover->bottomheight;
+			cullHeight   = P_GetFFloorBottomZAt(rover, viewx, viewy);
+			centerHeight = P_GetFFloorBottomZAt(rover, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
 
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES))
 				continue;
@@ -3478,13 +3439,8 @@ static void HWR_Subsector(size_t num)
 			}
 
 			// top plane
-			if (*rover->t_slope)
-			{
-				cullHeight = P_GetZAt(*rover->t_slope, viewx, viewy);
-				centerHeight = P_GetZAt(*rover->t_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
-			}
-			else
-				cullHeight = centerHeight = *rover->topheight;
+			cullHeight   = P_GetFFloorTopZAt(rover, viewx, viewy);
+			centerHeight = P_GetFFloorTopZAt(rover, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
 
 			if (centerHeight >= locFloorHeight &&
 			    centerHeight <= locCeilingHeight &&
@@ -4175,8 +4131,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 
 	for (i = 1; i < sector->numlights; i++)
 	{
-		fixed_t h = sector->lightlist[i].slope ? P_GetZAt(sector->lightlist[i].slope, spr->mobj->x, spr->mobj->y)
-					: sector->lightlist[i].height;
+		fixed_t h = P_GetLightZAt(&sector->lightlist[i], spr->mobj->x, spr->mobj->y);
 		if (h <= temp)
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
@@ -4201,15 +4156,10 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 
 		if (i + 1 < sector->numlights)
 		{
-			if (list[i+1].slope)
-			{
-				temp = P_GetZAt(list[i+1].slope, v1x, v1y);
-				bheight = FIXED_TO_FLOAT(temp);
-				temp = P_GetZAt(list[i+1].slope, v2x, v2y);
-				endbheight = FIXED_TO_FLOAT(temp);
-			}
-			else
-				bheight = endbheight = FIXED_TO_FLOAT(list[i+1].height);
+			temp = P_GetLightZAt(&list[i+1], v1x, v1y);
+			bheight = FIXED_TO_FLOAT(temp);
+			temp = P_GetLightZAt(&list[i+1], v2x, v2y);
+			endbheight = FIXED_TO_FLOAT(temp);
 		}
 		else
 		{

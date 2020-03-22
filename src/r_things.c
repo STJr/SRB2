@@ -1025,13 +1025,12 @@ static void R_SplitSprite(vissprite_t *sprite)
 
 	for (i = 1; i < sector->numlights; i++)
 	{
-		fixed_t testheight = sector->lightlist[i].height;
+		fixed_t testheight;
 
 		if (!(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
 			continue;
 
-		if (sector->lightlist[i].slope)
-			testheight = P_GetZAt(sector->lightlist[i].slope, sprite->gx, sprite->gy);
+		testheight = P_GetLightZAt(&sector->lightlist[i], sprite->gx, sprite->gy);
 
 		if (testheight >= sprite->gzt)
 			continue;
@@ -1113,10 +1112,12 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 	{
 		sector = node->m_sector;
 
-		slope = (sector->heightsec != -1) ? NULL : sector->f_slope;
-		z = slope ? P_GetZAt(slope, thing->x, thing->y) : (
-			(sector->heightsec != -1) ? sectors[sector->heightsec].floorheight : sector->floorheight
-		);
+		slope = sector->heightsec != -1 ? NULL : sector->f_slope;
+
+		if (sector->heightsec != -1)
+			z = sectors[sector->heightsec].floorheight;
+		else
+			z = P_GetSectorFloorZAt(sector, thing->x, thing->y);
 
 		if (z < thing->z+thing->height/2 && z > floorz)
 		{
@@ -1130,7 +1131,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES) || (rover->alpha < 90 && !(rover->flags & FF_SWIMMABLE)))
 					continue;
 
-				z = *rover->t_slope ? P_GetZAt(*rover->t_slope, thing->x, thing->y) : *rover->topheight;
+				z = P_GetFFloorTopZAt(rover, thing->x, thing->y);
 				if (z < thing->z+thing->height/2 && z > floorz)
 				{
 					floorz = z;
@@ -1323,8 +1324,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 		// R_GetPlaneLight won't work on sloped lights!
 		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
-			fixed_t h = thing->subsector->sector->lightlist[lightnum].slope ? P_GetZAt(thing->subsector->sector->lightlist[lightnum].slope, thing->x, thing->y)
-			            : thing->subsector->sector->lightlist[lightnum].height;
+			fixed_t h = P_GetLightZAt(&thing->subsector->sector->lightlist[lightnum], thing->x, thing->y);
 			if (h <= shadow->gzt) {
 				light = lightnum - 1;
 				break;
@@ -1730,8 +1730,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		// R_GetPlaneLight won't work on sloped lights!
 		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
-			fixed_t h = thing->subsector->sector->lightlist[lightnum].slope ? P_GetZAt(thing->subsector->sector->lightlist[lightnum].slope, thing->x, thing->y)
-			            : thing->subsector->sector->lightlist[lightnum].height;
+			fixed_t h = P_GetLightZAt(&thing->subsector->sector->lightlist[lightnum], thing->x, thing->y);
 			if (h <= gzt) {
 				light = lightnum - 1;
 				break;
@@ -2388,12 +2387,8 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 					continue;
 
 				// Effective height may be different for each comparison in the case of slopes
-				if (r2->plane->slope) {
-					planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy);
-					planecameraz = P_GetZAt(r2->plane->slope, viewx, viewy);
-				}
-				else
-					planeobjectz = planecameraz = r2->plane->height;
+				planeobjectz = P_GetZAt2(r2->plane->slope, rover->gx, rover->gy, r2->plane->height);
+				planecameraz = P_GetZAt2(r2->plane->slope,     viewx,     viewy, r2->plane->height);
 
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{
@@ -2451,19 +2446,10 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if (scale <= rover->sortscale)
 					continue;
 
-				if (*r2->ffloor->t_slope) {
-					topplaneobjectz = P_GetZAt(*r2->ffloor->t_slope, rover->gx, rover->gy);
-					topplanecameraz = P_GetZAt(*r2->ffloor->t_slope, viewx, viewy);
-				}
-				else
-					topplaneobjectz = topplanecameraz = *r2->ffloor->topheight;
-
-				if (*r2->ffloor->b_slope) {
-					botplaneobjectz = P_GetZAt(*r2->ffloor->b_slope, rover->gx, rover->gy);
-					botplanecameraz = P_GetZAt(*r2->ffloor->b_slope, viewx, viewy);
-				}
-				else
-					botplaneobjectz = botplanecameraz = *r2->ffloor->bottomheight;
+				topplaneobjectz = P_GetFFloorTopZAt   (r2->ffloor, rover->gx, rover->gy);
+				topplanecameraz = P_GetFFloorTopZAt   (r2->ffloor,     viewx,     viewy);
+				botplaneobjectz = P_GetFFloorBottomZAt(r2->ffloor, rover->gx, rover->gy);
+				botplanecameraz = P_GetFFloorBottomZAt(r2->ffloor,     viewx,     viewy);
 
 				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
 				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||

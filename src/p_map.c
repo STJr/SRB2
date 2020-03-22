@@ -3214,8 +3214,8 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 
 	glidesector = R_PointInSubsector(player->mo->x + platx, player->mo->y + platy);
 
-	floorz = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y) : glidesector->sector->floorheight;
-	ceilingz = glidesector->sector->c_slope ? P_GetZAt(glidesector->sector->c_slope, player->mo->x, player->mo->y) : glidesector->sector->ceilingheight;
+	floorz   = P_GetSectorFloorZAt  (glidesector->sector, player->mo->x, player->mo->y);
+	ceilingz = P_GetSectorCeilingZAt(glidesector->sector, player->mo->x, player->mo->y);
 
 	if (glidesector->sector != player->mo->subsector->sector)
 	{
@@ -3230,13 +3230,8 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER))
 					continue;
 
-				topheight = *rover->topheight;
-				bottomheight = *rover->bottomheight;
-
-				if (*rover->t_slope)
-					topheight = P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y);
-				if (*rover->b_slope)
-					bottomheight = P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y);
+				topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+				bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 				floorclimb = true;
 
@@ -3389,13 +3384,8 @@ isblocking:
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 					continue;
 
-				topheight = *rover->topheight;
-				bottomheight = *rover->bottomheight;
-
-				if (*rover->t_slope)
-					topheight = P_GetZAt(*rover->t_slope, slidemo->x, slidemo->y);
-				if (*rover->b_slope)
-					bottomheight = P_GetZAt(*rover->b_slope, slidemo->x, slidemo->y);
+				topheight    = P_GetFFloorTopZAt   (rover, slidemo->x, slidemo->y);
+				bottomheight = P_GetFFloorBottomZAt(rover, slidemo->x, slidemo->y);
 
 				if (topheight < slidemo->z)
 					continue;
@@ -3600,9 +3590,7 @@ static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
 		if (rover->master->flags & ML_BLOCKMONSTERS)
 			continue;
 
-		topheight = *rover->t_slope ?
-			P_GetZAt(*rover->t_slope, mo->x, mo->y) :
-			*rover->topheight;
+		topheight = P_GetFFloorTopZAt(rover, mo->x, mo->y);
 
 		if (mo->eflags & MFE_VERTICALFLIP)
 		{
@@ -3615,9 +3603,7 @@ static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
 				continue;
 		}
 
-		bottomheight = *rover->b_slope ?
-			P_GetZAt(*rover->b_slope, mo->x, mo->y) :
-			*rover->bottomheight;
+		bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
 
 		if (mo->eflags & MFE_VERTICALFLIP)
 		{
@@ -4203,11 +4189,8 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 
 				topheight = *rover->topheight;
 				bottomheight = *rover->bottomheight;
-
-				/*if (rover->t_slope)
-					topheight = P_GetZAt(rover->t_slope, thing->x, thing->y);
-				if (rover->b_slope)
-					bottomheight = P_GetZAt(rover->b_slope, thing->x, thing->y);*/
+				//topheight    = P_GetFFloorTopZAt   (rover, thing->x, thing->y);
+				//bottomheight = P_GetFFloorBottomZAt(rover, thing->x, thing->y);
 
 				delta1 = thing->z - (bottomheight + topheight)/2;
 				delta2 = thingtop - (bottomheight + topheight)/2;
@@ -4986,10 +4969,7 @@ void P_MapEnd(void)
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 {
 	sector_t *sec = R_PointInSubsector(x, y)->sector;
-	fixed_t floorz = sec->floorheight;
-
-	if (sec->f_slope)
-		floorz = P_GetZAt(sec->f_slope, x, y);
+	fixed_t floorz = P_GetSectorFloorZAt(sec, x, y);
 
 	// Intercept the stupid 'fall through 3dfloors' bug Tails 03-17-2002
 	if (sec->ffloors)
@@ -5006,13 +4986,8 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 			if ((!(rover->flags & FF_SOLID || rover->flags & FF_QUICKSAND) || (rover->flags & FF_SWIMMABLE)))
 				continue;
 
-			topheight = *rover->topheight;
-			bottomheight = *rover->bottomheight;
-
-			if (*rover->t_slope)
-				topheight = P_GetZAt(*rover->t_slope, x, y);
-			if (*rover->b_slope)
-				bottomheight = P_GetZAt(*rover->b_slope, x, y);
+			topheight    = P_GetFFloorTopZAt   (rover, x, y);
+			bottomheight = P_GetFFloorBottomZAt(rover, x, y);
 
 			if (rover->flags & FF_QUICKSAND)
 			{

@@ -6272,10 +6272,8 @@ void T_LaserFlash(laserthink_t *flash)
 
 	sourcesec = fflr->master->frontsector; // Less to type!
 
-	top = (*fflr->t_slope) ? P_GetZAt(*fflr->t_slope, sector->soundorg.x, sector->soundorg.y)
-			: *fflr->topheight;
-	bottom = (*fflr->b_slope) ? P_GetZAt(*fflr->b_slope, sector->soundorg.x, sector->soundorg.y)
-			: *fflr->bottomheight;
+	top    = P_GetFFloorTopZAt   (fflr, sector->soundorg.x, sector->soundorg.y);
+	bottom = P_GetFFloorBottomZAt(fflr, sector->soundorg.x, sector->soundorg.y);
 	sector->soundorg.z = (top + bottom)/2;
 	S_StartSound(&sector->soundorg, sfx_laser);
 
@@ -7921,10 +7919,7 @@ void T_Disappear(disappear_t *d)
 
 					if (!(lines[d->sourceline].flags & ML_NOCLIMB))
 					{
-						if (*rover->t_slope)
-							sectors[s].soundorg.z = P_GetZAt(*rover->t_slope, sectors[s].soundorg.x, sectors[s].soundorg.y);
-						else
-							sectors[s].soundorg.z = *rover->topheight;
+						sectors[s].soundorg.z = P_GetFFloorTopZAt(rover, sectors[s].soundorg.x, sectors[s].soundorg.y);
 						S_StartSound(&sectors[s].soundorg, sfx_appear);
 					}
 				}

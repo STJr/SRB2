@@ -926,13 +926,8 @@ boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover)
 		|| ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 		return false;
 
-	topheight = *rover->topheight;
-	bottomheight = *rover->bottomheight;
-
-	if (*rover->t_slope)
-		topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
-	if (*rover->b_slope)
-		bottomheight = P_GetZAt(*rover->b_slope, mobj->x, mobj->y);
+	topheight    = P_GetFFloorTopZAt   (rover, mobj->x, mobj->y);
+	bottomheight = P_GetFFloorBottomZAt(rover, mobj->x, mobj->y);
 
 	if (mobj->z > topheight)
 		return false;
@@ -3213,9 +3208,7 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 //
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 {
-	fixed_t topheight = *rover->t_slope ?
-		P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) :
-		*rover->topheight;
+	fixed_t topheight = P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
 
 	if (!player->powers[pw_carry] && !player->homing
 		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= DASHMODE_THRESHOLD) && player->mo->ceilingz-topheight >= player->mo->height)
@@ -3258,14 +3251,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 		 || ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 			continue;
 
-		topheight = *rover->topheight;
-		bottomheight = *rover->bottomheight;
-
-		if (*rover->t_slope)
-			topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
-
-		if (*rover->b_slope)
-			bottomheight = P_GetZAt(*rover->b_slope, mobj->x, mobj->y);
+		topheight    = P_GetFFloorTopZAt   (rover, mobj->x, mobj->y);
+		bottomheight = P_GetFFloorBottomZAt(rover, mobj->x, mobj->y);
 
 		if (mobj->eflags & MFE_VERTICALFLIP)
 		{
@@ -3512,14 +3499,8 @@ static void P_SceneryCheckWater(mobj_t *mobj)
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_BLOCKOTHERS)
 				continue;
 
-			topheight = *rover->topheight;
-			bottomheight = *rover->bottomheight;
-
-			if (*rover->t_slope)
-				topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
-
-			if (*rover->b_slope)
-				bottomheight = P_GetZAt(*rover->b_slope, mobj->x, mobj->y);
+			topheight    = P_GetFFloorTopZAt   (rover, mobj->x, mobj->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, mobj->x, mobj->y);
 
 			if (topheight <= mobj->z
 				|| bottomheight > (mobj->z + (mobj->height>>1)))
@@ -3564,13 +3545,9 @@ static boolean P_CameraCheckHeat(camera_t *thiscam)
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			if (halfheight >= (*rover->t_slope ?
-					P_GetZAt(*rover->t_slope, thiscam->x, thiscam->y) :
-					*rover->topheight))
+			if (halfheight >= P_GetFFloorTopZAt(rover, thiscam->x, thiscam->y))
 				continue;
-			if (halfheight <= (*rover->b_slope ?
-					P_GetZAt(*rover->b_slope, thiscam->x, thiscam->y) :
-					*rover->bottomheight))
+			if (halfheight <= P_GetFFloorBottomZAt(rover, thiscam->x, thiscam->y))
 				continue;
 
 			if (P_FindSpecialLineFromTag(13, rover->master->frontsector->tag, -1) != -1)
@@ -3598,13 +3575,9 @@ static boolean P_CameraCheckWater(camera_t *thiscam)
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_BLOCKOTHERS)
 				continue;
 
-			if (halfheight >= (*rover->t_slope ?
-					P_GetZAt(*rover->t_slope, thiscam->x, thiscam->y) :
-					*rover->topheight))
+			if (halfheight >= P_GetFFloorTopZAt(rover, thiscam->x, thiscam->y))
 				continue;
-			if (halfheight <= (
-					*rover->b_slope ? P_GetZAt(*rover->b_slope, thiscam->x, thiscam->y) :
-					*rover->bottomheight))
+			if (halfheight <= P_GetFFloorBottomZAt(rover, thiscam->x, thiscam->y))
 				continue;
 
 			return true;
@@ -3952,9 +3925,7 @@ static void CalculatePrecipFloor(precipmobj_t *mobj)
 		mobjsecsubsec = mobj->subsector->sector;
 	else
 		return;
-	mobj->floorz = mobjsecsubsec->f_slope ?
-				P_GetZAt(mobjsecsubsec->f_slope, mobj->x, mobj->y) :
-				mobjsecsubsec->floorheight;
+	mobj->floorz = P_GetSectorFloorZAt(mobjsecsubsec, mobj->x, mobj->y);
 	if (mobjsecsubsec->ffloors)
 	{
 		ffloor_t *rover;
@@ -3969,11 +3940,7 @@ static void CalculatePrecipFloor(precipmobj_t *mobj)
 			if (!(rover->flags & FF_BLOCKOTHERS) && !(rover->flags & FF_SWIMMABLE))
 				continue;
 
-			if (*rover->t_slope)
-				topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
-			else
-				topheight = *rover->topheight;
-
+			topheight = P_GetFFloorTopZAt(rover, mobj->x, mobj->y);
 			if (topheight > mobj->floorz)
 				mobj->floorz = topheight;
 		}
@@ -10496,12 +10463,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	// Make sure scale matches destscale immediately when spawned
 	P_SetScale(mobj, mobj->destscale);
 
-	mobj->floorz = mobj->subsector->sector->f_slope ?
-				P_GetZAt(mobj->subsector->sector->f_slope, x, y) :
-				mobj->subsector->sector->floorheight;
-	mobj->ceilingz = mobj->subsector->sector->c_slope ?
-				P_GetZAt(mobj->subsector->sector->c_slope, x, y) :
-				mobj->subsector->sector->ceilingheight;
+	mobj->floorz   = P_GetSectorFloorZAt  (mobj->subsector->sector, x, y);
+	mobj->ceilingz = P_GetSectorCeilingZAt(mobj->subsector->sector, x, y);
 
 	mobj->floorrover = NULL;
 	mobj->ceilingrover = NULL;
@@ -10854,12 +10817,8 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	// set subsector and/or block links
 	P_SetPrecipitationThingPosition(mobj);
 
-	mobj->floorz = starting_floorz = mobj->subsector->sector->f_slope ?
-				P_GetZAt(mobj->subsector->sector->f_slope, x, y) :
-				mobj->subsector->sector->floorheight;
-	mobj->ceilingz = mobj->subsector->sector->c_slope ?
-				P_GetZAt(mobj->subsector->sector->c_slope, x, y) :
-				mobj->subsector->sector->ceilingheight;
+	mobj->floorz   = starting_floorz = P_GetSectorFloorZAt  (mobj->subsector->sector, x, y);
+	mobj->ceilingz                   = P_GetSectorCeilingZAt(mobj->subsector->sector, x, y);
 
 	mobj->floorrover = NULL;
 	mobj->ceilingrover = NULL;
@@ -11494,12 +11453,8 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 	// set Z height
 	sector = R_PointInSubsector(x, y)->sector;
 
-	floor = sector->f_slope ?
-		P_GetZAt(sector->f_slope, x, y) :
-		sector->floorheight;
-	ceiling = sector->c_slope ?
-		P_GetZAt(sector->c_slope, x, y) :
-		sector->ceilingheight;
+	floor   = P_GetSectorFloorZAt  (sector, x, y);
+	ceiling = P_GetSectorCeilingZAt(sector, x, y);
 	ceilingspawn = ceiling - mobjinfo[MT_PLAYER].height;
 
 	if (mthing)
@@ -11569,12 +11524,8 @@ void P_MovePlayerToStarpost(INT32 playernum)
 	P_SetThingPosition(mobj);
 	sector = R_PointInSubsector(mobj->x, mobj->y)->sector;
 
-	floor = sector->f_slope ?
-		P_GetZAt(sector->f_slope, mobj->x, mobj->y) :
-		sector->floorheight;
-	ceiling = sector->c_slope ?
-		P_GetZAt(sector->c_slope, mobj->x, mobj->y) :
-		sector->ceilingheight;
+	floor   = P_GetSectorFloorZAt  (sector, mobj->x, mobj->y);
+	ceiling = P_GetSectorCeilingZAt(sector, mobj->x, mobj->y);
 
 	z = p->starpostz << FRACBITS;
 
@@ -11623,11 +11574,9 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, 
 
 	// Establish height.
 	if (flip)
-		return (ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) : ss->sector->ceilingheight)
-			- offset - mobjinfo[mobjtype].height;
+		return P_GetSectorCeilingZAt(ss->sector, x, y) - offset - mobjinfo[mobjtype].height;
 	else
-		return (ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) : ss->sector->floorheight)
-			+ offset;
+		return P_GetSectorFloorZAt(ss->sector, x, y) + offset;
 }
 
 static fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
