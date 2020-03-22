@@ -180,6 +180,9 @@
     <ClInclude Include="..\f_finale.h">
       <Filter>F_Frame</Filter>
     </ClInclude>
+    <ClInclude Include="..\g_demo.h">
+      <Filter>G_Game</Filter>
+    </ClInclude>
     <ClInclude Include="..\g_game.h">
       <Filter>G_Game</Filter>
     </ClInclude>
@@ -599,6 +602,9 @@
     </ClCompile>
     <ClCompile Include="..\f_wipe.c">
       <Filter>F_Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\g_demo.c">
+      <Filter>G_Game</Filter>
     </ClCompile>
     <ClCompile Include="..\g_game.c">
       <Filter>G_Game</Filter>
