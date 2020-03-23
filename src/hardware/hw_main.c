@@ -714,7 +714,7 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		UINT8 numplanes, j;
 		vertex_t v; // For determining the closest distance from the line to the camera, to split render planes for minimum distortion;
 
-		const float renderdist = 30000.0f; // How far out to properly render the plane
+		const float renderdist = 27000.0f; // How far out to properly render the plane
 		const float farrenderdist = 32768.0f; // From here, raise plane to horizon level to fill in the line with some texture distortion
 
 		seg_t *line = &segs[subsector->firstline];
