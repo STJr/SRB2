@@ -7990,12 +7990,18 @@ static void M_CustomLevelSelect(INT32 choice)
 static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
-	SP_MainMenu[sptutorial].status =
-		tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
-	SP_MainMenu[sprecordattack].status =
-		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
-	SP_MainMenu[spnightsmode].status =
-		(M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
+
+	if (M_GametypeHasLevels(LLM_RECORDATTACK))
+		SP_MainMenu[sprecordattack].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
+	else
+		SP_MainMenu[sprecordattack].status = IT_NOTHING|IT_DISABLED;
+
+	if (M_GametypeHasLevels(LLM_NIGHTSATTACK))
+		SP_MainMenu[spnightsmode].status = (M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
+	else
+		SP_MainMenu[spnightsmode].status = IT_NOTHING|IT_DISABLED;
+
+	SP_MainMenu[sptutorial].status = tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
 
 	M_SetupNextMenu(&SP_MainDef);
 }
