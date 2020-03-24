@@ -879,7 +879,8 @@ static menuitem_t SP_NightsAttackLevelSelectMenu[] =
 static menuitem_t SP_NightsAttackMenu[] =
 {
 	{IT_STRING|IT_KEYHANDLER,        NULL, "Level Select...",  &M_HandleTimeAttackLevelSelect,  52},
-	{IT_STRING|IT_CVAR,        NULL, "Show Records For", &cv_dummymares,              62},
+	{IT_STRING|IT_CVAR,        NULL, "Character",       &cv_chooseskin,             62},
+	{IT_STRING|IT_CVAR,        NULL, "Show Records For", &cv_dummymares,              72},
 
 	{IT_DISABLED,              NULL, "Guest Option...",  &SP_NightsGuestReplayDef,    100},
 	{IT_DISABLED,              NULL, "Replay...",        &SP_NightsReplayDef,         110},
@@ -890,6 +891,7 @@ static menuitem_t SP_NightsAttackMenu[] =
 enum
 {
 	nalevel,
+	nachar,
 	narecords,
 
 	naguest,
