@@ -1902,7 +1902,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		{
 			for (rover = gr_backsector->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES) || (rover->flags & FF_INVERTSIDES))
+				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES))
+					continue;
+				if (!(rover->flags & FF_ALLSIDES) && rover->flags & FF_INVERTSIDES)
 					continue;
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
 					continue;
@@ -2042,7 +2044,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		{
 			for (rover = gr_frontsector->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_ALLSIDES))
+				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES))
+					continue;
+				if (!(rover->flags & FF_ALLSIDES || rover->flags & FF_INVERTSIDES))
 					continue;
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
 					continue;
@@ -3427,7 +3431,7 @@ static void HWR_Subsector(size_t num)
 
 			if (centerHeight <= locCeilingHeight &&
 			    centerHeight >= locFloorHeight &&
-			    ((dup_viewz < cullHeight && !(rover->flags & FF_INVERTPLANES)) ||
+			    ((dup_viewz < cullHeight && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
 			     (dup_viewz > cullHeight && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 			{
 				if (rover->flags & FF_FOG)
@@ -3488,7 +3492,7 @@ static void HWR_Subsector(size_t num)
 
 			if (centerHeight >= locFloorHeight &&
 			    centerHeight <= locCeilingHeight &&
-			    ((dup_viewz > cullHeight && !(rover->flags & FF_INVERTPLANES)) ||
+			    ((dup_viewz > cullHeight && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
 			     (dup_viewz < cullHeight && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 			{
 				if (rover->flags & FF_FOG)
