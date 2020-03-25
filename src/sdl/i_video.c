@@ -1060,10 +1060,8 @@ void I_GetEvent(void)
 					M_SetupJoystickMenu(0);
 			 	break;
 			case SDL_QUIT:
-#ifdef HAVE_BLUA
 				if (Playing())
 					LUAh_GameQuit();
-#endif
 				I_Quit();
 				M_QuitResponse('y');
 				break;

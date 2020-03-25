@@ -68,7 +68,7 @@ void Command_Toggletwod_f(void);
 #ifdef _DEBUG
 void Command_CauseCfail_f(void);
 #endif
-#if defined(HAVE_BLUA) && defined(LUA_ALLOW_BYTECODE)
+#ifdef LUA_ALLOW_BYTECODE
 void Command_Dumplua_f(void);
 #endif
 

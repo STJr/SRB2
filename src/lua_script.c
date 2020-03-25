@@ -11,7 +11,6 @@
 /// \brief Lua scripting basics
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "dehacked.h"
 #include "z_zone.h"
@@ -24,9 +23,7 @@
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "p_local.h"
-#ifdef ESLOPE
 #include "p_slopes.h" // for P_SlopeById
-#endif
 #ifdef LUA_ALLOW_BYTECODE
 #include "d_netfil.h" // for LUA_DumpFile
 #endif
@@ -732,9 +729,7 @@ enum
 	ARCH_NODE,
 #endif
 	ARCH_FFLOOR,
-#ifdef ESLOPE
 	ARCH_SLOPE,
-#endif
 	ARCH_MAPHEADER,
 
 	ARCH_TEND=0xFF,
@@ -759,9 +754,7 @@ static const struct {
 	{META_NODE,     ARCH_NODE},
 #endif
 	{META_FFLOOR,	ARCH_FFLOOR},
-#ifdef ESLOPE
 	{META_SLOPE,    ARCH_SLOPE},
-#endif
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{NULL,          ARCH_NULL}
 };
@@ -1016,7 +1009,6 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
-#ifdef ESLOPE
 		case ARCH_SLOPE:
 		{
 			pslope_t *slope = *((pslope_t **)lua_touserdata(gL, myindex));
@@ -1028,7 +1020,6 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
-#endif
 		case ARCH_MAPHEADER:
 		{
 			mapheader_t *header = *((mapheader_t **)lua_touserdata(gL, myindex));
@@ -1250,11 +1241,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 			LUA_PushUserdata(gL, rover, META_FFLOOR);
 		break;
 	}
-#ifdef ESLOPE
 	case ARCH_SLOPE:
 		LUA_PushUserdata(gL, P_SlopeById(READUINT16(save_p)), META_SLOPE);
 		break;
-#endif
 	case ARCH_MAPHEADER:
 		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
 		break;
@@ -1423,5 +1412,3 @@ int Lua_optoption(lua_State *L, int narg,
 			return i;
 	return -1;
 }
-
-#endif // HAVE_BLUA

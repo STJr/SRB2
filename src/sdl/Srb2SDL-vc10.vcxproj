@@ -213,6 +213,7 @@
     <ClInclude Include="..\fastcmp.h" />
     <ClInclude Include="..\filesrch.h" />
     <ClInclude Include="..\f_finale.h" />
+    <ClInclude Include="..\g_demo.h" />
     <ClInclude Include="..\g_game.h" />
     <ClInclude Include="..\g_input.h" />
     <ClInclude Include="..\g_state.h" />
@@ -284,6 +285,7 @@
     <ClInclude Include="..\r_patch.h" />
     <ClInclude Include="..\r_portal.h" />
     <ClInclude Include="..\r_segs.h" />
+    <ClInclude Include="..\r_skins.h" />
     <ClInclude Include="..\r_sky.h" />
     <ClInclude Include="..\r_splats.h" />
     <ClInclude Include="..\r_state.h" />
@@ -363,6 +365,7 @@
     <ClCompile Include="..\filesrch.c" />
     <ClCompile Include="..\f_finale.c" />
     <ClCompile Include="..\f_wipe.c" />
+    <ClCompile Include="..\g_demo.c" />
     <ClCompile Include="..\g_game.c" />
     <ClCompile Include="..\g_input.c" />
     <ClCompile Include="..\hardware\hw3sound.c" />
@@ -446,6 +449,7 @@
 	<ClCompile Include="..\r_patch.c" />
     <ClCompile Include="..\r_portal.c" />
     <ClCompile Include="..\r_segs.c" />
+    <ClCompile Include="..\r_skins.c" />
     <ClCompile Include="..\r_sky.c" />
     <ClCompile Include="..\r_splats.c" />
     <ClCompile Include="..\r_things.c" />

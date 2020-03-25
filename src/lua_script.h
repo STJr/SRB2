@@ -10,8 +10,6 @@
 /// \file  lua_script.h
 /// \brief Lua scripting basics
 
-#ifdef HAVE_BLUA
-
 #include "m_fixed.h"
 #include "doomtype.h"
 #include "d_player.h"
@@ -102,5 +100,3 @@ void COM_Lua_f(void);
 
 #define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
 return luaL_error(L, "This can only be used in a level!");
-
-#endif
