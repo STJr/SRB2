@@ -575,6 +575,8 @@ extern UINT8 creditscutscene;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings
+extern UINT8 useContinues;
+#define continuesInSession (!multiplayer && (useContinues || ultimatemode || !(cursaveslot > 0)))
 
 extern mobj_t *hunt1, *hunt2, *hunt3; // Emerald hunt locations
 

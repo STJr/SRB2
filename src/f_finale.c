@@ -3618,7 +3618,7 @@ void F_StartContinue(void)
 {
 	I_Assert(!netgame && !multiplayer);
 
-	if (players[consoleplayer].continues <= 0)
+	if (continuesInSession && players[consoleplayer].continues <= 0)
 	{
 		Command_ExitGame_f();
 		return;
@@ -3725,7 +3725,9 @@ void F_ContinueDrawer(void)
 	}
 
 	// Draw the continue markers! Show continues.
-	if (ncontinues > 10)
+	if (!continuesInSession)
+		;
+	else if (ncontinues > 10)
 	{
 		if (!(continuetime & 1) || continuetime > 17)
 			V_DrawContinueIcon(x, 68, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);

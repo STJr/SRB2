@@ -1388,7 +1388,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 
 					// Continues are worthless in netgames.
 					// If that stops being the case uncomment this.
-/*					if (!ultimatemode && players[i].marescore > 50000
+/*					if (!ultimatemode && continuesInSession && players[i].marescore > 50000
 					&& oldscore < 50000)
 					{
 						players[i].continues += 1;
@@ -1408,7 +1408,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 			else
 				player->marescore = MAXSCORE;
 
-			if (!ultimatemode && !(netgame || multiplayer) && G_IsSpecialStage(gamemap)
+			if (!ultimatemode && continuesInSession && G_IsSpecialStage(gamemap)
 			&& player->marescore >= 50000 && oldscore < 50000)
 			{
 				player->continues += 1;
@@ -9539,7 +9539,7 @@ static void P_DeathThink(player_t *player)
 	// continue logic
 	if (!(netgame || multiplayer) && player->lives <= 0)
 	{
-		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_USE || cmd->buttons & BT_JUMP) && player->continues > 0)
+		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_USE || cmd->buttons & BT_JUMP) && (!continuesInSession || player->continues > 0))
 			G_UseContinue();
 		else if (player->deadtimer >= gameovertics)
 			G_UseContinue(); // Even if we don't have one this handles ending the game
