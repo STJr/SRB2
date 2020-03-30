@@ -39,12 +39,12 @@ typedef INT32 fixed_t;
   \brief convert fixed_t into floating number
 */
 
-FUNCMATH FUNCINLINE static inline float FixedToFloat(fixed_t x)
+FUNCMATH FUNCINLINE static ATTRINLINE float FixedToFloat(fixed_t x)
 {
 	return x / (float)FRACUNIT;
 }
 
-FUNCMATH FUNCINLINE static inline fixed_t FloatToFixed(float f)
+FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FloatToFixed(float f)
 {
 	return (fixed_t)(f * FRACUNIT);
 }
