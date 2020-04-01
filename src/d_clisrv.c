@@ -1338,7 +1338,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
 	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
 
-	if (FindRejoinerNum(node) != -1)
+	if (!node || FindRejoinerNum(node) != -1)
 		netbuffer->u.serverinfo.refusereason = 0;
 	else if (!cv_allownewplayer.value)
 		netbuffer->u.serverinfo.refusereason = 1;
