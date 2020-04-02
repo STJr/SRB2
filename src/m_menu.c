@@ -7991,12 +7991,14 @@ static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
 
-	if (M_GametypeHasLevels(LLM_RECORDATTACK))
+	levellistmode = LLM_RECORDATTACK;
+	if (M_PrepareLevelPlatter(-1, true))
 		SP_MainMenu[sprecordattack].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
 	else
 		SP_MainMenu[sprecordattack].status = IT_NOTHING|IT_DISABLED;
 
-	if (M_GametypeHasLevels(LLM_NIGHTSATTACK))
+	levellistmode = LLM_NIGHTSATTACK;
+	if (M_PrepareLevelPlatter(-1, true))
 		SP_MainMenu[spnightsmode].status = (M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
 	else
 		SP_MainMenu[spnightsmode].status = IT_NOTHING|IT_DISABLED;
