@@ -955,8 +955,8 @@ static void R_Subsector(size_t num)
 				*rover->bottomheight;
 			if (planecenterz <= ceilingcenterz
 				&& planecenterz >= floorcenterz
-				&& ((viewz < heightcheck && !(rover->flags & FF_INVERTPLANES))
-				|| (viewz > heightcheck && (rover->flags & FF_BOTHPLANES))))
+				&& ((viewz < heightcheck && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES)))
+				|| (viewz > heightcheck && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 			{
 				light = R_GetPlaneLight(frontsector, planecenterz,
 					viewz < heightcheck);
@@ -993,8 +993,8 @@ static void R_Subsector(size_t num)
 				*rover->topheight;
 			if (planecenterz >= floorcenterz
 				&& planecenterz <= ceilingcenterz
-				&& ((viewz > heightcheck && !(rover->flags & FF_INVERTPLANES))
-				|| (viewz < heightcheck && (rover->flags & FF_BOTHPLANES))))
+				&& ((viewz > heightcheck && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES)))
+				|| (viewz < heightcheck && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 			{
 				light = R_GetPlaneLight(frontsector, planecenterz, viewz < heightcheck);
 

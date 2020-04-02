@@ -2165,7 +2165,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				{
 					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
 						continue;
-					if (rover->flags & FF_INVERTSIDES)
+					if (!(rover->flags & FF_ALLSIDES) && rover->flags & FF_INVERTSIDES)
 						continue;
 
 					if (rover->norender == leveltime)
@@ -2220,7 +2220,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				{
 					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
 						continue;
-					if (!(rover->flags & FF_ALLSIDES))
+					if (!(rover->flags & FF_ALLSIDES || rover->flags & FF_INVERTSIDES))
 						continue;
 
 					if (rover->norender == leveltime)
@@ -2275,7 +2275,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			{
 				for (rover = backsector->ffloors, i = 0; rover && i < MAXFFLOORS; rover = rover->next)
 				{
-					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS) || rover->flags & FF_INVERTSIDES)
+					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
+						continue;
+					if (!(rover->flags & FF_ALLSIDES) && rover->flags & FF_INVERTSIDES)
 						continue;
 					if (rover->norender == leveltime)
 						continue;
@@ -2295,7 +2297,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			{
 				for (rover = frontsector->ffloors, i = 0; rover && i < MAXFFLOORS; rover = rover->next)
 				{
-					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_ALLSIDES))
+					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
+						continue;
+					if (!(rover->flags & FF_ALLSIDES || rover->flags & FF_INVERTSIDES))
 						continue;
 					if (rover->norender == leveltime)
 						continue;
@@ -2620,8 +2624,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
 					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
+					    ((viewz < planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
+					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
 						ffloor[i].b_pos = roverleft;
@@ -2643,8 +2647,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
 					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
+					    ((viewz > planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
+					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
 						ffloor[i].b_pos = roverleft;
@@ -2677,8 +2681,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
 					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
+					    ((viewz < planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
+					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
 						ffloor[i].b_pos = roverleft;
@@ -2700,8 +2704,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
 					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
+					    ((viewz > planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
+					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
 						ffloor[i].b_pos = roverleft;
