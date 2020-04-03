@@ -44,6 +44,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "f_finale.h"
+#include "lua_hook.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -6864,6 +6865,8 @@ static void M_SelectableClearMenus(INT32 choice)
 static void M_UltimateCheat(INT32 choice)
 {
 	(void)choice;
+	if (Playing())
+		LUAh_GameQuit();
 	I_Quit();
 }
 
@@ -12535,6 +12538,8 @@ void M_QuitResponse(INT32 ch)
 			I_Sleep();
 		}
 	}
+	if (Playing())
+		LUAh_GameQuit();
 	I_Quit();
 }
 
