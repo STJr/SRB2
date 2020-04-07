@@ -213,6 +213,7 @@ endif
 
 ifdef NONET
 	OPTS+=-DNONET
+	NOCURL=1
 else
 ifdef NO_IPV6
 	OPTS+=-DNO_IPV6
@@ -324,7 +325,15 @@ else
 NOPNG=1
 endif
 
-LIBS+=-lcurl
+ifndef NOCURL
+OPTS+=-DHAVE_CURL
+CURLCONFIG?=curl-config
+CURL_CFLAGS?=$(shell $(CURLCONFIG) --cflags)
+CURL_LDFLAGS?=$(shell $(CURLCONFIG) --libs)
+
+LIBS+=$(CURL_LDFLAGS)
+CFLAGS+=$(CURL_CFLAGS)
+endif
 
 ifdef STATIC
 LIBS:=-static $(LIBS)
