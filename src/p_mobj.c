@@ -10599,6 +10599,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->scale = FRACUNIT;
 	mobj->destscale = mobj->scale;
 	mobj->scalespeed = FRACUNIT/12;
+	
+	mobj->tcforce = 0;
 
 	// TODO: Make this a special map header
 	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))

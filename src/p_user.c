@@ -2034,6 +2034,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->color = mobj->color;
 	ghost->colorized = mobj->colorized; // alternatively, "true" for sonic advance style colourisation
+	ghost->tcforce = mobj->tcforce;
 
 	ghost->angle = (mobj->player ? mobj->player->drawangle : mobj->angle);
 	ghost->sprite = mobj->sprite;

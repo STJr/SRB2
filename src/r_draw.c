@@ -544,6 +544,12 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 {
 	INT32 i, starttranscolor, skinramplength;
 
+	if (skinnum >= numskins || skinnum <= (TC_DEFAULT-7))
+	{
+		CONS_Alert(CONS_WARNING, "R_GenerateTranslationColormap called with invalid skinnum %d\n", skinnum);
+		skinnum = TC_DEFAULT;
+	}
+		
 	// Handle a couple of simple special cases
 	if (skinnum < TC_DEFAULT)
 	{

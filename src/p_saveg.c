@@ -1258,6 +1258,7 @@ typedef enum
 	MD2_COLORIZED    = 1<<12,
 	MD2_ROLLANGLE    = 1<<13,
 	MD2_SHADOWSCALE  = 1<<14,
+	MD2_TCFORCE      = 1<<15,
 } mobj_diff2_t;
 
 typedef enum
@@ -1481,6 +1482,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_ROLLANGLE;
 	if (mobj->shadowscale)
 		diff2 |= MD2_SHADOWSCALE;
+	if (mobj->tcforce)
+		diff2 |= MD2_TCFORCE;
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1649,6 +1652,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEANGLE(save_p, mobj->rollangle);
 	if (diff2 & MD2_SHADOWSCALE)
 		WRITEFIXED(save_p, mobj->shadowscale);
+	if (diff2 & MD2_TCFORCE)
+		WRITEINT32(save_p, mobj->tcforce);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2730,6 +2735,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->rollangle = READANGLE(save_p);
 	if (diff2 & MD2_SHADOWSCALE)
 		mobj->shadowscale = READFIXED(save_p);
+	if (diff2 & MD2_TCFORCE)
+		mobj->tcforce = READINT32(save_p);
 
 	if (diff & MD_REDFLAG)
 	{
