@@ -459,14 +459,14 @@ springstate:
 	return final;
 }
 
-static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
+static void P_DoFan(mobj_t *spring, mobj_t *object)
 {
 	player_t *p = object->player; // will be NULL if not a player
 	fixed_t zdist; // distance between bottoms
-	fixed_t speed = spring->info->mass; // conveniently, both fans and gas jets use this for the vertical thrust
+	fixed_t speed = spring->info->mass; // used for the vertical thrust
 	SINT8 flipval = P_MobjFlip(spring); // virtually everything here centers around the thruster's gravity, not the object's!
 
-	if (p && object->state == &states[object->info->painstate]) // can't use fans and gas jets when player is in pain!
+	if (p && object->state == &states[object->info->painstate]) // can't use fans when player is in pain!
 		return;
 
 	// is object's top below thruster's position? if not, calculate distance between their bottoms
@@ -485,46 +485,24 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 
 	object->standingslope = NULL; // No launching off at silly angles for you.
 
-	switch (spring->type)
+	if (zdist > (spring->health << FRACBITS)) // max z distance determined by health (set by map thing angle)
+		return;
+	if (flipval*object->momz >= FixedMul(speed, spring->scale)) // if object's already moving faster than your best, don't bother
+		return;
+	if (p && (p->climbing || p->pflags & PF_GLIDING)) // doesn't affect Knux when he's using his abilities!
+		return;
+
+	object->momz += flipval*FixedMul(speed/4, spring->scale);
+
+	// limit the speed if too high
+	if (flipval*object->momz > FixedMul(speed, spring->scale))
+		object->momz = flipval*FixedMul(speed, spring->scale);
+
+	if (p && !p->powers[pw_tailsfly]) // doesn't reset anim for Tails' flight
 	{
-		case MT_FAN: // fan
-			if (zdist > (spring->health << FRACBITS)) // max z distance determined by health (set by map thing angle)
-				break;
-			if (flipval*object->momz >= FixedMul(speed, spring->scale)) // if object's already moving faster than your best, don't bother
-				break;
-			if (p && (p->climbing || p->pflags & PF_GLIDING)) // doesn't affect Knux when he's using his abilities!
-				break;
-
-			object->momz += flipval*FixedMul(speed/4, spring->scale);
-
-			// limit the speed if too high
-			if (flipval*object->momz > FixedMul(speed, spring->scale))
-				object->momz = flipval*FixedMul(speed, spring->scale);
-
-			if (p && !p->powers[pw_tailsfly]) // doesn't reset anim for Tails' flight
-			{
-				P_ResetPlayer(p);
-				if (p->panim != PA_FALL)
-					P_SetPlayerMobjState(object, S_PLAY_FALL);
-			}
-			break;
-		case MT_STEAM: // Steam
-			if (zdist > FixedMul(16*FRACUNIT, spring->scale))
-				break;
-			if (spring->state != &states[S_STEAM1]) // Only when it bursts
-				break;
-
-			object->momz = flipval*FixedMul(speed, FixedSqrt(FixedMul(spring->scale, object->scale))); // scale the speed with both objects' scales, just like with springs!
-
-			if (p)
-			{
-				P_ResetPlayer(p);
-				if (p->panim != PA_FALL)
-					P_SetPlayerMobjState(object, S_PLAY_FALL);
-			}
-			break;
-		default:
-			break;
+		P_ResetPlayer(p);
+		if (p->panim != PA_FALL)
+			P_SetPlayerMobjState(object, S_PLAY_FALL);
 	}
 }
 
@@ -1542,15 +1520,15 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->flags & MF_PUSHABLE)
 	{
-		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
-			P_DoFanAndGasJet(tmthing, thing);
+		if (tmthing->type == MT_FAN)
+			P_DoFan(tmthing, thing);
 	}
 
 	if (tmthing->flags & MF_PUSHABLE)
 	{
-		if (thing->type == MT_FAN || thing->type == MT_STEAM)
+		if (thing->type == MT_FAN)
 		{
-			P_DoFanAndGasJet(thing, tmthing);
+			P_DoFan(thing, tmthing);
 			return true;
 		}
 		else if (thing->flags & MF_SPRING)
@@ -1643,8 +1621,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			}
 		}
 
-		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
-			P_DoFanAndGasJet(tmthing, thing);
+		if (tmthing->type == MT_FAN)
+			P_DoFan(tmthing, thing);
 	}
 
 	if (tmthing->player) // Is the moving/interacting object the player?
@@ -1652,8 +1630,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (!tmthing->health)
 			return true;
 
-		if (thing->type == MT_FAN || thing->type == MT_STEAM)
-			P_DoFanAndGasJet(thing, tmthing);
+		if (thing->type == MT_FAN)
+			P_DoFan(thing, tmthing);
 		else if (thing->flags & MF_SPRING && tmthing->player->powers[pw_carry] != CR_MINECART)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height

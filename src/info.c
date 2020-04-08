@@ -3108,9 +3108,9 @@ state_t states[NUMSTATES] =
 
 	// Steam Riser
 	{SPR_STEM, 0, 2, {A_SetSolidSteam}, 0, 0, S_STEAM2},   // S_STEAM1
-	{SPR_STEM, 1, 2, {A_UnsetSolidSteam}, 0, 0, S_STEAM3}, // S_STEAM2
+	{SPR_STEM, 1, 2, {NULL}, 0, 0, S_STEAM3},              // S_STEAM2
 	{SPR_STEM, 2, 2, {NULL}, 0, 0, S_STEAM4},              // S_STEAM3
-	{SPR_STEM, 3, 2, {NULL}, 0, 0, S_STEAM5},              // S_STEAM4
+	{SPR_STEM, 3, 2, {A_UnsetSolidSteam}, 0, 0, S_STEAM5}, // S_STEAM4
 	{SPR_STEM, 4, 2, {NULL}, 0, 0, S_STEAM6},              // S_STEAM5
 	{SPR_STEM, 5, 2, {NULL}, 0, 0, S_STEAM7},              // S_STEAM6
 	{SPR_STEM, 6, 2, {NULL}, 0, 0, S_STEAM8},              // S_STEAM7
@@ -7403,12 +7403,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_steam1,     // deathsound
 		0,              // speed
 		32*FRACUNIT,    // radius
-		1*FRACUNIT,     // height
+		20*FRACUNIT,    // height
 		0,              // display offset
 		20*FRACUNIT,    // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID,       // flags
+		MF_SOLID|MF_SPRING, // flags
 		S_NULL          // raisestate
 	},
 
