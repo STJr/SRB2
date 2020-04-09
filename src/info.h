@@ -633,7 +633,7 @@ typedef enum sprite
 
 	// Springs
 	SPR_FANS, // Fan
-	SPR_STEM, // Steam riser
+	SPR_STEM, // Steam jet
 	SPR_BUMP, // Bumpers
 	SPR_BLON, // Balloons
 	SPR_SPRY, // Yellow spring
@@ -3247,7 +3247,7 @@ typedef enum state
 	S_FAN4,
 	S_FAN5,
 
-	// Steam Riser
+	// Steam jet
 	S_STEAM1,
 	S_STEAM2,
 	S_STEAM3,

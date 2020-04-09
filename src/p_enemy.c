@@ -4921,7 +4921,7 @@ void A_ThrownRing(mobj_t *actor)
 
 // Function: A_SetSolidSteam
 //
-// Description: Makes steam solid so it collides with the player to boost them.
+// Description: Applies the spring flag to steam jets, and randomly plays one of two sounds.
 //
 // var1 = unused
 // var2 = unused
@@ -4931,8 +4931,8 @@ void A_SetSolidSteam(mobj_t *actor)
 	if (LUA_CallAction("A_SetSolidSteam", actor))
 		return;
 
-	actor->flags &= ~MF_NOCLIP;
-	actor->flags |= MF_SOLID;
+	actor->flags |= MF_SPRING;
+
 	if (!(actor->flags2 & MF2_AMBUSH))
 	{
 		if (P_RandomChance(FRACUNIT/8))
@@ -4952,7 +4952,7 @@ void A_SetSolidSteam(mobj_t *actor)
 
 // Function: A_UnsetSolidSteam
 //
-// Description: Makes an object non-solid and also noclip. Used by the steam.
+// Description: Removes the spring flag from an object. Used by steam jets.
 //
 // var1 = unused
 // var2 = unused
@@ -4962,8 +4962,7 @@ void A_UnsetSolidSteam(mobj_t *actor)
 	if (LUA_CallAction("A_UnsetSolidSteam", actor))
 		return;
 
-	actor->flags &= ~MF_SOLID;
-	actor->flags |= MF_NOCLIP;
+	actor->flags &= ~MF_SPRING;
 }
 
 // Function: A_SignSpin

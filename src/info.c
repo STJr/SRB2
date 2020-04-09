@@ -370,7 +370,7 @@ char sprnames[NUMSPRITES + 1][5] =
 
 	// Springs
 	"FANS", // Fan
-	"STEM", // Steam riser
+	"STEM", // Steam jet
 	"BUMP", // Bumpers
 	"BLON", // Balloons
 	"SPRY", // Yellow spring
@@ -3106,7 +3106,7 @@ state_t states[NUMSTATES] =
 	{SPR_FANS, 3, 1, {A_FanBubbleSpawn}, 1024, 0, S_FAN5}, // S_FAN4
 	{SPR_FANS, 4, 1, {A_FanBubbleSpawn},  512, 0, S_FAN},  // S_FAN5
 
-	// Steam Riser
+	// Steam jet
 	{SPR_STEM, 0, 2, {A_SetSolidSteam}, 0, 0, S_STEAM2},   // S_STEAM1
 	{SPR_STEM, 1, 2, {NULL}, 0, 0, S_STEAM3},              // S_STEAM2
 	{SPR_STEM, 2, 2, {NULL}, 0, 0, S_STEAM4},              // S_STEAM3
@@ -7408,7 +7408,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		20*FRACUNIT,    // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID|MF_SPRING, // flags
+		MF_SPRING, // flags
 		S_NULL          // raisestate
 	},
 
