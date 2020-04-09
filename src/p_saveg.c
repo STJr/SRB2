@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,7 +22,7 @@
 #include "p_setup.h"
 #include "p_saveg.h"
 #include "r_data.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "r_state.h"
 #include "w_wad.h"
 #include "y_inter.h"
@@ -31,9 +31,7 @@
 #include "r_sky.h"
 #include "p_polyobj.h"
 #include "lua_script.h"
-#ifdef ESLOPE
 #include "p_slopes.h"
-#endif
 
 savedata_t savedata;
 UINT8 *save_p;
@@ -1252,9 +1250,7 @@ typedef enum
 	MD2_HPREV       = 1<<8,
 	MD2_FLOORROVER  = 1<<9,
 	MD2_CEILINGROVER = 1<<10,
-#ifdef ESLOPE
 	MD2_SLOPE        = 1<<11,
-#endif
 	MD2_COLORIZED    = 1<<12,
 	MD2_ROLLANGLE    = 1<<13,
 	MD2_SHADOWSCALE  = 1<<14,
@@ -1294,10 +1290,8 @@ typedef enum
 	tc_fade,
 	tc_fadecolormap,
 	tc_planedisplace,
-#ifdef ESLOPE
 	tc_dynslopeline,
 	tc_dynslopevert,
-#endif // ESLOPE
 #ifdef POLYOBJECTS
 	tc_polyrotate, // haleyjd 03/26/06: polyobjects
 	tc_polymove,
@@ -1336,13 +1330,11 @@ static inline UINT32 SavePlayer(const player_t *player)
 	return 0xFFFFFFFF;
 }
 
-#ifdef ESLOPE
 static UINT32 SaveSlope(const pslope_t *slope)
 {
 	if (slope) return (UINT32)(slope->id);
 	return 0xFFFFFFFF;
 }
-#endif // ESLOPE
 
 //
 // SaveMobjThinker
@@ -1406,7 +1398,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_TICS;
 	if (mobj->sprite != mobj->state->sprite)
 		diff |= MD_SPRITE;
-	if (mobj->sprite == SPR_PLAY && mobj->sprite2 != 0)
+	if (mobj->sprite == SPR_PLAY && mobj->sprite2 != (mobj->state->frame&FF_FRAMEMASK))
 		diff |= MD_SPRITE;
 	if (mobj->frame != mobj->state->frame)
 		diff |= MD_FRAME;
@@ -1471,10 +1463,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_FLOORROVER;
 	if (mobj->ceilingrover)
 		diff2 |= MD2_CEILINGROVER;
-#ifdef ESLOPE
 	if (mobj->standingslope)
 		diff2 |= MD2_SLOPE;
-#endif
 	if (mobj->colorized)
 		diff2 |= MD2_COLORIZED;
 	if (mobj->rollangle)
@@ -1639,10 +1629,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT32(save_p, mobj->hnext->mobjnum);
 	if (diff2 & MD2_HPREV)
 		WRITEUINT32(save_p, mobj->hprev->mobjnum);
-#ifdef ESLOPE
 	if (diff2 & MD2_SLOPE)
 		WRITEUINT16(save_p, mobj->standingslope->id);
-#endif
 	if (diff2 & MD2_COLORIZED)
 		WRITEUINT8(save_p, mobj->colorized);
 	if (diff2 & MD2_ROLLANGLE)
@@ -1993,7 +1981,7 @@ static void SavePlaneDisplaceThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->speed);
 	WRITEUINT8(save_p, ht->type);
 }
-#ifdef ESLOPE
+
 /// Save a dynamic slope thinker.
 static inline void SaveDynamicSlopeThinker(const thinker_t *th, const UINT8 type)
 {
@@ -2008,7 +1996,6 @@ static inline void SaveDynamicSlopeThinker(const thinker_t *th, const UINT8 type
 	WRITEMEM(save_p, ht->tags, sizeof(ht->tags));
     WRITEMEM(save_p, ht->vex, sizeof(ht->vex));
 }
-#endif // ESLOPE
 
 #ifdef POLYOBJECTS
 
@@ -2391,7 +2378,6 @@ static void P_NetArchiveThinkers(void)
 				continue;
 			}
 #endif
-#ifdef ESLOPE
 			else if (th->function.acp1 == (actionf_p1)T_DynamicSlopeLine)
 			{
 				SaveDynamicSlopeThinker(th, tc_dynslopeline);
@@ -2402,7 +2388,6 @@ static void P_NetArchiveThinkers(void)
 				SaveDynamicSlopeThinker(th, tc_dynslopevert);
 				continue;
 			}
-#endif // ESLOPE
 #ifdef PARANOIA
 			else if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed) // wait garbage collection
 				I_Error("unknown thinker type %p", th->function.acp1);
@@ -2463,7 +2448,6 @@ static inline player_t *LoadPlayer(UINT32 player)
 	return &players[player];
 }
 
-#ifdef ESLOPE
 static inline pslope_t *LoadSlope(UINT32 slopeid)
 {
 	pslope_t *p = slopelist;
@@ -2475,7 +2459,6 @@ static inline pslope_t *LoadSlope(UINT32 slopeid)
 	} while ((p = p->next));
 	return NULL;
 }
-#endif // ESLOPE
 
 //
 // LoadMobjThinker
@@ -2720,10 +2703,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->hnext = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff2 & MD2_HPREV)
 		mobj->hprev = (mobj_t *)(size_t)READUINT32(save_p);
-#ifdef ESLOPE
 	if (diff2 & MD2_SLOPE)
 		mobj->standingslope = P_SlopeById(READUINT16(save_p));
-#endif
 	if (diff2 & MD2_COLORIZED)
 		mobj->colorized = READUINT8(save_p);
 	if (diff2 & MD2_ROLLANGLE)
@@ -3183,7 +3164,6 @@ static inline thinker_t* LoadPlaneDisplaceThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-#ifdef ESLOPE
 /// Save a dynamic slope thinker.
 static inline thinker_t* LoadDynamicSlopeThinker(actionf_p1 thinker)
 {
@@ -3198,7 +3178,6 @@ static inline thinker_t* LoadDynamicSlopeThinker(actionf_p1 thinker)
 	READMEM(save_p, ht->vex, sizeof(ht->vex));
 	return &ht->thinker;
 }
-#endif // ESLOPE
 
 #ifdef POLYOBJECTS
 
@@ -3578,7 +3557,7 @@ static void P_NetUnArchiveThinkers(void)
 					th = LoadPolyfadeThinker((actionf_p1)T_PolyObjFade);
 					break;
 #endif
-#ifdef ESLOPE
+
 				case tc_dynslopeline:
 					th = LoadDynamicSlopeThinker((actionf_p1)T_DynamicSlopeLine);
 					break;
@@ -3586,7 +3565,6 @@ static void P_NetUnArchiveThinkers(void)
 				case tc_dynslopevert:
 					th = LoadDynamicSlopeThinker((actionf_p1)T_DynamicSlopeVert);
 					break;
-#endif // ESLOPE
 
 				case tc_scroll:
 					th = LoadScrollThinker((actionf_p1)T_Scroll);
@@ -4183,8 +4161,6 @@ void P_SaveGame(void)
 {
 	P_ArchiveMisc();
 	P_ArchivePlayer();
-
-	// yes, even in non HAVE_BLUA
 	P_ArchiveLuabanksAndConsistency();
 }
 
@@ -4220,9 +4196,7 @@ void P_SaveNetGame(void)
 		P_NetArchiveSpecials();
 		P_NetArchiveColormaps();
 	}
-#ifdef HAVE_BLUA
 	LUA_Archive();
-#endif
 
 	P_ArchiveLuabanksAndConsistency();
 }
@@ -4264,9 +4238,7 @@ boolean P_LoadNetGame(void)
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}
-#ifdef HAVE_BLUA
 	LUA_UnArchive();
-#endif
 
 	// This is stupid and hacky, but maybe it'll work!
 	P_SetRandSeed(P_GetInitSeed());

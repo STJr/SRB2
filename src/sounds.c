@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,7 +15,7 @@
 #include "i_sound.h"
 #include "sounds.h"
 #include "r_defs.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "z_zone.h"
 #include "w_wad.h"
 #include "lua_script.h"

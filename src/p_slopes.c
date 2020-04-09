@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2019 by Sonic Team Junior.
+// Copyright (C) 2015-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,8 +22,6 @@
 #include "r_main.h"
 #include "p_maputl.h"
 #include "w_wad.h"
-
-#ifdef ESLOPE
 
 pslope_t *slopelist = NULL;
 UINT16 slopecount = 0;
@@ -726,6 +724,9 @@ void P_SlopeLaunch(mobj_t *mo)
 
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
+
+	if (mo->player)
+		mo->player->powers[pw_justlaunched] = 1;
 }
 
 //
@@ -841,6 +842,3 @@ void P_ButteredSlope(mobj_t *mo)
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
-
-// EOF
-#endif // #ifdef ESLOPE

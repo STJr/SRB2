@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -130,11 +130,11 @@ typedef enum
 	FF_CUTEXTRA          = 0x100,      ///< Cuts out hidden translucent pixels.
 	FF_CUTLEVEL          = 0x180,      ///< Cuts out all hidden pixels.
 	FF_CUTSPRITES        = 0x200,      ///< Final step in making 3D water.
-	FF_BOTHPLANES        = 0x400,      ///< Renders both planes all the time.
+	FF_BOTHPLANES        = 0x400,      ///< Render inside and outside planes.
 	FF_EXTRA             = 0x800,      ///< Gets cut by ::FF_CUTEXTRA.
 	FF_TRANSLUCENT       = 0x1000,     ///< See through!
 	FF_FOG               = 0x2000,     ///< Fog "brush."
-	FF_INVERTPLANES      = 0x4000,     ///< Reverse the plane visibility rules.
+	FF_INVERTPLANES      = 0x4000,     ///< Only render inside planes.
 	FF_ALLSIDES          = 0x8000,     ///< Render inside and outside sides.
 	FF_INVERTSIDES       = 0x10000,    ///< Only render inside sides.
 	FF_DOUBLESHADOW      = 0x20000,    ///< Make two lightlist entries to reset light?
@@ -171,11 +171,9 @@ typedef struct ffloor_s
 	fixed_t *bottomyoffs;
 	angle_t *bottomangle;
 
-#ifdef ESLOPE
 	// Pointers to pointers. Yup.
 	struct pslope_s **t_slope;
 	struct pslope_s **b_slope;
-#endif
 
 	size_t secnum;
 	ffloortype_e flags;
@@ -208,9 +206,7 @@ typedef struct lightlist_s
 	extracolormap_t **extra_colormap; // pointer-to-a-pointer, so we can react to colormap changes
 	INT32 flags;
 	ffloor_t *caster;
-#ifdef ESLOPE
 	struct pslope_s *slope; // FF_DOUBLESHADOW makes me have to store this pointer here. Bluh bluh.
-#endif
 } lightlist_t;
 
 
@@ -244,7 +240,6 @@ typedef struct linechain_s
 
 
 // Slopes
-#ifdef ESLOPE
 typedef enum {
 	SL_NOPHYSICS = 1, /// This plane will have no physics applied besides the positioning.
 	SL_DYNAMIC = 1<<1, /// This plane slope will be assigned a thinker to make it dynamic.
@@ -268,7 +263,6 @@ typedef struct pslope_s
 
 	UINT8 flags; // Slope options
 } pslope_t;
-#endif
 
 typedef enum
 {
@@ -379,12 +373,10 @@ typedef struct sector_s
 	precipmobj_t *preciplist;
 	struct mprecipsecnode_s *touching_preciplist;
 
-#ifdef ESLOPE
 	// Eternity engine slope
 	pslope_t *f_slope; // floor slope
 	pslope_t *c_slope; // ceiling slope
 	boolean hasslope; // The sector, or one of its visible FOFs, contains a slope
-#endif
 
 	// for fade thinker
 	INT16 spawn_lightlevel;
@@ -668,11 +660,9 @@ typedef struct drawseg_s
 
 	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
 
-#ifdef ESLOPE
 	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
 
 	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
-#endif
 } drawseg_t;
 
 typedef enum

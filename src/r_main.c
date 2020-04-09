@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -459,9 +459,7 @@ static void R_InitTextureMapping(void)
 	focallength = FixedDiv(projection,
 		FINETANGENT(FINEANGLES/4+FIELDOFVIEW/2));
 
-#ifdef ESLOPE
 	focallengthf = FIXED_TO_FLOAT(focallength);
-#endif
 
 	for (i = 0; i < FINEANGLES/2; i++)
 	{

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -218,9 +218,7 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		const vertex_t *v1,*v2;
 		fixed_t frac;
 		fixed_t frontf, backf, frontc, backc;
-#ifdef ESLOPE
 		fixed_t fracx, fracy;
-#endif
 
 		if (seg->glseg)
 			continue;
@@ -263,7 +261,6 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 
 		front = seg->frontsector;
 		back  = seg->backsector;
-#ifdef ESLOPE
 		// calculate position at intercept
 		fracx = los->strace.x + FixedMul(los->strace.dx, frac);
 		fracy = los->strace.y + FixedMul(los->strace.dy, frac);
@@ -272,12 +269,6 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		frontc = (front->c_slope) ? P_GetZAt(front->c_slope, fracx, fracy) : front->ceilingheight;
 		backf  = (back->f_slope)  ? P_GetZAt(back->f_slope, fracx, fracy)  : back->floorheight;
 		backc  = (back->c_slope)  ? P_GetZAt(back->c_slope, fracx, fracy)  : back->ceilingheight;
-#else
-		frontf = front->floorheight;
-		frontc = front->ceilingheight;
-		backf  = back->floorheight;
-		backc  = back->ceilingheight;
-#endif
 		// crosses a two sided line
 		// no wall to block sight with?
 		if (frontf == backf && frontc == backc
@@ -327,13 +318,8 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 					continue;
 				}
 
-#ifdef ESLOPE
 				topz    = (*rover->t_slope) ? P_GetZAt(*rover->t_slope, fracx, fracy) : *rover->topheight;
 				bottomz = (*rover->b_slope) ? P_GetZAt(*rover->b_slope, fracx, fracy) : *rover->bottomheight;
-#else
-				topz    = *rover->topheight;
-				bottomz = *rover->bottomheight;
-#endif
 				topslope    = FixedDiv(topz - los->sightzstart , frac);
 				bottomslope = FixedDiv(bottomz - los->sightzstart , frac);
 				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
@@ -348,13 +334,8 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 					continue;
 				}
 
-#ifdef ESLOPE
 				topz    = (*rover->t_slope) ? P_GetZAt(*rover->t_slope, fracx, fracy) : *rover->topheight;
 				bottomz = (*rover->b_slope) ? P_GetZAt(*rover->b_slope, fracx, fracy) : *rover->bottomheight;
-#else
-				topz    = *rover->topheight;
-				bottomz = *rover->bottomheight;
-#endif
 				topslope    = FixedDiv(topz - los->sightzstart , frac);
 				bottomslope = FixedDiv(bottomz - los->sightzstart , frac);
 				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
@@ -487,7 +468,6 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 				continue;
 			}
 
-#ifdef ESLOPE
 			if (*rover->t_slope)
 			{
 				topz1 = P_GetZAt(*rover->t_slope, t1->x, t1->y);
@@ -503,10 +483,6 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 			}
 			else
 				bottomz1 = bottomz2 = *rover->bottomheight;
-#else
-			topz1 = topz2 = *rover->topheight;
-			bottomz1 = bottomz2 = *rover->bottomheight;
-#endif
 
 			// Check for blocking floors here.
 			if ((los.sightzstart < bottomz1 && t2->z >= topz2)
@@ -519,7 +495,7 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 			if (rover->flags & FF_SOLID)
 				continue; // shortcut since neither mobj can be inside the 3dfloor
 
-			if (!(rover->flags & FF_INVERTPLANES))
+			if (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))
 			{
 				if (los.sightzstart >= topz1 && t2->z + t2->height < topz2)
 					return false; // blocked by upper outside plane
@@ -528,7 +504,7 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 					return false; // blocked by lower outside plane
 			}
 
-			if (rover->flags & FF_INVERTPLANES || rover->flags & FF_BOTHPLANES)
+			if (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES)
 			{
 				if (los.sightzstart < topz1 && t2->z >= topz2)
 					return false; // blocked by upper inside plane

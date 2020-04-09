@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2019 by Sonic Team Junior.
+// Copyright (C) 2004-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,7 +19,7 @@
 #include "i_video.h"
 #include "p_tick.h"
 #include "r_defs.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "s_sound.h"
 #include "st_stuff.h"
 #include "v_video.h"
@@ -37,9 +37,7 @@
 #include "m_cond.h" // condition sets
 #include "lua_hook.h" // IntermissionThinker hook
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -330,9 +328,7 @@ void Y_IntermissionDrawer(void)
 
 	if (intertype == int_none)
 	{
-#ifdef HAVE_BLUA
 		LUAh_IntermissionHUD();
-#endif
 		return;
 	}
 
@@ -384,11 +380,9 @@ void Y_IntermissionDrawer(void)
 	else
 		V_DrawPatchFill(bgtile);
 
-#ifdef HAVE_BLUA
 	LUAh_IntermissionHUD();
 	if (!LUA_HudEnabled(hud_intermissiontally))
 		goto skiptallydrawer;
-#endif
 
 dontdrawbg:
 	if (intertype == int_coop)
@@ -944,11 +938,9 @@ dontdrawbg:
 		}
 	}
 
-#ifdef HAVE_BLUA
 skiptallydrawer:
 	if (!LUA_HudEnabled(hud_intermissionmessages))
 		return;
-#endif
 
 	if (timer)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
@@ -973,9 +965,7 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
-#ifdef HAVE_BLUA
 	LUAh_IntermissionThinker();
-#endif
 
 	intertic++;
 

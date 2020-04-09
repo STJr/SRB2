@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,7 +27,7 @@ This version is independent of the mod name, and standard
 version and subversion. It should only account for the
 basic fields of the packet, and change infrequently.
 */
-#define PACKETVERSION 2
+#define PACKETVERSION 3
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -36,7 +36,7 @@ basic fields of the packet, and change infrequently.
 //  be transmitted.
 
 // Networking and tick handling related.
-#define BACKUPTICS 32
+#define BACKUPTICS 96
 #define MAXTEXTCMD 256
 //
 // Packet structure
@@ -66,6 +66,10 @@ typedef enum
 	                  // If this ID changes, update masterserver definition.
 	PT_RESYNCHEND,    // Player is now resynched and is being requested to remake the gametic
 	PT_RESYNCHGET,    // Player got resynch packet
+
+	PT_SENDINGLUAFILE, // Server telling a client Lua needs to open a file
+	PT_ASKLUAFILE,     // Client telling the server they don't have the file
+	PT_HASLUAFILE,     // Client telling the server they have the file
 
 	// Add non-PT_CANFAIL packet types here to avoid breaking MS compatibility.
 
@@ -361,6 +365,7 @@ typedef struct
 	UINT8 subversion;
 	UINT8 numberofplayer;
 	UINT8 maxplayer;
+	UINT8 refusereason; // 0: joinable, 1: joins disabled, 2: full
 	char gametypename[24];
 	UINT8 modifiedgame;
 	UINT8 cheatsenabled;

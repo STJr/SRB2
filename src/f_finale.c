@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,9 +39,7 @@
 #include "fastcmp.h"
 #include "console.h"
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
-#endif
 
 // Stage of animation:
 // 0 = text, 1 = art screen
@@ -2762,11 +2760,7 @@ void F_TitleScreenDrawer(void)
 	// rei|miru: use title pics?
 	hidepics = curhidepics;
 	if (hidepics)
-#ifdef HAVE_BLUA
 		goto luahook;
-#else
-		return;
-#endif
 
 	switch(curttmode)
 	{
@@ -3488,10 +3482,8 @@ void F_TitleScreenDrawer(void)
 			break;
 	}
 
-#ifdef HAVE_BLUA
 luahook:
 	LUAh_TitleHUD();
-#endif
 }
 
 // separate animation timer for backgrounds, since we also count

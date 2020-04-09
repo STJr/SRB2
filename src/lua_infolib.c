@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,7 +11,6 @@
 /// \brief infotable editing library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "info.h"
 #include "dehacked.h"
@@ -389,10 +388,7 @@ static int lib_setSpriteInfo(lua_State *L)
 		lua_Integer i = 0;
 		const char *str = NULL;
 		if (lua_isnumber(L, 2))
-		{
 			i = lua_tointeger(L, 2);
-			i++; // shift index in case of missing rotsprite support
-		}
 		else
 			str = luaL_checkstring(L, 2);
 
@@ -1651,5 +1647,3 @@ int LUA_InfoLib(lua_State *L)
 
 	return 0;
 }
-
-#endif

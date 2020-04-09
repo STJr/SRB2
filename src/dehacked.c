@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,6 +31,7 @@
 #include "r_data.h"
 #include "r_draw.h"
 #include "r_patch.h"
+#include "r_things.h" // R_Char2Frame
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"
@@ -39,9 +40,7 @@
 
 #include "m_cond.h"
 
-#ifdef HAVE_BLUA
 #include "v_video.h" // video flags (for lua)
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_light.h"
@@ -76,10 +75,8 @@ static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
 #endif
 static hudnum_t get_huditem(const char *word);
 static menutype_t get_menutype(const char *word);
-#ifndef HAVE_BLUA
-static INT16 get_gametype(const char *word);
-static powertype_t get_power(const char *word);
-#endif
+//static INT16 get_gametype(const char *word);
+//static powertype_t get_power(const char *word);
 
 boolean deh_loaded = false;
 static int dbg_line;
@@ -585,21 +582,30 @@ static void readfreeslots(MYFILE *f)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
-					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
 					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
-					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
+					deh_warning("Ran out of free SPR2 slots!\n");
 			}
 			else if (fastcmp(type, "TOL"))
 			{
-				if (lastcustomtol > 31)
-					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				// Search if we already have a typeoflevel by that name...
+				for (i = 0; TYPEOFLEVEL[i].name; i++)
+					if (fastcmp(word, TYPEOFLEVEL[i].name))
+						break;
+
+				// We found it? Then don't allocate another one.
+				if (TYPEOFLEVEL[i].name)
+					continue;
+
+				// We don't, so freeslot it.
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
+					deh_warning("Ran out of free typeoflevel slots!\n");
 				else
 				{
-					G_AddTOL((1<<lastcustomtol), word);
-					lastcustomtol++;
+					G_AddTOL(lastcustomtol, word);
+					lastcustomtol <<= 1;
 				}
 			}
 			else
@@ -1105,38 +1111,7 @@ static void readsprite2(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-INT32 numtolinfo = NUMBASETOL;
-UINT32 lastcustomtol = 13;
-
-tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
-	{"SOLO",TOL_SP},
-	{"SP",TOL_SP},
-	{"SINGLEPLAYER",TOL_SP},
-	{"SINGLE",TOL_SP},
-
-	{"COOP",TOL_COOP},
-	{"CO-OP",TOL_COOP},
-
-	{"COMPETITION",TOL_COMPETITION},
-	{"RACE",TOL_RACE},
-
-	{"MATCH",TOL_MATCH},
-	{"TAG",TOL_TAG},
-	{"CTF",TOL_CTF},
-
-	{"2D",TOL_2D},
-	{"MARIO",TOL_MARIO},
-	{"NIGHTS",TOL_NIGHTS},
-	{"OLDBRAK",TOL_ERZ3},
-
-	{"XMAS",TOL_XMAS},
-	{"CHRISTMAS",TOL_XMAS},
-	{"WINTER",TOL_XMAS},
-
-	{NULL, 0}
-};
-
-// copypasted from readPlayer :sleep:
+// copypasted from readPlayer :]
 static const char *const GAMETYPERULE_LIST[];
 static void readgametype(MYFILE *f, char *gtname)
 {
@@ -1271,7 +1246,7 @@ static void readgametype(MYFILE *f, char *gtname)
 					newgttol = (UINT32)i;
 				else
 				{
-					UINT16 tol = 0;
+					UINT32 tol = 0;
 					tmp = strtok(word2,",");
 					do {
 						for (i = 0; TYPEOFLEVEL[i].name; i++)
@@ -1437,7 +1412,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			// Lua custom options also go above, contents may be case sensitive.
 			if (fastncmp(word, "LUA.", 4))
 			{
-#ifdef HAVE_BLUA
 				UINT8 j;
 				customoption_t *modoption;
 
@@ -1471,9 +1445,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				modoption->option[31] = '\0';
 				strncpy(modoption->value,  word2, 255);
 				modoption->value[255] = '\0';
-#else
-				// Silently ignore.
-#endif
 				continue;
 			}
 
@@ -1613,7 +1584,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->typeoflevel = (UINT32)i;
 				else
 				{
-					UINT16 tol = 0;
+					UINT32 tol = 0;
 					tmp = strtok(word2,",");
 					do {
 						for (i = 0; TYPEOFLEVEL[i].name; i++)
@@ -1827,6 +1798,24 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
+			}
+			else if (fastcmp(word, "SHOWTITLECARDFOR"))
+			{
+				mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
+				tmp = strtok(word2,",");
+				do {
+					if (fastcmp(tmp, "FIRST"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDFIRST;
+					else if (fastcmp(tmp, "RESPAWN"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRESPAWN;
+					else if (fastcmp(tmp, "RECORDATTACK"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRECORDATTACK;
+					else if (fastcmp(tmp, "ALL"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
+					else if (!fastcmp(tmp, "NONE"))
+						deh_warning("Level header %d: unknown titlecard show option %s\n", num, tmp);
+
+				} while((tmp = strtok(NULL,",")) != NULL);
 			}
 
 			// Individual triggers for menu flags
@@ -3127,22 +3116,20 @@ static void readframe(MYFILE *f, INT32 num)
 				}
 
 				z = 0;
-#ifdef HAVE_BLUA
 				found = LUA_SetLuaAction(&states[num], actiontocompare);
 				if (!found)
-#endif
-				while (actionpointers[z].name)
-				{
-					if (fastcmp(actiontocompare, actionpointers[z].name))
+					while (actionpointers[z].name)
 					{
-						states[num].action = actionpointers[z].action;
-						states[num].action.acv = actionpointers[z].action.acv; // assign
-						states[num].action.acp1 = actionpointers[z].action.acp1;
-						found = true;
-						break;
+						if (fastcmp(actiontocompare, actionpointers[z].name))
+						{
+							states[num].action = actionpointers[z].action;
+							states[num].action.acv = actionpointers[z].action.acv; // assign
+							states[num].action.acp1 = actionpointers[z].action.acp1;
+							found = true;
+							break;
+						}
+						z++;
 					}
-					z++;
-				}
 
 				if (!found)
 					deh_warning("Unknown action %s", actiontocompare);
@@ -7482,6 +7469,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Got Flag Sign
 	"S_GOTFLAG",
 
+	// Finish flag
+	"S_FINISHFLAG",
+
 	"S_CORK",
 	"S_LHRT",
 
@@ -8602,6 +8592,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LOCKONINF", // In-level Target
 	"MT_TAG", // Tag Sign
 	"MT_GOTFLAG", // Got Flag sign
+	"MT_FINISHFLAG", // Finish flag
 
 	// Ambient Sounds
 	"MT_AWATERA", // Ambient Water Sound 1
@@ -8848,14 +8839,12 @@ static const char *const MOBJEFLAG_LIST[] = {
 	NULL
 };
 
-#ifdef HAVE_BLUA
 static const char *const MAPTHINGFLAG_LIST[4] = {
 	"EXTRA", // Extra flag for objects.
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
 	"AMBUSH" // Deaf monsters/do not react to sound.
 };
-#endif
 
 static const char *const PLAYERFLAG_LIST[] = {
 
@@ -8952,7 +8941,6 @@ static const char *const GAMETYPERULE_LIST[] = {
 	NULL
 };
 
-#ifdef HAVE_BLUA
 // Linedef flags
 static const char *const ML_LIST[16] = {
 	"IMPASSIBLE",
@@ -8972,7 +8960,6 @@ static const char *const ML_LIST[16] = {
 	"BOUNCY",
 	"TFERLINE"
 };
-#endif
 
 // This DOES differ from r_draw's Color_Names, unfortunately.
 // Also includes Super colors
@@ -8992,9 +8979,11 @@ static const char *COLOR_ENUMS[] = {
 	// Desaturated
 	"AETHER",     	// SKINCOLOR_AETHER,
 	"SLATE",     	// SKINCOLOR_SLATE,
+	"BLUEBELL",   	// SKINCOLOR_BLUEBELL,
 	"PINK",     	// SKINCOLOR_PINK,
 	"YOGURT",     	// SKINCOLOR_YOGURT,
 	"BROWN",     	// SKINCOLOR_BROWN,
+	"BRONZE",     	// SKINCOLOR_BRONZE,
 	"TAN",     		// SKINCOLOR_TAN,
 	"BEIGE",     	// SKINCOLOR_BEIGE,
 	"MOSS",     	// SKINCOLOR_MOSS,
@@ -9007,9 +8996,11 @@ static const char *COLOR_ENUMS[] = {
 	"RED",     		// SKINCOLOR_RED,
 	"CRIMSON",     	// SKINCOLOR_CRIMSON,
 	"FLAME",     	// SKINCOLOR_FLAME,
+	"KETCHUP",     	// SKINCOLOR_KETCHUP,
 	"PEACHY",     	// SKINCOLOR_PEACHY,
 	"QUAIL",     	// SKINCOLOR_QUAIL,
 	"SUNSET",     	// SKINCOLOR_SUNSET,
+	"COPPER",     	// SKINCOLOR_COPPER,
 	"APRICOT",     	// SKINCOLOR_APRICOT,
 	"ORANGE",     	// SKINCOLOR_ORANGE,
 	"RUST",     	// SKINCOLOR_RUST,
@@ -9019,6 +9010,7 @@ static const char *COLOR_ENUMS[] = {
 	"OLIVE",     	// SKINCOLOR_OLIVE,
 	"LIME",     	// SKINCOLOR_LIME,
 	"PERIDOT",     	// SKINCOLOR_PERIDOT,
+	"APPLE",     	// SKINCOLOR_APPLE,
 	"GREEN",     	// SKINCOLOR_GREEN,
 	"FOREST",     	// SKINCOLOR_FOREST,
 	"EMERALD",     	// SKINCOLOR_EMERALD,
@@ -9045,6 +9037,7 @@ static const char *COLOR_ENUMS[] = {
 	"VIOLET",     	// SKINCOLOR_VIOLET,
 	"LILAC",     	// SKINCOLOR_LILAC,
 	"PLUM",     	// SKINCOLOR_PLUM,
+	"RASPBERRY",  	// SKINCOLOR_RASPBERRY,
 	"ROSY",     	// SKINCOLOR_ROSY,
 
 	// Super special awesome Super flashing colors!
@@ -9138,7 +9131,8 @@ static const char *const POWERS_LIST[] = {
 	"NIGHTS_LINKFREEZE",
 
 	//for linedef exec 427
-	"NOCONTROL"
+	"NOCONTROL",
+	"JUSTLAUNCHED",
 };
 
 static const char *const HUDITEMS_LIST[] = {
@@ -9264,11 +9258,7 @@ static const char *const MENUTYPES_LIST[] = {
 struct {
 	const char *n;
 	// has to be able to hold both fixed_t and angle_t, so drastic measure!!
-#ifdef HAVE_BLUA
 	lua_Integer v;
-#else
-	INT64 v;
-#endif
 } const INT_CONST[] = {
 	// If a mod removes some variables here,
 	// please leave the names in-tact and just set
@@ -9375,6 +9365,9 @@ struct {
 	{"LF_NOZONE",LF_NOZONE},
 	{"LF_SAVEGAME",LF_SAVEGAME},
 	{"LF_MIXNIGHTSCOUNTDOWN",LF_MIXNIGHTSCOUNTDOWN},
+	{"LF_NOTITLECARDFIRST",LF_NOTITLECARDFIRST},
+	{"LF_NOTITLECARDRESPAWN",LF_NOTITLECARDRESPAWN},
+	{"LF_NOTITLECARDRECORDATTACK",LF_NOTITLECARDRECORDATTACK},
 	{"LF_NOTITLECARD",LF_NOTITLECARD},
 	{"LF_WARNINGTITLE",LF_WARNINGTITLE},
 	// And map flags
@@ -9522,7 +9515,6 @@ struct {
 	{"ME_ULTIMATE",ME_ULTIMATE},
 	{"ME_PERFECT",ME_PERFECT},
 
-#ifdef HAVE_BLUA
 	// p_local.h constants
 	{"FLOATSPEED",FLOATSPEED},
 	{"MAXSTEPMOVE",MAXSTEPMOVE},
@@ -9657,11 +9649,11 @@ struct {
 	{"FF_CUTEXTRA",FF_CUTEXTRA},               ///< Cuts out hidden translucent pixels.
 	{"FF_CUTLEVEL",FF_CUTLEVEL},               ///< Cuts out all hidden pixels.
 	{"FF_CUTSPRITES",FF_CUTSPRITES},           ///< Final step in making 3D water.
-	{"FF_BOTHPLANES",FF_BOTHPLANES},           ///< Renders both planes all the time.
+	{"FF_BOTHPLANES",FF_BOTHPLANES},           ///< Render inside and outside planes.
 	{"FF_EXTRA",FF_EXTRA},                     ///< Gets cut by ::FF_CUTEXTRA.
 	{"FF_TRANSLUCENT",FF_TRANSLUCENT},         ///< See through!
 	{"FF_FOG",FF_FOG},                         ///< Fog "brush."
-	{"FF_INVERTPLANES",FF_INVERTPLANES},       ///< Reverse the plane visibility rules.
+	{"FF_INVERTPLANES",FF_INVERTPLANES},       ///< Only render inside planes.
 	{"FF_ALLSIDES",FF_ALLSIDES},               ///< Render inside and outside sides.
 	{"FF_INVERTSIDES",FF_INVERTSIDES},         ///< Only render inside sides.
 	{"FF_DOUBLESHADOW",FF_DOUBLESHADOW},       ///< Make two lightlist entries to reset light?
@@ -9687,11 +9679,10 @@ struct {
 	// Node flags
 	{"NF_SUBSECTOR",NF_SUBSECTOR}, // Indicate a leaf.
 #endif
-#ifdef ESLOPE
+
 	// Slope flags
 	{"SL_NOPHYSICS",SL_NOPHYSICS},
 	{"SL_DYNAMIC",SL_DYNAMIC},
-#endif
 
 	// Angles
 	{"ANG1",ANG1},
@@ -9855,7 +9846,6 @@ struct {
 	{"TC_RAINBOW",TC_RAINBOW},
 	{"TC_BLINK",TC_BLINK},
 	{"TC_DASHMODE",TC_DASHMODE},
-#endif
 
 	{NULL,0}
 };
@@ -10012,8 +10002,7 @@ static menutype_t get_menutype(const char *word)
 	return MN_NONE;
 }
 
-#ifndef HAVE_BLUA
-static INT16 get_gametype(const char *word)
+/*static INT16 get_gametype(const char *word)
 { // Returns the value of GT_ enumerations
 	INT16 i;
 	if (*word >= '0' && *word <= '9')
@@ -10039,7 +10028,7 @@ static powertype_t get_power(const char *word)
 			return i;
 	deh_warning("Couldn't find power named 'pw_%s'",word);
 	return pw_invulnerability;
-}
+}*/
 
 /// \todo Make ANY of this completely over-the-top math craziness obey the order of operations.
 static fixed_t op_mul(fixed_t a, fixed_t b) { return a*b; }
@@ -10067,7 +10056,7 @@ struct {
 };
 
 // Returns the full word, cut at the first symbol or whitespace
-static char *read_word(const char *line)
+/*static char *read_word(const char *line)
 {
 	// Part 1: You got the start of the word, now find the end.
   const char *p;
@@ -10227,7 +10216,7 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-	else if (fastncmp("GT_",word,4)) {
+	else if (fastncmp("GT_",word,3)) {
 		r = get_gametype(word);
 		free(word);
 		return r;
@@ -10297,16 +10286,14 @@ static fixed_t find_const(const char **rword)
 	const_warning("constant",word);
 	free(word);
 	return 0;
-}
-#endif
+}*/
 
 // Loops through every constant and operation in word and performs its calculations, returning the final value.
 fixed_t get_number(const char *word)
 {
-#ifdef HAVE_BLUA
 	return LUA_EvalMath(word);
-#else
-	// DESPERATELY NEEDED: Order of operations support! :x
+
+	/*// DESPERATELY NEEDED: Order of operations support! :x
 	fixed_t i = find_const(&word);
 	INT32 o;
 	while(*word) {
@@ -10316,8 +10303,7 @@ fixed_t get_number(const char *word)
 		else
 			break;
 	}
-	return i;
-#endif
+	return i;*/
 }
 
 void DEH_Check(void)
@@ -10342,7 +10328,6 @@ void DEH_Check(void)
 #endif
 }
 
-#ifdef HAVE_BLUA
 #include "lua_script.h"
 #include "lua_libs.h"
 
@@ -10469,16 +10454,23 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "TOL"))
 		{
-			if (lastcustomtol > 31)
-				CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
-			else
-			{
-				UINT32 newtol = (1<<lastcustomtol);
-				CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
-				G_AddTOL(newtol, word);
-				lua_pushinteger(L, newtol);
-				lastcustomtol++;
-				r++;
+			// Search if we already have a typeoflevel by that name...
+			int i;
+			for (i = 0; TYPEOFLEVEL[i].name; i++)
+				if (fastcmp(word, TYPEOFLEVEL[i].name))
+					break;
+
+			// We don't, so allocate a new one.
+			if (TYPEOFLEVEL[i].name == NULL) {
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
+					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				else {
+					CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
+					G_AddTOL(lastcustomtol, word);
+					lua_pushinteger(L, lastcustomtol);
+					lastcustomtol <<= 1;
+					r++;
+				}
 			}
 		}
 		Z_Free(s);
@@ -10961,5 +10953,3 @@ void LUA_SetActionByName(void *state, const char *actiontocompare)
 		}
 	}
 }
-
-#endif // HAVE_BLUA

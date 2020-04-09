@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,9 +15,10 @@
 #ifndef __X_MENU__
 #define __X_MENU__
 
+#include "doomstat.h" // for NUMGAMETYPES
 #include "d_event.h"
 #include "command.h"
-#include "r_things.h" // for SKINNAMESIZE
+#include "r_skins.h" // for SKINNAMESIZE
 #include "f_finale.h" // for ttmode_enum
 
 //

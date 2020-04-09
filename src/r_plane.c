@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -202,7 +202,6 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		// Needed for ds_bgofs
 		R_PlaneRipple(currentplane, y, planeheight);
 
-#ifdef ESLOPE
 		if (currentplane->slope)
 		{
 			ds_sup = &ds_su[y];
@@ -210,7 +209,6 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 			ds_szp = &ds_sz[y];
 		}
 		else
-#endif
 		{
 			ds_xfrac += ripple_xfrac;
 			ds_yfrac += ripple_yfrac;
@@ -227,12 +225,10 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
 
-#ifdef ESLOPE
 	if (currentplane->slope)
 		ds_colormap = colormaps;
 	else
-#endif
-	ds_colormap = planezlight[pindex];
+		ds_colormap = planezlight[pindex];
 
 	if (currentplane->extra_colormap)
 		ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
@@ -345,17 +341,12 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 #ifdef POLYOBJECTS_PLANES
 			, polyobj_t *polyobj
 #endif
-#ifdef ESLOPE
-			, pslope_t *slope
-#endif
-			)
+			, pslope_t *slope)
 {
 	visplane_t *check;
 	unsigned hash;
 
-#ifdef ESLOPE
-	if (slope); else // Don't mess with this right now if a slope is involved
-#endif
+	if (!slope) // Don't mess with this right now if a slope is involved
 	{
 		xoff += viewx;
 		yoff -= viewy;
@@ -413,10 +404,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 			&& check->viewangle == viewangle
 			&& check->plangle == plangle
-#ifdef ESLOPE
-			&& check->slope == slope
-#endif
-			)
+			&& check->slope == slope)
 		{
 			return check;
 		}
@@ -441,9 +429,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 #ifdef POLYOBJECTS_PLANES
 	check->polyobj = polyobj;
 #endif
-#ifdef ESLOPE
 	check->slope = slope;
-#endif
 
 	memset(check->top, 0xff, sizeof (check->top));
 	memset(check->bottom, 0x00, sizeof (check->bottom));
@@ -513,9 +499,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 #ifdef POLYOBJECTS_PLANES
 		new_pl->polyobj = pl->polyobj;
 #endif
-#ifdef ESLOPE
 		new_pl->slope = pl->slope;
-#endif
 		pl = new_pl;
 		pl->minx = start;
 		pl->maxx = stop;
@@ -860,7 +844,6 @@ static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boo
 	return flat;
 }
 
-#ifdef ESLOPE
 static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 {
 	// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
@@ -951,7 +934,6 @@ d.z = (v1.x * v2.y) - (v1.y * v2.x)
 	}
 #undef SFMULT
 }
-#endif // ESLOPE
 
 void R_DrawSinglePlane(visplane_t *pl)
 {
@@ -1087,10 +1069,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 	}
 	else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
-#ifdef ESLOPE
-	if (!pl->slope) // Don't mess with angle on slopes! We'll handle this ourselves later
-#endif
-	if (viewangle != pl->viewangle+pl->plangle)
+	if (!pl->slope // Don't mess with angle on slopes! We'll handle this ourselves later
+		&& viewangle != pl->viewangle+pl->plangle)
 	{
 		memset(cachedheight, 0, sizeof (cachedheight));
 		angle = (pl->viewangle+pl->plangle-ANGLE_90)>>ANGLETOFINESHIFT;
@@ -1148,7 +1128,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	if (light < 0)
 		light = 0;
 
-#ifdef ESLOPE
 	if (pl->slope)
 	{
 		float fudgecanyon = 0;
@@ -1248,10 +1227,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 			spanfunctype = SPANDRAWFUNC_TILTED;
 
 		planezlight = scalelight[light];
-	} else
-#endif // ESLOPE
-
-	planezlight = zlight[light];
+	}
+	else
+		planezlight = zlight[light];
 
 	// Use the correct span drawer depending on the powers-of-twoness
 	if (!ds_powersoftwo)

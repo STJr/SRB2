@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,11 +34,9 @@ void DEH_Check(void);
 
 fixed_t get_number(const char *word);
 
-#ifdef HAVE_BLUA
 boolean LUA_SetLuaAction(void *state, const char *actiontocompare);
 const char *LUA_GetActionName(void *action);
 void LUA_SetActionByName(void *state, const char *actiontocompare);
-#endif
 
 extern boolean deh_loaded;
 

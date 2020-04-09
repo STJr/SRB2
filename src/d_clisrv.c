@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1289,6 +1289,37 @@ static boolean CL_SendJoin(void)
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
 
+static INT32 FindRejoinerNum(SINT8 node)
+{
+	char strippednodeaddress[64];
+	const char *nodeaddress;
+	char *port;
+	INT32 i;
+
+	// Make sure there is no dead dress before proceeding to the stripping
+	if (!I_GetNodeAddress)
+		return -1;
+	nodeaddress = I_GetNodeAddress(node);
+	if (!nodeaddress)
+		return -1;
+
+	// Strip the address of its port
+	strcpy(strippednodeaddress, nodeaddress);
+	port = strchr(strippednodeaddress, ':');
+	if (port)
+		*port = '\0';
+
+	// Check if any player matches the stripped address
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i] && playeraddress[i][0] && playernode[i] == UINT8_MAX
+		&& !strcmp(playeraddress[i], strippednodeaddress))
+			return i;
+	}
+
+	return -1;
+}
+
 static void SV_SendServerInfo(INT32 node, tic_t servertime)
 {
 	UINT8 *p;
@@ -1306,6 +1337,16 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
 	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
+
+	if (!node || FindRejoinerNum(node) != -1)
+		netbuffer->u.serverinfo.refusereason = 0;
+	else if (!cv_allownewplayer.value)
+		netbuffer->u.serverinfo.refusereason = 1;
+	else if (D_NumPlayers() >= cv_maxplayers.value)
+		netbuffer->u.serverinfo.refusereason = 2;
+	else
+		netbuffer->u.serverinfo.refusereason = 0;
+
 	strncpy(netbuffer->u.serverinfo.gametypename, Gametype_Names[gametype],
 			sizeof netbuffer->u.serverinfo.gametypename);
 	netbuffer->u.serverinfo.modifiedgame = (UINT8)modifiedgame;
@@ -1863,12 +1904,17 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 		}
 
 		// Quit here rather than downloading files and being refused later.
-		if (serverlist[i].info.numberofplayer >= serverlist[i].info.maxplayer)
+		if (serverlist[i].info.refusereason)
 		{
 			D_QuitNetGame();
 			CL_Reset();
 			D_StartTitle();
-			M_StartMessage(va(M_GetText("Maximum players reached: %d\n\nPress ESC\n"), serverlist[i].info.maxplayer), NULL, MM_NOTHING);
+			if (serverlist[i].info.refusereason == 1)
+				M_StartMessage(M_GetText("The server is not accepting\njoins for the moment.\n\nPress ESC\n"), NULL, MM_NOTHING);
+			else if (serverlist[i].info.refusereason == 2)
+				M_StartMessage(va(M_GetText("Maximum players reached: %d\n\nPress ESC\n"), serverlist[i].info.maxplayer), NULL, MM_NOTHING);
+			else
+				M_StartMessage(M_GetText("You can't join.\nI don't know why,\nbut you can't join.\n\nPress ESC\n"), NULL, MM_NOTHING);
 			return false;
 		}
 
@@ -2439,14 +2485,14 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 	if (!playeringame[playernum])
 		return;
 
-	if (server && !demoplayback)
+	if (server && !demoplayback && playernode[playernum] != UINT8_MAX)
 	{
 		INT32 node = playernode[playernum];
 		playerpernode[node]--;
 		if (playerpernode[node] <= 0)
 		{
-			nodeingame[playernode[playernum]] = false;
-			Net_CloseConnection(playernode[playernum]);
+			nodeingame[node] = false;
+			Net_CloseConnection(node);
 			ResetNode(node);
 		}
 	}
@@ -2501,20 +2547,14 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		}
 	}
 
-#ifdef HAVE_BLUA
 	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
-#else
-	(void)reason;
-#endif
 
 	// don't look through someone's view who isn't there
 	if (playernum == displayplayer)
 	{
-#ifdef HAVE_BLUA
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
-		LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], true);
-#endif
+		LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
 
@@ -2535,9 +2575,7 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		RemoveAdminPlayer(playernum); // don't stay admin after you're gone
 	}
 
-#ifdef HAVE_BLUA
 	LUA_InvalidatePlayer(&players[playernum]);
-#endif
 
 	if (G_TagGametype()) //Check if you still have a game. Location flexible. =P
 		P_CheckSurvivors();
@@ -2792,16 +2830,13 @@ static void Command_Kick(void)
 		if (pn == -1 || pn == 0)
 			return;
 
-		if (server)
+		// Special case if we are trying to kick a player who is downloading the game state:
+		// trigger a timeout instead of kicking them, because a kick would only
+		// take effect after they have finished downloading
+		if (server && playernode[pn] != UINT8_MAX && sendingsavegame[playernode[pn]])
 		{
-			// Special case if we are trying to kick a player who is downloading the game state:
-			// trigger a timeout instead of kicking them, because a kick would only
-			// take effect after they have finished downloading
-			if (sendingsavegame[playernode[pn]])
-			{
-				Net_ConnectionTimeout(playernode[pn]);
-				return;
-			}
+			Net_ConnectionTimeout(playernode[pn]);
+			return;
 		}
 
 		WRITESINT8(p, pn);
@@ -2859,7 +2894,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	// Is playernum authorized to make this kick?
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum)
-		&& !(playerpernode[playernode[playernum]] == 2
+		&& !(playernode[playernum] != UINT8_MAX && playerpernode[playernode[playernum]] == 2
 		&& nodetoplayer2[playernode[playernum]] == pnum))
 	{
 		// We received a kick command from someone who isn't the
@@ -3018,7 +3053,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	}
 	else if (keepbody)
 	{
-		if (server && !demoplayback)
+		if (server && !demoplayback && playernode[pnum] != UINT8_MAX)
 		{
 			INT32 node = playernode[pnum];
 			playerpernode[node]--;
@@ -3134,9 +3169,7 @@ void SV_ResetServer(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-#ifdef HAVE_BLUA
 		LUA_InvalidatePlayer(&players[i]);
-#endif
 		playeringame[i] = false;
 		playernode[i] = UINT8_MAX;
 		memset(playeraddress[i], 0, sizeof(*playeraddress));
@@ -3197,6 +3230,8 @@ void D_QuitNetGame(void)
 
 	// abort send/receive of files
 	CloseNetFile();
+	RemoveAllLuaFileTransfers();
+	waitingforluafiletransfer = false;
 
 	if (server)
 	{
@@ -3228,37 +3263,6 @@ void D_QuitNetGame(void)
 		debugfile = NULL;
 	}
 #endif
-}
-
-static INT32 FindRejoinerNum(SINT8 node)
-{
-	char strippednodeaddress[64];
-	const char *nodeaddress;
-	char *port;
-	INT32 i;
-
-	// Make sure there is no dead dress before proceeding to the stripping
-	if (!I_GetNodeAddress)
-		return -1;
-	nodeaddress = I_GetNodeAddress(node);
-	if (!nodeaddress)
-		return -1;
-
-	// Strip the address of its port
-	strcpy(strippednodeaddress, nodeaddress);
-	port = strchr(strippednodeaddress, ':');
-	if (port)
-		*port = '\0';
-
-	// Check if any player matches the stripped address
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (playeringame[i] && playeraddress[i][0] && playernode[i] == UINT8_MAX
-		&& !strcmp(playeraddress[i], strippednodeaddress))
-			return i;
-	}
-
-	return -1;
 }
 
 // Adds a node to the game (player will follow at map change or at savegame....)
@@ -3398,10 +3402,8 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	if (server && multiplayer && motd[0] != '\0')
 		COM_BufAddText(va("sayto %d %s\n", newplayernum, motd));
 
-#ifdef HAVE_BLUA
 	if (!rejoined)
 		LUAh_PlayerJoin(newplayernum);
-#endif
 }
 
 static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
@@ -3591,7 +3593,7 @@ static void HandleConnect(SINT8 node)
 	rejoinernum = FindRejoinerNum(node);
 
 	if (bannednode && bannednode[node])
-		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server"));
+		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server."));
 	else if (netbuffer->u.clientcfg._255 != 255 ||
 			netbuffer->u.clientcfg.packetversion != PACKETVERSION)
 		SV_SendRefuse(node, "Incompatible packet formats.");
@@ -3602,13 +3604,15 @@ static void HandleConnect(SINT8 node)
 		|| netbuffer->u.clientcfg.subversion != SUBVERSION)
 		SV_SendRefuse(node, va(M_GetText("Different SRB2 versions cannot\nplay a netgame!\n(server version %d.%d.%d)"), VERSION/100, VERSION%100, SUBVERSION));
 	else if (!cv_allownewplayer.value && node && rejoinernum == -1)
-		SV_SendRefuse(node, M_GetText("The server is not accepting\njoins for the moment"));
+		SV_SendRefuse(node, M_GetText("The server is not accepting\njoins for the moment."));
 	else if (D_NumPlayers() >= cv_maxplayers.value && rejoinernum == -1)
 		SV_SendRefuse(node, va(M_GetText("Maximum players reached: %d"), cv_maxplayers.value));
 	else if (netgame && netbuffer->u.clientcfg.localplayers > 1) // Hacked client?
 		SV_SendRefuse(node, M_GetText("Too many players from\nthis node."));
 	else if (netgame && !netbuffer->u.clientcfg.localplayers) // Stealth join?
 		SV_SendRefuse(node, M_GetText("No players from\nthis node."));
+	else if (luafiletransfers)
+		SV_SendRefuse(node, M_GetText("The server is broadcasting a file\nrequested by a Lua script.\nPlease wait a bit and then\ntry rejoining."));
 	else
 	{
 #ifndef NONET
@@ -3945,7 +3949,9 @@ static void HandlePacketFromPlayer(SINT8 node)
 	INT32 netconsole;
 	tic_t realend, realstart;
 	UINT8 *pak, *txtpak, numtxtpak;
+#ifndef NOMD5
 	UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
+#endif
 
 	txtpak = NULL;
 
@@ -3964,7 +3970,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_RESYNCHGET:
 			if (client)
 				break;
-			SV_AcknowledgeResynchAck(netconsole, netbuffer->u.resynchgot);
+			SV_AcknowledgeResynchAck(node, netbuffer->u.resynchgot);
 			break;
 		case PT_CLIENTCMD:
 		case PT_CLIENT2CMD:
@@ -4193,6 +4199,18 @@ static void HandlePacketFromPlayer(SINT8 node)
 			Net_CloseConnection(node);
 			nodeingame[node] = false;
 			break;
+		case PT_ASKLUAFILE:
+			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
+			{
+				char *name = va("%s" PATHSEP "%s", luafiledir, luafiletransfers->filename);
+				boolean textmode = !strchr(luafiletransfers->mode, 'b');
+				SV_SendLuaFile(node, name, textmode);
+			}
+			break;
+		case PT_HASLUAFILE:
+			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_SENDING)
+				SV_HandleLuaFileSent(node);
+			break;
 // -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_RESYNCHEND:
 			// Only accept PT_RESYNCHEND from the server.
@@ -4319,6 +4337,10 @@ static void HandlePacketFromPlayer(SINT8 node)
 			}
 			if (client)
 				Got_Filetxpak();
+			break;
+		case PT_SENDINGLUAFILE:
+			if (client)
+				CL_PrepareDownloadLuaFile();
 			break;
 		default:
 			DEBFILE(va("UNKNOWN PACKET TYPE RECEIVED %d from host %d\n",
@@ -4853,7 +4875,8 @@ static inline void PingUpdate(void)
 	{
 		for (i = 1; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && (realpingtable[i] / pingmeasurecount > (unsigned)cv_maxping.value))
+			if (playeringame[i] && !players[i].quittime
+			&& (realpingtable[i] / pingmeasurecount > (unsigned)cv_maxping.value))
 			{
 				if (players[i].jointime > 30 * TICRATE)
 					laggers[i] = true;
@@ -4872,8 +4895,8 @@ static inline void PingUpdate(void)
 				if (playeringame[i] && laggers[i])
 				{
 					pingtimeout[i]++;
+					// ok your net has been bad for too long, you deserve to die.
 					if (pingtimeout[i] > cv_pingtimeout.value)
-// ok your net has been bad for too long, you deserve to die.
 					{
 						pingtimeout[i] = 0;
 						SendKick(i, KICK_MSG_PING_HIGH | KICK_MSG_KEEP_BODY);
@@ -4941,7 +4964,7 @@ void NetUpdate(void)
 			PingUpdate();
 		// update node latency values so we can take an average later.
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (playeringame[i] && playernode[i] != UINT8_MAX)
 				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,7 +27,7 @@
 #include "i_system.h"
 
 #include "r_data.h"
-#include "r_things.h"
+#include "r_things.h" // for R_AddSpriteDefs
 #include "r_patch.h"
 #include "r_sky.h"
 #include "r_draw.h"
@@ -57,9 +57,7 @@
 
 #include "filesrch.h" // refreshdirmenu
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h" // level title
-#endif
 
 #include "f_finale.h" // wipes
 
@@ -79,9 +77,7 @@
 #include "hardware/hw_model.h"
 #endif
 
-#ifdef ESLOPE
 #include "p_slopes.h"
-#endif
 
 #include "fastcmp.h" // textmap parsing
 
@@ -911,11 +907,9 @@ static void P_InitializeSector(sector_t *ss)
 	ss->preciplist = NULL;
 	ss->touching_preciplist = NULL;
 
-#ifdef ESLOPE
 	ss->f_slope = NULL;
 	ss->c_slope = NULL;
 	ss->hasslope = false;
-#endif
 
 	ss->spawn_lightlevel = ss->lightlevel;
 
@@ -3096,7 +3090,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !(players[i].spectator && players[i].quittime))
+		if (playeringame[i] && !(players[i].spectator || players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -3526,9 +3520,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
 
-#ifdef HAVE_BLUA
 	LUA_InvalidateLevel();
-#endif
 
 	for (ss = sectors; sectors+numsectors != ss; ss++)
 	{
@@ -3584,9 +3576,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
-#ifdef ESLOPE
 	P_SpawnSlopes(fromnetsave);
-#endif
 
 	P_SpawnMapThings(!fromnetsave);
 	skyboxmo[0] = skyboxviewpnts[0];
@@ -3665,9 +3655,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
-#ifdef HAVE_BLUA
 		LUAh_MapLoad();
-#endif
 	}
 
 	// No render mode, stop here.
@@ -3699,10 +3687,15 @@ void HWR_SetupLevel(void)
 	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
 	// Level textures are only reloaded after R_LoadTextures, which is
 	// when the texture list is loaded.
+
+	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
+	HWR_FreeMipmapCache();
+
 #ifdef ALAM_LIGHTING
 	// BP: reset light between levels (we draw preview frame lights on current frame)
 	HWR_ResetLights();
 #endif
+
 	// Correct missing sidedefs & deep water trick
 	HWR_CorrectSWTricks();
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
@@ -3826,10 +3819,9 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
-	if ((numlumps = W_InitFile(wadfilename, false)) == INT16_MAX)
+	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
 	else
@@ -3855,10 +3847,8 @@ boolean P_AddWadFile(const char *wadfilename)
 
 		// Update the detected resources.
 		// Note: ALWAYS load Lua scripts first, SOCs right after, and the remaining resources afterwards.
-#ifdef HAVE_BLUA
 //		if (luaNum) // Lua scripts.
 //			P_LoadLuaScrRange(wadnum, luaPos, luaNum);
-#endif
 //		if (socNum) // SOCs.
 //			P_LoadDehackRange(wadnum, socPos, socNum);
 		if (sfxNum) // Sounds. TODO: Function currently only updates already existing sounds, the rest is handled somewhere else.

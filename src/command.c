@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -481,13 +481,11 @@ void COM_AddCommand(const char *name, com_func_t func)
 	{
 		if (!stricmp(name, cmd->name)) //case insensitive now that we have lower and uppercase!
 		{
-#ifdef HAVE_BLUA
 			// don't I_Error for Lua commands
 			// Lua commands can replace game commands, and they have priority.
 			// BUT, if for some reason we screwed up and made two console commands with the same name,
 			// it's good to have this here so we find out.
 			if (cmd->function != COM_Lua_f)
-#endif
 				I_Error("Command %s already exists\n", name);
 
 			return;
@@ -501,7 +499,6 @@ void COM_AddCommand(const char *name, com_func_t func)
 	com_commands = cmd;
 }
 
-#ifdef HAVE_BLUA
 /** Adds a console command for Lua.
   * No I_Errors allowed; return a negative code instead.
   *
@@ -534,7 +531,6 @@ int COM_AddLuaCommand(const char *name)
 	com_commands = cmd;
 	return 0;
 }
-#endif
 
 /** Tests if a command exists.
   *
@@ -823,8 +819,13 @@ static void COM_Help_f(void)
 					if (!stricmp(cvar->PossibleValue[MINVAL].strvalue, "MIN"))
 					{
 						if (floatmode)
-							CONS_Printf("  range from %f to %f\n", FIXED_TO_FLOAT(cvar->PossibleValue[MINVAL].value),
-								FIXED_TO_FLOAT(cvar->PossibleValue[MAXVAL].value));
+						{
+							float fu = FIXED_TO_FLOAT(cvar->PossibleValue[MINVAL].value);
+							float ck = FIXED_TO_FLOAT(cvar->PossibleValue[MAXVAL].value);
+							CONS_Printf("  range from %ld%s to %ld%s\n",
+									(long)fu, M_Ftrim(fu),
+									(long)ck, M_Ftrim(ck));
+						}
 						else
 							CONS_Printf("  range from %d to %d\n", cvar->PossibleValue[MINVAL].value,
 								cvar->PossibleValue[MAXVAL].value);
@@ -973,7 +974,10 @@ static void COM_Add_f(void)
 	}
 
 	if (( cvar->flags & CV_FLOAT ))
-		CV_Set(cvar, va("%f", FIXED_TO_FLOAT (cvar->value) + atof(COM_Argv(2))));
+	{
+		float n =FIXED_TO_FLOAT (cvar->value) + atof(COM_Argv(2));
+		CV_Set(cvar, va("%ld%s", (long)n, M_Ftrim(n)));
+	}
 	else
 		CV_AddValue(cvar, atoi(COM_Argv(2)));
 }
@@ -1419,9 +1423,7 @@ finish:
 	}
 	var->flags |= CV_MODIFIED;
 	// raise 'on change' code
-#ifdef HAVE_BLUA
 	LUA_CVarChanged(var->name); // let consolelib know what cvar this is.
-#endif
 	if (var->flags & CV_CALL && !stealth)
 		var->func();
 

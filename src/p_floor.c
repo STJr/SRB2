@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,9 +15,7 @@
 #include "doomstat.h"
 #include "m_random.h"
 #include "p_local.h"
-#ifdef ESLOPE
 #include "p_slopes.h"
-#endif
 #include "r_state.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -3178,12 +3176,10 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			if (R_PointInSubsector(a, b)->sector == sec)
 			{
 				mobj_t *spawned = NULL;
-#ifdef ESLOPE
 				if (*rover->t_slope)
 					topz = P_GetZAt(*rover->t_slope, a, b) - (spacing>>1);
 				if (*rover->b_slope)
 					bottomz = P_GetZAt(*rover->b_slope, a, b);
-#endif
 
 				for (c = topz; c > bottomz; c -= spacing)
 				{

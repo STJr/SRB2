@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2016 by Iestyn "Monster Iestyn" Jealous.
-// Copyright (C) 2016-2019 by Sonic Team Junior.
+// Copyright (C) 2016-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,7 +11,6 @@
 /// \brief blockmap library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "p_local.h"
 #include "r_main.h" // validcount
 #include "lua_script.h"
@@ -264,5 +263,3 @@ int LUA_BlockmapLib(lua_State *L)
 	lua_register(L, "searchBlockmap", lib_searchBlockmap);
 	return 0;
 }
-
-#endif

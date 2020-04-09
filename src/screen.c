@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -127,14 +127,12 @@ void SCR_SetDrawFuncs(void)
 #ifndef NOWATER
 		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_8;
 #endif
-#ifdef ESLOPE
 		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_8;
 		spanfuncs[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_8;
 #ifndef NOWATER
 		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_8;
 #endif
 		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_8;
-#endif
 
 		// Lactozilla: Non-powers-of-two
 		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_8;
@@ -145,14 +143,12 @@ void SCR_SetDrawFuncs(void)
 #ifndef NOWATER
 		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
 #endif
-#ifdef ESLOPE
 		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_8;
 #ifndef NOWATER
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_8;
 #endif
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_8;
-#endif
 
 #ifdef RUSEASM
 		if (R_ASM)
@@ -450,6 +446,20 @@ static int target_renderer = 0;
 void SCR_ActuallyChangeRenderer(void)
 {
 	setrenderneeded = target_renderer;
+
+#ifdef HWRENDER
+	// Well, it didn't even load anyway.
+	if ((hwrenderloaded == -1) && (setrenderneeded == render_opengl))
+	{
+		if (M_CheckParm("-nogl"))
+			CONS_Alert(CONS_ERROR, "OpenGL rendering was disabled!\n");
+		else
+			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
+		setrenderneeded = 0;
+		return;
+	}
+#endif
+
 	// setting the same renderer twice WILL crash your game, so let's not, please
 	if (rendermode == setrenderneeded)
 		setrenderneeded = 0;
@@ -464,7 +474,7 @@ void SCR_ChangeRenderer(void)
 	{
 		target_renderer = cv_renderer.value;
 #ifdef HWRENDER
-		if (M_CheckParm("-opengl"))
+		if (M_CheckParm("-opengl") && (hwrenderloaded == 1))
 			target_renderer = rendermode = render_opengl;
 		else
 #endif

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -9,8 +9,6 @@
 //-----------------------------------------------------------------------------
 /// \file  lua_script.h
 /// \brief Lua scripting basics
-
-#ifdef HAVE_BLUA
 
 #include "m_fixed.h"
 #include "doomtype.h"
@@ -102,5 +100,3 @@ void COM_Lua_f(void);
 
 #define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
 return luaL_error(L, "This can only be used in a level!");
-
-#endif
