@@ -522,6 +522,8 @@ static menuitem_t MISC_AddonsMenu[] =
 // ---------------------------------
 static menuitem_t MAPauseMenu[] =
 {
+	{IT_CALL | IT_STRING,    NULL, "Emblem Hints...",      M_EmblemHints,         32},
+
 	{IT_CALL | IT_STRING,    NULL, "Continue",             M_SelectableClearMenus,48},
 	{IT_CALL | IT_STRING,    NULL, "Retry",                M_ModeAttackRetry,     56},
 	{IT_CALL | IT_STRING,    NULL, "Abort",                M_ModeAttackEndGame,   64},
@@ -529,6 +531,7 @@ static menuitem_t MAPauseMenu[] =
 
 typedef enum
 {
+	mapause_hints,
 	mapause_continue,
 	mapause_retry,
 	mapause_abort
@@ -730,9 +733,9 @@ static menuitem_t SR_SoundTestMenu[] =
 
 static menuitem_t SR_EmblemHintMenu[] =
 {
-	{IT_STRING | IT_ARROWS,       NULL, "Page", M_HandleEmblemHints, 10},
-	{IT_STRING|IT_CVAR,         NULL, "Emblem Radar", &cv_itemfinder, 20},
-	{IT_WHITESTRING|IT_SUBMENU, NULL, "Back",         &SPauseDef,     30}
+	{IT_STRING | IT_ARROWS,  NULL, "Page",    M_HandleEmblemHints, 10},
+	{IT_STRING|IT_CVAR,      NULL, "Emblem Radar", &cv_itemfinder, 20},
+	{IT_WHITESTRING|IT_CALL, NULL, "Back",         M_GoBack,       30}
 };
 
 // --------------------------------
@@ -3634,6 +3637,7 @@ void M_StartControlPanel(void)
 	else if (modeattacking)
 	{
 		currentMenu = &MAPauseDef;
+		MAPauseMenu[mapause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 		itemOn = mapause_continue;
 	}
 	else if (!(netgame || multiplayer)) // Single Player
@@ -7310,6 +7314,7 @@ static void M_EmblemHints(INT32 choice)
 	SR_EmblemHintMenu[0].status = (local > NUMHINTS*2) ? (IT_STRING | IT_ARROWS) : (IT_DISABLED);
 	SR_EmblemHintMenu[1].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
 	hintpage = 1;
+	SR_EmblemHintDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SR_EmblemHintDef);
 	itemOn = 2; // always start on back.
 }
