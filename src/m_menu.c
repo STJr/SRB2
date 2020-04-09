@@ -2098,7 +2098,7 @@ static void M_VideoOptions(INT32 choice)
 {
 	(void)choice;
 #ifdef HWRENDER
-	if (hwrenderloaded == -1)
+	if (vid_opengl_state == -1)
 	{
 		OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
 		OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
