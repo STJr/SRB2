@@ -40,6 +40,7 @@ enum hook {
 	hook_JumpSpinSpecial,
 	hook_BotTiccmd,
 	hook_BotAI,
+	hook_BotRespawn,
 	hook_LinedefExecute,
 	hook_PlayerMsg,
 	hook_HurtMsg,
@@ -91,6 +92,7 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 
 #define LUAh_JumpSpinSpecial(player) LUAh_PlayerHook(player, hook_JumpSpinSpecial) // Hook for P_DoJumpStuff (Spin button effect (mid-air))
 boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd); // Hook for B_BuildTiccmd
 boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd); // Hook for B_BuildTailsTiccmd by skin name
+boolean LUAh_BotRespawn(mobj_t *sonic, mobj_t *tails); // Hook for B_CheckRespawn
 boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector); // Hook for linedef executors
 boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg); // Hook for chat messages
 boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype); // Hook for hurt messages

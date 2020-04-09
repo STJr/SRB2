@@ -52,6 +52,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"JumpSpinSpecial",
 	"BotTiccmd",
 	"BotAI",
+	"BotRespawn",
 	"LinedefExecute",
 	"PlayerMsg",
 	"HurtMsg",
@@ -1109,6 +1110,51 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 
 	lua_settop(gL, 0);
 	return hooked;
+}
+
+// Hook for B_CheckRespawn
+boolean LUAh_BotRespawn(mobj_t *sonic, mobj_t *tails)
+{
+	hook_p hookp;
+	UINT8 shouldRespawn = 0; // 0 = default, 1 = force yes, 2 = force no.
+	if (!gL || !(hooksAvailable[hook_BotRespawn/8] & (1<<(hook_BotRespawn%8))))
+		return false;
+
+	lua_settop(gL, 0);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_BotRespawn)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, sonic, META_MOBJ);
+			LUA_PushUserdata(gL, tails, META_MOBJ);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{
+			if (lua_toboolean(gL, -1))
+				shouldRespawn = 1; // Force yes
+			else
+				shouldRespawn = 2; // Force no
+		}
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return shouldRespawn;
 }
 
 // Hook for linedef executors
