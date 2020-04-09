@@ -194,7 +194,6 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 	if (posStart != INT16_MAX)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
-		posStart++; // first "lump" will be "Lua/" folder itself, so ignore it
 		for (; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
@@ -204,7 +203,6 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("SOC/", wadnum, posStart);
 
-		posStart++; // first "lump" will be "SOC/" folder itself, so ignore it
 		for(; posStart < posEnd; posStart++)
 		{
 			lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[posStart];
@@ -914,15 +912,32 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	return INT16_MAX;
 }
 
+UINT16
+W_CheckNumForMarkerStartPwad (const char *name, UINT16 wad, UINT16 startlump)
+{
+	UINT16 marker;
+	marker = W_CheckNumForNamePwad(name, wad, startlump);
+	if (marker != INT16_MAX)
+		marker++; // Do not count the first marker
+	return marker;
+}
+
 // Look for the first lump from a folder.
 UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump)
 {
+	size_t name_length;
 	INT32 i;
 	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
+	name_length = strlen(name);
 	for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
 	{
-		if (strnicmp(name, lump_p->name2, strlen(name)) == 0)
+		if (strnicmp(name, lump_p->name2, name_length) == 0)
+		{
+			/* SLADE is special and puts a single directory entry. Skip that. */
+			if (strlen(lump_p->name2) == name_length)
+				i++;
 			break;
+		}
 	}
 	return i;
 }
@@ -1025,7 +1040,7 @@ lumpnum_t W_CheckNumForMap(const char *name)
 			else
 				continue;
 			// Now look for the specified map.
-			for (++lumpNum; lumpNum < end; lumpNum++)
+			for (; lumpNum < end; lumpNum++)
 				if (!strnicmp(name, (wadfiles[i]->lumpinfo + lumpNum)->name, 8))
 					return (i<<16) + lumpNum;
 		}
