@@ -1548,6 +1548,10 @@ boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 	int i;
 	boolean result = false;
 
+#ifndef HAVE_BLUA
+	(void)musname;
+#endif
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (!P_IsLocalPlayer(&players[i]))
