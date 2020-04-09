@@ -12213,7 +12213,7 @@ void P_PlayerThink(player_t *player)
 		player->powers[pw_nocontrol]--;
 	else
 		player->powers[pw_nocontrol] = 0;
-
+	
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]
 	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]
@@ -12856,6 +12856,12 @@ void P_PlayerAfterThink(player_t *player)
 	{
 		player->mo->flags2 |= MF2_DONTDRAW;
 		player->mo->flags |= MF_NOGRAVITY;
+	}
+
+	if (player->powers[pw_dye])
+	{
+		player->mo->colorized = true;
+		player->mo->color = player->powers[pw_dye];
 	}
 
 	if (player->followmobj && (player->spectator || player->mo->health <= 0 || player->followmobj->type != player->followitem))
