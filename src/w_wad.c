@@ -1520,6 +1520,57 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 // Cache a patch into heap memory, convert the patch format as necessary
 //
 
+void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
+{
+	lumpcache_t *lumpcache = NULL;
+
+	if (needpatchflush)
+		W_FlushCachedPatches();
+
+	if (!TestValidLump(wad, lump))
+		return NULL;
+
+	lumpcache = wadfiles[wad]->patchcache;
+
+	if (!lumpcache[lump])
+	{
+		size_t len = W_LumpLengthPwad(wad, lump);
+		void *ptr, *lumpdata;
+#ifndef NO_PNG_LUMPS
+		void *srcdata = NULL;
+#endif
+
+		ptr = Z_Malloc(len, tag, &lumpcache[lump]);
+		lumpdata = Z_Malloc(len, tag, NULL);
+
+		// read the lump in full
+		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
+
+#ifndef NO_PNG_LUMPS
+		// lump is a png so convert it
+		if (R_IsLumpPNG((UINT8 *)lumpdata, len))
+		{
+			size_t newlen;
+			srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
+			ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
+			M_Memcpy(ptr, srcdata, newlen);
+			Z_Free(srcdata);
+		}
+		else // just copy it into the patch cache
+#endif
+			M_Memcpy(ptr, lumpdata, len);
+	}
+	else
+		Z_ChangeTag(lumpcache[lump], tag);
+
+	return lumpcache[lump];
+}
+
+void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
+{
+	return W_CacheSoftwarePatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
+}
+
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
 #ifdef HWRENDER
@@ -1537,39 +1588,7 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	if (rendermode == render_soft || rendermode == render_none)
 #endif
 	{
-		lumpcache_t *lumpcache = wadfiles[wad]->patchcache;
-		if (!lumpcache[lump])
-		{
-			size_t len = W_LumpLengthPwad(wad, lump);
-			void *ptr, *lumpdata;
-#ifndef NO_PNG_LUMPS
-			void *srcdata = NULL;
-#endif
-
-			ptr = Z_Malloc(len, tag, &lumpcache[lump]);
-			lumpdata = Z_Malloc(len, tag, NULL);
-
-			// read the lump in full
-			W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
-
-#ifndef NO_PNG_LUMPS
-			// lump is a png so convert it
-			if (R_IsLumpPNG((UINT8 *)lumpdata, len))
-			{
-				size_t newlen;
-				srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
-				ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
-				M_Memcpy(ptr, srcdata, newlen);
-				Z_Free(srcdata);
-			}
-			else // just copy it into the patch cache
-#endif
-				M_Memcpy(ptr, lumpdata, len);
-		}
-		else
-			Z_ChangeTag(lumpcache[lump], tag);
-
-		return lumpcache[lump];
+		return W_CacheSoftwarePatchNumPwad(wad, lump, tag);
 	}
 #ifdef HWRENDER
 

@@ -1284,11 +1284,10 @@ void D_SRB2Main(void)
 
 		// Set cv_renderer to the new render mode
 		VID_CheckRenderer();
-		SCR_ChangeRendererCVars(setrenderneeded);
+		SCR_ChangeRendererCVars(rendermode);
 
-		// check the renderer's state, and then clear setrenderneeded
+		// check the renderer's state
 		D_CheckRendererState();
-		setrenderneeded = 0;
 	}
 
 	wipegamestate = gamestate;
