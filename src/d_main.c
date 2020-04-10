@@ -1150,6 +1150,12 @@ void D_SRB2Main(void)
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
 
+	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
+	Z_Init();
+
+	// Do this up here so that WADs loaded through the command line can use ExecCfg
+	COM_Init();
+
 	// add any files specified on the command line with -file wadfile
 	// to the wad list
 	if (!(M_CheckParm("-connect") && !M_CheckParm("-server")))
@@ -1176,9 +1182,6 @@ void D_SRB2Main(void)
 
 	if (M_CheckParm("-server") || dedicated)
 		netgame = server = true;
-
-	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
-	Z_Init();
 
 	// adapt tables to SRB2's needs, including extra slots for dehacked file support
 	P_PatchInfoTables();
@@ -1251,7 +1254,6 @@ void D_SRB2Main(void)
 	CONS_Printf("HU_Init(): Setting up heads up display.\n");
 	HU_Init();
 
-	COM_Init();
 	CON_Init();
 
 	D_RegisterServerCommands();

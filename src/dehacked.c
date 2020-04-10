@@ -3890,7 +3890,26 @@ static void readmaincfg(MYFILE *f)
 			value = atoi(word2); // used for numerical settings
 
 			if (fastcmp(word, "EXECCFG"))
-				COM_BufAddText(va("exec %s\n", word2));
+			{
+				if (strchr(word2, '.'))
+					COM_BufAddText(va("exec %s\n", word2));
+				else
+				{
+					lumpnum_t lumpnum;
+					char newname[9];
+
+					strncpy(newname, word2, 8);
+
+					newname[8] = '\0';
+
+					lumpnum = W_CheckNumForName(newname);
+
+					if (lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0)
+						CONS_Debug(DBG_SETUP, "SOC Error: script lump %s not found/not valid.\n", newname);
+					else
+						COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+				}
+			}
 
 			else if (fastcmp(word, "SPSTAGE_START"))
 			{
@@ -7478,7 +7497,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Got Flag Sign
 	"S_GOTFLAG",
-	
+
 	// Finish flag
 	"S_FINISHFLAG",
 
