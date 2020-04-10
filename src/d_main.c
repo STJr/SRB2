@@ -880,15 +880,10 @@ static inline void D_CleanFile(void)
 	}
 }
 
-// ==========================================================================
-// Identify the SRB2 version, and IWAD file to use.
-// ==========================================================================
-
-static void IdentifyVersion(void)
+///\brief Checks if a netgame URL is being handled, and changes working directory to the EXE's if so.
+///       Done because browsers (at least, Firefox on Windows) launch the game from the browser's directory, which causes problems.
+static void ChangeDirForUrlHandler(void)
 {
-	char *srb2wad;
-	const char *srb2waddir = NULL;
-
 	// URL handlers are opened by web browsers (at least Firefox) from the browser's working directory, not the game's stored directory,
 	// so chdir to that directory unless overridden.
 	if (M_GetUrlProtocolArg() != NULL && !M_CheckParm("-nochdir"))
@@ -917,6 +912,16 @@ static void IdentifyVersion(void)
 			I_OutputMsg("Couldn't change working directory\n");
 #endif
 	}
+}
+
+// ==========================================================================
+// Identify the SRB2 version, and IWAD file to use.
+// ==========================================================================
+
+static void IdentifyVersion(void)
+{
+	char *srb2wad;
+	const char *srb2waddir = NULL;
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	// change to the directory where 'srb2.pk3' is found
@@ -1096,6 +1101,9 @@ void D_SRB2Main(void)
 
 	// Test Dehacked lists
 	DEH_Check();
+
+	// Netgame URL special case: change working dir to EXE folder.
+	ChangeDirForUrlHandler();
 
 	// identify the main IWAD file to use
 	IdentifyVersion();
