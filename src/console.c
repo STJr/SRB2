@@ -97,6 +97,7 @@ static void CON_InputInit(void);
 static void CON_RecalcSize(void);
 static void CON_ChangeHeight(void);
 
+static void CON_DrawBackpic(void);
 static void CONS_hudlines_Change(void);
 static void CONS_backcolor_Change(void);
 
@@ -1530,6 +1531,51 @@ static void CON_DrawHudlines(void)
 	con_clearlines = y; // this is handled by HU_Erase();
 }
 
+// Lactozilla: Draws the console's background picture.
+static void CON_DrawBackpic(void)
+{
+	patch_t *con_backpic;
+	lumpnum_t piclump;
+	int x, w, h;
+
+	// Get the lumpnum for CONSBACK, or fallback into MISSING.
+	piclump = W_CheckNumForName("CONSBACK");
+	if (piclump == LUMPERROR)
+		piclump = W_GetNumForName("MISSING");
+
+	// Cache the Software patch.
+	con_backpic = W_CacheSoftwarePatchNum(piclump, PU_PATCH);
+
+	// Center the backpic, and draw a vertically cropped patch.
+	w = (con_backpic->width * vid.dupx);
+	x = (vid.width / 2) - (w / 2);
+	h = con_curlines/vid.dupy;
+
+	// If the patch doesn't fill the entire screen,
+	// then fill the sides with a solid color.
+	if (x > 0)
+	{
+		column_t *column = (column_t *)((UINT8 *)(con_backpic) + LONG(con_backpic->columnofs[0]));
+		if (!column->topdelta)
+		{
+			UINT8 *source = (UINT8 *)(column) + 3;
+			INT32 color = (source[0] | V_NOSCALESTART);
+			// left side
+			V_DrawFill(0, 0, x, con_curlines, color);
+			// right side
+			V_DrawFill((x + w), 0, (vid.width - w), con_curlines, color);
+		}
+	}
+
+	// Cache the patch normally.
+	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
+	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
+			0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
+
+	// Unlock the cached patch.
+	W_UnlockCachedPatch(con_backpic);
+}
+
 // draw the console background, text, and prompt if enough place
 //
 static void CON_DrawConsole(void)
@@ -1551,19 +1597,7 @@ static void CON_DrawConsole(void)
 
 	// draw console background
 	if (cons_backpic.value || con_forcepic)
-	{
-		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
-		int h;
-
-		h = con_curlines/vid.dupy;
-
-		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
-		//V_DrawScaledPatch(0, 0, 0, con_backpic);
-		V_DrawCroppedPatch(0, 0, FRACUNIT, 0, con_backpic,
-				0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
-
-		W_UnlockCachedPatch(con_backpic);
-	}
+		CON_DrawBackpic();
 	else
 	{
 		// inu: no more width (was always 0 and vid.width)

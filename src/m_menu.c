@@ -523,6 +523,8 @@ static menuitem_t MISC_AddonsMenu[] =
 // ---------------------------------
 static menuitem_t MAPauseMenu[] =
 {
+	{IT_CALL | IT_STRING,    NULL, "Emblem Hints...",      M_EmblemHints,         32},
+
 	{IT_CALL | IT_STRING,    NULL, "Continue",             M_SelectableClearMenus,48},
 	{IT_CALL | IT_STRING,    NULL, "Retry",                M_ModeAttackRetry,     56},
 	{IT_CALL | IT_STRING,    NULL, "Abort",                M_ModeAttackEndGame,   64},
@@ -530,6 +532,7 @@ static menuitem_t MAPauseMenu[] =
 
 typedef enum
 {
+	mapause_hints,
 	mapause_continue,
 	mapause_retry,
 	mapause_abort
@@ -731,9 +734,9 @@ static menuitem_t SR_SoundTestMenu[] =
 
 static menuitem_t SR_EmblemHintMenu[] =
 {
-	{IT_STRING | IT_ARROWS,       NULL, "Page", M_HandleEmblemHints, 10},
-	{IT_STRING|IT_CVAR,         NULL, "Emblem Radar", &cv_itemfinder, 20},
-	{IT_WHITESTRING|IT_SUBMENU, NULL, "Back",         &SPauseDef,     30}
+	{IT_STRING | IT_ARROWS,  NULL, "Page",    M_HandleEmblemHints, 10},
+	{IT_STRING|IT_CVAR,      NULL, "Emblem Radar", &cv_itemfinder, 20},
+	{IT_WHITESTRING|IT_CALL, NULL, "Back",         M_GoBack,       30}
 };
 
 // --------------------------------
@@ -2099,7 +2102,7 @@ static void M_VideoOptions(INT32 choice)
 {
 	(void)choice;
 #ifdef HWRENDER
-	if (hwrenderloaded == -1)
+	if (vid_opengl_state == -1)
 	{
 		OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
 		OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
@@ -3635,6 +3638,7 @@ void M_StartControlPanel(void)
 	else if (modeattacking)
 	{
 		currentMenu = &MAPauseDef;
+		MAPauseMenu[mapause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 		itemOn = mapause_continue;
 	}
 	else if (!(netgame || multiplayer)) // Single Player
@@ -7307,6 +7311,7 @@ static void M_EmblemHints(INT32 choice)
 	SR_EmblemHintMenu[0].status = (local > NUMHINTS*2) ? (IT_STRING | IT_ARROWS) : (IT_DISABLED);
 	SR_EmblemHintMenu[1].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
 	hintpage = 1;
+	SR_EmblemHintDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SR_EmblemHintDef);
 	itemOn = 2; // always start on back.
 }
@@ -7987,12 +7992,20 @@ static void M_CustomLevelSelect(INT32 choice)
 static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
-	SP_MainMenu[sptutorial].status =
-		tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
-	SP_MainMenu[sprecordattack].status =
-		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
-	SP_MainMenu[spnightsmode].status =
-		(M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
+
+	levellistmode = LLM_RECORDATTACK;
+	if (M_GametypeHasLevels(-1))
+		SP_MainMenu[sprecordattack].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
+	else
+		SP_MainMenu[sprecordattack].status = IT_NOTHING|IT_DISABLED;
+
+	levellistmode = LLM_NIGHTSATTACK;
+	if (M_GametypeHasLevels(-1))
+		SP_MainMenu[spnightsmode].status = (M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
+	else
+		SP_MainMenu[spnightsmode].status = IT_NOTHING|IT_DISABLED;
+
+	SP_MainMenu[sptutorial].status = tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
 
 	M_SetupNextMenu(&SP_MainDef);
 }
