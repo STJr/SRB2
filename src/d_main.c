@@ -909,7 +909,13 @@ static void IdentifyVersion(void)
 		}
 
 		CONS_Printf("%s\n", srb2path);
-		chdir(srb2path);
+
+#if defined (_WIN32)
+		SetCurrentDirectoryA(srb2path);
+#else
+		if (chdir(srb2path) == -1)
+			I_OutputMsg("Couldn't change working directory\n");
+#endif
 	}
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
