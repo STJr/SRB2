@@ -20,6 +20,7 @@
 #include "r_patch.h"
 #include "r_things.h"
 #include "doomstat.h" // luabanks[]
+#include "s_sound.h"/* musicdef_t */
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -57,6 +58,36 @@ const char *const sfxinfo_wopt[] = {
 	"flags",
 	"caption",
 	NULL};
+
+enum musicdef_field
+{
+	musicdef_name,
+	musicdef_title,
+	musicdef_alttitle,
+	musicdef_authors,
+	musicdef_soundtestpage,
+	musicdef_soundtestcond,
+	musicdef_stoppingtics,
+	musicdef_bpm,
+	musicdef_loop_ms,
+	musicdef_allowed,
+};
+
+const char * const musicdef_field_names[] =
+{
+	"name",
+	"title",
+	"alttitle",
+	"authors",
+	"soundtestpage",
+	"soundtestcond",
+	"stoppingtics",
+	"bpm",
+	"loop_ms",
+	"allowed",
+
+	NULL
+};
 
 //
 // Sprite Names
@@ -1411,6 +1442,211 @@ static int sfxinfo_num(lua_State *L)
 }
 
 //////////////
+// MUSICDEF //
+//////////////
+
+// Named/numbered musicdef[] table index -> musicdef_t *
+static int lib_getMusicDef (lua_State *L)
+{
+	const char *song;
+	INT32 idx;
+
+	musicdef_t *def;
+	const char *error;
+
+	if (lua_type(L, 2) == LUA_TNUMBER)
+	{
+		idx = lua_tonumber(L, 2);
+		/* ignore first musicdef, for it is a sound test hack */
+		/* oh... that means it's 1-indexed instead of 0 */
+		if (idx > 0 && idx < musicdefnum)
+		{
+			for (def = musicdefstart->next; def; def = def->next)
+			{
+				if ((--idx) == 0)
+					break;
+			}
+		}
+		else
+		{
+			return luaL_error(L, "musicdef index %d out of range (1 - %d)",
+					idx, musicdefnum);
+		}
+	}
+	else if (lua_type(L, 2) == LUA_TSTRING)
+	{
+		song = lua_tostring(L, 2);
+		for (def = musicdefstart->next; def; def = def->next)
+		{
+			if (strcasecmp(def->name, song) == 0)
+				break;
+		}
+	}
+	else
+	{
+		error = lua_pushfstring(L, "number or string expected, got %s",
+				luaL_typename(L, 2));
+		return luaL_argerror(L, 2, error);
+	}
+
+	LUA_PushLightUserdata(L, def, META_MUSICDEF);
+
+	return 1;
+}
+
+// Lua table full of data -> musicdef[]
+static int lib_setMusicDef(lua_State *L)
+{
+	musicdef_t *def;
+	enum musicdef_field field;
+
+	/*
+	lol a bit of a hack, this function never
+	returns zero with string argument
+	*/
+	if (lib_getMusicDef(L) > 0)
+	{
+		luaL_checktype(L, 3, LUA_TTABLE); // check that we've been passed a table.
+
+		if (lua_isnil(L, -1))
+		{
+			def = ZZ_Calloc(sizeof *def);
+			def->index = (musicdefnum++);
+			lastmusicdef->next = def;
+			lastmusicdef = def;
+		}
+		else
+			def = lua_touserdata(L, -1);
+
+		while (lua_next(L, 3))
+		{
+			if (lua_isnumber(L, -2))
+				field = lua_tointeger(L, -2) - 1; // lua is one based, this enum is zero based.
+			else
+				field = luaL_checkoption(L, -2, NULL, musicdef_field_names);
+
+			switch(field)
+			{
+				case musicdef_name:
+					strlcpy(def->name, luaL_checkstring(L, -1), sizeof def->name);
+					break;
+				case musicdef_title:
+					strlcpy(def->title, luaL_checkstring(L, -1), sizeof def->title);
+					break;
+				case musicdef_alttitle:
+					strlcpy(def->alttitle, luaL_checkstring(L, -1), sizeof def->alttitle);
+					break;
+				case musicdef_authors:
+					strlcpy(def->authors, luaL_checkstring(L, -1), sizeof def->authors);
+					break;
+				case musicdef_soundtestpage:
+					def->soundtestpage = luaL_checknumber(L, -1);
+					break;
+				case musicdef_soundtestcond:
+					def->soundtestcond = luaL_checknumber(L, -1);
+					break;
+				case musicdef_stoppingtics:
+					def->stoppingtics = luaL_checknumber(L, -1);
+					break;
+				case musicdef_bpm:
+					def->bpm = luaL_checknumber(L, -1);
+					break;
+				case musicdef_loop_ms:
+					def->loop_ms = luaL_checknumber(L, -1);
+					break;
+				case musicdef_allowed:
+					def->allowed = luaL_checkboolean(L, -1);
+					break;
+			}
+
+			lua_pop(L, 2);
+		}
+	}
+
+	return 0;
+}
+
+static int lib_musicdeflen (lua_State *L)
+{
+	lua_pushnumber(L, (musicdefnum - 1));
+	return 1;
+}
+
+static int musicdef_get (lua_State *L)
+{
+	musicdef_t *def;
+	const char *field;
+
+	def = lua_touserdata(L, 1);
+	field = luaL_checkstring(L, 2);
+
+	if (fastcmp(field, "name"))
+		lua_pushstring(L, def->name);
+	else if (fastcmp(field, "title"))
+		lua_pushstring(L, def->title);
+	else if (fastcmp(field, "alttitle"))
+		lua_pushstring(L, def->alttitle);
+	else if (fastcmp(field, "authors"))
+		lua_pushstring(L, def->authors);
+	else if (fastcmp(field, "soundtestpage"))
+		lua_pushnumber(L, def->soundtestpage);
+	else if (fastcmp(field, "soundtestcond"))
+		lua_pushnumber(L, def->soundtestcond);
+	else if (fastcmp(field, "stoppingtics"))
+		lua_pushnumber(L, def->stoppingtics);
+	else if (fastcmp(field, "bpm"))
+		lua_pushnumber(L, def->bpm);
+	else if (fastcmp(field, "loop_ms"))
+		lua_pushnumber(L, def->loop_ms);
+	else if (fastcmp(field, "allowed"))
+		lua_pushboolean(L, def->allowed);
+	else
+		return 0;
+
+	return 1;
+}
+
+static int musicdef_set (lua_State *L)
+{
+	musicdef_t *def;
+	const char *field;
+
+	def = lua_touserdata(L, 1);
+	field = luaL_checkstring(L, 2);
+
+	if (fastcmp(field, "name"))
+		strlcpy(def->name, luaL_checkstring(L, 3), sizeof def->name);
+	else if (fastcmp(field, "title"))
+		strlcpy(def->title, luaL_checkstring(L, 3), sizeof def->title);
+	else if (fastcmp(field, "alttitle"))
+		strlcpy(def->alttitle, luaL_checkstring(L, 3), sizeof def->alttitle);
+	else if (fastcmp(field, "authors"))
+		strlcpy(def->authors, luaL_checkstring(L, 3), sizeof def->authors);
+	else if (fastcmp(field, "soundtestpage"))
+		def->soundtestpage = luaL_checknumber(L, 3);
+	else if (fastcmp(field, "soundtestcond"))
+		def->soundtestcond = luaL_checknumber(L, 3);
+	else if (fastcmp(field, "stoppingtics"))
+		def->stoppingtics = luaL_checknumber(L, 3);
+	else if (fastcmp(field, "bpm"))
+		def->bpm = luaL_checknumber(L, 3);
+	else if (fastcmp(field, "loop_ms"))
+		def->loop_ms = luaL_checknumber(L, 3);
+	else if (fastcmp(field, "allowed"))
+		def->allowed = luaL_checkboolean(L, 3);
+
+	return 0;
+}
+
+static int musicdef_num (lua_State *L)
+{
+	musicdef_t *def;
+	def = lua_touserdata(L, 1);
+	lua_pushnumber(L, def->index);
+	return 1;
+}
+
+//////////////
 // LUABANKS //
 //////////////
 
@@ -1546,6 +1782,17 @@ int LUA_InfoLib(lua_State *L)
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
+	luaL_newmetatable(L, META_MUSICDEF);
+		lua_pushcfunction(L, musicdef_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, musicdef_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, musicdef_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
 			lua_pushcfunction(L, lib_getSprname);
@@ -1633,6 +1880,19 @@ int LUA_InfoLib(lua_State *L)
 		lua_setmetatable(L, -2);
 	lua_pushvalue(L, -1);
 	lua_setglobal(L, "spriteinfo");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getMusicDef);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_setMusicDef);
+			lua_setfield(L, -2, "__newindex");
+
+			lua_pushcfunction(L, lib_musicdeflen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "musicdef");
 
 	luaL_newmetatable(L, META_LUABANKS);
 		lua_pushcfunction(L, lib_getluabanks);

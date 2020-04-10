@@ -193,6 +193,7 @@ boolean S_SpeedMusic(float speed);
 // Music definitions
 typedef struct musicdef_s
 {
+	INT32 index;/* lua thingy */
 	char name[7];
 	char title[32];
 	char alttitle[64];
@@ -215,7 +216,9 @@ typedef struct musicdef_s
 
 extern musicdef_t soundtestsfx;
 extern musicdef_t *musicdefstart;
+extern musicdef_t *lastmusicdef;
 extern musicdef_t **soundtestdefs;
+extern INT32 musicdefnum;
 extern INT32 numsoundtestdefs;
 extern UINT8 soundtestpage;
 

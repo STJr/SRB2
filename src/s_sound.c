@@ -1448,6 +1448,7 @@ enum
 };
 
 musicdef_t soundtestsfx = {
+	0,
 	"_STSFX", // prevents exactly one valid track name from being used on the sound test
 	"Sound Effects",
 	"",
@@ -1462,6 +1463,8 @@ musicdef_t soundtestsfx = {
 };
 
 musicdef_t *musicdefstart = &soundtestsfx;
+musicdef_t *lastmusicdef = &soundtestsfx;
+INT32 musicdefnum = 1;
 
 //
 // search for music definition in wad
@@ -1534,11 +1537,13 @@ ReadMusicDefFields (UINT16 wadnum, int line, boolean fields, char *stoken,
 			if (!def)
 			{
 				def = Z_Calloc(sizeof (musicdef_t), PU_STATIC, NULL);
+				def->index = (musicdefnum++);
 				STRBUFCPY(def->name, value);
 				strlwr(def->name);
 				def->bpm = TICRATE<<(FRACBITS-1); // FixedDiv((60*TICRATE)<<FRACBITS, 120<<FRACBITS)
 				if (prev != NULL)
 					prev->next = def;
+				lastmusicdef = def;
 				//CONS_Printf("S_LoadMusicDefs: Added song '%s'\n", def->name);
 			}
 
