@@ -523,8 +523,8 @@ typedef struct zlentry_s
 static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 {
     zend_t zend;
-    zentry_t* zentries;
-    zentry_t* zentry;
+    zentry_t zentry;
+    zlentry_t zlentry;
 
 	UINT16 numlumps = *nlmp;
 	lumpinfo_t* lumpinfo;
@@ -552,40 +552,36 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 	numlumps = zend.entries;
 
 	lump_p = lumpinfo = Z_Malloc(numlumps * sizeof (*lumpinfo), PU_STATIC, NULL);
-	zentry = zentries = malloc(numlumps * sizeof (*zentries));
 
 	fseek(handle, zend.cdiroffset, SEEK_SET);
-	for (i = 0; i < numlumps; i++, zentry++, lump_p++)
+	for (i = 0; i < numlumps; i++, lump_p++)
 	{
 		char* fullname;
 		char* trimname;
 		char* dotpos;
 
-		if (fread(zentry, 1, sizeof(zentry_t), handle) < sizeof(zentry_t))
+		if (fread(&zentry, 1, sizeof(zentry_t), handle) < sizeof(zentry_t))
 		{
 			CONS_Alert(CONS_ERROR, "Failed to read central directory (%s)\n", M_FileError(handle));
 			Z_Free(lumpinfo);
-			free(zentries);
 			return NULL;
 		}
-		if (memcmp(zentry->signature, pat_central, 4))
+		if (memcmp(zentry.signature, pat_central, 4))
 		{
 			CONS_Alert(CONS_ERROR, "Central directory is corrupt\n");
 			Z_Free(lumpinfo);
-			free(zentries);
 			return NULL;
 		}
 
-		lump_p->position = zentry->offset + zentry->namelen + zentry->xtralen + sizeof(zlentry_t);
-		lump_p->disksize = zentry->compsize;
-		lump_p->size = zentry->size;
+		lump_p->position = zentry.offset; // NOT ACCURATE YET: we still need to read the local entry to find our true position
+		lump_p->disksize = zentry.compsize;
+		lump_p->size = zentry.size;
 
-		fullname = malloc(zentry->namelen + 1);
-		if (fgets(fullname, zentry->namelen + 1, handle) != fullname)
+		fullname = malloc(zentry.namelen + 1);
+		if (fgets(fullname, zentry.namelen + 1, handle) != fullname)
 		{
 			CONS_Alert(CONS_ERROR, "Unable to read lumpname (%s)\n", M_FileError(handle));
 			Z_Free(lumpinfo);
-			free(zentries);
 			free(fullname);
 			return NULL;
 		}
@@ -602,12 +598,12 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		memset(lump_p->name, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
 		strncpy(lump_p->name, trimname, min(8, dotpos - trimname));
 
-		lump_p->name2 = Z_Calloc(zentry->namelen + 1, PU_STATIC, NULL);
-		strncpy(lump_p->name2, fullname, zentry->namelen);
+		lump_p->name2 = Z_Calloc(zentry.namelen + 1, PU_STATIC, NULL);
+		strncpy(lump_p->name2, fullname, zentry.namelen);
 
 		free(fullname);
 
-		switch(zentry->compression)
+		switch(zentry.compression)
 		{
 		case 0:
 			lump_p->compression = CM_NOCOMPRESSION;
@@ -625,9 +621,29 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			lump_p->compression = CM_UNSUPPORTED;
 			break;
 		}
+
+		// skip and ignore comments/extra fields
+		if (fseek(handle, zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
+		{
+			CONS_Alert(CONS_ERROR, "Central directory is corrupt\n");
+			Z_Free(lumpinfo);
+			return NULL;
+		}
 	}
 
-	free(zentries);
+	// Adjust lump position values properly
+	for (i = 0, lump_p = lumpinfo; i < numlumps; i++, lump_p++)
+	{
+		// skip and ignore comments/extra fields
+		if ((fseek(handle, lump_p->position, SEEK_SET) != 0) || (fread(&zlentry, 1, sizeof(zlentry_t), handle) < sizeof(zlentry_t)))
+		{
+			CONS_Alert(CONS_ERROR, "Local headers for lump %s are corrupt\n", lump_p->name2);
+			Z_Free(lumpinfo);
+			return NULL;
+		}
+
+		lump_p->position += sizeof(zlentry_t) + zlentry.namelen + zlentry.xtralen;
+	}
 
 	*nlmp = numlumps;
 	return lumpinfo;
@@ -1863,6 +1879,10 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		}
 
 		free(fullname);
+
+		// skip and ignore comments/extra fields
+		if (fseek(fp, zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
+			return true;
 	}
 
 	return true;
