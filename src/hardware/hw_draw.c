@@ -291,7 +291,7 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 			if (cx >= -0.1f && cx <= 0.1f && SHORT(gpatch->width) == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && SHORT(gpatch->height) == BASEVIDHEIGHT)
 			{
 				// Need to temporarily cache the real patch to get the colour of the top left pixel
-				patch_t *realpatch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+				patch_t *realpatch = W_CacheSoftwarePatchNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
 				const column_t *column = (const column_t *)((const UINT8 *)(realpatch) + LONG((realpatch)->columnofs[0]));
 				if (!column->topdelta)
 				{
@@ -450,7 +450,7 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 			if (cx >= -0.1f && cx <= 0.1f && SHORT(gpatch->width) == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && SHORT(gpatch->height) == BASEVIDHEIGHT)
 			{
 				// Need to temporarily cache the real patch to get the colour of the top left pixel
-				patch_t *realpatch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+				patch_t *realpatch = W_CacheSoftwarePatchNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
 				const column_t *column = (const column_t *)((const UINT8 *)(realpatch) + LONG((realpatch)->columnofs[0]));
 				if (!column->topdelta)
 				{
