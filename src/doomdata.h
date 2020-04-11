@@ -193,6 +193,9 @@ typedef struct
 #pragma pack()
 #endif
 
+#define NUMMAPTHINGARGS 6
+#define NUMMAPTHINGSTRINGARGS 2
+
 // Thing definition, position, orientation and type,
 // plus visibility flags and attributes.
 typedef struct
@@ -204,6 +207,9 @@ typedef struct
 	INT16 z;
 	UINT8 extrainfo;
 	INT16 tag;
+	INT32 args[NUMMAPTHINGARGS];
+	char *stringargs[NUMMAPTHINGSTRINGARGS];
+
 	struct mobj_s *mobj;
 } mapthing_t;
 
