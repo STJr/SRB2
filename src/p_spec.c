@@ -1578,6 +1578,7 @@ void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean e
 static inline void P_InitTagLists(void)
 {
 	register size_t i;
+	size_t j;
 
 	for (i = numsectors - 1; i != (size_t)-1; i--)
 	{
@@ -1591,6 +1592,28 @@ static inline void P_InitTagLists(void)
 		size_t j = (unsigned)lines[i].tag % numlines;
 		lines[i].nexttag = lines[j].firsttag;
 		lines[j].firsttag = (INT32)i;
+	}
+
+	for (i = 0; i < MAXTAGS; i++)
+	{
+		tags_sectors[i] = NULL;
+		tags_lines[i] = NULL;
+		tags_mapthings[i] = NULL;
+	}
+	for (i = 0; i < numsectors; i++)
+	{
+		for (j = 0; j < sectors[i].tags.count; j++)
+			Taglist_AddToSectors(sectors[i].tags.tags[j], i);
+	}
+	for (i = 0; i < numlines; i++)
+	{
+		for (j = 0; j < lines[i].tags.count; j++)
+			Taglist_AddToLines(lines[i].tags.tags[j], i);
+	}
+	for (i = 0; i < nummapthings; i++)
+	{
+		for (j = 0; j < mapthings[i].tags.count; j++)
+			Taglist_AddToMapthings(mapthings[i].tags.tags[j], i);
 	}
 }
 
@@ -2025,7 +2048,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 				INT32 triggercolor = (INT32)sides[triggerline->sidenum[0]].toptexture;
 				UINT8 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
 				boolean invert = (triggerline->flags & ML_NOCLIMB ? true : false);
-				
+
 				if (invert ^ (triggercolor != color))
 					return false;
 			}
@@ -4034,23 +4057,23 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 			}
 			break;
-		
+
 		case 463: // Dye object
 			{
 				INT32 color = sides[line->sidenum[0]].toptexture;
-				
+
 				if (mo)
 				{
 					if (color < 0 || color >= MAXTRANSLATIONS)
 						return;
-					
+
 					var1 = 0;
 					var2 = color;
 					A_Dye(mo);
 				}
 			}
 			break;
-		
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
@@ -7271,7 +7294,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 331:
 			case 333:
 				break;
-			
+
 			// Object dye executors
 			case 334:
 			case 336:
