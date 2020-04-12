@@ -998,23 +998,7 @@ static sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, INT32 secnum)
   */
 INT32 P_FindSectorFromLineTag(line_t *line, INT32 start)
 {
-	if (line->tag == -1)
-	{
-		start++;
-
-		if (start >= (INT32)numsectors)
-			return -1;
-
-		return start;
-	}
-	else
-	{
-		start = start >= 0 ? sectors[start].nexttag :
-			sectors[(unsigned)line->tag % numsectors].firsttag;
-		while (start >= 0 && sectors[start].tag != line->tag)
-			start = sectors[start].nexttag;
-		return start;
-	}
+	return P_FindSectorFromTag(line->tag, start);
 }
 
 /** Searches the tag lists for the next sector with a given tag.
