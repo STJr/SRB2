@@ -28,3 +28,24 @@ void Taglist_AddToSectors (const size_t tag, const size_t itemid);
 void Taglist_AddToLines (const size_t tag, const size_t itemid);
 void Taglist_AddToMapthings (const size_t tag, const size_t itemid);
 #endif //__R_TAGLIST__
+
+#define Tag_IterateSectors(tag, sc)\
+size_t kk;\
+if(tags_sectors[tag])\
+	for(kk = 0, sc = tags_sectors[tag]->elements[0];\
+		kk < tags_sectors[tag]->count;\
+		sc = tags_sectors[tag]->elements[++kk])
+
+#define Tag_IterateLines(tag, li)\
+size_t kk;\
+if(tags_lines[tag])\
+	for(kk = 0, li = tags_lines[tag]->elements[0];\
+		kk < tags_lines[tag]->count;\
+		li = tags_lines[tag]->elements[++kk])
+
+#define Tag_IterateMapthings(tag, mt)\
+size_t kk;\
+if(tags_mapthings[tag])\
+	for(kk = 0, mt = tags_mapthings[tag]->elements[0];\
+		kk < tags_mapthings[tag]->count;\
+		mt = tags_mapthings[tag]->elements[++kk])
