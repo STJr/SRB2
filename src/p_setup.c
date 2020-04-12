@@ -81,6 +81,8 @@
 
 #include "fastcmp.h" // textmap parsing
 
+#include "taglist.h"
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -935,6 +937,8 @@ static void P_LoadSectors(UINT8 *data)
 		ss->lightlevel = SHORT(ms->lightlevel);
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
+		if (ss->tag)
+			Tag_Add(&ss->tags, ss->tag);
 
 		ss->floor_xoffs = ss->floor_yoffs = 0;
 		ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
@@ -1049,6 +1053,8 @@ static void P_LoadLinedefs(UINT8 *data)
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
+		if (ld->tag)
+			Tag_Add(&ld->tags, ld->tag);
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
@@ -1398,7 +1404,21 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "special"))
 		sectors[i].special = atol(val);
 	else if (fastcmp(param, "id"))
+	{
 		sectors[i].tag = atol(val);
+		if (sectors[i].tag)
+			Tag_Add(&sectors[i].tags, sectors[i].tag);
+	}
+	else if (fastcmp(param, "moreids"))
+	{
+		char* id = val;
+		while (id)
+		{
+			Tag_Add(&sectors[i].tags, atol(id));
+			if ((id = strchr(id, ' ')))
+				id++;
+		}
+	}
 	else if (fastcmp(param, "xpanningfloor"))
 		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningfloor"))
@@ -1434,7 +1454,21 @@ static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
 static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "id"))
+	{
 		lines[i].tag = atol(val);
+		if (lines[i].tag)
+			Tag_Add(&lines[i].tags, lines[i].tag);
+	}
+	else if (fastcmp(param, "moreids"))
+	{
+		char* id = val;
+		while (id)
+		{
+			Tag_Add(&lines[i].tags, atol(id));
+			if ((id = strchr(id, ' ')))
+				id++;
+		}
+	}
 	else if (fastcmp(param, "special"))
 		lines[i].special = atol(val);
 	else if (fastcmp(param, "v1"))
@@ -1501,8 +1535,22 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "id"))
+	{
 		mapthings[i].tag = atol(val);
-	if (fastcmp(param, "x"))
+		if (mapthings[i].tag)
+			Tag_Add(&mapthings[i].tags, mapthings[i].tag);
+	}
+	else if (fastcmp(param, "moreids"))
+	{
+		char* id = val;
+		while (id)
+		{
+			Tag_Add(&mapthings[i].tags, atol(id));
+			if ((id = strchr(id, ' ')))
+				id++;
+		}
+	}
+	else if (fastcmp(param, "x"))
 		mapthings[i].x = atol(val);
 	else if (fastcmp(param, "y"))
 		mapthings[i].y = atol(val);

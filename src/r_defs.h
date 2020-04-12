@@ -30,6 +30,8 @@
 
 #define POLYOBJECTS
 
+#include "taglist.h"
+
 //
 // ClipWallSegment
 // Clips the given range of columns
@@ -290,6 +292,7 @@ typedef struct sector_s
 	INT16 lightlevel;
 	INT16 special;
 	UINT16 tag;
+	taglist_t tags;
 	INT32 nexttag, firsttag; // for fast tag searches
 
 	// origin for any sounds played by the sector
@@ -413,6 +416,7 @@ typedef struct line_s
 	INT16 flags;
 	INT16 special;
 	INT16 tag;
+	taglist_t tags;
 	INT32 args[NUMLINEARGS];
 	char *stringargs[NUMLINESTRINGARGS];
 

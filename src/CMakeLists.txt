@@ -164,6 +164,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_telept.c
 	p_tick.c
 	p_user.c
+	taglist.c
 
 	p_local.h
 	p_maputl.h
@@ -175,6 +176,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_slopes.h
 	p_spec.h
 	p_tick.h
+	taglist.h
 )
 
 if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))

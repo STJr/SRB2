@@ -23,6 +23,8 @@
 // Some global defines, that configure the game.
 #include "doomdef.h"
 
+#include "taglist.h"
+
 //
 // Map level types.
 // The following data structures define the persistent format
@@ -204,6 +206,7 @@ typedef struct
 	INT16 z;
 	UINT8 extrainfo;
 	INT16 tag;
+	taglist_t tags;
 	struct mobj_s *mobj;
 } mapthing_t;
 
