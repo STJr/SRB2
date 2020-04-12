@@ -1020,6 +1020,25 @@ INT32 P_FindSectorFromTag(INT16 tag, INT32 start)
 
 		return start;
 	}
+#if 0
+	INT32 tpos = 0;
+
+	if (tags_sectors[tag])
+	{
+		// Resume previous position.
+		if (start != -1)
+			for (; tpos < tags_sectors[(UINT16)tag]->count;)
+				if (start == tags_sectors[(UINT16)tag]->elements[tpos++])
+					break;
+
+		if (tpos >= tags_sectors[(UINT16)tag]->count)
+			return -1;
+
+		return tags_sectors[(UINT16)tag]->elements[tpos++];
+	}
+
+	return -1;
+#else
 	else
 	{
 		start = start >= 0 ? sectors[start].nexttag :
@@ -1028,6 +1047,7 @@ INT32 P_FindSectorFromTag(INT16 tag, INT32 start)
 			start = sectors[start].nexttag;
 		return start;
 	}
+#endif
 }
 
 /** Searches the tag lists for the next line tagged to a line.
