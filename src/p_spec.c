@@ -7484,9 +7484,10 @@ static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinker
 {
 	INT32 s;
 	size_t sec = sides[*lines[line].sidenum].sector-sectors;
-
-	for (s = -1; (s = P_FindSectorFromLineTag(lines+line, s)) >= 0 ;)
-		P_AddFakeFloor(&sectors[s], &sectors[sec], lines+line, ffloorflags, secthinkers);
+	line_t* li = lines + line;
+	TAG_ITER_SECTORS(li->tag, s)
+		P_AddFakeFloor(&sectors[s], &sectors[sec], li, ffloorflags, secthinkers);
+	TAG_ITER_END
 }
 
 /*
