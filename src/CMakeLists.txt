@@ -452,9 +452,9 @@ if(${SRB2_CONFIG_HAVE_CURL})
 		set(CURL_FOUND ON)
 		set(CURL_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/curl)
 		if(${SRB2_SYSTEM_BITS} EQUAL 64)
-			set(CURL_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/curl/lib32 -lcurl")
-		else() # 32-bit
 			set(CURL_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/curl/lib64 -lcurl")
+		else() # 32-bit
+			set(CURL_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/curl/lib32 -lcurl")
 		endif()
 	else()
 		find_package(CURL)
