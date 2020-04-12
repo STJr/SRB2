@@ -11,4 +11,5 @@ typedef struct
 } taglist_t;
 
 void Tag_Add (taglist_t* list, const UINT16 tag);
+boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2);
 #endif //__R_TAGLIST__
