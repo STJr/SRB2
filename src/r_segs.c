@@ -2015,7 +2015,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->floorlightsec != frontsector->floorlightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && !Tags_Compare(&frontsector->tags, &backsector->tags))
+		    || (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 			markfloor = true;
 		}
@@ -2046,7 +2046,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->ceilinglightsec != frontsector->ceilinglightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && !Tags_Compare(&frontsector->tags, &backsector->tags))
+		    || (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 				markceiling = true;
 		}
@@ -2136,7 +2136,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		rw_bottomtexturemid += sidedef->rowoffset;
 
 		// allocate space for masked texture tables
-		if (frontsector && backsector && !Tags_Compare(&frontsector->tags, &backsector->tags) && (backsector->ffloors || frontsector->ffloors))
+		if (frontsector && backsector && !Tag_Compare(&frontsector->tags, &backsector->tags) && (backsector->ffloors || frontsector->ffloors))
 		{
 			ffloor_t *rover;
 			ffloor_t *r2;

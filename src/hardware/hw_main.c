@@ -1862,7 +1862,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 	//Hurdler: 3d-floors test
 #ifdef R_FAKEFLOORS
-	if (gr_frontsector && gr_backsector && !Tags_Compare(&gr_frontsector->tags, &gr_backsector->tags) && (gr_backsector->ffloors || gr_frontsector->ffloors))
+	if (gr_frontsector && gr_backsector && !Tag_Compare(&gr_frontsector->tags, &gr_backsector->tags) && (gr_backsector->ffloors || gr_frontsector->ffloors))
 	{
 		ffloor_t * rover;
 		fixed_t    highcut = 0, lowcut = 0;
@@ -2662,7 +2662,7 @@ static void HWR_AddLine(seg_t * line)
 #endif
 			!line->sidedef->midtexture
 			&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
-			|| Tags_Compare(&gr_frontsector->tags, &gr_backsector->tags)))
+			|| Tag_Compare(&gr_frontsector->tags, &gr_backsector->tags)))
 				return; // line is empty, don't even bother
 			// treat like wide open window instead
 			HWR_ProcessSeg(); // Doesn't need arguments because they're defined globally :D
@@ -2704,7 +2704,7 @@ static void HWR_AddLine(seg_t * line)
 #endif
 		!line->sidedef->midtexture
 		&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
-		|| Tags_Compare(&gr_frontsector->tags, &gr_backsector->tags)))
+		|| Tag_Compare(&gr_frontsector->tags, &gr_backsector->tags)))
 			return; // line is empty, don't even bother
 
 		goto clippass; // treat like wide open window instead
