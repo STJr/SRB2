@@ -21,6 +21,7 @@
 #include "p_local.h" // camera
 #include "p_slopes.h"
 #include "z_zone.h" // Check R_Prep3DFloors
+#include "taglist.h"
 
 seg_t *curline;
 side_t *sidedef;
@@ -376,7 +377,7 @@ boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back)
 		// Consider colormaps
 		&& back->extra_colormap == front->extra_colormap
 		&& ((!front->ffloors && !back->ffloors)
-		|| front->tag == back->tag));
+		|| Tags_Compare(&front->tags, &back->tags)));
 }
 
 //
@@ -488,7 +489,7 @@ static void R_AddLine(seg_t *line)
 #endif
 		!line->sidedef->midtexture
 		&& ((!frontsector->ffloors && !backsector->ffloors)
-		|| (frontsector->tag == backsector->tag)))
+		|| Tags_Compare(&frontsector->tags, &backsector->tags)))
 			return; // line is empty, don't even bother
 
 		goto clippass; // treat like wide open window instead
