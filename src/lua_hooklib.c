@@ -52,6 +52,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"JumpSpinSpecial",
 	"BotTiccmd",
 	"BotAI",
+	"BotRespawn",
 	"LinedefExecute",
 	"PlayerMsg",
 	"HurtMsg",
@@ -80,9 +81,7 @@ struct hook_s
 	UINT16 id;
 	union {
 		mobjtype_t mt;
-		char *skinname;
-		char *musname;
-		char *funcname;
+		char *str;
 	} s;
 	boolean error;
 };
@@ -151,28 +150,16 @@ static int lib_addHook(lua_State *L)
 		break;
 	case hook_BotAI:
 	case hook_ShouldJingleContinue:
-		hook.s.skinname = NULL;
+		hook.s.str = NULL;
 		if (lua_isstring(L, 2))
 		{ // lowercase copy
-			const char *s = lua_tostring(L, 2);
-			char *p = hook.s.skinname = ZZ_Alloc(strlen(s)+1);
-			do {
-				*p = tolower(*s);
-				++p;
-			} while(*(++s));
-			*p = 0;
+			hook.s.str = Z_StrDup(lua_tostring(L, 2));
+			strlwr(hook.s.str);
 		}
 		break;
 	case hook_LinedefExecute: // Linedef executor functions
-		{ // uppercase copy
-			const char *s = luaL_checkstring(L, 2);
-			char *p = hook.s.funcname = ZZ_Alloc(strlen(s)+1);
-			do {
-				*p = toupper(*s);
-				++p;
-			} while(*(++s));
-			*p = 0;
-		}
+		hook.s.str = Z_StrDup(luaL_checkstring(L, 2));
+		strupr(hook.s.str);
 		break;
 	default:
 		break;
@@ -1075,7 +1062,7 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_BotAI
-		|| (hookp->s.skinname && strcmp(hookp->s.skinname, ((skin_t*)tails->skin)->name)))
+		|| (hookp->s.str && strcmp(hookp->s.str, ((skin_t*)tails->skin)->name)))
 			continue;
 
 		if (lua_gettop(gL) == 0)
@@ -1125,6 +1112,51 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	return hooked;
 }
 
+// Hook for B_CheckRespawn
+boolean LUAh_BotRespawn(mobj_t *sonic, mobj_t *tails)
+{
+	hook_p hookp;
+	UINT8 shouldRespawn = 0; // 0 = default, 1 = force yes, 2 = force no.
+	if (!gL || !(hooksAvailable[hook_BotRespawn/8] & (1<<(hook_BotRespawn%8))))
+		return false;
+
+	lua_settop(gL, 0);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_BotRespawn)
+			continue;
+
+		if (lua_gettop(gL) == 0)
+		{
+			LUA_PushUserdata(gL, sonic, META_MOBJ);
+			LUA_PushUserdata(gL, tails, META_MOBJ);
+		}
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{
+			if (lua_toboolean(gL, -1))
+				shouldRespawn = 1; // Force yes
+			else
+				shouldRespawn = 2; // Force no
+		}
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return shouldRespawn;
+}
+
 // Hook for linedef executors
 boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 {
@@ -1137,7 +1169,7 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 
 	for (hookp = linedefexecutorhooks; hookp; hookp = hookp->next)
 	{
-		if (strcmp(hookp->s.funcname, line->stringargs[0]))
+		if (strcmp(hookp->s.str, line->stringargs[0]))
 			continue;
 
 		if (lua_gettop(gL) == 0)
@@ -1675,7 +1707,7 @@ boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_ShouldJingleContinue
-			|| (hookp->s.musname && strcmp(hookp->s.musname, musname)))
+			|| (hookp->s.str && strcmp(hookp->s.str, musname)))
 			continue;
 
 		if (lua_gettop(gL) == 0)

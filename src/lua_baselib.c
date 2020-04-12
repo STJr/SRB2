@@ -223,10 +223,16 @@ static const char *GetUserdataUType(lua_State *L)
 //   or players[0].powers -> "player_t.powers"
 static int lib_userdataType(lua_State *L)
 {
+	int type;
 	lua_settop(L, 1); // pop everything except arg 1 (in case somebody decided to add more)
-	luaL_checktype(L, 1, LUA_TUSERDATA);
-	lua_pushstring(L, GetUserdataUType(L));
-	return 1;
+	type = lua_type(L, 1);
+	if (type == LUA_TLIGHTUSERDATA || type == LUA_TUSERDATA)
+	{
+		lua_pushstring(L, GetUserdataUType(L));
+		return 1;
+	}
+	else
+		return luaL_typerror(L, 1, "userdata");
 }
 
 static int lib_isPlayerAdmin(lua_State *L)
