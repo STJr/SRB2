@@ -130,11 +130,11 @@ typedef enum
 	FF_CUTEXTRA          = 0x100,      ///< Cuts out hidden translucent pixels.
 	FF_CUTLEVEL          = 0x180,      ///< Cuts out all hidden pixels.
 	FF_CUTSPRITES        = 0x200,      ///< Final step in making 3D water.
-	FF_BOTHPLANES        = 0x400,      ///< Renders both planes all the time.
+	FF_BOTHPLANES        = 0x400,      ///< Render inside and outside planes.
 	FF_EXTRA             = 0x800,      ///< Gets cut by ::FF_CUTEXTRA.
 	FF_TRANSLUCENT       = 0x1000,     ///< See through!
 	FF_FOG               = 0x2000,     ///< Fog "brush."
-	FF_INVERTPLANES      = 0x4000,     ///< Reverse the plane visibility rules.
+	FF_INVERTPLANES      = 0x4000,     ///< Only render inside planes.
 	FF_ALLSIDES          = 0x8000,     ///< Render inside and outside sides.
 	FF_INVERTSIDES       = 0x10000,    ///< Only render inside sides.
 	FF_DOUBLESHADOW      = 0x20000,    ///< Make two lightlist entries to reset light?

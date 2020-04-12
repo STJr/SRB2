@@ -1548,6 +1548,10 @@ boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 	int i;
 	boolean result = false;
 
+#ifndef HAVE_BLUA
+	(void)musname;
+#endif
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (!P_IsLocalPlayer(&players[i]))
@@ -7978,7 +7982,7 @@ static void P_MovePlayer(player_t *player)
 			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6]))) // Note the < instead of <=
 		{
 			skin_t *skin = ((skin_t *)(player->mo->skin));
-			if (skin->flags & SF_SUPER)
+			if (( skin->flags & (SF_SUPER|SF_NONIGHTSSUPER) ) == SF_SUPER)
 			{
 				player->mo->color = skin->supercolor
 					+ ((player->nightstime == player->startedtime)
@@ -9327,7 +9331,7 @@ boolean P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	if (enemy->health <= 0) // dead
 		return false;
 
-	if (!((enemy->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR) && (enemy->flags & MF_SHOOTABLE)) || (enemy->flags & MF_SPRING)) == !(enemy->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
+	if (source->player && (!((enemy->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR) && (enemy->flags & MF_SHOOTABLE)) || (enemy->flags & MF_SPRING)) == !(enemy->flags2 & MF2_INVERTAIMABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
 		return false;
 
 	if (enemy->flags2 & MF2_FRET)
@@ -12209,7 +12213,7 @@ void P_PlayerThink(player_t *player)
 		player->powers[pw_nocontrol]--;
 	else
 		player->powers[pw_nocontrol] = 0;
-
+	
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]
 	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]
@@ -12852,6 +12856,12 @@ void P_PlayerAfterThink(player_t *player)
 	{
 		player->mo->flags2 |= MF2_DONTDRAW;
 		player->mo->flags |= MF_NOGRAVITY;
+	}
+
+	if (player->powers[pw_dye])
+	{
+		player->mo->colorized = true;
+		player->mo->color = player->powers[pw_dye];
 	}
 
 	if (player->followmobj && (player->spectator || player->mo->health <= 0 || player->followmobj->type != player->followitem))

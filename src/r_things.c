@@ -428,9 +428,9 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	switch (wadfiles[wadnum]->type)
 	{
 	case RET_WAD:
-		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
+		start = W_CheckNumForMarkerStartPwad("S_START", wadnum, 0);
 		if (start == INT16_MAX)
-			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
+			start = W_CheckNumForMarkerStartPwad("SS_START", wadnum, 0); //deutex compatib.
 
 		end = W_CheckNumForNamePwad("S_END",wadnum,start);
 		if (end == INT16_MAX)
@@ -452,8 +452,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 
 		start = 0; //let say S_START is lump 0
 	}
-	else
-		start++;   // just after S_START
 
 	if (end == INT16_MAX || start >= end)
 	{
