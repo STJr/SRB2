@@ -24,14 +24,6 @@ consvar_t cv_http_masterserver = {
 	NULL, NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
 };
 
-consvar_t cv_masterserver_token = {
-	"masterserver_token",
-	"",
-	CV_SAVE,
-
-	NULL, NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
-};
-
 consvar_t cv_masterserver_debug = {
 	"masterserver_debug", "Off", CV_SAVE, CV_OnOff,
 	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
@@ -235,8 +227,6 @@ HMS_unlist (void)
 	struct HMS_buffer *hms;
 	hms = HMS_connect("servers/%s/unlist", hms_server_token);
 	curl_easy_setopt(hms->curl, CURLOPT_CUSTOMREQUEST, "POST");
-	/*curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS,
-			cv_masterserver_token.string);*/
 	HMS_do(hms);
 	HMS_end(hms);
 }

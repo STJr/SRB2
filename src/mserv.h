@@ -65,7 +65,6 @@ typedef struct
 
 extern consvar_t cv_masterserver, cv_servername;
 extern consvar_t cv_http_masterserver;
-extern consvar_t cv_masterserver_token;
 extern consvar_t cv_masterserver_debug;
 
 // < 0 to not connect (usually -1) (offline mode)
