@@ -15,6 +15,11 @@
 #include "command.h"
 #include "mserv.h"
 #include "i_tcp.h"/* for current_port */
+#include "z_zone.h"
+
+/* I just stop myself from making macros anymore. */
+#define Blame( ... ) \
+	CONS_Printf("\x85" __VA_ARGS__)
 
 consvar_t cv_http_masterserver = {
 	"http_masterserver",
@@ -40,6 +45,14 @@ struct HMS_buffer
 	int   needle;
 	int    end;
 };
+
+static void
+Contact_error (void);
+{
+	CONS_Alert(CONS_ERROR,
+			"There was a problem contacting the master server...\n"
+	);
+}
 
 static size_t
 HMS_on_read (char *s, size_t _1, size_t n, void *userdata)
@@ -67,16 +80,32 @@ HMS_connect (const char *format, ...)
 
 	if (! hms_started)
 	{
-		curl_global_init(CURL_GLOBAL_ALL);
-		hms_started = 1;
+		if (curl_global_init(CURL_GLOBAL_ALL) != 0)
+		{
+			Contact_error();
+			Blame("From curl_global_init.\n");
+			return NULL;
+		}
+		else
+		{
+			atexit(curl_global_cleanup);
+			hms_started = 1;
+		}
 	}
 
 	curl = curl_easy_init();
 
+	if (! curl)
+	{
+		Contact_error();
+		Blame("From curl_easy_init.\n");
+		return NULL;
+	}
+
 	seek = strlen(cv_http_masterserver.string) + 1;/* + '/' */
 
 	va_start (ap, format);
-	url = malloc(seek + vsnprintf(0, 0, format, ap) + 1);
+	url = ZZ_Alloc(seek + vsnprintf(0, 0, format, ap) + 1);
 	va_end (ap);
 
 	sprintf(url, "%s/", cv_http_masterserver.string);
@@ -87,11 +116,11 @@ HMS_connect (const char *format, ...)
 
 	CONS_Printf("HMS: connecting '%s'...\n", url);
 
-	buffer = malloc(sizeof *buffer);
+	buffer = ZZ_Alloc(sizeof *buffer);
 	buffer->curl = curl;
 	/* I just allocated 4k and fuck it! */
 	buffer->end = 4096;
-	buffer->buffer = malloc(buffer->end);
+	buffer->buffer = ZZ_Alloc(buffer->end);
 	buffer->needle = 0;
 
 	if (cv_masterserver_debug.value)
@@ -114,17 +143,42 @@ HMS_connect (const char *format, ...)
 static int
 HMS_do (struct HMS_buffer *buffer)
 {
+	CURLcode cc;
 	long status;
-	curl_easy_perform(buffer->curl);
-	curl_easy_getinfo(buffer->curl, CURLINFO_RESPONSE_CODE, &status);
+
+	char *p;
+
+	cc = curl_easy_perform(buffer->curl);
+
+	if (cc != CURLE_OK)
+	{
+		Contact_error();
+		Blame(
+				"From curl_easy_perform: %s\n",
+				curl_easy_strerror(cc)
+		);
+		return 0;
+	}
+
 	buffer->buffer[buffer->needle] = '\0';
+
+	curl_easy_getinfo(buffer->curl, CURLINFO_RESPONSE_CODE, &status);
+
 	if (status != 200)
 	{
-		CONS_Alert(CONS_ERROR,
-				"Master server error %ld: %s",
+		p = strchr(buffer->buffer, '\n');
+
+		if (p)
+			*p = '\0';
+
+		Contact_error();
+		Blame(
+				"Master server error %ld: %s%s\n",
 				status,
-				buffer->buffer
+				buffer->buffer,
+				( (p) ? "" : " (malformed)" )
 		);
+
 		return 0;
 	}
 	else
@@ -134,9 +188,9 @@ HMS_do (struct HMS_buffer *buffer)
 static void
 HMS_end (struct HMS_buffer *buffer)
 {
-	free(buffer->buffer);
 	curl_easy_cleanup(buffer->curl);
-	free(buffer);
+	Z_Free(buffer->buffer);
+	Z_Free(buffer);
 }
 
 int
