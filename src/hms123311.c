@@ -8,6 +8,12 @@
 //-----------------------------------------------------------------------------
 // \brief HTTP based master server
 
+/*
+Documentation available here.
+
+                     <http://mb.srb2.org/MS/tools/api/v1/>
+*/
+
 #include <curl/curl.h>
 
 #include "doomdef.h"
@@ -36,7 +42,7 @@ consvar_t cv_masterserver_debug = {
 
 static int hms_started;
 
-static char hms_server_token[sizeof "xxx.xxx.xxx.xxx/xxxxx"];
+static char *hms_server_token;
 
 struct HMS_buffer
 {
@@ -128,9 +134,10 @@ HMS_connect (const char *format, ...)
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 		curl_easy_setopt(curl, CURLOPT_STDERR, logstream);
 	}
-	curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
 
@@ -202,25 +209,30 @@ void
 HMS_fetch_rooms (int joining)
 {
 	struct HMS_buffer *hms;
-	char *p;
-	char *end;
 
 	char *id;
 	char *title;
 	char *motd;
 
+	char *p;
+	char *end;
+
 	int i;
 
 	hms = HMS_connect("rooms");
+
 	if (HMS_do(hms))
 	{
 		p = hms->buffer;
+
 		for (i = 0; i < NUM_LIST_ROOMS && ( end = strstr(p, "\n\n\n") ); ++i)
 		{
 			*end = '\0';
+
 			id    = strtok(p, "\n");
 			title = strtok(0, "\n");
 			motd  = strtok(0, "");
+
 			if (id && title && motd)
 			{
 				room_list[i].header.buffer[0] = 1;
@@ -229,7 +241,7 @@ HMS_fetch_rooms (int joining)
 				strlcpy(room_list[i].name, title, sizeof room_list[i].name);
 				strlcpy(room_list[i].motd, motd, sizeof room_list[i].motd);
 
-				p = ( end + 3 );
+				p = ( end + 3 );/* skip the three linefeeds */
 			}
 			else
 				break;
@@ -237,38 +249,49 @@ HMS_fetch_rooms (int joining)
 
 		room_list[i].header.buffer[0] = 0;
 	}
+
 	HMS_end(hms);
 }
 
 int
 HMS_register (void)
 {
-	char post[256];
 	struct HMS_buffer *hms;
-	char *title;
 	int ok;
 
+	char post[256];
+
+	char *title;
+
 	hms = HMS_connect("rooms/%d/register", ms_RoomId);
+
 	title = curl_easy_escape(hms->curl, cv_servername.string, 0);
-	sprintf(post,
-			"port=%d&title=%s&version=%d.%d.%d",
+
+	snprintf(post, sizeof post,
+			"port=%d&"
+			"title=%s&"
+			"version=%d.%d.%d",
+
 			current_port,
+
 			title,
+
 			VERSION/100,
 			VERSION%100,
 			SUBVERSION
 	);
+
+	curl_free(title);
+
 	curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
 
 	ok = HMS_do(hms);
 
 	if (ok)
 	{
-		strlcpy(hms_server_token, strtok(hms->buffer, "\n"),
-				sizeof hms_server_token);
+		hms_server_token = Z_StrDup(strtok(hms->buffer, "\n"));
 	}
 
-	curl_free(title);
 	HMS_end(hms);
 
 	return ok;
@@ -278,23 +301,35 @@ void
 HMS_unlist (void)
 {
 	struct HMS_buffer *hms;
+
 	hms = HMS_connect("servers/%s/unlist", hms_server_token);
+
 	curl_easy_setopt(hms->curl, CURLOPT_CUSTOMREQUEST, "POST");
+
 	HMS_do(hms);
 	HMS_end(hms);
+
+	Z_Free(hms_server_token);
 }
 
 void
 HMS_update (void)
 {
-	char post[256];
 	struct HMS_buffer *hms;
+
+	char post[256];
+
 	char *title;
 
 	hms = HMS_connect("servers/%s/update", hms_server_token);
 
 	title = curl_easy_escape(hms->curl, cv_servername.string, 0);
-	sprintf(post, "title=%s", title);
+
+	snprintf(post, sizeof post,
+			"title=%s",
+			title
+	);
+
 	curl_free(title);
 
 	curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
@@ -307,9 +342,20 @@ void
 HMS_list_servers (void)
 {
 	struct HMS_buffer *hms;
+
+	char *p;
+
 	hms = HMS_connect("servers");
+
 	if (HMS_do(hms))
-		CONS_Printf("%s", hms->buffer);
+	{
+		p = &hms->buffer[strlen(hms->buffer)];
+		while (*--p == '\n')
+			;
+
+		CONS_Printf("%s\n", hms->buffer);
+	}
+
 	HMS_end(hms);
 }
 
@@ -317,14 +363,19 @@ void
 HMS_fetch_servers (msg_server_t *list, int room_number)
 {
 	struct HMS_buffer *hms;
-	char *end;
-	char *section_end;
-	char *p;
+
+	char local_version[9];
 
 	char *room;
+
 	char *address;
 	char *port;
 	char *title;
+	char *version;
+
+	char *end;
+	char *section_end;
+	char *p;
 
 	int i;
 
@@ -337,46 +388,64 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 
 	if (HMS_do(hms))
 	{
+		snprintf(local_version, sizeof local_version,
+				"%d.%d.%d\n",
+				VERSION/100,
+				VERSION%100,
+				SUBVERSION
+		);
+
 		p = hms->buffer;
 		i = 0;
+
 		do
 		{
 			section_end = strstr(p, "\n\n");
+
 			room = strtok(p, "\n");
+
 			p = strtok(0, "");
+
 			if (! p)
 				break;
-			for (; i < MAXSERVERLIST && ( end = strchr(p, '\n') ); ++i)
+
+			while (i < MAXSERVERLIST && ( end = strchr(p, '\n') ))
 			{
 				*end = '\0';
 
 				address = strtok(p, " ");
 				port    = strtok(0, " ");
-				title   = strtok(0, "");
+				title   = strtok(0, " ");
+				version = strtok(0, "");
 
-				if (address && port && title)
+				if (address && port && title && version)
 				{
-					strlcpy(list[i].ip, address, sizeof list[i].ip);
-					strlcpy(list[i].port, port, sizeof list[i].port);
-					strlcpy(list[i].name, title, sizeof list[i].name);
-					list[i].room = atoi(room);
-
-					list[i].header.buffer[0] = 1;
-
-					if (end == section_end)
+					if (strcmp(version, local_version) == 0)
 					{
-						i++;/* lol */
-						break;
+						strlcpy(list[i].ip,      address, sizeof list[i].ip);
+						strlcpy(list[i].port,    port,    sizeof list[i].port);
+						strlcpy(list[i].name,    title,   sizeof list[i].name);
+						strlcpy(list[i].version, version, sizeof list[i].version);
+
+						list[i].room = atoi(room);
+
+						list[i].header.buffer[0] = 1;
+
+						i++;
 					}
 
-					p = ( end + 1 );
+					if (end == section_end)/* end of list for this room */
+						break;
+					else
+						p = ( end + 1 );/* skip server delimiter */
 				}
 				else
 				{
-					section_end = 0;
+					section_end = 0;/* malformed so quit the parsing */
 					break;
 				}
 			}
+
 			p = ( section_end + 2 );
 		}
 		while (section_end) ;
