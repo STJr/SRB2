@@ -455,3 +455,39 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 
 	HMS_end(hms);
 }
+
+const char *
+HMS_compare_mod_version (void)
+{
+	static char buffer[16];
+
+	struct HMS_buffer *hms;
+
+	char *version;
+	char *version_name;
+
+	hms = HMS_connect("versions/%d", MODID);
+
+	if (HMS_do(hms))
+	{
+		version      = strtok(hms->buffer, " ");
+		version_name = strtok(0, "\n");
+
+		if (version && version_name)
+		{
+			if (atoi(version) != MODVERSION)
+			{
+				strlcpy(buffer, version_name, sizeof buffer);
+				version_name = buffer;
+			}
+			else
+				version_name = NULL;
+		}
+	}
+	else
+		version_name = NULL;
+
+	HMS_end(hms);
+
+	return version_name;
+}
