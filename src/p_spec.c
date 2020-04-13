@@ -1050,65 +1050,6 @@ INT32 P_FindSectorFromTag(INT16 tag, INT32 start)
 #endif
 }
 
-/** Searches the tag lists for the next line tagged to a line.
-  *
-  * \param line  Tagged line used as a reference.
-  * \param start -1 to start anew, or the result of a previous call to keep
-  *              searching.
-  * \return Number of the next tagged line found.
-  * \sa P_FindSectorFromLineTag
-  */
-static INT32 P_FindLineFromLineTag(const line_t *line, INT32 start)
-{
-	if (line->tag == -1)
-	{
-		start++;
-
-		if (start >= (INT32)numlines)
-			return -1;
-
-		return start;
-	}
-	else
-	{
-		start = start >= 0 ? lines[start].nexttag :
-			lines[(unsigned)line->tag % numlines].firsttag;
-		while (start >= 0 && lines[start].tag != line->tag)
-			start = lines[start].nexttag;
-		return start;
-	}
-}
-#if 0
-/** Searches the tag lists for the next line with a given tag and special.
-  *
-  * \param tag     Tag number.
-  * \param start   -1 to start anew, or the result of a previous call to keep
-  *                searching.
-  * \return Number of next suitable line found.
-  * \sa P_FindLineFromLineTag
-  * \author Graue <graue@oceanbase.org>
-  */
-static INT32 P_FindLineFromTag(INT32 tag, INT32 start)
-{
-	if (tag == -1)
-	{
-		start++;
-
-		if (start >= numlines)
-			return -1;
-
-		return start;
-	}
-	else
-	{
-		start = start >= 0 ? lines[start].nexttag :
-			lines[(unsigned)tag % numlines].firsttag;
-		while (start >= 0 && lines[start].tag != tag)
-			start = lines[start].nexttag;
-		return start;
-	}
-}
-#endif
 //
 // P_FindSpecialLineFromTag
 //
@@ -6771,13 +6712,16 @@ void P_SpawnSpecials(boolean fromnetsave)
 							if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
 								Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), (INT32)(sectors[s].lines[j]-lines), (INT32)i);
 				} else // Find FOFs by effect sector tag
-					for (s = -1; (s = P_FindLineFromLineTag(lines + i, s)) >= 0 ;)
+				{
+					TAG_ITER_C
+					TAG_ITER_LINES((lines + i)->tag, s)
 					{
 						if ((size_t)s == i)
 							continue;
 						if (sides[lines[s].sidenum[0]].sector->tag == sides[lines[i].sidenum[0]].sector->tag)
 							Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), s, (INT32)i);
 					}
+				}
 				break;
 
 			case 65: // Bridge Thinker
@@ -7899,10 +7843,13 @@ static void P_SpawnScrollers(void)
 			// scroll wall according to linedef
 			// (same direction and speed as scrolling floors)
 			case 502:
-				for (s = -1; (s = P_FindLineFromLineTag(l, s)) >= 0 ;)
+			{
+				TAG_ITER_C
+				TAG_ITER_LINES(l->tag, s)
 					if (s != (INT32)i)
 						Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
 				break;
+			}
 
 			case 505:
 				s = lines[i].sidenum[0];
