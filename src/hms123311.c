@@ -141,7 +141,7 @@ HMS_connect (const char *format, ...)
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
 
-	free(url);
+	Z_Free(url);
 
 	return buffer;
 }
@@ -389,7 +389,7 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 	if (HMS_do(hms))
 	{
 		snprintf(local_version, sizeof local_version,
-				"%d.%d.%d\n",
+				"%d.%d.%d",
 				VERSION/100,
 				VERSION%100,
 				SUBVERSION
