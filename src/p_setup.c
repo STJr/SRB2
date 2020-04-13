@@ -2813,25 +2813,27 @@ static void P_ConvertBinaryMap(void)
 			else if (lines[i].special == 103)
 				lines[i].args[1] = 1;
 
+			//Tangibility
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[2] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[2] |= 4;
+
 			//Translucency
 			if (lines[i].special == 102)
 			{
-				lines[i].args[2] = (lines[i].flags & ML_NOCLIMB) ? 2 : 1;
+				lines[i].args[3] |= 1;
+				if (lines[i].flags & ML_NOCLIMB)
+					lines[i].args[1] |= 4;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
 					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
 				else
 					lines[i].alpha = FRACUNIT/2;
 			}
 
-			//Tangibility
-			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[3] |= 8;
-			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[3] |= 4;
-
 			//Shadow?
 			if (lines[i].special != 100 && (lines[i].special != 104 || !(lines[i].flags & ML_NOCLIMB)))
-				lines[i].args[4] = 1;
+				lines[i].args[3] |= 1;
 
 			lines[i].special = 100;
 			break;
@@ -2887,27 +2889,34 @@ static void P_ConvertBinaryMap(void)
 			else if (lines[i].special == 146)
 				lines[i].args[1] = 1;
 
+			//Tangibility
+			if (lines[i].special <= 142)
+				lines[i].args[2] |= 2;
+			else if (lines[i].special <= 145)
+				lines[i].args[2] |= 1;
+			else
+				lines[i].args[2] |= 3;
+
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[2] |= 8;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[2] |= 4;
+
 			//Translucency
 			if (lines[i].special == 141 || lines[i].special == 142 || lines[i].special == 144 || lines[i].special == 145)
 			{
-				lines[i].args[2] = (lines[i].flags & ML_EFFECT2) ? 2 : 1;
+				lines[i].args[3] |= 1;
+				if (lines[i].flags & ML_NOCLIMB)
+					lines[i].args[1] |= 4;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
 					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
 				else
 					lines[i].alpha = FRACUNIT/2;
 			}
 
-			//Tangibility
-			if (lines[i].special <= 142)
-				lines[i].args[3] |= 2;
-			else if (lines[i].special <= 145)
-				lines[i].args[3] |= 1;
-			else
-				lines[i].args[3] |= 3;
-
 			//Shadow?
 			if (lines[i].special != 146 && (lines[i].flags & ML_NOCLIMB))
-				lines[i].args[4] = 1;
+				lines[i].args[3] |= 2;
 
 			lines[i].special = 100;
 			break;

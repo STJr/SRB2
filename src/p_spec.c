@@ -6757,43 +6757,44 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
 				//Visibility settings
-				if (lines[i].args[1] & 1)
+				if (lines[i].args[1] & 1) //Don't render planes
 					ffloorflags &= ~FF_RENDERPLANES;
-				if (lines[i].args[1] & 2)
+				if (lines[i].args[1] & 2) //Don't render sides
 					ffloorflags &= ~FF_RENDERSIDES;
-
-				//Translucency settings are irrelevant for invisible FOFs
-				if (lines[i].args[1] != 3)
+				if (lines[i].args[1] & 4) //Render insides
 				{
-					if (lines[i].args[2] == 0) //Opaque
-					{
-						if (lines[i].args[3] & 7)
-						{
-							//At least partially intangible: You can see it from the inside
-							ffloorflags |= FF_ALLSIDES;
-							//Unless the planes are invisible, render both sides.
-							if (!(lines[i].args[1] & 1))
-								ffloorflags |= FF_BOTHPLANES;
-						}
-						else
-							ffloorflags |= FF_CUTLEVEL;
-					}
-					if (lines[i].args[2] == 1) //Translucent, don't render insides
-						ffloorflags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-					if (lines[i].args[2] == 2) //Translucent, render insides
-						ffloorflags |= FF_TRANSLUCENT|FF_CUTEXTRA|FF_BOTHPLANES|FF_ALLSIDES;
+					if (ffloorflags & FF_RENDERPLANES)
+						ffloorflags |= FF_BOTHPLANES;
+					if (ffloorflags & FF_RENDERSIDES)
+						ffloorflags |= FF_ALLSIDES;
 				}
 
-				if (lines[i].args[3] & 1)
+				//Tangibility settings
+				if (lines[i].args[2] & 1) //Intangible from top
 					ffloorflags |= FF_REVERSEPLATFORM;
-				if (lines[i].args[3] & 2)
+				if (lines[i].args[2] & 2) //Intangible from bottom
 					ffloorflags |= FF_PLATFORM;
-				if (lines[i].args[3] & 4)
+				if (lines[i].args[2] & 4) //Don't block player
 					ffloorflags &= ~FF_BLOCKPLAYER;
-				if (lines[i].args[3] & 8)
+				if (lines[i].args[2] & 8) //Don't block others
 					ffloorflags &= ~FF_BLOCKOTHERS;
-				if (lines[i].args[4])
+
+				//Appearance settings
+				if ((lines[i].args[3] & 1) && (ffloorflags & FF_RENDERALL)) //Translucent
+					ffloorflags |= FF_TRANSLUCENT;
+				if (lines[i].args[3] & 2) //Don't cast shadow
 					ffloorflags |= FF_NOSHADE;
+
+				//Cutting options
+				if (ffloorflags & FF_RENDERALL)
+				{
+					//If translucent or player can enter it, cut inner walls
+					if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[2] & 7))
+						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
+					else
+						ffloorflags |= FF_CUTLEVEL;
+				}
+
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
