@@ -27,19 +27,6 @@
 // ==========================================================================
 
 //
-// Mini-P_IsObjectOnGroundIn for T_MovePlane hack
-//
-static inline boolean P_MobjReadyToMove(mobj_t *mo, sector_t *sec, boolean sectorisffloor, boolean sectorisquicksand)
-{
-	if (sectorisquicksand)
-		return (mo->z > sec->floorheight && mo->z < sec->ceilingheight);
-	else if (!!(mo->flags & MF_SPAWNCEILING) ^ !!(mo->eflags & MFE_VERTICALFLIP))
-		return ((sectorisffloor) ? (mo->z+mo->height != sec->floorheight) : (mo->z+mo->height != sec->ceilingheight));
-	else
-		return ((sectorisffloor) ? (mo->z != sec->ceilingheight) : (mo->z != sec->floorheight));
-}
-
-//
 // Move a plane (floor or ceiling) and check for crushing
 //
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crush,
