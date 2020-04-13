@@ -53,7 +53,7 @@ struct HMS_buffer
 };
 
 static void
-Contact_error (void);
+Contact_error (void)
 {
 	CONS_Alert(CONS_ERROR,
 			"There was a problem contacting the master server...\n"
