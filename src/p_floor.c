@@ -2028,8 +2028,9 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 	msecnode_t *node;
 	mobj_t *thing;
 	boolean FOFsector = false;
+	TAG_ITER_C
 
-	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
+	TAG_ITER_SECTORS(nobaddies->sourceline->tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -2039,13 +2040,14 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 		for (i = 0; i < sec->linecount; i++)
 		{
 			INT32 targetsecnum = -1;
+			TAG_ITER_C
 
 			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
 				continue;
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			TAG_ITER_SECTORS(sec->lines[i]->tag, targetsecnum)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -2171,6 +2173,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	fixed_t bottomheight, topheight;
 	msecnode_t *node;
 	ffloor_t *rover;
+	TAG_ITER_C
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2191,7 +2194,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		playersOnArea[i] = false;
 	}
 
-	while ((secnum = P_FindSectorFromLineTag(eachtime->sourceline, secnum)) >= 0)
+	TAG_ITER_SECTORS(eachtime->sourceline->tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -2208,13 +2211,14 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		for (i = 0; i < sec->linecount; i++)
 		{
 			INT32 targetsecnum = -1;
+			TAG_ITER_C
 
 			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
 				continue;
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			TAG_ITER_SECTORS(sec->lines[i]->tag, targetsecnum)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -2740,8 +2744,9 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 	INT32 secnum = -1;
 	sector_t *sec;
 	floormove_t *dofloor;
+	TAG_ITER_C
 
-	while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+	TAG_ITER_SECTORS(line->tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -2959,9 +2964,10 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 	INT32 rtn = 0;
 	sector_t *sec;
 	elevator_t *elevator;
+	TAG_ITER_C
 
 	// act on all sectors with the same tag as the triggering linedef
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	TAG_ITER_SECTORS(line->tag, secnum)
 	{
 		sec = &sectors[secnum];
 
