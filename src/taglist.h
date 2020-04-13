@@ -33,7 +33,7 @@ void Taglist_AddToMapthings (const size_t tag, const size_t itemid);
 
 #define TAG_ITER(group, tag, id)\
 if (group[tag])\
-	for(id = group[tag]->elements[kkkk = 0] = 0;\
+	for(id = group[tag]->elements[kkkk = 0];\
 	kkkk < group[tag]->count;\
 	id = group[tag]->elements[++kkkk])
 
