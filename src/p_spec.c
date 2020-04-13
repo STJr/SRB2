@@ -7502,12 +7502,12 @@ void P_SpawnSpecials(boolean fromnetsave)
   */
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers)
 {
+	TAG_ITER_C
 	INT32 s;
 	size_t sec = sides[*lines[line].sidenum].sector-sectors;
 	line_t* li = lines + line;
 	TAG_ITER_SECTORS(li->tag, s)
 		P_AddFakeFloor(&sectors[s], &sectors[sec], li, ffloorflags, secthinkers);
-	TAG_ITER_END
 }
 
 /*

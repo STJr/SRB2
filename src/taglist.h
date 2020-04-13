@@ -29,25 +29,14 @@ void Taglist_AddToLines (const size_t tag, const size_t itemid);
 void Taglist_AddToMapthings (const size_t tag, const size_t itemid);
 #endif //__R_TAGLIST__
 
-#define TAG_ITER_SECTORS(tag, sc)\
-if(tags_sectors[tag])\
-{	size_t kk;\
-	for(kk = 0, sc = tags_sectors[tag]->elements[0];\
-		kk < tags_sectors[tag]->count;\
-		sc = tags_sectors[tag]->elements[++kk])
+#define TAG_ITER_C size_t kkkk;
 
-#define TAG_ITER_LINES(tag, li)\
-if(tags_lines[tag])\
-{	size_t kk;\
-	for(kk = 0, li = tags_lines[tag]->elements[0];\
-		kk < tags_lines[tag]->count;\
-		li = tags_lines[tag]->elements[++kk])
+#define TAG_ITER(group, tag, id)\
+if (group[tag])\
+	for(id = group[tag]->elements[kkkk = 0] = 0;\
+	kkkk < group[tag]->count;\
+	id = group[tag]->elements[++kkkk])
 
-#define TAG_ITER_THINGS(tag, mt)\
-if(tags_mapthings[tag])\
-{	size_t kk;\
-	for(kk = 0, mt = tags_mapthings[tag]->elements[0];\
-		kk < tags_mapthings[tag]->count;\
-		mt = tags_mapthings[tag]->elements[++kk])
-
-#define TAG_ITER_END }
+#define TAG_ITER_SECTORS(tag, id) TAG_ITER(tags_sectors, tag, id)
+#define TAG_ITER_LINES(tag, id)   TAG_ITER(tags_lines, tag, id)
+#define TAG_ITER_THINGS(tag, id)  TAG_ITER(tags_mapthings, tag, id)
