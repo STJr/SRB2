@@ -5772,8 +5772,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		sec2->floorheight = tempceiling;
 	}
 
-	sec2->tagline = master;
-
 	if (sec2->numattached == 0)
 	{
 		sec2->attached = Z_Malloc(sizeof (*sec2->attached) * sec2->maxattached, PU_STATIC, NULL);
