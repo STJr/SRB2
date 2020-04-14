@@ -6943,12 +6943,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
 				break;
 
-			case 200: // Double light effect
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_CUTSPRITES|FF_DOUBLESHADOW, secthinkers);
-				break;
-
-			case 201: // Light effect
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_CUTSPRITES, secthinkers);
+			case 200: // Light block
+				ffloorflags = FF_EXISTS|FF_CUTSPRITES;
+				if (!lines[i].args[1])
+					ffloorflags |= FF_DOUBLESHADOW;
+				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
 			case 202: // Fog

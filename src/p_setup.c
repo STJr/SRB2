@@ -2920,6 +2920,13 @@ static void P_ConvertBinaryMap(void)
 
 			lines[i].special = 100;
 			break;
+		case 200: //FOF: Light block
+		case 201: //FOF: Half light block
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].special == 201)
+				lines[i].args[1] = 1;
+			lines[i].special = 200;
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
