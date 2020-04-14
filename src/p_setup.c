@@ -2983,6 +2983,45 @@ static void P_ConvertBinaryMap(void)
 				M_Memcpy(lines[i].stringargs[0], buffer, strlen(buffer) + 1);
 			}
 			break;
+		case 252: //FOF: Shatter block
+		case 253: //FOF: Shatter block, translucent
+		case 254: //FOF: Bustable block
+		case 255: //FOF: Spin-bustable block
+		case 256: //FOF: Spin-bustable block, translucent
+			lines[i].args[0] = lines[i].tag;
+
+			//Bustable type
+			if (lines[i].special <= 253)
+				lines[i].args[1] = 0;
+			else if (lines[i].special >= 255)
+				lines[i].args[1] = 1;
+			else if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] = 3;
+			else
+				lines[i].args[1] = 2;
+
+			//Translucency
+			if (lines[i].special == 253 || lines[i].special == 256)
+			{
+				lines[i].args[2] = 1;
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+				else
+					lines[i].alpha = FRACUNIT/2;
+			}
+
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[3] |= 1; //Bustable by pushables
+			if (lines[i].flags & ML_EFFECT5)
+			{
+				lines[i].args[3] |= 2; //Trigger linedef executor
+				lines[i].args[4] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			}
+			if (lines[i].special == 252 && lines[i].flags & ML_NOCLIMB)
+				lines[i].args[4] |= 4; //Bust only from below
+
+			lines[i].special = 254;
+			break;
 		case 258: //FOF: Laser
 			lines[i].args[0] = lines[i].tag;
 			if (lines[i].flags & ML_EFFECT1)

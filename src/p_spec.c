@@ -7008,32 +7008,35 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
-			case 252: // Shatter block (breaks when touched)
-				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_BLOCKPLAYER|FF_SHATTERBOTTOM;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 253: // Translucent shatter block (see 76)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER|FF_TRANSLUCENT, secthinkers);
-				break;
-
 			case 254: // Bustable block
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_STRONGBUST;
+				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP;
+
+				//Bustable type
+				switch (lines[i].args[1])
+				{
+					case 0:
+						ffloorflags |= FF_SHATTER;
+						break;
+					case 1:
+						ffloorflags |= FF_SPINBUST;
+						break;
+					case 3:
+						ffloorflags |= FF_STRONGBUST;
+						break;
+					default:
+						break;
+				}
+
+				if (lines[i].args[2])
+					ffloorflags |= FF_TRANSLUCENT;
+
+				if (lines[i].args[2] & 4)
+					ffloorflags |= FF_SHATTERBOTTOM;
+
+				if (!(ffloorflags & FF_SHATTER) || ffloorflags & FF_SHATTERBOTTOM)
+					ffloorflags |= FF_BLOCKPLAYER;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 255: // Spin bust block (breaks when jumped or spun downwards onto)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP|FF_SPINBUST, secthinkers);
-				break;
-
-			case 256: // Translucent spin bust block (see 78)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP|FF_SPINBUST|FF_TRANSLUCENT, secthinkers);
 				break;
 
 			case 257: // Quicksand

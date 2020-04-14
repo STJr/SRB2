@@ -2659,8 +2659,8 @@ static void P_CheckBustableBlocks(player_t *player)
 					EV_CrumbleChain(NULL, rover); // node->m_sector
 
 					// Run a linedef executor??
-					if (rover->master->flags & ML_EFFECT5)
-						P_LinedefExecute((INT16)(P_AproxDistance(rover->master->dx, rover->master->dy)>>FRACBITS), player->mo, node->m_sector);
+					if (rover->master->args[3] & 2)
+						P_LinedefExecute((INT16)(rover->master->args[4]), player->mo, node->m_sector);
 
 					goto bustupdone;
 				}
