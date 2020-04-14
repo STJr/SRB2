@@ -8,7 +8,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  mserv.c
-/// \brief Commands used for communicate with the master server
+/// \brief Commands used to communicate with the master server
 
 #ifdef __GNUC__
 #include <unistd.h>
