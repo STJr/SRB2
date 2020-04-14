@@ -2938,6 +2938,26 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].flags & ML_EFFECT1) //Invisible
 				lines[i].args[1] |= 2;
 			break;
+		case 251: //FOF: Thwomp block
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].flags & ML_EFFECT5) //Custom speeds
+			{
+				lines[i].args[1] = lines[i].dy >> FRACBITS;
+				lines[i].args[2] = lines[i].dx >> FRACBITS;
+			}
+			else
+			{
+				lines[i].args[1] = 80;
+				lines[i].args[2] = 16;
+			}
+			if (lines[i].flags & ML_EFFECT4)
+			{
+				char buffer[6];
+				sprintf(buffer, "%d", sides[lines[i].sidenum[0]].textureoffset >> FRACBITS);
+				lines[i].stringargs[0] = Z_Malloc(strlen(buffer) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], buffer, strlen(buffer) + 1);
+			}
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{

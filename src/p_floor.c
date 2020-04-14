@@ -11,6 +11,7 @@
 /// \file  p_floor.c
 /// \brief Floor animation, elevators
 
+#include "dehacked.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "m_random.h"
@@ -1885,10 +1886,7 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].bottomtexture;
 		/// \note this should only have to be done once, but is already done repeatedly, above
 
-		if (thwomp->sourceline->flags & ML_EFFECT5)
-			thwomp->speed = thwomp->sourceline->dx/8;
-		else
-			thwomp->speed = 2*FRACUNIT;
+		thwomp->speed = thwomp->sourceline->args[2] << (FRACBITS - 3);
 
 		res = T_MovePlane
 		(
@@ -1924,10 +1922,7 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		// Set the texture from the upper one (angry)
 		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].toptexture;
 
-		if (thwomp->sourceline->flags & ML_EFFECT5)
-			thwomp->speed = thwomp->sourceline->dy/8;
-		else
-			thwomp->speed = 10*FRACUNIT;
+		thwomp->speed = thwomp->sourceline->args[1] << (FRACBITS - 3);
 
 		res = T_MovePlane
 		(
@@ -1961,10 +1956,8 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 
 			if (!rover || (rover->flags & FF_EXISTS))
 			{
-				if (thwomp->sourceline->flags & ML_EFFECT4)
-					S_StartSound(mp, sides[thwomp->sourceline->sidenum[0]].textureoffset>>FRACBITS);
-				else
-					S_StartSound(mp, sfx_thwomp);
+				sfxenum_t sound = (thwomp->sourceline->stringargs[0]) ? get_number(thwomp->sourceline->stringargs[0]) : sfx_thwomp;
+				S_StartSound(mp, sound);
 			}
 
 			thwomp->direction = 1; // start heading back up

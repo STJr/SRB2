@@ -6997,7 +6997,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 251: // A THWOMP!
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 				{
 					P_AddThwompThinker(&sectors[sec], &sectors[s], &lines[i]);
 					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
