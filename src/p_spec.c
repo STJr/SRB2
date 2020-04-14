@@ -6293,7 +6293,7 @@ void T_LaserFlash(laserthink_t *flash)
 	{
 		thing = node->m_thing;
 
-		if ((fflr->master->flags & ML_EFFECT1)
+		if ((fflr->master->args[1])
 			&& thing->flags & MF_BOSS)
 			continue; // Don't hurt bosses
 
@@ -7045,7 +7045,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				sec = sides[*lines[i].sidenum].sector - sectors;
 
 				// No longer totally disrupts netgames
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers);
 				break;
 

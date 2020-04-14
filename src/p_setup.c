@@ -2958,6 +2958,11 @@ static void P_ConvertBinaryMap(void)
 				M_Memcpy(lines[i].stringargs[0], buffer, strlen(buffer) + 1);
 			}
 			break;
+		case 258: //FOF: Laser
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[1] = 1;
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
