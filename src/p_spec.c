@@ -6959,24 +6959,27 @@ void P_SpawnSpecials(boolean fromnetsave)
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
-			case 220: // Like opaque water, but not swimmable. (Good for snow effect on FOFs)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_RENDERALL|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES, secthinkers);
-				break;
+			case 220: //Intangible
+				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
 
-			case 221: // FOF (intangible, translucent)
-				// If line has no-climb set, give it shadows, otherwise don't
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA|FF_CUTSPRITES;
-				if (!(lines[i].flags & ML_NOCLIMB))
+				//Visibility settings
+				if (lines[i].args[1] & 1) //Don't render planes
+					ffloorflags &= ~FF_RENDERPLANES;
+				if (lines[i].args[1] & 2) //Don't render sides
+					ffloorflags &= ~FF_RENDERSIDES;
+				if (!(lines[i].args[1] & 4)) //Render insides
+				{
+					if (ffloorflags & FF_RENDERPLANES)
+						ffloorflags |= FF_BOTHPLANES;
+					if (ffloorflags & FF_RENDERSIDES)
+						ffloorflags |= FF_ALLSIDES;
+				}
+
+				//Appearance settings
+				if ((lines[i].args[2] & 1) && (ffloorflags & FF_RENDERALL)) //Translucent
+					ffloorflags |= FF_TRANSLUCENT;
+				if (lines[i].args[2] & 2) //Don't cast shadow
 					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 222: // FOF with no floor/ceiling (good for GFZGRASS effect on FOFs)
-				// If line has no-climb set, give it shadows, otherwise don't
-				ffloorflags = FF_EXISTS|FF_RENDERSIDES|FF_ALLSIDES;
-				if (!(lines[i].flags & ML_NOCLIMB))
-					ffloorflags |= FF_NOSHADE|FF_CUTSPRITES;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;

@@ -2931,6 +2931,31 @@ static void P_ConvertBinaryMap(void)
 		case 223: //FOF: Intangible, invisible
 			lines[i].args[0] = lines[i].tag;
 			break;
+		case 220: //FOF: Intangible, opaque
+		case 221: //FOF: Intangible, translucent
+		case 222: //FOF: Intangible, sides only
+			lines[i].args[0] = lines[i].tag;
+
+			//Visibility
+			if (lines[i].special == 222)
+				lines[i].args[1] |= 1; //Don't render planes
+			if (lines[i].special != 220)
+				lines[i].args[1] |= 4; //Don't render insides
+
+			//Appearance
+			if (lines[i].special == 221)
+			{
+				lines[i].args[2] |= 1; //Translucent
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+				else
+					lines[i].alpha = FRACUNIT/2;
+			}
+			if (lines[i].special != 220 && !(lines[i].flags & ML_NOCLIMB))
+				lines[i].args[2] |= 2; //Don't cast shadow
+
+			lines[i].special = 220;
+            break;
 		case 250: //FOF: Mario block
 			lines[i].args[0] = lines[i].tag;
 			if (lines[i].flags & ML_NOCLIMB) //Brick block
