@@ -2844,7 +2844,7 @@ static void P_CheckQuicksand(player_t *player)
 
 		if (topheight >= player->mo->z && bottomheight < player->mo->z + player->mo->height)
 		{
-			sinkspeed = abs(rover->master->v1->x - rover->master->v2->x)>>1;
+			sinkspeed = abs(rover->master->args[2]) << (FRACBITS - 1);
 
 			sinkspeed = FixedDiv(sinkspeed,TICRATE*FRACUNIT);
 
@@ -2873,7 +2873,7 @@ static void P_CheckQuicksand(player_t *player)
 					P_PlayerHitFloor(player, false);
 			}
 
-			friction = abs(rover->master->v1->y - rover->master->v2->y)>>6;
+			friction = abs(rover->master->args[3]) << (FRACBITS - 6);
 
 			player->mo->momx = FixedMul(player->mo->momx, friction);
 			player->mo->momy = FixedMul(player->mo->momy, friction);

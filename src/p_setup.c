@@ -3022,6 +3022,13 @@ static void P_ConvertBinaryMap(void)
 
 			lines[i].special = 254;
 			break;
+		case 257: //FOF: Quicksand
+			lines[i].args[0] = lines[i].tag;
+			if (!(lines[i].flags & ML_EFFECT5))
+				lines[i].args[1] = 1; //No ripple effect
+			lines[i].args[2] = lines[i].dx >> FRACBITS; //Sinking speed
+			lines[i].args[3] = lines[i].dy >> FRACBITS; //Friction
+			break;
 		case 258: //FOF: Laser
 			lines[i].args[0] = lines[i].tag;
 			if (lines[i].flags & ML_EFFECT1)

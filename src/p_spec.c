@@ -7041,7 +7041,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 257: // Quicksand
 				ffloorflags = FF_EXISTS|FF_QUICKSAND|FF_RENDERALL|FF_ALLSIDES|FF_CUTSPRITES;
-				if (lines[i].flags & ML_EFFECT5)
+				if (!(lines[i].args[1]))
 					ffloorflags |= FF_RIPPLE;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
