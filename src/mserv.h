@@ -65,6 +65,7 @@ typedef struct
 // ================================ GLOBALS ===============================
 
 extern consvar_t cv_masterserver, cv_servername;
+extern consvar_t cv_masterserver_update_rate;
 extern consvar_t cv_masterserver_debug;
 
 extern char *ms_API;

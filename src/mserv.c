@@ -34,14 +34,24 @@ int  HMS_compare_mod_version (char *buffer, size_t size_of_buffer);
 
 static time_t MSLastPing;
 
+static inline void SendPingToMasterServer(void);
+
 #ifndef NONET
 static void Command_Listserv_f(void);
 #endif
 static void MasterServer_OnChange(void);
 static void ServerName_OnChange(void);
 
+static CV_PossibleValue_t masterserver_update_rate_cons_t[] = {
+	{2,  "MIN"},
+	{60, "MAX"},
+	{0}
+};
+
 consvar_t cv_masterserver = {"masterserver", "https://mb.srb2.org/MS/0", CV_SAVE|CV_CALL, NULL, MasterServer_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_servername = {"servername", "SRB2Kart server", CV_SAVE|CV_CALL|CV_NOINIT, NULL, ServerName_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_masterserver_update_rate = {"masterserver_update_rate", "15", CV_SAVE|CV_CALL|CV_NOINIT, masterserver_update_rate_cons_t, SendPingToMasterServer, 0, NULL, NULL, 0, 0, NULL};
 
 char *ms_API;
 INT16 ms_RoomId = -1;
@@ -63,6 +73,7 @@ void AddMServCommands(void)
 {
 #ifndef NONET
 	CV_RegisterVar(&cv_masterserver);
+	CV_RegisterVar(&cv_masterserver_update_rate);
 	CV_RegisterVar(&cv_masterserver_debug);
 	CV_RegisterVar(&cv_servername);
 	COM_AddCommand("listserv", Command_Listserv_f);
@@ -171,7 +182,7 @@ static void UpdateServer(void)
 static inline void SendPingToMasterServer(void)
 {
 // Here, have a simpler MS Ping... - Cue
-	if(time(NULL) > (MSLastPing+(60*2)) && con_state != MSCS_NONE)
+	if(time(NULL) > (MSLastPing+(60*cv_masterserver_update_rate.value)) && con_state != MSCS_NONE)
 	{
 		UpdateServer();
 	}
