@@ -988,54 +988,6 @@ static sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, INT32 secnum)
 }
 #endif
 
-/** Searches the tag lists for the next sector with a given tag.
-  *
-  * \param tag   Tag number to look for.
-  * \param start -1 to start anew, or the result of a previous call to keep
-  *              searching.
-  * \return Number of the next tagged sector found.
-  */
-INT32 P_FindSectorFromTag(INT16 tag, INT32 start)
-{
-	if (tag == -1)
-	{
-		start++;
-
-		if (start >= (INT32)numsectors)
-			return -1;
-
-		return start;
-	}
-#if 0
-	INT32 tpos = 0;
-
-	if (tags_sectors[tag])
-	{
-		// Resume previous position.
-		if (start != -1)
-			for (; tpos < tags_sectors[(UINT16)tag]->count;)
-				if (start == tags_sectors[(UINT16)tag]->elements[tpos++])
-					break;
-
-		if (tpos >= tags_sectors[(UINT16)tag]->count)
-			return -1;
-
-		return tags_sectors[(UINT16)tag]->elements[tpos++];
-	}
-
-	return -1;
-#else
-	else
-	{
-		start = start >= 0 ? sectors[start].nexttag :
-			sectors[(unsigned)tag % numsectors].firsttag;
-		while (start >= 0 && sectors[start].tag != tag)
-			start = sectors[start].nexttag;
-		return start;
-	}
-#endif
-}
-
 //
 // P_FindSpecialLineFromTag
 //
@@ -3181,7 +3133,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				ffloor_t *rover; // FOF that we are going to crumble
 				boolean foundrover = false; // for debug, "Can't find a FOF" message
 
-				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+				TAG_ITER_SECTORS(sectag, secnum)
 				{
 					sec = sectors + secnum;
 
@@ -3365,7 +3317,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				boolean foundrover = false; // for debug, "Can't find a FOF" message
 				ffloortype_e oldflags; // store FOF's old flags
 
-				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+				TAG_ITER_SECTORS(sectag, secnum)
 				{
 					sec = sectors + secnum;
 
@@ -3423,7 +3375,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (line->flags & ML_NOCLIMB) // don't respawn!
 					respawn = false;
 
-				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+				TAG_ITER_SECTORS(sectag, secnum)
 				{
 					sec = sectors + secnum;
 
@@ -3608,7 +3560,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			ffloor_t *rover; // FOF that we are going to operate
 			boolean foundrover = false; // for debug, "Can't find a FOF" message
 
-			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+			TAG_ITER_SECTORS(sectag, secnum)
 			{
 				sec = sectors + secnum;
 
@@ -3672,7 +3624,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			boolean foundrover = false; // for debug, "Can't find a FOF" message
 			size_t j = 0; // sec->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
 
-			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+			TAG_ITER_SECTORS(sectag, secnum)
 			{
 				sec = sectors + secnum;
 
@@ -3757,7 +3709,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			ffloor_t *rover; // FOF that we are going to operate
 			boolean foundrover = false; // for debug, "Can't find a FOF" message
 
-			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+			TAG_ITER_SECTORS(sectag, secnum)
 			{
 				sec = sectors + secnum;
 
@@ -7617,8 +7569,7 @@ void T_Scroll(scroll_t *s)
 
 				if (!is3dblock)
 					continue;
-
-				for (sect = -1; (sect = P_FindSectorFromTag(line->tag, sect)) >= 0 ;)
+				TAG_ITER_SECTORS(line->tag, sect)
 				{
 					sector_t *psec;
 					psec = sectors + sect;

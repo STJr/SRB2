@@ -549,11 +549,11 @@ static boolean P_SetSlopeFromTag(sector_t *sec, INT32 tag, boolean ceiling)
 {
 	INT32 i;
 	pslope_t **secslope = ceiling ? &sec->c_slope : &sec->f_slope;
+	TAG_ITER_C
 
 	if (!tag || *secslope)
 		return false;
-
-	for (i = -1; (i = P_FindSectorFromTag(tag, i)) >= 0;)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		pslope_t *srcslope = ceiling ? sectors[i].c_slope : sectors[i].f_slope;
 		if (srcslope)

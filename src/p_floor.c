@@ -687,6 +687,7 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 	fixed_t floorheight;
 	sector_t *actionsector;
 	INT32 i;
+	TAG_ITER_C
 
 	if (bouncer->sector->crumblestate == 4 || bouncer->sector->crumblestate == 1
 		|| bouncer->sector->crumblestate == 2) // Oops! Crumbler says to remove yourself!
@@ -701,7 +702,7 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 	}
 
 	// You can use multiple target sectors, but at your own risk!!!
-	for (i = -1; (i = P_FindSectorFromTag(bouncer->sourceline->tag, i)) >= 0 ;)
+	TAG_ITER_SECTORS(bouncer->sourceline->tag, i)
 	{
 		actionsector = &sectors[i];
 		actionsector->moved = true;
@@ -844,6 +845,7 @@ void T_StartCrumble(elevator_t *elevator)
 	ffloor_t *rover;
 	sector_t *sector;
 	INT32 i;
+	TAG_ITER_C
 
 	// Once done, the no-return thinker just sits there,
 	// constantly 'returning'... kind of an oxymoron, isn't it?
@@ -873,7 +875,7 @@ void T_StartCrumble(elevator_t *elevator)
 		}
 		else if (++elevator->distance == 0) // Reposition back to original spot
 		{
-			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+			TAG_ITER_SECTORS(elevator->sourceline->tag, i)
 			{
 				sector = &sectors[i];
 
@@ -904,7 +906,7 @@ void T_StartCrumble(elevator_t *elevator)
 		// Flash to indicate that the platform is about to return.
 		if (elevator->distance > -224 && (leveltime % ((abs(elevator->distance)/8) + 1) == 0))
 		{
-			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+			TAG_ITER_SECTORS(elevator->sourceline->tag, i)
 			{
 				sector = &sectors[i];
 
@@ -1000,7 +1002,7 @@ void T_StartCrumble(elevator_t *elevator)
 		P_RemoveThinker(&elevator->thinker);
 	}
 
-	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+	TAG_ITER_SECTORS(elevator->sourceline->tag, i)
 	{
 		sector = &sectors[i];
 		sector->moved = true;
@@ -1016,6 +1018,7 @@ void T_StartCrumble(elevator_t *elevator)
 void T_MarioBlock(levelspecthink_t *block)
 {
 	INT32 i;
+	TAG_ITER_C
 
 #define speed vars[1]
 #define direction vars[2]
@@ -1057,8 +1060,7 @@ void T_MarioBlock(levelspecthink_t *block)
 		block->sector->ceilspeed = 0;
 		block->direction = 0;
 	}
-
-	for (i = -1; (i = P_FindSectorFromTag((INT16)block->vars[0], i)) >= 0 ;)
+	TAG_ITER_SECTORS((INT16)block->vars[0], i)
 		P_RecalcPrecipInSector(&sectors[i]);
 
 #undef speed
@@ -1151,9 +1153,7 @@ void T_FloatSector(levelspecthink_t *floater)
 
 	// Just find the first sector with the tag.
 	// Doesn't work with multiple sectors that have different floor/ceiling heights.
-	secnum = P_FindSectorFromTag((INT16)floater->vars[0], -1);
-
-	if (secnum > 0)
+	if ((secnum = Tag_Iterate_Sectors((INT16)floater->vars[0], 0)) >= 0)
 		actionsector = &sectors[secnum];
 	else
 		actionsector = NULL;
@@ -1288,9 +1288,7 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 
 	// Just find the first sector with the tag.
 	// Doesn't work with multiple sectors that have different floor/ceiling heights.
-	secnum = P_FindSectorFromTag((INT16)thwomp->vars[0], -1);
-
-	if (secnum > 0)
+	if ((secnum = Tag_Iterate_Sectors((INT16)thwomp->vars[0], 0)) >= 0)
 	{
 		actionsector = &sectors[secnum];
 
@@ -1860,11 +1858,12 @@ void T_RaiseSector(levelspecthink_t *raise)
 	boolean playeronme = false, active = false;
 	fixed_t ceilingdestination, floordestination;
 	result_e res = 0;
+	TAG_ITER_C
 
 	if (raise->sector->crumblestate >= 3 || raise->sector->ceilingdata)
 		return;
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	TAG_ITER_SECTORS(raise->sourceline->tag, i)
 	{
 		sector = &sectors[i];
 
@@ -2057,7 +2056,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 	raise->sector->ceilspeed = 42;
 	raise->sector->floorspeed = raise->vars[3]*raise->vars[8];
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	TAG_ITER_SECTORS(raise->sourceline->tag, i)
 		P_RecalcPrecipInSector(&sectors[i]);
 }
 
@@ -2726,6 +2725,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	elevator_t *elevator;
 	sector_t *foundsec;
 	INT32 i;
+	TAG_ITER_C
 
 	// If floor is already activated, skip it
 	if (sec->floordata)
@@ -2778,7 +2778,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 
 	elevator->sector->crumblestate = 2;
 
-	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+	TAG_ITER_SECTORS(elevator->sourceline->tag, i)
 	{
 		foundsec = &sectors[i];
 

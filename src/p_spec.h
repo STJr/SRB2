@@ -55,7 +55,6 @@ fixed_t P_FindNextLowestFloor(sector_t *sec, fixed_t currentheight);
 fixed_t P_FindLowestCeilingSurrounding(sector_t *sec);
 fixed_t P_FindHighestCeilingSurrounding(sector_t *sec);
 
-INT32 P_FindSectorFromTag(INT16 tag, INT32 start);
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
 
 INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
