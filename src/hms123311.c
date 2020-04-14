@@ -211,6 +211,9 @@ HMS_fetch_rooms (int joining)
 
 	hms = HMS_connect("rooms");
 
+	if (! hms)
+		return 0;
+
 	if (HMS_do(hms))
 	{
 		p = hms->buffer;
@@ -272,6 +275,9 @@ HMS_register (void)
 
 	hms = HMS_connect("rooms/%d/register", ms_RoomId);
 
+	if (! hms)
+		return 0;
+
 	title = curl_easy_escape(hms->curl, cv_servername.string, 0);
 
 	snprintf(post, sizeof post,
@@ -311,6 +317,9 @@ HMS_unlist (void)
 
 	hms = HMS_connect("servers/%s/unlist", hms_server_token);
 
+	if (! hms)
+		return 0;
+
 	curl_easy_setopt(hms->curl, CURLOPT_CUSTOMREQUEST, "POST");
 
 	HMS_do(hms);
@@ -330,6 +339,9 @@ HMS_update (void)
 	char *title;
 
 	hms = HMS_connect("servers/%s/update", hms_server_token);
+
+	if (! hms)
+		return 0;
 
 	title = curl_easy_escape(hms->curl, cv_servername.string, 0);
 
@@ -356,6 +368,9 @@ HMS_list_servers (void)
 	char *p;
 
 	hms = HMS_connect("servers");
+
+	if (! hms)
+		return;
 
 	if (HMS_do(hms))
 	{
@@ -395,6 +410,9 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 	}
 	else
 		hms = HMS_connect("servers");
+
+	if (! hms)
+		return NULL;
 
 	if (HMS_do(hms))
 	{
@@ -480,6 +498,9 @@ HMS_compare_mod_version (char *buffer, size_t buffer_size)
 	char *version_name;
 
 	hms = HMS_connect("versions/%d", MODID);
+
+	if (! hms)
+		return 0;
 
 	ok = 0;
 
