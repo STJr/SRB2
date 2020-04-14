@@ -61,8 +61,7 @@ void A_AttractChase(); // Ring Chase
 void A_DropMine(); // Drop Mine from Skim or Jetty-Syn Bomber
 void A_FishJump(); // Fish Jump
 void A_ThrownRing(); // Sparkle trail for red ring
-void A_SetSolidSteam();
-void A_UnsetSolidSteam();
+void A_PlaySteamSound();
 void A_SignSpin();
 void A_SignPlayer();
 void A_OverlayThink();
@@ -3256,6 +3255,8 @@ typedef enum state
 	S_STEAM6,
 	S_STEAM7,
 	S_STEAM8,
+	S_STEAMACTIVE,
+	S_STEAMSOUND,
 
 	// Bumpers
 	S_BUMPER,

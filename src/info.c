@@ -3107,14 +3107,16 @@ state_t states[NUMSTATES] =
 	{SPR_FANS, 4, 1, {A_FanBubbleSpawn},  512, 0, S_FAN},  // S_FAN5
 
 	// Steam jet
-	{SPR_STEM, 0, 2, {A_SetSolidSteam}, 0, 0, S_STEAM2},   // S_STEAM1
-	{SPR_STEM, 1, 2, {NULL}, 0, 0, S_STEAM3},              // S_STEAM2
-	{SPR_STEM, 2, 2, {NULL}, 0, 0, S_STEAM4},              // S_STEAM3
-	{SPR_STEM, 3, 2, {A_UnsetSolidSteam}, 0, 0, S_STEAM5}, // S_STEAM4
-	{SPR_STEM, 4, 2, {NULL}, 0, 0, S_STEAM6},              // S_STEAM5
-	{SPR_STEM, 5, 2, {NULL}, 0, 0, S_STEAM7},              // S_STEAM6
-	{SPR_STEM, 6, 2, {NULL}, 0, 0, S_STEAM8},              // S_STEAM7
-	{SPR_NULL, 0, 18, {NULL}, 0, 0, S_STEAM1},             // S_STEAM8
+	{SPR_STEM, 0, 2, {A_DualAction}, S_STEAMACTIVE, S_STEAMSOUND, S_STEAM2}, // S_STEAM1
+	{SPR_STEM, 1, 2, {NULL}, 0, 0, S_STEAM3},                                // S_STEAM2
+	{SPR_STEM, 2, 2, {NULL}, 0, 0, S_STEAM4},                                // S_STEAM3
+	{SPR_STEM, 3, 2, {A_SetObjectFlags}, MF_SPRING, 1, S_STEAM5},            // S_STEAM4
+	{SPR_STEM, 4, 2, {NULL}, 0, 0, S_STEAM6},                                // S_STEAM5
+	{SPR_STEM, 5, 2, {NULL}, 0, 0, S_STEAM7},                                // S_STEAM6
+	{SPR_STEM, 6, 2, {NULL}, 0, 0, S_STEAM8},                                // S_STEAM7
+	{SPR_NULL, 0, 18, {NULL}, 0, 0, S_STEAM1},                               // S_STEAM8
+	{SPR_NULL, 0, 0, {A_SetObjectFlags}, MF_SPRING, 2, S_NULL},              // S_STEAMACTIVE
+	{SPR_NULL, 0, 0, {A_PlaySteamSound}, 0, 0, S_NULL},                      // S_STEAMSOUND
 
 	// Bumpers
 	{SPR_BUMP, FF_ANIMATE|FF_GLOBALANIM, -1, {NULL},   3, 4, S_NULL},   // S_BUMPER

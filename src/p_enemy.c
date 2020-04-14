@@ -125,8 +125,7 @@ void A_AttractChase(mobj_t *actor);
 void A_DropMine(mobj_t *actor);
 void A_FishJump(mobj_t *actor);
 void A_ThrownRing(mobj_t *actor);
-void A_SetSolidSteam(mobj_t *actor);
-void A_UnsetSolidSteam(mobj_t *actor);
+void A_PlaySteamSound(mobj_t *actor);
 void A_SignSpin(mobj_t *actor);
 void A_SignPlayer(mobj_t *actor);
 void A_OverlayThink(mobj_t *actor);
@@ -4919,50 +4918,21 @@ void A_ThrownRing(mobj_t *actor)
 	return;
 }
 
-// Function: A_SetSolidSteam
+// Function: A_PlaySteamSound
 //
-// Description: Applies the spring flag to steam jets, and randomly plays one of two sounds.
+// Description: Plays either the deathsound (7/8) or the painsound (1/8) of an object. Used by steam jets.
+//              Can also be muted if the object has the Ambush flag checked.
 //
 // var1 = unused
 // var2 = unused
 //
-void A_SetSolidSteam(mobj_t *actor)
+void A_PlaySteamSound(mobj_t *actor)
 {
-	if (LUA_CallAction("A_SetSolidSteam", actor))
+	if (LUA_CallAction("A_PlaySteamSound", actor))
 		return;
-
-	actor->flags |= MF_SPRING;
 
 	if (!(actor->flags2 & MF2_AMBUSH))
-	{
-		if (P_RandomChance(FRACUNIT/8))
-		{
-			if (actor->info->deathsound)
-				S_StartSound(actor, actor->info->deathsound); // Hiss!
-		}
-		else
-		{
-			if (actor->info->painsound)
-				S_StartSound(actor, actor->info->painsound);
-		}
-	}
-
-	P_SetObjectMomZ (actor, 1, true);
-}
-
-// Function: A_UnsetSolidSteam
-//
-// Description: Removes the spring flag from an object. Used by steam jets.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_UnsetSolidSteam(mobj_t *actor)
-{
-	if (LUA_CallAction("A_UnsetSolidSteam", actor))
-		return;
-
-	actor->flags &= ~MF_SPRING;
+		P_RandomChance(FRACUNIT/8) ? A_Scream(actor) : A_Pain(actor);
 }
 
 // Function: A_SignSpin

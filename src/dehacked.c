@@ -2805,8 +2805,7 @@ static actionpointer_t actionpointers[] =
 	{{A_DropMine},               "A_DROPMINE"},
 	{{A_FishJump},               "A_FISHJUMP"},
 	{{A_ThrownRing},             "A_THROWNRING"},
-	{{A_SetSolidSteam},          "A_SETSOLIDSTEAM"},
-	{{A_UnsetSolidSteam},        "A_UNSETSOLIDSTEAM"},
+	{{A_PlaySteamSound},         "A_PLAYSTEAMSOUND"},
 	{{A_SignSpin},               "S_SIGNSPIN"},
 	{{A_SignPlayer},             "A_SIGNPLAYER"},
 	{{A_OverlayThink},           "A_OVERLAYTHINK"},
@@ -7238,6 +7237,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_STEAM6",
 	"S_STEAM7",
 	"S_STEAM8",
+	"S_STEAMACTIVE",
+	"S_STEAMSOUND",
 
 	// Bumpers
 	"S_BUMPER",
