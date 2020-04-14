@@ -31,12 +31,12 @@ void Taglist_AddToMapthings (const size_t tag, const size_t itemid);
 
 #define TAG_ITER_C size_t kkkk;
 
-#define TAG_ITER(group, tag, id)\
-if (group[tag])\
-	for(id = group[tag]->elements[kkkk = 0];\
-	kkkk < group[tag]->count;\
-	id = group[tag]->elements[++kkkk])
+#define TAG_ITER(group, grouptotal, tag, id)\
+if (group[tag] || tag == -1) for(\
+	tag != -1 ? (id = group[tag]->elements[kkkk = 0]) : (id = 0);\
+	tag != -1 ? (kkkk < group[tag]->count)            : (id < grouptotal);\
+	tag != -1 ? (id = group[tag]->elements[++kkkk])   : (id++))
 
-#define TAG_ITER_SECTORS(tag, id) TAG_ITER(tags_sectors, tag, id)
-#define TAG_ITER_LINES(tag, id)   TAG_ITER(tags_lines, tag, id)
-#define TAG_ITER_THINGS(tag, id)  TAG_ITER(tags_mapthings, tag, id)
+#define TAG_ITER_SECTORS(tag, id) TAG_ITER(tags_sectors, numsectors, tag, id)
+#define TAG_ITER_LINES(tag, id)   TAG_ITER(tags_lines, numlines, tag, id)
+#define TAG_ITER_THINGS(tag, id)  TAG_ITER(tags_mapthings, nummapthings, tag, id)
