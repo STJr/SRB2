@@ -2939,7 +2939,7 @@ static void P_ConvertBinaryMap(void)
 			//Visibility
 			if (lines[i].special == 222)
 				lines[i].args[1] |= 1; //Don't render planes
-			if (lines[i].special != 220)
+			if (lines[i].special == 221)
 				lines[i].args[1] |= 4; //Don't render insides
 
 			//Appearance
