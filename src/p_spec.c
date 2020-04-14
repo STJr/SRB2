@@ -5741,8 +5741,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		sec2->floorheight = tempceiling;
 	}
 
-	sec2->tagline = master;
-
 	if (sec2->numattached == 0)
 	{
 		sec2->attached = Z_Malloc(sizeof (*sec2->attached) * sec2->maxattached, PU_STATIC, NULL);
@@ -5943,39 +5941,6 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
 	floater->vars[0] = tag;
 	floater->sourceline = sourceline;
 }
-
-/** Adds a bridge thinker.
-  * Bridge thinkers cause a group of FOFs to behave like
-  * a bridge made up of pieces, that bows under weight.
-  *
-  * \param sec          Control sector.
-  * \sa P_SpawnSpecials, T_BridgeThinker
-  * \author SSNTails <http://www.ssntails.org>
-  */
-/*
-static inline void P_AddBridgeThinker(line_t *sourceline, sector_t *sec)
-{
-	levelspecthink_t *bridge;
-
-	// create an initialize new thinker
-	bridge = Z_Calloc(sizeof (*bridge), PU_LEVSPEC, NULL);
-	P_AddThinker(THINK_MAIN, &bridge->thinker);
-
-	bridge->thinker.function.acp1 = (actionf_p1)T_BridgeThinker;
-
-	bridge->sector = sec;
-	bridge->vars[0] = sourceline->frontsector->floorheight;
-	bridge->vars[1] = sourceline->frontsector->ceilingheight;
-	bridge->vars[2] = P_AproxDistance(sourceline->dx, sourceline->dy); // Speed
-	bridge->vars[2] = FixedDiv(bridge->vars[2], 16*FRACUNIT);
-	bridge->vars[3] = bridge->vars[2];
-
-	// Start tag and end tag are TARGET SECTORS, not CONTROL SECTORS
-	// Control sector tags should be End_Tag + (End_Tag - Start_Tag)
-	bridge->vars[4] = sourceline->tag; // Start tag
-	bridge->vars[5] = (sides[sourceline->sidenum[0]].textureoffset>>FRACBITS); // End tag
-}
-*/
 
 /**
   * Adds a plane displacement thinker.
@@ -6723,13 +6688,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 							Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), s, (INT32)i);
 					}
 				}
-				break;
-
-			case 65: // Bridge Thinker
-				/*
-				// Disable this until it's working right!
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					P_AddBridgeThinker(&lines[i], &sectors[s]);*/
 				break;
 
 			case 66: // Displace floor by front sector

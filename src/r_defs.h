@@ -331,11 +331,6 @@ typedef struct sector_s
 
 	size_t linecount;
 	struct line_s **lines; // [linecount] size
-	// Hack: store special line tagging to some sectors
-	// to efficiently help work around bugs by directly
-	// referencing the specific line that the problem happens in.
-	// (used in T_MovePlane mobj physics)
-	struct line_s *tagline;
 
 	// Improved fake floor hack
 	ffloor_t *ffloors;

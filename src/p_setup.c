@@ -875,7 +875,6 @@ static void P_InitializeSector(sector_t *ss)
 
 	ss->linecount = 0;
 	ss->lines = NULL;
-	ss->tagline = NULL;
 
 	ss->ffloors = NULL;
 	ss->attached = NULL;
