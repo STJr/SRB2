@@ -1,7 +1,7 @@
-#include "doomtype.h"
-
 #ifndef __R_TAGLIST__
 #define __R_TAGLIST__
+
+#include "doomtype.h"
 
 /// Multitag list.
 typedef struct
@@ -27,16 +27,16 @@ taggroup_t* tags_mapthings[MAXTAGS];
 void Taglist_AddToSectors (const size_t tag, const size_t itemid);
 void Taglist_AddToLines (const size_t tag, const size_t itemid);
 void Taglist_AddToMapthings (const size_t tag, const size_t itemid);
-#endif //__R_TAGLIST__
+
+INT32 Tag_Iterate_Sectors (const INT16 tag, const size_t p);
+INT32 Tag_Iterate_Lines (const INT16 tag, const size_t p);
+INT32 Tag_Iterate_Things (const INT16 tag, const size_t p);
 
 #define TAG_ITER_C size_t kkkk;
+#define TAG_ITER(fn, tag, id) for(kkkk = 0; (id = fn(tag, kkkk)) >= 0; kkkk++)
 
-#define TAG_ITER(group, grouptotal, tag, id)\
-if (group[tag] || tag == -1) for(\
-	tag != -1 ? (id = group[tag]->elements[kkkk = 0]) : (id = 0);\
-	tag != -1 ? (kkkk < group[tag]->count)            : (id < grouptotal);\
-	tag != -1 ? (id = group[tag]->elements[++kkkk])   : (id++))
+#define TAG_ITER_SECTORS(tag, id) TAG_ITER(Tag_Iterate_Sectors, tag, id)
+#define TAG_ITER_LINES(tag, id)   TAG_ITER(Tag_Iterate_Lines, tag, id)
+#define TAG_ITER_THINGS(tag, id)  TAG_ITER(Tag_Iterate_Things, tag, id)
 
-#define TAG_ITER_SECTORS(tag, id) TAG_ITER(tags_sectors, numsectors, tag, id)
-#define TAG_ITER_LINES(tag, id)   TAG_ITER(tags_lines, numlines, tag, id)
-#define TAG_ITER_THINGS(tag, id)  TAG_ITER(tags_mapthings, nummapthings, tag, id)
+#endif //__R_TAGLIST__

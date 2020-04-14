@@ -1,5 +1,6 @@
 #include "taglist.h"
 #include "z_zone.h"
+#include "r_data.h"
 
 void Tag_Add (taglist_t* list, const UINT16 tag)
 {
@@ -55,4 +56,58 @@ void Taglist_AddToMapthings (const size_t tag, const size_t itemid)
 	tagelems->count++;
 	tagelems->elements = Z_Realloc(tagelems->elements, tagelems->count * sizeof(size_t), PU_LEVEL, NULL);
 	tagelems->elements[tagelems->count - 1] = itemid;
+}
+
+INT32 Tag_Iterate_Sectors (const INT16 tag, const size_t p)
+{
+	if (tag == -1)
+	{
+		if (p < numsectors)
+			return p;
+		return -1;
+	}
+
+	if (tags_sectors[tag])
+	{
+		if (p < tags_sectors[tag]->count)
+			return tags_sectors[tag]->elements[p];
+		return -1;
+	}
+	return -1;
+}
+
+INT32 Tag_Iterate_Lines (const INT16 tag, const size_t p)
+{
+	if (tag == -1)
+	{
+		if (p < numlines)
+			return p;
+		return -1;
+	}
+
+	if (tags_lines[tag])
+	{
+		if (p < tags_lines[tag]->count)
+			return tags_lines[tag]->elements[p];
+		return -1;
+	}
+	return -1;
+}
+
+INT32 Tag_Iterate_Things (const INT16 tag, const size_t p)
+{
+	if (tag == -1)
+	{
+		if (p < nummapthings)
+			return p;
+		return -1;
+	}
+
+	if (tags_mapthings[tag])
+	{
+		if (p < tags_mapthings[tag]->count)
+			return tags_mapthings[tag]->elements[p];
+		return -1;
+	}
+	return -1;
 }
