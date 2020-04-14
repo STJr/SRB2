@@ -27,14 +27,6 @@ Documentation available here.
 #define Blame( ... ) \
 	CONS_Printf("\x85" __VA_ARGS__)
 
-consvar_t cv_http_masterserver = {
-	"http_masterserver",
-	"https://mb.srb2.org/MS/0",
-	CV_SAVE,
-
-	NULL, NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
-};
-
 consvar_t cv_masterserver_debug = {
 	"masterserver_debug", "Off", CV_SAVE, CV_OnOff,
 	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
@@ -108,13 +100,13 @@ HMS_connect (const char *format, ...)
 		return NULL;
 	}
 
-	seek = strlen(cv_http_masterserver.string) + 1;/* + '/' */
+	seek = strlen(ms_API) + 1;/* + '/' */
 
 	va_start (ap, format);
 	url = ZZ_Alloc(seek + vsnprintf(0, 0, format, ap) + 1);
 	va_end (ap);
 
-	sprintf(url, "%s/", cv_http_masterserver.string);
+	sprintf(url, "%s/", ms_API);
 
 	va_start (ap, format);
 	vsprintf(&url[seek], format, ap);
@@ -200,15 +192,10 @@ HMS_end (struct HMS_buffer *buffer)
 }
 
 int
-HMS_in_use (void)
-{
-	return cv_http_masterserver.string[0];
-}
-
-void
 HMS_fetch_rooms (int joining)
 {
 	struct HMS_buffer *hms;
+	int ok;
 
 	char *id;
 	char *title;
@@ -248,9 +235,15 @@ HMS_fetch_rooms (int joining)
 		}
 
 		room_list[i].header.buffer[0] = 0;
+
+		ok = 1;
 	}
+	else
+		ok = 0;
 
 	HMS_end(hms);
+
+	return ok;
 }
 
 int
@@ -312,10 +305,11 @@ HMS_unlist (void)
 	Z_Free(hms_server_token);
 }
 
-void
+int
 HMS_update (void)
 {
 	struct HMS_buffer *hms;
+	int ok;
 
 	char post[256];
 
@@ -334,8 +328,10 @@ HMS_update (void)
 
 	curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
 
-	HMS_do(hms);
+	ok = HMS_do(hms);
 	HMS_end(hms);
+
+	return ok;
 }
 
 void
@@ -359,7 +355,7 @@ HMS_list_servers (void)
 	HMS_end(hms);
 }
 
-void
+msg_server_t *
 HMS_fetch_servers (msg_server_t *list, int room_number)
 {
 	struct HMS_buffer *hms;
@@ -452,21 +448,26 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 
 		list[i].header.buffer[0] = 0;
 	}
+	else
+		list = NULL;
 
 	HMS_end(hms);
+
+	return list;
 }
 
-const char *
-HMS_compare_mod_version (void)
+int
+HMS_compare_mod_version (char *buffer, size_t buffer_size)
 {
-	static char buffer[16];
-
 	struct HMS_buffer *hms;
+	int ok;
 
 	char *version;
 	char *version_name;
 
 	hms = HMS_connect("versions/%d", MODID);
+
+	ok = 0;
 
 	if (HMS_do(hms))
 	{
@@ -477,17 +478,15 @@ HMS_compare_mod_version (void)
 		{
 			if (atoi(version) != MODVERSION)
 			{
-				strlcpy(buffer, version_name, sizeof buffer);
-				version_name = buffer;
+				strlcpy(buffer, version_name, buffer_size);
+				ok = 1;
 			}
 			else
-				version_name = NULL;
+				ok = -1;
 		}
 	}
-	else
-		version_name = NULL;
 
 	HMS_end(hms);
 
-	return version_name;
+	return ok;
 }

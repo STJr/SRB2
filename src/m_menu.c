@@ -3014,7 +3014,6 @@ static void M_GoBack(INT32 choice)
 		//make sure the game doesn't still think we're in a netgame.
 		if (!Playing() && netgame && multiplayer)
 		{
-			MSCloseUDPSocket();		// Clean up so we can re-open the connection later.
 			netgame = multiplayer = false;
 		}
 

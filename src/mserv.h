@@ -2,6 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C)      2020 by James R.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,7 +14,7 @@
 #ifndef _MSERV_H_
 #define _MSERV_H_
 
-#define MASTERSERVERS21 // MasterServer v2.1
+#define HMS123311 // don't mess with nights, man
 
 // lowered from 32 due to menu changes
 #define NUM_LIST_ROOMS 16
@@ -64,21 +65,14 @@ typedef struct
 // ================================ GLOBALS ===============================
 
 extern consvar_t cv_masterserver, cv_servername;
-extern consvar_t cv_http_masterserver;
 extern consvar_t cv_masterserver_debug;
+
+extern char *ms_API;
 
 // < 0 to not connect (usually -1) (offline mode)
 // == 0 to show all rooms, not a valid hosting room
 // anything else is whatever room the MS assigns to that number (online mode)
 extern INT16 ms_RoomId;
-
-const char *GetMasterServerPort(void);
-const char *GetMasterServerIP(void);
-
-void MSOpenUDPSocket(void);
-void MSCloseUDPSocket(void);
-
-void SendAskInfoViaMS(INT32 node, tic_t asktime);
 
 void RegisterServer(void);
 void UnregisterServer(void);
