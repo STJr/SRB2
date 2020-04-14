@@ -201,6 +201,8 @@ HMS_fetch_rooms (int joining)
 	char *title;
 	char *motd;
 
+	int id_no;
+
 	char *p;
 	char *end;
 
@@ -212,7 +214,7 @@ HMS_fetch_rooms (int joining)
 	{
 		p = hms->buffer;
 
-		for (i = 0; i < NUM_LIST_ROOMS && ( end = strstr(p, "\n\n\n") ); ++i)
+		for (i = 0; i < NUM_LIST_ROOMS && ( end = strstr(p, "\n\n\n") );)
 		{
 			*end = '\0';
 
@@ -222,11 +224,22 @@ HMS_fetch_rooms (int joining)
 
 			if (id && title && motd)
 			{
-				room_list[i].header.buffer[0] = 1;
+				id_no = atoi(id);
 
-				room_list[i].id = atoi(id);
-				strlcpy(room_list[i].name, title, sizeof room_list[i].name);
-				strlcpy(room_list[i].motd, motd, sizeof room_list[i].motd);
+				/*
+				Don't show the 'All' room if hosting. And it's a hack like this
+				because I'm way too lazy to add another feature to the MS.
+				*/
+				if (joining || id_no != 0)
+				{
+					room_list[i].header.buffer[0] = 1;
+
+					room_list[i].id = id_no;
+					strlcpy(room_list[i].name, title, sizeof room_list[i].name);
+					strlcpy(room_list[i].motd, motd, sizeof room_list[i].motd);
+
+					i++;
+				}
 
 				p = ( end + 3 );/* skip the three linefeeds */
 			}
