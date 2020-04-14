@@ -6107,7 +6107,7 @@ void A_RockSpawn(mobj_t *actor)
 {
 	mobj_t *mo;
 	mobjtype_t type;
-	INT32 i = P_FindSpecialLineFromTag(12, (INT16)actor->threshold, -1);
+	INT32 i = Tag_FindLineSpecial(12, (INT16)actor->threshold);
 	line_t *line;
 	fixed_t dist;
 	fixed_t randomoomph;
@@ -8794,19 +8794,19 @@ void A_Dye(mobj_t *actor)
 #endif
 	if (color >= MAXTRANSLATIONS)
 		return;
-	
+
 	if (!color)
 		target->colorized = false;
 	else
 		target->colorized = true;
-		
+
 	// What if it's a player?
 	if (target->player)
 	{
 		target->player->powers[pw_dye] = color;
 		return;
 	}
-	
+
 	target->color = color;
 }
 

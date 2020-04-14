@@ -10654,7 +10654,7 @@ static void P_CalcPostImg(player_t *player)
 
 	// see if we are in heat (no, not THAT kind of heat...)
 
-	if (P_FindSpecialLineFromTag(13, sector->tag, -1) != -1)
+	if (Tag_FindLineSpecial(13, sector->tag) != -1)
 		*type = postimg_heat;
 	else if (sector->ffloors)
 	{
@@ -10673,7 +10673,7 @@ static void P_CalcPostImg(player_t *player)
 			if (pviewheight >= topheight || pviewheight <= bottomheight)
 				continue;
 
-			if (P_FindSpecialLineFromTag(13, rover->master->frontsector->tag, -1) != -1)
+			if (Tag_FindLineSpecial(13, rover->master->frontsector->tag) != -1)
 				*type = postimg_heat;
 		}
 	}
@@ -10778,7 +10778,7 @@ static INT32 P_GetMinecartSpecialLine(sector_t *sec)
 		return line;
 
 	if (sec->tag != 0)
-		line = P_FindSpecialLineFromTag(16, sec->tag, -1);
+		line = Tag_FindLineSpecial(16, sec->tag);
 
 	// Also try for lines facing the sector itself, with tag 0.
 	{
@@ -12213,7 +12213,7 @@ void P_PlayerThink(player_t *player)
 		player->powers[pw_nocontrol]--;
 	else
 		player->powers[pw_nocontrol] = 0;
-	
+
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]
 	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]

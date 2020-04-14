@@ -2549,7 +2549,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 
 	if (controlsec->tag != 0)
 	{
-		INT32 tagline = P_FindSpecialLineFromTag(14, controlsec->tag, -1);
+		INT32 tagline = Tag_FindLineSpecial(14, controlsec->tag);
 		if (tagline != -1)
 		{
 			if (sides[lines[tagline].sidenum[0]].toptexture)

@@ -238,7 +238,7 @@ boolean P_BBoxInsidePolyobj(polyobj_t *po, fixed_t *bbox)
 //
 void Polyobj_GetInfo(INT16 poid, INT32 *poflags, INT32 *parentID, INT32 *potrans)
 {
-	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, poid, -1);
+	INT32 i = Tag_FindLineSpecial(POLYINFO_SPECIALNUM, poid);
 
 	if (i == -1)
 		return; // no extra settings to apply, let's leave it

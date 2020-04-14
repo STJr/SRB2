@@ -3552,7 +3552,7 @@ static boolean P_CameraCheckHeat(camera_t *thiscam)
 	// see if we are in water
 	sector = thiscam->subsector->sector;
 
-	if (P_FindSpecialLineFromTag(13, sector->tag, -1) != -1)
+	if (Tag_FindLineSpecial(13, sector->tag) != -1)
 		return true;
 
 	if (sector->ffloors)
@@ -3573,7 +3573,7 @@ static boolean P_CameraCheckHeat(camera_t *thiscam)
 					*rover->bottomheight))
 				continue;
 
-			if (P_FindSpecialLineFromTag(13, rover->master->frontsector->tag, -1) != -1)
+			if (Tag_FindLineSpecial(13, rover->master->frontsector->tag) != -1)
 				return true;
 		}
 	}
@@ -12035,8 +12035,7 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 	const size_t mthingi = (size_t)(mthing - mapthings);
 
 	// Find the corresponding linedef special, using angle as tag
-	// P_FindSpecialLineFromTag works here now =D
-	line = P_FindSpecialLineFromTag(9, mthing->angle, -1);
+	line = Tag_FindLineSpecial(9, mthing->angle);
 
 	if (line == -1)
 	{
@@ -12346,7 +12345,7 @@ static boolean P_SetupParticleGen(mapthing_t *mthing, mobj_t *mobj)
 	const size_t mthingi = (size_t)(mthing - mapthings);
 
 	// Find the corresponding linedef special, using angle as tag
-	line = P_FindSpecialLineFromTag(15, mthing->angle, -1);
+	line = Tag_FindLineSpecial(15, mthing->angle);
 
 	if (line == -1)
 	{

@@ -139,7 +139,7 @@ void T_DynamicSlopeVert (dynplanethink_t* th)
 	INT32 l;
 
 	for (i = 0; i < 3; i++) {
-		l = P_FindSpecialLineFromTag(799, th->tags[i], -1);
+		l = Tag_FindLineSpecial(799, th->tags[i]);
 		if (l != -1) {
 			th->vex[i].z = lines[l].frontsector->floorheight;
 		}

@@ -32,6 +32,8 @@ INT32 Tag_Iterate_Sectors (const INT16 tag, const size_t p);
 INT32 Tag_Iterate_Lines (const INT16 tag, const size_t p);
 INT32 Tag_Iterate_Things (const INT16 tag, const size_t p);
 
+INT32 Tag_FindLineSpecial(const INT16 tag, const INT16 special);
+
 #define TAG_ITER_C size_t kkkk;
 #define TAG_ITER(fn, tag, id) for(kkkk = 0; (id = fn(tag, kkkk)) >= 0; kkkk++)
 

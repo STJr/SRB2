@@ -111,3 +111,19 @@ INT32 Tag_Iterate_Things (const INT16 tag, const size_t p)
 	}
 	return -1;
 }
+
+INT32 Tag_FindLineSpecial(const INT16 tag, const INT16 special)
+{
+	TAG_ITER_C
+	INT32 i;
+
+	TAG_ITER_LINES(tag, i)
+	{
+		if (i == -1)
+			return -1;
+
+		if (lines[i].special == special)
+			return i;
+	}
+	return -1;
+}

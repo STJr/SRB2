@@ -4535,7 +4535,7 @@ DoneSection2:
 			if (player->powers[pw_flashing] != 0 && player->powers[pw_flashing] < TICRATE/2)
 				break;
 
-			i = P_FindSpecialLineFromTag(4, sector->tag, -1);
+			i = Tag_FindLineSpecial(4, sector->tag);
 
 			if (i != -1)
 			{
@@ -4647,7 +4647,7 @@ DoneSection2:
 				// important: use sector->tag on next line instead of player->mo->subsector->tag
 				// this part is different from in P_PlayerThink, this is what was causing
 				// FOF custom exits not to work.
-				lineindex = P_FindSpecialLineFromTag(2, sector->tag, -1);
+				lineindex = Tag_FindLineSpecial(2, sector->tag);
 
 				if (gametype == GT_COOP && lineindex != -1) // Custom exit!
 				{
@@ -4772,7 +4772,7 @@ DoneSection2:
 					break;
 
 				// Find line #3 tagged to this sector
-				lineindex = P_FindSpecialLineFromTag(3, sector->tag, -1);
+				lineindex = Tag_FindLineSpecial(3, sector->tag);
 
 				if (lineindex == -1)
 				{
@@ -4854,7 +4854,7 @@ DoneSection2:
 					break;
 
 				// Find line #3 tagged to this sector
-				lineindex = P_FindSpecialLineFromTag(3, sector->tag, -1);
+				lineindex = Tag_FindLineSpecial(3, sector->tag);
 
 				if (lineindex == -1)
 				{
@@ -5001,7 +5001,7 @@ DoneSection2:
 				memset(&resulthigh, 0x00, sizeof(resulthigh));
 
 				// Find line #11 tagged to this sector
-				lineindex = P_FindSpecialLineFromTag(11, sector->tag, -1);
+				lineindex = Tag_FindLineSpecial(11, sector->tag);
 
 				if (lineindex == -1)
 				{
