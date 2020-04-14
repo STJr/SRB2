@@ -56,8 +56,9 @@ static size_t
 HMS_on_read (char *s, size_t _1, size_t n, void *userdata)
 {
 	struct HMS_buffer *buffer;
+	(void)_1;
 	buffer = userdata;
-	if (n < ( buffer->end - buffer->needle ))
+	if (n < (size_t)( buffer->end - buffer->needle ))
 	{
 		memcpy(&buffer->buffer[buffer->needle], s, n);
 		buffer->needle += n;
@@ -199,7 +200,7 @@ HMS_fetch_rooms (int joining)
 
 	char *id;
 	char *title;
-	char *motd;
+	char *room_motd;
 
 	int id_no;
 
@@ -220,9 +221,9 @@ HMS_fetch_rooms (int joining)
 
 			id    = strtok(p, "\n");
 			title = strtok(0, "\n");
-			motd  = strtok(0, "");
+			room_motd = strtok(0, "");
 
-			if (id && title && motd)
+			if (id && title && room_motd)
 			{
 				id_no = atoi(id);
 
@@ -236,7 +237,7 @@ HMS_fetch_rooms (int joining)
 
 					room_list[i].id = id_no;
 					strlcpy(room_list[i].name, title, sizeof room_list[i].name);
-					strlcpy(room_list[i].motd, motd, sizeof room_list[i].motd);
+					strlcpy(room_list[i].motd, room_motd, sizeof room_list[i].motd);
 
 					i++;
 				}

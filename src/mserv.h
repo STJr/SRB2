@@ -90,4 +90,14 @@ extern msg_rooms_t room_list[NUM_LIST_ROOMS+1];
 
 void AddMServCommands(void);
 
+/* HTTP */
+int  HMS_in_use (void);
+int  HMS_fetch_rooms (int joining);
+int  HMS_register (void);
+void HMS_unlist (void);
+int  HMS_update (void);
+void HMS_list_servers (void);
+msg_server_t * HMS_fetch_servers (msg_server_t *list, int room);
+int  HMS_compare_mod_version (char *buffer, size_t size_of_buffer);
+
 #endif
