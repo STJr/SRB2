@@ -1356,7 +1356,6 @@ typedef enum
 	tc_marioblockchecker,
 	tc_spikesector,
 	tc_floatsector,
-	tc_bridgethinker,
 	tc_crushceiling,
 	tc_scroll,
 	tc_friction,
@@ -2370,11 +2369,6 @@ static void P_NetArchiveThinkers(void)
 			else if (th->function.acp1 == (actionf_p1)T_FloatSector)
 			{
 				SaveSpecialLevelThinker(th, tc_floatsector);
-				continue;
-			}
-			else if (th->function.acp1 == (actionf_p1)T_BridgeThinker)
-			{
-				SaveSpecialLevelThinker(th, tc_bridgethinker);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_LaserFlash)
@@ -3566,10 +3560,6 @@ static void P_NetUnArchiveThinkers(void)
 
 				case tc_floatsector:
 					th = LoadSpecialLevelThinker((actionf_p1)T_FloatSector, 0);
-					break;
-
-				case tc_bridgethinker:
-					th = LoadSpecialLevelThinker((actionf_p1)T_BridgeThinker, 3);
 					break;
 
 				case tc_laserflash:
