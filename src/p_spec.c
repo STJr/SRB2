@@ -988,26 +988,12 @@ static sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, INT32 secnum)
 }
 #endif
 
-/** Searches the tag lists for the next sector tagged to a line.
-  *
-  * \param line  Tagged line used as a reference.
-  * \param start -1 to start at the beginning, or the result of a previous call
-  *              to keep searching.
-  * \return Number of the next tagged sector found.
-  * \sa P_FindSectorFromTag, P_FindLineFromLineTag
-  */
-INT32 P_FindSectorFromLineTag(line_t *line, INT32 start)
-{
-	return P_FindSectorFromTag(line->tag, start);
-}
-
 /** Searches the tag lists for the next sector with a given tag.
   *
   * \param tag   Tag number to look for.
   * \param start -1 to start anew, or the result of a previous call to keep
   *              searching.
   * \return Number of the next tagged sector found.
-  * \sa P_FindSectorFromLineTag
   */
 INT32 P_FindSectorFromTag(INT16 tag, INT32 start)
 {
