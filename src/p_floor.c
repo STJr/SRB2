@@ -27,19 +27,6 @@
 // ==========================================================================
 
 //
-// Mini-P_IsObjectOnGroundIn for T_MovePlane hack
-//
-static inline boolean P_MobjReadyToMove(mobj_t *mo, sector_t *sec, boolean sectorisffloor, boolean sectorisquicksand)
-{
-	if (sectorisquicksand)
-		return (mo->z > sec->floorheight && mo->z < sec->ceilingheight);
-	else if (!!(mo->flags & MF_SPAWNCEILING) ^ !!(mo->eflags & MFE_VERTICALFLIP))
-		return ((sectorisffloor) ? (mo->z+mo->height != sec->floorheight) : (mo->z+mo->height != sec->ceilingheight));
-	else
-		return ((sectorisffloor) ? (mo->z != sec->ceilingheight) : (mo->z != sec->floorheight));
-}
-
-//
 // Move a plane (floor or ceiling) and check for crushing
 //
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crush,
@@ -48,14 +35,6 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 	boolean flag;
 	fixed_t lastpos;
 	fixed_t destheight; // used to keep floors/ceilings from moving through each other
-	// Stuff used for mobj hacks.
-	INT32 secnum = -1;
-	mobj_t *mo = NULL;
-	sector_t *sec = NULL;
-	ffloor_t *rover = NULL;
-	boolean sectorisffloor = false;
-	boolean sectorisquicksand = false;
-
 	sector->moved = true;
 
 	switch (floorOrCeiling)
@@ -191,83 +170,6 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 					break;
 			}
 			break;
-	}
-
-	// Hack for buggy mobjs to move by gravity with moving planes.
-	if (sector->tagline)
-		sectorisffloor = true;
-
-	// Optimization condition. If the sector is not an FOF, declare sec as the main sector outside of the loop.
-	if (!sectorisffloor)
-		sec = sector;
-
-	// Optimization condition. Only run the logic if there is any Things in the sector.
-	if (sectorisffloor || sec->thinglist)
-	{
-		// If this is an FOF being checked, check all the affected sectors for moving mobjs.
-		while ((sectorisffloor ? (secnum = P_FindSectorFromLineTag(sector->tagline, secnum)) : (secnum = 1)) >= 0)
-		{
-			if (sectorisffloor)
-			{
-				// Get actual sector from the list of sectors.
-				sec = &sectors[secnum];
-
-				// Can't use P_InQuicksand because it will return the incorrect result
-				// because of checking for heights.
-				for (rover = sec->ffloors; rover; rover = rover->next)
-				{
-					if (rover->target == sec && (rover->flags & FF_QUICKSAND))
-					{
-						sectorisquicksand = true;
-						break;
-					}
-				}
-			}
-
-			for (mo = sec->thinglist; mo; mo = mo->snext)
-			{
-				// The object should be ready to move as defined by this function.
-				if (!P_MobjReadyToMove(mo, sec, sectorisffloor, sectorisquicksand))
-					continue;
-
-				// The object should not be moving at all.
-				if (mo->momx || mo->momy || mo->momz)
-					continue;
-
-				// These objects will be affected by this condition.
-				switch (mo->type)
-				{
-					case MT_GOOP: // Egg Slimer's goop objects
-					case MT_SPINFIRE: // Elemental Shield flame balls
-					case MT_SPIKE: // Floor Spike
-						// Is the object hang from the ceiling?
-						// In that case, swap the planes used.
-						// verticalflip inverts
-						if (!!(mo->flags & MF_SPAWNCEILING) ^ !!(mo->eflags & MFE_VERTICALFLIP))
-						{
-							if (sectorisffloor && !sectorisquicksand)
-								mo->z = mo->ceilingz - mo->height;
-							else
-								mo->z = mo->ceilingz = mo->subsector->sector->ceilingheight - mo->height;
-						}
-						else
-						{
-							if (sectorisffloor && !sectorisquicksand)
-								mo->z = mo->floorz;
-							else
-								mo->z = mo->floorz = mo->subsector->sector->floorheight;
-						}
-						break;
-					// Kill warnings...
-					default:
-						break;
-				}
-			}
-
-			// Break from loop if there is no FOFs to check.
-			if (!sectorisffloor)
-				break;
-		}
 	}
 
 	return ok;
