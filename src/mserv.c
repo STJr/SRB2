@@ -151,17 +151,21 @@ void RegisterServer(void)
 		else
 			con_state = MSCS_FAILED;
 	}
+
+	time(&MSLastPing);
 }
 
 static void UpdateServer(void)
 {
-	if (!( con_state == MSCS_REGISTERED && HMS_update() ))
+	if (( con_state == MSCS_REGISTERED && HMS_update() ))
+	{
+		time(&MSLastPing);
+	}
+	else
 	{
 		con_state = MSCS_FAILED;
 		RegisterServer();
 	}
-
-	time(&MSLastPing);
 }
 
 static inline void SendPingToMasterServer(void)
