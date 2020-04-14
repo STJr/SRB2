@@ -2927,6 +2927,10 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[1] = 1;
 			lines[i].special = 200;
 			break;
+		case 202: //FOF: Fog block
+		case 223: //FOF: Intangible, invisible
+			lines[i].args[0] = lines[i].tag;
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
