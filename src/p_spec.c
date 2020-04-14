@@ -6987,9 +6987,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 250: // Mario Block
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO;
-				if (lines[i].flags & ML_NOCLIMB)
+				if (lines[i].args[1] & 1) //Brick block
 					ffloorflags |= FF_SHATTERBOTTOM;
-				if (lines[i].flags & ML_EFFECT1)
+				if (lines[i].args[1] & 2) // Invisible
 					ffloorflags &= ~(FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);

@@ -2931,6 +2931,13 @@ static void P_ConvertBinaryMap(void)
 		case 223: //FOF: Intangible, invisible
 			lines[i].args[0] = lines[i].tag;
 			break;
+		case 250: //FOF: Mario block
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].flags & ML_NOCLIMB) //Brick block
+				lines[i].args[1] |= 1;
+			if (lines[i].flags & ML_EFFECT1) //Invisible
+				lines[i].args[1] |= 2;
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
