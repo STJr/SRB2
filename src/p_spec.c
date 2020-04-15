@@ -988,38 +988,6 @@ static sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, INT32 secnum)
 }
 #endif
 
-//
-// P_FindSpecialLineFromTag
-//
-INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
-{
-	if (tag == -1)
-	{
-		start++;
-
-		// This redundant check stops the compiler from complaining about function expansion
-		// elsewhere for some reason and everything is awful
-		if (start >= (INT32)numlines)
-			return -1;
-
-		while (start < (INT32)numlines && lines[start].special != special)
-			start++;
-
-		if (start >= (INT32)numlines)
-			return -1;
-
-		return start;
-	}
-	else
-	{
-		start = start >= 0 ? lines[start].nexttag :
-			lines[(unsigned)tag % numlines].firsttag;
-		while (start >= 0 && (lines[start].tag != tag || lines[start].special != special))
-			start = lines[start].nexttag;
-		return start;
-	}
-}
-
 // haleyjd: temporary define
 #ifdef POLYOBJECTS
 

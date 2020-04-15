@@ -1915,17 +1915,6 @@ static int lib_pFindHighestCeilingSurrounding(lua_State *L)
 	return 1;
 }
 
-static int lib_pFindSpecialLineFromTag(lua_State *L)
-{
-	INT16 special = (INT16)luaL_checkinteger(L, 1);
-	INT16 line = (INT16)luaL_checkinteger(L, 2);
-	INT32 start = (INT32)luaL_optinteger(L, 3, -1);
-	NOHUD
-	INLEVEL
-	lua_pushinteger(L, P_FindSpecialLineFromTag(special, line, start));
-	return 1;
-}
-
 static int lib_pSwitchWeather(lua_State *L)
 {
 	INT32 weathernum = (INT32)luaL_checkinteger(L, 1);
@@ -3213,7 +3202,6 @@ static luaL_Reg lib[] = {
 	{"P_FindNextLowestFloor",lib_pFindNextLowestFloor},
 	{"P_FindLowestCeilingSurrounding",lib_pFindLowestCeilingSurrounding},
 	{"P_FindHighestCeilingSurrounding",lib_pFindHighestCeilingSurrounding},
-	{"P_FindSpecialLineFromTag",lib_pFindSpecialLineFromTag},
 	{"P_SwitchWeather",lib_pSwitchWeather},
 	{"P_LinedefExecute",lib_pLinedefExecute},
 	{"P_SpawnLightningFlash",lib_pSpawnLightningFlash},
