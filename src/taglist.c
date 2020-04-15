@@ -112,7 +112,7 @@ INT32 Tag_Iterate_Things (const INT16 tag, const size_t p)
 	return -1;
 }
 
-INT32 Tag_FindLineSpecial(const INT16 tag, const INT16 special)
+INT32 Tag_FindLineSpecial(const INT16 special, const INT16 tag)
 {
 	TAG_ITER_C
 	INT32 i;
