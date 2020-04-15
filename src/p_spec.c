@@ -6093,7 +6093,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline)
 	raise->sourceline = sourceline;
 }
 
-static void P_AddAirbob(sector_t *sec, line_t *sourceline, boolean noadjust, boolean dynamic)
+static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean raise, boolean dynamic, boolean spindash)
 {
 	levelspecthink_t *airbob;
 
@@ -6106,26 +6106,18 @@ static void P_AddAirbob(sector_t *sec, line_t *sourceline, boolean noadjust, boo
 	airbob->sector = sec;
 
 	// Require a spindash to activate
-	if (sourceline->flags & ML_NOCLIMB)
-		airbob->vars[1] = 1;
-	else
-		airbob->vars[1] = 0;
+	airbob->vars[1] = spindash ? 1 : 0;
 
 	airbob->vars[2] = FRACUNIT;
 
-	if (noadjust)
-		airbob->vars[7] = airbob->sector->ceilingheight-16*FRACUNIT;
-	else
-		airbob->vars[7] = airbob->sector->ceilingheight - P_AproxDistance(sourceline->dx, sourceline->dy);
+	airbob->vars[7] = airbob->sector->ceilingheight - dist;
+
 	airbob->vars[6] = airbob->vars[7]
 		- (sec->ceilingheight - sec->floorheight);
 
 	airbob->vars[3] = airbob->vars[2];
 
-	if (sourceline->flags & ML_BLOCKMONSTERS)
-		airbob->vars[0] = 1;
-	else
-		airbob->vars[0] = 0;
+	airbob->vars[0] = raise ? 0 : 1;
 
 	airbob->vars[5] = sec->ceilingheight;
 	airbob->vars[4] = airbob->vars[5]
@@ -6817,18 +6809,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 150: // Air bobbing platform
 			case 151: // Adjustable air bobbing platform
+			{
+				fixed_t dist = (lines[i].special == 151) ? P_AproxDistance(lines[i].dx, lines[i].dy) : 16*FRACUNIT;
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddAirbob(lines[i].frontsector, lines + i, (lines[i].special != 151), false);
+				P_AddAirbob(lines[i].frontsector, lines + i, dist, false, false, !!(lines[i].flags & ML_NOCLIMB));
 				break;
+			}
 			case 152: // Adjustable air bobbing platform in reverse
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
+				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), true, false, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 			case 153: // Dynamic Sinking Platform
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddAirbob(lines[i].frontsector, lines + i, false, true);
+				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), false, true, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
 			case 160: // Float/bob platform
@@ -6836,71 +6829,46 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 170: // Crumbling platform
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE, secthinkers);
-				break;
+				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE;
 
-			case 171: // Crumbling platform that will not return
-				P_AddFakeFloorsByLine(i,
-					FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE|FF_NORETURN, secthinkers);
-				break;
+				//Tangibility settings
+				if (lines[i].args[1] & 1) //Intangible from top
+					ffloorflags |= FF_REVERSEPLATFORM;
+				if (lines[i].args[1] & 2) //Intangible from bottom
+					ffloorflags |= FF_PLATFORM;
+				if (lines[i].args[1] & 4) //Don't block player
+					ffloorflags &= ~FF_BLOCKPLAYER;
+				if (lines[i].args[1] & 8) //Don't block others
+					ffloorflags &= ~FF_BLOCKOTHERS;
 
-			case 172: // "Platform" that crumbles and returns
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_CRUMBLE|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
+				//Flags
+				if (lines[i].args[2] & 1) //Translucent
+					ffloorflags |= FF_TRANSLUCENT;
+				if (lines[i].args[2] & 2) //Don't cast shadow
 					ffloorflags |= FF_NOSHADE;
+				if (lines[i].args[2] & 4) //Don't respawn
+					ffloorflags |= FF_NORETURN;
+				if (lines[i].args[2] & 16) //Float on water
+					ffloorflags |= FF_FLOATBOB;
+
+				//If translucent or player can enter it, cut inner walls
+				if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[1] & 7))
+					ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
+				else
+					ffloorflags |= FF_CUTLEVEL;
+
+				//If player can enter it, render insides
+				if (lines[i].args[1] & 7)
+				{
+					if (ffloorflags & FF_RENDERPLANES)
+						ffloorflags |= FF_BOTHPLANES;
+					if (ffloorflags & FF_RENDERSIDES)
+						ffloorflags |= FF_ALLSIDES;
+				}
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 173: // "Platform" that crumbles and doesn't return
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_CRUMBLE|FF_NORETURN|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 174: // Translucent "platform" that crumbles and returns
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_CRUMBLE|FF_TRANSLUCENT|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 175: // Translucent "platform" that crumbles and doesn't return
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_CRUMBLE|FF_NORETURN|FF_TRANSLUCENT|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 176: // Air bobbing platform that will crumble and bob on the water when it falls and hits
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB|FF_CRUMBLE, secthinkers);
-				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
-				break;
-
-			case 177: // Air bobbing platform that will crumble and bob on
-				// the water when it falls and hits, then never return
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB|FF_CRUMBLE|FF_NORETURN, secthinkers);
-				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
-				break;
-
-			case 178: // Crumbling platform that will float when it hits water
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE|FF_FLOATBOB, secthinkers);
-				break;
-
-			case 179: // Crumbling platform that will float when it hits water, but not return
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE|FF_FLOATBOB|FF_NORETURN, secthinkers);
-				break;
-
-			case 180: // Air bobbing platform that will crumble
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE, secthinkers);
-				lines[i].flags |= ML_BLOCKMONSTERS;
-				P_AddAirbob(lines[i].frontsector, lines + i, true, false);
+				if (lines[i].args[2] & 8) //Air bobbing
+					P_AddAirbob(lines[i].frontsector, lines + i, 16*FRACUNIT, false, false, false);
 				break;
 
 			case 190: // Rising Platform FOF (solid, opaque, shadows)

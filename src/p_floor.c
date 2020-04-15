@@ -972,7 +972,7 @@ void T_StartCrumble(elevator_t *elevator)
 		}
 		else if (++elevator->distance == 0) // Reposition back to original spot
 		{
-			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->args[0], i)) >= 0 ;)
 			{
 				sector = &sectors[i];
 
@@ -1003,7 +1003,7 @@ void T_StartCrumble(elevator_t *elevator)
 		// Flash to indicate that the platform is about to return.
 		if (elevator->distance > -224 && (leveltime % ((abs(elevator->distance)/8) + 1) == 0))
 		{
-			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->args[0], i)) >= 0 ;)
 			{
 				sector = &sectors[i];
 
@@ -1099,7 +1099,7 @@ void T_StartCrumble(elevator_t *elevator)
 		P_RemoveThinker(&elevator->thinker);
 	}
 
-	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->args[0], i)) >= 0 ;)
 	{
 		sector = &sectors[i];
 		sector->moved = true;
@@ -2423,7 +2423,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 	if (raise->sector->crumblestate >= 3 || raise->sector->ceilingdata)
 		return;
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->args[0], i)) >= 0 ;)
 	{
 		sector = &sectors[i];
 
@@ -2616,7 +2616,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 	raise->sector->ceilspeed = 42;
 	raise->sector->floorspeed = raise->vars[3]*raise->vars[8];
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->args[0], i)) >= 0 ;)
 		P_RecalcPrecipInSector(&sectors[i]);
 }
 
@@ -3335,7 +3335,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 
 	elevator->sector->crumblestate = 2;
 
-	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->args[0], i)) >= 0 ;)
 	{
 		foundsec = &sectors[i];
 

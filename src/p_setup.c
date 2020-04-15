@@ -2920,6 +2920,34 @@ static void P_ConvertBinaryMap(void)
 
 			lines[i].special = 100;
 			break;
+		case 170: //FOF: Crumbling, respawn
+		case 171: //FOF: Crumbling, no respawn
+		case 172: //FOF: Crumbling, respawn, intangible from bottom
+		case 173: //FOF: Crumbling, no respawn, intangible from bottom
+		case 174: //FOF: Crumbling, respawn, intangible from bottom, translucent
+		case 175: //FOF: Crumbling, no respawn, intangible from bottom, translucent
+		case 176: //FOF: Crumbling, respawn, floating, bobbing
+		case 177: //FOF: Crumbling, no respawn, floating, bobbing
+		case 178: //FOF: Crumbling, respawn, floating
+		case 179: //FOF: Crumbling, no respawn, floating
+		case 180: //FOF: Crumbling, respawn, air bobbing
+			lines[i].args[0] = lines[i].tag;
+			if (lines[i].special >= 172 && lines[i].special <= 175)
+			{
+				lines[i].args[1] |= 2; //Intangible from below
+				if (lines[i].flags & ML_NOCLIMB)
+					lines[i].args[2] |= 2; //Don't cast shadow
+			}
+			if (lines[i].special >= 174 && lines[i].special <= 175)
+				lines[i].args[2] |= 1; //Translucent
+			if (lines[i].special % 2 == 1)
+				lines[i].args[2] |= 4; //Don't respawn
+			if (lines[i].special == 176 || lines[i].special == 177 || lines[i].special == 180)
+				lines[i].args[2] |= 8; //Air bobbing
+			if (lines[i].special >= 176 && lines[i].special <= 179)
+				lines[i].args[2] |= 16; //Float on water
+			lines[i].special = 170;
+			break;
 		case 200: //FOF: Light block
 		case 201: //FOF: Half light block
 			lines[i].args[0] = lines[i].tag;
