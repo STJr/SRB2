@@ -451,21 +451,25 @@ static void R_AddLine(seg_t *line)
 	// Portal line
 	if (line->linedef->special == 40 && line->side == 0)
 	{
+		// Render portal if recursiveness limit hasn't been reached.
+		// Otherwise, render the wall normally.
 		if (portalrender < cv_maxportals.value)
 		{
-			// Find the other side!
-			INT32 line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, -1);
-			if (line->linedef == &lines[line2])
-				line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, line2);
-			if (line2 >= 0) // found it!
+			size_t p;
+			INT16 tag = line->linedef->tag;
+			INT32 li1 = line->linedef-lines;
+			INT32 li2;
+
+			for (p = 0; (li2 = Tag_Iterate_Lines(tag, p)) >= 0; p++)
 			{
-				Portal_Add2Lines(line->linedef-lines, line2, x1, x2); // Remember the lines for later rendering
-				//return; // Don't fill in that space now!
+				// Skip invalid lines.
+				if ((tag != lines[li2].tag) || (lines[li1].special != lines[li2].special) || (li1 == li2))
+					continue;
+
+				Portal_Add2Lines(li1, li2, x1, x2);
 				goto clipsolid;
 			}
 		}
-		// Recursed TOO FAR (viewing a portal within a portal)
-		// So uhhh, render it as a normal wall instead or something ???
 	}
 
 	// Single sided line?
