@@ -2939,7 +2939,13 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[2] |= 2; //Don't cast shadow
 			}
 			if (lines[i].special >= 174 && lines[i].special <= 175)
+			{
 				lines[i].args[2] |= 1; //Translucent
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+				else
+					lines[i].alpha = FRACUNIT/2;
+			}
 			if (lines[i].special % 2 == 1)
 				lines[i].args[2] |= 4; //Don't respawn
 			if (lines[i].special == 176 || lines[i].special == 177 || lines[i].special == 180)
