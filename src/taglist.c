@@ -25,6 +25,10 @@ boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2)
 void Taglist_AddToSectors (const size_t tag, const size_t itemid)
 {
 	taggroup_t* tagelems;
+
+	if (tag == -1)
+		return;
+
 	if (!tags_sectors[tag])
 		tags_sectors[tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
 
@@ -40,6 +44,9 @@ void Taglist_AddToLines (const size_t tag, const size_t itemid)
 	if (!tags_lines[tag])
 		tags_lines[tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
 
+	if (tag == -1)
+		return;
+
 	tagelems = tags_lines[tag];
 	tagelems->count++;
 	tagelems->elements = Z_Realloc(tagelems->elements, tagelems->count * sizeof(size_t), PU_LEVEL, NULL);
@@ -51,6 +58,9 @@ void Taglist_AddToMapthings (const size_t tag, const size_t itemid)
 	taggroup_t* tagelems;
 	if (!tags_mapthings[tag])
 		tags_mapthings[tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
+
+	if (tag == -1)
+		return;
 
 	tagelems = tags_mapthings[tag];
 	tagelems->count++;
