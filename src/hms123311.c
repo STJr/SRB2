@@ -318,7 +318,7 @@ HMS_unlist (void)
 	hms = HMS_connect("servers/%s/unlist", hms_server_token);
 
 	if (! hms)
-		return 0;
+		return;
 
 	curl_easy_setopt(hms->curl, CURLOPT_CUSTOMREQUEST, "POST");
 
