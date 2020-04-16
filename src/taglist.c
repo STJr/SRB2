@@ -41,11 +41,12 @@ void Taglist_AddToSectors (const size_t tag, const size_t itemid)
 void Taglist_AddToLines (const size_t tag, const size_t itemid)
 {
 	taggroup_t* tagelems;
-	if (!tags_lines[tag])
-		tags_lines[tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
 
 	if (tag == -1)
 		return;
+
+	if (!tags_lines[tag])
+		tags_lines[tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
 
 	tagelems = tags_lines[tag];
 	tagelems->count++;
@@ -56,11 +57,12 @@ void Taglist_AddToLines (const size_t tag, const size_t itemid)
 void Taglist_AddToMapthings (const size_t tag, const size_t itemid)
 {
 	taggroup_t* tagelems;
-	if (!tags_mapthings[tag])
-		tags_mapthings[tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
 
 	if (tag == -1)
 		return;
+
+	if (!tags_mapthings[tag])
+		tags_mapthings[tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
 
 	tagelems = tags_mapthings[tag];
 	tagelems->count++;
