@@ -3,14 +3,18 @@
 
 #include "doomtype.h"
 
+typedef INT16 mtag_t;
+#define MAXTAGS UINT16_MAX
+#define MTAG_GLOBAL -1
+
 /// Multitag list.
 typedef struct
 {
-	UINT16* tags;
+	mtag_t* tags;
 	UINT16 count;
 } taglist_t;
 
-void Tag_Add (taglist_t* list, const UINT16 tag);
+void Tag_Add (taglist_t* list, const mtag_t tag);
 boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2);
 
 typedef struct
@@ -19,18 +23,17 @@ typedef struct
 	size_t count;
 } taggroup_t;
 
-#define MAXTAGS 65536
-taggroup_t* tags_sectors[MAXTAGS];
-taggroup_t* tags_lines[MAXTAGS];
-taggroup_t* tags_mapthings[MAXTAGS];
+taggroup_t* tags_sectors[MAXTAGS + 1];
+taggroup_t* tags_lines[MAXTAGS + 1];
+taggroup_t* tags_mapthings[MAXTAGS + 1];
 
-void Taglist_AddToSectors (const size_t tag, const size_t itemid);
-void Taglist_AddToLines (const size_t tag, const size_t itemid);
-void Taglist_AddToMapthings (const size_t tag, const size_t itemid);
+void Taglist_AddToSectors (const mtag_t tag, const size_t itemid);
+void Taglist_AddToLines (const mtag_t tag, const size_t itemid);
+void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid);
 
-INT32 Tag_Iterate_Sectors (const INT16 tag, const size_t p);
-INT32 Tag_Iterate_Lines (const INT16 tag, const size_t p);
-INT32 Tag_Iterate_Things (const INT16 tag, const size_t p);
+INT32 Tag_Iterate_Sectors (const mtag_t tag, const size_t p);
+INT32 Tag_Iterate_Lines (const mtag_t tag, const size_t p);
+INT32 Tag_Iterate_Things (const mtag_t tag, const size_t p);
 
 INT32 Tag_FindLineSpecial(const INT16 special, const INT16 tag);
 
