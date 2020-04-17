@@ -6076,11 +6076,9 @@ static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean
 	airbob->sector = sec;
 
 	airbob->ceilingtop = sec->ceilingheight;
-	airbob->ceilingbottom = sec->ceilingheight - speed;
+	airbob->ceilingbottom = sec->ceilingheight - dist;
 
 	airbob->basespeed = FRACUNIT;
-
-	airbob->flags = flags;
 
 	if (!raise)
 		airbob->flags |= RF_REVERSE;
@@ -6897,8 +6895,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 			}
 			case 152: // Adjustable air bobbing platform in reverse
-				if (lines[i].flags & NOCLIMB)
-					raiseflags |= RF_SPINDASH;
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), true, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
