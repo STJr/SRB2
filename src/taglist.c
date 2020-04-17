@@ -8,6 +8,47 @@ void Tag_Add (taglist_t* list, const mtag_t tag)
 	list->tags[list->count++] = tag;
 }
 
+/// Sets the first tag entry in a taglist.
+void Tag_FSet (taglist_t* list, const mtag_t tag)
+{
+	if (!list->count)
+	{
+		Tag_Add(list, tag);
+		return;
+	}
+
+	list->tags[0] = tag;
+}
+
+/// Gets the first tag entry in a taglist.
+mtag_t Tag_FGet (const taglist_t* list)
+{
+	if (list->count)
+		return list->tags[0];
+
+	return 0;
+}
+
+boolean Tag_Find (const taglist_t* list, const mtag_t tag)
+{
+	size_t i;
+	for (i = 0; i < list->count; i++)
+		if (list->tags[i] == tag)
+			return true;
+
+	return false;
+}
+
+boolean Tag_Share (const taglist_t* list1, const taglist_t* list2)
+{
+	size_t i;
+	for (i = 0; i < list1->count; i++)
+		if (Tag_Find(list2, list1->tags[i]))
+			return true;
+
+	return false;
+}
+
 boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2)
 {
 	size_t i;

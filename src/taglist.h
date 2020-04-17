@@ -15,6 +15,12 @@ typedef struct
 } taglist_t;
 
 void Tag_Add (taglist_t* list, const mtag_t tag);
+
+void Tag_FSet (taglist_t* list, const mtag_t tag);
+mtag_t Tag_FGet (const taglist_t* list);
+boolean Tag_Find (const taglist_t* list, const mtag_t tag);
+boolean Tag_Share (const taglist_t* list1, const taglist_t* list2);
+
 boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2);
 
 typedef struct
