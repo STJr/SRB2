@@ -6396,6 +6396,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 	// Init line EFFECTs
 	for (i = 0; i < numlines; i++)
 	{
+		mtag_t tag = Tag_FGet(&lines[i].tags);
+
 		if (lines[i].special != 7) // This is a hack. I can at least hope nobody wants to prevent flat alignment in netgames...
 		{
 			// set line specials to 0 here too, same reason as above
@@ -6423,7 +6425,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 1: // Definable gravity per sector
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 				{
 					sectors[s].gravity = &sectors[sec].floorheight; // This allows it to change in realtime!
 
@@ -6447,7 +6449,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 5: // Change camera info
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					P_AddCameraScanner(&sectors[sec], &sectors[s], R_PointToAngle2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y));
 				break;
 
@@ -6470,22 +6472,22 @@ void P_SpawnSpecials(boolean fromnetsave)
 					}
 
 					//If no tag is given, apply to front sector
-					if (lines[i].tag == 0)
+					if (tag == 0)
 						P_ApplyFlatAlignment(lines + i, lines[i].frontsector, flatangle, xoffs, yoffs);
 					else
 					{
-						TAG_ITER_SECTORS(lines[i].tag, s)
+						TAG_ITER_SECTORS(tag, s)
 							P_ApplyFlatAlignment(lines + i, sectors + s, flatangle, xoffs, yoffs);
 					}
 				}
 				else // Otherwise, print a helpful warning. Can I do no less?
 					CONS_Alert(CONS_WARNING,
 					M_GetText("Flat alignment linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
-					lines[i].tag);
+					tag);
 				break;
 
 			case 8: // Sector Parameters
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 				{
 					if (lines[i].flags & ML_NOCLIMB)
 					{
@@ -6513,7 +6515,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 10: // Vertical culling plane for sprites and FOFs
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					sectors[s].cullheight = &lines[i]; // This allows it to change in realtime!
 				break;
 
@@ -6574,13 +6576,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 63: // support for drawn heights coming from different sector
 				sec = sides[*lines[i].sidenum].sector-sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					sectors[s].heightsec = (INT32)sec;
 				break;
 
 			case 64: // Appearing/Disappearing FOF option
 				if (lines[i].flags & ML_BLOCKMONSTERS) { // Find FOFs by control sector tag
-					TAG_ITER_SECTORS(lines[i].tag, s)
+					TAG_ITER_SECTORS(tag, s)
 						for (j = 0; (unsigned)j < sectors[s].linecount; j++)
 							if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
 								Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), (INT32)(sectors[s].lines[j]-lines), (INT32)i);
@@ -6597,15 +6599,15 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 66: // Displace floor by front sector
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					P_AddPlaneDisplaceThinker(pd_floor, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 			case 67: // Displace ceiling by front sector
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					P_AddPlaneDisplaceThinker(pd_ceiling, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 			case 68: // Displace both floor AND ceiling by front sector
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					P_AddPlaneDisplaceThinker(pd_both, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
@@ -6980,7 +6982,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 251: // A THWOMP!
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 				{
 					P_AddThwompThinker(&sectors[sec], &sectors[s], &lines[i]);
 					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
@@ -7028,7 +7030,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				sec = sides[*lines[i].sidenum].sector - sectors;
 
 				// No longer totally disrupts netgames
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers);
 				break;
 
@@ -7039,7 +7041,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					P_AddFakeFloorsByLine(i, fofflags, secthinkers);
 				}
 				else
-					I_Error("Custom FOF (tag %d) found without a linedef back side!", lines[i].tag);
+					I_Error("Custom FOF (tag %d) found without a linedef back side!", tag);
 				break;
 
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
@@ -7174,7 +7176,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				{
 					CONS_Alert(CONS_WARNING,
 						M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
-						lines[i].tag);
+						tag);
 					break;
 				}
 				if (!(lines[i].flags & ML_NOCLIMB))
@@ -7220,46 +7222,46 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 600: // floor lighting independently (e.g. lava)
 				sec = sides[*lines[i].sidenum].sector-sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					sectors[s].floorlightsec = (INT32)sec;
 				break;
 
 			case 601: // ceiling lighting independently
 				sec = sides[*lines[i].sidenum].sector-sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					sectors[s].ceilinglightsec = (INT32)sec;
 				break;
 
 			case 602: // Adjustable pulsating light
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					P_SpawnAdjustableGlowingLight(&sectors[sec], &sectors[s],
 						P_AproxDistance(lines[i].dx, lines[i].dy)>>FRACBITS);
 				break;
 
 			case 603: // Adjustable flickering light
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					P_SpawnAdjustableFireFlicker(&sectors[sec], &sectors[s],
 						P_AproxDistance(lines[i].dx, lines[i].dy)>>FRACBITS);
 				break;
 
 			case 604: // Adjustable Blinking Light (unsynchronized)
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					P_SpawnAdjustableStrobeFlash(&sectors[sec], &sectors[s],
 						abs(lines[i].dx)>>FRACBITS, abs(lines[i].dy)>>FRACBITS, false);
 				break;
 
 			case 605: // Adjustable Blinking Light (synchronized)
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					P_SpawnAdjustableStrobeFlash(&sectors[sec], &sectors[s],
 						abs(lines[i].dx)>>FRACBITS, abs(lines[i].dy)>>FRACBITS, true);
 				break;
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.
-				TAG_ITER_SECTORS(lines[i].tag, s)
+				TAG_ITER_SECTORS(tag, s)
 					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = sides[lines[i].sidenum[0]].colormap_data;
 				break;
 
