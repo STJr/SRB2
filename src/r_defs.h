@@ -293,7 +293,6 @@ typedef struct sector_s
 	INT16 special;
 	UINT16 tag;
 	taglist_t tags;
-	INT32 nexttag, firsttag; // for fast tag searches
 
 	// origin for any sounds played by the sector
 	// also considered the center for e.g. Mario blocks
@@ -433,7 +432,6 @@ typedef struct line_s
 #if 1//#ifdef WALLSPLATS
 	void *splats; // wallsplat_t list
 #endif
-	INT32 firsttag, nexttag; // improves searches for tags.
 #ifdef POLYOBJECTS
 	polyobj_t *polyobj; // Belongs to a polyobject?
 #endif

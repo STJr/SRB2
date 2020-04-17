@@ -852,8 +852,6 @@ static void P_LoadVertices(UINT8 *data)
 
 static void P_InitializeSector(sector_t *ss)
 {
-	ss->nexttag = ss->firsttag = -1;
-
 	memset(&ss->soundorg, 0, sizeof(ss->soundorg));
 
 	ss->validcount = 0;
@@ -976,7 +974,6 @@ static void P_InitializeLinedef(line_t *ld)
 #ifdef WALLSPLATS
 	ld->splats = NULL;
 #endif
-	ld->firsttag = ld->nexttag = -1;
 #ifdef POLYOBJECTS
 	ld->polyobj = NULL;
 #endif
