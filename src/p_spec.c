@@ -5902,7 +5902,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	}
 
 	if ((flags & FF_CRUMBLE))
-		sec2->crumblestate = 1;
+		sec2->crumblestate = CRUMBLE_WAIT;
 
 	if ((flags & FF_FLOATBOB))
 	{

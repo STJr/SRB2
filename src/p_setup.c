@@ -866,7 +866,7 @@ static void P_InitializeSector(sector_t *ss)
 	ss->camsec = -1;
 
 	ss->floorlightsec = ss->ceilinglightsec = -1;
-	ss->crumblestate = 0;
+	ss->crumblestate = CRUMBLE_NONE;
 
 	ss->touching_thinglist = NULL;
 

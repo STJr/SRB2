@@ -690,10 +690,10 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 	INT32 i;
 	boolean remove;
 
-	if (bouncer->sector->crumblestate == 4 || bouncer->sector->crumblestate == 1
-		|| bouncer->sector->crumblestate == 2) // Oops! Crumbler says to remove yourself!
+	if (bouncer->sector->crumblestate == CRUMBLE_RESTORE || bouncer->sector->crumblestate == CRUMBLE_WAIT
+		|| bouncer->sector->crumblestate == CRUMBLE_ACTIVATED) // Oops! Crumbler says to remove yourself!
 	{
-		bouncer->sector->crumblestate = 1;
+		bouncer->sector->crumblestate = CRUMBLE_WAIT;
 		bouncer->sector->ceilingdata = NULL;
 		bouncer->sector->ceilspeed = 0;
 		bouncer->sector->floordata = NULL;
@@ -817,15 +817,6 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 // T_StartCrumble ////////////////////////////////
 //////////////////////////////////////////////////
 // Crumbling platform Tails 03-11-2002
-//
-// DEFINITION OF THE 'CRUMBLESTATE'S:
-//
-// 0 - No crumble thinker
-// 1 - Don't float on water because this is supposed to wait for a crumble
-// 2 - Crumble thinker activated, but hasn't fallen yet
-// 3 - Crumble thinker is falling
-// 4 - Crumble thinker is about to restore to original position
-//
 void T_StartCrumble(elevator_t *elevator)
 {
 	ffloor_t *rover;
@@ -921,13 +912,13 @@ void T_StartCrumble(elevator_t *elevator)
 		// so set this to let other thinkers know what is
 		// about to happen.
 		if (elevator->distance < 0 && elevator->distance > -3)
-			elevator->sector->crumblestate = 4; // makes T_BounceCheese remove itself
+			elevator->sector->crumblestate = CRUMBLE_RESTORE; // makes T_BounceCheese remove itself
 	}
 
 	if ((elevator->floordestheight == 0 && elevator->direction == -1)
 		|| (elevator->floordestheight == 1 && elevator->direction == 1)) // Down
 	{
-		elevator->sector->crumblestate = 3; // Allow floating now.
+		elevator->sector->crumblestate = CRUMBLE_FALL; // Allow floating now.
 
 		// Only fall like this if it isn't meant to float on water
 		if (elevator->high != 42)
@@ -976,7 +967,7 @@ void T_StartCrumble(elevator_t *elevator)
 	}
 	else // Up (restore to original position)
 	{
-		elevator->sector->crumblestate = 1;
+		elevator->sector->crumblestate = CRUMBLE_WAIT;
 		elevator->sector->ceilingheight = elevator->ceilingwasheight;
 		elevator->sector->floorheight = elevator->floorwasheight;
 		elevator->sector->floordata = NULL;
@@ -1085,7 +1076,7 @@ void T_FloatSector(levelspecthink_t *floater)
 		else if (floater->sector->ceilingheight == actionsector->ceilingheight && waterheight > cheeseheight) // too high
 			;
 		// we have something to float in! Or we're for some reason above the ground, let's fall anyway
-		else if (floater->sector->crumblestate == 0 || floater->sector->crumblestate >= 3/* || floatanyway*/)
+		else if (floater->sector->crumblestate == CRUMBLE_NONE || floater->sector->crumblestate >= CRUMBLE_FALL/* || floatanyway*/)
 			EV_BounceSector(floater->sector, FRACUNIT, floater->sourceline);
 
 		P_RecalcPrecipInSector(actionsector);
@@ -1687,7 +1678,7 @@ void T_RaiseSector(raise_t *raise)
 	INT32 direction;
 	result_e res = 0;
 
-	if (raise->sector->crumblestate >= 3 || raise->sector->ceilingdata)
+	if (raise->sector->crumblestate >= CRUMBLE_FALL || raise->sector->ceilingdata)
 		return;
 
 	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
@@ -2489,7 +2480,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	if (sec->floordata)
 		return 0;
 
-	if (sec->crumblestate > 1)
+	if (sec->crumblestate >= CRUMBLE_ACTIVATED)
 		return 0;
 
 	// create and initialize new elevator thinker
@@ -2534,7 +2525,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	else
 		elevator->high = 0;
 
-	elevator->sector->crumblestate = 2;
+	elevator->sector->crumblestate = CRUMBLE_ACTIVATED;
 
 	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
 	{

@@ -2566,7 +2566,7 @@ static void P_CheckBustableBlocks(player_t *player)
 			{
 				if (!(rover->flags & FF_EXISTS)) continue;
 
-				if ((rover->flags & FF_BUSTUP)/* && !rover->master->frontsector->crumblestate*/)
+				if ((rover->flags & FF_BUSTUP)/* && rover->master->frontsector->crumblestate == CRUMBLE_NONE*/)
 				{
 					// If it's an FF_SHATTER, you can break it just by touching it.
 					if (rover->flags & FF_SHATTER)
@@ -12213,7 +12213,7 @@ void P_PlayerThink(player_t *player)
 		player->powers[pw_nocontrol]--;
 	else
 		player->powers[pw_nocontrol] = 0;
-	
+
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]
 	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]
