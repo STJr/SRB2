@@ -12584,17 +12584,20 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	}
 	case MT_SKYBOX:
-		if (mthing->tag < 0 || mthing->tag > 15)
+	{
+		mtag_t tag = Tag_FGet(&mthing->tags);
+		if (tag < 0 || tag > 15)
 		{
-			CONS_Debug(DBG_GAMELOGIC, "P_SetupSpawnedMapThing: Skybox ID %d of mapthing %s is not between 0 and 15!\n", mthing->tag, sizeu1((size_t)(mthing - mapthings)));
+			CONS_Debug(DBG_GAMELOGIC, "P_SetupSpawnedMapThing: Skybox ID %d of mapthing %s is not between 0 and 15!\n", tag, sizeu1((size_t)(mthing - mapthings)));
 			break;
 		}
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
-			skyboxcenterpnts[mthing->tag] = mobj;
+			skyboxcenterpnts[tag] = mobj;
 		else
-			skyboxviewpnts[mthing->tag] = mobj;
+			skyboxviewpnts[tag] = mobj;
 		break;
+	}
 	case MT_EGGSTATUE:
 		if (mthing->options & MTF_EXTRA)
 		{
