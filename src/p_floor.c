@@ -682,11 +682,13 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 #define low vars[2]
 #define ceilingwasheight vars[3]
 #define floorwasheight vars[4]
+	fixed_t sectorheight;
 	fixed_t halfheight;
 	fixed_t waterheight;
 	fixed_t floorheight;
 	sector_t *actionsector;
 	INT32 i;
+	boolean remove;
 
 	if (bouncer->sector->crumblestate == 4 || bouncer->sector->crumblestate == 1
 		|| bouncer->sector->crumblestate == 2) // Oops! Crumbler says to remove yourself!
@@ -706,48 +708,47 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		actionsector = &sectors[i];
 		actionsector->moved = true;
 
-		halfheight = abs(bouncer->sector->ceilingheight - bouncer->sector->floorheight) >> 1;
+		sectorheight = abs(bouncer->sector->ceilingheight - bouncer->sector->floorheight);
+		halfheight = sectorheight/2;
 
 		waterheight = P_SectorCheckWater(actionsector, bouncer->sector); // sorts itself out if there's no suitable water in the sector
 
-		floorheight = P_FloorzAtPos(actionsector->soundorg.x, actionsector->soundorg.y, bouncer->sector->floorheight, halfheight << 1);
+		floorheight = P_FloorzAtPos(actionsector->soundorg.x, actionsector->soundorg.y, bouncer->sector->floorheight, sectorheight);
+
+		remove = false;
 
 		// Water level is up to the ceiling.
 		if (waterheight > bouncer->sector->ceilingheight - halfheight && bouncer->sector->ceilingheight >= actionsector->ceilingheight) // Tails 01-08-2004
 		{
 			bouncer->sector->ceilingheight = actionsector->ceilingheight;
-			bouncer->sector->floorheight = bouncer->sector->ceilingheight - (halfheight*2);
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
-			P_RecalcPrecipInSector(actionsector);
-			bouncer->sector->ceilingdata = NULL;
-			bouncer->sector->floordata = NULL;
-			bouncer->sector->floorspeed = 0;
-			bouncer->sector->ceilspeed = 0;
-			bouncer->sector->moved = true;
-			P_RemoveThinker(&bouncer->thinker); // remove bouncer from actives
-			return;
+			bouncer->sector->floorheight = actionsector->ceilingheight - sectorheight;
+			remove = true;
 		}
 		// Water level is too shallow.
 		else if (waterheight < bouncer->sector->floorheight + halfheight && bouncer->sector->floorheight <= floorheight)
 		{
-			bouncer->sector->ceilingheight = floorheight + (halfheight << 1);
+			bouncer->sector->ceilingheight = floorheight + sectorheight;
 			bouncer->sector->floorheight = floorheight;
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
-			P_RecalcPrecipInSector(actionsector);
-			bouncer->sector->ceilingdata = NULL;
-			bouncer->sector->floordata = NULL;
-			bouncer->sector->floorspeed = 0;
-			bouncer->sector->ceilspeed = 0;
-			bouncer->sector->moved = true;
-			P_RemoveThinker(&bouncer->thinker); // remove bouncer from actives
-			return;
+			remove = true;
 		}
 		else
 		{
 			bouncer->ceilingwasheight = waterheight + halfheight;
 			bouncer->floorwasheight = waterheight - halfheight;
+		}
+
+		if (remove)
+		{
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
+			P_RecalcPrecipInSector(actionsector);
+			bouncer->sector->ceilingdata = NULL;
+			bouncer->sector->floordata = NULL;
+			bouncer->sector->floorspeed = 0;
+			bouncer->sector->ceilspeed = 0;
+			bouncer->sector->moved = true;
+			P_RemoveThinker(&bouncer->thinker); // remove bouncer from actives
+			return;
 		}
 
 		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
@@ -758,29 +759,15 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		bouncer->sector->floorspeed = -bouncer->speed/2;
 		bouncer->sector->ceilspeed = 42;
 
-		if (bouncer->sector->ceilingheight < bouncer->ceilingwasheight && bouncer->low == 0) // Down
+		if ((bouncer->sector->ceilingheight < bouncer->ceilingwasheight && bouncer->low == 0) // Down
+			|| (bouncer->sector->ceilingheight > bouncer->ceilingwasheight && bouncer->low)) // Up
 		{
 			if (abs(bouncer->speed) < 6*FRACUNIT)
 				bouncer->speed -= bouncer->speed/3;
 			else
 				bouncer->speed -= bouncer->speed/2;
 
-			bouncer->low = 1;
-			if (abs(bouncer->speed) > 6*FRACUNIT)
-			{
-				mobj_t *mp = (void *)&actionsector->soundorg;
-				actionsector->soundorg.z = bouncer->sector->floorheight;
-				S_StartSound(mp, sfx_splash);
-			}
-		}
-		else if (bouncer->sector->ceilingheight > bouncer->ceilingwasheight && bouncer->low) // Up
-		{
-			if (abs(bouncer->speed) < 6*FRACUNIT)
-				bouncer->speed -= bouncer->speed/3;
-			else
-				bouncer->speed -= bouncer->speed/2;
-
-			bouncer->low = 0;
+			bouncer->low = bouncer->low ? 0 : 1;
 			if (abs(bouncer->speed) > 6*FRACUNIT)
 			{
 				mobj_t *mp = (void *)&actionsector->soundorg;
