@@ -2728,6 +2728,8 @@ static void P_ConvertBinaryMap(void)
 
 	for (i = 0; i < numlines; i++)
 	{
+		mtag_t tag = Tag_FGet(&lines[i].tags);
+
 		switch (lines[i].special)
 		{
 		case 443: //Call Lua function
@@ -2778,7 +2780,7 @@ static void P_ConvertBinaryMap(void)
 			else if (lines[i].special == 715)
 				lines[i].args[0] = 3;
 
-			lines[i].args[1] = lines[i].tag;
+			lines[i].args[1] = tag;
 
 			if (lines[i].flags & ML_EFFECT6)
 			{
@@ -2810,9 +2812,9 @@ static void P_ConvertBinaryMap(void)
 		case 721: //Copy front side ceiling slope
 		case 722: //Copy front side floor and ceiling slope
 			if (lines[i].special != 721)
-				lines[i].args[0] = lines[i].tag;
+				lines[i].args[0] = tag;
 			if (lines[i].special != 720)
-				lines[i].args[1] = lines[i].tag;
+				lines[i].args[1] = tag;
 			lines[i].special = 720;
 			break;
 		case 900: //Translucent wall (10%)
