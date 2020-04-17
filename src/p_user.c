@@ -10629,6 +10629,7 @@ static void P_CalcPostImg(player_t *player)
 	postimg_t *type;
 	INT32 *param;
 	fixed_t pviewheight;
+	size_t i;
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		pviewheight = player->mo->z + player->mo->height - player->viewheight;
@@ -10653,28 +10654,45 @@ static void P_CalcPostImg(player_t *player)
 	}
 
 	// see if we are in heat (no, not THAT kind of heat...)
-
-	if (Tag_FindLineSpecial(13, sector->tag) != -1)
-		*type = postimg_heat;
-	else if (sector->ffloors)
+	for (i = 0; i < sector->tags.count; i++)
 	{
-		ffloor_t *rover;
-		fixed_t topheight;
-		fixed_t bottomheight;
-
-		for (rover = sector->ffloors; rover; rover = rover->next)
+		if (Tag_FindLineSpecial(13, sector->tags.tags[i]) != -1)
 		{
-			if (!(rover->flags & FF_EXISTS))
-				continue;
+			*type = postimg_heat;
+			break;
+		}
+		else if (sector->ffloors)
+		{
+			ffloor_t *rover;
+			fixed_t topheight;
+			fixed_t bottomheight;
+			boolean gotres = false;
 
-			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+			for (rover = sector->ffloors; rover; rover = rover->next)
+			{
+				size_t j;
 
-			if (pviewheight >= topheight || pviewheight <= bottomheight)
-				continue;
+				if (!(rover->flags & FF_EXISTS))
+					continue;
 
-			if (Tag_FindLineSpecial(13, rover->master->frontsector->tag) != -1)
-				*type = postimg_heat;
+				topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
+				bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+
+				if (pviewheight >= topheight || pviewheight <= bottomheight)
+					continue;
+
+				for (j = 0; j < rover->master->frontsector->tags.count; j++)
+				{
+					if (Tag_FindLineSpecial(13, rover->master->frontsector->tags.tags[j]) != -1)
+					{
+						*type = postimg_heat;
+						gotres = true;
+						break;
+					}
+				}
+			}
+			if (gotres)
+				break;
 		}
 	}
 
@@ -10773,22 +10791,21 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 static INT32 P_GetMinecartSpecialLine(sector_t *sec)
 {
 	INT32 line = -1;
+	size_t i;
 
 	if (!sec)
 		return line;
 
-	if (sec->tag != 0)
-		line = Tag_FindLineSpecial(16, sec->tag);
+	for (i = 0; i < sec->tags.count; i++)
+		if (sec->tags.tags[i] != 0)
+			line = Tag_FindLineSpecial(16, sec->tags.tags[i]);
 
 	// Also try for lines facing the sector itself, with tag 0.
+	for (i = 0; i < sec->linecount; i++)
 	{
-		UINT32 i;
-		for (i = 0; i < sec->linecount; i++)
-		{
-			line_t *li = sec->lines[i];
-			if (li->tag == 0 && li->special == 16 && li->frontsector == sec)
-				line = li - lines;
-		}
+		line_t *li = sec->lines[i];
+		if (Tag_Find(&li->tags, 0) && li->special == 16 && li->frontsector == sec)
+			line = li - lines;
 	}
 
 	return line;

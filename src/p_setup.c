@@ -1241,7 +1241,7 @@ static void P_LoadSidedefs(UINT8 *data)
 						|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'F'))
 						sd->toptexture = axtoi(msd->toptexture);
 					else
-						I_Error("Custom FOF (tag %d) needs a value in the linedef's back side upper texture field.", sd->line->tag);
+						I_Error("Custom FOF (line id %d) needs a value in the linedef's back side upper texture field.", sd->line - lines);
 
 					sd->midtexture = R_TextureNumForName(msd->midtexture);
 					sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);

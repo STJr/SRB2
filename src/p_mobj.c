@@ -4621,7 +4621,7 @@ static boolean P_Boss4MoveCage(mobj_t *mobj, fixed_t delta)
 	for (snum = sectors[tag%numsectors].firsttag; snum != -1; snum = sector->nexttag)
 	{
 		sector = &sectors[snum];
-		if (sector->tag != tag)
+		if (!Tag_Find(&sector->tags, tag))
 			continue;
 		sector->floorheight += delta;
 		sector->ceilingheight += delta;
@@ -4715,9 +4715,9 @@ static void P_Boss4DestroyCage(mobj_t *mobj)
 
 		next = sector->nexttag;
 		sector->nexttag = -1;
-		if (sector->tag != tag)
+		if (!Tag_Find(&sector->tags, tag))
 			continue;
-		sector->tag = 0;
+		Tag_SectorFSet(sector - sectors, 0);
 
 		// Destroy the FOFs.
 		for (a = 0; a < sector->numattached; a++)
@@ -10036,11 +10036,12 @@ void P_MobjThinker(mobj_t *mobj)
 	// Sector special (2,8) allows ANY mobj to trigger a linedef exec
 	if (mobj->subsector && GETSECSPECIAL(mobj->subsector->sector->special, 2) == 8)
 	{
-		sector_t *sec2;
-
-		sec2 = P_ThingOnSpecial3DFloor(mobj);
+		sector_t *sec2 = P_ThingOnSpecial3DFloor(mobj);
 		if (sec2 && GETSECSPECIAL(sec2->special, 2) == 1)
-			P_LinedefExecute(sec2->tag, mobj, sec2);
+		{
+			mtag_t tag = Tag_FGet(&sec2->tags);
+			P_LinedefExecute(tag, mobj, sec2);
+		}
 	}
 
 	if (mobj->scale != mobj->destscale)
@@ -10264,14 +10265,19 @@ void P_PushableThinker(mobj_t *mobj)
 	sec = mobj->subsector->sector;
 
 	if (GETSECSPECIAL(sec->special, 2) == 1 && mobj->z == sec->floorheight)
-		P_LinedefExecute(sec->tag, mobj, sec);
+	{
+		mtag_t tag = Tag_FGet(&sec->tags);
+		P_LinedefExecute(tag, mobj, sec);
+	}
+
 //	else if (GETSECSPECIAL(sec->special, 2) == 8)
 	{
-		sector_t *sec2;
-
-		sec2 = P_ThingOnSpecial3DFloor(mobj);
+		sector_t *sec2 = P_ThingOnSpecial3DFloor(mobj);
 		if (sec2 && GETSECSPECIAL(sec2->special, 2) == 1)
-			P_LinedefExecute(sec2->tag, mobj, sec2);
+		{
+			mtag_t tag = Tag_FGet(&sec2->tags);
+			P_LinedefExecute(tag, mobj, sec2);
+		}
 	}
 
 	// it has to be pushable RIGHT NOW for this part to happen

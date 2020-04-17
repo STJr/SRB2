@@ -405,9 +405,6 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 				P_AddDynSlopeThinker(cslope, DP_BACKCEIL, line, extent, NULL, NULL);
 		}
 	}
-
-	if(!line->tag)
-		return;
 }
 
 /// Creates a new slope from three mapthings with the specified IDs
