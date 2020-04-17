@@ -3866,13 +3866,10 @@ void A_BossDeath(mobj_t *mo)
 	{
 		// Bring the egg trap up to the surface
 		// Incredibly shitty code ahead
-		junk.tag = LE_CAPSULE0;
 		Tag_FSet(&junk.tags, LE_CAPSULE0);
 		EV_DoElevator(&junk, elevateHighest, false);
-		junk.tag = LE_CAPSULE1;
 		Tag_FSet(&junk.tags, LE_CAPSULE1);
 		EV_DoElevator(&junk, elevateUp, false);
-		junk.tag = LE_CAPSULE2;
 		Tag_FSet(&junk.tags, LE_CAPSULE2);
 		EV_DoElevator(&junk, elevateHighest, false);
 
@@ -3996,7 +3993,6 @@ bossjustdie:
 		}
 		case MT_KOOPA:
 		{
-			junk.tag = LE_KOOPA;
 			Tag_FSet(&junk.tags, LE_KOOPA);
 			EV_DoCeiling(&junk, raiseToHighest);
 			return;

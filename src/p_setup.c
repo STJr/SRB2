@@ -933,7 +933,6 @@ static void P_LoadSectors(UINT8 *data)
 
 		ss->lightlevel = SHORT(ms->lightlevel);
 		ss->special = SHORT(ms->special);
-		ss->tag = SHORT(ms->tag);
 		Tag_FSet(&ss->tags, SHORT(ms->tag));
 
 		ss->floor_xoffs = ss->floor_yoffs = 0;
@@ -1047,7 +1046,6 @@ static void P_LoadLinedefs(UINT8 *data)
 	{
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
-		ld->tag = SHORT(mld->tag);
 		Tag_FSet(&ld->tags, SHORT(mld->tag));
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
@@ -1278,7 +1276,6 @@ static void P_LoadThings(UINT8 *data)
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
-		mt->tag = 0;
 		Tag_FSet(&mt->tags, 0);
 
 		mt->type &= 4095;
@@ -1399,10 +1396,7 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "special"))
 		sectors[i].special = atol(val);
 	else if (fastcmp(param, "id"))
-	{
-		sectors[i].tag = atol(val);
-		Tag_FSet(&sectors[i].tags, sectors[i].tag);
-	}
+		Tag_FSet(&sectors[i].tags, atol(val));
 	else if (fastcmp(param, "moreids"))
 	{
 		char* id = val;
@@ -1448,10 +1442,7 @@ static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
 static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "id"))
-	{
-		lines[i].tag = atol(val);
-		Tag_FSet(&lines[i].tags, lines[i].tag);
-	}
+		Tag_FSet(&lines[i].tags, atol(val));
 	else if (fastcmp(param, "moreids"))
 	{
 		char* id = val;
@@ -1528,10 +1519,7 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "id"))
-	{
-		mapthings[i].tag = atol(val);
-		Tag_FSet(&mapthings[i].tags, mapthings[i].tag);
-	}
+		Tag_FSet(&mapthings[i].tags, atol(val));
 	else if (fastcmp(param, "moreids"))
 	{
 		char* id = val;
@@ -1670,7 +1658,6 @@ static void P_LoadTextmap(void)
 		sc->lightlevel = 255;
 
 		sc->special = 0;
-		sc->tag = 0;
 		Tag_FSet(&sc->tags, 0);
 
 		sc->floor_xoffs = sc->floor_yoffs = 0;
@@ -1690,7 +1677,6 @@ static void P_LoadTextmap(void)
 		ld->v1 = ld->v2 = NULL;
 		ld->flags = 0;
 		ld->special = 0;
-		ld->tag = 0;
 		Tag_FSet(&ld->tags, 0);
 
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
@@ -1739,7 +1725,6 @@ static void P_LoadTextmap(void)
 		mt->options = 0;
 		mt->z = 0;
 		mt->extrainfo = 0;
-		mt->tag = 0;
 		Tag_FSet(&mt->tags, 0);
 		mt->mobj = NULL;
 

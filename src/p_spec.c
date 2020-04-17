@@ -4366,16 +4366,13 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 			// Move the button down
 			Tag_FSet(&junk.tags, 680);
-			junk.tag = 680;
 			EV_DoElevator(&junk, elevateDown, false);
 
 			// Open the top FOF
 			Tag_FSet(&junk.tags, 681);
-			junk.tag = 681;
 			EV_DoFloor(&junk, raiseFloorToNearestFast);
 			// Open the bottom FOF
 			Tag_FSet(&junk.tags, 682);
-			junk.tag = 682;
 			EV_DoCeiling(&junk, lowerToLowestFast);
 
 			// Mark all players with the time to exit thingy!
@@ -5549,7 +5546,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	{
 		fixed_t tempceiling = sec2->ceilingheight;
 		//flip the sector around and print an error instead of crashing 12.1.08 -Inuyasha
-		CONS_Alert(CONS_ERROR, M_GetText("A FOF tagged %d has a top height below its bottom.\n"), master->tag);
+		CONS_Alert(CONS_ERROR, M_GetText("FOF (line %d) has a top height below its bottom.\n"), master - lines);
 		sec2->ceilingheight = sec2->floorheight;
 		sec2->floorheight = tempceiling;
 	}
