@@ -851,8 +851,6 @@ static void P_NetArchiveWorld(void)
 
 		if (!Tag_Compare(&ss->tags, &spawnss->tags))
 			diff2 |= SD_TAG;
-		if (ss->nexttag != spawnss->nexttag || ss->firsttag != spawnss->firsttag)
-			diff3 |= SD_TAGLIST;
 
 		if (ss->extra_colormap != spawnss->extra_colormap)
 			diff3 |= SD_COLORMAP;
@@ -917,11 +915,6 @@ static void P_NetArchiveWorld(void)
 				WRITEUINT32(put, ss->tags.count);
 				for (j = 0; j < ss->tags.count; j++)
 					WRITEINT16(put, ss->tags.tags[j]);
-			}
-			if (diff3 & SD_TAGLIST) // save both firsttag and nexttag
-			{ // either of these could be changed even if tag isn't
-				WRITEINT32(put, ss->firsttag);
-				WRITEINT32(put, ss->nexttag);
 			}
 
 			if (diff3 & SD_COLORMAP)
@@ -1164,11 +1157,6 @@ static void P_NetUnArchiveWorld(void)
 
 			for (j = 0; j < ncount; j++)
 				sectors[i].tags.tags[j] = READINT16(get);
-		}
-		if (diff3 & SD_TAGLIST)
-		{
-			sectors[i].firsttag = READINT32(get);
-			sectors[i].nexttag = READINT32(get);
 		}
 
 		if (diff3 & SD_COLORMAP)
