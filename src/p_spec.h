@@ -323,6 +323,17 @@ typedef struct
 typedef struct
 {
 	thinker_t thinker;
+	sector_t *sector;
+	fixed_t speed;
+	INT32 direction;
+	fixed_t floorstartheight;
+	fixed_t ceilingstartheight;
+	fixed_t destheight;
+} continuousfall_t;
+
+typedef struct
+{
+	thinker_t thinker;
 	line_t *sourceline;
 	sector_t *sector;
 	INT16 tag;
@@ -378,14 +389,14 @@ INT32 EV_BounceSector(sector_t *sector, fixed_t momz, line_t *sourceline);
 INT32 EV_StartCrumble(sector_t *sector, ffloor_t *rover,
 	boolean floating, player_t *player, fixed_t origalpha, boolean crumblereturn);
 
-INT32 EV_DoContinuousFall(sector_t *sec, sector_t *pbacksector, fixed_t spd, boolean backwards);
+void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boolean backwards);
 
 INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher);
 
 void T_MoveFloor(floormove_t *movefloor);
 
 void T_MoveElevator(elevator_t *elevator);
-void T_ContinuousFalling(levelspecthink_t *faller);
+void T_ContinuousFalling(continuousfall_t *faller);
 void T_BounceCheese(levelspecthink_t *bouncer);
 void T_StartCrumble(elevator_t *elevator);
 void T_MarioBlock(levelspecthink_t *block);

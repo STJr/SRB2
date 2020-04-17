@@ -561,43 +561,18 @@ void T_MoveElevator(elevator_t *elevator)
 //
 // Useful for things like intermittent falling lava.
 //
-void T_ContinuousFalling(levelspecthink_t *faller)
+void T_ContinuousFalling(continuousfall_t *faller)
 {
-#define speed vars[0]
-#define direction vars[1]
-#define floorwasheight vars[2]
-#define ceilingwasheight vars[3]
-#define floordestheight vars[4]
-#define ceilingdestheight vars[5]
-
-	if (faller->direction == -1)
-	{
-		faller->sector->ceilingheight -= faller->speed;
-		faller->sector->floorheight -= faller->speed;
-	}
-	else
-	{
-		faller->sector->ceilingheight += faller->speed;
-		faller->sector->floorheight += faller->speed;
-	}
+	faller->sector->ceilingheight += faller->speed*faller->direction;
+	faller->sector->floorheight += faller->speed*faller->direction;
 
 	P_CheckSector(faller->sector, false);
 
-	if (faller->direction == -1) // Down
+	if ((faller->direction == -1 && faller->sector->ceilingheight <= faller->destheight)
+		|| (faller->direction == 1 && faller->sector->floorheight >= faller->destheight))
 	{
-		if (faller->sector->ceilingheight <= faller->ceilingdestheight)            // if destination height acheived
-		{
-			faller->sector->ceilingheight = faller->ceilingwasheight;
-			faller->sector->floorheight = faller->floorwasheight;
-		}
-	}
-	else // Up
-	{
-		if (faller->sector->floorheight >= faller->floordestheight)            // if destination height acheived
-		{
-			faller->sector->ceilingheight = faller->ceilingwasheight;
-			faller->sector->floorheight = faller->floorwasheight;
-		}
+		faller->sector->ceilingheight = faller->ceilingstartheight;
+		faller->sector->floorheight = faller->floorstartheight;
 	}
 
 	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong
@@ -605,12 +580,6 @@ void T_ContinuousFalling(levelspecthink_t *faller)
 	faller->sector->floorspeed = faller->speed*faller->direction;
 	faller->sector->ceilspeed = 42;
 	faller->sector->moved = true;
-#undef speed
-#undef direction
-#undef floorwasheight
-#undef ceilingwasheight
-#undef floordestheight
-#undef ceilingdestheight
 }
 
 //
@@ -2398,18 +2367,12 @@ INT32 EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 }
 
 // For T_ContinuousFalling special
-INT32 EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boolean backwards)
+void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boolean backwards)
 {
-#define speed vars[0]
-#define direction vars[1]
-#define floorwasheight vars[2]
-#define ceilingwasheight vars[3]
-#define floordestheight vars[4]
-#define ceilingdestheight vars[5]
-	levelspecthink_t *faller;
+	continuousfall_t *faller;
 
 	// workaround for when there is no back sector
-	if (backsector == NULL)
+	if (!backsector)
 		backsector = sec;
 
 	// create and initialize new thinker
@@ -2421,29 +2384,11 @@ INT32 EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, bool
 	faller->sector = sec;
 	faller->speed = spd;
 
-	faller->floorwasheight = sec->floorheight;
-	faller->ceilingwasheight = sec->ceilingheight;
+	faller->floorstartheight = sec->floorheight;
+	faller->ceilingstartheight = sec->ceilingheight;
 
-	if (backwards)
-	{
-		faller->ceilingdestheight = backsector->ceilingheight;
-		faller->floordestheight = faller->ceilingdestheight;
-		faller->direction = 1; // Up!
-	}
-	else
-	{
-		faller->floordestheight = backsector->floorheight;
-		faller->ceilingdestheight = faller->floordestheight;
-		faller->direction = -1;
-	}
-
-	return 1;
-#undef speed
-#undef direction
-#undef floorwasheight
-#undef ceilingwasheight
-#undef floordestheight
-#undef ceilingdestheight
+	faller->destheight = backwards ? backsector->ceilingheight : backsector->floorheight;
+	faller->direction = backwards ? 1 : -1;
 }
 
 // Some other 3dfloor special things Tails 03-11-2002 (Search p_mobj.c for description)

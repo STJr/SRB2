@@ -1659,6 +1659,23 @@ static void SaveSpecialLevelThinker(const thinker_t *th, const UINT8 type)
 }
 
 //
+// SaveContinuousFallThinker
+//
+// Saves a continuousfall_t thinker
+//
+static void SaveContinuousFallThinker(const thinker_t *th, const UINT8 type)
+{
+	const continuousfall_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEFIXED(save_p, ht->speed);
+	WRITEINT32(save_p, ht->direction);
+	WRITEFIXED(save_p, ht->floorstartheight);
+	WRITEFIXED(save_p, ht->ceilingstartheight);
+	WRITEFIXED(save_p, ht->destheight);
+}
+
+//
 // SaveFloatThinker
 //
 // Saves a floatthink_t thinker
@@ -2266,7 +2283,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_ContinuousFalling)
 			{
-				SaveSpecialLevelThinker(th, tc_continuousfalling);
+				SaveContinuousFallThinker(th, tc_continuousfalling);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_ThwompSector)
@@ -2811,6 +2828,23 @@ static thinker_t* LoadSpecialLevelThinker(actionf_p1 thinker, UINT8 floorOrCeili
 			ht->sector->floordata = ht;
 	}
 
+	return &ht->thinker;
+}
+
+// LoadContinuousFallThinker
+//
+// Loads a continuousfall_t from a save game
+//
+static thinker_t* LoadContinuousFallThinker(actionf_p1 thinker)
+{
+	continuousfall_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->speed = READFIXED(save_p);
+	ht->direction = READINT32(save_p);
+	ht->floorstartheight = READFIXED(save_p);
+	ht->ceilingstartheight = READFIXED(save_p);
+	ht->destheight = READFIXED(save_p);
 	return &ht->thinker;
 }
 
@@ -3528,7 +3562,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_continuousfalling:
-					th = LoadSpecialLevelThinker((actionf_p1)T_ContinuousFalling, 3);
+					th = LoadContinuousFallThinker((actionf_p1)T_ContinuousFalling);
 					break;
 
 				case tc_thwomp:
