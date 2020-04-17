@@ -936,8 +936,7 @@ static void P_LoadSectors(UINT8 *data)
 		ss->lightlevel = SHORT(ms->lightlevel);
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
-		if (ss->tag)
-			Tag_Add(&ss->tags, ss->tag);
+		Tag_FSet(&ss->tags, ss->tag);
 
 		ss->floor_xoffs = ss->floor_yoffs = 0;
 		ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
@@ -1052,8 +1051,7 @@ static void P_LoadLinedefs(UINT8 *data)
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
-		if (ld->tag)
-			Tag_Add(&ld->tags, ld->tag);
+		Tag_FSet(&ld->tags, ld->tag);
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
@@ -1284,6 +1282,7 @@ static void P_LoadThings(UINT8 *data)
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
 		mt->tag = 0;
+		Tag_FSet(&mt->tags, mt->tag);
 
 		mt->type &= 4095;
 
@@ -1405,8 +1404,7 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "id"))
 	{
 		sectors[i].tag = atol(val);
-		if (sectors[i].tag)
-			Tag_Add(&sectors[i].tags, sectors[i].tag);
+		Tag_FSet(&sectors[i].tags, sectors[i].tag);
 	}
 	else if (fastcmp(param, "moreids"))
 	{
@@ -1455,8 +1453,7 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 	if (fastcmp(param, "id"))
 	{
 		lines[i].tag = atol(val);
-		if (lines[i].tag)
-			Tag_Add(&lines[i].tags, lines[i].tag);
+		Tag_FSet(&lines[i].tags, lines[i].tag);
 	}
 	else if (fastcmp(param, "moreids"))
 	{
@@ -1536,8 +1533,7 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 	if (fastcmp(param, "id"))
 	{
 		mapthings[i].tag = atol(val);
-		if (mapthings[i].tag)
-			Tag_Add(&mapthings[i].tags, mapthings[i].tag);
+		Tag_FSet(&mapthings[i].tags, mapthings[i].tag);
 	}
 	else if (fastcmp(param, "moreids"))
 	{
@@ -1678,6 +1674,7 @@ static void P_LoadTextmap(void)
 
 		sc->special = 0;
 		sc->tag = 0;
+		Tag_FSet(&sc->tags, 0);
 
 		sc->floor_xoffs = sc->floor_yoffs = 0;
 		sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
@@ -1685,6 +1682,7 @@ static void P_LoadTextmap(void)
 		sc->floorpic_angle = sc->ceilingpic_angle = 0;
 
 		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
+
 		P_InitializeSector(sc);
 		TextmapFixFlatOffsets(sc);
 	}
@@ -1696,6 +1694,8 @@ static void P_LoadTextmap(void)
 		ld->flags = 0;
 		ld->special = 0;
 		ld->tag = 0;
+		Tag_FSet(&ld->tags, 0);
+
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
@@ -1743,6 +1743,7 @@ static void P_LoadTextmap(void)
 		mt->z = 0;
 		mt->extrainfo = 0;
 		mt->tag = 0;
+		Tag_FSet(&mt->tags, 0);
 		mt->mobj = NULL;
 
 		TextmapParse(mapthingsPos[i], i, ParseTextmapThingParameter);
