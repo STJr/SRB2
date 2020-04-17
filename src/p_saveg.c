@@ -1669,13 +1669,9 @@ static void SaveRaiseThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 	WRITEUINT32(save_p, SaveSector(ht->sector));
-	WRITEFIXED(save_p, ht->floorbottom);
 	WRITEFIXED(save_p, ht->ceilingbottom);
-	WRITEFIXED(save_p, ht->floortop);
 	WRITEFIXED(save_p, ht->ceilingtop);
 	WRITEFIXED(save_p, ht->basespeed);
-	WRITEFIXED(save_p, ht->speed);
-	WRITEINT32(save_p, ht->direction);
 	WRITEFIXED(save_p, ht->extraspeed);
 	WRITEUINT8(save_p, ht->shaketimer);
 	WRITEUINT8(save_p, ht->flags);
@@ -2802,13 +2798,9 @@ static thinker_t* LoadRaiseThinker(actionf_p1 thinker)
 	ht->thinker.function.acp1 = thinker;
 	ht->sourceline = LoadLine(READUINT32(save_p));
 	ht->sector = LoadSector(READUINT32(save_p));
-	ht->floorbottom = READFIXED(save_p);
 	ht->ceilingbottom = READFIXED(save_p);
-	ht->floortop = READFIXED(save_p);
 	ht->ceilingtop = READFIXED(save_p);
 	ht->basespeed = READFIXED(save_p);
-	ht->speed = READFIXED(save_p);
-	ht->direction = READINT32(save_p);
 	ht->extraspeed = READFIXED(save_p);
 	ht->shaketimer = READUINT8(save_p);
 	ht->flags = READUINT8(save_p);

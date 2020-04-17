@@ -332,13 +332,9 @@ typedef struct
 	thinker_t thinker;
 	line_t *sourceline;
 	sector_t *sector;
-	fixed_t floorbottom;
 	fixed_t ceilingbottom;
-	fixed_t floortop;
 	fixed_t ceilingtop;
 	fixed_t basespeed;
-	fixed_t speed;
-	INT32 direction; //1 = up, -1 = down
 	fixed_t extraspeed; //For dynamically sinking platform
 	UINT8 shaketimer; //For dynamically sinking platform
 	UINT8 flags;

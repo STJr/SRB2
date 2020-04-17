@@ -1856,8 +1856,9 @@ void T_RaiseSector(raise_t *raise)
 	boolean playeronme = false, active = false;
 	boolean moveUp;
 	fixed_t ceilingdestination, floordestination;
-	fixed_t origspeed;
+	fixed_t speed, origspeed;
 	fixed_t distToNearestEndpoint;
+	INT32 direction;
 	result_e res = 0;
 
 	if (raise->sector->crumblestate >= 3 || raise->sector->ceilingdata)
@@ -1936,60 +1937,59 @@ void T_RaiseSector(raise_t *raise)
 	else // Air bobbing platform (not a Dynamically Sinking Platform^tm)
 		active = playeronme;
 
-	raise->speed = raise->basespeed;
-	if (!active)
-		raise->speed /= 2;
-
 	moveUp = active ^ (raise->flags & RF_REVERSE);
 	ceilingdestination = moveUp ? raise->ceilingtop : raise->ceilingbottom;
-	floordestination = moveUp ? raise->floortop : raise->floorbottom;
+	floordestination = ceilingdestination - (raise->sector->ceilingheight - raise->sector->floorheight);
 
 	if ((moveUp && raise->sector->ceilingheight >= ceilingdestination)
 		|| (!moveUp && raise->sector->ceilingheight <= ceilingdestination))
 	{
-		raise->sector->floorheight = ceilingdestination - (raise->sector->ceilingheight - raise->sector->floorheight);
+		raise->sector->floorheight = floordestination;
 		raise->sector->ceilingheight = ceilingdestination;
 		raise->sector->ceilspeed = 0;
 		raise->sector->floorspeed = 0;
 		return;
 	}
-	raise->direction = moveUp ? 1 : -1;
+	direction = moveUp ? 1 : -1;
 
-	origspeed = raise->speed;
+	origspeed = raise->basespeed;
+	if (!active)
+		origspeed /= 2;
+
 	// Speed up as you get closer to the middle, then slow down again
 	distToNearestEndpoint = min(raise->sector->ceilingheight - raise->ceilingbottom, raise->ceilingtop - raise->sector->ceilingheight);
-	raise->speed = FixedMul(raise->speed, FixedDiv(distToNearestEndpoint, (raise->ceilingtop - raise->ceilingbottom) >> 5));
+	speed = FixedMul(origspeed, FixedDiv(distToNearestEndpoint, (raise->ceilingtop - raise->ceilingbottom) >> 5));
 
-	if (raise->speed <= origspeed/16)
-		raise->speed = origspeed/16;
-	else if (raise->speed > origspeed)
-		raise->speed = origspeed;
+	if (speed <= origspeed/16)
+		speed = origspeed/16;
+	else if (speed > origspeed)
+		speed = origspeed;
 
-	raise->speed += raise->extraspeed;
+	speed += raise->extraspeed;
 
 	res = T_MovePlane
 	(
-		raise->sector,         // sector
-		raise->speed,          // speed
+		raise->sector,      // sector
+		speed,              // speed
 		ceilingdestination, // dest
-		0,                        // crush
-		1,                        // floor or ceiling (1 for ceiling)
-		raise->direction       // direction
+		0,                  // crush
+		1,                  // floor or ceiling (1 for ceiling)
+		direction           // direction
 	);
 
 	if (res == ok || res == pastdest)
 		T_MovePlane
 		(
-			raise->sector,           // sector
-			raise->speed,            // speed
+			raise->sector,    // sector
+			speed,            // speed
 			floordestination, // dest
-			0,                          // crush
-			0,                          // floor or ceiling (0 for floor)
-			raise->direction         // direction
+			0,                // crush
+			0,                // floor or ceiling (0 for floor)
+			direction         // direction
 		);
 
 	raise->sector->ceilspeed = 42;
-	raise->sector->floorspeed = raise->speed*raise->direction;
+	raise->sector->floorspeed = speed*direction;
 
 	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
 		P_RecalcPrecipInSector(&sectors[i]);
