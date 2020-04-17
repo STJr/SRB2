@@ -1315,67 +1315,6 @@ static boolean PolyRotDisplace(line_t *line)
 
 #endif // ifdef POLYOBJECTS
 
-/** Changes a sector's tag.
-  * Used by the linedef executor tag changer and by crumblers.
-  *
-  * \param sector Sector whose tag will be changed.
-  * \param newtag New tag number for this sector.
-  * \sa P_InitTagLists, P_FindSectorFromTag
-  * \author Graue <graue@oceanbase.org>
-  */
-void P_ChangeSectorTag(UINT32 sector, INT16 newtag)
-{
-	INT16 oldtag;
-	INT32 i;
-
-	I_Assert(sector < numsectors);
-
-	if ((oldtag = sectors[sector].tag) == newtag)
-		return;
-
-	// first you have to remove it from the old tag's taglist
-	i = sectors[(unsigned)oldtag % numsectors].firsttag;
-
-	if (i == -1) // shouldn't happen
-		I_Error("Corrupt tag list for sector %u\n", sector);
-	else if ((UINT32)i == sector)
-		sectors[(unsigned)oldtag % numsectors].firsttag = sectors[sector].nexttag;
-	else
-	{
-		while (sectors[i].nexttag != -1 && (UINT32)sectors[i].nexttag < sector )
-			i = sectors[i].nexttag;
-
-		sectors[i].nexttag = sectors[sector].nexttag;
-	}
-
-	sectors[sector].tag = newtag;
-
-	// now add it to the new tag's taglist
-	if ((UINT32)sectors[(unsigned)newtag % numsectors].firsttag > sector)
-	{
-		sectors[sector].nexttag = sectors[(unsigned)newtag % numsectors].firsttag;
-		sectors[(unsigned)newtag % numsectors].firsttag = sector;
-	}
-	else
-	{
-		i = sectors[(unsigned)newtag % numsectors].firsttag;
-
-		if (i == -1)
-		{
-			sectors[(unsigned)newtag % numsectors].firsttag = sector;
-			sectors[sector].nexttag = -1;
-		}
-		else
-		{
-			while (sectors[i].nexttag != -1 && (UINT32)sectors[i].nexttag < sector )
-				i = sectors[i].nexttag;
-
-			sectors[sector].nexttag = sectors[i].nexttag;
-			sectors[i].nexttag = sector;
-		}
-	}
-}
-
 //
 // P_RunNightserizeExecutors
 //
