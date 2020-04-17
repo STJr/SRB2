@@ -918,7 +918,6 @@ static void P_NetArchiveWorld(void)
 				for (j = 0; j < ss->tags.count; j++)
 					WRITEINT16(put, ss->tags.tags[j]);
 			}
-				WRITEINT16(put, ss->tag);
 			if (diff3 & SD_TAGLIST) // save both firsttag and nexttag
 			{ // either of these could be changed even if tag isn't
 				WRITEINT32(put, ss->firsttag);
