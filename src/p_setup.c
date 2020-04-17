@@ -936,7 +936,7 @@ static void P_LoadSectors(UINT8 *data)
 		ss->lightlevel = SHORT(ms->lightlevel);
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
-		Tag_FSet(&ss->tags, ss->tag);
+		Tag_FSet(&ss->tags, SHORT(ms->tag));
 
 		ss->floor_xoffs = ss->floor_yoffs = 0;
 		ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
@@ -1051,7 +1051,7 @@ static void P_LoadLinedefs(UINT8 *data)
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
-		Tag_FSet(&ld->tags, ld->tag);
+		Tag_FSet(&ld->tags, SHORT(mld->tag));
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
@@ -1282,7 +1282,7 @@ static void P_LoadThings(UINT8 *data)
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
 		mt->tag = 0;
-		Tag_FSet(&mt->tags, mt->tag);
+		Tag_FSet(&mt->tags, 0);
 
 		mt->type &= 4095;
 
@@ -2921,6 +2921,7 @@ static boolean P_LoadMapFromFile(void)
 {
 	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
 	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
+	size_t i;
 	udmf = textmap != NULL;
 
 	if (!P_LoadMapData(virt))
@@ -2941,6 +2942,10 @@ static boolean P_LoadMapFromFile(void)
 	memcpy(spawnsectors, sectors, numsectors * sizeof(*sectors));
 	memcpy(spawnlines, lines, numlines * sizeof(*lines));
 	memcpy(spawnsides, sides, numsides * sizeof(*sides));
+
+	for (i = 0; i < numsectors; i++)
+		if (sectors[i].tags.count)
+			spawnsectors[i].tags.tags = memcpy(Z_Malloc(sectors[i].tags.count*sizeof(mtag_t), PU_LEVEL, NULL), sectors[i].tags.tags, sectors[i].tags.count*sizeof(mtag_t));
 
 	P_MakeMapMD5(virt, &mapmd5);
 

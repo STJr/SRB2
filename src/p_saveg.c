@@ -798,7 +798,7 @@ static boolean P_AreStringArgsEqual(const line_t *li, const line_t *spawnli)
 //
 static void P_NetArchiveWorld(void)
 {
-	size_t i;
+	size_t i, j;
 	INT32 statsec = 0, statline = 0;
 	const line_t *li = lines;
 	const line_t *spawnli = spawnlines;
@@ -849,7 +849,7 @@ static void P_NetArchiveWorld(void)
 		if (ss->ceilingpic_angle != spawnss->ceilingpic_angle)
 			diff2 |= SD_CEILANG;
 
-		if (ss->tag != spawnss->tag)
+		if (!Tag_Compare(&ss->tags, &spawnss->tags))
 			diff2 |= SD_TAG;
 		if (ss->nexttag != spawnss->nexttag || ss->firsttag != spawnss->firsttag)
 			diff3 |= SD_TAGLIST;
@@ -912,7 +912,12 @@ static void P_NetArchiveWorld(void)
 				WRITEANGLE(put, ss->floorpic_angle);
 			if (diff2 & SD_CEILANG)
 				WRITEANGLE(put, ss->ceilingpic_angle);
-			if (diff2 & SD_TAG) // save only the tag
+			if (diff2 & SD_TAG)
+			{
+				WRITEUINT32(put, ss->tags.count);
+				for (j = 0; j < ss->tags.count; j++)
+					WRITEINT16(put, ss->tags.tags[j]);
+			}
 				WRITEINT16(put, ss->tag);
 			if (diff3 & SD_TAGLIST) // save both firsttag and nexttag
 			{ // either of these could be changed even if tag isn't
@@ -1076,7 +1081,7 @@ static void P_NetArchiveWorld(void)
 //
 static void P_NetUnArchiveWorld(void)
 {
-	UINT16 i;
+	UINT16 i, j;
 	line_t *li;
 	side_t *si;
 	UINT8 *get;
@@ -1150,6 +1155,17 @@ static void P_NetUnArchiveWorld(void)
 		if (diff2 & SD_CEILANG)
 			sectors[i].ceilingpic_angle = READANGLE(get);
 		if (diff2 & SD_TAG)
+		{
+			size_t ncount = READUINT32(get);
+			if (ncount != sectors[i].tags.count)
+			{
+				sectors[i].tags.count = ncount;
+				sectors[i].tags.tags = Z_Realloc(sectors[i].tags.tags, ncount*sizeof(mtag_t), PU_LEVEL, NULL);
+			}
+
+			for (j = 0; j < ncount; j++)
+				sectors[i].tags.tags[j] = READINT16(get);
+		}
 			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
 		if (diff3 & SD_TAGLIST)
 		{
