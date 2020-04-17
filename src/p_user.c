@@ -12342,12 +12342,14 @@ void P_PlayerThink(player_t *player)
 		sector_t *controlsec;
 		for (j=0; j<numsectors; j++)
 		{
+			mtag_t sectag = Tag_FGet(&sectors[j].tags);
 			controlsec = NULL;
 			// Does this sector have a water linedef?
 			for (i=0; i<numlines;i++)
 			{
+				mtag_t linetag = Tag_FGet(&lines[i].tags);
 				if ((lines[i].special == 121 || lines[i].special == 123)
-				&& lines[i].tag == sectors[j].tag)
+				&& linetag == sectag)
 				{
 					controlsec = lines[i].frontsector;
 					break;
@@ -12356,15 +12358,16 @@ void P_PlayerThink(player_t *player)
 
 			if (i < numlines && controlsec)
 			{
+				controlsectag = Tag_FGet(&controlsec->tags);
 				// Does this sector have a colormap?
 				for (i=0; i<numlines;i++)
 				{
-					if (lines[i].special == 606 && lines[i].tag == controlsec->tag)
+					if (lines[i].special == 606 && linetag == controlsectag)
 						break;
 				}
 
 				if (i == numlines)
-					CONS_Debug(DBG_GAMELOGIC, "%d, %d\n", j, sectors[j].tag);
+					CONS_Debug(DBG_GAMELOGIC, "%d, %d\n", j, sectag);
 			}
 		}
 
