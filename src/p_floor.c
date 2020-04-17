@@ -1547,30 +1547,40 @@ static boolean P_IsObjectOnRealGround(mobj_t *mo, sector_t *sec)
 	return false;
 }
 
-//
-// P_HavePlayersEnteredArea
-//
-// Helper function for T_EachTimeThinker
-//
-static INT32 P_HavePlayersEnteredArea(boolean *curPlayers, boolean *oldPlayers, boolean inAndOut)
+static boolean P_IsPlayerValid(size_t playernum)
 {
-	INT32 i;
+	if (!playeringame[playernum])
+		return false;
 
-	// Easy check... nothing has changed
-	if (!memcmp(curPlayers, oldPlayers, sizeof(boolean)*MAXPLAYERS))
-		return -1;
+	if (!players[playernum].mo)
+		return false;
 
-	// Otherwise, we have to check if any new players have entered
-	for (i = 0; i < MAXPLAYERS; i++)
+	if (players[playernum].mo->health <= 0)
+		return false;
+
+	if (players[playernum].spectator)
+		return false;
+
+	return true;
+}
+
+static boolean P_IsMobjTouchingSector(mobj_t *mo, sector_t *sec)
+{
+	msecnode_t *node;
+
+	if (mo->subsector->sector == sec)
+		return true;
+
+	if (!(sec->flags & SF_TRIGGERSPECIAL_TOUCH))
+		return false;
+
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
-		if (inAndOut && !curPlayers[i] && oldPlayers[i])
-			return i;
-
-		if (curPlayers[i] && !oldPlayers[i])
-			return i;
+		if (node->m_sector == sec)
+			return true;
 	}
 
-	return -1;
+	return false;
 }
 
 //
@@ -1586,20 +1596,14 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 	size_t i, j;
 	sector_t *sec = NULL;
 	sector_t *targetsec = NULL;
-	//sector_t *usesec = NULL;
 	INT32 secnum = -1;
-	INT32 affectPlayer = 0;
 	boolean oldPlayersInArea[MAXPLAYERS];
-	boolean playersInArea[MAXPLAYERS];
 	boolean oldPlayersOnArea[MAXPLAYERS];
-	boolean playersOnArea[MAXPLAYERS];
 	boolean *oldPlayersArea;
 	boolean *playersArea;
 	boolean FOFsector = false;
-	boolean inAndOut = false;
 	boolean floortouch = false;
 	fixed_t bottomheight, topheight;
-	msecnode_t *node;
 	ffloor_t *rover;
 
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -1608,8 +1612,6 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 		oldPlayersOnArea[i] = eachtime->playersOnArea[i];
 		eachtime->playersInArea[i] = false;
 		eachtime->playersOnArea[i] = false;
-		playersInArea[i] = false;
-		playersOnArea[i] = false;
 	}
 
 	while ((secnum = P_FindSectorFromLineTag(eachtime->sourceline, secnum)) >= 0)
@@ -1654,35 +1656,10 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 
 				for (j = 0; j < MAXPLAYERS; j++)
 				{
-					if (!playeringame[j])
+					if (!P_IsPlayerValid(j))
 						continue;
 
-					if (!players[j].mo)
-						continue;
-
-					if (players[j].mo->health <= 0)
-						continue;
-
-					if ((netgame || multiplayer) && players[j].spectator)
-						continue;
-
-					if (players[j].mo->subsector->sector == targetsec)
-						;
-					else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
-					{
-						boolean insector = false;
-						for (node = players[j].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-						{
-							if (node->m_sector == targetsec)
-							{
-								insector = true;
-								break;
-							}
-						}
-						if (!insector)
-							continue;
-					}
-					else
+					if (!P_IsMobjTouchingSector(players[j].mo, targetsec))
 						continue;
 
 					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
@@ -1694,16 +1671,10 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 					if (players[j].mo->z + players[j].mo->height < bottomheight)
 						continue;
 
-					if (floortouch == true && P_IsObjectOnGroundIn(players[j].mo, targetsec))
-					{
+					if (floortouch && P_IsObjectOnGroundIn(players[j].mo, targetsec))
 						eachtime->playersOnArea[j] = true;
-						playersOnArea[j] = true;
-					}
 					else
-					{
 						eachtime->playersInArea[j] = true;
-						playersInArea[j] = true;
-					}
 				}
 			}
 		}
@@ -1712,94 +1683,61 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i])
+				if (!P_IsPlayerValid(i))
 					continue;
 
-				if (!players[i].mo)
-					continue;
-
-				if (players[i].mo->health <= 0)
-					continue;
-
-				if ((netgame || multiplayer) && players[i].spectator)
-					continue;
-
-				if (players[i].mo->subsector->sector == sec)
-					;
-				else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
-				{
-					boolean insector = false;
-					for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-					{
-						if (node->m_sector == sec)
-						{
-							insector = true;
-							break;
-						}
-					}
-					if (!insector)
-						continue;
-				}
-				else
+				if (!P_IsMobjTouchingSector(players[i].mo, sec))
 					continue;
 
 				if (!(players[i].mo->subsector->sector == sec
 					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
 					continue;
 
-				if (floortouch == true && P_IsObjectOnRealGround(players[i].mo, sec))
-				{
+				if (floortouch && P_IsObjectOnRealGround(players[i].mo, sec))
 					eachtime->playersOnArea[i] = true;
-					playersOnArea[i] = true;
-				}
 				else
-				{
 					eachtime->playersInArea[i] = true;
-					playersInArea[i] = true;
-				}
 			}
 		}
 	}
-
-	if (eachtime->triggerOnExit)
-		inAndOut = true;
 
 	// Check if a new player entered.
 	// If not, check if a player hit the floor.
 	// If either condition is true, execute.
-	if (floortouch == true)
+	if (floortouch)
 	{
-		playersArea = playersOnArea;
+		playersArea = eachtime->playersOnArea;
 		oldPlayersArea = oldPlayersOnArea;
 	}
 	else
 	{
-		playersArea = playersInArea;
+		playersArea = eachtime->playersInArea;
 		oldPlayersArea = oldPlayersInArea;
 	}
 
-	while ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
+	// Easy check... nothing has changed
+	if (!memcmp(playersArea, oldPlayersArea, sizeof(boolean)*MAXPLAYERS))
+		return;
+
+	// If sector has an "all players" trigger type, all players need to be in area
+	if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
 	{
-		if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
+		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i])
-					continue;
-
-				if (!players[i].mo)
-					continue;
-
-				if (players[i].mo->health <= 0)
-					continue;
-
-				if ((netgame || multiplayer) && players[i].spectator)
-					continue;
-
-				if (!playersArea[i])
-					return;
-			}
+			if (P_IsPlayerValid(i) && playersArea[i])
+				continue;
 		}
+	}
+
+	// Trigger for every player who has entered (and exited, if triggerOnExit)
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playersArea[i] == oldPlayersArea[i])
+			continue;
+
+		// If player has just left, check if still valid
+		if (!playersArea[i] && (!eachtime->triggerOnExit || !P_IsPlayerValid(i)))
+			continue;
 
 		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", eachtime->sourceline->tag);
 
@@ -1807,12 +1745,10 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 		// No more stupid hacks involving changing eachtime->sourceline's tag or special or whatever!
 		// This should now run ONLY the stuff for eachtime->sourceline itself, instead of all trigger linedefs sharing the same tag.
 		// Makes much more sense doing it this way, honestly.
-		P_RunTriggerLinedef(eachtime->sourceline, players[affectPlayer].mo, sec);
+		P_RunTriggerLinedef(eachtime->sourceline, players[i].mo, sec);
 
 		if (!eachtime->sourceline->special) // this happens only for "Trigger on X calls" linedefs
 			P_RemoveThinker(&eachtime->thinker);
-
-		oldPlayersArea[affectPlayer]=playersArea[affectPlayer];
 	}
 }
 
