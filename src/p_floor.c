@@ -687,6 +687,7 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 	fixed_t floorheight;
 	sector_t *actionsector;
 	INT32 i;
+	mtag_t tag = Tag_FGet(&bouncer->sourceline->tags);
 	TAG_ITER_C
 
 	if (bouncer->sector->crumblestate == 4 || bouncer->sector->crumblestate == 1
@@ -702,7 +703,7 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 	}
 
 	// You can use multiple target sectors, but at your own risk!!!
-	TAG_ITER_SECTORS(bouncer->sourceline->tag, i)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		actionsector = &sectors[i];
 		actionsector->moved = true;
@@ -845,6 +846,7 @@ void T_StartCrumble(elevator_t *elevator)
 	ffloor_t *rover;
 	sector_t *sector;
 	INT32 i;
+	mtag_t tag = Tag_FGet(&elevator->sourceline->tags);
 	TAG_ITER_C
 
 	// Once done, the no-return thinker just sits there,
@@ -875,7 +877,7 @@ void T_StartCrumble(elevator_t *elevator)
 		}
 		else if (++elevator->distance == 0) // Reposition back to original spot
 		{
-			TAG_ITER_SECTORS(elevator->sourceline->tag, i)
+			TAG_ITER_SECTORS(tag, i)
 			{
 				sector = &sectors[i];
 
@@ -906,7 +908,7 @@ void T_StartCrumble(elevator_t *elevator)
 		// Flash to indicate that the platform is about to return.
 		if (elevator->distance > -224 && (leveltime % ((abs(elevator->distance)/8) + 1) == 0))
 		{
-			TAG_ITER_SECTORS(elevator->sourceline->tag, i)
+			TAG_ITER_SECTORS(tag, i)
 			{
 				sector = &sectors[i];
 
@@ -1002,7 +1004,7 @@ void T_StartCrumble(elevator_t *elevator)
 		P_RemoveThinker(&elevator->thinker);
 	}
 
-	TAG_ITER_SECTORS(elevator->sourceline->tag, i)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		sector = &sectors[i];
 		sector->moved = true;
@@ -1456,9 +1458,10 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 	msecnode_t *node;
 	mobj_t *thing;
 	boolean FOFsector = false;
+	mtag_t tag = Tag_FGet(&nobaddies->sourceline->tags);
 	TAG_ITER_C
 
-	TAG_ITER_SECTORS(nobaddies->sourceline->tag, secnum)
+	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -1468,6 +1471,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 		for (i = 0; i < sec->linecount; i++)
 		{
 			INT32 targetsecnum = -1;
+			mtag_t tag2 = Tag_FGet(&sec->lines[i]->tags);
 			TAG_ITER_C
 
 			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
@@ -1475,7 +1479,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 
 			FOFsector = true;
 
-			TAG_ITER_SECTORS(sec->lines[i]->tag, targetsecnum)
+			TAG_ITER_SECTORS(tag2, targetsecnum)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -1513,7 +1517,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 		}
 	}
 
-	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", nobaddies->sourceline->tag);
+	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", tag);
 
 	// No enemies found, run the linedef exec and terminate this thinker
 	P_RunTriggerLinedef(nobaddies->sourceline, NULL, NULL);
@@ -1601,6 +1605,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	fixed_t bottomheight, topheight;
 	msecnode_t *node;
 	ffloor_t *rover;
+	mtag_t tag = Tag_FGet(&eachtime->sourceline->tags);
 	TAG_ITER_C
 
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -1622,7 +1627,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		playersOnArea[i] = false;
 	}
 
-	TAG_ITER_SECTORS(eachtime->sourceline->tag, secnum)
+	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -1639,6 +1644,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		for (i = 0; i < sec->linecount; i++)
 		{
 			INT32 targetsecnum = -1;
+			mtag_t tag2 = Tag_FGet(&sec->lines[i]->tags);
 			TAG_ITER_C
 
 			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
@@ -1646,7 +1652,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 			FOFsector = true;
 
-			TAG_ITER_SECTORS(sec->lines[i]->tag, targetsecnum)
+			TAG_ITER_SECTORS(tag2, targetsecnum)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -1828,7 +1834,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 			}
 		}
 
-		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", eachtime->sourceline->tag);
+		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", tag);
 
 		// 03/08/14 -Monster Iestyn
 		// No more stupid hacks involving changing eachtime->sourceline's tag or special or whatever!
@@ -1858,12 +1864,13 @@ void T_RaiseSector(levelspecthink_t *raise)
 	boolean playeronme = false, active = false;
 	fixed_t ceilingdestination, floordestination;
 	result_e res = 0;
+	mtag_t tag = Tag_FGet(&raise->sourceline->tags);
 	TAG_ITER_C
 
 	if (raise->sector->crumblestate >= 3 || raise->sector->ceilingdata)
 		return;
 
-	TAG_ITER_SECTORS(raise->sourceline->tag, i)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		sector = &sectors[i];
 
@@ -2056,7 +2063,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 	raise->sector->ceilspeed = 42;
 	raise->sector->floorspeed = raise->vars[3]*raise->vars[8];
 
-	TAG_ITER_SECTORS(raise->sourceline->tag, i)
+	TAG_ITER_SECTORS(tag, i)
 		P_RecalcPrecipInSector(&sectors[i]);
 }
 
@@ -2173,9 +2180,10 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 	INT32 secnum = -1;
 	sector_t *sec;
 	floormove_t *dofloor;
+	mtag_t tag = Tag_FGet(&line->tags);
 	TAG_ITER_C
 
-	TAG_ITER_SECTORS(line->tag, secnum)
+	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -2393,10 +2401,11 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 	INT32 rtn = 0;
 	sector_t *sec;
 	elevator_t *elevator;
+	mtag_t tag = Tag_FGet(&line->tags);
 	TAG_ITER_C
 
 	// act on all sectors with the same tag as the triggering linedef
-	TAG_ITER_SECTORS(line->tag, secnum)
+	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -2519,6 +2528,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	INT16 flags;
 
 	sector_t *controlsec = rover->master->frontsector;
+	mtag_t tag = Tag_FGet(&controlsec->tags);
 
 	if (sec == NULL)
 	{
@@ -2547,9 +2557,9 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	lifetime = 3*TICRATE;
 	flags = 0;
 
-	if (controlsec->tag != 0)
+	if (tag != 0)
 	{
-		INT32 tagline = Tag_FindLineSpecial(14, controlsec->tag);
+		INT32 tagline = Tag_FindLineSpecial(14, tag);
 		if (tagline != -1)
 		{
 			if (sides[lines[tagline].sidenum[0]].toptexture)
@@ -2725,6 +2735,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	elevator_t *elevator;
 	sector_t *foundsec;
 	INT32 i;
+	mtag_t tag = Tag_FGet(&rover->master->tags);
 	TAG_ITER_C
 
 	// If floor is already activated, skip it
@@ -2778,7 +2789,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 
 	elevator->sector->crumblestate = 2;
 
-	TAG_ITER_SECTORS(elevator->sourceline->tag, i)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		foundsec = &sectors[i];
 
@@ -2822,7 +2833,7 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 
 		// Set up the fields
 		block->sector = roversec;
-		block->vars[0] = sector->tag; // actionsector
+		block->vars[0] = Tag_FGet(&sector->tags); // actionsector
 		block->vars[1] = 4*FRACUNIT; // speed
 		block->vars[2] = 1; // Up // direction
 		block->vars[3] = block->sector->floorheight; // floorwasheight

@@ -3548,16 +3548,19 @@ static boolean P_CameraCheckHeat(camera_t *thiscam)
 {
 	sector_t *sector;
 	fixed_t halfheight = thiscam->z + (thiscam->height >> 1);
+	size_t i;
 
 	// see if we are in water
 	sector = thiscam->subsector->sector;
 
-	if (Tag_FindLineSpecial(13, sector->tag) != -1)
-		return true;
+	for (i = 0; i < sector->tags.count; i++)
+		if (Tag_FindLineSpecial(13, sector->tags.tags[i]) != -1)
+			return true;
 
 	if (sector->ffloors)
 	{
 		ffloor_t *rover;
+		size_t j;
 
 		for (rover = sector->ffloors; rover; rover = rover->next)
 		{
@@ -3573,7 +3576,8 @@ static boolean P_CameraCheckHeat(camera_t *thiscam)
 					*rover->bottomheight))
 				continue;
 
-			if (Tag_FindLineSpecial(13, rover->master->frontsector->tag) != -1)
+			for (j = 0; j < rover->master->frontsector->tags.count; j++)
+			if (Tag_FindLineSpecial(13, rover->master->frontsector->tags.tags[j]) != -1)
 				return true;
 		}
 	}

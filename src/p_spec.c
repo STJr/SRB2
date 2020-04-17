@@ -1000,7 +1000,7 @@ static boolean PolyDoor(line_t *line)
 {
 	polydoordata_t pdd;
 
-	pdd.polyObjNum = line->tag; // polyobject id
+	pdd.polyObjNum = Tag_FGet(&line->tags); // polyobject id
 
 	switch(line->special)
 	{
@@ -1041,7 +1041,7 @@ static boolean PolyMove(line_t *line)
 {
 	polymovedata_t pmd;
 
-	pmd.polyObjNum = line->tag;
+	pmd.polyObjNum = Tag_FGet(&line->tags);
 	pmd.speed      = sides[line->sidenum[0]].textureoffset / 8;
 	pmd.angle      = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
 	pmd.distance   = sides[line->sidenum[0]].rowoffset;
@@ -1059,7 +1059,7 @@ static boolean PolyMove(line_t *line)
 //
 static void PolyInvisible(line_t *line)
 {
-	INT32 polyObjNum = line->tag;
+	INT32 polyObjNum = Tag_FGet(&line->tags);
 	polyobj_t *po;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
@@ -1087,7 +1087,7 @@ static void PolyInvisible(line_t *line)
 //
 static void PolyVisible(line_t *line)
 {
-	INT32 polyObjNum = line->tag;
+	INT32 polyObjNum = Tag_FGet(&line->tags);
 	polyobj_t *po;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
@@ -1115,7 +1115,7 @@ static void PolyVisible(line_t *line)
 //
 static void PolyTranslucency(line_t *line)
 {
-	INT32 polyObjNum = line->tag;
+	INT32 polyObjNum = Tag_FGet(&line->tags);
 	polyobj_t *po;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
@@ -1156,7 +1156,7 @@ static void PolyTranslucency(line_t *line)
 //
 static boolean PolyFade(line_t *line)
 {
-	INT32 polyObjNum = line->tag;
+	INT32 polyObjNum = Tag_FGet(&line->tags);
 	polyobj_t *po;
 	polyfadedata_t pfd;
 
@@ -1227,7 +1227,7 @@ static boolean PolyWaypoint(line_t *line)
 {
 	polywaypointdata_t pwd;
 
-	pwd.polyObjNum = line->tag;
+	pwd.polyObjNum = Tag_FGet(&line->tags);
 	pwd.speed      = sides[line->sidenum[0]].textureoffset / 8;
 	pwd.sequence   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Sequence #
 	pwd.reverse    = (line->flags & ML_EFFECT1) == ML_EFFECT1; // Reverse?
@@ -1247,7 +1247,7 @@ static boolean PolyRotate(line_t *line)
 {
 	polyrotdata_t prd;
 
-	prd.polyObjNum = line->tag;
+	prd.polyObjNum = Tag_FGet(&line->tags);
 	prd.speed      = sides[line->sidenum[0]].textureoffset >> FRACBITS; // angular speed
 	prd.distance   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // angular distance
 
@@ -1276,7 +1276,7 @@ static boolean PolyDisplace(line_t *line)
 {
 	polydisplacedata_t pdd;
 
-	pdd.polyObjNum = line->tag;
+	pdd.polyObjNum = Tag_FGet(&line->tags);
 
 	pdd.controlSector = line->frontsector;
 	pdd.dx = line->dx>>8;
@@ -1293,7 +1293,7 @@ static boolean PolyRotDisplace(line_t *line)
 	polyrotdisplacedata_t pdd;
 	fixed_t anginter, distinter;
 
-	pdd.polyObjNum = line->tag;
+	pdd.polyObjNum = Tag_FGet(&line->tags);
 	pdd.controlSector = line->frontsector;
 
 	// Rotate 'anginter' interval for each 'distinter' interval from the control sector.
@@ -2412,12 +2412,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		// (formerly "Change calling sectors' tag", but behavior was changed)
 		{
 			TAG_ITER_SECTORS(tag, secnum)
-				P_ChangeSectorTag(secnum,(INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
+				Tag_SectorFSet(secnum,(INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
 			break;
 		}
 
 		case 410: // Change front sector's tag
-			P_ChangeSectorTag((UINT32)(line->frontsector - sectors), (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
+			Tag_SectorFSet((UINT32)(line->frontsector - sectors), (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
 			break;
 
 		case 411: // Stop floor/ceiling movement in tagged sector(s)
@@ -2626,7 +2626,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							if (!camobj)
 								continue;
 
-							if (foundit || (camobj->subsector->sector->tag == tag))
+							if (foundit || Tag_Find(&camobj->subsector->sector->tags, tag))
 							{
 								foundit = true;
 								break;
@@ -2635,7 +2635,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							// Only trigger if mobj is touching the tag
 							for(rover = camobj->subsector->sector->ffloors; rover; rover = rover->next)
 							{
-								if (rover->master->frontsector->tag != tag)
+								if (!Tag_Find(&rover->master->frontsector->tags, tag))
 									continue;
 
 								if (camobj->z > P_GetSpecialTopZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
@@ -3092,7 +3092,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 					for (rover = sec->ffloors; rover; rover = rover->next)
 					{
-						if (rover->master->frontsector->tag == foftag)
+						if (Tag_Find(&rover->master->frontsector->tags, foftag))
 						{
 							foundrover = true;
 
@@ -3277,7 +3277,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 					for (rover = sec->ffloors; rover; rover = rover->next)
 					{
-						if (rover->master->frontsector->tag == foftag)
+						if (Tag_Find(&rover->master->frontsector->tags, foftag))
 						{
 							foundrover = true;
 
@@ -3335,7 +3335,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 					for (rover = sec->ffloors; rover; rover = rover->next)
 					{
-						if (rover->master->frontsector->tag == foftag)
+						if (Tag_Find(&rover->master->frontsector->tags, foftag))
 						{
 							foundrover = true;
 
@@ -3520,7 +3520,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				for (rover = sec->ffloors; rover; rover = rover->next)
 				{
-					if (rover->master->frontsector->tag == foftag)
+					if (Tag_Find(&rover->master->frontsector->tags, foftag))
 					{
 						foundrover = true;
 
@@ -3584,7 +3584,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				for (rover = sec->ffloors; rover; rover = rover->next)
 				{
-					if (rover->master->frontsector->tag == foftag)
+					if (Tag_Find(&rover->master->frontsector->tags, foftag))
 					{
 						foundrover = true;
 
@@ -3669,7 +3669,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				for (rover = sec->ffloors; rover; rover = rover->next)
 				{
-					if (rover->master->frontsector->tag == foftag)
+					if (Tag_Find(&rover->master->frontsector->tags, foftag))
 					{
 						foundrover = true;
 
@@ -5774,7 +5774,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 
 	if ((flags & FF_FLOATBOB))
 	{
-		P_AddFloatThinker(sec2, sec->tag, master);
+		P_AddFloatThinker(sec2, Tag_FGet(&master->tags), master);
 		CheckForFloatBob = true;
 	}
 
@@ -6011,7 +6011,7 @@ static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, lin
 
 	// set up the fields according to the type of elevator action
 	thwomp->sector = sec;
-	thwomp->vars[0] = actionsector->tag;
+	thwomp->vars[0] = Tag_FGet(&sourceline->tags);
 	thwomp->floorwasheight = thwomp->sector->floorheight;
 	thwomp->ceilingwasheight = thwomp->sector->ceilingheight;
 	thwomp->direction = 0;
@@ -6572,11 +6572,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 								Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), (INT32)(sectors[s].lines[j]-lines), (INT32)i);
 				} else // Find FOFs by effect sector tag
 				{
-					TAG_ITER_LINES((lines + i)->tag, s)
+					TAG_ITER_LINES(tag, s)
 					{
 						if ((size_t)s == i)
 							continue;
-						if (sides[lines[s].sidenum[0]].sector->tag == sides[lines[i].sidenum[0]].sector->tag)
+						if (Tag_Find(&sides[lines[s].sidenum[0]].sector->tags, Tag_FGet(&sides[lines[i].sidenum[0]].sector->tags)))
 							Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), s, (INT32)i);
 					}
 				}

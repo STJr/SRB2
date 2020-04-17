@@ -398,9 +398,10 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 	INT32 secnum = -1;
 	sector_t *sec;
 	ceiling_t *ceiling;
+	mtag_t tag = Tag_FGet(&line->tags);
 	TAG_ITER_C
 
-	TAG_ITER_SECTORS(line->tag, secnum)
+	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -598,7 +599,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 
 		}
 
-		ceiling->tag = sec->tag;
+		ceiling->tag = tag;
 		ceiling->type = type;
 		firstone = 0;
 	}
@@ -619,9 +620,10 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 	INT32 secnum = -1;
 	sector_t *sec;
 	ceiling_t *ceiling;
+	mtag_t tag = Tag_FGet(&line->tags);
 	TAG_ITER_C
 
-	TAG_ITER_SECTORS(line->tag, secnum)
+	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -676,7 +678,7 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 				break;
 		}
 
-		ceiling->tag = sec->tag;
+		ceiling->tag = tag;
 		ceiling->type = type;
 	}
 	return rtn;
