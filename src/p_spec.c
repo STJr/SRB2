@@ -7158,7 +7158,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 312:
 			case 332:
 			case 335:
-				sec = sides[*lines[i].sidenum].sector - sectors;
 				P_AddEachTimeThinker(&lines[i]);
 				break;
 
@@ -7189,10 +7188,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				else
 					lines[i].callcount = sides[lines[i].sidenum[0]].textureoffset>>FRACBITS;
 				if (lines[i].special == 322) // Each time
-				{
-					sec = sides[*lines[i].sidenum].sector - sectors;
 					P_AddEachTimeThinker(&lines[i]);
-				}
 				break;
 
 			// NiGHTS trigger executors
