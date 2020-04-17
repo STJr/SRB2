@@ -320,6 +320,30 @@ typedef struct
 	sector_t *sector;   // Sector the thinker is from
 } levelspecthink_t;
 
+typedef enum
+{
+	RF_REVERSE  = 1,    //Lower when stood on
+	RF_SPINDASH = 1<<1, //Require spindash to move
+	RF_DYNAMIC  = 1<<2, //Dynamically sinking platform
+} raiseflag_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+	fixed_t floorbottom;
+	fixed_t ceilingbottom;
+	fixed_t floortop;
+	fixed_t ceilingtop;
+	fixed_t basespeed;
+	fixed_t speed;
+	INT32 direction; //1 = up, -1 = down
+	fixed_t extraspeed; //For dynamically sinking platform
+	UINT8 shaketimer; //For dynamically sinking platform
+	UINT8 flags;
+} raise_t;
+
 #define ELEVATORSPEED (FRACUNIT*4)
 #define FLOORSPEED (FRACUNIT)
 
@@ -359,7 +383,7 @@ void T_ThwompSector(levelspecthink_t *thwomp);
 void T_NoEnemiesSector(levelspecthink_t *nobaddies);
 void T_EachTimeThinker(levelspecthink_t *eachtime);
 void T_CameraScanner(elevator_t *elevator);
-void T_RaiseSector(levelspecthink_t *sraise);
+void T_RaiseSector(raise_t *raise);
 
 typedef struct
 {

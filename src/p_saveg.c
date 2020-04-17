@@ -1659,6 +1659,28 @@ static void SaveSpecialLevelThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 }
 
+// SaveRaiseThinker
+//
+// Saves a raise_t thinker
+//
+static void SaveRaiseThinker(const thinker_t *th, const UINT8 type)
+{
+	const raise_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEFIXED(save_p, ht->floorbottom);
+	WRITEFIXED(save_p, ht->ceilingbottom);
+	WRITEFIXED(save_p, ht->floortop);
+	WRITEFIXED(save_p, ht->ceilingtop);
+	WRITEFIXED(save_p, ht->basespeed);
+	WRITEFIXED(save_p, ht->speed);
+	WRITEINT32(save_p, ht->direction);
+	WRITEFIXED(save_p, ht->extraspeed);
+	WRITEUINT8(save_p, ht->shaketimer);
+	WRITEUINT8(save_p, ht->flags);
+}
+
 //
 // SaveCeilingThinker
 //
@@ -2237,7 +2259,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_RaiseSector)
 			{
-				SaveSpecialLevelThinker(th, tc_raisesector);
+				SaveRaiseThinker(th, tc_raisesector);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_CameraScanner)
@@ -2767,6 +2789,29 @@ static thinker_t* LoadSpecialLevelThinker(actionf_p1 thinker, UINT8 floorOrCeili
 			ht->sector->floordata = ht;
 	}
 
+	return &ht->thinker;
+}
+
+// LoadRaiseThinker
+//
+// Loads a raise_t from a save game
+//
+static thinker_t* LoadRaiseThinker(actionf_p1 thinker)
+{
+	raise_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->floorbottom = READFIXED(save_p);
+	ht->ceilingbottom = READFIXED(save_p);
+	ht->floortop = READFIXED(save_p);
+	ht->ceilingtop = READFIXED(save_p);
+	ht->basespeed = READFIXED(save_p);
+	ht->speed = READFIXED(save_p);
+	ht->direction = READINT32(save_p);
+	ht->extraspeed = READFIXED(save_p);
+	ht->shaketimer = READUINT8(save_p);
+	ht->flags = READUINT8(save_p);
 	return &ht->thinker;
 }
 
@@ -3448,7 +3493,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_raisesector:
-					th = LoadSpecialLevelThinker((actionf_p1)T_RaiseSector, 0);
+					th = LoadRaiseThinker((actionf_p1)T_RaiseSector);
 					break;
 
 				/// \todo rewrite all the code that uses an elevator_t but isn't an elevator

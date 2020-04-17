@@ -6042,83 +6042,56 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
   */
 static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline)
 {
-	levelspecthink_t *raise;
+	raise_t *raise;
 
 	raise = Z_Calloc(sizeof (*raise), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &raise->thinker);
 
 	raise->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
-	if (sourceline->flags & ML_BLOCKMONSTERS)
-		raise->vars[0] = 1;
-	else
-		raise->vars[0] = 0;
-
-	// set up the fields
+	raise->sourceline = sourceline;
 	raise->sector = sec;
 
-	// Require a spindash to activate
+	raise->ceilingtop = P_FindHighestCeilingSurrounding(sec);
+	raise->floortop = raise->ceilingtop - (sec->ceilingheight - sec->floorheight);
+	raise->ceilingbottom = P_FindLowestCeilingSurrounding(sec);
+	raise->floorbottom = raise->ceilingbottom - (sec->ceilingheight - sec->floorheight);
+
+	raise->basespeed =  FixedDiv(P_AproxDistance(sourceline->dx, sourceline->dy), 4*FRACUNIT);
+	raise->speed = raise->basespeed;
+
+	if (sourceline->flags & ML_BLOCKMONSTERS)
+		raise->flags |= RF_REVERSE;
 	if (sourceline->flags & ML_NOCLIMB)
-		raise->vars[1] = 1;
-	else
-		raise->vars[1] = 0;
-
-	raise->vars[2] = P_AproxDistance(sourceline->dx, sourceline->dy);
-	raise->vars[2] = FixedDiv(raise->vars[2], 4*FRACUNIT);
-	raise->vars[3] = raise->vars[2];
-
-	raise->vars[5] = P_FindHighestCeilingSurrounding(sec);
-	raise->vars[4] = raise->vars[5]
-		- (sec->ceilingheight - sec->floorheight);
-
-	raise->vars[7] = P_FindLowestCeilingSurrounding(sec);
-	raise->vars[6] = raise->vars[7]
-		- (sec->ceilingheight - sec->floorheight);
-
-	raise->sourceline = sourceline;
+		raise->flags |= RF_SPINDASH;
 }
 
 static void P_AddAirbob(sector_t *sec, line_t *sourceline, boolean noadjust, boolean dynamic)
 {
-	levelspecthink_t *airbob;
+	raise_t *airbob;
 
 	airbob = Z_Calloc(sizeof (*airbob), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &airbob->thinker);
 
 	airbob->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
-	// set up the fields
+	airbob->sourceline = sourceline;
 	airbob->sector = sec;
 
-	// Require a spindash to activate
-	if (sourceline->flags & ML_NOCLIMB)
-		airbob->vars[1] = 1;
-	else
-		airbob->vars[1] = 0;
+	airbob->ceilingtop = sec->ceilingheight;
+	airbob->floortop = airbob->ceilingtop - (sec->ceilingheight - sec->floorheight);
+	airbob->ceilingbottom = sec->ceilingheight - (noadjust ? 16*FRACUNIT : P_AproxDistance(sourceline->dx, sourceline->dy));
+	airbob->floorbottom = airbob->ceilingbottom - (sec->ceilingheight - sec->floorheight);
 
-	airbob->vars[2] = FRACUNIT;
-
-	if (noadjust)
-		airbob->vars[7] = airbob->sector->ceilingheight-16*FRACUNIT;
-	else
-		airbob->vars[7] = airbob->sector->ceilingheight - P_AproxDistance(sourceline->dx, sourceline->dy);
-	airbob->vars[6] = airbob->vars[7]
-		- (sec->ceilingheight - sec->floorheight);
-
-	airbob->vars[3] = airbob->vars[2];
+	airbob->basespeed = FRACUNIT;
+	airbob->speed = airbob->basespeed;
 
 	if (sourceline->flags & ML_BLOCKMONSTERS)
-		airbob->vars[0] = 1;
-	else
-		airbob->vars[0] = 0;
-
-	airbob->vars[5] = sec->ceilingheight;
-	airbob->vars[4] = airbob->vars[5]
-			- (sec->ceilingheight - sec->floorheight);
-
-	airbob->vars[9] = dynamic ? 1 : 0;
-
-	airbob->sourceline = sourceline;
+		airbob->flags |= RF_REVERSE;
+	if (sourceline->flags & ML_NOCLIMB)
+		airbob->flags |= RF_SPINDASH;
+	if (dynamic)
+		airbob->flags |= RF_DYNAMIC;
 }
 
 /** Adds a thwomp thinker.
