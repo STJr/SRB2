@@ -1165,7 +1165,6 @@ static void P_NetUnArchiveWorld(void)
 			for (j = 0; j < ncount; j++)
 				sectors[i].tags.tags[j] = READINT16(get);
 		}
-			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
 		if (diff3 & SD_TAGLIST)
 		{
 			sectors[i].firsttag = READINT32(get);
