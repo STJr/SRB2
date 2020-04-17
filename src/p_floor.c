@@ -30,146 +30,127 @@
 // Move a plane (floor or ceiling) and check for crushing
 //
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crush,
-	INT32 floorOrCeiling, INT32 direction)
+	boolean ceiling, INT32 direction)
 {
-	boolean flag;
 	fixed_t lastpos;
 	fixed_t destheight; // used to keep floors/ceilings from moving through each other
 	sector->moved = true;
 
-	switch (floorOrCeiling)
+	if (ceiling)
 	{
-		case 0:
-			// moving a floor
-			switch (direction)
-			{
-				case -1:
-					// Moving a floor down
-					if (sector->floorheight - speed < dest)
+		lastpos = sector->ceilingheight;
+		// moving a ceiling
+		switch (direction)
+		{
+			case -1:
+				// moving a ceiling down
+				// keep ceiling from moving through floors
+				destheight = (dest > sector->floorheight) ? dest : sector->floorheight;
+				if (sector->ceilingheight - speed < destheight)
+				{
+					sector->ceilingheight = destheight;
+					if (P_CheckSector(sector, crush))
 					{
-						lastpos = sector->floorheight;
-						sector->floorheight = dest;
-						flag = P_CheckSector(sector, crush);
-						if (flag && sector->numattached)
-						{
-							sector->floorheight = lastpos;
-							P_CheckSector(sector, crush);
-						}
-						return pastdest;
+						sector->ceilingheight = lastpos;
+						P_CheckSector(sector, crush);
 					}
-					else
+					return pastdest;
+				}
+				else
+				{
+					// crushing is possible
+					sector->ceilingheight -= speed;
+					if (P_CheckSector(sector, crush))
 					{
-						lastpos = sector->floorheight;
-						sector->floorheight -= speed;
-						flag = P_CheckSector(sector, crush);
-						if (flag && sector->numattached)
-						{
-							sector->floorheight = lastpos;
-							P_CheckSector(sector, crush);
-							return crushed;
-						}
+						sector->ceilingheight = lastpos;
+						P_CheckSector(sector, crush);
+						return crushed;
 					}
-					break;
+				}
+				break;
 
-				case 1:
-					// Moving a floor up
-					// keep floor from moving through ceilings
-					destheight = (dest < sector->ceilingheight) ? dest : sector->ceilingheight;
-					if (sector->floorheight + speed > destheight)
+			case 1:
+				// moving a ceiling up
+				if (sector->ceilingheight + speed > dest)
+				{
+					sector->ceilingheight = dest;
+					if (P_CheckSector(sector, crush) && sector->numattached)
 					{
-						lastpos = sector->floorheight;
-						sector->floorheight = destheight;
-						flag = P_CheckSector(sector, crush);
-						if (flag)
-						{
-							sector->floorheight = lastpos;
-							P_CheckSector(sector, crush);
-						}
-						return pastdest;
+						sector->ceilingheight = lastpos;
+						P_CheckSector(sector, crush);
 					}
-					else
+					return pastdest;
+				}
+				else
+				{
+					sector->ceilingheight += speed;
+					if (P_CheckSector(sector, crush) && sector->numattached)
 					{
-						// crushing is possible
-						lastpos = sector->floorheight;
-						sector->floorheight += speed;
-						flag = P_CheckSector(sector, crush);
-						if (flag)
-						{
-							sector->floorheight = lastpos;
-							P_CheckSector(sector, crush);
-							return crushed;
-						}
+						sector->ceilingheight = lastpos;
+						P_CheckSector(sector, crush);
+						return crushed;
 					}
-					break;
-			}
-			break;
+				}
+				break;
+		}
+	}
+	else
+	{
+		lastpos = sector->floorheight;
+		// moving a floor
+		switch (direction)
+		{
+			case -1:
+				// Moving a floor down
+				if (sector->floorheight - speed < dest)
+				{
+					sector->floorheight = dest;
+					if (P_CheckSector(sector, crush) && sector->numattached)
+					{
+						sector->floorheight = lastpos;
+						P_CheckSector(sector, crush);
+					}
+					return pastdest;
+				}
+				else
+				{
+					sector->floorheight -= speed;
+					if (P_CheckSector(sector, crush) && sector->numattached)
+					{
+						sector->floorheight = lastpos;
+						P_CheckSector(sector, crush);
+						return crushed;
+					}
+				}
+				break;
 
-		case 1:
-			// moving a ceiling
-			switch (direction)
-			{
-				case -1:
-					// moving a ceiling down
-					// keep ceiling from moving through floors
-					destheight = (dest > sector->floorheight) ? dest : sector->floorheight;
-					if (sector->ceilingheight - speed < destheight)
+			case 1:
+				// Moving a floor up
+				// keep floor from moving through ceilings
+				destheight = (dest < sector->ceilingheight) ? dest : sector->ceilingheight;
+				if (sector->floorheight + speed > destheight)
+				{
+					sector->floorheight = destheight;
+					if (P_CheckSector(sector, crush))
 					{
-						lastpos = sector->ceilingheight;
-						sector->ceilingheight = destheight;
-						flag = P_CheckSector(sector, crush);
-
-						if (flag)
-						{
-							sector->ceilingheight = lastpos;
-							P_CheckSector(sector, crush);
-						}
-						return pastdest;
+						sector->floorheight = lastpos;
+						P_CheckSector(sector, crush);
 					}
-					else
+					return pastdest;
+				}
+				else
+				{
+					// crushing is possible
+					sector->floorheight += speed;
+					if (P_CheckSector(sector, crush))
 					{
-						// crushing is possible
-						lastpos = sector->ceilingheight;
-						sector->ceilingheight -= speed;
-						flag = P_CheckSector(sector, crush);
-
-						if (flag)
-						{
-							sector->ceilingheight = lastpos;
-							P_CheckSector(sector, crush);
-							return crushed;
-						}
+						sector->floorheight = lastpos;
+						P_CheckSector(sector, crush);
+						return crushed;
 					}
-					break;
-
-				case 1:
-					// moving a ceiling up
-					if (sector->ceilingheight + speed > dest)
-					{
-						lastpos = sector->ceilingheight;
-						sector->ceilingheight = dest;
-						flag = P_CheckSector(sector, crush);
-						if (flag && sector->numattached)
-						{
-							sector->ceilingheight = lastpos;
-							P_CheckSector(sector, crush);
-						}
-						return pastdest;
-					}
-					else
-					{
-						lastpos = sector->ceilingheight;
-						sector->ceilingheight += speed;
-						flag = P_CheckSector(sector, crush);
-						if (flag && sector->numattached)
-						{
-							sector->ceilingheight = lastpos;
-							P_CheckSector(sector, crush);
-							return crushed;
-						}
-					}
-					break;
-			}
-			break;
+				}
+				break;
+		}
 	}
 
 	return ok;
@@ -192,7 +173,7 @@ void T_MoveFloor(floormove_t *movefloor)
 	res = T_MovePlane(movefloor->sector,
 	                  movefloor->speed,
 	                  movefloor->floordestheight,
-	                  movefloor->crush, 0, movefloor->direction);
+	                  movefloor->crush, false, movefloor->direction);
 
 	if (movefloor->type == bounceFloor)
 	{
@@ -385,7 +366,7 @@ void T_MoveElevator(elevator_t *elevator)
 			elevator->speed,
 			elevator->ceilingdestheight,
 			elevator->distance,
-			1,                          // move floor
+			true,                          // move ceiling
 			elevator->direction
 		);
 
@@ -395,7 +376,7 @@ void T_MoveElevator(elevator_t *elevator)
 			elevator->speed,
 			elevator->floordestheight,
 			elevator->distance,
-			0,                        // move ceiling
+			false,                        // move floor
 			elevator->direction
 		);
 
@@ -447,7 +428,7 @@ void T_MoveElevator(elevator_t *elevator)
 			elevator->speed,
 			elevator->floordestheight,
 			elevator->distance,
-			0,                          // move ceiling
+			false,                          // move floor
 			elevator->direction
 		);
 
@@ -459,7 +440,7 @@ void T_MoveElevator(elevator_t *elevator)
 				elevator->speed,
 				elevator->ceilingdestheight,
 				elevator->distance,
-				1,                        // move floor
+				true,                        // move ceiling
 				elevator->direction
 			);
 		}
@@ -739,8 +720,8 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 
 		if (remove)
 		{
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, false, true, -1); // update things on ceiling
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, false, false, -1); // update things on floor
 			P_RecalcPrecipInSector(actionsector);
 			bouncer->sector->ceilingdata = NULL;
 			bouncer->sector->floordata = NULL;
@@ -752,9 +733,9 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		}
 
 		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
-			70*FRACUNIT, 0, 1, -1); // move ceiling
+			70*FRACUNIT, false, true, -1); // move ceiling
 		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
-			0, 0, -1); // move floor
+			false, false, -1); // move floor
 
 		bouncer->sector->floorspeed = -bouncer->speed/2;
 		bouncer->sector->ceilspeed = 42;
@@ -790,8 +771,8 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		{
 			bouncer->sector->floorheight = bouncer->floorwasheight;
 			bouncer->sector->ceilingheight = bouncer->ceilingwasheight;
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, false, true, -1); // update things on ceiling
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, false, false, -1); // update things on floor
 			bouncer->sector->ceilingdata = NULL;
 			bouncer->sector->floordata = NULL;
 			bouncer->sector->floorspeed = 0;
@@ -940,8 +921,8 @@ void T_StartCrumble(elevator_t *elevator)
 				  elevator->sector,
 				  elevator->speed,
 				  dest,
-				  0,
-				  1, // move floor
+				  false,
+				  true, // move ceiling
 				  elevator->direction
 				);
 
@@ -955,8 +936,8 @@ void T_StartCrumble(elevator_t *elevator)
 					elevator->sector,
 					elevator->speed,
 					dest,
-					0,
-					0,                        // move ceiling
+					false,
+					false, // move floor
 					elevator->direction
 				);
 
@@ -1007,8 +988,8 @@ void T_MarioBlock(levelspecthink_t *block)
 	  block->sector,
 	  block->speed,
 	  block->sector->ceilingheight + 70*FRACUNIT * block->direction,
-	  0,
-	  1, // move floor
+	  false,
+	  true, // move ceiling
 	  block->direction
 	);
 
@@ -1017,8 +998,8 @@ void T_MarioBlock(levelspecthink_t *block)
 	  block->sector,
 	  block->speed,
 	  block->sector->floorheight + 70*FRACUNIT * block->direction,
-	  0,
-	  0, // move ceiling
+	  false,
+	  false, // move floor
 	  block->direction
 	);
 
@@ -1228,8 +1209,8 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 			thwomp->sector,         // sector
 			thwomp->speed,          // speed
 			thwomp->floorwasheight, // dest
-			0,                      // crush
-			0,                      // floor or ceiling (0 for floor)
+			false,                      // crush
+			false,                  // ceiling?
 			thwomp->direction       // direction
 		);
 
@@ -1239,8 +1220,8 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 				thwomp->sector,           // sector
 				thwomp->speed,            // speed
 				thwomp->ceilingwasheight, // dest
-				0,                        // crush
-				1,                        // floor or ceiling (1 for ceiling)
+				false,                        // crush
+				true,                     // ceiling?
 				thwomp->direction         // direction
 			);
 
@@ -1268,8 +1249,8 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 			thwomp->speed,    // speed
 			P_FloorzAtPos(thwompx, thwompy, thwomp->sector->floorheight,
 				thwomp->sector->ceilingheight - thwomp->sector->floorheight), // dest
-			0,                  // crush
-			0,                  // floor or ceiling (0 for floor)
+			false,              // crush
+			false,              // ceiling?
 			thwomp->direction // direction
 		);
 
@@ -1283,8 +1264,8 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 					- (thwomp->sector->floorheight + thwomp->speed))
 					+ (thwomp->sector->ceilingheight
 					- (thwomp->sector->floorheight + thwomp->speed/2)), // dest
-				0,                  // crush
-				1,                  // floor or ceiling (1 for ceiling)
+				false,             // crush
+				true,              // ceiling?
 				thwomp->direction // direction
 			);
 
@@ -1786,8 +1767,8 @@ void T_RaiseSector(raise_t *raise)
 		raise->sector,      // sector
 		speed,              // speed
 		ceilingdestination, // dest
-		0,                  // crush
-		1,                  // floor or ceiling (1 for ceiling)
+		false,              // crush
+		true,               // ceiling?
 		direction           // direction
 	);
 
@@ -1797,8 +1778,8 @@ void T_RaiseSector(raise_t *raise)
 			raise->sector,    // sector
 			speed,            // speed
 			floordestination, // dest
-			0,                // crush
-			0,                // floor or ceiling (0 for floor)
+			false,            // crush
+			false,            // ceiling?
 			direction         // direction
 		);
 
@@ -1900,9 +1881,9 @@ void T_PlaneDisplace(planedisplace_t *pd)
 	}
 
 	if (pd->type == pd_floor || pd->type == pd_both)
-		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, 0, 0, direction); // move floor
+		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, false, false, direction); // move floor
 	if (pd->type == pd_ceiling || pd->type == pd_both)
-		T_MovePlane(target, INT32_MAX/2, target->ceilingheight+diff, 0, 1, direction); // move ceiling
+		T_MovePlane(target, INT32_MAX/2, target->ceilingheight+diff, false, true, direction); // move ceiling
 
 	pd->last_height = control->floorheight;
 }

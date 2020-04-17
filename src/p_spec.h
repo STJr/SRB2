@@ -368,7 +368,7 @@ typedef enum
 } result_e;
 
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crush,
-	INT32 floorOrCeiling, INT32 direction);
+	boolean ceiling, INT32 direction);
 INT32 EV_DoFloor(line_t *line, floor_e floortype);
 INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed);
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover);
