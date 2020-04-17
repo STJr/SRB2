@@ -1445,7 +1445,6 @@ void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean e
 static inline void P_InitTagLists(void)
 {
 	register size_t i;
-	size_t j;
 
 	for (i = numsectors - 1; i != (size_t)-1; i--)
 	{
@@ -1461,27 +1460,7 @@ static inline void P_InitTagLists(void)
 		lines[j].firsttag = (INT32)i;
 	}
 
-	for (i = 0; i < MAXTAGS; i++)
-	{
-		tags_sectors[i] = NULL;
-		tags_lines[i] = NULL;
-		tags_mapthings[i] = NULL;
-	}
-	for (i = 0; i < numsectors; i++)
-	{
-		for (j = 0; j < sectors[i].tags.count; j++)
-			Taglist_AddToSectors(sectors[i].tags.tags[j], i);
-	}
-	for (i = 0; i < numlines; i++)
-	{
-		for (j = 0; j < lines[i].tags.count; j++)
-			Taglist_AddToLines(lines[i].tags.tags[j], i);
-	}
-	for (i = 0; i < nummapthings; i++)
-	{
-		for (j = 0; j < mapthings[i].tags.count; j++)
-			Taglist_AddToMapthings(mapthings[i].tags.tags[j], i);
-	}
+	Taglist_InitGlobalTables();
 }
 
 /** Finds minimum light from an adjacent sector.

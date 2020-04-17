@@ -63,7 +63,7 @@ boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2)
 	return true;
 }
 
-void Taglist_AddToSectors (const mtag_t tag, const size_t itemid)
+static void Taglist_AddToSectors (const mtag_t tag, const size_t itemid)
 {
 	taggroup_t* tagelems;
 
@@ -79,7 +79,7 @@ void Taglist_AddToSectors (const mtag_t tag, const size_t itemid)
 	tagelems->elements[tagelems->count - 1] = itemid;
 }
 
-void Taglist_AddToLines (const mtag_t tag, const size_t itemid)
+static void Taglist_AddToLines (const mtag_t tag, const size_t itemid)
 {
 	taggroup_t* tagelems;
 
@@ -95,7 +95,7 @@ void Taglist_AddToLines (const mtag_t tag, const size_t itemid)
 	tagelems->elements[tagelems->count - 1] = itemid;
 }
 
-void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
+static void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
 {
 	taggroup_t* tagelems;
 
@@ -109,6 +109,33 @@ void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
 	tagelems->count++;
 	tagelems->elements = Z_Realloc(tagelems->elements, tagelems->count * sizeof(size_t), PU_LEVEL, NULL);
 	tagelems->elements[tagelems->count - 1] = itemid;
+}
+
+void Taglist_InitGlobalTables(void)
+{
+	size_t i, j;
+
+	for (i = 0; i < MAXTAGS; i++)
+	{
+		tags_sectors[i] = NULL;
+		tags_lines[i] = NULL;
+		tags_mapthings[i] = NULL;
+	}
+	for (i = 0; i < numsectors; i++)
+	{
+		for (j = 0; j < sectors[i].tags.count; j++)
+			Taglist_AddToSectors(sectors[i].tags.tags[j], i);
+	}
+	for (i = 0; i < numlines; i++)
+	{
+		for (j = 0; j < lines[i].tags.count; j++)
+			Taglist_AddToLines(lines[i].tags.tags[j], i);
+	}
+	for (i = 0; i < nummapthings; i++)
+	{
+		for (j = 0; j < mapthings[i].tags.count; j++)
+			Taglist_AddToMapthings(mapthings[i].tags.tags[j], i);
+	}
 }
 
 INT32 Tag_Iterate_Sectors (const mtag_t tag, const size_t p)

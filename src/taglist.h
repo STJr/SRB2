@@ -33,9 +33,7 @@ taggroup_t* tags_sectors[MAXTAGS + 1];
 taggroup_t* tags_lines[MAXTAGS + 1];
 taggroup_t* tags_mapthings[MAXTAGS + 1];
 
-void Taglist_AddToSectors (const mtag_t tag, const size_t itemid);
-void Taglist_AddToLines (const mtag_t tag, const size_t itemid);
-void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid);
+void Taglist_InitGlobalTables(void);
 
 INT32 Tag_Iterate_Sectors (const mtag_t tag, const size_t p);
 INT32 Tag_Iterate_Lines (const mtag_t tag, const size_t p);
