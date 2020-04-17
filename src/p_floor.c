@@ -1854,7 +1854,10 @@ void T_RaiseSector(raise_t *raise)
 	sector_t *sector;
 	INT32 i;
 	boolean playeronme = false, active = false;
+	boolean moveUp;
 	fixed_t ceilingdestination, floordestination;
+	fixed_t origspeed;
+	fixed_t distToNearestEndpoint;
 	result_e res = 0;
 
 	if (raise->sector->crumblestate >= 3 || raise->sector->ceilingdata)
@@ -1933,99 +1936,34 @@ void T_RaiseSector(raise_t *raise)
 	else // Air bobbing platform (not a Dynamically Sinking Platform^tm)
 		active = playeronme;
 
-	if (active)
+	raise->speed = raise->basespeed;
+	if (!active)
+		raise->speed /= 2;
+
+	moveUp = active ^ (raise->flags & RF_REVERSE);
+	ceilingdestination = moveUp ? raise->ceilingtop : raise->ceilingbottom;
+	floordestination = moveUp ? raise->floortop : raise->floorbottom;
+
+	if ((moveUp && raise->sector->ceilingheight >= ceilingdestination)
+		|| (!moveUp && raise->sector->ceilingheight <= ceilingdestination))
 	{
-		raise->speed = raise->basespeed;
-
-		if (raise->flags & RF_REVERSE)
-		{
-			if (raise->sector->ceilingheight <= raise->ceilingbottom)
-			{
-				raise->sector->floorheight = raise->ceilingbottom - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->ceilingbottom;
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-
-			raise->direction = -1;
-			ceilingdestination = raise->ceilingbottom;
-			floordestination = raise->floorbottom;
-		}
-		else // elevateUp
-		{
-			if (raise->sector->ceilingheight >= raise->ceilingtop)
-			{
-				raise->sector->floorheight = raise->ceilingtop - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->ceilingtop;
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-
-			raise->direction = 1;
-			ceilingdestination = raise->ceilingtop;
-			floordestination = raise->floortop;
-		}
+		raise->sector->floorheight = ceilingdestination - (raise->sector->ceilingheight - raise->sector->floorheight);
+		raise->sector->ceilingheight = ceilingdestination;
+		raise->sector->ceilspeed = 0;
+		raise->sector->floorspeed = 0;
+		return;
 	}
-	else
-	{
-		raise->speed = raise->basespeed/2;
+	raise->direction = moveUp ? 1 : -1;
 
-		if (raise->flags & RF_REVERSE)
-		{
-			if (raise->sector->ceilingheight >= raise->ceilingtop)
-			{
-				raise->sector->floorheight = raise->ceilingtop - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->ceilingtop;
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-			raise->direction = 1;
-			ceilingdestination = raise->ceilingtop;
-			floordestination = raise->floortop;
-		}
-		else // elevateUp
-		{
-			if (raise->sector->ceilingheight <= raise->ceilingbottom)
-			{
-				raise->sector->floorheight = raise->ceilingbottom - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->ceilingbottom;
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-			raise->direction = -1;
-			ceilingdestination = raise->ceilingbottom;
-			floordestination = raise->floorbottom;
-		}
-	}
+	origspeed = raise->speed;
+	// Speed up as you get closer to the middle, then slow down again
+	distToNearestEndpoint = min(raise->sector->ceilingheight - raise->ceilingbottom, raise->ceilingtop - raise->sector->ceilingheight);
+	raise->speed = FixedMul(raise->speed, FixedDiv(distToNearestEndpoint, (raise->ceilingtop - raise->ceilingbottom) >> 5));
 
-	if ((raise->sector->ceilingheight - raise->ceilingbottom)
-		< (raise->ceilingtop - raise->sector->ceilingheight))
-	{
-		fixed_t origspeed = raise->speed;
-
-		// Slow down as you get closer to the bottom
-		raise->speed = FixedMul(raise->speed,FixedDiv(raise->sector->ceilingheight - raise->ceilingbottom, (raise->ceilingtop - raise->ceilingbottom)>>5));
-
-		if (raise->speed <= origspeed/16)
-			raise->speed = origspeed/16;
-		else if (raise->speed > origspeed)
-			raise->speed = origspeed;
-	}
-	else
-	{
-		fixed_t origspeed = raise->speed;
-		// Slow down as you get closer to the top
-		raise->speed = FixedMul(raise->speed,FixedDiv(raise->ceilingtop - raise->sector->ceilingheight, (raise->ceilingtop - raise->ceilingbottom)>>5));
-
-		if (raise->speed <= origspeed/16)
-			raise->speed = origspeed/16;
-		else if (raise->speed > origspeed)
-			raise->speed = origspeed;
-	}
+	if (raise->speed <= origspeed/16)
+		raise->speed = origspeed/16;
+	else if (raise->speed > origspeed)
+		raise->speed = origspeed;
 
 	raise->speed += raise->extraspeed;
 
