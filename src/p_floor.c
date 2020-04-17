@@ -1047,40 +1047,37 @@ void T_MarioBlock(levelspecthink_t *block)
 #undef low
 }
 
-void T_FloatSector(levelspecthink_t *floater)
+void T_FloatSector(floatthink_t *floater)
 {
 	fixed_t cheeseheight;
+	fixed_t waterheight;
 	sector_t *actionsector;
 	INT32 secnum;
 
-	cheeseheight = (floater->sector->ceilingheight + floater->sector->floorheight)>>1;
-
 	// Just find the first sector with the tag.
 	// Doesn't work with multiple sectors that have different floor/ceiling heights.
-	secnum = P_FindSectorFromTag((INT16)floater->vars[0], -1);
+	secnum = P_FindSectorFromTag(floater->tag, -1);
+	if (secnum <= 0)
+		return;
+	actionsector = &sectors[secnum];
 
-	if (secnum > 0)
-		actionsector = &sectors[secnum];
-	else
-		actionsector = NULL;
+	cheeseheight = (floater->sector->ceilingheight + floater->sector->floorheight)>>1;
 
-	if (actionsector)
-	{
-		//boolean floatanyway = false; // Ignore the crumblestate setting.
-		fixed_t waterheight = P_SectorCheckWater(actionsector, floater->sector); // find the highest suitable water block around
+	//boolean floatanyway = false; // Ignore the crumblestate setting.
+	waterheight = P_SectorCheckWater(actionsector, floater->sector); // find the highest suitable water block around
 
-		if (waterheight == cheeseheight) // same height, no floating needed
-			;
-		else if (floater->sector->floorheight == actionsector->floorheight && waterheight < cheeseheight) // too low
-			;
-		else if (floater->sector->ceilingheight == actionsector->ceilingheight && waterheight > cheeseheight) // too high
-			;
-		// we have something to float in! Or we're for some reason above the ground, let's fall anyway
-		else if (floater->sector->crumblestate == CRUMBLE_NONE || floater->sector->crumblestate >= CRUMBLE_FALL/* || floatanyway*/)
-			EV_BounceSector(floater->sector, FRACUNIT, floater->sourceline);
+	if (waterheight == cheeseheight) // same height, no floating needed
+		return;
 
-		P_RecalcPrecipInSector(actionsector);
-	}
+	if (floater->sector->floorheight == actionsector->floorheight && waterheight < cheeseheight) // too low
+		return;
+
+	if (floater->sector->ceilingheight == actionsector->ceilingheight && waterheight > cheeseheight) // too high
+		return;
+
+	// we have something to float in! Or we're for some reason above the ground, let's fall anyway
+	if (floater->sector->crumblestate == CRUMBLE_NONE || floater->sector->crumblestate >= CRUMBLE_FALL/* || floatanyway*/)
+		EV_BounceSector(floater->sector, FRACUNIT, floater->sourceline);
 }
 
 static mobj_t *SearchMarioNode(msecnode_t *node)

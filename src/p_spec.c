@@ -114,7 +114,7 @@ static void P_ResetColormapFader(sector_t *sector);
 static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, extracolormap_t *dest_exc,
 	boolean ticbased, INT32 duration);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
-static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
+static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
@@ -5927,9 +5927,9 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
   * \sa P_SpawnSpecials, T_FloatSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
+static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline)
 {
-	levelspecthink_t *floater;
+	floatthink_t *floater;
 
 	// create and initialize new thinker
 	floater = Z_Calloc(sizeof (*floater), PU_LEVSPEC, NULL);
@@ -5938,7 +5938,7 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
 	floater->thinker.function.acp1 = (actionf_p1)T_FloatSector;
 
 	floater->sector = sec;
-	floater->vars[0] = tag;
+	floater->tag = (INT16)tag;
 	floater->sourceline = sourceline;
 }
 

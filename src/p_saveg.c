@@ -1658,6 +1658,20 @@ static void SaveSpecialLevelThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 }
 
+//
+// SaveFloatThinker
+//
+// Saves a floatthink_t thinker
+//
+static void SaveFloatThinker(const thinker_t *th, const UINT8 type)
+{
+	const floatthink_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEINT16(save_p, ht->tag);
+}
+
 // SaveEachTimeThinker
 //
 // Loads a eachtime_t from a save game
@@ -2317,7 +2331,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_FloatSector)
 			{
-				SaveSpecialLevelThinker(th, tc_floatsector);
+				SaveFloatThinker(th, tc_floatsector);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_LaserFlash)
@@ -2797,6 +2811,20 @@ static thinker_t* LoadSpecialLevelThinker(actionf_p1 thinker, UINT8 floorOrCeili
 			ht->sector->floordata = ht;
 	}
 
+	return &ht->thinker;
+}
+
+// LoadFloatThinker
+//
+// Loads a floatthink_t from a save game
+//
+static thinker_t* LoadFloatThinker(actionf_p1 thinker)
+{
+	floatthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->tag = READINT16(save_p);
 	return &ht->thinker;
 }
 
@@ -3542,7 +3570,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_floatsector:
-					th = LoadSpecialLevelThinker((actionf_p1)T_FloatSector, 0);
+					th = LoadFloatThinker((actionf_p1)T_FloatSector);
 					break;
 
 				case tc_laserflash:

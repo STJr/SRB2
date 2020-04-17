@@ -323,6 +323,14 @@ typedef struct
 typedef struct
 {
 	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+	INT16 tag;
+} floatthink_t;
+
+typedef struct
+{
+	thinker_t thinker;
 	line_t *sourceline; // Source line of the thinker
 	boolean playersInArea[MAXPLAYERS];
 	boolean playersOnArea[MAXPLAYERS];
@@ -381,7 +389,7 @@ void T_ContinuousFalling(levelspecthink_t *faller);
 void T_BounceCheese(levelspecthink_t *bouncer);
 void T_StartCrumble(elevator_t *elevator);
 void T_MarioBlock(levelspecthink_t *block);
-void T_FloatSector(levelspecthink_t *floater);
+void T_FloatSector(floatthink_t *floater);
 void T_MarioBlockChecker(levelspecthink_t *block);
 void T_ThwompSector(levelspecthink_t *thwomp);
 void T_NoEnemiesSector(levelspecthink_t *nobaddies);
