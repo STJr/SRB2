@@ -23,6 +23,8 @@ boolean Tag_Share (const taglist_t* list1, const taglist_t* list2);
 
 boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2);
 
+void Tag_SectorFSet (const size_t id, const mtag_t tag);
+
 typedef struct
 {
 	size_t *elements;

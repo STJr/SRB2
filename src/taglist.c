@@ -111,6 +111,12 @@ static void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
 	tagelems->elements[tagelems->count - 1] = itemid;
 }
 
+void Tag_SectorFSet (const size_t id, const mtag_t tag)
+{
+	sector_t* sec = &sectors[id];
+	Tag_FSet(&sec->tags, tag);
+}
+
 void Taglist_InitGlobalTables(void)
 {
 	size_t i, j;
