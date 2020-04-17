@@ -456,14 +456,14 @@ static void R_AddLine(seg_t *line)
 		if (portalrender < cv_maxportals.value)
 		{
 			size_t p;
-			INT16 tag = line->linedef->tag;
+			mtag_t tag = Tag_FGet(&line->linedef->tags);
 			INT32 li1 = line->linedef-lines;
 			INT32 li2;
 
 			for (p = 0; (li2 = Tag_Iterate_Lines(tag, p)) >= 0; p++)
 			{
 				// Skip invalid lines.
-				if ((tag != lines[li2].tag) || (lines[li1].special != lines[li2].special) || (li1 == li2))
+				if ((tag != Tag_FGet(&lines[li2].tags)) || (lines[li1].special != lines[li2].special) || (li1 == li2))
 					continue;
 
 				Portal_Add2Lines(li1, li2, x1, x2);
