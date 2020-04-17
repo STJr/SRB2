@@ -4622,16 +4622,18 @@ static boolean P_Boss4MoveCage(mobj_t *mobj, fixed_t delta)
 	const UINT16 tag = 65534 + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0);
 	INT32 snum;
 	sector_t *sector;
-	for (snum = sectors[tag%numsectors].firsttag; snum != -1; snum = sector->nexttag)
+	boolean gotcage = false;
+	TAG_ITER_C
+
+	TAG_ITER_SECTORS(tag, snum)
 	{
 		sector = &sectors[snum];
-		if (!Tag_Find(&sector->tags, tag))
-			continue;
 		sector->floorheight += delta;
 		sector->ceilingheight += delta;
 		P_CheckSector(sector, true);
+		gotcage = true;
 	}
-	return sectors[tag%numsectors].firsttag != -1;
+	return gotcage;
 }
 
 // Move Boss4's arms to angle
@@ -4703,22 +4705,15 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 static void P_Boss4DestroyCage(mobj_t *mobj)
 {
 	const UINT16 tag = 65534 + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0);
-	INT32 snum, next;
+	INT32 snum;
 	size_t a;
 	sector_t *sector, *rsec;
 	ffloor_t *rover;
+	TAG_ITER_C
 
-	// This will be the final iteration of sector tag.
-	// We'll destroy the tag list as we go.
-	next = sectors[tag%numsectors].firsttag;
-	sectors[tag%numsectors].firsttag = -1;
-
-	for (snum = next; snum != -1; snum = next)
+	TAG_ITER_SECTORS(tag, snum)
 	{
 		sector = &sectors[snum];
-
-		next = sector->nexttag;
-		sector->nexttag = -1;
 		if (!Tag_Find(&sector->tags, tag))
 			continue;
 		Tag_SectorFSet(sector - sectors, 0);
