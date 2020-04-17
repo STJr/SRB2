@@ -539,7 +539,7 @@ static void Polyobj_findExplicit(polyobj_t *po)
 		if (segs[i].linedef->special != POLYOBJ_EXPLICIT_LINE)
 			continue;
 
-		Polyobj_GetInfo(segs[i].linedef->tag, &polyID, &parentID, NULL);
+		Polyobj_GetInfo(Tag_FGet(&segs[i].linedef->tags), &polyID, &parentID, NULL);
 
 		if (polyID == po->id && parentID > 0)
 		{
@@ -622,7 +622,7 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		if (seg->linedef->special != POLYOBJ_START_LINE)
 			continue;
 
-		if (seg->linedef->tag != po->id)
+		if (Tag_FGet(&seg->linedef->tags) != po->id)
 			continue;
 
 		Polyobj_GetInfo(po->id, &poflags, &parentID, &potrans); // apply extra settings if they exist!
@@ -659,7 +659,7 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		if (po->isBad)
 			return;
 
-		Polyobj_GetInfo(po->segs[0]->linedef->tag, NULL, NULL, &parent);
+		Polyobj_GetInfo(Tag_FGet(&po->segs[0]->linedef->tags), NULL, NULL, &parent);
 		po->parent = parent;
 		if (po->parent == po->id) // do not allow a self-reference
 			po->parent = -1;
@@ -707,10 +707,11 @@ static void Polyobj_moveToSpawnSpot(mapthing_t *anchor)
 	polyobj_t *po;
 	vertex_t  dist, sspot;
 	size_t i;
+	mtag_t tag = Tag_FGet(&anchor->tags);
 
-	if (!(po = Polyobj_GetForNum(anchor->tag)))
+	if (!(po = Polyobj_GetForNum(tag)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", anchor->tag);
+		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", tag);
 		return;
 	}
 
@@ -1574,7 +1575,7 @@ void Polyobj_InitLevel(void)
 		{
 			qitem = (mobjqitem_t *)M_QueueIterator(&spawnqueue);
 
-			Polyobj_spawnPolyObj(i, qitem->mo, qitem->mo->spawnpoint->tag);
+			Polyobj_spawnPolyObj(i, qitem->mo, Tag_FGet(&qitem->mo->spawnpoint->tags));
 		}
 
 		// move polyobjects to spawn points
@@ -2943,10 +2944,11 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	polymove_t *th;
 	size_t i;
 	INT32 start;
+	mtag_t tag = Tag_FGet(&pfdata->tags);
 
-	if (!(po = Polyobj_GetForNum(pfdata->tag)))
+	if (!(po = Polyobj_GetForNum(tag)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", pfdata->tag);
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", tag);
 		return 0;
 	}
 
@@ -2969,7 +2971,7 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	po->thinker = &th->thinker;
 
 	// set fields
-	th->polyObjNum = pfdata->tag;
+	th->polyObjNum = tag;
 	th->distance   = 0;
 	th->speed      = P_AproxDistance(pfdata->dx, pfdata->dy)>>FRACBITS;
 	th->angle      = R_PointToAngle2(pfdata->v1->x, pfdata->v1->y, pfdata->v2->x, pfdata->v2->y)>>ANGLETOFINESHIFT;
@@ -2985,7 +2987,7 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	start = 0;
 	while ((po = Polyobj_GetChild(oldpo, &start)))
 	{
-		pfdata->tag = po->id;
+		Tag_FSet(&pfdata->tags, po->id);
 		EV_DoPolyObjFlag(pfdata);
 	}
 

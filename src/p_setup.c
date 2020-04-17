@@ -2841,7 +2841,7 @@ static void P_ConvertBinaryMap(void)
 		case 760:
 		case 761:
 		case 762:
-			mapthings[i].tag = mapthings[i].angle;
+			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
 			break;
 		case 780:
 			Tag_FSet(&mapthings[i].tags, mapthings[i].extrainfo);
