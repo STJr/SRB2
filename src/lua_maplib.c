@@ -94,8 +94,6 @@ enum line_e {
 	line_slopetype,
 	line_frontsector,
 	line_backsector,
-	line_firsttag,
-	line_nexttag,
 	line_text,
 	line_callcount
 };
@@ -118,8 +116,6 @@ static const char *const line_opt[] = {
 	"slopetype",
 	"frontsector",
 	"backsector",
-	"firsttag",
-	"nexttag",
 	"text",
 	"callcount",
 	NULL};
@@ -814,12 +810,6 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_backsector:
 		LUA_PushUserdata(L, line->backsector, META_SECTOR);
-		return 1;
-	case line_firsttag:
-		lua_pushinteger(L, line->firsttag);
-		return 1;
-	case line_nexttag:
-		lua_pushinteger(L, line->nexttag);
 		return 1;
 	case line_text:
 		lua_pushstring(L, line->text);
