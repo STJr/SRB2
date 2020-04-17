@@ -1581,7 +1581,7 @@ static INT32 P_HavePlayersEnteredArea(boolean *curPlayers, boolean *oldPlayers, 
 //
 // \sa P_AddEachTimeThinker
 //
-void T_EachTimeThinker(levelspecthink_t *eachtime)
+void T_EachTimeThinker(eachtime_t *eachtime)
 {
 	size_t i, j;
 	sector_t *sec = NULL;
@@ -1604,19 +1604,10 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (i & 1)
-		{
-			oldPlayersInArea[i] = eachtime->vars[i/2] & 65535;
-			oldPlayersOnArea[i] = eachtime->var2s[i/2] & 65535;
-			eachtime->vars[i/2] = 0;
-			eachtime->var2s[i/2] = 0;
-		}
-		else
-		{
-			oldPlayersInArea[i] = eachtime->vars[i/2] >> 16;
-			oldPlayersOnArea[i] = eachtime->var2s[i/2] >> 16;
-		}
-
+		oldPlayersInArea[i] = eachtime->playersInArea[i];
+		oldPlayersOnArea[i] = eachtime->playersOnArea[i];
+		eachtime->playersInArea[i] = false;
+		eachtime->playersOnArea[i] = false;
 		playersInArea[i] = false;
 		playersOnArea[i] = false;
 	}
@@ -1705,20 +1696,12 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 					if (floortouch == true && P_IsObjectOnGroundIn(players[j].mo, targetsec))
 					{
-						if (j & 1)
-							eachtime->var2s[j/2] |= 1;
-						else
-							eachtime->var2s[j/2] |= 1 << 16;
-
+						eachtime->playersOnArea[j] = true;
 						playersOnArea[j] = true;
 					}
 					else
 					{
-						if (j & 1)
-							eachtime->vars[j/2] |= 1;
-						else
-							eachtime->vars[j/2] |= 1 << 16;
-
+						eachtime->playersInArea[j] = true;
 						playersInArea[j] = true;
 					}
 				}
@@ -1766,27 +1749,19 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 				if (floortouch == true && P_IsObjectOnRealGround(players[i].mo, sec))
 				{
-					if (i & 1)
-						eachtime->var2s[i/2] |= 1;
-					else
-						eachtime->var2s[i/2] |= 1 << 16;
-
+					eachtime->playersOnArea[i] = true;
 					playersOnArea[i] = true;
 				}
 				else
 				{
-					if (i & 1)
-						eachtime->vars[i/2] |= 1;
-					else
-						eachtime->vars[i/2] |= 1 << 16;
-
+					eachtime->playersInArea[i] = true;
 					playersInArea[i] = true;
 				}
 			}
 		}
 	}
 
-	if ((eachtime->sourceline->flags & ML_BOUNCY) == ML_BOUNCY)
+	if (eachtime->triggerOnExit)
 		inAndOut = true;
 
 	// Check if a new player entered.

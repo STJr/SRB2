@@ -6160,14 +6160,13 @@ static inline void P_AddNoEnemiesThinker(sector_t *sec, line_t *sourceline)
 /** Adds a thinker for Each-Time linedef executors. A linedef executor is run
   * only when a player enters the area and doesn't run again until they re-enter.
   *
-  * \param sec          Control sector that contains the lines of executors we will want to run.
   * \param sourceline   Control linedef.
   * \sa P_SpawnSpecials, T_EachTimeThinker
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddEachTimeThinker(sector_t *sec, line_t *sourceline)
+static void P_AddEachTimeThinker(line_t *sourceline)
 {
-	levelspecthink_t *eachtime;
+	eachtime_t *eachtime;
 
 	// create and initialize new thinker
 	eachtime = Z_Calloc(sizeof (*eachtime), PU_LEVSPEC, NULL);
@@ -6175,8 +6174,8 @@ static void P_AddEachTimeThinker(sector_t *sec, line_t *sourceline)
 
 	eachtime->thinker.function.acp1 = (actionf_p1)T_EachTimeThinker;
 
-	eachtime->sector = sec;
 	eachtime->sourceline = sourceline;
+	eachtime->triggerOnExit = !!(sourceline->flags & ML_BOUNCY);
 }
 
 /** Adds a camera scanner.
@@ -7160,7 +7159,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 332:
 			case 335:
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				P_AddEachTimeThinker(&sectors[sec], &lines[i]);
+				P_AddEachTimeThinker(&lines[i]);
 				break;
 
 			// No More Enemies Linedef Exec
@@ -7192,7 +7191,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].special == 322) // Each time
 				{
 					sec = sides[*lines[i].sidenum].sector - sectors;
-					P_AddEachTimeThinker(&sectors[sec], &lines[i]);
+					P_AddEachTimeThinker(&lines[i]);
 				}
 				break;
 

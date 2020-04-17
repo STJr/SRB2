@@ -320,6 +320,15 @@ typedef struct
 	sector_t *sector;   // Sector the thinker is from
 } levelspecthink_t;
 
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline; // Source line of the thinker
+	boolean playersInArea[MAXPLAYERS];
+	boolean playersOnArea[MAXPLAYERS];
+	boolean triggerOnExit;
+} eachtime_t;
+
 typedef enum
 {
 	RF_REVERSE  = 1,    //Lower when stood on
@@ -377,7 +386,7 @@ void T_FloatSector(levelspecthink_t *floater);
 void T_MarioBlockChecker(levelspecthink_t *block);
 void T_ThwompSector(levelspecthink_t *thwomp);
 void T_NoEnemiesSector(levelspecthink_t *nobaddies);
-void T_EachTimeThinker(levelspecthink_t *eachtime);
+void T_EachTimeThinker(eachtime_t *eachtime);
 void T_CameraScanner(elevator_t *elevator);
 void T_RaiseSector(raise_t *raise);
 

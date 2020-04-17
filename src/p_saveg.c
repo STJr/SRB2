@@ -1659,6 +1659,24 @@ static void SaveSpecialLevelThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 }
 
+// SaveEachTimeThinker
+//
+// Loads a eachtime_t from a save game
+//
+static void SaveEachTimeThinker(const thinker_t *th, const UINT8 type)
+{
+	const eachtime_t *ht  = (const void *)th;
+	size_t i;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		WRITECHAR(save_p, ht->playersInArea[i]);
+		WRITECHAR(save_p, ht->playersOnArea[i]);
+	}
+	WRITECHAR(save_p, ht->triggerOnExit);
+}
+
 // SaveRaiseThinker
 //
 // Saves a raise_t thinker
@@ -2250,7 +2268,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_EachTimeThinker)
 			{
-				SaveSpecialLevelThinker(th, tc_eachtime);
+				SaveEachTimeThinker(th, tc_eachtime);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_RaiseSector)
@@ -2785,6 +2803,25 @@ static thinker_t* LoadSpecialLevelThinker(actionf_p1 thinker, UINT8 floorOrCeili
 			ht->sector->floordata = ht;
 	}
 
+	return &ht->thinker;
+}
+
+// LoadEachTimeThinker
+//
+// Loads a eachtime_t from a save game
+//
+static thinker_t* LoadEachTimeThinker(actionf_p1 thinker)
+{
+	size_t i;
+	eachtime_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		ht->playersInArea[i] = READCHAR(save_p);
+		ht->playersOnArea[i] = READCHAR(save_p);
+	}
+	ht->triggerOnExit = READCHAR(save_p);
 	return &ht->thinker;
 }
 
@@ -3481,7 +3518,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_eachtime:
-					th = LoadSpecialLevelThinker((actionf_p1)T_EachTimeThinker, 0);
+					th = LoadEachTimeThinker((actionf_p1)T_EachTimeThinker);
 					break;
 
 				case tc_raisesector:
