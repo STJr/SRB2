@@ -780,7 +780,7 @@ static int mapthing_get(lua_State *L)
 	else if(fastcmp(field,"extrainfo"))
 		number = mt->extrainfo;
 	else if(fastcmp(field,"tag"))
-		number = mt->tag;
+		number = Tag_FGet(&mt->tags);
 	else if(fastcmp(field,"mobj")) {
 		LUA_PushUserdata(L, mt->mobj, META_MOBJ);
 		return 1;
@@ -824,7 +824,7 @@ static int mapthing_set(lua_State *L)
 		mt->extrainfo = (UINT8)extrainfo;
 	}
 	else if (fastcmp(field,"tag"))
-		mt->tag = (INT16)luaL_checkinteger(L, 3);
+		Tag_FSet(&mt->tags, (INT16)luaL_checkinteger(L, 3));
 	else if(fastcmp(field,"mobj"))
 		mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 	else
