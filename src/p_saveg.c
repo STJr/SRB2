@@ -1273,7 +1273,6 @@ typedef enum
 	tc_startcrumble,
 	tc_marioblock,
 	tc_marioblockchecker,
-	tc_spikesector,
 	tc_floatsector,
 	tc_crushceiling,
 	tc_scroll,
@@ -2314,11 +2313,6 @@ static void P_NetArchiveThinkers(void)
 			else if (th->function.acp1 == (actionf_p1)T_MarioBlockChecker)
 			{
 				SaveSpecialLevelThinker(th, tc_marioblockchecker);
-				continue;
-			}
-			else if (th->function.acp1 == (actionf_p1)T_SpikeSector)
-			{
-				SaveSpecialLevelThinker(th, tc_spikesector);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_FloatSector)
@@ -3545,10 +3539,6 @@ static void P_NetUnArchiveThinkers(void)
 
 				case tc_marioblockchecker:
 					th = LoadSpecialLevelThinker((actionf_p1)T_MarioBlockChecker, 0);
-					break;
-
-				case tc_spikesector:
-					th = LoadSpecialLevelThinker((actionf_p1)T_SpikeSector, 0);
 					break;
 
 				case tc_floatsector:

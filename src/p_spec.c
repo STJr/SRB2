@@ -119,7 +119,6 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
-static void P_AddSpikeThinker(sector_t *sec, INT32 referrer);
 static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee, UINT8 reverse);
 
 
@@ -4446,7 +4445,8 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_ELECTRIC);
 			break;
 		case 5: // Spikes
-			// Don't do anything. In Soviet Russia, spikes find you.
+			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPIKE);
 			break;
 		case 6: // Death Pit (Camera Mod)
 		case 7: // Death Pit (No Camera Mod)
@@ -5754,7 +5754,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	thinker_t *th;
 	friction_t *f;
 	pusher_t *p;
-	levelspecthink_t *lst;
 	size_t sec2num;
 	size_t i;
 
@@ -5855,16 +5854,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		else if (th == &thlist[THINK_MAIN])
 			break;
 
-		// Should this FOF have spikeness?
-		if (th->function.acp1 == (actionf_p1)T_SpikeSector)
-		{
-			lst = (levelspecthink_t *)th;
-
-			if (lst->sector == sec2)
-				P_AddSpikeThinker(sec, (INT32)sec2num);
-		}
 		// Should this FOF have friction?
-		else if(th->function.acp1 == (actionf_p1)T_Friction)
+		if(th->function.acp1 == (actionf_p1)T_Friction)
 		{
 			f = (friction_t *)th;
 
@@ -5927,28 +5918,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 //
 // SPECIAL SPAWNING
 //
-
-/** Adds a spike thinker.
-  * Sector type Section1:5 will result in this effect.
-  *
-  * \param sec Sector in which to add the thinker.
-  * \param referrer If != sec, then we're dealing with a FOF
-  * \sa P_SpawnSpecials, T_SpikeSector
-  * \author SSNTails <http://www.ssntails.org>
-  */
-static void P_AddSpikeThinker(sector_t *sec, INT32 referrer)
-{
-	levelspecthink_t *spikes;
-
-	// create and initialize new thinker
-	spikes = Z_Calloc(sizeof (*spikes), PU_LEVSPEC, NULL);
-	P_AddThinker(THINK_MAIN, &spikes->thinker);
-
-	spikes->thinker.function.acp1 = (actionf_p1)T_SpikeSector;
-
-	spikes->sector = sec;
-	spikes->vars[0] = referrer;
-}
 
 /** Adds a float thinker.
   * Float thinkers cause solid 3Dfloors to float on water.
@@ -6401,10 +6370,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 		// Process Section 1
 		switch(GETSECSPECIAL(sector->special, 1))
 		{
-			case 5: // Spikes
-				P_AddSpikeThinker(sector, (INT32)(sector-sectors));
-				break;
-
 			case 15: // Bouncy sector
 				CheckForBouncySector = true;
 				break;
@@ -6450,9 +6415,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 	// Firstly, find out how many there are in each sector
 	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)T_SpikeSector)
-			secthinkers[((levelspecthink_t *)th)->sector - sectors].count++;
-		else if (th->function.acp1 == (actionf_p1)T_Friction)
+		if (th->function.acp1 == (actionf_p1)T_Friction)
 			secthinkers[((friction_t *)th)->affectee].count++;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secthinkers[((pusher_t *)th)->affectee].count++;
@@ -6472,9 +6435,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 	{
 		size_t secnum = (size_t)-1;
 
-		if (th->function.acp1 == (actionf_p1)T_SpikeSector)
-			secnum = ((levelspecthink_t *)th)->sector - sectors;
-		else if (th->function.acp1 == (actionf_p1)T_Friction)
+		if (th->function.acp1 == (actionf_p1)T_Friction)
 			secnum = ((friction_t *)th)->affectee;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secnum = ((pusher_t *)th)->affectee;
