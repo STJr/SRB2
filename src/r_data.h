@@ -147,12 +147,12 @@ boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, bo
 extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap);
 
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
-extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3);
+extracolormap_t * R_CreateColormapFromLinedef(char *p1, char *p2, char *p3);
+extracolormap_t* R_CreateColormap(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags);
 extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *exc_addend,
 	boolean subR, boolean subG, boolean subB, boolean subA,
 	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
 	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFlags,
-	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
 	boolean lighttable);
 #ifdef EXTRACOLORMAPLUMPS
 extracolormap_t *R_ColormapForName(char *name);
