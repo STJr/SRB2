@@ -63,58 +63,97 @@ boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2)
 	return true;
 }
 
-static void Taglist_AddToSectors (const mtag_t tag, const size_t itemid)
+
+size_t Taggroup_Find (const taggroup_t *group, const size_t id)
 {
-	taggroup_t* tagelems;
+	size_t i;
+
+	if (!group)
+		return -1;
+
+	for (i = 0; i < group->count; i++)
+		if (group->elements[i] == id)
+			return i;
+
+	return -1;
+}
+
+void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
+{
+	taggroup_t *group;
 
 	if (tag == MTAG_GLOBAL)
 		return;
 
-	if (!tags_sectors[(UINT16)tag])
-		tags_sectors[(UINT16)tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
+	group = garray[(UINT16)tag];
 
-	tagelems = tags_sectors[(UINT16)tag];
-	tagelems->count++;
-	tagelems->elements = Z_Realloc(tagelems->elements, tagelems->count * sizeof(size_t), PU_LEVEL, NULL);
-	tagelems->elements[tagelems->count - 1] = itemid;
+	// Don't add duplicate entries.
+	if (Taggroup_Find(group, id) != (size_t)-1)
+		return;
+
+	// Create group if empty.
+	if (!group)
+		group = garray[(UINT16)tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
+
+	group->count++;
+	group->elements = Z_Realloc(group->elements, group->count * sizeof(size_t), PU_LEVEL, NULL);
+	group->elements[group->count - 1] = id;
+}
+
+void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
+{
+	taggroup_t *group;
+	size_t rempos;
+	size_t newcount;
+
+	if (tag == MTAG_GLOBAL)
+		return;
+
+	group = garray[(UINT16)tag];
+
+	if ((rempos = Taggroup_Find(group, id)) == (size_t)-1)
+		return;
+
+	// Strip away taggroup if no elements left.
+	if (!(newcount = --group->count))
+	{
+		Z_Free(group->elements);
+		Z_Free(group);
+		garray[(UINT16)tag] = NULL;
+	}
+	else
+	{
+		size_t *newelements = Z_Malloc(newcount * sizeof(size_t), PU_LEVEL, NULL);
+		size_t i;
+
+		// Copy the previous entries save for the one to remove.
+		for (i = 0; i < rempos; i++)
+			newelements[i] = group->elements[i];
+
+		for (i = rempos + 1; i < group->count; i++)
+			newelements[i - 1] = group->elements[i];
+
+		Z_Free(group->elements);
+		group->elements = newelements;
+		group->count = newcount;
+	}
+}
+
+// Initialization.
+
+static void Taglist_AddToSectors (const mtag_t tag, const size_t itemid)
+{
+	Taggroup_Add(tags_sectors, tag, itemid);
 }
 
 static void Taglist_AddToLines (const mtag_t tag, const size_t itemid)
 {
-	taggroup_t* tagelems;
-
-	if (tag == MTAG_GLOBAL)
-		return;
-
-	if (!tags_lines[(UINT16)tag])
-		tags_lines[(UINT16)tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
-
-	tagelems = tags_lines[(UINT16)tag];
-	tagelems->count++;
-	tagelems->elements = Z_Realloc(tagelems->elements, tagelems->count * sizeof(size_t), PU_LEVEL, NULL);
-	tagelems->elements[tagelems->count - 1] = itemid;
+	Taggroup_Add(tags_lines, tag, itemid);
 }
 
 static void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
 {
-	taggroup_t* tagelems;
-
-	if (tag == MTAG_GLOBAL)
-		return;
-
-	if (!tags_mapthings[(UINT16)tag])
-		tags_mapthings[(UINT16)tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
-
-	tagelems = tags_mapthings[(UINT16)tag];
-	tagelems->count++;
-	tagelems->elements = Z_Realloc(tagelems->elements, tagelems->count * sizeof(size_t), PU_LEVEL, NULL);
-	tagelems->elements[tagelems->count - 1] = itemid;
-}
-
-void Tag_SectorFSet (const size_t id, const mtag_t tag)
-{
-	sector_t* sec = &sectors[id];
-	Tag_FSet(&sec->tags, tag);
+	Taggroup_Add(tags_mapthings, tag, itemid);
 }
 
 void Taglist_InitGlobalTables(void)
@@ -143,6 +182,8 @@ void Taglist_InitGlobalTables(void)
 			Taglist_AddToMapthings(mapthings[i].tags.tags[j], i);
 	}
 }
+
+// Iteration, inagme search.
 
 INT32 Tag_Iterate_Sectors (const mtag_t tag, const size_t p)
 {
@@ -216,4 +257,18 @@ INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag)
 				return tagged->elements[i];
 	}
 	return -1;
+}
+
+// Ingame list manipulation.
+
+void Tag_SectorFSet (const size_t id, const mtag_t tag)
+{
+	sector_t* sec = &sectors[id];
+	mtag_t curtag = Tag_FGet(&sec->tags);
+	if (curtag == tag)
+		return;
+
+	Taggroup_Remove(tags_sectors, curtag, id);
+	Taggroup_Add(tags_sectors, tag, id);
+	Tag_FSet(&sec->tags, tag);
 }

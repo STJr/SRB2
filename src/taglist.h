@@ -35,6 +35,9 @@ taggroup_t* tags_sectors[MAXTAGS + 1];
 taggroup_t* tags_lines[MAXTAGS + 1];
 taggroup_t* tags_mapthings[MAXTAGS + 1];
 
+void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id);
+void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id);
+
 void Taglist_InitGlobalTables(void);
 
 INT32 Tag_Iterate_Sectors (const mtag_t tag, const size_t p);

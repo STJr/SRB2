@@ -1149,6 +1149,12 @@ static void P_NetUnArchiveWorld(void)
 		if (diff2 & SD_TAG)
 		{
 			size_t ncount = READUINT32(get);
+
+			// Remove entries from global lists.
+			for (j = 0; j < sectors[i].tags.count; j++)
+				Taggroup_Remove(tags_sectors, sectors[i].tags.tags[j], i);
+
+			// Reallocate if size differs.
 			if (ncount != sectors[i].tags.count)
 			{
 				sectors[i].tags.count = ncount;
@@ -1157,6 +1163,10 @@ static void P_NetUnArchiveWorld(void)
 
 			for (j = 0; j < ncount; j++)
 				sectors[i].tags.tags[j] = READINT16(get);
+
+			// Add new entries.
+			for (j = 0; j < sectors[i].tags.count; j++)
+				Taggroup_Remove(tags_sectors, sectors[i].tags.tags[j], i);
 		}
 
 		if (diff3 & SD_COLORMAP)
