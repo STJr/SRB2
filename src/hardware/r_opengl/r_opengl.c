@@ -1073,6 +1073,7 @@ EXPORT void HWRAPI(UnSetShader) (void)
 #ifdef GL_SHADERS
 	gl_shadersenabled = false;
 	gl_currentshaderprogram = 0;
+	pglUseProgram(0);
 #endif
 }
 
@@ -2054,10 +2055,6 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUI
 
 	if (PolyFlags & PF_ForceWrapY)
 		Clamp2D(GL_TEXTURE_WRAP_T);
-
-#ifdef GL_SHADERS
-	pglUseProgram(0);
-#endif
 }
 
 typedef struct vbo_vertex_s
