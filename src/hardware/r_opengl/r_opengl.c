@@ -583,6 +583,7 @@ static PFNglGetUniformLocation pglGetUniformLocation;
 static char *gl_customvertexshaders[MAXSHADERS];
 static char *gl_customfragmentshaders[MAXSHADERS];
 static GLuint gl_currentshaderprogram = 0;
+static boolean gl_shaderprogramchanged = true;
 
 // 13062019
 typedef enum
@@ -1058,8 +1059,12 @@ EXPORT void HWRAPI(SetShader) (int shader)
 #ifdef GL_SHADERS
 	if (gl_allowshaders)
 	{
+		if ((GLuint)shader != gl_currentshaderprogram)
+		{
+			gl_currentshaderprogram = shader;
+			gl_shaderprogramchanged = true;
+		}
 		gl_shadersenabled = true;
-		gl_currentshaderprogram = shader;
 		return;
 	}
 #else
@@ -1868,7 +1873,11 @@ static void *Shader_Load(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *
 		gl_shaderprogram_t *shader = &gl_shaderprograms[gl_currentshaderprogram];
 		if (shader->program)
 		{
-			pglUseProgram(gl_shaderprograms[gl_currentshaderprogram].program);
+			if (gl_shaderprogramchanged)
+			{
+				pglUseProgram(gl_shaderprograms[gl_currentshaderprogram].program);
+				gl_shaderprogramchanged = false;
+			}
 			Shader_SetUniforms(Surface, poly, tint, fade);
 			return shader;
 		}
