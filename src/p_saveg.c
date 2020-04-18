@@ -1640,25 +1640,6 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 }
 
 //
-// SaveSpecialLevelThinker
-//
-// Saves a levelspecthink_t thinker
-//
-static void SaveSpecialLevelThinker(const thinker_t *th, const UINT8 type)
-{
-	const levelspecthink_t *ht  = (const void *)th;
-	size_t i;
-	WRITEUINT8(save_p, type);
-	for (i = 0; i < 16; i++)
-	{
-		WRITEFIXED(save_p, ht->vars[i]); //var[16]
-		WRITEFIXED(save_p, ht->var2s[i]); //var[16]
-	}
-	WRITEUINT32(save_p, SaveLine(ht->sourceline));
-	WRITEUINT32(save_p, SaveSector(ht->sector));
-}
-
-//
 // SaveNoEnemiesThinker
 //
 // Saves a noenemies_t thinker
@@ -1720,6 +1701,19 @@ static void SaveMarioBlockThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->floorstartheight);
 	WRITEFIXED(save_p, ht->ceilingstartheight);
 	WRITEINT16(save_p, ht->tag);
+}
+
+//
+// SaveMarioCheckThinker
+//
+// Saves a mariocheck_t thinker
+//
+static void SaveMarioCheckThinker(const thinker_t *th, const UINT8 type)
+{
+	const mariocheck_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT32(save_p, SaveSector(ht->sector));
 }
 
 //
@@ -2411,7 +2405,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_MarioBlockChecker)
 			{
-				SaveSpecialLevelThinker(th, tc_marioblockchecker);
+				SaveMarioCheckThinker(th, tc_marioblockchecker);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_FloatSector)
@@ -2864,41 +2858,6 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	return &mobj->thinker;
 }
 
-//
-// LoadSpecialLevelThinker
-//
-// Loads a levelspecthink_t from a save game
-//
-// floorOrCeiling:
-//		0 - Don't set
-//		1 - Floor Only
-//		2 - Ceiling Only
-//		3 - Both
-//
-static thinker_t* LoadSpecialLevelThinker(actionf_p1 thinker, UINT8 floorOrCeiling)
-{
-	levelspecthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	size_t i;
-	ht->thinker.function.acp1 = thinker;
-	for (i = 0; i < 16; i++)
-	{
-		ht->vars[i] = READFIXED(save_p); //var[16]
-		ht->var2s[i] = READFIXED(save_p); //var[16]
-	}
-	ht->sourceline = LoadLine(READUINT32(save_p));
-	ht->sector = LoadSector(READUINT32(save_p));
-
-	if (ht->sector)
-	{
-		if (floorOrCeiling & 2)
-			ht->sector->ceilingdata = ht;
-		if (floorOrCeiling & 1)
-			ht->sector->floordata = ht;
-	}
-
-	return &ht->thinker;
-}
-
 // LoadNoEnemiesThinker
 //
 // Loads a noenemies_t from a save game
@@ -2960,6 +2919,19 @@ static thinker_t* LoadMarioBlockThinker(actionf_p1 thinker)
 	ht->floorstartheight = READFIXED(save_p);
 	ht->ceilingstartheight = READFIXED(save_p);
 	ht->tag = READINT16(save_p);
+	return &ht->thinker;
+}
+
+// LoadMarioCheckThinker
+//
+// Loads a mariocheck_t from a save game
+//
+static thinker_t* LoadMarioCheckThinker(actionf_p1 thinker)
+{
+	mariocheck_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->sector = LoadSector(READUINT32(save_p));
 	return &ht->thinker;
 }
 
@@ -3736,7 +3708,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_marioblockchecker:
-					th = LoadSpecialLevelThinker((actionf_p1)T_MarioBlockChecker, 0);
+					th = LoadMarioCheckThinker((actionf_p1)T_MarioBlockChecker);
 					break;
 
 				case tc_floatsector:

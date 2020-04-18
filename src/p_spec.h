@@ -314,15 +314,6 @@ typedef struct
 typedef struct
 {
 	thinker_t thinker;
-	fixed_t vars[16];   // Misc. variables
-	fixed_t var2s[16];   // Second misc variables buffer.
-	line_t *sourceline; // Source line of the thinker
-	sector_t *sector;   // Sector the thinker is from
-} levelspecthink_t;
-
-typedef struct
-{
-	thinker_t thinker;
 	line_t *sourceline; // Source line of the thinker
 } noenemies_t;
 
@@ -359,6 +350,13 @@ typedef struct
 	fixed_t ceilingstartheight;
 	INT16 tag;
 } mariothink_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+} mariocheck_t;
 
 typedef struct
 {
@@ -445,7 +443,7 @@ void T_BounceCheese(bouncecheese_t *bouncer);
 void T_StartCrumble(elevator_t *elevator);
 void T_MarioBlock(mariothink_t *block);
 void T_FloatSector(floatthink_t *floater);
-void T_MarioBlockChecker(levelspecthink_t *block);
+void T_MarioBlockChecker(mariocheck_t *block);
 void T_ThwompSector(thwomp_t *thwomp);
 void T_NoEnemiesSector(noenemies_t *nobaddies);
 void T_EachTimeThinker(eachtime_t *eachtime);

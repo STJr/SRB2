@@ -1071,26 +1071,20 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 	return thing;
 }
 
-void T_MarioBlockChecker(levelspecthink_t *block)
+void T_MarioBlockChecker(mariocheck_t *block)
 {
 	line_t *masterline = block->sourceline;
-	if (block->vars[2] == 1) // Don't update the textures when the block's being bumped upwards.
-		return;
 	if (SearchMarioNode(block->sector->touching_thinglist))
 	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture; // Update textures
 		if (masterline->backsector)
-		{
 			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->ceilingpic; // Update flats to be backside's ceiling
-		}
 	}
 	else
 	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
 		if (masterline->backsector)
-		{
 			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->floorpic; // Update flats to be backside's floor
-		}
 	}
 }
 

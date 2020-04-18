@@ -5983,7 +5983,7 @@ static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, 
   */
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
 {
-	levelspecthink_t *block;
+	mariocheck_t *block;
 
 	// create and initialize new elevator thinker
 	block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
