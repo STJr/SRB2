@@ -2856,10 +2856,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 		pglShadeModel(GL_FLAT);
 	}
 #endif
-
-#ifdef GL_SHADERS
-	pglUseProgram(0);
-#endif
 }
 
 // -----------------+
