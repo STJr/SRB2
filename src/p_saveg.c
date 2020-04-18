@@ -787,8 +787,13 @@ static boolean P_AreStringArgsEqual(const line_t *li, const line_t *spawnli)
 {
 	UINT8 i;
 	for (i = 0; i < NUMLINESTRINGARGS; i++)
+	{
+		if (!li->stringargs[i])
+			return !spawnli->stringargs[i];
+
 		if (strcmp(li->stringargs[i], spawnli->stringargs[i]))
 			return false;
+	}
 
 	return true;
 }

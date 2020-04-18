@@ -3283,46 +3283,52 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// Except it is activated by linedef executor, not level load
 			// This could even override existing colormaps I believe
 			// -- Monster Iestyn 14/06/18
-			TAG_ITER_SECTORS(tag, secnum)
+		{
+			extracolormap_t *source;
+			if (!udmf)
+				source = sides[line->sidenum[0]].colormap_data;
+			else
 			{
+				if (!line->args[1])
+					source = line->frontsector->extra_colormap;
+				else
+				{
+					INT32 sourcesec = Tag_Iterate_Sectors(line->args[1], 0);
+					if (sourcesec == -1)
+					{
+						CONS_Debug(DBG_GAMELOGIC, "Line type 447 Executor: Can't find sector with source colormap (tag %d)!\n", line->args[1]);
+						return;
+					}
+					source = sectors[sourcesec].extra_colormap;
+				}
+			}
+			TAG_ITER_SECTORS(line->args[0], secnum)
+			{
+				if (sectors[secnum].colormap_protected)
+					continue;
+
 				P_ResetColormapFader(&sectors[secnum]);
 
-				if (line->flags & ML_EFFECT3) // relative calc
+				if (line->args[2] & 1) // relative calc
 				{
-					extracolormap_t *exc = R_AddColormaps(
-						(line->flags & ML_TFERLINE) && line->sidenum[1] != 0xFFFF ?
-							sides[line->sidenum[1]].colormap_data : sectors[secnum].extra_colormap, // use back colormap instead of target sector
-						sides[line->sidenum[0]].colormap_data,
-						line->flags & ML_EFFECT1,  // subtract R
-						line->flags & ML_NOCLIMB,  // subtract G
-						line->flags & ML_EFFECT2,  // subtract B
-						false,                     // subtract A (no flag for this, just pass negative alpha)
-						line->flags & ML_EFFECT1,  // subtract FadeR
-						line->flags & ML_NOCLIMB,  // subtract FadeG
-						line->flags & ML_EFFECT2,  // subtract FadeB
-						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
-						false,                     // subtract FadeStart (we ran out of flags)
-						false,                     // subtract FadeEnd (we ran out of flags)
-						false,                     // ignore Flags (we ran out of flags)
-						line->flags & ML_DONTPEGBOTTOM,
-						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
-						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
-						false);
+					extracolormap_t *target = (!udmf && (line->flags & ML_TFERLINE) && line->sidenum[1] != 0xFFFF) ?
+						sides[line->sidenum[1]].colormap_data : sectors[secnum].extra_colormap; // use back colormap instead of target sector
 
-					if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(exc)))
-					{
-						exc->colormap = R_CreateLightTable(exc);
-						R_AddColormapToList(exc);
-						sectors[secnum].extra_colormap = exc;
-					}
-					else
-						Z_Free(exc);
-				}
-				else if (line->flags & ML_DONTPEGBOTTOM) // alternate alpha (by texture offsets)
-				{
-					extracolormap_t *exc = R_CopyColormap(sides[line->sidenum[0]].colormap_data, false);
-					exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].textureoffset >> FRACBITS, 25), 0));
-					exc->fadergba = R_GetRgbaRGB(exc->fadergba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].rowoffset >> FRACBITS, 25), 0));
+						extracolormap_t *exc = R_AddColormaps(
+							target,
+							source,
+							line->args[2] & 2,    // subtract R
+							line->args[2] & 4,    // subtract G
+							line->args[2] & 8,    // subtract B
+							line->args[2] & 16,   // subtract A
+							line->args[2] & 32,   // subtract FadeR
+							line->args[2] & 64,   // subtract FadeG
+							line->args[2] & 128,  // subtract FadeB
+							line->args[2] & 256,  // subtract FadeA
+							line->args[2] & 512,  // subtract FadeStart
+							line->args[2] & 1024, // subtract FadeEnd
+							line->args[2] & 2048, // ignore Flags
+							false);
 
 					if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(exc)))
 					{
@@ -3334,10 +3340,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						Z_Free(exc);
 				}
 				else
-					sectors[secnum].extra_colormap = sides[line->sidenum[0]].colormap_data;
+					sectors[secnum].extra_colormap = source;
 			}
 			break;
-
+		}
 		case 448: // Change skybox viewpoint/centerpoint
 			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || (line->flags & ML_NOCLIMB))
 			{
@@ -3611,15 +3617,35 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		}
 
 		case 455: // Fade colormap
-			TAG_ITER_SECTORS(tag, secnum)
+		{
+			extracolormap_t *dest;
+			if (!udmf)
+				dest = sides[line->sidenum[0]].colormap_data;
+			else
+			{
+				if (!line->args[1])
+					dest = line->frontsector->extra_colormap;
+				else
+				{
+					INT32 destsec = Tag_Iterate_Sectors(line->args[1], 0);
+					if (destsec == -1)
+					{
+						CONS_Debug(DBG_GAMELOGIC, "Line type 455 Executor: Can't find sector with destination colormap (tag %d)!\n", line->args[1]);
+						return;
+					}
+					dest = sectors[destsec].extra_colormap;
+				}
+			}
+
+			TAG_ITER_SECTORS(line->args[0], secnum)
 			{
 				extracolormap_t *source_exc, *dest_exc, *exc;
-				INT32 speed = (INT32)((line->flags & ML_DONTPEGBOTTOM) || !sides[line->sidenum[0]].rowoffset) && line->sidenum[1] != 0xFFFF ?
-					abs(sides[line->sidenum[1]].rowoffset >> FRACBITS)
-					: abs(sides[line->sidenum[0]].rowoffset >> FRACBITS);
 
-				// Prevent continuous execs from interfering on an existing fade
-				if (!(line->flags & ML_EFFECT5)
+				if (sectors[secnum].colormap_protected)
+					continue;
+
+				// Don't interrupt ongoing fade
+				if (!(line->args[3] & 8192)
 					&& sectors[secnum].fadecolormapdata)
 					//&& ((fadecolormap_t*)sectors[secnum].fadecolormapdata)->timer > (ticbased ? 2 : speed*2))
 				{
@@ -3627,19 +3653,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					continue;
 				}
 
-				if (line->flags & ML_TFERLINE) // use back colormap instead of target sector
+				if (!udmf && (line->flags & ML_TFERLINE)) // use back colormap instead of target sector
 					sectors[secnum].extra_colormap = (line->sidenum[1] != 0xFFFF) ?
-						sides[line->sidenum[1]].colormap_data : NULL;
+					sides[line->sidenum[1]].colormap_data : NULL;
 
 				exc = sectors[secnum].extra_colormap;
 
-				if (!(line->flags & ML_BOUNCY) // BOUNCY: Do not override fade from default rgba
-					&& !R_CheckDefaultColormap(sides[line->sidenum[0]].colormap_data, true, false, false)
+				if (!(line->args[3] & 4096) // Override fade from default rgba
+					&& !R_CheckDefaultColormap(dest, true, false, false)
 					&& R_CheckDefaultColormap(exc, true, false, false))
 				{
 					exc = R_CopyColormap(exc, false);
-					exc->rgba = R_GetRgbaRGB(sides[line->sidenum[0]].colormap_data->rgba) + R_PutRgbaA(R_GetRgbaA(exc->rgba));
-					//exc->fadergba = R_GetRgbaRGB(sides[line->sidenum[0]].colormap_data->rgba) + R_PutRgbaA(R_GetRgbaA(exc->fadergba));
+					exc->rgba = R_GetRgbaRGB(dest->rgba) + R_PutRgbaA(R_GetRgbaA(exc->rgba));
+					//exc->fadergba = R_GetRgbaRGB(dest->rgba) + R_PutRgbaA(R_GetRgbaA(exc->fadergba));
 
 					if (!(source_exc = R_GetColormapFromList(exc)))
 					{
@@ -3655,35 +3681,26 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				else
 					source_exc = exc ? exc : R_GetDefaultColormap();
 
-				if (line->flags & ML_EFFECT3) // relative calc
+				if (line->args[3] & 1) // relative calc
 				{
 					exc = R_AddColormaps(
 						source_exc,
-						sides[line->sidenum[0]].colormap_data,
-						line->flags & ML_EFFECT1,  // subtract R
-						line->flags & ML_NOCLIMB,  // subtract G
-						line->flags & ML_EFFECT2,  // subtract B
-						false,                     // subtract A (no flag for this, just pass negative alpha)
-						line->flags & ML_EFFECT1,  // subtract FadeR
-						line->flags & ML_NOCLIMB,  // subtract FadeG
-						line->flags & ML_EFFECT2,  // subtract FadeB
-						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
-						false,                     // subtract FadeStart (we ran out of flags)
-						false,                     // subtract FadeEnd (we ran out of flags)
-						false,                     // ignore Flags (we ran out of flags)
-						line->flags & ML_DONTPEGBOTTOM,
-						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
-						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
+						dest,
+						line->args[3] & 2,    // subtract R
+						line->args[3] & 4,    // subtract G
+						line->args[3] & 8,    // subtract B
+						line->args[3] & 16,   // subtract A
+						line->args[3] & 32,   // subtract FadeR
+						line->args[3] & 64,   // subtract FadeG
+						line->args[3] & 128,  // subtract FadeB
+						line->args[3] & 256,  // subtract FadeA
+						line->args[3] & 512,  // subtract FadeStart
+						line->args[3] & 1024, // subtract FadeEnd
+						line->args[3] & 2048, // ignore Flags
 						false);
 				}
-				else if (line->flags & ML_DONTPEGBOTTOM) // alternate alpha (by texture offsets)
-				{
-					exc = R_CopyColormap(sides[line->sidenum[0]].colormap_data, false);
-					exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].textureoffset >> FRACBITS, 25), 0));
-					exc->fadergba = R_GetRgbaRGB(exc->fadergba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].rowoffset >> FRACBITS, 25), 0));
-				}
 				else
-					exc = R_CopyColormap(sides[line->sidenum[0]].colormap_data, false);
+					exc = R_CopyColormap(dest, false);
 
 				if (!(dest_exc = R_GetColormapFromList(exc)))
 				{
@@ -3694,13 +3711,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				else
 					Z_Free(exc);
 
-				Add_ColormapFader(&sectors[secnum], source_exc, dest_exc, (line->flags & ML_EFFECT4), // tic-based timing
-					speed);
+				Add_ColormapFader(&sectors[secnum], source_exc, dest_exc, true, // tic-based timing
+					line->args[2]);
 			}
 			break;
-
+		}
 		case 456: // Stop fade colormap
-			TAG_ITER_SECTORS(tag, secnum)
+			TAG_ITER_SECTORS(line->args[0], secnum)
 				P_ResetColormapFader(&sectors[secnum]);
 			break;
 
@@ -7165,8 +7182,32 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.
-				TAG_ITER_SECTORS(tag, s)
-					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = sides[lines[i].sidenum[0]].colormap_data;
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+				{
+					extracolormap_t *exc;
+
+					if (sectors[s].colormap_protected)
+						continue;
+
+					if (!udmf)
+						exc = sides[lines[i].sidenum[0]].colormap_data;
+					else
+					{
+						if (!lines[i].args[1])
+							exc = lines[i].frontsector->extra_colormap;
+						else
+						{
+							INT32 sourcesec = Tag_Iterate_Sectors(lines[i].args[1], 0);
+							if (sourcesec == -1)
+							{
+								CONS_Debug(DBG_GAMELOGIC, "Line type 606: Can't find sector with source colormap (tag %d)!\n", lines[i].args[1]);
+								return;
+							}
+							exc = sectors[sourcesec].extra_colormap;
+						}
+					}
+					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = exc;
+				}
 				break;
 
 			default:
@@ -8113,7 +8154,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 		d->destlightlevel = -1;
 
 	// Set a separate thinker for colormap fading
-	if (docolormap && !(rover->flags & FF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap)
+	if (docolormap && !(rover->flags & FF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap && !sectors[rover->secnum].colormap_protected)
 	{
 		extracolormap_t *dest_exc,
 			*source_exc = sectors[rover->secnum].extra_colormap ? sectors[rover->secnum].extra_colormap : R_GetDefaultColormap();
