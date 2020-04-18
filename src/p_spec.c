@@ -6363,6 +6363,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 		// Process Section 1
 		switch(GETSECSPECIAL(sector->special, 1))
 		{
+			case 5: // Spikes
+				//Terrible hack to replace an even worse hack:
+				//Spike damage automatically sets SF_TRIGGERSPECIAL_TOUCH.
+				//Yes, this also affects other specials on the same sector. Sorry.
+				sector->flags |= SF_TRIGGERSPECIAL_TOUCH;
+				break;
 			case 15: // Bouncy sector
 				CheckForBouncySector = true;
 				break;
