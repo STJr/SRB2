@@ -353,6 +353,21 @@ typedef struct
 	thinker_t thinker;
 	line_t *sourceline;
 	sector_t *sector;
+	fixed_t crushspeed;
+	fixed_t retractspeed;
+	INT32 direction;
+	fixed_t floorstartheight;
+	fixed_t ceilingstartheight;
+	INT32 delay;
+	INT16 tag;
+	UINT16 sound;
+} thwomp_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
 	INT16 tag;
 } floatthink_t;
 
@@ -419,7 +434,7 @@ void T_StartCrumble(elevator_t *elevator);
 void T_MarioBlock(mariothink_t *block);
 void T_FloatSector(floatthink_t *floater);
 void T_MarioBlockChecker(levelspecthink_t *block);
-void T_ThwompSector(levelspecthink_t *thwomp);
+void T_ThwompSector(thwomp_t *thwomp);
 void T_NoEnemiesSector(noenemies_t *nobaddies);
 void T_EachTimeThinker(eachtime_t *eachtime);
 void T_CameraScanner(elevator_t *elevator);

@@ -6068,12 +6068,7 @@ static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean
   */
 static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, line_t *sourceline)
 {
-#define speed vars[1]
-#define direction vars[2]
-#define distance vars[3]
-#define floorwasheight vars[4]
-#define ceilingwasheight vars[5]
-	levelspecthink_t *thwomp;
+	thwomp_t *thwomp;
 
 	// You *probably* already have a thwomp in this sector. If you've combined it with something
 	// else that uses the floordata/ceilingdata, you must be weird.
@@ -6087,21 +6082,21 @@ static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, lin
 	thwomp->thinker.function.acp1 = (actionf_p1)T_ThwompSector;
 
 	// set up the fields according to the type of elevator action
-	thwomp->sector = sec;
-	thwomp->vars[0] = actionsector->tag;
-	thwomp->floorwasheight = thwomp->sector->floorheight;
-	thwomp->ceilingwasheight = thwomp->sector->ceilingheight;
-	thwomp->direction = 0;
-	thwomp->distance = 1;
 	thwomp->sourceline = sourceline;
-	thwomp->sector->floordata = thwomp;
-	thwomp->sector->ceilingdata = thwomp;
-	return;
-#undef speed
-#undef direction
-#undef distance
-#undef floorwasheight
-#undef ceilingwasheight
+	thwomp->sector = sec;
+	thwomp->crushspeed = (sourceline->flags & ML_EFFECT5) ? sourceline->dy >> 3 : 10*FRACUNIT;
+	thwomp->retractspeed = (sourceline->flags & ML_EFFECT5) ? sourceline->dx >> 3 : 2*FRACUNIT;
+	thwomp->direction = 0;
+	thwomp->floorstartheight = sec->floorheight;
+	thwomp->ceilingstartheight = sec->ceilingheight;
+	thwomp->delay = 1;
+	thwomp->tag = actionsector->tag;
+	thwomp->sound = (sourceline->flags & ML_EFFECT4) ? sides[sourceline->sidenum[0]].textureoffset >> FRACBITS : sfx_thwomp;
+
+	sec->floordata = thwomp;
+	sec->ceilingdata = thwomp;
+	// Start with 'resting' texture
+	sides[sourceline->sidenum[0]].midtexture = sides[sourceline->sidenum[0]].bottomtexture;
 }
 
 /** Adds a thinker which checks if any MF_ENEMY objects with health are in the defined area.

@@ -1705,6 +1705,27 @@ static void SaveMarioBlockThinker(const thinker_t *th, const UINT8 type)
 }
 
 //
+// SaveThwompThinker
+//
+// Saves a thwomp_t thinker
+//
+static void SaveThwompThinker(const thinker_t *th, const UINT8 type)
+{
+	const thwomp_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEFIXED(save_p, ht->crushspeed);
+	WRITEFIXED(save_p, ht->retractspeed);
+	WRITEINT32(save_p, ht->direction);
+	WRITEFIXED(save_p, ht->floorstartheight);
+	WRITEFIXED(save_p, ht->ceilingstartheight);
+	WRITEINT32(save_p, ht->delay);
+	WRITEINT16(save_p, ht->tag);
+	WRITEUINT16(save_p, ht->sound);
+}
+
+//
 // SaveFloatThinker
 //
 // Saves a floatthink_t thinker
@@ -2317,7 +2338,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_ThwompSector)
 			{
-				SaveSpecialLevelThinker(th, tc_thwomp);
+				SaveThwompThinker(th, tc_thwomp);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_NoEnemiesSector)
@@ -2903,6 +2924,27 @@ static thinker_t* LoadMarioBlockThinker(actionf_p1 thinker)
 	ht->floorstartheight = READFIXED(save_p);
 	ht->ceilingstartheight = READFIXED(save_p);
 	ht->tag = READINT16(save_p);
+	return &ht->thinker;
+}
+
+// LoadThwompThinker
+//
+// Loads a thwomp_t from a save game
+//
+static thinker_t* LoadThwompThinker(actionf_p1 thinker)
+{
+	thwomp_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->crushspeed = READFIXED(save_p);
+	ht->retractspeed = READFIXED(save_p);
+	ht->direction = READINT32(save_p);
+	ht->floorstartheight = READFIXED(save_p);
+	ht->ceilingstartheight = READFIXED(save_p);
+	ht->delay = READINT32(save_p);
+	ht->tag = READINT16(save_p);
+	ht->sound = READUINT16(save_p);
 	return &ht->thinker;
 }
 
@@ -3624,7 +3666,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_thwomp:
-					th = LoadSpecialLevelThinker((actionf_p1)T_ThwompSector, 3);
+					th = LoadThwompThinker((actionf_p1)T_ThwompSector);
 					break;
 
 				case tc_noenemies:
