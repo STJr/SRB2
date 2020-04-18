@@ -341,6 +341,7 @@ typedef struct sector_s
 
 	// per-sector colormaps!
 	extracolormap_t *extra_colormap;
+	boolean colormap_protected;
 
 #ifdef HWRENDER // ----- for special tricks with HW renderer -----
 	boolean pseudoSector;
