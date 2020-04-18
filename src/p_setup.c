@@ -2705,13 +2705,13 @@ static void P_ConvertBinaryMap(void)
 			boolean frontceil = (lines[i].special == 701 || lines[i].special == 702 || lines[i].special == 713);
 			boolean backceil = (lines[i].special == 711 || lines[i].special == 712 || lines[i].special == 703);
 
-			lines[i].args[0] = backfloor ? 2 : (frontfloor ? 1 : 0);
-			lines[i].args[1] = backceil ? 2 : (frontceil ? 1 : 0);
+			lines[i].args[0] = backfloor ? TMS_BACK : (frontfloor ? TMS_FRONT : TMS_NONE);
+			lines[i].args[1] = backceil ? TMS_BACK : (frontceil ? TMS_FRONT : TMS_NONE);
 
 			if (lines[i].flags & ML_NETONLY)
-				lines[i].args[2] |= SL_NOPHYSICS;
+				lines[i].args[2] |= TMSL_NOPHYSICS;
 			if (lines[i].flags & ML_NONET)
-				lines[i].args[2] |= SL_DYNAMIC;
+				lines[i].args[2] |= TMSL_DYNAMIC;
 
 			lines[i].special = 700;
 			break;
@@ -2722,13 +2722,13 @@ static void P_ConvertBinaryMap(void)
 		case 715: //Slope back sector ceiling  by 3 tagged vertices
 		{
 			if (lines[i].special == 704)
-				lines[i].args[0] = 0;
+				lines[i].args[0] = TMSP_FRONTFLOOR;
 			else if (lines[i].special == 705)
-				lines[i].args[0] = 1;
+				lines[i].args[0] = TMSP_FRONTCEILING;
 			else if (lines[i].special == 714)
-				lines[i].args[0] = 2;
+				lines[i].args[0] = TMSP_BACKFLOOR;
 			else if (lines[i].special == 715)
-				lines[i].args[0] = 3;
+				lines[i].args[0] = TMSP_BACKCEILING;
 
 			lines[i].args[1] = lines[i].tag;
 
@@ -2751,9 +2751,9 @@ static void P_ConvertBinaryMap(void)
 			}
 
 			if (lines[i].flags & ML_NETONLY)
-				lines[i].args[4] |= SL_NOPHYSICS;
+				lines[i].args[4] |= TMSL_NOPHYSICS;
 			if (lines[i].flags & ML_NONET)
-				lines[i].args[4] |= SL_DYNAMIC;
+				lines[i].args[4] |= TMSL_DYNAMIC;
 
 			lines[i].special = 704;
 			break;
