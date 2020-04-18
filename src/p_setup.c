@@ -1825,12 +1825,12 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 				if (alpha < 0)
 				{
 					alpha *= -1;
-					ld->args[2] |= 16;
+					ld->args[2] |= TMCF_SUBLIGHTA;
 				}
 				if (fadealpha < 0)
 				{
 					fadealpha *= -1;
-					ld->args[2] |= 256;
+					ld->args[2] |= TMCF_SUBFADEA;
 				}
 
 				exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(alpha);
@@ -2812,13 +2812,13 @@ static void P_ConvertBinaryMap(void)
 		case 447: //Change colormap
 			lines[i].args[0] = lines[i].tag;
 			if (lines[i].flags & ML_EFFECT3)
-				lines[i].args[2] |= 1;
+				lines[i].args[2] |= TMCF_RELATIVE;
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] |= 34;
+				lines[i].args[2] |= TMCF_SUBLIGHTR|TMCF_SUBFADER;
 			if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[2] |= 68;
+				lines[i].args[2] |= TMCF_SUBLIGHTG|TMCF_SUBFADEG;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[2] |= 136;
+				lines[i].args[2] |= TMCF_SUBLIGHTB|TMCF_SUBFADEB;
 			break;
 		case 455: //Fade colormap
 		{
@@ -2832,17 +2832,17 @@ static void P_ConvertBinaryMap(void)
 			else
 				lines[i].args[2] = (256 + speed - 1)/speed;
 			if (lines[i].flags & ML_EFFECT3)
-				lines[i].args[3] |= 1;
+				lines[i].args[3] |= TMCF_RELATIVE;
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[3] |= 34;
+				lines[i].args[3] |= TMCF_SUBLIGHTR|TMCF_SUBFADER;
 			if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[3] |= 68;
+				lines[i].args[3] |= TMCF_SUBLIGHTG|TMCF_SUBFADEG;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[3] |= 136;
+				lines[i].args[3] |= TMCF_SUBLIGHTB|TMCF_SUBFADEB;
 			if (lines[i].flags & ML_BOUNCY)
-				lines[i].args[3] |= 4096;
+				lines[i].args[3] |= TMCF_FROMBLACK;
 			if (lines[i].flags & ML_EFFECT5)
-				lines[i].args[3] |= 8192;
+				lines[i].args[3] |= TMCF_OVERRIDE;
 			break;
 		}
 		case 456: //Stop fading colormap
