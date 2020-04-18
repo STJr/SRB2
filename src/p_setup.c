@@ -873,7 +873,6 @@ static void P_InitializeSector(sector_t *ss)
 
 	ss->linecount = 0;
 	ss->lines = NULL;
-	ss->tagline = NULL;
 
 	ss->ffloors = NULL;
 	ss->attached = NULL;
@@ -1189,10 +1188,14 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 9: // Mace parameters
 			case 14: // Bustable block parameters
 			case 15: // Fan particle spawner parameters
+			case 334: // Trigger linedef executor: Object dye - Continuous
+			case 335: // Trigger linedef executor: Object dye - Each time
+			case 336: // Trigger linedef executor: Object dye - Once
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 			case 461: // Spawns an object on the map based on texture offsets
+			case 463: // Colorizes an object
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -1822,12 +1825,12 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 				if (alpha < 0)
 				{
 					alpha *= -1;
-					ld->args[2] |= 16;
+					ld->args[2] |= TMCF_SUBLIGHTA;
 				}
 				if (fadealpha < 0)
 				{
 					fadealpha *= -1;
-					ld->args[2] |= 256;
+					ld->args[2] |= TMCF_SUBFADEA;
 				}
 
 				exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(alpha);
@@ -3080,13 +3083,13 @@ static void P_ConvertBinaryMap(void)
 		case 447: //Change colormap
 			lines[i].args[0] = lines[i].tag;
 			if (lines[i].flags & ML_EFFECT3)
-				lines[i].args[2] |= 1;
+				lines[i].args[2] |= TMCF_RELATIVE;
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] |= 34;
+				lines[i].args[2] |= TMCF_SUBLIGHTR|TMCF_SUBFADER;
 			if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[2] |= 68;
+				lines[i].args[2] |= TMCF_SUBLIGHTG|TMCF_SUBFADEG;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[2] |= 136;
+				lines[i].args[2] |= TMCF_SUBLIGHTB|TMCF_SUBFADEB;
 			break;
 		case 455: //Fade colormap
 		{
@@ -3100,17 +3103,17 @@ static void P_ConvertBinaryMap(void)
 			else
 				lines[i].args[2] = (256 + speed - 1)/speed;
 			if (lines[i].flags & ML_EFFECT3)
-				lines[i].args[3] |= 1;
+				lines[i].args[3] |= TMCF_RELATIVE;
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[3] |= 34;
+				lines[i].args[3] |= TMCF_SUBLIGHTR|TMCF_SUBFADER;
 			if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[3] |= 68;
+				lines[i].args[3] |= TMCF_SUBLIGHTG|TMCF_SUBFADEG;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[3] |= 136;
+				lines[i].args[3] |= TMCF_SUBLIGHTB|TMCF_SUBFADEB;
 			if (lines[i].flags & ML_BOUNCY)
-				lines[i].args[3] |= 4096;
+				lines[i].args[3] |= TMCF_FROMBLACK;
 			if (lines[i].flags & ML_EFFECT5)
-				lines[i].args[3] |= 8192;
+				lines[i].args[3] |= TMCF_OVERRIDE;
 			break;
 		}
 		case 456: //Stop fading colormap
@@ -3133,13 +3136,13 @@ static void P_ConvertBinaryMap(void)
 			boolean frontceil = (lines[i].special == 701 || lines[i].special == 702 || lines[i].special == 713);
 			boolean backceil = (lines[i].special == 711 || lines[i].special == 712 || lines[i].special == 703);
 
-			lines[i].args[0] = backfloor ? 2 : (frontfloor ? 1 : 0);
-			lines[i].args[1] = backceil ? 2 : (frontceil ? 1 : 0);
+			lines[i].args[0] = backfloor ? TMS_BACK : (frontfloor ? TMS_FRONT : TMS_NONE);
+			lines[i].args[1] = backceil ? TMS_BACK : (frontceil ? TMS_FRONT : TMS_NONE);
 
 			if (lines[i].flags & ML_NETONLY)
-				lines[i].args[2] |= SL_NOPHYSICS;
+				lines[i].args[2] |= TMSL_NOPHYSICS;
 			if (lines[i].flags & ML_NONET)
-				lines[i].args[2] |= SL_DYNAMIC;
+				lines[i].args[2] |= TMSL_DYNAMIC;
 
 			lines[i].special = 700;
 			break;
@@ -3150,13 +3153,13 @@ static void P_ConvertBinaryMap(void)
 		case 715: //Slope back sector ceiling  by 3 tagged vertices
 		{
 			if (lines[i].special == 704)
-				lines[i].args[0] = 0;
+				lines[i].args[0] = TMSP_FRONTFLOOR;
 			else if (lines[i].special == 705)
-				lines[i].args[0] = 1;
+				lines[i].args[0] = TMSP_FRONTCEILING;
 			else if (lines[i].special == 714)
-				lines[i].args[0] = 2;
+				lines[i].args[0] = TMSP_BACKFLOOR;
 			else if (lines[i].special == 715)
-				lines[i].args[0] = 3;
+				lines[i].args[0] = TMSP_BACKCEILING;
 
 			lines[i].args[1] = lines[i].tag;
 
@@ -3179,9 +3182,9 @@ static void P_ConvertBinaryMap(void)
 			}
 
 			if (lines[i].flags & ML_NETONLY)
-				lines[i].args[4] |= SL_NOPHYSICS;
+				lines[i].args[4] |= TMSL_NOPHYSICS;
 			if (lines[i].flags & ML_NONET)
-				lines[i].args[4] |= SL_DYNAMIC;
+				lines[i].args[4] |= TMSL_DYNAMIC;
 
 			lines[i].special = 704;
 			break;

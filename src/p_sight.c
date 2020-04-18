@@ -495,7 +495,7 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 			if (rover->flags & FF_SOLID)
 				continue; // shortcut since neither mobj can be inside the 3dfloor
 
-			if (!(rover->flags & FF_INVERTPLANES))
+			if (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))
 			{
 				if (los.sightzstart >= topz1 && t2->z + t2->height < topz2)
 					return false; // blocked by upper outside plane
@@ -504,7 +504,7 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 					return false; // blocked by lower outside plane
 			}
 
-			if (rover->flags & FF_INVERTPLANES || rover->flags & FF_BOTHPLANES)
+			if (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES)
 			{
 				if (los.sightzstart < topz1 && t2->z >= topz2)
 					return false; // blocked by upper inside plane

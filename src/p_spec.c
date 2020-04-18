@@ -2034,6 +2034,17 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin].name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
 				return false;
 			break;
+		case 334: // object dye - continuous
+		case 335: // object dye - each time
+		case 336: // object dye - once
+			{
+				INT32 triggercolor = (INT32)sides[triggerline->sidenum[0]].toptexture;
+				UINT8 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
+				boolean invert = (triggerline->flags & ML_NOCLIMB ? true : false);
+
+				if (invert ^ (triggercolor != color))
+					return false;
+			}
 		default:
 			break;
 	}
@@ -2167,6 +2178,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 328 // Nights lap - Once
 	 || specialtype == 330 // Nights Bonus Time - Once
 	 || specialtype == 333 // Skin - Once
+	 || specialtype == 336 // Dye - Once
 	 || specialtype == 399) // Level Load
 		triggerline->special = 0; // Clear it out
 
@@ -2208,7 +2220,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		 || lines[masterline].special == 310 // CTF Red team - Each time
 		 || lines[masterline].special == 312 // CTF Blue team - Each time
 		 || lines[masterline].special == 322 // Trigger on X calls - Each Time
-		 || lines[masterline].special == 332)// Skin - Each time
+		 || lines[masterline].special == 332 // Skin - Each time
+		 || lines[masterline].special == 335)// Dye - Each time
 			continue;
 
 		if (lines[masterline].special < 300
@@ -3519,7 +3532,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				P_ResetColormapFader(&sectors[secnum]);
 
-				if (line->args[2] & 1) // relative calc
+				if (line->args[2] & TMCF_RELATIVE)
 				{
 					extracolormap_t *target = (!udmf && (line->flags & ML_TFERLINE) && line->sidenum[1] != 0xFFFF) ?
 						sides[line->sidenum[1]].colormap_data : sectors[secnum].extra_colormap; // use back colormap instead of target sector
@@ -3527,17 +3540,17 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						extracolormap_t *exc = R_AddColormaps(
 							target,
 							source,
-							line->args[2] & 2,    // subtract R
-							line->args[2] & 4,    // subtract G
-							line->args[2] & 8,    // subtract B
-							line->args[2] & 16,   // subtract A
-							line->args[2] & 32,   // subtract FadeR
-							line->args[2] & 64,   // subtract FadeG
-							line->args[2] & 128,  // subtract FadeB
-							line->args[2] & 256,  // subtract FadeA
-							line->args[2] & 512,  // subtract FadeStart
-							line->args[2] & 1024, // subtract FadeEnd
-							line->args[2] & 2048, // ignore Flags
+							line->args[2] & TMCF_SUBLIGHTR,
+							line->args[2] & TMCF_SUBLIGHTG,
+							line->args[2] & TMCF_SUBLIGHTB,
+							line->args[2] & TMCF_SUBLIGHTA,
+							line->args[2] & TMCF_SUBFADER,
+							line->args[2] & TMCF_SUBFADEG,
+							line->args[2] & TMCF_SUBFADEB,
+							line->args[2] & TMCF_SUBFADEA,
+							line->args[2] & TMCF_SUBFADESTART,
+							line->args[2] & TMCF_SUBFADEEND,
+							line->args[2] & TMCF_IGNOREFLAGS,
 							false);
 
 					if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(exc)))
@@ -3855,7 +3868,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					continue;
 
 				// Don't interrupt ongoing fade
-				if (!(line->args[3] & 8192)
+				if (!(line->args[3] & TMCF_OVERRIDE)
 					&& sectors[secnum].fadecolormapdata)
 					//&& ((fadecolormap_t*)sectors[secnum].fadecolormapdata)->timer > (ticbased ? 2 : speed*2))
 				{
@@ -3869,7 +3882,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				exc = sectors[secnum].extra_colormap;
 
-				if (!(line->args[3] & 4096) // Override fade from default rgba
+				if (!(line->args[3] & TMCF_FROMBLACK) // Override fade from default rgba
 					&& !R_CheckDefaultColormap(dest, true, false, false)
 					&& R_CheckDefaultColormap(exc, true, false, false))
 				{
@@ -3891,22 +3904,22 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				else
 					source_exc = exc ? exc : R_GetDefaultColormap();
 
-				if (line->args[3] & 1) // relative calc
+				if (line->args[3] & TMCF_RELATIVE)
 				{
 					exc = R_AddColormaps(
 						source_exc,
 						dest,
-						line->args[3] & 2,    // subtract R
-						line->args[3] & 4,    // subtract G
-						line->args[3] & 8,    // subtract B
-						line->args[3] & 16,   // subtract A
-						line->args[3] & 32,   // subtract FadeR
-						line->args[3] & 64,   // subtract FadeG
-						line->args[3] & 128,  // subtract FadeB
-						line->args[3] & 256,  // subtract FadeA
-						line->args[3] & 512,  // subtract FadeStart
-						line->args[3] & 1024, // subtract FadeEnd
-						line->args[3] & 2048, // ignore Flags
+						line->args[3] & TMCF_SUBLIGHTR,
+						line->args[3] & TMCF_SUBLIGHTG,
+						line->args[3] & TMCF_SUBLIGHTB,
+						line->args[3] & TMCF_SUBLIGHTA,
+						line->args[3] & TMCF_SUBFADER,
+						line->args[3] & TMCF_SUBFADEG,
+						line->args[3] & TMCF_SUBFADEB,
+						line->args[3] & TMCF_SUBFADEA,
+						line->args[3] & TMCF_SUBFADESTART,
+						line->args[3] & TMCF_SUBFADEEND,
+						line->args[3] & TMCF_IGNOREFLAGS,
 						false);
 				}
 				else
@@ -4052,6 +4065,22 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							continue;
 						P_DoPlayerExit(&players[i]);
 					}
+				}
+			}
+			break;
+
+		case 463: // Dye object
+			{
+				INT32 color = sides[line->sidenum[0]].toptexture;
+
+				if (mo)
+				{
+					if (color < 0 || color >= MAXTRANSLATIONS)
+						return;
+
+					var1 = 0;
+					var2 = color;
+					A_Dye(mo);
 				}
 			}
 			break;
@@ -5761,8 +5790,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		sec2->floorheight = tempceiling;
 	}
 
-	sec2->tagline = master;
-
 	if (sec2->numattached == 0)
 	{
 		sec2->attached = Z_Malloc(sizeof (*sec2->attached) * sec2->maxattached, PU_STATIC, NULL);
@@ -5954,39 +5981,6 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
 	floater->vars[0] = tag;
 	floater->sourceline = sourceline;
 }
-
-/** Adds a bridge thinker.
-  * Bridge thinkers cause a group of FOFs to behave like
-  * a bridge made up of pieces, that bows under weight.
-  *
-  * \param sec          Control sector.
-  * \sa P_SpawnSpecials, T_BridgeThinker
-  * \author SSNTails <http://www.ssntails.org>
-  */
-/*
-static inline void P_AddBridgeThinker(line_t *sourceline, sector_t *sec)
-{
-	levelspecthink_t *bridge;
-
-	// create an initialize new thinker
-	bridge = Z_Calloc(sizeof (*bridge), PU_LEVSPEC, NULL);
-	P_AddThinker(THINK_MAIN, &bridge->thinker);
-
-	bridge->thinker.function.acp1 = (actionf_p1)T_BridgeThinker;
-
-	bridge->sector = sec;
-	bridge->vars[0] = sourceline->frontsector->floorheight;
-	bridge->vars[1] = sourceline->frontsector->ceilingheight;
-	bridge->vars[2] = P_AproxDistance(sourceline->dx, sourceline->dy); // Speed
-	bridge->vars[2] = FixedDiv(bridge->vars[2], 16*FRACUNIT);
-	bridge->vars[3] = bridge->vars[2];
-
-	// Start tag and end tag are TARGET SECTORS, not CONTROL SECTORS
-	// Control sector tags should be End_Tag + (End_Tag - Start_Tag)
-	bridge->vars[4] = sourceline->tag; // Start tag
-	bridge->vars[5] = (sides[sourceline->sidenum[0]].textureoffset>>FRACBITS); // End tag
-}
-*/
 
 /**
   * Adds a plane displacement thinker.
@@ -6725,13 +6719,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 					}
 				break;
 
-			case 65: // Bridge Thinker
-				/*
-				// Disable this until it's working right!
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					P_AddBridgeThinker(&lines[i], &sectors[s]);*/
-				break;
-
 			case 66: // Displace floor by front sector
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
 					P_AddPlaneDisplaceThinker(pd_floor, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
@@ -6919,7 +6906,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 202: // Fog
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_FOG|FF_BOTHPLANES|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
+				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_FOG|FF_INVERTPLANES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				// SoM: Because it's fog, check for an extra colormap and set the fog flag...
 				if (sectors[sec].extra_colormap)
@@ -7061,6 +7048,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 310:
 			case 312:
 			case 332:
+			case 335:
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				P_AddEachTimeThinker(&sectors[sec], &lines[i]);
 				break;
@@ -7112,6 +7100,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 			// Skin trigger executors
 			case 331:
 			case 333:
+				break;
+
+			// Object dye executors
+			case 334:
+			case 336:
 				break;
 
 			case 399: // Linedef execute on map load
