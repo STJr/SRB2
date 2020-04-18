@@ -424,10 +424,10 @@ typedef enum
 
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crush,
 	boolean ceiling, INT32 direction);
-INT32 EV_DoFloor(line_t *line, floor_e floortype);
-INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed);
+void EV_DoFloor(line_t *line, floor_e floortype);
+void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed);
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover);
-INT32 EV_BounceSector(sector_t *sector, fixed_t momz, line_t *sourceline);
+void EV_BounceSector(sector_t *sector, fixed_t momz, line_t *sourceline);
 
 // Some other special 3dfloor types
 INT32 EV_StartCrumble(sector_t *sector, ffloor_t *rover,

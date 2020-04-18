@@ -1800,9 +1800,9 @@ void T_PlaneDisplace(planedisplace_t *pd)
 // (egg capsule button), P_PlayerInSpecialSector (buttons),
 // and P_SpawnSpecials (continuous floor movers and instant lower).
 //
-INT32 EV_DoFloor(line_t *line, floor_e floortype)
+void EV_DoFloor(line_t *line, floor_e floortype)
 {
-	INT32 rtn = 0, firstone = 1;
+	INT32 firstone = 1;
 	INT32 secnum = -1;
 	sector_t *sec;
 	floormove_t *dofloor;
@@ -1815,7 +1815,6 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 			continue; // then don't add another one
 
 		// new floor thinker
-		rtn = 1;
 		dofloor = Z_Calloc(sizeof (*dofloor), PU_LEVSPEC, NULL);
 		P_AddThinker(THINK_MAIN, &dofloor->thinker);
 
@@ -2005,8 +2004,6 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 
 		firstone = 0;
 	}
-
-	return rtn;
 }
 
 // SoM: Boom elevator support.
@@ -2019,10 +2016,9 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 //
 // jff 2/22/98 new type to move floor and ceiling in parallel
 //
-INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
+void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 {
 	INT32 secnum = -1;
-	INT32 rtn = 0;
 	sector_t *sec;
 	elevator_t *elevator;
 
@@ -2036,7 +2032,6 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 			continue;
 
 		// create and initialize new elevator thinker
-		rtn = 1;
 		elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
 		P_AddThinker(THINK_MAIN, &elevator->thinker);
 		sec->floordata = elevator;
@@ -2138,7 +2133,6 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 				break;
 		}
 	}
-	return rtn;
 }
 
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
@@ -2271,13 +2265,13 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 }
 
 // Used for bobbing platforms on the water
-INT32 EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
+void EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 {
 	bouncecheese_t *bouncer;
 
 	// create and initialize new thinker
 	if (sec->ceilingdata) // One at a time, ma'am.
-		return 0;
+		return;
 
 	bouncer = Z_Calloc(sizeof (*bouncer), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &bouncer->thinker);
@@ -2290,8 +2284,6 @@ INT32 EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 	bouncer->speed = momz/2;
 	bouncer->distance = FRACUNIT;
 	bouncer->low = true;
-
-	return 1;
 }
 
 // For T_ContinuousFalling special
