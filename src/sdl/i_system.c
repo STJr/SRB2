@@ -2060,9 +2060,12 @@ static p_timeGetTime pfntimeGetTime = NULL;
 // but lower precision on Windows NT
 // ---------
 
-tic_t I_GetTime(void)
+DWORD TimeFunction(boolean microseconds)
 {
-	tic_t newtics = 0;
+	DWORD newtics = 0;
+	int multiplier = 1;
+
+	if (microseconds) multiplier = 1000;
 
 	if (!starttickcount) // high precision timer
 	{
@@ -2082,7 +2085,7 @@ tic_t I_GetTime(void)
 
 		if (frequency.LowPart && QueryPerformanceCounter(&currtime))
 		{
-			newtics = (INT32)((currtime.QuadPart - basetime.QuadPart) * NEWTICRATE
+			newtics = (INT32)((currtime.QuadPart - basetime.QuadPart) * 1000 * multiplier
 				/ frequency.QuadPart);
 		}
 		else if (pfntimeGetTime)
@@ -2090,11 +2093,11 @@ tic_t I_GetTime(void)
 			currtime.LowPart = pfntimeGetTime();
 			if (!basetime.LowPart)
 				basetime.LowPart = currtime.LowPart;
-			newtics = ((currtime.LowPart - basetime.LowPart)/(1000/NEWTICRATE));
+			newtics = currtime.LowPart - basetime.LowPart;
 		}
 	}
 	else
-		newtics = (GetTickCount() - starttickcount)/(1000/NEWTICRATE);
+		newtics = (GetTickCount() - starttickcount) * multiplier;
 
 	return newtics;
 }
@@ -2116,6 +2119,7 @@ static void I_ShutdownTimer(void)
 // I_GetTime
 // returns time in 1/TICRATE second tics
 //
+/*
 tic_t I_GetTime (void)
 {
 	static Uint64 basetime = 0;
@@ -2132,7 +2136,32 @@ tic_t I_GetTime (void)
 
 	return (tic_t)ticks;
 }
+*/
+int TimeFunction(boolean microseconds)// this cant actually do microseconds so it fakes it
+{
+	static Uint64 basetime = 0;
+		   Uint64 ticks = SDL_GetTicks();
+
+	if (!basetime)
+		basetime = ticks;
+
+	ticks -= basetime;
+	
+	return microseconds ? ticks * 1000 : ticks;
+}
 #endif
+
+tic_t I_GetTime(void)
+{
+	//return TimeFunction(false) / (1000/NEWTICRATE);
+	// how about this
+	return (TimeFunction(false) * NEWTICRATE) / 1000;
+}
+
+int I_GetTimeMicros(void)
+{
+	return TimeFunction(true);
+}
 
 //
 //I_StartupTimer

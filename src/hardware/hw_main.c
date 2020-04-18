@@ -146,6 +146,25 @@ static float gr_fovlud;
 static angle_t gr_aimingangle;
 static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox);
 
+// render stats
+int rs_prevframetime = 0;
+int rs_rendercalltime = 0;
+int rs_bsptime = 0;
+int rs_nodetime = 0;
+int rs_nodesorttime = 0;
+int rs_nodedrawtime = 0;
+int rs_spritesorttime = 0;
+int rs_spritedrawtime = 0;
+
+int rs_numdrawnodes = 0;
+int rs_numbspcalls = 0;
+int rs_numsprites = 0;
+int rs_numpolyobjects = 0;
+
+//int rs_posttime = 0;
+//int rs_swaptime = 0;
+
+
 // ==========================================================================
 // Lighting
 // ==========================================================================
@@ -3484,6 +3503,9 @@ static void HWR_Subsector(size_t num)
 			po = (polyobj_t *)(po->link.next);
 		}
 
+		// for render stats
+		rs_numpolyobjects += numpolys;
+
 		// Sort polyobjects
 		R_SortPolyObjects(sub);
 
@@ -3598,6 +3620,8 @@ static void HWR_RenderBSPNode(INT32 bspnum)
 
 	// Decide which side the view point is on
 	INT32 side;
+	
+	rs_numbspcalls++;
 
 	// Found a subsector?
 	if (bspnum & NF_SUBSECTOR)
@@ -4772,6 +4796,8 @@ static void HWR_CreateDrawNodes(void)
 
 	// If true, swap the draw order.
 	boolean shift = false;
+	
+	rs_nodesorttime = I_GetTimeMicros();
 
 	for (i = 0; i < numplanes; i++, p++)
 	{
@@ -4790,6 +4816,8 @@ static void HWR_CreateDrawNodes(void)
 		sortnode[p].wall = &wallinfo[i];
 		sortindex[p] = p;
 	}
+	
+	rs_numdrawnodes = p;
 
 	// p is the number of stuff to sort
 
@@ -4892,6 +4920,10 @@ static void HWR_CreateDrawNodes(void)
 		} //i++
 	} // loop++
 
+	rs_nodesorttime = I_GetTimeMicros() - rs_nodesorttime;
+	
+	rs_nodedrawtime = I_GetTimeMicros();
+
 	// Okay! Let's draw it all! Woo!
 	HWD.pfnSetTransform(&atransform);
 	HWD.pfnSetShader(0);
@@ -4926,6 +4958,8 @@ static void HWR_CreateDrawNodes(void)
 				sortnode[sortindex[i]].wall->lightlevel, sortnode[sortindex[i]].wall->wallcolormap);
 		}
 	}
+	
+	rs_nodedrawtime = I_GetTimeMicros() - rs_nodedrawtime;
 
 	numwalls = 0;
 	numplanes = 0;
@@ -6002,6 +6036,10 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	HWD.pfnSetSpecialState(HWD_SET_SHADERS, cv_grshaders.value);
 	HWD.pfnSetShader(0);
 
+	rs_numbspcalls = 0;
+	rs_numpolyobjects = 0;
+	rs_bsptime = I_GetTimeMicros();
+
 	validcount++;
 
 	HWR_RenderBSPNode((INT32)numnodes-1);
@@ -6035,6 +6073,8 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	}
 #endif
 
+	rs_bsptime = I_GetTimeMicros() - rs_bsptime;
+
 	// Check for new console commands.
 	NetUpdate();
 
@@ -6045,14 +6085,22 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 #endif
 
 	// Draw MD2 and sprites
+	rs_numsprites = gr_visspritecount;
+	rs_spritesorttime = I_GetTimeMicros();
 	HWR_SortVisSprites();
+	rs_spritesorttime = I_GetTimeMicros() - rs_spritesorttime;
+	rs_spritedrawtime = I_GetTimeMicros();
 	HWR_DrawSprites();
+	rs_spritedrawtime = I_GetTimeMicros() - rs_spritedrawtime;
 
 #ifdef NEWCORONAS
 	//Hurdler: they must be drawn before translucent planes, what about gl fog?
 	HWR_DrawCoronas();
 #endif
 
+	rs_numdrawnodes = 0;
+	rs_nodesorttime = 0;
+	rs_nodedrawtime = 0;
 	if (numplanes || numpolyplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
 	{
 		HWR_CreateDrawNodes();
@@ -6118,6 +6166,11 @@ consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotro
 consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+// render stats
+// for now have it in here in the hw code
+// could have it somewhere else since renderstats could also be a software rendering thing
+consvar_t cv_renderstats = {"renderstats", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 static void CV_grfiltermode_OnChange(void)
 {
 	if (rendermode == render_opengl)
@@ -6155,6 +6208,8 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_grfiltermode);
 	CV_RegisterVar(&cv_grcorrecttricks);
 	CV_RegisterVar(&cv_grsolvetjoin);
+	
+	CV_RegisterVar(&cv_renderstats);
 
 #ifndef NEWCLIP
 	CV_RegisterVar(&cv_grclipwalls);
