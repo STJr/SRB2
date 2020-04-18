@@ -941,16 +941,9 @@ void T_StartCrumble(elevator_t *elevator)
 //////////////////////////////////////////////////
 // Mario hits a block!
 //
-void T_MarioBlock(levelspecthink_t *block)
+void T_MarioBlock(mariothink_t *block)
 {
 	INT32 i;
-
-#define speed vars[1]
-#define direction vars[2]
-#define floorwasheight vars[3]
-#define ceilingwasheight vars[4]
-#define distance vars[5]
-#define low vars[6]
 
 	T_MovePlane
 	(
@@ -972,12 +965,12 @@ void T_MarioBlock(levelspecthink_t *block)
 	  block->direction
 	);
 
-	if (block->sector->ceilingheight >= block->ceilingwasheight + 32*FRACUNIT) // Go back down now..
-		block->direction = -block->direction;
-	else if (block->sector->ceilingheight <= block->ceilingwasheight)
+	if (block->sector->ceilingheight >= block->ceilingstartheight + 32*FRACUNIT) // Go back down now..
+		block->direction *= -1;
+	else if (block->sector->ceilingheight <= block->ceilingstartheight)
 	{
-		block->sector->ceilingheight = block->ceilingwasheight;
-		block->sector->floorheight = block->floorwasheight;
+		block->sector->ceilingheight = block->ceilingstartheight;
+		block->sector->floorheight = block->floorstartheight;
 		P_RemoveThinker(&block->thinker);
 		block->sector->floordata = NULL;
 		block->sector->ceilingdata = NULL;
@@ -986,15 +979,8 @@ void T_MarioBlock(levelspecthink_t *block)
 		block->direction = 0;
 	}
 
-	for (i = -1; (i = P_FindSectorFromTag((INT16)block->vars[0], i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(block->tag, i)) >= 0 ;)
 		P_RecalcPrecipInSector(&sectors[i]);
-
-#undef speed
-#undef direction
-#undef floorwasheight
-#undef ceilingwasheight
-#undef distance
-#undef low
 }
 
 void T_FloatSector(floatthink_t *floater)
@@ -2460,11 +2446,11 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	return 1;
 }
 
-INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
+void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 {
 	sector_t *roversec = rover->master->frontsector;
 	fixed_t topheight = *rover->topheight;
-	levelspecthink_t *block;
+	mariothink_t *block;
 	mobj_t *thing;
 	fixed_t oldx = 0, oldy = 0, oldz = 0;
 
@@ -2472,7 +2458,7 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 	I_Assert(puncher->player != NULL);
 
 	if (roversec->floordata || roversec->ceilingdata)
-		return 0;
+		return;
 
 	if (!(rover->flags & FF_SOLID))
 		rover->flags |= (FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
@@ -2480,8 +2466,9 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 	// Find an item to pop out!
 	thing = SearchMarioNode(roversec->touching_thinglist);
 
-	// Found something!
-	if (thing)
+	if (!thing)
+		S_StartSound(puncher, sfx_mario1); // "Thunk!" sound - puncher is "close enough".
+	else // Found something!
 	{
 		const boolean itsamonitor = (thing->flags & MF_MONITOR) == MF_MONITOR;
 		// create and initialize new elevator thinker
@@ -2494,13 +2481,11 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 
 		// Set up the fields
 		block->sector = roversec;
-		block->vars[0] = sector->tag; // actionsector
-		block->vars[1] = 4*FRACUNIT; // speed
-		block->vars[2] = 1; // Up // direction
-		block->vars[3] = block->sector->floorheight; // floorwasheight
-		block->vars[4] = block->sector->ceilingheight; // ceilingwasheight
-		block->vars[5] = FRACUNIT; // distance
-		block->vars[6] = 1; // low
+		block->speed = 4*FRACUNIT;
+		block->direction = 1;
+		block->floorstartheight = block->sector->floorheight;
+		block->ceilingstartheight = block->sector->ceilingheight;
+		block->tag = (INT16)sector->tag;
 
 		if (itsamonitor)
 		{
@@ -2541,8 +2526,4 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 			P_SetThingPosition(thing);
 		}
 	}
-	else
-		S_StartSound(puncher, sfx_mario1); // "Thunk!" sound - puncher is "close enough".
-
-	return 1;
 }
