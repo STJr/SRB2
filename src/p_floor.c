@@ -625,13 +625,8 @@ static fixed_t P_SectorCheckWater(sector_t *analyzesector,
 //////////////////////////////////////////////////
 // Bounces a floating cheese
 
-void T_BounceCheese(levelspecthink_t *bouncer)
+void T_BounceCheese(bouncecheese_t *bouncer)
 {
-#define speed vars[0]
-#define distance vars[1]
-#define low vars[2]
-#define ceilingwasheight vars[3]
-#define floorwasheight vars[4]
 	fixed_t sectorheight;
 	fixed_t halfheight;
 	fixed_t waterheight;
@@ -709,7 +704,7 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		bouncer->sector->floorspeed = -bouncer->speed/2;
 		bouncer->sector->ceilspeed = 42;
 
-		if ((bouncer->sector->ceilingheight < bouncer->ceilingwasheight && bouncer->low == 0) // Down
+		if ((bouncer->sector->ceilingheight < bouncer->ceilingwasheight && !bouncer->low) // Down
 			|| (bouncer->sector->ceilingheight > bouncer->ceilingwasheight && bouncer->low)) // Up
 		{
 			if (abs(bouncer->speed) < 6*FRACUNIT)
@@ -717,7 +712,7 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 			else
 				bouncer->speed -= bouncer->speed/2;
 
-			bouncer->low = bouncer->low ? 0 : 1;
+			bouncer->low = !bouncer->low;
 			if (abs(bouncer->speed) > 6*FRACUNIT)
 			{
 				mobj_t *mp = (void *)&actionsector->soundorg;
@@ -756,11 +751,6 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		if (actionsector)
 			P_RecalcPrecipInSector(actionsector);
 	}
-#undef speed
-#undef distance
-#undef low
-#undef ceilingwasheight
-#undef floorwasheight
 }
 
 //////////////////////////////////////////////////
@@ -2283,10 +2273,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 // Used for bobbing platforms on the water
 INT32 EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 {
-#define speed vars[0]
-#define distance vars[1]
-#define low vars[2]
-	levelspecthink_t *bouncer;
+	bouncecheese_t *bouncer;
 
 	// create and initialize new thinker
 	if (sec->ceilingdata) // One at a time, ma'am.
@@ -2298,16 +2285,13 @@ INT32 EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 	bouncer->thinker.function.acp1 = (actionf_p1)T_BounceCheese;
 
 	// set up the fields according to the type of elevator action
+	bouncer->sourceline = sourceline;
 	bouncer->sector = sec;
 	bouncer->speed = momz/2;
-	bouncer->sourceline = sourceline;
 	bouncer->distance = FRACUNIT;
-	bouncer->low = 1;
+	bouncer->low = true;
 
 	return 1;
-#undef speed
-#undef distance
-#undef low
 }
 
 // For T_ContinuousFalling special

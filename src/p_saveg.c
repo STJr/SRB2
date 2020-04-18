@@ -1671,6 +1671,24 @@ static void SaveNoEnemiesThinker(const thinker_t *th, const UINT8 type)
 }
 
 //
+// SaveBounceCheeseThinker
+//
+// Saves a bouncecheese_t thinker
+//
+static void SaveBounceCheeseThinker(const thinker_t *th, const UINT8 type)
+{
+	const bouncecheese_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEFIXED(save_p, ht->speed);
+	WRITEFIXED(save_p, ht->distance);
+	WRITEFIXED(save_p, ht->floorwasheight);
+	WRITEFIXED(save_p, ht->ceilingwasheight);
+	WRITECHAR(save_p, ht->low);
+}
+
+//
 // SaveContinuousFallThinker
 //
 // Saves a continuousfall_t thinker
@@ -2378,7 +2396,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_BounceCheese)
 			{
-				SaveSpecialLevelThinker(th, tc_bouncecheese);
+				SaveBounceCheeseThinker(th, tc_bouncecheese);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_StartCrumble)
@@ -2890,6 +2908,24 @@ static thinker_t* LoadNoEnemiesThinker(actionf_p1 thinker)
 	noenemies_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->sourceline = LoadLine(READUINT32(save_p));
+	return &ht->thinker;
+}
+
+// LoadBounceCheeseThinker
+//
+// Loads a bouncecheese_t from a save game
+//
+static thinker_t* LoadBounceCheeseThinker(actionf_p1 thinker)
+{
+	bouncecheese_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->speed = READFIXED(save_p);
+	ht->distance = READFIXED(save_p);
+	ht->floorwasheight = READFIXED(save_p);
+	ht->ceilingwasheight = READFIXED(save_p);
+	ht->low = READCHAR(save_p);
 	return &ht->thinker;
 }
 
@@ -3688,7 +3724,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_bouncecheese:
-					th = LoadSpecialLevelThinker((actionf_p1)T_BounceCheese, 2);
+					th = LoadBounceCheeseThinker((actionf_p1)T_BounceCheese);
 					break;
 
 				case tc_startcrumble:

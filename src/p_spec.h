@@ -340,6 +340,18 @@ typedef struct
 typedef struct
 {
 	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+	fixed_t speed;
+	fixed_t distance;
+	fixed_t floorwasheight;
+	fixed_t ceilingwasheight;
+	boolean low;
+} bouncecheese_t;
+
+typedef struct
+{
+	thinker_t thinker;
 	sector_t *sector;
 	fixed_t speed;
 	INT32 direction;
@@ -429,7 +441,7 @@ void T_MoveFloor(floormove_t *movefloor);
 
 void T_MoveElevator(elevator_t *elevator);
 void T_ContinuousFalling(continuousfall_t *faller);
-void T_BounceCheese(levelspecthink_t *bouncer);
+void T_BounceCheese(bouncecheese_t *bouncer);
 void T_StartCrumble(elevator_t *elevator);
 void T_MarioBlock(mariothink_t *block);
 void T_FloatSector(floatthink_t *floater);
