@@ -6107,14 +6107,13 @@ static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, lin
 /** Adds a thinker which checks if any MF_ENEMY objects with health are in the defined area.
   * If not, a linedef executor is run once.
   *
-  * \param sec          Control sector.
   * \param sourceline   Control linedef.
   * \sa P_SpawnSpecials, T_NoEnemiesSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static inline void P_AddNoEnemiesThinker(sector_t *sec, line_t *sourceline)
+static inline void P_AddNoEnemiesThinker(line_t *sourceline)
 {
-	levelspecthink_t *nobaddies;
+	noenemies_t *nobaddies;
 
 	// create and initialize new thinker
 	nobaddies = Z_Calloc(sizeof (*nobaddies), PU_LEVSPEC, NULL);
@@ -6122,7 +6121,6 @@ static inline void P_AddNoEnemiesThinker(sector_t *sec, line_t *sourceline)
 
 	nobaddies->thinker.function.acp1 = (actionf_p1)T_NoEnemiesSector;
 
-	nobaddies->sector = sec;
 	nobaddies->sourceline = sourceline;
 }
 
@@ -7124,8 +7122,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			// No More Enemies Linedef Exec
 			case 313:
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				P_AddNoEnemiesThinker(&sectors[sec], &lines[i]);
+				P_AddNoEnemiesThinker(&lines[i]);
 				break;
 
 			// Pushable linedef executors (count # of pushables)

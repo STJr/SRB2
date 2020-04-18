@@ -1659,6 +1659,18 @@ static void SaveSpecialLevelThinker(const thinker_t *th, const UINT8 type)
 }
 
 //
+// SaveNoEnemiesThinker
+//
+// Saves a noenemies_t thinker
+//
+static void SaveNoEnemiesThinker(const thinker_t *th, const UINT8 type)
+{
+	const noenemies_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+}
+
+//
 // SaveContinuousFallThinker
 //
 // Saves a continuousfall_t thinker
@@ -2310,7 +2322,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_NoEnemiesSector)
 			{
-				SaveSpecialLevelThinker(th, tc_noenemies);
+				SaveNoEnemiesThinker(th, tc_noenemies);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_EachTimeThinker)
@@ -2845,6 +2857,18 @@ static thinker_t* LoadSpecialLevelThinker(actionf_p1 thinker, UINT8 floorOrCeili
 			ht->sector->floordata = ht;
 	}
 
+	return &ht->thinker;
+}
+
+// LoadNoEnemiesThinker
+//
+// Loads a noenemies_t from a save game
+//
+static thinker_t* LoadNoEnemiesThinker(actionf_p1 thinker)
+{
+	noenemies_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
 	return &ht->thinker;
 }
 
@@ -3604,7 +3628,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_noenemies:
-					th = LoadSpecialLevelThinker((actionf_p1)T_NoEnemiesSector, 0);
+					th = LoadNoEnemiesThinker((actionf_p1)T_NoEnemiesSector);
 					break;
 
 				case tc_eachtime:

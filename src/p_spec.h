@@ -323,6 +323,12 @@ typedef struct
 typedef struct
 {
 	thinker_t thinker;
+	line_t *sourceline; // Source line of the thinker
+} noenemies_t;
+
+typedef struct
+{
+	thinker_t thinker;
 	sector_t *sector;
 	fixed_t speed;
 	INT32 direction;
@@ -414,7 +420,7 @@ void T_MarioBlock(mariothink_t *block);
 void T_FloatSector(floatthink_t *floater);
 void T_MarioBlockChecker(levelspecthink_t *block);
 void T_ThwompSector(levelspecthink_t *thwomp);
-void T_NoEnemiesSector(levelspecthink_t *nobaddies);
+void T_NoEnemiesSector(noenemies_t *nobaddies);
 void T_EachTimeThinker(eachtime_t *eachtime);
 void T_CameraScanner(elevator_t *elevator);
 void T_RaiseSector(raise_t *raise);

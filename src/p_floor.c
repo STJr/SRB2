@@ -1281,21 +1281,37 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 #undef ceilingwasheight
 }
 
+static boolean T_SectorHasEnemies(sector_t *sec)
+{
+	msecnode_t *node = sec->touching_thinglist; // things touching this sector
+	mobj_t *mo;
+	while (node)
+	{
+		mo = node->m_thing;
+
+		if ((mo->flags & (MF_ENEMY|MF_BOSS))
+			&& mo->health > 0
+			&& mo->z < sec->ceilingheight
+			&& mo->z + mo->height > sec->floorheight)
+			return true;
+
+		node = node->m_thinglist_next;
+	}
+
+	return false;
+}
+
 //
 // T_NoEnemiesThinker
 //
 // Runs a linedef exec when no more MF_ENEMY/MF_BOSS objects with health are in the area
 // \sa P_AddNoEnemiesThinker
 //
-void T_NoEnemiesSector(levelspecthink_t *nobaddies)
+void T_NoEnemiesSector(noenemies_t *nobaddies)
 {
 	size_t i;
-	fixed_t upperbound, lowerbound;
 	sector_t *sec = NULL;
-	sector_t *targetsec = NULL;
 	INT32 secnum = -1;
-	msecnode_t *node;
-	mobj_t *thing;
 	boolean FOFsector = false;
 
 	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
@@ -1316,40 +1332,13 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 
 			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
 			{
-				targetsec = &sectors[targetsecnum];
-
-				upperbound = targetsec->ceilingheight;
-				lowerbound = targetsec->floorheight;
-				node = targetsec->touching_thinglist; // things touching this sector
-				while (node)
-				{
-					thing = node->m_thing;
-
-					if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-					&& thing->z < upperbound && thing->z+thing->height > lowerbound)
-						return;
-
-					node = node->m_thinglist_next;
-				}
-			}
-		}
-
-		if (!FOFsector)
-		{
-			upperbound = sec->ceilingheight;
-			lowerbound = sec->floorheight;
-			node = sec->touching_thinglist; // things touching this sector
-			while (node)
-			{
-				thing = node->m_thing;
-
-				if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-				&& thing->z < upperbound && thing->z+thing->height > lowerbound)
+				if (T_SectorHasEnemies(&sectors[targetsecnum]))
 					return;
-
-				node = node->m_thinglist_next;
 			}
 		}
+
+		if (!FOFsector && T_SectorHasEnemies(sec))
+			return;
 	}
 
 	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", nobaddies->sourceline->tag);
