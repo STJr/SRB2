@@ -2810,24 +2810,24 @@ static void P_ConvertBinaryMap(void)
 
 			//Visibility
 			if (lines[i].special == 105)
-				lines[i].args[1] = 3;
+				lines[i].args[1] = TMFV_NOPLANES|TMFV_NOSIDES;
 			else if (lines[i].special == 104)
-				lines[i].args[1] = 2;
+				lines[i].args[1] = TMFV_NOSIDES;
 			else if (lines[i].special == 103)
-				lines[i].args[1] = 1;
+				lines[i].args[1] = TMFV_NOPLANES;
 
 			//Tangibility
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] |= 8;
+				lines[i].args[2] |= TMFT_DONTBLOCKOTHERS;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[2] |= 4;
+				lines[i].args[2] |= TMFT_DONTBLOCKPLAYER;
 
 			//Translucency
 			if (lines[i].special == 102)
 			{
-				lines[i].args[3] |= 1;
+				lines[i].args[3] |= TMFA_TRANSLUCENT;
 				if (lines[i].flags & ML_NOCLIMB)
-					lines[i].args[1] |= 4;
+					lines[i].args[1] |= TMFV_TOGGLEINSIDES;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
 					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
 				else
@@ -2836,7 +2836,7 @@ static void P_ConvertBinaryMap(void)
 
 			//Shadow?
 			if (lines[i].special != 100 && (lines[i].special != 104 || !(lines[i].flags & ML_NOCLIMB)))
-				lines[i].args[3] |= 1;
+				lines[i].args[3] |= TMFA_NOSHADE;
 
 			lines[i].special = 100;
 			break;
@@ -2850,7 +2850,7 @@ static void P_ConvertBinaryMap(void)
 
 			//Opaque?
 			if (lines[i].special == 120 || lines[i].special == 122)
-				lines[i].args[1] |= 1;
+				lines[i].args[1] |= TMFW_OPAQUE;
 			else
 			{
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
@@ -2861,19 +2861,19 @@ static void P_ConvertBinaryMap(void)
 
 			//No sides?
 			if (lines[i].special == 122 || lines[i].special == 123 || lines[i].special == 125)
-				lines[i].args[1] |= 2;
+				lines[i].args[1] |= TMFW_NOSIDES;
 
 			//Flags
 			if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[1] |= 4;
+				lines[i].args[1] |= TMFW_DOUBLESHADOW;
 			if (lines[i].flags & ML_EFFECT4)
-				lines[i].args[1] |= 8;
+				lines[i].args[1] |= TMFW_COLORMAPONLY;
 			if (!(lines[i].flags & ML_EFFECT5))
-				lines[i].args[1] |= 16;
+				lines[i].args[1] |= TMFW_NORIPPLE;
 
 			//Goo?
 			if (lines[i].special >= 124)
-				lines[i].args[1] |= 32;
+				lines[i].args[1] |= TMFW_GOOWATER;
 
 			lines[i].special = 120;
 			break;
@@ -2888,29 +2888,29 @@ static void P_ConvertBinaryMap(void)
 
 			//Visibility
 			if (lines[i].special == 142 || lines[i].special == 145)
-				lines[i].args[1] = 2;
+				lines[i].args[1] = TMFV_NOSIDES;
 			else if (lines[i].special == 146)
-				lines[i].args[1] = 1;
+				lines[i].args[1] = TMFV_NOPLANES;
 
 			//Tangibility
 			if (lines[i].special <= 142)
-				lines[i].args[2] |= 2;
+				lines[i].args[2] |= TMFT_INTANGIBLEBOTTOM;
 			else if (lines[i].special <= 145)
-				lines[i].args[2] |= 1;
+				lines[i].args[2] |= TMFT_INTANGIBLETOP;
 			else
-				lines[i].args[2] |= 3;
+				lines[i].args[2] |= TMFT_INTANGIBLEBOTTOM|TMFT_INTANGIBLETOP;
 
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] |= 8;
+				lines[i].args[2] |= TMFT_DONTBLOCKOTHERS;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[2] |= 4;
+				lines[i].args[2] |= TMFT_DONTBLOCKPLAYER;
 
 			//Translucency
 			if (lines[i].special == 141 || lines[i].special == 142 || lines[i].special == 144 || lines[i].special == 145)
 			{
-				lines[i].args[3] |= 1;
+				lines[i].args[3] |= TMFA_TRANSLUCENT;
 				if (lines[i].flags & ML_NOCLIMB)
-					lines[i].args[1] |= 4;
+					lines[i].args[1] |= TMFV_TOGGLEINSIDES;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
 					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
 				else
@@ -2919,7 +2919,7 @@ static void P_ConvertBinaryMap(void)
 
 			//Shadow?
 			if (lines[i].special != 146 && (lines[i].flags & ML_NOCLIMB))
-				lines[i].args[3] |= 2;
+				lines[i].args[3] |= TMFA_NOSHADE;
 
 			lines[i].special = 100;
 			break;
@@ -2937,24 +2937,24 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[0] = lines[i].tag;
 			if (lines[i].special >= 172 && lines[i].special <= 175)
 			{
-				lines[i].args[1] |= 2; //Intangible from below
+				lines[i].args[1] |= TMFT_INTANGIBLEBOTTOM;
 				if (lines[i].flags & ML_NOCLIMB)
-					lines[i].args[2] |= 2; //Don't cast shadow
+					lines[i].args[2] |= TMFC_NOSHADE;
 			}
 			if (lines[i].special >= 174 && lines[i].special <= 175)
 			{
-				lines[i].args[2] |= 1; //Translucent
+				lines[i].args[2] |= TMFC_TRANSLUCENT;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
 					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
 				else
 					lines[i].alpha = FRACUNIT/2;
 			}
 			if (lines[i].special % 2 == 1)
-				lines[i].args[2] |= 4; //Don't respawn
+				lines[i].args[2] |= TMFC_NORETURN;
 			if (lines[i].special == 176 || lines[i].special == 177 || lines[i].special == 180)
-				lines[i].args[2] |= 8; //Air bobbing
+				lines[i].args[2] |= TMFC_AIRBOB;
 			if (lines[i].special >= 176 && lines[i].special <= 179)
-				lines[i].args[2] |= 16; //Float on water
+				lines[i].args[2] |= TMFC_FLOATBOB;
 			lines[i].special = 170;
 			break;
 		case 200: //FOF: Light block
@@ -2975,30 +2975,30 @@ static void P_ConvertBinaryMap(void)
 
 			//Visibility
 			if (lines[i].special == 222)
-				lines[i].args[1] |= 1; //Don't render planes
+				lines[i].args[1] |= TMFV_NOPLANES;
 			if (lines[i].special == 221)
-				lines[i].args[1] |= 4; //Don't render insides
+				lines[i].args[1] |= TMFV_TOGGLEINSIDES;
 
 			//Appearance
 			if (lines[i].special == 221)
 			{
-				lines[i].args[2] |= 1; //Translucent
+				lines[i].args[2] |= TMFA_TRANSLUCENT;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
 					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
 				else
 					lines[i].alpha = FRACUNIT/2;
 			}
 			if (lines[i].special != 220 && !(lines[i].flags & ML_NOCLIMB))
-				lines[i].args[2] |= 2; //Don't cast shadow
+				lines[i].args[2] |= TMFA_NOSHADE;
 
 			lines[i].special = 220;
             break;
 		case 250: //FOF: Mario block
 			lines[i].args[0] = lines[i].tag;
-			if (lines[i].flags & ML_NOCLIMB) //Brick block
-				lines[i].args[1] |= 1;
-			if (lines[i].flags & ML_EFFECT1) //Invisible
-				lines[i].args[1] |= 2;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] |= TMFM_BRICK;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[1] |= TMFM_INVISIBLE;
 			break;
 		case 251: //FOF: Thwomp block
 			lines[i].args[0] = lines[i].tag;
@@ -3029,18 +3029,18 @@ static void P_ConvertBinaryMap(void)
 
 			//Bustable type
 			if (lines[i].special <= 253)
-				lines[i].args[1] = 0;
+				lines[i].args[1] = TMFB_TOUCH;
 			else if (lines[i].special >= 255)
-				lines[i].args[1] = 1;
+				lines[i].args[1] = TMFB_SPIN;
 			else if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[1] = 3;
+				lines[i].args[1] = TMFB_STRONG;
 			else
-				lines[i].args[1] = 2;
+				lines[i].args[1] = TMFB_REGULAR;
 
 			//Translucency
 			if (lines[i].special == 253 || lines[i].special == 256)
 			{
-				lines[i].args[2] = 1;
+				lines[i].args[2] = TMFC_TRANSLUCENT;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
 					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
 				else
@@ -3048,14 +3048,14 @@ static void P_ConvertBinaryMap(void)
 			}
 
 			if (lines[i].flags & ML_EFFECT4)
-				lines[i].args[3] |= 1; //Bustable by pushables
+				lines[i].args[3] |= TMFB_PUSHABLES;
 			if (lines[i].flags & ML_EFFECT5)
 			{
-				lines[i].args[3] |= 2; //Trigger linedef executor
+				lines[i].args[3] |= TMFB_EXECUTOR;
 				lines[i].args[4] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 			}
 			if (lines[i].special == 252 && lines[i].flags & ML_NOCLIMB)
-				lines[i].args[4] |= 4; //Bust only from below
+				lines[i].args[4] |= TMFB_ONLYBOTTOM;
 
 			lines[i].special = 254;
 			break;

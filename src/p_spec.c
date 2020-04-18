@@ -6736,11 +6736,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
 				//Visibility settings
-				if (lines[i].args[1] & 1) //Don't render planes
+				if (lines[i].args[1] & TMFV_NOPLANES)
 					ffloorflags &= ~FF_RENDERPLANES;
-				if (lines[i].args[1] & 2) //Don't render sides
+				if (lines[i].args[1] & TMFV_NOSIDES)
 					ffloorflags &= ~FF_RENDERSIDES;
-				if (lines[i].args[1] & 4) //Render insides
+				if (lines[i].args[1] & TMFV_TOGGLEINSIDES)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
@@ -6749,26 +6749,26 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 
 				//Tangibility settings
-				if (lines[i].args[2] & 1) //Intangible from top
+				if (lines[i].args[2] & TMFT_INTANGIBLETOP)
 					ffloorflags |= FF_REVERSEPLATFORM;
-				if (lines[i].args[2] & 2) //Intangible from bottom
+				if (lines[i].args[2] & TMFT_INTANGIBLEBOTTOM)
 					ffloorflags |= FF_PLATFORM;
-				if (lines[i].args[2] & 4) //Don't block player
+				if (lines[i].args[2] & TMFT_DONTBLOCKPLAYER)
 					ffloorflags &= ~FF_BLOCKPLAYER;
-				if (lines[i].args[2] & 8) //Don't block others
+				if (lines[i].args[2] & TMFT_DONTBLOCKOTHERS)
 					ffloorflags &= ~FF_BLOCKOTHERS;
 
 				//Appearance settings
-				if ((lines[i].args[3] & 1) && (ffloorflags & FF_RENDERALL)) //Translucent
+				if ((lines[i].args[3] & TMFA_TRANSLUCENT) && (ffloorflags & FF_RENDERALL)) //Translucent
 					ffloorflags |= FF_TRANSLUCENT;
-				if (lines[i].args[3] & 2) //Don't cast shadow
+				if (lines[i].args[3] & TMFA_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
 
 				//Cutting options
 				if (ffloorflags & FF_RENDERALL)
 				{
 					//If translucent or player can enter it, cut inner walls
-					if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[2] & 7))
+					if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[2] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
 					else
 						ffloorflags |= FF_CUTLEVEL;
@@ -6779,17 +6779,17 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 120: // FOF (water)
 				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (!(lines[i].args[1] & 1))
+				if (!(lines[i].args[1] & TMFW_OPAQUE))
 					ffloorflags |= FF_TRANSLUCENT;
-				if (!(lines[i].args[1] & 2))
+				if (!(lines[i].args[1] & TMFW_NOSIDES))
 					ffloorflags |= FF_RENDERSIDES|FF_ALLSIDES;
-				if (lines[i].args[1] & 4)
+				if (lines[i].args[1] & TMFW_DOUBLESHADOW)
 					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].args[1] & 8)
+				if (lines[i].args[1] & TMFW_COLORMAPONLY)
 					ffloorflags |= FF_COLORMAPONLY;
-				if (!(lines[i].args[1] & 16))
+				if (!(lines[i].args[1] & TMFW_NORIPPLE))
 					ffloorflags |= FF_RIPPLE;
-				if (lines[i].args[1] & 32)
+				if (lines[i].args[1] & TMFW_GOOWATER)
 					ffloorflags |= FF_GOOWATER;
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
@@ -6819,33 +6819,33 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE;
 
 				//Tangibility settings
-				if (lines[i].args[1] & 1) //Intangible from top
+				if (lines[i].args[1] & TMFT_INTANGIBLETOP)
 					ffloorflags |= FF_REVERSEPLATFORM;
-				if (lines[i].args[1] & 2) //Intangible from bottom
+				if (lines[i].args[1] & TMFT_INTANGIBLEBOTTOM)
 					ffloorflags |= FF_PLATFORM;
-				if (lines[i].args[1] & 4) //Don't block player
+				if (lines[i].args[1] & TMFT_DONTBLOCKPLAYER)
 					ffloorflags &= ~FF_BLOCKPLAYER;
-				if (lines[i].args[1] & 8) //Don't block others
+				if (lines[i].args[1] & TMFT_DONTBLOCKOTHERS)
 					ffloorflags &= ~FF_BLOCKOTHERS;
 
 				//Flags
-				if (lines[i].args[2] & 1) //Translucent
+				if (lines[i].args[2] & TMFC_TRANSLUCENT)
 					ffloorflags |= FF_TRANSLUCENT;
-				if (lines[i].args[2] & 2) //Don't cast shadow
+				if (lines[i].args[2] & TMFC_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
-				if (lines[i].args[2] & 4) //Don't respawn
+				if (lines[i].args[2] & TMFC_NORETURN)
 					ffloorflags |= FF_NORETURN;
-				if (lines[i].args[2] & 16) //Float on water
+				if (lines[i].args[2] & TMFC_FLOATBOB)
 					ffloorflags |= FF_FLOATBOB;
 
 				//If translucent or player can enter it, cut inner walls
-				if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[1] & 7))
+				if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[1] & TMFT_VISIBLEFROMINSIDE))
 					ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
 				else
 					ffloorflags |= FF_CUTLEVEL;
 
 				//If player can enter it, render insides
-				if (lines[i].args[1] & 7)
+				if (lines[i].args[1] & TMFT_VISIBLEFROMINSIDE)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
@@ -6854,7 +6854,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				if (lines[i].args[2] & 8) //Air bobbing
+				if (lines[i].args[2] & TMFC_AIRBOB)
 					P_AddAirbob(lines[i].frontsector, lines + i, 16*FRACUNIT, false, false, false);
 				break;
 
@@ -6918,11 +6918,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
 
 				//Visibility settings
-				if (lines[i].args[1] & 1) //Don't render planes
+				if (lines[i].args[1] & TMFV_NOPLANES)
 					ffloorflags &= ~FF_RENDERPLANES;
-				if (lines[i].args[1] & 2) //Don't render sides
+				if (lines[i].args[1] & TMFV_NOSIDES)
 					ffloorflags &= ~FF_RENDERSIDES;
-				if (!(lines[i].args[1] & 4)) //Render insides
+				if (!(lines[i].args[1] & TMFV_TOGGLEINSIDES))
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
@@ -6931,9 +6931,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 
 				//Appearance settings
-				if ((lines[i].args[2] & 1) && (ffloorflags & FF_RENDERALL)) //Translucent
+				if ((lines[i].args[2] & TMFA_TRANSLUCENT) && (ffloorflags & FF_RENDERALL))
 					ffloorflags |= FF_TRANSLUCENT;
-				if (lines[i].args[2] & 2) //Don't cast shadow
+				if (lines[i].args[2] & TMFA_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
@@ -6945,9 +6945,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 250: // Mario Block
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO;
-				if (lines[i].args[1] & 1) //Brick block
+				if (lines[i].args[1] & TMFM_BRICK)
 					ffloorflags |= FF_SHATTERBOTTOM;
-				if (lines[i].args[1] & 2) // Invisible
+				if (lines[i].args[1] & TMFM_INVISIBLE)
 					ffloorflags &= ~(FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
@@ -6969,13 +6969,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 				//Bustable type
 				switch (lines[i].args[1])
 				{
-					case 0:
+					case TMFB_TOUCH:
 						ffloorflags |= FF_SHATTER;
 						break;
-					case 1:
+					case TMFB_SPIN:
 						ffloorflags |= FF_SPINBUST;
 						break;
-					case 3:
+					case TMFB_STRONG:
 						ffloorflags |= FF_STRONGBUST;
 						break;
 					default:
@@ -6985,7 +6985,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[2])
 					ffloorflags |= FF_TRANSLUCENT;
 
-				if (lines[i].args[2] & 4)
+				if (lines[i].args[3] & TMFB_ONLYBOTTOM)
 					ffloorflags |= FF_SHATTERBOTTOM;
 
 				if (!(ffloorflags & FF_SHATTER) || ffloorflags & FF_SHATTERBOTTOM)

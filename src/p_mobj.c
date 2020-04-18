@@ -1689,7 +1689,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 				if (!(rover->flags & FF_BUSTUP)) continue;
 
 				// Bustable by pushables?
-				if (!(rover->master->args[3] & 1)) continue;
+				if (!(rover->master->args[3] & TMFB_PUSHABLES)) continue;
 
 				if (!rover->master->frontsector->crumblestate)
 				{

@@ -21,6 +21,69 @@ extern mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpo
 extern mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
 extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
+//FOF flags
+typedef enum
+{
+	TMFV_NOPLANES      = 1,
+	TMFV_NOSIDES       = 1<<1,
+	TMFV_TOGGLEINSIDES = 1<<2,
+} textmapfofvisibility_t;
+
+typedef enum
+{
+	TMFT_INTANGIBLETOP    = 1,
+	TMFT_INTANGIBLEBOTTOM = 1<<1,
+	TMFT_DONTBLOCKPLAYER  = 1<<2,
+	TMFT_VISIBLEFROMINSIDE = (TMFT_INTANGIBLETOP|TMFT_INTANGIBLEBOTTOM|TMFT_DONTBLOCKPLAYER),
+	TMFT_DONTBLOCKOTHERS  = 1<<3,
+} textmapfoftangibility_t;
+
+typedef enum
+{
+	TMFA_TRANSLUCENT = 1,
+	TMFA_NOSHADE     = 1<<1,
+} textmapfofappearance_t;
+
+typedef enum
+{
+	TMFW_OPAQUE       = 1,
+	TMFW_NOSIDES      = 1<<1,
+	TMFW_DOUBLESHADOW = 1<<2,
+	TMFW_COLORMAPONLY = 1<<3,
+	TMFW_NORIPPLE     = 1<<4,
+	TMFW_GOOWATER     = 1<<5,
+} textmapfofwater_t;
+
+typedef enum
+{
+	TMFC_TRANSLUCENT = 1,
+	TMFC_NOSHADE     = 1<<1,
+	TMFC_NORETURN    = 1<<2,
+	TMFC_AIRBOB      = 1<<3,
+	TMFC_FLOATBOB    = 1<<4,
+} textmapfofcrumbling_t;
+
+typedef enum
+{
+	TMFM_BRICK     = 1,
+	TMFM_INVISIBLE = 1<<1,
+} textmapfofmario_t;
+
+typedef enum
+{
+	TMFB_TOUCH,
+	TMFB_SPIN,
+	TMFB_REGULAR,
+	TMFB_STRONG,
+} textmapfofbusttype_t;
+
+typedef enum
+{
+	TMFB_PUSHABLES   = 1,
+	TMFB_EXECUTOR    = 1<<1,
+	TMFB_ONLYBOTTOM  = 1<<2,
+} textmapfofbustflags_t;
+
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.

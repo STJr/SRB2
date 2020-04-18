@@ -2663,7 +2663,7 @@ static void P_CheckBustableBlocks(player_t *player)
 					EV_CrumbleChain(NULL, rover); // node->m_sector
 
 					// Run a linedef executor??
-					if (rover->master->args[3] & 2)
+					if (rover->master->args[3] & TMFB_EXECUTOR)
 						P_LinedefExecute((INT16)(rover->master->args[4]), player->mo, node->m_sector);
 
 					goto bustupdone;
@@ -12213,7 +12213,7 @@ void P_PlayerThink(player_t *player)
 		player->powers[pw_nocontrol]--;
 	else
 		player->powers[pw_nocontrol] = 0;
-	
+
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]
 	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]
