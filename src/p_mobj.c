@@ -13077,14 +13077,14 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
 
+	P_SetScale(mobj, mthing->scale);
+	mobj->destscale = mthing->scale;
+
 	if (!P_SetupSpawnedMapThing(mthing, mobj, &doangle))
 		return mobj;
 
 	if (doangle)
 		mobj->angle = FixedAngle(mthing->angle << FRACBITS);
-
-	P_SetScale(mobj, mthing->scale);
-	mobj->destscale = mthing->scale;
 
 	mthing->mobj = mobj;
 
