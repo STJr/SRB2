@@ -775,6 +775,8 @@ static int mapthing_get(lua_State *L)
 		number = mt->type;
 	else if(fastcmp(field,"options"))
 		number = mt->options;
+	else if(fastcmp(field,"scale"))
+		number = mt->scale;
 	else if(fastcmp(field,"z"))
 		number = mt->z;
 	else if(fastcmp(field,"extrainfo"))
@@ -814,6 +816,8 @@ static int mapthing_set(lua_State *L)
 		mt->type = (UINT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"options"))
 		mt->options = (UINT16)luaL_checkinteger(L, 3);
+	else if(fastcmp(field,"scale"))
+		mt->scale = luaL_checkfixed(L, 3);
 	else if(fastcmp(field,"z"))
 		mt->z = (INT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"extrainfo"))
