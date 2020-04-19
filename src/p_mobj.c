@@ -13083,6 +13083,9 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	if (doangle)
 		mobj->angle = FixedAngle(mthing->angle << FRACBITS);
 
+	mobj->pitch = FixedAngle(mthing->pitch << FRACBITS);
+	mobj->roll = FixedAngle(mthing->roll << FRACBITS);
+
 	mthing->mobj = mobj;
 
 	// ignore MTF_ flags and return early

@@ -31,6 +31,8 @@ enum mobj_e {
 	mobj_snext,
 	mobj_sprev,
 	mobj_angle,
+	mobj_pitch,
+	mobj_roll,
 	mobj_rollangle,
 	mobj_sprite,
 	mobj_frame,
@@ -97,6 +99,8 @@ static const char *const mobj_opt[] = {
 	"snext",
 	"sprev",
 	"angle",
+	"pitch",
+	"roll",
 	"rollangle",
 	"sprite",
 	"frame",
@@ -197,6 +201,12 @@ static int mobj_get(lua_State *L)
 		return UNIMPLEMENTED;
 	case mobj_angle:
 		lua_pushangle(L, mo->angle);
+		break;
+	case mobj_pitch:
+		lua_pushangle(L, mo->pitch);
+		break;
+	case mobj_roll:
+		lua_pushangle(L, mo->roll);
 		break;
 	case mobj_rollangle:
 		lua_pushangle(L, mo->rollangle);
@@ -453,6 +463,11 @@ static int mobj_set(lua_State *L)
 			localangle = mo->angle;
 		else if (mo->player == &players[secondarydisplayplayer])
 			localangle2 = mo->angle;
+	case mobj_pitch:
+		mo->pitch = luaL_checkangle(L, 3);
+		break;
+	case mobj_roll:
+		mo->roll = luaL_checkangle(L, 3);
 		break;
 	case mobj_rollangle:
 		mo->rollangle = luaL_checkangle(L, 3);

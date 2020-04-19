@@ -1282,6 +1282,7 @@ static void P_LoadThings(UINT8 *data)
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
 		mt->tag = 0;
+		mt->pitch = mt->roll = 0;
 
 		mt->type &= 4095;
 
@@ -1568,6 +1569,10 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 		mapthings[i].z = atol(val);
 	else if (fastcmp(param, "angle"))
 		mapthings[i].angle = atol(val);
+	else if (fastcmp(param, "pitch"))
+		mapthings[i].pitch = atol(val);
+	else if (fastcmp(param, "roll"))
+		mapthings[i].roll = atol(val);
 	else if (fastcmp(param, "type"))
 		mapthings[i].type = atol(val);
 
