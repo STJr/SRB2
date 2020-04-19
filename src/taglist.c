@@ -81,6 +81,7 @@ size_t Taggroup_Find (const taggroup_t *group, const size_t id)
 void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 {
 	taggroup_t *group;
+	size_t i; // Insert position.
 
 	if (tag == MTAG_GLOBAL)
 		return;
@@ -93,11 +94,35 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 
 	// Create group if empty.
 	if (!group)
+	{
+		i = 0;
 		group = garray[(UINT16)tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
+	}
+	else
+	{
+		// Keep the group element ids in an ascending order.
+		// Find the location to insert the element to.
+		for (i = 0; i < group->count; i++)
+			if (group->elements[i] > id)
+				break;
+
+		group->elements = Z_Realloc(group->elements, (group->count + 1) * sizeof(size_t), PU_LEVEL, NULL);
+
+		// Offset existing elements to make room for the new one.
+		if (i < group->count)
+		{
+			// Temporary memory block for copying.
+			size_t size = group->count - i;
+			size_t *temp = malloc(size);
+			memcpy(temp, &group->elements[i], size);
+			memcpy(&group->elements[i + 1], temp, size);
+			free(temp);
+		}
+	}
 
 	group->count++;
 	group->elements = Z_Realloc(group->elements, group->count * sizeof(size_t), PU_LEVEL, NULL);
-	group->elements[group->count - 1] = id;
+	group->elements[i] = id;
 }
 
 void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
