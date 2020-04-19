@@ -880,6 +880,40 @@ static inline void D_CleanFile(void)
 	}
 }
 
+///\brief Checks if a netgame URL is being handled, and changes working directory to the EXE's if so.
+///       Done because browsers (at least, Firefox on Windows) launch the game from the browser's directory, which causes problems.
+static void ChangeDirForUrlHandler(void)
+{
+	// URL handlers are opened by web browsers (at least Firefox) from the browser's working directory, not the game's stored directory,
+	// so chdir to that directory unless overridden.
+	if (M_GetUrlProtocolArg() != NULL && !M_CheckParm("-nochdir"))
+	{
+		size_t i;
+
+		CONS_Printf("%s connect links load game files from the SRB2 application's stored directory. Switching to ", SERVER_URL_PROTOCOL);
+		strlcpy(srb2path, myargv[0], sizeof(srb2path));
+
+		// Get just the directory, minus the EXE name
+		for (i = strlen(srb2path)-1; i > 0; i--)
+		{
+			if (srb2path[i] == '/' || srb2path[i] == '\\')
+			{
+				srb2path[i] = '\0';
+				break;
+			}
+		}
+
+		CONS_Printf("%s\n", srb2path);
+
+#if defined (_WIN32)
+		SetCurrentDirectoryA(srb2path);
+#else
+		if (chdir(srb2path) == -1)
+			I_OutputMsg("Couldn't change working directory\n");
+#endif
+	}
+}
+
 // ==========================================================================
 // Identify the SRB2 version, and IWAD file to use.
 // ==========================================================================
@@ -1068,6 +1102,9 @@ void D_SRB2Main(void)
 	// Test Dehacked lists
 	DEH_Check();
 
+	// Netgame URL special case: change working dir to EXE folder.
+	ChangeDirForUrlHandler();
+
 	// identify the main IWAD file to use
 	IdentifyVersion();
 
@@ -1158,7 +1195,7 @@ void D_SRB2Main(void)
 
 	// add any files specified on the command line with -file wadfile
 	// to the wad list
-	if (!(M_CheckParm("-connect") && !M_CheckParm("-server")))
+	if (!((M_GetUrlProtocolArg() || M_CheckParm("-connect")) && !M_CheckParm("-server")))
 	{
 		if (M_CheckParm("-file"))
 		{
@@ -1190,7 +1227,7 @@ void D_SRB2Main(void)
 	M_InitMenuPresTables();
 
 	// init title screen display params
-	if (M_CheckParm("-connect"))
+	if (M_GetUrlProtocolArg() || M_CheckParm("-connect"))
 		F_InitMenuPresValues();
 
 	//---------------------------------------------------- READY TIME
