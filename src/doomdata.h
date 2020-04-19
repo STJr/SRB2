@@ -203,6 +203,7 @@ typedef struct
 	UINT16 options;
 	INT16 z;
 	UINT8 extrainfo;
+	INT32 scale;
 	INT16 tag;
 	struct mobj_s *mobj;
 } mapthing_t;
