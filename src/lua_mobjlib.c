@@ -786,6 +786,10 @@ static int mapthing_get(lua_State *L)
 		number = mt->y;
 	else if(fastcmp(field,"angle"))
 		number = mt->angle;
+	else if(fastcmp(field,"pitch"))
+		number = mt->pitch;
+	else if(fastcmp(field,"roll"))
+		number = mt->roll;
 	else if(fastcmp(field,"type"))
 		number = mt->type;
 	else if(fastcmp(field,"options"))
@@ -825,6 +829,10 @@ static int mapthing_set(lua_State *L)
 		mt->y = (INT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"angle"))
 		mt->angle = (INT16)luaL_checkinteger(L, 3);
+	else if(fastcmp(field,"pitch"))
+		mt->pitch = (INT16)luaL_checkinteger(L, 3);
+	else if(fastcmp(field,"roll"))
+		mt->roll = (INT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"type"))
 		mt->type = (UINT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"options"))
