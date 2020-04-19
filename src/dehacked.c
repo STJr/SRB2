@@ -4123,6 +4123,10 @@ static void readmaincfg(MYFILE *f)
 			{
 				maxXtraLife = (UINT8)get_number(word2);
 			}
+			else if (fastcmp(word, "USECONTINUES"))
+			{
+				useContinues = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 
 			else if (fastcmp(word, "GAMEDATA"))
 			{
