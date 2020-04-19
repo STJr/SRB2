@@ -4714,9 +4714,6 @@ static void P_Boss4DestroyCage(mobj_t *mobj)
 	TAG_ITER_SECTORS(tag, snum)
 	{
 		sector = &sectors[snum];
-		if (!Tag_Find(&sector->tags, tag))
-			continue;
-		Tag_SectorFSet(sector - sectors, 0);
 
 		// Destroy the FOFs.
 		for (a = 0; a < sector->numattached; a++)
