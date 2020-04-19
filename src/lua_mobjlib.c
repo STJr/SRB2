@@ -819,7 +819,7 @@ static int mapthing_get(lua_State *L)
 		number = mt->tag;
 	else if(fastcmp(field,"args"))
 	{
-		LUA_PushUserdata(L, mt->stringargs, META_THINGARGS);
+		LUA_PushUserdata(L, mt->args, META_THINGARGS);
 		return 1;
 	}
 	else if(fastcmp(field,"stringargs"))
