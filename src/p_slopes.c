@@ -250,14 +250,14 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 	vector2_t direction;
 	fixed_t nx, ny, dz, extent;
 
-	boolean frontfloor = line->args[0] == 1;
-	boolean backfloor = line->args[0] == 2;
-	boolean frontceil = line->args[1] == 1;
-	boolean backceil = line->args[1] == 2;
+	boolean frontfloor = line->args[0] == TMS_FRONT;
+	boolean backfloor = line->args[0] == TMS_BACK;
+	boolean frontceil = line->args[1] == TMS_FRONT;
+	boolean backceil = line->args[1] == TMS_BACK;
 	UINT8 flags = 0; // Slope flags
-	if (line->args[2] & 1)
+	if (line->args[2] & TMSL_NOPHYSICS)
 		flags |= SL_NOPHYSICS;
-	if (line->args[2] & 2)
+	if (line->args[2] & TMSL_DYNAMIC)
 		flags |= SL_DYNAMIC;
 
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
@@ -461,26 +461,26 @@ static void line_SpawnViaMapthingVertexes(const int linenum, const boolean spawn
 	UINT16 tag2 = line->args[2];
 	UINT16 tag3 = line->args[3];
 	UINT8 flags = 0; // Slope flags
-	if (line->args[4] & 1)
+	if (line->args[4] & TMSL_NOPHYSICS)
 		flags |= SL_NOPHYSICS;
-	if (line->args[4] & 2)
+	if (line->args[4] & TMSL_DYNAMIC)
 		flags |= SL_DYNAMIC;
 
 	switch(line->args[0])
 	{
-	case 0:
+	case TMSP_FRONTFLOOR:
 		slopetoset = &line->frontsector->f_slope;
 		side = &sides[line->sidenum[0]];
 		break;
-	case 1:
+	case TMSP_FRONTCEILING:
 		slopetoset = &line->frontsector->c_slope;
 		side = &sides[line->sidenum[0]];
 		break;
-	case 2:
+	case TMSP_BACKFLOOR:
 		slopetoset = &line->backsector->f_slope;
 		side = &sides[line->sidenum[1]];
 		break;
-	case 3:
+	case TMSP_BACKCEILING:
 		slopetoset = &line->backsector->c_slope;
 		side = &sides[line->sidenum[1]];
 	default:
@@ -602,13 +602,13 @@ void P_CopySectorSlope(line_t *line)
 		setback |= P_SetSlopeFromTag(bsec, line->args[2], false);
 		setback |= P_SetSlopeFromTag(bsec, line->args[3], true);
 
-		if (line->args[4] & 1)
+		if (line->args[4] & TMSC_FRONTTOBACKFLOOR)
 			setback |= P_CopySlope(&bsec->f_slope, fsec->f_slope);
-		if (line->args[4] & 2)
+		if (line->args[4] & TMSC_BACKTOFRONTFLOOR)
 			setfront |= P_CopySlope(&fsec->f_slope, bsec->f_slope);
-		if (line->args[4] & 4)
+		if (line->args[4] & TMSC_FRONTTOBACKCEILING)
 			setback |= P_CopySlope(&bsec->c_slope, fsec->c_slope);
-		if (line->args[4] & 8)
+		if (line->args[4] & TMSC_BACKTOFRONTCEILING)
 			setfront |= P_CopySlope(&fsec->c_slope, bsec->c_slope);
 	}
 

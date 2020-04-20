@@ -3309,7 +3309,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				P_ResetColormapFader(&sectors[secnum]);
 
-				if (line->args[2] & 1) // relative calc
+				if (line->args[2] & TMCF_RELATIVE)
 				{
 					extracolormap_t *target = (!udmf && (line->flags & ML_TFERLINE) && line->sidenum[1] != 0xFFFF) ?
 						sides[line->sidenum[1]].colormap_data : sectors[secnum].extra_colormap; // use back colormap instead of target sector
@@ -3317,17 +3317,17 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						extracolormap_t *exc = R_AddColormaps(
 							target,
 							source,
-							line->args[2] & 2,    // subtract R
-							line->args[2] & 4,    // subtract G
-							line->args[2] & 8,    // subtract B
-							line->args[2] & 16,   // subtract A
-							line->args[2] & 32,   // subtract FadeR
-							line->args[2] & 64,   // subtract FadeG
-							line->args[2] & 128,  // subtract FadeB
-							line->args[2] & 256,  // subtract FadeA
-							line->args[2] & 512,  // subtract FadeStart
-							line->args[2] & 1024, // subtract FadeEnd
-							line->args[2] & 2048, // ignore Flags
+							line->args[2] & TMCF_SUBLIGHTR,
+							line->args[2] & TMCF_SUBLIGHTG,
+							line->args[2] & TMCF_SUBLIGHTB,
+							line->args[2] & TMCF_SUBLIGHTA,
+							line->args[2] & TMCF_SUBFADER,
+							line->args[2] & TMCF_SUBFADEG,
+							line->args[2] & TMCF_SUBFADEB,
+							line->args[2] & TMCF_SUBFADEA,
+							line->args[2] & TMCF_SUBFADESTART,
+							line->args[2] & TMCF_SUBFADEEND,
+							line->args[2] & TMCF_IGNOREFLAGS,
 							false);
 
 					if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(exc)))
@@ -3645,7 +3645,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					continue;
 
 				// Don't interrupt ongoing fade
-				if (!(line->args[3] & 8192)
+				if (!(line->args[3] & TMCF_OVERRIDE)
 					&& sectors[secnum].fadecolormapdata)
 					//&& ((fadecolormap_t*)sectors[secnum].fadecolormapdata)->timer > (ticbased ? 2 : speed*2))
 				{
@@ -3659,7 +3659,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				exc = sectors[secnum].extra_colormap;
 
-				if (!(line->args[3] & 4096) // Override fade from default rgba
+				if (!(line->args[3] & TMCF_FROMBLACK) // Override fade from default rgba
 					&& !R_CheckDefaultColormap(dest, true, false, false)
 					&& R_CheckDefaultColormap(exc, true, false, false))
 				{
@@ -3681,22 +3681,22 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				else
 					source_exc = exc ? exc : R_GetDefaultColormap();
 
-				if (line->args[3] & 1) // relative calc
+				if (line->args[3] & TMCF_RELATIVE)
 				{
 					exc = R_AddColormaps(
 						source_exc,
 						dest,
-						line->args[3] & 2,    // subtract R
-						line->args[3] & 4,    // subtract G
-						line->args[3] & 8,    // subtract B
-						line->args[3] & 16,   // subtract A
-						line->args[3] & 32,   // subtract FadeR
-						line->args[3] & 64,   // subtract FadeG
-						line->args[3] & 128,  // subtract FadeB
-						line->args[3] & 256,  // subtract FadeA
-						line->args[3] & 512,  // subtract FadeStart
-						line->args[3] & 1024, // subtract FadeEnd
-						line->args[3] & 2048, // ignore Flags
+						line->args[3] & TMCF_SUBLIGHTR,
+						line->args[3] & TMCF_SUBLIGHTG,
+						line->args[3] & TMCF_SUBLIGHTB,
+						line->args[3] & TMCF_SUBLIGHTA,
+						line->args[3] & TMCF_SUBFADER,
+						line->args[3] & TMCF_SUBFADEG,
+						line->args[3] & TMCF_SUBFADEB,
+						line->args[3] & TMCF_SUBFADEA,
+						line->args[3] & TMCF_SUBFADESTART,
+						line->args[3] & TMCF_SUBFADEEND,
+						line->args[3] & TMCF_IGNOREFLAGS,
 						false);
 				}
 				else
@@ -3822,7 +3822,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				mobj = P_SpawnMobj(x, y, z, type);
 				if (mobj)
+				{
+					if (line->flags & ML_EFFECT1)
+						mobj->angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
 					CONS_Debug(DBG_GAMELOGIC, "Linedef Type %d - Spawn Object: %d spawned at (%d, %d, %d)\n", line->special, mobj->type, mobj->x>>FRACBITS, mobj->y>>FRACBITS, mobj->z>>FRACBITS); //TODO: Convert mobj->type to a string somehow.
+				}
 				else
 					CONS_Alert(CONS_ERROR,"Linedef Type %d - Spawn Object: Object did not spawn!\n", line->special);
 			}
