@@ -2337,7 +2337,7 @@ boolean P_CheckSolidLava(ffloor_t *rover)
 // P_ZMovement
 // Returns false if the mobj was killed/exploded/removed, true otherwise.
 //
-static boolean P_ZMovement(mobj_t *mo)
+boolean P_ZMovement(mobj_t *mo)
 {
 	fixed_t dist, delta;
 	boolean onground;

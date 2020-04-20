@@ -473,6 +473,7 @@ void P_SetScale(mobj_t *mobj, fixed_t newscale);
 void P_XYMovement(mobj_t *mo);
 void P_RingXYMovement(mobj_t *mo);
 void P_SceneryXYMovement(mobj_t *mo);
+boolean P_ZMovement(mobj_t *mo);
 void P_EmeraldManager(void);
 
 extern INT32 modulothing;
