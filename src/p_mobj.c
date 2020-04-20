@@ -2111,7 +2111,7 @@ void P_RingXYMovement(mobj_t *mo)
 		P_SlideMove(mo);
 }
 
-static void P_SceneryXYMovement(mobj_t *mo)
+void P_SceneryXYMovement(mobj_t *mo)
 {
 	fixed_t oldx, oldy; // reducing bobbing/momentum on ice when up against walls
 
