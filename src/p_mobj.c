@@ -2102,7 +2102,7 @@ void P_XYMovement(mobj_t *mo)
 	P_XYFriction(mo, oldx, oldy);
 }
 
-static void P_RingXYMovement(mobj_t *mo)
+void P_RingXYMovement(mobj_t *mo)
 {
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));

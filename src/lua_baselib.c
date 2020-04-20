@@ -924,6 +924,17 @@ static int lib_pXYMovement(lua_State *L)
 	return 0;
 }
 
+static int lib_pRingXYMovement(lua_State *L)
+{
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_RingXYMovement(actor);
+	return 0;
+}
+
 // P_USER
 ////////////
 
@@ -3283,6 +3294,7 @@ static luaL_Reg lib[] = {
 	{"P_MaceRotate",lib_pMaceRotate},
 	{"P_RailThinker",lib_pRailThinker},
 	{"P_XYMovement",lib_pXYMovement},
+	{"P_RingXYMovement",lib_pRingXYMovement},
 
 	// p_user
 	{"P_GetPlayerHeight",lib_pGetPlayerHeight},
