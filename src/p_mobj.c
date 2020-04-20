@@ -2270,7 +2270,7 @@ static void P_AdjustMobjFloorZ_PolyObjs(mobj_t *mo, subsector_t *subsec)
 	}
 }
 
-static void P_RingZMovement(mobj_t *mo)
+void P_RingZMovement(mobj_t *mo)
 {
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
