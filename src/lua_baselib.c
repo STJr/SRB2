@@ -968,6 +968,17 @@ static int lib_pRingZMovement(lua_State *L)
 	return 0;
 }
 
+static int lib_pSceneryZMovement(lua_State *L)
+{
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_SceneryZMovement(actor));
+	return 1;
+}
+
 // P_USER
 ////////////
 
@@ -3331,6 +3342,7 @@ static luaL_Reg lib[] = {
 	{"P_SceneryXYMovement",lib_pSceneryXYMovement},
 	{"P_ZMovement",lib_pZMovement},
 	{"P_RingZMovement",lib_pRingZMovement},
+	{"P_SceneryZMovement",lib_pSceneryZMovement},
 
 	// p_user
 	{"P_GetPlayerHeight",lib_pGetPlayerHeight},

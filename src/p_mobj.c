@@ -3069,7 +3069,7 @@ nightsdone:
 	}
 }
 
-static boolean P_SceneryZMovement(mobj_t *mo)
+boolean P_SceneryZMovement(mobj_t *mo)
 {
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
