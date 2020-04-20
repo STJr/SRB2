@@ -67,7 +67,7 @@ typedef struct
 	unsigned long position; // filelump_t filepos
 	unsigned long disksize; // filelump_t size
 	char name[9]; // filelump_t name[]
-	char *name2; // Used by PK3s. Dynamically allocated name.
+	char *fullname; // Used by PK3s. Dynamically allocated name.
 	size_t size; // real (uncompressed) size
 	compmethod compression; // lump compression method
 } lumpinfo_t;
