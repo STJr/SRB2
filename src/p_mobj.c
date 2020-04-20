@@ -2891,7 +2891,7 @@ static boolean P_PlayerPolyObjectZMovement(mobj_t *mo)
 	return stopmovecut;
 }
 
-static void P_PlayerZMovement(mobj_t *mo)
+void P_PlayerZMovement(mobj_t *mo)
 {
 	boolean onground;
 
