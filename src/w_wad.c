@@ -92,7 +92,7 @@ typedef struct
 
 typedef struct lumpnum_cache_s
 {
-	char lumpname[8];
+	char lumpname[32];
 	lumpnum_t lumpnum;
 } lumpnum_cache_t;
 
@@ -922,15 +922,13 @@ const char *W_CheckNameForNum(lumpnum_t lumpnum)
 UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 {
 	UINT16 i;
-	static char uname[9];
-
-	memset(uname, 0x00, sizeof uname);
-	strncpy(uname, name, 8);
-	uname[8] = 0;
-	strupr(uname);
+	static char uname[256 + 1];
 
 	if (!TestValidLump(wad,0))
 		return INT16_MAX;
+
+	strlcpy(uname, name, sizeof uname);
+	strupr(uname);
 
 	//
 	// scan forward
@@ -941,7 +939,7 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	{
 		lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
 		for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
-			if (memcmp(lump_p->name,uname,8) == 0)
+			if (!strcmp(lump_p->longname, uname))
 				return i;
 	}
 
@@ -1027,7 +1025,7 @@ lumpnum_t W_CheckNumForName(const char *name)
 	// most recent entries first
 	for (i = lumpnumcacheindex + LUMPNUMCACHESIZE; i > lumpnumcacheindex; i--)
 	{
-		if (strncmp(lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname, name, 8) == 0)
+		if (strcmp(lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname, name) == 0)
 		{
 			lumpnumcacheindex = i & (LUMPNUMCACHESIZE - 1);
 			return lumpnumcache[lumpnumcacheindex].lumpnum;
@@ -1047,7 +1045,7 @@ lumpnum_t W_CheckNumForName(const char *name)
 	{
 		// Update the cache.
 		lumpnumcacheindex = (lumpnumcacheindex + 1) & (LUMPNUMCACHESIZE - 1);
-		strncpy(lumpnumcache[lumpnumcacheindex].lumpname, name, 8);
+		strlcpy(lumpnumcache[lumpnumcacheindex].lumpname, name, 32);
 		lumpnumcache[lumpnumcacheindex].lumpnum = (i<<16)+check;
 
 		return lumpnumcache[lumpnumcacheindex].lumpnum;
