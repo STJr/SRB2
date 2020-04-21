@@ -11950,6 +11950,9 @@ void P_PlayerThink(player_t *player)
 						break;
 					}
 					/* FALLTHRU */
+				case CR_DUSTDEVIL:
+					player->drawangle += ANG20;
+					break;
 				default:
 					player->drawangle = player->mo->angle;
 					break;
