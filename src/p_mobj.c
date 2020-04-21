@@ -11616,7 +11616,7 @@ void P_MovePlayerToStarpost(INT32 playernum)
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
-static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip)
+static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip, const fixed_t scale)
 {
 	const subsector_t *ss = R_PointInSubsector(x, y);
 
@@ -11627,10 +11627,10 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, 
 	// Establish height.
 	if (flip)
 		return (ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) : ss->sector->ceilingheight)
-			- offset - mobjinfo[mobjtype].height;
+			- FixedMul(scale, offset + mobjinfo[mobjtype].height);
 	else
 		return (ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) : ss->sector->floorheight)
-			+ offset;
+			+ FixedMul(scale, offset);
 }
 
 static fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
@@ -11701,7 +11701,7 @@ static fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthin
 			return ONFLOORZ;
 	}
 
-	return P_GetMobjSpawnHeight(mobjtype, x, y, offset, flip);
+	return P_GetMobjSpawnHeight(mobjtype, x, y, offset, flip, mthing->scale);
 }
 
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
@@ -13077,6 +13077,9 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
 
+	P_SetScale(mobj, mthing->scale);
+	mobj->destscale = mthing->scale;
+
 	if (!P_SetupSpawnedMapThing(mthing, mobj, &doangle))
 		return mobj;
 
@@ -13179,7 +13182,7 @@ static void P_SpawnHoopInternal(mapthing_t *mthing, INT32 hoopsize, fixed_t size
 	TVector v, *res;
 	fixed_t x = mthing->x << FRACBITS;
 	fixed_t y = mthing->y << FRACBITS;
-	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, false);
+	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, false, mthing->scale);
 
 	hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 	hoopcenter->spawnpoint = mthing;
@@ -13324,7 +13327,7 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t* itemtypes, UINT8 numi
 			itemtypes[r] = P_GetMobjtypeSubstitute(&dummything, itemtypes[r]);
 		}
 	}
-	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, mthing->options & MTF_OBJECTFLIP);
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, mthing->options & MTF_OBJECTFLIP, mthing->scale);
 
 	for (r = 0; r < numitems; r++)
 	{
@@ -13382,7 +13385,7 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 			itemtypes[i] = P_GetMobjtypeSubstitute(&dummything, itemtypes[i]);
 		}
 	}
-	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, false);
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, false, mthing->scale);
 
 	for (i = 0; i < numitems; i++)
 	{

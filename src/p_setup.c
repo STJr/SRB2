@@ -1281,6 +1281,7 @@ static void P_LoadThings(UINT8 *data)
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
+		mt->scale = FRACUNIT;
 		mt->tag = 0;
 
 		mt->type &= 4095;
@@ -1570,7 +1571,8 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 		mapthings[i].angle = atol(val);
 	else if (fastcmp(param, "type"))
 		mapthings[i].type = atol(val);
-
+	else if (fastcmp(param, "scale") || fastcmp(param, "scalex") || fastcmp(param, "scaley"))
+		mapthings[i].scale = FLOAT_TO_FIXED(atof(val));
 	// Flags
 	else if (fastcmp(param, "extra") && fastcmp("true", val))
 		mapthings[i].options |= MTF_EXTRA;
@@ -1777,6 +1779,7 @@ static void P_LoadTextmap(void)
 		mt->options = 0;
 		mt->z = 0;
 		mt->extrainfo = 0;
+		mt->scale = FRACUNIT;
 		mt->tag = 0;
 		mt->mobj = NULL;
 

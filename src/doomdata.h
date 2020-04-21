@@ -23,6 +23,8 @@
 // Some global defines, that configure the game.
 #include "doomdef.h"
 
+#include "m_fixed.h" // See the mapthing_t scale.
+
 //
 // Map level types.
 // The following data structures define the persistent format
@@ -203,6 +205,7 @@ typedef struct
 	UINT16 options;
 	INT16 z;
 	UINT8 extrainfo;
+	fixed_t scale;
 	INT16 tag;
 	struct mobj_s *mobj;
 } mapthing_t;
