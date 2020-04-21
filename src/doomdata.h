@@ -200,7 +200,7 @@ typedef struct
 typedef struct
 {
 	INT16 x, y;
-	INT16 angle;
+	INT16 angle, pitch, roll;
 	UINT16 type;
 	UINT16 options;
 	INT16 z;
