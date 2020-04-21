@@ -114,13 +114,18 @@ void W_Shutdown(void)
 {
 	while (numwadfiles--)
 	{
-		fclose(wadfiles[numwadfiles]->handle);
-		Z_Free(wadfiles[numwadfiles]->filename);
-		while (wadfiles[numwadfiles]->numlumps--)
-			Z_Free(wadfiles[numwadfiles]->lumpinfo[wadfiles[numwadfiles]->numlumps].fullname);
+		wadfile_t *wad = wadfiles[numwadfiles];
 
-		Z_Free(wadfiles[numwadfiles]->lumpinfo);
-		Z_Free(wadfiles[numwadfiles]);
+		fclose(wad->handle);
+		Z_Free(wad->filename);
+		while (wad->numlumps--)
+		{
+			Z_Free(wad->lumpinfo[wad->numlumps].longname);
+			Z_Free(wad->lumpinfo[wad->numlumps].fullname);
+		}
+
+		Z_Free(wad->lumpinfo);
+		Z_Free(wad);
 	}
 }
 
@@ -339,6 +344,12 @@ static lumpinfo_t* ResGetLumpsStandalone (FILE* handle, UINT16* numlumps, const 
 	lumpinfo->size = ftell(handle);
 	fseek(handle, 0, SEEK_SET);
 	strcpy(lumpinfo->name, lumpname);
+
+	// Allocate the lump's long name.
+	lumpinfo->longname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
+	strcpy(lumpinfo->longname, lumpname);
+	lumpinfo->longname[8] = '\0';
+
 	// Allocate the lump's full name.
 	lumpinfo->fullname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
 	strcpy(lumpinfo->fullname, lumpname);
@@ -430,6 +441,12 @@ static lumpinfo_t* ResGetLumpsWad (FILE* handle, UINT16* nlmp, const char* filen
 			lump_p->compression = CM_NOCOMPRESSION;
 		memset(lump_p->name, 0x00, 9);
 		strncpy(lump_p->name, fileinfo->name, 8);
+
+		// Allocate the lump's long name.
+		lump_p->longname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
+		strncpy(lump_p->longname, fileinfo->name, 8);
+		lump_p->longname[8] = '\0';
+
 		// Allocate the lump's full name.
 		lump_p->fullname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
 		strncpy(lump_p->fullname, fileinfo->name, 8);
@@ -598,6 +615,9 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 
 		memset(lump_p->name, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
 		strncpy(lump_p->name, trimname, min(8, dotpos - trimname));
+
+		lump_p->longname = Z_Calloc(dotpos - trimname + 1, PU_STATIC, NULL);
+		strlcpy(lump_p->longname, trimname, dotpos - trimname + 1);
 
 		lump_p->fullname = Z_Calloc(zentry.namelen + 1, PU_STATIC, NULL);
 		strncpy(lump_p->fullname, fullname, zentry.namelen);
