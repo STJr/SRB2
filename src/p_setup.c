@@ -691,39 +691,28 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 }
 #endif
 
-static void P_SpawnEmeraldHunt(int amount)
+static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer[amount];
-	INT32 timeout = 0; // keeps from getting stuck
+	INT32 emer[3], num[numhuntemeralds], randomkey;
 	fixed_t x, y, z;
 
-	//increment spawn numbers because zero is valid.
-	emer[0] = (P_RandomKey(numhuntemeralds)) + 1;
-	while (timeout++ < 100)
+	for (int i = 0; i < numhuntemeralds; i++)
+		num[i] = i;
+
+	for (int i = 0; i < 3; i++)
 	{
-		emer[1] = (P_RandomKey(numhuntemeralds)) + 1;
+		// generate random index, shuffle afterwards
+		randomkey = P_RandomKey(numhuntemeralds--);
+		emer[i] = num[randomkey];
+		num[randomkey] = num[numhuntemeralds];
+		num[numhuntemeralds] = emer[i];
 
-		if (emer[1] != emer[0])
-			break;
-	}
-
-	timeout = 0;
-	while (timeout++ < 100)
-	{
-		emer[2] = (P_RandomKey(numhuntemeralds)) + 1;
-
-		if (emer[2] != emer[1] && emer[2] != emer[0])
-			break;
-	}
-
-	//decrement spawn values to the actual number because zero is valid.
-	for (int i = 0; i < amount; i++)
-	{
-		x = huntemeralds[emer[i]-1]->x<<FRACBITS;
-		y = huntemeralds[emer[i]-1]->y<<FRACBITS;
-		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer[i]-1], x, y);
+		// spawn emerald
+		x = huntemeralds[emer[i]]->x<<FRACBITS;
+		y = huntemeralds[emer[i]]->y<<FRACBITS;
+		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer[i]], x, y);
 		P_SetMobjStateNF(P_SpawnMobj(x, y, z, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+i);
+			mobjinfo[MT_EMERHUNT].spawnstate+i);
 	}
 }
 
@@ -772,7 +761,7 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 	// random emeralds for hunt
 	if (numhuntemeralds)
-		P_SpawnEmeraldHunt(3);
+		P_SpawnEmeraldHunt();
 }
 
 // Experimental groovy write function!
