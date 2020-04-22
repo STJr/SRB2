@@ -693,7 +693,7 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer[3], num[numhuntemeralds], randomkey;
+	INT32 emer[3], num[MAXHUNTEMERALDS], randomkey;
 	fixed_t x, y, z;
 
 	for (int i = 0; i < numhuntemeralds; i++)
