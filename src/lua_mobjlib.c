@@ -761,6 +761,42 @@ static int mobj_set(lua_State *L)
 #undef NOSETPOS
 #undef NOFIELD
 
+// args, i -> args[i]
+static int thingargs_get(lua_State *L)
+{
+	INT32 *args = *((INT32**)luaL_checkudata(L, 1, META_THINGARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMMAPTHINGARGS)
+		return luaL_error(L, LUA_QL("mapthing_t.args") " index cannot be %d", i);
+	lua_pushinteger(L, args[i]);
+	return 1;
+}
+
+// #args -> NUMMAPTHINGARGS
+static int thingargs_len(lua_State* L)
+{
+	lua_pushinteger(L, NUMMAPTHINGARGS);
+	return 1;
+}
+
+// stringargs, i -> stringargs[i]
+static int thingstringargs_get(lua_State *L)
+{
+	char **stringargs = *((char***)luaL_checkudata(L, 1, META_THINGSTRINGARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMMAPTHINGSTRINGARGS)
+		return luaL_error(L, LUA_QL("mapthing_t.stringargs") " index cannot be %d", i);
+	lua_pushstring(L, stringargs[i]);
+	return 1;
+}
+
+// #stringargs -> NUMMAPTHINGSTRINGARGS
+static int thingstringargs_len(lua_State *L)
+{
+	lua_pushinteger(L, NUMMAPTHINGSTRINGARGS);
+	return 1;
+}
+
 static int mapthing_get(lua_State *L)
 {
 	mapthing_t *mt = *((mapthing_t **)luaL_checkudata(L, 1, META_MAPTHING));
@@ -802,6 +838,16 @@ static int mapthing_get(lua_State *L)
 		number = mt->extrainfo;
 	else if(fastcmp(field,"tag"))
 		number = Tag_FGet(&mt->tags);
+	else if(fastcmp(field,"args"))
+	{
+		LUA_PushUserdata(L, mt->args, META_THINGARGS);
+		return 1;
+	}
+	else if(fastcmp(field,"stringargs"))
+	{
+		LUA_PushUserdata(L, mt->stringargs, META_THINGSTRINGARGS);
+		return 1;
+	}
 	else if(fastcmp(field,"mobj")) {
 		LUA_PushUserdata(L, mt->mobj, META_MOBJ);
 		return 1;
@@ -917,6 +963,22 @@ int LUA_MobjLib(lua_State *L)
 		lua_pushcfunction(L, mobj_set);
 		lua_setfield(L, -2, "__newindex");
 	lua_pop(L,1);
+
+	luaL_newmetatable(L, META_THINGARGS);
+		lua_pushcfunction(L, thingargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, thingargs_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_THINGSTRINGARGS);
+		lua_pushcfunction(L, thingstringargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, thingstringargs_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
 
 	luaL_newmetatable(L, META_MAPTHING);
 		lua_pushcfunction(L, mapthing_get);
