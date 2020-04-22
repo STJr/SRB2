@@ -1797,7 +1797,7 @@ static void P_LoadTextmap(void)
 	{
 		// Defaults.
 		mt->x = mt->y = 0;
-		mt->angle = 0;
+		mt->angle = mt->pitch = mt->roll = 0;
 		mt->type = 0;
 		mt->options = 0;
 		mt->z = 0;
