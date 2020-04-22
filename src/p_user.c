@@ -11943,6 +11943,9 @@ void P_PlayerThink(player_t *player)
 					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
+				case CR_DUSTDEVIL:
+					player->drawangle += ANG20;
+					break;
 				case CR_ROPEHANG:
 					if (player->mo->momx || player->mo->momy)
 					{
@@ -11950,9 +11953,6 @@ void P_PlayerThink(player_t *player)
 						break;
 					}
 					/* FALLTHRU */
-				case CR_DUSTDEVIL:
-					player->drawangle += ANG20;
-					break;
 				default:
 					player->drawangle = player->mo->angle;
 					break;
