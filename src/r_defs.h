@@ -447,6 +447,9 @@ typedef struct
 	// add this to the calculated texture top
 	fixed_t rowoffset;
 
+	vector2_t topscale, botscale, midscale;
+	vector2_t topoffset, botoffset, midoffset;
+
 	// Texture indices.
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;

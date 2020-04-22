@@ -1116,6 +1116,9 @@ static void P_LoadSidedefs(UINT8 *data)
 		}
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
+		sd->topscale.x = sd->topscale.y = sd->midscale.x = sd->midscale.y = sd->botscale.x = sd->botscale.y = FRACUNIT;
+		sd->topoffset.x = sd->topoffset.y = sd->midoffset.x = sd->midoffset.y = sd->botoffset.x = sd->botoffset.y = 0;
+
 		P_SetSidedefSector(i, SHORT(msd->sector));
 
 		// Special info stored in texture fields!
@@ -1489,6 +1492,30 @@ static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
 		P_SetSidedefSector(i, atol(val));
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(val);
+	else if (fastcmp(param, "scalex_top"))
+		sides[i].topscale.x = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_top"))
+		sides[i].topscale.y = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex_mid"))
+		sides[i].midscale.x = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_mid"))
+		sides[i].midscale.y = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex_bottom"))
+		sides[i].botscale.x = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_bottom"))
+		sides[i].botscale.y = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "offsetx_top"))
+		sides[i].topoffset.x = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "offsety_top"))
+		sides[i].topoffset.y = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "offsetx_mid"))
+		sides[i].midoffset.x = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "offsety_mid"))
+		sides[i].midoffset.y = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "offsetx_bottom"))
+		sides[i].botoffset.x = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "offsety_bottom"))
+		sides[i].botoffset.y = FLOAT_TO_FIXED(atof(val));
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
@@ -1766,6 +1793,9 @@ static void P_LoadTextmap(void)
 		sd->bottomtexture = R_TextureNumForName("-");
 		sd->sector = NULL;
 		sd->repeatcnt = 0;
+
+		sd->topscale.x = sd->topscale.y = sd->midscale.x = sd->midscale.y = sd->botscale.x = sd->botscale.y = FRACUNIT;
+		sd->topoffset.x = sd->topoffset.y = sd->midoffset.x = sd->midoffset.y = sd->botoffset.x = sd->botoffset.y = 0;
 
 		TextmapParse(sidesPos[i], i, ParseTextmapSidedefParameter);
 
