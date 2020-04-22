@@ -691,58 +691,39 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 }
 #endif
 
-static void P_SpawnEmeraldHunt(void)
+static void P_SpawnEmeraldHunt(int amount)
 {
-	INT32 emer1, emer2, emer3;
+	INT32 emer[amount];
 	INT32 timeout = 0; // keeps from getting stuck
 	fixed_t x, y, z;
 
-	emer1 = emer2 = emer3 = 0;
-
 	//increment spawn numbers because zero is valid.
-	emer1 = (P_RandomKey(numhuntemeralds)) + 1;
+	emer[0] = (P_RandomKey(numhuntemeralds)) + 1;
 	while (timeout++ < 100)
 	{
-		emer2 = (P_RandomKey(numhuntemeralds)) + 1;
+		emer[1] = (P_RandomKey(numhuntemeralds)) + 1;
 
-		if (emer2 != emer1)
+		if (emer[1] != emer[0])
 			break;
 	}
 
 	timeout = 0;
 	while (timeout++ < 100)
 	{
-		emer3 = (P_RandomKey(numhuntemeralds)) + 1;
+		emer[2] = (P_RandomKey(numhuntemeralds)) + 1;
 
-		if (emer3 != emer2 && emer3 != emer1)
+		if (emer[2] != emer[1] && emer[2] != emer[0])
 			break;
 	}
 
 	//decrement spawn values to the actual number because zero is valid.
-	if (emer1--)
+	for (int i = 0; i < amount; i++)
 	{
-		x = huntemeralds[emer1]->x<<FRACBITS;
-		y = huntemeralds[emer1]->y<<FRACBITS;
-		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer1], x, y);
-		P_SpawnMobj(x, y, z, MT_EMERHUNT);
-	}
-
-	if (emer2--)
-	{
-		x = huntemeralds[emer2]->x<<FRACBITS;
-		y = huntemeralds[emer2]->y<<FRACBITS;
-		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer2], x, y);
+		x = huntemeralds[emer[i]-1]->x<<FRACBITS;
+		y = huntemeralds[emer[i]-1]->y<<FRACBITS;
+		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer[i]-1], x, y);
 		P_SetMobjStateNF(P_SpawnMobj(x, y, z, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+1);
-	}
-
-	if (emer3--)
-	{
-		x = huntemeralds[emer3]->x<<FRACBITS;
-		y = huntemeralds[emer3]->y<<FRACBITS;
-		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer3], x, y);
-		P_SetMobjStateNF(P_SpawnMobj(x, y, z, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+2);
+		mobjinfo[MT_EMERHUNT].spawnstate+i);
 	}
 }
 
@@ -791,7 +772,7 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 	// random emeralds for hunt
 	if (numhuntemeralds)
-		P_SpawnEmeraldHunt();
+		P_SpawnEmeraldHunt(3);
 }
 
 // Experimental groovy write function!
