@@ -451,8 +451,8 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing);
 void P_MovePlayerToStarpost(INT32 playernum);
 void P_AfterPlayerSpawn(INT32 playernum);
 
-fixed_t P_GetMobjSpawnHeight(mobjtype_t mobjtype, fixed_t x, fixed_t y, fixed_t offset, boolean flip);
-fixed_t P_GetMapThingSpawnHeight(mobjtype_t mobjtype, mapthing_t* mthing, fixed_t x, fixed_t y);
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip);
+fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y);
 
 mobj_t *P_SpawnMapThing(mapthing_t *mthing);
 void P_SpawnHoop(mapthing_t *mthing);

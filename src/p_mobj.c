@@ -11616,7 +11616,7 @@ void P_MovePlayerToStarpost(INT32 playernum)
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
-fixed_t P_GetMobjSpawnHeight(mobjtype_t mobjtype, fixed_t x, fixed_t y, fixed_t offset, boolean flip)
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip)
 {
 	const subsector_t *ss = R_PointInSubsector(x, y);
 
@@ -11633,7 +11633,7 @@ fixed_t P_GetMobjSpawnHeight(mobjtype_t mobjtype, fixed_t x, fixed_t y, fixed_t 
 			+ offset;
 }
 
-fixed_t P_GetMapThingSpawnHeight(mobjtype_t mobjtype, mapthing_t* mthing, fixed_t x, fixed_t y)
+fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
 {
 	fixed_t offset = mthing->z << FRACBITS;
 	boolean flip = (!!(mobjinfo[mobjtype].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
