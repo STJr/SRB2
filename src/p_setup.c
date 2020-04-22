@@ -695,6 +695,7 @@ static void P_SpawnEmeraldHunt(void)
 {
 	INT32 emer1, emer2, emer3;
 	INT32 timeout = 0; // keeps from getting stuck
+	fixed_t x, y, z;
 
 	emer1 = emer2 = emer3 = 0;
 
@@ -719,21 +720,30 @@ static void P_SpawnEmeraldHunt(void)
 
 	//decrement spawn values to the actual number because zero is valid.
 	if (emer1--)
-		P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
-			huntemeralds[emer1]->y<<FRACBITS,
-			huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
+	{
+		x = huntemeralds[emer1]->x<<FRACBITS;
+		y = huntemeralds[emer1]->y<<FRACBITS;
+		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer1], x, y);
+		P_SpawnMobj(x, y, z, MT_EMERHUNT);
+	}
 
 	if (emer2--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
-			huntemeralds[emer2]->y<<FRACBITS,
-			huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
+	{
+		x = huntemeralds[emer2]->x<<FRACBITS;
+		y = huntemeralds[emer2]->y<<FRACBITS;
+		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer2], x, y);
+		P_SetMobjStateNF(P_SpawnMobj(x, y, z, MT_EMERHUNT),
 		mobjinfo[MT_EMERHUNT].spawnstate+1);
+	}
 
 	if (emer3--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
-			huntemeralds[emer3]->y<<FRACBITS,
-			huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
+	{
+		x = huntemeralds[emer3]->x<<FRACBITS;
+		y = huntemeralds[emer3]->y<<FRACBITS;
+		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer3], x, y);
+		P_SetMobjStateNF(P_SpawnMobj(x, y, z, MT_EMERHUNT),
 		mobjinfo[MT_EMERHUNT].spawnstate+2);
+	}
 }
 
 static void P_SpawnMapThings(boolean spawnemblems)
