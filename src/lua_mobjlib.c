@@ -31,6 +31,8 @@ enum mobj_e {
 	mobj_snext,
 	mobj_sprev,
 	mobj_angle,
+	mobj_pitch,
+	mobj_roll,
 	mobj_rollangle,
 	mobj_sprite,
 	mobj_frame,
@@ -97,6 +99,8 @@ static const char *const mobj_opt[] = {
 	"snext",
 	"sprev",
 	"angle",
+	"pitch",
+	"roll",
 	"rollangle",
 	"sprite",
 	"frame",
@@ -197,6 +201,12 @@ static int mobj_get(lua_State *L)
 		return UNIMPLEMENTED;
 	case mobj_angle:
 		lua_pushangle(L, mo->angle);
+		break;
+	case mobj_pitch:
+		lua_pushangle(L, mo->pitch);
+		break;
+	case mobj_roll:
+		lua_pushangle(L, mo->roll);
 		break;
 	case mobj_rollangle:
 		lua_pushangle(L, mo->rollangle);
@@ -453,6 +463,11 @@ static int mobj_set(lua_State *L)
 			localangle = mo->angle;
 		else if (mo->player == &players[secondarydisplayplayer])
 			localangle2 = mo->angle;
+	case mobj_pitch:
+		mo->pitch = luaL_checkangle(L, 3);
+		break;
+	case mobj_roll:
+		mo->roll = luaL_checkangle(L, 3);
 		break;
 	case mobj_rollangle:
 		mo->rollangle = luaL_checkangle(L, 3);
@@ -807,10 +822,16 @@ static int mapthing_get(lua_State *L)
 		number = mt->y;
 	else if(fastcmp(field,"angle"))
 		number = mt->angle;
+	else if(fastcmp(field,"pitch"))
+		number = mt->pitch;
+	else if(fastcmp(field,"roll"))
+		number = mt->roll;
 	else if(fastcmp(field,"type"))
 		number = mt->type;
 	else if(fastcmp(field,"options"))
 		number = mt->options;
+	else if(fastcmp(field,"scale"))
+		number = mt->scale;
 	else if(fastcmp(field,"z"))
 		number = mt->z;
 	else if(fastcmp(field,"extrainfo"))
@@ -856,10 +877,16 @@ static int mapthing_set(lua_State *L)
 		mt->y = (INT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"angle"))
 		mt->angle = (INT16)luaL_checkinteger(L, 3);
+	else if(fastcmp(field,"pitch"))
+		mt->pitch = (INT16)luaL_checkinteger(L, 3);
+	else if(fastcmp(field,"roll"))
+		mt->roll = (INT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"type"))
 		mt->type = (UINT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"options"))
 		mt->options = (UINT16)luaL_checkinteger(L, 3);
+	else if(fastcmp(field,"scale"))
+		mt->scale = luaL_checkfixed(L, 3);
 	else if(fastcmp(field,"z"))
 		mt->z = (INT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"extrainfo"))

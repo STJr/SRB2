@@ -564,7 +564,7 @@ dontdrawbg:
 			V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125+yoffset, 0, data.spec.score);
 
 			// Draw continues!
-			if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
+			if (continuesInSession /* && (data.spec.continues & 0x80) */) // Always draw when continues are a thing
 			{
 				UINT8 continues = data.spec.continues & 0x7F;
 

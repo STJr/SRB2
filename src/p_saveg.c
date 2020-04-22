@@ -787,8 +787,13 @@ static boolean P_AreStringArgsEqual(const line_t *li, const line_t *spawnli)
 {
 	UINT8 i;
 	for (i = 0; i < NUMLINESTRINGARGS; i++)
+	{
+		if (!li->stringargs[i])
+			return !spawnli->stringargs[i];
+
 		if (strcmp(li->stringargs[i], spawnli->stringargs[i]))
 			return false;
+	}
 
 	return true;
 }
@@ -1356,7 +1361,6 @@ typedef enum
 	tc_marioblockchecker,
 	tc_spikesector,
 	tc_floatsector,
-	tc_bridgethinker,
 	tc_crushceiling,
 	tc_scroll,
 	tc_friction,
@@ -1447,7 +1451,9 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 
 		if ((mobj->x != mobj->spawnpoint->x << FRACBITS) ||
 			(mobj->y != mobj->spawnpoint->y << FRACBITS) ||
-			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)))
+			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)) ||
+			(mobj->pitch != FixedAngle(mobj->spawnpoint->pitch*FRACUNIT)) ||
+			(mobj->roll != FixedAngle(mobj->spawnpoint->roll*FRACUNIT)) )
 			diff |= MD_POS;
 
 		if (mobj->info->doomednum != mobj->spawnpoint->type)
@@ -1629,6 +1635,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->x);
 		WRITEFIXED(save_p, mobj->y);
 		WRITEANGLE(save_p, mobj->angle);
+		WRITEANGLE(save_p, mobj->pitch);
+		WRITEANGLE(save_p, mobj->roll);
 	}
 	if (diff & MD_MOM)
 	{
@@ -2372,11 +2380,6 @@ static void P_NetArchiveThinkers(void)
 				SaveSpecialLevelThinker(th, tc_floatsector);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_BridgeThinker)
-			{
-				SaveSpecialLevelThinker(th, tc_bridgethinker);
-				continue;
-			}
 			else if (th->function.acp1 == (actionf_p1)T_LaserFlash)
 			{
 				SaveLaserThinker(th, tc_laserflash);
@@ -2650,12 +2653,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->x = READFIXED(save_p);
 		mobj->y = READFIXED(save_p);
 		mobj->angle = READANGLE(save_p);
+		mobj->pitch = READANGLE(save_p);
+		mobj->roll = READANGLE(save_p);
 	}
 	else
 	{
 		mobj->x = mobj->spawnpoint->x << FRACBITS;
 		mobj->y = mobj->spawnpoint->y << FRACBITS;
 		mobj->angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
+		mobj->pitch = FixedAngle(mobj->spawnpoint->pitch*FRACUNIT);
+		mobj->roll = FixedAngle(mobj->spawnpoint->roll*FRACUNIT);
 	}
 	if (diff & MD_MOM)
 	{
@@ -3566,10 +3573,6 @@ static void P_NetUnArchiveThinkers(void)
 
 				case tc_floatsector:
 					th = LoadSpecialLevelThinker((actionf_p1)T_FloatSector, 0);
-					break;
-
-				case tc_bridgethinker:
-					th = LoadSpecialLevelThinker((actionf_p1)T_BridgeThinker, 3);
 					break;
 
 				case tc_laserflash:

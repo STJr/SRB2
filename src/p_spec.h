@@ -354,7 +354,6 @@ void T_StartCrumble(elevator_t *elevator);
 void T_MarioBlock(levelspecthink_t *block);
 void T_SpikeSector(levelspecthink_t *spikes);
 void T_FloatSector(levelspecthink_t *floater);
-void T_BridgeThinker(levelspecthink_t *bridge);
 void T_MarioBlockChecker(levelspecthink_t *block);
 void T_ThwompSector(levelspecthink_t *thwomp);
 void T_NoEnemiesSector(levelspecthink_t *nobaddies);
