@@ -1463,7 +1463,9 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 
 		if ((mobj->x != mobj->spawnpoint->x << FRACBITS) ||
 			(mobj->y != mobj->spawnpoint->y << FRACBITS) ||
-			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)))
+			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)) ||
+			(mobj->pitch != FixedAngle(mobj->spawnpoint->pitch*FRACUNIT)) ||
+			(mobj->roll != FixedAngle(mobj->spawnpoint->roll*FRACUNIT)) )
 			diff |= MD_POS;
 
 		if (mobj->info->doomednum != mobj->spawnpoint->type)
@@ -1645,6 +1647,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->x);
 		WRITEFIXED(save_p, mobj->y);
 		WRITEANGLE(save_p, mobj->angle);
+		WRITEANGLE(save_p, mobj->pitch);
+		WRITEANGLE(save_p, mobj->roll);
 	}
 	if (diff & MD_MOM)
 	{
@@ -2661,12 +2665,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->x = READFIXED(save_p);
 		mobj->y = READFIXED(save_p);
 		mobj->angle = READANGLE(save_p);
+		mobj->pitch = READANGLE(save_p);
+		mobj->roll = READANGLE(save_p);
 	}
 	else
 	{
 		mobj->x = mobj->spawnpoint->x << FRACBITS;
 		mobj->y = mobj->spawnpoint->y << FRACBITS;
 		mobj->angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
+		mobj->pitch = FixedAngle(mobj->spawnpoint->pitch*FRACUNIT);
+		mobj->roll = FixedAngle(mobj->spawnpoint->roll*FRACUNIT);
 	}
 	if (diff & MD_MOM)
 	{

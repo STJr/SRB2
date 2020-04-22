@@ -1281,6 +1281,8 @@ static void P_LoadThings(UINT8 *data)
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
 		Tag_FSet(&mt->tags, 0);
+		mt->scale = FRACUNIT;
+		mt->pitch = mt->roll = 0;
 
 		mt->type &= 4095;
 
@@ -1597,9 +1599,14 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 		mapthings[i].z = atol(val);
 	else if (fastcmp(param, "angle"))
 		mapthings[i].angle = atol(val);
+	else if (fastcmp(param, "pitch"))
+		mapthings[i].pitch = atol(val);
+	else if (fastcmp(param, "roll"))
+		mapthings[i].roll = atol(val);
 	else if (fastcmp(param, "type"))
 		mapthings[i].type = atol(val);
-
+	else if (fastcmp(param, "scale") || fastcmp(param, "scalex") || fastcmp(param, "scaley"))
+		mapthings[i].scale = FLOAT_TO_FIXED(atof(val));
 	// Flags
 	else if (fastcmp(param, "extra") && fastcmp("true", val))
 		mapthings[i].options |= MTF_EXTRA;
@@ -1809,6 +1816,7 @@ static void P_LoadTextmap(void)
 		mt->z = 0;
 		mt->extrainfo = 0;
 		Tag_FSet(&mt->tags, 0);
+		mt->scale = FRACUNIT;
 		mt->mobj = NULL;
 
 		TextmapParse(mapthingsPos[i], i, ParseTextmapThingParameter);

@@ -24,6 +24,7 @@
 #include "doomdef.h"
 
 #include "taglist.h"
+#include "m_fixed.h" // See the mapthing_t scale.
 
 //
 // Map level types.
@@ -200,12 +201,13 @@ typedef struct
 typedef struct
 {
 	INT16 x, y;
-	INT16 angle;
+	INT16 angle, pitch, roll;
 	UINT16 type;
 	UINT16 options;
 	INT16 z;
 	UINT8 extrainfo;
 	taglist_t tags;
+	fixed_t scale;
 	struct mobj_s *mobj;
 } mapthing_t;
 
