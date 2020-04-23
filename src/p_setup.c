@@ -3777,12 +3777,12 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 {
 	UINT16 numlumps = *pnumlumps;
 	size_t i = *pi;
-	if (!stricmp(lumpinfo->name2, folName))
+	if (!stricmp(lumpinfo->fullname, folName))
 	{
 		lumpinfo++;
 		*start = ++i;
 		for (; i < numlumps; i++, lumpinfo++)
-			if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
+			if (strnicmp(lumpinfo->fullname, folName, strlen(folName)))
 				break;
 		lumpinfo--;
 		*end = i-- - *start;
