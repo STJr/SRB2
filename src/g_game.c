@@ -219,6 +219,7 @@ UINT8 ammoremovaltics = 2*TICRATE;
 
 UINT8 use1upSound = 0;
 UINT8 maxXtraLife = 2; // Max extra lives from rings
+UINT8 useContinues = 0; // Set to 1 to enable continues outside of no-save scenarioes
 
 UINT8 introtoplay;
 UINT8 creditscutscene;
@@ -3859,7 +3860,8 @@ static void G_DoContinued(void)
 	I_Assert(!netgame && !multiplayer);
 	I_Assert(pl->continues > 0);
 
-	pl->continues--;
+	if (pl->continues)
+		pl->continues--;
 
 	// Reset score
 	pl->score = 0;
