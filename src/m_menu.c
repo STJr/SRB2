@@ -12535,6 +12535,8 @@ void M_QuitResponse(INT32 ch)
 
 	if (ch != 'y' && ch != KEY_ENTER)
 		return;
+	if (Playing())
+		LUAh_GameQuit();
 	if (!(netgame || cv_debug))
 	{
 		S_ResetCaptions();
@@ -12551,8 +12553,6 @@ void M_QuitResponse(INT32 ch)
 			I_Sleep();
 		}
 	}
-	if (Playing())
-		LUAh_GameQuit();
 	I_Quit();
 }
 
