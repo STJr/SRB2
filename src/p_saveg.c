@@ -1518,42 +1518,14 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 
 	if (diff2 & MD2_FLOORROVER)
 	{
-		ffloor_t *rover;
-		size_t i = 0;
-		UINT32 roverindex = 0;
-
-		for (rover = mobj->floorrover->target->ffloors; rover; rover = rover->next)
-		{
-			if (rover == mobj->floorrover)
-			{
-				roverindex = i;
-				break;
-			}
-			i++;
-		}
-
-		WRITEUINT32(save_p, (UINT32)(mobj->floorrover->target - sectors));
-		WRITEUINT32(save_p, rover ? roverindex : i); // store max index to denote invalid ffloor ref
+		WRITEUINT32(save_p, SaveSector(mobj->floorrover->target));
+		WRITEUINT16(save_p, P_GetFFloorID(mobj->floorrover));
 	}
 
 	if (diff2 & MD2_CEILINGROVER)
 	{
-		ffloor_t *rover;
-		size_t i = 0;
-		UINT32 roverindex = 0;
-
-		for (rover = mobj->ceilingrover->target->ffloors; rover; rover = rover->next)
-		{
-			if (rover == mobj->ceilingrover)
-			{
-				roverindex = i;
-				break;
-			}
-			i++;
-		}
-
-		WRITEUINT32(save_p, (UINT32)(mobj->ceilingrover->target - sectors));
-		WRITEUINT32(save_p, rover ? roverindex : i); // store max index to denote invalid ffloor ref
+		WRITEUINT32(save_p, SaveSector(mobj->ceilingrover->target));
+		WRITEUINT16(save_p, P_GetFFloorID(mobj->ceilingrover));
 	}
 
 	if (diff & MD_SPAWNPOINT)
@@ -2634,34 +2606,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 
 	if (diff2 & MD2_FLOORROVER)
 	{
-		size_t floor_sectornum = (size_t)READUINT32(save_p);
-		size_t floor_rovernum = (size_t)READUINT32(save_p);
-		ffloor_t *rover = NULL;
-		size_t rovernum = 0;
-
-		for (rover = sectors[floor_sectornum].ffloors; rover; rover = rover->next)
-		{
-			if (rovernum == floor_rovernum)
-				break;
-			rovernum++;
-		}
-		floorrover = rover;
+		sector_t *sec = LoadSector(READUINT32(save_p));
+		UINT16 id = READUINT16(save_p);
+		floorrover = P_GetFFloorByID(sec, id);
 	}
 
 	if (diff2 & MD2_CEILINGROVER)
 	{
-		size_t ceiling_sectornum = (size_t)READUINT32(save_p);
-		size_t ceiling_rovernum = (size_t)READUINT32(save_p);
-		ffloor_t *rover = NULL;
-		size_t rovernum = 0;
-
-		for (rover = sectors[ceiling_sectornum].ffloors; rover; rover = rover->next)
-		{
-			if (rovernum == ceiling_rovernum)
-				break;
-			rovernum++;
-		}
-		ceilingrover = rover;
+		sector_t *sec = LoadSector(READUINT32(save_p));
+		UINT16 id = READUINT16(save_p);
+		ceilingrover = P_GetFFloorByID(sec, id);
 	}
 
 	if (diff & MD_SPAWNPOINT)
