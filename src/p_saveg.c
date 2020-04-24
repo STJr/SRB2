@@ -755,6 +755,7 @@ static void P_NetUnArchiveColormaps(void)
 // diff3 flags
 #define SD_TAGLIST   0x01
 #define SD_COLORMAP  0x02
+#define SD_CRUMBLESTATE 0x03
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -834,6 +835,8 @@ static void P_NetArchiveWorld(void)
 
 		if (ss->extra_colormap != spawnss->extra_colormap)
 			diff3 |= SD_COLORMAP;
+		if (ss->crumblestate)
+			diff3 |= SD_CRUMBLESTATE;
 
 		// Check if any of the sector's FOFs differ from how they spawned
 		if (ss->ffloors)
@@ -901,6 +904,8 @@ static void P_NetArchiveWorld(void)
 			if (diff3 & SD_COLORMAP)
 				WRITEUINT32(put, CheckAddNetColormapToList(ss->extra_colormap));
 					// returns existing index if already added, or appends to net_colormaps and returns new index
+			if (diff3 & SD_CRUMBLESTATE)
+				WRITEINT32(put, ss->crumblestate);
 
 			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
 			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
@@ -1105,6 +1110,8 @@ static void P_NetUnArchiveWorld(void)
 
 		if (diff3 & SD_COLORMAP)
 			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(get));
+		if (diff3 & SD_CRUMBLESTATE)
+			sectors[i].crumblestate = READINT32(get);
 
 		if (diff & SD_FFLOORS)
 		{
