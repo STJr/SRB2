@@ -1631,7 +1631,6 @@ int LUA_InfoLib(lua_State *L)
 			lua_pushcfunction(L, lib_spriteinfolen);
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
-	lua_pushvalue(L, -1);
 	lua_setglobal(L, "spriteinfo");
 
 	luaL_newmetatable(L, META_LUABANKS);

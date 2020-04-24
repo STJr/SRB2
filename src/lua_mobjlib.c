@@ -463,6 +463,7 @@ static int mobj_set(lua_State *L)
 			localangle = mo->angle;
 		else if (mo->player == &players[secondarydisplayplayer])
 			localangle2 = mo->angle;
+		break;
 	case mobj_pitch:
 		mo->pitch = luaL_checkangle(L, 3);
 		break;
