@@ -1280,7 +1280,6 @@ typedef enum
 	tc_startcrumble,
 	tc_marioblock,
 	tc_marioblockchecker,
-	tc_spikesector,
 	tc_floatsector,
 	tc_crushceiling,
 	tc_scroll,
@@ -1648,22 +1647,151 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 }
 
 //
-// SaveSpecialLevelThinker
+// SaveNoEnemiesThinker
 //
-// Saves a levelspecthink_t thinker
+// Saves a noenemies_t thinker
 //
-static void SaveSpecialLevelThinker(const thinker_t *th, const UINT8 type)
+static void SaveNoEnemiesThinker(const thinker_t *th, const UINT8 type)
 {
-	const levelspecthink_t *ht  = (const void *)th;
-	size_t i;
+	const noenemies_t *ht  = (const void *)th;
 	WRITEUINT8(save_p, type);
-	for (i = 0; i < 16; i++)
-	{
-		WRITEFIXED(save_p, ht->vars[i]); //var[16]
-		WRITEFIXED(save_p, ht->var2s[i]); //var[16]
-	}
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+}
+
+//
+// SaveBounceCheeseThinker
+//
+// Saves a bouncecheese_t thinker
+//
+static void SaveBounceCheeseThinker(const thinker_t *th, const UINT8 type)
+{
+	const bouncecheese_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEFIXED(save_p, ht->speed);
+	WRITEFIXED(save_p, ht->distance);
+	WRITEFIXED(save_p, ht->floorwasheight);
+	WRITEFIXED(save_p, ht->ceilingwasheight);
+	WRITECHAR(save_p, ht->low);
+}
+
+//
+// SaveContinuousFallThinker
+//
+// Saves a continuousfall_t thinker
+//
+static void SaveContinuousFallThinker(const thinker_t *th, const UINT8 type)
+{
+	const continuousfall_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEFIXED(save_p, ht->speed);
+	WRITEINT32(save_p, ht->direction);
+	WRITEFIXED(save_p, ht->floorstartheight);
+	WRITEFIXED(save_p, ht->ceilingstartheight);
+	WRITEFIXED(save_p, ht->destheight);
+}
+
+//
+// SaveMarioBlockThinker
+//
+// Saves a mariothink_t thinker
+//
+static void SaveMarioBlockThinker(const thinker_t *th, const UINT8 type)
+{
+	const mariothink_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEFIXED(save_p, ht->speed);
+	WRITEINT32(save_p, ht->direction);
+	WRITEFIXED(save_p, ht->floorstartheight);
+	WRITEFIXED(save_p, ht->ceilingstartheight);
+	WRITEINT16(save_p, ht->tag);
+}
+
+//
+// SaveMarioCheckThinker
+//
+// Saves a mariocheck_t thinker
+//
+static void SaveMarioCheckThinker(const thinker_t *th, const UINT8 type)
+{
+	const mariocheck_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+}
+
+//
+// SaveThwompThinker
+//
+// Saves a thwomp_t thinker
+//
+static void SaveThwompThinker(const thinker_t *th, const UINT8 type)
+{
+	const thwomp_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEFIXED(save_p, ht->crushspeed);
+	WRITEFIXED(save_p, ht->retractspeed);
+	WRITEINT32(save_p, ht->direction);
+	WRITEFIXED(save_p, ht->floorstartheight);
+	WRITEFIXED(save_p, ht->ceilingstartheight);
+	WRITEINT32(save_p, ht->delay);
+	WRITEINT16(save_p, ht->tag);
+	WRITEUINT16(save_p, ht->sound);
+}
+
+//
+// SaveFloatThinker
+//
+// Saves a floatthink_t thinker
+//
+static void SaveFloatThinker(const thinker_t *th, const UINT8 type)
+{
+	const floatthink_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEINT16(save_p, ht->tag);
+}
+
+// SaveEachTimeThinker
+//
+// Loads a eachtime_t from a save game
+//
+static void SaveEachTimeThinker(const thinker_t *th, const UINT8 type)
+{
+	const eachtime_t *ht  = (const void *)th;
+	size_t i;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		WRITECHAR(save_p, ht->playersInArea[i]);
+		WRITECHAR(save_p, ht->playersOnArea[i]);
+	}
+	WRITECHAR(save_p, ht->triggerOnExit);
+}
+
+// SaveRaiseThinker
+//
+// Saves a raise_t thinker
+//
+static void SaveRaiseThinker(const thinker_t *th, const UINT8 type)
+{
+	const raise_t *ht  = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEFIXED(save_p, ht->ceilingbottom);
+	WRITEFIXED(save_p, ht->ceilingtop);
+	WRITEFIXED(save_p, ht->basespeed);
+	WRITEFIXED(save_p, ht->extraspeed);
+	WRITEUINT8(save_p, ht->shaketimer);
+	WRITEUINT8(save_p, ht->flags);
 }
 
 //
@@ -2224,27 +2352,27 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_ContinuousFalling)
 			{
-				SaveSpecialLevelThinker(th, tc_continuousfalling);
+				SaveContinuousFallThinker(th, tc_continuousfalling);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_ThwompSector)
 			{
-				SaveSpecialLevelThinker(th, tc_thwomp);
+				SaveThwompThinker(th, tc_thwomp);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_NoEnemiesSector)
 			{
-				SaveSpecialLevelThinker(th, tc_noenemies);
+				SaveNoEnemiesThinker(th, tc_noenemies);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_EachTimeThinker)
 			{
-				SaveSpecialLevelThinker(th, tc_eachtime);
+				SaveEachTimeThinker(th, tc_eachtime);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_RaiseSector)
 			{
-				SaveSpecialLevelThinker(th, tc_raisesector);
+				SaveRaiseThinker(th, tc_raisesector);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_CameraScanner)
@@ -2269,7 +2397,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_BounceCheese)
 			{
-				SaveSpecialLevelThinker(th, tc_bouncecheese);
+				SaveBounceCheeseThinker(th, tc_bouncecheese);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_StartCrumble)
@@ -2279,22 +2407,17 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_MarioBlock)
 			{
-				SaveSpecialLevelThinker(th, tc_marioblock);
+				SaveMarioBlockThinker(th, tc_marioblock);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_MarioBlockChecker)
 			{
-				SaveSpecialLevelThinker(th, tc_marioblockchecker);
-				continue;
-			}
-			else if (th->function.acp1 == (actionf_p1)T_SpikeSector)
-			{
-				SaveSpecialLevelThinker(th, tc_spikesector);
+				SaveMarioCheckThinker(th, tc_marioblockchecker);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_FloatSector)
 			{
-				SaveSpecialLevelThinker(th, tc_floatsector);
+				SaveFloatThinker(th, tc_floatsector);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_LaserFlash)
@@ -2742,38 +2865,153 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	return &mobj->thinker;
 }
 
+// LoadNoEnemiesThinker
 //
-// LoadSpecialLevelThinker
+// Loads a noenemies_t from a save game
 //
-// Loads a levelspecthink_t from a save game
-//
-// floorOrCeiling:
-//		0 - Don't set
-//		1 - Floor Only
-//		2 - Ceiling Only
-//		3 - Both
-//
-static thinker_t* LoadSpecialLevelThinker(actionf_p1 thinker, UINT8 floorOrCeiling)
+static thinker_t* LoadNoEnemiesThinker(actionf_p1 thinker)
 {
-	levelspecthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	size_t i;
+	noenemies_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
-	for (i = 0; i < 16; i++)
-	{
-		ht->vars[i] = READFIXED(save_p); //var[16]
-		ht->var2s[i] = READFIXED(save_p); //var[16]
-	}
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	return &ht->thinker;
+}
+
+// LoadBounceCheeseThinker
+//
+// Loads a bouncecheese_t from a save game
+//
+static thinker_t* LoadBounceCheeseThinker(actionf_p1 thinker)
+{
+	bouncecheese_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
 	ht->sourceline = LoadLine(READUINT32(save_p));
 	ht->sector = LoadSector(READUINT32(save_p));
+	ht->speed = READFIXED(save_p);
+	ht->distance = READFIXED(save_p);
+	ht->floorwasheight = READFIXED(save_p);
+	ht->ceilingwasheight = READFIXED(save_p);
+	ht->low = READCHAR(save_p);
+	return &ht->thinker;
+}
 
-	if (ht->sector)
+// LoadContinuousFallThinker
+//
+// Loads a continuousfall_t from a save game
+//
+static thinker_t* LoadContinuousFallThinker(actionf_p1 thinker)
+{
+	continuousfall_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->speed = READFIXED(save_p);
+	ht->direction = READINT32(save_p);
+	ht->floorstartheight = READFIXED(save_p);
+	ht->ceilingstartheight = READFIXED(save_p);
+	ht->destheight = READFIXED(save_p);
+	return &ht->thinker;
+}
+
+// LoadMarioBlockThinker
+//
+// Loads a mariothink_t from a save game
+//
+static thinker_t* LoadMarioBlockThinker(actionf_p1 thinker)
+{
+	mariothink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->speed = READFIXED(save_p);
+	ht->direction = READINT32(save_p);
+	ht->floorstartheight = READFIXED(save_p);
+	ht->ceilingstartheight = READFIXED(save_p);
+	ht->tag = READINT16(save_p);
+	return &ht->thinker;
+}
+
+// LoadMarioCheckThinker
+//
+// Loads a mariocheck_t from a save game
+//
+static thinker_t* LoadMarioCheckThinker(actionf_p1 thinker)
+{
+	mariocheck_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->sector = LoadSector(READUINT32(save_p));
+	return &ht->thinker;
+}
+
+// LoadThwompThinker
+//
+// Loads a thwomp_t from a save game
+//
+static thinker_t* LoadThwompThinker(actionf_p1 thinker)
+{
+	thwomp_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->crushspeed = READFIXED(save_p);
+	ht->retractspeed = READFIXED(save_p);
+	ht->direction = READINT32(save_p);
+	ht->floorstartheight = READFIXED(save_p);
+	ht->ceilingstartheight = READFIXED(save_p);
+	ht->delay = READINT32(save_p);
+	ht->tag = READINT16(save_p);
+	ht->sound = READUINT16(save_p);
+	return &ht->thinker;
+}
+
+// LoadFloatThinker
+//
+// Loads a floatthink_t from a save game
+//
+static thinker_t* LoadFloatThinker(actionf_p1 thinker)
+{
+	floatthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->tag = READINT16(save_p);
+	return &ht->thinker;
+}
+
+// LoadEachTimeThinker
+//
+// Loads a eachtime_t from a save game
+//
+static thinker_t* LoadEachTimeThinker(actionf_p1 thinker)
+{
+	size_t i;
+	eachtime_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (floorOrCeiling & 2)
-			ht->sector->ceilingdata = ht;
-		if (floorOrCeiling & 1)
-			ht->sector->floordata = ht;
+		ht->playersInArea[i] = READCHAR(save_p);
+		ht->playersOnArea[i] = READCHAR(save_p);
 	}
+	ht->triggerOnExit = READCHAR(save_p);
+	return &ht->thinker;
+}
 
+// LoadRaiseThinker
+//
+// Loads a raise_t from a save game
+//
+static thinker_t* LoadRaiseThinker(actionf_p1 thinker)
+{
+	raise_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->ceilingbottom = READFIXED(save_p);
+	ht->ceilingtop = READFIXED(save_p);
+	ht->basespeed = READFIXED(save_p);
+	ht->extraspeed = READFIXED(save_p);
+	ht->shaketimer = READUINT8(save_p);
+	ht->flags = READUINT8(save_p);
 	return &ht->thinker;
 }
 
@@ -3439,23 +3677,23 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_continuousfalling:
-					th = LoadSpecialLevelThinker((actionf_p1)T_ContinuousFalling, 3);
+					th = LoadContinuousFallThinker((actionf_p1)T_ContinuousFalling);
 					break;
 
 				case tc_thwomp:
-					th = LoadSpecialLevelThinker((actionf_p1)T_ThwompSector, 3);
+					th = LoadThwompThinker((actionf_p1)T_ThwompSector);
 					break;
 
 				case tc_noenemies:
-					th = LoadSpecialLevelThinker((actionf_p1)T_NoEnemiesSector, 0);
+					th = LoadNoEnemiesThinker((actionf_p1)T_NoEnemiesSector);
 					break;
 
 				case tc_eachtime:
-					th = LoadSpecialLevelThinker((actionf_p1)T_EachTimeThinker, 0);
+					th = LoadEachTimeThinker((actionf_p1)T_EachTimeThinker);
 					break;
 
 				case tc_raisesector:
-					th = LoadSpecialLevelThinker((actionf_p1)T_RaiseSector, 0);
+					th = LoadRaiseThinker((actionf_p1)T_RaiseSector);
 					break;
 
 				/// \todo rewrite all the code that uses an elevator_t but isn't an elevator
@@ -3465,7 +3703,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_bouncecheese:
-					th = LoadSpecialLevelThinker((actionf_p1)T_BounceCheese, 2);
+					th = LoadBounceCheeseThinker((actionf_p1)T_BounceCheese);
 					break;
 
 				case tc_startcrumble:
@@ -3473,19 +3711,15 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_marioblock:
-					th = LoadSpecialLevelThinker((actionf_p1)T_MarioBlock, 3);
+					th = LoadMarioBlockThinker((actionf_p1)T_MarioBlock);
 					break;
 
 				case tc_marioblockchecker:
-					th = LoadSpecialLevelThinker((actionf_p1)T_MarioBlockChecker, 0);
-					break;
-
-				case tc_spikesector:
-					th = LoadSpecialLevelThinker((actionf_p1)T_SpikeSector, 0);
+					th = LoadMarioCheckThinker((actionf_p1)T_MarioBlockChecker);
 					break;
 
 				case tc_floatsector:
-					th = LoadSpecialLevelThinker((actionf_p1)T_FloatSector, 0);
+					th = LoadFloatThinker((actionf_p1)T_FloatSector);
 					break;
 
 				case tc_laserflash:
