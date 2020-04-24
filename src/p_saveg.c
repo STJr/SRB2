@@ -772,6 +772,95 @@ static void P_NetUnArchiveColormaps(void)
 #define LD_S2BOTTEX 0x04
 #define LD_S2MIDTEX 0x08
 
+#define FD_FLAGS 0x01
+#define FD_ALPHA 0x02
+
+// Check if any of the sector's FOFs differ from how they spawned
+static boolean CheckFFloorDiff(sector_t *ss)
+{
+	ffloor_t *rover;
+
+	for (rover = ss->ffloors; rover; rover = rover->next)
+	{
+		if (rover->flags != rover->spawnflags
+		|| rover->alpha != rover->spawnalpha)
+			{
+				return true; // we found an FOF that changed!
+				// don't bother checking for more, we do that later
+			}
+	}
+	return false;
+}
+
+// Special case: save the stats of all modified ffloors along with their ffloor "number"s
+// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
+static void ArchiveFFloors(UINT8 *put, sector_t *ss)
+{
+	size_t j = 0; // ss->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
+	ffloor_t *rover;
+	UINT8 fflr_diff;
+	for (rover = ss->ffloors; rover; rover = rover->next)
+	{
+		fflr_diff = 0; // reset diff flags
+		if (rover->flags != rover->spawnflags)
+			fflr_diff |= FD_FLAGS;
+		if (rover->alpha != rover->spawnalpha)
+			fflr_diff |= FD_ALPHA;
+
+		if (fflr_diff)
+		{
+			WRITEUINT16(put, j); // save ffloor "number"
+			WRITEUINT8(put, fflr_diff);
+			if (fflr_diff & FD_FLAGS)
+				WRITEUINT32(put, rover->flags);
+			if (fflr_diff & FD_ALPHA)
+				WRITEINT16(put, rover->alpha);
+		}
+		j++;
+	}
+	WRITEUINT16(put, 0xffff);
+}
+
+static void UnArchiveFFloors(UINT8 *get, sector_t *ss)
+{
+	UINT16 j = 0; // number of current ffloor in loop
+	UINT16 fflr_i; // saved ffloor "number" of next modified ffloor
+	UINT16 fflr_diff; // saved ffloor diff
+	ffloor_t *rover;
+
+	rover = ss->ffloors;
+	if (!rover) // it is assumed sectors[i].ffloors actually exists, but just in case...
+		I_Error("Sector does not have any ffloors!");
+
+	fflr_i = READUINT16(get); // get first modified ffloor's number ready
+	for (;;) // for some reason the usual for (rover = x; ...) thing doesn't work here?
+	{
+		if (fflr_i == 0xffff) // end of modified ffloors list, let's stop already
+			break;
+		// should NEVER need to be checked
+		//if (rover == NULL)
+			//break;
+		if (j != fflr_i) // this ffloor was not modified
+		{
+			j++;
+			rover = rover->next;
+			continue;
+		}
+
+		fflr_diff = READUINT8(get);
+
+		if (fflr_diff & FD_FLAGS)
+			rover->flags = READUINT32(get);
+		if (fflr_diff & FD_ALPHA)
+			rover->alpha = READINT16(get);
+
+		fflr_i = READUINT16(get); // get next ffloor "number" ready
+
+		j++;
+		rover = rover->next;
+	}
+}
+
 //
 // P_NetArchiveWorld
 //
@@ -838,20 +927,8 @@ static void P_NetArchiveWorld(void)
 		if (ss->crumblestate)
 			diff3 |= SD_CRUMBLESTATE;
 
-		// Check if any of the sector's FOFs differ from how they spawned
-		if (ss->ffloors)
-		{
-			ffloor_t *rover;
-			for (rover = ss->ffloors; rover; rover = rover->next)
-			{
-				if (rover->flags != rover->spawnflags
-				|| rover->alpha != rover->spawnalpha)
-					{
-						diff |= SD_FFLOORS; // we found an FOF that changed!
-						break; // don't bother checking for more, we do that later
-					}
-			}
-		}
+		if (ss->ffloors && CheckFFloorDiff(ss))
+			diff |= SD_FFLOORS;
 
 		if (diff3)
 			diff2 |= SD_DIFF3;
@@ -906,35 +983,8 @@ static void P_NetArchiveWorld(void)
 					// returns existing index if already added, or appends to net_colormaps and returns new index
 			if (diff3 & SD_CRUMBLESTATE)
 				WRITEINT32(put, ss->crumblestate);
-
-			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
-			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
 			if (diff & SD_FFLOORS)
-			{
-				size_t j = 0; // ss->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
-				ffloor_t *rover;
-				UINT8 fflr_diff;
-				for (rover = ss->ffloors; rover; rover = rover->next)
-				{
-					fflr_diff = 0; // reset diff flags
-					if (rover->flags != rover->spawnflags)
-						fflr_diff |= 1;
-					if (rover->alpha != rover->spawnalpha)
-						fflr_diff |= 2;
-
-					if (fflr_diff)
-					{
-						WRITEUINT16(put, j); // save ffloor "number"
-						WRITEUINT8(put, fflr_diff);
-						if (fflr_diff & 1)
-							WRITEUINT32(put, rover->flags);
-						if (fflr_diff & 2)
-							WRITEINT16(put, rover->alpha);
-					}
-					j++;
-				}
-				WRITEUINT16(put, 0xffff);
-			}
+				ArchiveFFloors(put, ss);
 		}
 	}
 
@@ -1114,44 +1164,7 @@ static void P_NetUnArchiveWorld(void)
 			sectors[i].crumblestate = READINT32(get);
 
 		if (diff & SD_FFLOORS)
-		{
-			UINT16 j = 0; // number of current ffloor in loop
-			UINT16 fflr_i; // saved ffloor "number" of next modified ffloor
-			UINT16 fflr_diff; // saved ffloor diff
-			ffloor_t *rover;
-
-			rover = sectors[i].ffloors;
-			if (!rover) // it is assumed sectors[i].ffloors actually exists, but just in case...
-				I_Error("Sector does not have any ffloors!");
-
-			fflr_i = READUINT16(get); // get first modified ffloor's number ready
-			for (;;) // for some reason the usual for (rover = x; ...) thing doesn't work here?
-			{
-				if (fflr_i == 0xffff) // end of modified ffloors list, let's stop already
-					break;
-				// should NEVER need to be checked
-				//if (rover == NULL)
-					//break;
-				if (j != fflr_i) // this ffloor was not modified
-				{
-					j++;
-					rover = rover->next;
-					continue;
-				}
-
-				fflr_diff = READUINT8(get);
-
-				if (fflr_diff & 1)
-					rover->flags = READUINT32(get);
-				if (fflr_diff & 2)
-					rover->alpha = READINT16(get);
-
-				fflr_i = READUINT16(get); // get next ffloor "number" ready
-
-				j++;
-				rover = rover->next;
-			}
-		}
+			UnArchiveFFloors(get, sectors[i]);
 	}
 
 	for (;;)
