@@ -861,27 +861,12 @@ static void UnArchiveFFloors(UINT8 *get, sector_t *ss)
 	}
 }
 
-//
-// P_NetArchiveWorld
-//
-static void P_NetArchiveWorld(void)
+static void ArchiveSectors(UINT8 *put)
 {
 	size_t i;
-	const line_t *li = lines;
-	const line_t *spawnli = spawnlines;
-	const side_t *si;
-	const side_t *spawnsi;
-	UINT8 *put;
-
 	const sector_t *ss = sectors;
 	const sector_t *spawnss = spawnsectors;
 	UINT8 diff, diff2, diff3;
-
-	// initialize colormap vars because paranoia
-	ClearNetColormaps();
-
-	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
-	put = save_p;
 
 	for (i = 0; i < numsectors; i++, ss++, spawnss++)
 	{
@@ -986,8 +971,90 @@ static void P_NetArchiveWorld(void)
 	}
 
 	WRITEUINT16(put, 0xffff);
+}
 
-	// do lines
+static void UnArchiveSectors(UINT8 *get)
+{
+	UINT16 i;
+	UINT8 diff, diff2, diff3;
+	for (;;)
+	{
+		i = READUINT16(get);
+
+		if (i == 0xffff)
+			break;
+
+		if (i > numsectors)
+			I_Error("Invalid sector number %u from server (expected end at %s)", i, sizeu1(numsectors));
+
+		diff = READUINT8(get);
+		if (diff & SD_DIFF2)
+			diff2 = READUINT8(get);
+		else
+			diff2 = 0;
+		if (diff2 & SD_DIFF3)
+			diff3 = READUINT8(get);
+		else
+			diff3 = 0;
+
+		if (diff & SD_FLOORHT)
+			sectors[i].floorheight = READFIXED(get);
+		if (diff & SD_CEILHT)
+			sectors[i].ceilingheight = READFIXED(get);
+		if (diff & SD_FLOORPIC)
+		{
+			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)get);
+			get += 8;
+		}
+		if (diff & SD_CEILPIC)
+		{
+			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)get);
+			get += 8;
+		}
+		if (diff & SD_LIGHT)
+			sectors[i].lightlevel = READINT16(get);
+		if (diff & SD_SPECIAL)
+			sectors[i].special = READINT16(get);
+
+		if (diff2 & SD_FXOFFS)
+			sectors[i].floor_xoffs = READFIXED(get);
+		if (diff2 & SD_FYOFFS)
+			sectors[i].floor_yoffs = READFIXED(get);
+		if (diff2 & SD_CXOFFS)
+			sectors[i].ceiling_xoffs = READFIXED(get);
+		if (diff2 & SD_CYOFFS)
+			sectors[i].ceiling_yoffs = READFIXED(get);
+		if (diff2 & SD_FLOORANG)
+			sectors[i].floorpic_angle  = READANGLE(get);
+		if (diff2 & SD_CEILANG)
+			sectors[i].ceilingpic_angle = READANGLE(get);
+		if (diff2 & SD_TAG)
+			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
+		if (diff3 & SD_TAGLIST)
+		{
+			sectors[i].firsttag = READINT32(get);
+			sectors[i].nexttag = READINT32(get);
+		}
+
+		if (diff3 & SD_COLORMAP)
+			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(get));
+		if (diff3 & SD_CRUMBLESTATE)
+			sectors[i].crumblestate = READINT32(get);
+
+		if (diff & SD_FFLOORS)
+			UnArchiveFFloors(get, sectors[i]);
+	}
+}
+
+static void ArchiveLines(UINT8 *put)
+{
+	size_t i;
+	const line_t *li = lines;
+	const line_t *spawnli = spawnlines;
+	const side_t *si;
+	const side_t *spawnsi;
+	UINT8 diff, diff2, diff3;
+
 	for (i = 0; i < numlines; i++, spawnli++, li++)
 	{
 		diff = diff2 = diff3 = 0;
@@ -1063,105 +1130,14 @@ static void P_NetArchiveWorld(void)
 		}
 	}
 	WRITEUINT16(put, 0xffff);
-	R_ClearTextureNumCache(false);
-
-	save_p = put;
 }
 
-//
-// P_NetUnArchiveWorld
-//
-static void P_NetUnArchiveWorld(void)
+static void UnArchiveLines(UINT8 *get)
 {
 	UINT16 i;
 	line_t *li;
 	side_t *si;
-	UINT8 *get;
 	UINT8 diff, diff2, diff3;
-
-	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
-		I_Error("Bad $$$.sav at archive block World");
-
-	// initialize colormap vars because paranoia
-	ClearNetColormaps();
-
-	// count the level's ffloors so that colormap loading can have an upper limit
-	for (i = 0; i < numsectors; i++)
-	{
-		ffloor_t *rover;
-		for (rover = sectors[i].ffloors; rover; rover = rover->next)
-			num_ffloors++;
-	}
-
-	get = save_p;
-
-	for (;;)
-	{
-		i = READUINT16(get);
-
-		if (i == 0xffff)
-			break;
-
-		if (i > numsectors)
-			I_Error("Invalid sector number %u from server (expected end at %s)", i, sizeu1(numsectors));
-
-		diff = READUINT8(get);
-		if (diff & SD_DIFF2)
-			diff2 = READUINT8(get);
-		else
-			diff2 = 0;
-		if (diff2 & SD_DIFF3)
-			diff3 = READUINT8(get);
-		else
-			diff3 = 0;
-
-		if (diff & SD_FLOORHT)
-			sectors[i].floorheight = READFIXED(get);
-		if (diff & SD_CEILHT)
-			sectors[i].ceilingheight = READFIXED(get);
-		if (diff & SD_FLOORPIC)
-		{
-			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)get);
-			get += 8;
-		}
-		if (diff & SD_CEILPIC)
-		{
-			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)get);
-			get += 8;
-		}
-		if (diff & SD_LIGHT)
-			sectors[i].lightlevel = READINT16(get);
-		if (diff & SD_SPECIAL)
-			sectors[i].special = READINT16(get);
-
-		if (diff2 & SD_FXOFFS)
-			sectors[i].floor_xoffs = READFIXED(get);
-		if (diff2 & SD_FYOFFS)
-			sectors[i].floor_yoffs = READFIXED(get);
-		if (diff2 & SD_CXOFFS)
-			sectors[i].ceiling_xoffs = READFIXED(get);
-		if (diff2 & SD_CYOFFS)
-			sectors[i].ceiling_yoffs = READFIXED(get);
-		if (diff2 & SD_FLOORANG)
-			sectors[i].floorpic_angle  = READANGLE(get);
-		if (diff2 & SD_CEILANG)
-			sectors[i].ceilingpic_angle = READANGLE(get);
-		if (diff2 & SD_TAG)
-			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
-		if (diff3 & SD_TAGLIST)
-		{
-			sectors[i].firsttag = READINT32(get);
-			sectors[i].nexttag = READINT32(get);
-		}
-
-		if (diff3 & SD_COLORMAP)
-			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(get));
-		if (diff3 & SD_CRUMBLESTATE)
-			sectors[i].crumblestate = READINT32(get);
-
-		if (diff & SD_FFLOORS)
-			UnArchiveFFloors(get, sectors[i]);
-	}
 
 	for (;;)
 	{
@@ -1209,6 +1185,54 @@ static void P_NetUnArchiveWorld(void)
 		if (diff2 & LD_S2MIDTEX)
 			si->midtexture = READINT32(get);
 	}
+}
+
+//
+// P_NetArchiveWorld
+//
+static void P_NetArchiveWorld(void)
+{
+	UINT8 *put;
+
+	// initialize colormap vars because paranoia
+	ClearNetColormaps();
+
+	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
+	put = save_p;
+
+	ArchiveSectors(put);
+	ArchiveLines(put);
+	R_ClearTextureNumCache(false);
+
+	save_p = put;
+}
+
+//
+// P_NetUnArchiveWorld
+//
+static void P_NetUnArchiveWorld(void)
+{
+	UINT16 i;
+	UINT8 *get;
+
+	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
+		I_Error("Bad $$$.sav at archive block World");
+
+	// initialize colormap vars because paranoia
+	ClearNetColormaps();
+
+	// count the level's ffloors so that colormap loading can have an upper limit
+	for (i = 0; i < numsectors; i++)
+	{
+		ffloor_t *rover;
+		for (rover = sectors[i].ffloors; rover; rover = rover->next)
+			num_ffloors++;
+	}
+
+	get = save_p;
+
+	UnArchiveSectors(get);
+	UnArchiveLines(get);
 
 	save_p = get;
 }
