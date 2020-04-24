@@ -1185,7 +1185,7 @@ typedef struct snake_s
 
 static snake_t *snake = NULL;
 
-static void CL_InitialiseSnake()
+static void CL_InitialiseSnake(void)
 {
 	if (!snake)
 		snake = malloc(sizeof(snake_t));
@@ -1207,7 +1207,7 @@ static void CL_InitialiseSnake()
 	snake->applecolor = rand() % 256;
 }
 
-static void CL_HandleSnake(INT32 key)
+static void CL_HandleSnake(void)
 {
 	UINT8 x, y;
 	UINT16 i;
@@ -2304,7 +2304,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 			return false;
 		}
 		else if (cl_mode == CL_DOWNLOADFILES && snake)
-			CL_HandleSnake(key);
+			CL_HandleSnake();
 
 		// why are these here? this is for servers, we're a client
 		//if (key == 's' && server)
