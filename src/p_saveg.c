@@ -755,7 +755,7 @@ static void P_NetUnArchiveColormaps(void)
 // diff3 flags
 #define SD_TAGLIST   0x01
 #define SD_COLORMAP  0x02
-#define SD_CRUMBLESTATE 0x03
+#define SD_CRUMBLESTATE 0x04
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
