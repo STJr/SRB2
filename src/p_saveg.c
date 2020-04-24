@@ -1053,11 +1053,11 @@ static void ArchiveLines(void)
 	const line_t *spawnli = spawnlines;
 	const side_t *si;
 	const side_t *spawnsi;
-	UINT8 diff, diff2, diff3;
+	UINT8 diff, diff2; // no diff3
 
 	for (i = 0; i < numlines; i++, spawnli++, li++)
 	{
-		diff = diff2 = diff3 = 0;
+		diff = diff2 = 0;
 
 		if (li->special != spawnli->special)
 			diff |= LD_SPECIAL;
@@ -1137,7 +1137,7 @@ static void UnArchiveLines(void)
 	UINT16 i;
 	line_t *li;
 	side_t *si;
-	UINT8 diff, diff2, diff3;
+	UINT8 diff, diff2; // no diff3
 
 	for (;;)
 	{
@@ -1155,8 +1155,6 @@ static void UnArchiveLines(void)
 			diff2 = READUINT8(save_p);
 		else
 			diff2 = 0;
-
-		diff3 = 0;
 
 		if (diff & LD_FLAG)
 			li->flags = READINT16(save_p);
