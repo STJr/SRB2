@@ -794,7 +794,7 @@ static boolean CheckFFloorDiff(sector_t *ss)
 
 // Special case: save the stats of all modified ffloors along with their ffloor "number"s
 // we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
-static void ArchiveFFloors(UINT8 *put, sector_t *ss)
+static void ArchiveFFloors(sector_t *ss)
 {
 	size_t j = 0; // ss->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
 	ffloor_t *rover;
@@ -809,19 +809,19 @@ static void ArchiveFFloors(UINT8 *put, sector_t *ss)
 
 		if (fflr_diff)
 		{
-			WRITEUINT16(put, j); // save ffloor "number"
-			WRITEUINT8(put, fflr_diff);
+			WRITEUINT16(save_p, j); // save ffloor "number"
+			WRITEUINT8(save_p, fflr_diff);
 			if (fflr_diff & FD_FLAGS)
-				WRITEUINT32(put, rover->flags);
+				WRITEUINT32(save_p, rover->flags);
 			if (fflr_diff & FD_ALPHA)
-				WRITEINT16(put, rover->alpha);
+				WRITEINT16(save_p, rover->alpha);
 		}
 		j++;
 	}
-	WRITEUINT16(put, 0xffff);
+	WRITEUINT16(save_p, 0xffff);
 }
 
-static void UnArchiveFFloors(UINT8 *get, sector_t *ss)
+static void UnArchiveFFloors(sector_t *ss)
 {
 	UINT16 j = 0; // number of current ffloor in loop
 	UINT16 fflr_i; // saved ffloor "number" of next modified ffloor
@@ -832,7 +832,7 @@ static void UnArchiveFFloors(UINT8 *get, sector_t *ss)
 	if (!rover) // it is assumed sectors[i].ffloors actually exists, but just in case...
 		I_Error("Sector does not have any ffloors!");
 
-	fflr_i = READUINT16(get); // get first modified ffloor's number ready
+	fflr_i = READUINT16(save_p); // get first modified ffloor's number ready
 	for (;;) // for some reason the usual for (rover = x; ...) thing doesn't work here?
 	{
 		if (fflr_i == 0xffff) // end of modified ffloors list, let's stop already
@@ -847,21 +847,21 @@ static void UnArchiveFFloors(UINT8 *get, sector_t *ss)
 			continue;
 		}
 
-		fflr_diff = READUINT8(get);
+		fflr_diff = READUINT8(save_p);
 
 		if (fflr_diff & FD_FLAGS)
-			rover->flags = READUINT32(get);
+			rover->flags = READUINT32(save_p);
 		if (fflr_diff & FD_ALPHA)
-			rover->alpha = READINT16(get);
+			rover->alpha = READINT16(save_p);
 
-		fflr_i = READUINT16(get); // get next ffloor "number" ready
+		fflr_i = READUINT16(save_p); // get next ffloor "number" ready
 
 		j++;
 		rover = rover->next;
 	}
 }
 
-static void ArchiveSectors(UINT8 *put)
+static void ArchiveSectors(void)
 {
 	size_t i;
 	const sector_t *ss = sectors;
@@ -922,64 +922,64 @@ static void ArchiveSectors(UINT8 *put)
 
 		if (diff)
 		{
-			WRITEUINT16(put, i);
-			WRITEUINT8(put, diff);
+			WRITEUINT16(save_p, i);
+			WRITEUINT8(save_p, diff);
 			if (diff & SD_DIFF2)
-				WRITEUINT8(put, diff2);
+				WRITEUINT8(save_p, diff2);
 			if (diff2 & SD_DIFF3)
-				WRITEUINT8(put, diff3);
+				WRITEUINT8(save_p, diff3);
 			if (diff & SD_FLOORHT)
-				WRITEFIXED(put, ss->floorheight);
+				WRITEFIXED(save_p, ss->floorheight);
 			if (diff & SD_CEILHT)
-				WRITEFIXED(put, ss->ceilingheight);
+				WRITEFIXED(save_p, ss->ceilingheight);
 			if (diff & SD_FLOORPIC)
-				WRITEMEM(put, levelflats[ss->floorpic].name, 8);
+				WRITEMEM(save_p, levelflats[ss->floorpic].name, 8);
 			if (diff & SD_CEILPIC)
-				WRITEMEM(put, levelflats[ss->ceilingpic].name, 8);
+				WRITEMEM(save_p, levelflats[ss->ceilingpic].name, 8);
 			if (diff & SD_LIGHT)
-				WRITEINT16(put, ss->lightlevel);
+				WRITEINT16(save_p, ss->lightlevel);
 			if (diff & SD_SPECIAL)
-				WRITEINT16(put, ss->special);
+				WRITEINT16(save_p, ss->special);
 			if (diff2 & SD_FXOFFS)
-				WRITEFIXED(put, ss->floor_xoffs);
+				WRITEFIXED(save_p, ss->floor_xoffs);
 			if (diff2 & SD_FYOFFS)
-				WRITEFIXED(put, ss->floor_yoffs);
+				WRITEFIXED(save_p, ss->floor_yoffs);
 			if (diff2 & SD_CXOFFS)
-				WRITEFIXED(put, ss->ceiling_xoffs);
+				WRITEFIXED(save_p, ss->ceiling_xoffs);
 			if (diff2 & SD_CYOFFS)
-				WRITEFIXED(put, ss->ceiling_yoffs);
+				WRITEFIXED(save_p, ss->ceiling_yoffs);
 			if (diff2 & SD_FLOORANG)
-				WRITEANGLE(put, ss->floorpic_angle);
+				WRITEANGLE(save_p, ss->floorpic_angle);
 			if (diff2 & SD_CEILANG)
-				WRITEANGLE(put, ss->ceilingpic_angle);
+				WRITEANGLE(save_p, ss->ceilingpic_angle);
 			if (diff2 & SD_TAG) // save only the tag
-				WRITEINT16(put, ss->tag);
+				WRITEINT16(save_p, ss->tag);
 			if (diff3 & SD_TAGLIST) // save both firsttag and nexttag
 			{ // either of these could be changed even if tag isn't
-				WRITEINT32(put, ss->firsttag);
-				WRITEINT32(put, ss->nexttag);
+				WRITEINT32(save_p, ss->firsttag);
+				WRITEINT32(save_p, ss->nexttag);
 			}
 
 			if (diff3 & SD_COLORMAP)
-				WRITEUINT32(put, CheckAddNetColormapToList(ss->extra_colormap));
+				WRITEUINT32(save_p, CheckAddNetColormapToList(ss->extra_colormap));
 					// returns existing index if already added, or appends to net_colormaps and returns new index
 			if (diff3 & SD_CRUMBLESTATE)
-				WRITEINT32(put, ss->crumblestate);
+				WRITEINT32(save_p, ss->crumblestate);
 			if (diff & SD_FFLOORS)
-				ArchiveFFloors(put, ss);
+				ArchiveFFloors(save_p, ss);
 		}
 	}
 
-	WRITEUINT16(put, 0xffff);
+	WRITEUINT16(save_p, 0xffff);
 }
 
-static void UnArchiveSectors(UINT8 *get)
+static void UnArchiveSectors(void)
 {
 	UINT16 i;
 	UINT8 diff, diff2, diff3;
 	for (;;)
 	{
-		i = READUINT16(get);
+		i = READUINT16(save_p);
 
 		if (i == 0xffff)
 			break;
@@ -987,66 +987,66 @@ static void UnArchiveSectors(UINT8 *get)
 		if (i > numsectors)
 			I_Error("Invalid sector number %u from server (expected end at %s)", i, sizeu1(numsectors));
 
-		diff = READUINT8(get);
+		diff = READUINT8(save_p);
 		if (diff & SD_DIFF2)
-			diff2 = READUINT8(get);
+			diff2 = READUINT8(save_p);
 		else
 			diff2 = 0;
 		if (diff2 & SD_DIFF3)
-			diff3 = READUINT8(get);
+			diff3 = READUINT8(save_p);
 		else
 			diff3 = 0;
 
 		if (diff & SD_FLOORHT)
-			sectors[i].floorheight = READFIXED(get);
+			sectors[i].floorheight = READFIXED(save_p);
 		if (diff & SD_CEILHT)
-			sectors[i].ceilingheight = READFIXED(get);
+			sectors[i].ceilingheight = READFIXED(save_p);
 		if (diff & SD_FLOORPIC)
 		{
-			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)get);
-			get += 8;
+			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)save_p);
+			save_p += 8;
 		}
 		if (diff & SD_CEILPIC)
 		{
-			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)get);
-			get += 8;
+			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)save_p);
+			save_p += 8;
 		}
 		if (diff & SD_LIGHT)
-			sectors[i].lightlevel = READINT16(get);
+			sectors[i].lightlevel = READINT16(save_p);
 		if (diff & SD_SPECIAL)
-			sectors[i].special = READINT16(get);
+			sectors[i].special = READINT16(save_p);
 
 		if (diff2 & SD_FXOFFS)
-			sectors[i].floor_xoffs = READFIXED(get);
+			sectors[i].floor_xoffs = READFIXED(save_p);
 		if (diff2 & SD_FYOFFS)
-			sectors[i].floor_yoffs = READFIXED(get);
+			sectors[i].floor_yoffs = READFIXED(save_p);
 		if (diff2 & SD_CXOFFS)
-			sectors[i].ceiling_xoffs = READFIXED(get);
+			sectors[i].ceiling_xoffs = READFIXED(save_p);
 		if (diff2 & SD_CYOFFS)
-			sectors[i].ceiling_yoffs = READFIXED(get);
+			sectors[i].ceiling_yoffs = READFIXED(save_p);
 		if (diff2 & SD_FLOORANG)
-			sectors[i].floorpic_angle  = READANGLE(get);
+			sectors[i].floorpic_angle  = READANGLE(save_p);
 		if (diff2 & SD_CEILANG)
-			sectors[i].ceilingpic_angle = READANGLE(get);
+			sectors[i].ceilingpic_angle = READANGLE(save_p);
 		if (diff2 & SD_TAG)
-			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
+			sectors[i].tag = READINT16(save_p); // DON'T use P_ChangeSectorTag
 		if (diff3 & SD_TAGLIST)
 		{
-			sectors[i].firsttag = READINT32(get);
-			sectors[i].nexttag = READINT32(get);
+			sectors[i].firsttag = READINT32(save_p);
+			sectors[i].nexttag = READINT32(save_p);
 		}
 
 		if (diff3 & SD_COLORMAP)
-			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(get));
+			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(save_p));
 		if (diff3 & SD_CRUMBLESTATE)
-			sectors[i].crumblestate = READINT32(get);
+			sectors[i].crumblestate = READINT32(save_p);
 
 		if (diff & SD_FFLOORS)
-			UnArchiveFFloors(get, sectors[i]);
+			UnArchiveFFloors(save_p, sectors[i]);
 	}
 }
 
-static void ArchiveLines(UINT8 *put)
+static void ArchiveLines(void)
 {
 	size_t i;
 	const line_t *li = lines;
@@ -1097,42 +1097,42 @@ static void ArchiveLines(UINT8 *put)
 
 		if (diff)
 		{
-			WRITEINT16(put, i);
-			WRITEUINT8(put, diff);
+			WRITEINT16(save_p, i);
+			WRITEUINT8(save_p, diff);
 			if (diff & LD_DIFF2)
-				WRITEUINT8(put, diff2);
+				WRITEUINT8(save_p, diff2);
 			if (diff & LD_FLAG)
-				WRITEINT16(put, li->flags);
+				WRITEINT16(save_p, li->flags);
 			if (diff & LD_SPECIAL)
-				WRITEINT16(put, li->special);
+				WRITEINT16(save_p, li->special);
 			if (diff & LD_CLLCOUNT)
-				WRITEINT16(put, li->callcount);
+				WRITEINT16(save_p, li->callcount);
 
 			si = &sides[li->sidenum[0]];
 			if (diff & LD_S1TEXOFF)
-				WRITEFIXED(put, si->textureoffset);
+				WRITEFIXED(save_p, si->textureoffset);
 			if (diff & LD_S1TOPTEX)
-				WRITEINT32(put, si->toptexture);
+				WRITEINT32(save_p, si->toptexture);
 			if (diff & LD_S1BOTTEX)
-				WRITEINT32(put, si->bottomtexture);
+				WRITEINT32(save_p, si->bottomtexture);
 			if (diff & LD_S1MIDTEX)
-				WRITEINT32(put, si->midtexture);
+				WRITEINT32(save_p, si->midtexture);
 
 			si = &sides[li->sidenum[1]];
 			if (diff2 & LD_S2TEXOFF)
-				WRITEFIXED(put, si->textureoffset);
+				WRITEFIXED(save_p, si->textureoffset);
 			if (diff2 & LD_S2TOPTEX)
-				WRITEINT32(put, si->toptexture);
+				WRITEINT32(save_p, si->toptexture);
 			if (diff2 & LD_S2BOTTEX)
-				WRITEINT32(put, si->bottomtexture);
+				WRITEINT32(save_p, si->bottomtexture);
 			if (diff2 & LD_S2MIDTEX)
-				WRITEINT32(put, si->midtexture);
+				WRITEINT32(save_p, si->midtexture);
 		}
 	}
-	WRITEUINT16(put, 0xffff);
+	WRITEUINT16(save_p, 0xffff);
 }
 
-static void UnArchiveLines(UINT8 *get)
+static void UnArchiveLines(void)
 {
 	UINT16 i;
 	line_t *li;
@@ -1141,49 +1141,49 @@ static void UnArchiveLines(UINT8 *get)
 
 	for (;;)
 	{
-		i = READUINT16(get);
+		i = READUINT16(save_p);
 
 		if (i == 0xffff)
 			break;
 		if (i > numlines)
 			I_Error("Invalid line number %u from server", i);
 
-		diff = READUINT8(get);
+		diff = READUINT8(save_p);
 		li = &lines[i];
 
 		if (diff & LD_DIFF2)
-			diff2 = READUINT8(get);
+			diff2 = READUINT8(save_p);
 		else
 			diff2 = 0;
 
 		diff3 = 0;
 
 		if (diff & LD_FLAG)
-			li->flags = READINT16(get);
+			li->flags = READINT16(save_p);
 		if (diff & LD_SPECIAL)
-			li->special = READINT16(get);
+			li->special = READINT16(save_p);
 		if (diff & LD_CLLCOUNT)
-			li->callcount = READINT16(get);
+			li->callcount = READINT16(save_p);
 
 		si = &sides[li->sidenum[0]];
 		if (diff & LD_S1TEXOFF)
-			si->textureoffset = READFIXED(get);
+			si->textureoffset = READFIXED(save_p);
 		if (diff & LD_S1TOPTEX)
-			si->toptexture = READINT32(get);
+			si->toptexture = READINT32(save_p);
 		if (diff & LD_S1BOTTEX)
-			si->bottomtexture = READINT32(get);
+			si->bottomtexture = READINT32(save_p);
 		if (diff & LD_S1MIDTEX)
-			si->midtexture = READINT32(get);
+			si->midtexture = READINT32(save_p);
 
 		si = &sides[li->sidenum[1]];
 		if (diff2 & LD_S2TEXOFF)
-			si->textureoffset = READFIXED(get);
+			si->textureoffset = READFIXED(save_p);
 		if (diff2 & LD_S2TOPTEX)
-			si->toptexture = READINT32(get);
+			si->toptexture = READINT32(save_p);
 		if (diff2 & LD_S2BOTTEX)
-			si->bottomtexture = READINT32(get);
+			si->bottomtexture = READINT32(save_p);
 		if (diff2 & LD_S2MIDTEX)
-			si->midtexture = READINT32(get);
+			si->midtexture = READINT32(save_p);
 	}
 }
 
@@ -1192,19 +1192,14 @@ static void UnArchiveLines(UINT8 *get)
 //
 static void P_NetArchiveWorld(void)
 {
-	UINT8 *put;
-
 	// initialize colormap vars because paranoia
 	ClearNetColormaps();
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
-	put = save_p;
 
-	ArchiveSectors(put);
-	ArchiveLines(put);
+	ArchiveSectors();
+	ArchiveLines();
 	R_ClearTextureNumCache(false);
-
-	save_p = put;
 }
 
 //
@@ -1213,7 +1208,6 @@ static void P_NetArchiveWorld(void)
 static void P_NetUnArchiveWorld(void)
 {
 	UINT16 i;
-	UINT8 *get;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
 		I_Error("Bad $$$.sav at archive block World");
@@ -1229,12 +1223,8 @@ static void P_NetUnArchiveWorld(void)
 			num_ffloors++;
 	}
 
-	get = save_p;
-
-	UnArchiveSectors(get);
-	UnArchiveLines(get);
-
-	save_p = get;
+	UnArchiveSectors();
+	UnArchiveLines();
 }
 
 //
