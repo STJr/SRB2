@@ -383,6 +383,21 @@ typedef struct
 	sector_t *sector;   // Sector the thinker is from
 } levelspecthink_t;
 
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+	fixed_t crushspeed;
+	fixed_t retractspeed;
+	INT32 direction;
+	fixed_t floorstartheight;
+	fixed_t ceilingstartheight;
+	INT32 delay;
+	INT16 tag;
+	UINT16 sound;
+} thwomp_t;
+
 #define ELEVATORSPEED (FRACUNIT*4)
 #define FLOORSPEED (FRACUNIT)
 
@@ -418,7 +433,7 @@ void T_MarioBlock(levelspecthink_t *block);
 void T_SpikeSector(levelspecthink_t *spikes);
 void T_FloatSector(levelspecthink_t *floater);
 void T_MarioBlockChecker(levelspecthink_t *block);
-void T_ThwompSector(levelspecthink_t *thwomp);
+void T_ThwompSector(thwomp_t *thwomp);
 void T_NoEnemiesSector(levelspecthink_t *nobaddies);
 void T_EachTimeThinker(levelspecthink_t *eachtime);
 void T_CameraScanner(elevator_t *elevator);

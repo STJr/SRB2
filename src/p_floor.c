@@ -11,7 +11,6 @@
 /// \file  p_floor.c
 /// \brief Floor animation, elevators
 
-#include "dehacked.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "m_random.h"
@@ -1266,156 +1265,74 @@ void T_MarioBlockChecker(levelspecthink_t *block)
 	}
 }
 
+static boolean P_IsPlayerValid(size_t playernum)
+{
+	if (!playeringame[playernum])
+		return false;
+
+	if (!players[playernum].mo)
+		return false;
+
+	if (players[playernum].mo->health <= 0)
+		return false;
+
+	if (players[playernum].spectator)
+		return false;
+
+	return true;
+}
+
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
 // it finds any, **SMASH**!!! Muahahhaa....
-void T_ThwompSector(levelspecthink_t *thwomp)
+void T_ThwompSector(thwomp_t *thwomp)
 {
-#define speed vars[1]
-#define direction vars[2]
-#define distance vars[3]
-#define floorwasheight vars[4]
-#define ceilingwasheight vars[5]
 	fixed_t thwompx, thwompy;
 	sector_t *actionsector;
 	ffloor_t *rover = NULL;
 	INT32 secnum;
+	fixed_t speed;
 
 	// If you just crashed down, wait a second before coming back up.
-	if (--thwomp->distance > 0)
-	{
-		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].bottomtexture;
+	if (--thwomp->delay > 0)
 		return;
-	}
 
 	// Just find the first sector with the tag.
 	// Doesn't work with multiple sectors that have different floor/ceiling heights.
-	secnum = P_FindSectorFromTag((INT16)thwomp->vars[0], -1);
+	secnum = P_FindSectorFromTag(thwomp->tag, -1);
 
-	if (secnum > 0)
-	{
-		actionsector = &sectors[secnum];
-
-		// Look for thwomp FFloor
-		for (rover = actionsector->ffloors; rover; rover = rover->next)
-		{
-			if (rover->master == thwomp->sourceline)
-				break;
-		}
-	}
-	else
+	if (secnum <= 0)
 		return; // Bad bad bad!
+
+	actionsector = &sectors[secnum];
+
+	// Look for thwomp FOF
+	for (rover = actionsector->ffloors; rover; rover = rover->next)
+	{
+		if (rover->master == thwomp->sourceline)
+			break;
+	}
+
+	if (!rover)
+		return; // Didn't find any FOFs, so bail out
 
 	thwompx = actionsector->soundorg.x;
 	thwompy = actionsector->soundorg.y;
 
-	if (thwomp->direction > 0) // Moving back up..
+	if (thwomp->direction == 0) // Not going anywhere, so look for players.
 	{
-		result_e res = 0;
-
-		// Set the texture from the lower one (normal)
-		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].bottomtexture;
-		/// \note this should only have to be done once, but is already done repeatedly, above
-
-		thwomp->speed = thwomp->sourceline->args[2] << (FRACBITS - 3);
-
-		res = T_MovePlane
-		(
-			thwomp->sector,         // sector
-			thwomp->speed,          // speed
-			thwomp->floorwasheight, // dest
-			0,                      // crush
-			0,                      // floor or ceiling (0 for floor)
-			thwomp->direction       // direction
-		);
-
-		if (res == ok || res == pastdest)
-			T_MovePlane
-			(
-				thwomp->sector,           // sector
-				thwomp->speed,            // speed
-				thwomp->ceilingwasheight, // dest
-				0,                        // crush
-				1,                        // floor or ceiling (1 for ceiling)
-				thwomp->direction         // direction
-			);
-
-		if (res == pastdest)
-			thwomp->direction = 0; // stop moving
-
-		thwomp->sector->ceilspeed = 42;
-		thwomp->sector->floorspeed = thwomp->speed*thwomp->direction;
-	}
-	else if (thwomp->direction < 0) // Crashing down!
-	{
-		result_e res = 0;
-
-		// Set the texture from the upper one (angry)
-		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].toptexture;
-
-		thwomp->speed = thwomp->sourceline->args[1] << (FRACBITS - 3);
-
-		res = T_MovePlane
-		(
-			thwomp->sector,   // sector
-			thwomp->speed,    // speed
-			P_FloorzAtPos(thwompx, thwompy, thwomp->sector->floorheight,
-				thwomp->sector->ceilingheight - thwomp->sector->floorheight), // dest
-			0,                  // crush
-			0,                  // floor or ceiling (0 for floor)
-			thwomp->direction // direction
-		);
-
-		if (res == ok || res == pastdest)
-			T_MovePlane
-			(
-				thwomp->sector,   // sector
-				thwomp->speed,    // speed
-				P_FloorzAtPos(thwompx, thwompy, thwomp->sector->floorheight,
-					thwomp->sector->ceilingheight
-					- (thwomp->sector->floorheight + thwomp->speed))
-					+ (thwomp->sector->ceilingheight
-					- (thwomp->sector->floorheight + thwomp->speed/2)), // dest
-				0,                  // crush
-				1,                  // floor or ceiling (1 for ceiling)
-				thwomp->direction // direction
-			);
-
-		if (res == pastdest)
-		{
-			mobj_t *mp = (void *)&actionsector->soundorg;
-
-			if (!rover || (rover->flags & FF_EXISTS))
-			{
-				sfxenum_t sound = (thwomp->sourceline->stringargs[0]) ? get_number(thwomp->sourceline->stringargs[0]) : sfx_thwomp;
-				S_StartSound(mp, sound);
-			}
-
-			thwomp->direction = 1; // start heading back up
-			thwomp->distance = TICRATE; // but only after a small delay
-		}
-
-		thwomp->sector->ceilspeed = 42;
-		thwomp->sector->floorspeed = thwomp->speed*thwomp->direction;
-	}
-	else // Not going anywhere, so look for players.
-	{
-		if (!rover || (rover->flags & FF_EXISTS))
+		if (rover->flags & FF_EXISTS)
 		{
 			UINT8 i;
 			// scan the players to find victims!
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i])
+				if (!P_IsPlayerValid(i))
 					continue;
-				if (players[i].spectator)
-					continue;
-				if (!players[i].mo)
-					continue;
-				if (!players[i].mo->health)
-					continue;
+
 				if (players[i].mo->z > thwomp->sector->ceilingheight)
 					continue;
-				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96 * FRACUNIT)
+
+				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96*FRACUNIT)
 					continue;
 
 				thwomp->direction = -1;
@@ -1426,13 +1343,89 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		thwomp->sector->ceilspeed = 0;
 		thwomp->sector->floorspeed = 0;
 	}
+	else
+	{
+		result_e res = 0;
+
+		if (thwomp->direction > 0) //Moving back up..
+		{
+			// Set the texture from the lower one (normal)
+			sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].bottomtexture;
+
+			speed = thwomp->retractspeed;
+
+			res = T_MovePlane
+			(
+				thwomp->sector,           // sector
+				speed,                    // speed
+				thwomp->floorstartheight, // dest
+				false,                    // crush
+				0,                    // ceiling?
+				thwomp->direction         // direction
+			);
+
+			if (res == ok || res == pastdest)
+				T_MovePlane
+				(
+					thwomp->sector,             // sector
+					speed,                      // speed
+					thwomp->ceilingstartheight, // dest
+					false,                      // crush
+					1,                       // ceiling?
+					thwomp->direction           // direction
+				);
+
+			if (res == pastdest)
+				thwomp->direction = 0; // stop moving
+			}
+		else // Crashing down!
+		{
+			// Set the texture from the upper one (angry)
+			sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].toptexture;
+
+			speed = thwomp->crushspeed;
+
+			res = T_MovePlane
+			(
+				thwomp->sector,   // sector
+				speed,            // speed
+				P_FloorzAtPos(thwompx, thwompy, thwomp->sector->floorheight,
+					thwomp->sector->ceilingheight - thwomp->sector->floorheight), // dest
+				false,              // crush
+				0,              // ceiling?
+				thwomp->direction // direction
+			);
+
+			if (res == ok || res == pastdest)
+				T_MovePlane
+				(
+					thwomp->sector,   // sector
+					speed,            // speed
+					P_FloorzAtPos(thwompx, thwompy, thwomp->sector->floorheight,
+						thwomp->sector->ceilingheight
+						- (thwomp->sector->floorheight + speed))
+						+ (thwomp->sector->ceilingheight
+						- (thwomp->sector->floorheight + speed/2)), // dest
+					false,             // crush
+					1,              // ceiling?
+					thwomp->direction // direction
+				);
+
+			if (res == pastdest)
+			{
+				if (rover->flags & FF_EXISTS)
+					S_StartSound((void *)&actionsector->soundorg, thwomp->sound);
+
+				thwomp->direction = 1; // start heading back up
+				thwomp->delay = TICRATE; // but only after a small delay
+			}
+		}
+
+		thwomp->sector->ceilspeed = 42;
+		thwomp->sector->floorspeed = speed*thwomp->direction;
+	}
 
 	P_RecalcPrecipInSector(actionsector);
-#undef speed
-#undef direction
-#undef distance
-#undef floorwasheight
-#undef ceilingwasheight
 }
 
 //
