@@ -339,7 +339,4 @@ void I_StartupGraphics(void)
 
 }
 
-void I_StartupHardwareGraphics(void)
-{
-	// oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo y
-}
+void VID_StartupOpenGL(void) {}

@@ -18,7 +18,7 @@
 #include "v_video.h" // video flags
 
 #include "g_game.h" // record info
-#include "r_things.h" // numskins
+#include "r_skins.h" // numskins
 #include "r_draw.h" // R_GetColorByName
 
 // Map triggers for linedef executors

@@ -240,14 +240,13 @@ static void R_DrawWallSplats(void)
 //  way we don't have to store extra post_t info with each column for
 //  multi-patch textures. They are not normally needed as multi-patch
 //  textures don't have holes in it. At least not for now.
-static INT32 column2s_length; // column->length : for multi-patch on 2sided wall = texture->height
 
 static void R_Render2sidedMultiPatchColumn(column_t *column)
 {
 	INT32 topscreen, bottomscreen;
 
 	topscreen = sprtopscreen; // + spryscale*column->topdelta;  topdelta is 0 for the wall
-	bottomscreen = topscreen + spryscale * column2s_length;
+	bottomscreen = topscreen + spryscale * lengthcol;
 
 	dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
 	dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -277,13 +276,6 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 		else
 			colfunc();
 	}
-}
-
-// quick wrapper for R_DrawFlippedMaskedColumn so it can be set as a colfunc_2s value
-// uses column2s_length for texture->height as above
-static void R_DrawFlippedMaskedSegColumn(column_t *column)
-{
-	R_DrawFlippedMaskedColumn(column, column2s_length);
 }
 
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
@@ -364,8 +356,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		if (textures[texnum]->flip & 2) // vertically flipped?
 		{
-			colfunc_2s = R_DrawFlippedMaskedSegColumn;
-			column2s_length = textures[texnum]->height;
+			colfunc_2s = R_DrawFlippedMaskedColumn;
+			lengthcol = textures[texnum]->height;
 		}
 		else
 			colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
@@ -373,7 +365,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn; // render multipatch with no holes (no post_t info)
-		column2s_length = textures[texnum]->height;
+		lengthcol = textures[texnum]->height;
 	}
 
 	// Setup lighting based on the presence/lack-of 3D floors.
@@ -733,7 +725,7 @@ static void R_DrawRepeatMaskedColumn(column_t *col)
 static void R_DrawRepeatFlippedMaskedColumn(column_t *col)
 {
 	do {
-		R_DrawFlippedMaskedColumn(col, column2s_length);
+		R_DrawFlippedMaskedColumn(col);
 		sprtopscreen += dc_texheight*spryscale;
 	} while (sprtopscreen < sprbotscreen);
 }
@@ -1065,7 +1057,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		if (textures[texnum]->flip & 2) // vertically flipped?
 		{
 			colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
-			column2s_length = textures[texnum]->height;
+			lengthcol = textures[texnum]->height;
 		}
 		else
 			colfunc_2s = R_DrawRepeatMaskedColumn; // render the usual 2sided single-patch packed texture
@@ -1073,7 +1065,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
-		column2s_length = textures[texnum]->height;
+		lengthcol = textures[texnum]->height;
 	}
 
 #ifdef ESLOPE

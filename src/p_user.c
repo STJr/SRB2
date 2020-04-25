@@ -22,7 +22,7 @@
 #include "p_local.h"
 #include "r_main.h"
 #include "s_sound.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "d_think.h"
 #include "r_sky.h"
 #include "p_setup.h"

@@ -36,7 +36,7 @@
 #include "m_cond.h" //unlock triggers
 #include "lua_hook.h" // LUAh_LinedefExecute
 #include "f_finale.h" // control text prompt
-#include "r_things.h" // skins
+#include "r_skins.h" // skins
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"

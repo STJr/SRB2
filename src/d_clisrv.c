@@ -4855,7 +4855,8 @@ static inline void PingUpdate(void)
 	{
 		for (i = 1; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && (realpingtable[i] / pingmeasurecount > (unsigned)cv_maxping.value))
+			if (playeringame[i] && !players[i].quittime
+			&& (realpingtable[i] / pingmeasurecount > (unsigned)cv_maxping.value))
 			{
 				if (players[i].jointime > 30 * TICRATE)
 					laggers[i] = true;
@@ -4874,8 +4875,8 @@ static inline void PingUpdate(void)
 				if (playeringame[i] && laggers[i])
 				{
 					pingtimeout[i]++;
+					// ok your net has been bad for too long, you deserve to die.
 					if (pingtimeout[i] > cv_pingtimeout.value)
-// ok your net has been bad for too long, you deserve to die.
 					{
 						pingtimeout[i] = 0;
 						SendKick(i, KICK_MSG_PING_HIGH | KICK_MSG_KEEP_BODY);
