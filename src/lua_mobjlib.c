@@ -13,7 +13,7 @@
 #include "doomdef.h"
 #ifdef HAVE_BLUA
 #include "fastcmp.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "p_local.h"
 #include "g_game.h"
 #include "p_setup.h"

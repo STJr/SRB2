@@ -20,12 +20,9 @@
 #include "d_player.h"
 
 /*
-The 'packet version' may be used with packets whose
-format is expected to change between versions.
-
-This version is independent of the mod name, and standard
-version and subversion. It should only account for the
-basic fields of the packet, and change infrequently.
+The 'packet version' is used to distinguish packet formats.
+This version is independent of VERSION and SUBVERSION. Different
+applications may follow different packet versions.
 */
 #define PACKETVERSION 2
 

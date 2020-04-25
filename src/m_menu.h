@@ -15,9 +15,10 @@
 #ifndef __X_MENU__
 #define __X_MENU__
 
+#include "doomstat.h" // for NUMGAMETYPES
 #include "d_event.h"
 #include "command.h"
-#include "r_things.h" // for SKINNAMESIZE
+#include "r_skins.h" // for SKINNAMESIZE
 #include "f_finale.h" // for ttmode_enum
 
 //

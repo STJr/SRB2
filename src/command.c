@@ -80,7 +80,7 @@ static boolean joyaxis2_default = false;
 static INT32 joyaxis_count = 0;
 static INT32 joyaxis2_count = 0;
 
-#define COM_BUF_SIZE 8192 // command buffer size
+#define COM_BUF_SIZE (32<<10) // command buffer size
 #define MAX_ALIAS_RECURSION 100 // max recursion allowed for aliases
 
 static INT32 com_wait; // one command per frame (for cmd sequences)
