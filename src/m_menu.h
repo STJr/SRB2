@@ -340,7 +340,7 @@ typedef struct
 {
 	boolean used;
 	char notes[441];
-	char picname[8];
+	char picname[9];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
 	patch_t *charpic;
 	UINT8 prev;

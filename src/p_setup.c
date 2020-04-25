@@ -2883,9 +2883,7 @@ static void P_RunLevelScript(const char *scriptname)
 		lumpnum_t lumpnum;
 		char newname[9];
 
-		strncpy(newname, scriptname, 8);
-
-		newname[8] = '\0';
+		strlcpy(newname, scriptname, sizeof(newname));
 
 		lumpnum = W_CheckNumForName(newname);
 

@@ -2603,7 +2603,7 @@ INT32 R_CheckTextureNumForName(const char *name)
 		return 0;
 
 	for (i = 0; i < tidcachelen; i++)
-		if (!strncasecmp(tidcache[i].name, name, 8))
+		if (!strcasecmp(tidcache[i].name, name))
 			return tidcache[i].id;
 
 	// Need to parse the list backwards, so textures loaded more recently are used in lieu of ones loaded earlier
@@ -2613,8 +2613,7 @@ INT32 R_CheckTextureNumForName(const char *name)
 		{
 			tidcachelen++;
 			Z_Realloc(tidcache, tidcachelen * sizeof(*tidcache), PU_STATIC, &tidcache);
-			strncpy(tidcache[tidcachelen-1].name, name, 8);
-			tidcache[tidcachelen-1].name[8] = '\0';
+			strlcpy(tidcache[tidcachelen-1].name, name, sizeof(tidcache->name));
 #ifndef ZDEBUG
 			CONS_Debug(DBG_SETUP, "texture #%s: %s\n", sizeu1(tidcachelen), tidcache[tidcachelen-1].name);
 #endif

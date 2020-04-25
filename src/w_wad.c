@@ -440,17 +440,15 @@ static lumpinfo_t* ResGetLumpsWad (FILE* handle, UINT16* nlmp, const char* filen
 		else
 			lump_p->compression = CM_NOCOMPRESSION;
 		memset(lump_p->name, 0x00, 9);
-		strncpy(lump_p->name, fileinfo->name, 8);
+		strlcpy(lump_p->name, fileinfo->name, 9);
 
 		// Allocate the lump's long name.
 		lump_p->longname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
-		strncpy(lump_p->longname, fileinfo->name, 8);
-		lump_p->longname[8] = '\0';
+		strlcpy(lump_p->longname, fileinfo->name, 9);
 
 		// Allocate the lump's full name.
 		lump_p->fullname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
-		strncpy(lump_p->fullname, fileinfo->name, 8);
-		lump_p->fullname[8] = '\0';
+		strlcpy(lump_p->fullname, fileinfo->name, 9);
 	}
 	free(fileinfov);
 	*nlmp = numlumps;
