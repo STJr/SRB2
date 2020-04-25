@@ -2566,7 +2566,7 @@ static void P_CheckBustableBlocks(player_t *player)
 			{
 				if (!(rover->flags & FF_EXISTS)) continue;
 
-				if ((rover->flags & FF_BUSTUP)/* && !rover->master->frontsector->crumblestate*/)
+				if ((rover->flags & FF_BUSTUP)/* && rover->master->frontsector->crumblestate == CRUMBLE_NONE*/)
 				{
 					// If it's an FF_SHATTER, you can break it just by touching it.
 					if (rover->flags & FF_SHATTER)

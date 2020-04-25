@@ -279,6 +279,16 @@ typedef enum
 	SF_INVERTPRECIP            =  1<<4,
 } sectorflags_t;
 
+
+typedef enum
+{
+	CRUMBLE_NONE, // No crumble thinker
+	CRUMBLE_WAIT, // Don't float on water because this is supposed to wait for a crumble
+	CRUMBLE_ACTIVATED, // Crumble thinker activated, but hasn't fallen yet
+	CRUMBLE_FALL, // Crumble thinker is falling
+	CRUMBLE_RESTORE, // Crumble thinker is about to restore to original position
+} crumblestate_t;
+
 //
 // The SECTORS record, at runtime.
 // Stores things/mobjs.
