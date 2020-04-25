@@ -5694,7 +5694,7 @@ UINT16 P_GetFFloorID(ffloor_t *fflr)
 	sector_t *sec;
 	UINT16 i = 0;
 
-	if (!rover)
+	if (!fflr)
 		return UINT16_MAX;
 
 	sec = rover->target;
