@@ -2889,6 +2889,8 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 		else
 			pglScalef(stransform->scalex, stransform->scaley, -stransform->scalez);
 
+		if (stransform->roll)
+			pglRotatef(stransform->rollangle, 0.0f, 0.0f, 1.0f);
 		pglRotatef(stransform->anglex       , 1.0f, 0.0f, 0.0f);
 		pglRotatef(stransform->angley+270.0f, 0.0f, 1.0f, 0.0f);
 		pglTranslatef(-stransform->x, -stransform->z, -stransform->y);

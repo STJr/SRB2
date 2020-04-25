@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -367,6 +367,36 @@ void P_GiveEmerald(boolean spawnObj)
 
 			emmo->flags2 |= MF2_DONTDRAW;
 		}
+	}
+}
+
+//
+// P_GiveFinishFlags
+//
+// Give the player visual indicators
+// that they've finished the map.
+//
+void P_GiveFinishFlags(player_t *player)
+{
+	angle_t angle = FixedAngle(player->mo->angle << FRACBITS);
+	UINT8 i;
+
+	if (!player->mo)
+		return;
+
+	if (!(netgame||multiplayer))
+		return;
+
+	for (i = 0; i < 3; i++)
+	{
+		angle_t fa = (angle >> ANGLETOFINESHIFT) & FINEMASK;
+		fixed_t xoffs = FINECOSINE(fa);
+		fixed_t yoffs = FINESINE(fa);
+		mobj_t* flag = P_SpawnMobjFromMobj(player->mo, xoffs, yoffs, 0, MT_FINISHFLAG);
+		flag->angle = angle;
+		angle += FixedAngle(120*FRACUNIT);
+		
+		P_SetTarget(&flag->target, player->mo);
 	}
 }
 
@@ -2171,6 +2201,7 @@ void P_DoPlayerFinish(player_t *player)
 		return;
 
 	player->pflags |= PF_FINISHED;
+	P_GiveFinishFlags(player);
 
 	if (netgame)
 		CONS_Printf(M_GetText("%s has completed the level.\n"), player_names[player-players]);
@@ -7435,6 +7466,8 @@ static void P_NiGHTSMovement(player_t *player)
 		}
 		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axises.
 			newangle = (INT16)FixedInt(AngleFixed(R_PointToAngle2(0,0, cmd->sidemove*FRACUNIT, cmd->forwardmove*FRACUNIT)));
+
+		newangle -= player->viewrollangle / ANG1;
 
 		if (newangle < 0 && moved)
 			newangle = (INT16)(360+newangle);

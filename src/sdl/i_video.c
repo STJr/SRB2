@@ -4,7 +4,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2019 by Sonic Team Junior.
+// Copyright (C) 2014-2020 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -104,7 +104,7 @@ static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff
 static consvar_t cv_alwaysgrabmouse = {"alwaysgrabmouse", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
-boolean hwrenderloaded = false;
+INT32 hwrenderloaded = 0;
 
 // To disable fullscreen at startup; is set in VID_PrepareModeList
 boolean allow_fullscreen = false;
@@ -176,7 +176,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
 //static void Impl_SetWindowName(const char *title);
 static void Impl_SetWindowIcon(void);
 
-static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
+static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool reposition)
 {
 	static SDL_bool wasfullscreen = SDL_FALSE;
 	Uint32 rmask;
@@ -205,10 +205,13 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window,
-				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window)),
-				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window))
-			);
+			if (reposition)
+			{
+				SDL_SetWindowPosition(window,
+					SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window)),
+					SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window))
+				);
+			}
 		}
 	}
 	else
@@ -1433,7 +1436,7 @@ static SDL_bool Impl_CreateContext(void)
 {
 	// Renderer-specific stuff
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if ((rendermode == render_opengl) && (hwrenderloaded != -1))
 	{
 		if (!sdlglcontext)
 			sdlglcontext = SDL_GL_CreateContext(window);
@@ -1469,7 +1472,7 @@ static SDL_bool Impl_CreateContext(void)
 #ifdef HWRENDER
 static void VID_CheckGLLoaded(rendermode_t oldrender)
 {
-	if (!hwrenderloaded) // Well, it didn't work the first time anyway.
+	if (hwrenderloaded == -1) // Well, it didn't work the first time anyway.
 	{
 		CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
 		rendermode = oldrender;
@@ -1487,6 +1490,7 @@ static void VID_CheckGLLoaded(rendermode_t oldrender)
 
 void VID_CheckRenderer(void)
 {
+	SDL_bool rendererchanged = SDL_FALSE;
 	rendermode_t oldrenderer = rendermode;
 
 	if (dedicated)
@@ -1500,14 +1504,24 @@ void VID_CheckRenderer(void)
 	if (setrenderneeded)
 	{
 		rendermode = setrenderneeded;
+		rendererchanged = SDL_TRUE;
+
 #ifdef HWRENDER
-		if (setrenderneeded == render_opengl)
+		if (rendermode == render_opengl)
+		{
 			VID_CheckGLLoaded(oldrenderer);
+			// Initialise OpenGL before calling SDLSetMode!!!
+			if (hwrenderloaded != 1)
+				I_StartupHardwareGraphics();
+			else if (hwrenderloaded == -1)
+				rendererchanged = SDL_FALSE;
+		}
 #endif
+
 		Impl_CreateContext();
 	}
 
-	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, (rendererchanged ? SDL_FALSE : SDL_TRUE));
 	Impl_VideoSetupBuffer();
 
 	if (rendermode == render_soft)
@@ -1518,16 +1532,14 @@ void VID_CheckRenderer(void)
 			bufSurface = NULL;
 		}
 #ifdef HWRENDER
-		HWR_FreeTextureCache();
+		if (hwrenderloaded == 1) // Only if OpenGL ever loaded!
+			HWR_FreeTextureCache();
 #endif
 		SCR_SetDrawFuncs();
 	}
 #ifdef HWRENDER
 	else if (rendermode == render_opengl)
-	{
-		I_StartupHardwareGraphics();
 		R_InitHardwareMode();
-	}
 #else
 	(void)oldrenderer;
 #endif
@@ -1571,7 +1583,8 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		flags |= SDL_WINDOW_BORDERLESS;
 
 #ifdef HWRENDER
-	flags |= SDL_WINDOW_OPENGL;
+	if (hwrenderloaded != -1)
+		flags |= SDL_WINDOW_OPENGL;
 #endif
 
 	// Create a window
@@ -1705,7 +1718,10 @@ void I_StartupGraphics(void)
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	VID_Command_ModeList_f();
 #ifdef HWRENDER
-	I_StartupHardwareGraphics();
+	if (M_CheckParm("-nogl"))
+		hwrenderloaded = -1; // Don't call SDL_GL_LoadLibrary
+	else
+		I_StartupHardwareGraphics();
 #endif
 
 	// Fury: we do window initialization after GL setup to allow
@@ -1808,8 +1824,6 @@ void I_StartupHardwareGraphics(void)
 			rendermode = render_soft;
 			setrenderneeded = 0;
 		}
-		else
-			hwrenderloaded = true;
 		glstartup = true;
 	}
 #endif
