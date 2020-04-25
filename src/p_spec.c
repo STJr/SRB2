@@ -6881,7 +6881,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 			case 153: // Dynamic Sinking Platform
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				lines[i].flags |= ML_BLOCKMONSTERS;
 				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), false, !!(lines[i].flags & ML_NOCLIMB), true);
 				break;
 
