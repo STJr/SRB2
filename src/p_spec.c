@@ -6074,7 +6074,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, boolean lower, 
 		raise->flags |= RF_SPINDASH;
 }
 
-static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean raise, boolean dynamic, boolean spindash)
+static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean raise, boolean spindash, boolean dynamic)
 {
 	levelspecthink_t *airbob;
 
@@ -6781,16 +6781,16 @@ void P_SpawnSpecials(boolean fromnetsave)
 			{
 				fixed_t dist = (lines[i].special == 151) ? P_AproxDistance(lines[i].dx, lines[i].dy) : 16*FRACUNIT;
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, dist, false, false, !!(lines[i].flags & ML_NOCLIMB));
+				P_AddAirbob(lines[i].frontsector, lines + i, dist, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 			}
 			case 152: // Adjustable air bobbing platform in reverse
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), true, false, !!(lines[i].flags & ML_NOCLIMB));
+				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), true, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 			case 153: // Dynamic Sinking Platform
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), false, true, !!(lines[i].flags & ML_NOCLIMB));
+				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), false, !!(lines[i].flags & ML_NOCLIMB), true);
 				break;
 
 			case 160: // Float/bob platform
