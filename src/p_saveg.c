@@ -1939,19 +1939,17 @@ static void SaveCrumbleThinker(const thinker_t *th, const UINT8 type)
 {
 	const crumble_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
-	WRITEUINT8(save_p, ht->type);
+	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEUINT32(save_p, SaveSector(ht->actionsector));
+	WRITEUINT32(save_p, SavePlayer(ht->player)); // was dummy
 	WRITEINT32(save_p, ht->direction);
-	WRITEFIXED(save_p, ht->floordestheight);
+	WRITEINT32(save_p, ht->origalpha);
+	WRITEINT32(save_p, ht->timer);
 	WRITEFIXED(save_p, ht->speed);
-	WRITEFIXED(save_p, ht->origspeed);
-	WRITEFIXED(save_p, ht->high);
-	WRITEFIXED(save_p, ht->distance);
 	WRITEFIXED(save_p, ht->floorwasheight);
 	WRITEFIXED(save_p, ht->ceilingwasheight);
-	WRITEUINT32(save_p, SavePlayer(ht->player)); // was dummy
-	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT8(save_p, ht->flags);
 }
 
 //
@@ -3212,19 +3210,17 @@ static thinker_t* LoadCrumbleThinker(actionf_p1 thinker)
 {
 	crumble_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
-	ht->type = READUINT8(save_p);
+	ht->sourceline = LoadLine(READUINT32(save_p));
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->actionsector = LoadSector(READUINT32(save_p));
+	ht->player = LoadPlayer(READUINT32(save_p));
 	ht->direction = READINT32(save_p);
-	ht->floordestheight = READFIXED(save_p);
+	ht->origalpha = READINT32(save_p);
+	ht->timer = READINT32(save_p);
 	ht->speed = READFIXED(save_p);
-	ht->origspeed = READFIXED(save_p);
-	ht->high = READFIXED(save_p);
-	ht->distance = READFIXED(save_p);
 	ht->floorwasheight = READFIXED(save_p);
 	ht->ceilingwasheight = READFIXED(save_p);
-	ht->player = LoadPlayer(READUINT32(save_p)); // was dummy
-	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->flags = READUINT8(save_p);
 
 	if (ht->sector)
 		ht->sector->floordata = ht;

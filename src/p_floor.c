@@ -765,22 +765,21 @@ void T_StartCrumble(crumble_t *crumble)
 
 	// Once done, the no-return thinker just sits there,
 	// constantly 'returning'... kind of an oxymoron, isn't it?
-	if (((crumble->floordestheight == 1 && crumble->direction == -1)
-		|| (crumble->floordestheight == 0 && crumble->direction == 1))
-		&& crumble->type == elevateContinuous) // No return crumbler
+	if ((((crumble->flags & CF_REVERSE) && crumble->direction == -1)
+		|| (!(crumble->flags & CF_REVERSE) && crumble->direction == 1))
+		&& !(crumble->flags & CF_RETURN))
 	{
 		crumble->sector->ceilspeed = 0;
 		crumble->sector->floorspeed = 0;
 		return;
 	}
 
-	if (crumble->distance != 0)
+	if (crumble->timer != 0)
 	{
-		if (crumble->distance > 0) // Count down the timer
+		if (crumble->timer > 0) // Count down the timer
 		{
-			crumble->distance--;
-			if (crumble->distance <= 0)
-				crumble->distance = -15*TICRATE; // Timer until platform returns to original position.
+			if (--crumble->timer <= 0)
+				crumble->timer = -15*TICRATE; // Timer until platform returns to original position.
 			else
 			{
 				// Timer isn't up yet, so just keep waiting.
@@ -789,7 +788,7 @@ void T_StartCrumble(crumble_t *crumble)
 				return;
 			}
 		}
-		else if (++crumble->distance == 0) // Reposition back to original spot
+		else if (++crumble->timer == 0) // Reposition back to original spot
 		{
 			for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 			{
@@ -797,19 +796,24 @@ void T_StartCrumble(crumble_t *crumble)
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (rover->flags & FF_CRUMBLE && rover->flags & FF_FLOATBOB
-						&& rover->master == crumble->sourceline)
-					{
-						rover->alpha = crumble->origspeed;
+					if (!(rover->flags & FF_CRUMBLE))
+						continue;
 
-						if (rover->alpha == 0xff)
-							rover->flags &= ~FF_TRANSLUCENT;
-					}
+					if (!(rover->flags & FF_FLOATBOB))
+						continue;
+
+					if (rover->master != crumble->sourceline)
+						continue;
+
+					rover->alpha = crumble->origalpha;
+
+					if (rover->alpha == 0xff)
+						rover->flags &= ~FF_TRANSLUCENT;
 				}
 			}
 
 			// Up!
-			if (crumble->floordestheight == 1)
+			if (crumble->flags & CF_REVERSE)
 				crumble->direction = -1;
 			else
 				crumble->direction = 1;
@@ -820,7 +824,7 @@ void T_StartCrumble(crumble_t *crumble)
 		}
 
 		// Flash to indicate that the platform is about to return.
-		if (crumble->distance > -224 && (leveltime % ((abs(crumble->distance)/8) + 1) == 0))
+		if (crumble->timer > -224 && (leveltime % ((abs(crumble->timer)/8) + 1) == 0))
 		{
 			for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 			{
@@ -828,21 +832,29 @@ void T_StartCrumble(crumble_t *crumble)
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (!(rover->flags & FF_NORETURN) && rover->flags & FF_CRUMBLE && rover->flags & FF_FLOATBOB
-						&& rover->master == crumble->sourceline)
-					{
-						if (rover->alpha == crumble->origspeed)
-						{
-							rover->flags |= FF_TRANSLUCENT;
-							rover->alpha = 0x00;
-						}
-						else
-						{
-							if (crumble->origspeed == 0xff)
-								rover->flags &= ~FF_TRANSLUCENT;
+					if (rover->flags & FF_NORETURN)
+						continue;
 
-							rover->alpha = crumble->origspeed;
-						}
+					if (!(rover->flags & FF_CRUMBLE))
+						continue;
+
+					if (!(rover->flags & FF_FLOATBOB))
+						continue;
+
+					if (rover->master != crumble->sourceline)
+						continue;
+
+					if (rover->alpha == crumble->origalpha)
+					{
+						rover->flags |= FF_TRANSLUCENT;
+						rover->alpha = 0x00;
+					}
+					else
+					{
+						rover->alpha = crumble->origalpha;
+
+						if (rover->alpha == 0xff)
+							rover->flags &= ~FF_TRANSLUCENT;
 					}
 				}
 			}
@@ -851,53 +863,41 @@ void T_StartCrumble(crumble_t *crumble)
 		// We're about to go back to the original position,
 		// so set this to let other thinkers know what is
 		// about to happen.
-		if (crumble->distance < 0 && crumble->distance > -3)
+		if (crumble->timer < 0 && crumble->timer > -3)
 			crumble->sector->crumblestate = CRUMBLE_RESTORE; // makes T_BounceCheese remove itself
 	}
 
-	if ((crumble->floordestheight == 0 && crumble->direction == -1)
-		|| (crumble->floordestheight == 1 && crumble->direction == 1)) // Down
+	if ((!(crumble->flags & CF_REVERSE) && crumble->direction == -1)
+		|| ((crumble->flags & CF_REVERSE) && crumble->direction == 1)) // Down
 	{
 		crumble->sector->crumblestate = CRUMBLE_FALL; // Allow floating now.
 
 		// Only fall like this if it isn't meant to float on water
-		if (crumble->high != 42)
+		if (!(crumble->flags & CF_FLOATBOB))
 		{
 			crumble->speed += gravity; // Gain more and more speed
 
-			if ((crumble->floordestheight == 0 && !(crumble->sector->ceilingheight < -16384*FRACUNIT))
-				|| (crumble->floordestheight == 1 && !(crumble->sector->ceilingheight > 16384*FRACUNIT)))
+			if ((!(crumble->flags & CF_REVERSE) && crumble->sector->ceilingheight >= -16384*FRACUNIT)
+				|| ((crumble->flags & CF_REVERSE) && crumble->sector->ceilingheight <= 16384*FRACUNIT))
 			{
-				fixed_t dest;
-
-				if (crumble->floordestheight == 1)
-					dest = crumble->sector->ceilingheight + (crumble->speed*2);
-				else
-					dest = crumble->sector->ceilingheight - (crumble->speed*2);
-
 				T_MovePlane             //jff 4/7/98 reverse order of ceiling/floor
 				(
 				  crumble->sector,
 				  crumble->speed,
-				  dest,
+				  crumble->sector->ceilingheight + crumble->direction*crumble->speed*2,
 				  false,
 				  true, // move ceiling
 				  crumble->direction
 				);
 
-				if (crumble->floordestheight == 1)
-					dest = crumble->sector->floorheight + (crumble->speed*2);
-				else
-					dest = crumble->sector->floorheight - (crumble->speed*2);
-
-				  T_MovePlane
-				  (
-					crumble->sector,
-					crumble->speed,
-					dest,
-					false,
-					false, // move floor
-					crumble->direction
+				T_MovePlane
+				(
+				  crumble->sector,
+				  crumble->speed,
+				  crumble->sector->floorheight + crumble->direction*crumble->speed*2,
+				  false,
+				  false, // move floor
+				  crumble->direction
 				);
 
 				crumble->sector->ceilspeed = 42;
@@ -2325,12 +2325,6 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	P_AddThinker(THINK_MAIN, &crumble->thinker);
 	crumble->thinker.function.acp1 = (actionf_p1)T_StartCrumble;
 
-	// Does this crumbler return?
-	if (crumblereturn)
-		crumble->type = elevateBounce;
-	else
-		crumble->type = elevateContinuous;
-
 	// set up the fields
 	crumble->sector = sec;
 	crumble->speed = 0;
@@ -2338,28 +2332,25 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	if (player && player->mo && (player->mo->eflags & MFE_VERTICALFLIP))
 	{
 		crumble->direction = 1; // Up
-		crumble->floordestheight = 1;
+		crumble->flags |= CF_REVERSE;
 	}
 	else
-	{
 		crumble->direction = -1; // Down
-		crumble->floordestheight = 0;
-	}
 
 	crumble->floorwasheight = crumble->sector->floorheight;
 	crumble->ceilingwasheight = crumble->sector->ceilingheight;
-	crumble->distance = TICRATE; // Used for delay time
+	crumble->timer = TICRATE;
 	crumble->player = player;
-	crumble->origspeed = origalpha;
+	crumble->origalpha = origalpha;
 
 	crumble->sourceline = rover->master;
 
 	sec->floordata = crumble;
 
+	if (crumblereturn)
+		crumble->flags |= CF_RETURN;
 	if (floating)
-		crumble->high = 42;
-	else
-		crumble->high = 0;
+		crumble->flags |= CF_FLOATBOB;
 
 	crumble->sector->crumblestate = CRUMBLE_ACTIVATED;
 

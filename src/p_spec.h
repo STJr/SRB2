@@ -311,22 +311,27 @@ typedef struct
 	line_t *sourceline;
 } elevator_t;
 
+typedef enum
+{
+	CF_RETURN   = 1,    // Return after crumbling
+	CF_FLOATBOB = 1<<1, // Float on water
+	CF_REVERSE  = 1<<2, // Reverse gravity
+} crumbleflag_t;
+
 typedef struct
 {
 	thinker_t thinker;
-	elevator_e type;
+	line_t *sourceline;
 	sector_t *sector;
 	sector_t *actionsector; // The sector the rover action is taking place in.
+	player_t *player; // Player who initiated the thinker (used for airbob)
 	INT32 direction;
-	fixed_t floordestheight;
+	INT32 origalpha;
+	INT32 timer;
 	fixed_t speed;
-	fixed_t origspeed;
-	fixed_t high;
-	fixed_t distance;
 	fixed_t floorwasheight; // Height the floor WAS at
 	fixed_t ceilingwasheight; // Height the ceiling WAS at
-	player_t *player; // Player who initiated the thinker (used for airbob)
-	line_t *sourceline;
+	UINT8 flags;
 } crumble_t;
 
 typedef struct

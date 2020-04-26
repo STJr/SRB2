@@ -4235,9 +4235,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 							if (crumbler->player && crumbler->player->mo
 								&& crumbler->player->mo != thing
 								&& crumbler->actionsector == thing->subsector->sector
-								&& crumbler->sector == rover->master->frontsector
-								&& (crumbler->type == elevateBounce
-								|| crumbler->type == elevateContinuous))
+								&& crumbler->sector == rover->master->frontsector)
 							{
 								killer = crumbler->player->mo;
 							}
