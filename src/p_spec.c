@@ -6156,6 +6156,8 @@ static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsecto
 {
 	elevator_t *elevator; // Why not? LOL
 
+	CONS_Alert(CONS_WARNING, M_GetText("Detected a camera scanner effect (linedef type 5). This effect is deprecated and will be removed in the future!\n"));
+
 	// create and initialize new elevator thinker
 	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &elevator->thinker);
