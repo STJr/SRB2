@@ -1252,18 +1252,32 @@ static void CL_HandleSnake(void)
 	switch (snake->snakedir)
 	{
 		case 1:
-			x = x > 0 ? x - 1 : SNAKE_NUM_BLOCKS_X - 1;
+			if (x > 0)
+				x--;
+			else
+				snake->gameover = true;
 			break;
 		case 2:
-			x = x < SNAKE_NUM_BLOCKS_X - 1 ? x + 1 : 0;
+			if (x < SNAKE_NUM_BLOCKS_X - 1)
+				x++;
+			else
+				snake->gameover = true;
 			break;
 		case 3:
-			y = y > 0 ? y - 1 : SNAKE_NUM_BLOCKS_Y - 1;
+			if (y > 0)
+				y--;
+			else
+				snake->gameover = true;
 			break;
 		case 4:
-			y = y < SNAKE_NUM_BLOCKS_Y - 1 ? y + 1 : 0;
+			if (y < SNAKE_NUM_BLOCKS_Y - 1)
+				y++;
+			else
+				snake->gameover = true;
 			break;
 	}
+	if (snake->gameover)
+		return;
 
 	// Check collision with snake
 	for (i = 1; i < snake->snakelength - 1; i++)
