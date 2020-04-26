@@ -2399,7 +2399,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_CameraScanner)
 			{
-				SaveCrumbleThinker(th, tc_camerascanner);
+				SaveElevatorThinker(th, tc_camerascanner);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_Scroll)
@@ -2424,7 +2424,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_StartCrumble)
 			{
-				SaveElevatorThinker(th, tc_startcrumble);
+				SaveCrumbleThinker(th, tc_startcrumble);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_MarioBlock)
