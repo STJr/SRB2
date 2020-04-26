@@ -314,6 +314,24 @@ typedef struct
 typedef struct
 {
 	thinker_t thinker;
+	elevator_e type;
+	sector_t *sector;
+	sector_t *actionsector; // The sector the rover action is taking place in.
+	INT32 direction;
+	fixed_t floordestheight;
+	fixed_t speed;
+	fixed_t origspeed;
+	fixed_t high;
+	fixed_t distance;
+	fixed_t floorwasheight; // Height the floor WAS at
+	fixed_t ceilingwasheight; // Height the ceiling WAS at
+	player_t *player; // Player who initiated the thinker (used for airbob)
+	line_t *sourceline;
+} crumble_t;
+
+typedef struct
+{
+	thinker_t thinker;
 	line_t *sourceline; // Source line of the thinker
 } noenemies_t;
 
@@ -440,7 +458,7 @@ void T_MoveFloor(floormove_t *movefloor);
 void T_MoveElevator(elevator_t *elevator);
 void T_ContinuousFalling(continuousfall_t *faller);
 void T_BounceCheese(bouncecheese_t *bouncer);
-void T_StartCrumble(elevator_t *elevator);
+void T_StartCrumble(crumble_t *crumble);
 void T_MarioBlock(mariothink_t *block);
 void T_FloatSector(floatthink_t *floater);
 void T_MarioBlockChecker(mariocheck_t *block);

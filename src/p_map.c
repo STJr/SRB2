@@ -4223,14 +4223,14 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 					{
 						//If the thing was crushed by a crumbling FOF, reward the player who made it crumble!
 						thinker_t *think;
-						elevator_t *crumbler;
+						crumble_t *crumbler;
 
 						for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 						{
 							if (think->function.acp1 != (actionf_p1)T_StartCrumble)
 								continue;
 
-							crumbler = (elevator_t *)think;
+							crumbler = (crumble_t *)think;
 
 							if (crumbler->player && crumbler->player->mo
 								&& crumbler->player->mo != thing
