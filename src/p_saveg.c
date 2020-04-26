@@ -1926,7 +1926,6 @@ static void SaveElevatorThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->delaytimer);
 	WRITEFIXED(save_p, ht->floorwasheight);
 	WRITEFIXED(save_p, ht->ceilingwasheight);
-	WRITEUINT32(save_p, SavePlayer(ht->player)); // was dummy
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 }
 
@@ -3168,7 +3167,7 @@ static thinker_t* LoadFireflickerThinker(actionf_p1 thinker)
 //
 // Loads a elevator_t from a save game
 //
-static thinker_t* LoadElevatorThinker(actionf_p1 thinker, UINT8 floorOrCeiling)
+static thinker_t* LoadElevatorThinker(actionf_p1 thinker, boolean setplanedata)
 {
 	elevator_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
@@ -3187,15 +3186,12 @@ static thinker_t* LoadElevatorThinker(actionf_p1 thinker, UINT8 floorOrCeiling)
 	ht->delaytimer = READFIXED(save_p);
 	ht->floorwasheight = READFIXED(save_p);
 	ht->ceilingwasheight = READFIXED(save_p);
-	ht->player = LoadPlayer(READUINT32(save_p)); // was dummy
 	ht->sourceline = LoadLine(READUINT32(save_p));
 
-	if (ht->sector)
+	if (ht->sector && setplanedata)
 	{
-		if (floorOrCeiling & 2)
-			ht->sector->ceilingdata = ht;
-		if (floorOrCeiling & 1)
-			ht->sector->floordata = ht;
+		ht->sector->ceilingdata = ht;
+		ht->sector->floordata = ht;
 	}
 
 	return &ht->thinker;
@@ -3722,7 +3718,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_elevator:
-					th = LoadElevatorThinker((actionf_p1)T_MoveElevator, 3);
+					th = LoadElevatorThinker((actionf_p1)T_MoveElevator, true);
 					break;
 
 				case tc_continuousfalling:
@@ -3745,10 +3741,8 @@ static void P_NetUnArchiveThinkers(void)
 					th = LoadRaiseThinker((actionf_p1)T_RaiseSector);
 					break;
 
-				/// \todo rewrite all the code that uses an elevator_t but isn't an elevator
-				/// \note working on it!
 				case tc_camerascanner:
-					th = LoadElevatorThinker((actionf_p1)T_CameraScanner, 0);
+					th = LoadElevatorThinker((actionf_p1)T_CameraScanner, false);
 					break;
 
 				case tc_bouncecheese:

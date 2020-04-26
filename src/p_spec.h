@@ -307,7 +307,6 @@ typedef struct
 	fixed_t delaytimer;
 	fixed_t floorwasheight; // Height the floor WAS at
 	fixed_t ceilingwasheight; // Height the ceiling WAS at
-	player_t *player; // Player who initiated the thinker (used for airbob)
 	line_t *sourceline;
 } elevator_t;
 
