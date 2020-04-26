@@ -1833,14 +1833,18 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 // Rises up to its topmost position when a
 // player steps on it. Lowers otherwise.
 //
-void T_RaiseSector(levelspecthink_t *raise)
+void T_RaiseSector(raise_t *raise)
 {
 	msecnode_t *node;
 	mobj_t *thing;
 	sector_t *sector;
 	INT32 i;
 	boolean playeronme = false, active = false;
+	boolean moveUp;
 	fixed_t ceilingdestination, floordestination;
+	fixed_t speed, origspeed;
+	fixed_t distToNearestEndpoint;
+	INT32 direction;
 	result_e res = 0;
 
 	if (raise->sector->crumblestate >= 3 || raise->sector->ceilingdata)
@@ -1863,7 +1867,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 				continue;
 
 			// Option to require spindashing.
-			if (raise->vars[1] && !(thing->player->pflags & PF_STARTDASH))
+			if (raise->flags & RF_SPINDASH && !(thing->player->pflags & PF_STARTDASH))
 				continue;
 
 			if (!(thing->z == P_GetSpecialTopZ(thing, raise->sector, sector)))
@@ -1874,43 +1878,43 @@ void T_RaiseSector(levelspecthink_t *raise)
 		}
 	}
 
-	if (raise->vars[9]) // Dynamically Sinking Platform^tm
+	if (raise->flags & RF_DYNAMIC) // Dynamically Sinking Platform^tm
 	{
 #define shaketime 10
-		if (raise->vars[11] > shaketime) // State: moving
+		if (raise->shaketimer > shaketime) // State: moving
 		{
 			if (playeronme) // If player is standing on the platform, accelerate
 			{
-				raise->vars[10] += (FRACUNIT >> 5);
+				raise->extraspeed += (FRACUNIT >> 5);
 			}
 			else // otherwise, decelerate until inflection
 			{
-				raise->vars[10] -= FRACUNIT >> 3;
-				if (raise->vars[10] <= 0) // inflection!
+				raise->extraspeed -= FRACUNIT >> 3;
+				if (raise->extraspeed <= 0) // inflection!
 				{
-					raise->vars[10] = 0;
-					raise->vars[11] = 0; // allow the shake to occur again (fucks over players attempting to jump-cheese)
+					raise->extraspeed = 0;
+					raise->shaketimer = 0; // allow the shake to occur again (fucks over players attempting to jump-cheese)
 				}
 			}
-			active = raise->vars[10] > 0;
+			active = raise->extraspeed > 0;
 		}
 		else // State: shaking
 		{
-			if (playeronme || raise->vars[11])
+			if (playeronme || raise->shaketimer)
 			{
 				active = true;
-				if (++raise->vars[11] > shaketime)
+				if (++raise->shaketimer > shaketime)
 				{
 					if (playeronme)
-						raise->vars[10] = FRACUNIT >> 5;
+						raise->extraspeed = FRACUNIT >> 5;
 					else
-						raise->vars[10] = FRACUNIT << 1;
+						raise->extraspeed = FRACUNIT << 1;
 				}
 				else
 				{
-					raise->vars[10] = ((shaketime/2) - raise->vars[11]) << FRACBITS;
-					if (raise->vars[10] < -raise->vars[2]/2)
-						raise->vars[10] = -raise->vars[2]/2;
+					raise->extraspeed = ((shaketime/2) - raise->shaketimer) << FRACBITS;
+					if (raise->extraspeed < -raise->basespeed/2)
+						raise->extraspeed = -raise->basespeed/2;
 				}
 			}
 		}
@@ -1919,125 +1923,59 @@ void T_RaiseSector(levelspecthink_t *raise)
 	else // Air bobbing platform (not a Dynamically Sinking Platform^tm)
 		active = playeronme;
 
-	if (active)
+	moveUp = active ^ (raise->flags & RF_REVERSE);
+	ceilingdestination = moveUp ? raise->ceilingtop : raise->ceilingbottom;
+	floordestination = ceilingdestination - (raise->sector->ceilingheight - raise->sector->floorheight);
+
+	if ((moveUp && raise->sector->ceilingheight >= ceilingdestination)
+		|| (!moveUp && raise->sector->ceilingheight <= ceilingdestination))
 	{
-		raise->vars[3] = raise->vars[2];
-
-		if (raise->vars[0] == 1)
-		{
-			if (raise->sector->ceilingheight <= raise->vars[7])
-			{
-				raise->sector->floorheight = raise->vars[7] - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->vars[7];
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-
-			raise->vars[8] = -1;
-			ceilingdestination = raise->vars[7];
-			floordestination = raise->vars[6];
-		}
-		else // elevateUp
-		{
-			if (raise->sector->ceilingheight >= raise->vars[5])
-			{
-				raise->sector->floorheight = raise->vars[5] - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->vars[5];
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-
-			raise->vars[8] = 1;
-			ceilingdestination = raise->vars[5];
-			floordestination = raise->vars[4];
-		}
+		raise->sector->floorheight = floordestination;
+		raise->sector->ceilingheight = ceilingdestination;
+		raise->sector->ceilspeed = 0;
+		raise->sector->floorspeed = 0;
+		return;
 	}
-	else
-	{
-		raise->vars[3] = raise->vars[2]/2;
+	direction = moveUp ? 1 : -1;
 
-		if (raise->vars[0] == 1)
-		{
-			if (raise->sector->ceilingheight >= raise->vars[5])
-			{
-				raise->sector->floorheight = raise->vars[5] - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->vars[5];
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-			raise->vars[8] = 1;
-			ceilingdestination = raise->vars[5];
-			floordestination = raise->vars[4];
-		}
-		else // elevateUp
-		{
-			if (raise->sector->ceilingheight <= raise->vars[7])
-			{
-				raise->sector->floorheight = raise->vars[7] - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->vars[7];
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-			raise->vars[8] = -1;
-			ceilingdestination = raise->vars[7];
-			floordestination = raise->vars[6];
-		}
-	}
+	origspeed = raise->basespeed;
+	if (!active)
+		origspeed /= 2;
 
-	if ((raise->sector->ceilingheight - raise->vars[7])
-		< (raise->vars[5] - raise->sector->ceilingheight))
-	{
-		fixed_t origspeed = raise->vars[3];
+	// Speed up as you get closer to the middle, then slow down again
+	distToNearestEndpoint = min(raise->sector->ceilingheight - raise->ceilingbottom, raise->ceilingtop - raise->sector->ceilingheight);
+	speed = FixedMul(origspeed, FixedDiv(distToNearestEndpoint, (raise->ceilingtop - raise->ceilingbottom) >> 5));
 
-		// Slow down as you get closer to the bottom
-		raise->vars[3] = FixedMul(raise->vars[3],FixedDiv(raise->sector->ceilingheight - raise->vars[7], (raise->vars[5] - raise->vars[7])>>5));
+	if (speed <= origspeed/16)
+		speed = origspeed/16;
+	else if (speed > origspeed)
+		speed = origspeed;
 
-		if (raise->vars[3] <= origspeed/16)
-			raise->vars[3] = origspeed/16;
-		else if (raise->vars[3] > origspeed)
-			raise->vars[3] = origspeed;
-	}
-	else
-	{
-		fixed_t origspeed = raise->vars[3];
-		// Slow down as you get closer to the top
-		raise->vars[3] = FixedMul(raise->vars[3],FixedDiv(raise->vars[5] - raise->sector->ceilingheight, (raise->vars[5] - raise->vars[7])>>5));
-
-		if (raise->vars[3] <= origspeed/16)
-			raise->vars[3] = origspeed/16;
-		else if (raise->vars[3] > origspeed)
-			raise->vars[3] = origspeed;
-	}
-
-	raise->vars[3] += raise->vars[10];
+	speed += raise->extraspeed;
 
 	res = T_MovePlane
 	(
-		raise->sector,         // sector
-		raise->vars[3],          // speed
+		raise->sector,      // sector
+		speed,              // speed
 		ceilingdestination, // dest
-		0,                        // crush
-		1,                        // floor or ceiling (1 for ceiling)
-		raise->vars[8]       // direction
+		0,                  // crush
+		1,                  // floor or ceiling (1 for ceiling)
+		direction           // direction
 	);
 
 	if (res == ok || res == pastdest)
 		T_MovePlane
 		(
-			raise->sector,           // sector
-			raise->vars[3],            // speed
+			raise->sector,    // sector
+			speed,            // speed
 			floordestination, // dest
-			0,                          // crush
-			0,                          // floor or ceiling (0 for floor)
-			raise->vars[8]         // direction
+			0,                // crush
+			0,                // floor or ceiling (0 for floor)
+			direction         // direction
 		);
 
 	raise->sector->ceilspeed = 42;
-	raise->sector->floorspeed = raise->vars[3]*raise->vars[8];
+	raise->sector->floorspeed = speed*direction;
 
 	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->args[0], i)) >= 0 ;)
 		P_RecalcPrecipInSector(&sectors[i]);
