@@ -47,8 +47,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 		case 0: // IN STASIS
 			break;
 		case 1: // UP
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false,
-				1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, true, ceiling->direction);
 
 			if (ceiling->type == bounceCeiling)
 			{
@@ -159,8 +158,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 			break;
 
 		case -1: // DOWN
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight,
-				ceiling->crush, 1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, true, ceiling->direction);
 
 			if (ceiling->type == bounceCeiling)
 			{
@@ -314,11 +312,10 @@ void T_CrushCeiling(ceiling_t *ceiling)
 			if (ceiling->type == crushBothOnce)
 			{
 				// Move the floor
-				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight-(ceiling->topheight-ceiling->bottomheight), false, 0, -ceiling->direction);
+				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight-(ceiling->topheight-ceiling->bottomheight), false, false, -ceiling->direction);
 			}
 
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight,
-				false, 1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, true, ceiling->direction);
 
 			if (res == pastdest)
 			{
@@ -357,11 +354,10 @@ void T_CrushCeiling(ceiling_t *ceiling)
 			if (ceiling->type == crushBothOnce)
 			{
 				// Move the floor
-				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, 0, -ceiling->direction);
+				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, false, -ceiling->direction);
 			}
 
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight,
-				ceiling->crush, 1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, true, ceiling->direction);
 
 			if (res == pastdest)
 			{

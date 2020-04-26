@@ -694,47 +694,27 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer1, emer2, emer3;
-	INT32 timeout = 0; // keeps from getting stuck
+	INT32 emer[3], num[MAXHUNTEMERALDS], i, randomkey;
+	fixed_t x, y, z;
 
-	emer1 = emer2 = emer3 = 0;
+	for (i = 0; i < numhuntemeralds; i++)
+		num[i] = i;
 
-	//increment spawn numbers because zero is valid.
-	emer1 = (P_RandomKey(numhuntemeralds)) + 1;
-	while (timeout++ < 100)
+	for (i = 0; i < 3; i++)
 	{
-		emer2 = (P_RandomKey(numhuntemeralds)) + 1;
+		// generate random index, shuffle afterwards
+		randomkey = P_RandomKey(numhuntemeralds--);
+		emer[i] = num[randomkey];
+		num[randomkey] = num[numhuntemeralds];
+		num[numhuntemeralds] = emer[i];
 
-		if (emer2 != emer1)
-			break;
+		// spawn emerald
+		x = huntemeralds[emer[i]]->x<<FRACBITS;
+		y = huntemeralds[emer[i]]->y<<FRACBITS;
+		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer[i]], x, y);
+		P_SetMobjStateNF(P_SpawnMobj(x, y, z, MT_EMERHUNT),
+			mobjinfo[MT_EMERHUNT].spawnstate+i);
 	}
-
-	timeout = 0;
-	while (timeout++ < 100)
-	{
-		emer3 = (P_RandomKey(numhuntemeralds)) + 1;
-
-		if (emer3 != emer2 && emer3 != emer1)
-			break;
-	}
-
-	//decrement spawn values to the actual number because zero is valid.
-	if (emer1--)
-		P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
-			huntemeralds[emer1]->y<<FRACBITS,
-			huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
-
-	if (emer2--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
-			huntemeralds[emer2]->y<<FRACBITS,
-			huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+1);
-
-	if (emer3--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
-			huntemeralds[emer3]->y<<FRACBITS,
-			huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+2);
 }
 
 static void P_SpawnMapThings(boolean spawnemblems)
@@ -867,7 +847,7 @@ static void P_InitializeSector(sector_t *ss)
 	ss->camsec = -1;
 
 	ss->floorlightsec = ss->ceilinglightsec = -1;
-	ss->crumblestate = 0;
+	ss->crumblestate = CRUMBLE_NONE;
 
 	ss->touching_thinglist = NULL;
 
@@ -1281,7 +1261,11 @@ static void P_LoadThings(UINT8 *data)
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
+		mt->scale = FRACUNIT;
 		mt->tag = 0;
+		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
+		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
+		mt->pitch = mt->roll = 0;
 
 		mt->type &= 4095;
 
@@ -1568,9 +1552,14 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 		mapthings[i].z = atol(val);
 	else if (fastcmp(param, "angle"))
 		mapthings[i].angle = atol(val);
+	else if (fastcmp(param, "pitch"))
+		mapthings[i].pitch = atol(val);
+	else if (fastcmp(param, "roll"))
+		mapthings[i].roll = atol(val);
 	else if (fastcmp(param, "type"))
 		mapthings[i].type = atol(val);
-
+	else if (fastcmp(param, "scale") || fastcmp(param, "scalex") || fastcmp(param, "scaley"))
+		mapthings[i].scale = FLOAT_TO_FIXED(atof(val));
 	// Flags
 	else if (fastcmp(param, "extra") && fastcmp("true", val))
 		mapthings[i].options |= MTF_EXTRA;
@@ -1580,6 +1569,22 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 		mapthings[i].options |= MTF_OBJECTSPECIAL;
 	else if (fastcmp(param, "ambush") && fastcmp("true", val))
 		mapthings[i].options |= MTF_AMBUSH;
+
+	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
+	{
+		size_t argnum = atol(param + 3);
+		if (argnum >= NUMMAPTHINGARGS)
+			return;
+		mapthings[i].args[argnum] = atol(val);
+	}
+	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
+	{
+		size_t argnum = param[9] - '0';
+		if (argnum >= NUMMAPTHINGSTRINGARGS)
+			return;
+		mapthings[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(mapthings[i].stringargs[argnum], val, strlen(val) + 1);
+	}
 }
 
 /** From a given position table, run a specified parser function through a {}-encapsuled text.
@@ -1772,12 +1777,15 @@ static void P_LoadTextmap(void)
 	{
 		// Defaults.
 		mt->x = mt->y = 0;
-		mt->angle = 0;
+		mt->angle = mt->pitch = mt->roll = 0;
 		mt->type = 0;
 		mt->options = 0;
 		mt->z = 0;
 		mt->extrainfo = 0;
+		mt->scale = FRACUNIT;
 		mt->tag = 0;
+		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
+		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
 
 		TextmapParse(mapthingsPos[i], i, ParseTextmapThingParameter);
@@ -4381,12 +4389,12 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 {
 	UINT16 numlumps = *pnumlumps;
 	size_t i = *pi;
-	if (!stricmp(lumpinfo->name2, folName))
+	if (!stricmp(lumpinfo->fullname, folName))
 	{
 		lumpinfo++;
 		*start = ++i;
 		for (; i < numlumps; i++, lumpinfo++)
-			if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
+			if (strnicmp(lumpinfo->fullname, folName, strlen(folName)))
 				break;
 		lumpinfo--;
 		*end = i-- - *start;

@@ -115,12 +115,11 @@ static void P_ResetColormapFader(sector_t *sector);
 static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, extracolormap_t *dest_exc,
 	boolean ticbased, INT32 duration);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
-static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
+static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
-static void P_AddSpikeThinker(sector_t *sec, INT32 referrer);
 static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee, UINT8 reverse);
 
 
@@ -4046,7 +4045,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				mobj = P_SpawnMobj(x, y, z, type);
 				if (mobj)
+				{
+					if (line->flags & ML_EFFECT1)
+						mobj->angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
 					CONS_Debug(DBG_GAMELOGIC, "Linedef Type %d - Spawn Object: %d spawned at (%d, %d, %d)\n", line->special, mobj->type, mobj->x>>FRACBITS, mobj->y>>FRACBITS, mobj->z>>FRACBITS); //TODO: Convert mobj->type to a string somehow.
+				}
 				else
 					CONS_Alert(CONS_ERROR,"Linedef Type %d - Spawn Object: Object did not spawn!\n", line->special);
 			}
@@ -4465,7 +4468,8 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_ELECTRIC);
 			break;
 		case 5: // Spikes
-			// Don't do anything. In Soviet Russia, spikes find you.
+			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPIKE);
 			break;
 		case 6: // Death Pit (Camera Mod)
 		case 7: // Death Pit (No Camera Mod)
@@ -5773,7 +5777,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	thinker_t *th;
 	friction_t *f;
 	pusher_t *p;
-	levelspecthink_t *lst;
 	size_t sec2num;
 	size_t i;
 
@@ -5875,16 +5878,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		else if (th == &thlist[THINK_MAIN])
 			break;
 
-		// Should this FOF have spikeness?
-		if (th->function.acp1 == (actionf_p1)T_SpikeSector)
-		{
-			lst = (levelspecthink_t *)th;
-
-			if (lst->sector == sec2)
-				P_AddSpikeThinker(sec, (INT32)sec2num);
-		}
 		// Should this FOF have friction?
-		else if(th->function.acp1 == (actionf_p1)T_Friction)
+		if(th->function.acp1 == (actionf_p1)T_Friction)
 		{
 			f = (friction_t *)th;
 
@@ -5921,7 +5916,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	}
 
 	if ((flags & FF_CRUMBLE))
-		sec2->crumblestate = 1;
+		sec2->crumblestate = CRUMBLE_WAIT;
 
 	if ((flags & FF_FLOATBOB))
 	{
@@ -5938,28 +5933,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 // SPECIAL SPAWNING
 //
 
-/** Adds a spike thinker.
-  * Sector type Section1:5 will result in this effect.
-  *
-  * \param sec Sector in which to add the thinker.
-  * \param referrer If != sec, then we're dealing with a FOF
-  * \sa P_SpawnSpecials, T_SpikeSector
-  * \author SSNTails <http://www.ssntails.org>
-  */
-static void P_AddSpikeThinker(sector_t *sec, INT32 referrer)
-{
-	levelspecthink_t *spikes;
-
-	// create and initialize new thinker
-	spikes = Z_Calloc(sizeof (*spikes), PU_LEVSPEC, NULL);
-	P_AddThinker(THINK_MAIN, &spikes->thinker);
-
-	spikes->thinker.function.acp1 = (actionf_p1)T_SpikeSector;
-
-	spikes->sector = sec;
-	spikes->vars[0] = referrer;
-}
-
 /** Adds a float thinker.
   * Float thinkers cause solid 3Dfloors to float on water.
   *
@@ -5968,9 +5941,9 @@ static void P_AddSpikeThinker(sector_t *sec, INT32 referrer)
   * \sa P_SpawnSpecials, T_FloatSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
+static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline)
 {
-	levelspecthink_t *floater;
+	floatthink_t *floater;
 
 	// create and initialize new thinker
 	floater = Z_Calloc(sizeof (*floater), PU_LEVSPEC, NULL);
@@ -5979,7 +5952,7 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
 	floater->thinker.function.acp1 = (actionf_p1)T_FloatSector;
 
 	floater->sector = sec;
-	floater->vars[0] = tag;
+	floater->tag = (INT16)tag;
 	floater->sourceline = sourceline;
 }
 
@@ -6024,7 +5997,7 @@ static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, 
   */
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
 {
-	levelspecthink_t *block;
+	mariocheck_t *block;
 
 	// create and initialize new elevator thinker
 	block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
@@ -6059,7 +6032,6 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, boolean lower, 
 
 	raise->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
-	// set up the fields
 	raise->sourceline = sourceline;
 	raise->sector = sec;
 
@@ -6076,37 +6048,27 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, boolean lower, 
 
 static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean raise, boolean spindash, boolean dynamic)
 {
-	levelspecthink_t *airbob;
+	raise_t *airbob;
 
 	airbob = Z_Calloc(sizeof (*airbob), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &airbob->thinker);
 
 	airbob->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
-	// set up the fields
+	airbob->sourceline = sourceline;
 	airbob->sector = sec;
 
-	// Require a spindash to activate
-	airbob->vars[1] = spindash ? 1 : 0;
+	airbob->ceilingtop = sec->ceilingheight;
+	airbob->ceilingbottom = sec->ceilingheight - dist;
 
-	airbob->vars[2] = FRACUNIT;
+	airbob->basespeed = FRACUNIT;
 
-	airbob->vars[7] = airbob->sector->ceilingheight - dist;
-
-	airbob->vars[6] = airbob->vars[7]
-		- (sec->ceilingheight - sec->floorheight);
-
-	airbob->vars[3] = airbob->vars[2];
-
-	airbob->vars[0] = raise ? 0 : 1;
-
-	airbob->vars[5] = sec->ceilingheight;
-	airbob->vars[4] = airbob->vars[5]
-			- (sec->ceilingheight - sec->floorheight);
-
-	airbob->vars[9] = dynamic ? 1 : 0;
-
-	airbob->sourceline = sourceline;
+	if (!raise)
+		airbob->flags |= RF_REVERSE;
+	if (spindash)
+		airbob->flags |= RF_SPINDASH;
+	if (dynamic)
+		airbob->flags |= RF_DYNAMIC;
 }
 
 /** Adds a thwomp thinker.
@@ -6136,14 +6098,14 @@ static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, lin
 	// set up the fields according to the type of elevator action
 	thwomp->sourceline = sourceline;
 	thwomp->sector = sec;
-	thwomp->crushspeed = thwomp->sourceline->args[1] << (FRACBITS - 3);
-	thwomp->retractspeed = thwomp->sourceline->args[2] << (FRACBITS - 3);
+	thwomp->crushspeed = sourceline->args[1] << (FRACBITS - 3);
+	thwomp->retractspeed = sourceline->args[2] << (FRACBITS - 3);
 	thwomp->direction = 0;
 	thwomp->floorstartheight = sec->floorheight;
 	thwomp->ceilingstartheight = sec->ceilingheight;
 	thwomp->delay = 1;
 	thwomp->tag = actionsector->tag;
-	thwomp->sound = (thwomp->sourceline->stringargs[0]) ? get_number(thwomp->sourceline->stringargs[0]) : sfx_thwomp;
+	thwomp->sound = (sourceline->stringargs[0]) ? get_number(sourceline->stringargs[0]) : sfx_thwomp;
 
 	sec->floordata = thwomp;
 	sec->ceilingdata = thwomp;
@@ -6154,14 +6116,13 @@ static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, lin
 /** Adds a thinker which checks if any MF_ENEMY objects with health are in the defined area.
   * If not, a linedef executor is run once.
   *
-  * \param sec          Control sector.
   * \param sourceline   Control linedef.
   * \sa P_SpawnSpecials, T_NoEnemiesSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static inline void P_AddNoEnemiesThinker(sector_t *sec, line_t *sourceline)
+static inline void P_AddNoEnemiesThinker(line_t *sourceline)
 {
-	levelspecthink_t *nobaddies;
+	noenemies_t *nobaddies;
 
 	// create and initialize new thinker
 	nobaddies = Z_Calloc(sizeof (*nobaddies), PU_LEVSPEC, NULL);
@@ -6169,21 +6130,19 @@ static inline void P_AddNoEnemiesThinker(sector_t *sec, line_t *sourceline)
 
 	nobaddies->thinker.function.acp1 = (actionf_p1)T_NoEnemiesSector;
 
-	nobaddies->sector = sec;
 	nobaddies->sourceline = sourceline;
 }
 
 /** Adds a thinker for Each-Time linedef executors. A linedef executor is run
   * only when a player enters the area and doesn't run again until they re-enter.
   *
-  * \param sec          Control sector that contains the lines of executors we will want to run.
   * \param sourceline   Control linedef.
   * \sa P_SpawnSpecials, T_EachTimeThinker
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddEachTimeThinker(sector_t *sec, line_t *sourceline)
+static void P_AddEachTimeThinker(line_t *sourceline)
 {
-	levelspecthink_t *eachtime;
+	eachtime_t *eachtime;
 
 	// create and initialize new thinker
 	eachtime = Z_Calloc(sizeof (*eachtime), PU_LEVSPEC, NULL);
@@ -6191,8 +6150,8 @@ static void P_AddEachTimeThinker(sector_t *sec, line_t *sourceline)
 
 	eachtime->thinker.function.acp1 = (actionf_p1)T_EachTimeThinker;
 
-	eachtime->sector = sec;
 	eachtime->sourceline = sourceline;
+	eachtime->triggerOnExit = !!(sourceline->flags & ML_BOUNCY);
 }
 
 /** Adds a camera scanner.
@@ -6419,7 +6378,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 		switch(GETSECSPECIAL(sector->special, 1))
 		{
 			case 5: // Spikes
-				P_AddSpikeThinker(sector, (INT32)(sector-sectors));
+				//Terrible hack to replace an even worse hack:
+				//Spike damage automatically sets SF_TRIGGERSPECIAL_TOUCH.
+				//Yes, this also affects other specials on the same sector. Sorry.
+				sector->flags |= SF_TRIGGERSPECIAL_TOUCH;
 				break;
 
 			case 15: // Bouncy sector
@@ -6467,9 +6429,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 	// Firstly, find out how many there are in each sector
 	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)T_SpikeSector)
-			secthinkers[((levelspecthink_t *)th)->sector - sectors].count++;
-		else if (th->function.acp1 == (actionf_p1)T_Friction)
+		if (th->function.acp1 == (actionf_p1)T_Friction)
 			secthinkers[((friction_t *)th)->affectee].count++;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secthinkers[((pusher_t *)th)->affectee].count++;
@@ -6489,9 +6449,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 	{
 		size_t secnum = (size_t)-1;
 
-		if (th->function.acp1 == (actionf_p1)T_SpikeSector)
-			secnum = ((levelspecthink_t *)th)->sector - sectors;
-		else if (th->function.acp1 == (actionf_p1)T_Friction)
+		if (th->function.acp1 == (actionf_p1)T_Friction)
 			secnum = ((friction_t *)th)->affectee;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secnum = ((pusher_t *)th)->affectee;
@@ -6779,7 +6737,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 150: // Air bobbing platform
 			case 151: // Adjustable air bobbing platform
 			{
-				fixed_t dist = (lines[i].special == 151) ? P_AproxDistance(lines[i].dx, lines[i].dy) : 16*FRACUNIT;
+				fixed_t dist = (lines[i].special == 150) ? 16*FRACUNIT : P_AproxDistance(lines[i].dx, lines[i].dy);
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				P_AddAirbob(lines[i].frontsector, lines + i, dist, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
@@ -7031,14 +6989,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 312:
 			case 332:
 			case 335:
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				P_AddEachTimeThinker(&sectors[sec], &lines[i]);
+				P_AddEachTimeThinker(&lines[i]);
 				break;
 
 			// No More Enemies Linedef Exec
 			case 313:
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				P_AddNoEnemiesThinker(&sectors[sec], &lines[i]);
+				P_AddNoEnemiesThinker(&lines[i]);
 				break;
 
 			// Pushable linedef executors (count # of pushables)
@@ -7062,10 +7018,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				else
 					lines[i].callcount = sides[lines[i].sidenum[0]].textureoffset>>FRACBITS;
 				if (lines[i].special == 322) // Each time
-				{
-					sec = sides[*lines[i].sidenum].sector - sectors;
-					P_AddEachTimeThinker(&sectors[sec], &lines[i]);
-				}
+					P_AddEachTimeThinker(&lines[i]);
 				break;
 
 			// NiGHTS trigger executors

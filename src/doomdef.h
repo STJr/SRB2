@@ -150,6 +150,9 @@ extern char logfilename[1024];
 // Otherwise we can't force updates!
 #endif
 
+/* A custom URL protocol for server links. */
+#define SERVER_URL_PROTOCOL "srb2://"
+
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
 #define USE_PATCH_DTA
