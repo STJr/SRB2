@@ -6050,42 +6050,28 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
   * \sa P_SpawnSpecials, T_RaiseSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline)
+static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, boolean lower, boolean spindash)
 {
-	levelspecthink_t *raise;
+	raise_t *raise;
 
 	raise = Z_Calloc(sizeof (*raise), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &raise->thinker);
 
 	raise->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
-	if (sourceline->flags & ML_BLOCKMONSTERS)
-		raise->vars[0] = 1;
-	else
-		raise->vars[0] = 0;
-
 	// set up the fields
+	raise->sourceline = sourceline;
 	raise->sector = sec;
 
-	// Require a spindash to activate
-	if (sourceline->flags & ML_NOCLIMB)
-		raise->vars[1] = 1;
-	else
-		raise->vars[1] = 0;
+	raise->ceilingtop = P_FindHighestCeilingSurrounding(sec);
+	raise->ceilingbottom = P_FindLowestCeilingSurrounding(sec);
 
-	raise->vars[2] = P_AproxDistance(sourceline->dx, sourceline->dy);
-	raise->vars[2] = FixedDiv(raise->vars[2], 4*FRACUNIT);
-	raise->vars[3] = raise->vars[2];
+	raise->basespeed = FixedDiv(P_AproxDistance(sourceline->dx, sourceline->dy), 4*FRACUNIT);
 
-	raise->vars[5] = P_FindHighestCeilingSurrounding(sec);
-	raise->vars[4] = raise->vars[5]
-		- (sec->ceilingheight - sec->floorheight);
-
-	raise->vars[7] = P_FindLowestCeilingSurrounding(sec);
-	raise->vars[6] = raise->vars[7]
-		- (sec->ceilingheight - sec->floorheight);
-
-	raise->sourceline = sourceline;
+	if (lower)
+		raise->flags |= RF_REVERSE;
+	if (spindash)
+		raise->flags |= RF_SPINDASH;
 }
 
 static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean raise, boolean dynamic, boolean spindash)
@@ -6856,22 +6842,22 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 190: // Rising Platform FOF (solid, opaque, shadows)
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
+				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
 			case 191: // Rising Platform FOF (solid, opaque, no shadows)
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_CUTLEVEL, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
+				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
 			case 192: // Rising Platform TL block: FOF (solid, translucent)
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
+				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
 			case 193: // Rising Platform FOF (solid, invisible)
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_NOSHADE, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
+				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
 			case 194: // Rising Platform 'Platform' - You can jump up through it
@@ -6881,7 +6867,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					ffloorflags |= FF_NOSHADE;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
+				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
 			case 195: // Rising Platform Translucent "platform"
@@ -6891,7 +6877,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					ffloorflags |= FF_NOSHADE;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
+				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
 			case 200: // Light block
