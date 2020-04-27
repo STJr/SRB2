@@ -1164,11 +1164,25 @@ static void CV_LoadPlayerNames(UINT8 **p)
 #define SNAKE_BOTTOM_Y (BASEVIDHEIGHT - 48)
 #define SNAKE_TOP_Y (SNAKE_BOTTOM_Y - SNAKE_MAP_HEIGHT - SNAKE_BORDER_SIZE * 2 + 1)
 
+static const char *snake_backgrounds[] = {
+	"RVPUMICF",
+	"FRSTRCKF",
+	"TAR",
+	"MMFLRB4",
+	"RVDARKF1",
+	"RVZWALF1",
+	"RVZWALF4",
+	"RVZWALF5",
+	"RVZGRS02",
+	"RVZGRS04",
+};
+
 typedef struct snake_s
 {
 	tic_t time;
 	tic_t nextupdate;
 	boolean gameover;
+	UINT8 background;
 
 	UINT16 snakelength;
 	UINT8 snakex[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
@@ -1189,6 +1203,7 @@ static void CL_InitialiseSnake(void)
 	snake->time = 0;
 	snake->nextupdate = SNAKE_SPEED;
 	snake->gameover = false;
+	snake->background = M_RandomKey(sizeof(snake_backgrounds) / sizeof(*snake_backgrounds));
 
 	snake->snakelength = 1;
 	snake->snakex[0] = M_RandomKey(SNAKE_NUM_BLOCKS_X);
@@ -1338,7 +1353,13 @@ static void CL_DrawSnake(void)
 	INT16 i;
 
 	// Background
-	V_DrawFill(SNAKE_LEFT_X + SNAKE_BORDER_SIZE, SNAKE_TOP_Y + SNAKE_BORDER_SIZE, SNAKE_MAP_WIDTH, SNAKE_MAP_HEIGHT, 239);
+	V_DrawFlatFill(
+		SNAKE_LEFT_X + SNAKE_BORDER_SIZE,
+		SNAKE_TOP_Y  + SNAKE_BORDER_SIZE,
+		SNAKE_MAP_WIDTH,
+		SNAKE_MAP_HEIGHT,
+		W_GetNumForName(snake_backgrounds[snake->background])
+	);
 
 	// Borders
 	V_DrawFill(SNAKE_LEFT_X, SNAKE_TOP_Y, SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_BORDER_SIZE, 242); // Top
@@ -2386,9 +2407,12 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 #ifdef CLIENT_LOADINGSCREEN
 		if (client && cl_mode != CL_CONNECTED && cl_mode != CL_ABORTED)
 		{
-			F_MenuPresTicker(true); // title sky
-			F_TitleScreenTicker(true);
-			F_TitleScreenDrawer();
+			if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_DOWNLOADSAVEGAME)
+			{
+				F_MenuPresTicker(true); // title sky
+				F_TitleScreenTicker(true);
+				F_TitleScreenDrawer();
+			}
 			CL_DrawConnectionStatus();
 			I_UpdateNoVsync(); // page flip or blit buffer
 			if (moviemode)
