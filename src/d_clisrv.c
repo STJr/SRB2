@@ -1152,13 +1152,16 @@ static void CV_LoadPlayerNames(UINT8 **p)
 }
 
 #ifdef CLIENT_LOADINGSCREEN
-#define SNAKE_SPEED 4
+#define SNAKE_SPEED 5
+
 #define SNAKE_NUM_BLOCKS_X 20
 #define SNAKE_NUM_BLOCKS_Y 10
 #define SNAKE_BLOCK_SIZE 12
+#define SNAKE_BORDER_SIZE 12
+
 #define SNAKE_MAP_WIDTH  (SNAKE_NUM_BLOCKS_X * SNAKE_BLOCK_SIZE)
 #define SNAKE_MAP_HEIGHT (SNAKE_NUM_BLOCKS_Y * SNAKE_BLOCK_SIZE)
-#define SNAKE_BORDER_SIZE 12
+
 #define SNAKE_LEFT_X ((BASEVIDWIDTH - SNAKE_MAP_WIDTH) / 2 - SNAKE_BORDER_SIZE)
 #define SNAKE_RIGHT_X (SNAKE_LEFT_X + SNAKE_MAP_WIDTH + SNAKE_BORDER_SIZE * 2 - 1)
 #define SNAKE_BOTTOM_Y (BASEVIDHEIGHT - 48)
@@ -1226,7 +1229,7 @@ typedef struct snake_s
 
 static snake_t *snake = NULL;
 
-static void CL_InitialiseSnake(void)
+static void Snake_Initialise(void)
 {
 	if (!snake)
 		snake = malloc(sizeof(snake_t));
@@ -1276,7 +1279,7 @@ static void Snake_FindFreeSlot(UINT8 *x, UINT8 *y)
 	} while (i < snake->snakelength);
 }
 
-static void CL_HandleSnake(void)
+static void Snake_Handle(void)
 {
 	UINT8 x, y;
 	UINT8 oldx, oldy;
@@ -1285,7 +1288,7 @@ static void CL_HandleSnake(void)
 	// Handle retry
 	if (snake->gameover && (PLAYER1INPUTDOWN(gc_jump) || gamekeydown[KEY_ENTER]))
 	{
-		CL_InitialiseSnake();
+		Snake_Initialise();
 		snake->pausepressed = true; // Avoid accidental pause on respawn
 	}
 
@@ -1534,7 +1537,7 @@ static void CL_HandleSnake(void)
 	}
 }
 
-static void CL_DrawSnake(void)
+static void Snake_Draw(void)
 {
 	INT16 i;
 
@@ -1703,7 +1706,7 @@ static inline void CL_DrawConnectionStatus(void)
 			fileneeded_t *file = &fileneeded[lastfilenum];
 			char *filename = file->filename;
 
-			CL_DrawSnake();
+			Snake_Draw();
 
 			Net_GetNetStat();
 			dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
@@ -2467,7 +2470,7 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 				if (CL_SendRequestFile())
 				{
 					cl_mode = CL_DOWNLOADFILES;
-					CL_InitialiseSnake();
+					Snake_Initialise();
 				}
 			}
 		}
@@ -2606,7 +2609,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 			return false;
 		}
 		else if (cl_mode == CL_DOWNLOADFILES && snake)
-			CL_HandleSnake();
+			Snake_Handle();
 
 		// why are these here? this is for servers, we're a client
 		//if (key == 's' && server)
