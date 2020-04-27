@@ -1556,7 +1556,7 @@ void T_RaiseSector(raise_t *raise)
 	if (raise->sector->crumblestate >= CRUMBLE_FALL || raise->sector->ceilingdata)
 		return;
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(raise->tag, i)) >= 0 ;)
 	{
 		sector = &sectors[i];
 
@@ -1683,7 +1683,7 @@ void T_RaiseSector(raise_t *raise)
 	raise->sector->ceilspeed = 42;
 	raise->sector->floorspeed = speed*direction;
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(raise->tag, i)) >= 0 ;)
 		P_RecalcPrecipInSector(&sectors[i]);
 }
 

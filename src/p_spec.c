@@ -6008,12 +6008,10 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
   * there already.
   *
   * \param sec          Control sector.
-  * \param actionsector Target sector.
-  * \param sourceline   Control linedef.
   * \sa P_SpawnSpecials, T_RaiseSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, fixed_t speed, fixed_t ceilingtop, fixed_t ceilingbottom, boolean lower, boolean spindash)
+static void P_AddRaiseThinker(sector_t *sec, INT16 tag, fixed_t speed, fixed_t ceilingtop, fixed_t ceilingbottom, boolean lower, boolean spindash)
 {
 	raise_t *raise;
 
@@ -6022,7 +6020,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, fixed_t speed, 
 
 	raise->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
-	raise->sourceline = sourceline;
+	raise->tag = tag;
 	raise->sector = sec;
 
 	raise->ceilingtop = ceilingtop;
@@ -6036,7 +6034,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, fixed_t speed, 
 		raise->flags |= RF_SPINDASH;
 }
 
-static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean raise, boolean spindash, boolean dynamic)
+static void P_AddAirbob(sector_t *sec, INT16 tag, fixed_t dist, boolean raise, boolean spindash, boolean dynamic)
 {
 	raise_t *airbob;
 
@@ -6045,7 +6043,7 @@ static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean
 
 	airbob->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
-	airbob->sourceline = sourceline;
+	airbob->tag = tag;
 	airbob->sector = sec;
 
 	airbob->ceilingtop = sec->ceilingheight;
@@ -6854,16 +6852,16 @@ void P_SpawnSpecials(boolean fromnetsave)
 			{
 				fixed_t dist = (lines[i].special == 150) ? 16*FRACUNIT : P_AproxDistance(lines[i].dx, lines[i].dy);
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, dist, false, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, dist, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 			}
 			case 152: // Adjustable air bobbing platform in reverse
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), true, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, P_AproxDistance(lines[i].dx, lines[i].dy), true, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 			case 153: // Dynamic Sinking Platform
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), false, !!(lines[i].flags & ML_NOCLIMB), true);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, P_AproxDistance(lines[i].dx, lines[i].dy), false, !!(lines[i].flags & ML_NOCLIMB), true);
 				break;
 
 			case 160: // Float/bob platform
@@ -6913,13 +6911,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 176: // Air bobbing platform that will crumble and bob on the water when it falls and hits
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB|FF_CRUMBLE, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 
 			case 177: // Air bobbing platform that will crumble and bob on
 				// the water when it falls and hits, then never return
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB|FF_CRUMBLE|FF_NORETURN, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 
 			case 178: // Crumbling platform that will float when it hits water
@@ -6932,7 +6930,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 180: // Air bobbing platform that will crumble
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 
 			case 190: // Rising Platform FOF (solid, opaque, shadows)
@@ -6959,7 +6957,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					ffloorflags |= FF_NOSHADE;
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i], speed, ceilingtop, ceilingbottom, !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
+				P_AddRaiseThinker(lines[i].frontsector, lines[i].tag, speed, ceilingtop, ceilingbottom, !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
 				break;
 			}
 

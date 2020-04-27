@@ -400,7 +400,7 @@ typedef enum
 typedef struct
 {
 	thinker_t thinker;
-	line_t *sourceline;
+	INT16 tag;
 	sector_t *sector;
 	fixed_t ceilingbottom;
 	fixed_t ceilingtop;

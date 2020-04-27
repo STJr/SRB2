@@ -1784,7 +1784,7 @@ static void SaveRaiseThinker(const thinker_t *th, const UINT8 type)
 {
 	const raise_t *ht  = (const void *)th;
 	WRITEUINT8(save_p, type);
-	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEINT16(save_p, ht->tag);
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEFIXED(save_p, ht->ceilingbottom);
 	WRITEFIXED(save_p, ht->ceilingtop);
@@ -3004,7 +3004,7 @@ static thinker_t* LoadRaiseThinker(actionf_p1 thinker)
 {
 	raise_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
-	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->tag = READINT16(save_p);
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->ceilingbottom = READFIXED(save_p);
 	ht->ceilingtop = READFIXED(save_p);
