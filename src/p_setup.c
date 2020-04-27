@@ -3035,7 +3035,7 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[3] |= TMFA_NOSHADE;
 
 			//Speed
-			lines[i].args[4] = FixedDiv(P_AproxDistance(lines[i].dx, lines[i].dy), 4*FRACUNIT) >> FRACBITS;
+			lines[i].args[4] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 
 			//Flags
 			if (lines[i].flags & ML_BLOCKMONSTERS)

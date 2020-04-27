@@ -6038,7 +6038,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, fixed_t speed, 
 	raise->ceilingtop = ceilingtop;
 	raise->ceilingbottom = ceilingbottom;
 
-	raise->basespeed = speed;
+	raise->basespeed = speed >> 2;
 
 	if (lower)
 		raise->flags |= RF_REVERSE;
