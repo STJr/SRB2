@@ -2931,6 +2931,20 @@ static void P_ConvertBinaryMap(void)
 
 			lines[i].special = 100;
 			break;
+		case 150: //FOF: Air bobbing
+		case 151: //FOF: Air bobbing (adjustable)
+		case 152: //FOF: Reverse air bobbing (adjustable)
+		case 153: //FOF: Dynamically sinking platform
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = (lines[i].special == 150) ? 16*FRACUNIT : P_AproxDistance(lines[i].dx, lines[i].dy);
+			if (lines[i].special == 152)
+				lines[i].args[2] |= TMFB_REVERSE;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] |= TMFB_SPINDASH;
+			if (lines[i].special == 153)
+				lines[i].args[3] |= TMFB_DYNAMIC;
+			lines[i].special = 150;
+			break;
 		case 170: //FOF: Crumbling, respawn
 		case 171: //FOF: Crumbling, no respawn
 		case 172: //FOF: Crumbling, respawn, intangible from bottom

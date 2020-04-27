@@ -56,6 +56,13 @@ typedef enum
 
 typedef enum
 {
+	TMFB_REVERSE  = 1,
+	TMFB_SPINDASH = 1<<1,
+	TMFB_DYNAMIC  = 1<<2,
+} textmapfofbobbing_t;
+
+typedef enum
+{
 	TMFC_TRANSLUCENT = 1,
 	TMFC_NOSHADE     = 1<<1,
 	TMFC_NORETURN    = 1<<2,

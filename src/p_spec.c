@@ -6735,20 +6735,26 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 150: // Air bobbing platform
-			case 151: // Adjustable air bobbing platform
-			{
-				fixed_t dist = (lines[i].special == 150) ? 16*FRACUNIT : P_AproxDistance(lines[i].dx, lines[i].dy);
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, dist, false, !!(lines[i].flags & ML_NOCLIMB), false);
-				break;
-			}
-			case 152: // Adjustable air bobbing platform in reverse
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), true, !!(lines[i].flags & ML_NOCLIMB), false);
-				break;
-			case 153: // Dynamic Sinking Platform
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), false, !!(lines[i].flags & ML_NOCLIMB), true);
+				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
+
+				//Tangibility settings
+				if (lines[i].args[3] & TMFT_INTANGIBLETOP)
+					ffloorflags |= FF_REVERSEPLATFORM;
+				if (lines[i].args[3] & TMFT_INTANGIBLEBOTTOM)
+					ffloorflags |= FF_PLATFORM;
+				if (lines[i].args[3] & TMFT_DONTBLOCKPLAYER)
+					ffloorflags &= ~FF_BLOCKPLAYER;
+				if (lines[i].args[3] & TMFT_DONTBLOCKOTHERS)
+					ffloorflags &= ~FF_BLOCKOTHERS;
+
+				//If player can enter it, cut inner walls
+				if (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE)
+					ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
+				else
+					ffloorflags |= FF_CUTLEVEL;
+
+				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddAirbob(lines[i].frontsector, lines + i, lines[i].args[1], !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
 				break;
 
 			case 160: // Float/bob platform
