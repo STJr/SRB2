@@ -1306,7 +1306,8 @@ void D_SRB2Main(void)
 	G_LoadGameData();
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	I_PrepareVideoModeList(); // Regenerate Modelist according to cv_fullscreen
+	// Under SDL2, we just use the windowed modes list, and scale in windowed fullscreen.
+	allow_fullscreen = true;
 #endif
 
 	// set user default mode or mode set at cmdline

@@ -437,11 +437,7 @@ void SCR_ChangeFullscreen(void)
 		return;
 
 	if (graphics_started)
-	{
-		I_PrepareVideoModeList();
 		setmodeneeded = I_GetVideoModeForSize(vid.width, vid.height) + 1;
-	}
-	return;
 #endif
 }
 

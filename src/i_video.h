@@ -89,6 +89,14 @@ INT32 I_GetVideoModeForSize(INT32 w, INT32 h);
 */
 INT32 I_SetVideoMode(INT32 modenum);
 
+/**	\brief	The I_GetVideoModeName function
+
+	\param	modenum	video mode number
+
+	\return	name of video mode
+*/
+const char *I_GetVideoModeName(INT32 modenum);
+
 /**	\brief Checks the render state
 */
 void I_CheckRenderer(void);
@@ -100,16 +108,6 @@ void I_StartupOpenGL(void);
 /**	\brief Checks if OpenGL loaded
 */
 void I_CheckGLLoaded(rendermode_t oldrender);
-
-/**	\brief	The I_GetVideoModeName function
-
-	\param	modenum	video mode number
-
-	\return	name of video mode
-*/
-const char *I_GetVideoModeName(INT32 modenum);
-void I_PrepareVideoModeList(void); /// note hack for SDL
-
 
 /**	\brief can video system do fullscreen
 */

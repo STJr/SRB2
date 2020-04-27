@@ -32,8 +32,6 @@ INT32 I_GetVideoModeForSize(INT32 w, INT32 h)
 	return 0;
 }
 
-void I_PrepareVideoModeList(void){}
-
 INT32 I_SetVideoMode(INT32 modenum)
 {
 	(void)modenum;
