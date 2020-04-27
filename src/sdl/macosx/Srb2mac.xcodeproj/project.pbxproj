@@ -79,6 +79,7 @@
 		1E44AF930B67CEFF00BAD059 /* st_stuff.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AF910B67CEFF00BAD059 /* st_stuff.c */; };
 		1E44AF9B0B67CF2E00BAD059 /* tables.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AF990B67CF2E00BAD059 /* tables.c */; };
 		1E44AFA50B67CF5D00BAD059 /* v_video.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFA30B67CF5D00BAD059 /* v_video.c */; };
+		1E44AFA50B67CF5D00BAD059 /* v_draw.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFA30B67CF5D00BAD059 /* v_draw.c */; };
 		1E44AFA90B67CF6400BAD059 /* w_wad.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFA70B67CF6400BAD059 /* w_wad.c */; };
 		1E44AFAD0B67CF6F00BAD059 /* y_inter.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFAB0B67CF6F00BAD059 /* y_inter.c */; };
 		1E44AFB10B67CF7A00BAD059 /* z_zone.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AFAF0B67CF7A00BAD059 /* z_zone.c */; };
@@ -329,6 +330,8 @@
 		1E44AFA00B67CF4900BAD059 /* tmap_vc.nas */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = tmap_vc.nas; path = ../../tmap_vc.nas; sourceTree = SOURCE_ROOT; };
 		1E44AFA30B67CF5D00BAD059 /* v_video.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = v_video.c; path = ../../v_video.c; sourceTree = SOURCE_ROOT; };
 		1E44AFA40B67CF5D00BAD059 /* v_video.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = v_video.h; path = ../../v_video.h; sourceTree = SOURCE_ROOT; };
+		1E44AFA30B67CF5D00BAD059 /* v_draw.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = v_draw.c; path = ../../v_draw.c; sourceTree = SOURCE_ROOT; };
+		1E44AFA40B67CF5D00BAD059 /* v_draw.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = v_draw.h; path = ../../v_draw.h; sourceTree = SOURCE_ROOT; };
 		1E44AFA70B67CF6400BAD059 /* w_wad.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = w_wad.c; path = ../../w_wad.c; sourceTree = SOURCE_ROOT; };
 		1E44AFA80B67CF6400BAD059 /* w_wad.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = w_wad.h; path = ../../w_wad.h; sourceTree = SOURCE_ROOT; };
 		1E44AFAB0B67CF6F00BAD059 /* y_inter.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = y_inter.c; path = ../../y_inter.c; sourceTree = SOURCE_ROOT; };
@@ -774,6 +777,8 @@
 				1E44AF8A0B67CEE900BAD059 /* screen.h */,
 				1E44AFA30B67CF5D00BAD059 /* v_video.c */,
 				1E44AFA40B67CF5D00BAD059 /* v_video.h */,
+				1E44AFA30B67CF5D00BAD059 /* v_draw.c */,
+				1E44AFA40B67CF5D00BAD059 /* v_draw.h */,
 			);
 			name = R_Render;
 			sourceTree = "<group>";
@@ -1139,6 +1144,7 @@
 				1E44AF930B67CEFF00BAD059 /* st_stuff.c in Sources */,
 				1E44AF9B0B67CF2E00BAD059 /* tables.c in Sources */,
 				1E44AFA50B67CF5D00BAD059 /* v_video.c in Sources */,
+				1E44AFA50B67CF5D00BAD059 /* v_draw.c in Sources */,
 				1E44AFA90B67CF6400BAD059 /* w_wad.c in Sources */,
 				1E44AFAD0B67CF6F00BAD059 /* y_inter.c in Sources */,
 				1E44AFB10B67CF7A00BAD059 /* z_zone.c in Sources */,

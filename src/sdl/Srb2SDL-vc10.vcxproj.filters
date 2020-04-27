@@ -870,6 +870,9 @@
     <ClCompile Include="..\v_video.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
+    <ClCompile Include="..\v_draw.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
     <ClCompile Include="..\sounds.c">
       <Filter>S_Sounds</Filter>
     </ClCompile>

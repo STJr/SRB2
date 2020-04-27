@@ -42,6 +42,7 @@ set(SRB2_CORE_SOURCES
 	#string.c
 	tables.c
 	v_video.c
+	v_draw.c
 	w_wad.c
 	y_inter.c
 	z_zone.c

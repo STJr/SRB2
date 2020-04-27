@@ -66,6 +66,7 @@ LOCAL_SRC_FILES :=      am_map.c \
                         string.c \
                         tables.c \
                         v_video.c \
+                        v_draw.c \
                         w_wad.c \
                         y_inter.c \
                         z_zone.c \

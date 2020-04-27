@@ -3271,6 +3271,13 @@
 			path = ../../v_video.c;
 			refType = 2;
 		};
+		8490D436085DF57B000C01D8 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			name = v_draw.c;
+			path = ../../v_draw.c;
+			refType = 2;
+		};
 		8490D437085DF57B000C01D8 = {
 			fileRef = 8490D436085DF57B000C01D8;
 			isa = PBXBuildFile;

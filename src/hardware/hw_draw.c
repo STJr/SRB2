@@ -185,7 +185,7 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 	if (vscale != pscale)
 		fscaleh = FIXED_TO_FLOAT(vscale);
 
-	// See my comments in v_video.c's V_DrawFixedPatch
+	// See my comments in v_draw.c's V_DrawFixedPatch
 	// -- Monster Iestyn 29/10/18
 	{
 		float offsetx = 0.0f, offsety = 0.0f;
@@ -585,7 +585,7 @@ void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
 }
 
 // ==========================================================================
-//                                                            V_VIDEO.C STUFF
+//                                                             V_DRAW.C STUFF
 // ==========================================================================
 
 

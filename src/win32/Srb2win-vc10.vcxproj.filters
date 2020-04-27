@@ -444,6 +444,9 @@
     <ClCompile Include="..\v_video.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
+    <ClCompile Include="..\v_draw.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
     <ClCompile Include="..\screen.c">
       <Filter>R_Rend</Filter>
     </ClCompile>

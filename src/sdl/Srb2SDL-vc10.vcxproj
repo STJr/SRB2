@@ -470,6 +470,7 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\v_video.c" />
+    <ClCompile Include="..\v_draw.c" />
     <ClCompile Include="..\win32\win_dbg.c" />
     <ClCompile Include="..\w_wad.c" />
     <ClCompile Include="..\y_inter.c" />

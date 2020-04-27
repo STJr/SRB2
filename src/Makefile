@@ -476,6 +476,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_portal.o \
 		$(OBJDIR)/screen.o   \
 		$(OBJDIR)/v_video.o  \
+		$(OBJDIR)/v_draw.o  \
 		$(OBJDIR)/s_sound.o  \
 		$(OBJDIR)/sounds.o   \
 		$(OBJDIR)/w_wad.o    \
