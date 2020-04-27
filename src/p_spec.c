@@ -6754,7 +6754,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					ffloorflags |= FF_CUTLEVEL;
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, lines[i].args[1], !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
+				P_AddAirbob(lines[i].frontsector, lines + i, lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
 				break;
 
 			case 160: // FOF (Water bobbing)

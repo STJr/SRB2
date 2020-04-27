@@ -2936,7 +2936,7 @@ static void P_ConvertBinaryMap(void)
 		case 152: //FOF: Reverse air bobbing (adjustable)
 		case 153: //FOF: Dynamically sinking platform
 			lines[i].args[0] = lines[i].tag;
-			lines[i].args[1] = (lines[i].special == 150) ? 16*FRACUNIT : P_AproxDistance(lines[i].dx, lines[i].dy);
+			lines[i].args[1] = (lines[i].special == 150) ? 16 : (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS);
 
 			//Flags
 			if (lines[i].special == 152)
