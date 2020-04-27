@@ -72,6 +72,12 @@ typedef enum
 
 typedef enum
 {
+	TMFR_REVERSE  = 1,
+	TMFR_SPINDASH = 1<<1,
+} textmapfofrising_t;
+
+typedef enum
+{
 	TMFM_BRICK     = 1,
 	TMFM_INVISIBLE = 1<<1,
 } textmapfofmario_t;

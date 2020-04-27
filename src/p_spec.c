@@ -6825,34 +6825,56 @@ void P_SpawnSpecials(boolean fromnetsave)
 					P_AddAirbob(lines[i].frontsector, lines + i, 16*FRACUNIT, false, false, false);
 				break;
 
-			case 190: // Rising Platform FOF (solid, opaque, shadows)
-			case 191: // Rising Platform FOF (solid, opaque, no shadows)
-			case 192: // Rising Platform TL block: FOF (solid, translucent)
-			case 193: // Rising Platform FOF (solid, invisible)
-			case 194: // Rising Platform 'Platform' - You can jump up through it
-			case 195: // Rising Platform Translucent "platform"
+			case 190: // FOF (Rising)
 			{
-				fixed_t speed = FixedDiv(P_AproxDistance(lines[i].dx, lines[i].dy), 4*FRACUNIT);
 				fixed_t ceilingtop = P_FindHighestCeilingSurrounding(lines[i].frontsector);
 				fixed_t ceilingbottom = P_FindLowestCeilingSurrounding(lines[i].frontsector);
 
-				ffloorflags = FF_EXISTS|FF_SOLID;
-				if (lines[i].special != 193)
-					ffloorflags |= FF_RENDERALL;
-				if (lines[i].special <= 191)
-					ffloorflags |= FF_CUTLEVEL;
-				if (lines[i].special == 192 || lines[i].special == 195)
-					ffloorflags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].special >= 194)
-					ffloorflags |= FF_PLATFORM|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].special != 190 && (lines[i].special <= 193 || lines[i].flags & ML_NOCLIMB))
-					ffloorflags |= FF_NOSHADE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i], speed, ceilingtop, ceilingbottom, !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
+				//Visibility settings
+				if (lines[i].args[1] & TMFV_NOPLANES)
+					ffloorflags &= ~FF_RENDERPLANES;
+				if (lines[i].args[1] & TMFV_NOSIDES)
+					ffloorflags &= ~FF_RENDERSIDES;
+				if (lines[i].args[1] & TMFV_TOGGLEINSIDES)
+				{
+					if (ffloorflags & FF_RENDERPLANES)
+						ffloorflags |= FF_BOTHPLANES;
+					if (ffloorflags & FF_RENDERSIDES)
+						ffloorflags |= FF_ALLSIDES;
+				}
+
+				//Tangibility settings
+				if (lines[i].args[2] & TMFT_INTANGIBLETOP)
+					ffloorflags |= FF_REVERSEPLATFORM;
+				if (lines[i].args[2] & TMFT_INTANGIBLEBOTTOM)
+					ffloorflags |= FF_PLATFORM;
+				if (lines[i].args[2] & TMFT_DONTBLOCKPLAYER)
+					ffloorflags &= ~FF_BLOCKPLAYER;
+				if (lines[i].args[2] & TMFT_DONTBLOCKOTHERS)
+					ffloorflags &= ~FF_BLOCKOTHERS;
+
+				//Appearance settings
+				if ((lines[i].args[3] & TMFA_TRANSLUCENT) && (ffloorflags & FF_RENDERALL)) //Translucent
+					ffloorflags |= FF_TRANSLUCENT;
+				if (lines[i].args[3] & TMFA_NOSHADE)
+					ffloorflags |= FF_NOSHADE;
+
+				//Cutting options
+				if (ffloorflags & FF_RENDERALL)
+				{
+					//If translucent or player can enter it, cut inner walls
+					if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[2] & TMFT_VISIBLEFROMINSIDE))
+						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
+					else
+						ffloorflags |= FF_CUTLEVEL;
+				}
+
+				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddRaiseThinker(lines[i].frontsector, &lines[i], lines[i].args[4] << FRACBITS, ceilingtop, ceilingbottom, !!(lines[i].args[5] & TMFR_REVERSE), !!(lines[i].args[5] & TMFR_SPINDASH));
 				break;
 			}
-
 			case 200: // Light block
 				ffloorflags = FF_EXISTS|FF_CUTSPRITES;
 				if (!lines[i].args[1])

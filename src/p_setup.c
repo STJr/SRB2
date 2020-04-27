@@ -2998,6 +2998,53 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[2] |= TMFC_FLOATBOB;
 			lines[i].special = 170;
 			break;
+		case 190: // FOF: Rising, solid, opaque, shadowcasting
+		case 191: // FOF: Rising, solid, opaque, non-shadowcasting
+		case 192: // FOF: Rising, solid, translucent
+		case 193: // FOF: Rising, solid, invisible
+		case 194: // FOF: Rising, intangible from bottom, opaque
+		case 195: // FOF: Rising, intangible from bottom, translucent
+			lines[i].args[0] = lines[i].tag;
+
+			//Visibility
+			if (lines[i].special == 193)
+				lines[i].args[1] = TMFV_NOPLANES|TMFV_NOSIDES;
+			if (lines[i].special >= 194)
+				lines[i].args[1] = TMFV_TOGGLEINSIDES;
+
+			//Tangibility
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[2] |= TMFT_DONTBLOCKOTHERS;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[2] |= TMFT_DONTBLOCKPLAYER;
+			if (lines[i].special >= 194)
+				lines[i].args[2] |= TMFT_INTANGIBLEBOTTOM;
+
+			//Translucency
+			if (lines[i].special == 192 || lines[i].special == 195)
+			{
+				lines[i].args[3] |= TMFA_TRANSLUCENT;
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+				else
+					lines[i].alpha = FRACUNIT/2;
+			}
+
+			//Shadow?
+			if (lines[i].special != 190 && (lines[i].special <= 193 || lines[i].flags & ML_NOCLIMB))
+				lines[i].args[3] |= TMFA_NOSHADE;
+
+			//Speed
+			lines[i].args[4] = FixedDiv(P_AproxDistance(lines[i].dx, lines[i].dy), 4*FRACUNIT) >> FRACBITS;
+
+			//Flags
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[5] |= TMFR_REVERSE;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[5] |= TMFR_SPINDASH;
+
+			lines[i].special = 190;
+			break;
 		case 200: //FOF: Light block
 		case 201: //FOF: Half light block
 			lines[i].args[0] = lines[i].tag;
