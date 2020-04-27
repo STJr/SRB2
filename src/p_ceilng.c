@@ -395,7 +395,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 	sector_t *sec;
 	ceiling_t *ceiling;
 
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag,secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -615,7 +615,7 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 	sector_t *sec;
 	ceiling_t *ceiling;
 
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag,secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
