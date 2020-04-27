@@ -54,9 +54,6 @@ INT32 globallevelskynum;
 
 	Called at loadlevel after skytexture is set, or when sky texture changes.
 
-	\warning wallcolfunc should be set at R_ExecuteSetViewSize()
-	I don't bother because we don't use low detail anymore
-
 	\return	void
 */
 void R_SetupSkyDraw(void)

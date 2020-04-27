@@ -37,6 +37,12 @@ cv_allcaps;
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
 
+// Recalculate the viddef (dupx, dupy, etc.) according to the current screen resolution.
+void V_Recalc(void);
+
+// After a renderer switch, flush and reload patches.
+void V_FlushPatches(void);
+
 // Color look-up table
 #define COLORBITS 6
 #define SHIFTCOLORBITS (8-COLORBITS)
@@ -265,6 +271,8 @@ INT32 V_SmallThinStringWidth(const char *string, INT32 option);
 void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param);
 
 void V_DrawPatchFill(patch_t *pat);
+
+void V_ReloadHUDGraphics(void);
 
 void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT32 height, size_t srcrowbytes,
 	size_t destrowbytes);

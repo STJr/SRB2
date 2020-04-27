@@ -3,6 +3,7 @@
 #include "../i_video.h"
 
 rendermode_t rendermode = render_none;
+rendermode_t chosenrendermode = render_none;
 
 boolean highcolor = false;
 
@@ -38,7 +39,11 @@ INT32 I_SetVideoMode(INT32 modenum)
 	return 0;
 }
 
-void I_CheckRenderer(void) {}
+boolean I_CheckRenderer(void)
+{
+	return false;
+}
+
 void I_CheckGLLoaded(rendermode_t oldrender) {}
 
 const char *I_GetVideoModeName(INT32 modenum)

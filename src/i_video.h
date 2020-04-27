@@ -22,24 +22,18 @@
 
 typedef enum
 {
-	/// Software
-	render_soft = 1,
-
-	/// OpenGL
-	render_opengl = 2,
-
-	/// Dedicated
-	render_none = 3  // for dedicated server
+	render_none = 0,     // Dedicated mode
+	render_soft = 1,     // Software
+	render_opengl = 2,   // OpenGL
 } rendermode_t;
 
 /**	\brief current render mode
 */
 extern rendermode_t rendermode;
 
-/**	\brief OpenGL state
-	0 = never loaded, 1 = loaded successfully, -1 = failed loading
+/**	\brief render mode set by command line arguments
 */
-extern INT32 vid_opengl_state;
+extern rendermode_t chosenrendermode;
 
 /**	\brief use highcolor modes if true
 */
@@ -98,8 +92,10 @@ INT32 I_SetVideoMode(INT32 modenum);
 const char *I_GetVideoModeName(INT32 modenum);
 
 /**	\brief Checks the render state
+
+	\return	true if the renderer changed
 */
-void I_CheckRenderer(void);
+boolean I_CheckRenderer(void);
 
 /**	\brief Load OpenGL mode
 */

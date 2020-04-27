@@ -6641,11 +6641,21 @@ void HWR_Startup(void)
 // --------------------------------------------------------------------------
 void HWR_Switch(void)
 {
+	// Add session commands
+	HWR_AddSessionCommands();
+
 	// Set special states from CVARs
 	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_grmodellighting.value);
 	HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, cv_grfogdensity.value);
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_grfiltermode.value);
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_granisotropicmode.value);
+
+	// Load textures
+	HWR_LoadTextures(numtextures);
+
+	// Create plane polygons
+	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
+		HWR_LoadLevel();
 }
 
 // --------------------------------------------------------------------------

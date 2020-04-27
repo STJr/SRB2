@@ -27,7 +27,7 @@
 #include "i_video.h"
 #include "i_system.h"
 
-#include "st_stuff.h" // ST_HEIGHT
+#include "st_stuff.h"
 #include "r_local.h"
 
 #include "keys.h"
@@ -2116,7 +2116,7 @@ static void HU_DrawDemoInfo(void)
 void HU_Drawer(void)
 {
 	if (needpatchrecache)
-		R_ReloadHUDGraphics();
+		V_ReloadHUDGraphics();
 
 #ifndef NONET
 	// draw chat string plus cursor

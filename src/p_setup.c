@@ -3603,14 +3603,12 @@ boolean P_LoadLevel(boolean fromnetsave)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	// Lactozilla: Free extrasubsectors regardless of renderer.
-	// Maybe we're not in OpenGL anymore.
-	if (extrasubsectors)
-		free(extrasubsectors);
-	extrasubsectors = NULL;
-	// stuff like HWR_CreatePlanePolygons is called there
+	// Free extrasubsectors regardless of the renderer.
+	HWR_FreeExtraSubsectors();
+
+	// Create plane polygons.
 	if (rendermode == render_opengl)
-		HWR_SetupLevel();
+		HWR_LoadLevel();
 #endif
 
 	// oh god I hope this helps
@@ -3690,7 +3688,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 }
 
 #ifdef HWRENDER
-void HWR_SetupLevel(void)
+void HWR_LoadLevel(void)
 {
 	// Lactozilla (December 8, 2019)
 	// Level setup used to free EVERY mipmap from memory.

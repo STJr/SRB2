@@ -94,7 +94,7 @@ static INT32 numVidModes = -1;
 static char vidModeName[33][32]; // allow 33 different modes
 
 rendermode_t rendermode = render_soft;
-static rendermode_t chosenrendermode = render_soft; // set by command line arguments
+rendermode_t chosenrendermode = render_none; // set by command line arguments
 
 boolean highcolor = false;
 
@@ -104,7 +104,6 @@ static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff
 static consvar_t cv_alwaysgrabmouse = {"alwaysgrabmouse", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
-INT32 vid_opengl_state = 0;
 
 // To disable fullscreen at startup; is set in I_PrepareVideoModeList
 boolean allow_fullscreen = false;
@@ -1343,7 +1342,8 @@ static SDL_bool Impl_CreateContext(void)
 {
 	// Renderer-specific stuff
 #ifdef HWRENDER
-	if ((rendermode == render_opengl) && (vid_opengl_state != -1))
+	if ((rendermode == render_opengl)
+	&& (vid.glstate != VID_GL_LIBRARY_ERROR))
 	{
 		if (!sdlglcontext)
 			sdlglcontext = SDL_GL_CreateContext(window);
@@ -1379,29 +1379,28 @@ static SDL_bool Impl_CreateContext(void)
 void I_CheckGLLoaded(rendermode_t oldrender)
 {
 #ifdef HWRENDER
-	if (vid_opengl_state == -1) // Well, it didn't work the first time anyway.
+	if (vid.glstate == VID_GL_LIBRARY_ERROR) // Well, it didn't work the first time anyway.
 	{
 		rendermode = oldrender;
 		if (chosenrendermode == render_opengl) // fallback to software
 			rendermode = render_soft;
-		if (setrenderneeded)
-		{
-			CV_StealthSetValue(&cv_renderer, oldrender);
-			CV_StealthSetValue(&cv_newrenderer, oldrender);
-			setrenderneeded = 0;
-		}
+
+		CV_StealthSetValue(&cv_renderer, oldrender);
+		CV_StealthSetValue(&cv_newrenderer, oldrender);
 	}
 #endif
 }
 
-void I_CheckRenderer(void)
+boolean I_CheckRenderer(void)
 {
 	boolean rendererchanged = false;
 	boolean contextcreated = false;
+#ifdef HWRENDER
 	rendermode_t oldrenderer = rendermode;
+#endif
 
 	if (dedicated)
-		return;
+		return false;
 
 	if (setrenderneeded)
 	{
@@ -1415,11 +1414,12 @@ void I_CheckRenderer(void)
 
 			// Initialise OpenGL before calling SDLSetMode!!!
 			// This is because SDLSetMode calls OglSdlSurface.
-			if (vid_opengl_state == 0)
+			if (vid.glstate == VID_GL_LIBRARY_NOTLOADED)
 			{
 				I_StartupOpenGL();
+
 				// Loaded successfully!
-				if (vid_opengl_state == 1)
+				if (vid.glstate == VID_GL_LIBRARY_LOADED)
 				{
 					// Destroy the current window, if it exists.
 					if (window)
@@ -1442,7 +1442,7 @@ void I_CheckRenderer(void)
 					contextcreated = true;
 				}
 			}
-			else if (vid_opengl_state == -1)
+			else if (vid.glstate == VID_GL_LIBRARY_ERROR)
 				rendererchanged = false;
 		}
 #endif
@@ -1464,27 +1464,22 @@ void I_CheckRenderer(void)
 			bufSurface = NULL;
 		}
 
-		if (rendererchanged)
-		{
 #ifdef HWRENDER
-			if (vid_opengl_state == 1) // Only if OpenGL ever loaded!
-				HWR_FreeTextureCache();
+		if (rendererchanged && vid.glstate == VID_GL_LIBRARY_LOADED) // Only if OpenGL ever loaded!
+			HWR_FreeTextureCache();
 #endif
-			SCR_SetDrawFuncs();
-		}
+
+		SCR_SetDrawFuncs();
 	}
 #ifdef HWRENDER
-	else if (rendermode == render_opengl)
+	else if (rendermode == render_opengl && rendererchanged)
 	{
-		if (rendererchanged)
-		{
-			R_InitHardwareMode();
-			V_SetPalette(0);
-		}
+		HWR_Switch();
+		V_SetPalette(0);
 	}
-#else
-	(void)oldrenderer;
 #endif
+
+	return rendererchanged;
 }
 
 INT32 I_SetVideoMode(INT32 modeNum)
@@ -1525,7 +1520,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		flags |= SDL_WINDOW_BORDERLESS;
 
 #ifdef HWRENDER
-	if (vid_opengl_state == 1)
+	if (vid.glstate == VID_GL_LIBRARY_LOADED)
 		flags |= SDL_WINDOW_OPENGL;
 #endif
 
@@ -1647,12 +1642,44 @@ void I_StartupGraphics(void)
 			framebuffer = SDL_TRUE;
 	}
 
-#ifdef HWRENDER
-	if (M_CheckParm("-opengl"))
-		chosenrendermode = rendermode = render_opengl;
+	// Renderer choices
+	// Takes priority over the config.
+	if (M_CheckParm("-renderer"))
+	{
+		INT32 i = 0;
+		CV_PossibleValue_t *renderer_list = &cv_renderer_t;
+		const char *modeparm = M_GetNextParm();
+		while (renderer_list[i].strvalue)
+		{
+			if (!stricmp(modeparm, renderer_list[i].strvalue))
+			{
+				chosenrendermode = renderer_list[i].value;
+				break;
+			}
+			i++;
+		}
+	}
+
+	// Choose Software renderer
 	else if (M_CheckParm("-software"))
+		chosenrendermode = render_soft;
+
+#ifdef HWRENDER
+	// Choose OpenGL renderer
+	else if (M_CheckParm("-opengl"))
+		chosenrendermode = render_opengl;
+
+	// Don't startup OpenGL
+	if (M_CheckParm("-nogl"))
+	{
+		vid.glstate = VID_GL_LIBRARY_ERROR;
+		if (chosenrendermode == render_opengl)
+			chosenrendermode = render_none;
+	}
 #endif
-		chosenrendermode = rendermode = render_soft;
+
+	if (chosenrendermode != render_none)
+		rendermode = chosenrendermode;
 
 	usesdl2soft = M_CheckParm("-softblit");
 	borderlesswindow = M_CheckParm("-borderless");
@@ -1661,9 +1688,7 @@ void I_StartupGraphics(void)
 	VID_Command_ModeList_f();
 
 #ifdef HWRENDER
-	if (M_CheckParm("-nogl"))
-		vid_opengl_state = -1; // Don't startup OpenGL
-	else if (chosenrendermode == render_opengl)
+	 if (rendermode == render_opengl)
 		I_StartupOpenGL();
 #endif
 
@@ -1677,10 +1702,9 @@ void I_StartupGraphics(void)
 
 	vid.width = BASEVIDWIDTH; // Default size for startup
 	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's
-	vid.recalc = true; // Set up the console stufff
+	vid.recalc = true; // Set up the console stuff
 	vid.direct = NULL; // Maybe direct access?
 	vid.bpp = 1; // This is the game engine's Bpp
-	vid.WndParent = NULL; //For the window?
 
 #ifdef HAVE_TTF
 	I_ShutdownTTF();
@@ -1758,12 +1782,12 @@ void I_StartupOpenGL(void)
 		if (HWD.pfnGetRenderVersion() != VERSION)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("The version of the renderer doesn't match the version of the executable!\nBe sure you have installed SRB2 properly.\n"));
-			vid_opengl_state = -1;
+			vid.glstate = VID_GL_LIBRARY_ERROR;
 		}
 		else
-			vid_opengl_state = HWD.pfnInit(I_Error) ? 1 : -1; // let load the OpenGL library
+			vid.glstate = HWD.pfnInit(I_Error) ? 1 : VID_GL_LIBRARY_ERROR; // let load the OpenGL library
 
-		if (vid_opengl_state == -1)
+		if (vid.glstate == VID_GL_LIBRARY_ERROR)
 		{
 			rendermode = render_soft;
 			setrenderneeded = 0;

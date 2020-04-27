@@ -4353,7 +4353,7 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 
 //	G_DeferedInitNew(sk_medium, G_BuildMapName(1), 0, 0, 1);
 	if (setsizeneeded)
-		R_ExecuteSetViewSize();
+		R_SetViewSize();
 
 	M_ClearMenus(true);
 	CON_ToggleOff();

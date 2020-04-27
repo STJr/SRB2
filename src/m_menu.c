@@ -1308,11 +1308,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",             &cv_fullscreen,         11},
 #endif
 	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
-#ifdef HWRENDER
-	{IT_STRING | IT_CVAR, NULL, "Renderer",                     &cv_newrenderer,        21},
-#else
-	{IT_TRANSTEXT | IT_PAIR, "Renderer", "Software",            &cv_renderer,           21},
-#endif
+	{IT_STRING | IT_CVAR, NULL, "Renderer",                     &cv_newrenderer,     21},
 
 	{IT_HEADER, NULL, "Color Profile", NULL, 30},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness (F11)", &cv_globalgamma,36},
@@ -2100,15 +2096,21 @@ menu_t OP_PlaystyleDef = {
 static void M_VideoOptions(INT32 choice)
 {
 	(void)choice;
-#ifdef HWRENDER
-	if (vid_opengl_state == -1)
-	{
-		OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
-		OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
-		OP_VideoOptionsMenu[op_video_renderer].text = "Software";
-	}
 
+	OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
+	OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
+	OP_VideoOptionsMenu[op_video_renderer].text = "Software";
+
+#ifdef HWRENDER
+	if (vid.glstate != VID_GL_LIBRARY_ERROR)
+	{
+		OP_VideoOptionsMenu[op_video_renderer].status = (IT_STRING | IT_CVAR);
+		OP_VideoOptionsMenu[op_video_renderer].patch = NULL;
+		OP_VideoOptionsMenu[op_video_renderer].text = "Renderer";
+	}
+	CV_StealthSetValue(&cv_newrenderer, cv_renderer.value);
 #endif
+
 	M_SetupNextMenu(&OP_VideoOptionsDef);
 }
 

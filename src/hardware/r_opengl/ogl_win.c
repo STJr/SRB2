@@ -240,7 +240,7 @@ int SetupPixelFormat(INT32 WantColorBits, INT32 WantStencilBits, INT32 WantDepth
 static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 {
 	LPCSTR renderer;
-	BOOL WantFullScreen = !(lvid->u.windowed);  //(lvid->u.windowed ? 0 : CDS_FULLSCREEN);
+	BOOL WantFullScreen = !(lvid->windowed);  //(lvid->windowed ? 0 : CDS_FULLSCREEN);
 
 	UNREFERENCED_PARAMETER(pcurrentmode);
 	DBG_Printf ("SetMode(): %dx%d %d bits (%s)\n",

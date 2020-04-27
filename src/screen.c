@@ -28,6 +28,7 @@
 #include "d_main.h"
 #include "d_clisrv.h"
 #include "f_finale.h"
+#include "y_inter.h" // usebuffer
 #include "i_sound.h" // closed captions
 #include "s_sound.h" // ditto
 #include "g_game.h" // ditto
@@ -63,7 +64,6 @@ consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE, CV_Unsigned, NULL, 0, N
 consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static void SCR_ActuallyChangeRenderer(void);
 CV_PossibleValue_t cv_renderer_t[] = {
 	{1, "Software"},
 #ifdef HWRENDER
@@ -71,7 +71,7 @@ CV_PossibleValue_t cv_renderer_t[] = {
 #endif
 	{0, NULL}
 };
-consvar_t cv_renderer = {"renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_renderer = {"renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_SetTargetRenderer, 0, NULL, NULL, 0, 0, NULL};
 
 static void SCR_ChangeFullscreen(void);
 
@@ -81,7 +81,6 @@ consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_C
 //                           SCREEN VARIABLES
 // =========================================================================
 
-INT32 scr_bpp; // current video mode bytes per pixel
 UINT8 *scr_borderpatch; // flat used to fill the reduced view borders set at ST_Init()
 
 // =========================================================================
@@ -206,14 +205,19 @@ void SCR_SetMode(void)
 	// Lactozilla: Renderer switching
 	if (setrenderneeded)
 	{
+		// stop recording movies (APNG only)
+		if (setrenderneeded && (moviemode == MM_APNG))
+			M_StopMovie();
+
 		Z_PreparePatchFlush();
 		needpatchflush = true;
 		needpatchrecache = true;
+
 		I_CheckRenderer();
-		if (!setmodeneeded)
-			I_SetVideoMode(vid.modenum);
+		vid.recalc = 1;
 	}
 
+	// Set the video mode in the video interface.
 	if (setmodeneeded)
 		I_SetVideoMode(--setmodeneeded);
 
@@ -283,34 +287,9 @@ void SCR_Startup(void)
 
 	vid.modenum = 0;
 
-	vid.dupx = vid.width / BASEVIDWIDTH;
-	vid.dupy = vid.height / BASEVIDHEIGHT;
-	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
-	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
-
-#ifdef HWRENDER
-	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
-#endif
-		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
-
-	vid.meddupx = (UINT8)(vid.dupx >> 1) + 1;
-	vid.meddupy = (UINT8)(vid.dupy >> 1) + 1;
-#ifdef HWRENDER
-	vid.fmeddupx = vid.meddupx*FRACUNIT;
-	vid.fmeddupy = vid.meddupy*FRACUNIT;
-#endif
-
-	vid.smalldupx = (UINT8)(vid.dupx / 3) + 1;
-	vid.smalldupy = (UINT8)(vid.dupy / 3) + 1;
-#ifdef HWRENDER
-	vid.fsmalldupx = vid.smalldupx*FRACUNIT;
-	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
-#endif
-
-	vid.baseratio = FRACUNIT;
-
 	V_Init();
+	V_Recalc();
+
 	CV_RegisterVar(&cv_ticrate);
 	CV_RegisterVar(&cv_constextsize);
 
@@ -324,41 +303,7 @@ void SCR_Recalc(void)
 	if (dedicated)
 		return;
 
-	// bytes per pixel quick access
-	scr_bpp = vid.bpp;
-
-	// scale 1,2,3 times in x and y the patches for the menus and overlays...
-	// calculated once and for all, used by routines in v_video.c
-	vid.dupx = vid.width / BASEVIDWIDTH;
-	vid.dupy = vid.height / BASEVIDHEIGHT;
-	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
-	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
-
-#ifdef HWRENDER
-	//if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
-	// 13/11/18:
-	// The above is no longer necessary, since we want OpenGL to be just like software now
-	// -- Monster Iestyn
-#endif
-		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
-
-	//vid.baseratio = FixedDiv(vid.height << FRACBITS, BASEVIDHEIGHT << FRACBITS);
-	vid.baseratio = FRACUNIT;
-
-	vid.meddupx = (UINT8)(vid.dupx >> 1) + 1;
-	vid.meddupy = (UINT8)(vid.dupy >> 1) + 1;
-#ifdef HWRENDER
-	vid.fmeddupx = vid.meddupx*FRACUNIT;
-	vid.fmeddupy = vid.meddupy*FRACUNIT;
-#endif
-
-	vid.smalldupx = (UINT8)(vid.dupx / 3) + 1;
-	vid.smalldupy = (UINT8)(vid.dupy / 3) + 1;
-#ifdef HWRENDER
-	vid.fsmalldupx = vid.smalldupx*FRACUNIT;
-	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
-#endif
+	V_Recalc();
 
 	// toggle off (then back on) the automap because some screensize-dependent values will
 	// be calculated next time the automap is activated.
@@ -373,11 +318,17 @@ void SCR_Recalc(void)
 
 	// scr_viewsize doesn't change, neither detailLevel, but the pixels
 	// per screenblock is different now, since we've changed resolution.
-	R_SetViewSize(); //just set setsizeneeded true now ..
+	R_ViewSizeChanged(); //just set setsizeneeded true now ..
 
 	// vid.recalc lasts only for the next refresh...
 	con_recalc = true;
 	am_recalc = true;
+
+#ifdef HWRENDER
+	// Shoot! The screen texture was flushed!
+	if ((rendermode == render_opengl) && (gamestate == GS_INTERMISSION))
+		usebuffer = false;
+#endif
 }
 
 // Check for screen cmd-line parms: to force a resolution.
@@ -415,7 +366,19 @@ void SCR_CheckDefaultMode(void)
 		setmodeneeded = I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 	}
 
-	SCR_ActuallyChangeRenderer();
+	if (cv_renderer.value != rendermode)
+	{
+		if (chosenrendermode == render_none) // nothing set at command line
+			SCR_ChangeRenderer();
+		else
+		{
+			// Set cv_renderer to the current render mode
+			CV_StealthSetValue(&cv_renderer, rendermode);
+#ifdef HWRENDER
+			CV_StealthSetValue(&cv_newrenderer, rendermode);
+#endif
+		}
+	}
 }
 
 // sets the modenum as the new default video mode to be saved in the config file
@@ -441,67 +404,33 @@ void SCR_ChangeFullscreen(void)
 #endif
 }
 
-static int target_renderer = 0;
-
-void SCR_ActuallyChangeRenderer(void)
+void SCR_SetTargetRenderer(void)
 {
-	setrenderneeded = target_renderer;
+	if (!con_refresh)
+		SCR_ChangeRenderer();
+}
+
+void SCR_ChangeRenderer(void)
+{
+	if (rendermode == cv_renderer.value)
+		return;
 
 #ifdef HWRENDER
-	// Well, it didn't even load anyway.
-	if ((vid_opengl_state == -1) && (setrenderneeded == render_opengl))
+	// Check if OpenGL loaded successfully (or wasn't disabled) before switching to it.
+	if ((vid.glstate == VID_GL_LIBRARY_ERROR)
+	&& (cv_renderer.value == render_opengl))
 	{
 		if (M_CheckParm("-nogl"))
 			CONS_Alert(CONS_ERROR, "OpenGL rendering was disabled!\n");
 		else
 			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
-		setrenderneeded = 0;
 		return;
 	}
 #endif
 
-	// setting the same renderer twice WILL crash your game, so let's not, please
-	if (rendermode == setrenderneeded)
-		setrenderneeded = 0;
-}
-
-// Lactozilla: Renderer switching
-void SCR_ChangeRenderer(void)
-{
-	setrenderneeded = 0;
-
-	if (con_startup)
-	{
-		target_renderer = cv_renderer.value;
-#ifdef HWRENDER
-		if (M_CheckParm("-opengl") && (vid_opengl_state == 1))
-			target_renderer = rendermode = render_opengl;
-		else
-#endif
-		if (M_CheckParm("-software"))
-			target_renderer = rendermode = render_soft;
-		// set cv_renderer back
-		SCR_ChangeRendererCVars(rendermode);
-		return;
-	}
-
-	if (cv_renderer.value == 1)
-		target_renderer = render_soft;
-	else if (cv_renderer.value == 2)
-		target_renderer = render_opengl;
-	SCR_ActuallyChangeRenderer();
-}
-
-void SCR_ChangeRendererCVars(INT32 mode)
-{
-	// set cv_renderer back
-	if (mode == render_soft)
-		CV_StealthSetValue(&cv_renderer, 1);
-	else if (mode == render_opengl)
-		CV_StealthSetValue(&cv_renderer, 2);
-#ifdef HWRENDER
-	CV_StealthSetValue(&cv_newrenderer, cv_renderer.value);
-#endif
+	// Set the new render mode
+	setrenderneeded = cv_renderer.value;
+	con_refresh = false;
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)

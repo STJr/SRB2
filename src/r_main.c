@@ -132,7 +132,7 @@ consvar_t cv_flipcam2 = {"flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, 
 consvar_t cv_shadow = {"shadow", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_skybox = {"skybox", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_allowmlook = {"allowmlook", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_showhud = {"showhud", "Yes", CV_CALL,  CV_YesNo, R_SetViewSize, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_showhud = {"showhud", "Yes", CV_CALL,  CV_YesNo, R_ViewSizeChanged, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_translucenthud = {"translucenthud", "10", CV_SAVE, translucenthud_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_translucency = {"translucency", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -160,7 +160,7 @@ void SplitScreen_OnChange(void)
 	}
 
 	// recompute screen size
-	R_ExecuteSetViewSize();
+	R_SetViewSize();
 
 	if (!demoplayback && !botingame)
 	{
@@ -190,7 +190,7 @@ static void Fov_OnChange(void)
 	//if ((netgame || multiplayer) && !cv_debug && cv_fov.value != 90*FRACUNIT)
 	//	CV_Set(&cv_fov, cv_fov.defaultvalue);
 
-	R_SetViewSize();
+	R_ViewSizeChanged();
 }
 
 static void ChaseCam_OnChange(void)
@@ -624,7 +624,7 @@ void R_CheckViewMorph(void)
 		viewmorph.use = false;
 		viewmorph.x1 = 0;
 		if (viewmorph.zoomneeded != FRACUNIT)
-			R_SetViewSize();
+			R_ViewSizeChanged();
 		viewmorph.zoomneeded = FRACUNIT;
 
 		return;
@@ -674,7 +674,7 @@ void R_CheckViewMorph(void)
 	if (temp != viewmorph.zoomneeded)
 	{
 		viewmorph.zoomneeded = temp;
-		R_SetViewSize();
+		R_ViewSizeChanged();
 	}
 
 	zoomfactor = FIXED_TO_FLOAT(viewmorph.zoomneeded);
@@ -846,22 +846,22 @@ void R_ApplyViewMorph(void)
 
 
 //
-// R_SetViewSize
+// R_ViewSizeChanged
 // Do not really change anything here,
 // because it might be in the middle of a refresh.
 // The change will take effect next refresh.
 //
 boolean setsizeneeded;
 
-void R_SetViewSize(void)
+void R_ViewSizeChanged(void)
 {
 	setsizeneeded = true;
 }
 
 //
-// R_ExecuteSetViewSize
+// R_SetViewSize
 //
-void R_ExecuteSetViewSize(void)
+void R_SetViewSize(void)
 {
 	fixed_t dy;
 	INT32 i;
@@ -968,7 +968,7 @@ void R_Init(void)
 
 	//I_OutputMsg("\nR_InitViewBorder");
 	R_InitViewBorder();
-	R_SetViewSize(); // setsizeneeded is set true
+	R_ViewSizeChanged(); // setsizeneeded is set true
 
 	//I_OutputMsg("\nR_InitPlanes");
 	R_InitPlanes();
@@ -1480,26 +1480,6 @@ void R_RenderPlayerView(player_t *player)
 	R_DrawMasked(masks, nummasks);
 
 	free(masks);
-}
-
-// Lactozilla: Renderer switching
-#ifdef HWRENDER
-void R_InitHardwareMode(void)
-{
-	HWR_AddSessionCommands();
-	HWR_Switch();
-	HWR_LoadTextures(numtextures);
-	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
-		HWR_SetupLevel();
-}
-#endif
-
-void R_ReloadHUDGraphics(void)
-{
-	CONS_Debug(DBG_RENDER, "R_ReloadHUDGraphics()...\n");
-	ST_LoadGraphics();
-	HU_LoadGraphics();
-	ST_ReloadSkinFaceGraphics();
 }
 
 // =========================================================================

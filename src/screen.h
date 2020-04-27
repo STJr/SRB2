@@ -30,10 +30,6 @@
 #define NUMSCREENS 5
 #endif
 
-// Size of statusbar.
-#define ST_HEIGHT 32
-#define ST_WIDTH 320
-
 // used now as a maximum video mode size for extra vesa modes.
 
 // we try to re-allocate a minimum of buffers for stability of the memory,
@@ -48,34 +44,40 @@
 typedef struct viddef_s
 {
 	INT32 modenum; // vidmode num indexes videomodes list
+	UINT8 *buffer; // screen buffers
+	UINT8 *direct; // direct screen buffer (DOS VGA)
 
-	UINT8 *buffer; // invisible screens buffer
+	INT32 width, height; // screen dimensions
 	size_t rowbytes; // bytes per scanline of the VIDEO mode
-	INT32 width; // PIXELS per scanline
-	INT32 height;
-	union { // don't need numpages for OpenGL, so we can use it for fullscreen/windowed mode
-		INT32 numpages; // always 1, page flipping todo
-		INT32 windowed; // windowed or fullscren mode?
-	} u;
-	INT32 recalc; // if true, recalc vid-based stuff
-	UINT8 *direct; // linear frame buffer, or vga base mem.
-	INT32 dupx, dupy; // scale 1, 2, 3 value for menus & overlays
-	INT32/*fixed_t*/ fdupx, fdupy; // same as dupx, dupy, but exact value when aspect ratio isn't 320/200
 	INT32 bpp; // BYTES per pixel: 1 = 256color, 2 = highcolor
 
-	INT32 baseratio; // Used to get the correct value for lighting walls
+	INT32 recalc; // if true, recalc vid-based stuff
+	INT32 numpages; // page flipping
+	INT32 windowed; // windowed or fullscreen mode? (DirectDraw)
 
-	// for Win32 version
-	DNWH WndParent; // handle of the application's window
+	INT32 dupx, dupy; // scale 1, 2, 3 value for menus & overlays
+	INT32/*fixed_t*/ fdupx, fdupy; // same as dupx, dupy, but exact value when aspect ratio isn't 320/200
 	UINT8 smalldupx, smalldupy; // factor for a little bit of scaling
 	UINT8 meddupx, meddupy; // factor for moderate, but not full, scaling
 #ifdef HWRENDER
 	INT32/*fixed_t*/ fsmalldupx, fsmalldupy;
 	INT32/*fixed_t*/ fmeddupx, fmeddupy;
+
+	INT32 glstate;
+#endif
+
+	// for Win32 version
+#if defined(_WINDOWS)
+	DNWH WndParent; // handle of the application's window
 #endif
 } viddef_t;
-#define VIDWIDTH vid.width
-#define VIDHEIGHT vid.height
+
+enum
+{
+	VID_GL_LIBRARY_NOTLOADED  = 0,
+	VID_GL_LIBRARY_LOADED     = 1,
+	VID_GL_LIBRARY_ERROR      = -1,
+};
 
 // internal additional info for vesa modes only
 typedef struct
@@ -83,6 +85,7 @@ typedef struct
 	INT32 vesamode; // vesa mode number plus LINEAR_MODE bit
 	void *plinearmem; // linear address of start of frame buffer
 } vesa_extra_t;
+
 // a video modes from the video modes list,
 // note: video mode 0 is always standard VGA320x200.
 typedef struct vmode_s
@@ -173,12 +176,11 @@ extern boolean R_SSE2;
 
 extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
-
-void SCR_ChangeRenderer(void);
-void SCR_ChangeRendererCVars(INT32 mode);
 extern UINT8 setrenderneeded;
 
-extern INT32 scr_bpp;
+void SCR_ChangeRenderer(void);
+void SCR_SetTargetRenderer(void);
+
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
 extern CV_PossibleValue_t cv_renderer_t[];
@@ -187,20 +189,25 @@ extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_re
 #ifdef HWRENDER
 extern consvar_t cv_newrenderer;
 #endif
-// wait for page flipping to end or not
-extern consvar_t cv_vidwait;
+extern consvar_t cv_vidwait; // wait for page flipping to end or not
+
+// Initialize the screen
+void SCR_Startup(void);
 
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);
+
+// Set drawer functions for Software
 void SCR_SetDrawFuncs(void);
+
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);
+
 // Check parms once at startup
 void SCR_CheckDefaultMode(void);
-// Set the mode number which is saved in the config
-void SCR_SetDefaultMode (void);
 
-void SCR_Startup (void);
+// Set the mode number which is saved in the config
+void SCR_SetDefaultMode(void);
 
 FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 

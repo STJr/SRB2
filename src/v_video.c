@@ -3699,3 +3699,61 @@ void V_Init(void)
 		CONS_Debug(DBG_RENDER, " screens[%d] = %x\n", i, screens[i]);
 #endif
 }
+
+// V_Init
+// Used to be portions of SCR_Startup and SCR_Recalc.
+void V_Recalc(void)
+{
+	// scale 1,2,3 times in x and y the patches for the menus and overlays...
+	// calculated once and for all, used by routines in v_video.c
+	vid.dupx = vid.width / BASEVIDWIDTH;
+	vid.dupy = vid.height / BASEVIDHEIGHT;
+	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
+	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
+
+#ifdef HWRENDER
+	//if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+	// 13/11/18:
+	// The above is no longer necessary, since we want OpenGL to be just like software now
+	// -- Monster Iestyn
+#endif
+		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
+
+	vid.meddupx = (UINT8)(vid.dupx >> 1) + 1;
+	vid.meddupy = (UINT8)(vid.dupy >> 1) + 1;
+#ifdef HWRENDER
+	vid.fmeddupx = vid.meddupx*FRACUNIT;
+	vid.fmeddupy = vid.meddupy*FRACUNIT;
+#endif
+
+	vid.smalldupx = (UINT8)(vid.dupx / 3) + 1;
+	vid.smalldupy = (UINT8)(vid.dupy / 3) + 1;
+#ifdef HWRENDER
+	vid.fsmalldupx = vid.smalldupx*FRACUNIT;
+	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
+#endif
+}
+
+// After a renderer switch, flush and reload patches.
+void V_FlushPatches(void)
+{
+	// flush all patches from memory
+	// (also frees memory tagged with PU_CACHE)
+	// (which are not necessarily patches but I don't care)
+	if (needpatchflush)
+		Z_FlushCachedPatches();
+
+	// some patches have been freed,
+	// so cache them again
+	if (needpatchrecache)
+		V_ReloadHUDGraphics();
+}
+
+void V_ReloadHUDGraphics(void)
+{
+	CONS_Debug(DBG_RENDER, "V_ReloadHUDGraphics()...\n");
+	ST_LoadGraphics();
+	HU_LoadGraphics();
+	ST_ReloadSkinFaceGraphics();
+}
