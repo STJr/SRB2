@@ -1172,7 +1172,7 @@ VOID I_DoStartupMouse(VOID)
 	if (nodinput)
 	{
 		CONS_Printf(M_GetText("\tMouse will not use DirectInput.\n"));
-		// System mouse input will be initiated by VID_SetMode
+		// System mouse input will be initiated by I_SetVideoMode
 		I_AddExitFunc(I_ShutdownMouse);
 
 		MSHWheelMessage = RegisterWindowMessage(MSH_MOUSEWHEEL);

@@ -209,13 +209,13 @@ void SCR_SetMode(void)
 		Z_PreparePatchFlush();
 		needpatchflush = true;
 		needpatchrecache = true;
-		VID_CheckRenderer();
+		I_CheckRenderer();
 		if (!setmodeneeded)
-			VID_SetMode(vid.modenum);
+			I_SetVideoMode(vid.modenum);
 	}
 
 	if (setmodeneeded)
-		VID_SetMode(--setmodeneeded);
+		I_SetVideoMode(--setmodeneeded);
 
 	V_SetPalette(0);
 
@@ -405,14 +405,14 @@ void SCR_CheckDefaultMode(void)
 	{
 		CONS_Printf(M_GetText("Using resolution: %d x %d\n"), scr_forcex, scr_forcey);
 		// returns -1 if not found, thus will be 0 (no mode change) if not found
-		setmodeneeded = VID_GetModeForSize(scr_forcex, scr_forcey) + 1;
+		setmodeneeded = I_GetVideoModeForSize(scr_forcex, scr_forcey) + 1;
 	}
 	else
 	{
 		CONS_Printf(M_GetText("Default resolution: %d x %d (%d bits)\n"), cv_scr_width.value,
 			cv_scr_height.value, cv_scr_depth.value);
 		// see note above
-		setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
+		setmodeneeded = I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 	}
 
 	SCR_ActuallyChangeRenderer();
@@ -431,15 +431,15 @@ void SCR_SetDefaultMode(void)
 void SCR_ChangeFullscreen(void)
 {
 #ifdef DIRECTFULLSCREEN
-	// allow_fullscreen is set by VID_PrepareModeList
+	// allow_fullscreen is set by I_PrepareVideoModeList
 	// it is used to prevent switching to fullscreen during startup
 	if (!allow_fullscreen)
 		return;
 
 	if (graphics_started)
 	{
-		VID_PrepareModeList();
-		setmodeneeded = VID_GetModeForSize(vid.width, vid.height) + 1;
+		I_PrepareVideoModeList();
+		setmodeneeded = I_GetVideoModeForSize(vid.width, vid.height) + 1;
 	}
 	return;
 #endif

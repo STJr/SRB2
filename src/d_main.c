@@ -1306,7 +1306,7 @@ void D_SRB2Main(void)
 	G_LoadGameData();
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
+	I_PrepareVideoModeList(); // Regenerate Modelist according to cv_fullscreen
 #endif
 
 	// set user default mode or mode set at cmdline
@@ -1323,7 +1323,7 @@ void D_SRB2Main(void)
 		needpatchrecache = true;
 
 		// Set cv_renderer to the new render mode
-		VID_CheckRenderer();
+		I_CheckRenderer();
 		SCR_ChangeRendererCVars(rendermode);
 
 		// check the renderer's state

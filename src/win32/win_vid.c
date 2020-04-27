@@ -239,7 +239,7 @@ void I_StartupGraphics(void)
 	if (!dedicated) graphics_started = true;
 }
 
-void VID_StartupOpenGL(void){}
+void I_StartupOpenGL(void){}
 
 // ------------------
 // I_ShutdownGraphics
@@ -517,14 +517,14 @@ void I_SetPalette(RGBA_t *palette)
 // return number of video modes in pvidmodes list
 // MODES ARE ZERO INDEXED. DO NOT USE (n > nummodes). USE >= INSTEAD.
 //
-INT32 VID_NumModes(void)
+INT32 I_NumVideoModes(void)
 {
 	return numvidmodes;
 }
 
 // return a video mode number from the dimensions
 // returns any available video mode if the mode was not found
-INT32 VID_GetModeForSize(INT32 w, INT32 h)
+INT32 I_GetVideoModeForSize(INT32 w, INT32 h)
 {
 	vmode_t *pv = pvidmodes;
 	int modenum = 0;
@@ -540,7 +540,7 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h)
 
 		// Try default video mode first
 		if (w != cv_scr_width.value || h != cv_scr_height.value)
-			return VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value);
+			return I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value);
 
 		// didn't find, return first fullscreen mode
 		return NUMSPECIALMODES;
@@ -553,7 +553,7 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h)
 
 	// Try default video mode first
 	if (w != cv_scr_width.value || h != cv_scr_height.value)
-		return VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value);
+		return I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value);
 
 	// didn't find, return first windowed mode
 	return 0;
@@ -661,7 +661,7 @@ static VOID VID_Init(VOID)
 	// if '-win' is specified on the command line, do not add DirectDraw modes
 	bWinParm = M_CheckParm("-win");
 
-	COM_AddCommand("vid_nummodes", VID_Command_NumModes_f);
+	COM_AddCommand("I_NumVideoModes", VID_Command_NumModes_f);
 	COM_AddCommand("vid_modeinfo", VID_Command_ModeInfo_f);
 	COM_AddCommand("vid_modelist", VID_Command_ModeList_f);
 	COM_AddCommand("vid_mode", VID_Command_Mode_f);
@@ -754,7 +754,7 @@ static VOID VID_Init(VOID)
 #endif
 
 	// set the startup screen in a window
-	VID_SetMode(0);
+	I_SetVideoMode(0);
 }
 
 // --------------------------
@@ -847,7 +847,7 @@ vmode_t *VID_GetModePtr(int modenum)
 //
 // return the name of a video mode
 //
-const char *VID_GetModeName(INT32 modenum)
+const char *I_GetVideoModeName(INT32 modenum)
 {
 	return (VID_GetModePtr(modenum))->name;
 }
@@ -855,7 +855,7 @@ const char *VID_GetModeName(INT32 modenum)
 // ========================================================================
 // Sets a video mode
 // ========================================================================
-INT32 VID_SetMode(INT32 modenum)
+INT32 I_SetVideoMode(INT32 modenum)
 {
 	int vstat;
 	vmode_t *pnewmode;
@@ -863,7 +863,7 @@ INT32 VID_SetMode(INT32 modenum)
 	if (dedicated)
 		return 0;
 
-	I_OutputMsg("VID_SetMode(%d)\n", modenum);
+	I_OutputMsg("I_SetVideoMode(%d)\n", modenum);
 
 	// if mode 0 (windowed) we must not be fullscreen already,
 	// if other mode, check it is not mode 0 and existing
@@ -908,7 +908,7 @@ INT32 VID_SetMode(INT32 modenum)
 	vstat = (*pcurrentmode->setmode)(&vid, pcurrentmode);
 
 	if (vstat == -1)
-		I_Error("Not enough mem for VID_SetMode\n");
+		I_Error("Not enough mem for I_SetVideoMode\n");
 	else if (vstat == -2)
 		I_Error("Couldn't set video mode because it failed the test\n");
 	else if (vstat == -3)
@@ -948,8 +948,8 @@ INT32 VID_SetMode(INT32 modenum)
 	return 1;
 }
 
-void VID_CheckRenderer(void) {}
-void VID_CheckGLLoaded(rendermode_t oldrender) {}
+void I_CheckRenderer(void) {}
+void I_CheckGLLoaded(rendermode_t oldrender) {}
 
 // ========================================================================
 // Free the video buffer of the last video mode,
@@ -1018,11 +1018,11 @@ static INT32 WINAPI VID_SetDirectDrawMode(viddef_t *lvid, vmode_t *currentmode)
 //                     VIDEO MODE CONSOLE COMMANDS
 // ========================================================================
 
-// vid_nummodes
+// I_NumVideoModes
 //
 static void VID_Command_NumModes_f(void)
 {
-	CONS_Printf(M_GetText("%d video mode(s) available(s)\n"), VID_NumModes());
+	CONS_Printf(M_GetText("%d video mode(s) available(s)\n"), I_NumVideoModes());
 }
 
 // vid_modeinfo <modenum>
@@ -1037,7 +1037,7 @@ static void VID_Command_ModeInfo_f(void)
 	else
 		modenum = atoi(COM_Argv(1)); // the given mode number
 
-	if (modenum >= VID_NumModes()
+	if (modenum >= I_NumVideoModes()
 	 || (!bWinParm && modenum < NUMSPECIALMODES)) // don't accept the windowed modes
 	{
 		CONS_Printf(M_GetText("Video mode not present\n"));
@@ -1046,7 +1046,7 @@ static void VID_Command_ModeInfo_f(void)
 
 	pv = VID_GetModePtr(modenum);
 
-	CONS_Printf("\x82" "%s\n", VID_GetModeName(modenum));
+	CONS_Printf("\x82" "%s\n", I_GetVideoModeName(modenum));
 	CONS_Printf(M_GetText("width: %d\nheight: %d\n"),
 		pv->width, pv->height);
 	if (rendermode == render_soft)
@@ -1062,7 +1062,7 @@ static void VID_Command_ModeList_f(void)
 	const char *pinfo;
 	vmode_t *pv;
 
-	numodes = VID_NumModes();
+	numodes = I_NumVideoModes();
 
 	// hide windowed modes unless using them
 	i = (!bWinParm) ? NUMSPECIALMODES : 0;
@@ -1070,7 +1070,7 @@ static void VID_Command_ModeList_f(void)
 	for (; i < numodes; i++)
 	{
 		pv = VID_GetModePtr(i);
-		pinfo = VID_GetModeName(i);
+		pinfo = I_GetVideoModeName(i);
 
 		if (pv->bytesperpixel == 1)
 			CONS_Printf("%d: %s\n", i, pinfo);
@@ -1093,7 +1093,7 @@ static void VID_Command_Mode_f(void)
 
 	modenum = atoi(COM_Argv(1));
 
-	if (modenum >= VID_NumModes()
+	if (modenum >= I_NumVideoModes()
 	 || (!bWinParm && modenum < NUMSPECIALMODES)) // don't accept the windowed modes
 		CONS_Printf(M_GetText("Video mode not present\n"));
 	else

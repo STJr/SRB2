@@ -317,7 +317,7 @@ int set_vesa1_mode( int width, int height )
 void I_StartupGraphics(void)
 {
 	//added:26-01-98: VID_Init() must be done only once,
-	//                use VID_SetMode() to change vid mode while in the game.
+	//                use I_SetVideoMode() to change vid mode while in the game.
 	if ( graphics_started )
 		return;
 
@@ -339,4 +339,4 @@ void I_StartupGraphics(void)
 
 }
 
-void VID_StartupOpenGL(void) {}
+void I_StartupOpenGL(void) {}

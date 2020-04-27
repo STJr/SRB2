@@ -13,37 +13,37 @@ consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL
 void I_StartupGraphics(void){}
 void I_ShutdownGraphics(void){}
 
-void VID_StartupOpenGL(void){}
+void I_StartupOpenGL(void){}
 
 void I_SetPalette(RGBA_t *palette)
 {
 	(void)palette;
 }
 
-INT32 VID_NumModes(void)
+INT32 I_NumVideoModes(void)
 {
 	return 0;
 }
 
-INT32 VID_GetModeForSize(INT32 w, INT32 h)
+INT32 I_GetVideoModeForSize(INT32 w, INT32 h)
 {
 	(void)w;
 	(void)h;
 	return 0;
 }
 
-void VID_PrepareModeList(void){}
+void I_PrepareVideoModeList(void){}
 
-INT32 VID_SetMode(INT32 modenum)
+INT32 I_SetVideoMode(INT32 modenum)
 {
 	(void)modenum;
 	return 0;
 }
 
-void VID_CheckRenderer(void) {}
-void VID_CheckGLLoaded(rendermode_t oldrender) {}
+void I_CheckRenderer(void) {}
+void I_CheckGLLoaded(rendermode_t oldrender) {}
 
-const char *VID_GetModeName(INT32 modenum)
+const char *I_GetVideoModeName(INT32 modenum)
 {
 	(void)modenum;
 	return NULL;

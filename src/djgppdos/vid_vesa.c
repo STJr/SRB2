@@ -170,7 +170,7 @@ static inline void VGA_Init(void)
 
 
 //added:30-01-98: return number of video modes in pvidmodes list
-INT32 VID_NumModes(void)
+INT32 I_NumVideoModes(void)
 {
 	return numvidmodes;
 }
@@ -200,7 +200,7 @@ FUNCINLINE static ATTRINLINE const char *VID_ModeInfo (int modenum, char **pphea
 
 
 //added:03-02-98: return a video mode number from the dimensions
-INT32 VID_GetModeForSize( INT32 w, INT32 h)
+INT32 I_GetVideoModeForSize( INT32 w, INT32 h)
 {
 	vmode_t *pv;
 	int modenum;
@@ -221,7 +221,7 @@ INT32 VID_GetModeForSize( INT32 w, INT32 h)
 /* ======================================================================== */
 void    VID_Init (void)
 {
-	COM_AddCommand ("vid_nummodes", VID_Command_NumModes_f);
+	COM_AddCommand ("I_NumVideoModes", VID_Command_NumModes_f);
 	COM_AddCommand ("vid_modeinfo", VID_Command_ModeInfo_f);
 	COM_AddCommand ("vid_modelist", VID_Command_ModeList_f);
 	COM_AddCommand ("vid_mode", VID_Command_Mode_f);
@@ -246,13 +246,13 @@ void    VID_Init (void)
 
 
 #ifdef DEBUG
-	CONS_Printf("VID_SetMode(%d)\n",vid.modenum);
+	CONS_Printf("I_SetVideoMode(%d)\n",vid.modenum);
 #endif
-	VID_SetMode (0); //vid.modenum);
+	I_SetVideoMode (0); //vid.modenum);
 
 
 #ifdef DEBUG
-	CONS_Printf("after VID_SetMode\n");
+	CONS_Printf("after I_SetVideoMode\n");
 	CONS_Printf("vid.width    %d\n",vid.width);
 	CONS_Printf("vid.height   %d\n",vid.height);
 	CONS_Printf("vid.buffer   %x\n",vid.buffer);
@@ -288,7 +288,7 @@ vmode_t *VID_GetModePtr (int modenum)
 
 
 //added:30-01-98:return the name of a video mode
-const char *VID_GetModeName (INT32 modenum)
+const char *I_GetVideoModeName (INT32 modenum)
 {
 	return (VID_GetModePtr(modenum))->name;
 }
@@ -297,7 +297,7 @@ const char *VID_GetModeName (INT32 modenum)
 // ========================================================================
 // Sets a video mode
 // ========================================================================
-INT32 VID_SetMode (INT32 modenum)  //, UINT8 *palette)
+INT32 I_SetVideoMode (INT32 modenum)  //, UINT8 *palette)
 {
 	int     vstat;
 	vmode_t *pnewmode, *poldmode;
@@ -345,14 +345,14 @@ INT32 VID_SetMode (INT32 modenum)  //, UINT8 *palette)
 		if (vstat == 0)
 		{
 			// harware could not setup mode
-			//if (!VID_SetMode (vid.modenum))
-			//    I_Error ("VID_SetMode: couldn't set video mode (hard failure)");
+			//if (!I_SetVideoMode (vid.modenum))
+			//    I_Error ("I_SetVideoMode: couldn't set video mode (hard failure)");
 			I_Error("Couldn't set video mode %d\n", modenum);
 		}
 		else
 		if (vstat == -1)
 		{
-			CONS_Printf ("Not enough mem for VID_SetMode...\n");
+			CONS_Printf ("Not enough mem for I_SetVideoMode...\n");
 
 			// not enough memory; just put things back the way they were
 			pcurrentmode = poldmode;
@@ -378,8 +378,8 @@ INT32 VID_SetMode (INT32 modenum)  //, UINT8 *palette)
 	return 1;
 }
 
-void VID_CheckRenderer(void) {}
-void VID_CheckGLLoaded(rendermode_t oldrender) {}
+void I_CheckRenderer(void) {}
+void I_CheckGLLoaded(rendermode_t oldrender) {}
 
 
 
@@ -747,7 +747,7 @@ static INT32 VGA_InitMode (viddef_t *lvid, vmode_t *currentmodep)
 
 
 // ========================================================================
-// Set video mode routine for VESA video modes, see VID_SetMode()
+// Set video mode routine for VESA video modes, see I_SetVideoMode()
 // Out: 1 ok,
 //      0 hardware could not set mode,
 //     -1 no mem
@@ -808,14 +808,14 @@ INT32 VID_VesaInitMode (viddef_t *lvid, vmode_t *currentmodep)
 // ========================================================================
 
 
-//  vid_nummodes
+//  I_NumVideoModes
 //
 //added:21-03-98:
 void VID_Command_NumModes_f (void)
 {
 	int     nummodes;
 
-	nummodes = VID_NumModes ();
+	nummodes = I_NumVideoModes ();
 	CONS_Printf ("%d video mode(s) available(s)\n", nummodes);
 }
 
@@ -832,7 +832,7 @@ void VID_Command_ModeInfo_f (void)
 	else
 		modenum = atoi (COM_Argv(1));   //    .. the given mode number
 
-	if (modenum >= VID_NumModes())
+	if (modenum >= I_NumVideoModes())
 	{
 		CONS_Printf ("No such video mode\n");
 		return;
@@ -866,7 +866,7 @@ void VID_Command_ModeList_f (void)
 
 	na = false;
 
-	nummodes = VID_NumModes ();
+	nummodes = I_NumVideoModes ();
 	for (i=0 ; i<nummodes ; i++)
 	{
 		pv = VID_GetModePtr (i);
@@ -895,7 +895,7 @@ void VID_Command_Mode_f (void)
 
 	modenum = atoi(COM_Argv(1));
 
-	if (modenum >= VID_NumModes())
+	if (modenum >= I_NumVideoModes())
 		CONS_Printf ("No such video mode\n");
 	else
 		// request vid mode change

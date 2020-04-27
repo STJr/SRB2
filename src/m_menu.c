@@ -12096,11 +12096,11 @@ static void M_VideoModeMenu(INT32 choice)
 	memset(modedescs, 0, sizeof(modedescs));
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	VID_PrepareModeList(); // FIXME: hack
+	I_PrepareVideoModeList(); // FIXME: hack
 #endif
 	vidm_nummodes = 0;
 	vidm_selected = 0;
-	nummodes = VID_NumModes();
+	nummodes = I_NumVideoModes();
 
 #ifdef _WINDOWS
 	// clean that later: skip windowed mode 0, video modes menu only shows FULL SCREEN modes
@@ -12114,7 +12114,7 @@ static void M_VideoModeMenu(INT32 choice)
 #endif
 	for (; i < nummodes && vidm_nummodes < MAXMODEDESCS; i++)
 	{
-		desc = VID_GetModeName(i);
+		desc = I_GetVideoModeName(i);
 		if (desc)
 		{
 			vdup = 0;
