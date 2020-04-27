@@ -6063,12 +6063,10 @@ static void P_AddAirbob(sector_t *sec, INT16 tag, fixed_t dist, boolean raise, b
   * Even thwomps need to think!
   *
   * \param sec          Control sector.
-  * \param actionsector Target sector.
-  * \param sourceline   Control linedef.
   * \sa P_SpawnSpecials, T_ThwompSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, line_t *sourceline)
+static inline void P_AddThwompThinker(sector_t *sec, INT16 tag, line_t *sourceline, fixed_t crushspeed, fixed_t retractspeed, UINT16 sound)
 {
 	thwomp_t *thwomp;
 
@@ -6086,14 +6084,14 @@ static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, lin
 	// set up the fields according to the type of elevator action
 	thwomp->sourceline = sourceline;
 	thwomp->sector = sec;
-	thwomp->crushspeed = (sourceline->flags & ML_EFFECT5) ? sourceline->dy >> 3 : 10*FRACUNIT;
-	thwomp->retractspeed = (sourceline->flags & ML_EFFECT5) ? sourceline->dx >> 3 : 2*FRACUNIT;
+	thwomp->crushspeed = crushspeed;
+	thwomp->retractspeed = retractspeed;
 	thwomp->direction = 0;
 	thwomp->floorstartheight = sec->floorheight;
 	thwomp->ceilingstartheight = sec->ceilingheight;
 	thwomp->delay = 1;
-	thwomp->tag = actionsector->tag;
-	thwomp->sound = (sourceline->flags & ML_EFFECT4) ? sides[sourceline->sidenum[0]].textureoffset >> FRACBITS : sfx_thwomp;
+	thwomp->tag = tag;
+	thwomp->sound = sound;
 
 	sec->floordata = thwomp;
 	sec->ceilingdata = thwomp;
@@ -7015,14 +7013,20 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 251: // A THWOMP!
+			{
+				fixed_t crushspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dy >> 3 : 10*FRACUNIT;
+				fixed_t retractspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dx >> 3 : 2*FRACUNIT;
+				UINT16 sound = (lines[i].flags & ML_EFFECT4) ? sides[lines[i].sidenum[0]].textureoffset >> FRACBITS : sfx_thwomp;
+
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].tag, s)) >= 0 ;)
 				{
-					P_AddThwompThinker(&sectors[sec], &sectors[s], &lines[i]);
+					P_AddThwompThinker(&sectors[sec], lines[i].tag, &lines[i], crushspeed, retractspeed, sound);
 					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
 						FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				}
 				break;
+			}
 
 			case 252: // Shatter block (breaks when touched)
 				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER;
