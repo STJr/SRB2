@@ -2003,6 +2003,7 @@ static void SaveLaserThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEUINT32(save_p, SaveSector(ht->sec));
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT8(save_p, ht->nobosses);
 }
 
 //
@@ -3257,6 +3258,7 @@ static inline thinker_t* LoadLaserThinker(actionf_p1 thinker)
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->sec = LoadSector(READUINT32(save_p));
 	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->nobosses = READUINT8(save_p);
 	for (rover = ht->sector->ffloors; rover; rover = rover->next)
 		if (rover->secnum == (size_t)(ht->sec - sectors)
 		&& rover->master == ht->sourceline)

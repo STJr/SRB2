@@ -6206,8 +6206,7 @@ void T_LaserFlash(laserthink_t *flash)
 	{
 		thing = node->m_thing;
 
-		if ((fflr->master->flags & ML_EFFECT1)
-			&& thing->flags & MF_BOSS)
+		if (flash->nobosses && thing->flags & MF_BOSS)
 			continue; // Don't hurt bosses
 
 		// Don't endlessly kill egg guard shields (or anything else for that matter)
@@ -6236,7 +6235,7 @@ void T_LaserFlash(laserthink_t *flash)
   * \sa T_LaserFlash
   * \author SSNTails <http://www.ssntails.org>
   */
-static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *line, thinkerlist_t *secthinkers)
+static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *line, thinkerlist_t *secthinkers, boolean nobosses)
 {
 	laserthink_t *flash;
 	ffloor_t *fflr = P_AddFakeFloor(sec, sec2, line, laserflags, secthinkers);
@@ -6253,6 +6252,7 @@ static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *lin
 	flash->sector = sec; // For finding mobjs
 	flash->sec = sec2;
 	flash->sourceline = line;
+	flash->nobosses = nobosses;
 }
 
 //
@@ -7068,8 +7068,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				sec = sides[*lines[i].sidenum].sector - sectors;
 
 				// No longer totally disrupts netgames
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers);
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].tag, s)) >= 0 ;)
+					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers, !!(lines[i].flags & ML_EFFECT1));
 				break;
 
 			case 259: // Custom FOF

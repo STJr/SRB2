@@ -108,6 +108,7 @@ typedef struct
 	sector_t *sector;  ///< Sector in which the effect takes place.
 	sector_t *sec;
 	line_t *sourceline;
+	UINT8 nobosses;
 } laserthink_t;
 
 /** Strobe light action structure..
