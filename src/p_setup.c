@@ -2937,12 +2937,21 @@ static void P_ConvertBinaryMap(void)
 		case 153: //FOF: Dynamically sinking platform
 			lines[i].args[0] = lines[i].tag;
 			lines[i].args[1] = (lines[i].special == 150) ? 16*FRACUNIT : P_AproxDistance(lines[i].dx, lines[i].dy);
+
+			//Flags
 			if (lines[i].special == 152)
 				lines[i].args[2] |= TMFB_REVERSE;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[2] |= TMFB_SPINDASH;
 			if (lines[i].special == 153)
-				lines[i].args[3] |= TMFB_DYNAMIC;
+				lines[i].args[2] |= TMFB_DYNAMIC;
+
+			//Tangibility
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
+
 			lines[i].special = 150;
 			break;
 		case 170: //FOF: Crumbling, respawn
