@@ -22,7 +22,6 @@ Documentation available here.
 #include "m_menu.h"
 #include "mserv.h"
 #include "i_tcp.h"/* for current_port */
-#include "z_zone.h"
 
 /* I just stop myself from making macros anymore. */
 #define Blame( ... ) \
@@ -105,7 +104,7 @@ HMS_connect (const char *format, ...)
 	seek = strlen(ms_API) + 1;/* + '/' */
 
 	va_start (ap, format);
-	url = ZZ_Alloc(seek + vsnprintf(0, 0, format, ap) + 1);
+	url = malloc(seek + vsnprintf(0, 0, format, ap) + 1);
 	va_end (ap);
 
 	sprintf(url, "%s/", ms_API);
@@ -116,11 +115,11 @@ HMS_connect (const char *format, ...)
 
 	CONS_Printf("HMS: connecting '%s'...\n", url);
 
-	buffer = ZZ_Alloc(sizeof *buffer);
+	buffer = malloc(sizeof *buffer);
 	buffer->curl = curl;
 	/* I just allocated 4k and fuck it! */
 	buffer->end = 4096;
-	buffer->buffer = ZZ_Alloc(buffer->end);
+	buffer->buffer = malloc(buffer->end);
 	buffer->needle = 0;
 
 	if (cv_masterserver_debug.value)
@@ -135,7 +134,7 @@ HMS_connect (const char *format, ...)
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
 
-	Z_Free(url);
+	free(url);
 
 	return buffer;
 }
@@ -189,8 +188,8 @@ static void
 HMS_end (struct HMS_buffer *buffer)
 {
 	curl_easy_cleanup(buffer->curl);
-	Z_Free(buffer->buffer);
-	Z_Free(buffer);
+	free(buffer->buffer);
+	free(buffer);
 }
 
 int
@@ -343,7 +342,7 @@ HMS_register (void)
 
 	if (ok)
 	{
-		hms_server_token = Z_StrDup(strtok(hms->buffer, "\n"));
+		hms_server_token = strdup(strtok(hms->buffer, "\n"));
 	}
 
 	HMS_end(hms);
@@ -366,7 +365,7 @@ HMS_unlist (void)
 	HMS_do(hms);
 	HMS_end(hms);
 
-	Z_Free(hms_server_token);
+	free(hms_server_token);
 }
 
 int
