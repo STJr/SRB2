@@ -18,6 +18,7 @@
 #include "d_net.h"
 #include "tables.h"
 #include "d_player.h"
+#include "mserv.h"
 
 /*
 The 'packet version' is used to distinguish packet formats.
@@ -541,6 +542,7 @@ void CL_AddSplitscreenPlayer(void);
 void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
+void CL_QueryServerList(msg_server_t *list);
 void CL_UpdateServerList(boolean internetsearch, INT32 room);
 // Is there a game running
 boolean Playing(void);

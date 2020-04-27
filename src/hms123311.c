@@ -19,6 +19,7 @@ Documentation available here.
 #include "doomdef.h"
 #include "d_clisrv.h"
 #include "command.h"
+#include "m_menu.h"
 #include "mserv.h"
 #include "i_tcp.h"/* for current_port */
 #include "z_zone.h"
@@ -193,10 +194,12 @@ HMS_end (struct HMS_buffer *buffer)
 }
 
 int
-HMS_fetch_rooms (int joining)
+HMS_fetch_rooms (int joining, int query_id)
 {
 	struct HMS_buffer *hms;
 	int ok;
+
+	int doing_shit;
 
 	char *id;
 	char *title;
@@ -209,6 +212,8 @@ HMS_fetch_rooms (int joining)
 
 	int i;
 
+	(void)query_id;
+
 	hms = HMS_connect("rooms");
 
 	if (! hms)
@@ -216,6 +221,8 @@ HMS_fetch_rooms (int joining)
 
 	if (HMS_do(hms))
 	{
+		doing_shit = 1;
+
 		p = hms->buffer;
 
 		for (i = 0; i < NUM_LIST_ROOMS && ( end = strstr(p, "\n\n\n") );)
@@ -236,6 +243,18 @@ HMS_fetch_rooms (int joining)
 				*/
 				if (joining || id_no != 0)
 				{
+#ifdef HAVE_THREADS
+					I_lock_mutex(&ms_QueryId_mutex);
+					{
+						if (query_id != ms_QueryId)
+							doing_shit = 0;
+					}
+					I_unlock_mutex(ms_QueryId_mutex);
+
+					if (! doing_shit)
+						break;
+#endif
+
 					room_list[i].header.buffer[0] = 1;
 
 					room_list[i].id = id_no;
@@ -251,9 +270,31 @@ HMS_fetch_rooms (int joining)
 				break;
 		}
 
-		room_list[i].header.buffer[0] = 0;
+		if (doing_shit)
+			room_list[i].header.buffer[0] = 0;
 
 		ok = 1;
+
+		if (doing_shit)
+		{
+#ifdef HAVE_THREADS
+			I_lock_mutex(&m_menu_mutex);
+#endif
+			{
+				for (i = 0; room_list[i].header.buffer[0]; i++)
+				{
+					if(*room_list[i].name != '\0')
+					{
+						MP_RoomMenu[i+1].text = room_list[i].name;
+						roomIds[i] = room_list[i].id;
+						MP_RoomMenu[i+1].status = IT_STRING|IT_CALL;
+					}
+				}
+			}
+#ifdef HAVE_THREADS
+			I_unlock_mutex(m_menu_mutex);
+#endif
+		}
 	}
 	else
 		ok = 0;
@@ -385,9 +426,11 @@ HMS_list_servers (void)
 }
 
 msg_server_t *
-HMS_fetch_servers (msg_server_t *list, int room_number)
+HMS_fetch_servers (msg_server_t *list, int room_number, int query_id)
 {
 	struct HMS_buffer *hms;
+
+	int doing_shit;
 
 	char local_version[9];
 
@@ -404,6 +447,8 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 
 	int i;
 
+	(void)query_id;
+
 	if (room_number > 0)
 	{
 		hms = HMS_connect("rooms/%d/servers", room_number);
@@ -416,6 +461,8 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 
 	if (HMS_do(hms))
 	{
+		doing_shit = 1;
+
 		snprintf(local_version, sizeof local_version,
 				"%d.%d.%d",
 				VERSION/100,
@@ -448,6 +495,18 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 
 				if (address && port && title && version)
 				{
+#ifdef HAVE_THREADS
+					I_lock_mutex(&ms_QueryId_mutex);
+					{
+						if (query_id != ms_QueryId)
+							doing_shit = 0;
+					}
+					I_unlock_mutex(ms_QueryId_mutex);
+
+					if (! doing_shit)
+						break;
+#endif
+
 					if (strcmp(version, local_version) == 0)
 					{
 						strlcpy(list[i].ip,      address, sizeof list[i].ip);
@@ -474,11 +533,15 @@ HMS_fetch_servers (msg_server_t *list, int room_number)
 				}
 			}
 
+			if (! doing_shit)
+				break;
+
 			p = ( section_end + 2 );
 		}
 		while (section_end) ;
 
-		list[i].header.buffer[0] = 0;
+		if (doing_shit)
+			list[i].header.buffer[0] = 0;
 	}
 	else
 		list = NULL;

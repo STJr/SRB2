@@ -1801,8 +1801,92 @@ static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
 	M_SortServerList();
 }
 
+#ifdef HAVE_THREADS
+struct Fetch_servers_ctx
+{
+	int room;
+	int id;
+};
+
+static void
+Fetch_servers_thread (struct Fetch_servers_ctx *ctx)
+{
+	msg_server_t *server_list;
+
+	server_list = GetShortServersList(ctx->room, ctx->id);
+
+	if (server_list)
+	{
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			if (ctx->id != ms_QueryId)
+			{
+				free(server_list);
+				server_list = NULL;
+			}
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
+
+		if (server_list)
+		{
+			I_lock_mutex(&m_menu_mutex);
+			{
+				if (m_waiting_mode == M_WAITING_SERVERS)
+					m_waiting_mode = M_NOT_WAITING;
+			}
+			I_unlock_mutex(m_menu_mutex);
+
+			I_lock_mutex(&ms_ServerList_mutex);
+			{
+				ms_ServerList = server_list;
+			}
+			I_unlock_mutex(ms_ServerList_mutex);
+		}
+	}
+
+	free(ctx);
+}
+#endif/*HAVE_THREADS*/
+
+void CL_QueryServerList (msg_server_t *server_list)
+{
+	INT32 i;
+
+	for (i = 0; server_list[i].header.buffer[0]; i++)
+	{
+		// Make sure MS version matches our own, to
+		// thwart nefarious servers who lie to the MS.
+
+		/* lol bruh, that version COMES from the servers */
+		//if (strcmp(version, server_list[i].version) == 0)
+		{
+			INT32 node = I_NetMakeNodewPort(server_list[i].ip, server_list[i].port);
+			if (node == -1)
+				break; // no more node free
+			SendAskInfo(node);
+			// Force close the connection so that servers can't eat
+			// up nodes forever if we never get a reply back from them
+			// (usually when they've not forwarded their ports).
+			//
+			// Don't worry, we'll get in contact with the working
+			// servers again when they send SERVERINFO to us later!
+			//
+			// (Note: as a side effect this probably means every
+			// server in the list will probably be using the same node (e.g. node 1),
+			// not that it matters which nodes they use when
+			// the connections are closed afterwards anyway)
+			// -- Monster Iestyn 12/11/18
+			Net_CloseConnection(node|FORCECLOSE);
+		}
+	}
+}
+
 void CL_UpdateServerList(boolean internetsearch, INT32 room)
 {
+#ifdef HAVE_THREADS
+	struct Fetch_servers_ctx *ctx;
+#endif
+
 	SL_ClearServerList(0);
 
 	if (!netgame && I_NetOpenSocket)
@@ -1820,53 +1904,32 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 
 	if (internetsearch)
 	{
-		const msg_server_t *server_list;
-		INT32 i = -1;
-		server_list = GetShortServersList(room);
+#ifdef HAVE_THREADS
+		ctx = malloc(sizeof *ctx);
+
+		/* This called from M_Refresh so I don't use a mutex */
+		m_waiting_mode = M_WAITING_SERVERS;
+
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			ctx->id = ms_QueryId;
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
+
+		ctx->room = room;
+
+		I_spawn_thread("fetch-servers", (I_thread_fn)Fetch_servers_thread, ctx);
+#else
+		msg_server_t *server_list;
+
+		server_list = GetShortServersList(room, 0);
+
 		if (server_list)
 		{
-			char version[8] = "";
-#if VERSION > 0 || SUBVERSION > 0
-			snprintf(version, sizeof (version), "%d.%d.%d", VERSION/100, VERSION%100, SUBVERSION);
-#else
-			strcpy(version, GetRevisionString());
+			CL_QueryServerList(server_list);
+			free(server_list);
+		}
 #endif
-			version[sizeof (version) - 1] = '\0';
-
-			for (i = 0; server_list[i].header.buffer[0]; i++)
-			{
-				// Make sure MS version matches our own, to
-				// thwart nefarious servers who lie to the MS.
-
-				/* lol bruh, that version COMES from the servers */
-				//if (strcmp(version, server_list[i].version) == 0)
-				{
-					INT32 node = I_NetMakeNodewPort(server_list[i].ip, server_list[i].port);
-					if (node == -1)
-						break; // no more node free
-					SendAskInfo(node);
-					// Force close the connection so that servers can't eat
-					// up nodes forever if we never get a reply back from them
-					// (usually when they've not forwarded their ports).
-					//
-					// Don't worry, we'll get in contact with the working
-					// servers again when they send SERVERINFO to us later!
-					//
-					// (Note: as a side effect this probably means every
-					// server in the list will probably be using the same node (e.g. node 1),
-					// not that it matters which nodes they use when
-					// the connections are closed afterwards anyway)
-					// -- Monster Iestyn 12/11/18
-					Net_CloseConnection(node|FORCECLOSE);
-				}
-			}
-		}
-
-		//no server list?(-1) or no servers?(0)
-		if (!i)
-		{
-			; /// TODO: display error or warning?
-		}
 	}
 }
 
@@ -5054,7 +5117,13 @@ void NetUpdate(void)
 	if (nowtime > resptime)
 	{
 		resptime = nowtime;
+#ifdef HAVE_THREADS
+		I_lock_mutex(&m_menu_mutex);
+#endif
 		M_Ticker();
+#ifdef HAVE_THREADS
+		I_unlock_mutex(m_menu_mutex);
+#endif
 		CON_Ticker();
 	}
 

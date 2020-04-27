@@ -32,6 +32,7 @@
 #include "sounds.h"
 #include "s_sound.h"
 #include "i_system.h"
+#include "i_threads.h"
 
 // Addfile
 #include "filesrch.h"
@@ -120,6 +121,12 @@ typedef enum
 	QUIT3MSG6,
 	NUM_QUITMESSAGES
 } text_enum;
+
+#ifdef HAVE_THREADS
+I_mutex m_menu_mutex;
+#endif
+
+M_waiting_mode_t m_waiting_mode = M_NOT_WAITING;
 
 const char *quitmsg[NUM_QUITMESSAGES];
 
@@ -996,7 +1003,7 @@ enum
 	FIRSTSERVERLINE
 };
 
-static menuitem_t MP_RoomMenu[] =
+menuitem_t MP_RoomMenu[] =
 {
 	{IT_STRING | IT_CALL, NULL, "<Unlisted Mode>", M_ChooseRoom,   9},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  18},
@@ -3769,6 +3776,30 @@ void M_SetupNextMenu(menu_t *menudef)
 {
 	INT16 i;
 
+#ifdef HAVE_THREADS
+	if (currentMenu == &MP_RoomDef || currentMenu == &MP_ConnectDef)
+	{
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			ms_QueryId++;
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
+	}
+
+	if (currentMenu == &MP_ConnectDef)
+	{
+		I_lock_mutex(&ms_ServerList_mutex);
+		{
+			if (ms_ServerList)
+			{
+				free(ms_ServerList);
+				ms_ServerList = NULL;
+			}
+		}
+		I_unlock_mutex(ms_ServerList_mutex);
+	}
+#endif/*HAVE_THREADS*/
+
 	if (currentMenu->quitroutine)
 	{
 		// If you're going from a menu to itself, why are you running the quitroutine? You're not quitting it! -SH
@@ -3832,6 +3863,19 @@ void M_Ticker(void)
 
 	if (currentMenu == &OP_ScreenshotOptionsDef)
 		M_SetupScreenshotMenu();
+
+#ifdef HAVE_THREADS
+	I_lock_mutex(&ms_ServerList_mutex);
+	{
+		if (ms_ServerList)
+		{
+			CL_QueryServerList(ms_ServerList);
+			free(ms_ServerList);
+			ms_ServerList = NULL;
+		}
+	}
+	I_unlock_mutex(ms_ServerList_mutex);
+#endif
 }
 
 //
@@ -10407,22 +10451,65 @@ static INT32 menuRoomIndex = 0;
 
 static void M_DrawRoomMenu(void)
 {
+	static int frame = -12;
+	int dot_frame;
+	char text[4];
+
 	const char *rmotd;
+	const char *waiting_message;
+
+	int dots;
+
+	if (m_waiting_mode)
+	{
+		dot_frame = frame / 4;
+		dots = dot_frame + 3;
+
+		strcpy(text, "   ");
+
+		if (dots > 0)
+		{
+			if (dot_frame < 0)
+				dot_frame = 0;
+
+			strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
+		}
+
+		if (++frame == 12)
+			frame = -12;
+
+		currentMenu->menuitems[0].text = text;
+	}
 
 	// use generic drawer for cursor, items and title
 	M_DrawGenericMenu();
 
 	V_DrawString(currentMenu->x - 16, currentMenu->y, V_YELLOWMAP, M_GetText("Select a room"));
 
-	M_DrawTextBox(144, 24, 20, 20);
+	if (m_waiting_mode == M_NOT_WAITING)
+	{
+		M_DrawTextBox(144, 24, 20, 20);
 
-	if (itemOn == 0)
-		rmotd = M_GetText("Don't connect to the Master Server.");
-	else
-		rmotd = room_list[itemOn-1].motd;
+		if (itemOn == 0)
+			rmotd = M_GetText("Don't connect to the Master Server.");
+		else
+			rmotd = room_list[itemOn-1].motd;
 
-	rmotd = V_WordWrap(0, 20*8, 0, rmotd);
-	V_DrawString(144+8, 32, V_ALLOWLOWERCASE|V_RETURN8, rmotd);
+		rmotd = V_WordWrap(0, 20*8, 0, rmotd);
+		V_DrawString(144+8, 32, V_ALLOWLOWERCASE|V_RETURN8, rmotd);
+	}
+
+	if (m_waiting_mode)
+	{
+		// Display a little "please wait" message.
+		M_DrawTextBox(52, BASEVIDHEIGHT/2-10, 25, 3);
+		if (m_waiting_mode == M_WAITING_VERSION)
+			waiting_message = "Checking for updates...";
+		else
+			waiting_message = "Fetching room info...";
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, waiting_message);
+		V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2)+12, 0, "Please wait.");
+	}
 }
 
 static void M_DrawConnectMenu(void)
@@ -10490,6 +10577,14 @@ static void M_DrawConnectMenu(void)
 	localservercount = serverlistcount;
 
 	M_DrawGenericMenu();
+
+	if (m_waiting_mode)
+	{
+		// Display a little "please wait" message.
+		M_DrawTextBox(52, BASEVIDHEIGHT/2-10, 25, 3);
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, "Searching for servers...");
+		V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2)+12, 0, "Please wait.");
+	}
 }
 
 static boolean M_CancelConnect(void)
@@ -10579,10 +10674,10 @@ void M_SortServerList(void)
 
 #ifndef NONET
 #ifdef UPDATE_ALERT
-static boolean M_CheckMODVersion(void)
+static boolean M_CheckMODVersion(int id)
 {
 	char updatestring[500];
-	const char *updatecheck = GetMODVersion();
+	const char *updatecheck = GetMODVersion(id);
 	if(updatecheck)
 	{
 		sprintf(updatestring, UPDATE_ALERT_STRING, VERSIONSTRING, updatecheck);
@@ -10591,7 +10686,62 @@ static boolean M_CheckMODVersion(void)
 	} else
 		return true;
 }
-#endif
+
+#ifdef HAVE_THREADS
+static void
+Check_new_version_thread (int *id)
+{
+	int hosting;
+	int ok;
+
+	ok = 0;
+
+	if (M_CheckMODVersion(*id))
+	{
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			ok = ( *id == ms_QueryId );
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
+
+		if (ok)
+		{
+			I_lock_mutex(&m_menu_mutex);
+			{
+				m_waiting_mode = M_WAITING_ROOMS;
+				hosting = ( currentMenu->prevMenu == &MP_ServerDef );
+			}
+			I_unlock_mutex(m_menu_mutex);
+
+			GetRoomsList(hosting, *id);
+		}
+	}
+	else
+	{
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			ok = ( *id == ms_QueryId );
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
+	}
+
+	if (ok)
+	{
+		I_lock_mutex(&m_menu_mutex);
+		{
+			if (m_waiting_mode)
+			{
+				m_waiting_mode = M_NOT_WAITING;
+				MP_RoomMenu[0].text = "<Offline Mode>";
+			}
+		}
+		I_unlock_mutex(m_menu_mutex);
+	}
+
+	free(id);
+}
+#endif/*HAVE_THREADS*/
+#endif/*UPDATE_ALERT*/
 
 static void M_ConnectMenu(INT32 choice)
 {
@@ -10627,11 +10777,14 @@ static void M_ConnectMenuModChecks(INT32 choice)
 	M_ConnectMenu(-1);
 }
 
-static UINT32 roomIds[NUM_LIST_ROOMS];
+UINT32 roomIds[NUM_LIST_ROOMS];
 
 static void M_RoomMenu(INT32 choice)
 {
 	INT32 i;
+#ifdef HAVE_THREADS
+	int *id;
+#endif
 
 	(void)choice;
 
@@ -10644,34 +10797,47 @@ static void M_RoomMenu(INT32 choice)
 	if (rendermode == render_soft)
 		I_FinishUpdate(); // page flip or blit buffer
 
-	if (GetRoomsList(currentMenu == &MP_ServerDef) < 0)
-		return;
-
-#ifdef UPDATE_ALERT
-	if (!M_CheckMODVersion())
-		return;
-#endif
-
 	for (i = 1; i < NUM_LIST_ROOMS+1; ++i)
 		MP_RoomMenu[i].status = IT_DISABLED;
 	memset(roomIds, 0, sizeof(roomIds));
 
-	for (i = 0; room_list[i].header.buffer[0]; i++)
-	{
-		if(*room_list[i].name != '\0')
-		{
-			MP_RoomMenu[i+1].text = room_list[i].name;
-			roomIds[i] = room_list[i].id;
-			MP_RoomMenu[i+1].status = IT_STRING|IT_CALL;
-		}
-	}
-
 	MP_RoomDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_RoomDef);
+
+#ifdef UPDATE_ALERT
+#ifdef HAVE_THREADS
+	m_waiting_mode = M_WAITING_VERSION;
+	MP_RoomMenu[0].text = "";
+
+	id = malloc(sizeof *id);
+
+	I_lock_mutex(&ms_QueryId_mutex);
+	{
+		*id = ms_QueryId;
+	}
+	I_unlock_mutex(ms_QueryId_mutex);
+
+	I_spawn_thread("check-new-version",
+			(I_thread_fn)Check_new_version_thread, id);
+#else/*HAVE_THREADS*/
+	if (M_CheckMODVersion(0))
+	{
+		GetRoomsList(currentMenu->prevMenu == &MP_ServerDef, 0);
+	}
+#endif/*HAVE_THREADS*/
+#endif/*UPDATE_ALERT*/
 }
 
 static void M_ChooseRoom(INT32 choice)
 {
+#ifdef HAVE_THREADS
+	I_lock_mutex(&ms_QueryId_mutex);
+	{
+		ms_QueryId++;
+	}
+	I_unlock_mutex(ms_QueryId_mutex);
+#endif
+
 	if (choice == 0)
 		ms_RoomId = -1;
 	else

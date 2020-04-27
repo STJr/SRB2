@@ -18,6 +18,7 @@
 #include "doomstat.h"
 #include "doomdef.h"
 #include "command.h"
+#include "i_threads.h"
 #include "mserv.h"
 #include "m_menu.h"
 #include "z_zone.h"
@@ -46,6 +47,14 @@ consvar_t cv_masterserver_update_rate = {"masterserver_update_rate", "15", CV_SA
 char *ms_API;
 INT16 ms_RoomId = -1;
 
+#ifdef HAVE_THREADS
+int           ms_QueryId;
+I_mutex       ms_QueryId_mutex;
+
+msg_server_t *ms_ServerList;
+I_mutex       ms_ServerList_mutex;
+#endif
+
 static enum { MSCS_NONE, MSCS_WAITING, MSCS_REGISTERED, MSCS_FAILED } con_state = MSCS_NONE;
 
 UINT16 current_port = 0;
@@ -72,26 +81,36 @@ void AddMServCommands(void)
 
 static void WarnGUI (void)
 {
+#ifdef HAVE_THREADS
+	I_lock_mutex(&m_menu_mutex);
+#endif
 	M_StartMessage(M_GetText("There was a problem connecting to\nthe Master Server\n\nCheck the console for details.\n"), NULL, MM_NOTHING);
+#ifdef HAVE_THREADS
+	I_unlock_mutex(m_menu_mutex);
+#endif
 }
 
 #define NUM_LIST_SERVER MAXSERVERLIST
-const msg_server_t *GetShortServersList(INT32 room)
+msg_server_t *GetShortServersList(INT32 room, int id)
 {
-	static msg_server_t server_list[NUM_LIST_SERVER+1]; // +1 for easy test
+	msg_server_t *server_list;
 
-	if (HMS_fetch_servers(server_list, room))
+	// +1 for easy test
+	server_list = malloc(( NUM_LIST_SERVER + 1 ) * sizeof *server_list);
+
+	if (HMS_fetch_servers(server_list, room, id))
 		return server_list;
 	else
 	{
+		free(server_list);
 		WarnGUI();
 		return NULL;
 	}
 }
 
-INT32 GetRoomsList(boolean hosting)
+INT32 GetRoomsList(boolean hosting, int id)
 {
-	if (HMS_fetch_rooms( ! hosting ))
+	if (HMS_fetch_rooms( ! hosting, id))
 		return 1;
 	else
 	{
@@ -101,17 +120,32 @@ INT32 GetRoomsList(boolean hosting)
 }
 
 #ifdef UPDATE_ALERT
-const char *GetMODVersion(void)
+char *GetMODVersion(int id)
 {
-	static char buffer[16];
+	char *buffer;
 	int c;
 
-	c = HMS_compare_mod_version(buffer, sizeof buffer);
+	(void)id;
+
+	buffer = malloc(16);
+
+	c = HMS_compare_mod_version(buffer, 16);
+
+#ifdef HAVE_THREADS
+	I_lock_mutex(&ms_QueryId_mutex);
+	{
+		if (id != ms_QueryId)
+			c = -1;
+	}
+	I_unlock_mutex(ms_QueryId_mutex);
+#endif
 
 	if (c > 0)
 		return buffer;
 	else
 	{
+		free(buffer);
+
 		if (! c)
 			WarnGUI();
 
