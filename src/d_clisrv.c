@@ -1179,6 +1179,8 @@ static const char *snake_backgrounds[] = {
 
 typedef struct snake_s
 {
+	boolean paused;
+	boolean pausepressed;
 	tic_t time;
 	tic_t nextupdate;
 	boolean gameover;
@@ -1200,6 +1202,8 @@ static void CL_InitialiseSnake(void)
 	if (!snake)
 		snake = malloc(sizeof(snake_t));
 
+	snake->paused = false;
+	snake->pausepressed = false;
 	snake->time = 0;
 	snake->nextupdate = SNAKE_SPEED;
 	snake->gameover = false;
@@ -1220,6 +1224,26 @@ static void CL_HandleSnake(void)
 	UINT8 x, y;
 	UINT8 oldx, oldy;
 	UINT16 i;
+
+	// Handle retry
+	if (snake->gameover && (PLAYER1INPUTDOWN(gc_jump) || gamekeydown[KEY_ENTER]))
+	{
+		CL_InitialiseSnake();
+		snake->pausepressed = true; // Avoid accidental pause on respawn
+	}
+
+	// Handle pause
+	if (PLAYER1INPUTDOWN(gc_pause) || gamekeydown[KEY_ENTER])
+	{
+		if (!snake->pausepressed)
+			snake->paused = !snake->paused;
+		snake->pausepressed = true;
+	}
+	else
+		snake->pausepressed = false;
+
+	if (snake->paused)
+		return;
 
 	snake->time++;
 
