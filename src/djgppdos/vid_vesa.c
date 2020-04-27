@@ -221,7 +221,7 @@ INT32 I_GetVideoModeForSize( INT32 w, INT32 h)
 /* ======================================================================== */
 void    VID_Init (void)
 {
-	COM_AddCommand ("I_NumVideoModes", VID_Command_NumModes_f);
+	COM_AddCommand ("vid_nummodes", VID_Command_NumModes_f);
 	COM_AddCommand ("vid_modeinfo", VID_Command_ModeInfo_f);
 	COM_AddCommand ("vid_modelist", VID_Command_ModeList_f);
 	COM_AddCommand ("vid_mode", VID_Command_Mode_f);
