@@ -2954,6 +2954,16 @@ static void P_ConvertBinaryMap(void)
 
 			lines[i].special = 150;
 			break;
+		case 160: //FOF: Water bobbing
+			lines[i].args[0] = lines[i].tag;
+
+			//Tangibility
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[1] |= TMFT_DONTBLOCKOTHERS;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[1] |= TMFT_DONTBLOCKPLAYER;
+
+			break;
 		case 170: //FOF: Crumbling, respawn
 		case 171: //FOF: Crumbling, no respawn
 		case 172: //FOF: Crumbling, respawn, intangible from bottom

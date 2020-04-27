@@ -6734,7 +6734,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
-			case 150: // Air bobbing platform
+			case 150: // FOF (Air bobbing)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
 				//Tangibility settings
@@ -6757,11 +6757,32 @@ void P_SpawnSpecials(boolean fromnetsave)
 				P_AddAirbob(lines[i].frontsector, lines + i, lines[i].args[1], !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
 				break;
 
-			case 160: // Float/bob platform
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB, secthinkers);
+			case 160: // FOF (Water bobbing)
+				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB;
+
+				//Tangibility settings
+				if (lines[i].args[1] & TMFT_INTANGIBLETOP)
+					ffloorflags |= FF_REVERSEPLATFORM;
+				if (lines[i].args[1] & TMFT_INTANGIBLEBOTTOM)
+					ffloorflags |= FF_PLATFORM;
+				if (lines[i].args[1] & TMFT_DONTBLOCKPLAYER)
+					ffloorflags &= ~FF_BLOCKPLAYER;
+				if (lines[i].args[1] & TMFT_DONTBLOCKOTHERS)
+					ffloorflags &= ~FF_BLOCKOTHERS;
+
+				//If player can enter it, render insides
+				if (lines[i].args[1] & TMFT_VISIBLEFROMINSIDE)
+				{
+					if (ffloorflags & FF_RENDERPLANES)
+						ffloorflags |= FF_BOTHPLANES;
+					if (ffloorflags & FF_RENDERSIDES)
+						ffloorflags |= FF_ALLSIDES;
+				}
+
+				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
-			case 170: // Crumbling platform
+			case 170: // FOF (Crumbling)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE;
 
 				//Tangibility settings
