@@ -1015,42 +1015,12 @@ INT32 P_FindSectorFromTag(INT16 tag, INT32 start)
 	}
 }
 
-/** Searches the tag lists for the next line tagged to a line.
-  *
-  * \param line  Tagged line used as a reference.
-  * \param start -1 to start anew, or the result of a previous call to keep
-  *              searching.
-  * \return Number of the next tagged line found.
-  * \sa P_FindSectorFromTag
-  */
-static INT32 P_FindLineFromLineTag(const line_t *line, INT32 start)
-{
-	if (line->tag == -1)
-	{
-		start++;
-
-		if (start >= (INT32)numlines)
-			return -1;
-
-		return start;
-	}
-	else
-	{
-		start = start >= 0 ? lines[start].nexttag :
-			lines[(unsigned)line->tag % numlines].firsttag;
-		while (start >= 0 && lines[start].tag != line->tag)
-			start = lines[start].nexttag;
-		return start;
-	}
-}
-#if 0
 /** Searches the tag lists for the next line with a given tag and special.
   *
   * \param tag     Tag number.
   * \param start   -1 to start anew, or the result of a previous call to keep
   *                searching.
   * \return Number of next suitable line found.
-  * \sa P_FindLineFromLineTag
   * \author Graue <graue@oceanbase.org>
   */
 static INT32 P_FindLineFromTag(INT32 tag, INT32 start)
@@ -1059,7 +1029,7 @@ static INT32 P_FindLineFromTag(INT32 tag, INT32 start)
 	{
 		start++;
 
-		if (start >= numlines)
+		if (start >= (INT32)numlines)
 			return -1;
 
 		return start;
@@ -1073,7 +1043,7 @@ static INT32 P_FindLineFromTag(INT32 tag, INT32 start)
 		return start;
 	}
 }
-#endif
+
 //
 // P_FindSpecialLineFromTag
 //
@@ -6605,7 +6575,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 							if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
 								Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), (INT32)(sectors[s].lines[j]-lines), (INT32)i);
 				} else // Find FOFs by effect sector tag
-					for (s = -1; (s = P_FindLineFromLineTag(lines + i, s)) >= 0 ;)
+					for (s = -1; (s = P_FindLineFromTag(lines[i].tag, s)) >= 0 ;)
 					{
 						if ((size_t)s == i)
 							continue;
