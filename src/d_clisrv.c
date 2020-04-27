@@ -1153,12 +1153,12 @@ static void CV_LoadPlayerNames(UINT8 **p)
 
 #ifdef CLIENT_LOADINGSCREEN
 #define SNAKE_SPEED 4
-#define SNAKE_NUM_BLOCKS_X 24
-#define SNAKE_NUM_BLOCKS_Y 14
-#define SNAKE_BLOCK_SIZE 8
+#define SNAKE_NUM_BLOCKS_X 20
+#define SNAKE_NUM_BLOCKS_Y 10
+#define SNAKE_BLOCK_SIZE 12
 #define SNAKE_MAP_WIDTH  (SNAKE_NUM_BLOCKS_X * SNAKE_BLOCK_SIZE)
 #define SNAKE_MAP_HEIGHT (SNAKE_NUM_BLOCKS_Y * SNAKE_BLOCK_SIZE)
-#define SNAKE_BORDER_SIZE 8
+#define SNAKE_BORDER_SIZE 12
 #define SNAKE_LEFT_X ((BASEVIDWIDTH - SNAKE_MAP_WIDTH) / 2 - SNAKE_BORDER_SIZE)
 #define SNAKE_RIGHT_X (SNAKE_LEFT_X + SNAKE_MAP_WIDTH + SNAKE_BORDER_SIZE * 2 - 1)
 #define SNAKE_BOTTOM_Y (BASEVIDHEIGHT - 48)
@@ -1170,17 +1170,13 @@ typedef struct snake_s
 	tic_t nextupdate;
 	boolean gameover;
 
-	UINT8 snakedir;
-	UINT8 snakeprevdir;
-
 	UINT16 snakelength;
 	UINT8 snakex[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
 	UINT8 snakey[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
-	UINT8 snakecolor[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
+	UINT8 snakedir[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
 
 	UINT8 applex;
 	UINT8 appley;
-	UINT8 applecolor;
 } snake_t;
 
 static snake_t *snake = NULL;
@@ -1194,46 +1190,49 @@ static void CL_InitialiseSnake(void)
 	snake->nextupdate = SNAKE_SPEED;
 	snake->gameover = false;
 
-	snake->snakedir = 0;
-	snake->snakeprevdir = snake->snakedir;
-
 	snake->snakelength = 1;
-	snake->snakex[0] = rand() % SNAKE_NUM_BLOCKS_X;
-	snake->snakey[0] = rand() % SNAKE_NUM_BLOCKS_Y;
-	snake->snakecolor[0] = rand() % 256;
+	snake->snakex[0] = M_RandomKey(SNAKE_NUM_BLOCKS_X);
+	snake->snakey[0] = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
+	snake->snakedir[0] = 0;
+	snake->snakedir[1] = 0;
 
-	snake->applex = rand() % SNAKE_NUM_BLOCKS_X;
-	snake->appley = rand() % SNAKE_NUM_BLOCKS_Y;
-	snake->applecolor = rand() % 256;
+	snake->applex = M_RandomKey(SNAKE_NUM_BLOCKS_X);
+	snake->appley = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
 }
 
 static void CL_HandleSnake(void)
 {
 	UINT8 x, y;
+	UINT8 oldx, oldy;
 	UINT16 i;
 
 	snake->time++;
 
+	x = snake->snakex[0];
+	y = snake->snakey[0];
+	oldx = snake->snakex[1];
+	oldy = snake->snakey[1];
+
 	// Update direction
 	if (gamekeydown[KEY_LEFTARROW])
 	{
-		if (snake->snakeprevdir != 2)
-			snake->snakedir = 1;
+		if (snake->snakelength < 2 || x <= oldx)
+			snake->snakedir[0] = 1;
 	}
 	else if (gamekeydown[KEY_RIGHTARROW])
 	{
-		if (snake->snakeprevdir != 1)
-			snake->snakedir = 2;
+		if (snake->snakelength < 2 || x >= oldx)
+			snake->snakedir[0] = 2;
 	}
 	else if (gamekeydown[KEY_UPARROW])
 	{
-		if (snake->snakeprevdir != 4)
-			snake->snakedir = 3;
+		if (snake->snakelength < 2 || y <= oldy)
+			snake->snakedir[0] = 3;
 	}
 	else if (gamekeydown[KEY_DOWNARROW])
 	{
-		if (snake->snakeprevdir != 3)
-			snake->snakedir = 4;
+		if (snake->snakelength < 2 || y >= oldy)
+			snake->snakedir[0] = 4;
 	}
 
 	snake->nextupdate--;
@@ -1241,15 +1240,11 @@ static void CL_HandleSnake(void)
 		return;
 	snake->nextupdate = SNAKE_SPEED;
 
-	snake->snakeprevdir = snake->snakedir;
-
 	if (snake->gameover)
 		return;
 
 	// Find new position
-	x = snake->snakex[0];
-	y = snake->snakey[0];
-	switch (snake->snakedir)
+	switch (snake->snakedir[0])
 	{
 		case 1:
 			if (x > 0)
@@ -1294,28 +1289,53 @@ static void CL_HandleSnake(void)
 		snake->snakelength++;
 		snake->snakex[snake->snakelength - 1] = snake->snakex[snake->snakelength - 2];
 		snake->snakey[snake->snakelength - 1] = snake->snakey[snake->snakelength - 2];
-		snake->snakecolor[snake->snakelength - 1] = snake->applecolor;
+		snake->snakedir[snake->snakelength - 1] = snake->snakedir[snake->snakelength - 2];
 
-		snake->applex = rand() % SNAKE_NUM_BLOCKS_X;
-		snake->appley = rand() % SNAKE_NUM_BLOCKS_Y;
-		snake->applecolor = rand() % 256;
+		snake->applex = M_RandomKey(SNAKE_NUM_BLOCKS_X);
+		snake->appley = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
 
 		S_StartSound(NULL, sfx_s3k6b);
 	}
 
-	// Move
-	for (i = snake->snakelength - 1; i > 0; i--)
+	if (snake->snakelength > 1)
 	{
-		snake->snakex[i] = snake->snakex[i - 1];
-		snake->snakey[i] = snake->snakey[i - 1];
+		UINT8 dir = snake->snakedir[0];
+
+		// Move
+		for (i = snake->snakelength - 1; i > 0; i--)
+		{
+			snake->snakex[i] = snake->snakex[i - 1];
+			snake->snakey[i] = snake->snakey[i - 1];
+			snake->snakedir[i] = snake->snakedir[i - 1];
+		}
+
+		// Handle corners
+		if      (x < oldx && dir == 3)
+			dir = 5;
+		else if (x > oldx && dir == 3)
+			dir = 6;
+		else if (x < oldx && dir == 4)
+			dir = 7;
+		else if (x > oldx && dir == 4)
+			dir = 8;
+		else if (y < oldy && dir == 1)
+			dir = 9;
+		else if (y < oldy && dir == 2)
+			dir = 10;
+		else if (y > oldy && dir == 1)
+			dir = 11;
+		else if (y > oldy && dir == 2)
+			dir = 12;
+		snake->snakedir[1] = dir;
 	}
+
 	snake->snakex[0] = x;
 	snake->snakey[0] = y;
 }
 
 static void CL_DrawSnake(void)
 {
-	UINT16 i;
+	INT16 i;
 
 	// Background
 	V_DrawFill(SNAKE_LEFT_X + SNAKE_BORDER_SIZE, SNAKE_TOP_Y + SNAKE_BORDER_SIZE, SNAKE_MAP_WIDTH, SNAKE_MAP_HEIGHT, 239);
@@ -1327,26 +1347,63 @@ static void CL_DrawSnake(void)
 	V_DrawFill(SNAKE_LEFT_X, SNAKE_TOP_Y + SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, 242); // Left
 
 	// Apple
-	V_DrawFill(
-		SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->applex * SNAKE_BLOCK_SIZE,
-		SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->appley * SNAKE_BLOCK_SIZE,
-		SNAKE_BLOCK_SIZE,
-		SNAKE_BLOCK_SIZE,
-		snake->applecolor
+	V_DrawFixedPatch(
+		(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->applex * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+		(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->appley * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+		FRACUNIT / 4,
+		0,
+		W_CachePatchName("DL_APPLE", PU_HUDGFX),
+		NULL
 	);
 
 	// Snake
 	if (!snake->gameover || snake->time % 8 < 8 / 2) // Blink if game over
-		for (i = 0; i < snake->snakelength; i++)
+	{
+		for (i = snake->snakelength - 1; i >= 0; i--)
 		{
-			V_DrawFill(
-				SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->snakex[i] * SNAKE_BLOCK_SIZE,
-				SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->snakey[i] * SNAKE_BLOCK_SIZE,
-				SNAKE_BLOCK_SIZE,
-				SNAKE_BLOCK_SIZE,
-				snake->snakecolor[i]
+			const char *patchname;
+			UINT8 dir = snake->snakedir[i];
+
+			if (i == 0) // Head
+			{
+				switch (dir)
+				{
+					case  1: patchname = "DL_SNAKEHEAD_L"; break;
+					case  2: patchname = "DL_SNAKEHEAD_R"; break;
+					case  3: patchname = "DL_SNAKEHEAD_T"; break;
+					default: patchname = "DL_SNAKEHEAD_B";
+				}
+			}
+			else // Body
+			{
+				switch (dir)
+				{
+					case  1: patchname = "DL_SNAKEBODY_L"; break;
+					case  2: patchname = "DL_SNAKEBODY_R"; break;
+					case  3: patchname = "DL_SNAKEBODY_T"; break;
+					case  4: patchname = "DL_SNAKEBODY_B"; break;
+					case  5: patchname = "DL_SNAKEBODY_LT"; break;
+					case  6: patchname = "DL_SNAKEBODY_RT"; break;
+					case  7: patchname = "DL_SNAKEBODY_LB"; break;
+					case  8: patchname = "DL_SNAKEBODY_RB"; break;
+					case  9: patchname = "DL_SNAKEBODY_TL"; break;
+					case 10: patchname = "DL_SNAKEBODY_TR"; break;
+					case 11: patchname = "DL_SNAKEBODY_BL"; break;
+					case 12: patchname = "DL_SNAKEBODY_BR"; break;
+					default: patchname = "DL_SNAKEBODY_B";
+				}
+			}
+
+			V_DrawFixedPatch(
+				(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->snakex[i] * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+				(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->snakey[i] * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+				FRACUNIT / 2,
+				0,
+				W_CachePatchName(patchname, PU_HUDGFX),
+				NULL
 			);
 		}
+	}
 
 	// Length
 	V_DrawString(SNAKE_RIGHT_X + 4, SNAKE_TOP_Y, V_MONOSPACE, va("%u", snake->snakelength));
