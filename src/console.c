@@ -29,6 +29,7 @@
 #include "i_video.h"
 #include "z_zone.h"
 #include "i_system.h"
+#include "i_threads.h"
 #include "d_main.h"
 #include "m_menu.h"
 #include "filesrch.h"
@@ -43,6 +44,16 @@
 #endif
 
 #define MAXHUDLINES 20
+
+#ifdef HAVE_THREADS
+I_mutex con_mutex;
+
+#  define Lock_state()    I_lock_mutex(&con_mutex)
+#  define Unlock_state() I_unlock_mutex(con_mutex)
+#else/*HAVE_THREADS*/
+#  define Lock_state()
+#  define Unlock_state()
+#endif/*HAVE_THREADS*/
 
 static boolean con_started = false; // console has been initialised
        boolean con_startup = false; // true at game startup, screen need refreshing
@@ -150,6 +161,8 @@ static void CONS_hudlines_Change(void)
 {
 	INT32 i;
 
+	Lock_state();
+
 	// Clear the currently displayed lines
 	for (i = 0; i < con_hudlines; i++)
 		con_hudtime[i] = 0;
@@ -161,6 +174,8 @@ static void CONS_hudlines_Change(void)
 
 	con_hudlines = cons_hudlines.value;
 
+	Unlock_state();
+
 	CONS_Printf(M_GetText("Number of console HUD lines is now %d\n"), con_hudlines);
 }
 
@@ -168,12 +183,16 @@ static void CONS_hudlines_Change(void)
 //
 static void CONS_Clear_f(void)
 {
+	Lock_state();
+
 	memset(con_buffer, 0, CON_BUFFERSIZE);
 
 	con_cx = 0;
 	con_cy = con_totallines-1;
 	con_line = &con_buffer[con_cy*con_width];
 	con_scrollup = 0;
+
+	Unlock_state();
 }
 
 // Choose english keymap
@@ -377,19 +396,28 @@ void CON_Init(void)
 	for (i = 0; i < NUMINPUTS; i++)
 		bindtable[i] = NULL;
 
+	Lock_state();
+
 	// clear all lines
 	memset(con_buffer, 0, CON_BUFFERSIZE);
 
 	// make sure it is ready for the loading screen
 	con_width = 0;
+
+	Unlock_state();
+
 	CON_RecalcSize();
 
 	CON_SetupColormaps();
+
+	Lock_state();
 
 	//note: CON_Ticker should always execute at least once before D_Display()
 	con_clipviewtop = -1; // -1 does not clip
 
 	con_hudlines = atoi(cons_hudlines.defaultvalue);
+
+	Unlock_state();
 
 	// setup console input filtering
 	CON_InputInit();
@@ -399,15 +427,23 @@ void CON_Init(void)
 	COM_AddCommand("cls", CONS_Clear_f);
 	//COM_AddCommand("english", CONS_English_f);
 	// set console full screen for game startup MAKE SURE VID_Init() done !!!
+	Lock_state();
+
 	con_destlines = vid.height;
 	con_curlines = vid.height;
 
+	Unlock_state();
 
 	if (!dedicated)
 	{
+		Lock_state();
+
 		con_started = true;
 		con_startup = true; // need explicit screen refresh until we are in Doom loop
 		consoletoggle = false;
+
+		Unlock_state();
+
 		CV_RegisterVar(&cons_msgtimeout);
 		CV_RegisterVar(&cons_hudlines);
 		CV_RegisterVar(&cons_speed);
@@ -418,19 +454,27 @@ void CON_Init(void)
 	}
 	else
 	{
+		Lock_state();
+
 		con_started = true;
 		con_startup = false; // need explicit screen refresh until we are in Doom loop
 		consoletoggle = true;
+
+		Unlock_state();
 	}
 }
 // Console input initialization
 //
 static void CON_InputInit(void)
 {
+	Lock_state();
+
 	// prepare the first prompt line
 	memset(inputlines, 0, sizeof (inputlines));
 	inputline = 0;
 	input_cur = input_sel = input_len = 0;
+
+	Unlock_state();
 }
 
 //======================================================================
@@ -445,6 +489,8 @@ static void CON_RecalcSize(void)
 	size_t conw, oldcon_width, oldnumlines, i, oldcon_cy;
 	char *tmp_buffer;
 	char *string;
+
+	Lock_state();
 
 	switch (cv_constextsize.value)
 	{
@@ -483,10 +529,17 @@ static void CON_RecalcSize(void)
 
 	// check for change of video width
 	if (conw == con_width)
+	{
+		Unlock_state();
 		return; // didn't change
+	}
+
+	Unlock_state();
 
 	tmp_buffer = Z_Malloc(CON_BUFFERSIZE, PU_STATIC, NULL);
 	string = Z_Malloc(CON_BUFFERSIZE, PU_STATIC, NULL); // BP: it is a line but who know
+
+	Lock_state();
 
 	oldcon_width = con_width;
 	oldnumlines = con_totallines;
@@ -507,6 +560,8 @@ static void CON_RecalcSize(void)
 	con_cy = con_totallines-1;
 	con_line = &con_buffer[con_cy*con_width];
 	con_scrollup = 0;
+
+	Unlock_state();
 
 	// re-arrange console text buffer to keep text
 	if (oldcon_width) // not the first time
@@ -532,7 +587,11 @@ static void CON_RecalcSize(void)
 
 static void CON_ChangeHeight(void)
 {
-	INT32 minheight = 20 * con_scalefactor;	// 20 = 8+8+4
+	INT32 minheight;
+
+	Lock_state();
+
+	minheight = 20 * con_scalefactor;	// 20 = 8+8+4
 
 	// toggle console in
 	con_destlines = (cons_height.value*vid.height)/100;
@@ -542,13 +601,19 @@ static void CON_ChangeHeight(void)
 		con_destlines = vid.height;
 
 	con_destlines &= ~0x3; // multiple of text row height
+
+	Unlock_state();
 }
 
 // Handles Console moves in/out of screen (per frame)
 //
 static void CON_MoveConsole(void)
 {
-	const fixed_t conspeed = FixedDiv(cons_speed.value*vid.fdupy, FRACUNIT);
+	fixed_t conspeed;
+
+	Lock_state();
+
+	conspeed = FixedDiv(cons_speed.value*vid.fdupy, FRACUNIT);
 
 	// instant
 	if (!cons_speed.value)
@@ -570,6 +635,8 @@ static void CON_MoveConsole(void)
 		if (con_curlines < con_destlines)
 			con_curlines = con_destlines;
 	}
+
+	Unlock_state();
 }
 
 // Clear time of console heads up messages
@@ -578,16 +645,25 @@ void CON_ClearHUD(void)
 {
 	INT32 i;
 
+	Lock_state();
+
 	for (i = 0; i < con_hudlines; i++)
 		con_hudtime[i] = 0;
+
+	Unlock_state();
 }
 
 // Force console to move out immediately
 // note: con_ticker will set consoleready false
 void CON_ToggleOff(void)
 {
+	Lock_state();
+
 	if (!con_destlines)
+	{
+		Unlock_state();
 		return;
+	}
 
 	con_destlines = 0;
 	con_curlines = 0;
@@ -596,11 +672,19 @@ void CON_ToggleOff(void)
 	con_clipviewtop = -1; // remove console clipping of view
 
 	I_UpdateMouseGrab();
+
+	Unlock_state();
 }
 
 boolean CON_Ready(void)
 {
-	return consoleready;
+	boolean ready;
+	Lock_state();
+	{
+		ready = consoleready;
+	}
+	Unlock_state();
+	return ready;
 }
 
 // Console ticker: handles console move in/out, cursor blinking
@@ -608,7 +692,11 @@ boolean CON_Ready(void)
 void CON_Ticker(void)
 {
 	INT32 i;
-	INT32 minheight = 20 * con_scalefactor;	// 20 = 8+8+4
+	INT32 minheight;
+
+	Lock_state();
+
+	minheight = 20 * con_scalefactor;	// 20 = 8+8+4
 
 	// cursor blinking
 	con_tick++;
@@ -659,6 +747,8 @@ void CON_Ticker(void)
 		if (con_hudtime[i] < 0)
 			con_hudtime[i] = 0;
 	}
+
+	Unlock_state();
 }
 
 //
@@ -670,32 +760,51 @@ void CON_Ticker(void)
 
 static void CON_InputClear(void)
 {
+	Lock_state();
+
 	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
 	input_cur = input_sel = input_len = 0;
+
+	Unlock_state();
 }
 
 static void CON_InputSetString(const char *c)
 {
+	Lock_state();
+
 	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
 	strcpy(inputlines[inputline], c);
 	input_cur = input_sel = input_len = strlen(c);
+
+	Unlock_state();
 }
 
 static void CON_InputAddString(const char *c)
 {
 	size_t csize = strlen(c);
+
+	Lock_state();
+
 	if (input_len + csize > CON_MAXPROMPTCHARS-1)
+	{
+		Unlock_state();
 		return;
+	}
 	if (input_cur != input_len)
 		memmove(&inputlines[inputline][input_cur+csize], &inputlines[inputline][input_cur], input_len-input_cur);
 	memcpy(&inputlines[inputline][input_cur], c, csize);
 	input_len += csize;
 	input_sel = (input_cur += csize);
+
+	Unlock_state();
 }
 
 static void CON_InputDelSelection(void)
 {
 	size_t start, end, len;
+
+	Lock_state();
+
 	if (input_cur > input_sel)
 	{
 		start = input_sel;
@@ -714,27 +823,39 @@ static void CON_InputDelSelection(void)
 
 	input_len -= len;
 	input_sel = input_cur = start;
+
+	Unlock_state();
 }
 
 static void CON_InputAddChar(char c)
 {
 	if (input_len >= CON_MAXPROMPTCHARS-1)
 		return;
+
+	Lock_state();
+
 	if (input_cur != input_len)
 		memmove(&inputlines[inputline][input_cur+1], &inputlines[inputline][input_cur], input_len-input_cur);
 	inputlines[inputline][input_cur++] = c;
 	inputlines[inputline][++input_len] = 0;
 	input_sel = input_cur;
+
+	Unlock_state();
 }
 
 static void CON_InputDelChar(void)
 {
 	if (!input_cur)
 		return;
+
+	Lock_state();
+
 	if (input_cur != input_len)
 		memmove(&inputlines[inputline][input_cur-1], &inputlines[inputline][input_cur], input_len-input_cur);
 	inputlines[inputline][--input_len] = 0;
 	input_sel = --input_cur;
+
+	Unlock_state();
 }
 
 //
@@ -1153,6 +1274,8 @@ static void CON_Print(char *msg)
 		S_StartSound(NULL, sfx_radio);
 	}
 
+	Lock_state();
+
 	if (!(*msg & 0x80))
 	{
 		con_line[con_cx++] = '\x80';
@@ -1213,7 +1336,12 @@ static void CON_Print(char *msg)
 		}
 
 		if (*msg == '\0')
+		{
+#ifdef HAVE_THREADS
+			I_unlock_mutex(con_mutex);
+#endif
 			return;
+		}
 
 		// printable character
 		for (l = 0; l < (con_width-11) && msg[l] > ' '; l++)
@@ -1231,6 +1359,8 @@ static void CON_Print(char *msg)
 		for (; l > 0; l--)
 			con_line[con_cx++] = *(msg++);
 	}
+
+	Unlock_state();
 }
 
 void CON_LogMessage(const char *msg)
@@ -1262,6 +1392,7 @@ void CONS_Printf(const char *fmt, ...)
 {
 	va_list argptr;
 	static char *txt = NULL;
+	boolean startup;
 
 	if (txt == NULL)
 		txt = malloc(8192);
@@ -1289,11 +1420,16 @@ void CONS_Printf(const char *fmt, ...)
 	CON_LogMessage(txt);
 #endif
 
+	Lock_state();
+
 	// make sure new text is visible
 	con_scrollup = 0;
+	startup = con_startup;
+
+	Unlock_state();
 
 	// if not in display loop, force screen update
-	if (con_startup && (!setrenderneeded))
+	if (startup && (!setrenderneeded))
 	{
 #ifdef _WINDOWS
 		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
@@ -1645,8 +1781,13 @@ static void CON_DrawConsole(void)
 //
 void CON_Drawer(void)
 {
+	Lock_state();
+
 	if (!con_started || !graphics_started)
+	{
+		Unlock_state();
 		return;
+	}
 
 	if (needpatchrecache)
 	{
@@ -1667,4 +1808,6 @@ void CON_Drawer(void)
 	|| gamestate == GS_INTERMISSION || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
 	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
 		CON_DrawHudlines();
+
+	Unlock_state();
 }
