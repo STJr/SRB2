@@ -2254,7 +2254,7 @@ INT32 I_StartupSystem(void)
 	SDL_GetVersion(&SDLlinked);
 #ifdef HAVE_THREADS
 	I_start_threads();
-	atexit(I_stop_threads);
+	I_AddExitFunc(I_stop_threads);
 #endif
 	I_StartupConsole();
 #ifdef NEWSIGNALHANDLER
