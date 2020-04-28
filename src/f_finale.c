@@ -102,21 +102,21 @@ INT16 curttloop;
 UINT16 curtttics;
 
 // ttmode old
-static patch_t *ttbanner; // white banner with "robo blast" and "2"
-static patch_t *ttwing; // wing background
-static patch_t *ttsonic; // "SONIC"
-static patch_t *ttswave1; // Title Sonics
-static patch_t *ttswave2;
-static patch_t *ttswip1;
-static patch_t *ttsprep1;
-static patch_t *ttsprep2;
-static patch_t *ttspop1;
-static patch_t *ttspop2;
-static patch_t *ttspop3;
-static patch_t *ttspop4;
-static patch_t *ttspop5;
-static patch_t *ttspop6;
-static patch_t *ttspop7;
+static patch_t **ttbanner; // white banner with "robo blast" and "2"
+static patch_t **ttwing; // wing background
+static patch_t **ttsonic; // "SONIC"
+static patch_t **ttswave1; // Title Sonics
+static patch_t **ttswave2;
+static patch_t **ttswip1;
+static patch_t **ttsprep1;
+static patch_t **ttsprep2;
+static patch_t **ttspop1;
+static patch_t **ttspop2;
+static patch_t **ttspop3;
+static patch_t **ttspop4;
+static patch_t **ttspop5;
+static patch_t **ttspop6;
+static patch_t **ttspop7;
 
 // ttmode alacroix
 static SINT8 testttscale = 0;
@@ -124,51 +124,51 @@ static SINT8 activettscale = 0;
 boolean ttavailable[6];
 boolean ttloaded[6];
 
-static patch_t *ttribb[6][TTMAX_ALACROIX];
-static patch_t *ttsont[6][TTMAX_ALACROIX];
-static patch_t *ttrobo[6][TTMAX_ALACROIX];
-static patch_t *tttwot[6][TTMAX_ALACROIX];
-static patch_t *ttembl[6][TTMAX_ALACROIX];
-static patch_t *ttrbtx[6][TTMAX_ALACROIX];
-static patch_t *ttsoib[6][TTMAX_ALACROIX];
-static patch_t *ttsoif[6][TTMAX_ALACROIX];
-static patch_t *ttsoba[6][TTMAX_ALACROIX];
-static patch_t *ttsobk[6][TTMAX_ALACROIX];
-static patch_t *ttsodh[6][TTMAX_ALACROIX];
-static patch_t *tttaib[6][TTMAX_ALACROIX];
-static patch_t *tttaif[6][TTMAX_ALACROIX];
-static patch_t *tttaba[6][TTMAX_ALACROIX];
-static patch_t *tttabk[6][TTMAX_ALACROIX];
-static patch_t *tttabt[6][TTMAX_ALACROIX];
-static patch_t *tttaft[6][TTMAX_ALACROIX];
-static patch_t *ttknib[6][TTMAX_ALACROIX];
-static patch_t *ttknif[6][TTMAX_ALACROIX];
-static patch_t *ttknba[6][TTMAX_ALACROIX];
-static patch_t *ttknbk[6][TTMAX_ALACROIX];
-static patch_t *ttkndh[6][TTMAX_ALACROIX];
+static patch_t **ttribb[6][TTMAX_ALACROIX];
+static patch_t **ttsont[6][TTMAX_ALACROIX];
+static patch_t **ttrobo[6][TTMAX_ALACROIX];
+static patch_t **tttwot[6][TTMAX_ALACROIX];
+static patch_t **ttembl[6][TTMAX_ALACROIX];
+static patch_t **ttrbtx[6][TTMAX_ALACROIX];
+static patch_t **ttsoib[6][TTMAX_ALACROIX];
+static patch_t **ttsoif[6][TTMAX_ALACROIX];
+static patch_t **ttsoba[6][TTMAX_ALACROIX];
+static patch_t **ttsobk[6][TTMAX_ALACROIX];
+static patch_t **ttsodh[6][TTMAX_ALACROIX];
+static patch_t **tttaib[6][TTMAX_ALACROIX];
+static patch_t **tttaif[6][TTMAX_ALACROIX];
+static patch_t **tttaba[6][TTMAX_ALACROIX];
+static patch_t **tttabk[6][TTMAX_ALACROIX];
+static patch_t **tttabt[6][TTMAX_ALACROIX];
+static patch_t **tttaft[6][TTMAX_ALACROIX];
+static patch_t **ttknib[6][TTMAX_ALACROIX];
+static patch_t **ttknif[6][TTMAX_ALACROIX];
+static patch_t **ttknba[6][TTMAX_ALACROIX];
+static patch_t **ttknbk[6][TTMAX_ALACROIX];
+static patch_t **ttkndh[6][TTMAX_ALACROIX];
 
-#define TTEMBL (ttembl[activettscale-1])
-#define TTRIBB (ttribb[activettscale-1])
-#define TTSONT (ttsont[activettscale-1])
-#define TTROBO (ttrobo[activettscale-1])
-#define TTTWOT (tttwot[activettscale-1])
-#define TTRBTX (ttrbtx[activettscale-1])
-#define TTSOIB (ttsoib[activettscale-1])
-#define TTSOIF (ttsoif[activettscale-1])
-#define TTSOBA (ttsoba[activettscale-1])
-#define TTSOBK (ttsobk[activettscale-1])
-#define TTSODH (ttsodh[activettscale-1])
-#define TTTAIB (tttaib[activettscale-1])
-#define TTTAIF (tttaif[activettscale-1])
-#define TTTABA (tttaba[activettscale-1])
-#define TTTABK (tttabk[activettscale-1])
-#define TTTABT (tttabt[activettscale-1])
-#define TTTAFT (tttaft[activettscale-1])
-#define TTKNIB (ttknib[activettscale-1])
-#define TTKNIF (ttknif[activettscale-1])
-#define TTKNBA (ttknba[activettscale-1])
-#define TTKNBK (ttknbk[activettscale-1])
-#define TTKNDH (ttkndh[activettscale-1])
+#define TTEMBL *(ttembl[activettscale-1])
+#define TTRIBB *(ttribb[activettscale-1])
+#define TTSONT *(ttsont[activettscale-1])
+#define TTROBO *(ttrobo[activettscale-1])
+#define TTTWOT *(tttwot[activettscale-1])
+#define TTRBTX *(ttrbtx[activettscale-1])
+#define TTSOIB *(ttsoib[activettscale-1])
+#define TTSOIF *(ttsoif[activettscale-1])
+#define TTSOBA *(ttsoba[activettscale-1])
+#define TTSOBK *(ttsobk[activettscale-1])
+#define TTSODH *(ttsodh[activettscale-1])
+#define TTTAIB *(tttaib[activettscale-1])
+#define TTTAIF *(tttaif[activettscale-1])
+#define TTTABA *(tttaba[activettscale-1])
+#define TTTABK *(tttabk[activettscale-1])
+#define TTTABT *(tttabt[activettscale-1])
+#define TTTAFT *(tttaft[activettscale-1])
+#define TTKNIB *(ttknib[activettscale-1])
+#define TTKNIF *(ttknif[activettscale-1])
+#define TTKNBA *(ttknba[activettscale-1])
+#define TTKNBK *(ttknbk[activettscale-1])
+#define TTKNDH *(ttkndh[activettscale-1])
 
 static boolean sonic_blink = false;
 static boolean sonic_blink_twice = false;
@@ -187,18 +187,18 @@ static INT32 knux_idle_start = 0;
 static INT32 knux_idle_end = 0;
 
 // ttmode user
-static patch_t *ttuser[TTMAX_USER];
+static patch_t **ttuser[TTMAX_USER];
 static INT32 ttuser_count = 0;
 
 static boolean goodending;
-static patch_t *endbrdr[2]; // border - blue, white, pink - where have i seen those colours before?
-static patch_t *endbgsp[3]; // nebula, sun, planet
-static patch_t *endegrk[2]; // eggrock - replaced midway through good ending
-static patch_t *endfwrk[3]; // firework - replaced with skin when good ending
-static patch_t *endspkl[3]; // sparkle
-static patch_t *endglow[2]; // glow aura - replaced with black rock's midway through good ending
-static patch_t *endxpld[4]; // mini explosion
-static patch_t *endescp[5]; // escape pod + flame
+static patch_t **endbrdr[2]; // border - blue, white, pink - where have i seen those colours before?
+static patch_t **endbgsp[3]; // nebula, sun, planet
+static patch_t **endegrk[2]; // eggrock - replaced midway through good ending
+static patch_t **endfwrk[3]; // firework - replaced with skin when good ending
+static patch_t **endspkl[3]; // sparkle
+static patch_t **endglow[2]; // glow aura - replaced with black rock's midway through good ending
+static patch_t **endxpld[4]; // mini explosion
+static patch_t **endescp[5]; // escape pod + flame
 static INT32 sparkloffs[3][2]; // eggrock explosions/blackrock sparkles
 static INT32 sparklloop;
 
@@ -1760,32 +1760,32 @@ void F_GameEvaluationTicker(void)
 
 static void F_CacheEnding(void)
 {
-	endbrdr[1] = W_CachePatchName("ENDBRDR1", PU_PATCH);
+	endbrdr[1] = (patch_t **)W_GetPatchPointerFromName("ENDBRDR1", PU_PATCH);
 
-	endegrk[0] = W_CachePatchName("ENDEGRK0", PU_PATCH);
-	endegrk[1] = W_CachePatchName("ENDEGRK1", PU_PATCH);
+	endegrk[0] = (patch_t **)W_GetPatchPointerFromName("ENDEGRK0", PU_PATCH);
+	endegrk[1] = (patch_t **)W_GetPatchPointerFromName("ENDEGRK1", PU_PATCH);
 
-	endglow[0] = W_CachePatchName("ENDGLOW0", PU_PATCH);
-	endglow[1] = W_CachePatchName("ENDGLOW1", PU_PATCH);
+	endglow[0] = (patch_t **)W_GetPatchPointerFromName("ENDGLOW0", PU_PATCH);
+	endglow[1] = (patch_t **)W_GetPatchPointerFromName("ENDGLOW1", PU_PATCH);
 
-	endbgsp[0] = W_CachePatchName("ENDBGSP0", PU_PATCH);
-	endbgsp[1] = W_CachePatchName("ENDBGSP1", PU_PATCH);
-	endbgsp[2] = W_CachePatchName("ENDBGSP2", PU_PATCH);
+	endbgsp[0] = (patch_t **)W_GetPatchPointerFromName("ENDBGSP0", PU_PATCH);
+	endbgsp[1] = (patch_t **)W_GetPatchPointerFromName("ENDBGSP1", PU_PATCH);
+	endbgsp[2] = (patch_t **)W_GetPatchPointerFromName("ENDBGSP2", PU_PATCH);
 
-	endspkl[0] = W_CachePatchName("ENDSPKL0", PU_PATCH);
-	endspkl[1] = W_CachePatchName("ENDSPKL1", PU_PATCH);
-	endspkl[2] = W_CachePatchName("ENDSPKL2", PU_PATCH);
+	endspkl[0] = (patch_t **)W_GetPatchPointerFromName("ENDSPKL0", PU_PATCH);
+	endspkl[1] = (patch_t **)W_GetPatchPointerFromName("ENDSPKL1", PU_PATCH);
+	endspkl[2] = (patch_t **)W_GetPatchPointerFromName("ENDSPKL2", PU_PATCH);
 
-	endxpld[0] = W_CachePatchName("ENDXPLD0", PU_PATCH);
-	endxpld[1] = W_CachePatchName("ENDXPLD1", PU_PATCH);
-	endxpld[2] = W_CachePatchName("ENDXPLD2", PU_PATCH);
-	endxpld[3] = W_CachePatchName("ENDXPLD3", PU_PATCH);
+	endxpld[0] = (patch_t **)W_GetPatchPointerFromName("ENDXPLD0", PU_PATCH);
+	endxpld[1] = (patch_t **)W_GetPatchPointerFromName("ENDXPLD1", PU_PATCH);
+	endxpld[2] = (patch_t **)W_GetPatchPointerFromName("ENDXPLD2", PU_PATCH);
+	endxpld[3] = (patch_t **)W_GetPatchPointerFromName("ENDXPLD3", PU_PATCH);
 
-	endescp[0] = W_CachePatchName("ENDESCP0", PU_PATCH);
-	endescp[1] = W_CachePatchName("ENDESCP1", PU_PATCH);
-	endescp[2] = W_CachePatchName("ENDESCP2", PU_PATCH);
-	endescp[3] = W_CachePatchName("ENDESCP3", PU_PATCH);
-	endescp[4] = W_CachePatchName("ENDESCP4", PU_PATCH);
+	endescp[0] = (patch_t **)W_GetPatchPointerFromName("ENDESCP0", PU_PATCH);
+	endescp[1] = (patch_t **)W_GetPatchPointerFromName("ENDESCP1", PU_PATCH);
+	endescp[2] = (patch_t **)W_GetPatchPointerFromName("ENDESCP2", PU_PATCH);
+	endescp[3] = (patch_t **)W_GetPatchPointerFromName("ENDESCP3", PU_PATCH);
+	endescp[4] = (patch_t **)W_GetPatchPointerFromName("ENDESCP4", PU_PATCH);
 
 	// so we only need to check once
 	if ((goodending = ALL7EMERALDS(emeralds)))
@@ -1798,41 +1798,41 @@ static void F_CacheEnding(void)
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
 			sprframe = &sprdef->spriteframes[XTRA_ENDING];
-			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			endfwrk[0] = &W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 			sprframe = &sprdef->spriteframes[XTRA_ENDING+1];
-			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			endfwrk[1] = &W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 			sprframe = &sprdef->spriteframes[XTRA_ENDING+2];
-			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			endfwrk[2] = &W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 		}
 		else // Show a star if your character doesn't have an ending firework display. (Basically the MISSINGs for this)
 		{
-			endfwrk[0] = W_CachePatchName("ENDFWRK3", PU_PATCH);
-			endfwrk[1] = W_CachePatchName("ENDFWRK4", PU_PATCH);
-			endfwrk[2] = W_CachePatchName("ENDFWRK5", PU_PATCH);
+			endfwrk[0] = (patch_t **)W_GetPatchPointerFromName("ENDFWRK3", PU_PATCH);
+			endfwrk[1] = (patch_t **)W_GetPatchPointerFromName("ENDFWRK4", PU_PATCH);
+			endfwrk[2] = (patch_t **)W_GetPatchPointerFromName("ENDFWRK5", PU_PATCH);
 		}
 
-		endbrdr[0] = W_CachePatchName("ENDBRDR2", PU_PATCH);
+		endbrdr[0] = (patch_t **)W_GetPatchPointerFromName("ENDBRDR2", PU_PATCH);
 	}
 	else
 	{
 		// eggman, skin nonspecific
-		endfwrk[0] = W_CachePatchName("ENDFWRK0", PU_PATCH);
-		endfwrk[1] = W_CachePatchName("ENDFWRK1", PU_PATCH);
-		endfwrk[2] = W_CachePatchName("ENDFWRK2", PU_PATCH);
+		endfwrk[0] = (patch_t **)W_GetPatchPointerFromName("ENDFWRK0", PU_PATCH);
+		endfwrk[1] = (patch_t **)W_GetPatchPointerFromName("ENDFWRK1", PU_PATCH);
+		endfwrk[2] = (patch_t **)W_GetPatchPointerFromName("ENDFWRK2", PU_PATCH);
 
-		endbrdr[0] = W_CachePatchName("ENDBRDR0", PU_LEVEL);
+		endbrdr[0] = (patch_t **)W_GetPatchPointerFromName("ENDBRDR0", PU_LEVEL);
 	}
 }
 
 static void F_CacheGoodEnding(void)
 {
-	endegrk[0] = W_CachePatchName("ENDEGRK2", PU_PATCH);
-	endegrk[1] = W_CachePatchName("ENDEGRK3", PU_PATCH);
+	endegrk[0] = (patch_t **)W_GetPatchPointerFromName("ENDEGRK2", PU_PATCH);
+	endegrk[1] = (patch_t **)W_GetPatchPointerFromName("ENDEGRK3", PU_PATCH);
 
-	endglow[0] = W_CachePatchName("ENDGLOW2", PU_PATCH);
-	endglow[1] = W_CachePatchName("ENDGLOW3", PU_PATCH);
+	endglow[0] = (patch_t **)W_GetPatchPointerFromName("ENDGLOW2", PU_PATCH);
+	endglow[1] = (patch_t **)W_GetPatchPointerFromName("ENDGLOW3", PU_PATCH);
 
-	endxpld[0] = W_CachePatchName("ENDEGRK4", PU_PATCH);
+	endxpld[0] = (patch_t **)W_GetPatchPointerFromName("ENDEGRK4", PU_PATCH);
 }
 
 void F_StartEnding(void)
@@ -1893,13 +1893,6 @@ void F_EndingDrawer(void)
 	INT32 x, y, i, j, parallaxticker;
 	patch_t *rockpat;
 
-	if (needpatchrecache)
-	{
-		F_CacheEnding();
-		if (goodending && finalecount >= INFLECTIONPOINT) // time to swap some assets
-			F_CacheGoodEnding();
-	}
-
 	if (!goodending || finalecount < INFLECTIONPOINT)
 		rockpat = W_CachePatchName("ROID0000", PU_PATCH);
 	else
@@ -1926,25 +1919,25 @@ void F_EndingDrawer(void)
 			if (trans < 0)
 			{
 				trans = -trans;
-				V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, endbrdr[0]);
+				V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, *endbrdr[0]);
 			}
-			V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, trans<<V_ALPHASHIFT, endbrdr[1]);
+			V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, trans<<V_ALPHASHIFT, *endbrdr[1]);
 		}
 		else if (finalecount == 20)
-			V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, endbrdr[0]);
+			V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, *endbrdr[0]);
 	}
 	else if (goodending && (parallaxticker == -2 || !parallaxticker))
 	{
 		V_DrawFill(24, 24, BASEVIDWIDTH-48, BASEVIDHEIGHT-48, 0);
-		V_DrawFixedPatch(x+i, y+j, FRACUNIT, 0, endegrk[0],
+		V_DrawFixedPatch(x+i, y+j, FRACUNIT, 0, *endegrk[0],
 			R_GetTranslationColormap(TC_BLINK, SKINCOLOR_BLACK, GTC_CACHE));
-		//V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, endbrdr[1]);
+		//V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, *endbrdr[1]);
 	}
 	else if (goodending && parallaxticker == -1)
 	{
 		V_DrawFixedPatch(x+i, y+j, FRACUNIT, 0, rockpat,
 			R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE));
-		V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, endbrdr[1]);
+		V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, *endbrdr[1]);
 	}
 	else
 	{
@@ -1954,14 +1947,14 @@ void F_EndingDrawer(void)
 
 		if (parallaxticker < 75) // f background's supposed to be visible
 		{
-			V_DrawFixedPatch(-(x/10), -(y/10), FRACUNIT, 0, endbgsp[0], NULL); // nebula
-			V_DrawFixedPatch(-(x/5),  -(y/5),  FRACUNIT, 0, endbgsp[1], NULL); // sun
-			V_DrawFixedPatch(     0,  -(y/2),  FRACUNIT, 0, endbgsp[2], NULL); // planet
+			V_DrawFixedPatch(-(x/10), -(y/10), FRACUNIT, 0, *endbgsp[0], NULL); // nebula
+			V_DrawFixedPatch(-(x/5),  -(y/5),  FRACUNIT, 0, *endbgsp[1], NULL); // sun
+			V_DrawFixedPatch(     0,  -(y/2),  FRACUNIT, 0, *endbgsp[2], NULL); // planet
 
 			// player's escape pod
 			V_DrawFixedPatch((200<<FRACBITS)+(finalecount<<(FRACBITS-2)),
 				(100<<FRACBITS)+(finalecount<<(FRACBITS-2)),
-				FRACUNIT, 0, endescp[4], NULL);
+				FRACUNIT, 0, *endescp[4], NULL);
 			if (parallaxticker > -19)
 			{
 				INT32 trans = (-parallaxticker)>>1;
@@ -1969,7 +1962,7 @@ void F_EndingDrawer(void)
 					trans = 0;
 				V_DrawFixedPatch((200<<FRACBITS)+(finalecount<<(FRACBITS-2)),
 					(100<<FRACBITS)+(finalecount<<(FRACBITS-2)),
-					FRACUNIT, trans<<V_ALPHASHIFT, endescp[(finalecount/2)&3], NULL);
+					FRACUNIT, trans<<V_ALPHASHIFT, *endescp[(finalecount/2)&3], NULL);
 			}
 
 			if (goodending && parallaxticker > 0) // gunchedrock
@@ -1995,21 +1988,21 @@ void F_EndingDrawer(void)
 				y <<= 1;
 
 				// center detritrus
-				V_DrawFixedPatch(i-x, j-y, FRACUNIT, 0, endegrk[0], colormap);
+				V_DrawFixedPatch(i-x, j-y, FRACUNIT, 0, *endegrk[0], colormap);
 				if (trans < 10)
-					V_DrawFixedPatch(i-x, j-y, FRACUNIT, trans<<V_ALPHASHIFT, endegrk[0], NULL);
+					V_DrawFixedPatch(i-x, j-y, FRACUNIT, trans<<V_ALPHASHIFT, *endegrk[0], NULL);
 
 				 // ring detritrus
-				V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(2*x), (30*(FRACUNIT-scale))+j-(2*y) - ((7<<FRACBITS)/2), scale, 0, endegrk[1], colormap);
+				V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(2*x), (30*(FRACUNIT-scale))+j-(2*y) - ((7<<FRACBITS)/2), scale, 0, *endegrk[1], colormap);
 				if (trans < 10)
-					V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(2*x), (30*(FRACUNIT-scale))+j-(2*y), scale, trans<<V_ALPHASHIFT, endegrk[1], NULL);
+					V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(2*x), (30*(FRACUNIT-scale))+j-(2*y), scale, trans<<V_ALPHASHIFT, *endegrk[1], NULL);
 
 				scale += ((parallaxticker-10)<<7);
 
 				 // shard detritrus
-				V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(x/2), (30*(FRACUNIT-scale))+j-(y/2) - ((7<<FRACBITS)/2), scale, 0, endxpld[0], colormap);
+				V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(x/2), (30*(FRACUNIT-scale))+j-(y/2) - ((7<<FRACBITS)/2), scale, 0, *endxpld[0], colormap);
 				if (trans < 10)
-					V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(x/2), (30*(FRACUNIT-scale))+j-(y/2), scale, trans<<V_ALPHASHIFT, endxpld[0], NULL);
+					V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(x/2), (30*(FRACUNIT-scale))+j-(y/2), scale, trans<<V_ALPHASHIFT, *endxpld[0], NULL);
 			}
 		}
 		else if (goodending)
@@ -2063,7 +2056,7 @@ void F_EndingDrawer(void)
 				trans = (-parallaxticker/4) + 5;
 				if (trans < 0)
 					trans = 0;
-				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, endglow[(finalecount & 1) ? 0 : 1], NULL);
+				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, *endglow[(finalecount & 1) ? 0 : 1], NULL);
 			}
 
 			if (goodending && finalecount > INFLECTIONPOINT)
@@ -2097,7 +2090,7 @@ void F_EndingDrawer(void)
 				if ((-parallaxticker/2) < -5)
 					colormap[1] = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
 
-				V_DrawFixedPatch(x, y, scale, 0, endegrk[0], colormap[1]);
+				V_DrawFixedPatch(x, y, scale, 0, *endegrk[0], colormap[1]);
 
 				if ((-parallaxticker/2) < 5)
 				{
@@ -2105,7 +2098,7 @@ void F_EndingDrawer(void)
 					if (trans < 0)
 						trans = -trans;
 					if (trans < 10)
-						V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, endegrk[1], NULL);
+						V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, *endegrk[1], NULL);
 				}
 			}
 		}
@@ -2131,7 +2124,7 @@ void F_EndingDrawer(void)
 				colormap = R_GetTranslationColormap(players[consoleplayer].skin, players[consoleplayer].skincolor, GTC_CACHE);
 
 			if ((frame = ((parallaxticker & 1) ? 1 : 0) + (parallaxticker/TICRATE)) < 3)
-				V_DrawFixedPatch(x, y, scale, 0, endfwrk[frame], colormap);
+				V_DrawFixedPatch(x, y, scale, 0, *endfwrk[frame], colormap);
 		}
 
 		// explosions
@@ -2143,7 +2136,7 @@ void F_EndingDrawer(void)
 			y = ((((BASEVIDHEIGHT-82)/2)+12)<<FRACBITS) + ((boomtime*7)<<FRACBITS)/INFLECTIONPOINT;
 
 			V_DrawFixedPatch(x + sparkloffs[0][0], y + sparkloffs[0][1],
-				FRACUNIT, 0, endxpld[sparklloop/4], NULL);
+				FRACUNIT, 0, *endxpld[sparklloop/4], NULL);
 		}
 
 		// initial fade
@@ -2156,11 +2149,11 @@ void F_EndingDrawer(void)
 			if (borderstuff)
 				trans = (10*parallaxticker)/(3*TICRATE);
 			if (trans < 10)
-				V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, trans<<V_ALPHASHIFT, endbrdr[0]);
+				V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, trans<<V_ALPHASHIFT, *endbrdr[0]);
 			if (borderstuff && parallaxticker < 11)
-				V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, (parallaxticker-1)<<V_ALPHASHIFT, endbrdr[1]);
+				V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, (parallaxticker-1)<<V_ALPHASHIFT, *endbrdr[1]);
 			else if (goodending && finalecount > INFLECTIONPOINT && finalecount < INFLECTIONPOINT+10)
-				V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, (finalecount-INFLECTIONPOINT)<<V_ALPHASHIFT, endbrdr[1]);
+				V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, (finalecount-INFLECTIONPOINT)<<V_ALPHASHIFT, *endbrdr[1]);
 		}
 
 		// emeralds and emerald accessories
@@ -2225,7 +2218,7 @@ void F_EndingDrawer(void)
 					// if j == 0 - alternate between 0 and 1
 					//         1 -                   1 and 2
 					//         2 -                   2 and not rendered
-					V_DrawFixedPatch(x, y, FRACUNIT, 0, endspkl[(j - ((sparklloop & 1) ? 0 : 1))], colormap);
+					V_DrawFixedPatch(x, y, FRACUNIT, 0, *endspkl[(j - ((sparklloop & 1) ? 0 : 1))], colormap);
 
 					j--;
 				}
@@ -2430,7 +2423,7 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 lumpnum = W_CheckNumForName(name); \
 if (lumpnum != LUMPERROR) \
 { \
-	arr[0] = W_CachePatchName(name, PU_LEVEL); \
+	arr[0] = (patch_t **)W_GetPatchPointerFromName(name, PU_LEVEL); \
 	arr[min(1, maxf-1)] = 0; \
 } \
 else if (strlen(name) <= 6) \
@@ -2443,7 +2436,7 @@ else if (strlen(name) <= 6) \
 		lumpname[8] = 0; \
 		lumpnum = W_CheckNumForName(lumpname); \
 		if (lumpnum != LUMPERROR) \
-			arr[i] = W_CachePatchName(lumpname, PU_LEVEL); \
+			arr[i] = (patch_t **)W_GetPatchPointerFromName(lumpname, PU_LEVEL); \
 		else \
 			break; \
 	} \
@@ -2458,21 +2451,21 @@ static void F_CacheTitleScreen(void)
 	{
 		case TTMODE_OLD:
 		case TTMODE_NONE:
-			ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
-			ttwing = W_CachePatchName("TTWING", PU_LEVEL);
-			ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
-			ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
-			ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
-			ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
-			ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
-			ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
-			ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
-			ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
-			ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
-			ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
-			ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
-			ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
-			ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
+			ttbanner = (patch_t **)W_GetPatchPointerFromName("TTBANNER", PU_LEVEL);
+			ttwing = (patch_t **)W_GetPatchPointerFromName("TTWING", PU_LEVEL);
+			ttsonic = (patch_t **)W_GetPatchPointerFromName("TTSONIC", PU_LEVEL);
+			ttswave1 = (patch_t **)W_GetPatchPointerFromName("TTSWAVE1", PU_LEVEL);
+			ttswave2 = (patch_t **)W_GetPatchPointerFromName("TTSWAVE2", PU_LEVEL);
+			ttswip1 = (patch_t **)W_GetPatchPointerFromName("TTSWIP1", PU_LEVEL);
+			ttsprep1 = (patch_t **)W_GetPatchPointerFromName("TTSPREP1", PU_LEVEL);
+			ttsprep2 = (patch_t **)W_GetPatchPointerFromName("TTSPREP2", PU_LEVEL);
+			ttspop1 = (patch_t **)W_GetPatchPointerFromName("TTSPOP1", PU_LEVEL);
+			ttspop2 = (patch_t **)W_GetPatchPointerFromName("TTSPOP2", PU_LEVEL);
+			ttspop3 = (patch_t **)W_GetPatchPointerFromName("TTSPOP3", PU_LEVEL);
+			ttspop4 = (patch_t **)W_GetPatchPointerFromName("TTSPOP4", PU_LEVEL);
+			ttspop5 = (patch_t **)W_GetPatchPointerFromName("TTSPOP5", PU_LEVEL);
+			ttspop6 = (patch_t **)W_GetPatchPointerFromName("TTSPOP6", PU_LEVEL);
+			ttspop7 = (patch_t **)W_GetPatchPointerFromName("TTSPOP7", PU_LEVEL);
 			break;
 
 		// don't load alacroix gfx yet; we do that upon first draw.
@@ -2600,28 +2593,28 @@ static void F_UnloadAlacroixGraphics(SINT8 oldttscale)
 	oldttscale--; // zero-based index
 	for (i = 0; i < TTMAX_ALACROIX; i++)
 	{
-		if(ttembl[oldttscale][i]) { Z_Free(ttembl[oldttscale][i]); ttembl[oldttscale][i] = 0; }
-		if(ttribb[oldttscale][i]) { Z_Free(ttribb[oldttscale][i]); ttribb[oldttscale][i] = 0; }
-		if(ttsont[oldttscale][i]) { Z_Free(ttsont[oldttscale][i]); ttsont[oldttscale][i] = 0; }
-		if(ttrobo[oldttscale][i]) { Z_Free(ttrobo[oldttscale][i]); ttrobo[oldttscale][i] = 0; }
-		if(tttwot[oldttscale][i]) { Z_Free(tttwot[oldttscale][i]); tttwot[oldttscale][i] = 0; }
-		if(ttrbtx[oldttscale][i]) { Z_Free(ttrbtx[oldttscale][i]); ttrbtx[oldttscale][i] = 0; }
-		if(ttsoib[oldttscale][i]) { Z_Free(ttsoib[oldttscale][i]); ttsoib[oldttscale][i] = 0; }
-		if(ttsoif[oldttscale][i]) { Z_Free(ttsoif[oldttscale][i]); ttsoif[oldttscale][i] = 0; }
-		if(ttsoba[oldttscale][i]) { Z_Free(ttsoba[oldttscale][i]); ttsoba[oldttscale][i] = 0; }
-		if(ttsobk[oldttscale][i]) { Z_Free(ttsobk[oldttscale][i]); ttsobk[oldttscale][i] = 0; }
-		if(ttsodh[oldttscale][i]) { Z_Free(ttsodh[oldttscale][i]); ttsodh[oldttscale][i] = 0; }
-		if(tttaib[oldttscale][i]) { Z_Free(tttaib[oldttscale][i]); tttaib[oldttscale][i] = 0; }
-		if(tttaif[oldttscale][i]) { Z_Free(tttaif[oldttscale][i]); tttaif[oldttscale][i] = 0; }
-		if(tttaba[oldttscale][i]) { Z_Free(tttaba[oldttscale][i]); tttaba[oldttscale][i] = 0; }
-		if(tttabk[oldttscale][i]) { Z_Free(tttabk[oldttscale][i]); tttabk[oldttscale][i] = 0; }
-		if(tttabt[oldttscale][i]) { Z_Free(tttabt[oldttscale][i]); tttabt[oldttscale][i] = 0; }
-		if(tttaft[oldttscale][i]) { Z_Free(tttaft[oldttscale][i]); tttaft[oldttscale][i] = 0; }
-		if(ttknib[oldttscale][i]) { Z_Free(ttknib[oldttscale][i]); ttknib[oldttscale][i] = 0; }
-		if(ttknif[oldttscale][i]) { Z_Free(ttknif[oldttscale][i]); ttknif[oldttscale][i] = 0; }
-		if(ttknba[oldttscale][i]) { Z_Free(ttknba[oldttscale][i]); ttknba[oldttscale][i] = 0; }
-		if(ttknbk[oldttscale][i]) { Z_Free(ttknbk[oldttscale][i]); ttknbk[oldttscale][i] = 0; }
-		if(ttkndh[oldttscale][i]) { Z_Free(ttkndh[oldttscale][i]); ttkndh[oldttscale][i] = 0; }
+		if(ttembl[oldttscale][i]) { Z_Free(*ttembl[oldttscale][i]); ttembl[oldttscale][i] = 0; }
+		if(ttribb[oldttscale][i]) { Z_Free(*ttribb[oldttscale][i]); ttribb[oldttscale][i] = 0; }
+		if(ttsont[oldttscale][i]) { Z_Free(*ttsont[oldttscale][i]); ttsont[oldttscale][i] = 0; }
+		if(ttrobo[oldttscale][i]) { Z_Free(*ttrobo[oldttscale][i]); ttrobo[oldttscale][i] = 0; }
+		if(tttwot[oldttscale][i]) { Z_Free(*tttwot[oldttscale][i]); tttwot[oldttscale][i] = 0; }
+		if(ttrbtx[oldttscale][i]) { Z_Free(*ttrbtx[oldttscale][i]); ttrbtx[oldttscale][i] = 0; }
+		if(ttsoib[oldttscale][i]) { Z_Free(*ttsoib[oldttscale][i]); ttsoib[oldttscale][i] = 0; }
+		if(ttsoif[oldttscale][i]) { Z_Free(*ttsoif[oldttscale][i]); ttsoif[oldttscale][i] = 0; }
+		if(ttsoba[oldttscale][i]) { Z_Free(*ttsoba[oldttscale][i]); ttsoba[oldttscale][i] = 0; }
+		if(ttsobk[oldttscale][i]) { Z_Free(*ttsobk[oldttscale][i]); ttsobk[oldttscale][i] = 0; }
+		if(ttsodh[oldttscale][i]) { Z_Free(*ttsodh[oldttscale][i]); ttsodh[oldttscale][i] = 0; }
+		if(tttaib[oldttscale][i]) { Z_Free(*tttaib[oldttscale][i]); tttaib[oldttscale][i] = 0; }
+		if(tttaif[oldttscale][i]) { Z_Free(*tttaif[oldttscale][i]); tttaif[oldttscale][i] = 0; }
+		if(tttaba[oldttscale][i]) { Z_Free(*tttaba[oldttscale][i]); tttaba[oldttscale][i] = 0; }
+		if(tttabk[oldttscale][i]) { Z_Free(*tttabk[oldttscale][i]); tttabk[oldttscale][i] = 0; }
+		if(tttabt[oldttscale][i]) { Z_Free(*tttabt[oldttscale][i]); tttabt[oldttscale][i] = 0; }
+		if(tttaft[oldttscale][i]) { Z_Free(*tttaft[oldttscale][i]); tttaft[oldttscale][i] = 0; }
+		if(ttknib[oldttscale][i]) { Z_Free(*ttknib[oldttscale][i]); ttknib[oldttscale][i] = 0; }
+		if(ttknif[oldttscale][i]) { Z_Free(*ttknif[oldttscale][i]); ttknif[oldttscale][i] = 0; }
+		if(ttknba[oldttscale][i]) { Z_Free(*ttknba[oldttscale][i]); ttknba[oldttscale][i] = 0; }
+		if(ttknbk[oldttscale][i]) { Z_Free(*ttknbk[oldttscale][i]); ttknbk[oldttscale][i] = 0; }
+		if(ttkndh[oldttscale][i]) { Z_Free(*ttkndh[oldttscale][i]); ttkndh[oldttscale][i] = 0; }
 	}
 	ttloaded[oldttscale] = false;
 }
@@ -2698,17 +2691,12 @@ static void F_FigureActiveTtScale(void)
 	SINT8 newttscale = max(1, min(6, vid.dupx));
 	SINT8 oldttscale = activettscale;
 
-	if (needpatchrecache)
-		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = 0;
-	else
-	{
-		if (newttscale == testttscale)
-			return;
+	if (newttscale == testttscale)
+		return;
 
-		// We have a new ttscale, so load gfx
-		if(oldttscale > 0)
-			F_UnloadAlacroixGraphics(oldttscale);
-	}
+	// We have a new ttscale, so load gfx
+	if(oldttscale > 0)
+		F_UnloadAlacroixGraphics(oldttscale);
 
 	testttscale = newttscale;
 
@@ -2742,9 +2730,6 @@ void F_TitleScreenDrawer(void)
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
-	if (needpatchrecache && (curttmode != TTMODE_ALACROIX))
-		F_CacheTitleScreen();
-
 	// Draw that sky!
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
@@ -2772,42 +2757,42 @@ void F_TitleScreenDrawer(void)
 	{
 		case TTMODE_OLD:
 		case TTMODE_NONE:
-			V_DrawSciencePatch(30<<FRACBITS, 14<<FRACBITS, 0, ttwing, sc);
+			V_DrawSciencePatch(30<<FRACBITS, 14<<FRACBITS, 0, *ttwing, sc);
 
 			if (finalecount < 57)
 			{
 				if (finalecount == 35)
-					V_DrawSciencePatch(115<<FRACBITS, 15<<FRACBITS, 0, ttspop1, sc);
+					V_DrawSciencePatch(115<<FRACBITS, 15<<FRACBITS, 0, *ttspop1, sc);
 				else if (finalecount == 36)
-					V_DrawSciencePatch(114<<FRACBITS, 15<<FRACBITS, 0,ttspop2, sc);
+					V_DrawSciencePatch(114<<FRACBITS, 15<<FRACBITS, 0,*ttspop2, sc);
 				else if (finalecount == 37)
-					V_DrawSciencePatch(113<<FRACBITS, 15<<FRACBITS, 0,ttspop3, sc);
+					V_DrawSciencePatch(113<<FRACBITS, 15<<FRACBITS, 0,*ttspop3, sc);
 				else if (finalecount == 38)
-					V_DrawSciencePatch(112<<FRACBITS, 15<<FRACBITS, 0,ttspop4, sc);
+					V_DrawSciencePatch(112<<FRACBITS, 15<<FRACBITS, 0,*ttspop4, sc);
 				else if (finalecount == 39)
-					V_DrawSciencePatch(111<<FRACBITS, 15<<FRACBITS, 0,ttspop5, sc);
+					V_DrawSciencePatch(111<<FRACBITS, 15<<FRACBITS, 0,*ttspop5, sc);
 				else if (finalecount == 40)
-					V_DrawSciencePatch(110<<FRACBITS, 15<<FRACBITS, 0, ttspop6, sc);
+					V_DrawSciencePatch(110<<FRACBITS, 15<<FRACBITS, 0, *ttspop6, sc);
 				else if (finalecount >= 41 && finalecount <= 44)
-					V_DrawSciencePatch(109<<FRACBITS, 15<<FRACBITS, 0, ttspop7, sc);
+					V_DrawSciencePatch(109<<FRACBITS, 15<<FRACBITS, 0, *ttspop7, sc);
 				else if (finalecount >= 45 && finalecount <= 48)
-					V_DrawSciencePatch(108<<FRACBITS, 12<<FRACBITS, 0, ttsprep1, sc);
+					V_DrawSciencePatch(108<<FRACBITS, 12<<FRACBITS, 0, *ttsprep1, sc);
 				else if (finalecount >= 49 && finalecount <= 52)
-					V_DrawSciencePatch(107<<FRACBITS, 9<<FRACBITS, 0, ttsprep2, sc);
+					V_DrawSciencePatch(107<<FRACBITS, 9<<FRACBITS, 0, *ttsprep2, sc);
 				else if (finalecount >= 53 && finalecount <= 56)
-					V_DrawSciencePatch(106<<FRACBITS, 6<<FRACBITS, 0, ttswip1, sc);
-				V_DrawSciencePatch(93<<FRACBITS, 106<<FRACBITS, 0, ttsonic, sc);
+					V_DrawSciencePatch(106<<FRACBITS, 6<<FRACBITS, 0, *ttswip1, sc);
+				V_DrawSciencePatch(93<<FRACBITS, 106<<FRACBITS, 0, *ttsonic, sc);
 			}
 			else
 			{
-				V_DrawSciencePatch(93<<FRACBITS, 106<<FRACBITS, 0,ttsonic, sc);
+				V_DrawSciencePatch(93<<FRACBITS, 106<<FRACBITS, 0,*ttsonic, sc);
 				if (finalecount/5 & 1)
-					V_DrawSciencePatch(100<<FRACBITS, 3<<FRACBITS, 0,ttswave1, sc);
+					V_DrawSciencePatch(100<<FRACBITS, 3<<FRACBITS, 0,*ttswave1, sc);
 				else
-					V_DrawSciencePatch(100<<FRACBITS, 3<<FRACBITS, 0,ttswave2, sc);
+					V_DrawSciencePatch(100<<FRACBITS, 3<<FRACBITS, 0,*ttswave2, sc);
 			}
 
-			V_DrawSciencePatch(48<<FRACBITS, 142<<FRACBITS, 0,ttbanner, sc);
+			V_DrawSciencePatch(48<<FRACBITS, 142<<FRACBITS, 0,*ttbanner, sc);
 			break;
 
 		case TTMODE_ALACROIX:
@@ -3481,7 +3466,7 @@ void F_TitleScreenDrawer(void)
 					break; // draw nothing
 			}
 
-			V_DrawSciencePatch(curttx<<FRACBITS, curtty<<FRACBITS, 0, ttuser[ttuser_count], sc);
+			V_DrawSciencePatch(curttx<<FRACBITS, curtty<<FRACBITS, 0, *ttuser[ttuser_count], sc);
 
 			if (!(finalecount % max(1, curtttics)))
 				ttuser_count++;

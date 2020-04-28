@@ -745,24 +745,8 @@ void V_Recalc(void)
 #endif
 }
 
-// After a renderer switch, flush and reload patches.
-void V_FlushPatches(void)
-{
-	// flush all patches from memory
-	// (also frees memory tagged with PU_CACHE)
-	// (which are not necessarily patches but I don't care)
-	if (needpatchflush)
-		Z_FlushCachedPatches();
-
-	// some patches have been freed,
-	// so cache them again
-	if (needpatchrecache)
-		V_ReloadHUDGraphics();
-}
-
 void V_ReloadHUDGraphics(void)
 {
-	CONS_Debug(DBG_RENDER, "V_ReloadHUDGraphics()...\n");
 	ST_LoadGraphics();
 	HU_LoadGraphics();
 	ST_ReloadSkinFaceGraphics();

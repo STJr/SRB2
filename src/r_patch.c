@@ -10,7 +10,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  r_patch.c
-/// \brief Patch generation.
+/// \brief Patch caching and generation.
 
 #include "byteptr.h"
 #include "dehacked.h"
@@ -49,6 +49,173 @@
 #endif
 
 static unsigned char imgbuf[1<<26];
+
+// ==========================================================================
+//                                         CACHING OF GRAPHIC PATCH RESOURCES
+// ==========================================================================
+
+// Graphic 'patches' are loaded, and if necessary, converted into the format
+// the most useful for the current rendermode. For software renderer, the
+// graphic patches are kept as is. For the hardware renderer, graphic patches
+// are 'unpacked', and are kept into the cache in that unpacked format, and
+// the heap memory cache then acts as a 'level 2' cache just after the
+// graphics card memory.
+
+static patchstorage_t *patchstorage = NULL; // linked list
+static patchstorage_t *patchstorage_tail = NULL; // tail of the above
+
+// Find patch in storage
+static patchstorage_t *FindPatchInList(UINT16 wad, UINT16 lump)
+{
+	patchstorage_t *patch = patchstorage;
+
+	while (patch)
+	{
+		if (patch->wad == wad && patch->lump == lump)
+			return patch;
+		patch = patch->next;
+	}
+
+	return NULL;
+}
+
+// Insert patch in storage
+static patchstorage_t *InsertPatchInList(UINT16 wad, UINT16 lump, INT32 tag)
+{
+	patchstorage_t *found = FindPatchInList(wad, lump);
+	if (found)
+		return found;
+
+	if (!patchstorage)
+	{
+		patchstorage = Z_Calloc(sizeof(patchstorage_t), PU_STATIC, NULL);
+		patchstorage->wad = wad;
+		patchstorage->lump = lump;
+		patchstorage->tag = tag;
+		patchstorage_tail = patchstorage;
+		return patchstorage;
+	}
+	else
+	{
+		patchstorage_t *list = Z_Calloc(sizeof(patchstorage_t), PU_STATIC, NULL);
+		list->wad = wad;
+		list->lump = lump;
+		list->tag = tag;
+		patchstorage_tail->next = list;
+		patchstorage_tail = list;
+		return list;
+	}
+}
+
+//
+// Cache a patch into heap memory, convert the patch format as necessary
+//
+
+#define CacheAccessFormula(ln, md) (ln * num_renderers + md)
+
+#define GetPatchCache(wadnum, lumpnum, mode) \
+	wadfiles[wadnum]->patchcache.renderer[CacheAccessFormula(lumpnum, (mode - 1))]
+
+#define SetPatchCache(wadnum, lumpnum, mode, ptr) \
+	wadfiles[wadnum]->patchcache.renderer[CacheAccessFormula(lumpnum, (mode - 1))] = ptr
+
+#define UpdatePatchCache(wadnum, lumpnum, mode) \
+	wadfiles[wadnum]->patchcache.current[lumpnum] = wadfiles[wadnum]->patchcache.renderer[CacheAccessFormula(lumpnum, (mode - 1))]
+
+void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
+{
+	if (!GetPatchCache(wad, lump, render_soft))
+	{
+		size_t len = W_LumpLengthPwad(wad, lump);
+		void *ptr, *lumpdata;
+#ifndef NO_PNG_LUMPS
+		void *srcdata = NULL;
+#endif
+
+		ptr = Z_Malloc(len, tag, &GetPatchCache(wad, lump, render_soft));
+		lumpdata = Z_Malloc(len, tag, NULL);
+
+		// read the lump in full
+		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
+
+#ifndef NO_PNG_LUMPS
+		// lump is a png so convert it
+		if (R_IsLumpPNG((UINT8 *)lumpdata, len))
+		{
+			size_t newlen;
+			srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
+			ptr = Z_Realloc(ptr, newlen, tag, &GetPatchCache(wad, lump, render_soft));
+			M_Memcpy(ptr, srcdata, newlen);
+			Z_Free(srcdata);
+		}
+		else // just copy it into the patch cache
+#endif
+			M_Memcpy(ptr, lumpdata, len);
+
+		// insert into list
+		if (store)
+			InsertPatchInList(wad, lump, tag);
+
+		SetPatchCache(wad, lump, render_soft, GetPatchCache(wad, lump, render_soft));
+		UpdatePatchCache(wad, lump, render_soft);
+	}
+	else
+		Z_ChangeTag(GetPatchCache(wad, lump, render_soft), tag);
+
+	return GetPatchCache(wad, lump, render_soft);
+}
+
+#ifdef HWRENDER
+void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
+{
+	GLPatch_t *grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
+
+	if (grPatch->mipmap->grInfo.data)
+	{
+		if (tag == PU_CACHE)
+			tag = PU_HWRCACHE;
+		Z_ChangeTag(grPatch->mipmap->grInfo.data, tag);
+	}
+	else
+	{
+		patch_t *ptr = NULL;
+
+		// Only load the patch if we haven't initialised the grPatch yet
+		if (grPatch->mipmap->width == 0)
+			ptr = W_CacheLumpNumPwad(grPatch->wadnum, grPatch->lumpnum, PU_STATIC);
+
+		// Run HWR_MakePatch in all cases, to recalculate some things
+		HWR_MakePatch(ptr, grPatch, grPatch->mipmap, false);
+		Z_Free(ptr);
+
+		// insert into list
+		if (store)
+			InsertPatchInList(wad, lump, tag);
+
+		SetPatchCache(wad, lump, render_opengl, (void *)grPatch);
+		UpdatePatchCache(wad, lump, render_opengl);
+	}
+
+	// return GLPatch_t, which can be casted to (patch_t *) with valid patch header info
+	return (void *)grPatch;
+}
+#endif
+
+void R_UpdatePatchPointers(void)
+{
+	patchstorage_t *patch = patchstorage;
+	while (patch)
+	{
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
+			R_CacheGLPatch(patch->wad, patch->lump, patch->tag, false);
+		else
+#endif
+			R_CacheSoftwarePatch(patch->wad, patch->lump, patch->tag, false);
+		UpdatePatchCache(patch->wad, patch->lump, rendermode);
+		patch = patch->next;
+	}
+}
 
 //
 // R_CheckIfPatch
@@ -1205,7 +1372,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 #define ROTSPRITE_XCENTER (newwidth / 2)
 #define ROTSPRITE_YCENTER (newheight / 2)
 
-	if (!(sprframe->rotsprite.cached & (1<<rot)))
+	if (!(sprframe->rotsprite.cached[rendermode-1] & (1<<rot)))
 	{
 		INT32 dx, dy;
 		INT32 px, py;
@@ -1364,19 +1531,19 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 				GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
 				grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
 				grPatch->rawpatch = newpatch;
-				sprframe->rotsprite.patch[rot][angle] = (patch_t *)grPatch;
+				sprframe->rotsprite.patch[rot][angle][render_opengl-1] = (patch_t *)grPatch;
 				HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
 			}
 			else
 #endif // HWRENDER
-				sprframe->rotsprite.patch[rot][angle] = newpatch;
+				sprframe->rotsprite.patch[rot][angle][rendermode-1] = newpatch;
 
 			// free rotated image data
 			Z_Free(rawdst);
 		}
 
 		// This rotation is cached now
-		sprframe->rotsprite.cached |= (1<<rot);
+		sprframe->rotsprite.cached[rendermode-1] |= (1<<rot);
 
 		// free image data
 		Z_Free(patch);
@@ -1396,44 +1563,25 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 {
 	UINT8 frame;
 	INT32 rot, ang;
+	rendermode_t renderer;
 
 	for (frame = 0; frame < spritedef->numframes; frame++)
 	{
 		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
 		for (rot = 0; rot < 16; rot++)
 		{
-			if (sprframe->rotsprite.cached & (1<<rot))
+			if (sprframe->rotsprite.cached[rendermode-1] & (1<<rot))
 			{
 				for (ang = 0; ang < ROTANGLES; ang++)
 				{
-					patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang];
-					if (rotsprite)
+					for (renderer = render_none+1; renderer < render_last; renderer++)
 					{
-#ifdef HWRENDER
-						if (rendermode == render_opengl)
-						{
-							GLPatch_t *grPatch = (GLPatch_t *)rotsprite;
-							if (grPatch->rawpatch)
-							{
-								Z_Free(grPatch->rawpatch);
-								grPatch->rawpatch = NULL;
-							}
-							if (grPatch->mipmap)
-							{
-								if (grPatch->mipmap->grInfo.data)
-								{
-									Z_Free(grPatch->mipmap->grInfo.data);
-									grPatch->mipmap->grInfo.data = NULL;
-								}
-								Z_Free(grPatch->mipmap);
-								grPatch->mipmap = NULL;
-							}
-						}
-#endif
-						Z_Free(rotsprite);
+						patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang][renderer-1];
+						if (rotsprite)
+							Z_Free(rotsprite);
 					}
 				}
-				sprframe->rotsprite.cached &= ~(1<<rot);
+				sprframe->rotsprite.cached[rendermode-1] &= ~(1<<rot);
 			}
 		}
 	}
@@ -1455,20 +1603,5 @@ void R_FreeSkinRotSprite(size_t skinnum)
 		R_FreeSingleRotSprite(skinsprites);
 		skinsprites++;
 	}
-}
-
-//
-// R_FreeAllRotSprite
-//
-// Free ALL sprite rotation data from memory.
-//
-void R_FreeAllRotSprite(void)
-{
-	INT32 i;
-	size_t s;
-	for (s = 0; s < numsprites; s++)
-		R_FreeSingleRotSprite(&sprites[s]);
-	for (i = 0; i < numskins; ++i)
-		R_FreeSkinRotSprite(i);
 }
 #endif

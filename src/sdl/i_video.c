@@ -73,6 +73,7 @@
 #include "../console.h"
 #include "../command.h"
 #include "../r_main.h"
+#include "../r_patch.h" // R_UpdatePatchPointers
 #include "sdlmain.h"
 #ifdef HWRENDER
 #include "../hardware/hw_main.h"
@@ -1447,6 +1448,12 @@ boolean I_CheckRenderer(void)
 		}
 #endif
 
+		if (rendererchanged)
+		{
+			R_UpdatePatchPointers();
+			V_ReloadHUDGraphics();
+		}
+
 		if (!contextcreated)
 			Impl_CreateContext();
 
@@ -1647,7 +1654,7 @@ void I_StartupGraphics(void)
 	if (M_CheckParm("-renderer"))
 	{
 		INT32 i = 0;
-		CV_PossibleValue_t *renderer_list = &cv_renderer_t;
+		CV_PossibleValue_t *renderer_list = cv_renderer_t;
 		const char *modeparm = M_GetNextParm();
 		while (renderer_list[i].strvalue)
 		{

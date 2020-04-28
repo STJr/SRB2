@@ -115,6 +115,8 @@ GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
 GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 
+extern boolean gr_leveltexturesloaded;
+
 // --------
 // hw_draw.c
 // --------

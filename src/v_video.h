@@ -40,9 +40,6 @@ void V_Init(void);
 // Recalculate the viddef (dupx, dupy, etc.) according to the current screen resolution.
 void V_Recalc(void);
 
-// After a renderer switch, flush and reload patches.
-void V_FlushPatches(void);
-
 // Color look-up table
 #define COLORBITS 6
 #define SHIFTCOLORBITS (8-COLORBITS)

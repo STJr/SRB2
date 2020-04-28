@@ -242,9 +242,6 @@ static void D_Display(void)
 		forcerefresh = true; // force background redraw
 	}
 
-	// Free and reload patches.
-	V_FlushPatches();
-
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
 	I_UpdateNoBlit();
@@ -560,9 +557,6 @@ static void D_Display(void)
 
 		I_FinishUpdate(); // page flip or blit buffer
 	}
-
-	needpatchflush = false;
-	needpatchrecache = false;
 }
 
 // =========================================================================
@@ -1269,20 +1263,9 @@ void D_SRB2Main(void)
 	{
 		CONS_Printf(M_GetText("Switching the renderer...\n"));
 
-		// set needpatchflush / needpatchrecache true for V_FlushPatches
-		Z_PreparePatchFlush();
-		needpatchflush = true;
-		needpatchrecache = true;
-
 		// Switch the renderer in the interface
 		if (I_CheckRenderer())
-		{
-			// Free and reload patches.
-			V_FlushPatches();
-
-			// Allow explicit screen refresh again
-			con_refresh = true;
-		}
+			con_refresh = true; // Allow explicit screen refresh again
 
 		// Set cv_renderer to the new render mode
 		CV_StealthSetValue(&cv_renderer, rendermode);

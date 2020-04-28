@@ -209,10 +209,6 @@ void SCR_SetMode(void)
 		if (setrenderneeded && (moviemode == MM_APNG))
 			M_StopMovie();
 
-		Z_PreparePatchFlush();
-		needpatchflush = true;
-		needpatchrecache = true;
-
 		I_CheckRenderer();
 		vid.recalc = 1;
 	}
@@ -366,7 +362,7 @@ void SCR_CheckDefaultMode(void)
 		setmodeneeded = I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 	}
 
-	if (cv_renderer.value != rendermode)
+	if (cv_renderer.value != (signed)rendermode)
 	{
 		if (chosenrendermode == render_none) // nothing set at command line
 			SCR_ChangeRenderer();
@@ -412,7 +408,7 @@ void SCR_SetTargetRenderer(void)
 
 void SCR_ChangeRenderer(void)
 {
-	if (rendermode == cv_renderer.value)
+	if ((signed)rendermode == cv_renderer.value)
 		return;
 
 #ifdef HWRENDER

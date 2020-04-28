@@ -99,11 +99,22 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 #define MAX_WADFILES 48 // maximum of wad files used at the same time
 // (there is a max of simultaneous open files anyway, and this should be plenty)
 
-#define lumpcache_t void *
-
 #ifdef HWRENDER
 #include "m_aatree.h"
 #endif
+
+#include "i_video.h" // num_renderers
+
+#define lumpcache_t void *
+
+typedef struct patchcache_s
+{
+	lumpcache_t *current;
+	lumpcache_t *renderer;
+#ifdef HWRENDER
+	aatree_t *hwrcache; // patches are cached in renderer's native format
+#endif
+} patchcache_t;
 
 // Resource type of the WAD. Yeah, I know this sounds dumb, but I'll leave it like this until I clean up the code further.
 typedef enum restype
@@ -121,10 +132,7 @@ typedef struct wadfile_s
 	restype_t type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
-	lumpcache_t *patchcache;
-#ifdef HWRENDER
-	aatree_t *hwrcache; // patches are cached in renderer's native format
-#endif
+	patchcache_t patchcache;
 	UINT16 numlumps; // this wad's number of resources
 	FILE *handle;
 	UINT32 filesize; // for network
@@ -186,7 +194,6 @@ void *W_CacheLumpNum(lumpnum_t lump, INT32 tag);
 void *W_CacheLumpNumForce(lumpnum_t lumpnum, INT32 tag);
 
 boolean W_IsLumpCached(lumpnum_t lump, void *ptr);
-boolean W_IsPatchCached(lumpnum_t lump, void *ptr);
 
 void *W_CacheLumpName(const char *name, INT32 tag);
 void *W_CachePatchName(const char *name, INT32 tag);
@@ -201,6 +208,12 @@ void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
 void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
 void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
 
+// Returns patch pointers.
+void **W_GetPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag);
+void **W_GetPatchPointer(lumpnum_t lumpnum, INT32 tag);
+void **W_GetPatchPointerFromName(const char *name, INT32 tag);
+
+void W_InitPatchCache(wadfile_t *wadfile);
 void W_UnlockCachedPatch(void *patch);
 void W_FlushCachedPatches(void);
 

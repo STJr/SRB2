@@ -97,6 +97,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	char cn = R_Frame2Char(frame), cr = R_Rotation2Char(rotation); // for debugging
 
 	INT32 r, ang;
+	rendermode_t rmode;
 	lumpnum_t lumppat = wad;
 	lumppat <<= 16;
 	lumppat += lump;
@@ -106,11 +107,13 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 
 	// rotsprite
 #ifdef ROTSPRITE
-	sprtemp[frame].rotsprite.cached = 0;
+	for (rmode = render_none+1; rmode < render_last; rmode++)
+		sprtemp[frame].rotsprite.cached[rmode-1] = 0;
 	for (r = 0; r < 16; r++)
 	{
 		for (ang = 0; ang < ROTANGLES; ang++)
-			sprtemp[frame].rotsprite.patch[r][ang] = NULL;
+			for (rmode = render_none+1; rmode < render_last; rmode++)
+				sprtemp[frame].rotsprite.patch[r][ang][rmode-1] = NULL;
 	}
 #endif/*ROTSPRITE*/
 
@@ -1529,9 +1532,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->rollangle)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
-		if (!(sprframe->rotsprite.cached & (1<<rot)))
+		if (!(sprframe->rotsprite.cached[rendermode-1] & (1<<rot)))
 			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
+		rotsprite = sprframe->rotsprite.patch[rot][rollangle][rendermode-1];
 		if (rotsprite != NULL)
 		{
 			spr_width = rotsprite->width << FRACBITS;

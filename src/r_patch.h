@@ -17,7 +17,19 @@
 #include "r_defs.h"
 #include "doomdef.h"
 
+void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
+void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
+void R_UpdatePatchPointers(void);
+
 // Structs
+struct patchstorage_s
+{
+	struct patchstorage_s *next;
+	UINT16 wad, lump;
+	INT32 tag;
+};
+typedef struct patchstorage_s patchstorage_t;
+
 typedef enum
 {
 	ROTAXIS_X, // Roll (the default)
@@ -68,7 +80,6 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef);
 void R_FreeSkinRotSprite(size_t skinnum);
 extern fixed_t rollcosang[ROTANGLES];
 extern fixed_t rollsinang[ROTANGLES];
-void R_FreeAllRotSprite(void);
 #endif
 
 #endif // __R_PATCH__

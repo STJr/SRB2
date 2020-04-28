@@ -5546,9 +5546,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->rollangle)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
-		if (!(sprframe->rotsprite.cached & (1<<rot)))
+		if (!(sprframe->rotsprite.cached[rendermode-1] & (1<<rot)))
 			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
+		rotsprite = sprframe->rotsprite.patch[rot][rollangle][rendermode-1];
 		if (rotsprite != NULL)
 		{
 			spr_width = rotsprite->width << FRACBITS;
@@ -6651,7 +6651,8 @@ void HWR_Switch(void)
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_granisotropicmode.value);
 
 	// Load textures
-	HWR_LoadTextures(numtextures);
+	if (!gr_leveltexturesloaded)
+		HWR_LoadTextures(numtextures);
 
 	// Create plane polygons
 	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))

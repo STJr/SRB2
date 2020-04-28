@@ -201,7 +201,7 @@ menu_t SPauseDef;
 // Level Select
 static levelselect_t levelselect = {0, NULL};
 static UINT8 levelselectselect[3];
-static patch_t *levselp[2][3];
+static patch_t **levselp[2][3];
 static INT32 lsoffs[2];
 
 #define lsrow levelselectselect[0]
@@ -331,7 +331,7 @@ static void M_EraseData(INT32 choice);
 
 static void M_Addons(INT32 choice);
 static void M_AddonsOptions(INT32 choice);
-static patch_t *addonsp[NUM_EXT+5];
+static patch_t **addonsp[NUM_EXT+5];
 
 #define addonmenusize 9 // number of items actually displayed in the addons menu view, formerly (2*numaddonsshown + 1)
 #define numaddonsshown 4 // number of items to each side of the currently selected item, unless at top/bottom ends of directory
@@ -5132,13 +5132,13 @@ static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 //
 static void M_CacheLevelPlatter(void)
 {
-	levselp[0][0] = W_CachePatchName("SLCT1LVL", PU_PATCH);
-	levselp[0][1] = W_CachePatchName("SLCT2LVL", PU_PATCH);
-	levselp[0][2] = W_CachePatchName("BLANKLVL", PU_PATCH);
+	levselp[0][0] = (patch_t **)W_GetPatchPointerFromName("SLCT1LVL", PU_PATCH);
+	levselp[0][1] = (patch_t **)W_GetPatchPointerFromName("SLCT2LVL", PU_PATCH);
+	levselp[0][2] = (patch_t **)W_GetPatchPointerFromName("BLANKLVL", PU_PATCH);
 
-	levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_PATCH);
-	levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_PATCH);
-	levselp[1][2] = W_CachePatchName("BLANKLVW", PU_PATCH);
+	levselp[1][0] = (patch_t **)W_GetPatchPointerFromName("SLCT1LVW", PU_PATCH);
+	levselp[1][1] = (patch_t **)W_GetPatchPointerFromName("SLCT2LVW", PU_PATCH);
+	levselp[1][2] = (patch_t **)W_GetPatchPointerFromName("BLANKLVW", PU_PATCH);
 }
 
 //
@@ -5517,13 +5517,10 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	if (map <= 0)
 		return;
 
-	if (needpatchrecache)
-		M_CacheLevelPlatter();
-
 	//  A 564x100 image of the level as entry MAPxxW
 	if (!(levelselect.rows[row].mapavailable[col]))
 	{
-		V_DrawSmallScaledPatch(x, y, 0, levselp[1][2]);
+		V_DrawSmallScaledPatch(x, y, 0, *levselp[1][2]);
 		M_DrawStaticBox(x, y, V_80TRANS, 282, 50);
 	}
 	else
@@ -5531,7 +5528,7 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 		if (W_CheckNumForName(va("%sW", G_BuildMapName(map))) != LUMPERROR)
 			patch = W_CachePatchName(va("%sW", G_BuildMapName(map)), PU_PATCH);
 		else
-			patch = levselp[1][2]; // don't static to indicate that it's just a normal level
+			patch = *levselp[1][2]; // don't static to indicate that it's just a normal level
 
 		V_DrawSmallScaledPatch(x, y, 0, patch);
 	}
@@ -5551,13 +5548,10 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 	if (map <= 0)
 		return;
 
-	if (needpatchrecache)
-		M_CacheLevelPlatter();
-
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
 	{
-		V_DrawSmallScaledPatch(x, y, 0, levselp[0][2]);
+		V_DrawSmallScaledPatch(x, y, 0, *levselp[0][2]);
 		M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
 	}
 	else
@@ -5565,7 +5559,7 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 		if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
 			patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_PATCH);
 		else
-			patch = levselp[0][2]; // don't static to indicate that it's just a normal level
+			patch = *levselp[0][2]; // don't static to indicate that it's just a normal level
 
 		V_DrawSmallScaledPatch(x, y, 0, patch);
 	}
@@ -5839,7 +5833,7 @@ static void M_DrawLevelPlatterMenu(void)
 
 	// draw cursor box
 	if (levellistmode != LLM_CREATESERVER || lsrow)
-		V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey+lsoffs[0], 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
+		V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey+lsoffs[0], 0, (*levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
 
 #if 0
 	if (levelselect.rows[lsrow].maplist[lscol] > 0)
@@ -6174,23 +6168,23 @@ static void M_AddonsOptions(INT32 choice)
 
 static void M_LoadAddonsPatches(void)
 {
-	addonsp[EXT_FOLDER] = W_CachePatchName("M_FFLDR", PU_PATCH);
-	addonsp[EXT_UP] = W_CachePatchName("M_FBACK", PU_PATCH);
-	addonsp[EXT_NORESULTS] = W_CachePatchName("M_FNOPE", PU_PATCH);
-	addonsp[EXT_TXT] = W_CachePatchName("M_FTXT", PU_PATCH);
-	addonsp[EXT_CFG] = W_CachePatchName("M_FCFG", PU_PATCH);
-	addonsp[EXT_WAD] = W_CachePatchName("M_FWAD", PU_PATCH);
+	addonsp[EXT_FOLDER] = (patch_t **)W_GetPatchPointerFromName("M_FFLDR", PU_PATCH);
+	addonsp[EXT_UP] = (patch_t **)W_GetPatchPointerFromName("M_FBACK", PU_PATCH);
+	addonsp[EXT_NORESULTS] = (patch_t **)W_GetPatchPointerFromName("M_FNOPE", PU_PATCH);
+	addonsp[EXT_TXT] = (patch_t **)W_GetPatchPointerFromName("M_FTXT", PU_PATCH);
+	addonsp[EXT_CFG] = (patch_t **)W_GetPatchPointerFromName("M_FCFG", PU_PATCH);
+	addonsp[EXT_WAD] = (patch_t **)W_GetPatchPointerFromName("M_FWAD", PU_PATCH);
 #ifdef USE_KART
-	addonsp[EXT_KART] = W_CachePatchName("M_FKART", PU_PATCH);
+	addonsp[EXT_KART] = (patch_t **)W_GetPatchPointerFromName("M_FKART", PU_PATCH);
 #endif
-	addonsp[EXT_PK3] = W_CachePatchName("M_FPK3", PU_PATCH);
-	addonsp[EXT_SOC] = W_CachePatchName("M_FSOC", PU_PATCH);
-	addonsp[EXT_LUA] = W_CachePatchName("M_FLUA", PU_PATCH);
-	addonsp[NUM_EXT] = W_CachePatchName("M_FUNKN", PU_PATCH);
-	addonsp[NUM_EXT+1] = W_CachePatchName("M_FSEL", PU_PATCH);
-	addonsp[NUM_EXT+2] = W_CachePatchName("M_FLOAD", PU_PATCH);
-	addonsp[NUM_EXT+3] = W_CachePatchName("M_FSRCH", PU_PATCH);
-	addonsp[NUM_EXT+4] = W_CachePatchName("M_FSAVE", PU_PATCH);
+	addonsp[EXT_PK3] = (patch_t **)W_GetPatchPointerFromName("M_FPK3", PU_PATCH);
+	addonsp[EXT_SOC] = (patch_t **)W_GetPatchPointerFromName("M_FSOC", PU_PATCH);
+	addonsp[EXT_LUA] = (patch_t **)W_GetPatchPointerFromName("M_FLUA", PU_PATCH);
+	addonsp[NUM_EXT] = (patch_t **)W_GetPatchPointerFromName("M_FUNKN", PU_PATCH);
+	addonsp[NUM_EXT+1] = (patch_t **)W_GetPatchPointerFromName("M_FSEL", PU_PATCH);
+	addonsp[NUM_EXT+2] = (patch_t **)W_GetPatchPointerFromName("M_FLOAD", PU_PATCH);
+	addonsp[NUM_EXT+3] = (patch_t **)W_GetPatchPointerFromName("M_FSRCH", PU_PATCH);
+	addonsp[NUM_EXT+4] = (patch_t **)W_GetPatchPointerFromName("M_FSAVE", PU_PATCH);
 }
 
 static void M_Addons(INT32 choice)
@@ -6376,10 +6370,6 @@ static void M_DrawAddons(void)
 		return;
 	}
 
-	// Lactozilla: Load addons menu patches.
-	if (needpatchrecache)
-		M_LoadAddonsPatches();
-
 	if (Playing())
 		V_DrawCenteredString(BASEVIDWIDTH/2, 5, warningflags, "Adding files mid-game may cause problems.");
 	else
@@ -6474,16 +6464,16 @@ static void M_DrawAddons(void)
 			if (type & EXT_LOADED)
 			{
 				flags |= V_TRANSLUCENT;
-				V_DrawSmallScaledPatch(x-(16+4), y, V_TRANSLUCENT, addonsp[(type & ~EXT_LOADED)]);
-				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+2]);
+				V_DrawSmallScaledPatch(x-(16+4), y, V_TRANSLUCENT, *addonsp[(type & ~EXT_LOADED)]);
+				V_DrawSmallScaledPatch(x-(16+4), y, 0, *addonsp[NUM_EXT+2]);
 			}
 			else
-				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[(type & ~EXT_LOADED)]);
+				V_DrawSmallScaledPatch(x-(16+4), y, 0, *addonsp[(type & ~EXT_LOADED)]);
 
 			// draw selection box for the item currently selected
 			if ((size_t)i == dir_on[menudepthleft])
 			{
-				V_DrawFixedPatch((x-(16+4))<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, 0, addonsp[NUM_EXT+1], flashcol);
+				V_DrawFixedPatch((x-(16+4))<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, 0, *addonsp[NUM_EXT+1], flashcol);
 				flags = V_ALLOWLOWERCASE|highlightflags;
 			}
 
@@ -6517,14 +6507,14 @@ static void M_DrawAddons(void)
 
 	// draw search icon
 	x -= (21 + 5 + 16);
-	V_DrawSmallScaledPatch(x, y + 4, (menusearch[0] ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+3]);
+	V_DrawSmallScaledPatch(x, y + 4, (menusearch[0] ? 0 : V_TRANSLUCENT), *addonsp[NUM_EXT+3]);
 
 	// draw save icon
 	x = BASEVIDWIDTH - x - 16;
-	V_DrawSmallScaledPatch(x, y + 4, ((!modifiedgame || savemoddata) ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+4]);
+	V_DrawSmallScaledPatch(x, y + 4, ((!modifiedgame || savemoddata) ? 0 : V_TRANSLUCENT), *addonsp[NUM_EXT+4]);
 
 	if (modifiedgame)
-		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+2]);
+		V_DrawSmallScaledPatch(x, y + 4, 0, *addonsp[NUM_EXT+2]);
 }
 
 static void M_AddonExec(INT32 ch)
@@ -7476,8 +7466,8 @@ static void M_HandleEmblemHints(INT32 choice)
 static musicdef_t *curplaying = NULL;
 static INT32 st_sel = 0, st_cc = 0;
 static tic_t st_time = 0;
-static patch_t* st_radio[9];
-static patch_t* st_launchpad[4];
+static patch_t **st_radio[9];
+static patch_t **st_launchpad[4];
 
 static void M_CacheSoundTest(void)
 {
@@ -7488,14 +7478,14 @@ static void M_CacheSoundTest(void)
 	for (i = 0; i < 9; i++)
 	{
 		buf[7] = (char)('0'+i);
-		st_radio[i] = W_CachePatchName(buf, PU_PATCH);
+		st_radio[i] = (patch_t **)W_GetPatchPointerFromName(buf, PU_PATCH);
 	}
 
 	STRBUFCPY(buf, "M_LPADn");
 	for (i = 0; i < 4; i++)
 	{
 		buf[6] = (char)('0'+i);
-		st_launchpad[i] = W_CachePatchName(buf, PU_PATCH);
+		st_launchpad[i] = (patch_t **)W_GetPatchPointerFromName(buf, PU_PATCH);
 	}
 }
 
@@ -7531,9 +7521,6 @@ static void M_DrawSoundTest(void)
 	INT32 x, y, i;
 	fixed_t hscale = FRACUNIT/2, vscale = FRACUNIT/2, bounce = 0;
 	UINT8 frame[4] = {0, 0, -1, SKINCOLOR_RUBY};
-
-	if (needpatchrecache)
-		M_CacheSoundTest();
 
 	// let's handle the ticker first. ideally we'd tick this somewhere else, BUT...
 	if (curplaying)
@@ -7587,19 +7574,19 @@ static void M_DrawSoundTest(void)
 
 	V_DrawStretchyFixedPatch(x, y,
 		hscale, vscale,
-		0, st_radio[frame[0]], NULL);
+		0, *st_radio[frame[0]], NULL);
 
-	V_DrawFixedPatch(x, y, FRACUNIT/2, 0, st_launchpad[0], NULL);
+	V_DrawFixedPatch(x, y, FRACUNIT/2, 0, *st_launchpad[0], NULL);
 
 	for (i = 0; i < 9; i++)
 	{
 		if (i == frame[2])
 		{
 			UINT8 *colmap = R_GetTranslationColormap(TC_RAINBOW, frame[3], GTC_CACHE);
-			V_DrawFixedPatch(x, y + (frame[1]<<FRACBITS), FRACUNIT/2, 0, st_launchpad[frame[1]+1], colmap);
+			V_DrawFixedPatch(x, y + (frame[1]<<FRACBITS), FRACUNIT/2, 0, *st_launchpad[frame[1]+1], colmap);
 		}
 		else
-			V_DrawFixedPatch(x, y, FRACUNIT/2, 0, st_launchpad[1], NULL);
+			V_DrawFixedPatch(x, y, FRACUNIT/2, 0, *st_launchpad[1], NULL);
 
 		if ((i % 3) == 2)
 		{
@@ -8133,9 +8120,6 @@ static void M_DrawLoadGameData(void)
 
 	if (vid.width != BASEVIDWIDTH*vid.dupx)
 		hsep = (hsep*vid.width)/(BASEVIDWIDTH*vid.dupx);
-
-	if (needpatchrecache)
-		M_CacheLoadGameData();
 
 	for (i = -2; i <= 2; i++)
 	{
@@ -8801,7 +8785,6 @@ void M_ForceSaveSlotSelected(INT32 sslot)
 // CHARACTER SELECT
 // ================
 
-// lactozilla: sometimes the renderer changes and these patches don't exist anymore
 static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 {
 	if (!(description[i].picname[0]))
@@ -8810,32 +8793,16 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 		{
 			spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
-			description[i].charpic = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			description[i].charpic = (patch_t **)W_GetPatchPointer(sprframe->lumppat[0], PU_PATCH);
 		}
 		else
-			description[i].charpic = W_CachePatchName("MISSING", PU_PATCH);
+			description[i].charpic = (patch_t **)W_GetPatchPointerFromName("MISSING", PU_PATCH);
 	}
 	else
-		description[i].charpic = W_CachePatchName(description[i].picname, PU_PATCH);
+		description[i].charpic = (patch_t **)W_GetPatchPointerFromName(description[i].picname, PU_PATCH);
 
 	if (description[i].nametag[0])
-		description[i].namepic = W_CachePatchName(description[i].nametag, PU_PATCH);
-}
-
-static void M_CacheCharacterSelect(void)
-{
-	INT32 i, skinnum;
-
-	for (i = 0; i < 32; i++)
-	{
-		if (!description[i].used)
-			continue;
-
-		// Already set in M_SetupChoosePlayer
-		skinnum = description[i].skinnum[0];
-		if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
-			M_CacheCharacterSelectEntry(i, skinnum);
-	}
+		description[i].namepic = (patch_t **)W_GetPatchPointerFromName(description[i].nametag, PU_PATCH);
 }
 
 static void M_SetupChoosePlayer(INT32 choice)
@@ -9033,10 +9000,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT32 x, y;
 	INT32 w = (vid.width/vid.dupx);
 
-	// lactozilla: the renderer changed so recache patches
-	if (needpatchrecache)
-		M_CacheCharacterSelect();
-
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
 	else // close enough.
@@ -9090,11 +9053,11 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	{
 		x = 8;
 		y = (my+16) - FixedInt(char_scroll);
-		V_DrawScaledPatch(x, y, 0, description[char_on].charpic);
+		V_DrawScaledPatch(x, y, 0, *description[char_on].charpic);
 		if (prev != -1)
-			V_DrawScaledPatch(x, y - 144, 0, description[prev].charpic);
+			V_DrawScaledPatch(x, y - 144, 0, *description[prev].charpic);
 		if (next != -1)
-			V_DrawScaledPatch(x, y + 144, 0, description[next].charpic);
+			V_DrawScaledPatch(x, y + 144, 0, *description[next].charpic);
 	}
 
 	// Character description
@@ -9118,14 +9081,14 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		curtextcolor = description[char_on].tagtextcolor;
 		curoutlinecolor = description[char_on].tagoutlinecolor;
 		if (curtext[0] == '\0')
-			curpatch = description[char_on].namepic;
+			curpatch = *description[char_on].namepic;
 		if (!curtextcolor)
 			curtextcolor = charskin->prefcolor;
 		if (!curoutlinecolor)
 			curoutlinecolor = Color_Opposite[charskin->prefcolor - 1][0];
 
 		txsh = oxsh;
-		ox = 8 + SHORT((description[char_on].charpic)->width)/2;
+		ox = 8 + SHORT((*description[char_on].charpic)->width)/2;
 		y = my + 144;
 
 		// cur
@@ -9156,7 +9119,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				prevtextcolor = description[prev].tagtextcolor;
 				prevoutlinecolor = description[prev].tagoutlinecolor;
 				if (prevtext[0] == '\0')
-					prevpatch = description[prev].namepic;
+					prevpatch = *description[prev].namepic;
 				charskin = &skins[description[prev].skinnum[0]];
 				if (!prevtextcolor)
 					prevtextcolor = charskin->prefcolor;
@@ -9186,7 +9149,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				nexttextcolor = description[next].tagtextcolor;
 				nextoutlinecolor = description[next].tagoutlinecolor;
 				if (nexttext[0] == '\0')
-					nextpatch = description[next].namepic;
+					nextpatch = *description[next].namepic;
 				charskin = &skins[description[next].skinnum[0]];
 				if (!nexttextcolor)
 					nexttextcolor = charskin->prefcolor;

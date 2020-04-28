@@ -64,7 +64,7 @@ extern lua_State *gL;
 #define META_BBOX "BOUNDING_BOX"
 
 #define META_HUDINFO "HUDINFO_T*"
-#define META_PATCH "PATCH_T*"
+#define META_PATCH "PATCH_T**"
 #define META_COLORMAP "COLORMAP"
 #define META_CAMERA "CAMERA_T*"
 

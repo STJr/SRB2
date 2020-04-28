@@ -730,10 +730,11 @@ typedef struct
 
 // rotsprite
 #ifdef ROTSPRITE
+#include "i_video.h" // num_renderers
 typedef struct
 {
-	patch_t *patch[16][ROTANGLES];
-	UINT16 cached;
+	patch_t *patch[16][ROTANGLES][num_renderers];
+	UINT16 cached[num_renderers];
 } rotsprite_t;
 #endif/*ROTSPRITE*/
 
@@ -748,24 +749,6 @@ typedef enum
 	SRF_2D          = SRF_LEFT|SRF_RIGHT, // 12
 	SRF_NONE        = 0xff // Initial value
 } spriterotateflags_t;     // SRF's up!
-
-// Same as a patch_t, except just the header
-// and the wadnum/lumpnum combination that points
-// to wherever the patch is in memory.
-struct patchinfo_s
-{
-	INT16 width;          // bounding box size
-	INT16 height;
-	INT16 leftoffset;     // pixels to the left of origin
-	INT16 topoffset;      // pixels below the origin
-
-	UINT16 wadnum;        // the software patch lump num for when the patch
-	UINT16 lumpnum;       // was flushed, and we need to re-create it
-
-	// next patchinfo_t in memory
-	struct patchinfo_s *next;
-};
-typedef struct patchinfo_s patchinfo_t;
 
 //
 // Sprites are patches with a special naming convention so they can be

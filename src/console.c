@@ -1297,7 +1297,7 @@ void CONS_Printf(const char *fmt, ...)
 	// if not in display loop, force screen update
 	if (con_refresh)
 	{
-#ifdef _WINDOWS
+#if defined(_WINDOWS)
 		if (con_startup)
 		{
 			patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
@@ -1649,12 +1649,6 @@ void CON_Drawer(void)
 {
 	if (!con_started || !graphics_started)
 		return;
-
-	if (needpatchrecache)
-	{
-		W_FlushCachedPatches();
-		HU_LoadGraphics();
-	}
 
 	if (con_recalc)
 	{
