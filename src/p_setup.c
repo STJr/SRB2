@@ -3837,6 +3837,8 @@ boolean P_AddWadFile(const char *wadfilename)
 	else
 		wadnum = (UINT16)(numwadfiles-1);
 
+	R_FreePatchReferences();
+
 	switch(wadfiles[wadnum]->type)
 	{
 	case RET_PK3:

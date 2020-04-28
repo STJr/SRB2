@@ -831,13 +831,18 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 void W_InitPatchCache(wadfile_t *wadfile)
 {
 	patchcache_t *cache = &wadfile->patchcache;
-	UINT16 numlumps = wadfile->numlumps;
+	rendermode_t rmode;
 
-	Z_Calloc(numlumps * sizeof(lumpcache_t), PU_STATIC, &cache->current);
-	Z_Calloc(numlumps * (sizeof(lumpcache_t) * num_renderers), PU_STATIC, &cache->renderer);
+	// Main patch cache for the current renderer
+	Z_Calloc(wadfile->numlumps * sizeof(lumpcache_t), PU_STATIC, &cache->current);
+
+	// Patch cache for each renderer
+	cache->renderer = M_AATreeAlloc(AATREE_ZUSER);
+	for (rmode = render_none+1; rmode < render_last; rmode++)
+		M_AATreeSet(cache->renderer, (rmode - 1), M_AATreeAlloc(AATREE_ZUSER));
 
 #ifdef HWRENDER
-	// allocates GLPatch info structures and store them in a tree
+	// allocates GLPatch info structures and stores them in a tree
 	cache->hwrcache = M_AATreeAlloc(AATREE_ZUSER);
 #endif
 }

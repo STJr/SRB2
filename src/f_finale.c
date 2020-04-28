@@ -1798,11 +1798,11 @@ static void F_CacheEnding(void)
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
 			sprframe = &sprdef->spriteframes[XTRA_ENDING];
-			endfwrk[0] = &W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			endfwrk[0] = (patch_t **)W_GetPatchPointer(sprframe->lumppat[0], PU_PATCH);
 			sprframe = &sprdef->spriteframes[XTRA_ENDING+1];
-			endfwrk[1] = &W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			endfwrk[1] = (patch_t **)W_GetPatchPointer(sprframe->lumppat[0], PU_PATCH);
 			sprframe = &sprdef->spriteframes[XTRA_ENDING+2];
-			endfwrk[2] = &W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			endfwrk[2] = (patch_t **)W_GetPatchPointer(sprframe->lumppat[0], PU_PATCH);
 		}
 		else // Show a star if your character doesn't have an ending firework display. (Basically the MISSINGs for this)
 		{

@@ -19,16 +19,19 @@
 
 void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
 void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
-void R_UpdatePatchPointers(void);
+
+void R_UpdatePatchReferences(void);
+void R_FreePatchReferences(void);
 
 // Structs
-struct patchstorage_s
+struct patchreference_s
 {
-	struct patchstorage_s *next;
+	struct patchreference_s *prev, *next;
 	UINT16 wad, lump;
 	INT32 tag;
+	void *ptr;
 };
-typedef struct patchstorage_s patchstorage_t;
+typedef struct patchreference_s patchreference_t;
 
 typedef enum
 {

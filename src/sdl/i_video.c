@@ -73,7 +73,7 @@
 #include "../console.h"
 #include "../command.h"
 #include "../r_main.h"
-#include "../r_patch.h" // R_UpdatePatchPointers
+#include "../r_patch.h" // R_UpdatePatchReferences
 #include "sdlmain.h"
 #ifdef HWRENDER
 #include "../hardware/hw_main.h"
@@ -1450,7 +1450,7 @@ boolean I_CheckRenderer(void)
 
 		if (rendererchanged)
 		{
-			R_UpdatePatchPointers();
+			R_UpdatePatchReferences();
 			V_ReloadHUDGraphics();
 		}
 

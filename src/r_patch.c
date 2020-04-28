@@ -55,54 +55,85 @@ static unsigned char imgbuf[1<<26];
 // ==========================================================================
 
 // Graphic 'patches' are loaded, and if necessary, converted into the format
-// the most useful for the current rendermode. For software renderer, the
+// the most useful for the current render mode. For the software renderer, the
 // graphic patches are kept as is. For the hardware renderer, graphic patches
 // are 'unpacked', and are kept into the cache in that unpacked format, and
 // the heap memory cache then acts as a 'level 2' cache just after the
 // graphics card memory.
 
-static patchstorage_t *patchstorage = NULL; // linked list
-static patchstorage_t *patchstorage_tail = NULL; // tail of the above
+// If patches need to be cached only once, references to those patches
+// can be obtained with W_GetPatchPointer and relatives. By returning a
+// double pointer that can be dereferenced, the addresses of the patches
+// can be swapped out to point to another patch instead. The main use case
+// for this is renderer switching.
 
-// Find patch in storage
-static patchstorage_t *FindPatchInList(UINT16 wad, UINT16 lump)
+static patchreference_t *patchlist_head = NULL;
+static patchreference_t *patchlist_tail = NULL;
+
+// Find patch in list
+static patchreference_t *FindPatchReference(UINT16 wad, UINT16 lump)
 {
-	patchstorage_t *patch = patchstorage;
+	patchreference_t *patch = patchlist_head;
+
+	CONS_Debug(DBG_RENDER, "FindPatchReference: searching for %s\n", W_CheckNameForNumPwad(wad, lump));
 
 	while (patch)
 	{
+		patchreference_t *prev = NULL, *next = NULL;
+
+		CONS_Debug(DBG_RENDER, "%s\n", W_CheckNameForNumPwad(patch->wad, patch->lump));
+
 		if (patch->wad == wad && patch->lump == lump)
+		{
+			CONS_Debug(DBG_RENDER, "found\n");
 			return patch;
-		patch = patch->next;
+		}
+
+		// Lazy memory deallocation.
+		// References aren't removed until an iteration
+		// knows the pointer isn't valid anymore.
+		next = patch->next;
+		if (patch->ptr == NULL)
+		{
+			CONS_Debug(DBG_RENDER, "freeing this patch\n");
+			prev = patch->prev;
+			if (prev)
+				prev->next = next;
+			Z_Free(patch);
+		}
+		patch = next;
 	}
 
 	return NULL;
 }
 
-// Insert patch in storage
-static patchstorage_t *InsertPatchInList(UINT16 wad, UINT16 lump, INT32 tag)
+// Insert patch in list
+static patchreference_t *InsertPatchReference(UINT16 wad, UINT16 lump, void *ptr, INT32 tag)
 {
-	patchstorage_t *found = FindPatchInList(wad, lump);
+	patchreference_t *found = FindPatchReference(wad, lump);
 	if (found)
 		return found;
 
-	if (!patchstorage)
+	if (!patchlist_head)
 	{
-		patchstorage = Z_Calloc(sizeof(patchstorage_t), PU_STATIC, NULL);
-		patchstorage->wad = wad;
-		patchstorage->lump = lump;
-		patchstorage->tag = tag;
-		patchstorage_tail = patchstorage;
-		return patchstorage;
+		patchlist_head = Z_Calloc(sizeof(patchreference_t), PU_STATIC, NULL);
+		patchlist_head->wad = wad;
+		patchlist_head->lump = lump;
+		patchlist_head->ptr = ptr;
+		patchlist_head->tag = tag;
+		patchlist_tail = patchlist_head;
+		return patchlist_head;
 	}
 	else
 	{
-		patchstorage_t *list = Z_Calloc(sizeof(patchstorage_t), PU_STATIC, NULL);
+		patchreference_t *list = Z_Calloc(sizeof(patchreference_t), PU_STATIC, NULL);
 		list->wad = wad;
 		list->lump = lump;
+		list->ptr = ptr;
 		list->tag = tag;
-		patchstorage_tail->next = list;
-		patchstorage_tail = list;
+		list->prev = patchlist_tail; // set the previous item to the tail
+		patchlist_tail->next = list; // set the tail's next item to the new item
+		patchlist_tail = list; // set the tail to the new item
 		return list;
 	}
 }
@@ -111,28 +142,27 @@ static patchstorage_t *InsertPatchInList(UINT16 wad, UINT16 lump, INT32 tag)
 // Cache a patch into heap memory, convert the patch format as necessary
 //
 
-#define CacheAccessFormula(ln, md) (ln * num_renderers + md)
-
 #define GetPatchCache(wadnum, lumpnum, mode) \
-	wadfiles[wadnum]->patchcache.renderer[CacheAccessFormula(lumpnum, (mode - 1))]
+	M_AATreeGet(M_AATreeGet(wadfiles[wadnum]->patchcache.renderer, (mode - 1)), lumpnum)
 
 #define SetPatchCache(wadnum, lumpnum, mode, ptr) \
-	wadfiles[wadnum]->patchcache.renderer[CacheAccessFormula(lumpnum, (mode - 1))] = ptr
+	M_AATreeSet(M_AATreeGet(wadfiles[wadnum]->patchcache.renderer, (mode - 1)), lumpnum, ptr)
 
 #define UpdatePatchCache(wadnum, lumpnum, mode) \
-	wadfiles[wadnum]->patchcache.current[lumpnum] = wadfiles[wadnum]->patchcache.renderer[CacheAccessFormula(lumpnum, (mode - 1))]
+	wadfiles[wadnum]->patchcache.current[lumpnum] = GetPatchCache(wadnum, lumpnum, mode)
 
 void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 {
+	void *cache = GetPatchCache(wad, lump, render_soft);
 	if (!GetPatchCache(wad, lump, render_soft))
 	{
 		size_t len = W_LumpLengthPwad(wad, lump);
 		void *ptr, *lumpdata;
 #ifndef NO_PNG_LUMPS
-		void *srcdata = NULL;
+		void *converted = NULL;
 #endif
 
-		ptr = Z_Malloc(len, tag, &GetPatchCache(wad, lump, render_soft));
+		ptr = Z_Malloc(len, tag, &cache);
 		lumpdata = Z_Malloc(len, tag, NULL);
 
 		// read the lump in full
@@ -143,10 +173,10 @@ void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 		if (R_IsLumpPNG((UINT8 *)lumpdata, len))
 		{
 			size_t newlen;
-			srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
-			ptr = Z_Realloc(ptr, newlen, tag, &GetPatchCache(wad, lump, render_soft));
-			M_Memcpy(ptr, srcdata, newlen);
-			Z_Free(srcdata);
+			converted = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
+			ptr = Z_Realloc(ptr, newlen, tag, &cache);
+			M_Memcpy(ptr, converted, newlen);
+			Z_Free(converted);
 		}
 		else // just copy it into the patch cache
 #endif
@@ -154,15 +184,17 @@ void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 
 		// insert into list
 		if (store)
-			InsertPatchInList(wad, lump, tag);
+			InsertPatchReference(wad, lump, ptr, tag);
 
-		SetPatchCache(wad, lump, render_soft, GetPatchCache(wad, lump, render_soft));
+		SetPatchCache(wad, lump, render_soft, ptr);
 		UpdatePatchCache(wad, lump, render_soft);
+
+		return ptr;
 	}
 	else
-		Z_ChangeTag(GetPatchCache(wad, lump, render_soft), tag);
+		Z_ChangeTag(cache, tag);
 
-	return GetPatchCache(wad, lump, render_soft);
+	return cache;
 }
 
 #ifdef HWRENDER
@@ -190,7 +222,7 @@ void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 
 		// insert into list
 		if (store)
-			InsertPatchInList(wad, lump, tag);
+			InsertPatchReference(wad, lump, (void *)grPatch, tag);
 
 		SetPatchCache(wad, lump, render_opengl, (void *)grPatch);
 		UpdatePatchCache(wad, lump, render_opengl);
@@ -201,9 +233,12 @@ void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 }
 #endif
 
-void R_UpdatePatchPointers(void)
+//
+// Update patch references to point to the current renderer's patches.
+//
+void R_UpdatePatchReferences(void)
 {
-	patchstorage_t *patch = patchstorage;
+	patchreference_t *patch = patchlist_head;
 	while (patch)
 	{
 #ifdef HWRENDER
@@ -214,6 +249,20 @@ void R_UpdatePatchPointers(void)
 			R_CacheSoftwarePatch(patch->wad, patch->lump, patch->tag, false);
 		UpdatePatchCache(patch->wad, patch->lump, rendermode);
 		patch = patch->next;
+	}
+}
+
+//
+// Free the patch reference list.
+//
+void R_FreePatchReferences(void)
+{
+	patchreference_t *patch = patchlist_head;
+	while (patch)
+	{
+		patchreference_t *next = patch->next;
+		Z_Free(patch);
+		patch = next;
 	}
 }
 

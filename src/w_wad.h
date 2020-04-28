@@ -99,10 +99,7 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 #define MAX_WADFILES 48 // maximum of wad files used at the same time
 // (there is a max of simultaneous open files anyway, and this should be plenty)
 
-#ifdef HWRENDER
-#include "m_aatree.h"
-#endif
-
+#include "m_aatree.h" // for the patch cache
 #include "i_video.h" // num_renderers
 
 #define lumpcache_t void *
@@ -110,9 +107,9 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 typedef struct patchcache_s
 {
 	lumpcache_t *current;
-	lumpcache_t *renderer;
+	aatree_t *renderer;
 #ifdef HWRENDER
-	aatree_t *hwrcache; // patches are cached in renderer's native format
+	aatree_t *hwrcache; // Secondary AA tree for OpenGL because I'm a dummy and don't know how to handle this better
 #endif
 } patchcache_t;
 
