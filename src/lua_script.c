@@ -732,7 +732,8 @@ enum
 	ARCH_NULL=0,
 	ARCH_BOOLEAN,
 	ARCH_SIGNED,
-	ARCH_STRING,
+	ARCH_SMALLSTRING,
+	ARCH_LARGESTRING,
 	ARCH_TABLE,
 
 	ARCH_MOBJINFO,
@@ -829,10 +830,9 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 	}
 	case LUA_TSTRING:
 	{
-		UINT16 len = (UINT16)lua_objlen(gL, myindex); // get length of string, including embedded zeros
+		UINT32 len = (UINT32)lua_objlen(gL, myindex); // get length of string, including embedded zeros
 		const char *s = lua_tostring(gL, myindex);
-		UINT16 i = 0;
-		WRITEUINT8(save_p, ARCH_STRING);
+		UINT32 i = 0;
 		// if you're wondering why we're writing a string to save_p this way,
 		// it turns out that Lua can have embedded zeros ('\0') in the strings,
 		// so we can't use WRITESTRING as that cuts off when it finds a '\0'.
@@ -840,7 +840,16 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		// fixing the awful crashes previously encountered for reading strings longer than 1024
 		// (yes I know that's kind of a stupid thing to care about, but it'd be evil to trim or ignore them?)
 		// -- Monster Iestyn 05/08/18
-		WRITEUINT16(save_p, len); // save size of string
+		if (len < 255)
+		{
+			WRITEUINT8(save_p, ARCH_SMALLSTRING);
+			WRITEUINT8(save_p, len); // save size of string
+		}
+		else
+		{
+			WRITEUINT8(save_p, ARCH_LARGESTRING);
+			WRITEUINT32(save_p, len); // save size of string
+		}
 		while (i < len)
 			WRITECHAR(save_p, s[i++]); // write chars individually, including the embedded zeros
 		break;
@@ -1184,15 +1193,21 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_SIGNED:
 		lua_pushinteger(gL, READFIXED(save_p));
 		break;
-	case ARCH_STRING:
+	case ARCH_SMALLSTRING:
+	case ARCH_LARGESTRING:
 	{
-		UINT16 len = READUINT16(save_p); // length of string, including embedded zeros
+		UINT32 len;
 		char *value;
-		UINT16 i = 0;
+		UINT32 i = 0;
+
 		// See my comments in the ArchiveValue function;
 		// it's much the same for reading strings as writing them!
 		// (i.e. we can't use READSTRING either)
 		// -- Monster Iestyn 05/08/18
+		if (type == ARCH_SMALLSTRING)
+			len = READUINT8(save_p); // length of string, including embedded zeros
+		else
+			len = READUINT32(save_p); // length of string, including embedded zeros
 		value = malloc(len); // make temp buffer of size len
 		// now read the actual string
 		while (i < len)
