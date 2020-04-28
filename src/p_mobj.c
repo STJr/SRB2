@@ -1691,7 +1691,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 				// Needs ML_EFFECT4 flag for pushables to break it
 				if (!(rover->master->flags & ML_EFFECT4)) continue;
 
-				if (!rover->master->frontsector->crumblestate)
+				if (rover->master->frontsector->crumblestate == CRUMBLE_NONE)
 				{
 					topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
 					bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
