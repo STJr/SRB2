@@ -732,7 +732,9 @@ enum
 	ARCH_NULL=0,
 	ARCH_TRUE,
 	ARCH_FALSE,
-	ARCH_SIGNED,
+	ARCH_INT8,
+	ARCH_INT16,
+	ARCH_INT32,
 	ARCH_SMALLSTRING,
 	ARCH_LARGESTRING,
 	ARCH_TABLE,
@@ -824,8 +826,21 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 	case LUA_TNUMBER:
 	{
 		lua_Integer number = lua_tointeger(gL, myindex);
-        WRITEUINT8(save_p, ARCH_SIGNED);
-        WRITEFIXED(save_p, number);
+		if (number >= INT8_MIN && number <= INT8_MAX)
+		{
+			WRITEUINT8(save_p, ARCH_INT8);
+			WRITESINT8(save_p, number);
+		}
+		else if (number >= INT16_MIN && number <= INT16_MAX)
+		{
+			WRITEUINT8(save_p, ARCH_INT16);
+			WRITEINT16(save_p, number);
+		}
+		else
+		{
+			WRITEUINT8(save_p, ARCH_INT32);
+			WRITEFIXED(save_p, number);
+		}
 		break;
 	}
 	case LUA_TSTRING:
@@ -1193,8 +1208,13 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_FALSE:
 		lua_pushboolean(gL, false);
 		break;
+	case ARCH_INT8:
+		lua_pushinteger(gL, READSINT8(save_p));
 		break;
-	case ARCH_SIGNED:
+	case ARCH_INT16:
+		lua_pushinteger(gL, READINT16(save_p));
+		break;
+	case ARCH_INT32:
 		lua_pushinteger(gL, READFIXED(save_p));
 		break;
 	case ARCH_SMALLSTRING:
