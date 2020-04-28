@@ -32,8 +32,8 @@ void      I_unlock_mutex    (I_mutex);
 
 void      I_hold_cond       (I_cond *, I_mutex);
 
-void      I_wake_one_cond   (I_cond);
-void      I_wake_all_cond   (I_cond);
+void      I_wake_one_cond   (I_cond *);
+void      I_wake_all_cond   (I_cond *);
 
 #endif/*I_THREADS_H*/
 #endif/*HAVE_THREADS*/

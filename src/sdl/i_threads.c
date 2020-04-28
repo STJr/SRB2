@@ -323,16 +323,34 @@ I_hold_cond (
 
 void
 I_wake_one_cond (
-		I_cond id
+		I_cond * anchor
 ){
-	if (SDL_CondSignal(id) == -1)
+	SDL_cond * cond;
+
+	cond = Identity(
+			&i_cond_pool,
+			i_cond_pool_mutex,
+			anchor,
+			(Create_fn)SDL_CreateCond
+	);
+
+	if (SDL_CondSignal(cond) == -1)
 		abort();
 }
 
 void
 I_wake_all_cond (
-		I_cond id
+		I_cond * anchor
 ){
-	if (SDL_CondBroadcast(id) == -1)
+	SDL_cond * cond;
+
+	cond = Identity(
+			&i_cond_pool,
+			i_cond_pool_mutex,
+			anchor,
+			(Create_fn)SDL_CreateCond
+	);
+
+	if (SDL_CondBroadcast(cond) == -1)
 		abort();
 }
