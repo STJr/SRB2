@@ -730,7 +730,8 @@ void LUA_InvalidatePlayer(player_t *player)
 enum
 {
 	ARCH_NULL=0,
-	ARCH_BOOLEAN,
+	ARCH_TRUE,
+	ARCH_FALSE,
 	ARCH_SIGNED,
 	ARCH_SMALLSTRING,
 	ARCH_LARGESTRING,
@@ -818,8 +819,7 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		WRITEUINT8(save_p, ARCH_NULL);
 		return 2;
 	case LUA_TBOOLEAN:
-		WRITEUINT8(save_p, ARCH_BOOLEAN);
-		WRITEUINT8(save_p, lua_toboolean(gL, myindex));
+		WRITEUINT8(save_p, lua_toboolean(gL, myindex) ? ARCH_TRUE : ARCH_FALSE);
 		break;
 	case LUA_TNUMBER:
 	{
@@ -1187,8 +1187,12 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_NULL:
 		lua_pushnil(gL);
 		break;
-	case ARCH_BOOLEAN:
-		lua_pushboolean(gL, READUINT8(save_p));
+	case ARCH_TRUE:
+		lua_pushboolean(gL, true);
+		break;
+	case ARCH_FALSE:
+		lua_pushboolean(gL, false);
+		break;
 		break;
 	case ARCH_SIGNED:
 		lua_pushinteger(gL, READFIXED(save_p));
