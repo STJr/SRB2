@@ -61,7 +61,6 @@ consvar_t cv_servername = {"servername", "SRB2Kart server", CV_SAVE|CV_CALL|CV_N
 
 consvar_t cv_masterserver_update_rate = {"masterserver_update_rate", "15", CV_SAVE|CV_CALL|CV_NOINIT, masterserver_update_rate_cons_t, Update_parameters, 0, NULL, NULL, 0, 0, NULL};
 
-char *ms_API;
 INT16 ms_RoomId = -1;
 
 #ifdef HAVE_THREADS
@@ -377,6 +376,19 @@ Unlist_server_thread (int *id)
 
 	free(id);
 }
+
+static void
+Change_masterserver_thread (char *api)
+{
+	Lock_state();
+	{
+		while (MSRegistered)
+			I_hold_cond(&MSCond, MSMutex);
+	}
+	Unlock_state();
+
+	HMS_set_api(api);
+}
 #endif/*HAVE_THREADS*/
 
 void RegisterServer(void)
@@ -421,7 +433,7 @@ void UnregisterServer(void)
 static boolean
 Online (void)
 {
-	return ( server && ms_RoomId > 0 );
+	return ( serverrunning && ms_RoomId > 0 );
 }
 
 static inline void SendPingToMasterServer(void)
@@ -480,21 +492,26 @@ void MasterClient_Ticker(void)
 	SendPingToMasterServer();
 }
 
+static void
+Set_api (const char *api)
+{
+#ifdef HAVE_THREADS
+	I_spawn_thread(
+			"change-masterserver",
+			(I_thread_fn)Change_masterserver_thread,
+			strdup(api)
+	);
+#else
+	HMS_set_api(strdup(api));
+#endif
+}
+
 static void MasterServer_OnChange(void)
 {
-	boolean auto_register;
+	UnregisterServer();
 
-	//auto_register = ( con_state != MSCS_NONE );
-	auto_register = false;
+	Set_api(cv_masterserver.string);
 
-	if (ms_API)
-	{
-		UnregisterServer();
-		Z_Free(ms_API);
-	}
-
-	ms_API = Z_StrDup(cv_masterserver.string);
-
-	if (auto_register)
+	if (Online())
 		RegisterServer();
 }

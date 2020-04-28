@@ -22,6 +22,7 @@ Documentation available here.
 #include "m_menu.h"
 #include "mserv.h"
 #include "i_tcp.h"/* for current_port */
+#include "i_threads.h"
 
 /* I just stop myself from making macros anymore. */
 #define Blame( ... ) \
@@ -33,6 +34,11 @@ consvar_t cv_masterserver_debug = {
 };
 
 static int hms_started;
+
+static char *hms_api;
+#ifdef HAVE_THREADS
+static I_mutex hms_api_mutex;
+#endif
 
 static char *hms_server_token;
 
@@ -101,13 +107,21 @@ HMS_connect (const char *format, ...)
 		return NULL;
 	}
 
-	seek = strlen(ms_API) + 1;/* + '/' */
+#ifdef HAVE_THREADS
+	I_lock_mutex(&hms_api_mutex);
+#endif
+
+	seek = strlen(hms_api) + 1;/* + '/' */
 
 	va_start (ap, format);
 	url = malloc(seek + vsnprintf(0, 0, format, ap) + 1);
 	va_end (ap);
 
-	sprintf(url, "%s/", ms_API);
+	sprintf(url, "%s/", hms_api);
+
+#ifdef HAVE_THREADS
+	I_unlock_mutex(hms_api_mutex);
+#endif
 
 	va_start (ap, format);
 	vsprintf(&url[seek], format, ap);
@@ -589,4 +603,19 @@ HMS_compare_mod_version (char *buffer, size_t buffer_size)
 	HMS_end(hms);
 
 	return ok;
+}
+
+void
+HMS_set_api (char *api)
+{
+#ifdef HAVE_THREADS
+	I_lock_mutex(&hms_api_mutex);
+#endif
+	{
+		free(hms_api);
+		hms_api = api;
+	}
+#ifdef HAVE_THREADS
+	I_unlock_mutex(hms_api_mutex);
+#endif
 }

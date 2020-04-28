@@ -70,8 +70,6 @@ extern consvar_t cv_masterserver, cv_servername;
 extern consvar_t cv_masterserver_update_rate;
 extern consvar_t cv_masterserver_debug;
 
-extern char *ms_API;
-
 // < 0 to not connect (usually -1) (offline mode)
 // == 0 to show all rooms, not a valid hosting room
 // anything else is whatever room the MS assigns to that number (online mode)
@@ -101,7 +99,7 @@ extern msg_rooms_t room_list[NUM_LIST_ROOMS+1];
 void AddMServCommands(void);
 
 /* HTTP */
-int  HMS_in_use (void);
+void HMS_set_api (char *api);
 int  HMS_fetch_rooms (int joining, int id);
 int  HMS_register (void);
 int  HMS_unlist (void);
