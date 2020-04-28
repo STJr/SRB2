@@ -450,7 +450,7 @@ static inline void SendPingToMasterServer(void)
 			ready = (
 					MSRegisteredId == MSId &&
 					! MSInProgress &&
-					now >= ( MSLastPing + cv_masterserver_update_rate.value )
+					now >= ( MSLastPing + 60 * cv_masterserver_update_rate.value )
 			);
 
 			if (ready)
