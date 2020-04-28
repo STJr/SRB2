@@ -23,15 +23,32 @@
 #include "m_menu.h"
 #include "z_zone.h"
 
-static time_t MSLastPing;
+static int     MSId;
+static int     MSRegisteredId = -1;
 
-static inline void SendPingToMasterServer(void);
+static boolean MSRegistered;
+static boolean MSInProgress;
+static boolean MSUpdateAgain;
+
+static time_t  MSLastPing;
+
+#ifdef HAVE_THREADS
+static I_mutex MSMutex;
+static I_cond  MSCond;
+
+#  define Lock_state()   I_lock_mutex  (&MSMutex)
+#  define Unlock_state() I_unlock_mutex (MSMutex)
+#else/*HAVE_THREADS*/
+#  define Lock_state()
+#  define Unlock_state()
+#endif/*HAVE_THREADS*/
+
+static void Update_parameters (void);
 
 #ifndef NONET
 static void Command_Listserv_f(void);
 #endif
 static void MasterServer_OnChange(void);
-static void ServerName_OnChange(void);
 
 static CV_PossibleValue_t masterserver_update_rate_cons_t[] = {
 	{2,  "MIN"},
@@ -40,9 +57,9 @@ static CV_PossibleValue_t masterserver_update_rate_cons_t[] = {
 };
 
 consvar_t cv_masterserver = {"masterserver", "https://mb.srb2.org/MS/0", CV_SAVE|CV_CALL, NULL, MasterServer_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_servername = {"servername", "SRB2Kart server", CV_SAVE|CV_CALL|CV_NOINIT, NULL, ServerName_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_servername = {"servername", "SRB2Kart server", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Update_parameters, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_masterserver_update_rate = {"masterserver_update_rate", "15", CV_SAVE|CV_CALL|CV_NOINIT, masterserver_update_rate_cons_t, SendPingToMasterServer, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_masterserver_update_rate = {"masterserver_update_rate", "15", CV_SAVE|CV_CALL|CV_NOINIT, masterserver_update_rate_cons_t, Update_parameters, 0, NULL, NULL, 0, 0, NULL};
 
 char *ms_API;
 INT16 ms_RoomId = -1;
@@ -54,8 +71,6 @@ I_mutex       ms_QueryId_mutex;
 msg_server_t *ms_ServerList;
 I_mutex       ms_ServerList_mutex;
 #endif
-
-static enum { MSCS_NONE, MSCS_WAITING, MSCS_REGISTERED, MSCS_FAILED } con_state = MSCS_NONE;
 
 UINT16 current_port = 0;
 
@@ -176,71 +191,301 @@ static void Command_Listserv_f(void)
 }
 #endif
 
-void RegisterServer(void)
+static void
+Finish_registration (void)
 {
-	CONS_Printf(M_GetText("Registering this server on the Master Server...\n"));
+	int registered;
 
+	CONS_Printf("Registering this server on the master server...\n");
+
+	registered = HMS_register();
+
+	Lock_state();
 	{
-		if (HMS_register())
-			con_state = MSCS_REGISTERED;
+		MSRegistered = registered;
+		MSRegisteredId = MSId;
+
+		time(&MSLastPing);
+	}
+	Unlock_state();
+
+	if (registered)
+		CONS_Printf("Master server registration successful.\n");
+}
+
+static void
+Finish_update (void)
+{
+	int registered;
+	int done;
+
+	Lock_state();
+	{
+		registered = MSRegistered;
+		MSUpdateAgain = false;/* this will happen anyway */
+	}
+	Unlock_state();
+
+	if (registered)
+	{
+		if (HMS_update())
+		{
+			Lock_state();
+			{
+				time(&MSLastPing);
+				MSRegistered = true;
+			}
+			Unlock_state();
+
+			CONS_Printf("Updated master server listing.\n");
+		}
 		else
-			con_state = MSCS_FAILED;
+			Finish_registration();
+	}
+	else
+		Finish_registration();
+
+	Lock_state();
+	{
+		done = ! MSUpdateAgain;
+
+		if (done)
+			MSInProgress = false;
+	}
+	Unlock_state();
+
+	if (! done)
+		Finish_update();
+}
+
+static void
+Finish_unlist (void)
+{
+	int registered;
+
+	Lock_state();
+	{
+		registered = MSRegistered;
+	}
+	Unlock_state();
+
+	if (registered)
+	{
+		CONS_Printf("Removing this server from the master server...\n");
+
+		if (HMS_unlist())
+			CONS_Printf("Server deregistration request successfully sent.\n");
+
+		Lock_state();
+		{
+			MSRegistered = false;
+		}
+		Unlock_state();
+
+#ifdef HAVE_THREADS
+		I_wake_all_cond(&MSCond);
+#endif
 	}
 
-	time(&MSLastPing);
+	Lock_state();
+	{
+		if (MSId == MSRegisteredId)
+			MSId++;
+	}
+	Unlock_state();
+}
+
+#ifdef HAVE_THREADS
+static int *
+Server_id (void)
+{
+	int *id;
+	id = malloc(sizeof *id);
+	Lock_state();
+	{
+		*id = MSId;
+	}
+	Unlock_state();
+	return id;
+}
+
+static int *
+New_server_id (void)
+{
+	int *id;
+	id = malloc(sizeof *id);
+	Lock_state();
+	{
+		*id = ++MSId;
+		I_wake_all_cond(&MSCond);
+	}
+	Unlock_state();
+	return id;
+}
+
+static void
+Register_server_thread (int *id)
+{
+	int same;
+
+	Lock_state();
+	{
+		/* wait for previous unlist to finish */
+		while (*id == MSId && MSRegistered)
+			I_hold_cond(&MSCond, MSMutex);
+
+		same = ( *id == MSId );/* it could have been a while */
+	}
+	Unlock_state();
+
+	if (same)/* it could have been a while */
+		Finish_registration();
+
+	free(id);
+}
+
+static void
+Update_server_thread (int *id)
+{
+	int same;
+
+	Lock_state();
+	{
+		same = ( *id == MSRegisteredId );
+	}
+	Unlock_state();
+
+	if (same)
+		Finish_update();
+
+	free(id);
+}
+
+static void
+Unlist_server_thread (int *id)
+{
+	int same;
+
+	Lock_state();
+	{
+		same = ( *id == MSRegisteredId );
+	}
+	Unlock_state();
+
+	if (same)
+		Finish_unlist();
+
+	free(id);
+}
+#endif/*HAVE_THREADS*/
+
+void RegisterServer(void)
+{
+#ifdef HAVE_THREADS
+	I_spawn_thread(
+			"register-server",
+			(I_thread_fn)Register_server_thread,
+			New_server_id()
+	);
+#else
+	Finish_registration();
+#endif
 }
 
 static void UpdateServer(void)
 {
-	if (( con_state == MSCS_REGISTERED && HMS_update() ))
-	{
-		time(&MSLastPing);
-	}
-	else
-	{
-		con_state = MSCS_FAILED;
-		RegisterServer();
-	}
-}
-
-static inline void SendPingToMasterServer(void)
-{
-// Here, have a simpler MS Ping... - Cue
-	if(time(NULL) > (MSLastPing+(60*cv_masterserver_update_rate.value)) && con_state != MSCS_NONE)
-	{
-		UpdateServer();
-	}
+#ifdef HAVE_THREADS
+	I_spawn_thread(
+			"update-server",
+			(I_thread_fn)Update_server_thread,
+			Server_id()
+	);
+#else
+	Finish_update();
+#endif
 }
 
 void UnregisterServer(void)
 {
-	if (con_state == MSCS_REGISTERED)
+#ifdef HAVE_THREADS
+	I_spawn_thread(
+			"unlist-server",
+			(I_thread_fn)Unlist_server_thread,
+			Server_id()
+	);
+#else
+	Finish_unlist();
+#endif
+}
+
+static boolean
+Online (void)
+{
+	return ( server && ms_RoomId > 0 );
+}
+
+static inline void SendPingToMasterServer(void)
+{
+	int ready;
+	time_t now;
+
+	if (Online())
 	{
-		CONS_Printf(M_GetText("Removing this server from the Master Server...\n"));
+		time(&now);
 
-		HMS_unlist();
+		Lock_state();
+		{
+			ready = (
+					MSRegisteredId == MSId &&
+					! MSInProgress &&
+					now >= ( MSLastPing + cv_masterserver_update_rate.value )
+			);
+
+			if (ready)
+				MSInProgress = true;
+		}
+		Unlock_state();
+
+		if (ready)
+			UpdateServer();
 	}
+}
 
-	con_state = MSCS_NONE;
+static void
+Update_parameters (void)
+{
+	int registered;
+	int delayed;
+
+	if (Online())
+	{
+		Lock_state();
+		{
+			delayed = MSInProgress;
+
+			if (delayed)/* do another update after the current one */
+				MSUpdateAgain = true;
+			else
+				registered = MSRegistered;
+		}
+		Unlock_state();
+
+		if (! delayed && registered)
+			UpdateServer();
+	}
 }
 
 void MasterClient_Ticker(void)
 {
-	if (server && ms_RoomId > 0)
-		SendPingToMasterServer();
-}
-
-static void ServerName_OnChange(void)
-{
-	if (con_state == MSCS_REGISTERED)
-		UpdateServer();
+	SendPingToMasterServer();
 }
 
 static void MasterServer_OnChange(void)
 {
 	boolean auto_register;
 
-	auto_register = ( con_state != MSCS_NONE );
+	//auto_register = ( con_state != MSCS_NONE );
+	auto_register = false;
 
 	if (ms_API)
 	{

@@ -104,7 +104,7 @@ void AddMServCommands(void);
 int  HMS_in_use (void);
 int  HMS_fetch_rooms (int joining, int id);
 int  HMS_register (void);
-void HMS_unlist (void);
+int  HMS_unlist (void);
 int  HMS_update (void);
 void HMS_list_servers (void);
 msg_server_t * HMS_fetch_servers (msg_server_t *list, int room, int id);

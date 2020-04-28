@@ -350,22 +350,25 @@ HMS_register (void)
 	return ok;
 }
 
-void
+int
 HMS_unlist (void)
 {
 	struct HMS_buffer *hms;
+	int ok;
 
 	hms = HMS_connect("servers/%s/unlist", hms_server_token);
 
 	if (! hms)
-		return;
+		return 0;
 
 	curl_easy_setopt(hms->curl, CURLOPT_CUSTOMREQUEST, "POST");
 
-	HMS_do(hms);
+	ok = HMS_do(hms);
 	HMS_end(hms);
 
 	free(hms_server_token);
+
+	return ok;
 }
 
 int
