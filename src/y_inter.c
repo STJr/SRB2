@@ -1740,8 +1740,9 @@ static void Y_CalculateCompetitionWinners(void)
 		data.competition.monitors[data.competition.numplayers] = monitors[winner];
 		data.competition.scores[data.competition.numplayers] = scores[winner];
 
-		strlcpy(tempname, player_names[winner], 9);
-		strlcpy(data.competition.name[data.competition.numplayers], tempname, 9);
+		strncpy(tempname, player_names[winner], 8);
+		tempname[8] = '\0';
+		strncpy(data.competition.name[data.competition.numplayers], tempname, 9);
 
 		data.competition.color[data.competition.numplayers] = &players[winner].skincolor;
 		data.competition.character[data.competition.numplayers] = &players[winner].skin;

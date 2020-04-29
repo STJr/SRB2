@@ -2338,7 +2338,7 @@ void F_InitMenuPresValues(void)
 	activeMenuId = MainDef.menuid;
 
 	// Set defaults for presentation values
-	strlcpy(curbgname, "TITLESKY", sizeof(curbgname));
+	strncpy(curbgname, "TITLESKY", 9);
 	curfadevalue = 16;
 	curbgcolor = -1;
 	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
@@ -2348,7 +2348,7 @@ void F_InitMenuPresValues(void)
 	curhidepics = hidetitlepics;
 	curttmode = ttmode;
 	curttscale = ttscale;
-	strlcpy(curttname, ttname, sizeof(curttname));
+	strncpy(curttname, ttname, 9);
 	curttx = ttx;
 	curtty = tty;
 	curttloop = ttloop;

@@ -2615,7 +2615,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 	}
 	else if (menupres[menutype].bgname[0])
 	{
-		strlcpy(curbgname, menupres[menutype].bgname, sizeof(curbgname));
+		strncpy(curbgname, menupres[menutype].bgname, 8);
 		curbgxspeed = menupres[menutype].titlescrollxspeed != INT32_MAX ? menupres[menutype].titlescrollxspeed : titlescrollxspeed;
 		curbgyspeed = menupres[menutype].titlescrollyspeed != INT32_MAX ? menupres[menutype].titlescrollyspeed : titlescrollyspeed;
 		return true;
@@ -2628,7 +2628,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 			curbghide = true;
 		else
 		{
-			strlcpy(curbgname, defaultname, sizeof(curbgname));
+			strncpy(curbgname, defaultname, 9);
 			curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
 			curbgyspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollyspeed;
 		}
@@ -2767,7 +2767,7 @@ void M_ChangeMenuMusic(const char *defaultmusname, boolean defaultmuslooping)
 void M_SetMenuCurBackground(const char *defaultname)
 {
 	char name[9];
-	strlcpy(name, defaultname, 9);
+	strncpy(name, defaultname, 8);
 	M_IterateMenuTree(MIT_SetCurBackground, &name);
 }
 
@@ -2820,7 +2820,7 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	activeMenuId = newMenu ? newMenu->menuid : 0;
 
 	// Set defaults for presentation values
-	strlcpy(curbgname, "TITLESKY", sizeof(curbgname));
+	strncpy(curbgname, "TITLESKY", 9);
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
@@ -5785,7 +5785,7 @@ static void M_DrawLevelPlatterMenu(void)
 		{
 			F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 			// Draw and animate foreground
-			if (!strcmp("RECATKBG", curbgname))
+			if (!strncmp("RECATKBG", curbgname, 8))
 				M_DrawRecordAttackForeground();
 		}
 
@@ -6033,7 +6033,7 @@ static void M_DrawMessageMenu(void)
 			else
 			{
 				F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
-				if (!strcmp("RECATKBG", curbgname))
+				if (!strncmp("RECATKBG", curbgname, 8))
 					M_DrawRecordAttackForeground();
 			}
 		}
@@ -9583,7 +9583,7 @@ void M_DrawTimeAttackMenu(void)
 	{
 		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 		// Draw and animate foreground
-		if (!strcmp("RECATKBG", curbgname))
+		if (!strncmp("RECATKBG", curbgname, 8))
 			M_DrawRecordAttackForeground();
 	}
 	if (curfadevalue)

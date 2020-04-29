@@ -391,7 +391,7 @@ const char *R_GetPalname(UINT16 num)
 	if (num > 0 && num <= 10000)
 		snprintf(newpal, 8, "PAL%04u", num-1);
 
-	strlcpy(palname, newpal, sizeof(palname));
+	strncpy(palname, newpal, 8);
 	return palname;
 }
 

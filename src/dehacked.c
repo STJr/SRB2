@@ -419,7 +419,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			if (fastcmp(word, "PICNAME"))
 			{
 				SLOTFOUND
-				strlcpy(description[num].picname, word2, sizeof(description->picname));
+				strncpy(description[num].picname, word2, 8);
 			}
 			// new character select
 			else if (fastcmp(word, "DISPLAYNAME"))
@@ -3889,7 +3889,9 @@ static void readmaincfg(MYFILE *f)
 					lumpnum_t lumpnum;
 					char newname[9];
 
-					strlcpy(newname, word2, sizeof(newname));
+					strncpy(newname, word2, 8);
+
+					newname[8] = '\0';
 
 					lumpnum = W_CheckNumForName(newname);
 
