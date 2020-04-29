@@ -2867,6 +2867,10 @@ static thinker_t* LoadBounceCheeseThinker(actionf_p1 thinker)
 	ht->floorwasheight = READFIXED(save_p);
 	ht->ceilingwasheight = READFIXED(save_p);
 	ht->low = READCHAR(save_p);
+
+	if (ht->sector)
+		ht->sector->ceilingdata = ht;
+
 	return &ht->thinker;
 }
 
@@ -2884,6 +2888,13 @@ static thinker_t* LoadContinuousFallThinker(actionf_p1 thinker)
 	ht->floorstartheight = READFIXED(save_p);
 	ht->ceilingstartheight = READFIXED(save_p);
 	ht->destheight = READFIXED(save_p);
+
+	if (ht->sector)
+	{
+		ht->sector->ceilingdata = ht;
+		ht->sector->floordata = ht;
+	}
+
 	return &ht->thinker;
 }
 
@@ -2901,6 +2912,13 @@ static thinker_t* LoadMarioBlockThinker(actionf_p1 thinker)
 	ht->floorstartheight = READFIXED(save_p);
 	ht->ceilingstartheight = READFIXED(save_p);
 	ht->tag = READINT16(save_p);
+
+	if (ht->sector)
+	{
+		ht->sector->ceilingdata = ht;
+		ht->sector->floordata = ht;
+	}
+
 	return &ht->thinker;
 }
 
@@ -2935,6 +2953,13 @@ static thinker_t* LoadThwompThinker(actionf_p1 thinker)
 	ht->delay = READINT32(save_p);
 	ht->tag = READINT16(save_p);
 	ht->sound = READUINT16(save_p);
+
+	if (ht->sector)
+	{
+		ht->sector->ceilingdata = ht;
+		ht->sector->floordata = ht;
+	}
+
 	return &ht->thinker;
 }
 
