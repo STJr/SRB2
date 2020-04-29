@@ -776,7 +776,7 @@ static void P_NetUnArchiveColormaps(void)
 #define FD_ALPHA 0x02
 
 // Check if any of the sector's FOFs differ from how they spawned
-static boolean CheckFFloorDiff(sector_t *ss)
+static boolean CheckFFloorDiff(const sector_t *ss)
 {
 	ffloor_t *rover;
 
@@ -794,7 +794,7 @@ static boolean CheckFFloorDiff(sector_t *ss)
 
 // Special case: save the stats of all modified ffloors along with their ffloor "number"s
 // we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
-static void ArchiveFFloors(sector_t *ss)
+static void ArchiveFFloors(const sector_t *ss)
 {
 	size_t j = 0; // ss->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
 	ffloor_t *rover;
@@ -821,7 +821,7 @@ static void ArchiveFFloors(sector_t *ss)
 	WRITEUINT16(save_p, 0xffff);
 }
 
-static void UnArchiveFFloors(sector_t *ss)
+static void UnArchiveFFloors(const sector_t *ss)
 {
 	UINT16 j = 0; // number of current ffloor in loop
 	UINT16 fflr_i; // saved ffloor "number" of next modified ffloor
@@ -1042,7 +1042,7 @@ static void UnArchiveSectors(void)
 			sectors[i].crumblestate = READINT32(save_p);
 
 		if (diff & SD_FFLOORS)
-			UnArchiveFFloors(sectors[i]);
+			UnArchiveFFloors(&sectors[i]);
 	}
 }
 
