@@ -966,7 +966,7 @@ static void ArchiveSectors(void)
 			if (diff3 & SD_CRUMBLESTATE)
 				WRITEINT32(save_p, ss->crumblestate);
 			if (diff & SD_FFLOORS)
-				ArchiveFFloors(save_p, ss);
+				ArchiveFFloors(ss);
 		}
 	}
 
@@ -1042,7 +1042,7 @@ static void UnArchiveSectors(void)
 			sectors[i].crumblestate = READINT32(save_p);
 
 		if (diff & SD_FFLOORS)
-			UnArchiveFFloors(save_p, sectors[i]);
+			UnArchiveFFloors(sectors[i]);
 	}
 }
 
