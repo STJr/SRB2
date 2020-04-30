@@ -5006,6 +5006,15 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 	player->pflags |= PF_THOKKED;
 }
 
+static inline void P_DoTwinSpin(player_t *player)
+{
+	player->pflags &= ~PF_NOJUMPDAMAGE;
+	player->pflags |= P_GetJumpFlags(player) | PF_THOKKED;
+	S_StartSound(player->mo, sfx_s3k42);
+	player->mo->frame = 0;
+	P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
+}
+
 //
 // P_DoJumpStuff
 //
@@ -5176,12 +5185,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						break;
 					case CA_TWINSPIN:
 						if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || player->charflags & SF_MULTIABILITY))
-						{
-							player->pflags |= PF_THOKKED;
-							S_StartSound(player->mo, sfx_s3k42);
-							player->mo->frame = 0;
-							P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
-						}
+							P_DoTwinSpin(player);
 						break;
 					default:
 						break;
@@ -5438,12 +5442,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					break;
 				case CA_TWINSPIN:
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
-					{
-						player->pflags |= PF_THOKKED;
-						S_StartSound(player->mo, sfx_s3k42);
-						player->mo->frame = 0;
-						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
-					}
+						P_DoTwinSpin(player);
 					break;
 				default:
 					break;
