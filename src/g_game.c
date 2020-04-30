@@ -268,6 +268,8 @@ static void Analog_OnChange(void);
 static void Analog2_OnChange(void);
 static void DirectionChar_OnChange(void);
 static void DirectionChar2_OnChange(void);
+static void Pivot_OnChange(void);
+static void Pivot2_OnChange(void);
 static void AutoBrake_OnChange(void);
 static void AutoBrake2_OnChange(void);
 void SendWeaponPref(void);
@@ -353,6 +355,10 @@ consvar_t cv_directionchar[2] = {
 };
 consvar_t cv_autobrake = {"autobrake", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_autobrake2 = {"autobrake2", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_pivot[2] = {
+	{"pivot", "On", CV_SAVE|CV_CALL, CV_OnOff, Pivot_OnChange, 0, NULL, NULL, 0, 0, NULL},
+	{"pivot2", "On", CV_SAVE|CV_CALL, CV_OnOff, Pivot2_OnChange, 0, NULL, NULL, 0, 0, NULL}
+};
 
 // hi here's some new controls
 static CV_PossibleValue_t zerotoone_cons_t[] = {{0, "MIN"}, {FRACUNIT, "MAX"}, {0, NULL}};
@@ -1753,6 +1759,16 @@ static void AutoBrake_OnChange(void)
 }
 
 static void AutoBrake2_OnChange(void)
+{
+	SendWeaponPref2();
+}
+
+static void Pivot_OnChange(void)
+{
+	SendWeaponPref();
+}
+
+static void Pivot2_OnChange(void)
 {
 	SendWeaponPref2();
 }

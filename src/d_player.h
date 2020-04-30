@@ -105,56 +105,57 @@ typedef enum
 	PF_ANALOGMODE    = 1<<1, // Analog mode?
 	PF_DIRECTIONCHAR = 1<<2, // Directional character sprites?
 	PF_AUTOBRAKE     = 1<<3, // Autobrake?
+	PF_PIVOT    = 1<<4, // Rotate to the camera when still?
 
 	// Cheats
-	PF_GODMODE = 1<<4,
-	PF_NOCLIP  = 1<<5,
-	PF_INVIS   = 1<<6,
+	PF_GODMODE = 1<<5,
+	PF_NOCLIP  = 1<<6,
+	PF_INVIS   = 1<<7,
 
 	// True if button down last tic.
-	PF_ATTACKDOWN = 1<<7,
-	PF_USEDOWN    = 1<<8,
-	PF_JUMPDOWN   = 1<<9,
-	PF_WPNDOWN    = 1<<10,
+	PF_ATTACKDOWN = 1<<8,
+	PF_USEDOWN    = 1<<9,
+	PF_JUMPDOWN   = 1<<10,
+	PF_WPNDOWN    = 1<<11,
 
 	// Unmoving states
-	PF_STASIS     = 1<<11, // Player is not allowed to move
-	PF_JUMPSTASIS = 1<<12, // and that includes jumping.
+	PF_STASIS     = 1<<12, // Player is not allowed to move
+	PF_JUMPSTASIS = 1<<13, // and that includes jumping.
 	PF_FULLSTASIS = PF_STASIS|PF_JUMPSTASIS,
 
 	// Applying autobrake?
-	PF_APPLYAUTOBRAKE = 1<<13,
+	PF_APPLYAUTOBRAKE = 1<<14,
 
 	// Character action status
-	PF_STARTJUMP     = 1<<14,
-	PF_JUMPED        = 1<<15,
-	PF_NOJUMPDAMAGE  = 1<<16,
+	PF_STARTJUMP     = 1<<15,
+	PF_JUMPED        = 1<<16,
+	PF_NOJUMPDAMAGE  = 1<<17,
 
-	PF_SPINNING      = 1<<17,
-	PF_STARTDASH     = 1<<18,
+	PF_SPINNING      = 1<<18,
+	PF_STARTDASH     = 1<<19,
 
-	PF_THOKKED       = 1<<19,
-	PF_SHIELDABILITY = 1<<20,
-	PF_GLIDING       = 1<<21,
-	PF_BOUNCING      = 1<<22,
+	PF_THOKKED       = 1<<20,
+	PF_SHIELDABILITY = 1<<21,
+	PF_GLIDING       = 1<<22,
+	PF_BOUNCING      = 1<<23,
 
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
-	PF_SLIDING       = 1<<23,
+	PF_SLIDING       = 1<<24,
 
 	// NiGHTS stuff
-	PF_TRANSFERTOCLOSEST = 1<<24,
-	PF_DRILLING          = 1<<25,
+	PF_TRANSFERTOCLOSEST = 1<<25,
+	PF_DRILLING          = 1<<26,
 
 	// Gametype-specific stuff
-	PF_GAMETYPEOVER = 1<<26, // Race time over, or H&S out-of-game
-	PF_TAGIT        = 1<<27, // The player is it! For Tag Mode
+	PF_GAMETYPEOVER = 1<<27, // Race time over, or H&S out-of-game
+	PF_TAGIT        = 1<<28, // The player is it! For Tag Mode
 
 	/*** misc ***/
-	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
-	PF_CANCARRY    = 1<<29, // Can carry another player?
-	PF_FINISHED    = 1<<30, // The player finished the level. NOT the same as exiting
+	PF_FORCESTRAFE = 1<<29, // Turning inputs are translated into strafing inputs
+	PF_CANCARRY    = 1<<30, // Can carry another player?
+	PF_FINISHED    = 1<<31, // The player finished the level. NOT the same as exiting
 
-	// up to 1<<31 is free
+	// up to 1<<31 is free (oops we hit the cap, join us next week as we introduce pflags2)
 } pflags_t;
 
 typedef enum

@@ -829,6 +829,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_directionchar[1]);
 	CV_RegisterVar(&cv_autobrake);
 	CV_RegisterVar(&cv_autobrake2);
+	CV_RegisterVar(&cv_pivot[0]);
+	CV_RegisterVar(&cv_pivot[1]);
 
 	// hi here's some new controls
 	CV_RegisterVar(&cv_cam_shiftfacing[0]);
@@ -1523,6 +1525,8 @@ void SendWeaponPref(void)
 		buf[0] |= 4;
 	if (cv_autobrake.value)
 		buf[0] |= 8;
+	if (cv_pivot[0].value)
+		buf[0] |= 16;
 	SendNetXCmd(XD_WEAPONPREF, buf, 1);
 }
 
@@ -1539,6 +1543,8 @@ void SendWeaponPref2(void)
 		buf[0] |= 4;
 	if (cv_autobrake2.value)
 		buf[0] |= 8;
+	if (cv_pivot[1].value)
+		buf[0] |= 16;
 	SendNetXCmd2(XD_WEAPONPREF, buf, 1);
 }
 
@@ -1546,7 +1552,7 @@ static void Got_WeaponPref(UINT8 **cp,INT32 playernum)
 {
 	UINT8 prefs = READUINT8(*cp);
 
-	players[playernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE);
+	players[playernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_PIVOT);
 	if (prefs & 1)
 		players[playernum].pflags |= PF_FLIPCAM;
 	if (prefs & 2)
@@ -1555,6 +1561,8 @@ static void Got_WeaponPref(UINT8 **cp,INT32 playernum)
 		players[playernum].pflags |= PF_DIRECTIONCHAR;
 	if (prefs & 8)
 		players[playernum].pflags |= PF_AUTOBRAKE;
+	if (prefs & 16)
+		players[playernum].pflags |= PF_PIVOT;
 }
 
 void D_SendPlayerConfig(void)

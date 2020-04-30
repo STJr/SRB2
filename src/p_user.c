@@ -11997,7 +11997,7 @@ void P_PlayerThink(player_t *player)
 				diff = ((player->mo->angle + ((player->pflags & PF_ANALOGMODE) ? 0 : R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS))) - player->drawangle);
 				factor = 4;
 			}
-			else if (player->rmomx || player->rmomy)
+			else if (player->rmomx || player->rmomy || !(player->pflags & PF_PIVOT))
 				diff = factor = 0;
 			else
 			{
