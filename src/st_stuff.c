@@ -1383,7 +1383,7 @@ void ST_drawTitleCard(void)
 	{
 		if (!splitscreen)
 		{
-			if (actnum > 9)
+			if (actnum > 9) // slightly offset the act diamond for two-digit act numbers
 				V_DrawMappedPatch(ttlnumxpos + (V_LevelActNumWidth(actnum)/4) + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
 			else
 				V_DrawMappedPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);

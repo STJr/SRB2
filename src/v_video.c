@@ -2954,12 +2954,12 @@ void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 // Draw an act number for a level title
 void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, UINT8 num)
 {
-	if (num < 0 || num > 99)
+	if (num > 99)
 		return; // not supported
 
 	while (num > 0)
 	{
-		if (num > 9)
+		if (num > 9) // if there are two digits, draw second digit first
 			V_DrawScaledPatch(x + (V_LevelActNumWidth(num) - V_LevelActNumWidth(num%10)), y, flags, ttlnum[num%10]);
 		else
 			V_DrawScaledPatch(x, y, flags, ttlnum[num]);
@@ -3345,19 +3345,17 @@ INT32 V_LevelNameHeight(const char *string)
 }
 
 // For ST_drawTitleCard
-// Returns the width of the act num patch
-INT32 V_LevelActNumWidth(UINT8 num)
+// Returns the width of the act num patch(es)
+INT16 V_LevelActNumWidth(UINT8 num)
 {
-	SHORT result = 0;
-	if (num > 99)
-		return 0; // not a valid number
+	INT16 result = 0;
 
 	if (num == 0)
-		return SHORT(ttlnum[num]->width);
+		result = ttlnum[num]->width;
 
-	while (num > 0)
+	while (num > 0 && num <= 99)
 	{
-		result = result + SHORT(ttlnum[num%10]->width);
+		result = result + ttlnum[num%10]->width;
 		num = num/10;
 	}
 
