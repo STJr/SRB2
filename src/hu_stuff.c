@@ -68,7 +68,7 @@ patch_t *nightsnum[10]; // 0-9
 // Level title and credits fonts
 patch_t *lt_font[LT_FONTSIZE];
 patch_t *cred_font[CRED_FONTSIZE];
-patch_t *ttlnum[20]; // act numbers (0-19)
+patch_t *ttlnum[10]; // act numbers (0-9)
 
 // Name tag fonts
 patch_t *ntb_font[NT_FONTSIZE];
@@ -243,7 +243,7 @@ void HU_LoadGraphics(void)
 	tallinfin = (patch_t *)W_CachePatchName("STTINFIN", PU_HUDGFX);
 
 	// cache act numbers for level titles
-	for (i = 0; i < 20; i++)
+	for (i = 0; i < 10; i++)
 	{
 		sprintf(buffer, "TTL%.2d", i);
 		ttlnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
