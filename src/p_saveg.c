@@ -772,28 +772,101 @@ static void P_NetUnArchiveColormaps(void)
 #define LD_S2BOTTEX 0x04
 #define LD_S2MIDTEX 0x08
 
-//
-// P_NetArchiveWorld
-//
-static void P_NetArchiveWorld(void)
+#define FD_FLAGS 0x01
+#define FD_ALPHA 0x02
+
+// Check if any of the sector's FOFs differ from how they spawned
+static boolean CheckFFloorDiff(const sector_t *ss)
+{
+	ffloor_t *rover;
+
+	for (rover = ss->ffloors; rover; rover = rover->next)
+	{
+		if (rover->flags != rover->spawnflags
+		|| rover->alpha != rover->spawnalpha)
+			{
+				return true; // we found an FOF that changed!
+				// don't bother checking for more, we do that later
+			}
+	}
+	return false;
+}
+
+// Special case: save the stats of all modified ffloors along with their ffloor "number"s
+// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
+static void ArchiveFFloors(const sector_t *ss)
+{
+	size_t j = 0; // ss->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
+	ffloor_t *rover;
+	UINT8 fflr_diff;
+	for (rover = ss->ffloors; rover; rover = rover->next)
+	{
+		fflr_diff = 0; // reset diff flags
+		if (rover->flags != rover->spawnflags)
+			fflr_diff |= FD_FLAGS;
+		if (rover->alpha != rover->spawnalpha)
+			fflr_diff |= FD_ALPHA;
+
+		if (fflr_diff)
+		{
+			WRITEUINT16(save_p, j); // save ffloor "number"
+			WRITEUINT8(save_p, fflr_diff);
+			if (fflr_diff & FD_FLAGS)
+				WRITEUINT32(save_p, rover->flags);
+			if (fflr_diff & FD_ALPHA)
+				WRITEINT16(save_p, rover->alpha);
+		}
+		j++;
+	}
+	WRITEUINT16(save_p, 0xffff);
+}
+
+static void UnArchiveFFloors(const sector_t *ss)
+{
+	UINT16 j = 0; // number of current ffloor in loop
+	UINT16 fflr_i; // saved ffloor "number" of next modified ffloor
+	UINT16 fflr_diff; // saved ffloor diff
+	ffloor_t *rover;
+
+	rover = ss->ffloors;
+	if (!rover) // it is assumed sectors[i].ffloors actually exists, but just in case...
+		I_Error("Sector does not have any ffloors!");
+
+	fflr_i = READUINT16(save_p); // get first modified ffloor's number ready
+	for (;;) // for some reason the usual for (rover = x; ...) thing doesn't work here?
+	{
+		if (fflr_i == 0xffff) // end of modified ffloors list, let's stop already
+			break;
+		// should NEVER need to be checked
+		//if (rover == NULL)
+			//break;
+		if (j != fflr_i) // this ffloor was not modified
+		{
+			j++;
+			rover = rover->next;
+			continue;
+		}
+
+		fflr_diff = READUINT8(save_p);
+
+		if (fflr_diff & FD_FLAGS)
+			rover->flags = READUINT32(save_p);
+		if (fflr_diff & FD_ALPHA)
+			rover->alpha = READINT16(save_p);
+
+		fflr_i = READUINT16(save_p); // get next ffloor "number" ready
+
+		j++;
+		rover = rover->next;
+	}
+}
+
+static void ArchiveSectors(void)
 {
 	size_t i;
-	INT32 statsec = 0, statline = 0;
-	const line_t *li = lines;
-	const line_t *spawnli = spawnlines;
-	const side_t *si;
-	const side_t *spawnsi;
-	UINT8 *put;
-
 	const sector_t *ss = sectors;
 	const sector_t *spawnss = spawnsectors;
 	UINT8 diff, diff2, diff3;
-
-	// initialize colormap vars because paranoia
-	ClearNetColormaps();
-
-	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
-	put = save_p;
 
 	for (i = 0; i < numsectors; i++, ss++, spawnss++)
 	{
@@ -838,20 +911,8 @@ static void P_NetArchiveWorld(void)
 		if (ss->crumblestate)
 			diff3 |= SD_CRUMBLESTATE;
 
-		// Check if any of the sector's FOFs differ from how they spawned
-		if (ss->ffloors)
-		{
-			ffloor_t *rover;
-			for (rover = ss->ffloors; rover; rover = rover->next)
-			{
-				if (rover->flags != rover->spawnflags
-				|| rover->alpha != rover->spawnalpha)
-					{
-						diff |= SD_FFLOORS; // we found an FOF that changed!
-						break; // don't bother checking for more, we do that later
-					}
-			}
-		}
+		if (ss->ffloors && CheckFFloorDiff(ss))
+			diff |= SD_FFLOORS;
 
 		if (diff3)
 			diff2 |= SD_DIFF3;
@@ -861,89 +922,142 @@ static void P_NetArchiveWorld(void)
 
 		if (diff)
 		{
-			statsec++;
-
-			WRITEUINT16(put, i);
-			WRITEUINT8(put, diff);
+			WRITEUINT16(save_p, i);
+			WRITEUINT8(save_p, diff);
 			if (diff & SD_DIFF2)
-				WRITEUINT8(put, diff2);
+				WRITEUINT8(save_p, diff2);
 			if (diff2 & SD_DIFF3)
-				WRITEUINT8(put, diff3);
+				WRITEUINT8(save_p, diff3);
 			if (diff & SD_FLOORHT)
-				WRITEFIXED(put, ss->floorheight);
+				WRITEFIXED(save_p, ss->floorheight);
 			if (diff & SD_CEILHT)
-				WRITEFIXED(put, ss->ceilingheight);
+				WRITEFIXED(save_p, ss->ceilingheight);
 			if (diff & SD_FLOORPIC)
-				WRITEMEM(put, levelflats[ss->floorpic].name, 8);
+				WRITEMEM(save_p, levelflats[ss->floorpic].name, 8);
 			if (diff & SD_CEILPIC)
-				WRITEMEM(put, levelflats[ss->ceilingpic].name, 8);
+				WRITEMEM(save_p, levelflats[ss->ceilingpic].name, 8);
 			if (diff & SD_LIGHT)
-				WRITEINT16(put, ss->lightlevel);
+				WRITEINT16(save_p, ss->lightlevel);
 			if (diff & SD_SPECIAL)
-				WRITEINT16(put, ss->special);
+				WRITEINT16(save_p, ss->special);
 			if (diff2 & SD_FXOFFS)
-				WRITEFIXED(put, ss->floor_xoffs);
+				WRITEFIXED(save_p, ss->floor_xoffs);
 			if (diff2 & SD_FYOFFS)
-				WRITEFIXED(put, ss->floor_yoffs);
+				WRITEFIXED(save_p, ss->floor_yoffs);
 			if (diff2 & SD_CXOFFS)
-				WRITEFIXED(put, ss->ceiling_xoffs);
+				WRITEFIXED(save_p, ss->ceiling_xoffs);
 			if (diff2 & SD_CYOFFS)
-				WRITEFIXED(put, ss->ceiling_yoffs);
+				WRITEFIXED(save_p, ss->ceiling_yoffs);
 			if (diff2 & SD_FLOORANG)
-				WRITEANGLE(put, ss->floorpic_angle);
+				WRITEANGLE(save_p, ss->floorpic_angle);
 			if (diff2 & SD_CEILANG)
-				WRITEANGLE(put, ss->ceilingpic_angle);
+				WRITEANGLE(save_p, ss->ceilingpic_angle);
 			if (diff2 & SD_TAG) // save only the tag
-				WRITEINT16(put, ss->tag);
+				WRITEINT16(save_p, ss->tag);
 			if (diff3 & SD_TAGLIST) // save both firsttag and nexttag
 			{ // either of these could be changed even if tag isn't
-				WRITEINT32(put, ss->firsttag);
-				WRITEINT32(put, ss->nexttag);
+				WRITEINT32(save_p, ss->firsttag);
+				WRITEINT32(save_p, ss->nexttag);
 			}
 
 			if (diff3 & SD_COLORMAP)
-				WRITEUINT32(put, CheckAddNetColormapToList(ss->extra_colormap));
+				WRITEUINT32(save_p, CheckAddNetColormapToList(ss->extra_colormap));
 					// returns existing index if already added, or appends to net_colormaps and returns new index
 			if (diff3 & SD_CRUMBLESTATE)
-				WRITEINT32(put, ss->crumblestate);
-
-			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
-			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
+				WRITEINT32(save_p, ss->crumblestate);
 			if (diff & SD_FFLOORS)
-			{
-				size_t j = 0; // ss->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
-				ffloor_t *rover;
-				UINT8 fflr_diff;
-				for (rover = ss->ffloors; rover; rover = rover->next)
-				{
-					fflr_diff = 0; // reset diff flags
-					if (rover->flags != rover->spawnflags)
-						fflr_diff |= 1;
-					if (rover->alpha != rover->spawnalpha)
-						fflr_diff |= 2;
-
-					if (fflr_diff)
-					{
-						WRITEUINT16(put, j); // save ffloor "number"
-						WRITEUINT8(put, fflr_diff);
-						if (fflr_diff & 1)
-							WRITEUINT32(put, rover->flags);
-						if (fflr_diff & 2)
-							WRITEINT16(put, rover->alpha);
-					}
-					j++;
-				}
-				WRITEUINT16(put, 0xffff);
-			}
+				ArchiveFFloors(ss);
 		}
 	}
 
-	WRITEUINT16(put, 0xffff);
+	WRITEUINT16(save_p, 0xffff);
+}
 
-	// do lines
+static void UnArchiveSectors(void)
+{
+	UINT16 i;
+	UINT8 diff, diff2, diff3;
+	for (;;)
+	{
+		i = READUINT16(save_p);
+
+		if (i == 0xffff)
+			break;
+
+		if (i > numsectors)
+			I_Error("Invalid sector number %u from server (expected end at %s)", i, sizeu1(numsectors));
+
+		diff = READUINT8(save_p);
+		if (diff & SD_DIFF2)
+			diff2 = READUINT8(save_p);
+		else
+			diff2 = 0;
+		if (diff2 & SD_DIFF3)
+			diff3 = READUINT8(save_p);
+		else
+			diff3 = 0;
+
+		if (diff & SD_FLOORHT)
+			sectors[i].floorheight = READFIXED(save_p);
+		if (diff & SD_CEILHT)
+			sectors[i].ceilingheight = READFIXED(save_p);
+		if (diff & SD_FLOORPIC)
+		{
+			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)save_p);
+			save_p += 8;
+		}
+		if (diff & SD_CEILPIC)
+		{
+			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)save_p);
+			save_p += 8;
+		}
+		if (diff & SD_LIGHT)
+			sectors[i].lightlevel = READINT16(save_p);
+		if (diff & SD_SPECIAL)
+			sectors[i].special = READINT16(save_p);
+
+		if (diff2 & SD_FXOFFS)
+			sectors[i].floor_xoffs = READFIXED(save_p);
+		if (diff2 & SD_FYOFFS)
+			sectors[i].floor_yoffs = READFIXED(save_p);
+		if (diff2 & SD_CXOFFS)
+			sectors[i].ceiling_xoffs = READFIXED(save_p);
+		if (diff2 & SD_CYOFFS)
+			sectors[i].ceiling_yoffs = READFIXED(save_p);
+		if (diff2 & SD_FLOORANG)
+			sectors[i].floorpic_angle  = READANGLE(save_p);
+		if (diff2 & SD_CEILANG)
+			sectors[i].ceilingpic_angle = READANGLE(save_p);
+		if (diff2 & SD_TAG)
+			sectors[i].tag = READINT16(save_p); // DON'T use P_ChangeSectorTag
+		if (diff3 & SD_TAGLIST)
+		{
+			sectors[i].firsttag = READINT32(save_p);
+			sectors[i].nexttag = READINT32(save_p);
+		}
+
+		if (diff3 & SD_COLORMAP)
+			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(save_p));
+		if (diff3 & SD_CRUMBLESTATE)
+			sectors[i].crumblestate = READINT32(save_p);
+
+		if (diff & SD_FFLOORS)
+			UnArchiveFFloors(&sectors[i]);
+	}
+}
+
+static void ArchiveLines(void)
+{
+	size_t i;
+	const line_t *li = lines;
+	const line_t *spawnli = spawnlines;
+	const side_t *si;
+	const side_t *spawnsi;
+	UINT8 diff, diff2; // no diff3
+
 	for (i = 0; i < numlines; i++, spawnli++, li++)
 	{
-		diff = diff2 = diff3 = 0;
+		diff = diff2 = 0;
 
 		if (li->special != spawnli->special)
 			diff |= LD_SPECIAL;
@@ -983,43 +1097,107 @@ static void P_NetArchiveWorld(void)
 
 		if (diff)
 		{
-			statline++;
-			WRITEINT16(put, i);
-			WRITEUINT8(put, diff);
+			WRITEINT16(save_p, i);
+			WRITEUINT8(save_p, diff);
 			if (diff & LD_DIFF2)
-				WRITEUINT8(put, diff2);
+				WRITEUINT8(save_p, diff2);
 			if (diff & LD_FLAG)
-				WRITEINT16(put, li->flags);
+				WRITEINT16(save_p, li->flags);
 			if (diff & LD_SPECIAL)
-				WRITEINT16(put, li->special);
+				WRITEINT16(save_p, li->special);
 			if (diff & LD_CLLCOUNT)
-				WRITEINT16(put, li->callcount);
+				WRITEINT16(save_p, li->callcount);
 
 			si = &sides[li->sidenum[0]];
 			if (diff & LD_S1TEXOFF)
-				WRITEFIXED(put, si->textureoffset);
+				WRITEFIXED(save_p, si->textureoffset);
 			if (diff & LD_S1TOPTEX)
-				WRITEINT32(put, si->toptexture);
+				WRITEINT32(save_p, si->toptexture);
 			if (diff & LD_S1BOTTEX)
-				WRITEINT32(put, si->bottomtexture);
+				WRITEINT32(save_p, si->bottomtexture);
 			if (diff & LD_S1MIDTEX)
-				WRITEINT32(put, si->midtexture);
+				WRITEINT32(save_p, si->midtexture);
 
 			si = &sides[li->sidenum[1]];
 			if (diff2 & LD_S2TEXOFF)
-				WRITEFIXED(put, si->textureoffset);
+				WRITEFIXED(save_p, si->textureoffset);
 			if (diff2 & LD_S2TOPTEX)
-				WRITEINT32(put, si->toptexture);
+				WRITEINT32(save_p, si->toptexture);
 			if (diff2 & LD_S2BOTTEX)
-				WRITEINT32(put, si->bottomtexture);
+				WRITEINT32(save_p, si->bottomtexture);
 			if (diff2 & LD_S2MIDTEX)
-				WRITEINT32(put, si->midtexture);
+				WRITEINT32(save_p, si->midtexture);
 		}
 	}
-	WRITEUINT16(put, 0xffff);
-	R_ClearTextureNumCache(false);
+	WRITEUINT16(save_p, 0xffff);
+}
 
-	save_p = put;
+static void UnArchiveLines(void)
+{
+	UINT16 i;
+	line_t *li;
+	side_t *si;
+	UINT8 diff, diff2; // no diff3
+
+	for (;;)
+	{
+		i = READUINT16(save_p);
+
+		if (i == 0xffff)
+			break;
+		if (i > numlines)
+			I_Error("Invalid line number %u from server", i);
+
+		diff = READUINT8(save_p);
+		li = &lines[i];
+
+		if (diff & LD_DIFF2)
+			diff2 = READUINT8(save_p);
+		else
+			diff2 = 0;
+
+		if (diff & LD_FLAG)
+			li->flags = READINT16(save_p);
+		if (diff & LD_SPECIAL)
+			li->special = READINT16(save_p);
+		if (diff & LD_CLLCOUNT)
+			li->callcount = READINT16(save_p);
+
+		si = &sides[li->sidenum[0]];
+		if (diff & LD_S1TEXOFF)
+			si->textureoffset = READFIXED(save_p);
+		if (diff & LD_S1TOPTEX)
+			si->toptexture = READINT32(save_p);
+		if (diff & LD_S1BOTTEX)
+			si->bottomtexture = READINT32(save_p);
+		if (diff & LD_S1MIDTEX)
+			si->midtexture = READINT32(save_p);
+
+		si = &sides[li->sidenum[1]];
+		if (diff2 & LD_S2TEXOFF)
+			si->textureoffset = READFIXED(save_p);
+		if (diff2 & LD_S2TOPTEX)
+			si->toptexture = READINT32(save_p);
+		if (diff2 & LD_S2BOTTEX)
+			si->bottomtexture = READINT32(save_p);
+		if (diff2 & LD_S2MIDTEX)
+			si->midtexture = READINT32(save_p);
+	}
+}
+
+//
+// P_NetArchiveWorld
+//
+static void P_NetArchiveWorld(void)
+{
+	// initialize colormap vars because paranoia
+	ClearNetColormaps();
+
+	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
+
+	ArchiveSectors();
+	ArchiveLines();
+	R_ClearTextureNumCache(false);
 }
 
 //
@@ -1028,10 +1206,6 @@ static void P_NetArchiveWorld(void)
 static void P_NetUnArchiveWorld(void)
 {
 	UINT16 i;
-	line_t *li;
-	side_t *si;
-	UINT8 *get;
-	UINT8 diff, diff2, diff3;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
 		I_Error("Bad $$$.sav at archive block World");
@@ -1047,161 +1221,8 @@ static void P_NetUnArchiveWorld(void)
 			num_ffloors++;
 	}
 
-	get = save_p;
-
-	for (;;)
-	{
-		i = READUINT16(get);
-
-		if (i == 0xffff)
-			break;
-
-		if (i > numsectors)
-			I_Error("Invalid sector number %u from server (expected end at %s)", i, sizeu1(numsectors));
-
-		diff = READUINT8(get);
-		if (diff & SD_DIFF2)
-			diff2 = READUINT8(get);
-		else
-			diff2 = 0;
-		if (diff2 & SD_DIFF3)
-			diff3 = READUINT8(get);
-		else
-			diff3 = 0;
-
-		if (diff & SD_FLOORHT)
-			sectors[i].floorheight = READFIXED(get);
-		if (diff & SD_CEILHT)
-			sectors[i].ceilingheight = READFIXED(get);
-		if (diff & SD_FLOORPIC)
-		{
-			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)get);
-			get += 8;
-		}
-		if (diff & SD_CEILPIC)
-		{
-			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)get);
-			get += 8;
-		}
-		if (diff & SD_LIGHT)
-			sectors[i].lightlevel = READINT16(get);
-		if (diff & SD_SPECIAL)
-			sectors[i].special = READINT16(get);
-
-		if (diff2 & SD_FXOFFS)
-			sectors[i].floor_xoffs = READFIXED(get);
-		if (diff2 & SD_FYOFFS)
-			sectors[i].floor_yoffs = READFIXED(get);
-		if (diff2 & SD_CXOFFS)
-			sectors[i].ceiling_xoffs = READFIXED(get);
-		if (diff2 & SD_CYOFFS)
-			sectors[i].ceiling_yoffs = READFIXED(get);
-		if (diff2 & SD_FLOORANG)
-			sectors[i].floorpic_angle  = READANGLE(get);
-		if (diff2 & SD_CEILANG)
-			sectors[i].ceilingpic_angle = READANGLE(get);
-		if (diff2 & SD_TAG)
-			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
-		if (diff3 & SD_TAGLIST)
-		{
-			sectors[i].firsttag = READINT32(get);
-			sectors[i].nexttag = READINT32(get);
-		}
-
-		if (diff3 & SD_COLORMAP)
-			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(get));
-		if (diff3 & SD_CRUMBLESTATE)
-			sectors[i].crumblestate = READINT32(get);
-
-		if (diff & SD_FFLOORS)
-		{
-			UINT16 j = 0; // number of current ffloor in loop
-			UINT16 fflr_i; // saved ffloor "number" of next modified ffloor
-			UINT16 fflr_diff; // saved ffloor diff
-			ffloor_t *rover;
-
-			rover = sectors[i].ffloors;
-			if (!rover) // it is assumed sectors[i].ffloors actually exists, but just in case...
-				I_Error("Sector does not have any ffloors!");
-
-			fflr_i = READUINT16(get); // get first modified ffloor's number ready
-			for (;;) // for some reason the usual for (rover = x; ...) thing doesn't work here?
-			{
-				if (fflr_i == 0xffff) // end of modified ffloors list, let's stop already
-					break;
-				// should NEVER need to be checked
-				//if (rover == NULL)
-					//break;
-				if (j != fflr_i) // this ffloor was not modified
-				{
-					j++;
-					rover = rover->next;
-					continue;
-				}
-
-				fflr_diff = READUINT8(get);
-
-				if (fflr_diff & 1)
-					rover->flags = READUINT32(get);
-				if (fflr_diff & 2)
-					rover->alpha = READINT16(get);
-
-				fflr_i = READUINT16(get); // get next ffloor "number" ready
-
-				j++;
-				rover = rover->next;
-			}
-		}
-	}
-
-	for (;;)
-	{
-		i = READUINT16(get);
-
-		if (i == 0xffff)
-			break;
-		if (i > numlines)
-			I_Error("Invalid line number %u from server", i);
-
-		diff = READUINT8(get);
-		li = &lines[i];
-
-		if (diff & LD_DIFF2)
-			diff2 = READUINT8(get);
-		else
-			diff2 = 0;
-
-		diff3 = 0;
-
-		if (diff & LD_FLAG)
-			li->flags = READINT16(get);
-		if (diff & LD_SPECIAL)
-			li->special = READINT16(get);
-		if (diff & LD_CLLCOUNT)
-			li->callcount = READINT16(get);
-
-		si = &sides[li->sidenum[0]];
-		if (diff & LD_S1TEXOFF)
-			si->textureoffset = READFIXED(get);
-		if (diff & LD_S1TOPTEX)
-			si->toptexture = READINT32(get);
-		if (diff & LD_S1BOTTEX)
-			si->bottomtexture = READINT32(get);
-		if (diff & LD_S1MIDTEX)
-			si->midtexture = READINT32(get);
-
-		si = &sides[li->sidenum[1]];
-		if (diff2 & LD_S2TEXOFF)
-			si->textureoffset = READFIXED(get);
-		if (diff2 & LD_S2TOPTEX)
-			si->toptexture = READINT32(get);
-		if (diff2 & LD_S2BOTTEX)
-			si->bottomtexture = READINT32(get);
-		if (diff2 & LD_S2MIDTEX)
-			si->midtexture = READINT32(get);
-	}
-
-	save_p = get;
+	UnArchiveSectors();
+	UnArchiveLines();
 }
 
 //
@@ -1497,42 +1518,14 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 
 	if (diff2 & MD2_FLOORROVER)
 	{
-		ffloor_t *rover;
-		size_t i = 0;
-		UINT32 roverindex = 0;
-
-		for (rover = mobj->floorrover->target->ffloors; rover; rover = rover->next)
-		{
-			if (rover == mobj->floorrover)
-			{
-				roverindex = i;
-				break;
-			}
-			i++;
-		}
-
-		WRITEUINT32(save_p, (UINT32)(mobj->floorrover->target - sectors));
-		WRITEUINT32(save_p, rover ? roverindex : i); // store max index to denote invalid ffloor ref
+		WRITEUINT32(save_p, SaveSector(mobj->floorrover->target));
+		WRITEUINT16(save_p, P_GetFFloorID(mobj->floorrover));
 	}
 
 	if (diff2 & MD2_CEILINGROVER)
 	{
-		ffloor_t *rover;
-		size_t i = 0;
-		UINT32 roverindex = 0;
-
-		for (rover = mobj->ceilingrover->target->ffloors; rover; rover = rover->next)
-		{
-			if (rover == mobj->ceilingrover)
-			{
-				roverindex = i;
-				break;
-			}
-			i++;
-		}
-
-		WRITEUINT32(save_p, (UINT32)(mobj->ceilingrover->target - sectors));
-		WRITEUINT32(save_p, rover ? roverindex : i); // store max index to denote invalid ffloor ref
+		WRITEUINT32(save_p, SaveSector(mobj->ceilingrover->target));
+		WRITEUINT16(save_p, P_GetFFloorID(mobj->ceilingrover));
 	}
 
 	if (diff & MD_SPAWNPOINT)
@@ -2613,34 +2606,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 
 	if (diff2 & MD2_FLOORROVER)
 	{
-		size_t floor_sectornum = (size_t)READUINT32(save_p);
-		size_t floor_rovernum = (size_t)READUINT32(save_p);
-		ffloor_t *rover = NULL;
-		size_t rovernum = 0;
-
-		for (rover = sectors[floor_sectornum].ffloors; rover; rover = rover->next)
-		{
-			if (rovernum == floor_rovernum)
-				break;
-			rovernum++;
-		}
-		floorrover = rover;
+		sector_t *sec = LoadSector(READUINT32(save_p));
+		UINT16 id = READUINT16(save_p);
+		floorrover = P_GetFFloorByID(sec, id);
 	}
 
 	if (diff2 & MD2_CEILINGROVER)
 	{
-		size_t ceiling_sectornum = (size_t)READUINT32(save_p);
-		size_t ceiling_rovernum = (size_t)READUINT32(save_p);
-		ffloor_t *rover = NULL;
-		size_t rovernum = 0;
-
-		for (rover = sectors[ceiling_sectornum].ffloors; rover; rover = rover->next)
-		{
-			if (rovernum == ceiling_rovernum)
-				break;
-			rovernum++;
-		}
-		ceilingrover = rover;
+		sector_t *sec = LoadSector(READUINT32(save_p));
+		UINT16 id = READUINT16(save_p);
+		ceilingrover = P_GetFFloorByID(sec, id);
 	}
 
 	if (diff & MD_SPAWNPOINT)

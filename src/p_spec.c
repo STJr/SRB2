@@ -5678,6 +5678,35 @@ void P_UpdateSpecials(void)
 	}
 }
 
+//
+// Floor over floors (FOFs), 3Dfloors, 3Dblocks, fake floors (ffloors), rovers, or whatever you want to call them
+//
+
+/** Gets the ID number for a 3Dfloor in its target sector.
+  *
+  * \param fflr The 3Dfloor we want an ID for.
+  * \return ID of 3Dfloor in target sector. Note that the first FOF's ID is 0. UINT16_MAX is given if invalid.
+  * \sa P_GetFFloorByID
+  */
+UINT16 P_GetFFloorID(ffloor_t *fflr)
+{
+	ffloor_t *rover;
+	sector_t *sec;
+	UINT16 i = 0;
+
+	if (!fflr)
+		return UINT16_MAX;
+
+	sec = fflr->target;
+
+	if (!sec->ffloors)
+		return UINT16_MAX;
+	for (rover = sec->ffloors; rover; rover = rover->next, i++)
+		if (rover == fflr)
+			return i;
+	return UINT16_MAX;
+}
+
 /** Gets a 3Dfloor by control sector.
   *
   * \param sec  Target sector.
@@ -5702,7 +5731,7 @@ static inline ffloor_t *P_GetFFloorBySec(sector_t *sec, sector_t *sec2)
   * \param sec Target sector.
   * \param id  ID of 3Dfloor in target sector. Note that the first FOF's ID is 0.
   * \return Pointer to found 3Dfloor, or NULL.
-  * \sa P_GetFFloorBySec
+  * \sa P_GetFFloorBySec, P_GetFFloorID
   */
 ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id)
 {
