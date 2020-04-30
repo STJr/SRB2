@@ -3351,11 +3351,11 @@ INT16 V_LevelActNumWidth(UINT8 num)
 	INT16 result = 0;
 
 	if (num == 0)
-		result = ttlnum[num]->width;
+		result = SHORT(ttlnum[num]->width);
 
 	while (num > 0 && num <= 99)
 	{
-		result = result + ttlnum[num%10]->width;
+		result = result + SHORT(ttlnum[num%10]->width);
 		num = num/10;
 	}
 
