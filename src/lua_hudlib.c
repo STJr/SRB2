@@ -412,9 +412,9 @@ static int libd_cachePatch(lua_State *L)
 	HUDONLY
 
 	luapat = patchinfohead;
-	lumpnum = W_CheckNumForName(luaL_checkstring(L, 1));
+	lumpnum = W_CheckNumForLongName(luaL_checkstring(L, 1));
 	if (lumpnum == LUMPERROR)
-		lumpnum = W_GetNumForName("MISSING");
+		lumpnum = W_GetNumForLongName("MISSING");
 
 	for (i = 0; i < numluapatches; i++)
 	{
@@ -454,7 +454,7 @@ static int libd_cachePatch(lua_State *L)
 	numluapatches++;
 #else
 	HUDONLY
-	LUA_PushUserdata(L, W_CachePatchName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
+	LUA_PushUserdata(L, W_CachePatchLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
 #endif
 	return 1;
 }
