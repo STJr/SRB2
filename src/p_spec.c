@@ -7002,6 +7002,21 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
+			case 262: // Add thwomp thinker to FOF
+				if (udmf)
+				{
+					UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
+
+					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						P_AddThwompThinker(lines[l].frontsector, lines[l].args[0], &lines[l], lines[i].args[1] << FRACBITS, lines[i].args[2] << FRACBITS, sound);
+					}
+				}
+				break;
+
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
 			case 302:
 			case 303:
