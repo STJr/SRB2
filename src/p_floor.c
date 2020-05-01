@@ -757,7 +757,7 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 // T_StartCrumble ////////////////////////////////
 //////////////////////////////////////////////////
 // Crumbling platform Tails 03-11-2002
-void T_StartCrumble(elevator_t *elevator)
+void T_StartCrumble(crumble_t *crumble)
 {
 	ffloor_t *rover;
 	sector_t *sector;
@@ -765,84 +765,96 @@ void T_StartCrumble(elevator_t *elevator)
 
 	// Once done, the no-return thinker just sits there,
 	// constantly 'returning'... kind of an oxymoron, isn't it?
-	if (((elevator->floordestheight == 1 && elevator->direction == -1)
-		|| (elevator->floordestheight == 0 && elevator->direction == 1))
-		&& elevator->type == elevateContinuous) // No return crumbler
+	if ((((crumble->flags & CF_REVERSE) && crumble->direction == -1)
+		|| (!(crumble->flags & CF_REVERSE) && crumble->direction == 1))
+		&& !(crumble->flags & CF_RETURN))
 	{
-		elevator->sector->ceilspeed = 0;
-		elevator->sector->floorspeed = 0;
+		crumble->sector->ceilspeed = 0;
+		crumble->sector->floorspeed = 0;
 		return;
 	}
 
-	if (elevator->distance != 0)
+	if (crumble->timer != 0)
 	{
-		if (elevator->distance > 0) // Count down the timer
+		if (crumble->timer > 0) // Count down the timer
 		{
-			elevator->distance--;
-			if (elevator->distance <= 0)
-				elevator->distance = -15*TICRATE; // Timer until platform returns to original position.
+			if (--crumble->timer <= 0)
+				crumble->timer = -15*TICRATE; // Timer until platform returns to original position.
 			else
 			{
 				// Timer isn't up yet, so just keep waiting.
-				elevator->sector->ceilspeed = 0;
-				elevator->sector->floorspeed = 0;
+				crumble->sector->ceilspeed = 0;
+				crumble->sector->floorspeed = 0;
 				return;
 			}
 		}
-		else if (++elevator->distance == 0) // Reposition back to original spot
+		else if (++crumble->timer == 0) // Reposition back to original spot
 		{
-			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+			for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 			{
 				sector = &sectors[i];
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (rover->flags & FF_CRUMBLE && rover->flags & FF_FLOATBOB
-						&& rover->master == elevator->sourceline)
-					{
-						rover->alpha = elevator->origspeed;
+					if (!(rover->flags & FF_CRUMBLE))
+						continue;
 
-						if (rover->alpha == 0xff)
-							rover->flags &= ~FF_TRANSLUCENT;
-					}
+					if (!(rover->flags & FF_FLOATBOB))
+						continue;
+
+					if (rover->master != crumble->sourceline)
+						continue;
+
+					rover->alpha = crumble->origalpha;
+
+					if (rover->alpha == 0xff)
+						rover->flags &= ~FF_TRANSLUCENT;
 				}
 			}
 
 			// Up!
-			if (elevator->floordestheight == 1)
-				elevator->direction = -1;
+			if (crumble->flags & CF_REVERSE)
+				crumble->direction = -1;
 			else
-				elevator->direction = 1;
+				crumble->direction = 1;
 
-			elevator->sector->ceilspeed = 0;
-			elevator->sector->floorspeed = 0;
+			crumble->sector->ceilspeed = 0;
+			crumble->sector->floorspeed = 0;
 			return;
 		}
 
 		// Flash to indicate that the platform is about to return.
-		if (elevator->distance > -224 && (leveltime % ((abs(elevator->distance)/8) + 1) == 0))
+		if (crumble->timer > -224 && (leveltime % ((abs(crumble->timer)/8) + 1) == 0))
 		{
-			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+			for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 			{
 				sector = &sectors[i];
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (!(rover->flags & FF_NORETURN) && rover->flags & FF_CRUMBLE && rover->flags & FF_FLOATBOB
-						&& rover->master == elevator->sourceline)
-					{
-						if (rover->alpha == elevator->origspeed)
-						{
-							rover->flags |= FF_TRANSLUCENT;
-							rover->alpha = 0x00;
-						}
-						else
-						{
-							if (elevator->origspeed == 0xff)
-								rover->flags &= ~FF_TRANSLUCENT;
+					if (rover->flags & FF_NORETURN)
+						continue;
 
-							rover->alpha = elevator->origspeed;
-						}
+					if (!(rover->flags & FF_CRUMBLE))
+						continue;
+
+					if (!(rover->flags & FF_FLOATBOB))
+						continue;
+
+					if (rover->master != crumble->sourceline)
+						continue;
+
+					if (rover->alpha == crumble->origalpha)
+					{
+						rover->flags |= FF_TRANSLUCENT;
+						rover->alpha = 0x00;
+					}
+					else
+					{
+						rover->alpha = crumble->origalpha;
+
+						if (rover->alpha == 0xff)
+							rover->flags &= ~FF_TRANSLUCENT;
 					}
 				}
 			}
@@ -851,74 +863,62 @@ void T_StartCrumble(elevator_t *elevator)
 		// We're about to go back to the original position,
 		// so set this to let other thinkers know what is
 		// about to happen.
-		if (elevator->distance < 0 && elevator->distance > -3)
-			elevator->sector->crumblestate = CRUMBLE_RESTORE; // makes T_BounceCheese remove itself
+		if (crumble->timer < 0 && crumble->timer > -3)
+			crumble->sector->crumblestate = CRUMBLE_RESTORE; // makes T_BounceCheese remove itself
 	}
 
-	if ((elevator->floordestheight == 0 && elevator->direction == -1)
-		|| (elevator->floordestheight == 1 && elevator->direction == 1)) // Down
+	if ((!(crumble->flags & CF_REVERSE) && crumble->direction == -1)
+		|| ((crumble->flags & CF_REVERSE) && crumble->direction == 1)) // Down
 	{
-		elevator->sector->crumblestate = CRUMBLE_FALL; // Allow floating now.
+		crumble->sector->crumblestate = CRUMBLE_FALL; // Allow floating now.
 
 		// Only fall like this if it isn't meant to float on water
-		if (elevator->high != 42)
+		if (!(crumble->flags & CF_FLOATBOB))
 		{
-			elevator->speed += gravity; // Gain more and more speed
+			crumble->speed += gravity; // Gain more and more speed
 
-			if ((elevator->floordestheight == 0 && !(elevator->sector->ceilingheight < -16384*FRACUNIT))
-				|| (elevator->floordestheight == 1 && !(elevator->sector->ceilingheight > 16384*FRACUNIT)))
+			if ((!(crumble->flags & CF_REVERSE) && crumble->sector->ceilingheight >= -16384*FRACUNIT)
+				|| ((crumble->flags & CF_REVERSE) && crumble->sector->ceilingheight <= 16384*FRACUNIT))
 			{
-				fixed_t dest;
-
-				if (elevator->floordestheight == 1)
-					dest = elevator->sector->ceilingheight + (elevator->speed*2);
-				else
-					dest = elevator->sector->ceilingheight - (elevator->speed*2);
-
 				T_MovePlane             //jff 4/7/98 reverse order of ceiling/floor
 				(
-				  elevator->sector,
-				  elevator->speed,
-				  dest,
+				  crumble->sector,
+				  crumble->speed,
+				  crumble->sector->ceilingheight + crumble->direction*crumble->speed*2,
 				  false,
 				  true, // move ceiling
-				  elevator->direction
+				  crumble->direction
 				);
 
-				if (elevator->floordestheight == 1)
-					dest = elevator->sector->floorheight + (elevator->speed*2);
-				else
-					dest = elevator->sector->floorheight - (elevator->speed*2);
-
-				  T_MovePlane
-				  (
-					elevator->sector,
-					elevator->speed,
-					dest,
-					false,
-					false, // move floor
-					elevator->direction
+				T_MovePlane
+				(
+				  crumble->sector,
+				  crumble->speed,
+				  crumble->sector->floorheight + crumble->direction*crumble->speed*2,
+				  false,
+				  false, // move floor
+				  crumble->direction
 				);
 
-				elevator->sector->ceilspeed = 42;
-				elevator->sector->floorspeed = elevator->speed*elevator->direction;
+				crumble->sector->ceilspeed = 42;
+				crumble->sector->floorspeed = crumble->speed*crumble->direction;
 			}
 		}
 	}
 	else // Up (restore to original position)
 	{
-		elevator->sector->crumblestate = CRUMBLE_WAIT;
-		elevator->sector->ceilingheight = elevator->ceilingwasheight;
-		elevator->sector->floorheight = elevator->floorwasheight;
-		elevator->sector->floordata = NULL;
-		elevator->sector->ceilingdata = NULL;
-		elevator->sector->ceilspeed = 0;
-		elevator->sector->floorspeed = 0;
-		elevator->sector->moved = true;
-		P_RemoveThinker(&elevator->thinker);
+		crumble->sector->crumblestate = CRUMBLE_WAIT;
+		crumble->sector->ceilingheight = crumble->ceilingwasheight;
+		crumble->sector->floorheight = crumble->floorwasheight;
+		crumble->sector->floordata = NULL;
+		crumble->sector->ceilingdata = NULL;
+		crumble->sector->ceilspeed = 0;
+		crumble->sector->floorspeed = 0;
+		crumble->sector->moved = true;
+		P_RemoveThinker(&crumble->thinker);
 	}
 
-	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 	{
 		sector = &sectors[i];
 		sector->moved = true;
@@ -1284,7 +1284,7 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 	INT32 secnum = -1;
 	boolean FOFsector = false;
 
-	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(nobaddies->sourceline->tag, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -1300,7 +1300,7 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			while ((targetsecnum = P_FindSectorFromTag(sec->lines[i]->tag, targetsecnum)) >= 0)
 			{
 				if (T_SectorHasEnemies(&sectors[targetsecnum]))
 					return;
@@ -1395,7 +1395,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 		eachtime->playersOnArea[i] = false;
 	}
 
-	while ((secnum = P_FindSectorFromLineTag(eachtime->sourceline, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(eachtime->sourceline->tag, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -1418,7 +1418,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			while ((targetsecnum = P_FindSectorFromTag(sec->lines[i]->tag, targetsecnum)) >= 0)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -1556,7 +1556,7 @@ void T_RaiseSector(raise_t *raise)
 	if (raise->sector->crumblestate >= CRUMBLE_FALL || raise->sector->ceilingdata)
 		return;
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(raise->tag, i)) >= 0 ;)
 	{
 		sector = &sectors[i];
 
@@ -1683,7 +1683,7 @@ void T_RaiseSector(raise_t *raise)
 	raise->sector->ceilspeed = 42;
 	raise->sector->floorspeed = speed*direction;
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(raise->tag, i)) >= 0 ;)
 		P_RecalcPrecipInSector(&sectors[i]);
 }
 
@@ -1801,7 +1801,7 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 	sector_t *sec;
 	floormove_t *dofloor;
 
-	while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -2017,7 +2017,7 @@ void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 	elevator_t *elevator;
 
 	// act on all sectors with the same tag as the triggering linedef
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag,secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -2309,7 +2309,7 @@ void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boole
 INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	player_t *player, fixed_t origalpha, boolean crumblereturn)
 {
-	elevator_t *elevator;
+	crumble_t *crumble;
 	sector_t *foundsec;
 	INT32 i;
 
@@ -2320,55 +2320,45 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	if (sec->crumblestate >= CRUMBLE_ACTIVATED)
 		return 0;
 
-	// create and initialize new elevator thinker
-	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
-	P_AddThinker(THINK_MAIN, &elevator->thinker);
-	elevator->thinker.function.acp1 = (actionf_p1)T_StartCrumble;
+	// create and initialize new crumble thinker
+	crumble = Z_Calloc(sizeof (*crumble), PU_LEVSPEC, NULL);
+	P_AddThinker(THINK_MAIN, &crumble->thinker);
+	crumble->thinker.function.acp1 = (actionf_p1)T_StartCrumble;
 
-	// Does this crumbler return?
-	if (crumblereturn)
-		elevator->type = elevateBounce;
-	else
-		elevator->type = elevateContinuous;
-
-	// set up the fields according to the type of elevator action
-	elevator->sector = sec;
-	elevator->speed = 0;
+	// set up the fields
+	crumble->sector = sec;
+	crumble->speed = 0;
 
 	if (player && player->mo && (player->mo->eflags & MFE_VERTICALFLIP))
 	{
-		elevator->direction = 1; // Up
-		elevator->floordestheight = 1;
+		crumble->direction = 1; // Up
+		crumble->flags |= CF_REVERSE;
 	}
 	else
-	{
-		elevator->direction = -1; // Down
-		elevator->floordestheight = 0;
-	}
+		crumble->direction = -1; // Down
 
-	elevator->floorwasheight = elevator->sector->floorheight;
-	elevator->ceilingwasheight = elevator->sector->ceilingheight;
-	elevator->distance = TICRATE; // Used for delay time
-	elevator->low = 0;
-	elevator->player = player;
-	elevator->origspeed = origalpha;
+	crumble->floorwasheight = crumble->sector->floorheight;
+	crumble->ceilingwasheight = crumble->sector->ceilingheight;
+	crumble->timer = TICRATE;
+	crumble->player = player;
+	crumble->origalpha = origalpha;
 
-	elevator->sourceline = rover->master;
+	crumble->sourceline = rover->master;
 
-	sec->floordata = elevator;
+	sec->floordata = crumble;
 
+	if (crumblereturn)
+		crumble->flags |= CF_RETURN;
 	if (floating)
-		elevator->high = 42;
-	else
-		elevator->high = 0;
+		crumble->flags |= CF_FLOATBOB;
 
-	elevator->sector->crumblestate = CRUMBLE_ACTIVATED;
+	crumble->sector->crumblestate = CRUMBLE_ACTIVATED;
 
-	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 	{
 		foundsec = &sectors[i];
 
-		P_SpawnMobj(foundsec->soundorg.x, foundsec->soundorg.y, elevator->direction == 1 ? elevator->sector->floorheight : elevator->sector->ceilingheight, MT_CRUMBLEOBJ);
+		P_SpawnMobj(foundsec->soundorg.x, foundsec->soundorg.y, crumble->direction == 1 ? crumble->sector->floorheight : crumble->sector->ceilingheight, MT_CRUMBLEOBJ);
 	}
 
 	return 1;
