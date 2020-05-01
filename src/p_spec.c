@@ -6450,6 +6450,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 		switch (lines[i].special)
 		{
 			INT32 s;
+			INT32 l;
 			size_t sec;
 			ffloortype_e ffloorflags;
 
@@ -6966,6 +6967,26 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				else
 					I_Error("Custom FOF (tag %d) found without a linedef back side!", lines[i].tag);
+				break;
+
+			case 260: // Add raise thinker to FOF
+				if (udmf)
+				{
+					fixed_t destheight = lines[i].args[2] << FRACBITS;
+					fixed_t startheight, topheight, bottomheight;
+
+					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						startheight = lines[l].frontsector->ceilingheight;
+						topheight = max(startheight, destheight);
+						bottomheight = min(startheight, destheight);
+
+						P_AddRaiseThinker(lines[l].frontsector, lines[l].args[0], lines[i].args[1] << FRACBITS, topheight, bottomheight, (destheight < startheight), !!(lines[i].args[3]));
+					}
+				}
 				break;
 
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
