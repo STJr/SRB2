@@ -11485,6 +11485,13 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
 	fume->z = mo->z + ((mo->height - fume->height) >> 1);
 	P_SetThingPosition(fume);
+
+	// If dashmode is high enough, spawn a trail
+	if (!(fume->flags2 & MF2_DONTDRAW) && player->normalspeed >= skins[player->skin].normalspeed*2)
+	{
+		mobj_t *ghost = P_SpawnGhostMobj(fume);
+		ghost->tics = 4;
+	}
 }
 
 //
@@ -12279,6 +12286,7 @@ void P_PlayerThink(player_t *player)
 	// Dash mode - thanks be to VelocitOni
 	if ((player->charflags & SF_DASHMODE) && !player->gotflag && !player->powers[pw_carry] && !player->exiting && !(maptol & TOL_NIGHTS) && !metalrecording) // woo, dashmode! no nights tho.
 	{
+		tic_t prevdashmode = dashmode;
 		boolean totallyradical = player->speed >= FixedMul(player->runspeed, player->mo->scale);
 		boolean floating = (player->secondjump == 1);
 
@@ -12303,8 +12311,11 @@ void P_PlayerThink(player_t *player)
 
 		if (dashmode < DASHMODE_THRESHOLD) // Exits Dash Mode if you drop below speed/dash counter tics. Not in the above block so it doesn't keep disabling in midair.
 		{
-			player->normalspeed = skins[player->skin].normalspeed; // Reset to default if not capable of entering dash mode.
-			player->jumpfactor = skins[player->skin].jumpfactor;
+			if (prevdashmode >= DASHMODE_THRESHOLD)
+			{
+				player->normalspeed = skins[player->skin].normalspeed; // Reset to default if not capable of entering dash mode.
+				player->jumpfactor = skins[player->skin].jumpfactor;
+			}
 		}
 		else if (P_IsObjectOnGround(player->mo)) // Activate dash mode if we're on the ground.
 		{
@@ -12319,6 +12330,10 @@ void P_PlayerThink(player_t *player)
 		{
 			mobj_t *ghost = P_SpawnGhostMobj(player->mo); // Spawns afterimages
 			ghost->fuse = 2; // Makes the images fade quickly
+			if (ghost->tracer)
+			{
+				ghost->tracer->fuse = ghost->fuse;
+			}
 		}
 	}
 	else if (dashmode)

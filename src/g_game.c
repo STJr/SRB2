@@ -2377,6 +2377,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	fixed_t height;
 	fixed_t spinheight;
 	INT32 exiting;
+	tic_t dashmode;
 	INT16 numboxes;
 	INT16 totalring;
 	UINT8 laps;
@@ -2410,6 +2411,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
 		pflags |= (players[player].pflags & (PF_GODMODE|PF_NOCLIP|PF_INVIS));
+
+	dashmode = players[player].dashmode;
 
 	numboxes = players[player].numboxes;
 	laps = players[player].laps;
@@ -2508,6 +2511,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->height = height;
 	p->spinheight = spinheight;
 	p->exiting = exiting;
+
+	p->dashmode = dashmode;
 
 	p->numboxes = numboxes;
 	p->laps = laps;

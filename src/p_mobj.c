@@ -11393,6 +11393,14 @@ void P_SpawnPlayer(INT32 playernum)
 	p->realtime = leveltime;
 	p->followitem = skins[p->skin].followitem;
 
+	// Make sure player's stats are reset if they were in dashmode!
+	if (p->dashmode)
+	{
+		p->dashmode = 0;
+		p->normalspeed = skins[p->skin].normalspeed;
+		p->jumpfactor = skins[p->skin].jumpfactor;
+	}
+
 	//awayview stuff
 	p->awayviewmobj = NULL;
 	p->awayviewtics = 0;
