@@ -308,9 +308,31 @@ typedef struct
 	fixed_t delaytimer;
 	fixed_t floorwasheight; // Height the floor WAS at
 	fixed_t ceilingwasheight; // Height the ceiling WAS at
-	player_t *player; // Player who initiated the thinker (used for airbob)
 	line_t *sourceline;
 } elevator_t;
+
+typedef enum
+{
+	CF_RETURN   = 1,    // Return after crumbling
+	CF_FLOATBOB = 1<<1, // Float on water
+	CF_REVERSE  = 1<<2, // Reverse gravity
+} crumbleflag_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+	sector_t *actionsector; // The sector the rover action is taking place in.
+	player_t *player; // Player who initiated the thinker (used for airbob)
+	INT32 direction;
+	INT32 origalpha;
+	INT32 timer;
+	fixed_t speed;
+	fixed_t floorwasheight; // Height the floor WAS at
+	fixed_t ceilingwasheight; // Height the ceiling WAS at
+	UINT8 flags;
+} crumble_t;
 
 typedef struct
 {
@@ -441,7 +463,7 @@ void T_MoveFloor(floormove_t *movefloor);
 void T_MoveElevator(elevator_t *elevator);
 void T_ContinuousFalling(continuousfall_t *faller);
 void T_BounceCheese(bouncecheese_t *bouncer);
-void T_StartCrumble(elevator_t *elevator);
+void T_StartCrumble(crumble_t *crumble);
 void T_MarioBlock(mariothink_t *block);
 void T_FloatSector(floatthink_t *floater);
 void T_MarioBlockChecker(mariocheck_t *block);
