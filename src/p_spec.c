@@ -5678,6 +5678,35 @@ void P_UpdateSpecials(void)
 	}
 }
 
+//
+// Floor over floors (FOFs), 3Dfloors, 3Dblocks, fake floors (ffloors), rovers, or whatever you want to call them
+//
+
+/** Gets the ID number for a 3Dfloor in its target sector.
+  *
+  * \param fflr The 3Dfloor we want an ID for.
+  * \return ID of 3Dfloor in target sector. Note that the first FOF's ID is 0. UINT16_MAX is given if invalid.
+  * \sa P_GetFFloorByID
+  */
+UINT16 P_GetFFloorID(ffloor_t *fflr)
+{
+	ffloor_t *rover;
+	sector_t *sec;
+	UINT16 i = 0;
+
+	if (!fflr)
+		return UINT16_MAX;
+
+	sec = fflr->target;
+
+	if (!sec->ffloors)
+		return UINT16_MAX;
+	for (rover = sec->ffloors; rover; rover = rover->next, i++)
+		if (rover == fflr)
+			return i;
+	return UINT16_MAX;
+}
+
 /** Gets a 3Dfloor by control sector.
   *
   * \param sec  Target sector.
@@ -5702,7 +5731,7 @@ static inline ffloor_t *P_GetFFloorBySec(sector_t *sec, sector_t *sec2)
   * \param sec Target sector.
   * \param id  ID of 3Dfloor in target sector. Note that the first FOF's ID is 0.
   * \return Pointer to found 3Dfloor, or NULL.
-  * \sa P_GetFFloorBySec
+  * \sa P_GetFFloorBySec, P_GetFFloorID
   */
 ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id)
 {
@@ -6013,7 +6042,7 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
   * \sa P_SpawnSpecials, T_RaiseSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, boolean lower, boolean spindash)
+static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, fixed_t speed, fixed_t ceilingtop, fixed_t ceilingbottom, boolean lower, boolean spindash)
 {
 	raise_t *raise;
 
@@ -6025,10 +6054,10 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, boolean lower, 
 	raise->sourceline = sourceline;
 	raise->sector = sec;
 
-	raise->ceilingtop = P_FindHighestCeilingSurrounding(sec);
-	raise->ceilingbottom = P_FindLowestCeilingSurrounding(sec);
+	raise->ceilingtop = ceilingtop;
+	raise->ceilingbottom = ceilingbottom;
 
-	raise->basespeed =  FixedDiv(P_AproxDistance(sourceline->dx, sourceline->dy), 4*FRACUNIT);
+	raise->basespeed =  speed;
 
 	if (lower)
 		raise->flags |= RF_REVERSE;
@@ -6938,44 +6967,32 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 190: // Rising Platform FOF (solid, opaque, shadows)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
-				break;
-
 			case 191: // Rising Platform FOF (solid, opaque, no shadows)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_CUTLEVEL, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
-				break;
-
 			case 192: // Rising Platform TL block: FOF (solid, translucent)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
-				break;
-
 			case 193: // Rising Platform FOF (solid, invisible)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_NOSHADE, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
-				break;
-
 			case 194: // Rising Platform 'Platform' - You can jump up through it
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
-				break;
-
 			case 195: // Rising Platform Translucent "platform"
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_TRANSLUCENT|FF_BOTHPLANES|FF_ALLSIDES|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
+			{
+				fixed_t speed = FixedDiv(P_AproxDistance(lines[i].dx, lines[i].dy), 4*FRACUNIT);
+				fixed_t ceilingtop = P_FindHighestCeilingSurrounding(lines[i].frontsector);
+				fixed_t ceilingbottom = P_FindLowestCeilingSurrounding(lines[i].frontsector);
 
+				ffloorflags = FF_EXISTS|FF_SOLID;
+				if (lines[i].special != 193)
+					ffloorflags |= FF_RENDERALL;
+				if (lines[i].special <= 191)
+					ffloorflags |= FF_CUTLEVEL;
+				if (lines[i].special == 192 || lines[i].special == 195)
+					ffloorflags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
+				if (lines[i].special >= 194)
+					ffloorflags |= FF_PLATFORM|FF_BOTHPLANES|FF_ALLSIDES;
+				if (lines[i].special != 190 && (lines[i].special <= 193 || lines[i].flags & ML_NOCLIMB))
+					ffloorflags |= FF_NOSHADE;
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i], !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
+
+				P_AddRaiseThinker(lines[i].frontsector, &lines[i], speed, ceilingtop, ceilingbottom, !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
 				break;
+			}
 
 			case 200: // Double light effect
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_CUTSPRITES|FF_DOUBLESHADOW, secthinkers);

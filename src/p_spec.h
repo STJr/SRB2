@@ -74,6 +74,7 @@ void P_RunDeNightserizeExecutors(mobj_t *actor);
 void P_RunNightsLapExecutors(mobj_t *actor);
 void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean enoughspheres);
 
+UINT16 P_GetFFloorID(ffloor_t *fflr);
 ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id);
 
 //
