@@ -8877,6 +8877,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	"ANALOGMODE", // Analog mode?
 	"DIRECTIONCHAR", // Directional character sprites?
 	"AUTOBRAKE", // Autobrake?
+	"PIVOT", // Rotate to the camera when still?
 
 	// Cheats
 	"GODMODE",
