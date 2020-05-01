@@ -6989,6 +6989,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
+			case 261: // Add air bob thinker to FOF
+				if (udmf)
+				{
+					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						P_AddAirbob(lines[l].frontsector, lines[l].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
+					}
+				}
+				break;
+
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
 			case 302:
 			case 303:
