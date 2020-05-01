@@ -1711,7 +1711,7 @@ static void SaveRaiseThinker(const thinker_t *th, const UINT8 type)
 {
 	const raise_t *ht  = (const void *)th;
 	WRITEUINT8(save_p, type);
-	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEINT16(save_p, ht->tag);
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEFIXED(save_p, ht->ceilingbottom);
 	WRITEFIXED(save_p, ht->ceilingtop);
@@ -1893,6 +1893,7 @@ static void SaveLaserThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEUINT32(save_p, SaveSector(ht->sec));
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
+	WRITEUINT8(save_p, ht->nobosses);
 }
 
 static void SaveLightlevelThinker(const thinker_t *th, const UINT8 type)
@@ -2786,7 +2787,7 @@ static thinker_t* LoadRaiseThinker(actionf_p1 thinker)
 {
 	raise_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
-	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->tag = READINT16(save_p);
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->ceilingbottom = READFIXED(save_p);
 	ht->ceilingtop = READFIXED(save_p);
@@ -3005,6 +3006,7 @@ static inline thinker_t* LoadLaserThinker(actionf_p1 thinker)
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->sec = LoadSector(READUINT32(save_p));
 	ht->sourceline = LoadLine(READUINT32(save_p));
+	ht->nobosses = READUINT8(save_p);
 	for (rover = ht->sector->ffloors; rover; rover = rover->next)
 		if (rover->secnum == (size_t)(ht->sec - sectors)
 		&& rover->master == ht->sourceline)

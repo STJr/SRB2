@@ -109,6 +109,7 @@ typedef struct
 	sector_t *sector;  ///< Sector in which the effect takes place.
 	sector_t *sec;
 	line_t *sourceline;
+	UINT8 nobosses;
 } laserthink_t;
 
 /** Strobe light action structure..
@@ -423,7 +424,7 @@ typedef enum
 typedef struct
 {
 	thinker_t thinker;
-	line_t *sourceline;
+	INT16 tag;
 	sector_t *sector;
 	fixed_t ceilingbottom;
 	fixed_t ceilingtop;

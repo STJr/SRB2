@@ -6037,12 +6037,10 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
   * there already.
   *
   * \param sec          Control sector.
-  * \param actionsector Target sector.
-  * \param sourceline   Control linedef.
   * \sa P_SpawnSpecials, T_RaiseSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, fixed_t speed, fixed_t ceilingtop, fixed_t ceilingbottom, boolean lower, boolean spindash)
+static void P_AddRaiseThinker(sector_t *sec, INT16 tag, fixed_t speed, fixed_t ceilingtop, fixed_t ceilingbottom, boolean lower, boolean spindash)
 {
 	raise_t *raise;
 
@@ -6051,7 +6049,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, fixed_t speed, 
 
 	raise->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
-	raise->sourceline = sourceline;
+	raise->tag = tag;
 	raise->sector = sec;
 
 	raise->ceilingtop = ceilingtop;
@@ -6065,7 +6063,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline, fixed_t speed, 
 		raise->flags |= RF_SPINDASH;
 }
 
-static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean raise, boolean spindash, boolean dynamic)
+static void P_AddAirbob(sector_t *sec, INT16 tag, fixed_t dist, boolean raise, boolean spindash, boolean dynamic)
 {
 	raise_t *airbob;
 
@@ -6074,7 +6072,7 @@ static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean
 
 	airbob->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
-	airbob->sourceline = sourceline;
+	airbob->tag = tag;
 	airbob->sector = sec;
 
 	airbob->ceilingtop = sec->ceilingheight;
@@ -6094,12 +6092,10 @@ static void P_AddAirbob(sector_t *sec, line_t *sourceline, fixed_t dist, boolean
   * Even thwomps need to think!
   *
   * \param sec          Control sector.
-  * \param actionsector Target sector.
-  * \param sourceline   Control linedef.
   * \sa P_SpawnSpecials, T_ThwompSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, line_t *sourceline)
+static inline void P_AddThwompThinker(sector_t *sec, INT16 tag, line_t *sourceline, fixed_t crushspeed, fixed_t retractspeed, UINT16 sound)
 {
 	thwomp_t *thwomp;
 
@@ -6117,14 +6113,14 @@ static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, lin
 	// set up the fields according to the type of elevator action
 	thwomp->sourceline = sourceline;
 	thwomp->sector = sec;
-	thwomp->crushspeed = (sourceline->flags & ML_EFFECT5) ? sourceline->dy >> 3 : 10*FRACUNIT;
-	thwomp->retractspeed = (sourceline->flags & ML_EFFECT5) ? sourceline->dx >> 3 : 2*FRACUNIT;
+	thwomp->crushspeed = crushspeed;
+	thwomp->retractspeed = retractspeed;
 	thwomp->direction = 0;
 	thwomp->floorstartheight = sec->floorheight;
 	thwomp->ceilingstartheight = sec->ceilingheight;
 	thwomp->delay = 1;
-	thwomp->tag = actionsector->tag;
-	thwomp->sound = (sourceline->flags & ML_EFFECT4) ? sides[sourceline->sidenum[0]].textureoffset >> FRACBITS : sfx_thwomp;
+	thwomp->tag = tag;
+	thwomp->sound = sound;
 
 	sec->floordata = thwomp;
 	sec->ceilingdata = thwomp;
@@ -6241,8 +6237,7 @@ void T_LaserFlash(laserthink_t *flash)
 	{
 		thing = node->m_thing;
 
-		if ((fflr->master->flags & ML_EFFECT1)
-			&& thing->flags & MF_BOSS)
+		if (flash->nobosses && thing->flags & MF_BOSS)
 			continue; // Don't hurt bosses
 
 		// Don't endlessly kill egg guard shields (or anything else for that matter)
@@ -6271,7 +6266,7 @@ void T_LaserFlash(laserthink_t *flash)
   * \sa T_LaserFlash
   * \author SSNTails <http://www.ssntails.org>
   */
-static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *line, thinkerlist_t *secthinkers)
+static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *line, thinkerlist_t *secthinkers, boolean nobosses)
 {
 	laserthink_t *flash;
 	ffloor_t *fflr = P_AddFakeFloor(sec, sec2, line, laserflags, secthinkers);
@@ -6288,6 +6283,7 @@ static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *lin
 	flash->sector = sec; // For finding mobjs
 	flash->sec = sec2;
 	flash->sourceline = line;
+	flash->nobosses = nobosses;
 }
 
 //
@@ -6885,16 +6881,16 @@ void P_SpawnSpecials(boolean fromnetsave)
 			{
 				fixed_t dist = (lines[i].special == 150) ? 16*FRACUNIT : P_AproxDistance(lines[i].dx, lines[i].dy);
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, dist, false, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, dist, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 			}
 			case 152: // Adjustable air bobbing platform in reverse
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), true, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, P_AproxDistance(lines[i].dx, lines[i].dy), true, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 			case 153: // Dynamic Sinking Platform
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, P_AproxDistance(lines[i].dx, lines[i].dy), false, !!(lines[i].flags & ML_NOCLIMB), true);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, P_AproxDistance(lines[i].dx, lines[i].dy), false, !!(lines[i].flags & ML_NOCLIMB), true);
 				break;
 
 			case 160: // Float/bob platform
@@ -6944,13 +6940,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 176: // Air bobbing platform that will crumble and bob on the water when it falls and hits
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB|FF_CRUMBLE, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 
 			case 177: // Air bobbing platform that will crumble and bob on
 				// the water when it falls and hits, then never return
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB|FF_CRUMBLE|FF_NORETURN, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 
 			case 178: // Crumbling platform that will float when it hits water
@@ -6963,7 +6959,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 180: // Air bobbing platform that will crumble
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines + i, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
+				P_AddAirbob(lines[i].frontsector, lines[i].tag, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
 				break;
 
 			case 190: // Rising Platform FOF (solid, opaque, shadows)
@@ -6990,7 +6986,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					ffloorflags |= FF_NOSHADE;
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 
-				P_AddRaiseThinker(lines[i].frontsector, &lines[i], speed, ceilingtop, ceilingbottom, !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
+				P_AddRaiseThinker(lines[i].frontsector, lines[i].tag, speed, ceilingtop, ceilingbottom, !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
 				break;
 			}
 
@@ -7048,14 +7044,20 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 251: // A THWOMP!
+			{
+				fixed_t crushspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dy >> 3 : 10*FRACUNIT;
+				fixed_t retractspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dx >> 3 : 2*FRACUNIT;
+				UINT16 sound = (lines[i].flags & ML_EFFECT4) ? sides[lines[i].sidenum[0]].textureoffset >> FRACBITS : sfx_thwomp;
+
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].tag, s)) >= 0 ;)
 				{
-					P_AddThwompThinker(&sectors[sec], &sectors[s], &lines[i]);
+					P_AddThwompThinker(&sectors[sec], lines[i].tag, &lines[i], crushspeed, retractspeed, sound);
 					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
 						FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				}
 				break;
+			}
 
 			case 252: // Shatter block (breaks when touched)
 				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER;
@@ -7097,8 +7099,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				sec = sides[*lines[i].sidenum].sector - sectors;
 
 				// No longer totally disrupts netgames
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers);
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].tag, s)) >= 0 ;)
+					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers, !!(lines[i].flags & ML_EFFECT1));
 				break;
 
 			case 259: // Custom FOF
