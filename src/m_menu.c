@@ -1583,7 +1583,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_HEADER, NULL, "General", NULL, 0},
 #ifndef NONET
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
-	                         NULL, "Server name",                      &cv_servername,          7},
+	                         NULL, "Server name",                      &cv_servername,           7},
 	{IT_STRING | IT_CVAR,    NULL, "Max Players",                      &cv_maxplayers,          21},
 	{IT_STRING | IT_CVAR,    NULL, "Allow Add-on Downloading",         &cv_downloading,         26},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
@@ -1628,8 +1628,9 @@ static menuitem_t OP_ServerOptionsMenu[] =
 
 #ifndef NONET
 	{IT_HEADER, NULL, "Advanced", NULL, 225},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        231},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     245},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,       231},
+	{IT_STRING | IT_CVAR,    NULL, "Join delay",                       &cv_joindelay,          246},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    251},
 #endif
 };
 
@@ -10822,7 +10823,8 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 3].status = IT_GRAYEDOUT; // Allow add-on downloading
 		OP_ServerOptionsMenu[ 4].status = IT_GRAYEDOUT; // Allow players to join
 		OP_ServerOptionsMenu[35].status = IT_GRAYEDOUT; // Master server
-		OP_ServerOptionsMenu[36].status = IT_GRAYEDOUT; // Attempts to resynchronise
+		OP_ServerOptionsMenu[36].status = IT_GRAYEDOUT; // Minimum delay between joins
+		OP_ServerOptionsMenu[37].status = IT_GRAYEDOUT; // Attempts to resynchronise
 	}
 	else
 	{
@@ -10834,6 +10836,7 @@ static void M_ServerOptions(INT32 choice)
 			? IT_GRAYEDOUT
 			: (IT_STRING | IT_CVAR | IT_CV_STRING));
 		OP_ServerOptionsMenu[36].status = IT_STRING | IT_CVAR;
+		OP_ServerOptionsMenu[37].status = IT_STRING | IT_CVAR;
 	}
 #endif
 
