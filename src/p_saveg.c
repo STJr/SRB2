@@ -59,9 +59,6 @@ typedef enum
 	DRONE      = 0x80,
 } player_saveflags;
 
-//
-// P_ArchivePlayer
-//
 static inline void P_ArchivePlayer(void)
 {
 	const player_t *player = &players[consoleplayer];
@@ -77,9 +74,6 @@ static inline void P_ArchivePlayer(void)
 	WRITEINT32(save_p, player->continues);
 }
 
-//
-// P_UnArchivePlayer
-//
 static inline void P_UnArchivePlayer(void)
 {
 	INT16 skininfo = READUINT16(save_p);
@@ -92,9 +86,6 @@ static inline void P_UnArchivePlayer(void)
 	savedata.continues = READINT32(save_p);
 }
 
-//
-// P_NetArchivePlayers
-//
 static void P_NetArchivePlayers(void)
 {
 	INT32 i, j;
@@ -300,9 +291,6 @@ static void P_NetArchivePlayers(void)
 	}
 }
 
-//
-// P_NetUnArchivePlayers
-//
 static void P_NetUnArchivePlayers(void)
 {
 	INT32 i, j;
@@ -772,9 +760,6 @@ static void P_NetUnArchiveColormaps(void)
 #define LD_S2BOTTEX 0x04
 #define LD_S2MIDTEX 0x08
 
-//
-// P_NetArchiveWorld
-//
 static void P_NetArchiveWorld(void)
 {
 	size_t i;
@@ -1022,9 +1007,6 @@ static void P_NetArchiveWorld(void)
 	save_p = put;
 }
 
-//
-// P_NetUnArchiveWorld
-//
 static void P_NetUnArchiveWorld(void)
 {
 	UINT16 i;
@@ -1341,11 +1323,6 @@ static UINT32 SaveSlope(const pslope_t *slope)
 	return 0xFFFFFFFF;
 }
 
-//
-// SaveMobjThinker
-//
-// Saves a mobj_t thinker
-//
 static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 {
 	const mobj_t *mobj = (const mobj_t *)th;
@@ -1646,11 +1623,6 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
 
-//
-// SaveNoEnemiesThinker
-//
-// Saves a noenemies_t thinker
-//
 static void SaveNoEnemiesThinker(const thinker_t *th, const UINT8 type)
 {
 	const noenemies_t *ht  = (const void *)th;
@@ -1658,11 +1630,6 @@ static void SaveNoEnemiesThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 }
 
-//
-// SaveBounceCheeseThinker
-//
-// Saves a bouncecheese_t thinker
-//
 static void SaveBounceCheeseThinker(const thinker_t *th, const UINT8 type)
 {
 	const bouncecheese_t *ht  = (const void *)th;
@@ -1676,11 +1643,6 @@ static void SaveBounceCheeseThinker(const thinker_t *th, const UINT8 type)
 	WRITECHAR(save_p, ht->low);
 }
 
-//
-// SaveContinuousFallThinker
-//
-// Saves a continuousfall_t thinker
-//
 static void SaveContinuousFallThinker(const thinker_t *th, const UINT8 type)
 {
 	const continuousfall_t *ht  = (const void *)th;
@@ -1693,11 +1655,6 @@ static void SaveContinuousFallThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->destheight);
 }
 
-//
-// SaveMarioBlockThinker
-//
-// Saves a mariothink_t thinker
-//
 static void SaveMarioBlockThinker(const thinker_t *th, const UINT8 type)
 {
 	const mariothink_t *ht  = (const void *)th;
@@ -1710,11 +1667,6 @@ static void SaveMarioBlockThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT16(save_p, ht->tag);
 }
 
-//
-// SaveMarioCheckThinker
-//
-// Saves a mariocheck_t thinker
-//
 static void SaveMarioCheckThinker(const thinker_t *th, const UINT8 type)
 {
 	const mariocheck_t *ht  = (const void *)th;
@@ -1723,11 +1675,6 @@ static void SaveMarioCheckThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 }
 
-//
-// SaveThwompThinker
-//
-// Saves a thwomp_t thinker
-//
 static void SaveThwompThinker(const thinker_t *th, const UINT8 type)
 {
 	const thwomp_t *ht  = (const void *)th;
@@ -1744,11 +1691,6 @@ static void SaveThwompThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT16(save_p, ht->sound);
 }
 
-//
-// SaveFloatThinker
-//
-// Saves a floatthink_t thinker
-//
 static void SaveFloatThinker(const thinker_t *th, const UINT8 type)
 {
 	const floatthink_t *ht  = (const void *)th;
@@ -1758,10 +1700,6 @@ static void SaveFloatThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT16(save_p, ht->tag);
 }
 
-// SaveEachTimeThinker
-//
-// Loads a eachtime_t from a save game
-//
 static void SaveEachTimeThinker(const thinker_t *th, const UINT8 type)
 {
 	const eachtime_t *ht  = (const void *)th;
@@ -1776,10 +1714,6 @@ static void SaveEachTimeThinker(const thinker_t *th, const UINT8 type)
 	WRITECHAR(save_p, ht->triggerOnExit);
 }
 
-// SaveRaiseThinker
-//
-// Saves a raise_t thinker
-//
 static void SaveRaiseThinker(const thinker_t *th, const UINT8 type)
 {
 	const raise_t *ht  = (const void *)th;
@@ -1794,11 +1728,6 @@ static void SaveRaiseThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->flags);
 }
 
-//
-// SaveCeilingThinker
-//
-// Saves a ceiling_t thinker
-//
 static void SaveCeilingThinker(const thinker_t *th, const UINT8 type)
 {
 	const ceiling_t *ht = (const void *)th;
@@ -1820,11 +1749,6 @@ static void SaveCeilingThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->sourceline);
 }
 
-//
-// SaveFloormoveThinker
-//
-// Saves a floormove_t thinker
-//
 static void SaveFloormoveThinker(const thinker_t *th, const UINT8 type)
 {
 	const floormove_t *ht = (const void *)th;
@@ -1841,11 +1765,6 @@ static void SaveFloormoveThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->delaytimer);
 }
 
-//
-// SaveLightflashThinker
-//
-// Saves a lightflash_t thinker
-//
 static void SaveLightflashThinker(const thinker_t *th, const UINT8 type)
 {
 	const lightflash_t *ht = (const void *)th;
@@ -1855,11 +1774,6 @@ static void SaveLightflashThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->minlight);
 }
 
-//
-// SaveStrobeThinker
-//
-// Saves a strobe_t thinker
-//
 static void SaveStrobeThinker(const thinker_t *th, const UINT8 type)
 {
 	const strobe_t *ht = (const void *)th;
@@ -1872,11 +1786,6 @@ static void SaveStrobeThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->brighttime);
 }
 
-//
-// SaveGlowThinker
-//
-// Saves a glow_t thinker
-//
 static void SaveGlowThinker(const thinker_t *th, const UINT8 type)
 {
 	const glow_t *ht = (const void *)th;
@@ -1887,11 +1796,7 @@ static void SaveGlowThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->direction);
 	WRITEINT32(save_p, ht->speed);
 }
-//
-// SaveFireflickerThinker
-//
-// Saves a fireflicker_t thinker
-//
+
 static inline void SaveFireflickerThinker(const thinker_t *th, const UINT8 type)
 {
 	const fireflicker_t *ht = (const void *)th;
@@ -1902,11 +1807,7 @@ static inline void SaveFireflickerThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->maxlight);
 	WRITEINT32(save_p, ht->minlight);
 }
-//
-// SaveElevatorThinker
-//
-// Saves a elevator_t thinker
-//
+
 static void SaveElevatorThinker(const thinker_t *th, const UINT8 type)
 {
 	const elevator_t *ht = (const void *)th;
@@ -1929,11 +1830,6 @@ static void SaveElevatorThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 }
 
-//
-// SaveCrumbleThinker
-//
-// Saves a crumble_t thinker
-//
 static void SaveCrumbleThinker(const thinker_t *th, const UINT8 type)
 {
 	const crumble_t *ht = (const void *)th;
@@ -1951,11 +1847,6 @@ static void SaveCrumbleThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->flags);
 }
 
-//
-// SaveScrollThinker
-//
-// Saves a scroll_t thinker
-//
 static inline void SaveScrollThinker(const thinker_t *th, const UINT8 type)
 {
 	const scroll_t *ht = (const void *)th;
@@ -1972,11 +1863,6 @@ static inline void SaveScrollThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->type);
 }
 
-//
-// SaveFrictionThinker
-//
-// Saves a friction_t thinker
-//
 static inline void SaveFrictionThinker(const thinker_t *th, const UINT8 type)
 {
 	const friction_t *ht = (const void *)th;
@@ -1988,11 +1874,6 @@ static inline void SaveFrictionThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->roverfriction);
 }
 
-//
-// SavePusherThinker
-//
-// Saves a pusher_t thinker
-//
 static inline void SavePusherThinker(const thinker_t *th, const UINT8 type)
 {
 	const pusher_t *ht = (const void *)th;
@@ -2012,11 +1893,6 @@ static inline void SavePusherThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->slider);
 }
 
-//
-// SaveLaserThinker
-//
-// Saves a laserthink_t thinker
-//
 static void SaveLaserThinker(const thinker_t *th, const UINT8 type)
 {
 	const laserthink_t *ht = (const void *)th;
@@ -2026,11 +1902,6 @@ static void SaveLaserThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 }
 
-//
-// SaveLightlevelThinker
-//
-// Saves a lightlevel_t thinker
-//
 static void SaveLightlevelThinker(const thinker_t *th, const UINT8 type)
 {
 	const lightlevel_t *ht = (const void *)th;
@@ -2043,11 +1914,6 @@ static void SaveLightlevelThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->timer);
 }
 
-//
-// SaveExecutorThinker
-//
-// Saves a executor_t thinker
-//
 static void SaveExecutorThinker(const thinker_t *th, const UINT8 type)
 {
 	const executor_t *ht = (const void *)th;
@@ -2058,11 +1924,6 @@ static void SaveExecutorThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->timer);
 }
 
-//
-// SaveDisappearThinker
-//
-// Saves a disappear_t thinker
-//
 static void SaveDisappearThinker(const thinker_t *th, const UINT8 type)
 {
 	const disappear_t *ht = (const void *)th;
@@ -2076,11 +1937,6 @@ static void SaveDisappearThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->exists);
 }
 
-//
-// SaveFadeThinker
-//
-// Saves a fade_t thinker
-//
 static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 {
 	const fade_t *ht = (const void *)th;
@@ -2104,11 +1960,6 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->exactalpha);
 }
 
-//
-// SaveFadeColormapThinker
-//
-// Saves a fadecolormap_t thinker
-//
 static void SaveFadeColormapThinker(const thinker_t *th, const UINT8 type)
 {
 	const fadecolormap_t *ht = (const void *)th;
@@ -2121,11 +1972,6 @@ static void SaveFadeColormapThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->timer);
 }
 
-//
-// SavePlaneDisplaceThinker
-//
-// Saves a planedisplace_t thinker
-//
 static void SavePlaneDisplaceThinker(const thinker_t *th, const UINT8 type)
 {
 	const planedisplace_t *ht = (const void *)th;
@@ -2137,7 +1983,6 @@ static void SavePlaneDisplaceThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->type);
 }
 
-/// Save a dynamic slope thinker.
 static inline void SaveDynamicSlopeThinker(const thinker_t *th, const UINT8 type)
 {
 	const dynplanethink_t* ht = (const void*)th;
@@ -2153,12 +1998,6 @@ static inline void SaveDynamicSlopeThinker(const thinker_t *th, const UINT8 type
 }
 
 #ifdef POLYOBJECTS
-
-//
-// SavePolyrotateThinker
-//
-// Saves a polyrotate_t thinker
-//
 static inline void SavePolyrotatetThinker(const thinker_t *th, const UINT8 type)
 {
 	const polyrotate_t *ht = (const void *)th;
@@ -2168,11 +2007,6 @@ static inline void SavePolyrotatetThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->distance);
 }
 
-//
-// SavePolymoveThinker
-//
-// Saves a polymovet_t thinker
-//
 static void SavePolymoveThinker(const thinker_t *th, const UINT8 type)
 {
 	const polymove_t *ht = (const void *)th;
@@ -2185,11 +2019,6 @@ static void SavePolymoveThinker(const thinker_t *th, const UINT8 type)
 	WRITEANGLE(save_p, ht->angle);
 }
 
-//
-// SavePolywaypointThinker
-//
-// Saves a polywaypoint_t thinker
-//
 static void SavePolywaypointThinker(const thinker_t *th, UINT8 type)
 {
 	const polywaypoint_t *ht = (const void *)th;
@@ -2209,11 +2038,6 @@ static void SavePolywaypointThinker(const thinker_t *th, UINT8 type)
 	WRITEUINT32(save_p, SaveMobjnum(ht->target));
 }
 
-//
-// SavePolyslidedoorThinker
-//
-// Saves a polyslidedoor_t thinker
-//
 static void SavePolyslidedoorThinker(const thinker_t *th, const UINT8 type)
 {
 	const polyslidedoor_t *ht = (const void *)th;
@@ -2233,11 +2057,6 @@ static void SavePolyslidedoorThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->closing);
 }
 
-//
-// SavePolyswingdoorThinker
-//
-// Saves a polyswingdoor_t thinker
-//
 static void SavePolyswingdoorThinker(const thinker_t *th, const UINT8 type)
 {
 	const polyswingdoor_t *ht = (const void *)th;
@@ -2287,25 +2106,8 @@ static void SavePolyfadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->duration);
 	WRITEINT32(save_p, ht->timer);
 }
-
 #endif
-/*
-//
-// SaveWhatThinker
-//
-// Saves a what_t thinker
-//
-static inline void SaveWhatThinker(const thinker_t *th, const UINT8 type)
-{
-	const what_t *ht = (const void *)th;
-	WRITEUINT8(save_p, type);
-}
-*/
 
-//
-// P_NetArchiveThinkers
-//
-//
 static void P_NetArchiveThinkers(void)
 {
 	const thinker_t *th;
@@ -2605,11 +2407,6 @@ static inline pslope_t *LoadSlope(UINT32 slopeid)
 	return NULL;
 }
 
-//
-// LoadMobjThinker
-//
-// Loads a mobj_t from a save game
-//
 static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 {
 	thinker_t *next;
@@ -2886,10 +2683,6 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	return &mobj->thinker;
 }
 
-// LoadNoEnemiesThinker
-//
-// Loads a noenemies_t from a save game
-//
 static thinker_t* LoadNoEnemiesThinker(actionf_p1 thinker)
 {
 	noenemies_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -2898,10 +2691,6 @@ static thinker_t* LoadNoEnemiesThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-// LoadBounceCheeseThinker
-//
-// Loads a bouncecheese_t from a save game
-//
 static thinker_t* LoadBounceCheeseThinker(actionf_p1 thinker)
 {
 	bouncecheese_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -2916,10 +2705,6 @@ static thinker_t* LoadBounceCheeseThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-// LoadContinuousFallThinker
-//
-// Loads a continuousfall_t from a save game
-//
 static thinker_t* LoadContinuousFallThinker(actionf_p1 thinker)
 {
 	continuousfall_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -2933,10 +2718,6 @@ static thinker_t* LoadContinuousFallThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-// LoadMarioBlockThinker
-//
-// Loads a mariothink_t from a save game
-//
 static thinker_t* LoadMarioBlockThinker(actionf_p1 thinker)
 {
 	mariothink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -2950,10 +2731,6 @@ static thinker_t* LoadMarioBlockThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-// LoadMarioCheckThinker
-//
-// Loads a mariocheck_t from a save game
-//
 static thinker_t* LoadMarioCheckThinker(actionf_p1 thinker)
 {
 	mariocheck_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -2963,10 +2740,6 @@ static thinker_t* LoadMarioCheckThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-// LoadThwompThinker
-//
-// Loads a thwomp_t from a save game
-//
 static thinker_t* LoadThwompThinker(actionf_p1 thinker)
 {
 	thwomp_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -2984,10 +2757,6 @@ static thinker_t* LoadThwompThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-// LoadFloatThinker
-//
-// Loads a floatthink_t from a save game
-//
 static thinker_t* LoadFloatThinker(actionf_p1 thinker)
 {
 	floatthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -2998,10 +2767,6 @@ static thinker_t* LoadFloatThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-// LoadEachTimeThinker
-//
-// Loads a eachtime_t from a save game
-//
 static thinker_t* LoadEachTimeThinker(actionf_p1 thinker)
 {
 	size_t i;
@@ -3017,10 +2782,6 @@ static thinker_t* LoadEachTimeThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-// LoadRaiseThinker
-//
-// Loads a raise_t from a save game
-//
 static thinker_t* LoadRaiseThinker(actionf_p1 thinker)
 {
 	raise_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3036,11 +2797,6 @@ static thinker_t* LoadRaiseThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadCeilingThinker
-//
-// Loads a ceiling_t from a save game
-//
 static thinker_t* LoadCeilingThinker(actionf_p1 thinker)
 {
 	ceiling_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3065,11 +2821,6 @@ static thinker_t* LoadCeilingThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadFloormoveThinker
-//
-// Loads a floormove_t from a save game
-//
 static thinker_t* LoadFloormoveThinker(actionf_p1 thinker)
 {
 	floormove_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3089,11 +2840,6 @@ static thinker_t* LoadFloormoveThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadLightflashThinker
-//
-// Loads a lightflash_t from a save game
-//
 static thinker_t* LoadLightflashThinker(actionf_p1 thinker)
 {
 	lightflash_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3106,11 +2852,6 @@ static thinker_t* LoadLightflashThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadStrobeThinker
-//
-// Loads a strobe_t from a save game
-//
 static thinker_t* LoadStrobeThinker(actionf_p1 thinker)
 {
 	strobe_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3126,11 +2867,6 @@ static thinker_t* LoadStrobeThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadGlowThinker
-//
-// Loads a glow_t from a save game
-//
 static thinker_t* LoadGlowThinker(actionf_p1 thinker)
 {
 	glow_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3144,11 +2880,7 @@ static thinker_t* LoadGlowThinker(actionf_p1 thinker)
 		ht->sector->lightingdata = ht;
 	return &ht->thinker;
 }
-//
-// LoadFireflickerThinker
-//
-// Loads a fireflicker_t from a save game
-//
+
 static thinker_t* LoadFireflickerThinker(actionf_p1 thinker)
 {
 	fireflicker_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3162,11 +2894,7 @@ static thinker_t* LoadFireflickerThinker(actionf_p1 thinker)
 		ht->sector->lightingdata = ht;
 	return &ht->thinker;
 }
-//
-// +vatorThinker
-//
-// Loads a elevator_t from a save game
-//
+
 static thinker_t* LoadElevatorThinker(actionf_p1 thinker, boolean setplanedata)
 {
 	elevator_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3197,11 +2925,6 @@ static thinker_t* LoadElevatorThinker(actionf_p1 thinker, boolean setplanedata)
 	return &ht->thinker;
 }
 
-//
-// LoadCrumbleThinker
-//
-// Loads a crumble_t from a save game
-//
 static thinker_t* LoadCrumbleThinker(actionf_p1 thinker)
 {
 	crumble_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3224,11 +2947,6 @@ static thinker_t* LoadCrumbleThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadScrollThinker
-//
-// Loads a scroll_t from a save game
-//
 static thinker_t* LoadScrollThinker(actionf_p1 thinker)
 {
 	scroll_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3246,11 +2964,6 @@ static thinker_t* LoadScrollThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadFrictionThinker
-//
-// Loads a friction_t from a save game
-//
 static inline thinker_t* LoadFrictionThinker(actionf_p1 thinker)
 {
 	friction_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3263,11 +2976,6 @@ static inline thinker_t* LoadFrictionThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadPusherThinker
-//
-// Loads a pusher_t from a save game
-//
 static thinker_t* LoadPusherThinker(actionf_p1 thinker)
 {
 	pusher_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3289,11 +2997,6 @@ static thinker_t* LoadPusherThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadLaserThinker
-//
-// Loads a laserthink_t from a save game
-//
 static inline thinker_t* LoadLaserThinker(actionf_p1 thinker)
 {
 	laserthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3309,11 +3012,6 @@ static inline thinker_t* LoadLaserThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadLightlevelThinker
-//
-// Loads a lightlevel_t from a save game
-//
 static inline thinker_t* LoadLightlevelThinker(actionf_p1 thinker)
 {
 	lightlevel_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3329,11 +3027,6 @@ static inline thinker_t* LoadLightlevelThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadExecutorThinker
-//
-// Loads a executor_t from a save game
-//
 static inline thinker_t* LoadExecutorThinker(actionf_p1 thinker)
 {
 	executor_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3345,11 +3038,6 @@ static inline thinker_t* LoadExecutorThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadDisappearThinker
-//
-// Loads a disappear_t thinker
-//
 static inline thinker_t* LoadDisappearThinker(actionf_p1 thinker)
 {
 	disappear_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3364,11 +3052,6 @@ static inline thinker_t* LoadDisappearThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadFadeThinker
-//
-// Loads a fade_t thinker
-//
 static inline thinker_t* LoadFadeThinker(actionf_p1 thinker)
 {
 	sector_t *ss;
@@ -3411,10 +3094,6 @@ static inline thinker_t* LoadFadeThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-// LoadFadeColormapThinker
-//
-// Loads a fadecolormap_t from a save game
-//
 static inline thinker_t* LoadFadeColormapThinker(actionf_p1 thinker)
 {
 	fadecolormap_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3430,11 +3109,6 @@ static inline thinker_t* LoadFadeColormapThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadPlaneDisplaceThinker
-//
-// Loads a planedisplace_t thinker
-//
 static inline thinker_t* LoadPlaneDisplaceThinker(actionf_p1 thinker)
 {
 	planedisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3448,7 +3122,6 @@ static inline thinker_t* LoadPlaneDisplaceThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-/// Save a dynamic slope thinker.
 static inline thinker_t* LoadDynamicSlopeThinker(actionf_p1 thinker)
 {
 	dynplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
@@ -3464,12 +3137,6 @@ static inline thinker_t* LoadDynamicSlopeThinker(actionf_p1 thinker)
 }
 
 #ifdef POLYOBJECTS
-
-//
-// LoadPolyrotateThinker
-//
-// Loads a polyrotate_t thinker
-//
 static inline thinker_t* LoadPolyrotatetThinker(actionf_p1 thinker)
 {
 	polyrotate_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3480,11 +3147,6 @@ static inline thinker_t* LoadPolyrotatetThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadPolymoveThinker
-//
-// Loads a polymovet_t thinker
-//
 static thinker_t* LoadPolymoveThinker(actionf_p1 thinker)
 {
 	polymove_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3498,11 +3160,6 @@ static thinker_t* LoadPolymoveThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadPolywaypointThinker
-//
-// Loads a polywaypoint_t thinker
-//
 static inline thinker_t* LoadPolywaypointThinker(actionf_p1 thinker)
 {
 	polywaypoint_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3523,11 +3180,6 @@ static inline thinker_t* LoadPolywaypointThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadPolyslidedoorThinker
-//
-// loads a polyslidedoor_t thinker
-//
 static inline thinker_t* LoadPolyslidedoorThinker(actionf_p1 thinker)
 {
 	polyslidedoor_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3548,11 +3200,6 @@ static inline thinker_t* LoadPolyslidedoorThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadPolyswingdoorThinker
-//
-// Loads a polyswingdoor_t thinker
-//
 static inline thinker_t* LoadPolyswingdoorThinker(actionf_p1 thinker)
 {
 	polyswingdoor_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3568,11 +3215,6 @@ static inline thinker_t* LoadPolyswingdoorThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadPolydisplaceThinker
-//
-// Loads a polydisplace_t thinker
-//
 static inline thinker_t* LoadPolydisplaceThinker(actionf_p1 thinker)
 {
 	polydisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3597,11 +3239,6 @@ static inline thinker_t* LoadPolyrotdisplaceThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-//
-// LoadPolyfadeThinker
-//
-// Loads a polyfadet_t thinker
-//
 static thinker_t* LoadPolyfadeThinker(actionf_p1 thinker)
 {
 	polyfade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3618,22 +3255,6 @@ static thinker_t* LoadPolyfadeThinker(actionf_p1 thinker)
 }
 #endif
 
-/*
-//
-// LoadWhatThinker
-//
-// load a what_t thinker
-//
-static inline void LoadWhatThinker(actionf_p1 thinker)
-{
-	what_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
-}
-*/
-
-//
-// P_NetUnArchiveThinkers
-//
 static void P_NetUnArchiveThinkers(void)
 {
 	thinker_t *currentthinker;
@@ -3982,9 +3603,7 @@ static inline void P_UnArchivePolyObjects(void)
 		P_UnArchivePolyObj(&PolyObjects[i]);
 }
 #endif
-//
-// P_FinishMobjs
-//
+
 static inline void P_FinishMobjs(void)
 {
 	thinker_t *currentthinker;
@@ -4093,9 +3712,6 @@ static void P_RelinkPointers(void)
 	}
 }
 
-//
-// P_NetArchiveSpecials
-//
 static inline void P_NetArchiveSpecials(void)
 {
 	size_t i, z;
@@ -4136,9 +3752,6 @@ static inline void P_NetArchiveSpecials(void)
 		WRITEUINT8(save_p, 0x00);
 }
 
-//
-// P_NetUnArchiveSpecials
-//
 static void P_NetUnArchiveSpecials(void)
 {
 	size_t i;
