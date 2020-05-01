@@ -1284,7 +1284,7 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 	INT32 secnum = -1;
 	boolean FOFsector = false;
 
-	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(nobaddies->sourceline->tag, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -1300,7 +1300,7 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			while ((targetsecnum = P_FindSectorFromTag(sec->lines[i]->tag, targetsecnum)) >= 0)
 			{
 				if (T_SectorHasEnemies(&sectors[targetsecnum]))
 					return;
@@ -1395,7 +1395,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 		eachtime->playersOnArea[i] = false;
 	}
 
-	while ((secnum = P_FindSectorFromLineTag(eachtime->sourceline, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(eachtime->sourceline->tag, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -1418,7 +1418,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			while ((targetsecnum = P_FindSectorFromTag(sec->lines[i]->tag, targetsecnum)) >= 0)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -1801,7 +1801,7 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 	sector_t *sec;
 	floormove_t *dofloor;
 
-	while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -2017,7 +2017,7 @@ void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 	elevator_t *elevator;
 
 	// act on all sectors with the same tag as the triggering linedef
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag,secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
