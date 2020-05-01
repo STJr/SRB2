@@ -146,9 +146,7 @@ static float gr_fovlud;
 static angle_t gr_aimingangle;
 static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox);
 
-// render stats
-int rs_prevframetime = 0;
-int rs_rendercalltime = 0;
+// Render stats
 int rs_bsptime = 0;
 int rs_nodetime = 0;
 int rs_nodesorttime = 0;
@@ -162,7 +160,6 @@ int rs_numsprites = 0;
 int rs_numpolyobjects = 0;
 
 //int rs_posttime = 0;
-//int rs_swaptime = 0;
 
 
 // ==========================================================================
@@ -6165,11 +6162,6 @@ consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotro
 
 consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-// render stats
-// for now have it in here in the hw code
-// could have it somewhere else since renderstats could also be a software rendering thing
-consvar_t cv_renderstats = {"renderstats", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static void CV_grfiltermode_OnChange(void)
 {

@@ -98,6 +98,11 @@ lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 // Hack to support extra boom colormaps.
 extracolormap_t *extra_colormaps = NULL;
 
+// Render stats
+int rs_prevframetime = 0;
+int rs_rendercalltime = 0;
+int rs_swaptime = 0;
+
 static CV_PossibleValue_t drawdist_cons_t[] = {
 	{256, "256"},	{512, "512"},	{768, "768"},
 	{1024, "1024"},	{1536, "1536"},	{2048, "2048"},
@@ -147,6 +152,8 @@ consvar_t cv_fov = {"fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange, 0, 
 consvar_t cv_homremoval = {"homremoval", "No", CV_SAVE, homremoval_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_maxportals = {"maxportals", "2", CV_SAVE, maxportals_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_renderstats = {"renderstats", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 void SplitScreen_OnChange(void)
 {

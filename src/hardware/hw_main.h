@@ -105,11 +105,6 @@ extern fixed_t *hwbbox;
 extern FTransform atransform;
 
 
-// render stats console toggle
-extern consvar_t cv_renderstats;
-// render stats time counter variables
-extern int rs_prevframetime;// time when previous frame was rendered
-extern int rs_rendercalltime;
 extern int rs_bsptime;
 extern int rs_nodetime;
 extern int rs_nodesorttime;
@@ -118,7 +113,6 @@ extern int rs_spritesorttime;
 extern int rs_spritedrawtime;
 
 //extern int rs_posttime;
-//extern int rs_swaptime;
 
 extern int rs_numdrawnodes;
 extern int rs_numbspcalls;
