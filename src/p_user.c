@@ -2532,6 +2532,72 @@ boolean P_InQuicksand(mobj_t *mo) // Returns true if you are in quicksand
 	return false; // No sand here, Captain!
 }
 
+static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
+{
+	if (!(rover->flags & FF_EXISTS))
+		return false;
+
+	if (!(rover->flags & FF_BUSTUP))
+		return false;
+
+	/*if (rover->master->frontsector->crumblestate != CRUMBLE_NONE)
+		return false;*/
+
+	// If it's an FF_SHATTER, you can break it just by touching it.
+	if (rover->flags & FF_SHATTER)
+		return true;
+
+	// If it's an FF_SPINBUST, you can break it if you are in your spinning frames
+	// (either from jumping or spindashing).
+	if (rover->flags & FF_SPINBUST)
+	{
+		if ((player->pflags & PF_SPINNING) && !(player->pflags & PF_STARTDASH))
+			return true;
+
+		if ((player->pflags & PF_JUMPED) && !(player->pflags & PF_NOJUMPDAMAGE))
+			return true;
+	}
+
+	// Strong abilities can break even FF_STRONGBUST.
+	if (player->charability == CA_GLIDEANDCLIMB)
+		return true;
+
+	if (player->pflags & PF_BOUNCING)
+		return true;
+
+	if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+		return true;
+
+	if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+		return true;
+
+	// Everyone else is out of luck.
+	if (rover->flags & FF_STRONGBUST)
+		return false;
+
+	// Spinning (and not jumping)
+	if ((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
+		return true;
+
+	// Super
+	if (player->powers[pw_super])
+		return true;
+
+	// Dashmode
+	if ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE) && player->dashmode >= DASHMODE_THRESHOLD)
+		return true;
+
+	// NiGHTS drill
+	if (player->pflags & PF_DRILLING)
+		return true;
+
+	// Recording for Metal Sonic
+	if (metalrecording)
+		return true;
+
+	return false;
+}
+
 static void P_CheckBustableBlocks(player_t *player)
 {
 	msecnode_t *node;
@@ -2554,121 +2620,83 @@ static void P_CheckBustableBlocks(player_t *player)
 
 	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
+		ffloor_t *rover;
+		fixed_t topheight, bottomheight;
+
 		if (!node->m_sector)
 			break;
 
-		if (node->m_sector->ffloors)
+		if (!node->m_sector->ffloors)
+			continue;
+
+		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
-			ffloor_t *rover;
-			fixed_t topheight, bottomheight;
+			if (!P_PlayerCanBust(player, rover))
+				continue;
 
-			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
+			topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+			bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+
+			if (((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
+			|| ((P_MobjFlip(player->mo)*player->mo->momz < 0) && (player->pflags & PF_BOUNCING || ((player->charability2 == CA2_MELEE) && (player->panim == PA_ABILITY2)))))
 			{
-				if (!(rover->flags & FF_EXISTS)) continue;
-
-				if ((rover->flags & FF_BUSTUP)/* && rover->master->frontsector->crumblestate == CRUMBLE_NONE*/)
-				{
-					// If it's an FF_SHATTER, you can break it just by touching it.
-					if (rover->flags & FF_SHATTER)
-						goto bust;
-
-					// If it's an FF_SPINBUST, you can break it if you are in your spinning frames
-					// (either from jumping or spindashing).
-					if (rover->flags & FF_SPINBUST
-						&& (((player->pflags & PF_SPINNING) && !(player->pflags & PF_STARTDASH))
-							|| (player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE))))
-						goto bust;
-
-					// You can always break it if you have CA_GLIDEANDCLIMB
-					// or if you are bouncing on it
-					// or you are using CA_TWINSPIN/CA2_MELEE.
-					if (player->charability == CA_GLIDEANDCLIMB
-						|| (player->pflags & PF_BOUNCING)
-						|| ((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
-						|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
-						goto bust;
-
-					if (rover->flags & FF_STRONGBUST)
-						continue;
-
-					// If it's not an FF_STRONGBUST, you can break if you are spinning (and not jumping)
-					// or you are super
-					// or you are in dashmode with SF_DASHMODE
-					// or you are drilling in NiGHTS
-					// or you are recording for Metal Sonic
-					if (!((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
-						&& !(player->powers[pw_super])
-						&& !(((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)) && (player->dashmode >= DASHMODE_THRESHOLD))
-						&& !(player->pflags & PF_DRILLING)
-						&& !metalrecording)
-						continue;
-
-				bust:
-					topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
-					bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
-
-					if (((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
-					|| ((P_MobjFlip(player->mo)*player->mo->momz < 0) && (player->pflags & PF_BOUNCING || ((player->charability2 == CA2_MELEE) && (player->panim == PA_ABILITY2)))))
-					{
-						topheight -= player->mo->momz;
-						bottomheight -= player->mo->momz;
-					}
-
-					// Height checks
-					if (rover->flags & FF_SHATTERBOTTOM)
-					{
-						if (player->mo->z+player->mo->momz + player->mo->height < bottomheight)
-							continue;
-
-						if (player->mo->z+player->mo->height > bottomheight)
-							continue;
-					}
-					else if (rover->flags & FF_SPINBUST)
-					{
-						if (player->mo->z+player->mo->momz > topheight)
-							continue;
-
-						if (player->mo->z + player->mo->height < bottomheight)
-							continue;
-					}
-					else if (rover->flags & FF_SHATTER)
-					{
-						if (player->mo->z + player->mo->momz > topheight)
-							continue;
-
-						if (player->mo->z+player->mo->momz + player->mo->height < bottomheight)
-							continue;
-					}
-					else
-					{
-						if (player->mo->z >= topheight)
-							continue;
-
-						if (player->mo->z + player->mo->height < bottomheight)
-							continue;
-					}
-
-					// Impede the player's fall a bit
-					if (((rover->flags & FF_SPINBUST) || (rover->flags & FF_SHATTER)) && player->mo->z >= topheight)
-						player->mo->momz >>= 1;
-					else if (rover->flags & FF_SHATTER)
-					{
-						player->mo->momx >>= 1;
-						player->mo->momy >>= 1;
-					}
-
-					//if (metalrecording)
-					//	G_RecordBustup(rover);
-
-					EV_CrumbleChain(NULL, rover); // node->m_sector
-
-					// Run a linedef executor??
-					if (rover->master->flags & ML_EFFECT5)
-						P_LinedefExecute((INT16)(P_AproxDistance(rover->master->dx, rover->master->dy)>>FRACBITS), player->mo, node->m_sector);
-
-					goto bustupdone;
-				}
+				topheight -= player->mo->momz;
+				bottomheight -= player->mo->momz;
 			}
+
+			// Height checks
+			if (rover->flags & FF_SHATTERBOTTOM)
+			{
+				if (player->mo->z + player->mo->momz + player->mo->height < bottomheight)
+					continue;
+
+				if (player->mo->z + player->mo->height > bottomheight)
+					continue;
+			}
+			else if (rover->flags & FF_SPINBUST)
+			{
+				if (player->mo->z + player->mo->momz > topheight)
+					continue;
+
+				if (player->mo->z + player->mo->height < bottomheight)
+					continue;
+			}
+			else if (rover->flags & FF_SHATTER)
+			{
+				if (player->mo->z + player->mo->momz > topheight)
+					continue;
+
+				if (player->mo->z + player->mo->momz + player->mo->height < bottomheight)
+					continue;
+			}
+			else
+			{
+				if (player->mo->z >= topheight)
+					continue;
+
+				if (player->mo->z + player->mo->height < bottomheight)
+					continue;
+			}
+
+			// Impede the player's fall a bit
+			if (((rover->flags & FF_SPINBUST) || (rover->flags & FF_SHATTER)) && player->mo->z >= topheight)
+				player->mo->momz >>= 1;
+			else if (rover->flags & FF_SHATTER)
+			{
+				player->mo->momx >>= 1;
+				player->mo->momy >>= 1;
+			}
+
+			//if (metalrecording)
+			//	G_RecordBustup(rover);
+
+			EV_CrumbleChain(NULL, rover); // node->m_sector
+
+			// Run a linedef executor??
+			if (rover->master->flags & ML_EFFECT5)
+				P_LinedefExecute((INT16)(P_AproxDistance(rover->master->dx, rover->master->dy)>>FRACBITS), player->mo, node->m_sector);
+
+			goto bustupdone;
 		}
 	}
 bustupdone:
