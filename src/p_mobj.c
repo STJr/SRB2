@@ -1674,70 +1674,74 @@ static void P_PushableCheckBustables(mobj_t *mo)
 
 	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
+		ffloor_t *rover;
+		fixed_t topheight, bottomheight;
+
 		if (!node->m_sector)
 			break;
 
-		if (node->m_sector->ffloors)
+		if (!node->m_sector->ffloors)
+			continue;
+
+		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
-			ffloor_t *rover;
-			fixed_t topheight, bottomheight;
+			if (!(rover->flags & FF_EXISTS))
+				continue;
 
-			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
+			if (!(rover->flags & FF_BUSTUP))
+				continue;
+
+			// Bustable by pushables?
+			if (!(rover->master->args[3] & TMFB_PUSHABLES))
+				continue;
+
+			if (rover->master->frontsector->crumblestate != CRUMBLE_NONE)
+				continue;
+
+			topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
+			bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
+
+			// Height checks
+			if (rover->flags & FF_SHATTERBOTTOM)
 			{
-				if (!(rover->flags & FF_EXISTS)) continue;
+				if (mo->z + mo->momz + mo->height < bottomheight)
+					continue;
 
-				if (!(rover->flags & FF_BUSTUP)) continue;
-
-				// Bustable by pushables?
-				if (!(rover->master->args[3] & TMFB_PUSHABLES)) continue;
-
-				if (rover->master->frontsector->crumblestate == CRUMBLE_NONE)
-				{
-					topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
-					bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
-					// Height checks
-					if (rover->flags & FF_SHATTERBOTTOM)
-					{
-						if (mo->z+mo->momz + mo->height < bottomheight)
-							continue;
-
-						if (mo->z+mo->height > bottomheight)
-							continue;
-					}
-					else if (rover->flags & FF_SPINBUST)
-					{
-						if (mo->z+mo->momz > topheight)
-							continue;
-
-						if (mo->z+mo->height < bottomheight)
-							continue;
-					}
-					else if (rover->flags & FF_SHATTER)
-					{
-						if (mo->z+mo->momz > topheight)
-							continue;
-
-						if (mo->z+mo->momz + mo->height < bottomheight)
-							continue;
-					}
-					else
-					{
-						if (mo->z >= topheight)
-							continue;
-
-						if (mo->z+mo->height < bottomheight)
-							continue;
-					}
-
-					EV_CrumbleChain(NULL, rover); // node->m_sector
-
-					// Run a linedef executor??
-					if (rover->master->args[3] & TMFB_EXECUTOR)
-						P_LinedefExecute((INT16)(rover->master->args[4]), mo, node->m_sector);
-
-					goto bustupdone;
-				}
+				if (mo->z + mo->height > bottomheight)
+					continue;
 			}
+			else if (rover->flags & FF_SPINBUST)
+			{
+				if (mo->z + mo->momz > topheight)
+					continue;
+
+				if (mo->z + mo->height < bottomheight)
+					continue;
+			}
+			else if (rover->flags & FF_SHATTER)
+			{
+				if (mo->z + mo->momz > topheight)
+					continue;
+
+				if (mo->z + mo->momz + mo->height < bottomheight)
+					continue;
+			}
+			else
+			{
+				if (mo->z >= topheight)
+					continue;
+
+				if (mo->z + mo->height < bottomheight)
+					continue;
+			}
+
+			EV_CrumbleChain(NULL, rover); // node->m_sector
+
+			// Run a linedef executor??
+			if (rover->master->args[3] & TMFB_EXECUTOR)
+				P_LinedefExecute((INT16)(rover->master->args[4]), mo, node->m_sector);
+
+			goto bustupdone;
 		}
 	}
 bustupdone:
