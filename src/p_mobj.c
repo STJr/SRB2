@@ -3815,10 +3815,79 @@ static void P_CheckCrumblingPlatforms(mobj_t *mobj)
 	}
 }
 
-static void P_PlayerMobjThinker(mobj_t *mobj)
+static boolean P_MobjTouchesSectorWithWater(mobj_t *mobj)
 {
 	msecnode_t *node;
 
+	for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		ffloor_t *rover;
+
+		if (!node->m_sector->ffloors)
+			continue;
+
+		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
+			if (!(rover->flags & FF_SWIMMABLE))
+				continue;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// Check for floating water platforms and bounce them
+static void P_CheckFloatbobPlatforms(mobj_t *mobj)
+{
+	msecnode_t *node;
+
+	// Can't land on anything if you're not moving downwards
+	if (P_MobjFlip(mobj)*mobj->momz >= 0)
+		return;
+
+	if (!P_MobjTouchesSectorWithWater(mobj))
+		return;
+
+	for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		ffloor_t *rover;
+
+		if (!node->m_sector->ffloors)
+			continue;
+
+		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
+			if (!(rover->flags & FF_FLOATBOB))
+				continue;
+
+
+			if (mobj->eflags & MFE_VERTICALFLIP)
+			{
+				if (abs(*rover->bottomheight - (mobj->z + mobj->height)) > abs(mobj->momz))
+					continue;
+			}
+			else
+			{
+				if (abs(*rover->topheight - mobj->z) > abs(mobj->momz))
+					continue;
+			}
+
+			// Initiate a 'bouncy' elevator function which slowly diminishes.
+			EV_BounceSector(rover->master->frontsector, -mobj->momz, rover->master);
+		}
+	}
+}
+
+static void P_PlayerMobjThinker(mobj_t *mobj)
+{
 	I_Assert(mobj != NULL);
 	I_Assert(mobj->player != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
@@ -3873,54 +3942,8 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 
 	P_CheckCrumblingPlatforms(mobj);
 
-	// Check for floating water platforms and bounce them
-	if (CheckForFloatBob && P_MobjFlip(mobj)*mobj->momz < 0)
-	{
-		boolean thereiswater = false;
-
-		for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
-		{
-			if (node->m_sector->ffloors)
-			{
-				ffloor_t *rover;
-				// Get water boundaries first
-				for (rover = node->m_sector->ffloors; rover; rover = rover->next)
-				{
-					if (!(rover->flags & FF_EXISTS))
-						continue;
-
-					if (rover->flags & FF_SWIMMABLE) // Is there water?
-					{
-						thereiswater = true;
-						break;
-					}
-				}
-			}
-		}
-		if (thereiswater)
-		{
-			for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
-			{
-				if (node->m_sector->ffloors)
-				{
-					ffloor_t *rover;
-					for (rover = node->m_sector->ffloors; rover; rover = rover->next)
-					{
-						if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_FLOATBOB))
-							continue;
-
-						if ((!(mobj->eflags & MFE_VERTICALFLIP) && abs(*rover->topheight-mobj->z) <= abs(mobj->momz)) // The player is landing on the cheese!
-						|| (mobj->eflags & MFE_VERTICALFLIP && abs(*rover->bottomheight-(mobj->z+mobj->height)) <= abs(mobj->momz)))
-						{
-							// Initiate a 'bouncy' elevator function
-							// which slowly diminishes.
-							EV_BounceSector(rover->master->frontsector, -mobj->momz, rover->master);
-						}
-					}
-				}
-			}
-		} // Ugly ugly billions of braces! Argh!
-	}
+	if (CheckForFloatBob)
+		P_CheckFloatbobPlatforms(mobj);
 
 	// always do the gravity bit now, that's simpler
 	// BUT CheckPosition only if wasn't done before.
