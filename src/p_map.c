@@ -3310,9 +3310,139 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 	return false;
 }
 
-//
-// PTR_SlideTraverse
-//
+static boolean PTR_LineIsBlocking(line_t *li)
+{
+	// one-sided linedefs are always solid to sliding movement.
+	if (!li->backsector)
+		return !P_PointOnLineSide(slidemo->x, slidemo->y, li);
+
+	if (!(slidemo->flags & MF_MISSILE))
+	{
+		if (li->flags & ML_IMPASSIBLE)
+			return true;
+
+		if ((slidemo->flags & (MF_ENEMY|MF_BOSS)) && li->flags & ML_BLOCKMONSTERS)
+			return true;
+	}
+
+	// set openrange, opentop, openbottom
+	P_LineOpening(li, slidemo);
+
+	if (openrange < slidemo->height)
+		return true; // doesn't fit
+
+	if (opentop - slidemo->z < slidemo->height)
+		return true; // mobj is too high
+
+	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
+		return true; // too big a step up
+
+	return false;
+}
+
+static void PTR_GlideClimbTraverse(line_t *li)
+{
+	line_t *checkline = li;
+	sector_t *checksector;
+	ffloor_t *rover;
+	fixed_t topheight, bottomheight;
+	boolean fofline = false;
+	INT32 side = P_PointOnLineSide(slidemo->x, slidemo->y, li);
+
+	if (!side && li->backsector)
+		checksector = li->backsector;
+	else
+		checksector = li->frontsector;
+
+	if (checksector->ffloors)
+	{
+		for (rover = checksector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
+				continue;
+
+			topheight = *rover->topheight;
+			bottomheight = *rover->bottomheight;
+
+			if (*rover->t_slope)
+				topheight = P_GetZAt(*rover->t_slope, slidemo->x, slidemo->y);
+			if (*rover->b_slope)
+				bottomheight = P_GetZAt(*rover->b_slope, slidemo->x, slidemo->y);
+
+			if (topheight < slidemo->z)
+				continue;
+
+			if (bottomheight > slidemo->z + slidemo->height)
+				continue;
+
+			// Got this far, so I guess it's climbable. // TODO: Climbing check, also, better method to do this?
+			if (rover->master->flags & ML_TFERLINE)
+			{
+				size_t linenum = li-checksector->lines[0];
+				checkline = rover->master->frontsector->lines[0] + linenum;
+				fofline = true;
+			}
+
+			break;
+		}
+	}
+
+	// see about climbing on the wall
+	if (!(checkline->flags & ML_NOCLIMB) && checkline->special != HORIZONSPECIAL)
+	{
+		boolean canclimb;
+		angle_t climbangle, climbline;
+		INT32 whichside = P_PointOnLineSide(slidemo->x, slidemo->y, li);
+
+		climbangle = climbline = R_PointToAngle2(li->v1->x, li->v1->y, li->v2->x, li->v2->y);
+
+		if (whichside) // on second side?
+			climbline += ANGLE_180;
+
+		climbangle += (ANGLE_90 * (whichside ? -1 : 1));
+
+		canclimb = (li->backsector ? P_IsClimbingValid(slidemo->player, climbangle) : true);
+
+		if (((!slidemo->player->climbing && abs((signed)(slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
+			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbline)) < ANGLE_135))
+			&& canclimb)
+		{
+			slidemo->angle = climbangle;
+			/*if (!demoplayback || P_ControlStyle(slidemo->player) == CS_LMAOGALOG)
+			{
+				if (slidemo->player == &players[consoleplayer])
+					localangle = slidemo->angle;
+				else if (slidemo->player == &players[secondarydisplayplayer])
+					localangle2 = slidemo->angle;
+			}*/
+
+			if (!slidemo->player->climbing)
+			{
+				S_StartSound(slidemo->player->mo, sfx_s3k4a);
+				slidemo->player->climbing = 5;
+			}
+
+			slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED);
+			slidemo->player->glidetime = 0;
+			slidemo->player->secondjump = 0;
+
+			if (slidemo->player->climbing > 1)
+				slidemo->momz = slidemo->momx = slidemo->momy = 0;
+
+			if (fofline)
+				whichside = 0;
+
+			if (!whichside)
+			{
+				slidemo->player->lastsidehit = checkline->sidenum[whichside];
+				slidemo->player->lastlinehit = (INT16)(checkline - lines);
+			}
+
+			P_Thrust(slidemo, slidemo->angle, FixedMul(5*FRACUNIT, slidemo->scale));
+		}
+	}
+}
+
 static boolean PTR_SlideTraverse(intercept_t *in)
 {
 	line_t *li;
@@ -3321,151 +3451,20 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 
 	li = in->d.line;
 
-	// one-sided linedefs are always solid to sliding movement.
-	// one-sided linedef
-	if (!li->backsector)
-	{
-		if (P_PointOnLineSide(slidemo->x, slidemo->y, li))
-			return true; // don't hit the back side
-		goto isblocking;
-	}
+	if (!PTR_LineIsBlocking(li))
+		return true;
 
-	if (!(slidemo->flags & MF_MISSILE))
-	{
-		if (li->flags & ML_IMPASSIBLE)
-			goto isblocking;
-
-		if ((slidemo->flags & (MF_ENEMY|MF_BOSS)) && li->flags & ML_BLOCKMONSTERS)
-			goto isblocking;
-	}
-
-	// set openrange, opentop, openbottom
-	P_LineOpening(li, slidemo);
-
-	if (openrange < slidemo->height)
-		goto isblocking; // doesn't fit
-
-	if (opentop - slidemo->z < slidemo->height)
-		goto isblocking; // mobj is too high
-
-	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
-		goto isblocking; // too big a step up
-
-	// this line doesn't block movement
-	return true;
-
-	// the line does block movement,
+	// the line blocks movement,
 	// see if it is closer than best so far
-isblocking:
 	if (li->polyobj && slidemo->player)
 	{
 		if ((li->polyobj->lines[0]->backsector->flags & SF_TRIGGERSPECIAL_TOUCH) && !(li->polyobj->flags & POF_NOSPECIALS))
 			P_ProcessSpecialSector(slidemo->player, slidemo->subsector->sector, li->polyobj->lines[0]->backsector);
 	}
 
-	if (slidemo->player && (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing)
-		&& slidemo->player->charability == CA_GLIDEANDCLIMB)
-	{
-		line_t *checkline = li;
-		sector_t *checksector;
-		ffloor_t *rover;
-		fixed_t topheight, bottomheight;
-		boolean fofline = false;
-		INT32 side = P_PointOnLineSide(slidemo->x, slidemo->y, li);
-
-		if (!side && li->backsector)
-			checksector = li->backsector;
-		else
-			checksector = li->frontsector;
-
-		if (checksector->ffloors)
-		{
-			for (rover = checksector->ffloors; rover; rover = rover->next)
-			{
-				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
-					continue;
-
-				topheight = *rover->topheight;
-				bottomheight = *rover->bottomheight;
-
-				if (*rover->t_slope)
-					topheight = P_GetZAt(*rover->t_slope, slidemo->x, slidemo->y);
-				if (*rover->b_slope)
-					bottomheight = P_GetZAt(*rover->b_slope, slidemo->x, slidemo->y);
-
-				if (topheight < slidemo->z)
-					continue;
-
-				if (bottomheight > slidemo->z + slidemo->height)
-					continue;
-
-				// Got this far, so I guess it's climbable. // TODO: Climbing check, also, better method to do this?
-				if (rover->master->flags & ML_TFERLINE)
-				{
-					size_t linenum = li-checksector->lines[0];
-					checkline = rover->master->frontsector->lines[0] + linenum;
-					fofline = true;
-				}
-
-				break;
-			}
-		}
-
-		// see about climbing on the wall
-		if (!(checkline->flags & ML_NOCLIMB) && checkline->special != HORIZONSPECIAL)
-		{
-			boolean canclimb;
-			angle_t climbangle, climbline;
-			INT32 whichside = P_PointOnLineSide(slidemo->x, slidemo->y, li);
-
-			climbangle = climbline = R_PointToAngle2(li->v1->x, li->v1->y, li->v2->x, li->v2->y);
-
-			if (whichside) // on second side?
-				climbline += ANGLE_180;
-
-			climbangle += (ANGLE_90 * (whichside ? -1 : 1));
-
-			canclimb = (li->backsector ? P_IsClimbingValid(slidemo->player, climbangle) : true);
-
-			if (((!slidemo->player->climbing && abs((signed)(slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
-			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbline)) < ANGLE_135))
-			&& canclimb)
-			{
-				slidemo->angle = climbangle;
-				/*if (!demoplayback || P_ControlStyle(slidemo->player) == CS_LMAOGALOG)
-				{
-					if (slidemo->player == &players[consoleplayer])
-						localangle = slidemo->angle;
-					else if (slidemo->player == &players[secondarydisplayplayer])
-						localangle2 = slidemo->angle;
-				}*/
-
-				if (!slidemo->player->climbing)
-				{
-					S_StartSound(slidemo->player->mo, sfx_s3k4a);
-					slidemo->player->climbing = 5;
-				}
-
-				slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED);
-				slidemo->player->glidetime = 0;
-				slidemo->player->secondjump = 0;
-
-				if (slidemo->player->climbing > 1)
-					slidemo->momz = slidemo->momx = slidemo->momy = 0;
-
-				if (fofline)
-					whichside = 0;
-
-				if (!whichside)
-				{
-					slidemo->player->lastsidehit = checkline->sidenum[whichside];
-					slidemo->player->lastlinehit = (INT16)(checkline - lines);
-				}
-
-				P_Thrust(slidemo, slidemo->angle, FixedMul(5*FRACUNIT, slidemo->scale));
-			}
-		}
-	}
+	if (slidemo->player && slidemo->player->charability == CA_GLIDEANDCLIMB
+		&& (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing))
+		PTR_GlideClimbTraverse(li);
 
 	if (in->frac < bestslidefrac && (!slidemo->player || !slidemo->player->climbing))
 	{
