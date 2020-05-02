@@ -5867,12 +5867,12 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	if (flags & FF_QUICKSAND)
 		CheckForQuicksand = true;
 
-	if ((flags & FF_BUSTUP) || (flags & FF_SHATTER) || (flags & FF_SPINBUST))
+	if (flags & FF_BUSTUP)
 		CheckForBustableBlocks = true;
 
 	if ((flags & FF_MARIO))
 	{
-		if (!(flags & FF_SHATTERBOTTOM)) // Don't change the textures of a brick block, just a question block
+		if (!(flags & FF_GOOWATER)) // Don't change the textures of a brick block, just a question block
 			P_AddBlockThinker(sec2, master);
 		CheckForMarioBlocks = true;
 	}
@@ -6875,7 +6875,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 250: // Mario Block
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO;
 				if (lines[i].args[1] & TMFM_BRICK)
-					ffloorflags |= FF_SHATTERBOTTOM;
+					ffloorflags |= FF_GOOWATER;
 				if (lines[i].args[1] & TMFM_INVISIBLE)
 					ffloorflags &= ~(FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
 
@@ -6891,36 +6891,53 @@ void P_SpawnSpecials(boolean fromnetsave)
 			}
 
 			case 254: // Bustable block
+			{
+				UINT8 busttype = BT_REGULAR;
+				UINT8 bustflags = 0;
+
 				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP;
 
 				//Bustable type
 				switch (lines[i].args[1])
 				{
 					case TMFB_TOUCH:
-						ffloorflags |= FF_SHATTER;
+						busttype = BT_TOUCH;
 						break;
 					case TMFB_SPIN:
-						ffloorflags |= FF_SPINBUST;
+						busttype = BT_SPIN;
+						break;
+					case TMFB_REGULAR:
+						busttype = BT_REGULAR;
 						break;
 					case TMFB_STRONG:
-						ffloorflags |= FF_STRONGBUST;
-						break;
-					default:
+						busttype = BT_STRONG;
 						break;
 				}
 
+				//Translucent?
 				if (lines[i].args[2])
 					ffloorflags |= FF_TRANSLUCENT;
 
+				//Flags
+				if (lines[i].args[3] & TMFB_PUSHABLES)
+					bustflags |= BF_PUSHABLES;
+				if (lines[i].args[3] & TMFB_EXECUTOR)
+					bustflags |= BF_EXECUTOR;
 				if (lines[i].args[3] & TMFB_ONLYBOTTOM)
-					ffloorflags |= FF_SHATTERBOTTOM;
+					bustflags |= BF_ONLYBOTTOM;
 
-				if (!(ffloorflags & FF_SHATTER) || ffloorflags & FF_SHATTERBOTTOM)
+				if (busttype != BT_TOUCH || bustflags & BF_ONLYBOTTOM)
 					ffloorflags |= FF_BLOCKPLAYER;
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
+				{
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, ffloorflags, secthinkers);
+					fflr->busttype = busttype;
+					fflr->bustflags = bustflags;
+					fflr->busttag = lines[i].args[4];
+				}
 				break;
-
+			}
 			case 257: // Quicksand
 				ffloorflags = FF_EXISTS|FF_QUICKSAND|FF_RENDERALL|FF_ALLSIDES|FF_CUTSPRITES;
 				if (!(lines[i].args[1]))

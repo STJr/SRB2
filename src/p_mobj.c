@@ -1691,8 +1691,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 			if (!(rover->flags & FF_BUSTUP))
 				continue;
 
-			// Bustable by pushables?
-			if (!(rover->master->args[3] & TMFB_PUSHABLES))
+			if (!(rover->bustflags & BF_PUSHABLES))
 				continue;
 
 			if (rover->master->frontsector->crumblestate != CRUMBLE_NONE)
@@ -1702,7 +1701,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 			bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
 
 			// Height checks
-			if (rover->flags & FF_SHATTERBOTTOM)
+			if (rover->bustflags & BF_ONLYBOTTOM)
 			{
 				if (mo->z + mo->momz + mo->height < bottomheight)
 					continue;
@@ -1710,36 +1709,42 @@ static void P_PushableCheckBustables(mobj_t *mo)
 				if (mo->z + mo->height > bottomheight)
 					continue;
 			}
-			else if (rover->flags & FF_SPINBUST)
-			{
-				if (mo->z + mo->momz > topheight)
-					continue;
-
-				if (mo->z + mo->height < bottomheight)
-					continue;
-			}
-			else if (rover->flags & FF_SHATTER)
-			{
-				if (mo->z + mo->momz > topheight)
-					continue;
-
-				if (mo->z + mo->momz + mo->height < bottomheight)
-					continue;
-			}
 			else
 			{
-				if (mo->z >= topheight)
-					continue;
+				switch (rover->busttype)
+				{
+				case BT_TOUCH:
+					if (mo->z + mo->momz > topheight)
+						continue;
 
-				if (mo->z + mo->height < bottomheight)
-					continue;
+					if (mo->z + mo->momz + mo->height < bottomheight)
+						continue;
+
+					break;
+				case BT_SPIN:
+					if (mo->z + mo->momz > topheight)
+						continue;
+
+					if (mo->z + mo->height < bottomheight)
+						continue;
+
+					break;
+				default:
+					if (mo->z >= topheight)
+						continue;
+
+					if (mo->z + mo->height < bottomheight)
+						continue;
+
+					break;
+				}
 			}
 
 			EV_CrumbleChain(NULL, rover); // node->m_sector
 
 			// Run a linedef executor??
-			if (rover->master->args[3] & TMFB_EXECUTOR)
-				P_LinedefExecute((INT16)(rover->master->args[4]), mo, node->m_sector);
+			if (rover->bustflags & BF_EXECUTOR)
+				P_LinedefExecute(rover->busttag, mo, node->m_sector);
 
 			goto bustupdone;
 		}
@@ -2831,7 +2836,7 @@ static void P_CheckMarioBlocks(mobj_t *mo)
 			if (*rover->bottomheight != mo->ceilingz)
 				continue;
 
-			if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
+			if (rover->flags & FF_GOOWATER) // Brick block!
 				EV_CrumbleChain(node->m_sector, rover);
 			else // Question block!
 				EV_MarioBlock(rover, node->m_sector, mo);

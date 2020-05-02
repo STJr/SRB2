@@ -137,20 +137,31 @@ typedef enum
 	FF_FLOATBOB          = 0x40000,    ///< Floats on water and bobs if you step on it.
 	FF_NORETURN          = 0x80000,    ///< Used with ::FF_CRUMBLE. Will not return to its original position after falling.
 	FF_CRUMBLE           = 0x100000,   ///< Falls 2 seconds after being stepped on, and randomly brings all touching crumbling 3dfloors down with it, providing their master sectors share the same tag (allows crumble platforms above or below, to also exist).
-	FF_SHATTERBOTTOM     = 0x200000,   ///< Used with ::FF_BUSTUP. Like FF_SHATTER, but only breaks from the bottom. Good for springing up through rubble.
+	FF_GOOWATER          = 0x200000,   ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 	FF_MARIO             = 0x400000,   ///< Acts like a question block when hit from underneath. Goodie spawned at top is determined by master sector.
 	FF_BUSTUP            = 0x800000,   ///< You can spin through/punch this block and it will crumble!
 	FF_QUICKSAND         = 0x1000000,  ///< Quicksand!
 	FF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
 	FF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
 	FF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
-	FF_SHATTER           = 0x8000000,  ///< Used with ::FF_BUSTUP. Bustable on mere touch.
-	FF_SPINBUST          = 0x10000000, ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
-	FF_STRONGBUST        = 0x20000000, ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
 	FF_RIPPLE            = 0x40000000, ///< Ripple the flats
 	FF_COLORMAPONLY      = 0x80000000, ///< Only copy the colormap, not the lightlevel
-	FF_GOOWATER          = FF_SHATTERBOTTOM, ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 } ffloortype_e;
+
+typedef enum
+{
+	BT_TOUCH,
+	BT_SPIN,
+	BT_REGULAR,
+	BT_STRONG,
+} busttype_e;
+
+typedef enum
+{
+	BF_PUSHABLES   = 1,
+	BF_EXECUTOR    = 1<<1,
+	BF_ONLYBOTTOM  = 1<<2,
+} bustflags_e;
 
 typedef struct ffloor_s
 {
@@ -183,6 +194,11 @@ typedef struct ffloor_s
 	INT32 lastlight;
 	INT32 alpha;
 	tic_t norender; // for culling
+
+	// Only relevant for FF_BUSTUP
+	UINT8 busttype;
+	UINT8 bustflags;
+	INT16 busttag;
 
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with

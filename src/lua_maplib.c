@@ -187,6 +187,9 @@ enum ffloor_e {
 	ffloor_next,
 	ffloor_prev,
 	ffloor_alpha,
+	ffloor_busttype,
+	ffloor_bustflags,
+	ffloor_busttag,
 };
 
 static const char *const ffloor_opt[] = {
@@ -205,6 +208,9 @@ static const char *const ffloor_opt[] = {
 	"next",
 	"prev",
 	"alpha",
+	"busttype",
+	"bustflags",
+	"busttag",
 	NULL};
 
 #ifdef HAVE_LUA_SEGS
@@ -1751,6 +1757,15 @@ static int ffloor_get(lua_State *L)
 		return 1;
 	case ffloor_alpha:
 		lua_pushinteger(L, ffloor->alpha);
+		return 1;
+	case ffloor_busttype:
+		lua_pushinteger(L, ffloor->busttype);
+		return 1;
+	case ffloor_bustflags:
+		lua_pushinteger(L, ffloor->bustflags);
+		return 1;
+	case ffloor_busttag:
+		lua_pushinteger(L, ffloor->busttag);
 		return 1;
 	}
 	return 0;

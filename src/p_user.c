@@ -2543,57 +2543,55 @@ static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 	/*if (rover->master->frontsector->crumblestate != CRUMBLE_NONE)
 		return false;*/
 
-	// If it's an FF_SHATTER, you can break it just by touching it.
-	if (rover->flags & FF_SHATTER)
-		return true;
-
-	// If it's an FF_SPINBUST, you can break it if you are in your spinning frames
-	// (either from jumping or spindashing).
-	if (rover->flags & FF_SPINBUST)
+	switch (rover->busttype)
 	{
+	case BT_TOUCH: // Shatters on contact
+		return true;
+	case BT_SPIN: // Can be busted by spinning (either from jumping or spindashing)
 		if ((player->pflags & PF_SPINNING) && !(player->pflags & PF_STARTDASH))
 			return true;
 
 		if ((player->pflags & PF_JUMPED) && !(player->pflags & PF_NOJUMPDAMAGE))
 			return true;
+
+		/* FALLTHRU */
+	case BT_REGULAR:
+		// Spinning (and not jumping)
+		if ((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
+			return true;
+
+		// Super
+		if (player->powers[pw_super])
+			return true;
+
+		// Dashmode
+		if ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE) && player->dashmode >= DASHMODE_THRESHOLD)
+			return true;
+
+		// NiGHTS drill
+		if (player->pflags & PF_DRILLING)
+			return true;
+
+		// Recording for Metal Sonic
+		if (metalrecording)
+			return true;
+
+		/* FALLTHRU */
+	case BT_STRONG: // Requires a "strong ability"
+		if (player->charability == CA_GLIDEANDCLIMB)
+			return true;
+
+		if (player->pflags & PF_BOUNCING)
+			return true;
+
+		if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+			return true;
+
+		if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+			return true;
+
+		break;
 	}
-
-	// Strong abilities can break even FF_STRONGBUST.
-	if (player->charability == CA_GLIDEANDCLIMB)
-		return true;
-
-	if (player->pflags & PF_BOUNCING)
-		return true;
-
-	if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
-		return true;
-
-	if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
-		return true;
-
-	// Everyone else is out of luck.
-	if (rover->flags & FF_STRONGBUST)
-		return false;
-
-	// Spinning (and not jumping)
-	if ((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
-		return true;
-
-	// Super
-	if (player->powers[pw_super])
-		return true;
-
-	// Dashmode
-	if ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE) && player->dashmode >= DASHMODE_THRESHOLD)
-		return true;
-
-	// NiGHTS drill
-	if (player->pflags & PF_DRILLING)
-		return true;
-
-	// Recording for Metal Sonic
-	if (metalrecording)
-		return true;
 
 	return false;
 }
@@ -2645,7 +2643,7 @@ static void P_CheckBustableBlocks(player_t *player)
 			}
 
 			// Height checks
-			if (rover->flags & FF_SHATTERBOTTOM)
+			if (rover->bustflags & BF_ONLYBOTTOM)
 			{
 				if (player->mo->z + player->mo->momz + player->mo->height < bottomheight)
 					continue;
@@ -2653,35 +2651,41 @@ static void P_CheckBustableBlocks(player_t *player)
 				if (player->mo->z + player->mo->height > bottomheight)
 					continue;
 			}
-			else if (rover->flags & FF_SPINBUST)
-			{
-				if (player->mo->z + player->mo->momz > topheight)
-					continue;
-
-				if (player->mo->z + player->mo->height < bottomheight)
-					continue;
-			}
-			else if (rover->flags & FF_SHATTER)
-			{
-				if (player->mo->z + player->mo->momz > topheight)
-					continue;
-
-				if (player->mo->z + player->mo->momz + player->mo->height < bottomheight)
-					continue;
-			}
 			else
 			{
-				if (player->mo->z >= topheight)
-					continue;
+				switch (rover->busttype)
+				{
+				case BT_TOUCH:
+					if (player->mo->z + player->mo->momz > topheight)
+						continue;
 
-				if (player->mo->z + player->mo->height < bottomheight)
-					continue;
+					if (player->mo->z + player->mo->momz + player->mo->height < bottomheight)
+						continue;
+
+					break;
+				case BT_SPIN:
+					if (player->mo->z + player->mo->momz > topheight)
+						continue;
+
+					if (player->mo->z + player->mo->height < bottomheight)
+						continue;
+
+					break;
+				default:
+					if (player->mo->z >= topheight)
+						continue;
+
+					if (player->mo->z + player->mo->height < bottomheight)
+						continue;
+
+					break;
+				}
 			}
 
 			// Impede the player's fall a bit
-			if (((rover->flags & FF_SPINBUST) || (rover->flags & FF_SHATTER)) && player->mo->z >= topheight)
+			if (((rover->busttype == BT_TOUCH) || (rover->busttype == BT_SPIN)) && player->mo->z >= topheight)
 				player->mo->momz >>= 1;
-			else if (rover->flags & FF_SHATTER)
+			else if (rover->busttype == BT_TOUCH)
 			{
 				player->mo->momx >>= 1;
 				player->mo->momy >>= 1;
@@ -2693,8 +2697,8 @@ static void P_CheckBustableBlocks(player_t *player)
 			EV_CrumbleChain(NULL, rover); // node->m_sector
 
 			// Run a linedef executor??
-			if (rover->master->args[3] & TMFB_EXECUTOR)
-				P_LinedefExecute((INT16)(rover->master->args[4]), player->mo, node->m_sector);
+			if (rover->bustflags & BF_EXECUTOR)
+				P_LinedefExecute(rover->busttag, player->mo, node->m_sector);
 
 			goto bustupdone;
 		}
@@ -8669,7 +8673,7 @@ static void P_MovePlayer(player_t *player)
 #endif
 
 	// Look for blocks to bust up
-	// Because of FF_SHATTER, we should look for blocks constantly,
+	// Because of BT_TOUCH, we should look for blocks constantly,
 	// not just when spinning or playing as Knuckles
 	if (CheckForBustableBlocks)
 		P_CheckBustableBlocks(player);
