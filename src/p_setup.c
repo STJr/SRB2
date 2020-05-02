@@ -956,9 +956,7 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->splats = NULL;
 #endif
 	ld->firsttag = ld->nexttag = -1;
-#ifdef POLYOBJECTS
 	ld->polyobj = NULL;
-#endif
 
 	ld->text = NULL;
 	ld->callcount = 0;
@@ -2043,10 +2041,8 @@ static void P_InitializeSeg(seg_t *seg)
 
 	seg->numlights = 0;
 	seg->rlights = NULL;
-#ifdef POLYOBJECTS
 	seg->polyseg = NULL;
 	seg->dontrenderme = false;
-#endif
 }
 
 static void P_LoadSegs(UINT8 *data)
@@ -2409,11 +2405,9 @@ static boolean P_LoadBlockMap(UINT8 *data, size_t count)
 	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 	blockmap = blockmaplump+4;
 
-#ifdef POLYOBJECTS
 	// haleyjd 2/22/06: setup polyobject blockmap
 	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	return true;
 }
 
@@ -2664,11 +2658,9 @@ static void P_CreateBlockMap(void)
 		blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 		blockmap = blockmaplump + 4;
 
-#ifdef POLYOBJECTS
 		// haleyjd 2/22/06: setup polyobject blockmap
 		count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 		polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	}
 }
 

@@ -28,12 +28,6 @@
 #include "r_state.h"
 #include "r_defs.h"
 
-
-#define POLYOBJECTS
-
-
-#ifdef POLYOBJECTS
-
 /*
    Theory behind Polyobjects:
 
@@ -3151,7 +3145,5 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	// action was successful
 	return 1;
 }
-
-#endif // ifdef POLYOBJECTS
 
 // EOF
