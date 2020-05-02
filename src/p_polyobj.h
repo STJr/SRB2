@@ -18,8 +18,6 @@
 #include "p_mobj.h"
 #include "r_defs.h"
 
-// haleyjd: temporary define
-#ifdef POLYOBJECTS
 //
 // Defines
 //
@@ -352,8 +350,6 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *);
 extern polyobj_t *PolyObjects;
 extern INT32 numPolyObjects;
 extern polymaplink_t **polyblocklinks; // polyobject blockmap
-
-#endif // ifdef POLYOBJECTS
 
 #endif
 
