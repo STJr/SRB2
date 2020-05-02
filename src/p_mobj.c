@@ -2798,6 +2798,43 @@ static boolean P_ZMovement(mobj_t *mo)
 	return true;
 }
 
+// Check for "Mario" blocks to hit and bounce them
+static void P_CheckMarioBlocks(mobj_t *mo)
+{
+	msecnode_t *node;
+
+	if (netgame && mo->player->spectator)
+		return;
+
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		ffloor_t *rover;
+
+		if (!node->m_sector->ffloors)
+			continue;
+
+		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
+			if (!(rover->flags & FF_MARIO))
+				continue;
+
+			if (mo->eflags & MFE_VERTICALFLIP)
+				continue; // if you were flipped, your head isn't actually hitting your ceilingz is it?
+
+			if (*rover->bottomheight != mo->ceilingz)
+				continue;
+
+			if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
+				EV_CrumbleChain(node->m_sector, rover);
+			else // Question block!
+				EV_MarioBlock(rover, node->m_sector, mo);
+		}
+	}
+}
+
 static void P_PlayerZMovement(mobj_t *mo)
 {
 	boolean onground;
@@ -3022,39 +3059,10 @@ nightsdone:
 			}
 		}
 
-		// Check for "Mario" blocks to hit and bounce them
 		if (P_MobjFlip(mo)*mo->momz > 0)
 		{
-			msecnode_t *node;
-
-			if (CheckForMarioBlocks && !(netgame && mo->player->spectator)) // Only let the player punch
-			{
-				// Search the touching sectors, from side-to-side...
-				for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-				{
-					ffloor_t *rover;
-					if (!node->m_sector->ffloors)
-						continue;
-
-					for (rover = node->m_sector->ffloors; rover; rover = rover->next)
-					{
-						if (!(rover->flags & FF_EXISTS))
-							continue;
-
-						// Come on, it's time to go...
-						if (rover->flags & FF_MARIO
-						&& !(mo->eflags & MFE_VERTICALFLIP) // if you were flipped, your head isn't actually hitting your ceilingz is it?
-						&& *rover->bottomheight == mo->ceilingz) // The player's head hit the bottom!
-						{
-							// DO THE MARIO!
-							if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
-								EV_CrumbleChain(node->m_sector, rover);
-							else // Question block!
-								EV_MarioBlock(rover, node->m_sector, mo);
-						}
-					}
-				} // Ugly ugly billions of braces! Argh!
-			}
+			if (CheckForMarioBlocks)
+				P_CheckMarioBlocks(mo);
 
 			// hit the ceiling
 			if (mariomode)
