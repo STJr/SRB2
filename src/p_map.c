@@ -3343,16 +3343,10 @@ static boolean PTR_LineIsBlocking(line_t *li)
 static void PTR_GlideClimbTraverse(line_t *li)
 {
 	line_t *checkline = li;
-	sector_t *checksector;
 	ffloor_t *rover;
 	fixed_t topheight, bottomheight;
 	boolean fofline = false;
-	INT32 side = P_PointOnLineSide(slidemo->x, slidemo->y, li);
-
-	if (!side && li->backsector)
-		checksector = li->backsector;
-	else
-		checksector = li->frontsector;
+	sector_t *checksector = (li->backsector && !P_PointOnLineSide(slidemo->x, slidemo->y, li)) ? li->backsector : li->frontsector;
 
 	if (checksector->ffloors)
 	{
