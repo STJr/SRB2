@@ -200,6 +200,10 @@ typedef struct ffloor_s
 	UINT8 bustflags;
 	INT16 busttag;
 
+	// Only relevant for FF_QUICKSAND
+	fixed_t sinkspeed;
+	fixed_t friction;
+
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with
 	INT32 spawnalpha; // alpha the 3D floor spawned with

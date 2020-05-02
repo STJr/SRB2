@@ -2862,7 +2862,7 @@ bouncydone:
 static void P_CheckQuicksand(player_t *player)
 {
 	ffloor_t *rover;
-	fixed_t sinkspeed, friction;
+	fixed_t sinkspeed;
 	fixed_t topheight, bottomheight;
 
 	if (!(player->mo->subsector->sector->ffloors && player->mo->momz <= 0))
@@ -2880,9 +2880,7 @@ static void P_CheckQuicksand(player_t *player)
 
 		if (topheight >= player->mo->z && bottomheight < player->mo->z + player->mo->height)
 		{
-			sinkspeed = abs(rover->master->args[2]) << (FRACBITS - 1);
-
-			sinkspeed = FixedDiv(sinkspeed,TICRATE*FRACUNIT);
+			sinkspeed = FixedDiv(rover->sinkspeed,TICRATE*FRACUNIT);
 
 			if (player->mo->eflags & MFE_VERTICALFLIP)
 			{
@@ -2909,10 +2907,8 @@ static void P_CheckQuicksand(player_t *player)
 					P_PlayerHitFloor(player, false);
 			}
 
-			friction = abs(rover->master->args[3]) << (FRACBITS - 6);
-
-			player->mo->momx = FixedMul(player->mo->momx, friction);
-			player->mo->momy = FixedMul(player->mo->momy, friction);
+			player->mo->momx = FixedMul(player->mo->momx, rover->friction);
+			player->mo->momy = FixedMul(player->mo->momy, rover->friction);
 		}
 	}
 }

@@ -6943,7 +6943,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (!(lines[i].args[1]))
 					ffloorflags |= FF_RIPPLE;
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
+				{
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, ffloorflags, secthinkers);
+					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
+					fflr->fricttion = abs(lines[i].args[3]) << (FRACBITS - 6);
+				}
 				break;
 
 			case 258: // Laser block
