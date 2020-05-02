@@ -7267,6 +7267,73 @@ void P_SpawnSpecials(boolean fromnetsave)
 		}
 	}
 
+	// And another round, this time with all FOFs already created
+	for (i = 0; i < numlines; i++)
+	{
+		switch (lines[i].special)
+		{
+			INT32 s;
+			INT32 l;
+
+			case 264: // Make FOF bustable
+			{
+				UINT8 busttype = BT_REGULAR;
+				UINT8 bustflags = 0;
+
+				if (!udmf)
+					break;
+
+				switch (lines[i].args[1])
+				{
+					case TMFB_TOUCH:
+						busttype = BT_TOUCH;
+						break;
+					case TMFB_SPIN:
+						busttype = BT_SPIN;
+						break;
+					case TMFB_REGULAR:
+						busttype = BT_REGULAR;
+						break;
+					case TMFB_STRONG:
+						busttype = BT_STRONG;
+						break;
+				}
+
+				if (lines[i].args[2] & TMFB_PUSHABLES)
+					bustflags |= BF_PUSHABLES;
+				if (lines[i].args[2] & TMFB_EXECUTOR)
+					bustflags |= BF_EXECUTOR;
+				if (lines[i].args[2] & TMFB_ONLYBOTTOM)
+					bustflags |= BF_ONLYBOTTOM;
+
+				for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+				{
+					if (lines[l].special < 100 || lines[l].special >= 300)
+						continue;
+
+					for (s = -1; (s = P_FindSectorFromTag(lines[l].args[0], s)) >= 0 ;)
+					{
+						ffloor_t *rover;
+
+						for (rover = sectors[s].ffloors; rover; rover = rover->next)
+						{
+							if (rover->master != lines + l)
+								continue;
+
+							rover->flags |= FF_BUSTUP;
+							rover->busttype = busttype;
+							rover->bustflags = bustflags;
+							rover->busttag = lines[i].args[3];
+							CheckForBustableBlocks = true;
+							break;
+						}
+					}
+				}
+				break;
+			}
+		}
+	}
+
 	// Allocate each list
 	for (i = 0; i < numsectors; i++)
 		if(secthinkers[i].thinkers)
