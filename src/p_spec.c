@@ -6136,92 +6136,83 @@ static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsecto
 	elevator->distance = FixedInt(AngleFixed(angle));
 }
 
-static const ffloortype_e laserflags = FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT;
-
 /** Flashes a laser block.
   *
   * \param flash Thinker structure for this laser.
-  * \sa EV_AddLaserThinker
+  * \sa P_AddLaserThinker
   * \author SSNTails <http://www.ssntails.org>
   */
 void T_LaserFlash(laserthink_t *flash)
 {
 	msecnode_t *node;
 	mobj_t *thing;
-	sector_t *sourcesec;
-	ffloor_t *fflr = flash->ffloor;
-	sector_t *sector = flash->sector;
+	INT32 s;
+	ffloor_t *fflr;
+	sector_t *sector;
+	sector_t *sourcesec = flash->sourceline->frontsector;
 	fixed_t top, bottom;
 
-	if (!fflr || !(fflr->flags & FF_EXISTS))
-		return;
-
-	if (leveltime & 2)
-		//fflr->flags |= FF_RENDERALL;
-		fflr->alpha = 0xB0;
-	else
-		//fflr->flags &= ~FF_RENDERALL;
-		fflr->alpha = 0x90;
-
-	sourcesec = fflr->master->frontsector; // Less to type!
-
-	top = (*fflr->t_slope) ? P_GetZAt(*fflr->t_slope, sector->soundorg.x, sector->soundorg.y)
-			: *fflr->topheight;
-	bottom = (*fflr->b_slope) ? P_GetZAt(*fflr->b_slope, sector->soundorg.x, sector->soundorg.y)
-			: *fflr->bottomheight;
-	sector->soundorg.z = (top + bottom)/2;
-	S_StartSound(&sector->soundorg, sfx_laser);
-
-	// Seek out objects to DESTROY! MUAHAHHAHAHAA!!!*cough*
-	for (node = sector->touching_thinglist; node && node->m_thing; node = node->m_thinglist_next)
+	for (s = -1; (s = P_FindSectorFromTag(flash->tag, s)) >= 0 ;)
 	{
-		thing = node->m_thing;
+		sector = &sectors[s];
+		for (fflr = sector->ffloors; fflr; fflr = fflr->next)
+		{
+			if (fflr->master != flash->sourceline)
+				continue;
 
-		if (flash->nobosses && thing->flags & MF_BOSS)
-			continue; // Don't hurt bosses
+			if (!(fflr->flags & FF_EXISTS))
+				break;
 
-		// Don't endlessly kill egg guard shields (or anything else for that matter)
-		if (thing->health <= 0)
-			continue;
+			if (leveltime & 2)
+				//fflr->flags |= FF_RENDERALL;
+				fflr->alpha = 0xB0;
+			else
+				//fflr->flags &= ~FF_RENDERALL;
+				fflr->alpha = 0x90;
 
-		top = P_GetSpecialTopZ(thing, sourcesec, sector);
-		bottom = P_GetSpecialBottomZ(thing, sourcesec, sector);
+			top = (*fflr->t_slope) ? P_GetZAt(*fflr->t_slope, sector->soundorg.x, sector->soundorg.y) : *fflr->topheight;
+			bottom = (*fflr->b_slope) ? P_GetZAt(*fflr->b_slope, sector->soundorg.x, sector->soundorg.y) : *fflr->bottomheight;
+			sector->soundorg.z = (top + bottom)/2;
+			S_StartSound(&sector->soundorg, sfx_laser);
 
-		if (thing->z >= top
-		|| thing->z + thing->height <= bottom)
-			continue;
+			// Seek out objects to DESTROY! MUAHAHHAHAHAA!!!*cough*
+			for (node = sector->touching_thinglist; node && node->m_thing; node = node->m_thinglist_next)
+			{
+				thing = node->m_thing;
 
-		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, NULL, NULL, 1, 0);
-		else if (thing->type == MT_EGGSHIELD)
-			P_KillMobj(thing, NULL, NULL, 0);
+				if (flash->nobosses && thing->flags & MF_BOSS)
+					continue; // Don't hurt bosses
+
+				// Don't endlessly kill egg guard shields (or anything else for that matter)
+				if (thing->health <= 0)
+					continue;
+
+				top = P_GetSpecialTopZ(thing, sourcesec, sector);
+				bottom = P_GetSpecialBottomZ(thing, sourcesec, sector);
+
+				if (thing->z >= top
+				|| thing->z + thing->height <= bottom)
+					continue;
+
+				if (thing->flags & MF_SHOOTABLE)
+					P_DamageMobj(thing, NULL, NULL, 1, 0);
+				else if (thing->type == MT_EGGSHIELD)
+					P_KillMobj(thing, NULL, NULL, 0);
+			}
+
+			break;
+		}
 	}
 }
 
-/** Adds a laser thinker to a 3Dfloor.
-  *
-  * \param fflr      3Dfloor to turn into a laser block.
-  * \param sector      Target sector.
-  * \param secthkiners Lists of thinkers sorted by sector. May be NULL.
-  * \sa T_LaserFlash
-  * \author SSNTails <http://www.ssntails.org>
-  */
-static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *line, thinkerlist_t *secthinkers, boolean nobosses)
+static inline void P_AddLaserThinker(INT16 tag, line_t *line, boolean nobosses)
 {
-	laserthink_t *flash;
-	ffloor_t *fflr = P_AddFakeFloor(sec, sec2, line, laserflags, secthinkers);
-
-	if (!fflr)
-		return;
-
-	flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
+	laserthink_t *flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
 
 	P_AddThinker(THINK_MAIN, &flash->thinker);
 
 	flash->thinker.function.acp1 = (actionf_p1)T_LaserFlash;
-	flash->ffloor = fflr;
-	flash->sector = sec; // For finding mobjs
-	flash->sec = sec2;
+	flash->tag = tag;
 	flash->sourceline = line;
 	flash->nobosses = nobosses;
 }
@@ -7030,11 +7021,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 258: // Laser block
-				sec = sides[*lines[i].sidenum].sector - sectors;
-
-				// No longer totally disrupts netgames
-				for (s = -1; (s = P_FindSectorFromTag(lines[i].tag, s)) >= 0 ;)
-					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers, !!(lines[i].flags & ML_EFFECT1));
+				P_AddLaserThinker(lines[i].tag, lines + i, !!(lines[i].flags & ML_EFFECT1));
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT, secthinkers);
 				break;
 
 			case 259: // Custom FOF
