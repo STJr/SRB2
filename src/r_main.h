@@ -82,6 +82,17 @@ extern int rs_prevframetime;// time when previous frame was rendered
 extern int rs_rendercalltime;
 extern int rs_swaptime;
 
+extern int rs_bsptime;
+
+extern int rs_sw_portaltime;
+extern int rs_sw_planetime;
+extern int rs_sw_maskedtime;
+
+extern int rs_numbspcalls;
+extern int rs_numsprites;
+extern int rs_numdrawnodes;
+extern int rs_numpolyobjects;
+
 //
 // REFRESH - the actual rendering functions.
 //

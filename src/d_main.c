@@ -607,17 +607,25 @@ static void D_Display(void)
 			V_DrawThinString(30, 10, V_MONOSPACE | V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "rtot %d", rs_rendercalltime / divisor);
 			V_DrawThinString(30, 20, V_MONOSPACE | V_YELLOWMAP, s);
-			if (rendermode == render_opengl)// dont show unimplemented stats
+			snprintf(s, sizeof s - 1, "bsp  %d", rs_bsptime / divisor);
+			V_DrawThinString(30, 30, V_MONOSPACE | V_YELLOWMAP, s);
+			snprintf(s, sizeof s - 1, "nbsp %d", rs_numbspcalls);
+			V_DrawThinString(80, 10, V_MONOSPACE | V_BLUEMAP, s);
+			snprintf(s, sizeof s - 1, "nspr %d", rs_numsprites);
+			V_DrawThinString(80, 20, V_MONOSPACE | V_BLUEMAP, s);
+			snprintf(s, sizeof s - 1, "nnod %d", rs_numdrawnodes);
+			V_DrawThinString(80, 30, V_MONOSPACE | V_BLUEMAP, s);
+			snprintf(s, sizeof s - 1, "npob %d", rs_numpolyobjects);
+			V_DrawThinString(80, 40, V_MONOSPACE | V_BLUEMAP, s);
+			if (rendermode == render_opengl) // OpenGL specific stats
 			{
-				snprintf(s, sizeof s - 1, "bsp  %d", rs_bsptime / divisor);
-				V_DrawThinString(30, 30, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "nsrt %d", rs_nodesorttime / divisor);
+				snprintf(s, sizeof s - 1, "nsrt %d", rs_hw_nodesorttime / divisor);
 				V_DrawThinString(30, 40, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ndrw %d", rs_nodedrawtime / divisor);
+				snprintf(s, sizeof s - 1, "ndrw %d", rs_hw_nodedrawtime / divisor);
 				V_DrawThinString(30, 50, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ssrt %d", rs_spritesorttime / divisor);
+				snprintf(s, sizeof s - 1, "ssrt %d", rs_hw_spritesorttime / divisor);
 				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "sdrw %d", rs_spritedrawtime / divisor);
+				snprintf(s, sizeof s - 1, "sdrw %d", rs_hw_spritedrawtime / divisor);
 				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
 				/*snprintf(s, sizeof s - 1, "post %d", rs_posttime / divisor);
 				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);*/
@@ -626,14 +634,6 @@ static void D_Display(void)
 				/*snprintf(s, sizeof s - 1, "test %d", rs_test / divisor);
 				V_DrawThinString(30, 100, V_MONOSPACE | V_YELLOWMAP, s);*/
 
-				snprintf(s, sizeof s - 1, "nbsp %d", rs_numbspcalls);
-				V_DrawThinString(80, 10, V_MONOSPACE | V_BLUEMAP, s);
-				snprintf(s, sizeof s - 1, "nnod %d", rs_numdrawnodes);
-				V_DrawThinString(80, 20, V_MONOSPACE | V_BLUEMAP, s);
-				snprintf(s, sizeof s - 1, "nspr %d", rs_numsprites);
-				V_DrawThinString(80, 30, V_MONOSPACE | V_BLUEMAP, s);
-				snprintf(s, sizeof s - 1, "npob %d", rs_numpolyobjects);
-				V_DrawThinString(80, 40, V_MONOSPACE | V_BLUEMAP, s);
 /*
 				if (cv_enable_batching.value)
 				{
@@ -658,10 +658,16 @@ static void D_Display(void)
 					V_DrawThinString(185, 30, V_MONOSPACE | V_PURPLEMAP, s);
 				}*/
 			}
-			else
+			else // software specific stats
 			{
+				snprintf(s, sizeof s - 1, "prtl %d", rs_sw_portaltime / divisor);
+				V_DrawThinString(30, 40, V_MONOSPACE | V_YELLOWMAP, s);
+				snprintf(s, sizeof s - 1, "plns %d", rs_sw_planetime / divisor);
+				V_DrawThinString(30, 50, V_MONOSPACE | V_YELLOWMAP, s);
+				snprintf(s, sizeof s - 1, "mskd %d", rs_sw_maskedtime / divisor);
+				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
 				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
-				V_DrawThinString(30, 30, V_MONOSPACE | V_YELLOWMAP, s);
+				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
 			}
 		}
 

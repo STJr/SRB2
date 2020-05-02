@@ -147,17 +147,10 @@ static angle_t gr_aimingangle;
 static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox);
 
 // Render stats
-int rs_bsptime = 0;
-int rs_nodetime = 0;
-int rs_nodesorttime = 0;
-int rs_nodedrawtime = 0;
-int rs_spritesorttime = 0;
-int rs_spritedrawtime = 0;
-
-int rs_numdrawnodes = 0;
-int rs_numbspcalls = 0;
-int rs_numsprites = 0;
-int rs_numpolyobjects = 0;
+int rs_hw_nodesorttime = 0;
+int rs_hw_nodedrawtime = 0;
+int rs_hw_spritesorttime = 0;
+int rs_hw_spritedrawtime = 0;
 
 //int rs_posttime = 0;
 
@@ -4794,7 +4787,7 @@ static void HWR_CreateDrawNodes(void)
 	// If true, swap the draw order.
 	boolean shift = false;
 	
-	rs_nodesorttime = I_GetTimeMicros();
+	rs_hw_nodesorttime = I_GetTimeMicros();
 
 	for (i = 0; i < numplanes; i++, p++)
 	{
@@ -4917,9 +4910,9 @@ static void HWR_CreateDrawNodes(void)
 		} //i++
 	} // loop++
 
-	rs_nodesorttime = I_GetTimeMicros() - rs_nodesorttime;
+	rs_hw_nodesorttime = I_GetTimeMicros() - rs_hw_nodesorttime;
 	
-	rs_nodedrawtime = I_GetTimeMicros();
+	rs_hw_nodedrawtime = I_GetTimeMicros();
 
 	// Okay! Let's draw it all! Woo!
 	HWD.pfnSetTransform(&atransform);
@@ -4956,7 +4949,7 @@ static void HWR_CreateDrawNodes(void)
 		}
 	}
 	
-	rs_nodedrawtime = I_GetTimeMicros() - rs_nodedrawtime;
+	rs_hw_nodedrawtime = I_GetTimeMicros() - rs_hw_nodedrawtime;
 
 	numwalls = 0;
 	numplanes = 0;
@@ -6083,12 +6076,12 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 	// Draw MD2 and sprites
 	rs_numsprites = gr_visspritecount;
-	rs_spritesorttime = I_GetTimeMicros();
+	rs_hw_spritesorttime = I_GetTimeMicros();
 	HWR_SortVisSprites();
-	rs_spritesorttime = I_GetTimeMicros() - rs_spritesorttime;
-	rs_spritedrawtime = I_GetTimeMicros();
+	rs_hw_spritesorttime = I_GetTimeMicros() - rs_hw_spritesorttime;
+	rs_hw_spritedrawtime = I_GetTimeMicros();
 	HWR_DrawSprites();
-	rs_spritedrawtime = I_GetTimeMicros() - rs_spritedrawtime;
+	rs_hw_spritedrawtime = I_GetTimeMicros() - rs_hw_spritedrawtime;
 
 #ifdef NEWCORONAS
 	//Hurdler: they must be drawn before translucent planes, what about gl fog?
@@ -6096,8 +6089,8 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 #endif
 
 	rs_numdrawnodes = 0;
-	rs_nodesorttime = 0;
-	rs_nodedrawtime = 0;
+	rs_hw_nodesorttime = 0;
+	rs_hw_nodedrawtime = 0;
 	if (numplanes || numpolyplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
 	{
 		HWR_CreateDrawNodes();

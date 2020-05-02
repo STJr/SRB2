@@ -105,18 +105,12 @@ extern fixed_t *hwbbox;
 extern FTransform atransform;
 
 
-extern int rs_bsptime;
-extern int rs_nodetime;
-extern int rs_nodesorttime;
-extern int rs_nodedrawtime;
-extern int rs_spritesorttime;
-extern int rs_spritedrawtime;
+// Render stats
+extern int rs_hw_nodesorttime;
+extern int rs_hw_nodedrawtime;
+extern int rs_hw_spritesorttime;
+extern int rs_hw_spritedrawtime;
 
 //extern int rs_posttime;
-
-extern int rs_numdrawnodes;
-extern int rs_numbspcalls;
-extern int rs_numsprites;
-extern int rs_numpolyobjects;
 
 #endif
