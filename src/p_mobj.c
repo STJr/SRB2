@@ -1732,8 +1732,8 @@ static void P_PushableCheckBustables(mobj_t *mo)
 					EV_CrumbleChain(NULL, rover); // node->m_sector
 
 					// Run a linedef executor??
-					if (rover->master->flags & ML_EFFECT5)
-						P_LinedefExecute((INT16)(P_AproxDistance(rover->master->dx, rover->master->dy)>>FRACBITS), mo, node->m_sector);
+					if (rover->master->args[3] & TMFB_EXECUTOR)
+						P_LinedefExecute((INT16)(rover->master->args[4]), mo, node->m_sector);
 
 					goto bustupdone;
 				}
