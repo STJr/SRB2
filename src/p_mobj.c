@@ -1741,13 +1741,14 @@ static void P_PushableCheckBustables(mobj_t *mo)
 			if (rover->master->flags & ML_EFFECT5)
 				P_LinedefExecute((INT16)(P_AproxDistance(rover->master->dx, rover->master->dy)>>FRACBITS), mo, node->m_sector);
 
-			P_UnsetThingPosition(mo);
-			mo->x = oldx;
-			mo->y = oldy;
-			P_SetThingPosition(mo);
-			return;
+			goto bustupdone;
 		}
 	}
+bustupdone:
+	P_UnsetThingPosition(mo);
+	mo->x = oldx;
+	mo->y = oldy;
+	P_SetThingPosition(mo);
 }
 
 //
