@@ -3780,9 +3780,41 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 	return false;
 }
 
-//
-// P_PlayerMobjThinker
-//
+static void P_CheckCrumblingPlatforms(mobj_t *mobj)
+{
+	msecnode_t *node;
+
+	if (netgame && mobj->player->spectator)
+		return;
+
+	for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		ffloor_t *rover;
+
+		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
+			if (!(rover->flags & FF_CRUMBLE))
+				continue;
+
+			if (mobj->eflags & MFE_VERTICALFLIP)
+			{
+				if (P_GetSpecialBottomZ(mobj, sectors + rover->secnum, node->m_sector) != mobj->z + mobj->height)
+					continue;
+			}
+			else
+			{
+				if (P_GetSpecialTopZ(mobj, sectors + rover->secnum, node->m_sector) != mobj->z)
+					continue;
+			}
+
+			EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), mobj->player, rover->alpha, !(rover->flags & FF_NORETURN));
+		}
+	}
+}
+
 static void P_PlayerMobjThinker(mobj_t *mobj)
 {
 	msecnode_t *node;
@@ -3839,28 +3871,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	else
 		P_TryMove(mobj, mobj->x, mobj->y, true);
 
-	if (!(netgame && mobj->player->spectator))
-	{
-		// Crumbling platforms
-		for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
-		{
-			fixed_t topheight, bottomheight;
-			ffloor_t *rover;
-
-			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
-			{
-				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_CRUMBLE))
-					continue;
-
-				topheight = P_GetSpecialTopZ(mobj, sectors + rover->secnum, node->m_sector);
-				bottomheight = P_GetSpecialBottomZ(mobj, sectors + rover->secnum, node->m_sector);
-
-				if ((topheight == mobj->z && !(mobj->eflags & MFE_VERTICALFLIP))
-				|| (bottomheight == mobj->z + mobj->height && mobj->eflags & MFE_VERTICALFLIP)) // You nut.
-					EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), mobj->player, rover->alpha, !(rover->flags & FF_NORETURN));
-			}
-		}
-	}
+	P_CheckCrumblingPlatforms(mobj);
 
 	// Check for floating water platforms and bounce them
 	if (CheckForFloatBob && P_MobjFlip(mobj)*mobj->momz < 0)
