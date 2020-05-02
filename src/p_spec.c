@@ -6999,6 +6999,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
+			case 263: // Add laser thinker to FOF
+				if (udmf)
+				{
+					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						P_AddLaserThinker(lines[l].args[0], lines + l, !!(lines[i].args[1]));
+					}
+				}
+				break;
+
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
 			case 302:
 			case 303:
