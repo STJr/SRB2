@@ -152,8 +152,6 @@ int rs_hw_nodedrawtime = 0;
 int rs_hw_spritesorttime = 0;
 int rs_hw_spritedrawtime = 0;
 
-//int rs_posttime = 0;
-
 
 // ==========================================================================
 // Lighting

@@ -111,6 +111,4 @@ extern int rs_hw_nodedrawtime;
 extern int rs_hw_spritesorttime;
 extern int rs_hw_spritedrawtime;
 
-//extern int rs_posttime;
-
 #endif
