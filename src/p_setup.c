@@ -2996,6 +2996,12 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[2] |= TMFC_AIRBOB;
 			if (lines[i].special >= 176 && lines[i].special <= 179)
 				lines[i].args[2] |= TMFC_FLOATBOB;
+
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[1] |= TMFT_DONTBLOCKOTHERS;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[1] |= TMFT_DONTBLOCKPLAYER;
+
 			lines[i].special = 170;
 			break;
 		case 190: // FOF: Rising, solid, opaque, shadowcasting
