@@ -148,6 +148,12 @@ typedef enum
 	FF_COLORMAPONLY      = 0x80000000, ///< Only copy the colormap, not the lightlevel
 } ffloortype_e;
 
+//Binary map format ffloor flags, for backwards compatibility only
+#define BFF_SHATTERBOTTOM 0x200000
+#define BFF_SHATTER       0x8000000
+#define BFF_SPINBUST      0x10000000
+#define BFF_STRONGBUST    0x20000000
+
 typedef enum
 {
 	BT_TOUCH,

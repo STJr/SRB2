@@ -6947,7 +6947,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, ffloorflags, secthinkers);
 					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
-					fflr->fricttion = abs(lines[i].args[3]) << (FRACBITS - 6);
+					fflr->friction = abs(lines[i].args[3]) << (FRACBITS - 6);
 				}
 				break;
 
@@ -6957,13 +6957,39 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 259: // Custom FOF
-				if (lines[i].sidenum[1] != 0xffff)
+				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 				{
-					ffloortype_e fofflags = sides[lines[i].sidenum[1]].toptexture;
-					P_AddFakeFloorsByLine(i, fofflags, secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], secthinkers);
+					if (!udmf) // Ugly backwards compatibility stuff
+					{
+						if (lines[i].args[1] & FF_QUICKSAND)
+						{
+							fflr->sinkspeed = abs(lines[i].dx) >> 1;
+							fflr->friction = abs(lines[i].dy) >> 6;
+						}
+						if (lines[i].args[1] & FF_BUSTUP)
+						{
+							if (lines[i].args[1] & BFF_SHATTER)
+								fflr->busttype = BT_TOUCH;
+							else if (lines[i].args[1] & BFF_SPINBUST)
+								fflr->busttype = BT_SPIN;
+							else if (lines[i].args[1] & BFF_STRONGBUST)
+								fflr->busttype = BT_STRONG;
+							else
+								fflr->busttype = BT_REGULAR;
+
+							if (lines[i].args[1] & BFF_SHATTERBOTTOM)
+								fflr->bustflags |= BF_ONLYBOTTOM;
+							if (lines[i].flags & ML_EFFECT4)
+								fflr->bustflags |= BF_PUSHABLES;
+							if (lines[i].flags & ML_EFFECT5)
+							{
+								fflr->bustflags |= BF_EXECUTOR;
+								fflr->busttag = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+							}
+						}
+					}
 				}
-				else
-					I_Error("Custom FOF (tag %d) found without a linedef back side!", lines[i].tag);
 				break;
 
 			case 260: // Add raise thinker to FOF
@@ -7326,6 +7352,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 								continue;
 
 							rover->flags |= FF_BUSTUP;
+							rover->spawnflags |= FF_BUSTUP;
 							rover->busttype = busttype;
 							rover->bustflags = bustflags;
 							rover->busttag = lines[i].args[3];
@@ -7336,8 +7363,43 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 			}
+
+			case 265: // Make FOF quicksand
+			{
+				if (!udmf)
+					break;
+
+				for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+				{
+					if (lines[l].special < 100 || lines[l].special >= 300)
+						continue;
+
+					for (s = -1; (s = P_FindSectorFromTag(lines[l].args[0], s)) >= 0 ;)
+					{
+						ffloor_t *rover;
+
+						for (rover = sectors[s].ffloors; rover; rover = rover->next)
+						{
+							if (rover->master != lines + l)
+								continue;
+
+							rover->flags |= FF_QUICKSAND;
+							rover->spawnflags |= FF_QUICKSAND;
+							rover->sinkspeed = abs(lines[i].args[1]) << (FRACBITS - 1);
+							rover->friction = abs(lines[i].args[2]) << (FRACBITS - 6);
+							CheckForQuicksand = true;
+							break;
+						}
+					}
+				}
+				break;
+			}
 		}
 	}
+
+
+
+
 
 	// Allocate each list
 	for (i = 0; i < numsectors; i++)
