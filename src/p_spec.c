@@ -6988,14 +6988,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				fixed_t crushspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dy >> 3 : 10*FRACUNIT;
 				fixed_t retractspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dx >> 3 : 2*FRACUNIT;
 				UINT16 sound = (lines[i].flags & ML_EFFECT4) ? sides[lines[i].sidenum[0]].textureoffset >> FRACBITS : sfx_thwomp;
-
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				for (s = -1; (s = P_FindSectorFromTag(lines[i].tag, s)) >= 0 ;)
-				{
-					P_AddThwompThinker(&sectors[sec], lines[i].tag, &lines[i], crushspeed, retractspeed, sound);
-					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
-						FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				}
+				P_AddThwompThinker(lines[i].frontsector, lines[i].tag, &lines[i], crushspeed, retractspeed, sound);
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				break;
 			}
 
