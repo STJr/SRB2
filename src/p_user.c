@@ -5004,7 +5004,7 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 	player->pflags |= PF_THOKKED;
 }
 
-static inline void P_DoTwinSpin(player_t *player)
+static void P_DoTwinSpin(player_t *player)
 {
 	player->pflags &= ~PF_NOJUMPDAMAGE;
 	player->pflags |= P_GetJumpFlags(player) | PF_THOKKED;
