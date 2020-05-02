@@ -3309,17 +3309,6 @@ static void P_ConvertBinaryMap(void)
 		case 908: //Translucent wall (90%)
 			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
 			break;
-		default:
-			// \todo Remove once all FOF types are converted
-			if (lines[i].special >= 100 && lines[i].special < 300)
-			{
-				lines[i].args[0] = lines[i].tag;
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
-				else
-					lines[i].alpha = FRACUNIT/2;
-			}
-			break;
 		}
 	}
 

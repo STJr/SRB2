@@ -5807,13 +5807,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	if (sec2->hasslope)
 		sec->hasslope = true;
 
-	// \todo Remove once all FOFs are adapted
-	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT1)) // Block player only
-		flags &= ~FF_BLOCKOTHERS;
-
-	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT2)) // Block all BUT player
-		flags &= ~FF_BLOCKPLAYER;
-
 	fflr->spawnflags = fflr->flags = flags;
 	fflr->master = master;
 	fflr->norender = INFTICS;
