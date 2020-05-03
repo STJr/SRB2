@@ -2729,122 +2729,109 @@ static void P_CheckBouncySectors(player_t *player)
 
 	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
+		ffloor_t *rover;
+
 		if (!node->m_sector)
 			break;
 
-		if (node->m_sector->ffloors)
+		if (!node->m_sector->ffloors)
+			continue;
+
+		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
-			ffloor_t *rover;
-			boolean top = true;
+			fixed_t bouncestrength;
 			fixed_t topheight, bottomheight;
 
-			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
+			if (!(rover->flags & FF_EXISTS))
+				continue; // FOFs should not be bouncy if they don't even "exist"
+
+			if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 15)
+				continue; // this sector type is required for FOFs to be bouncy
+
+			topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+			bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+
+			if (player->mo->z > topheight)
+				continue;
+
+			if (player->mo->z + player->mo->height < bottomheight)
+				continue;
+
+			bouncestrength = P_AproxDistance(rover->master->dx, rover->master->dy)/100;
+
+			if (oldz < P_GetFOFTopZ(player->mo, node->m_sector, rover, oldx, oldy, NULL)
+					&& oldz + player->mo->height > P_GetFOFBottomZ(player->mo, node->m_sector, rover, oldx, oldy, NULL))
 			{
-				if (!(rover->flags & FF_EXISTS))
-					continue; // FOFs should not be bouncy if they don't even "exist"
+				player->mo->momx = -FixedMul(player->mo->momx,bouncestrength);
+				player->mo->momy = -FixedMul(player->mo->momy,bouncestrength);
 
-				if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 15)
-					continue; // this sector type is required for FOFs to be bouncy
-
-				topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
-				bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
-
-				if (player->mo->z > topheight)
-					continue;
-
-				if (player->mo->z + player->mo->height < bottomheight)
-					continue;
-
-				if (oldz < P_GetFOFTopZ(player->mo, node->m_sector, rover, oldx, oldy, NULL)
-						&& oldz + player->mo->height > P_GetFOFBottomZ(player->mo, node->m_sector, rover, oldx, oldy, NULL))
-					top = false;
-
+				if (player->pflags & PF_SPINNING)
 				{
-					fixed_t linedist;
-
-					linedist = P_AproxDistance(rover->master->v1->x-rover->master->v2->x, rover->master->v1->y-rover->master->v2->y);
-
-					linedist = FixedDiv(linedist,100*FRACUNIT);
-
-					if (top)
-					{
-						fixed_t newmom;
-
-						pslope_t *slope;
-						if (abs(oldz - topheight) < abs(oldz + player->mo->height - bottomheight)) { // Hit top
-							slope = *rover->t_slope;
-						} else { // Hit bottom
-							slope = *rover->b_slope;
-						}
-
-						momentum.x = player->mo->momx;
-						momentum.y = player->mo->momy;
-						momentum.z = player->mo->momz*2;
-
-						if (slope)
-							P_ReverseQuantizeMomentumToSlope(&momentum, slope);
-
-						newmom = momentum.z = -FixedMul(momentum.z,linedist)/2;
-
-						if (abs(newmom) < (linedist*2))
-						{
-							goto bouncydone;
-						}
-
-						if (!(rover->master->flags & ML_BOUNCY))
-						{
-							if (newmom > 0)
-							{
-								if (newmom < 8*FRACUNIT)
-									newmom = 8*FRACUNIT;
-							}
-							else if (newmom > -8*FRACUNIT && newmom != 0)
-								newmom = -8*FRACUNIT;
-						}
-
-						if (newmom > P_GetPlayerHeight(player)/2)
-							newmom = P_GetPlayerHeight(player)/2;
-						else if (newmom < -P_GetPlayerHeight(player)/2)
-							newmom = -P_GetPlayerHeight(player)/2;
-
-						momentum.z = newmom*2;
-
-						if (slope)
-							P_QuantizeMomentumToSlope(&momentum, slope);
-
-						player->mo->momx = momentum.x;
-						player->mo->momy = momentum.y;
-						player->mo->momz = momentum.z/2;
-
-						if (player->pflags & PF_SPINNING)
-						{
-							player->pflags &= ~PF_SPINNING;
-							player->pflags |= P_GetJumpFlags(player);
-							player->pflags |= PF_THOKKED;
-						}
-					}
-					else
-					{
-						player->mo->momx = -FixedMul(player->mo->momx,linedist);
-						player->mo->momy = -FixedMul(player->mo->momy,linedist);
-
-						if (player->pflags & PF_SPINNING)
-						{
-							player->pflags &= ~PF_SPINNING;
-							player->pflags |= P_GetJumpFlags(player);
-							player->pflags |= PF_THOKKED;
-						}
-					}
-
-					if ((player->pflags & PF_SPINNING) && player->speed < FixedMul(1<<FRACBITS, player->mo->scale) && player->mo->momz)
-					{
-						player->pflags &= ~PF_SPINNING;
-						player->pflags |= P_GetJumpFlags(player);
-					}
-
-					goto bouncydone;
+					player->pflags &= ~PF_SPINNING;
+					player->pflags |= P_GetJumpFlags(player);
+					player->pflags |= PF_THOKKED;
 				}
 			}
+			else
+			{
+				fixed_t newmom;
+				pslope_t *slope = (abs(oldz - topheight) < abs(oldz + player->mo->height - bottomheight)) ? *rover->t_slope : *rover->b_slope;
+
+				momentum.x = player->mo->momx;
+				momentum.y = player->mo->momy;
+				momentum.z = player->mo->momz*2;
+
+				if (slope)
+					P_ReverseQuantizeMomentumToSlope(&momentum, slope);
+
+				newmom = momentum.z = -FixedMul(momentum.z,bouncestrength)/2;
+
+				if (abs(newmom) < (bouncestrength*2))
+					goto bouncydone;
+
+				if (!(rover->master->flags & ML_BOUNCY))
+				{
+					if (newmom > 0)
+					{
+						if (newmom < 8*FRACUNIT)
+							newmom = 8*FRACUNIT;
+					}
+					else if (newmom < 0)
+					{
+						if (newmom > -8*FRACUNIT)
+							newmom = -8*FRACUNIT;
+					}
+				}
+
+				if (newmom > P_GetPlayerHeight(player)/2)
+					newmom = P_GetPlayerHeight(player)/2;
+				else if (newmom < -P_GetPlayerHeight(player)/2)
+					newmom = -P_GetPlayerHeight(player)/2;
+
+				momentum.z = newmom*2;
+
+				if (slope)
+					P_QuantizeMomentumToSlope(&momentum, slope);
+
+				player->mo->momx = momentum.x;
+				player->mo->momy = momentum.y;
+				player->mo->momz = momentum.z/2;
+
+				if (player->pflags & PF_SPINNING)
+				{
+					player->pflags &= ~PF_SPINNING;
+					player->pflags |= P_GetJumpFlags(player);
+					player->pflags |= PF_THOKKED;
+				}
+			}
+
+			if ((player->pflags & PF_SPINNING) && player->speed < FixedMul(1<<FRACBITS, player->mo->scale) && player->mo->momz)
+			{
+				player->pflags &= ~PF_SPINNING;
+				player->pflags |= P_GetJumpFlags(player);
+			}
+
+			goto bouncydone;
 		}
 	}
 bouncydone:
