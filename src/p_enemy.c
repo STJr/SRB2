@@ -13288,8 +13288,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 	if (!player)
 		return true;
 
-	if (abs(thing->x - dustdevil->x) > dustdevil->radius || abs(thing->y - dustdevil->y) > dustdevil->radius)
+	if (abs(thing->x - dustdevil->x) > dustdevil->radius || abs(thing->y - dustdevil->y) > dustdevil->radius){
 		return true;
+	}
 
 	if (thing->z + thing->height >= dustdevil->z && dustdevil->z + dustdevil->height >= thing->z) {
 		fixed_t pos = thing->z - dustdevil->z;
