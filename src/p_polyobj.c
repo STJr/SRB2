@@ -230,36 +230,38 @@ boolean P_BBoxInsidePolyobj(polyobj_t *po, fixed_t *bbox)
 // Finds the 'polyobject settings' linedef for a polyobject
 // the polyobject's id should be set as its tag
 //
-void Polyobj_GetInfo(INT16 poid, INT32 *poflags, INT32 *parentID, INT32 *potrans)
+static void Polyobj_GetInfo(polyobj_t *po)
 {
-	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, poid, -1);
+	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, po->id, -1);
 
 	if (i == -1)
 		return; // no extra settings to apply, let's leave it
 
-	if (parentID)
-		*parentID = lines[i].frontsector->special;
+	po->parent = lines[i].frontsector->special;
+	if (po->parent == po->id) // do not allow a self-reference
+		po->parent = -1;
 
-	if (potrans)
-		*potrans = (lines[i].frontsector->floorheight>>FRACBITS) / 100;
+	po->translucency = (lines[i].frontsector->floorheight>>FRACBITS) / 100;
+
+	po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 
 	if (lines[i].flags & ML_EFFECT1)
-		*poflags |= POF_ONESIDE;
+		po->flags |= POF_ONESIDE;
 
 	if (lines[i].flags & ML_EFFECT2)
-		*poflags &= ~POF_SOLID;
+		po->flags &= ~POF_SOLID;
 
 	if (lines[i].flags & ML_EFFECT3)
-		*poflags |= POF_PUSHABLESTOP;
+		po->flags |= POF_PUSHABLESTOP;
 
 	if (lines[i].flags & ML_EFFECT4)
-		*poflags |= POF_RENDERPLANES;
+		po->flags |= POF_RENDERPLANES;
 
 	/*if (lines[i].flags & ML_EFFECT5)
-		*poflags &= ~POF_CLIPPLANES;*/
+		po->flags &= ~POF_CLIPPLANES;*/
 
 	if (lines[i].flags & ML_NOCLIMB) // Has a linedef executor
-		*poflags |= POF_LDEXEC;
+		po->flags |= POF_LDEXEC;
 }
 
 // Reallocating array maintenance
@@ -526,8 +528,6 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 	for (i = 0; i < numsegs; ++i)
 	{
 		seg_t *seg = &segs[i];
-		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
-		INT32 parentID = 0, potrans = 0;
 
 		if (seg->glseg)
 			continue;
@@ -541,17 +541,13 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		if (seg->linedef->tag != po->id)
 			continue;
 
-		Polyobj_GetInfo(po->id, &poflags, &parentID, &potrans); // apply extra settings if they exist!
+		Polyobj_GetInfo(po); // apply extra settings if they exist!
 
 		// save original flags and translucency to reference later for netgames!
-		po->spawnflags = po->flags = poflags;
-		po->spawntrans = po->translucency = potrans;
+		po->spawnflags = po->flags;
+		po->spawntrans = po->translucency;
 
 		Polyobj_findSegs(po, seg);
-		po->parent = parentID;
-		if (po->parent == po->id) // do not allow a self-reference
-			po->parent = -1;
-		// TODO: sound sequence is in args[2]
 		break;
 	}
 
