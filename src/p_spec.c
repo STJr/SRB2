@@ -6617,6 +6617,67 @@ void P_SpawnSpecials(boolean fromnetsave)
 					P_AddPlaneDisplaceThinker(pd_both, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
+			case 70: // Add raise thinker to FOF
+				if (udmf)
+				{
+					fixed_t destheight = lines[i].args[2] << FRACBITS;
+					fixed_t startheight, topheight, bottomheight;
+
+					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						startheight = lines[l].frontsector->ceilingheight;
+						topheight = max(startheight, destheight);
+						bottomheight = min(startheight, destheight);
+
+						P_AddRaiseThinker(lines[l].frontsector, lines[l].args[0], lines[i].args[1] << FRACBITS, topheight, bottomheight, (destheight < startheight), !!(lines[i].args[3]));
+					}
+				}
+				break;
+
+			case 71: // Add air bob thinker to FOF
+				if (udmf)
+				{
+					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						P_AddAirbob(lines[l].frontsector, lines[l].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
+					}
+				}
+				break;
+
+			case 72: // Add thwomp thinker to FOF
+				if (udmf)
+				{
+					UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
+
+					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						P_AddThwompThinker(lines[l].frontsector, lines[l].args[0], &lines[l], lines[i].args[1] << FRACBITS, lines[i].args[2] << FRACBITS, sound);
+					}
+				}
+				break;
+
+			case 73: // Add laser thinker to FOF
+				if (udmf)
+				{
+					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						P_AddLaserThinker(lines[l].args[0], lines + l, !!(lines[i].args[1]));
+					}
+				}
+				break;
+
 			case 100: // FOF (solid)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
@@ -6985,67 +7046,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
-			case 260: // Add raise thinker to FOF
-				if (udmf)
-				{
-					fixed_t destheight = lines[i].args[2] << FRACBITS;
-					fixed_t startheight, topheight, bottomheight;
-
-					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
-					{
-						if (lines[l].special < 100 || lines[l].special >= 300)
-							continue;
-
-						startheight = lines[l].frontsector->ceilingheight;
-						topheight = max(startheight, destheight);
-						bottomheight = min(startheight, destheight);
-
-						P_AddRaiseThinker(lines[l].frontsector, lines[l].args[0], lines[i].args[1] << FRACBITS, topheight, bottomheight, (destheight < startheight), !!(lines[i].args[3]));
-					}
-				}
-				break;
-
-			case 261: // Add air bob thinker to FOF
-				if (udmf)
-				{
-					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
-					{
-						if (lines[l].special < 100 || lines[l].special >= 300)
-							continue;
-
-						P_AddAirbob(lines[l].frontsector, lines[l].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
-					}
-				}
-				break;
-
-			case 262: // Add thwomp thinker to FOF
-				if (udmf)
-				{
-					UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
-
-					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
-					{
-						if (lines[l].special < 100 || lines[l].special >= 300)
-							continue;
-
-						P_AddThwompThinker(lines[l].frontsector, lines[l].args[0], &lines[l], lines[i].args[1] << FRACBITS, lines[i].args[2] << FRACBITS, sound);
-					}
-				}
-				break;
-
-			case 263: // Add laser thinker to FOF
-				if (udmf)
-				{
-					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
-					{
-						if (lines[l].special < 100 || lines[l].special >= 300)
-							continue;
-
-						P_AddLaserThinker(lines[l].args[0], lines + l, !!(lines[i].args[1]));
-					}
-				}
-				break;
-
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
 			case 302:
 			case 303:
@@ -7299,7 +7299,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			INT32 s;
 			INT32 l;
 
-			case 264: // Make FOF bustable
+			case 74: // Make FOF bustable
 			{
 				UINT8 busttype = BT_REGULAR;
 				UINT8 bustflags = 0;
@@ -7357,7 +7357,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 			}
 
-			case 265: // Make FOF quicksand
+			case 75: // Make FOF quicksand
 			{
 				if (!udmf)
 					break;
