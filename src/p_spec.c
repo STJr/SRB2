@@ -4036,6 +4036,23 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 465: // Set linedef executor delay
+			{
+				INT32 linenum;
+
+				if (!udmf)
+					break;
+
+				for (linenum = -1; (linenum = P_FindLineFromTag(line->args[0], linenum)) >= 0 ;)
+				{
+					if (line->args[2])
+						lines[linenum].executordelay += line->args[1];
+					else
+						lines[linenum].executordelay = line->args[1];
+				}
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
