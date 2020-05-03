@@ -1033,6 +1033,7 @@ static void P_LoadLinedefs(UINT8 *data)
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
+		ld->executordelay = 0;
 		P_SetLinedefV1(i, SHORT(mld->v1));
 		P_SetLinedefV2(i, SHORT(mld->v2));
 
@@ -1504,6 +1505,8 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].sidenum[1] = atol(val);
 	else if (fastcmp(param, "alpha"))
 		lines[i].alpha = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "executordelay"))
+		lines[i].executordelay = atol(val);
 
 	// Flags
 	else if (fastcmp(param, "blocking") && fastcmp("true", val))
@@ -1739,6 +1742,7 @@ static void P_LoadTextmap(void)
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
+		ld->executordelay = 0;
 		ld->sidenum[0] = 0xffff;
 		ld->sidenum[1] = 0xffff;
 
@@ -2951,6 +2955,15 @@ static void P_ConvertBinaryMap(void)
 			break;
 		default:
 			break;
+		}
+
+		//Linedef executor delay
+		if (lines[i].special >= 400 && lines[i].special < 500)
+		{
+			//Dummy value to indicate that this executor is delayed.
+			//The real value is taken from the back sector at runtime.
+			if (lines[i].flags & ML_DONTPEGTOP)
+				lines[i].executordelay = 1;
 		}
 	}
 

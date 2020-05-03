@@ -91,6 +91,7 @@ enum line_e {
 	line_frontside,
 	line_backside,
 	line_alpha,
+	line_executordelay,
 	line_slopetype,
 	line_frontsector,
 	line_backsector,
@@ -115,6 +116,7 @@ static const char *const line_opt[] = {
 	"frontside",
 	"backside",
 	"alpha",
+	"executordelay",
 	"slopetype",
 	"frontsector",
 	"backsector",
@@ -791,6 +793,9 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_alpha:
 		lua_pushfixed(L, line->alpha);
+		return 1;
+	case line_executordelay:
+		lua_pushinteger(L, line->executordelay);
 		return 1;
 	case line_slopetype:
 		switch(line->slopetype)

@@ -1592,16 +1592,24 @@ void T_ExecutorDelay(executor_t *e)
 static void P_AddExecutorDelay(line_t *line, mobj_t *mobj, sector_t *sector)
 {
 	executor_t *e;
+	INT32 delay;
 
-	if (!line->backsector)
-		I_Error("P_AddExecutorDelay: Line has no backsector!\n");
+	if (udmf)
+		delay = line->executordelay;
+	else
+	{
+		if (!line->backsector)
+			I_Error("P_AddExecutorDelay: Line has no backsector!\n");
+
+		delay = (line->backsector->ceilingheight >> FRACBITS) + (line->backsector->floorheight >> FRACBITS);
+	}
 
 	e = Z_Calloc(sizeof (*e), PU_LEVSPEC, NULL);
 
 	e->thinker.function.acp1 = (actionf_p1)T_ExecutorDelay;
 	e->line = line;
 	e->sector = sector;
-	e->timer = (line->backsector->ceilingheight>>FRACBITS)+(line->backsector->floorheight>>FRACBITS);
+	e->timer = delay;
 	P_SetTarget(&e->caller, mobj); // Use P_SetTarget to make sure the mobj doesn't get freed while we're delaying.
 	P_AddThinker(THINK_MAIN, &e->thinker);
 }
@@ -2002,7 +2010,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (ctlsector->lines[i]->special >= 400
 				&& ctlsector->lines[i]->special < 500)
 			{
-				if (ctlsector->lines[i]->flags & ML_DONTPEGTOP)
+				if (ctlsector->lines[i]->executordelay)
 					P_AddExecutorDelay(ctlsector->lines[i], actor, caller);
 				else
 					P_ProcessLineSpecial(ctlsector->lines[i], actor, caller);
@@ -2090,7 +2098,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (ctlsector->lines[i]->special >= 400
 				&& ctlsector->lines[i]->special < 500)
 			{
-				if (ctlsector->lines[i]->flags & ML_DONTPEGTOP)
+				if (ctlsector->lines[i]->executordelay)
 					P_AddExecutorDelay(ctlsector->lines[i], actor, caller);
 				else
 					P_ProcessLineSpecial(ctlsector->lines[i], actor, caller);
