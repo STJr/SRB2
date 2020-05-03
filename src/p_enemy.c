@@ -2990,6 +2990,19 @@ void A_Boss1Laser(mobj_t *actor)
 	angle_t angle;
 	mobj_t *point;
 	tic_t dur;
+	static const UINT8 LASERCOLORS[] =
+	{
+		SKINCOLOR_SUPERRED3,
+		SKINCOLOR_SUPERRED4,
+		SKINCOLOR_SUPERRED5,
+		SKINCOLOR_FLAME,
+		SKINCOLOR_RED,
+		SKINCOLOR_RED,
+		SKINCOLOR_FLAME,
+		SKINCOLOR_SUPERRED5,
+		SKINCOLOR_SUPERRED4,
+		SKINCOLOR_SUPERRED3,
+	};
 
 	if (LUA_CallAction("A_Boss1Laser", actor))
 		return;
@@ -3064,7 +3077,7 @@ void A_Boss1Laser(mobj_t *actor)
 	point = P_SpawnMobj(x, y, z, locvar1);
 	P_SetTarget(&point->target, actor);
 	point->angle = actor->angle;
-	speed = point->radius*2;
+	speed = point->radius;
 	point->momz = FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT), speed);
 	point->momx = FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), FixedMul(FINECOSINE(point->angle>>ANGLETOFINESHIFT), speed));
 	point->momy = FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), FixedMul(FINESINE(point->angle>>ANGLETOFINESHIFT), speed));
@@ -3073,9 +3086,25 @@ void A_Boss1Laser(mobj_t *actor)
 	{
 		mobj_t *mo = P_SpawnMobj(point->x, point->y, point->z, point->type);
 		mo->angle = point->angle;
+		mo->color = LASERCOLORS[((UINT8)(i - 3*leveltime) >> 2) % sizeof(LASERCOLORS)]; // codeing
 		P_UnsetThingPosition(mo);
 		mo->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
 		P_SetThingPosition(mo);
+
+		if (leveltime & 1 && mo->info->missilestate)
+		{
+			P_SetMobjState(mo, mo->info->missilestate);
+			if (mo->info->meleestate)
+			{
+				mobk_t *mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_PARTICLE);
+				mo2->flags2 |= MF2_LINKDRAW;
+				P_SetTarget(&mo2->tracer, actor);
+				P_SetMobjState(mo2, mo->info->meleestate);
+			}
+		}
+
+		if (leveltime % 4 == 0)
+			P_SpawnGhostMobj(mo);
 
 		x = point->x, y = point->y, z = point->z;
 		if (P_RailThinker(point))
@@ -3085,6 +3114,20 @@ void A_Boss1Laser(mobj_t *actor)
 	floorz = P_FloorzAtPos(x, y, z, mobjinfo[MT_EGGMOBILE_FIRE].height);
 	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1)
 	{
+		for (i = 0; point->info->painstate && i < 3; i++)
+		{
+			mobj_t *spark = P_SpawnMobj(x, y, floorz+1, MT_PARTICLE);
+			spark->flags &= ~MF_NOGRAVITY;
+			spark->angle = FixedAngle(P_RandomKey(360)*FRACUNIT);
+			spark->rollangle = FixedAngle(P_RandomKey(360)*FRACUNIT);
+			spark->color = LASERCOLORS[P_RandomKey(sizeof(LASERCOLORS)/sizeof(UINT8))];
+			spark->colorized = true;
+			spark->fuse = 12;
+			spark->destscale = point->scale >> 3;
+			P_SetObjectMomZ(spark, 8*FRACUNIT, true);
+			P_InstaThrust(spark, spark->angle, 6*FRACUNIT);
+			P_SetMobjState(spark, point->info->painstate);
+		}
 		point = P_SpawnMobj(x, y, floorz+1, MT_EGGMOBILE_FIRE);
 		P_SetTarget(&point->target, actor);
 		point->destscale = 3*FRACUNIT;

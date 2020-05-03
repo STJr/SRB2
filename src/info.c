@@ -2058,7 +2058,10 @@ state_t states[NUMSTATES] =
 
 	{SPR_MISL, FF_FULLBRIGHT, 1, {A_SmokeTrailer}, MT_SMOKE, 0, S_ROCKET}, // S_ROCKET
 
-	{SPR_MISL, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LASER
+	{SPR_MISL, FF_FULLBRIGHT|1, 2, {NULL}, 0, 0, S_NULL}, // S_LASER1
+	{SPR_MISL, FF_FULLBRIGHT|2, 2, {NULL}, 0, 0, S_NULL}, // S_LASER2
+	{SPR_MISL, FF_FULLBRIGHT|3, 2, {NULL}, 0, 0, S_NULL}, // S_LASERFLASH
+	{SPR_MISL, FF_FULLBRIGHT|4, 1, {NULL}, 0, 0, S_LASERSPARK}, // S_LASERSPARK
 
 	{SPR_TORP, 0, 1, {A_SmokeTrailer}, MT_SMOKE, 0, S_TORPEDO}, // S_TORPEDO
 
@@ -9628,17 +9631,17 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_LASER
 		-1,             // doomednum
-		S_LASER,        // spawnstate
+		S_LASER1,       // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_rlaunc,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
-		S_NULL,         // painstate
+		S_LASERSPARK,   // painstate
 		0,              // painchance
 		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
+		S_LASERFLASH,   // meleestate
+		S_LASER2,       // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
