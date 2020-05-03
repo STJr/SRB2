@@ -2028,7 +2028,12 @@ static void P_InitializeSeg(seg_t *seg)
 {
 	if (seg->linedef)
 	{
-		seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
+		UINT16 side = seg->linedef->sidenum[seg->side];
+
+		if (side == 0xffff)
+			I_Error("P_InitializeSeg: Seg %s refers to side %d of linedef %s, which doesn't exist!\n", sizeu1((size_t)(seg - segs)), seg->side, sizeu1((size_t)(seg->linedef - lines)));
+
+		seg->sidedef = &sides[side];
 
 		seg->frontsector = seg->sidedef->sector;
 		seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
@@ -2224,10 +2229,8 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 				segs[k - 1 + ((m == 0) ? subsectors[i].numlines : 0)].v2 = segs[k].v1 = &vertexes[vertexnum];
 
 				READUINT32((*data)); // partner, can be ignored by software renderer
-				if (nodetype == NT_XGL3)
-					READUINT16((*data)); // Line number is 32-bit in XGL3, but we're limited to 16 bits.
 
-				linenum = READUINT16((*data));
+				linenum = (nodetype == NT_XGL3) ? READUINT32((*data)) : READUINT16((*data));
 				if (linenum != 0xFFFF && linenum >= numlines)
 					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), m, linenum);
 				segs[k].glseg = (linenum == 0xFFFF);
