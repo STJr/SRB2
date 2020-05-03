@@ -146,7 +146,17 @@ typedef enum
 	FF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
 	FF_RIPPLE            = 0x8000000,  ///< Ripple the flats
 	FF_COLORMAPONLY      = 0x10000000, ///< Only copy the colormap, not the lightlevel
+	FF_BOUNCY            = 0x20000000, ///< Bounces players
 } ffloortype_e;
+
+typedef enum
+{
+	FS_PUSHABLES   = 0x1, // FF_BUSTABLE: Bustable by pushables
+	FS_EXECUTOR    = 0x2, // FF_BUSTABLE: Trigger linedef executor
+	FS_ONLYBOTTOM  = 0x4, // FF_BUSTABLE: Only bustable from below
+	FS_BUSTMASK    = 0x7,
+	FS_DAMPEN      = 0x8, // FF_BOUNCY:   Dampen bounce
+} ffloorspecialflags_e;
 
 typedef enum
 {
@@ -155,13 +165,6 @@ typedef enum
 	BT_REGULAR,
 	BT_STRONG,
 } busttype_e;
-
-typedef enum
-{
-	BF_PUSHABLES   = 1,
-	BF_EXECUTOR    = 1<<1,
-	BF_ONLYBOTTOM  = 1<<2,
-} bustflags_e;
 
 typedef struct ffloor_s
 {
@@ -195,14 +198,19 @@ typedef struct ffloor_s
 	INT32 alpha;
 	tic_t norender; // for culling
 
+	// Flags that are only relevant for special ffloor types
+	ffloorspecialflags_e specialflags;
+
 	// Only relevant for FF_BUSTUP
 	UINT8 busttype;
-	UINT8 bustflags;
 	INT16 busttag;
 
 	// Only relevant for FF_QUICKSAND
 	fixed_t sinkspeed;
 	fixed_t friction;
+
+	// Only relevant for FF_BOUNCY
+	fixed_t bouncestrength;
 
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with

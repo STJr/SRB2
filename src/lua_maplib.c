@@ -187,11 +187,12 @@ enum ffloor_e {
 	ffloor_next,
 	ffloor_prev,
 	ffloor_alpha,
+	ffloor_specialflags,
 	ffloor_busttype,
-	ffloor_bustflags,
 	ffloor_busttag,
 	ffloor_sinkspeed,
 	ffloor_friction,
+	ffloor_bouncestrength,
 };
 
 static const char *const ffloor_opt[] = {
@@ -210,11 +211,12 @@ static const char *const ffloor_opt[] = {
 	"next",
 	"prev",
 	"alpha",
+	"specialflags",
 	"busttype",
-	"bustflags",
 	"busttag",
 	"sinkspeed",
 	"friction",
+	"bouncestrength",
 	NULL};
 
 #ifdef HAVE_LUA_SEGS
@@ -1762,11 +1764,11 @@ static int ffloor_get(lua_State *L)
 	case ffloor_alpha:
 		lua_pushinteger(L, ffloor->alpha);
 		return 1;
+	case ffloor_specialflags:
+		lua_pushinteger(L, ffloor->specialflags);
+		return 1;
 	case ffloor_busttype:
 		lua_pushinteger(L, ffloor->busttype);
-		return 1;
-	case ffloor_bustflags:
-		lua_pushinteger(L, ffloor->bustflags);
 		return 1;
 	case ffloor_busttag:
 		lua_pushinteger(L, ffloor->busttag);
@@ -1776,6 +1778,9 @@ static int ffloor_get(lua_State *L)
 		return 1;
 	case ffloor_friction:
 		lua_pushfixed(L, ffloor->friction);
+		return 1;
+	case ffloor_bouncestrength:
+		lua_pushfixed(L, ffloor->bouncestrength);
 		return 1;
 	}
 	return 0;

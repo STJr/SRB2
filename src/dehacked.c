@@ -9697,17 +9697,20 @@ struct {
 	{"FF_INTANGABLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
+	{"FF_BOUNCY",FF_BOUNCY},                   ///< Bounces players
+
+	// FOF special flags
+	{"FS_PUSHABLES",FS_PUSHABLES},
+	{"FS_EXECUTOR",FS_EXECUTOR},
+	{"FS_ONLYBOTTOM",FS_ONLYBOTTOM},
+	{"FS_BUSTMASK",FS_BUSTMASK},
+	{"FS_DAMPEN",FS_DAMPEN},
 
 	// Bustable FOF type
 	{"BT_TOUCH",BT_TOUCH},
 	{"BT_SPIN",BT_SPIN},
 	{"BT_REGULAR",BT_REGULAR},
 	{"BT_STRONG",BT_STRONG},
-
-	// Bustable FOF flags
-	{"BF_PUSHABLES",BF_PUSHABLES},
-	{"BF_EXECUTOR",BF_EXECUTOR},
-	{"BF_ONLYBOTTOM",BF_ONLYBOTTOM},
 
 #ifdef HAVE_LUA_SEGS
 	// Node flags

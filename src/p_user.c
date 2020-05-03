@@ -2643,7 +2643,7 @@ static void P_CheckBustableBlocks(player_t *player)
 			}
 
 			// Height checks
-			if (rover->bustflags & BF_ONLYBOTTOM)
+			if (rover->specialflags & FS_ONLYBOTTOM)
 			{
 				if (player->mo->z + player->mo->momz + player->mo->height < bottomheight)
 					continue;
@@ -2697,7 +2697,7 @@ static void P_CheckBustableBlocks(player_t *player)
 			EV_CrumbleChain(NULL, rover); // node->m_sector
 
 			// Run a linedef executor??
-			if (rover->bustflags & BF_EXECUTOR)
+			if (rover->specialflags & FS_EXECUTOR)
 				P_LinedefExecute(rover->busttag, player->mo, node->m_sector);
 
 			goto bustupdone;
@@ -2743,14 +2743,13 @@ static void P_CheckBouncySectors(player_t *player)
 
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
-			fixed_t bouncestrength;
 			fixed_t topheight, bottomheight;
 
 			if (!(rover->flags & FF_EXISTS))
 				continue; // FOFs should not be bouncy if they don't even "exist"
 
-			if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 15)
-				continue; // this sector type is required for FOFs to be bouncy
+			if (!(rover->flags & FF_BOUNCY))
+				continue;
 
 			topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 			bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
@@ -2761,13 +2760,13 @@ static void P_CheckBouncySectors(player_t *player)
 			if (player->mo->z + player->mo->height < bottomheight)
 				continue;
 
-			bouncestrength = P_AproxDistance(rover->master->dx, rover->master->dy)/100;
+			//bouncestrength = P_AproxDistance(rover->master->dx, rover->master->dy)/100;
 
 			if (oldz < P_GetFOFTopZ(player->mo, node->m_sector, rover, oldx, oldy, NULL)
 					&& oldz + player->mo->height > P_GetFOFBottomZ(player->mo, node->m_sector, rover, oldx, oldy, NULL))
 			{
-				player->mo->momx = -FixedMul(player->mo->momx,bouncestrength);
-				player->mo->momy = -FixedMul(player->mo->momy,bouncestrength);
+				player->mo->momx = -FixedMul(player->mo->momx,rover->bouncestrength);
+				player->mo->momy = -FixedMul(player->mo->momy,rover->bouncestrength);
 
 				if (player->pflags & PF_SPINNING)
 				{
@@ -2788,12 +2787,12 @@ static void P_CheckBouncySectors(player_t *player)
 				if (slope)
 					P_ReverseQuantizeMomentumToSlope(&momentum, slope);
 
-				newmom = momentum.z = -FixedMul(momentum.z,bouncestrength)/2;
+				newmom = momentum.z = -FixedMul(momentum.z,rover->bouncestrength)/2;
 
-				if (abs(newmom) < (bouncestrength*2))
+				if (abs(newmom) < (rover->bouncestrength*2))
 					goto bouncydone;
 
-				if (!(rover->master->flags & ML_BOUNCY))
+				if (!(rover->specialflags & FS_DAMPEN))
 				{
 					if (newmom > 0)
 					{

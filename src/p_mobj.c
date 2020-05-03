@@ -1691,7 +1691,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 			if (!(rover->flags & FF_BUSTUP))
 				continue;
 
-			if (!(rover->bustflags & BF_PUSHABLES))
+			if (!(rover->specialflags & FS_PUSHABLES))
 				continue;
 
 			if (rover->master->frontsector->crumblestate != CRUMBLE_NONE)
@@ -1701,7 +1701,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 			bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
 
 			// Height checks
-			if (rover->bustflags & BF_ONLYBOTTOM)
+			if (rover->specialflags & FS_ONLYBOTTOM)
 			{
 				if (mo->z + mo->momz + mo->height < bottomheight)
 					continue;
@@ -1743,7 +1743,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 			EV_CrumbleChain(NULL, rover); // node->m_sector
 
 			// Run a linedef executor??
-			if (rover->bustflags & BF_EXECUTOR)
+			if (rover->specialflags & FS_EXECUTOR)
 				P_LinedefExecute(rover->busttag, mo, node->m_sector);
 
 			goto bustupdone;

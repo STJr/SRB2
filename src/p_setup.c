@@ -2800,6 +2800,12 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (lines[i].special)
 		{
+		case 76: //Make FOF bouncy
+			lines[i].args[0] = lines[i].tag;
+			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			if (lines[i].flags & ML_BOUNCY)
+				lines[i].args[2] = 1;
+			break;
 		case 100: //FOF: solid, opaque, shadowcasting
 		case 101: //FOF: solid, opaque, non-shadowcasting
 		case 102: //FOF: solid, translucent

@@ -4443,7 +4443,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		case 13: // Ramp Sector (Increase step-up/down)
 		case 14: // Non-Ramp Sector (Don't step-down)
-		case 15: // Bouncy Sector (FOF Control Only)
+		case 15: // Unused
 			break;
 	}
 
@@ -6287,6 +6287,36 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
 
 }
 
+static void P_MakeFOFBouncy(line_t *paramline, line_t *masterline)
+{
+	INT32 s;
+
+	if (masterline->special < 100 || masterline->special >= 300)
+		return;
+
+	for (s = -1; (s = P_FindSectorFromTag(masterline->args[0], s)) >= 0 ;)
+	{
+		ffloor_t *rover;
+
+		for (rover = sectors[s].ffloors; rover; rover = rover->next)
+		{
+			if (rover->master != masterline)
+				continue;
+
+			rover->flags |= FF_BOUNCY;
+			rover->spawnflags |= FF_BOUNCY;
+			rover->bouncestrength = (paramline->args[1]<< FRACBITS)/100;
+			if (paramline->args[2])
+				rover->specialflags |= FS_DAMPEN;
+			else
+				rover->specialflags &= ~FS_DAMPEN;
+			CheckForBouncySector = true;
+			break;
+		}
+	}
+
+}
+
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
   * thinkers.
   *
@@ -6326,10 +6356,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				//Spike damage automatically sets SF_TRIGGERSPECIAL_TOUCH.
 				//Yes, this also affects other specials on the same sector. Sorry.
 				sector->flags |= SF_TRIGGERSPECIAL_TOUCH;
-				break;
-
-			case 15: // Bouncy sector
-				CheckForBouncySector = true;
 				break;
 		}
 
@@ -6947,7 +6973,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 254: // Bustable block
 			{
 				UINT8 busttype = BT_REGULAR;
-				UINT8 bustflags = 0;
+				ffloorspecialflags_e bustflags = 0;
 
 				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP;
 
@@ -6974,20 +7000,20 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 				//Flags
 				if (lines[i].args[3] & TMFB_PUSHABLES)
-					bustflags |= BF_PUSHABLES;
+					bustflags |= FS_PUSHABLES;
 				if (lines[i].args[3] & TMFB_EXECUTOR)
-					bustflags |= BF_EXECUTOR;
+					bustflags |= FS_EXECUTOR;
 				if (lines[i].args[3] & TMFB_ONLYBOTTOM)
-					bustflags |= BF_ONLYBOTTOM;
+					bustflags |= FS_ONLYBOTTOM;
 
-				if (busttype != BT_TOUCH || bustflags & BF_ONLYBOTTOM)
+				if (busttype != BT_TOUCH || bustflags & FS_ONLYBOTTOM)
 					ffloorflags |= FF_BLOCKPLAYER;
 
 				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, ffloorflags, secthinkers);
 					fflr->busttype = busttype;
-					fflr->bustflags = bustflags;
+					fflr->specialflags = bustflags;
 					fflr->busttag = lines[i].args[4];
 				}
 				break;
@@ -7040,12 +7066,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 							}
 
 							if (lines[i].args[2] & TMFB_ONLYBOTTOM)
-								fflr->bustflags |= BF_ONLYBOTTOM;
+								fflr->specialflags |= FS_ONLYBOTTOM;
 							if (lines[i].flags & ML_EFFECT4)
-								fflr->bustflags |= BF_PUSHABLES;
+								fflr->specialflags |= FS_PUSHABLES;
 							if (lines[i].flags & ML_EFFECT5)
 							{
-								fflr->bustflags |= BF_EXECUTOR;
+								fflr->specialflags |= FS_EXECUTOR;
 								fflr->busttag = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 							}
 						}
@@ -7309,7 +7335,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 74: // Make FOF bustable
 			{
 				UINT8 busttype = BT_REGULAR;
-				UINT8 bustflags = 0;
+				ffloorspecialflags_e bustflags = 0;
 
 				if (!udmf)
 					break;
@@ -7331,11 +7357,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 
 				if (lines[i].args[2] & TMFB_PUSHABLES)
-					bustflags |= BF_PUSHABLES;
+					bustflags |= FS_PUSHABLES;
 				if (lines[i].args[2] & TMFB_EXECUTOR)
-					bustflags |= BF_EXECUTOR;
+					bustflags |= FS_EXECUTOR;
 				if (lines[i].args[2] & TMFB_ONLYBOTTOM)
-					bustflags |= BF_ONLYBOTTOM;
+					bustflags |= FS_ONLYBOTTOM;
 
 				for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
 				{
@@ -7354,7 +7380,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 							rover->flags |= FF_BUSTUP;
 							rover->spawnflags |= FF_BUSTUP;
 							rover->busttype = busttype;
-							rover->bustflags = bustflags;
+							rover->specialflags &= ~FS_BUSTMASK;
+							rover->specialflags |= bustflags;
 							rover->busttag = lines[i].args[3];
 							CheckForBustableBlocks = true;
 							break;
@@ -7391,6 +7418,22 @@ void P_SpawnSpecials(boolean fromnetsave)
 							break;
 						}
 					}
+				}
+				break;
+			}
+
+			case 76: // Make FOF bouncy
+			{
+				if (udmf)
+				{
+					for (l = -1; (l = P_FindLineFromTag(lines[i].args[0], l)) >= 0 ;)
+						P_MakeFOFBouncy(lines + i, lines + l);
+				}
+				else
+				{
+					for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
+						for (j = 0; (unsigned)j < sectors[s].linecount; j++)
+							P_MakeFOFBouncy(lines + i, sectors[s].lines[j]);
 				}
 				break;
 			}
