@@ -490,84 +490,6 @@ newseg:
 	CONS_Debug(DBG_POLYOBJ, "Polyobject %d is not closed\n", po->id);
 }
 
-/*
-// structure used to store segs during explicit search process
-typedef struct segitem_s
-{
-	seg_t *seg;
-	INT32   num;
-} segitem_t;
-
-//
-// Polyobj_segCompare
-//
-// Callback for qsort that compares two segitems.
-//
-static int Polyobj_segCompare(const void *s1, const void *s2)
-{
-	const segitem_t *si1 = s1;
-	const segitem_t *si2 = s2;
-
-	return si2->num - si1->num;
-}
-
-//
-// Polyobj_findExplicit
-//
-// Searches for segs to put into a polyobject in an explicitly provided order.
-//
-static void Polyobj_findExplicit(polyobj_t *po)
-{
-	// temporary dynamic seg array
-	segitem_t *segitems = NULL;
-	size_t numSegItems = 0;
-	size_t numSegItemsAlloc = 0;
-
-	size_t i;
-
-	// first loop: save off all segs with polyobject's id number
-	for (i = 0; i < numsegs; ++i)
-	{
-		INT32 polyID, parentID;
-
-		if (segs[i].linedef->special != POLYOBJ_EXPLICIT_LINE)
-			continue;
-
-		Polyobj_GetInfo(segs[i].linedef->tag, &polyID, &parentID, NULL);
-
-		if (polyID == po->id && parentID > 0)
-		{
-			if (numSegItems >= numSegItemsAlloc)
-			{
-				numSegItemsAlloc = numSegItemsAlloc ? numSegItemsAlloc*2 : 4;
-				segitems = Z_Realloc(segitems, numSegItemsAlloc*sizeof(segitem_t), PU_STATIC, NULL);
-			}
-			segitems[numSegItems].seg = &segs[i];
-			segitems[numSegItems].num = parentID;
-			++numSegItems;
-		}
-	}
-
-	// make sure array isn't empty
-	if (numSegItems == 0)
-	{
-		po->isBad = true;
-		CONS_Debug(DBG_POLYOBJ, "Polyobject %d is empty\n", po->id);
-		return;
-	}
-
-	// sort the array if necessary
-	if (numSegItems >= 2)
-		qsort(segitems, numSegItems, sizeof(segitem_t), Polyobj_segCompare);
-
-	// second loop: put the sorted segs into the polyobject
-	for (i = 0; i < numSegItems; ++i)
-		Polyobj_addSeg(po, segitems[i].seg);
-
-	// free the temporary array
-	Z_Free(segitems);
-}*/
-
 // Setup functions
 
 //
@@ -598,9 +520,9 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 	po->thrust = FRACUNIT;
 	po->spawnflags = po->flags = 0;
 
-	// 1. Search segs for "line start" special with tag matching this
-	//    polyobject's id number. If found, iterate through segs which
-	//    share common vertices and record them into the polyobject.
+	// Search segs for "line start" special with tag matching this
+	// polyobject's id number. If found, iterate through segs which
+	// share common vertices and record them into the polyobject.
 	for (i = 0; i < numsegs; ++i)
 	{
 		seg_t *seg = &segs[i];
@@ -639,29 +561,7 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 	if (po->isBad)
 		return;
 
-	/*
-	// 2. If no such line existed in the first step, look for a seg with the
-	//    "explicit" special with tag matching this polyobject's id number. If
-	//    found, continue to search for all such lines, storing them in a
-	//    temporary list of segs which is then copied into the polyobject in
-	//    sorted order.
-	if (po->segCount == 0)
-	{
-		UINT16 parent;
-		Polyobj_findExplicit(po);
-		// if an error occurred above, quit processing this object
-		if (po->isBad)
-			return;
-
-		Polyobj_GetInfo(po->segs[0]->linedef->tag, NULL, NULL, &parent);
-		po->parent = parent;
-		if (po->parent == po->id) // do not allow a self-reference
-			po->parent = -1;
-		// TODO: sound sequence is in args[3]
-	}*/
-
 	// make sure array isn't empty
-	// since Polyobj_findExplicit is disabled currently, we have to do things here instead now!
 	if (po->segCount == 0)
 	{
 		po->isBad = true;
