@@ -3163,6 +3163,7 @@ static void P_ConvertBinaryMap(void)
 
 			lines[i].args[0] = lines[i].tag;
 			lines[i].args[1] = sides[lines[i].sidenum[1]].toptexture;
+			lines[i].args[2] = sides[lines[i].sidenum[1]].midtexture;
 			if (lines[i].args[1] & FF_TRANSLUCENT)
 			{
 				if (sides[lines[i].sidenum[0]].toptexture > 0)

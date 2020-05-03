@@ -144,15 +144,9 @@ typedef enum
 	FF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
 	FF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
 	FF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
-	FF_RIPPLE            = 0x40000000, ///< Ripple the flats
-	FF_COLORMAPONLY      = 0x80000000, ///< Only copy the colormap, not the lightlevel
+	FF_RIPPLE            = 0x8000000,  ///< Ripple the flats
+	FF_COLORMAPONLY      = 0x10000000, ///< Only copy the colormap, not the lightlevel
 } ffloortype_e;
-
-//Binary map format ffloor flags, for backwards compatibility only
-#define BFF_SHATTERBOTTOM 0x200000
-#define BFF_SHATTER       0x8000000
-#define BFF_SPINBUST      0x10000000
-#define BFF_STRONGBUST    0x20000000
 
 typedef enum
 {

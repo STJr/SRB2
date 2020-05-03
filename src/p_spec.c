@@ -7023,16 +7023,23 @@ void P_SpawnSpecials(boolean fromnetsave)
 						}
 						if (lines[i].args[1] & FF_BUSTUP)
 						{
-							if (lines[i].args[1] & BFF_SHATTER)
-								fflr->busttype = BT_TOUCH;
-							else if (lines[i].args[1] & BFF_SPINBUST)
-								fflr->busttype = BT_SPIN;
-							else if (lines[i].args[1] & BFF_STRONGBUST)
-								fflr->busttype = BT_STRONG;
-							else
-								fflr->busttype = BT_REGULAR;
+							switch (lines[i].args[2] % TMFB_ONLYBOTTOM)
+							{
+								case TMFB_TOUCH:
+									fflr->busttype = BT_TOUCH;
+									break;
+								case TMFB_SPIN:
+									fflr->busttype = BT_SPIN;
+									break;
+								case TMFB_REGULAR:
+									fflr->busttype = BT_REGULAR;
+									break;
+								case TMFB_STRONG:
+									fflr->busttype = BT_STRONG;
+									break;
+							}
 
-							if (lines[i].args[1] & BFF_SHATTERBOTTOM)
+							if (lines[i].args[2] & TMFB_ONLYBOTTOM)
 								fflr->bustflags |= BF_ONLYBOTTOM;
 							if (lines[i].flags & ML_EFFECT4)
 								fflr->bustflags |= BF_PUSHABLES;
