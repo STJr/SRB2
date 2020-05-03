@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,6 +27,9 @@ extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 //
 #define GETSECSPECIAL(i,j) ((i >> ((j-1)*4))&15)
 
+// This must be updated whenever we up the max flat size - quicker to assume rather than figuring out the sqrt of the specific flat's filesize.
+#define MAXFLATSIZE (2048<<FRACBITS)
+
 // at game start
 void P_InitPicAnims(void);
 
@@ -35,7 +38,7 @@ void P_SetupLevelFlatAnims(void);
 
 // at map load
 void P_InitSpecials(void);
-void P_SpawnSpecials(INT32 fromnetsave);
+void P_SpawnSpecials(boolean fromnetsave);
 
 // every tic
 void P_UpdateSpecials(void);

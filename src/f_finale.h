@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -146,7 +146,7 @@ extern boolean WipeStageTitle;
 typedef enum
 {
 	WIPESTYLE_NORMAL,
-	WIPESTYLE_LEVEL
+	WIPESTYLE_COLORMAP
 } wipestyle_t;
 extern wipestyle_t wipestyle;
 
@@ -158,6 +158,11 @@ typedef enum
 	WSF_CROSSFADE = 1<<3,
 } wipestyleflags_t;
 extern wipestyleflags_t wipestyleflags;
+
+// Even my function names are borderline
+boolean F_ShouldColormapFade(void);
+boolean F_TryColormapFade(UINT8 wipecolor);
+void F_DecideWipeStyle(void);
 
 #define FADECOLORMAPDIV 8
 #define FADECOLORMAPROWS (256/FADECOLORMAPDIV)

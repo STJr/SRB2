@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 2005-2009 by Andrey "entryway" Budko.
-// Copyright (C) 2018-2019 by Jaime "Lactozilla" Passos.
-// Copyright (C) 2019      by Sonic Team Junior.
+// Copyright (C) 2018-2020 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2019-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -49,8 +49,6 @@
 #endif
 
 static unsigned char imgbuf[1<<26];
-fixed_t cosang2rad[ROTANGLES];
-fixed_t sinang2rad[ROTANGLES];
 
 //
 // R_CheckIfPatch
@@ -201,11 +199,15 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat)
 }
 
 //
-// R_PatchToFlat_16bpp
+// R_PatchToMaskedFlat
 //
-// Convert a patch to a 16-bit flat.
+// Convert a patch to a masked flat.
+// Now, what is a "masked" flat anyway?
+// It means the flat uses two bytes to store image data.
+// The upper byte is used to store the transparent pixel,
+// and the lower byte stores a palette index.
 //
-void R_PatchToFlat_16bpp(patch_t *patch, UINT16 *raw, boolean flip)
+void R_PatchToMaskedFlat(patch_t *patch, UINT16 *raw, boolean flip)
 {
 	fixed_t col, ofs;
 	column_t *column;
@@ -249,6 +251,9 @@ patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffse
 	UINT8 *imgptr = imgbuf;
 	UINT8 *colpointers, *startofspan;
 	size_t size = 0;
+
+	if (!raw)
+		return NULL;
 
 	// Write image size and offset
 	WRITEINT16(imgptr, width);
@@ -349,16 +354,18 @@ patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffse
 }
 
 //
-// R_FlatToPatch_16bpp
+// R_MaskedFlatToPatch
 //
-// Convert a 16-bit flat to a patch.
+// Convert a masked flat to a patch.
+// Explanation of "masked" flats in R_PatchToMaskedFlat.
 //
-patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
+patch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize)
 {
 	UINT32 x, y;
 	UINT8 *img;
 	UINT8 *imgptr = imgbuf;
 	UINT8 *colpointers, *startofspan;
+	size_t size = 0;
 
 	if (!raw)
 		return NULL;
@@ -366,9 +373,8 @@ patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *s
 	// Write image size and offset
 	WRITEINT16(imgptr, width);
 	WRITEINT16(imgptr, height);
-	// no offsets
-	WRITEINT16(imgptr, 0);
-	WRITEINT16(imgptr, 0);
+	WRITEINT16(imgptr, leftoffset);
+	WRITEINT16(imgptr, topoffset);
 
 	// Leave placeholder to column pointers
 	colpointers = imgptr;
@@ -452,9 +458,12 @@ patch_t *R_FlatToPatch_16bpp(UINT16 *raw, UINT16 width, UINT16 height, size_t *s
 		WRITEUINT8(imgptr, 0xFF);
 	}
 
-	*size = imgptr-imgbuf;
-	img = Z_Malloc(*size, PU_STATIC, NULL);
-	memcpy(img, imgbuf, *size);
+	size = imgptr-imgbuf;
+	img = Z_Malloc(size, PU_STATIC, NULL);
+	memcpy(img, imgbuf, size);
+
+	if (destsize != NULL)
+		*destsize = size;
 	return (patch_t *)img;
 }
 
@@ -677,6 +686,41 @@ static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topo
 	return flat;
 }
 
+// Convert a PNG with transparency to a raw image.
+static UINT16 *PNG_MaskedRawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+{
+	UINT16 *flat;
+	png_uint_32 x, y;
+	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, size);
+	png_uint_32 width = *w, height = *h;
+	size_t flatsize, i;
+
+	if (!row_pointers)
+		I_Error("PNG_MaskedRawConvert: conversion failed");
+
+	// Convert the image to 16bpp
+	flatsize = (width * height);
+	flat = Z_Malloc(flatsize * sizeof(UINT16), PU_LEVEL, NULL);
+
+	// can't memset here
+	for (i = 0; i < flatsize; i++)
+		flat[i] = 0xFF00;
+
+	for (y = 0; y < height; y++)
+	{
+		png_bytep row = row_pointers[y];
+		for (x = 0; x < width; x++)
+		{
+			png_bytep px = &(row[x * 4]);
+			if ((UINT8)px[3])
+				flat[((y * width) + x)] = NearestColor((UINT8)px[0], (UINT8)px[1], (UINT8)px[2]);
+		}
+	}
+	free(row_pointers);
+
+	return flat;
+}
+
 //
 // R_PNGToFlat
 //
@@ -692,16 +736,16 @@ UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size)
 //
 // Convert a PNG to a patch.
 //
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency)
+patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize)
 {
 	UINT16 width, height;
 	INT16 topoffset = 0, leftoffset = 0;
-	UINT8 *raw = PNG_RawConvert(png, &width, &height, &topoffset, &leftoffset, size);
+	UINT16 *raw = PNG_MaskedRawConvert(png, &width, &height, &topoffset, &leftoffset, size);
 
 	if (!raw)
 		I_Error("R_PNGToPatch: conversion failed");
 
-	return R_FlatToPatch(raw, width, height, leftoffset, topoffset, destsize, transparency);
+	return R_MaskedFlatToPatch(raw, width, height, leftoffset, topoffset, destsize);
 }
 
 //
@@ -789,11 +833,9 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 	size_t sprinfoTokenLength;
 	char *frameChar = NULL;
 	UINT8 frameFrame = 0xFF;
-#ifdef ROTSPRITE
 	INT16 frameXPivot = 0;
 	INT16 frameYPivot = 0;
 	rotaxis_t frameRotAxis = 0;
-#endif
 
 	// Sprite identifier
 	sprinfoToken = M_GetToken(NULL);
@@ -828,7 +870,6 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 			}
 			while (strcmp(sprinfoToken,"}")!=0)
 			{
-#ifdef ROTSPRITE
 				if (stricmp(sprinfoToken, "XPIVOT")==0)
 				{
 					Z_Free(sprinfoToken);
@@ -852,7 +893,6 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 					else if ((stricmp(sprinfoToken, "Z")==0) || (stricmp(sprinfoToken, "ZAXIS")==0) || (stricmp(sprinfoToken, "YAW")==0))
 						frameRotAxis = ROTAXIS_Z;
 				}
-#endif
 				Z_Free(sprinfoToken);
 
 				sprinfoToken = M_GetToken(NULL);
@@ -866,11 +906,9 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 	}
 
 	// set fields
-#ifdef ROTSPRITE
 	info->pivot[frameFrame].x = frameXPivot;
 	info->pivot[frameFrame].y = frameYPivot;
 	info->pivot[frameFrame].rotaxis = frameRotAxis;
-#endif
 }
 
 //
@@ -1093,16 +1131,60 @@ void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
 	for (i = 0; i < numlumps; i++, lumpinfo++)
 	{
 		name = lumpinfo->name;
-		// load SPRTINFO lumps
-		if (!stricmp(name, "SPRTINFO"))
+		// Load SPRTINFO and SPR_ lumps as SpriteInfo
+		if (!memcmp(name, "SPRTINFO", 8) || !memcmp(name, "SPR_", 4))
 			R_ParseSPRTINFOLump(wadnum, i);
-		// load SPR_ lumps (as DEHACKED lump)
-		else if (!memcmp(name, "SPR_", 4))
-			DEH_LoadDehackedLumpPwad(wadnum, i, false);
 	}
 }
 
+static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
+{
+	fixed_t ofs;
+	column_t *column;
+	UINT8 *source;
+
+	if (x >= 0 && x < SHORT(patch->width))
+	{
+		INT32 topdelta, prevdelta = -1;
+		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-x) : x]));
+		while (column->topdelta != 0xff)
+		{
+			topdelta = column->topdelta;
+			if (topdelta <= prevdelta)
+				topdelta += prevdelta;
+			prevdelta = topdelta;
+			source = (UINT8 *)(column) + 3;
+			for (ofs = 0; ofs < column->length; ofs++)
+			{
+				if ((topdelta + ofs) == y)
+					return source[ofs];
+			}
+			column = (column_t *)((UINT8 *)column + column->length + 4);
+		}
+	}
+
+	return 0xFF00;
+}
+
 #ifdef ROTSPRITE
+//
+// R_GetRollAngle
+//
+// Angles precalculated in R_InitSprites.
+//
+fixed_t rollcosang[ROTANGLES];
+fixed_t rollsinang[ROTANGLES];
+INT32 R_GetRollAngle(angle_t rollangle)
+{
+	INT32 ra = AngleFixed(rollangle)>>FRACBITS;
+#if (ROTANGDIFF > 1)
+	ra += (ROTANGDIFF/2);
+#endif
+	ra /= ROTANGDIFF;
+	ra %= ROTANGLES;
+	return ra;
+}
+
 //
 // R_CacheRotSprite
 //
@@ -1114,8 +1196,8 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 	INT32 angle;
 	patch_t *patch;
 	patch_t *newpatch;
-	UINT16 *rawsrc, *rawdst;
-	size_t size, size2;
+	UINT16 *rawdst;
+	size_t size;
 	INT32 bflip = (flip != 0x00);
 
 #define SPRITE_XCENTER (leftoffset)
@@ -1123,21 +1205,32 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 #define ROTSPRITE_XCENTER (newwidth / 2)
 #define ROTSPRITE_YCENTER (newheight / 2)
 
-	if (!sprframe->rotsprite.cached[rot])
+	if (!(sprframe->rotsprite.cached & (1<<rot)))
 	{
 		INT32 dx, dy;
 		INT32 px, py;
 		INT32 width, height, leftoffset;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
+#ifndef NO_PNG_LUMPS
+		size_t lumplength;
+#endif
 
 		if (lump == LUMPERROR)
 			return;
+
+		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
+#ifndef NO_PNG_LUMPS
+		lumplength = W_LumpLength(lump);
+
+		if (R_IsLumpPNG((UINT8 *)patch, lumplength))
+			patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL);
+		else
+#endif
 		// Because there's something wrong with SPR_DFLM, I guess
 		if (!R_CheckIfPatch(lump))
 			return;
 
-		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
 		width = patch->width;
 		height = patch->height;
 		leftoffset = patch->leftoffset;
@@ -1160,23 +1253,13 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			leftoffset = width - leftoffset;
 		}
 
-		// Draw the sprite to a temporary buffer.
-		size = (width*height);
-		rawsrc = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
-
-		// can't memset here
-		for (i = 0; i < size; i++)
-			rawsrc[i] = 0xFF00;
-
-		R_PatchToFlat_16bpp(patch, rawsrc, bflip);
-
 		// Don't cache angle = 0
 		for (angle = 1; angle < ROTANGLES; angle++)
 		{
 			INT32 newwidth, newheight;
 
-			ca = cosang2rad[angle];
-			sa = sinang2rad[angle];
+			ca = rollcosang[angle];
+			sa = rollsinang[angle];
 
 			// Find the dimensions of the rotated patch.
 			{
@@ -1237,17 +1320,15 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 #undef BOUNDARYADJUST
 			}
 
-			size2 = (newwidth * newheight);
-			if (!size2)
-				size2 = size;
+			// Draw the rotated sprite to a temporary buffer.
+			size = (newwidth * newheight);
+			if (!size)
+				size = (width * height);
 
-			rawdst = Z_Malloc(size2 * sizeof(UINT16), PU_STATIC, NULL);
-
-			// can't memset here
-			for (i = 0; i < size2; i++)
+			rawdst = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
+			for (i = 0; i < size; i++)
 				rawdst[i] = 0xFF00;
 
-			// Draw the rotated sprite to a temporary buffer.
 			for (dy = 0; dy < newheight; dy++)
 			{
 				for (dx = 0; dx < newwidth; dx++)
@@ -1259,12 +1340,12 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 					sx >>= FRACBITS;
 					sy >>= FRACBITS;
 					if (sx >= 0 && sy >= 0 && sx < width && sy < height)
-						rawdst[(dy*newwidth)+dx] = rawsrc[(sy*width)+sx];
+						rawdst[(dy*newwidth)+dx] = GetPatchPixel(patch, sx, sy, bflip);
 				}
 			}
 
 			// make patch
-			newpatch = R_FlatToPatch_16bpp(rawdst, newwidth, newheight, &size);
+			newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
 			{
 				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
 				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
@@ -1280,9 +1361,11 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 #ifdef HWRENDER
 			if (rendermode == render_opengl)
 			{
-				GLPatch_t *grPatch = HWR_GetCachedGLRotSprite(sprframe->rotsprite.hardware_patch[rot], angle, newpatch);
-				HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
+				GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
+				grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
+				grPatch->rawpatch = newpatch;
 				sprframe->rotsprite.patch[rot][angle] = (patch_t *)grPatch;
+				HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
 			}
 			else
 #endif // HWRENDER
@@ -1293,10 +1376,9 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		}
 
 		// This rotation is cached now
-		sprframe->rotsprite.cached[rot] = true;
+		sprframe->rotsprite.cached |= (1<<rot);
 
 		// free image data
-		Z_Free(rawsrc);
 		Z_Free(patch);
 	}
 #undef SPRITE_XCENTER
@@ -1318,9 +1400,9 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 	for (frame = 0; frame < spritedef->numframes; frame++)
 	{
 		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
-		for (rot = 0; rot < 8; rot++)
+		for (rot = 0; rot < 16; rot++)
 		{
-			if (sprframe->rotsprite.cached[rot])
+			if (sprframe->rotsprite.cached & (1<<rot))
 			{
 				for (ang = 0; ang < ROTANGLES; ang++)
 				{
@@ -1351,7 +1433,7 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 						Z_Free(rotsprite);
 					}
 				}
-				sprframe->rotsprite.cached[rot] = false;
+				sprframe->rotsprite.cached &= ~(1<<rot);
 			}
 		}
 	}
@@ -1373,5 +1455,20 @@ void R_FreeSkinRotSprite(size_t skinnum)
 		R_FreeSingleRotSprite(skinsprites);
 		skinsprites++;
 	}
+}
+
+//
+// R_FreeAllRotSprite
+//
+// Free ALL sprite rotation data from memory.
+//
+void R_FreeAllRotSprite(void)
+{
+	INT32 i;
+	size_t s;
+	for (s = 0; s < numsprites; s++)
+		R_FreeSingleRotSprite(&sprites[s]);
+	for (i = 0; i < numskins; ++i)
+		R_FreeSkinRotSprite(i);
 }
 #endif

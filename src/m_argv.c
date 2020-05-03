@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +34,25 @@ boolean myargmalloc = false;
 */
 static INT32 found;
 
+/**	\brief Parses a server URL (such as srb2://127.0.0.1) as may be passed to the game via a web browser, etc.
+
+	\return the contents of the URL after the protocol (a server to join), or NULL if not found
+*/
+const char *M_GetUrlProtocolArg(void)
+{
+	INT32 i;
+	const size_t len = strlen(SERVER_URL_PROTOCOL);
+
+	for (i = 1; i < myargc; i++)
+	{
+		if (strlen(myargv[i]) > len && !strnicmp(myargv[i], SERVER_URL_PROTOCOL, len))
+		{
+			return &myargv[i][len];
+		}
+	}
+
+	return NULL;
+}
 
 /**	\brief	The M_CheckParm function
 
@@ -92,36 +111,21 @@ const char *M_GetNextParm(void)
 void M_PushSpecialParameters(void)
 {
 	INT32 i;
-	char s[256];
-	boolean onetime = false;
-
 	for (i = 1; i < myargc; i++)
 	{
 		if (myargv[i][0] == '+')
 		{
-			strcpy(s, &myargv[i][1]);
+			COM_BufAddText(&myargv[i][1]);
 			i++;
 
 			// get the parameters of the command too
 			for (; i < myargc && myargv[i][0] != '+' && myargv[i][0] != '-'; i++)
 			{
-				strcat(s, " ");
-				if (!onetime)
-				{
-					strcat(s, "\"");
-					onetime = true;
-				}
-				strcat(s, myargv[i]);
+				COM_BufAddText(va(" \"%s\"", myargv[i]));
 			}
-			if (onetime)
-			{
-				strcat(s, "\"");
-				onetime = false;
-			}
-			strcat(s, "\n");
 
 			// push it
-			COM_BufAddText(s);
+			COM_BufAddText("\n");
 			i--;
 		}
 	}

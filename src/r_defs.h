@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -53,11 +53,14 @@ typedef struct
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
 
+#define CMF_FADEFULLBRIGHTSPRITES  1
+#define CMF_FOG 4
+
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s
 {
 	UINT8 fadestart, fadeend;
-	UINT8 fog; // categorical value, not boolean
+	UINT8 flags;
 
 	// store rgba values in combined bitwise
 	// also used in OpenGL instead lighttables
@@ -83,7 +86,9 @@ typedef struct extracolormap_s
   */
 typedef struct
 {
-	fixed_t x, y, z;
+	fixed_t x, y;
+	boolean floorzset, ceilingzset;
+	fixed_t floorz, ceilingz;
 } vertex_t;
 
 // Forward of linedefs, for sectors.
@@ -142,7 +147,7 @@ typedef enum
 	FF_QUICKSAND         = 0x1000000,  ///< Quicksand!
 	FF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
 	FF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
-	FF_INTANGABLEFLATS   = 0x6000000,  ///< Both flats are intangable, but the sides are still solid.
+	FF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
 	FF_SHATTER           = 0x8000000,  ///< Used with ::FF_BUSTUP. Bustable on mere touch.
 	FF_SPINBUST          = 0x10000000, ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
 	FF_STRONGBUST        = 0x20000000, ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
@@ -384,17 +389,6 @@ typedef struct sector_s
 	// for fade thinker
 	INT16 spawn_lightlevel;
 
-	// these are saved for netgames, so do not let Lua touch these!
-	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
-
-	// offsets sector spawned with (via linedef type 7)
-	fixed_t spawn_flr_xoffs, spawn_flr_yoffs;
-	fixed_t spawn_ceil_xoffs, spawn_ceil_yoffs;
-
-	// flag angles sector spawned with (via linedef type 7)
-	angle_t spawn_flrpic_angle;
-	angle_t spawn_ceilpic_angle;
-
 	// colormap structure
 	extracolormap_t *spawn_extra_colormap;
 } sector_t;
@@ -447,13 +441,9 @@ typedef struct line_s
 	polyobj_t *polyobj; // Belongs to a polyobject?
 #endif
 
-	char *text; // a concatination of all front and back texture names, for linedef specials that require a string.
+	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 } line_t;
-
-//
-// The SideDef.
-//
 
 typedef struct
 {
@@ -467,13 +457,16 @@ typedef struct
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;
 
-	// Sector the SideDef is facing.
+	// Linedef the sidedef belongs to
+	line_t *line;
+
+	// Sector the sidedef is facing.
 	sector_t *sector;
 
 	INT16 special; // the special of the linedef this side belongs to
 	INT16 repeatcnt; // # of times to repeat midtexture
 
-	char *text; // a concatination of all top, bottom, and mid texture names, for linedef specials that require a string.
+	char *text; // a concatenation of all top, bottom, and mid texture names, for linedef specials that require a string.
 
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
@@ -598,6 +591,7 @@ typedef struct seg_s
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 #endif
+	boolean glseg;
 } seg_t;
 
 //
@@ -738,29 +732,46 @@ typedef struct
 #ifdef ROTSPRITE
 typedef struct
 {
-	patch_t *patch[8][ROTANGLES];
-	boolean cached[8];
-#ifdef HWRENDER
-	aatree_t *hardware_patch[8];
-#endif
+	patch_t *patch[16][ROTANGLES];
+	UINT16 cached;
 } rotsprite_t;
-#endif
+#endif/*ROTSPRITE*/
 
 typedef enum
 {
 	SRF_SINGLE      = 0,   // 0-angle for all rotations
 	SRF_3D          = 1,   // Angles 1-8
-	SRF_LEFT        = 2,   // Left side uses single patch
-	SRF_RIGHT       = 4,   // Right side uses single patch
-	SRF_2D          = SRF_LEFT|SRF_RIGHT, // 6
+	SRF_3DGE        = 2,   // 3DGE, ZDoom and Doom Legacy all have 16-angle support. Why not us?
+	SRF_3DMASK      = SRF_3D|SRF_3DGE, // 3
+	SRF_LEFT        = 4,   // Left side uses single patch
+	SRF_RIGHT       = 8,   // Right side uses single patch
+	SRF_2D          = SRF_LEFT|SRF_RIGHT, // 12
 	SRF_NONE        = 0xff // Initial value
 } spriterotateflags_t;     // SRF's up!
+
+// Same as a patch_t, except just the header
+// and the wadnum/lumpnum combination that points
+// to wherever the patch is in memory.
+struct patchinfo_s
+{
+	INT16 width;          // bounding box size
+	INT16 height;
+	INT16 leftoffset;     // pixels to the left of origin
+	INT16 topoffset;      // pixels below the origin
+
+	UINT16 wadnum;        // the software patch lump num for when the patch
+	UINT16 lumpnum;       // was flushed, and we need to re-create it
+
+	// next patchinfo_t in memory
+	struct patchinfo_s *next;
+};
+typedef struct patchinfo_s patchinfo_t;
 
 //
 // Sprites are patches with a special naming convention so they can be
 //  recognized by R_InitSprites.
 // The base name is NNNNFx or NNNNFxFx, with x indicating the rotation,
-//  x = 0, 1-8, L/R
+//  x = 0, 1-8, 9+A-G, L/R
 // The sprite and frame specified by a thing_t is range checked at run time.
 // A sprite is a patch_t that is assumed to represent a three dimensional
 //  object and may have multiple rotations predrawn.
@@ -777,12 +788,12 @@ typedef struct
 	//  name eight times.
 	UINT8 rotate; // see spriterotateflags_t above
 
-	// Lump to use for view angles 0-7.
-	lumpnum_t lumppat[8]; // lump number 16 : 16 wad : lump
-	size_t lumpid[8]; // id in the spriteoffset, spritewidth, etc. tables
+	// Lump to use for view angles 0-7/15.
+	lumpnum_t lumppat[16]; // lump number 16 : 16 wad : lump
+	size_t lumpid[16]; // id in the spriteoffset, spritewidth, etc. tables
 
-	// Flip bits (1 = flip) to use for view angles 0-7.
-	UINT8 flip;
+	// Flip bits (1 = flip) to use for view angles 0-7/15.
+	UINT16 flip;
 
 #ifdef ROTSPRITE
 	rotsprite_t rotsprite;

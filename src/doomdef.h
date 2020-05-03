@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -98,8 +98,8 @@
 
 #ifdef GETTEXT
 #include <libintl.h>
-#include <locale.h>
 #endif
+#include <locale.h> // locale should not be dependent on GETTEXT -- 11/01/20 Monster Iestyn
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -127,7 +127,11 @@
 
 #ifdef LOGMESSAGES
 extern FILE *logstream;
+extern char logfilename[1024];
 #endif
+
+/* A mod name to further distinguish versions. */
+#define SRB2APPLICATION "SRB2"
 
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
@@ -139,16 +143,19 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    202 // Game version
-#define SUBVERSION 0  // more precise version number
-#define VERSIONSTRING "v2.2.0"
-#define VERSIONSTRINGW L"v2.2.0"
+#define SUBVERSION 2  // more precise version number
+#define VERSIONSTRING "v2.2.2"
+#define VERSIONSTRINGW L"v2.2.2"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
 
+/* A custom URL protocol for server links. */
+#define SERVER_URL_PROTOCOL "srb2://"
+
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-//#define USE_PATCH_DTA
+#define USE_PATCH_DTA
 
 // Use .kart extension addons
 //#define USE_KART
@@ -206,7 +213,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
-#define MODVERSION 40
+#define MODVERSION 42
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
@@ -249,9 +256,11 @@ typedef enum
 	// Desaturated
 	SKINCOLOR_AETHER,
 	SKINCOLOR_SLATE,
+	SKINCOLOR_BLUEBELL,
 	SKINCOLOR_PINK,
 	SKINCOLOR_YOGURT,
 	SKINCOLOR_BROWN,
+	SKINCOLOR_BRONZE,
 	SKINCOLOR_TAN,
 	SKINCOLOR_BEIGE,
 	SKINCOLOR_MOSS,
@@ -264,9 +273,11 @@ typedef enum
 	SKINCOLOR_RED,
 	SKINCOLOR_CRIMSON,
 	SKINCOLOR_FLAME,
+	SKINCOLOR_KETCHUP,
 	SKINCOLOR_PEACHY,
 	SKINCOLOR_QUAIL,
 	SKINCOLOR_SUNSET,
+	SKINCOLOR_COPPER,
 	SKINCOLOR_APRICOT,
 	SKINCOLOR_ORANGE,
 	SKINCOLOR_RUST,
@@ -276,6 +287,7 @@ typedef enum
 	SKINCOLOR_OLIVE,
 	SKINCOLOR_LIME,
 	SKINCOLOR_PERIDOT,
+	SKINCOLOR_APPLE,
 	SKINCOLOR_GREEN,
 	SKINCOLOR_FOREST,
 	SKINCOLOR_EMERALD,
@@ -302,6 +314,7 @@ typedef enum
 	SKINCOLOR_VIOLET,
 	SKINCOLOR_LILAC,
 	SKINCOLOR_PLUM,
+	SKINCOLOR_RASPBERRY,
 	SKINCOLOR_ROSY,
 
 	// SKINCOLOR_? - one left before we bump up against 0x39, which isn't a HARD limit anymore but would be excessive
@@ -450,16 +463,18 @@ char savegamename[256];
 // m_misc.h
 #ifdef GETTEXT
 #define M_GetText(String) gettext(String)
-void M_StartupLocale(void);
 #else
 // If no translations are to be used, make a stub
 // M_GetText function that just returns the string.
 #define M_GetText(x) (x)
 #endif
+void M_StartupLocale(void);
 extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
 void M_UnGetToken(void);
+UINT32 M_GetTokenPos(void);
+void M_SetTokenPos(UINT32 newPos);
 char *sizeu1(size_t num);
 char *sizeu2(size_t num);
 char *sizeu3(size_t num);
@@ -484,6 +499,7 @@ extern INT32 cv_debug;
 #define DBG_SETUP       0x0400
 #define DBG_LUA         0x0800
 #define DBG_RANDOMIZER  0x1000
+#define DBG_VIEWMORPH   0x2000
 
 // =======================
 // Misc stuff for later...
@@ -539,6 +555,8 @@ INT32 I_GetKey(void);
 #else
 	#define PATHSEP "/"
 #endif
+
+#define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 // Compile date and time and revision.
 extern const char *compdate, *comptime, *comprevision, *compbranch;
@@ -623,13 +641,20 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
+/// Cache patches in Lua in a way that renderer switching will work flawlessly.
+//#define LUA_PATCH_SAFETY
+
 /// Sprite rotation
 #define ROTSPRITE
-#define ROTANGLES 24	// Needs to be a divisor of 360 (45, 60, 90, 120...)
+#define ROTANGLES 72 // Needs to be a divisor of 360 (45, 60, 90, 120...)
 #define ROTANGDIFF (360 / ROTANGLES)
 
+/// PNG support
 #ifndef HAVE_PNG
 #define NO_PNG_LUMPS
 #endif
+
+/// Render flats on walls
+#define WALLFLATS
 
 #endif // __DOOMDEF__

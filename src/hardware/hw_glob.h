@@ -100,6 +100,7 @@ void HWR_FreePolyPool(void);
 // --------
 void HWR_InitTextureCache(void);
 void HWR_FreeTextureCache(void);
+void HWR_FreeMipmapCache(void);
 void HWR_FreeExtraSubsectors(void);
 
 void HWR_GetLevelFlat(levelflat_t *levelflat);
@@ -112,9 +113,6 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum);
 void HWR_SetPalette(RGBA_t *palette);
 GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
 GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
-#ifdef ROTSPRITE
-GLPatch_t *HWR_GetCachedGLRotSprite(aatree_t *hwrcache, UINT16 rollangle, patch_t *rawpatch);
-#endif
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 
 // --------
@@ -127,6 +125,5 @@ extern consvar_t cv_grrounddown; // on/off
 
 extern INT32 patchformat;
 extern INT32 textureformat;
-extern boolean firetranslucent;
 
 #endif //_HW_GLOB_

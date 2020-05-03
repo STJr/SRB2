@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -110,19 +110,51 @@ extern vmode_t specialmodes[NUMSPECIALMODES];
 // color mode dependent drawer function pointers
 // ---------------------------------------------
 
-extern void (*wallcolfunc)(void);
+#define BASEDRAWFUNC 0
+
+enum
+{
+	COLDRAWFUNC_BASE = BASEDRAWFUNC,
+	COLDRAWFUNC_FUZZY,
+	COLDRAWFUNC_TRANS,
+	COLDRAWFUNC_SHADE,
+	COLDRAWFUNC_SHADOWED,
+	COLDRAWFUNC_TRANSTRANS,
+	COLDRAWFUNC_TWOSMULTIPATCH,
+	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
+	COLDRAWFUNC_FOG,
+
+	COLDRAWFUNC_MAX
+};
+
 extern void (*colfunc)(void);
-extern void (*basecolfunc)(void);
-extern void (*fuzzcolfunc)(void);
-extern void (*transcolfunc)(void);
-extern void (*shadecolfunc)(void);
+extern void (*colfuncs[COLDRAWFUNC_MAX])(void);
+
+enum
+{
+	SPANDRAWFUNC_BASE = BASEDRAWFUNC,
+	SPANDRAWFUNC_TRANS,
+	SPANDRAWFUNC_SPLAT,
+	SPANDRAWFUNC_TRANSSPLAT,
+	SPANDRAWFUNC_FOG,
+#ifndef NOWATER
+	SPANDRAWFUNC_WATER,
+#endif
+#ifdef ESLOPE
+	SPANDRAWFUNC_TILTED,
+	SPANDRAWFUNC_TILTEDTRANS,
+	SPANDRAWFUNC_TILTEDSPLAT,
+#ifndef NOWATER
+	SPANDRAWFUNC_TILTEDWATER,
+#endif
+#endif
+
+	SPANDRAWFUNC_MAX
+};
+
 extern void (*spanfunc)(void);
-extern void (*basespanfunc)(void);
-extern void (*mmxspanfunc)(void);
-extern void (*splatfunc)(void);
-extern void (*transtransfunc)(void);
-extern void (*twosmultipatchfunc)(void);
-extern void (*twosmultipatchtransfunc)(void);
+extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
+extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
 // -----
 // CPUID
@@ -138,21 +170,29 @@ extern boolean R_SSE2;
 // ----------------
 // screen variables
 // ----------------
+
 extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
+
+void SCR_ChangeRenderer(void);
+void SCR_ChangeRendererCVars(INT32 mode);
+extern UINT8 setrenderneeded;
 
 extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
-extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_fullscreen;
+extern CV_PossibleValue_t cv_renderer_t[];
+
+extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
+#ifdef HWRENDER
+extern consvar_t cv_newrenderer;
+#endif
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 
-// quick fix for tall/short skies, depending on bytesperpixel
-extern void (*walldrawerfunc)(void);
-
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);
+void SCR_SetDrawFuncs(void);
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);
 // Check parms once at startup

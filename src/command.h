@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,6 +20,20 @@
 // Command buffer & command execution
 //===================================
 
+/* Lua command registration flags. */
+enum
+{
+	COM_ADMIN       = 1,
+	COM_SPLITSCREEN = 2,
+	COM_LOCAL       = 4,
+};
+
+/* Command buffer flags. */
+enum
+{
+	COM_SAFE = 1,
+};
+
 typedef void (*com_func_t)(void);
 
 void COM_AddCommand(const char *name, com_func_t func);
@@ -36,10 +50,12 @@ size_t COM_FirstOption(void);
 const char *COM_CompleteCommand(const char *partial, INT32 skips);
 
 // insert at queu (at end of other command)
-void COM_BufAddText(const char *btext);
+#define COM_BufAddText(s) COM_BufAddTextEx(s, 0)
+void COM_BufAddTextEx(const char *btext, int flags);
 
 // insert in head (before other command)
-void COM_BufInsertText(const char *btext);
+#define COM_BufInsertText(s) COM_BufInsertTextEx(s, 0)
+void COM_BufInsertTextEx(const char *btext, int flags);
 
 // don't bother inserting, just do immediately
 void COM_ImmedExecute(const char *ptext);
@@ -71,6 +87,7 @@ void VS_Free(vsbuf_t *buf);
 void VS_Clear(vsbuf_t *buf);
 void *VS_GetSpace(vsbuf_t *buf, size_t length);
 void VS_Write(vsbuf_t *buf, const void *data, size_t length);
+void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, int flags);
 void VS_Print(vsbuf_t *buf, const char *data); // strcats onto the sizebuf
 
 //==================
@@ -100,7 +117,8 @@ typedef enum
 	CV_HIDEN = 1024, // variable is not part of the cvar list so cannot be accessed by the console
 	                 // can only be set when we have the pointer to it
                    // used on menus
-	CV_CHEAT = 2048 // Don't let this be used in multiplayer unless cheats are on.
+	CV_CHEAT = 2048, // Don't let this be used in multiplayer unless cheats are on.
+	CV_NOLUA = 4096,/* don't let this be called from Lua */
 } cvflags_t;
 
 typedef struct CV_PossibleValue_s
@@ -139,6 +157,9 @@ void CV_ToggleExecVersion(boolean enable);
 
 // register a variable for use at the console
 void CV_RegisterVar(consvar_t *variable);
+
+// returns a console variable by name
+consvar_t *CV_FindVar(const char *name);
 
 // sets changed to 0 for every console variable
 void CV_ClearChangedFlags(void);

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -68,13 +68,36 @@ extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime,
 extern consvar_t cv_crosshair, cv_crosshair2;
 extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_chasefreelook, cv_mousemove;
 extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_chasefreelook2, cv_mousemove2;
-extern consvar_t cv_useranalog, cv_useranalog2;
-extern consvar_t cv_analog, cv_analog2;
-extern consvar_t cv_directionchar, cv_directionchar2;
+
+extern consvar_t cv_useranalog[2], cv_analog[2];
+extern consvar_t cv_directionchar[2];
+
+typedef enum {
+	CS_LEGACY,
+	CS_LMAOGALOG,
+	CS_STANDARD,
+	CS_SIMPLE = CS_LMAOGALOG|CS_STANDARD,
+} controlstyle_e;
+#define G_ControlStyle(ssplayer) (cv_directionchar[(ssplayer)-1].value == 3 ? CS_LMAOGALOG : ((cv_analog[(ssplayer)-1].value ? CS_LMAOGALOG : 0) | (cv_directionchar[(ssplayer)-1].value ? CS_STANDARD : 0)))
+#define P_ControlStyle(player) ((((player)->pflags & PF_ANALOGMODE) ? CS_LMAOGALOG : 0) | (((player)->pflags & PF_DIRECTIONCHAR) ? CS_STANDARD : 0))
+
 extern consvar_t cv_autobrake, cv_autobrake2;
-extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis;
-extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2;
+extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis,cv_deadzone,cv_digitaldeadzone;
+extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2,cv_deadzone2,cv_digitaldeadzone2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
+
+// hi here's some new controls
+extern consvar_t cv_cam_shiftfacing[2], cv_cam_turnfacing[2],
+	cv_cam_turnfacingability[2], cv_cam_turnfacingspindash[2], cv_cam_turnfacinginput[2],
+	cv_cam_centertoggle[2], cv_cam_lockedinput[2], cv_cam_lockonboss[2];
+
+typedef enum
+{
+	LOCK_BOSS = 1<<0,
+	LOCK_ENEMY = 1<<1,
+	LOCK_INTERESTS = 1<<2,
+} lockassist_e;
+
 
 // mouseaiming (looking up/down with the mouse or keyboard)
 #define KB_LOOKSPEED (1<<25)
@@ -83,8 +106,10 @@ extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_g
 
 // build an internal map name MAPxx from map number
 const char *G_BuildMapName(INT32 map);
-void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics);
-void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics);
+
+extern boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
+extern mobj_t *ticcmd_ztargetfocus[2]; // Locking onto an object?
+void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer);
 
 // copy ticcmd_t to and fro the normal way
 ticcmd_t *G_CopyTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n);
@@ -129,11 +154,16 @@ INT32 G_FindMap(const char *query, char **foundmapnamep,
 		mapsearchfreq_t **freqp, INT32 *freqc);
 void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
 
+/* Match map name by search + 2 digit map code or map number. */
+INT32 G_FindMapByNameOrCode(const char *query, char **foundmapnamep);
+
 // XMOD spawning
 mapthing_t *G_FindCTFStart(INT32 playernum);
 mapthing_t *G_FindMatchStart(INT32 playernum);
 mapthing_t *G_FindCoopStart(INT32 playernum);
-void G_SpawnPlayer(INT32 playernum, boolean starpost);
+mapthing_t *G_FindMapStart(INT32 playernum);
+void G_MovePlayerToSpawnOrStarpost(INT32 playernum);
+void G_SpawnPlayer(INT32 playernum);
 
 // Can be called by the startup code or M_Responder.
 // A normal game starts at map 1, but a warp test can start elsewhere
@@ -142,6 +172,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar,
 void G_DoLoadLevel(boolean resetplayer);
 void G_StartTitleCard(void);
 void G_PreLevelTitleCard(void);
+boolean G_IsTitleCardAvailable(void);
 void G_DeferedPlayDemo(const char *demo);
 
 // Can be called by the startup code or M_Responder, calls P_SetupLevel.
@@ -201,14 +232,29 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 
+extern UINT32 gametypedefaultrules[NUMGAMETYPES];
+extern UINT32 gametypetol[NUMGAMETYPES];
+extern INT16 gametyperankings[NUMGAMETYPES];
+
+void G_SetGametype(INT16 gametype);
+INT16 G_AddGametype(UINT32 rules);
+void G_AddGametypeConstant(INT16 gtype, const char *newgtconst);
+void G_UpdateGametypeSelections(void);
+void G_AddTOL(UINT32 newtol, const char *tolname);
+void G_AddGametypeTOL(INT16 gtype, UINT32 newtol);
+void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolor, UINT8 rightcolor);
+
 INT32 G_GetGametypeByName(const char *gametypestr);
 boolean G_IsSpecialStage(INT32 mapnum);
 boolean G_GametypeUsesLives(void);
+boolean G_GametypeUsesCoopLives(void);
+boolean G_GametypeUsesCoopStarposts(void);
 boolean G_GametypeHasTeams(void);
 boolean G_GametypeHasSpectators(void);
 boolean G_RingSlingerGametype(void);
 boolean G_PlatformGametype(void);
 boolean G_TagGametype(void);
+boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);
 void G_ExitLevel(void);
 void G_NextLevel(void);

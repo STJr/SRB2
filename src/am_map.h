@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -37,6 +37,9 @@ void AM_Ticker(void);
 
 // Called by main loop, instead of view drawer if automap is active.
 void AM_Drawer(void);
+
+// Enables the automap.
+void AM_Start(void);
 
 // Called to force the automap to quit if the level is completed while it is up.
 void AM_Stop(void);

@@ -1,4 +1,4 @@
-version: 2.1.25.{branch}-{build}
+version: 2.2.2.{branch}-{build}
 os: MinGW
 
 environment:
@@ -9,7 +9,7 @@ environment:
  # c:\mingw-w64 i686 has gcc 6.3.0, so use c:\msys64 7.3.0 instead
  MINGW_SDK: c:\msys64\mingw32
  # c:\msys64 x86_64 has gcc 8.2.0, so use c:\mingw-w64 7.3.0 instead
- MINGW_SDK_64: C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64
+ MINGW_SDK_64: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64
  CFLAGS: -Wall -W -Werror -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3 -Wno-tautological-compare -Wno-error=suggest-attribute=noreturn
  NASM_ZIP: nasm-2.12.01
  NASM_URL: http://www.nasm.us/pub/nasm/releasebuilds/2.12.01/win64/nasm-2.12.01-win64.zip
@@ -29,15 +29,15 @@ environment:
  ##############################
  DPL_ENABLED: 0
  DPL_TAG_ENABLED: 0
- DPL_INSTALLER_NAME: SRB2-v2123
+ DPL_INSTALLER_NAME: SRB2-v220
  # Asset handling is barebones vs. Travis Deployer. We operate on 7z only.
  # Include the README files and the OpenGL batch in the main and patch archives.
  # The x86/x64 archives contain the DLL binaries.
- ASSET_ARCHIVE_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-assets.7z
- ASSET_ARCHIVE_PATCH_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-patch-assets.7z
- ASSET_ARCHIVE_X86_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-x86-assets.7z
- ASSET_ARCHIVE_X64_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-x64-assets.7z
- ASSET_ARCHIVE_OPTIONAL_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-optional-assets.7z
+ ASSET_ARCHIVE_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-assets.7z
+ ASSET_ARCHIVE_PATCH_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-patch-assets.7z
+ ASSET_ARCHIVE_X86_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-x86-assets.7z
+ ASSET_ARCHIVE_X64_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-x64-assets.7z
+ ASSET_ARCHIVE_OPTIONAL_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-optional-assets.7z
  # This is overridden to 1 for release tag builds
  ASSET_FILES_OPTIONAL_GET: 0
  # For patches, also include the X86/X64 DLLs.
@@ -55,8 +55,6 @@ cache:
 install:
 - if [%CONFIGURATION%] == [SDL64] ( set "X86_64=1" )
 - if [%CONFIGURATION%] == [SDL64] ( set "CONFIGURATION=SDL" )
-- if [%CONFIGURATION%] == [DD64] ( set "X86_64=1" )
-- if [%CONFIGURATION%] == [DD64] ( set "CONFIGURATION=DD" )
 - if [%X86_64%] == [1] ( set "MINGW_SDK=%MINGW_SDK_64%" )
 - if [%X86_64%] == [1] ( set "CCACHE_CC=%CCACHE_CC_64%" )
 
@@ -75,13 +73,6 @@ install:
 configuration:
 - SDL
 - SDL64
-- DD
-- DD64
-
-matrix:
-  allow_failures:
-    - configuration: DD
-    - configuration: DD64
 
 before_build:
 - set "Path=%MINGW_SDK%\bin;%Path%"
@@ -92,8 +83,15 @@ before_build:
 - ccache -V
 - ccache -s
 - if [%NOUPX%] == [1] ( set "NOUPX=NOUPX=1" ) else ( set "NOUPX=" )
-- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 GCC73=1 NOOBJDUMP=1 %NOUPX%"
-- if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1" ) else ( set "MINGW_FLAGS=MINGW=1 GCC91=1" )
+- if defined [%APPVEYOR_PULL_REQUEST_HEAD_COMMIT%] ( set "COMMIT=%APPVEYOR_PULL_REQUEST_HEAD_COMMIT%" ) else ( set "COMMIT=%APPVEYOR_REPO_COMMIT%" )
+- cmd: git rev-parse --short %COMMIT%>%TMP%/gitshort.txt
+- cmd: set /P GITSHORT=<%TMP%/gitshort.txt
+# for pull requests, take the owner's name only, if this isn't the same repo of course
+- set "REPO=%APPVEYOR_REPO_BRANCH%"
+- if not [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [] ( if not [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [%APPVEYOR_REPO_NAME%] (  for /f "delims=/" %%a in ("%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%") do set "REPO=%%a-%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" ) )
+- set "EXENAME=EXENAME=srb2win-%REPO%-%GITSHORT%.exe"
+- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 NOOBJDUMP=1 %NOUPX% %EXENAME%"
+- if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1 GCC81=1" ) else ( set "MINGW_FLAGS=MINGW=1 GCC91=1" )
 - set "SRB2_MFLAGS=%SRB2_MFLAGS% %MINGW_FLAGS% %CONFIGURATION%=1"
 
 build_script:
@@ -108,10 +106,8 @@ after_build:
   )
 - if [%X86_64%] == [1] ( set "CONFIGURATION=%CONFIGURATION%64" )
 - ccache -s
-- cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
-- cmd: set /P GITSHORT=<%TMP%/gitshort.txt
-- set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%-%CONFIGURATION%.7z
-- set BUILDSARCHIVE=%APPVEYOR_REPO_BRANCH%-%CONFIGURATION%.7z
+- set BUILD_ARCHIVE=%REPO%-%GITSHORT%-%CONFIGURATION%.7z
+- set BUILDSARCHIVE=%REPO%-%CONFIGURATION%.7z
 - cmd: 7z a %BUILD_ARCHIVE% %BUILD_PATH% -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
 - cmd: copy %BUILD_ARCHIVE% %BUILDSARCHIVE%

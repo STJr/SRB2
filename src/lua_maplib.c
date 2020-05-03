@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -134,6 +134,7 @@ enum side_e {
 	side_toptexture,
 	side_bottomtexture,
 	side_midtexture,
+	side_line,
 	side_sector,
 	side_special,
 	side_repeatcnt,
@@ -157,14 +158,20 @@ enum vertex_e {
 	vertex_valid = 0,
 	vertex_x,
 	vertex_y,
-	vertex_z
+	vertex_floorz,
+	vertex_floorzset,
+	vertex_ceilingz,
+	vertex_ceilingzset
 };
 
 static const char *const vertex_opt[] = {
 	"valid",
 	"x",
 	"y",
-	"z",
+	"floorz",
+	"floorzset",
+	"ceilingz",
+	"ceilingzset",
 	NULL};
 
 enum ffloor_e {
@@ -445,7 +452,7 @@ static int sectorlines_get(lua_State *L)
 	// get the "linecount" by shifting our retrieved memory address of "lines" to where "linecount" is in the sector_t, then dereferencing the result
 	// we need this to determine the array's actual size, and therefore also the maximum value allowed as an index
 	// this only works if seclines is actually a pointer to a sector's lines member in memory, oh boy
-	numoflines = (size_t)(*(seclines - (offsetof(sector_t, lines) - offsetof(sector_t, linecount))));
+	numoflines = (size_t)(*(size_t *)(((size_t)seclines) - (offsetof(sector_t, lines) - offsetof(sector_t, linecount))));
 
 /* OLD HACK
 	// check first linedef to figure which of its sectors owns this sector->lines pointer
@@ -479,7 +486,7 @@ static int sectorlines_num(lua_State *L)
 		return luaL_error(L, "accessed sector_t.lines doesn't exist anymore.");
 
 	// see comments in the _get function above
-	numoflines = (size_t)(*(seclines - (offsetof(sector_t, lines) - offsetof(sector_t, linecount))));
+	numoflines = (size_t)(*(size_t *)(((size_t)seclines) - (offsetof(sector_t, lines) - offsetof(sector_t, linecount))));
 	lua_pushinteger(L, numoflines);
 	return 1;
 }
@@ -869,6 +876,9 @@ static int side_get(lua_State *L)
 	case side_midtexture:
 		lua_pushinteger(L, side->midtexture);
 		return 1;
+	case side_line:
+		LUA_PushUserdata(L, side->line, META_LINE);
+		return 1;
 	case side_sector:
 		LUA_PushUserdata(L, side->sector, META_SECTOR);
 		return 1;
@@ -902,6 +912,7 @@ static int side_set(lua_State *L)
 	switch(field)
 	{
 	case side_valid: // valid
+	case side_line:
 	case side_sector:
 	case side_special:
 	case side_text:
@@ -965,8 +976,17 @@ static int vertex_get(lua_State *L)
 	case vertex_y:
 		lua_pushfixed(L, vertex->y);
 		return 1;
-	case vertex_z:
-		lua_pushfixed(L, vertex->z);
+	case vertex_floorzset:
+		lua_pushboolean(L, vertex->floorzset);
+		return 1;
+	case vertex_ceilingzset:
+		lua_pushboolean(L, vertex->ceilingzset);
+		return 1;
+	case vertex_floorz:
+		lua_pushfixed(L, vertex->floorz);
+		return 1;
+	case vertex_ceilingz:
+		lua_pushfixed(L, vertex->ceilingz);
 		return 1;
 	}
 	return 0;
@@ -2014,6 +2034,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->typeoflevel);
 	else if (fastcmp(field,"nextlevel"))
 		lua_pushinteger(L, header->nextlevel);
+	else if (fastcmp(field,"keywords"))
+		lua_pushstring(L, header->keywords);
 	else if (fastcmp(field,"musname"))
 		lua_pushstring(L, header->musname);
 	else if (fastcmp(field,"mustrack"))
@@ -2071,6 +2093,12 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->levelselect);
 	else if (fastcmp(field,"bonustype"))
 		lua_pushinteger(L, header->bonustype);
+	else if (fastcmp(field,"ltzzpatch"))
+		lua_pushstring(L, header->ltzzpatch);
+	else if (fastcmp(field,"ltzztext"))
+		lua_pushstring(L, header->ltzztext);
+	else if (fastcmp(field,"ltactdiamond"))
+		lua_pushstring(L, header->ltactdiamond);
 	else if (fastcmp(field,"maxbonuslives"))
 		lua_pushinteger(L, header->maxbonuslives);
 	else if (fastcmp(field,"levelflags"))

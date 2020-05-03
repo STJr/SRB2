@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -73,6 +73,25 @@ typedef struct
 } lumpinfo_t;
 
 // =========================================================================
+//                         'VIRTUAL' RESOURCES
+// =========================================================================
+
+typedef struct {
+	char name[9];
+	UINT8* data;
+	size_t size;
+} virtlump_t;
+
+typedef struct {
+	size_t numlumps;
+	virtlump_t* vlumps;
+} virtres_t;
+
+virtres_t* vres_GetMap(lumpnum_t);
+void vres_Free(virtres_t*);
+virtlump_t* vres_Find(const virtres_t*, const char*);
+
+// =========================================================================
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
@@ -127,11 +146,10 @@ void W_Shutdown(void);
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
-UINT16 W_InitFile(const char *filename, boolean mainfile);
+UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
 
-// W_InitMultipleFiles returns 1 if all is okay, 0 otherwise,
-// so that it stops with a message if a file was not found, but not if all is okay.
-INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles);
+// W_InitMultipleFiles exits if a file was not found, but not if all is okay.
+void W_InitMultipleFiles(char **filenames, UINT16 mainfiles);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);
@@ -173,10 +191,18 @@ boolean W_IsPatchCached(lumpnum_t lump, void *ptr);
 void *W_CacheLumpName(const char *name, INT32 tag);
 void *W_CachePatchName(const char *name, INT32 tag);
 
-void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag); // return a patch_t
-void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag); // return a patch_t
+// Returns either a Software patch, or an OpenGL patch.
+// Performs any necessary conversions from PNG images.
+void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
+void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
+
+// Returns a Software patch.
+// Performs any necessary conversions from PNG images.
+void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
+void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
 
 void W_UnlockCachedPatch(void *patch);
+void W_FlushCachedPatches(void);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2019 by Sonic Team Junior.
+// Copyright (C) 2006-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -400,6 +400,8 @@ static void Polyobj_findSegs(polyobj_t *po, seg_t *seg)
 		// Find backfacings
 		for (s = 0;  s < numsegs; s++)
 		{
+			if (segs[s].glseg)
+				continue;
 			if (segs[s].linedef == seg->linedef
 				&& segs[s].side == 1)
 			{
@@ -436,6 +438,8 @@ newseg:
 	// seg's ending vertex.
 	for (i = 0; i < numsegs; ++i)
 	{
+		if (segs[i].glseg)
+			continue;
 		if (segs[i].side != 0) // needs to be frontfacing
 			continue;
 		if (segs[i].v1->x == seg->v2->x && segs[i].v1->y == seg->v2->y)
@@ -460,6 +464,9 @@ newseg:
 				// Find backfacings
 				for (q = 0;  q < numsegs; q++)
 				{
+					if (segs[q].glseg)
+						continue;
+
 					if (segs[q].linedef == segs[i].linedef
 						&& segs[q].side == 1)
 					{
@@ -605,6 +612,9 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		seg_t *seg = &segs[i];
 		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 		INT32 parentID = 0, potrans = 0;
+
+		if (seg->glseg)
+			continue;
 
 		if (seg->side != 0) // needs to be frontfacing
 			continue;
@@ -991,15 +1001,35 @@ static void Polyobj_pushThing(polyobj_t *po, line_t *line, mobj_t *mo)
 //
 static void Polyobj_slideThing(mobj_t *mo, fixed_t dx, fixed_t dy)
 {
-	if (mo->player) { // Do something similar to conveyor movement. -Red
-		mo->player->cmomx += dx;
-		mo->player->cmomy += dy;
+	if (mo->player) { // Finally this doesn't suck eggs -fickle
+		fixed_t cdx, cdy;
 
-		dx = FixedMul(dx, CARRYFACTOR);
-		dy = FixedMul(dy, CARRYFACTOR);
+		cdx = FixedMul(dx, FRACUNIT-CARRYFACTOR);
+		cdy = FixedMul(dy, FRACUNIT-CARRYFACTOR);
 
-		mo->player->cmomx -= dx;
-		mo->player->cmomy -= dy;
+		if (mo->player->onconveyor == 1)
+		{
+			mo->momx += cdx;
+			mo->momy += cdy;
+
+			// Multiple slides in the same tic, somehow
+			mo->player->cmomx += cdx;
+			mo->player->cmomy += cdy;
+		}
+		else
+		{
+			if (mo->player->onconveyor == 3)
+			{
+				mo->momx += cdx - mo->player->cmomx;
+				mo->momy += cdy - mo->player->cmomy;
+			}
+
+			mo->player->cmomx = cdx;
+			mo->player->cmomy = cdy;
+		}
+
+		dx = FixedMul(dx, FRACUNIT - mo->friction);
+		dy = FixedMul(dy, FRACUNIT - mo->friction);
 
 		if (mo->player->pflags & PF_SPINNING && (mo->player->rmomx || mo->player->rmomy) && !(mo->player->pflags & PF_STARTDASH)) {
 #define SPINMULT 5184 // Consider this a substitute for properly calculating FRACUNIT-friction. I'm tired. -Red
@@ -1272,7 +1302,8 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 {
 	static INT32 pomovecount = 10000;
 	INT32 x, y;
-	angle_t deltafine = delta >> ANGLETOFINESHIFT;
+	angle_t deltafine = (((po->angle + delta) >> ANGLETOFINESHIFT) - (po->angle >> ANGLETOFINESHIFT)) & FINEMASK;
+	// This fineshift trickery replaces the old delta>>ANGLETOFINESHIFT; doing it this way avoids loss of precision causing objects to slide off -fickle
 
 	pomovecount++;
 
@@ -1324,26 +1355,17 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 					oldxoff = mo->x-origin.x;
 					oldyoff = mo->y-origin.y;
 
-					if (mo->player) // Hack to fix players sliding off of spinning polys -Red
-					{
-						fixed_t temp;
+					newxoff = FixedMul(oldxoff, c)-FixedMul(oldyoff, s) - oldxoff;
+					newyoff = FixedMul(oldyoff, c)+FixedMul(oldxoff, s) - oldyoff;
 
-						temp = FixedMul(oldxoff, c)-FixedMul(oldyoff, s);
-						oldyoff = FixedMul(oldyoff, c)+FixedMul(oldxoff, s);
-						oldxoff = temp;
-					}
-
-					newxoff = FixedMul(oldxoff, c)-FixedMul(oldyoff, s);
-					newyoff = FixedMul(oldyoff, c)+FixedMul(oldxoff, s);
-
-					Polyobj_slideThing(mo, newxoff-oldxoff, newyoff-oldyoff);
+					Polyobj_slideThing(mo, newxoff, newyoff);
 
 					if (turnthings == 2 || (turnthings == 1 && !mo->player)) {
 						mo->angle += delta;
 						if (mo->player == &players[consoleplayer])
-							localangle = mo->angle;
+							localangle += delta;
 						else if (mo->player == &players[secondarydisplayplayer])
-							localangle2 = mo->angle;
+							localangle2 += delta;
 					}
 				}
 			}
@@ -1815,6 +1837,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	if (po->thinker == NULL)
 		po->thinker = &th->thinker;
 
+/*
 	// Find out target first.
 	// We redo this each tic to make savegame compatibility easier.
 	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
@@ -1833,6 +1856,9 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			break;
 		}
 	}
+*/
+
+	target = th->target;
 
 	if (!target)
 	{
@@ -2015,6 +2041,8 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 			target = waypoint;
 			th->pointnum = target->health;
+			// Set the mobj as your target! -- Monster Iestyn 27/12/19
+			P_SetTarget(&th->target, target);
 
 			// calculate MOMX/MOMY/MOMZ for next waypoint
 			// change slope
@@ -2641,6 +2669,9 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// Set pointnum
 	th->pointnum = target->health;
+	th->target = NULL; // set to NULL first so the below doesn't go wrong
+	// Set the mobj as your target! -- Monster Iestyn 27/12/19
+	P_SetTarget(&th->target, target);
 
 	// We don't deal with the mirror crap here, we'll
 	// handle that in the T_Thinker function.

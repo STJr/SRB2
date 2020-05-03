@@ -120,6 +120,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_main.c
 	r_plane.c
 	r_segs.c
+	r_skins.c
 	r_sky.c
 	r_splats.c
 	r_things.c
@@ -134,6 +135,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_main.h
 	r_plane.h
 	r_segs.h
+	r_skins.h
 	r_sky.h
 	r_splats.h
 	r_state.h
@@ -518,10 +520,6 @@ add_definitions(-DCMAKECONFIG)
 
 add_subdirectory(sdl)
 
-if(${CMAKE_SYSTEM} MATCHES Windows)
-	add_subdirectory(win32)
-endif()
-
-if(NOT ${SRB2_SDL2_AVAILABLE} AND NOT ${SRB2_WIN32_AVAILABLE})
+if(NOT ${SRB2_SDL2_AVAILABLE})
 	message(FATAL_ERROR "There are no targets available to build an SRB2 executable. :(")
 endif()

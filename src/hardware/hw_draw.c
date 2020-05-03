@@ -291,7 +291,7 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 			if (cx >= -0.1f && cx <= 0.1f && SHORT(gpatch->width) == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && SHORT(gpatch->height) == BASEVIDHEIGHT)
 			{
 				// Need to temporarily cache the real patch to get the colour of the top left pixel
-				patch_t *realpatch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+				patch_t *realpatch = W_CacheSoftwarePatchNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
 				const column_t *column = (const column_t *)((const UINT8 *)(realpatch) + LONG((realpatch)->columnofs[0]));
 				if (!column->topdelta)
 				{
@@ -450,7 +450,7 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 			if (cx >= -0.1f && cx <= 0.1f && SHORT(gpatch->width) == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && SHORT(gpatch->height) == BASEVIDHEIGHT)
 			{
 				// Need to temporarily cache the real patch to get the colour of the top left pixel
-				patch_t *realpatch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+				patch_t *realpatch = W_CacheSoftwarePatchNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
 				const column_t *column = (const column_t *)((const UINT8 *)(realpatch) + LONG((realpatch)->columnofs[0]));
 				if (!column->topdelta)
 				{
@@ -992,7 +992,7 @@ void HWR_DrawViewBorder(INT32 clearlines)
 	// top edge
 	if (clearlines > basewindowy - 8)
 	{
-		patch = W_CachePatchNum(viewborderlump[BRDR_T], PU_CACHE);
+		patch = W_CachePatchNum(viewborderlump[BRDR_T], PU_PATCH);
 		for (x = 0; x < baseviewwidth; x += 8)
 			HWR_DrawPatch(patch, basewindowx + x, basewindowy - 8,
 				0);
@@ -1001,7 +1001,7 @@ void HWR_DrawViewBorder(INT32 clearlines)
 	// bottom edge
 	if (clearlines > basewindowy + baseviewheight)
 	{
-		patch = W_CachePatchNum(viewborderlump[BRDR_B], PU_CACHE);
+		patch = W_CachePatchNum(viewborderlump[BRDR_B], PU_PATCH);
 		for (x = 0; x < baseviewwidth; x += 8)
 			HWR_DrawPatch(patch, basewindowx + x,
 				basewindowy + baseviewheight, 0);
@@ -1010,7 +1010,7 @@ void HWR_DrawViewBorder(INT32 clearlines)
 	// left edge
 	if (clearlines > basewindowy)
 	{
-		patch = W_CachePatchNum(viewborderlump[BRDR_L], PU_CACHE);
+		patch = W_CachePatchNum(viewborderlump[BRDR_L], PU_PATCH);
 		for (y = 0; y < baseviewheight && basewindowy + y < clearlines;
 			y += 8)
 		{
@@ -1022,7 +1022,7 @@ void HWR_DrawViewBorder(INT32 clearlines)
 	// right edge
 	if (clearlines > basewindowy)
 	{
-		patch = W_CachePatchNum(viewborderlump[BRDR_R], PU_CACHE);
+		patch = W_CachePatchNum(viewborderlump[BRDR_R], PU_PATCH);
 		for (y = 0; y < baseviewheight && basewindowy+y < clearlines;
 			y += 8)
 		{
@@ -1034,22 +1034,22 @@ void HWR_DrawViewBorder(INT32 clearlines)
 	// Draw beveled corners.
 	if (clearlines > basewindowy - 8)
 		HWR_DrawPatch(W_CachePatchNum(viewborderlump[BRDR_TL],
-				PU_CACHE),
+				PU_PATCH),
 			basewindowx - 8, basewindowy - 8, 0);
 
 	if (clearlines > basewindowy - 8)
 		HWR_DrawPatch(W_CachePatchNum(viewborderlump[BRDR_TR],
-				PU_CACHE),
+				PU_PATCH),
 			basewindowx + baseviewwidth, basewindowy - 8, 0);
 
 	if (clearlines > basewindowy+baseviewheight)
 		HWR_DrawPatch(W_CachePatchNum(viewborderlump[BRDR_BL],
-				PU_CACHE),
+				PU_PATCH),
 			basewindowx - 8, basewindowy + baseviewheight, 0);
 
 	if (clearlines > basewindowy + baseviewheight)
 		HWR_DrawPatch(W_CachePatchNum(viewborderlump[BRDR_BR],
-				PU_CACHE),
+				PU_PATCH),
 			basewindowx + baseviewwidth,
 			basewindowy + baseviewheight, 0);
 }

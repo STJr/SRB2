@@ -239,6 +239,8 @@ void I_StartupGraphics(void)
 	if (!dedicated) graphics_started = true;
 }
 
+void VID_StartupOpenGL(void){}
+
 // ------------------
 // I_ShutdownGraphics
 // Close the screen, restore previous video mode.
@@ -945,6 +947,9 @@ INT32 VID_SetMode(INT32 modenum)
 	I_RestartSysMouse();
 	return 1;
 }
+
+void VID_CheckRenderer(void) {}
+void VID_CheckGLLoaded(rendermode_t oldrender) {}
 
 // ========================================================================
 // Free the video buffer of the last video mode,

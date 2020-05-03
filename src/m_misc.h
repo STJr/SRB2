@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -95,6 +95,25 @@ void strcatbf(char *s1, const char *s2, const char *s3);
 void M_SetupMemcpy(void);
 
 const char *M_FileError(FILE *handle);
+
+int     M_PathParts      (const char *path);
+boolean M_IsPathAbsolute (const char *path);
+void    M_MkdirEach      (const char *path, int start, int mode);
+void    M_MkdirEachUntil (const char *path, int start, int end, int mode);
+
+/* Return offset to the first word in a string. */
+/* E.g. cursor += M_JumpWord(line + cursor); */
+int M_JumpWord (const char *s);
+
+/* Return index of the last word behind offset bytes in a string. */
+/* E.g. cursor = M_JumpWordReverse(line, cursor); */
+int M_JumpWordReverse (const char *line, int offset);
+
+/*
+Return dot and then the fractional part of a float, without
+trailing zeros, or "" if the fractional part is zero.
+*/
+const char * M_Ftrim (double);
 
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);

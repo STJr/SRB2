@@ -374,7 +374,6 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ADST
 	&lspr[NOLIGHT],     // SPR_MCRT
 	&lspr[NOLIGHT],     // SPR_MCSP
-	&lspr[NOLIGHT],     // SPR_NON2
 	&lspr[NOLIGHT],     // SPR_SALD
 	&lspr[NOLIGHT],     // SPR_TRAE
 	&lspr[NOLIGHT],     // SPR_TRAI
@@ -510,6 +509,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_LCKN
 	&lspr[NOLIGHT],     // SPR_TTAG
 	&lspr[NOLIGHT],     // SPR_GFLG
+	&lspr[NOLIGHT],     // SPR_FNSF
 
 	&lspr[NOLIGHT],     // SPR_CORK
 	&lspr[NOLIGHT],     // SPR_LHRT

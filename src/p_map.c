@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -377,7 +377,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		{
 			object->angle = object->player->drawangle = spring->angle;
 
-			if (!demoplayback || P_AnalogMove(object->player))
+			if (!demoplayback || P_ControlStyle(object->player) == CS_LMAOGALOG)
 			{
 				if (object->player == &players[consoleplayer])
 					localangle = spring->angle;
@@ -426,7 +426,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				object->player->pflags |= pflags;
 				object->player->secondjump = secondjump;
 			}
-			else if (object->player->dashmode >= 3*TICRATE)
+			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
 				P_SetPlayerMobjState(object, S_PLAY_DASH);
 			else if (P_IsObjectOnGround(object) && horizspeed >= FixedMul(object->player->runspeed, object->scale))
 				P_SetPlayerMobjState(object, S_PLAY_RUN);
@@ -592,9 +592,6 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if (!(tails->pflags & PF_CANCARRY))
 		return;
 
-	if (sonic->pflags & PF_FINISHED)
-		return;
-
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
 
@@ -615,7 +612,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	// Why block opposing teams from tailsflying each other?
 	// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
 	/*
-	if (gametype == GT_RACE || gametype == GT_COMPETITION
+	if ((gametyperules & GTR_RACE)
 		|| (netgame && (tails->spectator || sonic->spectator))
 		|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
 		|| (gametype == GT_MATCH)
@@ -632,7 +629,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
 	{
 		if (sonic-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, false);
+			CV_SetValue(&cv_analog[1], false);
 		P_ResetPlayer(sonic);
 		P_SetTarget(&sonic->mo->tracer, tails->mo);
 		sonic->powers[pw_carry] = CR_PLAYER;
@@ -644,7 +641,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	}
 	else {
 		if (sonic-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, true);
+			CV_SetValue(&cv_analog[1], true);
 		P_SetTarget(&sonic->mo->tracer, NULL);
 		sonic->powers[pw_carry] = CR_NONE;
 	}
@@ -745,9 +742,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
   // So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
 	if (tmthing->type == MT_NAMECHECK)
 	{
-	  // Ignore things that aren't players, ignore spectators, ignore yourself.
-		// (also don't bother to check that tmthing->target->player is non-NULL because we're not actually using it here.)
-		if (!thing->player || thing->player->spectator || (tmthing->target && thing->player == tmthing->target->player))
+		// Ignore things that aren't players, ignore spectators, ignore yourself.
+		if (!thing->player || !(tmthing->target && tmthing->target->player) || thing->player->spectator || (tmthing->target && thing->player == tmthing->target->player))
 			return true;
 
 		// Now check that you actually hit them.
@@ -759,6 +755,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
+
+#ifdef HAVE_BLUA
+		// REX HAS SEEN YOU
+		if (!LUAh_SeenPlayer(tmthing->target->player, thing->player))
+			return false;
+#endif
 
 		seenplayer = thing->player;
 		return false;
@@ -801,7 +803,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	// SF_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
 	if ((tmthing->player)
-		&& (((tmthing->player->charflags & SF_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& ((((tmthing->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)) && (tmthing->player->dashmode >= DASHMODE_THRESHOLD)
 		&& (thing->flags & (MF_MONITOR)
 		|| (thing->type == MT_SPIKE
 		|| thing->type == MT_WALLSPIKE)))
@@ -829,13 +831,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
 				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(iter, tmthing, tmthing, 0);
+			return true;
 		}
 		else
 		{
-			thing->health = 0;
-			P_KillMobj(thing, tmthing, tmthing, 0);
+			if (P_DamageMobj(thing, tmthing, tmthing, 1, 0))
+				return true;
 		}
-		return true;
 	}
 
 	// vectorise metal - done in a special case as at this point neither has the right flags for touching
@@ -995,7 +997,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	if (thing->type == MT_SALOONDOOR && tmthing->player)
 	{
 		mobj_t *ref = (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)) ? tmthing->tracer : tmthing;
-		if ((thing->flags & MF2_AMBUSH) || ref != tmthing)
+		if ((thing->flags2 & MF2_AMBUSH) || ref != tmthing)
 		{
 			fixed_t dm = min(FixedHypot(ref->momx, ref->momy), 16*FRACUNIT);
 			angle_t ang = R_PointToAngle2(0, 0, ref->momx, ref->momy) - thing->angle;
@@ -1008,7 +1010,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->type == MT_SALOONDOORCENTER && tmthing->player)
 	{
-		if ((thing->flags & MF2_AMBUSH) || (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
+		if ((thing->flags2 & MF2_AMBUSH) || (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
 			return true;
 	}
 
@@ -1322,7 +1324,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			thing->angle = tmthing->angle;
 
-			if (!demoplayback || P_AnalogMove(thing->player))
+			if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 			{
 				if (thing->player == &players[consoleplayer])
 					localangle = thing->angle;
@@ -1621,7 +1623,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 	else if (thing->player) {
 		if (thing->player-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, true);
+			CV_SetValue(&cv_analog[1], true);
 		if (thing->player->powers[pw_carry] == CR_PLAYER)
 		{
 			P_SetTarget(&thing->tracer, NULL);
@@ -1943,6 +1945,19 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	// this line is out of the if so upper and lower textures can be hit by a splat
 	blockingline = ld;
+
+#ifdef HAVE_BLUA
+	{
+		UINT8 shouldCollide = LUAh_MobjLineCollide(tmthing, blockingline); // checks hook for thing's type
+		if (P_MobjWasRemoved(tmthing))
+			return true; // one of them was removed???
+		if (shouldCollide == 1)
+			return false; // force collide
+		else if (shouldCollide == 2)
+			return true; // force no collide
+	}
+#endif
+
 	if (!ld->backsector) // one sided line
 	{
 		if (P_PointOnLineSide(tmthing->x, tmthing->y, ld))
@@ -3491,7 +3506,7 @@ isblocking:
 			&& canclimb)
 			{
 				slidemo->angle = climbangle;
-				/*if (!demoplayback || P_AnalogMove(slidemo->player))
+				/*if (!demoplayback || P_ControlStyle(slidemo->player) == CS_LMAOGALOG)
 				{
 					if (slidemo->player == &players[consoleplayer])
 						localangle = slidemo->angle;

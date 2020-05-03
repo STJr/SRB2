@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014-2019 by Sonic Team Junior.
+// Copyright (C) 2014-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -8,6 +8,26 @@
 //-----------------------------------------------------------------------------
 /// \file
 /// \brief SDL Mixer interface for sound
+
+#ifdef HAVE_LIBGME
+#ifdef HAVE_ZLIB
+#ifndef _MSC_VER
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
+#endif
+
+#ifndef _LFS64_LARGEFILE
+#define _LFS64_LARGEFILE
+#endif
+
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 0
+#endif
+
+#include <zlib.h>
+#endif // HAVE_ZLIB
+#endif // HAVE_LIBGME
 
 #include "../doomdef.h"
 #include "../doomstat.h" // menuactive
@@ -57,24 +77,6 @@
 #include "gme/gme.h"
 #define GME_TREBLE 5.0f
 #define GME_BASS 1.0f
-
-#ifdef HAVE_ZLIB
-#ifndef _MSC_VER
-#ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE64_SOURCE
-#endif
-#endif
-
-#ifndef _LFS64_LARGEFILE
-#define _LFS64_LARGEFILE
-#endif
-
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 0
-#endif
-
-#include "zlib.h"
-#endif // HAVE_ZLIB
 #endif // HAVE_LIBGME
 
 static UINT16 BUFFERSIZE = 2048;

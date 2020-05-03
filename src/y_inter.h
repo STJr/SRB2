@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2019 by Sonic Team Junior.
+// Copyright (C) 2004-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,3 +31,4 @@ typedef enum
 	int_comp,     // Competition
 } intertype_t;
 extern intertype_t intertype;
+extern intertype_t intermissiontypes[NUMGAMETYPES];

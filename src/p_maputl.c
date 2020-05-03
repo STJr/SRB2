@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -78,68 +78,37 @@ void P_ClosestPointOnLine(fixed_t x, fixed_t y, line_t *line, vertex_t *result)
 	return;
 }
 
-//
-// P_ClosestPointOnLine3D
-// Finds the closest point on a given line to the supplied point IN 3D!!!
-//
-void P_ClosestPointOnLine3D(fixed_t x, fixed_t y, fixed_t z, line_t *line, vertex_t *result)
+/// Similar to FV3_ClosestPointOnLine() except it actually works.
+void P_ClosestPointOnLine3D(const vector3_t *p, const vector3_t *Line, vector3_t *result)
 {
-	fixed_t startx = line->v1->x;
-	fixed_t starty = line->v1->y;
-	fixed_t startz = line->v1->z;
-	fixed_t dx = line->dx;
-	fixed_t dy = line->dy;
-	fixed_t dz = line->v2->z - line->v1->z;
+	const vector3_t* v1 = &Line[0];
+	const vector3_t* v2 = &Line[1];
+	vector3_t c, V, n;
+	fixed_t t, d;
+	FV3_SubEx(v2, v1, &V);
+	FV3_SubEx(p, v1, &c);
 
-	// Determine t (the length of the vector from �Line[0]� to �p�)
-	fixed_t cx, cy, cz;
-	fixed_t vx, vy, vz;
-	fixed_t magnitude;
-	fixed_t t;
+	d = R_PointToDist2(0, v2->z, R_PointToDist2(v2->x, v2->y, v1->x, v1->y), v1->z);
+	FV3_Copy(&n, &V);
+	FV3_Divide(&n, d);
 
-	//Sub (p, &Line[0], &c);
-	cx = x - startx;
-	cy = y - starty;
-	cz = z - startz;
-
-	//Sub (&Line[1], &Line[0], &V);
-	vx = dx;
-	vy = dy;
-	vz = dz;
-
-	//Normalize (&V, &V);
-	magnitude = R_PointToDist2(0, line->v2->z, R_PointToDist2(line->v2->x, line->v2->y, startx, starty), startz);
-	vx = FixedDiv(vx, magnitude);
-	vy = FixedDiv(vy, magnitude);
-	vz = FixedDiv(vz, magnitude);
-
-	t = (FixedMul(vx, cx) + FixedMul(vy, cy) + FixedMul(vz, cz));
+	t = FV3_Dot(&n, &c);
 
 	// Set closest point to the end if it extends past -Red
 	if (t <= 0)
 	{
-		result->x = line->v1->x;
-		result->y = line->v1->y;
-		result->z = line->v1->z;
+		FV3_Copy(result, v1);
 		return;
 	}
-	else if (t >= magnitude)
+	else if (t >= d)
 	{
-		result->x = line->v2->x;
-		result->y = line->v2->y;
-		result->z = line->v2->z;
+		FV3_Copy(result, v2);
 		return;
 	}
 
-	// Return the point between �Line[0]� and �Line[1]�
-	vx = FixedMul(vx, t);
-	vy = FixedMul(vy, t);
-	vz = FixedMul(vz, t);
+	FV3_Mul(&n, t);
 
-	//Add (&Line[0], &V, out);
-	result->x = startx + vx;
-	result->y = starty + vy;
-	result->z = startz + vz;
+	FV3_AddEx(v1, &n, result);
 	return;
 }
 
@@ -674,7 +643,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
-				if (delta1 >= delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_PLATFORM) // thing is below FOF
+				if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
 				{
 					if (bottomheight < opentop) {
 						opentop = bottomheight;
@@ -687,7 +656,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 						highceiling = bottomheight;
 				}
 
-				if (delta1 < delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+				if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
 				{
 					if (topheight > openbottom) {
 						openbottom = topheight;
@@ -720,7 +689,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
-				if (delta1 >= delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_PLATFORM) // thing is below FOF
+				if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
 				{
 					if (bottomheight < opentop) {
 						opentop = bottomheight;
@@ -733,7 +702,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 						highceiling = bottomheight;
 				}
 
-				if (delta1 < delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+				if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
 				{
 					if (topheight > openbottom) {
 						openbottom = topheight;

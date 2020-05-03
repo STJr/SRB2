@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -26,6 +26,7 @@ UINT8 portalrender;			/**< When rendering a portal, it establishes the depth of 
 portal_t *portal_base, *portal_cap;
 
 line_t *portalclipline;
+sector_t *portalcullsector;
 INT32 portalclipstart, portalclipend;
 
 boolean portalline; // is curline a portal seg?
