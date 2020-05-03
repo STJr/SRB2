@@ -6246,7 +6246,7 @@ static void P_RunLevelLoadExecutors(void)
 void P_InitSpecials(void)
 {
 	// Set the default gravity. Custom gravity overrides this setting.
-	gravity = FRACUNIT/2;
+	gravity = mapheaderinfo[gamemap-1]->gravity;
 
 	// Defaults in case levels don't have them set.
 	sstimer = mapheaderinfo[gamemap-1]->sstimer*TICRATE + 6;

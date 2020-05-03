@@ -220,6 +220,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->startrings = 0;
 	mapheaderinfo[num]->sstimer = 90;
 	mapheaderinfo[num]->ssspheres = 1;
+	mapheaderinfo[num]->gravity = FRACUNIT/2;
 	mapheaderinfo[num]->keywords[0] = '\0';
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
