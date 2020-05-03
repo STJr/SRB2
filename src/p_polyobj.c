@@ -356,25 +356,29 @@ static void Polyobj_findSegs(polyobj_t *po, seg_t *seg)
 		// Find backfacings
 		for (s = 0;  s < numsegs; s++)
 		{
+			size_t r;
+
 			if (segs[s].glseg)
 				continue;
-			if (segs[s].linedef == seg->linedef
-				&& segs[s].side == 1)
+
+			if (segs[s].linedef != seg->linedef)
+				continue;
+
+			if (segs[s].side != 1)
+				continue;
+
+			for (r = 0; r < po->segCount; r++)
 			{
-				size_t r;
-				for (r = 0; r < po->segCount; r++)
-				{
-					if (po->segs[r] == &segs[s])
-						break;
-				}
-
-				if (r != po->segCount)
-					continue;
-
-				segs[s].dontrenderme = true;
-
-				Polyobj_addSeg(po, &segs[s]);
+				if (po->segs[r] == &segs[s])
+					break;
 			}
+
+			if (r != po->segCount)
+				continue;
+
+			segs[s].dontrenderme = true;
+
+			Polyobj_addSeg(po, &segs[s]);
 		}
 	}
 
@@ -394,56 +398,60 @@ newseg:
 	// seg's ending vertex.
 	for (i = 0; i < numsegs; ++i)
 	{
+		size_t q;
+
 		if (segs[i].glseg)
 			continue;
 		if (segs[i].side != 0) // needs to be frontfacing
 			continue;
-		if (segs[i].v1->x == seg->v2->x && segs[i].v1->y == seg->v2->y)
+		if (segs[i].v1->x != seg->v2->x)
+			continue;
+		if (segs[i].v1->y != seg->v2->y)
+			continue;
+
+		// Make sure you didn't already add this seg...
+		for (q = 0; q < po->segCount; q++)
 		{
-			// Make sure you didn't already add this seg...
-			size_t q;
-			for (q = 0; q < po->segCount; q++)
-			{
-				if (po->segs[q] == &segs[i])
-					break;
-			}
-
-			if (q != po->segCount)
-				continue;
-
-			// add the new seg and recurse
-			Polyobj_addSeg(po, &segs[i]);
-			seg = &segs[i];
-
-			if (!(po->flags & POF_ONESIDE))
-			{
-				// Find backfacings
-				for (q = 0;  q < numsegs; q++)
-				{
-					if (segs[q].glseg)
-						continue;
-
-					if (segs[q].linedef == segs[i].linedef
-						&& segs[q].side == 1)
-					{
-						size_t r;
-						for (r=0; r < po->segCount; r++)
-						{
-							if (po->segs[r] == &segs[q])
-								break;
-						}
-
-						if (r != po->segCount)
-							continue;
-
-						segs[q].dontrenderme = true;
-						Polyobj_addSeg(po, &segs[q]);
-					}
-				}
-			}
-
-			goto newseg;
+			if (po->segs[q] == &segs[i])
+				break;
 		}
+
+		if (q != po->segCount)
+			continue;
+
+		// add the new seg and recurse
+		Polyobj_addSeg(po, &segs[i]);
+		seg = &segs[i];
+
+		if (!(po->flags & POF_ONESIDE))
+		{
+			// Find backfacings
+			for (q = 0; q < numsegs; q++)
+			{
+				size_t r;
+
+				if (segs[q].glseg)
+					continue;
+				if (segs[q].linedef != segs[i].linedef)
+					continue;
+				if (segs[q].side != 1)
+					continue;
+
+				for (r = 0; r < po->segCount; r++)
+				{
+					if (po->segs[r] == &segs[q])
+						break;
+				}
+
+				if (r != po->segCount)
+					continue;
+
+				segs[q].dontrenderme = true;
+				Polyobj_addSeg(po, &segs[q]);
+			}
+		}
+
+		goto newseg;
 	}
 
 	// error: if we reach here, the seg search never found another seg to
