@@ -1140,7 +1140,6 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 	}
 
 #if 0 // Unfortunately, this drops CEZ2 down to sub-17 FPS on my i7.
-//#ifdef POLYOBJECTS
 	// Check polyobjects and see if floorz needs to be altered, for rings only because they don't update floorz
 	if (thing->type == MT_RING)
 	{
@@ -2271,7 +2270,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				entry->ffloor = ds->thicksides[i];
 			}
 		}
-#ifdef POLYOBJECTS_PLANES
 		// Check for a polyobject plane, but only if this is a front line
 		if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
 			plane = ds->curline->polyseg->visplane;
@@ -2287,7 +2285,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			}
 			ds->curline->polyseg->visplane = NULL;
 		}
-#endif
 		if (ds->maskedtexturecol)
 		{
 			entry = R_CreateDrawNode(head);
@@ -2335,7 +2332,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 	if (tempskip)
 		return;
 
-#ifdef POLYOBJECTS_PLANES
 	// find all the remaining polyobject planes and add them on the end of the list
 	// probably this is a terrible idea if we wanted them to be sorted properly
 	// but it works getting them in for now
@@ -2356,7 +2352,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 		// note: no seg is set, for what should be obvious reasons
 		PolyObjects[i].visplane = NULL;
 	}
-#endif
 
 	// No vissprites in this mask?
 	if (mask->vissprites[1] - mask->vissprites[0] == 0)

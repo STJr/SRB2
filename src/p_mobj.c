@@ -2895,7 +2895,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 			mo->eflags |= MFE_JUSTHITFLOOR; // Spin Attack
 
 			{
-#ifdef POLYOBJECTS
 				// Check if we're on a polyobject
 				// that triggers a linedef executor.
 				msecnode_t *node;
@@ -2955,8 +2954,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 				}
 
 			if (!stopmovecut)
-#endif
-
 				// Cut momentum in half when you hit the ground and
 				// aren't pressing any controls.
 				if (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING))

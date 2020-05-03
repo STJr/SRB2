@@ -1076,9 +1076,6 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 	}
 }
 
-// haleyjd: temporary define
-#ifdef POLYOBJECTS
-
 //
 // PolyDoor
 //
@@ -1400,8 +1397,6 @@ static boolean PolyRotDisplace(line_t *line)
 
 	return EV_DoPolyObjRotDisplace(&pdd);
 }
-
-#endif // ifdef POLYOBJECTS
 
 /** Changes a sector's tag.
   * Used by the linedef executor tag changer and by crumblers.
@@ -4051,7 +4046,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
-#ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
 			PolyDoor(line);
@@ -4081,7 +4075,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 492:
 			PolyFade(line);
 			break;
-#endif
 
 		default:
 			break;
@@ -7322,7 +7315,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 	Z_Free(secthinkers);
 
-#ifdef POLYOBJECTS
 	// haleyjd 02/20/06: spawn polyobjects
 	Polyobj_InitLevel();
 
@@ -7343,7 +7335,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 		}
 	}
-#endif
 
 	P_RunLevelLoadExecutors();
 }

@@ -337,11 +337,7 @@ static visplane_t *new_visplane(unsigned hash)
 //
 visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	fixed_t xoff, fixed_t yoff, angle_t plangle, extracolormap_t *planecolormap,
-	ffloor_t *pfloor
-#ifdef POLYOBJECTS_PLANES
-			, polyobj_t *polyobj
-#endif
-			, pslope_t *slope)
+	ffloor_t *pfloor, polyobj_t *polyobj, pslope_t *slope)
 {
 	visplane_t *check;
 	unsigned hash;
@@ -361,7 +357,6 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 		}
 	}
 
-#ifdef POLYOBJECTS_PLANES
 	if (polyobj)
 	{
 		if (polyobj->angle != 0)
@@ -376,7 +371,6 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			yoff += polyobj->centerPt.y;
 		}
 	}
-#endif
 
 	// This appears to fix the Nimbus Ruins sky bug.
 	if (picnum == skyflatnum && pfloor)
@@ -390,12 +384,10 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 
 	for (check = visplanes[hash]; check; check = check->next)
 	{
-#ifdef POLYOBJECTS_PLANES
 		if (check->polyobj && pfloor)
 			continue;
 		if (polyobj != check->polyobj)
 			continue;
-#endif
 		if (height == check->height && picnum == check->picnum
 			&& lightlevel == check->lightlevel
 			&& xoff == check->xoffs && yoff == check->yoffs
@@ -426,9 +418,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->viewz = viewz;
 	check->viewangle = viewangle;
 	check->plangle = plangle;
-#ifdef POLYOBJECTS_PLANES
 	check->polyobj = polyobj;
-#endif
 	check->slope = slope;
 
 	memset(check->top, 0xff, sizeof (check->top));
@@ -496,9 +486,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->viewz = pl->viewz;
 		new_pl->viewangle = pl->viewangle;
 		new_pl->plangle = pl->plangle;
-#ifdef POLYOBJECTS_PLANES
 		new_pl->polyobj = pl->polyobj;
-#endif
 		new_pl->slope = pl->slope;
 		pl = new_pl;
 		pl->minx = start;
@@ -523,11 +511,9 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 //	INT32 unionl, unionh;
 //	INT32 x;
 
-#ifdef POLYOBJECTS_PLANES
 	// Don't expand polyobject planes here - we do that on our own.
 	if (pl->polyobj)
 		return;
-#endif
 
 	if (pl->minx > start) pl->minx = start;
 	if (pl->maxx < stop)  pl->maxx = stop;
@@ -603,11 +589,7 @@ void R_DrawPlanes(void)
 	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
-			if (pl->ffloor != NULL
-#ifdef POLYOBJECTS_PLANES
-			|| pl->polyobj != NULL
-#endif
-			)
+			if (pl->ffloor != NULL || pl->polyobj != NULL)
 				continue;
 
 			R_DrawSinglePlane(pl);
@@ -961,7 +943,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 #endif
 	spanfunc = spanfuncs[BASEDRAWFUNC];
 
-#ifdef POLYOBJECTS_PLANES
 	if (pl->polyobj && pl->polyobj->translucency != 0)
 	{
 		spanfunctype = SPANDRAWFUNC_TRANS;
@@ -979,95 +960,98 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else
 			light = LIGHTLEVELS-1;
 
-	} else
-#endif
-	if (pl->ffloor)
+	}
+	else
 	{
-		// Don't draw planes that shouldn't be drawn.
-		for (rover = pl->ffloor->target->ffloors; rover; rover = rover->next)
+		if (pl->ffloor)
 		{
-			if ((pl->ffloor->flags & FF_CUTEXTRA) && (rover->flags & FF_EXTRA))
+			// Don't draw planes that shouldn't be drawn.
+			for (rover = pl->ffloor->target->ffloors; rover; rover = rover->next)
 			{
-				if (pl->ffloor->flags & FF_EXTRA)
+				if ((pl->ffloor->flags & FF_CUTEXTRA) && (rover->flags & FF_EXTRA))
 				{
-					// The plane is from an extra 3D floor... Check the flags so
-					// there are no undesired cuts.
-					if (((pl->ffloor->flags & (FF_FOG|FF_SWIMMABLE)) == (rover->flags & (FF_FOG|FF_SWIMMABLE)))
-						&& pl->height < *rover->topheight
-						&& pl->height > *rover->bottomheight)
-						return;
+					if (pl->ffloor->flags & FF_EXTRA)
+					{
+						// The plane is from an extra 3D floor... Check the flags so
+						// there are no undesired cuts.
+						if (((pl->ffloor->flags & (FF_FOG|FF_SWIMMABLE)) == (rover->flags & (FF_FOG|FF_SWIMMABLE)))
+							&& pl->height < *rover->topheight
+							&& pl->height > *rover->bottomheight)
+							return;
+					}
 				}
 			}
-		}
 
-		if (pl->ffloor->flags & FF_TRANSLUCENT)
-		{
-			spanfunctype = SPANDRAWFUNC_TRANS;
-
-			// Hacked up support for alpha value in software mode Tails 09-24-2002
-			if (pl->ffloor->alpha < 12)
-				return; // Don't even draw it
-			else if (pl->ffloor->alpha < 38)
-				ds_transmap = transtables + ((tr_trans90-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 64)
-				ds_transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 89)
-				ds_transmap = transtables + ((tr_trans70-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 115)
-				ds_transmap = transtables + ((tr_trans60-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 140)
-				ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 166)
-				ds_transmap = transtables + ((tr_trans40-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 192)
-				ds_transmap = transtables + ((tr_trans30-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 217)
-				ds_transmap = transtables + ((tr_trans20-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 243)
-				ds_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
-			else // Opaque, but allow transparent flat pixels
-				spanfunctype = SPANDRAWFUNC_SPLAT;
-
-			if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
-				light = (pl->lightlevel >> LIGHTSEGSHIFT);
-			else
-				light = LIGHTLEVELS-1;
-		}
-		else if (pl->ffloor->flags & FF_FOG)
-		{
-			spanfunctype = SPANDRAWFUNC_FOG;
-			light = (pl->lightlevel >> LIGHTSEGSHIFT);
-		}
-		else light = (pl->lightlevel >> LIGHTSEGSHIFT);
-
-#ifndef NOWATER
-		if (pl->ffloor->flags & FF_RIPPLE)
-		{
-			INT32 top, bottom;
-
-			itswater = true;
-			if (spanfunctype == SPANDRAWFUNC_TRANS)
+			if (pl->ffloor->flags & FF_TRANSLUCENT)
 			{
-				spanfunctype = SPANDRAWFUNC_WATER;
+				spanfunctype = SPANDRAWFUNC_TRANS;
 
-				// Copy the current scene, ugh
-				top = pl->high-8;
-				bottom = pl->low+8;
+				// Hacked up support for alpha value in software mode Tails 09-24-2002
+				if (pl->ffloor->alpha < 12)
+					return; // Don't even draw it
+				else if (pl->ffloor->alpha < 38)
+					ds_transmap = transtables + ((tr_trans90-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 64)
+					ds_transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 89)
+					ds_transmap = transtables + ((tr_trans70-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 115)
+					ds_transmap = transtables + ((tr_trans60-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 140)
+					ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 166)
+					ds_transmap = transtables + ((tr_trans40-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 192)
+					ds_transmap = transtables + ((tr_trans30-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 217)
+					ds_transmap = transtables + ((tr_trans20-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 243)
+					ds_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
+				else // Opaque, but allow transparent flat pixels
+					spanfunctype = SPANDRAWFUNC_SPLAT;
 
-				if (top < 0)
-					top = 0;
-				if (bottom > vid.height)
-					bottom = vid.height;
-
-				// Only copy the part of the screen we need
-				VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.width : screens[0]+((top)*vid.width), screens[1]+((top)*vid.width),
-				                     vid.width, bottom-top,
-				                     vid.width, vid.width);
+				if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
+					light = (pl->lightlevel >> LIGHTSEGSHIFT);
+				else
+					light = LIGHTLEVELS-1;
 			}
+			else if (pl->ffloor->flags & FF_FOG)
+			{
+				spanfunctype = SPANDRAWFUNC_FOG;
+				light = (pl->lightlevel >> LIGHTSEGSHIFT);
+			}
+			else light = (pl->lightlevel >> LIGHTSEGSHIFT);
+
+	#ifndef NOWATER
+			if (pl->ffloor->flags & FF_RIPPLE)
+			{
+				INT32 top, bottom;
+
+				itswater = true;
+				if (spanfunctype == SPANDRAWFUNC_TRANS)
+				{
+					spanfunctype = SPANDRAWFUNC_WATER;
+
+					// Copy the current scene, ugh
+					top = pl->high-8;
+					bottom = pl->low+8;
+
+					if (top < 0)
+						top = 0;
+					if (bottom > vid.height)
+						bottom = vid.height;
+
+					// Only copy the part of the screen we need
+					VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.width : screens[0]+((top)*vid.width), screens[1]+((top)*vid.width),
+										 vid.width, bottom-top,
+										 vid.width, vid.width);
+				}
+			}
+	#endif
 		}
-#endif
+		else
+			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 	}
-	else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
 	if (!pl->slope // Don't mess with angle on slopes! We'll handle this ourselves later
 		&& viewangle != pl->viewangle+pl->plangle)

@@ -578,9 +578,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	Dumps the contents of a network save game upon consistency failure for debugging.
 //#define DUMPCONSISTENCY
 
-///	Polyobject fake flat code
-#define POLYOBJECTS_PLANES
-
 ///	See name of player in your crosshair
 #define SEENAMES
 
