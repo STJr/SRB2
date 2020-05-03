@@ -319,6 +319,8 @@ typedef struct
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
 	UINT16 startrings;      ///< Number of rings players start with.
+	INT32 sstimer;          ///< Timer for special stages.
+	UINT32 ssspheres;        ///< Sphere requirement in special stages.
 
 	// Title card.
 	char ltzzpatch[8];      ///< Zig zag patch.

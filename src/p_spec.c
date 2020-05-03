@@ -6249,8 +6249,8 @@ void P_InitSpecials(void)
 	gravity = FRACUNIT/2;
 
 	// Defaults in case levels don't have them set.
-	sstimer = 90*TICRATE + 6;
-	ssspheres = 1;
+	sstimer = mapheaderinfo[gamemap-1]->sstimer*TICRATE + 6;
+	ssspheres = mapheaderinfo[gamemap-1]->ssspheres;
 
 	CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
 
