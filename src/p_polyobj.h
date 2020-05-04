@@ -298,6 +298,14 @@ typedef struct polyrotdisplacedata_s
 	UINT8 turnobjs;
 } polyrotdisplacedata_t;
 
+typedef struct polyflagdata_s
+{
+	INT32 polyObjNum;
+	INT32 speed;
+	UINT32 angle;
+	fixed_t momx;
+} polyflagdata_t;
+
 typedef struct polyfadedata_s
 {
 	INT32 polyObjNum;
@@ -337,7 +345,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *);
 INT32 EV_DoPolyObjRotate(polyrotdata_t *);
 INT32 EV_DoPolyObjDisplace(polydisplacedata_t *);
 INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *);
-INT32 EV_DoPolyObjFlag(struct line_s *);
+INT32 EV_DoPolyObjFlag(polyflagdata_t *);
 INT32 EV_DoPolyObjFade(polyfadedata_t *);
 
 

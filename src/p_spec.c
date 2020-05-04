@@ -7282,8 +7282,15 @@ void P_SpawnSpecials(boolean fromnetsave)
 		switch (lines[i].special)
 		{
 			case 30: // Polyobj_Flag
-				EV_DoPolyObjFlag(&lines[i]);
+			{
+				polyflagdata_t pfd;
+				pfd.polyObjNum = lines[i].tag;
+				pfd.speed = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+				pfd.angle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y) >> ANGLETOFINESHIFT;
+				pfd.momx = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				EV_DoPolyObjFlag(&pfd);
 				break;
+			}
 
 			case 31: // Polyobj_Displace
 				PolyDisplace(&lines[i]);

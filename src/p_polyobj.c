@@ -2691,7 +2691,7 @@ void T_PolyObjFlag(polymove_t *th)
 	Polyobj_attachToSubsec(po);     // relink to subsector
 }
 
-INT32 EV_DoPolyObjFlag(line_t *pfdata)
+INT32 EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2699,9 +2699,9 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	size_t i;
 	INT32 start;
 
-	if (!(po = Polyobj_GetForNum(pfdata->tag)))
+	if (!(po = Polyobj_GetForNum(pfdata->polyObjNum)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", pfdata->tag);
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", pfdata->polyObjNum);
 		return 0;
 	}
 
@@ -2724,11 +2724,11 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	po->thinker = &th->thinker;
 
 	// set fields
-	th->polyObjNum = pfdata->tag;
+	th->polyObjNum = pfdata->polyObjNum;
 	th->distance   = 0;
-	th->speed      = P_AproxDistance(pfdata->dx, pfdata->dy)>>FRACBITS;
-	th->angle      = R_PointToAngle2(pfdata->v1->x, pfdata->v1->y, pfdata->v2->x, pfdata->v2->y)>>ANGLETOFINESHIFT;
-	th->momx       = sides[pfdata->sidenum[0]].textureoffset>>FRACBITS;
+	th->speed      = pfdata->speed;
+	th->angle      = pfdata->angle;
+	th->momx       = pfdata->momx;
 
 	// save current positions
 	for (i = 0; i < po->numVertices; ++i)
@@ -2740,7 +2740,7 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	start = 0;
 	while ((po = Polyobj_GetChild(oldpo, &start)))
 	{
-		pfdata->tag = po->id;
+		pfdata->polyObjNum = po->id;
 		EV_DoPolyObjFlag(pfdata);
 	}
 
