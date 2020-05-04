@@ -5422,8 +5422,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
 #ifdef ROTSPRITE
-	patch_t *rotsprite = NULL;
-	INT32 rollangle = 0;
+	angle_t rollangle = 0;
 #endif
 
 	if (!thing)
@@ -5545,18 +5544,18 @@ static void HWR_ProjectSprite(mobj_t *thing)
 #ifdef ROTSPRITE
 	if (thing->rollangle)
 	{
-		rollangle = R_GetRollAngle(thing->rollangle);
-		if (!(sprframe->rotsprite.cached & (1<<rot)))
-			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
-		if (rotsprite != NULL)
+		INT32 ra = R_GetRollAngle(thing->rollangle);
+		if (ra)
 		{
-			spr_width = rotsprite->width << FRACBITS;
-			spr_height = rotsprite->height << FRACBITS;
-			spr_offset = rotsprite->leftoffset << FRACBITS;
-			spr_topoffset = rotsprite->topoffset << FRACBITS;
-			// flip -> rotate, not rotate -> flip
-			flip = 0;
+			pixelmap_t *pixelmap = &sprframe->rotsprite.pixelmap[rot][ra];
+			rollangle = (ra * ROTANGDIFF);
+			if (!(sprframe->rotsprite.cached & (1<<rot)))
+				R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
+			spr_width = pixelmap->width << FRACBITS;
+			spr_height = pixelmap->height << FRACBITS;
+			spr_offset = pixelmap->leftoffset << FRACBITS;
+			spr_topoffset = pixelmap->topoffset << FRACBITS;
+			(void)rollangle;
 		}
 	}
 #endif
@@ -5648,13 +5647,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->x2 = x2;
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	//vis->patchlumpnum = sprframe->lumppat[rot];
-#ifdef ROTSPRITE
-	if (rotsprite)
-		vis->gpatch = (GLPatch_t *)rotsprite;
-	else
-#endif
-		vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+	vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = thing;
 	vis->z1 = z1;

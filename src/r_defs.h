@@ -728,11 +728,19 @@ typedef struct
 #pragma pack()
 #endif
 
+typedef struct
+{
+	UINT32 width, height;
+	INT16 leftoffset, topoffset;
+	size_t size;
+	INT32 *map;
+} pixelmap_t;
+
 // rotsprite
 #ifdef ROTSPRITE
 typedef struct
 {
-	patch_t *patch[16][ROTANGLES];
+	pixelmap_t pixelmap[16][ROTANGLES];
 	UINT16 cached;
 } rotsprite_t;
 #endif/*ROTSPRITE*/

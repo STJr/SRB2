@@ -35,6 +35,9 @@ extern fixed_t dc_iscale, dc_texturemid;
 extern UINT8 dc_hires;
 
 extern UINT8 *dc_source; // first pixel in a column
+extern patch_t *dc_sourcepatch;
+extern pixelmap_t *dc_pixelmap;
+extern INT32 *dc_pixelmapdata;
 
 // translucency stuff here
 extern UINT8 *transtables; // translucency tables, should be (*transtables)[5][256][256]

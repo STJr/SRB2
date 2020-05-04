@@ -49,6 +49,8 @@ extern INT32 lengthcol;
 void R_DrawMaskedColumn(column_t *column);
 void R_DrawFlippedMaskedColumn(column_t *column);
 
+boolean R_PreparePixelMap(INT32 *map, UINT8 *post, boolean flipped);
+
 // ----------------
 // SPRITE RENDERING
 // ----------------
@@ -169,6 +171,7 @@ typedef struct vissprite_s
 	extracolormap_t *extra_colormap; // global colormaps
 
 	fixed_t xscale;
+	boolean flipped;
 
 	// Precalculated top and bottom screen coords for the sprite.
 	fixed_t thingheight; // The actual height of the thing (for 3D floors)
@@ -180,6 +183,8 @@ typedef struct vissprite_s
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
+
+	pixelmap_t *pixelmap;
 } vissprite_t;
 
 extern UINT32 visspritecount;

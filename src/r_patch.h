@@ -37,6 +37,9 @@ typedef struct
 	boolean available;
 } spriteinfo_t;
 
+int CountPixelsInPatch(patch_t *patch);
+UINT8 *GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip);
+
 // Conversions between patches / flats / textures...
 boolean R_CheckIfPatch(lumpnum_t lump);
 void R_TextureToFlat(size_t tex, UINT8 *flat);
