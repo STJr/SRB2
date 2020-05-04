@@ -341,7 +341,7 @@ void MySQL_AddServer(const char *ip, const char *port, const char *name, const c
 			if(atoi(row[0]) != 0)
 				room = atoi(row[0]);
             mysql_free_result(res);
-            logPrintf(logfile, "Server's IP already exists, so let's just update it instead...\n");
+            logPrintf(logfile, "Server's IP and port already exists, so let's just update it instead...\n");
             logPrintf(logfile, "Updating Server Data for %s\n", ip);
             sprintf(updatequery, updatequeryp1, escapedName, escapedPort, escapedVersion, timestamp, room, escapedKey, ip, port);
             logPrintf(mysqlfile, "Executing MySQL Query: %s\n", updatequery);
