@@ -4005,6 +4005,47 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 464: // Trigger Egg Capsule
+			{
+				thinker_t *th;
+				mobj_t *mo2;
+
+				// Find the center of the Eggtrap and release all the pretty animals!
+				// The chimps are my friends.. heeheeheheehehee..... - LouisJM
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
+					mo2 = (mobj_t *)th;
+
+					if (mo2->type != MT_EGGTRAP)
+						continue;
+
+					if (!mo2->spawnpoint)
+						continue;
+
+					if (mo2->spawnpoint->angle != line->tag)
+						continue;
+
+					P_KillMobj(mo2, NULL, mo, 0);
+				}
+
+				if (!(line->flags & ML_NOCLIMB))
+				{
+					INT32 i;
+
+					// Mark all players with the time to exit thingy!
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+						P_DoPlayerExit(&players[i]);
+					}
+				}
+			}
+			break;
+
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
 			PolyDoor(line);
