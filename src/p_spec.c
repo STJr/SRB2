@@ -1181,6 +1181,7 @@ static void PolyTranslucency(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
 	polyobj_t *po;
+	INT32 value;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
@@ -1192,25 +1193,19 @@ static void PolyTranslucency(line_t *line)
 	if (po->isBad)
 		return;
 
-	// if DONTPEGBOTTOM, specify raw translucency value in Front X Offset
-	// else, take it out of 1000. If Front X Offset is specified, use that. Else, use floorheight.
+	// If Front X Offset is specified, use that. Else, use floorheight.
+	value = (sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : line->frontsector->floorheight) >> FRACBITS;
+
+	// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
+	if (!(line->flags & ML_DONTPEGBOTTOM))
+		value /= 100;
+
 	if (line->flags & ML_EFFECT3) // relative calc
-		po->translucency = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
-			(sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
-				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS))
-			: (sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
-				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
-			NUMTRANSMAPS), 0);
+		po->translucency += value;
 	else
-		po->translucency = (line->flags & ML_DONTPEGBOTTOM) ?
-			(sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
-				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), 0))
-			: (sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
-				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
+		po->translucency = value;
+
+	po->translucency = max(min(po->translucency, NUMTRANSMAPS), 0);
 }
 
 // Makes a polyobject translucency fade and applies tangibility
@@ -1219,6 +1214,7 @@ static boolean PolyFade(line_t *line)
 	INT32 polyObjNum = line->tag;
 	polyobj_t *po;
 	polyfadedata_t pfd;
+	INT32 value;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
@@ -1241,25 +1237,19 @@ static boolean PolyFade(line_t *line)
 
 	pfd.polyObjNum = polyObjNum;
 
-	// if DONTPEGBOTTOM, specify raw translucency value in Front X Offset
-	// else, take it out of 1000. If Front X Offset is specified, use that. Else, use floorheight.
+	// If Front X Offset is specified, use that. Else, use floorheight.
+	value = (sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : line->frontsector->floorheight) >> FRACBITS;
+
+	// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
+	if (!(line->flags & ML_DONTPEGBOTTOM))
+		value /= 100;
+
 	if (line->flags & ML_EFFECT3) // relative calc
-		pfd.destvalue = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
-			(sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
-				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS))
-			: (sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
-				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
-			NUMTRANSMAPS), 0);
+		pfd.destvalue = po->translucency + value;
 	else
-		pfd.destvalue = (line->flags & ML_DONTPEGBOTTOM) ?
-			(sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
-				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), 0))
-			: (sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
-				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
+		pfd.destvalue = value;
+
+	pfd.destvalue = max(min(pfd.destvalue, NUMTRANSMAPS), 0);
 
 	// already equal, nothing to do
 	if (po->translucency == pfd.destvalue)
