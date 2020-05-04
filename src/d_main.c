@@ -971,11 +971,11 @@ static void IdentifyVersion(void)
 	D_AddFile(va(pandf,srb2waddir,"zones.pk3"));
 
 	// Add the players
-	D_AddFile(va(pandf,srb2waddir, "player.dta"));
+	D_AddFile(va(pandf,srb2waddir, "player_next.dta"));
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(va(pandf,srb2waddir,"patch.pk3"));
+	D_AddFile(va(pandf,srb2waddir,"patch_next.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
