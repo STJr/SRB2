@@ -1044,9 +1044,6 @@ static INT32 P_FindLineFromTag(INT32 tag, INT32 start)
 	}
 }
 
-//
-// P_FindSpecialLineFromTag
-//
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 {
 	if (tag == -1)
@@ -1076,11 +1073,8 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 	}
 }
 
-//
-// PolyDoor
-//
+
 // Parses arguments for parameterized polyobject door types
-//
 static boolean PolyDoor(line_t *line)
 {
 	polydoordata_t pdd;
@@ -1117,11 +1111,7 @@ static boolean PolyDoor(line_t *line)
 	return EV_DoPolyDoor(&pdd);
 }
 
-//
-// PolyMove
-//
 // Parses arguments for parameterized polyobject move specials
-//
 static boolean PolyMove(line_t *line)
 {
 	polymovedata_t pmd;
@@ -1136,12 +1126,8 @@ static boolean PolyMove(line_t *line)
 	return EV_DoPolyObjMove(&pmd);
 }
 
-//
-// PolyInvisible
-//
 // Makes a polyobject invisible and intangible
 // If NOCLIMB is ticked, the polyobject will still be tangible, just not visible.
-//
 static void PolyInvisible(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
@@ -1164,12 +1150,8 @@ static void PolyInvisible(line_t *line)
 	po->flags &= ~POF_RENDERALL;
 }
 
-//
-// PolyVisible
-//
 // Makes a polyobject visible and tangible
 // If NOCLIMB is ticked, the polyobject will not be tangible, just visible.
-//
 static void PolyVisible(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
@@ -1192,12 +1174,9 @@ static void PolyVisible(line_t *line)
 	po->flags |= (po->spawnflags & POF_RENDERALL);
 }
 
-//
-// PolyTranslucency
-//
+
 // Sets the translucency of a polyobject
 // Frontsector floor / 100 = translevel
-//
 static void PolyTranslucency(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
@@ -1234,11 +1213,7 @@ static void PolyTranslucency(line_t *line)
 				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
 }
 
-//
-// PolyFade
-//
 // Makes a polyobject translucency fade and applies tangibility
-//
 static boolean PolyFade(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
@@ -1303,11 +1278,7 @@ static boolean PolyFade(line_t *line)
 	return EV_DoPolyObjFade(&pfd);
 }
 
-//
-// PolyWaypoint
-//
 // Parses arguments for parameterized polyobject waypoint movement
-//
 static boolean PolyWaypoint(line_t *line)
 {
 	polywaypointdata_t pwd;
@@ -1323,11 +1294,7 @@ static boolean PolyWaypoint(line_t *line)
 	return EV_DoPolyObjWaypoint(&pwd);
 }
 
-//
-// PolyRotate
-//
 // Parses arguments for parameterized polyobject rotate specials
-//
 static boolean PolyRotate(line_t *line)
 {
 	polyrotdata_t prd;
@@ -1365,11 +1332,7 @@ static boolean PolyFlag(line_t *line)
 	return EV_DoPolyObjFlag(&pfd);
 }
 
-//
-// PolyDisplace
-//
 // Parses arguments for parameterized polyobject move-by-sector-heights specials
-//
 static boolean PolyDisplace(line_t *line)
 {
 	polydisplacedata_t pdd;
@@ -1384,8 +1347,7 @@ static boolean PolyDisplace(line_t *line)
 }
 
 
-/** Similar to PolyDisplace().
- */
+// Parses arguments for parameterized polyobject rotate-by-sector-heights specials
 static boolean PolyRotDisplace(line_t *line)
 {
 	polyrotdisplacedata_t pdd;
