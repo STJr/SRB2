@@ -2144,7 +2144,7 @@ static inline INT32 Polyobj_AngSpeed(INT32 speed)
 
 // Linedef Handlers
 
-INT32 EV_DoPolyObjRotate(polyrotdata_t *prdata)
+boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2154,16 +2154,16 @@ INT32 EV_DoPolyObjRotate(polyrotdata_t *prdata)
 	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// check for override if this polyobj already has a thinker
 	if (po->thinker && !prdata->overRide)
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotate_t), PU_LEVSPEC, NULL);
@@ -2206,10 +2206,10 @@ INT32 EV_DoPolyObjRotate(polyrotdata_t *prdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
-INT32 EV_DoPolyObjMove(polymovedata_t *pmdata)
+boolean EV_DoPolyObjMove(polymovedata_t *pmdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2219,16 +2219,16 @@ INT32 EV_DoPolyObjMove(polymovedata_t *pmdata)
 	if (!(po = Polyobj_GetForNum(pmdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjMove: bad polyobj %d\n", pmdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// check for override if this polyobj already has a thinker
 	if (po->thinker && !pmdata->overRide)
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polymove_t), PU_LEVSPEC, NULL);
@@ -2265,10 +2265,10 @@ INT32 EV_DoPolyObjMove(polymovedata_t *pmdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
-INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
+boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 {
 	polyobj_t *po;
 	polywaypoint_t *th;
@@ -2281,15 +2281,15 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	if (!(po = Polyobj_GetForNum(pwdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: bad polyobj %d\n", pwdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	if (po->thinker) // Don't crowd out another thinker.
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polywaypoint_t), PU_LEVSPEC, NULL);
@@ -2356,7 +2356,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: Missing starting waypoint!\n");
 		po->thinker = NULL;
 		P_RemoveThinker(&th->thinker);
-		return 0;
+		return false;
 	}
 
 	// Hotfix to not crash on single-waypoint sequences -Red
@@ -2419,7 +2419,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: Missing target waypoint!\n");
 		po->thinker = NULL;
 		P_RemoveThinker(&th->thinker);
-		return 0;
+		return false;
 	}
 
 	// Set pointnum
@@ -2430,7 +2430,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// We don't deal with the mirror crap here, we'll
 	// handle that in the T_Thinker function.
-	return 1;
+	return true;
 }
 
 static void Polyobj_doSlideDoor(polyobj_t *po, polydoordata_t *doordata)
@@ -2522,20 +2522,20 @@ static void Polyobj_doSwingDoor(polyobj_t *po, polydoordata_t *doordata)
 		Polyobj_doSwingDoor(po, doordata);
 }
 
-INT32 EV_DoPolyDoor(polydoordata_t *doordata)
+boolean EV_DoPolyDoor(polydoordata_t *doordata)
 {
 	polyobj_t *po;
 
 	if (!(po = Polyobj_GetForNum(doordata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyDoor: bad polyobj %d\n", doordata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects;
 	// polyobject doors don't allow action overrides
 	if (po->isBad || po->thinker)
-		return 0;
+		return false;
 
 	switch (doordata->doorType)
 	{
@@ -2547,13 +2547,13 @@ INT32 EV_DoPolyDoor(polydoordata_t *doordata)
 		break;
 	default:
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyDoor: unknown door type %d", doordata->doorType);
-		return 0;
+		return false;
 	}
 
-	return 1;
+	return true;
 }
 
-INT32 EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
+boolean EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2563,12 +2563,12 @@ INT32 EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polydisplace_t), PU_LEVSPEC, NULL);
@@ -2596,10 +2596,10 @@ INT32 EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
-INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
+boolean EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2609,12 +2609,12 @@ INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotdisplace_t), PU_LEVSPEC, NULL);
@@ -2642,7 +2642,7 @@ INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
 void T_PolyObjFlag(polymove_t *th)
@@ -2691,7 +2691,7 @@ void T_PolyObjFlag(polymove_t *th)
 	Polyobj_attachToSubsec(po);     // relink to subsector
 }
 
-INT32 EV_DoPolyObjFlag(polyflagdata_t *pfdata)
+boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2702,19 +2702,19 @@ INT32 EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 	if (!(po = Polyobj_GetForNum(pfdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", pfdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects,
 	// polyobject doors don't allow action overrides
 	if (po->isBad || po->thinker)
-		return 0;
+		return false;
 
 	// Must have even # of vertices
 	if (po->numVertices & 1)
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: Polyobject has odd # of vertices!\n");
-		return 0;
+		return false;
 	}
 
 	// create a new thinker
@@ -2745,7 +2745,7 @@ INT32 EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
 void T_PolyObjFade(polyfade_t *th)
@@ -2843,7 +2843,7 @@ void T_PolyObjFade(polyfade_t *th)
 	}
 }
 
-INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
+boolean EV_DoPolyObjFade(polyfadedata_t *pfdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2853,16 +2853,16 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	if (!(po = Polyobj_GetForNum(pfdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjFade: bad polyobj %d\n", pfdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// already equal, nothing to do
 	if (po->translucency == pfdata->destvalue)
-		return 1;
+		return true;
 
 	if (po->thinker && po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
 		P_RemoveThinker(po->thinker);
@@ -2904,7 +2904,7 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
 // EOF

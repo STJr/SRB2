@@ -339,14 +339,14 @@ void T_PolyObjRotDisplace  (polyrotdisplace_t *);
 void T_PolyObjFlag  (polymove_t *);
 void T_PolyObjFade  (polyfade_t *);
 
-INT32 EV_DoPolyDoor(polydoordata_t *);
-INT32 EV_DoPolyObjMove(polymovedata_t *);
-INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *);
-INT32 EV_DoPolyObjRotate(polyrotdata_t *);
-INT32 EV_DoPolyObjDisplace(polydisplacedata_t *);
-INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *);
-INT32 EV_DoPolyObjFlag(polyflagdata_t *);
-INT32 EV_DoPolyObjFade(polyfadedata_t *);
+boolean EV_DoPolyDoor(polydoordata_t *);
+boolean EV_DoPolyObjMove(polymovedata_t *);
+boolean EV_DoPolyObjWaypoint(polywaypointdata_t *);
+boolean EV_DoPolyObjRotate(polyrotdata_t *);
+boolean EV_DoPolyObjDisplace(polydisplacedata_t *);
+boolean EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *);
+boolean EV_DoPolyObjFlag(polyflagdata_t *);
+boolean EV_DoPolyObjFade(polyfadedata_t *);
 
 
 //
