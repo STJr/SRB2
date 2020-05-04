@@ -217,7 +217,11 @@ static void Polyobj_GetInfo(polyobj_t *po)
 	if (po->parent == po->id) // do not allow a self-reference
 		po->parent = -1;
 
-	po->translucency = (lines[i].frontsector->floorheight>>FRACBITS) / 100;
+	po->translucency = (lines[i].flags & ML_DONTPEGTOP)
+						? (sides[lines[i].sidenum[0]].textureoffset>>FRACBITS)
+						: ((lines[i].frontsector->floorheight>>FRACBITS) / 100);
+
+	po->translucency = max(min(po->translucency, NUMTRANSMAPS), 0);
 
 	po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 
