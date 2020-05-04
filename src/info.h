@@ -3487,7 +3487,7 @@ typedef enum state
 
 	// Got Flag Sign
 	S_GOTFLAG,
-	
+
 	// Finish flag
 	S_FINISHFLAG,
 
@@ -4754,7 +4754,6 @@ typedef enum mobj_type
 	MT_ANGLEMAN,
 	MT_POLYANCHOR,
 	MT_POLYSPAWN,
-	MT_POLYSPAWNCRUSH,
 
 	// Skybox objects
 	MT_SKYBOX,

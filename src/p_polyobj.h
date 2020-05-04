@@ -26,7 +26,6 @@
 
 #define POLYOBJ_ANCHOR_DOOMEDNUM     760
 #define POLYOBJ_SPAWN_DOOMEDNUM      761
-#define POLYOBJ_SPAWNCRUSH_DOOMEDNUM 762 // todo: REMOVE
 
 #define POLYOBJ_START_LINE    20
 
@@ -57,7 +56,8 @@ typedef enum
 	TMPF_PUSHABLESTOP    = 1<<2,
 	TMPF_INVISIBLEPLANES = 1<<3,
 	TMPF_EXECUTOR        = 1<<4,
-	//TMPF_DONTCLIPPLANES  = 1<<5,
+	TMPF_CRUSH           = 1<<5,
+	//TMPF_DONTCLIPPLANES  = 1<<6,
 } textmappolyobjectflags_t;
 
 //

@@ -234,6 +234,10 @@ static void Polyobj_GetInfo(polyobj_t *po, line_t *line)
 	if (line->args[3] & TMPF_EXECUTOR) // Has a linedef executor
 		po->flags |= POF_LDEXEC;
 
+	// TODO: support customized damage somehow?
+	if (line->args[3] & TMPF_CRUSH)
+		po->damage = 3;
+
 	po->triggertag = line->args[4];
 }
 
@@ -472,10 +476,6 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 	}
 
 	po->id = id;
-
-	// TODO: support customized damage somehow?
-	if (spawnSpot->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
-		po->damage = 3;
 
 	// set to default thrust; may be modified by attached thinkers
 	// TODO: support customized thrust?
@@ -1306,8 +1306,7 @@ void Polyobj_InitLevel(void)
 
 		mo = (mobj_t *)th;
 
-		if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM ||
-			mo->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
+		if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM)
 		{
 			++numPolyObjects;
 

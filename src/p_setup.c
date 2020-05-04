@@ -3019,9 +3019,17 @@ static void P_ConvertBinaryMap(void)
 		case 750:
 		case 760:
 		case 761:
-		case 762:
 			mapthings[i].tag = mapthings[i].angle;
 			break;
+		case 762:
+		{
+			INT32 firstline = P_FindSpecialLineFromTag(20, mapthings[i].angle, -1);
+			if (firstline != -1)
+				lines[firstline].args[3] |= TMPF_CRUSH;
+			mapthings[i].tag = mapthings[i].angle;
+			mapthings[i].type = 761;
+			break;
+		}
 		case 780:
 			mapthings[i].tag = mapthings[i].extrainfo;
 			break;

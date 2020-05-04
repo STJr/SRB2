@@ -3351,7 +3351,7 @@ state_t states[NUMSTATES] =
 
 	// CTF Sign
 	{SPR_GFLG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
-	
+
 	// Finish flag
 	{SPR_FNSF,    FF_TRANS30, -1, {NULL}, 0, 0, S_NULL}, // S_FINISHFLAG
 
@@ -17999,7 +17999,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
-	
+
 	{           // MT_FINISHFLAG
 		-1,             // doomednum
 		S_FINISHFLAG,   // spawnstate
@@ -19844,7 +19844,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
 	},
-	
+
 	{           // MT_FLINGNIGHTSSTAR
 		-1,             // doomednum
 		S_NIGHTSSTAR,   // spawnstate
@@ -20822,33 +20822,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_POLYSPAWN
 		761,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		1,              // spawnhealth
-		S_NULL,         // seestate
-		sfx_None,       // seesound
-		0,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		3,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		1*FRACUNIT,     // radius
-		1*FRACUNIT,     // height
-		0,              // display offset
-		1000,           // mass
-		8,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_NOCLIP, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_POLYSPAWNCRUSH
-		762,            // doomednum
 		S_INVISIBLE,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
