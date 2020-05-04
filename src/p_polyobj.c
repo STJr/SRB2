@@ -204,44 +204,37 @@ boolean P_BBoxInsidePolyobj(polyobj_t *po, fixed_t *bbox)
 	return true;
 }
 
-// Finds the 'polyobject settings' linedef for a polyobject
-// the polyobject's id should be set as its tag
-static void Polyobj_GetInfo(polyobj_t *po)
+// Gets the polyobject's settings from its first line
+// args[0] of the first line should be the polyobject's id
+static void Polyobj_GetInfo(polyobj_t *po, line_t *line)
 {
-	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, po->id, -1);
-
-	if (i == -1)
-		return; // no extra settings to apply, let's leave it
-
-	po->parent = lines[i].frontsector->special;
+	po->parent = line->args[1];
 	if (po->parent == po->id) // do not allow a self-reference
 		po->parent = -1;
 
-	po->translucency = (lines[i].flags & ML_DONTPEGTOP)
-						? (sides[lines[i].sidenum[0]].textureoffset>>FRACBITS)
-						: ((lines[i].frontsector->floorheight>>FRACBITS) / 100);
+	po->translucency = max(min(line->args[2], NUMTRANSMAPS), 0);
 
-	po->translucency = max(min(po->translucency, NUMTRANSMAPS), 0);
+	po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES|POF_RENDERPLANES;
 
-	po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
-
-	if (lines[i].flags & ML_EFFECT1)
+	if (line->args[3] & TMPF_NOINSIDES)
 		po->flags |= POF_ONESIDE;
 
-	if (lines[i].flags & ML_EFFECT2)
+	if (line->args[3] & TMPF_INTANGIBLE)
 		po->flags &= ~POF_SOLID;
 
-	if (lines[i].flags & ML_EFFECT3)
+	if (line->args[3] & TMPF_PUSHABLESTOP)
 		po->flags |= POF_PUSHABLESTOP;
 
-	if (lines[i].flags & ML_EFFECT4)
-		po->flags |= POF_RENDERPLANES;
+	if (line->args[3] & TMPF_INVISIBLEPLANES)
+		po->flags &= ~POF_RENDERPLANES;
 
-	/*if (lines[i].flags & ML_EFFECT5)
+	/*if (line->args[3] & TMPF_DONTCLIPPLANES)
 		po->flags &= ~POF_CLIPPLANES;*/
 
-	if (lines[i].flags & ML_NOCLIMB) // Has a linedef executor
+	if (line->args[3] & TMPF_EXECUTOR) // Has a linedef executor
 		po->flags |= POF_LDEXEC;
+
+	po->triggertag = line->args[4];
 }
 
 // Reallocating array maintenance
@@ -505,10 +498,10 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		if (seg->linedef->special != POLYOBJ_START_LINE)
 			continue;
 
-		if (seg->linedef->tag != po->id)
+		if (seg->linedef->args[0] != po->id)
 			continue;
 
-		Polyobj_GetInfo(po); // apply extra settings if they exist!
+		Polyobj_GetInfo(po, seg->linedef); // apply extra settings if they exist!
 
 		// save original flags and translucency to reference later for netgames!
 		po->spawnflags = po->flags;

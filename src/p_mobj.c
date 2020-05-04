@@ -2941,10 +2941,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 								if (mo->z == polysec->ceilingheight)
 								{
-									// We're landing on a PO, so check for
-									// a linedef executor.
-									// Trigger tags are 32000 + the PO's ID number.
-									P_LinedefExecute((INT16)(32000 + po->id), mo, NULL);
+									// We're landing on a PO, so check for a linedef executor.
+									P_LinedefExecute(po->triggertag, mo, NULL);
 								}
 
 								po = (polyobj_t *)(po->link.next);
