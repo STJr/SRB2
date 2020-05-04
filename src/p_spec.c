@@ -1044,9 +1044,6 @@ static INT32 P_FindLineFromTag(INT32 tag, INT32 start)
 	}
 }
 
-//
-// P_FindSpecialLineFromTag
-//
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 {
 	if (tag == -1)
@@ -1076,11 +1073,8 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 	}
 }
 
-//
-// PolyDoor
-//
+
 // Parses arguments for parameterized polyobject door types
-//
 static boolean PolyDoor(line_t *line)
 {
 	polydoordata_t pdd;
@@ -1117,11 +1111,7 @@ static boolean PolyDoor(line_t *line)
 	return EV_DoPolyDoor(&pdd);
 }
 
-//
-// PolyMove
-//
 // Parses arguments for parameterized polyobject move specials
-//
 static boolean PolyMove(line_t *line)
 {
 	polymovedata_t pmd;
@@ -1136,12 +1126,8 @@ static boolean PolyMove(line_t *line)
 	return EV_DoPolyObjMove(&pmd);
 }
 
-//
-// PolyInvisible
-//
 // Makes a polyobject invisible and intangible
 // If NOCLIMB is ticked, the polyobject will still be tangible, just not visible.
-//
 static void PolyInvisible(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
@@ -1164,12 +1150,8 @@ static void PolyInvisible(line_t *line)
 	po->flags &= ~POF_RENDERALL;
 }
 
-//
-// PolyVisible
-//
 // Makes a polyobject visible and tangible
 // If NOCLIMB is ticked, the polyobject will not be tangible, just visible.
-//
 static void PolyVisible(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
@@ -1192,16 +1174,14 @@ static void PolyVisible(line_t *line)
 	po->flags |= (po->spawnflags & POF_RENDERALL);
 }
 
-//
-// PolyTranslucency
-//
+
 // Sets the translucency of a polyobject
 // Frontsector floor / 100 = translevel
-//
 static void PolyTranslucency(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
 	polyobj_t *po;
+	INT32 value;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
@@ -1213,37 +1193,28 @@ static void PolyTranslucency(line_t *line)
 	if (po->isBad)
 		return;
 
-	// if DONTPEGBOTTOM, specify raw translucency value in Front X Offset
-	// else, take it out of 1000. If Front X Offset is specified, use that. Else, use floorheight.
+	// If Front X Offset is specified, use that. Else, use floorheight.
+	value = (sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : line->frontsector->floorheight) >> FRACBITS;
+
+	// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
+	if (!(line->flags & ML_DONTPEGBOTTOM))
+		value /= 100;
+
 	if (line->flags & ML_EFFECT3) // relative calc
-		po->translucency = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
-			(sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
-				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS))
-			: (sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
-				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
-			NUMTRANSMAPS), 0);
+		po->translucency += value;
 	else
-		po->translucency = (line->flags & ML_DONTPEGBOTTOM) ?
-			(sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
-				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), 0))
-			: (sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
-				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
+		po->translucency = value;
+
+	po->translucency = max(min(po->translucency, NUMTRANSMAPS), 0);
 }
 
-//
-// PolyFade
-//
 // Makes a polyobject translucency fade and applies tangibility
-//
 static boolean PolyFade(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
 	polyobj_t *po;
 	polyfadedata_t pfd;
+	INT32 value;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
@@ -1266,25 +1237,19 @@ static boolean PolyFade(line_t *line)
 
 	pfd.polyObjNum = polyObjNum;
 
-	// if DONTPEGBOTTOM, specify raw translucency value in Front X Offset
-	// else, take it out of 1000. If Front X Offset is specified, use that. Else, use floorheight.
+	// If Front X Offset is specified, use that. Else, use floorheight.
+	value = (sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : line->frontsector->floorheight) >> FRACBITS;
+
+	// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
+	if (!(line->flags & ML_DONTPEGBOTTOM))
+		value /= 100;
+
 	if (line->flags & ML_EFFECT3) // relative calc
-		pfd.destvalue = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
-			(sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
-				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS))
-			: (sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
-				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
-			NUMTRANSMAPS), 0);
+		pfd.destvalue = po->translucency + value;
 	else
-		pfd.destvalue = (line->flags & ML_DONTPEGBOTTOM) ?
-			(sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
-				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), 0))
-			: (sides[line->sidenum[0]].textureoffset ?
-				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
-				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
+		pfd.destvalue = value;
+
+	pfd.destvalue = max(min(pfd.destvalue, NUMTRANSMAPS), 0);
 
 	// already equal, nothing to do
 	if (po->translucency == pfd.destvalue)
@@ -1303,11 +1268,7 @@ static boolean PolyFade(line_t *line)
 	return EV_DoPolyObjFade(&pfd);
 }
 
-//
-// PolyWaypoint
-//
 // Parses arguments for parameterized polyobject waypoint movement
-//
 static boolean PolyWaypoint(line_t *line)
 {
 	polywaypointdata_t pwd;
@@ -1323,11 +1284,7 @@ static boolean PolyWaypoint(line_t *line)
 	return EV_DoPolyObjWaypoint(&pwd);
 }
 
-//
-// PolyRotate
-//
 // Parses arguments for parameterized polyobject rotate specials
-//
 static boolean PolyRotate(line_t *line)
 {
 	polyrotdata_t prd;
@@ -1352,11 +1309,20 @@ static boolean PolyRotate(line_t *line)
 	return EV_DoPolyObjRotate(&prd);
 }
 
-//
-// PolyDisplace
-//
+// Parses arguments for polyobject flag waving special
+static boolean PolyFlag(line_t *line)
+{
+	polyflagdata_t pfd;
+
+	pfd.polyObjNum = line->tag;
+	pfd.speed = P_AproxDistance(line->dx, line->dy) >> FRACBITS;
+	pfd.angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y) >> ANGLETOFINESHIFT;
+	pfd.momx = sides[line->sidenum[0]].textureoffset >> FRACBITS;
+
+	return EV_DoPolyObjFlag(&pfd);
+}
+
 // Parses arguments for parameterized polyobject move-by-sector-heights specials
-//
 static boolean PolyDisplace(line_t *line)
 {
 	polydisplacedata_t pdd;
@@ -1371,8 +1337,7 @@ static boolean PolyDisplace(line_t *line)
 }
 
 
-/** Similar to PolyDisplace().
- */
+// Parses arguments for parameterized polyobject rotate-by-sector-heights specials
 static boolean PolyRotDisplace(line_t *line)
 {
 	polyrotdisplacedata_t pdd;
@@ -7323,7 +7288,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 		switch (lines[i].special)
 		{
 			case 30: // Polyobj_Flag
-				EV_DoPolyObjFlag(&lines[i]);
+				PolyFlag(&lines[i]);
 				break;
 
 			case 31: // Polyobj_Displace
