@@ -1352,6 +1352,19 @@ static boolean PolyRotate(line_t *line)
 	return EV_DoPolyObjRotate(&prd);
 }
 
+// Parses arguments for polyobject flag waving special
+static boolean PolyFlag(line_t *line)
+{
+	polyflagdata_t pfd;
+
+	pfd.polyObjNum = line->tag;
+	pfd.speed = P_AproxDistance(line->dx, line->dy) >> FRACBITS;
+	pfd.angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y) >> ANGLETOFINESHIFT;
+	pfd.momx = sides[line->sidenum[0]].textureoffset >> FRACBITS;
+
+	return EV_DoPolyObjFlag(&pfd);
+}
+
 //
 // PolyDisplace
 //
@@ -7282,15 +7295,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 		switch (lines[i].special)
 		{
 			case 30: // Polyobj_Flag
-			{
-				polyflagdata_t pfd;
-				pfd.polyObjNum = lines[i].tag;
-				pfd.speed = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
-				pfd.angle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y) >> ANGLETOFINESHIFT;
-				pfd.momx = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
-				EV_DoPolyObjFlag(&pfd);
+				PolyFlag(&lines[i]);
 				break;
-			}
 
 			case 31: // Polyobj_Displace
 				PolyDisplace(&lines[i]);
