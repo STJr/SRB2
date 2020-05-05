@@ -1108,12 +1108,11 @@ static boolean PolyMove(line_t *line)
 {
 	polymovedata_t pmd;
 
-	pmd.polyObjNum = line->tag;
-	pmd.speed      = sides[line->sidenum[0]].textureoffset / 8;
+	pmd.polyObjNum = line->args[0];
+	pmd.speed      = line->args[1] << (FRACBITS - 3);
 	pmd.angle      = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
-	pmd.distance   = sides[line->sidenum[0]].rowoffset;
-
-	pmd.overRide = (line->special == 483); // Polyobj_OR_Move
+	pmd.distance   = line->args[2] << FRACBITS;
+	pmd.overRide   = line->args[3]; // Polyobj_OR_Move
 
 	return EV_DoPolyObjMove(&pmd);
 }
@@ -4002,7 +4001,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			PolyDoor(line);
 			break;
 		case 482: // Polyobj_Move
-		case 483: // Polyobj_OR_Move
 			PolyMove(line);
 			break;
 		case 484: // Polyobj_RotateRight
