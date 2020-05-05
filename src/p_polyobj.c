@@ -210,6 +210,8 @@ static void Polyobj_GetInfo(polyobj_t *po)
 {
 	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, po->id, -1);
 
+	po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
+
 	if (i == -1)
 		return; // no extra settings to apply, let's leave it
 
@@ -222,8 +224,6 @@ static void Polyobj_GetInfo(polyobj_t *po)
 						: ((lines[i].frontsector->floorheight>>FRACBITS) / 100);
 
 	po->translucency = max(min(po->translucency, NUMTRANSMAPS), 0);
-
-	po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 
 	if (lines[i].flags & ML_EFFECT1)
 		po->flags |= POF_ONESIDE;
