@@ -736,14 +736,20 @@ typedef struct
 	INT32 *map;
 } pixelmap_t;
 
-// rotsprite
 #ifdef ROTSPRITE
 typedef struct
 {
+	UINT8 *data;
+	void **columnofs;
+} rscache_t;
+
+typedef struct
+{
 	pixelmap_t pixelmap[16][ROTANGLES];
-	UINT16 cached;
+	rscache_t pixels[16][ROTANGLES];
+	UINT16 cached[ROTANGLES];
 } rotsprite_t;
-#endif/*ROTSPRITE*/
+#endif
 
 typedef enum
 {

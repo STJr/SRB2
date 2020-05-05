@@ -37,7 +37,7 @@ typedef struct
 	boolean available;
 } spriteinfo_t;
 
-int CountPixelsInPatch(patch_t *patch);
+boolean R_ApplyPixelMapToColumn(pixelmap_t *pmap, INT32 *map, patch_t *patch, UINT8 *post, size_t *colsize, boolean flipped);
 UINT8 *GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip);
 
 // Conversions between patches / flats / textures...
@@ -66,12 +66,16 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 // Sprite rotation
 #ifdef ROTSPRITE
 INT32 R_GetRollAngle(angle_t rollangle);
-void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip);
+void R_CacheRotSprite(INT32 rollangle, spriteinfo_t *sprinfo, spriteframe_t *sprframe, UINT8 frame, INT32 rot, UINT16 flip);
+void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, rscache_t *cache, patch_t *patch, UINT16 flip);
+void R_GetRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, spriteframepivot_t *pivot, spriteframe_t *sprframe, INT32 rot, UINT16 flip);
+
 void R_FreeSingleRotSprite(spritedef_t *spritedef);
 void R_FreeSkinRotSprite(size_t skinnum);
+void R_FreeAllRotSprite(void);
+
 extern fixed_t rollcosang[ROTANGLES];
 extern fixed_t rollsinang[ROTANGLES];
-void R_FreeAllRotSprite(void);
 #endif
 
 #endif // __R_PATCH__

@@ -105,15 +105,18 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
 
-	// rotsprite
 #ifdef ROTSPRITE
-	sprtemp[frame].rotsprite.cached = 0;
-	for (r = 0; r < 16; r++)
+	for (ang = 0; ang < ROTANGLES; ang++)
 	{
-		for (ang = 0; ang < ROTANGLES; ang++)
+		sprtemp[frame].rotsprite.cached[ang] = 0;
+		for (r = 0; r < 16; r++)
+		{
 			sprtemp[frame].rotsprite.pixelmap[r][ang].map = NULL;
+			sprtemp[frame].rotsprite.pixels[r][ang].data = NULL;
+			sprtemp[frame].rotsprite.pixels[r][ang].columnofs = NULL;
+		}
 	}
-#endif/*ROTSPRITE*/
+#endif
 
 	if (rotation == 0)
 	{
@@ -732,87 +735,6 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 	dc_texturemid = basetexturemid;
 }
 
-boolean R_PreparePixelMap(INT32 *map, UINT8 *post, boolean flipped)
-{
-	INT32 x, y;
-	size_t pmsize = dc_pixelmap->size;
-	size_t i = 0;
-	int lastStartY = 0;
-	int spanSize = 0;
-	UINT8 *px, *startofspan = NULL, *dest = post;
-	boolean written = false;
-
-	// Taken from R_FlatToPatch.
-	while (i < dc_pixelmap->height)
-	{
-		y = map[i];
-		x = map[i + pmsize];
-		px = GetPatchPixel(dc_sourcepatch, x, y, flipped); // If not NULL, we have a pixel
-		i++;
-
-		// End span if we have a transparent pixel
-		if (px == NULL)
-		{
-			if (startofspan)
-				WRITEUINT8(dest, 0);
-			startofspan = NULL;
-			continue;
-		}
-
-		// Start new column if we need to
-		if (!startofspan || spanSize == 255)
-		{
-			int writeY = i;
-
-			// If we reached the span size limit, finish the previous span
-			if (startofspan)
-				WRITEUINT8(dest, 0);
-
-			if (i > 254)
-			{
-				// Make sure we're aligned to 254
-				if (lastStartY < 254)
-				{
-					WRITEUINT8(dest, 254);
-					WRITEUINT8(dest, 0);
-					dest += 2;
-					lastStartY = 254;
-				}
-
-				// Write stopgap empty spans if needed
-				writeY = y - lastStartY;
-
-				while (writeY > 254)
-				{
-					WRITEUINT8(dest, 254);
-					WRITEUINT8(dest, 0);
-					dest += 2;
-					writeY -= 254;
-				}
-			}
-
-			startofspan = dest;
-			WRITEUINT8(dest, writeY);
-			dest += 2;
-			spanSize = 0;
-
-			lastStartY = i;
-		}
-
-		// Write the pixel
-		WRITEUINT8(dest, *px);
-		spanSize++;
-		startofspan[1] = spanSize;
-		written = true;
-	}
-
-	if (startofspan)
-		WRITEUINT8(dest, 0);
-	WRITEUINT8(dest, 0xFF);
-
-	return written;
-}
-
 //
 // R_DrawVisSprite
 //  mfloorclip and mceilingclip should also be set.
@@ -930,7 +852,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	dc_texturemid = vis->texturemid;
 	dc_texheight = 0;
-	dc_pixelmap = vis->pixelmap;
 
 	frac = vis->startfrac;
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
@@ -976,14 +897,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	lengthcol = patch->height;
 
 	colfunc = colfuncs[colfunctype];
-	dc_sourcepatch = dc_pixelmap ? patch : NULL;
 
 	// Pixel map drawing loop
-	if (dc_pixelmap)
+	if (vis->pixelmap)
 	{
-		static UINT8 pixelmapcol[0xFFFF];
-		INT32 lastfrac = -1;
-		boolean drawcolumn;
+		void **columnofs = vis->columnofs;
+		if (!columnofs)
+			I_Error("R_DrawVisSprite: vis->columnofs NULL!");
 
 		if (vis->scalestep)
 		{
@@ -1004,29 +924,29 @@ static void R_DrawVisSprite(vissprite_t *vis)
 				sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 				dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-				dc_pixelmapdata = &dc_pixelmap->map[texturecolumn * dc_pixelmap->height];
-				if (texturecolumn != lastfrac)
-				{
-					drawcolumn = R_PreparePixelMap(dc_pixelmapdata, pixelmapcol, vis->flipped);
-					lastfrac = texturecolumn;
-				}
-				if (drawcolumn)
-					localcolfunc((column_t *)pixelmapcol);
+				column = (column_t *)(columnofs[texturecolumn]);
+				if (column)
+					localcolfunc(column);
 			}
 		}
 		else
 		{
+#ifdef RANGECHECK
+			pwidth = SHORT(patch->width);
+#endif
+
 			for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 			{
-				texturecolumn = frac>>FRACBITS;
-				dc_pixelmapdata = &dc_pixelmap->map[texturecolumn * dc_pixelmap->height];
-				if (texturecolumn != lastfrac)
-				{
-					drawcolumn = R_PreparePixelMap(dc_pixelmapdata, pixelmapcol, vis->flipped);
-					lastfrac = texturecolumn;
-				}
-				if (drawcolumn)
-					localcolfunc((column_t *)pixelmapcol);
+#ifdef RANGECHECK
+				texturecolumn = (frac>>FRACBITS);
+				if (texturecolumn < 0 || texturecolumn >= pwidth)
+					I_Error("R_DrawVisSprite: bad texturecolumn at %d from end", vis->x2 - dc_x);
+				column = (column_t *)(columnofs[texturecolumn]);
+#else
+				column = (column_t *)(columnofs[frac>>FRACBITS]);
+#endif
+				if (column)
+					localcolfunc(column);
 			}
 		}
 	}
@@ -1067,9 +987,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 			{
 #ifdef RANGECHECK
-				texturecolumn = frac>>FRACBITS;
+				texturecolumn = (frac>>FRACBITS);
 				if (texturecolumn < 0 || texturecolumn >= pwidth)
-					I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
+					I_Error("R_DrawVisSprite: bad texturecolumn at %d from end", vis->x2 - dc_x);
 				column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
 #else
 				column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
@@ -1414,6 +1334,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow = R_NewVisSprite();
 	shadow->patch = patch;
 	shadow->pixelmap = NULL;
+	shadow->columnofs = NULL;
 	shadow->heightsec = vis->heightsec;
 
 	shadow->thingheight = FRACUNIT;
@@ -1538,10 +1459,12 @@ static void R_ProjectSprite(mobj_t *thing)
 	INT32 light = 0;
 	fixed_t this_scale = thing->scale;
 
-	// rotsprite
 	pixelmap_t *pixelmap = NULL;
+	void **columnofs = NULL;
+	patch_t *spr_patch = NULL;
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
+
 #ifdef ROTSPRITE
 	INT32 rollangle = 0;
 #endif
@@ -1592,7 +1515,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
 #ifdef ROTSPRITE
-			sprinfo = NULL;
+			sprinfo = &spriteinfo[thing->sprite];
 #endif
 			rot = thing->frame&FF_FRAMEMASK;
 		}
@@ -1601,7 +1524,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		sprdef = &sprites[thing->sprite];
 #ifdef ROTSPRITE
-		sprinfo = NULL;
+		sprinfo = &spriteinfo[thing->sprite];
 #endif
 
 		if (rot >= sprdef->numframes)
@@ -1676,13 +1599,27 @@ static void R_ProjectSprite(mobj_t *thing)
 		rollangle = R_GetRollAngle(thing->rollangle);
 		if (rollangle)
 		{
-			if (!(sprframe->rotsprite.cached & (1<<rot)))
-				R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-			pixelmap = &sprframe->rotsprite.pixelmap[rot][rollangle];
+			rotsprite_t *rotsprite = &sprframe->rotsprite;
+
+			// Create a pixel map of the rotated sprite.
+			if (!(rotsprite->cached[rollangle] & (1<<rot)))
+				R_CacheRotSprite(rollangle, sprinfo, sprframe, (thing->frame & FF_FRAMEMASK), rot, flip);
+
+			// Generate column offsets.
+			pixelmap = &rotsprite->pixelmap[rot][rollangle];
+			if (!rotsprite->pixels[rot][rollangle].columnofs)
+			{
+				// Cache the patch
+				spr_patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+				R_CacheRotSpriteColumns(pixelmap, &rotsprite->pixels[rot][rollangle], spr_patch, flip);
+			}
+			columnofs = rotsprite->pixels[rot][rollangle].columnofs;
+
 			spr_width = pixelmap->width << FRACBITS;
 			spr_height = pixelmap->height << FRACBITS;
 			spr_offset = pixelmap->leftoffset << FRACBITS;
 			spr_topoffset = pixelmap->topoffset << FRACBITS;
+
 			// flip -> rotate, not rotate -> flip
 			flip = 0;
 		}
@@ -1973,8 +1910,11 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
-	vis->patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+	if (spr_patch == NULL)
+		spr_patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+	vis->patch = spr_patch;
 	vis->pixelmap = pixelmap;
+	vis->columnofs = columnofs;
 
 //
 // determine the colormap (lightlevel & special effects)

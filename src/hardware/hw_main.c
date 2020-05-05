@@ -5406,7 +5406,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float gz, gzt;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
-	spriteinfo_t *sprinfo;
 	md2_t *md2;
 	size_t lumpoff;
 	unsigned rot;
@@ -5421,7 +5420,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
-#ifdef ROTSPRITE
+#if 0
 	angle_t rollangle = 0;
 #endif
 
@@ -5468,15 +5467,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
 	if (thing->skin && thing->sprite == SPR_PLAY)
-	{
 		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
-		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
-	}
 	else
-	{
 		sprdef = &sprites[thing->sprite];
-		sprinfo = NULL;
-	}
 
 	if (rot >= sprdef->numframes)
 	{
@@ -5485,7 +5478,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		thing->sprite = states[S_UNKNOWN].sprite;
 		thing->frame = states[S_UNKNOWN].frame;
 		sprdef = &sprites[thing->sprite];
-		sprinfo = NULL;
 		rot = thing->frame&FF_FRAMEMASK;
 		thing->state->sprite = thing->sprite;
 		thing->state->frame = thing->frame;
@@ -5541,22 +5533,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_offset = spritecachedinfo[lumpoff].offset;
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
-#ifdef ROTSPRITE
+#if 0
 	if (thing->rollangle)
 	{
 		INT32 ra = R_GetRollAngle(thing->rollangle);
 		if (ra)
-		{
-			pixelmap_t *pixelmap = &sprframe->rotsprite.pixelmap[rot][ra];
 			rollangle = (ra * ROTANGDIFF);
-			if (!(sprframe->rotsprite.cached & (1<<rot)))
-				R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-			spr_width = pixelmap->width << FRACBITS;
-			spr_height = pixelmap->height << FRACBITS;
-			spr_offset = pixelmap->leftoffset << FRACBITS;
-			spr_topoffset = pixelmap->topoffset << FRACBITS;
-			(void)rollangle;
-		}
 	}
 #endif
 

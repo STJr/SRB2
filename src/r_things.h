@@ -49,8 +49,6 @@ extern INT32 lengthcol;
 void R_DrawMaskedColumn(column_t *column);
 void R_DrawFlippedMaskedColumn(column_t *column);
 
-boolean R_PreparePixelMap(INT32 *map, UINT8 *post, boolean flipped);
-
 // ----------------
 // SPRITE RENDERING
 // ----------------
@@ -185,6 +183,7 @@ typedef struct vissprite_s
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 
 	pixelmap_t *pixelmap;
+	void **columnofs;
 } vissprite_t;
 
 extern UINT32 visspritecount;

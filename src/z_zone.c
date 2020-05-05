@@ -526,7 +526,7 @@ void Z_FlushCachedPatches(void)
 void Z_PreparePatchFlush(void)
 {
 	CONS_Debug(DBG_RENDER, "Z_PreparePatchFlush()...\n");
-#ifdef ROTSPRITE
+#if 0
 	R_FreeAllRotSprite();
 #endif
 }
