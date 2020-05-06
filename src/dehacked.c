@@ -1863,6 +1863,12 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "STARTRINGS"))
 				mapheaderinfo[num-1]->startrings = (UINT16)i;
+			else if (fastcmp(word, "SPECIALSTAGETIME"))
+				mapheaderinfo[num-1]->sstimer = i;
+			else if (fastcmp(word, "SPECIALSTAGESPHERES"))
+				mapheaderinfo[num-1]->ssspheres = i;
+			else if (fastcmp(word, "GRAVITY"))
+				mapheaderinfo[num-1]->gravity = FLOAT_TO_FIXED(atof(word2));
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
