@@ -1266,11 +1266,6 @@ INT32 R_GetRollAngle(angle_t rollangle)
 	return ra;
 }
 
-#define SPRITE_XCENTER (leftoffset)
-#define SPRITE_YCENTER (height / 2)
-#define ROTSPRITE_XCENTER (newwidth / 2)
-#define ROTSPRITE_YCENTER (newheight / 2)
-
 //
 // Creates a rotated sprite by calculating a pixel map.
 // Caches column data between levels.
@@ -1301,7 +1296,7 @@ void R_CacheRotSprite(INT32 rollangle, spriteinfo_t *sprinfo, spriteframe_t *spr
 //
 // Caches columns of a rotated sprite, applying the pixel map.
 //
-void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, rscache_t *cache, patch_t *patch, UINT16 flip)
+void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, UINT16 flip)
 {
 	void **columnofs;
 	UINT8 *data;
@@ -1345,32 +1340,39 @@ void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, rscache_t *cache, patch_t *pa
 }
 
 //
-// Finds the dimensions of a rotated triangle.
+// Calculates the dimensions of a rotated rectangle.
 //
-static void FindRotatedRectangleDimensions(INT16 width, INT16 height, fixed_t ca, fixed_t sa, INT16 *newwidth, INT16 *newheight)
+static void CalculateRotatedRectangleDimensions(INT16 width, INT16 height, fixed_t ca, fixed_t sa, spriteframepivot_t *pivot, INT16 *newwidth, INT16 *newheight)
 {
-	fixed_t fw = (width << FRACBITS);
-	fixed_t fh = (height << FRACBITS);
-	INT32 w1 = abs(FixedMul(fw, ca) - FixedMul(fh, sa));
-	INT32 w2 = abs(FixedMul(-fw, ca) - FixedMul(fh, sa));
-	INT32 h1 = abs(FixedMul(fw, sa) + FixedMul(fh, ca));
-	INT32 h2 = abs(FixedMul(-fw, sa) + FixedMul(fh, ca));
-	w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
-	w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
-	h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
-	h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
-	*newwidth = max(width, max(w1, w2));
-	*newheight = max(height, max(h1, h2));
+	if (pivot)
+	{
+		*newwidth = width + (height * 2);
+		*newheight = height + (width * 2);
+	}
+	else
+	{
+		fixed_t fw = (width * FRACUNIT);
+		fixed_t fh = (height * FRACUNIT);
+		INT32 w1 = abs(FixedMul(fw, ca) - FixedMul(fh, sa));
+		INT32 w2 = abs(FixedMul(-fw, ca) - FixedMul(fh, sa));
+		INT32 h1 = abs(FixedMul(fw, sa) + FixedMul(fh, ca));
+		INT32 h2 = abs(FixedMul(-fw, sa) + FixedMul(fh, ca));
+		w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
+		w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
+		h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
+		h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
+		*newwidth = max(width, max(w1, w2));
+		*newheight = max(height, max(h1, h2));
+	}
 }
 
 //
 // Creates a pixel map for a rotated sprite.
 //
-void R_GetRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, spriteframepivot_t *pivot, spriteframe_t *sprframe, INT32 rot, UINT16 flip)
+void R_GetRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, spriteframepivot_t *spritepivot, spriteframe_t *sprframe, INT32 rot, UINT16 flip)
 {
 	size_t size;
 	INT32 dx, dy;
-	INT32 pivotx, pivoty;
 	INT16 newwidth, newheight;
 	fixed_t ca = rollcosang[rollangle];
 	fixed_t sa = rollsinang[rollangle];
@@ -1379,18 +1381,22 @@ void R_GetRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelma
 	INT16 height = SHORT(patch->height);
 	INT16 leftoffset = SHORT(patch->leftoffset);
 
-	// rotation pivot
-	pivotx = pivot ? pivot->x : SPRITE_XCENTER;
-	pivoty = pivot ? pivot->y : SPRITE_YCENTER;
+	spriteframepivot_t pivot;
+	INT16 rotxcenter, rotycenter;
+
+	pivot.x = (spritepivot ? spritepivot->x : leftoffset);
+	pivot.y = (spritepivot ? spritepivot->y : (height / 2));
 
 	if (flip)
 	{
-		pivotx = width - pivotx;
+		pivot.x = width - pivot.x;
 		leftoffset = width - leftoffset;
 	}
 
 	// Find the dimensions of the rotated patch.
-	FindRotatedRectangleDimensions(width, height, ca, sa, &newwidth, &newheight);
+	CalculateRotatedRectangleDimensions(width, height, ca, sa, (spritepivot ? &pivot : NULL), &newwidth, &newheight);
+	rotxcenter = (newwidth / 2);
+	rotycenter = (newheight / 2);
 	size = (newwidth * newheight);
 
 	// Build pixel map.
@@ -1407,10 +1413,10 @@ void R_GetRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelma
 		for (dx = 0; dx < newwidth; dx++)
 		{
 			INT32 dst = (dx*newheight)+dy;
-			INT32 x = (dx-ROTSPRITE_XCENTER) << FRACBITS;
-			INT32 y = (dy-ROTSPRITE_YCENTER) << FRACBITS;
-			INT32 sx = FixedMul(x, ca) + FixedMul(y, sa) + (pivotx << FRACBITS);
-			INT32 sy = -FixedMul(x, sa) + FixedMul(y, ca) + (pivoty << FRACBITS);
+			INT32 x = (dx-rotxcenter) << FRACBITS;
+			INT32 y = (dy-rotycenter) << FRACBITS;
+			INT32 sx = FixedMul(x, ca) + FixedMul(y, sa) + (pivot.x << FRACBITS);
+			INT32 sy = -FixedMul(x, sa) + FixedMul(y, ca) + (pivot.y << FRACBITS);
 			sx >>= FRACBITS;
 			sy >>= FRACBITS;
 			pixelmap->map[dst] = sy;
@@ -1419,18 +1425,13 @@ void R_GetRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelma
 	}
 
 	// Set offsets.
-	pixelmap->leftoffset = (newwidth / 2) + (leftoffset - pivotx);
-	pixelmap->topoffset = (newheight / 2) + (SHORT(patch->topoffset) - pivoty);
+	pixelmap->leftoffset = (newwidth / 2) + (leftoffset - pivot.x);
+	pixelmap->topoffset = (newheight / 2) + (SHORT(patch->topoffset) - pivot.y);
 	pixelmap->topoffset += FEETADJUST>>FRACBITS;
 
 	// This rotation is cached now
 	sprframe->rotsprite.cached[rollangle] |= (1<<rot);
 }
-
-#undef SPRITE_XCENTER
-#undef SPRITE_YCENTER
-#undef ROTSPRITE_XCENTER
-#undef ROTSPRITE_YCENTER
 
 //
 // Free sprite rotation data from memory, for a single spritedef.
@@ -1450,7 +1451,7 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 				if (sprframe->rotsprite.cached[ang] & (1<<rot))
 				{
 					pixelmap_t *pixelmap = &sprframe->rotsprite.pixelmap[rot][ang];
-					rscache_t *cache = &sprframe->rotsprite.pixels[rot][ang];
+					pmcache_t *cache = &pixelmap->cache;
 
 					if (pixelmap->map)
 						Z_Free(pixelmap->map);

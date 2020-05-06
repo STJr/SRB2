@@ -108,12 +108,14 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 #ifdef ROTSPRITE
 	for (ang = 0; ang < ROTANGLES; ang++)
 	{
-		sprtemp[frame].rotsprite.cached[ang] = 0;
+		rotsprite_t *rotsprite = &sprtemp[frame].rotsprite;
+		rotsprite->cached[ang] = 0;
 		for (r = 0; r < 16; r++)
 		{
-			sprtemp[frame].rotsprite.pixelmap[r][ang].map = NULL;
-			sprtemp[frame].rotsprite.pixels[r][ang].data = NULL;
-			sprtemp[frame].rotsprite.pixels[r][ang].columnofs = NULL;
+			pixelmap_t *pixelmap = &rotsprite->pixelmap[r][ang];
+			pixelmap->map = NULL;
+			pixelmap->cache.data = NULL;
+			pixelmap->cache.columnofs = NULL;
 		}
 	}
 #endif
@@ -1607,13 +1609,13 @@ static void R_ProjectSprite(mobj_t *thing)
 
 			// Generate column offsets.
 			pixelmap = &rotsprite->pixelmap[rot][rollangle];
-			if (!rotsprite->pixels[rot][rollangle].columnofs)
+			if (!pixelmap->cache.columnofs)
 			{
 				// Cache the patch
 				spr_patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
-				R_CacheRotSpriteColumns(pixelmap, &rotsprite->pixels[rot][rollangle], spr_patch, flip);
+				R_CacheRotSpriteColumns(pixelmap, &pixelmap->cache, spr_patch, flip);
 			}
-			columnofs = rotsprite->pixels[rot][rollangle].columnofs;
+			columnofs = pixelmap->cache.columnofs;
 
 			spr_width = pixelmap->width << FRACBITS;
 			spr_height = pixelmap->height << FRACBITS;

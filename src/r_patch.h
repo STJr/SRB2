@@ -67,8 +67,8 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 #ifdef ROTSPRITE
 INT32 R_GetRollAngle(angle_t rollangle);
 void R_CacheRotSprite(INT32 rollangle, spriteinfo_t *sprinfo, spriteframe_t *sprframe, UINT8 frame, INT32 rot, UINT16 flip);
-void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, rscache_t *cache, patch_t *patch, UINT16 flip);
-void R_GetRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, spriteframepivot_t *pivot, spriteframe_t *sprframe, INT32 rot, UINT16 flip);
+void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, UINT16 flip);
+void R_GetRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, spriteframepivot_t *spritepivot, spriteframe_t *sprframe, INT32 rot, UINT16 flip);
 
 void R_FreeSingleRotSprite(spritedef_t *spritedef);
 void R_FreeSkinRotSprite(size_t skinnum);

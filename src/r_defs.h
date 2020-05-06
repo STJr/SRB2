@@ -730,23 +730,23 @@ typedef struct
 
 typedef struct
 {
+	UINT8 *data;
+	void **columnofs;
+} pmcache_t;
+
+typedef struct
+{
 	UINT32 width, height;
 	INT16 leftoffset, topoffset;
 	size_t size;
 	INT32 *map;
+	pmcache_t cache;
 } pixelmap_t;
 
 #ifdef ROTSPRITE
 typedef struct
 {
-	UINT8 *data;
-	void **columnofs;
-} rscache_t;
-
-typedef struct
-{
 	pixelmap_t pixelmap[16][ROTANGLES];
-	rscache_t pixels[16][ROTANGLES];
 	UINT16 cached[ROTANGLES];
 } rotsprite_t;
 #endif
