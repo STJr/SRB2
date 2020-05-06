@@ -7056,8 +7056,7 @@ static void P_MobjScaleThink(mobj_t *mobj)
 	fixed_t oldheight = mobj->height;
 	UINT8 correctionType = 0; // Don't correct Z position, just gain height
 
-	if ((mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
-		&& mobj->type != MT_EGGMOBILE_FIRE)
+	if (mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
 		correctionType = 1; // Correct Z position by centering
 	else if (mobj->eflags & MFE_VERTICALFLIP)
 		correctionType = 2; // Correct Z position by moving down
@@ -7078,10 +7077,6 @@ static void P_MobjScaleThink(mobj_t *mobj)
 		/// \todo Lua hook for "reached destscale"?
 		switch (mobj->type)
 		{
-		case MT_EGGMOBILE_FIRE:
-			mobj->destscale = FRACUNIT;
-			mobj->scalespeed = FRACUNIT>>4;
-			break;
 		default:
 			break;
 		}

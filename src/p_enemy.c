@@ -312,6 +312,7 @@ void A_RolloutRock(mobj_t *actor);
 void A_DragonbomberSpawn(mobj_t *actor);
 void A_DragonWing(mobj_t *actor);
 void A_DragonSegment(mobj_t *actor);
+void A_ChangeHeight(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -3086,24 +3087,24 @@ void A_Boss1Laser(mobj_t *actor)
 	{
 		mobj_t *mo = P_SpawnMobj(point->x, point->y, point->z, point->type);
 		mo->angle = point->angle;
-		mo->color = LASERCOLORS[((UINT8)(i - 3*leveltime) >> 2) % sizeof(LASERCOLORS)]; // codeing
+		mo->color = LASERCOLORS[((UINT8)(i + 3*dur) >> 2) % sizeof(LASERCOLORS)]; // codeing
 		P_UnsetThingPosition(mo);
 		mo->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
 		P_SetThingPosition(mo);
 
-		if (leveltime & 1 && mo->info->missilestate)
+		if (dur & 1 && mo->info->missilestate)
 		{
 			P_SetMobjState(mo, mo->info->missilestate);
 			if (mo->info->meleestate)
 			{
-				mobk_t *mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_PARTICLE);
+				mobj_t *mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_PARTICLE);
 				mo2->flags2 |= MF2_LINKDRAW;
 				P_SetTarget(&mo2->tracer, actor);
 				P_SetMobjState(mo2, mo->info->meleestate);
 			}
 		}
 
-		if (leveltime % 4 == 0)
+		if (dur == 1)
 			P_SpawnGhostMobj(mo);
 
 		x = point->x, y = point->y, z = point->z;
@@ -3111,28 +3112,32 @@ void A_Boss1Laser(mobj_t *actor)
 			break;
 	}
 
+	x += point->momx;
+	y += point->momy;
 	floorz = P_FloorzAtPos(x, y, z, mobjinfo[MT_EGGMOBILE_FIRE].height);
-	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1)
+	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1 && dur & 1)
 	{
-		for (i = 0; point->info->painstate && i < 3; i++)
-		{
-			mobj_t *spark = P_SpawnMobj(x, y, floorz+1, MT_PARTICLE);
-			spark->flags &= ~MF_NOGRAVITY;
-			spark->angle = FixedAngle(P_RandomKey(360)*FRACUNIT);
-			spark->rollangle = FixedAngle(P_RandomKey(360)*FRACUNIT);
-			spark->color = LASERCOLORS[P_RandomKey(sizeof(LASERCOLORS)/sizeof(UINT8))];
-			spark->colorized = true;
-			spark->fuse = 12;
-			spark->destscale = point->scale >> 3;
-			P_SetObjectMomZ(spark, 8*FRACUNIT, true);
-			P_InstaThrust(spark, spark->angle, 6*FRACUNIT);
-			P_SetMobjState(spark, point->info->painstate);
-		}
 		point = P_SpawnMobj(x, y, floorz+1, MT_EGGMOBILE_FIRE);
+		point->angle = actor->angle;
+		point->destscale = actor->scale*3;
+		P_SetScale(point, point->destscale);
 		P_SetTarget(&point->target, actor);
-		point->destscale = 3*FRACUNIT;
-		point->scalespeed = FRACUNIT>>2;
-		point->fuse = TICRATE;
+		P_MobjCheckWater(point);
+		if (point->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER))
+		{
+			for (i = 0; i < 2; i++)
+			{
+				UINT8 size = 3;
+				mobj_t *steam = P_SpawnMobj(x, y, point->watertop - size*mobjinfo[MT_DUST].height, MT_DUST);
+				P_SetScale(steam, size*actor->scale);
+				P_SetObjectMomZ(steam, FRACUNIT + 2*P_RandomFixed(), true);
+				P_InstaThrust(steam, FixedAngle(P_RandomKey(360)*FRACUNIT), 2*P_RandomFixed());
+				if (point->info->painsound)
+					S_StartSound(steam, point->info->painsound);
+			}
+		}
+		else if (point->info->seesound)
+			S_StartSound(point, point->info->seesound);
 	}
 
 	if (dur > 1)
@@ -14451,4 +14456,44 @@ void A_DragonSegment(mobj_t *actor)
 
 	actor->angle = hangle;
 	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);
+}
+
+// Function: A_ChangeHeight
+//
+// Description: Changes the actor's height by var1
+//
+// var1 = height
+// var2 =
+//     &1: height is absolute
+//     &2: scale with actor's scale
+//
+void A_ChangeHeight(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t height = locvar1;
+	boolean reverse;
+
+	if (LUA_CallAction("A_ChangeHeight", actor))
+		return;
+
+	reverse = (actor->eflags & MFE_VERTICALFLIP) || (actor->flags2 & MF2_OBJECTFLIP);
+
+	if (locvar2 & 2)
+		height = FixedMul(height, actor->scale);
+
+	P_UnsetThingPosition(actor);
+	if (locvar2 & 1)
+	{
+		if (reverse)
+			actor->z += actor->height - locvar1;
+		actor->height = locvar1;
+	}
+	else
+	{
+		if (reverse)
+			actor->z -= locvar1;
+		actor->height += locvar1;
+	}
+	P_SetThingPosition(actor);
 }

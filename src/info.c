@@ -187,6 +187,8 @@ char sprnames[NUMSPRITES + 1][5] =
 
 	// Projectiles
 	"MISL",
+	"LASR", // GFZ3 laser
+	"LASF", // GFZ3 laser flames
 	"TORP", // Torpedo
 	"ENRG", // Energy ball
 	"MINE", // Skim mine
@@ -2058,10 +2060,15 @@ state_t states[NUMSTATES] =
 
 	{SPR_MISL, FF_FULLBRIGHT, 1, {A_SmokeTrailer}, MT_SMOKE, 0, S_ROCKET}, // S_ROCKET
 
-	{SPR_MISL, FF_FULLBRIGHT|1, 2, {NULL}, 0, 0, S_NULL}, // S_LASER1
-	{SPR_MISL, FF_FULLBRIGHT|2, 2, {NULL}, 0, 0, S_NULL}, // S_LASER2
-	{SPR_MISL, FF_FULLBRIGHT|3, 2, {NULL}, 0, 0, S_NULL}, // S_LASERFLASH
-	{SPR_MISL, FF_FULLBRIGHT|4, 1, {NULL}, 0, 0, S_LASERSPARK}, // S_LASERSPARK
+	{SPR_LASR, FF_FULLBRIGHT|0, 2, {NULL}, 0, 0, S_NULL}, // S_LASER
+	{SPR_LASR, FF_FULLBRIGHT|1, 2, {NULL}, 0, 0, S_NULL}, // S_LASER2
+	{SPR_LASR, FF_FULLBRIGHT|2, 2, {NULL}, 0, 0, S_NULL}, // S_LASERFLASH
+
+	{SPR_LASF,                           FF_FULLBRIGHT|0,       2,           {NULL}, 0, 0, S_LASERFLAME2}, // S_LASERFLAME1
+	{SPR_LASF,                           FF_FULLBRIGHT|1,       1, {A_ChangeHeight}, 52*FRACUNIT, 3, S_LASERFLAME3}, // S_LASERFLAME2
+	{SPR_LASF,                           FF_FULLBRIGHT|2,       0, {A_ChangeHeight}, 12*FRACUNIT, 3, S_LASERFLAME4}, // S_LASERFLAME3
+	{SPR_LASF, FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT|2,       4,           {NULL}, 1, 2, S_LASERFLAME5}, // S_LASERFLAME4
+	{SPR_LASF, FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT|4,      28,           {NULL}, 2, 2, S_NULL}, // S_LASERFLAME5
 
 	{SPR_TORP, 0, 1, {A_SmokeTrailer}, MT_SMOKE, 0, S_TORPEDO}, // S_TORPEDO
 
@@ -5668,15 +5675,15 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_EGGMOBILE_FIRE
 		-1,             // doomednum
-		S_SPINFIRE1,    // spawnstate
+		S_LASERFLAME1,  // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_None,       // seesound
+		sfx_s3kc2s,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
-		sfx_None,       // painsound
+		sfx_s3k8d,      // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
 		S_NULL,         // deathstate
@@ -5684,7 +5691,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		8*FRACUNIT,     // radius
-		14*FRACUNIT,    // height
+		28*FRACUNIT,    // height
 		0,              // display offset
 		DMG_FIRE,       // mass
 		1,              // damage
@@ -9631,13 +9638,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_LASER
 		-1,             // doomednum
-		S_LASER1,       // spawnstate
+		S_LASER,        // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_rlaunc,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
-		S_LASERSPARK,   // painstate
+		S_NULL,         // painstate
 		0,              // painchance
 		sfx_None,       // painsound
 		S_LASERFLASH,   // meleestate
