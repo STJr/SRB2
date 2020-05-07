@@ -3119,7 +3119,7 @@ void A_Boss1Laser(mobj_t *actor)
 	{
 		point = P_SpawnMobj(x, y, floorz+1, MT_EGGMOBILE_FIRE);
 		point->angle = actor->angle;
-		point->destscale = actor->scale*3;
+		point->destscale = actor->scale;
 		P_SetScale(point, point->destscale);
 		P_SetTarget(&point->target, actor);
 		P_MobjCheckWater(point);

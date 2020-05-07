@@ -2065,8 +2065,8 @@ state_t states[NUMSTATES] =
 	{SPR_LASR, FF_FULLBRIGHT|2, 2, {NULL}, 0, 0, S_NULL}, // S_LASERFLASH
 
 	{SPR_LASF,                           FF_FULLBRIGHT|0,       2,           {NULL}, 0, 0, S_LASERFLAME2}, // S_LASERFLAME1
-	{SPR_LASF,                           FF_FULLBRIGHT|1,       1, {A_ChangeHeight}, 52*FRACUNIT, 3, S_LASERFLAME3}, // S_LASERFLAME2
-	{SPR_LASF,                           FF_FULLBRIGHT|2,       0, {A_ChangeHeight}, 12*FRACUNIT, 3, S_LASERFLAME4}, // S_LASERFLAME3
+	{SPR_LASF,                           FF_FULLBRIGHT|1,       1, {A_ChangeHeight}, 156*FRACUNIT, 3, S_LASERFLAME3}, // S_LASERFLAME2
+	{SPR_LASF,                           FF_FULLBRIGHT|2,       0, {A_ChangeHeight}, 32*FRACUNIT, 3, S_LASERFLAME4}, // S_LASERFLAME3
 	{SPR_LASF, FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT|2,       4,           {NULL}, 1, 2, S_LASERFLAME5}, // S_LASERFLAME4
 	{SPR_LASF, FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT|4,      28,           {NULL}, 2, 2, S_NULL}, // S_LASERFLAME5
 
@@ -5690,8 +5690,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		8*FRACUNIT,     // radius
-		28*FRACUNIT,    // height
+		24*FRACUNIT,    // radius
+		84*FRACUNIT,    // height
 		0,              // display offset
 		DMG_FIRE,       // mass
 		1,              // damage
