@@ -3117,7 +3117,7 @@ void A_Boss1Laser(mobj_t *actor)
 	floorz = P_FloorzAtPos(x, y, z, mobjinfo[MT_EGGMOBILE_FIRE].height);
 	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1 && dur & 1)
 	{
-		point = P_SpawnMobj(x, y, floorz+1, MT_EGGMOBILE_FIRE);
+		point = P_SpawnMobj(x, y, floorz, MT_EGGMOBILE_FIRE);
 		point->angle = actor->angle;
 		point->destscale = actor->scale;
 		P_SetScale(point, point->destscale);
@@ -3136,8 +3136,20 @@ void A_Boss1Laser(mobj_t *actor)
 					S_StartSound(steam, point->info->painsound);
 			}
 		}
-		else if (point->info->seesound)
-			S_StartSound(point, point->info->seesound);
+		else
+		{
+			fixed_t distx = P_ReturnThrustX(point, point->angle, point->radius);
+			fixed_t disty = P_ReturnThrustY(point, point->angle, point->radius);
+			if (P_TryMove(point, point->x + distx, point->y + disty, false) // prevents the sprite from clipping into the wall or dangling off ledges
+				&& P_TryMove(point, point->x - 2*distx, point->y - 2*disty, false)
+				&& P_TryMove(point, point->x + distx, point->y + disty, false))
+			{
+				if (point->info->seesound)
+					S_StartSound(point, point->info->seesound);
+			}
+			else
+				P_RemoveMobj(point);
+		}
 	}
 
 	if (dur > 1)
