@@ -3089,7 +3089,7 @@ void A_Boss1Laser(mobj_t *actor)
 		mo->angle = point->angle;
 		mo->color = LASERCOLORS[((UINT8)(i + 3*dur) >> 2) % sizeof(LASERCOLORS)]; // codeing
 		P_UnsetThingPosition(mo);
-		mo->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
+		mo->flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
 		P_SetThingPosition(mo);
 
 		if (dur & 1 && mo->info->missilestate)
