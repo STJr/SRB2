@@ -1675,7 +1675,7 @@ void S_LoadMusicDefs(UINT16 wadnum)
 	char *lf;
 	char *stoken;
 
-	size_t nlf;
+	size_t nlf = 0xFFFFFFFF;
 	size_t ncr;
 
 	musicdef_t *def = NULL;
