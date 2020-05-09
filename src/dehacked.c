@@ -3033,6 +3033,7 @@ static actionpointer_t actionpointers[] =
 	{{A_DragonbomberSpawn},      "A_DRAGONBOMERSPAWN"},
 	{{A_DragonWing},             "A_DRAGONWING"},
 	{{A_DragonSegment},          "A_DRAGONSEGMENT"},
+	{{A_ChangeHeight},           "A_CHANGEHEIGHT"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -6231,6 +6232,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROCKET",
 
 	"S_LASER",
+	"S_LASER2",
+	"S_LASERFLASH",
+
+	"S_LASERFLAME1",
+	"S_LASERFLAME2",
+	"S_LASERFLAME3",
+	"S_LASERFLAME4",
+	"S_LASERFLAME5",
 
 	"S_TORPEDO",
 
