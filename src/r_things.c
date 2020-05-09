@@ -96,26 +96,29 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 {
 	char cn = R_Frame2Char(frame), cr = R_Rotation2Char(rotation); // for debugging
 
-	INT32 r, ang;
-	rendermode_t rmode;
+	INT32 r;
 	lumpnum_t lumppat = wad;
 	lumppat <<= 16;
 	lumppat += lump;
 
+#ifdef ROTSPRITE
+	INT32 rollangle;
+	rendermode_t rmode;
+	rotsprite_t *rotsprite = &sprtemp[frame].rotsprite;
+
+	for (rollangle = 0; rollangle < ROTANGLES; rollangle++)
+	{
+		for (rmode = render_none+1; rmode < render_last; rmode++)
+		{
+			rotsprite->cached[rollangle][rmode-1] = 0;
+			for (r = 0; r < 16; r++)
+				rotsprite->patches[rollangle][r][rmode-1] = NULL;
+		}
+	}
+#endif
+
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
-
-	// rotsprite
-#ifdef ROTSPRITE
-	for (rmode = render_none+1; rmode < render_last; rmode++)
-		sprtemp[frame].rotsprite.cached[rmode-1] = 0;
-	for (r = 0; r < 16; r++)
-	{
-		for (ang = 0; ang < ROTANGLES; ang++)
-			for (rmode = render_none+1; rmode < render_last; rmode++)
-				sprtemp[frame].rotsprite.patch[r][ang][rmode-1] = NULL;
-	}
-#endif/*ROTSPRITE*/
 
 	if (rotation == 0)
 	{
@@ -1529,18 +1532,18 @@ static void R_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lump].topoffset;
 
 #ifdef ROTSPRITE
-	if (thing->rollangle)
+	rollangle = R_GetRollAngle(thing->rollangle);
+	if (rollangle)
 	{
-		rollangle = R_GetRollAngle(thing->rollangle);
-		if (!(sprframe->rotsprite.cached[rendermode-1] & (1<<rot)))
-			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rotsprite = sprframe->rotsprite.patch[rot][rollangle][rendermode-1];
+		if (!(sprframe->rotsprite.cached[rollangle][rendermode-1] & (1<<rot)))
+			R_CacheRotSprite(rollangle, thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
+		rotsprite = R_GetRotatedPatch(&sprframe->rotsprite, rollangle, rot);
 		if (rotsprite != NULL)
 		{
-			spr_width = rotsprite->width << FRACBITS;
-			spr_height = rotsprite->height << FRACBITS;
-			spr_offset = rotsprite->leftoffset << FRACBITS;
-			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			spr_width = SHORT(rotsprite->width) << FRACBITS;
+			spr_height = SHORT(rotsprite->height) << FRACBITS;
+			spr_offset = SHORT(rotsprite->leftoffset) << FRACBITS;
+			spr_topoffset = SHORT(rotsprite->topoffset) << FRACBITS;
 			// flip -> rotate, not rotate -> flip
 			flip = 0;
 		}

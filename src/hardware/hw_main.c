@@ -5543,18 +5543,18 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
 #ifdef ROTSPRITE
-	if (thing->rollangle)
+	rollangle = R_GetRollAngle(thing->rollangle);
+	if (rollangle)
 	{
-		rollangle = R_GetRollAngle(thing->rollangle);
-		if (!(sprframe->rotsprite.cached[rendermode-1] & (1<<rot)))
-			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rotsprite = sprframe->rotsprite.patch[rot][rollangle][rendermode-1];
+		if (!(sprframe->rotsprite.cached[rollangle][rendermode-1] & (1<<rot)))
+			R_CacheRotSprite(rollangle, thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
+		rotsprite = R_GetRotatedPatch(&sprframe->rotsprite, rollangle, rot);
 		if (rotsprite != NULL)
 		{
-			spr_width = rotsprite->width << FRACBITS;
-			spr_height = rotsprite->height << FRACBITS;
-			spr_offset = rotsprite->leftoffset << FRACBITS;
-			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			spr_width = SHORT(rotsprite->width) << FRACBITS;
+			spr_height = SHORT(rotsprite->height) << FRACBITS;
+			spr_offset = SHORT(rotsprite->leftoffset) << FRACBITS;
+			spr_topoffset = SHORT(rotsprite->topoffset) << FRACBITS;
 			// flip -> rotate, not rotate -> flip
 			flip = 0;
 		}

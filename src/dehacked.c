@@ -1040,18 +1040,20 @@ static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 				if (sprite2)
 				{
 					INT32 i;
+
 					if (!foundskins)
 					{
 						deh_warning("Sprite2 %s: no skins specified", spr2names[num]);
 						break;
 					}
+
 					for (i = 0; i < foundskins; i++)
 					{
 						size_t skinnum = skinnumbers[i];
 						skin_t *skin = &skins[skinnum];
 						spriteinfo_t *sprinfo = skin->sprinfo;
 #ifdef ROTSPRITE
-						R_FreeSkinRotSprite(skinnum);
+						R_FreeSkinRotSprites(skinnum);
 #endif
 						M_Memcpy(&sprinfo[num], info, sizeof(spriteinfo_t));
 					}

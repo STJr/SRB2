@@ -728,15 +728,14 @@ typedef struct
 #pragma pack()
 #endif
 
-// rotsprite
 #ifdef ROTSPRITE
 #include "i_video.h" // num_renderers
 typedef struct
 {
-	patch_t *patch[16][ROTANGLES][num_renderers];
-	UINT16 cached[num_renderers];
+	patch_t *patches[ROTANGLES][16][num_renderers];
+	UINT16 cached[ROTANGLES][num_renderers];
 } rotsprite_t;
-#endif/*ROTSPRITE*/
+#endif
 
 typedef enum
 {

@@ -48,6 +48,11 @@
 #endif
 #endif
 
+#ifdef ROTSPRITE
+fixed_t rollcosang[ROTANGLES];
+fixed_t rollsinang[ROTANGLES];
+#endif
+
 static unsigned char imgbuf[1<<26];
 
 // ==========================================================================
@@ -1251,17 +1256,19 @@ static void R_ParseSpriteInfo(boolean spr2)
 			{
 				R_ParseSpriteInfoFrame(info);
 				Z_Free(sprinfoToken);
+
 				if (spr2)
 				{
 					if (!foundskins)
 						I_Error("Error parsing SPRTINFO lump: No skins specified in this sprite2 definition");
+
 					for (i = 0; i < foundskins; i++)
 					{
 						size_t skinnum = skinnumbers[i];
 						skin_t *skin = &skins[skinnum];
 						spriteinfo_t *sprinfo = skin->sprinfo;
 #ifdef ROTSPRITE
-						R_FreeSkinRotSprite(skinnum);
+						R_FreeSkinRotSprites(skinnum);
 #endif
 						M_Memcpy(&sprinfo[spr2num], info, sizeof(spriteinfo_t));
 					}
@@ -1383,13 +1390,6 @@ static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
 }
 
 #ifdef ROTSPRITE
-//
-// R_GetRollAngle
-//
-// Angles precalculated in R_InitSprites.
-//
-fixed_t rollcosang[ROTANGLES];
-fixed_t rollsinang[ROTANGLES];
 INT32 R_GetRollAngle(angle_t rollangle)
 {
 	INT32 ra = AngleFixed(rollangle)>>FRACBITS;
@@ -1401,207 +1401,172 @@ INT32 R_GetRollAngle(angle_t rollangle)
 	return ra;
 }
 
-//
-// R_CacheRotSprite
-//
-// Create a rotated sprite.
-//
-void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip)
+patch_t *R_GetRotatedPatch(rotsprite_t *rotsprite, INT32 rollangle, size_t rot)
 {
-	UINT32 i;
-	INT32 angle;
-	patch_t *patch;
-	patch_t *newpatch;
-	UINT16 *rawdst;
-	size_t size;
-	INT32 bflip = (flip != 0x00);
+	return rotsprite->patches[rollangle][rot][rendermode-1];
+}
 
 #define SPRITE_XCENTER (leftoffset)
 #define SPRITE_YCENTER (height / 2)
 #define ROTSPRITE_XCENTER (newwidth / 2)
 #define ROTSPRITE_YCENTER (newheight / 2)
 
-	if (!(sprframe->rotsprite.cached[rendermode-1] & (1<<rot)))
+void R_CacheRotSprite(INT32 rollangle, spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, size_t rot, UINT8 flip)
+{
+	rotsprite_t *rotsprite = &sprframe->rotsprite;
+
+	INT32 dx, dy;
+	INT32 px, py;
+	INT32 newwidth, newheight;
+
+	UINT32 i;
+	size_t size;
+	UINT16 *rawdst;
+
+	fixed_t ca = rollcosang[rollangle];
+	fixed_t sa = rollsinang[rollangle];
+
+	patch_t *patch = (patch_t *)W_CacheSoftwarePatchNum(sprframe->lumppat[rot], PU_STATIC);
+	patch_t *newpatch;
+
+	INT32 width = SHORT(patch->width);
+	INT32 height = SHORT(patch->height);
+	INT32 leftoffset = SHORT(patch->leftoffset);
+	INT32 bflip = (flip != 0x00);
+
+	// rotation pivot
+	px = SPRITE_XCENTER;
+	py = SPRITE_YCENTER;
+
+	// get correct sprite info for sprite
+	if (sprinfo == NULL)
+		sprinfo = &spriteinfo[sprnum];
+	if (sprinfo->available)
 	{
-		INT32 dx, dy;
-		INT32 px, py;
-		INT32 width, height, leftoffset;
-		fixed_t ca, sa;
-		lumpnum_t lump = sprframe->lumppat[rot];
-#ifndef NO_PNG_LUMPS
-		size_t lumplength;
-#endif
+		px = sprinfo->pivot[frame].x;
+		py = sprinfo->pivot[frame].y;
+	}
+	if (bflip)
+	{
+		px = width - px;
+		leftoffset = width - leftoffset;
+	}
 
-		if (lump == LUMPERROR)
-			return;
+	// Find the dimensions of the rotated patch.
+	{
+		INT32 w1 = abs(FixedMul(width << FRACBITS, ca) - FixedMul(height << FRACBITS, sa));
+		INT32 w2 = abs(FixedMul(-(width << FRACBITS), ca) - FixedMul(height << FRACBITS, sa));
+		INT32 h1 = abs(FixedMul(width << FRACBITS, sa) + FixedMul(height << FRACBITS, ca));
+		INT32 h2 = abs(FixedMul(-(width << FRACBITS), sa) + FixedMul(height << FRACBITS, ca));
+		w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
+		w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
+		h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
+		h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
+		newwidth = max(width, max(w1, w2));
+		newheight = max(height, max(h1, h2));
+	}
 
-		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
-#ifndef NO_PNG_LUMPS
-		lumplength = W_LumpLength(lump);
+	// check boundaries
+	{
+		fixed_t top[2][2];
+		fixed_t bottom[2][2];
 
-		if (R_IsLumpPNG((UINT8 *)patch, lumplength))
-			patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL);
-		else
-#endif
-		// Because there's something wrong with SPR_DFLM, I guess
-		if (!R_CheckIfPatch(lump))
-			return;
+		top[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
+		top[0][1] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
+		top[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
+		top[1][1] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
 
-		width = patch->width;
-		height = patch->height;
-		leftoffset = patch->leftoffset;
+		bottom[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
+		bottom[0][1] = -FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
+		bottom[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
+		bottom[1][1] = -FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
 
-		// rotation pivot
-		px = SPRITE_XCENTER;
-		py = SPRITE_YCENTER;
+		top[0][0] >>= FRACBITS;
+		top[0][1] >>= FRACBITS;
+		top[1][0] >>= FRACBITS;
+		top[1][1] >>= FRACBITS;
 
-		// get correct sprite info for sprite
-		if (sprinfo == NULL)
-			sprinfo = &spriteinfo[sprnum];
-		if (sprinfo->available)
-		{
-			px = sprinfo->pivot[frame].x;
-			py = sprinfo->pivot[frame].y;
-		}
-		if (bflip)
-		{
-			px = width - px;
-			leftoffset = width - leftoffset;
-		}
-
-		// Don't cache angle = 0
-		for (angle = 1; angle < ROTANGLES; angle++)
-		{
-			INT32 newwidth, newheight;
-
-			ca = rollcosang[angle];
-			sa = rollsinang[angle];
-
-			// Find the dimensions of the rotated patch.
-			{
-				INT32 w1 = abs(FixedMul(width << FRACBITS, ca) - FixedMul(height << FRACBITS, sa));
-				INT32 w2 = abs(FixedMul(-(width << FRACBITS), ca) - FixedMul(height << FRACBITS, sa));
-				INT32 h1 = abs(FixedMul(width << FRACBITS, sa) + FixedMul(height << FRACBITS, ca));
-				INT32 h2 = abs(FixedMul(-(width << FRACBITS), sa) + FixedMul(height << FRACBITS, ca));
-				w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
-				w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
-				h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
-				h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
-				newwidth = max(width, max(w1, w2));
-				newheight = max(height, max(h1, h2));
-			}
-
-			// check boundaries
-			{
-				fixed_t top[2][2];
-				fixed_t bottom[2][2];
-
-				top[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				top[0][1] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-				top[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				top[1][1] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-
-				bottom[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				bottom[0][1] = -FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-				bottom[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				bottom[1][1] = -FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-
-				top[0][0] >>= FRACBITS;
-				top[0][1] >>= FRACBITS;
-				top[1][0] >>= FRACBITS;
-				top[1][1] >>= FRACBITS;
-
-				bottom[0][0] >>= FRACBITS;
-				bottom[0][1] >>= FRACBITS;
-				bottom[1][0] >>= FRACBITS;
-				bottom[1][1] >>= FRACBITS;
+		bottom[0][0] >>= FRACBITS;
+		bottom[0][1] >>= FRACBITS;
+		bottom[1][0] >>= FRACBITS;
+		bottom[1][1] >>= FRACBITS;
 
 #define BOUNDARYWCHECK(b) (b[0] < 0 || b[0] >= width)
 #define BOUNDARYHCHECK(b) (b[1] < 0 || b[1] >= height)
 #define BOUNDARYADJUST(x) x *= 2
-				// top left/right
-				if (BOUNDARYWCHECK(top[0]) || BOUNDARYWCHECK(top[1]))
-					BOUNDARYADJUST(newwidth);
-				// bottom left/right
-				else if (BOUNDARYWCHECK(bottom[0]) || BOUNDARYWCHECK(bottom[1]))
-					BOUNDARYADJUST(newwidth);
-				// top left/right
-				if (BOUNDARYHCHECK(top[0]) || BOUNDARYHCHECK(top[1]))
-					BOUNDARYADJUST(newheight);
-				// bottom left/right
-				else if (BOUNDARYHCHECK(bottom[0]) || BOUNDARYHCHECK(bottom[1]))
-					BOUNDARYADJUST(newheight);
+		// top left/right
+		if (BOUNDARYWCHECK(top[0]) || BOUNDARYWCHECK(top[1]))
+			BOUNDARYADJUST(newwidth);
+		// bottom left/right
+		else if (BOUNDARYWCHECK(bottom[0]) || BOUNDARYWCHECK(bottom[1]))
+			BOUNDARYADJUST(newwidth);
+		// top left/right
+		if (BOUNDARYHCHECK(top[0]) || BOUNDARYHCHECK(top[1]))
+			BOUNDARYADJUST(newheight);
+		// bottom left/right
+		else if (BOUNDARYHCHECK(bottom[0]) || BOUNDARYHCHECK(bottom[1]))
+			BOUNDARYADJUST(newheight);
 #undef BOUNDARYWCHECK
 #undef BOUNDARYHCHECK
 #undef BOUNDARYADJUST
-			}
+	}
 
-			// Draw the rotated sprite to a temporary buffer.
-			size = (newwidth * newheight);
-			if (!size)
-				size = (width * height);
+	// Draw the rotated sprite to a temporary buffer.
+	size = (newwidth * newheight);
+	if (!size)
+		size = (width * height);
 
-			rawdst = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
-			for (i = 0; i < size; i++)
-				rawdst[i] = 0xFF00;
+	rawdst = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
+	for (i = 0; i < size; i++)
+		rawdst[i] = 0xFF00;
 
-			for (dy = 0; dy < newheight; dy++)
-			{
-				for (dx = 0; dx < newwidth; dx++)
-				{
-					INT32 x = (dx-ROTSPRITE_XCENTER) << FRACBITS;
-					INT32 y = (dy-ROTSPRITE_YCENTER) << FRACBITS;
-					INT32 sx = FixedMul(x, ca) + FixedMul(y, sa) + (px << FRACBITS);
-					INT32 sy = -FixedMul(x, sa) + FixedMul(y, ca) + (py << FRACBITS);
-					sx >>= FRACBITS;
-					sy >>= FRACBITS;
-					if (sx >= 0 && sy >= 0 && sx < width && sy < height)
-						rawdst[(dy*newwidth)+dx] = GetPatchPixel(patch, sx, sy, bflip);
-				}
-			}
+	for (dy = 0; dy < newheight; dy++)
+	{
+		for (dx = 0; dx < newwidth; dx++)
+		{
+			INT32 x = (dx-ROTSPRITE_XCENTER) << FRACBITS;
+			INT32 y = (dy-ROTSPRITE_YCENTER) << FRACBITS;
+			INT32 sx = FixedMul(x, ca) + FixedMul(y, sa) + (px << FRACBITS);
+			INT32 sy = -FixedMul(x, sa) + FixedMul(y, ca) + (py << FRACBITS);
+			sx >>= FRACBITS;
+			sy >>= FRACBITS;
+			if (sx >= 0 && sy >= 0 && sx < width && sy < height)
+				rawdst[(dy*newwidth)+dx] = GetPatchPixel(patch, sx, sy, bflip);
+		}
+	}
 
-			// make patch
-			newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
-			{
-				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
-				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
-			}
-
-			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-			if (rendermode != render_none) // not for psprite
-				newpatch->topoffset += FEETADJUST>>FRACBITS;
-
-			// P_PrecacheLevel
-			if (devparm) spritememory += size;
+	// make patch
+	newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
+	newpatch->leftoffset = SHORT((newpatch->width / 2) + (leftoffset - px));
+	newpatch->topoffset = SHORT((newpatch->height / 2) + (patch->topoffset - py));
+	newpatch->topoffset += SHORT(FEETADJUST>>FRACBITS);
 
 #ifdef HWRENDER
-			if (rendermode == render_opengl)
-			{
-				GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
-				grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
-				grPatch->rawpatch = newpatch;
-				sprframe->rotsprite.patch[rot][angle][render_opengl-1] = (patch_t *)grPatch;
-				HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
-			}
-			else
-#endif // HWRENDER
-				sprframe->rotsprite.patch[rot][angle][rendermode-1] = newpatch;
+	if (rendermode == render_opengl)
+	{
+		GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
 
-			// free rotated image data
-			Z_Free(rawdst);
-		}
+		grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
+		grPatch->patch = newpatch;
+		rotsprite->patches[rollangle][rot][render_opengl-1] = (patch_t *)grPatch;
 
-		// This rotation is cached now
-		sprframe->rotsprite.cached[rendermode-1] |= (1<<rot);
-
-		// free image data
-		Z_Free(patch);
+		HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
 	}
+	else
+#endif
+		rotsprite->patches[rollangle][rot][rendermode-1] = newpatch;
+
+	// free rotated image data
+	Z_Free(rawdst);
+
+	// This rotation is cached now
+	rotsprite->cached[rollangle][rendermode-1] |= (1<<rot);
+}
+
 #undef SPRITE_XCENTER
 #undef SPRITE_YCENTER
 #undef ROTSPRITE_XCENTER
 #undef ROTSPRITE_YCENTER
-}
 
 //
 // R_FreeSingleRotSprite
@@ -1617,22 +1582,30 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 	for (frame = 0; frame < spritedef->numframes; frame++)
 	{
 		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
-		for (rot = 0; rot < 16; rot++)
-		{
-			if (sprframe->rotsprite.cached[rendermode-1] & (1<<rot))
-			{
-				for (ang = 0; ang < ROTANGLES; ang++)
+		rotsprite_t *rotsprite = &sprframe->rotsprite;
+		patch_t *patch = NULL;
+
+		for (ang = 1; ang < ROTANGLES; ang++)
+			for (rot = 0; rot < 16; rot++)
+				if (rotsprite->cached[ang][rendermode-1] & (1<<rot))
 				{
 					for (renderer = render_none+1; renderer < render_last; renderer++)
 					{
-						patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang][renderer-1];
-						if (rotsprite)
-							Z_Free(rotsprite);
+#ifdef HWRENDER
+						// Don't bother with OpenGL.
+						// It manages patches differently.
+						if (rendermode == render_opengl)
+							continue;
+#endif
+						patch = rotsprite->patches[ang][rot][renderer-1];
+						if (patch)
+						{
+							Z_Free(patch);
+							rotsprite->patches[ang][rot][renderer-1] = NULL;
+						}
 					}
+					rotsprite->cached[ang][rendermode-1] &= ~(1<<rot);
 				}
-				sprframe->rotsprite.cached[rendermode-1] &= ~(1<<rot);
-			}
-		}
 	}
 }
 
@@ -1642,15 +1615,29 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 // Free sprite rotation data from memory, for a skin.
 // Calls R_FreeSingleRotSprite.
 //
-void R_FreeSkinRotSprite(size_t skinnum)
+void R_FreeSkinRotSprites(size_t skinnum)
 {
 	size_t i;
 	skin_t *skin = &skins[skinnum];
 	spritedef_t *skinsprites = skin->sprites;
+
 	for (i = 0; i < NUMPLAYERSPRITES*2; i++)
 	{
 		R_FreeSingleRotSprite(skinsprites);
 		skinsprites++;
 	}
+}
+
+//
+// Frees all sprite rotation data from memory.
+//
+void R_FreeAllRotSprites(void)
+{
+	INT32 i;
+	size_t s;
+	for (s = 0; s < numsprites; s++)
+		R_FreeSingleRotSprite(&sprites[s]);
+	for (i = 0; i < numskins; ++i)
+		R_FreeSkinRotSprites(i);
 }
 #endif
