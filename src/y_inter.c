@@ -323,7 +323,6 @@ void Y_IntermissionDrawer(void)
 	if (rendermode == render_none)
 		return;
 
-	if (!usebuffer)
 	// Lactozilla: Renderer switching
 	if (needpatchrecache)
 	{
@@ -364,11 +363,11 @@ void Y_IntermissionDrawer(void)
 		{
 			if (widebgpatch && rendermode == render_soft && vid.width / vid.dupx == 400)
 				V_DrawScaledPatch(0, 0, V_SNAPTOLEFT, widebgpatch);
-			else
+			else if (bgpatch)
 				V_DrawScaledPatch(0, 0, 0, bgpatch);
 		}
 	}
-	else
+	else if (bgtile)
 		V_DrawPatchFill(bgtile);
 
 	LUAh_IntermissionHUD();
