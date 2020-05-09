@@ -66,9 +66,7 @@ typedef enum
 	THINK_POLYOBJ,
 	THINK_MAIN,
 	THINK_MOBJ,
-#ifdef ESLOPE
 	THINK_DYNSLOPE,
-#endif
 	THINK_PRECIP,
 	NUM_THINKERLISTS
 } thinklistnum_t; /**< Thinker lists. */
@@ -250,7 +248,7 @@ extern jingle_t jingleinfo[NUMJINGLES];
 #define JINGLEPOSTFADE 1000
 
 void P_PlayJingle(player_t *player, jingletype_t jingletype);
-boolean P_EvaluateMusicStatus(UINT16 status);
+boolean P_EvaluateMusicStatus(UINT16 status, const char *musname);
 void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, boolean looping, UINT16 status);
 
 //
@@ -383,9 +381,7 @@ extern mobj_t *tmfloorthing, *tmhitthing, *tmthing;
 extern camera_t *mapcampointer;
 extern fixed_t tmx;
 extern fixed_t tmy;
-#ifdef ESLOPE
 extern pslope_t *tmfloorslope, *tmceilingslope;
-#endif
 
 /* cphipps 2004/08/30 */
 extern void P_MapStart(void);

@@ -11,9 +11,8 @@
 /// \brief mobj/thing library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "p_local.h"
 #include "g_game.h"
 #include "p_setup.h"
@@ -85,9 +84,7 @@ enum mobj_e {
 	mobj_extravalue2,
 	mobj_cusval,
 	mobj_cvmem,
-#ifdef ESLOPE
 	mobj_standingslope,
-#endif
 	mobj_colorized,
 	mobj_shadowscale
 };
@@ -153,9 +150,7 @@ static const char *const mobj_opt[] = {
 	"extravalue2",
 	"cusval",
 	"cvmem",
-#ifdef ESLOPE
 	"standingslope",
-#endif
 	"colorized",
 	"shadowscale",
 	NULL};
@@ -384,11 +379,9 @@ static int mobj_get(lua_State *L)
 	case mobj_cvmem:
 		lua_pushinteger(L, mo->cvmem);
 		break;
-#ifdef ESLOPE
 	case mobj_standingslope:
 		LUA_PushUserdata(L, mo->standingslope, META_SLOPE);
 		break;
-#endif
 	case mobj_colorized:
 		lua_pushboolean(L, mo->colorized);
 		break;
@@ -717,10 +710,8 @@ static int mobj_set(lua_State *L)
 	case mobj_cvmem:
 		mo->cvmem = luaL_checkinteger(L, 3);
 		break;
-#ifdef ESLOPE
 	case mobj_standingslope:
 		return NOSET;
-#endif
 	case mobj_colorized:
 		mo->colorized = luaL_checkboolean(L, 3);
 		break;
@@ -915,5 +906,3 @@ int LUA_MobjLib(lua_State *L)
 	lua_setglobal(L, "mapthings");
 	return 0;
 }
-
-#endif

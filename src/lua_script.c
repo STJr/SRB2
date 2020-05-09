@@ -11,7 +11,6 @@
 /// \brief Lua scripting basics
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "dehacked.h"
 #include "z_zone.h"
@@ -24,9 +23,7 @@
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "p_local.h"
-#ifdef ESLOPE
 #include "p_slopes.h" // for P_SlopeById
-#endif
 #ifdef LUA_ALLOW_BYTECODE
 #include "d_netfil.h" // for LUA_DumpFile
 #endif
@@ -444,9 +441,9 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 	else // If it's not a .lua file, copy the lump name in too.
 	{
 		lumpinfo_t *lump_p = &wadfiles[wad]->lumpinfo[lump];
-		len += 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+		len += 1 + strlen(lump_p->fullname); // length of file name, '|', and lump name
 		name = malloc(len+1);
-		sprintf(name, "%s|%s", wadfiles[wad]->filename, lump_p->name2);
+		sprintf(name, "%s|%s", wadfiles[wad]->filename, lump_p->fullname);
 		name[len] = '\0';
 	}
 
@@ -569,6 +566,27 @@ fixed_t LUA_EvalMath(const char *word)
 	// clean up and return.
 	lua_close(L);
 	return res;
+}
+
+/*
+LUA_PushUserdata but no userdata is created.
+You can't invalidate it therefore.
+*/
+
+void LUA_PushLightUserdata (lua_State *L, void *data, const char *meta)
+{
+	if (data)
+	{
+		lua_pushlightuserdata(L, data);
+		luaL_getmetatable(L, meta);
+		/*
+		The metatable is the last value on the stack, so this
+		applies it to the second value, which is the userdata.
+		*/
+		lua_setmetatable(L, -2);
+	}
+	else
+		lua_pushnil(L);
 }
 
 // Takes a pointer, any pointer, and a metatable name
@@ -732,9 +750,7 @@ enum
 	ARCH_NODE,
 #endif
 	ARCH_FFLOOR,
-#ifdef ESLOPE
 	ARCH_SLOPE,
-#endif
 	ARCH_MAPHEADER,
 
 	ARCH_TEND=0xFF,
@@ -759,9 +775,7 @@ static const struct {
 	{META_NODE,     ARCH_NODE},
 #endif
 	{META_FFLOOR,	ARCH_FFLOOR},
-#ifdef ESLOPE
 	{META_SLOPE,    ARCH_SLOPE},
-#endif
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{NULL,          ARCH_NULL}
 };
@@ -996,16 +1010,8 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			if (!rover)
 				WRITEUINT8(save_p, ARCH_NULL);
 			else {
-				ffloor_t *r2;
-				UINT16 i = 0;
-				// search for id
-				for (r2 = rover->target->ffloors; r2; r2 = r2->next)
-				{
-					if (r2 == rover)
-						break;
-					i++;
-				}
-				if (!r2)
+				UINT16 i = P_GetFFloorID(rover);
+				if (i == UINT16_MAX) // invalid ID
 					WRITEUINT8(save_p, ARCH_NULL);
 				else
 				{
@@ -1016,7 +1022,6 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
-#ifdef ESLOPE
 		case ARCH_SLOPE:
 		{
 			pslope_t *slope = *((pslope_t **)lua_touserdata(gL, myindex));
@@ -1028,7 +1033,6 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
-#endif
 		case ARCH_MAPHEADER:
 		{
 			mapheader_t *header = *((mapheader_t **)lua_touserdata(gL, myindex));
@@ -1250,11 +1254,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 			LUA_PushUserdata(gL, rover, META_FFLOOR);
 		break;
 	}
-#ifdef ESLOPE
 	case ARCH_SLOPE:
 		LUA_PushUserdata(gL, P_SlopeById(READUINT16(save_p)), META_SLOPE);
 		break;
-#endif
 	case ARCH_MAPHEADER:
 		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
 		break;
@@ -1423,5 +1425,3 @@ int Lua_optoption(lua_State *L, int narg,
 			return i;
 	return -1;
 }
-
-#endif // HAVE_BLUA

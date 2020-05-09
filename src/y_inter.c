@@ -19,7 +19,7 @@
 #include "i_video.h"
 #include "p_tick.h"
 #include "r_defs.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "s_sound.h"
 #include "st_stuff.h"
 #include "v_video.h"
@@ -37,9 +37,7 @@
 #include "m_cond.h" // condition sets
 #include "lua_hook.h" // IntermissionThinker hook
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -373,11 +371,9 @@ void Y_IntermissionDrawer(void)
 	else
 		V_DrawPatchFill(bgtile);
 
-#ifdef HAVE_BLUA
 	LUAh_IntermissionHUD();
 	if (!LUA_HudEnabled(hud_intermissiontally))
 		goto skiptallydrawer;
-#endif
 
 dontdrawbg:
 	if (intertype == int_coop)
@@ -559,7 +555,7 @@ dontdrawbg:
 			V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125+yoffset, 0, data.spec.score);
 
 			// Draw continues!
-			if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
+			if (continuesInSession /* && (data.spec.continues & 0x80) */) // Always draw when continues are a thing
 			{
 				UINT8 continues = data.spec.continues & 0x7F;
 
@@ -933,11 +929,9 @@ dontdrawbg:
 		}
 	}
 
-#ifdef HAVE_BLUA
 skiptallydrawer:
 	if (!LUA_HudEnabled(hud_intermissionmessages))
 		return;
-#endif
 
 	if (timer)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
@@ -962,9 +956,7 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
-#ifdef HAVE_BLUA
 	LUAh_IntermissionThinker();
-#endif
 
 	intertic++;
 

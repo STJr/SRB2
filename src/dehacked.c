@@ -31,6 +31,7 @@
 #include "r_data.h"
 #include "r_draw.h"
 #include "r_patch.h"
+#include "r_things.h" // R_Char2Frame
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"
@@ -39,9 +40,7 @@
 
 #include "m_cond.h"
 
-#ifdef HAVE_BLUA
 #include "v_video.h" // video flags (for lua)
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_light.h"
@@ -76,10 +75,8 @@ static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
 #endif
 static hudnum_t get_huditem(const char *word);
 static menutype_t get_menutype(const char *word);
-#ifndef HAVE_BLUA
-static INT16 get_gametype(const char *word);
-static powertype_t get_power(const char *word);
-#endif
+//static INT16 get_gametype(const char *word);
+//static powertype_t get_power(const char *word);
 
 boolean deh_loaded = false;
 static int dbg_line;
@@ -1249,7 +1246,7 @@ static void readgametype(MYFILE *f, char *gtname)
 					newgttol = (UINT32)i;
 				else
 				{
-					UINT16 tol = 0;
+					UINT32 tol = 0;
 					tmp = strtok(word2,",");
 					do {
 						for (i = 0; TYPEOFLEVEL[i].name; i++)
@@ -1415,7 +1412,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			// Lua custom options also go above, contents may be case sensitive.
 			if (fastncmp(word, "LUA.", 4))
 			{
-#ifdef HAVE_BLUA
 				UINT8 j;
 				customoption_t *modoption;
 
@@ -1449,9 +1445,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				modoption->option[31] = '\0';
 				strncpy(modoption->value,  word2, 255);
 				modoption->value[255] = '\0';
-#else
-				// Silently ignore.
-#endif
 				continue;
 			}
 
@@ -1591,7 +1584,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->typeoflevel = (UINT32)i;
 				else
 				{
-					UINT16 tol = 0;
+					UINT32 tol = 0;
 					tmp = strtok(word2,",");
 					do {
 						for (i = 0; TYPEOFLEVEL[i].name; i++)
@@ -1870,6 +1863,12 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "STARTRINGS"))
 				mapheaderinfo[num-1]->startrings = (UINT16)i;
+			else if (fastcmp(word, "SPECIALSTAGETIME"))
+				mapheaderinfo[num-1]->sstimer = i;
+			else if (fastcmp(word, "SPECIALSTAGESPHERES"))
+				mapheaderinfo[num-1]->ssspheres = i;
+			else if (fastcmp(word, "GRAVITY"))
+				mapheaderinfo[num-1]->gravity = FLOAT_TO_FIXED(atof(word2));
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
@@ -2916,6 +2915,7 @@ static actionpointer_t actionpointers[] =
 	{{A_SetRandomTics},          "A_SETRANDOMTICS"},
 	{{A_ChangeColorRelative},    "A_CHANGECOLORRELATIVE"},
 	{{A_ChangeColorAbsolute},    "A_CHANGECOLORABSOLUTE"},
+	{{A_Dye},                    "A_DYE"},
 	{{A_MoveRelative},           "A_MOVERELATIVE"},
 	{{A_MoveAbsolute},           "A_MOVEABSOLUTE"},
 	{{A_Thrust},                 "A_THRUST"},
@@ -3123,22 +3123,20 @@ static void readframe(MYFILE *f, INT32 num)
 				}
 
 				z = 0;
-#ifdef HAVE_BLUA
 				found = LUA_SetLuaAction(&states[num], actiontocompare);
 				if (!found)
-#endif
-				while (actionpointers[z].name)
-				{
-					if (fastcmp(actiontocompare, actionpointers[z].name))
+					while (actionpointers[z].name)
 					{
-						states[num].action = actionpointers[z].action;
-						states[num].action.acv = actionpointers[z].action.acv; // assign
-						states[num].action.acp1 = actionpointers[z].action.acp1;
-						found = true;
-						break;
+						if (fastcmp(actiontocompare, actionpointers[z].name))
+						{
+							states[num].action = actionpointers[z].action;
+							states[num].action.acv = actionpointers[z].action.acv; // assign
+							states[num].action.acp1 = actionpointers[z].action.acp1;
+							found = true;
+							break;
+						}
+						z++;
 					}
-					z++;
-				}
 
 				if (!found)
 					deh_warning("Unknown action %s", actiontocompare);
@@ -3889,7 +3887,26 @@ static void readmaincfg(MYFILE *f)
 			value = atoi(word2); // used for numerical settings
 
 			if (fastcmp(word, "EXECCFG"))
-				COM_BufAddText(va("exec %s\n", word2));
+			{
+				if (strchr(word2, '.'))
+					COM_BufAddText(va("exec %s\n", word2));
+				else
+				{
+					lumpnum_t lumpnum;
+					char newname[9];
+
+					strncpy(newname, word2, 8);
+
+					newname[8] = '\0';
+
+					lumpnum = W_CheckNumForName(newname);
+
+					if (lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0)
+						CONS_Debug(DBG_SETUP, "SOC Error: script lump %s not found/not valid.\n", newname);
+					else
+						COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+				}
+			}
 
 			else if (fastcmp(word, "SPSTAGE_START"))
 			{
@@ -4130,6 +4147,10 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "MAXXTRALIFE"))
 			{
 				maxXtraLife = (UINT8)get_number(word2);
+			}
+			else if (fastcmp(word, "USECONTINUES"))
+			{
+				useContinues = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 
 			else if (fastcmp(word, "GAMEDATA"))
@@ -7477,7 +7498,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Got Flag Sign
 	"S_GOTFLAG",
-	
+
 	// Finish flag
 	"S_FINISHFLAG",
 
@@ -8848,14 +8869,12 @@ static const char *const MOBJEFLAG_LIST[] = {
 	NULL
 };
 
-#ifdef HAVE_BLUA
 static const char *const MAPTHINGFLAG_LIST[4] = {
 	"EXTRA", // Extra flag for objects.
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
 	"AMBUSH" // Deaf monsters/do not react to sound.
 };
-#endif
 
 static const char *const PLAYERFLAG_LIST[] = {
 
@@ -8952,7 +8971,6 @@ static const char *const GAMETYPERULE_LIST[] = {
 	NULL
 };
 
-#ifdef HAVE_BLUA
 // Linedef flags
 static const char *const ML_LIST[16] = {
 	"IMPASSIBLE",
@@ -8972,7 +8990,6 @@ static const char *const ML_LIST[16] = {
 	"BOUNCY",
 	"TFERLINE"
 };
-#endif
 
 // This DOES differ from r_draw's Color_Names, unfortunately.
 // Also includes Super colors
@@ -9145,7 +9162,11 @@ static const char *const POWERS_LIST[] = {
 
 	//for linedef exec 427
 	"NOCONTROL",
-	"JUSTLAUNCHED",
+
+	//for dyes
+	"DYE",
+
+	"JUSTLAUNCHED"
 };
 
 static const char *const HUDITEMS_LIST[] = {
@@ -9271,11 +9292,7 @@ static const char *const MENUTYPES_LIST[] = {
 struct {
 	const char *n;
 	// has to be able to hold both fixed_t and angle_t, so drastic measure!!
-#ifdef HAVE_BLUA
 	lua_Integer v;
-#else
-	INT64 v;
-#endif
 } const INT_CONST[] = {
 	// If a mod removes some variables here,
 	// please leave the names in-tact and just set
@@ -9484,6 +9501,7 @@ struct {
 	{"SF_FASTEDGE",SF_FASTEDGE},
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
 	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
+	{"SF_NONIGHTSSUPER",SF_NONIGHTSSUPER},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
@@ -9531,7 +9549,6 @@ struct {
 	{"ME_ULTIMATE",ME_ULTIMATE},
 	{"ME_PERFECT",ME_PERFECT},
 
-#ifdef HAVE_BLUA
 	// p_local.h constants
 	{"FLOATSPEED",FLOATSPEED},
 	{"MAXSTEPMOVE",MAXSTEPMOVE},
@@ -9666,11 +9683,11 @@ struct {
 	{"FF_CUTEXTRA",FF_CUTEXTRA},               ///< Cuts out hidden translucent pixels.
 	{"FF_CUTLEVEL",FF_CUTLEVEL},               ///< Cuts out all hidden pixels.
 	{"FF_CUTSPRITES",FF_CUTSPRITES},           ///< Final step in making 3D water.
-	{"FF_BOTHPLANES",FF_BOTHPLANES},           ///< Renders both planes all the time.
+	{"FF_BOTHPLANES",FF_BOTHPLANES},           ///< Render inside and outside planes.
 	{"FF_EXTRA",FF_EXTRA},                     ///< Gets cut by ::FF_CUTEXTRA.
 	{"FF_TRANSLUCENT",FF_TRANSLUCENT},         ///< See through!
 	{"FF_FOG",FF_FOG},                         ///< Fog "brush."
-	{"FF_INVERTPLANES",FF_INVERTPLANES},       ///< Reverse the plane visibility rules.
+	{"FF_INVERTPLANES",FF_INVERTPLANES},       ///< Only render inside planes.
 	{"FF_ALLSIDES",FF_ALLSIDES},               ///< Render inside and outside sides.
 	{"FF_INVERTSIDES",FF_INVERTSIDES},         ///< Only render inside sides.
 	{"FF_DOUBLESHADOW",FF_DOUBLESHADOW},       ///< Make two lightlist entries to reset light?
@@ -9696,11 +9713,10 @@ struct {
 	// Node flags
 	{"NF_SUBSECTOR",NF_SUBSECTOR}, // Indicate a leaf.
 #endif
-#ifdef ESLOPE
+
 	// Slope flags
 	{"SL_NOPHYSICS",SL_NOPHYSICS},
 	{"SL_DYNAMIC",SL_DYNAMIC},
-#endif
 
 	// Angles
 	{"ANG1",ANG1},
@@ -9864,7 +9880,6 @@ struct {
 	{"TC_RAINBOW",TC_RAINBOW},
 	{"TC_BLINK",TC_BLINK},
 	{"TC_DASHMODE",TC_DASHMODE},
-#endif
 
 	{NULL,0}
 };
@@ -10021,8 +10036,7 @@ static menutype_t get_menutype(const char *word)
 	return MN_NONE;
 }
 
-#ifndef HAVE_BLUA
-static INT16 get_gametype(const char *word)
+/*static INT16 get_gametype(const char *word)
 { // Returns the value of GT_ enumerations
 	INT16 i;
 	if (*word >= '0' && *word <= '9')
@@ -10048,7 +10062,7 @@ static powertype_t get_power(const char *word)
 			return i;
 	deh_warning("Couldn't find power named 'pw_%s'",word);
 	return pw_invulnerability;
-}
+}*/
 
 /// \todo Make ANY of this completely over-the-top math craziness obey the order of operations.
 static fixed_t op_mul(fixed_t a, fixed_t b) { return a*b; }
@@ -10076,7 +10090,7 @@ struct {
 };
 
 // Returns the full word, cut at the first symbol or whitespace
-static char *read_word(const char *line)
+/*static char *read_word(const char *line)
 {
 	// Part 1: You got the start of the word, now find the end.
   const char *p;
@@ -10236,7 +10250,7 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-	else if (fastncmp("GT_",word,4)) {
+	else if (fastncmp("GT_",word,3)) {
 		r = get_gametype(word);
 		free(word);
 		return r;
@@ -10306,16 +10320,14 @@ static fixed_t find_const(const char **rword)
 	const_warning("constant",word);
 	free(word);
 	return 0;
-}
-#endif
+}*/
 
 // Loops through every constant and operation in word and performs its calculations, returning the final value.
 fixed_t get_number(const char *word)
 {
-#ifdef HAVE_BLUA
 	return LUA_EvalMath(word);
-#else
-	// DESPERATELY NEEDED: Order of operations support! :x
+
+	/*// DESPERATELY NEEDED: Order of operations support! :x
 	fixed_t i = find_const(&word);
 	INT32 o;
 	while(*word) {
@@ -10325,8 +10337,7 @@ fixed_t get_number(const char *word)
 		else
 			break;
 	}
-	return i;
-#endif
+	return i;*/
 }
 
 void DEH_Check(void)
@@ -10351,7 +10362,6 @@ void DEH_Check(void)
 #endif
 }
 
-#ifdef HAVE_BLUA
 #include "lua_script.h"
 #include "lua_libs.h"
 
@@ -10977,5 +10987,3 @@ void LUA_SetActionByName(void *state, const char *actiontocompare)
 		}
 	}
 }
-
-#endif // HAVE_BLUA

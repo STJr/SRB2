@@ -38,8 +38,20 @@ typedef INT32 fixed_t;
 /*!
   \brief convert fixed_t into floating number
 */
-#define FIXED_TO_FLOAT(x) (((float)(x)) / ((float)FRACUNIT))
-#define FLOAT_TO_FIXED(f) (fixed_t)((f) * ((float)FRACUNIT))
+
+FUNCMATH FUNCINLINE static ATTRINLINE float FixedToFloat(fixed_t x)
+{
+	return x / (float)FRACUNIT;
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FloatToFixed(float f)
+{
+	return (fixed_t)(f * FRACUNIT);
+}
+
+// for backwards compat
+#define FIXED_TO_FLOAT(x) FixedToFloat(x) // (((float)(x)) / ((float)FRACUNIT))
+#define FLOAT_TO_FIXED(f) FloatToFixed(f) // (fixed_t)((f) * ((float)FRACUNIT))
 
 
 #if defined (__WATCOMC__) && FRACBITS == 16

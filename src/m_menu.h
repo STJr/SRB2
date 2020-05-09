@@ -15,9 +15,10 @@
 #ifndef __X_MENU__
 #define __X_MENU__
 
+#include "doomstat.h" // for NUMGAMETYPES
 #include "d_event.h"
 #include "command.h"
-#include "r_things.h" // for SKINNAMESIZE
+#include "r_skins.h" // for SKINNAMESIZE
 #include "f_finale.h" // for ttmode_enum
 
 //
@@ -396,7 +397,7 @@ typedef struct
 	UINT8 numemeralds;
 	UINT8 numgameovers;
 	INT32 lives;
-	INT32 continues;
+	INT32 continuescore;
 	INT32 gamemap;
 } saveinfo_t;
 

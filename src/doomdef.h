@@ -150,6 +150,9 @@ extern char logfilename[1024];
 // Otherwise we can't force updates!
 #endif
 
+/* A custom URL protocol for server links. */
+#define SERVER_URL_PROTOCOL "srb2://"
+
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
 #define USE_PATCH_DTA
@@ -562,14 +565,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 // None of these that are disabled in the normal build are guaranteed to work perfectly
 // Compile them at your own risk!
 
-/// Kalaron/Eternity Engine slope code (SRB2CB ported)
-#define ESLOPE
-
-#ifdef ESLOPE
 /// Backwards compatibility with SRB2CB's slope linedef types.
 ///	\note	A simple shim that prints a warning.
 #define ESLOPE_TYPESHIM
-#endif
 
 ///	Allows the use of devmode in multiplayer. AKA "fishcake"
 //#define NETGAME_DEVMODE
@@ -579,9 +577,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 ///	Dumps the contents of a network save game upon consistency failure for debugging.
 //#define DUMPCONSISTENCY
-
-///	Polyobject fake flat code
-#define POLYOBJECTS_PLANES
 
 ///	See name of player in your crosshair
 #define SEENAMES

@@ -208,6 +208,7 @@ typedef struct musicdef_s
 	INT16 soundtestcond; // +ve for map, -ve for conditionset, 0 for already here
 	tic_t stoppingtics;
 	fixed_t bpm;
+	UINT32 loop_ms;/* override LOOPPOINT/LOOPMS */
 	boolean allowed; // question marks or listenable on sound test?
 	struct musicdef_s *next;
 } musicdef_t;
