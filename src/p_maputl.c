@@ -451,7 +451,6 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 	I_Assert(back != NULL);
 
 	openfloorrover = openceilingrover = NULL;
-#ifdef POLYOBJECTS
 	if (linedef->polyobj)
 	{
 		// set these defaults so that polyobjects don't interfere with collision above or below them
@@ -462,7 +461,6 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		opentopslope = openbottomslope = NULL;
 	}
 	else
-#endif
 	{ // Set open and high/low values here
 		fixed_t frontheight, backheight;
 
@@ -517,7 +515,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				texheight = textures[texnum]->height << FRACBITS;
 
 				// Set texbottom and textop to the Z coordinates of the texture's boundaries
-#if 0 // #ifdef POLYOBJECTS
+#if 0
 				// don't remove this code unless solid midtextures
 				// on non-solid polyobjects should NEVER happen in the future
 				if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
@@ -560,7 +558,6 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				}
 			}
 		}
-#ifdef POLYOBJECTS
 		if (linedef->polyobj)
 		{
 			// Treat polyobj's backsector like a 3D Floor
@@ -597,94 +594,95 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			// otherwise don't do anything special, pretend there's nothing else there
 		}
 		else
-#endif
-		// Check for fake floors in the sector.
-		if (front->ffloors || back->ffloors)
 		{
-			ffloor_t *rover;
-			fixed_t delta1, delta2;
-
-			// Check for frontsector's fake floors
-			for (rover = front->ffloors; rover; rover = rover->next)
+			// Check for fake floors in the sector.
+			if (front->ffloors || back->ffloors)
 			{
-				fixed_t topheight, bottomheight;
-				if (!(rover->flags & FF_EXISTS))
-					continue;
+				ffloor_t *rover;
+				fixed_t delta1, delta2;
 
-				if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
-					;
-				else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
-					|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
-					continue;
-
-				topheight = P_GetFOFTopZ(mobj, front, rover, tmx, tmy, linedef);
-				bottomheight = P_GetFOFBottomZ(mobj, front, rover, tmx, tmy, linedef);
-
-				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
-				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
-
-				if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
+				// Check for frontsector's fake floors
+				for (rover = front->ffloors; rover; rover = rover->next)
 				{
-					if (bottomheight < opentop) {
-						opentop = bottomheight;
-						opentopslope = *rover->b_slope;
-						openceilingrover = rover;
+					fixed_t topheight, bottomheight;
+					if (!(rover->flags & FF_EXISTS))
+						continue;
+
+					if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
+						;
+					else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
+						|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
+						continue;
+
+					topheight = P_GetFOFTopZ(mobj, front, rover, tmx, tmy, linedef);
+					bottomheight = P_GetFOFBottomZ(mobj, front, rover, tmx, tmy, linedef);
+
+					delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
+					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
+
+					if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
+					{
+						if (bottomheight < opentop) {
+							opentop = bottomheight;
+							opentopslope = *rover->b_slope;
+							openceilingrover = rover;
+						}
+						else if (bottomheight < highceiling)
+							highceiling = bottomheight;
 					}
-					else if (bottomheight < highceiling)
-						highceiling = bottomheight;
+
+					if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+					{
+						if (topheight > openbottom) {
+							openbottom = topheight;
+							openbottomslope = *rover->t_slope;
+							openfloorrover = rover;
+						}
+						else if (topheight > lowfloor)
+							lowfloor = topheight;
+					}
 				}
 
-				if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+				// Check for backsectors fake floors
+				for (rover = back->ffloors; rover; rover = rover->next)
 				{
-					if (topheight > openbottom) {
-						openbottom = topheight;
-						openbottomslope = *rover->t_slope;
-						openfloorrover = rover;
+					fixed_t topheight, bottomheight;
+					if (!(rover->flags & FF_EXISTS))
+						continue;
+
+					if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
+						;
+					else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
+						|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
+						continue;
+
+					topheight = P_GetFOFTopZ(mobj, back, rover, tmx, tmy, linedef);
+					bottomheight = P_GetFOFBottomZ(mobj, back, rover, tmx, tmy, linedef);
+
+					delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
+					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
+
+					if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
+					{
+						if (bottomheight < opentop) {
+							opentop = bottomheight;
+							opentopslope = *rover->b_slope;
+							openceilingrover = rover;
+						}
+						else if (bottomheight < highceiling)
+							highceiling = bottomheight;
 					}
-					else if (topheight > lowfloor)
-						lowfloor = topheight;
-				}
-			}
 
-			// Check for backsectors fake floors
-			for (rover = back->ffloors; rover; rover = rover->next)
-			{
-				fixed_t topheight, bottomheight;
-				if (!(rover->flags & FF_EXISTS))
-					continue;
-
-				if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
-					;
-				else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
-					|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
-					continue;
-
-				topheight = P_GetFOFTopZ(mobj, back, rover, tmx, tmy, linedef);
-				bottomheight = P_GetFOFBottomZ(mobj, back, rover, tmx, tmy, linedef);
-
-				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
-				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
-
-				if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
-				{
-					if (bottomheight < opentop) {
-						opentop = bottomheight;
-						opentopslope = *rover->b_slope;
-						openceilingrover = rover;
+					if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+					{
+						if (topheight > openbottom) {
+							openbottom = topheight;
+							openbottomslope = *rover->t_slope;
+							openfloorrover = rover;
+						}
+						else if (topheight > lowfloor)
+							lowfloor = topheight;
 					}
-					else if (bottomheight < highceiling)
-						highceiling = bottomheight;
-				}
-
-				if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
-				{
-					if (topheight > openbottom) {
-						openbottom = topheight;
-						openbottomslope = *rover->t_slope;
-						openfloorrover = rover;
-					}
-					else if (topheight > lowfloor)
-						lowfloor = topheight;
 				}
 			}
 		}
@@ -934,9 +932,7 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 {
 	INT32 offset;
 	const INT32 *list; // Big blockmap
-#ifdef POLYOBJECTS
 	polymaplink_t *plink; // haleyjd 02/22/06
-#endif
 	line_t *ld;
 
 	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
@@ -944,7 +940,6 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 
 	offset = y*bmapwidth + x;
 
-#ifdef POLYOBJECTS
 	// haleyjd 02/22/06: consider polyobject lines
 	plink = polyblocklinks[offset];
 
@@ -968,7 +963,6 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 		}
 		plink = (polymaplink_t *)(plink->link.next);
 	}
-#endif
 
 	offset = *(blockmap + offset); // offset = blockmap[y*bmapwidth+x];
 

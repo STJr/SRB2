@@ -1010,16 +1010,8 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			if (!rover)
 				WRITEUINT8(save_p, ARCH_NULL);
 			else {
-				ffloor_t *r2;
-				UINT16 i = 0;
-				// search for id
-				for (r2 = rover->target->ffloors; r2; r2 = r2->next)
-				{
-					if (r2 == rover)
-						break;
-					i++;
-				}
-				if (!r2)
+				UINT16 i = P_GetFFloorID(rover);
+				if (i == UINT16_MAX) // invalid ID
 					WRITEUINT8(save_p, ARCH_NULL);
 				else
 				{
