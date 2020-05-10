@@ -4019,7 +4019,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 }
 
 // This is expecting a pointer to an array containing 4 wallVerts for a sprite
-static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts)
+static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts, const boolean precip)
 {
 	if (cv_grspritebillboarding.value
 		&& spr && spr->mobj && !(spr->mobj->frame & FF_PAPERSPRITE)
@@ -4027,7 +4027,7 @@ static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts
 	{
 		float basey = FIXED_TO_FLOAT(spr->mobj->z);
 		float lowy = wallVerts[0].y;
-		if (P_MobjFlip(spr->mobj) == -1)
+		if (!precip && P_MobjFlip(spr->mobj) == -1) // precip doesn't have eflags so they can't flip
 		{
 			basey = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
 		}
@@ -4140,7 +4140,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	}
 
 	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, baseWallVerts);
+	HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
 
 	realtop = top = baseWallVerts[3].y;
 	realbot = bot = baseWallVerts[0].y;
@@ -4419,7 +4419,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	}
 
 	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, wallVerts);
+	HWR_RotateSpritePolyToAim(spr, wallVerts, false);
 
 	// This needs to be AFTER the shadows so that the regular sprites aren't drawn completely black.
 	// sprite lighting by modulating the RGB components
@@ -4503,7 +4503,7 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 	wallVerts[1].z = wallVerts[2].z = spr->z2;
 
 	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, wallVerts);
+	HWR_RotateSpritePolyToAim(spr, wallVerts, true);
 
 	wallVerts[0].sow = wallVerts[3].sow = 0;
 	wallVerts[2].sow = wallVerts[1].sow = gpatch->max_s;
