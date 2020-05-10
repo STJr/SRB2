@@ -2484,7 +2484,7 @@ void I_RemoveExitFunc(void (*func)())
 	}
 }
 
-#ifndef __unix__
+#if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))
 static void Shittycopyerror(const char *name)
 {
 	I_OutputMsg(
@@ -2524,7 +2524,7 @@ static void Shittylogcopy(void)
 		Shittycopyerror(logfilename);
 	}
 }
-#endif/*__unix__*/
+#endif/*!(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))*/
 
 //
 //  Closes down everything. This includes restoring the initial
@@ -2548,7 +2548,7 @@ void I_ShutdownSystem(void)
 	if (logstream)
 	{
 		I_OutputMsg("I_ShutdownSystem(): end of logstream.\n");
-#ifndef __unix__
+#if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))
 		Shittylogcopy();
 #endif
 		fclose(logstream);
