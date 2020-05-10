@@ -538,10 +538,16 @@ void SCR_DisplayTicRate(void)
 	if (totaltics <= TICRATE/2) ticcntcolor = V_REDMAP;
 	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
 
-	V_DrawString(vid.width-(72*vid.dupx), h,
-		V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
-	V_DrawString(vid.width-(40*vid.dupx), h,
-		ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d/%02u", totaltics, TICRATE));
+	if (cv_ticrate.value == 2) // compact counter
+		V_DrawString(vid.width-(16*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d", totaltics));
+	else if (cv_ticrate.value == 1) // full counter
+	{
+		V_DrawString(vid.width-(72*vid.dupx), h,
+			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
+		V_DrawString(vid.width-(40*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d/%02u", totaltics, TICRATE));
+	}
 
 	lasttic = ontic;
 }

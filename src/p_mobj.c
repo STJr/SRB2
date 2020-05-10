@@ -1691,7 +1691,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 				// Needs ML_EFFECT4 flag for pushables to break it
 				if (!(rover->master->flags & ML_EFFECT4)) continue;
 
-				if (!rover->master->frontsector->crumblestate)
+				if (rover->master->frontsector->crumblestate == CRUMBLE_NONE)
 				{
 					topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
 					bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
@@ -2895,7 +2895,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 			mo->eflags |= MFE_JUSTHITFLOOR; // Spin Attack
 
 			{
-#ifdef POLYOBJECTS
 				// Check if we're on a polyobject
 				// that triggers a linedef executor.
 				msecnode_t *node;
@@ -2955,8 +2954,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 				}
 
 			if (!stopmovecut)
-#endif
-
 				// Cut momentum in half when you hit the ground and
 				// aren't pressing any controls.
 				if (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING))
@@ -7059,8 +7056,7 @@ static void P_MobjScaleThink(mobj_t *mobj)
 	fixed_t oldheight = mobj->height;
 	UINT8 correctionType = 0; // Don't correct Z position, just gain height
 
-	if ((mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
-		&& mobj->type != MT_EGGMOBILE_FIRE)
+	if (mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
 		correctionType = 1; // Correct Z position by centering
 	else if (mobj->eflags & MFE_VERTICALFLIP)
 		correctionType = 2; // Correct Z position by moving down
@@ -7081,10 +7077,6 @@ static void P_MobjScaleThink(mobj_t *mobj)
 		/// \todo Lua hook for "reached destscale"?
 		switch (mobj->type)
 		{
-		case MT_EGGMOBILE_FIRE:
-			mobj->destscale = FRACUNIT;
-			mobj->scalespeed = FRACUNIT>>4;
-			break;
 		default:
 			break;
 		}

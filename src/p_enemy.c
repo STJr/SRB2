@@ -312,6 +312,7 @@ void A_RolloutRock(mobj_t *actor);
 void A_DragonbomberSpawn(mobj_t *actor);
 void A_DragonWing(mobj_t *actor);
 void A_DragonSegment(mobj_t *actor);
+void A_ChangeHeight(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -2990,6 +2991,19 @@ void A_Boss1Laser(mobj_t *actor)
 	angle_t angle;
 	mobj_t *point;
 	tic_t dur;
+	static const UINT8 LASERCOLORS[] =
+	{
+		SKINCOLOR_SUPERRED3,
+		SKINCOLOR_SUPERRED4,
+		SKINCOLOR_SUPERRED5,
+		SKINCOLOR_FLAME,
+		SKINCOLOR_RED,
+		SKINCOLOR_RED,
+		SKINCOLOR_FLAME,
+		SKINCOLOR_SUPERRED5,
+		SKINCOLOR_SUPERRED4,
+		SKINCOLOR_SUPERRED3,
+	};
 
 	if (LUA_CallAction("A_Boss1Laser", actor))
 		return;
@@ -3064,7 +3078,7 @@ void A_Boss1Laser(mobj_t *actor)
 	point = P_SpawnMobj(x, y, z, locvar1);
 	P_SetTarget(&point->target, actor);
 	point->angle = actor->angle;
-	speed = point->radius*2;
+	speed = point->radius;
 	point->momz = FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT), speed);
 	point->momx = FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), FixedMul(FINECOSINE(point->angle>>ANGLETOFINESHIFT), speed));
 	point->momy = FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), FixedMul(FINESINE(point->angle>>ANGLETOFINESHIFT), speed));
@@ -3073,23 +3087,69 @@ void A_Boss1Laser(mobj_t *actor)
 	{
 		mobj_t *mo = P_SpawnMobj(point->x, point->y, point->z, point->type);
 		mo->angle = point->angle;
+		mo->color = LASERCOLORS[((UINT8)(i + 3*dur) >> 2) % sizeof(LASERCOLORS)]; // codeing
 		P_UnsetThingPosition(mo);
-		mo->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
+		mo->flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
 		P_SetThingPosition(mo);
+
+		if (dur & 1 && mo->info->missilestate)
+		{
+			P_SetMobjState(mo, mo->info->missilestate);
+			if (mo->info->meleestate)
+			{
+				mobj_t *mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_PARTICLE);
+				mo2->flags2 |= MF2_LINKDRAW;
+				P_SetTarget(&mo2->tracer, actor);
+				P_SetMobjState(mo2, mo->info->meleestate);
+			}
+		}
+
+		if (dur == 1)
+			P_SpawnGhostMobj(mo);
 
 		x = point->x, y = point->y, z = point->z;
 		if (P_RailThinker(point))
 			break;
 	}
 
+	x += point->momx;
+	y += point->momy;
 	floorz = P_FloorzAtPos(x, y, z, mobjinfo[MT_EGGMOBILE_FIRE].height);
-	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1)
+	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1 && dur & 1)
 	{
-		point = P_SpawnMobj(x, y, floorz+1, MT_EGGMOBILE_FIRE);
+		point = P_SpawnMobj(x, y, floorz, MT_EGGMOBILE_FIRE);
+		point->angle = actor->angle;
+		point->destscale = actor->scale;
+		P_SetScale(point, point->destscale);
 		P_SetTarget(&point->target, actor);
-		point->destscale = 3*FRACUNIT;
-		point->scalespeed = FRACUNIT>>2;
-		point->fuse = TICRATE;
+		P_MobjCheckWater(point);
+		if (point->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER))
+		{
+			for (i = 0; i < 2; i++)
+			{
+				UINT8 size = 3;
+				mobj_t *steam = P_SpawnMobj(x, y, point->watertop - size*mobjinfo[MT_DUST].height, MT_DUST);
+				P_SetScale(steam, size*actor->scale);
+				P_SetObjectMomZ(steam, FRACUNIT + 2*P_RandomFixed(), true);
+				P_InstaThrust(steam, FixedAngle(P_RandomKey(360)*FRACUNIT), 2*P_RandomFixed());
+				if (point->info->painsound)
+					S_StartSound(steam, point->info->painsound);
+			}
+		}
+		else
+		{
+			fixed_t distx = P_ReturnThrustX(point, point->angle, point->radius);
+			fixed_t disty = P_ReturnThrustY(point, point->angle, point->radius);
+			if (P_TryMove(point, point->x + distx, point->y + disty, false) // prevents the sprite from clipping into the wall or dangling off ledges
+				&& P_TryMove(point, point->x - 2*distx, point->y - 2*disty, false)
+				&& P_TryMove(point, point->x + distx, point->y + disty, false))
+			{
+				if (point->info->seesound)
+					S_StartSound(point, point->info->seesound);
+			}
+			else
+				P_RemoveMobj(point);
+		}
 	}
 
 	if (dur > 1)
@@ -14408,4 +14468,44 @@ void A_DragonSegment(mobj_t *actor)
 
 	actor->angle = hangle;
 	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);
+}
+
+// Function: A_ChangeHeight
+//
+// Description: Changes the actor's height by var1
+//
+// var1 = height
+// var2 =
+//     &1: height is absolute
+//     &2: scale with actor's scale
+//
+void A_ChangeHeight(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t height = locvar1;
+	boolean reverse;
+
+	if (LUA_CallAction("A_ChangeHeight", actor))
+		return;
+
+	reverse = (actor->eflags & MFE_VERTICALFLIP) || (actor->flags2 & MF2_OBJECTFLIP);
+
+	if (locvar2 & 2)
+		height = FixedMul(height, actor->scale);
+
+	P_UnsetThingPosition(actor);
+	if (locvar2 & 1)
+	{
+		if (reverse)
+			actor->z += actor->height - locvar1;
+		actor->height = locvar1;
+	}
+	else
+	{
+		if (reverse)
+			actor->z -= locvar1;
+		actor->height += locvar1;
+	}
+	P_SetThingPosition(actor);
 }

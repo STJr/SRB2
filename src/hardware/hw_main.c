@@ -1602,7 +1602,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			// heights of the polygon, and h & l, are the final (clipped)
 			// poly coords.
 
-#ifdef POLYOBJECTS
 			// NOTE: With polyobjects, whenever you need to check the properties of the polyobject sector it belongs to,
 			// you must use the linedef's backsector to be correct
 			// From CB
@@ -1612,7 +1611,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				popenbottom = back->floorheight;
 			}
 			else
-#endif
             {
 				popentop = min(worldtop, worldhigh);
 				popenbottom = max(worldbottom, worldlow);
@@ -1642,7 +1640,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				polybottom = polytop - textureheight[gr_midtexture]*repeats;
 			}
 			// CB
-#ifdef POLYOBJECTS
 			// NOTE: With polyobjects, whenever you need to check the properties of the polyobject sector it belongs to,
 			// you must use the linedef's backsector to be correct
 			if (gr_curline->polyseg)
@@ -1650,7 +1647,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				lowcut = polybottom;
 				highcut = polytop;
 			}
-#endif
 			else
 			{
 				// The cut-off values of a linedef can always be constant, since every line has an absoulute front and or back sector
@@ -1780,7 +1776,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					break;
 			}
 
-#ifdef POLYOBJECTS
 			if (gr_curline->polyseg && gr_curline->polyseg->translucency > 0)
 			{
 				if (gr_curline->polyseg->translucency >= NUMTRANSMAPS) // wall not drawn
@@ -1791,7 +1786,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else
 					blendmode = HWR_TranstableToAlpha(gr_curline->polyseg->translucency, &Surf);
 			}
-#endif
 
 			if (gr_frontsector->numlights)
 			{
@@ -2587,10 +2581,8 @@ static void HWR_AddLine(seg_t * line)
 	static sector_t tempsec;
 
 	fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
-#ifdef POLYOBJECTS
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
-#endif
 
 	gr_curline = line;
 
@@ -2717,13 +2709,10 @@ static void HWR_AddLine(seg_t * line)
 
 		if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
 		{
-			if (
-#ifdef POLYOBJECTS
-			!line->polyseg &&
-#endif
-			!line->sidedef->midtexture
-			&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
-			|| (gr_frontsector->tag == gr_backsector->tag)))
+			if (!line->polyseg &&
+				!line->sidedef->midtexture
+				&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
+					|| (gr_frontsector->tag == gr_backsector->tag)))
 				return; // line is empty, don't even bother
 			// treat like wide open window instead
 			HWR_ProcessSeg(); // Doesn't need arguments because they're defined globally :D
@@ -2759,13 +2748,10 @@ static void HWR_AddLine(seg_t * line)
 
 	if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
 	{
-		if (
-#ifdef POLYOBJECTS
-		!line->polyseg &&
-#endif
-		!line->sidedef->midtexture
-		&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
-		|| (gr_frontsector->tag == gr_backsector->tag)))
+		if (!line->polyseg &&
+			!line->sidedef->midtexture
+			&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
+				|| (gr_frontsector->tag == gr_backsector->tag)))
 			return; // line is empty, don't even bother
 
 		goto clippass; // treat like wide open window instead
@@ -2957,8 +2943,6 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 #endif
 }
 
-#ifdef POLYOBJECTS
-
 //
 // HWR_AddPolyObjectSegs
 //
@@ -3001,7 +2985,6 @@ static inline void HWR_AddPolyObjectSegs(void)
 	Z_Free(gr_fakeline);
 }
 
-#ifdef POLYOBJECTS_PLANES
 static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
 									FBITFIELD blendmode, UINT8 lightlevel, levelflat_t *levelflat, sector_t *FOFsector,
 									UINT8 alpha, extracolormap_t *planecolormap)
@@ -3256,8 +3239,6 @@ static void HWR_AddPolyObjectPlanes(void)
 		}
 	}
 }
-#endif
-#endif
 
 // -----------------+
 // HWR_Subsector    : Determine floor/ceiling planes.
@@ -3585,7 +3566,6 @@ static void HWR_Subsector(size_t num)
 #endif
 #endif //doplanes
 
-#ifdef POLYOBJECTS
 	// Draw all the polyobjects in this subsector
 	if (sub->polyList)
 	{
@@ -3606,15 +3586,12 @@ static void HWR_Subsector(size_t num)
 		// Draw polyobject lines.
 		HWR_AddPolyObjectSegs();
 
-#ifdef POLYOBJECTS_PLANES
 		if (sub->validcount != validcount) // This validcount situation seems to let us know that the floors have already been drawn.
 		{
 			// Draw polyobject planes
 			HWR_AddPolyObjectPlanes();
 		}
-#endif
 	}
-#endif
 
 // Hurder ici se passe les choses INT32�essantes!
 // on vient de tracer le sol et le plafond
@@ -3637,14 +3614,8 @@ static void HWR_Subsector(size_t num)
 		while (count--)
 		{
 
-			if (!line->glseg
-#ifdef POLYOBJECTS
-			    && !line->polyseg // ignore segs that belong to polyobjects
-#endif
-			)
-			{
+			if (!line->glseg && !line->polyseg) // ignore segs that belong to polyobjects
 				HWR_AddLine(line);
-			}
 			line++;
 		}
 	}
@@ -3959,7 +3930,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	HWR_GetPatch(gpatch);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
-	scalemul = FixedMul(scalemul, (thing->radius*2) / gpatch->height);
+	scalemul = FixedMul(scalemul, (thing->radius*2) / SHORT(gpatch->height));
 
 	fscale = FIXED_TO_FLOAT(scalemul);
 	fx = FIXED_TO_FLOAT(thing->x);
@@ -3971,9 +3942,9 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	//  0--1
 
 	if (thing && fabsf(fscale - 1.0f) > 1.0E-36f)
-		offset = (gpatch->height/2) * fscale;
+		offset = (SHORT(gpatch->height)/2) * fscale;
 	else
-		offset = (float)(gpatch->height/2);
+		offset = (float)(SHORT(gpatch->height)/2);
 
 	shadowVerts[0].x = shadowVerts[3].x = fx - offset;
 	shadowVerts[2].x = shadowVerts[1].x = fx + offset;
@@ -5282,10 +5253,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
 		{
-			spr_width = rotsprite->width << FRACBITS;
-			spr_height = rotsprite->height << FRACBITS;
-			spr_offset = rotsprite->leftoffset << FRACBITS;
-			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			spr_width = SHORT(rotsprite->width) << FRACBITS;
+			spr_height = SHORT(rotsprite->height) << FRACBITS;
+			spr_offset = SHORT(rotsprite->leftoffset) << FRACBITS;
+			spr_topoffset = SHORT(rotsprite->topoffset) << FRACBITS;
 			// flip -> rotate, not rotate -> flip
 			flip = 0;
 		}

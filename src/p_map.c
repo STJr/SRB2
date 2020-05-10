@@ -2157,7 +2157,6 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
-#ifdef POLYOBJECTS
 	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
 	{
 		validcount++;
@@ -2229,7 +2228,6 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				}
 			}
 	}
-#endif
 
 	// tmfloorthing is set when tmfloorz comes from a thing's top
 	tmfloorthing = NULL;
@@ -2387,7 +2385,6 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
-#ifdef POLYOBJECTS
 	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
 	{
 		validcount++;
@@ -2458,7 +2455,6 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 				}
 			}
 	}
-#endif
 
 	// check lines
 	for (bx = xl; bx <= xh; bx++)
@@ -4223,21 +4219,19 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 					{
 						//If the thing was crushed by a crumbling FOF, reward the player who made it crumble!
 						thinker_t *think;
-						elevator_t *crumbler;
+						crumble_t *crumbler;
 
 						for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 						{
 							if (think->function.acp1 != (actionf_p1)T_StartCrumble)
 								continue;
 
-							crumbler = (elevator_t *)think;
+							crumbler = (crumble_t *)think;
 
 							if (crumbler->player && crumbler->player->mo
 								&& crumbler->player->mo != thing
 								&& crumbler->actionsector == thing->subsector->sector
-								&& crumbler->sector == rover->master->frontsector
-								&& (crumbler->type == elevateBounce
-								|| crumbler->type == elevateContinuous))
+								&& crumbler->sector == rover->master->frontsector)
 							{
 								killer = crumbler->player->mo;
 							}
