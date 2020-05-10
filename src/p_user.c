@@ -395,7 +395,7 @@ void P_GiveFinishFlags(player_t *player)
 		mobj_t* flag = P_SpawnMobjFromMobj(player->mo, xoffs, yoffs, 0, MT_FINISHFLAG);
 		flag->angle = angle;
 		angle += FixedAngle(120*FRACUNIT);
-		
+
 		P_SetTarget(&flag->target, player->mo);
 	}
 }
@@ -1492,17 +1492,10 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if (use1upSound)
+	if (use1upSound || cv_1upsound.value)
 		S_StartSound(NULL, sfx_oneup);
 	else if (mariomode)
 		S_StartSound(NULL, sfx_marioa);
-	else if (cv_1upsound.value)
-	{
-		if (S_sfx[sfx_oneup].lumpnum != LUMPERROR)
-			S_StartSound(NULL, sfx_oneup);
-		else
-			S_StartSound(NULL, sfx_chchng);/* at least play something! */
-	}
 	else
 	{
 		P_PlayJingle(player, JT_1UP);
