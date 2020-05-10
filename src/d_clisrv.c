@@ -1566,7 +1566,7 @@ static void Snake_Draw(void)
 		(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->appley * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
 		FRACUNIT / 4,
 		0,
-		W_CachePatchName("DL_APPLE", PU_HUDGFX),
+		W_CachePatchLongName("DL_APPLE", PU_HUDGFX),
 		NULL
 	);
 
@@ -1577,7 +1577,7 @@ static void Snake_Draw(void)
 			(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->bonusy * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2 + 4) * FRACUNIT,
 			FRACUNIT / 2,
 			0,
-			W_CachePatchName(snake_bonuspatches[snake->bonustype], PU_HUDGFX),
+			W_CachePatchLongName(snake_bonuspatches[snake->bonustype], PU_HUDGFX),
 			NULL
 		);
 
@@ -1625,7 +1625,7 @@ static void Snake_Draw(void)
 				(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->snakey[i] * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
 				i == 0 && dir == 0 ? FRACUNIT / 5 : FRACUNIT / 2,
 				snake->snakebonus == SNAKE_BONUS_GHOST ? V_TRANSLUCENT : 0,
-				W_CachePatchName(patchname, PU_HUDGFX),
+				W_CachePatchLongName(patchname, PU_HUDGFX),
 				NULL
 			);
 		}
@@ -1642,7 +1642,7 @@ static void Snake_Draw(void)
 			(SNAKE_TOP_Y + 24) * FRACUNIT,
 			FRACUNIT / 2,
 			0,
-			W_CachePatchName(snake_bonuspatches[snake->snakebonus], PU_HUDGFX),
+			W_CachePatchLongName(snake_bonuspatches[snake->snakebonus], PU_HUDGFX),
 			NULL
 		);
 }
