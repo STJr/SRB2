@@ -8848,10 +8848,8 @@ void A_Dye(mobj_t *actor)
 
 	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
 	UINT8 color = (UINT8)locvar2;
-#ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Dye", actor))
 		return;
-#endif
 	if (color >= MAXTRANSLATIONS)
 		return;
 	
