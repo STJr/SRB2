@@ -9239,6 +9239,7 @@ static const char *const MENUTYPES_LIST[] = {
 	"MP_CONNECT",
 	"MP_ROOM",
 	"MP_PLAYERSETUP", // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	"MP_SERVER_OPTIONS",
 
 	// Options
 	"OP_MAIN",
@@ -9248,10 +9249,14 @@ static const char *const MENUTYPES_LIST[] = {
 	"OP_P1MOUSE",
 	"OP_P1JOYSTICK",
 	"OP_JOYSTICKSET", // OP_JoystickSetDef shared with P2
+	"OP_P1CAMERA",
 
 	"OP_P2CONTROLS",
 	"OP_P2MOUSE",
 	"OP_P2JOYSTICK",
+	"OP_P2CAMERA",
+
+	"OP_PLAYSTYLE",
 
 	"OP_VIDEO",
 	"OP_VIDEOMODE",

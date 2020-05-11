@@ -310,7 +310,9 @@ static void D_Display(void)
 				F_WipeStartScreen();
 				// Check for Mega Genesis fade
 				wipestyleflags = WSF_FADEOUT;
-				if (F_TryColormapFade(31))
+				if (wipegamestate == (gamestate_t)FORCEWIPE)
+					F_WipeColorFill(31);
+				else if (F_TryColormapFade(31))
 					wipetypepost = -1; // Don't run the fade below this one
 				F_WipeEndScreen();
 				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
