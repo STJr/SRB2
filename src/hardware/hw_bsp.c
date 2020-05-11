@@ -887,12 +887,10 @@ static void AdjustSegs(void)
 			float distv1,distv2,tmp;
 			nearv1 = nearv2 = MYMAX;
 
-#ifdef POLYOBJECTS
 			// Don't touch polyobject segs. We'll compensate
 			// for this when we go about drawing them.
 			if (lseg->polyseg)
 				continue;
-#endif
 
 			if (p) {
 				for (j = 0; j < p->numpts; j++)

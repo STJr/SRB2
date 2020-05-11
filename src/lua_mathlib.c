@@ -11,7 +11,6 @@
 /// \brief basic math library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 //#include "fastcmp.h"
 #include "tables.h"
 #include "p_local.h"
@@ -217,5 +216,3 @@ int LUA_MathLib(lua_State *L)
 	luaL_register(L, NULL, lib);
 	return 0;
 }
-
-#endif

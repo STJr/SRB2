@@ -319,6 +319,9 @@ typedef struct
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
 	UINT16 startrings;      ///< Number of rings players start with.
+	INT32 sstimer;          ///< Timer for special stages.
+	UINT32 ssspheres;       ///< Sphere requirement in special stages.
+	fixed_t gravity;        ///< Map-wide gravity.
 
 	// Title card.
 	char ltzzpatch[8];      ///< Zig zag patch.
@@ -493,7 +496,6 @@ extern UINT16 emeralds;
 #define EMERALD7 64
 #define ALL7EMERALDS(v) ((v & (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7)) == (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7))
 
-// yes, even in non HAVE_BLUA
 #define NUM_LUABANKS 16 // please only make this number go up between versions, never down. you'll break saves otherwise. also, must fit in UINT8
 extern INT32 luabanks[NUM_LUABANKS];
 
@@ -576,6 +578,8 @@ extern UINT8 creditscutscene;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings
+extern UINT8 useContinues;
+#define continuesInSession (!multiplayer && (useContinues || ultimatemode || !(cursaveslot > 0)))
 
 extern mobj_t *hunt1, *hunt2, *hunt3; // Emerald hunt locations
 

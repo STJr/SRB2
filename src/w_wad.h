@@ -66,9 +66,10 @@ typedef struct
 {
 	unsigned long position; // filelump_t filepos
 	unsigned long disksize; // filelump_t size
-	char name[9]; // filelump_t name[]
-	char *name2; // Used by PK3s. Dynamically allocated name.
-	size_t size; // real (uncompressed) size
+	char name[9];           // filelump_t name[] e.g. "LongEntr"
+	char *longname;         //                   e.g. "LongEntryName"
+	char *fullname;         //                   e.g. "Folder/Subfolder/LongEntryName.extension"
+	size_t size;            // real (uncompressed) size
 	compmethod compression; // lump compression method
 } lumpinfo_t;
 
@@ -155,6 +156,10 @@ const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);
 
 UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump); // checks only in one pwad
+UINT16 W_CheckNumForLongNamePwad(const char *name, UINT16 wad, UINT16 startlump);
+
+/* Find the first lump after F_START for instance. */
+UINT16 W_CheckNumForMarkerStartPwad(const char *name, UINT16 wad, UINT16 startlump);
 
 UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump);
@@ -162,7 +167,9 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 
 lumpnum_t W_CheckNumForMap(const char *name);
 lumpnum_t W_CheckNumForName(const char *name);
+lumpnum_t W_CheckNumForLongName(const char *name);
 lumpnum_t W_GetNumForName(const char *name); // like W_CheckNumForName but I_Error on LUMPERROR
+lumpnum_t W_GetNumForLongName(const char *name);
 lumpnum_t W_CheckNumForNameInBlock(const char *name, const char *blockstart, const char *blockend);
 UINT8 W_LumpExists(const char *name); // Lua uses this.
 
@@ -190,9 +197,17 @@ boolean W_IsPatchCached(lumpnum_t lump, void *ptr);
 
 void *W_CacheLumpName(const char *name, INT32 tag);
 void *W_CachePatchName(const char *name, INT32 tag);
+void *W_CachePatchLongName(const char *name, INT32 tag);
 
-void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag); // return a patch_t
-void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag); // return a patch_t
+// Returns either a Software patch, or an OpenGL patch.
+// Performs any necessary conversions from PNG images.
+void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
+void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
+
+// Returns a Software patch.
+// Performs any necessary conversions from PNG images.
+void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
+void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
 
 void W_UnlockCachedPatch(void *patch);
 void W_FlushCachedPatches(void);

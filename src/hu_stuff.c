@@ -47,10 +47,8 @@
 #include "hardware/hw_main.h"
 #endif
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
 #include "lua_hook.h"
-#endif
 
 // coords are scaled
 #define HU_INPUTX 0
@@ -688,10 +686,8 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 
 	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
 
-#ifdef HAVE_BLUA
 	if (LUAh_PlayerMsg(playernum, target, flags, msg))
 		return;
-#endif
 
 	if (spam_eatmsg)
 		return; // don't proceed if we were supposed to eat the message.
@@ -787,10 +783,12 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				case SKINCOLOR_RED:
 				case SKINCOLOR_CRIMSON:
 				case SKINCOLOR_FLAME:
+				case SKINCOLOR_KETCHUP:
 					cstart = "\x85"; // V_REDMAP
 					break;
 				case SKINCOLOR_YOGURT:
 				case SKINCOLOR_BROWN:
+				case SKINCOLOR_BRONZE:
 				case SKINCOLOR_TAN:
 				case SKINCOLOR_BEIGE:
 				case SKINCOLOR_QUAIL:
@@ -818,6 +816,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 					cstart = "\x8e"; // V_ROSYMAP
 					break;
 				case SKINCOLOR_SUNSET:
+				case SKINCOLOR_COPPER:
 				case SKINCOLOR_APRICOT:
 				case SKINCOLOR_ORANGE:
 				case SKINCOLOR_RUST:
@@ -831,6 +830,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 					break;
 				case SKINCOLOR_LIME:
 				case SKINCOLOR_PERIDOT:
+				case SKINCOLOR_APPLE:
 					cstart = "\x8b"; // V_PERIDOTMAP
 					break;
 				case SKINCOLOR_SEAFOAM:
@@ -851,12 +851,14 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				case SKINCOLOR_BLUE:
 				case SKINCOLOR_COBALT:
 				case SKINCOLOR_DUSK:
+				case SKINCOLOR_BLUEBELL:
 					cstart = "\x84"; // V_BLUEMAP
 					break;
 				case SKINCOLOR_BUBBLEGUM:
 				case SKINCOLOR_MAGENTA:
 				case SKINCOLOR_NEON:
 				case SKINCOLOR_VIOLET:
+				case SKINCOLOR_RASPBERRY:
 					cstart = "\x81"; // V_MAGENTAMAP
 					break;
 			}
@@ -2171,18 +2173,14 @@ void HU_Drawer(void)
 	{
 		if (netgame || multiplayer)
 		{
-#ifdef HAVE_BLUA
 			if (LUA_HudEnabled(hud_rankings))
-#endif
-			HU_DrawRankings();
+				HU_DrawRankings();
 			if (gametype == GT_COOP)
 				HU_DrawNetplayCoopOverlay();
 		}
 		else
 			HU_DrawCoopOverlay();
-#ifdef HAVE_BLUA
 		LUAh_ScoresHUD();
-#endif
 	}
 
 	if (gamestate != GS_LEVEL)
@@ -3165,29 +3163,20 @@ static void HU_DrawRankings(void)
 
 static void HU_DrawCoopOverlay(void)
 {
-	if (token
-#ifdef HAVE_BLUA
-	&& LUA_HudEnabled(hud_tokens)
-#endif
-	)
+	if (token && LUA_HudEnabled(hud_tokens))
 	{
 		V_DrawString(168, 176, 0, va("- %d", token));
 		V_DrawSmallScaledPatch(148, 172, 0, tokenicon);
 	}
 
-#ifdef HAVE_BLUA
-	if (LUA_HudEnabled(hud_tabemblems))
-#endif
-	if (!modifiedgame || savemoddata)
+	if (LUA_HudEnabled(hud_tabemblems) && (!modifiedgame || savemoddata))
 	{
 		V_DrawString(160, 144, 0, va("- %d/%d", M_CountEmblems(), numemblems+numextraemblems));
 		V_DrawScaledPatch(128, 144 - SHORT(emblemicon->height)/4, 0, emblemicon);
 	}
 
-#ifdef HAVE_BLUA
 	if (!LUA_HudEnabled(hud_coopemeralds))
 		return;
-#endif
 
 	if (emeralds & EMERALD1)
 		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)-32, 0, emeraldpics[0][0]);
@@ -3209,20 +3198,14 @@ static void HU_DrawNetplayCoopOverlay(void)
 {
 	int i;
 
-	if (token
-#ifdef HAVE_BLUA
-	&& LUA_HudEnabled(hud_tokens)
-#endif
-	)
+	if (token && LUA_HudEnabled(hud_tokens))
 	{
 		V_DrawString(168, 10, 0, va("- %d", token));
 		V_DrawSmallScaledPatch(148, 6, 0, tokenicon);
 	}
 
-#ifdef HAVE_BLUA
 	if (!LUA_HudEnabled(hud_coopemeralds))
 		return;
-#endif
 
 	for (i = 0; i < 7; ++i)
 	{
