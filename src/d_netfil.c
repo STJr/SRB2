@@ -847,7 +847,7 @@ void FileSendTicker(void)
 {
 	static INT32 currentnode = 0;
 	filetx_pak *p;
-	size_t size;
+	size_t fragmentsize;
 	filetx_t *f;
 	INT32 packetsent, ram, i, j;
 	INT32 maxpacketsent;
@@ -926,33 +926,33 @@ void FileSendTicker(void)
 
 		// Build a packet containing a file fragment
 		p = &netbuffer->u.filetxpak;
-		size = software_MAXPACKETLENGTH - (FILETXHEADER + BASEPACKETSIZE);
-		if (f->size-transfer[i].position < size)
-			size = f->size-transfer[i].position;
+		fragmentsize = software_MAXPACKETLENGTH - (FILETXHEADER + BASEPACKETSIZE);
+		if (f->size-transfer[i].position < fragmentsize)
+			fragmentsize = f->size-transfer[i].position;
 		if (ram)
-			M_Memcpy(p->data, &f->id.ram[transfer[i].position], size);
+			M_Memcpy(p->data, &f->id.ram[transfer[i].position], fragmentsize);
 		else
 		{
-			size_t n = fread(p->data, 1, size, transfer[i].currentfile);
-			if (n != size) // Either an error or Windows turning CR-LF into LF
+			size_t n = fread(p->data, 1, fragmentsize, transfer[i].currentfile);
+			if (n != fragmentsize) // Either an error or Windows turning CR-LF into LF
 			{
 				if (f->textmode && feof(transfer[i].currentfile))
-                    size = n;
-				else if (fread(p->data, 1, size, transfer[i].currentfile) != size)
-					I_Error("FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(size), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
+                    fragmentsize = n;
+				else if (fread(p->data, 1, fragmentsize, transfer[i].currentfile) != fragmentsize)
+					I_Error("FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(fragmentsize), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
 			}
 		}
 		p->position = LONG(transfer[i].position);
 		// Put flag so receiver knows the total size
-		if (transfer[i].position + size == f->size || (f->textmode && feof(transfer[i].currentfile)))
+		if (transfer[i].position + fragmentsize == f->size || (f->textmode && feof(transfer[i].currentfile)))
 			p->position |= LONG(0x80000000);
 		p->fileid = f->fileid;
-		p->size = SHORT((UINT16)size);
+		p->size = SHORT((UINT16)fragmentsize);
 
 		// Send the packet
-		if (HSendPacket(i, true, 0, FILETXHEADER + size)) // Reliable SEND
+		if (HSendPacket(i, true, 0, FILETXHEADER + fragmentsize)) // Reliable SEND
 		{ // Success
-			transfer[i].position = (UINT32)(transfer[i].position + size);
+			transfer[i].position = (UINT32)(transfer[i].position + fragmentsize);
 			if (transfer[i].position == f->size || (f->textmode && feof(transfer[i].currentfile))) // Finish?
 				SV_EndFileSend(i);
 		}
@@ -1007,20 +1007,20 @@ void PT_FileFragment(void)
 
 	if (file->status == FS_DOWNLOADING)
 	{
-		UINT32 pos = LONG(netbuffer->u.filetxpak.position);
-		UINT16 size = SHORT(netbuffer->u.filetxpak.size);
+		UINT32 fragmentpos = LONG(netbuffer->u.filetxpak.position);
+		UINT16 fragmentsize = SHORT(netbuffer->u.filetxpak.size);
 		// Use a special trick to know when the file is complete (not always used)
 		// WARNING: file fragments can arrive out of order so don't stop yet!
-		if (pos & 0x80000000)
+		if (fragmentpos & 0x80000000)
 		{
-			pos &= ~0x80000000;
-			file->totalsize = pos + size;
+			fragmentpos &= ~0x80000000;
+			file->totalsize = fragmentpos + fragmentsize;
 		}
 		// We can receive packet in the wrong order, anyway all os support gaped file
-		fseek(file->file, pos, SEEK_SET);
-		if (size && fwrite(netbuffer->u.filetxpak.data,size,1,file->file) != 1)
+		fseek(file->file, fragmentpos, SEEK_SET);
+		if (fragmentsize && fwrite(netbuffer->u.filetxpak.data,fragmentsize,1,file->file) != 1)
 			I_Error("Can't write to %s: %s\n",filename, M_FileError(file->file));
-		file->currentsize += size;
+		file->currentsize += fragmentsize;
 
 		// Finished?
 		if (file->currentsize == file->totalsize)
