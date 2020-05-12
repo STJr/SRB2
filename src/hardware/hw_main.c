@@ -42,9 +42,7 @@
 #include "../m_cheat.h"
 #include "../f_finale.h"
 #include "../r_things.h" // R_GetShadowZ
-#ifdef ESLOPE
 #include "../p_slopes.h"
-#endif
 #include "hw_md2.h"
 
 #ifdef NEWCLIP
@@ -486,9 +484,7 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	angle_t angle = 0;
 	FSurfaceInfo    Surf;
 	fixed_t tempxsow, tempytow;
-#ifdef ESLOPE
 	pslope_t *slope = NULL;
-#endif
 
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
@@ -497,7 +493,6 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	if (!xsub->planepoly)
 		return;
 
-#ifdef ESLOPE
 	// Get the slope pointer to simplify future code
 	if (FOFsector)
 	{
@@ -517,7 +512,6 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	// Set fixedheight to the slope's height from our viewpoint, if we have a slope
 	if (slope)
 		fixedheight = P_GetZAt(slope, viewx, viewy);
-#endif
 
 	height = FIXED_TO_FLOAT(fixedheight);
 
@@ -1102,7 +1096,6 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	float pegt, pegb, pegmul;
 	float height = 0.0f, bheight = 0.0f;
 
-#ifdef ESLOPE
 	float endrealtop, endrealbot, endtop, endbot;
 	float endpegt, endpegb, endpegmul;
 	float endheight = 0.0f, endbheight = 0.0f;
@@ -1110,7 +1103,6 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
 	// use this as a temp var to store P_GetZAt's return value each time
 	fixed_t temp;
-#endif
 
 	fixed_t v1x = FLOAT_TO_FIXED(wallVerts[0].x);
 	fixed_t v1y = FLOAT_TO_FIXED(wallVerts[0].z); // not a typo
@@ -1129,23 +1121,18 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	pegb = wallVerts[0].t;
 	pegmul = (pegb - pegt) / (top - bot);
 
-#ifdef ESLOPE
 	endrealtop = endtop = wallVerts[2].y;
 	endrealbot = endbot = wallVerts[1].y;
 	endpegt = wallVerts[2].t;
 	endpegb = wallVerts[1].t;
 	endpegmul = (endpegb - endpegt) / (endtop - endbot);
-#endif
 
 	for (i = 0; i < sector->numlights; i++)
 	{
-#ifdef ESLOPE
-        if (endtop < endrealbot)
-#endif
-		if (top < realbot)
+        if (endtop < endrealbot && top < realbot)
 			return;
 
-	// There's a compiler warning here if this comment isn't here because of indentation
+		// There's a compiler warning here if this comment isn't here because of indentation
 		if (!(list[i].flags & FF_NOSHADE))
 		{
 			if (pfloor && (pfloor->flags & FF_FOG))
@@ -1177,7 +1164,6 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		else
 			solid = false;
 
-#ifdef ESLOPE
 		if (list[i].slope)
 		{
 			temp = P_GetZAt(list[i].slope, v1x, v1y);
@@ -1199,26 +1185,15 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 			else
 				bheight = endbheight = FIXED_TO_FLOAT(*list[i].caster->bottomheight);
 		}
-#else
-		height = FIXED_TO_FLOAT(list[i].height);
-		if (solid)
-			bheight = FIXED_TO_FLOAT(*list[i].caster->bottomheight);
-#endif
 
-#ifdef ESLOPE
-		if (endheight >= endtop)
-#endif
-		if (height >= top)
+		if (endheight >= endtop && height >= top)
 		{
 			if (solid && top > bheight)
 				top = bheight;
-#ifdef ESLOPE
 			if (solid && endtop > endbheight)
 				endtop = endbheight;
-#endif
 		}
 
-#ifdef ESLOPE
 		if (i + 1 < sector->numlights)
 		{
 			if (list[i+1].slope)
@@ -1236,21 +1211,8 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 			bheight = realbot;
 			endbheight = endrealbot;
 		}
-#else
-		if (i + 1 < sector->numlights)
-		{
-			bheight = FIXED_TO_FLOAT(list[i+1].height);
-		}
-		else
-		{
-			bheight = realbot;
-		}
-#endif
 
-#ifdef ESLOPE
-		if (endbheight >= endtop)
-#endif
-		if (bheight >= top)
+		if (endbheight >= endtop && bheight >= top)
 			continue;
 
 		//Found a break;
@@ -1259,15 +1221,12 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		if (bot < realbot)
 			bot = realbot;
 
-#ifdef ESLOPE
 		endbot = endbheight;
 
 		if (endbot < endrealbot)
 			endbot = endrealbot;
-#endif
 		Surf->FlatColor.s.alpha = alpha;
 
-#ifdef ESLOPE
 		wallVerts[3].t = pegt + ((realtop - top) * pegmul);
 		wallVerts[2].t = endpegt + ((endrealtop - endtop) * endpegmul);
 		wallVerts[0].t = pegt + ((realtop - bot) * pegmul);
@@ -1278,14 +1237,6 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		wallVerts[2].y = endtop;
 		wallVerts[0].y = bot;
 		wallVerts[1].y = endbot;
-#else
-		wallVerts[3].t = wallVerts[2].t = pegt + ((realtop - top) * pegmul);
-		wallVerts[0].t = wallVerts[1].t = pegt + ((realtop - bot) * pegmul);
-
-		// set top/bottom coords
-		wallVerts[2].y = wallVerts[3].y = top;
-		wallVerts[0].y = wallVerts[1].y = bot;
-#endif
 
 		if (cutflag & FF_FOG)
 			HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Fog|PF_NoTexture, true, lightnum, colormap);
@@ -1295,22 +1246,16 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 			HWR_ProjectWall(wallVerts, Surf, PF_Masked, lightnum, colormap);
 
 		top = bot;
-#ifdef ESLOPE
 		endtop = endbot;
-#endif
 	}
 
 	bot = realbot;
-#ifdef ESLOPE
 	endbot = endrealbot;
-	if (endtop <= endrealbot)
-#endif
-	if (top <= realbot)
+	if (endtop <= endrealbot && top <= realbot)
 		return;
 
 	Surf->FlatColor.s.alpha = alpha;
 
-#ifdef ESLOPE
 	wallVerts[3].t = pegt + ((realtop - top) * pegmul);
 	wallVerts[2].t = endpegt + ((endrealtop - endtop) * endpegmul);
 	wallVerts[0].t = pegt + ((realtop - bot) * pegmul);
@@ -1321,14 +1266,6 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	wallVerts[2].y = endtop;
 	wallVerts[0].y = bot;
 	wallVerts[1].y = endbot;
-#else
-    wallVerts[3].t = wallVerts[2].t = pegt + ((realtop - top) * pegmul);
-    wallVerts[0].t = wallVerts[1].t = pegt + ((realtop - bot) * pegmul);
-
-    // set top/bottom coords
-    wallVerts[2].y = wallVerts[3].y = top;
-    wallVerts[0].y = wallVerts[1].y = bot;
-#endif
 
 	if (cutflag & FF_FOG)
 		HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Fog|PF_NoTexture, true, lightnum, colormap);
@@ -1373,19 +1310,15 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 	fixed_t worldtop, worldbottom;
 	fixed_t worldhigh = 0, worldlow = 0;
-#ifdef ESLOPE
 	fixed_t worldtopslope, worldbottomslope;
 	fixed_t worldhighslope = 0, worldlowslope = 0;
 	fixed_t v1x, v1y, v2x, v2y;
-#endif
 
 	GLTexture_t *grTex = NULL;
 	float cliplow = 0.0f, cliphigh = 0.0f;
 	INT32 gr_midtexture;
 	fixed_t h, l; // 3D sides and 2s middle textures
-#ifdef ESLOPE
 	fixed_t hS, lS;
-#endif
 
 	FUINT lightnum = 0; // shut up compiler
 	extracolormap_t *colormap;
@@ -1404,13 +1337,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	ve.x = ((polyvertex_t *)gr_curline->pv2)->x;
 	ve.y = ((polyvertex_t *)gr_curline->pv2)->y;
 
-#ifdef ESLOPE
 	v1x = FLOAT_TO_FIXED(vs.x);
 	v1y = FLOAT_TO_FIXED(vs.y);
 	v2x = FLOAT_TO_FIXED(ve.x);
 	v2y = FLOAT_TO_FIXED(ve.y);
-#endif
-#ifdef ESLOPE
 
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
 	if (slope) { \
@@ -1421,10 +1351,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 	SLOPEPARAMS(gr_frontsector->c_slope, worldtop,    worldtopslope,    gr_frontsector->ceilingheight)
 	SLOPEPARAMS(gr_frontsector->f_slope, worldbottom, worldbottomslope, gr_frontsector->floorheight)
-#else
-	worldtop    = gr_frontsector->ceilingheight;
-	worldbottom = gr_frontsector->floorheight;
-#endif
 
 	// remember vertices ordering
 	//  3--2
@@ -1474,14 +1400,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
 		boolean bothfloorssky = false; // likewise, but for floors
 
-#ifdef ESLOPE
 		SLOPEPARAMS(gr_backsector->c_slope, worldhigh, worldhighslope, gr_backsector->ceilingheight)
 		SLOPEPARAMS(gr_backsector->f_slope, worldlow,  worldlowslope,  gr_backsector->floorheight)
 #undef SLOPEPARAMS
-#else
-		worldhigh = gr_backsector->ceilingheight;
-		worldlow  = gr_backsector->floorheight;
-#endif
 
 		// hack to allow height changes in outdoor areas
 		// This is what gets rid of the upper textures if there should be sky
@@ -1504,12 +1425,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			gr_bottomtexture = R_GetTextureNum(gr_sidedef->bottomtexture);
 
 		// check TOP TEXTURE
-		if ((
-#ifdef ESLOPE
-			worldhighslope < worldtopslope ||
-#endif
-            worldhigh < worldtop
-            ) && gr_toptexture)
+		if ((worldhighslope < worldtopslope || worldhigh < worldtop) && gr_toptexture)
 		{
 			{
 				fixed_t texturevpegtop; // top
@@ -1519,15 +1435,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				// PEGGING
 				if (gr_linedef->flags & ML_DONTPEGTOP)
 					texturevpegtop = 0;
-#ifdef ESLOPE
 				else if (gr_linedef->flags & ML_EFFECT1)
 					texturevpegtop = worldhigh + textureheight[gr_sidedef->toptexture] - worldtop;
 				else
 					texturevpegtop = gr_backsector->ceilingheight + textureheight[gr_sidedef->toptexture] - gr_frontsector->ceilingheight;
-#else
-                else
-                    texturevpegtop = worldhigh + textureheight[gr_sidedef->toptexture] - worldtop;
-#endif
 
 				texturevpegtop += gr_sidedef->rowoffset;
 
@@ -1539,7 +1450,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				wallVerts[0].s = wallVerts[3].s = cliplow * grTex->scaleX;
 				wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
 
-#ifdef ESLOPE
 				// Adjust t value for sloped walls
 				if (!(gr_linedef->flags & ML_EFFECT1))
 				{
@@ -1562,19 +1472,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					wallVerts[3].t = wallVerts[0].t - (worldtop - worldhigh) * grTex->scaleY;
 					wallVerts[2].t = wallVerts[1].t - (worldtopslope - worldhighslope) * grTex->scaleY;
 				}
-#endif
 			}
 
 			// set top/bottom coords
-#ifdef ESLOPE
 			wallVerts[3].y = FIXED_TO_FLOAT(worldtop);
 			wallVerts[0].y = FIXED_TO_FLOAT(worldhigh);
 			wallVerts[2].y = FIXED_TO_FLOAT(worldtopslope);
 			wallVerts[1].y = FIXED_TO_FLOAT(worldhighslope);
-#else
-			wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(worldtop);
-			wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(worldhigh);
-#endif
 
 			if (gr_frontsector->numlights)
 				HWR_SplitWall(gr_frontsector, wallVerts, gr_toptexture, &Surf, FF_CUTLEVEL, NULL);
@@ -1586,9 +1490,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 		// check BOTTOM TEXTURE
 		if ((
-#ifdef ESLOPE
 			worldlowslope > worldbottomslope ||
-#endif
             worldlow > worldbottom) && gr_bottomtexture) //only if VISIBLE!!!
 		{
 			{
@@ -1597,19 +1499,12 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				grTex = HWR_GetTexture(gr_bottomtexture);
 
 				// PEGGING
-#ifdef ESLOPE
 				if (!(gr_linedef->flags & ML_DONTPEGBOTTOM))
 					texturevpegbottom = 0;
 				else if (gr_linedef->flags & ML_EFFECT1)
 					texturevpegbottom = worldbottom - worldlow;
 				else
 					texturevpegbottom = gr_frontsector->floorheight - gr_backsector->floorheight;
-#else
-				if (gr_linedef->flags & ML_DONTPEGBOTTOM)
-					texturevpegbottom = worldbottom - worldlow;
-                else
-                    texturevpegbottom = 0;
-#endif
 
 				texturevpegbottom += gr_sidedef->rowoffset;
 
@@ -1621,7 +1516,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				wallVerts[0].s = wallVerts[3].s = cliplow * grTex->scaleX;
 				wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
 
-#ifdef ESLOPE
 				// Adjust t value for sloped walls
 				if (!(gr_linedef->flags & ML_EFFECT1))
 				{
@@ -1644,19 +1538,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					wallVerts[0].t = (texturevpegbottom + worldlow - worldbottom) * grTex->scaleY;
 					wallVerts[1].t = (texturevpegbottom + worldlowslope - worldbottomslope) * grTex->scaleY;
 				}
-#endif
 			}
 
 			// set top/bottom coords
-#ifdef ESLOPE
 			wallVerts[3].y = FIXED_TO_FLOAT(worldlow);
 			wallVerts[0].y = FIXED_TO_FLOAT(worldbottom);
 			wallVerts[2].y = FIXED_TO_FLOAT(worldlowslope);
 			wallVerts[1].y = FIXED_TO_FLOAT(worldbottomslope);
-#else
-			wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(worldlow);
-			wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(worldbottom);
-#endif
 
 			if (gr_frontsector->numlights)
 				HWR_SplitWall(gr_frontsector, wallVerts, gr_bottomtexture, &Surf, FF_CUTLEVEL, NULL);
@@ -1714,7 +1602,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			// heights of the polygon, and h & l, are the final (clipped)
 			// poly coords.
 
-#ifdef POLYOBJECTS
 			// NOTE: With polyobjects, whenever you need to check the properties of the polyobject sector it belongs to,
 			// you must use the linedef's backsector to be correct
 			// From CB
@@ -1724,18 +1611,11 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				popenbottom = back->floorheight;
 			}
 			else
-#endif
             {
-#ifdef ESLOPE
 				popentop = min(worldtop, worldhigh);
 				popenbottom = max(worldbottom, worldlow);
-#else
-				popentop = min(front->ceilingheight, back->ceilingheight);
-				popenbottom = max(front->floorheight, back->floorheight);
-#endif
 			}
 
-#ifdef ESLOPE
 			if (gr_linedef->flags & ML_EFFECT2)
 			{
 				if (!!(gr_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gr_linedef->flags & ML_EFFECT3))
@@ -1750,9 +1630,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				}
 			}
 			else if (!!(gr_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gr_linedef->flags & ML_EFFECT3))
-#else
-            if (gr_linedef->flags & ML_DONTPEGBOTTOM)
-#endif
 			{
 				polybottom = popenbottom + gr_sidedef->rowoffset;
 				polytop = polybottom + textureheight[gr_midtexture]*repeats;
@@ -1763,7 +1640,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				polybottom = polytop - textureheight[gr_midtexture]*repeats;
 			}
 			// CB
-#ifdef POLYOBJECTS
 			// NOTE: With polyobjects, whenever you need to check the properties of the polyobject sector it belongs to,
 			// you must use the linedef's backsector to be correct
 			if (gr_curline->polyseg)
@@ -1771,7 +1647,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				lowcut = polybottom;
 				highcut = polytop;
 			}
-#endif
 			else
 			{
 				// The cut-off values of a linedef can always be constant, since every line has an absoulute front and or back sector
@@ -1784,11 +1659,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 			{
 				// PEGGING
-#ifdef ESLOPE
 				if (!!(gr_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gr_linedef->flags & ML_EFFECT3))
-#else
-				if (gr_linedef->flags & ML_DONTPEGBOTTOM)
-#endif
 					texturevpeg = textureheight[gr_sidedef->midtexture]*repeats - h + polybottom;
 				else
 					texturevpeg = polytop - h;
@@ -1807,7 +1678,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(h);
 			wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(l);
 
-#ifdef ESLOPE
 			// Correct to account for slopes
 			{
 				fixed_t midtextureslant;
@@ -1850,7 +1720,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				wallVerts[2].y = FIXED_TO_FLOAT(h);
 				wallVerts[1].y = FIXED_TO_FLOAT(l);
 			}
-#endif
 
 			// set alpha for transparent walls (new boom and legacy linedef types)
 			// ooops ! this do not work at all because render order we should render it in backtofront order
@@ -1907,7 +1776,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					break;
 			}
 
-#ifdef POLYOBJECTS
 			if (gr_curline->polyseg && gr_curline->polyseg->translucency > 0)
 			{
 				if (gr_curline->polyseg->translucency >= NUMTRANSMAPS) // wall not drawn
@@ -1918,7 +1786,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else
 					blendmode = HWR_TranstableToAlpha(gr_curline->polyseg->translucency, &Surf);
 			}
-#endif
 
 			if (gr_frontsector->numlights)
 			{
@@ -1952,12 +1819,8 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				if (gr_backsector->ceilingpic != skyflatnum) // don't cull if back sector is also sky
 				{
 					wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(INT32_MAX); // draw to top of map space
-#ifdef ESLOPE
 					wallVerts[0].y = FIXED_TO_FLOAT(worldtop);
 					wallVerts[1].y = FIXED_TO_FLOAT(worldtopslope);
-#else
-					wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(worldtop);
-#endif
 					HWR_DrawSkyWall(wallVerts, &Surf);
 				}
 			}
@@ -1966,12 +1829,8 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			{
 				if (gr_backsector->floorpic != skyflatnum) // don't cull if back sector is also sky
 				{
-#ifdef ESLOPE
 					wallVerts[3].y = FIXED_TO_FLOAT(worldbottom);
 					wallVerts[2].y = FIXED_TO_FLOAT(worldbottomslope);
-#else
-					wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(worldbottom);
-#endif
 					wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(INT32_MIN); // draw to bottom of map space
 					HWR_DrawSkyWall(wallVerts, &Surf);
 				}
@@ -1988,12 +1847,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			{
 				fixed_t     texturevpeg;
 				// PEGGING
-#ifdef ESLOPE
 				if ((gr_linedef->flags & (ML_DONTPEGBOTTOM|ML_EFFECT2)) == (ML_DONTPEGBOTTOM|ML_EFFECT2))
 					texturevpeg = gr_frontsector->floorheight + textureheight[gr_sidedef->midtexture] - gr_frontsector->ceilingheight + gr_sidedef->rowoffset;
-				else
-#endif
-				if (gr_linedef->flags & ML_DONTPEGBOTTOM)
+				else if (gr_linedef->flags & ML_DONTPEGBOTTOM)
 					texturevpeg = worldbottom + textureheight[gr_sidedef->midtexture] - worldtop + gr_sidedef->rowoffset;
 				else
 					// top of texture at top
@@ -2006,7 +1862,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				wallVerts[0].s = wallVerts[3].s = cliplow * grTex->scaleX;
 				wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
 
-#ifdef ESLOPE
 				// Texture correction for slopes
 				if (gr_linedef->flags & ML_EFFECT2) {
 					wallVerts[3].t += (gr_frontsector->ceilingheight - worldtop) * grTex->scaleY;
@@ -2020,19 +1875,14 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					wallVerts[0].t = wallVerts[3].t - (worldbottom-worldtop) * grTex->scaleY;
 					wallVerts[1].t = wallVerts[2].t - (worldbottomslope-worldtopslope) * grTex->scaleY;
 				}
-#endif
 			}
-#ifdef ESLOPE
+
 			//Set textures properly on single sided walls that are sloped
 			wallVerts[3].y = FIXED_TO_FLOAT(worldtop);
 			wallVerts[0].y = FIXED_TO_FLOAT(worldbottom);
 			wallVerts[2].y = FIXED_TO_FLOAT(worldtopslope);
 			wallVerts[1].y = FIXED_TO_FLOAT(worldbottomslope);
-#else
-			// set top/bottom coords
-			wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(worldtop);
-			wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(worldbottom);
-#endif
+
 			// I don't think that solid walls can use translucent linedef types...
 			if (gr_frontsector->numlights)
 				HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTLEVEL, NULL);
@@ -2050,22 +1900,14 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			if (gr_frontsector->ceilingpic == skyflatnum) // It's a single-sided line with sky for its sector
 			{
 				wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(INT32_MAX); // draw to top of map space
-#ifdef ESLOPE
 				wallVerts[0].y = FIXED_TO_FLOAT(worldtop);
 				wallVerts[1].y = FIXED_TO_FLOAT(worldtopslope);
-#else
-				wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(worldtop);
-#endif
 				HWR_DrawSkyWall(wallVerts, &Surf);
 			}
 			if (gr_frontsector->floorpic == skyflatnum)
 			{
-#ifdef ESLOPE
 				wallVerts[3].y = FIXED_TO_FLOAT(worldbottom);
 				wallVerts[2].y = FIXED_TO_FLOAT(worldbottomslope);
-#else
-				wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(worldbottom);
-#endif
 				wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(INT32_MIN); // draw to bottom of map space
 				HWR_DrawSkyWall(wallVerts, &Surf);
 			}
@@ -2092,7 +1934,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		{
 			for (rover = gr_backsector->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES) || (rover->flags & FF_INVERTSIDES))
+				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES))
+					continue;
+				if (!(rover->flags & FF_ALLSIDES) && rover->flags & FF_INVERTSIDES)
 					continue;
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
 					continue;
@@ -2106,7 +1950,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
 
-#ifdef ESLOPE
 				h  = *rover->t_slope ? P_GetZAt(*rover->t_slope, v1x, v1y) : *rover->topheight;
 				hS = *rover->t_slope ? P_GetZAt(*rover->t_slope, v2x, v2y) : *rover->topheight;
 				l  = *rover->b_slope ? P_GetZAt(*rover->b_slope, v1x, v1y) : *rover->bottomheight;
@@ -2123,19 +1966,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				wallVerts[2].y = FIXED_TO_FLOAT(hS);
 				wallVerts[0].y = FIXED_TO_FLOAT(l);
 				wallVerts[1].y = FIXED_TO_FLOAT(lS);
-#else
-				h = *rover->topheight;
-				l = *rover->bottomheight;
-				if (h > highcut)
-					h = highcut;
-				if (l < lowcut)
-					l = lowcut;
-				//Hurdler: HW code starts here
-				//FIXME: check if peging is correct
-				// set top/bottom coords
-				wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(h);
-				wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(l);
-#endif
 				if (rover->flags & FF_FOG)
 				{
 					wallVerts[3].t = wallVerts[2].t = 0;
@@ -2147,9 +1977,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				{
 					fixed_t texturevpeg;
 					boolean attachtobottom = false;
-#ifdef ESLOPE
 					boolean slopeskew = false; // skew FOF walls with slopes?
-#endif
 
 					// Wow, how was this missing from OpenGL for so long?
 					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
@@ -2158,22 +1986,17 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					{
 						texturevpeg = sides[newline->sidenum[0]].rowoffset;
 						attachtobottom = !!(newline->flags & ML_DONTPEGBOTTOM);
-#ifdef ESLOPE
 						slopeskew = !!(newline->flags & ML_DONTPEGTOP);
-#endif
 					}
 					else
 					{
 						texturevpeg = sides[rover->master->sidenum[0]].rowoffset;
 						attachtobottom = !!(gr_linedef->flags & ML_DONTPEGBOTTOM);
-#ifdef ESLOPE
 						slopeskew = !!(rover->master->flags & ML_DONTPEGTOP);
-#endif
 					}
 
 					grTex = HWR_GetTexture(texnum);
 
-#ifdef ESLOPE
 					if (!slopeskew) // no skewing
 					{
 						if (attachtobottom)
@@ -2198,12 +2021,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 							wallVerts[2].t = wallVerts[1].t - (hS - lS) * grTex->scaleY;
 						}
 					}
-#else
-					if (attachtobottom)
-						texturevpeg -= *rover->topheight - *rover->bottomheight;
-					wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
-					wallVerts[0].t = wallVerts[1].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
-#endif
 
 					wallVerts[0].s = wallVerts[3].s = cliplow * grTex->scaleX;
 					wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
@@ -2259,7 +2076,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		{
 			for (rover = gr_frontsector->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_ALLSIDES))
+				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES))
+					continue;
+				if (!(rover->flags & FF_ALLSIDES || rover->flags & FF_INVERTSIDES))
 					continue;
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
 					continue;
@@ -2272,7 +2091,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					newline = rover->master->frontsector->lines[0] + linenum;
 					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
-#ifdef ESLOPE //backsides
 				h  = *rover->t_slope ? P_GetZAt(*rover->t_slope, v1x, v1y) : *rover->topheight;
 				hS = *rover->t_slope ? P_GetZAt(*rover->t_slope, v2x, v2y) : *rover->topheight;
 				l  = *rover->b_slope ? P_GetZAt(*rover->b_slope, v1x, v1y) : *rover->bottomheight;
@@ -2289,19 +2107,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				wallVerts[2].y = FIXED_TO_FLOAT(hS);
 				wallVerts[0].y = FIXED_TO_FLOAT(l);
 				wallVerts[1].y = FIXED_TO_FLOAT(lS);
-#else
-				h = *rover->topheight;
-				l = *rover->bottomheight;
-				if (h > highcut)
-					h = highcut;
-				if (l < lowcut)
-					l = lowcut;
-				//Hurdler: HW code starts here
-				//FIXME: check if peging is correct
-				// set top/bottom coords
-				wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(h);
-				wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(l);
-#endif
 				if (rover->flags & FF_FOG)
 				{
 					wallVerts[3].t = wallVerts[2].t = 0;
@@ -2399,7 +2204,6 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 
 	// GZDoom method of sloped line clipping
 
-#ifdef ESLOPE
 	if (afrontsector->f_slope || afrontsector->c_slope || abacksector->f_slope || abacksector->c_slope)
 	{
 		fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
@@ -2421,7 +2225,6 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 #undef SLOPEPARAMS
 	}
 	else
-#endif
 	{
 		frontf1 = frontf2 = afrontsector->floorheight;
 		frontc1 = frontc2 = afrontsector->ceilingheight;
@@ -2778,10 +2581,8 @@ static void HWR_AddLine(seg_t * line)
 	static sector_t tempsec;
 
 	fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
-#ifdef POLYOBJECTS
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
-#endif
 
 	gr_curline = line;
 
@@ -2908,13 +2709,10 @@ static void HWR_AddLine(seg_t * line)
 
 		if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
 		{
-			if (
-#ifdef POLYOBJECTS
-			!line->polyseg &&
-#endif
-			!line->sidedef->midtexture
-			&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
-			|| (gr_frontsector->tag == gr_backsector->tag)))
+			if (!line->polyseg &&
+				!line->sidedef->midtexture
+				&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
+					|| (gr_frontsector->tag == gr_backsector->tag)))
 				return; // line is empty, don't even bother
 			// treat like wide open window instead
 			HWR_ProcessSeg(); // Doesn't need arguments because they're defined globally :D
@@ -2950,19 +2748,15 @@ static void HWR_AddLine(seg_t * line)
 
 	if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
 	{
-		if (
-#ifdef POLYOBJECTS
-		!line->polyseg &&
-#endif
-		!line->sidedef->midtexture
-		&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
-		|| (gr_frontsector->tag == gr_backsector->tag)))
+		if (!line->polyseg &&
+			!line->sidedef->midtexture
+			&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
+				|| (gr_frontsector->tag == gr_backsector->tag)))
 			return; // line is empty, don't even bother
 
 		goto clippass; // treat like wide open window instead
 	}
 
-#ifdef ESLOPE
 	if (gr_frontsector->f_slope || gr_frontsector->c_slope || gr_backsector->f_slope || gr_backsector->c_slope)
 	{
 		fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
@@ -3007,7 +2801,6 @@ static void HWR_AddLine(seg_t * line)
 				goto clippass;
 	}
 	else
-#endif
 	{
 		// if both ceilings are skies, consider it always "open"
 		// same for floors
@@ -3150,8 +2943,6 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 #endif
 }
 
-#ifdef POLYOBJECTS
-
 //
 // HWR_AddPolyObjectSegs
 //
@@ -3194,7 +2985,6 @@ static inline void HWR_AddPolyObjectSegs(void)
 	Z_Free(gr_fakeline);
 }
 
-#ifdef POLYOBJECTS_PLANES
 static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
 									FBITFIELD blendmode, UINT8 lightlevel, levelflat_t *levelflat, sector_t *FOFsector,
 									UINT8 alpha, extracolormap_t *planecolormap)
@@ -3449,8 +3239,6 @@ static void HWR_AddPolyObjectPlanes(void)
 		}
 	}
 }
-#endif
-#endif
 
 // -----------------+
 // HWR_Subsector    : Determine floor/ceiling planes.
@@ -3545,7 +3333,6 @@ static void HWR_Subsector(size_t num)
 		cullFloorHeight   = locFloorHeight   = gr_frontsector->floorheight;
 		cullCeilingHeight = locCeilingHeight = gr_frontsector->ceilingheight;
 
-#ifdef ESLOPE
 		if (gr_frontsector->f_slope)
 		{
 			cullFloorHeight = P_GetZAt(gr_frontsector->f_slope, viewx, viewy);
@@ -3557,7 +3344,6 @@ static void HWR_Subsector(size_t num)
 			cullCeilingHeight = P_GetZAt(gr_frontsector->c_slope, viewx, viewy);
 			locCeilingHeight = P_GetZAt(gr_frontsector->c_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
 		}
-#endif
 	}
 // ----- end special tricks -----
 
@@ -3649,15 +3435,13 @@ static void HWR_Subsector(size_t num)
 			fixed_t cullHeight, centerHeight;
 
             // bottom plane
-#ifdef ESLOPE
 			if (*rover->b_slope)
 			{
 				cullHeight = P_GetZAt(*rover->b_slope, viewx, viewy);
 				centerHeight = P_GetZAt(*rover->b_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
 			}
 			else
-#endif
-		    cullHeight = centerHeight = *rover->bottomheight;
+				cullHeight = centerHeight = *rover->bottomheight;
 
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES))
 				continue;
@@ -3666,7 +3450,7 @@ static void HWR_Subsector(size_t num)
 
 			if (centerHeight <= locCeilingHeight &&
 			    centerHeight >= locFloorHeight &&
-			    ((dup_viewz < cullHeight && !(rover->flags & FF_INVERTPLANES)) ||
+			    ((dup_viewz < cullHeight && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
 			     (dup_viewz > cullHeight && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 			{
 				if (rover->flags & FF_FOG)
@@ -3717,19 +3501,17 @@ static void HWR_Subsector(size_t num)
 			}
 
 			// top plane
-#ifdef ESLOPE
 			if (*rover->t_slope)
 			{
 				cullHeight = P_GetZAt(*rover->t_slope, viewx, viewy);
 				centerHeight = P_GetZAt(*rover->t_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
 			}
 			else
-#endif
-		    cullHeight = centerHeight = *rover->topheight;
+				cullHeight = centerHeight = *rover->topheight;
 
 			if (centerHeight >= locFloorHeight &&
 			    centerHeight <= locCeilingHeight &&
-			    ((dup_viewz > cullHeight && !(rover->flags & FF_INVERTPLANES)) ||
+			    ((dup_viewz > cullHeight && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
 			     (dup_viewz < cullHeight && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 			{
 				if (rover->flags & FF_FOG)
@@ -3784,7 +3566,6 @@ static void HWR_Subsector(size_t num)
 #endif
 #endif //doplanes
 
-#ifdef POLYOBJECTS
 	// Draw all the polyobjects in this subsector
 	if (sub->polyList)
 	{
@@ -3805,15 +3586,12 @@ static void HWR_Subsector(size_t num)
 		// Draw polyobject lines.
 		HWR_AddPolyObjectSegs();
 
-#ifdef POLYOBJECTS_PLANES
 		if (sub->validcount != validcount) // This validcount situation seems to let us know that the floors have already been drawn.
 		{
 			// Draw polyobject planes
 			HWR_AddPolyObjectPlanes();
 		}
-#endif
 	}
-#endif
 
 // Hurder ici se passe les choses INT32�essantes!
 // on vient de tracer le sol et le plafond
@@ -3836,14 +3614,8 @@ static void HWR_Subsector(size_t num)
 		while (count--)
 		{
 
-			if (!line->glseg
-#ifdef POLYOBJECTS
-			    && !line->polyseg // ignore segs that belong to polyobjects
-#endif
-			)
-			{
+			if (!line->glseg && !line->polyseg) // ignore segs that belong to polyobjects
 				HWR_AddLine(line);
-			}
 			line++;
 		}
 	}
@@ -4158,7 +3930,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	HWR_GetPatch(gpatch);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
-	scalemul = FixedMul(scalemul, (thing->radius*2) / gpatch->height);
+	scalemul = FixedMul(scalemul, (thing->radius*2) / SHORT(gpatch->height));
 
 	fscale = FIXED_TO_FLOAT(scalemul);
 	fx = FIXED_TO_FLOAT(thing->x);
@@ -4170,9 +3942,9 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	//  0--1
 
 	if (thing && fabsf(fscale - 1.0f) > 1.0E-36f)
-		offset = (gpatch->height/2) * fscale;
+		offset = (SHORT(gpatch->height)/2) * fscale;
 	else
-		offset = (float)(gpatch->height/2);
+		offset = (float)(SHORT(gpatch->height)/2);
 
 	shadowVerts[0].x = shadowVerts[3].x = fx - offset;
 	shadowVerts[2].x = shadowVerts[1].x = fx + offset;
@@ -4247,7 +4019,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 }
 
 // This is expecting a pointer to an array containing 4 wallVerts for a sprite
-static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts)
+static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts, const boolean precip)
 {
 	if (cv_grspritebillboarding.value
 		&& spr && spr->mobj && !(spr->mobj->frame & FF_PAPERSPRITE)
@@ -4255,7 +4027,7 @@ static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts
 	{
 		float basey = FIXED_TO_FLOAT(spr->mobj->z);
 		float lowy = wallVerts[0].y;
-		if (P_MobjFlip(spr->mobj) == -1)
+		if (!precip && P_MobjFlip(spr->mobj) == -1) // precip doesn't have eflags so they can't flip
 		{
 			basey = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
 		}
@@ -4300,13 +4072,11 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	float realheight, heightmult;
 	const sector_t *sector = spr->mobj->subsector->sector;
 	const lightlist_t *list = sector->lightlist;
-#ifdef ESLOPE
 	float endrealtop, endrealbot, endtop, endbot;
 	float endbheight;
 	float endrealheight;
 	fixed_t temp;
 	fixed_t v1x, v1y, v2x, v2y;
-#endif
 
 	this_scale = FIXED_TO_FLOAT(spr->mobj->scale);
 
@@ -4370,7 +4140,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	}
 
 	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, baseWallVerts);
+	HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
 
 	realtop = top = baseWallVerts[3].y;
 	realbot = bot = baseWallVerts[0].y;
@@ -4378,10 +4148,8 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	towbot = baseWallVerts[0].tow;
 	towmult = (towbot - towtop) / (top - bot);
 
-#ifdef ESLOPE
 	endrealtop = endtop = baseWallVerts[2].y;
 	endrealbot = endbot = baseWallVerts[1].y;
-#endif
 
 	// copy the contents of baseWallVerts into the drawn wallVerts array
 	// baseWallVerts is used to know the final shape to easily get the vertex
@@ -4421,7 +4189,6 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	if (spr->mobj->frame & FF_FULLBRIGHT)
 		lightlevel = 255;
 
-#ifdef ESLOPE
 	for (i = 1; i < sector->numlights; i++)
 	{
 		fixed_t h = sector->lightlist[i].slope ? P_GetZAt(sector->lightlist[i].slope, spr->mobj->x, spr->mobj->y)
@@ -4434,19 +4201,10 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 			break;
 		}
 	}
-#else
-	i = R_GetPlaneLight(sector, temp, false);
-	if (!(spr->mobj->frame & FF_FULLBRIGHT))
-		lightlevel = *list[i].lightlevel > 255 ? 255 : *list[i].lightlevel;
-	colormap = *list[i].extra_colormap;
-#endif
 
 	for (i = 0; i < sector->numlights; i++)
 	{
-#ifdef ESLOPE
-		if (endtop < endrealbot)
-#endif
-		if (top < realbot)
+		if (endtop < endrealbot && top < realbot)
 			return;
 
 		// even if we aren't changing colormap or lightlevel, we still need to continue drawing down the sprite
@@ -4457,7 +4215,6 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 			colormap = *list[i].extra_colormap;
 		}
 
-#ifdef ESLOPE
 		if (i + 1 < sector->numlights)
 		{
 			if (list[i+1].slope)
@@ -4475,21 +4232,8 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 			bheight = realbot;
 			endbheight = endrealbot;
 		}
-#else
-		if (i + 1 < sector->numlights)
-		{
-			bheight = FIXED_TO_FLOAT(list[i+1].height);
-		}
-		else
-		{
-			bheight = realbot;
-		}
-#endif
 
-#ifdef ESLOPE
-		if (endbheight >= endtop)
-#endif
-		if (bheight >= top)
+		if (endbheight >= endtop && bheight >= top)
 			continue;
 
 		bot = bheight;
@@ -4497,14 +4241,11 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		if (bot < realbot)
 			bot = realbot;
 
-#ifdef ESLOPE
 		endbot = endbheight;
 
 		if (endbot < endrealbot)
 			endbot = endrealbot;
-#endif
 
-#ifdef ESLOPE
 		wallVerts[3].tow = towtop + ((realtop - top) * towmult);
 		wallVerts[2].tow = towtop + ((endrealtop - endtop) * towmult);
 		wallVerts[0].tow = towtop + ((realtop - bot) * towmult);
@@ -4538,32 +4279,6 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 			wallVerts[1].x = baseWallVerts[2].x + (baseWallVerts[2].x - baseWallVerts[1].x) * heightmult;
 			wallVerts[1].z = baseWallVerts[2].z + (baseWallVerts[2].z - baseWallVerts[1].z) * heightmult;
 		}
-#else
-		wallVerts[3].tow = wallVerts[2].tow = towtop + ((realtop - top) * towmult);
-		wallVerts[0].tow = wallVerts[1].tow = towtop + ((realtop - bot) * towmult);
-
-		wallVerts[2].y = wallVerts[3].y = top;
-		wallVerts[0].y = wallVerts[1].y = bot;
-
-		// The x and y only need to be adjusted in the case that it's not a papersprite
-		if (cv_grspritebillboarding.value
-			&& spr->mobj && !(spr->mobj->frame & FF_PAPERSPRITE))
-		{
-			// Get the x and z of the vertices so billboarding draws correctly
-			realheight = realbot - realtop;
-			heightmult = (realtop - top) / realheight;
-			wallVerts[3].x = baseWallVerts[3].x + (baseWallVerts[3].x - baseWallVerts[0].x) * heightmult;
-			wallVerts[3].z = baseWallVerts[3].z + (baseWallVerts[3].z - baseWallVerts[0].z) * heightmult;
-			wallVerts[2].x = baseWallVerts[2].x + (baseWallVerts[2].x - baseWallVerts[1].x) * heightmult;
-			wallVerts[2].z = baseWallVerts[2].z + (baseWallVerts[2].z - baseWallVerts[1].z) * heightmult;
-
-			heightmult = (realtop - bot) / realheight;
-			wallVerts[0].x = baseWallVerts[3].x + (baseWallVerts[3].x - baseWallVerts[0].x) * heightmult;
-			wallVerts[0].z = baseWallVerts[3].z + (baseWallVerts[3].z - baseWallVerts[0].z) * heightmult;
-			wallVerts[1].x = baseWallVerts[2].x + (baseWallVerts[2].x - baseWallVerts[1].x) * heightmult;
-			wallVerts[1].z = baseWallVerts[2].z + (baseWallVerts[2].z - baseWallVerts[1].z) * heightmult;
-		}
-#endif
 
 		if (colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
@@ -4575,21 +4290,15 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		HWD.pfnDrawPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip);
 
 		top = bot;
-#ifdef ESLOPE
 		endtop = endbot;
-#endif
 	}
 
 	bot = realbot;
-#ifdef ESLOPE
 	endbot = endrealbot;
-	if (endtop <= endrealbot)
-#endif
-	if (top <= realbot)
+	if (endtop <= endrealbot && top <= realbot)
 		return;
 
 	// If we're ever down here, somehow the above loop hasn't draw all the light levels of sprite
-#ifdef ESLOPE
 	wallVerts[3].tow = towtop + ((realtop - top) * towmult);
 	wallVerts[2].tow = towtop + ((endrealtop - endtop) * towmult);
 	wallVerts[0].tow = towtop + ((realtop - bot) * towmult);
@@ -4599,13 +4308,6 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	wallVerts[2].y = endtop;
 	wallVerts[0].y = bot;
 	wallVerts[1].y = endbot;
-#else
-	wallVerts[3].tow = wallVerts[2].tow = towtop + ((realtop - top) * towmult);
-	wallVerts[0].tow = wallVerts[1].tow = towtop + ((realtop - bot) * towmult);
-
-	wallVerts[2].y = wallVerts[3].y = top;
-	wallVerts[0].y = wallVerts[1].y = bot;
-#endif
 
 	if (colormap)
 		Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
@@ -4717,7 +4419,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	}
 
 	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, wallVerts);
+	HWR_RotateSpritePolyToAim(spr, wallVerts, false);
 
 	// This needs to be AFTER the shadows so that the regular sprites aren't drawn completely black.
 	// sprite lighting by modulating the RGB components
@@ -4801,7 +4503,7 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 	wallVerts[1].z = wallVerts[2].z = spr->z2;
 
 	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, wallVerts);
+	HWR_RotateSpritePolyToAim(spr, wallVerts, true);
 
 	wallVerts[0].sow = wallVerts[3].sow = 0;
 	wallVerts[2].sow = wallVerts[1].sow = gpatch->max_s;

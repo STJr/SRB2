@@ -1537,19 +1537,23 @@ void R_CacheRotSprite(INT32 rollangle, spritenum_t sprnum, UINT8 frame, spritein
 
 	// make patch
 	newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
-	newpatch->leftoffset = SHORT((newpatch->width / 2) + (leftoffset - px));
-	newpatch->topoffset = SHORT((newpatch->height / 2) + (patch->topoffset - py));
+	newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
+	newpatch->topoffset = (newpatch->height / 2) + (SHORT(patch->topoffset) - py);
 	newpatch->topoffset += SHORT(FEETADJUST>>FRACBITS);
+
+	// convert everything to little-endian, for big-endian support
+	newpatch->width = SHORT(newpatch->width);
+	newpatch->height = SHORT(newpatch->height);
+	newpatch->leftoffset = SHORT(newpatch->leftoffset);
+	newpatch->topoffset = SHORT(newpatch->topoffset);
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
 		GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
-
 		grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
 		grPatch->patch = newpatch;
 		rotsprite->patches[rollangle][rot][render_opengl-1] = (patch_t *)grPatch;
-
 		HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
 	}
 	else

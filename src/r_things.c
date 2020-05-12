@@ -434,9 +434,9 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	switch (wadfiles[wadnum]->type)
 	{
 	case RET_WAD:
-		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
+		start = W_CheckNumForMarkerStartPwad("S_START", wadnum, 0);
 		if (start == INT16_MAX)
-			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
+			start = W_CheckNumForMarkerStartPwad("SS_START", wadnum, 0); //deutex compatib.
 
 		end = W_CheckNumForNamePwad("S_END",wadnum,start);
 		if (end == INT16_MAX)
@@ -458,8 +458,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 
 		start = 0; //let say S_START is lump 0
 	}
-	else
-		start++;   // just after S_START
 
 	if (end == INT16_MAX || start >= end)
 	{
@@ -896,7 +894,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		vis->x2 = vid.width-1;
 
 	localcolfunc = (vis->cut & SC_VFLIP) ? R_DrawFlippedMaskedColumn : R_DrawMaskedColumn;
-	lengthcol = patch->height;
+	lengthcol = SHORT(patch->height);
 
 	// Split drawing loops for paper and non-paper to reduce conditional checks per sprite
 	if (vis->scalestep)
@@ -1032,10 +1030,8 @@ static void R_SplitSprite(vissprite_t *sprite)
 		if (!(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
 			continue;
 
-#ifdef ESLOPE
 		if (sector->lightlist[i].slope)
 			testheight = P_GetZAt(sector->lightlist[i].slope, sprite->gx, sprite->gy);
-#endif
 
 		if (testheight >= sprite->gzt)
 			continue;
@@ -1150,7 +1146,6 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 	}
 
 #if 0 // Unfortunately, this drops CEZ2 down to sub-17 FPS on my i7.
-//#ifdef POLYOBJECTS
 	// Check polyobjects and see if floorz needs to be altered, for rings only because they don't update floorz
 	if (thing->type == MT_RING)
 	{
@@ -1241,8 +1236,8 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	yscale = FixedDiv(projectiony, tz);
 	shadowxscale = FixedMul(thing->radius*2, scalemul);
 	shadowyscale = FixedMul(FixedMul(thing->radius*2, scalemul), FixedDiv(abs(floorz - viewz), tz));
-	shadowyscale = min(shadowyscale, shadowxscale) / patch->height;
-	shadowxscale /= patch->width;
+	shadowyscale = min(shadowyscale, shadowxscale) / SHORT(patch->height);
+	shadowxscale /= SHORT(patch->width);
 	shadowskew = 0;
 
 	if (floorslope)
@@ -1257,24 +1252,24 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 		//CONS_Printf("Shadow is sloped by %d %d\n", xslope, zslope);
 
 		if (viewz < floorz)
-			shadowyscale += FixedMul(FixedMul(thing->radius*2 / patch->height, scalemul), zslope);
+			shadowyscale += FixedMul(FixedMul(thing->radius*2 / SHORT(patch->height), scalemul), zslope);
 		else
-			shadowyscale -= FixedMul(FixedMul(thing->radius*2 / patch->height, scalemul), zslope);
+			shadowyscale -= FixedMul(FixedMul(thing->radius*2 / SHORT(patch->height), scalemul), zslope);
 
 		shadowyscale = abs(shadowyscale);
 
 		shadowskew = xslope;
 	}
 
-	tx -= patch->width * shadowxscale/2;
+	tx -= SHORT(patch->width) * shadowxscale/2;
 	x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 	if (x1 >= viewwidth) return;
 
-	tx += patch->width * shadowxscale;
+	tx += SHORT(patch->width) * shadowxscale;
 	x2 = ((centerxfrac + FixedMul(tx,xscale))>>FRACBITS); x2--;
 	if (x2 < 0 || x2 <= x1) return;
 
-	if (shadowyscale < FRACUNIT/patch->height) return; // fix some crashes?
+	if (shadowyscale < FRACUNIT/SHORT(patch->height)) return; // fix some crashes?
 
 	shadow = R_NewVisSprite();
 	shadow->patch = patch;
@@ -1289,8 +1284,8 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow->dispoffset = vis->dispoffset - 5;
 	shadow->gx = thing->x;
 	shadow->gy = thing->y;
-	shadow->gzt = shadow->pz + shadow->patch->height * shadowyscale / 2;
-	shadow->gz = shadow->gzt - shadow->patch->height * shadowyscale;
+	shadow->gzt = shadow->pz + SHORT(patch->height) * shadowyscale / 2;
+	shadow->gz = shadow->gzt - SHORT(patch->height) * shadowyscale;
 	shadow->texturemid = FixedMul(thing->scale, FixedDiv(shadow->gzt - viewz, shadowyscale));
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		shadow->texturemid = FixedMul(shadow->texturemid, ((skin_t *)thing->skin)->highresscale);
@@ -1311,7 +1306,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->startfrac = 0;
 	//shadow->xiscale = 0x7ffffff0 / (shadow->xscale/2);
-	shadow->xiscale = (patch->width<<FRACBITS)/(x2-x1+1); // fuck it
+	shadow->xiscale = (SHORT(patch->width)<<FRACBITS)/(x2-x1+1); // fuck it
 
 	if (shadow->x1 > x1)
 		shadow->startfrac += shadow->xiscale*(shadow->x1-x1);
@@ -1323,9 +1318,9 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	if (thing->subsector->sector->numlights)
 	{
 		INT32 lightnum;
-#ifdef ESLOPE // R_GetPlaneLight won't work on sloped lights!
 		light = thing->subsector->sector->numlights - 1;
 
+		// R_GetPlaneLight won't work on sloped lights!
 		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
 			fixed_t h = thing->subsector->sector->lightlist[lightnum].slope ? P_GetZAt(thing->subsector->sector->lightlist[lightnum].slope, thing->x, thing->y)
 			            : thing->subsector->sector->lightlist[lightnum].height;
@@ -1334,9 +1329,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 				break;
 			}
 		}
-#else
-		light = R_GetPlaneLight(thing->subsector->sector, shadow->gzt, false);
-#endif
+		//light = R_GetPlaneLight(thing->subsector->sector, shadow->gzt, false);
 	}
 
 	if (thing->subsector->sector->numlights)
@@ -1732,9 +1725,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 	{
 		INT32 lightnum;
-#ifdef ESLOPE // R_GetPlaneLight won't work on sloped lights!
 		light = thing->subsector->sector->numlights - 1;
 
+		// R_GetPlaneLight won't work on sloped lights!
 		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
 			fixed_t h = thing->subsector->sector->lightlist[lightnum].slope ? P_GetZAt(thing->subsector->sector->lightlist[lightnum].slope, thing->x, thing->y)
 			            : thing->subsector->sector->lightlist[lightnum].height;
@@ -1743,9 +1736,7 @@ static void R_ProjectSprite(mobj_t *thing)
 				break;
 			}
 		}
-#else
-		light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
-#endif
+		//light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
 		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 
 		if (lightnum < 0)
@@ -2285,7 +2276,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				entry->ffloor = ds->thicksides[i];
 			}
 		}
-#ifdef POLYOBJECTS_PLANES
 		// Check for a polyobject plane, but only if this is a front line
 		if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
 			plane = ds->curline->polyseg->visplane;
@@ -2301,7 +2291,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			}
 			ds->curline->polyseg->visplane = NULL;
 		}
-#endif
 		if (ds->maskedtexturecol)
 		{
 			entry = R_CreateDrawNode(head);
@@ -2349,7 +2338,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 	if (tempskip)
 		return;
 
-#ifdef POLYOBJECTS_PLANES
 	// find all the remaining polyobject planes and add them on the end of the list
 	// probably this is a terrible idea if we wanted them to be sorted properly
 	// but it works getting them in for now
@@ -2370,7 +2358,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 		// note: no seg is set, for what should be obvious reasons
 		PolyObjects[i].visplane = NULL;
 	}
-#endif
 
 	// No vissprites in this mask?
 	if (mask->vissprites[1] - mask->vissprites[0] == 0)
@@ -2395,13 +2382,12 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
 					continue;
 
-#ifdef ESLOPE
 				// Effective height may be different for each comparison in the case of slopes
 				if (r2->plane->slope) {
 					planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy);
 					planecameraz = P_GetZAt(r2->plane->slope, viewx, viewy);
-				} else
-#endif
+				}
+				else
 					planeobjectz = planecameraz = r2->plane->height;
 
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
@@ -2460,20 +2446,18 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if (scale <= rover->sortscale)
 					continue;
 
-#ifdef ESLOPE
 				if (*r2->ffloor->t_slope) {
 					topplaneobjectz = P_GetZAt(*r2->ffloor->t_slope, rover->gx, rover->gy);
 					topplanecameraz = P_GetZAt(*r2->ffloor->t_slope, viewx, viewy);
-				} else
-#endif
+				}
+				else
 					topplaneobjectz = topplanecameraz = *r2->ffloor->topheight;
 
-#ifdef ESLOPE
 				if (*r2->ffloor->b_slope) {
 					botplaneobjectz = P_GetZAt(*r2->ffloor->b_slope, rover->gx, rover->gy);
 					botplanecameraz = P_GetZAt(*r2->ffloor->b_slope, viewx, viewy);
-				} else
-#endif
+				}
+				else
 					botplaneobjectz = botplanecameraz = *r2->ffloor->bottomheight;
 
 				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||

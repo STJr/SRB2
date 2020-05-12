@@ -39,9 +39,7 @@
 #include "fastcmp.h"
 #include "console.h"
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
-#endif
 
 // Stage of animation:
 // 0 = text, 1 = art screen
@@ -2747,11 +2745,7 @@ void F_TitleScreenDrawer(void)
 	// rei|miru: use title pics?
 	hidepics = curhidepics;
 	if (hidepics)
-#ifdef HAVE_BLUA
 		goto luahook;
-#else
-		return;
-#endif
 
 	switch(curttmode)
 	{
@@ -3473,10 +3467,8 @@ void F_TitleScreenDrawer(void)
 			break;
 	}
 
-#ifdef HAVE_BLUA
 luahook:
 	LUAh_TitleHUD();
-#endif
 }
 
 // separate animation timer for backgrounds, since we also count
@@ -3611,7 +3603,7 @@ void F_StartContinue(void)
 {
 	I_Assert(!netgame && !multiplayer);
 
-	if (players[consoleplayer].continues <= 0)
+	if (continuesInSession && players[consoleplayer].continues <= 0)
 	{
 		Command_ExitGame_f();
 		return;
@@ -3718,7 +3710,9 @@ void F_ContinueDrawer(void)
 	}
 
 	// Draw the continue markers! Show continues.
-	if (ncontinues > 10)
+	if (!continuesInSession)
+		;
+	else if (ncontinues > 10)
 	{
 		if (!(continuetime & 1) || continuetime > 17)
 			V_DrawContinueIcon(x, 68, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);

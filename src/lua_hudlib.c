@@ -11,7 +11,6 @@
 /// \brief custom HUD rendering library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "r_defs.h"
 #include "r_local.h"
@@ -395,7 +394,7 @@ static int libd_patchExists(lua_State *L)
 static int libd_cachePatch(lua_State *L)
 {
 	HUDONLY
-	LUA_PushUserdata(L, W_GetPatchPointerFromName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
+	LUA_PushUserdata(L, W_GetPatchPointerFromLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
 	return 1;
 }
 
@@ -1387,5 +1386,3 @@ void LUAh_IntermissionHUD(void)
 	lua_pop(gL, -1);
 	hud_running = false;
 }
-
-#endif

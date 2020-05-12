@@ -3199,7 +3199,7 @@ INT32 I_GetKey(void)
 // -----------------
 #define DI_KEYBOARD_BUFFERSIZE 32 // number of data elements in keyboard buffer
 
-void I_StartupKeyboard(void)
+static void I_StartupKeyboard(void)
 {
 	DIPROPDWORD dip;
 
@@ -3434,6 +3434,8 @@ INT32 I_StartupSystem(void)
 
 	// some 'more global than globals' things to initialize here ?
 	graphics_started = keyboard_started = sound_started = cdaudio_started = false;
+
+	I_StartupKeyboard();
 
 #ifdef NDEBUG
 

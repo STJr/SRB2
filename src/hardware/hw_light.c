@@ -298,6 +298,8 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// Projectiles
 	&lspr[NOLIGHT],     // SPR_MISL
+	&lspr[SMALLREDBALL_L], // SPR_LASR
+	&lspr[REDSHINE_L],  // SPR_LASF
 	&lspr[NOLIGHT],     // SPR_TORP
 	&lspr[NOLIGHT],     // SPR_ENRG
 	&lspr[NOLIGHT],     // SPR_MINE

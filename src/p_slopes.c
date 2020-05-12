@@ -23,8 +23,6 @@
 #include "p_maputl.h"
 #include "w_wad.h"
 
-#ifdef ESLOPE
-
 pslope_t *slopelist = NULL;
 UINT16 slopecount = 0;
 
@@ -568,7 +566,7 @@ void P_CopySectorSlope(line_t *line)
 	int i, special = line->special;
 
 	// Check for copy linedefs
-	for (i = -1; (i = P_FindSectorFromLineTag(line, i)) >= 0;)
+	for (i = -1; (i = P_FindSectorFromTag(line->tag, i)) >= 0;)
 	{
 		sector_t *srcsec = sectors + i;
 
@@ -844,6 +842,3 @@ void P_ButteredSlope(mobj_t *mo)
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
-
-// EOF
-#endif // #ifdef ESLOPE
