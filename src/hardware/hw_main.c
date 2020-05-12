@@ -3930,7 +3930,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	HWR_GetPatch(gpatch);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
-	scalemul = FixedMul(scalemul, (thing->radius*2) / gpatch->height);
+	scalemul = FixedMul(scalemul, (thing->radius*2) / SHORT(gpatch->height));
 
 	fscale = FIXED_TO_FLOAT(scalemul);
 	fx = FIXED_TO_FLOAT(thing->x);
@@ -3942,9 +3942,9 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	//  0--1
 
 	if (thing && fabsf(fscale - 1.0f) > 1.0E-36f)
-		offset = (gpatch->height/2) * fscale;
+		offset = (SHORT(gpatch->height)/2) * fscale;
 	else
-		offset = (float)(gpatch->height/2);
+		offset = (float)(SHORT(gpatch->height)/2);
 
 	shadowVerts[0].x = shadowVerts[3].x = fx - offset;
 	shadowVerts[2].x = shadowVerts[1].x = fx + offset;
@@ -4019,7 +4019,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 }
 
 // This is expecting a pointer to an array containing 4 wallVerts for a sprite
-static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts)
+static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts, const boolean precip)
 {
 	if (cv_grspritebillboarding.value
 		&& spr && spr->mobj && !(spr->mobj->frame & FF_PAPERSPRITE)
@@ -4027,7 +4027,7 @@ static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts
 	{
 		float basey = FIXED_TO_FLOAT(spr->mobj->z);
 		float lowy = wallVerts[0].y;
-		if (P_MobjFlip(spr->mobj) == -1)
+		if (!precip && P_MobjFlip(spr->mobj) == -1) // precip doesn't have eflags so they can't flip
 		{
 			basey = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
 		}
@@ -4140,7 +4140,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	}
 
 	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, baseWallVerts);
+	HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
 
 	realtop = top = baseWallVerts[3].y;
 	realbot = bot = baseWallVerts[0].y;
@@ -4419,7 +4419,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	}
 
 	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, wallVerts);
+	HWR_RotateSpritePolyToAim(spr, wallVerts, false);
 
 	// This needs to be AFTER the shadows so that the regular sprites aren't drawn completely black.
 	// sprite lighting by modulating the RGB components
@@ -4503,7 +4503,7 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 	wallVerts[1].z = wallVerts[2].z = spr->z2;
 
 	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, wallVerts);
+	HWR_RotateSpritePolyToAim(spr, wallVerts, true);
 
 	wallVerts[0].sow = wallVerts[3].sow = 0;
 	wallVerts[2].sow = wallVerts[1].sow = gpatch->max_s;
@@ -5253,10 +5253,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
 		{
-			spr_width = rotsprite->width << FRACBITS;
-			spr_height = rotsprite->height << FRACBITS;
-			spr_offset = rotsprite->leftoffset << FRACBITS;
-			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			spr_width = SHORT(rotsprite->width) << FRACBITS;
+			spr_height = SHORT(rotsprite->height) << FRACBITS;
+			spr_offset = SHORT(rotsprite->leftoffset) << FRACBITS;
+			spr_topoffset = SHORT(rotsprite->topoffset) << FRACBITS;
 			// flip -> rotate, not rotate -> flip
 			flip = 0;
 		}

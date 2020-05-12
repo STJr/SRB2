@@ -7056,8 +7056,7 @@ static void P_MobjScaleThink(mobj_t *mobj)
 	fixed_t oldheight = mobj->height;
 	UINT8 correctionType = 0; // Don't correct Z position, just gain height
 
-	if ((mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
-		&& mobj->type != MT_EGGMOBILE_FIRE)
+	if (mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
 		correctionType = 1; // Correct Z position by centering
 	else if (mobj->eflags & MFE_VERTICALFLIP)
 		correctionType = 2; // Correct Z position by moving down
@@ -7078,10 +7077,6 @@ static void P_MobjScaleThink(mobj_t *mobj)
 		/// \todo Lua hook for "reached destscale"?
 		switch (mobj->type)
 		{
-		case MT_EGGMOBILE_FIRE:
-			mobj->destscale = FRACUNIT;
-			mobj->scalespeed = FRACUNIT>>4;
-			break;
 		default:
 			break;
 		}
@@ -8257,6 +8252,7 @@ static boolean P_MobjDeadThink(mobj_t *mobj)
 // See Linedef Exec 457 (Track mobj angle to point)
 static void P_TracerAngleThink(mobj_t *mobj)
 {
+	angle_t looking;
 	angle_t ang;
 
 	if (!mobj->tracer)
@@ -8271,7 +8267,12 @@ static void P_TracerAngleThink(mobj_t *mobj)
 	// mobj->cvval - Allowable failure delay
 	// mobj->cvmem - Failure timer
 
-	ang = mobj->angle - R_PointToAngle2(mobj->x, mobj->y, mobj->tracer->x, mobj->tracer->y);
+	if (mobj->player)
+		looking = ( mobj->player->cmd.angleturn << 16 );/* fixes CS_LMAOGALOG */
+	else
+		looking = mobj->angle;
+
+	ang = looking - R_PointToAngle2(mobj->x, mobj->y, mobj->tracer->x, mobj->tracer->y);
 
 	// \todo account for distance between mobj and tracer
 	// Because closer mobjs can be facing beyond the angle tolerance

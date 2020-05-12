@@ -76,6 +76,10 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 //int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
+#ifdef _DEBUG
+#include "console.h"
+#endif
+
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
