@@ -1571,10 +1571,8 @@ void T_PolyObjMove(polymove_t *th)
 
 void T_PolyObjWaypoint(polywaypoint_t *th)
 {
-	mobj_t *mo2;
 	mobj_t *target = NULL;
 	mobj_t *waypoint = NULL;
-	thinker_t *wp;
 	fixed_t adjustx, adjusty, adjustz;
 	fixed_t momx, momy, momz, dist;
 	INT32 start;
@@ -1593,29 +1591,8 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 #endif
 
 	// check for displacement due to override and reattach when possible
-	if (po->thinker == NULL)
+	if (!po->thinker)
 		po->thinker = &th->thinker;
-
-/*
-	// Find out target first.
-	// We redo this each tic to make savegame compatibility easier.
-	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
-	{
-		if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-			continue;
-
-		mo2 = (mobj_t *)wp;
-
-		if (mo2->type != MT_TUBEWAYPOINT)
-			continue;
-
-		if (mo2->threshold == th->sequence && mo2->health == th->pointnum)
-		{
-			target = mo2;
-			break;
-		}
-	}
-*/
 
 	target = th->target;
 
@@ -1683,38 +1660,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		if (!th->stophere)
 		{
 			CONS_Debug(DBG_POLYOBJ, "Looking for next waypoint...\n");
-
-			// Find next waypoint
-			for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
-			{
-				if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-					continue;
-
-				mo2 = (mobj_t *)wp;
-
-				if (mo2->type != MT_TUBEWAYPOINT)
-					continue;
-
-				if (mo2->threshold != th->sequence)
-					continue;
-
-				if (th->direction == -1)
-				{
-					if (mo2->health == target->health - 1)
-					{
-						waypoint = mo2;
-						break;
-					}
-				}
-				else
-				{
-					if (mo2->health == target->health + 1)
-					{
-						waypoint = mo2;
-						break;
-					}
-				}
-			}
+			waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
 
 			if (!waypoint && th->wrap) // If specified, wrap waypoints
 			{
@@ -1724,35 +1670,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 					th->stophere = true;
 				}
 
-				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
-				{
-					if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
-
-					mo2 = (mobj_t *)wp;
-
-					if (mo2->type != MT_TUBEWAYPOINT)
-						continue;
-
-					if (mo2->threshold != th->sequence)
-						continue;
-
-					if (th->direction == -1)
-					{
-						if (waypoint == NULL)
-							waypoint = mo2;
-						else if (mo2->health > waypoint->health)
-							waypoint = mo2;
-					}
-					else
-					{
-						if (mo2->health == 0)
-						{
-							waypoint = mo2;
-							break;
-						}
-					}
-				}
+				waypoint = (th->direction == -1) ? P_GetFirstWaypoint(th->sequence) : P_GetLastWaypoint(th->sequence);
 			}
 			else if (!waypoint && th->comeback) // Come back to the start
 			{
@@ -1761,36 +1679,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 				if (!th->continuous)
 					th->comeback = false;
 
-				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
-				{
-					if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
-
-					mo2 = (mobj_t *)wp;
-
-					if (mo2->type != MT_TUBEWAYPOINT)
-						continue;
-
-					if (mo2->threshold != th->sequence)
-						continue;
-
-					if (th->direction == -1)
-					{
-						if (mo2->health == target->health - 1)
-						{
-							waypoint = mo2;
-							break;
-						}
-					}
-					else
-					{
-						if (mo2->health == target->health + 1)
-						{
-							waypoint = mo2;
-							break;
-						}
-					}
-				}
+				waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
 			}
 		}
 
@@ -2276,11 +2165,9 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 {
 	polyobj_t *po;
 	polywaypoint_t *th;
-	mobj_t *mo2;
 	mobj_t *first = NULL;
 	mobj_t *last = NULL;
 	mobj_t *target = NULL;
-	thinker_t *wp;
 
 	if (!(po = Polyobj_GetForNum(pwdata->polyObjNum)))
 	{
@@ -2305,10 +2192,7 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	th->polyObjNum = pwdata->polyObjNum;
 	th->speed = pwdata->speed;
 	th->sequence = pwdata->sequence; // Used to specify sequence #
-	if (pwdata->reverse)
-		th->direction = -1;
-	else
-		th->direction = 1;
+	th->direction = pwdata->reverse ? -1 : 1;
 
 	th->comeback = pwdata->comeback;
 	th->continuous = pwdata->continuous;
@@ -2316,44 +2200,8 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	th->stophere = false;
 
 	// Find the first waypoint we need to use
-	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
-	{
-		if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-			continue;
-
-		mo2 = (mobj_t *)wp;
-
-		if (mo2->type != MT_TUBEWAYPOINT)
-			continue;
-
-		if (mo2->threshold != th->sequence)
-			continue;
-
-		if (th->direction == -1) // highest waypoint #
-		{
-			if (mo2->health == 0)
-				last = mo2;
-			else
-			{
-				if (first == NULL)
-					first = mo2;
-				else if (mo2->health > first->health)
-					first = mo2;
-			}
-		}
-		else // waypoint 0
-		{
-			if (mo2->health == 0)
-				first = mo2;
-			else
-			{
-				if (last == NULL)
-					last = mo2;
-				else if (mo2->health > last->health)
-					last = mo2;
-			}
-		}
-	}
+	first = (th->direction == -1) ? P_GetLastWaypoint(th->sequence) : P_GetFirstWaypoint(th->sequence);
+	last = (th->direction == -1) ? P_GetFirstWaypoint(th->sequence) : P_GetLastWaypoint(th->sequence);
 
 	if (!first)
 	{
@@ -2387,36 +2235,6 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// Find the actual target movement waypoint
 	target = first;
-	/*for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
-	{
-		if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-			continue;
-
-		mo2 = (mobj_t *)wp;
-
-		if (mo2->type != MT_TUBEWAYPOINT)
-			continue;
-
-		if (mo2->threshold != th->sequence)
-			continue;
-
-		if (th->direction == -1) // highest waypoint #
-		{
-			if (mo2->health == first->health - 1)
-			{
-				target = mo2;
-				break;
-			}
-		}
-		else // waypoint 0
-		{
-			if (mo2->health == first->health + 1)
-			{
-				target = mo2;
-				break;
-			}
-		}
-	}*/
 
 	if (!target)
 	{
