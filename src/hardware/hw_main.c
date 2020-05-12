@@ -4052,6 +4052,87 @@ static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts
 	}
 }
 
+#ifdef ROTSPRITE
+static void HWR_ApplyPitchRollYawToSprite(FOutVector *wallVerts, float pitch, float roll, float yaw)
+{
+	size_t i;
+
+	float yawcos = cos(yaw);
+	float yawsin = sin(yaw);
+	float pitchcos = cos(pitch);
+	float pitchsin = sin(pitch);
+	float rollcos = cos(roll);
+	float rollsin = sin(roll);
+
+	float xx = yawcos * pitchcos;
+	float xy = (yawcos * pitchsin * rollsin) - (yawsin * rollcos);
+	float xz = (yawcos * pitchsin * rollcos) + (yawsin * rollsin);
+
+	float yx = yawsin * pitchcos;
+	float yy = (yawsin * pitchsin * rollsin) + (yawcos * rollcos);
+	float yz = (yawsin * pitchsin * rollcos) - (yawcos * rollsin);
+
+	float zx = -pitchsin;
+	float zy = pitchcos * rollsin;
+	float zz = pitchcos * rollcos;
+
+	for (i = 0; i < 4; i++)
+	{
+		float x = wallVerts[i].x;
+		float y = wallVerts[i].y;
+		float z = wallVerts[i].z;
+		wallVerts[i].x = xx*x + xy*y + xz*z;
+		wallVerts[i].y = yx*x + yy*y + yz*z;
+		wallVerts[i].z = zx*x + zy*y + zz*z;
+	}
+}
+
+static void HWR_RotateSpritePolyToRollAngle(gr_vissprite_t *spr, FOutVector *wallVerts)
+{
+	INT32 i;
+	float radians = (M_PIl / 180.0f);
+
+	float cx = (spr->gpatch->leftoffset - spr->pivotx);
+	float cy = spr->pivoty;
+
+	fixed_t fa = AngleFixed(spr->rollangle);
+	float rotate = FIXED_TO_FLOAT(fa) * radians;
+
+	// Translate sprite by its pivot
+	for (i = 0; i < 4; i++)
+	{
+		wallVerts[i].x -= cx;
+		wallVerts[i].y -= cy;
+	}
+
+	// Apply sprite roll
+	HWR_ApplyPitchRollYawToSprite(wallVerts, 0.0f, 0.0f, rotate);
+
+	// Translate sprite back
+	for (i = 0; i < 4; i++)
+	{
+		wallVerts[i].x += cx;
+		wallVerts[i].y += cy;
+	}
+
+	// Apply sprite angle
+	fa = AngleFixed(spr->angle - ANGLE_180);
+	rotate = FIXED_TO_FLOAT(fa) * radians;
+	HWR_ApplyPitchRollYawToSprite(wallVerts, -rotate, 0.0f, 0.0f);
+
+	// Translate the sprite to its intended position
+	for (i = 0; i < 4; i++)
+	{
+		wallVerts[i].x += spr->originx;
+		wallVerts[i].z += spr->originy;
+	}
+
+	// Translate the sprite vertically
+	for (i = 0; i < 4; i++)
+		wallVerts[i].y += spr->originz;
+}
+#endif
+
 static void HWR_SplitSprite(gr_vissprite_t *spr)
 {
 	float this_scale = 1.0f;
@@ -4141,6 +4222,12 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 
 	// Let dispoffset work first since this adjust each vertex
 	HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
+
+#ifdef ROTSPRITE
+	// Rotate the sprite polygon, then translate it
+	if (spr->rollangle)
+		HWR_RotateSpritePolyToRollAngle(spr, baseWallVerts);
+#endif
 
 	realtop = top = baseWallVerts[3].y;
 	realbot = bot = baseWallVerts[0].y;
@@ -4420,6 +4507,12 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 
 	// Let dispoffset work first since this adjust each vertex
 	HWR_RotateSpritePolyToAim(spr, wallVerts, false);
+
+#ifdef ROTSPRITE
+	// Rotate the sprite polygon, then translate it
+	if (spr->rollangle)
+		HWR_RotateSpritePolyToRollAngle(spr, wallVerts);
+#endif
 
 	// This needs to be AFTER the shadows so that the regular sprites aren't drawn completely black.
 	// sprite lighting by modulating the RGB components
@@ -5106,9 +5199,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float rightsin, rightcos;
 	float this_scale;
 	float gz, gzt;
+	float topz, bottomz, originz;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
+#ifdef ROTSPRITE
 	spriteinfo_t *sprinfo;
+#endif
 	md2_t *md2;
 	size_t lumpoff;
 	unsigned rot;
@@ -5119,14 +5215,11 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	INT32 heightsec, phs;
 	const boolean papersprite = (thing->frame & FF_PAPERSPRITE);
 	angle_t mobjangle = (thing->player ? thing->player->drawangle : thing->angle);
+	angle_t spriteangle;
 	float z1, z2;
 
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
-#ifdef ROTSPRITE
-	patch_t *rotsprite = NULL;
-	INT32 rollangle = 0;
-#endif
 
 	if (!thing)
 		return;
@@ -5173,12 +5266,16 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
 		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+#ifdef ROTSPRITE
 		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
+#endif
 	}
 	else
 	{
 		sprdef = &sprites[thing->sprite];
-		sprinfo = NULL;
+#ifdef ROTSPRITE
+		sprinfo = &spriteinfo[thing->sprite];
+#endif
 	}
 
 	if (rot >= sprdef->numframes)
@@ -5188,7 +5285,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		thing->sprite = states[S_UNKNOWN].sprite;
 		thing->frame = states[S_UNKNOWN].frame;
 		sprdef = &sprites[thing->sprite];
-		sprinfo = NULL;
+#ifdef ROTSPRITE
+		sprinfo = &spriteinfo[thing->sprite];
+#endif
 		rot = thing->frame&FF_FRAMEMASK;
 		thing->state->sprite = thing->sprite;
 		thing->state->frame = thing->frame;
@@ -5244,7 +5343,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_offset = spritecachedinfo[lumpoff].offset;
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
-#ifdef ROTSPRITE
+#if 0
 	rollangle = R_GetRollAngle(thing->rollangle);
 	if (rollangle)
 	{
@@ -5264,15 +5363,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 #endif
 
 	if (papersprite)
-	{
-		rightsin = FIXED_TO_FLOAT(FINESINE((mobjangle)>>ANGLETOFINESHIFT));
-		rightcos = FIXED_TO_FLOAT(FINECOSINE((mobjangle)>>ANGLETOFINESHIFT));
-	}
+		spriteangle = mobjangle;
 	else
-	{
-		rightsin = FIXED_TO_FLOAT(FINESINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
-		rightcos = FIXED_TO_FLOAT(FINECOSINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
-	}
+		spriteangle = (viewangle + ANGLE_90);
+
+	rightsin = FIXED_TO_FLOAT(FINESINE((spriteangle)>>ANGLETOFINESHIFT));
+	rightcos = FIXED_TO_FLOAT(FINECOSINE((spriteangle)>>ANGLETOFINESHIFT));
 
 	if (flip)
 	{
@@ -5285,31 +5381,35 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_scale);
 	}
 
-	// test if too close
-/*
-	if (papersprite)
+	originz = FIXED_TO_FLOAT(thing->z);
+
+	// Don't transform the sprite if it has a roll angle.
+#ifdef ROTSPRITE
+	if (thing->rollangle)
 	{
-		z1 = tz - x1 * angle_scalez;
-		z2 = tz + x2 * angle_scalez;
-
-		if (max(z1, z2) < ZCLIP_PLANE)
-			return;
+		z1 = z2 = 0.0f;
+		x1 = -x1;
+		topz = bottomz = 0.0;
 	}
-*/
-
-	z1 = tr_y + x1 * rightsin;
-	z2 = tr_y - x2 * rightsin;
-	x1 = tr_x + x1 * rightcos;
-	x2 = tr_x - x2 * rightcos;
+	else
+#endif
+	{
+		z1 = tr_y + x1 * rightsin;
+		z2 = tr_y - x2 * rightsin;
+		x1 = tr_x + x1 * rightcos;
+		x2 = tr_x - x2 * rightcos;
+		topz = originz + FIXED_TO_FLOAT(thing->height);
+		bottomz = originz;
+	}
 
 	if (vflip)
 	{
-		gz = FIXED_TO_FLOAT(thing->z+thing->height) - FIXED_TO_FLOAT(spr_topoffset) * this_scale;
+		gz = topz - FIXED_TO_FLOAT(spr_topoffset) * this_scale;
 		gzt = gz + FIXED_TO_FLOAT(spr_height) * this_scale;
 	}
 	else
 	{
-		gzt = FIXED_TO_FLOAT(thing->z) + FIXED_TO_FLOAT(spr_topoffset) * this_scale;
+		gzt = bottomz + FIXED_TO_FLOAT(spr_topoffset) * this_scale;
 		gz = gzt - FIXED_TO_FLOAT(spr_height) * this_scale;
 	}
 
@@ -5350,17 +5450,33 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->x2 = x2;
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	//vis->patchlumpnum = sprframe->lumppat[rot];
-#ifdef ROTSPRITE
-	if (rotsprite)
-		vis->gpatch = (GLPatch_t *)rotsprite;
-	else
-#endif
-		vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+	vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = thing;
 	vis->z1 = z1;
 	vis->z2 = z2;
+	vis->angle = spriteangle;
+	vis->originx = tr_x;
+	vis->originy = tr_y;
+	vis->originz = originz;
+
+#ifdef ROTSPRITE
+	if (thing->rollangle)
+	{
+		if (sprinfo->available)
+		{
+			spriteframepivot_t *pivot = &sprinfo->pivot[thing->frame & FF_FRAMEMASK];
+			vis->pivotx = (float)(pivot->x) * this_scale;
+			vis->pivoty = (float)(pivot->y) * this_scale;
+		}
+		else
+		{
+			vis->pivotx = (float)(vis->gpatch->leftoffset) * this_scale;
+			vis->pivoty = (float)(vis->gpatch->height / 2) * this_scale;
+		}
+	}
+	vis->rollangle = thing->rollangle;
+#endif
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	if ((vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
@@ -5490,8 +5606,11 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->z1 = z1;
 	vis->z2 = z2;
 	vis->tz = tz;
+	vis->angle = 0;
+	vis->originx = tr_x;
+	vis->originy = tr_y;
+	vis->originz = FIXED_TO_FLOAT(thing->z);
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	//vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
@@ -5499,9 +5618,15 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->colormap = colormaps;
 
 	// set top/bottom coords
-	vis->ty = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset);
+	vis->ty = vis->originz + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset);
 
 	vis->precip = true;
+
+#ifdef ROTSPRITE
+	vis->rollangle = 0;
+	vis->pivotx = 0.0f;
+	vis->pivoty = 0.0f;
+#endif
 
 	// okay... this is a hack, but weather isn't networked, so it should be ok
 	if (!(thing->precipflags & PCF_THUNK))

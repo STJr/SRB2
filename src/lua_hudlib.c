@@ -449,7 +449,8 @@ static int libd_getSpritePatch(lua_State *L)
 	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
 
-#ifdef ROTSPRITE
+//#ifdef ROTSPRITE
+#if 0
 	if (lua_isnumber(L, 4))
 	{
 		// rotsprite?????
@@ -562,7 +563,8 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
 
-#ifdef ROTSPRITE
+//#ifdef ROTSPRITE
+#if 0
 	if (lua_isnumber(L, 4))
 	{
 		// rotsprite?????

@@ -713,12 +713,27 @@ typedef struct
 #pragma pack()
 #endif
 
+typedef struct
+{
+	UINT8 *data;
+	void **columnofs;
+} pmcache_t;
+
+typedef struct
+{
+	UINT32 width, height;
+	INT16 leftoffset, topoffset;
+	size_t size;
+	INT32 *map;
+	pmcache_t cache;
+} pixelmap_t;
+
 #ifdef ROTSPRITE
 #include "i_video.h" // num_renderers
 typedef struct
 {
-	patch_t *patches[ROTANGLES][16][num_renderers];
-	UINT16 cached[ROTANGLES][num_renderers];
+	pixelmap_t pixelmap[16][ROTANGLES];
+	UINT16 cached[ROTANGLES];
 } rotsprite_t;
 #endif
 

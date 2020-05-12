@@ -169,6 +169,7 @@ typedef struct vissprite_s
 	extracolormap_t *extra_colormap; // global colormaps
 
 	fixed_t xscale;
+	boolean flipped;
 
 	// Precalculated top and bottom screen coords for the sprite.
 	fixed_t thingheight; // The actual height of the thing (for 3D floors)
@@ -180,6 +181,9 @@ typedef struct vissprite_s
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
+
+	pixelmap_t *pixelmap;
+	void **columnofs;
 } vissprite_t;
 
 extern UINT32 visspritecount;

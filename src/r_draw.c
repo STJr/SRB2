@@ -65,9 +65,11 @@ lighttable_t *dc_colormap;
 INT32 dc_x = 0, dc_yl = 0, dc_yh = 0;
 
 fixed_t dc_iscale, dc_texturemid;
+
+UINT8 *dc_source;
+
 UINT8 dc_hires; // under MSVC boolean is a byte, while on other systems, it a bit,
                // soo lets make it a byte on all system for the ASM code
-UINT8 *dc_source;
 
 // -----------------------
 // translucency stuff here
