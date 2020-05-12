@@ -8794,19 +8794,19 @@ void A_Dye(mobj_t *actor)
 #endif
 	if (color >= MAXTRANSLATIONS)
 		return;
-	
+
 	if (!color)
 		target->colorized = false;
 	else
 		target->colorized = true;
-		
+
 	// What if it's a player?
 	if (target->player)
 	{
 		target->player->powers[pw_dye] = color;
 		return;
 	}
-	
+
 	target->color = color;
 }
 
@@ -12642,8 +12642,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	else // locvar1 == 0
 	{
 		fixed_t hackoffset = P_MobjFlip(actor)*56*FRACUNIT;
-		INT32 numwaypoints = 0;
-		mobj_t **waypoints;
+		INT32 numfangwaypoints = 0;
+		mobj_t **fangwaypoints;
 		INT32 key;
 
 		actor->z += hackoffset;
@@ -12668,7 +12668,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 				continue;
 			if (!P_CheckSight(actor, mapthings[i].mobj))
 				continue;
-			numwaypoints++;
+			numfangwaypoints++;
 		}
 
 		// players also count as waypoints apparently
@@ -12690,11 +12690,11 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 					continue;
 				if (!P_CheckSight(actor, players[i].mo))
 					continue;
-				numwaypoints++;
+				numfangwaypoints++;
 			}
 		}
 
-		if (!numwaypoints)
+		if (!numfangwaypoints)
 		{
 			// restore z position
 			actor->z -= hackoffset;
@@ -12702,8 +12702,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 		}
 
 		// allocate the table and reset count to zero
-		waypoints = Z_Calloc(sizeof(*waypoints)*numwaypoints, PU_STATIC, NULL);
-		numwaypoints = 0;
+		fangwaypoints = Z_Calloc(sizeof(*waypoints)*numfangwaypoints, PU_STATIC, NULL);
+		numfangwaypoints = 0;
 
 		// now find them again and add them to the table!
 		for (i = 0; i < nummapthings; i++)
@@ -12728,7 +12728,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			}
 			if (!P_CheckSight(actor, mapthings[i].mobj))
 				continue;
-			waypoints[numwaypoints++] = mapthings[i].mobj;
+			fangwaypoints[numfangwaypoints++] = mapthings[i].mobj;
 		}
 
 		if (actor->extravalue2 > 1)
@@ -12749,25 +12749,25 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 					continue;
 				if (!P_CheckSight(actor, players[i].mo))
 					continue;
-				waypoints[numwaypoints++] = players[i].mo;
+				fangwaypoints[numfangwaypoints++] = players[i].mo;
 			}
 		}
 
 		// restore z position
 		actor->z -= hackoffset;
 
-		if (!numwaypoints)
+		if (!numfangwaypoints)
 		{
-			Z_Free(waypoints); // free table
+			Z_Free(fangwaypoints); // free table
 			goto nowaypoints; // ???
 		}
 
-		key = P_RandomKey(numwaypoints);
+		key = P_RandomKey(numfangwaypoints);
 
-		P_SetTarget(&actor->tracer, waypoints[key]);
+		P_SetTarget(&actor->tracer, fangwaypoints[key]);
 		if (actor->tracer->type == MT_FANGWAYPOINT)
-			actor->tracer->reactiontime = numwaypoints/4; // Monster Iestyn: is this how it should be? I count center waypoints as waypoints unlike the original Lua script
-		Z_Free(waypoints); // free table
+			actor->tracer->reactiontime = numfangwaypoints/4; // Monster Iestyn: is this how it should be? I count center waypoints as waypoints unlike the original Lua script
+		Z_Free(fangwaypoints); // free table
 	}
 
 	// now face the tracer you just set!
