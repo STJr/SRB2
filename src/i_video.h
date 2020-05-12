@@ -22,13 +22,22 @@
 
 typedef enum
 {
-	render_none,
-	render_soft,
+	// No renderer chosen. Used on dedicated mode.
+	render_none = 0,
+
+	// First renderer choice.
+	// Must start from 1.
+	render_first = 1,
+
+	// Main renderer choices.
+	render_soft = render_first,
 	render_opengl,
 
+	// Last renderer choice.
 	render_last,
 
-	num_renderers = (render_last - 1)
+	// Number of renderers.
+	num_renderers = (render_last - 1),
 } rendermode_t;
 
 /**	\brief current render mode

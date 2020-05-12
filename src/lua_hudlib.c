@@ -449,18 +449,16 @@ static int libd_getSpritePatch(lua_State *L)
 	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
 
-//#ifdef ROTSPRITE
-#if 0
+#if defined(ROTSPRITE) && defined(ROTSPRITE_RENDER_PATCHES)
 	if (lua_isnumber(L, 4))
 	{
 		// rotsprite?????
 		angle_t rollangle = luaL_checkangle(L, 4);
 		INT32 rot = R_GetRollAngle(rollangle);
 
-		if (rot) {
-			if (!(sprframe->rotsprite.cached[rot][rendermode-1] & (1<<angle)))
-				R_CacheRotSprite(rot, i, frame, NULL, sprframe, angle, sprframe->flip & (1<<angle));
-			LUA_PushUserdata(L, R_GetRotatedPatch(&sprframe->rotsprite, rot, angle), META_PATCH);
+		if (rot)
+		{
+			LUA_PushUserdata(L, R_GetRotatedPatchForSprite(sprframe->lumppat[angle], PU_PATCH, rot, NULL, sprframe->flip & (1<<angle)), META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;
@@ -563,8 +561,7 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
 
-//#ifdef ROTSPRITE
-#if 0
+#if defined(ROTSPRITE) && defined(ROTSPRITE_RENDER_PATCHES)
 	if (lua_isnumber(L, 4))
 	{
 		// rotsprite?????
@@ -572,9 +569,9 @@ static int libd_getSprite2Patch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			if (!(sprframe->rotsprite.cached[rot][rendermode-1] & (1<<angle)))
-				R_CacheRotSprite(rot, SPR_PLAY, frame, &skins[i].sprinfo[j], sprframe, angle, sprframe->flip & (1<<angle));
-			LUA_PushUserdata(L, R_GetRotatedPatch(&sprframe->rotsprite, rot, angle), META_PATCH);
+			spriteinfo_t *sprinfo = &skins[i].sprinfo[j];
+			spriteframepivot_t *pivot = (sprinfo->available) ? &sprinfo->pivot[frame] : NULL;
+			LUA_PushUserdata(L, R_GetRotatedPatchForSprite(sprframe->lumppat[angle], PU_PATCH, rot, pivot, sprframe->flip & (1<<angle)), META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;

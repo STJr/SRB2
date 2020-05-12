@@ -827,7 +827,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// set up caching
 	//
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
-	W_InitPatchCache(wadfile);
+	R_InitPatchCache(wadfile);
 
 	//
 	// add the wadfile
@@ -858,26 +858,6 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
-}
-
-// Init patch cache for a wadfile
-void W_InitPatchCache(wadfile_t *wadfile)
-{
-	patchcache_t *cache = &wadfile->patchcache;
-	rendermode_t rmode;
-
-	// Main patch cache for the current renderer
-	Z_Calloc(wadfile->numlumps * sizeof(lumpcache_t), PU_STATIC, &cache->current);
-
-	// Patch cache for each renderer
-	cache->renderer = M_AATreeAlloc(AATREE_ZUSER);
-	for (rmode = render_none+1; rmode < render_last; rmode++)
-		M_AATreeSet(cache->renderer, (rmode - 1), M_AATreeAlloc(AATREE_ZUSER));
-
-#ifdef HWRENDER
-	// allocates GLPatch info structures and stores them in a tree
-	cache->hwrcache = M_AATreeAlloc(AATREE_ZUSER);
-#endif
 }
 
 /** Tries to load a series of files.

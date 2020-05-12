@@ -717,6 +717,7 @@ typedef struct
 {
 	UINT8 *data;
 	void **columnofs;
+	size_t *columnsize;
 } pmcache_t;
 
 typedef struct
@@ -729,11 +730,12 @@ typedef struct
 } pixelmap_t;
 
 #ifdef ROTSPRITE
-#include "i_video.h" // num_renderers
 typedef struct
 {
-	pixelmap_t pixelmap[16][ROTANGLES];
-	UINT16 cached[ROTANGLES];
+	pixelmap_t pixelmap[ROTANGLES];
+	patch_t *patches[ROTANGLES];
+	boolean cached[ROTANGLES];
+	UINT32 lumpnum;
 } rotsprite_t;
 #endif
 
@@ -776,10 +778,6 @@ typedef struct
 
 	// Flip bits (1 = flip) to use for view angles 0-7/15.
 	UINT16 flip;
-
-#ifdef ROTSPRITE
-	rotsprite_t rotsprite;
-#endif
 } spriteframe_t;
 
 //

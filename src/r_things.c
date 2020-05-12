@@ -102,22 +102,6 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	lumppat <<= 16;
 	lumppat += lump;
 
-#ifdef ROTSPRITE
-	INT32 rollangle;
-	for (rollangle = 0; rollangle < ROTANGLES; rollangle++)
-	{
-		rotsprite_t *rotsprite = &sprtemp[frame].rotsprite;
-		rotsprite->cached[rollangle] = 0;
-		for (r = 0; r < 16; r++)
-		{
-			pixelmap_t *pixelmap = &rotsprite->pixelmap[r][rollangle];
-			pixelmap->map = NULL;
-			pixelmap->cache.data = NULL;
-			pixelmap->cache.columnofs = NULL;
-		}
-	}
-#endif
-
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
 
@@ -247,9 +231,6 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	// if so, it might patch only certain frames, not all
 	if (spritedef->numframes) // (then spriteframes is not null)
 	{
-#ifdef ROTSPRITE
-		R_FreeSingleRotSprite(spritedef);
-#endif
 		// copy the already defined sprite frames
 		M_Memcpy(sprtemp, spritedef->spriteframes,
 		 spritedef->numframes * sizeof (spriteframe_t));
@@ -404,9 +385,6 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	if (spritedef->numframes &&             // has been allocated
 		spritedef->numframes < maxframe)   // more frames are defined ?
 	{
-#ifdef ROTSPRITE
-		R_FreeSingleRotSprite(spritedef);
-#endif
 		Z_Free(spritedef->spriteframes);
 		spritedef->spriteframes = NULL;
 	}
@@ -1593,25 +1571,27 @@ static void R_ProjectSprite(mobj_t *thing)
 	rollangle = R_GetRollAngle(thing->rollangle);
 	if (rollangle)
 	{
-#if 0
-		if (!(sprframe->rotsprite.cached[rollangle][rendermode-1] & (1<<rot)))
-			R_CacheRotSprite(rollangle, thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rotsprite = R_GetRotatedPatch(&sprframe->rotsprite, rollangle, rot);
-		if (rotsprite != NULL)
+		spriteframepivot_t *pivot = (sprinfo->available) ? &sprinfo->pivot[(thing->frame & FF_FRAMEMASK)] : NULL;
+#ifdef ROTSPRITE_RENDER_PATCHES
+		patch_t *rotpatch = R_GetRotatedPatchForSprite(sprframe->lumppat[rot], PU_CACHE, rollangle, pivot, flip);
+		if (rotpatch != NULL)
 		{
-			spr_width = SHORT(rotsprite->width) << FRACBITS;
-			spr_height = SHORT(rotsprite->height) << FRACBITS;
-			spr_offset = SHORT(rotsprite->leftoffset) << FRACBITS;
-			spr_topoffset = SHORT(rotsprite->topoffset) << FRACBITS;
-#endif
-		rotsprite_t *rotsprite = &sprframe->rotsprite;
+			spr_patch = rotpatch;
+			spr_width = SHORT(rotpatch->width) << FRACBITS;
+			spr_height = SHORT(rotpatch->height) << FRACBITS;
+			spr_offset = SHORT(rotpatch->leftoffset) << FRACBITS;
+			spr_topoffset = SHORT(rotpatch->topoffset) << FRACBITS;
+			// flip -> rotate, not rotate -> flip
+			flip = 0;
+		}
+#else
+		rotsprite_t *rotsprite = R_GetRotSpriteNum(sprframe->lumppat[rot], PU_CACHE);
 
 		// Create a pixel map of the rotated sprite.
-		if (!(rotsprite->cached[rollangle] & (1<<rot)))
-			R_CacheRotSprite(rollangle, sprinfo, sprframe, (thing->frame & FF_FRAMEMASK), rot, flip);
+		R_CacheRotSprite(rotsprite, rollangle, pivot, flip);
 
 		// Generate column offsets.
-		pixelmap = &rotsprite->pixelmap[rot][rollangle];
+		pixelmap = &rotsprite->pixelmap[rollangle];
 		if (!pixelmap->cache.columnofs)
 		{
 			// Cache the patch
@@ -1627,8 +1607,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		// flip -> rotate, not rotate -> flip
 		flip = 0;
+#endif // ROTSPRITE_RENDER_PATCHES
 	}
-#endif
+#endif // ROTSPRITE
 
 	// calculate edges of the shape
 	if (flip)

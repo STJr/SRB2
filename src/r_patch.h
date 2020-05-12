@@ -15,6 +15,7 @@
 #define __R_PATCH__
 
 #include "r_defs.h"
+#include "w_wad.h"
 #include "doomdef.h"
 
 void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
@@ -22,6 +23,8 @@ void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
 
 void R_UpdatePatchReferences(void);
 void R_FreePatchReferences(void);
+
+void R_InitPatchCache(wadfile_t *wadfile);
 
 // Structs
 struct patchreference_s
@@ -59,9 +62,8 @@ UINT8 *GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip);
 boolean R_CheckIfPatch(lumpnum_t lump);
 void R_TextureToFlat(size_t tex, UINT8 *flat);
 void R_PatchToFlat(patch_t *patch, UINT8 *flat);
-void R_PatchToMaskedFlat(patch_t *patch, UINT16 *raw, boolean flip);
 patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
-patch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize);
+patch_t *R_TransparentFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize);
 
 // Portable Network Graphics
 boolean R_IsLumpPNG(const UINT8 *d, size_t s);
@@ -81,13 +83,24 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 // Sprite rotation
 #ifdef ROTSPRITE
 INT32 R_GetRollAngle(angle_t rollangle);
-void R_CacheRotSprite(INT32 rollangle, spriteinfo_t *sprinfo, spriteframe_t *sprframe, UINT8 frame, INT32 rot, UINT16 flip);
-void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, UINT16 flip);
-void R_GetRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, spriteframepivot_t *spritepivot, spriteframe_t *sprframe, INT32 rot, UINT16 flip);
-//patch_t *R_GetRotatedPatch(rotsprite_t *rotsprite, INT32 rollangle, size_t rot);
 
-void R_FreeSingleRotSprite(spritedef_t *spritedef);
-void R_FreeSkinRotSprites(size_t skinnum);
+rotsprite_t *R_GetRotSpriteNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
+rotsprite_t *R_GetRotSpriteNum(lumpnum_t lumpnum, INT32 tag);
+rotsprite_t *R_GetRotSpriteName(const char *name, INT32 tag);
+rotsprite_t *R_GetRotSpriteLongName(const char *name, INT32 tag);
+
+void R_CacheRotSprite(rotsprite_t *rotsprite, INT32 rollangle, spriteframepivot_t *pivot, boolean flip);
+void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, boolean flip);
+void R_CacheRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, spriteframepivot_t *spritepivot, boolean flip);
+patch_t *R_CacheRotSpritePatch(rotsprite_t *rotsprite, INT32 rollangle, boolean flip);
+
+patch_t *R_GetRotatedPatch(UINT32 lumpnum, INT32 tag, INT32 rollangle, boolean flip);
+patch_t *R_GetRotatedPatchForSprite(UINT32 lumpnum, INT32 tag, INT32 rollangle, spriteframepivot_t *pivot, boolean flip);
+patch_t *R_GetRotatedPatchPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean flip);
+patch_t *R_GetRotatedPatchName(const char *name, INT32 tag, INT32 rollangle, boolean flip);
+patch_t *R_GetRotatedPatchLongName(const char *name, INT32 tag, INT32 rollangle, boolean flip);
+
+void R_FreeRotSprite(rotsprite_t *rotsprite);
 void R_FreeAllRotSprites(void);
 
 extern fixed_t rollcosang[ROTANGLES];

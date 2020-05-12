@@ -22,6 +22,8 @@
 #pragma interface
 #endif
 
+#define lumpcache_t void *
+
 // a raw entry of the wad directory
 // NOTE: This sits here and not in w_wad.c because p_setup.c makes use of it to load map WADs inside PK3s.
 #if defined(_MSC_VER)
@@ -36,7 +38,6 @@ typedef struct
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
-
 
 // ==============================================================
 //               WAD FILE STRUCTURE DEFINITIONS
@@ -96,23 +97,33 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
-#define MAX_WADPATH 512
-#define MAX_WADFILES 48 // maximum of wad files used at the same time
-// (there is a max of simultaneous open files anyway, and this should be plenty)
-
-#include "m_aatree.h" // for the patch cache
+#include "m_aatree.h"
 #include "i_video.h" // num_renderers
 
-#define lumpcache_t void *
+typedef struct r_patchcache_s
+{
+	aatree_t *base;
+#ifdef ROTSPRITE
+	aatree_t *rotated;
+#endif
+} r_patchcache_t;
 
 typedef struct patchcache_s
 {
 	lumpcache_t *current;
-	aatree_t *renderer;
+	r_patchcache_t renderer[num_renderers];
 #ifdef HWRENDER
-	aatree_t *hwrcache; // Secondary AA tree for OpenGL because I'm a dummy and don't know how to handle this better
+	aatree_t *hwrcache;
 #endif
 } patchcache_t;
+
+// =========================================================================
+//                         DYNAMIC WAD LOADING
+// =========================================================================
+
+#define MAX_WADPATH 512
+#define MAX_WADFILES 48 // maximum of wad files used at the same time
+// (there is a max of simultaneous open files anyway, and this should be plenty)
 
 // Resource type of the WAD. Yeah, I know this sounds dumb, but I'll leave it like this until I clean up the code further.
 typedef enum restype
@@ -217,8 +228,8 @@ void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
 void **W_GetPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag);
 void **W_GetPatchPointer(lumpnum_t lumpnum, INT32 tag);
 void **W_GetPatchPointerFromName(const char *name, INT32 tag);
+void **W_GetPatchPointerFromLongName(const char *name, INT32 tag);
 
-void W_InitPatchCache(wadfile_t *wadfile);
 void W_UnlockCachedPatch(void *patch);
 void W_FlushCachedPatches(void);
 

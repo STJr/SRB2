@@ -4052,7 +4052,7 @@ static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts
 	}
 }
 
-#ifdef ROTSPRITE
+#if defined(ROTSPRITE) && !defined(ROTSPRITE_RENDER_PATCHES)
 static void HWR_ApplyPitchRollYawToSprite(FOutVector *wallVerts, float pitch, float roll, float yaw)
 {
 	size_t i;
@@ -4223,7 +4223,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	// Let dispoffset work first since this adjust each vertex
 	HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
 
-#ifdef ROTSPRITE
+#if defined(ROTSPRITE) && !defined(ROTSPRITE_RENDER_PATCHES)
 	// Rotate the sprite polygon, then translate it
 	if (spr->rollangle)
 		HWR_RotateSpritePolyToRollAngle(spr, baseWallVerts);
@@ -4508,7 +4508,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	// Let dispoffset work first since this adjust each vertex
 	HWR_RotateSpritePolyToAim(spr, wallVerts, false);
 
-#ifdef ROTSPRITE
+#if defined(ROTSPRITE) && !defined(ROTSPRITE_RENDER_PATCHES)
 	// Rotate the sprite polygon, then translate it
 	if (spr->rollangle)
 		HWR_RotateSpritePolyToRollAngle(spr, wallVerts);
@@ -5204,6 +5204,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spriteframe_t *sprframe;
 #ifdef ROTSPRITE
 	spriteinfo_t *sprinfo;
+#ifdef ROTSPRITE_RENDER_PATCHES
+	INT32 rollangle;
+#endif
 #endif
 	md2_t *md2;
 	size_t lumpoff;
@@ -5218,6 +5221,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	angle_t spriteangle;
 	float z1, z2;
 
+	GLPatch_t *spr_patch;
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
 
@@ -5338,24 +5342,25 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
 
+	spr_patch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	spr_width = spritecachedinfo[lumpoff].width;
 	spr_height = spritecachedinfo[lumpoff].height;
 	spr_offset = spritecachedinfo[lumpoff].offset;
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
-#if 0
+#if defined(ROTSPRITE) && defined(ROTSPRITE_RENDER_PATCHES)
 	rollangle = R_GetRollAngle(thing->rollangle);
 	if (rollangle)
 	{
-		if (!(sprframe->rotsprite.cached[rollangle][rendermode-1] & (1<<rot)))
-			R_CacheRotSprite(rollangle, thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
-		rotsprite = R_GetRotatedPatch(&sprframe->rotsprite, rollangle, rot);
-		if (rotsprite != NULL)
+		spriteframepivot_t *pivot = (sprinfo->available) ? &sprinfo->pivot[(thing->frame & FF_FRAMEMASK)] : NULL;
+		patch_t *rotpatch = R_GetRotatedPatchForSprite(sprframe->lumppat[rot], PU_CACHE, rollangle, pivot, flip);
+		if (rotpatch != NULL)
 		{
-			spr_width = SHORT(rotsprite->width) << FRACBITS;
-			spr_height = SHORT(rotsprite->height) << FRACBITS;
-			spr_offset = SHORT(rotsprite->leftoffset) << FRACBITS;
-			spr_topoffset = SHORT(rotsprite->topoffset) << FRACBITS;
+			spr_patch = (GLPatch_t *)rotpatch;
+			spr_width = SHORT(rotpatch->width) << FRACBITS;
+			spr_height = SHORT(rotpatch->height) << FRACBITS;
+			spr_offset = SHORT(rotpatch->leftoffset) << FRACBITS;
+			spr_topoffset = SHORT(rotpatch->topoffset) << FRACBITS;
 			// flip -> rotate, not rotate -> flip
 			flip = 0;
 		}
@@ -5383,8 +5388,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	originz = FIXED_TO_FLOAT(thing->z);
 
+#if defined(ROTSPRITE) && !defined(ROTSPRITE_RENDER_PATCHES)
 	// Don't transform the sprite if it has a roll angle.
-#ifdef ROTSPRITE
 	if (thing->rollangle)
 	{
 		z1 = z2 = 0.0f;
@@ -5450,7 +5455,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->x2 = x2;
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+	vis->gpatch = spr_patch;
 	vis->flip = flip;
 	vis->mobj = thing;
 	vis->z1 = z1;
@@ -5460,7 +5465,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->originy = tr_y;
 	vis->originz = originz;
 
-#ifdef ROTSPRITE
+#if defined(ROTSPRITE) && !defined(ROTSPRITE_RENDER_PATCHES)
 	if (thing->rollangle)
 	{
 		if (sprinfo->available)
@@ -5471,8 +5476,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		}
 		else
 		{
-			vis->pivotx = (float)(vis->gpatch->leftoffset) * this_scale;
-			vis->pivoty = (float)(vis->gpatch->height / 2) * this_scale;
+			vis->pivotx = (float)(spr_patch->leftoffset) * this_scale;
+			vis->pivoty = (float)(spr_patch->height / 2) * this_scale;
 		}
 	}
 	vis->rollangle = thing->rollangle;

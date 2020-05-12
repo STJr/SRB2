@@ -913,11 +913,6 @@ static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 	spriteinfo_t *info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
 	info->available = true;
 
-#ifdef ROTSPRITE
-	if ((sprites != NULL) && (!sprite2))
-		R_FreeSingleRotSprite(&sprites[num]);
-#endif
-
 	do
 	{
 		lastline = f->curpos;
@@ -1048,9 +1043,6 @@ static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 						size_t skinnum = skinnumbers[i];
 						skin_t *skin = &skins[skinnum];
 						spriteinfo_t *sprinfo = skin->sprinfo;
-#ifdef ROTSPRITE
-						R_FreeSkinRotSprites(skinnum);
-#endif
 						M_Memcpy(&sprinfo[num], info, sizeof(spriteinfo_t));
 					}
 				}
