@@ -61,16 +61,16 @@ void CL_PrepareDownloadSaveGame(const char *tmpsave);
 
 INT32 CL_CheckFiles(void);
 void CL_LoadServerFiles(void);
-void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod,
+void AddRamToSendQueue(INT32 node, void *data, size_t size, freemethod_t freemethod,
 	UINT8 fileid);
 
-void SV_FileSendTicker(void);
-void Got_Filetxpak(void);
-boolean SV_SendingFile(INT32 node);
+void FileSendTicker(void);
+void PT_FileFragment(void);
+boolean SendingFile(INT32 node);
 
 boolean CL_CheckDownloadable(void);
-boolean CL_SendRequestFile(void);
-boolean Got_RequestFilePak(INT32 node);
+boolean CL_SendFileRequest(void);
+boolean PT_RequestFile(INT32 node);
 
 typedef enum
 {
@@ -96,7 +96,7 @@ extern char luafiledir[256 + 16];
 
 void AddLuaFileTransfer(const char *filename, const char *mode);
 void SV_PrepareSendLuaFileToNextNode(void);
-boolean SV_SendLuaFile(INT32 node, const char *filename, boolean textmode);
+boolean AddLuaFileToSendQueue(INT32 node, const char *filename, boolean textmode);
 void SV_PrepareSendLuaFile(const char *filename);
 void SV_HandleLuaFileSent(UINT8 node);
 void RemoveLuaFileTransfer(void);

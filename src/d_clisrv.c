@@ -1598,7 +1598,7 @@ static void SV_SendSaveGame(INT32 node)
 		WRITEUINT32(savebuffer, 0);
 	}
 
-	SV_SendRam(node, buffertosend, length, SF_RAM, 0);
+	AddRamToSendQueue(node, buffertosend, length, SF_RAM, 0);
 	save_p = NULL;
 
 	// Remember when we started sending the savegame so we can handle timeouts
@@ -1978,7 +1978,7 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 					return false;
 				}
 				// no problem if can't send packet, we will retry later
-				if (CL_SendRequestFile())
+				if (CL_SendFileRequest())
 					cl_mode = CL_DOWNLOADFILES;
 			}
 		}
@@ -2106,7 +2106,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 		// why are these here? this is for servers, we're a client
 		//if (key == 's' && server)
 		//	doomcom->numnodes = (INT16)pnumnodes;
-		//SV_FileSendTicker();
+		//FileSendTicker();
 		*oldtic = I_GetTime();
 
 #ifdef CLIENT_LOADINGSCREEN
@@ -3911,13 +3911,13 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				break;
 			}
 			SERVERONLY
-			Got_Filetxpak();
+			PT_FileFragment();
 			break;
 
 		case PT_REQUESTFILE:
 			if (server)
 			{
-				if (!cv_downloading.value || !Got_RequestFilePak(node))
+				if (!cv_downloading.value || !PT_RequestFile(node))
 					Net_CloseConnection(node); // close connection if one of the requested files could not be sent, or you disabled downloading anyway
 			}
 			else
@@ -4216,7 +4216,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 			{
 				char *name = va("%s" PATHSEP "%s", luafiledir, luafiletransfers->filename);
 				boolean textmode = !strchr(luafiletransfers->mode, 'b');
-				SV_SendLuaFile(node, name, textmode);
+				AddLuaFileToSendQueue(node, name, textmode);
 			}
 			break;
 		case PT_HASLUAFILE:
@@ -4348,7 +4348,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 			}
 			if (client)
-				Got_Filetxpak();
+				PT_FileFragment();
 			break;
 		case PT_SENDINGLUAFILE:
 			if (client)
@@ -5073,7 +5073,7 @@ void NetUpdate(void)
 		CON_Ticker();
 	}
 
-	SV_FileSendTicker();
+	FileSendTicker();
 }
 
 /** Returns the number of players playing.

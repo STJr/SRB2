@@ -56,7 +56,7 @@
 #include <errno.h>
 
 // Prototypes
-static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid);
+static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid);
 
 // Sender structure
 typedef struct filetx_s
@@ -253,7 +253,7 @@ boolean CL_CheckDownloadable(void)
   * \note Sends a PT_REQUESTFILE packet
   *
   */
-boolean CL_SendRequestFile(void)
+boolean CL_SendFileRequest(void)
 {
 	char *p;
 	INT32 i;
@@ -298,7 +298,7 @@ boolean CL_SendRequestFile(void)
 
 // get request filepak and put it on the send queue
 // returns false if a requested file was not found or cannot be sent
-boolean Got_RequestFilePak(INT32 node)
+boolean PT_RequestFile(INT32 node)
 {
 	char wad[MAX_WADPATH+1];
 	UINT8 *p = netbuffer->u.textcmd;
@@ -309,7 +309,7 @@ boolean Got_RequestFilePak(INT32 node)
 		if (id == 0xFF)
 			break;
 		READSTRINGN(p, wad, MAX_WADPATH);
-		if (!SV_SendFile(node, wad, id))
+		if (!AddFileToSendQueue(node, wad, id))
 		{
 			SV_AbortSendFiles(node);
 			return false; // don't read the rest of the files
@@ -621,11 +621,11 @@ static INT32 filestosend = 0;
   * \param node The node to send the file to
   * \param filename The file to send
   * \param fileid ???
-  * \sa SV_SendRam
-  * \sa SV_SendLuaFile
+  * \sa AddRamToSendQueue
+  * \sa AddLuaFileToSendQueue
   *
   */
-static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
+static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
@@ -643,7 +643,7 @@ static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	// Allocate a file request and append it to the file list
 	p = *q = (filetx_t *)malloc(sizeof (filetx_t));
 	if (!p)
-		I_Error("SV_SendFile: No more memory\n");
+		I_Error("AddFileToSendQueue: No more memory\n");
 
 	// Initialise with zeros
 	memset(p, 0, sizeof (filetx_t));
@@ -651,7 +651,7 @@ static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	// Allocate the file name
 	p->id.filename = (char *)malloc(MAX_WADPATH);
 	if (!p->id.filename)
-		I_Error("SV_SendFile: No more memory\n");
+		I_Error("AddFileToSendQueue: No more memory\n");
 
 	// Set the file name and get rid of the path
 	strlcpy(p->id.filename, filename, MAX_WADPATH);
@@ -712,11 +712,11 @@ static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
   * \param size The size of the block in bytes
   * \param freemethod How to free the block after it has been sent
   * \param fileid ???
-  * \sa SV_SendFile
-  * \sa SV_SendLuaFile
+  * \sa AddFileToSendQueue
+  * \sa AddLuaFileToSendQueue
   *
   */
-void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UINT8 fileid)
+void AddRamToSendQueue(INT32 node, void *data, size_t size, freemethod_t freemethod, UINT8 fileid)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
@@ -729,7 +729,7 @@ void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UI
 	// Allocate a file request and append it to the file list
 	p = *q = (filetx_t *)malloc(sizeof (filetx_t));
 	if (!p)
-		I_Error("SV_SendRam: No more memory\n");
+		I_Error("AddRamToSendQueue: No more memory\n");
 
 	// Initialise with zeros
 	memset(p, 0, sizeof (filetx_t));
@@ -749,11 +749,11 @@ void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UI
   *
   * \param node The node to send the file to
   * \param filename The file to send
-  * \sa SV_SendFile
-  * \sa SV_SendRam
+  * \sa AddFileToSendQueue
+  * \sa AddRamToSendQueue
   *
   */
-boolean SV_SendLuaFile(INT32 node, const char *filename, boolean textmode)
+boolean AddLuaFileToSendQueue(INT32 node, const char *filename, boolean textmode)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
@@ -770,7 +770,7 @@ boolean SV_SendLuaFile(INT32 node, const char *filename, boolean textmode)
 	// Allocate a file request and append it to the file list
 	p = *q = (filetx_t *)malloc(sizeof (filetx_t));
 	if (!p)
-		I_Error("SV_SendLuaFile: No more memory\n");
+		I_Error("AddLuaFileToSendQueue: No more memory\n");
 
 	// Initialise with zeros
 	memset(p, 0, sizeof (filetx_t));
@@ -778,7 +778,7 @@ boolean SV_SendLuaFile(INT32 node, const char *filename, boolean textmode)
 	// Allocate the file name
 	p->id.filename = (char *)malloc(MAX_WADPATH); // !!!
 	if (!p->id.filename)
-		I_Error("SV_SendLuaFile: No more memory\n");
+		I_Error("AddLuaFileToSendQueue: No more memory\n");
 
 	// Set the file name and get rid of the path
 	strlcpy(p->id.filename, filename, MAX_WADPATH); // !!!
@@ -804,7 +804,8 @@ static void SV_EndFileSend(INT32 node)
 {
 	filetx_t *p = transfer[node].txlist;
 
-	// Free the file request according to the freemethod parameter used with SV_SendFile/Ram
+	// Free the file request according to the freemethod
+	// parameter used with AddFileToSendQueue/AddRamToSendQueue
 	switch (p->ram)
 	{
 		case SF_FILE: // It's a file, close it and free its filename
@@ -842,7 +843,7 @@ static void SV_EndFileSend(INT32 node)
   *       especially when the one downloading has high latency
   *
   */
-void SV_FileSendTicker(void)
+void FileSendTicker(void)
 {
 	static INT32 currentnode = 0;
 	filetx_pak *p;
@@ -938,7 +939,7 @@ void SV_FileSendTicker(void)
 				if (f->textmode && feof(transfer[i].currentfile))
                     size = n;
 				else if (fread(p->data, 1, size, transfer[i].currentfile) != size)
-					I_Error("SV_FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(size), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
+					I_Error("FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(size), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
 			}
 		}
 		p->position = LONG(transfer[i].position);
@@ -965,7 +966,7 @@ void SV_FileSendTicker(void)
 	}
 }
 
-void Got_Filetxpak(void)
+void PT_FileFragment(void)
 {
 	INT32 filenum = netbuffer->u.filetxpak.fileid;
 	fileneeded_t *file = &fileneeded[filenum];
@@ -995,7 +996,7 @@ void Got_Filetxpak(void)
 	if (file->status == FS_REQUESTED)
 	{
 		if (file->file)
-			I_Error("Got_Filetxpak: already open file\n");
+			I_Error("PT_FileFragment: already open file\n");
 		file->file = fopen(filename, file->textmode ? "w" : "wb");
 		if (!file->file)
 			I_Error("Can't create file %s: %s", filename, strerror(errno));
@@ -1078,7 +1079,7 @@ void Got_Filetxpak(void)
  * \return True if the node is downloading a file
  *
  */
-boolean SV_SendingFile(INT32 node)
+boolean SendingFile(INT32 node)
 {
 	return transfer[node].txlist != NULL;
 }
