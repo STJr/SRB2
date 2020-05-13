@@ -31,6 +31,9 @@
 #define MENUBITS 6
 
 // Menu IDs sectioned by numeric places to signify hierarchy
+/**
+ * IF YOU MODIFY THIS, MODIFY MENUTYPES_LIST[] IN dehacked.c TO MATCH.
+ */
 typedef enum
 {
 	MN_NONE,
@@ -129,6 +132,9 @@ typedef enum
 	MN_SPECIAL,
 	NUMMENUTYPES,
 } menutype_t; // up to 63; MN_SPECIAL = 53
+#define MTREE2(a,b) (a | (b<<MENUBITS))
+#define MTREE3(a,b,c) MTREE2(a, MTREE2(b,c))
+#define MTREE4(a,b,c,d) MTREE2(a, MTREE3(b,c,d))
 
 typedef struct
 {
