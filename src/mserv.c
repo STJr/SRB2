@@ -510,6 +510,17 @@ static void MasterServer_OnChange(void)
 {
 	UnregisterServer();
 
+	/*
+	TODO: remove this for v2, it's just a hack
+	for those coming in with an old config.
+	*/
+	if (
+			! cv_masterserver.changed &&
+			strcmp(cv_masterserver.string, "ms.srb2.org:28900") == 0
+	){
+		CV_StealthSet(&cv_masterserver, cv_masterserver.defaultvalue);
+	}
+
 	Set_api(cv_masterserver.string);
 
 	if (Online())
