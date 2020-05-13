@@ -2019,8 +2019,7 @@ static void SavePolywaypointThinker(const thinker_t *th, UINT8 type)
 	WRITEINT32(save_p, ht->sequence);
 	WRITEINT32(save_p, ht->pointnum);
 	WRITEINT32(save_p, ht->direction);
-	WRITEUINT8(save_p, ht->comeback);
-	WRITEUINT8(save_p, ht->wrap);
+	WRITEUINT8(save_p, ht->returnbehavior);
 	WRITEUINT8(save_p, ht->continuous);
 	WRITEUINT8(save_p, ht->stophere);
 	WRITEUINT32(save_p, SaveMobjnum(ht->target));
@@ -3161,8 +3160,7 @@ static inline thinker_t* LoadPolywaypointThinker(actionf_p1 thinker)
 	ht->sequence = READINT32(save_p);
 	ht->pointnum = READINT32(save_p);
 	ht->direction = READINT32(save_p);
-	ht->comeback = READUINT8(save_p);
-	ht->wrap = READUINT8(save_p);
+	ht->returnbehavior = READUINT8(save_p);
 	ht->continuous = READUINT8(save_p);
 	ht->stophere = READUINT8(save_p);
 	ht->target = LoadMobj(READUINT32(save_p));

@@ -140,19 +140,26 @@ typedef struct polymove_s
 	UINT32 angle;       // angle along which to move
 } polymove_t;
 
+// PolyObject waypoint movement return behavior
+typedef enum
+{
+	PWR_STOP,     // Stop after reaching last waypoint
+	PWR_WRAP,     // Wrap back to first waypoint
+	PWR_COMEBACK, // Repeat sequence in reverse
+} polywaypointreturn_e;
+
 typedef struct polywaypoint_s
 {
 	thinker_t thinker; // must be first
 
-	INT32 polyObjNum;   // numeric id of polyobject
-	INT32 speed;        // resultant velocity
-	INT32 sequence;     // waypoint sequence #
-	INT32 pointnum;     // waypoint #
-	INT32 direction;    // 1 for normal, -1 for backwards
-	UINT8 comeback;      // reverses and comes back when the end is reached
-	UINT8 wrap;          // Wrap around waypoints
-	UINT8 continuous;    // continuously move - used with COMEBACK or WRAP
-	UINT8 stophere;      // Will stop after it reaches the next waypoint
+	INT32 polyObjNum;      // numeric id of polyobject
+	INT32 speed;           // resultant velocity
+	INT32 sequence;        // waypoint sequence #
+	INT32 pointnum;        // waypoint #
+	INT32 direction;       // 1 for normal, -1 for backwards
+	UINT8 returnbehavior;  // behavior after reaching the last waypoint
+	UINT8 continuous;      // continuously move - used with PWR_WRAP or PWR_COMEBACK
+	UINT8 stophere;        // Will stop after it reaches the next waypoint
 
 	mobj_t *target; // next waypoint mobj
 } polywaypoint_t;
@@ -251,13 +258,12 @@ typedef struct polymovedata_s
 
 typedef struct polywaypointdata_s
 {
-	INT32 polyObjNum;   // numeric id of polyobject to affect
-	INT32 sequence;     // waypoint sequence #
-	fixed_t speed;      // linear speed
-	UINT8 reverse;    // if true, will go in reverse waypoint order
-	UINT8 comeback;      // reverses and comes back when the end is reached
-	UINT8 wrap;       // Wrap around waypoints
-	UINT8 continuous; // continuously move - used with COMEBACK or WRAP
+	INT32 polyObjNum;     // numeric id of polyobject to affect
+	INT32 sequence;       // waypoint sequence #
+	fixed_t speed;        // linear speed
+	UINT8 reverse;        // if true, will go in reverse waypoint order
+	UINT8 returnbehavior; // behavior after reaching the last waypoint
+	UINT8 continuous;     // continuously move - used with PWR_WRAP or PWR_COMEBACK
 } polywaypointdata_t;
 
 // polyobject door types

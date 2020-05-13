@@ -1277,9 +1277,16 @@ static boolean PolyWaypoint(line_t *line)
 	pwd.speed      = sides[line->sidenum[0]].textureoffset / 8;
 	pwd.sequence   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Sequence #
 	pwd.reverse    = (line->flags & ML_EFFECT1) == ML_EFFECT1; // Reverse?
-	pwd.comeback   = (line->flags & ML_EFFECT2) == ML_EFFECT2; // Return when reaching end?
-	pwd.wrap       = (line->flags & ML_EFFECT3) == ML_EFFECT3; // Wrap around waypoints
-	pwd.continuous = (line->flags & ML_EFFECT4) == ML_EFFECT4; // Continuously move - used with COMEBACK or WRAP
+
+	// Behavior after reaching the last waypoint?
+	if (line->flags & ML_EFFECT3)
+		pwd.returnbehavior = PWR_WRAP; // Wrap back to first waypoint
+	else if (line->flags & ML_EFFECT2)
+		pwd.returnbehavior = PWR_COMEBACK; // Go through sequence in reverse
+	else
+		pwd.returnbehavior = PWR_STOP; // Stop
+
+	pwd.continuous = (line->flags & ML_EFFECT4) == ML_EFFECT4; // Continuously move - used with PWR_WRAP or PWR_COMEBACK
 
 	return EV_DoPolyObjWaypoint(&pwd);
 }

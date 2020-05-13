@@ -1606,6 +1606,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	poy = po->centerPt.y;
 	poz = (po->lines[0]->backsector->floorheight + po->lines[0]->backsector->ceilingheight)/2;
 
+	// Calculate the distance between the polyobject and the waypoint
 	dist = P_AproxDistance(P_AproxDistance(target->x - pox, target->y - poy), target->z - poz);
 
 	if (dist < 1)
@@ -1614,9 +1615,6 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	momx = FixedMul(FixedDiv(target->x - pox, dist), th->speed);
 	momy = FixedMul(FixedDiv(target->y - poy, dist), th->speed);
 	momz = FixedMul(FixedDiv(target->z - poz, dist), th->speed);
-
-	// Calculate the distance between the polyobject and the waypoint
-	// 'dist' already equals this.
 
 	// Will the polyobject be FURTHER away if the momx/momy/momz is added to
 	// its current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
@@ -1661,22 +1659,22 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			CONS_Debug(DBG_POLYOBJ, "Looking for next waypoint...\n");
 			waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
 
-			if (!waypoint && th->wrap) // If specified, wrap waypoints
+			if (!waypoint && th->returnbehavior == PWR_WRAP) // If specified, wrap waypoints
 			{
 				if (!th->continuous)
 				{
-					th->wrap = 0;
+					th->returnbehavior = PWR_STOP;
 					th->stophere = true;
 				}
 
 				waypoint = (th->direction == -1) ? P_GetLastWaypoint(th->sequence) : P_GetFirstWaypoint(th->sequence);
 			}
-			else if (!waypoint && th->comeback) // Come back to the start
+			else if (!waypoint && th->returnbehavior == PWR_COMEBACK) // Come back to the start
 			{
 				th->direction = -th->direction;
 
 				if (!th->continuous)
-					th->comeback = false;
+					th->returnbehavior = PWR_STOP;
 
 				waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
 			}
@@ -2193,9 +2191,8 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	th->sequence = pwdata->sequence; // Used to specify sequence #
 	th->direction = pwdata->reverse ? -1 : 1;
 
-	th->comeback = pwdata->comeback;
+	th->returnbehavior = pwdata->returnbehavior;
 	th->continuous = pwdata->continuous;
-	th->wrap = pwdata->wrap;
 	th->stophere = false;
 
 	// Find the first waypoint we need to use
@@ -2219,7 +2216,7 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		&& last->z == (po->lines[0]->backsector->floorheight + (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2))
 	{
 		// Already at the destination point...
-		if (!th->wrap)
+		if (th->returnbehavior != PWR_WRAP)
 		{
 			po->thinker = NULL;
 			P_RemoveThinker(&th->thinker);
