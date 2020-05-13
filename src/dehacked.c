@@ -3033,6 +3033,7 @@ static actionpointer_t actionpointers[] =
 	{{A_DragonbomberSpawn},      "A_DRAGONBOMERSPAWN"},
 	{{A_DragonWing},             "A_DRAGONWING"},
 	{{A_DragonSegment},          "A_DRAGONSEGMENT"},
+	{{A_ChangeHeight},           "A_CHANGEHEIGHT"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -6231,6 +6232,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROCKET",
 
 	"S_LASER",
+	"S_LASER2",
+	"S_LASERFLASH",
+
+	"S_LASERFLAME1",
+	"S_LASERFLAME2",
+	"S_LASERFLAME3",
+	"S_LASERFLAME4",
+	"S_LASERFLAME5",
 
 	"S_TORPEDO",
 
@@ -9230,6 +9239,7 @@ static const char *const MENUTYPES_LIST[] = {
 	"MP_CONNECT",
 	"MP_ROOM",
 	"MP_PLAYERSETUP", // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	"MP_SERVER_OPTIONS",
 
 	// Options
 	"OP_MAIN",
@@ -9239,10 +9249,14 @@ static const char *const MENUTYPES_LIST[] = {
 	"OP_P1MOUSE",
 	"OP_P1JOYSTICK",
 	"OP_JOYSTICKSET", // OP_JoystickSetDef shared with P2
+	"OP_P1CAMERA",
 
 	"OP_P2CONTROLS",
 	"OP_P2MOUSE",
 	"OP_P2JOYSTICK",
+	"OP_P2CAMERA",
+
+	"OP_PLAYSTYLE",
 
 	"OP_VIDEO",
 	"OP_VIDEOMODE",
