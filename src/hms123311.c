@@ -337,14 +337,13 @@ HMS_register (void)
 	snprintf(post, sizeof post,
 			"port=%d&"
 			"title=%s&"
-			"version=%d.%d.%d",
+			"version=%d.%d",
 
 			current_port,
 
 			title,
 
-			VERSION/100,
-			VERSION%100,
+			VERSION,
 			SUBVERSION
 	);
 
@@ -480,9 +479,8 @@ HMS_fetch_servers (msg_server_t *list, int room_number, int query_id)
 		doing_shit = 1;
 
 		snprintf(local_version, sizeof local_version,
-				"%d.%d.%d",
-				VERSION/100,
-				VERSION%100,
+				"%d.%d",
+				VERSION,
 				SUBVERSION
 		);
 
