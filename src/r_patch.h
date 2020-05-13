@@ -32,6 +32,8 @@ struct patchreference_s
 	struct patchreference_s *prev, *next;
 	UINT16 wad, lump;
 	INT32 tag;
+	boolean flip;
+	INT32 rollangle;
 	void *ptr;
 };
 typedef struct patchreference_s patchreference_t;
@@ -84,24 +86,25 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 #ifdef ROTSPRITE
 INT32 R_GetRollAngle(angle_t rollangle);
 
-rotsprite_t *R_GetRotSpriteNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
-rotsprite_t *R_GetRotSpriteNum(lumpnum_t lumpnum, INT32 tag);
-rotsprite_t *R_GetRotSpriteName(const char *name, INT32 tag);
-rotsprite_t *R_GetRotSpriteLongName(const char *name, INT32 tag);
+rotsprite_t *R_GetRotSpriteNumPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean flip, boolean store);
+rotsprite_t *R_GetRotSpriteNum(lumpnum_t lumpnum, INT32 tag, INT32 rollangle, boolean flip, boolean store);
+rotsprite_t *R_GetRotSpriteName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store);
+rotsprite_t *R_GetRotSpriteLongName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store);
 
-void R_CacheRotSprite(rotsprite_t *rotsprite, INT32 rollangle, spriteframepivot_t *pivot, boolean flip);
+void R_CacheRotSprite(rotsprite_t *rotsprite, INT32 rollangle, boolean sprite, spriteframepivot_t *pivot, boolean flip);
 void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, boolean flip);
-void R_CacheRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, spriteframepivot_t *spritepivot, boolean flip);
+void R_CacheRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, boolean sprite, spriteframepivot_t *spritepivot, boolean flip);
 patch_t *R_CacheRotSpritePatch(rotsprite_t *rotsprite, INT32 rollangle, boolean flip);
 
-patch_t *R_GetRotatedPatch(UINT32 lumpnum, INT32 tag, INT32 rollangle, boolean flip);
-patch_t *R_GetRotatedPatchForSprite(UINT32 lumpnum, INT32 tag, INT32 rollangle, spriteframepivot_t *pivot, boolean flip);
-patch_t *R_GetRotatedPatchPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean flip);
-patch_t *R_GetRotatedPatchName(const char *name, INT32 tag, INT32 rollangle, boolean flip);
-patch_t *R_GetRotatedPatchLongName(const char *name, INT32 tag, INT32 rollangle, boolean flip);
+patch_t *R_GetRotatedPatch(UINT32 lumpnum, INT32 tag, INT32 rollangle, boolean flip, boolean store);
+patch_t *R_GetRotatedPatchForSprite(UINT32 lumpnum, INT32 tag, INT32 rollangle, spriteframepivot_t *pivot, boolean flip, boolean store);
+patch_t *R_GetRotatedPatchPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean store, boolean flip);
+patch_t *R_GetRotatedPatchForSpritePwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, spriteframepivot_t *pivot, boolean flip, boolean store);
+patch_t *R_GetRotatedPatchName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store);
+patch_t *R_GetRotatedPatchLongName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store);
 
-void R_FreeRotSprite(rotsprite_t *rotsprite);
-void R_FreeAllRotSprites(void);
+void R_RecacheRotSprite(rotsprite_t *rotsprite);
+void R_RecacheAllRotSprites(void);
 
 extern fixed_t rollcosang[ROTANGLES];
 extern fixed_t rollsinang[ROTANGLES];

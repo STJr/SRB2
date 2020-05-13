@@ -3509,11 +3509,6 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();
 
-#ifdef ROTSPRITE
-	// Free rotated sprites
-	R_FreeAllRotSprites();
-#endif
-
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 
 #if defined (WALLSPLATS) || defined (FLOORSPLATS)
@@ -3808,8 +3803,6 @@ boolean P_AddWadFile(const char *wadfilename)
 	else
 		wadnum = (UINT16)(numwadfiles-1);
 
-	R_FreePatchReferences();
-
 	switch(wadfiles[wadnum]->type)
 	{
 	case RET_PK3:
@@ -3920,6 +3913,13 @@ boolean P_AddWadFile(const char *wadfilename)
 	// edit music defs
 	//
 	S_LoadMusicDefs(wadnum);
+
+	//
+	// recache sprite rotation data
+	//
+#ifdef ROTSPRITE
+	R_RecacheAllRotSprites();
+#endif
 
 	//
 	// search for maps

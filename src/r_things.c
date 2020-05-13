@@ -1573,7 +1573,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		spriteframepivot_t *pivot = (sprinfo->available) ? &sprinfo->pivot[(thing->frame & FF_FRAMEMASK)] : NULL;
 #ifdef ROTSPRITE_RENDER_PATCHES
-		patch_t *rotpatch = R_GetRotatedPatchForSprite(sprframe->lumppat[rot], PU_CACHE, rollangle, pivot, flip);
+		patch_t *rotpatch = R_GetRotatedPatchForSprite(sprframe->lumppat[rot], PU_LEVEL, rollangle, pivot, hflip, false);
 		if (rotpatch != NULL)
 		{
 			spr_patch = rotpatch;
@@ -1585,7 +1585,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			flip = 0;
 		}
 #else
-		rotsprite_t *rotsprite = R_GetRotSpriteNum(sprframe->lumppat[rot], PU_CACHE);
+		rotsprite_t *rotsprite = R_GetRotSpriteNum(sprframe->lumppat[rot], PU_CACHE, rollangle, false);
 
 		// Create a pixel map of the rotated sprite.
 		R_CacheRotSprite(rotsprite, rollangle, pivot, flip);

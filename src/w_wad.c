@@ -1655,7 +1655,7 @@ void **W_GetPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag)
 #endif
 		R_CacheSoftwarePatch(wad, lump, tag, true);
 
-	return &(wadfiles[wad]->patchcache.current[lump]);
+	return (void **)(&(wadfiles[wad]->patchcache.current[lump]));
 }
 
 void **W_GetPatchPointer(lumpnum_t lumpnum, INT32 tag)
@@ -1678,6 +1678,42 @@ void **W_GetPatchPointerFromLongName(const char *name, INT32 tag)
 		return W_GetPatchPointer(W_CheckNumForLongName("MISSING"), tag);
 	return W_GetPatchPointer(num, tag);
 }
+
+#ifdef ROTSPRITE
+void **W_GetRotatedPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
+{
+	if (!TestValidLump(wad, lump))
+		return NULL;
+
+	if (sprite)
+		R_GetRotatedPatchForSpritePwad(wad, lump, tag, rollangle, pivot, flip, true);
+	else
+		R_GetRotatedPatchPwad(wad, lump, tag, rollangle, flip, true);
+
+	return (void **)(&(wadfiles[wad]->patchcache.rotated[lump][rollangle + (ROTANGLES * flip)]));
+}
+
+void **W_GetRotatedPatchPointer(lumpnum_t lumpnum, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
+{
+	return W_GetRotatedPatchPointerPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag,rollangle,sprite,pivot,flip);
+}
+
+void **W_GetRotatedPatchPointerFromName(const char *name, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
+{
+	lumpnum_t num = W_CheckNumForName(name);
+	if (num == LUMPERROR)
+		return W_GetRotatedPatchPointer(W_GetNumForName("MISSING"), tag, rollangle, sprite, pivot, flip);
+	return W_GetRotatedPatchPointer(num, tag, rollangle, sprite, pivot, flip);
+}
+
+void **W_GetRotatedPatchPointerFromLongName(const char *name, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
+{
+	lumpnum_t num = W_CheckNumForLongName(name);
+	if (num == LUMPERROR)
+		return W_GetRotatedPatchPointer(W_CheckNumForLongName("MISSING"), tag, rollangle, sprite, pivot, flip);
+	return W_GetRotatedPatchPointer(num, tag, rollangle, sprite, pivot, flip);
+}
+#endif
 
 void W_UnlockCachedPatch(void *patch)
 {

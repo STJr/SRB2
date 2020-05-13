@@ -5353,7 +5353,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (rollangle)
 	{
 		spriteframepivot_t *pivot = (sprinfo->available) ? &sprinfo->pivot[(thing->frame & FF_FRAMEMASK)] : NULL;
-		patch_t *rotpatch = R_GetRotatedPatchForSprite(sprframe->lumppat[rot], PU_CACHE, rollangle, pivot, flip);
+		patch_t *rotpatch = R_GetRotatedPatchForSprite(sprframe->lumppat[rot], PU_LEVEL, rollangle, pivot, (flip != 0), false);
 		if (rotpatch != NULL)
 		{
 			spr_patch = (GLPatch_t *)rotpatch;

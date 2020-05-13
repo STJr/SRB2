@@ -735,7 +735,13 @@ typedef struct
 	pixelmap_t pixelmap[ROTANGLES];
 	patch_t *patches[ROTANGLES];
 	boolean cached[ROTANGLES];
+
 	UINT32 lumpnum;
+	boolean spritelump;
+
+	boolean flip;
+	void *pivot;
+	INT32 tag;
 } rotsprite_t;
 #endif
 

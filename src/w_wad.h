@@ -104,16 +104,20 @@ typedef struct r_patchcache_s
 {
 	aatree_t *base;
 #ifdef ROTSPRITE
-	aatree_t *rotated;
+	aatree_t *rotated[2];
 #endif
 } r_patchcache_t;
 
 typedef struct patchcache_s
 {
-	lumpcache_t *current;
 	r_patchcache_t renderer[num_renderers];
 #ifdef HWRENDER
 	aatree_t *hwrcache;
+#endif
+
+	lumpcache_t *current;
+#ifdef ROTSPRITE
+	lumpcache_t **rotated;
 #endif
 } patchcache_t;
 
@@ -229,6 +233,14 @@ void **W_GetPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag);
 void **W_GetPatchPointer(lumpnum_t lumpnum, INT32 tag);
 void **W_GetPatchPointerFromName(const char *name, INT32 tag);
 void **W_GetPatchPointerFromLongName(const char *name, INT32 tag);
+
+#ifdef ROTSPRITE
+// Returns rotated patch pointers.
+void **W_GetRotatedPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip);
+void **W_GetRotatedPatchPointer(lumpnum_t lumpnum, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip);
+void **W_GetRotatedPatchPointerFromName(const char *name, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip);
+void **W_GetRotatedPatchPointerFromLongName(const char *name, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip);
+#endif
 
 void W_UnlockCachedPatch(void *patch);
 void W_FlushCachedPatches(void);

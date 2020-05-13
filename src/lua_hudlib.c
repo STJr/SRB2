@@ -398,6 +398,19 @@ static int libd_cachePatch(lua_State *L)
 	return 1;
 }
 
+#ifdef ROTSPRITE
+static int libd_cacheRotatedPatch(lua_State *L)
+{
+	INT32 rollangle = R_GetRollAngle(luaL_checkinteger(L, 2));
+	HUDONLY
+	if (rollangle)
+		LUA_PushUserdata(L, W_GetRotatedPatchPointerFromLongName(luaL_checkstring(L, 1), PU_PATCH, rollangle, false, NULL, lua_optboolean(L, 3)), META_PATCH);
+	else
+		LUA_PushUserdata(L, W_GetPatchPointerFromLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
+	return 1;
+}
+#endif
+
 // v.getSpritePatch(sprite, [frame, [angle, [rollangle]]])
 static int libd_getSpritePatch(lua_State *L)
 {
@@ -458,7 +471,7 @@ static int libd_getSpritePatch(lua_State *L)
 
 		if (rot)
 		{
-			LUA_PushUserdata(L, R_GetRotatedPatchForSprite(sprframe->lumppat[angle], PU_PATCH, rot, NULL, sprframe->flip & (1<<angle)), META_PATCH);
+			LUA_PushUserdata(L, W_GetRotatedPatchPointer(sprframe->lumppat[angle], PU_PATCH, rot, true, NULL, sprframe->flip & (1<<angle)), META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;
@@ -571,7 +584,7 @@ static int libd_getSprite2Patch(lua_State *L)
 		if (rot) {
 			spriteinfo_t *sprinfo = &skins[i].sprinfo[j];
 			spriteframepivot_t *pivot = (sprinfo->available) ? &sprinfo->pivot[frame] : NULL;
-			LUA_PushUserdata(L, R_GetRotatedPatchForSprite(sprframe->lumppat[angle], PU_PATCH, rot, pivot, sprframe->flip & (1<<angle)), META_PATCH);
+			LUA_PushUserdata(L, W_GetRotatedPatchPointer(sprframe->lumppat[angle], PU_PATCH, rot, true, pivot, sprframe->flip & (1<<angle)), META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;
@@ -1063,6 +1076,9 @@ static luaL_Reg lib_draw[] = {
 	// cache
 	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
+#ifdef ROTSPRITE
+	{"cacheRotatedPatch", libd_cacheRotatedPatch},
+#endif
 	{"getSpritePatch", libd_getSpritePatch},
 	{"getSprite2Patch", libd_getSprite2Patch},
 	{"getColormap", libd_getColormap},
