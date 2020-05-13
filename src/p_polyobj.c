@@ -1573,7 +1573,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 {
 	mobj_t *target = NULL;
 	mobj_t *waypoint = NULL;
-	fixed_t adjustx, adjusty, adjustz;
+	fixed_t pox, poy, poz;
 	fixed_t momx, momy, momz, dist;
 	INT32 start;
 	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
@@ -1602,32 +1602,31 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		return;
 	}
 
-	// Compensate for position offset
-	adjustx = po->centerPt.x + th->diffx;
-	adjusty = po->centerPt.y + th->diffy;
-	adjustz = po->lines[0]->backsector->floorheight + (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2 + th->diffz;
+	pox = po->centerPt.x;
+	poy = po->centerPt.y;
+	poz = (po->lines[0]->backsector->floorheight + po->lines[0]->backsector->ceilingheight)/2;
 
-	dist = P_AproxDistance(P_AproxDistance(target->x - adjustx, target->y - adjusty), target->z - adjustz);
+	dist = P_AproxDistance(P_AproxDistance(target->x - pox, target->y - poy), target->z - poz);
 
 	if (dist < 1)
 		dist = 1;
 
-	momx = FixedMul(FixedDiv(target->x - adjustx, dist), (th->speed));
-	momy = FixedMul(FixedDiv(target->y - adjusty, dist), (th->speed));
-	momz = FixedMul(FixedDiv(target->z - adjustz, dist), (th->speed));
+	momx = FixedMul(FixedDiv(target->x - pox, dist), th->speed);
+	momy = FixedMul(FixedDiv(target->y - poy, dist), th->speed);
+	momz = FixedMul(FixedDiv(target->z - poz, dist), th->speed);
 
 	// Calculate the distance between the polyobject and the waypoint
 	// 'dist' already equals this.
 
 	// Will the polyobject be FURTHER away if the momx/momy/momz is added to
 	// its current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
-	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(target->x - adjustx - momx, target->y - adjusty - momy), target->z - adjustz - momz)>>FRACBITS)
+	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(target->x - pox - momx, target->y - poy - momy), target->z - poz - momz)>>FRACBITS)
 	{
 		// If further away, set XYZ of polyobject to waypoint location
 		fixed_t amtx, amty, amtz;
 		fixed_t diffz;
-		amtx = (target->x - th->diffx) - po->centerPt.x;
-		amty = (target->y - th->diffy) - po->centerPt.y;
+		amtx = target->x - po->centerPt.x;
+		amty = target->y - po->centerPt.y;
 		Polyobj_moveXY(po, amtx, amty, true);
 		// TODO: use T_MovePlane
 		amtz = (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2;
@@ -1694,14 +1693,14 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 			// calculate MOMX/MOMY/MOMZ for next waypoint
 			// change slope
-			dist = P_AproxDistance(P_AproxDistance(target->x - adjustx, target->y - adjusty), target->z - adjustz);
+			dist = P_AproxDistance(P_AproxDistance(target->x - pox, target->y - poy), target->z - poz);
 
 			if (dist < 1)
 				dist = 1;
 
-			momx = FixedMul(FixedDiv(target->x - adjustx, dist), (th->speed));
-			momy = FixedMul(FixedDiv(target->y - adjusty, dist), (th->speed));
-			momz = FixedMul(FixedDiv(target->z - adjustz, dist), (th->speed));
+			momx = FixedMul(FixedDiv(target->x - pox, dist), th->speed);
+			momy = FixedMul(FixedDiv(target->y - poy, dist), th->speed);
+			momz = FixedMul(FixedDiv(target->z - poz, dist), th->speed);
 		}
 		else
 		{
@@ -2214,12 +2213,6 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	// Hotfix to not crash on single-waypoint sequences -Red
 	if (!last)
 		last = first;
-
-	// Set diffx, diffy, diffz
-	// Put these at 0 for now...might not be needed after all.
-	th->diffx = 0;//first->x - po->centerPt.x;
-	th->diffy = 0;//first->y - po->centerPt.y;
-	th->diffz = 0;//first->z - (po->lines[0]->backsector->floorheight + (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2);
 
 	if (last->x == po->centerPt.x
 		&& last->y == po->centerPt.y

@@ -154,11 +154,6 @@ typedef struct polywaypoint_s
 	UINT8 continuous;    // continuously move - used with COMEBACK or WRAP
 	UINT8 stophere;      // Will stop after it reaches the next waypoint
 
-	// Difference between location of PO and location of waypoint (offset)
-	fixed_t diffx;
-	fixed_t diffy;
-	fixed_t diffz;
-
 	mobj_t *target; // next waypoint mobj
 } polywaypoint_t;
 

@@ -2023,9 +2023,6 @@ static void SavePolywaypointThinker(const thinker_t *th, UINT8 type)
 	WRITEUINT8(save_p, ht->wrap);
 	WRITEUINT8(save_p, ht->continuous);
 	WRITEUINT8(save_p, ht->stophere);
-	WRITEFIXED(save_p, ht->diffx);
-	WRITEFIXED(save_p, ht->diffy);
-	WRITEFIXED(save_p, ht->diffz);
 	WRITEUINT32(save_p, SaveMobjnum(ht->target));
 }
 
@@ -3168,9 +3165,6 @@ static inline thinker_t* LoadPolywaypointThinker(actionf_p1 thinker)
 	ht->wrap = READUINT8(save_p);
 	ht->continuous = READUINT8(save_p);
 	ht->stophere = READUINT8(save_p);
-	ht->diffx = READFIXED(save_p);
-	ht->diffy = READFIXED(save_p);
-	ht->diffz = READFIXED(save_p);
 	ht->target = LoadMobj(READUINT32(save_p));
 	return &ht->thinker;
 }
