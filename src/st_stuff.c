@@ -1333,13 +1333,12 @@ void ST_drawTitleCard(void)
 	patch_t *actpat, *zigzag, *zztext;
 	UINT8 colornum;
 	const UINT8 *colormap;
-	stplyr = &players[consoleplayer];
-	
-	if (stplyr->skincolor)
-		colornum = stplyr->skincolor;
+
+	if (players[consoleplayer].skincolor)
+		colornum = players[consoleplayer].skincolor;
 	else
 		colornum = cv_playercolor.value;
-	
+
 	colormap = R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE);
 
 	if (!G_IsTitleCardAvailable())

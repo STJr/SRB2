@@ -7777,7 +7777,7 @@ static void P_SpawnScrollers(void)
 			// scroll wall according to linedef
 			// (same direction and speed as scrolling floors)
 			case 502:
-				for (s = -1; (s = P_FindSectorFromTag(l->tag, s)) >= 0 ;)
+				for (s = -1; (s = P_FindLineFromTag(l->tag, s)) >= 0 ;)
 					if (s != (INT32)i)
 						Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
 				break;

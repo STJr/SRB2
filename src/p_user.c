@@ -1490,17 +1490,10 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if (use1upSound)
+	if (use1upSound || cv_1upsound.value)
 		S_StartSound(NULL, sfx_oneup);
 	else if (mariomode)
 		S_StartSound(NULL, sfx_marioa);
-	else if (cv_1upsound.value)
-	{
-		if (S_sfx[sfx_oneup].lumpnum != LUMPERROR)
-			S_StartSound(NULL, sfx_oneup);
-		else
-			S_StartSound(NULL, sfx_chchng);/* at least play something! */
-	}
 	else
 	{
 		P_PlayJingle(player, JT_1UP);
@@ -1547,10 +1540,6 @@ boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 	// \todo lua hook
 	int i;
 	boolean result = false;
-
-#ifndef HAVE_BLUA
-	(void)musname;
-#endif
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -4440,13 +4429,16 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		else if (player->powers[pw_carry] == CR_ROLLOUT)
 		{
 			player->mo->momz = 9*FRACUNIT;
-			if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
-				player->mo->momz += player->mo->tracer->momz;
-			if (!P_IsObjectOnGround(player->mo->tracer))
-				P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
+			if (player->mo->tracer)
+			{
+				if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
+					player->mo->momz += player->mo->tracer->momz;
+				if (!P_IsObjectOnGround(player->mo->tracer))
+					P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
+				player->mo->tracer->flags |= MF_PUSHABLE;
+				P_SetTarget(&player->mo->tracer->tracer, NULL);
+			}
 			player->powers[pw_carry] = CR_NONE;
-			player->mo->tracer->flags |= MF_PUSHABLE;
-			P_SetTarget(&player->mo->tracer->tracer, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->mo->eflags & MFE_GOOWATER)
