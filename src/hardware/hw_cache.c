@@ -823,7 +823,7 @@ void HWR_FreeMipmapCache(void)
 	// Alam: free the Z_Blocks before freeing it's users
 	// free all patch colormaps after each level: must be done after ClearMipMapCache!
 	for (i = 0; i < numwadfiles; i++)
-		M_AATreeIterate(wadfiles[i]->patchinfo.hwrcache, FreeMipmapColormap);
+		M_AATreeIterate(Patch_GetRendererTree(i, render_opengl), FreeMipmapColormap);
 }
 
 void HWR_FreeTextureCache(void)
@@ -1289,18 +1289,17 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 	return grpatch;
 }
 
-GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum)
+GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum, void *hwrcache)
 {
-	aatree_t *hwrcache = wadfiles[wadnum]->patchinfo.hwrcache;
 	GLPatch_t *grpatch;
 
-	if (!(grpatch = M_AATreeGet(hwrcache, lumpnum)))
+	if (!(grpatch = M_AATreeGet((aatree_t *)hwrcache, lumpnum)))
 	{
 		grpatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
 		grpatch->wadnum = wadnum;
 		grpatch->lumpnum = lumpnum;
 		grpatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
-		M_AATreeSet(hwrcache, lumpnum, grpatch);
+		M_AATreeSet((aatree_t *)hwrcache, lumpnum, grpatch);
 	}
 
 	return grpatch;
@@ -1308,7 +1307,8 @@ GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum)
 
 GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum)
 {
-	return HWR_GetCachedGLPatchPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
+	UINT16 wad = WADFILENUM(lumpnum);
+	return HWR_GetCachedGLPatchPwad(wad, LUMPNUM(lumpnum), Patch_GetRendererTree(wad, render_opengl));
 }
 
 // Need to do this because they aren't powers of 2

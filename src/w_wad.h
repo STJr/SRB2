@@ -111,9 +111,6 @@ typedef struct rendererpatch_s
 typedef struct patchinfo_s
 {
 	rendererpatch_t renderer[num_renderers];
-#ifdef HWRENDER
-	aatree_t *hwrcache;
-#endif
 
 	lumpcache_t *current;
 #ifdef ROTSPRITE

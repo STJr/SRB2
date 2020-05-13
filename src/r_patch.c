@@ -177,21 +177,18 @@ void Patch_InitFile(wadfile_t *wadfile)
 			rcache->rotated[i] = M_AATreeAlloc(AATREE_ZUSER);
 #endif
 	}
-
-#ifdef HWRENDER
-	// allocates GLPatch info structures and stores them in a tree
-	cache->hwrcache = M_AATreeAlloc(AATREE_ZUSER);
-#endif
 }
 
-//
-// Cache a patch into heap memory, convert the patch format as necessary
-//
+// Get renderer patch tree.
+aatree_t *Patch_GetRendererTree(UINT16 wadnum, rendermode_t mode)
+{
+	return wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].base;
+}
 
 // Get renderer patch info.
 static inline void *GetRendererPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode)
 {
-	return M_AATreeGet(wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].base, lumpnum);
+	return M_AATreeGet(Patch_GetRendererTree(wadnum, mode), lumpnum);
 }
 
 // Set renderer patch info.
@@ -291,7 +288,7 @@ void *Patch_CacheSoftware(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 #ifdef HWRENDER
 void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 {
-	GLPatch_t *grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
+	GLPatch_t *grPatch = HWR_GetCachedGLPatchPwad(wad, lump, Patch_GetRendererTree(wad, render_opengl));
 
 	if (grPatch->mipmap->grInfo.data)
 	{
@@ -314,8 +311,6 @@ void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 		// insert into list
 		if (store)
 			InsertPatchReference(wad, lump, tag, (void *)grPatch, 0, false);
-
-		SetRendererPatchInfo(wad, lump, render_opengl, (void *)grPatch);
 		UpdateCurrentPatchInfo(wad, lump, render_opengl);
 	}
 

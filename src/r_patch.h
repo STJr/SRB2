@@ -16,10 +16,14 @@
 
 #include "r_defs.h"
 #include "w_wad.h"
+#include "m_aatree.h"
+#include "i_video.h"
 #include "doomdef.h"
 
 void *Patch_CacheSoftware(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
 void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
+
+aatree_t *Patch_GetRendererTree(UINT16 wadnum, rendermode_t mode);
 
 void Patch_UpdateReferences(void);
 void Patch_FreeReferences(void);
