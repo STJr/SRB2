@@ -1395,7 +1395,6 @@ typedef enum
 	tc_planedisplace,
 	tc_dynslopeline,
 	tc_dynslopevert,
-#ifdef POLYOBJECTS
 	tc_polyrotate, // haleyjd 03/26/06: polyobjects
 	tc_polymove,
 	tc_polywaypoint,
@@ -1405,7 +1404,6 @@ typedef enum
 	tc_polydisplace,
 	tc_polyrotdisplace,
 	tc_polyfade,
-#endif
 	tc_end
 } specials_e;
 
@@ -2090,7 +2088,6 @@ static inline void SaveDynamicSlopeThinker(const thinker_t *th, const UINT8 type
     WRITEMEM(save_p, ht->vex, sizeof(ht->vex));
 }
 
-#ifdef POLYOBJECTS
 static inline void SavePolyrotatetThinker(const thinker_t *th, const UINT8 type)
 {
 	const polyrotate_t *ht = (const void *)th;
@@ -2199,7 +2196,6 @@ static void SavePolyfadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->duration);
 	WRITEINT32(save_p, ht->timer);
 }
-#endif
 
 static void P_NetArchiveThinkers(void)
 {
@@ -2371,7 +2367,6 @@ static void P_NetArchiveThinkers(void)
 				SavePlaneDisplaceThinker(th, tc_planedisplace);
 				continue;
 			}
-#ifdef POLYOBJECTS
 			else if (th->function.acp1 == (actionf_p1)T_PolyObjRotate)
 			{
 				SavePolyrotatetThinker(th, tc_polyrotate);
@@ -2417,7 +2412,6 @@ static void P_NetArchiveThinkers(void)
 				SavePolyfadeThinker(th, tc_polyfade);
 				continue;
 			}
-#endif
 			else if (th->function.acp1 == (actionf_p1)T_DynamicSlopeLine)
 			{
 				SaveDynamicSlopeThinker(th, tc_dynslopeline);
@@ -3241,7 +3235,6 @@ static inline thinker_t* LoadDynamicSlopeThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-#ifdef POLYOBJECTS
 static inline thinker_t* LoadPolyrotatetThinker(actionf_p1 thinker)
 {
 	polyrotate_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3358,7 +3351,6 @@ static thinker_t* LoadPolyfadeThinker(actionf_p1 thinker)
 	ht->timer = READINT32(save_p);
 	return &ht->thinker;
 }
-#endif
 
 static void P_NetUnArchiveThinkers(void)
 {
@@ -3519,7 +3511,6 @@ static void P_NetUnArchiveThinkers(void)
 				case tc_planedisplace:
 					th = LoadPlaneDisplaceThinker((actionf_p1)T_PlaneDisplace);
 					break;
-#ifdef POLYOBJECTS
 				case tc_polyrotate:
 					th = LoadPolyrotatetThinker((actionf_p1)T_PolyObjRotate);
 					break;
@@ -3556,7 +3547,6 @@ static void P_NetUnArchiveThinkers(void)
 				case tc_polyfade:
 					th = LoadPolyfadeThinker((actionf_p1)T_PolyObjFade);
 					break;
-#endif
 
 				case tc_dynslopeline:
 					th = LoadDynamicSlopeThinker((actionf_p1)T_DynamicSlopeLine);
@@ -3618,7 +3608,6 @@ static void P_NetUnArchiveThinkers(void)
 //
 // haleyjd 03/26/06: PolyObject saving code
 //
-#ifdef POLYOBJECTS
 #define PD_FLAGS  0x01
 #define PD_TRANS   0x02
 
@@ -3707,7 +3696,6 @@ static inline void P_UnArchivePolyObjects(void)
 	for (i = 0; i < numSavedPolys; ++i)
 		P_UnArchivePolyObj(&PolyObjects[i]);
 }
-#endif
 
 static inline void P_FinishMobjs(void)
 {
@@ -4181,9 +4169,7 @@ void P_SaveNetGame(void)
 	if (gamestate == GS_LEVEL)
 	{
 		P_NetArchiveWorld();
-#ifdef POLYOBJECTS
 		P_ArchivePolyObjects();
-#endif
 		P_NetArchiveThinkers();
 		P_NetArchiveSpecials();
 		P_NetArchiveColormaps();
@@ -4221,9 +4207,7 @@ boolean P_LoadNetGame(void)
 	if (gamestate == GS_LEVEL)
 	{
 		P_NetUnArchiveWorld();
-#ifdef POLYOBJECTS
 		P_UnArchivePolyObjects();
-#endif
 		P_NetUnArchiveThinkers();
 		P_NetUnArchiveSpecials();
 		P_NetUnArchiveColormaps();
