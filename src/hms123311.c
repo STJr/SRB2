@@ -19,6 +19,7 @@ Documentation available here.
 #include "doomdef.h"
 #include "d_clisrv.h"
 #include "command.h"
+#include "m_argv.h"
 #include "m_menu.h"
 #include "mserv.h"
 #include "i_tcp.h"/* for current_port */
@@ -142,6 +143,11 @@ HMS_connect (const char *format, ...)
 	{
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 		curl_easy_setopt(curl, CURLOPT_STDERR, logstream);
+	}
+
+	if (M_CheckParm("-bindaddr") && M_IsNextParm())
+	{
+		curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
 	}
 
 	curl_easy_setopt(curl, CURLOPT_URL, url);
