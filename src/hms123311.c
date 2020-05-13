@@ -28,9 +28,11 @@ Documentation available here.
 #define Blame( ... ) \
 	CONS_Printf("\x85" __VA_ARGS__)
 
+static void MasterServer_Debug_OnChange (void);
+
 consvar_t cv_masterserver_debug = {
-	"masterserver_debug", "Off", CV_SAVE, CV_OnOff,
-	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
+	"masterserver_debug", "Off", CV_SAVE|CV_CALL, CV_OnOff,
+	MasterServer_Debug_OnChange, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
 };
 
 static int hms_started;
@@ -617,4 +619,12 @@ HMS_set_api (char *api)
 #ifdef HAVE_THREADS
 	I_unlock_mutex(hms_api_mutex);
 #endif
+}
+
+static void
+MasterServer_Debug_OnChange (void)
+{
+	/* TODO: change to 'latest-log.txt' for log files revision. */
+	if (cv_masterserver_debug.value)
+		CONS_Printf("Master server debug messages will appear in log.txt\n");
 }
