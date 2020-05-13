@@ -1569,7 +1569,7 @@ void R_CacheRotSprite(rotsprite_t *rotsprite, INT32 rollangle, boolean sprite, s
 //
 void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, boolean flip)
 {
-	void **columnofs;
+	void **colofs;
 	UINT8 *data;
 	boolean *colexists;
 	size_t *coltbl;
@@ -1582,7 +1582,7 @@ void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *pa
 
 	colexists = Z_Calloc(width * sizeof(boolean), PU_STATIC, NULL);
 	coltbl = Z_Calloc(width * sizeof(size_t), PU_STATIC, NULL);
-	columnofs = cache->columnofs;
+	colofs = cache->columnofs;
 
 	for (x = 0; x < width; x++)
 	{
@@ -1604,9 +1604,9 @@ void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *pa
 	for (x = 0; x < width; x++)
 	{
 		if (colexists[x])
-			columnofs[x] = &(cache->data[coltbl[x]]);
+			colofs[x] = &(cache->data[coltbl[x]]);
 		else
-			columnofs[x] = NULL;
+			colofs[x] = NULL;
 	}
 
 	Z_Free(colexists);
@@ -1720,7 +1720,7 @@ patch_t *R_CacheRotSpritePatch(rotsprite_t *rotsprite, INT32 rollangle, boolean 
 	pmcache_t *pmcache = &pixelmap->cache;
 	UINT32 x, width = pixelmap->width;
 	UINT8 *colpointers;
-	void **columnofs = NULL;
+	void **colofs;
 	size_t size = 0;
 
 	WRITEINT16(imgptr, (INT16)width);
@@ -1733,11 +1733,11 @@ patch_t *R_CacheRotSpritePatch(rotsprite_t *rotsprite, INT32 rollangle, boolean 
 
 	if (!pmcache->columnofs)
 		R_CacheRotSpriteColumns(pixelmap, pmcache, patch, flip);
-	columnofs = pmcache->columnofs;
+	colofs = pmcache->columnofs;
 
 	for (x = 0; x < width; x++)
 	{
-		column_t *column = (column_t *)(columnofs[x]);
+		column_t *column = (column_t *)(colofs[x]);
 		WRITEINT32(colpointers, imgptr - imgbuf);
 		if (column)
 		{

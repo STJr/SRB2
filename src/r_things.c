@@ -880,8 +880,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	// Pixel map drawing loop
 	if (vis->pixelmap)
 	{
-		void **columnofs = vis->columnofs;
-		if (!columnofs)
+		void **colofs = vis->columnofs;
+		if (!colofs)
 			I_Error("R_DrawVisSprite: vis->columnofs NULL!");
 
 		if (vis->scalestep)
@@ -903,7 +903,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 				sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 				dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-				column = (column_t *)(columnofs[texturecolumn]);
+				column = (column_t *)(colofs[texturecolumn]);
 				if (column)
 					localcolfunc(column);
 			}
@@ -920,9 +920,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 				texturecolumn = (frac>>FRACBITS);
 				if (texturecolumn < 0 || texturecolumn >= pwidth)
 					I_Error("R_DrawVisSprite: bad texturecolumn at %d from end", vis->x2 - dc_x);
-				column = (column_t *)(columnofs[texturecolumn]);
+				column = (column_t *)(colofs[texturecolumn]);
 #else
-				column = (column_t *)(columnofs[frac>>FRACBITS]);
+				column = (column_t *)(colofs[frac>>FRACBITS]);
 #endif
 				if (column)
 					localcolfunc(column);
@@ -1434,7 +1434,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t this_scale = thing->scale;
 
 	pixelmap_t *pixelmap = NULL;
-	void **columnofs = NULL;
+	void **colofs = NULL;
 	patch_t *spr_patch = NULL;
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
@@ -1598,7 +1598,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			spr_patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 			R_CacheRotSpriteColumns(pixelmap, &pixelmap->cache, spr_patch, flip);
 		}
-		columnofs = pixelmap->cache.columnofs;
+		colofs = pixelmap->cache.columnofs;
 
 		spr_width = pixelmap->width << FRACBITS;
 		spr_height = pixelmap->height << FRACBITS;
@@ -1897,7 +1897,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		spr_patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->patch = spr_patch;
 	vis->pixelmap = pixelmap;
-	vis->columnofs = columnofs;
+	vis->columnofs = colofs;
 
 //
 // determine the colormap (lightlevel & special effects)
