@@ -9758,6 +9758,11 @@ struct {
 	{"ANGLE_337h",ANGLE_337h},
 	{"ANGLE_MAX",ANGLE_MAX},
 
+	// Sprite rotation
+	{"ROTANGLES",ROTANGLES},
+	{"ROTANGDIFF",ROTANGDIFF},
+	{"FEETADJUST",FEETADJUST},
+
 	// P_Chase directions (dirtype_t)
 	{"DI_NODIR",DI_NODIR},
 	{"DI_EAST",DI_EAST},

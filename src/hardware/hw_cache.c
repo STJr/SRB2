@@ -823,7 +823,7 @@ void HWR_FreeMipmapCache(void)
 	// Alam: free the Z_Blocks before freeing it's users
 	// free all patch colormaps after each level: must be done after ClearMipMapCache!
 	for (i = 0; i < numwadfiles; i++)
-		M_AATreeIterate(wadfiles[i]->patchcache.hwrcache, FreeMipmapColormap);
+		M_AATreeIterate(wadfiles[i]->patchinfo.hwrcache, FreeMipmapColormap);
 }
 
 void HWR_FreeTextureCache(void)
@@ -1291,7 +1291,7 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 
 GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum)
 {
-	aatree_t *hwrcache = wadfiles[wadnum]->patchcache.hwrcache;
+	aatree_t *hwrcache = wadfiles[wadnum]->patchinfo.hwrcache;
 	GLPatch_t *grpatch;
 
 	if (!(grpatch = M_AATreeGet(hwrcache, lumpnum)))

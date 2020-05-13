@@ -827,7 +827,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// set up caching
 	//
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
-	R_InitPatchCache(wadfile);
+	Patch_InitFile(wadfile);
 
 	//
 	// add the wadfile
@@ -1601,7 +1601,7 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
-	return R_CacheSoftwarePatch(wad, lump, tag, false);
+	return Patch_CacheSoftware(wad, lump, tag, false);
 }
 
 void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
@@ -1616,10 +1616,10 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-		return (void *)R_CacheGLPatch(wad, lump, tag, false);
+		return (void *)Patch_CacheGL(wad, lump, tag, false);
 	else
 #endif
-		return R_CacheSoftwarePatch(wad, lump, tag, false);
+		return Patch_CacheSoftware(wad, lump, tag, false);
 }
 
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag)
@@ -1650,12 +1650,12 @@ void **W_GetPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-		R_CacheGLPatch(wad, lump, tag, true);
+		Patch_CacheGL(wad, lump, tag, true);
 	else
 #endif
-		R_CacheSoftwarePatch(wad, lump, tag, true);
+		Patch_CacheSoftware(wad, lump, tag, true);
 
-	return (void **)(&(wadfiles[wad]->patchcache.current[lump]));
+	return (void **)(&(wadfiles[wad]->patchinfo.current[lump]));
 }
 
 void **W_GetPatchPointer(lumpnum_t lumpnum, INT32 tag)
@@ -1682,15 +1682,21 @@ void **W_GetPatchPointerFromLongName(const char *name, INT32 tag)
 #ifdef ROTSPRITE
 void **W_GetRotatedPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
 {
+	static rotsprite_vars_t rsvars;
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
-	if (sprite)
-		R_GetRotatedPatchForSpritePwad(wad, lump, tag, rollangle, pivot, flip, true);
-	else
-		R_GetRotatedPatchPwad(wad, lump, tag, rollangle, flip, true);
+	rsvars.rollangle = rollangle;
+	rsvars.sprite = sprite;
+	rsvars.pivot = pivot;
+	rsvars.flip = flip;
 
-	return (void **)(&(wadfiles[wad]->patchcache.rotated[lump][rollangle + (ROTANGLES * flip)]));
+	if (sprite)
+		Patch_CacheRotatedForSpritePwad(wad, lump, tag, rsvars, true);
+	else
+		Patch_CacheRotatedPwad(wad, lump, tag, rsvars, true);
+
+	return (void **)(&(wadfiles[wad]->patchinfo.rotated[lump][RotSprite_GetCurrentPatchInfoIdx(rollangle, flip)]));
 }
 
 void **W_GetRotatedPatchPointer(lumpnum_t lumpnum, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)

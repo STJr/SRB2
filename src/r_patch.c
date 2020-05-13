@@ -147,10 +147,12 @@ static patchreference_t *InsertPatchReference(UINT16 wad, UINT16 lump, INT32 tag
 	}
 }
 
-// Init patch cache for a wadfile
-void R_InitPatchCache(wadfile_t *wadfile)
+//
+// Initializes patch info for a WAD file.
+//
+void Patch_InitFile(wadfile_t *wadfile)
 {
-	patchcache_t *cache = &wadfile->patchcache;
+	patchinfo_t *cache = &wadfile->patchinfo;
 	rendermode_t rmode;
 
 	// Main patch cache for the current renderer
@@ -163,7 +165,7 @@ void R_InitPatchCache(wadfile_t *wadfile)
 	// Patch cache for each renderer
 	for (rmode = render_first; rmode < render_last; rmode++)
 	{
-		r_patchcache_t *rcache = &cache->renderer[(rmode - 1)];
+		rendererpatch_t *rcache = &cache->renderer[(rmode - 1)];
 #ifdef ROTSPRITE
 		INT32 i;
 #endif
@@ -186,32 +188,64 @@ void R_InitPatchCache(wadfile_t *wadfile)
 // Cache a patch into heap memory, convert the patch format as necessary
 //
 
-#define GetPatchCache(wadnum, lumpnum, mode) \
-	M_AATreeGet(wadfiles[wadnum]->patchcache.renderer[(mode - 1)].base, lumpnum)
-
-#define SetPatchCache(wadnum, lumpnum, mode, ptr) \
-	M_AATreeSet(wadfiles[wadnum]->patchcache.renderer[(mode - 1)].base, lumpnum, ptr)
-
-#define UpdatePatchCache(wadnum, lumpnum, mode) \
-	wadfiles[wadnum]->patchcache.current[lumpnum] = GetPatchCache(wadnum, lumpnum, mode)
-
-#define GetRotatedPatchCache(wadnum, lumpnum, mode, flip) \
-	M_AATreeGet(wadfiles[wadnum]->patchcache.renderer[(mode - 1)].rotated[flip], lumpnum)
-
-#define SetRotatedPatchCache(wadnum, lumpnum, mode, flip, ptr) \
-	M_AATreeSet(wadfiles[wadnum]->patchcache.renderer[(mode - 1)].rotated[flip], lumpnum, ptr)
-
-#define UpdateRotatedPatchCache(wadnum, lumpnum, mode, rollangle, flip) { \
-	patchcache_t *pc = &wadfiles[wadnum]->patchcache; \
-	if (!pc->rotated[lumpnum]) \
-		pc->rotated[lumpnum] = Z_Calloc((ROTANGLES * 2) * sizeof(lumpcache_t), PU_STATIC, NULL); \
-	pc->rotated[lumpnum][rollangle + (ROTANGLES * flip)] = ((rotsprite_t *)GetRotatedPatchCache(wadnum, lumpnum, mode, flip))->patches[rollangle]; \
+// Get renderer patch info.
+static inline void *GetRendererPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode)
+{
+	return M_AATreeGet(wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].base, lumpnum);
 }
 
-void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
+// Set renderer patch info.
+static inline void SetRendererPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, void *ptr)
 {
-	void *cache = GetPatchCache(wad, lump, render_soft);
-	if (!GetPatchCache(wad, lump, render_soft))
+	M_AATreeSet(wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].base, lumpnum, ptr);
+}
+
+// Update current patch info.
+static inline void UpdateCurrentPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode)
+{
+	wadfiles[wadnum]->patchinfo.current[lumpnum] = GetRendererPatchInfo(wadnum, lumpnum, mode);
+}
+
+#ifdef ROTSPRITE
+int RotSprite_GetCurrentPatchInfoIdx(INT32 rollangle, boolean flip)
+{
+	UINT8 f = (flip == true) ? 1 : 0;
+	return rollangle + (ROTANGLES * f);
+}
+
+static void AllocCurrentPatchInfo(patchinfo_t *pc, UINT16 lumpnum)
+{
+	pc->rotated[lumpnum] = Z_Calloc((ROTANGLES * 2) * sizeof(lumpcache_t), PU_STATIC, NULL);
+}
+
+// Get renderer rotated patch info.
+static inline void *GetRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, boolean flip)
+{
+	UINT8 f = (flip == true) ? 1 : 0;
+	return M_AATreeGet(wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].rotated[f], lumpnum);
+}
+
+// Set renderer rotated patch info.
+static inline void SetRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, boolean flip, void *ptr)
+{
+	UINT8 f = (flip == true) ? 1 : 0;
+	M_AATreeSet(wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].rotated[f], lumpnum, ptr);
+}
+
+// Update current rotated patch info.
+static inline void UpdateCurrentRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, INT32 rollangle, boolean flip)
+{
+	patchinfo_t *pc = &wadfiles[wadnum]->patchinfo;
+	if (!pc->rotated[lumpnum])
+		AllocCurrentPatchInfo(pc, lumpnum);
+	pc->rotated[lumpnum][RotSprite_GetCurrentPatchInfoIdx(rollangle, flip)] = ((rotsprite_t *)GetRotatedPatchInfo(wadnum, lumpnum, mode, flip))->patches[rollangle];
+}
+#endif
+
+void *Patch_CacheSoftware(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
+{
+	void *cache = GetRendererPatchInfo(wad, lump, render_soft);
+	if (!GetRendererPatchInfo(wad, lump, render_soft))
 	{
 		size_t len = W_LumpLengthPwad(wad, lump);
 		void *ptr, *lumpdata;
@@ -243,8 +277,8 @@ void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 		if (store)
 			InsertPatchReference(wad, lump, tag, ptr, 0, false);
 
-		SetPatchCache(wad, lump, render_soft, ptr);
-		UpdatePatchCache(wad, lump, render_soft);
+		SetRendererPatchInfo(wad, lump, render_soft, ptr);
+		UpdateCurrentPatchInfo(wad, lump, render_soft);
 
 		return ptr;
 	}
@@ -255,7 +289,7 @@ void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 }
 
 #ifdef HWRENDER
-void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
+void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 {
 	GLPatch_t *grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
 
@@ -281,8 +315,8 @@ void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 		if (store)
 			InsertPatchReference(wad, lump, tag, (void *)grPatch, 0, false);
 
-		SetPatchCache(wad, lump, render_opengl, (void *)grPatch);
-		UpdatePatchCache(wad, lump, render_opengl);
+		SetRendererPatchInfo(wad, lump, render_opengl, (void *)grPatch);
+		UpdateCurrentPatchInfo(wad, lump, render_opengl);
 	}
 
 	// return GLPatch_t, which can be casted to (patch_t *) with valid patch header info
@@ -293,7 +327,7 @@ void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 //
 // Update patch references to point to the current renderer's patches.
 //
-void R_UpdatePatchReferences(void)
+void Patch_UpdateReferences(void)
 {
 	patchreference_t *patch = patchlist_head;
 
@@ -302,20 +336,25 @@ void R_UpdatePatchReferences(void)
 #ifdef ROTSPRITE
 		if (patch->rollangle)
 		{
-			R_GetRotatedPatchPwad(patch->wad, patch->lump, patch->tag, patch->rollangle, patch->flip, false);
-			UpdateRotatedPatchCache(patch->wad, patch->lump, rendermode, patch->rollangle, patch->flip);
+			static rotsprite_vars_t rsvars;
+
+			rsvars.rollangle = patch->rollangle;
+			rsvars.flip = patch->flip;
+
+			Patch_CacheRotatedPwad(patch->wad, patch->lump, patch->tag, rsvars, false);
+			UpdateCurrentRotatedPatchInfo(patch->wad, patch->lump, rendermode, patch->rollangle, patch->flip);
 		}
 		else
 #endif
 		{
 #ifdef HWRENDER
 			if (rendermode == render_opengl)
-				R_CacheGLPatch(patch->wad, patch->lump, patch->tag, false);
+				Patch_CacheGL(patch->wad, patch->lump, patch->tag, false);
 			else
 #endif
-				R_CacheSoftwarePatch(patch->wad, patch->lump, patch->tag, false);
+				Patch_CacheSoftware(patch->wad, patch->lump, patch->tag, false);
 
-			UpdatePatchCache(patch->wad, patch->lump, rendermode);
+			UpdateCurrentPatchInfo(patch->wad, patch->lump, rendermode);
 		}
 
 		patch = patch->next;
@@ -325,7 +364,7 @@ void R_UpdatePatchReferences(void)
 //
 // Free the patch reference list.
 //
-void R_FreePatchReferences(void)
+void Patch_FreeReferences(void)
 {
 	patchreference_t *patch = patchlist_head;
 	while (patch)
@@ -1375,7 +1414,7 @@ void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
 	}
 }
 
-UINT8 *GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
+UINT8 *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
 {
 	fixed_t ofs;
 	column_t *column;
@@ -1404,7 +1443,7 @@ UINT8 *GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
 	return NULL;
 }
 
-boolean R_ApplyPixelMapToColumn(pixelmap_t *pmap, INT32 *map, patch_t *patch, UINT8 *post, size_t *colsize, boolean flipped)
+boolean PixelMap_ApplyToColumn(pixelmap_t *pmap, INT32 *map, patch_t *patch, UINT8 *post, size_t *colsize, boolean flipped)
 {
 	INT32 x, y;
 	size_t pmsize = pmap->size;
@@ -1418,7 +1457,7 @@ boolean R_ApplyPixelMapToColumn(pixelmap_t *pmap, INT32 *map, patch_t *patch, UI
 	{
 		y = map[i];
 		x = map[i + pmsize];
-		px = GetPatchPixel(patch, x, y, flipped); // If not NULL, we have a pixel
+		px = Patch_GetPixel(patch, x, y, flipped); // If not NULL, we have a pixel
 		i++;
 
 		// End span if we have a transparent pixel
@@ -1487,6 +1526,11 @@ boolean R_ApplyPixelMapToColumn(pixelmap_t *pmap, INT32 *map, patch_t *patch, UI
 }
 
 #ifdef ROTSPRITE
+/** Get a rotation angle from a roll angle.
+  *
+  * \param rollangle The roll angle.
+  * \return The rotation angle.
+  */
 INT32 R_GetRollAngle(angle_t rollangle)
 {
 	INT32 ra = AngleFixed(rollangle)>>FRACBITS;
@@ -1498,14 +1542,24 @@ INT32 R_GetRollAngle(angle_t rollangle)
 	return ra;
 }
 
-rotsprite_t *R_GetRotSpriteNumPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean flip, boolean store)
+/** Get rotated sprite info for a patch.
+  *
+  * \param wad The patch's wad number.
+  * \param lump The patch's lump number.
+  * \param tag Zone memory tag.
+  * \param rsvars Sprite rotation variables.
+  * \param store Store the rotated patch into the patch reference list.
+  * \return The rotated sprite info.
+  * \sa Patch_CacheRotatedPwad
+  */
+rotsprite_t *RotSprite_GetFromPatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
-	void *cache = GetRotatedPatchCache(wad, lump, rendermode, flip);
-	if (!GetRotatedPatchCache(wad, lump, rendermode, flip))
+	void *cache = GetRotatedPatchInfo(wad, lump, rendermode, rsvars.flip);
+	if (!GetRotatedPatchInfo(wad, lump, rendermode, rsvars.flip))
 	{
 		rotsprite_t *ptr = Z_Calloc(sizeof(rotsprite_t), tag, &cache);
-		ptr->lumpnum = ((wad << 16) | lump);
-		SetRotatedPatchCache(wad, lump, rendermode, flip, cache);
+		ptr->lumpnum = WADANDLUMP(wad, lump);
+		SetRotatedPatchInfo(wad, lump, rendermode, rsvars.flip, cache);
 		return (void *)ptr;
 	}
 	else
@@ -1513,40 +1567,43 @@ rotsprite_t *R_GetRotSpriteNumPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rol
 
 	// insert into list
 	if (store)
-		InsertPatchReference(wad, lump, tag, cache, rollangle, flip);
+		InsertPatchReference(wad, lump, tag, cache, rsvars.rollangle, rsvars.flip);
 
 	return cache;
 }
 
-rotsprite_t *R_GetRotSpriteNum(lumpnum_t lumpnum, INT32 tag, INT32 rollangle, boolean flip, boolean store)
+rotsprite_t *RotSprite_GetFromPatchNum(lumpnum_t lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
-	return R_GetRotSpriteNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag,rollangle,flip,store);
+	return RotSprite_GetFromPatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag,rsvars,store);
 }
 
-rotsprite_t *R_GetRotSpriteName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store)
+rotsprite_t *RotSprite_GetFromPatchName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
 	lumpnum_t num = W_CheckNumForName(name);
 	if (num == LUMPERROR)
-		return R_GetRotSpriteNum(W_GetNumForName("MISSING"), tag, rollangle, flip, store);
-	return R_GetRotSpriteNum(num, tag, rollangle, flip, store);
+		return RotSprite_GetFromPatchNum(W_GetNumForName("MISSING"), tag, rsvars, store);
+	return RotSprite_GetFromPatchNum(num, tag, rsvars, store);
 }
 
-rotsprite_t *R_GetRotSpriteLongName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store)
+rotsprite_t *RotSprite_GetFromPatchLongName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
 	lumpnum_t num = W_CheckNumForLongName(name);
 	if (num == LUMPERROR)
-		return R_GetRotSpriteNum(W_GetNumForLongName("MISSING"), tag, rollangle, flip, store);
-	return R_GetRotSpriteNum(num, tag, rollangle, flip, store);
+		return RotSprite_GetFromPatchNum(W_GetNumForLongName("MISSING"), tag, rsvars, store);
+	return RotSprite_GetFromPatchNum(num, tag, rsvars, store);
 }
 
-//
-// Creates a rotated sprite by calculating a pixel map.
-// Caches column data and patches between levels.
-//
-void R_CacheRotSprite(rotsprite_t *rotsprite, INT32 rollangle, boolean sprite, spriteframepivot_t *pivot, boolean flip)
+/** Creates a rotated sprite by calculating a pixel map.
+  * Caches column data and patches between levels.
+  *
+  * \param rotsprite The rotated sprite info.
+  * \param rsvars Sprite rotation variables.
+  * \sa RotSprite_CreatePatch
+  */
+void RotSprite_Create(rotsprite_t *rotsprite, rotsprite_vars_t rsvars)
 {
 	patch_t *patch;
-	pixelmap_t *pixelmap = &rotsprite->pixelmap[rollangle];
+	pixelmap_t *pixelmap = &rotsprite->pixelmap[rsvars.rollangle];
 	lumpnum_t lump = rotsprite->lumpnum;
 
 	// Sprite lump is invalid.
@@ -1557,17 +1614,22 @@ void R_CacheRotSprite(rotsprite_t *rotsprite, INT32 rollangle, boolean sprite, s
 	patch = (patch_t *)W_CacheSoftwarePatchNum(lump, PU_CACHE);
 
 	// If this pixel map was not generated, do it.
-	if (!rotsprite->cached[rollangle])
+	if (!rotsprite->cached[rsvars.rollangle])
 	{
-		R_CacheRotSpritePixelMap(rollangle, patch, pixelmap, sprite, pivot, flip);
-		rotsprite->cached[rollangle] = true;
+		RotSprite_CreatePixelMap(patch, pixelmap, rsvars);
+		rotsprite->cached[rsvars.rollangle] = true;
 	}
 }
 
-//
-// Caches columns of a rotated sprite, applying the pixel map.
-//
-void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, boolean flip)
+/** Caches columns of a rotated sprite, applying the pixel map.
+  *
+  * \param pixelmap The source pixel map.
+  * \param cache The destination pixel map cache.
+  * \param patch The source patch.
+  * \param rsvars Sprite rotation variables.
+  * \sa RotSprite_CreatePatch
+  */
+void RotSprite_CreateColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, rotsprite_vars_t rsvars)
 {
 	void **colofs;
 	UINT8 *data;
@@ -1587,7 +1649,7 @@ void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *pa
 	for (x = 0; x < width; x++)
 	{
 		size_t colpos = totalsize;
-		colexists[x] = R_ApplyPixelMapToColumn(pixelmap, &(pixelmap->map[x * pixelmap->height]), patch, pixelmapcol, &colsize, flip);
+		colexists[x] = PixelMap_ApplyToColumn(pixelmap, &(pixelmap->map[x * pixelmap->height]), patch, pixelmapcol, &colsize, rsvars.flip);
 		cache->columnsize[x] = colsize;
 		totalsize += colsize;
 
@@ -1613,9 +1675,17 @@ void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *pa
 	Z_Free(coltbl);
 }
 
-//
-// Calculates the dimensions of a rotated rectangle.
-//
+/** Calculates the dimensions of a rotated rectangle.
+  *
+  * \param width Rectangle width.
+  * \param height Rectangle height.
+  * \param ca Cosine for the angle.
+  * \param sa Sine for the angle.
+  * \param pivot Rotation pivot.
+  * \param newwidth The width for the rotated rectangle.
+  * \param newheight The height for the rotated rectangle.
+  * \sa RotSprite_CreatePixelMap
+  */
 static void CalculateRotatedRectangleDimensions(INT16 width, INT16 height, fixed_t ca, fixed_t sa, spriteframepivot_t *pivot, INT16 *newwidth, INT16 *newheight)
 {
 	if (pivot)
@@ -1640,16 +1710,20 @@ static void CalculateRotatedRectangleDimensions(INT16 width, INT16 height, fixed
 	}
 }
 
-//
-// Creates a pixel map for a rotated sprite.
-//
-void R_CacheRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, boolean sprite, spriteframepivot_t *spritepivot, boolean flip)
+/** Creates a pixel map for a rotated patch.
+  *
+  * \param patch The source patch.
+  * \param pixelmap The destination pixel map.
+  * \param rsvars Sprite rotation variables.
+  * \sa RotSprite_CreatePixelMap
+  */
+void RotSprite_CreatePixelMap(patch_t *patch, pixelmap_t *pixelmap, rotsprite_vars_t rsvars)
 {
 	size_t size;
 	INT32 dx, dy;
 	INT16 newwidth, newheight;
-	fixed_t ca = rollcosang[rollangle];
-	fixed_t sa = rollsinang[rollangle];
+	fixed_t ca = rollcosang[rsvars.rollangle];
+	fixed_t sa = rollsinang[rsvars.rollangle];
 
 	INT16 width = SHORT(patch->width);
 	INT16 height = SHORT(patch->height);
@@ -1657,11 +1731,12 @@ void R_CacheRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixel
 
 	spriteframepivot_t pivot;
 	INT16 rotxcenter, rotycenter;
+	spriteframepivot_t *spritepivot = rsvars.pivot;
 
-	pivot.x = (spritepivot ? spritepivot->x : leftoffset);
+	pivot.x = (spritepivot ? spritepivot->x : (rsvars.sprite ? leftoffset : (width / 2)));
 	pivot.y = (spritepivot ? spritepivot->y : (height / 2));
 
-	if (flip)
+	if (rsvars.flip)
 	{
 		pivot.x = width - pivot.x;
 		leftoffset = width - leftoffset;
@@ -1699,7 +1774,7 @@ void R_CacheRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixel
 	}
 
 	// Set offsets.
-	if (sprite)
+	if (rsvars.sprite)
 	{
 		pixelmap->leftoffset = (newwidth / 2) + (leftoffset - pivot.x);
 		pixelmap->topoffset = (newheight / 2) + (SHORT(patch->topoffset) - pivot.y);
@@ -1712,10 +1787,17 @@ void R_CacheRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixel
 	}
 }
 
-patch_t *R_CacheRotSpritePatch(rotsprite_t *rotsprite, INT32 rollangle, boolean flip)
+/** Creates a rotated patch from sprite rotation data.
+  *
+  * \param rotsprite The rotated sprite info.
+  * \param rsvars Sprite rotation variables.
+  * \return The rotated patch.
+  * \sa RotSprite_CreatePixelMap
+  */
+patch_t *RotSprite_CreatePatch(rotsprite_t *rotsprite, rotsprite_vars_t rsvars)
 {
 	UINT8 *img, *imgptr = imgbuf;
-	pixelmap_t *pixelmap = &rotsprite->pixelmap[rollangle];
+	pixelmap_t *pixelmap = &rotsprite->pixelmap[rsvars.rollangle];
 	patch_t *patch = (patch_t *)W_CacheSoftwarePatchNum(rotsprite->lumpnum, PU_CACHE);
 	pmcache_t *pmcache = &pixelmap->cache;
 	UINT32 x, width = pixelmap->width;
@@ -1732,7 +1814,7 @@ patch_t *R_CacheRotSpritePatch(rotsprite_t *rotsprite, INT32 rollangle, boolean 
 	imgptr += width*4;
 
 	if (!pmcache->columnofs)
-		R_CacheRotSpriteColumns(pixelmap, pmcache, patch, flip);
+		RotSprite_CreateColumns(pixelmap, pmcache, patch, rsvars);
 	colofs = pmcache->columnofs;
 
 	for (x = 0; x < width; x++)
@@ -1759,118 +1841,128 @@ patch_t *R_CacheRotSpritePatch(rotsprite_t *rotsprite, INT32 rollangle, boolean 
 		GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
 		grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
 		grPatch->patch = (patch_t *)img;
-		rotsprite->patches[rollangle] = (patch_t *)grPatch;
+		rotsprite->patches[rsvars.rollangle] = (patch_t *)grPatch;
 		HWR_MakePatch((patch_t *)img, grPatch, grPatch->mipmap, false);
 	}
 	else
 #endif
-		rotsprite->patches[rollangle] = (patch_t *)img;
+		rotsprite->patches[rsvars.rollangle] = (patch_t *)img;
 
-	return rotsprite->patches[rollangle];
+	return rotsprite->patches[rsvars.rollangle];
 }
 
-patch_t *R_GetRotatedPatch(UINT32 lumpnum, INT32 tag, INT32 rollangle, boolean flip, boolean store)
+/** Creates a rotated patch from another patch.
+  *
+  * \param wad The patch's wad number.
+  * \param lump The patch's lump number.
+  * \param tag Zone memory tag.
+  * \param rsvars Sprite rotation variables.
+  * \param store Store the rotated patch into the patch reference list.
+  * \return The rotated patch.
+  * \sa Patch_CacheRotatedPwad
+  */
+patch_t *Patch_CacheRotatedPwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
-	UINT16 wad = WADFILENUM(lumpnum);
-	UINT16 lump = LUMPNUM(lumpnum);
-	rotsprite_t *rotsprite = R_GetRotSpriteNumPwad(wad, lump, tag, rollangle, flip, store);
+	rotsprite_t *rotsprite = RotSprite_GetFromPatchNumPwad(wad, lump, tag, rsvars, store);
 	patch_t *patch = NULL;
-	spriteframepivot_t *pivot = NULL;
 
-	if (rotsprite->patches[rollangle])
-		return rotsprite->patches[rollangle];
+	if (rotsprite->patches[rsvars.rollangle])
+		return rotsprite->patches[rsvars.rollangle];
 
-	if (!rotsprite->pivot)
-	{
-		patch = (patch_t *)W_CacheSoftwarePatchNum(rotsprite->lumpnum, PU_CACHE);
-		pivot = Z_Calloc(sizeof(spriteframepivot_t), PU_STATIC, NULL);
-		pivot->x = SHORT(patch->width) / 2;
-		pivot->y = SHORT(patch->height) / 2;
-		rotsprite->pivot = pivot;
-	}
-	else
-		pivot = rotsprite->pivot;
-
-	rotsprite->spritelump = false;
-	rotsprite->flip = flip;
+	rsvars.sprite = false;
+	rotsprite->vars = rsvars;
 	rotsprite->tag = tag;
 
-	R_CacheRotSprite(rotsprite, rollangle, false, rotsprite->pivot, flip);
-	patch = R_CacheRotSpritePatch(rotsprite, rollangle, flip);
+	RotSprite_Create(rotsprite, rsvars);
+	patch = RotSprite_CreatePatch(rotsprite, rsvars);
 
-	// Caveat: At the point R_GetRotSpriteNum is called, no patch exists yet.
+	// Caveat: At the point RotSprite_GetFromPatchNum is called, no patch exists yet.
 	// So, the update has to be done right below here.
 	if (store)
-		UpdateRotatedPatchCache(wad, lump, rendermode, rollangle, flip);
+		UpdateCurrentRotatedPatchInfo(wad, lump, rendermode, rsvars.rollangle, rsvars.flip);
 
 #ifdef HWRENDER
 	if (rendermode != render_opengl) // uuggghhhhh
 #endif
 	{
 		Z_ChangeTag(patch, tag);
-		Z_SetUser(patch, (void **)(&rotsprite->patches[rollangle]));
+		Z_SetUser(patch, (void **)(&rotsprite->patches[rsvars.rollangle]));
 	}
 
 	return patch;
 }
 
-patch_t *R_GetRotatedPatchForSprite(UINT32 lumpnum, INT32 tag, INT32 rollangle, spriteframepivot_t *pivot, boolean flip, boolean store)
+/** Creates a rotated patch from a sprite.
+  *
+  * \param wad The sprite's wad number.
+  * \param lump The sprite's lump number.
+  * \param tag Zone memory tag.
+  * \param rsvars Sprite rotation variables.
+  * \param store Store the rotated sprite into the patch reference list.
+  * \return The rotated sprite.
+  * \sa Patch_CacheRotatedPwad
+  */
+patch_t *Patch_CacheRotatedForSpritePwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
-	rotsprite_t *rotsprite = R_GetRotSpriteNum(lumpnum, tag, rollangle, flip, store);
+	lumpnum_t lumpnum = WADANDLUMP(wad, lump);
+	rotsprite_t *rotsprite = RotSprite_GetFromPatchNum(lumpnum, tag, rsvars, store);
 	patch_t *patch = NULL;
 
-	if (rotsprite->patches[rollangle])
-		return rotsprite->patches[rollangle];
+	if (rotsprite->patches[rsvars.rollangle])
+		return rotsprite->patches[rsvars.rollangle];
 
-	rotsprite->pivot = pivot;
-	rotsprite->spritelump = true;
-	rotsprite->flip = flip;
+	rsvars.sprite = true;
+	rotsprite->vars = rsvars;
 	rotsprite->tag = tag;
 
-	R_CacheRotSprite(rotsprite, rollangle, true, pivot, flip);
-	patch = R_CacheRotSpritePatch(rotsprite, rollangle, flip);
+	RotSprite_Create(rotsprite, rsvars);
+	patch = RotSprite_CreatePatch(rotsprite, rsvars);
 
 #ifdef HWRENDER
 	if (rendermode != render_opengl) // uuggghhhhh
 #endif
 	{
 		Z_ChangeTag(patch, tag);
-		Z_SetUser(patch, (void **)(&rotsprite->patches[rollangle]));
+		Z_SetUser(patch, (void **)(&rotsprite->patches[rsvars.rollangle]));
 	}
 
 	return patch;
 }
 
-patch_t *R_GetRotatedPatchPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean flip, boolean store)
+patch_t *Patch_CacheRotated(UINT32 lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
-	return R_GetRotatedPatch((wad << 16) | lump, tag, rollangle, flip, store);
+	return Patch_CacheRotatedPwad(WADFILENUM(lumpnum), LUMPNUM(lumpnum), tag, rsvars, store);
 }
 
-patch_t *R_GetRotatedPatchForSpritePwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, spriteframepivot_t *pivot, boolean flip, boolean store)
+patch_t *Patch_CacheRotatedForSprite(UINT32 lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
-	return R_GetRotatedPatchForSprite((wad << 16) | lump, tag, rollangle, pivot, flip, store);
+	return Patch_CacheRotatedForSpritePwad(WADFILENUM(lumpnum), LUMPNUM(lumpnum), tag, rsvars, store);
 }
 
-patch_t *R_GetRotatedPatchName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store)
+patch_t *Patch_CacheRotatedName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
 	lumpnum_t num = W_CheckNumForName(name);
 	if (num == LUMPERROR)
-		return R_GetRotatedPatch(W_GetNumForName("MISSING"), tag, store, rollangle, flip);
-	return R_GetRotatedPatch(num, tag, store, rollangle, flip);
+		return Patch_CacheRotated(W_GetNumForName("MISSING"), tag, rsvars, store);
+	return Patch_CacheRotated(num, tag, rsvars, store);
 }
 
-patch_t *R_GetRotatedPatchLongName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store)
+patch_t *Patch_CacheRotatedLongName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
 	lumpnum_t num = W_CheckNumForLongName(name);
 	if (num == LUMPERROR)
-		return R_GetRotatedPatch(W_GetNumForLongName("MISSING"), tag, store, rollangle, flip);
-	return R_GetRotatedPatch(num, tag, store, rollangle, flip);
+		return Patch_CacheRotated(W_GetNumForLongName("MISSING"), tag, rsvars, store);
+	return Patch_CacheRotated(num, tag, rsvars, store);
 }
 
-//
-// Free sprite rotation data from memory.
-//
-void R_RecacheRotSprite(rotsprite_t *rotsprite)
+/** Recreates sprite rotation data in memory.
+  *
+  * \param rotsprite The rotated sprite info.
+  * \sa RotSprite_RecreateAll
+  * \sa Patch_CacheRotated
+  * \sa Patch_CacheRotatedForSprite
+  */
+void RotSprite_Recreate(rotsprite_t *rotsprite, rendermode_t rmode)
 {
 	INT32 ang;
 	for (ang = 0; ang < ROTANGLES; ang++)
@@ -1897,27 +1989,36 @@ void R_RecacheRotSprite(rotsprite_t *rotsprite)
 			cache->data = NULL;
 
 #ifdef HWRENDER
-			// Don't bother with OpenGL.
-			// It manages patches differently.
-			if (rendermode != render_opengl)
-#endif
+			if (rmode == render_opengl)
 			{
-				if (rotsprite->patches[ang])
-					Z_Free(rotsprite->patches[ang]);
+				GLPatch_t *grPatch = (GLPatch_t *)(rotsprite->patches[ang]);
+				if (grPatch && grPatch->patch)
+				{
+					Z_Free(grPatch->patch);
+					grPatch->patch = NULL;
+				}
 			}
+			else
+#endif
+			if (rotsprite->patches[ang])
+				Z_Free(rotsprite->patches[ang]);
 			rotsprite->patches[ang] = NULL;
 
-			if (rotsprite->spritelump)
-				R_GetRotatedPatchForSprite(rotsprite->lumpnum, rotsprite->tag, ang, rotsprite->pivot, rotsprite->flip, false);
+			if (rotsprite->vars.sprite)
+				Patch_CacheRotatedForSprite(rotsprite->lumpnum, rotsprite->tag, rotsprite->vars, false);
 			else
-				R_GetRotatedPatch(rotsprite->lumpnum, rotsprite->tag, ang, rotsprite->flip, false);
+				Patch_CacheRotated(rotsprite->lumpnum, rotsprite->tag, rotsprite->vars, false);
 		}
 	}
 }
 
-void R_RecacheAllRotSprites(void)
+/** Recreates all sprite rotation data in memory.
+  *
+  * \sa RotSprite_Recreate
+  */
+void RotSprite_RecreateAll(void)
 {
-	// TODO: Write this in a better way.
+	// TODO: Write this in a more efficient way.
 	INT32 w, l, r, f;
 	for (r = render_first; r < render_last; r++)
 		for (w = 0; w < numwadfiles; w++)
@@ -1925,9 +2026,9 @@ void R_RecacheAllRotSprites(void)
 			{
 				for (f = 0; f < 2; f++)
 				{
-					rotsprite_t *rotsprite = GetRotatedPatchCache(w, l, r, f);
+					rotsprite_t *rotsprite = GetRotatedPatchInfo(w, l, r, (f ? true : false));
 					if (rotsprite)
-						R_RecacheRotSprite(rotsprite);
+						RotSprite_Recreate(rotsprite, r);
 				}
 			}
 }

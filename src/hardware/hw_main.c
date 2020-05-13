@@ -5353,17 +5353,23 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (rollangle)
 	{
 		spriteframepivot_t *pivot = (sprinfo->available) ? &sprinfo->pivot[(thing->frame & FF_FRAMEMASK)] : NULL;
-		patch_t *rotpatch = R_GetRotatedPatchForSprite(sprframe->lumppat[rot], PU_LEVEL, rollangle, pivot, (flip != 0), false);
-		if (rotpatch != NULL)
-		{
-			spr_patch = (GLPatch_t *)rotpatch;
-			spr_width = SHORT(rotpatch->width) << FRACBITS;
-			spr_height = SHORT(rotpatch->height) << FRACBITS;
-			spr_offset = SHORT(rotpatch->leftoffset) << FRACBITS;
-			spr_topoffset = SHORT(rotpatch->topoffset) << FRACBITS;
-			// flip -> rotate, not rotate -> flip
-			flip = 0;
-		}
+		static rotsprite_vars_t rsvars;
+		patch_t *rotpatch;
+
+		rsvars.rollangle = rollangle;
+		rsvars.sprite = true;
+		rsvars.pivot = pivot;
+		rsvars.flip = (flip != 0);
+
+		rotpatch = Patch_CacheRotatedForSprite(sprframe->lumppat[rot], PU_LEVEL, rsvars, false);
+		spr_patch = (GLPatch_t *)rotpatch;
+		spr_width = SHORT(rotpatch->width) << FRACBITS;
+		spr_height = SHORT(rotpatch->height) << FRACBITS;
+		spr_offset = SHORT(rotpatch->leftoffset) << FRACBITS;
+		spr_topoffset = SHORT(rotpatch->topoffset) << FRACBITS;
+
+		// flip -> rotate, not rotate -> flip
+		flip = 0;
 	}
 #endif
 

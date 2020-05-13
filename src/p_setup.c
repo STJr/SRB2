@@ -3918,7 +3918,7 @@ boolean P_AddWadFile(const char *wadfilename)
 	// recache sprite rotation data
 	//
 #ifdef ROTSPRITE
-	R_RecacheAllRotSprites();
+	RotSprite_RecreateAll();
 #endif
 
 	//

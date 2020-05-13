@@ -1572,23 +1572,32 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (rollangle)
 	{
 		spriteframepivot_t *pivot = (sprinfo->available) ? &sprinfo->pivot[(thing->frame & FF_FRAMEMASK)] : NULL;
+		static rotsprite_vars_t rsvars;
+
 #ifdef ROTSPRITE_RENDER_PATCHES
-		patch_t *rotpatch = R_GetRotatedPatchForSprite(sprframe->lumppat[rot], PU_LEVEL, rollangle, pivot, hflip, false);
-		if (rotpatch != NULL)
-		{
-			spr_patch = rotpatch;
-			spr_width = SHORT(rotpatch->width) << FRACBITS;
-			spr_height = SHORT(rotpatch->height) << FRACBITS;
-			spr_offset = SHORT(rotpatch->leftoffset) << FRACBITS;
-			spr_topoffset = SHORT(rotpatch->topoffset) << FRACBITS;
-			// flip -> rotate, not rotate -> flip
-			flip = 0;
-		}
+		patch_t *rotpatch;
+#endif
+
+		rsvars.rollangle = rollangle;
+		rsvars.sprite = true;
+		rsvars.pivot = pivot;
+		rsvars.flip = hflip;
+
+#ifdef ROTSPRITE_RENDER_PATCHES
+		rotpatch = Patch_CacheRotatedForSprite(sprframe->lumppat[rot], PU_LEVEL, rsvars, false);
+		spr_patch = rotpatch;
+		spr_width = SHORT(rotpatch->width) << FRACBITS;
+		spr_height = SHORT(rotpatch->height) << FRACBITS;
+		spr_offset = SHORT(rotpatch->leftoffset) << FRACBITS;
+		spr_topoffset = SHORT(rotpatch->topoffset) << FRACBITS;
+
+		// flip -> rotate, not rotate -> flip
+		flip = 0;
 #else
-		rotsprite_t *rotsprite = R_GetRotSpriteNum(sprframe->lumppat[rot], PU_CACHE, rollangle, false);
+		rotsprite_t *rotsprite = RotSprite_GetFromPatchNum(sprframe->lumppat[rot], PU_CACHE, rsvars, false);
 
 		// Create a pixel map of the rotated sprite.
-		R_CacheRotSprite(rotsprite, rollangle, pivot, flip);
+		RotSprite_Create(rotsprite, rsvars);
 
 		// Generate column offsets.
 		pixelmap = &rotsprite->pixelmap[rollangle];
@@ -1596,10 +1605,10 @@ static void R_ProjectSprite(mobj_t *thing)
 		{
 			// Cache the patch
 			spr_patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
-			R_CacheRotSpriteColumns(pixelmap, &pixelmap->cache, spr_patch, flip);
+			RotSprite_CreateColumns(pixelmap, &pixelmap->cache, spr_patch, rsvars);
 		}
-		colofs = pixelmap->cache.columnofs;
 
+		colofs = pixelmap->cache.columnofs;
 		spr_width = pixelmap->width << FRACBITS;
 		spr_height = pixelmap->height << FRACBITS;
 		spr_offset = pixelmap->leftoffset << FRACBITS;

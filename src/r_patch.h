@@ -18,13 +18,13 @@
 #include "w_wad.h"
 #include "doomdef.h"
 
-void *R_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
-void *R_CacheGLPatch(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
+void *Patch_CacheSoftware(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
+void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
 
-void R_UpdatePatchReferences(void);
-void R_FreePatchReferences(void);
+void Patch_UpdateReferences(void);
+void Patch_FreeReferences(void);
 
-void R_InitPatchCache(wadfile_t *wadfile);
+void Patch_InitFile(wadfile_t *wadfile);
 
 // Structs
 struct patchreference_s
@@ -53,12 +53,12 @@ typedef struct
 
 typedef struct
 {
-	spriteframepivot_t pivot[64];
+	spriteframepivot_t pivot[64]; // Max number of frames in a sprite.
 	boolean available;
 } spriteinfo_t;
 
-boolean R_ApplyPixelMapToColumn(pixelmap_t *pmap, INT32 *map, patch_t *patch, UINT8 *post, size_t *colsize, boolean flipped);
-UINT8 *GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip);
+boolean PixelMap_ApplyToColumn(pixelmap_t *pmap, INT32 *map, patch_t *patch, UINT8 *post, size_t *colsize, boolean flipped);
+UINT8 *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y, boolean flip);
 
 // Conversions between patches / flats / textures...
 boolean R_CheckIfPatch(lumpnum_t lump);
@@ -67,7 +67,7 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat);
 patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
 patch_t *R_TransparentFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize);
 
-// Portable Network Graphics
+// PNGs
 boolean R_IsLumpPNG(const UINT8 *d, size_t s);
 #define W_ThrowPNGError(lumpname, wadfilename) I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", lumpname, wadfilename); // Fears Of LJ Sonic
 
@@ -86,25 +86,47 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 #ifdef ROTSPRITE
 INT32 R_GetRollAngle(angle_t rollangle);
 
-rotsprite_t *R_GetRotSpriteNumPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean flip, boolean store);
-rotsprite_t *R_GetRotSpriteNum(lumpnum_t lumpnum, INT32 tag, INT32 rollangle, boolean flip, boolean store);
-rotsprite_t *R_GetRotSpriteName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store);
-rotsprite_t *R_GetRotSpriteLongName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store);
+// Arguments for RotSprite_ functions.
+typedef struct
+{
+	INT32 rollangle;
+	boolean flip;
+	boolean sprite;
+	spriteframepivot_t *pivot;
+} rotsprite_vars_t;
 
-void R_CacheRotSprite(rotsprite_t *rotsprite, INT32 rollangle, boolean sprite, spriteframepivot_t *pivot, boolean flip);
-void R_CacheRotSpriteColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, boolean flip);
-void R_CacheRotSpritePixelMap(INT32 rollangle, patch_t *patch, pixelmap_t *pixelmap, boolean sprite, spriteframepivot_t *spritepivot, boolean flip);
-patch_t *R_CacheRotSpritePatch(rotsprite_t *rotsprite, INT32 rollangle, boolean flip);
+typedef struct
+{
+	pixelmap_t pixelmap[ROTANGLES];
+	patch_t *patches[ROTANGLES];
+	boolean cached[ROTANGLES];
 
-patch_t *R_GetRotatedPatch(UINT32 lumpnum, INT32 tag, INT32 rollangle, boolean flip, boolean store);
-patch_t *R_GetRotatedPatchForSprite(UINT32 lumpnum, INT32 tag, INT32 rollangle, spriteframepivot_t *pivot, boolean flip, boolean store);
-patch_t *R_GetRotatedPatchPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean store, boolean flip);
-patch_t *R_GetRotatedPatchForSpritePwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, spriteframepivot_t *pivot, boolean flip, boolean store);
-patch_t *R_GetRotatedPatchName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store);
-patch_t *R_GetRotatedPatchLongName(const char *name, INT32 tag, INT32 rollangle, boolean flip, boolean store);
+	UINT32 lumpnum;
+	rotsprite_vars_t vars;
+	INT32 tag;
+} rotsprite_t;
 
-void R_RecacheRotSprite(rotsprite_t *rotsprite);
-void R_RecacheAllRotSprites(void);
+rotsprite_t *RotSprite_GetFromPatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+rotsprite_t *RotSprite_GetFromPatchNum(lumpnum_t lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+rotsprite_t *RotSprite_GetFromPatchName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+rotsprite_t *RotSprite_GetFromPatchLongName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+
+void RotSprite_Create(rotsprite_t *rotsprite, rotsprite_vars_t rsvars);
+void RotSprite_CreateColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, rotsprite_vars_t rsvars);
+void RotSprite_CreatePixelMap(patch_t *patch, pixelmap_t *pixelmap, rotsprite_vars_t rsvars);
+patch_t *RotSprite_CreatePatch(rotsprite_t *rotsprite, rotsprite_vars_t rsvars);
+
+patch_t *Patch_CacheRotated(UINT32 lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+patch_t *Patch_CacheRotatedForSprite(UINT32 lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+patch_t *Patch_CacheRotatedPwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+patch_t *Patch_CacheRotatedForSpritePwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+patch_t *Patch_CacheRotatedName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+patch_t *Patch_CacheRotatedLongName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
+
+void RotSprite_Recreate(rotsprite_t *rotsprite, rendermode_t rmode);
+void RotSprite_RecreateAll(void);
+
+int RotSprite_GetCurrentPatchInfoIdx(INT32 rollangle, boolean flip);
 
 extern fixed_t rollcosang[ROTANGLES];
 extern fixed_t rollsinang[ROTANGLES];

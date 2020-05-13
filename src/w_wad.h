@@ -100,17 +100,17 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 #include "m_aatree.h"
 #include "i_video.h" // num_renderers
 
-typedef struct r_patchcache_s
+typedef struct rendererpatch_s
 {
 	aatree_t *base;
 #ifdef ROTSPRITE
-	aatree_t *rotated[2];
+	aatree_t *rotated[2]; // Sprite rotation stores flipped and non-flipped variants of a patch.
 #endif
-} r_patchcache_t;
+} rendererpatch_t;
 
-typedef struct patchcache_s
+typedef struct patchinfo_s
 {
-	r_patchcache_t renderer[num_renderers];
+	rendererpatch_t renderer[num_renderers];
 #ifdef HWRENDER
 	aatree_t *hwrcache;
 #endif
@@ -119,7 +119,7 @@ typedef struct patchcache_s
 #ifdef ROTSPRITE
 	lumpcache_t **rotated;
 #endif
-} patchcache_t;
+} patchinfo_t;
 
 // =========================================================================
 //                         DYNAMIC WAD LOADING
@@ -145,7 +145,7 @@ typedef struct wadfile_s
 	restype_t type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
-	patchcache_t patchcache;
+	patchinfo_t patchinfo;
 	UINT16 numlumps; // this wad's number of resources
 	FILE *handle;
 	UINT32 filesize; // for network
@@ -154,8 +154,9 @@ typedef struct wadfile_s
 	boolean important; // also network - !W_VerifyNMUSlumps
 } wadfile_t;
 
-#define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad flumpnum>>16) // wad file number in upper word
+#define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad file number in upper word
 #define LUMPNUM(lumpnum) (UINT16)((lumpnum)&0xFFFF) // lump number for this pwad
+#define WADANDLUMP(wad, lump) (UINT32)(((wad)<<16)|((lump)&0xFFFF)) // wad and lump number
 
 extern UINT16 numwadfiles;
 extern wadfile_t *wadfiles[MAX_WADFILES];
