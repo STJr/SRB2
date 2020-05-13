@@ -46,6 +46,15 @@ extern consvar_t cv_1upsound;
 extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
+extern consvar_t cv_musicpref;
+
+#define PREFAVAILABLE(pref, music) (pref ? \
+	(!S_MIDIMusicDisabled() && S_MIDIExists(music)) : \
+	(!S_DigMusicDisabled() && S_DigExists(music)))
+
+#define ELSEAVAILABLE(pref, music) (pref ? \
+	(!S_DigMusicDisabled() && S_DigExists(music)) : \
+	(!S_MIDIMusicDisabled() && S_MIDIExists(music)))
 
 extern consvar_t cv_playmusicifunfocused;
 extern consvar_t cv_playsoundsifunfocused;
@@ -178,7 +187,6 @@ boolean S_MusicPaused(void);
 boolean S_MusicNotInFocus(void);
 musictype_t S_MusicType(void);
 const char *S_MusicName(void);
-boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 #define S_DigExists(a) S_MusicExists(a, false, true)
 #define S_MIDIExists(a) S_MusicExists(a, true, false)
