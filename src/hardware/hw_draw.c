@@ -904,7 +904,11 @@ void HWR_DrawTutorialBack(UINT32 color, INT32 boxheight)
 {
 	FOutVector  v[4];
 	FSurfaceInfo Surf;
-	INT32 height = (boxheight * 4) + (boxheight/2)*5; // 4 lines of space plus gaps between and some leeway
+	INT32 height;
+	if (boxheight < 0)
+		height = -boxheight;
+	else
+		height = (boxheight * 4) + (boxheight/2)*5; // 4 lines of space plus gaps between and some leeway
 
 	// setup some neat-o translucency effect
 

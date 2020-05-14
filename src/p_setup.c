@@ -217,6 +217,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
+	mapheaderinfo[num]->marathonnext = 0;
 	mapheaderinfo[num]->startrings = 0;
 	mapheaderinfo[num]->sstimer = 90;
 	mapheaderinfo[num]->ssspheres = 1;
@@ -3181,7 +3182,7 @@ static boolean CanSaveLevel(INT32 mapnum)
 	// Any levels that have the savegame flag can save normally.
 	// If the game is complete for this save slot, then any level can save!
 	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
-	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
+	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || (gamecomplete != 0) || marathonmode || !lastmaploaded);
 }
 
 static void P_RunSpecialStageWipe(void)

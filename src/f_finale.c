@@ -1330,10 +1330,6 @@ void F_StartCredits(void)
 	// Just in case they're open ... somehow
 	M_ClearMenus(true);
 
-	// Save the second we enter the credits
-	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
-		G_SaveGame((UINT32)cursaveslot);
-
 	if (creditscutscene)
 	{
 		F_StartCustomCutscene(creditscutscene - 1, false, false);
@@ -1529,12 +1525,6 @@ void F_StartGameEvaluation(void)
 	// Just in case they're open ... somehow
 	M_ClearMenus(true);
 
-	// Save the second we enter the evaluation
-	// We need to do this again!  Remember, it's possible a mod designed skipped
-	// the credits sequence!
-	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
-		G_SaveGame((UINT32)cursaveslot);
-
 	goodending = (ALL7EMERALDS(emeralds));
 
 	gameaction = ga_nothing;
@@ -1551,13 +1541,20 @@ void F_GameEvaluationDrawer(void)
 	angle_t fa;
 	INT32 eemeralds_cur;
 	char patchname[7] = "CEMGx0";
-	const char* endingtext = (goodending ? "CONGRATULATIONS!" : "TRY AGAIN...");
+	const char* endingtext;
+
+	if (marathonmode)
+		endingtext = "THANKS FOR THE RUN!";
+	else if (goodending)
+		endingtext = "CONGRATULATIONS!";
+	else
+		endingtext = "TRY AGAIN...";
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 	// Draw all the good crap here.
 
-	if (finalecount > 0)
+	if (finalecount > 0 && useBlackRock)
 	{
 		INT32 scale = FRACUNIT;
 		patch_t *rockpat;
@@ -1840,10 +1837,6 @@ void F_StartEnding(void)
 
 	// Just in case they're open ... somehow
 	M_ClearMenus(true);
-
-	// Save before the credits sequence.
-	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
-		G_SaveGame((UINT32)cursaveslot);
 
 	gameaction = ga_nothing;
 	paused = false;
@@ -3959,6 +3952,7 @@ static void F_AdvanceToNextScene(void)
 	animtimer = pictime = cutscenes[cutnum]->scene[scenenum].picduration[picnum];
 }
 
+// See also G_AfterIntermission, the only other place which handles intra-map/ending transitions
 void F_EndCutScene(void)
 {
 	cutsceneover = true; // do this first, just in case G_EndGame or something wants to turn it back false later

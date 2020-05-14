@@ -815,6 +815,7 @@ void D_StartTitle(void)
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
 	modeattacking = ATTACKING_NONE;
+	marathonmode = 0;
 
 	// empty maptol so mario/etc sounds don't play in sound test when they shouldn't
 	maptol = 0;
@@ -1131,6 +1132,7 @@ void D_SRB2Main(void)
 
 	// default savegame
 	strcpy(savegamename, SAVEGAMENAME"%u.ssg");
+	strcpy(liveeventbackup,"liveevent.bkp"); // intentionally not ending with .ssg
 
 	{
 		const char *userhome = D_Home(); //Alam: path to home
@@ -1159,6 +1161,7 @@ void D_SRB2Main(void)
 
 			// can't use sprintf since there is %u in savegamename
 			strcatbf(savegamename, srb2home, PATHSEP);
+			strcatbf(liveeventbackup, srb2home, PATHSEP);
 
 			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", srb2home);
 #else // DEFAULTDIR
@@ -1171,6 +1174,7 @@ void D_SRB2Main(void)
 
 			// can't use sprintf since there is %u in savegamename
 			strcatbf(savegamename, userhome, PATHSEP);
+			strcatbf(liveeventbackup, userhome, PATHSEP);
 
 			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", userhome);
 #endif // DEFAULTDIR

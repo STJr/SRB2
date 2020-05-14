@@ -377,6 +377,9 @@ void I_FinishUpdate(void)
 	if (cv_showping.value && netgame && consoleplayer != serverplayer)
 		SCR_DisplayLocalPing();
 
+	if (marathonmode)
+		SCR_DisplayMarathonInfo();
+
 	//
 	if (bDIBMode)
 	{

@@ -622,3 +622,35 @@ void SCR_ClosedCaptions(void)
 			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }
+
+void SCR_DisplayMarathonInfo(void)
+{
+	INT32 flags = V_SNAPTOBOTTOM;
+	static tic_t entertic, oldentertics = 0;
+	const char *str;
+#if 0 // eh, this probably isn't going to be a problem
+	if (((signed)marathontime) < 0)
+	{
+		flags |= V_REDMAP;
+		str = "No waiting out the clock to submit a bogus time.";
+	}
+	else
+#endif
+	{
+		entertic = I_GetTime();
+		if (gamecomplete)
+			flags |= V_YELLOWMAP;
+		else if (marathonmode & MA_INIT)
+			marathonmode &= ~MA_INIT;
+		else
+			marathontime += entertic - oldentertics;
+		str = va("%i:%02i:%02i.%02i",
+			G_TicsToHours(marathontime),
+			G_TicsToMinutes(marathontime, false),
+			G_TicsToSeconds(marathontime),
+			G_TicsToCentiseconds(marathontime));
+		oldentertics = entertic;
+	}
+	V_DrawPromptBack(-8, cons_backcolor.value);
+	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-8, flags, str);
+}

@@ -763,7 +763,7 @@ static void ST_drawTime(void)
 		ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon, V_HUDTRANS); // Colon
 		ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2, V_HUDTRANS); // Seconds
 
-		if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking) // there's not enough room for tics in splitscreen, don't even bother trying!
+		if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking || marathonmode)
 		{
 			ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod, V_HUDTRANS); // Period
 			ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2, V_HUDTRANS); // Tics
@@ -1445,7 +1445,7 @@ static void ST_drawPowerupHUD(void)
 // ---------
 
 	// Let's have a power-like icon to represent finishing the level!
-	if (stplyr->pflags & PF_FINISHED && cv_exitmove.value)
+	if (stplyr->pflags & PF_FINISHED && cv_exitmove.value && multiplayer)
 	{
 		finishoffs[q] = ICONSEP;
 		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, fnshico);

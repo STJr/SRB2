@@ -182,6 +182,7 @@ static tic_t keydown = 0;
 
 static void M_GoBack(INT32 choice);
 static void M_StopMessage(INT32 choice);
+static boolean stopstopmessage = false;
 
 #ifndef NONET
 static void M_HandleServerPage(INT32 choice);
@@ -252,6 +253,7 @@ static void M_ConfirmTeamScramble(INT32 choice);
 static void M_ConfirmTeamChange(INT32 choice);
 static void M_SecretsMenu(INT32 choice);
 static void M_SetupChoosePlayer(INT32 choice);
+static UINT8 M_SetupChoosePlayerDirect(INT32 choice);
 static void M_QuitSRB2(INT32 choice);
 menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
@@ -272,9 +274,14 @@ static void M_ModeAttackEndGame(INT32 choice);
 static void M_SetGuestReplay(INT32 choice);
 static void M_HandleChoosePlayerMenu(INT32 choice);
 static void M_ChoosePlayer(INT32 choice);
+static void M_MarathonLiveEventBackup(INT32 choice);
+static void M_Marathon(INT32 choice);
+static void M_HandleMarathonChoosePlayer(INT32 choice);
+static void M_StartMarathon(INT32 choice);
 menu_t SP_LevelStatsDef;
 static menu_t SP_TimeAttackDef, SP_ReplayDef, SP_GuestReplayDef, SP_GhostDef;
 static menu_t SP_NightsAttackDef, SP_NightsReplayDef, SP_NightsGuestReplayDef, SP_NightsGhostDef;
+static menu_t SP_MarathonDef;
 
 // Multiplayer
 static void M_SetupMultiPlayer(INT32 choice);
@@ -354,6 +361,7 @@ static void M_DrawLoad(void);
 static void M_DrawLevelStats(void);
 static void M_DrawTimeAttackMenu(void);
 static void M_DrawNightsAttackMenu(void);
+static void M_DrawMarathon(void);
 static void M_DrawSetupChoosePlayerMenu(void);
 static void M_DrawControlsDefMenu(void);
 static void M_DrawCameraOptionsMenu(void);
@@ -475,6 +483,11 @@ static consvar_t cv_dummyrings = {"dummyrings", "0", CV_HIDEN, ringlimit_cons_t,
 static consvar_t cv_dummylives = {"dummylives", "0", CV_HIDEN, liveslimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_dummycontinues = {"dummycontinues", "0", CV_HIDEN, contlimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_dummymares = {"dummymares", "Overall", CV_HIDEN|CV_CALL, dummymares_cons_t, Dummymares_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+CV_PossibleValue_t marathon_cons_t[] = {{0, "Standard"}, {1, "Live Event Backup"}, {2, "Ultimate"}, {0, NULL}};
+
+consvar_t cv_dummymarathon = {"dummymarathon", "Standard", CV_HIDEN, marathon_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dummycutscenes = {"dummycutscenes", "Off", CV_HIDEN, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // ==========================================================================
 // ORGANIZATION START.
@@ -746,10 +759,11 @@ static menuitem_t SR_EmblemHintMenu[] =
 // Single Player Main
 static menuitem_t SP_MainMenu[] =
 {
-	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 84},
-	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,               92},
-	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,            100},
-	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,           108},
+	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 76},
+	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,               84},
+	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,             92},
+	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,           100},
+	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Marathon Run",  M_Marathon,                108},
 	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Statistics",    M_Statistics,              116}
 };
 
@@ -759,6 +773,7 @@ enum
 	sprecordattack,
 	spnightsmode,
 	sptutorial,
+	spmarathon,
 	spstatistics
 };
 
@@ -899,6 +914,23 @@ enum
 	nareplay,
 	naghost,
 	nastart
+};
+
+// Marathon
+static menuitem_t SP_MarathonMenu[] =
+{
+	{IT_STRING|IT_KEYHANDLER,  NULL, "Character", M_HandleMarathonChoosePlayer, 100},
+	{IT_STRING|IT_CVAR,        NULL, "Category",  &cv_dummymarathon,            110},
+	{IT_STRING|IT_CVAR,        NULL, "Cutscenes", &cv_dummycutscenes,           120},
+	{IT_WHITESTRING|IT_CALL,   NULL, "Start",     M_StartMarathon,              130},
+};
+
+enum
+{
+	marathonplayer,
+	marathonultimate,
+	marathoncutscenes,
+	marathonstart
 };
 
 // Statistics
@@ -1908,6 +1940,18 @@ static menu_t SP_NightsGhostDef =
 	NULL
 };
 
+static menu_t SP_MarathonDef =
+{
+	MTREE2(MN_SP_MAIN, MN_SP_MARATHON),
+	"M_ATTACK", // temporary
+	sizeof(SP_MarathonMenu)/sizeof(menuitem_t),
+	&MainDef,  // Doesn't matter.
+	SP_MarathonMenu,
+	M_DrawMarathon,
+	32, 40,
+	0,
+	NULL
+};
 
 menu_t SP_PlayerDef =
 {
@@ -2524,6 +2568,8 @@ void M_InitMenuPresTables(void)
 			strncpy(menupres[i].musname, "_recat", 7);
 		else if (i == MN_SP_NIGHTSATTACK)
 			strncpy(menupres[i].musname, "_nitat", 7);
+		else if (i == MN_SP_MARATHON)
+			strncpy(menupres[i].musname, "spec8", 6);
 		else if (i == MN_SP_PLAYER || i == MN_SR_PLAYER)
 			strncpy(menupres[i].musname, "_chsel", 7);
 		else if (i == MN_SR_SOUNDTEST)
@@ -3018,7 +3064,7 @@ static void M_GoBack(INT32 choice)
 			netgame = multiplayer = false;
 		}
 
-		if ((currentMenu->prevMenu == &MainDef) && (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef))
+		if ((currentMenu->prevMenu == &MainDef) && (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef || currentMenu == &SP_MarathonDef))
 		{
 			// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
 
@@ -3403,11 +3449,14 @@ boolean M_Responder(event_t *ev)
 	{
 		if (currentMenu->menuitems[itemOn].alphaKey != MM_EVENTHANDLER)
 		{
-			if (ch == ' ' || ch == 'n' || ch == 'y' || ch == KEY_ESCAPE || ch == KEY_ENTER)
+			if (ch == ' ' || ch == 'n' || ch == 'y' || ch == KEY_ESCAPE || ch == KEY_ENTER || ch == KEY_DEL)
 			{
 				if (routine)
 					routine(ch);
-				M_StopMessage(0);
+				if (stopstopmessage)
+					stopstopmessage = false;
+				else
+					M_StopMessage(0);
 				noFurtherInput = true;
 				return true;
 			}
@@ -3657,7 +3706,7 @@ void M_StartControlPanel(void)
 		{
 			INT32 numlives = 2;
 
-			SPauseMenu[spause_pandora].status = (M_SecretUnlocked(SECRET_PANDORA)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			SPauseMenu[spause_pandora].status = (M_SecretUnlocked(SECRET_PANDORA) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 			if (&players[consoleplayer])
 			{
@@ -3675,7 +3724,7 @@ void M_StartControlPanel(void)
 		}
 
 		// We can always use level select though. :33
-		SPauseMenu[spause_levelselect].status = (gamecomplete) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+		SPauseMenu[spause_levelselect].status = (gamecomplete == 1) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 		// And emblem hints.
 		SPauseMenu[spause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
@@ -3859,6 +3908,8 @@ void M_Init(void)
 	CV_RegisterVar(&cv_dummylives);
 	CV_RegisterVar(&cv_dummycontinues);
 	CV_RegisterVar(&cv_dummymares);
+	CV_RegisterVar(&cv_dummymarathon);
+	CV_RegisterVar(&cv_dummycutscenes);
 
 	quitmsg[QUITMSG] = M_GetText("Eggman's tied explosives\nto your girlfriend, and\nwill activate them if\nyou press the 'Y' key!\nPress 'N' to save her!\n\n(Press 'Y' to quit)");
 	quitmsg[QUITMSG1] = M_GetText("What would Tails say if\nhe saw you quitting the game?\n\n(Press 'Y' to quit)");
@@ -6321,8 +6372,8 @@ static char *M_AddonsHeaderPath(void)
 
 static void M_AddonsClearName(INT32 choice)
 {
+	(void)choice;
 	CLEARNAME;
-	M_StopMessage(choice);
 }
 
 // returns whether to do message draw
@@ -6354,7 +6405,7 @@ static boolean M_AddonsRefresh(void)
 
 		if (message)
 		{
-			M_StartMessage(message,M_AddonsClearName,MM_EVENTHANDLER);
+			M_StartMessage(message,M_AddonsClearName,MM_NOTHING);
 			return true;
 		}
 
@@ -8011,6 +8062,15 @@ static void M_SinglePlayerMenu(INT32 choice)
 
 	SP_MainMenu[sptutorial].status = tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
 
+	// If the FIRST stage immediately leads to the ending, or itself (which gets converted to the title screen in G_DoCompleted for marathonmode only), there's no point in having this option on the menu. You should use Record Attack in that circumstance, although if marathonnext is set this behaviour can be overridden if you make some weird mod that requires multiple playthroughs of the same map in sequence and has some in-level mechanism to break the cycle.
+	if (mapheaderinfo[spmarathon_start-1]
+		&& !mapheaderinfo[spmarathon_start-1]->marathonnext
+		&& (mapheaderinfo[spmarathon_start-1]->nextlevel == spmarathon_start
+			|| mapheaderinfo[spmarathon_start-1]->nextlevel >= 1100))
+		SP_MainMenu[spmarathon].status = IT_NOTHING|IT_DISABLED;
+	else
+		SP_MainMenu[spmarathon].status = IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED;
+
 	M_SetupNextMenu(&SP_MainDef);
 }
 
@@ -8101,7 +8161,7 @@ static void M_StartTutorial(INT32 choice)
 	emeralds = 0;
 	memset(&luabanks, 0, sizeof(luabanks));
 	M_ClearMenus(true);
-	gamecomplete = false;
+	gamecomplete = 0;
 	cursaveslot = 0;
 	G_DeferedInitNew(false, G_BuildMapName(tutorialmap), 0, false, false);
 }
@@ -8864,7 +8924,7 @@ static void M_CacheCharacterSelect(void)
 {
 	INT32 i, skinnum;
 
-	for (i = 0; i < 32; i++)
+	for (i = 0; i < MAXSKINS; i++)
 	{
 		if (!description[i].used)
 			continue;
@@ -8876,7 +8936,7 @@ static void M_CacheCharacterSelect(void)
 	}
 }
 
-static void M_SetupChoosePlayer(INT32 choice)
+static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
 {
 	INT32 skinnum;
 	UINT8 i;
@@ -8887,7 +8947,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 
 	if (!mapheaderinfo[startmap-1] || mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
 	{
-		for (i = 0; i < 32; i++) // Handle charsels, availability, and unlocks.
+		for (i = 0; i < MAXSKINS; i++) // Handle charsels, availability, and unlocks.
 		{
 			if (description[i].used) // If the character's disabled through SOC, there's nothing we can do for it.
 			{
@@ -8895,7 +8955,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 				if (and)
 				{
 					char firstskin[SKINNAMESIZE+1];
-					if (mapheaderinfo[startmap-1]->typeoflevel & TOL_NIGHTS) // skip tagteam characters for NiGHTS levels
+					if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->typeoflevel & TOL_NIGHTS) // skip tagteam characters for NiGHTS levels
 						continue;
 					strncpy(firstskin, description[i].skinname, (and - description[i].skinname));
 					firstskin[(and - description[i].skinname)] = '\0';
@@ -8932,13 +8992,35 @@ static void M_SetupChoosePlayer(INT32 choice)
 
 	if (firstvalid == lastvalid) // We're being forced into a specific character, so might as well just skip it.
 	{
-		M_ChoosePlayer(firstvalid);
-		return;
+		return firstvalid;
 	}
 
 	// One last bit of order we can't do in the iteration above.
 	description[firstvalid].prev = lastvalid;
 	description[lastvalid].next = firstvalid;
+
+	if (!allowed)
+	{
+		char_on = firstvalid;
+		if (startchar > 0 && startchar < MAXSKINS)
+		{
+			INT16 workchar = startchar;
+			while (workchar--)
+				char_on = description[char_on].next;
+		}
+	}
+
+	return MAXSKINS;
+}
+
+static void M_SetupChoosePlayer(INT32 choice)
+{
+	UINT8 skinset = M_SetupChoosePlayerDirect(choice);
+	if (skinset != MAXSKINS)
+	{
+		M_ChoosePlayer(skinset);
+		return;
+	}
 
 	M_ChangeMenuMusic("_chsel", true);
 
@@ -8954,16 +9036,6 @@ static void M_SetupChoosePlayer(INT32 choice)
 
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
-	if (!allowed)
-	{
-		char_on = firstvalid;
-		if (startchar > 0 && startchar < 32)
-		{
-			INT16 workchar = startchar;
-			while (workchar--)
-				char_on = description[char_on].next;
-		}
-	}
 
 	// finish scrolling the menu
 	char_scroll = 0;
@@ -9022,6 +9094,10 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 
 		case KEY_ENTER:
 			S_StartSound(NULL, sfx_menu1);
+			char_scroll = 0; // finish scrolling the menu
+			M_DrawSetupChoosePlayerMenu(); // draw the finally selected character one last time for the fadeout
+			// Is this a hack?
+			charseltimer = 0;
 			M_ChoosePlayer(char_on);
 			break;
 
@@ -9261,7 +9337,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 // Chose the player you want to use Tails 03-02-2002
 static void M_ChoosePlayer(INT32 choice)
 {
-	boolean ultmode = (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
+	boolean ultmode = (currentMenu == &SP_MarathonDef) ? (cv_dummymarathon.value == 2) : (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
 	UINT8 skinnum;
 
 	// skip this if forcecharacter or no characters available
@@ -9273,11 +9349,6 @@ static void M_ChoosePlayer(INT32 choice)
 	// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
 	else
 	{
-		char_scroll = 0; // finish scrolling the menu
-		M_DrawSetupChoosePlayerMenu(); // draw the finally selected character one last time for the fadeout
-		// Is this a hack?
-		charseltimer = 0;
-
 		skinnum = description[choice].skinnum[0];
 
 		if ((botingame = (description[choice].skinnum[1] != -1))) {
@@ -9291,11 +9362,11 @@ static void M_ChoosePlayer(INT32 choice)
 
 	M_ClearMenus(true);
 
-	if (startmap != spstage_start)
+	if (!marathonmode && startmap != spstage_start)
 		cursaveslot = 0;
 
 	//lastmapsaved = 0;
-	gamecomplete = false;
+	gamecomplete = 0;
 
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
@@ -10292,6 +10363,364 @@ static void M_ModeAttackEndGame(INT32 choice)
 	modeattacking = ATTACKING_NONE;
 	M_ChangeMenuMusic("_title", true);
 	Nextmap_OnChange();
+}
+
+static void M_MarathonLiveEventBackup(INT32 choice)
+{
+	if (choice == 'y' || choice == KEY_ENTER)
+	{
+		marathonmode = MA_INIT;
+		G_LoadGame(MARATHONSLOT, 0);
+		cursaveslot = MARATHONSLOT;
+		if (!(marathonmode & MA_RUNNING))
+			marathonmode = 0;
+		return;
+	}
+	else if (choice == KEY_DEL)
+	{
+		M_StopMessage(0);
+		if (FIL_FileExists(liveeventbackup)) // just in case someone deleted it while we weren't looking.
+			remove(liveeventbackup);
+		BwehHehHe();
+		M_StartMessage("Live event backup erased.\n",M_Marathon,MM_NOTHING);
+		stopstopmessage = true;
+		return;
+	}
+
+	M_Marathon(-1);
+}
+
+// Going to Marathon menu...
+static void M_Marathon(INT32 choice)
+{
+	UINT8 skinset;
+	INT32 mapnum = 0;
+
+	if (choice != -1 && FIL_FileExists(liveeventbackup))
+	{
+		M_StartMessage(\
+			"\x82Live event backup detected.\n\x80\
+			Do you want to resurrect the last run?\n\
+			(Fs in chat if we crashed on stream.)\n\
+			\n\
+			Press 'Y' or 'Enter' to resume,\n\
+			'Del' to delete, or any other\n\
+			key to continue to Marathon Run.",M_MarathonLiveEventBackup,MM_YESNO);
+		return;
+	}
+
+	fromlevelselect = false;
+
+	startmap = spmarathon_start;
+	CV_SetValue(&cv_newgametype, GT_COOP); // Graue 09-08-2004
+
+	skinset = M_SetupChoosePlayerDirect(-1);
+
+	SP_MarathonMenu[marathonplayer].status = (skinset == MAXSKINS) ? IT_KEYHANDLER|IT_STRING : IT_NOTHING|IT_DISABLED;
+
+	while (mapnum < NUMMAPS)
+	{
+		if (mapheaderinfo[mapnum])
+		{
+			if (mapheaderinfo[mapnum]->cutscenenum || mapheaderinfo[mapnum]->precutscenenum)
+				break;
+		}
+		mapnum++;
+	}
+
+	SP_MarathonMenu[marathoncutscenes].status = (mapnum < NUMMAPS) ? IT_CVAR |IT_STRING : IT_NOTHING|IT_DISABLED;
+
+	M_ChangeMenuMusic("spec8", true);
+
+	SP_MarathonDef.prevMenu = &MainDef;
+	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
+	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
+	M_SetupNextMenu(&SP_MarathonDef);
+	itemOn = marathonstart; // "Start" is selected.
+	recatkdrawtimer = 50-8;
+	char_scroll = 0;
+}
+
+static void M_HandleMarathonChoosePlayer(INT32 choice)
+{
+	INT32 selectval;
+
+	if (keydown > 1)
+		return;
+
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			M_NextOpt();
+			break;
+		case KEY_UPARROW:
+			M_PrevOpt();
+			break;
+
+		case KEY_LEFTARROW:
+			if ((selectval = description[char_on].prev) == char_on)
+				return;
+			char_on = selectval;
+			break;
+		case KEY_RIGHTARROW:
+			if ((selectval = description[char_on].next) == char_on)
+				return;
+			char_on = selectval;
+			break;
+
+		case KEY_ESCAPE:
+			noFurtherInput = true;
+			M_GoBack(0);
+			return;
+
+		default:
+			return;
+	}
+	S_StartSound(NULL, sfx_menu1);
+}
+
+static void M_StartMarathon(INT32 choice)
+{
+	(void)choice;
+	marathontime = 0;
+	marathonmode = MA_RUNNING|MA_INIT;
+	if (cv_dummymarathon.value == 1)
+		cursaveslot = MARATHONSLOT;
+	if (!cv_dummycutscenes.value)
+		marathonmode |= MA_NOCUTSCENES;
+	M_ChoosePlayer(char_on);
+}
+
+// Drawing function for Marathon menu
+void M_DrawMarathon(void)
+{
+	INT32 i, x, y, cursory = 0, cnt, soffset = 0, w;
+	UINT16 dispstatus;
+	consvar_t *cv;
+	const char *cvstring;
+	char *work;
+	angle_t fa;
+	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy), xspan = (vid.width/dupz), yspan = (vid.height/dupz), diffx = (xspan - BASEVIDWIDTH)/2, diffy = (yspan - BASEVIDHEIGHT)/2, maxy = BASEVIDHEIGHT + diffy;
+
+	// lactozilla: the renderer changed so recache patches
+	if (needpatchrecache)
+		M_CacheCharacterSelect();
+
+	curbgxspeed = 0;
+	curbgyspeed = 18;
+
+	M_ChangeMenuMusic("spec8", true); // Eww, but needed for when user hits escape during demo playback
+
+	V_DrawFill(-diffx, -diffy, diffx+(BASEVIDWIDTH-190)/2, yspan, 158);
+	V_DrawFill((BASEVIDWIDTH-190)/2, -diffy, 190, yspan, 31);
+	V_DrawFill((BASEVIDWIDTH+190)/2, -diffy, diffx+(BASEVIDWIDTH-190)/2, yspan, 158);
+	//M_DrawRecordAttackForeground();
+	if (curfadevalue)
+		V_DrawFadeScreen(0xFF00, curfadevalue);
+
+	x = (((BASEVIDWIDTH-82)/2)+11)<<FRACBITS;
+	y = (((BASEVIDHEIGHT-82)/2)+12-10)<<FRACBITS;
+
+	cnt = (36*(recatkdrawtimer<<FRACBITS))/TICRATE;
+	fa = (FixedAngle(cnt)>>ANGLETOFINESHIFT) & FINEMASK;
+	y -= (10*FINECOSINE(fa));
+
+	recatkdrawtimer++;
+
+	soffset = cnt = (recatkdrawtimer%50);
+	if (!useBlackRock)
+	{
+		if (cnt > 8)
+			cnt = 8;
+		V_DrawFixedPatch(x+(6<<FRACBITS), y, FRACUNIT/2, (cnt&~1)<<(V_ALPHASHIFT-1), W_CachePatchName("RECCLOCK", PU_PATCH), NULL);
+	}
+	else if (cnt > 8)
+	{
+		cnt = 8;
+		V_DrawFixedPatch(x, y, FRACUNIT, V_TRANSLUCENT, W_CachePatchName("ENDEGRK5", PU_PATCH), NULL);
+	}
+	else
+	{
+		V_DrawFixedPatch(x, y, FRACUNIT, cnt<<V_ALPHASHIFT, W_CachePatchName("ROID0000", PU_PATCH), NULL);
+		V_DrawFixedPatch(x, y, FRACUNIT, V_TRANSLUCENT, W_CachePatchName("ENDEGRK5", PU_PATCH), NULL);
+		V_DrawFixedPatch(x, y, FRACUNIT, cnt<<V_ALPHASHIFT, W_CachePatchName("ENDEGRK0", PU_PATCH), NULL);
+	}
+
+	{
+		UINT8 col;
+		i = 0;
+		w = (((8-cnt)+1)/3)+1;
+		w *= w;
+		cursory = 0;
+		while (i < cnt)
+		{
+			i++;
+			col = 158+((cnt-i)/3);
+			if (col >= 160)
+				col = 253;
+			V_DrawFill(((BASEVIDWIDTH-190)/2)-cursory-w, -diffy, w, yspan, col);
+			V_DrawFill(((BASEVIDWIDTH+190)/2)+cursory,   -diffy, w, yspan, col);
+			cursory += w;
+			w *= 2;
+		}
+	}
+
+	w = char_scroll + (((8-cnt)*(8-cnt))<<(FRACBITS-5));
+	if (soffset == 50-1)
+		w += FRACUNIT/2;
+
+	{
+		patch_t *fg = W_CachePatchName("RECATKFG", PU_PATCH);
+		INT32 trans = V_60TRANS+((cnt&~3)<<(V_ALPHASHIFT-2));
+		INT32 height = (SHORT(fg->height)/2);
+		char patchname[7] = "CEMGx0";
+
+		dupz = (w*7)/6; //(w*42*120)/(360*6); -- I don't know why this works but I'm not going to complain.
+		dupz = ((dupz>>FRACBITS) % height);
+		y = height/2;
+		while (y+dupz >= -diffy)
+			y -= height;
+		while (y-2-dupz < maxy)
+		{
+			V_DrawFixedPatch(((BASEVIDWIDTH-190)<<(FRACBITS-1)), (y-2-dupz)<<FRACBITS, FRACUNIT/2, trans, fg, NULL);
+			V_DrawFixedPatch(((BASEVIDWIDTH+190)<<(FRACBITS-1)), (y+dupz)<<FRACBITS, FRACUNIT/2, trans|V_FLIP, fg, NULL);
+			y += height;
+		}
+
+		trans = V_40TRANS+((cnt&~1)<<(V_ALPHASHIFT-1));
+
+		for (i = 0; i < 7; ++i)
+		{
+			fa = (FixedAngle(w)>>ANGLETOFINESHIFT) & FINEMASK;
+			x = (BASEVIDWIDTH<<(FRACBITS-1)) + (60*FINESINE(fa));
+			y = ((BASEVIDHEIGHT+16-20)<<(FRACBITS-1)) - (60*FINECOSINE(fa));
+			w += (360<<FRACBITS)/7;
+
+			patchname[4] = 'A'+(char)i;
+			V_DrawFixedPatch(x, y, FRACUNIT, trans, W_CachePatchName(patchname, PU_PATCH), NULL);
+		}
+
+		height = 18; // prevents the need for the next line
+		//dupz = (w*height)/18;
+		dupz = ((w>>FRACBITS) % height);
+		y = dupz+(height/4);
+		x = 105+dupz;
+		while (y >= -diffy)
+		{
+			x -= height;
+			y -= height;
+		}
+		while (y-dupz < maxy && x < (xspan/2))
+		{
+			V_DrawFill((BASEVIDWIDTH/2)-x-height, -diffy, height, diffy+y+height, 153);
+			V_DrawFill((BASEVIDWIDTH/2)+x, (maxy-y)-height, height, height+y, 153);
+			y += height;
+			x += height;
+		}
+	}
+
+	if (!soffset)
+	{
+		char_scroll += (360<<FRACBITS)/42; // like a clock, ticking at 42bpm!
+		if (char_scroll >= 360<<FRACBITS)
+			char_scroll -= 360<<FRACBITS;
+		if (recatkdrawtimer > (10*TICRATE))
+			recatkdrawtimer -= (10*TICRATE);
+	}
+
+	//M_DrawMenuTitle();
+
+	// draw menu (everything else goes on top of it)
+	// Sadly we can't just use generic mode menus because we need some extra hacks
+	x = currentMenu->x;
+	y = currentMenu->y;
+
+	dispstatus = (currentMenu->menuitems[marathonplayer].status & IT_DISPLAY);
+	if (dispstatus == IT_STRING || dispstatus == IT_WHITESTRING)
+	{
+		soffset = 68;
+		if (description[char_on].charpic->width >= 256)
+			V_DrawTinyScaledPatch(224, 120, 0, description[char_on].charpic);
+		else
+			V_DrawSmallScaledPatch(224, 120, 0, description[char_on].charpic);
+	}
+	else
+		soffset = 0;
+
+	for (i = 0; i < currentMenu->numitems; ++i)
+	{
+		dispstatus = (currentMenu->menuitems[i].status & IT_DISPLAY);
+		if (dispstatus != IT_STRING && dispstatus != IT_WHITESTRING)
+			continue;
+
+		y = currentMenu->y+currentMenu->menuitems[i].alphaKey;
+		if (i == itemOn)
+			cursory = y;
+
+		V_DrawString(x, y, (dispstatus == IT_WHITESTRING) ? V_YELLOWMAP : 0 , currentMenu->menuitems[i].text);
+
+		cv = NULL;
+		cvstring = NULL;
+		work = NULL;
+		if ((currentMenu->menuitems[i].status & IT_TYPE) == IT_CVAR)
+		{
+			cv = (consvar_t *)currentMenu->menuitems[i].itemaction;
+			cvstring = cv->string;
+		}
+		else if (i == marathonplayer)
+		{
+			if (description[char_on].displayname[0])
+			{
+				work = Z_StrDup(description[char_on].displayname);
+				cnt = 0;
+				while (work[cnt])
+				{
+					if (work[cnt] == '\n')
+						work[cnt] = ' ';
+					cnt++;
+				}
+				cvstring = work;
+			}
+			else
+				cvstring = description[char_on].skinname;
+		}
+
+		// Cvar specific handling
+		if (cvstring)
+		{
+			INT32 flags = V_YELLOWMAP;
+			if (cv == &cv_dummymarathon && cv->value == 2) // ultimate_selectable
+				flags = V_REDMAP;
+
+			// Should see nothing but strings
+			if (cv == &cv_dummymarathon && cv->value == 1)
+			{
+				w = V_ThinStringWidth(cvstring, 0);
+				V_DrawThinString(BASEVIDWIDTH - x - soffset - w, y+1, flags, cvstring);
+			}
+			else
+			{
+				w = V_StringWidth(cvstring, 0);
+				V_DrawString(BASEVIDWIDTH - x - soffset - w, y, flags, cvstring);
+			}
+			if (i == itemOn)
+			{
+				V_DrawCharacter(BASEVIDWIDTH - x - soffset - 10 - w - (skullAnimCounter/5), y,
+					'\x1C' | V_YELLOWMAP, false);
+				V_DrawCharacter(BASEVIDWIDTH - x - soffset + 2 + (skullAnimCounter/5), y,
+					'\x1D' | V_YELLOWMAP, false);
+			}
+			if (work)
+				Z_Free(work);
+		}
+	}
+
+	// DRAW THE SKULL CURSOR
+	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0, W_CachePatchName("M_CURSOR", PU_PATCH));
+	V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
+
+	// Draw press ESC to exit string on main record attack menu
+	V_DrawString(104-72, 180, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
 }
 
 // ========
@@ -12578,6 +13007,7 @@ void M_QuitResponse(INT32 ch)
 	if (!(netgame || cv_debug))
 	{
 		S_ResetCaptions();
+		marathonmode = 0;
 
 		mrand = M_RandomKey(sizeof(quitsounds)/sizeof(INT32));
 		if (quitsounds[mrand]) S_StartSound(NULL, quitsounds[mrand]);

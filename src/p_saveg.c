@@ -3807,10 +3807,10 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	if (mapoverride != 0)
 	{
 		gamemap = mapoverride;
-		gamecomplete = true;
+		gamecomplete = 1;
 	}
 	else
-		gamecomplete = false;
+		gamecomplete = 0;
 
 	// gamemap changed; we assume that its map header is always valid,
 	// so make it so

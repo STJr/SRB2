@@ -1578,6 +1578,22 @@ static void readlevelheader(MYFILE *f, INT32 num)
 
 				mapheaderinfo[num-1]->nextlevel = (INT16)i;
 			}
+			else if (fastcmp(word, "MARATHONNEXT"))
+			{
+				if      (fastcmp(word2, "TITLE"))      i = 1100;
+				else if (fastcmp(word2, "EVALUATION")) i = 1101;
+				else if (fastcmp(word2, "CREDITS"))    i = 1102;
+				else if (fastcmp(word2, "ENDING"))     i = 1103;
+				else
+				// Support using the actual map name,
+				// i.e., MarathonNext = AB, MarathonNext = FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z' && word2[2] == '\0')
+					i = M_MapNumber(word2[0], word2[1]);
+
+				mapheaderinfo[num-1]->marathonnext = (INT16)i;
+			}
 			else if (fastcmp(word, "TYPEOFLEVEL"))
 			{
 				if (i) // it's just a number
@@ -3920,7 +3936,20 @@ static void readmaincfg(MYFILE *f)
 				else
 					value = get_number(word2);
 
-				spstage_start = (INT16)value;
+				spstage_start = spmarathon_start = (INT16)value;
+			}
+			else if (fastcmp(word, "SPMARATHON_START"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				spmarathon_start = (INT16)value;
 			}
 			else if (fastcmp(word, "SSTAGE_START"))
 			{
@@ -4013,6 +4042,17 @@ static void readmaincfg(MYFILE *f)
 				if (introtoplay > 128)
 					introtoplay = 128;
 				introchanged = true;
+			}
+			else if (fastcmp(word, "CREDITSCUTSCENE"))
+			{
+				creditscutscene = (UINT8)get_number(word2);
+				// range check, you morons.
+				if (creditscutscene > 128)
+					creditscutscene = 128;
+			}
+			else if (fastcmp(word, "USEBLACKROCK"))
+			{
+				useBlackRock = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
@@ -4114,13 +4154,6 @@ static void readmaincfg(MYFILE *f)
 			{
 				titlescrollyspeed = get_number(word2);
 				titlechanged = true;
-			}
-			else if (fastcmp(word, "CREDITSCUTSCENE"))
-			{
-				creditscutscene = (UINT8)get_number(word2);
-				// range check, you morons.
-				if (creditscutscene > 128)
-					creditscutscene = 128;
 			}
 			else if (fastcmp(word, "DISABLESPEEDADJUST"))
 			{
@@ -9894,6 +9927,11 @@ struct {
 	{"TC_RAINBOW",TC_RAINBOW},
 	{"TC_BLINK",TC_BLINK},
 	{"TC_DASHMODE",TC_DASHMODE},
+
+	// marathonmode flags
+	//{"MA_INIT",MA_INIT}, -- should never see this
+	{"MA_RUNNING",MA_RUNNING},
+	{"MA_NOCUTSCENES",MA_NOCUTSCENES},
 
 	{NULL,0}
 };

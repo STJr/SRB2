@@ -101,6 +101,9 @@ void I_FinishUpdate (void)
 	if (cv_showping.value && netgame && consoleplayer != serverplayer)
 		SCR_DisplayLocalPing();
 
+	if (marathonmode)
+		SCR_DisplayMarathonInfo();
+
 	//blast it to the screen
 	// this code sucks
 	//memcpy(dascreen,screens[0],screenwidth*screenheight);

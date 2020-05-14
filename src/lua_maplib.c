@@ -2009,6 +2009,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->typeoflevel);
 	else if (fastcmp(field,"nextlevel"))
 		lua_pushinteger(L, header->nextlevel);
+	else if (fastcmp(field,"marathonnext"))
+		lua_pushinteger(L, header->marathonnext);
 	else if (fastcmp(field,"keywords"))
 		lua_pushstring(L, header->keywords);
 	else if (fastcmp(field,"musname"))
