@@ -12724,7 +12724,8 @@ void P_PlayerAfterThink(player_t *player)
 			{
 				mobj_t *mo = player->mo, *dustdevil = player->mo->tracer;
 
-				if (abs(mo->x - dustdevil->x) > dustdevil->radius || abs(mo->y - dustdevil->y) > dustdevil->radius){
+				if (abs(mo->x - dustdevil->x) > dustdevil->radius || abs(mo->y - dustdevil->y) > dustdevil->radius)
+				{
 					P_SetTarget(&player->mo->tracer, NULL);
 					player->powers[pw_carry] = CR_NONE;
 					break;
