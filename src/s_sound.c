@@ -2151,7 +2151,11 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		return false;
 	}
 
-	if (strncmp(entry->musname, S_MusicName(), 7)) // don't restart music if we're already playing it
+	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
+	boolean midipref = cv_musicpref.value;
+
+	if (strncmp(entry->musname, S_MusicName(), 7) || // don't restart music if we're already playing it
+		(midipref != currentmidi && PREFAVAILABLE(midipref, entry->musname))) // but do if the user's preference has changed
 	{
 		if (music_stack_fadeout)
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, music_stack_fadeout, 0);
@@ -2350,6 +2354,9 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 	}
 
+	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
+	boolean midipref = cv_musicpref.value;
+
 	if (prefadems) // queue music change for after fade // allow even if the music is the same
 		// && S_MusicPlaying() // Let the delay happen even if we're not playing music
 	{
@@ -2358,7 +2365,8 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
 		return;
 	}
-	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET))
+	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) || 
+			(midipref != currentmidi && PREFAVAILABLE(midipref, newmusic)))
  	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
@@ -2659,21 +2667,15 @@ void GameDigiMusic_OnChange(void)
 	else if (M_CheckParm("-nodigmusic"))
 		return;
 
-	boolean midipref = cv_musicpref.value;
-
 	if (digital_disabled)
 	{
 		digital_disabled = false;
 		I_StartupSound(); // will return early if initialised
 		I_InitMusic();
 
-		if (midipref && (S_MusicType() == MU_MID || S_MusicType() == MU_MID_EX))
-			return;
-
-		S_StopMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
-		else
+		else if ((!cv_musicpref.value || midi_disabled) && S_DigExists("_clear"))
 			S_ChangeMusicInternal("_clear", false);
 	}
 	else
@@ -2692,7 +2694,6 @@ void GameDigiMusic_OnChange(void)
 		}
 	}
 }
-}
 
 void GameMIDIMusic_OnChange(void)
 {
@@ -2701,21 +2702,15 @@ void GameMIDIMusic_OnChange(void)
 	else if (M_CheckParm("-nomidimusic"))
 		return;
 
-	boolean midipref = cv_musicpref.value;
-
 	if (midi_disabled)
 	{
 		midi_disabled = false;
 		I_StartupSound(); // will return early if initialised
 		I_InitMusic();
 
-		if (!midipref && (S_MusicType() != MU_MID && S_MusicType() != MU_MID_EX && S_MusicType() != MU_NONE))
-			return;
-
-		S_StopMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
-		else
+		else if ((cv_musicpref.value || digital_disabled) && S_MIDIExists("_clear"))
 			S_ChangeMusicInternal("_clear", false);
 	}
 	else
@@ -2741,22 +2736,10 @@ void MusicPref_OnChange(void)
 		M_CheckParm("-nomidimusic") || M_CheckParm("-nodigmusic"))
 		return;
 
-	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
-	boolean midipref = cv_musicpref.value;
-
-	if (midipref == currentmidi)
-		return;
-
-	if (Playing() && PREFAVAILABLE(midipref, S_MusicName()))
-	{
-		S_StopMusic();
+	if (Playing())
 		P_RestoreMusic(&players[consoleplayer]);
-	}
-	else if (PREFAVAILABLE(midipref, "_clear"))
-	{
-		S_StopMusic();
+	else if (PREFAVAILABLE(cv_musicpref.value, "_clear"))
 		S_ChangeMusicInternal("_clear", false);
-	}
 }
 
 #ifdef HAVE_OPENMPT
