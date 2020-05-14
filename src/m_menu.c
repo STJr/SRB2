@@ -10692,19 +10692,19 @@ static void
 Check_new_version_thread (int *id)
 {
 	int hosting;
-	int ok;
+	int okay;
 
-	ok = 0;
+	okay = 0;
 
 	if (M_CheckMODVersion(*id))
 	{
 		I_lock_mutex(&ms_QueryId_mutex);
 		{
-			ok = ( *id == ms_QueryId );
+			okay = ( *id == ms_QueryId );
 		}
 		I_unlock_mutex(ms_QueryId_mutex);
 
-		if (ok)
+		if (okay)
 		{
 			I_lock_mutex(&m_menu_mutex);
 			{
@@ -10720,12 +10720,12 @@ Check_new_version_thread (int *id)
 	{
 		I_lock_mutex(&ms_QueryId_mutex);
 		{
-			ok = ( *id == ms_QueryId );
+			okay = ( *id == ms_QueryId );
 		}
 		I_unlock_mutex(ms_QueryId_mutex);
 	}
 
-	if (ok)
+	if (okay)
 	{
 		I_lock_mutex(&m_menu_mutex);
 		{
