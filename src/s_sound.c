@@ -2206,7 +2206,7 @@ static lumpnum_t S_GetMusicLumpNum(const char *mname)
 	
 	if (PREFAVAILABLE(midipref, mname))
 		return W_GetNumForName(va(midipref ? "d_%s":"o_%s", mname));
-	else if (ELSEAVAILABLE(midipref, mname))
+	else if (PREFAVAILABLE(!midipref, mname))
 		return W_GetNumForName(va(midipref ? "o_%s":"d_%s", mname));
 	else
 		return LUMPERROR;

@@ -48,14 +48,6 @@ extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
 extern consvar_t cv_musicpref;
 
-#define PREFAVAILABLE(pref, music) (pref ? \
-	(!S_MIDIMusicDisabled() && S_MIDIExists(music)) : \
-	(!S_DigMusicDisabled() && S_DigExists(music)))
-
-#define ELSEAVAILABLE(pref, music) (pref ? \
-	(!S_DigMusicDisabled() && S_DigExists(music)) : \
-	(!S_MIDIMusicDisabled() && S_MIDIExists(music)))
-
 extern consvar_t cv_playmusicifunfocused;
 extern consvar_t cv_playsoundsifunfocused;
 
@@ -190,6 +182,12 @@ const char *S_MusicName(void);
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 #define S_DigExists(a) S_MusicExists(a, false, true)
 #define S_MIDIExists(a) S_MusicExists(a, true, false)
+
+// Returns whether the preferred format a (true = MIDI, false = Digital)
+// exists and is enabled for musicname b
+#define PREFAVAILABLE(a, b) (a ? \
+	(!S_MIDIMusicDisabled() && S_MIDIExists(b)) : \
+	(!S_DigMusicDisabled() && S_DigExists(b)))
 
 //
 // Music Effects
