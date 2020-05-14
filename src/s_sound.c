@@ -2366,7 +2366,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 	}
 	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) || 
-			(midipref != currentmidi && PREFAVAILABLE(midipref, newmusic)))
+		(midipref != currentmidi && PREFAVAILABLE(midipref, newmusic)))
  	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
