@@ -1337,9 +1337,7 @@ static void CON_Print(char *msg)
 
 		if (*msg == '\0')
 		{
-#ifdef HAVE_THREADS
-			I_unlock_mutex(con_mutex);
-#endif
+			Unlock_state();
 			return;
 		}
 
