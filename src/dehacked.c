@@ -9488,6 +9488,7 @@ struct {
 	{"CR_MINECART",CR_MINECART},
 	{"CR_ROLLOUT",CR_ROLLOUT},
 	{"CR_PTERABYTE",CR_PTERABYTE},
+	{"CR_DUSTDEVIL",CR_DUSTDEVIL},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon

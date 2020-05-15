@@ -13369,8 +13369,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 				P_ResetPlayer(player);
 				A_PlayActiveSound(dustdevil);
 			}
+			player->powers[pw_carry] = CR_DUSTDEVIL;
 			player->powers[pw_nocontrol] = 2;
-			player->drawangle += ANG20;
+			P_SetTarget(&thing->tracer, dustdevil);
 			P_SetPlayerMobjState(thing, S_PLAY_PAIN);
 
 			if (dist > dragamount)
@@ -13390,7 +13391,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 			P_ResetPlayer(player);
 			thing->z = dustdevil->z + dustdevil->height;
 			thrust = 20 * FRACUNIT;
+			player->powers[pw_carry] = CR_NONE;
 			player->powers[pw_nocontrol] = 0;
+			P_SetTarget(&thing->tracer, NULL);
 			S_StartSound(thing, sfx_wdjump);
 			P_SetPlayerMobjState(thing, S_PLAY_FALL);
 		}

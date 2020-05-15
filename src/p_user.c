@@ -11918,6 +11918,9 @@ void P_PlayerThink(player_t *player)
 						factor = 4;
 					}
 					break;
+				case CR_DUSTDEVIL:
+					player->drawangle += ANG20;
+					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
 				case CR_ROPEHANG:
@@ -12688,6 +12691,19 @@ void P_PlayerAfterThink(player_t *player)
 						}
 					}
 				}
+				break;
+			}
+			case CR_DUSTDEVIL:
+			{
+				mobj_t *mo = player->mo, *dustdevil = player->mo->tracer;
+
+				if (abs(mo->x - dustdevil->x) > dustdevil->radius || abs(mo->y - dustdevil->y) > dustdevil->radius)
+				{
+					P_SetTarget(&player->mo->tracer, NULL);
+					player->powers[pw_carry] = CR_NONE;
+					break;
+				}
+
 				break;
 			}
 			case CR_ROLLOUT:
