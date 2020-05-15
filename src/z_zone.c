@@ -27,7 +27,6 @@
 
 #include "doomdef.h"
 #include "doomstat.h"
-#include "r_patch.h"
 #include "i_system.h" // I_GetFreeMem
 #include "i_video.h" // rendermode
 #include "z_zone.h"

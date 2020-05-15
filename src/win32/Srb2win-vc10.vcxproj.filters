@@ -478,6 +478,9 @@
     <ClCompile Include="..\r_patch.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
+    <ClCompile Include="..\r_rotsprite.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
     <ClCompile Include="..\r_portal.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
@@ -896,6 +899,9 @@
     </ClInclude>
     <ClInclude Include="..\apng.h" />
     <ClInclude Include="..\r_patch.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_rotsprite.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
     <ClInclude Include="..\r_portal.h">

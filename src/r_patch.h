@@ -15,10 +15,13 @@
 #define __R_PATCH__
 
 #include "r_defs.h"
+#include "r_patchtrees.h"
 #include "w_wad.h"
 #include "m_aatree.h"
 #include "i_video.h"
 #include "doomdef.h"
+
+void Patch_InitInfo(wadfile_t *wadfile);
 
 void *Patch_CacheSoftware(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
 void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
@@ -30,12 +33,16 @@ aatree_t *Patch_GetRendererBaseSubTree(UINT16 wadnum, rendermode_t mode);
 aatree_t *Patch_GetRendererRotatedSubTree(UINT16 wadnum, rendermode_t mode, boolean flip);
 #endif
 
-void Patch_UpdateReferences(void);
-void Patch_FreeReferences(void);
+void *GetRendererPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode);
+void SetRendererPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, void *ptr);
+void UpdateCurrentPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode);
 
-void Patch_InitInfo(wadfile_t *wadfile);
+#ifdef ROTSPRITE
+void *GetRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, boolean flip);
+void SetRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, boolean flip, void *ptr);
+void UpdateCurrentRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, INT32 rollangle, boolean flip);
+#endif
 
-// Structs
 struct patchreference_s
 {
 	struct patchreference_s *prev, *next;
@@ -47,6 +54,14 @@ struct patchreference_s
 };
 typedef struct patchreference_s patchreference_t;
 
+patchreference_t *FindPatchReference(UINT16 wad, UINT16 lump, INT32 rollangle, boolean flip);
+patchreference_t *InsertPatchReference(UINT16 wad, UINT16 lump, INT32 tag, void *ptr, INT32 rollangle, boolean flip);
+
+void Patch_UpdateReferences(void);
+void Patch_FreeReferences(void);
+
+// This should be in r_rotsprite.h, but that file
+// includes this one, so this file can't include that one.
 typedef enum
 {
 	ROTAXIS_X, // Roll (the default)
@@ -93,9 +108,9 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 
 // Sprite rotation
 #ifdef ROTSPRITE
-INT32 R_GetRollAngle(angle_t rollangle);
-
 // Arguments for RotSprite_ functions.
+// This should be in r_rotsprite.h, but you already know why it isn't.
+// Also, function prototypes here require this struct.
 typedef struct
 {
 	INT32 rollangle;
@@ -104,39 +119,12 @@ typedef struct
 	spriteframepivot_t *pivot;
 } rotsprite_vars_t;
 
-typedef struct
-{
-	pixelmap_t pixelmap[ROTANGLES];
-	patch_t *patches[ROTANGLES];
-	boolean cached[ROTANGLES];
-
-	UINT32 lumpnum;
-	rotsprite_vars_t vars;
-	INT32 tag;
-} rotsprite_t;
-
-rotsprite_t *RotSprite_GetFromPatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store);
-rotsprite_t *RotSprite_GetFromPatchNum(lumpnum_t lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store);
-rotsprite_t *RotSprite_GetFromPatchName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
-rotsprite_t *RotSprite_GetFromPatchLongName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
-
-void RotSprite_Create(rotsprite_t *rotsprite, rotsprite_vars_t rsvars);
-void RotSprite_CreateColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *patch, rotsprite_vars_t rsvars);
-void RotSprite_CreatePixelMap(patch_t *patch, pixelmap_t *pixelmap, rotsprite_vars_t rsvars);
-patch_t *RotSprite_CreatePatch(rotsprite_t *rotsprite, rotsprite_vars_t rsvars);
-
 patch_t *Patch_CacheRotated(UINT32 lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store);
 patch_t *Patch_CacheRotatedForSprite(UINT32 lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store);
 patch_t *Patch_CacheRotatedPwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store);
 patch_t *Patch_CacheRotatedForSpritePwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store);
 patch_t *Patch_CacheRotatedName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
 patch_t *Patch_CacheRotatedLongName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
-
-void RotSprite_InitPatchTree(patchtree_t *rcache);
-void RotSprite_Recreate(rotsprite_t *rotsprite, rendermode_t rmode);
-void RotSprite_RecreateAll(void);
-
-int RotSprite_GetCurrentPatchInfoIdx(INT32 rollangle, boolean flip);
 
 extern fixed_t rollcosang[ROTANGLES];
 extern fixed_t rollsinang[ROTANGLES];

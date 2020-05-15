@@ -57,6 +57,7 @@
 #include "r_defs.h"
 #include "r_data.h"
 #include "r_patch.h"
+#include "r_rotsprite.h"
 #include "i_system.h"
 #include "md5.h"
 #include "lua_script.h"

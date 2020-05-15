@@ -29,6 +29,7 @@
 #include "r_data.h"
 #include "r_things.h" // for R_AddSpriteDefs
 #include "r_patch.h"
+#include "r_rotsprite.h"
 #include "r_sky.h"
 #include "r_draw.h"
 

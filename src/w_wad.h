@@ -97,26 +97,7 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
-#include "m_aatree.h"
-#include "i_video.h" // num_renderers
-
-// Renderer tree types
-typedef enum patchtreetype_e
-{
-	patchtree_software, // Software.
-	patchtree_mipmap, // OpenGL, or any hardware renderer.
-
-	num_patchtrees,
-} patchtreetype_t;
-
-// Renderer patch trees
-typedef struct patchtree_s
-{
-	aatree_t *base;
-#ifdef ROTSPRITE
-	aatree_t *rotated[2]; // Sprite rotation stores flipped and non-flipped variants of a patch.
-#endif
-} patchtree_t;
+#include "r_patchtrees.h"
 
 typedef struct patchinfo_s
 {

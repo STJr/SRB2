@@ -18,6 +18,7 @@
 #include "p_local.h"
 #include "z_zone.h"
 #include "r_patch.h"
+#include "r_rotsprite.h"
 #include "r_things.h"
 #include "doomstat.h" // luabanks[]
 
