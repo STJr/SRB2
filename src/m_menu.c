@@ -5237,7 +5237,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 	{
 		if (M_CanShowLevelOnPlatter(mapnum, gt))
 		{
-			const INT32 actnum = mapheaderinfo[mapnum]->actnum;
+			const UINT8 actnum = mapheaderinfo[mapnum]->actnum;
 			const boolean headingisname = (fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[mapnum]->lvlttl));
 			const boolean wide = (mapheaderinfo[mapnum]->menuflags & LF2_WIDEICON);
 
