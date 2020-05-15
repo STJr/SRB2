@@ -2944,7 +2944,7 @@ void G_DoReborn(INT32 playernum)
 				players[i].starpostnum = 0;
 			}
 		}
-		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD))
+		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD) && !(marathonmode & MA_INIT))
 		{
 			P_RespawnThings();
 
