@@ -1,4 +1,4 @@
-// SONIC ROBO BLAST 2 KART
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2020 by James R.
 //
