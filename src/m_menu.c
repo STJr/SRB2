@@ -10376,14 +10376,16 @@ static void M_MarathonLiveEventBackup(INT32 choice)
 			marathonmode = 0;
 		return;
 	}
-	else if (choice == KEY_DEL)
+
+	M_StopMessage(0);
+	stopstopmessage = true;
+
+	if (choice == KEY_DEL)
 	{
-		M_StopMessage(0);
 		if (FIL_FileExists(liveeventbackup)) // just in case someone deleted it while we weren't looking.
 			remove(liveeventbackup);
 		BwehHehHe();
 		M_StartMessage("Live event backup erased.\n",M_Marathon,MM_NOTHING);
-		stopstopmessage = true;
 		return;
 	}
 
