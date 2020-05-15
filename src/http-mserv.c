@@ -34,6 +34,11 @@ Documentation available here.
 
 static void MasterServer_Debug_OnChange (void);
 
+consvar_t cv_masterserver_timeout = {
+	"masterserver_timeout", "5", CV_SAVE, CV_Unsigned,
+	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
+};
+
 consvar_t cv_masterserver_debug = {
 	"masterserver_debug", "Off", CV_SAVE|CV_CALL, CV_OnOff,
 	MasterServer_Debug_OnChange, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
@@ -165,6 +170,7 @@ HMS_connect (const char *format, ...)
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, cv_masterserver_timeout.value);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
 

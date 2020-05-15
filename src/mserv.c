@@ -87,6 +87,7 @@ void AddMServCommands(void)
 #ifndef NONET
 	CV_RegisterVar(&cv_masterserver);
 	CV_RegisterVar(&cv_masterserver_update_rate);
+	CV_RegisterVar(&cv_masterserver_timeout);
 	CV_RegisterVar(&cv_masterserver_debug);
 	CV_RegisterVar(&cv_servername);
 	COM_AddCommand("listserv", Command_Listserv_f);
