@@ -14,6 +14,7 @@
 #include "fastcmp.h"
 #include "r_defs.h"
 #include "r_local.h"
+#include "r_rotsprite.h"
 #include "st_stuff.h" // hudinfo[]
 #include "g_game.h"
 #include "i_video.h" // rendermode
