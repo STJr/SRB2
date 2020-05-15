@@ -16,6 +16,7 @@
 #include "i_video.h"
 #include "v_video.h"
 
+#include "r_state.h" // fadecolormap
 #include "r_draw.h" // transtable
 #include "p_pspr.h" // tr_transxxx
 #include "p_local.h"
@@ -32,9 +33,7 @@
 
 #include "doomstat.h"
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h" // level title
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"

@@ -28,12 +28,6 @@
 #include "r_state.h"
 #include "r_defs.h"
 
-
-#define POLYOBJECTS
-
-
-#ifdef POLYOBJECTS
-
 /*
    Theory behind Polyobjects:
 
@@ -146,11 +140,6 @@ FUNCINLINE static ATTRINLINE void Polyobj_vecSub2(vertex_t *dst, vertex_t *v1, v
 	dst->y = v1->y - v2->y;
 }
 
-//
-// P_PointInsidePolyobj
-//
-// Returns TRUE if the XY point is inside the polyobject
-//
 boolean P_PointInsidePolyobj(polyobj_t *po, fixed_t x, fixed_t y)
 {
 	size_t i;
@@ -164,11 +153,6 @@ boolean P_PointInsidePolyobj(polyobj_t *po, fixed_t x, fixed_t y)
 	return true;
 }
 
-//
-// P_MobjTouchingPolyobj
-//
-// Returns TRUE if the mobj is touching the edge of a polyobject
-//
 boolean P_MobjTouchingPolyobj(polyobj_t *po, mobj_t *mo)
 {
 	fixed_t mbbox[4];
@@ -188,11 +172,6 @@ boolean P_MobjTouchingPolyobj(polyobj_t *po, mobj_t *mo)
 	return false;
 }
 
-//
-// P_MobjInsidePolyobj
-//
-// Returns TRUE if the mobj is inside the polyobject
-//
 boolean P_MobjInsidePolyobj(polyobj_t *po, mobj_t *mo)
 {
 	fixed_t mbbox[4];
@@ -212,11 +191,6 @@ boolean P_MobjInsidePolyobj(polyobj_t *po, mobj_t *mo)
 	return true;
 }
 
-//
-// P_BBoxInsidePolyobj
-//
-// Returns TRUE if the bbox is inside the polyobject
-//
 boolean P_BBoxInsidePolyobj(polyobj_t *po, fixed_t *bbox)
 {
 	size_t i;
@@ -230,55 +204,53 @@ boolean P_BBoxInsidePolyobj(polyobj_t *po, fixed_t *bbox)
 	return true;
 }
 
-//
-// Polyobj_GetInfo
-//
 // Finds the 'polyobject settings' linedef for a polyobject
 // the polyobject's id should be set as its tag
-//
-void Polyobj_GetInfo(INT16 poid, INT32 *poflags, INT32 *parentID, INT32 *potrans)
+static void Polyobj_GetInfo(polyobj_t *po)
 {
-	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, poid, -1);
+	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, po->id, -1);
+
+	po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 
 	if (i == -1)
 		return; // no extra settings to apply, let's leave it
 
-	if (parentID)
-		*parentID = lines[i].frontsector->special;
+	po->parent = lines[i].frontsector->special;
+	if (po->parent == po->id) // do not allow a self-reference
+		po->parent = -1;
 
-	if (potrans)
-		*potrans = (lines[i].frontsector->floorheight>>FRACBITS) / 100;
+	po->translucency = (lines[i].flags & ML_DONTPEGTOP)
+						? (sides[lines[i].sidenum[0]].textureoffset>>FRACBITS)
+						: ((lines[i].frontsector->floorheight>>FRACBITS) / 100);
+
+	po->translucency = max(min(po->translucency, NUMTRANSMAPS), 0);
 
 	if (lines[i].flags & ML_EFFECT1)
-		*poflags |= POF_ONESIDE;
+		po->flags |= POF_ONESIDE;
 
 	if (lines[i].flags & ML_EFFECT2)
-		*poflags &= ~POF_SOLID;
+		po->flags &= ~POF_SOLID;
 
 	if (lines[i].flags & ML_EFFECT3)
-		*poflags |= POF_PUSHABLESTOP;
+		po->flags |= POF_PUSHABLESTOP;
 
 	if (lines[i].flags & ML_EFFECT4)
-		*poflags |= POF_RENDERPLANES;
+		po->flags |= POF_RENDERPLANES;
 
 	/*if (lines[i].flags & ML_EFFECT5)
-		*poflags &= ~POF_CLIPPLANES;*/
+		po->flags &= ~POF_CLIPPLANES;*/
 
 	if (lines[i].flags & ML_NOCLIMB) // Has a linedef executor
-		*poflags |= POF_LDEXEC;
+		po->flags |= POF_LDEXEC;
 }
 
 // Reallocating array maintenance
 
-//
-// Polyobj_addVertex
-//
 // Adds a vertex to a polyobject's reallocating vertex arrays, provided
 // that such a vertex isn't already in the array. Each vertex must only
 // be translated once during polyobject movement. Keeping track of them
 // this way results in much more clear and efficient code than what
 // Hexen used.
-//
 static void Polyobj_addVertex(polyobj_t *po, vertex_t *v)
 {
 	size_t i;
@@ -314,14 +286,10 @@ static void Polyobj_addVertex(polyobj_t *po, vertex_t *v)
 	po->numVertices++;
 }
 
-//
-// Polyobj_addLine
-//
 // Adds a linedef to a polyobject's reallocating linedefs array, provided
 // that such a linedef isn't already in the array. Each linedef must only
 // be adjusted once during polyobject movement. Keeping track of them
 // this way provides the same benefits as for vertices.
-//
 static void Polyobj_addLine(polyobj_t *po, line_t *l)
 {
 	size_t i;
@@ -346,14 +314,10 @@ static void Polyobj_addLine(polyobj_t *po, line_t *l)
 	po->lines[po->numLines++] = l;
 }
 
-//
-// Polyobj_addSeg
-//
 // Adds a single seg to a polyobject's reallocating seg pointer array.
 // Most polyobjects will have between 4 and 16 segs, so the array size
 // begins much smaller than usual. Calls Polyobj_addVertex and Polyobj_addLine
 // to add those respective structures for this seg, as well.
-//
 static void Polyobj_addSeg(polyobj_t *po, seg_t *seg)
 {
 	if (po->segCount >= po->numSegsAlloc)
@@ -379,14 +343,10 @@ static void Polyobj_addSeg(polyobj_t *po, seg_t *seg)
 
 // Seg-finding functions
 
-//
-// Polyobj_findSegs
-//
 // This method adds segs to a polyobject by following segs from vertex to
 // vertex.  The process stops when the original starting point is reached
 // or if a particular search ends unexpectedly (ie, the polyobject is not
 // closed).
-//
 static void Polyobj_findSegs(polyobj_t *po, seg_t *seg)
 {
 	fixed_t startx, starty;
@@ -400,25 +360,29 @@ static void Polyobj_findSegs(polyobj_t *po, seg_t *seg)
 		// Find backfacings
 		for (s = 0;  s < numsegs; s++)
 		{
+			size_t r;
+
 			if (segs[s].glseg)
 				continue;
-			if (segs[s].linedef == seg->linedef
-				&& segs[s].side == 1)
+
+			if (segs[s].linedef != seg->linedef)
+				continue;
+
+			if (segs[s].side != 1)
+				continue;
+
+			for (r = 0; r < po->segCount; r++)
 			{
-				size_t r;
-				for (r = 0; r < po->segCount; r++)
-				{
-					if (po->segs[r] == &segs[s])
-						break;
-				}
-
-				if (r != po->segCount)
-					continue;
-
-				segs[s].dontrenderme = true;
-
-				Polyobj_addSeg(po, &segs[s]);
+				if (po->segs[r] == &segs[s])
+					break;
 			}
+
+			if (r != po->segCount)
+				continue;
+
+			segs[s].dontrenderme = true;
+
+			Polyobj_addSeg(po, &segs[s]);
 		}
 	}
 
@@ -438,56 +402,60 @@ newseg:
 	// seg's ending vertex.
 	for (i = 0; i < numsegs; ++i)
 	{
+		size_t q;
+
 		if (segs[i].glseg)
 			continue;
 		if (segs[i].side != 0) // needs to be frontfacing
 			continue;
-		if (segs[i].v1->x == seg->v2->x && segs[i].v1->y == seg->v2->y)
+		if (segs[i].v1->x != seg->v2->x)
+			continue;
+		if (segs[i].v1->y != seg->v2->y)
+			continue;
+
+		// Make sure you didn't already add this seg...
+		for (q = 0; q < po->segCount; q++)
 		{
-			// Make sure you didn't already add this seg...
-			size_t q;
-			for (q = 0; q < po->segCount; q++)
-			{
-				if (po->segs[q] == &segs[i])
-					break;
-			}
-
-			if (q != po->segCount)
-				continue;
-
-			// add the new seg and recurse
-			Polyobj_addSeg(po, &segs[i]);
-			seg = &segs[i];
-
-			if (!(po->flags & POF_ONESIDE))
-			{
-				// Find backfacings
-				for (q = 0;  q < numsegs; q++)
-				{
-					if (segs[q].glseg)
-						continue;
-
-					if (segs[q].linedef == segs[i].linedef
-						&& segs[q].side == 1)
-					{
-						size_t r;
-						for (r=0; r < po->segCount; r++)
-						{
-							if (po->segs[r] == &segs[q])
-								break;
-						}
-
-						if (r != po->segCount)
-							continue;
-
-						segs[q].dontrenderme = true;
-						Polyobj_addSeg(po, &segs[q]);
-					}
-				}
-			}
-
-			goto newseg;
+			if (po->segs[q] == &segs[i])
+				break;
 		}
+
+		if (q != po->segCount)
+			continue;
+
+		// add the new seg and recurse
+		Polyobj_addSeg(po, &segs[i]);
+		seg = &segs[i];
+
+		if (!(po->flags & POF_ONESIDE))
+		{
+			// Find backfacings
+			for (q = 0; q < numsegs; q++)
+			{
+				size_t r;
+
+				if (segs[q].glseg)
+					continue;
+				if (segs[q].linedef != segs[i].linedef)
+					continue;
+				if (segs[q].side != 1)
+					continue;
+
+				for (r = 0; r < po->segCount; r++)
+				{
+					if (po->segs[r] == &segs[q])
+						break;
+				}
+
+				if (r != po->segCount)
+					continue;
+
+				segs[q].dontrenderme = true;
+				Polyobj_addSeg(po, &segs[q]);
+			}
+		}
+
+		goto newseg;
 	}
 
 	// error: if we reach here, the seg search never found another seg to
@@ -496,91 +464,8 @@ newseg:
 	CONS_Debug(DBG_POLYOBJ, "Polyobject %d is not closed\n", po->id);
 }
 
-/*
-// structure used to store segs during explicit search process
-typedef struct segitem_s
-{
-	seg_t *seg;
-	INT32   num;
-} segitem_t;
-
-//
-// Polyobj_segCompare
-//
-// Callback for qsort that compares two segitems.
-//
-static int Polyobj_segCompare(const void *s1, const void *s2)
-{
-	const segitem_t *si1 = s1;
-	const segitem_t *si2 = s2;
-
-	return si2->num - si1->num;
-}
-
-//
-// Polyobj_findExplicit
-//
-// Searches for segs to put into a polyobject in an explicitly provided order.
-//
-static void Polyobj_findExplicit(polyobj_t *po)
-{
-	// temporary dynamic seg array
-	segitem_t *segitems = NULL;
-	size_t numSegItems = 0;
-	size_t numSegItemsAlloc = 0;
-
-	size_t i;
-
-	// first loop: save off all segs with polyobject's id number
-	for (i = 0; i < numsegs; ++i)
-	{
-		INT32 polyID, parentID;
-
-		if (segs[i].linedef->special != POLYOBJ_EXPLICIT_LINE)
-			continue;
-
-		Polyobj_GetInfo(segs[i].linedef->tag, &polyID, &parentID, NULL);
-
-		if (polyID == po->id && parentID > 0)
-		{
-			if (numSegItems >= numSegItemsAlloc)
-			{
-				numSegItemsAlloc = numSegItemsAlloc ? numSegItemsAlloc*2 : 4;
-				segitems = Z_Realloc(segitems, numSegItemsAlloc*sizeof(segitem_t), PU_STATIC, NULL);
-			}
-			segitems[numSegItems].seg = &segs[i];
-			segitems[numSegItems].num = parentID;
-			++numSegItems;
-		}
-	}
-
-	// make sure array isn't empty
-	if (numSegItems == 0)
-	{
-		po->isBad = true;
-		CONS_Debug(DBG_POLYOBJ, "Polyobject %d is empty\n", po->id);
-		return;
-	}
-
-	// sort the array if necessary
-	if (numSegItems >= 2)
-		qsort(segitems, numSegItems, sizeof(segitem_t), Polyobj_segCompare);
-
-	// second loop: put the sorted segs into the polyobject
-	for (i = 0; i < numSegItems; ++i)
-		Polyobj_addSeg(po, segitems[i].seg);
-
-	// free the temporary array
-	Z_Free(segitems);
-}*/
-
 // Setup functions
 
-//
-// Polyobj_spawnPolyObj
-//
-// Sets up a Polyobject.
-//
 static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 {
 	size_t i;
@@ -604,14 +489,12 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 	po->thrust = FRACUNIT;
 	po->spawnflags = po->flags = 0;
 
-	// 1. Search segs for "line start" special with tag matching this
-	//    polyobject's id number. If found, iterate through segs which
-	//    share common vertices and record them into the polyobject.
+	// Search segs for "line start" special with tag matching this
+	// polyobject's id number. If found, iterate through segs which
+	// share common vertices and record them into the polyobject.
 	for (i = 0; i < numsegs; ++i)
 	{
 		seg_t *seg = &segs[i];
-		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
-		INT32 parentID = 0, potrans = 0;
 
 		if (seg->glseg)
 			continue;
@@ -625,17 +508,13 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		if (seg->linedef->tag != po->id)
 			continue;
 
-		Polyobj_GetInfo(po->id, &poflags, &parentID, &potrans); // apply extra settings if they exist!
+		Polyobj_GetInfo(po); // apply extra settings if they exist!
 
 		// save original flags and translucency to reference later for netgames!
-		po->spawnflags = po->flags = poflags;
-		po->spawntrans = po->translucency = potrans;
+		po->spawnflags = po->flags;
+		po->spawntrans = po->translucency;
 
 		Polyobj_findSegs(po, seg);
-		po->parent = parentID;
-		if (po->parent == po->id) // do not allow a self-reference
-			po->parent = -1;
-		// TODO: sound sequence is in args[2]
 		break;
 	}
 
@@ -645,29 +524,7 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 	if (po->isBad)
 		return;
 
-	/*
-	// 2. If no such line existed in the first step, look for a seg with the
-	//    "explicit" special with tag matching this polyobject's id number. If
-	//    found, continue to search for all such lines, storing them in a
-	//    temporary list of segs which is then copied into the polyobject in
-	//    sorted order.
-	if (po->segCount == 0)
-	{
-		UINT16 parent;
-		Polyobj_findExplicit(po);
-		// if an error occurred above, quit processing this object
-		if (po->isBad)
-			return;
-
-		Polyobj_GetInfo(po->segs[0]->linedef->tag, NULL, NULL, &parent);
-		po->parent = parent;
-		if (po->parent == po->id) // do not allow a self-reference
-			po->parent = -1;
-		// TODO: sound sequence is in args[3]
-	}*/
-
 	// make sure array isn't empty
-	// since Polyobj_findExplicit is disabled currently, we have to do things here instead now!
 	if (po->segCount == 0)
 	{
 		po->isBad = true;
@@ -696,12 +553,8 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 
 static void Polyobj_attachToSubsec(polyobj_t *po);
 
-//
-// Polyobj_moveToSpawnSpot
-//
 // Translates the polyobject's vertices with respect to the difference between
 // the anchor and spawn spots. Updates linedef bounding boxes as well.
-//
 static void Polyobj_moveToSpawnSpot(mapthing_t *anchor)
 {
 	polyobj_t *po;
@@ -748,11 +601,7 @@ static void Polyobj_moveToSpawnSpot(mapthing_t *anchor)
 	Polyobj_attachToSubsec(po);
 }
 
-//
-// Polyobj_attachToSubsec
-//
 // Attaches a polyobject to its appropriate subsector.
-//
 static void Polyobj_attachToSubsec(polyobj_t *po)
 {
 	subsector_t  *ss;
@@ -787,11 +636,7 @@ static void Polyobj_attachToSubsec(polyobj_t *po)
 	po->attached = true;
 }
 
-//
-// Polyobj_removeFromSubsec
-//
 // Removes a polyobject from the subsector to which it is attached.
-//
 static void Polyobj_removeFromSubsec(polyobj_t *po)
 {
 	if (po->attached)
@@ -803,11 +648,7 @@ static void Polyobj_removeFromSubsec(polyobj_t *po)
 
 // Blockmap Functions
 
-//
-// Polyobj_getLink
-//
 // Retrieves a polymaplink object from the free list or creates a new one.
-//
 static polymaplink_t *Polyobj_getLink(void)
 {
 	polymaplink_t *l;
@@ -826,11 +667,7 @@ static polymaplink_t *Polyobj_getLink(void)
 	return l;
 }
 
-//
-// Polyobj_putLink
-//
 // Puts a polymaplink object into the free list.
-//
 static void Polyobj_putLink(polymaplink_t *l)
 {
 	memset(l, 0, sizeof(*l));
@@ -838,14 +675,10 @@ static void Polyobj_putLink(polymaplink_t *l)
 	bmap_freelist = l;
 }
 
-//
-// Polyobj_linkToBlockmap
-//
 // Inserts a polyobject into the polyobject blockmap. Unlike, mobj_t's,
 // polyobjects need to be linked into every blockmap cell which their
 // bounding box intersects. This ensures the accurate level of clipping
 // which is present with linedefs but absent from most mobj interactions.
-//
 static void Polyobj_linkToBlockmap(polyobj_t *po)
 {
 	fixed_t *blockbox = po->blockbox;
@@ -890,12 +723,8 @@ static void Polyobj_linkToBlockmap(polyobj_t *po)
 	po->linked = true;
 }
 
-//
-// Polyobj_removeFromBlockmap
-//
 // Unlinks a polyobject from all blockmap cells it intersects and returns
 // its polymaplink objects to the free list.
-//
 static void Polyobj_removeFromBlockmap(polyobj_t *po)
 {
 	polymaplink_t *rover;
@@ -934,13 +763,9 @@ static void Polyobj_removeFromBlockmap(polyobj_t *po)
 
 // Movement functions
 
-//
-// Polyobj_untouched
-//
 // A version of Lee's routine from p_maputl.c that accepts an mobj pointer
 // argument instead of using tmthing. Returns true if the line isn't contacted
 // and false otherwise.
-//
 static inline boolean Polyobj_untouched(line_t *ld, mobj_t *mo)
 {
 	fixed_t x, y, ptmbbox[4];
@@ -953,13 +778,9 @@ static inline boolean Polyobj_untouched(line_t *ld, mobj_t *mo)
 		P_BoxOnLineSide(ptmbbox, ld) != -1;
 }
 
-//
-// Polyobj_pushThing
-//
 // Inflicts thrust and possibly damage on a thing which has been found to be
 // blocking the motion of a polyobject. The default thrust amount is only one
 // unit, but the motion of the polyobject can be used to change this.
-//
 static void Polyobj_pushThing(polyobj_t *po, line_t *line, mobj_t *mo)
 {
 	angle_t lineangle;
@@ -994,11 +815,7 @@ static void Polyobj_pushThing(polyobj_t *po, line_t *line, mobj_t *mo)
 	}
 }
 
-//
-// Polyobj_slideThing
-//
 // Moves an object resting on top of a polyobject by (x, y). Template function to make alteration easier.
-//
 static void Polyobj_slideThing(mobj_t *mo, fixed_t dx, fixed_t dy)
 {
 	if (mo->player) { // Finally this doesn't suck eggs -fickle
@@ -1046,11 +863,7 @@ static void Polyobj_slideThing(mobj_t *mo, fixed_t dx, fixed_t dy)
 		P_TryMove(mo, mo->x+dx, mo->y+dy, true);
 }
 
-//
-// Polyobj_carryThings
-//
 // Causes objects resting on top of the polyobject to 'ride' with its movement.
-//
 static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 {
 	static INT32 pomovecount = 0;
@@ -1102,12 +915,8 @@ static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 	}
 }
 
-//
-// Polyobj_clipThings
-//
 // Checks for things that are in the way of a polyobject line move.
 // Returns true if something was hit.
-//
 static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 {
 	INT32 hitflags = 0;
@@ -1169,11 +978,8 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 	return hitflags;
 }
 
-//
-// Polyobj_moveXY
-//
+
 // Moves a polyobject on the x-y plane.
-//
 static boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean checkmobjs)
 {
 	size_t i;
@@ -1229,14 +1035,10 @@ static boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean check
 	return !(hitflags & 2);
 }
 
-//
-// Polyobj_rotatePoint
-//
 // Rotates a point and then translates it relative to point c.
 // The formula for this can be found here:
 // http://www.inversereality.org/tutorials/graphics%20programming/2dtransformations.html
 // It is, of course, just a vector-matrix multiplication.
-//
 static inline void Polyobj_rotatePoint(vertex_t *v, const vertex_t *c, angle_t ang)
 {
 	vertex_t tmp = *v;
@@ -1248,12 +1050,8 @@ static inline void Polyobj_rotatePoint(vertex_t *v, const vertex_t *c, angle_t a
 	v->y += c->y;
 }
 
-//
-// Polyobj_rotateLine
-//
 // Taken from P_LoadLineDefs; simply updates the linedef's dx, dy, slopetype,
 // and bounding box to be consistent with its vertices.
-//
 static void Polyobj_rotateLine(line_t *ld)
 {
 	vertex_t *v1, *v2;
@@ -1293,11 +1091,7 @@ static void Polyobj_rotateLine(line_t *ld)
 	}
 }
 
-//
-// Polyobj_rotateThings
-//
 // Causes objects resting on top of the rotating polyobject to 'ride' with its movement.
-//
 static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, UINT8 turnthings)
 {
 	static INT32 pomovecount = 10000;
@@ -1373,11 +1167,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 	}
 }
 
-//
-// Polyobj_rotate
-//
 // Rotates a polyobject around its start point.
-//
 static boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean checkmobjs)
 {
 	size_t i;
@@ -1451,12 +1241,8 @@ static boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, bo
 // Global Functions
 //
 
-//
-// Polyobj_GetForNum
-//
 // Retrieves a polyobject by its numeric id using hashing.
 // Returns NULL if no such polyobject exists.
-//
 polyobj_t *Polyobj_GetForNum(INT32 id)
 {
 	INT32 curidx  = PolyObjects[id % numPolyObjects].first;
@@ -1467,12 +1253,9 @@ polyobj_t *Polyobj_GetForNum(INT32 id)
 	return curidx == numPolyObjects ? NULL : &PolyObjects[curidx];
 }
 
-//
-// Polyobj_GetParent
-//
+
 // Retrieves the parenting polyobject if one exists. Returns NULL
 // otherwise.
-//
 #if 0 //unused function
 static polyobj_t *Polyobj_GetParent(polyobj_t *po)
 {
@@ -1480,12 +1263,8 @@ static polyobj_t *Polyobj_GetParent(polyobj_t *po)
 }
 #endif
 
-//
-// Polyobj_GetChild
-//
 // Iteratively retrieves the children POs of a parent,
 // sorta like P_FindSectorSpecialFromTag.
-//
 static polyobj_t *Polyobj_GetChild(polyobj_t *po, INT32 *start)
 {
 	for (; *start < numPolyObjects; (*start)++)
@@ -1504,12 +1283,8 @@ typedef struct mobjqitem_s
 	mobj_t *mo;
 } mobjqitem_t;
 
-//
-// Polyobj_InitLevel
-//
 // Called at the beginning of each map after all other line and thing
 // processing is finished.
-//
 void Polyobj_InitLevel(void)
 {
 	thinker_t   *th;
@@ -1628,9 +1403,6 @@ void Polyobj_InitLevel(void)
 	M_QueueFree(&anchorqueue);
 }
 
-//
-// Polyobj_MoveOnLoad
-//
 // Called when a savegame is being loaded. Rotates and translates an
 // existing polyobject to its position when the game was saved.
 //
@@ -1655,11 +1427,7 @@ void Polyobj_MoveOnLoad(polyobj_t *po, angle_t angle, fixed_t x, fixed_t y)
 
 // Thinker Functions
 
-//
-// T_PolyObjRotate
-//
 // Thinker function for PolyObject rotation.
-//
 void T_PolyObjRotate(polyrotate_t *th)
 {
 	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
@@ -1720,11 +1488,7 @@ void T_PolyObjRotate(polyrotate_t *th)
 	}
 }
 
-//
-// Polyobj_componentSpeed
-//
 // Calculates the speed components from the desired resultant velocity.
-//
 FUNCINLINE static ATTRINLINE void Polyobj_componentSpeed(INT32 resVel, INT32 angle,
                                             fixed_t *xVel, fixed_t *yVel)
 {
@@ -1805,11 +1569,6 @@ void T_PolyObjMove(polymove_t *th)
 	}
 }
 
-//
-// T_PolyObjWaypoint
-//
-// Kinda like 'Zoom Tubes for PolyObjects'
-//
 void T_PolyObjWaypoint(polywaypoint_t *th)
 {
 	mobj_t *mo2;
@@ -2303,7 +2062,7 @@ void T_PolyDoorSwing(polyswingdoor_t *th)
 	}
 }
 
-// T_PolyObjDisplace: shift a polyobject based on a control sector's heights.
+// Shift a polyobject based on a control sector's heights.
 void T_PolyObjDisplace(polydisplace_t *th)
 {
 	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
@@ -2343,7 +2102,7 @@ void T_PolyObjDisplace(polydisplace_t *th)
 		th->oldHeights = newheights;
 }
 
-// T_PolyObjRotDisplace: rotate a polyobject based on a control sector's heights.
+// Rotate a polyobject based on a control sector's heights.
 void T_PolyObjRotDisplace(polyrotdisplace_t *th)
 {
 	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
@@ -2389,7 +2148,7 @@ static inline INT32 Polyobj_AngSpeed(INT32 speed)
 
 // Linedef Handlers
 
-INT32 EV_DoPolyObjRotate(polyrotdata_t *prdata)
+boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2399,16 +2158,16 @@ INT32 EV_DoPolyObjRotate(polyrotdata_t *prdata)
 	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// check for override if this polyobj already has a thinker
 	if (po->thinker && !prdata->overRide)
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotate_t), PU_LEVSPEC, NULL);
@@ -2451,10 +2210,10 @@ INT32 EV_DoPolyObjRotate(polyrotdata_t *prdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
-INT32 EV_DoPolyObjMove(polymovedata_t *pmdata)
+boolean EV_DoPolyObjMove(polymovedata_t *pmdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2464,16 +2223,16 @@ INT32 EV_DoPolyObjMove(polymovedata_t *pmdata)
 	if (!(po = Polyobj_GetForNum(pmdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjMove: bad polyobj %d\n", pmdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// check for override if this polyobj already has a thinker
 	if (po->thinker && !pmdata->overRide)
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polymove_t), PU_LEVSPEC, NULL);
@@ -2510,10 +2269,10 @@ INT32 EV_DoPolyObjMove(polymovedata_t *pmdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
-INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
+boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 {
 	polyobj_t *po;
 	polywaypoint_t *th;
@@ -2526,15 +2285,15 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	if (!(po = Polyobj_GetForNum(pwdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: bad polyobj %d\n", pwdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	if (po->thinker) // Don't crowd out another thinker.
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polywaypoint_t), PU_LEVSPEC, NULL);
@@ -2601,7 +2360,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: Missing starting waypoint!\n");
 		po->thinker = NULL;
 		P_RemoveThinker(&th->thinker);
-		return 0;
+		return false;
 	}
 
 	// Hotfix to not crash on single-waypoint sequences -Red
@@ -2664,7 +2423,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: Missing target waypoint!\n");
 		po->thinker = NULL;
 		P_RemoveThinker(&th->thinker);
-		return 0;
+		return false;
 	}
 
 	// Set pointnum
@@ -2675,7 +2434,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// We don't deal with the mirror crap here, we'll
 	// handle that in the T_Thinker function.
-	return 1;
+	return true;
 }
 
 static void Polyobj_doSlideDoor(polyobj_t *po, polydoordata_t *doordata)
@@ -2767,20 +2526,20 @@ static void Polyobj_doSwingDoor(polyobj_t *po, polydoordata_t *doordata)
 		Polyobj_doSwingDoor(po, doordata);
 }
 
-INT32 EV_DoPolyDoor(polydoordata_t *doordata)
+boolean EV_DoPolyDoor(polydoordata_t *doordata)
 {
 	polyobj_t *po;
 
 	if (!(po = Polyobj_GetForNum(doordata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyDoor: bad polyobj %d\n", doordata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects;
 	// polyobject doors don't allow action overrides
 	if (po->isBad || po->thinker)
-		return 0;
+		return false;
 
 	switch (doordata->doorType)
 	{
@@ -2792,13 +2551,13 @@ INT32 EV_DoPolyDoor(polydoordata_t *doordata)
 		break;
 	default:
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyDoor: unknown door type %d", doordata->doorType);
-		return 0;
+		return false;
 	}
 
-	return 1;
+	return true;
 }
 
-INT32 EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
+boolean EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2808,12 +2567,12 @@ INT32 EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polydisplace_t), PU_LEVSPEC, NULL);
@@ -2841,10 +2600,10 @@ INT32 EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
-INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
+boolean EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2854,12 +2613,12 @@ INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotdisplace_t), PU_LEVSPEC, NULL);
@@ -2887,7 +2646,7 @@ INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
 void T_PolyObjFlag(polymove_t *th)
@@ -2936,7 +2695,7 @@ void T_PolyObjFlag(polymove_t *th)
 	Polyobj_attachToSubsec(po);     // relink to subsector
 }
 
-INT32 EV_DoPolyObjFlag(line_t *pfdata)
+boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -2944,22 +2703,22 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	size_t i;
 	INT32 start;
 
-	if (!(po = Polyobj_GetForNum(pfdata->tag)))
+	if (!(po = Polyobj_GetForNum(pfdata->polyObjNum)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", pfdata->tag);
-		return 0;
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", pfdata->polyObjNum);
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects,
 	// polyobject doors don't allow action overrides
 	if (po->isBad || po->thinker)
-		return 0;
+		return false;
 
 	// Must have even # of vertices
 	if (po->numVertices & 1)
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: Polyobject has odd # of vertices!\n");
-		return 0;
+		return false;
 	}
 
 	// create a new thinker
@@ -2969,11 +2728,11 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	po->thinker = &th->thinker;
 
 	// set fields
-	th->polyObjNum = pfdata->tag;
+	th->polyObjNum = pfdata->polyObjNum;
 	th->distance   = 0;
-	th->speed      = P_AproxDistance(pfdata->dx, pfdata->dy)>>FRACBITS;
-	th->angle      = R_PointToAngle2(pfdata->v1->x, pfdata->v1->y, pfdata->v2->x, pfdata->v2->y)>>ANGLETOFINESHIFT;
-	th->momx       = sides[pfdata->sidenum[0]].textureoffset>>FRACBITS;
+	th->speed      = pfdata->speed;
+	th->angle      = pfdata->angle;
+	th->momx       = pfdata->momx;
 
 	// save current positions
 	for (i = 0; i < po->numVertices; ++i)
@@ -2985,12 +2744,12 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	start = 0;
 	while ((po = Polyobj_GetChild(oldpo, &start)))
 	{
-		pfdata->tag = po->id;
+		pfdata->polyObjNum = po->id;
 		EV_DoPolyObjFlag(pfdata);
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
 
 void T_PolyObjFade(polyfade_t *th)
@@ -3088,7 +2847,7 @@ void T_PolyObjFade(polyfade_t *th)
 	}
 }
 
-INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
+boolean EV_DoPolyObjFade(polyfadedata_t *pfdata)
 {
 	polyobj_t *po;
 	polyobj_t *oldpo;
@@ -3098,16 +2857,16 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	if (!(po = Polyobj_GetForNum(pfdata->polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjFade: bad polyobj %d\n", pfdata->polyObjNum);
-		return 0;
+		return false;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return 0;
+		return false;
 
 	// already equal, nothing to do
 	if (po->translucency == pfdata->destvalue)
-		return 1;
+		return true;
 
 	if (po->thinker && po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
 		P_RemoveThinker(po->thinker);
@@ -3149,9 +2908,7 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	}
 
 	// action was successful
-	return 1;
+	return true;
 }
-
-#endif // ifdef POLYOBJECTS
 
 // EOF

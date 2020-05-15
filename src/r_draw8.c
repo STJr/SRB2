@@ -620,7 +620,6 @@ void R_DrawSpan_8 (void)
 	}
 }
 
-#ifdef ESLOPE
 // R_CalcTiltedLighting
 // Exactly what it says on the tin. I wish I wasn't too lazy to explain things properly.
 INT32 tiltlighting[MAXVIDWIDTH];
@@ -1199,7 +1198,6 @@ void R_DrawTiltedSplat_8(void)
 	}
 #endif
 }
-#endif // ESLOPE
 
 /**	\brief The R_DrawSplat_8 function
 	Just like R_DrawSpan_8, but skips transparent pixels.

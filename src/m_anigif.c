@@ -490,23 +490,27 @@ const UINT8 gifframe_gchead[4] = {0x21,0xF9,0x04,0x04}; // GCE, bytes, packed by
 static UINT8 *gifframe_data = NULL;
 static size_t gifframe_size = 8192;
 
-static void GIF_rgbconvert(UINT8 *src, UINT8 *dest, size_t bpp)
+//
+// GIF_rgbconvert
+// converts an RGB frame to a frame with a palette.
+//
+#ifdef HWRENDER
+static void GIF_rgbconvert(UINT8 *linear, UINT8 *scr, size_t bpp)
 {
 	UINT8 r, g, b;
-	INT32 x, y;
-	size_t i = 0;
+	size_t src = 0, dest = 0;
+	size_t size = (vid.width * vid.height * 3);
 
 	InitColorLUT(gif_framepalette);
 
-	for (y = 0; y < vid.height; y++)
+	while (src < size)
 	{
-		for (x = 0; x < vid.width; x++, i += bpp)
-		{
-			r = (UINT8)src[i];
-			g = (UINT8)src[i + 1];
-			b = (UINT8)src[i + 2];
-			dest[(y * vid.width) + x] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
-		}
+		r = (UINT8)linear[src];
+		g = (UINT8)linear[src + 1];
+		b = (UINT8)linear[src + 2];
+		scr[dest] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
+		src += (bpp * scrbuf_downscaleamt);
+		dest += scrbuf_downscaleamt;
 	}
 }
 
@@ -566,7 +570,7 @@ static void GIF_framewrite(void)
 		else if (rendermode == render_opengl)
 		{
 			UINT8 *sshot = HWR_GetScreenshot();
-			GIF_rgbconvert(sshot, screens[2], 3);
+			GIF_rgbconvert(sshot, movie_screen, 3);
 			free(sshot);
 		}
 #endif
@@ -598,6 +602,12 @@ static void GIF_framewrite(void)
 					I_ReadScreen(movie_screen);
 			}
 		}
+#endif
+
+		// Copy the first frame into the movie screen
+		// OpenGL already does the same above.
+		if (gif_frames == 0 && rendermode == render_soft)
+			I_ReadScreen(movie_screen);
 
 		movie_screen = screens[0];
 #ifdef TRUECOLOR

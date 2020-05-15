@@ -73,7 +73,6 @@ extern UINT8 ds_alpha;
 extern UINT8 ds_picfmt;
 extern UINT8 ds_colmapstyle;
 
-#ifdef ESLOPE
 typedef struct {
 	float x, y, z;
 } floatv3_t;
@@ -82,7 +81,6 @@ extern pslope_t *ds_slope; // Current slope being used
 extern floatv3_t ds_su[MAXVIDHEIGHT], ds_sv[MAXVIDHEIGHT], ds_sz[MAXVIDHEIGHT]; // Vectors for... stuff?
 extern floatv3_t *ds_sup, *ds_svp, *ds_szp;
 extern float focallengthf, zeroheight;
-#endif
 
 // Variable flat sizes
 extern UINT32 nflatxshift;
@@ -163,7 +161,6 @@ void R_DrawSpan_8(void);
 void R_DrawSplat_8(void);
 void R_DrawTranslucentSpan_8(void);
 void R_DrawTranslucentSplat_8(void);
-#ifdef ESLOPE
 void R_DrawTiltedSpan_8(void);
 void R_DrawTiltedTranslucentSpan_8(void);
 #ifndef NOWATER
@@ -172,7 +169,6 @@ void R_DrawTiltedTranslucentWaterSpan_8(void);
 void R_DrawTiltedSplat_8(void);
 void R_CalcTiltedLighting(fixed_t start, fixed_t end);
 extern INT32 tiltlighting[MAXVIDWIDTH];
-#endif
 #ifndef NOWATER
 void R_DrawTranslucentWaterSpan_8(void);
 extern INT32 ds_bgofs;
@@ -185,14 +181,12 @@ void R_DrawSpan_NPO2_8(void);
 void R_DrawTranslucentSpan_NPO2_8(void);
 void R_DrawSplat_NPO2_8(void);
 void R_DrawTranslucentSplat_NPO2_8(void);
-#ifdef ESLOPE
 void R_DrawTiltedSpan_NPO2_8(void);
 void R_DrawTiltedTranslucentSpan_NPO2_8(void);
 #ifndef NOWATER
 void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void);
 #endif
 void R_DrawTiltedSplat_NPO2_8(void);
-#endif
 #ifndef NOWATER
 void R_DrawTranslucentWaterSpan_NPO2_8(void);
 #endif
@@ -239,14 +233,12 @@ void R_DrawSpan_32(void);
 void R_DrawSplat_32(void);
 void R_DrawTranslucentSpan_32(void);
 void R_DrawTranslucentSplat_32(void);
-#ifdef ESLOPE
 void R_DrawTiltedSpan_32(void);
 void R_DrawTiltedTranslucentSpan_32(void);
 #ifndef NOWATER
 void R_DrawTiltedTranslucentWaterSpan_32(void);
 #endif
 void R_DrawTiltedSplat_32(void);
-#endif
 #ifndef NOWATER
 void R_DrawTranslucentWaterSpan_32(void);
 #endif
@@ -257,14 +249,12 @@ void R_DrawSpan_NPO2_32(void);
 void R_DrawTranslucentSpan_NPO2_32(void);
 void R_DrawSplat_NPO2_32(void);
 void R_DrawTranslucentSplat_NPO2_32(void);
-#ifdef ESLOPE
 void R_DrawTiltedSpan_NPO2_32(void);
 void R_DrawTiltedTranslucentSpan_NPO2_32(void);
 #ifndef NOWATER
 void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void);
 #endif
 void R_DrawTiltedSplat_NPO2_32(void);
-#endif
 #ifndef NOWATER
 void R_DrawTranslucentWaterSpan_NPO2_32(void);
 #endif

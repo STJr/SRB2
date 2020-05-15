@@ -119,7 +119,6 @@ void R_DrawSpan_NPO2_32 (void)
 	}
 }
 
-#ifdef ESLOPE
 /**	\brief The R_DrawTiltedSpan_NPO2_32 function
 	Draw slopes! Holy sheit!
 */
@@ -1796,7 +1795,6 @@ void R_DrawTiltedSplat_NPO2_32(void)
 	}
 #endif
 }
-#endif // ESLOPE
 
 /**	\brief The R_DrawSplat_NPO2_32 function
 	Just like R_DrawSpan_NPO2_32, but skips transparent pixels.

@@ -218,11 +218,9 @@ void Z_Free(void *ptr)
 	CONS_Debug(DBG_MEMORY, "Z_Free at %s:%d\n", file, line);
 #endif
 
-#ifdef HAVE_BLUA
 	// anything that isn't by lua gets passed to lua just in case.
 	if (block->tag != PU_LUA)
 		LUA_InvalidateUserdata(ptr);
-#endif
 
 	// TODO: if zdebugging, make sure no other block has a user
 	// that is about to be freed.
@@ -502,13 +500,9 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 // Utility functions
 // -----------------
 
-// for renderer switching, free a bunch of stuff
 boolean needpatchflush = false;
 boolean needpatchrecache = false;
 
-// flush all patches from memory
-// (also frees memory tagged with PU_CACHE)
-// (which are not necessarily patches but I don't care)
 void Z_FlushCachedPatches(void)
 {
 	CONS_Debug(DBG_RENDER, "Z_FlushCachedPatches()...\n");
@@ -523,7 +517,6 @@ void Z_FlushCachedPatches(void)
 	Z_FreeTag(PU_HWRMODELTEXTURE_UNLOCKED);
 }
 
-// happens before a renderer switch
 void Z_PreparePatchFlush(void)
 {
 	CONS_Debug(DBG_RENDER, "Z_PreparePatchFlush()...\n");

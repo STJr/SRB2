@@ -370,9 +370,7 @@ typedef struct mobj_s
 	INT32 cusval;
 	INT32 cvmem;
 
-#ifdef ESLOPE
 	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
-#endif
 
 	boolean colorized; // Whether the mobj uses the rainbow colormap
 	fixed_t shadowscale; // If this object casts a shadow, and the size relative to radius
@@ -452,6 +450,9 @@ void P_SpawnPlayer(INT32 playernum);
 void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing);
 void P_MovePlayerToStarpost(INT32 playernum);
 void P_AfterPlayerSpawn(INT32 playernum);
+
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip);
+fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y);
 
 mobj_t *P_SpawnMapThing(mapthing_t *mthing);
 void P_SpawnHoop(mapthing_t *mthing);

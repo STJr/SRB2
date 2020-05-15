@@ -91,9 +91,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "hardware/hw3sound.h"
 #endif
 
-#ifdef HAVE_BLUA
 #include "lua_script.h"
-#endif
 
 // platform independant focus loss
 UINT8 window_notinfocus = false;
@@ -124,6 +122,8 @@ boolean advancedemo;
 #ifdef DEBUGFILE
 INT32 debugload = 0;
 #endif
+
+char savegamename[256];
 
 char srb2home[256] = ".";
 char srb2path[256] = ".";
@@ -310,7 +310,9 @@ static void D_Display(void)
 				F_WipeStartScreen();
 				// Check for Mega Genesis fade
 				wipestyleflags = WSF_FADEOUT;
-				if (F_TryColormapFade(31))
+				if (wipegamestate == (gamestate_t)FORCEWIPE)
+					F_WipeColorFill(31);
+				else if (F_TryColormapFade(31))
 					wipetypepost = -1; // Don't run the fade below this one
 				F_WipeEndScreen();
 				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
@@ -605,18 +607,10 @@ static void D_Display(void)
 	needpatchrecache = false;
 }
 
-// Lactozilla: Check the renderer's state
-// after a possible renderer switch.
 void D_CheckRendererState(void)
 {
-	// flush all patches from memory
-	// (also frees memory tagged with PU_CACHE)
-	// (which are not necessarily patches but I don't care)
 	if (needpatchflush)
 		Z_FlushCachedPatches();
-
-	// some patches have been freed,
-	// so cache them again
 	if (needpatchrecache)
 		R_ReloadHUDGraphics();
 }
@@ -773,9 +767,7 @@ void D_SRB2Loop(void)
 		HW3S_EndFrameUpdate();
 #endif
 
-#ifdef HAVE_BLUA
 		LUA_Step();
-#endif
 	}
 }
 
@@ -907,6 +899,40 @@ static inline void D_CleanFile(void)
 	}
 }
 
+///\brief Checks if a netgame URL is being handled, and changes working directory to the EXE's if so.
+///       Done because browsers (at least, Firefox on Windows) launch the game from the browser's directory, which causes problems.
+static void ChangeDirForUrlHandler(void)
+{
+	// URL handlers are opened by web browsers (at least Firefox) from the browser's working directory, not the game's stored directory,
+	// so chdir to that directory unless overridden.
+	if (M_GetUrlProtocolArg() != NULL && !M_CheckParm("-nochdir"))
+	{
+		size_t i;
+
+		CONS_Printf("%s connect links load game files from the SRB2 application's stored directory. Switching to ", SERVER_URL_PROTOCOL);
+		strlcpy(srb2path, myargv[0], sizeof(srb2path));
+
+		// Get just the directory, minus the EXE name
+		for (i = strlen(srb2path)-1; i > 0; i--)
+		{
+			if (srb2path[i] == '/' || srb2path[i] == '\\')
+			{
+				srb2path[i] = '\0';
+				break;
+			}
+		}
+
+		CONS_Printf("%s\n", srb2path);
+
+#if defined (_WIN32)
+		SetCurrentDirectoryA(srb2path);
+#else
+		if (chdir(srb2path) == -1)
+			I_OutputMsg("Couldn't change working directory\n");
+#endif
+	}
+}
+
 // ==========================================================================
 // Identify the SRB2 version, and IWAD file to use.
 // ==========================================================================
@@ -988,6 +1014,7 @@ static void IdentifyVersion(void)
 		}
 
 		MUSICTEST("music.dta")
+		MUSICTEST("patch_music.pk3")
 #ifdef DEVELOP // remove when music_new.dta is merged into music.dta
 		MUSICTEST("music_new.dta")
 #endif
@@ -1095,6 +1122,9 @@ void D_SRB2Main(void)
 	// Test Dehacked lists
 	DEH_Check();
 
+	// Netgame URL special case: change working dir to EXE folder.
+	ChangeDirForUrlHandler();
+
 	// identify the main IWAD file to use
 	IdentifyVersion();
 
@@ -1151,9 +1181,7 @@ void D_SRB2Main(void)
 			// can't use sprintf since there is %u in savegamename
 			strcatbf(savegamename, srb2home, PATHSEP);
 
-#ifdef HAVE_BLUA
 			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", srb2home);
-#endif
 #else // DEFAULTDIR
 			snprintf(srb2home, sizeof srb2home, "%s", userhome);
 			snprintf(downloaddir, sizeof downloaddir, "%s", userhome);
@@ -1165,9 +1193,7 @@ void D_SRB2Main(void)
 			// can't use sprintf since there is %u in savegamename
 			strcatbf(savegamename, userhome, PATHSEP);
 
-#ifdef HAVE_BLUA
 			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", userhome);
-#endif
 #endif // DEFAULTDIR
 		}
 
@@ -1184,9 +1210,15 @@ void D_SRB2Main(void)
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
 
+	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
+	Z_Init();
+
+	// Do this up here so that WADs loaded through the command line can use ExecCfg
+	COM_Init();
+
 	// add any files specified on the command line with -file wadfile
 	// to the wad list
-	if (!(M_CheckParm("-connect") && !M_CheckParm("-server")))
+	if (!((M_GetUrlProtocolArg() || M_CheckParm("-connect")) && !M_CheckParm("-server")))
 	{
 		if (M_CheckParm("-file"))
 		{
@@ -1211,9 +1243,6 @@ void D_SRB2Main(void)
 	if (M_CheckParm("-server") || dedicated)
 		netgame = server = true;
 
-	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
-	Z_Init();
-
 	// adapt tables to SRB2's needs, including extra slots for dehacked file support
 	P_PatchInfoTables();
 
@@ -1221,7 +1250,7 @@ void D_SRB2Main(void)
 	M_InitMenuPresTables();
 
 	// init title screen display params
-	if (M_CheckParm("-connect"))
+	if (M_GetUrlProtocolArg() || M_CheckParm("-connect"))
 		F_InitMenuPresValues();
 
 	//---------------------------------------------------- READY TIME
@@ -1285,7 +1314,6 @@ void D_SRB2Main(void)
 	CONS_Printf("HU_Init(): Setting up heads up display.\n");
 	HU_Init();
 
-	COM_Init();
 	CON_Init();
 
 	D_RegisterServerCommands();
@@ -1319,11 +1347,10 @@ void D_SRB2Main(void)
 
 		// Set cv_renderer to the new render mode
 		VID_CheckRenderer();
-		SCR_ChangeRendererCVars(setrenderneeded);
+		SCR_ChangeRendererCVars(rendermode);
 
-		// check the renderer's state, and then clear setrenderneeded
+		// check the renderer's state
 		D_CheckRendererState();
-		setrenderneeded = 0;
 	}
 
 	wipegamestate = gamestate;

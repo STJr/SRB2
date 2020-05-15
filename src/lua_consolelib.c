@@ -11,7 +11,6 @@
 /// \brief console modifying/etc library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "p_local.h"
 #include "g_game.h"
@@ -431,22 +430,8 @@ static int lib_cvRegisterVar(lua_State *L)
 
 static int lib_cvFindVar(lua_State *L)
 {
-	consvar_t *cv;
-	if (( cv = CV_FindVar(luaL_checkstring(L,1)) ))
-	{
-		lua_settop(L,1);/* We only want one argument in the stack. */
-		lua_pushlightuserdata(L, cv);/* Now the second value on stack. */
-		luaL_getmetatable(L, META_CVAR);
-		/*
-		The metatable is the last value on the stack, so this
-		applies it to the second value, which is the cvar.
-		*/
-		lua_setmetatable(L,2);
-		lua_pushvalue(L,2);
-		return 1;
-	}
-	else
-		return 0;
+	LUA_PushLightUserdata(L, CV_FindVar(luaL_checkstring(L,1)), META_CVAR);
+	return 1;
 }
 
 // CONS_Printf for a single player
@@ -551,5 +536,3 @@ int LUA_ConsoleLib(lua_State *L)
 	luaL_register(L, NULL, lib);
 	return 0;
 }
-
-#endif
