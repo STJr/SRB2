@@ -100,17 +100,27 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 #include "m_aatree.h"
 #include "i_video.h" // num_renderers
 
-typedef struct rendererpatch_s
+// Renderer tree types
+typedef enum patchtreetype_e
+{
+	patchtree_software, // Software.
+	patchtree_mipmap, // OpenGL, or any hardware renderer.
+
+	num_patchtrees,
+} patchtreetype_t;
+
+// Renderer patch trees
+typedef struct patchtree_s
 {
 	aatree_t *base;
 #ifdef ROTSPRITE
 	aatree_t *rotated[2]; // Sprite rotation stores flipped and non-flipped variants of a patch.
 #endif
-} rendererpatch_t;
+} patchtree_t;
 
 typedef struct patchinfo_s
 {
-	rendererpatch_t renderer[num_renderers];
+	patchtree_t renderer[num_patchtrees];
 
 	lumpcache_t *current;
 #ifdef ROTSPRITE

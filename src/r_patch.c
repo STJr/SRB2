@@ -147,54 +147,81 @@ static patchreference_t *InsertPatchReference(UINT16 wad, UINT16 lump, INT32 tag
 	}
 }
 
+// Get patch tree type from a render mode.
+patchtreetype_t Patch_GetTreeType(rendermode_t mode)
+{
+	return (mode == render_opengl) ? patchtree_mipmap : patchtree_software;
+}
+
+// Get patch tree.
+patchtree_t *Patch_GetRendererTree(UINT16 wadnum, rendermode_t mode)
+{
+	return &(wadfiles[wadnum]->patchinfo.renderer[Patch_GetTreeType(mode)]);
+}
+
+// Get patch base subtree.
+aatree_t *Patch_GetRendererBaseSubTree(UINT16 wadnum, rendermode_t mode)
+{
+	return Patch_GetRendererTree(wadnum, mode)->base;
+}
+
+#ifdef ROTSPRITE
+// Get rotated patch subtree.
+aatree_t *Patch_GetRendererRotatedSubTree(UINT16 wadnum, rendermode_t mode, boolean flip)
+{
+	UINT8 f = (flip == true) ? 1 : 0;
+	return Patch_GetRendererTree(wadnum, mode)->rotated[f];
+}
+#endif
+
 //
 // Initializes patch info for a WAD file.
 //
-void Patch_InitFile(wadfile_t *wadfile)
+void Patch_InitInfo(wadfile_t *wadfile)
 {
 	patchinfo_t *cache = &wadfile->patchinfo;
 	rendermode_t rmode;
+
+	// Patch info is uninitialized.
+	memset(cache, 0x00, sizeof(patchinfo_t));
 
 	// Main patch cache for the current renderer
 	Z_Calloc(wadfile->numlumps * sizeof(lumpcache_t), PU_STATIC, &cache->current);
 
 #ifdef ROTSPRITE
+	// Rotated patch cache for the current renderer
 	Z_Calloc(wadfile->numlumps * sizeof(lumpcache_t *), PU_STATIC, &cache->rotated);
 #endif
 
-	// Patch cache for each renderer
+	// Patch trees for each renderer
 	for (rmode = render_first; rmode < render_last; rmode++)
 	{
-		rendererpatch_t *rcache = &cache->renderer[(rmode - 1)];
-#ifdef ROTSPRITE
-		INT32 i;
-#endif
+		patchtree_t *rcache = &(cache->renderer[Patch_GetTreeType(rmode)]);
+
+		// Multiple renderers can point to the same tree.
+		// If this tree was already initialized, then
+		// don't try initializing it again.
+		if (rcache->base)
+			continue;
 
 		rcache->base = M_AATreeAlloc(AATREE_ZUSER);
 
 #ifdef ROTSPRITE
-		for (i = 0; i < 2; i++)
-			rcache->rotated[i] = M_AATreeAlloc(AATREE_ZUSER);
+		RotSprite_InitPatchTree(rcache);
 #endif
 	}
-}
-
-// Get renderer patch tree.
-aatree_t *Patch_GetRendererTree(UINT16 wadnum, rendermode_t mode)
-{
-	return wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].base;
 }
 
 // Get renderer patch info.
 static inline void *GetRendererPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode)
 {
-	return M_AATreeGet(Patch_GetRendererTree(wadnum, mode), lumpnum);
+	return M_AATreeGet(Patch_GetRendererBaseSubTree(wadnum, mode), lumpnum);
 }
 
 // Set renderer patch info.
 static inline void SetRendererPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, void *ptr)
 {
-	M_AATreeSet(wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].base, lumpnum, ptr);
+	M_AATreeSet(Patch_GetRendererBaseSubTree(wadnum, mode), lumpnum, ptr);
 }
 
 // Update current patch info.
@@ -204,13 +231,20 @@ static inline void UpdateCurrentPatchInfo(UINT16 wadnum, UINT16 lumpnum, renderm
 }
 
 #ifdef ROTSPRITE
+void RotSprite_InitPatchTree(patchtree_t *rcache)
+{
+	INT32 i;
+	for (i = 0; i < 2; i++)
+		rcache->rotated[i] = M_AATreeAlloc(AATREE_ZUSER);
+}
+
 int RotSprite_GetCurrentPatchInfoIdx(INT32 rollangle, boolean flip)
 {
 	UINT8 f = (flip == true) ? 1 : 0;
 	return rollangle + (ROTANGLES * f);
 }
 
-static void AllocCurrentPatchInfo(patchinfo_t *pc, UINT16 lumpnum)
+static void AllocCurrentRotatedPatchInfo(patchinfo_t *pc, UINT16 lumpnum)
 {
 	pc->rotated[lumpnum] = Z_Calloc((ROTANGLES * 2) * sizeof(lumpcache_t), PU_STATIC, NULL);
 }
@@ -218,15 +252,13 @@ static void AllocCurrentPatchInfo(patchinfo_t *pc, UINT16 lumpnum)
 // Get renderer rotated patch info.
 static inline void *GetRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, boolean flip)
 {
-	UINT8 f = (flip == true) ? 1 : 0;
-	return M_AATreeGet(wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].rotated[f], lumpnum);
+	return M_AATreeGet(Patch_GetRendererRotatedSubTree(wadnum, mode, flip), lumpnum);
 }
 
 // Set renderer rotated patch info.
 static inline void SetRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, boolean flip, void *ptr)
 {
-	UINT8 f = (flip == true) ? 1 : 0;
-	M_AATreeSet(wadfiles[wadnum]->patchinfo.renderer[(mode - 1)].rotated[f], lumpnum, ptr);
+	M_AATreeSet(Patch_GetRendererRotatedSubTree(wadnum, mode, flip), lumpnum, ptr);
 }
 
 // Update current rotated patch info.
@@ -234,7 +266,7 @@ static inline void UpdateCurrentRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, 
 {
 	patchinfo_t *pc = &wadfiles[wadnum]->patchinfo;
 	if (!pc->rotated[lumpnum])
-		AllocCurrentPatchInfo(pc, lumpnum);
+		AllocCurrentRotatedPatchInfo(pc, lumpnum);
 	pc->rotated[lumpnum][RotSprite_GetCurrentPatchInfoIdx(rollangle, flip)] = ((rotsprite_t *)GetRotatedPatchInfo(wadnum, lumpnum, mode, flip))->patches[rollangle];
 }
 #endif
@@ -288,7 +320,7 @@ void *Patch_CacheSoftware(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 #ifdef HWRENDER
 void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 {
-	GLPatch_t *grPatch = HWR_GetCachedGLPatchPwad(wad, lump, Patch_GetRendererTree(wad, render_opengl));
+	GLPatch_t *grPatch = HWR_GetCachedGLPatchPwad(wad, lump, Patch_GetRendererBaseSubTree(wad, render_opengl));
 
 	if (grPatch->mipmap->grInfo.data)
 	{

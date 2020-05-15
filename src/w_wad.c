@@ -827,7 +827,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// set up caching
 	//
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
-	Patch_InitFile(wadfile);
+	Patch_InitInfo(wadfile);
 
 	//
 	// add the wadfile

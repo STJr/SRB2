@@ -20,7 +20,7 @@
 #pragma interface
 #endif
 
-typedef enum
+typedef enum rendermode_e
 {
 	// No renderer chosen. Used on dedicated mode.
 	render_none = 0,
@@ -36,7 +36,7 @@ typedef enum
 	// Last renderer choice.
 	render_last,
 
-	// Number of renderers.
+	// Renderer count.
 	num_renderers = (render_last - 1),
 } rendermode_t;
 

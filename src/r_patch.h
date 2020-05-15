@@ -23,12 +23,17 @@
 void *Patch_CacheSoftware(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
 void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store);
 
-aatree_t *Patch_GetRendererTree(UINT16 wadnum, rendermode_t mode);
+patchtreetype_t Patch_GetTreeType(rendermode_t mode);
+patchtree_t *Patch_GetRendererTree(UINT16 wadnum, rendermode_t mode);
+aatree_t *Patch_GetRendererBaseSubTree(UINT16 wadnum, rendermode_t mode);
+#ifdef ROTSPRITE
+aatree_t *Patch_GetRendererRotatedSubTree(UINT16 wadnum, rendermode_t mode, boolean flip);
+#endif
 
 void Patch_UpdateReferences(void);
 void Patch_FreeReferences(void);
 
-void Patch_InitFile(wadfile_t *wadfile);
+void Patch_InitInfo(wadfile_t *wadfile);
 
 // Structs
 struct patchreference_s
@@ -127,6 +132,7 @@ patch_t *Patch_CacheRotatedForSpritePwad(UINT16 wad, UINT16 lump, INT32 tag, rot
 patch_t *Patch_CacheRotatedName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
 patch_t *Patch_CacheRotatedLongName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store);
 
+void RotSprite_InitPatchTree(patchtree_t *rcache);
 void RotSprite_Recreate(rotsprite_t *rotsprite, rendermode_t rmode);
 void RotSprite_RecreateAll(void);
 

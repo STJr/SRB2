@@ -823,7 +823,17 @@ void HWR_FreeMipmapCache(void)
 	// Alam: free the Z_Blocks before freeing it's users
 	// free all patch colormaps after each level: must be done after ClearMipMapCache!
 	for (i = 0; i < numwadfiles; i++)
-		M_AATreeIterate(Patch_GetRendererTree(i, render_opengl), FreeMipmapColormap);
+	{
+		M_AATreeIterate(Patch_GetRendererBaseSubTree(i, render_opengl), FreeMipmapColormap);
+
+#ifdef ROTSPRITE
+		// free non-flipped rotated subtree
+		M_AATreeIterate(Patch_GetRendererRotatedSubTree(i, render_opengl, false), FreeMipmapColormap);
+
+		// free flipped rotated subtree
+		M_AATreeIterate(Patch_GetRendererRotatedSubTree(i, render_opengl, true), FreeMipmapColormap);
+#endif
+	}
 }
 
 void HWR_FreeTextureCache(void)
@@ -1308,7 +1318,7 @@ GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum, void *hwrcach
 GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum)
 {
 	UINT16 wad = WADFILENUM(lumpnum);
-	return HWR_GetCachedGLPatchPwad(wad, LUMPNUM(lumpnum), Patch_GetRendererTree(wad, render_opengl));
+	return HWR_GetCachedGLPatchPwad(wad, LUMPNUM(lumpnum), Patch_GetRendererBaseSubTree(wad, render_opengl));
 }
 
 // Need to do this because they aren't powers of 2
