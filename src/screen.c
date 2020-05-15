@@ -640,10 +640,13 @@ void SCR_DisplayMarathonInfo(void)
 		entertic = I_GetTime();
 		if (gamecomplete)
 			flags |= V_YELLOWMAP;
+		else if (marathonmode & MA_INGAME)
+			; // see also G_Ticker
 		else if (marathonmode & MA_INIT)
 			marathonmode &= ~MA_INIT;
 		else
 			marathontime += entertic - oldentertics;
+
 		// Create a sequence of primes such that their LCM is nice and big.
 #define PRIMEV1 13
 #define PRIMEV2 17 // I can't believe it! I'm on TV!

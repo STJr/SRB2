@@ -9933,9 +9933,10 @@ struct {
 	{"TC_DASHMODE",TC_DASHMODE},
 
 	// marathonmode flags
-	//{"MA_INIT",MA_INIT}, -- should never see this
+	{"MA_INIT",MA_INIT},
 	{"MA_RUNNING",MA_RUNNING},
 	{"MA_NOCUTSCENES",MA_NOCUTSCENES},
+	{"MA_INGAME",MA_INGAME},
 
 	{NULL,0}
 };

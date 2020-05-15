@@ -485,9 +485,11 @@ static consvar_t cv_dummycontinues = {"dummycontinues", "0", CV_HIDEN, contlimit
 static consvar_t cv_dummymares = {"dummymares", "Overall", CV_HIDEN|CV_CALL, dummymares_cons_t, Dummymares_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 CV_PossibleValue_t marathon_cons_t[] = {{0, "Standard"}, {1, "Live Event Backup"}, {2, "Ultimate"}, {0, NULL}};
+CV_PossibleValue_t loadless_cons_t[] = {{0, "Realtime"}, {1, "In-game"}, {0, NULL}};
 
 consvar_t cv_dummymarathon = {"dummymarathon", "Standard", CV_HIDEN, marathon_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_dummycutscenes = {"dummycutscenes", "Off", CV_HIDEN, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dummyloadless = {"dummyloadless", "Realtime", CV_HIDEN, loadless_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // ==========================================================================
 // ORGANIZATION START.
@@ -919,8 +921,9 @@ enum
 // Marathon
 static menuitem_t SP_MarathonMenu[] =
 {
-	{IT_STRING|IT_KEYHANDLER,  NULL, "Character", M_HandleMarathonChoosePlayer, 100},
-	{IT_STRING|IT_CVAR,        NULL, "Category",  &cv_dummymarathon,            110},
+	{IT_STRING|IT_KEYHANDLER,  NULL, "Character", M_HandleMarathonChoosePlayer,  90},
+	{IT_STRING|IT_CVAR,        NULL, "Category",  &cv_dummymarathon,            100},
+	{IT_STRING|IT_CVAR,        NULL, "Timer",     &cv_dummyloadless,            110},
 	{IT_STRING|IT_CVAR,        NULL, "Cutscenes", &cv_dummycutscenes,           120},
 	{IT_WHITESTRING|IT_CALL,   NULL, "Start",     M_StartMarathon,              130},
 };
@@ -929,6 +932,7 @@ enum
 {
 	marathonplayer,
 	marathonultimate,
+	marathonloadless,
 	marathoncutscenes,
 	marathonstart
 };
@@ -3909,6 +3913,7 @@ void M_Init(void)
 	CV_RegisterVar(&cv_dummycontinues);
 	CV_RegisterVar(&cv_dummymares);
 	CV_RegisterVar(&cv_dummymarathon);
+	CV_RegisterVar(&cv_dummyloadless);
 	CV_RegisterVar(&cv_dummycutscenes);
 
 	quitmsg[QUITMSG] = M_GetText("Eggman's tied explosives\nto your girlfriend, and\nwill activate them if\nyou press the 'Y' key!\nPress 'N' to save her!\n\n(Press 'Y' to quit)");
@@ -6910,6 +6915,11 @@ static void M_RetryResponse(INT32 ch)
 static void M_Retry(INT32 choice)
 {
 	(void)choice;
+	if (marathonmode)
+	{
+		M_RetryResponse(KEY_ENTER);
+		return;
+	}
 	M_StartMessage(M_GetText("Retry this act from the last starpost?\n\n(Press 'Y' to confirm)\n"),M_RetryResponse,MM_YESNO);
 }
 
@@ -10430,7 +10440,7 @@ static void M_Marathon(INT32 choice)
 		mapnum++;
 	}
 
-	SP_MarathonMenu[marathoncutscenes].status = (mapnum < NUMMAPS) ? IT_CVAR |IT_STRING : IT_NOTHING|IT_DISABLED;
+	SP_MarathonMenu[marathoncutscenes].status = (mapnum < NUMMAPS) ? IT_CVAR|IT_STRING : IT_NOTHING|IT_DISABLED;
 
 	M_ChangeMenuMusic("spec8", true);
 
@@ -10490,6 +10500,8 @@ static void M_StartMarathon(INT32 choice)
 		cursaveslot = MARATHONSLOT;
 	if (!cv_dummycutscenes.value)
 		marathonmode |= MA_NOCUTSCENES;
+	if (cv_dummyloadless.value)
+		marathonmode |= MA_INGAME;
 	M_ChoosePlayer(char_on);
 }
 
