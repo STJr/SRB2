@@ -626,7 +626,7 @@ void SCR_ClosedCaptions(void)
 void SCR_DisplayMarathonInfo(void)
 {
 	INT32 flags = V_SNAPTOBOTTOM;
-	static tic_t entertic, oldentertics = 0;
+	static tic_t entertic, oldentertics = 0, antisplice[2] = {48,0};
 	const char *str;
 #if 0 // eh, this probably isn't going to be a problem
 	if (((signed)marathontime) < 0)
@@ -644,6 +644,13 @@ void SCR_DisplayMarathonInfo(void)
 			marathonmode &= ~MA_INIT;
 		else
 			marathontime += entertic - oldentertics;
+		// Create a sequence of primes such that their LCM is nice and big.
+#define PRIMEV1 13
+#define PRIMEV2 17 // I can't believe it! I'm on TV!
+		antisplice[0] += (entertic - oldentertics)*PRIMEV2;
+		antisplice[0] %= PRIMEV1*((vid.width/vid.dupx)+1);
+		antisplice[1] += (entertic - oldentertics)*PRIMEV1;
+		antisplice[1] %= PRIMEV1*((vid.width/vid.dupx)+1);
 		str = va("%i:%02i:%02i.%02i",
 			G_TicsToHours(marathontime),
 			G_TicsToMinutes(marathontime, false),
@@ -651,6 +658,12 @@ void SCR_DisplayMarathonInfo(void)
 			G_TicsToCentiseconds(marathontime));
 		oldentertics = entertic;
 	}
+	V_DrawFill((antisplice[0]/PRIMEV1)-1, BASEVIDHEIGHT-8, 1, 8, V_SNAPTOBOTTOM|V_SNAPTOLEFT);
+	V_DrawFill((antisplice[0]/PRIMEV1),   BASEVIDHEIGHT-8, 1, 8, V_SNAPTOBOTTOM|V_SNAPTOLEFT|31);
+	V_DrawFill(BASEVIDWIDTH-((antisplice[1]/PRIMEV1)-1), BASEVIDHEIGHT-8, 1, 8, V_SNAPTOBOTTOM|V_SNAPTORIGHT);
+	V_DrawFill(BASEVIDWIDTH-((antisplice[1]/PRIMEV1)),   BASEVIDHEIGHT-8, 1, 8, V_SNAPTOBOTTOM|V_SNAPTORIGHT|31);
+#undef PRIMEV1
+#undef PRIMEV2
 	V_DrawPromptBack(-8, cons_backcolor.value);
 	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-8, flags, str);
 }
