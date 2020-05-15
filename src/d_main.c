@@ -1135,7 +1135,7 @@ void D_SRB2Main(void)
 
 	// default savegame
 	strcpy(savegamename, SAVEGAMENAME"%u.ssg");
-	strcpy(liveeventbackup,"liveevent.bkp"); // intentionally not ending with .ssg
+	strcpy(liveeventbackup, "live"SAVEGAMENAME".bkp"); // intentionally not ending with .ssg
 
 	{
 		const char *userhome = D_Home(); //Alam: path to home
