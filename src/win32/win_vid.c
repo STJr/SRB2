@@ -366,6 +366,9 @@ void I_FinishUpdate(void)
 	if (I_SkipFrame())
 		return;
 
+	if (marathonmode)
+		SCR_DisplayMarathonInfo();
+
 	// draw captions if enabled
 	if (cv_closedcaptioning.value)
 		SCR_ClosedCaptions();
@@ -376,9 +379,6 @@ void I_FinishUpdate(void)
 
 	if (cv_showping.value && netgame && consoleplayer != serverplayer)
 		SCR_DisplayLocalPing();
-
-	if (marathonmode)
-		SCR_DisplayMarathonInfo();
 
 	//
 	if (bDIBMode)

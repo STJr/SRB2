@@ -90,6 +90,9 @@ static   unsigned long  nombre = NEWTICRATE*10;
 static void I_BlitScreenVesa1(void);   //see later
 void I_FinishUpdate (void)
 {
+	if (marathonmode)
+		SCR_DisplayMarathonInfo();
+
 	// draw captions if enabled
 	if (cv_closedcaptioning.value)
 		SCR_ClosedCaptions();
@@ -100,9 +103,6 @@ void I_FinishUpdate (void)
 
 	if (cv_showping.value && netgame && consoleplayer != serverplayer)
 		SCR_DisplayLocalPing();
-
-	if (marathonmode)
-		SCR_DisplayMarathonInfo();
 
 	//blast it to the screen
 	// this code sucks
