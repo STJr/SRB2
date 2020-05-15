@@ -9097,7 +9097,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		col = Color_Opposite[charskin->prefcolor - 1][0];
 
 	// Make the translation colormap
-	colormap = R_GetTranslationColormap(TC_DEFAULT, col, 0);
+	colormap = R_GetTranslationColormap(TC_DEFAULT, col, GTC_CACHE);
 
 	// Don't render the title map
 	hidetitlemap = true;
@@ -9173,8 +9173,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			{
 				V_DrawNameTag(
 					x, y, V_CENTERNAMETAG, FRACUNIT,
-					R_GetTranslationColormap(TC_DEFAULT, curtextcolor, 0),
-					R_GetTranslationColormap(TC_DEFAULT, curoutlinecolor, 0),
+					R_GetTranslationColormap(TC_DEFAULT, curtextcolor, GTC_CACHE),
+					R_GetTranslationColormap(TC_DEFAULT, curoutlinecolor, GTC_CACHE),
 					curtext
 				);
 			}
@@ -9206,8 +9206,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				{
 					V_DrawNameTag(
 						x, y, V_CENTERNAMETAG, FRACUNIT,
-						R_GetTranslationColormap(TC_DEFAULT, prevtextcolor, 0),
-						R_GetTranslationColormap(TC_DEFAULT, prevoutlinecolor, 0),
+						R_GetTranslationColormap(TC_DEFAULT, prevtextcolor, GTC_CACHE),
+						R_GetTranslationColormap(TC_DEFAULT, prevoutlinecolor, GTC_CACHE),
 						prevtext
 					);
 				}
@@ -9236,8 +9236,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				{
 					V_DrawNameTag(
 						x, y, V_CENTERNAMETAG, FRACUNIT,
-						R_GetTranslationColormap(TC_DEFAULT, nexttextcolor, 0),
-						R_GetTranslationColormap(TC_DEFAULT, nextoutlinecolor, 0),
+						R_GetTranslationColormap(TC_DEFAULT, nexttextcolor, GTC_CACHE),
+						R_GetTranslationColormap(TC_DEFAULT, nextoutlinecolor, GTC_CACHE),
 						nexttext
 					);
 				}
