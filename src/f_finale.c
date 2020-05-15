@@ -1681,7 +1681,9 @@ void F_GameEvaluationTicker(void)
 		return;
 	}
 
-	if (!goodending)
+	if (!useBlackRock)
+		;
+	else if (!goodending)
 	{
 		if (sparklloop)
 			sparklloop--;
