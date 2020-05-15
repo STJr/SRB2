@@ -433,7 +433,7 @@ if(${SRB2_CONFIG_HAVE_CURL})
 		set(SRB2_HAVE_CURL ON)
 		add_definitions(-DHAVE_CURL)
 	else()
-		message(WARNING "You have specified that CURL is available but it was not found. SRB2Kart may not compile correctly.")
+		message(WARNING "You have specified that CURL is available but it was not found. SRB2 may not compile correctly.")
 	endif()
 endif()
 
