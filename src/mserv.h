@@ -16,8 +16,6 @@
 
 #include "i_threads.h"
 
-#define HMS123311 // don't mess with nights, man
-
 // lowered from 32 due to menu changes
 #define NUM_LIST_ROOMS 16
 
