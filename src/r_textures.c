@@ -473,6 +473,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	{
 		texture->format = PICFMT_PATCH;
 #if defined (PICTURES_ALLOWDEPTH) && !defined (NO_PNG_LUMPS) && defined(TRUECOLOR)
+		// Detect if any of the patches are PNGs, and adjust the texture format accordingly.
 		if (truecolor)
 		{
 			for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
@@ -481,12 +482,11 @@ UINT8 *R_GenerateTexture(size_t texnum)
 				lumpnum = patch->lump;
 				pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_STATIC);
 				lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+
+				// If this patch is a PNG, this means that
+				// the entire texture is 32bpp.
 				if (Picture_IsLumpPNG(pdata, lumplength))
 				{
-					// Your clown ass decided to use a PNG,
-					// so now the entire fucking texture has
-					// to be 32bpp. I hope you're happy with yourself.
-					// Enjoy your performance. Fuck you.
 					texture->format = PICFMT_PATCH32;
 					Z_Free(pdata);
 					break;
@@ -1134,10 +1134,8 @@ Rloadtextures (INT32 i, INT32 w)
 				texture->width = width;
 				texture->height = height;
 #if defined(PICTURES_ALLOWDEPTH) && defined(TRUECOLOR)
-				// Your clown ass decided to use a PNG,
-				// so now the entire fucking texture has
-				// to be 32bpp. I hope you're happy with yourself.
-				// Enjoy your performance. Fuck you.
+				// If this patch is a PNG, this means that
+				// the entire texture is 32bpp.
 				if (truecolor)
 					texture->format = PICFMT_PATCH32;
 #endif
