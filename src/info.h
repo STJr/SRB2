@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -165,6 +165,7 @@ void A_SetTics();
 void A_SetRandomTics();
 void A_ChangeColorRelative();
 void A_ChangeColorAbsolute();
+void A_Dye();
 void A_MoveRelative();
 void A_MoveAbsolute();
 void A_Thrust();
@@ -283,6 +284,7 @@ void A_RolloutRock();
 void A_DragonbomberSpawn();
 void A_DragonWing();
 void A_DragonSegment();
+void A_ChangeHeight();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -450,6 +452,8 @@ typedef enum sprite
 
 	// Projectiles
 	SPR_MISL,
+	SPR_LASR, // GFZ3 laser
+	SPR_LASF, // GFZ3 laser flames
 	SPR_TORP, // Torpedo
 	SPR_ENRG, // Energy ball
 	SPR_MINE, // Skim mine
@@ -670,6 +674,7 @@ typedef enum sprite
 	SPR_LCKN, // Target
 	SPR_TTAG, // Tag Sign
 	SPR_GFLG, // Got Flag sign
+	SPR_FNSF, // Finish flag
 
 	SPR_CORK,
 	SPR_LHRT,
@@ -2021,6 +2026,7 @@ typedef enum state
 	S_SIGNSTOP,
 	S_SIGNBOARD,
 	S_EGGMANSIGN,
+	S_CLEARSIGN,
 
 	// Spike Ball
 	S_SPIKEBALL1,
@@ -2217,6 +2223,14 @@ typedef enum state
 	S_ROCKET,
 
 	S_LASER,
+	S_LASER2,
+	S_LASERFLASH,
+
+	S_LASERFLAME1,
+	S_LASERFLAME2,
+	S_LASERFLAME3,
+	S_LASERFLAME4,
+	S_LASERFLAME5,
 
 	S_TORPEDO,
 
@@ -2502,6 +2516,7 @@ typedef enum state
 	S_TNTBARREL_EXPL4,
 	S_TNTBARREL_EXPL5,
 	S_TNTBARREL_EXPL6,
+	S_TNTBARREL_EXPL7,
 	S_TNTBARREL_FLYING,
 
 	// TNT proximity shell
@@ -3483,6 +3498,9 @@ typedef enum state
 
 	// Got Flag Sign
 	S_GOTFLAG,
+	
+	// Finish flag
+	S_FINISHFLAG,
 
 	S_CORK,
 	S_LHRT,
@@ -4624,6 +4642,7 @@ typedef enum mobj_type
 	MT_LOCKONINF, // In-level Target
 	MT_TAG, // Tag Sign
 	MT_GOTFLAG, // Got Flag sign
+	MT_FINISHFLAG, // Finish flag
 
 	// Ambient Sounds
 	MT_AWATERA, // Ambient Water Sound 1
@@ -4702,6 +4721,7 @@ typedef enum mobj_type
 	MT_NIGHTSCHIP, // NiGHTS Chip
 	MT_FLINGNIGHTSCHIP, // Lost NiGHTS Chip
 	MT_NIGHTSSTAR, // NiGHTS Star
+	MT_FLINGNIGHTSSTAR, // Lost NiGHTS Star
 	MT_NIGHTSSUPERLOOP,
 	MT_NIGHTSDRILLREFILL,
 	MT_NIGHTSHELPER,

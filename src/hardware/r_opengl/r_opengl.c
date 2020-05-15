@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-// Copyright (C) 1998-2019 by Sonic Team Junior.
+// Copyright (C) 1998-2020 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -49,8 +49,7 @@ static const GLubyte white[4] = { 255, 255, 255, 255 };
 // ==========================================================================
 
 // With OpenGL 1.1+, the first texture should be 1
-#define NOTEXTURE_NUM     1     // small white texture
-#define FIRST_TEX_AVAIL   (NOTEXTURE_NUM + 1)
+static GLuint NOTEXTURE_NUM = 0;
 
 #define      N_PI_DEMI               (M_PIl/2.0f) //(1.5707963268f)
 
@@ -63,7 +62,6 @@ static float NEAR_CLIPPING_PLANE =   NZCLIP_PLANE;
 // **************************************************************************
 
 
-static  GLuint      NextTexAvail    = FIRST_TEX_AVAIL;
 static  GLuint      tex_downloaded  = 0;
 static  GLfloat     fov             = 90.0f;
 #if 0
@@ -72,8 +70,8 @@ static  FRGBAFloat  const_pal_col;
 #endif
 static  FBITFIELD   CurrentPolyFlags;
 
-static  FTextureInfo*  gr_cachetail = NULL;
-static  FTextureInfo*  gr_cachehead = NULL;
+static  FTextureInfo *gr_cachetail = NULL;
+static  FTextureInfo *gr_cachehead = NULL;
 
 RGBA_t  myPaletteData[256];
 GLint   screen_width    = 0;               // used by Draw2DLine()
@@ -94,16 +92,10 @@ static GLfloat    modelMatrix[16];
 static GLfloat    projMatrix[16];
 static GLint       viewport[4];
 
-// Yay for arbitrary  numbers! NextTexAvail is buggy for some reason.
 // Sryder:	NextTexAvail is broken for these because palette changes or changes to the texture filter or antialiasing
 //			flush all of the stored textures, leaving them unavailable at times such as between levels
 //			These need to start at 0 and be set to their number, and be reset to 0 when deleted so that intel GPUs
 //			can know when the textures aren't there, as textures are always considered resident in their virtual memory
-// TODO:	Store them in a more normal way
-#define SCRTEX_SCREENTEXTURE 4294967295U
-#define SCRTEX_STARTSCREENWIPE 4294967294U
-#define SCRTEX_ENDSCREENWIPE 4294967293U
-#define SCRTEX_FINALSCREENTEXTURE 4294967292U
 static GLuint screentexture = 0;
 static GLuint startScreenWipe = 0;
 static GLuint endScreenWipe = 0;
@@ -243,6 +235,7 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 
 /* 1.1 functions */
 /* texture objects */ //GL_EXT_texture_object
+#define pglGenTextures glGenTextures
 #define pglDeleteTextures glDeleteTextures
 #define pglBindTexture glBindTexture
 /* texture mapping */ //GL_EXT_copy_texture
@@ -359,6 +352,8 @@ static PFNglFogfv pglFogfv;
 
 /* 1.1 functions */
 /* texture objects */ //GL_EXT_texture_object
+typedef void (APIENTRY * PFNglGenTextures) (GLsizei n, const GLuint *textures);
+static PFNglGenTextures pglGenTextures;
 typedef void (APIENTRY * PFNglDeleteTextures) (GLsizei n, const GLuint *textures);
 static PFNglDeleteTextures pglDeleteTextures;
 typedef void (APIENTRY * PFNglBindTexture) (GLenum target, GLuint texture);
@@ -487,6 +482,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglFogf , glFogf)
 	GETOPENGLFUNC(pglFogfv , glFogfv)
 
+	GETOPENGLFUNC(pglGenTextures , glGenTextures)
 	GETOPENGLFUNC(pglDeleteTextures , glDeleteTextures)
 	GETOPENGLFUNC(pglBindTexture , glBindTexture)
 
@@ -527,6 +523,8 @@ static void SetNoTexture(void)
 	// Set small white texture.
 	if (tex_downloaded != NOTEXTURE_NUM)
 	{
+		if (NOTEXTURE_NUM == 0)
+			pglGenTextures(1, &NOTEXTURE_NUM);
 		pglBindTexture(GL_TEXTURE_2D, NOTEXTURE_NUM);
 		tex_downloaded = NOTEXTURE_NUM;
 	}
@@ -641,11 +639,6 @@ void SetModelView(GLint w, GLint h)
 // -----------------+
 void SetStates(void)
 {
-	// Bind little white RGBA texture to ID NOTEXTURE_NUM.
-	/*
-	FUINT Data[8*8];
-	INT32 i;
-	*/
 #ifdef GL_LIGHT_MODEL_AMBIENT
 	GLfloat LightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
 #endif
@@ -679,16 +672,8 @@ void SetStates(void)
 	CurrentPolyFlags = 0xffffffff;
 	SetBlend(0);
 
-	/*
-	for (i = 0; i < 64; i++)
-		Data[i] = 0xffFFffFF;       // white pixel
-	*/
-
-	tex_downloaded = (GLuint)-1;
+	tex_downloaded = 0;
 	SetNoTexture();
-	//pglBindTexture(GL_TEXTURE_2D, NOTEXTURE_NUM);
-	//tex_downloaded = NOTEXTURE_NUM;
-	//pglTexImage2D(GL_TEXTURE_2D, 0, 4, 8, 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, Data);
 
 	pglPolygonOffset(-1.0f, -1.0f);
 
@@ -723,33 +708,12 @@ void Flush(void)
 
 	while (gr_cachehead)
 	{
-		// this is not necessary at all, because you have loaded them normally,
-		// and so they already are in your list!
-#if 0
-		//Hurdler: 25/04/2000: now support colormap in hardware mode
-		FTextureInfo    *tmp = gr_cachehead->nextskin;
-
-		// The memory should be freed in the main code
-		while (tmp)
-		{
-			pglDeleteTextures(1, &tmp->downloaded);
-			tmp->downloaded = 0;
-			tmp = tmp->nextcolormap;
-		}
-#endif
-		pglDeleteTextures(1, (GLuint *)&gr_cachehead->downloaded);
+		if (gr_cachehead->downloaded)
+			pglDeleteTextures(1, (GLuint *)&gr_cachehead->downloaded);
 		gr_cachehead->downloaded = 0;
 		gr_cachehead = gr_cachehead->nextmipmap;
 	}
 	gr_cachetail = gr_cachehead = NULL; //Hurdler: well, gr_cachehead is already NULL
-	NextTexAvail = FIRST_TEX_AVAIL;
-#if 0
-	if (screentexture != FIRST_TEX_AVAIL)
-	{
-		pglDeleteTextures(1, &screentexture);
-		screentexture = FIRST_TEX_AVAIL;
-	}
-#endif
 
 	tex_downloaded = 0;
 }
@@ -1128,8 +1092,10 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 		static RGBA_t   tex[2048*2048];
 		const GLvoid   *ptex = tex;
 		INT32             w, h;
+		GLuint texnum = 0;
 
-		//DBG_Printf ("DownloadMipmap %d %x\n",NextTexAvail,pTexInfo->grInfo.data);
+		pglGenTextures(1, &texnum);
+		//DBG_Printf ("DownloadMipmap %d %x\n",(INT32)texnum,pTexInfo->grInfo.data);
 
 		w = pTexInfo->width;
 		h = pTexInfo->height;
@@ -1217,9 +1183,10 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 		else
 			DBG_Printf ("SetTexture(bad format) %ld\n", pTexInfo->grInfo.format);
 
-		pTexInfo->downloaded = NextTexAvail++;
-		tex_downloaded = pTexInfo->downloaded;
-		pglBindTexture(GL_TEXTURE_2D, pTexInfo->downloaded);
+		// the texture number was already generated by pglGenTextures
+		pglBindTexture(GL_TEXTURE_2D, texnum);
+		pTexInfo->downloaded = texnum;
+		tex_downloaded = texnum;
 
 		// disable texture filtering on any texture that has holes so there's no dumb borders or blending issues
 		if (pTexInfo->flags & TF_TRANSPARENT)
@@ -2222,11 +2189,11 @@ EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration,
 EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 {
 	static boolean special_splitscreen;
+	float used_fov;
 	pglLoadIdentity();
 	if (stransform)
 	{
-		boolean fovx90;
-
+		used_fov = stransform->fovxangle;
 #ifdef USE_FTRANSFORM_MIRROR
 		// mirroring from Kart
 		if (stransform->mirror)
@@ -2238,35 +2205,33 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 		else
 			pglScalef(stransform->scalex, stransform->scaley, -stransform->scalez);
 
+		if (stransform->roll)
+			pglRotatef(stransform->rollangle, 0.0f, 0.0f, 1.0f);
 		pglRotatef(stransform->anglex       , 1.0f, 0.0f, 0.0f);
 		pglRotatef(stransform->angley+270.0f, 0.0f, 1.0f, 0.0f);
 		pglTranslatef(-stransform->x, -stransform->z, -stransform->y);
 
-		pglMatrixMode(GL_PROJECTION);
-		pglLoadIdentity();
-		fovx90 = stransform->fovxangle > 0.0f && fabsf(stransform->fovxangle - 90.0f) < 0.5f;
-		special_splitscreen = (stransform->splitscreen && fovx90);
-		if (special_splitscreen)
-			GLPerspective(53.13f, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
-		else
-			GLPerspective(stransform->fovxangle, ASPECT_RATIO);
-		pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
-		pglMatrixMode(GL_MODELVIEW);
+		special_splitscreen = stransform->splitscreen;
 	}
 	else
 	{
+		used_fov = fov;
 		pglScalef(1.0f, 1.0f, -1.0f);
-
-		pglMatrixMode(GL_PROJECTION);
-		pglLoadIdentity();
-		if (special_splitscreen)
-			GLPerspective(53.13f, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
-		else
-			//Hurdler: is "fov" correct?
-			GLPerspective(fov, ASPECT_RATIO);
-		pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
-		pglMatrixMode(GL_MODELVIEW);
 	}
+
+	pglMatrixMode(GL_PROJECTION);
+	pglLoadIdentity();
+
+	if (special_splitscreen)
+	{
+		used_fov = atan(tan(used_fov*M_PI/360)*0.8)*360/M_PI;
+		GLPerspective(used_fov, 2*ASPECT_RATIO);
+	}
+	else
+		GLPerspective(used_fov, ASPECT_RATIO);
+
+	pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
+	pglMatrixMode(GL_MODELVIEW);
 
 	pglGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix); // added for new coronas' code (without depth buffer)
 }
@@ -2421,7 +2386,7 @@ EXPORT void HWRAPI(StartScreenWipe) (void)
 
 	// Create screen texture
 	if (firstTime)
-		startScreenWipe = SCRTEX_STARTSCREENWIPE;
+		pglGenTextures(1, &startScreenWipe);
 	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
 
 	if (firstTime)
@@ -2452,7 +2417,7 @@ EXPORT void HWRAPI(EndScreenWipe)(void)
 
 	// Create screen texture
 	if (firstTime)
-		endScreenWipe = SCRTEX_ENDSCREENWIPE;
+		pglGenTextures(1, &endScreenWipe);
 	pglBindTexture(GL_TEXTURE_2D, endScreenWipe);
 
 	if (firstTime)
@@ -2623,7 +2588,7 @@ EXPORT void HWRAPI(MakeScreenTexture) (void)
 
 	// Create screen texture
 	if (firstTime)
-		screentexture = SCRTEX_SCREENTEXTURE;
+		pglGenTextures(1, &screentexture);
 	pglBindTexture(GL_TEXTURE_2D, screentexture);
 
 	if (firstTime)
@@ -2653,7 +2618,7 @@ EXPORT void HWRAPI(MakeScreenFinalTexture) (void)
 
 	// Create screen texture
 	if (firstTime)
-		finalScreenTexture = SCRTEX_FINALSCREENTEXTURE;
+		pglGenTextures(1, &finalScreenTexture);
 	pglBindTexture(GL_TEXTURE_2D, finalScreenTexture);
 
 	if (firstTime)

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -68,7 +68,7 @@ extern consvar_t cv_masterserver, cv_servername;
 // < 0 to not connect (usually -1) (offline mode)
 // == 0 to show all rooms, not a valid hosting room
 // anything else is whatever room the MS assigns to that number (online mode)
-INT16 ms_RoomId;
+extern INT16 ms_RoomId;
 
 const char *GetMasterServerPort(void);
 const char *GetMasterServerIP(void);

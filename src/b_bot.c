@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2019 by Sonic Team Junior.
+// Copyright (C) 2011-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -74,11 +74,9 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	if (!sonic || sonic->health <= 0)
 		return;
 
-#ifdef HAVE_BLUA
 	// Lua can handle it!
 	if (LUAh_BotAI(sonic, tails, cmd))
 		return;
-#endif
 
 	if (tails->player->powers[pw_carry] == CR_MACESPIN || tails->player->powers[pw_carry] == CR_GENERIC)
 	{
@@ -364,11 +362,9 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 	// Bot AI isn't programmed in analog.
 	CV_SetValue(&cv_analog[1], false);
 
-#ifdef HAVE_BLUA
 	// Let Lua scripts build ticcmds
 	if (LUAh_BotTiccmd(player, cmd))
 		return;
-#endif
 
 	// We don't have any main character AI, sorry. D:
 	if (player-players == consoleplayer)
@@ -462,6 +458,19 @@ boolean B_CheckRespawn(player_t *player)
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
 		return false;
+
+	// B_RespawnBot doesn't do anything if the condition above this isn't met
+	{
+		UINT8 shouldForce = LUAh_BotRespawn(sonic, tails);
+
+		if (P_MobjWasRemoved(sonic) || P_MobjWasRemoved(tails))
+			return (shouldForce == 1); // mobj was removed
+
+		if (shouldForce == 1)
+			return true;
+		else if (shouldForce == 2)
+			return false;
+	}
 
 	// Check if Sonic is busy first.
 	// If he's doing any of these things, he probably doesn't want to see us.

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -620,7 +620,6 @@ void R_DrawSpan_8 (void)
 	}
 }
 
-#ifdef ESLOPE
 // R_CalcTiltedLighting
 // Exactly what it says on the tin. I wish I wasn't too lazy to explain things properly.
 INT32 tiltlighting[MAXVIDWIDTH];
@@ -644,6 +643,7 @@ void R_CalcTiltedLighting(fixed_t start, fixed_t end)
 	}
 }
 
+#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f * FIXED_TO_FLOAT(fovtan))
 
 /**	\brief The R_DrawTiltedSpan_8 function
 	Draw slopes! Holy sheit!
@@ -669,7 +669,7 @@ void R_DrawTiltedSpan_8(void)
 
 	// Lighting is simple. It's just linear interpolation from start to end
 	{
-		float planelightfloat = BASEVIDWIDTH*BASEVIDWIDTH/vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f;
+		float planelightfloat = PLANELIGHTFLOAT;
 		float lightstart, lightend;
 
 		lightend = (iz + ds_szp->x*width) * planelightfloat;
@@ -805,7 +805,7 @@ void R_DrawTiltedTranslucentSpan_8(void)
 
 	// Lighting is simple. It's just linear interpolation from start to end
 	{
-		float planelightfloat = BASEVIDWIDTH*BASEVIDWIDTH/vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f;
+		float planelightfloat = PLANELIGHTFLOAT;
 		float lightstart, lightend;
 
 		lightend = (iz + ds_szp->x*width) * planelightfloat;
@@ -942,7 +942,7 @@ void R_DrawTiltedTranslucentWaterSpan_8(void)
 
 	// Lighting is simple. It's just linear interpolation from start to end
 	{
-		float planelightfloat = BASEVIDWIDTH*BASEVIDWIDTH/vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f;
+		float planelightfloat = PLANELIGHTFLOAT;
 		float lightstart, lightend;
 
 		lightend = (iz + ds_szp->x*width) * planelightfloat;
@@ -1078,7 +1078,7 @@ void R_DrawTiltedSplat_8(void)
 
 	// Lighting is simple. It's just linear interpolation from start to end
 	{
-		float planelightfloat = BASEVIDWIDTH*BASEVIDWIDTH/vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f;
+		float planelightfloat = PLANELIGHTFLOAT;
 		float lightstart, lightend;
 
 		lightend = (iz + ds_szp->x*width) * planelightfloat;
@@ -1198,7 +1198,6 @@ void R_DrawTiltedSplat_8(void)
 	}
 #endif
 }
-#endif // ESLOPE
 
 /**	\brief The R_DrawSplat_8 function
 	Just like R_DrawSpan_8, but skips transparent pixels.

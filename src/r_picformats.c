@@ -1479,7 +1479,9 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		INT32 width, height, leftoffset;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
+#ifndef NO_PNG_LUMPS
 		size_t lumplength;
+#endif
 		pictureformat_t format = PICFMT_PATCH;
 		INT32 fmtbpp = PICDEPTH_NONE;
 
@@ -1487,9 +1489,8 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			return;
 
 		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
-		lumplength = W_LumpLength(lump);
-
 #ifndef NO_PNG_LUMPS
+		lumplength = W_LumpLength(lump);
 		if (Picture_IsLumpPNG((const UINT8 *)patch, lumplength))
 		{
 			INT32 pngwidth, pngheight;
@@ -1506,9 +1507,9 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		if (!Picture_CheckIfPatch(patch, lumplength))
 			return;
 
-		width = patch->width;
-		height = patch->height;
-		leftoffset = patch->leftoffset;
+		width = SHORT(patch->width);
+		height = SHORT(patch->height);
+		leftoffset = SHORT(patch->leftoffset);
 		fmtbpp = Picture_FormatBPP(format);
 		if (fmtbpp < PICDEPTH_16BPP)
 			fmtbpp = PICDEPTH_16BPP;
@@ -1662,7 +1663,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			newpatch = (patch_t *)Picture_Convert((fmtbpp == PICDEPTH_32BPP) ? PICFMT_FLAT32 : PICFMT_FLAT16, rawdst, format, 0, &size, newwidth, newheight, 0, 0, 0);
 			{
 				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
-				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
+				newpatch->topoffset = (newpatch->height / 2) + (SHORT(patch->topoffset) - py);
 			}
 
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
@@ -1671,6 +1672,12 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 
 			// P_PrecacheLevel
 			if (devparm) spritememory += size;
+
+			// convert everything to little-endian, for big-endian support
+			newpatch->width = SHORT(newpatch->width);
+			newpatch->height = SHORT(newpatch->height);
+			newpatch->leftoffset = SHORT(newpatch->leftoffset);
+			newpatch->topoffset = SHORT(newpatch->topoffset);
 
 #ifdef HWRENDER
 			if (rendermode == render_opengl)

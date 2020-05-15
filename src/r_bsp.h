@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,13 +40,11 @@ void R_PortalClearClipSegs(INT32 start, INT32 end);
 void R_ClearDrawSegs(void);
 void R_RenderBSPNode(INT32 bspnum);
 
-#ifdef POLYOBJECTS
 void R_SortPolyObjects(subsector_t *sub);
 
 extern size_t numpolys;        // number of polyobjects in current subsector
 extern size_t num_po_ptrs;     // number of polyobject pointers allocated
 extern polyobj_t **po_ptrs; // temp ptr array to sort polyobject pointers
-#endif
 
 sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 	INT32 *ceilinglightlevel, boolean back);

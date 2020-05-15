@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -715,6 +715,8 @@ void Net_CloseConnection(INT32 node)
 
 	InitNode(&nodes[node]);
 	SV_AbortSendFiles(node);
+	if (server)
+		SV_AbortLuaFileTransfer(node);
 	I_NetFreeNodenum(node);
 #endif
 }
@@ -798,6 +800,10 @@ static const char *packettypename[NUMPACKETTYPE] =
 
 	"RESYNCHEND",
 	"RESYNCHGET",
+
+	"SENDINGLUAFILE",
+	"ASKLUAFILE",
+	"HASLUAFILE",
 
 	"FILEFRAGMENT",
 	"TEXTCMD",

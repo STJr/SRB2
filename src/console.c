@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -32,6 +32,7 @@
 #include "d_main.h"
 #include "m_menu.h"
 #include "filesrch.h"
+#include "m_misc.h"
 
 #ifdef _WINDOWS
 #include "win32/win_main.h"
@@ -96,6 +97,7 @@ static void CON_InputInit(void);
 static void CON_RecalcSize(void);
 static void CON_ChangeHeight(void);
 
+static void CON_DrawBackpic(void);
 static void CONS_hudlines_Change(void);
 static void CONS_backcolor_Change(void);
 
@@ -612,15 +614,6 @@ void CON_Ticker(void)
 	con_tick++;
 	con_tick &= 7;
 
-	// if the menu is open then close the console.
-	if (menuactive && con_destlines)
-	{
-		consoletoggle = false;
-		con_destlines = 0;
-		CON_ClearHUD();
-		I_UpdateMouseGrab();
-	}
-
 	// console key was pushed
 	if (consoletoggle)
 	{
@@ -792,7 +785,7 @@ boolean CON_Responder(event_t *ev)
 		// check other keys only if console prompt is active
 		if (!consoleready && key < NUMINPUTS) // metzgermeister: boundary check!!
 		{
-			if (bindtable[key])
+			if (! menuactive && bindtable[key])
 			{
 				COM_BufAddText(bindtable[key]);
 				COM_BufAddText("\n");
@@ -814,6 +807,33 @@ boolean CON_Responder(event_t *ev)
 	 || key == KEY_LCTRL || key == KEY_RCTRL
 	 || key == KEY_LALT || key == KEY_RALT)
 		return true;
+
+	if (key == KEY_LEFTARROW)
+	{
+		if (input_cur != 0)
+		{
+			if (ctrldown)
+				input_cur = M_JumpWordReverse(inputlines[inputline], input_cur);
+			else
+				--input_cur;
+		}
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+	else if (key == KEY_RIGHTARROW)
+	{
+		if (input_cur < input_len)
+		{
+			if (ctrldown)
+				input_cur += M_JumpWord(&inputlines[inputline][input_cur]);
+			else
+				++input_cur;
+		}
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
 
 	// ctrl modifier -- changes behavior, adds shortcuts
 	if (ctrldown)
@@ -965,23 +985,6 @@ boolean CON_Responder(event_t *ev)
 	{
 		if (con_scrollup > 0)
 			con_scrollup--;
-		return true;
-	}
-
-	if (key == KEY_LEFTARROW)
-	{
-		if (input_cur != 0)
-			--input_cur;
-		if (!shiftdown)
-			input_sel = input_cur;
-		return true;
-	}
-	else if (key == KEY_RIGHTARROW)
-	{
-		if (input_cur < input_len)
-			++input_cur;
-		if (!shiftdown)
-			input_sel = input_cur;
 		return true;
 	}
 	else if (key == KEY_HOME)
@@ -1528,6 +1531,51 @@ static void CON_DrawHudlines(void)
 	con_clearlines = y; // this is handled by HU_Erase();
 }
 
+// Lactozilla: Draws the console's background picture.
+static void CON_DrawBackpic(void)
+{
+	patch_t *con_backpic;
+	lumpnum_t piclump;
+	int x, w, h;
+
+	// Get the lumpnum for CONSBACK, or fallback into MISSING.
+	piclump = W_CheckNumForName("CONSBACK");
+	if (piclump == LUMPERROR)
+		piclump = W_GetNumForName("MISSING");
+
+	// Cache the Software patch.
+	con_backpic = W_CacheSoftwarePatchNum(piclump, PU_PATCH);
+
+	// Center the backpic, and draw a vertically cropped patch.
+	w = (con_backpic->width * vid.dupx);
+	x = (vid.width / 2) - (w / 2);
+	h = con_curlines/vid.dupy;
+
+	// If the patch doesn't fill the entire screen,
+	// then fill the sides with a solid color.
+	if (x > 0)
+	{
+		column_t *column = (column_t *)((UINT8 *)(con_backpic) + LONG(con_backpic->columnofs[0]));
+		if (!column->topdelta)
+		{
+			UINT8 *source = (UINT8 *)(column) + 3;
+			INT32 color = (source[0] | V_NOSCALESTART);
+			// left side
+			V_DrawFill(0, 0, x, con_curlines, color);
+			// right side
+			V_DrawFill((x + w), 0, (vid.width - w), con_curlines, color);
+		}
+	}
+
+	// Cache the patch normally.
+	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
+	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
+			0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
+
+	// Unlock the cached patch.
+	W_UnlockCachedPatch(con_backpic);
+}
+
 // draw the console background, text, and prompt if enough place
 //
 static void CON_DrawConsole(void)
@@ -1549,14 +1597,7 @@ static void CON_DrawConsole(void)
 
 	// draw console background
 	if (cons_backpic.value || con_forcepic)
-	{
-		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
-
-		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
-		V_DrawScaledPatch(0, 0, 0, con_backpic);
-
-		W_UnlockCachedPatch(con_backpic);
-	}
+		CON_DrawBackpic();
 	else
 	{
 		// inu: no more width (was always 0 and vid.width)
@@ -1608,10 +1649,7 @@ void CON_Drawer(void)
 		return;
 
 	if (needpatchrecache)
-	{
-		W_FlushCachedPatches();
 		HU_LoadGraphics();
-	}
 
 	if (con_recalc)
 	{

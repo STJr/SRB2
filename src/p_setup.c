@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,7 +27,7 @@
 #include "i_system.h"
 
 #include "r_data.h"
-#include "r_things.h"
+#include "r_things.h" // for R_AddSpriteDefs
 #include "r_textures.h"
 #include "r_picformats.h"
 #include "r_sky.h"
@@ -58,9 +58,7 @@
 
 #include "filesrch.h" // refreshdirmenu
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h" // level title
-#endif
 
 #include "f_finale.h" // wipes
 
@@ -80,9 +78,7 @@
 #include "hardware/hw_model.h"
 #endif
 
-#ifdef ESLOPE
 #include "p_slopes.h"
-#endif
 
 #include "fastcmp.h" // textmap parsing
 
@@ -223,6 +219,10 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
 	mapheaderinfo[num]->startrings = 0;
+	mapheaderinfo[num]->sstimer = 90;
+	mapheaderinfo[num]->ssspheres = 1;
+	mapheaderinfo[num]->gravity = FRACUNIT/2;
+	mapheaderinfo[num]->keywords[0] = '\0';
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
 	mapheaderinfo[num]->mustrack = 0;
@@ -411,7 +411,7 @@ levelflat refers to an array of level flats,
 or NULL if we want to allocate it now.
 */
 static INT32
-Ploadflat (levelflat_t *levelflat, const char *flatname)
+Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 {
 #ifndef NO_PNG_LUMPS
 	UINT8         buffer[8];
@@ -424,30 +424,25 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 
 	size_t i;
 
-	if (levelflat)
+	// Scan through the already found flats, return if it matches.
+	for (i = 0; i < numlevelflats; i++)
 	{
-		// Scan through the already found flats, return if it matches.
-		for (i = 0; i < numlevelflats; i++)
-		{
-			if (strnicmp(levelflat[i].name, flatname, 8) == 0)
-				return i;
-		}
+		if (strnicmp(levelflat[i].name, flatname, 8) == 0)
+			return i;
 	}
 
-#ifndef ZDEBUG
-	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-	if (numlevelflats >= MAXLEVELFLATS)
-		I_Error("Too many flats in level\n");
-
-	if (levelflat)
-		levelflat += numlevelflats;
-	else
+	if (resize)
 	{
 		// allocate new flat memory
 		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
 		levelflat  = levelflats + numlevelflats;
+	}
+	else
+	{
+		if (numlevelflats >= MAXLEVELFLATS)
+			I_Error("Too many flats in level\n");
+
+		levelflat += numlevelflats;
 	}
 
 	// Store the name.
@@ -507,6 +502,10 @@ flatfound:
 		levelflat->u.flat.baselumpnum = LUMPERROR;
 	}
 
+#ifndef ZDEBUG
+	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
 	return ( numlevelflats++ );
 }
 
@@ -514,7 +513,7 @@ flatfound:
 // allocate an id for it, and set the levelflat (to speedup search)
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 {
-	return Ploadflat(levelflat, flatname);
+	return Ploadflat(levelflat, flatname, false);
 }
 
 // help function for Lua and $$$.sav reading
@@ -523,7 +522,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	return Ploadflat(levelflats, flatname);
+	return Ploadflat(levelflats, flatname, true);
 }
 
 // help function for $$$.sav checking
@@ -704,47 +703,27 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer1, emer2, emer3;
-	INT32 timeout = 0; // keeps from getting stuck
+	INT32 emer[3], num[MAXHUNTEMERALDS], i, randomkey;
+	fixed_t x, y, z;
 
-	emer1 = emer2 = emer3 = 0;
+	for (i = 0; i < numhuntemeralds; i++)
+		num[i] = i;
 
-	//increment spawn numbers because zero is valid.
-	emer1 = (P_RandomKey(numhuntemeralds)) + 1;
-	while (timeout++ < 100)
+	for (i = 0; i < 3; i++)
 	{
-		emer2 = (P_RandomKey(numhuntemeralds)) + 1;
+		// generate random index, shuffle afterwards
+		randomkey = P_RandomKey(numhuntemeralds--);
+		emer[i] = num[randomkey];
+		num[randomkey] = num[numhuntemeralds];
+		num[numhuntemeralds] = emer[i];
 
-		if (emer2 != emer1)
-			break;
+		// spawn emerald
+		x = huntemeralds[emer[i]]->x<<FRACBITS;
+		y = huntemeralds[emer[i]]->y<<FRACBITS;
+		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer[i]], x, y);
+		P_SetMobjStateNF(P_SpawnMobj(x, y, z, MT_EMERHUNT),
+			mobjinfo[MT_EMERHUNT].spawnstate+i);
 	}
-
-	timeout = 0;
-	while (timeout++ < 100)
-	{
-		emer3 = (P_RandomKey(numhuntemeralds)) + 1;
-
-		if (emer3 != emer2 && emer3 != emer1)
-			break;
-	}
-
-	//decrement spawn values to the actual number because zero is valid.
-	if (emer1--)
-		P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
-			huntemeralds[emer1]->y<<FRACBITS,
-			huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
-
-	if (emer2--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
-			huntemeralds[emer2]->y<<FRACBITS,
-			huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+1);
-
-	if (emer3--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
-			huntemeralds[emer3]->y<<FRACBITS,
-			huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+2);
 }
 
 static void P_SpawnMapThings(boolean spawnemblems)
@@ -853,6 +832,8 @@ static void P_LoadVertices(UINT8 *data)
 	{
 		v->x = SHORT(mv->x)<<FRACBITS;
 		v->y = SHORT(mv->y)<<FRACBITS;
+		v->floorzset = v->ceilingzset = false;
+		v->floorz = v->ceilingz = 0;
 	}
 }
 
@@ -875,13 +856,12 @@ static void P_InitializeSector(sector_t *ss)
 	ss->camsec = -1;
 
 	ss->floorlightsec = ss->ceilinglightsec = -1;
-	ss->crumblestate = 0;
+	ss->crumblestate = CRUMBLE_NONE;
 
 	ss->touching_thinglist = NULL;
 
 	ss->linecount = 0;
 	ss->lines = NULL;
-	ss->tagline = NULL;
 
 	ss->ffloors = NULL;
 	ss->attached = NULL;
@@ -916,11 +896,9 @@ static void P_InitializeSector(sector_t *ss)
 	ss->preciplist = NULL;
 	ss->touching_preciplist = NULL;
 
-#ifdef ESLOPE
 	ss->f_slope = NULL;
 	ss->c_slope = NULL;
 	ss->hasslope = false;
-#endif
 
 	ss->spawn_lightlevel = ss->lightlevel;
 
@@ -985,9 +963,7 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->splats = NULL;
 #endif
 	ld->firsttag = ld->nexttag = -1;
-#ifdef POLYOBJECTS
 	ld->polyobj = NULL;
-#endif
 
 	ld->text = NULL;
 	ld->callcount = 0;
@@ -1112,8 +1088,8 @@ static void P_LoadSidedefs(UINT8 *data)
 		if (((sd->line->flags & (ML_TWOSIDED|ML_EFFECT5)) == (ML_TWOSIDED|ML_EFFECT5))
 			&& !(sd->special >= 300 && sd->special < 500)) // exempt linedef exec specials
 		{
-			sd->repeatcnt = (INT16)(((unsigned)textureoffset) >> 12);
-			sd->textureoffset = (((unsigned)textureoffset) & 2047) << FRACBITS;
+			sd->repeatcnt = (INT16)(((UINT16)textureoffset) >> 12);
+			sd->textureoffset = (((UINT16)textureoffset) & 2047) << FRACBITS;
 		}
 		else
 		{
@@ -1192,10 +1168,14 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 9: // Mace parameters
 			case 14: // Bustable block parameters
 			case 15: // Fan particle spawner parameters
+			case 334: // Trigger linedef executor: Object dye - Continuous
+			case 335: // Trigger linedef executor: Object dye - Each time
+			case 336: // Trigger linedef executor: Object dye - Once
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 			case 461: // Spawns an object on the map based on texture offsets
+			case 463: // Colorizes an object
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -1373,6 +1353,16 @@ static void ParseTextmapVertexParameter(UINT32 i, char *param, char *val)
 		vertexes[i].x = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "y"))
 		vertexes[i].y = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "zfloor"))
+	{
+		vertexes[i].floorz = FLOAT_TO_FIXED(atof(val));
+		vertexes[i].floorzset = true;
+	}
+	else if (fastcmp(param, "zceiling"))
+	{
+		vertexes[i].ceilingz = FLOAT_TO_FIXED(atof(val));
+		vertexes[i].ceilingzset = true;
+	}
 }
 
 static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
@@ -1580,6 +1570,8 @@ static void P_LoadTextmap(void)
 	{
 		// Defaults.
 		vt->x = vt->y = INT32_MAX;
+		vt->floorzset = vt->ceilingzset = false;
+		vt->floorz = vt->ceilingz = 0;
 
 		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
 
@@ -1885,10 +1877,8 @@ static void P_InitializeSeg(seg_t *seg)
 
 	seg->numlights = 0;
 	seg->rlights = NULL;
-#ifdef POLYOBJECTS
 	seg->polyseg = NULL;
 	seg->dontrenderme = false;
-#endif
 }
 
 static void P_LoadSegs(UINT8 *data)
@@ -2251,11 +2241,9 @@ static boolean P_LoadBlockMap(UINT8 *data, size_t count)
 	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 	blockmap = blockmaplump+4;
 
-#ifdef POLYOBJECTS
 	// haleyjd 2/22/06: setup polyobject blockmap
 	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	return true;
 }
 
@@ -2506,11 +2494,9 @@ static void P_CreateBlockMap(void)
 		blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 		blockmap = blockmaplump + 4;
 
-#ifdef POLYOBJECTS
 		// haleyjd 2/22/06: setup polyobject blockmap
 		count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 		polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	}
 }
 
@@ -3089,7 +3075,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !players[i].spectator)
+		if (playeringame[i] && !(players[i].spectator || players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -3111,7 +3097,7 @@ static void P_InitTagGametype(void)
 	if (players[playersactive[i]].mo)
 		P_RemoveMobj(players[playersactive[i]].mo);
 
-	G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
+	G_SpawnPlayer(playersactive[i]); //respawn the lucky player in his dedicated spawn location.
 }
 
 static void P_SetupCamera(void)
@@ -3289,7 +3275,7 @@ static void P_InitPlayers(void)
 			G_DoReborn(i);
 		else // gametype is GT_COOP or GT_RACE
 		{
-			G_SpawnPlayer(i, players[i].starposttime);
+			G_SpawnPlayer(i);
 			if (players[i].starposttime)
 				P_ClearStarPost(players[i].starpostnum);
 		}
@@ -3519,9 +3505,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
 
-#ifdef HAVE_BLUA
 	LUA_InvalidateLevel();
-#endif
 
 	for (ss = sectors; sectors+numsectors != ss; ss++)
 	{
@@ -3574,12 +3558,10 @@ boolean P_LoadLevel(boolean fromnetsave)
 		return false;
 
 	// init gravity, tag lists,
-	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
+	// anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
-#ifdef ESLOPE
-	P_ResetDynamicSlopes(fromnetsave);
-#endif
+	P_SpawnSlopes(fromnetsave);
 
 	P_SpawnMapThings(!fromnetsave);
 	skyboxmo[0] = skyboxviewpnts[0];
@@ -3658,9 +3640,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
-#ifdef HAVE_BLUA
 		LUAh_MapLoad();
-#endif
 	}
 
 	// No render mode, stop here.
@@ -3677,8 +3657,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 		return true;
 
 	// If so...
-	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
-		G_PreLevelTitleCard();
+	G_PreLevelTitleCard();
 
 	return true;
 }
@@ -3693,10 +3672,15 @@ void HWR_SetupLevel(void)
 	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
 	// Level textures are only reloaded after R_LoadTextures, which is
 	// when the texture list is loaded.
+
+	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
+	HWR_FreeMipmapCache();
+
 #ifdef ALAM_LIGHTING
 	// BP: reset light between levels (we draw preview frame lights on current frame)
 	HWR_ResetLights();
 #endif
+
 	// Correct missing sidedefs & deep water trick
 	HWR_CorrectSWTricks();
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
@@ -3775,12 +3759,12 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 {
 	UINT16 numlumps = *pnumlumps;
 	size_t i = *pi;
-	if (!stricmp(lumpinfo->name2, folName))
+	if (!stricmp(lumpinfo->fullname, folName))
 	{
 		lumpinfo++;
 		*start = ++i;
 		for (; i < numlumps; i++, lumpinfo++)
-			if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
+			if (strnicmp(lumpinfo->fullname, folName, strlen(folName)))
 				break;
 		lumpinfo--;
 		*end = i-- - *start;
@@ -3820,10 +3804,9 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
-	if ((numlumps = W_InitFile(wadfilename, false)) == INT16_MAX)
+	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
 	else
@@ -3849,10 +3832,8 @@ boolean P_AddWadFile(const char *wadfilename)
 
 		// Update the detected resources.
 		// Note: ALWAYS load Lua scripts first, SOCs right after, and the remaining resources afterwards.
-#ifdef HAVE_BLUA
 //		if (luaNum) // Lua scripts.
 //			P_LoadLuaScrRange(wadnum, luaPos, luaNum);
-#endif
 //		if (socNum) // SOCs.
 //			P_LoadDehackRange(wadnum, socPos, socNum);
 		if (sfxNum) // Sounds. TODO: Function currently only updates already existing sounds, the rest is handled somewhere else.

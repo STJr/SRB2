@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2019 by Sonic Team Junior.
+// Copyright (C) 2015-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,8 +22,6 @@
 #include "r_main.h"
 #include "p_maputl.h"
 #include "w_wad.h"
-
-#ifdef ESLOPE
 
 pslope_t *slopelist = NULL;
 UINT16 slopecount = 0;
@@ -458,8 +456,8 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 	return ret;
 }
 
-/// Create vertex based slopes.
-static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
+/// Create vertex based slopes using tagged mapthings.
+static void line_SpawnViaMapthingVertexes(const int linenum, const boolean spawnthinker)
 {
 	line_t *line = lines + linenum;
 	side_t *side;
@@ -507,6 +505,55 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 	side->sector->hasslope = true;
 }
 
+/// Spawn textmap vertex slopes.
+static void SpawnVertexSlopes(void)
+{
+	line_t *l1, *l2;
+	sector_t* sc;
+	vertex_t *v1, *v2, *v3;
+	size_t i;
+	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
+	{
+		// The vertex slopes only work for 3-vertex sectors (and thus 3-sided sectors).
+		if (sc->linecount != 3)
+			continue;
+
+		l1 = sc->lines[0];
+		l2 = sc->lines[1];
+
+		// Determine the vertexes.
+		v1 = l1->v1;
+		v2 = l1->v2;
+		if ((l2->v1 != v1) && (l2->v1 != v2))
+			v3 = l2->v1;
+		else
+			v3 = l2->v2;
+
+		if (v1->floorzset || v2->floorzset || v3->floorzset)
+		{
+			vector3_t vtx[3] = {
+				{v1->x, v1->y, v1->floorzset ? v1->floorz : sc->floorheight},
+				{v2->x, v2->y, v2->floorzset ? v2->floorz : sc->floorheight},
+				{v3->x, v3->y, v3->floorzset ? v3->floorz : sc->floorheight}};
+			pslope_t *slop = Slope_Add(0);
+			sc->f_slope = slop;
+			sc->hasslope = true;
+			ReconfigureViaVertexes(slop, vtx[0], vtx[1], vtx[2]);
+		}
+
+		if (v1->ceilingzset || v2->ceilingzset || v3->ceilingzset)
+		{
+			vector3_t vtx[3] = {
+				{v1->x, v1->y, v1->ceilingzset ? v1->ceilingz : sc->ceilingheight},
+				{v2->x, v2->y, v2->ceilingzset ? v2->ceilingz : sc->ceilingheight},
+				{v3->x, v3->y, v3->ceilingzset ? v3->ceilingz : sc->ceilingheight}};
+			pslope_t *slop = Slope_Add(0);
+			sc->c_slope = slop;
+			sc->hasslope = true;
+			ReconfigureViaVertexes(slop, vtx[0], vtx[1], vtx[2]);
+		}
+	}
+}
 
 //
 // P_CopySectorSlope
@@ -519,7 +566,7 @@ void P_CopySectorSlope(line_t *line)
 	int i, special = line->special;
 
 	// Check for copy linedefs
-	for (i = -1; (i = P_FindSectorFromLineTag(line, i)) >= 0;)
+	for (i = -1; (i = P_FindSectorFromTag(line->tag, i)) >= 0;)
 	{
 		sector_t *srcsec = sectors + i;
 
@@ -551,11 +598,15 @@ pslope_t *P_SlopeById(UINT16 id)
 	return ret;
 }
 
-/// Reset slopes and read them from special lines.
-void P_ResetDynamicSlopes(const boolean fromsave) {
+/// Initializes and reads the slopes from the map data.
+void P_SpawnSlopes(const boolean fromsave) {
 	size_t i;
+
 	slopelist = NULL;
 	slopecount = 0;
+
+	/// Generates vertex slopes.
+	SpawnVertexSlopes();
 
 	/// Generates line special-defined slopes.
 	for (i = 0; i < numlines; i++)
@@ -577,7 +628,7 @@ void P_ResetDynamicSlopes(const boolean fromsave) {
 			case 705:
 			case 714:
 			case 715:
-				line_SpawnViaVertexes(i, !fromsave);
+				line_SpawnViaMapthingVertexes(i, !fromsave);
 				break;
 
 			default:
@@ -673,6 +724,9 @@ void P_SlopeLaunch(mobj_t *mo)
 
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
+
+	if (mo->player)
+		mo->player->powers[pw_justlaunched] = 1;
 }
 
 //
@@ -788,6 +842,3 @@ void P_ButteredSlope(mobj_t *mo)
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
-
-// EOF
-#endif // #ifdef ESLOPE
