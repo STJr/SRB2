@@ -764,8 +764,8 @@ static menuitem_t SP_MainMenu[] =
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 76},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,               84},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,             92},
-	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,           100},
-	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Marathon Run",  M_Marathon,                108},
+	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Marathon Run",  M_Marathon,                100},
+	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,           108},
 	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Statistics",    M_Statistics,              116}
 };
 
@@ -774,8 +774,8 @@ enum
 	sploadgame,
 	sprecordattack,
 	spnightsmode,
-	sptutorial,
 	spmarathon,
+	sptutorial,
 	spstatistics
 };
 
@@ -8073,10 +8073,11 @@ static void M_SinglePlayerMenu(INT32 choice)
 	SP_MainMenu[sptutorial].status = tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
 
 	// If the FIRST stage immediately leads to the ending, or itself (which gets converted to the title screen in G_DoCompleted for marathonmode only), there's no point in having this option on the menu. You should use Record Attack in that circumstance, although if marathonnext is set this behaviour can be overridden if you make some weird mod that requires multiple playthroughs of the same map in sequence and has some in-level mechanism to break the cycle.
-	if (mapheaderinfo[spmarathon_start-1]
+	if (!M_SecretUnlocked(SECRET_RECORDATTACK) // also if record attack is locked
+		|| (mapheaderinfo[spmarathon_start-1]
 		&& !mapheaderinfo[spmarathon_start-1]->marathonnext
 		&& (mapheaderinfo[spmarathon_start-1]->nextlevel == spmarathon_start
-			|| mapheaderinfo[spmarathon_start-1]->nextlevel >= 1100))
+			|| mapheaderinfo[spmarathon_start-1]->nextlevel >= 1100)))
 		SP_MainMenu[spmarathon].status = IT_NOTHING|IT_DISABLED;
 	else
 		SP_MainMenu[spmarathon].status = IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED;
