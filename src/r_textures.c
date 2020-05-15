@@ -505,7 +505,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
 
 	if (format == PICFMT_PATCH32)
-		memset(block, 0x00000000, blocksize+1);
+		memset(block, 0x00, blocksize+1);
 	else
 		memset(block, TRANSPARENTPIXEL, blocksize+1); // Transparency hack
 
@@ -560,10 +560,18 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		x2 = x1 + width;
 
 		if (x1 > texture->width || x2 < 0)
+		{
+			if (dealloc)
+				Z_Free(realpatch);
 			continue; // patch not located within texture's x bounds, ignore
+		}
 
 		if (patch->originy > texture->height || (patch->originy + height) < 0)
+		{
+			if (dealloc)
+				Z_Free(realpatch);
 			continue; // patch not located within texture's y bounds, ignore
+		}
 
 		// patch is actually inside the texture!
 		// now check if texture is partly off-screen and adjust accordingly
