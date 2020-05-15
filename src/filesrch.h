@@ -60,7 +60,7 @@ typedef enum
 #endif
 	EXT_PK3,
 	EXT_SOC,
-	EXT_LUA, // allowed even if not HAVE_BLUA so that we can yell on load attempt
+	EXT_LUA,
 	NUM_EXT,
 	NUM_EXT_TABLE = NUM_EXT-EXT_START,
 	EXT_LOADED = 0x80

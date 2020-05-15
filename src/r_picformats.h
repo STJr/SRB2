@@ -11,8 +11,8 @@
 /// \file  r_picformats.h
 /// \brief Patch generation.
 
-#ifndef __R_PATCH__
-#define __R_PATCH__
+#ifndef __R_PICFORMATS__
+#define __R_PICFORMATS__
 
 #include "r_defs.h"
 #include "doomdef.h"

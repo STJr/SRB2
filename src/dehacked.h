@@ -34,11 +34,9 @@ void DEH_Check(void);
 
 fixed_t get_number(const char *word);
 
-#ifdef HAVE_BLUA
 boolean LUA_SetLuaAction(void *state, const char *actiontocompare);
 const char *LUA_GetActionName(void *action);
 void LUA_SetActionByName(void *state, const char *actiontocompare);
-#endif
 
 extern boolean deh_loaded;
 

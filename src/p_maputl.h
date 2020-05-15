@@ -55,9 +55,7 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing, fixed_t x,fixed_t y);
 boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y);
 
 extern fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
-#ifdef ESLOPE
 extern pslope_t *opentopslope, *openbottomslope;
-#endif
 extern ffloor_t *openfloorrover, *openceilingrover;
 
 void P_LineOpening(line_t *plinedef, mobj_t *mobj);

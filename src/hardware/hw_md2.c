@@ -1221,7 +1221,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
 
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
-				lightlevel = *sector->lightlist[light].lightlevel;
+				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;
 
 			if (*sector->lightlist[light].extra_colormap)
 				colormap = *sector->lightlist[light].extra_colormap;
@@ -1229,7 +1229,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		else
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
-				lightlevel = sector->lightlevel;
+				lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
 
 			if (sector->extra_colormap)
 				colormap = sector->extra_colormap;
@@ -1478,7 +1478,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 
 			// rotation pivot
 			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
-			p.centery = FIXED_TO_FLOAT(spr->mobj->height/2);
+			p.centery = FIXED_TO_FLOAT(spr->mobj->height/(flip ? -2 : 2));
 
 			// rotation axis
 			if (sprinfo->available)
@@ -1490,6 +1490,9 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 				p.rollflip = 1;
 			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
 				p.rollflip = -1;
+
+			if (flip)
+				p.rollflip *= -1;
 		}
 
 		p.anglex = 0.0f;
