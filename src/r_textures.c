@@ -1025,7 +1025,7 @@ Rloadflats (INT32 i, INT32 w)
 
 			// Set texture properties.
 			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
-			texture->format = PICFMT_FLAT;
+			texture->format = PICFMT_PATCH; // Textures are always patches. Don't use flat formats here.
 
 #ifndef NO_PNG_LUMPS
 			if (Picture_IsLumpPNG((UINT8 *)flatlump, lumplength))
@@ -1241,6 +1241,18 @@ void R_LoadTextures(void)
 		{
 			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
 			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
+		}
+
+		// Count single-patch textures
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
+			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
+		}
+		else
+		{
+			texstart = W_CheckNumForMarkerStartPwad(TX_START, (UINT16)w, 0);
+			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
 		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
