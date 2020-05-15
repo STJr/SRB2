@@ -1074,7 +1074,10 @@ static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 	grtex = &gr_textures[texturenum];
 
 	// Generate texture if missing from the cache
-	if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
+	// The texture CAN be downloaded but have no data,
+	// which is perfectly fine when the GPU has it,
+	// but not for this kind of conversion.
+	if (!grtex->mipmap.grInfo.data)
 		HWR_GenerateTexture(texturenum, grtex);
 #endif
 
