@@ -322,12 +322,12 @@ UINT32 ASTBlendTexturePixel(RGBA_t background, RGBA_t foreground, int style, UIN
 		{
 			// Is the patch way too translucent? Don't blend then.
 			if (alpha < ASTTextureBlendingThreshold[0])
-				return background;
+				return background.rgba;
 
-			return foreground;
+			return ASTBlendPixel(background, foreground, style, alpha);
 		}
 		else // just copy the pixel
-			return foreground;
+			return foreground.rgba;
 	}
 	else
 		return ASTBlendPixel(background, foreground, style, alpha);
