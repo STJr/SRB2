@@ -2131,8 +2131,6 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	polyobj_t *po;
 	polywaypoint_t *th;
 	mobj_t *first = NULL;
-	mobj_t *last = NULL;
-	mobj_t *target = NULL;
 
 	if (!(po = Polyobj_GetForNum(pwdata->polyObjNum)))
 	{
@@ -2165,7 +2163,6 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// Find the first waypoint we need to use
 	first = (th->direction == -1) ? P_GetLastWaypoint(th->sequence) : P_GetFirstWaypoint(th->sequence);
-	last = (th->direction == -1) ? P_GetFirstWaypoint(th->sequence) : P_GetLastWaypoint(th->sequence);
 
 	if (!first)
 	{
@@ -2175,35 +2172,8 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		return false;
 	}
 
-	// Hotfix to not crash on single-waypoint sequences -Red
-	if (!last)
-		last = first;
-
-	if (last->x == po->centerPt.x
-		&& last->y == po->centerPt.y
-		&& last->z == (po->lines[0]->backsector->floorheight + (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2))
-	{
-		// Already at the destination point...
-		if (th->returnbehavior != PWR_WRAP)
-		{
-			po->thinker = NULL;
-			P_RemoveThinker(&th->thinker);
-		}
-	}
-
-	// Find the actual target movement waypoint
-	target = first;
-
-	if (!target)
-	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: Missing target waypoint!\n");
-		po->thinker = NULL;
-		P_RemoveThinker(&th->thinker);
-		return false;
-	}
-
 	// Set pointnum
-	th->pointnum = target->health;
+	th->pointnum = first->health;
 
 	// We don't deal with the mirror crap here, we'll
 	// handle that in the T_Thinker function.
