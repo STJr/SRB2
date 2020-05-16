@@ -2458,6 +2458,21 @@ static int lib_sStopSound(lua_State *L)
 	return 0;
 }
 
+static int lib_sStopSoundByID(lua_State *L)
+{
+	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	//NOHUD
+	if (!origin)
+		return LUA_ErrInvalid(L, "mobj_t");
+
+	sfxenum_t sound_id = luaL_checkinteger(L, 2);
+	if (sound_id >= NUMSFX)
+		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
+
+	S_StopSoundByID(origin, sound_id);
+	return 0;
+}
+
 static int lib_sChangeMusic(lua_State *L)
 {
 #ifdef MUSICSLOT_COMPATIBILITY
@@ -3253,6 +3268,7 @@ static luaL_Reg lib[] = {
 	{"S_StartSound",lib_sStartSound},
 	{"S_StartSoundAtVolume",lib_sStartSoundAtVolume},
 	{"S_StopSound",lib_sStopSound},
+	{"S_StopSoundByID",lib_sStopSoundByID},
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
 	{"S_StopMusic",lib_sStopMusic},
