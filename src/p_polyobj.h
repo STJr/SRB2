@@ -254,14 +254,19 @@ typedef struct polymovedata_s
 	UINT8 overRide;     // if true, will override any action on the object
 } polymovedata_t;
 
+typedef enum
+{
+	PWF_REVERSE = 1,    // Move through waypoints in reverse order
+	PWF_LOOP    = 1<<1, // Loop movement (used with PWR_WRAP or PWR_COMEBACK)
+} polywaypointflags_e;
+
 typedef struct polywaypointdata_s
 {
 	INT32 polyObjNum;     // numeric id of polyobject to affect
 	INT32 sequence;       // waypoint sequence #
 	fixed_t speed;        // linear speed
-	UINT8 reverse;        // if true, will go in reverse waypoint order
 	UINT8 returnbehavior; // behavior after reaching the last waypoint
-	UINT8 continuous;     // continuously move - used with PWR_WRAP or PWR_COMEBACK
+	UINT8 flags;          // PWF_ flags
 } polywaypointdata_t;
 
 // polyobject door types

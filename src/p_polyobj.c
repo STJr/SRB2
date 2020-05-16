@@ -2154,11 +2154,12 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	// set fields
 	th->polyObjNum = pwdata->polyObjNum;
 	th->speed = pwdata->speed;
-	th->sequence = pwdata->sequence; // Used to specify sequence #
-	th->direction = pwdata->reverse ? -1 : 1;
+	th->sequence = pwdata->sequence;
+	th->direction = (pwdata->flags & PWF_REVERSE) ? -1 : 1;
 
 	th->returnbehavior = pwdata->returnbehavior;
-	th->continuous = pwdata->continuous;
+	if (pwdata->flags & PWF_LOOP)
+		th->continuous = true;
 	th->stophere = false;
 
 	// Find the first waypoint we need to use
@@ -2172,11 +2173,8 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		return false;
 	}
 
-	// Set pointnum
 	th->pointnum = first->health;
 
-	// We don't deal with the mirror crap here, we'll
-	// handle that in the T_Thinker function.
 	return true;
 }
 
