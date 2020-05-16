@@ -1600,11 +1600,8 @@ static void T_MovePolyObj(polyobj_t *po, fixed_t distx, fixed_t disty, fixed_t d
 void T_PolyObjWaypoint(polywaypoint_t *th)
 {
 	mobj_t *target = NULL;
-	mobj_t *waypoint = NULL;
-	fixed_t pox, poy, poz;
-	fixed_t distx, disty, distz, dist;
-	fixed_t momx, momy, momz;
 	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
+	fixed_t speed = th->speed;
 
 	if (!po)
 #ifdef RANGECHECK
@@ -1629,97 +1626,95 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		return;
 	}
 
-	pox = po->centerPt.x;
-	poy = po->centerPt.y;
-	poz = (po->lines[0]->backsector->floorheight + po->lines[0]->backsector->ceilingheight)/2;
-
-	// Calculate the distance between the polyobject and the waypoint
-	distx = target->x - pox;
-	disty = target->y - poy;
-	distz = target->z - poz;
-	dist = P_AproxDistance(P_AproxDistance(distx, disty), distz);
-
-	if (dist < 1)
-		dist = 1;
-
-	momx = FixedMul(FixedDiv(target->x - pox, dist), th->speed);
-	momy = FixedMul(FixedDiv(target->y - poy, dist), th->speed);
-	momz = FixedMul(FixedDiv(target->z - poz, dist), th->speed);
-
-	// Will the polyobject be FURTHER away if the momx/momy/momz is added to
-	// its current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
-	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(target->x - pox - momx, target->y - poy - momy), target->z - poz - momz)>>FRACBITS)
+	// Move along the waypoint sequence until speed for the current tic is exhausted
+	while (speed > 0)
 	{
-		// If further away, set XYZ of polyobject to waypoint location
-		T_MovePolyObj(po, distx, disty, distz);
+		mobj_t *waypoint = NULL;
+		fixed_t pox, poy, poz;
+		fixed_t distx, disty, distz, dist;
 
-		if (!th->stophere)
+		// Current position of polyobject
+		pox = po->centerPt.x;
+		poy = po->centerPt.y;
+		poz = (po->lines[0]->backsector->floorheight + po->lines[0]->backsector->ceilingheight)/2;
+
+		// Calculate the distance between the polyobject and the waypoint
+		distx = target->x - pox;
+		disty = target->y - poy;
+		distz = target->z - poz;
+		dist = P_AproxDistance(P_AproxDistance(distx, disty), distz);
+
+		if (dist < 1)
+			dist = 1;
+
+		// Will the polyobject overshoot its target?
+		if (speed <= dist)
 		{
-			CONS_Debug(DBG_POLYOBJ, "Looking for next waypoint...\n");
-			waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
+			// No. Move towards waypoint
+			fixed_t momx, momy, momz;
 
-			if (!waypoint && th->returnbehavior == PWR_WRAP) // If specified, wrap waypoints
-			{
-				if (!th->continuous)
-				{
-					th->returnbehavior = PWR_STOP;
-					th->stophere = true;
-				}
-
-				waypoint = (th->direction == -1) ? P_GetLastWaypoint(th->sequence) : P_GetFirstWaypoint(th->sequence);
-			}
-			else if (!waypoint && th->returnbehavior == PWR_COMEBACK) // Come back to the start
-			{
-				th->direction = -th->direction;
-
-				if (!th->continuous)
-					th->returnbehavior = PWR_STOP;
-
-				waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
-			}
-		}
-
-		if (waypoint)
-		{
-			CONS_Debug(DBG_POLYOBJ, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
-
-			target = waypoint;
-			th->pointnum = target->health;
-			// Set the mobj as your target! -- Monster Iestyn 27/12/19
-			P_SetTarget(&th->target, target);
-
-			// calculate MOMX/MOMY/MOMZ for next waypoint
-			// change slope
-			dist = P_AproxDistance(P_AproxDistance(target->x - pox, target->y - poy), target->z - poz);
-
-			if (dist < 1)
-				dist = 1;
-
-			momx = FixedMul(FixedDiv(target->x - pox, dist), th->speed);
-			momy = FixedMul(FixedDiv(target->y - poy, dist), th->speed);
-			momz = FixedMul(FixedDiv(target->z - poz, dist), th->speed);
+			momx = FixedMul(FixedDiv(target->x - pox, dist), speed);
+			momy = FixedMul(FixedDiv(target->y - poy, dist), speed);
+			momz = FixedMul(FixedDiv(target->z - poz, dist), speed);
+			T_MovePolyObj(po, momx, momy, momz);
+			return;
 		}
 		else
 		{
-			momx = momy = momz = 0;
+			// Yes. Teleport to waypoint and look for the next one
+			T_MovePolyObj(po, distx, disty, distz);
 
 			if (!th->stophere)
-				CONS_Debug(DBG_POLYOBJ, "Next waypoint not found!\n");
+			{
+				CONS_Debug(DBG_POLYOBJ, "Looking for next waypoint...\n");
+				waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
 
-			if (po->thinker == &th->thinker)
-				po->thinker = NULL;
+				if (!waypoint && th->returnbehavior == PWR_WRAP) // If specified, wrap waypoints
+				{
+					if (!th->continuous)
+					{
+						th->returnbehavior = PWR_STOP;
+						th->stophere = true;
+					}
 
-			P_RemoveThinker(&th->thinker);
-			return;
+					waypoint = (th->direction == -1) ? P_GetLastWaypoint(th->sequence) : P_GetFirstWaypoint(th->sequence);
+				}
+				else if (!waypoint && th->returnbehavior == PWR_COMEBACK) // Come back to the start
+				{
+					th->direction = -th->direction;
+
+					if (!th->continuous)
+						th->returnbehavior = PWR_STOP;
+
+					waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
+				}
+			}
+
+			if (waypoint)
+			{
+				CONS_Debug(DBG_POLYOBJ, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
+
+				target = waypoint;
+				th->pointnum = target->health;
+				// Set the mobj as your target! -- Monster Iestyn 27/12/19
+				P_SetTarget(&th->target, target);
+
+				// Calculate remaining speed
+				speed -= dist;
+			}
+			else
+			{
+				if (!th->stophere)
+					CONS_Debug(DBG_POLYOBJ, "Next waypoint not found!\n");
+
+				if (po->thinker == &th->thinker)
+					po->thinker = NULL;
+
+				P_RemoveThinker(&th->thinker);
+				return;
+			}
 		}
 	}
-	else
-	{
-		// momx/momy/momz already equals the right speed
-	}
-
-	// Move the polyobject
-	T_MovePolyObj(po, momx, momy, momz);
 }
 
 void T_PolyDoorSlide(polyslidedoor_t *th)
