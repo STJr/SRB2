@@ -19,6 +19,7 @@
 #include "r_main.h"
 #include "r_draw.h"
 #include "r_things.h" // R_Frame2Char etc
+#include "r_rotsprite.h" // R_GetRollAngle
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
