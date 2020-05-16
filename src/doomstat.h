@@ -631,6 +631,7 @@ mobj_t *P_GetLastWaypoint(UINT8 sequence);
 mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap);
 mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap);
 mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo);
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence);
 
 // =====================================
 // Internal parameters, used for engine.

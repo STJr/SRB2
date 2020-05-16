@@ -239,6 +239,38 @@ mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo)
 	return result;
 }
 
+// Return true if all waypoints are in the same location
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence)
+{
+	mobj_t *first, *waypoint;
+	UINT8 wp;
+
+	if (numwaypoints[sequence] <= 1)
+		return true;
+
+	first = waypoints[sequence][0];
+
+	for (wp = 1; wp < numwaypoints[sequence]; wp++)
+	{
+		waypoint = waypoints[sequence][wp];
+
+		if (!waypoint)
+			continue;
+
+		if (waypoint->x != first->x)
+			return false;
+
+		if (waypoint->y != first->y)
+			return false;
+
+		if (waypoint->z != first->z)
+			return false;
+	}
+
+	return true;
+}
+
+
 /** Logs an error about a map being corrupt, then terminate.
   * This allows reporting highly technical errors for usefulness, without
   * confusing a novice map designer who simply needs to run ZenNode.

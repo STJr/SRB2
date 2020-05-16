@@ -2173,6 +2173,14 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		return false;
 	}
 
+	// Sanity check: If all waypoints are in the same location,
+	// don't allow the movement to be continuous so we don't get stuck in an infinite loop.
+	if (th->continuous && P_IsDegeneratedWaypointSequence(th->sequence))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: All waypoints are in the same location!\n");
+		th->continuous = false;
+	}
+
 	th->pointnum = first->health;
 
 	return true;
