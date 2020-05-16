@@ -175,6 +175,10 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr)
 
 void CL_PrepareDownloadSaveGame(const char *tmpsave)
 {
+#ifdef CLIENT_LOADINGSCREEN
+	lastfilenum = -1;
+#endif
+
 	fileneedednum = 1;
 	fileneeded[0].status = FS_REQUESTED;
 	fileneeded[0].justdownloaded = false;
