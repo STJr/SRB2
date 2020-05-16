@@ -459,7 +459,6 @@ boolean B_CheckRespawn(player_t *player)
 	if (!sonic || sonic->health <= 0)
 		return false;
 
-#ifdef HAVE_BLUA
 	// B_RespawnBot doesn't do anything if the condition above this isn't met
 	{
 		UINT8 shouldForce = LUAh_BotRespawn(sonic, tails);
@@ -472,7 +471,6 @@ boolean B_CheckRespawn(player_t *player)
 		else if (shouldForce == 2)
 			return false;
 	}
-#endif
 
 	// Check if Sonic is busy first.
 	// If he's doing any of these things, he probably doesn't want to see us.

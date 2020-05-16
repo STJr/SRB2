@@ -284,6 +284,7 @@ void A_RolloutRock();
 void A_DragonbomberSpawn();
 void A_DragonWing();
 void A_DragonSegment();
+void A_ChangeHeight();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -451,6 +452,8 @@ typedef enum sprite
 
 	// Projectiles
 	SPR_MISL,
+	SPR_LASR, // GFZ3 laser
+	SPR_LASF, // GFZ3 laser flames
 	SPR_TORP, // Torpedo
 	SPR_ENRG, // Energy ball
 	SPR_MINE, // Skim mine
@@ -2220,6 +2223,14 @@ typedef enum state
 	S_ROCKET,
 
 	S_LASER,
+	S_LASER2,
+	S_LASERFLASH,
+
+	S_LASERFLAME1,
+	S_LASERFLAME2,
+	S_LASERFLAME3,
+	S_LASERFLAME4,
+	S_LASERFLAME5,
 
 	S_TORPEDO,
 

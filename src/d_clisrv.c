@@ -5062,7 +5062,7 @@ void NetUpdate(void)
 
 		// In case the cvar value was lowered
 		if (joindelay)
-			joindelay = min(joindelay - 1, 3 * cv_joindelay.value * TICRATE);
+			joindelay = min(joindelay - 1, 3 * (tic_t)cv_joindelay.value * TICRATE);
 	}
 
 	nowtime /= NEWTICRATERATIO;
