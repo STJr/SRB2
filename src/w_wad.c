@@ -1688,27 +1688,27 @@ void **W_GetPatchPointerFromLongName(const char *name, INT32 tag)
 #ifdef ROTSPRITE
 void **W_GetRotatedPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
 {
-	void **pp;
 	static rotsprite_vars_t rsvars;
+	patchinfo_t *patchinfo = NULL;
 
 	if (!TestValidLump(wad, lump))
 		return NULL;
+
+	patchinfo = &wadfiles[wad]->patchinfo;
+	if (!patchinfo->rotated[lump])
+		RotSprite_AllocCurrentPatchInfo(patchinfo, lump);
 
 	rsvars.rollangle = rollangle;
 	rsvars.sprite = sprite;
 	rsvars.pivot = pivot;
 	rsvars.flip = flip;
 
-	pp = (void **)(&(wadfiles[wad]->patchinfo.rotated[lump][RotSprite_GetCurrentPatchInfoIdx(rollangle, flip)]));
-	if (*pp) // Already cached
-		return pp;
-
 	if (sprite)
 		Patch_CacheRotatedForSpritePwad(wad, lump, tag, rsvars, true);
 	else
 		Patch_CacheRotatedPwad(wad, lump, tag, rsvars, true);
 
-	return pp;
+	return (void **)(&(patchinfo->rotated[lump][RotSprite_GetCurrentPatchInfoIdx(rollangle, flip)]));
 }
 
 void **W_GetRotatedPatchPointer(lumpnum_t lumpnum, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)

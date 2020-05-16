@@ -54,8 +54,8 @@ struct patchreference_s
 };
 typedef struct patchreference_s patchreference_t;
 
-patchreference_t *FindPatchReference(UINT16 wad, UINT16 lump, INT32 rollangle, boolean flip);
-patchreference_t *InsertPatchReference(UINT16 wad, UINT16 lump, INT32 tag, void *ptr, INT32 rollangle, boolean flip);
+patchreference_t *Patch_FindReference(UINT16 wad, UINT16 lump, INT32 rollangle, boolean flip);
+patchreference_t *Patch_StoreReference(UINT16 wad, UINT16 lump, INT32 tag, void *ptr, INT32 rollangle, boolean flip);
 
 void Patch_UpdateReferences(void);
 void Patch_FreeReferences(void);

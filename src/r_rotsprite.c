@@ -72,7 +72,7 @@ rotsprite_t *RotSprite_GetFromPatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag, r
 
 	// insert into list
 	if (store)
-		InsertPatchReference(wad, lump, tag, cache, rsvars.rollangle, rsvars.flip);
+		Patch_StoreReference(wad, lump, tag, cache, rsvars.rollangle, rsvars.flip);
 
 	return cache;
 }

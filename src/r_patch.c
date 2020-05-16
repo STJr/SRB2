@@ -72,17 +72,15 @@ static patchreference_t *patchlist_head = NULL;
 static patchreference_t *patchlist_tail = NULL;
 
 // Find patch in list
-patchreference_t *FindPatchReference(UINT16 wad, UINT16 lump, INT32 rollangle, boolean flip)
+patchreference_t *Patch_FindReference(UINT16 wad, UINT16 lump, INT32 rollangle, boolean flip)
 {
 	patchreference_t *patch = patchlist_head;
 
-	CONS_Debug(DBG_RENDER, "FindPatchReference: searching for %s (%d)\n", W_CheckNameForNumPwad(wad, lump), rollangle);
+	CONS_Debug(DBG_RENDER, "Patch_FindReference: searching for %s (%d)\n", W_CheckNameForNumPwad(wad, lump), rollangle);
 
 	while (patch)
 	{
 		patchreference_t *prev = NULL, *next = NULL;
-
-		CONS_Debug(DBG_RENDER, "%s %d\n", W_CheckNameForNumPwad(patch->wad, patch->lump), patch->rollangle);
 
 		if (patch->wad == wad && patch->lump == lump && patch->rollangle == rollangle && patch->flip == flip)
 		{
@@ -96,7 +94,7 @@ patchreference_t *FindPatchReference(UINT16 wad, UINT16 lump, INT32 rollangle, b
 		next = patch->next;
 		if (patch->ptr == NULL)
 		{
-			CONS_Debug(DBG_RENDER, "freeing this patch\n");
+			CONS_Debug(DBG_RENDER, "freeing %s (%d) in the list\n", W_CheckNameForNumPwad(patch->wad, patch->lump), patch->rollangle);
 			prev = patch->prev;
 			if (prev)
 				prev->next = next;
@@ -105,15 +103,18 @@ patchreference_t *FindPatchReference(UINT16 wad, UINT16 lump, INT32 rollangle, b
 		patch = next;
 	}
 
+	CONS_Debug(DBG_RENDER, "not found\n");
 	return NULL;
 }
 
 // Insert patch in list
-patchreference_t *InsertPatchReference(UINT16 wad, UINT16 lump, INT32 tag, void *ptr, INT32 rollangle, boolean flip)
+patchreference_t *Patch_StoreReference(UINT16 wad, UINT16 lump, INT32 tag, void *ptr, INT32 rollangle, boolean flip)
 {
-	patchreference_t *found = FindPatchReference(wad, lump, rollangle, flip);
+	patchreference_t *found = Patch_FindReference(wad, lump, rollangle, flip);
 	if (found)
 		return found;
+
+	CONS_Debug(DBG_RENDER, "Patch_StoreReference: storing %s (%d)\n", W_CheckNameForNumPwad(wad, lump), rollangle);
 
 	if (!patchlist_head)
 	{
@@ -240,9 +241,9 @@ int RotSprite_GetCurrentPatchInfoIdx(INT32 rollangle, boolean flip)
 	return rollangle + (ROTANGLES * f);
 }
 
-static void AllocCurrentRotatedPatchInfo(patchinfo_t *pc, UINT16 lumpnum)
+void RotSprite_AllocCurrentPatchInfo(patchinfo_t *patchinfo, UINT16 lumpnum)
 {
-	pc->rotated[lumpnum] = Z_Calloc((ROTANGLES * 2) * sizeof(lumpcache_t), PU_STATIC, NULL);
+	patchinfo->rotated[lumpnum] = Z_Calloc((ROTANGLES * 2) * sizeof(lumpcache_t), PU_STATIC, NULL);
 }
 
 // Get renderer rotated patch info.
@@ -260,10 +261,10 @@ void SetRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, boole
 // Update current rotated patch info.
 void UpdateCurrentRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, INT32 rollangle, boolean flip)
 {
-	patchinfo_t *pc = &wadfiles[wadnum]->patchinfo;
-	if (!pc->rotated[lumpnum])
-		AllocCurrentRotatedPatchInfo(pc, lumpnum);
-	pc->rotated[lumpnum][RotSprite_GetCurrentPatchInfoIdx(rollangle, flip)] = ((rotsprite_t *)GetRotatedPatchInfo(wadnum, lumpnum, mode, flip))->patches[rollangle];
+	patchinfo_t *patchinfo = &wadfiles[wadnum]->patchinfo;
+	if (!patchinfo->rotated[lumpnum])
+		RotSprite_AllocCurrentPatchInfo(patchinfo, lumpnum);
+	patchinfo->rotated[lumpnum][RotSprite_GetCurrentPatchInfoIdx(rollangle, flip)] = ((rotsprite_t *)GetRotatedPatchInfo(wadnum, lumpnum, mode, flip))->patches[rollangle];
 }
 #endif
 
@@ -300,7 +301,7 @@ void *Patch_CacheSoftware(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 
 		// insert into list
 		if (store)
-			InsertPatchReference(wad, lump, tag, ptr, 0, false);
+			Patch_StoreReference(wad, lump, tag, ptr, 0, false);
 
 		SetRendererPatchInfo(wad, lump, render_soft, ptr);
 		UpdateCurrentPatchInfo(wad, lump, render_soft);
@@ -338,7 +339,7 @@ void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 
 		// insert into list
 		if (store)
-			InsertPatchReference(wad, lump, tag, (void *)grPatch, 0, false);
+			Patch_StoreReference(wad, lump, tag, (void *)grPatch, 0, false);
 		UpdateCurrentPatchInfo(wad, lump, render_opengl);
 	}
 
@@ -356,6 +357,8 @@ void Patch_UpdateReferences(void)
 
 	while (patch)
 	{
+		CONS_Debug(DBG_RENDER, "Patch_UpdateReferences: %s (%d)\n", W_CheckNameForNumPwad(patch->wad, patch->lump), patch->rollangle);
+
 #ifdef ROTSPRITE
 		if (patch->rollangle)
 		{

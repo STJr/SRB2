@@ -41,10 +41,11 @@ void RotSprite_CreateColumns(pixelmap_t *pixelmap, pmcache_t *cache, patch_t *pa
 void RotSprite_CreatePixelMap(patch_t *patch, pixelmap_t *pixelmap, rotsprite_vars_t rsvars);
 patch_t *RotSprite_CreatePatch(rotsprite_t *rotsprite, rotsprite_vars_t rsvars);
 
-void RotSprite_InitPatchTree(patchtree_t *rcache);
 void RotSprite_Recreate(rotsprite_t *rotsprite, rendermode_t rmode);
 void RotSprite_RecreateAll(void);
 
+void RotSprite_InitPatchTree(patchtree_t *rcache);
+void RotSprite_AllocCurrentPatchInfo(patchinfo_t *patchinfo, UINT16 lumpnum);
 int RotSprite_GetCurrentPatchInfoIdx(INT32 rollangle, boolean flip);
 
 #endif // ROTSPRITE

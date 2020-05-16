@@ -394,23 +394,20 @@ static int libd_patchExists(lua_State *L)
 
 static int libd_cachePatch(lua_State *L)
 {
+#ifdef ROTSPRITE
+	INT32 rollangle = R_GetRollAngle(luaL_optinteger(L, 2, 0));
+#endif
 	HUDONLY
-	LUA_PushUserdata(L, W_GetPatchPointerFromLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
-	return 1;
-}
 
 #ifdef ROTSPRITE
-static int libd_cacheRotatedPatch(lua_State *L)
-{
-	INT32 rollangle = R_GetRollAngle(luaL_checkinteger(L, 2));
-	HUDONLY
 	if (rollangle)
 		LUA_PushUserdata(L, W_GetRotatedPatchPointerFromLongName(luaL_checkstring(L, 1), PU_PATCH, rollangle, false, NULL, lua_optboolean(L, 3)), META_PATCH);
 	else
+#endif
 		LUA_PushUserdata(L, W_GetPatchPointerFromLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
+
 	return 1;
 }
-#endif
 
 // v.getSpritePatch(sprite, [frame, [angle, [rollangle]]])
 static int libd_getSpritePatch(lua_State *L)
@@ -1077,9 +1074,6 @@ static luaL_Reg lib_draw[] = {
 	// cache
 	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
-#ifdef ROTSPRITE
-	{"cacheRotatedPatch", libd_cacheRotatedPatch},
-#endif
 	{"getSpritePatch", libd_getSpritePatch},
 	{"getSprite2Patch", libd_getSprite2Patch},
 	{"getColormap", libd_getColormap},
