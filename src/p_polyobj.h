@@ -160,8 +160,6 @@ typedef struct polywaypoint_s
 	UINT8 returnbehavior;  // behavior after reaching the last waypoint
 	UINT8 continuous;      // continuously move - used with PWR_WRAP or PWR_COMEBACK
 	UINT8 stophere;        // Will stop after it reaches the next waypoint
-
-	mobj_t *target; // next waypoint mobj
 } polywaypoint_t;
 
 typedef struct polyslidedoor_s

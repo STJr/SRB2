@@ -1618,7 +1618,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	if (!po->thinker)
 		po->thinker = &th->thinker;
 
-	target = th->target;
+	target = waypoints[th->sequence][th->pointnum];
 
 	if (!target)
 	{
@@ -1696,8 +1696,6 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 				target = waypoint;
 				th->pointnum = target->health;
-				// Set the mobj as your target! -- Monster Iestyn 27/12/19
-				P_SetTarget(&th->target, target);
 
 				// Calculate remaining speed
 				speed -= dist;
@@ -2206,9 +2204,6 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// Set pointnum
 	th->pointnum = target->health;
-	th->target = NULL; // set to NULL first so the below doesn't go wrong
-	// Set the mobj as your target! -- Monster Iestyn 27/12/19
-	P_SetTarget(&th->target, target);
 
 	// We don't deal with the mirror crap here, we'll
 	// handle that in the T_Thinker function.
