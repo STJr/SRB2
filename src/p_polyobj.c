@@ -1648,7 +1648,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			dist = 1;
 
 		// Will the polyobject overshoot its target?
-		if (speed <= dist)
+		if (speed < dist)
 		{
 			// No. Move towards waypoint
 			fixed_t momx, momy, momz;
