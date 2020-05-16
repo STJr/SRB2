@@ -205,14 +205,14 @@ tic_t ExpandTics(INT32 low)
 {
 	INT32 delta;
 
-	delta = low - (maketic & UINT8_MAX);
+	delta = low - (maketic & UINT16_MAX);
 
-	if (delta >= -64 && delta <= 64)
-		return (maketic & ~UINT8_MAX) + low;
-	else if (delta > 64)
-		return (maketic & ~UINT8_MAX) - 256 + low;
-	else //if (delta < -64)
-		return (maketic & ~UINT8_MAX) + 256 + low;
+	if (delta >= -128 && delta <= 128)
+		return (maketic & ~UINT16_MAX) + low;
+	else if (delta > 128)
+		return (maketic & ~UINT16_MAX) - 65536 + low;
+	else //if (delta < -128)
+		return (maketic & ~UINT16_MAX) + 65536 + low;
 }
 
 // -----------------------------------------------------------------
@@ -4534,8 +4534,8 @@ static void CL_SendClientCmd(void)
 
 	if (cl_packetmissed)
 		netbuffer->packettype++;
-	netbuffer->u.clientpak.resendfrom = (UINT8)(neededtic & UINT8_MAX);
-	netbuffer->u.clientpak.client_tic = (UINT8)(gametic & UINT8_MAX);
+	netbuffer->u.clientpak.resendfrom = (UINT16)(neededtic & UINT16_MAX);
+	netbuffer->u.clientpak.client_tic = (UINT16)(  gametic & UINT16_MAX);
 
 	if (gamestate == GS_WAITINGPLAYERS)
 	{
@@ -4659,7 +4659,7 @@ static void SV_SendTics(void)
 
 			// Send the tics
 			netbuffer->packettype = PT_SERVERTICS;
-			netbuffer->u.serverpak.starttic = (UINT8)realfirsttic;
+			netbuffer->u.serverpak.starttic = (UINT16)realfirsttic;
 			netbuffer->u.serverpak.numtics = (UINT8)(lasttictosend - realfirsttic);
 			netbuffer->u.serverpak.numslots = (UINT8)SHORT(doomcom->numslots);
 			bufpos = (UINT8 *)&netbuffer->u.serverpak.cmds;

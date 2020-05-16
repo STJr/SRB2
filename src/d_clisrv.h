@@ -104,8 +104,8 @@ void Command_Numnodes(void);
 // Client to server packet
 typedef struct
 {
-	UINT8 client_tic;
-	UINT8 resendfrom;
+	UINT16 client_tic;
+	UINT16 resendfrom;
 	INT16 consistancy;
 	ticcmd_t cmd;
 } ATTRPACK clientcmd_pak;
@@ -114,8 +114,8 @@ typedef struct
 // WARNING: must have the same format of clientcmd_pak, for more easy use
 typedef struct
 {
-	UINT8 client_tic;
-	UINT8 resendfrom;
+	UINT16 client_tic;
+	UINT16 resendfrom;
 	INT16 consistancy;
 	ticcmd_t cmd, cmd2;
 } ATTRPACK client2cmd_pak;
@@ -128,7 +128,7 @@ typedef struct
 // this packet is too large
 typedef struct
 {
-	UINT8 starttic;
+	UINT16 starttic;
 	UINT8 numtics;
 	UINT8 numslots; // "Slots filled": Highest player number in use plus one.
 	ticcmd_t cmds[45]; // Normally [BACKUPTIC][MAXPLAYERS] but too large
