@@ -14,6 +14,7 @@
 #define __D_NETFIL__
 
 #include "d_net.h"
+#include "d_clisrv.h"
 #include "w_wad.h"
 
 typedef enum
@@ -41,9 +42,13 @@ typedef struct
 	UINT8 md5sum[16];
 	// Used only for download
 	FILE *file;
+	boolean *receivedfragments;
+	fileack_pak *ackpacket;
+	tic_t lasttimeackpacketsent;
 	UINT32 currentsize;
 	UINT32 totalsize;
 	filestatus_t status; // The value returned by recsearch
+	boolean justdownloaded; // To prevent late fragments from causing an I_Error
 	boolean textmode; // For files requested by Lua without the "b" option
 } fileneeded_t;
 
@@ -65,8 +70,12 @@ void AddRamToSendQueue(INT32 node, void *data, size_t size, freemethod_t freemet
 	UINT8 fileid);
 
 void FileSendTicker(void);
-void PT_FileFragment(void);
+void PT_FileAck(void);
+void PT_FileReceived(void);
 boolean SendingFile(INT32 node);
+
+void FileReceiveTicker(void);
+void PT_FileFragment(void);
 
 boolean CL_CheckDownloadable(void);
 boolean CL_SendFileRequest(void);

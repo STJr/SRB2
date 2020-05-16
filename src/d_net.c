@@ -806,6 +806,9 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"HASLUAFILE",
 
 	"FILEFRAGMENT",
+	"FILEACK",
+	"FILERECEIVED",
+
 	"TEXTCMD",
 	"TEXTCMD2",
 	"CLIENTJOIN",

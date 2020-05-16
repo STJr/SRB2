@@ -75,6 +75,8 @@ typedef enum
 	                  // In addition, this packet can't occupy all the available slots.
 
 	PT_FILEFRAGMENT = PT_CANFAIL, // A part of a file.
+	PT_FILEACK,
+	PT_FILERECEIVED,
 
 	PT_TEXTCMD,       // Extra text commands from the client.
 	PT_TEXTCMD2,      // Splitscreen text commands.
@@ -320,12 +322,27 @@ typedef struct
 	UINT8 varlengthinputs[0]; // Playernames and netvars
 } ATTRPACK serverconfig_pak;
 
-typedef struct {
+typedef struct
+{
 	UINT8 fileid;
+	UINT32 filesize;
 	UINT32 position;
 	UINT16 size;
 	UINT8 data[0]; // Size is variable using hardware_MAXPACKETLENGTH
 } ATTRPACK filetx_pak;
+
+typedef struct
+{
+	UINT32 start;
+	UINT32 acks;
+} ATTRPACK fileacksegment_t;
+
+typedef struct
+{
+	UINT8 fileid;
+	UINT8 numsegments;
+	fileacksegment_t segments[0];
+} ATTRPACK fileack_pak;
 
 #ifdef _MSC_VER
 #pragma warning(default : 4200)
@@ -442,6 +459,8 @@ typedef struct
 		UINT8 resynchgot;                   //
 		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
 		filetx_pak filetxpak;               //         139 bytes
+		fileack_pak fileack;
+		UINT8 filereceived;
 		clientconfig_pak clientcfg;         //         136 bytes
 		UINT8 md5sum[16];
 		serverinfo_pak serverinfo;          //        1024 bytes

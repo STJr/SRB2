@@ -2103,6 +2103,9 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 			return false;
 		}
 
+		if (client && (cl_mode == CL_DOWNLOADFILES || cl_mode == CL_DOWNLOADSAVEGAME))
+			FileReceiveTicker();
+
 		// why are these here? this is for servers, we're a client
 		//if (key == 's' && server)
 		//	doomcom->numnodes = (INT16)pnumnodes;
@@ -3914,6 +3917,16 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			PT_FileFragment();
 			break;
 
+		case PT_FILEACK:
+			if (server)
+				PT_FileAck();
+			break;
+
+		case PT_FILERECEIVED:
+			if (server)
+				PT_FileReceived();
+			break;
+
 		case PT_REQUESTFILE:
 			if (server)
 			{
@@ -4349,6 +4362,14 @@ static void HandlePacketFromPlayer(SINT8 node)
 			}
 			if (client)
 				PT_FileFragment();
+			break;
+		case PT_FILEACK:
+			if (server)
+				PT_FileAck();
+			break;
+		case PT_FILERECEIVED:
+			if (server)
+				PT_FileReceived();
 			break;
 		case PT_SENDINGLUAFILE:
 			if (client)
