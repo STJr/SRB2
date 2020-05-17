@@ -4252,7 +4252,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 			}
 
-			realstart = ExpandTics(netbuffer->u.serverpak.starttic);
+			realstart = netbuffer->u.serverpak.starttic;
 			realend = realstart + netbuffer->u.serverpak.numtics;
 
 			if (!txtpak)
@@ -4659,7 +4659,7 @@ static void SV_SendTics(void)
 
 			// Send the tics
 			netbuffer->packettype = PT_SERVERTICS;
-			netbuffer->u.serverpak.starttic = (UINT8)realfirsttic;
+			netbuffer->u.serverpak.starttic = realfirsttic;
 			netbuffer->u.serverpak.numtics = (UINT8)(lasttictosend - realfirsttic);
 			netbuffer->u.serverpak.numslots = (UINT8)SHORT(doomcom->numslots);
 			bufpos = (UINT8 *)&netbuffer->u.serverpak.cmds;
