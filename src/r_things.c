@@ -1688,7 +1688,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	// PORTAL SPRITE CLIPPING
 	if (portalrender && portalclipline)
 	{
-		if (x2 < portalclipstart || x1 > portalclipend)
+		if (x2 < portalclipstart || x1 >= portalclipend)
 			return;
 
 		if (P_PointOnLineSide(thing->x, thing->y, portalclipline) != 0)
@@ -1958,7 +1958,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	// PORTAL SPRITE CLIPPING
 	if (portalrender && portalclipline)
 	{
-		if (x2 < portalclipstart || x1 > portalclipend)
+		if (x2 < portalclipstart || x1 >= portalclipend)
 			return;
 
 		if (P_PointOnLineSide(thing->x, thing->y, portalclipline) != 0)
