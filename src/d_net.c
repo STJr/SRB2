@@ -857,8 +857,8 @@ static void DebugPrintpacket(const char *header)
 		case PT_NODEKEEPALIVE:
 		case PT_NODEKEEPALIVEMIS:
 			fprintf(debugfile, "    tic %4u resendfrom %u\n",
-				(UINT32)ExpandTics(netbuffer->u.clientpak.client_tic),
-				(UINT32)ExpandTics (netbuffer->u.clientpak.resendfrom));
+				(UINT32)ExpandTics(netbuffer->u.clientpak.client_tic, doomcom->remotenode),
+				(UINT32)ExpandTics (netbuffer->u.clientpak.resendfrom, doomcom->remotenode));
 			break;
 		case PT_TEXTCMD:
 		case PT_TEXTCMD2:
