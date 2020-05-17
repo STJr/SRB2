@@ -882,7 +882,8 @@ static menuitem_t SP_NightsAttackLevelSelectMenu[] =
 static menuitem_t SP_NightsAttackMenu[] =
 {
 	{IT_STRING|IT_KEYHANDLER,        NULL, "Level Select...",  &M_HandleTimeAttackLevelSelect,  52},
-	{IT_STRING|IT_CVAR,        NULL, "Show Records For", &cv_dummymares,              62},
+	{IT_STRING|IT_CVAR,        NULL, "Character",       &cv_chooseskin,             62},
+	{IT_STRING|IT_CVAR,        NULL, "Show Records For", &cv_dummymares,              72},
 
 	{IT_DISABLED,              NULL, "Guest Option...",  &SP_NightsGuestReplayDef,    100},
 	{IT_DISABLED,              NULL, "Replay...",        &SP_NightsReplayDef,         110},
@@ -893,6 +894,7 @@ static menuitem_t SP_NightsAttackMenu[] =
 enum
 {
 	nalevel,
+	nachar,
 	narecords,
 
 	naguest,
@@ -5186,7 +5188,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 	{
 		if (M_CanShowLevelOnPlatter(mapnum, gt))
 		{
-			const INT32 actnum = mapheaderinfo[mapnum]->actnum;
+			const UINT8 actnum = mapheaderinfo[mapnum]->actnum;
 			const boolean headingisname = (fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[mapnum]->lvlttl));
 			const boolean wide = (mapheaderinfo[mapnum]->menuflags & LF2_WIDEICON);
 
@@ -9095,7 +9097,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		col = Color_Opposite[charskin->prefcolor - 1][0];
 
 	// Make the translation colormap
-	colormap = R_GetTranslationColormap(TC_DEFAULT, col, 0);
+	colormap = R_GetTranslationColormap(TC_DEFAULT, col, GTC_CACHE);
 
 	// Don't render the title map
 	hidetitlemap = true;
@@ -9171,8 +9173,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			{
 				V_DrawNameTag(
 					x, y, V_CENTERNAMETAG, FRACUNIT,
-					R_GetTranslationColormap(TC_DEFAULT, curtextcolor, 0),
-					R_GetTranslationColormap(TC_DEFAULT, curoutlinecolor, 0),
+					R_GetTranslationColormap(TC_DEFAULT, curtextcolor, GTC_CACHE),
+					R_GetTranslationColormap(TC_DEFAULT, curoutlinecolor, GTC_CACHE),
 					curtext
 				);
 			}
@@ -9204,8 +9206,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				{
 					V_DrawNameTag(
 						x, y, V_CENTERNAMETAG, FRACUNIT,
-						R_GetTranslationColormap(TC_DEFAULT, prevtextcolor, 0),
-						R_GetTranslationColormap(TC_DEFAULT, prevoutlinecolor, 0),
+						R_GetTranslationColormap(TC_DEFAULT, prevtextcolor, GTC_CACHE),
+						R_GetTranslationColormap(TC_DEFAULT, prevoutlinecolor, GTC_CACHE),
 						prevtext
 					);
 				}
@@ -9234,8 +9236,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				{
 					V_DrawNameTag(
 						x, y, V_CENTERNAMETAG, FRACUNIT,
-						R_GetTranslationColormap(TC_DEFAULT, nexttextcolor, 0),
-						R_GetTranslationColormap(TC_DEFAULT, nextoutlinecolor, 0),
+						R_GetTranslationColormap(TC_DEFAULT, nexttextcolor, GTC_CACHE),
+						R_GetTranslationColormap(TC_DEFAULT, nextoutlinecolor, GTC_CACHE),
 						nexttext
 					);
 				}
