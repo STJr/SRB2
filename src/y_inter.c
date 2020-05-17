@@ -1016,8 +1016,13 @@ void Y_Ticker(void)
 #endif
 			)
 				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
+
+			//Set the level clear jingle to the one defined in the level header if it exists, or to the skin's custom clear jingle if it exists,
+			//or to the default if neither exist. Level header jingles have higher priority over skin jingles.
 			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
 				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
+			else if (skins[players[consoleplayer].skin].clearmusic[0] && S_MusicExists(skins[players[consoleplayer].skin].clearmusic, !midi_disabled, !digital_disabled))
+				S_ChangeMusicInternal(skins[players[consoleplayer].skin].clearmusic, false); // don't loop it
 			else
 				S_ChangeMusicInternal("_clear", false); // don't loop it
 			tallydonetic = -1;

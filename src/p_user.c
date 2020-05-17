@@ -1507,6 +1507,20 @@ void P_PlayLivesJingle(player_t *player)
 void P_PlayJingle(player_t *player, jingletype_t jingletype)
 {
 	const char *musname = jingleinfo[jingletype].musname;
+	
+	//Set the music name to the one of the skin's custom jingles if a
+	//certain jingle is being played and the custom jingle is a valid music choice
+	//The default is played otherwise
+	if (jingletype == JT_SHOES && skins[player->skin].shoesmusic[0]
+	&& S_MusicExists(skins[player->skin].shoesmusic, !midi_disabled, !digital_disabled))
+		musname = skins[player->skin].shoesmusic;
+	else if (jingletype == JT_INV && skins[player->skin].invmusic[0]
+	&& S_MusicExists(skins[player->skin].invmusic, !midi_disabled, !digital_disabled))
+		musname = skins[player->skin].invmusic;
+	else if (jingletype == JT_SUPER && skins[player->skin].supermusic[0]
+	&& S_MusicExists(skins[player->skin].supermusic, !midi_disabled, !digital_disabled))
+		musname = skins[player->skin].supermusic;
+
 	UINT16 musflags = 0;
 	boolean looping = jingleinfo[jingletype].looping;
 

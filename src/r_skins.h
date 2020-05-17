@@ -73,6 +73,12 @@ typedef struct
 	UINT8 contspeed; // continue screen animation speed
 	UINT8 contangle; // initial angle on continue screen
 
+	// specific jingles for the skin
+	char clearmusic[7];
+	char invmusic[7];
+	char shoesmusic[7];
+	char supermusic[7];
+
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 

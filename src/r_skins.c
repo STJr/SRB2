@@ -156,6 +156,11 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	skin->availability = 0;
 
+	strcpy(skin->clearmusic, "_clear");
+	strcpy(skin->invmusic, "_inv");
+	strcpy(skin->shoesmusic, "_shoes");
+	strcpy(skin->supermusic, "_super");
+
 	for (i = 0; i < sfx_skinsoundslot0; i++)
 		if (S_sfx[i].skinsound != -1)
 			skin->soundsid[S_sfx[i].skinsound] = i;
@@ -506,6 +511,13 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(NONIGHTSROTATION)
 	GETFLAG(NONIGHTSSUPER)
 #undef GETFLAG
+
+#define GETSTRING(field) else if (!stricmp(stoken, #field)) STRBUFCPY(skin->field, value);
+	GETSTRING(clearmusic)
+	GETSTRING(invmusic)
+	GETSTRING(shoesmusic)
+	GETSTRING(supermusic)
+#undef GETSTRING
 
 	else // let's check if it's a sound, otherwise error out
 	{
