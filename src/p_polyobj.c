@@ -1569,15 +1569,39 @@ void T_PolyObjMove(polymove_t *th)
 	}
 }
 
+static void T_MovePolyObj(polyobj_t *po, fixed_t distx, fixed_t disty, fixed_t distz)
+{
+	polyobj_t *child;
+	INT32 start;
+
+	Polyobj_moveXY(po, distx, disty, true);
+	// TODO: use T_MovePlane
+	po->lines[0]->backsector->floorheight += distz;
+	po->lines[0]->backsector->ceilingheight += distz;
+	// Sal: Remember to check your sectors!
+	// Monster Iestyn: we only need to bother with the back sector, now that P_CheckSector automatically checks the blockmap
+	//  updating objects in the front one too just added teleporting to ground bugs
+	P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
+	// Apply action to mirroring polyobjects as well
+	start = 0;
+	while ((child = Polyobj_GetChild(po, &start)))
+	{
+		if (child->isBad)
+			continue;
+
+		Polyobj_moveXY(child, distx, disty, true);
+		// TODO: use T_MovePlane
+		child->lines[0]->backsector->floorheight += distz;
+		child->lines[0]->backsector->ceilingheight += distz;
+		P_CheckSector(child->lines[0]->backsector, (boolean)(child->damage));
+	}
+}
+
 void T_PolyObjWaypoint(polywaypoint_t *th)
 {
 	mobj_t *target = NULL;
-	mobj_t *waypoint = NULL;
-	fixed_t adjustx, adjusty, adjustz;
-	fixed_t momx, momy, momz, dist;
-	INT32 start;
 	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
-	polyobj_t *oldpo = po;
+	fixed_t speed = th->speed;
 
 	if (!po)
 #ifdef RANGECHECK
@@ -1594,7 +1618,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	if (!po->thinker)
 		po->thinker = &th->thinker;
 
-	target = th->target;
+	target = waypoints[th->sequence][th->pointnum];
 
 	if (!target)
 	{
@@ -1602,151 +1626,92 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		return;
 	}
 
-	// Compensate for position offset
-	adjustx = po->centerPt.x + th->diffx;
-	adjusty = po->centerPt.y + th->diffy;
-	adjustz = po->lines[0]->backsector->floorheight + (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2 + th->diffz;
-
-	dist = P_AproxDistance(P_AproxDistance(target->x - adjustx, target->y - adjusty), target->z - adjustz);
-
-	if (dist < 1)
-		dist = 1;
-
-	momx = FixedMul(FixedDiv(target->x - adjustx, dist), (th->speed));
-	momy = FixedMul(FixedDiv(target->y - adjusty, dist), (th->speed));
-	momz = FixedMul(FixedDiv(target->z - adjustz, dist), (th->speed));
-
-	// Calculate the distance between the polyobject and the waypoint
-	// 'dist' already equals this.
-
-	// Will the polyobject be FURTHER away if the momx/momy/momz is added to
-	// its current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
-	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(target->x - adjustx - momx, target->y - adjusty - momy), target->z - adjustz - momz)>>FRACBITS)
+	// Move along the waypoint sequence until speed for the current tic is exhausted
+	while (speed > 0)
 	{
-		// If further away, set XYZ of polyobject to waypoint location
-		fixed_t amtx, amty, amtz;
-		fixed_t diffz;
-		amtx = (target->x - th->diffx) - po->centerPt.x;
-		amty = (target->y - th->diffy) - po->centerPt.y;
-		Polyobj_moveXY(po, amtx, amty, true);
-		// TODO: use T_MovePlane
-		amtz = (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2;
-		diffz = po->lines[0]->backsector->floorheight - (target->z - amtz);
-		po->lines[0]->backsector->floorheight = target->z - amtz;
-		po->lines[0]->backsector->ceilingheight = target->z + amtz;
-		// Sal: Remember to check your sectors!
-		// Monster Iestyn: we only need to bother with the back sector, now that P_CheckSector automatically checks the blockmap
-		//  updating objects in the front one too just added teleporting to ground bugs
-		P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
-		// Apply action to mirroring polyobjects as well
-		start = 0;
-		while ((po = Polyobj_GetChild(oldpo, &start)))
+		mobj_t *waypoint = NULL;
+		fixed_t pox, poy, poz;
+		fixed_t distx, disty, distz, dist;
+
+		// Current position of polyobject
+		pox = po->centerPt.x;
+		poy = po->centerPt.y;
+		poz = (po->lines[0]->backsector->floorheight + po->lines[0]->backsector->ceilingheight)/2;
+
+		// Calculate the distance between the polyobject and the waypoint
+		distx = target->x - pox;
+		disty = target->y - poy;
+		distz = target->z - poz;
+		dist = P_AproxDistance(P_AproxDistance(distx, disty), distz);
+
+		if (dist < 1)
+			dist = 1;
+
+		// Will the polyobject overshoot its target?
+		if (speed < dist)
 		{
-			if (po->isBad)
-				continue;
+			// No. Move towards waypoint
+			fixed_t momx, momy, momz;
 
-			Polyobj_moveXY(po, amtx, amty, true);
-			// TODO: use T_MovePlane
-			po->lines[0]->backsector->floorheight += diffz; // move up/down by same amount as the parent did
-			po->lines[0]->backsector->ceilingheight += diffz;
-			// Sal: Remember to check your sectors!
-			// Monster Iestyn: we only need to bother with the back sector, now that P_CheckSector automatically checks the blockmap
-			//  updating objects in the front one too just added teleporting to ground bugs
-			P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
-		}
-
-		po = oldpo;
-
-		if (!th->stophere)
-		{
-			CONS_Debug(DBG_POLYOBJ, "Looking for next waypoint...\n");
-			waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
-
-			if (!waypoint && th->wrap) // If specified, wrap waypoints
-			{
-				if (!th->continuous)
-				{
-					th->wrap = 0;
-					th->stophere = true;
-				}
-
-				waypoint = (th->direction == -1) ? P_GetLastWaypoint(th->sequence) : P_GetFirstWaypoint(th->sequence);
-			}
-			else if (!waypoint && th->comeback) // Come back to the start
-			{
-				th->direction = -th->direction;
-
-				if (!th->continuous)
-					th->comeback = false;
-
-				waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
-			}
-		}
-
-		if (waypoint)
-		{
-			CONS_Debug(DBG_POLYOBJ, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
-
-			target = waypoint;
-			th->pointnum = target->health;
-			// Set the mobj as your target! -- Monster Iestyn 27/12/19
-			P_SetTarget(&th->target, target);
-
-			// calculate MOMX/MOMY/MOMZ for next waypoint
-			// change slope
-			dist = P_AproxDistance(P_AproxDistance(target->x - adjustx, target->y - adjusty), target->z - adjustz);
-
-			if (dist < 1)
-				dist = 1;
-
-			momx = FixedMul(FixedDiv(target->x - adjustx, dist), (th->speed));
-			momy = FixedMul(FixedDiv(target->y - adjusty, dist), (th->speed));
-			momz = FixedMul(FixedDiv(target->z - adjustz, dist), (th->speed));
+			momx = FixedMul(FixedDiv(target->x - pox, dist), speed);
+			momy = FixedMul(FixedDiv(target->y - poy, dist), speed);
+			momz = FixedMul(FixedDiv(target->z - poz, dist), speed);
+			T_MovePolyObj(po, momx, momy, momz);
+			return;
 		}
 		else
 		{
-			momx = momy = momz = 0;
+			// Yes. Teleport to waypoint and look for the next one
+			T_MovePolyObj(po, distx, disty, distz);
 
 			if (!th->stophere)
-				CONS_Debug(DBG_POLYOBJ, "Next waypoint not found!\n");
+			{
+				CONS_Debug(DBG_POLYOBJ, "Looking for next waypoint...\n");
+				waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
 
-			if (po->thinker == &th->thinker)
-				po->thinker = NULL;
+				if (!waypoint && th->returnbehavior == PWR_WRAP) // If specified, wrap waypoints
+				{
+					if (!th->continuous)
+					{
+						th->returnbehavior = PWR_STOP;
+						th->stophere = true;
+					}
 
-			P_RemoveThinker(&th->thinker);
-			return;
+					waypoint = (th->direction == -1) ? P_GetLastWaypoint(th->sequence) : P_GetFirstWaypoint(th->sequence);
+				}
+				else if (!waypoint && th->returnbehavior == PWR_COMEBACK) // Come back to the start
+				{
+					th->direction = -th->direction;
+
+					if (!th->continuous)
+						th->returnbehavior = PWR_STOP;
+
+					waypoint = (th->direction == -1) ? P_GetPreviousWaypoint(target, false) : P_GetNextWaypoint(target, false);
+				}
+			}
+
+			if (waypoint)
+			{
+				CONS_Debug(DBG_POLYOBJ, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
+
+				target = waypoint;
+				th->pointnum = target->health;
+
+				// Calculate remaining speed
+				speed -= dist;
+			}
+			else
+			{
+				if (!th->stophere)
+					CONS_Debug(DBG_POLYOBJ, "Next waypoint not found!\n");
+
+				if (po->thinker == &th->thinker)
+					po->thinker = NULL;
+
+				P_RemoveThinker(&th->thinker);
+				return;
+			}
 		}
-	}
-	else
-	{
-		// momx/momy/momz already equals the right speed
-	}
-
-	// Move the polyobject
-	Polyobj_moveXY(po, momx, momy, true);
-	// TODO: use T_MovePlane
-	po->lines[0]->backsector->floorheight += momz;
-	po->lines[0]->backsector->ceilingheight += momz;
-	// Sal: Remember to check your sectors!
-	// Monster Iestyn: we only need to bother with the back sector, now that P_CheckSector automatically checks the blockmap
-	//  updating objects in the front one too just added teleporting to ground bugs
-	P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
-
-	// Apply action to mirroring polyobjects as well
-	start = 0;
-	while ((po = Polyobj_GetChild(oldpo, &start)))
-	{
-		if (po->isBad)
-			continue;
-
-		Polyobj_moveXY(po, momx, momy, true);
-		// TODO: use T_MovePlane
-		po->lines[0]->backsector->floorheight += momz;
-		po->lines[0]->backsector->ceilingheight += momz;
-		// Sal: Remember to check your sectors!
-		// Monster Iestyn: we only need to bother with the back sector, now that P_CheckSector automatically checks the blockmap
-		//  updating objects in the front one too just added teleporting to ground bugs
-		P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
 	}
 }
 
@@ -2166,8 +2131,6 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	polyobj_t *po;
 	polywaypoint_t *th;
 	mobj_t *first = NULL;
-	mobj_t *last = NULL;
-	mobj_t *target = NULL;
 
 	if (!(po = Polyobj_GetForNum(pwdata->polyObjNum)))
 	{
@@ -2191,17 +2154,16 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	// set fields
 	th->polyObjNum = pwdata->polyObjNum;
 	th->speed = pwdata->speed;
-	th->sequence = pwdata->sequence; // Used to specify sequence #
-	th->direction = pwdata->reverse ? -1 : 1;
+	th->sequence = pwdata->sequence;
+	th->direction = (pwdata->flags & PWF_REVERSE) ? -1 : 1;
 
-	th->comeback = pwdata->comeback;
-	th->continuous = pwdata->continuous;
-	th->wrap = pwdata->wrap;
+	th->returnbehavior = pwdata->returnbehavior;
+	if (pwdata->flags & PWF_LOOP)
+		th->continuous = true;
 	th->stophere = false;
 
 	// Find the first waypoint we need to use
 	first = (th->direction == -1) ? P_GetLastWaypoint(th->sequence) : P_GetFirstWaypoint(th->sequence);
-	last = (th->direction == -1) ? P_GetFirstWaypoint(th->sequence) : P_GetLastWaypoint(th->sequence);
 
 	if (!first)
 	{
@@ -2211,47 +2173,16 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		return false;
 	}
 
-	// Hotfix to not crash on single-waypoint sequences -Red
-	if (!last)
-		last = first;
-
-	// Set diffx, diffy, diffz
-	// Put these at 0 for now...might not be needed after all.
-	th->diffx = 0;//first->x - po->centerPt.x;
-	th->diffy = 0;//first->y - po->centerPt.y;
-	th->diffz = 0;//first->z - (po->lines[0]->backsector->floorheight + (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2);
-
-	if (last->x == po->centerPt.x
-		&& last->y == po->centerPt.y
-		&& last->z == (po->lines[0]->backsector->floorheight + (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2))
+	// Sanity check: If all waypoints are in the same location,
+	// don't allow the movement to be continuous so we don't get stuck in an infinite loop.
+	if (th->continuous && P_IsDegeneratedWaypointSequence(th->sequence))
 	{
-		// Already at the destination point...
-		if (!th->wrap)
-		{
-			po->thinker = NULL;
-			P_RemoveThinker(&th->thinker);
-		}
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: All waypoints are in the same location!\n");
+		th->continuous = false;
 	}
 
-	// Find the actual target movement waypoint
-	target = first;
+	th->pointnum = first->health;
 
-	if (!target)
-	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: Missing target waypoint!\n");
-		po->thinker = NULL;
-		P_RemoveThinker(&th->thinker);
-		return false;
-	}
-
-	// Set pointnum
-	th->pointnum = target->health;
-	th->target = NULL; // set to NULL first so the below doesn't go wrong
-	// Set the mobj as your target! -- Monster Iestyn 27/12/19
-	P_SetTarget(&th->target, target);
-
-	// We don't deal with the mirror crap here, we'll
-	// handle that in the T_Thinker function.
 	return true;
 }
 
