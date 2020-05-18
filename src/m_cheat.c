@@ -1026,7 +1026,7 @@ static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 	if (ceiling)
 	{
 		// Truncate position to match where mapthing would be when spawned
-		// (this applies to every further P_GetZAt call as well)
+		// (this applies to every further P_GetSlopeZAt call as well)
 		fixed_t cheight = P_GetSectorCeilingZAt(sec, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000);
 
 		if (((cheight - player->mo->z - player->mo->height)>>FRACBITS) >= (1 << (16-ZSHIFT)))

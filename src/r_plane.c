@@ -851,15 +851,15 @@ static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 	floatv3_t p, m, n;
 	float ang;
 	float vx, vy, vz;
-	// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
-	// use this as a temp var to store P_GetZAt's return value each time
+	// compiler complains when P_GetSlopeZAt is used in FLOAT_TO_FIXED directly
+	// use this as a temp var to store P_GetSlopeZAt's return value each time
 	fixed_t temp;
 
 	vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
 	vy = FIXED_TO_FLOAT(pl->viewy-yoffs);
 	vz = FIXED_TO_FLOAT(pl->viewz);
 
-	temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
+	temp = P_GetSlopeZAt(pl->slope, pl->viewx, pl->viewy);
 	zeroheight = FIXED_TO_FLOAT(temp);
 
 	// p is the texture origin in view space
@@ -868,7 +868,7 @@ static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 	ang = ANG2RAD(ANGLE_270 - pl->viewangle);
 	p.x = vx * cos(ang) - vy * sin(ang);
 	p.z = vx * sin(ang) + vy * cos(ang);
-	temp = P_GetZAt(pl->slope, -xoffs, yoffs);
+	temp = P_GetSlopeZAt(pl->slope, -xoffs, yoffs);
 	p.y = FIXED_TO_FLOAT(temp) - vz;
 
 	// m is the v direction vector in view space
@@ -881,9 +881,9 @@ static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 	n.z = -cos(ang);
 
 	ang = ANG2RAD(pl->plangle);
-	temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(sin(ang)), pl->viewy + FLOAT_TO_FIXED(cos(ang)));
+	temp = P_GetSlopeZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(sin(ang)), pl->viewy + FLOAT_TO_FIXED(cos(ang)));
 	m.y = FIXED_TO_FLOAT(temp) - zeroheight;
-	temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
+	temp = P_GetSlopeZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
 	n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
 	if (ds_powersoftwo)
@@ -1193,7 +1193,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		if (itswater)
 		{
 			INT32 i;
-			fixed_t plheight = abs(P_GetZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
+			fixed_t plheight = abs(P_GetSlopeZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
 			fixed_t rxoffs = xoffs;
 			fixed_t ryoffs = yoffs;
 

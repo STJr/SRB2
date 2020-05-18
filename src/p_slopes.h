@@ -33,10 +33,10 @@ void P_CopySectorSlope(line_t *line);
 pslope_t *P_SlopeById(UINT16 id);
 
 // Returns the height of the sloped plane at (x, y) as a fixed_t
-fixed_t P_GetZAt(const pslope_t *slope, fixed_t x, fixed_t y);
+fixed_t P_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y);
 
-// Like P_GetZAt but falls back to z if slope is NULL
-fixed_t P_GetZAt2(const pslope_t *slope, fixed_t x, fixed_t y, fixed_t z);
+// Like P_GetSlopeZAt but falls back to z if slope is NULL
+fixed_t P_GetZAt(const pslope_t *slope, fixed_t x, fixed_t y, fixed_t z);
 
 // Returns the height of the sector at (x, y)
 fixed_t P_GetSectorFloorZAt  (const sector_t *sector, fixed_t x, fixed_t y);

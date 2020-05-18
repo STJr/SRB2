@@ -3177,9 +3177,9 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			{
 				mobj_t *spawned = NULL;
 				if (*rover->t_slope)
-					topz = P_GetZAt(*rover->t_slope, a, b) - (spacing>>1);
+					topz = P_GetSlopeZAt(*rover->t_slope, a, b) - (spacing>>1);
 				if (*rover->b_slope)
-					bottomz = P_GetZAt(*rover->b_slope, a, b);
+					bottomz = P_GetSlopeZAt(*rover->b_slope, a, b);
 
 				for (c = topz; c > bottomz; c -= spacing)
 				{

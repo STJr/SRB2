@@ -2387,8 +2387,8 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 					continue;
 
 				// Effective height may be different for each comparison in the case of slopes
-				planeobjectz = P_GetZAt2(r2->plane->slope, rover->gx, rover->gy, r2->plane->height);
-				planecameraz = P_GetZAt2(r2->plane->slope,     viewx,     viewy, r2->plane->height);
+				planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy, r2->plane->height);
+				planecameraz = P_GetZAt(r2->plane->slope,     viewx,     viewy, r2->plane->height);
 
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{

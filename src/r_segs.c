@@ -805,8 +805,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			rlight = &dc_lightlist[p];
 
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-	end1 = P_GetZAt2(slope, ds-> leftpos.x, ds-> leftpos.y, normalheight); \
-	end2 = P_GetZAt2(slope, ds->rightpos.x, ds->rightpos.y, normalheight);
+	end1 = P_GetZAt(slope, ds-> leftpos.x, ds-> leftpos.y, normalheight); \
+	end2 = P_GetZAt(slope, ds->rightpos.x, ds->rightpos.y, normalheight);
 
 			SLOPEPARAMS(light->slope,     leftheight, rightheight, light->height)
 			SLOPEPARAMS(*pfloor->b_slope, pfloorleft, pfloorright, *pfloor->bottomheight)
@@ -819,8 +819,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			if (leftheight > pfloorleft && rightheight > pfloorright && i+1 < dc_numlights)
 			{
 				lightlist_t *nextlight = &frontsector->lightlist[i+1];
-				if (P_GetZAt2(nextlight->slope, ds-> leftpos.x, ds-> leftpos.y, nextlight->height) > pfloorleft
-				 && P_GetZAt2(nextlight->slope, ds->rightpos.x, ds->rightpos.y, nextlight->height) > pfloorright)
+				if (P_GetZAt(nextlight->slope, ds-> leftpos.x, ds-> leftpos.y, nextlight->height) > pfloorleft
+				 && P_GetZAt(nextlight->slope, ds->rightpos.x, ds->rightpos.y, nextlight->height) > pfloorright)
 					continue;
 			}
 
@@ -1777,8 +1777,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-	end1 = P_GetZAt2(slope,  segleft.x,  segleft.y, normalheight); \
-	end2 = P_GetZAt2(slope, segright.x, segright.y, normalheight);
+	end1 = P_GetZAt(slope,  segleft.x,  segleft.y, normalheight); \
+	end2 = P_GetZAt(slope, segright.x, segright.y, normalheight);
 
 	SLOPEPARAMS(frontsector->c_slope, worldtop,    worldtopslope,    frontsector->ceilingheight)
 	SLOPEPARAMS(frontsector->f_slope, worldbottom, worldbottomslope, frontsector->floorheight)
@@ -1809,8 +1809,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				continue;
 #endif
 
-			ffloor[i].f_pos       = P_GetZAt2(ffloor[i].slope, segleft .x, segleft .y, ffloor[i].height) - viewz;
-			ffloor[i].f_pos_slope = P_GetZAt2(ffloor[i].slope, segright.x, segright.y, ffloor[i].height) - viewz;
+			ffloor[i].f_pos       = P_GetZAt(ffloor[i].slope, segleft .x, segleft .y, ffloor[i].height) - viewz;
+			ffloor[i].f_pos_slope = P_GetZAt(ffloor[i].slope, segright.x, segright.y, ffloor[i].height) - viewz;
 		}
 	}
 

@@ -14,7 +14,7 @@
 #include "fastcmp.h"
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
-#include "p_slopes.h" // P_GetZAt
+#include "p_slopes.h" // P_GetSlopeZAt
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_draw.h"
@@ -2182,10 +2182,14 @@ static int lib_pGetZAt(lua_State *L)
 	fixed_t x = luaL_checkfixed(L, 2);
 	fixed_t y = luaL_checkfixed(L, 3);
 	//HUDSAFE
-	if (!slope)
-		return LUA_ErrInvalid(L, "pslope_t");
+	if (slope)
+		lua_pushfixed(L, P_GetSlopeZAt(slope, x, y));
+	else
+	{
+		fixed_t z = luaL_checkfixed(L, 4);
+		lua_pushfixed(L, P_GetZAt(slope, x, y, z));
+	}
 
-	lua_pushfixed(L, P_GetZAt(slope, x, y));
 	return 1;
 }
 

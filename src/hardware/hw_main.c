@@ -513,7 +513,7 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 
 	// Set fixedheight to the slope's height from our viewpoint, if we have a slope
 	if (slope)
-		fixedheight = P_GetZAt(slope, viewx, viewy);
+		fixedheight = P_GetSlopeZAt(slope, viewx, viewy);
 
 	height = FIXED_TO_FLOAT(fixedheight);
 
@@ -665,7 +665,7 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 
 		if (slope)
 		{
-			fixedheight = P_GetZAt(slope, FLOAT_TO_FIXED(pv->x), FLOAT_TO_FIXED(pv->y));
+			fixedheight = P_GetSlopeZAt(slope, FLOAT_TO_FIXED(pv->x), FLOAT_TO_FIXED(pv->y));
 			v3d->y = FIXED_TO_FLOAT(fixedheight);
 		}
 	}
@@ -686,7 +686,7 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 		sector_t *psector = gr_frontsector;
 
 		if (slope)
-			fixedheight = P_GetZAt(slope, psector->soundorg.x, psector->soundorg.y);
+			fixedheight = P_GetSlopeZAt(slope, psector->soundorg.x, psector->soundorg.y);
 
 		if (psector->ffloors)
 		{
@@ -1062,8 +1062,8 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	float endpegt, endpegb, endpegmul;
 	float endheight = 0.0f, endbheight = 0.0f;
 
-	// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
-	// use this as a temp var to store P_GetZAt's return value each time
+	// compiler complains when P_GetSlopeZAt is used in FLOAT_TO_FIXED directly
+	// use this as a temp var to store P_GetSlopeZAt's return value each time
 	fixed_t temp;
 
 	fixed_t v1x = FLOAT_TO_FIXED(wallVerts[0].x);
@@ -1290,8 +1290,8 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	v2y = FLOAT_TO_FIXED(ve.y);
 
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-	end1 = P_GetZAt2(slope, v1x, v1y, normalheight); \
-	end2 = P_GetZAt2(slope, v2x, v2y, normalheight);
+	end1 = P_GetZAt(slope, v1x, v1y, normalheight); \
+	end2 = P_GetZAt(slope, v2x, v2y, normalheight);
 
 	SLOPEPARAMS(gr_frontsector->c_slope, worldtop,    worldtopslope,    gr_frontsector->ceilingheight)
 	SLOPEPARAMS(gr_frontsector->f_slope, worldbottom, worldbottomslope, gr_frontsector->floorheight)
@@ -2158,8 +2158,8 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x);
 		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y);
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-		end1 = P_GetZAt2(slope, v1x, v1y, normalheight); \
-		end2 = P_GetZAt2(slope, v2x, v2y, normalheight);
+		end1 = P_GetZAt(slope, v1x, v1y, normalheight); \
+		end2 = P_GetZAt(slope, v2x, v2y, normalheight);
 
 		SLOPEPARAMS(afrontsector->f_slope, frontf1, frontf2, afrontsector->  floorheight)
 		SLOPEPARAMS(afrontsector->c_slope, frontc1, frontc2, afrontsector->ceilingheight)
@@ -2714,8 +2714,8 @@ static void HWR_AddLine(seg_t * line)
 		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
 
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-		end1 = P_GetZAt2(slope, v1x, v1y, normalheight); \
-		end2 = P_GetZAt2(slope, v2x, v2y, normalheight);
+		end1 = P_GetZAt(slope, v1x, v1y, normalheight); \
+		end2 = P_GetZAt(slope, v2x, v2y, normalheight);
 
 		SLOPEPARAMS(gr_frontsector->f_slope, frontf1, frontf2, gr_frontsector->  floorheight)
 		SLOPEPARAMS(gr_frontsector->c_slope, frontc1, frontc2, gr_frontsector->ceilingheight)
@@ -3898,7 +3898,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	{
 		for (i = 0; i < 4; i++)
 		{
-			slopez = P_GetZAt(floorslope, FLOAT_TO_FIXED(shadowVerts[i].x), FLOAT_TO_FIXED(shadowVerts[i].z));
+			slopez = P_GetSlopeZAt(floorslope, FLOAT_TO_FIXED(shadowVerts[i].x), FLOAT_TO_FIXED(shadowVerts[i].z));
 			shadowVerts[i].y = FIXED_TO_FLOAT(slopez) + 0.05f;
 		}
 	}

@@ -500,8 +500,8 @@ static void R_AddLine(seg_t *line)
 		fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
 		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-		end1 = P_GetZAt2(slope, line->v1->x, line->v1->y, normalheight); \
-		end2 = P_GetZAt2(slope, line->v2->x, line->v2->y, normalheight);
+		end1 = P_GetZAt(slope, line->v1->x, line->v1->y, normalheight); \
+		end2 = P_GetZAt(slope, line->v2->x, line->v2->y, normalheight);
 
 		SLOPEPARAMS(frontsector->f_slope, frontf1, frontf2, frontsector->  floorheight)
 		SLOPEPARAMS(frontsector->c_slope, frontc1, frontc2, frontsector->ceilingheight)
