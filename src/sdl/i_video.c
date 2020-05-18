@@ -1064,7 +1064,6 @@ void I_GetEvent(void)
 				if (Playing())
 					LUAh_GameQuit();
 				I_Quit();
-				M_QuitResponse('y');
 				break;
 		}
 	}
