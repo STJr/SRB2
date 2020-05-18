@@ -2332,6 +2332,38 @@ void G_DoneLevelLoad(void)
 ===================
 */
 
+// Writes the demo's checksum, or just random garbage if you can't do that for some reason.
+static void WriteDemoChecksum(void)
+{
+	UINT8 *p = demobuffer+16; // checksum position
+#ifdef NOMD5
+	UINT8 i;
+	for (i = 0; i < 16; i++, p++)
+		*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
+#else
+	md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
+#endif
+}
+
+// Stops recording a demo.
+static void G_StopDemoRecording(void)
+{
+	boolean saved = false;
+	WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
+	WriteDemoChecksum();
+	saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
+	free(demobuffer);
+	demorecording = false;
+
+	if (modeattacking != ATTACKING_RECORD)
+	{
+		if (saved)
+			CONS_Printf(M_GetText("Demo %s recorded\n"), demoname);
+		else
+			CONS_Alert(CONS_WARNING, M_GetText("Demo %s not saved\n"), demoname);
+	}
+}
+
 // Stops metal sonic's demo. Separate from other functions because metal + replays can coexist
 void G_StopMetalDemo(void)
 {
@@ -2349,20 +2381,8 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 	boolean saved = false;
 	if (demo_p)
 	{
-		UINT8 *p = demobuffer+16; // checksum position
-		if (kill)
-			WRITEUINT8(demo_p, METALDEATH); // add the metal death marker
-		else
-			WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-#ifdef NOMD5
-		{
-			UINT8 i;
-			for (i = 0; i < 16; i++, p++)
-				*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
-		}
-#else
-		md5_buffer((char *)p+16, demo_p - (p+16), (void *)p); // make a checksum of everything after the checksum in the file.
-#endif
+		WRITEUINT8(demo_p, (kill) ? METALDEATH : DEMOMARKER); // add the demo end (or metal death) marker
+		WriteDemoChecksum();
 		saved = FIL_WriteFile(va("%sMS.LMP", G_BuildMapName(gamemap)), demobuffer, demo_p - demobuffer); // finally output the file.
 	}
 	free(demobuffer);
@@ -2370,6 +2390,63 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 	if (saved)
 		I_Error("Saved to %sMS.LMP", G_BuildMapName(gamemap));
 	I_Error("Failed to save demo!");
+}
+
+// Stops timing a demo.
+static void G_StopTimingDemo(void)
+{
+	INT32 demotime;
+	double f1, f2;
+	demotime = I_GetTime() - demostarttime;
+	if (!demotime)
+		return;
+	G_StopDemo();
+	timingdemo = false;
+	f1 = (double)demotime;
+	f2 = (double)framecount*TICRATE;
+
+	CONS_Printf(M_GetText("timed %u gametics in %d realtics - %u frames\n%f seconds, %f avg fps\n"),
+		leveltime,demotime,(UINT32)framecount,f1/TICRATE,f2/f1);
+
+	// CSV-readable timedemo results, for external parsing
+	if (timedemo_csv)
+	{
+		FILE *f;
+		const char *csvpath = va("%s"PATHSEP"%s", srb2home, "timedemo.csv");
+		const char *header = "id,demoname,seconds,avgfps,leveltime,demotime,framecount,ticrate,rendermode,vidmode,vidwidth,vidheight,procbits\n";
+		const char *rowformat = "\"%s\",\"%s\",%f,%f,%u,%d,%u,%u,%u,%u,%u,%u,%u\n";
+		boolean headerrow = !FIL_FileExists(csvpath);
+		UINT8 procbits = 0;
+
+		// Bitness
+		if (sizeof(void*) == 4)
+			procbits = 32;
+		else if (sizeof(void*) == 8)
+			procbits = 64;
+
+		f = fopen(csvpath, "a+");
+
+		if (f)
+		{
+			if (headerrow)
+				fputs(header, f);
+			fprintf(f, rowformat,
+				timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
+			fclose(f);
+			CONS_Printf("Timedemo results saved to '%s'\n", csvpath);
+		}
+		else
+		{
+			// Just print the CSV output to console
+			CON_LogMessage(header);
+			CONS_Printf(rowformat,
+				timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
+		}
+	}
+
+	if (restorecv_vidwait != cv_vidwait.value)
+		CV_SetValue(&cv_vidwait, restorecv_vidwait);
+	D_AdvanceDemo();
 }
 
 // reset engine variable set for the demos
@@ -2394,66 +2471,13 @@ void G_StopDemo(void)
 
 boolean G_CheckDemoStatus(void)
 {
-	boolean saved;
-
 	G_FreeGhosts();
 
 	// DO NOT end metal sonic demos here
 
 	if (timingdemo)
 	{
-		INT32 demotime;
-		double f1, f2;
-		demotime = I_GetTime() - demostarttime;
-		if (!demotime)
-			return true;
-		G_StopDemo();
-		timingdemo = false;
-		f1 = (double)demotime;
-		f2 = (double)framecount*TICRATE;
-
-		CONS_Printf(M_GetText("timed %u gametics in %d realtics - %u frames\n%f seconds, %f avg fps\n"),
-			leveltime,demotime,(UINT32)framecount,f1/TICRATE,f2/f1);
-
-		// CSV-readable timedemo results, for external parsing
-		if (timedemo_csv)
-		{
-			FILE *f;
-			const char *csvpath = va("%s"PATHSEP"%s", srb2home, "timedemo.csv");
-			const char *header = "id,demoname,seconds,avgfps,leveltime,demotime,framecount,ticrate,rendermode,vidmode,vidwidth,vidheight,procbits\n";
-			const char *rowformat = "\"%s\",\"%s\",%f,%f,%u,%d,%u,%u,%u,%u,%u,%u,%u\n";
-			boolean headerrow = !FIL_FileExists(csvpath);
-			UINT8 procbits = 0;
-
-			// Bitness
-			if (sizeof(void*) == 4)
-				procbits = 32;
-			else if (sizeof(void*) == 8)
-				procbits = 64;
-
-			f = fopen(csvpath, "a+");
-
-			if (f)
-			{
-				if (headerrow)
-					fputs(header, f);
-				fprintf(f, rowformat,
-					timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
-				fclose(f);
-				CONS_Printf("Timedemo results saved to '%s'\n", csvpath);
-			}
-			else
-			{
-				// Just print the CSV output to console
-				CON_LogMessage(header);
-				CONS_Printf(rowformat,
-					timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
-			}
-		}
-
-		if (restorecv_vidwait != cv_vidwait.value)
-			CV_SetValue(&cv_vidwait, restorecv_vidwait);
-		D_AdvanceDemo();
+		G_StopTimingDemo();
 		return true;
 	}
 
@@ -2473,27 +2497,7 @@ boolean G_CheckDemoStatus(void)
 
 	if (demorecording)
 	{
-		UINT8 *p = demobuffer+16; // checksum position
-#ifdef NOMD5
-		UINT8 i;
-		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-		for (i = 0; i < 16; i++, p++)
-			*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
-#else
-		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-		md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
-#endif
-		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
-		free(demobuffer);
-		demorecording = false;
-
-		if (modeattacking != ATTACKING_RECORD)
-		{
-			if (saved)
-				CONS_Printf(M_GetText("Demo %s recorded\n"), demoname);
-			else
-				CONS_Alert(CONS_WARNING, M_GetText("Demo %s not saved\n"), demoname);
-		}
+		G_StopDemoRecording();
 		return true;
 	}
 

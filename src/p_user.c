@@ -1490,17 +1490,10 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if (use1upSound)
+	if (use1upSound || cv_1upsound.value)
 		S_StartSound(NULL, sfx_oneup);
 	else if (mariomode)
 		S_StartSound(NULL, sfx_marioa);
-	else if (cv_1upsound.value)
-	{
-		if (S_sfx[sfx_oneup].lumpnum != LUMPERROR)
-			S_StartSound(NULL, sfx_oneup);
-		else
-			S_StartSound(NULL, sfx_chchng);/* at least play something! */
-	}
 	else
 	{
 		P_PlayJingle(player, JT_1UP);
@@ -1547,10 +1540,6 @@ boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 	// \todo lua hook
 	int i;
 	boolean result = false;
-
-#ifndef HAVE_BLUA
-	(void)musname;
-#endif
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2278,8 +2267,8 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 
 			if (GETSECSPECIAL(rover->master->frontsector->special, 1) != SPACESPECIAL)
 				continue;
-			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) : *rover->topheight;
-			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) : *rover->bottomheight;
+			topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
 
 			if (mo->z + (mo->height/2) > topheight)
 				continue;
@@ -2516,8 +2505,8 @@ boolean P_InQuicksand(mobj_t *mo) // Returns true if you are in quicksand
 			if (!(rover->flags & FF_QUICKSAND))
 				continue;
 
-			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) : *rover->topheight;
-			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) : *rover->bottomheight;
+			topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
 
 			if (mo->z + flipoffset > topheight)
 				continue;
@@ -2843,8 +2832,8 @@ static void P_CheckQuicksand(player_t *player)
 		if (!(rover->flags & FF_QUICKSAND))
 			continue;
 
-		topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-		bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+		topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+		bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 		if (topheight >= player->mo->z && bottomheight < player->mo->z + player->mo->height)
 		{
@@ -3184,10 +3173,8 @@ static void P_DoClimbing(player_t *player)
 			floorclimb = true;
 		else
 		{
-			floorheight = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y)
-													   : glidesector->sector->floorheight;
-			ceilingheight = glidesector->sector->c_slope ? P_GetZAt(glidesector->sector->c_slope, player->mo->x, player->mo->y)
-														 : glidesector->sector->ceilingheight;
+			floorheight   = P_GetSectorFloorZAt  (glidesector->sector, player->mo->x, player->mo->y);
+			ceilingheight = P_GetSectorCeilingZAt(glidesector->sector, player->mo->x, player->mo->y);
 
 			if (glidesector->sector->ffloors)
 			{
@@ -3201,8 +3188,8 @@ static void P_DoClimbing(player_t *player)
 
 					floorclimb = true;
 
-					topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-					bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+					topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+					bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 					// Only supports rovers that are moving like an 'elevator', not just the top or bottom.
 					if (rover->master->frontsector->floorspeed && rover->master->frontsector->ceilspeed == 42)
@@ -3243,8 +3230,7 @@ static void P_DoClimbing(player_t *player)
 								if (roverbelow == rover)
 									continue;
 
-								bottomheight2 = *roverbelow->b_slope ? P_GetZAt(*roverbelow->b_slope, player->mo->x, player->mo->y) : *roverbelow->bottomheight;
-
+								bottomheight2 = P_GetFFloorBottomZAt(roverbelow, player->mo->x, player->mo->y);
 								if (bottomheight2 < topheight + FixedMul(16*FRACUNIT, player->mo->scale))
 									foundfof = true;
 							}
@@ -3289,8 +3275,7 @@ static void P_DoClimbing(player_t *player)
 								if (roverbelow == rover)
 									continue;
 
-								topheight2 = *roverbelow->t_slope ? P_GetZAt(*roverbelow->t_slope, player->mo->x, player->mo->y) : *roverbelow->topheight;
-
+								topheight2 = P_GetFFloorTopZAt(roverbelow, player->mo->x, player->mo->y);
 								if (topheight2 > bottomheight - FixedMul(16*FRACUNIT, player->mo->scale))
 									foundfof = true;
 							}
@@ -3344,8 +3329,7 @@ static void P_DoClimbing(player_t *player)
 							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 								continue;
 
-							bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
-
+							bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 							if (bottomheight < floorheight + FixedMul(16*FRACUNIT, player->mo->scale))
 							{
 								foundfof = true;
@@ -3385,8 +3369,7 @@ static void P_DoClimbing(player_t *player)
 							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 								continue;
 
-							topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-
+							topheight = P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
 							if (topheight > ceilingheight - FixedMul(16*FRACUNIT, player->mo->scale))
 							{
 								foundfof = true;
@@ -3758,12 +3741,8 @@ static void P_DoTeeter(player_t *player)
 
 			sec = R_PointInSubsector(checkx, checky)->sector;
 
-			ceilingheight = sec->ceilingheight;
-			floorheight = sec->floorheight;
-			if (sec->c_slope)
-				ceilingheight = P_GetZAt(sec->c_slope, checkx, checky);
-			if (sec->f_slope)
-				floorheight = P_GetZAt(sec->f_slope, checkx, checky);
+			ceilingheight = P_GetSectorCeilingZAt(sec, checkx, checky);
+			floorheight   = P_GetSectorFloorZAt  (sec, checkx, checky);
 			highestceilingheight = (ceilingheight > highestceilingheight) ? ceilingheight : highestceilingheight;
 			lowestfloorheight = (floorheight < lowestfloorheight) ? floorheight : lowestfloorheight;
 
@@ -3774,8 +3753,8 @@ static void P_DoTeeter(player_t *player)
 			{
 				if (!(rover->flags & FF_EXISTS)) continue;
 
-				topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-				bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+				topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+				bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 				if (P_CheckSolidLava(rover))
 					;
@@ -4440,13 +4419,16 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		else if (player->powers[pw_carry] == CR_ROLLOUT)
 		{
 			player->mo->momz = 9*FRACUNIT;
-			if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
-				player->mo->momz += player->mo->tracer->momz;
-			if (!P_IsObjectOnGround(player->mo->tracer))
-				P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
+			if (player->mo->tracer)
+			{
+				if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
+					player->mo->momz += player->mo->tracer->momz;
+				if (!P_IsObjectOnGround(player->mo->tracer))
+					P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
+				player->mo->tracer->flags |= MF_PUSHABLE;
+				P_SetTarget(&player->mo->tracer->tracer, NULL);
+			}
 			player->powers[pw_carry] = CR_NONE;
-			player->mo->tracer->flags |= MF_PUSHABLE;
-			P_SetTarget(&player->mo->tracer->tracer, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->mo->eflags & MFE_GOOWATER)
@@ -7751,7 +7733,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 
 			if (player->mo->standingslope)
 			{
-				ground = P_GetZAt(player->mo->standingslope, newx, newy);
+				ground = P_GetSlopeZAt(player->mo->standingslope, newx, newy);
 				if (player->mo->eflags & MFE_VERTICALFLIP)
 					ground -= FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
 			}
@@ -10654,8 +10636,8 @@ static void P_CalcPostImg(player_t *player)
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+			topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 			if (pviewheight >= topheight || pviewheight <= bottomheight)
 				continue;
@@ -10677,8 +10659,8 @@ static void P_CalcPostImg(player_t *player)
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_BLOCKPLAYER)
 				continue;
 
-			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+			topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 			if (pviewheight >= topheight || pviewheight <= bottomheight)
 				continue;
@@ -10740,7 +10722,7 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 			if (!(rover->flags & (FF_EXISTS|FF_BLOCKOTHERS)))
 				continue;
 
-			*nz = *rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;
+			*nz = P_GetFFloorTopZAt(rover, x, y);
 			if (abs(z - *nz) <= 56*FRACUNIT)
 			{
 				sec = &sectors[rover->secnum];
@@ -10750,7 +10732,7 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 
 	}
 
-	*nz = sec->f_slope ? P_GetZAt(sec->f_slope, x, y) : sec->floorheight;
+	*nz = P_GetSectorFloorZAt(sec, x, y);
 	if (abs(z - *nz) > 56*FRACUNIT)
 		return NULL;
 
@@ -11104,8 +11086,8 @@ static void P_MinecartThink(player_t *player)
 				if (minecart->standingslope)
 				{
 					fixed_t fa2 = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
-					fixed_t front = P_GetZAt(minecart->standingslope, minecart->x, minecart->y);
-					fixed_t back = P_GetZAt(minecart->standingslope, minecart->x - FINECOSINE(fa2), minecart->y - FINESINE(fa2));
+					fixed_t front = P_GetSlopeZAt(minecart->standingslope, minecart->x, minecart->y);
+					fixed_t back = P_GetSlopeZAt(minecart->standingslope, minecart->x - FINECOSINE(fa2), minecart->y - FINESINE(fa2));
 
 					if (abs(front - back) < 3*FRACUNIT)
 						currentSpeed += (back - front)/3;
@@ -11926,6 +11908,9 @@ void P_PlayerThink(player_t *player)
 						factor = 4;
 					}
 					break;
+				case CR_DUSTDEVIL:
+					player->drawangle += ANG20;
+					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
 				case CR_ROPEHANG:
@@ -12696,6 +12681,19 @@ void P_PlayerAfterThink(player_t *player)
 						}
 					}
 				}
+				break;
+			}
+			case CR_DUSTDEVIL:
+			{
+				mobj_t *mo = player->mo, *dustdevil = player->mo->tracer;
+
+				if (abs(mo->x - dustdevil->x) > dustdevil->radius || abs(mo->y - dustdevil->y) > dustdevil->radius)
+				{
+					P_SetTarget(&player->mo->tracer, NULL);
+					player->powers[pw_carry] = CR_NONE;
+					break;
+				}
+
 				break;
 			}
 			case CR_ROLLOUT:

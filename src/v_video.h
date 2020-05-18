@@ -238,12 +238,12 @@ void V_DrawRightAlignedSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option
 // Draw tall nums, used for menu, HUD, intermission
 void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num);
 void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits);
-void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, INT32 num);
+void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, UINT8 num);
 
 // Find string width from lt_font chars
 INT32 V_LevelNameWidth(const char *string);
 INT32 V_LevelNameHeight(const char *string);
-INT32 V_LevelActNumWidth(INT32 num); // act number width
+INT16 V_LevelActNumWidth(UINT8 num); // act number width
 
 void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string);
 INT32 V_CreditStringWidth(const char *string);

@@ -14,7 +14,7 @@
 #include "fastcmp.h"
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
-#include "p_slopes.h" // P_GetZAt
+#include "p_slopes.h" // P_GetSlopeZAt
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_draw.h"
@@ -2184,14 +2184,20 @@ static int lib_evStartCrumble(lua_State *L)
 
 static int lib_pGetZAt(lua_State *L)
 {
-	pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
 	fixed_t x = luaL_checkfixed(L, 2);
 	fixed_t y = luaL_checkfixed(L, 3);
 	//HUDSAFE
-	if (!slope)
-		return LUA_ErrInvalid(L, "pslope_t");
+	if (lua_isnil(L, 1))
+	{
+		fixed_t z = luaL_checkfixed(L, 4);
+		lua_pushfixed(L, P_GetZAt(NULL, x, y, z));
+	}
+	else
+	{
+		pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
+		lua_pushfixed(L, P_GetSlopeZAt(slope, x, y));
+	}
 
-	lua_pushfixed(L, P_GetZAt(slope, x, y));
 	return 1;
 }
 
@@ -2455,6 +2461,20 @@ static int lib_sStopSound(lua_State *L)
 	if (!origin)
 		return LUA_ErrInvalid(L, "mobj_t");
 	S_StopSound(origin);
+	return 0;
+}
+
+static int lib_sStopSoundByID(lua_State *L)
+{
+	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	sfxenum_t sound_id = luaL_checkinteger(L, 2);
+	//NOHUD
+	if (!origin)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (sound_id >= NUMSFX)
+		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
+
+	S_StopSoundByID(origin, sound_id);
 	return 0;
 }
 
@@ -3253,6 +3273,7 @@ static luaL_Reg lib[] = {
 	{"S_StartSound",lib_sStartSound},
 	{"S_StartSoundAtVolume",lib_sStartSoundAtVolume},
 	{"S_StopSound",lib_sStopSound},
+	{"S_StopSoundByID",lib_sStopSoundByID},
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
 	{"S_StopMusic",lib_sStopMusic},

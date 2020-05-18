@@ -303,45 +303,33 @@ void P_CameraLineOpening(line_t *linedef)
 	// If you can see through it, why not move the camera through it too?
 	if (front->camsec >= 0)
 	{
-		frontfloor = sectors[front->camsec].floorheight;
-		frontceiling = sectors[front->camsec].ceilingheight;
-		if (sectors[front->camsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
-			frontfloor = P_GetZAt(sectors[front->camsec].f_slope, camera.x, camera.y);
-		if (sectors[front->camsec].c_slope)
-			frontceiling = P_GetZAt(sectors[front->camsec].c_slope, camera.x, camera.y);
+		// SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
+		frontfloor   = P_GetSectorFloorZAt  (&sectors[front->camsec], camera.x, camera.y);
+		frontceiling = P_GetSectorCeilingZAt(&sectors[front->camsec], camera.x, camera.y);
 
 	}
 	else if (front->heightsec >= 0)
 	{
-		frontfloor = sectors[front->heightsec].floorheight;
-		frontceiling = sectors[front->heightsec].ceilingheight;
-		if (sectors[front->heightsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
-			frontfloor = P_GetZAt(sectors[front->heightsec].f_slope, camera.x, camera.y);
-		if (sectors[front->heightsec].c_slope)
-			frontceiling = P_GetZAt(sectors[front->heightsec].c_slope, camera.x, camera.y);
+		// SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
+		frontfloor   = P_GetSectorFloorZAt  (&sectors[front->heightsec], camera.x, camera.y);
+		frontceiling = P_GetSectorCeilingZAt(&sectors[front->heightsec], camera.x, camera.y);
 	}
 	else
 	{
-		frontfloor = P_CameraGetFloorZ(mapcampointer, front, tmx, tmy, linedef);
+		frontfloor   = P_CameraGetFloorZ  (mapcampointer, front, tmx, tmy, linedef);
 		frontceiling = P_CameraGetCeilingZ(mapcampointer, front, tmx, tmy, linedef);
 	}
 	if (back->camsec >= 0)
 	{
-		backfloor = sectors[back->camsec].floorheight;
-		backceiling = sectors[back->camsec].ceilingheight;
-		if (sectors[back->camsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
-			frontfloor = P_GetZAt(sectors[back->camsec].f_slope, camera.x, camera.y);
-		if (sectors[back->camsec].c_slope)
-			frontceiling = P_GetZAt(sectors[back->camsec].c_slope, camera.x, camera.y);
+		// SRB2CBTODO: ESLOPE (sectors[back->heightsec].f_slope)
+		backfloor   = P_GetSectorFloorZAt  (&sectors[back->camsec], camera.x, camera.y);
+		backceiling = P_GetSectorCeilingZAt(&sectors[back->camsec], camera.x, camera.y);
 	}
 	else if (back->heightsec >= 0)
 	{
-		backfloor = sectors[back->heightsec].floorheight;
-		backceiling = sectors[back->heightsec].ceilingheight;
-		if (sectors[back->heightsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
-			frontfloor = P_GetZAt(sectors[back->heightsec].f_slope, camera.x, camera.y);
-		if (sectors[back->heightsec].c_slope)
-			frontceiling = P_GetZAt(sectors[back->heightsec].c_slope, camera.x, camera.y);
+		// SRB2CBTODO: ESLOPE (sectors[back->heightsec].f_slope)
+		backfloor   = P_GetSectorFloorZAt  (&sectors[back->heightsec], camera.x, camera.y);
+		backceiling = P_GetSectorCeilingZAt(&sectors[back->heightsec], camera.x, camera.y);
 	}
 	else
 	{

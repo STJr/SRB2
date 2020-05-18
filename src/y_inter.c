@@ -73,7 +73,7 @@ typedef union
 		UINT32 score, total; // fake score, total
 		UINT32 tics; // time
 
-		INT32 actnum; // act number being displayed
+		UINT8 actnum; // act number being displayed
 		patch_t *ptotal; // TOTAL
 		UINT8 gotlife; // Number of extra lives obtained
 	} coop;
