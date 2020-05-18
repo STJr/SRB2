@@ -33,7 +33,7 @@ applications may follow different packet versions.
 //  be transmitted.
 
 // Networking and tick handling related.
-#define BACKUPTICS 96
+#define BACKUPTICS 1024
 #define CLIENTBACKUPTICS 32
 #define MAXTEXTCMD 256
 //
