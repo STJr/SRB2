@@ -113,7 +113,8 @@ static int lib_fixeddiv(lua_State *L)
 
 static int lib_fixedrem(lua_State *L)
 {
-	lua_pushfixed(L, FixedRem(luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
+	LUA_Deprecated(L, "FixedRem(a, b)", "a % b");
+	lua_pushfixed(L, luaL_checkfixed(L, 1) % luaL_checkfixed(L, 2));
 	return 1;
 }
 
