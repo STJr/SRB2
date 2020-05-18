@@ -652,10 +652,14 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		}\
 \
 		vert->x = (vx);\
+		vert->y = height;\
 		vert->z = (vy);\
 \
-		fixedheight = P_GetZAt(slope, FLOAT_TO_FIXED((vx)), FLOAT_TO_FIXED((vy)), height);\
-		vert->y = FIXED_TO_FLOAT(fixedheight);\
+		if (slope)\
+		{\
+			fixedheight = P_GetSlopeZAt(slope, FLOAT_TO_FIXED((vx)), FLOAT_TO_FIXED((vy)));\
+			vert->y = FIXED_TO_FLOAT(fixedheight);\
+		}\
 }
 
 	for (i = 0, v3d = planeVerts; i < nrPlaneVerts; i++,v3d++,pv++)
