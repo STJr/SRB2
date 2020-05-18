@@ -4260,8 +4260,8 @@ static void HandlePacketFromPlayer(SINT8 node)
 				txtpak = (UINT8 *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots
 					* netbuffer->u.serverpak.numtics];
 
-			if (realend > gametic + BACKUPTICS)
-				realend = gametic + BACKUPTICS;
+			if (realend > gametic + CLIENTBACKUPTICS)
+				realend = gametic + CLIENTBACKUPTICS;
 			cl_packetmissed = realstart > neededtic;
 
 			if (realstart <= neededtic && realend > neededtic)
@@ -4604,11 +4604,11 @@ static void SV_SendTics(void)
 	for (n = 1; n < MAXNETNODES; n++)
 		if (nodeingame[n])
 		{
-			lasttictosend = maketic;
-
 			// assert supposedtics[n]>=nettics[n]
 			realfirsttic = supposedtics[n];
-			if (realfirsttic >= maketic)
+			lasttictosend = min(maketic, realfirsttic + CLIENTBACKUPTICS);
+
+			if (realfirsttic >= lasttictosend)
 			{
 				// well we have sent all tics we will so use extrabandwidth
 				// to resent packet that are supposed lost (this is necessary since lost
@@ -4617,7 +4617,7 @@ static void SV_SendTics(void)
 				DEBFILE(va("Nothing to send node %u mak=%u sup=%u net=%u \n",
 					n, maketic, supposedtics[n], nettics[n]));
 				realfirsttic = nettics[n];
-				if (realfirsttic >= maketic || (I_GetTime() + n)&3)
+				if (realfirsttic >= lasttictosend || (I_GetTime() + n)&3)
 					// all tic are ok
 					continue;
 				DEBFILE(va("Sent %d anyway\n", realfirsttic));

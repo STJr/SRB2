@@ -34,6 +34,7 @@ applications may follow different packet versions.
 
 // Networking and tick handling related.
 #define BACKUPTICS 96
+#define CLIENTBACKUPTICS 32
 #define MAXTEXTCMD 256
 //
 // Packet structure
