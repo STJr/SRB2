@@ -236,14 +236,13 @@ static void R_DrawWallSplats(void)
 //  way we don't have to store extra post_t info with each column for
 //  multi-patch textures. They are not normally needed as multi-patch
 //  textures don't have holes in it. At least not for now.
-static INT32 column2s_length; // column->length : for multi-patch on 2sided wall = texture->height
 
 static void R_Render2sidedMultiPatchColumn(column_t *column)
 {
 	INT32 topscreen, bottomscreen;
 
 	topscreen = sprtopscreen; // + spryscale*column->topdelta;  topdelta is 0 for the wall
-	bottomscreen = topscreen + spryscale * column2s_length;
+	bottomscreen = topscreen + spryscale * lengthcol;
 
 	dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
 	dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -273,13 +272,6 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 		else
 			colfunc();
 	}
-}
-
-// quick wrapper for R_DrawFlippedMaskedColumn so it can be set as a colfunc_2s value
-// uses column2s_length for texture->height as above
-static void R_DrawFlippedMaskedSegColumn(column_t *column)
-{
-	R_DrawFlippedMaskedColumn(column, column2s_length);
 }
 
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
@@ -356,8 +348,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		if (textures[texnum]->flip & 2) // vertically flipped?
 		{
-			colfunc_2s = R_DrawFlippedMaskedSegColumn;
-			column2s_length = textures[texnum]->height;
+			colfunc_2s = R_DrawFlippedMaskedColumn;
+			lengthcol = textures[texnum]->height;
 		}
 		else
 			colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
@@ -365,7 +357,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn; // render multipatch with no holes (no post_t info)
-		column2s_length = textures[texnum]->height;
+		lengthcol = textures[texnum]->height;
 	}
 
 	// Setup lighting based on the presence/lack-of 3D floors.
@@ -615,7 +607,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				// draw the texture
 				col = (column_t *)((UINT8 *)R_GetColumn(texnum, maskedtexturecol[dc_x]) - 3);
 
-//#ifdef POLYOBJECTS_PLANES
 #if 0 // Disabling this allows inside edges to render below the planes, for until the clipping is fixed to work right when POs are near the camera. -Red
 				if (curline->dontrenderme && curline->polyseg && (curline->polyseg->flags & POF_RENDERPLANES))
 				{
@@ -692,7 +683,7 @@ static void R_DrawRepeatMaskedColumn(column_t *col)
 static void R_DrawRepeatFlippedMaskedColumn(column_t *col)
 {
 	do {
-		R_DrawFlippedMaskedColumn(col, column2s_length);
+		R_DrawFlippedMaskedColumn(col);
 		sprtopscreen += dc_texheight*spryscale;
 	} while (sprtopscreen < sprbotscreen);
 }
@@ -978,7 +969,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		if (textures[texnum]->flip & 2) // vertically flipped?
 		{
 			colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
-			column2s_length = textures[texnum]->height;
+			lengthcol = textures[texnum]->height;
 		}
 		else
 			colfunc_2s = R_DrawRepeatMaskedColumn; // render the usual 2sided single-patch packed texture
@@ -986,7 +977,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
-		column2s_length = textures[texnum]->height;
+		lengthcol = textures[texnum]->height;
 	}
 
 	// Set heights according to plane, or slope, whichever
@@ -1298,10 +1289,8 @@ static void R_RenderSegLoop (void)
 
 			for (i = 0; i < numffloors; i++)
 			{
-#ifdef POLYOBJECTS_PLANES
 				if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
 					continue;
-#endif
 
 				if (ffloor[i].height < viewz)
 				{
@@ -1314,18 +1303,19 @@ static void R_RenderSegLoop (void)
 					if (bottom_w > bottom)
 						bottom_w = bottom;
 
-#ifdef POLYOBJECTS_PLANES
 					// Polyobject-specific hack to fix plane leaking -Red
-					if (ffloor[i].polyobj && top_w >= bottom_w) {
+					if (ffloor[i].polyobj && top_w >= bottom_w)
+					{
 						ffloor[i].plane->top[rw_x] = 0xFFFF;
 						ffloor[i].plane->bottom[rw_x] = 0x0000; // fix for sky plane drawing crashes - Monster Iestyn 25/05/18
-					} else
-#endif
-
-					if (top_w <= bottom_w)
+					}
+					else
 					{
-						ffloor[i].plane->top[rw_x] = (INT16)top_w;
-						ffloor[i].plane->bottom[rw_x] = (INT16)bottom_w;
+						if (top_w <= bottom_w)
+						{
+							ffloor[i].plane->top[rw_x] = (INT16)top_w;
+							ffloor[i].plane->bottom[rw_x] = (INT16)bottom_w;
+						}
 					}
 				}
 				else if (ffloor[i].height > viewz)
@@ -1339,18 +1329,19 @@ static void R_RenderSegLoop (void)
 					if (bottom_w > bottom)
 						bottom_w = bottom;
 
-#ifdef POLYOBJECTS_PLANES
 					// Polyobject-specific hack to fix plane leaking -Red
-					if (ffloor[i].polyobj && top_w >= bottom_w) {
+					if (ffloor[i].polyobj && top_w >= bottom_w)
+					{
 						ffloor[i].plane->top[rw_x] = 0xFFFF;
 						ffloor[i].plane->bottom[rw_x] = 0x0000; // fix for sky plane drawing crashes - Monster Iestyn 25/05/18
-					} else
-#endif
-
-					if (top_w <= bottom_w)
+					}
+					else
 					{
-						ffloor[i].plane->top[rw_x] = (INT16)top_w;
-						ffloor[i].plane->bottom[rw_x] = (INT16)bottom_w;
+						if (top_w <= bottom_w)
+						{
+							ffloor[i].plane->top[rw_x] = (INT16)top_w;
+							ffloor[i].plane->bottom[rw_x] = (INT16)bottom_w;
+						}
 					}
 				}
 			}
@@ -1804,10 +1795,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	{
 		for (i = 0; i < numffloors; i++)
 		{
-#ifdef POLYOBJECTS_PLANES
 			if (ffloor[i].polyobj && (!ds_p->curline->polyseg || ffloor[i].polyobj != ds_p->curline->polyseg))
 				continue;
-#endif
 
 			ffloor[i].f_pos       = P_GetZAt(ffloor[i].slope, segleft .x, segleft .y, ffloor[i].height) - viewz;
 			ffloor[i].f_pos_slope = P_GetZAt(ffloor[i].slope, segright.x, segright.y, ffloor[i].height) - viewz;
@@ -2139,7 +2128,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				{
 					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
 						continue;
-					if (rover->flags & FF_INVERTSIDES)
+					if (!(rover->flags & FF_ALLSIDES) && rover->flags & FF_INVERTSIDES)
 						continue;
 
 					if (rover->norender == leveltime)
@@ -2194,7 +2183,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				{
 					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
 						continue;
-					if (!(rover->flags & FF_ALLSIDES))
+					if (!(rover->flags & FF_ALLSIDES || rover->flags & FF_INVERTSIDES))
 						continue;
 
 					if (rover->norender == leveltime)
@@ -2249,7 +2238,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			{
 				for (rover = backsector->ffloors, i = 0; rover && i < MAXFFLOORS; rover = rover->next)
 				{
-					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS) || rover->flags & FF_INVERTSIDES)
+					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
+						continue;
+					if (!(rover->flags & FF_ALLSIDES) && rover->flags & FF_INVERTSIDES)
 						continue;
 					if (rover->norender == leveltime)
 						continue;
@@ -2269,7 +2260,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			{
 				for (rover = frontsector->ffloors, i = 0; rover && i < MAXFFLOORS; rover = rover->next)
 				{
-					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_ALLSIDES))
+					if (!(rover->flags & FF_RENDERSIDES) || !(rover->flags & FF_EXISTS))
+						continue;
+					if (!(rover->flags & FF_ALLSIDES || rover->flags & FF_INVERTSIDES))
 						continue;
 					if (rover->norender == leveltime)
 						continue;
@@ -2306,33 +2299,40 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
 
-#ifdef POLYOBJECTS
-			if (curline->polyseg) { // use REAL front and back floors please, so midtexture rendering isn't mucked up
+			if (curline->polyseg)
+			{ // use REAL front and back floors please, so midtexture rendering isn't mucked up
 				rw_midtextureslide = rw_midtexturebackslide = 0;
 				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
 					rw_midtexturemid = rw_midtextureback = max(curline->frontsector->floorheight, curline->backsector->floorheight) - viewz;
 				else
 					rw_midtexturemid = rw_midtextureback = min(curline->frontsector->ceilingheight, curline->backsector->ceilingheight) - viewz;
-			} else
-#endif
-			// Set midtexture starting height
-			if (linedef->flags & ML_EFFECT2) { // Ignore slopes when texturing
-				rw_midtextureslide = rw_midtexturebackslide = 0;
-				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
-					rw_midtexturemid = rw_midtextureback = max(frontsector->floorheight, backsector->floorheight) - viewz;
-				else
-					rw_midtexturemid = rw_midtextureback = min(frontsector->ceilingheight, backsector->ceilingheight) - viewz;
+			}
+			else
+			{
+				// Set midtexture starting height
+				if (linedef->flags & ML_EFFECT2)
+				{ // Ignore slopes when texturing
+					rw_midtextureslide = rw_midtexturebackslide = 0;
+					if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+						rw_midtexturemid = rw_midtextureback = max(frontsector->floorheight, backsector->floorheight) - viewz;
+					else
+						rw_midtexturemid = rw_midtextureback = min(frontsector->ceilingheight, backsector->ceilingheight) - viewz;
 
-			} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
-				rw_midtexturemid = worldbottom;
-				rw_midtextureslide = floorfrontslide;
-				rw_midtextureback = worldlow;
-				rw_midtexturebackslide = floorbackslide;
-			} else {
-				rw_midtexturemid = worldtop;
-				rw_midtextureslide = ceilingfrontslide;
-				rw_midtextureback = worldhigh;
-				rw_midtexturebackslide = ceilingbackslide;
+				}
+				else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+				{
+					rw_midtexturemid = worldbottom;
+					rw_midtextureslide = floorfrontslide;
+					rw_midtextureback = worldlow;
+					rw_midtexturebackslide = floorbackslide;
+				}
+				else
+				{
+					rw_midtexturemid = worldtop;
+					rw_midtextureslide = ceilingfrontslide;
+					rw_midtextureback = worldhigh;
+					rw_midtexturebackslide = ceilingbackslide;
+				}
 			}
 			rw_midtexturemid += sidedef->rowoffset;
 			rw_midtextureback += sidedef->rowoffset;
@@ -2586,8 +2586,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
 					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
+					    ((viewz < planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
+					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
 						ffloor[i].b_pos = roverleft;
@@ -2609,8 +2609,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
 					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
+					    ((viewz > planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
+					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
 						ffloor[i].b_pos = roverleft;
@@ -2643,8 +2643,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
 					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
+					    ((viewz < planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
+					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
 						ffloor[i].b_pos = roverleft;
@@ -2666,8 +2666,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
 					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
-					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
-					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
+					    ((viewz > planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
+					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
 						ffloor[i].b_pos = roverleft;
@@ -2681,7 +2681,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					}
 				}
 			}
-#ifdef POLYOBJECTS_PLANES
 			if (curline->polyseg && frontsector && (curline->polyseg->flags & POF_RENDERPLANES))
 			{
 				while (i < numffloors && ffloor[i].polyobj != curline->polyseg) i++;
@@ -2720,7 +2719,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					i++;
 				}
 			}
-#endif
 
 			numbackffloors = i;
 		}
@@ -2774,7 +2772,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			for (i = 0; i < numffloors; i++)
 				R_ExpandPlane(ffloor[i].plane, rw_x, rw_stopx - 1);
 		}
-#ifdef POLYOBJECTS_PLANES
 		// FIXME hack to fix planes disappearing when a seg goes behind the camera. This NEEDS to be changed to be done properly. -Red
 		if (curline->polyseg)
 		{
@@ -2789,7 +2786,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					ffloor[i].plane->maxx = rw_stopx - 1;
 			}
 		}
-#endif
 	}
 
 #ifdef WALLSPLATS

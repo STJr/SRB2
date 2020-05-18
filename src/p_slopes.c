@@ -566,7 +566,7 @@ void P_CopySectorSlope(line_t *line)
 	int i, special = line->special;
 
 	// Check for copy linedefs
-	for (i = -1; (i = P_FindSectorFromLineTag(line, i)) >= 0;)
+	for (i = -1; (i = P_FindSectorFromTag(line->tag, i)) >= 0;)
 	{
 		sector_t *srcsec = sectors + i;
 

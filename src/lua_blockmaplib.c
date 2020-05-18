@@ -80,9 +80,7 @@ static UINT8 lib_searchBlockmap_Lines(lua_State *L, INT32 x, INT32 y, mobj_t *th
 {
 	INT32 offset;
 	const INT32 *list; // Big blockmap
-#ifdef POLYOBJECTS
 	polymaplink_t *plink; // haleyjd 02/22/06
-#endif
 	line_t *ld;
 
 	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
@@ -90,7 +88,6 @@ static UINT8 lib_searchBlockmap_Lines(lua_State *L, INT32 x, INT32 y, mobj_t *th
 
 	offset = y*bmapwidth + x;
 
-#ifdef POLYOBJECTS
 	// haleyjd 02/22/06: consider polyobject lines
 	plink = polyblocklinks[offset];
 
@@ -133,7 +130,6 @@ static UINT8 lib_searchBlockmap_Lines(lua_State *L, INT32 x, INT32 y, mobj_t *th
 		}
 		plink = (polymaplink_t *)(plink->link.next);
 	}
-#endif
 
 	offset = *(blockmap + offset); // offset = blockmap[y*bmapwidth+x];
 

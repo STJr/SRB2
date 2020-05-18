@@ -633,7 +633,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if (ALL7EMERALDS(emeralds)) // Got all 7
 			{
-				if (!(netgame || multiplayer))
+				if (continuesInSession)
 				{
 					player->continues += 1;
 					player->gotcontinue = true;
@@ -643,7 +643,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						S_StartSound(toucher, sfx_chchng);
 				}
 				else
+				{
+					P_GiveCoopLives(player, 1, true); // if continues are disabled, a life is a reasonable substitute
 					S_StartSound(toucher, sfx_chchng);
+				}
 			}
 			else
 			{
@@ -3150,7 +3153,7 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 			return false;
 
 		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
-		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (G_PlatformGametype()))
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (gametyperules & GTR_FRIENDLY))
 		{
 			if (gametype == GT_COOP && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
 			{

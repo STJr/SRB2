@@ -1388,7 +1388,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 
 					// Continues are worthless in netgames.
 					// If that stops being the case uncomment this.
-/*					if (!ultimatemode && players[i].marescore > 50000
+/*					if (!ultimatemode && continuesInSession && players[i].marescore > 50000
 					&& oldscore < 50000)
 					{
 						players[i].continues += 1;
@@ -1408,7 +1408,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 			else
 				player->marescore = MAXSCORE;
 
-			if (!ultimatemode && !(netgame || multiplayer) && G_IsSpecialStage(gamemap)
+			if (!ultimatemode && continuesInSession && G_IsSpecialStage(gamemap)
 			&& player->marescore >= 50000 && oldscore < 50000)
 			{
 				player->continues += 1;
@@ -1490,17 +1490,10 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if (use1upSound)
+	if (use1upSound || cv_1upsound.value)
 		S_StartSound(NULL, sfx_oneup);
 	else if (mariomode)
 		S_StartSound(NULL, sfx_marioa);
-	else if (cv_1upsound.value)
-	{
-		if (S_sfx[sfx_oneup].lumpnum != LUMPERROR)
-			S_StartSound(NULL, sfx_oneup);
-		else
-			S_StartSound(NULL, sfx_chchng);/* at least play something! */
-	}
 	else
 	{
 		P_PlayJingle(player, JT_1UP);
@@ -2562,7 +2555,7 @@ static void P_CheckBustableBlocks(player_t *player)
 			{
 				if (!(rover->flags & FF_EXISTS)) continue;
 
-				if ((rover->flags & FF_BUSTUP)/* && !rover->master->frontsector->crumblestate*/)
+				if ((rover->flags & FF_BUSTUP)/* && rover->master->frontsector->crumblestate == CRUMBLE_NONE*/)
 				{
 					// If it's an FF_SHATTER, you can break it just by touching it.
 					if (rover->flags & FF_SHATTER)
@@ -3833,7 +3826,6 @@ static void P_DoTeeter(player_t *player)
 		BMBOUNDFIX(xl, xh, yl, yh);
 
 	// Polyobjects
-#ifdef POLYOBJECTS
 		validcount++;
 
 		for (by = yl; by <= yh; by++)
@@ -3927,7 +3919,6 @@ static void P_DoTeeter(player_t *player)
 					plink = (polymaplink_t *)(plink->link.next);
 				}
 			}
-#endif
 		if (teeter) // only bother with objects as a last resort if you were already teetering
 		{
 			mobj_t *oldtmthing = tmthing;
@@ -4428,13 +4419,16 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		else if (player->powers[pw_carry] == CR_ROLLOUT)
 		{
 			player->mo->momz = 9*FRACUNIT;
-			if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
-				player->mo->momz += player->mo->tracer->momz;
-			if (!P_IsObjectOnGround(player->mo->tracer))
-				P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
+			if (player->mo->tracer)
+			{
+				if (P_MobjFlip(player->mo->tracer)*player->mo->tracer->momz > 0)
+					player->mo->momz += player->mo->tracer->momz;
+				if (!P_IsObjectOnGround(player->mo->tracer))
+					P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
+				player->mo->tracer->flags |= MF_PUSHABLE;
+				P_SetTarget(&player->mo->tracer->tracer, NULL);
+			}
 			player->powers[pw_carry] = CR_NONE;
-			player->mo->tracer->flags |= MF_PUSHABLE;
-			P_SetTarget(&player->mo->tracer->tracer, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->mo->eflags & MFE_GOOWATER)
@@ -4992,6 +4986,15 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 	player->pflags |= PF_THOKKED;
 }
 
+static void P_DoTwinSpin(player_t *player)
+{
+	player->pflags &= ~PF_NOJUMPDAMAGE;
+	player->pflags |= P_GetJumpFlags(player) | PF_THOKKED;
+	S_StartSound(player->mo, sfx_s3k42);
+	player->mo->frame = 0;
+	P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
+}
+
 //
 // P_DoJumpStuff
 //
@@ -5162,12 +5165,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						break;
 					case CA_TWINSPIN:
 						if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || player->charflags & SF_MULTIABILITY))
-						{
-							player->pflags |= PF_THOKKED;
-							S_StartSound(player->mo, sfx_s3k42);
-							player->mo->frame = 0;
-							P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
-						}
+							P_DoTwinSpin(player);
 						break;
 					default:
 						break;
@@ -5424,12 +5422,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					break;
 				case CA_TWINSPIN:
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
-					{
-						player->pflags |= PF_THOKKED;
-						S_StartSound(player->mo, sfx_s3k42);
-						player->mo->frame = 0;
-						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
-					}
+						P_DoTwinSpin(player);
 					break;
 				default:
 					break;
@@ -5688,11 +5681,7 @@ static void P_2dMovement(player_t *player)
 	}
 	else if (player->onconveyor == 4 && !P_IsObjectOnGround(player->mo)) // Actual conveyor belt
 		player->cmomx = player->cmomy = 0;
-	else if (player->onconveyor != 2 && player->onconveyor != 4
-#ifdef POLYOBJECTS
-				&& player->onconveyor != 1
-#endif
-	)
+	else if (player->onconveyor != 2 && player->onconveyor != 4 && player->onconveyor != 1)
 		player->cmomx = player->cmomy = 0;
 
 	player->rmomx = player->mo->momx - player->cmomx;
@@ -5887,11 +5876,7 @@ static void P_3dMovement(player_t *player)
 	}
 	else if (player->onconveyor == 4 && !P_IsObjectOnGround(player->mo)) // Actual conveyor belt
 		player->cmomx = player->cmomy = 0;
-	else if (player->onconveyor != 2 && player->onconveyor != 4
-#ifdef POLYOBJECTS
-				&& player->onconveyor != 1
-#endif
-	)
+	else if (player->onconveyor != 2 && player->onconveyor != 4 && player->onconveyor != 1)
 		player->cmomx = player->cmomy = 0;
 
 	player->rmomx = player->mo->momx - player->cmomx;
@@ -7968,7 +7953,7 @@ static void P_MovePlayer(player_t *player)
 			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6]))) // Note the < instead of <=
 		{
 			skin_t *skin = ((skin_t *)(player->mo->skin));
-			if (skin->flags & SF_SUPER)
+			if (( skin->flags & (SF_SUPER|SF_NONIGHTSSUPER) ) == SF_SUPER)
 			{
 				player->mo->color = skin->supercolor
 					+ ((player->nightstime == player->startedtime)
@@ -9317,7 +9302,7 @@ boolean P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	if (enemy->health <= 0) // dead
 		return false;
 
-	if (!((enemy->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR) && (enemy->flags & MF_SHOOTABLE)) || (enemy->flags & MF_SPRING)) == !(enemy->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
+	if (source->player && (!((enemy->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR) && (enemy->flags & MF_SHOOTABLE)) || (enemy->flags & MF_SPRING)) == !(enemy->flags2 & MF2_INVERTAIMABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
 		return false;
 
 	if (enemy->flags2 & MF2_FRET)
@@ -9529,7 +9514,7 @@ static void P_DeathThink(player_t *player)
 	// continue logic
 	if (!(netgame || multiplayer) && player->lives <= 0)
 	{
-		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_USE || cmd->buttons & BT_JUMP) && player->continues > 0)
+		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_USE || cmd->buttons & BT_JUMP) && (!continuesInSession || player->continues > 0))
 			G_UseContinue();
 		else if (player->deadtimer >= gameovertics)
 			G_UseContinue(); // Even if we don't have one this handles ending the game
@@ -10221,7 +10206,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			}
 		}
 
-#ifdef POLYOBJECTS
 	// Check polyobjects and see if floorz/ceilingz need to be altered
 	{
 		INT32 xl, xh, yl, yh, bx, by;
@@ -10300,7 +10284,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				}
 			}
 	}
-#endif
 
 		// crushed camera
 		if (myceilingz <= myfloorz + thiscam->height && !resetcalled && !cameranoclip)
@@ -11711,10 +11694,8 @@ void P_PlayerThink(player_t *player)
 	P_MobjCheckWater(player->mo);
 
 #ifndef SECTORSPECIALSAFTERTHINK
-#ifdef POLYOBJECTS
 	if (player->onconveyor != 1 || !P_IsObjectOnGround(player->mo))
-#endif
-	player->onconveyor = 0;
+		player->onconveyor = 0;
 	// check special sectors : damage & secrets
 
 	if (!player->spectator)
@@ -11927,6 +11908,9 @@ void P_PlayerThink(player_t *player)
 						factor = 4;
 					}
 					break;
+				case CR_DUSTDEVIL:
+					player->drawangle += ANG20;
+					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
 				case CR_ROPEHANG:
@@ -12072,12 +12056,10 @@ void P_PlayerThink(player_t *player)
 	// it lasts for one tic.
 	player->pflags &= ~PF_FULLSTASIS;
 
-#ifdef POLYOBJECTS
 	if (player->onconveyor == 1)
 		player->onconveyor = 3;
 	else if (player->onconveyor == 3)
 		player->cmomy = player->cmomx = 0;
-#endif
 
 	P_DoSuperStuff(player);
 	P_CheckSneakerAndLivesTimer(player);
@@ -12410,10 +12392,8 @@ void P_PlayerAfterThink(player_t *player)
 	cmd = &player->cmd;
 
 #ifdef SECTORSPECIALSAFTERTHINK
-#ifdef POLYOBJECTS
 	if (player->onconveyor != 1 || !P_IsObjectOnGround(player->mo))
-#endif
-	player->onconveyor = 0;
+		player->onconveyor = 0;
 	// check special sectors : damage & secrets
 
 	if (!player->spectator)
@@ -12703,6 +12683,19 @@ void P_PlayerAfterThink(player_t *player)
 				}
 				break;
 			}
+			case CR_DUSTDEVIL:
+			{
+				mobj_t *mo = player->mo, *dustdevil = player->mo->tracer;
+
+				if (abs(mo->x - dustdevil->x) > dustdevil->radius || abs(mo->y - dustdevil->y) > dustdevil->radius)
+				{
+					P_SetTarget(&player->mo->tracer, NULL);
+					player->powers[pw_carry] = CR_NONE;
+					break;
+				}
+
+				break;
+			}
 			case CR_ROLLOUT:
 			{
 				mobj_t *mo = player->mo, *rock = player->mo->tracer;
@@ -12842,6 +12835,12 @@ void P_PlayerAfterThink(player_t *player)
 	{
 		player->mo->flags2 |= MF2_DONTDRAW;
 		player->mo->flags |= MF_NOGRAVITY;
+	}
+
+	if (player->powers[pw_dye])
+	{
+		player->mo->colorized = true;
+		player->mo->color = player->powers[pw_dye];
 	}
 
 	if (player->followmobj && (player->spectator || player->mo->health <= 0 || player->followmobj->type != player->followitem))

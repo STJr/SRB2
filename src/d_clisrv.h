@@ -20,12 +20,9 @@
 #include "d_player.h"
 
 /*
-The 'packet version' may be used with packets whose
-format is expected to change between versions.
-
-This version is independent of the mod name, and standard
-version and subversion. It should only account for the
-basic fields of the packet, and change infrequently.
+The 'packet version' is used to distinguish packet formats.
+This version is independent of VERSION and SUBVERSION. Different
+applications may follow different packet versions.
 */
 #define PACKETVERSION 3
 
@@ -518,7 +515,7 @@ extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 extern tic_t servermaxping;
 
-extern consvar_t cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_rejointimeout;
+extern consvar_t cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_joindelay, cv_rejointimeout;
 extern consvar_t cv_resynchattempts, cv_blamecfail;
 extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 

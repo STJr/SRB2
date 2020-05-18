@@ -73,7 +73,7 @@ typedef union
 		UINT32 score, total; // fake score, total
 		UINT32 tics; // time
 
-		INT32 actnum; // act number being displayed
+		UINT8 actnum; // act number being displayed
 		patch_t *ptotal; // TOTAL
 		UINT8 gotlife; // Number of extra lives obtained
 	} coop;
@@ -564,7 +564,7 @@ dontdrawbg:
 			V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125+yoffset, 0, data.spec.score);
 
 			// Draw continues!
-			if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
+			if (continuesInSession /* && (data.spec.continues & 0x80) */) // Always draw when continues are a thing
 			{
 				UINT8 continues = data.spec.continues & 0x7F;
 

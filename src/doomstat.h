@@ -319,6 +319,9 @@ typedef struct
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
 	UINT16 startrings;      ///< Number of rings players start with.
+	INT32 sstimer;          ///< Timer for special stages.
+	UINT32 ssspheres;       ///< Sphere requirement in special stages.
+	fixed_t gravity;        ///< Map-wide gravity.
 
 	// Title card.
 	char ltzzpatch[8];      ///< Zig zag patch.
@@ -542,7 +545,7 @@ extern recorddata_t *mainrecords[NUMMAPS];
 extern UINT8 mapvisited[NUMMAPS];
 
 // Temporary holding place for nights data for the current map
-nightsdata_t ntemprecords;
+extern nightsdata_t ntemprecords;
 
 extern UINT32 token; ///< Number of tokens collected in a level
 extern UINT32 tokenlist; ///< List of tokens collected
@@ -575,6 +578,8 @@ extern UINT8 creditscutscene;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings
+extern UINT8 useContinues;
+#define continuesInSession (!multiplayer && (useContinues || ultimatemode || !(cursaveslot > 0)))
 
 extern mobj_t *hunt1, *hunt2, *hunt3; // Emerald hunt locations
 

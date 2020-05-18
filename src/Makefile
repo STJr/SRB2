@@ -422,6 +422,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/z_zone.o   \
 		$(OBJDIR)/f_finale.o \
 		$(OBJDIR)/f_wipe.o   \
+		$(OBJDIR)/g_demo.o   \
 		$(OBJDIR)/g_game.o   \
 		$(OBJDIR)/g_input.o  \
 		$(OBJDIR)/am_map.o   \

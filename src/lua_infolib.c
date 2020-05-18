@@ -388,10 +388,7 @@ static int lib_setSpriteInfo(lua_State *L)
 		lua_Integer i = 0;
 		const char *str = NULL;
 		if (lua_isnumber(L, 2))
-		{
 			i = lua_tointeger(L, 2);
-			i++; // shift index in case of missing rotsprite support
-		}
 		else
 			str = luaL_checkstring(L, 2);
 
@@ -1634,7 +1631,6 @@ int LUA_InfoLib(lua_State *L)
 			lua_pushcfunction(L, lib_spriteinfolen);
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
-	lua_pushvalue(L, -1);
 	lua_setglobal(L, "spriteinfo");
 
 	luaL_newmetatable(L, META_LUABANKS);

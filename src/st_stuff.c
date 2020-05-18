@@ -1325,12 +1325,21 @@ void ST_drawTitleCard(void)
 {
 	char *lvlttl = mapheaderinfo[gamemap-1]->lvlttl;
 	char *subttl = mapheaderinfo[gamemap-1]->subttl;
-	INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
+	UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
 	INT32 lvlttlxpos, ttlnumxpos, zonexpos;
 	INT32 subttlxpos = BASEVIDWIDTH/2;
 	INT32 ttlscroll = FixedInt(lt_scroll);
 	INT32 zzticker;
 	patch_t *actpat, *zigzag, *zztext;
+	UINT8 colornum;
+	const UINT8 *colormap;
+
+	if (players[consoleplayer].skincolor)
+		colornum = players[consoleplayer].skincolor;
+	else
+		colornum = cv_playercolor.value;
+
+	colormap = R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE);
 
 	if (!G_IsTitleCardAvailable())
 		return;
@@ -1364,16 +1373,21 @@ void ST_drawTitleCard(void)
 	if (!splitscreen || (splitscreen && stplyr == &players[displayplayer]))
 	{
 		zzticker = lt_ticker;
-		V_DrawScaledPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
-		V_DrawScaledPatch(FixedInt(lt_zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag);
-		V_DrawScaledPatch(FixedInt(lt_zigzag), (-zigzag->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
-		V_DrawScaledPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext);
+		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
+		V_DrawMappedPatch(FixedInt(lt_zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
+		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zigzag->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
+		V_DrawMappedPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 	}
 
 	if (actnum)
 	{
 		if (!splitscreen)
-			V_DrawScaledPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat);
+		{
+			if (actnum > 9) // slightly offset the act diamond for two-digit act numbers
+				V_DrawMappedPatch(ttlnumxpos + (V_LevelActNumWidth(actnum)/4) + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
+			else
+				V_DrawMappedPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
+		}
 		V_DrawLevelActNum(ttlnumxpos + ttlscroll, 104, V_PERPLAYER, actnum);
 	}
 

@@ -1686,7 +1686,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 				// Needs ML_EFFECT4 flag for pushables to break it
 				if (!(rover->master->flags & ML_EFFECT4)) continue;
 
-				if (!rover->master->frontsector->crumblestate)
+				if (rover->master->frontsector->crumblestate == CRUMBLE_NONE)
 				{
 					topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
 					bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
@@ -2890,7 +2890,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 			mo->eflags |= MFE_JUSTHITFLOOR; // Spin Attack
 
 			{
-#ifdef POLYOBJECTS
 				// Check if we're on a polyobject
 				// that triggers a linedef executor.
 				msecnode_t *node;
@@ -2950,8 +2949,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 				}
 
 			if (!stopmovecut)
-#endif
-
 				// Cut momentum in half when you hit the ground and
 				// aren't pressing any controls.
 				if (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING))
@@ -7026,8 +7023,7 @@ static void P_MobjScaleThink(mobj_t *mobj)
 	fixed_t oldheight = mobj->height;
 	UINT8 correctionType = 0; // Don't correct Z position, just gain height
 
-	if ((mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
-		&& mobj->type != MT_EGGMOBILE_FIRE)
+	if (mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
 		correctionType = 1; // Correct Z position by centering
 	else if (mobj->eflags & MFE_VERTICALFLIP)
 		correctionType = 2; // Correct Z position by moving down
@@ -7048,10 +7044,6 @@ static void P_MobjScaleThink(mobj_t *mobj)
 		/// \todo Lua hook for "reached destscale"?
 		switch (mobj->type)
 		{
-		case MT_EGGMOBILE_FIRE:
-			mobj->destscale = FRACUNIT;
-			mobj->scalespeed = FRACUNIT>>4;
-			break;
 		default:
 			break;
 		}
@@ -8227,6 +8219,7 @@ static boolean P_MobjDeadThink(mobj_t *mobj)
 // See Linedef Exec 457 (Track mobj angle to point)
 static void P_TracerAngleThink(mobj_t *mobj)
 {
+	angle_t looking;
 	angle_t ang;
 
 	if (!mobj->tracer)
@@ -8241,7 +8234,12 @@ static void P_TracerAngleThink(mobj_t *mobj)
 	// mobj->cvval - Allowable failure delay
 	// mobj->cvmem - Failure timer
 
-	ang = mobj->angle - R_PointToAngle2(mobj->x, mobj->y, mobj->tracer->x, mobj->tracer->y);
+	if (mobj->player)
+		looking = ( mobj->player->cmd.angleturn << 16 );/* fixes CS_LMAOGALOG */
+	else
+		looking = mobj->angle;
+
+	ang = looking - R_PointToAngle2(mobj->x, mobj->y, mobj->tracer->x, mobj->tracer->y);
 
 	// \todo account for distance between mobj and tracer
 	// Because closer mobjs can be facing beyond the angle tolerance
@@ -9250,8 +9248,11 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
 				&& P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z - mobj->z) <= mobj->radius*16)
 			{
+				var1 = mobj->info->speed;
+				var2 = 1;
+
 				// Home in on the target.
-				P_HomingAttack(mobj, mobj->tracer);
+				A_HomingChase(mobj);
 
 				if (mobj->z < mobj->floorz)
 					mobj->z = mobj->floorz;
@@ -11564,7 +11565,7 @@ void P_MovePlayerToStarpost(INT32 playernum)
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
-static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip)
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip)
 {
 	const subsector_t *ss = R_PointInSubsector(x, y);
 
@@ -11579,7 +11580,7 @@ static fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, 
 		return P_GetSectorFloorZAt(ss->sector, x, y) + offset;
 }
 
-static fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
+fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
 {
 	fixed_t offset = mthing->z << FRACBITS;
 	boolean flip = (!!(mobjinfo[mobjtype].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
@@ -11619,6 +11620,7 @@ static fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthin
 
 	// Ring-like items, may float additional units with MTF_AMBUSH.
 	case MT_SPIKEBALL:
+	case MT_EMERHUNT:
 	case MT_EMERALDSPAWN:
 	case MT_TOKEN:
 	case MT_EMBLEM:

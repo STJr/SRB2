@@ -48,6 +48,7 @@ typedef enum
 	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
 	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
 	SF_NONIGHTSROTATION = 1<<14, // Disable sprite rotation for NiGHTS
+	SF_NONIGHTSSUPER    = 1<<15, // Disable super colors for NiGHTS (if you have SF_SUPER)
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -238,7 +239,8 @@ typedef enum
 	CR_MACESPIN,
 	CR_MINECART,
 	CR_ROLLOUT,
-	CR_PTERABYTE
+	CR_PTERABYTE,
+	CR_DUSTDEVIL
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
@@ -278,6 +280,9 @@ typedef enum
 	pw_nights_linkfreeze,
 
 	pw_nocontrol, //for linedef exec 427
+
+	pw_dye, // for dyes
+
 	pw_justlaunched, // Launched off a slope this tic (0=none, 1=standard launch, 2=half-pipe launch)
 
 	NUMPOWERS

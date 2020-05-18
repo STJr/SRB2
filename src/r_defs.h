@@ -28,8 +28,6 @@
 #include "m_aatree.h"
 #endif
 
-#define POLYOBJECTS
-
 //
 // ClipWallSegment
 // Clips the given range of columns
@@ -107,9 +105,7 @@ typedef struct
 	fixed_t z;         ///< Z coordinate.
 } degenmobj_t;
 
-#ifdef POLYOBJECTS
 #include "p_polyobj.h"
-#endif
 
 // Store fake planes in a resizable array insted of just by
 // heightsec. Allows for multiple fake planes.
@@ -130,11 +126,11 @@ typedef enum
 	FF_CUTEXTRA          = 0x100,      ///< Cuts out hidden translucent pixels.
 	FF_CUTLEVEL          = 0x180,      ///< Cuts out all hidden pixels.
 	FF_CUTSPRITES        = 0x200,      ///< Final step in making 3D water.
-	FF_BOTHPLANES        = 0x400,      ///< Renders both planes all the time.
+	FF_BOTHPLANES        = 0x400,      ///< Render inside and outside planes.
 	FF_EXTRA             = 0x800,      ///< Gets cut by ::FF_CUTEXTRA.
 	FF_TRANSLUCENT       = 0x1000,     ///< See through!
 	FF_FOG               = 0x2000,     ///< Fog "brush."
-	FF_INVERTPLANES      = 0x4000,     ///< Reverse the plane visibility rules.
+	FF_INVERTPLANES      = 0x4000,     ///< Only render inside planes.
 	FF_ALLSIDES          = 0x8000,     ///< Render inside and outside sides.
 	FF_INVERTSIDES       = 0x10000,    ///< Only render inside sides.
 	FF_DOUBLESHADOW      = 0x20000,    ///< Make two lightlist entries to reset light?
@@ -277,6 +273,16 @@ typedef enum
 	SF_INVERTPRECIP            =  1<<4,
 } sectorflags_t;
 
+
+typedef enum
+{
+	CRUMBLE_NONE, // No crumble thinker
+	CRUMBLE_WAIT, // Don't float on water because this is supposed to wait for a crumble
+	CRUMBLE_ACTIVATED, // Crumble thinker activated, but hasn't fallen yet
+	CRUMBLE_FALL, // Crumble thinker is falling
+	CRUMBLE_RESTORE, // Crumble thinker is about to restore to original position
+} crumblestate_t;
+
 //
 // The SECTORS record, at runtime.
 // Stores things/mobjs.
@@ -328,11 +334,6 @@ typedef struct sector_s
 
 	size_t linecount;
 	struct line_s **lines; // [linecount] size
-	// Hack: store special line tagging to some sectors
-	// to efficiently help work around bugs by directly
-	// referencing the specific line that the problem happens in.
-	// (used in T_MovePlane mobj physics)
-	struct line_s *tagline;
 
 	// Improved fake floor hack
 	ffloor_t *ffloors;
@@ -429,9 +430,7 @@ typedef struct line_s
 	void *splats; // wallsplat_t list
 #endif
 	INT32 firsttag, nexttag; // improves searches for tags.
-#ifdef POLYOBJECTS
 	polyobj_t *polyobj; // Belongs to a polyobject?
-#endif
 
 	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
@@ -474,9 +473,7 @@ typedef struct subsector_s
 	sector_t *sector;
 	INT16 numlines;
 	UINT16 firstline;
-#ifdef POLYOBJECTS
 	struct polyobj_s *polyList; // haleyjd 02/19/06: list of polyobjects
-#endif
 #if 1//#ifdef FLOORSPLATS
 	void *splats; // floorsplat_t list
 #endif
@@ -579,10 +576,8 @@ typedef struct seg_s
 	// Why slow things down by calculating lightlists for every thick side?
 	size_t numlights;
 	r_lightlist_t *rlights;
-#ifdef POLYOBJECTS
 	polyobj_t *polyseg;
 	boolean dontrenderme;
-#endif
 	boolean glseg;
 } seg_t;
 

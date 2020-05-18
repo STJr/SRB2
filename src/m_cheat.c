@@ -934,6 +934,12 @@ void Command_Setcontinues_f(void)
 	REQUIRE_NOULTIMATE;
 	REQUIRE_PANDORA;
 
+	if (!continuesInSession)
+	{
+		CONS_Printf(M_GetText("This session does not use continues.\n"));
+		return;
+	}
+
 	if (COM_Argc() > 1)
 	{
 		INT32 numcontinues = atoi(COM_Argv(1));

@@ -85,7 +85,7 @@ extern patch_t *lt_font[LT_FONTSIZE];
 extern patch_t *cred_font[CRED_FONTSIZE];
 extern patch_t *ntb_font[NT_FONTSIZE];
 extern patch_t *nto_font[NT_FONTSIZE];
-extern patch_t *ttlnum[20];
+extern patch_t *ttlnum[10];
 extern patch_t *emeraldpics[3][8];
 extern patch_t *rflagico;
 extern patch_t *bflagico;
