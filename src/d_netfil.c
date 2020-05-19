@@ -93,6 +93,17 @@ fileneeded_t fileneeded[MAX_WADFILES]; // List of needed files
 static tic_t lasttimeackpacketsent = 0;
 char downloaddir[512] = "DOWNLOAD";
 
+// For resuming failed downloads
+typedef struct
+{
+	char filename[MAX_WADPATH];
+	UINT8 md5sum[16];
+	boolean *receivedfragments;
+	UINT32 fragmentsize;
+	UINT32 currentsize;
+} pauseddownload_t;
+static pauseddownload_t *pauseddownload = NULL;
+
 #ifdef CLIENT_LOADINGSCREEN
 // for cl loading screen
 INT32 lastfilenum = -1;
@@ -253,6 +264,31 @@ boolean CL_CheckDownloadable(void)
 			break;
 	}
 	return false;
+}
+
+/** Returns true if a needed file transfer can be resumed
+  *
+  * \param file The needed file to resume the transfer for
+  * \return True if the transfer can be resumed
+  *
+  */
+static boolean CL_CanResumeDownload(fileneeded_t *file)
+{
+	return pauseddownload
+		&& !strcmp(pauseddownload->filename, file->filename) // Same name
+		&& !memcmp(pauseddownload->md5sum, file->md5sum, 16) // Same checksum
+		&& pauseddownload->fragmentsize == file->fragmentsize; // Same fragment size
+}
+
+void CL_AbortDownloadResume(void)
+{
+	if (!pauseddownload)
+		return;
+
+	free(pauseddownload->receivedfragments);
+	remove(pauseddownload->filename);
+	free(pauseddownload);
+	pauseddownload = NULL;
 }
 
 /** Sends requests for files in the ::fileneeded table with a status of
@@ -630,7 +666,7 @@ static INT32 filestosend = 0;
   *
   * \param node The node to send the file to
   * \param filename The file to send
-  * \param fileid ???
+  * \param fileid The index of the file in the list of added files
   * \sa AddRamToSendQueue
   * \sa AddLuaFileToSendQueue
   *
@@ -721,7 +757,7 @@ static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid
   * \param data The memory block to send
   * \param size The size of the block in bytes
   * \param freemethod How to free the block after it has been sent
-  * \param fileid ???
+  * \param fileid The index of the file in the list of added files
   * \sa AddFileToSendQueue
   * \sa AddLuaFileToSendQueue
   *
@@ -1083,13 +1119,36 @@ void FileReceiveTicker(void)
 {
 	INT32 i;
 
-	if (lasttimeackpacketsent - I_GetTime() > TICRATE / 2)
-		for (i = 0; i < fileneedednum; i++)
-			if (fileneeded[i].status == FS_DOWNLOADING)
+	for (i = 0; i < fileneedednum; i++)
+	{
+		fileneeded_t *file = &fileneeded[i];
+
+		if (file->status == FS_DOWNLOADING)
+		{
+			if (lasttimeackpacketsent - I_GetTime() > TICRATE / 2)
+				SendAckPacket(file->ackpacket, i);
+
+			// When resuming a tranfer, start with telling
+			// the server what parts we already received
+			if (file->ackresendposition != UINT32_MAX && file->status == FS_DOWNLOADING)
 			{
-				SendAckPacket(fileneeded[i].ackpacket, i);
-				break;
+				// Acknowledge ~70 MB/s, whichs means the client sends ~18 KB/s
+				INT32 j;
+				for (j = 0; j < 2048; j++)
+				{
+					if (file->receivedfragments[file->ackresendposition])
+						AddFragmentToAckPacket(file->ackpacket, file->ackresendposition, i);
+
+					file->ackresendposition++;
+					if (file->ackresendposition * file->fragmentsize >= file->totalsize)
+					{
+						file->ackresendposition = UINT32_MAX;
+						break;
+					}
+				}
 			}
+		}
+	}
 }
 
 void PT_FileFragment(void)
@@ -1126,20 +1185,47 @@ void PT_FileFragment(void)
 		if (file->file)
 			I_Error("PT_FileFragment: already open file\n");
 
-		file->file = fopen(filename, file->textmode ? "w" : "wb");
-		if (!file->file)
-			I_Error("Can't create file %s: %s", filename, strerror(errno));
-
-		CONS_Printf("\r%s...\n",filename);
-		file->currentsize = 0;
 		file->status = FS_DOWNLOADING;
+		file->fragmentsize = fragmentsize;
 
-		file->totalsize = LONG(netbuffer->u.filetxpak.filesize);
-
-		file->receivedfragments = calloc(file->totalsize / fragmentsize + 1, sizeof(*file->receivedfragments));
 		file->ackpacket = calloc(1, sizeof(*file->ackpacket) + 512);
-		if (!(file->receivedfragments && file->ackpacket))
+		if (!file->ackpacket)
 			I_Error("FileSendTicker: No more memory\n");
+
+		if (CL_CanResumeDownload(file))
+		{
+			file->file = fopen(filename, file->textmode ? "r+" : "r+b");
+			if (!file->file)
+				I_Error("Can't reopen file %s: %s", filename, strerror(errno));
+			CONS_Printf("\r%s...\n", filename);
+
+			CONS_Printf("Resuming download...\n");
+			file->currentsize = pauseddownload->currentsize;
+			file->receivedfragments = pauseddownload->receivedfragments;
+			file->ackresendposition = 0;
+
+			free(pauseddownload);
+			pauseddownload = NULL;
+		}
+		else
+		{
+			CL_AbortDownloadResume();
+
+			file->file = fopen(filename, file->textmode ? "w" : "wb");
+			if (!file->file)
+				I_Error("Can't create file %s: %s", filename, strerror(errno));
+
+			CONS_Printf("\r%s...\n",filename);
+
+			file->currentsize = 0;
+			file->totalsize = LONG(netbuffer->u.filetxpak.filesize);
+			file->ackresendposition = UINT32_MAX; // Only used for resumed downloads
+
+			file->receivedfragments = calloc(file->totalsize / fragmentsize + 1, sizeof(*file->receivedfragments));
+			if (!file->receivedfragments)
+				I_Error("FileSendTicker: No more memory\n");
+		}
+
 		lasttimeackpacketsent = I_GetTime();
 	}
 
@@ -1256,14 +1342,28 @@ void CloseNetFile(void)
 		if (fileneeded[i].status == FS_DOWNLOADING && fileneeded[i].file)
 		{
 			fclose(fileneeded[i].file);
-			free(fileneeded[i].receivedfragments);
 			free(fileneeded[i].ackpacket);
-			// File is not complete delete it
-			remove(fileneeded[i].filename);
-		}
 
-	// Remove PT_FILEFRAGMENT from acknowledge list
-	Net_AbortPacketType(PT_FILEFRAGMENT);
+			if (!pauseddownload && i != 0) // 0 is either srb2.srb or the gamestate...
+			{
+				// Don't remove the file, save it for later in case we resume the download
+				pauseddownload = malloc(sizeof(*pauseddownload));
+				if (!pauseddownload)
+					I_Error("CloseNetFile: No more memory\n");
+
+				strcpy(pauseddownload->filename, fileneeded[i].filename);
+				memcpy(pauseddownload->md5sum, fileneeded[i].md5sum, 16);
+				pauseddownload->currentsize = fileneeded[i].currentsize;
+				pauseddownload->receivedfragments = fileneeded[i].receivedfragments;
+				pauseddownload->fragmentsize = fileneeded[i].fragmentsize;
+			}
+			else
+			{
+				free(fileneeded[i].receivedfragments);
+				// File is not complete delete it
+				remove(fileneeded[i].filename);
+			}
+		}
 }
 
 // Functions cut and pasted from Doomatic :)

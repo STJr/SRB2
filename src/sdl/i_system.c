@@ -293,6 +293,7 @@ static void I_ReportSignal(int num, int coredumped)
 FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 {
 	D_QuitNetGame(); // Fix server freezes
+	CL_AbortDownloadResume();
 	I_ReportSignal(num, 0);
 	I_ShutdownSystem();
 	signal(num, SIG_DFL);               //default signal action
@@ -2293,6 +2294,7 @@ void I_Quit(void)
 		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
+	CL_AbortDownloadResume();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_ShutdownCD();
@@ -2409,6 +2411,7 @@ void I_Error(const char *error, ...)
 		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
+	CL_AbortDownloadResume();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_ShutdownCD();

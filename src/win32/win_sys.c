@@ -465,6 +465,7 @@ static void signal_handler(int num)
 	char sigdef[64];
 
 	D_QuitNetGame(); // Fix server freezes
+	CL_AbortDownloadResume();
 	I_ShutdownSystem();
 
 	switch (num)
@@ -650,6 +651,7 @@ void I_Error(const char *error, ...)
 		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
+	CL_AbortDownloadResume();
 
 	// shutdown everything that was started
 	I_ShutdownSystem();
@@ -745,6 +747,7 @@ void I_Quit(void)
 	// or something else that will be finished by I_ShutdownSystem(),
 	// so do it before.
 	D_QuitNetGame();
+	CL_AbortDownloadResume();
 
 	// shutdown everything that was started
 	I_ShutdownSystem();

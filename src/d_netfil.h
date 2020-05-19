@@ -43,10 +43,11 @@ typedef struct
 	// Used only for download
 	FILE *file;
 	boolean *receivedfragments;
+	UINT32 fragmentsize;
 	fileack_pak *ackpacket;
-	tic_t lasttimeackpacketsent;
 	UINT32 currentsize;
 	UINT32 totalsize;
+	UINT32 ackresendposition; // Used when resuming downloads
 	filestatus_t status; // The value returned by recsearch
 	boolean justdownloaded; // To prevent late fragments from causing an I_Error
 	boolean textmode; // For files requested by Lua without the "b" option
@@ -119,6 +120,7 @@ void MakePathDirs(char *path);
 
 void SV_AbortSendFiles(INT32 node);
 void CloseNetFile(void);
+void CL_AbortDownloadResume(void);
 
 boolean fileexist(char *filename, time_t ptime);
 
