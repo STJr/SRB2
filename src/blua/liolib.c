@@ -321,6 +321,12 @@ void Got_LuaFile(UINT8 **cp, INT32 playernum)
 
 	RemoveLuaFileTransfer();
 
+	if (waitingforluafilecommand)
+	{
+		waitingforluafilecommand = false;
+		CL_PrepareDownloadLuaFile();
+	}
+
 	if (server && luafiletransfers)
 		SV_PrepareSendLuaFile();
 }

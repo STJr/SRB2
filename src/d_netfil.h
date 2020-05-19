@@ -95,12 +95,14 @@ typedef struct luafiletransfer_s
 	char *realfilename;
 	char mode[4]; // rb+/wb+/ab+ + null character
 	INT32 id; // Callback ID
+	boolean ongoing;
 	luafiletransfernodestatus_t nodestatus[MAXNETNODES];
 	struct luafiletransfer_s *next;
 } luafiletransfer_t;
 
 extern luafiletransfer_t *luafiletransfers;
 extern boolean waitingforluafiletransfer;
+extern boolean waitingforluafilecommand;
 extern char luafiledir[256 + 16];
 
 void AddLuaFileTransfer(const char *filename, const char *mode);

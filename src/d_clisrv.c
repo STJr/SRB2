@@ -3256,6 +3256,7 @@ void D_QuitNetGame(void)
 	CloseNetFile();
 	RemoveAllLuaFileTransfers();
 	waitingforluafiletransfer = false;
+	waitingforluafilecommand = false;
 
 	if (server)
 	{

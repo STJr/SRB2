@@ -110,6 +110,7 @@ INT32 lastfilenum = -1;
 
 luafiletransfer_t *luafiletransfers = NULL;
 boolean waitingforluafiletransfer = false;
+boolean waitingforluafilecommand = false;
 char luafiledir[256 + 16] = "luafiles";
 
 
@@ -536,6 +537,8 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 	// Only if there is no transfer already going on
 	if (server && filetransfer == luafiletransfers)
 		SV_PrepareSendLuaFile();
+	else
+		filetransfer->ongoing = false;
 
 	// Store the callback so it can be called once everyone has the file
 	filetransfer->id = id;
@@ -577,6 +580,8 @@ void SV_PrepareSendLuaFile(void)
 {
 	char *binfilename;
 	INT32 i;
+
+	luafiletransfers->ongoing = true;
 
 	// Set status to "waiting" for everyone
 	for (i = 0; i < MAXNETNODES; i++)
@@ -660,6 +665,12 @@ void CL_PrepareDownloadLuaFile(void)
 		return;
 	}
 
+	if (luafiletransfers->ongoing)
+	{
+		waitingforluafilecommand = true;
+		return;
+	}
+
 	// Tell the server we are ready to receive the file
 	netbuffer->packettype = PT_ASKLUAFILE;
 	HSendPacket(servernode, true, 0, 0);
@@ -674,6 +685,8 @@ void CL_PrepareDownloadLuaFile(void)
 
 	// Make sure all directories in the file path exist
 	MakePathDirs(fileneeded[0].filename);
+
+	luafiletransfers->ongoing = true;
 }
 
 // Number of files to send
