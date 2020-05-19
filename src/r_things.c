@@ -1358,7 +1358,7 @@ static void R_ProjectSprite(mobj_t *thing)
 #endif
 	size_t lump;
 
-	size_t rot;
+	size_t frame, rot;
 	UINT16 flip;
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
 
@@ -1420,7 +1420,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		I_Error("R_ProjectSprite: invalid sprite number %d ", thing->sprite);
 #endif
 
-	rot = thing->frame&FF_FRAMEMASK;
+	frame = thing->frame&FF_FRAMEMASK;
 
 	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
 	if (thing->skin && thing->sprite == SPR_PLAY)
@@ -1429,15 +1429,15 @@ static void R_ProjectSprite(mobj_t *thing)
 #ifdef ROTSPRITE
 		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
 #endif
-		if (rot >= sprdef->numframes) {
-			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(rot));
+		if (frame >= sprdef->numframes) {
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(frame));
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
 #ifdef ROTSPRITE
 			sprinfo = NULL;
 #endif
-			rot = thing->frame&FF_FRAMEMASK;
+			frame = thing->frame&FF_FRAMEMASK;
 		}
 	}
 	else
@@ -1447,10 +1447,10 @@ static void R_ProjectSprite(mobj_t *thing)
 		sprinfo = NULL;
 #endif
 
-		if (rot >= sprdef->numframes)
+		if (frame >= sprdef->numframes)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
-				sizeu1(rot), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
+				sizeu1(frame), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
 			if (thing->sprite == thing->state->sprite && thing->frame == thing->state->frame)
 			{
 				thing->state->sprite = states[S_UNKNOWN].sprite;
@@ -1459,11 +1459,11 @@ static void R_ProjectSprite(mobj_t *thing)
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
-			rot = thing->frame&FF_FRAMEMASK;
+			frame = thing->frame&FF_FRAMEMASK;
 		}
 	}
 
-	sprframe = &sprdef->spriteframes[rot];
+	sprframe = &sprdef->spriteframes[frame];
 
 #ifdef PARANOIA
 	if (!sprframe)
@@ -1517,7 +1517,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
 		if (!(sprframe->rotsprite.cached & (1<<rot)))
-			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
+			R_CacheRotSprite(thing->sprite, frame, sprinfo, sprframe, rot, flip);
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
 		{
