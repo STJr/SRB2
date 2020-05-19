@@ -284,8 +284,16 @@ void Got_LuaFile(UINT8 **cp, INT32 playernum)
 	// Push the first argument (file handle or nil) on the stack
 	if (success)
 	{
+		char mode[4];
+
+		// Ensure we are opening in binary mode
+		// (if it's a text file, newlines have been converted already)
+		strcpy(mode, luafiletransfers->mode);
+		if (!strchr(mode, 'b'))
+			strcat(mode, "b");
+
 		pf = newfile(gL); // Create and push the file handle
-		*pf = fopen(luafiletransfers->realfilename, luafiletransfers->mode); // Open the file
+		*pf = fopen(luafiletransfers->realfilename, mode); // Open the file
 		if (!*pf)
 			I_Error("Can't open file \"%s\"\n", luafiletransfers->realfilename); // The file SHOULD exist
 	}

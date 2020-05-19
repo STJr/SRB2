@@ -4239,11 +4239,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 			break;
 		case PT_ASKLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
-			{
-				char *name = va("%s" PATHSEP "%s", luafiledir, luafiletransfers->filename);
-				boolean textmode = !strchr(luafiletransfers->mode, 'b');
-				AddLuaFileToSendQueue(node, name, textmode);
-			}
+				AddLuaFileToSendQueue(node, luafiletransfers->realfilename);
 			break;
 		case PT_HASLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_SENDING)

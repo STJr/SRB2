@@ -69,7 +69,6 @@ typedef struct filetx_s
 	UINT32 size; // Size of the file
 	UINT8 fileid;
 	INT32 node; // Destination
-	boolean textmode; // For files requested by Lua without the "b" option
 	struct filetx_s *next; // Next file in the list
 } filetx_t;
 
@@ -180,7 +179,6 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr)
 		fileneeded[i].file = NULL; // The file isn't open yet
 		READSTRINGN(p, fileneeded[i].filename, MAX_WADPATH); // The next bytes are the file name
 		READMEM(p, fileneeded[i].md5sum, 16); // The last 16 bytes are the file checksum
-		fileneeded[i].textmode = false;
 	}
 }
 
@@ -197,7 +195,6 @@ void CL_PrepareDownloadSaveGame(const char *tmpsave)
 	fileneeded[0].file = NULL;
 	memset(fileneeded[0].md5sum, 0, 16);
 	strcpy(fileneeded[0].filename, tmpsave);
-	fileneeded[0].textmode = false;
 }
 
 /** Checks the server to see if we CAN download all the files,
@@ -507,8 +504,6 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 	luafiletransfer_t *filetransfer;
 	static INT32 id;
 
-	//CONS_Printf("AddLuaFileTransfer \"%s\"\n", filename);
-
 	// Find the last transfer in the list and set a pointer to its "next" field
 	prevnext = &luafiletransfers;
 	while (*prevnext)
@@ -580,6 +575,7 @@ static void SV_PrepareSendLuaFileToNextNode(void)
 
 void SV_PrepareSendLuaFile(void)
 {
+	char *binfilename;
 	INT32 i;
 
 	// Set status to "waiting" for everyone
@@ -587,7 +583,25 @@ void SV_PrepareSendLuaFile(void)
 		luafiletransfers->nodestatus[i] = LFTNS_WAITING;
 
 	if (FIL_ReadFileOK(luafiletransfers->realfilename))
+	{
+		// If opening in text mode, convert all newlines to LF
+		if (!strchr(luafiletransfers->mode, 'b'))
+		{
+			binfilename = strdup(va("%s" PATHSEP "$$$%d%d.tmp",
+				luafiledir, rand(), rand()));
+			if (!binfilename)
+				I_Error("SV_PrepareSendLuaFile: Out of memory\n");
+
+			if (!FIL_ConvertTextFileToBinary(luafiletransfers->realfilename, binfilename))
+				I_Error("SV_PrepareSendLuaFile: Failed to convert file newlines\n");
+
+			// Use the temporary file instead
+			free(luafiletransfers->realfilename);
+			luafiletransfers->realfilename = binfilename;
+		}
+
 		SV_PrepareSendLuaFileToNextNode();
+	}
 	else
 	{
 		// Send a net command with 0 as its first byte to indicate the file couldn't be opened
@@ -605,6 +619,10 @@ void SV_HandleLuaFileSent(UINT8 node)
 void RemoveLuaFileTransfer(void)
 {
 	luafiletransfer_t *filetransfer = luafiletransfers;
+
+	// If it was a temporary file, delete it
+	if (server && !strchr(filetransfer->mode, 'b'))
+		remove(filetransfer->realfilename);
 
 	RemoveLuaFileCallback(filetransfer->id);
 
@@ -653,7 +671,6 @@ void CL_PrepareDownloadLuaFile(void)
 	fileneeded[0].file = NULL;
 	memset(fileneeded[0].md5sum, 0, 16);
 	strcpy(fileneeded[0].filename, luafiletransfers->realfilename);
-	fileneeded[0].textmode = !strchr(luafiletransfers->mode, 'b');
 
 	// Make sure all directories in the file path exist
 	MakePathDirs(fileneeded[0].filename);
@@ -800,7 +817,7 @@ void AddRamToSendQueue(INT32 node, void *data, size_t size, freemethod_t freemet
   * \sa AddRamToSendQueue
   *
   */
-boolean AddLuaFileToSendQueue(INT32 node, const char *filename, boolean textmode)
+boolean AddLuaFileToSendQueue(INT32 node, const char *filename)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
@@ -830,9 +847,6 @@ boolean AddLuaFileToSendQueue(INT32 node, const char *filename, boolean textmode
 	// Set the file name and get rid of the path
 	strlcpy(p->id.filename, filename, MAX_WADPATH); // !!!
 	//nameonly(p->id.filename);
-
-	// Open in text mode if required by the Lua script
-	p->textmode = textmode;
 
 	DEBFILE(va("Sending Lua file %s to %d\n", filename, node));
 	p->ram = SF_FILE; // It's a file, we need to close it and free its name once we're done sending it
@@ -937,7 +951,7 @@ void FileSendTicker(void)
 				long filesize;
 
 				transfer[i].currentfile =
-					fopen(f->id.filename, f->textmode ? "r" : "rb");
+					fopen(f->id.filename, "rb");
 
 				if (!transfer[i].currentfile)
 					I_Error("File %s does not exist",
@@ -984,18 +998,10 @@ void FileSendTicker(void)
 			M_Memcpy(p->data, &f->id.ram[transfer[i].position], fragmentsize);
 		else
 		{
-			size_t n;
-
 			fseek(transfer[i].currentfile, transfer[i].position, SEEK_SET);
 
-			n = fread(p->data, 1, fragmentsize, transfer[i].currentfile);
-			if (n != fragmentsize) // Either an error or Windows turning CR-LF into LF
-			{
-				if (f->textmode && feof(transfer[i].currentfile))
-                    fragmentsize = n;
-				else if (fread(p->data, 1, fragmentsize, transfer[i].currentfile) != fragmentsize)
-					I_Error("FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(fragmentsize), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
-			}
+			if (fread(p->data, 1, fragmentsize, transfer[i].currentfile) != fragmentsize)
+				I_Error("FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(fragmentsize), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
 		}
 		p->position = LONG(transfer[i].position);
 		p->fileid = f->fileid;
@@ -1195,7 +1201,7 @@ void PT_FileFragment(void)
 
 		if (CL_CanResumeDownload(file))
 		{
-			file->file = fopen(filename, file->textmode ? "r+" : "r+b");
+			file->file = fopen(filename, "r+b");
 			if (!file->file)
 				I_Error("Can't reopen file %s: %s", filename, strerror(errno));
 			CONS_Printf("\r%s...\n", filename);
@@ -1212,7 +1218,7 @@ void PT_FileFragment(void)
 		{
 			CL_AbortDownloadResume();
 
-			file->file = fopen(filename, file->textmode ? "w" : "wb");
+			file->file = fopen(filename, "wb");
 			if (!file->file)
 				I_Error("Can't create file %s: %s", filename, strerror(errno));
 

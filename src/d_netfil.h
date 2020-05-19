@@ -50,7 +50,6 @@ typedef struct
 	UINT32 ackresendposition; // Used when resuming downloads
 	filestatus_t status; // The value returned by recsearch
 	boolean justdownloaded; // To prevent late fragments from causing an I_Error
-	boolean textmode; // For files requested by Lua without the "b" option
 } fileneeded_t;
 
 extern INT32 fileneedednum;
@@ -105,9 +104,8 @@ extern boolean waitingforluafiletransfer;
 extern char luafiledir[256 + 16];
 
 void AddLuaFileTransfer(const char *filename, const char *mode);
-void SV_PrepareSendLuaFileToNextNode(void);
-boolean AddLuaFileToSendQueue(INT32 node, const char *filename, boolean textmode);
-void SV_PrepareSendLuaFile(const char *filename);
+void SV_PrepareSendLuaFile(void);
+boolean AddLuaFileToSendQueue(INT32 node, const char *filename);
 void SV_HandleLuaFileSent(UINT8 node);
 void RemoveLuaFileTransfer(void);
 void RemoveAllLuaFileTransfers(void);
