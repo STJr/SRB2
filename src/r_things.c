@@ -1582,9 +1582,6 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
 
-		if (tx2 < -(tz2<<2) || tx > tz<<2) // too far off the side?
-			return;
-
 		// Needs partially clipped
 		if (tz < FixedMul(MINZ, this_scale))
 		{
@@ -1602,6 +1599,9 @@ static void R_ProjectSprite(mobj_t *thing)
 			yscale2 = FixedDiv(projectiony, tz2);
 			xscale2 = FixedDiv(projection, tz2);
 		}
+
+		if (tx2 < -(tz2<<2) || tx > tz<<2) // too far off the side?
+			return;
 
 		// TODO: tx clamping
 
