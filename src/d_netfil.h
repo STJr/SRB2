@@ -122,6 +122,8 @@ void SV_AbortSendFiles(INT32 node);
 void CloseNetFile(void);
 void CL_AbortDownloadResume(void);
 
+void Command_Downloads_f(void);
+
 boolean fileexist(char *filename, time_t ptime);
 
 // Search a file in the wadpath, return FS_FOUND when found
