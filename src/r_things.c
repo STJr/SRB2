@@ -1557,7 +1557,6 @@ static void R_ProjectSprite(mobj_t *thing)
 		tr_y += FixedMul(offset, sinmul);
 		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		yscale = FixedDiv(projectiony, tz);
-		//if (yscale < 64) return; // Fix some funky visuals
 
 		tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
 		xscale = FixedDiv(projection, tz);
@@ -1577,13 +1576,15 @@ static void R_ProjectSprite(mobj_t *thing)
 		tr_y += FixedMul(offset2, sinmul);
 		tz2 = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		yscale2 = FixedDiv(projectiony, tz2);
-		//if (yscale2 < 64) return; // ditto
 
 		tx2 = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
 		xscale2 = FixedDiv(projection, tz2);
 		x2 = ((centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS);
 
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
+			return;
+
+		if (tx2 < -(tz2<<2) || tx > tz<<2) // too far off the side?
 			return;
 
 		// Needs partially clipped
@@ -1605,6 +1606,8 @@ static void R_ProjectSprite(mobj_t *thing)
 			xscale2 = FixedDiv(projection, tz2);
 			x2 = (centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS;
 		}
+
+		// TODO: tx clamping
 
 		// off the right side?
 		if (x1 > viewwidth)
