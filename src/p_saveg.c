@@ -2018,14 +2018,9 @@ static void SavePolywaypointThinker(const thinker_t *th, UINT8 type)
 	WRITEINT32(save_p, ht->sequence);
 	WRITEINT32(save_p, ht->pointnum);
 	WRITEINT32(save_p, ht->direction);
-	WRITEUINT8(save_p, ht->comeback);
-	WRITEUINT8(save_p, ht->wrap);
+	WRITEUINT8(save_p, ht->returnbehavior);
 	WRITEUINT8(save_p, ht->continuous);
 	WRITEUINT8(save_p, ht->stophere);
-	WRITEFIXED(save_p, ht->diffx);
-	WRITEFIXED(save_p, ht->diffy);
-	WRITEFIXED(save_p, ht->diffz);
-	WRITEUINT32(save_p, SaveMobjnum(ht->target));
 }
 
 static void SavePolyslidedoorThinker(const thinker_t *th, const UINT8 type)
@@ -3157,14 +3152,9 @@ static inline thinker_t* LoadPolywaypointThinker(actionf_p1 thinker)
 	ht->sequence = READINT32(save_p);
 	ht->pointnum = READINT32(save_p);
 	ht->direction = READINT32(save_p);
-	ht->comeback = READUINT8(save_p);
-	ht->wrap = READUINT8(save_p);
+	ht->returnbehavior = READUINT8(save_p);
 	ht->continuous = READUINT8(save_p);
 	ht->stophere = READUINT8(save_p);
-	ht->diffx = READFIXED(save_p);
-	ht->diffy = READFIXED(save_p);
-	ht->diffz = READFIXED(save_p);
-	ht->target = LoadMobj(READUINT32(save_p));
 	return &ht->thinker;
 }
 
@@ -3411,7 +3401,6 @@ static void P_NetUnArchiveThinkers(void)
 
 				case tc_polywaypoint:
 					th = LoadPolywaypointThinker((actionf_p1)T_PolyObjWaypoint);
-					restoreNum = true;
 					break;
 
 				case tc_polyslidedoor:
@@ -3471,7 +3460,6 @@ static void P_NetUnArchiveThinkers(void)
 	if (restoreNum)
 	{
 		executor_t *delay = NULL;
-		polywaypoint_t *polywp = NULL;
 		UINT32 mobjnum;
 		for (currentthinker = thlist[THINK_MAIN].next; currentthinker != &thlist[THINK_MAIN]; currentthinker = currentthinker->next)
 		{
@@ -3481,15 +3469,6 @@ static void P_NetUnArchiveThinkers(void)
 			if (!(mobjnum = (UINT32)(size_t)delay->caller))
 				continue;
 			delay->caller = P_FindNewPosition(mobjnum);
-		}
-		for (currentthinker = thlist[THINK_POLYOBJ].next; currentthinker != &thlist[THINK_POLYOBJ]; currentthinker = currentthinker->next)
-		{
-			if (currentthinker->function.acp1 != (actionf_p1)T_PolyObjWaypoint)
-				continue;
-			polywp = (void *)currentthinker;
-			if (!(mobjnum = (UINT32)(size_t)polywp->target))
-				continue;
-			polywp->target = P_FindNewPosition(mobjnum);
 		}
 	}
 }
