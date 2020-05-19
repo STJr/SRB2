@@ -538,26 +538,9 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 
 	strlcpy(filetransfer->mode, mode, sizeof(filetransfer->mode));
 
-	if (server)
-	{
-		INT32 i;
-
-		// Set status to "waiting" for everyone
-		for (i = 0; i < MAXNETNODES; i++)
-			filetransfer->nodestatus[i] = LFTNS_WAITING;
-
-		if (!luafiletransfers->next) // Only if there is no transfer already going on
-		{
-			if (FIL_ReadFileOK(filetransfer->realfilename))
-				SV_PrepareSendLuaFileToNextNode();
-			else
-			{
-				// Send a net command with 0 as its first byte to indicate the file couldn't be opened
-				UINT8 success = 0;
-				SendNetXCmd(XD_LUAFILE, &success, 1);
-			}
-		}
-	}
+	// Only if there is no transfer already going on
+	if (server && filetransfer == luafiletransfers)
+		SV_PrepareSendLuaFile();
 
 	// Store the callback so it can be called once everyone has the file
 	filetransfer->id = id;
@@ -571,7 +554,7 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 	}
 }
 
-void SV_PrepareSendLuaFileToNextNode(void)
+static void SV_PrepareSendLuaFileToNextNode(void)
 {
 	INT32 i;
 	UINT8 success = 1;
@@ -593,6 +576,24 @@ void SV_PrepareSendLuaFileToNextNode(void)
 	// No client found, everyone has the file
 	// Send a net command with 1 as its first byte to indicate the file could be opened
 	SendNetXCmd(XD_LUAFILE, &success, 1);
+}
+
+void SV_PrepareSendLuaFile(void)
+{
+	INT32 i;
+
+	// Set status to "waiting" for everyone
+	for (i = 0; i < MAXNETNODES; i++)
+		luafiletransfers->nodestatus[i] = LFTNS_WAITING;
+
+	if (FIL_ReadFileOK(luafiletransfers->realfilename))
+		SV_PrepareSendLuaFileToNextNode();
+	else
+	{
+		// Send a net command with 0 as its first byte to indicate the file couldn't be opened
+		UINT8 success = 0;
+		SendNetXCmd(XD_LUAFILE, &success, 1);
+	}
 }
 
 void SV_HandleLuaFileSent(UINT8 node)

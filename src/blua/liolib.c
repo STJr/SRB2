@@ -314,16 +314,7 @@ void Got_LuaFile(UINT8 **cp, INT32 playernum)
 	RemoveLuaFileTransfer();
 
 	if (server && luafiletransfers)
-	{
-		if (FIL_FileOK(luafiletransfers->realfilename))
-			SV_PrepareSendLuaFileToNextNode();
-		else
-		{
-			// Send a net command with 0 as its first byte to indicate the file couldn't be opened
-			success = 0;
-			SendNetXCmd(XD_LUAFILE, &success, 1);
-		}
-	}
+		SV_PrepareSendLuaFile();
 }
 
 
