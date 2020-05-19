@@ -490,29 +490,28 @@ const UINT8 gifframe_gchead[4] = {0x21,0xF9,0x04,0x04}; // GCE, bytes, packed by
 static UINT8 *gifframe_data = NULL;
 static size_t gifframe_size = 8192;
 
+//
+// GIF_rgbconvert
+// converts an RGB frame to a frame with a palette.
+//
 #ifdef HWRENDER
-static void hwrconvert(void)
+static void GIF_rgbconvert(UINT8 *linear, UINT8 *scr)
 {
-	UINT8 *linear = HWR_GetScreenshot();
-	UINT8 *dest = screens[2];
 	UINT8 r, g, b;
-	INT32 x, y;
-	size_t i = 0;
+	size_t src = 0, dest = 0;
+	size_t size = (vid.width * vid.height * 3);
 
 	InitColorLUT(gif_framepalette);
 
-	for (y = 0; y < vid.height; y++)
+	while (src < size)
 	{
-		for (x = 0; x < vid.width; x++, i += 3)
-		{
-			r = (UINT8)linear[i];
-			g = (UINT8)linear[i + 1];
-			b = (UINT8)linear[i + 2];
-			dest[(y * vid.width) + x] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
-		}
+		r = (UINT8)linear[src];
+		g = (UINT8)linear[src + 1];
+		b = (UINT8)linear[src + 2];
+		scr[dest] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
+		src += (3 * scrbuf_downscaleamt);
+		dest += scrbuf_downscaleamt;
 	}
-
-	free(linear);
 }
 #endif
 
@@ -556,7 +555,11 @@ static void GIF_framewrite(void)
 			I_ReadScreen(movie_screen);
 #ifdef HWRENDER
 		else if (rendermode == render_opengl)
-			hwrconvert();
+		{
+			UINT8 *linear = HWR_GetScreenshot();
+			GIF_rgbconvert(linear, movie_screen);
+			free(linear);
+		}
 #endif
 	}
 	else
@@ -565,18 +568,20 @@ static void GIF_framewrite(void)
 		blitw = vid.width;
 		blith = vid.height;
 
-		if (gif_frames == 0)
-		{
-			if (rendermode == render_soft)
-				I_ReadScreen(movie_screen);
 #ifdef HWRENDER
-			else if (rendermode == render_opengl)
-			{
-				hwrconvert();
-				VID_BlitLinearScreen(screens[2], screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
-			}
-#endif
+		// Copy the current OpenGL frame into the base screen
+		if (rendermode == render_opengl)
+		{
+			UINT8 *linear = HWR_GetScreenshot();
+			GIF_rgbconvert(linear, screens[0]);
+			free(linear);
 		}
+#endif
+
+		// Copy the first frame into the movie screen
+		// OpenGL already does the same above.
+		if (gif_frames == 0 && rendermode == render_soft)
+			I_ReadScreen(movie_screen);
 
 		movie_screen = screens[0];
 	}

@@ -1690,7 +1690,7 @@ static void CL_LoadReceivedSavegame(void)
 	// load a base level
 	if (P_LoadNetGame())
 	{
-		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
+		const UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
 		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
 		if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
 		{
@@ -5062,7 +5062,7 @@ void NetUpdate(void)
 
 		// In case the cvar value was lowered
 		if (joindelay)
-			joindelay = min(joindelay - 1, 3 * cv_joindelay.value * TICRATE);
+			joindelay = min(joindelay - 1, 3 * (tic_t)cv_joindelay.value * TICRATE);
 	}
 
 	nowtime /= NEWTICRATERATIO;
