@@ -1346,7 +1346,6 @@ static void R_ProjectSprite(mobj_t *thing)
 {
 	mobj_t *oldthing = thing;
 	fixed_t tr_x, tr_y;
-	fixed_t gxt, gyt;
 	fixed_t tx, tz;
 	fixed_t xscale, yscale, sortscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
 
@@ -1399,18 +1398,13 @@ static void R_ProjectSprite(mobj_t *thing)
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;
 
-	gxt = FixedMul(tr_x, viewcos);
-	gyt = -FixedMul(tr_y, viewsin);
-
-	tz = gxt-gyt;
+	tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
 
 	// thing is behind view plane?
 	if (!papersprite && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
 		return;
 
-	gxt = -FixedMul(tr_x, viewsin);
-	gyt = FixedMul(tr_y, viewcos);
-	basetx = tx = -(gyt + gxt);
+	basetx = tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos); // sideways distance
 
 	// too far off the side?
 	if (!papersprite && abs(tx) > tz<<2) // papersprite clipping is handled later
@@ -1561,15 +1555,11 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		tr_x += FixedMul(offset, cosmul);
 		tr_y += FixedMul(offset, sinmul);
-		gxt = FixedMul(tr_x, viewcos);
-		gyt = -FixedMul(tr_y, viewsin);
-		tz = gxt-gyt;
+		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		yscale = FixedDiv(projectiony, tz);
 		//if (yscale < 64) return; // Fix some funky visuals
 
-		gxt = -FixedMul(tr_x, viewsin);
-		gyt = FixedMul(tr_y, viewcos);
-		tx = -(gyt + gxt);
+		tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
 		xscale = FixedDiv(projection, tz);
 		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
@@ -1585,15 +1575,11 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
-		gxt = FixedMul(tr_x, viewcos);
-		gyt = -FixedMul(tr_y, viewsin);
-		tz2 = gxt-gyt;
+		tz2 = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		yscale2 = FixedDiv(projectiony, tz2);
 		//if (yscale2 < 64) return; // ditto
 
-		gxt = -FixedMul(tr_x, viewsin);
-		gyt = FixedMul(tr_y, viewcos);
-		tx2 = -(gyt + gxt);
+		tx2 = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
 		xscale2 = FixedDiv(projection, tz2);
 		x2 = ((centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS);
 
@@ -1670,9 +1656,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		tr_x = thing->x - viewx;
 		tr_y = thing->y - viewy;
-		gxt = FixedMul(tr_x, viewcos);
-		gyt = -FixedMul(tr_y, viewsin);
-		tz = gxt-gyt;
+		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		linkscale = FixedDiv(projectiony, tz);
 
 		if (tz < FixedMul(MINZ, this_scale))
@@ -1872,7 +1856,6 @@ static void R_ProjectSprite(mobj_t *thing)
 static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 {
 	fixed_t tr_x, tr_y;
-	fixed_t gxt, gyt;
 	fixed_t tx, tz;
 	fixed_t xscale, yscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
 
@@ -1893,18 +1876,13 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;
 
-	gxt = FixedMul(tr_x, viewcos);
-	gyt = -FixedMul(tr_y, viewsin);
-
-	tz = gxt - gyt;
+	tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
 
 	// thing is behind view plane?
 	if (tz < MINZ)
 		return;
 
-	gxt = -FixedMul(tr_x, viewsin);
-	gyt = FixedMul(tr_y, viewcos);
-	tx = -(gyt + gxt);
+	tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos); // sideways distance
 
 	// too far off the side?
 	if (abs(tx) > tz<<2)
