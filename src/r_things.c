@@ -1560,7 +1560,6 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
 		xscale = FixedDiv(projection, tz);
-		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
 		// Get paperoffset (offset) and paperoffset (distance)
 		paperoffset = -FixedMul(tr_x, cosmul) - FixedMul(tr_y, sinmul);
@@ -1579,7 +1578,6 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		tx2 = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
 		xscale2 = FixedDiv(projection, tz2);
-		x2 = ((centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS);
 
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
@@ -1595,7 +1593,6 @@ static void R_ProjectSprite(mobj_t *thing)
 			tz = FixedMul(MINZ, this_scale);
 			yscale = FixedDiv(projectiony, tz);
 			xscale = FixedDiv(projection, tz);
-			x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 		}
 		else if (tz2 < FixedMul(MINZ, this_scale))
 		{
@@ -1604,14 +1601,17 @@ static void R_ProjectSprite(mobj_t *thing)
 			tz2 = FixedMul(MINZ, this_scale);
 			yscale2 = FixedDiv(projectiony, tz2);
 			xscale2 = FixedDiv(projection, tz2);
-			x2 = (centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS;
 		}
 
 		// TODO: tx clamping
 
+		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
+
 		// off the right side?
 		if (x1 > viewwidth)
 			return;
+
+		x2 = (centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS;
 
 		// off the left side
 		if (x2 < 0)
