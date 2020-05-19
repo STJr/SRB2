@@ -1407,7 +1407,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	basetx = tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos); // sideways distance
 
 	// too far off the side?
-	if (!papersprite && abs(tx) > tz<<2) // papersprite clipping is handled later
+	if (!papersprite && abs(tx) > FixedMul(tz, fovtan)<<2) // papersprite clipping is handled later
 		return;
 
 	// aspect ratio stuff
@@ -1600,7 +1600,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			xscale2 = FixedDiv(projection, tz2);
 		}
 
-		if (tx2 < -(tz2<<2) || tx > tz<<2) // too far off the side?
+		if (tx2 < -(FixedMul(tz2, fovtan)<<2) || tx > FixedMul(tz, fovtan)<<2) // too far off the side?
 			return;
 
 		// TODO: tx clamping
