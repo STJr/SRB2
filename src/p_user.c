@@ -1507,6 +1507,8 @@ void P_PlayLivesJingle(player_t *player)
 void P_PlayJingle(player_t *player, jingletype_t jingletype)
 {
 	const char *musname = jingleinfo[jingletype].musname;
+	UINT16 musflags = 0;
+	boolean looping = jingleinfo[jingletype].looping;
 	
 	//Set the music name to the one of the skin's custom jingles if a
 	//certain jingle is being played and the custom jingle is a valid music choice
@@ -1520,9 +1522,6 @@ void P_PlayJingle(player_t *player, jingletype_t jingletype)
 	else if (jingletype == JT_SUPER && skins[player->skin].supermusic[0]
 	&& S_MusicExists(skins[player->skin].supermusic, !midi_disabled, !digital_disabled))
 		musname = skins[player->skin].supermusic;
-
-	UINT16 musflags = 0;
-	boolean looping = jingleinfo[jingletype].looping;
 
 	char newmusic[7];
 	strncpy(newmusic, musname, 7);
