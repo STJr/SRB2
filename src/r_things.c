@@ -1884,7 +1884,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos); // sideways distance
 
 	// too far off the side?
-	if (abs(tx) > tz<<2)
+	if (abs(tx) > FixedMul(tz, fovtan)<<2)
 		return;
 
 	// aspect ratio stuff :
