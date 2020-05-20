@@ -2898,12 +2898,47 @@ static int lib_gAddGametype(lua_State *L)
 	return 0;
 }
 
+static int Lcheckmapnumber (lua_State *L, int idx, const char *fun)
+{
+	if (ISINLEVEL)
+		return luaL_optinteger(L, idx, gamemap);
+	else
+	{
+		if (lua_isnoneornil(L, idx))
+		{
+			return luaL_error(L,
+					"%s can only be used without a parameter while in a level.",
+					fun
+			);
+		}
+		else
+			return luaL_checkinteger(L, idx);
+	}
+}
+
 static int lib_gBuildMapName(lua_State *L)
 {
-	INT32 map = luaL_optinteger(L, 1, gamemap);
+	INT32 map = Lcheckmapnumber(L, 1, "G_BuildMapName");
 	//HUDSAFE
-	INLEVEL
 	lua_pushstring(L, G_BuildMapName(map));
+	return 1;
+}
+
+static int lib_gBuildMapTitle(lua_State *L)
+{
+	INT32 map = Lcheckmapnumber(L, 1, "G_BuildMapTitle");
+	char *name;
+	if (map < 1 || map > NUMMAPS)
+	{
+		return luaL_error(L,
+				"map number %d out of range (1 - %d)",
+				map,
+				NUMMAPS
+		);
+	}
+	name = G_BuildMapTitle(map);
+	lua_pushstring(L, name);
+	Z_Free(name);
 	return 1;
 }
 
@@ -3292,6 +3327,7 @@ static luaL_Reg lib[] = {
 	// g_game
 	{"G_AddGametype", lib_gAddGametype},
 	{"G_BuildMapName",lib_gBuildMapName},
+	{"G_BuildMapTitle",lib_gBuildMapTitle},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
 	{"G_EnoughPlayersFinished",lib_gEnoughPlayersFinished},
