@@ -40,16 +40,18 @@ typedef struct
 	UINT8 willsend; // Is the server willing to send it?
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
+	filestatus_t status; // The value returned by recsearch
+	boolean justdownloaded; // To prevent late fragments from causing an I_Error
+
 	// Used only for download
 	FILE *file;
 	boolean *receivedfragments;
 	UINT32 fragmentsize;
+	UINT8 iteration;
 	fileack_pak *ackpacket;
 	UINT32 currentsize;
 	UINT32 totalsize;
 	UINT32 ackresendposition; // Used when resuming downloads
-	filestatus_t status; // The value returned by recsearch
-	boolean justdownloaded; // To prevent late fragments from causing an I_Error
 } fileneeded_t;
 
 extern INT32 fileneedednum;

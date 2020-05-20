@@ -76,10 +76,13 @@ typedef struct filetx_s
 typedef struct filetran_s
 {
 	filetx_t *txlist; // Linked list of all files for the node
+	UINT8 iteration;
+	UINT8 ackediteration;
 	UINT32 position; // The current position in the file
 	boolean *ackedfragments;
 	UINT32 ackedsize;
 	FILE *currentfile; // The file currently being sent/received
+	tic_t dontsenduntil;
 } filetran_t;
 static filetran_t transfer[MAXNETNODES];
 
@@ -986,20 +989,36 @@ void FileSendTicker(void)
 			else // Sending RAM
 				transfer[i].currentfile = (FILE *)1; // Set currentfile to a non-null value to indicate that it is open
 
+			transfer[i].iteration = 1;
+			transfer[i].ackediteration = 0;
 			transfer[i].position = 0;
 			transfer[i].ackedsize = 0;
 
 			transfer[i].ackedfragments = calloc(f->size / FILEFRAGMENTSIZE + 1, sizeof(*transfer[i].ackedfragments));
 			if (!transfer[i].ackedfragments)
 				I_Error("FileSendTicker: No more memory\n");
+
+			transfer[i].dontsenduntil = 0;
 		}
+
+		// If the client hasn't acknowledged any fragment from the previous iteration,
+		// it is most likely because their acks haven't had enough time to reach the server
+		// yet, due to latency. In that case, we wait a little to avoid useless resend.
+		if (I_GetTime() < transfer[i].dontsenduntil)
+			continue;
 
 		// Find the first non-acknowledged fragment
 		while (transfer[i].ackedfragments[transfer[i].position / FILEFRAGMENTSIZE])
 		{
 			transfer[i].position += FILEFRAGMENTSIZE;
 			if (transfer[i].position >= f->size)
+			{
+				if (transfer[i].ackediteration < transfer[i].iteration)
+					transfer[i].dontsenduntil = I_GetTime() + TICRATE / 2;
+
 				transfer[i].position = 0;
+				transfer[i].iteration++;
+			}
 		}
 
 		// Build a packet containing a file fragment
@@ -1016,6 +1035,7 @@ void FileSendTicker(void)
 			if (fread(p->data, 1, fragmentsize, transfer[i].currentfile) != fragmentsize)
 				I_Error("FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(fragmentsize), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
 		}
+		p->iteration = transfer[i].iteration;
 		p->position = LONG(transfer[i].position);
 		p->fileid = f->fileid;
 		p->filesize = LONG(f->size);
@@ -1026,7 +1046,13 @@ void FileSendTicker(void)
 		{ // Success
 			transfer[i].position = (UINT32)(transfer[i].position + fragmentsize);
 			if (transfer[i].position >= f->size)
+			{
+				if (transfer[i].ackediteration < transfer[i].iteration)
+					transfer[i].dontsenduntil = I_GetTime() + TICRATE / 2;
+
 				transfer[i].position = 0;
+				transfer[i].iteration++;
+			}
 		}
 		else
 		{ // Not sent for some odd reason, retry at next call
@@ -1051,6 +1077,13 @@ void PT_FileAck(void)
 	{
 		Net_CloseConnection(node);
 		return;
+	}
+
+	if (packet->iteration > trans->ackediteration)
+	{
+		trans->ackediteration = packet->iteration;
+		if (trans->ackediteration >= trans->iteration - 1)
+			trans->dontsenduntil = 0;
 	}
 
 	for (i = 0; i < packet->numsegments; i++)
@@ -1114,9 +1147,11 @@ static void SendAckPacket(fileack_pak *packet, UINT8 fileid)
 	memset(packet, 0, sizeof(*packet) + 512);
 }
 
-static void AddFragmentToAckPacket(fileack_pak *packet, UINT32 fragmentpos, UINT8 fileid)
+static void AddFragmentToAckPacket(fileack_pak *packet, UINT8 iteration, UINT32 fragmentpos, UINT8 fileid)
 {
 	fileacksegment_t *segment = &packet->segments[packet->numsegments - 1];
+
+	packet->iteration = max(packet->iteration, iteration);
 
     if (packet->numsegments == 0
 		|| fragmentpos < segment->start
@@ -1157,7 +1192,7 @@ void FileReceiveTicker(void)
 				for (j = 0; j < 2048; j++)
 				{
 					if (file->receivedfragments[file->ackresendposition])
-						AddFragmentToAckPacket(file->ackpacket, file->ackresendposition, i);
+						AddFragmentToAckPacket(file->ackpacket, file->iteration, file->ackresendposition, i);
 
 					file->ackresendposition++;
 					if (file->ackresendposition * file->fragmentsize >= file->totalsize)
@@ -1207,6 +1242,7 @@ void PT_FileFragment(void)
 
 		file->status = FS_DOWNLOADING;
 		file->fragmentsize = fragmentsize;
+		file->iteration = 0;
 
 		file->ackpacket = calloc(1, sizeof(*file->ackpacket) + 512);
 		if (!file->ackpacket)
@@ -1254,6 +1290,8 @@ void PT_FileFragment(void)
 		if (fragmentpos >= file->totalsize)
 			I_Error("Invalid file fragment\n");
 
+		file->iteration = max(file->iteration, netbuffer->u.filetxpak.iteration);
+
 		if (!file->receivedfragments[fragmentpos / fragmentsize]) // Not received yet
 		{
 			file->receivedfragments[fragmentpos / fragmentsize] = true;
@@ -1264,7 +1302,7 @@ void PT_FileFragment(void)
 				I_Error("Can't write to %s: %s\n",filename, M_FileError(file->file));
 			file->currentsize += boundedfragmentsize;
 
-			AddFragmentToAckPacket(file->ackpacket, fragmentpos / fragmentsize, filenum);
+			AddFragmentToAckPacket(file->ackpacket, file->iteration, fragmentpos / fragmentsize, filenum);
 
 			// Finished?
 			if (file->currentsize == file->totalsize)
@@ -1295,7 +1333,7 @@ void PT_FileFragment(void)
 		{
 			// If they are sending us the fragment again, it's probably because
 			// they missed our previous ack, so we must re-acknowledge it
-			AddFragmentToAckPacket(file->ackpacket, fragmentpos / fragmentsize, filenum);
+			AddFragmentToAckPacket(file->ackpacket, file->iteration, fragmentpos / fragmentsize, filenum);
 		}
 	}
 	else if (!file->justdownloaded)
