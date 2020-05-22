@@ -21,6 +21,9 @@ extern INT32 myargc;
 extern char **myargv;
 extern boolean myargmalloc;
 
+// Looks for an srb2:// (or similar) URL passed in as an argument and returns the IP to connect to if found.
+const char *M_GetUrlProtocolArg(void);
+
 // Returns the position of the given parameter in the arg list (0 if not found).
 INT32 M_CheckParm(const char *check);
 

@@ -17,6 +17,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "d_event.h"
+#include "g_demo.h"
 
 extern char gamedatafilename[64];
 extern char timeattackfolder[64];
@@ -30,21 +31,6 @@ extern char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 
 extern player_t players[MAXPLAYERS];
 extern boolean playeringame[MAXPLAYERS];
-
-// ======================================
-// DEMO playback/recording related stuff.
-// ======================================
-
-// demoplaying back and demo recording
-extern boolean demoplayback, titledemo, demorecording, timingdemo;
-extern tic_t demostarttime;
-
-// Quit after playing a demo from cmdline.
-extern boolean singledemo;
-extern boolean demo_start;
-extern boolean demosynced;
-
-extern mobj_t *metalplayback;
 
 // gametic at level start
 extern tic_t levelstarttic;
@@ -173,7 +159,6 @@ void G_DoLoadLevel(boolean resetplayer);
 void G_StartTitleCard(void);
 void G_PreLevelTitleCard(void);
 boolean G_IsTitleCardAvailable(void);
-void G_DeferedPlayDemo(const char *demo);
 
 // Can be called by the startup code or M_Responder, calls P_SetupLevel.
 void G_LoadGame(UINT32 slot, INT16 mapoverride);
@@ -183,54 +168,6 @@ void G_SaveGameData(void);
 void G_SaveGame(UINT32 slot);
 
 void G_SaveGameOver(UINT32 slot, boolean modifylives);
-
-// Only called by startup code.
-void G_RecordDemo(const char *name);
-void G_RecordMetal(void);
-void G_BeginRecording(void);
-void G_BeginMetal(void);
-
-// Only called by shutdown code.
-void G_SetDemoTime(UINT32 ptime, UINT32 pscore, UINT16 prings);
-UINT8 G_CmpDemoTime(char *oldname, char *newname);
-
-typedef enum
-{
-	GHC_NORMAL = 0,
-	GHC_SUPER,
-	GHC_FIREFLOWER,
-	GHC_INVINCIBLE,
-	GHC_NIGHTSSKIN, // not actually a colour
-	GHC_RETURNSKIN // ditto
-} ghostcolor_t;
-
-// Record/playback tics
-void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum);
-void G_WriteDemoTiccmd(ticcmd_t *cmd, INT32 playernum);
-void G_GhostAddThok(void);
-void G_GhostAddSpin(void);
-void G_GhostAddRev(void);
-void G_GhostAddColor(ghostcolor_t color);
-void G_GhostAddFlip(void);
-void G_GhostAddScale(fixed_t scale);
-void G_GhostAddHit(mobj_t *victim);
-void G_WriteGhostTic(mobj_t *ghost);
-void G_ConsGhostTic(void);
-void G_GhostTicker(void);
-void G_ReadMetalTic(mobj_t *metal);
-void G_WriteMetalTic(mobj_t *metal);
-void G_SaveMetal(UINT8 **buffer);
-void G_LoadMetal(UINT8 **buffer);
-
-void G_DoPlayDemo(char *defdemoname);
-void G_TimeDemo(const char *name);
-void G_AddGhost(char *defdemoname);
-void G_DoPlayMetal(void);
-void G_DoneLevelLoad(void);
-void G_StopMetalDemo(void);
-ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
-void G_StopDemo(void);
-boolean G_CheckDemoStatus(void);
 
 extern UINT32 gametypedefaultrules[NUMGAMETYPES];
 extern UINT32 gametypetol[NUMGAMETYPES];
@@ -309,6 +246,6 @@ FUNCMATH INT32 G_TicsToCentiseconds(tic_t tics);
 FUNCMATH INT32 G_TicsToMilliseconds(tic_t tics);
 
 // Don't split up TOL handling
-INT16 G_TOLFlag(INT32 pgametype);
+UINT32 G_TOLFlag(INT32 pgametype);
 
 #endif

@@ -459,9 +459,7 @@ static void R_InitTextureMapping(void)
 	focallength = FixedDiv(projection,
 		FINETANGENT(FINEANGLES/4+FIELDOFVIEW/2));
 
-#ifdef ESLOPE
 	focallengthf = FIXED_TO_FLOAT(focallength);
-#endif
 
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
@@ -1390,7 +1388,7 @@ void R_RenderPlayerView(player_t *player)
 	else
 	{
 		portalclipstart = 0;
-		portalclipend = viewwidth-1;
+		portalclipend = viewwidth;
 		R_ClearClipSegs();
 	}
 	R_ClearDrawSegs();
