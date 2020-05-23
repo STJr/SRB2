@@ -1346,7 +1346,6 @@ static void R_ProjectSprite(mobj_t *thing)
 {
 	mobj_t *oldthing = thing;
 	fixed_t tr_x, tr_y;
-	fixed_t gxt, gyt;
 	fixed_t tx, tz;
 	fixed_t xscale, yscale, sortscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
 
@@ -1359,7 +1358,7 @@ static void R_ProjectSprite(mobj_t *thing)
 #endif
 	size_t lump;
 
-	size_t rot;
+	size_t frame, rot;
 	UINT16 flip;
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
 
@@ -1399,21 +1398,16 @@ static void R_ProjectSprite(mobj_t *thing)
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;
 
-	gxt = FixedMul(tr_x, viewcos);
-	gyt = -FixedMul(tr_y, viewsin);
-
-	tz = gxt-gyt;
+	tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
 
 	// thing is behind view plane?
 	if (!papersprite && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
 		return;
 
-	gxt = -FixedMul(tr_x, viewsin);
-	gyt = FixedMul(tr_y, viewcos);
-	basetx = tx = -(gyt + gxt);
+	basetx = tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos); // sideways distance
 
 	// too far off the side?
-	if (!papersprite && abs(tx) > tz<<2) // papersprite clipping is handled later
+	if (!papersprite && abs(tx) > FixedMul(tz, fovtan)<<2) // papersprite clipping is handled later
 		return;
 
 	// aspect ratio stuff
@@ -1426,7 +1420,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		I_Error("R_ProjectSprite: invalid sprite number %d ", thing->sprite);
 #endif
 
-	rot = thing->frame&FF_FRAMEMASK;
+	frame = thing->frame&FF_FRAMEMASK;
 
 	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
 	if (thing->skin && thing->sprite == SPR_PLAY)
@@ -1435,15 +1429,15 @@ static void R_ProjectSprite(mobj_t *thing)
 #ifdef ROTSPRITE
 		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
 #endif
-		if (rot >= sprdef->numframes) {
-			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(rot));
+		if (frame >= sprdef->numframes) {
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(frame));
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
 #ifdef ROTSPRITE
 			sprinfo = NULL;
 #endif
-			rot = thing->frame&FF_FRAMEMASK;
+			frame = thing->frame&FF_FRAMEMASK;
 		}
 	}
 	else
@@ -1453,10 +1447,10 @@ static void R_ProjectSprite(mobj_t *thing)
 		sprinfo = NULL;
 #endif
 
-		if (rot >= sprdef->numframes)
+		if (frame >= sprdef->numframes)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
-				sizeu1(rot), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
+				sizeu1(frame), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
 			if (thing->sprite == thing->state->sprite && thing->frame == thing->state->frame)
 			{
 				thing->state->sprite = states[S_UNKNOWN].sprite;
@@ -1465,11 +1459,11 @@ static void R_ProjectSprite(mobj_t *thing)
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
-			rot = thing->frame&FF_FRAMEMASK;
+			frame = thing->frame&FF_FRAMEMASK;
 		}
 	}
 
-	sprframe = &sprdef->spriteframes[rot];
+	sprframe = &sprdef->spriteframes[frame];
 
 #ifdef PARANOIA
 	if (!sprframe)
@@ -1523,7 +1517,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
 		if (!(sprframe->rotsprite.cached & (1<<rot)))
-			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
+			R_CacheRotSprite(thing->sprite, frame, sprinfo, sprframe, rot, flip);
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
 		{
@@ -1561,17 +1555,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		tr_x += FixedMul(offset, cosmul);
 		tr_y += FixedMul(offset, sinmul);
-		gxt = FixedMul(tr_x, viewcos);
-		gyt = -FixedMul(tr_y, viewsin);
-		tz = gxt-gyt;
-		yscale = FixedDiv(projectiony, tz);
-		//if (yscale < 64) return; // Fix some funky visuals
+		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 
-		gxt = -FixedMul(tr_x, viewsin);
-		gyt = FixedMul(tr_y, viewcos);
-		tx = -(gyt + gxt);
-		xscale = FixedDiv(projection, tz);
-		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
+		tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
 
 		// Get paperoffset (offset) and paperoffset (distance)
 		paperoffset = -FixedMul(tr_x, cosmul) - FixedMul(tr_y, sinmul);
@@ -1585,17 +1571,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
-		gxt = FixedMul(tr_x, viewcos);
-		gyt = -FixedMul(tr_y, viewsin);
-		tz2 = gxt-gyt;
-		yscale2 = FixedDiv(projectiony, tz2);
-		//if (yscale2 < 64) return; // ditto
+		tz2 = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 
-		gxt = -FixedMul(tr_x, viewsin);
-		gyt = FixedMul(tr_y, viewcos);
-		tx2 = -(gyt + gxt);
-		xscale2 = FixedDiv(projection, tz2);
-		x2 = ((centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS);
+		tx2 = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
 
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
@@ -1606,23 +1584,30 @@ static void R_ProjectSprite(mobj_t *thing)
 			fixed_t div = FixedDiv(tz2-tz, FixedMul(MINZ, this_scale)-tz);
 			tx += FixedDiv(tx2-tx, div);
 			tz = FixedMul(MINZ, this_scale);
-			yscale = FixedDiv(projectiony, tz);
-			xscale = FixedDiv(projection, tz);
-			x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 		}
 		else if (tz2 < FixedMul(MINZ, this_scale))
 		{
 			fixed_t div = FixedDiv(tz-tz2, FixedMul(MINZ, this_scale)-tz2);
 			tx2 += FixedDiv(tx-tx2, div);
 			tz2 = FixedMul(MINZ, this_scale);
-			yscale2 = FixedDiv(projectiony, tz2);
-			xscale2 = FixedDiv(projection, tz2);
-			x2 = (centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS;
 		}
+
+		if (tx2 < -(FixedMul(tz2, fovtan)<<2) || tx > FixedMul(tz, fovtan)<<2) // too far off the side?
+			return;
+
+		yscale = FixedDiv(projectiony, tz);
+		xscale = FixedDiv(projection, tz);
+
+		x1 = (centerxfrac + FixedMul(tx,xscale))>>FRACBITS;
 
 		// off the right side?
 		if (x1 > viewwidth)
 			return;
+
+		yscale2 = FixedDiv(projectiony, tz2);
+		xscale2 = FixedDiv(projection, tz2);
+
+		x2 = (centerxfrac + FixedMul(tx2,xscale2))>>FRACBITS;
 
 		// off the left side
 		if (x2 < 0)
@@ -1670,9 +1655,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		tr_x = thing->x - viewx;
 		tr_y = thing->y - viewy;
-		gxt = FixedMul(tr_x, viewcos);
-		gyt = -FixedMul(tr_y, viewsin);
-		tz = gxt-gyt;
+		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		linkscale = FixedDiv(projectiony, tz);
 
 		if (tz < FixedMul(MINZ, this_scale))
@@ -1872,7 +1855,6 @@ static void R_ProjectSprite(mobj_t *thing)
 static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 {
 	fixed_t tr_x, tr_y;
-	fixed_t gxt, gyt;
 	fixed_t tx, tz;
 	fixed_t xscale, yscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
 
@@ -1893,21 +1875,16 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;
 
-	gxt = FixedMul(tr_x, viewcos);
-	gyt = -FixedMul(tr_y, viewsin);
-
-	tz = gxt - gyt;
+	tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
 
 	// thing is behind view plane?
 	if (tz < MINZ)
 		return;
 
-	gxt = -FixedMul(tr_x, viewsin);
-	gyt = FixedMul(tr_y, viewcos);
-	tx = -(gyt + gxt);
+	tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos); // sideways distance
 
 	// too far off the side?
-	if (abs(tx) > tz<<2)
+	if (abs(tx) > FixedMul(tz, fovtan)<<2)
 		return;
 
 	// aspect ratio stuff :
