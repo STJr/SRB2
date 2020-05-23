@@ -277,12 +277,22 @@ static int hudinfo_num(lua_State *L)
 
 static int colormap_get(lua_State *L)
 {
-	const UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
 	UINT32 i = luaL_checkinteger(L, 2);
 	if (i >= 256)
 		return luaL_error(L, "colormap index %d out of range (0 - %d)", i, 255);
 	lua_pushinteger(L, colormap[i]);
 	return 1;
+}
+
+static int colormap_set(lua_State *L)
+{
+	UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	UINT32 i = luaL_checkinteger(L, 2);
+	if (i >= 256)
+		return luaL_error(L, "colormap index %d out of range (0 - %d)", i, 255);
+	colormap[i] = (UINT8)luaL_checkinteger(L, 3);
+	return 0;
 }
 
 static int patch_get(lua_State *L)
@@ -1230,6 +1240,9 @@ int LUA_HudLib(lua_State *L)
 	luaL_newmetatable(L, META_COLORMAP);
 		lua_pushcfunction(L, colormap_get);
 		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, colormap_set);
+		lua_setfield(L, -2, "__newindex");
 	lua_pop(L,1);
 
 	luaL_newmetatable(L, META_PATCH);
