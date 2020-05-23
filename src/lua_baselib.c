@@ -1360,6 +1360,17 @@ static int lib_pSpawnSkidDust(lua_State *L)
 	return 0;
 }
 
+static int lib_pMovePlayer(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_MovePlayer(player);
+	return 0;
+}
+
 static int lib_pDoPlayerFinish(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -3386,6 +3397,7 @@ static luaL_Reg lib[] = {
 	{"P_BlackOw",lib_pBlackOw},
 	{"P_ElementalFire",lib_pElementalFire},
 	{"P_SpawnSkidDust", lib_pSpawnSkidDust},
+	{"P_MovePlayer",lib_pMovePlayer},
 	{"P_DoPlayerFinish",lib_pDoPlayerFinish},
 	{"P_DoPlayerExit",lib_pDoPlayerExit},
 	{"P_InstaThrust",lib_pInstaThrust},
