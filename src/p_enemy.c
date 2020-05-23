@@ -9707,6 +9707,9 @@ void A_SplitShot(mobj_t *actor)
 	if (LUA_CallAction("A_SplitShot", actor))
 		return;
 
+	if (!actor->target)
+		return;
+
 	A_FaceTarget(actor);
 	{
 		const angle_t an = (actor->angle + ANGLE_90) >> ANGLETOFINESHIFT;
