@@ -464,6 +464,7 @@ void F_WipeEndScreen(void)
   */
 boolean F_ShouldColormapFade(void)
 {
+#ifndef NOWIPE
 	if ((wipestyleflags & (WSF_FADEIN|WSF_FADEOUT)) // only if one of those wipestyleflags are actually set
 	&& !(wipestyleflags & WSF_CROSSFADE)) // and if not crossfading
 	{
@@ -479,11 +480,13 @@ boolean F_ShouldColormapFade(void)
 		// Menus
 		|| gamestate == GS_TIMEATTACK);
 	}
+#endif
 	return false;
 }
 
 /** Decides what wipe style to use.
   */
+#ifndef NOWIPE
 void F_DecideWipeStyle(void)
 {
 	// Set default wipe style
@@ -493,6 +496,7 @@ void F_DecideWipeStyle(void)
 	if (F_ShouldColormapFade())
 		wipestyle = WIPESTYLE_COLORMAP;
 }
+#endif
 
 /** Attempt to run a colormap fade,
     provided all the conditionals were properly met.
@@ -501,6 +505,7 @@ void F_DecideWipeStyle(void)
   */
 boolean F_TryColormapFade(UINT8 wipecolor)
 {
+#ifndef NOWIPE
 	if (F_ShouldColormapFade())
 	{
 #ifdef HWRENDER
@@ -510,6 +515,7 @@ boolean F_TryColormapFade(UINT8 wipecolor)
 		return true;
 	}
 	else
+#endif
 	{
 		F_WipeColorFill(wipecolor);
 		return false;
