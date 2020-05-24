@@ -614,6 +614,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 tic_t F_GetWipeLength(UINT8 wipetype)
 {
 #ifdef NOWIPE
+	(void)wipetype;
 	return 0;
 #else
 	static char lumpname[10] = "FADEmmss";
@@ -640,6 +641,7 @@ tic_t F_GetWipeLength(UINT8 wipetype)
 boolean F_WipeExists(UINT8 wipetype)
 {
 #ifdef NOWIPE
+	(void)wipetype;
 	return false;
 #else
 	static char lumpname[10] = "FADEmm00";
