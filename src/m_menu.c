@@ -9055,7 +9055,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	skin_t *charskin = &skins[0];
 	INT32 skinnum = 0;
-	UINT8 col;
+	UINT16 col;
 	UINT8 *colormap = NULL;
 	INT32 prev = -1, next = -1;
 
@@ -9145,8 +9145,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		INT32 ox, oxsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(char_scroll, 128*FRACUNIT))), txsh;
 		patch_t *curpatch = NULL, *prevpatch = NULL, *nextpatch = NULL;
 		const char *curtext = NULL, *prevtext = NULL, *nexttext = NULL;
-		UINT8 curtextcolor = 0, prevtextcolor = 0, nexttextcolor = 0;
-		UINT8 curoutlinecolor = 0, prevoutlinecolor = 0, nextoutlinecolor = 0;
+		UINT16 curtextcolor = 0, prevtextcolor = 0, nexttextcolor = 0;
+		UINT16 curoutlinecolor = 0, prevoutlinecolor = 0, nextoutlinecolor = 0;
 
 		// Name tag
 		curtext = description[char_on].displayname;
@@ -11355,7 +11355,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			else if (itemOn == 2)
 			{
-				UINT8 col = skins[setupm_fakeskin].prefcolor;
+				UINT16 col = skins[setupm_fakeskin].prefcolor;
 				if ((setupm_fakecolor->color != col) && skincolors[col].accessible)
 				{
 					S_StartSound(NULL,sfx_menu1); // Tails
@@ -11514,7 +11514,7 @@ static boolean M_QuitMultiPlayerMenu(void)
 	return true;
 }
 
-void M_AddMenuColor(UINT8 color) {
+void M_AddMenuColor(UINT16 color) {
 	menucolor_t *c;
 
 	if (color >= numskincolors) {
@@ -11538,7 +11538,7 @@ void M_AddMenuColor(UINT8 color) {
 	}
 }
 
-void M_MoveColorBefore(UINT8 color, UINT8 targ) {
+void M_MoveColorBefore(UINT16 color, UINT16 targ) {
 	menucolor_t *look, *c = NULL, *t = NULL;
 
 	if (color == targ)
@@ -11580,7 +11580,7 @@ void M_MoveColorBefore(UINT8 color, UINT8 targ) {
 	t->prev = c;
 }
 
-void M_MoveColorAfter(UINT8 color, UINT8 targ) {
+void M_MoveColorAfter(UINT16 color, UINT16 targ) {
 	menucolor_t *look, *c = NULL, *t = NULL;
 
 	if (color == targ)
@@ -11622,7 +11622,7 @@ void M_MoveColorAfter(UINT8 color, UINT8 targ) {
 	t->next = c;
 }
 
-UINT8 M_GetColorBefore(UINT8 color) {
+UINT16 M_GetColorBefore(UINT16 color) {
 	menucolor_t *look;
 
 	if (color >= numskincolors) {
@@ -11638,7 +11638,7 @@ UINT8 M_GetColorBefore(UINT8 color) {
 	}
 }
 
-UINT8 M_GetColorAfter(UINT8 color) {
+UINT16 M_GetColorAfter(UINT16 color) {
 	menucolor_t *look;
 
 	if (color >= numskincolors) {

@@ -9429,7 +9429,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 	case MT_BOSSFLYPOINT:
 		return false;
 	case MT_NIGHTSCORE:
-		mobj->color = (UINT8)(leveltime % SKINCOLOR_WHITE);
+		mobj->color = (UINT16)(leveltime % SKINCOLOR_WHITE);
 		break;
 	case MT_JETFUME1:
 		if (!P_JetFume1Think(mobj))
@@ -11939,7 +11939,7 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 
 	mobj->health = j + 1;
 	emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
-	mobj->color = (UINT8)emcolor;
+	mobj->color = (UINT16)emcolor;
 
 	if (emblemlocations[j].collected
 		|| (emblemlocations[j].type == ET_SKIN && emblemlocations[j].var != players[0].skin))

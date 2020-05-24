@@ -184,7 +184,7 @@ void R_InitTranslationTables(void)
 	\param	dest_colormap	colormap to populate
 	\param	skincolor		translation color
 */
-static void R_RainbowColormap(UINT8 *dest_colormap, UINT8 skincolor)
+static void R_RainbowColormap(UINT8 *dest_colormap, UINT16 skincolor)
 {
 	INT32 i;
 	RGBA_t color;
@@ -226,7 +226,7 @@ static void R_RainbowColormap(UINT8 *dest_colormap, UINT8 skincolor)
 
 #undef SETBRIGHTNESS
 
-static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, UINT8 color)
+static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, UINT16 color)
 {
 	INT32 i, starttranscolor, skinramplength;
 
@@ -419,9 +419,9 @@ void R_FlushTranslationColormapCache(void)
 			memset(translationtablecache[i], 0, MAXSKINCOLORS * sizeof(UINT8**));
 }
 
-UINT8 R_GetColorByName(const char *name)
+UINT16 R_GetColorByName(const char *name)
 {
-	UINT16 color = (UINT8)atoi(name);
+	UINT16 color = (UINT16)atoi(name);
 	if (color > 0 && color < numskincolors)
 		return color;
 	for (color = 1; color < numskincolors; color++)
@@ -430,7 +430,7 @@ UINT8 R_GetColorByName(const char *name)
 	return SKINCOLOR_GREEN;
 }
 
-UINT8 R_GetSuperColorByName(const char *name)
+UINT16 R_GetSuperColorByName(const char *name)
 {
 	UINT16 i, color = SKINCOLOR_SUPERGOLD1;
 	char *realname = Z_Malloc(MAXCOLORNAME+1, PU_STATIC, NULL);

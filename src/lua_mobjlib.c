@@ -574,7 +574,7 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_color:
 	{
-		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
 		if (newcolor >= numskincolors)
 			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, numskincolors-1);
 		mo->color = newcolor;

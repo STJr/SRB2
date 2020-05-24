@@ -2424,6 +2424,17 @@ static int lib_rGetColorByName(lua_State *L)
 	return 1;
 }
 
+// Lua exclusive function, returns the name of a color from the SKINCOLOR_ constant.
+// SKINCOLOR_GREEN > "Green" for example
+static int lib_rGetNameByColor(lua_State *L)
+{
+	UINT16 colornum = (UINT16)luaL_checkinteger(L, 1);
+	if (!colornum || colornum >= numskincolors)
+		return luaL_error(L, "skincolor %d out of range (1 - %d).", colornum, numskincolors-1);
+	lua_pushstring(L, skincolors[colornum].name);
+	return 1;
+}
+
 // S_SOUND
 ////////////
 static int lib_sStartSound(lua_State *L)
@@ -3337,6 +3348,7 @@ static luaL_Reg lib[] = {
 
 	// r_draw
 	{"R_GetColorByName", lib_rGetColorByName},
+	{"R_GetNameByColor", lib_rGetNameByColor},
 
 	// s_sound
 	{"S_StartSound",lib_sStartSound},

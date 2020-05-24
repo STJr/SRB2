@@ -452,7 +452,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "OPPOSITECOLOR") || fastcmp(word, "OPPOSITECOLOUR"))
 			{
 				SLOTFOUND
-				description[num].oppositecolor = (UINT8)get_number(word2);
+				description[num].oppositecolor = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "NAMETAG") || fastcmp(word, "TAGNAME"))
 			{
@@ -462,12 +462,12 @@ static void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "TAGTEXTCOLOR") || fastcmp(word, "TAGTEXTCOLOUR"))
 			{
 				SLOTFOUND
-				description[num].tagtextcolor = (UINT8)get_number(word2);
+				description[num].tagtextcolor = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "TAGOUTLINECOLOR") || fastcmp(word, "TAGOUTLINECOLOUR"))
 			{
 				SLOTFOUND
-				description[num].tagoutlinecolor = (UINT8)get_number(word2);
+				description[num].tagoutlinecolor = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "STATUS"))
 			{
@@ -821,11 +821,11 @@ static void readskincolor(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "INVCOLOR"))
 			{
-				skincolors[num].invcolor = (UINT8)get_number(word2);
+				skincolors[num].invcolor = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "INVSHADE"))
 			{
-				skincolors[num].invshade = get_number(word2);
+				skincolors[num].invshade = get_number(word2)%COLORRAMPSIZE;
 			}
 			else if (fastcmp(word, "CHATCOLOR"))
 			{
@@ -4043,19 +4043,19 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "REDTEAM"))
 			{
-				skincolor_redteam = (UINT8)get_number(word2);
+				skincolor_redteam = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUETEAM"))
 			{
-				skincolor_blueteam = (UINT8)get_number(word2);
+				skincolor_blueteam = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "REDRING"))
 			{
-				skincolor_redring = (UINT8)get_number(word2);
+				skincolor_redring = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUERING"))
 			{
-				skincolor_bluering = (UINT8)get_number(word2);
+				skincolor_bluering = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "INVULNTICS"))
 			{

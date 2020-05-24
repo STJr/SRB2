@@ -355,11 +355,11 @@ typedef struct
 	// new character select
 	char displayname[SKINNAMESIZE+1];
 	SINT8 skinnum[2];
-	UINT8 oppositecolor;
+	UINT16 oppositecolor;
 	char nametag[8];
 	patch_t *namepic;
-	UINT8 tagtextcolor;
-	UINT8 tagoutlinecolor;
+	UINT16 tagtextcolor;
+	UINT16 tagoutlinecolor;
 } description_t;
 
 // level select platter
@@ -447,16 +447,16 @@ void Moviemode_option_Onchange(void);
 typedef struct menucolor_s {
 	struct menucolor_s *next;
 	struct menucolor_s *prev;
-	UINT8 color;
+	UINT16 color;
 } menucolor_t;
 
 menucolor_t *menucolorhead, *menucolortail;
 
-void M_AddMenuColor(UINT8 color);
-void M_MoveColorBefore(UINT8 color, UINT8 targ);
-void M_MoveColorAfter(UINT8 color, UINT8 targ);
-UINT8 M_GetColorBefore(UINT8 color);
-UINT8 M_GetColorAfter(UINT8 color);
+void M_AddMenuColor(UINT16 color);
+void M_MoveColorBefore(UINT16 color, UINT16 targ);
+void M_MoveColorAfter(UINT16 color, UINT16 targ);
+UINT16 M_GetColorBefore(UINT16 color);
+UINT16 M_GetColorAfter(UINT16 color);
 void M_InitPlayerSetupColors(void);
 void M_FreePlayerSetupColors(void);
 

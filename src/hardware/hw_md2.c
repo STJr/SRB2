@@ -682,7 +682,7 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	UINT16 w = gpatch->width, h = gpatch->height;
 	UINT32 size = w*h;
 	RGBA_t *image, *blendimage, *cur, blendcolor;
-	UINT8 translation[16]; // First the color index
+	UINT16 translation[16]; // First the color index
 	UINT8 cutoff[16]; // Brightness cutoff before using the next color
 	UINT8 translen = 0;
 	UINT8 i;
@@ -741,7 +741,7 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 			numdupes = 1;
 			translen++;
 
-			translation[translen] = (UINT8)skincolors[color].ramp[i];
+			translation[translen] = (UINT16)skincolors[color].ramp[i];
 		}
 
 		translen++;

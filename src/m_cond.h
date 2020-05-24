@@ -90,7 +90,7 @@ typedef struct
 	INT16 tag;       ///< Tag of emblem mapthing
 	INT16 level;     ///< Level on which this emblem can be found.
 	UINT8 sprite;    ///< emblem sprite to use, 0 - 25
-	UINT8 color;     ///< skincolor to use
+	UINT16 color;    ///< skincolor to use
 	INT32 var;       ///< If needed, specifies information on the target amount to achieve (or target skin)
 	char hint[110];  ///< Hint for emblem hints menu
 	UINT8 collected; ///< Do you have this emblem?
@@ -102,7 +102,7 @@ typedef struct
 	UINT8 conditionset;     ///< Condition set that awards this emblem.
 	UINT8 showconditionset; ///< Condition set that shows this emblem.
 	UINT8 sprite;           ///< emblem sprite to use, 0 - 25
-	UINT8 color;            ///< skincolor to use
+	UINT16 color;           ///< skincolor to use
 	UINT8 collected;        ///< Do you have this emblem?
 } extraemblem_t;
 

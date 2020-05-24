@@ -1508,10 +1508,10 @@ static int lib_setSkinColor(lua_State *L)
 {
 	UINT32 j;
 	skincolor_t *info;
-	UINT8 cnum; //skincolor num
+	UINT16 cnum; //skincolor num
 	lua_remove(L, 1); // don't care about skincolors[] userdata.
 	{
-		cnum = (UINT8)luaL_checkinteger(L, 1);
+		cnum = (UINT16)luaL_checkinteger(L, 1);
 		if (cnum < SKINCOLOR_FIRSTFREESLOT || cnum >= numskincolors)
 			return luaL_error(L, "skincolors[] index %d out of range (%d - %d)", cnum, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
 		info = &skincolors[cnum]; // get the skincolor to assign to.
@@ -1551,9 +1551,9 @@ static int lib_setSkinColor(lua_State *L)
 					info->ramp[j] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[j];
 			R_FlushTranslationColormapCache();
 		} else if (i == 3 || (str && fastcmp(str,"invcolor")))
-			info->invcolor = (UINT8)luaL_checkinteger(L, 3);
+			info->invcolor = (UINT16)luaL_checkinteger(L, 3);
 		else if (i == 4 || (str && fastcmp(str,"invshade")))
-			info->invshade = (UINT8)luaL_checkinteger(L, 3);
+			info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 		else if (i == 5 || (str && fastcmp(str,"chatcolor")))
 			info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
 		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
@@ -1631,9 +1631,9 @@ static int skincolor_set(lua_State *L)
 				info->ramp[i] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[i];
 		R_FlushTranslationColormapCache();
 	} else if (fastcmp(field,"invcolor"))
-		info->invcolor = (UINT8)luaL_checkinteger(L, 3);
+		info->invcolor = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"invshade"))
-		info->invshade = (UINT8)luaL_checkinteger(L, 3);
+		info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 	else if (fastcmp(field,"chatcolor"))
 		info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"accessible"))

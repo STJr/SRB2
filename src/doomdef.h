@@ -241,12 +241,13 @@ extern char logfilename[1024];
 
 #define COLORRAMPSIZE 16
 #define MAXCOLORNAME 32
+#define NUMCOLORFREESLOTS 1024
 
 typedef struct skincolor_s
 {
 	char name[MAXCOLORNAME+1];  // Skincolor name
 	UINT8 ramp[COLORRAMPSIZE];  // Colormap ramp
-	UINT8 invcolor;             // Signpost color
+	UINT16 invcolor;            // Signpost color
 	UINT8 invshade;             // Signpost color shade
 	UINT16 chatcolor;           // Chat color
 	boolean accessible;         // Accessible by the color command + setup menu
@@ -388,7 +389,7 @@ typedef enum
 	SKINCOLOR_SUPERTAN5,
 
 	SKINCOLOR_FIRSTFREESLOT,
-	SKINCOLOR_LASTFREESLOT = 255,
+	SKINCOLOR_LASTFREESLOT = SKINCOLOR_FIRSTFREESLOT + NUMCOLORFREESLOTS - 1,
 
 	MAXSKINCOLORS,
 
@@ -397,7 +398,6 @@ typedef enum
 
 UINT16 numskincolors;
 
-#define NUMCOLORFREESLOTS (SKINCOLOR_LASTFREESLOT-SKINCOLOR_FIRSTFREESLOT)+1
 extern skincolor_t skincolors[MAXSKINCOLORS];
 
 // State updates, number of tics / second.
