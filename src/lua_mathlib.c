@@ -11,7 +11,6 @@
 /// \brief basic math library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 //#include "fastcmp.h"
 #include "tables.h"
 #include "p_local.h"
@@ -176,7 +175,7 @@ static int lib_all7emeralds(lua_State *L)
 // Returns both color and signpost shade numbers!
 static int lib_coloropposite(lua_State *L)
 {
-	UINT8 colornum = (UINT8)luaL_checkinteger(L, 1);
+	UINT16 colornum = (UINT16)luaL_checkinteger(L, 1);
 	if (!colornum || colornum >= numskincolors)
 		return luaL_error(L, "skincolor %d out of range (1 - %d).", colornum, numskincolors-1);
 	lua_pushinteger(L, skincolors[colornum].invcolor); // push color
@@ -216,5 +215,3 @@ int LUA_MathLib(lua_State *L)
 	luaL_register(L, NULL, lib);
 	return 0;
 }
-
-#endif

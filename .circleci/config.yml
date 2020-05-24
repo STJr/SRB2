@@ -51,8 +51,8 @@ jobs:
             - /var/cache/apt/archives
       - checkout
       - run:
-          name: Compile without network support and BLUA
-          command: make -C src LINUX=1 ERRORMODE=1 -k NONET=1 NO_LUA=1
+          name: Compile without network support
+          command: make -C src LINUX=1 ERRORMODE=1 -k NONET=1
       - run:
           name: wipe build
           command: make -C src LINUX=1 cleandep

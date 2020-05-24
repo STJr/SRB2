@@ -15,9 +15,10 @@
 #ifndef __X_MENU__
 #define __X_MENU__
 
+#include "doomstat.h" // for NUMGAMETYPES
 #include "d_event.h"
 #include "command.h"
-#include "r_things.h" // for SKINNAMESIZE
+#include "r_skins.h" // for SKINNAMESIZE
 #include "f_finale.h" // for ttmode_enum
 
 //
@@ -30,6 +31,9 @@
 #define MENUBITS 6
 
 // Menu IDs sectioned by numeric places to signify hierarchy
+/**
+ * IF YOU MODIFY THIS, MODIFY MENUTYPES_LIST[] IN dehacked.c TO MATCH.
+ */
 typedef enum
 {
 	MN_NONE,
@@ -128,6 +132,9 @@ typedef enum
 	MN_SPECIAL,
 	NUMMENUTYPES,
 } menutype_t; // up to 63; MN_SPECIAL = 53
+#define MTREE2(a,b) (a | (b<<MENUBITS))
+#define MTREE3(a,b,c) MTREE2(a, MTREE2(b,c))
+#define MTREE4(a,b,c,d) MTREE2(a, MTREE3(b,c,d))
 
 typedef struct
 {
@@ -348,11 +355,11 @@ typedef struct
 	// new character select
 	char displayname[SKINNAMESIZE+1];
 	SINT8 skinnum[2];
-	UINT8 oppositecolor;
+	UINT16 oppositecolor;
 	char nametag[8];
 	patch_t *namepic;
-	UINT8 tagtextcolor;
-	UINT8 tagoutlinecolor;
+	UINT16 tagtextcolor;
+	UINT16 tagoutlinecolor;
 } description_t;
 
 // level select platter
@@ -396,7 +403,7 @@ typedef struct
 	UINT8 numemeralds;
 	UINT8 numgameovers;
 	INT32 lives;
-	INT32 continues;
+	INT32 continuescore;
 	INT32 gamemap;
 } saveinfo_t;
 
@@ -440,16 +447,16 @@ void Moviemode_option_Onchange(void);
 typedef struct menucolor_s {
 	struct menucolor_s *next;
 	struct menucolor_s *prev;
-	UINT8 color;
+	UINT16 color;
 } menucolor_t;
 
 menucolor_t *menucolorhead, *menucolortail;
 
-void M_AddMenuColor(UINT8 color);
-void M_MoveColorBefore(UINT8 color, UINT8 targ);
-void M_MoveColorAfter(UINT8 color, UINT8 targ);
-UINT8 M_GetColorBefore(UINT8 color);
-UINT8 M_GetColorAfter(UINT8 color);
+void M_AddMenuColor(UINT16 color);
+void M_MoveColorBefore(UINT16 color, UINT16 targ);
+void M_MoveColorAfter(UINT16 color, UINT16 targ);
+UINT16 M_GetColorBefore(UINT16 color);
+UINT16 M_GetColorAfter(UINT16 color);
 void M_InitPlayerSetupColors(void);
 void M_FreePlayerSetupColors(void);
 
