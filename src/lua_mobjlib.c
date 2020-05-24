@@ -829,6 +829,15 @@ static int mapthing_set(lua_State *L)
 	return 0;
 }
 
+static int mapthing_num(lua_State *L)
+{
+	mapthing_t *mt = *((mapthing_t **)luaL_checkudata(L, 1, META_MAPTHING));
+	if (!mt)
+		return luaL_error(L, "accessed mapthing_t doesn't exist anymore.");
+	lua_pushinteger(L, mt-mapthings);
+	return 1;
+}
+
 static int lib_iterateMapthings(lua_State *L)
 {
 	size_t i = 0;
@@ -893,6 +902,9 @@ int LUA_MobjLib(lua_State *L)
 
 		lua_pushcfunction(L, mapthing_set);
 		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, mapthing_num);
+		lua_setfield(L, -2, "__len");
 	lua_pop(L,1);
 
 	lua_newuserdata(L, 0);

@@ -8857,6 +8857,40 @@ void A_Dye(mobj_t *actor)
 	target->color = color;
 }
 
+// Function: A_Dye
+//
+// Description: Colorizes an object.
+//
+// var1 = if (var1 != 0), dye your target instead of yourself
+// var2 = color value to dye
+//
+void A_Dye(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
+	UINT8 color = (UINT8)locvar2;
+	if (LUA_CallAction("A_Dye", actor))
+		return;
+	if (color >= MAXTRANSLATIONS)
+		return;
+
+	if (!color)
+		target->colorized = false;
+	else
+		target->colorized = true;
+
+	// What if it's a player?
+	if (target->player)
+	{
+		target->player->powers[pw_dye] = color;
+		return;
+	}
+
+	target->color = color;
+}
+
 // Function: A_MoveRelative
 //
 // Description: Moves an object (wrapper for P_Thrust)
@@ -9694,6 +9728,9 @@ void A_SplitShot(mobj_t *actor)
 	const fixed_t hoffs = (fixed_t)(loc2up*FRACUNIT);
 
 	if (LUA_CallAction("A_SplitShot", actor))
+		return;
+
+	if (!actor->target)
 		return;
 
 	A_FaceTarget(actor);
