@@ -191,7 +191,6 @@ int main(int argc, char **argv)
 				left = snprintf(logfilename, sizeof logfilename,
 						"."PATHSEP"%s"PATHSEP, reldir);
 			}
-#endif/*LOGMESSAGES*/
 
 			strftime(&logfilename[left], sizeof logfilename - left,
 					format, timeinfo);
@@ -218,6 +217,7 @@ int main(int argc, char **argv)
 		logstream = fopen("latest-log.txt", "wt+");
 #endif/*defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)*/
 	}
+#endif/*LOGMESSAGES*/
 
 	//I_OutputMsg("I_StartupSystem() ...\n");
 	I_StartupSystem();
