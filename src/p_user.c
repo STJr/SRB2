@@ -3557,22 +3557,11 @@ static void P_DoClimbing(player_t *player)
 #define CLIMBCONEMAX FixedAngle(90*FRACUNIT)
 	if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 	{
-		if (player == &players[consoleplayer])
-		{
-			angle_t angdiff = localangle - player->mo->angle;
-			if (angdiff < ANGLE_180 && angdiff > CLIMBCONEMAX)
-				localangle = player->mo->angle + CLIMBCONEMAX;
-			else if (angdiff > ANGLE_180 && angdiff < InvAngle(CLIMBCONEMAX))
-				localangle = player->mo->angle - CLIMBCONEMAX;
-		}
-		else if (player == &players[secondarydisplayplayer])
-		{
-			angle_t angdiff = localangle2 - player->mo->angle;
-			if (angdiff < ANGLE_180 && angdiff > CLIMBCONEMAX)
-				localangle2 = player->mo->angle + CLIMBCONEMAX;
-			else if (angdiff > ANGLE_180 && angdiff < InvAngle(CLIMBCONEMAX))
-				localangle2 = player->mo->angle - CLIMBCONEMAX;
-		}
+		angle_t angdiff = P_GetLocalAngle(player) - player->mo->angle;
+		if (angdiff < ANGLE_180 && angdiff > CLIMBCONEMAX)
+			P_SetLocalAngle(player, player->mo->angle + CLIMBCONEMAX);
+		else if (angdiff > ANGLE_180 && angdiff < InvAngle(CLIMBCONEMAX))
+			P_SetLocalAngle(player, player->mo->angle - CLIMBCONEMAX);
 	}
 
 	if (player->climbing == 0)
@@ -4358,12 +4347,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		player->drawangle = player->mo->angle = player->mo->angle - ANGLE_180; // Turn around from the wall you were climbing.
 
 		if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-		{
-			if (player == &players[consoleplayer])
-				localangle = player->mo->angle; // Adjust the local control angle.
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
-		}
+			P_SetPlayerAngle(player, player->mo->angle);
 
 		player->climbing = 0; // Stop climbing, duh!
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(6*FRACUNIT, player->mo->scale)); // Jump off the wall.
@@ -4686,12 +4670,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 								bullet = P_SpawnPointMissile(player->mo, lockon->x, lockon->y, zpos(lockon), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
 								if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-								{
-									if (player == &players[consoleplayer])
-										localangle = player->mo->angle;
-									else if (player == &players[secondarydisplayplayer])
-										localangle2 = player->mo->angle;
-								}
+									P_SetPlayerAngle(player, player->mo->angle);
 							}
 							else
 							{
@@ -5311,9 +5290,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						/*if (!demoplayback)
 						{
 							if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(PLAYER1INPUTDOWN(gc_turnleft) || PLAYER1INPUTDOWN(gc_turnright)))
-								localangle = player->mo->angle;
+								P_SetPlayerAngle(player, player->mo->angle);;
 							else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(PLAYER2INPUTDOWN(gc_turnleft) || PLAYER2INPUTDOWN(gc_turnright)))
-								localangle2 = player->mo->angle;
+								P_SetPlayerAngle(player, player->mo->angle);
 						}*/
 					}
 					break;
@@ -5718,10 +5697,7 @@ static void P_2dMovement(player_t *player)
 			player->mo->angle = ANGLE_180;
 	}
 
-	if (player == &players[consoleplayer])
-		localangle = player->mo->angle;
-	else if (player == &players[secondarydisplayplayer])
-		localangle2 = player->mo->angle;
+	P_SetPlayerAngle(player, player->mo->angle);
 
 	if (player->pflags & PF_GLIDING)
 		movepushangle = player->mo->angle;
@@ -7558,10 +7534,7 @@ static void P_NiGHTSMovement(player_t *player)
 	else
 		player->mo->rollangle = rollangle;
 
-	if (player == &players[consoleplayer])
-		localangle = player->mo->angle;
-	else if (player == &players[secondarydisplayplayer])
-		localangle2 = player->mo->angle;
+	P_SetPlayerAngle(player, player->mo->angle);
 
 	// Check for crushing in our new location
 	if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
@@ -8510,10 +8483,7 @@ static void P_MovePlayer(player_t *player)
 			player->mo->angle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 
 		// Update the local angle control.
-		if (player == &players[consoleplayer])
-			localangle = player->mo->angle;
-		else if (player == &players[secondarydisplayplayer])
-			localangle2 = player->mo->angle;
+		P_SetPlayerAngle(player, player->mo->angle);
 	}
 
 	if (player->climbing == 1)
@@ -8789,11 +8759,7 @@ static void P_DoZoomTube(player_t *player)
 	if (player->mo->tracer)
 	{
 		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y);
-
-		if (player == &players[consoleplayer])
-			localangle = player->mo->angle;
-		else if (player == &players[secondarydisplayplayer])
-			localangle2 = player->mo->angle;
+		P_SetPlayerAngle(player, player->mo->angle);
 	}
 }
 
@@ -9250,12 +9216,7 @@ boolean P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	{
 		source->player->drawangle = source->angle;
 		if (!demoplayback || P_ControlStyle(source->player) == CS_LMAOGALOG)
-		{
-			if (source->player == &players[consoleplayer])
-				localangle = source->angle;
-			else if (source->player == &players[secondarydisplayplayer])
-				localangle2 = source->angle;
-		}
+			P_SetPlayerAngle(source->player, source->angle);
 	}
 
 	// change slope
@@ -9696,7 +9657,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	if ((thiscam == &camera && G_ControlStyle(1) == CS_SIMPLE)
 	|| (thiscam == &camera2 && G_ControlStyle(2) == CS_SIMPLE))
 	{
-		thiscam->angle = (thiscam == &camera) ? localangle : localangle2;
+		thiscam->angle = P_GetLocalAngle(player);
 		thiscam->aiming = (thiscam == &camera) ? localaiming : localaiming2;
 	}
 	else if (!(thiscam == &camera && (cv_cam_still.value || cv_analog[0].value))
@@ -9897,9 +9858,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (player == &players[consoleplayer])
 		{
 			if (focusangle >= localangle)
-				localangle += abs((signed)(focusangle - localangle))>>5;
+				P_ForceLocalAngle(player, localangle + (abs((signed)(focusangle - localangle))>>5));
 			else
-				localangle -= abs((signed)(focusangle - localangle))>>5;
+				P_ForceLocalAngle(player, localangle - (abs((signed)(focusangle - localangle))>>5));
 		}
 	}
 	else
@@ -10873,21 +10834,13 @@ static void P_MinecartThink(player_t *player)
 
 		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))
 		{
-			angle_t *ang = NULL;
+			angdiff = P_GetLocalAngle(player) - minecart->angle;
+			if (angdiff < ANGLE_180 && angdiff > MINECARTCONEMAX)
+				P_SetLocalAngle(player, minecart->angle + MINECARTCONEMAX);
+			else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
+				P_SetLocalAngle(player, minecart->angle - MINECARTCONEMAX);
 
-			if (player == &players[consoleplayer])
-				ang = &localangle;
-			else if (player == &players[secondarydisplayplayer])
-				ang = &localangle2;
 
-			if (ang)
-			{
-				angdiff = *ang - minecart->angle;
-				if (angdiff < ANGLE_180 && angdiff > MINECARTCONEMAX)
-					*ang = minecart->angle + MINECARTCONEMAX;
-				else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
-					*ang = minecart->angle - MINECARTCONEMAX;
-			}
 		}
 	}
 
@@ -10964,10 +10917,7 @@ static void P_MinecartThink(player_t *player)
 			if (angdiff && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))  // maintain relative angle on turns
 			{
 				player->mo->angle += angdiff;
-				if (player == &players[consoleplayer])
-					localangle += angdiff;
-				else if (player == &players[secondarydisplayplayer])
-					localangle2 += angdiff;
+				P_SetPlayerAngle(player, (angle_t)(player->angleturn << 16) + angdiff);
 			}
 
 			// Sideways detection
@@ -12520,12 +12470,7 @@ void P_PlayerAfterThink(player_t *player)
 					player->mo->angle = tails->angle;
 
 					if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-					{
-						if (player == &players[consoleplayer])
-							localangle = player->mo->angle;
-						else if (player == &players[secondarydisplayplayer])
-							localangle2 = player->mo->angle;
-					}
+						P_SetPlayerAngle(player, player->mo->angle);
 				}
 
 				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > player->mo->radius)
@@ -12609,12 +12554,7 @@ void P_PlayerAfterThink(player_t *player)
 						player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 
 						if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-						{
-							if (player == &players[consoleplayer])
-								localangle = player->mo->angle; // Adjust the local control angle.
-							else if (player == &players[secondarydisplayplayer])
-								localangle2 = player->mo->angle;
-						}
+							P_SetPlayerAngle(player, player->mo->angle);
 					}
 				}
 				break;
@@ -12825,4 +12765,44 @@ void P_PlayerAfterThink(player_t *player)
 			}
 		}
 	}
+}
+
+void P_SetPlayerAngle(player_t *player, angle_t angle)
+{
+	INT16 delta = (INT16)(angle >> 16) - player->angleturn;
+
+	P_ForceLocalAngle(player, P_GetLocalAngle(player) + (delta << 16));
+	player->angleturn += delta;
+}
+
+void P_SetLocalAngle(player_t *player, angle_t angle)
+{
+	INT16 delta = (INT16)((angle - P_GetLocalAngle(player)) >> 16);
+
+	P_ForceLocalAngle(player, P_GetLocalAngle(player) + (angle_t)(delta << 16));
+
+	if (player == &players[consoleplayer])
+		ticcmd_oldangleturn[0] += delta;
+	else if (player == &players[secondarydisplayplayer])
+		ticcmd_oldangleturn[1] += delta;
+}
+
+angle_t P_GetLocalAngle(player_t *player)
+{
+	if (player == &players[consoleplayer])
+		return localangle;
+	else if (player == &players[secondarydisplayplayer])
+		return localangle2;
+	else
+		return 0;
+}
+
+void P_ForceLocalAngle(player_t *player, angle_t angle)
+{
+	angle = angle >> 16 << 16;
+
+	if (player == &players[consoleplayer])
+		localangle = angle;
+	else if (player == &players[secondarydisplayplayer])
+		localangle2 = angle;
 }

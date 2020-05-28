@@ -522,6 +522,9 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->pflags = (UINT32)LONG(players[i].pflags); //pflags_t
 	rsp->panim  = (UINT8)players[i].panim; //panim_t
 
+	rsp->angleturn = (INT16)SHORT(players[i].angleturn);
+	rsp->oldrelangleturn = (INT16)SHORT(players[i].oldrelangleturn);
+
 	rsp->aiming = (angle_t)LONG(players[i].aiming);
 	rsp->currentweapon = LONG(players[i].currentweapon);
 	rsp->ringweapons = LONG(players[i].ringweapons);
@@ -662,6 +665,9 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].playerstate = (UINT8)rsp->playerstate; //playerstate_t
 	players[i].pflags = (UINT32)LONG(rsp->pflags); //pflags_t
 	players[i].panim  = (UINT8)rsp->panim; //panim_t
+
+	players[i].angleturn = (INT16)SHORT(rsp->angleturn);
+	players[i].oldrelangleturn = (INT16)SHORT(rsp->oldrelangleturn);
 
 	players[i].aiming = (angle_t)LONG(rsp->aiming);
 	players[i].currentweapon = LONG(rsp->currentweapon);
@@ -3346,6 +3352,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			displayplayer = newplayernum;
 			secondarydisplayplayer = newplayernum;
 			DEBFILE("spawning me\n");
+			ticcmd_oldangleturn[0] = newplayer->oldrelangleturn;
 		}
 		else
 		{
@@ -3353,7 +3360,9 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			DEBFILE("spawning my brother\n");
 			if (botingame)
 				newplayer->bot = 1;
+			ticcmd_oldangleturn[1] = newplayer->oldrelangleturn;
 		}
+		P_ForceLocalAngle(newplayer, (angle_t)(newplayer->angleturn << 16));
 		D_SendPlayerConfig();
 		addedtogame = true;
 
@@ -3361,11 +3370,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		{
 			if (newplayer->mo)
 			{
-				if (!splitscreenplayer)
-					localangle = newplayer->mo->angle;
-				else
-					localangle2 = newplayer->mo->angle;
-
 				newplayer->viewheight = 41*newplayer->height/48;
 
 				if (newplayer->mo->eflags & MFE_VERTICALFLIP)
@@ -4719,41 +4723,6 @@ static void Local_Maketic(INT32 realtics)
 
 	localcmds.angleturn |= TICCMD_RECEIVED;
 	localcmds2.angleturn |= TICCMD_RECEIVED;
-}
-
-// This function is utter bullshit and is responsible for
-// the random desynch that happens when a player spawns.
-// This is because ticcmds are resent to clients if a packet
-// was dropped, and thus modifying them can lead to several
-// clients having their ticcmds set to different values.
-void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle)
-{
-	tic_t tic;
-	UINT8 numadjust = 0;
-
-	(void)x;
-	(void)y;
-
-	// Revisionist history: adjust the angles in the ticcmds received
-	// for this player, because they actually preceded the player
-	// spawning, but will be applied afterwards.
-
-	for (tic = server ? maketic : (neededtic - 1); tic >= gametic; tic--)
-	{
-		if (numadjust++ == BACKUPTICS)
-		{
-			DEBFILE(va("SV_SpawnPlayer: All netcmds for player %d adjusted!\n", playernum));
-			// We already adjusted them all, waste of time doing the same thing over and over
-			// This shouldn't happen normally though, either gametic was 0 (which is handled now anyway)
-			// or maketic >= gametic + BACKUPTICS
-			// -- Monster Iestyn 16/01/18
-			break;
-		}
-		netcmds[tic%BACKUPTICS][playernum].angleturn = (INT16)((angle>>16) | TICCMD_RECEIVED);
-
-		if (!tic) // failsafe for gametic == 0 -- Monster Iestyn 16/01/18
-			break;
-	}
 }
 
 // create missed tic

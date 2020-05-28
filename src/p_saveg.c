@@ -103,6 +103,8 @@ static void P_NetArchivePlayers(void)
 
 		// no longer send ticcmds, player name, skin, or color
 
+		WRITEINT16(save_p, players[i].angleturn);
+		WRITEINT16(save_p, players[i].oldrelangleturn);
 		WRITEANGLE(save_p, players[i].aiming);
 		WRITEANGLE(save_p, players[i].drawangle);
 		WRITEANGLE(save_p, players[i].viewrollangle);
@@ -311,6 +313,8 @@ static void P_NetUnArchivePlayers(void)
 		// sending player names, skin and color should not be necessary at all!
 		// (that data is handled in the server config now)
 
+		players[i].angleturn = READINT16(save_p);
+		players[i].oldrelangleturn = READINT16(save_p);
 		players[i].aiming = READANGLE(save_p);
 		players[i].drawangle = READANGLE(save_p);
 		players[i].viewrollangle = READANGLE(save_p);
@@ -2547,11 +2551,6 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		i = READUINT8(save_p);
 		mobj->player = &players[i];
 		mobj->player->mo = mobj;
-		// added for angle prediction
-		if (consoleplayer == i)
-			localangle = mobj->angle;
-		if (secondarydisplayplayer == i)
-			localangle2 = mobj->angle;
 	}
 	if (diff & MD_MOVEDIR)
 		mobj->movedir = READANGLE(save_p);
