@@ -764,7 +764,7 @@ void G_GhostTicker(void)
 			if (xziptic & EZT_THOKMASK)
 			{ // Let's only spawn ONE of these per frame, thanks.
 				mobj_t *mobj;
-				INT32 type = -1;
+				UINT32 type = MT_NULL;
 				if (g->mo->skin)
 				{
 					skin_t *skin = (skin_t *)g->mo->skin;
@@ -1051,7 +1051,7 @@ void G_ReadMetalTic(mobj_t *metal)
 		if (xziptic & EZT_THOKMASK)
 		{ // Let's only spawn ONE of these per frame, thanks.
 			mobj_t *mobj;
-			INT32 type = -1;
+			UINT32 type = MT_NULL;
 			if (metal->skin)
 			{
 				skin_t *skin = (skin_t *)metal->skin;
