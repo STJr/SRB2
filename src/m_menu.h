@@ -450,7 +450,7 @@ typedef struct menucolor_s {
 	UINT16 color;
 } menucolor_t;
 
-menucolor_t *menucolorhead, *menucolortail;
+extern menucolor_t *menucolorhead, *menucolortail;
 
 void M_AddMenuColor(UINT16 color);
 void M_MoveColorBefore(UINT16 color, UINT16 targ);
