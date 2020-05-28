@@ -34,6 +34,7 @@ applications may follow different packet versions.
 
 // Networking and tick handling related.
 #define BACKUPTICS 96
+#define CLIENTBACKUPTICS 32
 #define MAXTEXTCMD 256
 //
 // Packet structure
@@ -128,7 +129,7 @@ typedef struct
 // this packet is too large
 typedef struct
 {
-	UINT8 starttic;
+	tic_t starttic;
 	UINT8 numtics;
 	UINT8 numslots; // "Slots filled": Highest player number in use plus one.
 	ticcmd_t cmds[45]; // Normally [BACKUPTIC][MAXPLAYERS] but too large
@@ -520,7 +521,7 @@ extern consvar_t cv_resynchattempts, cv_blamecfail;
 extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
 // Used in d_net, the only dependence
-tic_t ExpandTics(INT32 low);
+tic_t ExpandTics(INT32 low, INT32 node);
 void D_ClientServerInit(void);
 
 // Initialise the other field
