@@ -3292,7 +3292,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	boolean splitscreenplayer;
 	boolean rejoined;
 	player_t *newplayer;
-	char *port;
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -3323,10 +3322,15 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 		if (server && I_GetNodeAddress)
 		{
-			strcpy(playeraddress[newplayernum], I_GetNodeAddress(node));
-			port = strchr(playeraddress[newplayernum], ':');
-			if (port)
-				*port = '\0';
+			const char *address = I_GetNodeAddress(node);
+			char *port = NULL;
+			if (address) // MI: fix msvcrt.dll!_mbscat crash?
+			{
+				strcpy(playeraddress[newplayernum], address);
+				port = strchr(playeraddress[newplayernum], ':');
+				if (port)
+					*port = '\0';
+			}
 		}
 	}
 
