@@ -449,7 +449,8 @@ static int mobj_set(lua_State *L)
 		return UNIMPLEMENTED;
 	case mobj_angle:
 		mo->angle = luaL_checkangle(L, 3);
-		P_SetPlayerAngle(mo->player, mo->angle);
+		if (mo->player)
+			P_SetPlayerAngle(mo->player, mo->angle);
 		break;
 	case mobj_rollangle:
 		mo->rollangle = luaL_checkangle(L, 3);
