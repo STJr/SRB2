@@ -61,6 +61,8 @@
 
 #include "../console.h"
 
+#include "../m_menu.h"
+
 #ifdef __GNUG__
  #pragma implementation "../i_system.h"
 #endif
@@ -555,6 +557,7 @@ void I_Error (const char *error, ...)
 	if (demorecording)
 		G_CheckDemoStatus();
 	D_QuitNetGame ();
+	M_FreePlayerSetupColors();
 
 	if (shutdowning)
 	{
@@ -622,6 +625,7 @@ void I_Quit (void)
 	if (demorecording)
 		G_CheckDemoStatus();
 	D_QuitNetGame ();
+	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_ShutdownCD();

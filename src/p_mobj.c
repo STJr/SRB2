@@ -436,7 +436,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			mobj->sprite2 = spr2;
 			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
-			if (mobj->color >= MAXSKINCOLORS && mobj->color < MAXTRANSLATIONS) // Super colours? Super bright!
+			if (mobj->color >= FIRSTSUPERCOLOR && mobj->color < numskincolors) // Super colours? Super bright!
 				mobj->frame |= FF_FULLBRIGHT;
 		}
 		// Regular sprites
@@ -9429,7 +9429,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 	case MT_BOSSFLYPOINT:
 		return false;
 	case MT_NIGHTSCORE:
-		mobj->color = (UINT8)(leveltime % SKINCOLOR_WHITE);
+		mobj->color = (UINT16)(leveltime % SKINCOLOR_WHITE);
 		break;
 	case MT_JETFUME1:
 		if (!P_JetFume1Think(mobj))
@@ -10636,7 +10636,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_EGGROBO1:
 			mobj->movecount = P_RandomKey(13);
-			mobj->color = SKINCOLOR_RUBY + P_RandomKey(MAXSKINCOLORS - SKINCOLOR_RUBY);
+			mobj->color = SKINCOLOR_RUBY + P_RandomKey(numskincolors - SKINCOLOR_RUBY);
 			break;
 		case MT_HIVEELEMENTAL:
 			mobj->extravalue1 = 5;
@@ -11916,7 +11916,7 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 {
 	INT32 j;
 	emblem_t* emblem = M_GetLevelEmblems(gamemap);
-	skincolors_t emcolor;
+	skincolornum_t emcolor;
 
 	while (emblem)
 	{
@@ -11939,7 +11939,7 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 
 	mobj->health = j + 1;
 	emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
-	mobj->color = (UINT8)emcolor;
+	mobj->color = (UINT16)emcolor;
 
 	if (emblemlocations[j].collected
 		|| (emblemlocations[j].type == ET_SKIN && emblemlocations[j].var != players[0].skin))
@@ -12578,7 +12578,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	case MT_BALLOON:
 		if (mthing->angle > 0)
-			mobj->color = ((mthing->angle - 1) % (MAXSKINCOLORS - 1)) + 1;
+			mobj->color = ((mthing->angle - 1) % (numskincolors - 1)) + 1;
 		break;
 #define makesoftwarecorona(mo, h) \
 			corona = P_SpawnMobjFromMobj(mo, 0, 0, h<<FRACBITS, MT_PARTICLE);\

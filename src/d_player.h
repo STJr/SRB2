@@ -366,7 +366,7 @@ typedef struct player_s
 	UINT16 flashpal;
 
 	// Player skin colorshift, 0-15 for which color to draw player.
-	UINT8 skincolor;
+	UINT16 skincolor;
 
 	INT32 skin;
 	UINT32 availabilities;
