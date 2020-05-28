@@ -3696,7 +3696,7 @@ void V_Init(void)
 
 #ifdef DEBUG
 	CONS_Debug(DBG_RENDER, "V_Init done:\n");
-	for (i = 0; i < NUMSCREENS+1; i++)
+	for (i = 0; i < NUMSCREENS; i++)
 		CONS_Debug(DBG_RENDER, " screens[%d] = %x\n", i, screens[i]);
 #endif
 }
