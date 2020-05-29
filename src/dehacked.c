@@ -547,8 +547,6 @@ static void readfreeslots(MYFILE *f)
 					{
 						if (memcmp(sprnames[i],word,4)==0)
 						{
-							if (!sprnames[i][4])
-								sprnames[i][4] = (char)f->wad;
 							deh_warning("Freeslots: Sprite 'SPR_%s' already exists", word);
 							break; // don't continue
 						}
@@ -10084,8 +10082,14 @@ static spritenum_t get_sprite(const char *word)
 	if (fastncmp("SPR_",word,4))
 		word += 4; // take off the SPR_
 	for (i = 0; i < NUMSPRITES; i++)
-		if (!sprnames[i][4] && memcmp(word,sprnames[i],4)==0)
+	{
+		if (i >= SPR_FIRSTFREESLOT) {
+			if (!(used_spr[(i-SPR_FIRSTFREESLOT)/8] & (1<<(i%8))))
+				break;
+		}
+		if (memcmp(word,sprnames[i],4)==0)
 			return i;
+	}
 	deh_warning("Couldn't find sprite named 'SPR_%s'",word);
 	return SPR_NULL;
 }
@@ -10557,18 +10561,12 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "SPR"))
 		{
-			char wad;
 			spritenum_t j;
-			lua_getfield(L, LUA_REGISTRYINDEX, "WAD");
-			wad = (char)lua_tointeger(L, -1);
-			lua_pop(L, 1);
 			for (j = SPR_FIRSTFREESLOT; j <= SPR_LASTFREESLOT; j++)
 			{
 				if (used_spr[(j-SPR_FIRSTFREESLOT)/8] & (1<<(j%8)))
 				{
 					if (memcmp(sprnames[j],word,4)==0) {
-						if (!sprnames[j][4])
-							sprnames[j][4] = wad;
 						CONS_Printf("Sprite SPR_%s already exists.\n", word);
 						break; // don't continue
 					}
