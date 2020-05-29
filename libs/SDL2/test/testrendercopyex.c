@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2016 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -45,7 +45,7 @@ quit(int rc)
 }
 
 SDL_Texture *
-LoadTexture(SDL_Renderer *renderer, char *file, SDL_bool transparent)
+LoadTexture(SDL_Renderer *renderer, const char *file, SDL_bool transparent)
 {
     SDL_Surface *temp;
     SDL_Texture *texture;
@@ -126,7 +126,7 @@ Draw(DrawState *s)
     s->sprite_rect.x = (viewport.w - s->sprite_rect.w) / 2;
     s->sprite_rect.y = (viewport.h - s->sprite_rect.h) / 2;
 
-    SDL_RenderCopyEx(s->renderer, s->sprite, NULL, &s->sprite_rect, (double)s->sprite_rect.w, center, s->scale_direction);
+    SDL_RenderCopyEx(s->renderer, s->sprite, NULL, &s->sprite_rect, (double)s->sprite_rect.w, center, (SDL_RendererFlip)s->scale_direction);
 
     SDL_SetRenderTarget(s->renderer, NULL);
     SDL_RenderCopy(s->renderer, target, NULL, NULL);
@@ -174,18 +174,10 @@ main(int argc, char *argv[])
     if (!state) {
         return 1;
     }
-    for (i = 1; i < argc;) {
-        int consumed;
 
-        consumed = SDLTest_CommonArg(state, i);
-        if (consumed == 0) {
-            SDL_Log("Usage: %s %s\n", argv[0], SDLTest_CommonUsage(state));
-            return 1;
-        }
-        i += consumed;
-    }
-    if (!SDLTest_CommonInit(state)) {
-        quit(2);
+    if (!SDLTest_CommonDefaultArgs(state, argc, argv) || !SDLTest_CommonInit(state)) {
+        SDLTest_CommonQuit(state);
+        return 1;
     }
 
     drawstates = SDL_stack_alloc(DrawState, state->num_windows);

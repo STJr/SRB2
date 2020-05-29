@@ -59,9 +59,11 @@ typedef FxI32 GrTextureFormat_t;
 
 typedef struct
 {
+#ifdef GLIDE_API_COMPATIBILITY
 	GrLOD_t           smallLodLog2;
 	GrLOD_t           largeLodLog2;
 	GrAspectRatio_t   aspectRatioLog2;
+#endif
 	GrTextureFormat_t format;
 	void              *data;
 } GrTexInfo;

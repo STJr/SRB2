@@ -1,7 +1,7 @@
 #
 # Makefile for installing the mingw32 version of the SDL2_mixer library
 
-CROSS_PATH := /usr/local/cross-tools
+CROSS_PATH := /usr/local
 ARCHITECTURES := i686-w64-mingw32 x86_64-w64-mingw32
 
 all install:

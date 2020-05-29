@@ -1,0 +1,22 @@
+# SRB2-data Debian package control file.
+
+Source: ${PACKAGE_NAME}-data
+Section: games
+Priority: extra
+Maintainer: ${PACKAGE_GROUP_NAME_EMAIL}
+Build-Depends: debhelper (>= 7.0.50~),
+ wget
+Standards-Version: 3.8.4
+Homepage: ${PACKAGE_WEBSITE}
+
+Package: ${PACKAGE_NAME}-data
+Architecture: all
+Description: A cross-platform 3D Sonic fangame
+ Sonic Robo Blast 2 is a 3D open-source Sonic the Hedgehog
+ fangame built using a modified version of the Doom Legacy
+ port of Doom. SRB2 is closely inspired by the original
+ Sonic games from the Sega Genesis, and attempts to recreate
+ the design in 3D. It features tons of levels, enemies, speed,
+ and quite a lot of the fun that the original Sonic games provided.
+ This is the data package that provides the data files that
+ SRB2 requires to run; it will not work without it.

@@ -33,7 +33,6 @@
 
 void ShowEndTxt(void)
 {
-#if !(defined (_WIN32_WCE) || defined (_XBOX) || defined (_arch_dreamcast))
 	INT32 i;
 	UINT16 j, att = 0;
 	INT32 nlflag = 1;
@@ -232,5 +231,4 @@ void ShowEndTxt(void)
 		printf("\n");
 
 	Z_Free(data);
-#endif
 }

@@ -150,6 +150,8 @@ void I_GetJoystick2Events(void){}
 
 void I_GetMouseEvents(void){}
 
+void I_UpdateMouseGrab(void){}
+
 char *I_GetEnv(const char *name)
 {
 	(void)name;
@@ -160,6 +162,18 @@ INT32 I_PutEnv(char *variable)
 {
 	(void)variable;
 	return -1;
+}
+
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	(void)data;
+	(void)size;
+	return -1;
+}
+
+char *I_ClipboardPaste(void)
+{
+	return NULL;
 }
 
 void I_RegisterSysCommands(void) {}

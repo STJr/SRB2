@@ -1,8 +1,11 @@
 // Emacs style mode select   -*- C++ -*-
+//
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 2014-2020 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -26,26 +29,18 @@
 #include "../config.h.in"
 #endif
 
-#ifndef _WIN32_WCE
 #include <signal.h>
-#endif
 
-#ifdef _XBOX
-#include "SRB2XBOX/xboxhelp.h"
-#endif
-
-#if defined (_WIN32) && !defined (_XBOX)
+#ifdef _WIN32
 #define RPC_NO_WINDOWS_H
 #include <windows.h>
 #include "../doomtype.h"
-#ifndef _WIN32_WCE
 typedef BOOL (WINAPI *p_GetDiskFreeSpaceExA)(LPCSTR, PULARGE_INTEGER, PULARGE_INTEGER, PULARGE_INTEGER);
 typedef BOOL (WINAPI *p_IsProcessorFeaturePresent) (DWORD);
 typedef DWORD (WINAPI *p_timeGetTime) (void);
 typedef UINT (WINAPI *p_timeEndPeriod) (UINT);
 typedef HANDLE (WINAPI *p_OpenFileMappingA) (DWORD, BOOL, LPCSTR);
 typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
-#endif
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,17 +54,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <fcntl.h>
 #endif
 
-#ifdef _arch_dreamcast
-#include <arch/gdb.h>
-#include <arch/timer.h>
-#include <conio/conio.h>
-#include <dc/pvr.h>
-void __set_fpscr(long); // in libgcc / kernel's startup.s?
-#else
 #include <stdio.h>
-#if defined (_WIN32) && !defined (_WIN32_WCE) && !defined (_XBOX)
+#ifdef _WIN32
 #include <conio.h>
-#endif
 #endif
 
 #ifdef _MSC_VER
@@ -88,15 +75,10 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #pragma warning(default : 4214 4244)
 #endif
 
-#if SDL_VERSION_ATLEAST(1,2,7) && !defined (DC)
-#include "SDL_cpuinfo.h" // 1.2.7 or greater
+#include "SDL_cpuinfo.h"
 #define HAVE_SDLCPUINFO
-#endif
 
-#ifdef _PSP
-//#include <pspiofilemgr.h>
-#elif !defined(_PS3)
-#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (_arch_dreamcast) && !defined (__HAIKU__) && !defined (_WII))
+#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
 #if defined (__linux__)
 #include <sys/vfs.h>
 #else
@@ -111,20 +93,23 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #include <sys/vmmeter.h>
 #endif
 #endif
-#endif
 
-#ifndef _PS3
-#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (_arch_dreamcast) && !defined (_PSP) && !defined (__HAIKU__) && !defined (_WII))
+#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
 #ifndef NOTERMIOS
 #include <termios.h>
 #include <sys/ioctl.h> // ioctl
 #define HAVE_TERMIOS
 #endif
 #endif
+
+#if (defined (__unix__) && !defined (_MSDOS)) || defined (UNIXCOMMON)
+#include <errno.h>
+#include <sys/wait.h>
+#define NEWSIGNALHANDLER
 #endif
 
 #ifndef NOMUMBLE
-#if defined (__linux__) && !defined(_PS3) // need -lrt
+#ifdef __linux__ // need -lrt
 #include <sys/mman.h>
 #ifdef MAP_FAILED
 #define HAVE_SHM
@@ -132,17 +117,13 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #include <wchar.h>
 #endif
 
-#if defined (_WIN32) && !defined (_WIN32_WCE) && !defined (_XBOX)
+#ifdef _WIN32
 #define HAVE_MUMBLE
 #define WINMUMBLE
 #elif defined (HAVE_SHM)
 #define HAVE_MUMBLE
 #endif
 #endif // NOMUMBLE
-
-#ifdef _WIN32_WCE
-#include "SRB2CE/cehelp.h"
-#endif
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -152,45 +133,12 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #include "macosx/mac_resources.h"
 #endif
 
-// Locations for searching the srb2.srb
-#ifdef _arch_dreamcast
-#define DEFAULTWADLOCATION1 "/cd"
-#define DEFAULTWADLOCATION2 "/pc"
-#define DEFAULTWADLOCATION3 "/pc/home/alam/srb2code/data"
-#define DEFAULTSEARCHPATH1 "/cd"
-#define DEFAULTSEARCHPATH2 "/pc"
-//#define DEFAULTSEARCHPATH3 "/pc/home/alam/srb2code/data"
-#elif defined (GP2X)
-#define DEFAULTWADLOCATION1 "/mnt/sd"
-#define DEFAULTWADLOCATION2 "/mnt/sd/SRB2"
-#define DEFAULTWADLOCATION3 "/tmp/mnt/sd"
-#define DEFAULTWADLOCATION4 "/tmp/mnt/sd/SRB2"
-#define DEFAULTSEARCHPATH1 "/mnt/sd"
-#define DEFAULTSEARCHPATH2 "/tmp/mnt/sd"
-#elif defined (_WII)
-#define NOCWD
-#define NOHOME
-#define NEED_SDL_GETENV
-#define DEFAULTWADLOCATION1 "sd:/srb2wii"
-#define DEFAULTWADLOCATION2 "usb:/srb2wii"
-#define DEFAULTSEARCHPATH1 "sd:/srb2wii"
-#define DEFAULTSEARCHPATH2 "usb:/srb2wii"
-// PS3: TODO: this will need modification most likely
-#elif defined (_PS3)
-#define NOCWD
-#define NOHOME
-#define DEFAULTWADLOCATION1 "/dev_hdd0/game/SRB2-PS3_/USRDIR/etc"
-#define DEFAULTWADLOCATION2 "/dev_usb/SRB2PS3"
-#define DEFAULTSEARCHPATH1 "/dev_hdd0/game/SRB2-PS3_/USRDIR/etc"
-#define DEFAULTSEARCHPATH2 "/dev_usb/SRB2PS3"
-#elif defined (_PSP)
-#define NOCWD
-#define NOHOME
-#define DEFAULTWADLOCATION1 "host0:/bin/Resources"
-#define DEFAULTWADLOCATION2 "ms0:/PSP/GAME/SRB2PSP"
-#define DEFAULTSEARCHPATH1 "host0:/"
-#define DEFAULTSEARCHPATH2 "ms0:/PSP/GAME/SRB2PSP"
-#elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#ifndef errno
+#include <errno.h>
+#endif
+
+// Locations for searching the srb2.pk3
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
 #define DEFAULTWADLOCATION2 "/usr/local/games/SRB2"
 #define DEFAULTWADLOCATION3 "/usr/share/games/SRB2"
@@ -198,23 +146,6 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #define DEFAULTSEARCHPATH1 "/usr/local/games"
 #define DEFAULTSEARCHPATH2 "/usr/games"
 #define DEFAULTSEARCHPATH3 "/usr/local"
-#elif defined (_XBOX)
-#define NOCWD
-#ifdef __GNUC__
-#include <openxdk/debug.h>
-#endif
-#define DEFAULTWADLOCATION1 "c:\\srb2"
-#define DEFAULTWADLOCATION2 "d:\\srb2"
-#define DEFAULTWADLOCATION3 "e:\\srb2"
-#define DEFAULTWADLOCATION4 "f:\\srb2"
-#define DEFAULTWADLOCATION5 "g:\\srb2"
-#define DEFAULTWADLOCATION6 "h:\\srb2"
-#define DEFAULTWADLOCATION7 "i:\\srb2"
-#elif defined (_WIN32_WCE)
-#define NOCWD
-#define NOHOME
-#define DEFAULTWADLOCATION1 "\\Storage Card\\SRB2DEMO"
-#define DEFAULTSEARCHPATH1 "\\Storage Card"
 #elif defined (_WIN32)
 #define DEFAULTWADLOCATION1 "c:\\games\\srb2"
 #define DEFAULTWADLOCATION2 "\\games\\srb2"
@@ -224,8 +155,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 
 /**	\brief WAD file to look for
 */
-#define WADKEYWORD1 "srb2.srb"
-#define WADKEYWORD2 "srb2.wad"
+#define WADKEYWORD1 "srb2.pk3"
 /**	\brief holds wad path
 */
 static char returnWadPath[256];
@@ -247,6 +177,8 @@ static char returnWadPath[256];
 #include "../i_joy.h"
 
 #include "../m_argv.h"
+
+#include "../m_menu.h"
 
 #ifdef MAC_ALERT
 #include "macosx/mac_alert.h"
@@ -270,9 +202,6 @@ static void JoyReset(SDLJoyInfo_t *JoySet)
 {
 	if (JoySet->dev)
 	{
-#ifdef GP2X //GP2X's SDL does an illegal free on the 1st joystick...
-		if (SDL_JoystickIndex(JoySet->dev) != 0)
-#endif
 		SDL_JoystickClose(JoySet->dev);
 	}
 	JoySet->dev = NULL;
@@ -308,14 +237,11 @@ SDL_bool framebuffer = SDL_FALSE;
 
 UINT8 keyboard_started = false;
 
-#if !defined (DC)
-FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
+static void I_ReportSignal(int num, int coredumped)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
 	const char *      sigmsg;
-	char        sigdef[32];
-
-	D_QuitNetGame(); // Fix server freezes
+	char msg[128];
 
 	switch (num)
 	{
@@ -341,20 +267,41 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 		sigmsg = "SIGABRT - abnormal termination triggered by abort call";
 		break;
 	default:
-		sprintf(sigdef,"signal number %d", num);
-		sigmsg = sigdef;
+		sprintf(msg,"signal number %d", num);
+		if (coredumped)
+			sigmsg = 0;
+		else
+			sigmsg = msg;
 	}
 
-	I_OutputMsg("\nsignal_handler() error: %s\n", sigmsg);
+	if (coredumped)
+	{
+		if (sigmsg)
+			sprintf(msg, "%s (core dumped)", sigmsg);
+		else
+			strcat(msg, " (core dumped)");
+
+		sigmsg = msg;
+	}
+
+	I_OutputMsg("\nProcess killed by signal: %s\n\n", sigmsg);
 
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-		"Signal caught",
+		"Process killed by signal",
 		sigmsg, NULL);
+}
+
+#ifndef NEWSIGNALHANDLER
+FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
+{
+	D_QuitNetGame(); // Fix server freezes
+	I_ReportSignal(num, 0);
 	I_ShutdownSystem();
 	signal(num, SIG_DFL);               //default signal action
 	raise(num);
 	I_Quit();
 }
+#endif
 
 FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 {
@@ -362,7 +309,6 @@ FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 	raise(num);
 	I_Quit();
 }
-#endif
 
 #ifdef HAVE_TERMIOS
 // TERMIOS console code from Quake3: thank you!
@@ -487,9 +433,7 @@ static void I_StartupConsole(void)
 	signal(SIGTTIN, SIG_IGN);
 	signal(SIGTTOU, SIG_IGN);
 
-#if !defined(GP2X) //read is bad on GP2X
 	consolevent = !M_CheckParm("-noconsole");
-#endif
 	framebuffer = M_CheckParm("-framebuffer");
 
 	if (framebuffer)
@@ -577,7 +521,7 @@ void I_GetConsoleEvents(void)
 	(void)d;
 }
 
-#elif defined (_WIN32) && !(defined (_XBOX) || defined (_WIN32_WCE))
+#elif defined (_WIN32)
 static BOOL I_ReadyConsole(HANDLE ci)
 {
 	DWORD gotinput;
@@ -590,70 +534,78 @@ static BOOL I_ReadyConsole(HANDLE ci)
 
 static boolean entering_con_command = false;
 
+static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
+{
+	event_t event;
+	CONSOLE_SCREEN_BUFFER_INFO CSBI;
+	DWORD t;
+
+	memset(&event,0x00,sizeof (event));
+
+	if (evt.bKeyDown)
+	{
+		event.type = ev_console;
+		entering_con_command = true;
+		switch (evt.wVirtualKeyCode)
+		{
+			case VK_ESCAPE:
+			case VK_TAB:
+				event.data1 = KEY_NULL;
+				break;
+			case VK_SHIFT:
+				event.data1 = KEY_LSHIFT;
+				break;
+			case VK_RETURN:
+				entering_con_command = false;
+				/* FALLTHRU */
+			default:
+				event.data1 = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
+		}
+		if (co != INVALID_HANDLE_VALUE && GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &t))
+		{
+			if (event.data1 && event.data1 != KEY_LSHIFT && event.data1 != KEY_RSHIFT)
+			{
+#ifdef _UNICODE
+				WriteConsole(co, &evt.uChar.UnicodeChar, 1, &t, NULL);
+#else
+				WriteConsole(co, &evt.uChar.AsciiChar, 1 , &t, NULL);
+#endif
+			}
+			if (evt.wVirtualKeyCode == VK_BACK
+				&& GetConsoleScreenBufferInfo(co,&CSBI))
+			{
+				WriteConsoleOutputCharacterA(co, " ",1, CSBI.dwCursorPosition, &t);
+			}
+		}
+	}
+	else
+	{
+		event.type = ev_keyup;
+		switch (evt.wVirtualKeyCode)
+		{
+			case VK_SHIFT:
+				event.data1 = KEY_LSHIFT;
+				break;
+			default:
+				break;
+		}
+	}
+	if (event.data1) D_PostEvent(&event);
+}
+
 void I_GetConsoleEvents(void)
 {
-	event_t ev = {0,0,0,0};
 	HANDLE ci = GetStdHandle(STD_INPUT_HANDLE);
 	HANDLE co = GetStdHandle(STD_OUTPUT_HANDLE);
-	CONSOLE_SCREEN_BUFFER_INFO CSBI;
 	INPUT_RECORD input;
 	DWORD t;
 
 	while (I_ReadyConsole(ci) && ReadConsoleInput(ci, &input, 1, &t) && t)
 	{
-		memset(&ev,0x00,sizeof (ev));
 		switch (input.EventType)
 		{
 			case KEY_EVENT:
-				if (input.Event.KeyEvent.bKeyDown)
-				{
-					ev.type = ev_console;
-					entering_con_command = true;
-					switch (input.Event.KeyEvent.wVirtualKeyCode)
-					{
-						case VK_ESCAPE:
-						case VK_TAB:
-							ev.data1 = KEY_NULL;
-							break;
-						case VK_SHIFT:
-							ev.data1 = KEY_LSHIFT;
-							break;
-						case VK_RETURN:
-							entering_con_command = false;
-							// Fall through.
-						default:
-							ev.data1 = MapVirtualKey(input.Event.KeyEvent.wVirtualKeyCode,2); // convert in to char
-					}
-					if (co != INVALID_HANDLE_VALUE && GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &t))
-					{
-						if (ev.data1 && ev.data1 != KEY_LSHIFT && ev.data1 != KEY_RSHIFT)
-						{
-#ifdef _UNICODE
-							WriteConsole(co, &input.Event.KeyEvent.uChar.UnicodeChar, 1, &t, NULL);
-#else
-							WriteConsole(co, &input.Event.KeyEvent.uChar.AsciiChar, 1 , &t, NULL);
-#endif
-						}
-						if (input.Event.KeyEvent.wVirtualKeyCode == VK_BACK
-							&& GetConsoleScreenBufferInfo(co,&CSBI))
-						{
-							WriteConsoleOutputCharacterA(co, " ",1, CSBI.dwCursorPosition, &t);
-						}
-					}
-				}
-				else
-				{
-					ev.type = ev_keyup;
-					switch (input.Event.KeyEvent.wVirtualKeyCode)
-					{
-						case VK_SHIFT:
-							ev.data1 = KEY_LSHIFT;
-							break;
-						default:
-							break;
-					}
-				}
-				if (ev.data1) D_PostEvent(&ev);
+				Impl_HandleKeyboardConsoleEvent(input.Event.KeyEvent, co);
 				break;
 			case MOUSE_EVENT:
 			case WINDOW_BUFFER_SIZE_EVENT:
@@ -708,17 +660,6 @@ static inline void I_ShutdownConsole(void){}
 void I_GetConsoleEvents(void){}
 static inline void I_StartupConsole(void)
 {
-#ifdef _arch_dreamcast
-	char title[] = "SRB2 for Dreamcast!\n";
-	__set_fpscr(0x00040000); /* ignore FPU underflow */
-	//printf("\nHello world!\n\n");
-	pvr_init_defaults();
-	conio_init(CONIO_TTY_PVR, CONIO_INPUT_LINE);
-	conio_set_theme(CONIO_THEME_MATRIX);
-	conio_clear();
-	conio_putstr(title);
-	//printf("\nHello world!\n\n");
-#endif
 #ifdef _DEBUG
 	consolevent = !M_CheckParm("-noconsole");
 #else
@@ -736,9 +677,8 @@ static inline void I_ShutdownConsole(void){}
 //
 // StartupKeyboard
 //
-void I_StartupKeyboard (void)
+static void I_RegisterSignals (void)
 {
-#if !defined (DC)
 #ifdef SIGINT
 	signal(SIGINT , quit_handler);
 #endif
@@ -751,6 +691,7 @@ void I_StartupKeyboard (void)
 
 	// If these defines don't exist,
 	// then compilation would have failed above us...
+#ifndef NEWSIGNALHANDLER
 	signal(SIGILL , signal_handler);
 	signal(SIGSEGV , signal_handler);
 	signal(SIGABRT , signal_handler);
@@ -764,12 +705,8 @@ void I_StartupKeyboard (void)
 void I_OutputMsg(const char *fmt, ...)
 {
 	size_t len;
-	XBOXSTATIC char txt[8192];
+	char txt[8192];
 	va_list  argptr;
-
-#ifdef _arch_dreamcast
-	if (!keyboard_started) conio_printf(fmt);
-#endif
 
 	va_start(argptr,fmt);
 	vsprintf(txt, fmt, argptr);
@@ -780,7 +717,7 @@ void I_OutputMsg(const char *fmt, ...)
 	DEFAULTFONTBGR, DEFAULTFONTBGG, DEFAULTFONTBGB, DEFAULTFONTBGA, txt);
 #endif
 
-#if defined (_WIN32) && !defined (_XBOX) && defined (_MSC_VER)
+#if defined (_WIN32) && defined (_MSC_VER)
 	OutputDebugStringA(txt);
 #endif
 
@@ -795,7 +732,7 @@ void I_OutputMsg(const char *fmt, ...)
 	}
 #endif
 
-#if defined (_WIN32) && !defined (_XBOX) && !defined(_WIN32_WCE)
+#if defined (_WIN32)
 #ifdef DEBUGFILE
 	if (debugfile != stderr)
 #endif
@@ -909,24 +846,31 @@ INT32 I_GetKey (void)
 //
 void I_JoyScale(void)
 {
-#ifdef GP2X
-	if (JoyInfo.dev && SDL_JoystickIndex(JoyInfo.dev) == 0)
-		Joystick.bGamepadStyle = true;
-	else
-#endif
 	Joystick.bGamepadStyle = cv_joyscale.value==0;
 	JoyInfo.scale = Joystick.bGamepadStyle?1:cv_joyscale.value;
 }
 
 void I_JoyScale2(void)
 {
-#ifdef GP2X
-	if (JoyInfo2.dev && SDL_JoystickIndex(JoyInfo2.dev) == 0)
-		Joystick.bGamepadStyle = true;
-	else
-#endif
 	Joystick2.bGamepadStyle = cv_joyscale2.value==0;
 	JoyInfo2.scale = Joystick2.bGamepadStyle?1:cv_joyscale2.value;
+}
+
+// Cheat to get the device index for a joystick handle
+INT32 I_GetJoystickDeviceIndex(SDL_Joystick *dev)
+{
+	INT32 i, count = SDL_NumJoysticks();
+
+	for (i = 0; dev && i < count; i++)
+	{
+		SDL_Joystick *test = SDL_JoystickOpen(i);
+		if (test && test == dev)
+			return i;
+		else if (JoyInfo.dev != test && JoyInfo2.dev != test)
+			SDL_JoystickClose(test);
+	}
+
+	return -1;
 }
 
 /**	\brief Joystick 1 buttons states
@@ -944,7 +888,7 @@ static UINT64 lastjoyhats = 0;
 
 
 */
-static void I_ShutdownJoystick(void)
+void I_ShutdownJoystick(void)
 {
 	INT32 i;
 	event_t event;
@@ -978,14 +922,8 @@ static void I_ShutdownJoystick(void)
 
 	joystick_started = 0;
 	JoyReset(&JoyInfo);
-	if (!joystick_started && !joystick2_started && SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
-	{
-		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
-		if (cv_usejoystick.value == 0)
-		{
-			I_OutputMsg("I_Joystick: SDL's Joystick system has been shutdown\n");
-		}
-	}
+
+	// don't shut down the subsystem here, because hotplugging
 }
 
 void I_GetJoystickEvents(void)
@@ -995,8 +933,8 @@ void I_GetJoystickEvents(void)
 	UINT64 joyhats = 0;
 #if 0
 	UINT64 joybuttons = 0;
-#endif
 	Sint16 axisx, axisy;
+#endif
 
 	if (!joystick_started) return;
 
@@ -1027,11 +965,6 @@ void I_GetJoystickEvents(void)
 					event.type = ev_keydown;
 				else
 					event.type = ev_keyup;
-#ifdef _PSP
-				if (i == 12)
-					event.data1 = KEY_ESCAPE;
-				else
-#endif
 				event.data1 = KEY_JOY1 + i;
 				D_PostEvent(&event);
 			}
@@ -1069,6 +1002,7 @@ void I_GetJoystickEvents(void)
 		}
 	}
 
+#if 0
 	// send joystick axis positions
 	event.type = ev_joystick;
 
@@ -1082,13 +1016,11 @@ void I_GetJoystickEvents(void)
 			axisy = SDL_JoystickGetAxis(JoyInfo.dev, i*2 + 1);
 		else axisy = 0;
 
-#ifdef _arch_dreamcast // -128 to 127
-		axisx = axisx*8;
-		axisy = axisy*8;
-#else // -32768 to 32767
+
+		// -32768 to 32767
 		axisx = axisx/32;
 		axisy = axisy/32;
-#endif
+
 
 		if (Joystick.bGamepadStyle)
 		{
@@ -1121,6 +1053,7 @@ void I_GetJoystickEvents(void)
 		}
 		D_PostEvent(&event);
 	}
+#endif
 }
 
 /**	\brief	Open joystick handle
@@ -1131,74 +1064,66 @@ void I_GetJoystickEvents(void)
 
 
 */
-static int joy_open(const char *fname)
+static int joy_open(int joyindex)
 {
-	int joyindex = atoi(fname);
+	SDL_Joystick *newdev = NULL;
 	int num_joy = 0;
-	int i;
 
-	if (joystick_started == 0 && joystick2_started == 0)
+	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
-		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
-		{
-			CONS_Printf(M_GetText("Couldn't initialize joystick: %s\n"), SDL_GetError());
-			return -1;
-		}
-		else
-		{
-			num_joy = SDL_NumJoysticks();
-		}
+		CONS_Printf(M_GetText("Joystick subsystem not started\n"));
+		return -1;
+	}
 
-		if (num_joy < joyindex)
-		{
-			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
-			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
-			I_ShutdownJoystick();
-			return -1;
-		}
-	}
-	else
-	{
-		JoyReset(&JoyInfo);
-		//I_ShutdownJoystick();
-		//joy_open(fname);
-	}
+	if (joyindex <= 0)
+		return -1;
 
 	num_joy = SDL_NumJoysticks();
 
-	if (joyindex <= 0 || num_joy == 0 || JoyInfo.oldjoy == joyindex)
+	if (num_joy == 0)
 	{
-//		I_OutputMsg("Unable to use that joystick #(%s), non-number\n",fname);
-		if (num_joy != 0)
-		{
-			CONS_Printf(M_GetText("Found %d joysticks on this system\n"), num_joy);
-			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
-		}
-		else
-			CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
-		if (joyindex <= 0 || num_joy == 0) return 0;
+		CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
+		return -1;
 	}
 
-	JoyInfo.dev = SDL_JoystickOpen(joyindex-1);
+	newdev = SDL_JoystickOpen(joyindex-1);
+
+	// Handle the edge case where the device <-> joystick index assignment can change due to hotplugging
+	// This indexing is SDL's responsibility and there's not much we can do about it.
+	//
+	// Example:
+	// 1. Plug Controller A   -> Index 0 opened
+	// 2. Plug Controller B   -> Index 1 opened
+	// 3. Unplug Controller A -> Index 0 closed, Index 1 active
+	// 4. Unplug Controller B -> Index 0 inactive, Index 1 closed
+	// 5. Plug Controller B   -> Index 0 opened
+	// 6. Plug Controller A   -> Index 0 REPLACED, opened as Controller A; Index 1 is now Controller B
+	if (JoyInfo.dev)
+	{
+		if (JoyInfo.dev == newdev // same device, nothing to do
+			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo.dev))) // we failed, but already have a working device
+			return JoyInfo.axises;
+		// Else, we're changing devices, so send neutral joy events
+		CONS_Debug(DBG_GAMELOGIC, "Joystick1 device is changing; resetting events...\n");
+		I_ShutdownJoystick();
+	}
+
+	JoyInfo.dev = newdev;
 
 	if (JoyInfo.dev == NULL)
 	{
-		CONS_Printf(M_GetText("Couldn't open joystick: %s\n"), SDL_GetError());
-		I_ShutdownJoystick();
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick1: Couldn't open device - %s\n"), SDL_GetError());
 		return -1;
 	}
 	else
 	{
-		CONS_Printf(M_GetText("Joystick: %s\n"), SDL_JoystickName(JoyInfo.dev));
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick1: %s\n"), SDL_JoystickName(JoyInfo.dev));
 		JoyInfo.axises = SDL_JoystickNumAxes(JoyInfo.dev);
 		if (JoyInfo.axises > JOYAXISSET*2)
 			JoyInfo.axises = JOYAXISSET*2;
-/*		if (joyaxes<2)
+	/*		if (joyaxes<2)
 		{
 			I_OutputMsg("Not enought axes?\n");
-			I_ShutdownJoystick();
 			return 0;
 		}*/
 
@@ -1206,15 +1131,11 @@ static int joy_open(const char *fname)
 		if (JoyInfo.buttons > JOYBUTTONS)
 			JoyInfo.buttons = JOYBUTTONS;
 
-#ifdef DC
-		JoyInfo.hats = 0;
-#else
 		JoyInfo.hats = SDL_JoystickNumHats(JoyInfo.dev);
 		if (JoyInfo.hats > JOYHATS)
 			JoyInfo.hats = JOYHATS;
 
 		JoyInfo.balls = SDL_JoystickNumBalls(JoyInfo.dev);
-#endif
 
 		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo.dev), "pad");
 
@@ -1237,7 +1158,7 @@ static UINT64 lastjoy2hats = 0;
 
 	\return	void
 */
-static void I_ShutdownJoystick2(void)
+void I_ShutdownJoystick2(void)
 {
 	INT32 i;
 	event_t event;
@@ -1269,15 +1190,10 @@ static void I_ShutdownJoystick2(void)
 		D_PostEvent(&event);
 	}
 
+	joystick2_started = 0;
 	JoyReset(&JoyInfo2);
-	if (!joystick_started && !joystick2_started && SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
-	{
-		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
-		if (cv_usejoystick2.value == 0)
-		{
-			DEBFILE("I_Joystick2: SDL's Joystick system has been shutdown\n");
-		}
-	}
+
+	// don't shut down the subsystem here, because hotplugging
 }
 
 void I_GetJoystick2Events(void)
@@ -1287,8 +1203,8 @@ void I_GetJoystick2Events(void)
 	UINT64 joyhats = 0;
 #if 0
 	INT64 joybuttons = 0;
-#endif
 	INT32 axisx, axisy;
+#endif
 
 	if (!joystick2_started)
 		return;
@@ -1358,6 +1274,7 @@ void I_GetJoystick2Events(void)
 		}
 	}
 
+#if 0
 	// send joystick axis positions
 	event.type = ev_joystick2;
 
@@ -1371,13 +1288,9 @@ void I_GetJoystick2Events(void)
 			axisy = SDL_JoystickGetAxis(JoyInfo2.dev, i*2 + 1);
 		else axisy = 0;
 
-#ifdef _arch_dreamcast // -128 to 127
-		axisx = axisx*8;
-		axisy = axisy*8;
-#else // -32768 to 32767
+		// -32768 to 32767
 		axisx = axisx/32;
 		axisy = axisy/32;
-#endif
 
 		if (Joystick2.bGamepadStyle)
 		{
@@ -1412,7 +1325,7 @@ void I_GetJoystick2Events(void)
 		}
 		D_PostEvent(&event);
 	}
-
+#endif
 }
 
 /**	\brief	Open joystick handle
@@ -1423,72 +1336,66 @@ void I_GetJoystick2Events(void)
 
 
 */
-static int joy_open2(const char *fname)
+static int joy_open2(int joyindex)
 {
-	int joyindex = atoi(fname);
+	SDL_Joystick *newdev = NULL;
 	int num_joy = 0;
-	int i;
 
-	if (joystick_started == 0 && joystick2_started == 0)
+	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
-		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
-		{
-			CONS_Printf(M_GetText("Couldn't initialize joystick: %s\n"), SDL_GetError());
-			return -1;
-		}
-		else
-			num_joy = SDL_NumJoysticks();
+		CONS_Printf(M_GetText("Joystick subsystem not started\n"));
+		return -1;
+	}
 
-		if (num_joy < joyindex)
-		{
-			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
-			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
-			I_ShutdownJoystick2();
-			return -1;
-		}
-	}
-	else
-	{
-		JoyReset(&JoyInfo2);
-		//I_ShutdownJoystick();
-		//joy_open(fname);
-	}
+	if (joyindex <= 0)
+		return -1;
 
 	num_joy = SDL_NumJoysticks();
 
-	if (joyindex <= 0 || num_joy == 0 || JoyInfo2.oldjoy == joyindex)
+	if (num_joy == 0)
 	{
-//		I_OutputMsg("Unable to use that joystick #(%s), non-number\n",fname);
-		if (num_joy != 0)
-		{
-			CONS_Printf(M_GetText("Found %d joysticks on this system\n"), num_joy);
-			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
-		}
-		else
-			CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
-		if (joyindex <= 0 || num_joy == 0) return 0;
+		CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
+		return -1;
 	}
 
-	JoyInfo2.dev = SDL_JoystickOpen(joyindex-1);
+	newdev = SDL_JoystickOpen(joyindex-1);
 
-	if (!JoyInfo2.dev)
+	// Handle the edge case where the device <-> joystick index assignment can change due to hotplugging
+	// This indexing is SDL's responsibility and there's not much we can do about it.
+	//
+	// Example:
+	// 1. Plug Controller A   -> Index 0 opened
+	// 2. Plug Controller B   -> Index 1 opened
+	// 3. Unplug Controller A -> Index 0 closed, Index 1 active
+	// 4. Unplug Controller B -> Index 0 inactive, Index 1 closed
+	// 5. Plug Controller B   -> Index 0 opened
+	// 6. Plug Controller A   -> Index 0 REPLACED, opened as Controller A; Index 1 is now Controller B
+	if (JoyInfo2.dev)
 	{
-		CONS_Printf(M_GetText("Couldn't open joystick2: %s\n"), SDL_GetError());
+		if (JoyInfo2.dev == newdev // same device, nothing to do
+			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo2.dev))) // we failed, but already have a working device
+			return JoyInfo.axises;
+		// Else, we're changing devices, so send neutral joy events
+		CONS_Debug(DBG_GAMELOGIC, "Joystick2 device is changing; resetting events...\n");
 		I_ShutdownJoystick2();
+	}
+
+	JoyInfo2.dev = newdev;
+
+	if (JoyInfo2.dev == NULL)
+	{
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick2: couldn't open device - %s\n"), SDL_GetError());
 		return -1;
 	}
 	else
 	{
-		CONS_Printf(M_GetText("Joystick2: %s\n"), SDL_JoystickName(JoyInfo2.dev));
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick2: %s\n"), SDL_JoystickName(JoyInfo2.dev));
 		JoyInfo2.axises = SDL_JoystickNumAxes(JoyInfo2.dev);
 		if (JoyInfo2.axises > JOYAXISSET*2)
 			JoyInfo2.axises = JOYAXISSET*2;
-/*		if (joyaxes < 2)
+/*		if (joyaxes<2)
 		{
 			I_OutputMsg("Not enought axes?\n");
-			I_ShutdownJoystick2();
 			return 0;
 		}*/
 
@@ -1496,15 +1403,11 @@ static int joy_open2(const char *fname)
 		if (JoyInfo2.buttons > JOYBUTTONS)
 			JoyInfo2.buttons = JOYBUTTONS;
 
-#ifdef DC
-		JoyInfo2.hats = 0;
-#else
 		JoyInfo2.hats = SDL_JoystickNumHats(JoyInfo2.dev);
 		if (JoyInfo2.hats > JOYHATS)
 			JoyInfo2.hats = JOYHATS;
 
 		JoyInfo2.balls = SDL_JoystickNumBalls(JoyInfo2.dev);
-#endif
 
 		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo2.dev), "pad");
 
@@ -1517,73 +1420,139 @@ static int joy_open2(const char *fname)
 //
 void I_InitJoystick(void)
 {
-	I_ShutdownJoystick();
-	SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
-	if (!strcmp(cv_usejoystick.string, "0") || M_CheckParm("-nojoy"))
+	SDL_Joystick *newjoy = NULL;
+
+	//I_ShutdownJoystick();
+	if (M_CheckParm("-nojoy"))
 		return;
-	if (joy_open(cv_usejoystick.string) != -1)
-		JoyInfo.oldjoy = atoi(cv_usejoystick.string);
+
+	if (M_CheckParm("-noxinput"))
+		SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
+
+	if (M_CheckParm("-nohidapi"))
+		SDL_SetHintWithPriority("SDL_JOYSTICK_HIDAPI", "0", SDL_HINT_OVERRIDE);
+
+	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
+	{
+		CONS_Printf("I_InitJoystick()...\n");
+
+		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
+		{
+			CONS_Printf(M_GetText("Couldn't initialize joystick: %s\n"), SDL_GetError());
+			return;
+		}
+	}
+
+	if (cv_usejoystick.value)
+		newjoy = SDL_JoystickOpen(cv_usejoystick.value-1);
+
+	if (newjoy && JoyInfo2.dev == newjoy) // don't override an active device
+		cv_usejoystick.value = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
+	else if (newjoy && joy_open(cv_usejoystick.value) != -1)
+	{
+		// SDL's device indexes are unstable, so cv_usejoystick may not match
+		// the actual device index. So let's cheat a bit and find the device's current index.
+		JoyInfo.oldjoy = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
+		joystick_started = 1;
+	}
 	else
 	{
+		if (JoyInfo.oldjoy)
+			I_ShutdownJoystick();
 		cv_usejoystick.value = 0;
-		return;
+		joystick_started = 0;
 	}
-	joystick_started = 1;
+
+	if (JoyInfo.dev != newjoy && JoyInfo2.dev != newjoy)
+		SDL_JoystickClose(newjoy);
 }
 
 void I_InitJoystick2(void)
 {
-	I_ShutdownJoystick2();
-	SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
-	if (!strcmp(cv_usejoystick2.string, "0") || M_CheckParm("-nojoy"))
+	SDL_Joystick *newjoy = NULL;
+
+	//I_ShutdownJoystick2();
+	if (M_CheckParm("-nojoy"))
 		return;
-	if (joy_open2(cv_usejoystick2.string) != -1)
-		JoyInfo2.oldjoy = atoi(cv_usejoystick2.string);
+
+	if (M_CheckParm("-noxinput"))
+		SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
+
+	if (M_CheckParm("-nohidapi"))
+		SDL_SetHintWithPriority("SDL_JOYSTICK_HIDAPI", "0", SDL_HINT_OVERRIDE);
+
+	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
+	{
+		CONS_Printf("I_InitJoystick2()...\n");
+
+		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
+		{
+			CONS_Printf(M_GetText("Couldn't initialize joystick: %s\n"), SDL_GetError());
+			return;
+		}
+	}
+
+	if (cv_usejoystick2.value)
+		newjoy = SDL_JoystickOpen(cv_usejoystick2.value-1);
+
+	if (newjoy && JoyInfo.dev == newjoy) // don't override an active device
+		cv_usejoystick2.value = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
+	else if (newjoy && joy_open2(cv_usejoystick2.value) != -1)
+	{
+		// SDL's device indexes are unstable, so cv_usejoystick may not match
+		// the actual device index. So let's cheat a bit and find the device's current index.
+		JoyInfo2.oldjoy = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
+		joystick2_started = 1;
+	}
 	else
 	{
+		if (JoyInfo2.oldjoy)
+			I_ShutdownJoystick2();
 		cv_usejoystick2.value = 0;
-		return;
+		joystick2_started = 0;
 	}
-	joystick2_started = 1;
+
+	if (JoyInfo.dev != newjoy && JoyInfo2.dev != newjoy)
+		SDL_JoystickClose(newjoy);
 }
 
 static void I_ShutdownInput(void)
 {
+	// Yes, the name is misleading: these send neutral events to
+	// clean up the unplugged joystick's input
+	// Note these methods are internal to this file, not called elsewhere.
+	I_ShutdownJoystick();
+	I_ShutdownJoystick2();
+
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
 	{
-		JoyReset(&JoyInfo);
-		JoyReset(&JoyInfo2);
+		CONS_Printf("Shutting down joy system\n");
 		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+		I_OutputMsg("I_Joystick: SDL's Joystick system has been shutdown\n");
 	}
-
 }
 
 INT32 I_NumJoys(void)
 {
 	INT32 numjoy = 0;
-	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
-	{
-		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) != -1)
-			numjoy = SDL_NumJoysticks();
-		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
-	}
-	else
+	if (SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
 		numjoy = SDL_NumJoysticks();
 	return numjoy;
 }
 
+static char joyname[255]; // joystick name is straight from the driver
+
 const char *I_GetJoyName(INT32 joyindex)
 {
-	const char *joyname = "NA";
+	const char *tempname = NULL;
+	joyname[0] = 0;
 	joyindex--; //SDL's Joystick System starts at 0, not 1
-	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
+	if (SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
 	{
-		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) != -1)
-			joyname = SDL_JoystickNameForIndex(joyindex);
-		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+		tempname = SDL_JoystickNameForIndex(joyindex);
+		if (tempname)
+			strncpy(joyname, tempname, 255);
 	}
-	else
-		joyname = SDL_JoystickNameForIndex(joyindex);
 	return joyname;
 }
 
@@ -1788,7 +1757,7 @@ static void I_ShutdownMouse2(void)
 	if (fdmouse2 != -1) close(fdmouse2);
 	mouse2_started = 0;
 }
-#elif defined (_WIN32) && !defined (_XBOX)
+#elif defined (_WIN32)
 
 static HANDLE mouse2filehandle = INVALID_HANDLE_VALUE;
 
@@ -1806,7 +1775,7 @@ static void I_ShutdownMouse2(void)
 	EscapeCommFunction(mouse2filehandle, CLRRTS);
 
 	PurgeComm(mouse2filehandle, PURGE_TXABORT | PURGE_RXABORT |
-	          PURGE_TXCLEAR | PURGE_RXCLEAR);
+			  PURGE_TXCLEAR | PURGE_RXCLEAR);
 
 	CloseHandle(mouse2filehandle);
 
@@ -1986,7 +1955,7 @@ void I_StartupMouse2(void)
 	}
 	mouse2_started = 1;
 	I_AddExitFunc(I_ShutdownMouse2);
-#elif defined (_WIN32) && !defined (_XBOX)
+#elif defined (_WIN32)
 	DCB dcb;
 
 	if (mouse2filehandle != INVALID_HANDLE_VALUE)
@@ -1999,11 +1968,11 @@ void I_StartupMouse2(void)
 	{
 		// COM file handle
 		mouse2filehandle = CreateFileA(cv_mouse2port.string, GENERIC_READ | GENERIC_WRITE,
-		                               0,                     // exclusive access
-		                               NULL,                  // no security attrs
-		                               OPEN_EXISTING,
-		                               FILE_ATTRIBUTE_NORMAL,
-		                               NULL);
+									   0,                     // exclusive access
+									   NULL,                  // no security attrs
+									   OPEN_EXISTING,
+									   FILE_ATTRIBUTE_NORMAL,
+									   NULL);
 		if (mouse2filehandle == INVALID_HANDLE_VALUE)
 		{
 			INT32 e = GetLastError();
@@ -2023,7 +1992,7 @@ void I_StartupMouse2(void)
 
 	// purge buffers
 	PurgeComm(mouse2filehandle, PURGE_TXABORT | PURGE_RXABORT
-	          | PURGE_TXCLEAR | PURGE_RXCLEAR);
+			  | PURGE_TXCLEAR | PURGE_RXCLEAR);
 
 	// setup port to 1200 7N1
 	dcb.DCBlength = sizeof (DCB);
@@ -2081,7 +2050,7 @@ ticcmd_t *I_BaseTiccmd2(void)
 	return &emptycmd2;
 }
 
-#if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
+#if defined (_WIN32)
 static HMODULE winmm = NULL;
 static DWORD starttickcount = 0; // hack for win2k time bug
 static p_timeGetTime pfntimeGetTime = NULL;
@@ -2137,7 +2106,7 @@ static void I_ShutdownTimer(void)
 	pfntimeGetTime = NULL;
 	if (winmm)
 	{
-		p_timeEndPeriod pfntimeEndPeriod = (p_timeEndPeriod)GetProcAddress(winmm, "timeEndPeriod");
+		p_timeEndPeriod pfntimeEndPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeEndPeriod");
 		if (pfntimeEndPeriod)
 			pfntimeEndPeriod(1);
 		FreeLibrary(winmm);
@@ -2151,13 +2120,8 @@ static void I_ShutdownTimer(void)
 //
 tic_t I_GetTime (void)
 {
-#ifdef _arch_dreamcast
 	static Uint64 basetime = 0;
-	       Uint64 ticks = timer_ms_gettime64(); //using timer_ms_gettime64 instand of SDL_GetTicks for the Dreamcast
-#else
-	static Uint32 basetime = 0;
-	       Uint32 ticks = SDL_GetTicks();
-#endif
+		   Uint64 ticks = SDL_GetTicks();
 
 	if (!basetime)
 		basetime = ticks;
@@ -2166,11 +2130,7 @@ tic_t I_GetTime (void)
 
 	ticks = (ticks*TICRATE);
 
-#if 0 //#ifdef _WIN32_WCE
-	ticks = (ticks/10);
-#else
 	ticks = (ticks/1000);
-#endif
 
 	return (tic_t)ticks;
 }
@@ -2181,7 +2141,7 @@ tic_t I_GetTime (void)
 //
 void I_StartupTimer(void)
 {
-#if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
+#ifdef _WIN32
 	// for win2k time bug
 	if (M_CheckParm("-gettickcount"))
 	{
@@ -2191,15 +2151,12 @@ void I_StartupTimer(void)
 	winmm = LoadLibraryA("winmm.dll");
 	if (winmm)
 	{
-		p_timeEndPeriod pfntimeBeginPeriod = (p_timeEndPeriod)GetProcAddress(winmm, "timeBeginPeriod");
+		p_timeEndPeriod pfntimeBeginPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeBeginPeriod");
 		if (pfntimeBeginPeriod)
 			pfntimeBeginPeriod(1);
-		pfntimeGetTime = (p_timeGetTime)GetProcAddress(winmm, "timeGetTime");
+		pfntimeGetTime = (p_timeGetTime)(LPVOID)GetProcAddress(winmm, "timeGetTime");
 	}
 	I_AddExitFunc(I_ShutdownTimer);
-#elif 0 //#elif !defined (_arch_dreamcast) && !defined(GP2X) // the DC have it own timer and GP2X have broken pthreads?
-	if (SDL_InitSubSystem(SDL_INIT_TIMER) < 0)
-		I_Error("SRB2: Needs SDL_Timer, Error: %s", SDL_GetError());
 #endif
 }
 
@@ -2207,54 +2164,111 @@ void I_StartupTimer(void)
 
 void I_Sleep(void)
 {
-#if !(defined (_arch_dreamcast) || defined (_XBOX))
 	if (cv_sleep.value != -1)
 		SDL_Delay(cv_sleep.value);
-#endif
 }
+
+#ifdef NEWSIGNALHANDLER
+static void newsignalhandler_Warn(const char *pr)
+{
+	char text[128];
+
+	snprintf(text, sizeof text,
+			"Error while setting up signal reporting: %s: %s",
+			pr,
+			strerror(errno)
+	);
+
+	I_OutputMsg("%s\n", text);
+
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+		"Startup error",
+		text, NULL);
+
+	I_ShutdownConsole();
+	exit(-1);
+}
+
+static void I_Fork(void)
+{
+	int child;
+	int status;
+	int signum;
+	int c;
+
+	child = fork();
+
+	switch (child)
+	{
+		case -1:
+			newsignalhandler_Warn("fork()");
+			break;
+		case 0:
+			break;
+		default:
+			if (logstream)
+				fclose(logstream);/* the child has this */
+
+			c = wait(&status);
+
+#ifdef LOGMESSAGES
+			/* By the way, exit closes files. */
+			logstream = fopen(logfilename, "at");
+#else
+			logstream = 0;
+#endif
+
+			if (c == -1)
+			{
+				kill(child, SIGKILL);
+				newsignalhandler_Warn("wait()");
+			}
+			else
+			{
+				if (WIFSIGNALED (status))
+				{
+					signum = WTERMSIG (status);
+#ifdef WCOREDUMP
+					I_ReportSignal(signum, WCOREDUMP (status));
+#else
+					I_ReportSignal(signum, 0);
+#endif
+					status = 128 + signum;
+				}
+				else if (WIFEXITED (status))
+				{
+					status = WEXITSTATUS (status);
+				}
+
+				I_ShutdownConsole();
+				exit(status);
+			}
+	}
+}
+#endif/*NEWSIGNALHANDLER*/
 
 INT32 I_StartupSystem(void)
 {
 	SDL_version SDLcompiled;
 	SDL_version SDLlinked;
-#ifdef _XBOX
-#ifdef __GNUC__
-	char DP[] ="      Sonic Robo Blast 2!\n";
-	debugPrint(DP);
-#endif
-	unlink("e:/Games/SRB2/stdout.txt");
-	freopen("e:/Games/SRB2/stdout.txt", "w+", stdout);
-	unlink("e:/Games/SRB2/stderr.txt");
-	freopen("e:/Games/SRB2/stderr.txt", "w+", stderr);
-#endif
-#ifdef _arch_dreamcast
-#ifdef _DEBUG
-	//gdb_init();
-#endif
-	printf(__FILE__":%i\n",__LINE__);
-#ifdef _DEBUG
-	//gdb_breakpoint();
-#endif
-#endif
 	SDL_VERSION(&SDLcompiled)
 	SDL_GetVersion(&SDLlinked);
 	I_StartupConsole();
+#ifdef NEWSIGNALHANDLER
+	I_Fork();
+#endif
+	I_RegisterSignals();
 	I_OutputMsg("Compiled for SDL version: %d.%d.%d\n",
 	 SDLcompiled.major, SDLcompiled.minor, SDLcompiled.patch);
 	I_OutputMsg("Linked with SDL version: %d.%d.%d\n",
 	 SDLlinked.major, SDLlinked.minor, SDLlinked.patch);
-#if 0 //#ifdef GP2X //start up everything
-	if (SDL_Init(SDL_INIT_NOPARACHUTE|SDL_INIT_EVERYTHING) < 0)
-#else
-	if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0)
-#endif
+	if (SDL_Init(0) < 0)
 		I_Error("SRB2: SDL System Error: %s", SDL_GetError()); //Alam: Oh no....
 #ifndef NOMUMBLE
 	I_SetupMumble();
 #endif
 	return 0;
 }
-
 
 //
 // I_Quit
@@ -2267,7 +2281,6 @@ void I_Quit(void)
 	if (quiting) goto death;
 	SDLforceUngrabMouse();
 	quiting = SDL_FALSE;
-	I_ShutdownConsole();
 	M_SaveConfig(NULL); //save game config, cvars..
 #ifndef NONET
 	D_SaveBan(); // save the ban list
@@ -2279,9 +2292,10 @@ void I_Quit(void)
 	if (demorecording)
 		G_CheckDemoStatus();
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
+	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_ShutdownCD();
@@ -2289,21 +2303,17 @@ void I_Quit(void)
 	I_ShutdownGraphics();
 	I_ShutdownInput();
 	I_ShutdownSystem();
-#ifndef _arch_dreamcast
 	SDL_Quit();
-#endif
 	/* if option -noendtxt is set, don't print the text */
 	if (!M_CheckParm("-noendtxt") && W_CheckNumForName("ENDOOM") != LUMPERROR)
 	{
 		printf("\r");
 		ShowEndTxt();
 	}
+	if (myargmalloc)
+		free(myargv); // Deallocate allocated memory
 death:
 	W_Shutdown();
-#ifdef GP2X
-	chdir("/usr/gp2x");
-	execl("/usr/gp2x/gp2xmenu", "/usr/gp2x/gp2xmenu", NULL);
-#endif
 	exit(0);
 }
 
@@ -2356,10 +2366,8 @@ void I_Error(const char *error, ...)
 			I_ShutdownInput();
 		if (errorcount == 7)
 			I_ShutdownSystem();
-#ifndef _arch_dreamcast
 		if (errorcount == 8)
 			SDL_Quit();
-#endif
 		if (errorcount == 9)
 		{
 			M_SaveConfig(NULL);
@@ -2378,12 +2386,6 @@ void I_Error(const char *error, ...)
 				buffer, NULL);
 
 			W_Shutdown();
-
-#ifdef GP2X
-			chdir("/usr/gp2x");
-			execl("/usr/gp2x/gp2xmenu", "/usr/gp2x/gp2xmenu", NULL);
-#endif
-
 			exit(-1); // recursive errors detected
 		}
 	}
@@ -2397,8 +2399,6 @@ void I_Error(const char *error, ...)
 	I_OutputMsg("\nI_Error(): %s\n", buffer);
 	// ---
 
-	I_ShutdownConsole();
-
 	M_SaveConfig(NULL); // save game config, cvars..
 #ifndef NONET
 	D_SaveBan(); // save the ban list
@@ -2409,9 +2409,10 @@ void I_Error(const char *error, ...)
 	if (demorecording)
 		G_CheckDemoStatus();
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
+	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_ShutdownCD();
@@ -2419,9 +2420,7 @@ void I_Error(const char *error, ...)
 	I_ShutdownGraphics();
 	I_ShutdownInput();
 	I_ShutdownSystem();
-#ifndef _arch_dreamcast
 	SDL_Quit();
-#endif
 
 	// Implement message box with SDL_ShowSimpleMessageBox,
 	// which should fail gracefully if it can't put a message box up
@@ -2439,11 +2438,6 @@ void I_Error(const char *error, ...)
 
 #if defined (PARANOIA) && defined (__CYGWIN__)
 	*(INT32 *)2 = 4; //Alam: Debug!
-#endif
-
-#ifdef GP2X
-	chdir("/usr/gp2x");
-	execl("/usr/gp2x/gp2xmenu", "/usr/gp2x/gp2xmenu", NULL);
 #endif
 
 	exit(-1);
@@ -2494,6 +2488,48 @@ void I_RemoveExitFunc(void (*func)())
 	}
 }
 
+#if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))
+static void Shittycopyerror(const char *name)
+{
+	I_OutputMsg(
+			"Error copying log file: %s: %s\n",
+			name,
+			strerror(errno)
+	);
+}
+
+static void Shittylogcopy(void)
+{
+	char buf[8192];
+	FILE *fp;
+	size_t r;
+	if (fseek(logstream, 0, SEEK_SET) == -1)
+	{
+		Shittycopyerror("fseek");
+	}
+	else if (( fp = fopen(logfilename, "wt") ))
+	{
+		while (( r = fread(buf, 1, sizeof buf, logstream) ))
+		{
+			if (fwrite(buf, 1, r, fp) < r)
+			{
+				Shittycopyerror("fwrite");
+				break;
+			}
+		}
+		if (ferror(logstream))
+		{
+			Shittycopyerror("fread");
+		}
+		fclose(fp);
+	}
+	else
+	{
+		Shittycopyerror(logfilename);
+	}
+}
+#endif/*!(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))*/
+
 //
 //  Closes down everything. This includes restoring the initial
 //  palette and video mode, and removing whatever mouse, keyboard, and
@@ -2505,13 +2541,20 @@ void I_ShutdownSystem(void)
 {
 	INT32 c;
 
+#ifndef NEWSIGNALHANDLER
+	I_ShutdownConsole();
+#endif
+
 	for (c = MAX_QUIT_FUNCS-1; c >= 0; c--)
 		if (quit_funcs[c])
 			(*quit_funcs[c])();
-#ifdef  LOGMESSAGES
+#ifdef LOGMESSAGES
 	if (logstream)
 	{
 		I_OutputMsg("I_ShutdownSystem(): end of logstream.\n");
+#if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))
+		Shittylogcopy();
+#endif
 		fclose(logstream);
 		logstream = NULL;
 	}
@@ -2521,10 +2564,8 @@ void I_ShutdownSystem(void)
 
 void I_GetDiskFreeSpace(INT64 *freespace)
 {
-#if defined (_arch_dreamcast) || defined (_PSP)
-	*freespace = 0;
-#elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#if defined (SOLARIS) || defined (__HAIKU__) || defined (_WII) || defined (_PS3)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (SOLARIS) || defined (__HAIKU__)
 	*freespace = INT32_MAX;
 	return;
 #else // Both Linux and BSD have this, apparently.
@@ -2536,14 +2577,14 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 	}
 	*freespace = stfs.f_bavail * stfs.f_bsize;
 #endif
-#elif (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
+#elif defined (_WIN32)
 	static p_GetDiskFreeSpaceExA pfnGetDiskFreeSpaceEx = NULL;
 	static boolean testwin95 = false;
 	ULARGE_INTEGER usedbytes, lfreespace;
 
 	if (!testwin95)
 	{
-		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
+		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
 		testwin95 = true;
 	}
 	if (pfnGetDiskFreeSpaceEx)
@@ -2557,7 +2598,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 	{
 		DWORD SectorsPerCluster, BytesPerSector, NumberOfFreeClusters, TotalNumberOfClusters;
 		GetDiskFreeSpace(NULL, &SectorsPerCluster, &BytesPerSector,
-		                 &NumberOfFreeClusters, &TotalNumberOfClusters);
+						 &NumberOfFreeClusters, &TotalNumberOfClusters);
 		*freespace = BytesPerSector*SectorsPerCluster*NumberOfFreeClusters;
 	}
 #else // Dummy for platform independent; 1GB should be enough
@@ -2567,14 +2608,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 
 char *I_GetUserName(void)
 {
-#ifdef GP2X
-	static char username[MAXPLAYERNAME] = "GP2XUSER";
-	return username;
-#elif defined (PSP)
-	static char username[MAXPLAYERNAME] = "PSPUSER";
-	return username;
-#elif !(defined (_WIN32_WCE) || defined (_XBOX))
-	static char username[MAXPLAYERNAME];
+	static char username[MAXPLAYERNAME+1];
 	char *p;
 #ifdef _WIN32
 	DWORD i = MAXPLAYERNAME;
@@ -2605,16 +2639,15 @@ char *I_GetUserName(void)
 
 	if (strcmp(username, "") != 0)
 		return username;
-#endif
 	return NULL; // dummy for platform independent version
 }
 
 INT32 I_mkdir(const char *dirname, INT32 unixright)
 {
 //[segabor]
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__CYGWIN__) || defined (__OS2__)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__CYGWIN__)
 	return mkdir(dirname, unixright);
-#elif (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
+#elif defined (_WIN32)
 	UNREFERENCED_PARAMETER(unixright); /// \todo should implement ntright under nt...
 	return CreateDirectoryA(dirname, NULL);
 #else
@@ -2628,9 +2661,6 @@ char *I_GetEnv(const char *name)
 {
 #ifdef NEED_SDL_GETENV
 	return SDL_getenv(name);
-#elif defined(_WIN32_WCE)
-	(void)name;
-	return NULL;
 #else
 	return getenv(name);
 #endif
@@ -2640,11 +2670,50 @@ INT32 I_PutEnv(char *variable)
 {
 #ifdef NEED_SDL_GETENV
 	return SDL_putenv(variable);
-#elif defined(_WIN32_WCE)
-	return ((variable)?-1:0);
 #else
 	return putenv(variable);
 #endif
+}
+
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	char storage[256];
+	if (size > 255)
+		size = 255;
+	memcpy(storage, data, size);
+	storage[size] = 0;
+
+	if (SDL_SetClipboardText(storage))
+		return 0;
+	return -1;
+}
+
+const char *I_ClipboardPaste(void)
+{
+	static char clipboard_modified[256];
+	char *clipboard_contents, *i = clipboard_modified;
+
+	if (!SDL_HasClipboardText())
+		return NULL;
+	clipboard_contents = SDL_GetClipboardText();
+	memcpy(clipboard_modified, clipboard_contents, 255);
+	SDL_free(clipboard_contents);
+	clipboard_modified[255] = 0;
+
+	while (*i)
+	{
+		if (*i == '\n' || *i == '\r')
+		{ // End on newline
+			*i = 0;
+			break;
+		}
+		else if (*i == '\t')
+			*i = ' '; // Tabs become spaces
+		else if (*i < 32 || (unsigned)*i > 127)
+			*i = '?'; // Nonprintable chars become question marks
+		++i;
+	}
+	return (const char *)&clipboard_modified;
 }
 
 /**	\brief	The isWadPathOk function
@@ -2670,14 +2739,6 @@ static boolean isWadPathOk(const char *path)
 		return true;
 	}
 
-	sprintf(wad3path, pandf, path, WADKEYWORD2);
-
-	if (FIL_ReadFileOK(wad3path))
-	{
-		free(wad3path);
-		return true;
-	}
-
 	free(wad3path);
 	return false;
 }
@@ -2695,7 +2756,7 @@ static void pathonly(char *s)
 		}
 }
 
-/**	\brief	search for srb2.srb in the given path
+/**	\brief	search for srb2.pk3 in the given path
 
 	\param	searchDir	starting path
 
@@ -2716,19 +2777,12 @@ static const char *searchWad(const char *searchDir)
 		return tempsw;
 	}
 
-	strcpy(tempsw, WADKEYWORD2);
-	fstemp = filesearch(tempsw, searchDir, NULL, true, 20);
-	if (fstemp == FS_FOUND)
-	{
-		pathonly(tempsw);
-		return tempsw;
-	}
 	return NULL;
 }
 
-/**	\brief go through all possible paths and look for srb2.srb
+/**	\brief go through all possible paths and look for srb2.pk3
 
-  \return path to srb2.srb if any
+  \return path to srb2.pk3 if any
 */
 static const char *locateWad(void)
 {
@@ -2739,15 +2793,6 @@ static const char *locateWad(void)
 	// does SRB2WADDIR exist?
 	if (((envstr = I_GetEnv("SRB2WADDIR")) != NULL) && isWadPathOk(envstr))
 		return envstr;
-
-#if defined(_WIN32_WCE) || defined(_PS3) || defined(_PSP)
-	// examine argv[0]
-	strcpy(returnWadPath, myargv[0]);
-	pathonly(returnWadPath);
-	I_PutEnv(va("HOME=%s",returnWadPath));
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
 
 #ifndef NOCWD
 	I_OutputMsg(",.");
@@ -2760,22 +2805,22 @@ static const char *locateWad(void)
 
 #ifdef CMAKECONFIG
 #ifndef NDEBUG
-    I_OutputMsg(","CMAKE_ASSETS_DIR);
-    strcpy(returnWadPath, CMAKE_ASSETS_DIR);
-    if (isWadPathOk(returnWadPath))
-    {
-        return returnWadPath;
-    }
+	I_OutputMsg(","CMAKE_ASSETS_DIR);
+	strcpy(returnWadPath, CMAKE_ASSETS_DIR);
+	if (isWadPathOk(returnWadPath))
+	{
+		return returnWadPath;
+	}
 #endif
 #endif
 
 #ifdef __APPLE__
-    OSX_GetResourcesPath(returnWadPath);
-    I_OutputMsg(",%s", returnWadPath);
-    if (isWadPathOk(returnWadPath))
-    {
-        return returnWadPath;
-    }
+	OSX_GetResourcesPath(returnWadPath);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+	{
+		return returnWadPath;
+	}
 #endif
 
 	// examine default dirs
@@ -2866,10 +2911,10 @@ const char *I_LocateWad(void)
 
 	if (waddir)
 	{
-		// change to the directory where we found srb2.srb
-#if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
+		// change to the directory where we found srb2.pk3
+#if defined (_WIN32)
 		SetCurrentDirectoryA(waddir);
-#elif !defined (_WIN32_WCE) && !defined (_PS3)
+#else
 		if (chdir(waddir) == -1)
 			I_OutputMsg("Couldn't change working directory\n");
 #endif
@@ -2877,26 +2922,39 @@ const char *I_LocateWad(void)
 	return waddir;
 }
 
-#if defined(LINUX) || defined(LINUX64)
+#ifdef __linux__
 #define MEMINFO_FILE "/proc/meminfo"
 #define MEMTOTAL "MemTotal:"
+#define MEMAVAILABLE "MemAvailable:"
 #define MEMFREE "MemFree:"
+#define CACHED "Cached:"
+#define BUFFERS "Buffers:"
+#define SHMEM "Shmem:"
+
+/* Parse the contents of /proc/meminfo (in buf), return value of "name"
+ * (example: MemTotal) */
+static long get_entry(const char* name, const char* buf)
+{
+	long val;
+	char* hit = strstr(buf, name);
+	if (hit == NULL) {
+		return -1;
+	}
+
+	errno = 0;
+	val = strtol(hit + strlen(name), NULL, 10);
+	if (errno != 0) {
+		CONS_Alert(CONS_ERROR, M_GetText("get_entry: strtol() failed: %s\n"), strerror(errno));
+		return -1;
+	}
+	return val;
+}
 #endif
 
 // quick fix for compil
 UINT32 I_GetFreeMem(UINT32 *total)
 {
-#if defined (_arch_dreamcast)
-	//Dreamcast!
-	if (total)
-		*total = 16<<20;
-	return 8<<20;
-#elif defined (_PSP)
-	// PSP
-	if (total)
-		*total = 32<<20;
-	return 16<<20;
-#elif defined (FREEBSD)
+#ifdef FREEBSD
 	struct vmmeter sum;
 	kvm_t *kd;
 	struct nlist namelist[] =
@@ -2907,20 +2965,23 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	};
 	if ((kd = kvm_open(NULL, NULL, NULL, O_RDONLY, "kvm_open")) == NULL)
 	{
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	if (kvm_nlist(kd, namelist) != 0)
 	{
 		kvm_close (kd);
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	if (kvm_read(kd, namelist[X_SUM].n_value, &sum,
 		sizeof (sum)) != sizeof (sum))
 	{
 		kvm_close(kd);
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	kvm_close(kd);
@@ -2933,7 +2994,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = 32 << 20;
 	return 32 << 20;
-#elif (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
+#elif defined (_WIN32)
 	MEMORYSTATUS info;
 
 	info.dwLength = sizeof (MEMORYSTATUS);
@@ -2941,17 +3002,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = (UINT32)info.dwTotalPhys;
 	return (UINT32)info.dwAvailPhys;
-#elif defined (__OS2__)
-	UINT32 pr_arena;
-
-	if (total)
-		DosQuerySysInfo( QSV_TOTPHYSMEM, QSV_TOTPHYSMEM,
-							(PVOID) total, sizeof (UINT32));
-	DosQuerySysInfo( QSV_MAXPRMEM, QSV_MAXPRMEM,
-				(PVOID) &pr_arena, sizeof (UINT32));
-
-	return pr_arena;
-#elif defined (LINUX) || defined (LINUX64)
+#elif defined (__linux__)
 	/* Linux */
 	char buf[1024];
 	char *memTag;
@@ -2959,6 +3010,11 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	UINT32 totalKBytes;
 	INT32 n;
 	INT32 meminfo_fd = -1;
+	long Cached;
+	long MemFree;
+	long Buffers;
+	long Shmem;
+	long MemAvailable = -1;
 
 	meminfo_fd = open(MEMINFO_FILE, O_RDONLY);
 	n = read(meminfo_fd, buf, 1023);
@@ -2967,30 +3023,45 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (n < 0)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
 	buf[n] = '\0';
-	if (NULL == (memTag = strstr(buf, MEMTOTAL)))
+	if ((memTag = strstr(buf, MEMTOTAL)) == NULL)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
 	memTag += sizeof (MEMTOTAL);
 	totalKBytes = atoi(memTag);
 
-	if (NULL == (memTag = strstr(buf, MEMFREE)))
+	if ((memTag = strstr(buf, MEMAVAILABLE)) == NULL)
 	{
-		// Error
-		*total = 0L;
-		return 0;
-	}
+		Cached = get_entry(CACHED, buf);
+		MemFree = get_entry(MEMFREE, buf);
+		Buffers = get_entry(BUFFERS, buf);
+		Shmem = get_entry(SHMEM, buf);
+		MemAvailable = Cached + MemFree + Buffers - Shmem;
 
-	memTag += sizeof (MEMFREE);
-	freeKBytes = atoi(memTag);
+		if (MemAvailable == -1)
+		{
+			// Error
+			if (total)
+				*total = 0L;
+			return 0;
+		}
+		freeKBytes = MemAvailable;
+	}
+	else
+	{
+		memTag += sizeof (MEMAVAILABLE);
+		freeKBytes = atoi(memTag);
+	}
 
 	if (total)
 		*total = totalKBytes << 10;
@@ -3000,15 +3071,15 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = 48<<20;
 	return 48<<20;
-#endif /* LINUX */
+#endif
 }
 
 const CPUInfoFlags *I_CPUInfo(void)
 {
-#if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
+#if defined (_WIN32)
 	static CPUInfoFlags WIN_CPUInfo;
 	SYSTEM_INFO SI;
-	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
+	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
 
 	ZeroMemory(&WIN_CPUInfo,sizeof (WIN_CPUInfo));
 	if (pfnCPUID)

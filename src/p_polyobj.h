@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2016 by Sonic Team Junior.
+// Copyright (C) 2006-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,8 +18,6 @@
 #include "p_mobj.h"
 #include "r_defs.h"
 
-// haleyjd: temporary define
-#ifdef POLYOBJECTS
 //
 // Defines
 //
@@ -28,10 +26,9 @@
 
 #define POLYOBJ_ANCHOR_DOOMEDNUM     760
 #define POLYOBJ_SPAWN_DOOMEDNUM      761
-#define POLYOBJ_SPAWNCRUSH_DOOMEDNUM 762
+#define POLYOBJ_SPAWNCRUSH_DOOMEDNUM 762 // todo: REMOVE
 
 #define POLYOBJ_START_LINE    20
-#define POLYOBJ_EXPLICIT_LINE 21
 #define POLYINFO_SPECIALNUM   22
 
 typedef enum
@@ -104,6 +101,7 @@ typedef struct polyobj_s
 
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawnflags; // Flags the polyobject originally spawned with
+	INT32 spawntrans; // Translucency the polyobject originally spawned with
 } polyobj_t;
 
 //
@@ -142,24 +140,26 @@ typedef struct polymove_s
 	UINT32 angle;       // angle along which to move
 } polymove_t;
 
+// PolyObject waypoint movement return behavior
+typedef enum
+{
+	PWR_STOP,     // Stop after reaching last waypoint
+	PWR_WRAP,     // Wrap back to first waypoint
+	PWR_COMEBACK, // Repeat sequence in reverse
+} polywaypointreturn_e;
+
 typedef struct polywaypoint_s
 {
 	thinker_t thinker; // must be first
 
-	INT32 polyObjNum;   // numeric id of polyobject
-	INT32 speed;        // resultant velocity
-	INT32 sequence;     // waypoint sequence #
-	INT32 pointnum;     // waypoint #
-	INT32 direction;    // 1 for normal, -1 for backwards
-	UINT8 comeback;      // reverses and comes back when the end is reached
-	UINT8 wrap;          // Wrap around waypoints
-	UINT8 continuous;    // continuously move - used with COMEBACK or WRAP
-	UINT8 stophere;      // Will stop after it reaches the next waypoint
-
-	// Difference between location of PO and location of waypoint (offset)
-	fixed_t diffx;
-	fixed_t diffy;
-	fixed_t diffz;
+	INT32 polyObjNum;      // numeric id of polyobject
+	INT32 speed;           // resultant velocity
+	INT32 sequence;        // waypoint sequence #
+	INT32 pointnum;        // waypoint #
+	INT32 direction;       // 1 for normal, -1 for backwards
+	UINT8 returnbehavior;  // behavior after reaching the last waypoint
+	UINT8 continuous;      // continuously move - used with PWR_WRAP or PWR_COMEBACK
+	UINT8 stophere;        // Will stop after it reaches the next waypoint
 } polywaypoint_t;
 
 typedef struct polyslidedoor_s
@@ -206,6 +206,31 @@ typedef struct polydisplace_s
 	fixed_t oldHeights;
 } polydisplace_t;
 
+typedef struct polyrotdisplace_s
+{
+	thinker_t thinker; // must be first
+
+	INT32 polyObjNum;
+	struct sector_s *controlSector;
+	fixed_t rotscale;
+	UINT8 turnobjs;
+	fixed_t oldHeights;
+} polyrotdisplace_t;
+
+typedef struct polyfade_s
+{
+	thinker_t thinker; // must be first
+
+	INT32 polyObjNum;
+	INT32 sourcevalue;
+	INT32 destvalue;
+	boolean docollision;
+	boolean doghostfade;
+	boolean ticbased;
+	INT32 duration;
+	INT32 timer;
+} polyfade_t;
+
 //
 // Line Activation Data Structures
 //
@@ -229,15 +254,19 @@ typedef struct polymovedata_s
 	UINT8 overRide;     // if true, will override any action on the object
 } polymovedata_t;
 
+typedef enum
+{
+	PWF_REVERSE = 1,    // Move through waypoints in reverse order
+	PWF_LOOP    = 1<<1, // Loop movement (used with PWR_WRAP or PWR_COMEBACK)
+} polywaypointflags_e;
+
 typedef struct polywaypointdata_s
 {
-	INT32 polyObjNum;   // numeric id of polyobject to affect
-	INT32 sequence;     // waypoint sequence #
-	fixed_t speed;      // linear speed
-	UINT8 reverse;    // if true, will go in reverse waypoint order
-	UINT8 comeback;      // reverses and comes back when the end is reached
-	UINT8 wrap;       // Wrap around waypoints
-	UINT8 continuous; // continuously move - used with COMEBACK or WRAP
+	INT32 polyObjNum;     // numeric id of polyobject to affect
+	INT32 sequence;       // waypoint sequence #
+	fixed_t speed;        // linear speed
+	UINT8 returnbehavior; // behavior after reaching the last waypoint
+	UINT8 flags;          // PWF_ flags
 } polywaypointdata_t;
 
 // polyobject door types
@@ -265,6 +294,32 @@ typedef struct polydisplacedata_s
 	fixed_t dy;
 } polydisplacedata_t;
 
+typedef struct polyrotdisplacedata_s
+{
+	INT32 polyObjNum;
+	struct sector_s *controlSector;
+	fixed_t rotscale;
+	UINT8 turnobjs;
+} polyrotdisplacedata_t;
+
+typedef struct polyflagdata_s
+{
+	INT32 polyObjNum;
+	INT32 speed;
+	UINT32 angle;
+	fixed_t momx;
+} polyflagdata_t;
+
+typedef struct polyfadedata_s
+{
+	INT32 polyObjNum;
+	INT32 destvalue;
+	boolean docollision;
+	boolean doghostfade;
+	boolean ticbased;
+	INT32 speed;
+} polyfadedata_t;
+
 //
 // Functions
 //
@@ -276,7 +331,6 @@ boolean P_PointInsidePolyobj(polyobj_t *po, fixed_t x, fixed_t y);
 boolean P_MobjTouchingPolyobj(polyobj_t *po, mobj_t *mo);
 boolean P_MobjInsidePolyobj(polyobj_t *po, mobj_t *mo);
 boolean P_BBoxInsidePolyobj(polyobj_t *po, fixed_t *bbox);
-void Polyobj_GetInfo(INT16 tag, INT32 *polyID, INT32 *parentID, UINT16 *exparg);
 
 // thinkers (needed in p_saveg.c)
 void T_PolyObjRotate(polyrotate_t *);
@@ -285,14 +339,18 @@ void T_PolyObjWaypoint (polywaypoint_t *);
 void T_PolyDoorSlide(polyslidedoor_t *);
 void T_PolyDoorSwing(polyswingdoor_t *);
 void T_PolyObjDisplace  (polydisplace_t *);
+void T_PolyObjRotDisplace  (polyrotdisplace_t *);
 void T_PolyObjFlag  (polymove_t *);
+void T_PolyObjFade  (polyfade_t *);
 
-INT32 EV_DoPolyDoor(polydoordata_t *);
-INT32 EV_DoPolyObjMove(polymovedata_t *);
-INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *);
-INT32 EV_DoPolyObjRotate(polyrotdata_t *);
-INT32 EV_DoPolyObjDisplace(polydisplacedata_t *);
-INT32 EV_DoPolyObjFlag(struct line_s *);
+boolean EV_DoPolyDoor(polydoordata_t *);
+boolean EV_DoPolyObjMove(polymovedata_t *);
+boolean EV_DoPolyObjWaypoint(polywaypointdata_t *);
+boolean EV_DoPolyObjRotate(polyrotdata_t *);
+boolean EV_DoPolyObjDisplace(polydisplacedata_t *);
+boolean EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *);
+boolean EV_DoPolyObjFlag(polyflagdata_t *);
+boolean EV_DoPolyObjFade(polyfadedata_t *);
 
 
 //
@@ -302,8 +360,6 @@ INT32 EV_DoPolyObjFlag(struct line_s *);
 extern polyobj_t *PolyObjects;
 extern INT32 numPolyObjects;
 extern polymaplink_t **polyblocklinks; // polyobject blockmap
-
-#endif // ifdef POLYOBJECTS
 
 #endif
 

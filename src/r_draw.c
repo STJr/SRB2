@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -99,15 +99,16 @@ INT32 dc_numlights = 0, dc_maxlights, dc_texheight;
 INT32 ds_y, ds_x1, ds_x2;
 lighttable_t *ds_colormap;
 fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
+UINT16 ds_flatwidth, ds_flatheight;
+boolean ds_powersoftwo;
 
 UINT8 *ds_source; // start of a 64*64 tile image
 UINT8 *ds_transmap; // one of the translucency tables
 
-#ifdef ESLOPE
 pslope_t *ds_slope; // Current slope being used
-floatv3_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
+floatv3_t ds_su[MAXVIDHEIGHT], ds_sv[MAXVIDHEIGHT], ds_sz[MAXVIDHEIGHT]; // Vectors for... stuff?
+floatv3_t *ds_sup, *ds_svp, *ds_szp;
 float focallengthf, zeroheight;
-#endif
 
 /**	\brief Variable flat sizes
 */
@@ -126,74 +127,13 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 #define BOSS_TT_CACHE_INDEX (MAXSKINS + 1)
 #define METALSONIC_TT_CACHE_INDEX (MAXSKINS + 2)
 #define ALLWHITE_TT_CACHE_INDEX (MAXSKINS + 3)
-#define SKIN_RAMP_LENGTH 16
-#define DEFAULT_STARTTRANSCOLOR 160
+#define RAINBOW_TT_CACHE_INDEX (MAXSKINS + 4)
+#define BLINK_TT_CACHE_INDEX (MAXSKINS + 5)
+#define DASHMODE_TT_CACHE_INDEX (MAXSKINS + 6)
+#define DEFAULT_STARTTRANSCOLOR 96
 #define NUM_PALETTE_ENTRIES 256
 
-static UINT8** translationtablecache[MAXSKINS + 4] = {NULL};
-
-
-// See also the enum skincolors_t
-// TODO Callum: Can this be translated?
-const char *Color_Names[MAXSKINCOLORS] =
-{
-	"None",      // SKINCOLOR_NONE
-	"White",     // SKINCOLOR_WHITE
-	"Silver",    // SKINCOLOR_SILVER
-	"Grey",      // SKINCOLOR_GREY
-	"Black",     // SKINCOLOR_BLACK
-	"Cyan",      // SKINCOLOR_CYAN
-	"Teal",      // SKINCOLOR_TEAL
-	"Steel_Blue",// SKINCOLOR_STEELBLUE
-	"Blue",      // SKINCOLOR_BLUE
-	"Peach",     // SKINCOLOR_PEACH
-	"Tan",       // SKINCOLOR_TAN
-	"Pink",      // SKINCOLOR_PINK
-	"Lavender",  // SKINCOLOR_LAVENDER
-	"Purple",    // SKINCOLOR_PURPLE
-	"Orange",    // SKINCOLOR_ORANGE
-	"Rosewood",  // SKINCOLOR_ROSEWOOD
-	"Beige",     // SKINCOLOR_BEIGE
-	"Brown",     // SKINCOLOR_BROWN
-	"Red",       // SKINCOLOR_RED
-	"Dark_Red",  // SKINCOLOR_DARKRED
-	"Neon_Green",// SKINCOLOR_NEONGREEN
-	"Green",     // SKINCOLOR_GREEN
-	"Zim",       // SKINCOLOR_ZIM
-	"Olive",     // SKINCOLOR_OLIVE
-	"Yellow",    // SKINCOLOR_YELLOW
-	"Gold"       // SKINCOLOR_GOLD
-};
-
-const UINT8 Color_Opposite[MAXSKINCOLORS*2] =
-{
-	SKINCOLOR_NONE,8,   // SKINCOLOR_NONE
-	SKINCOLOR_BLACK,10, // SKINCOLOR_WHITE
-	SKINCOLOR_GREY,4,   // SKINCOLOR_SILVER
-	SKINCOLOR_SILVER,12,// SKINCOLOR_GREY
-	SKINCOLOR_WHITE,8,  // SKINCOLOR_BLACK
-	SKINCOLOR_NONE,8,   // SKINCOLOR_CYAN
-	SKINCOLOR_NONE,8,   // SKINCOLOR_TEAL
-	SKINCOLOR_NONE,8,   // SKINCOLOR_STEELBLUE
-	SKINCOLOR_ORANGE,9, // SKINCOLOR_BLUE
-	SKINCOLOR_NONE,8,   // SKINCOLOR_PEACH
-	SKINCOLOR_NONE,8,   // SKINCOLOR_TAN
-	SKINCOLOR_NONE,8,   // SKINCOLOR_PINK
-	SKINCOLOR_NONE,8,   // SKINCOLOR_LAVENDER
-	SKINCOLOR_NONE,8,   // SKINCOLOR_PURPLE
-	SKINCOLOR_BLUE,12,  // SKINCOLOR_ORANGE
-	SKINCOLOR_NONE,8,   // SKINCOLOR_ROSEWOOD
-	SKINCOLOR_NONE,8,   // SKINCOLOR_BEIGE
-	SKINCOLOR_NONE,8,   // SKINCOLOR_BROWN
-	SKINCOLOR_GREEN,5,  // SKINCOLOR_RED
-	SKINCOLOR_NONE,8,   // SKINCOLOR_DARKRED
-	SKINCOLOR_NONE,8,   // SKINCOLOR_NEONGREEN
-	SKINCOLOR_RED,11,   // SKINCOLOR_GREEN
-	SKINCOLOR_PURPLE,3, // SKINCOLOR_ZIM
-	SKINCOLOR_NONE,8,   // SKINCOLOR_OLIVE
-	SKINCOLOR_NONE,8,   // SKINCOLOR_YELLOW
-	SKINCOLOR_NONE,8    // SKINCOLOR_GOLD
-};
+static UINT8** translationtablecache[MAXSKINS + 7] = {NULL};
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 
@@ -203,10 +143,6 @@ CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 */
 void R_InitTranslationTables(void)
 {
-#ifdef _NDS
-	// Ugly temporary NDS hack.
-	transtables = (UINT8*)0x2000000;
-#else
 	// Load here the transparency lookup tables 'TINTTAB'
 	// NOTE: the TINTTAB resource MUST BE aligned on 64k for the asm
 	// optimised code (in other words, transtables pointer low word is 0)
@@ -222,7 +158,6 @@ void R_InitTranslationTables(void)
 	W_ReadLump(W_GetNumForName("TRANS70"), transtables+0x60000);
 	W_ReadLump(W_GetNumForName("TRANS80"), transtables+0x70000);
 	W_ReadLump(W_GetNumForName("TRANS90"), transtables+0x80000);
-#endif
 }
 
 
@@ -234,267 +169,184 @@ void R_InitTranslationTables(void)
 
 	\return	void
 */
-static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, UINT8 color)
+
+// Define for getting accurate color brightness readings according to how the human eye sees them.
+// https://en.wikipedia.org/wiki/Relative_luminance
+// 0.2126 to red
+// 0.7152 to green
+// 0.0722 to blue
+// (See this same define in hw_md2.c!)
+#define SETBRIGHTNESS(brightness,r,g,b) \
+	brightness = (UINT8)(((1063*((UINT16)r)/5000) + (3576*((UINT16)g)/5000) + (361*((UINT16)b)/5000)) / 3)
+
+/** \brief	Generates the rainbow colourmaps that are used when a player has the invincibility power... stolen from kart, with permission
+
+	\param	dest_colormap	colormap to populate
+	\param	skincolor		translation color
+*/
+static void R_RainbowColormap(UINT8 *dest_colormap, UINT16 skincolor)
 {
-	// Table of indices into the palette of the first entries of each translated ramp
-	const UINT8 skinbasecolors[] = {
-		0x00, // SKINCOLOR_WHITE
-		0x03, // SKINCOLOR_SILVER
-		0x08, // SKINCOLOR_GREY
-		0x18, // SKINCOLOR_BLACK
-		0xd0, // SKINCOLOR_CYAN
-		0xdc, // SKINCOLOR_TEAL
-		0xc8, // SKINCOLOR_STEELBLUE
-		0xe2, // SKINCOLOR_BLUE
-		0x40, // SKINCOLOR_PEACH
-		0x48, // SKINCOLOR_TAN
-		0x90, // SKINCOLOR_PINK
-		0xf8, // SKINCOLOR_LAVENDER
-		0xc0, // SKINCOLOR_PURPLE
-		0x52, // SKINCOLOR_ORANGE
-		0x5c, // SKINCOLOR_ROSEWOOD
-		0x20, // SKINCOLOR_BEIGE
-		0x30, // SKINCOLOR_BROWN
-		0x7d, // SKINCOLOR_RED
-		0x85, // SKINCOLOR_DARKRED
-		0xb8, // SKINCOLOR_NEONGREEN
-		0xa0, // SKINCOLOR_GREEN
-		0xb0, // SKINCOLOR_ZIM
-		0x69, // SKINCOLOR_OLIVE
-		0x67, // SKINCOLOR_YELLOW
-		0x70, // SKINCOLOR_GOLD
-	};
 	INT32 i;
-	INT32 starttranscolor;
+	RGBA_t color;
+	UINT8 brightness;
+	INT32 j;
+	UINT8 colorbrightnesses[16];
+	UINT16 brightdif;
+	INT32 temp;
+
+	// first generate the brightness of all the colours of that skincolour
+	for (i = 0; i < 16; i++)
+	{
+		color = V_GetColor(skincolors[skincolor].ramp[i]);
+		SETBRIGHTNESS(colorbrightnesses[i], color.s.red, color.s.green, color.s.blue);
+	}
+
+	// next, for every colour in the palette, choose the transcolor that has the closest brightness
+	for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+	{
+		if (i == 0 || i == 31) // pure black and pure white don't change
+		{
+			dest_colormap[i] = (UINT8)i;
+			continue;
+		}
+		color = V_GetColor(i);
+		SETBRIGHTNESS(brightness, color.s.red, color.s.green, color.s.blue);
+		brightdif = 256;
+		for (j = 0; j < 16; j++)
+		{
+			temp = abs((INT16)brightness - (INT16)colorbrightnesses[j]);
+			if (temp < brightdif)
+			{
+				brightdif = (UINT16)temp;
+				dest_colormap[i] = skincolors[skincolor].ramp[j];
+			}
+		}
+	}
+}
+
+#undef SETBRIGHTNESS
+
+static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, UINT16 color)
+{
+	INT32 i, starttranscolor, skinramplength;
 
 	// Handle a couple of simple special cases
-	if (skinnum == TC_BOSS || skinnum == TC_ALLWHITE || skinnum == TC_METALSONIC || color == SKINCOLOR_NONE)
+	if (skinnum < TC_DEFAULT)
 	{
-		for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+		switch (skinnum)
 		{
-			if (skinnum == TC_ALLWHITE) dest_colormap[i] = 0;
-			else dest_colormap[i] = (UINT8)i;
+			case TC_ALLWHITE:
+				memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8));
+				return;
+			case TC_RAINBOW:
+				if (color >= numskincolors)
+					I_Error("Invalid skin color #%hu.", (UINT16)color);
+				if (color != SKINCOLOR_NONE)
+				{
+					R_RainbowColormap(dest_colormap, color);
+					return;
+				}
+				break;
+			case TC_BLINK:
+				if (color >= numskincolors)
+					I_Error("Invalid skin color #%hu.", (UINT16)color);
+				if (color != SKINCOLOR_NONE)
+				{
+					memset(dest_colormap, skincolors[color].ramp[3], NUM_PALETTE_ENTRIES * sizeof(UINT8));
+					return;
+				}
+				break;
+			default:
+				break;
 		}
+
+		for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+			dest_colormap[i] = (UINT8)i;
 
 		// White!
 		if (skinnum == TC_BOSS)
-			dest_colormap[31] = 0;
+		{
+			for (i = 0; i < 16; i++)
+				dest_colormap[31-i] = i;
+		}
 		else if (skinnum == TC_METALSONIC)
-			dest_colormap[239] = 0;
+		{
+			for (i = 0; i < 6; i++)
+			{
+				dest_colormap[skincolors[SKINCOLOR_BLUE].ramp[12-i]] = skincolors[SKINCOLOR_BLUE].ramp[i];
+			}
+			dest_colormap[159] = dest_colormap[253] = dest_colormap[254] = 0;
+			for (i = 0; i < 16; i++)
+				dest_colormap[96+i] = dest_colormap[skincolors[SKINCOLOR_COBALT].ramp[i]];
+		}
+		else if (skinnum == TC_DASHMODE) // This is a long one, because MotorRoach basically hand-picked the indices
+		{
+			// greens -> ketchups
+			dest_colormap[96] = dest_colormap[97] = 48;
+			dest_colormap[98] = 49;
+			dest_colormap[99] = 51;
+			dest_colormap[100] = 52;
+			dest_colormap[101] = dest_colormap[102] = 54;
+			dest_colormap[103] = 34;
+			dest_colormap[104] = 37;
+			dest_colormap[105] = 39;
+			dest_colormap[106] = 41;
+			for (i = 0; i < 5; i++)
+				dest_colormap[107 + i] = 43 + i;
 
+			// reds -> steel blues
+			dest_colormap[32] = 146;
+			dest_colormap[33] = 147;
+			dest_colormap[34] = dest_colormap[35] = 170;
+			dest_colormap[36] = 171;
+			dest_colormap[37] = dest_colormap[38] = 172;
+			dest_colormap[39] = dest_colormap[40] = dest_colormap[41] = 173;
+			dest_colormap[42] = dest_colormap[43] = dest_colormap[44] = 174;
+			dest_colormap[45] = dest_colormap[46] = dest_colormap[47] = 175;
+			dest_colormap[71] = 139;
+
+			// steel blues -> oranges
+			dest_colormap[170] = 52;
+			dest_colormap[171] = 54;
+			dest_colormap[172] = 56;
+			dest_colormap[173] = 42;
+			dest_colormap[174] = 45;
+			dest_colormap[175] = 47;
+		}
+		return;
+	}
+	else if (color == SKINCOLOR_NONE)
+	{
+		for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+			dest_colormap[i] = (UINT8)i;
 		return;
 	}
 
+	if (color >= numskincolors)
+		I_Error("Invalid skin color #%hu.", (UINT16)color);
+
 	starttranscolor = (skinnum != TC_DEFAULT) ? skins[skinnum].starttranscolor : DEFAULT_STARTTRANSCOLOR;
+
+	if (starttranscolor >= NUM_PALETTE_ENTRIES)
+		I_Error("Invalid startcolor #%d.", starttranscolor);
 
 	// Fill in the entries of the palette that are fixed
 	for (i = 0; i < starttranscolor; i++)
 		dest_colormap[i] = (UINT8)i;
 
-	for (i = (UINT8)(starttranscolor + 16); i < NUM_PALETTE_ENTRIES; i++)
-		dest_colormap[i] = (UINT8)i;
+	i = starttranscolor + 16;
+	if (i < NUM_PALETTE_ENTRIES)
+	{
+		for (i = (UINT8)i; i < NUM_PALETTE_ENTRIES; i++)
+			dest_colormap[i] = (UINT8)i;
+		skinramplength = 16;
+	}
+	else
+		skinramplength = i - NUM_PALETTE_ENTRIES; // shouldn't this be NUM_PALETTE_ENTRIES - starttranscolor?
 
 	// Build the translated ramp
-	switch (color)
-	{
-	case SKINCOLOR_SILVER:
-	case SKINCOLOR_GREY:
-	case SKINCOLOR_PEACH:
-	case SKINCOLOR_BEIGE:
-	case SKINCOLOR_BROWN:
-	case SKINCOLOR_RED:
-	case SKINCOLOR_GREEN:
-	case SKINCOLOR_BLUE:
-		// 16 color ramp
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i);
-		break;
-
-	case SKINCOLOR_ORANGE:
-		// 14 colors of orange + brown
-		for (i = 0; i < SKIN_RAMP_LENGTH-2; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i);
-		for (i = 0; i < 2; i++)
-			dest_colormap[starttranscolor + (i+SKIN_RAMP_LENGTH-2)] = (UINT8)(152 + i);
-		break;
-
-	case SKINCOLOR_CYAN:
-		// 12 color ramp
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (12*i/SKIN_RAMP_LENGTH));
-		break;
-
-	case SKINCOLOR_WHITE:
-	case SKINCOLOR_BLACK:
-	case SKINCOLOR_STEELBLUE:
-	case SKINCOLOR_PINK:
-	case SKINCOLOR_LAVENDER:
-	case SKINCOLOR_PURPLE:
-	case SKINCOLOR_DARKRED:
-	case SKINCOLOR_ZIM:
-	case SKINCOLOR_YELLOW:
-	case SKINCOLOR_GOLD:
-		// 8 color ramp
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1));
-		break;
-
-	case SKINCOLOR_TEAL:
-		// 5 color ramp
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (5*i/16 == 0)
-				dest_colormap[starttranscolor + i] = 0xf7;
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (5*i/SKIN_RAMP_LENGTH) - 1);
-		}
-		break;
-
-	case SKINCOLOR_OLIVE:
-		// 7 color ramp
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (7*i/SKIN_RAMP_LENGTH));
-		break;
-
-	case SKINCOLOR_TAN:
-		// 16 color ramp, from two color ranges
-		for (i = 0; i < SKIN_RAMP_LENGTH/2; i++) // Peach half
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i);
-		for (i = 0; i < SKIN_RAMP_LENGTH/2; i++) // Brown half
-			dest_colormap[starttranscolor + (i+8)] = (UINT8)(48 + i);
-		break;
-
-	case SKINCOLOR_ROSEWOOD:
-		// 12 color ramp, from two color ranges!
-		for (i = 0; i < 6; i++) // Orange ...third?
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (12*i/SKIN_RAMP_LENGTH));
-		for (i = 0; i < 10; i++) // Rosewood two-thirds-ish
-			dest_colormap[starttranscolor + (i+6)] = (UINT8)(152 + (12*i/SKIN_RAMP_LENGTH));
-		break;
-
-	case SKINCOLOR_NEONGREEN:
-		// Multi-color ramp
-		dest_colormap[starttranscolor] = 0xA0; // Brighter green
-		for (i = 0; i < SKIN_RAMP_LENGTH-1; i++) // Neon Green
-			dest_colormap[starttranscolor + (i+1)] = (UINT8)(skinbasecolors[color - 1] + (6*i/(SKIN_RAMP_LENGTH-1)));
-		break;
-
-	// Super colors, from lightest to darkest!
-	case SKINCOLOR_SUPER1:
-		// Super White
-		for (i = 0; i < 10; i++)
-			dest_colormap[starttranscolor + i] = 120; // True white
-		for (; i < SKIN_RAMP_LENGTH; i++) // White-yellow fade
-			dest_colormap[starttranscolor + i] = (UINT8)(96 + (i-10));
-		break;
-
-	case SKINCOLOR_SUPER2:
-		// Super Bright
-		for (i = 0; i < 5; i++) // White-yellow fade
-			dest_colormap[starttranscolor + i] = (UINT8)(96 + i);
-		dest_colormap[starttranscolor + 5] = 112; // Golden shine
-		for (i = 0; i < 8; i++) // Yellow
-			dest_colormap[starttranscolor + (i+6)] = (UINT8)(101 + (i>>1));
-		for (i = 0; i < 2; i++) // With a fine golden finish! :3
-			dest_colormap[starttranscolor + (i+14)] = (UINT8)(113 + i);
-		break;
-
-	case SKINCOLOR_SUPER3:
-		// Super Yellow
-		for (i = 0; i < 3; i++) // White-yellow fade
-			dest_colormap[starttranscolor + i] = (UINT8)(98 + i);
-		dest_colormap[starttranscolor + 3] = 112; // Golden shine
-		for (i = 0; i < 8; i++) // Yellow
-			dest_colormap[starttranscolor + (i+4)] = (UINT8)(101 + (i>>1));
-		for (i = 0; i < 4; i++) // With a fine golden finish! :3
-			dest_colormap[starttranscolor + (i+12)] = (UINT8)(113 + i);
-		break;
-
-	case SKINCOLOR_SUPER4:
-		// "The SSNTails"
-		dest_colormap[starttranscolor] = 112; // Golden shine
-		for (i = 0; i < 8; i++) // Yellow
-			dest_colormap[starttranscolor + (i+1)] = (UINT8)(101 + (i>>1));
-		for (i = 0; i < 7; i++) // With a fine golden finish! :3
-			dest_colormap[starttranscolor + (i+9)] = (UINT8)(113 + i);
-		break;
-
-	case SKINCOLOR_SUPER5:
-		// Golden Delicious
-		for (i = 0; i < 8; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(101 + (i>>1));
-		for (i = 0; i < 7; i++) // With a fine golden finish! :3
-			dest_colormap[starttranscolor + (i+8)] = (UINT8)(113 + i);
-		dest_colormap[starttranscolor + 15] = 155;
-		break;
-
-	// Super Tails
-	case SKINCOLOR_TSUPER1:
-		for (i = 0; i < 10; i++) // white
-			dest_colormap[starttranscolor + i] = 120;
-		for (; i < SKIN_RAMP_LENGTH; i++) // orange
-			dest_colormap[starttranscolor + i] = (UINT8)(80 + (i-10));
-		break;
-
-	case SKINCOLOR_TSUPER2:
-		for (i = 0; i < 4; i++) // white
-			dest_colormap[starttranscolor + i] = 120;
-		for (; i < SKIN_RAMP_LENGTH; i++) // orange
-			dest_colormap[starttranscolor + i] = (UINT8)(80 + ((i-4)>>1));
-		break;
-
-	case SKINCOLOR_TSUPER3:
-		dest_colormap[starttranscolor] = 120; // pure white
-		dest_colormap[starttranscolor+1] = 120;
-		for (i = 2; i < SKIN_RAMP_LENGTH; i++) // orange
-			dest_colormap[starttranscolor + i] = (UINT8)(80 + ((i-2)>>1));
-		break;
-
-	case SKINCOLOR_TSUPER4:
-		dest_colormap[starttranscolor] = 120; // pure white
-		for (i = 1; i < 9; i++) // orange
-			dest_colormap[starttranscolor + i] = (UINT8)(80 + (i-1));
-		for (; i < SKIN_RAMP_LENGTH; i++) // gold
-			dest_colormap[starttranscolor + i] = (UINT8)(115 + (5*(i-9)/7));
-		break;
-
-	case SKINCOLOR_TSUPER5:
-		for (i = 0; i < 8; i++) // orange
-			dest_colormap[starttranscolor + i] = (UINT8)(80 + i);
-		for (; i < SKIN_RAMP_LENGTH; i++) // gold
-			dest_colormap[starttranscolor + i] = (UINT8)(115 + (5*(i-8)/8));
-		break;
-
-	// Super Knuckles
-	case SKINCOLOR_KSUPER1:
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(120 + (i >> 2));
-		break;
-
-	case SKINCOLOR_KSUPER2:
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(120 + (6*i/SKIN_RAMP_LENGTH));
-		break;
-
-	case SKINCOLOR_KSUPER3:
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(120 + (i >> 1));
-		break;
-
-	case SKINCOLOR_KSUPER4:
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(121 + (i >> 1));
-		break;
-
-	case SKINCOLOR_KSUPER5:
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(122 + (i >> 1));
-		break;
-
-	default:
-		I_Error("Invalid skin color #%hu.", (UINT16)color);
-		break;
-	}
+	for (i = 0; i < skinramplength; i++)
+		dest_colormap[starttranscolor + i] = (UINT8)skincolors[color].ramp[i];
 }
 
 
@@ -506,24 +358,30 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 
 	\return	Colormap. If not cached, caller should Z_Free.
 */
-UINT8* R_GetTranslationColormap(INT32 skinnum, skincolors_t color, UINT8 flags)
+UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags)
 {
 	UINT8* ret;
 	INT32 skintableindex;
 
 	// Adjust if we want the default colormap
-	if (skinnum == TC_DEFAULT) skintableindex = DEFAULT_TT_CACHE_INDEX;
-	else if (skinnum == TC_BOSS) skintableindex = BOSS_TT_CACHE_INDEX;
-	else if (skinnum == TC_METALSONIC) skintableindex = METALSONIC_TT_CACHE_INDEX;
-	else if (skinnum == TC_ALLWHITE) skintableindex = ALLWHITE_TT_CACHE_INDEX;
-	else skintableindex = skinnum;
+	switch (skinnum)
+	{
+		case TC_DEFAULT:    skintableindex = DEFAULT_TT_CACHE_INDEX; break;
+		case TC_BOSS:       skintableindex = BOSS_TT_CACHE_INDEX; break;
+		case TC_METALSONIC: skintableindex = METALSONIC_TT_CACHE_INDEX; break;
+		case TC_ALLWHITE:   skintableindex = ALLWHITE_TT_CACHE_INDEX; break;
+		case TC_RAINBOW:    skintableindex = RAINBOW_TT_CACHE_INDEX; break;
+		case TC_BLINK:      skintableindex = BLINK_TT_CACHE_INDEX; break;
+		case TC_DASHMODE:   skintableindex = DASHMODE_TT_CACHE_INDEX; break;
+		     default:       skintableindex = skinnum; break;
+	}
 
 	if (flags & GTC_CACHE)
 	{
 
 		// Allocate table for skin if necessary
 		if (!translationtablecache[skintableindex])
-			translationtablecache[skintableindex] = Z_Calloc(MAXTRANSLATIONS * sizeof(UINT8**), PU_STATIC, NULL);
+			translationtablecache[skintableindex] = Z_Calloc(MAXSKINCOLORS * sizeof(UINT8**), PU_STATIC, NULL);
 
 		// Get colormap
 		ret = translationtablecache[skintableindex][color];
@@ -558,18 +416,32 @@ void R_FlushTranslationColormapCache(void)
 
 	for (i = 0; i < (INT32)(sizeof(translationtablecache) / sizeof(translationtablecache[0])); i++)
 		if (translationtablecache[i])
-			memset(translationtablecache[i], 0, MAXTRANSLATIONS * sizeof(UINT8**));
+			memset(translationtablecache[i], 0, MAXSKINCOLORS * sizeof(UINT8**));
 }
 
-UINT8 R_GetColorByName(const char *name)
+UINT16 R_GetColorByName(const char *name)
 {
-	UINT8 color = (UINT8)atoi(name);
-	if (color > 0 && color < MAXSKINCOLORS)
+	UINT16 color = (UINT16)atoi(name);
+	if (color > 0 && color < numskincolors)
 		return color;
-	for (color = 1; color < MAXSKINCOLORS; color++)
-		if (!stricmp(Color_Names[color], name))
+	for (color = 1; color < numskincolors; color++)
+		if (!stricmp(skincolors[color].name, name))
 			return color;
-	return 0;
+	return SKINCOLOR_GREEN;
+}
+
+UINT16 R_GetSuperColorByName(const char *name)
+{
+	UINT16 i, color = SKINCOLOR_SUPERGOLD1;
+	char *realname = Z_Malloc(MAXCOLORNAME+1, PU_STATIC, NULL);
+	snprintf(realname, MAXCOLORNAME+1, "Super %s 1", name);
+	for (i = 1; i < numskincolors; i++)
+		if (!stricmp(skincolors[i].name, realname)) {
+			color = i;
+			break;
+		}
+	Z_Free(realname);
+	return color;
 }
 
 // ==========================================================================
@@ -796,6 +668,7 @@ void R_DrawViewBorder(void)
 // ==========================================================================
 
 #include "r_draw8.c"
+#include "r_draw8_npo2.c"
 
 // ==========================================================================
 //                   INCLUDE 16bpp DRAWING CODE HERE

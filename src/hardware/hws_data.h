@@ -114,7 +114,7 @@ typedef struct snddev_s
 	size_t  numsfxs;
 
 // Windows specific data
-#if defined (_WIN32) && !defined (_XBOX)
+#ifdef _WIN32
 	UINT32   cooplevel;
 	HWND    hWnd;
 #endif

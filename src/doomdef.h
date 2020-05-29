@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -28,13 +28,11 @@
 
 // Use Mixer interface?
 #ifdef HAVE_MIXER
-    //#if !defined(DC) && !defined(_WIN32_WCE) && !defined(_XBOX) && !defined(GP2X)
     #define SOUND SOUND_MIXER
     #define NOHS // No HW3SOUND
     #ifdef HW3SOUND
     #undef HW3SOUND
     #endif
-    //#endif
 #endif
 
 // Use generic SDL interface.
@@ -60,6 +58,7 @@
 #endif
 
 #ifdef _WINDOWS
+#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -69,7 +68,7 @@
 #endif
 #endif
 
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #define ASMCALL __cdecl
 #else
 #define ASMCALL
@@ -86,13 +85,6 @@
 // warning C4152: nonstandard extension, function/data pointer conversion in expression
 // warning C4213: nonstandard extension used : cast on l-value
 
-#if defined (_WIN32_WCE) && defined (DEBUG) && defined (ARM)
-#if defined (ARMV4) || defined (ARMV4I)
-//#pragma warning(disable : 1166)
-// warning LNK1166: cannot adjust code at offset=
-#endif
-#endif
-
 
 #include "doomtype.h"
 
@@ -106,16 +98,14 @@
 
 #ifdef GETTEXT
 #include <libintl.h>
-#include <locale.h>
 #endif
+#include <locale.h> // locale should not be dependent on GETTEXT -- 11/01/20 Monster Iestyn
 
-#if !defined (_WIN32_WCE)
 #include <sys/types.h>
 #include <sys/stat.h>
-#endif
 #include <ctype.h>
 
-#if ((defined (_WIN32) && !defined (_WIN32_WCE)) || defined (__DJGPP__)) && !defined (_XBOX)
+#if defined (_WIN32) || defined (__DJGPP__)
 #include <io.h>
 #endif
 
@@ -137,7 +127,11 @@
 
 #ifdef LOGMESSAGES
 extern FILE *logstream;
+extern char logfilename[1024];
 #endif
+
+/* A mod name to further distinguish versions. */
+#define SRB2APPLICATION "SRB2"
 
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
@@ -148,17 +142,23 @@ extern FILE *logstream;
 // most interface strings are ignored in development mode.
 // we use comprevision and compbranch instead.
 #else
-#define VERSION    201 // Game version
-#define SUBVERSION 15  // more precise version number
-#define VERSIONSTRING "v2.1.15"
-#define VERSIONSTRINGW L"v2.1.15"
+#define VERSION    202 // Game version
+#define SUBVERSION 4  // more precise version number
+#define VERSIONSTRING "v2.2.4"
+#define VERSIONSTRINGW L"v2.2.4"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
 
+/* A custom URL protocol for server links. */
+#define SERVER_URL_PROTOCOL "srb2://"
+
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
 #define USE_PATCH_DTA
+
+// Use .kart extension addons
+//#define USE_KART
 
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
@@ -202,18 +202,32 @@ extern FILE *logstream;
 // and should not be changed unless you have merged changes between versions of SRB2
 // (such as 2.0.4 to 2.0.5, etc) into your working copy.
 // Will always resemble the versionstring, 205 = 2.0.5, 210 = 2.1, etc.
-#define CODEBASE 210
+#define CODEBASE 220
 
-// The Modification ID; must be obtained from Inuyasha ( http://mb.srb2.org/private.php?do=newpm&u=2604 ).
+// The Modification ID; must be obtained from Rob ( https://mb.srb2.org/private.php?do=newpm&u=546 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
-// "12" is the default mod ID for version 2.1
-#define MODID 12
+// "18" is the default mod ID for version 2.2
+#define MODID 18
 
 // The Modification Version, starting from 1. Do not follow your version string for this,
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
-// Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 20
+// Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
+#define MODVERSION 44
+
+// To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
+// Increment MINOREXECVERSION whenever a config change is needed that does not correspond
+// to an increment in MODVERSION. This might never happen in practice.
+// If MODVERSION increases, set MINOREXECVERSION to 0.
+#define MAJOREXECVERSION MODVERSION
+#define MINOREXECVERSION 0
+// (It would have been nice to use VERSION and SUBVERSION but those are zero'd out for DEVELOP builds)
+
+// Macros
+#define GETMAJOREXECVERSION(v) (v & 0xFFFF)
+#define GETMINOREXECVERSION(v) (v >> 16)
+#define GETEXECVERSION(major,minor) (major + (minor << 16))
+#define EXECVERSION GETEXECVERSION(MAJOREXECVERSION, MINOREXECVERSION)
 
 // =========================================================================
 
@@ -221,65 +235,170 @@ extern FILE *logstream;
 // NOTE: it needs more than this to increase the number of players...
 
 #define MAXPLAYERS 32
-#define MAXSKINS MAXPLAYERS
+#define MAXSKINS 32
 #define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
+
+#define COLORRAMPSIZE 16
+#define MAXCOLORNAME 32
+#define NUMCOLORFREESLOTS 1024
+
+typedef struct skincolor_s
+{
+	char name[MAXCOLORNAME+1];  // Skincolor name
+	UINT8 ramp[COLORRAMPSIZE];  // Colormap ramp
+	UINT16 invcolor;            // Signpost color
+	UINT8 invshade;             // Signpost color shade
+	UINT16 chatcolor;           // Chat color
+	boolean accessible;         // Accessible by the color command + setup menu
+} skincolor_t;
 
 typedef enum
 {
 	SKINCOLOR_NONE = 0,
-	SKINCOLOR_WHITE,
-	SKINCOLOR_SILVER,
-	SKINCOLOR_GREY,
-	SKINCOLOR_BLACK,
-	SKINCOLOR_CYAN,
-	SKINCOLOR_TEAL,
-	SKINCOLOR_STEELBLUE,
-	SKINCOLOR_BLUE,
-	SKINCOLOR_PEACH,
-	SKINCOLOR_TAN,
-	SKINCOLOR_PINK,
-	SKINCOLOR_LAVENDER,
-	SKINCOLOR_PURPLE,
-	SKINCOLOR_ORANGE,
-	SKINCOLOR_ROSEWOOD,
-	SKINCOLOR_BEIGE,
-	SKINCOLOR_BROWN,
-	SKINCOLOR_RED,
-	SKINCOLOR_DARKRED,
-	SKINCOLOR_NEONGREEN,
-	SKINCOLOR_GREEN,
-	SKINCOLOR_ZIM,
-	SKINCOLOR_OLIVE,
-	SKINCOLOR_YELLOW,
-	SKINCOLOR_GOLD,
 
-	// Careful! MAXSKINCOLORS cannot be greater than 0x20!
-	MAXSKINCOLORS,
+	// Greyscale ranges
+	SKINCOLOR_WHITE,
+	SKINCOLOR_BONE,
+	SKINCOLOR_CLOUDY,
+	SKINCOLOR_GREY,
+	SKINCOLOR_SILVER,
+	SKINCOLOR_CARBON,
+	SKINCOLOR_JET,
+	SKINCOLOR_BLACK,
+
+	// Desaturated
+	SKINCOLOR_AETHER,
+	SKINCOLOR_SLATE,
+	SKINCOLOR_BLUEBELL,
+	SKINCOLOR_PINK,
+	SKINCOLOR_YOGURT,
+	SKINCOLOR_BROWN,
+	SKINCOLOR_BRONZE,
+	SKINCOLOR_TAN,
+	SKINCOLOR_BEIGE,
+	SKINCOLOR_MOSS,
+	SKINCOLOR_AZURE,
+	SKINCOLOR_LAVENDER,
+
+	// Viv's vivid colours (toast 21/07/17)
+	SKINCOLOR_RUBY,
+	SKINCOLOR_SALMON,
+	SKINCOLOR_RED,
+	SKINCOLOR_CRIMSON,
+	SKINCOLOR_FLAME,
+	SKINCOLOR_KETCHUP,
+	SKINCOLOR_PEACHY,
+	SKINCOLOR_QUAIL,
+	SKINCOLOR_SUNSET,
+	SKINCOLOR_COPPER,
+	SKINCOLOR_APRICOT,
+	SKINCOLOR_ORANGE,
+	SKINCOLOR_RUST,
+	SKINCOLOR_GOLD,
+	SKINCOLOR_SANDY,
+	SKINCOLOR_YELLOW,
+	SKINCOLOR_OLIVE,
+	SKINCOLOR_LIME,
+	SKINCOLOR_PERIDOT,
+	SKINCOLOR_APPLE,
+	SKINCOLOR_GREEN,
+	SKINCOLOR_FOREST,
+	SKINCOLOR_EMERALD,
+	SKINCOLOR_MINT,
+	SKINCOLOR_SEAFOAM,
+	SKINCOLOR_AQUA,
+	SKINCOLOR_TEAL,
+	SKINCOLOR_WAVE,
+	SKINCOLOR_CYAN,
+	SKINCOLOR_SKY,
+	SKINCOLOR_CERULEAN,
+	SKINCOLOR_ICY,
+	SKINCOLOR_SAPPHIRE, // sweet mother, i cannot weave – slender aphrodite has overcome me with longing for a girl
+	SKINCOLOR_CORNFLOWER,
+	SKINCOLOR_BLUE,
+	SKINCOLOR_COBALT,
+	SKINCOLOR_VAPOR,
+	SKINCOLOR_DUSK,
+	SKINCOLOR_PASTEL,
+	SKINCOLOR_PURPLE,
+	SKINCOLOR_BUBBLEGUM,
+	SKINCOLOR_MAGENTA,
+	SKINCOLOR_NEON,
+	SKINCOLOR_VIOLET,
+	SKINCOLOR_LILAC,
+	SKINCOLOR_PLUM,
+	SKINCOLOR_RASPBERRY,
+	SKINCOLOR_ROSY,
+
+	FIRSTSUPERCOLOR,
 
 	// Super special awesome Super flashing colors!
-	SKINCOLOR_SUPER1 = MAXSKINCOLORS,
-	SKINCOLOR_SUPER2,
-	SKINCOLOR_SUPER3,
-	SKINCOLOR_SUPER4,
-	SKINCOLOR_SUPER5,
+	SKINCOLOR_SUPERSILVER1 = FIRSTSUPERCOLOR,
+	SKINCOLOR_SUPERSILVER2,
+	SKINCOLOR_SUPERSILVER3,
+	SKINCOLOR_SUPERSILVER4,
+	SKINCOLOR_SUPERSILVER5,
 
-	// Super Tails
-	SKINCOLOR_TSUPER1,
-	SKINCOLOR_TSUPER2,
-	SKINCOLOR_TSUPER3,
-	SKINCOLOR_TSUPER4,
-	SKINCOLOR_TSUPER5,
+	SKINCOLOR_SUPERRED1,
+	SKINCOLOR_SUPERRED2,
+	SKINCOLOR_SUPERRED3,
+	SKINCOLOR_SUPERRED4,
+	SKINCOLOR_SUPERRED5,
 
-	// Super Knuckles
-	SKINCOLOR_KSUPER1,
-	SKINCOLOR_KSUPER2,
-	SKINCOLOR_KSUPER3,
-	SKINCOLOR_KSUPER4,
-	SKINCOLOR_KSUPER5,
+	SKINCOLOR_SUPERORANGE1,
+	SKINCOLOR_SUPERORANGE2,
+	SKINCOLOR_SUPERORANGE3,
+	SKINCOLOR_SUPERORANGE4,
+	SKINCOLOR_SUPERORANGE5,
 
-	MAXTRANSLATIONS
-} skincolors_t;
+	SKINCOLOR_SUPERGOLD1,
+	SKINCOLOR_SUPERGOLD2,
+	SKINCOLOR_SUPERGOLD3,
+	SKINCOLOR_SUPERGOLD4,
+	SKINCOLOR_SUPERGOLD5,
+
+	SKINCOLOR_SUPERPERIDOT1,
+	SKINCOLOR_SUPERPERIDOT2,
+	SKINCOLOR_SUPERPERIDOT3,
+	SKINCOLOR_SUPERPERIDOT4,
+	SKINCOLOR_SUPERPERIDOT5,
+
+	SKINCOLOR_SUPERSKY1,
+	SKINCOLOR_SUPERSKY2,
+	SKINCOLOR_SUPERSKY3,
+	SKINCOLOR_SUPERSKY4,
+	SKINCOLOR_SUPERSKY5,
+
+	SKINCOLOR_SUPERPURPLE1,
+	SKINCOLOR_SUPERPURPLE2,
+	SKINCOLOR_SUPERPURPLE3,
+	SKINCOLOR_SUPERPURPLE4,
+	SKINCOLOR_SUPERPURPLE5,
+
+	SKINCOLOR_SUPERRUST1,
+	SKINCOLOR_SUPERRUST2,
+	SKINCOLOR_SUPERRUST3,
+	SKINCOLOR_SUPERRUST4,
+	SKINCOLOR_SUPERRUST5,
+
+	SKINCOLOR_SUPERTAN1,
+	SKINCOLOR_SUPERTAN2,
+	SKINCOLOR_SUPERTAN3,
+	SKINCOLOR_SUPERTAN4,
+	SKINCOLOR_SUPERTAN5,
+
+	SKINCOLOR_FIRSTFREESLOT,
+	SKINCOLOR_LASTFREESLOT = SKINCOLOR_FIRSTFREESLOT + NUMCOLORFREESLOTS - 1,
+
+	MAXSKINCOLORS,
+
+	NUMSUPERCOLORS = ((SKINCOLOR_FIRSTFREESLOT - FIRSTSUPERCOLOR)/5)
+} skincolornum_t;
+
+extern UINT16 numskincolors;
+
+extern skincolor_t skincolors[MAXSKINCOLORS];
 
 // State updates, number of tics / second.
 // NOTE: used to setup the timer rate, see I_StartupTimer().
@@ -287,26 +406,34 @@ typedef enum
 #define NEWTICRATERATIO 1 // try 4 for 140 fps :)
 #define NEWTICRATE (TICRATE*NEWTICRATERATIO)
 
+#define MUSICRATE 1000 // sound timing is calculated by milliseconds
+
 #define RING_DIST 512*FRACUNIT // how close you need to be to a ring to attract it
 
 #define PUSHACCEL (2*FRACUNIT) // Acceleration for MF2_SLIDEPUSH items.
 
 // Special linedef executor tag numbers!
 enum {
-	LE_PINCHPHASE      = -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
-	LE_ALLBOSSESDEAD   = -3, // All bosses in the map are dead (Egg capsule raise)
-	LE_BOSSDEAD        = -4, // A boss in the map died (Chaos mode boss tally)
-	LE_BOSS4DROP       = -5,  // CEZ boss dropped its cage
-	LE_BRAKVILEATACK   = -6  // Brak's doing his LOS attack, oh noes
+	LE_PINCHPHASE      =    -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
+	LE_ALLBOSSESDEAD   =    -3, // All bosses in the map are dead (Egg capsule raise)
+	LE_BOSSDEAD        =    -4, // A boss in the map died (Chaos mode boss tally)
+	LE_BOSS4DROP       =    -5, // CEZ boss dropped its cage (also subtract the number of hitpoints it's lost)
+	LE_BRAKVILEATACK   =    -6, // Brak's doing his LOS attack, oh noes
+	LE_TURRET          = 32000, // THZ turret
+	LE_BRAKPLATFORM    =  4200, // v2.0 Black Eggman destroys platform
+	LE_CAPSULE2        =   682, // Egg Capsule
+	LE_CAPSULE1        =   681, // Egg Capsule
+	LE_CAPSULE0        =   680, // Egg Capsule
+	LE_KOOPA           =   650, // Distant cousin to Gay Bowser
+	LE_AXE             =   649, // MKB Axe object
+	LE_PARAMWIDTH      =  -100  // If an object that calls LinedefExecute has a nonzero parameter value, this times the parameter will be subtracted. (Mostly for the purpose of coexisting bosses...)
 };
 
 // Name of local directory for config files and savegames
-#if !defined(_arch_dreamcast) && !defined(_WIN32_WCE) && !defined(GP2X) && !defined(_WII) && !defined(_PS3)
 #if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else
 #define DEFAULTDIR "srb2"
-#endif
 #endif
 
 #include "g_state.h"
@@ -351,20 +478,23 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 
 // Things that used to be in dstrings.h
 #define SAVEGAMENAME "srb2sav"
-char savegamename[256];
+extern char savegamename[256];
 
 // m_misc.h
 #ifdef GETTEXT
 #define M_GetText(String) gettext(String)
-void M_StartupLocale(void);
 #else
 // If no translations are to be used, make a stub
 // M_GetText function that just returns the string.
 #define M_GetText(x) (x)
 #endif
+void M_StartupLocale(void);
 extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
+void M_UnGetToken(void);
+UINT32 M_GetTokenPos(void);
+void M_SetTokenPos(UINT32 newPos);
 char *sizeu1(size_t num);
 char *sizeu2(size_t num);
 char *sizeu3(size_t num);
@@ -378,7 +508,7 @@ extern INT32 cv_debug;
 
 #define DBG_BASIC       0x0001
 #define DBG_DETAILED    0x0002
-#define DBG_RANDOMIZER  0x0004
+#define DBG_PLAYER      0x0004
 #define DBG_RENDER      0x0008
 #define DBG_NIGHTSBASIC 0x0010
 #define DBG_NIGHTS      0x0020
@@ -388,13 +518,22 @@ extern INT32 cv_debug;
 #define DBG_MEMORY      0x0200
 #define DBG_SETUP       0x0400
 #define DBG_LUA         0x0800
+#define DBG_RANDOMIZER  0x1000
+#define DBG_VIEWMORPH   0x2000
 
 // =======================
 // Misc stuff for later...
 // =======================
 
+#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
+
+// Modifier key variables, accessible anywhere
+extern UINT8 shiftdown, ctrldown, altdown;
+extern boolean capslock;
+
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
+#define ZZ_Calloc(x) Z_Calloc(x, PU_STATIC, NULL)
 
 // i_system.c, replace getchar() once the keyboard has been appropriated
 INT32 I_GetKey(void);
@@ -404,6 +543,22 @@ INT32 I_GetKey(void);
 #endif
 #ifndef max // Double-Check with WATTCP-32's cdefs.h
 #define max(x, y) (((x) > (y)) ? (x) : (y))
+#endif
+
+// Max gamepad/joysticks that can be detected/used.
+#define MAX_JOYSTICKS 4
+
+#ifndef M_PIl
+#define M_PIl 3.1415926535897932384626433832795029L
+#endif
+
+// Floating point comparison epsilons from float.h
+#ifndef FLT_EPSILON
+#define FLT_EPSILON 1.1920928955078125e-7f
+#endif
+
+#ifndef DBL_EPSILON
+#define DBL_EPSILON 2.2204460492503131e-16l
 #endif
 
 // An assert-type mechanism.
@@ -421,19 +576,14 @@ INT32 I_GetKey(void);
 	#define PATHSEP "/"
 #endif
 
+#define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
 // Compile date and time and revision.
 extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 // Disabled code and code under testing
 // None of these that are disabled in the normal build are guaranteed to work perfectly
 // Compile them at your own risk!
-
-/// Kalaron/Eternity Engine slope code (SRB2CB ported)
-#define ESLOPE
-
-///	Delete file while the game is running.
-///	\note	EXTREMELY buggy, tends to crash game.
-//#define DELFILE
 
 ///	Allows the use of devmode in multiplayer. AKA "fishcake"
 //#define NETGAME_DEVMODE
@@ -443,12 +593,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 ///	Dumps the contents of a network save game upon consistency failure for debugging.
 //#define DUMPCONSISTENCY
-
-///	Polyobject fake flat code
-#define POLYOBJECTS_PLANES
-
-///	Improved way of dealing with ping values and a ping limit.
-#define NEWPING
 
 ///	See name of player in your crosshair
 #define SEENAMES
@@ -462,19 +606,15 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	    	Most modifications should probably enable this.
 //#define SAVEGAME_OTHERVERSIONS
 
-#if !defined (_NDS) && !defined (_PSP)
 ///	Shuffle's incomplete OpenGL sorting code.
 #define SHUFFLE // This has nothing to do with sorting, why was it disabled?
-#endif
 
-#if !defined (_NDS) && !defined (_PSP)
 ///	Allow the use of the SOC RESETINFO command.
 ///	\note	Builds that are tight on memory should disable this.
 ///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.
 ///	    	Though this info is compressed under normal circumstances, it's still a lot of extra
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
-#endif
 
 #ifndef NONET
 ///	Display a connection screen on join attempts.
@@ -487,5 +627,42 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Backwards compatibility with musicslots.
 /// \note	You should leave this enabled unless you're working with a future SRB2 version.
 #define MUSICSLOT_COMPATIBILITY
+
+/// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
+//#define PAPER_COLLISIONCORRECTION
+
+/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
+/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
+/// on the bright side it fixes some weird issues with translucent walls
+/// \note	SRB2CB port.
+///      	SRB2CB itself ported this from PrBoom+
+#define NEWCLIP
+
+/// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
+/// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
+#define SECTORSPECIALSAFTERTHINK
+
+/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
+/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
+/// on the bright side it fixes some weird issues with translucent walls
+/// \note	SRB2CB port.
+///      	SRB2CB itself ported this from PrBoom+
+#define NEWCLIP
+
+/// Cache patches in Lua in a way that renderer switching will work flawlessly.
+//#define LUA_PATCH_SAFETY
+
+/// Sprite rotation
+#define ROTSPRITE
+#define ROTANGLES 72 // Needs to be a divisor of 360 (45, 60, 90, 120...)
+#define ROTANGDIFF (360 / ROTANGLES)
+
+/// PNG support
+#ifndef HAVE_PNG
+#define NO_PNG_LUMPS
+#endif
+
+/// Render flats on walls
+#define WALLFLATS
 
 #endif // __DOOMDEF__

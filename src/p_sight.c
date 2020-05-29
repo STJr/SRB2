@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,6 +14,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "p_local.h"
+#include "p_slopes.h"
 #include "r_main.h"
 #include "r_state.h"
 
@@ -99,16 +100,23 @@ static fixed_t P_InterceptVector2(divline_t *v2, divline_t *v1)
 	return frac;
 }
 
-#ifdef POLYOBJECTS
 static boolean P_CrossSubsecPolyObj(polyobj_t *po, register los_t *los)
 {
 	size_t i;
+	sector_t *polysec;
+
+	if (!(po->flags & POF_RENDERALL))
+		return true; // the polyobject isn't visible, so we can ignore it
+
+	polysec = po->lines[0]->backsector;
 
 	for (i = 0; i < po->numLines; ++i)
 	{
 		line_t *line = po->lines[i];
 		divline_t divl;
 		const vertex_t *v1,*v2;
+		fixed_t frac;
+		fixed_t topslope, bottomslope;
 
 		// already checked other side?
 		if (line->validcount == validcount)
@@ -140,12 +148,26 @@ static boolean P_CrossSubsecPolyObj(polyobj_t *po, register los_t *los)
 			continue;
 
 		// stop because it is not two sided
-		return false;
+		//if (!(po->flags & POF_TESTHEIGHT))
+			//return false;
+
+		frac = P_InterceptVector2(&los->strace, &divl);
+
+		// get slopes of top and bottom of this polyobject line
+		topslope = FixedDiv(polysec->ceilingheight - los->sightzstart , frac);
+		bottomslope = FixedDiv(polysec->floorheight - los->sightzstart , frac);
+
+		if (topslope >= los->topslope && bottomslope <= los->bottomslope)
+			return false; // view completely blocked
+
+		// TODO: figure out if it's worth considering partially blocked cases or not?
+		// maybe to adjust los's top/bottom slopes if needed
+		//if (los->topslope <= los->bottomslope)
+			//return false;
 	}
 
 	return true;
 }
-#endif
 
 //
 // P_CrossSubsector
@@ -156,9 +178,7 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 {
 	seg_t *seg;
 	INT32 count;
-#ifdef POLYOBJECTS
 	polyobj_t *po; // haleyjd 02/23/06
-#endif
 
 #ifdef RANGECHECK
 	if (num >= numsubsectors)
@@ -168,7 +188,6 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 	// haleyjd 02/23/06: this assignment should be after the above check
 	seg = segs + subsectors[num].firstline;
 
-#ifdef POLYOBJECTS
 	// haleyjd 02/23/06: check polyobject lines
 	if ((po = subsectors[num].polyList))
 	{
@@ -183,7 +202,6 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 			po = (polyobj_t *)(po->link.next);
 		}
 	}
-#endif
 
 	for (count = subsectors[num].numlines; --count >= 0; seg++)  // check lines
 	{
@@ -193,6 +211,11 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		const sector_t *front, *back;
 		const vertex_t *v1,*v2;
 		fixed_t frac;
+		fixed_t frontf, backf, frontc, backc;
+		fixed_t fracx, fracy;
+
+		if (seg->glseg)
+			continue;
 
 		// already checked other side?
 		if (line->validcount == validcount)
@@ -227,36 +250,44 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		if (!(line->flags & ML_TWOSIDED))
 			return false;
 
+		// calculate fractional intercept (how far along we are divided by how far we are from t2)
+		frac = P_InterceptVector2(&los->strace, &divl);
+
+		front = seg->frontsector;
+		back  = seg->backsector;
+		// calculate position at intercept
+		fracx = los->strace.x + FixedMul(los->strace.dx, frac);
+		fracy = los->strace.y + FixedMul(los->strace.dy, frac);
+		// calculate sector heights
+		frontf = P_GetSectorFloorZAt  (front, fracx, fracy);
+		frontc = P_GetSectorCeilingZAt(front, fracx, fracy);
+		backf  = P_GetSectorFloorZAt  (back , fracx, fracy);
+		backc  = P_GetSectorCeilingZAt(back , fracx, fracy);
 		// crosses a two sided line
 		// no wall to block sight with?
-		if ((front = seg->frontsector)->floorheight ==
-			(back = seg->backsector)->floorheight   &&
-			front->ceilingheight == back->ceilingheight)
+		if (frontf == backf && frontc == backc
+		&& !front->ffloors & !back->ffloors) // (and no FOFs)
 			continue;
 
 		// possible occluder
 		// because of ceiling height differences
-		popentop = front->ceilingheight < back->ceilingheight ?
-			front->ceilingheight : back->ceilingheight ;
+		popentop = min(frontc, backc);
 
 		// because of floor height differences
-		popenbottom = front->floorheight > back->floorheight ?
-			front->floorheight : back->floorheight ;
+		popenbottom = max(frontf, backf);
 
 		// quick test for totally closed doors
 		if (popenbottom >= popentop)
 			return false;
 
-		frac = P_InterceptVector2(&los->strace, &divl);
-
-		if (front->floorheight != back->floorheight)
+		if (frontf != backf)
 		{
 			fixed_t slope = FixedDiv(popenbottom - los->sightzstart , frac);
 			if (slope > los->bottomslope)
 				los->bottomslope = slope;
 		}
 
-		if (front->ceilingheight != back->ceilingheight)
+		if (frontc != backc)
 		{
 			fixed_t slope = FixedDiv(popentop - los->sightzstart , frac);
 			if (slope < los->topslope)
@@ -265,6 +296,48 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 
 		if (los->topslope <= los->bottomslope)
 			return false;
+
+		// Monster Iestyn: check FOFs!
+		if (front->ffloors || back->ffloors)
+		{
+			ffloor_t *rover;
+			fixed_t topslope, bottomslope;
+			fixed_t topz, bottomz;
+			// check front sector's FOFs first
+			for (rover = front->ffloors; rover; rover = rover->next)
+			{
+				if (!(rover->flags & FF_EXISTS)
+					|| !(rover->flags & FF_RENDERSIDES) || rover->flags & FF_TRANSLUCENT)
+				{
+					continue;
+				}
+
+				topz    = P_GetFFloorTopZAt   (rover, fracx, fracy);
+				bottomz = P_GetFFloorBottomZAt(rover, fracx, fracy);
+				topslope    = FixedDiv(   topz - los->sightzstart, frac);
+				bottomslope = FixedDiv(bottomz - los->sightzstart, frac);
+				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
+					return false; // view completely blocked
+			}
+			// check back sector's FOFs as well
+			for (rover = back->ffloors; rover; rover = rover->next)
+			{
+				if (!(rover->flags & FF_EXISTS)
+					|| !(rover->flags & FF_RENDERSIDES) || rover->flags & FF_TRANSLUCENT)
+				{
+					continue;
+				}
+
+				topz    = P_GetFFloorTopZAt   (rover, fracx, fracy);
+				bottomz = P_GetFFloorBottomZAt(rover, fracx, fracy);
+				topslope    = FixedDiv(   topz - los->sightzstart, frac);
+				bottomslope = FixedDiv(bottomz - los->sightzstart, frac);
+				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
+					return false; // view completely blocked
+			}
+			// TODO: figure out if it's worth considering partially blocked cases or not?
+			// maybe to adjust los's top/bottom slopes if needed
+		}
 	}
 
 	// passed the subsector ok
@@ -325,21 +398,19 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	s2 = t2->subsector->sector;
 	pnum = (s1-sectors)*numsectors + (s2-sectors);
 
-	// Check in REJECT table.
-	if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
-		return false;
+	if (rejectmatrix != NULL)
+	{
+		// Check in REJECT table.
+		if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
+			return false;
+	}
 
 	// killough 11/98: shortcut for melee situations
 	// same subsector? obviously visible
-#ifndef POLYOBJECTS
-	if (t1->subsector == t2->subsector)
-		return true;
-#else
 	// haleyjd 02/23/06: can't do this if there are polyobjects in the subsec
 	if (!t1->subsector->polyList &&
 		t1->subsector == t2->subsector)
 		return true;
-#endif
 
 	// An unobstructed LOS is possible.
 	// Now look from eyes of t1 to any part of t2.
@@ -372,6 +443,8 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	if (s1 == s2) // Both sectors are the same.
 	{
 		ffloor_t *rover;
+		fixed_t topz1, bottomz1; // top, bottom heights at t1's position
+		fixed_t topz2, bottomz2; // likewise but for t2
 
 		for (rover = s1->ffloors; rover; rover = rover->next)
 		{
@@ -384,9 +457,14 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 				continue;
 			}
 
+			topz1    = P_GetFFloorTopZAt   (rover, t1->x, t1->y);
+			topz2    = P_GetFFloorTopZAt   (rover, t2->x, t2->y);
+			bottomz1 = P_GetFFloorBottomZAt(rover, t1->x, t1->y);
+			bottomz2 = P_GetFFloorBottomZAt(rover, t2->x, t2->y);
+
 			// Check for blocking floors here.
-			if ((los.sightzstart < *rover->bottomheight && t2->z >= *rover->topheight)
-				|| (los.sightzstart >= *rover->topheight && t2->z + t2->height < *rover->bottomheight))
+			if ((los.sightzstart < bottomz1 && t2->z >= topz2)
+				|| (los.sightzstart >= topz1 && t2->z + t2->height < bottomz2))
 			{
 				// no way to see through that
 				return false;
@@ -395,21 +473,21 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 			if (rover->flags & FF_SOLID)
 				continue; // shortcut since neither mobj can be inside the 3dfloor
 
-			if (!(rover->flags & FF_INVERTPLANES))
+			if (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))
 			{
-				if (los.sightzstart >= *rover->topheight && t2->z + t2->height < *rover->topheight)
+				if (los.sightzstart >= topz1 && t2->z + t2->height < topz2)
 					return false; // blocked by upper outside plane
 
-				if (los.sightzstart < *rover->bottomheight && t2->z >= *rover->bottomheight)
+				if (los.sightzstart < bottomz1 && t2->z >= bottomz2)
 					return false; // blocked by lower outside plane
 			}
 
-			if (rover->flags & FF_INVERTPLANES || rover->flags & FF_BOTHPLANES)
+			if (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES)
 			{
-				if (los.sightzstart < *rover->topheight && t2->z >= *rover->topheight)
+				if (los.sightzstart < topz1 && t2->z >= topz2)
 					return false; // blocked by upper inside plane
 
-				if (los.sightzstart >= *rover->bottomheight && t2->z + t2->height < *rover->bottomheight)
+				if (los.sightzstart >= bottomz1 && t2->z + t2->height < bottomz2)
 					return false; // blocked by lower inside plane
 			}
 		}

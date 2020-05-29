@@ -61,6 +61,8 @@
 
 #include "../console.h"
 
+#include "../m_menu.h"
+
 #ifdef __GNUG__
  #pragma implementation "../i_system.h"
 #endif
@@ -555,6 +557,7 @@ void I_Error (const char *error, ...)
 	if (demorecording)
 		G_CheckDemoStatus();
 	D_QuitNetGame ();
+	M_FreePlayerSetupColors();
 
 	if (shutdowning)
 	{
@@ -622,6 +625,7 @@ void I_Quit (void)
 	if (demorecording)
 		G_CheckDemoStatus();
 	D_QuitNetGame ();
+	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_ShutdownCD();
@@ -1719,6 +1723,18 @@ char * I_GetEnv(const char *name)
 INT32 I_PutEnv(char *variable)
 {
 	return putenv(variable);
+}
+
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	(void)data;
+	(void)size;
+	return -1;
+}
+
+char *I_ClipboardPaste(void)
+{
+	return NULL;
 }
 
 const CPUInfoFlags *I_CPUInfo(void)

@@ -1,7 +1,5 @@
 // C++ example that opens a game music file and records 10 seconds to "out.wav"
 
-static char filename [] = "test.nsf"; /* opens this file (can be any music type) */
-
 #include "gme/Music_Emu.h"
 
 #include "Wave_Writer.h"
@@ -10,10 +8,15 @@ static char filename [] = "test.nsf"; /* opens this file (can be any music type)
 
 void handle_error( const char* str );
 
-int main()
+int main(int argc, char *argv[])
 {
+	const char *filename = "test.nsf"; /* Default file to open */
+	if ( argc >= 2 )
+		filename = argv[1];
+
 	long sample_rate = 44100; // number of samples per second
-	int track = 0; // index of track to play (0 = first)
+	// index of track to play (0 = first)
+	int track = argc >= 3 ? atoi(argv[2]) : 0;
 	
 	// Determine file type
 	gme_type_t file_type;

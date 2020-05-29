@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2016 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -50,6 +50,7 @@ quit(int rc)
 void
 loop()
 {
+    int i;
     SDL_Event event;
         /* Check for events */
         while (SDL_PollEvent(&event)) {
@@ -100,6 +101,12 @@ loop()
                 }
             }
         }
+
+        for (i = 0; i < state->num_windows; ++i) {
+            SDL_Renderer *renderer = state->renderers[i];
+            SDL_RenderClear(renderer);
+            SDL_RenderPresent(renderer);
+        }
 #ifdef __EMSCRIPTEN__
     if (done) {
         emscripten_cancel_main_loop();
@@ -122,24 +129,21 @@ main(int argc, char *argv[])
     if (!state) {
         return 1;
     }
-    state->skip_renderer = SDL_TRUE;
-    for (i = 1; i < argc;) {
-        int consumed;
 
-        consumed = SDLTest_CommonArg(state, i);
-        if (consumed == 0) {
-            consumed = -1;
-        }
-        if (consumed < 0) {
-            SDL_Log("Usage: %s %s\n", argv[0], SDLTest_CommonUsage(state));
-            quit(1);
-        }
-        i += consumed;
-    }
-    if (!SDLTest_CommonInit(state)) {
-        quit(2);
+    if (!SDLTest_CommonDefaultArgs(state, argc, argv) || !SDLTest_CommonInit(state)) {
+        SDLTest_CommonQuit(state);
+        return 1;
     }
 
+    SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
+    SDL_EventState(SDL_DROPTEXT, SDL_ENABLE);
+
+    for (i = 0; i < state->num_windows; ++i) {
+        SDL_Renderer *renderer = state->renderers[i];
+        SDL_SetRenderDrawColor(renderer, 0xA0, 0xA0, 0xA0, 0xFF);
+        SDL_RenderClear(renderer);
+    }
+ 
     /* Main render loop */
     done = 0;
 #ifdef __EMSCRIPTEN__

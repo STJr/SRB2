@@ -23,9 +23,13 @@
 #include "hw_defs.h"
 #include "hw_main.h"
 #include "../m_misc.h"
+#include "../p_setup.h"
 
 // the original aspect ratio of Doom graphics isn't square
 #define ORIGINAL_ASPECT (320.0f/200.0f)
+
+// Uncomment this to enable the OpenGL loading screen
+//#define HWR_LOADING_SCREEN
 
 // -----------
 // structures
@@ -69,7 +73,8 @@ typedef struct gr_vissprite_s
 	struct gr_vissprite_s *next;
 	float x1, x2;
 	float tz, ty;
-	lumpnum_t patchlumpnum;
+	//lumpnum_t patchlumpnum;
+	GLPatch_t *gpatch;
 	boolean flip;
 	UINT8 translucency;       //alpha level 0-255
 	mobj_t *mobj;
@@ -78,6 +83,7 @@ typedef struct gr_vissprite_s
    //Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
+	float z1, z2;
 } gr_vissprite_t;
 
 // --------
@@ -94,9 +100,11 @@ void HWR_FreePolyPool(void);
 // --------
 void HWR_InitTextureCache(void);
 void HWR_FreeTextureCache(void);
+void HWR_FreeMipmapCache(void);
 void HWR_FreeExtraSubsectors(void);
 
-void HWR_GetFlat(lumpnum_t flatlumpnum);
+void HWR_GetLevelFlat(levelflat_t *levelflat);
+void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
 GLTexture_t *HWR_GetTexture(INT32 tex);
 void HWR_GetPatch(GLPatch_t *gpatch);
 void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap);
@@ -117,6 +125,5 @@ extern consvar_t cv_grrounddown; // on/off
 
 extern INT32 patchformat;
 extern INT32 textureformat;
-extern boolean firetranslucent;
 
 #endif //_HW_GLOB_

@@ -24,10 +24,11 @@
     - 1.10:  enabled "message window"/console (thanks to David Geldreich)
     - 2.00:  dual-licensed (added GNU GPL)
     - 2.01:  fixed improper display of usage screen on PNG error(s)
+    - 2.02:  check for integer overflow (Glenn R-P)
 
   ---------------------------------------------------------------------------
 
-      Copyright (c) 1998-2008 Greg Roelofs.  All rights reserved.
+      Copyright (c) 1998-2008, 2017 Greg Roelofs.  All rights reserved.
 
       This software is provided "as is," without warranty of any kind,
       express or implied.  In no event shall the author or contributors
@@ -85,7 +86,33 @@
 #include <string.h>
 #include <time.h>
 #include <windows.h>
+#ifdef __CYGWIN__
+/* getch replacement. Turns out, we don't really need this,
+ * but leave it here if we ever enable any of the uses of
+ * _getch in the main code
+ */
+#include <unistd.h>
+#include <termio.h>
+#include <sys/ioctl.h>
+int repl_getch( void )
+{
+  char ch;
+  int fd = fileno(stdin);
+  struct termio old_tty, new_tty;
+
+  ioctl(fd, TCGETA, &old_tty);
+  new_tty = old_tty;
+  new_tty.c_lflag &= ~(ICANON | ECHO | ISIG);
+  ioctl(fd, TCSETA, &new_tty);
+  fread(&ch, 1, sizeof(ch), stdin);
+  ioctl(fd, TCSETA, &old_tty);
+
+  return ch;
+}
+#define _getch repl_getch
+#else
 #include <conio.h>      /* only for _getch() */
+#endif
 
 /* #define DEBUG  :  this enables the Trace() macros */
 
@@ -153,15 +180,16 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR cmd, int showmode)
 
     filename = (char *)NULL;
 
-
+#ifndef __CYGWIN__
     /* First reenable console output, which normally goes to the bit bucket
      * for windowed apps.  Closing the console window will terminate the
-     * app.  Thanks to David.Geldreich@realviz.com for supplying the magical
+     * app.  Thanks to David.Geldreich at realviz.com for supplying the magical
      * incantation. */
 
     AllocConsole();
     freopen("CONOUT$", "a", stderr);
     freopen("CONOUT$", "a", stdout);
+#endif
 
 
     /* Next set the default value for our display-system exponent, i.e.,
@@ -279,7 +307,9 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR cmd, int showmode)
     /* print usage screen if any errors up to this point */
 
     if (error) {
+#ifndef __CYGWIN__
         int ch;
+#endif
 
         fprintf(stderr, "\n%s %s:  %s\n\n", PROGNAME, VERSION, appname);
         readpng_version_info();
@@ -293,11 +323,15 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR cmd, int showmode)
           "\t\t  (e.g., ``#ff7700'' for orange:  same as HTML colors);\n"
           "\t\t  used with transparent images\n"
           "\nPress Q, Esc or mouse button 1 after image is displayed to quit.\n"
+#ifndef __CYGWIN__
           "Press Q or Esc to quit this usage screen.\n"
+#endif
           "\n", PROGNAME, default_display_exponent);
+#ifndef __CYGWIN__
         do
             ch = _getch();
         while (ch != 'q' && ch != 'Q' && ch != 0x1B);
+#endif
         exit(1);
     }
 
@@ -333,18 +367,24 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR cmd, int showmode)
 
 
     if (error) {
+#ifndef __CYGWIN__
         int ch;
+#endif
 
         fprintf(stderr, PROGNAME ":  aborting.\n");
+#ifndef __CYGWIN__
         do
             ch = _getch();
         while (ch != 'q' && ch != 'Q' && ch != 0x1B);
+#endif
         exit(2);
     } else {
         fprintf(stderr, "\n%s %s:  %s\n", PROGNAME, VERSION, appname);
+#ifndef __CYGWIN__
         fprintf(stderr,
           "\n   [console window:  closing this window will terminate %s]\n\n",
           PROGNAME);
+#endif
     }
 
 
@@ -417,7 +457,12 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR cmd, int showmode)
     /* wait for the user to tell us when to quit */
 
     printf(
-      "Done.  Press Q, Esc or mouse button 1 (within image window) to quit.\n");
+#ifndef __CYGWIN__
+      "Done.  Press Q, Esc or mouse button 1 (within image window) to quit.\n"
+#else
+      "Done.  Press mouse button 1 (within image window) to quit.\n"
+#endif
+    );
     fflush(stdout);
 
     while (GetMessage(&msg, NULL, 0, 0)) {
@@ -451,6 +496,12 @@ static int rpng_win_create_window(HINSTANCE hInst, int showmode)
   ---------------------------------------------------------------------------*/
 
     wimage_rowbytes = ((3*image_width + 3L) >> 2) << 2;
+
+    /* Guard against integer overflow */
+    if (image_height > ((size_t)(-1))/wimage_rowbytes) {
+        fprintf(stderr, PROGNAME ":  image_data buffer would be too large\n");
+        return 4;   /* fail */
+    }
 
     if (!(dib = (uch *)malloc(sizeof(BITMAPINFOHEADER) +
                               wimage_rowbytes*image_height)))

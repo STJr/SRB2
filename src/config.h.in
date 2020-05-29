@@ -11,32 +11,31 @@
 
 #ifdef CMAKECONFIG
 
-#define ASSET_HASH_SRB2_SRB   "${SRB2_ASSET_srb2.srb_HASH}"
+#define ASSET_HASH_SRB2_PK3   "${SRB2_ASSET_srb2.pk3_HASH}"
 #define ASSET_HASH_PLAYER_DTA "${SRB2_ASSET_player.dta_HASH}"
-#define ASSET_HASH_RINGS_DTA  "${SRB2_ASSET_rings.dta_HASH}"
-#define ASSET_HASH_ZONES_DTA  "${SRB2_ASSET_zones.dta_HASH}"
+#define ASSET_HASH_ZONES_PK3  "${SRB2_ASSET_zones.pk3_HASH}"
 #ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_DTA  "${SRB2_ASSET_patch.dta_HASH}"
+#define ASSET_HASH_PATCH_PK3  "${SRB2_ASSET_patch.pk3_HASH}"
 #endif
 
 #define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
 #define SRB2_COMP_BRANCH      "${SRB2_COMP_BRANCH}"
-#define SRB2_GIT_DESCRIBE     "${SRB2_GIT_DESCRIBE}"
-#define SRB2_GIT_BRANCH       "${SRB2_GIT_BRANCH}"
 
 #define CMAKE_ASSETS_DIR      "${CMAKE_SOURCE_DIR}/assets"
 
 #else
 
 /* Manually defined asset hashes for non-CMake builds
- * Last updated 2015 / 05 / 03
+ * Last updated 2020 / 02 / 15 - v2.2.1 - main assets
+ * Last updated 2020 / 02 / 22 - v2.2.2 - patch.pk3
+ * Last updated 2020 / 05 / 10 - v2.2.3 - player.dta & patch.pk3
+ * Last updated 2020 / 05 / 11 - v2.2.4 - patch.pk3
  */
-#define ASSET_HASH_SRB2_SRB   "c1b9577687f8a795104aef4600720ea7"
-#define ASSET_HASH_ZONES_DTA  "303838c6c534d9540288360fa49cca60"
-#define ASSET_HASH_PLAYER_DTA "cfca0f1c73023cbbd8f844f45480f799"
-#define ASSET_HASH_RINGS_DTA  "85901ad4bf94637e5753d2ac2c03ea26"
+#define ASSET_HASH_SRB2_PK3   "0277c9416756627004e83cbb5b2e3e28"
+#define ASSET_HASH_ZONES_PK3  "f7e88afb6af7996a834c7d663144bead"
+#define ASSET_HASH_PLAYER_DTA "8a4507ddf9bc0682c09174400f26ad65"
 #ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_DTA  "dbbf8bc6121618ee3be2d5b14650429b"
+#define ASSET_HASH_PATCH_PK3  "bbbf6af3b20349612ee06e0b55979a76"
 #endif
 
 #endif

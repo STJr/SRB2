@@ -37,11 +37,9 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-#ifndef MINI_GL_COMPATIBILITY
 #ifdef STATIC_OPENGL // Because of the 1.3 functions, you'll need GLext to compile it if static
 #define GL_GLEXT_PROTOTYPES
 #include <GL/glext.h>
-#endif
 #endif
 #endif
 
@@ -73,7 +71,6 @@ extern FILE             *gllogstream;
 #endif
 
 #ifndef DRIVER_STRING
-//    #define USE_PALETTED_TEXTURE
 #define DRIVER_STRING "HWRAPI Init(): SRB2 OpenGL renderer" // Tails
 #endif
 
@@ -91,10 +88,6 @@ int SetupPixelFormat(INT32 WantColorBits, INT32 WantStencilBits, INT32 WantDepth
 void SetModelView(GLint w, GLint h);
 void SetStates(void);
 FUNCMATH float byteasfloat(UINT8 fbyte);
-#ifdef USE_PALETTED_TEXTURE
-extern PFNGLCOLORTABLEEXTPROC glColorTableEXT;
-extern GLubyte                palette_tex[256*3];
-#endif
 
 #ifndef GL_EXT_texture_filter_anisotropic
 #define GL_TEXTURE_MAX_ANISOTROPY_EXT     0x84FE
@@ -120,6 +113,10 @@ typedef void (APIENTRY * PFNglGetIntegerv) (GLenum pname, GLint *params);
 extern PFNglGetIntegerv pglGetIntegerv;
 typedef const GLubyte* (APIENTRY  * PFNglGetString) (GLenum name);
 extern PFNglGetString pglGetString;
+#if 0
+typedef void (APIENTRY * PFNglEnableClientState) (GLenum cap); // redefined in r_opengl.c
+static PFNglEnableClientState pglEnableClientState;
+#endif
 #endif
 
 // ==========================================================================

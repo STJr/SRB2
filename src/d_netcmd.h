@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,6 +20,17 @@
 // console vars
 extern consvar_t cv_playername;
 extern consvar_t cv_playercolor;
+extern consvar_t cv_skin;
+// secondary splitscreen player
+extern consvar_t cv_playername2;
+extern consvar_t cv_playercolor2;
+extern consvar_t cv_skin2;
+// saved versions of the above six
+extern consvar_t cv_defaultplayercolor;
+extern consvar_t cv_defaultskin;
+extern consvar_t cv_defaultplayercolor2;
+extern consvar_t cv_defaultskin2;
+
 #ifdef SEENAMES
 extern consvar_t cv_seenames, cv_allowseenames;
 #endif
@@ -32,7 +43,6 @@ extern consvar_t cv_joyport2;
 #endif
 extern consvar_t cv_joyscale;
 extern consvar_t cv_joyscale2;
-extern consvar_t cv_controlperkey;
 
 // splitscreen with second mouse
 extern consvar_t cv_mouse2port;
@@ -40,25 +50,12 @@ extern consvar_t cv_usemouse2;
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)
 extern consvar_t cv_mouse2opt;
 #endif
-extern consvar_t cv_invertmouse2;
-extern consvar_t cv_alwaysfreelook2;
-extern consvar_t cv_mousemove2;
-extern consvar_t cv_mousesens2;
-extern consvar_t cv_mouseysens2;
 
 // normally in p_mobj but the .h is not read
 extern consvar_t cv_itemrespawntime;
 extern consvar_t cv_itemrespawn;
 
 extern consvar_t cv_flagtime;
-extern consvar_t cv_suddendeath;
-
-extern consvar_t cv_skin;
-
-// secondary splitscreen player
-extern consvar_t cv_playername2;
-extern consvar_t cv_playercolor2;
-extern consvar_t cv_skin2;
 
 extern consvar_t cv_touchtag;
 extern consvar_t cv_hidetime;
@@ -67,7 +64,7 @@ extern consvar_t cv_friendlyfire;
 extern consvar_t cv_pointlimit;
 extern consvar_t cv_timelimit;
 extern consvar_t cv_numlaps;
-extern consvar_t cv_usemapnumlaps;
+extern consvar_t cv_basenumlaps;
 extern UINT32 timelimitintics;
 extern consvar_t cv_allowexitlevel;
 
@@ -76,9 +73,6 @@ extern consvar_t cv_hazardlog;
 extern consvar_t cv_autobalance;
 extern consvar_t cv_teamscramble;
 extern consvar_t cv_scrambleonchange;
-
-extern consvar_t cv_useranalog, cv_useranalog2;
-extern consvar_t cv_analog, cv_analog2;
 
 extern consvar_t cv_netstat;
 #ifdef WALLSPLATS
@@ -100,38 +94,30 @@ extern consvar_t cv_recycler;
 
 extern consvar_t cv_itemfinder;
 
-extern consvar_t cv_inttime, cv_advancemap, cv_playersforexit;
-extern consvar_t cv_soniccd;
-extern consvar_t cv_match_scoring;
+extern consvar_t cv_inttime, cv_coopstarposts, cv_cooplives, cv_advancemap, cv_playersforexit, cv_exitmove;
 extern consvar_t cv_overtime;
 extern consvar_t cv_startinglives;
 
 // for F_finale.c
 extern consvar_t cv_rollingdemos;
 
-extern consvar_t cv_resetmusic;
-
 extern consvar_t cv_ringslinger, cv_soundtest;
 
 extern consvar_t cv_specialrings, cv_powerstones, cv_matchboxes, cv_competitionboxes;
 
-#ifdef NEWPING
 extern consvar_t cv_maxping;
-#endif
+extern consvar_t cv_pingtimeout;
+extern consvar_t cv_showping;
+
 
 extern consvar_t cv_skipmapcheck;
 
-extern consvar_t cv_sleep, cv_screenshot_option, cv_screenshot_folder;
+extern consvar_t cv_sleep;
 
-extern consvar_t cv_moviemode;
-
-extern consvar_t cv_zlib_level, cv_zlib_memory, cv_zlib_strategy;
-
-extern consvar_t cv_zlib_window_bits, cv_zlib_levela, cv_zlib_memorya;
-
-extern consvar_t cv_zlib_strategya, cv_zlib_window_bitsa;
-
-extern consvar_t cv_apng_delay;
+extern char timedemo_name[256];
+extern boolean timedemo_csv;
+extern char timedemo_csv_id[256];
+extern boolean timedemo_quit;
 
 typedef enum
 {
@@ -147,20 +133,22 @@ typedef enum
 	XD_ADDPLAYER,   // 10
 	XD_TEAMCHANGE,  // 11
 	XD_CLEARSCORES, // 12
-	XD_LOGIN,       // 13
-	XD_VERIFIED,    // 14
+	// UNUSED          13 (Because I don't want to change these comments)
+	XD_VERIFIED = 14,//14
 	XD_RANDOMSEED,  // 15
 	XD_RUNSOC,      // 16
 	XD_REQADDFILE,  // 17
-	XD_DELFILE,     // 18
+	XD_DELFILE,     // 18 - replace next time we add an XD
 	XD_SETMOTD,     // 19
 	XD_SUICIDE,     // 20
-#ifdef HAVE_BLUA
-	XD_LUACMD,      // 21
-	XD_LUAVAR,      // 22
-#endif
+	XD_DEMOTED,     // 21
+	XD_LUACMD,      // 22
+	XD_LUAVAR,      // 23
+	XD_LUAFILE,     // 24
 	MAXNETXCMD
 } netxcmd_t;
+
+extern const char *netxcmdnames[MAXNETXCMD - 1];
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -205,12 +193,17 @@ typedef union {
 // add game commands, needs cleanup
 void D_RegisterServerCommands(void);
 void D_RegisterClientCommands(void);
+void CleanupPlayerName(INT32 playernum, const char *newname);
+boolean EnsurePlayerNameIsGood(char *name, INT32 playernum);
 void D_SendPlayerConfig(void);
 void Command_ExitGame_f(void);
 void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore
 void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean pultmode, boolean presetplayers, INT32 pdelay, boolean pskipprecutscene, boolean pfromlevelselect);
-void ObjectPlace_OnChange(void);
+boolean IsPlayerAdmin(INT32 playernum);
+void SetAdminPlayer(INT32 playernum);
+void ClearAdminPlayers(void);
+void RemoveAdminPlayer(INT32 playernum);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
 
@@ -218,5 +211,3 @@ void D_SetPassword(const char *pw);
 UINT8 CanChangeSkin(INT32 playernum);
 
 #endif
-
-

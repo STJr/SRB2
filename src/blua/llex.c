@@ -306,11 +306,12 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
               save_and_next(ls); /* skip $ */
               seminfo->ts = luaX_newstring(ls, luaZ_buffer(ls->buff) + 1,
                             luaZ_bufflen(ls->buff) - 2);
-	      ls->refstr++; /* expect '\' anytime soon */
+              ls->refstr++; /* expect '\' anytime soon */
               lua_assert(ls->lookahead.token == TK_EOS);
-	      ls->lookahead.token = TK_CONCAT;
-	      return;
-	    }
+              ls->lookahead.token = TK_CONCAT;
+              return;
+            }
+            /* FALLTHRU */
           default: {
             if (!isdigit(ls->current))
               save_and_next(ls);  /* handles \\, \", \', and \? */
@@ -340,7 +341,8 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
               };
 
             switch (i) {
-                case 4: save( ls, (c>>8) & 0xff );  // pass-through..
+                case 4: save( ls, (c>>8) & 0xff );
+                /* FALLTHRU */
                 case 2: save( ls, c&0xff );
                         break;
                 case 5:
@@ -350,7 +352,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           }
           continue;
 
-	    // "\u0000".."\x10FFFF": UTF-8 encoded Unicode
+            // "\u0000".."\x10FFFF": UTF-8 encoded Unicode
             //
             // Note that although codes are entered like this (must have min. four digit,
             // just to tease you!) the actual outcome in the string will vary between
@@ -482,20 +484,22 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         else if (sep == -1) return '[';
         else luaX_lexerror(ls, "invalid long string delimiter", TK_STRING);
       }
+      /* FALLTHRU */
       case '=': {
         next(ls);
         if (ls->current != '=') return '=';
         else { next(ls); return TK_EQ; }
       }
+      /* FALLTHRU */
       case '<': {
         next(ls);
-	if (ls->current == '<') { next(ls); return TK_SHL; }
+        if (ls->current == '<') { next(ls); return TK_SHL; }
         if (ls->current != '=') return '<';
         else { next(ls); return TK_LE; }
       }
       case '>': {
         next(ls);
-	if (ls->current == '>') { next(ls); return TK_SHR; }
+        if (ls->current == '>') { next(ls); return TK_SHR; }
         if (ls->current != '=') return '>';
         else { next(ls); return TK_GE; }
       }
@@ -547,9 +551,10 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '\\': if (ls->refstr) {
         ls->refstr--;
-	ls->current = '"'; /* whacky! */
-	return TK_CONCAT;
+        ls->current = '"'; /* whacky! */
+        return TK_CONCAT;
       }
+      /* FALLTHRU */
       default: {
         if (isspace(ls->current)) {
           lua_assert(!currIsNewline(ls));

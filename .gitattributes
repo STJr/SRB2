@@ -1,3 +1,12 @@
+#Source code
+/src/*.c text=auto
+/src/*.h text=auto
+/src/*.s text=auto
+/src/*.m text=auto
+/src/*.xpm text=auto
+/src/Makefile text=auto
+/src/Make*.cfg text=auto
+/src/CMakeLists.txt text=auto
 # Windows EOL
 *.cs -crlf -whitespace
 *.mk -crlf -whitespace

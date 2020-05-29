@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,7 +11,6 @@
 /// \brief console modifying/etc library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "p_local.h"
 #include "g_game.h"
@@ -22,7 +21,12 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 
-#define NOHUD if (hud_running) return luaL_error(L, "HUD rendering code should not call this function!");
+// for functions not allowed in hud.add hooks
+#define NOHUD if (hud_running)\
+return luaL_error(L, "HUD rendering code should not call this function!");
+// for functions not allowed in hooks or coroutines (supercedes above)
+#define NOHOOK if (!lua_lumploading)\
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 
 static const char *cvname = NULL;
 
@@ -55,7 +59,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 	lua_pop(gL, 1); // pop flags
 
 	// requires server/admin and the player is not one of them
-	if ((flags & 1) && playernum != serverplayer && playernum != adminplayer)
+	if ((flags & 1) && playernum != serverplayer && !IsPlayerAdmin(playernum))
 		goto deny;
 
 	lua_rawgeti(gL, -1, 1); // push function from command info table
@@ -77,16 +81,12 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 deny:
 	//must be hacked/buggy client
-	lua_settop(gL, 0); // clear stack
+	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
+		lua_settop(gL, 0); // clear stack
+
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
-	{
-		XBOXSTATIC UINT8 bufn[2];
-
-		bufn[0] = (UINT8)playernum;
-		bufn[1] = KICK_MSG_CON_FAIL;
-		SendNetXCmd(XD_KICK, &bufn, 2);
-	}
+		SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 }
 
 // Wrapper for COM_AddCommand commands
@@ -111,12 +111,12 @@ void COM_Lua_f(void)
 
 	lua_rawgeti(gL, -1, 2); // push flags from command info table
 	if (lua_isboolean(gL, -1))
-		flags = (lua_toboolean(gL, -1) ? 1 : 0);
+		flags = (lua_toboolean(gL, -1) ? COM_ADMIN : 0);
 	else
 		flags = (UINT8)lua_tointeger(gL, -1);
 	lua_pop(gL, 1); // pop flags
 
-	if (flags & 2) // flag 2: splitscreen player command.
+	if (flags & COM_SPLITSCREEN) // flag 2: splitscreen player command.
 	{
 		if (!splitscreen)
 		{
@@ -126,12 +126,12 @@ void COM_Lua_f(void)
 		playernum = secondarydisplayplayer;
 	}
 
-	if (netgame)
+	if (netgame && !( flags & COM_LOCAL ))/* don't send local commands */
 	{ // Send the command through the network
 		UINT8 argc;
 		lua_pop(gL, 1); // pop command info table
 
-		if (flags & 1 && !server && adminplayer != playernum) // flag 1: only server/admin can use this command.
+		if (flags & COM_ADMIN && !server && !IsPlayerAdmin(playernum)) // flag 1: only server/admin can use this command.
 		{
 			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 			return;
@@ -151,7 +151,7 @@ void COM_Lua_f(void)
 		WRITEUINT8(p, argc);
 		for (i = 0; i < argc; i++)
 			WRITESTRINGN(p, COM_Argv(i), 255);
-		if (flags & 2)
+		if (flags & COM_SPLITSCREEN)
 			SendNetXCmd2(XD_LUACMD, buf, p-buf);
 		else
 			SendNetXCmd(XD_LUACMD, buf, p-buf);
@@ -181,11 +181,19 @@ static int lib_comAddCommand(lua_State *L)
 	strlwr(name);
 
 	luaL_checktype(L, 2, LUA_TFUNCTION);
-	NOHUD
+	NOHOOK
 	if (lua_gettop(L) >= 3)
 	{ // For the third argument, only take a boolean or a number.
 		lua_settop(L, 3);
-		if (lua_type(L, 3) != LUA_TBOOLEAN)
+		if (lua_type(L, 3) == LUA_TBOOLEAN)
+		{
+			CONS_Alert(CONS_WARNING,
+					"Using a boolean for admin commands is "
+					"deprecated and will be removed.\n"
+					"Use \"COM_ADMIN\" instead.\n"
+			);
+		}
+		else
 			luaL_checktype(L, 3, LUA_TNUMBER);
 	}
 	else
@@ -238,7 +246,7 @@ static int lib_comBufAddText(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	if (plr != &players[consoleplayer])
 		return 0;
-	COM_BufAddText(va("%s\n", luaL_checkstring(L, 2)));
+	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
 }
 
@@ -255,7 +263,7 @@ static int lib_comBufInsertText(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	if (plr != &players[consoleplayer])
 		return 0;
-	COM_BufInsertText(va("%s\n", luaL_checkstring(L, 2)));
+	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
 }
 
@@ -293,13 +301,15 @@ static int lib_cvRegisterVar(lua_State *L)
 	consvar_t *cvar;
 	luaL_checktype(L, 1, LUA_TTABLE);
 	lua_settop(L, 1); // Clear out all other possible arguments, leaving only the first one.
-	NOHUD
+	NOHOOK
 	cvar = lua_newuserdata(L, sizeof(consvar_t));
 	luaL_getmetatable(L, META_CVAR);
 	lua_setmetatable(L, -2);
 
 #define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to " LUA_QL("CV_RegisterVar") " (%s)", e);
 #define TYPEERROR(f, t) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t), luaL_typename(L, -1)))
+
+	memset(cvar, 0x00, sizeof(consvar_t)); // zero everything by default
 
 	lua_pushnil(L);
 	while (lua_next(L, 1)) {
@@ -388,17 +398,39 @@ static int lib_cvRegisterVar(lua_State *L)
 #undef FIELDERROR
 #undef TYPEERROR
 
+	if (!cvar->name)
+		return luaL_error(L, M_GetText("Variable has no name!\n"));
+	if ((cvar->flags & CV_NOINIT) && !(cvar->flags & CV_CALL))
+		return luaL_error(L, M_GetText("Variable %s has CV_NOINIT without CV_CALL\n"), cvar->name);
+	if ((cvar->flags & CV_CALL) && !cvar->func)
+		return luaL_error(L, M_GetText("Variable %s has CV_CALL without a function\n"), cvar->name);
+
 	// stack: cvar table, cvar userdata
 	lua_getfield(L, LUA_REGISTRYINDEX, "CV_Vars");
 	I_Assert(lua_istable(L, 3));
+
+	lua_getfield(L, 3, cvar->name);
+	if (lua_type(L, -1) != LUA_TNIL)
+		return luaL_error(L, M_GetText("Variable %s is already defined\n"), cvar->name);
+	lua_pop(L, 1);
+
 	lua_pushvalue(L, 2);
 	lua_setfield(L, 3, cvar->name);
 	lua_pop(L, 1);
 
 	// actually time to register it to the console now! Finally!
+	cvar->flags |= CV_MODIFIED;
 	CV_RegisterVar(cvar);
+	if (cvar->flags & CV_MODIFIED)
+		return luaL_error(L, "failed to register cvar (probable conflict with internal variable/command names)");
 
 	// return cvar userdata
+	return 1;
+}
+
+static int lib_cvFindVar(lua_State *L)
+{
+	LUA_PushLightUserdata(L, CV_FindVar(luaL_checkstring(L,1)), META_CVAR);
 	return 1;
 }
 
@@ -412,6 +444,7 @@ static int lib_consPrintf(lua_State *L)
 	if (n < 2)
 		return luaL_error(L, "CONS_Printf requires at least two arguments: player and text.");
 	//HUDSAFE
+	INLEVEL
 	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (!plr)
 		return LUA_ErrInvalid(L, "player_t");
@@ -440,6 +473,7 @@ static luaL_Reg lib[] = {
 	{"COM_BufAddText", lib_comBufAddText},
 	{"COM_BufInsertText", lib_comBufInsertText},
 	{"CV_RegisterVar", lib_cvRegisterVar},
+	{"CV_FindVar", lib_cvFindVar},
 	{"CONS_Printf", lib_consPrintf},
 	{NULL, NULL}
 };
@@ -502,5 +536,3 @@ int LUA_ConsoleLib(lua_State *L)
 	luaL_register(L, NULL, lib);
 	return 0;
 }
-
-#endif

@@ -143,7 +143,7 @@ add_definitions(-DBLARGG_BUILD_DLL)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Add library to be compiled.
-add_library(gme SHARED ${libgme_SRCS})
+add_library(gme ${libgme_SRCS})
 
 # The version is the release.  The "soversion" is the API version.  As long
 # as only build fixes are performed (i.e. no backwards-incompatible changes
@@ -159,4 +159,4 @@ install(TARGETS gme LIBRARY DESTINATION lib${LIB_SUFFIX}
                     ARCHIVE DESTINATION lib) # DLL platforms
 
 install(FILES ${EXPORTED_HEADERS} DESTINATION include/gme)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgme.pc DESTINATION lib/pkgconfig)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgme.pc DESTINATION lib${LIB_SUFFIX}/pkgconfig)

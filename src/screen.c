@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -28,47 +28,53 @@
 #include "d_main.h"
 #include "d_clisrv.h"
 #include "f_finale.h"
+#include "i_sound.h" // closed captions
+#include "s_sound.h" // ditto
+#include "g_game.h" // ditto
+#include "p_local.h" // P_AutoPause()
 
 
-#if defined (USEASM) //&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
+#if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
 #define RUSEASM //MSC.NET can't patch itself
 #endif
 
 // --------------------------------------------
 // assembly or c drawer routines for 8bpp/16bpp
 // --------------------------------------------
-void (*wallcolfunc)(void); // new wall column drawer to draw posts >128 high
-void (*colfunc)(void); // standard column, up to 128 high posts
+void (*colfunc)(void);
+void (*colfuncs[COLDRAWFUNC_MAX])(void);
 
-void (*basecolfunc)(void);
-void (*fuzzcolfunc)(void); // standard fuzzy effect column drawer
-void (*transcolfunc)(void); // translation column drawer
-void (*shadecolfunc)(void); // smokie test..
-void (*spanfunc)(void); // span drawer, use a 64x64 tile
-void (*splatfunc)(void); // span drawer w/ transparency
-void (*basespanfunc)(void); // default span func for color mode
-void (*transtransfunc)(void); // translucent translated column drawer
-void (*twosmultipatchfunc)(void); // for cols with transparent pixels
+void (*spanfunc)(void);
+void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
+void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
 // ------------------
 // global video state
 // ------------------
 viddef_t vid;
 INT32 setmodeneeded; //video mode change needed if > 0 (the mode number to set + 1)
+UINT8 setrenderneeded = 0;
 
 static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, {24, "24 bits"}, {32, "32 bits"}, {0, NULL}};
 
 //added : 03-02-98: default screen mode, as loaded/saved in config
-#ifdef WII
-consvar_t cv_scr_width = {"scr_width", "640", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_scr_height = {"scr_height", "480", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-#else
 consvar_t cv_scr_width = {"scr_width", "1280", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static void SCR_ActuallyChangeRenderer(void);
+CV_PossibleValue_t cv_renderer_t[] = {
+	{1, "Software"},
+#ifdef HWRENDER
+	{2, "OpenGL"},
+#endif
+	{0, NULL}
+};
+consvar_t cv_renderer = {"renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
+
+static void SCR_ChangeFullscreen(void);
+
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
 
 // =========================================================================
@@ -92,53 +98,75 @@ boolean R_3DNow = false;
 boolean R_MMXExt = false;
 boolean R_SSE2 = false;
 
-
-void SCR_SetMode(void)
+void SCR_SetDrawFuncs(void)
 {
-	if (dedicated)
-		return;
-
-	if (!setmodeneeded || WipeInAction)
-		return; // should never happen and don't change it during a wipe, BAD!
-
-	VID_SetMode(--setmodeneeded);
-
-	V_SetPalette(0);
-
 	//
 	//  setup the right draw routines for either 8bpp or 16bpp
 	//
 	if (true)//vid.bpp == 1) //Always run in 8bpp. todo: remove all 16bpp code?
 	{
-		spanfunc = basespanfunc = R_DrawSpan_8;
-		splatfunc = R_DrawSplat_8;
-		transcolfunc = R_DrawTranslatedColumn_8;
-		transtransfunc = R_DrawTranslatedTranslucentColumn_8;
+		colfuncs[BASEDRAWFUNC] = R_DrawColumn_8;
+		spanfuncs[BASEDRAWFUNC] = R_DrawSpan_8;
 
-		colfunc = basecolfunc = R_DrawColumn_8;
-		shadecolfunc = R_DrawShadeColumn_8;
-		fuzzcolfunc = R_DrawTranslucentColumn_8;
-		walldrawerfunc = R_DrawWallColumn_8;
-		twosmultipatchfunc = R_Draw2sMultiPatchColumn_8;
+		colfunc = colfuncs[BASEDRAWFUNC];
+		spanfunc = spanfuncs[BASEDRAWFUNC];
+
+		colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8;
+		colfuncs[COLDRAWFUNC_TRANS] = R_DrawTranslatedColumn_8;
+		colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8;
+		colfuncs[COLDRAWFUNC_SHADOWED] = R_DrawColumnShadowed_8;
+		colfuncs[COLDRAWFUNC_TRANSTRANS] = R_DrawTranslatedTranslucentColumn_8;
+		colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8;
+		colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS] = R_Draw2sMultiPatchTranslucentColumn_8;
+		colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_8;
+
+		spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_8;
+		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_8;
+		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_8;
+		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_8;
+#ifndef NOWATER
+		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_8;
+#endif
+		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_8;
+		spanfuncs[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_8;
+#ifndef NOWATER
+		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_8;
+#endif
+		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_8;
+
+		// Lactozilla: Non-powers-of-two
+		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
+#ifndef NOWATER
+		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
+#endif
+		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_8;
+#ifndef NOWATER
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_8;
+#endif
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_8;
+
 #ifdef RUSEASM
 		if (R_ASM)
 		{
 			if (R_MMX)
 			{
-				colfunc = basecolfunc = R_DrawColumn_8_MMX;
-				//shadecolfunc = R_DrawShadeColumn_8_ASM;
-				//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
-				walldrawerfunc = R_DrawWallColumn_8_MMX;
-				twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_MMX;
-				spanfunc = basespanfunc = R_DrawSpan_8_MMX;
+				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_MMX;
+				//colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8_ASM;
+				//colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8_ASM;
+				colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8_MMX;
+				spanfuncs[BASEDRAWFUNC] = R_DrawSpan_8_MMX;
 			}
 			else
 			{
-				colfunc = basecolfunc = R_DrawColumn_8_ASM;
-				//shadecolfunc = R_DrawShadeColumn_8_ASM;
-				//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
-				walldrawerfunc = R_DrawWallColumn_8_ASM;
-				twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_ASM;
+				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_ASM;
+				//colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8_ASM;
+				//colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8_ASM;
+				colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8_ASM;
 			}
 		}
 #endif
@@ -157,12 +185,41 @@ void SCR_SetMode(void)
 	}*/
 	else
 		I_Error("unknown bytes per pixel mode %d\n", vid.bpp);
-/*#if !defined (DC) && !defined (WII)
+/*
 	if (SCR_IsAspectCorrect(vid.width, vid.height))
 		CONS_Alert(CONS_WARNING, M_GetText("Resolution is not aspect-correct!\nUse a multiple of %dx%d\n"), BASEVIDWIDTH, BASEVIDHEIGHT);
-#endif*/
+*/
+}
+
+void SCR_SetMode(void)
+{
+	if (dedicated)
+		return;
+
+	if (!(setmodeneeded || setrenderneeded) || WipeInAction)
+		return; // should never happen and don't change it during a wipe, BAD!
+
+	// Lactozilla: Renderer switching
+	if (setrenderneeded)
+	{
+		Z_PreparePatchFlush();
+		needpatchflush = true;
+		needpatchrecache = true;
+		VID_CheckRenderer();
+		if (!setmodeneeded)
+			VID_SetMode(vid.modenum);
+	}
+
+	if (setmodeneeded)
+		VID_SetMode(--setmodeneeded);
+
+	V_SetPalette(0);
+
+	SCR_SetDrawFuncs();
+
 	// set the apprpriate drawer for the sky (tall or INT16)
 	setmodeneeded = 0;
+	setrenderneeded = 0;
 }
 
 // do some initial settings for the game loading screen
@@ -275,7 +332,10 @@ void SCR_Recalc(void)
 	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
 
 #ifdef HWRENDER
-	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+	//if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+	// 13/11/18:
+	// The above is no longer necessary, since we want OpenGL to be just like software now
+	// -- Monster Iestyn
 #endif
 		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
 
@@ -296,18 +356,13 @@ void SCR_Recalc(void)
 	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
 #endif
 
-	// toggle off automap because some screensize-dependent values will
+	// toggle off (then back on) the automap because some screensize-dependent values will
 	// be calculated next time the automap is activated.
 	if (automapactive)
-		AM_Stop();
-
-	// r_plane stuff: visplanes, openings, floorclip, ceilingclip, spanstart,
-	//                spanstop, yslope, distscale, cachedheight, cacheddistance,
-	//                cachedxstep, cachedystep
-	//             -> allocated at the maximum vidsize, static.
-
-	// r_main: xtoviewangle, allocated at the maximum size.
-	// r_things: negonearray, screenheightarray allocated max. size.
+	{
+		am_recalc = true;
+		AM_Start();
+	}
 
 	// set the screen[x] ptrs on the new vidbuffers
 	V_Init();
@@ -355,6 +410,8 @@ void SCR_CheckDefaultMode(void)
 		// see note above
 		setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 	}
+
+	SCR_ActuallyChangeRenderer();
 }
 
 // sets the modenum as the new default video mode to be saved in the config file
@@ -384,6 +441,69 @@ void SCR_ChangeFullscreen(void)
 #endif
 }
 
+static int target_renderer = 0;
+
+void SCR_ActuallyChangeRenderer(void)
+{
+	setrenderneeded = target_renderer;
+
+#ifdef HWRENDER
+	// Well, it didn't even load anyway.
+	if ((vid_opengl_state == -1) && (setrenderneeded == render_opengl))
+	{
+		if (M_CheckParm("-nogl"))
+			CONS_Alert(CONS_ERROR, "OpenGL rendering was disabled!\n");
+		else
+			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
+		setrenderneeded = 0;
+		return;
+	}
+#endif
+
+	// setting the same renderer twice WILL crash your game, so let's not, please
+	if (rendermode == setrenderneeded)
+		setrenderneeded = 0;
+}
+
+// Lactozilla: Renderer switching
+void SCR_ChangeRenderer(void)
+{
+	setrenderneeded = 0;
+
+	if (con_startup)
+	{
+		target_renderer = cv_renderer.value;
+#ifdef HWRENDER
+		if (M_CheckParm("-opengl") && (vid_opengl_state == 1))
+			target_renderer = rendermode = render_opengl;
+		else
+#endif
+		if (M_CheckParm("-software"))
+			target_renderer = rendermode = render_soft;
+		// set cv_renderer back
+		SCR_ChangeRendererCVars(rendermode);
+		return;
+	}
+
+	if (cv_renderer.value == 1)
+		target_renderer = render_soft;
+	else if (cv_renderer.value == 2)
+		target_renderer = render_opengl;
+	SCR_ActuallyChangeRenderer();
+}
+
+void SCR_ChangeRendererCVars(INT32 mode)
+{
+	// set cv_renderer back
+	if (mode == render_soft)
+		CV_StealthSetValue(&cv_renderer, 1);
+	else if (mode == render_opengl)
+		CV_StealthSetValue(&cv_renderer, 2);
+#ifdef HWRENDER
+	CV_StealthSetValue(&cv_newrenderer, cv_renderer.value);
+#endif
+}
+
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
 {
 	return
@@ -404,6 +524,10 @@ void SCR_DisplayTicRate(void)
 	tic_t ontic = I_GetTime();
 	tic_t totaltics = 0;
 	INT32 ticcntcolor = 0;
+	const INT32 h = vid.height-(8*vid.dupy);
+
+	if (gamestate == GS_NULL)
+		return;
 
 	for (i = lasttic + 1; i < TICRATE+lasttic && i < ontic; ++i)
 		fpsgraph[i % TICRATE] = false;
@@ -417,10 +541,84 @@ void SCR_DisplayTicRate(void)
 	if (totaltics <= TICRATE/2) ticcntcolor = V_REDMAP;
 	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
 
-	V_DrawString(vid.width-(24*vid.dupx), vid.height-(16*vid.dupy),
-		V_YELLOWMAP|V_NOSCALESTART, "FPS");
-	V_DrawString(vid.width-(40*vid.dupx), vid.height-( 8*vid.dupy),
-		ticcntcolor|V_NOSCALESTART, va("%02d/%02u", totaltics, TICRATE));
+	if (cv_ticrate.value == 2) // compact counter
+		V_DrawString(vid.width-(16*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d", totaltics));
+	else if (cv_ticrate.value == 1) // full counter
+	{
+		V_DrawString(vid.width-(72*vid.dupx), h,
+			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
+		V_DrawString(vid.width-(40*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d/%02u", totaltics, TICRATE));
+	}
 
 	lasttic = ontic;
+}
+
+void SCR_DisplayLocalPing(void)
+{
+	UINT32 ping = playerpingtable[consoleplayer];	// consoleplayer's ping is everyone's ping in a splitnetgame :P
+	if (cv_showping.value == 1 || (cv_showping.value == 2 && servermaxping && ping > servermaxping))	// only show 2 (warning) if our ping is at a bad level
+	{
+		INT32 dispy = cv_ticrate.value ? 180 : 189;
+		HU_drawPing(307, dispy, ping, true, V_SNAPTORIGHT | V_SNAPTOBOTTOM);
+	}
+}
+
+
+void SCR_ClosedCaptions(void)
+{
+	UINT8 i;
+	boolean gamestopped = (paused || P_AutoPause());
+	INT32 basey = BASEVIDHEIGHT;
+
+	if (gamestate != wipegamestate)
+		return;
+
+	if (gamestate == GS_LEVEL)
+	{
+		if (promptactive)
+			basey -= 42;
+		else if (splitscreen)
+			basey -= 8;
+		else if ((modeattacking == ATTACKING_NIGHTS)
+		|| (!(maptol & TOL_NIGHTS)
+		&& ((cv_powerupdisplay.value == 2) // "Always"
+		 || (cv_powerupdisplay.value == 1 && !camera.chase)))) // "First-person only"
+			basey -= 16;
+	}
+
+	for (i = 0; i < NUMCAPTIONS; i++)
+	{
+		INT32 flags, y;
+		char dot;
+		boolean music;
+
+		if (!closedcaptions[i].s)
+			continue;
+
+		music = (closedcaptions[i].s-S_sfx == sfx_None);
+
+		if (music && !gamestopped && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
+			continue;
+
+		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
+		y = basey-((i + 2)*10);
+
+		if (closedcaptions[i].b)
+			y -= (closedcaptions[i].b--)*vid.dupy;
+
+		if (closedcaptions[i].t < CAPTIONFADETICS)
+			flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);
+
+		if (music)
+			dot = '\x19';
+		else if (closedcaptions[i].c && closedcaptions[i].c->origin)
+			dot = '\x1E';
+		else
+			dot = ' ';
+
+		V_DrawRightAlignedString(BASEVIDWIDTH - 20, y, flags,
+			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+	}
 }

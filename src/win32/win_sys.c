@@ -54,6 +54,8 @@
 
 #include "../screen.h"
 
+#include "../m_menu.h"
+
 // Wheel support for Win95/WinNT3.51
 #include <zmouse.h>
 
@@ -327,7 +329,7 @@ static inline VOID I_GetConsoleEvents(VOID)
 							break;
 						case VK_RETURN:
 							entering_con_command = false;
-							// Fall through.
+							/* FALLTHRU */
 						default:
 							ev.data1 = MapVirtualKey(input.Event.KeyEvent.wVirtualKeyCode,2); // convert in to char
 					}
@@ -639,9 +641,6 @@ void I_Error(const char *error, ...)
 	if (!errorcount)
 	{
 		M_SaveConfig(NULL); // save game config, cvars..
-#ifndef NONET
-		D_SaveBan(); // save the ban list
-#endif
 		G_SaveGameData();
 	}
 
@@ -650,9 +649,10 @@ void I_Error(const char *error, ...)
 	if (demorecording)
 		G_CheckDemoStatus();
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
+	M_FreePlayerSetupColors();
 
 	// shutdown everything that was started
 	I_ShutdownSystem();
@@ -736,7 +736,7 @@ void I_Quit(void)
 	if (demorecording)
 		G_CheckDemoStatus();
 	if (metalrecording)
-		G_StopMetalRecording();
+		G_StopMetalRecording(false);
 
 	M_SaveConfig(NULL); // save game config, cvars..
 #ifndef NONET
@@ -748,6 +748,8 @@ void I_Quit(void)
 	// or something else that will be finished by I_ShutdownSystem(),
 	// so do it before.
 	D_QuitNetGame();
+
+	M_FreePlayerSetupColors();
 
 	// shutdown everything that was started
 	I_ShutdownSystem();
@@ -771,6 +773,8 @@ void I_Quit(void)
 		ShowEndTxt(co);
 	}
 	fflush(stderr);
+	if (myargmalloc)
+		free(myargv); // Deallocate allocated memory
 	W_Shutdown();
 	exit(0);
 }
@@ -1354,6 +1358,8 @@ getBufferedData:
 		}
 	}
 }
+
+void I_UpdateMouseGrab(void) {}
 
 // ===========================================================================================
 //                                                                       DIRECT INPUT JOYSTICK
@@ -2581,7 +2587,7 @@ acquire:
 		UINT64 newbuttons = joybuttons ^ lastjoybuttons;
 		lastjoybuttons = joybuttons;
 
-		for (i = 0; i < JOYBUTTONS && i < JOYBUTTONS_MAX; i++, j <<= 1)
+		for (i = 0; i < JOYBUTTONS_MIN; i++, j <<= 1)
 		{
 			if (newbuttons & j) // button changed state?
 			{
@@ -2601,7 +2607,7 @@ acquire:
 		UINT64 newhats = joyhats ^ lastjoyhats;
 		lastjoyhats = joyhats;
 
-		for (i = 0; i < JOYHATS*4 && i < JOYHATS_MAX*4; i++, j <<= 1)
+		for (i = 0; i < JOYHATS_MIN*4; i++, j <<= 1)
 		{
 			if (newhats & j) // button changed state?
 			{
@@ -2825,7 +2831,7 @@ acquire:
 		UINT64 newbuttons = joybuttons ^ lastjoy2buttons;
 		lastjoy2buttons = joybuttons;
 
-		for (i = 0; i < JOYBUTTONS && i < JOYBUTTONS_MAX; i++, j <<= 1)
+		for (i = 0; i < JOYBUTTONS_MIN; i++, j <<= 1)
 		{
 			if (newbuttons & j) // button changed state?
 			{
@@ -2845,7 +2851,7 @@ acquire:
 		UINT64 newhats = joyhats ^ lastjoy2hats;
 		lastjoy2hats = joyhats;
 
-		for (i = 0; i < JOYHATS*4 && i < JOYHATS_MAX*4; i++, j <<= 1)
+		for (i = 0; i < JOYHATS_MIN*4; i++, j <<= 1)
 		{
 			if (newhats & j) // button changed state?
 			{
@@ -3198,7 +3204,7 @@ INT32 I_GetKey(void)
 // -----------------
 #define DI_KEYBOARD_BUFFERSIZE 32 // number of data elements in keyboard buffer
 
-void I_StartupKeyboard(void)
+static void I_StartupKeyboard(void)
 {
 	DIPROPDWORD dip;
 
@@ -3396,7 +3402,7 @@ BOOL LoadDirectInput(VOID)
 	DInputDLL = LoadLibraryA("DINPUT.DLL");
 	if (DInputDLL == NULL)
 		return false;
-	pfnDirectInputCreateA = (DICreateA)GetProcAddress(DInputDLL, "DirectInputCreateA");
+	pfnDirectInputCreateA = (DICreateA)(LPVOID)GetProcAddress(DInputDLL, "DirectInputCreateA");
 	if (pfnDirectInputCreateA == NULL)
 		return false;
 	return true;
@@ -3433,6 +3439,8 @@ INT32 I_StartupSystem(void)
 
 	// some 'more global than globals' things to initialize here ?
 	graphics_started = keyboard_started = sound_started = cdaudio_started = false;
+
+	I_StartupKeyboard();
 
 #ifdef NDEBUG
 
@@ -3530,7 +3538,7 @@ void I_GetDiskFreeSpace(INT64* freespace)
 
 	if (!testwin95)
 	{
-		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
+		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
 		testwin95 = true;
 	}
 	if (pfnGetDiskFreeSpaceEx)
@@ -3598,13 +3606,25 @@ INT32 I_PutEnv(char *variable)
 	return putenv(variable);
 }
 
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	(void)data;
+	(void)size;
+	return -1;
+}
+
+const char *I_ClipboardPaste(void)
+{
+	return NULL;
+}
+
 typedef BOOL (WINAPI *p_IsProcessorFeaturePresent) (DWORD);
 
 const CPUInfoFlags *I_CPUInfo(void)
 {
 	static CPUInfoFlags WIN_CPUInfo;
 	SYSTEM_INFO SI;
-	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
+	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
 
 	ZeroMemory(&WIN_CPUInfo,sizeof (WIN_CPUInfo));
 	if (pfnCPUID)
@@ -3647,9 +3667,9 @@ static p_SetProcessAffinityMask pfnSetProcessAffinityMask = NULL;
 static inline VOID GetAffinityFuncs(VOID)
 {
 	HMODULE h = GetModuleHandleA("kernel32.dll");
-	pfnGetCurrentProcess = (p_GetCurrentProcess)GetProcAddress(h, "GetCurrentProcess");
-	pfnGetProcessAffinityMask = (p_GetProcessAffinityMask)GetProcAddress(h, "GetProcessAffinityMask");
-	pfnSetProcessAffinityMask = (p_SetProcessAffinityMask)GetProcAddress(h, "SetProcessAffinityMask");
+	pfnGetCurrentProcess = (p_GetCurrentProcess)(LPVOID)GetProcAddress(h, "GetCurrentProcess");
+	pfnGetProcessAffinityMask = (p_GetProcessAffinityMask)(LPVOID)GetProcAddress(h, "GetProcessAffinityMask");
+	pfnSetProcessAffinityMask = (p_SetProcessAffinityMask)(LPVOID)GetProcAddress(h, "SetProcessAffinityMask");
 }
 
 static void CPUAffinity_OnChange(void)

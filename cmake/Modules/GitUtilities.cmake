@@ -29,3 +29,15 @@ function(git_current_branch variable path)
 
 	set(${variable} "${output}" PARENT_SCOPE)
 endfunction()
+
+function(git_latest_commit variable path)
+	execute_process(COMMAND ${GIT_EXECUTABLE} "rev-parse" "--short" "HEAD"
+		WORKING_DIRECTORY "${path}"
+		RESULT_VARIABLE result
+		OUTPUT_VARIABLE output
+		ERROR_QUIET
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+
+	set(${variable} "${output}" PARENT_SCOPE)
+endfunction()

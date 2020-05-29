@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -47,8 +47,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 		case 0: // IN STASIS
 			break;
 		case 1: // UP
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false,
-				1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, true, ceiling->direction);
 
 			if (ceiling->type == bounceCeiling)
 			{
@@ -79,7 +78,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 							P_LinedefExecute((INT16)(ceiling->texture + INT16_MAX + 2), NULL, NULL);
 						if (ceiling->texture > -1) // flat changing
 							ceiling->sector->ceilingpic = ceiling->texture;
-						// don't break
+						/* FALLTHRU */
 					case raiseToHighest:
 //					case raiseCeilingByLine:
 					case moveCeilingByFrontTexture:
@@ -159,8 +158,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 			break;
 
 		case -1: // DOWN
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight,
-				ceiling->crush, 1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, true, ceiling->direction);
 
 			if (ceiling->type == bounceCeiling)
 			{
@@ -182,6 +180,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 					// except generalized ones, reset speed, start back up
 					case crushAndRaise:
 						ceiling->speed = CEILSPEED;
+						/* FALLTHRU */
 					case fastCrushAndRaise:
 						ceiling->direction = 1;
 						break;
@@ -200,6 +199,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 						if (ceiling->texture > -1) // flat changing
 							ceiling->sector->ceilingpic = ceiling->texture;
 						// don't break
+						/* FALLTHRU */
 
 					// in all other cases, just remove the active ceiling
 					case lowerAndCrush:
@@ -312,11 +312,10 @@ void T_CrushCeiling(ceiling_t *ceiling)
 			if (ceiling->type == crushBothOnce)
 			{
 				// Move the floor
-				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight-(ceiling->topheight-ceiling->bottomheight), false, 0, -ceiling->direction);
+				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight-(ceiling->topheight-ceiling->bottomheight), false, false, -ceiling->direction);
 			}
 
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight,
-				false, 1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, true, ceiling->direction);
 
 			if (res == pastdest)
 			{
@@ -355,11 +354,10 @@ void T_CrushCeiling(ceiling_t *ceiling)
 			if (ceiling->type == crushBothOnce)
 			{
 				// Move the floor
-				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, 0, -ceiling->direction);
+				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, false, -ceiling->direction);
 			}
 
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight,
-				ceiling->crush, 1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, true, ceiling->direction);
 
 			if (res == pastdest)
 			{
@@ -397,7 +395,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 	sector_t *sec;
 	ceiling_t *ceiling;
 
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag,secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -407,7 +405,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 		// new door thinker
 		rtn = 1;
 		ceiling = Z_Calloc(sizeof (*ceiling), PU_LEVSPEC, NULL);
-		P_AddThinker(&ceiling->thinker);
+		P_AddThinker(THINK_MAIN, &ceiling->thinker);
 		sec->ceilingdata = ceiling;
 		ceiling->thinker.function.acp1 = (actionf_p1)T_MoveCeiling;
 		ceiling->sector = sec;
@@ -427,6 +425,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 			case crushAndRaise:
 				ceiling->crush = true;
 				ceiling->topheight = sec->ceilingheight;
+				/* FALLTHRU */
 			case lowerAndCrush:
 				ceiling->bottomheight = sec->floorheight;
 				ceiling->bottomheight += 4*FRACUNIT;
@@ -616,7 +615,7 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 	sector_t *sec;
 	ceiling_t *ceiling;
 
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag,secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -626,7 +625,7 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 		// new door thinker
 		rtn = 1;
 		ceiling = Z_Calloc(sizeof (*ceiling), PU_LEVSPEC, NULL);
-		P_AddThinker(&ceiling->thinker);
+		P_AddThinker(THINK_MAIN, &ceiling->thinker);
 		sec->ceilingdata = ceiling;
 		ceiling->thinker.function.acp1 = (actionf_p1)T_CrushCeiling;
 		ceiling->sector = sec;

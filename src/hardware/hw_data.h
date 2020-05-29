@@ -20,14 +20,10 @@
 #ifndef _HWR_DATA_
 #define _HWR_DATA_
 
-#if defined (_WIN32) && !defined (__CYGWIN__) && !defined (_XBOX)
+#if defined (_WIN32) && !defined (__CYGWIN__)
 //#define WIN32_LEAN_AND_MEAN
 #define RPC_NO_WINDOWS_H
 #include <windows.h>
-#endif
-
-#if defined (VID_X11) && !defined (HAVE_SDL)
-#include <GL/glx.h>
 #endif
 
 #include "../doomdef.h"
@@ -64,7 +60,7 @@ typedef struct GLMipmap_s GLMipmap_t;
 //
 struct GLTexture_s
 {
-	GLMipmap_t mipmap;
+	GLMipmap_t  mipmap;
 	float       scaleX;             //used for scaling textures on walls
 	float       scaleY;
 };
@@ -87,7 +83,8 @@ struct GLPatch_s
 	float               max_s,max_t;
 	UINT16              wadnum;      // the software patch lump num for when the hardware patch
 	UINT16              lumpnum;     // was flushed, and we need to re-create it
-	GLMipmap_t          mipmap;
+	void                *rawpatch;   // :^)
+	GLMipmap_t          *mipmap;
 } ATTRPACK;
 typedef struct GLPatch_s GLPatch_t;
 

@@ -147,7 +147,7 @@ static inline BOOL LoadDirectDraw(VOID)
 	DDrawDLL = LoadLibraryA("DDRAW.DLL");
 	if (DDrawDLL == NULL)
 		return false;
-	pfnDirectDrawCreate = (DDCreate)GetProcAddress(DDrawDLL, "DirectDrawCreate");
+	pfnDirectDrawCreate = (DDCreate)(LPVOID)GetProcAddress(DDrawDLL, "DirectDrawCreate");
 	if (pfnDirectDrawCreate == NULL)
 		return false;
 	return true;

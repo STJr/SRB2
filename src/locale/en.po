@@ -1377,11 +1377,6 @@ msgstr ""
 msgid "modifiedgame is false, you can unlock secrets\n"
 msgstr ""
 
-#: d_netcmd.c:4599
-#, c-format
-msgid "Valid skin numbers are 0 to %d (-1 disables)\n"
-msgstr ""
-
 #: d_netcmd.c:4617 d_netcmd.c:4629
 msgid "You may not change your name when chat is muted.\n"
 msgstr ""
@@ -3629,7 +3624,7 @@ msgid "another castle!"
 msgstr ""
 
 #: st_stuff.c:2328 st_stuff.c:2334 st_stuff.c:2356
-msgid "Press F12 to watch another player."
+msgid "Press Viewpoint Key to watch a player."
 msgstr ""
 
 #: st_stuff.c:2333
@@ -3830,7 +3825,7 @@ msgid "Music lump is not MID music format\n"
 msgstr ""
 
 #: win32/win_snd.c:2128
-msgid "I_RegisterSong: StreamBufferSetup FAILED"
+msgid "I_LoadSong: StreamBufferSetup FAILED"
 msgstr ""
 
 #: win32/win_sys.c:892

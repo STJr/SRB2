@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,7 @@
 #include "doomdef.h"
 #include "command.h"
 #include "m_argv.h"
+#include "m_misc.h"
 
 /**	\brief number of arg
 */
@@ -25,10 +26,33 @@ INT32 myargc;
 */
 char **myargv;
 
+/** \brief did we alloc myargv ourselves?
+*/
+boolean myargmalloc = false;
+
 /**	\brief founded the parm
 */
 static INT32 found;
 
+/**	\brief Parses a server URL (such as srb2://127.0.0.1) as may be passed to the game via a web browser, etc.
+
+	\return the contents of the URL after the protocol (a server to join), or NULL if not found
+*/
+const char *M_GetUrlProtocolArg(void)
+{
+	INT32 i;
+	const size_t len = strlen(SERVER_URL_PROTOCOL);
+
+	for (i = 1; i < myargc; i++)
+	{
+		if (strlen(myargv[i]) > len && !strnicmp(myargv[i], SERVER_URL_PROTOCOL, len))
+		{
+			return &myargv[i][len];
+		}
+	}
+
+	return NULL;
+}
 
 /**	\brief	The M_CheckParm function
 
@@ -87,48 +111,28 @@ const char *M_GetNextParm(void)
 void M_PushSpecialParameters(void)
 {
 	INT32 i;
-	char s[256];
-	boolean onetime = false;
-
 	for (i = 1; i < myargc; i++)
 	{
 		if (myargv[i][0] == '+')
 		{
-			strcpy(s, &myargv[i][1]);
+			COM_BufAddText(&myargv[i][1]);
 			i++;
 
 			// get the parameters of the command too
 			for (; i < myargc && myargv[i][0] != '+' && myargv[i][0] != '-'; i++)
 			{
-				strcat(s, " ");
-				if (!onetime)
-				{
-					strcat(s, "\"");
-					onetime = true;
-				}
-				strcat(s, myargv[i]);
+				COM_BufAddText(va(" \"%s\"", myargv[i]));
 			}
-			if (onetime)
-			{
-				strcat(s, "\"");
-				onetime = false;
-			}
-			strcat(s, "\n");
 
 			// push it
-			COM_BufAddText(s);
+			COM_BufAddText("\n");
 			i--;
 		}
 	}
 }
 
 /// \brief max args
-
-#if defined (_arch_dreamcast) || defined (_XBOX) || defined (_WII)
-#define MAXARGVS 1
-#else
 #define MAXARGVS 256
-#endif
 
 /**	\brief the M_FindResponseFile function
 	Find a response file
@@ -162,7 +166,7 @@ void M_FindResponseFile(void)
 			if (!file)
 				I_Error("No more free memory for the response file");
 			if (fread(file, size, 1, handle) != 1)
-				I_Error("Couldn't read response file because %s", strerror(ferror(handle)));
+				I_Error("Couldn't read response file because %s", M_FileError(handle));
 			fclose(handle);
 
 			// keep all the command line arguments following @responsefile
@@ -176,6 +180,7 @@ void M_FindResponseFile(void)
 				free(file);
 				I_Error("Not enough memory to read response file");
 			}
+			myargmalloc = true; // mark as having been allocated by us
 			memset(myargv, 0, sizeof (char *) * MAXARGVS);
 			myargv[0] = firstargv;
 
@@ -198,14 +203,12 @@ void M_FindResponseFile(void)
 					k++;
 			} while (k < size);
 
-			free(file);
-
 			for (k = 0; k < pindex; k++)
 				myargv[indexinfile++] = moreargs[k];
 			myargc = indexinfile;
 
 			// display arguments
-			CONS_Printf(M_GetText("%d command-line args:\n"), myargc);
+			CONS_Printf(M_GetText("%d command-line args:\n"), myargc-1); // -1 so @ don't actually get counted for
 			for (k = 1; k < myargc; k++)
 				CONS_Printf("%s\n", myargv[k]);
 

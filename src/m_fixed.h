@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,10 +18,6 @@
 #include "doomtype.h"
 #ifdef __GNUC__
 #include <stdlib.h>
-#endif
-
-#ifdef _WIN32_WCE
-#include "sdl/SRB2CE/cehelp.h"
 #endif
 
 /*!
@@ -42,44 +38,21 @@ typedef INT32 fixed_t;
 /*!
   \brief convert fixed_t into floating number
 */
-#define FIXED_TO_FLOAT(x) (((float)(x)) / ((float)FRACUNIT))
-#define FLOAT_TO_FIXED(f) (fixed_t)((f) * ((float)FRACUNIT))
 
-
-/**	\brief	The TMulScale16 function
-
-	\param	a	a parameter of type fixed_t
-	\param	b	a parameter of type fixed_t
-	\param	c	a parameter of type fixed_t
-	\param	d	a parameter of type fixed_t
-	\param	e	a parameter of type fixed_t
-	\param	f	a parameter of type fixed_t
-
-	\return	fixed_t
-
-
-*/
-FUNCMATH FUNCINLINE static ATTRINLINE fixed_t TMulScale16(fixed_t a, fixed_t b, fixed_t c, fixed_t d, fixed_t e, fixed_t f) \
-{ \
-	return (fixed_t)((((INT64)a * (INT64)b) + ((INT64)c * (INT64)d) \
-		+ ((INT64)e * (INT64)f)) >> 16); \
+FUNCMATH FUNCINLINE static ATTRINLINE float FixedToFloat(fixed_t x)
+{
+	return x / (float)FRACUNIT;
 }
 
-/**	\brief	The DMulScale16 function
-
-	\param	a	a parameter of type fixed_t
-	\param	b	a parameter of type fixed_t
-	\param	c	a parameter of type fixed_t
-	\param	d	a parameter of type fixed_t
-
-	\return	fixed_t
-
-
-*/
-FUNCMATH FUNCINLINE static ATTRINLINE fixed_t DMulScale16(fixed_t a, fixed_t b, fixed_t c, fixed_t d) \
-{ \
-	return (fixed_t)((((INT64)a * (INT64)b) + ((INT64)c * (INT64)d)) >> 16); \
+FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FloatToFixed(float f)
+{
+	return (fixed_t)(f * FRACUNIT);
 }
+
+// for backwards compat
+#define FIXED_TO_FLOAT(x) FixedToFloat(x) // (((float)(x)) / ((float)FRACUNIT))
+#define FLOAT_TO_FIXED(f) FloatToFixed(f) // (fixed_t)((f) * ((float)FRACUNIT))
+
 
 #if defined (__WATCOMC__) && FRACBITS == 16
 	#pragma aux FixedMul =  \
@@ -109,7 +82,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t DMulScale16(fixed_t a, fixed_t b, 
 			:"=a" (ret)            // eax is always the result and the first operand (%0,%1)
 			:"0" (a), "r" (b)      // and %2 is what we use imull on with what in %1
 			, "I" (FRACBITS)       // %3 holds FRACBITS (normally 16)
-			:"%cc", "%edx"         // edx and condition codes clobbered
+			:"cc", "%edx"         // edx and condition codes clobbered
 		);
 		return ret;
 	}
@@ -240,14 +213,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedDiv(fixed_t a, fixed_t b)
 */
 FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRem(fixed_t x, fixed_t y)
 {
-	const boolean n = x < 0;
-	x = abs(x);
-	while (x >= y)
-		x -= y;
-	if (n)
-		return -x;
-	else
-		return x;
+	return x % y;
 }
 
 /**	\brief	The FixedSqrt function
@@ -283,9 +249,16 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedFloor(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
+	if (f == 0)
+		return x;
 	if (x != INT32_MIN)
-		return x-f; // return largest integral value not greater than argument
+	{ // return rounded down to nearest whole number
+		if (x > 0)
+			return x-f;
+		else
+			return x-(FRACUNIT-f);
+	}
 	return INT32_MIN;
 }
 
@@ -301,7 +274,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedTrunc(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
 	if (x != INT32_MIN)
 	{ // return rounded to nearest whole number, towards zero
 		if (x > 0)
@@ -324,11 +297,18 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedCeil(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
+	if (f == 0)
+		return x;
 	if (x == INT32_MIN)
 		return INT32_MIN;
 	else if (x < FixedFloor(INT32_MAX))
-		return x+(FRACUNIT-f); // return smallest integral value not less than argument
+	{ // return rounded up to nearest whole number
+		if (x > 0)
+			return x+(FRACUNIT-f);
+		else
+			return x+f;
+	}
 	return INT32_MAX;
 }
 
@@ -344,7 +324,9 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
+	if (f == 0)
+		return x;
 	if (x == INT32_MIN)
 		return INT32_MIN;
 	else if (x < FixedFloor(INT32_MAX))
@@ -412,9 +394,11 @@ boolean FV3_Equal(const vector3_t *a_1, const vector3_t *a_2);
 fixed_t FV3_Dot(const vector3_t *a_1, const vector3_t *a_2);
 vector3_t *FV3_Cross(const vector3_t *a_1, const vector3_t *a_2, vector3_t *a_o);
 vector3_t *FV3_ClosestPointOnLine(const vector3_t *Line, const vector3_t *p, vector3_t *out);
+void FV3_ClosestPointOnVector(const vector3_t *dir, const vector3_t *p, vector3_t *out);
 void FV3_ClosestPointOnTriangle(const vector3_t *tri, const vector3_t *point, vector3_t *result);
 vector3_t *FV3_Point2Vec(const vector3_t *point1, const vector3_t *point2, vector3_t *a_o);
-void FV3_Normal(const vector3_t *a_triangle, vector3_t *a_normal);
+fixed_t FV3_Normal(const vector3_t *a_triangle, vector3_t *a_normal);
+fixed_t FV3_Strength(const vector3_t *a_1, const vector3_t *dir);
 fixed_t FV3_PlaneDistance(const vector3_t *a_normal, const vector3_t *a_point);
 boolean FV3_IntersectedPlane(const vector3_t *a_triangle, const vector3_t *a_line, vector3_t *a_normal, fixed_t *originDistance);
 fixed_t FV3_PlaneIntersection(const vector3_t *pOrigin, const vector3_t *pNormal, const vector3_t *rOrigin, const vector3_t *rVector);

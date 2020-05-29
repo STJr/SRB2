@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <IncludePath>$(SolutionDir)libs\libopenmpt\inc;$(IncludePath)</IncludePath>
+	<LibraryPath Condition="'$(Platform)' == 'Win32'">$(SolutionDir)libs\libopenmpt\lib\x86;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)' == 'x64'">$(SolutionDir)libs\libopenmpt\lib\x86_64;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>libopenmpt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>

@@ -1,3 +1,4 @@
-/srb2sdl.exe
-/srb2win.exe
-/r_opengl.dll
+*.exe
+*.mo
+r_opengl.dll
+*.bat

@@ -1,0 +1,27 @@
+This work was packaged for Debian by:
+
+    ${PACKAGE_NAME_EMAIL}  ${__PACKAGE_DATETIME}
+
+It was downloaded from:
+
+    ${PACKAGE_WEBSITE}
+
+Upstream Author(s):
+
+    ${PACKAGE_GROUP_NAME_EMAIL}
+
+Copyright:
+
+    Copyright (C) 1998-2018 by Sonic Team Junior
+
+License:
+
+    GNU General Public License, version 2
+
+The Debian packaging is:
+
+    Copyright (C) 2010 Callum Dickinson <gcfreak_ag20@hotmail.com>
+    Copyright (C) 2010-2018 by Sonic Team Junior <stjr@srb2.org>
+
+and is licensed under the GPL version 2,
+see "/usr/share/common-licenses/GPL-2".

@@ -37,14 +37,8 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#if defined (_XBOX) || defined (_arch_dreamcast) || defined(GP2X)
-#define NOLOADSO
-#endif
-
-#if SDL_VERSION_ATLEAST(1,2,6) && !defined (NOLOADSO)
-#include "SDL_loadso.h" // 1.2.6+
-#elif !defined (NOLOADSO)
-#define NOLOADSO
+#ifndef NOLOADSO
+#include "SDL_loadso.h"
 #endif
 
 #define  _CREATE_DLL_  // necessary for Unix AND Windows
@@ -85,6 +79,7 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(Init);
 	GETFUNC(Draw2DLine);
 	GETFUNC(DrawPolygon);
+	GETFUNC(RenderSkyDome);
 	GETFUNC(SetBlend);
 	GETFUNC(ClearBuffer);
 	GETFUNC(SetTexture);
@@ -93,13 +88,12 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(ClearMipMapCache);
 	GETFUNC(SetSpecialState);
 	GETFUNC(GetTextureUsed);
-	GETFUNC(DrawMD2);
-	GETFUNC(DrawMD2i);
+	GETFUNC(DrawModel);
+	GETFUNC(CreateModelVBOs);
 	GETFUNC(SetTransform);
 	GETFUNC(GetRenderVersion);
-#ifdef SHUFFLE
 	GETFUNC(PostImgRedraw);
-#endif //SHUFFLE
+	GETFUNC(FlushScreenTextures);
 	GETFUNC(StartScreenWipe);
 	GETFUNC(EndScreenWipe);
 	GETFUNC(DoScreenWipe);

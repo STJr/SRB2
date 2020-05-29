@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -184,10 +184,6 @@ void I_StartupMouse(void);
 */
 void I_StartupMouse2(void);
 
-/**	\brief keyboard startup, shutdown, handler
-*/
-void I_StartupKeyboard(void);
-
 /**	\brief  setup timer irq and user timer routine.
 */
 void I_StartupTimer(void);
@@ -292,9 +288,21 @@ void I_GetJoystick2Events(void);
 */
 void I_GetMouseEvents(void);
 
+/**	\brief Checks if the mouse needs to be grabbed
+*/
+void I_UpdateMouseGrab(void);
+
 char *I_GetEnv(const char *name);
 
 INT32 I_PutEnv(char *variable);
+
+/** \brief Put data in system clipboard
+*/
+INT32 I_ClipboardCopy(const char *data, size_t size);
+
+/** \brief Retrieve data from system clipboard
+*/
+const char *I_ClipboardPaste(void);
 
 void I_RegisterSysCommands(void);
 

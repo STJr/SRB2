@@ -3,7 +3,7 @@
 # later are used by pkg-config.
 prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
-lib_suffix=
+lib_suffix=@LIB_SUFFIX@
 libdir=${exec_prefix}/lib${lib_suffix}
 includedir=${prefix}/include
 
@@ -13,3 +13,4 @@ URL: http://code.google.com/p/game-music-emu/
 Version: @GME_VERSION@
 Cflags: -I${includedir}
 Libs: -L${libdir} -lgme
+Libs.private: -lstdc++
