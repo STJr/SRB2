@@ -602,7 +602,10 @@ static void readfreeslots(MYFILE *f)
 				// Search if we already have an SPR2 by that name...
 				for (i = SPR2_FIRSTFREESLOT; i < (int)free_spr2; i++)
 					if (memcmp(spr2names[i],word,4) == 0)
+					{
+						deh_warning("Freeslots: Player sprite 'SPR2_%s' already exists", word);
 						break;
+					}
 				// We found it? (Two mods using the same SPR2 name?) Then don't allocate another one.
 				if (i < (int)free_spr2)
 					continue;
@@ -10646,7 +10649,10 @@ static inline int lib_freeslot(lua_State *L)
 			playersprite_t i;
 			for (i = SPR2_FIRSTFREESLOT; i < free_spr2; i++)
 				if (memcmp(spr2names[i],word,4) == 0)
+				{
+					CONS_Printf("Player sprite SPR2_%s already exists.\n", word);
 					break;
+				}
 			// We don't, so allocate a new one.
 			if (i >= free_spr2) {
 				if (free_spr2 < NUMPLAYERSPRITES)
@@ -10654,11 +10660,12 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
 					spr2defaults[free_spr2] = 0;
-					spr2names[free_spr2++][4] = 0;
+					spr2names[free_spr2][4] = 0;
+					lua_pushinteger(L, free_spr2++);
+					r++;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
 			}
-			r++;
 		}
 		else if (fastcmp(type, "TOL"))
 		{
