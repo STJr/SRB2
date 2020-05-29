@@ -3971,7 +3971,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (mo)
 				{
-					if (color < 0 || color >= MAXTRANSLATIONS)
+					if (color < 0 || color >= numskincolors)
 						return;
 
 					var1 = 0;
@@ -7065,6 +7065,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 			// 503 is used for a scroller
 			// 504 is used for a scroller
 			// 505 is used for a scroller
+			// 506 is used for a scroller
+			// 507 is used for a scroller
+			// 508 is used for a scroller
 			// 510 is used for a scroller
 			// 511 is used for a scroller
 			// 512 is used for a scroller
@@ -7581,7 +7584,20 @@ static void P_SpawnScrollers(void)
 			case 502:
 				for (s = -1; (s = P_FindLineFromTag(l->tag, s)) >= 0 ;)
 					if (s != (INT32)i)
-						Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
+					{
+						if (l->flags & ML_EFFECT2) // use texture offsets instead
+						{
+							dx = sides[l->sidenum[0]].textureoffset;
+							dy = sides[l->sidenum[0]].rowoffset;
+						}
+						if (l->flags & ML_EFFECT3)
+						{
+							if (lines[s].sidenum[1] != 0xffff)
+								Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[1], accel, 0);
+						}
+						else
+							Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
+					}
 				break;
 
 			case 505:
@@ -7595,7 +7611,25 @@ static void P_SpawnScrollers(void)
 				if (s != 0xffff)
 					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[0], accel, 0);
 				else
-					CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing 2nd side!\n", sizeu1(i));
+					CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing back side!\n", sizeu1(i));
+				break;
+
+			case 507:
+				s = lines[i].sidenum[0];
+
+				if (lines[i].sidenum[1] != 0xffff)
+					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[1], accel, 0);
+				else
+					CONS_Debug(DBG_GAMELOGIC, "Line special 507 (line #%s) missing back side!\n", sizeu1(i));
+				break;
+
+			case 508:
+				s = lines[i].sidenum[1];
+
+				if (s != 0xffff)
+					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
+				else
+					CONS_Debug(DBG_GAMELOGIC, "Line special 508 (line #%s) missing back side!\n", sizeu1(i));
 				break;
 
 			case 500: // scroll first side
