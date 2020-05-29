@@ -142,7 +142,6 @@ size_t Z_TagsUsage(INT32 lowtag, INT32 hightag);
 // Miscellaneous functions
 //
 char *Z_StrDup(const char *in);
-#define Z_Unlock(p) (void)p // TODO: remove this now that NDS code has been removed
 
 // For renderer switching
 extern boolean needpatchflush;
