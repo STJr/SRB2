@@ -11392,11 +11392,8 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	P_SetThingPosition(fume);
 
 	// If dashmode is high enough, spawn a trail
-	if (!(fume->flags2 & MF2_DONTDRAW) && player->normalspeed >= skins[player->skin].normalspeed*2)
-	{
-		mobj_t *ghost = P_SpawnGhostMobj(fume);
-		ghost->tics = 4;
-	}
+	if (player->normalspeed >= skins[player->skin].normalspeed*2)
+		P_SpawnGhostMobj(fume);
 }
 
 //
