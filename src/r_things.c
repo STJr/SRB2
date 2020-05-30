@@ -1096,27 +1096,29 @@ static void R_SplitSprite(vissprite_t *sprite)
 //
 fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 {
-	fixed_t z, floorz = INT32_MIN;
-	pslope_t *slope, *floorslope = NULL;
+	boolean isflipped = thing->eflags & MFE_VERTICALFLIP;
+	fixed_t z, groundz = isflipped ? INT32_MAX : INT32_MIN;
+	pslope_t *slope, *groundslope = NULL;
 	msecnode_t *node;
 	sector_t *sector;
 	ffloor_t *rover;
+#define CHECKZ (isflipped ? z > thing->z+thing->height/2 && z < groundz : z < thing->z+thing->height/2 && z > groundz)
 
 	for (node = thing->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		sector = node->m_sector;
 
-		slope = sector->heightsec != -1 ? NULL : sector->f_slope;
+		slope = sector->heightsec != -1 ? NULL : (isflipped ? sector->c_slope : sector->f_slope);
 
 		if (sector->heightsec != -1)
-			z = sectors[sector->heightsec].floorheight;
+			z = isflipped ? sectors[sector->heightsec].ceilingheight : sectors[sector->heightsec].floorheight;
 		else
-			z = P_GetSectorFloorZAt(sector, thing->x, thing->y);
+			z = isflipped ? P_GetSectorCeilingZAt(sector, thing->x, thing->y) : P_GetSectorFloorZAt(sector, thing->x, thing->y);
 
-		if (z < thing->z+thing->height/2 && z > floorz)
+		if CHECKZ
 		{
-			floorz = z;
-			floorslope = slope;
+			groundz = z;
+			groundslope = slope;
 		}
 
 		if (sector->ffloors)
@@ -1125,23 +1127,25 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES) || (rover->alpha < 90 && !(rover->flags & FF_SWIMMABLE)))
 					continue;
 
-				z = P_GetFFloorTopZAt(rover, thing->x, thing->y);
-				if (z < thing->z+thing->height/2 && z > floorz)
+				z = isflipped ? P_GetFFloorBottomZAt(rover, thing->x, thing->y) : P_GetFFloorTopZAt(rover, thing->x, thing->y);
+				if CHECKZ
 				{
-					floorz = z;
-					floorslope = *rover->t_slope;
+					groundz = z;
+					groundslope = isflipped ? *rover->b_slope : *rover->t_slope;
 				}
 			}
 	}
 
-	if (thing->floorz > floorz + (!floorslope ? 0 : FixedMul(abs(floorslope->zdelta), thing->radius*3/2)))
+	if (isflipped ? (thing->ceilingz < groundz - (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2)))
+		: (thing->floorz > groundz + (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2))))
 	{
-		floorz = thing->floorz;
-		floorslope = NULL;
+		groundz = isflipped ? thing->ceilingz : thing->floorz;
+		groundslope = NULL;
 	}
 
 #if 0 // Unfortunately, this drops CEZ2 down to sub-17 FPS on my i7.
-	// Check polyobjects and see if floorz needs to be altered, for rings only because they don't update floorz
+	// NOTE: this section was not updated to reflect reverse gravity support
+	// Check polyobjects and see if groundz needs to be altered, for rings only because they don't update floorz
 	if (thing->type == MT_RING)
 	{
 		INT32 xl, xh, yl, yh, bx, by;
@@ -1186,10 +1190,10 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 						// We're inside it! Yess...
 						z = po->lines[0]->backsector->ceilingheight;
 
-						if (z < thing->z+thing->height/2 && z > floorz)
+						if (z < thing->z+thing->height/2 && z > groundz)
 						{
-							floorz = z;
-							floorslope = NULL;
+							groundz = z;
+							groundslope = NULL;
 						}
 					}
 					plink = (polymaplink_t *)(plink->link.next);
@@ -1199,9 +1203,9 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 #endif
 
 	if (shadowslope != NULL)
-		*shadowslope = floorslope;
+		*shadowslope = groundslope;
 
-	return floorz;
+	return groundz;
 }
 
 static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, fixed_t tx, fixed_t tz)
@@ -1212,14 +1216,15 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	INT32 light = 0;
 	fixed_t scalemul; UINT8 trans;
 	fixed_t floordiff;
-	fixed_t floorz;
-	pslope_t *floorslope;
+	fixed_t groundz;
+	pslope_t *groundslope;
+	boolean isflipped = thing->eflags & MFE_VERTICALFLIP;
 
-	floorz = R_GetShadowZ(thing, &floorslope);
+	groundz = R_GetShadowZ(thing, &groundslope);
 
-	if (abs(floorz-viewz)/tz > 4) return; // Prevent stretchy shadows and possible crashes
+	if (abs(groundz-viewz)/tz > 4) return; // Prevent stretchy shadows and possible crashes
 
-	floordiff = abs(thing->z - floorz);
+	floordiff = abs((isflipped ? thing->height : 0) + thing->z - groundz);
 
 	trans = floordiff / (100*FRACUNIT) + 3;
 	if (trans >= 9) return;
@@ -1230,23 +1235,23 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	xscale = FixedDiv(projection, tz);
 	yscale = FixedDiv(projectiony, tz);
 	shadowxscale = FixedMul(thing->radius*2, scalemul);
-	shadowyscale = FixedMul(FixedMul(thing->radius*2, scalemul), FixedDiv(abs(floorz - viewz), tz));
+	shadowyscale = FixedMul(FixedMul(thing->radius*2, scalemul), FixedDiv(abs(groundz - viewz), tz));
 	shadowyscale = min(shadowyscale, shadowxscale) / SHORT(patch->height);
 	shadowxscale /= SHORT(patch->width);
 	shadowskew = 0;
 
-	if (floorslope)
+	if (groundslope)
 	{
 		// haha let's try some dumb stuff
 		fixed_t xslope, zslope;
-		angle_t sloperelang = (R_PointToAngle(thing->x, thing->y) - floorslope->xydirection) >> ANGLETOFINESHIFT;
+		angle_t sloperelang = (R_PointToAngle(thing->x, thing->y) - groundslope->xydirection) >> ANGLETOFINESHIFT;
 
-		xslope = FixedMul(FINESINE(sloperelang), floorslope->zdelta);
-		zslope = FixedMul(FINECOSINE(sloperelang), floorslope->zdelta);
+		xslope = FixedMul(FINESINE(sloperelang), groundslope->zdelta);
+		zslope = FixedMul(FINECOSINE(sloperelang), groundslope->zdelta);
 
 		//CONS_Printf("Shadow is sloped by %d %d\n", xslope, zslope);
 
-		if (viewz < floorz)
+		if (viewz < groundz)
 			shadowyscale += FixedMul(FixedMul(thing->radius*2 / SHORT(patch->height), scalemul), zslope);
 		else
 			shadowyscale -= FixedMul(FixedMul(thing->radius*2 / SHORT(patch->height), scalemul), zslope);
@@ -1271,7 +1276,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow->heightsec = vis->heightsec;
 
 	shadow->thingheight = FRACUNIT;
-	shadow->pz = floorz;
+	shadow->pz = groundz + (isflipped ? -shadow->thingheight : 0);
 	shadow->pzt = shadow->pz + shadow->thingheight;
 
 	shadow->mobjflags = 0;
@@ -1279,7 +1284,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow->dispoffset = vis->dispoffset - 5;
 	shadow->gx = thing->x;
 	shadow->gy = thing->y;
-	shadow->gzt = shadow->pz + SHORT(patch->height) * shadowyscale / 2;
+	shadow->gzt = (isflipped ? shadow->pzt : shadow->pz) + SHORT(patch->height) * shadowyscale / 2;
 	shadow->gz = shadow->gzt - SHORT(patch->height) * shadowyscale;
 	shadow->texturemid = FixedMul(thing->scale, FixedDiv(shadow->gzt - viewz, shadowyscale));
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
