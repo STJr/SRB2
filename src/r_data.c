@@ -742,7 +742,7 @@ Rloadflats (INT32 i, INT32 w)
 					continue; // If it is then SKIP IT
 			}
 
-			flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+			flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_LEVEL);
 			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 
 			switch (lumplength)
@@ -800,8 +800,6 @@ Rloadflats (INT32 i, INT32 w)
 			patch->wad = (UINT16)w;
 			patch->lump = texstart + j;
 			patch->flip = 0;
-
-			Z_Free(flatlump);
 
 			texturewidth[i] = texture->width;
 			textureheight[i] = texture->height << FRACBITS;
@@ -863,7 +861,7 @@ Rloadtextures (INT32 i, INT32 w)
 					continue; // If it is then SKIP IT
 			}
 
-			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_LEVEL);
 #ifndef NO_PNG_LUMPS
 			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 #endif
@@ -901,8 +899,6 @@ Rloadtextures (INT32 i, INT32 w)
 			patch->wad = (UINT16)w;
 			patch->lump = texstart + j;
 			patch->flip = 0;
-
-			Z_Free(patchlump);
 
 			texturewidth[i] = texture->width;
 			textureheight[i] = texture->height << FRACBITS;
