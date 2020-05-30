@@ -1289,7 +1289,7 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 			                   pic,
 			                   format2bpp[grpatch->mipmap->grInfo.format]);
 
-		Z_Free(pic);
+		Z_ChangeTag(pic, PU_HWRCACHE_UNLOCKED);
 		Z_ChangeTag(block, PU_HWRCACHE_UNLOCKED);
 
 		grpatch->mipmap->flags = 0;
