@@ -670,7 +670,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 		HWR_DrawTexturePatchInCache(&grtex->mipmap, blockwidth, blockheight, texture, patch, realpatch);
 
 		if (dealloc)
-			Z_Free(realpatch);
+			Z_ChangeTag(realpatch, PU_HWRCACHE_UNLOCKED);
 	}
 	//Hurdler: not efficient at all but I don't remember exactly how HWR_DrawPatchInCache works :(
 	if (format2bpp[grtex->mipmap.grInfo.format]==4)
