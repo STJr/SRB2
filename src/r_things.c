@@ -1206,6 +1206,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 		*shadowslope = groundslope;
 
 	return groundz;
+#undef CHECKZ
 }
 
 static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, fixed_t tx, fixed_t tz)
