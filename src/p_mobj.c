@@ -2948,6 +2948,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 					}
 				}
 
+			clipmomz = P_PlayerHitFloor(mo->player, true);
+
 			if (!stopmovecut)
 				// Cut momentum in half when you hit the ground and
 				// aren't pressing any controls.
@@ -2957,8 +2959,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 					mo->momy >>= 1;
 				}
 			}
-
-			clipmomz = P_PlayerHitFloor(mo->player, true);
 
 			if (!(mo->player->pflags & PF_SPINNING) && mo->player->powers[pw_carry] != CR_NIGHTSMODE)
 				mo->player->pflags &= ~PF_STARTDASH;
