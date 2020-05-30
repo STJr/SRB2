@@ -12231,10 +12231,8 @@ void P_PlayerThink(player_t *player)
 		{
 			mobj_t *ghost = P_SpawnGhostMobj(player->mo); // Spawns afterimages
 			ghost->fuse = 2; // Makes the images fade quickly
-			if (ghost->tracer)
-			{
+			if (ghost->tracer && !P_MobjWasRemoved(ghost->tracer))
 				ghost->tracer->fuse = ghost->fuse;
-			}
 		}
 	}
 	else if (dashmode)
