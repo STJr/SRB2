@@ -85,6 +85,10 @@ tic_t jointimeout = (10*TICRATE);
 static boolean sendingsavegame[MAXNETNODES]; // Are we sending the savegame?
 static tic_t freezetimeout[MAXNETNODES]; // Until when can this node freeze the server before getting a timeout?
 
+// Incremented by cv_joindelay when a client joins, decremented each tic.
+// If higher than cv_joindelay * 2 (3 joins in a short timespan), joins are temporarily disabled.
+static tic_t joindelay = 0;
+
 UINT16 pingmeasurecount = 1;
 UINT32 realpingtable[MAXPLAYERS]; //the base table of ping where an average will be sent to everyone.
 UINT32 playerpingtable[MAXPLAYERS]; //table of player latency values.
@@ -191,24 +195,25 @@ static inline void *G_ScpyTiccmd(ticcmd_t* dest, void* src, const size_t n)
 // of 512 bytes is like 0.1)
 UINT16 software_MAXPACKETLENGTH;
 
-/** Guesses the value of a tic from its lowest byte and from maketic
+/** Guesses the full value of a tic from its lowest byte, for a specific node
   *
   * \param low The lowest byte of the tic value
+  * \param node The node to deduce the tic for
   * \return The full tic value
   *
   */
-tic_t ExpandTics(INT32 low)
+tic_t ExpandTics(INT32 low, INT32 node)
 {
 	INT32 delta;
 
-	delta = low - (maketic & UINT8_MAX);
+	delta = low - (nettics[node] & UINT8_MAX);
 
 	if (delta >= -64 && delta <= 64)
-		return (maketic & ~UINT8_MAX) + low;
+		return (nettics[node] & ~UINT8_MAX) + low;
 	else if (delta > 64)
-		return (maketic & ~UINT8_MAX) - 256 + low;
+		return (nettics[node] & ~UINT8_MAX) - 256 + low;
 	else //if (delta < -64)
-		return (maketic & ~UINT8_MAX) + 256 + low;
+		return (nettics[node] & ~UINT8_MAX) + 256 + low;
 }
 
 // -----------------------------------------------------------------
@@ -1491,7 +1496,7 @@ static boolean SV_SendServerConfig(INT32 node)
 		if (!playeringame[i])
 			continue;
 		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
-		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
+		netbuffer->u.servercfg.playercolor[i] = (UINT16)players[i].skincolor;
 		netbuffer->u.servercfg.playeravailabilities[i] = (UINT32)LONG(players[i].availabilities);
 	}
 
@@ -1686,7 +1691,7 @@ static void CL_LoadReceivedSavegame(void)
 	// load a base level
 	if (P_LoadNetGame())
 	{
-		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
+		const UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
 		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
 		if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
 		{
@@ -3077,6 +3082,8 @@ consvar_t cv_allownewplayer = {"allowjoin", "On", CV_NETVAR, CV_OnOff, NULL, 0, 
 consvar_t cv_joinnextround = {"joinnextround", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
 consvar_t cv_maxplayers = {"maxplayers", "8", CV_SAVE, maxplayers_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t joindelay_cons_t[] = {{1, "MIN"}, {3600, "MAX"}, {0, "Off"}, {0, NULL}};
+consvar_t cv_joindelay = {"joindelay", "10", CV_SAVE, joindelay_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static CV_PossibleValue_t rejointimeout_cons_t[] = {{1, "MIN"}, {60 * FRACUNIT, "MAX"}, {0, "Off"}, {0, NULL}};
 consvar_t cv_rejointimeout = {"rejointimeout", "Off", CV_SAVE|CV_FLOAT, rejointimeout_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -3163,6 +3170,8 @@ void SV_ResetServer(void)
 	maketic = gametic + 1;
 	neededtic = maketic;
 	tictoclear = maketic;
+
+	joindelay = 0;
 
 	for (i = 0; i < MAXNETNODES; i++)
 		ResetNode(i);
@@ -3283,7 +3292,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	boolean splitscreenplayer;
 	boolean rejoined;
 	player_t *newplayer;
-	char *port;
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -3314,10 +3322,15 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 		if (server && I_GetNodeAddress)
 		{
-			strcpy(playeraddress[newplayernum], I_GetNodeAddress(node));
-			port = strchr(playeraddress[newplayernum], ':');
-			if (port)
-				*port = '\0';
+			const char *address = I_GetNodeAddress(node);
+			char *port = NULL;
+			if (address) // MI: fix msvcrt.dll!_mbscat crash?
+			{
+				strcpy(playeraddress[newplayernum], address);
+				port = strchr(playeraddress[newplayernum], ':');
+				if (port)
+					*port = '\0';
+			}
 		}
 	}
 
@@ -3613,6 +3626,9 @@ static void HandleConnect(SINT8 node)
 		SV_SendRefuse(node, M_GetText("No players from\nthis node."));
 	else if (luafiletransfers)
 		SV_SendRefuse(node, M_GetText("The server is broadcasting a file\nrequested by a Lua script.\nPlease wait a bit and then\ntry rejoining."));
+	else if (netgame && joindelay > 2 * (tic_t)cv_joindelay.value * TICRATE)
+		SV_SendRefuse(node, va(M_GetText("Too many people are connecting.\nPlease wait %d seconds and then\ntry rejoining."),
+			(joindelay - 2 * cv_joindelay.value * TICRATE) / TICRATE));
 	else
 	{
 #ifndef NONET
@@ -3670,6 +3686,7 @@ static void HandleConnect(SINT8 node)
 				DEBFILE("send savegame\n");
 			}
 			SV_AddWaitingPlayers(names[0], names[1]);
+			joindelay += cv_joindelay.value * TICRATE;
 			player_joining = true;
 		}
 #else
@@ -3865,7 +3882,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			for (j = 0; j < MAXPLAYERS; j++)
 			{
 				if (netbuffer->u.servercfg.playerskins[j] == 0xFF
-				 && netbuffer->u.servercfg.playercolor[j] == 0xFF
+				 && netbuffer->u.servercfg.playercolor[j] == 0xFFFF
 				 && netbuffer->u.servercfg.playeravailabilities[j] == 0xFFFFFFFF)
 					continue; // not in game
 
@@ -3987,8 +4004,8 @@ static void HandlePacketFromPlayer(SINT8 node)
 
 			// To save bytes, only the low byte of tic numbers are sent
 			// Use ExpandTics to figure out what the rest of the bytes are
-			realstart = ExpandTics(netbuffer->u.clientpak.client_tic);
-			realend = ExpandTics(netbuffer->u.clientpak.resendfrom);
+			realstart = ExpandTics(netbuffer->u.clientpak.client_tic, node);
+			realend = ExpandTics(netbuffer->u.clientpak.resendfrom, node);
 
 			if (netbuffer->packettype == PT_CLIENTMIS || netbuffer->packettype == PT_CLIENT2MIS
 				|| netbuffer->packettype == PT_NODEKEEPALIVEMIS
@@ -4240,15 +4257,15 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 			}
 
-			realstart = ExpandTics(netbuffer->u.serverpak.starttic);
+			realstart = netbuffer->u.serverpak.starttic;
 			realend = realstart + netbuffer->u.serverpak.numtics;
 
 			if (!txtpak)
 				txtpak = (UINT8 *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots
 					* netbuffer->u.serverpak.numtics];
 
-			if (realend > gametic + BACKUPTICS)
-				realend = gametic + BACKUPTICS;
+			if (realend > gametic + CLIENTBACKUPTICS)
+				realend = gametic + CLIENTBACKUPTICS;
 			cl_packetmissed = realstart > neededtic;
 
 			if (realstart <= neededtic && realend > neededtic)
@@ -4591,11 +4608,11 @@ static void SV_SendTics(void)
 	for (n = 1; n < MAXNETNODES; n++)
 		if (nodeingame[n])
 		{
-			lasttictosend = maketic;
-
 			// assert supposedtics[n]>=nettics[n]
 			realfirsttic = supposedtics[n];
-			if (realfirsttic >= maketic)
+			lasttictosend = min(maketic, realfirsttic + CLIENTBACKUPTICS);
+
+			if (realfirsttic >= lasttictosend)
 			{
 				// well we have sent all tics we will so use extrabandwidth
 				// to resent packet that are supposed lost (this is necessary since lost
@@ -4604,7 +4621,7 @@ static void SV_SendTics(void)
 				DEBFILE(va("Nothing to send node %u mak=%u sup=%u net=%u \n",
 					n, maketic, supposedtics[n], nettics[n]));
 				realfirsttic = nettics[n];
-				if (realfirsttic >= maketic || (I_GetTime() + n)&3)
+				if (realfirsttic >= lasttictosend || (I_GetTime() + n)&3)
 					// all tic are ok
 					continue;
 				DEBFILE(va("Sent %d anyway\n", realfirsttic));
@@ -4647,7 +4664,7 @@ static void SV_SendTics(void)
 
 			// Send the tics
 			netbuffer->packettype = PT_SERVERTICS;
-			netbuffer->u.serverpak.starttic = (UINT8)realfirsttic;
+			netbuffer->u.serverpak.starttic = realfirsttic;
 			netbuffer->u.serverpak.numtics = (UINT8)(lasttictosend - realfirsttic);
 			netbuffer->u.serverpak.numslots = (UINT8)SHORT(doomcom->numslots);
 			bufpos = (UINT8 *)&netbuffer->u.serverpak.cmds;
@@ -5038,12 +5055,21 @@ void NetUpdate(void)
 				hu_resynching = true;
 		}
 	}
+
 	Net_AckTicker();
+
 	// Handle timeouts to prevent definitive freezes from happenning
 	if (server)
+	{
 		for (i = 1; i < MAXNETNODES; i++)
 			if (nodeingame[i] && freezetimeout[i] < I_GetTime())
 				Net_ConnectionTimeout(i);
+
+		// In case the cvar value was lowered
+		if (joindelay)
+			joindelay = min(joindelay - 1, 3 * (tic_t)cv_joindelay.value * TICRATE);
+	}
+
 	nowtime /= NEWTICRATERATIO;
 	if (nowtime > resptime)
 	{
@@ -5051,6 +5077,7 @@ void NetUpdate(void)
 		M_Ticker();
 		CON_Ticker();
 	}
+
 	SV_FileSendTicker();
 }
 

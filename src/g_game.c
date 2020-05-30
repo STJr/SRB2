@@ -54,7 +54,7 @@ UINT8 ultimatemode = false;
 
 boolean botingame;
 UINT8 botskin;
-UINT8 botcolor;
+UINT16 botcolor;
 
 JoyType_t Joystick;
 JoyType_t Joystick2;
@@ -135,10 +135,10 @@ INT32 tutorialanalog = 0; // store cv_analog[0] user value
 
 boolean looptitle = false;
 
-UINT8 skincolor_redteam = SKINCOLOR_RED;
-UINT8 skincolor_blueteam = SKINCOLOR_BLUE;
-UINT8 skincolor_redring = SKINCOLOR_SALMON;
-UINT8 skincolor_bluering = SKINCOLOR_CORNFLOWER;
+UINT16 skincolor_redteam = SKINCOLOR_RED;
+UINT16 skincolor_blueteam = SKINCOLOR_BLUE;
+UINT16 skincolor_redring = SKINCOLOR_SALMON;
+UINT16 skincolor_bluering = SKINCOLOR_CORNFLOWER;
 
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
@@ -1866,6 +1866,7 @@ void G_StartTitleCard(void)
 //
 void G_PreLevelTitleCard(void)
 {
+#ifndef NOWIPE
 	tic_t starttime = I_GetTime();
 	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
 	tic_t nowtime = starttime;
@@ -1888,6 +1889,7 @@ void G_PreLevelTitleCard(void)
 	}
 	if (!cv_showhud.value)
 		wipestyleflags = WSF_CROSSFADE;
+#endif
 }
 
 static boolean titlecardforreload = false;
@@ -2382,7 +2384,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	INT16 totalring;
 	UINT8 laps;
 	UINT8 mare;
-	UINT8 skincolor;
+	UINT16 skincolor;
 	INT32 skin;
 	UINT32 availabilities;
 	tic_t jointime;
@@ -4480,7 +4482,7 @@ cleanup:
 //
 void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, boolean SSSG, boolean FLS)
 {
-	UINT8 color = skins[pickedchar].prefcolor;
+	UINT16 color = skins[pickedchar].prefcolor;
 	paused = false;
 
 	if (demoplayback)
@@ -4634,7 +4636,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 	{
 		size_t len = 1;
 		const char *zonetext = NULL;
-		const INT32 actnum = mapheaderinfo[mapnum-1]->actnum;
+		const UINT8 actnum = mapheaderinfo[mapnum-1]->actnum;
 
 		len += strlen(mapheaderinfo[mapnum-1]->lvlttl);
 		if (!(mapheaderinfo[mapnum-1]->levelflags & LF_NOZONE))

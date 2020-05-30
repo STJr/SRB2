@@ -14,7 +14,7 @@
 #include "fastcmp.h"
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
-#include "p_slopes.h" // P_GetZAt
+#include "p_slopes.h" // P_GetSlopeZAt
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_draw.h"
@@ -27,6 +27,7 @@
 #include "hu_stuff.h"	// HU_AddChatText
 #include "console.h"
 #include "d_netcmd.h" // IsPlayerAdmin
+#include "m_menu.h" // Player Setup menu color stuff
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -144,6 +145,8 @@ static const struct {
 	{META_STATE,        "state_t"},
 	{META_MOBJINFO,     "mobjinfo_t"},
 	{META_SFXINFO,      "sfxinfo_t"},
+	{META_SKINCOLOR,    "skincolor_t"},
+	{META_COLORRAMP,    "skincolor_t.ramp"},
 	{META_SPRITEINFO,   "spriteinfo_t"},
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
@@ -249,6 +252,43 @@ static int lib_reserveLuabanks(lua_State *L)
 		return luaL_error(L, "luabanks[] has already been reserved! Only one savedata-enabled mod at a time may use this feature.");
 	reserved = true;
 	LUA_PushUserdata(L, &luabanks, META_LUABANKS);
+	return 1;
+}
+
+// M_MENU
+//////////////
+
+static int lib_pMoveColorBefore(lua_State *L)
+{
+	UINT16 color = (UINT16)luaL_checkinteger(L, 1);
+	UINT16 targ = (UINT16)luaL_checkinteger(L, 2);
+
+	NOHUD
+	M_MoveColorBefore(color, targ);
+	return 0;
+}
+
+static int lib_pMoveColorAfter(lua_State *L)
+{
+	UINT16 color = (UINT16)luaL_checkinteger(L, 1);
+	UINT16 targ = (UINT16)luaL_checkinteger(L, 2);
+
+	NOHUD
+	M_MoveColorAfter(color, targ);
+	return 0;
+}
+
+static int lib_pGetColorBefore(lua_State *L)
+{
+	UINT16 color = (UINT16)luaL_checkinteger(L, 1);
+	lua_pushinteger(L, M_GetColorBefore(color));
+	return 1;
+}
+
+static int lib_pGetColorAfter(lua_State *L)
+{
+	UINT16 color = (UINT16)luaL_checkinteger(L, 1);
+	lua_pushinteger(L, M_GetColorAfter(color));
 	return 1;
 }
 
@@ -2184,14 +2224,20 @@ static int lib_evStartCrumble(lua_State *L)
 
 static int lib_pGetZAt(lua_State *L)
 {
-	pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
 	fixed_t x = luaL_checkfixed(L, 2);
 	fixed_t y = luaL_checkfixed(L, 3);
 	//HUDSAFE
-	if (!slope)
-		return LUA_ErrInvalid(L, "pslope_t");
+	if (lua_isnil(L, 1))
+	{
+		fixed_t z = luaL_checkfixed(L, 4);
+		lua_pushfixed(L, P_GetZAt(NULL, x, y, z));
+	}
+	else
+	{
+		pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
+		lua_pushfixed(L, P_GetSlopeZAt(slope, x, y));
+	}
 
-	lua_pushfixed(L, P_GetZAt(slope, x, y));
 	return 1;
 }
 
@@ -2382,10 +2428,10 @@ static int lib_rGetColorByName(lua_State *L)
 // SKINCOLOR_GREEN > "Green" for example
 static int lib_rGetNameByColor(lua_State *L)
 {
-	UINT8 colornum = (UINT8)luaL_checkinteger(L, 1);
-	if (!colornum || colornum >= MAXSKINCOLORS)
-		return luaL_error(L, "skincolor %d out of range (1 - %d).", colornum, MAXSKINCOLORS-1);
-	lua_pushstring(L, Color_Names[colornum]);
+	UINT16 colornum = (UINT16)luaL_checkinteger(L, 1);
+	if (!colornum || colornum >= numskincolors)
+		return luaL_error(L, "skincolor %d out of range (1 - %d).", colornum, numskincolors-1);
+	lua_pushstring(L, skincolors[colornum].name);
 	return 1;
 }
 
@@ -2455,6 +2501,20 @@ static int lib_sStopSound(lua_State *L)
 	if (!origin)
 		return LUA_ErrInvalid(L, "mobj_t");
 	S_StopSound(origin);
+	return 0;
+}
+
+static int lib_sStopSoundByID(lua_State *L)
+{
+	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	sfxenum_t sound_id = luaL_checkinteger(L, 2);
+	//NOHUD
+	if (!origin)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (sound_id >= NUMSFX)
+		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
+
+	S_StopSoundByID(origin, sound_id);
 	return 0;
 }
 
@@ -2878,12 +2938,47 @@ static int lib_gAddGametype(lua_State *L)
 	return 0;
 }
 
+static int Lcheckmapnumber (lua_State *L, int idx, const char *fun)
+{
+	if (ISINLEVEL)
+		return luaL_optinteger(L, idx, gamemap);
+	else
+	{
+		if (lua_isnoneornil(L, idx))
+		{
+			return luaL_error(L,
+					"%s can only be used without a parameter while in a level.",
+					fun
+			);
+		}
+		else
+			return luaL_checkinteger(L, idx);
+	}
+}
+
 static int lib_gBuildMapName(lua_State *L)
 {
-	INT32 map = luaL_optinteger(L, 1, gamemap);
+	INT32 map = Lcheckmapnumber(L, 1, "G_BuildMapName");
 	//HUDSAFE
-	INLEVEL
 	lua_pushstring(L, G_BuildMapName(map));
+	return 1;
+}
+
+static int lib_gBuildMapTitle(lua_State *L)
+{
+	INT32 map = Lcheckmapnumber(L, 1, "G_BuildMapTitle");
+	char *name;
+	if (map < 1 || map > NUMMAPS)
+	{
+		return luaL_error(L,
+				"map number %d out of range (1 - %d)",
+				map,
+				NUMMAPS
+		);
+	}
+	name = G_BuildMapTitle(map);
+	lua_pushstring(L, name);
+	Z_Free(name);
 	return 1;
 }
 
@@ -3073,6 +3168,12 @@ static luaL_Reg lib[] = {
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
 	{"reserveLuabanks", lib_reserveLuabanks},
 
+	// m_menu
+	{"M_MoveColorAfter",lib_pMoveColorAfter},
+	{"M_MoveColorBefore",lib_pMoveColorBefore},
+	{"M_GetColorAfter",lib_pGetColorAfter},
+	{"M_GetColorBefore",lib_pGetColorBefore},
+
 	// m_random
 	{"P_RandomFixed",lib_pRandomFixed},
 	{"P_RandomByte",lib_pRandomByte},
@@ -3253,6 +3354,7 @@ static luaL_Reg lib[] = {
 	{"S_StartSound",lib_sStartSound},
 	{"S_StartSoundAtVolume",lib_sStartSoundAtVolume},
 	{"S_StopSound",lib_sStopSound},
+	{"S_StopSoundByID",lib_sStopSoundByID},
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
 	{"S_StopMusic",lib_sStopMusic},
@@ -3271,6 +3373,7 @@ static luaL_Reg lib[] = {
 	// g_game
 	{"G_AddGametype", lib_gAddGametype},
 	{"G_BuildMapName",lib_gBuildMapName},
+	{"G_BuildMapTitle",lib_gBuildMapTitle},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
 	{"G_EnoughPlayersFinished",lib_gEnoughPlayersFinished},

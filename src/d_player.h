@@ -239,7 +239,8 @@ typedef enum
 	CR_MACESPIN,
 	CR_MINECART,
 	CR_ROLLOUT,
-	CR_PTERABYTE
+	CR_PTERABYTE,
+	CR_DUSTDEVIL
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
@@ -365,7 +366,7 @@ typedef struct player_s
 	UINT16 flashpal;
 
 	// Player skin colorshift, 0-15 for which color to draw player.
-	UINT8 skincolor;
+	UINT16 skincolor;
 
 	INT32 skin;
 	UINT32 availabilities;

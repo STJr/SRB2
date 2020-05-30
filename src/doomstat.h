@@ -145,7 +145,7 @@ extern INT32 tutorialanalog; // store cv_analog[0] user value
 extern boolean looptitle;
 
 // CTF colors.
-extern UINT8 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
+extern UINT16 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
 
 extern tic_t countdowntimer;
 extern boolean countdowntimeup;
@@ -319,6 +319,9 @@ typedef struct
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
 	UINT16 startrings;      ///< Number of rings players start with.
+	INT32 sstimer;          ///< Timer for special stages.
+	UINT32 ssspheres;       ///< Sphere requirement in special stages.
+	fixed_t gravity;        ///< Map-wide gravity.
 
 	// Title card.
 	char ltzzpatch[8];      ///< Zig zag patch.
@@ -542,7 +545,7 @@ extern recorddata_t *mainrecords[NUMMAPS];
 extern UINT8 mapvisited[NUMMAPS];
 
 // Temporary holding place for nights data for the current map
-nightsdata_t ntemprecords;
+extern nightsdata_t ntemprecords;
 
 extern UINT32 token; ///< Number of tokens collected in a level
 extern UINT32 tokenlist; ///< List of tokens collected
@@ -616,6 +619,19 @@ extern tic_t gametic;
 extern mapthing_t *playerstarts[MAXPLAYERS]; // Cooperative
 extern mapthing_t *bluectfstarts[MAXPLAYERS]; // CTF
 extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
+
+#define WAYPOINTSEQUENCESIZE 256
+#define NUMWAYPOINTSEQUENCES 256
+extern mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
+extern UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
+
+void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint);
+mobj_t *P_GetFirstWaypoint(UINT8 sequence);
+mobj_t *P_GetLastWaypoint(UINT8 sequence);
+mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap);
+mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap);
+mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo);
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence);
 
 // =====================================
 // Internal parameters, used for engine.
