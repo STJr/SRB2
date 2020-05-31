@@ -725,7 +725,7 @@ static void P_NetArchiveWaypoints(void)
 	{
 		WRITEUINT16(save_p, numwaypoints[i]);
 		for (j = 0; j < numwaypoints[i]; j++)
-			WRITEUINT32(save_p, waypoints[i][j] ? waypoints[i][j]->mobjnum : 0xffff);
+			WRITEUINT32(save_p, waypoints[i][j] ? waypoints[i][j]->mobjnum : 0);
 	}
 }
 
@@ -740,7 +740,7 @@ static void P_NetUnArchiveWaypoints(void)
 		for (j = 0; j < numwaypoints[i]; j++)
 		{
 			mobjnum = READUINT32(save_p);
-			waypoints[i][j] = (mobjnum == 0xffff) ? NULL : P_FindNewPosition(mobjnum);
+			waypoints[i][j] = (mobjnum == 0) ? NULL : P_FindNewPosition(mobjnum);
 		}
 	}
 }
