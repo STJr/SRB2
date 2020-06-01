@@ -2797,6 +2797,30 @@ static void P_LinkMapData(void)
 	}
 }
 
+/** Hashes the sector tags across the sectors and linedefs.
+  *
+  * \sa P_FindSectorFromTag, P_ChangeSectorTag
+  * \author Lee Killough
+  */
+static inline void P_InitTagLists(void)
+{
+	register size_t i;
+
+	for (i = numsectors - 1; i != (size_t)-1; i--)
+	{
+		size_t j = (unsigned)sectors[i].tag % numsectors;
+		sectors[i].nexttag = sectors[j].firsttag;
+		sectors[j].firsttag = (INT32)i;
+	}
+
+	for (i = numlines - 1; i != (size_t)-1; i--)
+	{
+		size_t j = (unsigned)lines[i].tag % numlines;
+		lines[i].nexttag = lines[j].firsttag;
+		lines[j].firsttag = (INT32)i;
+	}
+}
+
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
@@ -2806,6 +2830,45 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (lines[i].special)
 		{
+		case 20: //PolyObject first line
+		{
+			INT32 paramline = P_FindSpecialLineFromTag(22, lines[i].tag, -1);
+
+			//PolyObject ID
+			lines[i].args[0] = lines[i].tag;
+
+			//Default: Invisible planes
+			lines[i].args[3] |= TMPF_INVISIBLEPLANES;
+
+			//Linedef executor tag
+			lines[i].args[4] = 32000 + lines[i].args[0];
+
+			if (paramline == -1)
+				break; // no extra settings to apply, let's leave it
+
+			//Parent ID
+			lines[i].args[1] = lines[paramline].frontsector->special;
+			//Translucency
+			lines[i].args[2] = (lines[paramline].flags & ML_DONTPEGTOP)
+						? (sides[lines[paramline].sidenum[0]].textureoffset >> FRACBITS)
+						: ((lines[paramline].frontsector->floorheight >> FRACBITS) / 100);
+
+			//Flags
+			if (lines[paramline].flags & ML_EFFECT1)
+				lines[i].args[3] |= TMPF_NOINSIDES;
+			if (lines[paramline].flags & ML_EFFECT2)
+				lines[i].args[3] |= TMPF_INTANGIBLE;
+			if (lines[paramline].flags & ML_EFFECT3)
+				lines[i].args[3] |= TMPF_PUSHABLESTOP;
+			if (lines[paramline].flags & ML_EFFECT4)
+				lines[i].args[3] &= ~TMPF_INVISIBLEPLANES;
+			/*if (lines[paramline].flags & ML_EFFECT5)
+				lines[i].args[3] |= TMPF_DONTCLIPPLANES;*/
+			if (lines[paramline].flags & ML_NOCLIMB)
+				lines[i].args[3] |= TMPF_EXECUTOR;
+
+			break;
+		}
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
@@ -2956,9 +3019,17 @@ static void P_ConvertBinaryMap(void)
 		case 750:
 		case 760:
 		case 761:
-		case 762:
 			mapthings[i].tag = mapthings[i].angle;
 			break;
+		case 762:
+		{
+			INT32 firstline = P_FindSpecialLineFromTag(20, mapthings[i].angle, -1);
+			if (firstline != -1)
+				lines[firstline].args[3] |= TMPF_CRUSH;
+			mapthings[i].tag = mapthings[i].angle;
+			mapthings[i].type = 761;
+			break;
+		}
 		case 780:
 			mapthings[i].tag = mapthings[i].extrainfo;
 			break;
@@ -3042,6 +3113,8 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_LinkMapData();
+
+	P_InitTagLists();   // Create xref tables for tags
 
 	if (!udmf)
 		P_ConvertBinaryMap();
@@ -3905,8 +3978,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	if (!P_LoadMapFromFile())
 		return false;
 
-	// init gravity, tag lists,
-	// anything that P_SpawnSlopes/P_LoadThings needs to know
+	// init anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
 	P_SpawnSlopes(fromnetsave);
