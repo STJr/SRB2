@@ -755,12 +755,13 @@ static void P_NetUnArchiveColormaps(void)
 #define LD_DIFF2    0x80
 
 // diff2 flags
-#define LD_S2TEXOFF   0x01
-#define LD_S2TOPTEX   0x02
-#define LD_S2BOTTEX   0x04
-#define LD_S2MIDTEX   0x08
-#define LD_ARGS       0x10
-#define LD_STRINGARGS 0x20
+#define LD_S2TEXOFF      0x01
+#define LD_S2TOPTEX      0x02
+#define LD_S2BOTTEX      0x04
+#define LD_S2MIDTEX      0x08
+#define LD_ARGS          0x10
+#define LD_STRINGARGS    0x20
+#define LD_EXECUTORDELAY 0x40
 
 static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
 {
@@ -1086,6 +1087,9 @@ static void ArchiveLines(void)
 		if (!P_AreStringArgsEqual(li, spawnli))
 			diff2 |= LD_STRINGARGS;
 
+		if (li->executordelay != spawnli->executordelay)
+			diff2 |= LD_EXECUTORDELAY;
+
 		if (li->sidenum[0] != 0xffff)
 		{
 			si = &sides[li->sidenum[0]];
@@ -1174,6 +1178,8 @@ static void ArchiveLines(void)
 						WRITECHAR(save_p, li->stringargs[j][k]);
 				}
 			}
+			if (diff2 & LD_EXECUTORDELAY)
+				WRITEINT32(save_p, li->executordelay);
 		}
 	}
 	WRITEUINT16(save_p, 0xffff);
@@ -1256,6 +1262,9 @@ static void UnArchiveLines(void)
 				li->stringargs[j][len] = '\0';
 			}
 		}
+		if (diff2 & LD_EXECUTORDELAY)
+			li->executordelay = READINT32(save_p);
+
 	}
 }
 
