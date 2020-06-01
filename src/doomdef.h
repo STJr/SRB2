@@ -396,7 +396,7 @@ typedef enum
 	NUMSUPERCOLORS = ((SKINCOLOR_FIRSTFREESLOT - FIRSTSUPERCOLOR)/5)
 } skincolornum_t;
 
-UINT16 numskincolors;
+extern UINT16 numskincolors;
 
 extern skincolor_t skincolors[MAXSKINCOLORS];
 
