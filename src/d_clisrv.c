@@ -1268,7 +1268,7 @@ static UINT8 Snake_GetOppositeDir(UINT8 dir)
 		return 12 + 5 - dir;
 }
 
-static void Snake_FindFreeSlot(UINT8 *x, UINT8 *y)
+static void Snake_FindFreeSlot(UINT8 *x, UINT8 *y, UINT8 headx, UINT8 heady)
 {
 	UINT16 i;
 
@@ -1280,7 +1280,7 @@ static void Snake_FindFreeSlot(UINT8 *x, UINT8 *y)
 		for (i = 0; i < snake->snakelength; i++)
 			if (*x == snake->snakex[i] && *y == snake->snakey[i])
 				break;
-	} while (i < snake->snakelength);
+	} while (i < snake->snakelength || (*x == headx && *y == heady));
 }
 
 static void Snake_Handle(void)
@@ -1420,7 +1420,7 @@ static void Snake_Handle(void)
 		}
 
 		// Spawn new apple
-		Snake_FindFreeSlot(&snake->applex, &snake->appley);
+		Snake_FindFreeSlot(&snake->applex, &snake->appley, x, y);
 
 		// Spawn new bonus
 		if (!(snake->snakelength % 5))
@@ -1431,7 +1431,7 @@ static void Snake_Handle(void)
 			} while (snake->snakelength > SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y * 3 / 4
 				&& (snake->bonustype == SNAKE_BONUS_EGGMAN || snake->bonustype == SNAKE_BONUS_FAST || snake->bonustype == SNAKE_BONUS_REVERSE));
 
-			Snake_FindFreeSlot(&snake->bonusx, &snake->bonusy);
+			Snake_FindFreeSlot(&snake->bonusx, &snake->bonusy, x, y);
 		}
 
 		S_StartSound(NULL, sfx_s3k6b);
