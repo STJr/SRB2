@@ -721,6 +721,34 @@ static void P_NetUnArchiveColormaps(void)
 	net_colormaps = NULL;
 }
 
+static void P_NetArchiveWaypoints(void)
+{
+	INT32 i, j;
+
+	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
+	{
+		WRITEUINT16(save_p, numwaypoints[i]);
+		for (j = 0; j < numwaypoints[i]; j++)
+			WRITEUINT32(save_p, waypoints[i][j] ? waypoints[i][j]->mobjnum : 0);
+	}
+}
+
+static void P_NetUnArchiveWaypoints(void)
+{
+	INT32 i, j;
+	UINT32 mobjnum;
+
+	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
+	{
+		numwaypoints[i] = READUINT16(save_p);
+		for (j = 0; j < numwaypoints[i]; j++)
+		{
+			mobjnum = READUINT32(save_p);
+			waypoints[i][j] = (mobjnum == 0) ? NULL : P_FindNewPosition(mobjnum);
+		}
+	}
+}
+
 ///
 /// World Archiving
 ///
@@ -1597,7 +1625,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff2 & MD2_SKIN)
 		WRITEUINT8(save_p, (UINT8)((skin_t *)mobj->skin - skins));
 	if (diff2 & MD2_COLOR)
-		WRITEUINT8(save_p, mobj->color);
+		WRITEUINT16(save_p, mobj->color);
 	if (diff2 & MD2_EXTVAL1)
 		WRITEINT32(save_p, mobj->extravalue1);
 	if (diff2 & MD2_EXTVAL2)
@@ -2599,7 +2627,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	if (diff2 & MD2_SKIN)
 		mobj->skin = &skins[READUINT8(save_p)];
 	if (diff2 & MD2_COLOR)
-		mobj->color = READUINT8(save_p);
+		mobj->color = READUINT16(save_p);
 	if (diff2 & MD2_EXTVAL1)
 		mobj->extravalue1 = READINT32(save_p);
 	if (diff2 & MD2_EXTVAL2)
@@ -4041,6 +4069,7 @@ void P_SaveNetGame(void)
 		P_NetArchiveThinkers();
 		P_NetArchiveSpecials();
 		P_NetArchiveColormaps();
+		P_NetArchiveWaypoints();
 	}
 	LUA_Archive();
 
@@ -4079,6 +4108,7 @@ boolean P_LoadNetGame(void)
 		P_NetUnArchiveThinkers();
 		P_NetUnArchiveSpecials();
 		P_NetUnArchiveColormaps();
+		P_NetUnArchiveWaypoints();
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}
