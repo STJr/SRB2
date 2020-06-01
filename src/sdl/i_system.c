@@ -178,6 +178,8 @@ static char returnWadPath[256];
 
 #include "../m_argv.h"
 
+#include "../m_menu.h"
+
 #ifdef MAC_ALERT
 #include "macosx/mac_alert.h"
 #endif
@@ -2295,6 +2297,7 @@ void I_Quit(void)
 
 	D_QuitNetGame();
 	CL_AbortDownloadResume();
+	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_ShutdownCD();
@@ -2412,6 +2415,7 @@ void I_Error(const char *error, ...)
 
 	D_QuitNetGame();
 	CL_AbortDownloadResume();
+	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_ShutdownCD();

@@ -134,6 +134,7 @@ consvar_t cv_playmusicifunfocused = {"playmusicifunfocused", "No", CV_SAVE, CV_Y
 consvar_t cv_playsoundsifunfocused = {"playsoundsifunfocused", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef HAVE_OPENMPT
+openmpt_module *openmpt_mhandle = NULL;
 static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
 consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #endif
@@ -1910,6 +1911,10 @@ UINT32 S_GetMusicPosition(void)
 /// In this section: mazmazz doesn't know how to do dynamic arrays or struct pointers!
 /// ------------------------
 
+char music_stack_nextmusname[7];
+boolean music_stack_noposition = false;
+UINT32 music_stack_fadeout = 0;
+UINT32 music_stack_fadein = 0;
 static musicstack_t *music_stacks = NULL;
 static musicstack_t *last_music_stack = NULL;
 

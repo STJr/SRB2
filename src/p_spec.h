@@ -104,9 +104,7 @@ typedef struct
 typedef struct
 {
 	thinker_t thinker; ///< Thinker structure for laser.
-	ffloor_t *ffloor;  ///< 3Dfloor that is a laser.
-	sector_t *sector;  ///< Sector in which the effect takes place.
-	sector_t *sec;
+	INT16 tag;
 	line_t *sourceline;
 	UINT8 nobosses;
 } laserthink_t;
