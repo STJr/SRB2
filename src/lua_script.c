@@ -452,6 +452,8 @@ INT32 lua_lumploading = 0;
 // Load a script from a MYFILE
 static inline void LUA_LoadFile(MYFILE *f, char *name, boolean noresults)
 {
+	int errorhandlerindex;
+
 	if (!name)
 		name = wadfiles[f->wad]->filename;
 	CONS_Printf("Loading Lua script from %s\n", name);
@@ -463,12 +465,13 @@ static inline void LUA_LoadFile(MYFILE *f, char *name, boolean noresults)
 	lua_lumploading++; // turn on loading flag
 
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	errorhandlerindex = lua_gettop(gL);
 	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, noresults ? 0 : LUA_MULTRET, lua_gettop(gL) - 1)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
 	lua_gc(gL, LUA_GCCOLLECT, 0);
-	lua_pop(gL, 1); // Pop error handler
+	lua_remove(gL, errorhandlerindex);
 
 	lua_lumploading--; // turn off again
 }
