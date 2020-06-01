@@ -1433,7 +1433,7 @@ void Command_Downloads_f(void)
 		&& transfer[node].txlist->ram == SF_FILE) // Node is downloading a file?
 		{
 			const char *name = transfer[node].txlist->id.filename;
-			UINT32 position = transfer[node].position;
+			UINT32 position = transfer[node].ackedsize;
 			UINT32 size = transfer[node].txlist->size;
 			char ratecolor;
 
