@@ -12814,7 +12814,7 @@ angle_t P_GetLocalAngle(player_t *player)
 
 void P_ForceLocalAngle(player_t *player, angle_t angle)
 {
-	angle = angle >> 16 << 16;
+	angle = angle & ~UINT16_MAX;
 
 	if (player == &players[consoleplayer])
 		localangle = angle;
