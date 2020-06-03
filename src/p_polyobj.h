@@ -38,7 +38,7 @@ typedef enum
 	POF_SOLID             = 0x3,       ///< Clips things.
 	POF_TESTHEIGHT        = 0x4,       ///< Test line collision with heights
 	POF_RENDERSIDES       = 0x8,       ///< Renders the sides.
-	POF_RENDERTOP         = 0x10,      ///< Renders the top..
+	POF_RENDERTOP         = 0x10,      ///< Renders the top.
 	POF_RENDERBOTTOM      = 0x20,      ///< Renders the bottom.
 	POF_RENDERPLANES      = 0x30,      ///< Renders top and bottom.
 	POF_RENDERALL         = 0x38,      ///< Renders everything.
@@ -49,6 +49,7 @@ typedef enum
 	POF_LDEXEC            = 0x400,     ///< This PO triggers a linedef executor.
 	POF_ONESIDE           = 0x800,     ///< Only use the first side of the linedef.
 	POF_NOSPECIALS        = 0x1000,    ///< Don't apply sector specials.
+	POF_SPLAT             = 0x2000,    ///< Use splat flat renderer (treat cyan pixels as invisible).
 } polyobjflags_e;
 
 //
