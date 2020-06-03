@@ -596,6 +596,10 @@ static void readfreeslots(MYFILE *f)
 						M_AddMenuColor(numskincolors++);
 						break;
 					}
+					else if (fastcmp(word, FREE_SKINCOLORS[i])) {
+						deh_warning("Freeslots: Skincolor 'SKINCOLOR_%s' already exists", word);
+						break; // don't continue
+					}
 			}
 			else if (fastcmp(type, "SPR2"))
 			{
@@ -10630,7 +10634,7 @@ static inline int lib_freeslot(lua_State *L)
 		else if (fastcmp(type, "SKINCOLOR"))
 		{
 			skincolornum_t i;
-			for (i = 0; i < NUMCOLORFREESLOTS; i++)
+			for (i = 0; i < NUMCOLORFREESLOTS; i++) {
 				if (!FREE_SKINCOLORS[i]) {
 					CONS_Printf("Skincolor SKINCOLOR_%s allocated.\n",word);
 					FREE_SKINCOLORS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
@@ -10640,6 +10644,11 @@ static inline int lib_freeslot(lua_State *L)
 					r++;
 					break;
 				}
+				else if (fastcmp(word, FREE_SKINCOLORS[i])) {
+					CONS_Printf("Skincolor SKINCOLOR_%s already exists.\n", word);
+					break;
+				}
+			}
 			if (i == NUMCOLORFREESLOTS)
 				CONS_Alert(CONS_WARNING, "Ran out of free skincolor slots!\n");
 		}
