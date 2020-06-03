@@ -204,18 +204,6 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedDiv(fixed_t a, fixed_t b)
 	return FixedDiv2(a, b);
 }
 
-/**	\brief	The FixedRem function
-
-	\param	x	fixed_t number
-	\param	y	fixed_t number
-
-	\return	 remainder of dividing x by y
-*/
-FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRem(fixed_t x, fixed_t y)
-{
-	return x % y;
-}
-
 /**	\brief	The FixedSqrt function
 
 	\param	x	fixed_t number

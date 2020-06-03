@@ -5106,13 +5106,13 @@ void A_SignPlayer(mobj_t *actor)
 	INT32 locvar2 = var2;
 	skin_t *skin = NULL;
 	mobj_t *ov;
-	UINT8 facecolor, signcolor = (UINT8)locvar2;
+	UINT16 facecolor, signcolor = (UINT16)locvar2;
 	UINT32 signframe = states[actor->info->raisestate].frame;
 
 	if (LUA_CallAction("A_SignPlayer", actor))
 		return;
 
-	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins || signcolor >= MAXTRANSLATIONS)
+	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins || signcolor >= numskincolors)
 		return;
 
 	// if no face overlay, spawn one
@@ -5143,7 +5143,7 @@ void A_SignPlayer(mobj_t *actor)
 		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
 			signcolor = skin->prefoppositecolor;
 		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
-			signcolor = Color_Opposite[actor->target->player->skincolor - 1][0];
+			signcolor = skincolors[actor->target->player->skincolor].invcolor;
 		else
 			signcolor = SKINCOLOR_NONE;
 	}
@@ -5181,7 +5181,7 @@ void A_SignPlayer(mobj_t *actor)
 		else if (skin->prefoppositecolor)
 			signcolor = skin->prefoppositecolor;
 		else if (facecolor)
-			signcolor = Color_Opposite[facecolor - 1][0];
+			signcolor = skincolors[facecolor].invcolor;
 	}
 
 	if (skin)
@@ -5212,19 +5212,8 @@ void A_SignPlayer(mobj_t *actor)
 	}
 
 	actor->tracer->color = signcolor;
-	/*
-	If you're here from the comment above Color_Opposite,
-	the following line is the one which is dependent on the
-	array being symmetrical. It gets the opposite of the
-	opposite of your desired colour just so it can get the
-	brightness frame for the End Sign. It's not a great
-	design choice, but it's constant time array access and
-	the idea that the colours should be OPPOSITES is kind
-	of in the name. If you have a better idea, feel free
-	to let me know. ~toast 2016/07/20
-	*/
-	if (signcolor && signcolor < MAXSKINCOLORS)
-		signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+	if (signcolor && signcolor < numskincolors)
+		signframe += (15 - skincolors[signcolor].invshade);
 	actor->tracer->frame = signframe;
 }
 
@@ -8804,10 +8793,10 @@ void A_ChangeColorRelative(mobj_t *actor)
 	{
 		// Have you ever seen anything so hideous?
 		if (actor->target)
-			actor->color = (UINT8)(actor->color + actor->target->color);
+			actor->color = (UINT16)(actor->color + actor->target->color);
 	}
 	else
-		actor->color = (UINT8)(actor->color + locvar2);
+		actor->color = (UINT16)(actor->color + locvar2);
 }
 
 // Function: A_ChangeColorAbsolute
@@ -8831,7 +8820,7 @@ void A_ChangeColorAbsolute(mobj_t *actor)
 			actor->color = actor->target->color;
 	}
 	else
-		actor->color = (UINT8)locvar2;
+		actor->color = (UINT16)locvar2;
 }
 
 // Function: A_Dye
@@ -8850,7 +8839,7 @@ void A_Dye(mobj_t *actor)
 	UINT8 color = (UINT8)locvar2;
 	if (LUA_CallAction("A_Dye", actor))
 		return;
-	if (color >= MAXTRANSLATIONS)
+	if (color >= numskincolors)
 		return;
 
 	if (!color)

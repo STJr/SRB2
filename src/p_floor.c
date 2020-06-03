@@ -696,10 +696,20 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 			return;
 		}
 
-		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
-			70*FRACUNIT, false, true, -1); // move ceiling
-		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
-			false, false, -1); // move floor
+		if (bouncer->speed >= 0) // move floor first to fix height desync and any bizarre bugs following that
+		{
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
+				false, false, -1); // move floor
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
+				70*FRACUNIT, false, true, -1); // move ceiling
+		}
+		else
+		{
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
+				70*FRACUNIT, false, true, -1); // move ceiling
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
+				false, false, -1); // move floor
+		}
 
 		bouncer->sector->floorspeed = -bouncer->speed/2;
 		bouncer->sector->ceilspeed = 42;

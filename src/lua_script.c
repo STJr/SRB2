@@ -78,6 +78,58 @@ FUNCNORETURN static int LUA_Panic(lua_State *L)
 #endif
 }
 
+#define LEVELS1 12 // size of the first part of the stack
+#define LEVELS2 10 // size of the second part of the stack
+
+// Error handler used with pcall() when loading scripts or calling hooks
+// Takes a string with the original error message,
+// appends the traceback to it, and return the result
+int LUA_GetErrorMessage(lua_State *L)
+{
+	int level = 1;
+	int firstpart = 1; // still before eventual `...'
+	lua_Debug ar;
+
+	lua_pushliteral(L, "\nstack traceback:");
+	while (lua_getstack(L, level++, &ar))
+	{
+		if (level > LEVELS1 && firstpart)
+		{
+			// no more than `LEVELS2' more levels?
+			if (!lua_getstack(L, level + LEVELS2, &ar))
+				level--; // keep going
+			else
+			{
+				lua_pushliteral(L, "\n    ..."); // too many levels
+				while (lua_getstack(L, level + LEVELS2, &ar)) // find last levels
+					level++;
+			}
+			firstpart = 0;
+			continue;
+		}
+		lua_pushliteral(L, "\n    ");
+		lua_getinfo(L, "Snl", &ar);
+		lua_pushfstring(L, "%s:", ar.short_src);
+		if (ar.currentline > 0)
+			lua_pushfstring(L, "%d:", ar.currentline);
+		if (*ar.namewhat != '\0') // is there a name?
+			lua_pushfstring(L, " in function " LUA_QS, ar.name);
+		else
+		{
+			if (*ar.what == 'm') // main?
+				lua_pushfstring(L, " in main chunk");
+			else if (*ar.what == 'C' || *ar.what == 't')
+				lua_pushliteral(L, " ?"); // C function or tail call
+			else
+				lua_pushfstring(L, " in function <%s:%d>",
+					ar.short_src, ar.linedefined);
+		}
+		lua_concat(L, lua_gettop(L));
+	}
+	lua_concat(L, lua_gettop(L));
+	return 1;
+}
+
 // Moved here from lib_getenum.
 int LUA_PushGlobals(lua_State *L, const char *word)
 {
@@ -410,11 +462,13 @@ static inline void LUA_LoadFile(MYFILE *f, char *name)
 
 	lua_lumploading = true; // turn on loading flag
 
-	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, 0)) {
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, lua_gettop(gL) - 1)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
 	lua_gc(gL, LUA_GCCOLLECT, 0);
+	lua_pop(gL, 1); // Pop error handler
 
 	lua_lumploading = false; // turn off again
 }
@@ -756,6 +810,7 @@ enum
 	ARCH_FFLOOR,
 	ARCH_SLOPE,
 	ARCH_MAPHEADER,
+	ARCH_SKINCOLOR,
 
 	ARCH_TEND=0xFF,
 };
@@ -781,6 +836,7 @@ static const struct {
 	{META_FFLOOR,	ARCH_FFLOOR},
 	{META_SLOPE,    ARCH_SLOPE},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
+	{META_SKINCOLOR,   ARCH_SKINCOLOR},
 	{NULL,          ARCH_NULL}
 };
 
@@ -1068,6 +1124,14 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+
+		case ARCH_SKINCOLOR:
+		{
+			skincolor_t *info = *((skincolor_t **)lua_touserdata(gL, myindex));
+			WRITEUINT8(save_p, ARCH_SKINCOLOR);
+			WRITEUINT16(save_p, info - skincolors);
+			break;
+		}
 		default:
 			WRITEUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -1298,6 +1362,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_MAPHEADER:
 		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
+		break;
+	case ARCH_SKINCOLOR:
+		LUA_PushUserdata(gL, &skincolors[READUINT16(save_p)], META_SKINCOLOR);
 		break;
 	case ARCH_TEND:
 		return 1;
