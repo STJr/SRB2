@@ -717,6 +717,34 @@ static void P_NetUnArchiveColormaps(void)
 	net_colormaps = NULL;
 }
 
+static void P_NetArchiveWaypoints(void)
+{
+	INT32 i, j;
+
+	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
+	{
+		WRITEUINT16(save_p, numwaypoints[i]);
+		for (j = 0; j < numwaypoints[i]; j++)
+			WRITEUINT32(save_p, waypoints[i][j] ? waypoints[i][j]->mobjnum : 0);
+	}
+}
+
+static void P_NetUnArchiveWaypoints(void)
+{
+	INT32 i, j;
+	UINT32 mobjnum;
+
+	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
+	{
+		numwaypoints[i] = READUINT16(save_p);
+		for (j = 0; j < numwaypoints[i]; j++)
+		{
+			mobjnum = READUINT32(save_p);
+			waypoints[i][j] = (mobjnum == 0) ? NULL : P_FindNewPosition(mobjnum);
+		}
+	}
+}
+
 ///
 /// World Archiving
 ///
@@ -1995,6 +2023,7 @@ static inline void SavePolyrotatetThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->polyObjNum);
 	WRITEINT32(save_p, ht->speed);
 	WRITEINT32(save_p, ht->distance);
+	WRITEUINT8(save_p, ht->turnobjs);
 }
 
 static void SavePolymoveThinker(const thinker_t *th, const UINT8 type)
@@ -3127,6 +3156,7 @@ static inline thinker_t* LoadPolyrotatetThinker(actionf_p1 thinker)
 	ht->polyObjNum = READINT32(save_p);
 	ht->speed = READINT32(save_p);
 	ht->distance = READINT32(save_p);
+	ht->turnobjs = READUINT8(save_p);
 	return &ht->thinker;
 }
 
@@ -4042,6 +4072,7 @@ void P_SaveNetGame(void)
 		P_NetArchiveThinkers();
 		P_NetArchiveSpecials();
 		P_NetArchiveColormaps();
+		P_NetArchiveWaypoints();
 	}
 	LUA_Archive();
 
@@ -4080,6 +4111,7 @@ boolean P_LoadNetGame(void)
 		P_NetUnArchiveThinkers();
 		P_NetUnArchiveSpecials();
 		P_NetUnArchiveColormaps();
+		P_NetUnArchiveWaypoints();
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}
