@@ -1783,8 +1783,7 @@ void LUAh_GameQuit(void)
 		if (hookp->type != hook_GameQuit)
 			continue;
 
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		if (lua_pcall(gL, 0, 0, 0)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
