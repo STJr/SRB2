@@ -1121,32 +1121,10 @@ consvar_t *CV_FindVar(const char *name)
 	return NULL;
 }
 
-/** Builds a unique Net Variable identifier number, which is used
-  * in network packets instead of the full name.
-  *
-  * \param s Name of the variable.
-  * \return A new unique identifier.
-  * \sa CV_FindNetVar
-  */
-static inline UINT16 CV_ComputeNetid(const char *s)
-{
-	UINT16 ret = 0, i = 0;
-	static UINT16 premiers[16] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53};
-
-	while (*s)
-	{
-		ret = (UINT16)(ret + (*s)*premiers[i]);
-		s++;
-		i = (UINT16)((i+1) % 16);
-	}
-	return ret;
-}
-
 /** Finds a net variable based on its identifier number.
   *
   * \param netid The variable's identifier number.
   * \return A pointer to the variable itself if found, or NULL.
-  * \sa CV_ComputeNetid
   */
 static consvar_t *CV_FindNetVar(UINT16 netid)
 {
@@ -1167,6 +1145,8 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth);
   */
 void CV_RegisterVar(consvar_t *variable)
 {
+	static UINT16 id = 1;
+
 	// first check to see if it has already been defined
 	if (CV_FindVar(variable->name))
 	{
@@ -1185,7 +1165,8 @@ void CV_RegisterVar(consvar_t *variable)
 	if (variable->flags & CV_NETVAR)
 	{
 		const consvar_t *netvar;
-		variable->netid = CV_ComputeNetid(variable->name);
+		variable->netid = id;
+		id++;
 		netvar = CV_FindNetVar(variable->netid);
 		if (netvar)
 			I_Error("Variables %s and %s have same netid\n", variable->name, netvar->name);
