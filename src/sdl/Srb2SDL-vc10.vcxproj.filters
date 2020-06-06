@@ -534,6 +534,9 @@
     <ClCompile Include="..\blua\linit.c">
       <Filter>BLUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\blua\liolib.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\blua\llex.c">
       <Filter>BLUA</Filter>
     </ClCompile>
