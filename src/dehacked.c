@@ -9938,7 +9938,7 @@ struct {
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},
 	{"BT_WEAPONPREV",BT_WEAPONPREV},
 	{"BT_ATTACK",BT_ATTACK}, // shoot rings
-	{"BT_SPIN",BT_SPIN}, // spin
+	{"BT_SPIN",BT_SPIN},
 	{"BT_CAMLEFT",BT_CAMLEFT}, // turn camera left
 	{"BT_CAMRIGHT",BT_CAMRIGHT}, // turn camera right
 	{"BT_TOSSFLAG",BT_TOSSFLAG},
