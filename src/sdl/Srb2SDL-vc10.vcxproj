@@ -338,6 +338,7 @@
     <ClCompile Include="..\blua\lfunc.c" />
     <ClCompile Include="..\blua\lgc.c" />
     <ClCompile Include="..\blua\linit.c" />
+    <ClCompile Include="..\blua\liolib.c" />
     <ClCompile Include="..\blua\llex.c" />
     <ClCompile Include="..\blua\lmem.c" />
     <ClCompile Include="..\blua\lobject.c" />

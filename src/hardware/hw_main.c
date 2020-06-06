@@ -3862,20 +3862,21 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	UINT8 lightlevel = 255;
 	extracolormap_t *colormap = NULL;
 	UINT8 i;
+	SINT8 flip = P_MobjFlip(thing);
 
 	INT32 light;
 	fixed_t scalemul;
 	UINT16 alpha;
 	fixed_t floordiff;
-	fixed_t floorz;
+	fixed_t groundz;
 	fixed_t slopez;
-	pslope_t *floorslope;
+	pslope_t *groundslope;
 
-	floorz = R_GetShadowZ(thing, &floorslope);
+	groundz = R_GetShadowZ(thing, &groundslope);
 
-	//if (abs(floorz - gr_viewz) / tz > 4) return; // Prevent stretchy shadows and possible crashes
+	//if (abs(groundz - gr_viewz) / tz > 4) return; // Prevent stretchy shadows and possible crashes
 
-	floordiff = abs(thing->z - floorz);
+	floordiff = abs((flip < 0 ? thing->height : 0) + thing->z - groundz);
 
 	alpha = floordiff / (4*FRACUNIT) + 75;
 	if (alpha >= 255) return;
@@ -3907,18 +3908,18 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 	shadowVerts[0].z = shadowVerts[1].z = fy - offset;
 	shadowVerts[3].z = shadowVerts[2].z = fy + offset;
 
-	if (floorslope)
+	if (groundslope)
 	{
 		for (i = 0; i < 4; i++)
 		{
-			slopez = P_GetSlopeZAt(floorslope, FLOAT_TO_FIXED(shadowVerts[i].x), FLOAT_TO_FIXED(shadowVerts[i].z));
-			shadowVerts[i].y = FIXED_TO_FLOAT(slopez) + 0.05f;
+			slopez = P_GetSlopeZAt(groundslope, FLOAT_TO_FIXED(shadowVerts[i].x), FLOAT_TO_FIXED(shadowVerts[i].z));
+			shadowVerts[i].y = FIXED_TO_FLOAT(slopez) + flip * 0.05f;
 		}
 	}
 	else
 	{
 		for (i = 0; i < 4; i++)
-			shadowVerts[i].y = FIXED_TO_FLOAT(floorz) + 0.05f;
+			shadowVerts[i].y = FIXED_TO_FLOAT(groundz) + flip * 0.05f;
 	}
 
 	if (spr->flip)
@@ -3946,7 +3947,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, gr_vissprite_t *spr, fixed_t scale
 
 	if (thing->subsector->sector->numlights)
 	{
-		light = R_GetPlaneLight(thing->subsector->sector, floorz, false); // Always use the light at the top instead of whatever I was doing before
+		light = R_GetPlaneLight(thing->subsector->sector, groundz, false); // Always use the light at the top instead of whatever I was doing before
 
 		if (*thing->subsector->sector->lightlist[light].lightlevel > 255)
 			lightlevel = 255;
