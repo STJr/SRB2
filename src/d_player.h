@@ -115,7 +115,7 @@ typedef enum
 
 	// True if button down last tic.
 	PF_ATTACKDOWN = 1<<7,
-	PF_USEDOWN    = 1<<8,
+	PF_SPINDOWN   = 1<<8,
 	PF_JUMPDOWN   = 1<<9,
 	PF_WPNDOWN    = 1<<10,
 

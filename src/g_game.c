@@ -2570,7 +2570,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->spheres = spheres;
 
 	// Don't do anything immediately
-	p->pflags |= PF_USEDOWN;
+	p->pflags |= PF_SPINDOWN;
 	p->pflags |= PF_ATTACKDOWN;
 	p->pflags |= PF_JUMPDOWN;
 

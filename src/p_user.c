@@ -665,7 +665,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->powers[pw_carry] = CR_NIGHTSFALL;
 
 	player->powers[pw_underwater] = 0;
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
+	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
 	player->secondjump = 0;
 	player->homing = 0;
 	player->climbing = 0;
@@ -795,7 +795,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		}
 	}
 
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
+	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
@@ -4592,12 +4592,12 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 			case CA2_SPINDASH: // Spinning and Spindashing
 				 // Start revving
 				if ((cmd->buttons & BT_SPIN) && (player->speed < FixedMul(5<<FRACBITS, player->mo->scale) || player->mo->state - states == S_PLAY_GLIDE_LANDING)
-					&& !player->mo->momz && onground && !(player->pflags & (PF_USEDOWN|PF_SPINNING))
+					&& !player->mo->momz && onground && !(player->pflags & (PF_SPINDOWN|PF_SPINNING))
 						&& canstand)
 				{
 					player->mo->momx = player->cmomx;
 					player->mo->momy = player->cmomy;
-					player->pflags |= (PF_USEDOWN|PF_STARTDASH|PF_SPINNING);
+					player->pflags |= (PF_SPINDOWN|PF_STARTDASH|PF_SPINNING);
 					player->dashspeed = player->mindash;
 					P_SetPlayerMobjState(player->mo, S_PLAY_SPINDASH);
 					if (!player->spectator)
@@ -4639,16 +4639,16 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				// AKA Just go into a spin on the ground, you idiot. ;)
 				else if ((cmd->buttons & BT_SPIN || ((twodlevel || (player->mo->flags2 & MF2_TWOD)) && cmd->forwardmove < -20))
 					&& !player->climbing && !player->mo->momz && onground && (player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
-						|| !canstand) && !(player->pflags & (PF_USEDOWN|PF_SPINNING)))
+						|| !canstand) && !(player->pflags & (PF_SPINDOWN|PF_SPINNING)))
 				{
-					player->pflags |= (PF_USEDOWN|PF_SPINNING);
+					player->pflags |= (PF_SPINDOWN|PF_SPINNING);
 					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_spin);
 				}
 				else
 				// Catapult the player from a spindash rev!
-				if (onground && !(player->pflags & PF_USEDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
+				if (onground && !(player->pflags & PF_SPINDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
 				{
 					player->pflags &= ~PF_STARTDASH;
 					if (player->powers[pw_carry] == CR_BRAKGOOP)
@@ -4690,7 +4690,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 								P_SetTarget(&visual->target, lockon);
 							}
 						}
-						if ((cmd->buttons & BT_SPIN) && !(player->pflags & PF_USEDOWN))
+						if ((cmd->buttons & BT_SPIN) && !(player->pflags & PF_SPINDOWN))
 						{
 							mobj_t *bullet;
 
@@ -4719,7 +4719,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 							player->mo->momx >>= 1;
 							player->mo->momy >>= 1;
-							player->pflags |= PF_USEDOWN;
+							player->pflags |= PF_SPINDOWN;
 							P_SetWeaponDelay(player, TICRATE/2);
 						}
 					}
@@ -4727,7 +4727,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				break;
 			case CA2_MELEE: // Melee attack
 				if (player->panim != PA_ABILITY2 && (cmd->buttons & BT_SPIN)
-				&& !player->mo->momz && onground && !(player->pflags & PF_USEDOWN)
+				&& !player->mo->momz && onground && !(player->pflags & PF_SPINDOWN)
 				&& canstand)
 				{
 					P_ResetPlayer(player);
@@ -4767,7 +4767,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						P_SetPlayerMobjState(player->mo, S_PLAY_MELEE);
 						S_StartSound(player->mo, sfx_s3k42);
 					}
-					player->pflags |= PF_USEDOWN;
+					player->pflags |= PF_SPINDOWN;
 				}
 				break;
 		}
@@ -5040,7 +5040,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			;
 		else if (player->pflags & (PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player has used an ability previously
 			;
-		else if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_USEDOWN)
+		else if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
 			&& ((!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX)))) // thokked is optional if you're bubblewrapped
 		{
 			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
@@ -5142,7 +5142,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		}
 		else if ((cmd->buttons & BT_SPIN))
 		{
-			if (!(player->pflags & PF_USEDOWN) && P_SuperReady(player))
+			if (!(player->pflags & PF_SPINDOWN) && P_SuperReady(player))
 			{
 				// If you can turn super and aren't already,
 				// and you don't have a shield, do it!
@@ -5172,7 +5172,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						}
 						break;
 					case CA_TELEKINESIS:
-						if (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || (player->charflags & SF_MULTIABILITY))
+						if (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || (player->charflags & SF_MULTIABILITY))
 						{
 							P_Telekinesis(player,
 								-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
@@ -5180,7 +5180,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						}
 						break;
 					case CA_TWINSPIN:
-						if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || player->charflags & SF_MULTIABILITY))
+						if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || player->charflags & SF_MULTIABILITY))
 							P_DoTwinSpin(player);
 						break;
 					default:
@@ -8830,7 +8830,7 @@ static void P_DoRopeHang(player_t *player)
 
 	if (player->cmd.buttons & BT_SPIN && !(player->pflags & PF_STASIS)) // Drop off of the rope
 	{
-		player->pflags |= (P_GetJumpFlags(player)|PF_USEDOWN);
+		player->pflags |= (P_GetJumpFlags(player)|PF_SPINDOWN);
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 
 		P_SetTarget(&player->mo->tracer, NULL);
@@ -12065,9 +12065,9 @@ void P_PlayerThink(player_t *player)
 	if (player->powers[pw_carry] != CR_NIGHTSMODE)
 	{
 		if (cmd->buttons & BT_SPIN)
-			player->pflags |= PF_USEDOWN;
+			player->pflags |= PF_SPINDOWN;
 		else
-			player->pflags &= ~PF_USEDOWN;
+			player->pflags &= ~PF_SPINDOWN;
 	}
 
 	// IF PLAYER NOT HERE THEN FLASH END IF
