@@ -5000,7 +5000,7 @@ DoneSection2:
 				if (player->mo->momz > 0)
 					break;
 
-				if (player->cmd.buttons & BT_USE)
+				if (player->cmd.buttons & BT_SPIN)
 					break;
 
 				if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate])
