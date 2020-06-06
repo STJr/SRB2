@@ -4437,11 +4437,11 @@ static boolean F_GetTextPromptTutorialTag(char *tag, INT32 length)
 	else if (!strncmp(tag, "TAJ", 3)) // Jump
 		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
 	else if (!strncmp(tag, "TAS", 3)) // Spin
-		gcs = G_GetControlScheme(gamecontrol, gcl_use, num_gcl_use);
+		gcs = G_GetControlScheme(gamecontrol, gcl_spin, num_gcl_spin);
 	else if (!strncmp(tag, "TAA", 3)) // Char ability
 		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
 	else if (!strncmp(tag, "TAW", 3)) // Shield ability
-		gcs = G_GetControlScheme(gamecontrol, gcl_jump_use, num_gcl_jump_use);
+		gcs = G_GetControlScheme(gamecontrol, gcl_jump_spin, num_gcl_jump_spin);
 	else
 		gcs = G_GetControlScheme(gamecontrol, gcl_tutorial_used, num_gcl_tutorial_used);
 
