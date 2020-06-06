@@ -583,7 +583,7 @@ static const char *gamecontrolname[num_gamecontrols] =
 	"fire",
 	"firenormal",
 	"tossflag",
-	"use",
+	"spin",
 	"camtoggle",
 	"camreset",
 	"lookup",
