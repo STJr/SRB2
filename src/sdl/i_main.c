@@ -104,7 +104,7 @@ static inline VOID MakeCodeWritable(VOID)
 #endif
 
 #ifdef LOGMESSAGES
-static VOID InitLogging(VOID)
+static void InitLogging(void)
 {
 	const char *logdir = NULL;
 	time_t my_time;
