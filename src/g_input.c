@@ -996,7 +996,9 @@ static void setcontrol(INT32 (*gc)[2])
 	INT32 player = ((void*)gc == (void*)&gamecontrolbis ? 1 : 0);
 	boolean nestedoverride = false;
 
-	namectrl = COM_Argv(1);
+	// Update me for 2.3
+	namectrl = (stricmp(COM_Argv(1), "use")) ? COM_Argv(1) : "spin";
+
 	for (numctrl = 0; numctrl < num_gamecontrols && stricmp(namectrl, gamecontrolname[numctrl]);
 		numctrl++)
 		;
