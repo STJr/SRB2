@@ -240,6 +240,9 @@ static void Polyobj_GetInfo(polyobj_t *po)
 	/*if (lines[i].flags & ML_EFFECT5)
 		po->flags &= ~POF_CLIPPLANES;*/
 
+	if (lines[i].flags & ML_EFFECT6)
+		po->flags |= POF_SPLAT;
+
 	if (lines[i].flags & ML_NOCLIMB) // Has a linedef executor
 		po->flags |= POF_LDEXEC;
 }

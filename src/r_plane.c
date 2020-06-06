@@ -943,23 +943,23 @@ void R_DrawSinglePlane(visplane_t *pl)
 #endif
 	spanfunc = spanfuncs[BASEDRAWFUNC];
 
-	if (pl->polyobj && pl->polyobj->translucency != 0)
+	if (pl->polyobj)
 	{
-		spanfunctype = SPANDRAWFUNC_TRANS;
-
 		// Hacked up support for alpha value in software mode Tails 09-24-2002 (sidenote: ported to polys 10-15-2014, there was no time travel involved -Red)
 		if (pl->polyobj->translucency >= 10)
 			return; // Don't even draw it
 		else if (pl->polyobj->translucency > 0)
+		{
+			spanfunctype = (pl->polyobj->flags & POF_SPLAT) ? SPANDRAWFUNC_TRANSSPLAT : SPANDRAWFUNC_TRANS;
 			ds_transmap = transtables + ((pl->polyobj->translucency-1)<<FF_TRANSSHIFT);
-		else // Opaque, but allow transparent flat pixels
+		}
+		else if (pl->polyobj->flags & POF_SPLAT) // Opaque, but allow transparent flat pixels
 			spanfunctype = SPANDRAWFUNC_SPLAT;
 
-		if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
+		if (pl->polyobj->translucency == 0 || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
-
 	}
 	else
 	{
@@ -984,7 +984,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 			if (pl->ffloor->flags & FF_TRANSLUCENT)
 			{
-				spanfunctype = SPANDRAWFUNC_TRANS;
+				spanfunctype = (pl->ffloor->master->flags & ML_EFFECT6) ? SPANDRAWFUNC_TRANSSPLAT : SPANDRAWFUNC_TRANS;
 
 				// Hacked up support for alpha value in software mode Tails 09-24-2002
 				if (pl->ffloor->alpha < 12)
