@@ -1772,7 +1772,7 @@ void P_XYMovement(mobj_t *mo)
 	fixed_t oldx, oldy; // reducing bobbing/momentum on ice when up against walls
 	boolean moved;
 	pslope_t *oldslope = NULL;
-	vector3_t slopemom;
+	vector3_t slopemom = {0,0,0};
 	fixed_t predictedz = 0;
 
 	I_Assert(mo != NULL);
