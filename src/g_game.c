@@ -1340,7 +1340,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	// use with any button/key
 	axis = PlayerJoyAxis(ssplayer, AXISSPIN);
-	if (PLAYERINPUTDOWN(ssplayer, gc_use) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, gc_spin) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_SPIN;
 
 	// Centerview can be a toggle in simple mode!
