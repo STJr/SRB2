@@ -226,6 +226,12 @@ set(SRB2_CONFIG_HAVE_GME ON CACHE BOOL
 	"Enable GME support.")
 set(SRB2_CONFIG_HAVE_OPENMPT ON CACHE BOOL
 	"Enable OpenMPT support.")
+if(${CMAKE_SYSTEM} MATCHES Windows)
+	set(SRB2_CONFIG_HAVE_MIXERX ON CACHE BOOL
+		"Enable SDL Mixer X support.")
+else()
+	set(SRB2_CONFIG_HAVE_MIXERX OFF)
+endif()
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL.")
 set(SRB2_CONFIG_USEASM OFF CACHE BOOL
@@ -363,6 +369,30 @@ if(${SRB2_CONFIG_HAVE_OPENMPT})
 		add_definitions(-DHAVE_OPENMPT)
 	else()
 		message(WARNING "You have specified that OpenMPT is available but it was not found.")
+	endif()
+endif()
+
+if(${SRB2_CONFIG_HAVE_MIXERX})
+	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
+		set(MIXERX_FOUND ON)
+		set(MIXERX_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/SDLMixerX/i686-w64-mingw32/include/SDL2)
+        if(${SRB2_SYSTEM_BITS} EQUAL 64)
+			set(MIXERX_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/SDLMixerX/x86_64-w64-mingw32/lib -lSDL2_mixer_ext")
+		else() # 32-bit
+			set(MIXERX_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/SDLMixerX/i686-w64-mingw32/lib -lSDL2_mixer_ext")
+		endif()
+	else()
+		# No support for non-Windows (yet?)
+		#find_package(MIXERX)
+		message(WARNING "SDL Mixer X is not supported as an external library.")
+		set(MIXERX_FOUND OFF)
+	endif()
+	if(${MIXERX_FOUND})
+		set(SRB2_HAVE_MIXERX ON)
+		set(SRB2_SDL2_SOUNDIMPL mixer_sound.c)
+		add_definitions(-DHAVE_MIXERX)
+	else()
+		message(WARNING "You have specified that SDL Mixer X is available but it was not found.")
 	endif()
 endif()
 
