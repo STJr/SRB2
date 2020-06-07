@@ -94,7 +94,7 @@ void vres_Free(virtres_t*);
 virtlump_t* vres_Find(const virtres_t*, const char*);
 
 // =========================================================================
-//                         DYNAMIC WAD LOADING
+//                                PATCH INFO
 // =========================================================================
 
 #include "r_patchtrees.h"

@@ -447,8 +447,8 @@
     </ClCompile>
     <ClCompile Include="..\r_main.c" />
     <ClCompile Include="..\r_plane.c" />
-	<ClCompile Include="..\r_patch.c" />
-	<ClCompile Include="..\r_rotsprite.c" />
+    <ClCompile Include="..\r_patch.c" />
+    <ClCompile Include="..\r_rotsprite.c" />
     <ClCompile Include="..\r_portal.c" />
     <ClCompile Include="..\r_segs.c" />
     <ClCompile Include="..\r_skins.c" />
