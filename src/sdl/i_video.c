@@ -1794,7 +1794,7 @@ void I_StartupOpenGL(void)
 			vid.glstate = VID_GL_LIBRARY_ERROR;
 		}
 		else
-			vid.glstate = HWD.pfnInit(I_Error) ? 1 : VID_GL_LIBRARY_ERROR; // let load the OpenGL library
+			vid.glstate = HWD.pfnInit(I_Error) ? VID_GL_LIBRARY_LOADED : VID_GL_LIBRARY_ERROR; // let load the OpenGL library
 
 		if (vid.glstate == VID_GL_LIBRARY_ERROR)
 		{
