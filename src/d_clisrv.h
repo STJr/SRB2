@@ -24,7 +24,7 @@ The 'packet version' is used to distinguish packet formats.
 This version is independent of VERSION and SUBVERSION. Different
 applications may follow different packet versions.
 */
-#define PACKETVERSION 2
+#define PACKETVERSION 3
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -33,7 +33,8 @@ applications may follow different packet versions.
 //  be transmitted.
 
 // Networking and tick handling related.
-#define BACKUPTICS 32
+#define BACKUPTICS 96
+#define CLIENTBACKUPTICS 32
 #define MAXTEXTCMD 256
 //
 // Packet structure
@@ -63,6 +64,10 @@ typedef enum
 	                  // If this ID changes, update masterserver definition.
 	PT_RESYNCHEND,    // Player is now resynched and is being requested to remake the gametic
 	PT_RESYNCHGET,    // Player got resynch packet
+
+	PT_SENDINGLUAFILE, // Server telling a client Lua needs to open a file
+	PT_ASKLUAFILE,     // Client telling the server they don't have the file
+	PT_HASLUAFILE,     // Client telling the server they have the file
 
 	// Add non-PT_CANFAIL packet types here to avoid breaking MS compatibility.
 
@@ -124,7 +129,7 @@ typedef struct
 // this packet is too large
 typedef struct
 {
-	UINT8 starttic;
+	tic_t starttic;
 	UINT8 numtics;
 	UINT8 numslots; // "Slots filled": Highest player number in use plus one.
 	ticcmd_t cmds[45]; // Normally [BACKUPTIC][MAXPLAYERS] but too large
@@ -184,7 +189,7 @@ typedef struct
 	SINT8 xtralife;
 	SINT8 pity;
 
-	UINT8 skincolor;
+	UINT16 skincolor;
 	INT32 skin;
 	UINT32 availabilities;
 	// Just in case Lua does something like
@@ -304,7 +309,7 @@ typedef struct
 
 	// 0xFF == not in game; else player skin num
 	UINT8 playerskins[MAXPLAYERS];
-	UINT8 playercolor[MAXPLAYERS];
+	UINT16 playercolor[MAXPLAYERS];
 	UINT32 playeravailabilities[MAXPLAYERS];
 
 	UINT8 gametype;
@@ -358,6 +363,7 @@ typedef struct
 	UINT8 subversion;
 	UINT8 numberofplayer;
 	UINT8 maxplayer;
+	UINT8 refusereason; // 0: joinable, 1: joins disabled, 2: full
 	char gametypename[24];
 	UINT8 modifiedgame;
 	UINT8 cheatsenabled;
@@ -409,7 +415,7 @@ typedef struct
 {
 	char name[MAXPLAYERNAME+1];
 	UINT8 skin;
-	UINT8 color;
+	UINT16 color;
 	UINT32 pflags;
 	UINT32 score;
 	UINT8 ctfteam;
@@ -510,12 +516,12 @@ extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 extern tic_t servermaxping;
 
-extern consvar_t cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_rejointimeout;
+extern consvar_t cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_joindelay, cv_rejointimeout;
 extern consvar_t cv_resynchattempts, cv_blamecfail;
 extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
 // Used in d_net, the only dependence
-tic_t ExpandTics(INT32 low);
+tic_t ExpandTics(INT32 low, INT32 node);
 void D_ClientServerInit(void);
 
 // Initialise the other field

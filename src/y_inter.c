@@ -37,9 +37,7 @@
 #include "m_cond.h" // condition sets
 #include "lua_hook.h" // IntermissionThinker hook
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -75,7 +73,7 @@ typedef union
 		UINT32 score, total; // fake score, total
 		UINT32 tics; // time
 
-		INT32 actnum; // act number being displayed
+		UINT8 actnum; // act number being displayed
 		patch_t *ptotal; // TOTAL
 		UINT8 gotlife; // Number of extra lives obtained
 	} coop;
@@ -101,7 +99,7 @@ typedef union
 		UINT8 continues;
 		patch_t *pcontinues;
 		INT32 *playerchar; // Continue HUD
-		UINT8 *playercolor;
+		UINT16 *playercolor;
 
 		UINT8 gotlife; // Number of extra lives obtained
 	} spec;
@@ -109,7 +107,7 @@ typedef union
 	struct
 	{
 		UINT32 scores[MAXPLAYERS]; // Winner's score
-		UINT8 *color[MAXPLAYERS]; // Winner's color #
+		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		boolean spectator[MAXPLAYERS]; // Spectator list
 		INT32 *character[MAXPLAYERS]; // Winner's character #
 		INT32 num[MAXPLAYERS]; // Winner's player #
@@ -123,7 +121,7 @@ typedef union
 
 	struct
 	{
-		UINT8 *color[MAXPLAYERS]; // Winner's color #
+		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		INT32 *character[MAXPLAYERS]; // Winner's character #
 		INT32 num[MAXPLAYERS]; // Winner's player #
 		char name[MAXPLAYERS][9]; // Winner's name
@@ -330,9 +328,7 @@ void Y_IntermissionDrawer(void)
 
 	if (intertype == int_none)
 	{
-#ifdef HAVE_BLUA
 		LUAh_IntermissionHUD();
-#endif
 		return;
 	}
 
@@ -384,11 +380,9 @@ void Y_IntermissionDrawer(void)
 	else
 		V_DrawPatchFill(bgtile);
 
-#ifdef HAVE_BLUA
 	LUAh_IntermissionHUD();
 	if (!LUA_HudEnabled(hud_intermissiontally))
 		goto skiptallydrawer;
-#endif
 
 dontdrawbg:
 	if (intertype == int_coop)
@@ -570,7 +564,7 @@ dontdrawbg:
 			V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125+yoffset, 0, data.spec.score);
 
 			// Draw continues!
-			if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
+			if (continuesInSession /* && (data.spec.continues & 0x80) */) // Always draw when continues are a thing
 			{
 				UINT8 continues = data.spec.continues & 0x7F;
 
@@ -944,11 +938,9 @@ dontdrawbg:
 		}
 	}
 
-#ifdef HAVE_BLUA
 skiptallydrawer:
 	if (!LUA_HudEnabled(hud_intermissionmessages))
 		return;
-#endif
 
 	if (timer)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
@@ -973,9 +965,7 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
-#ifdef HAVE_BLUA
 	LUAh_IntermissionThinker();
-#endif
 
 	intertic++;
 

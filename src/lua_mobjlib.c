@@ -11,7 +11,6 @@
 /// \brief mobj/thing library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "r_skins.h"
 #include "p_local.h"
@@ -85,9 +84,7 @@ enum mobj_e {
 	mobj_extravalue2,
 	mobj_cusval,
 	mobj_cvmem,
-#ifdef ESLOPE
 	mobj_standingslope,
-#endif
 	mobj_colorized,
 	mobj_shadowscale
 };
@@ -153,9 +150,7 @@ static const char *const mobj_opt[] = {
 	"extravalue2",
 	"cusval",
 	"cvmem",
-#ifdef ESLOPE
 	"standingslope",
-#endif
 	"colorized",
 	"shadowscale",
 	NULL};
@@ -384,11 +379,9 @@ static int mobj_get(lua_State *L)
 	case mobj_cvmem:
 		lua_pushinteger(L, mo->cvmem);
 		break;
-#ifdef ESLOPE
 	case mobj_standingslope:
 		LUA_PushUserdata(L, mo->standingslope, META_SLOPE);
 		break;
-#endif
 	case mobj_colorized:
 		lua_pushboolean(L, mo->colorized);
 		break;
@@ -581,9 +574,9 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_color:
 	{
-		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
-		if (newcolor >= MAXTRANSLATIONS)
-			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, MAXTRANSLATIONS-1);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
+		if (newcolor >= numskincolors)
+			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, numskincolors-1);
 		mo->color = newcolor;
 		break;
 	}
@@ -717,10 +710,8 @@ static int mobj_set(lua_State *L)
 	case mobj_cvmem:
 		mo->cvmem = luaL_checkinteger(L, 3);
 		break;
-#ifdef ESLOPE
 	case mobj_standingslope:
 		return NOSET;
-#endif
 	case mobj_colorized:
 		mo->colorized = luaL_checkboolean(L, 3);
 		break;
@@ -838,6 +829,15 @@ static int mapthing_set(lua_State *L)
 	return 0;
 }
 
+static int mapthing_num(lua_State *L)
+{
+	mapthing_t *mt = *((mapthing_t **)luaL_checkudata(L, 1, META_MAPTHING));
+	if (!mt)
+		return luaL_error(L, "accessed mapthing_t doesn't exist anymore.");
+	lua_pushinteger(L, mt-mapthings);
+	return 1;
+}
+
 static int lib_iterateMapthings(lua_State *L)
 {
 	size_t i = 0;
@@ -902,6 +902,9 @@ int LUA_MobjLib(lua_State *L)
 
 		lua_pushcfunction(L, mapthing_set);
 		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, mapthing_num);
+		lua_setfield(L, -2, "__len");
 	lua_pop(L,1);
 
 	lua_newuserdata(L, 0);
@@ -915,5 +918,3 @@ int LUA_MobjLib(lua_State *L)
 	lua_setglobal(L, "mapthings");
 	return 0;
 }
-
-#endif

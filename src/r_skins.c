@@ -248,7 +248,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 {
 	player_t *player = &players[playernum];
 	skin_t *skin = &skins[skinnum];
-	UINT8 newcolor = 0;
+	UINT16 newcolor = 0;
 
 	if (skinnum >= 0 && skinnum < numskins && R_SkinUsable(playernum, skinnum)) // Make sure it exists!
 	{
@@ -504,6 +504,7 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(FASTEDGE)
 	GETFLAG(MULTIABILITY)
 	GETFLAG(NONIGHTSROTATION)
+	GETFLAG(NONIGHTSSUPER)
 #undef GETFLAG
 
 	else // let's check if it's a sound, otherwise error out
