@@ -546,13 +546,13 @@ static void D_Display(void)
 			s[sizeof s - 1] = '\0';
 
 			snprintf(s, sizeof s - 1, "get %d b/s", getbps);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT+8, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-32-40, V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "send %d b/s", sendbps);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-2, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-32-30, V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "GameMiss %.2f%%", gamelostpercent);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-12, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-32-20, V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-22, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-32-10, V_YELLOWMAP, s);
 		}
 
 		I_FinishUpdate(); // page flip or blit buffer
