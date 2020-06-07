@@ -1234,6 +1234,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		//mdlframe_t *next = NULL;
 		const boolean papersprite = (spr->mobj->frame & FF_PAPERSPRITE);
 		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
+		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !(spr->mobj->frame & FF_HORIZONTALFLIP));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
 		spriteinfo_t *sprinfo;
@@ -1504,7 +1505,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 #endif
 
 		HWD.pfnSetShader(4);	// model shader
-		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, &Surf);
+		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, hflip, &Surf);
 	}
 
 	return true;
