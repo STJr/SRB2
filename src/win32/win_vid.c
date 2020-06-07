@@ -663,7 +663,7 @@ static VOID VID_Init(VOID)
 	// if '-win' is specified on the command line, do not add DirectDraw modes
 	bWinParm = M_CheckParm("-win");
 
-	COM_AddCommand("I_NumVideoModes", VID_Command_NumModes_f);
+	COM_AddCommand("vid_nummodes", VID_Command_NumModes_f);
 	COM_AddCommand("vid_modeinfo", VID_Command_ModeInfo_f);
 	COM_AddCommand("vid_modelist", VID_Command_ModeList_f);
 	COM_AddCommand("vid_mode", VID_Command_Mode_f);
