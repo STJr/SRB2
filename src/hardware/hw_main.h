@@ -104,4 +104,11 @@ extern float gr_viewwindowx, gr_basewindowcentery;
 extern fixed_t *hwbbox;
 extern FTransform atransform;
 
+
+// Render stats
+extern int rs_hw_nodesorttime;
+extern int rs_hw_nodedrawtime;
+extern int rs_hw_spritesorttime;
+extern int rs_hw_spritedrawtime;
+
 #endif

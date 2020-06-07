@@ -74,6 +74,25 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y);
 
 boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph);
 
+// Render stats
+
+extern consvar_t cv_renderstats;
+
+extern int rs_prevframetime;// time when previous frame was rendered
+extern int rs_rendercalltime;
+extern int rs_swaptime;
+
+extern int rs_bsptime;
+
+extern int rs_sw_portaltime;
+extern int rs_sw_planetime;
+extern int rs_sw_maskedtime;
+
+extern int rs_numbspcalls;
+extern int rs_numsprites;
+extern int rs_numdrawnodes;
+extern int rs_numpolyobjects;
+
 //
 // REFRESH - the actual rendering functions.
 //
