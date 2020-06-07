@@ -2981,6 +2981,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 			mo->eflags |= MFE_JUSTHITFLOOR; // Spin Attack
 
+			clipmomz = P_PlayerHitFloor(mo->player, true);
+
 			if (!P_PlayerPolyObjectZMovement(mo))
 			{
 				// Cut momentum in half when you hit the ground and
@@ -2991,8 +2993,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 					mo->momy >>= 1;
 				}
 			}
-
-			clipmomz = P_PlayerHitFloor(mo->player, true);
 
 			if (!(mo->player->pflags & PF_SPINNING) && mo->player->powers[pw_carry] != CR_NIGHTSMODE)
 				mo->player->pflags &= ~PF_STARTDASH;
