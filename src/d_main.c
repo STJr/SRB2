@@ -634,6 +634,28 @@ static void D_Display(void)
 				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
 				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
 				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);
+				if (cv_grbatching.value)
+				{
+					snprintf(s, sizeof s - 1, "bsrt %d", rs_hw_batchsorttime / divisor);
+					V_DrawThinString(80, 55, V_MONOSPACE | V_REDMAP, s);
+					snprintf(s, sizeof s - 1, "bdrw %d", rs_hw_batchdrawtime / divisor);
+					V_DrawThinString(80, 65, V_MONOSPACE | V_REDMAP, s);
+
+					snprintf(s, sizeof s - 1, "npol %d", rs_hw_numpolys);
+					V_DrawThinString(130, 10, V_MONOSPACE | V_PURPLEMAP, s);
+					snprintf(s, sizeof s - 1, "ndc  %d", rs_hw_numcalls);
+					V_DrawThinString(130, 20, V_MONOSPACE | V_PURPLEMAP, s);
+					snprintf(s, sizeof s - 1, "nshd %d", rs_hw_numshaders);
+					V_DrawThinString(130, 30, V_MONOSPACE | V_PURPLEMAP, s);
+					snprintf(s, sizeof s - 1, "nvrt %d", rs_hw_numverts);
+					V_DrawThinString(130, 40, V_MONOSPACE | V_PURPLEMAP, s);
+					snprintf(s, sizeof s - 1, "ntex %d", rs_hw_numtextures);
+					V_DrawThinString(185, 10, V_MONOSPACE | V_PURPLEMAP, s);
+					snprintf(s, sizeof s - 1, "npf  %d", rs_hw_numpolyflags);
+					V_DrawThinString(185, 20, V_MONOSPACE | V_PURPLEMAP, s);
+					snprintf(s, sizeof s - 1, "ncol %d", rs_hw_numcolors);
+					V_DrawThinString(185, 30, V_MONOSPACE | V_PURPLEMAP, s);
+				}
 			}
 			else // software specific stats
 			{
