@@ -20,8 +20,10 @@ matrix:
           - CXXFLAGS="-march=core2 -mtune=haswell"
           cache:
             directories:
-            - $HOME/Library/Caches/Homebrew
+            # Note: brew update cache (/usr/local/Homebrew) does not appear to be effective.
+            # Would be nice to implement this solution -- https://stackoverflow.com/a/53331571
             - /usr/local/Homebrew
+            - $HOME/Library/Caches/Homebrew
             - $HOME/homebrew_cache
             - $HOME/.ccache
             - $HOME/srb2_cache
@@ -419,7 +421,7 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       BREW_UPGRADE="bash ./travis/osx_brew_upgrade.sh";
       brew tap mazmazz/srb2;
-      brew update;
+      brew update --merge > /dev/null;
       $BREW_UPGRADE p7zip; brew link p7zip;
       $BREW_UPGRADE cmake; brew link cmake;
       $BREW_UPGRADE ccache; brew link ccache;
