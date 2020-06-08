@@ -372,12 +372,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			object->angle = object->player->drawangle = spring->angle;
 
 			if (!demoplayback || P_ControlStyle(object->player) == CS_LMAOGALOG)
-			{
-				if (object->player == &players[consoleplayer])
-					localangle = spring->angle;
-				else if (object->player == &players[secondarydisplayplayer])
-					localangle2 = spring->angle;
-			}
+				P_SetPlayerAngle(object->player, spring->angle);
 		}
 
 		if (object->player->pflags & PF_GLIDING)
@@ -1310,12 +1305,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			thing->angle = tmthing->angle;
 
 			if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
-			{
-				if (thing->player == &players[consoleplayer])
-					localangle = thing->angle;
-				else if (thing->player == &players[secondarydisplayplayer])
-					localangle2 = thing->angle;
-			}
+				P_SetPlayerAngle(thing->player, thing->angle);
 
 			return true;
 		}
@@ -3379,12 +3369,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 		{
 			slidemo->angle = climbangle;
 			/*if (!demoplayback || P_ControlStyle(slidemo->player) == CS_LMAOGALOG)
-			{
-				if (slidemo->player == &players[consoleplayer])
-					localangle = slidemo->angle;
-				else if (slidemo->player == &players[secondarydisplayplayer])
-					localangle2 = slidemo->angle;
-			}*/
+				P_SetPlayerAngle(slidemo->player, slidemo->angle);*/
 
 			if (!slidemo->player->climbing)
 			{
