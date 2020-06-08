@@ -91,9 +91,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "hardware/hw3sound.h"
 #endif
 
-#ifdef HAVE_BLUA
 #include "lua_script.h"
-#endif
 
 // platform independant focus loss
 UINT8 window_notinfocus = false;
@@ -126,6 +124,11 @@ boolean advancedemo;
 #ifdef DEBUGFILE
 INT32 debugload = 0;
 #endif
+
+UINT16 numskincolors;
+menucolor_t *menucolorhead, *menucolortail;
+
+char savegamename[256];
 
 char srb2home[256] = ".";
 char srb2path[256] = ".";
@@ -312,7 +315,9 @@ static void D_Display(void)
 				F_WipeStartScreen();
 				// Check for Mega Genesis fade
 				wipestyleflags = WSF_FADEOUT;
-				if (F_TryColormapFade(31))
+				if (wipegamestate == (gamestate_t)FORCEWIPE)
+					F_WipeColorFill(31);
+				else if (F_TryColormapFade(31))
 					wipetypepost = -1; // Don't run the fade below this one
 				F_WipeEndScreen();
 				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
@@ -800,9 +805,7 @@ void D_SRB2Loop(void)
 		HW3S_EndFrameUpdate();
 #endif
 
-#ifdef HAVE_BLUA
 		LUA_Step();
-#endif
 	}
 }
 
@@ -1049,6 +1052,7 @@ static void IdentifyVersion(void)
 		}
 
 		MUSICTEST("music.dta")
+		MUSICTEST("patch_music.pk3")
 #ifdef DEVELOP // remove when music_new.dta is merged into music.dta
 		MUSICTEST("music_new.dta")
 #endif
@@ -1215,7 +1219,8 @@ void D_SRB2Main(void)
 			// can't use sprintf since there is %u in savegamename
 			strcatbf(savegamename, srb2home, PATHSEP);
 
-#else
+			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", srb2home);
+#else // DEFAULTDIR
 			snprintf(srb2home, sizeof srb2home, "%s", userhome);
 			snprintf(downloaddir, sizeof downloaddir, "%s", userhome);
 			if (dedicated)
@@ -1225,7 +1230,9 @@ void D_SRB2Main(void)
 
 			// can't use sprintf since there is %u in savegamename
 			strcatbf(savegamename, userhome, PATHSEP);
-#endif
+
+			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", userhome);
+#endif // DEFAULTDIR
 		}
 
 		configfile[sizeof configfile - 1] = '\0';
@@ -1240,6 +1247,10 @@ void D_SRB2Main(void)
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
+
+	// player setup menu colors must be initialized before
+	// any wad file is added, as they may contain colors themselves
+	M_InitPlayerSetupColors();
 
 	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
 	Z_Init();
