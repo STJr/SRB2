@@ -3,6 +3,7 @@
 # Deployer for Travis-CI
 # DPUT uploader (e.g., Launchpad PPA)
 #
+# NOTE: RETAINED FOR REFERENCE; NOT CURRENTLY USED
 
 if [[ "$__DPL_DPUT_ACTIVE" == "1" ]]; then
     # Install APT dependencies

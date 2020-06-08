@@ -7,49 +7,33 @@
 # See the "Cross-platform deployment" page on SRB2 Wiki for documentation.
 
 # Core Parameters
-: ${DPL_ENABLED}                # Enable Deployer behavior; must be set for any deployment activity
-: ${DPL_TAG_ENABLED}            # Trigger Deployer for all tag releases
-: ${DPL_JOB_ENABLE_ALL}         # Enable all jobs for deployment
-: ${DPL_TERMINATE_TESTS}        # Terminate all build test jobs (used in .travis.yml)
-: ${DPL_TRIGGER}                # Use a [word] in the commit message to trigger Deployer
-: ${DPL_JOBNAMES}               # Trigger Deployer by job name
-: ${DPL_OSNAMES}                # Trigger Deployer by OS name (osx,linux)
-: ${DPL_BRANCHES}               # Trigger Deployer by git branch name
-
-# Job Parameters
-: ${_DPL_JOB_ENABLED}           # Enable Deployer for this specific job. DPL_ENABLED must be set too.
-: ${_DPL_JOB_NAME}              # Identifier for the job, used for logging and trigger word matching
-: ${_DPL_FTP_TARGET}            # Deploy to FTP
-: ${_DPL_DPUT_TARGET}           # Deploy to DPUT
-: ${_DPL_PACKAGE_SOURCE}        # Build packages into a Source distribution. Linux only.
-: ${_DPL_PACKAGE_BINARY}        # Build packages into a Binary distribution.
-: ${_DPL_PACKAGE_MAIN:=1}       # Build main installation package. Linux only; OS X assumes this.
-: ${_DPL_PACKAGE_ASSET}         # Build asset installation package. Linux only.
+: ${DPL_FORCE_ON}               # Force-enable Deployer for branches
+: ${DPL_FORCE_ON_GITHUB}        # Force-enable Deployer for GitHub Releases
+: ${DPL_FORCE_ON_FTP}           # Force-enable Deployer for FTP
+: ${DPL_FORCE_OFF}              # Force-disable Deployer for tags
+: ${DPL_FORCE_OFF_GITHUB}       # Force-disable Deployer for GitHub Releases
+: ${DPL_FORCE_OFF_FTP}          # Force-disable Deployer for FTP
+: ${DPL_BRANCH_TRIGGER:=deployer} # Use a word in the branch name to trigger Deployer
+: ${DPL_COMMIT_TRIGGER:=deployer} # Use a [word] in the commit message to trigger Deployer
+: ${DPL_UPLOAD_BINARY:=1}       # Upload an archive containing the binary file plus $ASSET_FILES_DOCS
+: ${DPL_UPLOAD_ASSETS}          # Upload an archive containing the binary file plus $ASSET_FILES_DOCS plus all other assets
+: ${DPL_UPLOAD_INSTALLER}       # Upload an archive containing an installer
+: ${DPL_ARCHIVE_NAME}           # Name to use for deployed archives. Defaults to $TRAVIS_TAG-$TRAVIS_OS_NAME or "srb2$TRAVIS_OS_NAME-$TRAVIS_BRANCH-${TRAVIS_COMMIT:0:8}-${TRAVIS_JOB_ID}"
 
 # Asset File Parameters
-: ${ASSET_ARCHIVE_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-assets.7z}
-: ${ASSET_ARCHIVE_OPTIONAL_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/SRB2-v220-optional-assets.7z}
-: ${ASSET_FILES_HASHED:=srb2.pk3 zones.pk3 player.dta} # POST v2.2 NOTE: Don't forget to add patch.pk3!
+: ${ASSET_ARCHIVE_PATHS:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/srb2-2.2.4-assets.7z;https://github.com/mazmazz/SRB2/releases/download/SRB2_assets_220/srb2-2.2.4-optional-assets.7z}
+: ${ASSET_FILES_HASHED:=srb2.pk3 zones.pk3 player.dta patch.pk3}
 : ${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt README-SDL.txt}
-: ${ASSET_FILES_OPTIONAL_GET:=0}
 
 # FTP Parameters
-: ${DPL_FTP_PROTOCOL}
+: ${DPL_FTP_PROTOCOL:=ftp}
 : ${DPL_FTP_USER}
 : ${DPL_FTP_PASS}
 : ${DPL_FTP_HOSTNAME}
-: ${DPL_FTP_PORT}
+: ${DPL_FTP_PORT:=21}
 : ${DPL_FTP_PATH}
 
-# DPUT Parameters
-: ${DPL_DPUT_DOMAIN:=ppa.launchpad.net}
-: ${DPL_DPUT_METHOD:=sftp}
-: ${DPL_DPUT_INCOMING}
-: ${DPL_DPUT_LOGIN:=anonymous}
-: ${DPL_SSH_KEY_PRIVATE}        # Base64-encoded private key file. Used to sign repository uploads
-: ${DPL_SSH_KEY_PASSPHRASE}     # Decodes the private key file.
-
-# Package Parameters
+# Debian Package Parameters
 : ${PACKAGE_NAME:=srb2}
 : ${PACKAGE_VERSION:=2.2.0}
 : ${PACKAGE_SUBVERSION}         # Highly recommended to set this to reflect the distro series target (e.g., ~18.04bionic)
@@ -70,9 +54,6 @@
 : ${PROGRAM_VERSION:=2.2.0}
 : ${PROGRAM_DESCRIPTION:=A free 3D Sonic the Hedgehog fangame closely inspired by the original Sonic games on the Sega Genesis.}
 : ${PROGRAM_FILENAME:=srb2}
-
-: ${DPL_PGP_KEY_PRIVATE}        # Base64-encoded private key file. Used to sign Debian packages
-: ${DPL_PGP_KEY_PASSPHRASE}     # Decodes the private key file.
 
 # Export Asset and Package Parameters for envsubst templating
 
