@@ -2716,9 +2716,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	{
 		boolean reversecull = (flipped ^ hflipped ^ pos->flip ^ pos->mirror);
 		if (reversecull)
-			pglCullFace(GL_BACK);
-		else
 			pglCullFace(GL_FRONT);
+		else
+			pglCullFace(GL_BACK);
 	}
 #else
 	// pos->flip is if the screen is flipped too
