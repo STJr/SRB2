@@ -54,6 +54,12 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <fcntl.h>
 #endif
 
+#if defined (_WIN32)
+DWORD TimeFunction(int requested_frequency);
+#else
+int TimeFunction(int requested_frequency);
+#endif
+
 #include <stdio.h>
 #ifdef _WIN32
 #include <conio.h>
