@@ -295,10 +295,13 @@ if(${SDL2_FOUND})
 			RUNTIME DESTINATION .
 		)
 		if ((${CMAKE_BUILD_TYPE} MATCHES Debug) OR (${CMAKE_BUILD_TYPE} MATCHES RelWithDebInfo))
-			install(FILES $<TARGET_FILE:SRB2SDL2>.debug
-				DESTINATION .
-				OPTIONAL
-			)
+			set(SRB2_DEBUG_INSTALL OFF CACHE BOOL "Insert *.debug file into the install directory or package.")
+			if (${SRB2_DEBUG_INSTALL})
+				install(FILES $<TARGET_FILE:SRB2SDL2>.debug
+					DESTINATION .
+					OPTIONAL
+				)
+			endif()
 		endif()
 	endif()
 
