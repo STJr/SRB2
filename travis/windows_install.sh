@@ -18,8 +18,7 @@ export msys2+='& set MSYS=winsymlinks:nativestrict '
 export msys2+='& C:\\tools\\msys64\\msys2_shell.cmd -defterm -no-start'
 export mingw64="$msys2 -mingw64 -full-path -here -c "\"\$@"\" --"
 export msys2+=" -msys2 -c "\"\$@"\" --"
-# It would be better to download specific build versions,
-# but the toolchain contains a lot of packages. We target GCC 10.
+# Install current toolchain
 if [[ "$MSYS2_PACKAGES" == "" ]]; then
   MSYS2_PACKAGES="mingw-w64-i686-toolchain;mingw-w64-i686-nasm;mingw-w64-i686-ccache";
 fi
@@ -27,6 +26,17 @@ IFS=';' read -r -a pkgs <<< "$MSYS2_PACKAGES";
 for pkg in "${pkgs[@]}";
 do
   $msys2 pacman --sync -u --noconfirm --needed $pkg;
+done;
+# Get specific GCC version. This is lazy, but we'll overwrite the current
+# install with the linked package. 
+if [[ "$MSYS2_STORES" == "" ]]; then
+  MSYS2_STORES="http://repo.msys2.org/mingw/i686/mingw-w64-i686-gcc-10.1.0-3-any.pkg.tar.zst";
+fi
+IFS=';' read -r -a pkgs <<< "$MSYS2_STORES";
+for pkg in "${pkgs[@]}";
+do
+  wget "$pkg";
+  $msys2 pacman -U --noconfirm "$(basename $pkg)";
 done;
 ## Install more MSYS2 packages from https://packages.msys2.org/base here
 #taskkill //IM gpg-agent.exe //F  # https://travis-ci.community/t/4967
