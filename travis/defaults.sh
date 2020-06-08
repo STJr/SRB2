@@ -13,11 +13,18 @@
 : ${DPL_FORCE_OFF}              # Force-disable Deployer for tags
 : ${DPL_FORCE_OFF_GITHUB}       # Force-disable Deployer for GitHub Releases
 : ${DPL_FORCE_OFF_FTP}          # Force-disable Deployer for FTP
+: ${DPL_DEPLOY_TAG:=1}          # Trigger Deployer on a release tag
 : ${DPL_BRANCH_TRIGGER:=deployer} # Use a word in the branch name to trigger Deployer
 : ${DPL_COMMIT_TRIGGER:=deployer} # Use a [word] in the commit message to trigger Deployer
 : ${DPL_UPLOAD_BINARY:=1}       # Upload an archive containing the binary file plus $ASSET_FILES_DOCS
+: ${DPL_UPLOAD_BINARY_GITHUB}   # Upload an archive containing the binary file plus $ASSET_FILES_DOCS for GitHub Releases
+: ${DPL_UPLOAD_BINARY_FTP}      # Upload an archive containing the binary file plus $ASSET_FILES_DOCS for FTP
 : ${DPL_UPLOAD_ASSETS}          # Upload an archive containing the binary file plus $ASSET_FILES_DOCS plus all other assets
+: ${DPL_UPLOAD_ASSETS_GITHUB}   # Upload an archive containing the binary file plus $ASSET_FILES_DOCS plus all other assets for GitHub Releases
+: ${DPL_UPLOAD_ASSETS_FTP}      # Upload an archive containing the binary file plus $ASSET_FILES_DOCS plus all other assets for FTP
 : ${DPL_UPLOAD_INSTALLER}       # Upload an archive containing an installer
+: ${DPL_UPLOAD_INSTALLER_GITHUB} # Upload an archive containing an installer for GitHub Releases
+: ${DPL_UPLOAD_INSTALLER_FTP}   # Upload an archive containing an installer for FTP
 : ${DPL_ARCHIVE_NAME}           # Name to use for deployed archives. Defaults to $TRAVIS_TAG-$TRAVIS_OS_NAME or "srb2$TRAVIS_OS_NAME-$TRAVIS_BRANCH-${TRAVIS_COMMIT:0:8}-${TRAVIS_JOB_ID}"
 
 # Asset File Parameters

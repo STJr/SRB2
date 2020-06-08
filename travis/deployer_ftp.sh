@@ -48,7 +48,7 @@ echo "Uploading to FTP...";
 curl --ftp-create-dirs -T "commit.txt" -u $DPL_FTP_USER:$DPL_FTP_PASS "$__DPL_FTP_LOCATION/commit.txt";
 
 if [[ "$__DPL_DEBIAN_ACTIVE" != "1" ]]; then
-	find deploy -type f -exec curl -u $DPL_FTP_USER:$DPL_FTP_PASS --ftp-create-dirs -T {} $__DPL_FTP_LOCATION/{} \;;
+	find deploy-ftp -type f -exec curl -u $DPL_FTP_USER:$DPL_FTP_PASS --ftp-create-dirs -T {} $__DPL_FTP_LOCATION/ \;;
 else
 	if [[ "$_DPL_PACKAGE_MAIN" == "1" ]]; then
 		PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}${PACKAGE_SUBVERSION}${PACKAGE_REVISION};

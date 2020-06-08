@@ -15,9 +15,9 @@ matrix:
         - os: osx
           osx_image: xcode11.5
           env: 
-          - DPL_UPLOAD_INSTALLER=1
           - CFLAGS="-march=core2 -mtune=haswell"
           - CXXFLAGS="-march=core2 -mtune=haswell"
+          - DPL_UPLOAD_INSTALLER_FTP="${DPL_UPLOAD_INSTALLER_FTP:-1}"
           cache:
             directories:
             # Note: brew update cache (/usr/local/Homebrew) does not appear to be effective.
@@ -49,29 +49,35 @@ matrix:
             skip_cleanup: true
             api_key: $DPL_GITHUB_TOKEN
             file_glob: true
-            file: $TRAVIS_BUILD_DIR/build/deploy/**/*
+            file: $TRAVIS_BUILD_DIR/build/deploy-github/**/*
             draft: true
             on:
               all_branches: true
-              condition: '"$__DPL_ENABLED" == "1"'
+              condition: >
+                          "$__DPL_DISABLED" != "1" &&
+                          "$__DPL_DISABLED_GITHUB" != "1" &&
+                          ("$__DPL_TRIGGERED" == "1" || "$DPL_FORCE_ON_GITHUB" == "1")
           - provider: script
             skip_cleanup: true
             # relative to {repo_root}/build
             script: bash ../travis/deployer_ftp.sh
             on:
               all_branches: true
-              condition: '"$__DPL_ENABLED" == "1"'
+              condition: >
+                          "$__DPL_DISABLED" != "1" &&
+                          "$__DPL_DISABLED_FTP" != "1" &&
+                          ("$__DPL_TRIGGERED" == "1" || "$DPL_FORCE_ON_FTP" == "1")
           #Default: macOS 10.13 and Xcode 9.4.1
         - os: windows
           compiler: gcc
           env:
-          - DPL_UPLOAD_ASSETS=1
-          - DPL_UPLOAD_INSTALLER=1
           - CFLAGS="-march=nocona -mtune=haswell"
           - CXXFLAGS="-march=nocona -mtune=haswell"
           - WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow -Wno-error=format-truncation -Wno-error=stringop-overflow -Wno-error=stringop-truncation"
           - GCC91=1
           - PROGRAM_FILENAME=srb2win
+          - DPL_UPLOAD_ASSETS_FTP="${DPL_UPLOAD_ASSETS_FTP:-1}"
+          - DPL_UPLOAD_INSTALLER_FTP="${DPL_UPLOAD_INSTALLER_FTP:-1}"
           cache:
             directories:
             - $HOME/AppData/Local/Temp/chocolatey
@@ -82,22 +88,29 @@ matrix:
           # https://unix.stackexchange.com/a/137322/107554
           - $msys2 pacman --sync --clean --noconfirm
           deploy:
-          - provider: releases
-            skip_cleanup: true
-            api_key: $DPL_GITHUB_TOKEN
-            file_glob: true
-            file: $TRAVIS_BUILD_DIR/build/deploy/**/*
-            draft: true
-            on:
-              all_branches: true
-              condition: '"$__DPL_ENABLED" == "1"'
+          # currently not supported on travis windows
+          # - provider: releases
+          #   skip_cleanup: true
+          #   api_key: $DPL_GITHUB_TOKEN
+          #   file_glob: true
+          #   file: $TRAVIS_BUILD_DIR/build/deploy-github/**/*
+          #   draft: true
+          #   on:
+          #     all_branches: true
+          #     condition: >
+          #                 "$__DPL_DISABLED" != "1" &&
+          #                 "$__DPL_DISABLED_GITHUB" != "1" &&
+          #                 ("$__DPL_TRIGGERED" == "1" || "$DPL_FORCE_ON_GITHUB" == "1")
           - provider: script
             skip_cleanup: true
             # relative to {repo_root}/build
             script: bash ../travis/deployer_ftp.sh
             on:
               all_branches: true
-              condition: '"$__DPL_ENABLED" == "1"'
+              condition: >
+                          "$__DPL_DISABLED" != "1" &&
+                          "$__DPL_DISABLED_FTP" != "1" &&
+                          ("$__DPL_TRIGGERED" == "1" || "$DPL_FORCE_ON_FTP" == "1")
           #Windows Server version 1809, mingw-w64-i686-gcc-10.1.0-3
         - os: linux
           addons:
@@ -119,23 +132,30 @@ matrix:
           - CXXFLAGS="-march=nocona -mtune=haswell"
           - WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow -Wno-error=format-truncation"
           - GCC81=1
+          - DPL_UPLOAD_ASSETS_FTP="${DPL_UPLOAD_ASSETS_FTP:-1}"
           deploy:
           - provider: releases
             skip_cleanup: true
             api_key: $DPL_GITHUB_TOKEN
             file_glob: true
-            file: $TRAVIS_BUILD_DIR/build/deploy/**/*
+            file: $TRAVIS_BUILD_DIR/build/deploy-github/**/*
             draft: true
             on:
               all_branches: true
-              condition: '"$__DPL_ENABLED" == "1"'
+              condition: >
+                          "$__DPL_DISABLED" != "1" &&
+                          "$__DPL_DISABLED_GITHUB" != "1" &&
+                          ("$__DPL_TRIGGERED" == "1" || "$DPL_FORCE_ON_GITHUB" == "1")
           - provider: script
             skip_cleanup: true
             # relative to {repo_root}/build
             script: bash ../travis/deployer_ftp.sh
             on:
               all_branches: true
-              condition: '"$__DPL_ENABLED" == "1"'
+              condition: >
+                          "$__DPL_DISABLED" != "1" &&
+                          "$__DPL_DISABLED_FTP" != "1" &&
+                          ("$__DPL_TRIGGERED" == "1" || "$DPL_FORCE_ON_FTP" == "1")
           #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
 ################################
 # Non-Deploying Buildbots
