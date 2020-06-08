@@ -113,16 +113,19 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINAR
 
 ##### PACKAGE CONFIGURATION #####
 
-if(${CMAKE_SYSTEM} MATCHES "Windows")
-	set(CPACK_GENERATOR "ZIP")
-endif()
-if(${CMAKE_SYSTEM} MATCHES "Linux")
-	set(CPACK_GENERATOR "TGZ")
-endif()
-if(${CMAKE_SYSTEM} MATCHES "Darwin")
-	set(CPACK_GENERATOR "DragNDrop")
+set(SRB2_CPACK_GENERATOR "" CACHE STRING "Generator to use for making a package. E.g., ZIP, TGZ, DragNDrop (OSX only). Leave blank for default generator.")
+
+if("${SRB2_CPACK_GENERATOR}" STREQUAL "")
+	if(${CMAKE_SYSTEM} MATCHES "Windows")
+		set(SRB2_CPACK_GENERATOR "ZIP")
+	elseif(${CMAKE_SYSTEM} MATCHES "Linux")
+		set(SRB2_CPACK_GENERATOR "TGZ")
+	elseif(${CMAKE_SYSTEM} MATCHES "Darwin")
+		set(SRB2_CPACK_GENERATOR "TGZ")
+	endif()
 endif()
 
+set(CPACK_GENERATOR ${SRB2_CPACK_GENERATOR})
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Sonic Robo Blast 2" CACHE STRING "Program name for display purposes")
 set(CPACK_PACKAGE_VENDOR "Sonic Team Jr." CACHE STRING "Vendor name for display purposes")
 #set(CPACK_PACKAGE_DESCRIPTION_FILE )
