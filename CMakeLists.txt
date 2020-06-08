@@ -1,4 +1,17 @@
 cmake_minimum_required(VERSION 3.0)
+
+# Enable CCache early
+set(SRB2_USE_CCACHE OFF CACHE BOOL "Use CCache")
+if (${SRB2_USE_CCACHE})
+	find_program(CCACHE_PROGRAM ccache)
+	if(CCACHE_PROGRAM)
+		message(STATUS "Found CCache: ${CCACHE_PROGRAM}")
+		set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+	else()
+		message(WARNING "You have specified to use CCACHE but it was not found. Object files will not be cached.")
+	endif()
+endif()
+
 # DO NOT CHANGE THIS SRB2 STRING! Some variable names depend on this string.
 # Version change is fine.
 project(SRB2
@@ -7,6 +20,10 @@ project(SRB2
 
 if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
 	message(FATAL_ERROR "In-source builds will bring you a world of pain. Please make a separate directory to invoke CMake from.")
+endif()
+
+if ((${SRB2_USE_CCACHE}) AND (${CMAKE_C_COMPILER} MATCHES "clang"))
+	message(WARNING "Using clang and CCache: You may want to set environment variable CCACHE_CPP2=yes to prevent include errors during compile.")
 endif()
 
 # Set up CMAKE path
