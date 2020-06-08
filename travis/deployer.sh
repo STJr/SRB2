@@ -7,10 +7,12 @@
 if [[ ("$DPL_GITHUB_TOKEN" != "" &&
       "$TRAVIS_PULL_REQUEST" == "false" &&
       "$DPL_FORCE_OFF" != "1" &&
-      "$DPL_FORCE_OFF_GITHUB" != "1" &&
+      !("$DPL_FORCE_OFF_GITHUB" == "1" &&
+        "$DPL_FORCE_OFF_FTP" == "1") &&
       (
       "$DPL_FORCE_ON" = "1" ||
       "$DPL_FORCE_ON_GITHUB" = "1" ||
+      "$DPL_FORCE_ON_FTP" = "1" ||
       "$TRAVIS_TAG" != "" ||
       "$TRAVIS_BRANCH" =~ ^.*$DPL_BRANCH_TRIGGER.*$ ||
       "$TRAVIS_COMMIT_MESSAGE" =~ ^.*\[$DPL_COMMIT_TRIGGER\].*$
