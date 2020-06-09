@@ -45,7 +45,7 @@ fi;
 ########################################
 if [[ ("$DPL_DISABLED" != "1" &&
         ("$DPL_FORCE_ON" == "1" ||
-        ("$TRAVIS_TAG" != "" && "$DPL_DEPLOY_TAG" != "1") ||
+        ("$TRAVIS_TAG" != "" && "$DPL_TAG_ENABLED" == "1") ||
         "$TRAVIS_BRANCH" =~ ^.*$DPL_BRANCH_TRIGGER.*$ ||
         "$TRAVIS_COMMIT_MESSAGE" =~ ^.*\[$DPL_COMMIT_TRIGGER\].*$
         )

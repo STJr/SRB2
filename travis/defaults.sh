@@ -13,7 +13,7 @@
 : ${DPL_FORCE_OFF}              # Force-disable Deployer for tags
 : ${DPL_FORCE_OFF_GITHUB}       # Force-disable Deployer for GitHub Releases
 : ${DPL_FORCE_OFF_FTP}          # Force-disable Deployer for FTP
-: ${DPL_DEPLOY_TAG:=1}          # Trigger Deployer on a release tag
+: ${DPL_TAG_ENABLED:=1}          # Trigger Deployer on a release tag
 : ${DPL_BRANCH_TRIGGER:=deployer} # Use a word in the branch name to trigger Deployer
 : ${DPL_COMMIT_TRIGGER:=deployer} # Use a [word] in the commit message to trigger Deployer
 : ${DPL_UPLOAD_BINARY:=1}       # Upload an archive containing the binary file plus $ASSET_FILES_DOCS
