@@ -2297,7 +2297,6 @@ void V_DrawStringScaled(
 		if (!( flags & V_SNAPTOLEFT ))
 		{
 			left   = ( right - BASEVIDWIDTH )/ 2;/* left edge of drawable area */
-			x      = ( left << FRACBITS )+ x;
 			right -= left;
 		}
 	}
