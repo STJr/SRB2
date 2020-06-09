@@ -24,6 +24,7 @@ matrix:
           cache:
             directories:
             - $HOME/macports_cache
+            - $HOME/.ccache # must be set explicitly
             - $HOME/srb2_cache
           deploy:
           - provider: releases
@@ -61,7 +62,7 @@ matrix:
           cache:
             directories:
             - /c/tools/msys64/var/cache/pacman/pkg
-            - $HOME/.ccache # must be set in Windows
+            - $HOME/.ccache # must be set explicitly
             - $HOME/srb2_cache
           before_cache:
           # https://unix.stackexchange.com/a/137322/107554
