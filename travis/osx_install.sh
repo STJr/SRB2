@@ -10,7 +10,6 @@ if [ -f "$HOME/macports_cache/macports.tar" ]; then
     unlink "$HOME/macports_cache/macports.tar";
 else
     echo "MacPorts cache not found; installing from scratch...";
-    VERBOSE=1;
 fi
 
 # Verbose?
