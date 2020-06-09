@@ -14,37 +14,17 @@ matrix:
 ################################
         - os: osx
           osx_image: xcode11.5
-          env: 
-          - CFLAGS="-march=core2 -mtune=haswell"
-          - CXXFLAGS="-march=core2 -mtune=haswell"
+          env:
+          - MARCH=core2
+          - MTUNE=haswell
           - MACOSX_DEPLOYMENT_TARGET=10.9
+          - CFLAGS="-march=$MARCH -mtune=$MTUNE"
+          - CXXFLAGS="-march=$MARCH -mtune=$MTUNE"
           - DPL_UPLOAD_INSTALLER_FTP="${DPL_UPLOAD_INSTALLER_FTP:-1}"
           cache:
             directories:
-            # Note: brew update cache (/usr/local/Homebrew) does not appear to be effective.
-            # Would be nice to implement this solution -- https://stackoverflow.com/a/53331571
-            #- /usr/local/Homebrew
-            - $HOME/Library/Caches/Homebrew
-            - $HOME/homebrew_cache
-            - $HOME/.ccache
+            - $HOME/macports_cache
             - $HOME/srb2_cache
-          before_install:
-          # Initialize Deployer defaults
-          - source ./travis/defaults.sh
-          # Unpack homebrew.
-          # Unlink current cmake so our installed cmake can overwrite.
-          - if [[ -f "$HOME/homebrew_cache/homebrew-cache-Cellar.tar.gz" ]]; then
-              brew unlink cmake;
-              tar xzf $HOME/homebrew_cache/homebrew-cache-Cellar.tar.gz --directory=/usr/local/Cellar;
-              tar xzf $HOME/homebrew_cache/homebrew-cache-opt.tar.gz --directory=/usr/local/opt;
-            fi;
-          before_cache:
-          - brew cleanup
-          # Credit https://discourse.brew.sh/t/best-practice-for-homebrew-on-travis-brew-update-is-5min-to-build-time/5215/9
-          # Cache only .git files under "/usr/local/Homebrew" so "brew update" does not take 5min every build
-          #- find /usr/local/Homebrew \! -regex ".+\.git.+" -delete
-          - tar czf $HOME/homebrew_cache/homebrew-cache-Cellar.tar.gz --directory=/usr/local/Cellar p7zip cmake ccache sdl2 sdl2_mixer game-music-emu libopenmpt
-          - tar czf $HOME/homebrew_cache/homebrew-cache-opt.tar.gz --directory=/usr/local/opt p7zip cmake ccache sdl2 sdl2_mixer game-music-emu libopenmpt
           deploy:
           - provider: releases
             skip_cleanup: true
@@ -431,28 +411,13 @@ addons:
 before_install:
   # Initialize Deployer defaults
   - source ./travis/defaults.sh
+  - export CCACHE_COMPRESS="true"
 
 
 install:
-  # OS X: Install library dependencies via Homebrew
-  #     * `brew install --build-from-source` builds libraries for our CFLAGS, which target core2 CPU
-  #     * `sdl2_mixer` requires options from the formula tap https://github.com/mazmazz/homebrew-srb2
-  - mkdir -p $HOME/srb2_cache
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      BREW_UPGRADE="bash ./travis/osx_brew_upgrade.sh";
-      brew tap mazmazz/srb2;
-      brew update > /dev/null;
-      $BREW_UPGRADE p7zip; brew link p7zip;
-      $BREW_UPGRADE cmake; brew link cmake;
-      $BREW_UPGRADE ccache; brew link ccache;
-      $BREW_UPGRADE --build-from-source sdl2; brew link sdl2;
-      $BREW_UPGRADE --build-from-source mazmazz/srb2/sdl2_mixer --with-flac --with-mpg123; brew link mazmazz/srb2/sdl2_mixer;
-      $BREW_UPGRADE --build-from-source mazmazz/srb2/game-music-emu; brew link mazmazz/srb2/game-music-emu;
-      $BREW_UPGRADE --build-from-source libopenmpt; brew link libopenmpt;
-    fi
-  # Windows: Install MSYS2 and build toolchain
-  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
-      source ./travis/windows_install.sh;
+  # Install Windows and OS X toolchains
+  - if [ -f "./travis/${TRAVIS_OS_NAME}_install.sh" ]; then
+      source ./travis/${TRAVIS_OS_NAME}_install.sh;
     fi
 
 
@@ -495,16 +460,7 @@ before_script:
   # Prepare CMake
   - mkdir build
   - cd build
-  - mkdir package
   - export CFLAGS="-Wall -W -Werror $WFLAGS $CFLAGS"
-  - export CCACHE_COMPRESS=true
-  # enable CCACHE on OSX
-  # also fix LIBRARY_PATH to include SDL2
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      export PATH="/usr/local/opt/ccache/bin:$PATH";
-      export LIBRARY_PATH="$LIBRARY_PATH:/usr/local/lib";
-      __CMAKE_CCACHE="-DSRB2_USE_CCACHE=ON";
-    fi;
   - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
       __CMAKE_GENERATOR="MinGW Makefiles";
       __CMAKE_COMPILER="-DCMAKE_C_COMPILER=gcc -DCMAKE_MAKE_PROGRAM=mingw32-make";
@@ -516,7 +472,12 @@ before_script:
       __CMAKE_GENERATOR="Unix Makefiles";
       __MAKE="make";
     fi;
-  - cmake .. -G "$__CMAKE_GENERATOR" ${__CMAKE_COMPILER} ${__CMAKE_CCACHE} -DCMAKE_BUILD_TYPE=RelWithDebInfo ${__CMAKE_LIBRARIES} ${__CMAKE_ASM}
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      __CMAKE_CCACHE="-DSRB2_USE_CCACHE=ON";
+      __CMAKE_PREFIX_PATH="-DCMAKE_PREFIX_PATH=/opt/local/include/gme;/opt/local/include/libopenmpt";
+    fi;
+  - cmake .. -G "$__CMAKE_GENERATOR" ${__CMAKE_COMPILER} ${__CMAKE_PREFIX_PATH} ${__CMAKE_CCACHE}
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo ${__CMAKE_LIBRARIES} ${__CMAKE_ASM}
       -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package
       -DSRB2_ASSET_HASHED="${SRB2_ASSET_HASHED}" -DSRB2_ASSET_DOCS="${SRB2_ASSET_DOCS}"
       -DSRB2_ASSET_DIRECTORY="${SRB2_ASSET_DIRECTORY}"

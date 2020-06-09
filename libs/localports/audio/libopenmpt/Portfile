@@ -1,0 +1,31 @@
+PortSystem      1.0
+
+name            libopenmpt
+version         0.5.0
+categories      audio devel
+platforms       darwin
+license         bsd
+maintainers     nomaintainer
+description     Software library to decode tracked music files
+
+homepage        https://lib.openmpt.org/libopenmpt/
+master_sites    https://lib.openmpt.org/files/libopenmpt/src/
+distname        ${name}-${version}+release.autotools
+livecheck.url   ${master_sites}
+
+checksums       rmd160 ad501fc60a8952bf7160fb1c41b76c8c6624b4a9 \
+                sha256 43cba54a3f7220c3cc5baae1e2c19a5af7196bfdb95ff4d0c4979d9fbc6c837e
+
+depends_build   port:pkgconfig
+depends_lib     port:zlib \
+                port:libogg \
+                port:libvorbis \
+                port:mpg123
+
+configure.args  --disable-dependency-tracking \
+                --disable-silent-rules \
+                --without-vorbisfile \
+                --without-portaudio \
+                --without-portaudiocpp \
+                --without-sndfile \
+                --without-flac

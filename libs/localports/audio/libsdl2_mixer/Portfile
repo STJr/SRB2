@@ -1,0 +1,65 @@
+PortSystem      1.0
+
+name            libsdl2_mixer
+set my_name     SDL2_mixer
+version         2.0.4
+categories      audio devel
+platforms       darwin
+license         zlib
+maintainers     {jmr @jmroot} openmaintainer
+description     Audio mixer library for SDL
+
+long_description \
+    A sample multi-channel audio mixer library. It supports any number of \
+    simultaneously playing channels of 16 bit stereo audio, plus a single \
+    channel of music.
+
+homepage        http://www.libsdl.org/projects/SDL_mixer/
+master_sites    ${homepage}release/
+distname        ${my_name}-${version}
+
+checksums       rmd160 d5674a92bc9a81e3aba0072c4d7e2314e56958d6 \
+                sha256 b4cf5a382c061cd75081cf246c2aa2f9df8db04bdda8dcdc6b6cca55bede2419
+
+depends_build   port:pkgconfig
+depends_lib     port:libsdl2 \
+                port:flac \
+                port:libmodplug \
+                port:libvorbis \
+                port:mpg123
+
+configure.args  --disable-sdltest \
+                --disable-dependency-tracking \
+                --enable-music-flac \
+                --disable-music-flac-shared \
+                --enable-music-midi \
+                --disable-music-midi-fluidsynth \
+                --disable-music-midi-fluidsynth-shared \
+                --enable-music-midi-native \
+                --disable-music-midi-timidity \
+                --enable-music-mod \
+                --disable-music-mod-mikmod \
+                --disable-music-mod-mikmod-shared \
+                --enable-music-mod-modplug \
+                --disable-music-mod-modplug-shared \
+                --enable-music-mp3 \
+                --enable-music-mp3-mpg123 \
+                --disable-music-mp3-mpg123-shared \
+                --enable-music-ogg \
+                --disable-music-ogg-shared \
+                --disable-music-opus \
+                --disable-music-opus-shared \
+                --enable-music-wave
+
+compiler.blacklist *gcc* { clang < 211 }
+
+post-destroot {
+    set docdir ${prefix}/share/doc/${name}
+    xinstall -d ${destroot}${docdir}
+    xinstall -m 0644 -W ${worksrcpath} CHANGES.txt COPYING.txt README.txt \
+        ${destroot}${docdir}
+}
+
+livecheck.type  regex
+livecheck.url   ${homepage}
+livecheck.regex ${my_name}-(\\d+(?:\\.\\d+)*)

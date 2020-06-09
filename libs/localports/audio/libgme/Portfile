@@ -1,0 +1,20 @@
+PortSystem      1.0
+PortGroup       cmake 1.1
+PortGroup       bitbucket 1.0
+
+name            libgme
+version         0.6.2
+categories      audio devel
+platforms       darwin
+license         lgpl
+maintainers     nomaintainer
+description     Videogame music file emulator collection
+
+bitbucket.author        mpyne
+bitbucket.project       game-music-emu
+bitbucket.version       0.6.2
+bitbucket.tarball_from  downloads
+extract.suffix          .tar.xz
+
+checksums       rmd160 743793e4e752074e7dcdccfb2d92dd0c86a9edd0 \
+                sha256 5046cb471d422dbe948b5f5dd4e5552aaef52a0899c4b2688e5a68a556af7342
