@@ -60,15 +60,14 @@ matrix:
           - DPL_UPLOAD_INSTALLER_FTP="${DPL_UPLOAD_INSTALLER_FTP:-1}"
           cache:
             directories:
-            - $HOME/AppData/Local/Temp/chocolatey
-            - /c/tools/msys64
-            - $HOME/.ccache
+            - /c/tools/msys64/var/cache/pacman/pkg
+            - $HOME/.ccache # must be set in Windows
             - $HOME/srb2_cache
           before_cache:
           # https://unix.stackexchange.com/a/137322/107554
           - $msys2 pacman --sync --clean --noconfirm
           deploy:
-          # currently not supported on travis windows
+          # currently not supported on travis windows, 6/2020
           # - provider: releases
           #   skip_cleanup: true
           #   api_key: $DPL_GITHUB_TOKEN
@@ -426,7 +425,6 @@ before_script:
   - OLDPWD=$PWD
   - __ASSET_DIRECTORY="$OLDPWD/assets/installer"
   - mkdir -p "$__ASSET_DIRECTORY"
-  - cd "$HOME/srb2_cache"
 
   # Get stat command so we know what the cached archive date is.
   # stat is different for OSX
