@@ -58,7 +58,8 @@ typedef enum
 	TMPF_INVISIBLEPLANES = 1<<3,
 	TMPF_EXECUTOR        = 1<<4,
 	TMPF_CRUSH           = 1<<5,
-	//TMPF_DONTCLIPPLANES  = 1<<6,
+	TMPF_SPLAT           = 1<<6,
+	//TMPF_DONTCLIPPLANES  = 1<<7,
 } textmappolyobjectflags_t;
 
 //

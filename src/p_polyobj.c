@@ -231,7 +231,7 @@ static void Polyobj_GetInfo(polyobj_t *po, line_t *line)
 	/*if (line->args[3] & TMPF_DONTCLIPPLANES)
 		po->flags &= ~POF_CLIPPLANES;*/
 
-	if (lines[i].flags & ML_EFFECT6)
+	if (lines[i].flags & TMPF_SPLAT)
 		po->flags |= POF_SPLAT;
 
 	if (line->args[3] & TMPF_EXECUTOR) // Has a linedef executor

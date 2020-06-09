@@ -2995,6 +2995,8 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[3] &= ~TMPF_INVISIBLEPLANES;
 			/*if (lines[paramline].flags & ML_EFFECT5)
 				lines[i].args[3] |= TMPF_DONTCLIPPLANES;*/
+			if (lines[paramline].flags & ML_EFFECT6)
+				lines[i].args[3] |= TMPF_SPLAT;
 			if (lines[paramline].flags & ML_NOCLIMB)
 				lines[i].args[3] |= TMPF_EXECUTOR;
 
