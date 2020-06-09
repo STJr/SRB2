@@ -774,6 +774,9 @@ typedef enum sprite
 	SPR_GFZD, // GFZ debris
 	SPR_BRIC, // Bricks
 	SPR_WDDB, // Wood Debris
+	SPR_BRIR, // CEZ3 colored bricks
+	SPR_BRIB,
+	SPR_BRIY,
 
 	// Gravity Well Objects
 	SPR_GWLG,
@@ -3998,6 +4001,9 @@ typedef enum state
 	S_GFZDEBRIS,
 	S_BRICKDEBRIS,
 	S_WOODDEBRIS,
+	S_COLOREDBRICKDEBRISA, // for CEZ3
+	S_COLOREDBRICKDEBRISB, // for CEZ3
+	S_COLOREDBRICKDEBRISC, // for CEZ3
 
 #ifdef SEENAMES
 	S_NAMECHECK,
@@ -4798,6 +4804,9 @@ typedef enum mobj_type
 	MT_GFZDEBRIS,
 	MT_BRICKDEBRIS,
 	MT_WOODDEBRIS,
+	MT_COLOREDBRICKDEBRISA, // for CEZ3
+	MT_COLOREDBRICKDEBRISB, // for CEZ3
+	MT_COLOREDBRICKDEBRISC, // for CEZ3
 
 #ifdef SEENAMES
 	MT_NAMECHECK,

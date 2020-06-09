@@ -392,7 +392,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 				// It works down here, though.
 				{
 					INT32 numline = 0;
-					for (i = 0; (size_t)i < sizeof(description[num].notes)-1; i++)
+					for (i = 0; i < MAXLINELEN-1; i++)
 					{
 						if (numline < 20 && description[num].notes[i] == '\n')
 							numline++;
@@ -1174,7 +1174,7 @@ static void readgametype(MYFILE *f, char *gtname)
 				// It works down here, though.
 				{
 					INT32 numline = 0;
-					for (i = 0; (size_t)i < sizeof(gtdescription)-1; i++)
+					for (i = 0; i < MAXLINELEN-1; i++)
 					{
 						if (numline < 20 && gtdescription[i] == '\n')
 							numline++;
@@ -8007,6 +8007,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_GFZDEBRIS",
 	"S_BRICKDEBRIS",
 	"S_WOODDEBRIS",
+	"S_COLOREDBRICKDEBRISA",
+	"S_COLOREDBRICKDEBRISB",
+	"S_COLOREDBRICKDEBRISC",
 
 #ifdef SEENAMES
 	"S_NAMECHECK",
@@ -8787,6 +8790,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GFZDEBRIS",
 	"MT_BRICKDEBRIS",
 	"MT_WOODDEBRIS",
+	"MT_COLOREDBRICKDEBRISA",
+	"MT_COLOREDBRICKDEBRISB",
+	"MT_COLOREDBRICKDEBRISC",
 
 #ifdef SEENAMES
 	"MT_NAMECHECK",
