@@ -266,7 +266,7 @@ if(${SDL2_FOUND})
 	endif()
 
 	target_compile_definitions(SRB2SDL2 PRIVATE
-		-DHAVE_SDL
+		-DDDIRECTFULLSCREEN -DHAVE_SDL
 	)
 
 	## strip debug symbols into separate file when using gcc.
