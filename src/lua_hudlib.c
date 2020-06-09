@@ -878,8 +878,8 @@ static int libd_drawNameTag(lua_State *L)
 	INT32 y;
 	const char *str;
 	INT32 flags;
-	UINT8 basecolor;
-	UINT8 outlinecolor;
+	UINT16 basecolor;
+	UINT16 outlinecolor;
 	UINT8 *basecolormap = NULL;
 	UINT8 *outlinecolormap = NULL;
 
@@ -908,8 +908,8 @@ static int libd_drawScaledNameTag(lua_State *L)
 	const char *str;
 	INT32 flags;
 	fixed_t scale;
-	UINT8 basecolor;
-	UINT8 outlinecolor;
+	UINT16 basecolor;
+	UINT16 outlinecolor;
 	UINT8 *basecolormap = NULL;
 	UINT8 *outlinecolormap = NULL;
 
@@ -966,7 +966,7 @@ static int libd_nameTagWidth(lua_State *L)
 static int libd_getColormap(lua_State *L)
 {
 	INT32 skinnum = TC_DEFAULT;
-	skincolors_t color = luaL_optinteger(L, 2, 0);
+	skincolornum_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
 	HUDONLY
 	if (lua_isnoneornil(L, 1))

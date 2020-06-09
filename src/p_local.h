@@ -138,6 +138,10 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
 boolean P_PlayerCanDamage(player_t *player, mobj_t *thing);
 boolean P_IsLocalPlayer(player_t *player);
+void P_SetPlayerAngle(player_t *player, angle_t angle);
+angle_t P_GetLocalAngle(player_t *player);
+void P_SetLocalAngle(player_t *player, angle_t angle);
+void P_ForceLocalAngle(player_t *player, angle_t angle);
 
 boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
