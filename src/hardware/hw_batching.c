@@ -138,7 +138,7 @@ static int comparePolygons(const void *p1, const void *p2)
 	PolygonArrayEntry* poly2 = &polygonArray[index2];
 	int diff;
 	INT64 diff64;
-	
+
 	int shader1 = poly1->shader;
 	int shader2 = poly2->shader;
 	// make skywalls and horizon lines first in order
@@ -152,20 +152,20 @@ static int comparePolygons(const void *p1, const void *p2)
 	// skywalls and horizon lines must retain their order for horizon lines to work
 	if (shader1 == -1 && shader2 == -1)
 		return index1 - index2;
-	
+
 	diff64 = poly1->texture - poly2->texture;
 	if (diff64 != 0) return diff64;
-	
+
 	diff = poly1->polyFlags - poly2->polyFlags;
 	if (diff != 0) return diff;
-	
+
 	diff64 = poly1->surf.PolyColor.rgba - poly2->surf.PolyColor.rgba;
 	if (diff64 < 0) return -1; else if (diff64 > 0) return 1;
 	diff64 = poly1->surf.TintColor.rgba - poly2->surf.TintColor.rgba;
 	if (diff64 < 0) return -1; else if (diff64 > 0) return 1;
 	diff64 = poly1->surf.FadeColor.rgba - poly2->surf.FadeColor.rgba;
 	if (diff64 < 0) return -1; else if (diff64 > 0) return 1;
-	
+
 	diff = poly1->surf.LightInfo.light_level - poly2->surf.LightInfo.light_level;
 	if (diff != 0) return diff;
 	diff = poly1->surf.LightInfo.fade_start - poly2->surf.LightInfo.fade_start;
@@ -182,7 +182,7 @@ static int comparePolygonsNoShaders(const void *p1, const void *p2)
 	PolygonArrayEntry* poly2 = &polygonArray[index2];
 	int diff;
 	INT64 diff64;
-	
+
 	GLMipmap_t *texture1 = poly1->texture;
 	GLMipmap_t *texture2 = poly2->texture;
 	if (poly1->polyFlags & PF_NoTexture || poly1->horizonSpecial)
@@ -195,10 +195,10 @@ static int comparePolygonsNoShaders(const void *p1, const void *p2)
 	// skywalls and horizon lines must retain their order for horizon lines to work
 	if (texture1 == NULL && texture2 == NULL)
 		return index1 - index2;
-	
+
 	diff = poly1->polyFlags - poly2->polyFlags;
 	if (diff != 0) return diff;
-	
+
 	diff64 = poly1->surf.PolyColor.rgba - poly2->surf.PolyColor.rgba;
 	if (diff64 < 0) return -1; else if (diff64 > 0) return 1;
 
@@ -262,19 +262,19 @@ void HWR_RenderBatches(void)
 	currentSurfaceInfo = polygonArray[polygonIndexArray[0]].surf;
 	// For now, will sort and track the colors. Vertex attributes could be used instead of uniforms
 	// and a color array could replace the color calls.
-	
+
 	// set state for first batch
-	
+
 	if (cv_grshaders.value) // TODO also have the shader availability check here when its done
 	{
 		HWD.pfnSetShader(currentShader);
 	}
-	
+
 	if (currentPolyFlags & PF_NoTexture)
 		currentTexture = NULL;
     else
 	    HWD.pfnSetTexture(currentTexture);
-	
+
 	while (1)// note: remember handling notexture polyflag as having texture number 0 (also in comparePolygons)
 	{
 		int firstIndex;
@@ -283,13 +283,13 @@ void HWR_RenderBatches(void)
 		boolean stopFlag = false;
 		boolean changeState = false;
 		boolean changeShader = false;
-		int nextShader;
+		int nextShader = 0;
 		boolean changeTexture = false;
-		GLMipmap_t *nextTexture;
+		GLMipmap_t *nextTexture = NULL;
 		boolean changePolyFlags = false;
-		FBITFIELD nextPolyFlags;
+		FBITFIELD nextPolyFlags = 0;
 		boolean changeSurfaceInfo = false;
-		FSurfaceInfo nextSurfaceInfo;
+		FSurfaceInfo nextSurfaceInfo = {0};
 
 		// steps:
 		// write vertices
@@ -301,7 +301,7 @@ void HWR_RenderBatches(void)
 		// change states according to next vars and change bools, updating the current vars and reseting the bools
 		// reset write pos
 		// repeat loop
-		
+
 		int index = polygonIndexArray[polygonReadPos++];
 		int numVerts = polygonArray[index].numVerts;
 		// before writing, check if there is enough room
@@ -336,7 +336,7 @@ void HWR_RenderBatches(void)
 			finalVertexIndexArray[finalIndexWritePos++] = finalVertexWritePos - 1;
 			finalVertexIndexArray[finalIndexWritePos++] = finalVertexWritePos++;
 		}
-		
+
 		if (polygonReadPos >= polygonArraySize)
 		{
 			stopFlag = true;
@@ -388,7 +388,7 @@ void HWR_RenderBatches(void)
 				}
 			}
 		}
-		
+
 		if (changeState || stopFlag)
 		{
 			// execute draw call
@@ -401,10 +401,10 @@ void HWR_RenderBatches(void)
 			finalIndexWritePos = 0;
 		}
 		else continue;
-		
+
 		// if we're here then either its time to stop or time to change state
 		if (stopFlag) break;
-		
+
 		// change state according to change bools and next vars, update current vars and reset bools
 		if (changeShader)
 		{
@@ -442,7 +442,7 @@ void HWR_RenderBatches(void)
 	// reset the arrays (set sizes to 0)
 	polygonArraySize = 0;
 	unsortedVertexArraySize = 0;
-	
+
 	rs_hw_batchdrawtime = I_GetTimeMicros() - rs_hw_batchdrawtime;
 }
 
