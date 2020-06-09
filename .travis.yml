@@ -17,12 +17,13 @@ matrix:
           env: 
           - CFLAGS="-march=core2 -mtune=haswell"
           - CXXFLAGS="-march=core2 -mtune=haswell"
+          - MACOSX_DEPLOYMENT_TARGET=10.9
           - DPL_UPLOAD_INSTALLER_FTP="${DPL_UPLOAD_INSTALLER_FTP:-1}"
           cache:
             directories:
             # Note: brew update cache (/usr/local/Homebrew) does not appear to be effective.
             # Would be nice to implement this solution -- https://stackoverflow.com/a/53331571
-            - /usr/local/Homebrew
+            #- /usr/local/Homebrew
             - $HOME/Library/Caches/Homebrew
             - $HOME/homebrew_cache
             - $HOME/.ccache
@@ -41,7 +42,7 @@ matrix:
           - brew cleanup
           # Credit https://discourse.brew.sh/t/best-practice-for-homebrew-on-travis-brew-update-is-5min-to-build-time/5215/9
           # Cache only .git files under "/usr/local/Homebrew" so "brew update" does not take 5min every build
-          - find /usr/local/Homebrew \! -regex ".+\.git.+" -delete
+          #- find /usr/local/Homebrew \! -regex ".+\.git.+" -delete
           - tar czf $HOME/homebrew_cache/homebrew-cache-Cellar.tar.gz --directory=/usr/local/Cellar p7zip cmake ccache sdl2 sdl2_mixer game-music-emu libopenmpt
           - tar czf $HOME/homebrew_cache/homebrew-cache-opt.tar.gz --directory=/usr/local/opt p7zip cmake ccache sdl2 sdl2_mixer game-music-emu libopenmpt
           deploy:
@@ -441,7 +442,7 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       BREW_UPGRADE="bash ./travis/osx_brew_upgrade.sh";
       brew tap mazmazz/srb2;
-      brew update --merge > /dev/null;
+      brew update > /dev/null;
       $BREW_UPGRADE p7zip; brew link p7zip;
       $BREW_UPGRADE cmake; brew link cmake;
       $BREW_UPGRADE ccache; brew link ccache;
