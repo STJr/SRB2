@@ -213,7 +213,7 @@ fi;
 
 # Build installer
 # We expect the filetype to be different than the asset package, above.
-# For now, only build for OSX.
+# Windows TODO: Support NSIS. For now, we'll just do 7-zip SFX.
 if [[ "$__DPL_UPLOAD_INSTALLER" == "1" ]]; then
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     cmake .. -DSRB2_ASSET_INSTALL=ON -DSRB2_DEBUG_INSTALL=OFF -DSRB2_CPACK_GENERATOR=DragNDrop -DCPACK_PACKAGE_FILE_NAME="${DPL_PACKAGE_NAME}";
@@ -221,6 +221,17 @@ if [[ "$__DPL_UPLOAD_INSTALLER" == "1" ]]; then
     if [ -d "package/_CPack_Packages" ]; then
       $__RM -r package/_CPack_Packages;
     fi;
+  elif [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+    cmake .. -DSRB2_ASSET_INSTALL=ON -DSRB2_DEBUG_INSTALL=OFF -DCMAKE_INSTALL_PREFIX="${PWD}/staging";
+    $__MAKE -k install;
+    mkdir package;
+    cd staging;
+    7z a -sfx7z.sfx "../package/${DPL_PACKAGE_NAME}.exe" ./*;
+    cd ..;
+  else
+    echo "Building an installer is not supported on $TRAVIS_OS_NAME.";
+  fi;
+  if [ -d "package" ]; then
     if [[ "$__DPL_UPLOAD_INSTALLER_GITHUB" == "1" ]]; then
       $__CP package/* deploy-github/;
     fi;
@@ -228,7 +239,5 @@ if [[ "$__DPL_UPLOAD_INSTALLER" == "1" ]]; then
       $__CP package/* deploy-ftp/;
     fi;
     $__RM -r package;
-  else
-    echo "Building an installer is not supported on $TRAVIS_OS_NAME.";
   fi;
 fi;

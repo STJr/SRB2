@@ -76,8 +76,7 @@ matrix:
           - CXXFLAGS="-march=nocona -mtune=haswell"
           - WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow -Wno-error=format-truncation -Wno-error=stringop-overflow -Wno-error=stringop-truncation"
           - GCC91=1
-          - PROGRAM_FILENAME=srb2win
-          - DPL_UPLOAD_ASSETS_FTP="${DPL_UPLOAD_ASSETS_FTP:-1}"
+          #- DPL_UPLOAD_ASSETS_FTP="${DPL_UPLOAD_ASSETS_FTP:-1}"
           - DPL_UPLOAD_INSTALLER_FTP="${DPL_UPLOAD_INSTALLER_FTP:-1}"
           cache:
             directories:
