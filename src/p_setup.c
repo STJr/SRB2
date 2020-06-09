@@ -145,6 +145,133 @@ mapthing_t *playerstarts[MAXPLAYERS];
 mapthing_t *bluectfstarts[MAXPLAYERS];
 mapthing_t *redctfstarts[MAXPLAYERS];
 
+// Maintain waypoints
+mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
+UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
+
+void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint)
+{
+	waypoints[sequence][id] = waypoint;
+	if (id >= numwaypoints[sequence])
+		numwaypoints[sequence] = id + 1;
+}
+
+static void P_ResetWaypoints(void)
+{
+	UINT16 sequence, id;
+	for (sequence = 0; sequence < NUMWAYPOINTSEQUENCES; sequence++)
+	{
+		for (id = 0; id < numwaypoints[sequence]; id++)
+			waypoints[sequence][id] = NULL;
+
+		numwaypoints[sequence] = 0;
+	}
+}
+
+mobj_t *P_GetFirstWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][0];
+}
+
+mobj_t *P_GetLastWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][numwaypoints[sequence] - 1];
+}
+
+mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == 0)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = numwaypoints[sequence] - 1;
+	}
+	else
+		id--;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == numwaypoints[sequence] - 1)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = 0;
+	}
+	else
+		id++;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo)
+{
+	UINT8 wp;
+	mobj_t *mo2, *result = NULL;
+	fixed_t bestdist = 0;
+	fixed_t curdist;
+
+	for (wp = 0; wp < numwaypoints[sequence]; wp++)
+	{
+		mo2 = waypoints[sequence][wp];
+
+		if (!mo2)
+			continue;
+
+		curdist = P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z);
+
+		if (result && curdist > bestdist)
+			continue;
+
+		result = mo2;
+		bestdist = curdist;
+	}
+
+	return result;
+}
+
+// Return true if all waypoints are in the same location
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence)
+{
+	mobj_t *first, *waypoint;
+	UINT8 wp;
+
+	if (numwaypoints[sequence] <= 1)
+		return true;
+
+	first = waypoints[sequence][0];
+
+	for (wp = 1; wp < numwaypoints[sequence]; wp++)
+	{
+		waypoint = waypoints[sequence][wp];
+
+		if (!waypoint)
+			continue;
+
+		if (waypoint->x != first->x)
+			return false;
+
+		if (waypoint->y != first->y)
+			return false;
+
+		if (waypoint->z != first->z)
+			return false;
+	}
+
+	return true;
+}
+
+
 /** Logs an error about a map being corrupt, then terminate.
   * This allows reporting highly technical errors for usefulness, without
   * confusing a novice map designer who simply needs to run ZenNode.
@@ -1034,6 +1161,7 @@ static void P_LoadLinedefs(UINT8 *data)
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
+		ld->executordelay = 0;
 		P_SetLinedefV1(i, SHORT(mld->v1));
 		P_SetLinedefV2(i, SHORT(mld->v2));
 
@@ -1505,6 +1633,8 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].sidenum[1] = atol(val);
 	else if (fastcmp(param, "alpha"))
 		lines[i].alpha = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "executordelay"))
+		lines[i].executordelay = atol(val);
 
 	// Flags
 	else if (fastcmp(param, "blocking") && fastcmp("true", val))
@@ -1740,6 +1870,7 @@ static void P_LoadTextmap(void)
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
+		ld->executordelay = 0;
 		ld->sidenum[0] = 0xffff;
 		ld->sidenum[1] = 0xffff;
 
@@ -2797,6 +2928,30 @@ static void P_LinkMapData(void)
 	}
 }
 
+/** Hashes the sector tags across the sectors and linedefs.
+  *
+  * \sa P_FindSectorFromTag, P_ChangeSectorTag
+  * \author Lee Killough
+  */
+static inline void P_InitTagLists(void)
+{
+	register size_t i;
+
+	for (i = numsectors - 1; i != (size_t)-1; i--)
+	{
+		size_t j = (unsigned)sectors[i].tag % numsectors;
+		sectors[i].nexttag = sectors[j].firsttag;
+		sectors[j].firsttag = (INT32)i;
+	}
+
+	for (i = numlines - 1; i != (size_t)-1; i--)
+	{
+		size_t j = (unsigned)lines[i].tag % numlines;
+		lines[i].nexttag = lines[j].firsttag;
+		lines[j].firsttag = (INT32)i;
+	}
+}
+
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
@@ -2806,6 +2961,47 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (lines[i].special)
 		{
+		case 20: //PolyObject first line
+		{
+			INT32 paramline = P_FindSpecialLineFromTag(22, lines[i].tag, -1);
+
+			//PolyObject ID
+			lines[i].args[0] = lines[i].tag;
+
+			//Default: Invisible planes
+			lines[i].args[3] |= TMPF_INVISIBLEPLANES;
+
+			//Linedef executor tag
+			lines[i].args[4] = 32000 + lines[i].args[0];
+
+			if (paramline == -1)
+				break; // no extra settings to apply, let's leave it
+
+			//Parent ID
+			lines[i].args[1] = lines[paramline].frontsector->special;
+			//Translucency
+			lines[i].args[2] = (lines[paramline].flags & ML_DONTPEGTOP)
+						? (sides[lines[paramline].sidenum[0]].textureoffset >> FRACBITS)
+						: ((lines[paramline].frontsector->floorheight >> FRACBITS) / 100);
+
+			//Flags
+			if (lines[paramline].flags & ML_EFFECT1)
+				lines[i].args[3] |= TMPF_NOINSIDES;
+			if (lines[paramline].flags & ML_EFFECT2)
+				lines[i].args[3] |= TMPF_INTANGIBLE;
+			if (lines[paramline].flags & ML_EFFECT3)
+				lines[i].args[3] |= TMPF_PUSHABLESTOP;
+			if (lines[paramline].flags & ML_EFFECT4)
+				lines[i].args[3] &= ~TMPF_INVISIBLEPLANES;
+			/*if (lines[paramline].flags & ML_EFFECT5)
+				lines[i].args[3] |= TMPF_DONTCLIPPLANES;*/
+			if (lines[paramline].flags & ML_EFFECT6)
+				lines[i].args[3] |= TMPF_SPLAT;
+			if (lines[paramline].flags & ML_NOCLIMB)
+				lines[i].args[3] |= TMPF_EXECUTOR;
+
+			break;
+		}
 		case 76: //Make FOF bouncy
 			lines[i].args[0] = lines[i].tag;
 			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
@@ -3323,6 +3519,15 @@ static void P_ConvertBinaryMap(void)
 			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
 			break;
 		}
+
+		//Linedef executor delay
+		if (lines[i].special >= 400 && lines[i].special < 500)
+		{
+			//Dummy value to indicate that this executor is delayed.
+			//The real value is taken from the back sector at runtime.
+			if (lines[i].flags & ML_DONTPEGTOP)
+				lines[i].executordelay = 1;
+		}
 	}
 
 	for (i = 0; i < nummapthings; i++)
@@ -3332,9 +3537,17 @@ static void P_ConvertBinaryMap(void)
 		case 750:
 		case 760:
 		case 761:
-		case 762:
 			mapthings[i].tag = mapthings[i].angle;
 			break;
+		case 762:
+		{
+			INT32 firstline = P_FindSpecialLineFromTag(20, mapthings[i].angle, -1);
+			if (firstline != -1)
+				lines[firstline].args[3] |= TMPF_CRUSH;
+			mapthings[i].tag = mapthings[i].angle;
+			mapthings[i].type = 761;
+			break;
+		}
 		case 780:
 			mapthings[i].tag = mapthings[i].extrainfo;
 			break;
@@ -3418,6 +3631,8 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_LinkMapData();
+
+	P_InitTagLists();   // Create xref tables for tags
 
 	if (!udmf)
 		P_ConvertBinaryMap();
@@ -4276,13 +4491,14 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_ResetSpawnpoints();
 
+	P_ResetWaypoints();
+
 	P_MapStart();
 
 	if (!P_LoadMapFromFile())
 		return false;
 
-	// init gravity, tag lists,
-	// anything that P_SpawnSlopes/P_LoadThings needs to know
+	// init anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
 	P_SpawnSlopes(fromnetsave);

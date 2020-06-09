@@ -1916,7 +1916,7 @@ void P_SpawnShieldOrb(player_t *player)
 		shieldobj->colorized = true;
 	}
 	else
-		shieldobj->color = (UINT8)shieldobj->info->painchance;
+		shieldobj->color = (UINT16)shieldobj->info->painchance;
 	shieldobj->threshold = (player->powers[pw_shield] & SH_FORCE) ? SH_FORCE : (player->powers[pw_shield] & SH_NOSTACK);
 
 	if (shieldobj->info->seestate)
@@ -2267,8 +2267,8 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 
 			if (GETSECSPECIAL(rover->master->frontsector->special, 1) != SPACESPECIAL)
 				continue;
-			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) : *rover->topheight;
-			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) : *rover->bottomheight;
+			topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
 
 			if (mo->z + (mo->height/2) > topheight)
 				continue;
@@ -2505,8 +2505,8 @@ boolean P_InQuicksand(mobj_t *mo) // Returns true if you are in quicksand
 			if (!(rover->flags & FF_QUICKSAND))
 				continue;
 
-			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) : *rover->topheight;
-			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) : *rover->bottomheight;
+			topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
 
 			if (mo->z + flipoffset > topheight)
 				continue;
@@ -2850,8 +2850,8 @@ static void P_CheckQuicksand(player_t *player)
 		if (!(rover->flags & FF_QUICKSAND))
 			continue;
 
-		topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-		bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+		topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+		bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 		if (topheight >= player->mo->z && bottomheight < player->mo->z + player->mo->height)
 		{
@@ -3000,7 +3000,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 		return;
 
 	if (mariomode && !player->powers[pw_super])
-		player->mo->color = (UINT8)(SKINCOLOR_RUBY + (leveltime % (MAXSKINCOLORS - SKINCOLOR_RUBY))); // Passes through all saturated colours
+		player->mo->color = (UINT16)(SKINCOLOR_RUBY + (leveltime % (numskincolors - SKINCOLOR_RUBY))); // Passes through all saturated colours
 	else if (leveltime % (TICRATE/7) == 0)
 	{
 		mobj_t *sparkle = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_IVSP);
@@ -3187,10 +3187,8 @@ static void P_DoClimbing(player_t *player)
 			floorclimb = true;
 		else
 		{
-			floorheight = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y)
-													   : glidesector->sector->floorheight;
-			ceilingheight = glidesector->sector->c_slope ? P_GetZAt(glidesector->sector->c_slope, player->mo->x, player->mo->y)
-														 : glidesector->sector->ceilingheight;
+			floorheight   = P_GetSectorFloorZAt  (glidesector->sector, player->mo->x, player->mo->y);
+			ceilingheight = P_GetSectorCeilingZAt(glidesector->sector, player->mo->x, player->mo->y);
 
 			if (glidesector->sector->ffloors)
 			{
@@ -3204,8 +3202,8 @@ static void P_DoClimbing(player_t *player)
 
 					floorclimb = true;
 
-					topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-					bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+					topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+					bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 					// Only supports rovers that are moving like an 'elevator', not just the top or bottom.
 					if (rover->master->frontsector->floorspeed && rover->master->frontsector->ceilspeed == 42)
@@ -3246,8 +3244,7 @@ static void P_DoClimbing(player_t *player)
 								if (roverbelow == rover)
 									continue;
 
-								bottomheight2 = *roverbelow->b_slope ? P_GetZAt(*roverbelow->b_slope, player->mo->x, player->mo->y) : *roverbelow->bottomheight;
-
+								bottomheight2 = P_GetFFloorBottomZAt(roverbelow, player->mo->x, player->mo->y);
 								if (bottomheight2 < topheight + FixedMul(16*FRACUNIT, player->mo->scale))
 									foundfof = true;
 							}
@@ -3292,8 +3289,7 @@ static void P_DoClimbing(player_t *player)
 								if (roverbelow == rover)
 									continue;
 
-								topheight2 = *roverbelow->t_slope ? P_GetZAt(*roverbelow->t_slope, player->mo->x, player->mo->y) : *roverbelow->topheight;
-
+								topheight2 = P_GetFFloorTopZAt(roverbelow, player->mo->x, player->mo->y);
 								if (topheight2 > bottomheight - FixedMul(16*FRACUNIT, player->mo->scale))
 									foundfof = true;
 							}
@@ -3347,8 +3343,7 @@ static void P_DoClimbing(player_t *player)
 							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 								continue;
 
-							bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
-
+							bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 							if (bottomheight < floorheight + FixedMul(16*FRACUNIT, player->mo->scale))
 							{
 								foundfof = true;
@@ -3388,8 +3383,7 @@ static void P_DoClimbing(player_t *player)
 							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 								continue;
 
-							topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-
+							topheight = P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
 							if (topheight > ceilingheight - FixedMul(16*FRACUNIT, player->mo->scale))
 							{
 								foundfof = true;
@@ -3577,22 +3571,11 @@ static void P_DoClimbing(player_t *player)
 #define CLIMBCONEMAX FixedAngle(90*FRACUNIT)
 	if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 	{
-		if (player == &players[consoleplayer])
-		{
-			angle_t angdiff = localangle - player->mo->angle;
-			if (angdiff < ANGLE_180 && angdiff > CLIMBCONEMAX)
-				localangle = player->mo->angle + CLIMBCONEMAX;
-			else if (angdiff > ANGLE_180 && angdiff < InvAngle(CLIMBCONEMAX))
-				localangle = player->mo->angle - CLIMBCONEMAX;
-		}
-		else if (player == &players[secondarydisplayplayer])
-		{
-			angle_t angdiff = localangle2 - player->mo->angle;
-			if (angdiff < ANGLE_180 && angdiff > CLIMBCONEMAX)
-				localangle2 = player->mo->angle + CLIMBCONEMAX;
-			else if (angdiff > ANGLE_180 && angdiff < InvAngle(CLIMBCONEMAX))
-				localangle2 = player->mo->angle - CLIMBCONEMAX;
-		}
+		angle_t angdiff = P_GetLocalAngle(player) - player->mo->angle;
+		if (angdiff < ANGLE_180 && angdiff > CLIMBCONEMAX)
+			P_SetLocalAngle(player, player->mo->angle + CLIMBCONEMAX);
+		else if (angdiff > ANGLE_180 && angdiff < InvAngle(CLIMBCONEMAX))
+			P_SetLocalAngle(player, player->mo->angle - CLIMBCONEMAX);
 	}
 
 	if (player->climbing == 0)
@@ -3761,12 +3744,8 @@ static void P_DoTeeter(player_t *player)
 
 			sec = R_PointInSubsector(checkx, checky)->sector;
 
-			ceilingheight = sec->ceilingheight;
-			floorheight = sec->floorheight;
-			if (sec->c_slope)
-				ceilingheight = P_GetZAt(sec->c_slope, checkx, checky);
-			if (sec->f_slope)
-				floorheight = P_GetZAt(sec->f_slope, checkx, checky);
+			ceilingheight = P_GetSectorCeilingZAt(sec, checkx, checky);
+			floorheight   = P_GetSectorFloorZAt  (sec, checkx, checky);
 			highestceilingheight = (ceilingheight > highestceilingheight) ? ceilingheight : highestceilingheight;
 			lowestfloorheight = (floorheight < lowestfloorheight) ? floorheight : lowestfloorheight;
 
@@ -3777,8 +3756,8 @@ static void P_DoTeeter(player_t *player)
 			{
 				if (!(rover->flags & FF_EXISTS)) continue;
 
-				topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-				bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+				topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+				bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 				if (P_CheckSolidLava(rover))
 					;
@@ -4382,12 +4361,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		player->drawangle = player->mo->angle = player->mo->angle - ANGLE_180; // Turn around from the wall you were climbing.
 
 		if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-		{
-			if (player == &players[consoleplayer])
-				localangle = player->mo->angle; // Adjust the local control angle.
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
-		}
+			P_SetPlayerAngle(player, player->mo->angle);
 
 		player->climbing = 0; // Stop climbing, duh!
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(6*FRACUNIT, player->mo->scale)); // Jump off the wall.
@@ -4710,12 +4684,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 								bullet = P_SpawnPointMissile(player->mo, lockon->x, lockon->y, zpos(lockon), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
 								if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-								{
-									if (player == &players[consoleplayer])
-										localangle = player->mo->angle;
-									else if (player == &players[secondarydisplayplayer])
-										localangle2 = player->mo->angle;
-								}
+									P_SetPlayerAngle(player, player->mo->angle);
 							}
 							else
 							{
@@ -5335,9 +5304,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						/*if (!demoplayback)
 						{
 							if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(PLAYER1INPUTDOWN(gc_turnleft) || PLAYER1INPUTDOWN(gc_turnright)))
-								localangle = player->mo->angle;
+								P_SetPlayerAngle(player, player->mo->angle);;
 							else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(PLAYER2INPUTDOWN(gc_turnleft) || PLAYER2INPUTDOWN(gc_turnright)))
-								localangle2 = player->mo->angle;
+								P_SetPlayerAngle(player, player->mo->angle);
 						}*/
 					}
 					break;
@@ -5742,10 +5711,7 @@ static void P_2dMovement(player_t *player)
 			player->mo->angle = ANGLE_180;
 	}
 
-	if (player == &players[consoleplayer])
-		localangle = player->mo->angle;
-	else if (player == &players[secondarydisplayplayer])
-		localangle2 = player->mo->angle;
+	P_SetPlayerAngle(player, player->mo->angle);
 
 	if (player->pflags & PF_GLIDING)
 		movepushangle = player->mo->angle;
@@ -7582,10 +7548,7 @@ static void P_NiGHTSMovement(player_t *player)
 	else
 		player->mo->rollangle = rollangle;
 
-	if (player == &players[consoleplayer])
-		localangle = player->mo->angle;
-	else if (player == &players[secondarydisplayplayer])
-		localangle2 = player->mo->angle;
+	P_SetPlayerAngle(player, player->mo->angle);
 
 	// Check for crushing in our new location
 	if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
@@ -7757,7 +7720,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 
 			if (player->mo->standingslope)
 			{
-				ground = P_GetZAt(player->mo->standingslope, newx, newy);
+				ground = P_GetSlopeZAt(player->mo->standingslope, newx, newy);
 				if (player->mo->eflags & MFE_VERTICALFLIP)
 					ground -= FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
 			}
@@ -8534,10 +8497,7 @@ static void P_MovePlayer(player_t *player)
 			player->mo->angle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 
 		// Update the local angle control.
-		if (player == &players[consoleplayer])
-			localangle = player->mo->angle;
-		else if (player == &players[secondarydisplayplayer])
-			localangle2 = player->mo->angle;
+		P_SetPlayerAngle(player, player->mo->angle);
 	}
 
 	if (player->climbing == 1)
@@ -8733,10 +8693,7 @@ static void P_MovePlayer(player_t *player)
 
 static void P_DoZoomTube(player_t *player)
 {
-	INT32 sequence;
 	fixed_t speed;
-	thinker_t *th;
-	mobj_t *mo2;
 	mobj_t *waypoint = NULL;
 	fixed_t dist;
 	boolean reverse;
@@ -8751,8 +8708,6 @@ static void P_DoZoomTube(player_t *player)
 	player->powers[pw_flashing] = 1;
 
 	speed = abs(player->speed);
-
-	sequence = player->mo->tracer->threshold;
 
 	// change slope
 	dist = P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y), player->mo->tracer->z - player->mo->z);
@@ -8785,28 +8740,7 @@ static void P_DoZoomTube(player_t *player)
 		CONS_Debug(DBG_GAMELOGIC, "Looking for next waypoint...\n");
 
 		// Find next waypoint
-		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-				continue;
-
-			mo2 = (mobj_t *)th;
-
-			if (mo2->type != MT_TUBEWAYPOINT)
-				continue;
-
-			if (mo2->threshold != sequence)
-				continue;
-
-			if (reverse && mo2->health != player->mo->tracer->health - 1)
-				continue;
-
-			if (!reverse && mo2->health != player->mo->tracer->health + 1)
-				continue;
-
-			waypoint = mo2;
-			break;
-		}
+		waypoint = reverse ? P_GetPreviousWaypoint(player->mo->tracer, false) : P_GetNextWaypoint(player->mo->tracer, false);
 
 		if (waypoint)
 		{
@@ -8839,11 +8773,7 @@ static void P_DoZoomTube(player_t *player)
 	if (player->mo->tracer)
 	{
 		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y);
-
-		if (player == &players[consoleplayer])
-			localangle = player->mo->angle;
-		else if (player == &players[secondarydisplayplayer])
-			localangle2 = player->mo->angle;
+		P_SetPlayerAngle(player, player->mo->angle);
 	}
 }
 
@@ -8857,8 +8787,6 @@ static void P_DoRopeHang(player_t *player)
 {
 	INT32 sequence;
 	fixed_t speed;
-	thinker_t *th;
-	mobj_t *mo2;
 	mobj_t *waypoint = NULL;
 	fixed_t dist;
 	fixed_t playerz;
@@ -8921,50 +8849,14 @@ static void P_DoRopeHang(player_t *player)
 		CONS_Debug(DBG_GAMELOGIC, "Looking for next waypoint...\n");
 
 		// Find next waypoint
-		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-				continue;
-
-			mo2 = (mobj_t *)th;
-
-			if (mo2->type != MT_TUBEWAYPOINT)
-				continue;
-
-			if (mo2->threshold != sequence)
-				continue;
-
-			if (mo2->health != player->mo->tracer->health + 1)
-				continue;
-
-			waypoint = mo2;
-			break;
-		}
+		waypoint = P_GetNextWaypoint(player->mo->tracer, false);
 
 		if (!(player->mo->tracer->flags & MF_SLIDEME) && !waypoint)
 		{
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found, wrapping to start...\n");
 
 			// Wrap around back to first waypoint
-			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-					continue;
-
-				mo2 = (mobj_t *)th;
-
-				if (mo2->type != MT_TUBEWAYPOINT)
-					continue;
-
-				if (mo2->threshold != sequence)
-					continue;
-
-				if (mo2->health != 0)
-					continue;
-
-				waypoint = mo2;
-				break;
-			}
+			waypoint = P_GetFirstWaypoint(sequence);
 		}
 
 		if (waypoint)
@@ -9338,12 +9230,7 @@ boolean P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	{
 		source->player->drawangle = source->angle;
 		if (!demoplayback || P_ControlStyle(source->player) == CS_LMAOGALOG)
-		{
-			if (source->player == &players[consoleplayer])
-				localangle = source->angle;
-			else if (source->player == &players[secondarydisplayplayer])
-				localangle2 = source->angle;
-		}
+			P_SetPlayerAngle(source->player, source->angle);
 	}
 
 	// change slope
@@ -9784,7 +9671,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	if ((thiscam == &camera && G_ControlStyle(1) == CS_SIMPLE)
 	|| (thiscam == &camera2 && G_ControlStyle(2) == CS_SIMPLE))
 	{
-		thiscam->angle = (thiscam == &camera) ? localangle : localangle2;
+		thiscam->angle = P_GetLocalAngle(player);
 		thiscam->aiming = (thiscam == &camera) ? localaiming : localaiming2;
 	}
 	else if (!(thiscam == &camera && (cv_cam_still.value || cv_analog[0].value))
@@ -9985,9 +9872,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (player == &players[consoleplayer])
 		{
 			if (focusangle >= localangle)
-				localangle += abs((signed)(focusangle - localangle))>>5;
+				P_ForceLocalAngle(player, localangle + (abs((signed)(focusangle - localangle))>>5));
 			else
-				localangle -= abs((signed)(focusangle - localangle))>>5;
+				P_ForceLocalAngle(player, localangle - (abs((signed)(focusangle - localangle))>>5));
 		}
 	}
 	else
@@ -10660,8 +10547,8 @@ static void P_CalcPostImg(player_t *player)
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+			topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 			if (pviewheight >= topheight || pviewheight <= bottomheight)
 				continue;
@@ -10683,8 +10570,8 @@ static void P_CalcPostImg(player_t *player)
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_BLOCKPLAYER)
 				continue;
 
-			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
-			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+			topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
 
 			if (pviewheight >= topheight || pviewheight <= bottomheight)
 				continue;
@@ -10746,7 +10633,7 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 			if (!(rover->flags & (FF_EXISTS|FF_BLOCKOTHERS)))
 				continue;
 
-			*nz = *rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;
+			*nz = P_GetFFloorTopZAt(rover, x, y);
 			if (abs(z - *nz) <= 56*FRACUNIT)
 			{
 				sec = &sectors[rover->secnum];
@@ -10756,7 +10643,7 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 
 	}
 
-	*nz = sec->f_slope ? P_GetZAt(sec->f_slope, x, y) : sec->floorheight;
+	*nz = P_GetSectorFloorZAt(sec, x, y);
 	if (abs(z - *nz) > 56*FRACUNIT)
 		return NULL;
 
@@ -10961,21 +10848,13 @@ static void P_MinecartThink(player_t *player)
 
 		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))
 		{
-			angle_t *ang = NULL;
+			angdiff = P_GetLocalAngle(player) - minecart->angle;
+			if (angdiff < ANGLE_180 && angdiff > MINECARTCONEMAX)
+				P_SetLocalAngle(player, minecart->angle + MINECARTCONEMAX);
+			else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
+				P_SetLocalAngle(player, minecart->angle - MINECARTCONEMAX);
 
-			if (player == &players[consoleplayer])
-				ang = &localangle;
-			else if (player == &players[secondarydisplayplayer])
-				ang = &localangle2;
 
-			if (ang)
-			{
-				angdiff = *ang - minecart->angle;
-				if (angdiff < ANGLE_180 && angdiff > MINECARTCONEMAX)
-					*ang = minecart->angle + MINECARTCONEMAX;
-				else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
-					*ang = minecart->angle - MINECARTCONEMAX;
-			}
 		}
 	}
 
@@ -11052,10 +10931,7 @@ static void P_MinecartThink(player_t *player)
 			if (angdiff && (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG))  // maintain relative angle on turns
 			{
 				player->mo->angle += angdiff;
-				if (player == &players[consoleplayer])
-					localangle += angdiff;
-				else if (player == &players[secondarydisplayplayer])
-					localangle2 += angdiff;
+				P_SetPlayerAngle(player, (angle_t)(player->angleturn << 16) + angdiff);
 			}
 
 			// Sideways detection
@@ -11110,8 +10986,8 @@ static void P_MinecartThink(player_t *player)
 				if (minecart->standingslope)
 				{
 					fixed_t fa2 = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
-					fixed_t front = P_GetZAt(minecart->standingslope, minecart->x, minecart->y);
-					fixed_t back = P_GetZAt(minecart->standingslope, minecart->x - FINECOSINE(fa2), minecart->y - FINESINE(fa2));
+					fixed_t front = P_GetSlopeZAt(minecart->standingslope, minecart->x, minecart->y);
+					fixed_t back = P_GetSlopeZAt(minecart->standingslope, minecart->x - FINECOSINE(fa2), minecart->y - FINESINE(fa2));
 
 					if (abs(front - back) < 3*FRACUNIT)
 						currentSpeed += (back - front)/3;
@@ -11478,6 +11354,10 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
 	fume->z = mo->z + ((mo->height - fume->height) >> 1);
 	P_SetThingPosition(fume);
+
+	// If dashmode is high enough, spawn a trail
+	if (player->normalspeed >= skins[player->skin].normalspeed*2)
+		P_SpawnGhostMobj(fume);
 }
 
 //
@@ -11932,6 +11812,9 @@ void P_PlayerThink(player_t *player)
 						factor = 4;
 					}
 					break;
+				case CR_DUSTDEVIL:
+					player->drawangle += ANG20;
+					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
 				case CR_ROPEHANG:
@@ -12268,6 +12151,7 @@ void P_PlayerThink(player_t *player)
 	// Dash mode - thanks be to VelocitOni
 	if ((player->charflags & SF_DASHMODE) && !player->gotflag && !player->powers[pw_carry] && !player->exiting && !(maptol & TOL_NIGHTS) && !metalrecording) // woo, dashmode! no nights tho.
 	{
+		tic_t prevdashmode = dashmode;
 		boolean totallyradical = player->speed >= FixedMul(player->runspeed, player->mo->scale);
 		boolean floating = (player->secondjump == 1);
 
@@ -12292,8 +12176,11 @@ void P_PlayerThink(player_t *player)
 
 		if (dashmode < DASHMODE_THRESHOLD) // Exits Dash Mode if you drop below speed/dash counter tics. Not in the above block so it doesn't keep disabling in midair.
 		{
-			player->normalspeed = skins[player->skin].normalspeed; // Reset to default if not capable of entering dash mode.
-			player->jumpfactor = skins[player->skin].jumpfactor;
+			if (prevdashmode >= DASHMODE_THRESHOLD)
+			{
+				player->normalspeed = skins[player->skin].normalspeed; // Reset to default if not capable of entering dash mode.
+				player->jumpfactor = skins[player->skin].jumpfactor;
+			}
 		}
 		else if (P_IsObjectOnGround(player->mo)) // Activate dash mode if we're on the ground.
 		{
@@ -12308,6 +12195,8 @@ void P_PlayerThink(player_t *player)
 		{
 			mobj_t *ghost = P_SpawnGhostMobj(player->mo); // Spawns afterimages
 			ghost->fuse = 2; // Makes the images fade quickly
+			if (ghost->tracer && !P_MobjWasRemoved(ghost->tracer))
+				ghost->tracer->fuse = ghost->fuse;
 		}
 	}
 	else if (dashmode)
@@ -12605,12 +12494,7 @@ void P_PlayerAfterThink(player_t *player)
 					player->mo->angle = tails->angle;
 
 					if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-					{
-						if (player == &players[consoleplayer])
-							localangle = player->mo->angle;
-						else if (player == &players[secondarydisplayplayer])
-							localangle2 = player->mo->angle;
-					}
+						P_SetPlayerAngle(player, player->mo->angle);
 				}
 
 				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > player->mo->radius)
@@ -12694,14 +12578,22 @@ void P_PlayerAfterThink(player_t *player)
 						player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 
 						if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-						{
-							if (player == &players[consoleplayer])
-								localangle = player->mo->angle; // Adjust the local control angle.
-							else if (player == &players[secondarydisplayplayer])
-								localangle2 = player->mo->angle;
-						}
+							P_SetPlayerAngle(player, player->mo->angle);
 					}
 				}
+				break;
+			}
+			case CR_DUSTDEVIL:
+			{
+				mobj_t *mo = player->mo, *dustdevil = player->mo->tracer;
+
+				if (abs(mo->x - dustdevil->x) > dustdevil->radius || abs(mo->y - dustdevil->y) > dustdevil->radius)
+				{
+					P_SetTarget(&player->mo->tracer, NULL);
+					player->powers[pw_carry] = CR_NONE;
+					break;
+				}
+
 				break;
 			}
 			case CR_ROLLOUT:
@@ -12897,4 +12789,44 @@ void P_PlayerAfterThink(player_t *player)
 			}
 		}
 	}
+}
+
+void P_SetPlayerAngle(player_t *player, angle_t angle)
+{
+	INT16 delta = (INT16)(angle >> 16) - player->angleturn;
+
+	P_ForceLocalAngle(player, P_GetLocalAngle(player) + (delta << 16));
+	player->angleturn += delta;
+}
+
+void P_SetLocalAngle(player_t *player, angle_t angle)
+{
+	INT16 delta = (INT16)((angle - P_GetLocalAngle(player)) >> 16);
+
+	P_ForceLocalAngle(player, P_GetLocalAngle(player) + (angle_t)(delta << 16));
+
+	if (player == &players[consoleplayer])
+		ticcmd_oldangleturn[0] += delta;
+	else if (player == &players[secondarydisplayplayer])
+		ticcmd_oldangleturn[1] += delta;
+}
+
+angle_t P_GetLocalAngle(player_t *player)
+{
+	if (player == &players[consoleplayer])
+		return localangle;
+	else if (player == &players[secondarydisplayplayer])
+		return localangle2;
+	else
+		return 0;
+}
+
+void P_ForceLocalAngle(player_t *player, angle_t angle)
+{
+	angle = angle & ~UINT16_MAX;
+
+	if (player == &players[consoleplayer])
+		localangle = angle;
+	else if (player == &players[secondarydisplayplayer])
+		localangle2 = angle;
 }

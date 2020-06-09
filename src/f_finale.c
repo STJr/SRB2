@@ -2185,7 +2185,7 @@ void F_EndingDrawer(void)
 			for (i = 0; i < 7; ++i)
 			{
 				UINT8* colormap;
-				skincolors_t col = SKINCOLOR_GREEN;
+				skincolornum_t col = SKINCOLOR_GREEN;
 				switch (i)
 				{
 					case 1:

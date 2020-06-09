@@ -195,24 +195,25 @@ static inline void *G_ScpyTiccmd(ticcmd_t* dest, void* src, const size_t n)
 // of 512 bytes is like 0.1)
 UINT16 software_MAXPACKETLENGTH;
 
-/** Guesses the value of a tic from its lowest byte and from maketic
+/** Guesses the full value of a tic from its lowest byte, for a specific node
   *
   * \param low The lowest byte of the tic value
+  * \param node The node to deduce the tic for
   * \return The full tic value
   *
   */
-tic_t ExpandTics(INT32 low)
+tic_t ExpandTics(INT32 low, INT32 node)
 {
 	INT32 delta;
 
-	delta = low - (maketic & UINT8_MAX);
+	delta = low - (nettics[node] & UINT8_MAX);
 
 	if (delta >= -64 && delta <= 64)
-		return (maketic & ~UINT8_MAX) + low;
+		return (nettics[node] & ~UINT8_MAX) + low;
 	else if (delta > 64)
-		return (maketic & ~UINT8_MAX) - 256 + low;
+		return (nettics[node] & ~UINT8_MAX) - 256 + low;
 	else //if (delta < -64)
-		return (maketic & ~UINT8_MAX) + 256 + low;
+		return (nettics[node] & ~UINT8_MAX) + 256 + low;
 }
 
 // -----------------------------------------------------------------
@@ -522,6 +523,9 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->pflags = (UINT32)LONG(players[i].pflags); //pflags_t
 	rsp->panim  = (UINT8)players[i].panim; //panim_t
 
+	rsp->angleturn = (INT16)SHORT(players[i].angleturn);
+	rsp->oldrelangleturn = (INT16)SHORT(players[i].oldrelangleturn);
+
 	rsp->aiming = (angle_t)LONG(players[i].aiming);
 	rsp->currentweapon = LONG(players[i].currentweapon);
 	rsp->ringweapons = LONG(players[i].ringweapons);
@@ -662,6 +666,9 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].playerstate = (UINT8)rsp->playerstate; //playerstate_t
 	players[i].pflags = (UINT32)LONG(rsp->pflags); //pflags_t
 	players[i].panim  = (UINT8)rsp->panim; //panim_t
+
+	players[i].angleturn = (INT16)SHORT(rsp->angleturn);
+	players[i].oldrelangleturn = (INT16)SHORT(rsp->oldrelangleturn);
 
 	players[i].aiming = (angle_t)LONG(rsp->aiming);
 	players[i].currentweapon = LONG(rsp->currentweapon);
@@ -1495,7 +1502,7 @@ static boolean SV_SendServerConfig(INT32 node)
 		if (!playeringame[i])
 			continue;
 		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
-		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
+		netbuffer->u.servercfg.playercolor[i] = (UINT16)players[i].skincolor;
 		netbuffer->u.servercfg.playeravailabilities[i] = (UINT32)LONG(players[i].availabilities);
 	}
 
@@ -1690,7 +1697,7 @@ static void CL_LoadReceivedSavegame(void)
 	// load a base level
 	if (P_LoadNetGame())
 	{
-		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
+		const UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
 		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
 		if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
 		{
@@ -3291,7 +3298,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	boolean splitscreenplayer;
 	boolean rejoined;
 	player_t *newplayer;
-	char *port;
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -3322,10 +3328,15 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 		if (server && I_GetNodeAddress)
 		{
-			strcpy(playeraddress[newplayernum], I_GetNodeAddress(node));
-			port = strchr(playeraddress[newplayernum], ':');
-			if (port)
-				*port = '\0';
+			const char *address = I_GetNodeAddress(node);
+			char *port = NULL;
+			if (address) // MI: fix msvcrt.dll!_mbscat crash?
+			{
+				strcpy(playeraddress[newplayernum], address);
+				port = strchr(playeraddress[newplayernum], ':');
+				if (port)
+					*port = '\0';
+			}
 		}
 	}
 
@@ -3346,6 +3357,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			displayplayer = newplayernum;
 			secondarydisplayplayer = newplayernum;
 			DEBFILE("spawning me\n");
+			ticcmd_oldangleturn[0] = newplayer->oldrelangleturn;
 		}
 		else
 		{
@@ -3353,7 +3365,9 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			DEBFILE("spawning my brother\n");
 			if (botingame)
 				newplayer->bot = 1;
+			ticcmd_oldangleturn[1] = newplayer->oldrelangleturn;
 		}
+		P_ForceLocalAngle(newplayer, (angle_t)(newplayer->angleturn << 16));
 		D_SendPlayerConfig();
 		addedtogame = true;
 
@@ -3361,11 +3375,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		{
 			if (newplayer->mo)
 			{
-				if (!splitscreenplayer)
-					localangle = newplayer->mo->angle;
-				else
-					localangle2 = newplayer->mo->angle;
-
 				newplayer->viewheight = 41*newplayer->height/48;
 
 				if (newplayer->mo->eflags & MFE_VERTICALFLIP)
@@ -3877,7 +3886,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			for (j = 0; j < MAXPLAYERS; j++)
 			{
 				if (netbuffer->u.servercfg.playerskins[j] == 0xFF
-				 && netbuffer->u.servercfg.playercolor[j] == 0xFF
+				 && netbuffer->u.servercfg.playercolor[j] == 0xFFFF
 				 && netbuffer->u.servercfg.playeravailabilities[j] == 0xFFFFFFFF)
 					continue; // not in game
 
@@ -3999,8 +4008,8 @@ static void HandlePacketFromPlayer(SINT8 node)
 
 			// To save bytes, only the low byte of tic numbers are sent
 			// Use ExpandTics to figure out what the rest of the bytes are
-			realstart = ExpandTics(netbuffer->u.clientpak.client_tic);
-			realend = ExpandTics(netbuffer->u.clientpak.resendfrom);
+			realstart = ExpandTics(netbuffer->u.clientpak.client_tic, node);
+			realend = ExpandTics(netbuffer->u.clientpak.resendfrom, node);
 
 			if (netbuffer->packettype == PT_CLIENTMIS || netbuffer->packettype == PT_CLIENT2MIS
 				|| netbuffer->packettype == PT_NODEKEEPALIVEMIS
@@ -4252,15 +4261,15 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 			}
 
-			realstart = ExpandTics(netbuffer->u.serverpak.starttic);
+			realstart = netbuffer->u.serverpak.starttic;
 			realend = realstart + netbuffer->u.serverpak.numtics;
 
 			if (!txtpak)
 				txtpak = (UINT8 *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots
 					* netbuffer->u.serverpak.numtics];
 
-			if (realend > gametic + BACKUPTICS)
-				realend = gametic + BACKUPTICS;
+			if (realend > gametic + CLIENTBACKUPTICS)
+				realend = gametic + CLIENTBACKUPTICS;
 			cl_packetmissed = realstart > neededtic;
 
 			if (realstart <= neededtic && realend > neededtic)
@@ -4603,11 +4612,11 @@ static void SV_SendTics(void)
 	for (n = 1; n < MAXNETNODES; n++)
 		if (nodeingame[n])
 		{
-			lasttictosend = maketic;
-
 			// assert supposedtics[n]>=nettics[n]
 			realfirsttic = supposedtics[n];
-			if (realfirsttic >= maketic)
+			lasttictosend = min(maketic, realfirsttic + CLIENTBACKUPTICS);
+
+			if (realfirsttic >= lasttictosend)
 			{
 				// well we have sent all tics we will so use extrabandwidth
 				// to resent packet that are supposed lost (this is necessary since lost
@@ -4616,7 +4625,7 @@ static void SV_SendTics(void)
 				DEBFILE(va("Nothing to send node %u mak=%u sup=%u net=%u \n",
 					n, maketic, supposedtics[n], nettics[n]));
 				realfirsttic = nettics[n];
-				if (realfirsttic >= maketic || (I_GetTime() + n)&3)
+				if (realfirsttic >= lasttictosend || (I_GetTime() + n)&3)
 					// all tic are ok
 					continue;
 				DEBFILE(va("Sent %d anyway\n", realfirsttic));
@@ -4659,7 +4668,7 @@ static void SV_SendTics(void)
 
 			// Send the tics
 			netbuffer->packettype = PT_SERVERTICS;
-			netbuffer->u.serverpak.starttic = (UINT8)realfirsttic;
+			netbuffer->u.serverpak.starttic = realfirsttic;
 			netbuffer->u.serverpak.numtics = (UINT8)(lasttictosend - realfirsttic);
 			netbuffer->u.serverpak.numslots = (UINT8)SHORT(doomcom->numslots);
 			bufpos = (UINT8 *)&netbuffer->u.serverpak.cmds;
@@ -4719,41 +4728,6 @@ static void Local_Maketic(INT32 realtics)
 
 	localcmds.angleturn |= TICCMD_RECEIVED;
 	localcmds2.angleturn |= TICCMD_RECEIVED;
-}
-
-// This function is utter bullshit and is responsible for
-// the random desynch that happens when a player spawns.
-// This is because ticcmds are resent to clients if a packet
-// was dropped, and thus modifying them can lead to several
-// clients having their ticcmds set to different values.
-void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle)
-{
-	tic_t tic;
-	UINT8 numadjust = 0;
-
-	(void)x;
-	(void)y;
-
-	// Revisionist history: adjust the angles in the ticcmds received
-	// for this player, because they actually preceded the player
-	// spawning, but will be applied afterwards.
-
-	for (tic = server ? maketic : (neededtic - 1); tic >= gametic; tic--)
-	{
-		if (numadjust++ == BACKUPTICS)
-		{
-			DEBFILE(va("SV_SpawnPlayer: All netcmds for player %d adjusted!\n", playernum));
-			// We already adjusted them all, waste of time doing the same thing over and over
-			// This shouldn't happen normally though, either gametic was 0 (which is handled now anyway)
-			// or maketic >= gametic + BACKUPTICS
-			// -- Monster Iestyn 16/01/18
-			break;
-		}
-		netcmds[tic%BACKUPTICS][playernum].angleturn = (INT16)((angle>>16) | TICCMD_RECEIVED);
-
-		if (!tic) // failsafe for gametic == 0 -- Monster Iestyn 16/01/18
-			break;
-	}
 }
 
 // create missed tic

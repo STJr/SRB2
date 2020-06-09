@@ -696,10 +696,20 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 			return;
 		}
 
-		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
-			70*FRACUNIT, false, true, -1); // move ceiling
-		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
-			false, false, -1); // move floor
+		if (bouncer->speed >= 0) // move floor first to fix height desync and any bizarre bugs following that
+		{
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
+				false, false, -1); // move floor
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
+				70*FRACUNIT, false, true, -1); // move ceiling
+		}
+		else
+		{
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
+				70*FRACUNIT, false, true, -1); // move ceiling
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
+				false, false, -1); // move floor
+		}
 
 		bouncer->sector->floorspeed = -bouncer->speed/2;
 		bouncer->sector->ceilspeed = 42;
@@ -2231,9 +2241,9 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			{
 				mobj_t *spawned = NULL;
 				if (*rover->t_slope)
-					topz = P_GetZAt(*rover->t_slope, a, b) - (spacing>>1);
+					topz = P_GetSlopeZAt(*rover->t_slope, a, b) - (spacing>>1);
 				if (*rover->b_slope)
-					bottomz = P_GetZAt(*rover->b_slope, a, b);
+					bottomz = P_GetSlopeZAt(*rover->b_slope, a, b);
 
 				for (c = topz; c > bottomz; c -= spacing)
 				{

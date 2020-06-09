@@ -54,7 +54,7 @@ UINT8 ultimatemode = false;
 
 boolean botingame;
 UINT8 botskin;
-UINT8 botcolor;
+UINT16 botcolor;
 
 JoyType_t Joystick;
 JoyType_t Joystick2;
@@ -135,10 +135,10 @@ INT32 tutorialanalog = 0; // store cv_analog[0] user value
 
 boolean looptitle = false;
 
-UINT8 skincolor_redteam = SKINCOLOR_RED;
-UINT8 skincolor_blueteam = SKINCOLOR_BLUE;
-UINT8 skincolor_redring = SKINCOLOR_SALMON;
-UINT8 skincolor_bluering = SKINCOLOR_CORNFLOWER;
+UINT16 skincolor_redteam = SKINCOLOR_RED;
+UINT16 skincolor_blueteam = SKINCOLOR_BLUE;
+UINT16 skincolor_redring = SKINCOLOR_SALMON;
+UINT16 skincolor_bluering = SKINCOLOR_CORNFLOWER;
 
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
@@ -1065,6 +1065,7 @@ static fixed_t forwardmove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16};
 static fixed_t sidemove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16}; // faster!
 static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 
+INT16 ticcmd_oldangleturn[2];
 boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
 mobj_t *ticcmd_ztargetfocus[2]; // Locking onto an object?
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
@@ -1140,7 +1141,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
 	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{//@TODO splitscreen player
-		cmd->angleturn = (INT16)(*myangle >> 16);
+		cmd->angleturn = ticcmd_oldangleturn[forplayer];
 		cmd->aiming = G_ClipAimingPitch(myaiming);
 		return;
 	}
@@ -1361,7 +1362,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (controlstyle == CS_SIMPLE && !ticcmd_centerviewdown[forplayer] && !G_RingSlingerGametype())
 		{
 			CV_SetValue(&cv_directionchar[forplayer], 2);
-			*myangle = player->mo->angle;
+			cmd->angleturn = (INT16)((player->mo->angle - *myangle) >> 16);
 			*myaiming = 0;
 
 			if (cv_cam_lockonboss[forplayer].value)
@@ -1430,7 +1431,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				else if (anglediff < -maxturn)
 					anglediff = -maxturn;
 
-				*myangle += anglediff;
+				cmd->angleturn = (INT16)(cmd->angleturn + (anglediff >> 16));
 			}
 		}
 	}
@@ -1567,19 +1568,23 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		B_HandleFlightIndicator(player);
 	}
 	else if (player->bot == 2)
-		*myangle = localangle; // Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
+		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
+		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
+
+	*myangle += (cmd->angleturn<<16);
 
 	if (controlstyle == CS_LMAOGALOG) {
+		angle_t angle;
+
 		if (player->awayviewtics)
-			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+			angle = player->awayviewmobj->angle;
 		else
-			cmd->angleturn = (INT16)(thiscam->angle >> 16);
+			angle = thiscam->angle;
+
+		cmd->angleturn = (INT16)((angle - (ticcmd_oldangleturn[forplayer] << 16)) >> 16);
 	}
 	else
 	{
-		*myangle += (cmd->angleturn<<16);
-		cmd->angleturn = (INT16)(*myangle >> 16);
-
 		// Adjust camera angle by player input
 		if (controlstyle == CS_SIMPLE && !forcestrafe && thiscam->chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
@@ -1589,13 +1594,17 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			{
 				fixed_t sine = FINESINE((R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - localangle)>>ANGLETOFINESHIFT);
 				fixed_t factor;
+				INT16 camadjust;
 
 				if ((sine > 0) == (cmd->sidemove > 0))
 					sine = 0; // Prevent jerking right when braking from going left, or vice versa
 
 				factor = min(40, FixedMul(player->speed, abs(sine))*2 / FRACUNIT);
 
-				*myangle -= cmd->sidemove * factor * camadjustfactor;
+				camadjust = (cmd->sidemove * factor * camadjustfactor) >> 16;
+
+				*myangle -= camadjust << 16;
+				cmd->angleturn = (INT16)(cmd->angleturn - camadjust);
 			}
 
 			if (ticcmd_centerviewdown[forplayer] && (cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
@@ -1632,9 +1641,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			{
 				angle_t controlangle;
 				INT32 anglediff;
+				INT16 camadjust;
 
 				if ((cmd->forwardmove || cmd->sidemove) && !(player->pflags & PF_SPINNING))
-					controlangle = (cmd->angleturn<<16) + R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
+					controlangle = *myangle + R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
 				else
 					controlangle = player->drawangle + drawangleoffset;
 
@@ -1651,7 +1661,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 					anglediff = FixedMul(anglediff, sine);
 				}
 
-				*myangle += FixedMul(anglediff, camadjustfactor);
+				camadjust = FixedMul(anglediff, camadjustfactor) >> 16;
+
+				*myangle += camadjust << 16;
+				cmd->angleturn = (INT16)(cmd->angleturn + camadjust);
 			}
 		}
 	}
@@ -1665,6 +1678,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
+
+	cmd->angleturn = (INT16)(cmd->angleturn + ticcmd_oldangleturn[forplayer]);
+	ticcmd_oldangleturn[forplayer] = cmd->angleturn;
 }
 
 ticcmd_t *G_CopyTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n)
@@ -1866,6 +1882,7 @@ void G_StartTitleCard(void)
 //
 void G_PreLevelTitleCard(void)
 {
+#ifndef NOWIPE
 	tic_t starttime = I_GetTime();
 	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
 	tic_t nowtime = starttime;
@@ -1888,6 +1905,7 @@ void G_PreLevelTitleCard(void)
 	}
 	if (!cv_showhud.value)
 		wipestyleflags = WSF_CROSSFADE;
+#endif
 }
 
 static boolean titlecardforreload = false;
@@ -2205,11 +2223,16 @@ void G_Ticker(boolean run)
 
 	buf = gametic % BACKUPTICS;
 
-	// read/write demo and check turbo cheat
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (playeringame[i])
+		{
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+
+			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
+			players[i].oldrelangleturn = players[i].cmd.angleturn;
+			players[i].cmd.angleturn = players[i].angleturn;
+		}
 	}
 
 	// do main actions
@@ -2377,11 +2400,12 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	fixed_t height;
 	fixed_t spinheight;
 	INT32 exiting;
+	tic_t dashmode;
 	INT16 numboxes;
 	INT16 totalring;
 	UINT8 laps;
 	UINT8 mare;
-	UINT8 skincolor;
+	UINT16 skincolor;
 	INT32 skin;
 	UINT32 availabilities;
 	tic_t jointime;
@@ -2392,6 +2416,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	SINT8 pity;
 	INT16 rings;
 	INT16 spheres;
+	INT16 playerangleturn;
+	INT16 oldrelangleturn;
 
 	score = players[player].score;
 	lives = players[player].lives;
@@ -2403,6 +2429,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
+	playerangleturn = players[player].angleturn;
+	oldrelangleturn = players[player].oldrelangleturn;
 
 	if (!betweenmaps)
 		pflags |= (players[player].pflags & PF_FINISHED);
@@ -2410,6 +2438,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
 		pflags |= (players[player].pflags & (PF_GODMODE|PF_NOCLIP|PF_INVIS));
+
+	dashmode = players[player].dashmode;
 
 	numboxes = players[player].numboxes;
 	laps = players[player].laps;
@@ -2474,6 +2504,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->quittime = quittime;
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
+	p->angleturn = playerangleturn;
+	p->oldrelangleturn = oldrelangleturn;
 
 	// save player config truth reborn
 	p->skincolor = skincolor;
@@ -2508,6 +2540,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->height = height;
 	p->spinheight = spinheight;
 	p->exiting = exiting;
+
+	p->dashmode = dashmode;
 
 	p->numboxes = numboxes;
 	p->laps = laps;
@@ -4475,7 +4509,7 @@ cleanup:
 //
 void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, boolean SSSG, boolean FLS)
 {
-	UINT8 color = skins[pickedchar].prefcolor;
+	UINT16 color = skins[pickedchar].prefcolor;
 	paused = false;
 
 	if (demoplayback)
@@ -4629,7 +4663,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 	{
 		size_t len = 1;
 		const char *zonetext = NULL;
-		const INT32 actnum = mapheaderinfo[mapnum-1]->actnum;
+		const UINT8 actnum = mapheaderinfo[mapnum-1]->actnum;
 
 		len += strlen(mapheaderinfo[mapnum-1]->lvlttl);
 		if (!(mapheaderinfo[mapnum-1]->levelflags & LF_NOZONE))
