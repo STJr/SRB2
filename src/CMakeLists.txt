@@ -530,8 +530,8 @@ if (${CMAKE_SYSTEM} MATCHES "Darwin")
 	if(RULE_LAUNCH_COMPILE)
 		MESSAGE(STATUS "Force enabling CCache usage under macOS")
 		# Set up wrapper scripts
-		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../launch-c.in   ${CMAKE_BINARY_DIR}/launch-c)
-		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../launch-cxx.in ${CMAKE_BINARY_DIR}/launch-cxx)
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/launch-c.in   ${CMAKE_BINARY_DIR}/launch-c)
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/launch-cxx.in ${CMAKE_BINARY_DIR}/launch-cxx)
 		execute_process(COMMAND chmod a+rx
 			"${CMAKE_BINARY_DIR}/launch-c"
 			"${CMAKE_BINARY_DIR}/launch-cxx")
