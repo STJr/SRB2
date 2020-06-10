@@ -166,7 +166,6 @@ void G_LoadMetal(UINT8 **buffer)
 void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 {
 	UINT8 ziptic;
-	(void)playernum;
 
 	if (!demo_p || !demo_start)
 		return;
@@ -184,6 +183,7 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 		oldcmd.aiming = READINT16(demo_p);
 
 	G_CopyTiccmd(cmd, &oldcmd, 1);
+	players[playernum].angleturn = cmd->angleturn;
 
 	if (!(demoflags & DF_GHOST) && *demo_p == DEMOMARKER)
 	{

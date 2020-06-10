@@ -374,7 +374,8 @@ static boolean IgnoreMouse(void)
 		return !M_MouseNeeded();
 	if (paused || con_destlines || chat_on)
 		return true;
-	if (gamestate != GS_LEVEL && gamestate != GS_INTERMISSION && gamestate != GS_CUTSCENE)
+	if (gamestate != GS_LEVEL && gamestate != GS_INTERMISSION &&
+			gamestate != GS_CONTINUING && gamestate != GS_CUTSCENE)
 		return true;
 	return false;
 }

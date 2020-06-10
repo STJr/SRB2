@@ -1143,10 +1143,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					toucher->angle = special->angle;
 
-					if (player == &players[consoleplayer])
-						localangle = toucher->angle;
-					else if (player == &players[secondarydisplayplayer])
-						localangle2 = toucher->angle;
+					P_SetPlayerAngle(player, toucher->angle);
 
 					P_ResetPlayer(player);
 
@@ -1564,10 +1561,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 #if 0 // camera redirection - deemed unnecessary
 			toucher->angle = special->angle;
-			if (player == &players[consoleplayer])
-				localangle = toucher->angle;
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = toucher->angle;
+			P_SetPlayerAngle(player, toucher->angle);
 #endif
 
 			S_StartSound(toucher, special->info->attacksound); // home run

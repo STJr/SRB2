@@ -11389,6 +11389,14 @@ void P_SpawnPlayer(INT32 playernum)
 	p->realtime = leveltime;
 	p->followitem = skins[p->skin].followitem;
 
+	// Make sure player's stats are reset if they were in dashmode!
+	if (p->dashmode)
+	{
+		p->dashmode = 0;
+		p->normalspeed = skins[p->skin].normalspeed;
+		p->jumpfactor = skins[p->skin].jumpfactor;
+	}
+
 	//awayview stuff
 	p->awayviewmobj = NULL;
 	p->awayviewtics = 0;
@@ -11427,10 +11435,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
 
-	if (playernum == consoleplayer)
-		localangle = mobj->angle;
-	else if (playernum == secondarydisplayplayer)
-		localangle2 = mobj->angle;
+	P_SetPlayerAngle(p, mobj->angle);
 
 	p->viewheight = 41*p->height/48;
 
@@ -11447,7 +11452,6 @@ void P_AfterPlayerSpawn(INT32 playernum)
 		HU_Start();
 	}
 
-	SV_SpawnPlayer(playernum, mobj->x, mobj->y, mobj->angle);
 	p->drawangle = mobj->angle;
 
 	if (camera.chase)
