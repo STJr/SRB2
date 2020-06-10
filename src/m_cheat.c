@@ -555,7 +555,8 @@ void Command_Teleport_f(void)
 				p->mo->flags2 &= ~MF2_OBJECTFLIP;
 			}
 
-			localangle = p->mo->angle = p->drawangle = FixedAngle(mt->angle<<FRACBITS);
+			p->mo->angle = p->drawangle = FixedAngle(mt->angle<<FRACBITS);
+			P_SetPlayerAngle(p, p->mo->angle);
 		}
 		else // scan the thinkers to find starposts...
 		{
@@ -619,7 +620,8 @@ void Command_Teleport_f(void)
 				p->mo->flags2 &= ~MF2_OBJECTFLIP;
 			}
 
-			localangle = p->mo->angle = p->drawangle = mo2->angle;
+			p->mo->angle = p->drawangle = mo2->angle;
+			P_SetPlayerAngle(p, p->mo->angle);
 		}
 
 		CONS_Printf(M_GetText("Teleporting to checkpoint %d, %d...\n"), starpostnum, starpostpath);
@@ -673,7 +675,10 @@ void Command_Teleport_f(void)
 
 		i = COM_CheckParm("-ang");
 		if (i)
-			localangle = p->drawangle = p->mo->angle = FixedAngle(atoi(COM_Argv(i + 1))<<FRACBITS);
+		{
+			p->drawangle = p->mo->angle = FixedAngle(atoi(COM_Argv(i + 1))<<FRACBITS);
+			P_SetPlayerAngle(p, p->mo->angle);
+		}
 
 		i = COM_CheckParm("-aim");
 		if (i)

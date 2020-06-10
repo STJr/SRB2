@@ -174,6 +174,9 @@ typedef struct
 	UINT32 pflags; // pflags_t
 	UINT8 panim; // panim_t
 
+	INT16 angleturn;
+	INT16 oldrelangleturn;
+
 	angle_t aiming;
 	INT32 currentweapon;
 	INT32 ringweapons;
@@ -556,7 +559,6 @@ void NetUpdate(void);
 
 void SV_StartSinglePlayerServer(void);
 boolean SV_SpawnServer(void);
-void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle);
 void SV_StopServer(void);
 void SV_ResetServer(void);
 void CL_AddSplitscreenPlayer(void);

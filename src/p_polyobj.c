@@ -240,6 +240,9 @@ static void Polyobj_GetInfo(polyobj_t *po)
 	/*if (lines[i].flags & ML_EFFECT5)
 		po->flags &= ~POF_CLIPPLANES;*/
 
+	if (lines[i].flags & ML_EFFECT6)
+		po->flags |= POF_SPLAT;
+
 	if (lines[i].flags & ML_NOCLIMB) // Has a linedef executor
 		po->flags |= POF_LDEXEC;
 }
@@ -1039,7 +1042,7 @@ static boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean check
 // The formula for this can be found here:
 // http://www.inversereality.org/tutorials/graphics%20programming/2dtransformations.html
 // It is, of course, just a vector-matrix multiplication.
-static inline void Polyobj_rotatePoint(vertex_t *v, const vertex_t *c, angle_t ang)
+static inline void Polyobj_rotatePoint(vertex_t *v, const vector2_t *c, angle_t ang)
 {
 	vertex_t tmp = *v;
 
@@ -1092,7 +1095,7 @@ static void Polyobj_rotateLine(line_t *ld)
 }
 
 // Causes objects resting on top of the rotating polyobject to 'ride' with its movement.
-static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, UINT8 turnthings)
+static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta, UINT8 turnthings)
 {
 	static INT32 pomovecount = 10000;
 	INT32 x, y;
@@ -1156,10 +1159,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 
 					if (turnthings == 2 || (turnthings == 1 && !mo->player)) {
 						mo->angle += delta;
-						if (mo->player == &players[consoleplayer])
-							localangle += delta;
-						else if (mo->player == &players[secondarydisplayplayer])
-							localangle2 += delta;
+						P_SetPlayerAngle(mo->player, (angle_t)(mo->player->angleturn << 16) + delta);
 					}
 				}
 			}
@@ -1172,7 +1172,7 @@ static boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, bo
 {
 	size_t i;
 	angle_t angle;
-	vertex_t origin;
+	vector2_t origin;
 	INT32 hitflags = 0;
 
 	// don't move bad polyobjects
