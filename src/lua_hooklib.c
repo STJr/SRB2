@@ -1778,13 +1778,15 @@ void LUAh_GameQuit(void)
 	if (!gL || !(hooksAvailable[hook_GameQuit/8] & (1<<(hook_GameQuit%8))))
 		return;
 
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_GameQuit)
 			continue;
 
 		PushHook(gL, hookp);
-		if (lua_pcall(gL, 0, 0, 0)) {
+		if (lua_pcall(gL, 0, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
