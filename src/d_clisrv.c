@@ -1678,8 +1678,9 @@ static inline void CL_DrawConnectionStatus(void)
 		// 15 pal entries total.
 		const char *cltext;
 
-		for (i = 0; i < 16; ++i)
-			V_DrawFill((BASEVIDWIDTH/2-128) + (i * 16), BASEVIDHEIGHT-16, 16, 8, palstart + ((animtime - i) & 15));
+		if (!(cl_mode == CL_DOWNLOADSAVEGAME && lastfilenum != -1))
+			for (i = 0; i < 16; ++i)
+				V_DrawFill((BASEVIDWIDTH/2-128) + (i * 16), BASEVIDHEIGHT-16, 16, 8, palstart + ((animtime - i) & 15));
 
 		switch (cl_mode)
 		{
@@ -1687,10 +1688,22 @@ static inline void CL_DrawConnectionStatus(void)
 			case CL_DOWNLOADSAVEGAME:
 				if (lastfilenum != -1)
 				{
+					UINT32 currentsize = fileneeded[lastfilenum].currentsize;
+					UINT32 totalsize = fileneeded[lastfilenum].totalsize;
+					INT32 dldlength;
+
 					cltext = M_GetText("Downloading game state...");
 					Net_GetNetStat();
+
+					dldlength = (INT32)((currentsize/(double)totalsize) * 256);
+					if (dldlength > 256)
+						dldlength = 256;
+					V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
+					V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, dldlength, 8, 96);
+
 					V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
-						va(" %4uK",fileneeded[lastfilenum].currentsize>>10));
+						va(" %4uK/%4uK",currentsize>>10,totalsize>>10));
+
 					V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
 						va("%3.1fK/s ", ((double)getbps)/1024));
 				}
@@ -2098,7 +2111,7 @@ static void SV_SendSaveGame(INT32 node)
 		WRITEUINT32(savebuffer, 0);
 	}
 
-	SV_SendRam(node, buffertosend, length, SF_RAM, 0);
+	AddRamToSendQueue(node, buffertosend, length, SF_RAM, 0);
 	save_p = NULL;
 
 	// Remember when we started sending the savegame so we can handle timeouts
@@ -2478,7 +2491,7 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 					return false;
 				}
 				// no problem if can't send packet, we will retry later
-				if (CL_SendRequestFile())
+				if (CL_SendFileRequest())
 				{
 					cl_mode = CL_DOWNLOADFILES;
 					Snake_Initialise();
@@ -2622,10 +2635,13 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 		else if (cl_mode == CL_DOWNLOADFILES && snake)
 			Snake_Handle();
 
+		if (client && (cl_mode == CL_DOWNLOADFILES || cl_mode == CL_DOWNLOADSAVEGAME))
+			FileReceiveTicker();
+
 		// why are these here? this is for servers, we're a client
 		//if (key == 's' && server)
 		//	doomcom->numnodes = (INT16)pnumnodes;
-		//SV_FileSendTicker();
+		//FileSendTicker();
 		*oldtic = I_GetTime();
 
 #ifdef CLIENT_LOADINGSCREEN
@@ -3764,6 +3780,7 @@ void D_QuitNetGame(void)
 	CloseNetFile();
 	RemoveAllLuaFileTransfers();
 	waitingforluafiletransfer = false;
+	waitingforluafilecommand = false;
 
 	if (server)
 	{
@@ -4437,13 +4454,23 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				break;
 			}
 			SERVERONLY
-			Got_Filetxpak();
+			PT_FileFragment();
+			break;
+
+		case PT_FILEACK:
+			if (server)
+				PT_FileAck();
+			break;
+
+		case PT_FILERECEIVED:
+			if (server)
+				PT_FileReceived();
 			break;
 
 		case PT_REQUESTFILE:
 			if (server)
 			{
-				if (!cv_downloading.value || !Got_RequestFilePak(node))
+				if (!cv_downloading.value || !PT_RequestFile(node))
 					Net_CloseConnection(node); // close connection if one of the requested files could not be sent, or you disabled downloading anyway
 			}
 			else
@@ -4739,11 +4766,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 			break;
 		case PT_ASKLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
-			{
-				char *name = va("%s" PATHSEP "%s", luafiledir, luafiletransfers->filename);
-				boolean textmode = !strchr(luafiletransfers->mode, 'b');
-				SV_SendLuaFile(node, name, textmode);
-			}
+				AddLuaFileToSendQueue(node, luafiletransfers->realfilename);
 			break;
 		case PT_HASLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_SENDING)
@@ -4874,7 +4897,15 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 			}
 			if (client)
-				Got_Filetxpak();
+				PT_FileFragment();
+			break;
+		case PT_FILEACK:
+			if (server)
+				PT_FileAck();
+			break;
+		case PT_FILERECEIVED:
+			if (server)
+				PT_FileReceived();
 			break;
 		case PT_SENDINGLUAFILE:
 			if (client)
@@ -5564,7 +5595,7 @@ void NetUpdate(void)
 		CON_Ticker();
 	}
 
-	SV_FileSendTicker();
+	FileSendTicker();
 }
 
 /** Returns the number of players playing.
