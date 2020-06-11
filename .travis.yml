@@ -16,7 +16,7 @@ matrix:
           osx_image: xcode11.5
           env:
           - MARCH=core2
-          - MTUNE=haswell
+          - MTUNE=generic
           - MACOSX_DEPLOYMENT_TARGET=10.9
           - CFLAGS="-march=$MARCH -mtune=$MTUNE"
           - CXXFLAGS="-march=$MARCH -mtune=$MTUNE"
@@ -53,8 +53,8 @@ matrix:
         - os: windows
           compiler: gcc
           env:
-          - CFLAGS="-march=nocona -mtune=haswell"
-          - CXXFLAGS="-march=nocona -mtune=haswell"
+          - CFLAGS="-march=pentium"
+          - CXXFLAGS="-march=pentium"
           - WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow -Wno-error=format-truncation -Wno-error=stringop-overflow -Wno-error=stringop-truncation"
           - GCC91=1
           #- DPL_UPLOAD_ASSETS_FTP="${DPL_UPLOAD_ASSETS_FTP:-1}"
@@ -108,8 +108,8 @@ matrix:
               - gcc-8
           compiler: gcc-8
           env:
-          - CFLAGS="-march=nocona -mtune=haswell"
-          - CXXFLAGS="-march=nocona -mtune=haswell"
+          - CFLAGS="-march=nocona"
+          - CXXFLAGS="-march=nocona"
           - WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow -Wno-error=format-truncation"
           - GCC81=1
           - DPL_UPLOAD_ASSETS_FTP="${DPL_UPLOAD_ASSETS_FTP:-1}"
