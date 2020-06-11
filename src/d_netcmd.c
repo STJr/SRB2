@@ -502,6 +502,8 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("archivetest", Command_Archivetest_f);
 #endif
 
+	COM_AddCommand("downloads", Command_Downloads_f);
+
 	// for master server connection
 	AddMServCommands();
 
