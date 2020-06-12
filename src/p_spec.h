@@ -99,6 +99,12 @@ typedef enum
 
 typedef enum
 {
+	TMFQ_NORIPPLE = 1,
+	TMFQ_SPLAT    = 1<<1,
+} textmapfofquicksandflags_t;
+
+typedef enum
+{
 	TMFL_NOBOSSES = 1,
 	TMFL_SPLAT    = 1<<1,
 } textmapfoflaserflags_t;

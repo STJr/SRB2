@@ -6915,14 +6915,16 @@ void P_SpawnSpecials(boolean fromnetsave)
 			}
 			case 257: // Quicksand
 				ffloorflags = FF_EXISTS|FF_QUICKSAND|FF_RENDERALL|FF_ALLSIDES|FF_CUTSPRITES;
-				if (!(lines[i].args[1]))
+				if (!(lines[i].args[2] & TMFQ_NORIPPLE))
 					ffloorflags |= FF_RIPPLE;
+				if (lines[i].args[2] & TMFQ_SPLAT)
+					ffloorflags |= FF_SPLAT;
 
 				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, ffloorflags, secthinkers);
-					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
-					fflr->friction = abs(lines[i].args[3]) << (FRACBITS - 6);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], ffloorflags, secthinkers);
+					fflr->sinkspeed = abs(lines[i].args[3]) << (FRACBITS - 1);
+					fflr->friction = abs(lines[i].args[4]) << (FRACBITS - 6);
 				}
 				break;
 
