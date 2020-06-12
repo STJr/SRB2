@@ -24,10 +24,13 @@ extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 //FOF flags
 typedef enum
 {
-	TMFV_NOPLANES      = 1,
-	TMFV_NOSIDES       = 1<<1,
-	TMFV_TOGGLEINSIDES = 1<<2,
-} textmapfofvisibility_t;
+	TMFA_NOPLANES    = 1,
+	TMFA_NOSIDES     = 1<<1,
+	TMFA_INSIDES     = 1<<2,
+	TMFA_ONLYINSIDES = 1<<3,
+	TMFA_NOSHADE     = 1<<4,
+	TMFA_SPLAT       = 1<<5,
+} textmapfofappearance_t;
 
 typedef enum
 {
@@ -36,13 +39,8 @@ typedef enum
 	TMFT_DONTBLOCKPLAYER  = 1<<2,
 	TMFT_VISIBLEFROMINSIDE = (TMFT_INTANGIBLETOP|TMFT_INTANGIBLEBOTTOM|TMFT_DONTBLOCKPLAYER),
 	TMFT_DONTBLOCKOTHERS  = 1<<3,
+	TMFT_INTANGIBLE       = (TMFT_DONTBLOCKPLAYER|TMFT_DONTBLOCKOTHERS),
 } textmapfoftangibility_t;
-
-typedef enum
-{
-	TMFA_TRANSLUCENT = 1,
-	TMFA_NOSHADE     = 1<<1,
-} textmapfofappearance_t;
 
 typedef enum
 {

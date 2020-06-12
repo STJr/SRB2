@@ -6602,46 +6602,51 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 100: // FOF (solid)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
-				//Visibility settings
-				if (lines[i].args[1] & TMFV_NOPLANES)
+				//Appearance settings
+				if (lines[i].args[2] & TMFA_NOPLANES)
 					ffloorflags &= ~FF_RENDERPLANES;
-				if (lines[i].args[1] & TMFV_NOSIDES)
+				if (lines[i].args[2] & TMFA_NOSIDES)
 					ffloorflags &= ~FF_RENDERSIDES;
-				if (lines[i].args[1] & TMFV_TOGGLEINSIDES)
+				if (lines[i].args[2] & TMFA_INSIDES)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
 					if (ffloorflags & FF_RENDERSIDES)
 						ffloorflags |= FF_ALLSIDES;
 				}
+				if (lines[i].args[2] & TMFA_ONLYINSIDES)
+				{
+					if (ffloorflags & FF_RENDERPLANES)
+						ffloorflags |= FF_INVERTPLANES;
+					if (ffloorflags & FF_RENDERSIDES)
+						ffloorflags |= FF_INVERTSIDES;
+				}
+				if (lines[i].args[2] & TMFA_NOSHADE)
+					ffloorflags |= FF_NOSHADE;
+				if (lines[i].args[2] & TMFA_SPLAT)
+					ffloorflags |= FF_SPLAT;
 
 				//Tangibility settings
-				if (lines[i].args[2] & TMFT_INTANGIBLETOP)
+				if (lines[i].args[3] & TMFT_INTANGIBLETOP)
 					ffloorflags |= FF_REVERSEPLATFORM;
-				if (lines[i].args[2] & TMFT_INTANGIBLEBOTTOM)
+				if (lines[i].args[3] & TMFT_INTANGIBLEBOTTOM)
 					ffloorflags |= FF_PLATFORM;
-				if (lines[i].args[2] & TMFT_DONTBLOCKPLAYER)
+				if (lines[i].args[3] & TMFT_DONTBLOCKPLAYER)
 					ffloorflags &= ~FF_BLOCKPLAYER;
-				if (lines[i].args[2] & TMFT_DONTBLOCKOTHERS)
+				if (lines[i].args[3] & TMFT_DONTBLOCKOTHERS)
 					ffloorflags &= ~FF_BLOCKOTHERS;
-
-				//Appearance settings
-				if ((lines[i].args[3] & TMFA_TRANSLUCENT) && (ffloorflags & FF_RENDERALL)) //Translucent
-					ffloorflags |= FF_TRANSLUCENT;
-				if (lines[i].args[3] & TMFA_NOSHADE)
-					ffloorflags |= FF_NOSHADE;
 
 				//Cutting options
 				if (ffloorflags & FF_RENDERALL)
 				{
 					//If translucent or player can enter it, cut inner walls
-					if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[2] & TMFT_VISIBLEFROMINSIDE))
+					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
 					else
 						ffloorflags |= FF_CUTLEVEL;
 				}
 
-				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
 				break;
 
 			case 120: // FOF (water)
@@ -6765,40 +6770,45 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
-				//Visibility settings
-				if (lines[i].args[1] & TMFV_NOPLANES)
+				//Appearance settings
+				if (lines[i].args[2] & TMFA_NOPLANES)
 					ffloorflags &= ~FF_RENDERPLANES;
-				if (lines[i].args[1] & TMFV_NOSIDES)
+				if (lines[i].args[2] & TMFA_NOSIDES)
 					ffloorflags &= ~FF_RENDERSIDES;
-				if (lines[i].args[1] & TMFV_TOGGLEINSIDES)
+				if (lines[i].args[2] & TMFA_INSIDES)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
 					if (ffloorflags & FF_RENDERSIDES)
 						ffloorflags |= FF_ALLSIDES;
 				}
+				if (lines[i].args[2] & TMFA_ONLYINSIDES)
+				{
+					if (ffloorflags & FF_RENDERPLANES)
+						ffloorflags |= FF_INVERTPLANES;
+					if (ffloorflags & FF_RENDERSIDES)
+						ffloorflags |= FF_INVERTSIDES;
+				}
+				if (lines[i].args[2] & TMFA_NOSHADE)
+					ffloorflags |= FF_NOSHADE;
+				if (lines[i].args[2] & TMFA_SPLAT)
+					ffloorflags |= FF_SPLAT;
 
 				//Tangibility settings
-				if (lines[i].args[2] & TMFT_INTANGIBLETOP)
+				if (lines[i].args[3] & TMFT_INTANGIBLETOP)
 					ffloorflags |= FF_REVERSEPLATFORM;
-				if (lines[i].args[2] & TMFT_INTANGIBLEBOTTOM)
+				if (lines[i].args[3] & TMFT_INTANGIBLEBOTTOM)
 					ffloorflags |= FF_PLATFORM;
-				if (lines[i].args[2] & TMFT_DONTBLOCKPLAYER)
+				if (lines[i].args[3] & TMFT_DONTBLOCKPLAYER)
 					ffloorflags &= ~FF_BLOCKPLAYER;
-				if (lines[i].args[2] & TMFT_DONTBLOCKOTHERS)
+				if (lines[i].args[3] & TMFT_DONTBLOCKOTHERS)
 					ffloorflags &= ~FF_BLOCKOTHERS;
-
-				//Appearance settings
-				if ((lines[i].args[3] & TMFA_TRANSLUCENT) && (ffloorflags & FF_RENDERALL)) //Translucent
-					ffloorflags |= FF_TRANSLUCENT;
-				if (lines[i].args[3] & TMFA_NOSHADE)
-					ffloorflags |= FF_NOSHADE;
 
 				//Cutting options
 				if (ffloorflags & FF_RENDERALL)
 				{
 					//If translucent or player can enter it, cut inner walls
-					if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[2] & TMFT_VISIBLEFROMINSIDE))
+					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
 					else
 						ffloorflags |= FF_CUTLEVEL;
@@ -6827,24 +6837,29 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 220: //Intangible
 				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
 
-				//Visibility settings
-				if (lines[i].args[1] & TMFV_NOPLANES)
+				//Appearance settings
+				if (lines[i].args[2] & TMFA_NOPLANES)
 					ffloorflags &= ~FF_RENDERPLANES;
-				if (lines[i].args[1] & TMFV_NOSIDES)
+				if (lines[i].args[2] & TMFA_NOSIDES)
 					ffloorflags &= ~FF_RENDERSIDES;
-				if (!(lines[i].args[1] & TMFV_TOGGLEINSIDES))
+				if (!(lines[i].args[2] & TMFA_INSIDES))
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
 					if (ffloorflags & FF_RENDERSIDES)
 						ffloorflags |= FF_ALLSIDES;
 				}
-
-				//Appearance settings
-				if ((lines[i].args[2] & TMFA_TRANSLUCENT) && (ffloorflags & FF_RENDERALL))
-					ffloorflags |= FF_TRANSLUCENT;
+				if (lines[i].args[2] & TMFA_ONLYINSIDES)
+				{
+					if (ffloorflags & FF_RENDERPLANES)
+						ffloorflags |= FF_INVERTPLANES;
+					if (ffloorflags & FF_RENDERSIDES)
+						ffloorflags |= FF_INVERTSIDES;
+				}
 				if (lines[i].args[2] & TMFA_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
+				if (lines[i].args[2] & TMFA_SPLAT)
+					ffloorflags |= FF_SPLAT;
 
 				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
 				break;

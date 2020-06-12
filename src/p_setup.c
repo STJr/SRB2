@@ -3016,35 +3016,36 @@ static void P_ConvertBinaryMap(void)
 		case 105: //FOF: solid, invisible
 			lines[i].args[0] = lines[i].tag;
 
-			//Visibility
+			//Alpha
+			if (lines[i].special == 102)
+			{
+				if (lines[i].flags & ML_NOCLIMB)
+					lines[i].args[2] |= TMFA_INSIDES;
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
+				else
+					lines[i].args[1] = 128;
+			}
+			else
+				lines[i].args[1] = 255;
+
+			//Appearance
 			if (lines[i].special == 105)
-				lines[i].args[1] = TMFV_NOPLANES|TMFV_NOSIDES;
+				lines[i].args[2] = TMFA_NOPLANES|TMFA_NOSIDES;
 			else if (lines[i].special == 104)
-				lines[i].args[1] = TMFV_NOSIDES;
+				lines[i].args[2] = TMFA_NOSIDES;
 			else if (lines[i].special == 103)
-				lines[i].args[1] = TMFV_NOPLANES;
+				lines[i].args[2] = TMFA_NOPLANES;
+			if (lines[i].special != 100 && (lines[i].special != 104 || !(lines[i].flags & ML_NOCLIMB)))
+				lines[i].args[2] |= TMFA_NOSHADE;
+			if (lines[i].flags & ML_EFFECT6)
+				lines[i].args[2] |= TMFA_SPLAT;
 
 			//Tangibility
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] |= TMFT_DONTBLOCKOTHERS;
+				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[2] |= TMFT_DONTBLOCKPLAYER;
-
-			//Translucency
-			if (lines[i].special == 102)
-			{
-				lines[i].args[3] |= TMFA_TRANSLUCENT;
-				if (lines[i].flags & ML_NOCLIMB)
-					lines[i].args[1] |= TMFV_TOGGLEINSIDES;
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
-				else
-					lines[i].alpha = FRACUNIT/2;
-			}
-
-			//Shadow?
-			if (lines[i].special != 100 && (lines[i].special != 104 || !(lines[i].flags & ML_NOCLIMB)))
-				lines[i].args[3] |= TMFA_NOSHADE;
+				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
 
 			lines[i].special = 100;
 			break;
@@ -3098,40 +3099,41 @@ static void P_ConvertBinaryMap(void)
 		case 146: //FOF: only tangible from sides
 			lines[i].args[0] = lines[i].tag;
 
-			//Visibility
+			//Alpha
+			if (lines[i].special == 141 || lines[i].special == 142 || lines[i].special == 144 || lines[i].special == 145)
+			{
+				if (lines[i].flags & ML_NOCLIMB)
+					lines[i].args[2] |= TMFA_INSIDES;
+				if (sides[lines[i].sidenum[0]].toptexture > 0)
+					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
+				else
+					lines[i].args[1] = 128;
+			}
+			else
+				lines[i].args[1] = 255;
+
+			//Appearance
 			if (lines[i].special == 142 || lines[i].special == 145)
-				lines[i].args[1] = TMFV_NOSIDES;
+				lines[i].args[2] = TMFA_NOSIDES;
 			else if (lines[i].special == 146)
-				lines[i].args[1] = TMFV_NOPLANES;
+				lines[i].args[2] = TMFA_NOPLANES;
+			if (lines[i].special != 146 && (lines[i].flags & ML_NOCLIMB))
+				lines[i].args[2] |= TMFA_NOSHADE;
+			if (lines[i].flags & ML_EFFECT6)
+				lines[i].args[2] |= TMFA_SPLAT;
 
 			//Tangibility
 			if (lines[i].special <= 142)
-				lines[i].args[2] |= TMFT_INTANGIBLEBOTTOM;
+				lines[i].args[3] |= TMFT_INTANGIBLEBOTTOM;
 			else if (lines[i].special <= 145)
-				lines[i].args[2] |= TMFT_INTANGIBLETOP;
+				lines[i].args[3] |= TMFT_INTANGIBLETOP;
 			else
-				lines[i].args[2] |= TMFT_INTANGIBLEBOTTOM|TMFT_INTANGIBLETOP;
+				lines[i].args[3] |= TMFT_INTANGIBLEBOTTOM|TMFT_INTANGIBLETOP;
 
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] |= TMFT_DONTBLOCKOTHERS;
+				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[2] |= TMFT_DONTBLOCKPLAYER;
-
-			//Translucency
-			if (lines[i].special == 141 || lines[i].special == 142 || lines[i].special == 144 || lines[i].special == 145)
-			{
-				lines[i].args[3] |= TMFA_TRANSLUCENT;
-				if (lines[i].flags & ML_NOCLIMB)
-					lines[i].args[1] |= TMFV_TOGGLEINSIDES;
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
-				else
-					lines[i].alpha = FRACUNIT/2;
-			}
-
-			//Shadow?
-			if (lines[i].special != 146 && (lines[i].flags & ML_NOCLIMB))
-				lines[i].args[3] |= TMFA_NOSHADE;
+				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
 
 			lines[i].special = 100;
 			break;
@@ -3227,33 +3229,34 @@ static void P_ConvertBinaryMap(void)
 		case 195: // FOF: Rising, intangible from bottom, translucent
 			lines[i].args[0] = lines[i].tag;
 
-			//Visibility
-			if (lines[i].special == 193)
-				lines[i].args[1] = TMFV_NOPLANES|TMFV_NOSIDES;
-			if (lines[i].special >= 194)
-				lines[i].args[1] = TMFV_TOGGLEINSIDES;
-
-			//Tangibility
-			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] |= TMFT_DONTBLOCKOTHERS;
-			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[2] |= TMFT_DONTBLOCKPLAYER;
-			if (lines[i].special >= 194)
-				lines[i].args[2] |= TMFT_INTANGIBLEBOTTOM;
-
 			//Translucency
 			if (lines[i].special == 192 || lines[i].special == 195)
 			{
-				lines[i].args[3] |= TMFA_TRANSLUCENT;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
-					lines[i].alpha = FRACUNIT/2;
+					lines[i].args[1] = 128;
 			}
+			else
+				lines[i].args[1] = 255;
 
-			//Shadow?
+			//Appearance
+			if (lines[i].special == 193)
+				lines[i].args[2] = TMFA_NOPLANES|TMFA_NOSIDES;
+			if (lines[i].special >= 194)
+				lines[i].args[2] = TMFA_INSIDES;
 			if (lines[i].special != 190 && (lines[i].special <= 193 || lines[i].flags & ML_NOCLIMB))
-				lines[i].args[3] |= TMFA_NOSHADE;
+				lines[i].args[2] |= TMFA_NOSHADE;
+			if (lines[i].flags & ML_EFFECT6)
+				lines[i].args[2] |= TMFA_SPLAT;
+
+			//Tangibility
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
+			if (lines[i].special >= 194)
+				lines[i].args[3] |= TMFT_INTANGIBLEBOTTOM;
 
 			//Speed
 			lines[i].args[4] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
@@ -3282,23 +3285,26 @@ static void P_ConvertBinaryMap(void)
 		case 222: //FOF: Intangible, sides only
 			lines[i].args[0] = lines[i].tag;
 
-			//Visibility
-			if (lines[i].special == 222)
-				lines[i].args[1] |= TMFV_NOPLANES;
-			if (lines[i].special == 221)
-				lines[i].args[1] |= TMFV_TOGGLEINSIDES;
-
-			//Appearance
+			//Alpha
 			if (lines[i].special == 221)
 			{
-				lines[i].args[2] |= TMFA_TRANSLUCENT;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
-					lines[i].alpha = FRACUNIT/2;
+					lines[i].args[1] = 128;
 			}
+			else
+				lines[i].args[1] = 255;
+
+			//Appearance
+			if (lines[i].special == 222)
+				lines[i].args[2] |= TMFA_NOPLANES;
+			if (lines[i].special != 221)
+				lines[i].args[2] |= TMFA_INSIDES;
 			if (lines[i].special != 220 && !(lines[i].flags & ML_NOCLIMB))
 				lines[i].args[2] |= TMFA_NOSHADE;
+			if (lines[i].flags & ML_EFFECT6)
+				lines[i].args[2] |= TMFA_SPLAT;
 
 			lines[i].special = 220;
             break;
