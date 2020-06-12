@@ -447,11 +447,13 @@ void LUA_ClearExtVars(void)
 // Use this variable to prevent certain functions from running
 // if they were not called on lump load
 // (i.e. they were called in hooks or coroutines etc)
-boolean lua_lumploading = false;
+INT32 lua_lumploading = 0;
 
 // Load a script from a MYFILE
-static inline void LUA_LoadFile(MYFILE *f, char *name)
+static inline void LUA_LoadFile(MYFILE *f, char *name, boolean noresults)
 {
+	int errorhandlerindex;
+
 	if (!name)
 		name = wadfiles[f->wad]->filename;
 	CONS_Printf("Loading Lua script from %s\n", name);
@@ -460,21 +462,22 @@ static inline void LUA_LoadFile(MYFILE *f, char *name)
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
 
-	lua_lumploading = true; // turn on loading flag
+	lua_lumploading++; // turn on loading flag
 
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
-	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, lua_gettop(gL) - 1)) {
+	errorhandlerindex = lua_gettop(gL);
+	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, noresults ? 0 : LUA_MULTRET, lua_gettop(gL) - 1)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
 	lua_gc(gL, LUA_GCCOLLECT, 0);
-	lua_pop(gL, 1); // Pop error handler
+	lua_remove(gL, errorhandlerindex);
 
-	lua_lumploading = false; // turn off again
+	lua_lumploading--; // turn off again
 }
 
 // Load a script from a lump
-void LUA_LoadLump(UINT16 wad, UINT16 lump)
+void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults)
 {
 	MYFILE f;
 	char *name;
@@ -501,7 +504,7 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 		name[len] = '\0';
 	}
 
-	LUA_LoadFile(&f, name); // actually load file!
+	LUA_LoadFile(&f, name, noresults); // actually load file!
 
 	free(name);
 	Z_Free(f.data);
