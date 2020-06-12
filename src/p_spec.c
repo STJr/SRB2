@@ -5697,6 +5697,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	if (sec2->hasslope)
 		sec->hasslope = true;
 
+	if (!udmf && master->flags & ML_EFFECT6)
+		fflr->flags |= FF_SPLAT; //TODO: Temporary
 	fflr->spawnflags = fflr->flags = flags;
 	fflr->master = master;
 	fflr->norender = INFTICS;

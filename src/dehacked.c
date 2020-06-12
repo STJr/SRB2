@@ -9820,6 +9820,7 @@ struct {
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_BOUNCY",FF_BOUNCY},                   ///< Bounces players
+	{"FF_SPLAT",FF_SPLAT},                     ///< Use splat flat renderer (treat cyan pixels as invisible)
 
 	// FOF special flags
 	{"FS_PUSHABLES",FS_PUSHABLES},

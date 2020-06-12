@@ -147,6 +147,7 @@ typedef enum
 	FF_RIPPLE            = 0x8000000,  ///< Ripple the flats
 	FF_COLORMAPONLY      = 0x10000000, ///< Only copy the colormap, not the lightlevel
 	FF_BOUNCY            = 0x20000000, ///< Bounces players
+	FF_SPLAT             = 0x40000000, ///< Use splat flat renderer (treat cyan pixels as invisible)
 } ffloortype_e;
 
 typedef enum
