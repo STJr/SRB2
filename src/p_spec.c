@@ -6713,33 +6713,33 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE;
 
 				//Tangibility settings
-				if (lines[i].args[1] & TMFT_INTANGIBLETOP)
+				if (lines[i].args[2] & TMFT_INTANGIBLETOP)
 					ffloorflags |= FF_REVERSEPLATFORM;
-				if (lines[i].args[1] & TMFT_INTANGIBLEBOTTOM)
+				if (lines[i].args[2] & TMFT_INTANGIBLEBOTTOM)
 					ffloorflags |= FF_PLATFORM;
-				if (lines[i].args[1] & TMFT_DONTBLOCKPLAYER)
+				if (lines[i].args[2] & TMFT_DONTBLOCKPLAYER)
 					ffloorflags &= ~FF_BLOCKPLAYER;
-				if (lines[i].args[1] & TMFT_DONTBLOCKOTHERS)
+				if (lines[i].args[2] & TMFT_DONTBLOCKOTHERS)
 					ffloorflags &= ~FF_BLOCKOTHERS;
 
 				//Flags
-				if (lines[i].args[2] & TMFC_TRANSLUCENT)
-					ffloorflags |= FF_TRANSLUCENT;
-				if (lines[i].args[2] & TMFC_NOSHADE)
+				if (lines[i].args[3] & TMFC_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
-				if (lines[i].args[2] & TMFC_NORETURN)
+				if (lines[i].args[3] & TMFC_NORETURN)
 					ffloorflags |= FF_NORETURN;
-				if (lines[i].args[2] & TMFC_FLOATBOB)
+				if (lines[i].args[3] & TMFC_FLOATBOB)
 					ffloorflags |= FF_FLOATBOB;
+				if (lines[i].args[3] & TMFC_SPLAT)
+					ffloorflags |= FF_SPLAT;
 
 				//If translucent or player can enter it, cut inner walls
-				if ((ffloorflags & FF_TRANSLUCENT) || (lines[i].args[1] & TMFT_VISIBLEFROMINSIDE))
+				if (lines[i].args[1] < 0xff || (lines[i].args[2] & TMFT_VISIBLEFROMINSIDE))
 					ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
 				else
 					ffloorflags |= FF_CUTLEVEL;
 
 				//If player can enter it, render insides
-				if (lines[i].args[1] & TMFT_VISIBLEFROMINSIDE)
+				if (lines[i].args[2] & TMFT_VISIBLEFROMINSIDE)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
@@ -6747,8 +6747,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 						ffloorflags |= FF_ALLSIDES;
 				}
 
-				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
-				if (lines[i].args[2] & TMFC_AIRBOB)
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
+				if (lines[i].args[3] & TMFC_AIRBOB)
 					P_AddAirbob(lines[i].frontsector, lines[i].args[0], 16*FRACUNIT, false, false, false);
 				break;
 

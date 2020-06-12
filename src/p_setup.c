@@ -3180,31 +3180,38 @@ static void P_ConvertBinaryMap(void)
 		case 179: //FOF: Crumbling, no respawn, floating
 		case 180: //FOF: Crumbling, respawn, air bobbing
 			lines[i].args[0] = lines[i].tag;
-			if (lines[i].special >= 172 && lines[i].special <= 175)
-			{
-				lines[i].args[1] |= TMFT_INTANGIBLEBOTTOM;
-				if (lines[i].flags & ML_NOCLIMB)
-					lines[i].args[2] |= TMFC_NOSHADE;
-			}
+
+			//Alpha
 			if (lines[i].special >= 174 && lines[i].special <= 175)
 			{
-				lines[i].args[2] |= TMFC_TRANSLUCENT;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
-					lines[i].alpha = FRACUNIT/2;
+					lines[i].args[1] = 128;
 			}
+			else
+				lines[i].args[1] = 255;
+
+			if (lines[i].special >= 172 && lines[i].special <= 175)
+			{
+				lines[i].args[2] |= TMFT_INTANGIBLEBOTTOM;
+				if (lines[i].flags & ML_NOCLIMB)
+					lines[i].args[3] |= TMFC_NOSHADE;
+			}
+
 			if (lines[i].special % 2 == 1)
-				lines[i].args[2] |= TMFC_NORETURN;
+				lines[i].args[3] |= TMFC_NORETURN;
 			if (lines[i].special == 176 || lines[i].special == 177 || lines[i].special == 180)
-				lines[i].args[2] |= TMFC_AIRBOB;
+				lines[i].args[3] |= TMFC_AIRBOB;
 			if (lines[i].special >= 176 && lines[i].special <= 179)
-				lines[i].args[2] |= TMFC_FLOATBOB;
+				lines[i].args[3] |= TMFC_FLOATBOB;
+			if (lines[i].flags & ML_EFFECT6)
+				lines[i].args[3] |= TMFC_SPLAT;
 
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[1] |= TMFT_DONTBLOCKOTHERS;
+				lines[i].args[2] |= TMFT_DONTBLOCKOTHERS;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[1] |= TMFT_DONTBLOCKPLAYER;
+				lines[i].args[2] |= TMFT_DONTBLOCKPLAYER;
 
 			lines[i].special = 170;
 			break;
@@ -3338,7 +3345,7 @@ static void P_ConvertBinaryMap(void)
 			//Translucency
 			if (lines[i].special == 253 || lines[i].special == 256)
 			{
-				lines[i].args[2] = TMFC_TRANSLUCENT;
+				lines[i].args[2] = 1;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
 					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
 				else

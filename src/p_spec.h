@@ -63,11 +63,11 @@ typedef enum
 
 typedef enum
 {
-	TMFC_TRANSLUCENT = 1,
-	TMFC_NOSHADE     = 1<<1,
-	TMFC_NORETURN    = 1<<2,
-	TMFC_AIRBOB      = 1<<3,
-	TMFC_FLOATBOB    = 1<<4,
+	TMFC_NOSHADE     = 1,
+	TMFC_NORETURN    = 1<<1,
+	TMFC_AIRBOB      = 1<<2,
+	TMFC_FLOATBOB    = 1<<3,
+	TMFC_SPLAT       = 1<<4,
 } textmapfofcrumbling_t;
 
 typedef enum
