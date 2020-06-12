@@ -5747,7 +5747,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	}
 
 	fflr->alpha = max(0, min(0xff, alpha));
-	if (fflr->alpha == 0xff)
+	if (fflr->alpha < 0xff)
 	{
 		fflr->flags |= FF_TRANSLUCENT;
 		fflr->spawnflags = fflr->flags;
@@ -6646,19 +6646,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 120: // FOF (water)
 				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (!(lines[i].args[1] & TMFW_OPAQUE))
-					ffloorflags |= FF_TRANSLUCENT;
-				if (!(lines[i].args[1] & TMFW_NOSIDES))
+				if (!(lines[i].args[2] & TMFW_NOSIDES))
 					ffloorflags |= FF_RENDERSIDES|FF_ALLSIDES;
-				if (lines[i].args[1] & TMFW_DOUBLESHADOW)
+				if (lines[i].args[2] & TMFW_DOUBLESHADOW)
 					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].args[1] & TMFW_COLORMAPONLY)
+				if (lines[i].args[2] & TMFW_COLORMAPONLY)
 					ffloorflags |= FF_COLORMAPONLY;
-				if (!(lines[i].args[1] & TMFW_NORIPPLE))
+				if (!(lines[i].args[2] & TMFW_NORIPPLE))
 					ffloorflags |= FF_RIPPLE;
-				if (lines[i].args[1] & TMFW_GOOWATER)
+				if (lines[i].args[2] & TMFW_GOOWATER)
 					ffloorflags |= FF_GOOWATER;
-				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
+				if (lines[i].args[2] & TMFW_SPLAT)
+					ffloorflags |= FF_SPLAT;
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
 				break;
 
 			case 150: // FOF (Air bobbing)

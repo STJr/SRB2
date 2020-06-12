@@ -46,12 +46,12 @@ typedef enum
 
 typedef enum
 {
-	TMFW_OPAQUE       = 1,
-	TMFW_NOSIDES      = 1<<1,
-	TMFW_DOUBLESHADOW = 1<<2,
-	TMFW_COLORMAPONLY = 1<<3,
-	TMFW_NORIPPLE     = 1<<4,
-	TMFW_GOOWATER     = 1<<5,
+	TMFW_NOSIDES      = 1,
+	TMFW_DOUBLESHADOW = 1<<1,
+	TMFW_COLORMAPONLY = 1<<2,
+	TMFW_NORIPPLE     = 1<<3,
+	TMFW_GOOWATER     = 1<<4,
+	TMFW_SPLAT        = 1<<5,
 } textmapfofwater_t;
 
 typedef enum

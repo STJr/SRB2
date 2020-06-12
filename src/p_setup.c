@@ -3056,32 +3056,36 @@ static void P_ConvertBinaryMap(void)
 		case 125: //FOF: goo water, translucent, no sides
 			lines[i].args[0] = lines[i].tag;
 
-			//Opaque?
+			//Alpha
 			if (lines[i].special == 120 || lines[i].special == 122)
-				lines[i].args[1] |= TMFW_OPAQUE;
+				lines[i].args[1] = 255;
 			else
 			{
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
-					lines[i].alpha = FRACUNIT/2;
+					lines[i].args[1] = 128;
 			}
 
 			//No sides?
 			if (lines[i].special == 122 || lines[i].special == 123 || lines[i].special == 125)
-				lines[i].args[1] |= TMFW_NOSIDES;
+				lines[i].args[2] |= TMFW_NOSIDES;
 
 			//Flags
 			if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[1] |= TMFW_DOUBLESHADOW;
+				lines[i].args[2] |= TMFW_DOUBLESHADOW;
 			if (lines[i].flags & ML_EFFECT4)
-				lines[i].args[1] |= TMFW_COLORMAPONLY;
+				lines[i].args[2] |= TMFW_COLORMAPONLY;
 			if (!(lines[i].flags & ML_EFFECT5))
-				lines[i].args[1] |= TMFW_NORIPPLE;
+				lines[i].args[2] |= TMFW_NORIPPLE;
 
 			//Goo?
 			if (lines[i].special >= 124)
-				lines[i].args[1] |= TMFW_GOOWATER;
+				lines[i].args[2] |= TMFW_GOOWATER;
+
+			//Splat rendering?
+			if (lines[i].flags & ML_EFFECT6)
+				lines[i].args[2] |= TMFW_SPLAT;
 
 			lines[i].special = 120;
 			break;
