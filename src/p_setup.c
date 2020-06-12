@@ -3373,8 +3373,12 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 258: //FOF: Laser
 			lines[i].args[0] = lines[i].tag;
+			if (sides[lines[i].sidenum[0]].toptexture > 0)
+				lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
+			else
+				lines[i].args[1] = 128;
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[1] = 1;
+				lines[i].args[2] = 1;
 			break;
 		case 259: //Custom FOF
 			if (lines[i].sidenum[1] == 0xffff)
