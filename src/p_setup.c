@@ -3142,37 +3142,20 @@ static void P_ConvertBinaryMap(void)
 		case 152: //FOF: Reverse air bobbing (adjustable)
 		case 153: //FOF: Dynamically sinking platform
 			lines[i].args[0] = lines[i].tag;
-			lines[i].args[1] = 255;
-			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT6);
-			lines[i].args[3] = (lines[i].special == 150) ? 16 : (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS);
+			lines[i].args[1] = (lines[i].special == 150) ? 16 : (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS);
 
 			//Flags
 			if (lines[i].special == 152)
-				lines[i].args[4] |= TMFB_REVERSE;
+				lines[i].args[2] |= TMFB_REVERSE;
 			if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[4] |= TMFB_SPINDASH;
+				lines[i].args[2] |= TMFB_SPINDASH;
 			if (lines[i].special == 153)
-				lines[i].args[4] |= TMFB_DYNAMIC;
-
-			//Tangibility
-			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[5] |= TMFT_DONTBLOCKOTHERS;
-			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[5] |= TMFT_DONTBLOCKPLAYER;
+				lines[i].args[2] |= TMFB_DYNAMIC;
 
 			lines[i].special = 150;
 			break;
 		case 160: //FOF: Water bobbing
 			lines[i].args[0] = lines[i].tag;
-			lines[i].args[1] = 255;
-			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT6);
-
-			//Tangibility
-			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
-			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
-
 			break;
 		case 170: //FOF: Crumbling, respawn
 		case 171: //FOF: Crumbling, no respawn
