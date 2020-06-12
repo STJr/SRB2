@@ -117,7 +117,7 @@ static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, ext
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
-static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
+static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
 static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee, UINT8 reverse);
@@ -5617,12 +5617,13 @@ static inline void P_AddFFloorToList(sector_t *sec, ffloor_t *fflr)
   * \param sec         Target sector.
   * \param sec2        Control sector.
   * \param master      Control linedef.
+  * \param alpha       Alpha value (0-255).
   * \param flags       Options affecting this 3Dfloor.
   * \param secthinkers List of relevant thinkers sorted by sector. May be NULL.
   * \return Pointer to the new 3Dfloor.
   * \sa P_AddFFloor, P_AddFakeFloorsByLine, P_SpawnSpecials
   */
-static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, ffloortype_e flags, thinkerlist_t *secthinkers)
+static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, INT32 alpha, ffloortype_e flags, thinkerlist_t *secthinkers)
 {
 	ffloor_t *fflr;
 	thinker_t *th;
@@ -5743,7 +5744,12 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		else th = th->next;
 	}
 
-	fflr->alpha = (flags & FF_TRANSLUCENT) ? (master->alpha * 0xff) >> FRACBITS : 0xff;
+	fflr->alpha = max(0, min(0xff, alpha));
+	if (fflr->alpha == 0xff)
+	{
+		fflr->flags |= FF_TRANSLUCENT;
+		fflr->spawnflags = fflr->flags;
+	}
 	fflr->spawnalpha = fflr->alpha; // save for netgames
 
 	if (flags & FF_QUICKSAND)
@@ -6633,7 +6639,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						ffloorflags |= FF_CUTLEVEL;
 				}
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
 				break;
 
 			case 120: // FOF (water)
@@ -6650,7 +6656,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					ffloorflags |= FF_RIPPLE;
 				if (lines[i].args[1] & TMFW_GOOWATER)
 					ffloorflags |= FF_GOOWATER;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
 				break;
 
 			case 150: // FOF (Air bobbing)
@@ -6672,7 +6678,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				else
 					ffloorflags |= FF_CUTLEVEL;
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
 				P_AddAirbob(lines[i].frontsector, lines[i].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
 				break;
 
@@ -6698,7 +6704,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						ffloorflags |= FF_ALLSIDES;
 				}
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
 				break;
 
 			case 170: // FOF (Crumbling)
@@ -6739,7 +6745,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						ffloorflags |= FF_ALLSIDES;
 				}
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
 				if (lines[i].args[2] & TMFC_AIRBOB)
 					P_AddAirbob(lines[i].frontsector, lines[i].args[0], 16*FRACUNIT, false, false, false);
 				break;
@@ -6790,7 +6796,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						ffloorflags |= FF_CUTLEVEL;
 				}
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
 				P_AddRaiseThinker(lines[i].frontsector, lines[i].args[0], lines[i].args[4] << FRACBITS, ceilingtop, ceilingbottom, !!(lines[i].args[5] & TMFR_REVERSE), !!(lines[i].args[5] & TMFR_SPINDASH));
 				break;
 			}
@@ -6798,7 +6804,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_CUTSPRITES;
 				if (!lines[i].args[1])
 					ffloorflags |= FF_DOUBLESHADOW;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
 				break;
 
 			case 202: // Fog
@@ -6807,7 +6813,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				// SoM: Because it's fog, check for an extra colormap and set the fog flag...
 				if (sectors[sec].extra_colormap)
 					sectors[sec].extra_colormap->flags = CMF_FOG;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
 				break;
 
 			case 220: //Intangible
@@ -6832,11 +6838,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[2] & TMFA_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
 				break;
 
 			case 223: // FOF (intangible, invisible) - for combining specials in a sector
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_NOSHADE, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, FF_EXISTS|FF_NOSHADE, secthinkers);
 				break;
 
 			case 250: // Mario Block
@@ -6846,14 +6852,14 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[1] & TMFM_INVISIBLE)
 					ffloorflags &= ~(FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
 				break;
 
 			case 251: // A THWOMP!
 			{
 				UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
 				P_AddThwompThinker(lines[i].frontsector, lines[i].args[0], &lines[i], lines[i].args[1] << FRACBITS, lines[i].args[2] << FRACBITS, sound);
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				break;
 			}
 
@@ -6898,7 +6904,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, ffloorflags, secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
 					fflr->busttype = busttype;
 					fflr->specialflags = bustflags;
 					fflr->busttag = lines[i].args[4];
@@ -6912,7 +6918,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, ffloorflags, secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, ffloorflags, secthinkers);
 					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
 					fflr->friction = abs(lines[i].args[3]) << (FRACBITS - 6);
 				}
@@ -6920,13 +6926,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 258: // Laser block
 				P_AddLaserThinker(lines[i].args[0], lines + i, !!(lines[i].args[1]));
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT, secthinkers);
+				P_AddFakeFloorsByLine(i, (lines[i].alpha * 0xff) >> FRACBITS, FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT, secthinkers);
 				break;
 
 			case 259: // Custom FOF
 				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, (lines[i].args[1] & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, lines[i].args[1], secthinkers);
 					if (!udmf) // Ugly backwards compatibility stuff
 					{
 						if (lines[i].args[1] & FF_QUICKSAND)
@@ -7368,18 +7374,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 /** Adds 3Dfloors as appropriate based on a common control linedef.
   *
   * \param line        Control linedef to use.
+  * \param alpha       Alpha value (0-255).
   * \param ffloorflags 3Dfloor flags to use.
   * \param secthkiners Lists of thinkers sorted by sector. May be NULL.
   * \sa P_SpawnSpecials, P_AddFakeFloor
   * \author Graue <graue@oceanbase.org>
   */
-static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers)
+static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, ffloortype_e ffloorflags, thinkerlist_t *secthinkers)
 {
 	INT32 s;
 	size_t sec = sides[*lines[line].sidenum].sector-sectors;
 
 	for (s = -1; (s = P_FindSectorFromTag(lines[line].args[0], s)) >= 0 ;)
-		P_AddFakeFloor(&sectors[s], &sectors[sec], lines+line, ffloorflags, secthinkers);
+		P_AddFakeFloor(&sectors[s], &sectors[sec], lines+line, alpha, ffloorflags, secthinkers);
 }
 
 /*
