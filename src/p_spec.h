@@ -95,6 +95,7 @@ typedef enum
 	TMFB_PUSHABLES   = 1,
 	TMFB_EXECUTOR    = 1<<1,
 	TMFB_ONLYBOTTOM  = 1<<2,
+	TMFB_SPLAT       = 1<<3,
 } textmapfofbustflags_t;
 
 typedef enum

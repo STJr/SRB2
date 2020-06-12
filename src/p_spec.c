@@ -6873,7 +6873,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP;
 
 				//Bustable type
-				switch (lines[i].args[1])
+				switch (lines[i].args[2])
 				{
 					case TMFB_TOUCH:
 						busttype = BT_TOUCH;
@@ -6889,10 +6889,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 						break;
 				}
 
-				//Translucent?
-				if (lines[i].args[2])
-					ffloorflags |= FF_TRANSLUCENT;
-
 				//Flags
 				if (lines[i].args[3] & TMFB_PUSHABLES)
 					bustflags |= FS_PUSHABLES;
@@ -6900,13 +6896,15 @@ void P_SpawnSpecials(boolean fromnetsave)
 					bustflags |= FS_EXECUTOR;
 				if (lines[i].args[3] & TMFB_ONLYBOTTOM)
 					bustflags |= FS_ONLYBOTTOM;
+				if (lines[i].args[3] & TMFB_SPLAT)
+					ffloorflags |= FF_SPLAT;
 
 				if (busttype != BT_TOUCH || bustflags & FS_ONLYBOTTOM)
 					ffloorflags |= FF_BLOCKPLAYER;
 
 				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], ffloorflags, secthinkers);
 					fflr->busttype = busttype;
 					fflr->specialflags = bustflags;
 					fflr->busttag = lines[i].args[4];

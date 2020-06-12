@@ -3332,26 +3332,28 @@ static void P_ConvertBinaryMap(void)
 		case 256: //FOF: Spin-bustable block, translucent
 			lines[i].args[0] = lines[i].tag;
 
-			//Bustable type
-			if (lines[i].special <= 253)
-				lines[i].args[1] = TMFB_TOUCH;
-			else if (lines[i].special >= 255)
-				lines[i].args[1] = TMFB_SPIN;
-			else if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[1] = TMFB_STRONG;
-			else
-				lines[i].args[1] = TMFB_REGULAR;
-
-			//Translucency
+			//Alpha
 			if (lines[i].special == 253 || lines[i].special == 256)
 			{
-				lines[i].args[2] = 1;
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
-					lines[i].alpha = FRACUNIT/2;
+					lines[i].args[1] = 128;
 			}
+			else
+				lines[i].args[1] = 255;
 
+			//Bustable type
+			if (lines[i].special <= 253)
+				lines[i].args[2] = TMFB_TOUCH;
+			else if (lines[i].special >= 255)
+				lines[i].args[2] = TMFB_SPIN;
+			else if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] = TMFB_STRONG;
+			else
+				lines[i].args[2] = TMFB_REGULAR;
+
+			//Flags
 			if (lines[i].flags & ML_EFFECT4)
 				lines[i].args[3] |= TMFB_PUSHABLES;
 			if (lines[i].flags & ML_EFFECT5)
@@ -3360,7 +3362,9 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 			}
 			if (lines[i].special == 252 && lines[i].flags & ML_NOCLIMB)
-				lines[i].args[4] |= TMFB_ONLYBOTTOM;
+				lines[i].args[3] |= TMFB_ONLYBOTTOM;
+			if (lines[i].flags & ML_EFFECT6)
+				lines[i].args[3] |= TMFB_SPLAT;
 
 			lines[i].special = 254;
 			break;
