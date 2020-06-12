@@ -3363,13 +3363,10 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 257: //FOF: Quicksand
 			lines[i].args[0] = lines[i].tag;
-			lines[i].args[1] = 255;
 			if (!(lines[i].flags & ML_EFFECT5))
-				lines[i].args[2] |= TMFQ_NORIPPLE;
-			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[2] |= TMFQ_SPLAT;
-			lines[i].args[3] = lines[i].dx >> FRACBITS; //Sinking speed
-			lines[i].args[4] = lines[i].dy >> FRACBITS; //Friction
+				lines[i].args[1] = 1; //No ripple effect
+			lines[i].args[2] = lines[i].dx >> FRACBITS; //Sinking speed
+			lines[i].args[3] = lines[i].dy >> FRACBITS; //Friction
 			break;
 		case 258: //FOF: Laser
 			lines[i].args[0] = lines[i].tag;
