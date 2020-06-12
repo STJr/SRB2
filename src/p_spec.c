@@ -6934,17 +6934,17 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 259: // Custom FOF
 				for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0], s)) >= 0 ;)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, (lines[i].args[1] & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, lines[i].args[1], secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], lines[i].args[2], secthinkers);
 					if (!udmf) // Ugly backwards compatibility stuff
 					{
-						if (lines[i].args[1] & FF_QUICKSAND)
+						if (lines[i].args[2] & FF_QUICKSAND)
 						{
 							fflr->sinkspeed = abs(lines[i].dx) >> 1;
 							fflr->friction = abs(lines[i].dy) >> 6;
 						}
-						if (lines[i].args[1] & FF_BUSTUP)
+						if (lines[i].args[2] & FF_BUSTUP)
 						{
-							switch (lines[i].args[2] % TMFB_ONLYBOTTOM)
+							switch (lines[i].args[3] % TMFB_ONLYBOTTOM)
 							{
 								case TMFB_TOUCH:
 									fflr->busttype = BT_TOUCH;
@@ -6960,7 +6960,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 									break;
 							}
 
-							if (lines[i].args[2] & TMFB_ONLYBOTTOM)
+							if (lines[i].args[3] & TMFB_ONLYBOTTOM)
 								fflr->specialflags |= FS_ONLYBOTTOM;
 							if (lines[i].flags & ML_EFFECT4)
 								fflr->specialflags |= FS_PUSHABLES;

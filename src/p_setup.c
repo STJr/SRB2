@@ -3381,15 +3381,19 @@ static void P_ConvertBinaryMap(void)
 				I_Error("Custom FOF (tag %d) found without a linedef back side!", lines[i].tag);
 
 			lines[i].args[0] = lines[i].tag;
-			lines[i].args[1] = sides[lines[i].sidenum[1]].toptexture;
-			lines[i].args[2] = sides[lines[i].sidenum[1]].midtexture;
-			if (lines[i].args[1] & FF_TRANSLUCENT)
+			lines[i].args[2] = sides[lines[i].sidenum[1]].toptexture;
+			if (lines[i].flags & ML_EFFECT6)
+				lines[i].args[2] |= FF_SPLAT;
+			lines[i].args[3] = sides[lines[i].sidenum[1]].midtexture;
+			if (lines[i].args[2] & FF_TRANSLUCENT)
 			{
 				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].alpha = (sides[lines[i].sidenum[0]].toptexture << FRACBITS)/255;
+					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
-					lines[i].alpha = FRACUNIT/2;
+					lines[i].args[1] = 128;
 			}
+			else
+				lines[i].args[1] = 255;
 			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
