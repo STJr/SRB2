@@ -97,6 +97,12 @@ typedef enum
 	TMFB_ONLYBOTTOM  = 1<<2,
 } textmapfofbustflags_t;
 
+typedef enum
+{
+	TMFL_NOBOSSES = 1,
+	TMFL_SPLAT    = 1<<1,
+} textmapfoflaserflags_t;
+
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.

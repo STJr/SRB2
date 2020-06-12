@@ -6927,8 +6927,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 258: // Laser block
-				P_AddLaserThinker(lines[i].args[0], lines + i, !!(lines[i].args[2]));
-				P_AddFakeFloorsByLine(i, lines[i].args[1], FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT, secthinkers);
+				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT;
+				P_AddLaserThinker(lines[i].args[0], lines + i, !!(lines[i].args[2] & TMFL_NOBOSSES));
+				if (lines[i].args[2] & TMFL_SPLAT)
+					ffloorflags |= FF_SPLAT;
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
 				break;
 
 			case 259: // Custom FOF
