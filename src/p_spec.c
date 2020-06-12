@@ -6664,6 +6664,35 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 150: // FOF (Air bobbing)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
+				if (lines[i].args[2])
+					ffloorflags |= FF_SPLAT;
+
+				//Tangibility settings
+				if (lines[i].args[5] & TMFT_INTANGIBLETOP)
+					ffloorflags |= FF_REVERSEPLATFORM;
+				if (lines[i].args[5] & TMFT_INTANGIBLEBOTTOM)
+					ffloorflags |= FF_PLATFORM;
+				if (lines[i].args[5] & TMFT_DONTBLOCKPLAYER)
+					ffloorflags &= ~FF_BLOCKPLAYER;
+				if (lines[i].args[5] & TMFT_DONTBLOCKOTHERS)
+					ffloorflags &= ~FF_BLOCKOTHERS;
+
+				//If player can enter it, cut inner walls
+				if (lines[i].args[5] & TMFT_VISIBLEFROMINSIDE)
+					ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
+				else
+					ffloorflags |= FF_CUTLEVEL;
+
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
+				P_AddAirbob(lines[i].frontsector, lines[i].args[0], lines[i].args[3] << FRACBITS, !!(lines[i].args[4] & TMFB_REVERSE), !!(lines[i].args[4] & TMFB_SPINDASH), !!(lines[i].args[4] & TMFB_DYNAMIC));
+				break;
+
+			case 160: // FOF (Water bobbing)
+				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB;
+
+				if (lines[i].args[2])
+					ffloorflags |= FF_SPLAT;
+
 				//Tangibility settings
 				if (lines[i].args[3] & TMFT_INTANGIBLETOP)
 					ffloorflags |= FF_REVERSEPLATFORM;
@@ -6674,31 +6703,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[3] & TMFT_DONTBLOCKOTHERS)
 					ffloorflags &= ~FF_BLOCKOTHERS;
 
-				//If player can enter it, cut inner walls
-				if (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE)
-					ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
-				else
-					ffloorflags |= FF_CUTLEVEL;
-
-				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines[i].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
-				break;
-
-			case 160: // FOF (Water bobbing)
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB;
-
-				//Tangibility settings
-				if (lines[i].args[1] & TMFT_INTANGIBLETOP)
-					ffloorflags |= FF_REVERSEPLATFORM;
-				if (lines[i].args[1] & TMFT_INTANGIBLEBOTTOM)
-					ffloorflags |= FF_PLATFORM;
-				if (lines[i].args[1] & TMFT_DONTBLOCKPLAYER)
-					ffloorflags &= ~FF_BLOCKPLAYER;
-				if (lines[i].args[1] & TMFT_DONTBLOCKOTHERS)
-					ffloorflags &= ~FF_BLOCKOTHERS;
-
 				//If player can enter it, render insides
-				if (lines[i].args[1] & TMFT_VISIBLEFROMINSIDE)
+				if (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
@@ -6706,7 +6712,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						ffloorflags |= FF_ALLSIDES;
 				}
 
-				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
 				break;
 
 			case 170: // FOF (Crumbling)
@@ -6927,7 +6933,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 258: // Laser block
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT;
+				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA;
 				P_AddLaserThinker(lines[i].args[0], lines + i, !!(lines[i].args[2] & TMFL_NOBOSSES));
 				if (lines[i].args[2] & TMFL_SPLAT)
 					ffloorflags |= FF_SPLAT;
