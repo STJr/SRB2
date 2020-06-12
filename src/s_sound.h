@@ -56,9 +56,9 @@ extern consvar_t cv_modfilter;
 
 #ifdef HAVE_MIXERX
 extern consvar_t cv_midiplayer;
-extern consvar_t cv_midisoundfontpath;
 extern consvar_t cv_miditimiditypath;
 #endif
+extern consvar_t cv_midisoundfontpath;
 
 #ifdef SNDSERV
 extern consvar_t sndserver_cmd, sndserver_arg;

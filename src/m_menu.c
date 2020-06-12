@@ -1487,10 +1487,12 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 12},
 #endif
 
-#ifdef HAVE_MIXERX
 	{IT_HEADER, NULL, "MIDI Settings", NULL, OPENMPT_MENUOFFSET},
+#ifdef HAVE_MIXERX
 	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+12},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+24},
+#endif
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "MIDI Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+24},
+#ifdef HAVE_MIXERX
 	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+51},
 #endif
 
