@@ -44,6 +44,11 @@ consvar_t cv_masterserver_debug = {
 	MasterServer_Debug_OnChange, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
 };
 
+consvar_t cv_masterserver_token = {
+	"masterserver_token", "", CV_SAVE, NULL,
+	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
+};
+
 static int hms_started;
 
 static char *hms_api;
@@ -100,7 +105,9 @@ HMS_connect (const char *format, ...)
 	va_list ap;
 	CURL *curl;
 	char *url;
+	char *quack_token;
 	size_t seek;
+	size_t token_length;
 	struct HMS_buffer *buffer;
 
 	if (! hms_started)
@@ -127,6 +134,17 @@ HMS_connect (const char *format, ...)
 		return NULL;
 	}
 
+	if (cv_masterserver_token.string[0])
+	{
+		quack_token = curl_easy_escape(curl, cv_masterserver_token.string, 0);
+		token_length = ( sizeof "?token="-1 )+ strlen(quack_token);
+	}
+	else
+	{
+		quack_token = NULL;
+		token_length = 0;
+	}
+
 #ifdef HAVE_THREADS
 	I_lock_mutex(&hms_api_mutex);
 #endif
@@ -134,7 +152,7 @@ HMS_connect (const char *format, ...)
 	seek = strlen(hms_api) + 1;/* + '/' */
 
 	va_start (ap, format);
-	url = malloc(seek + vsnprintf(0, 0, format, ap) + 1);
+	url = malloc(seek + vsnprintf(0, 0, format, ap) + token_length + 1);
 	va_end (ap);
 
 	sprintf(url, "%s/", hms_api);
@@ -144,8 +162,11 @@ HMS_connect (const char *format, ...)
 #endif
 
 	va_start (ap, format);
-	vsprintf(&url[seek], format, ap);
+	seek += vsprintf(&url[seek], format, ap);
 	va_end (ap);
+
+	if (quack_token)
+		sprintf(&url[seek], "?token=%s", quack_token);
 
 	CONS_Printf("HMS: connecting '%s'...\n", url);
 
@@ -174,6 +195,7 @@ HMS_connect (const char *format, ...)
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
 
+	curl_free(quack_token);
 	free(url);
 
 	return buffer;
