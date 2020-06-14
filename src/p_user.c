@@ -2291,6 +2291,7 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 {
 	boolean clipmomz;
+	CONS_Printf("Hit floor! %u\n", dorollstuff);
 
 	I_Assert(player->mo != NULL);
 
@@ -2301,7 +2302,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 	{
 		if (dorollstuff)
 		{
-			if ((player->charability2 == CA2_SPINDASH) && !((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+			if ((player->charability2 == CA2_SPINDASH) && !((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_THOKKED) && !(player->charability == CA_THOK && player->secondjump)
+			&& (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
 				player->pflags = (player->pflags|PF_SPINNING) & ~PF_THOKKED;
 			else if (!(player->pflags & PF_STARTDASH))
 				player->pflags &= ~PF_SPINNING;
@@ -2402,7 +2404,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				;
 			else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
 				;
-			else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
+			else if (dorollstuff && player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
 			{
 				fixed_t runspd = FixedMul(player->runspeed, player->mo->scale);
 
@@ -5146,6 +5148,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 								player->mo->momz = 0;
 								player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
+								player->secondjump = 1;
 							}
 						}
 						break;
@@ -5519,7 +5522,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				else
 					potentialmomz = ((player->speed < 10*player->mo->scale)
 					? (player->speed - 10*player->mo->scale)/5
-					: -1); // Should be 0, but made negative to ensure P_PlayerHitFloor runs upon touching ground
+					: 0);
 				if (P_MobjFlip(player->mo)*player->mo->momz < potentialmomz)
 					player->mo->momz = P_MobjFlip(player->mo)*potentialmomz;
 				player->pflags &= ~PF_SPINNING;
@@ -5531,7 +5534,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		player->pflags &= ~PF_JUMPDOWN;
 
 		// Repeat abilities, but not double jump!
-		if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP && player->charability != CA_AIRDRILL)
+		if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP && player->charability != CA_AIRDRILL && player->charability != CA_THOK)
 		{
 			if (player->charflags & SF_MULTIABILITY)
 			{
@@ -8411,7 +8414,7 @@ static void P_MovePlayer(player_t *player)
 	// Also keep in mind the PF_JUMPED check.
 	// If we lacked this, stepping up while jumping up would reset score.
 	// (for instance, when climbing up off a wall.)
-	if ((onground || player->climbing) && !(player->pflags & PF_JUMPED) && player->powers[pw_invulnerability] <= 1)
+	if ((onground || player->climbing) && !(player->pflags & (PF_JUMPED|PF_BOUNCING)) && player->powers[pw_invulnerability] <= 1)
 		P_ResetScore(player);
 
 	// Show the "THOK!" graphic when spinning quickly across the ground. (even applies to non-spinners, in the case of zoom tubes)

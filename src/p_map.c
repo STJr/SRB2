@@ -2823,14 +2823,22 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				P_HandleSlopeLanding(thing, tmfloorslope);
 
 			if (thing->momz <= 0)
+			{
 				thing->standingslope = tmfloorslope;
+				if (thing->momz == 0 && thing->player && !startingonground)
+					P_PlayerHitFloor(thing->player, true);
+			}
 		}
 		else if (thing->z+thing->height >= tmceilingz && (thing->eflags & MFE_VERTICALFLIP)) {
 			if (!startingonground && tmceilingslope)
 				P_HandleSlopeLanding(thing, tmceilingslope);
 
 			if (thing->momz >= 0)
+			{
 				thing->standingslope = tmceilingslope;
+				if (thing->momz == 0 && thing->player && !startingonground)
+					P_PlayerHitFloor(thing->player, true);
+			}
 		}
 	}
 	else // don't set standingslope if you're not going to clip against it
