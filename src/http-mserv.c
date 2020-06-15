@@ -88,7 +88,7 @@ HMS_on_read (char *s, size_t _1, size_t n, void *userdata)
 	{
 		/* resize to next multiple of buffer size */
 		blocks = ( n / DEFAULT_BUFFER_SIZE + 1 );
-		buffer->end = ( blocks * DEFAULT_BUFFER_SIZE );
+		buffer->end += ( blocks * DEFAULT_BUFFER_SIZE );
 
 		buffer->buffer = realloc(buffer->buffer, buffer->end);
 	}
