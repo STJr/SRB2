@@ -2291,7 +2291,6 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 {
 	boolean clipmomz;
-	CONS_Printf("Hit floor! %u\n", dorollstuff);
 
 	I_Assert(player->mo != NULL);
 
