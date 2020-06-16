@@ -2319,6 +2319,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				if (player->scoreadd)
 					player->scoreadd--;
 			}
+			else
+				player->mo->z += P_MobjFlip(player->mo);
 			clipmomz = false;
 		}
 		else
@@ -8414,7 +8416,7 @@ static void P_MovePlayer(player_t *player)
 	// Also keep in mind the PF_JUMPED check.
 	// If we lacked this, stepping up while jumping up would reset score.
 	// (for instance, when climbing up off a wall.)
-	if ((onground || player->climbing) && !(player->pflags & (PF_JUMPED|PF_BOUNCING)) && player->powers[pw_invulnerability] <= 1)
+	if ((onground || player->climbing) && !(player->pflags & PF_JUMPED) && player->powers[pw_invulnerability] <= 1)
 		P_ResetScore(player);
 
 	// Show the "THOK!" graphic when spinning quickly across the ground. (even applies to non-spinners, in the case of zoom tubes)
