@@ -1162,9 +1162,6 @@ boolean I_LoadSong(char *data, size_t len)
 				// Run GME on new data
 				if (!gme_open_data(inflatedData, inflatedLen, &gme, 44100))
 				{
-					gme_start_track(gme, 0);
-					current_track = 0;
-					Mix_HookMusic(mix_gme, gme);
 					Z_Free(inflatedData); // GME supposedly makes a copy for itself, so we don't need this lying around
 					return true;
 				}
