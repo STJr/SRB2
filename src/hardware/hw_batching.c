@@ -215,9 +215,13 @@ void HWR_RenderBatches(void)
 	int polygonReadPos = 0;// position in polygonIndexArray
 
 	int currentShader;
+	int nextShader;
 	GLMipmap_t *currentTexture;
+	GLMipmap_t *nextTexture;
 	FBITFIELD currentPolyFlags;
+	FBITFIELD nextPolyFlags;
 	FSurfaceInfo currentSurfaceInfo;
+	FSurfaceInfo nextSurfaceInfo;
 
 	int i;
 
@@ -283,13 +287,9 @@ void HWR_RenderBatches(void)
 		boolean stopFlag = false;
 		boolean changeState = false;
 		boolean changeShader = false;
-		int nextShader = 0;
 		boolean changeTexture = false;
-		GLMipmap_t *nextTexture = NULL;
 		boolean changePolyFlags = false;
-		FBITFIELD nextPolyFlags = 0;
 		boolean changeSurfaceInfo = false;
-		FSurfaceInfo nextSurfaceInfo = {0};
 
 		// steps:
 		// write vertices
