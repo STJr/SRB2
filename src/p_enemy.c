@@ -5106,8 +5106,10 @@ void A_SignPlayer(mobj_t *actor)
 	INT32 locvar2 = var2;
 	skin_t *skin = NULL;
 	mobj_t *ov;
-	UINT16 facecolor, signcolor = (UINT16)locvar2;
+	UINT16 facecolor, signcolor = 0;
 	UINT32 signframe = states[actor->info->raisestate].frame;
+
+	facecolor = signcolor = (UINT16)locvar2;
 
 	if (LUA_CallAction("A_SignPlayer", actor))
 		return;
