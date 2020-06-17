@@ -206,5 +206,6 @@ FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 void SCR_DisplayTicRate(void);
 void SCR_ClosedCaptions(void);
 void SCR_DisplayLocalPing(void);
+void SCR_DisplayMarathonInfo(void);
 #undef DNWH
 #endif //__SCREEN_H__
