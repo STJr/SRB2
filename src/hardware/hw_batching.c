@@ -215,11 +215,11 @@ void HWR_RenderBatches(void)
 	int polygonReadPos = 0;// position in polygonIndexArray
 
 	int currentShader;
-	int nextShader;
+	int nextShader = 0;
 	GLMipmap_t *currentTexture;
-	GLMipmap_t *nextTexture;
-	FBITFIELD currentPolyFlags;
-	FBITFIELD nextPolyFlags;
+	GLMipmap_t *nextTexture = NULL;
+	FBITFIELD currentPolyFlags = 0;
+	FBITFIELD nextPolyFlags = 0;
 	FSurfaceInfo currentSurfaceInfo;
 	FSurfaceInfo nextSurfaceInfo;
 
@@ -227,6 +227,10 @@ void HWR_RenderBatches(void)
 
     if (!currently_batching)
 		I_Error("HWR_RenderBatches called without starting batching");
+
+	nextSurfaceInfo.LightInfo.fade_end = 0;
+	nextSurfaceInfo.LightInfo.fade_start = 0;
+	nextSurfaceInfo.LightInfo.light_level = 0;
 
 	currently_batching = false;// no longer collecting batches
 	if (!polygonArraySize)
