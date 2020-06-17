@@ -2610,7 +2610,7 @@ EXPORT void HWRAPI(CreateModelVBOs) (model_t *model)
 	}
 }
 
-#define BUFFER_OFFSET(i) ((char*)(i))
+#define BUFFER_OFFSET(i) ((void*)(i))
 
 static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, FSurfaceInfo *Surface)
 {
