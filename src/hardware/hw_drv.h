@@ -68,14 +68,14 @@ EXPORT void HWRAPI(DrawScreenFinalTexture) (int width, int height);
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
 
 // jimita
-EXPORT void HWRAPI(LoadShaders) (void);
+EXPORT boolean HWRAPI(LoadShaders) (void);
 EXPORT void HWRAPI(KillShaders) (void);
 EXPORT void HWRAPI(SetShader) (int shader);
 EXPORT void HWRAPI(UnSetShader) (void);
 
 EXPORT void HWRAPI(SetShaderInfo) (hwdshaderinfo_t info, INT32 value);
 EXPORT void HWRAPI(LoadCustomShader) (int number, char *shader, size_t size, boolean fragment);
-EXPORT void HWRAPI(InitCustomShaders) (void);
+EXPORT boolean HWRAPI(InitCustomShaders) (void);
 
 // ==========================================================================
 //                                      HWR DRIVER OBJECT, FOR CLIENT PROGRAM

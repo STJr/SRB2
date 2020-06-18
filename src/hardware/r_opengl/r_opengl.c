@@ -866,11 +866,13 @@ void SetupGLFunc4(void)
 }
 
 // jimita
-EXPORT void HWRAPI(LoadShaders) (void)
+EXPORT boolean HWRAPI(LoadShaders) (void)
 {
 #ifdef GL_SHADERS
 	GLuint gl_vertShader, gl_fragShader;
 	GLint i, result;
+
+	if (!pglUseProgram) return false;
 
 	gl_customvertexshaders[0] = NULL;
 	gl_customfragmentshaders[0] = NULL;
@@ -993,6 +995,7 @@ EXPORT void HWRAPI(LoadShaders) (void)
 #undef GETUNI
 	}
 #endif
+	return true;
 }
 
 //
@@ -1023,6 +1026,7 @@ EXPORT void HWRAPI(SetShaderInfo) (hwdshaderinfo_t info, INT32 value)
 EXPORT void HWRAPI(LoadCustomShader) (int number, char *shader, size_t size, boolean fragment)
 {
 #ifdef GL_SHADERS
+	if (!pglUseProgram) return;
 	if (number < 1 || number > MAXSHADERS)
 		I_Error("LoadCustomShader(): cannot load shader %d (max %d)", number, MAXSHADERS);
 
@@ -1046,11 +1050,11 @@ EXPORT void HWRAPI(LoadCustomShader) (int number, char *shader, size_t size, boo
 #endif
 }
 
-EXPORT void HWRAPI(InitCustomShaders) (void)
+EXPORT boolean HWRAPI(InitCustomShaders) (void)
 {
 #ifdef GL_SHADERS
 	KillShaders();
-	LoadShaders();
+	return LoadShaders();
 #endif
 }
 
@@ -1078,6 +1082,7 @@ EXPORT void HWRAPI(UnSetShader) (void)
 #ifdef GL_SHADERS
 	gl_shadersenabled = false;
 	gl_currentshaderprogram = 0;
+	if (!pglUseProgram) return;
 	pglUseProgram(0);
 #endif
 }
@@ -1868,7 +1873,7 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 static void *Shader_Load(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade)
 {
 #ifdef GL_SHADERS
-	if (gl_shadersenabled)
+	if (gl_shadersenabled && pglUseProgram)
 	{
 		gl_shaderprogram_t *shader = &gl_shaderprograms[gl_currentshaderprogram];
 		if (shader->program)
@@ -1884,8 +1889,6 @@ static void *Shader_Load(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *
 		else
 			pglUseProgram(0);
 	}
-	else
-		pglUseProgram(0);
 #else
 	(void)Surface;
 	(void)poly;
