@@ -6946,7 +6946,9 @@ void A_RecyclePowers(mobj_t *actor)
 		for (j = 0; j < NUMPOWERS; j++)
 		{
 			if (j == pw_flashing || j == pw_underwater || j == pw_spacetime || j == pw_carry
-			    || j == pw_tailsfly || j == pw_extralife || j == pw_nocontrol || j == pw_super)
+			    || j == pw_tailsfly || j == pw_extralife || j == pw_nocontrol || j == pw_super
+				|| j == pw_pushing || j == pw_justsprung || j == pw_noautobrake || j == pw_justlaunched
+				|| j == pw_ignorelatch)
 				continue;
 			players[recv_pl].powers[j] = powers[send_pl][j];
 		}
@@ -13338,6 +13340,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 	player_t *player = thing->player;
 
 	if (!player)
+		return true;
+
+	if (player->powers[pw_carry] != CR_DUSTDEVIL && (player->powers[pw_ignorelatch] & (1<<15)))
 		return true;
 
 	if (abs(thing->x - dustdevil->x) > dustdevil->radius || abs(thing->y - dustdevil->y) > dustdevil->radius)
