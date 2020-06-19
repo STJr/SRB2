@@ -5203,12 +5203,13 @@ void A_SignPlayer(mobj_t *actor)
 	}
 	else // Eggman face
 	{
+		ov->color = SKINCOLOR_NONE;
 		ov->skin = NULL;
 		if ((statenum_t)(ov->state-states) != actor->info->meleestate)
 			P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		if (!signcolor)
 			signcolor = SKINCOLOR_CARBON;
-		ov->color = signcolor;
+		facecolor = signcolor;
 	}
 
 	actor->tracer->color = signcolor;
