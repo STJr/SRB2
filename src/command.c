@@ -56,7 +56,9 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
 static boolean CV_Command(void);
 consvar_t *CV_FindVar(const char *name);
 static const char *CV_StringValue(const char *var_name);
+
 static consvar_t *consvar_vars; // list of registered console variables
+static UINT16     consvar_number_of_netids = 0;
 
 static char com_token[1024];
 static char *COM_Parse(char *data);
@@ -1126,7 +1128,6 @@ consvar_t *CV_FindVar(const char *name)
   *
   * \param s Name of the variable.
   * \return A new unique identifier.
-  * \sa CV_FindNetVar
   */
 static inline UINT16 CV_ComputeNetid(const char *s)
 {
@@ -1146,11 +1147,13 @@ static inline UINT16 CV_ComputeNetid(const char *s)
   *
   * \param netid The variable's identifier number.
   * \return A pointer to the variable itself if found, or NULL.
-  * \sa CV_ComputeNetid
   */
 static consvar_t *CV_FindNetVar(UINT16 netid)
 {
 	consvar_t *cvar;
+
+	if (netid > consvar_number_of_netids)
+		return NULL;
 
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
 		if (cvar->netid == netid)
@@ -1184,11 +1187,11 @@ void CV_RegisterVar(consvar_t *variable)
 	// check net variables
 	if (variable->flags & CV_NETVAR)
 	{
-		const consvar_t *netvar;
-		variable->netid = CV_ComputeNetid(variable->name);
-		netvar = CV_FindNetVar(variable->netid);
-		if (netvar)
-			I_Error("Variables %s and %s have same netid\n", variable->name, netvar->name);
+		variable->netid = consvar_number_of_netids++;
+
+		/* in case of overflow... */
+		if (variable->netid > consvar_number_of_netids)
+			I_Error("Way too many netvars");
 	}
 
 	// link the variable in
