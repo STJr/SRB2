@@ -4179,96 +4179,45 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 // --------------------------------------------------------------------------
 // Sort vissprites by distance
 // --------------------------------------------------------------------------
-static gr_vissprite_t gr_vsprsortedhead;
+gr_vissprite_t* gr_vsprorder[MAXVISSPRITES];
 
-static void HWR_SortVisSprites(void)
+// Note: For more correct transparency the transparent sprites would need to be
+// sorted and drawn together with transparent surfaces.
+static int CompareVisSprites(const void *p1, const void *p2)
 {
-	UINT32 i;
-	gr_vissprite_t *ds, *dsprev, *dsnext, *dsfirst;
-	gr_vissprite_t *best = NULL;
-	gr_vissprite_t unsorted;
-	float bestdist = 0.0f;
-	INT32 bestdispoffset = 0;
-
-	if (!gr_visspritecount)
-		return;
-
-	dsfirst = HWR_GetVisSprite(0);
-
-	for (i = 0, dsnext = dsfirst, ds = NULL; i < gr_visspritecount; i++)
-	{
-		dsprev = ds;
-		ds = dsnext;
-		if (i < gr_visspritecount - 1) dsnext = HWR_GetVisSprite(i + 1);
-
-		ds->next = dsnext;
-		ds->prev = dsprev;
-	}
-
-	// Fix first and last. ds still points to the last one after the loop
-	dsfirst->prev = &unsorted;
-	unsorted.next = dsfirst;
-	if (ds)
-		ds->next = &unsorted;
-	unsorted.prev = ds;
-
-	// pull the vissprites out by scale
-	gr_vsprsortedhead.next = gr_vsprsortedhead.prev = &gr_vsprsortedhead;
-	for (i = 0; i < gr_visspritecount; i++)
-	{
-		best = NULL;
-		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
-		{
-			if (!best || ds->tz > bestdist)
-			{
-				bestdist = ds->tz;
-				bestdispoffset = ds->dispoffset;
-				best = ds;
-			}
-			// order visprites of same scale by dispoffset, smallest first
-			else if (fabsf(ds->tz - bestdist) < 1.0E-36f && ds->dispoffset < bestdispoffset)
-			{
-				bestdispoffset = ds->dispoffset;
-				best = ds;
-			}
-		}
-		if (best)
-		{
-			best->next->prev = best->prev;
-			best->prev->next = best->next;
-			best->next = &gr_vsprsortedhead;
-			best->prev = gr_vsprsortedhead.prev;
-		}
-		gr_vsprsortedhead.prev->next = best;
-		gr_vsprsortedhead.prev = best;
-	}
-
+	gr_vissprite_t* spr1 = *(gr_vissprite_t*const*)p1;
+	gr_vissprite_t* spr2 = *(gr_vissprite_t*const*)p2;
+	int idiff;
+	float fdiff;
+	
+	// Make transparent sprites last. Comment from the previous sort implementation:
 	// Sryder:	Oh boy, while it's nice having ALL the sprites sorted properly, it fails when we bring MD2's into the
 	//			mix and they want to be translucent. So let's place all the translucent sprites and MD2's AFTER
 	//			everything else, but still ordered of course, the depth buffer can handle the opaque ones plenty fine.
 	//			We just need to move all translucent ones to the end in order
 	// TODO:	Fully sort all sprites and MD2s with walls and floors, this part will be unnecessary after that
-	best = gr_vsprsortedhead.next;
+	int transparency1 = (spr1->mobj->flags2 & MF2_SHADOW) || (spr1->mobj->frame & FF_TRANSMASK);
+	int transparency2 = (spr2->mobj->flags2 & MF2_SHADOW) || (spr2->mobj->frame & FF_TRANSMASK);
+	idiff = transparency1 - transparency2;
+	if (idiff != 0) return idiff;
+
+	fdiff = spr2->tz - spr1->tz; // this order seems correct when checking with apitrace. Back to front.
+	if (fabsf(fdiff) < 1.0E-36f)
+		return spr1->dispoffset - spr2->dispoffset; // smallest dispoffset first if sprites are at (almost) same location.
+	else if (fdiff > 0)
+		return 1;
+	else
+		return -1;
+}
+
+static void HWR_SortVisSprites(void)
+{
+	UINT32 i;
 	for (i = 0; i < gr_visspritecount; i++)
 	{
-		if ((best->mobj->flags2 & MF2_SHADOW) || (best->mobj->frame & FF_TRANSMASK))
-		{
-			if (best == gr_vsprsortedhead.next)
-			{
-				gr_vsprsortedhead.next = best->next;
-			}
-			best->prev->next = best->next;
-			best->next->prev = best->prev;
-			best->prev = gr_vsprsortedhead.prev;
-			gr_vsprsortedhead.prev->next = best;
-			gr_vsprsortedhead.prev = best;
-			ds = best;
-			best = best->next;
-			ds->next = &gr_vsprsortedhead;
-		}
-		else
-			best = best->next;
+		gr_vsprorder[i] = HWR_GetVisSprite(i);
 	}
+	qsort(gr_vsprorder, gr_visspritecount, sizeof(gr_vissprite_t*), CompareVisSprites);
 }
 
 // A drawnode is something that points to a 3D floor, 3D side, or masked
@@ -4605,52 +4554,45 @@ static void HWR_CreateDrawNodes(void)
 // added the stransform so they can be switched as drawing happenes so MD2s and sprites are sorted correctly with each other
 static void HWR_DrawSprites(void)
 {
-	if (gr_visspritecount > 0)
+	UINT32 i;
+	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_grmodellighting.value);
+	for (i = 0; i < gr_visspritecount; i++)
 	{
-		gr_vissprite_t *spr;
-		HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_grmodellighting.value);
-
-		// draw all vissprites back to front
-		for (spr = gr_vsprsortedhead.next;
-		     spr != &gr_vsprsortedhead;
-		     spr = spr->next)
-		{
+		gr_vissprite_t *spr = gr_vsprorder[i];
 #ifdef HWPRECIP
-			if (spr->precip)
-				HWR_DrawPrecipitationSprite(spr);
-			else
+		if (spr->precip)
+			HWR_DrawPrecipitationSprite(spr);
+		else
 #endif
+		{
+			if (spr->mobj && spr->mobj->shadowscale && cv_shadow.value)
 			{
-				if (spr->mobj && spr->mobj->shadowscale && cv_shadow.value)
-				{
-					HWR_DrawDropShadow(spr->mobj, spr->mobj->shadowscale);
-				}
+				HWR_DrawDropShadow(spr->mobj, spr->mobj->shadowscale);
+			}
 
-				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-				{
-					if (!cv_grmodels.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
-						HWR_DrawSprite(spr);
-					else
-					{
-						if (!HWR_DrawModel(spr))
-							HWR_DrawSprite(spr);
-					}
-				}
+			if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+			{
+				if (!cv_grmodels.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
+					HWR_DrawSprite(spr);
 				else
 				{
-					if (!cv_grmodels.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
+					if (!HWR_DrawModel(spr))
 						HWR_DrawSprite(spr);
-					else
-					{
-						if (!HWR_DrawModel(spr))
-							HWR_DrawSprite(spr);
-					}
+				}
+			}
+			else
+			{
+				if (!cv_grmodels.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
+					HWR_DrawSprite(spr);
+				else
+				{
+					if (!HWR_DrawModel(spr))
+						HWR_DrawSprite(spr);
 				}
 			}
 		}
-
-		HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, 0);
 	}
+	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, 0);
 }
 
 // --------------------------------------------------------------------------
