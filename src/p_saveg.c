@@ -103,6 +103,8 @@ static void P_NetArchivePlayers(void)
 
 		// no longer send ticcmds, player name, skin, or color
 
+		WRITEINT16(save_p, players[i].angleturn);
+		WRITEINT16(save_p, players[i].oldrelangleturn);
 		WRITEANGLE(save_p, players[i].aiming);
 		WRITEANGLE(save_p, players[i].drawangle);
 		WRITEANGLE(save_p, players[i].viewrollangle);
@@ -311,6 +313,8 @@ static void P_NetUnArchivePlayers(void)
 		// sending player names, skin and color should not be necessary at all!
 		// (that data is handled in the server config now)
 
+		players[i].angleturn = READINT16(save_p);
+		players[i].oldrelangleturn = READINT16(save_p);
 		players[i].aiming = READANGLE(save_p);
 		players[i].drawangle = READANGLE(save_p);
 		players[i].viewrollangle = READANGLE(save_p);
@@ -715,6 +719,34 @@ static void P_NetUnArchiveColormaps(void)
 	num_net_colormaps = 0;
 	num_ffloors = 0;
 	net_colormaps = NULL;
+}
+
+static void P_NetArchiveWaypoints(void)
+{
+	INT32 i, j;
+
+	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
+	{
+		WRITEUINT16(save_p, numwaypoints[i]);
+		for (j = 0; j < numwaypoints[i]; j++)
+			WRITEUINT32(save_p, waypoints[i][j] ? waypoints[i][j]->mobjnum : 0);
+	}
+}
+
+static void P_NetUnArchiveWaypoints(void)
+{
+	INT32 i, j;
+	UINT32 mobjnum;
+
+	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
+	{
+		numwaypoints[i] = READUINT16(save_p);
+		for (j = 0; j < numwaypoints[i]; j++)
+		{
+			mobjnum = READUINT32(save_p);
+			waypoints[i][j] = (mobjnum == 0) ? NULL : P_FindNewPosition(mobjnum);
+		}
+	}
 }
 
 ///
@@ -1593,7 +1625,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff2 & MD2_SKIN)
 		WRITEUINT8(save_p, (UINT8)((skin_t *)mobj->skin - skins));
 	if (diff2 & MD2_COLOR)
-		WRITEUINT8(save_p, mobj->color);
+		WRITEUINT16(save_p, mobj->color);
 	if (diff2 & MD2_EXTVAL1)
 		WRITEINT32(save_p, mobj->extravalue1);
 	if (diff2 & MD2_EXTVAL2)
@@ -1995,6 +2027,7 @@ static inline void SavePolyrotatetThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->polyObjNum);
 	WRITEINT32(save_p, ht->speed);
 	WRITEINT32(save_p, ht->distance);
+	WRITEUINT8(save_p, ht->turnobjs);
 }
 
 static void SavePolymoveThinker(const thinker_t *th, const UINT8 type)
@@ -2018,14 +2051,9 @@ static void SavePolywaypointThinker(const thinker_t *th, UINT8 type)
 	WRITEINT32(save_p, ht->sequence);
 	WRITEINT32(save_p, ht->pointnum);
 	WRITEINT32(save_p, ht->direction);
-	WRITEUINT8(save_p, ht->comeback);
-	WRITEUINT8(save_p, ht->wrap);
+	WRITEUINT8(save_p, ht->returnbehavior);
 	WRITEUINT8(save_p, ht->continuous);
 	WRITEUINT8(save_p, ht->stophere);
-	WRITEFIXED(save_p, ht->diffx);
-	WRITEFIXED(save_p, ht->diffy);
-	WRITEFIXED(save_p, ht->diffz);
-	WRITEUINT32(save_p, SaveMobjnum(ht->target));
 }
 
 static void SavePolyslidedoorThinker(const thinker_t *th, const UINT8 type)
@@ -2552,11 +2580,6 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		i = READUINT8(save_p);
 		mobj->player = &players[i];
 		mobj->player->mo = mobj;
-		// added for angle prediction
-		if (consoleplayer == i)
-			localangle = mobj->angle;
-		if (secondarydisplayplayer == i)
-			localangle2 = mobj->angle;
 	}
 	if (diff & MD_MOVEDIR)
 		mobj->movedir = READANGLE(save_p);
@@ -2605,7 +2628,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	if (diff2 & MD2_SKIN)
 		mobj->skin = &skins[READUINT8(save_p)];
 	if (diff2 & MD2_COLOR)
-		mobj->color = READUINT8(save_p);
+		mobj->color = READUINT16(save_p);
 	if (diff2 & MD2_EXTVAL1)
 		mobj->extravalue1 = READINT32(save_p);
 	if (diff2 & MD2_EXTVAL2)
@@ -3132,6 +3155,7 @@ static inline thinker_t* LoadPolyrotatetThinker(actionf_p1 thinker)
 	ht->polyObjNum = READINT32(save_p);
 	ht->speed = READINT32(save_p);
 	ht->distance = READINT32(save_p);
+	ht->turnobjs = READUINT8(save_p);
 	return &ht->thinker;
 }
 
@@ -3157,14 +3181,9 @@ static inline thinker_t* LoadPolywaypointThinker(actionf_p1 thinker)
 	ht->sequence = READINT32(save_p);
 	ht->pointnum = READINT32(save_p);
 	ht->direction = READINT32(save_p);
-	ht->comeback = READUINT8(save_p);
-	ht->wrap = READUINT8(save_p);
+	ht->returnbehavior = READUINT8(save_p);
 	ht->continuous = READUINT8(save_p);
 	ht->stophere = READUINT8(save_p);
-	ht->diffx = READFIXED(save_p);
-	ht->diffy = READFIXED(save_p);
-	ht->diffz = READFIXED(save_p);
-	ht->target = LoadMobj(READUINT32(save_p));
 	return &ht->thinker;
 }
 
@@ -3411,7 +3430,6 @@ static void P_NetUnArchiveThinkers(void)
 
 				case tc_polywaypoint:
 					th = LoadPolywaypointThinker((actionf_p1)T_PolyObjWaypoint);
-					restoreNum = true;
 					break;
 
 				case tc_polyslidedoor:
@@ -3471,7 +3489,6 @@ static void P_NetUnArchiveThinkers(void)
 	if (restoreNum)
 	{
 		executor_t *delay = NULL;
-		polywaypoint_t *polywp = NULL;
 		UINT32 mobjnum;
 		for (currentthinker = thlist[THINK_MAIN].next; currentthinker != &thlist[THINK_MAIN]; currentthinker = currentthinker->next)
 		{
@@ -3481,15 +3498,6 @@ static void P_NetUnArchiveThinkers(void)
 			if (!(mobjnum = (UINT32)(size_t)delay->caller))
 				continue;
 			delay->caller = P_FindNewPosition(mobjnum);
-		}
-		for (currentthinker = thlist[THINK_POLYOBJ].next; currentthinker != &thlist[THINK_POLYOBJ]; currentthinker = currentthinker->next)
-		{
-			if (currentthinker->function.acp1 != (actionf_p1)T_PolyObjWaypoint)
-				continue;
-			polywp = (void *)currentthinker;
-			if (!(mobjnum = (UINT32)(size_t)polywp->target))
-				continue;
-			polywp->target = P_FindNewPosition(mobjnum);
 		}
 	}
 }
@@ -3800,10 +3808,10 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	if (mapoverride != 0)
 	{
 		gamemap = mapoverride;
-		gamecomplete = true;
+		gamecomplete = 1;
 	}
 	else
-		gamecomplete = false;
+		gamecomplete = 0;
 
 	// gamemap changed; we assume that its map header is always valid,
 	// so make it so
@@ -4063,6 +4071,7 @@ void P_SaveNetGame(void)
 		P_NetArchiveThinkers();
 		P_NetArchiveSpecials();
 		P_NetArchiveColormaps();
+		P_NetArchiveWaypoints();
 	}
 	LUA_Archive();
 
@@ -4101,6 +4110,7 @@ boolean P_LoadNetGame(void)
 		P_NetUnArchiveThinkers();
 		P_NetUnArchiveSpecials();
 		P_NetUnArchiveColormaps();
+		P_NetUnArchiveWaypoints();
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}

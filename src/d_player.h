@@ -332,6 +332,9 @@ typedef struct player_s
 
 	angle_t viewrollangle;
 
+	INT16 angleturn;
+	INT16 oldrelangleturn;
+
 	// Mouse aiming, where the guy is looking at!
 	// It is updated with cmd->aiming.
 	angle_t aiming;
@@ -366,7 +369,7 @@ typedef struct player_s
 	UINT16 flashpal;
 
 	// Player skin colorshift, 0-15 for which color to draw player.
-	UINT8 skincolor;
+	UINT16 skincolor;
 
 	INT32 skin;
 	UINT32 availabilities;

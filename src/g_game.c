@@ -54,7 +54,7 @@ UINT8 ultimatemode = false;
 
 boolean botingame;
 UINT8 botskin;
-UINT8 botcolor;
+UINT16 botcolor;
 
 JoyType_t Joystick;
 JoyType_t Joystick2;
@@ -82,7 +82,10 @@ INT32 curWeather = PRECIP_NONE;
 INT32 cursaveslot = 0; // Auto-save 1p savegame slot
 //INT16 lastmapsaved = 0; // Last map we auto-saved at
 INT16 lastmaploaded = 0; // Last map the game loaded
-boolean gamecomplete = false;
+UINT8 gamecomplete = 0;
+
+marathonmode_t marathonmode = 0;
+tic_t marathontime = 0;
 
 UINT8 numgameovers = 0; // for startinglives balance
 SINT8 startinglivesbalance[maxgameovers+1] = {3, 5, 7, 9, 12, 15, 20, 25, 30, 40, 50, 75, 99, 0x7F};
@@ -118,7 +121,7 @@ UINT32 ssspheres; // old special stage
 INT16 lastmap; // last level you were at (returning from special stages)
 tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 
-INT16 spstage_start;
+INT16 spstage_start, spmarathon_start;
 INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
 
 INT16 titlemap = 0;
@@ -135,10 +138,10 @@ INT32 tutorialanalog = 0; // store cv_analog[0] user value
 
 boolean looptitle = false;
 
-UINT8 skincolor_redteam = SKINCOLOR_RED;
-UINT8 skincolor_blueteam = SKINCOLOR_BLUE;
-UINT8 skincolor_redring = SKINCOLOR_SALMON;
-UINT8 skincolor_bluering = SKINCOLOR_CORNFLOWER;
+UINT16 skincolor_redteam = SKINCOLOR_RED;
+UINT16 skincolor_blueteam = SKINCOLOR_BLUE;
+UINT16 skincolor_redring = SKINCOLOR_SALMON;
+UINT16 skincolor_bluering = SKINCOLOR_CORNFLOWER;
 
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
@@ -223,6 +226,7 @@ UINT8 useContinues = 0; // Set to 1 to enable continues outside of no-save scena
 
 UINT8 introtoplay;
 UINT8 creditscutscene;
+UINT8 useBlackRock = 1;
 
 // Emerald locations
 mobj_t *hunt1;
@@ -769,6 +773,8 @@ void G_SetGameModified(boolean silent)
 	// If in record attack recording, cancel it.
 	if (modeattacking)
 		M_EndModeAttackRun();
+	else if (marathonmode)
+		Command_ExitGame_f();
 }
 
 /** Builds an original game map name from a map number.
@@ -1065,6 +1071,7 @@ static fixed_t forwardmove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16};
 static fixed_t sidemove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16}; // faster!
 static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 
+INT16 ticcmd_oldangleturn[2];
 boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
 mobj_t *ticcmd_ztargetfocus[2]; // Locking onto an object?
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
@@ -1140,7 +1147,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
 	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{//@TODO splitscreen player
-		cmd->angleturn = (INT16)(*myangle >> 16);
+		cmd->angleturn = ticcmd_oldangleturn[forplayer];
 		cmd->aiming = G_ClipAimingPitch(myaiming);
 		return;
 	}
@@ -1361,7 +1368,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (controlstyle == CS_SIMPLE && !ticcmd_centerviewdown[forplayer] && !G_RingSlingerGametype())
 		{
 			CV_SetValue(&cv_directionchar[forplayer], 2);
-			*myangle = player->mo->angle;
+			cmd->angleturn = (INT16)((player->mo->angle - *myangle) >> 16);
 			*myaiming = 0;
 
 			if (cv_cam_lockonboss[forplayer].value)
@@ -1430,7 +1437,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				else if (anglediff < -maxturn)
 					anglediff = -maxturn;
 
-				*myangle += anglediff;
+				cmd->angleturn = (INT16)(cmd->angleturn + (anglediff >> 16));
 			}
 		}
 	}
@@ -1567,19 +1574,23 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		B_HandleFlightIndicator(player);
 	}
 	else if (player->bot == 2)
-		*myangle = localangle; // Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
+		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
+		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
+
+	*myangle += (cmd->angleturn<<16);
 
 	if (controlstyle == CS_LMAOGALOG) {
+		angle_t angle;
+
 		if (player->awayviewtics)
-			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+			angle = player->awayviewmobj->angle;
 		else
-			cmd->angleturn = (INT16)(thiscam->angle >> 16);
+			angle = thiscam->angle;
+
+		cmd->angleturn = (INT16)((angle - (ticcmd_oldangleturn[forplayer] << 16)) >> 16);
 	}
 	else
 	{
-		*myangle += (cmd->angleturn<<16);
-		cmd->angleturn = (INT16)(*myangle >> 16);
-
 		// Adjust camera angle by player input
 		if (controlstyle == CS_SIMPLE && !forcestrafe && thiscam->chase && !turnheld[forplayer] && !ticcmd_centerviewdown[forplayer] && !player->climbing && player->powers[pw_carry] != CR_MINECART)
 		{
@@ -1589,13 +1600,17 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			{
 				fixed_t sine = FINESINE((R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - localangle)>>ANGLETOFINESHIFT);
 				fixed_t factor;
+				INT16 camadjust;
 
 				if ((sine > 0) == (cmd->sidemove > 0))
 					sine = 0; // Prevent jerking right when braking from going left, or vice versa
 
 				factor = min(40, FixedMul(player->speed, abs(sine))*2 / FRACUNIT);
 
-				*myangle -= cmd->sidemove * factor * camadjustfactor;
+				camadjust = (cmd->sidemove * factor * camadjustfactor) >> 16;
+
+				*myangle -= camadjust << 16;
+				cmd->angleturn = (INT16)(cmd->angleturn - camadjust);
 			}
 
 			if (ticcmd_centerviewdown[forplayer] && (cv_cam_lockedinput[forplayer].value || (player->pflags & PF_STARTDASH)))
@@ -1632,9 +1647,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			{
 				angle_t controlangle;
 				INT32 anglediff;
+				INT16 camadjust;
 
 				if ((cmd->forwardmove || cmd->sidemove) && !(player->pflags & PF_SPINNING))
-					controlangle = (cmd->angleturn<<16) + R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
+					controlangle = *myangle + R_PointToAngle2(0, 0, cmd->forwardmove << FRACBITS, -cmd->sidemove << FRACBITS);
 				else
 					controlangle = player->drawangle + drawangleoffset;
 
@@ -1651,7 +1667,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 					anglediff = FixedMul(anglediff, sine);
 				}
 
-				*myangle += FixedMul(anglediff, camadjustfactor);
+				camadjust = FixedMul(anglediff, camadjustfactor) >> 16;
+
+				*myangle += camadjust << 16;
+				cmd->angleturn = (INT16)(cmd->angleturn + camadjust);
 			}
 		}
 	}
@@ -1665,6 +1684,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
+
+	cmd->angleturn = (INT16)(cmd->angleturn + ticcmd_oldangleturn[forplayer]);
+	ticcmd_oldangleturn[forplayer] = cmd->angleturn;
 }
 
 ticcmd_t *G_CopyTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n)
@@ -1866,6 +1888,7 @@ void G_StartTitleCard(void)
 //
 void G_PreLevelTitleCard(void)
 {
+#ifndef NOWIPE
 	tic_t starttime = I_GetTime();
 	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
 	tic_t nowtime = starttime;
@@ -1888,6 +1911,7 @@ void G_PreLevelTitleCard(void)
 	}
 	if (!cv_showhud.value)
 		wipestyleflags = WSF_CROSSFADE;
+#endif
 }
 
 static boolean titlecardforreload = false;
@@ -2161,6 +2185,10 @@ void G_Ticker(boolean run)
 	UINT32 i;
 	INT32 buf;
 
+	// see also SCR_DisplayMarathonInfo
+	if ((marathonmode & (MA_INIT|MA_INGAME)) == MA_INGAME && gamestate == GS_LEVEL)
+		marathontime++;
+
 	P_MapStart();
 	// do player reborns if needed
 	if (gamestate == GS_LEVEL)
@@ -2177,8 +2205,13 @@ void G_Ticker(boolean run)
 			}
 			else
 			{
-				// Costs a life to retry ... unless the player in question is dead already.
-				if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
+				// Costs a life to retry ... unless the player in question is dead already, or you haven't even touched the first starpost in marathon run.
+				if (marathonmode && gamemap == spmarathon_start && !players[consoleplayer].starposttime)
+				{
+					marathonmode |= MA_INIT;
+					marathontime = 0;
+				}
+				else if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
 					players[consoleplayer].lives -= 1;
 
 				G_DoReborn(consoleplayer);
@@ -2205,11 +2238,16 @@ void G_Ticker(boolean run)
 
 	buf = gametic % BACKUPTICS;
 
-	// read/write demo and check turbo cheat
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (playeringame[i])
+		{
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+
+			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
+			players[i].oldrelangleturn = players[i].cmd.angleturn;
+			players[i].cmd.angleturn = players[i].angleturn;
+		}
 	}
 
 	// do main actions
@@ -2377,11 +2415,12 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	fixed_t height;
 	fixed_t spinheight;
 	INT32 exiting;
+	tic_t dashmode;
 	INT16 numboxes;
 	INT16 totalring;
 	UINT8 laps;
 	UINT8 mare;
-	UINT8 skincolor;
+	UINT16 skincolor;
 	INT32 skin;
 	UINT32 availabilities;
 	tic_t jointime;
@@ -2392,6 +2431,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	SINT8 pity;
 	INT16 rings;
 	INT16 spheres;
+	INT16 playerangleturn;
+	INT16 oldrelangleturn;
 
 	score = players[player].score;
 	lives = players[player].lives;
@@ -2403,6 +2444,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
+	playerangleturn = players[player].angleturn;
+	oldrelangleturn = players[player].oldrelangleturn;
 
 	if (!betweenmaps)
 		pflags |= (players[player].pflags & PF_FINISHED);
@@ -2410,6 +2453,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
 		pflags |= (players[player].pflags & (PF_GODMODE|PF_NOCLIP|PF_INVIS));
+
+	dashmode = players[player].dashmode;
 
 	numboxes = players[player].numboxes;
 	laps = players[player].laps;
@@ -2474,6 +2519,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->quittime = quittime;
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
+	p->angleturn = playerangleturn;
+	p->oldrelangleturn = oldrelangleturn;
 
 	// save player config truth reborn
 	p->skincolor = skincolor;
@@ -2508,6 +2555,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->height = height;
 	p->spinheight = spinheight;
 	p->exiting = exiting;
+
+	p->dashmode = dashmode;
 
 	p->numboxes = numboxes;
 	p->laps = laps;
@@ -2929,7 +2978,7 @@ void G_DoReborn(INT32 playernum)
 				players[i].starpostnum = 0;
 			}
 		}
-		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD))
+		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD) && !(marathonmode & MA_INIT))
 		{
 			P_RespawnThings();
 
@@ -3662,8 +3711,14 @@ static void G_DoCompleted(void)
 	// nextmap is 0-based, unlike gamemap
 	if (nextmapoverride != 0)
 		nextmap = (INT16)(nextmapoverride-1);
+	else if (marathonmode && mapheaderinfo[gamemap-1]->marathonnext)
+		nextmap = (INT16)(mapheaderinfo[gamemap-1]->marathonnext-1);
 	else
+	{
 		nextmap = (INT16)(mapheaderinfo[gamemap-1]->nextlevel-1);
+		if (marathonmode && nextmap == spmarathon_start-1)
+			nextmap = 1100-1; // No infinite loop for you
+	}
 
 	// Remember last map for when you come out of the special stage.
 	if (!spec)
@@ -3687,10 +3742,12 @@ static void G_DoCompleted(void)
 			visitedmap[cm/8] |= (1<<(cm&7));
 			if (!mapheaderinfo[cm])
 				cm = -1; // guarantee error execution
+			else if (marathonmode && mapheaderinfo[cm]->marathonnext)
+				cm = (INT16)(mapheaderinfo[cm]->marathonnext-1);
 			else
 				cm = (INT16)(mapheaderinfo[cm]->nextlevel-1);
 
-			if (cm >= NUMMAPS || cm < 0) // out of range (either 1100-1102 or error)
+			if (cm >= NUMMAPS || cm < 0) // out of range (either 1100ish or error)
 			{
 				cm = nextmap; //Start the loop again so that the error checking below is executed.
 
@@ -3759,6 +3816,25 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
+	// do this before going to the intermission or starting a custom cutscene, mostly for the sake of marathon mode but it also massively reduces redundant file save events in f_finale.c
+	if (nextmap >= 1100-1)
+	{
+		if (!gamecomplete)
+			gamecomplete = 2; // special temporary mode to prevent using SP level select in pause menu until the intermission is over without restricting it in every intermission
+		if (cursaveslot > 0)
+		{
+			if (marathonmode)
+			{
+				// don't keep a backup around when the run is done!
+				if (FIL_FileExists(liveeventbackup))
+					remove(liveeventbackup);
+				cursaveslot = 0;
+			}
+			else if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+				G_SaveGame((UINT32)cursaveslot);
+		}
+	}
+
 	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed))
 	{
 		G_UpdateVisited();
@@ -3772,6 +3848,7 @@ static void G_DoCompleted(void)
 	}
 }
 
+// See also F_EndCutscene, the only other place which handles intra-map/ending transitions
 void G_AfterIntermission(void)
 {
 	Y_CleanupScreenBuffer();
@@ -3782,9 +3859,12 @@ void G_AfterIntermission(void)
 		return;
 	}
 
+	if (gamecomplete == 2) // special temporary mode to prevent using SP level select in pause menu until the intermission is over without restricting it in every intermission
+		gamecomplete = 1;
+
 	HU_ClearCEcho();
 
-	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1) // Start a custom cutscene.
+	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1 && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
 	else
 	{
@@ -3925,7 +4005,7 @@ void G_EndGame(void)
 void G_LoadGameSettings(void)
 {
 	// defaults
-	spstage_start = 1;
+	spstage_start = spmarathon_start = 1;
 	sstage_start = 50;
 	sstage_end = 56; // 7 special stages in vanilla SRB2
 	sstage_end++; // plus one weirdo
@@ -4245,7 +4325,10 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 	startonmapnum = mapoverride;
 #endif
 
-	sprintf(savename, savegamename, slot);
+	if (marathonmode)
+		strcpy(savename, liveeventbackup);
+	else
+		sprintf(savename, savegamename, slot);
 
 	length = FIL_ReadFile(savename, &savebuffer);
 	if (!length)
@@ -4257,7 +4340,7 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 	save_p = savebuffer;
 
 	memset(vcheck, 0, sizeof (vcheck));
-	sprintf(vcheck, "version %d", VERSION);
+	sprintf(vcheck, (marathonmode ? "back-up %d" : "version %d"), VERSION);
 	if (strcmp((const char *)save_p, (const char *)vcheck))
 	{
 #ifdef SAVEGAME_OTHERVERSIONS
@@ -4297,6 +4380,11 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 		memset(&savedata, 0, sizeof(savedata));
 		return;
 	}
+	if (marathonmode)
+	{
+		marathontime = READUINT32(save_p);
+		marathonmode |= READUINT8(save_p);
+	}
 
 	// done
 	Z_Free(savebuffer);
@@ -4325,12 +4413,11 @@ void G_SaveGame(UINT32 slot)
 	char savename[256] = "";
 	const char *backup;
 
-	sprintf(savename, savegamename, slot);
+	if (marathonmode)
+		strcpy(savename, liveeventbackup);
+	else
+		sprintf(savename, savegamename, slot);
 	backup = va("%s",savename);
-
-	// save during evaluation or credits? game's over, folks!
-	if (gamestate == GS_ENDING || gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
-		gamecomplete = true;
 
 	gameaction = ga_nothing;
 	{
@@ -4345,10 +4432,15 @@ void G_SaveGame(UINT32 slot)
 		}
 
 		memset(name, 0, sizeof (name));
-		sprintf(name, "version %d", VERSION);
+		sprintf(name, (marathonmode ? "back-up %d" : "version %d"), VERSION);
 		WRITEMEM(save_p, name, VERSIONSIZE);
 
 		P_SaveGame();
+		if (marathonmode)
+		{
+			WRITEUINT32(save_p, marathontime);
+			WRITEUINT8(save_p, (marathonmode & ~MA_INIT));
+		}
 
 		length = save_p - savebuffer;
 		saved = FIL_WriteFile(backup, savebuffer, length);
@@ -4361,7 +4453,7 @@ void G_SaveGame(UINT32 slot)
 	if (cv_debug && saved)
 		CONS_Printf(M_GetText("Game saved.\n"));
 	else if (!saved)
-		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, slot, savegamename);
+		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, slot, (marathonmode ? liveeventbackup : savegamename));
 }
 
 #define BADSAVE goto cleanup;
@@ -4374,7 +4466,10 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 	char savename[255];
 	const char *backup;
 
-	sprintf(savename, savegamename, slot);
+	if (marathonmode)
+		strcpy(savename, liveeventbackup);
+	else
+		sprintf(savename, savegamename, slot);
 	backup = va("%s",savename);
 
 	length = FIL_ReadFile(savename, &savebuffer);
@@ -4393,7 +4488,7 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 		save_p = savebuffer;
 		// Version check
 		memset(vcheck, 0, sizeof (vcheck));
-		sprintf(vcheck, "version %d", VERSION);
+		sprintf(vcheck, (marathonmode ? "back-up %d" : "version %d"), VERSION);
 		if (strcmp((const char *)save_p, (const char *)vcheck)) BADSAVE
 		save_p += VERSIONSIZE;
 
@@ -4460,7 +4555,7 @@ cleanup:
 	if (cv_debug && saved)
 		CONS_Printf(M_GetText("Game saved.\n"));
 	else if (!saved)
-		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, slot, savegamename);
+		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, slot, (marathonmode ? liveeventbackup : savegamename));
 	Z_Free(savebuffer);
 	save_p = savebuffer = NULL;
 
@@ -4475,7 +4570,7 @@ cleanup:
 //
 void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, boolean SSSG, boolean FLS)
 {
-	UINT8 color = skins[pickedchar].prefcolor;
+	UINT16 color = skins[pickedchar].prefcolor;
 	paused = false;
 
 	if (demoplayback)
@@ -4598,7 +4693,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	automapactive = false;
 	imcontinuing = false;
 
-	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking) // Start a custom cutscene.
+	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer);
 	else
 		G_DoLoadLevel(resetplayer);

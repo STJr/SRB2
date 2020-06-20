@@ -1276,10 +1276,21 @@ static boolean PolyWaypoint(line_t *line)
 	pwd.polyObjNum = line->tag;
 	pwd.speed      = sides[line->sidenum[0]].textureoffset / 8;
 	pwd.sequence   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Sequence #
-	pwd.reverse    = (line->flags & ML_EFFECT1) == ML_EFFECT1; // Reverse?
-	pwd.comeback   = (line->flags & ML_EFFECT2) == ML_EFFECT2; // Return when reaching end?
-	pwd.wrap       = (line->flags & ML_EFFECT3) == ML_EFFECT3; // Wrap around waypoints
-	pwd.continuous = (line->flags & ML_EFFECT4) == ML_EFFECT4; // Continuously move - used with COMEBACK or WRAP
+
+	// Behavior after reaching the last waypoint?
+	if (line->flags & ML_EFFECT3)
+		pwd.returnbehavior = PWR_WRAP; // Wrap back to first waypoint
+	else if (line->flags & ML_EFFECT2)
+		pwd.returnbehavior = PWR_COMEBACK; // Go through sequence in reverse
+	else
+		pwd.returnbehavior = PWR_STOP; // Stop
+
+	// Flags
+	pwd.flags = 0;
+	if (line->flags & ML_EFFECT1)
+		pwd.flags |= PWF_REVERSE;
+	if (line->flags & ML_EFFECT4)
+		pwd.flags |= PWF_LOOP;
 
 	return EV_DoPolyObjWaypoint(&pwd);
 }
@@ -3960,7 +3971,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (mo)
 				{
-					if (color < 0 || color >= MAXTRANSLATIONS)
+					if (color < 0 || color >= numskincolors)
 						return;
 
 					var1 = 0;
@@ -4591,12 +4602,7 @@ DoneSection2:
 				player->mo->angle = player->drawangle = lineangle;
 
 				if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-				{
-					if (player == &players[consoleplayer])
-						localangle = player->mo->angle;
-					else if (player == &players[secondarydisplayplayer])
-						localangle2 = player->mo->angle;
-				}
+					P_SetPlayerAngle(player, player->mo->angle);
 
 				if (!(lines[i].flags & ML_EFFECT4))
 				{
@@ -4799,9 +4805,7 @@ DoneSection2:
 				INT32 sequence;
 				fixed_t speed;
 				INT32 lineindex;
-				thinker_t *th;
 				mobj_t *waypoint = NULL;
-				mobj_t *mo2;
 				angle_t an;
 
 				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
@@ -4826,25 +4830,7 @@ DoneSection2:
 					break;
 				}
 
-				// scan the thinkers
-				// to find the first waypoint
-				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
-
-					mo2 = (mobj_t *)th;
-
-					if (mo2->type != MT_TUBEWAYPOINT)
-						continue;
-					if (mo2->threshold != sequence)
-						continue;
-					if (mo2->health != 0)
-						continue;
-
-					waypoint = mo2;
-					break;
-				}
+				waypoint = P_GetFirstWaypoint(sequence);
 
 				if (!waypoint)
 				{
@@ -4881,9 +4867,7 @@ DoneSection2:
 				INT32 sequence;
 				fixed_t speed;
 				INT32 lineindex;
-				thinker_t *th;
 				mobj_t *waypoint = NULL;
-				mobj_t *mo2;
 				angle_t an;
 
 				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
@@ -4908,25 +4892,7 @@ DoneSection2:
 					break;
 				}
 
-				// scan the thinkers
-				// to find the last waypoint
-				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
-
-					mo2 = (mobj_t *)th;
-
-					if (mo2->type != MT_TUBEWAYPOINT)
-						continue;
-					if (mo2->threshold != sequence)
-						continue;
-
-					if (!waypoint)
-						waypoint = mo2;
-					else if (mo2->health > waypoint->health)
-						waypoint = mo2;
-				}
+				waypoint = P_GetLastWaypoint(sequence);
 
 				if (!waypoint)
 				{
@@ -5008,14 +4974,11 @@ DoneSection2:
 				INT32 sequence;
 				fixed_t speed;
 				INT32 lineindex;
-				thinker_t *th;
 				mobj_t *waypointmid = NULL;
 				mobj_t *waypointhigh = NULL;
 				mobj_t *waypointlow = NULL;
-				mobj_t *mo2;
 				mobj_t *closest = NULL;
 				vector3_t p, line[2], resulthigh, resultlow;
-				mobj_t *highest = NULL;
 
 				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
 					break;
@@ -5061,98 +5024,16 @@ DoneSection2:
 				// Determine the closest spot on the line between the three waypoints
 				// Put player at that location.
 
-				// scan the thinkers
-				// to find the first waypoint
-				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
+				waypointmid = P_GetClosestWaypoint(sequence, player->mo);
 
-					mo2 = (mobj_t *)th;
-
-					if (mo2->type != MT_TUBEWAYPOINT)
-						continue;
-
-					if (mo2->threshold != sequence)
-						continue;
-
-					if (!highest)
-						highest = mo2;
-					else if (mo2->health > highest->health) // Find the highest waypoint # in case we wrap
-						highest = mo2;
-
-					if (closest && P_AproxDistance(P_AproxDistance(player->mo->x-mo2->x, player->mo->y-mo2->y),
-						player->mo->z-mo2->z) > P_AproxDistance(P_AproxDistance(player->mo->x-closest->x,
-						player->mo->y-closest->y), player->mo->z-closest->z))
-						continue;
-
-					// Found a target
-					closest = mo2;
-				}
-
-				waypointmid = closest;
-
-				closest = NULL;
-
-				if (waypointmid == NULL)
+				if (!waypointmid)
 				{
 					CONS_Debug(DBG_GAMELOGIC, "ERROR: WAYPOINT(S) IN SEQUENCE %d NOT FOUND.\n", sequence);
 					break;
 				}
 
-				// Find waypoint before this one (waypointlow)
-				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
-
-					mo2 = (mobj_t *)th;
-
-					if (mo2->type != MT_TUBEWAYPOINT)
-						continue;
-
-					if (mo2->threshold != sequence)
-						continue;
-
-					if (waypointmid->health == 0)
-					{
-						if (mo2->health != highest->health)
-							continue;
-					}
-					else if (mo2->health != waypointmid->health - 1)
-						continue;
-
-					// Found a target
-					waypointlow = mo2;
-					break;
-				}
-
-				// Find waypoint after this one (waypointhigh)
-				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
-
-					mo2 = (mobj_t *)th;
-
-					if (mo2->type != MT_TUBEWAYPOINT)
-						continue;
-
-					if (mo2->threshold != sequence)
-						continue;
-
-					if (waypointmid->health == highest->health)
-					{
-						if (mo2->health != 0)
-							continue;
-					}
-					else if (mo2->health != waypointmid->health + 1)
-						continue;
-
-					// Found a target
-					waypointhigh = mo2;
-					break;
-				}
+				waypointlow = P_GetPreviousWaypoint(waypointmid, true);
+				waypointhigh = P_GetNextWaypoint(waypointmid, true);
 
 				CONS_Debug(DBG_GAMELOGIC, "WaypointMid: %d; WaypointLow: %d; WaypointHigh: %d\n",
 								waypointmid->health, waypointlow ? waypointlow->health : -1, waypointhigh ? waypointhigh->health : -1);
@@ -5199,6 +5080,7 @@ DoneSection2:
 
 				if (lines[lineindex].flags & ML_EFFECT1) // Don't wrap
 				{
+					mobj_t *highest = P_GetLastWaypoint(sequence);
 					highest->flags |= MF_SLIDEME;
 				}
 
@@ -5210,7 +5092,7 @@ DoneSection2:
 					player->mo->y = resulthigh.y;
 					player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
 				}
-				else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == highest->health)
+				else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == numwaypoints[sequence] - 1)
 				{
 					closest = waypointmid;
 					player->mo->x = resultlow.x;
@@ -6169,8 +6051,8 @@ void T_LaserFlash(laserthink_t *flash)
 				//fflr->flags &= ~FF_RENDERALL;
 				fflr->alpha = 0x90;
 
-			top = (*fflr->t_slope) ? P_GetZAt(*fflr->t_slope, sector->soundorg.x, sector->soundorg.y) : *fflr->topheight;
-			bottom = (*fflr->b_slope) ? P_GetZAt(*fflr->b_slope, sector->soundorg.x, sector->soundorg.y) : *fflr->bottomheight;
+			top    = P_GetFFloorTopZAt   (fflr, sector->soundorg.x, sector->soundorg.y);
+			bottom = P_GetFFloorBottomZAt(fflr, sector->soundorg.x, sector->soundorg.y);
 			sector->soundorg.z = (top + bottom)/2;
 			S_StartSound(&sector->soundorg, sfx_laser);
 
@@ -7178,6 +7060,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 			// 503 is used for a scroller
 			// 504 is used for a scroller
 			// 505 is used for a scroller
+			// 506 is used for a scroller
+			// 507 is used for a scroller
+			// 508 is used for a scroller
 			// 510 is used for a scroller
 			// 511 is used for a scroller
 			// 512 is used for a scroller
@@ -7694,7 +7579,20 @@ static void P_SpawnScrollers(void)
 			case 502:
 				for (s = -1; (s = P_FindLineFromTag(l->tag, s)) >= 0 ;)
 					if (s != (INT32)i)
-						Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
+					{
+						if (l->flags & ML_EFFECT2) // use texture offsets instead
+						{
+							dx = sides[l->sidenum[0]].textureoffset;
+							dy = sides[l->sidenum[0]].rowoffset;
+						}
+						if (l->flags & ML_EFFECT3)
+						{
+							if (lines[s].sidenum[1] != 0xffff)
+								Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[1], accel, 0);
+						}
+						else
+							Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
+					}
 				break;
 
 			case 505:
@@ -7708,7 +7606,25 @@ static void P_SpawnScrollers(void)
 				if (s != 0xffff)
 					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[0], accel, 0);
 				else
-					CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing 2nd side!\n", sizeu1(i));
+					CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing back side!\n", sizeu1(i));
+				break;
+
+			case 507:
+				s = lines[i].sidenum[0];
+
+				if (lines[i].sidenum[1] != 0xffff)
+					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[1], accel, 0);
+				else
+					CONS_Debug(DBG_GAMELOGIC, "Line special 507 (line #%s) missing back side!\n", sizeu1(i));
+				break;
+
+			case 508:
+				s = lines[i].sidenum[1];
+
+				if (s != 0xffff)
+					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
+				else
+					CONS_Debug(DBG_GAMELOGIC, "Line special 508 (line #%s) missing back side!\n", sizeu1(i));
 				break;
 
 			case 500: // scroll first side
@@ -7777,10 +7693,7 @@ void T_Disappear(disappear_t *d)
 
 					if (!(lines[d->sourceline].flags & ML_NOCLIMB))
 					{
-						if (*rover->t_slope)
-							sectors[s].soundorg.z = P_GetZAt(*rover->t_slope, sectors[s].soundorg.x, sectors[s].soundorg.y);
-						else
-							sectors[s].soundorg.z = *rover->topheight;
+						sectors[s].soundorg.z = P_GetFFloorTopZAt(rover, sectors[s].soundorg.x, sectors[s].soundorg.y);
 						S_StartSound(&sectors[s].soundorg, sfx_appear);
 					}
 				}
@@ -8981,24 +8894,12 @@ void T_Pusher(pusher_t *p)
 
 				if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 				{
-					if (thing->player == &players[consoleplayer])
-					{
-						if (thing->angle - localangle > ANGLE_180)
-							localangle -= (localangle - thing->angle) / 8;
-						else
-							localangle += (thing->angle - localangle) / 8;
-					}
-					else if (thing->player == &players[secondarydisplayplayer])
-					{
-						if (thing->angle - localangle2 > ANGLE_180)
-							localangle2 -= (localangle2 - thing->angle) / 8;
-						else
-							localangle2 += (thing->angle - localangle2) / 8;
-					}
-					/*if (thing->player == &players[consoleplayer])
-						localangle = thing->angle;
-					else if (thing->player == &players[secondarydisplayplayer])
-						localangle2 = thing->angle;*/
+					angle_t angle = thing->player->angleturn << 16;
+					if (thing->angle - angle > ANGLE_180)
+						P_SetPlayerAngle(thing->player, angle - (angle - thing->angle) / 8);
+					else
+						P_SetPlayerAngle(thing->player, angle + (thing->angle - angle) / 8);
+					//P_SetPlayerAngle(thing->player, thing->angle);
 				}
 			}
 

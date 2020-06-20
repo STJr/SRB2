@@ -755,6 +755,9 @@ void P_PreTicker(INT32 frames)
 
 	postimgtype = postimgtype2 = postimg_none;
 
+	if (marathonmode & MA_INGAME)
+		marathonmode |= MA_INIT;
+
 	for (framecnt = 0; framecnt < frames; ++framecnt)
 	{
 		P_MapStart();
@@ -770,7 +773,9 @@ void P_PreTicker(INT32 frames)
 				memcpy(&temptic, &players[i].cmd, sizeof(ticcmd_t));
 				memset(&players[i].cmd, 0, sizeof(ticcmd_t));
 				// correct angle on spawn...
-				players[i].cmd.angleturn = temptic.angleturn;
+				players[i].angleturn += temptic.angleturn - players[i].oldrelangleturn;
+				players[i].oldrelangleturn = temptic.angleturn;
+				players[i].cmd.angleturn = players[i].angleturn;
 
 				P_PlayerThink(&players[i]);
 
@@ -797,4 +802,7 @@ void P_PreTicker(INT32 frames)
 
 		P_MapEnd();
 	}
+
+	if (marathonmode & MA_INGAME)
+		marathonmode &= ~MA_INIT;
 }

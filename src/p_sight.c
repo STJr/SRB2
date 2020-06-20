@@ -259,10 +259,10 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		fracx = los->strace.x + FixedMul(los->strace.dx, frac);
 		fracy = los->strace.y + FixedMul(los->strace.dy, frac);
 		// calculate sector heights
-		frontf = (front->f_slope) ? P_GetZAt(front->f_slope, fracx, fracy) : front->floorheight;
-		frontc = (front->c_slope) ? P_GetZAt(front->c_slope, fracx, fracy) : front->ceilingheight;
-		backf  = (back->f_slope)  ? P_GetZAt(back->f_slope, fracx, fracy)  : back->floorheight;
-		backc  = (back->c_slope)  ? P_GetZAt(back->c_slope, fracx, fracy)  : back->ceilingheight;
+		frontf = P_GetSectorFloorZAt  (front, fracx, fracy);
+		frontc = P_GetSectorCeilingZAt(front, fracx, fracy);
+		backf  = P_GetSectorFloorZAt  (back , fracx, fracy);
+		backc  = P_GetSectorCeilingZAt(back , fracx, fracy);
 		// crosses a two sided line
 		// no wall to block sight with?
 		if (frontf == backf && frontc == backc
@@ -312,10 +312,10 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 					continue;
 				}
 
-				topz    = (*rover->t_slope) ? P_GetZAt(*rover->t_slope, fracx, fracy) : *rover->topheight;
-				bottomz = (*rover->b_slope) ? P_GetZAt(*rover->b_slope, fracx, fracy) : *rover->bottomheight;
-				topslope    = FixedDiv(topz - los->sightzstart , frac);
-				bottomslope = FixedDiv(bottomz - los->sightzstart , frac);
+				topz    = P_GetFFloorTopZAt   (rover, fracx, fracy);
+				bottomz = P_GetFFloorBottomZAt(rover, fracx, fracy);
+				topslope    = FixedDiv(   topz - los->sightzstart, frac);
+				bottomslope = FixedDiv(bottomz - los->sightzstart, frac);
 				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
 					return false; // view completely blocked
 			}
@@ -328,10 +328,10 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 					continue;
 				}
 
-				topz    = (*rover->t_slope) ? P_GetZAt(*rover->t_slope, fracx, fracy) : *rover->topheight;
-				bottomz = (*rover->b_slope) ? P_GetZAt(*rover->b_slope, fracx, fracy) : *rover->bottomheight;
-				topslope    = FixedDiv(topz - los->sightzstart , frac);
-				bottomslope = FixedDiv(bottomz - los->sightzstart , frac);
+				topz    = P_GetFFloorTopZAt   (rover, fracx, fracy);
+				bottomz = P_GetFFloorBottomZAt(rover, fracx, fracy);
+				topslope    = FixedDiv(   topz - los->sightzstart, frac);
+				bottomslope = FixedDiv(bottomz - los->sightzstart, frac);
 				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
 					return false; // view completely blocked
 			}
@@ -457,21 +457,10 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 				continue;
 			}
 
-			if (*rover->t_slope)
-			{
-				topz1 = P_GetZAt(*rover->t_slope, t1->x, t1->y);
-				topz2 = P_GetZAt(*rover->t_slope, t2->x, t2->y);
-			}
-			else
-				topz1 = topz2 = *rover->topheight;
-
-			if (*rover->b_slope)
-			{
-				bottomz1 = P_GetZAt(*rover->b_slope, t1->x, t1->y);
-				bottomz2 = P_GetZAt(*rover->b_slope, t2->x, t2->y);
-			}
-			else
-				bottomz1 = bottomz2 = *rover->bottomheight;
+			topz1    = P_GetFFloorTopZAt   (rover, t1->x, t1->y);
+			topz2    = P_GetFFloorTopZAt   (rover, t2->x, t2->y);
+			bottomz1 = P_GetFFloorBottomZAt(rover, t1->x, t1->y);
+			bottomz2 = P_GetFFloorBottomZAt(rover, t2->x, t2->y);
 
 			// Check for blocking floors here.
 			if ((los.sightzstart < bottomz1 && t2->z >= topz2)

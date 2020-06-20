@@ -357,11 +357,7 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 		case SDL_SCANCODE_RGUI:   return KEY_RIGHTWIN;
 		default:                  break;
 	}
-#ifdef HWRENDER
-	DBG_Printf("Unknown incoming scancode: %d, represented %c\n",
-				code,
-				SDL_GetKeyName(SDL_GetKeyFromScancode(code)));
-#endif
+
 	return 0;
 }
 
@@ -373,7 +369,8 @@ static boolean IgnoreMouse(void)
 		return !M_MouseNeeded();
 	if (paused || con_destlines || chat_on)
 		return true;
-	if (gamestate != GS_LEVEL && gamestate != GS_INTERMISSION && gamestate != GS_CUTSCENE)
+	if (gamestate != GS_LEVEL && gamestate != GS_INTERMISSION &&
+			gamestate != GS_CONTINUING && gamestate != GS_CUTSCENE)
 		return true;
 	return false;
 }
@@ -1203,6 +1200,9 @@ void I_FinishUpdate(void)
 	if (I_SkipFrame())
 		return;
 
+	if (marathonmode)
+		SCR_DisplayMarathonInfo();
+
 	// draw captions if enabled
 	if (cv_closedcaptioning.value)
 		SCR_ClosedCaptions();
@@ -1479,6 +1479,7 @@ void VID_CheckGLLoaded(rendermode_t oldrender)
 #ifdef HWRENDER
 	if (vid_opengl_state == -1) // Well, it didn't work the first time anyway.
 	{
+		CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
 		rendermode = oldrender;
 		if (chosenrendermode == render_opengl) // fallback to software
 			rendermode = render_soft;
@@ -1827,10 +1828,12 @@ void VID_StartupOpenGL(void)
 		HWD.pfnFinishUpdate     = NULL;
 		HWD.pfnDraw2DLine       = hwSym("Draw2DLine",NULL);
 		HWD.pfnDrawPolygon      = hwSym("DrawPolygon",NULL);
+		HWD.pfnDrawIndexedTriangles = hwSym("DrawIndexedTriangles",NULL);
 		HWD.pfnRenderSkyDome    = hwSym("RenderSkyDome",NULL);
 		HWD.pfnSetBlend         = hwSym("SetBlend",NULL);
 		HWD.pfnClearBuffer      = hwSym("ClearBuffer",NULL);
 		HWD.pfnSetTexture       = hwSym("SetTexture",NULL);
+		HWD.pfnUpdateTexture    = hwSym("UpdateTexture",NULL);
 		HWD.pfnReadRect         = hwSym("ReadRect",NULL);
 		HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
 		HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
@@ -1840,7 +1843,6 @@ void VID_StartupOpenGL(void)
 		HWD.pfnDrawModel        = hwSym("DrawModel",NULL);
 		HWD.pfnCreateModelVBOs  = hwSym("CreateModelVBOs",NULL);
 		HWD.pfnSetTransform     = hwSym("SetTransform",NULL);
-		HWD.pfnGetRenderVersion = hwSym("GetRenderVersion",NULL);
 		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
 		HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
 		HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
@@ -1851,14 +1853,16 @@ void VID_StartupOpenGL(void)
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 
-		// check gl renderer lib
-		if (HWD.pfnGetRenderVersion() != VERSION)
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("The version of the renderer doesn't match the version of the executable!\nBe sure you have installed SRB2 properly.\n"));
-			vid_opengl_state = -1;
-		}
-		else
-			vid_opengl_state = HWD.pfnInit(I_Error) ? 1 : -1; // let load the OpenGL library
+		HWD.pfnLoadShaders      = hwSym("LoadShaders",NULL);
+		HWD.pfnKillShaders      = hwSym("KillShaders",NULL);
+		HWD.pfnSetShader        = hwSym("SetShader",NULL);
+		HWD.pfnUnSetShader      = hwSym("UnSetShader",NULL);
+
+		HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
+		HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
+		HWD.pfnInitCustomShaders= hwSym("InitCustomShaders",NULL);
+
+		vid_opengl_state = HWD.pfnInit() ? 1 : -1; // let load the OpenGL library
 
 		if (vid_opengl_state == -1)
 		{

@@ -931,11 +931,8 @@ static inline void AM_drawWalls(void)
 		l.b.y = lines[i].v2->y >> FRACTOMAPBITS;
 
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-		if (slope) { \
-			end1 = P_GetZAt(slope, lines[i].v1->x, lines[i].v1->y); \
-			end2 = P_GetZAt(slope, lines[i].v2->x, lines[i].v2->y); \
-		} else \
-			end1 = end2 = normalheight;
+		end1 = P_GetZAt(slope, lines[i].v1->x, lines[i].v1->y, normalheight); \
+		end2 = P_GetZAt(slope, lines[i].v2->x, lines[i].v2->y, normalheight);
 
 		SLOPEPARAMS(lines[i].frontsector->f_slope, frontf1, frontf2, lines[i].frontsector->floorheight)
 		SLOPEPARAMS(lines[i].frontsector->c_slope, frontc1, frontc2, lines[i].frontsector->ceilingheight)

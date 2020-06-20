@@ -76,6 +76,8 @@ typedef enum
 	                  // In addition, this packet can't occupy all the available slots.
 
 	PT_FILEFRAGMENT = PT_CANFAIL, // A part of a file.
+	PT_FILEACK,
+	PT_FILERECEIVED,
 
 	PT_TEXTCMD,       // Extra text commands from the client.
 	PT_TEXTCMD2,      // Splitscreen text commands.
@@ -172,6 +174,9 @@ typedef struct
 	UINT32 pflags; // pflags_t
 	UINT8 panim; // panim_t
 
+	INT16 angleturn;
+	INT16 oldrelangleturn;
+
 	angle_t aiming;
 	INT32 currentweapon;
 	INT32 ringweapons;
@@ -189,7 +194,7 @@ typedef struct
 	SINT8 xtralife;
 	SINT8 pity;
 
-	UINT8 skincolor;
+	UINT16 skincolor;
 	INT32 skin;
 	UINT32 availabilities;
 	// Just in case Lua does something like
@@ -309,7 +314,7 @@ typedef struct
 
 	// 0xFF == not in game; else player skin num
 	UINT8 playerskins[MAXPLAYERS];
-	UINT8 playercolor[MAXPLAYERS];
+	UINT16 playercolor[MAXPLAYERS];
 	UINT32 playeravailabilities[MAXPLAYERS];
 
 	UINT8 gametype;
@@ -321,12 +326,29 @@ typedef struct
 	UINT8 varlengthinputs[0]; // Playernames and netvars
 } ATTRPACK serverconfig_pak;
 
-typedef struct {
+typedef struct
+{
 	UINT8 fileid;
+	UINT32 filesize;
+	UINT8 iteration;
 	UINT32 position;
 	UINT16 size;
 	UINT8 data[0]; // Size is variable using hardware_MAXPACKETLENGTH
 } ATTRPACK filetx_pak;
+
+typedef struct
+{
+	UINT32 start;
+	UINT32 acks;
+} ATTRPACK fileacksegment_t;
+
+typedef struct
+{
+	UINT8 fileid;
+	UINT8 iteration;
+	UINT8 numsegments;
+	fileacksegment_t segments[0];
+} ATTRPACK fileack_pak;
 
 #ifdef _MSC_VER
 #pragma warning(default : 4200)
@@ -415,7 +437,7 @@ typedef struct
 {
 	char name[MAXPLAYERNAME+1];
 	UINT8 skin;
-	UINT8 color;
+	UINT16 color;
 	UINT32 pflags;
 	UINT32 score;
 	UINT8 ctfteam;
@@ -443,6 +465,8 @@ typedef struct
 		UINT8 resynchgot;                   //
 		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
 		filetx_pak filetxpak;               //         139 bytes
+		fileack_pak fileack;
+		UINT8 filereceived;
 		clientconfig_pak clientcfg;         //         136 bytes
 		UINT8 md5sum[16];
 		serverinfo_pak serverinfo;          //        1024 bytes
@@ -535,7 +559,6 @@ void NetUpdate(void);
 
 void SV_StartSinglePlayerServer(void);
 boolean SV_SpawnServer(void);
-void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle);
 void SV_StopServer(void);
 void SV_ResetServer(void);
 void CL_AddSplitscreenPlayer(void);
