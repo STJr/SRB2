@@ -1923,7 +1923,7 @@ void G_DoPlayDemo(char *defdemoname)
 	}
 
 	// net var data
-	CV_LoadNetVars(&demo_p);
+	CV_LoadDemoVars(&demo_p);
 
 	// Sigh ... it's an empty demo.
 	if (*demo_p == DEMOMARKER)

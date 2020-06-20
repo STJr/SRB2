@@ -1451,12 +1451,68 @@ badinput:
 
 static boolean serverloading = false;
 
+static consvar_t *
+ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
+{
+	UINT16  netid;
+	char   *val;
+	boolean stealth;
+
+	consvar_t *cvar;
+
+	netid   = READUINT16 (*p);
+	val     = (char *)*p;
+	SKIPSTRING (*p);
+	stealth = READUINT8  (*p);
+
+	cvar = CV_FindNetVar(netid);
+
+	if (cvar)
+	{
+		(*return_value)   = val;
+		(*return_stealth) = stealth;
+
+		DEBFILE(va("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, val));
+	}
+	else
+		CONS_Alert(CONS_WARNING, "Netvar not found with netid %hu\n", netid);
+
+	return cvar;
+}
+
+static consvar_t *
+ReadDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
+{
+	char   *name;
+	char   *val;
+	boolean stealth;
+
+	consvar_t *cvar;
+
+	name    = (char *)*p;
+	SKIPSTRING (*p);
+	val     = (char *)*p;
+	SKIPSTRING (*p);
+	stealth = READUINT8  (*p);
+
+	cvar = CV_FindVar(name);
+
+	if (cvar)
+	{
+		(*return_value)   = val;
+		(*return_stealth) = stealth;
+	}
+	else
+		CONS_Alert(CONS_WARNING, "Netvar not found with name %s\n", name);
+
+	return cvar;
+}
+
 static void Got_NetVar(UINT8 **p, INT32 playernum)
 {
 	consvar_t *cvar;
-	UINT16 netid;
 	char *svalue;
-	UINT8 stealth = false;
+	boolean stealth;
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum) && !serverloading)
 	{
@@ -1466,20 +1522,11 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
 	}
-	netid = READUINT16(*p);
-	cvar = CV_FindNetVar(netid);
-	svalue = (char *)*p;
-	SKIPSTRING(*p);
-	stealth = READUINT8(*p);
 
-	if (!cvar)
-	{
-		CONS_Alert(CONS_WARNING, "Netvar not found with netid %hu\n", netid);
-		return;
-	}
-	DEBFILE(va("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue));
+	cvar = ReadNetVar(p, &svalue, &stealth);
 
-	Setvalue(cvar, svalue, stealth);
+	if (cvar)
+		Setvalue(cvar, svalue, stealth);
 }
 
 void CV_SaveNetVars(UINT8 **p)
@@ -1502,10 +1549,14 @@ void CV_SaveNetVars(UINT8 **p)
 	WRITEUINT16(count_p, count);
 }
 
-void CV_LoadNetVars(UINT8 **p)
+static void CV_LoadVars(UINT8 **p,
+		consvar_t *(*got)(UINT8 **p, char **ret_value, boolean *ret_stealth))
 {
 	consvar_t *cvar;
 	UINT16 count;
+
+	char *val;
+	boolean stealth;
 
 	// prevent "invalid command received"
 	serverloading = true;
@@ -1516,9 +1567,24 @@ void CV_LoadNetVars(UINT8 **p)
 
 	count = READUINT16(*p);
 	while (count--)
-		Got_NetVar(p, 0);
+	{
+		cvar = (*got)(p, &val, &stealth);
+
+		if (cvar)
+			Setvalue(cvar, val, stealth);
+	}
 
 	serverloading = false;
+}
+
+void CV_LoadNetVars(UINT8 **p)
+{
+	CV_LoadVars(p, ReadNetVar);
+}
+
+void CV_LoadDemoVars(UINT8 **p)
+{
+	CV_LoadVars(p, ReadDemoVar);
 }
 
 static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth);
