@@ -3913,9 +3913,9 @@ state_t states[NUMSTATES] =
 	{SPR_GFZD, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL}, // S_GFZDEBRIS
 	{SPR_BRIC, FF_ANIMATE, -1, {A_DebrisRandom}, 7, 2, S_NULL}, // S_BRICKDEBRIS
 	{SPR_WDDB, FF_ANIMATE, -1, {A_DebrisRandom}, 7, 2, S_NULL}, // S_WOODDEBRIS
-	{SPR_BRIR, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL}, // S_COLOREDBRICKDEBRISA
-	{SPR_BRIB, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL}, // S_COLOREDBRICKDEBRISB
-	{SPR_BRIY, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL}, // S_COLOREDBRICKDEBRISC
+	{SPR_BRIR, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL}, // S_REDBRICKDEBRIS
+	{SPR_BRIB, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL}, // S_BLUEBRICKDEBRIS
+	{SPR_BRIY, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL}, // S_YELLOWBRICKDEBRIS
 
 #ifdef SEENAMES
 	{SPR_NULL, 0, 1, {NULL}, 0, 0, S_NULL}, // S_NAMECHECK
@@ -21592,9 +21592,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_COLOREDBRICKDEBRISA
+	{           // MT_REDBRICKDEBRIS
 		-1,             // doomednum
-		S_COLOREDBRICKDEBRISA,    // spawnstate
+		S_REDBRICKDEBRIS,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -21619,9 +21619,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_COLOREDBRICKDEBRISB
+	{           // MT_BLUEBRICKDEBRIS
 		-1,             // doomednum
-		S_COLOREDBRICKDEBRISB,    // spawnstate
+		S_BLUEBRICKDEBRIS,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -21646,9 +21646,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_COLOREDBRICKDEBRISC
+	{           // MT_YELLOWBRICKDEBRIS
 		-1,             // doomednum
-		S_COLOREDBRICKDEBRISC,    // spawnstate
+		S_YELLOWBRICKDEBRIS,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
