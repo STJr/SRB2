@@ -1163,7 +1163,16 @@ static old_demo_var_t *CV_FindOldDemoVar(UINT16 chk)
 	for (demovar = consvar_old_demo_vars; demovar; demovar = demovar->next)
 	{
 		if (demovar->checksum == chk)
+		{
+			if (demovar->collides)
+			{
+				CONS_Alert(CONS_WARNING,
+						"Old demo netvar id %hu is a collision\n", chk);
+				return NULL;
+			}
+
 			return demovar;
+		}
 	}
 
 	return NULL;
