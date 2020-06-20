@@ -60,6 +60,10 @@ static const char *CV_StringValue(const char *var_name);
 static consvar_t *consvar_vars; // list of registered console variables
 static UINT16     consvar_number_of_netids = 0;
 
+#ifdef OLD22DEMOCOMPAT
+static old_demo_var_t *consvar_old_demo_vars;
+#endif
+
 static char com_token[1024];
 static char *COM_Parse(char *data);
 
@@ -1123,13 +1127,16 @@ consvar_t *CV_FindVar(const char *name)
 	return NULL;
 }
 
-/** Builds a unique Net Variable identifier number, which is used
-  * in network packets instead of the full name.
+#ifdef OLD22DEMOCOMPAT
+/** Builds a unique Net Variable identifier number, which was used
+  * in network packets and demos instead of the full name.
+  *
+  * This function only still exists to keep compatibility with old demos.
   *
   * \param s Name of the variable.
   * \return A new unique identifier.
   */
-static inline UINT16 CV_ComputeNetid(const char *s)
+static inline UINT16 CV_ComputeOldDemoID(const char *s)
 {
 	UINT16 ret = 0, i = 0;
 	static UINT16 premiers[16] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53};
@@ -1142,6 +1149,26 @@ static inline UINT16 CV_ComputeNetid(const char *s)
 	}
 	return ret;
 }
+
+/** Finds a net variable based on its old style hash. If a hash collides, a
+  * warning is printed and this function returns NULL.
+  *
+  * \param chk The variable's old style hash.
+  * \return A pointer to the variable itself if found, or NULL.
+  */
+static old_demo_var_t *CV_FindOldDemoVar(UINT16 chk)
+{
+	old_demo_var_t *demovar;
+
+	for (demovar = consvar_old_demo_vars; demovar; demovar = demovar->next)
+	{
+		if (demovar->checksum == chk)
+			return demovar;
+	}
+
+	return NULL;
+}
+#endif/*OLD22DEMOCOMPAT*/
 
 /** Finds a net variable based on its identifier number.
   *
@@ -1163,6 +1190,32 @@ static consvar_t *CV_FindNetVar(UINT16 netid)
 }
 
 static void Setvalue(consvar_t *var, const char *valstr, boolean stealth);
+
+#ifdef OLD22DEMOCOMPAT
+/* Sets up a netvar for compatibility with old demos. */
+static void CV_RegisterOldDemoVar(consvar_t *variable)
+{
+	old_demo_var_t *demovar;
+	UINT16 old_demo_id;
+
+	old_demo_id = CV_ComputeOldDemoID(variable->name);
+
+	demovar = CV_FindOldDemoVar(old_demo_id);
+
+	if (demovar)
+		demovar->collides = true;
+	else
+	{
+		demovar = ZZ_Calloc(sizeof *demovar);
+
+		demovar->checksum = old_demo_id;
+		demovar->cvar = variable;
+
+		demovar->next = consvar_old_demo_vars;
+		consvar_old_demo_vars = demovar;
+	}
+}
+#endif
 
 /** Registers a variable for later use from the console.
   *
@@ -1192,6 +1245,10 @@ void CV_RegisterVar(consvar_t *variable)
 		/* in case of overflow... */
 		if (variable->netid > consvar_number_of_netids)
 			I_Error("Way too many netvars");
+
+#ifdef OLD22DEMOCOMPAT
+		CV_RegisterOldDemoVar(variable);
+#endif
 	}
 
 	// link the variable in
@@ -1480,6 +1537,38 @@ ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
 	return cvar;
 }
 
+#ifdef OLD22DEMOCOMPAT
+static consvar_t *
+ReadOldDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
+{
+	UINT16  id;
+	char   *val;
+	boolean stealth;
+
+	old_demo_var_t *demovar;
+
+	id      = READUINT16 (*p);
+	val     = (char *)*p;
+	SKIPSTRING (*p);
+	stealth = READUINT8  (*p);
+
+	demovar = CV_FindOldDemoVar(id);
+
+	if (demovar)
+	{
+		(*return_value)   = val;
+		(*return_stealth) = stealth;
+
+		return demovar->cvar;
+	}
+	else
+	{
+		CONS_Alert(CONS_WARNING, "Netvar not found with old demo id %hu\n", id);
+		return NULL;
+	}
+}
+#endif/*OLD22DEMOCOMPAT*/
+
 static consvar_t *
 ReadDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
 {
@@ -1581,6 +1670,13 @@ void CV_LoadNetVars(UINT8 **p)
 {
 	CV_LoadVars(p, ReadNetVar);
 }
+
+#ifdef OLD22DEMOCOMPAT
+void CV_LoadOldDemoVars(UINT8 **p)
+{
+	CV_LoadVars(p, ReadOldDemoVar);
+}
+#endif
 
 void CV_LoadDemoVars(UINT8 **p)
 {

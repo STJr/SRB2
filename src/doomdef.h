@@ -662,4 +662,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Render flats on walls
 #define WALLFLATS
 
+/// Maintain compatibility with older 2.2 demos
+#define OLD22DEMOCOMPAT
+
 #endif // __DOOMDEF__
