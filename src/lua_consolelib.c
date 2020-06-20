@@ -33,6 +33,7 @@ static const char *cvname = NULL;
 void Got_Luacmd(UINT8 **cp, INT32 playernum)
 {
 	UINT8 i, argc, flags;
+	UINT16 netid;
 	char buf[256];
 
 	// don't use I_Assert here, goto the deny code below
@@ -43,10 +44,9 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 	lua_getfield(gL, LUA_REGISTRYINDEX, "COM_Command"); // push COM_Command
 	if (!lua_istable(gL, -1)) goto deny;
 
+	netid = READUINT16(*cp);
 	argc = READUINT8(*cp);
-	READSTRINGN(*cp, buf, 255);
-	strlwr(buf); // must lowercase buffer
-	lua_getfield(gL, -1, buf); // push command info table
+	lua_rawgeti(gL, -1, netid); // push command info table
 	if (!lua_istable(gL, -1)) goto deny;
 
 	lua_remove(gL, -2); // pop COM_Command
@@ -129,6 +129,12 @@ void COM_Lua_f(void)
 	if (netgame && !( flags & COM_LOCAL ))/* don't send local commands */
 	{ // Send the command through the network
 		UINT8 argc;
+		UINT16 netid;
+
+		lua_rawgeti(gL, -1, 3); // push netid from command info table
+		netid = lua_tonumber(gL, -1);
+		lua_pop(gL, -1); // pop netid
+
 		lua_pop(gL, 1); // pop command info table
 
 		if (flags & COM_ADMIN && !server && !IsPlayerAdmin(playernum)) // flag 1: only server/admin can use this command.
@@ -144,12 +150,13 @@ void COM_Lua_f(void)
 		if (argc == UINT8_MAX)
 			len = UINT16_MAX;
 		else
-			len = (argc+1)*256;
+			len = (argc)*256;
 
-		buf = malloc(len);
+		buf = malloc(sizeof (UINT16) + len);
 		p = buf;
+		WRITEUINT16(p, netid);
 		WRITEUINT8(p, argc);
-		for (i = 0; i < argc; i++)
+		for (i = 1; i < argc; i++)
 			WRITESTRINGN(p, COM_Argv(i), 255);
 		if (flags & COM_SPLITSCREEN)
 			SendNetXCmd2(XD_LUACMD, buf, p-buf);
@@ -175,6 +182,8 @@ static int lib_comAddCommand(lua_State *L)
 {
 	int com_return = -1;
 	const char *luaname = luaL_checkstring(L, 1);
+
+	UINT16 netid;
 
 	// must store in all lowercase
 	char *name = Z_StrDup(luaname);
@@ -202,16 +211,44 @@ static int lib_comAddCommand(lua_State *L)
 		lua_pushinteger(L, 0);
 	}
 
+	if (!( lua_tonumber(L, 3) & COM_LOCAL ))
+	{
+		netid = COM_NewNetID();
+
+		if (! netid)
+		{ // no more netids -- free the lowercased name and return error
+			Z_Free(name);
+			return luaL_error(L,
+					"Couldn't add a new console command \"%s\", too many", luaname);
+		}
+	}
+	else
+		netid = 0;
+
 	lua_getfield(L, LUA_REGISTRYINDEX, "COM_Command");
 	I_Assert(lua_istable(L, -1));
 
-	lua_createtable(L, 2, 0);
+	lua_createtable(L, ( (netid > 0) ? 3 : 2 ), 0);
 		lua_pushvalue(L, 2);
 		lua_rawseti(L, -2, 1);
 
 		lua_pushvalue(L, 3);
 		lua_rawseti(L, -2, 2);
-	lua_setfield(L, -2, name);
+
+		if (netid > 0)
+		{
+			lua_pushnumber(L, netid);
+			lua_rawseti(L, -2, 3);
+		}
+
+	if (netid > 0)
+	{
+		lua_pushvalue(L, -1);/* push the table again to reference it :V */
+		lua_setfield(L, -3, name);
+		lua_rawseti(L, -2, netid);
+	}
+	else
+		lua_setfield(L, -2, name);
 
 	// Try to add the Lua command
 	com_return = COM_AddLuaCommand(name);

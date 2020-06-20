@@ -298,6 +298,7 @@ typedef struct xcommand_s
 } xcommand_t;
 
 static xcommand_t *com_commands = NULL; // current commands
+static UINT16      com_last_netid = 1;
 
 #define MAX_ARGS 80
 static size_t com_argc;
@@ -497,6 +498,18 @@ void COM_AddCommand(const char *name, com_func_t func)
 	cmd->function = func;
 	cmd->next = com_commands;
 	com_commands = cmd;
+}
+
+/** Allocates a new netid for commands. Only applicable for Lua commands.
+  *
+  * \return The new netid, or zero if we ran out.
+  */
+UINT16 COM_NewNetID(void)
+{
+	if (com_last_netid > 0)
+		return ++com_last_netid;
+	else
+		return 0;
 }
 
 /** Adds a console command for Lua.

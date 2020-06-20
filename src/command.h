@@ -36,6 +36,8 @@ enum
 
 typedef void (*com_func_t)(void);
 
+UINT16 COM_NewNetID(void);
+
 void COM_AddCommand(const char *name, com_func_t func);
 int COM_AddLuaCommand(const char *name);
 
