@@ -758,6 +758,7 @@ static menuitem_t SR_EmblemHintMenu[] =
 // Single Player Main
 static menuitem_t SP_MainMenu[] =
 {
+	// Note: If changing the positions here, also change them in M_SinglePlayerMenu()
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 76},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,               84},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,             92},
@@ -8041,6 +8042,16 @@ static void M_SinglePlayerMenu(INT32 choice)
 	(void)choice;
 
 
+	// Reset the item positions, to avoid them sinking farther down every time the menu is opened if one is unavailable
+	// Note that they're reset, not simply "not moved again", in case mid-game add-ons re-enable an option
+	SP_MainMenu[spstartgame]   .alphaKey = 76;
+	SP_MainMenu[sprecordattack].alphaKey = 84;
+	SP_MainMenu[spnightsmode]  .alphaKey = 92;
+	SP_MainMenu[spmarathon]    .alphaKey = 100;
+	//SP_MainMenu[sptutorial]  .alphaKey = 108; // Not needed
+	//SP_MainMenu[spstatistics].alphaKey = 116; // Not needed
+
+
 	levellistmode = LLM_RECORDATTACK;
 	if (M_GametypeHasLevels(-1))
 		SP_MainMenu[sprecordattack].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
@@ -8075,11 +8086,13 @@ static void M_SinglePlayerMenu(INT32 choice)
 		SP_MainMenu[sprecordattack].alphaKey += 8;
 		SP_MainMenu[spnightsmode]  .alphaKey += 8;
 	}
-	else if (M_SecretUnlocked(SECRET_RECORDATTACK)) // Otherwise, if Marathon Run is allowed and Record Attack is unlocked...
-		SP_MainMenu[spmarathon].status = IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED; // ...unlock Marathon Run!
+	else // Otherwise, if Marathon Run is allowed and Record Attack is unlocked, unlock Marathon Run!
+		SP_MainMenu[spmarathon].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
 
 
-	if (!tutorialmap) // If there's no tutorial available in the current add-on...
+	if (tutorialmap) // If there's a tutorial available in the current add-on...
+		SP_MainMenu[sptutorial].status = IT_CALL | IT_STRING; // ...always unlock Tutorial
+	else // But if there's no tutorial available in the current add-on...
 	{
 		SP_MainMenu[sptutorial].status = IT_NOTHING|IT_DISABLED; // ...hide and disable the Tutorial option...
 		// ...and lower the above options' display positions by 8 pixels to close the gap
