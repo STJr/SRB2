@@ -8149,12 +8149,18 @@ static void P_MovePlayer(player_t *player)
 	}
 
 	// Correct floating when ending up on the ground.
+	// Also fight against airwalking when going down.
 	if (onground)
 	{
 		if (player->mo->state-states == S_PLAY_FLOAT)
 			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 		else if (player->mo->state-states == S_PLAY_FLOAT_RUN)
 			P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+	}
+	else
+	{
+			if ((player->mo->state-states == S_PLAY_WALK || player->mo->state-states == S_PLAY_RUN) && P_MobjFlip(player->mo)*player->mo->momz < 0)
+				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 	}
 
 	// If Springing (or nojumpspinning), but travelling DOWNWARD, change back!
