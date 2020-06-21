@@ -417,10 +417,10 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
 				P_SetPlayerMobjState(object, S_PLAY_DASH);
-			else if (P_IsObjectOnGround(object) && horizspeed >= FixedMul(object->player->runspeed, object->scale))
-				P_SetPlayerMobjState(object, S_PLAY_RUN);
+			else if (P_IsObjectOnGround(object))
+				(horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? P_SetPlayerMobjState(object, S_PLAY_RUN) : P_SetPlayerMobjState(object, S_PLAY_WALK);
 			else
-				P_SetPlayerMobjState(object, S_PLAY_WALK);
+				object->momz > 0 ? P_SetPlayerMobjState(object, S_PLAY_SPRING) : P_SetPlayerMobjState(object, S_PLAY_FALL);
 		}
 		else if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
