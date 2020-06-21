@@ -2951,13 +2951,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// If titlemap, set the camera ref for title's thinker
 				// This is not revoked until overwritten; awayviewtics is ignored
 				if (titlemapinaction)
-				{
 					titlemapcameraref = altview;
-					return;
+				else
+				{
+					P_SetTarget(&mo->player->awayviewmobj, altview);
+					mo->player->awayviewtics = P_AproxDistance(line->dx, line->dy)>>FRACBITS;
 				}
 
-				P_SetTarget(&mo->player->awayviewmobj, altview);
-				mo->player->awayviewtics = P_AproxDistance(line->dx, line->dy)>>FRACBITS;
 
 				if (line->flags & ML_NOCLIMB) // lets you specify a vertical angle
 				{
@@ -2971,10 +2971,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					aim *= (ANGLE_90>>8);
 					aim /= 90;
 					aim <<= 8;
-					mo->player->awayviewaiming = (angle_t)aim;
+					if (titlemapinaction)
+						titlemapcameraref->cusval = (angle_t)aim;
+					else
+						mo->player->awayviewaiming = (angle_t)aim;
 				}
 				else
-					mo->player->awayviewaiming = 0; // straight ahead
+				{
+					// straight ahead
+					if (titlemapinaction)
+						titlemapcameraref->cusval = 0;
+					else
+						mo->player->awayviewaiming = 0;
+				}
 			}
 			break;
 
