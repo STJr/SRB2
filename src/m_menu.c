@@ -761,14 +761,14 @@ static menuitem_t SP_MainMenu[] =
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 76},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,               84},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,             92},
-	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Marathon Run",  M_Marathon,                100},
+	{IT_SECRET,                                 NULL, "Marathon Run",  M_Marathon,                100},
 	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,           108},
 	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Statistics",    M_Statistics,              116}
 };
 
 enum
 {
-	sploadgame,
+	spstartgame,
 	sprecordattack,
 	spnightsmode,
 	spmarathon,
@@ -8040,29 +8040,55 @@ static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
 
+
 	levellistmode = LLM_RECORDATTACK;
 	if (M_GametypeHasLevels(-1))
 		SP_MainMenu[sprecordattack].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
-	else
-		SP_MainMenu[sprecordattack].status = IT_NOTHING|IT_DISABLED;
+	else // If Record Attack is nonexistent in the current add-on...
+	{
+		SP_MainMenu[sprecordattack].status = IT_NOTHING|IT_DISABLED; // ...hide and disable the Record Attack option...
+		SP_MainMenu[spstartgame].alphaKey += 8; // ...and lower Start Game by 8 pixels to close the gap
+	}
+
 
 	levellistmode = LLM_NIGHTSATTACK;
 	if (M_GametypeHasLevels(-1))
 		SP_MainMenu[spnightsmode].status = (M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
-	else
-		SP_MainMenu[spnightsmode].status = IT_NOTHING|IT_DISABLED;
+	else // If NiGHTS Mode is nonexistent in the current add-on...
+	{
+		SP_MainMenu[spnightsmode].status = IT_NOTHING|IT_DISABLED; // ...hide and disable the NiGHTS Mode option...
+		// ...and lower the above options' display positions by 8 pixels to close the gap
+		SP_MainMenu[spstartgame]   .alphaKey += 8;
+		SP_MainMenu[sprecordattack].alphaKey += 8;
+	}
 
-	SP_MainMenu[sptutorial].status = tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
 
 	// If the FIRST stage immediately leads to the ending, or itself (which gets converted to the title screen in G_DoCompleted for marathonmode only), there's no point in having this option on the menu. You should use Record Attack in that circumstance, although if marathonnext is set this behaviour can be overridden if you make some weird mod that requires multiple playthroughs of the same map in sequence and has some in-level mechanism to break the cycle.
-	if (!M_SecretUnlocked(SECRET_RECORDATTACK) // also if record attack is locked
-		|| (mapheaderinfo[spmarathon_start-1]
+	if (mapheaderinfo[spmarathon_start-1]
 		&& !mapheaderinfo[spmarathon_start-1]->marathonnext
 		&& (mapheaderinfo[spmarathon_start-1]->nextlevel == spmarathon_start
-			|| mapheaderinfo[spmarathon_start-1]->nextlevel >= 1100)))
-		SP_MainMenu[spmarathon].status = IT_NOTHING|IT_DISABLED;
-	else
-		SP_MainMenu[spmarathon].status = IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED;
+			|| mapheaderinfo[spmarathon_start-1]->nextlevel >= 1100))
+	{
+		SP_MainMenu[spmarathon].status = IT_NOTHING|IT_DISABLED; // Hide and disable the Marathon Run option...
+		// ...and lower the above options' display positions by 8 pixels to close the gap
+		SP_MainMenu[spstartgame]   .alphaKey += 8;
+		SP_MainMenu[sprecordattack].alphaKey += 8;
+		SP_MainMenu[spnightsmode]  .alphaKey += 8;
+	}
+	else if (M_SecretUnlocked(SECRET_RECORDATTACK)) // Otherwise, if Marathon Run is allowed and Record Attack is unlocked...
+		SP_MainMenu[spmarathon].status = IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED; // ...unlock Marathon Run!
+
+
+	if (!tutorialmap) // If there's no tutorial available in the current add-on...
+	{
+		SP_MainMenu[sptutorial].status = IT_NOTHING|IT_DISABLED; // ...hide and disable the Tutorial option...
+		// ...and lower the above options' display positions by 8 pixels to close the gap
+		SP_MainMenu[spstartgame]   .alphaKey += 8;
+		SP_MainMenu[sprecordattack].alphaKey += 8;
+		SP_MainMenu[spnightsmode]  .alphaKey += 8;
+		SP_MainMenu[spmarathon]    .alphaKey += 8;
+	}
+
 
 	M_SetupNextMenu(&SP_MainDef);
 }
