@@ -3676,6 +3676,24 @@ static void G_UpdateVisited(void)
 	}
 }
 
+static boolean CanSaveLevel(INT32 mapnum)
+{
+	// You can never save in a special stage.
+	if (G_IsSpecialStage(mapnum))
+		return false;
+
+	// If the game is complete for this save slot, then any level can save!
+	if (gamecomplete)
+		return true;
+
+	// Be kind with Marathon Mode live event backups.
+	if (marathonmode)
+		return true;
+
+	// Any levels that have the savegame flag can save normally.
+	return (mapheaderinfo[mapnum-1] && (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME));
+}
+
 //
 // G_DoCompleted
 //
@@ -3720,64 +3738,64 @@ static void G_DoCompleted(void)
 			nextmap = 1100-1; // No infinite loop for you
 	}
 
-	// Remember last map for when you come out of the special stage.
-	if (!spec)
-		lastmap = nextmap;
-
 	// If nextmap is actually going to get used, make sure it points to
 	// a map of the proper gametype -- skip levels that don't support
 	// the current gametype. (Helps avoid playing boss levels in Race,
 	// for instance).
-	if (!token && !spec
-		&& (nextmap >= 0 && nextmap < NUMMAPS))
+	if (!spec)
 	{
-		register INT16 cm = nextmap;
-		UINT32 tolflag = G_TOLFlag(gametype);
-		UINT8 visitedmap[(NUMMAPS+7)/8];
-
-		memset(visitedmap, 0, sizeof (visitedmap));
-
-		while (!mapheaderinfo[cm] || !(mapheaderinfo[cm]->typeoflevel & tolflag))
+		if (nextmap >= 0 && nextmap < NUMMAPS)
 		{
-			visitedmap[cm/8] |= (1<<(cm&7));
-			if (!mapheaderinfo[cm])
-				cm = -1; // guarantee error execution
-			else if (marathonmode && mapheaderinfo[cm]->marathonnext)
-				cm = (INT16)(mapheaderinfo[cm]->marathonnext-1);
-			else
-				cm = (INT16)(mapheaderinfo[cm]->nextlevel-1);
+			register INT16 cm = nextmap;
+			UINT32 tolflag = G_TOLFlag(gametype);
+			UINT8 visitedmap[(NUMMAPS+7)/8];
 
-			if (cm >= NUMMAPS || cm < 0) // out of range (either 1100ish or error)
+			memset(visitedmap, 0, sizeof (visitedmap));
+
+			while (!mapheaderinfo[cm] || !(mapheaderinfo[cm]->typeoflevel & tolflag))
 			{
-				cm = nextmap; //Start the loop again so that the error checking below is executed.
+				visitedmap[cm/8] |= (1<<(cm&7));
+				if (!mapheaderinfo[cm])
+					cm = -1; // guarantee error execution
+				else if (marathonmode && mapheaderinfo[cm]->marathonnext)
+					cm = (INT16)(mapheaderinfo[cm]->marathonnext-1);
+				else
+					cm = (INT16)(mapheaderinfo[cm]->nextlevel-1);
 
-				//Make sure the map actually exists before you try to go to it!
-				if ((W_CheckNumForName(G_BuildMapName(cm + 1)) == LUMPERROR))
+				if (cm >= NUMMAPS || cm < 0) // out of range (either 1100ish or error)
 				{
-					CONS_Alert(CONS_ERROR, M_GetText("Next map given (MAP %d) doesn't exist! Reverting to MAP01.\n"), cm+1);
-					cm = 0;
+					cm = nextmap; //Start the loop again so that the error checking below is executed.
+
+					//Make sure the map actually exists before you try to go to it!
+					if ((W_CheckNumForName(G_BuildMapName(cm + 1)) == LUMPERROR))
+					{
+						CONS_Alert(CONS_ERROR, M_GetText("Next map given (MAP %d) doesn't exist! Reverting to MAP01.\n"), cm+1);
+						cm = 0;
+						break;
+					}
+				}
+
+				if (visitedmap[cm/8] & (1<<(cm&7))) // smells familiar
+				{
+					// We got stuck in a loop, came back to the map we started on
+					// without finding one supporting the current gametype.
+					// Thus, print a warning, and just use this map anyways.
+					CONS_Alert(CONS_WARNING, M_GetText("Can't find a compatible map after map %d; using map %d anyway\n"), prevmap+1, cm+1);
 					break;
 				}
 			}
-
-			if (visitedmap[cm/8] & (1<<(cm&7))) // smells familiar
-			{
-				// We got stuck in a loop, came back to the map we started on
-				// without finding one supporting the current gametype.
-				// Thus, print a warning, and just use this map anyways.
-				CONS_Alert(CONS_WARNING, M_GetText("Can't find a compatible map after map %d; using map %d anyway\n"), prevmap+1, cm+1);
-				break;
-			}
+			nextmap = cm;
 		}
-		nextmap = cm;
+
+		// wrap around in race
+		if (nextmap >= 1100-1 && nextmap <= 1102-1 && !(gametyperules & GTR_CAMPAIGN))
+			nextmap = (INT16)(spstage_start-1);
+
+		if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1103-1)
+			I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
+
+		lastmap = nextmap; // Remember last map for when you come out of the special stage.
 	}
-
-	if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1103-1)
-		I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
-
-	// wrap around in race
-	if (nextmap >= 1100-1 && nextmap <= 1102-1 && !(gametyperules & GTR_CAMPAIGN))
-		nextmap = (INT16)(spstage_start-1);
 
 	if ((gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)))
 	{
@@ -3816,7 +3834,19 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	// do this before going to the intermission or starting a custom cutscene, mostly for the sake of marathon mode but it also massively reduces redundant file save events in f_finale.c
+	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed))
+	{
+		G_UpdateVisited();
+		G_AfterIntermission();
+	}
+	else
+	{
+		G_SetGamestate(GS_INTERMISSION);
+		Y_StartIntermission();
+		G_UpdateVisited();
+	}
+
+	// do this before running the intermission or custom cutscene, mostly for the sake of marathon mode but it also massively reduces redundant file save events in f_finale.c
 	if (nextmap >= 1100-1)
 	{
 		if (!gamecomplete)
@@ -3831,21 +3861,13 @@ static void G_DoCompleted(void)
 				cursaveslot = 0;
 			}
 			else if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
-				G_SaveGame((UINT32)cursaveslot);
+				G_SaveGame((UINT32)cursaveslot, spstage_start);
 		}
 	}
-
-	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed))
-	{
-		G_UpdateVisited();
-		G_AfterIntermission();
-	}
-	else
-	{
-		G_SetGamestate(GS_INTERMISSION);
-		Y_StartIntermission();
-		G_UpdateVisited();
-	}
+	// and doing THIS here means you don't lose your progress if you close the game mid-intermission
+	else if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
+		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(lastmap+1))
+		G_SaveGame((UINT32)cursaveslot, lastmap+1); // not nextmap+1 to route around special stages
 }
 
 // See also F_EndCutscene, the only other place which handles intra-map/ending transitions
@@ -4407,7 +4429,7 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 // G_SaveGame
 // Saves your game.
 //
-void G_SaveGame(UINT32 slot)
+void G_SaveGame(UINT32 slot, INT16 mapnum)
 {
 	boolean saved;
 	char savename[256] = "";
@@ -4435,7 +4457,7 @@ void G_SaveGame(UINT32 slot)
 		sprintf(name, (marathonmode ? "back-up %d" : "version %d"), VERSION);
 		WRITEMEM(save_p, name, VERSIONSIZE);
 
-		P_SaveGame();
+		P_SaveGame(mapnum);
 		if (marathonmode)
 		{
 			WRITEUINT32(save_p, marathontime);
