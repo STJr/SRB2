@@ -2964,10 +2964,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					INT32 aim;
 
 					aim = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-					while (aim < 0)
-						aim += 360;
-					while (aim >= 360)
-						aim -= 360;
+					aim = (aim + 360) % 360;
 					aim *= (ANGLE_90>>8);
 					aim /= 90;
 					aim <<= 8;
