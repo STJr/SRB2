@@ -139,6 +139,7 @@ static const char *const side_opt[] = {
 	"toptexture",
 	"bottomtexture",
 	"midtexture",
+	"line",
 	"sector",
 	"special",
 	"repeatcnt",
