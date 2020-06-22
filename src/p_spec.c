@@ -2979,10 +2979,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				else
 				{
 					// straight ahead
-					if (titlemapinaction)
-						titlemapcameraref->cusval = 0;
-					else
+					if (!titlemapinaction)
 						mo->player->awayviewaiming = 0;
+					// don't do cusval cause that's annoying
 				}
 			}
 			break;
