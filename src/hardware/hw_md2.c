@@ -1,22 +1,15 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-//
 // Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file
-/// \brief MD2 Handling
+/// \file hw_md2.c
+/// \brief 3D Model Handling
 ///	Inspired from md2.c by Mete Ciragan (mete@swissquake.ch)
-
 
 #ifdef __GNUC__
 #include <unistd.h>
@@ -400,13 +393,6 @@ static void md2_loadTexture(md2_t *model)
 			V_CubeApply(&image->s.red, &image->s.green, &image->s.blue);
 			image++;
 		}
-
-#ifdef GLIDE_API_COMPATIBILITY
-		// not correct!
-		grpatch->mipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_256;
-		grpatch->mipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_256;
-		grpatch->mipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
-#endif
 	}
 	HWD.pfnSetTexture(grpatch->mipmap);
 }
@@ -455,13 +441,6 @@ static void md2_loadBlendTexture(md2_t *model)
 		grpatch->height = (INT16)h;
 		grpatch->mipmap->width = (UINT16)w;
 		grpatch->mipmap->height = (UINT16)h;
-
-#ifdef GLIDE_API_COMPATIBILITY
-		// not correct!
-		grpatch->mipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_256;
-		grpatch->mipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_256;
-		grpatch->mipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
-#endif
 	}
 	HWD.pfnSetTexture(grpatch->mipmap); // We do need to do this so that it can be cleared and knows to recreate it when necessary
 
@@ -949,11 +928,19 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 
 					blendcolor = V_GetColor(translation[firsti]);
 
+					if (secondi >= translen)
+						mul = 0;
+
 					if (mul > 0) // If it's 0, then we only need the first color.
 					{
-						if (secondi >= translen) // blend to black
+#if 0
+						if (secondi >= translen)
+						{
+							// blend to black
 							nextcolor = V_GetColor(31);
+						}
 						else
+#endif
 							nextcolor = V_GetColor(translation[secondi]);
 
 						// Find difference between points
@@ -1188,15 +1175,14 @@ static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t 
 
 boolean HWR_DrawModel(gr_vissprite_t *spr)
 {
-	FSurfaceInfo Surf;
+	md2_t *md2;
 
 	char filename[64];
 	INT32 frame = 0;
 	INT32 nextFrame = -1;
 	UINT8 spr2 = 0;
 	FTransform p;
-	md2_t *md2;
-	UINT8 color[4];
+	FSurfaceInfo Surf;
 
 	if (!cv_grmodels.value)
 		return false;
@@ -1235,13 +1221,10 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 				colormap = sector->extra_colormap;
 		}
 
-		if (colormap)
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
-		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+		HWR_Lighting(&Surf, lightlevel, colormap);
 	}
 	else
-		Surf.FlatColor.rgba = 0xFFFFFFFF;
+		Surf.PolyColor.rgba = 0xFFFFFFFF;
 
 	// Look at HWR_ProjectSprite for more
 	{
@@ -1263,11 +1246,11 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 			//durs = tics;
 
 		if (spr->mobj->flags2 & MF2_SHADOW)
-			Surf.FlatColor.s.alpha = 0x40;
+			Surf.PolyColor.s.alpha = 0x40;
 		else if (spr->mobj->frame & FF_TRANSMASK)
 			HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
-			Surf.FlatColor.s.alpha = 0xFF;
+			Surf.PolyColor.s.alpha = 0xFF;
 
 		// dont forget to enabled the depth test because we can't do this like
 		// before: polygons models are not sorted
@@ -1512,11 +1495,6 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		}
 #endif
 
-		color[0] = Surf.FlatColor.s.red;
-		color[1] = Surf.FlatColor.s.green;
-		color[2] = Surf.FlatColor.s.blue;
-		color[3] = Surf.FlatColor.s.alpha;
-
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
 
@@ -1525,7 +1503,8 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		p.mirror = atransform.mirror; // from Kart
 #endif
 
-		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, color);
+		HWD.pfnSetShader(4);	// model shader
+		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, &Surf);
 	}
 
 	return true;

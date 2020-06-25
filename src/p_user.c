@@ -8578,7 +8578,7 @@ static void P_MovePlayer(player_t *player)
 	}
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none && cv_fovchange.value)
+	if (rendermode == render_opengl && cv_fovchange.value)
 	{
 		fixed_t speed;
 		const fixed_t runnyspeed = 20*FRACUNIT;
@@ -9988,9 +9988,11 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (camorbit) //Sev here, I'm guessing this is where orbital cam lives
 	{
-		if (rendermode == render_opengl)
+#ifdef HWRENDER
+		if (rendermode == render_opengl && !cv_grshearing.value)
 			distxy = FixedMul(dist, FINECOSINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK));
 		else
+#endif
 			distxy = dist;
 		distz = -FixedMul(dist, FINESINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK)) + slopez;
 	}
