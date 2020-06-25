@@ -359,12 +359,11 @@ void Y_IntermissionDrawer(void)
 		else if (rendermode != render_soft && usebuffer)
 			HWR_DrawIntermissionBG();
 #endif
-		else
+		else if (bgpatch)
 		{
-			if (widebgpatch && rendermode == render_soft && vid.width / vid.dupx == 400)
-				V_DrawScaledPatch(0, 0, V_SNAPTOLEFT, widebgpatch);
-			else if (bgpatch)
-				V_DrawScaledPatch(0, 0, 0, bgpatch);
+			fixed_t hs = vid.width  * FRACUNIT / BASEVIDWIDTH;
+			fixed_t vs = vid.height * FRACUNIT / BASEVIDHEIGHT;
+			V_DrawStretchyFixedPatch(0, 0, hs, vs, V_NOSCALEPATCH, bgpatch, NULL);
 		}
 	}
 	else if (bgtile)
