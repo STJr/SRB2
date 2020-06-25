@@ -4179,96 +4179,45 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 // --------------------------------------------------------------------------
 // Sort vissprites by distance
 // --------------------------------------------------------------------------
-static gr_vissprite_t gr_vsprsortedhead;
+gr_vissprite_t* gr_vsprorder[MAXVISSPRITES];
 
-static void HWR_SortVisSprites(void)
+// Note: For more correct transparency the transparent sprites would need to be
+// sorted and drawn together with transparent surfaces.
+static int CompareVisSprites(const void *p1, const void *p2)
 {
-	UINT32 i;
-	gr_vissprite_t *ds, *dsprev, *dsnext, *dsfirst;
-	gr_vissprite_t *best = NULL;
-	gr_vissprite_t unsorted;
-	float bestdist = 0.0f;
-	INT32 bestdispoffset = 0;
-
-	if (!gr_visspritecount)
-		return;
-
-	dsfirst = HWR_GetVisSprite(0);
-
-	for (i = 0, dsnext = dsfirst, ds = NULL; i < gr_visspritecount; i++)
-	{
-		dsprev = ds;
-		ds = dsnext;
-		if (i < gr_visspritecount - 1) dsnext = HWR_GetVisSprite(i + 1);
-
-		ds->next = dsnext;
-		ds->prev = dsprev;
-	}
-
-	// Fix first and last. ds still points to the last one after the loop
-	dsfirst->prev = &unsorted;
-	unsorted.next = dsfirst;
-	if (ds)
-		ds->next = &unsorted;
-	unsorted.prev = ds;
-
-	// pull the vissprites out by scale
-	gr_vsprsortedhead.next = gr_vsprsortedhead.prev = &gr_vsprsortedhead;
-	for (i = 0; i < gr_visspritecount; i++)
-	{
-		best = NULL;
-		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
-		{
-			if (!best || ds->tz > bestdist)
-			{
-				bestdist = ds->tz;
-				bestdispoffset = ds->dispoffset;
-				best = ds;
-			}
-			// order visprites of same scale by dispoffset, smallest first
-			else if (fabsf(ds->tz - bestdist) < 1.0E-36f && ds->dispoffset < bestdispoffset)
-			{
-				bestdispoffset = ds->dispoffset;
-				best = ds;
-			}
-		}
-		if (best)
-		{
-			best->next->prev = best->prev;
-			best->prev->next = best->next;
-			best->next = &gr_vsprsortedhead;
-			best->prev = gr_vsprsortedhead.prev;
-		}
-		gr_vsprsortedhead.prev->next = best;
-		gr_vsprsortedhead.prev = best;
-	}
-
+	gr_vissprite_t* spr1 = *(gr_vissprite_t*const*)p1;
+	gr_vissprite_t* spr2 = *(gr_vissprite_t*const*)p2;
+	int idiff;
+	float fdiff;
+	
+	// Make transparent sprites last. Comment from the previous sort implementation:
 	// Sryder:	Oh boy, while it's nice having ALL the sprites sorted properly, it fails when we bring MD2's into the
 	//			mix and they want to be translucent. So let's place all the translucent sprites and MD2's AFTER
 	//			everything else, but still ordered of course, the depth buffer can handle the opaque ones plenty fine.
 	//			We just need to move all translucent ones to the end in order
 	// TODO:	Fully sort all sprites and MD2s with walls and floors, this part will be unnecessary after that
-	best = gr_vsprsortedhead.next;
+	int transparency1 = (spr1->mobj->flags2 & MF2_SHADOW) || (spr1->mobj->frame & FF_TRANSMASK);
+	int transparency2 = (spr2->mobj->flags2 & MF2_SHADOW) || (spr2->mobj->frame & FF_TRANSMASK);
+	idiff = transparency1 - transparency2;
+	if (idiff != 0) return idiff;
+
+	fdiff = spr2->tz - spr1->tz; // this order seems correct when checking with apitrace. Back to front.
+	if (fabsf(fdiff) < 1.0E-36f)
+		return spr1->dispoffset - spr2->dispoffset; // smallest dispoffset first if sprites are at (almost) same location.
+	else if (fdiff > 0)
+		return 1;
+	else
+		return -1;
+}
+
+static void HWR_SortVisSprites(void)
+{
+	UINT32 i;
 	for (i = 0; i < gr_visspritecount; i++)
 	{
-		if ((best->mobj->flags2 & MF2_SHADOW) || (best->mobj->frame & FF_TRANSMASK))
-		{
-			if (best == gr_vsprsortedhead.next)
-			{
-				gr_vsprsortedhead.next = best->next;
-			}
-			best->prev->next = best->next;
-			best->next->prev = best->prev;
-			best->prev = gr_vsprsortedhead.prev;
-			gr_vsprsortedhead.prev->next = best;
-			gr_vsprsortedhead.prev = best;
-			ds = best;
-			best = best->next;
-			ds->next = &gr_vsprsortedhead;
-		}
-		else
-			best = best->next;
+		gr_vsprorder[i] = HWR_GetVisSprite(i);
 	}
+	qsort(gr_vsprorder, gr_visspritecount, sizeof(gr_vissprite_t*), CompareVisSprites);
 }
 
 // A drawnode is something that points to a 3D floor, 3D side, or masked
@@ -4402,28 +4351,66 @@ void HWR_AddTransparentPolyobjectFloor(levelflat_t *levelflat, polyobj_t *polyse
 	numpolyplanes++;
 }
 
+// putting sortindex and sortnode here so the comparator function can see them
+gr_drawnode_t *sortnode;
+size_t *sortindex;
+
+static int CompareDrawNodes(const void *p1, const void *p2)
+{
+	size_t n1 = *(const size_t*)p1;
+	size_t n2 = *(const size_t*)p2;
+	INT32 v1 = 0;
+	INT32 v2 = 0;
+	INT32 diff;
+	if (sortnode[n1].plane)
+		v1 = sortnode[n1].plane->drawcount;
+	else if (sortnode[n1].polyplane)
+		v1 = sortnode[n1].polyplane->drawcount;
+	else if (sortnode[n1].wall)
+		v1 = sortnode[n1].wall->drawcount;
+	else I_Error("CompareDrawNodes: n1 unknown");
+
+	if (sortnode[n2].plane)
+		v2 = sortnode[n2].plane->drawcount;
+	else if (sortnode[n2].polyplane)
+		v2 = sortnode[n2].polyplane->drawcount;
+	else if (sortnode[n2].wall)
+		v2 = sortnode[n2].wall->drawcount;
+	else I_Error("CompareDrawNodes: n2 unknown");
+
+	diff = v2 - v1;
+	if (diff == 0) I_Error("CompareDrawNodes: diff is zero");
+	return diff;
+}
+
+static int CompareDrawNodePlanes(const void *p1, const void *p2)
+{
+	size_t n1 = *(const size_t*)p1;
+	size_t n2 = *(const size_t*)p2;
+	if (!sortnode[n1].plane) I_Error("CompareDrawNodePlanes: Uh.. This isn't a plane! (n1)");
+	if (!sortnode[n2].plane) I_Error("CompareDrawNodePlanes: Uh.. This isn't a plane! (n2)");
+	return ABS(sortnode[n2].plane->fixedheight - viewz) - ABS(sortnode[n1].plane->fixedheight - viewz);
+}
+
 //
 // HWR_CreateDrawNodes
 // Creates and sorts a list of drawnodes for the scene being rendered.
 static void HWR_CreateDrawNodes(void)
 {
-	UINT32 i = 0, p = 0, prev = 0, loop;
-	const fixed_t pviewz = dup_viewz;
+	UINT32 i = 0, p = 0;
+	size_t run_start = 0;
 
 	// Dump EVERYTHING into a huge drawnode list. Then we'll sort it!
 	// Could this be optimized into _AddTransparentWall/_AddTransparentPlane?
 	// Hell yes! But sort algorithm must be modified to use a linked list.
-	gr_drawnode_t *sortnode = Z_Calloc((sizeof(planeinfo_t)*numplanes)
-									+ (sizeof(polyplaneinfo_t)*numpolyplanes)
-									+ (sizeof(wallinfo_t)*numwalls)
-									,PU_STATIC, NULL);
+	sortnode = Z_Calloc((sizeof(planeinfo_t)*numplanes)
+					+ (sizeof(polyplaneinfo_t)*numpolyplanes)
+					+ (sizeof(wallinfo_t)*numwalls)
+					,PU_STATIC, NULL);
 	// todo:
 	// However, in reality we shouldn't be re-copying and shifting all this information
 	// that is already lying around. This should all be in some sort of linked list or lists.
-	size_t *sortindex = Z_Calloc(sizeof(size_t) * (numplanes + numpolyplanes + numwalls), PU_STATIC, NULL);
-
-	// If true, swap the draw order.
-	boolean shift = false;
+	sortindex = Z_Calloc(sizeof(size_t) * (numplanes + numpolyplanes + numwalls), PU_STATIC, NULL);
 	
 	rs_hw_nodesorttime = I_GetTimeMicros();
 
@@ -4449,104 +4436,36 @@ static void HWR_CreateDrawNodes(void)
 
 	// p is the number of stuff to sort
 
-	// Add the 3D floors, thicksides, and masked textures...
-	// Instead of going through drawsegs, we need to iterate
-	// through the lists of masked textures and
-	// translucent ffloors being drawn.
+	// sort the list based on the value of the 'drawcount' member of the drawnodes.
+	qsort(sortindex, p, sizeof(size_t), CompareDrawNodes);
 
-	// This is a bubble sort! Wahoo!
-
-	// Stuff is sorted:
-	//      sortnode[sortindex[0]]   = farthest away
-	//      sortnode[sortindex[p-1]] = closest
-	// "i" should be closer. "prev" should be further.
-	// The lower drawcount is, the further it is from the screen.
-
-	for (loop = 0; loop < p; loop++)
+	// an additional pass is needed to correct the order of consecutive planes in the list.
+	// for each consecutive run of planes in the list, sort that run based on plane height and view height.
+	while (run_start < p-1)// p-1 because a 1 plane run at the end of the list does not count
 	{
-		for (i = 1; i < p; i++)
+		// locate run start
+		if (sortnode[sortindex[run_start]].plane)
 		{
-			prev = i-1;
-			if (sortnode[sortindex[i]].plane)
+			// found it, now look for run end
+			size_t run_end;// (inclusive)
+			for (i = run_start+1; i < p; i++)// size_t and UINT32 being used mixed here... shouldnt break anything though..
 			{
-				// What are we comparing it with?
-				if (sortnode[sortindex[prev]].plane)
-				{
-					// Plane (i) is further away than plane (prev)
-					if (ABS(sortnode[sortindex[i]].plane->fixedheight - pviewz) > ABS(sortnode[sortindex[prev]].plane->fixedheight - pviewz))
-						shift = true;
-				}
-				if (sortnode[sortindex[prev]].polyplane)
-				{
-					// Plane (i) is further away than polyplane (prev)
-					if (ABS(sortnode[sortindex[i]].plane->fixedheight - pviewz) > ABS(sortnode[sortindex[prev]].polyplane->fixedheight - pviewz))
-						shift = true;
-				}
-				else if (sortnode[sortindex[prev]].wall)
-				{
-					// Plane (i) is further than wall (prev)
-					if (sortnode[sortindex[i]].plane->drawcount > sortnode[sortindex[prev]].wall->drawcount)
-						shift = true;
-				}
+				if (!sortnode[sortindex[i]].plane) break;
 			}
-			else if (sortnode[sortindex[i]].polyplane)
+			run_end = i-1;
+			if (run_end > run_start)// if there are multiple consecutive planes, not just one
 			{
-				// What are we comparing it with?
-				if (sortnode[sortindex[prev]].plane)
-				{
-					// Plane (i) is further away than plane (prev)
-					if (ABS(sortnode[sortindex[i]].polyplane->fixedheight - pviewz) > ABS(sortnode[sortindex[prev]].plane->fixedheight - pviewz))
-						shift = true;
-				}
-				if (sortnode[sortindex[prev]].polyplane)
-				{
-					// Plane (i) is further away than polyplane (prev)
-					if (ABS(sortnode[sortindex[i]].polyplane->fixedheight - pviewz) > ABS(sortnode[sortindex[prev]].polyplane->fixedheight - pviewz))
-						shift = true;
-				}
-				else if (sortnode[sortindex[prev]].wall)
-				{
-					// Plane (i) is further than wall (prev)
-					if (sortnode[sortindex[i]].polyplane->drawcount > sortnode[sortindex[prev]].wall->drawcount)
-						shift = true;
-				}
+				// consecutive run of planes found, now sort it
+				qsort(sortindex + run_start, run_end - run_start + 1, sizeof(size_t), CompareDrawNodePlanes);
 			}
-			else if (sortnode[sortindex[i]].wall)
-			{
-				// What are we comparing it with?
-				if (sortnode[sortindex[prev]].plane)
-				{
-					// Wall (i) is further than plane(prev)
-					if (sortnode[sortindex[i]].wall->drawcount > sortnode[sortindex[prev]].plane->drawcount)
-						shift = true;
-				}
-				if (sortnode[sortindex[prev]].polyplane)
-				{
-					// Wall (i) is further than polyplane(prev)
-					if (sortnode[sortindex[i]].wall->drawcount > sortnode[sortindex[prev]].polyplane->drawcount)
-						shift = true;
-				}
-				else if (sortnode[sortindex[prev]].wall)
-				{
-					// Wall (i) is further than wall (prev)
-					if (sortnode[sortindex[i]].wall->drawcount > sortnode[sortindex[prev]].wall->drawcount)
-						shift = true;
-				}
-			}
-
-			if (shift)
-			{
-				size_t temp;
-
-				temp = sortindex[prev];
-				sortindex[prev] = sortindex[i];
-				sortindex[i] = temp;
-
-				shift = false;
-			}
-
-		} //i++
-	} // loop++
+			run_start = run_end + 1;// continue looking for runs coming right after this one
+		}
+		else
+		{
+			// this wasnt the run start, try next one
+			run_start++;
+		}
+	}
 
 	rs_hw_nodesorttime = I_GetTimeMicros() - rs_hw_nodesorttime;
 	
@@ -4605,52 +4524,45 @@ static void HWR_CreateDrawNodes(void)
 // added the stransform so they can be switched as drawing happenes so MD2s and sprites are sorted correctly with each other
 static void HWR_DrawSprites(void)
 {
-	if (gr_visspritecount > 0)
+	UINT32 i;
+	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_grmodellighting.value);
+	for (i = 0; i < gr_visspritecount; i++)
 	{
-		gr_vissprite_t *spr;
-		HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_grmodellighting.value);
-
-		// draw all vissprites back to front
-		for (spr = gr_vsprsortedhead.next;
-		     spr != &gr_vsprsortedhead;
-		     spr = spr->next)
-		{
+		gr_vissprite_t *spr = gr_vsprorder[i];
 #ifdef HWPRECIP
-			if (spr->precip)
-				HWR_DrawPrecipitationSprite(spr);
-			else
+		if (spr->precip)
+			HWR_DrawPrecipitationSprite(spr);
+		else
 #endif
+		{
+			if (spr->mobj && spr->mobj->shadowscale && cv_shadow.value)
 			{
-				if (spr->mobj && spr->mobj->shadowscale && cv_shadow.value)
-				{
-					HWR_DrawDropShadow(spr->mobj, spr->mobj->shadowscale);
-				}
+				HWR_DrawDropShadow(spr->mobj, spr->mobj->shadowscale);
+			}
 
-				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-				{
-					if (!cv_grmodels.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
-						HWR_DrawSprite(spr);
-					else
-					{
-						if (!HWR_DrawModel(spr))
-							HWR_DrawSprite(spr);
-					}
-				}
+			if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+			{
+				if (!cv_grmodels.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
+					HWR_DrawSprite(spr);
 				else
 				{
-					if (!cv_grmodels.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
+					if (!HWR_DrawModel(spr))
 						HWR_DrawSprite(spr);
-					else
-					{
-						if (!HWR_DrawModel(spr))
-							HWR_DrawSprite(spr);
-					}
+				}
+			}
+			else
+			{
+				if (!cv_grmodels.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
+					HWR_DrawSprite(spr);
+				else
+				{
+					if (!HWR_DrawModel(spr))
+						HWR_DrawSprite(spr);
 				}
 			}
 		}
-
-		HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, 0);
 	}
+	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, 0);
 }
 
 // --------------------------------------------------------------------------

@@ -28,7 +28,9 @@ typedef struct
 	float       offset;
 	model_t     *model;
 	void        *grpatch;
+	boolean     notexturefile; // true if texture file was not found
 	void        *blendgrpatch;
+	boolean     noblendfile; // true if blend texture file was not found
 	boolean     notfound;
 	INT32       skin;
 	boolean     error;

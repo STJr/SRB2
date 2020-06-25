@@ -61,9 +61,6 @@ typedef struct
 // equivalent of the software renderer's vissprites
 typedef struct gr_vissprite_s
 {
-	// Doubly linked list
-	struct gr_vissprite_s *prev;
-	struct gr_vissprite_s *next;
 	float x1, x2;
 	float tz, ty;
 	//lumpnum_t patchlumpnum;

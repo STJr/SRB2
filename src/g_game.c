@@ -2067,7 +2067,7 @@ boolean G_Responder(event_t *ev)
 					 && players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
 						continue;
 				}
-				else if (gametype == GT_HIDEANDSEEK)
+				else if (gametyperules & GTR_HIDEFROZEN)
 				{
 					if (players[consoleplayer].pflags & PF_TAGIT)
 						continue;
@@ -2618,7 +2618,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 	}
 
-	if (gametype == GT_COOP)
+	if (gametyperules & GTR_EMERALDHUNT)
 		P_FindEmerald(); // scan for emeralds to hunt for
 
 	// If NiGHTS, find lowest mare to start with.
@@ -2786,6 +2786,26 @@ mapthing_t *G_FindCoopStart(INT32 playernum)
 	return NULL;
 }
 
+// Find a Co-op start, or fallback into other types of starts.
+static inline mapthing_t *G_FindCoopStartOrFallback(INT32 playernum)
+{
+	mapthing_t *spawnpoint = NULL;
+	if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
+	&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
+		spawnpoint = G_FindCTFStart(playernum); // fallback
+	return spawnpoint;
+}
+
+// Find a Match start, or fallback into other types of starts.
+static inline mapthing_t *G_FindMatchStartOrFallback(INT32 playernum)
+{
+	mapthing_t *spawnpoint = NULL;
+	if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
+	&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
+		spawnpoint = G_FindCoopStart(playernum); // fallback
+	return spawnpoint;
+}
+
 mapthing_t *G_FindMapStart(INT32 playernum)
 {
 	mapthing_t *spawnpoint;
@@ -2793,9 +2813,22 @@ mapthing_t *G_FindMapStart(INT32 playernum)
 	if (!playeringame[playernum])
 		return NULL;
 
+	// -- Spectators --
+	// Order in platform gametypes: Coop->DM->CTF
+	// And, with deathmatch starts: DM->CTF->Coop
+	if (players[playernum].spectator)
+	{
+		// In platform gametypes, spawn in Co-op starts first
+		// Overriden by GTR_DEATHMATCHSTARTS.
+		if (G_PlatformGametype() && !(gametyperules & GTR_DEATHMATCHSTARTS))
+			spawnpoint = G_FindCoopStartOrFallback(playernum);
+		else
+			spawnpoint = G_FindMatchStartOrFallback(playernum);
+	}
+
 	// -- CTF --
 	// Order: CTF->DM->Coop
-	if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
+	else if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
 	{
 		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
 		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
@@ -2804,21 +2837,13 @@ mapthing_t *G_FindMapStart(INT32 playernum)
 
 	// -- DM/Tag/CTF-spectator/etc --
 	// Order: DM->CTF->Coop
-	else if ((gametyperules & GTR_DEATHMATCHSTARTS) && !(players[playernum].pflags & PF_TAGIT))
-	{
-		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
-		&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
-			spawnpoint = G_FindCoopStart(playernum); // fallback
-	}
+	else if (G_TagGametype() ? (!(players[playernum].pflags & PF_TAGIT)) : (gametyperules & GTR_DEATHMATCHSTARTS))
+		spawnpoint = G_FindMatchStartOrFallback(playernum);
 
 	// -- Other game modes --
 	// Order: Coop->DM->CTF
 	else
-	{
-		if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
-		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-			spawnpoint = G_FindCTFStart(playernum); // fallback
-	}
+		spawnpoint = G_FindCoopStartOrFallback(playernum);
 
 	//No spawns found. ANYWHERE.
 	if (!spawnpoint)
@@ -2904,7 +2929,7 @@ void G_DoReborn(INT32 playernum)
 		return;
 	}
 
-	if (countdowntimeup || (!(netgame || multiplayer) && gametype == GT_COOP))
+	if (countdowntimeup || (!(netgame || multiplayer) && (gametyperules & GTR_CAMPAIGN)))
 		resetlevel = true;
 	else if ((G_GametypeUsesCoopLives() || G_GametypeUsesCoopStarposts()) && (netgame || multiplayer) && !G_IsSpecialStage(gamemap))
 	{
@@ -3109,7 +3134,7 @@ void G_AddPlayer(INT32 playernum)
 
 	p->height = mobjinfo[MT_PLAYER].height;
 
-	if (G_GametypeUsesLives() || ((netgame || multiplayer) && gametype == GT_COOP))
+	if (G_GametypeUsesLives() || ((netgame || multiplayer) && (gametyperules & GTR_FRIENDLY)))
 		p->lives = cv_startinglives.value;
 
 	if ((countplayers && !notexiting) || G_IsSpecialStage(gamemap))
@@ -3158,7 +3183,7 @@ void G_ExitLevel(void)
 				CV_SetValue(&cv_teamscramble, cv_scrambleonchange.value);
 		}
 
-		if (!(gametyperules & GTR_CAMPAIGN))
+		if (!(gametyperules & (GTR_FRIENDLY|GTR_CAMPAIGN)))
 			CONS_Printf(M_GetText("The round has ended.\n"));
 
 		// Remove CEcho text on round end.
@@ -3224,7 +3249,7 @@ UINT32 gametypedefaultrules[NUMGAMETYPES] =
 	// Tag
 	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
 	// Hide and Seek
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
+	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_HIDEFROZEN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
 
 	// CTF
 	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_TEAMFLAGS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
@@ -3570,6 +3595,16 @@ boolean G_PlatformGametype(void)
 }
 
 //
+// G_CoopGametype
+//
+// Returns true if a gametype is a Co-op gametype.
+//
+boolean G_CoopGametype(void)
+{
+	return ((gametyperules & (GTR_FRIENDLY|GTR_CAMPAIGN)) == (GTR_FRIENDLY|GTR_CAMPAIGN));
+}
+
+//
 // G_TagGametype
 //
 // For Jazz's Tag/HnS modes that have a lot of special cases..
@@ -3834,7 +3869,10 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed))
+	// If the current gametype has no intermission screen set, then don't start it.
+	Y_DetermineIntermissionType();
+
+	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed) || (intertype == int_none))
 	{
 		G_UpdateVisited();
 		G_AfterIntermission();
@@ -3860,7 +3898,7 @@ static void G_DoCompleted(void)
 					remove(liveeventbackup);
 				cursaveslot = 0;
 			}
-			else if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+			else if ((!modifiedgame || savemoddata) && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
 				G_SaveGame((UINT32)cursaveslot, spstage_start);
 		}
 	}
@@ -3886,7 +3924,7 @@ void G_AfterIntermission(void)
 
 	HU_ClearCEcho();
 
-	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1 && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
+	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1 && (gamecomplete || !(marathonmode & MA_NOCUTSCENES))) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
 	else
 	{
@@ -3912,7 +3950,7 @@ static void G_DoWorldDone(void)
 {
 	if (server)
 	{
-		if (gametype == GT_COOP)
+		if (gametyperules & GTR_CAMPAIGN)
 			// don't reset player between maps
 			D_MapChange(nextmap+1, gametype, ultimatemode, false, 0, false, false);
 		else

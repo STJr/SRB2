@@ -1156,7 +1156,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 	// Server has skin change restrictions.
 	if (cv_restrictskinchange.value)
 	{
-		if (gametype == GT_COOP)
+		if (gametyperules & GTR_FRIENDLY)
 			return true;
 
 		// Can change skin during initial countdown.
@@ -1747,7 +1747,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	}
 	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d gametype=%d ultmode=%d resetplayers=%d delay=%d skipprecutscene=%d\n",
 	           mapnum, newgametype, pultmode, resetplayers, delay, skipprecutscene);
-	if ((netgame || multiplayer) && !((gametype == newgametype) && (newgametype == GT_COOP)))
+	if ((netgame || multiplayer) && !((gametype == newgametype) && (gametypedefaultrules[newgametype] & GTR_CAMPAIGN)))
 		FLS = false;
 
 	if (delay != 2)
@@ -1989,7 +1989,7 @@ static void Command_Map_f(void)
 			fromlevelselect =
 				( netgame || multiplayer ) &&
 				newgametype == gametype    &&
-				newgametype == GT_COOP;
+				gametypedefaultrules[newgametype] & GTR_CAMPAIGN;
 		}
 	}
 
@@ -2779,7 +2779,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 			players[playernum].spectator = false;
 
 			//If joining after hidetime in normal tag, default to being IT.
-			if (gametype == GT_TAG && (leveltime > (hidetime * TICRATE)))
+			if (((gametyperules & (GTR_TAG|GTR_HIDEFROZEN)) == GTR_TAG) && (leveltime > (hidetime * TICRATE)))
 			{
 				NetPacket.packet.newteam = 1; //minor hack, causes the "is it" message to be printed later.
 				players[playernum].pflags |= PF_TAGIT; //make the player IT.
@@ -3627,7 +3627,7 @@ static void PointLimit_OnChange(void)
 static void NumLaps_OnChange(void)
 {
 	// Just don't be verbose
-	if (gametype == GT_RACE)
+	if ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)
 		CONS_Printf(M_GetText("Number of laps set to %d\n"), cv_numlaps.value);
 }
 
@@ -3741,7 +3741,7 @@ static void ExitMove_OnChange(void)
 {
 	UINT8 i;
 
-	if (!(netgame || multiplayer) || gametype != GT_COOP)
+	if (!(netgame || multiplayer) || !(gametyperules & GTR_FRIENDLY))
 		return;
 
 	if (cv_exitmove.value)
@@ -4615,7 +4615,7 @@ static void Command_ShowTime_f(void)
 
 static void BaseNumLaps_OnChange(void)
 {
-	if (gametype == GT_RACE)
+	if ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)
 	{
 		if (cv_basenumlaps.value)
 			CONS_Printf(M_GetText("Number of laps will be changed to map defaults next round.\n"));

@@ -4950,7 +4950,7 @@ void A_ThrownRing(mobj_t *actor)
 				continue;
 
 			// Don't home in on teammates.
-			if ((gametyperules & GTR_TEAMFLAGS)
+			if ((gametyperules & GTR_TEAMS)
 				&& actor->target->player->ctfteam == player->ctfteam)
 				continue;
 		}
@@ -5142,12 +5142,10 @@ void A_SignPlayer(mobj_t *actor)
 			;
 		else if (!skin->sprites[SPR2_SIGN].numframes)
 			signcolor = facecolor;
-		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
+		else if ((facecolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
 			signcolor = skin->prefoppositecolor;
-		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
-			signcolor = skincolors[actor->target->player->skincolor].invcolor;
-		else
-			signcolor = SKINCOLOR_NONE;
+		else if (facecolor) // Set the sign to be an appropriate background color for this player's skincolor.
+			signcolor = skincolors[facecolor].invcolor;
 	}
 	else if (locvar1 != -3) // set to a defined skin
 	{
@@ -5211,6 +5209,7 @@ void A_SignPlayer(mobj_t *actor)
 			P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		if (!signcolor)
 			signcolor = SKINCOLOR_CARBON;
+		facecolor = signcolor;
 	}
 
 	actor->tracer->color = signcolor;
@@ -6524,7 +6523,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 		if (changecolor)
 		{
-			if (!(gametyperules & GTR_TEAMFLAGS))
+			if (!(gametyperules & GTR_TEAMS))
 				mo->color = actor->target->color; //copy color
 			else if (actor->target->player->ctfteam == 2)
 				mo->color = skincolor_bluering;
@@ -6540,7 +6539,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (!(gametyperules & GTR_TEAMFLAGS))
+		if (!(gametyperules & GTR_TEAMS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -6555,7 +6554,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (!(gametyperules & GTR_TEAMFLAGS))
+		if (!(gametyperules & GTR_TEAMS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
