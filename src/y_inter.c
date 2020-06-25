@@ -141,7 +141,6 @@ static y_data data;
 
 // graphics
 static patch_t *bgpatch = NULL;     // INTERSCR
-static patch_t *widebgpatch = NULL; // INTERSCW
 static patch_t *bgtile = NULL;      // SPECTILE/SRB2BACK
 static patch_t *interpic = NULL;    // custom picture defined in map header
 static boolean usetile;
@@ -1265,7 +1264,6 @@ void Y_StartIntermission(void)
 			data.coop.actnum = mapheaderinfo[gamemap-1]->actnum;
 
 			// get background patches
-			widebgpatch = W_CachePatchName("INTERSCW", PU_PATCH);
 			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 
 			// grab an interscreen if appropriate
@@ -2083,7 +2081,6 @@ static void Y_UnloadData(void)
 
 	// unload the background patches
 	UNLOAD(bgpatch);
-	UNLOAD(widebgpatch);
 	UNLOAD(bgtile);
 	UNLOAD(interpic);
 
@@ -2126,7 +2123,6 @@ static void Y_CleanupData(void)
 {
 	// unload the background patches
 	CLEANUP(bgpatch);
-	CLEANUP(widebgpatch);
 	CLEANUP(bgtile);
 	CLEANUP(interpic);
 
