@@ -1430,11 +1430,13 @@ state_t states[NUMSTATES] =
 
 	{SPR_FANG,  8,  0, {A_PrepareRepeat}, 1, 0, S_FANG_PINCHPATHINGSTART2}, // S_FANG_PINCHPATHINGSTART1
 	{SPR_FANG,  8,  0, {A_PlayActiveSound}, 0, 0, S_FANG_PINCHPATHING}, // S_FANG_PINCHPATHINGSTART2
-	{SPR_FANG,  8,  0, {A_Boss5FindWaypoint}, 1, 0, S_FANG_PINCHBOUNCE1}, // S_FANG_PINCHPATHING
+	{SPR_FANG,  8,  0, {A_Boss5FindWaypoint}, 1, 0, S_FANG_PINCHBOUNCE0}, // S_FANG_PINCHPATHING
+	{SPR_FANG,  8,  0, {A_SetObjectFlags}, MF_NOCLIP|MF_NOCLIPHEIGHT, 2, S_FANG_PINCHBOUNCE1}, // S_FANG_PINCHBOUNCE0
 	{SPR_FANG,  8,  2, {A_Thrust}, 0, 1, S_FANG_PINCHBOUNCE2}, // S_FANG_PINCHBOUNCE1
 	{SPR_FANG,  9,  2, {NULL}, 0, 0, S_FANG_PINCHBOUNCE3}, // S_FANG_PINCHBOUNCE2
 	{SPR_FANG, 10,  2, {A_Boss5Jump}, 0, 0, S_FANG_PINCHBOUNCE4}, // S_FANG_PINCHBOUNCE3
-	{SPR_FANG, 10,  1, {A_Boss5CheckFalling}, S_FANG_PINCHSKID1, S_FANG_PINCHFALL1, S_FANG_PINCHBOUNCE4}, // S_FANG_PINCHBOUNCE4
+	{SPR_FANG, 10,  1, {A_Boss5CheckFalling}, S_FANG_PINCHSKID1, S_FANG_PINCHFALL0, S_FANG_PINCHBOUNCE4}, // S_FANG_PINCHBOUNCE4
+	{SPR_FANG, 12,  0, {A_SetObjectFlags}, MF_NOCLIP|MF_NOCLIPHEIGHT, 1, S_FANG_PINCHFALL1}, // S_FANG_PINCHFALL0
 	{SPR_FANG, 12,  1, {A_Boss5CheckOnGround}, S_FANG_PINCHSKID1, 0, S_FANG_PINCHFALL2}, // S_FANG_PINCHFALL1
 	{SPR_FANG, 13,  1, {A_Boss5CheckOnGround}, S_FANG_PINCHSKID1, 0, S_FANG_PINCHFALL1}, // S_FANG_PINCHFALL2
 	{SPR_FANG,  4,  0, {A_PlayAttackSound}, 0, 0, S_FANG_PINCHSKID2}, // S_FANG_PINCHSKID1
@@ -3362,7 +3364,7 @@ state_t states[NUMSTATES] =
 
 	// CTF Sign
 	{SPR_GFLG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
-	
+
 	// Finish flag
 	{SPR_FNSF,    FF_TRANS30, -1, {NULL}, 0, 0, S_NULL}, // S_FINISHFLAG
 
@@ -18010,7 +18012,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
-	
+
 	{           // MT_FINISHFLAG
 		-1,             // doomednum
 		S_FINISHFLAG,   // spawnstate
@@ -19855,7 +19857,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
 	},
-	
+
 	{           // MT_FLINGNIGHTSSTAR
 		-1,             // doomednum
 		S_NIGHTSSTAR,   // spawnstate
@@ -21691,7 +21693,7 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 	{"Violet",     {0xd0, 0xd1, 0xd2, 0xca, 0xcc, 0xb8, 0xb9, 0xb9, 0xba, 0xa8, 0xa8, 0xa9, 0xa9, 0xfd, 0xfe, 0xfe}, SKINCOLOR_MINT,       6,  V_MAGENTAMAP, true}, // SKINCOLOR_VIOLET
 	{"Lilac",      {0x00, 0xd0, 0xd1, 0xd2, 0xd3, 0xc1, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc5, 0xc6, 0xc6, 0xfe, 0x1f}, SKINCOLOR_VAPOR,      4,  V_ROSYMAP,    true}, // SKINCOLOR_LILAC
 	{"Plum",       {0xc8, 0xd3, 0xd5, 0xd6, 0xd7, 0xce, 0xcf, 0xb9, 0xb9, 0xba, 0xba, 0xa9, 0xa9, 0xa9, 0xfd, 0xfe}, SKINCOLOR_MINT,       7,  V_ROSYMAP,    true}, // SKINCOLOR_PLUM
-	{"Raspberry",  {0xc8, 0xc9, 0xca, 0xcb, 0xcb, 0xcc, 0xcd, 0xcd, 0xce, 0xb9, 0xb9, 0xba, 0xba, 0xbb, 0xfe, 0xfe}, SKINCOLOR_APPLE,      15, V_MAGENTAMAP, true}, // SKINCOLOR_RASPBERRY
+	{"Raspberry",  {0xc8, 0xc9, 0xca, 0xcb, 0xcb, 0xcc, 0xcd, 0xcd, 0xce, 0xb9, 0xb9, 0xba, 0xba, 0xbb, 0xfe, 0xfe}, SKINCOLOR_APPLE,      13, V_MAGENTAMAP, true}, // SKINCOLOR_RASPBERRY
 	{"Rosy",       {0xfc, 0xc8, 0xc8, 0xc9, 0xc9, 0xca, 0xca, 0xcb, 0xcb, 0xcc, 0xcc, 0xcd, 0xcd, 0xce, 0xce, 0xcf}, SKINCOLOR_AQUA,       1,  V_ROSYMAP,    true}, // SKINCOLOR_ROSY
 
 	// super
