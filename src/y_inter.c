@@ -227,8 +227,7 @@ static void Y_IntermissionTokenDrawer(void)
 //
 // Y_ConsiderScreenBuffer
 //
-// Can we copy the current screen
-// to a buffer?
+// Can we copy the current screen to a buffer?
 //
 void Y_ConsiderScreenBuffer(void)
 {
@@ -254,9 +253,7 @@ void Y_ConsiderScreenBuffer(void)
 //
 // Y_RescaleScreenBuffer
 //
-// Write the rescaled source picture,
-// to the destination picture that
-// has the current screen's resolutions.
+// Write the rescaled source picture, to the destination picture that has the current screen's resolutions.
 //
 static void Y_RescaleScreenBuffer(void)
 {
@@ -326,13 +323,6 @@ void Y_IntermissionDrawer(void)
 	if (rendermode == render_none)
 		return;
 
-	if (intertype == int_none)
-	{
-		LUAh_IntermissionHUD();
-		return;
-	}
-
-	if (!usebuffer)
 	// Lactozilla: Renderer switching
 	if (needpatchrecache)
 	{
@@ -373,11 +363,11 @@ void Y_IntermissionDrawer(void)
 		{
 			if (widebgpatch && rendermode == render_soft && vid.width / vid.dupx == 400)
 				V_DrawScaledPatch(0, 0, V_SNAPTOLEFT, widebgpatch);
-			else
+			else if (bgpatch)
 				V_DrawScaledPatch(0, 0, 0, bgpatch);
 		}
 	}
-	else
+	else if (bgtile)
 		V_DrawPatchFill(bgtile);
 
 	LUAh_IntermissionHUD();
@@ -1187,6 +1177,34 @@ void Y_Ticker(void)
 }
 
 //
+// Y_DetermineIntermissionType
+//
+// Determines the intermission type from the current gametype.
+//
+void Y_DetermineIntermissionType(void)
+{
+	// set to int_none initially
+	intertype = int_none;
+
+	if (intermissiontypes[gametype] != int_none)
+		intertype = intermissiontypes[gametype];
+	else if (gametype == GT_COOP)
+		intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
+	else if (gametype == GT_TEAMMATCH)
+		intertype = int_teammatch;
+	else if (gametype == GT_MATCH
+	 || gametype == GT_TAG
+	 || gametype == GT_HIDEANDSEEK)
+		intertype = int_match;
+	else if (gametype == GT_RACE)
+		intertype = int_race;
+	else if (gametype == GT_COMPETITION)
+		intertype = int_comp;
+	else if (gametype == GT_CTF)
+		intertype = int_ctf;
+}
+
+//
 // Y_StartIntermission
 //
 // Called by G_DoCompleted. Sets up data for intermission drawer/ticker.
@@ -1207,12 +1225,11 @@ void Y_StartIntermission(void)
 	if (!multiplayer)
 	{
 		timer = 0;
-
 		intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
 	}
 	else
 	{
-		if (cv_inttime.value == 0 && gametype == GT_COOP)
+		if (cv_inttime.value == 0 && ((intertype == int_coop) || (intertype == int_spec)))
 			timer = 0;
 		else
 		{
@@ -1221,23 +1238,6 @@ void Y_StartIntermission(void)
 			if (!timer)
 				timer = 1;
 		}
-
-		if (intermissiontypes[gametype] != int_none)
-			intertype = intermissiontypes[gametype];
-		else if (gametype == GT_COOP)
-			intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
-		else if (gametype == GT_TEAMMATCH)
-			intertype = int_teammatch;
-		else if (gametype == GT_MATCH
-		 || gametype == GT_TAG
-		 || gametype == GT_HIDEANDSEEK)
-			intertype = int_match;
-		else if (gametype == GT_RACE)
-			intertype = int_race;
-		else if (gametype == GT_COMPETITION)
-			intertype = int_comp;
-		else if (gametype == GT_CTF)
-			intertype = int_ctf;
 	}
 
 	// We couldn't display the intermission even if we wanted to.

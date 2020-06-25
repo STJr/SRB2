@@ -4078,7 +4078,7 @@ void P_SetupSignExit(player_t *player)
 
 		if (!numfound
 			&& !(player->mo->target && player->mo->target->type == MT_SIGN)
-			&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value))
+			&& !((gametyperules & GTR_FRIENDLY) && (netgame || multiplayer) && cv_exitmove.value))
 				P_SetTarget(&player->mo->target, thing);
 
 		if (thing->state != &states[thing->info->spawnstate])
@@ -4109,7 +4109,7 @@ void P_SetupSignExit(player_t *player)
 
 		if (!numfound
 			&& !(player->mo->target && player->mo->target->type == MT_SIGN)
-			&& !(gametype == GT_COOP && (netgame || multiplayer) && cv_exitmove.value))
+			&& !((gametyperules & GTR_FRIENDLY) && (netgame || multiplayer) && cv_exitmove.value))
 				P_SetTarget(&player->mo->target, thing);
 
 		if (thing->state != &states[thing->info->spawnstate])
@@ -4465,7 +4465,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 					continue;
 				if (players[i].bot)
 					continue;
-				if (gametype == GT_COOP && players[i].lives <= 0)
+				if (G_CoopGametype() && players[i].lives <= 0)
 					continue;
 				if (roversector)
 				{
@@ -4691,7 +4691,7 @@ DoneSection2:
 				// FOF custom exits not to work.
 				lineindex = P_FindSpecialLineFromTag(2, sector->tag, -1);
 
-				if (gametype == GT_COOP && lineindex != -1) // Custom exit!
+				if (G_CoopGametype() && lineindex != -1) // Custom exit!
 				{
 					// Special goodies with the block monsters flag depending on emeralds collected
 					if ((lines[lineindex].flags & ML_BLOCKMONSTERS) && ALL7EMERALDS(emeralds))
@@ -4925,7 +4925,7 @@ DoneSection2:
 			break;
 
 		case 10: // Finish Line
-			if (gametype == GT_RACE && !player->exiting)
+			if (((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE) && !player->exiting)
 			{
 				if (player->starpostnum == numstarposts) // Must have touched all the starposts
 				{
@@ -6240,7 +6240,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 		switch(GETSECSPECIAL(sector->special, 4))
 		{
 			case 10: // Circuit finish line
-				if (gametype == GT_RACE)
+				if ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)
 					circuitmap = true;
 				break;
 		}
