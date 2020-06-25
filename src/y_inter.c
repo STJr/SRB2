@@ -330,7 +330,7 @@ void Y_IntermissionDrawer(void)
 		safetorender = false;
 	}
 
-	if (!usebuffer || !safetorender)
+	if (!safetorender)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 	if (!safetorender)
