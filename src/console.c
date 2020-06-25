@@ -770,7 +770,7 @@ boolean CON_Responder(event_t *ev)
 	// check for console toggle key
 	if (ev->type != ev_console)
 	{
-		if (modeattacking || metalrecording)
+		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
 		if (key == gamecontrol[gc_console][0] || key == gamecontrol[gc_console][1])
@@ -1649,10 +1649,7 @@ void CON_Drawer(void)
 		return;
 
 	if (needpatchrecache)
-	{
-		W_FlushCachedPatches();
 		HU_LoadGraphics();
-	}
 
 	if (con_recalc)
 	{

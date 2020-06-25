@@ -93,6 +93,7 @@ typedef enum
 // build an internal map name MAPxx from map number
 const char *G_BuildMapName(INT32 map);
 
+extern INT16 ticcmd_oldangleturn[2];
 extern boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
 extern mobj_t *ticcmd_ztargetfocus[2]; // Locking onto an object?
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer);

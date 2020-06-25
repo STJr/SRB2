@@ -73,7 +73,7 @@ typedef union
 		UINT32 score, total; // fake score, total
 		UINT32 tics; // time
 
-		INT32 actnum; // act number being displayed
+		UINT8 actnum; // act number being displayed
 		patch_t *ptotal; // TOTAL
 		UINT8 gotlife; // Number of extra lives obtained
 	} coop;
@@ -99,7 +99,7 @@ typedef union
 		UINT8 continues;
 		patch_t *pcontinues;
 		INT32 *playerchar; // Continue HUD
-		UINT8 *playercolor;
+		UINT16 *playercolor;
 
 		UINT8 gotlife; // Number of extra lives obtained
 	} spec;
@@ -107,7 +107,7 @@ typedef union
 	struct
 	{
 		UINT32 scores[MAXPLAYERS]; // Winner's score
-		UINT8 *color[MAXPLAYERS]; // Winner's color #
+		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		boolean spectator[MAXPLAYERS]; // Spectator list
 		INT32 *character[MAXPLAYERS]; // Winner's character #
 		INT32 num[MAXPLAYERS]; // Winner's player #
@@ -121,7 +121,7 @@ typedef union
 
 	struct
 	{
-		UINT8 *color[MAXPLAYERS]; // Winner's color #
+		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		INT32 *character[MAXPLAYERS]; // Winner's character #
 		INT32 num[MAXPLAYERS]; // Winner's player #
 		char name[MAXPLAYERS][9]; // Winner's name
@@ -382,7 +382,7 @@ dontdrawbg:
 		if (gottoken) // first to be behind everything else
 			Y_IntermissionTokenDrawer();
 
-		if (!splitscreen)
+		if (!splitscreen)  // there's not enough room in splitscreen, don't even bother trying!
 		{
 			// draw score
 			ST_DrawPatchFromHud(HUD_SCORE, sboscore);
@@ -404,7 +404,7 @@ dontdrawbg:
 				ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
 				ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
 
-				if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking) // there's not enough room for tics in splitscreen, don't even bother trying!
+				if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking || marathonmode)
 				{
 					ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
 					ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
@@ -994,7 +994,7 @@ void Y_Ticker(void)
 	{
 		INT32 i;
 		UINT32 oldscore = data.coop.score;
-		boolean skip = false;
+		boolean skip = (marathonmode) ? true : false;
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
@@ -1070,7 +1070,7 @@ void Y_Ticker(void)
 	{
 		INT32 i;
 		UINT32 oldscore = data.spec.score;
-		boolean skip = false, super = false, anybonuses = false;
+		boolean skip = (marathonmode) ? true : false, super = false, anybonuses = false;
 
 		if (!intertic) // first time only
 		{

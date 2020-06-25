@@ -199,12 +199,20 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 posStart, posEnd;
 
-	posStart = W_CheckNumForFolderStartPK3("Lua/", wadnum, 0);
+	posStart = W_CheckNumForFullNamePK3("Init.lua", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
-		for (; posStart < posEnd; posStart++)
-			LUA_LoadLump(wadnum, posStart);
+		LUA_LoadLump(wadnum, posStart, true);
+	}
+	else
+	{
+		posStart = W_CheckNumForFolderStartPK3("Lua/", wadnum, 0);
+		if (posStart != INT16_MAX)
+		{
+			posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
+			for (; posStart < posEnd; posStart++)
+				LUA_LoadLump(wadnum, posStart, true);
+		}
 	}
 
 	posStart = W_CheckNumForFolderStartPK3("SOC/", wadnum, 0);
@@ -236,7 +244,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"LUA_",4)==0)
-				LUA_LoadLump(wadnum, lump);
+				LUA_LoadLump(wadnum, lump, true);
 	}
 
 	{
@@ -840,6 +848,15 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
+#ifdef HWRENDER
+	// Read shaders from file
+	if (rendermode == render_opengl && (vid_opengl_state == 1))
+	{
+		HWR_ReadShaders(numwadfiles - 1, (type == RET_PK3));
+		HWR_LoadShaders();
+	}
+#endif // HWRENDER
+
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	switch (wadfile->type)
 	{
@@ -854,7 +871,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0, mainfile);
 		break;
 	case RET_LUA:
-		LUA_LoadLump(numwadfiles - 1, 0);
+		LUA_LoadLump(numwadfiles - 1, 0, true);
 		break;
 	default:
 		break;
@@ -1624,21 +1641,6 @@ boolean W_IsPatchCached(lumpnum_t lumpnum, void *ptr)
 	return W_IsPatchCachedPWAD(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
 }
 
-void W_FlushCachedPatches(void)
-{
-	if (needpatchflush)
-	{
-		Z_FreeTag(PU_CACHE);
-		Z_FreeTag(PU_PATCH);
-		Z_FreeTag(PU_HUDGFX);
-		Z_FreeTag(PU_HWRPATCHINFO);
-		Z_FreeTag(PU_HWRMODELTEXTURE);
-		Z_FreeTag(PU_HWRCACHE);
-		Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRMODELTEXTURE_UNLOCKED);
-	}
-	needpatchflush = false;
-}
-
 // ==========================================================================
 // W_CacheLumpName
 // ==========================================================================
@@ -1665,9 +1667,6 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
 	lumpcache_t *lumpcache = NULL;
-
-	if (needpatchflush)
-		W_FlushCachedPatches();
 
 	if (!TestValidLump(wad, lump))
 		return NULL;
@@ -1719,9 +1718,6 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	GLPatch_t *grPatch;
 #endif
 
-	if (needpatchflush)
-		W_FlushCachedPatches();
-
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
@@ -1770,7 +1766,7 @@ void W_UnlockCachedPatch(void *patch)
 	// The hardware code does its own memory management, as its patches
 	// have different lifetimes from software's.
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 		HWR_UnlockCachedPatch((GLPatch_t*)patch);
 	else
 #endif

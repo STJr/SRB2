@@ -144,6 +144,133 @@ mapthing_t *playerstarts[MAXPLAYERS];
 mapthing_t *bluectfstarts[MAXPLAYERS];
 mapthing_t *redctfstarts[MAXPLAYERS];
 
+// Maintain waypoints
+mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
+UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
+
+void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint)
+{
+	waypoints[sequence][id] = waypoint;
+	if (id >= numwaypoints[sequence])
+		numwaypoints[sequence] = id + 1;
+}
+
+static void P_ResetWaypoints(void)
+{
+	UINT16 sequence, id;
+	for (sequence = 0; sequence < NUMWAYPOINTSEQUENCES; sequence++)
+	{
+		for (id = 0; id < numwaypoints[sequence]; id++)
+			waypoints[sequence][id] = NULL;
+
+		numwaypoints[sequence] = 0;
+	}
+}
+
+mobj_t *P_GetFirstWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][0];
+}
+
+mobj_t *P_GetLastWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][numwaypoints[sequence] - 1];
+}
+
+mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == 0)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = numwaypoints[sequence] - 1;
+	}
+	else
+		id--;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == numwaypoints[sequence] - 1)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = 0;
+	}
+	else
+		id++;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo)
+{
+	UINT8 wp;
+	mobj_t *mo2, *result = NULL;
+	fixed_t bestdist = 0;
+	fixed_t curdist;
+
+	for (wp = 0; wp < numwaypoints[sequence]; wp++)
+	{
+		mo2 = waypoints[sequence][wp];
+
+		if (!mo2)
+			continue;
+
+		curdist = P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z);
+
+		if (result && curdist > bestdist)
+			continue;
+
+		result = mo2;
+		bestdist = curdist;
+	}
+
+	return result;
+}
+
+// Return true if all waypoints are in the same location
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence)
+{
+	mobj_t *first, *waypoint;
+	UINT8 wp;
+
+	if (numwaypoints[sequence] <= 1)
+		return true;
+
+	first = waypoints[sequence][0];
+
+	for (wp = 1; wp < numwaypoints[sequence]; wp++)
+	{
+		waypoint = waypoints[sequence][wp];
+
+		if (!waypoint)
+			continue;
+
+		if (waypoint->x != first->x)
+			return false;
+
+		if (waypoint->y != first->y)
+			return false;
+
+		if (waypoint->z != first->z)
+			return false;
+	}
+
+	return true;
+}
+
+
 /** Logs an error about a map being corrupt, then terminate.
   * This allows reporting highly technical errors for usefulness, without
   * confusing a novice map designer who simply needs to run ZenNode.
@@ -217,6 +344,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
+	mapheaderinfo[num]->marathonnext = 0;
 	mapheaderinfo[num]->startrings = 0;
 	mapheaderinfo[num]->sstimer = 90;
 	mapheaderinfo[num]->ssspheres = 1;
@@ -3181,7 +3309,7 @@ static boolean CanSaveLevel(INT32 mapnum)
 	// Any levels that have the savegame flag can save normally.
 	// If the game is complete for this save slot, then any level can save!
 	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
-	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
+	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || (gamecomplete != 0) || marathonmode || !lastmaploaded);
 }
 
 static void P_RunSpecialStageWipe(void)
@@ -3544,6 +3672,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
 
 	P_ResetSpawnpoints();
+
+	P_ResetWaypoints();
 
 	P_MapStart();
 

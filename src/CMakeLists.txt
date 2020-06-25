@@ -418,6 +418,7 @@ endif()
 if(${SRB2_CONFIG_HWRENDER})
 	add_definitions(-DHWRENDER)
 	set(SRB2_HWRENDER_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_batching.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_bsp.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_cache.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_clip.c
@@ -433,6 +434,7 @@ if(${SRB2_CONFIG_HWRENDER})
 	)
 
 	set (SRB2_HWRENDER_HEADERS
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_batching.h
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_clip.h
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_data.h
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_defs.h

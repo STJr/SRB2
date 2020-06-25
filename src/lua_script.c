@@ -78,6 +78,58 @@ FUNCNORETURN static int LUA_Panic(lua_State *L)
 #endif
 }
 
+#define LEVELS1 12 // size of the first part of the stack
+#define LEVELS2 10 // size of the second part of the stack
+
+// Error handler used with pcall() when loading scripts or calling hooks
+// Takes a string with the original error message,
+// appends the traceback to it, and return the result
+int LUA_GetErrorMessage(lua_State *L)
+{
+	int level = 1;
+	int firstpart = 1; // still before eventual `...'
+	lua_Debug ar;
+
+	lua_pushliteral(L, "\nstack traceback:");
+	while (lua_getstack(L, level++, &ar))
+	{
+		if (level > LEVELS1 && firstpart)
+		{
+			// no more than `LEVELS2' more levels?
+			if (!lua_getstack(L, level + LEVELS2, &ar))
+				level--; // keep going
+			else
+			{
+				lua_pushliteral(L, "\n    ..."); // too many levels
+				while (lua_getstack(L, level + LEVELS2, &ar)) // find last levels
+					level++;
+			}
+			firstpart = 0;
+			continue;
+		}
+		lua_pushliteral(L, "\n    ");
+		lua_getinfo(L, "Snl", &ar);
+		lua_pushfstring(L, "%s:", ar.short_src);
+		if (ar.currentline > 0)
+			lua_pushfstring(L, "%d:", ar.currentline);
+		if (*ar.namewhat != '\0') // is there a name?
+			lua_pushfstring(L, " in function " LUA_QS, ar.name);
+		else
+		{
+			if (*ar.what == 'm') // main?
+				lua_pushfstring(L, " in main chunk");
+			else if (*ar.what == 'C' || *ar.what == 't')
+				lua_pushliteral(L, " ?"); // C function or tail call
+			else
+				lua_pushfstring(L, " in function <%s:%d>",
+					ar.short_src, ar.linedefined);
+		}
+		lua_concat(L, lua_gettop(L));
+	}
+	lua_concat(L, lua_gettop(L));
+	return 1;
+}
+
 // Moved here from lib_getenum.
 int LUA_PushGlobals(lua_State *L, const char *word)
 {
@@ -115,7 +167,10 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushboolean(L, splitscreen);
 		return 1;
 	} else if (fastcmp(word,"gamecomplete")) {
-		lua_pushboolean(L, gamecomplete);
+		lua_pushboolean(L, (gamecomplete != 0));
+		return 1;
+	} else if (fastcmp(word,"marathonmode")) {
+		lua_pushinteger(L, marathonmode);
 		return 1;
 	} else if (fastcmp(word,"devparm")) {
 		lua_pushboolean(L, devparm);
@@ -144,6 +199,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
 		lua_pushinteger(L, spstage_start);
+		return 1;
+	} else if (fastcmp(word,"spmarathon_start")) {
+		lua_pushinteger(L, spmarathon_start);
 		return 1;
 	} else if (fastcmp(word,"sstage_start")) {
 		lua_pushinteger(L, sstage_start);
@@ -395,11 +453,13 @@ void LUA_ClearExtVars(void)
 // Use this variable to prevent certain functions from running
 // if they were not called on lump load
 // (i.e. they were called in hooks or coroutines etc)
-boolean lua_lumploading = false;
+INT32 lua_lumploading = 0;
 
 // Load a script from a MYFILE
-static inline void LUA_LoadFile(MYFILE *f, char *name)
+static inline void LUA_LoadFile(MYFILE *f, char *name, boolean noresults)
 {
+	int errorhandlerindex;
+
 	if (!name)
 		name = wadfiles[f->wad]->filename;
 	CONS_Printf("Loading Lua script from %s\n", name);
@@ -408,19 +468,22 @@ static inline void LUA_LoadFile(MYFILE *f, char *name)
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
 
-	lua_lumploading = true; // turn on loading flag
+	lua_lumploading++; // turn on loading flag
 
-	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, 0)) {
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	errorhandlerindex = lua_gettop(gL);
+	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, noresults ? 0 : LUA_MULTRET, lua_gettop(gL) - 1)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
 	lua_gc(gL, LUA_GCCOLLECT, 0);
+	lua_remove(gL, errorhandlerindex);
 
-	lua_lumploading = false; // turn off again
+	lua_lumploading--; // turn off again
 }
 
 // Load a script from a lump
-void LUA_LoadLump(UINT16 wad, UINT16 lump)
+void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults)
 {
 	MYFILE f;
 	char *name;
@@ -447,7 +510,7 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 		name[len] = '\0';
 	}
 
-	LUA_LoadFile(&f, name); // actually load file!
+	LUA_LoadFile(&f, name, noresults); // actually load file!
 
 	free(name);
 	Z_Free(f.data);
@@ -730,9 +793,13 @@ void LUA_InvalidatePlayer(player_t *player)
 enum
 {
 	ARCH_NULL=0,
-	ARCH_BOOLEAN,
-	ARCH_SIGNED,
-	ARCH_STRING,
+	ARCH_TRUE,
+	ARCH_FALSE,
+	ARCH_INT8,
+	ARCH_INT16,
+	ARCH_INT32,
+	ARCH_SMALLSTRING,
+	ARCH_LARGESTRING,
 	ARCH_TABLE,
 
 	ARCH_MOBJINFO,
@@ -752,6 +819,7 @@ enum
 	ARCH_FFLOOR,
 	ARCH_SLOPE,
 	ARCH_MAPHEADER,
+	ARCH_SKINCOLOR,
 
 	ARCH_TEND=0xFF,
 };
@@ -777,6 +845,7 @@ static const struct {
 	{META_FFLOOR,	ARCH_FFLOOR},
 	{META_SLOPE,    ARCH_SLOPE},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
+	{META_SKINCOLOR,   ARCH_SKINCOLOR},
 	{NULL,          ARCH_NULL}
 };
 
@@ -817,22 +886,33 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		WRITEUINT8(save_p, ARCH_NULL);
 		return 2;
 	case LUA_TBOOLEAN:
-		WRITEUINT8(save_p, ARCH_BOOLEAN);
-		WRITEUINT8(save_p, lua_toboolean(gL, myindex));
+		WRITEUINT8(save_p, lua_toboolean(gL, myindex) ? ARCH_TRUE : ARCH_FALSE);
 		break;
 	case LUA_TNUMBER:
 	{
 		lua_Integer number = lua_tointeger(gL, myindex);
-        WRITEUINT8(save_p, ARCH_SIGNED);
-        WRITEFIXED(save_p, number);
+		if (number >= INT8_MIN && number <= INT8_MAX)
+		{
+			WRITEUINT8(save_p, ARCH_INT8);
+			WRITESINT8(save_p, number);
+		}
+		else if (number >= INT16_MIN && number <= INT16_MAX)
+		{
+			WRITEUINT8(save_p, ARCH_INT16);
+			WRITEINT16(save_p, number);
+		}
+		else
+		{
+			WRITEUINT8(save_p, ARCH_INT32);
+			WRITEFIXED(save_p, number);
+		}
 		break;
 	}
 	case LUA_TSTRING:
 	{
-		UINT16 len = (UINT16)lua_objlen(gL, myindex); // get length of string, including embedded zeros
+		UINT32 len = (UINT32)lua_objlen(gL, myindex); // get length of string, including embedded zeros
 		const char *s = lua_tostring(gL, myindex);
-		UINT16 i = 0;
-		WRITEUINT8(save_p, ARCH_STRING);
+		UINT32 i = 0;
 		// if you're wondering why we're writing a string to save_p this way,
 		// it turns out that Lua can have embedded zeros ('\0') in the strings,
 		// so we can't use WRITESTRING as that cuts off when it finds a '\0'.
@@ -840,7 +920,16 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		// fixing the awful crashes previously encountered for reading strings longer than 1024
 		// (yes I know that's kind of a stupid thing to care about, but it'd be evil to trim or ignore them?)
 		// -- Monster Iestyn 05/08/18
-		WRITEUINT16(save_p, len); // save size of string
+		if (len < 255)
+		{
+			WRITEUINT8(save_p, ARCH_SMALLSTRING);
+			WRITEUINT8(save_p, len); // save size of string
+		}
+		else
+		{
+			WRITEUINT8(save_p, ARCH_LARGESTRING);
+			WRITEUINT32(save_p, len); // save size of string
+		}
 		while (i < len)
 			WRITECHAR(save_p, s[i++]); // write chars individually, including the embedded zeros
 		break;
@@ -1044,6 +1133,14 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+
+		case ARCH_SKINCOLOR:
+		{
+			skincolor_t *info = *((skincolor_t **)lua_touserdata(gL, myindex));
+			WRITEUINT8(save_p, ARCH_SKINCOLOR);
+			WRITEUINT16(save_p, info - skincolors);
+			break;
+		}
 		default:
 			WRITEUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -1170,21 +1267,36 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_NULL:
 		lua_pushnil(gL);
 		break;
-	case ARCH_BOOLEAN:
-		lua_pushboolean(gL, READUINT8(save_p));
+	case ARCH_TRUE:
+		lua_pushboolean(gL, true);
 		break;
-	case ARCH_SIGNED:
+	case ARCH_FALSE:
+		lua_pushboolean(gL, false);
+		break;
+	case ARCH_INT8:
+		lua_pushinteger(gL, READSINT8(save_p));
+		break;
+	case ARCH_INT16:
+		lua_pushinteger(gL, READINT16(save_p));
+		break;
+	case ARCH_INT32:
 		lua_pushinteger(gL, READFIXED(save_p));
 		break;
-	case ARCH_STRING:
+	case ARCH_SMALLSTRING:
+	case ARCH_LARGESTRING:
 	{
-		UINT16 len = READUINT16(save_p); // length of string, including embedded zeros
+		UINT32 len;
 		char *value;
-		UINT16 i = 0;
+		UINT32 i = 0;
+
 		// See my comments in the ArchiveValue function;
 		// it's much the same for reading strings as writing them!
 		// (i.e. we can't use READSTRING either)
 		// -- Monster Iestyn 05/08/18
+		if (type == ARCH_SMALLSTRING)
+			len = READUINT8(save_p); // length of string, including embedded zeros
+		else
+			len = READUINT32(save_p); // length of string, including embedded zeros
 		value = malloc(len); // make temp buffer of size len
 		// now read the actual string
 		while (i < len)
@@ -1259,6 +1371,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_MAPHEADER:
 		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
+		break;
+	case ARCH_SKINCOLOR:
+		LUA_PushUserdata(gL, &skincolors[READUINT16(save_p)], META_SKINCOLOR);
 		break;
 	case ARCH_TEND:
 		return 1;
