@@ -106,7 +106,7 @@ typedef struct
 } pauseddownload_t;
 static pauseddownload_t *pauseddownload = NULL;
 
-#ifdef CLIENT_LOADINGSCREEN
+#ifndef NONET
 // for cl loading screen
 INT32 lastfilenum = -1;
 #endif
@@ -188,7 +188,7 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr)
 
 void CL_PrepareDownloadSaveGame(const char *tmpsave)
 {
-#ifdef CLIENT_LOADINGSCREEN
+#ifndef NONET
 	lastfilenum = -1;
 #endif
 
@@ -1360,7 +1360,7 @@ void PT_FileFragment(void)
 		I_Error("Received a file not requested (file id: %d, file status: %s)\n", filenum, s);
 	}
 
-#ifdef CLIENT_LOADINGSCREEN
+#ifndef NONET
 	lastfilenum = filenum;
 #endif
 }
