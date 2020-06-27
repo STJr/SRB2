@@ -575,9 +575,9 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 	strupr(levelflat->name);
 
 	/* If we can't find a flat, try looking for a texture! */
-	if (( flatnum = R_GetFlatNumForName(flatname) ) == LUMPERROR)
+	if (( flatnum = R_GetFlatNumForName(levelflat->name) ) == LUMPERROR)
 	{
-		if (( texturenum = R_CheckTextureNumForName(flatname) ) == -1)
+		if (( texturenum = R_CheckTextureNumForName(levelflat->name) ) == -1)
 		{
 			// check for REDWALL
 			if (( texturenum = R_CheckTextureNumForName("REDWALL") ) != -1)
