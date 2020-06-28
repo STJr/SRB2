@@ -3157,6 +3157,7 @@ static void P_LoadNightsGhosts(void)
 {
 	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
 	char *gpath = malloc(glen);
+	INT32 i;
 
 	if (!gpath)
 		return;
@@ -3164,16 +3165,43 @@ static void P_LoadNightsGhosts(void)
 	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
 
 	// Best Score ghost
-	if (cv_ghost_bestscore.value && FIL_FileExists(va("%s-score-best.lmp", gpath)))
-			G_AddGhost(va("%s-score-best.lmp", gpath));
+	if (cv_ghost_bestscore.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Best Time ghost
-	if (cv_ghost_besttime.value && FIL_FileExists(va("%s-time-best.lmp", gpath)))
-			G_AddGhost(va("%s-time-best.lmp", gpath));
+	if (cv_ghost_besttime.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Last ghost
-	if (cv_ghost_last.value && FIL_FileExists(va("%s-last.lmp", gpath)))
-		G_AddGhost(va("%s-last.lmp", gpath));
+	if (cv_ghost_last.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Guest ghost
 	if (cv_ghost_guest.value && FIL_FileExists(va("%s-guest.lmp", gpath)))
