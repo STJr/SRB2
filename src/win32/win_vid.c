@@ -326,7 +326,7 @@ static inline boolean I_SkipFrame(void)
 			if (!paused)
 				return false;
 		//case GS_TIMEATTACK: -- sorry optimisation but now we have a cool level platter and that being laggardly looks terrible
-#ifndef CLIENT_LOADINGSCREEN
+#ifndef NONET
 		/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
 #endif

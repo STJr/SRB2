@@ -58,7 +58,7 @@ extern INT32 fileneedednum;
 extern fileneeded_t fileneeded[MAX_WADFILES];
 extern char downloaddir[512];
 
-#ifdef CLIENT_LOADINGSCREEN
+#ifndef NONET
 extern INT32 lastfilenum;
 #endif
 

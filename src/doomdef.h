@@ -617,11 +617,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
 
-#ifndef NONET
-///	Display a connection screen on join attempts.
-#define CLIENT_LOADINGSCREEN
-#endif
-
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
 
