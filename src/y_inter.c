@@ -320,7 +320,7 @@ void Y_IntermissionDrawer(void)
 	// Bonus loops
 	INT32 i;
 
-	if (rendermode == render_none)
+	if (intertype == int_none || rendermode == render_none)
 		return;
 
 	// Lactozilla: Renderer switching
