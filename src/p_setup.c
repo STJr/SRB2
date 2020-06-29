@@ -3297,21 +3297,6 @@ static void P_InitCamera(void)
 	}
 }
 
-static boolean CanSaveLevel(INT32 mapnum)
-{
-	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
-		return false;
-
-	if (G_IsSpecialStage(mapnum) // don't save in special stages
-		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
-		return false;
-
-	// Any levels that have the savegame flag can save normally.
-	// If the game is complete for this save slot, then any level can save!
-	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
-	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || (gamecomplete != 0) || marathonmode || !lastmaploaded);
-}
-
 static void P_RunSpecialStageWipe(void)
 {
 	tic_t starttime = I_GetTime();
@@ -3748,11 +3733,19 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_RunCachedActions();
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(gamemap))
-		G_SaveGame((UINT32)cursaveslot);
-
-	lastmaploaded = gamemap; // HAS to be set after saving!!
+	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
+	if (!titlemapinaction)
+	{
+		if (!lastmaploaded) // Start a new game?
+		{
+			// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
+			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
+			&& (!modifiedgame || savemoddata) && cursaveslot > 0)
+				G_SaveGame((UINT32)cursaveslot, gamemap);
+			// If you're looking for saving sp file progression (distinct from G_SaveGameOver), check G_DoCompleted.
+		}
+		lastmaploaded = gamemap; // HAS to be set after saving!!
+	}
 
 	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
