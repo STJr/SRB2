@@ -2276,6 +2276,9 @@ void Nextmap_OnChange(void)
 {
 	char *leveltitle;
 	char tabase[256];
+#ifdef OLDNREPLAYNAME
+	char tabaseold[256];
+#endif
 	short i;
 	boolean active;
 
@@ -2301,10 +2304,16 @@ void Nextmap_OnChange(void)
 
 		// Check if file exists, if not, disable REPLAY option
 		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
+
+#ifdef OLDNREPLAYNAME		
+		sprintf(tabaseold,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
+#endif	
+
 		for (i = 0; i < 4; i++) {
 			SP_NightsReplayMenu[i].status = IT_DISABLED;
 			SP_NightsGuestReplayMenu[i].status = IT_DISABLED;
 		}
+
 		if (FIL_FileExists(va("%s-score-best.lmp", tabase))) {
 			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
 			SP_NightsGuestReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
@@ -2325,11 +2334,32 @@ void Nextmap_OnChange(void)
 			SP_NightsGuestReplayMenu[3].status = IT_WHITESTRING|IT_CALL;
 			active = true;
 		}
+
+		// Old style name compatibility 
+#ifdef OLDNREPLAYNAME
+		if (FIL_FileExists(va("%s-score-best.lmp", tabaseold))) {
+			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
+			SP_NightsGuestReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
+			active = true;
+		}
+		if (FIL_FileExists(va("%s-time-best.lmp", tabaseold))) {
+			SP_NightsReplayMenu[1].status = IT_WHITESTRING|IT_CALL;
+			SP_NightsGuestReplayMenu[1].status = IT_WHITESTRING|IT_CALL;
+			active = true;
+		}
+		if (FIL_FileExists(va("%s-last.lmp", tabaseold))) {
+			SP_NightsReplayMenu[2].status = IT_WHITESTRING|IT_CALL;
+			SP_NightsGuestReplayMenu[2].status = IT_WHITESTRING|IT_CALL;
+			active = true;
+		}
+#endif
+
 		if (active) {
 			SP_NightsAttackMenu[naguest].status = IT_WHITESTRING|IT_SUBMENU;
 			SP_NightsAttackMenu[nareplay].status = IT_WHITESTRING|IT_SUBMENU;
 			SP_NightsAttackMenu[naghost].status = IT_WHITESTRING|IT_SUBMENU;
 		}
+
 		else if(itemOn == nareplay) // Reset lastOn so replay isn't still selected when not available.
 		{
 			currentMenu->lastOn = itemOn;
@@ -10185,6 +10215,7 @@ static void M_ChooseTimeAttack(INT32 choice)
 static void M_ReplayTimeAttack(INT32 choice)
 {
 	const char *which;
+	char *demoname;
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_RECORD; // set modeattacking before G_DoPlayDemo so the map loader knows
 
@@ -10229,7 +10260,15 @@ static void M_ReplayTimeAttack(INT32 choice)
 			G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
 			return;
 		}
-		G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which));
+
+		demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
+
+#ifdef OLDNREPLAYNAME // Check for old style named NiGHTS replay, since the new style replay doesn't exist.
+		if (!FIL_FileExists(demoname))
+			demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which);
+#endif
+
+		G_DoPlayDemo(demoname);
 	}
 }
 
