@@ -10263,7 +10263,7 @@ static void M_ReplayTimeAttack(INT32 choice)
 
 		demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
 
-#ifdef OLDNREPLAYNAME // Check for old style named NiGHTS replay, since the new style replay doesn't exist.
+#ifdef OLDNREPLAYNAME // Check for old style named NiGHTS replay if a new style replay doesn't exist.
 		if (!FIL_FileExists(demoname))
 			demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which);
 #endif
