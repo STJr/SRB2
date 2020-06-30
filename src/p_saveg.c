@@ -3888,16 +3888,15 @@ static void P_NetUnArchiveSpecials(void)
 // =======================================================================
 //          Misc
 // =======================================================================
-static inline void P_ArchiveMisc(void)
+static inline void P_ArchiveMisc(INT16 mapnum)
 {
+	//lastmapsaved = mapnum;
+	lastmaploaded = mapnum;
+
 	if (gamecomplete)
-		WRITEINT16(save_p, gamemap | 8192);
-	else
-		WRITEINT16(save_p, gamemap);
+		mapnum |= 8192;
 
-	//lastmapsaved = gamemap;
-	lastmaploaded = gamemap;
-
+	WRITEINT16(save_p, mapnum);
 	WRITEUINT16(save_p, emeralds+357);
 	WRITESTRINGN(save_p, timeattackfolder, sizeof(timeattackfolder));
 }
@@ -3911,10 +3910,10 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	if (mapoverride != 0)
 	{
 		gamemap = mapoverride;
-		gamecomplete = true;
+		gamecomplete = 1;
 	}
 	else
-		gamecomplete = false;
+		gamecomplete = 0;
 
 	// gamemap changed; we assume that its map header is always valid,
 	// so make it so
@@ -4138,9 +4137,9 @@ static inline boolean P_UnArchiveLuabanksAndConsistency(void)
 	return true;
 }
 
-void P_SaveGame(void)
+void P_SaveGame(INT16 mapnum)
 {
-	P_ArchiveMisc();
+	P_ArchiveMisc(mapnum);
 	P_ArchivePlayer();
 	P_ArchiveLuabanksAndConsistency();
 }

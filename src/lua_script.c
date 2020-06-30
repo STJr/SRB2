@@ -170,7 +170,10 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushboolean(L, splitscreen);
 		return 1;
 	} else if (fastcmp(word,"gamecomplete")) {
-		lua_pushboolean(L, gamecomplete);
+		lua_pushboolean(L, (gamecomplete != 0));
+		return 1;
+	} else if (fastcmp(word,"marathonmode")) {
+		lua_pushinteger(L, marathonmode);
 		return 1;
 	} else if (fastcmp(word,"devparm")) {
 		lua_pushboolean(L, devparm);
@@ -199,6 +202,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
 		lua_pushinteger(L, spstage_start);
+		return 1;
+	} else if (fastcmp(word,"spmarathon_start")) {
+		lua_pushinteger(L, spmarathon_start);
 		return 1;
 	} else if (fastcmp(word,"sstage_start")) {
 		lua_pushinteger(L, sstage_start);
@@ -322,6 +328,12 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		if (!splitscreen || secondarydisplayplayer < 0 || !playeringame[secondarydisplayplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"isserver")) {
+		lua_pushboolean(L, server);
+		return 1;
+	} else if (fastcmp(word,"isdedicatedserver")) {
+		lua_pushboolean(L, dedicated);
 		return 1;
 	// end local player variables
 	} else if (fastcmp(word,"server")) {
@@ -450,11 +462,13 @@ void LUA_ClearExtVars(void)
 // Use this variable to prevent certain functions from running
 // if they were not called on lump load
 // (i.e. they were called in hooks or coroutines etc)
-boolean lua_lumploading = false;
+INT32 lua_lumploading = 0;
 
 // Load a script from a MYFILE
-static inline void LUA_LoadFile(MYFILE *f, char *name)
+static inline void LUA_LoadFile(MYFILE *f, char *name, boolean noresults)
 {
+	int errorhandlerindex;
+
 	if (!name)
 		name = wadfiles[f->wad]->filename;
 	CONS_Printf("Loading Lua script from %s\n", name);
@@ -463,21 +477,22 @@ static inline void LUA_LoadFile(MYFILE *f, char *name)
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
 
-	lua_lumploading = true; // turn on loading flag
+	lua_lumploading++; // turn on loading flag
 
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
-	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, lua_gettop(gL) - 1)) {
+	errorhandlerindex = lua_gettop(gL);
+	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, noresults ? 0 : LUA_MULTRET, lua_gettop(gL) - 1)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
 	lua_gc(gL, LUA_GCCOLLECT, 0);
-	lua_pop(gL, 1); // Pop error handler
+	lua_remove(gL, errorhandlerindex);
 
-	lua_lumploading = false; // turn off again
+	lua_lumploading--; // turn off again
 }
 
 // Load a script from a lump
-void LUA_LoadLump(UINT16 wad, UINT16 lump)
+void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults)
 {
 	MYFILE f;
 	char *name;
@@ -504,7 +519,7 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 		name[len] = '\0';
 	}
 
-	LUA_LoadFile(&f, name); // actually load file!
+	LUA_LoadFile(&f, name, noresults); // actually load file!
 
 	free(name);
 	Z_Free(f.data);

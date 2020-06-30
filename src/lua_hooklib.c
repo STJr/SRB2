@@ -70,6 +70,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"SeenPlayer",
 	"PlayerThink",
 	"ShouldJingleContinue",
+	"GameQuit",
 	NULL
 };
 
@@ -1768,4 +1769,30 @@ boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 	hud_running = false;
 
 	return keepplaying;
+}
+
+// Hook for game quitting
+void LUAh_GameQuit(void)
+{
+	hook_p hookp;
+	if (!gL || !(hooksAvailable[hook_GameQuit/8] & (1<<(hook_GameQuit%8))))
+		return;
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_GameQuit)
+			continue;
+
+		PushHook(gL, hookp);
+		if (lua_pcall(gL, 0, 0, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+		}
+	}
+	
+	lua_pop(gL, 1); // Pop error handler
 }
