@@ -1256,6 +1256,7 @@ static const char *credits[] = {
 	"Johnny \"Sonikku\" Wallbank",
 	"",
 	"\1Testing",
+	"Discord Community Testers",
 	"Hank \"FuriousFox\" Brannock",
 	"Cody \"SRB2 Playah\" Koester",
 	"Skye \"OmegaVelocity\" Meredith",
