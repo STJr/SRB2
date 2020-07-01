@@ -288,7 +288,7 @@ void Command_CheatGod_f(void)
 
 	plyr = &players[consoleplayer];
 	plyr->pflags ^= PF_GODMODE;
-	CONS_Printf(M_GetText("Sissy Mode %s\n"), plyr->pflags & PF_GODMODE ? M_GetText("On") : M_GetText("Off"));
+	CONS_Printf(M_GetText("Cheese Mode %s\n"), plyr->pflags & PF_GODMODE ? M_GetText("On") : M_GetText("Off"));
 
 	G_SetGameModified(multiplayer);
 }
