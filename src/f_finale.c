@@ -1148,11 +1148,13 @@ static const char *credits[] = {
 	"",
 	"\1Programming",
 	"\1Assistance",
+	"Colette \"fickleheart\" Bordelon",
 	"\"chi.miru\"", // helped port slope drawing code from ZDoom
 	"Andrew \"orospakr\" Clunis",
 	"Sally \"TehRealSalt\" Cochenour",
 	"Gregor \"Oogaland\" Dick",
 	"Julio \"Chaos Zero 64\" Guir",
+	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
@@ -1171,6 +1173,7 @@ static const char *credits[] = {
 	"\1Art",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
 	"Ryan \"Blaze Hedgehog\" Bloom",
+	"\"ChrispyPixels\"",
 	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
 	"\"Dave Lite\"",
@@ -1217,6 +1220,7 @@ static const char *credits[] = {
 	"\"SSNTails\"",
 	"",
 	"\1Level Design",
+	"Colette \"fickleheart\" Bordelon",
 	"Hank \"FuriousFox\" Brannock",
 	"Matthew \"Fawfulfan\" Chapman",
 	"Paul \"Boinciel\" Clempson",
