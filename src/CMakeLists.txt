@@ -16,6 +16,7 @@ set(SRB2_CORE_SOURCES
 	f_finale.c
 	f_wipe.c
 	filesrch.c
+	g_demo.c
 	g_game.c
 	g_input.c
 	hu_stuff.c
@@ -71,6 +72,7 @@ set(SRB2_CORE_HEADERS
 	f_finale.h
 	fastcmp.h
 	filesrch.h
+	g_demo.h
 	g_game.h
 	g_input.h
 	g_state.h
@@ -120,6 +122,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_main.c
 	r_plane.c
 	r_segs.c
+	r_skins.c
 	r_sky.c
 	r_splats.c
 	r_things.c
@@ -134,6 +137,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_main.h
 	r_plane.h
 	r_segs.h
+	r_skins.h
 	r_sky.h
 	r_splats.h
 	r_state.h
@@ -214,8 +218,6 @@ source_group("Assembly" FILES ${SRB2_ASM_SOURCES} ${SRB2_NASM_SOURCES})
 
 
 ### Configuration
-set(SRB2_CONFIG_HAVE_BLUA ON CACHE BOOL
-	"Enable Lua interpreter support")
 set(SRB2_CONFIG_HAVE_PNG ON CACHE BOOL
 	"Enable PNG support. Depends on zlib, so will be disabled if you don't enable that too.")
 set(SRB2_CONFIG_HAVE_ZLIB ON CACHE BOOL
@@ -239,92 +241,90 @@ if(${CMAKE_SYSTEM} MATCHES "Windows") ###set on Windows only
 	"Use SRB2's internal copies of required dependencies (SDL2, PNG, zlib, GME, OpenMPT).")
 endif()
 
-if(${SRB2_CONFIG_HAVE_BLUA})
-	add_definitions(-DHAVE_BLUA)
-	set(SRB2_LUA_SOURCES
-		lua_baselib.c
-		lua_blockmaplib.c
-		lua_consolelib.c
-		lua_hooklib.c
-		lua_hudlib.c
-		lua_infolib.c
-		lua_maplib.c
-		lua_mathlib.c
-		lua_mobjlib.c
-		lua_playerlib.c
-		lua_script.c
-		lua_skinlib.c
-		lua_thinkerlib.c
-	)
-	set(SRB2_LUA_HEADERS
-		lua_hook.h
-		lua_hud.h
-		lua_libs.h
-		lua_script.h
-	)
+set(SRB2_LUA_SOURCES
+	lua_baselib.c
+	lua_blockmaplib.c
+	lua_consolelib.c
+	lua_hooklib.c
+	lua_hudlib.c
+	lua_infolib.c
+	lua_maplib.c
+	lua_mathlib.c
+	lua_mobjlib.c
+	lua_playerlib.c
+	lua_script.c
+	lua_skinlib.c
+	lua_thinkerlib.c
+)
+set(SRB2_LUA_HEADERS
+	lua_hook.h
+	lua_hud.h
+	lua_libs.h
+	lua_script.h
+)
 
-	prepend_sources(SRB2_LUA_SOURCES)
-	prepend_sources(SRB2_LUA_HEADERS)
+prepend_sources(SRB2_LUA_SOURCES)
+prepend_sources(SRB2_LUA_HEADERS)
 
-	source_group("LUA" FILES ${SRB2_LUA_SOURCES} ${SRB2_LUA_HEADERS})
+source_group("LUA" FILES ${SRB2_LUA_SOURCES} ${SRB2_LUA_HEADERS})
 
-	set(SRB2_BLUA_SOURCES
-		blua/lapi.c
-		blua/lauxlib.c
-		blua/lbaselib.c
-		blua/lcode.c
-		blua/ldebug.c
-		blua/ldo.c
-		blua/ldump.c
-		blua/lfunc.c
-		blua/lgc.c
-		blua/linit.c
-		blua/llex.c
-		blua/lmem.c
-		blua/lobject.c
-		blua/lopcodes.c
-		blua/lparser.c
-		blua/lstate.c
-		blua/lstring.c
-		blua/lstrlib.c
-		blua/ltable.c
-		blua/ltablib.c
-		blua/ltm.c
-		blua/lundump.c
-		blua/lvm.c
-		blua/lzio.c
-	)
-	set(SRB2_BLUA_HEADERS
-		blua/lapi.h
-		blua/lauxlib.h
-		blua/lcode.h
-		blua/ldebug.h
-		blua/ldo.h
-		blua/lfunc.h
-		blua/lgc.h
-		blua/llex.h
-		blua/llimits.h
-		blua/lmem.h
-		blua/lobject.h
-		blua/lopcodes.h
-		blua/lparser.h
-		blua/lstate.h
-		blua/lstring.h
-		blua/ltable.h
-		blua/ltm.h
-		blua/lua.h
-		blua/luaconf.h
-		blua/lualib.h
-		blua/lundump.h
-		blua/lvm.h
-		blua/lzio.h
-	)
+set(SRB2_BLUA_SOURCES
+	blua/lapi.c
+	blua/lauxlib.c
+	blua/lbaselib.c
+	blua/lcode.c
+	blua/ldebug.c
+	blua/ldo.c
+	blua/ldump.c
+	blua/lfunc.c
+	blua/lgc.c
+	blua/linit.c
+	blua/liolib.c
+	blua/llex.c
+	blua/lmem.c
+	blua/lobject.c
+	blua/lopcodes.c
+	blua/lparser.c
+	blua/lstate.c
+	blua/lstring.c
+	blua/lstrlib.c
+	blua/ltable.c
+	blua/ltablib.c
+	blua/ltm.c
+	blua/lundump.c
+	blua/lvm.c
+	blua/lzio.c
+)
+set(SRB2_BLUA_HEADERS
+	blua/lapi.h
+	blua/lauxlib.h
+	blua/lcode.h
+	blua/ldebug.h
+	blua/ldo.h
+	blua/lfunc.h
+	blua/lgc.h
+	blua/llex.h
+	blua/llimits.h
+	blua/lmem.h
+	blua/lobject.h
+	blua/lopcodes.h
+	blua/lparser.h
+	blua/lstate.h
+	blua/lstring.h
+	blua/ltable.h
+	blua/ltm.h
+	blua/lua.h
+	blua/luaconf.h
+	blua/lualib.h
+	blua/lundump.h
+	blua/lvm.h
+	blua/lzio.h
+)
 
-	prepend_sources(SRB2_BLUA_SOURCES)
-	prepend_sources(SRB2_BLUA_HEADERS)
+prepend_sources(SRB2_BLUA_SOURCES)
+prepend_sources(SRB2_BLUA_HEADERS)
 
-	source_group("LUA\\Interpreter" FILES ${SRB2_BLUA_SOURCES} ${SRB2_BLUA_HEADERS})
-endif()
+source_group("LUA\\Interpreter" FILES ${SRB2_BLUA_SOURCES} ${SRB2_BLUA_HEADERS})
 
 if(${SRB2_CONFIG_HAVE_GME})
 	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
@@ -418,6 +418,7 @@ endif()
 if(${SRB2_CONFIG_HWRENDER})
 	add_definitions(-DHWRENDER)
 	set(SRB2_HWRENDER_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_batching.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_bsp.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_cache.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_clip.c
@@ -433,6 +434,7 @@ if(${SRB2_CONFIG_HWRENDER})
 	)
 
 	set (SRB2_HWRENDER_HEADERS
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_batching.h
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_clip.h
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_data.h
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_defs.h

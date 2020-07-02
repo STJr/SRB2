@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,9 +39,7 @@
 #include "fastcmp.h"
 #include "console.h"
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
-#endif
 
 // Stage of animation:
 // 0 = text, 1 = art screen
@@ -1120,9 +1118,6 @@ static const char *credits[] = {
 	"\1Sonic Robo Blast II",
 	"\1Credits",
 	"",
-	"\1Producer",
-	"Rob Tisdell",
-	"",
 	"\1Game Design",
 	"Ben \"Mystic\" Geyer",
 	"\"SSNTails\"",
@@ -1153,11 +1148,13 @@ static const char *credits[] = {
 	"",
 	"\1Programming",
 	"\1Assistance",
+	"Colette \"fickleheart\" Bordelon",
 	"\"chi.miru\"", // helped port slope drawing code from ZDoom
 	"Andrew \"orospakr\" Clunis",
 	"Sally \"TehRealSalt\" Cochenour",
 	"Gregor \"Oogaland\" Dick",
 	"Julio \"Chaos Zero 64\" Guir",
+	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
@@ -1176,6 +1173,7 @@ static const char *credits[] = {
 	"\1Art",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
 	"Ryan \"Blaze Hedgehog\" Bloom",
+	"\"ChrispyPixels\"",
 	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
 	"\"Dave Lite\"",
@@ -1222,6 +1220,7 @@ static const char *credits[] = {
 	"\"SSNTails\"",
 	"",
 	"\1Level Design",
+	"Colette \"fickleheart\" Bordelon",
 	"Hank \"FuriousFox\" Brannock",
 	"Matthew \"Fawfulfan\" Chapman",
 	"Paul \"Boinciel\" Clempson",
@@ -1257,6 +1256,7 @@ static const char *credits[] = {
 	"Johnny \"Sonikku\" Wallbank",
 	"",
 	"\1Testing",
+	"Discord Community Testers",
 	"Hank \"FuriousFox\" Brannock",
 	"Cody \"SRB2 Playah\" Koester",
 	"Skye \"OmegaVelocity\" Meredith",
@@ -1331,10 +1331,6 @@ void F_StartCredits(void)
 
 	// Just in case they're open ... somehow
 	M_ClearMenus(true);
-
-	// Save the second we enter the credits
-	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
-		G_SaveGame((UINT32)cursaveslot);
 
 	if (creditscutscene)
 	{
@@ -1531,12 +1527,6 @@ void F_StartGameEvaluation(void)
 	// Just in case they're open ... somehow
 	M_ClearMenus(true);
 
-	// Save the second we enter the evaluation
-	// We need to do this again!  Remember, it's possible a mod designed skipped
-	// the credits sequence!
-	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
-		G_SaveGame((UINT32)cursaveslot);
-
 	goodending = (ALL7EMERALDS(emeralds));
 
 	gameaction = ga_nothing;
@@ -1553,13 +1543,20 @@ void F_GameEvaluationDrawer(void)
 	angle_t fa;
 	INT32 eemeralds_cur;
 	char patchname[7] = "CEMGx0";
-	const char* endingtext = (goodending ? "CONGRATULATIONS!" : "TRY AGAIN...");
+	const char* endingtext;
+
+	if (marathonmode)
+		endingtext = "THANKS FOR THE RUN!";
+	else if (goodending)
+		endingtext = "CONGRATULATIONS!";
+	else
+		endingtext = "TRY AGAIN...";
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 	// Draw all the good crap here.
 
-	if (finalecount > 0)
+	if (finalecount > 0 && useBlackRock)
 	{
 		INT32 scale = FRACUNIT;
 		patch_t *rockpat;
@@ -1686,7 +1683,9 @@ void F_GameEvaluationTicker(void)
 		return;
 	}
 
-	if (!goodending)
+	if (!useBlackRock)
+		;
+	else if (!goodending)
 	{
 		if (sparklloop)
 			sparklloop--;
@@ -1842,10 +1841,6 @@ void F_StartEnding(void)
 
 	// Just in case they're open ... somehow
 	M_ClearMenus(true);
-
-	// Save before the credits sequence.
-	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
-		G_SaveGame((UINT32)cursaveslot);
 
 	gameaction = ga_nothing;
 	paused = false;
@@ -2187,7 +2182,7 @@ void F_EndingDrawer(void)
 			for (i = 0; i < 7; ++i)
 			{
 				UINT8* colormap;
-				skincolors_t col = SKINCOLOR_GREEN;
+				skincolornum_t col = SKINCOLOR_GREEN;
 				switch (i)
 				{
 					case 1:
@@ -2762,11 +2757,7 @@ void F_TitleScreenDrawer(void)
 	// rei|miru: use title pics?
 	hidepics = curhidepics;
 	if (hidepics)
-#ifdef HAVE_BLUA
 		goto luahook;
-#else
-		return;
-#endif
 
 	switch(curttmode)
 	{
@@ -3488,10 +3479,8 @@ void F_TitleScreenDrawer(void)
 			break;
 	}
 
-#ifdef HAVE_BLUA
 luahook:
 	LUAh_TitleHUD();
-#endif
 }
 
 // separate animation timer for backgrounds, since we also count
@@ -3626,7 +3615,7 @@ void F_StartContinue(void)
 {
 	I_Assert(!netgame && !multiplayer);
 
-	if (players[consoleplayer].continues <= 0)
+	if (continuesInSession && players[consoleplayer].continues <= 0)
 	{
 		Command_ExitGame_f();
 		return;
@@ -3733,7 +3722,9 @@ void F_ContinueDrawer(void)
 	}
 
 	// Draw the continue markers! Show continues.
-	if (ncontinues > 10)
+	if (!continuesInSession)
+		;
+	else if (ncontinues > 10)
 	{
 		if (!(continuetime & 1) || continuetime > 17)
 			V_DrawContinueIcon(x, 68, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);
@@ -3965,6 +3956,7 @@ static void F_AdvanceToNextScene(void)
 	animtimer = pictime = cutscenes[cutnum]->scene[scenenum].picduration[picnum];
 }
 
+// See also G_AfterIntermission, the only other place which handles intra-map/ending transitions
 void F_EndCutScene(void)
 {
 	cutsceneover = true; // do this first, just in case G_EndGame or something wants to turn it back false later

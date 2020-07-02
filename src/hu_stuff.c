@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -47,10 +47,8 @@
 #include "hardware/hw_main.h"
 #endif
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h"
 #include "lua_hook.h"
-#endif
 
 // coords are scaled
 #define HU_INPUTX 0
@@ -70,7 +68,7 @@ patch_t *nightsnum[10]; // 0-9
 // Level title and credits fonts
 patch_t *lt_font[LT_FONTSIZE];
 patch_t *cred_font[CRED_FONTSIZE];
-patch_t *ttlnum[20]; // act numbers (0-19)
+patch_t *ttlnum[10]; // act numbers (0-9)
 
 // Name tag fonts
 patch_t *ntb_font[NT_FONTSIZE];
@@ -245,7 +243,7 @@ void HU_LoadGraphics(void)
 	tallinfin = (patch_t *)W_CachePatchName("STTINFIN", PU_HUDGFX);
 
 	// cache act numbers for level titles
-	for (i = 0; i < 20; i++)
+	for (i = 0; i < 10; i++)
 	{
 		sprintf(buffer, "TTL%.2d", i);
 		ttlnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
@@ -688,10 +686,8 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 
 	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
 
-#ifdef HAVE_BLUA
 	if (LUAh_PlayerMsg(playernum, target, flags, msg))
 		return;
-#endif
 
 	if (spam_eatmsg)
 		return; // don't proceed if we were supposed to eat the message.
@@ -759,107 +755,40 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		}
 		else
         {
-			const UINT8 color = players[playernum].skincolor;
+			UINT16 chatcolor = skincolors[players[playernum].skincolor].chatcolor;
 
-			cstart = "\x83";
-
-			// Follow palette order at r_draw.c Color_Names
-			switch (color)
-			{
-				default:
-				case SKINCOLOR_WHITE:
-				case SKINCOLOR_BONE:
-				case SKINCOLOR_CLOUDY:
-				case SKINCOLOR_GREY:
-				case SKINCOLOR_SILVER:
-				case SKINCOLOR_AETHER:
-				case SKINCOLOR_SLATE:
-					cstart = "\x80"; // white
-					break;
-				case SKINCOLOR_CARBON:
-				case SKINCOLOR_JET:
-				case SKINCOLOR_BLACK:
-					cstart = "\x86"; // V_GRAYMAP
-					break;
-				case SKINCOLOR_PINK:
-				case SKINCOLOR_RUBY:
-				case SKINCOLOR_SALMON:
-				case SKINCOLOR_RED:
-				case SKINCOLOR_CRIMSON:
-				case SKINCOLOR_FLAME:
-					cstart = "\x85"; // V_REDMAP
-					break;
-				case SKINCOLOR_YOGURT:
-				case SKINCOLOR_BROWN:
-				case SKINCOLOR_TAN:
-				case SKINCOLOR_BEIGE:
-				case SKINCOLOR_QUAIL:
-					cstart = "\x8d"; // V_BROWNMAP
-					break;
-				case SKINCOLOR_MOSS:
-				case SKINCOLOR_GREEN:
-				case SKINCOLOR_FOREST:
-				case SKINCOLOR_EMERALD:
-				case SKINCOLOR_MINT:
-					cstart = "\x83"; // V_GREENMAP
-					break;
-				case SKINCOLOR_AZURE:
-					cstart = "\x8c"; // V_AZUREMAP
-					break;
-				case SKINCOLOR_LAVENDER:
-				case SKINCOLOR_PASTEL:
-				case SKINCOLOR_PURPLE:
-					cstart = "\x89"; // V_PURPLEMAP
-					break;
-				case SKINCOLOR_PEACHY:
-				case SKINCOLOR_LILAC:
-				case SKINCOLOR_PLUM:
-				case SKINCOLOR_ROSY:
-					cstart = "\x8e"; // V_ROSYMAP
-					break;
-				case SKINCOLOR_SUNSET:
-				case SKINCOLOR_APRICOT:
-				case SKINCOLOR_ORANGE:
-				case SKINCOLOR_RUST:
-					cstart = "\x87"; // V_ORANGEMAP
-					break;
-				case SKINCOLOR_GOLD:
-				case SKINCOLOR_SANDY:
-				case SKINCOLOR_YELLOW:
-				case SKINCOLOR_OLIVE:
-					cstart = "\x82"; // V_YELLOWMAP
-					break;
-				case SKINCOLOR_LIME:
-				case SKINCOLOR_PERIDOT:
-					cstart = "\x8b"; // V_PERIDOTMAP
-					break;
-				case SKINCOLOR_SEAFOAM:
-				case SKINCOLOR_AQUA:
-					cstart = "\x8a"; // V_AQUAMAP
-					break;
-				case SKINCOLOR_TEAL:
-				case SKINCOLOR_WAVE:
-				case SKINCOLOR_CYAN:
-				case SKINCOLOR_SKY:
-				case SKINCOLOR_CERULEAN:
-				case SKINCOLOR_ICY:
-				case SKINCOLOR_SAPPHIRE:
-				case SKINCOLOR_VAPOR:
-					cstart = "\x88"; // V_SKYMAP
-					break;
-				case SKINCOLOR_CORNFLOWER:
-				case SKINCOLOR_BLUE:
-				case SKINCOLOR_COBALT:
-				case SKINCOLOR_DUSK:
-					cstart = "\x84"; // V_BLUEMAP
-					break;
-				case SKINCOLOR_BUBBLEGUM:
-				case SKINCOLOR_MAGENTA:
-				case SKINCOLOR_NEON:
-				case SKINCOLOR_VIOLET:
-					cstart = "\x81"; // V_MAGENTAMAP
-					break;
-			}
+			if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
+				cstart = "\x80";
+			else if (chatcolor == V_MAGENTAMAP)
+				cstart = "\x81";
+			else if (chatcolor == V_YELLOWMAP)
+				cstart = "\x82";
+			else if (chatcolor == V_GREENMAP)
+				cstart = "\x83";
+			else if (chatcolor == V_BLUEMAP)
+				cstart = "\x84";
+			else if (chatcolor == V_REDMAP)
+				cstart = "\x85";
+			else if (chatcolor == V_GRAYMAP)
+				cstart = "\x86";
+			else if (chatcolor == V_ORANGEMAP)
+				cstart = "\x87";
+			else if (chatcolor == V_SKYMAP)
+				cstart = "\x88";
+			else if (chatcolor == V_PURPLEMAP)
+				cstart = "\x89";
+			else if (chatcolor == V_AQUAMAP)
+				cstart = "\x8a";
+			else if (chatcolor == V_PERIDOTMAP)
+				cstart = "\x8b";
+			else if (chatcolor == V_AZUREMAP)
+				cstart = "\x8c";
+			else if (chatcolor == V_BROWNMAP)
+				cstart = "\x8d";
+			else if (chatcolor == V_ROSYMAP)
+				cstart = "\x8e";
+			else if (chatcolor == V_INVERTMAP)
+				cstart = "\x8f";
         }
 		prefix = cstart;
 
@@ -2171,18 +2100,14 @@ void HU_Drawer(void)
 	{
 		if (netgame || multiplayer)
 		{
-#ifdef HAVE_BLUA
 			if (LUA_HudEnabled(hud_rankings))
-#endif
-			HU_DrawRankings();
-			if (gametype == GT_COOP)
+				HU_DrawRankings();
+			if (gametyperules & GTR_CAMPAIGN)
 				HU_DrawNetplayCoopOverlay();
 		}
 		else
 			HU_DrawCoopOverlay();
-#ifdef HAVE_BLUA
 		LUAh_ScoresHUD();
-#endif
 	}
 
 	if (gamestate != GS_LEVEL)
@@ -3165,29 +3090,20 @@ static void HU_DrawRankings(void)
 
 static void HU_DrawCoopOverlay(void)
 {
-	if (token
-#ifdef HAVE_BLUA
-	&& LUA_HudEnabled(hud_tokens)
-#endif
-	)
+	if (token && LUA_HudEnabled(hud_tokens))
 	{
 		V_DrawString(168, 176, 0, va("- %d", token));
 		V_DrawSmallScaledPatch(148, 172, 0, tokenicon);
 	}
 
-#ifdef HAVE_BLUA
-	if (LUA_HudEnabled(hud_tabemblems))
-#endif
-	if (!modifiedgame || savemoddata)
+	if (LUA_HudEnabled(hud_tabemblems) && (!modifiedgame || savemoddata))
 	{
 		V_DrawString(160, 144, 0, va("- %d/%d", M_CountEmblems(), numemblems+numextraemblems));
 		V_DrawScaledPatch(128, 144 - SHORT(emblemicon->height)/4, 0, emblemicon);
 	}
 
-#ifdef HAVE_BLUA
 	if (!LUA_HudEnabled(hud_coopemeralds))
 		return;
-#endif
 
 	if (emeralds & EMERALD1)
 		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)-32, 0, emeraldpics[0][0]);
@@ -3209,20 +3125,14 @@ static void HU_DrawNetplayCoopOverlay(void)
 {
 	int i;
 
-	if (token
-#ifdef HAVE_BLUA
-	&& LUA_HudEnabled(hud_tokens)
-#endif
-	)
+	if (token && LUA_HudEnabled(hud_tokens))
 	{
 		V_DrawString(168, 10, 0, va("- %d", token));
 		V_DrawSmallScaledPatch(148, 6, 0, tokenicon);
 	}
 
-#ifdef HAVE_BLUA
 	if (!LUA_HudEnabled(hud_coopemeralds))
 		return;
-#endif
 
 	for (i = 0; i < 7; ++i)
 	{

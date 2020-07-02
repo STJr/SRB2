@@ -1219,7 +1219,7 @@
 		C01FCF4B08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 2.2.1;
+				CURRENT_PROJECT_VERSION = 2.2.4;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					NORMALSRB2,
@@ -1231,7 +1231,7 @@
 		C01FCF4C08A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 2.2.1;
+				CURRENT_PROJECT_VERSION = 2.2.4;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -1272,7 +1272,6 @@
 					HAVE_SDL,
 					HAVE_MIXER,
 					HAVE_PNG,
-					HAVE_BLUA,
 					LUA_USE_POSIX,
 					COMPVERSION,
 					HWRENDER,
@@ -1395,7 +1394,6 @@
 					HAVE_SDL,
 					HAVE_MIXER,
 					HAVE_PNG,
-					HAVE_BLUA,
 					LUA_USE_POSIX,
 					COMPVERSION,
 					HWRENDER,

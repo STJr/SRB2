@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2019 by Sonic Team Junior.
+// Copyright (C) 2014-2020 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -37,6 +37,7 @@
 
 #ifdef HWRENDER
 #include "../hardware/r_opengl/r_opengl.h"
+#include "../hardware/hw_main.h"
 #include "ogl_sdl.h"
 #include "../i_system.h"
 #include "hwsym_sdl.h"
@@ -90,15 +91,15 @@ boolean LoadGL(void)
 	const char *OGLLibname = NULL;
 	const char *GLULibname = NULL;
 
-	if (M_CheckParm ("-OGLlib") && M_IsNextParm())
+	if (M_CheckParm("-OGLlib") && M_IsNextParm())
 		OGLLibname = M_GetNextParm();
 
 	if (SDL_GL_LoadLibrary(OGLLibname) != 0)
 	{
-		I_OutputMsg("Could not load OpenGL Library: %s\n"
+		CONS_Alert(CONS_ERROR, "Could not load OpenGL Library: %s\n"
 					"Falling back to Software mode.\n", SDL_GetError());
-		if (!M_CheckParm ("-OGLlib"))
-			I_OutputMsg("If you know what is the OpenGL library's name, use -OGLlib\n");
+		if (!M_CheckParm("-OGLlib"))
+			CONS_Printf("If you know what is the OpenGL library's name, use -OGLlib\n");
 		return 0;
 	}
 
@@ -118,7 +119,7 @@ boolean LoadGL(void)
 	GLULibname = NULL;
 #endif
 
-	if (M_CheckParm ("-GLUlib") && M_IsNextParm())
+	if (M_CheckParm("-GLUlib") && M_IsNextParm())
 		GLULibname = M_GetNextParm();
 
 	if (GLULibname)
@@ -128,15 +129,15 @@ boolean LoadGL(void)
 			return SetupGLfunc();
 		else
 		{
-			I_OutputMsg("Could not load GLU Library: %s\n", GLULibname);
+			CONS_Alert(CONS_ERROR, "Could not load GLU Library: %s\n", GLULibname);
 			if (!M_CheckParm ("-GLUlib"))
-				I_OutputMsg("If you know what is the GLU library's name, use -GLUlib\n");
+				CONS_Alert(CONS_ERROR, "If you know what is the GLU library's name, use -GLUlib\n");
 		}
 	}
 	else
 	{
-		I_OutputMsg("Could not load GLU Library\n");
-		I_OutputMsg("If you know what is the GLU library's name, use -GLUlib\n");
+		CONS_Alert(CONS_ERROR, "Could not load GLU Library\n");
+		CONS_Alert(CONS_ERROR, "If you know what is the GLU library's name, use -GLUlib\n");
 	}
 #endif
 	return SetupGLfunc();
@@ -152,31 +153,29 @@ boolean LoadGL(void)
 */
 boolean OglSdlSurface(INT32 w, INT32 h)
 {
-	INT32 cbpp;
-	const GLvoid *glvendor = NULL, *glrenderer = NULL, *glversion = NULL;
+	INT32 cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
+	static boolean first_init = false;
 
-	cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
-
-	glvendor = pglGetString(GL_VENDOR);
-	// Get info and extensions.
-	//BP: why don't we make it earlier ?
-	//Hurdler: we cannot do that before intialising gl context
-	glrenderer = pglGetString(GL_RENDERER);
-	glversion = pglGetString(GL_VERSION);
-	gl_extensions = pglGetString(GL_EXTENSIONS);
-
-	DBG_Printf("Vendor     : %s\n", glvendor);
-	DBG_Printf("Renderer   : %s\n", glrenderer);
-	DBG_Printf("Version    : %s\n", glversion);
-	DBG_Printf("Extensions : %s\n", gl_extensions);
 	oglflags = 0;
+
+	if (!first_init)
+	{
+		gl_version = pglGetString(GL_VERSION);
+		gl_renderer = pglGetString(GL_RENDERER);
+		gl_extensions = pglGetString(GL_EXTENSIONS);
+
+		GL_DBG_Printf("OpenGL %s\n", gl_version);
+		GL_DBG_Printf("GPU: %s\n", gl_renderer);
+		GL_DBG_Printf("Extensions: %s\n", gl_extensions);
+	}
+	first_init = true;
 
 	if (isExtAvailable("GL_EXT_texture_filter_anisotropic", gl_extensions))
 		pglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximumAnisotropy);
 	else
 		maximumAnisotropy = 1;
 
-	SetupGLFunc13();
+	SetupGLFunc4();
 
 	granisotropicmode_cons_t[1].value = maximumAnisotropy;
 
@@ -222,7 +221,7 @@ void OglSdlFinishUpdate(boolean waitvbl)
 	HWR_DrawScreenFinalTexture(realwidth, realheight);
 }
 
-EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette)
+EXPORT void HWRAPI(OglSdlSetPalette) (RGBA_t *palette)
 {
 	size_t palsize = (sizeof(RGBA_t) * 256);
 	// on a palette change, you have to reload all of the textures

@@ -180,6 +180,9 @@
     <ClInclude Include="..\f_finale.h">
       <Filter>F_Frame</Filter>
     </ClInclude>
+    <ClInclude Include="..\g_demo.h">
+      <Filter>G_Game</Filter>
+    </ClInclude>
     <ClInclude Include="..\g_game.h">
       <Filter>G_Game</Filter>
     </ClInclude>
@@ -214,6 +217,9 @@
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
     <ClInclude Include="..\hardware\hws_data.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_batching.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
     <ClInclude Include="..\hardware\hw_clip.h">
@@ -417,6 +423,9 @@
     <ClInclude Include="..\r_segs.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
+    <ClInclude Include="..\r_skins.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
     <ClInclude Include="..\r_sky.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
@@ -528,6 +537,9 @@
     <ClCompile Include="..\blua\linit.c">
       <Filter>BLUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\blua\liolib.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\blua\llex.c">
       <Filter>BLUA</Filter>
     </ClCompile>
@@ -597,6 +609,9 @@
     <ClCompile Include="..\f_wipe.c">
       <Filter>F_Frame</Filter>
     </ClCompile>
+    <ClCompile Include="..\g_demo.c">
+      <Filter>G_Game</Filter>
+    </ClCompile>
     <ClCompile Include="..\g_game.c">
       <Filter>G_Game</Filter>
     </ClCompile>
@@ -622,6 +637,9 @@
       <Filter>H_Hud</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\hw3sound.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_batching.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\hw_bsp.c">
@@ -847,6 +865,9 @@
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_segs.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_skins.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_sky.c">

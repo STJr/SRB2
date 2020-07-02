@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,7 +22,7 @@
 
 #ifdef HAVE_OPENMPT
 #include "libopenmpt/libopenmpt.h"
-openmpt_module *openmpt_mhandle;
+extern openmpt_module *openmpt_mhandle;
 #endif
 
 // mask used to indicate sound origin is player item pickup
@@ -208,6 +208,7 @@ typedef struct musicdef_s
 	INT16 soundtestcond; // +ve for map, -ve for conditionset, 0 for already here
 	tic_t stoppingtics;
 	fixed_t bpm;
+	UINT32 loop_ms;/* override LOOPPOINT/LOOPMS */
 	boolean allowed; // question marks or listenable on sound test?
 	struct musicdef_s *next;
 } musicdef_t;
@@ -261,10 +262,10 @@ typedef struct musicstack_s
     struct musicstack_s *next;
 } musicstack_t;
 
-char music_stack_nextmusname[7];
-boolean music_stack_noposition;
-UINT32 music_stack_fadeout;
-UINT32 music_stack_fadein;
+extern char music_stack_nextmusname[7];
+extern boolean music_stack_noposition;
+extern UINT32 music_stack_fadeout;
+extern UINT32 music_stack_fadein;
 
 void S_SetStackAdjustmentStart(void);
 void S_AdjustMusicStackTics(void);
@@ -332,7 +333,7 @@ void S_StopSoundByNum(sfxenum_t sfxnum);
 #ifdef MUSICSLOT_COMPATIBILITY
 // For compatibility with code/scripts relying on older versions
 // This is a list of all the "special" slot names and their associated numbers
-const char *compat_special_music_slots[16];
+extern const char *compat_special_music_slots[16];
 #endif
 
 #endif

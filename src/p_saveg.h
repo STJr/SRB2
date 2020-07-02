@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,7 +21,7 @@
 // Persistent storage/archiving.
 // These are the load / save game routines.
 
-void P_SaveGame(void);
+void P_SaveGame(INT16 mapnum);
 void P_SaveNetGame(void);
 boolean P_LoadGame(INT16 mapoverride);
 boolean P_LoadNetGame(void);

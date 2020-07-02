@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,9 +15,7 @@
 #include "doomstat.h"
 #include "m_random.h"
 #include "p_local.h"
-#ifdef ESLOPE
 #include "p_slopes.h"
-#endif
 #include "r_state.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -29,245 +27,128 @@
 // ==========================================================================
 
 //
-// Mini-P_IsObjectOnGroundIn for T_MovePlane hack
-//
-static inline boolean P_MobjReadyToMove(mobj_t *mo, sector_t *sec, boolean sectorisffloor, boolean sectorisquicksand)
-{
-	if (sectorisquicksand)
-		return (mo->z > sec->floorheight && mo->z < sec->ceilingheight);
-	else if (!!(mo->flags & MF_SPAWNCEILING) ^ !!(mo->eflags & MFE_VERTICALFLIP))
-		return ((sectorisffloor) ? (mo->z+mo->height != sec->floorheight) : (mo->z+mo->height != sec->ceilingheight));
-	else
-		return ((sectorisffloor) ? (mo->z != sec->ceilingheight) : (mo->z != sec->floorheight));
-}
-
-//
 // Move a plane (floor or ceiling) and check for crushing
 //
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crush,
-	INT32 floorOrCeiling, INT32 direction)
+	boolean ceiling, INT32 direction)
 {
-	boolean flag;
 	fixed_t lastpos;
 	fixed_t destheight; // used to keep floors/ceilings from moving through each other
-	// Stuff used for mobj hacks.
-	INT32 secnum = -1;
-	mobj_t *mo = NULL;
-	sector_t *sec = NULL;
-	ffloor_t *rover = NULL;
-	boolean sectorisffloor = false;
-	boolean sectorisquicksand = false;
-
 	sector->moved = true;
 
-	switch (floorOrCeiling)
+	if (ceiling)
 	{
-		case 0:
-			// moving a floor
-			switch (direction)
-			{
-				case -1:
-					// Moving a floor down
-					if (sector->floorheight - speed < dest)
-					{
-						lastpos = sector->floorheight;
-						sector->floorheight = dest;
-						flag = P_CheckSector(sector, crush);
-						if (flag && sector->numattached)
-						{
-							sector->floorheight = lastpos;
-							P_CheckSector(sector, crush);
-						}
-						return pastdest;
-					}
-					else
-					{
-						lastpos = sector->floorheight;
-						sector->floorheight -= speed;
-						flag = P_CheckSector(sector, crush);
-						if (flag && sector->numattached)
-						{
-							sector->floorheight = lastpos;
-							P_CheckSector(sector, crush);
-							return crushed;
-						}
-					}
-					break;
-
-				case 1:
-					// Moving a floor up
-					// keep floor from moving through ceilings
-					destheight = (dest < sector->ceilingheight) ? dest : sector->ceilingheight;
-					if (sector->floorheight + speed > destheight)
-					{
-						lastpos = sector->floorheight;
-						sector->floorheight = destheight;
-						flag = P_CheckSector(sector, crush);
-						if (flag)
-						{
-							sector->floorheight = lastpos;
-							P_CheckSector(sector, crush);
-						}
-						return pastdest;
-					}
-					else
-					{
-						// crushing is possible
-						lastpos = sector->floorheight;
-						sector->floorheight += speed;
-						flag = P_CheckSector(sector, crush);
-						if (flag)
-						{
-							sector->floorheight = lastpos;
-							P_CheckSector(sector, crush);
-							return crushed;
-						}
-					}
-					break;
-			}
-			break;
-
-		case 1:
-			// moving a ceiling
-			switch (direction)
-			{
-				case -1:
-					// moving a ceiling down
-					// keep ceiling from moving through floors
-					destheight = (dest > sector->floorheight) ? dest : sector->floorheight;
-					if (sector->ceilingheight - speed < destheight)
-					{
-						lastpos = sector->ceilingheight;
-						sector->ceilingheight = destheight;
-						flag = P_CheckSector(sector, crush);
-
-						if (flag)
-						{
-							sector->ceilingheight = lastpos;
-							P_CheckSector(sector, crush);
-						}
-						return pastdest;
-					}
-					else
-					{
-						// crushing is possible
-						lastpos = sector->ceilingheight;
-						sector->ceilingheight -= speed;
-						flag = P_CheckSector(sector, crush);
-
-						if (flag)
-						{
-							sector->ceilingheight = lastpos;
-							P_CheckSector(sector, crush);
-							return crushed;
-						}
-					}
-					break;
-
-				case 1:
-					// moving a ceiling up
-					if (sector->ceilingheight + speed > dest)
-					{
-						lastpos = sector->ceilingheight;
-						sector->ceilingheight = dest;
-						flag = P_CheckSector(sector, crush);
-						if (flag && sector->numattached)
-						{
-							sector->ceilingheight = lastpos;
-							P_CheckSector(sector, crush);
-						}
-						return pastdest;
-					}
-					else
-					{
-						lastpos = sector->ceilingheight;
-						sector->ceilingheight += speed;
-						flag = P_CheckSector(sector, crush);
-						if (flag && sector->numattached)
-						{
-							sector->ceilingheight = lastpos;
-							P_CheckSector(sector, crush);
-							return crushed;
-						}
-					}
-					break;
-			}
-			break;
-	}
-
-	// Hack for buggy mobjs to move by gravity with moving planes.
-	if (sector->tagline)
-		sectorisffloor = true;
-
-	// Optimization condition. If the sector is not an FOF, declare sec as the main sector outside of the loop.
-	if (!sectorisffloor)
-		sec = sector;
-
-	// Optimization condition. Only run the logic if there is any Things in the sector.
-	if (sectorisffloor || sec->thinglist)
-	{
-		// If this is an FOF being checked, check all the affected sectors for moving mobjs.
-		while ((sectorisffloor ? (secnum = P_FindSectorFromLineTag(sector->tagline, secnum)) : (secnum = 1)) >= 0)
+		lastpos = sector->ceilingheight;
+		// moving a ceiling
+		switch (direction)
 		{
-			if (sectorisffloor)
-			{
-				// Get actual sector from the list of sectors.
-				sec = &sectors[secnum];
-
-				// Can't use P_InQuicksand because it will return the incorrect result
-				// because of checking for heights.
-				for (rover = sec->ffloors; rover; rover = rover->next)
+			case -1:
+				// moving a ceiling down
+				// keep ceiling from moving through floors
+				destheight = (dest > sector->floorheight) ? dest : sector->floorheight;
+				if (sector->ceilingheight - speed < destheight)
 				{
-					if (rover->target == sec && (rover->flags & FF_QUICKSAND))
+					sector->ceilingheight = destheight;
+					if (P_CheckSector(sector, crush))
 					{
-						sectorisquicksand = true;
-						break;
+						sector->ceilingheight = lastpos;
+						P_CheckSector(sector, crush);
+					}
+					return pastdest;
+				}
+				else
+				{
+					// crushing is possible
+					sector->ceilingheight -= speed;
+					if (P_CheckSector(sector, crush))
+					{
+						sector->ceilingheight = lastpos;
+						P_CheckSector(sector, crush);
+						return crushed;
 					}
 				}
-			}
+				break;
 
-			for (mo = sec->thinglist; mo; mo = mo->snext)
-			{
-				// The object should be ready to move as defined by this function.
-				if (!P_MobjReadyToMove(mo, sec, sectorisffloor, sectorisquicksand))
-					continue;
-
-				// The object should not be moving at all.
-				if (mo->momx || mo->momy || mo->momz)
-					continue;
-
-				// These objects will be affected by this condition.
-				switch (mo->type)
+			case 1:
+				// moving a ceiling up
+				if (sector->ceilingheight + speed > dest)
 				{
-					case MT_GOOP: // Egg Slimer's goop objects
-					case MT_SPINFIRE: // Elemental Shield flame balls
-					case MT_SPIKE: // Floor Spike
-						// Is the object hang from the ceiling?
-						// In that case, swap the planes used.
-						// verticalflip inverts
-						if (!!(mo->flags & MF_SPAWNCEILING) ^ !!(mo->eflags & MFE_VERTICALFLIP))
-						{
-							if (sectorisffloor && !sectorisquicksand)
-								mo->z = mo->ceilingz - mo->height;
-							else
-								mo->z = mo->ceilingz = mo->subsector->sector->ceilingheight - mo->height;
-						}
-						else
-						{
-							if (sectorisffloor && !sectorisquicksand)
-								mo->z = mo->floorz;
-							else
-								mo->z = mo->floorz = mo->subsector->sector->floorheight;
-						}
-						break;
-					// Kill warnings...
-					default:
-						break;
+					sector->ceilingheight = dest;
+					if (P_CheckSector(sector, crush) && sector->numattached)
+					{
+						sector->ceilingheight = lastpos;
+						P_CheckSector(sector, crush);
+					}
+					return pastdest;
 				}
-			}
+				else
+				{
+					sector->ceilingheight += speed;
+					if (P_CheckSector(sector, crush) && sector->numattached)
+					{
+						sector->ceilingheight = lastpos;
+						P_CheckSector(sector, crush);
+						return crushed;
+					}
+				}
+				break;
+		}
+	}
+	else
+	{
+		lastpos = sector->floorheight;
+		// moving a floor
+		switch (direction)
+		{
+			case -1:
+				// Moving a floor down
+				if (sector->floorheight - speed < dest)
+				{
+					sector->floorheight = dest;
+					if (P_CheckSector(sector, crush) && sector->numattached)
+					{
+						sector->floorheight = lastpos;
+						P_CheckSector(sector, crush);
+					}
+					return pastdest;
+				}
+				else
+				{
+					sector->floorheight -= speed;
+					if (P_CheckSector(sector, crush) && sector->numattached)
+					{
+						sector->floorheight = lastpos;
+						P_CheckSector(sector, crush);
+						return crushed;
+					}
+				}
+				break;
 
-			// Break from loop if there is no FOFs to check.
-			if (!sectorisffloor)
+			case 1:
+				// Moving a floor up
+				// keep floor from moving through ceilings
+				destheight = (dest < sector->ceilingheight) ? dest : sector->ceilingheight;
+				if (sector->floorheight + speed > destheight)
+				{
+					sector->floorheight = destheight;
+					if (P_CheckSector(sector, crush))
+					{
+						sector->floorheight = lastpos;
+						P_CheckSector(sector, crush);
+					}
+					return pastdest;
+				}
+				else
+				{
+					// crushing is possible
+					sector->floorheight += speed;
+					if (P_CheckSector(sector, crush))
+					{
+						sector->floorheight = lastpos;
+						P_CheckSector(sector, crush);
+						return crushed;
+					}
+				}
 				break;
 		}
 	}
@@ -292,7 +173,7 @@ void T_MoveFloor(floormove_t *movefloor)
 	res = T_MovePlane(movefloor->sector,
 	                  movefloor->speed,
 	                  movefloor->floordestheight,
-	                  movefloor->crush, 0, movefloor->direction);
+	                  movefloor->crush, false, movefloor->direction);
 
 	if (movefloor->type == bounceFloor)
 	{
@@ -485,7 +366,7 @@ void T_MoveElevator(elevator_t *elevator)
 			elevator->speed,
 			elevator->ceilingdestheight,
 			elevator->distance,
-			1,                          // move floor
+			true,                          // move ceiling
 			elevator->direction
 		);
 
@@ -495,7 +376,7 @@ void T_MoveElevator(elevator_t *elevator)
 			elevator->speed,
 			elevator->floordestheight,
 			elevator->distance,
-			0,                        // move ceiling
+			false,                        // move floor
 			elevator->direction
 		);
 
@@ -547,7 +428,7 @@ void T_MoveElevator(elevator_t *elevator)
 			elevator->speed,
 			elevator->floordestheight,
 			elevator->distance,
-			0,                          // move ceiling
+			false,                          // move floor
 			elevator->direction
 		);
 
@@ -559,7 +440,7 @@ void T_MoveElevator(elevator_t *elevator)
 				elevator->speed,
 				elevator->ceilingdestheight,
 				elevator->distance,
-				1,                        // move floor
+				true,                        // move ceiling
 				elevator->direction
 			);
 		}
@@ -680,43 +561,18 @@ void T_MoveElevator(elevator_t *elevator)
 //
 // Useful for things like intermittent falling lava.
 //
-void T_ContinuousFalling(levelspecthink_t *faller)
+void T_ContinuousFalling(continuousfall_t *faller)
 {
-#define speed vars[0]
-#define direction vars[1]
-#define floorwasheight vars[2]
-#define ceilingwasheight vars[3]
-#define floordestheight vars[4]
-#define ceilingdestheight vars[5]
-
-	if (faller->direction == -1)
-	{
-		faller->sector->ceilingheight -= faller->speed;
-		faller->sector->floorheight -= faller->speed;
-	}
-	else
-	{
-		faller->sector->ceilingheight += faller->speed;
-		faller->sector->floorheight += faller->speed;
-	}
+	faller->sector->ceilingheight += faller->speed*faller->direction;
+	faller->sector->floorheight += faller->speed*faller->direction;
 
 	P_CheckSector(faller->sector, false);
 
-	if (faller->direction == -1) // Down
+	if ((faller->direction == -1 && faller->sector->ceilingheight <= faller->destheight)
+		|| (faller->direction == 1 && faller->sector->floorheight >= faller->destheight))
 	{
-		if (faller->sector->ceilingheight <= faller->ceilingdestheight)            // if destination height acheived
-		{
-			faller->sector->ceilingheight = faller->ceilingwasheight;
-			faller->sector->floorheight = faller->floorwasheight;
-		}
-	}
-	else // Up
-	{
-		if (faller->sector->floorheight >= faller->floordestheight)            // if destination height acheived
-		{
-			faller->sector->ceilingheight = faller->ceilingwasheight;
-			faller->sector->floorheight = faller->floorwasheight;
-		}
+		faller->sector->ceilingheight = faller->ceilingstartheight;
+		faller->sector->floorheight = faller->floorstartheight;
 	}
 
 	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong
@@ -724,12 +580,6 @@ void T_ContinuousFalling(levelspecthink_t *faller)
 	faller->sector->floorspeed = faller->speed*faller->direction;
 	faller->sector->ceilspeed = 42;
 	faller->sector->moved = true;
-#undef speed
-#undef direction
-#undef floorwasheight
-#undef ceilingwasheight
-#undef floordestheight
-#undef ceilingdestheight
 }
 
 //
@@ -775,23 +625,20 @@ static fixed_t P_SectorCheckWater(sector_t *analyzesector,
 //////////////////////////////////////////////////
 // Bounces a floating cheese
 
-void T_BounceCheese(levelspecthink_t *bouncer)
+void T_BounceCheese(bouncecheese_t *bouncer)
 {
-#define speed vars[0]
-#define distance vars[1]
-#define low vars[2]
-#define ceilingwasheight vars[3]
-#define floorwasheight vars[4]
+	fixed_t sectorheight;
 	fixed_t halfheight;
 	fixed_t waterheight;
 	fixed_t floorheight;
 	sector_t *actionsector;
 	INT32 i;
+	boolean remove;
 
-	if (bouncer->sector->crumblestate == 4 || bouncer->sector->crumblestate == 1
-		|| bouncer->sector->crumblestate == 2) // Oops! Crumbler says to remove yourself!
+	if (bouncer->sector->crumblestate == CRUMBLE_RESTORE || bouncer->sector->crumblestate == CRUMBLE_WAIT
+		|| bouncer->sector->crumblestate == CRUMBLE_ACTIVATED) // Oops! Crumbler says to remove yourself!
 	{
-		bouncer->sector->crumblestate = 1;
+		bouncer->sector->crumblestate = CRUMBLE_WAIT;
 		bouncer->sector->ceilingdata = NULL;
 		bouncer->sector->ceilspeed = 0;
 		bouncer->sector->floordata = NULL;
@@ -806,43 +653,28 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		actionsector = &sectors[i];
 		actionsector->moved = true;
 
-		halfheight = abs(bouncer->sector->ceilingheight - bouncer->sector->floorheight) >> 1;
+		sectorheight = abs(bouncer->sector->ceilingheight - bouncer->sector->floorheight);
+		halfheight = sectorheight/2;
 
 		waterheight = P_SectorCheckWater(actionsector, bouncer->sector); // sorts itself out if there's no suitable water in the sector
 
-		floorheight = P_FloorzAtPos(actionsector->soundorg.x, actionsector->soundorg.y, bouncer->sector->floorheight, halfheight << 1);
+		floorheight = P_FloorzAtPos(actionsector->soundorg.x, actionsector->soundorg.y, bouncer->sector->floorheight, sectorheight);
+
+		remove = false;
 
 		// Water level is up to the ceiling.
 		if (waterheight > bouncer->sector->ceilingheight - halfheight && bouncer->sector->ceilingheight >= actionsector->ceilingheight) // Tails 01-08-2004
 		{
 			bouncer->sector->ceilingheight = actionsector->ceilingheight;
-			bouncer->sector->floorheight = bouncer->sector->ceilingheight - (halfheight*2);
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
-			P_RecalcPrecipInSector(actionsector);
-			bouncer->sector->ceilingdata = NULL;
-			bouncer->sector->floordata = NULL;
-			bouncer->sector->floorspeed = 0;
-			bouncer->sector->ceilspeed = 0;
-			bouncer->sector->moved = true;
-			P_RemoveThinker(&bouncer->thinker); // remove bouncer from actives
-			return;
+			bouncer->sector->floorheight = actionsector->ceilingheight - sectorheight;
+			remove = true;
 		}
 		// Water level is too shallow.
 		else if (waterheight < bouncer->sector->floorheight + halfheight && bouncer->sector->floorheight <= floorheight)
 		{
-			bouncer->sector->ceilingheight = floorheight + (halfheight << 1);
+			bouncer->sector->ceilingheight = floorheight + sectorheight;
 			bouncer->sector->floorheight = floorheight;
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
-			P_RecalcPrecipInSector(actionsector);
-			bouncer->sector->ceilingdata = NULL;
-			bouncer->sector->floordata = NULL;
-			bouncer->sector->floorspeed = 0;
-			bouncer->sector->ceilspeed = 0;
-			bouncer->sector->moved = true;
-			P_RemoveThinker(&bouncer->thinker); // remove bouncer from actives
-			return;
+			remove = true;
 		}
 		else
 		{
@@ -850,37 +682,47 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 			bouncer->floorwasheight = waterheight - halfheight;
 		}
 
-		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
-			70*FRACUNIT, 0, 1, -1); // move ceiling
-		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
-			0, 0, -1); // move floor
+		if (remove)
+		{
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, false, true, -1); // update things on ceiling
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, false, false, -1); // update things on floor
+			P_RecalcPrecipInSector(actionsector);
+			bouncer->sector->ceilingdata = NULL;
+			bouncer->sector->floordata = NULL;
+			bouncer->sector->floorspeed = 0;
+			bouncer->sector->ceilspeed = 0;
+			bouncer->sector->moved = true;
+			P_RemoveThinker(&bouncer->thinker); // remove bouncer from actives
+			return;
+		}
+
+		if (bouncer->speed >= 0) // move floor first to fix height desync and any bizarre bugs following that
+		{
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
+				false, false, -1); // move floor
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
+				70*FRACUNIT, false, true, -1); // move ceiling
+		}
+		else
+		{
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
+				70*FRACUNIT, false, true, -1); // move ceiling
+			T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
+				false, false, -1); // move floor
+		}
 
 		bouncer->sector->floorspeed = -bouncer->speed/2;
 		bouncer->sector->ceilspeed = 42;
 
-		if (bouncer->sector->ceilingheight < bouncer->ceilingwasheight && bouncer->low == 0) // Down
+		if ((bouncer->sector->ceilingheight < bouncer->ceilingwasheight && !bouncer->low) // Down
+			|| (bouncer->sector->ceilingheight > bouncer->ceilingwasheight && bouncer->low)) // Up
 		{
 			if (abs(bouncer->speed) < 6*FRACUNIT)
 				bouncer->speed -= bouncer->speed/3;
 			else
 				bouncer->speed -= bouncer->speed/2;
 
-			bouncer->low = 1;
-			if (abs(bouncer->speed) > 6*FRACUNIT)
-			{
-				mobj_t *mp = (void *)&actionsector->soundorg;
-				actionsector->soundorg.z = bouncer->sector->floorheight;
-				S_StartSound(mp, sfx_splash);
-			}
-		}
-		else if (bouncer->sector->ceilingheight > bouncer->ceilingwasheight && bouncer->low) // Up
-		{
-			if (abs(bouncer->speed) < 6*FRACUNIT)
-				bouncer->speed -= bouncer->speed/3;
-			else
-				bouncer->speed -= bouncer->speed/2;
-
-			bouncer->low = 0;
+			bouncer->low = !bouncer->low;
 			if (abs(bouncer->speed) > 6*FRACUNIT)
 			{
 				mobj_t *mp = (void *)&actionsector->soundorg;
@@ -903,8 +745,8 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		{
 			bouncer->sector->floorheight = bouncer->floorwasheight;
 			bouncer->sector->ceilingheight = bouncer->ceilingwasheight;
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
-			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, false, true, -1); // update things on ceiling
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, false, false, -1); // update things on floor
 			bouncer->sector->ceilingdata = NULL;
 			bouncer->sector->floordata = NULL;
 			bouncer->sector->floorspeed = 0;
@@ -919,27 +761,13 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		if (actionsector)
 			P_RecalcPrecipInSector(actionsector);
 	}
-#undef speed
-#undef distance
-#undef low
-#undef ceilingwasheight
-#undef floorwasheight
 }
 
 //////////////////////////////////////////////////
 // T_StartCrumble ////////////////////////////////
 //////////////////////////////////////////////////
 // Crumbling platform Tails 03-11-2002
-//
-// DEFINITION OF THE 'CRUMBLESTATE'S:
-//
-// 0 - No crumble thinker
-// 1 - Don't float on water because this is supposed to wait for a crumble
-// 2 - Crumble thinker activated, but hasn't fallen yet
-// 3 - Crumble thinker is falling
-// 4 - Crumble thinker is about to restore to original position
-//
-void T_StartCrumble(elevator_t *elevator)
+void T_StartCrumble(crumble_t *crumble)
 {
 	ffloor_t *rover;
 	sector_t *sector;
@@ -947,84 +775,96 @@ void T_StartCrumble(elevator_t *elevator)
 
 	// Once done, the no-return thinker just sits there,
 	// constantly 'returning'... kind of an oxymoron, isn't it?
-	if (((elevator->floordestheight == 1 && elevator->direction == -1)
-		|| (elevator->floordestheight == 0 && elevator->direction == 1))
-		&& elevator->type == elevateContinuous) // No return crumbler
+	if ((((crumble->flags & CF_REVERSE) && crumble->direction == -1)
+		|| (!(crumble->flags & CF_REVERSE) && crumble->direction == 1))
+		&& !(crumble->flags & CF_RETURN))
 	{
-		elevator->sector->ceilspeed = 0;
-		elevator->sector->floorspeed = 0;
+		crumble->sector->ceilspeed = 0;
+		crumble->sector->floorspeed = 0;
 		return;
 	}
 
-	if (elevator->distance != 0)
+	if (crumble->timer != 0)
 	{
-		if (elevator->distance > 0) // Count down the timer
+		if (crumble->timer > 0) // Count down the timer
 		{
-			elevator->distance--;
-			if (elevator->distance <= 0)
-				elevator->distance = -15*TICRATE; // Timer until platform returns to original position.
+			if (--crumble->timer <= 0)
+				crumble->timer = -15*TICRATE; // Timer until platform returns to original position.
 			else
 			{
 				// Timer isn't up yet, so just keep waiting.
-				elevator->sector->ceilspeed = 0;
-				elevator->sector->floorspeed = 0;
+				crumble->sector->ceilspeed = 0;
+				crumble->sector->floorspeed = 0;
 				return;
 			}
 		}
-		else if (++elevator->distance == 0) // Reposition back to original spot
+		else if (++crumble->timer == 0) // Reposition back to original spot
 		{
-			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+			for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 			{
 				sector = &sectors[i];
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (rover->flags & FF_CRUMBLE && rover->flags & FF_FLOATBOB
-						&& rover->master == elevator->sourceline)
-					{
-						rover->alpha = elevator->origspeed;
+					if (!(rover->flags & FF_CRUMBLE))
+						continue;
 
-						if (rover->alpha == 0xff)
-							rover->flags &= ~FF_TRANSLUCENT;
-					}
+					if (!(rover->flags & FF_FLOATBOB))
+						continue;
+
+					if (rover->master != crumble->sourceline)
+						continue;
+
+					rover->alpha = crumble->origalpha;
+
+					if (rover->alpha == 0xff)
+						rover->flags &= ~FF_TRANSLUCENT;
 				}
 			}
 
 			// Up!
-			if (elevator->floordestheight == 1)
-				elevator->direction = -1;
+			if (crumble->flags & CF_REVERSE)
+				crumble->direction = -1;
 			else
-				elevator->direction = 1;
+				crumble->direction = 1;
 
-			elevator->sector->ceilspeed = 0;
-			elevator->sector->floorspeed = 0;
+			crumble->sector->ceilspeed = 0;
+			crumble->sector->floorspeed = 0;
 			return;
 		}
 
 		// Flash to indicate that the platform is about to return.
-		if (elevator->distance > -224 && (leveltime % ((abs(elevator->distance)/8) + 1) == 0))
+		if (crumble->timer > -224 && (leveltime % ((abs(crumble->timer)/8) + 1) == 0))
 		{
-			for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+			for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 			{
 				sector = &sectors[i];
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (!(rover->flags & FF_NORETURN) && rover->flags & FF_CRUMBLE && rover->flags & FF_FLOATBOB
-						&& rover->master == elevator->sourceline)
-					{
-						if (rover->alpha == elevator->origspeed)
-						{
-							rover->flags |= FF_TRANSLUCENT;
-							rover->alpha = 0x00;
-						}
-						else
-						{
-							if (elevator->origspeed == 0xff)
-								rover->flags &= ~FF_TRANSLUCENT;
+					if (rover->flags & FF_NORETURN)
+						continue;
 
-							rover->alpha = elevator->origspeed;
-						}
+					if (!(rover->flags & FF_CRUMBLE))
+						continue;
+
+					if (!(rover->flags & FF_FLOATBOB))
+						continue;
+
+					if (rover->master != crumble->sourceline)
+						continue;
+
+					if (rover->alpha == crumble->origalpha)
+					{
+						rover->flags |= FF_TRANSLUCENT;
+						rover->alpha = 0x00;
+					}
+					else
+					{
+						rover->alpha = crumble->origalpha;
+
+						if (rover->alpha == 0xff)
+							rover->flags &= ~FF_TRANSLUCENT;
 					}
 				}
 			}
@@ -1033,74 +873,62 @@ void T_StartCrumble(elevator_t *elevator)
 		// We're about to go back to the original position,
 		// so set this to let other thinkers know what is
 		// about to happen.
-		if (elevator->distance < 0 && elevator->distance > -3)
-			elevator->sector->crumblestate = 4; // makes T_BounceCheese remove itself
+		if (crumble->timer < 0 && crumble->timer > -3)
+			crumble->sector->crumblestate = CRUMBLE_RESTORE; // makes T_BounceCheese remove itself
 	}
 
-	if ((elevator->floordestheight == 0 && elevator->direction == -1)
-		|| (elevator->floordestheight == 1 && elevator->direction == 1)) // Down
+	if ((!(crumble->flags & CF_REVERSE) && crumble->direction == -1)
+		|| ((crumble->flags & CF_REVERSE) && crumble->direction == 1)) // Down
 	{
-		elevator->sector->crumblestate = 3; // Allow floating now.
+		crumble->sector->crumblestate = CRUMBLE_FALL; // Allow floating now.
 
 		// Only fall like this if it isn't meant to float on water
-		if (elevator->high != 42)
+		if (!(crumble->flags & CF_FLOATBOB))
 		{
-			elevator->speed += gravity; // Gain more and more speed
+			crumble->speed += gravity; // Gain more and more speed
 
-			if ((elevator->floordestheight == 0 && !(elevator->sector->ceilingheight < -16384*FRACUNIT))
-				|| (elevator->floordestheight == 1 && !(elevator->sector->ceilingheight > 16384*FRACUNIT)))
+			if ((!(crumble->flags & CF_REVERSE) && crumble->sector->ceilingheight >= -16384*FRACUNIT)
+				|| ((crumble->flags & CF_REVERSE) && crumble->sector->ceilingheight <= 16384*FRACUNIT))
 			{
-				fixed_t dest;
-
-				if (elevator->floordestheight == 1)
-					dest = elevator->sector->ceilingheight + (elevator->speed*2);
-				else
-					dest = elevator->sector->ceilingheight - (elevator->speed*2);
-
 				T_MovePlane             //jff 4/7/98 reverse order of ceiling/floor
 				(
-				  elevator->sector,
-				  elevator->speed,
-				  dest,
-				  0,
-				  1, // move floor
-				  elevator->direction
+				  crumble->sector,
+				  crumble->speed,
+				  crumble->sector->ceilingheight + crumble->direction*crumble->speed*2,
+				  false,
+				  true, // move ceiling
+				  crumble->direction
 				);
 
-				if (elevator->floordestheight == 1)
-					dest = elevator->sector->floorheight + (elevator->speed*2);
-				else
-					dest = elevator->sector->floorheight - (elevator->speed*2);
-
-				  T_MovePlane
-				  (
-					elevator->sector,
-					elevator->speed,
-					dest,
-					0,
-					0,                        // move ceiling
-					elevator->direction
+				T_MovePlane
+				(
+				  crumble->sector,
+				  crumble->speed,
+				  crumble->sector->floorheight + crumble->direction*crumble->speed*2,
+				  false,
+				  false, // move floor
+				  crumble->direction
 				);
 
-				elevator->sector->ceilspeed = 42;
-				elevator->sector->floorspeed = elevator->speed*elevator->direction;
+				crumble->sector->ceilspeed = 42;
+				crumble->sector->floorspeed = crumble->speed*crumble->direction;
 			}
 		}
 	}
 	else // Up (restore to original position)
 	{
-		elevator->sector->crumblestate = 1;
-		elevator->sector->ceilingheight = elevator->ceilingwasheight;
-		elevator->sector->floorheight = elevator->floorwasheight;
-		elevator->sector->floordata = NULL;
-		elevator->sector->ceilingdata = NULL;
-		elevator->sector->ceilspeed = 0;
-		elevator->sector->floorspeed = 0;
-		elevator->sector->moved = true;
-		P_RemoveThinker(&elevator->thinker);
+		crumble->sector->crumblestate = CRUMBLE_WAIT;
+		crumble->sector->ceilingheight = crumble->ceilingwasheight;
+		crumble->sector->floorheight = crumble->floorwasheight;
+		crumble->sector->floordata = NULL;
+		crumble->sector->ceilingdata = NULL;
+		crumble->sector->ceilspeed = 0;
+		crumble->sector->floorspeed = 0;
+		crumble->sector->moved = true;
+		P_RemoveThinker(&crumble->thinker);
 	}
 
-	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 	{
 		sector = &sectors[i];
 		sector->moved = true;
@@ -1113,24 +941,17 @@ void T_StartCrumble(elevator_t *elevator)
 //////////////////////////////////////////////////
 // Mario hits a block!
 //
-void T_MarioBlock(levelspecthink_t *block)
+void T_MarioBlock(mariothink_t *block)
 {
 	INT32 i;
-
-#define speed vars[1]
-#define direction vars[2]
-#define floorwasheight vars[3]
-#define ceilingwasheight vars[4]
-#define distance vars[5]
-#define low vars[6]
 
 	T_MovePlane
 	(
 	  block->sector,
 	  block->speed,
 	  block->sector->ceilingheight + 70*FRACUNIT * block->direction,
-	  0,
-	  1, // move floor
+	  false,
+	  true, // move ceiling
 	  block->direction
 	);
 
@@ -1139,17 +960,17 @@ void T_MarioBlock(levelspecthink_t *block)
 	  block->sector,
 	  block->speed,
 	  block->sector->floorheight + 70*FRACUNIT * block->direction,
-	  0,
-	  0, // move ceiling
+	  false,
+	  false, // move floor
 	  block->direction
 	);
 
-	if (block->sector->ceilingheight >= block->ceilingwasheight + 32*FRACUNIT) // Go back down now..
-		block->direction = -block->direction;
-	else if (block->sector->ceilingheight <= block->ceilingwasheight)
+	if (block->sector->ceilingheight >= block->ceilingstartheight + 32*FRACUNIT) // Go back down now..
+		block->direction *= -1;
+	else if (block->sector->ceilingheight <= block->ceilingstartheight)
 	{
-		block->sector->ceilingheight = block->ceilingwasheight;
-		block->sector->floorheight = block->floorwasheight;
+		block->sector->ceilingheight = block->ceilingstartheight;
+		block->sector->floorheight = block->floorstartheight;
 		P_RemoveThinker(&block->thinker);
 		block->sector->floordata = NULL;
 		block->sector->ceilingdata = NULL;
@@ -1158,595 +979,41 @@ void T_MarioBlock(levelspecthink_t *block)
 		block->direction = 0;
 	}
 
-	for (i = -1; (i = P_FindSectorFromTag((INT16)block->vars[0], i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(block->tag, i)) >= 0 ;)
 		P_RecalcPrecipInSector(&sectors[i]);
-
-#undef speed
-#undef direction
-#undef floorwasheight
-#undef ceilingwasheight
-#undef distance
-#undef low
 }
 
-void T_SpikeSector(levelspecthink_t *spikes)
-{
-	mobj_t *thing;
-	msecnode_t *node;
-	boolean dothepain;
-	sector_t *affectsec;
-
-	node = spikes->sector->touching_thinglist; // things touching this sector
-
-	for (; node; node = node->m_thinglist_next)
-	{
-		thing = node->m_thing;
-		if (!thing->player)
-			continue;
-
-		dothepain = false;
-		affectsec = &sectors[spikes->vars[0]];
-
-		if (affectsec == spikes->sector) // Applied to an actual sector
-		{
-			fixed_t affectfloor = P_GetSpecialBottomZ(thing, affectsec, affectsec);
-			fixed_t affectceil = P_GetSpecialTopZ(thing, affectsec, affectsec);
-
-			if (affectsec->flags & SF_FLIPSPECIAL_FLOOR)
-			{
-				if (!(thing->eflags & MFE_VERTICALFLIP) && thing->momz > 0)
-					continue;
-
-				if (thing->z == affectfloor)
-					dothepain = true;
-			}
-
-			if (affectsec->flags & SF_FLIPSPECIAL_CEILING)
-			{
-				if ((thing->eflags & MFE_VERTICALFLIP) && thing->momz < 0)
-					continue;
-
-				if (thing->z + thing->height == affectceil)
-					dothepain = true;
-			}
-		}
-		else
-		{
-			fixed_t affectfloor = P_GetSpecialBottomZ(thing, affectsec, spikes->sector);
-			fixed_t affectceil = P_GetSpecialTopZ(thing, affectsec, spikes->sector);
-			if (affectsec->flags & SF_FLIPSPECIAL_FLOOR)
-			{
-				if (!(thing->eflags & MFE_VERTICALFLIP) && thing->momz > 0)
-					continue;
-
-				if (thing->z == affectceil)
-					dothepain = true;
-			}
-
-			if (affectsec->flags & SF_FLIPSPECIAL_CEILING)
-			{
-				if ((thing->eflags & MFE_VERTICALFLIP) && thing->momz < 0)
-					continue;
-
-				if (thing->z + thing->height == affectfloor)
-					dothepain = true;
-			}
-		}
-
-		if (dothepain)
-		{
-			P_DamageMobj(thing, NULL, NULL, 1, DMG_SPIKE);
-			break;
-		}
-	}
-}
-
-void T_FloatSector(levelspecthink_t *floater)
+void T_FloatSector(floatthink_t *floater)
 {
 	fixed_t cheeseheight;
+	fixed_t waterheight;
 	sector_t *actionsector;
 	INT32 secnum;
 
-	cheeseheight = (floater->sector->ceilingheight + floater->sector->floorheight)>>1;
-
 	// Just find the first sector with the tag.
 	// Doesn't work with multiple sectors that have different floor/ceiling heights.
-	secnum = P_FindSectorFromTag((INT16)floater->vars[0], -1);
+	secnum = P_FindSectorFromTag(floater->tag, -1);
+	if (secnum <= 0)
+		return;
+	actionsector = &sectors[secnum];
 
-	if (secnum > 0)
-		actionsector = &sectors[secnum];
-	else
-		actionsector = NULL;
+	cheeseheight = (floater->sector->ceilingheight + floater->sector->floorheight)>>1;
 
-	if (actionsector)
-	{
-		//boolean floatanyway = false; // Ignore the crumblestate setting.
-		fixed_t waterheight = P_SectorCheckWater(actionsector, floater->sector); // find the highest suitable water block around
+	//boolean floatanyway = false; // Ignore the crumblestate setting.
+	waterheight = P_SectorCheckWater(actionsector, floater->sector); // find the highest suitable water block around
 
-		if (waterheight == cheeseheight) // same height, no floating needed
-			;
-		else if (floater->sector->floorheight == actionsector->floorheight && waterheight < cheeseheight) // too low
-			;
-		else if (floater->sector->ceilingheight == actionsector->ceilingheight && waterheight > cheeseheight) // too high
-			;
-		// we have something to float in! Or we're for some reason above the ground, let's fall anyway
-		else if (floater->sector->crumblestate == 0 || floater->sector->crumblestate >= 3/* || floatanyway*/)
-			EV_BounceSector(floater->sector, FRACUNIT, floater->sourceline);
+	if (waterheight == cheeseheight) // same height, no floating needed
+		return;
 
-		P_RecalcPrecipInSector(actionsector);
-	}
-}
+	if (floater->sector->floorheight == actionsector->floorheight && waterheight < cheeseheight) // too low
+		return;
 
-//
-// T_BridgeThinker
-//
-// Kind of like T_RaiseSector,
-// but spreads out across
-// multiple FOFs at varying
-// intensity.
-//
-void T_BridgeThinker(levelspecthink_t *bridge)
-{
-	msecnode_t *node;
-	mobj_t *thing;
-	sector_t *sector;
-	sector_t *controlsec = NULL;
-	INT32 i, k;
+	if (floater->sector->ceilingheight == actionsector->ceilingheight && waterheight > cheeseheight) // too high
+		return;
 
-	INT16 j;
-	boolean playeronme = false;
-	fixed_t ceilingdestination = 0, floordestination = 0;
-	result_e res = 0;
-
-#define ORIGFLOORHEIGHT (bridge->vars[0])
-#define ORIGCEILINGHEIGHT (bridge->vars[1])
-#define BASESPEED (bridge->vars[2])
-#define CURSPEED (bridge->vars[3])
-#define STARTTAG ((INT16)bridge->vars[4])
-#define ENDTAG ((INT16)bridge->vars[5])
-#define DIRECTION (bridge->vars[8])
-#define SAGAMT (8*FRACUNIT)
-	fixed_t lowceilheight = ORIGCEILINGHEIGHT - SAGAMT;
-	fixed_t lowfloorheight = ORIGFLOORHEIGHT - SAGAMT;
-#define LOWCEILINGHEIGHT (lowceilheight)
-#define LOWFLOORHEIGHT (lowfloorheight)
-#define STARTCONTROLTAG (ENDTAG + 1)
-#define ENDCONTROLTAG (ENDTAG + (ENDTAG - STARTTAG) + 1)
-
-	// Is someone standing on it?
-	for (j = STARTTAG; j <= ENDTAG; j++)
-	{
-		for (i = -1; (i = P_FindSectorFromTag(j, i)) >= 0 ;)
-		{
-			sector = &sectors[i];
-
-			// Nab the control sector that this sector belongs to.
-			k = P_FindSectorFromTag((INT16)(j + (ENDTAG-STARTTAG) + 1), -1);
-
-			if (k == -1)
-				break;
-
-			controlsec = &sectors[k];
-
-			// Is a player standing on me?
-			for (node = sector->touching_thinglist; node; node = node->m_thinglist_next)
-			{
-				thing = node->m_thing;
-
-				if (!thing->player)
-					continue;
-
-				if (!(thing->z == controlsec->ceilingheight))
-					continue;
-
-				playeronme = true;
-				goto wegotit; // Just take the first one?
-			}
-		}
-	}
-wegotit:
-	if (playeronme)
-	{
-		// Lower controlsec like a regular T_RaiseSector
-		// Set the heights of all the other control sectors to
-		// be a gradient of this height toward the edges
-	}
-	else
-	{
-		// Raise controlsec like a regular T_RaiseSector
-		// Set the heights of all the other control sectors to
-		// be a gradient of this height toward the edges.
-	}
-
-	if (playeronme && controlsec)
-	{
-		INT32 dist;
-
-		bridge->sector = controlsec;
-		CURSPEED = BASESPEED;
-
-		{
-			// Translate tags to - 0 + range
-			/*so you have a number in [min, max].
-			let range = max - min, subtract min
-			from your number to get [0, range].
-			subtract range/2 to get [-range/2, range/2].
-			take absolute value and get [0, range/2] where
-			lower number = closer to midpoint. divide by
-			range/2 to get [0, 1]. subtract that number
-			from 1 to get [0, 1] with higher number = closer
-			to midpoint. multiply this by max sag amount*/
-
-			INT32 midpoint = STARTCONTROLTAG + ((ENDCONTROLTAG-STARTCONTROLTAG) + 1)/2;
-//			INT32 tagstart = STARTTAG - midpoint;
-//			INT32 tagend = ENDTAG - midpoint;
-
-//			CONS_Debug(DBG_GAMELOGIC, "tagstart is %d, tagend is %d\n", tagstart, tagend);
-
-			// Sag is adjusted by how close you are to the center
-			dist = ((ENDCONTROLTAG - STARTCONTROLTAG))/2 - abs(bridge->sector->tag - midpoint);
-
-//			CONS_Debug(DBG_GAMELOGIC, "Dist is %d\n", dist);
-			LOWCEILINGHEIGHT -= (SAGAMT) * dist;
-			LOWFLOORHEIGHT -= (SAGAMT) * dist;
-		}
-
-		// go down
-		if (bridge->sector->ceilingheight <= LOWCEILINGHEIGHT)
-		{
-			bridge->sector->floorheight = LOWCEILINGHEIGHT - (bridge->sector->ceilingheight - bridge->sector->floorheight);
-			bridge->sector->ceilingheight = LOWCEILINGHEIGHT;
-			bridge->sector->ceilspeed = 0;
-			bridge->sector->floorspeed = 0;
-			goto dorest;
-		}
-
-		DIRECTION = -1;
-		ceilingdestination = LOWCEILINGHEIGHT;
-		floordestination = LOWFLOORHEIGHT;
-
-		if ((bridge->sector->ceilingheight - LOWCEILINGHEIGHT)
-			< (ORIGCEILINGHEIGHT - bridge->sector->ceilingheight))
-		{
-			fixed_t origspeed = CURSPEED;
-
-			// Slow down as you get closer to the bottom
-			CURSPEED = FixedMul(CURSPEED,FixedDiv(bridge->sector->ceilingheight - LOWCEILINGHEIGHT, (ORIGCEILINGHEIGHT - LOWCEILINGHEIGHT)>>5));
-
-			if (CURSPEED <= origspeed/16)
-				CURSPEED = origspeed/16;
-			else if (CURSPEED > origspeed)
-				CURSPEED = origspeed;
-		}
-		else
-		{
-			fixed_t origspeed = CURSPEED;
-			// Slow down as you get closer to the top
-			CURSPEED = FixedMul(CURSPEED,FixedDiv(ORIGCEILINGHEIGHT - bridge->sector->ceilingheight, (ORIGCEILINGHEIGHT - LOWCEILINGHEIGHT)>>5));
-
-			if (CURSPEED <= origspeed/16)
-				CURSPEED = origspeed/16;
-			else if (CURSPEED > origspeed)
-				CURSPEED = origspeed;
-		}
-
-//		CONS_Debug(DBG_GAMELOGIC, "Curspeed is %d\n", CURSPEED>>FRACBITS);
-
-		res = T_MovePlane
-		(
-			bridge->sector,         // sector
-			CURSPEED,          // speed
-			ceilingdestination, // dest
-			0,                        // crush
-			1,                        // floor or ceiling (1 for ceiling)
-			DIRECTION       // direction
-		);
-
-		if (res == ok || res == pastdest)
-			T_MovePlane
-			(
-				bridge->sector,           // sector
-				CURSPEED,            // speed
-				floordestination, // dest
-				0,                          // crush
-				0,                          // floor or ceiling (0 for floor)
-				DIRECTION         // direction
-			);
-
-		bridge->sector->ceilspeed = 42;
-		bridge->sector->floorspeed = CURSPEED*DIRECTION;
-
-	dorest:
-		// Adjust joined sector heights
-		{
-			sector_t *sourcesec = bridge->sector;
-
-			INT32 divisor = sourcesec->tag - ENDTAG + 1;
-			fixed_t heightdiff = ORIGCEILINGHEIGHT - sourcesec->ceilingheight;
-			fixed_t interval;
-			INT32 plusplusme = 0;
-
-			if (divisor > 0)
-			{
-				interval = heightdiff/divisor;
-
-//				CONS_Debug(DBG_GAMELOGIC, "interval is %d\n", interval>>FRACBITS);
-
-				// TODO: Use T_MovePlane
-
-				for (j = (INT16)(ENDTAG+1); j <= sourcesec->tag; j++, plusplusme++)
-				{
-					for (i = -1; (i = P_FindSectorFromTag(j, i)) >= 0 ;)
-					{
-						if (sectors[i].ceilingheight >= sourcesec->ceilingheight)
-						{
-							sectors[i].ceilingheight = ORIGCEILINGHEIGHT - (interval*plusplusme);
-							sectors[i].floorheight = ORIGFLOORHEIGHT - (interval*plusplusme);
-						}
-						else // Do the regular rise
-						{
-							bridge->sector = &sectors[i];
-
-							CURSPEED = BASESPEED/2;
-
-							// rise back up
-							if (bridge->sector->ceilingheight >= ORIGCEILINGHEIGHT)
-							{
-								bridge->sector->floorheight = ORIGCEILINGHEIGHT - (bridge->sector->ceilingheight - bridge->sector->floorheight);
-								bridge->sector->ceilingheight = ORIGCEILINGHEIGHT;
-								bridge->sector->ceilspeed = 0;
-								bridge->sector->floorspeed = 0;
-								continue;
-							}
-
-							DIRECTION = 1;
-							ceilingdestination = ORIGCEILINGHEIGHT;
-							floordestination = ORIGFLOORHEIGHT;
-
-//							CONS_Debug(DBG_GAMELOGIC, "ceildest: %d, floordest: %d\n", ceilingdestination>>FRACBITS, floordestination>>FRACBITS);
-
-							if ((bridge->sector->ceilingheight - LOWCEILINGHEIGHT)
-								< (ORIGCEILINGHEIGHT - bridge->sector->ceilingheight))
-							{
-								fixed_t origspeed = CURSPEED;
-
-								// Slow down as you get closer to the bottom
-								CURSPEED = FixedMul(CURSPEED,FixedDiv(bridge->sector->ceilingheight - LOWCEILINGHEIGHT, (ORIGCEILINGHEIGHT - LOWCEILINGHEIGHT)>>5));
-
-								if (CURSPEED <= origspeed/16)
-									CURSPEED = origspeed/16;
-								else if (CURSPEED > origspeed)
-									CURSPEED = origspeed;
-							}
-							else
-							{
-								fixed_t origspeed = CURSPEED;
-								// Slow down as you get closer to the top
-								CURSPEED = FixedMul(CURSPEED,FixedDiv(ORIGCEILINGHEIGHT - bridge->sector->ceilingheight, (ORIGCEILINGHEIGHT - LOWCEILINGHEIGHT)>>5));
-
-								if (CURSPEED <= origspeed/16)
-									CURSPEED = origspeed/16;
-								else if (CURSPEED > origspeed)
-									CURSPEED = origspeed;
-							}
-
-							res = T_MovePlane
-							(
-								bridge->sector,         // sector
-								CURSPEED,          // speed
-								ceilingdestination, // dest
-								0,                        // crush
-								1,                        // floor or ceiling (1 for ceiling)
-								DIRECTION       // direction
-							);
-
-							if (res == ok || res == pastdest)
-								T_MovePlane
-								(
-									bridge->sector,           // sector
-									CURSPEED,            // speed
-									floordestination, // dest
-									0,                          // crush
-									0,                          // floor or ceiling (0 for floor)
-									DIRECTION         // direction
-								);
-
-							bridge->sector->ceilspeed = 42;
-							bridge->sector->floorspeed = CURSPEED*DIRECTION;
-						}
-					}
-				}
-			}
-
-			// Now the other side
-			divisor = ENDTAG + (ENDTAG-STARTTAG) + 1;
-			divisor -= sourcesec->tag;
-
-			if (divisor > 0)
-			{
-				interval = heightdiff/divisor;
-				plusplusme = 0;
-
-//				CONS_Debug(DBG_GAMELOGIC, "interval2 is %d\n", interval>>FRACBITS);
-
-				for (j = (INT16)(sourcesec->tag+1); j <= ENDTAG + (ENDTAG-STARTTAG) + 1; j++, plusplusme++)
-				{
-					for (i = -1; (i = P_FindSectorFromTag(j, i)) >= 0 ;)
-					{
-						if (sectors[i].ceilingheight >= sourcesec->ceilingheight)
-						{
-							sectors[i].ceilingheight = sourcesec->ceilingheight + (interval*plusplusme);
-							sectors[i].floorheight = sourcesec->floorheight + (interval*plusplusme);
-						}
-						else // Do the regular rise
-						{
-							bridge->sector = &sectors[i];
-
-							CURSPEED = BASESPEED/2;
-
-							// rise back up
-							if (bridge->sector->ceilingheight >= ORIGCEILINGHEIGHT)
-							{
-								bridge->sector->floorheight = ORIGCEILINGHEIGHT - (bridge->sector->ceilingheight - bridge->sector->floorheight);
-								bridge->sector->ceilingheight = ORIGCEILINGHEIGHT;
-								bridge->sector->ceilspeed = 0;
-								bridge->sector->floorspeed = 0;
-								continue;
-							}
-
-							DIRECTION = 1;
-							ceilingdestination = ORIGCEILINGHEIGHT;
-							floordestination = ORIGFLOORHEIGHT;
-
-//							CONS_Debug(DBG_GAMELOGIC, "ceildest: %d, floordest: %d\n", ceilingdestination>>FRACBITS, floordestination>>FRACBITS);
-
-							if ((bridge->sector->ceilingheight - LOWCEILINGHEIGHT)
-								< (ORIGCEILINGHEIGHT - bridge->sector->ceilingheight))
-							{
-								fixed_t origspeed = CURSPEED;
-
-								// Slow down as you get closer to the bottom
-								CURSPEED = FixedMul(CURSPEED,FixedDiv(bridge->sector->ceilingheight - LOWCEILINGHEIGHT, (ORIGCEILINGHEIGHT - LOWCEILINGHEIGHT)>>5));
-
-								if (CURSPEED <= origspeed/16)
-									CURSPEED = origspeed/16;
-								else if (CURSPEED > origspeed)
-									CURSPEED = origspeed;
-							}
-							else
-							{
-								fixed_t origspeed = CURSPEED;
-								// Slow down as you get closer to the top
-								CURSPEED = FixedMul(CURSPEED,FixedDiv(ORIGCEILINGHEIGHT - bridge->sector->ceilingheight, (ORIGCEILINGHEIGHT - LOWCEILINGHEIGHT)>>5));
-
-								if (CURSPEED <= origspeed/16)
-									CURSPEED = origspeed/16;
-								else if (CURSPEED > origspeed)
-									CURSPEED = origspeed;
-							}
-
-							res = T_MovePlane
-							(
-								bridge->sector,         // sector
-								CURSPEED,          // speed
-								ceilingdestination, // dest
-								0,                        // crush
-								1,                        // floor or ceiling (1 for ceiling)
-								DIRECTION       // direction
-							);
-
-							if (res == ok || res == pastdest)
-								T_MovePlane
-								(
-									bridge->sector,           // sector
-									CURSPEED,            // speed
-									floordestination, // dest
-									0,                          // crush
-									0,                          // floor or ceiling (0 for floor)
-									DIRECTION         // direction
-								);
-
-							bridge->sector->ceilspeed = 42;
-							bridge->sector->floorspeed = CURSPEED*DIRECTION;
-						}
-					}
-				}
-			}
-		}
-
-	//	for (i = -1; (i = P_FindSectorFromTag(bridge->sourceline->tag, i)) >= 0 ;)
-	//		P_RecalcPrecipInSector(&sectors[i]);
-	}
-	else
-	{
-		// Iterate control sectors
-		for (j = (INT16)(ENDTAG+1); j <= (ENDTAG+(ENDTAG-STARTTAG)+1); j++)
-		{
-			for (i = -1; (i = P_FindSectorFromTag(j, i)) >= 0 ;)
-			{
-				bridge->sector = &sectors[i];
-
-				CURSPEED = BASESPEED/2;
-
-				// rise back up
-				if (bridge->sector->ceilingheight >= ORIGCEILINGHEIGHT)
-				{
-					bridge->sector->floorheight = ORIGCEILINGHEIGHT - (bridge->sector->ceilingheight - bridge->sector->floorheight);
-					bridge->sector->ceilingheight = ORIGCEILINGHEIGHT;
-					bridge->sector->ceilspeed = 0;
-					bridge->sector->floorspeed = 0;
-					continue;
-				}
-
-				DIRECTION = 1;
-				ceilingdestination = ORIGCEILINGHEIGHT;
-				floordestination = ORIGFLOORHEIGHT;
-
-//				CONS_Debug(DBG_GAMELOGIC, "ceildest: %d, floordest: %d\n", ceilingdestination>>FRACBITS, floordestination>>FRACBITS);
-
-				if ((bridge->sector->ceilingheight - LOWCEILINGHEIGHT)
-					< (ORIGCEILINGHEIGHT - bridge->sector->ceilingheight))
-				{
-					fixed_t origspeed = CURSPEED;
-
-					// Slow down as you get closer to the bottom
-					CURSPEED = FixedMul(CURSPEED,FixedDiv(bridge->sector->ceilingheight - LOWCEILINGHEIGHT, (ORIGCEILINGHEIGHT - LOWCEILINGHEIGHT)>>5));
-
-					if (CURSPEED <= origspeed/16)
-						CURSPEED = origspeed/16;
-					else if (CURSPEED > origspeed)
-						CURSPEED = origspeed;
-				}
-				else
-				{
-					fixed_t origspeed = CURSPEED;
-					// Slow down as you get closer to the top
-					CURSPEED = FixedMul(CURSPEED,FixedDiv(ORIGCEILINGHEIGHT - bridge->sector->ceilingheight, (ORIGCEILINGHEIGHT - LOWCEILINGHEIGHT)>>5));
-
-					if (CURSPEED <= origspeed/16)
-						CURSPEED = origspeed/16;
-					else if (CURSPEED > origspeed)
-						CURSPEED = origspeed;
-				}
-
-				res = T_MovePlane
-				(
-					bridge->sector,         // sector
-					CURSPEED,          // speed
-					ceilingdestination, // dest
-					0,                        // crush
-					1,                        // floor or ceiling (1 for ceiling)
-					DIRECTION       // direction
-				);
-
-				if (res == ok || res == pastdest)
-					T_MovePlane
-					(
-						bridge->sector,           // sector
-						CURSPEED,            // speed
-						floordestination, // dest
-						0,                          // crush
-						0,                          // floor or ceiling (0 for floor)
-						DIRECTION         // direction
-					);
-
-				bridge->sector->ceilspeed = 42;
-				bridge->sector->floorspeed = CURSPEED*DIRECTION;
-			}
-		}
-		// Update precip
-	}
-
-#undef SAGAMT
-#undef LOWFLOORHEIGHT
-#undef LOWCEILINGHEIGHT
-#undef ORIGFLOORHEIGHT
-#undef ORIGCEILINGHEIGHT
-#undef BASESPEED
-#undef CURSPEED
-#undef STARTTAG
-#undef ENDTAG
-#undef DIRECTION
+	// we have something to float in! Or we're for some reason above the ground, let's fall anyway
+	if (floater->sector->crumblestate == CRUMBLE_NONE || floater->sector->crumblestate >= CRUMBLE_FALL/* || floatanyway*/)
+		EV_BounceSector(floater->sector, FRACUNIT, floater->sourceline);
 }
 
 static mobj_t *SearchMarioNode(msecnode_t *node)
@@ -1814,187 +1081,91 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 	return thing;
 }
 
-void T_MarioBlockChecker(levelspecthink_t *block)
+void T_MarioBlockChecker(mariocheck_t *block)
 {
 	line_t *masterline = block->sourceline;
-	if (block->vars[2] == 1) // Don't update the textures when the block's being bumped upwards.
-		return;
 	if (SearchMarioNode(block->sector->touching_thinglist))
 	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture; // Update textures
 		if (masterline->backsector)
-		{
 			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->ceilingpic; // Update flats to be backside's ceiling
-		}
 	}
 	else
 	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
 		if (masterline->backsector)
-		{
 			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->floorpic; // Update flats to be backside's floor
-		}
 	}
+}
+
+static boolean P_IsPlayerValid(size_t playernum)
+{
+	if (!playeringame[playernum])
+		return false;
+
+	if (!players[playernum].mo)
+		return false;
+
+	if (players[playernum].mo->health <= 0)
+		return false;
+
+	if (players[playernum].spectator)
+		return false;
+
+	return true;
 }
 
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
 // it finds any, **SMASH**!!! Muahahhaa....
-void T_ThwompSector(levelspecthink_t *thwomp)
+void T_ThwompSector(thwomp_t *thwomp)
 {
-#define speed vars[1]
-#define direction vars[2]
-#define distance vars[3]
-#define floorwasheight vars[4]
-#define ceilingwasheight vars[5]
 	fixed_t thwompx, thwompy;
 	sector_t *actionsector;
 	ffloor_t *rover = NULL;
 	INT32 secnum;
+	fixed_t speed;
 
 	// If you just crashed down, wait a second before coming back up.
-	if (--thwomp->distance > 0)
-	{
-		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].bottomtexture;
+	if (--thwomp->delay > 0)
 		return;
-	}
 
 	// Just find the first sector with the tag.
 	// Doesn't work with multiple sectors that have different floor/ceiling heights.
-	secnum = P_FindSectorFromTag((INT16)thwomp->vars[0], -1);
+	secnum = P_FindSectorFromTag(thwomp->tag, -1);
 
-	if (secnum > 0)
-	{
-		actionsector = &sectors[secnum];
-
-		// Look for thwomp FFloor
-		for (rover = actionsector->ffloors; rover; rover = rover->next)
-		{
-			if (rover->master == thwomp->sourceline)
-				break;
-		}
-	}
-	else
+	if (secnum <= 0)
 		return; // Bad bad bad!
+
+	actionsector = &sectors[secnum];
+
+	// Look for thwomp FOF
+	for (rover = actionsector->ffloors; rover; rover = rover->next)
+	{
+		if (rover->master == thwomp->sourceline)
+			break;
+	}
+
+	if (!rover)
+		return; // Didn't find any FOFs, so bail out
 
 	thwompx = actionsector->soundorg.x;
 	thwompy = actionsector->soundorg.y;
 
-	if (thwomp->direction > 0) // Moving back up..
+	if (thwomp->direction == 0) // Not going anywhere, so look for players.
 	{
-		result_e res = 0;
-
-		// Set the texture from the lower one (normal)
-		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].bottomtexture;
-		/// \note this should only have to be done once, but is already done repeatedly, above
-
-		if (thwomp->sourceline->flags & ML_EFFECT5)
-			thwomp->speed = thwomp->sourceline->dx/8;
-		else
-			thwomp->speed = 2*FRACUNIT;
-
-		res = T_MovePlane
-		(
-			thwomp->sector,         // sector
-			thwomp->speed,          // speed
-			thwomp->floorwasheight, // dest
-			0,                      // crush
-			0,                      // floor or ceiling (0 for floor)
-			thwomp->direction       // direction
-		);
-
-		if (res == ok || res == pastdest)
-			T_MovePlane
-			(
-				thwomp->sector,           // sector
-				thwomp->speed,            // speed
-				thwomp->ceilingwasheight, // dest
-				0,                        // crush
-				1,                        // floor or ceiling (1 for ceiling)
-				thwomp->direction         // direction
-			);
-
-		if (res == pastdest)
-			thwomp->direction = 0; // stop moving
-
-		thwomp->sector->ceilspeed = 42;
-		thwomp->sector->floorspeed = thwomp->speed*thwomp->direction;
-	}
-	else if (thwomp->direction < 0) // Crashing down!
-	{
-		result_e res = 0;
-
-		// Set the texture from the upper one (angry)
-		sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].toptexture;
-
-		if (thwomp->sourceline->flags & ML_EFFECT5)
-			thwomp->speed = thwomp->sourceline->dy/8;
-		else
-			thwomp->speed = 10*FRACUNIT;
-
-		res = T_MovePlane
-		(
-			thwomp->sector,   // sector
-			thwomp->speed,    // speed
-			P_FloorzAtPos(thwompx, thwompy, thwomp->sector->floorheight,
-				thwomp->sector->ceilingheight - thwomp->sector->floorheight), // dest
-			0,                  // crush
-			0,                  // floor or ceiling (0 for floor)
-			thwomp->direction // direction
-		);
-
-		if (res == ok || res == pastdest)
-			T_MovePlane
-			(
-				thwomp->sector,   // sector
-				thwomp->speed,    // speed
-				P_FloorzAtPos(thwompx, thwompy, thwomp->sector->floorheight,
-					thwomp->sector->ceilingheight
-					- (thwomp->sector->floorheight + thwomp->speed))
-					+ (thwomp->sector->ceilingheight
-					- (thwomp->sector->floorheight + thwomp->speed/2)), // dest
-				0,                  // crush
-				1,                  // floor or ceiling (1 for ceiling)
-				thwomp->direction // direction
-			);
-
-		if (res == pastdest)
-		{
-			mobj_t *mp = (void *)&actionsector->soundorg;
-
-			if (!rover || (rover->flags & FF_EXISTS))
-			{
-				if (thwomp->sourceline->flags & ML_EFFECT4)
-					S_StartSound(mp, sides[thwomp->sourceline->sidenum[0]].textureoffset>>FRACBITS);
-				else
-					S_StartSound(mp, sfx_thwomp);
-			}
-
-			thwomp->direction = 1; // start heading back up
-			thwomp->distance = TICRATE; // but only after a small delay
-		}
-
-		thwomp->sector->ceilspeed = 42;
-		thwomp->sector->floorspeed = thwomp->speed*thwomp->direction;
-	}
-	else // Not going anywhere, so look for players.
-	{
-		if (!rover || (rover->flags & FF_EXISTS))
+		if (rover->flags & FF_EXISTS)
 		{
 			UINT8 i;
 			// scan the players to find victims!
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i])
+				if (!P_IsPlayerValid(i))
 					continue;
-				if (players[i].spectator)
-					continue;
-				if (!players[i].mo)
-					continue;
-				if (!players[i].mo->health)
-					continue;
+
 				if (players[i].mo->z > thwomp->sector->ceilingheight)
 					continue;
-				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96 * FRACUNIT)
+
+				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96*FRACUNIT)
 					continue;
 
 				thwomp->direction = -1;
@@ -2005,13 +1176,109 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		thwomp->sector->ceilspeed = 0;
 		thwomp->sector->floorspeed = 0;
 	}
+	else
+	{
+		result_e res = 0;
+
+		if (thwomp->direction > 0) //Moving back up..
+		{
+			// Set the texture from the lower one (normal)
+			sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].bottomtexture;
+
+			speed = thwomp->retractspeed;
+
+			res = T_MovePlane
+			(
+				thwomp->sector,           // sector
+				speed,                    // speed
+				thwomp->floorstartheight, // dest
+				false,                    // crush
+				false,                    // ceiling?
+				thwomp->direction         // direction
+			);
+
+			if (res == ok || res == pastdest)
+				T_MovePlane
+				(
+					thwomp->sector,             // sector
+					speed,                      // speed
+					thwomp->ceilingstartheight, // dest
+					false,                      // crush
+					true,                       // ceiling?
+					thwomp->direction           // direction
+				);
+
+			if (res == pastdest)
+				thwomp->direction = 0; // stop moving
+			}
+		else // Crashing down!
+		{
+			// Set the texture from the upper one (angry)
+			sides[thwomp->sourceline->sidenum[0]].midtexture = sides[thwomp->sourceline->sidenum[0]].toptexture;
+
+			speed = thwomp->crushspeed;
+
+			res = T_MovePlane
+			(
+				thwomp->sector,   // sector
+				speed,            // speed
+				P_FloorzAtPos(thwompx, thwompy, thwomp->sector->floorheight,
+					thwomp->sector->ceilingheight - thwomp->sector->floorheight), // dest
+				false,              // crush
+				false,              // ceiling?
+				thwomp->direction // direction
+			);
+
+			if (res == ok || res == pastdest)
+				T_MovePlane
+				(
+					thwomp->sector,   // sector
+					speed,            // speed
+					P_FloorzAtPos(thwompx, thwompy, thwomp->sector->floorheight,
+						thwomp->sector->ceilingheight
+						- (thwomp->sector->floorheight + speed))
+						+ (thwomp->sector->ceilingheight
+						- (thwomp->sector->floorheight + speed/2)), // dest
+					false,             // crush
+					true,              // ceiling?
+					thwomp->direction // direction
+				);
+
+			if (res == pastdest)
+			{
+				if (rover->flags & FF_EXISTS)
+					S_StartSound((void *)&actionsector->soundorg, thwomp->sound);
+
+				thwomp->direction = 1; // start heading back up
+				thwomp->delay = TICRATE; // but only after a small delay
+			}
+		}
+
+		thwomp->sector->ceilspeed = 42;
+		thwomp->sector->floorspeed = speed*thwomp->direction;
+	}
 
 	P_RecalcPrecipInSector(actionsector);
-#undef speed
-#undef direction
-#undef distance
-#undef floorwasheight
-#undef ceilingwasheight
+}
+
+static boolean T_SectorHasEnemies(sector_t *sec)
+{
+	msecnode_t *node = sec->touching_thinglist; // things touching this sector
+	mobj_t *mo;
+	while (node)
+	{
+		mo = node->m_thing;
+
+		if ((mo->flags & (MF_ENEMY|MF_BOSS))
+			&& mo->health > 0
+			&& mo->z < sec->ceilingheight
+			&& mo->z + mo->height > sec->floorheight)
+			return true;
+
+		node = node->m_thinglist_next;
+	}
+
+	return false;
 }
 
 //
@@ -2020,18 +1287,14 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 // Runs a linedef exec when no more MF_ENEMY/MF_BOSS objects with health are in the area
 // \sa P_AddNoEnemiesThinker
 //
-void T_NoEnemiesSector(levelspecthink_t *nobaddies)
+void T_NoEnemiesSector(noenemies_t *nobaddies)
 {
 	size_t i;
-	fixed_t upperbound, lowerbound;
 	sector_t *sec = NULL;
-	sector_t *targetsec = NULL;
 	INT32 secnum = -1;
-	msecnode_t *node;
-	mobj_t *thing;
 	boolean FOFsector = false;
 
-	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(nobaddies->sourceline->tag, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -2047,42 +1310,15 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			while ((targetsecnum = P_FindSectorFromTag(sec->lines[i]->tag, targetsecnum)) >= 0)
 			{
-				targetsec = &sectors[targetsecnum];
-
-				upperbound = targetsec->ceilingheight;
-				lowerbound = targetsec->floorheight;
-				node = targetsec->touching_thinglist; // things touching this sector
-				while (node)
-				{
-					thing = node->m_thing;
-
-					if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-					&& thing->z < upperbound && thing->z+thing->height > lowerbound)
-						return;
-
-					node = node->m_thinglist_next;
-				}
-			}
-		}
-
-		if (!FOFsector)
-		{
-			upperbound = sec->ceilingheight;
-			lowerbound = sec->floorheight;
-			node = sec->touching_thinglist; // things touching this sector
-			while (node)
-			{
-				thing = node->m_thing;
-
-				if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-				&& thing->z < upperbound && thing->z+thing->height > lowerbound)
+				if (T_SectorHasEnemies(&sectors[targetsecnum]))
 					return;
-
-				node = node->m_thinglist_next;
 			}
 		}
+
+		if (!FOFsector && T_SectorHasEnemies(sec))
+			return;
 	}
 
 	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", nobaddies->sourceline->tag);
@@ -2119,30 +1355,23 @@ static boolean P_IsObjectOnRealGround(mobj_t *mo, sector_t *sec)
 	return false;
 }
 
-//
-// P_HavePlayersEnteredArea
-//
-// Helper function for T_EachTimeThinker
-//
-static INT32 P_HavePlayersEnteredArea(boolean *curPlayers, boolean *oldPlayers, boolean inAndOut)
+static boolean P_IsMobjTouchingSector(mobj_t *mo, sector_t *sec)
 {
-	INT32 i;
+	msecnode_t *node;
 
-	// Easy check... nothing has changed
-	if (!memcmp(curPlayers, oldPlayers, sizeof(boolean)*MAXPLAYERS))
-		return -1;
+	if (mo->subsector->sector == sec)
+		return true;
 
-	// Otherwise, we have to check if any new players have entered
-	for (i = 0; i < MAXPLAYERS; i++)
+	if (!(sec->flags & SF_TRIGGERSPECIAL_TOUCH))
+		return false;
+
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
-		if (inAndOut && !curPlayers[i] && oldPlayers[i])
-			return i;
-
-		if (curPlayers[i] && !oldPlayers[i])
-			return i;
+		if (node->m_sector == sec)
+			return true;
 	}
 
-	return -1;
+	return false;
 }
 
 //
@@ -2153,47 +1382,30 @@ static INT32 P_HavePlayersEnteredArea(boolean *curPlayers, boolean *oldPlayers, 
 //
 // \sa P_AddEachTimeThinker
 //
-void T_EachTimeThinker(levelspecthink_t *eachtime)
+void T_EachTimeThinker(eachtime_t *eachtime)
 {
 	size_t i, j;
 	sector_t *sec = NULL;
 	sector_t *targetsec = NULL;
-	//sector_t *usesec = NULL;
 	INT32 secnum = -1;
-	INT32 affectPlayer = 0;
 	boolean oldPlayersInArea[MAXPLAYERS];
-	boolean playersInArea[MAXPLAYERS];
 	boolean oldPlayersOnArea[MAXPLAYERS];
-	boolean playersOnArea[MAXPLAYERS];
 	boolean *oldPlayersArea;
 	boolean *playersArea;
 	boolean FOFsector = false;
-	boolean inAndOut = false;
 	boolean floortouch = false;
 	fixed_t bottomheight, topheight;
-	msecnode_t *node;
 	ffloor_t *rover;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (i & 1)
-		{
-			oldPlayersInArea[i] = eachtime->vars[i/2] & 65535;
-			oldPlayersOnArea[i] = eachtime->var2s[i/2] & 65535;
-			eachtime->vars[i/2] = 0;
-			eachtime->var2s[i/2] = 0;
-		}
-		else
-		{
-			oldPlayersInArea[i] = eachtime->vars[i/2] >> 16;
-			oldPlayersOnArea[i] = eachtime->var2s[i/2] >> 16;
-		}
-
-		playersInArea[i] = false;
-		playersOnArea[i] = false;
+		oldPlayersInArea[i] = eachtime->playersInArea[i];
+		oldPlayersOnArea[i] = eachtime->playersOnArea[i];
+		eachtime->playersInArea[i] = false;
+		eachtime->playersOnArea[i] = false;
 	}
 
-	while ((secnum = P_FindSectorFromLineTag(eachtime->sourceline, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(eachtime->sourceline->tag, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -2216,7 +1428,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 			FOFsector = true;
 
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			while ((targetsecnum = P_FindSectorFromTag(sec->lines[i]->tag, targetsecnum)) >= 0)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -2235,35 +1447,10 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 				for (j = 0; j < MAXPLAYERS; j++)
 				{
-					if (!playeringame[j])
+					if (!P_IsPlayerValid(j))
 						continue;
 
-					if (!players[j].mo)
-						continue;
-
-					if (players[j].mo->health <= 0)
-						continue;
-
-					if ((netgame || multiplayer) && players[j].spectator)
-						continue;
-
-					if (players[j].mo->subsector->sector == targetsec)
-						;
-					else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
-					{
-						boolean insector = false;
-						for (node = players[j].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-						{
-							if (node->m_sector == targetsec)
-							{
-								insector = true;
-								break;
-							}
-						}
-						if (!insector)
-							continue;
-					}
-					else
+					if (!P_IsMobjTouchingSector(players[j].mo, targetsec))
 						continue;
 
 					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
@@ -2275,24 +1462,10 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					if (players[j].mo->z + players[j].mo->height < bottomheight)
 						continue;
 
-					if (floortouch == true && P_IsObjectOnGroundIn(players[j].mo, targetsec))
-					{
-						if (j & 1)
-							eachtime->var2s[j/2] |= 1;
-						else
-							eachtime->var2s[j/2] |= 1 << 16;
-
-						playersOnArea[j] = true;
-					}
+					if (floortouch && P_IsObjectOnGroundIn(players[j].mo, targetsec))
+						eachtime->playersOnArea[j] = true;
 					else
-					{
-						if (j & 1)
-							eachtime->vars[j/2] |= 1;
-						else
-							eachtime->vars[j/2] |= 1 << 16;
-
-						playersInArea[j] = true;
-					}
+						eachtime->playersInArea[j] = true;
 				}
 			}
 		}
@@ -2301,102 +1474,61 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i])
+				if (!P_IsPlayerValid(i))
 					continue;
 
-				if (!players[i].mo)
-					continue;
-
-				if (players[i].mo->health <= 0)
-					continue;
-
-				if ((netgame || multiplayer) && players[i].spectator)
-					continue;
-
-				if (players[i].mo->subsector->sector == sec)
-					;
-				else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
-				{
-					boolean insector = false;
-					for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-					{
-						if (node->m_sector == sec)
-						{
-							insector = true;
-							break;
-						}
-					}
-					if (!insector)
-						continue;
-				}
-				else
+				if (!P_IsMobjTouchingSector(players[i].mo, sec))
 					continue;
 
 				if (!(players[i].mo->subsector->sector == sec
 					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
 					continue;
 
-				if (floortouch == true && P_IsObjectOnRealGround(players[i].mo, sec))
-				{
-					if (i & 1)
-						eachtime->var2s[i/2] |= 1;
-					else
-						eachtime->var2s[i/2] |= 1 << 16;
-
-					playersOnArea[i] = true;
-				}
+				if (floortouch && P_IsObjectOnRealGround(players[i].mo, sec))
+					eachtime->playersOnArea[i] = true;
 				else
-				{
-					if (i & 1)
-						eachtime->vars[i/2] |= 1;
-					else
-						eachtime->vars[i/2] |= 1 << 16;
-
-					playersInArea[i] = true;
-				}
+					eachtime->playersInArea[i] = true;
 			}
 		}
 	}
-
-	if ((eachtime->sourceline->flags & ML_BOUNCY) == ML_BOUNCY)
-		inAndOut = true;
 
 	// Check if a new player entered.
 	// If not, check if a player hit the floor.
 	// If either condition is true, execute.
-	if (floortouch == true)
+	if (floortouch)
 	{
-		playersArea = playersOnArea;
+		playersArea = eachtime->playersOnArea;
 		oldPlayersArea = oldPlayersOnArea;
 	}
 	else
 	{
-		playersArea = playersInArea;
+		playersArea = eachtime->playersInArea;
 		oldPlayersArea = oldPlayersInArea;
 	}
 
-	while ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
+	// Easy check... nothing has changed
+	if (!memcmp(playersArea, oldPlayersArea, sizeof(boolean)*MAXPLAYERS))
+		return;
+
+	// If sector has an "all players" trigger type, all players need to be in area
+	if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
 	{
-		if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
+		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i])
-					continue;
-
-				if (!players[i].mo)
-					continue;
-
-				if (players[i].mo->health <= 0)
-					continue;
-
-				if ((netgame || multiplayer) && players[i].spectator)
-					continue;
-
-				if (!playersArea[i])
-					return;
-			}
+			if (P_IsPlayerValid(i) && playersArea[i])
+				continue;
 		}
+	}
+
+	// Trigger for every player who has entered (and exited, if triggerOnExit)
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playersArea[i] == oldPlayersArea[i])
+			continue;
+
+		// If player has just left, check if still valid
+		if (!playersArea[i] && (!eachtime->triggerOnExit || !P_IsPlayerValid(i)))
+			continue;
 
 		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", eachtime->sourceline->tag);
 
@@ -2404,12 +1536,10 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		// No more stupid hacks involving changing eachtime->sourceline's tag or special or whatever!
 		// This should now run ONLY the stuff for eachtime->sourceline itself, instead of all trigger linedefs sharing the same tag.
 		// Makes much more sense doing it this way, honestly.
-		P_RunTriggerLinedef(eachtime->sourceline, players[affectPlayer].mo, sec);
+		P_RunTriggerLinedef(eachtime->sourceline, players[i].mo, sec);
 
 		if (!eachtime->sourceline->special) // this happens only for "Trigger on X calls" linedefs
 			P_RemoveThinker(&eachtime->thinker);
-
-		oldPlayersArea[affectPlayer]=playersArea[affectPlayer];
 	}
 }
 
@@ -2419,20 +1549,24 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 // Rises up to its topmost position when a
 // player steps on it. Lowers otherwise.
 //
-void T_RaiseSector(levelspecthink_t *raise)
+void T_RaiseSector(raise_t *raise)
 {
 	msecnode_t *node;
 	mobj_t *thing;
 	sector_t *sector;
 	INT32 i;
 	boolean playeronme = false, active = false;
+	boolean moveUp;
 	fixed_t ceilingdestination, floordestination;
+	fixed_t speed, origspeed;
+	fixed_t distToNearestEndpoint;
+	INT32 direction;
 	result_e res = 0;
 
-	if (raise->sector->crumblestate >= 3 || raise->sector->ceilingdata)
+	if (raise->sector->crumblestate >= CRUMBLE_FALL || raise->sector->ceilingdata)
 		return;
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(raise->tag, i)) >= 0 ;)
 	{
 		sector = &sectors[i];
 
@@ -2449,7 +1583,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 				continue;
 
 			// Option to require spindashing.
-			if (raise->vars[1] && !(thing->player->pflags & PF_STARTDASH))
+			if (raise->flags & RF_SPINDASH && !(thing->player->pflags & PF_STARTDASH))
 				continue;
 
 			if (!(thing->z == P_GetSpecialTopZ(thing, raise->sector, sector)))
@@ -2460,43 +1594,43 @@ void T_RaiseSector(levelspecthink_t *raise)
 		}
 	}
 
-	if (raise->vars[9]) // Dynamically Sinking Platform^tm
+	if (raise->flags & RF_DYNAMIC) // Dynamically Sinking Platform^tm
 	{
 #define shaketime 10
-		if (raise->vars[11] > shaketime) // State: moving
+		if (raise->shaketimer > shaketime) // State: moving
 		{
 			if (playeronme) // If player is standing on the platform, accelerate
 			{
-				raise->vars[10] += (FRACUNIT >> 5);
+				raise->extraspeed += (FRACUNIT >> 5);
 			}
 			else // otherwise, decelerate until inflection
 			{
-				raise->vars[10] -= FRACUNIT >> 3;
-				if (raise->vars[10] <= 0) // inflection!
+				raise->extraspeed -= FRACUNIT >> 3;
+				if (raise->extraspeed <= 0) // inflection!
 				{
-					raise->vars[10] = 0;
-					raise->vars[11] = 0; // allow the shake to occur again (fucks over players attempting to jump-cheese)
+					raise->extraspeed = 0;
+					raise->shaketimer = 0; // allow the shake to occur again (fucks over players attempting to jump-cheese)
 				}
 			}
-			active = raise->vars[10] > 0;
+			active = raise->extraspeed > 0;
 		}
 		else // State: shaking
 		{
-			if (playeronme || raise->vars[11])
+			if (playeronme || raise->shaketimer)
 			{
 				active = true;
-				if (++raise->vars[11] > shaketime)
+				if (++raise->shaketimer > shaketime)
 				{
 					if (playeronme)
-						raise->vars[10] = FRACUNIT >> 5;
+						raise->extraspeed = FRACUNIT >> 5;
 					else
-						raise->vars[10] = FRACUNIT << 1;
+						raise->extraspeed = FRACUNIT << 1;
 				}
 				else
 				{
-					raise->vars[10] = ((shaketime/2) - raise->vars[11]) << FRACBITS;
-					if (raise->vars[10] < -raise->vars[2]/2)
-						raise->vars[10] = -raise->vars[2]/2;
+					raise->extraspeed = ((shaketime/2) - raise->shaketimer) << FRACBITS;
+					if (raise->extraspeed < -raise->basespeed/2)
+						raise->extraspeed = -raise->basespeed/2;
 				}
 			}
 		}
@@ -2505,127 +1639,61 @@ void T_RaiseSector(levelspecthink_t *raise)
 	else // Air bobbing platform (not a Dynamically Sinking Platform^tm)
 		active = playeronme;
 
-	if (active)
+	moveUp = active ^ (raise->flags & RF_REVERSE);
+	ceilingdestination = moveUp ? raise->ceilingtop : raise->ceilingbottom;
+	floordestination = ceilingdestination - (raise->sector->ceilingheight - raise->sector->floorheight);
+
+	if ((moveUp && raise->sector->ceilingheight >= ceilingdestination)
+		|| (!moveUp && raise->sector->ceilingheight <= ceilingdestination))
 	{
-		raise->vars[3] = raise->vars[2];
-
-		if (raise->vars[0] == 1)
-		{
-			if (raise->sector->ceilingheight <= raise->vars[7])
-			{
-				raise->sector->floorheight = raise->vars[7] - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->vars[7];
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-
-			raise->vars[8] = -1;
-			ceilingdestination = raise->vars[7];
-			floordestination = raise->vars[6];
-		}
-		else // elevateUp
-		{
-			if (raise->sector->ceilingheight >= raise->vars[5])
-			{
-				raise->sector->floorheight = raise->vars[5] - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->vars[5];
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-
-			raise->vars[8] = 1;
-			ceilingdestination = raise->vars[5];
-			floordestination = raise->vars[4];
-		}
+		raise->sector->floorheight = floordestination;
+		raise->sector->ceilingheight = ceilingdestination;
+		raise->sector->ceilspeed = 0;
+		raise->sector->floorspeed = 0;
+		return;
 	}
-	else
-	{
-		raise->vars[3] = raise->vars[2]/2;
+	direction = moveUp ? 1 : -1;
 
-		if (raise->vars[0] == 1)
-		{
-			if (raise->sector->ceilingheight >= raise->vars[5])
-			{
-				raise->sector->floorheight = raise->vars[5] - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->vars[5];
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-			raise->vars[8] = 1;
-			ceilingdestination = raise->vars[5];
-			floordestination = raise->vars[4];
-		}
-		else // elevateUp
-		{
-			if (raise->sector->ceilingheight <= raise->vars[7])
-			{
-				raise->sector->floorheight = raise->vars[7] - (raise->sector->ceilingheight - raise->sector->floorheight);
-				raise->sector->ceilingheight = raise->vars[7];
-				raise->sector->ceilspeed = 0;
-				raise->sector->floorspeed = 0;
-				return;
-			}
-			raise->vars[8] = -1;
-			ceilingdestination = raise->vars[7];
-			floordestination = raise->vars[6];
-		}
-	}
+	origspeed = raise->basespeed;
+	if (!active)
+		origspeed /= 2;
 
-	if ((raise->sector->ceilingheight - raise->vars[7])
-		< (raise->vars[5] - raise->sector->ceilingheight))
-	{
-		fixed_t origspeed = raise->vars[3];
+	// Speed up as you get closer to the middle, then slow down again
+	distToNearestEndpoint = min(raise->sector->ceilingheight - raise->ceilingbottom, raise->ceilingtop - raise->sector->ceilingheight);
+	speed = FixedMul(origspeed, FixedDiv(distToNearestEndpoint, (raise->ceilingtop - raise->ceilingbottom) >> 5));
 
-		// Slow down as you get closer to the bottom
-		raise->vars[3] = FixedMul(raise->vars[3],FixedDiv(raise->sector->ceilingheight - raise->vars[7], (raise->vars[5] - raise->vars[7])>>5));
+	if (speed <= origspeed/16)
+		speed = origspeed/16;
+	else if (speed > origspeed)
+		speed = origspeed;
 
-		if (raise->vars[3] <= origspeed/16)
-			raise->vars[3] = origspeed/16;
-		else if (raise->vars[3] > origspeed)
-			raise->vars[3] = origspeed;
-	}
-	else
-	{
-		fixed_t origspeed = raise->vars[3];
-		// Slow down as you get closer to the top
-		raise->vars[3] = FixedMul(raise->vars[3],FixedDiv(raise->vars[5] - raise->sector->ceilingheight, (raise->vars[5] - raise->vars[7])>>5));
-
-		if (raise->vars[3] <= origspeed/16)
-			raise->vars[3] = origspeed/16;
-		else if (raise->vars[3] > origspeed)
-			raise->vars[3] = origspeed;
-	}
-
-	raise->vars[3] += raise->vars[10];
+	speed += raise->extraspeed;
 
 	res = T_MovePlane
 	(
-		raise->sector,         // sector
-		raise->vars[3],          // speed
+		raise->sector,      // sector
+		speed,              // speed
 		ceilingdestination, // dest
-		0,                        // crush
-		1,                        // floor or ceiling (1 for ceiling)
-		raise->vars[8]       // direction
+		false,              // crush
+		true,               // ceiling?
+		direction           // direction
 	);
 
 	if (res == ok || res == pastdest)
 		T_MovePlane
 		(
-			raise->sector,           // sector
-			raise->vars[3],            // speed
+			raise->sector,    // sector
+			speed,            // speed
 			floordestination, // dest
-			0,                          // crush
-			0,                          // floor or ceiling (0 for floor)
-			raise->vars[8]         // direction
+			false,            // crush
+			false,            // ceiling?
+			direction         // direction
 		);
 
 	raise->sector->ceilspeed = 42;
-	raise->sector->floorspeed = raise->vars[3]*raise->vars[8];
+	raise->sector->floorspeed = speed*direction;
 
-	for (i = -1; (i = P_FindSectorFromTag(raise->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(raise->tag, i)) >= 0 ;)
 		P_RecalcPrecipInSector(&sectors[i]);
 }
 
@@ -2720,9 +1788,9 @@ void T_PlaneDisplace(planedisplace_t *pd)
 	}
 
 	if (pd->type == pd_floor || pd->type == pd_both)
-		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, 0, 0, direction); // move floor
+		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, false, false, direction); // move floor
 	if (pd->type == pd_ceiling || pd->type == pd_both)
-		T_MovePlane(target, INT32_MAX/2, target->ceilingheight+diff, 0, 1, direction); // move ceiling
+		T_MovePlane(target, INT32_MAX/2, target->ceilingheight+diff, false, true, direction); // move ceiling
 
 	pd->last_height = control->floorheight;
 }
@@ -2736,14 +1804,14 @@ void T_PlaneDisplace(planedisplace_t *pd)
 // (egg capsule button), P_PlayerInSpecialSector (buttons),
 // and P_SpawnSpecials (continuous floor movers and instant lower).
 //
-INT32 EV_DoFloor(line_t *line, floor_e floortype)
+void EV_DoFloor(line_t *line, floor_e floortype)
 {
-	INT32 rtn = 0, firstone = 1;
+	INT32 firstone = 1;
 	INT32 secnum = -1;
 	sector_t *sec;
 	floormove_t *dofloor;
 
-	while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -2751,7 +1819,6 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 			continue; // then don't add another one
 
 		// new floor thinker
-		rtn = 1;
 		dofloor = Z_Calloc(sizeof (*dofloor), PU_LEVSPEC, NULL);
 		P_AddThinker(THINK_MAIN, &dofloor->thinker);
 
@@ -2941,8 +2008,6 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 
 		firstone = 0;
 	}
-
-	return rtn;
 }
 
 // SoM: Boom elevator support.
@@ -2955,15 +2020,14 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 //
 // jff 2/22/98 new type to move floor and ceiling in parallel
 //
-INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
+void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 {
 	INT32 secnum = -1;
-	INT32 rtn = 0;
 	sector_t *sec;
 	elevator_t *elevator;
 
 	// act on all sectors with the same tag as the triggering linedef
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	while ((secnum = P_FindSectorFromTag(line->tag,secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
 
@@ -2972,7 +2036,6 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 			continue;
 
 		// create and initialize new elevator thinker
-		rtn = 1;
 		elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
 		P_AddThinker(THINK_MAIN, &elevator->thinker);
 		sec->floordata = elevator;
@@ -3074,7 +2137,6 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 				break;
 		}
 	}
-	return rtn;
 }
 
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
@@ -3178,12 +2240,10 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			if (R_PointInSubsector(a, b)->sector == sec)
 			{
 				mobj_t *spawned = NULL;
-#ifdef ESLOPE
 				if (*rover->t_slope)
-					topz = P_GetZAt(*rover->t_slope, a, b) - (spacing>>1);
+					topz = P_GetSlopeZAt(*rover->t_slope, a, b) - (spacing>>1);
 				if (*rover->b_slope)
-					bottomz = P_GetZAt(*rover->b_slope, a, b);
-#endif
+					bottomz = P_GetSlopeZAt(*rover->b_slope, a, b);
 
 				for (c = topz; c > bottomz; c -= spacing)
 				{
@@ -3209,16 +2269,13 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 }
 
 // Used for bobbing platforms on the water
-INT32 EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
+void EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 {
-#define speed vars[0]
-#define distance vars[1]
-#define low vars[2]
-	levelspecthink_t *bouncer;
+	bouncecheese_t *bouncer;
 
 	// create and initialize new thinker
 	if (sec->ceilingdata) // One at a time, ma'am.
-		return 0;
+		return;
 
 	bouncer = Z_Calloc(sizeof (*bouncer), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &bouncer->thinker);
@@ -3226,31 +2283,20 @@ INT32 EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 	bouncer->thinker.function.acp1 = (actionf_p1)T_BounceCheese;
 
 	// set up the fields according to the type of elevator action
+	bouncer->sourceline = sourceline;
 	bouncer->sector = sec;
 	bouncer->speed = momz/2;
-	bouncer->sourceline = sourceline;
 	bouncer->distance = FRACUNIT;
-	bouncer->low = 1;
-
-	return 1;
-#undef speed
-#undef distance
-#undef low
+	bouncer->low = true;
 }
 
 // For T_ContinuousFalling special
-INT32 EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boolean backwards)
+void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boolean backwards)
 {
-#define speed vars[0]
-#define direction vars[1]
-#define floorwasheight vars[2]
-#define ceilingwasheight vars[3]
-#define floordestheight vars[4]
-#define ceilingdestheight vars[5]
-	levelspecthink_t *faller;
+	continuousfall_t *faller;
 
 	// workaround for when there is no back sector
-	if (backsector == NULL)
+	if (!backsector)
 		backsector = sec;
 
 	// create and initialize new thinker
@@ -3262,36 +2308,18 @@ INT32 EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, bool
 	faller->sector = sec;
 	faller->speed = spd;
 
-	faller->floorwasheight = sec->floorheight;
-	faller->ceilingwasheight = sec->ceilingheight;
+	faller->floorstartheight = sec->floorheight;
+	faller->ceilingstartheight = sec->ceilingheight;
 
-	if (backwards)
-	{
-		faller->ceilingdestheight = backsector->ceilingheight;
-		faller->floordestheight = faller->ceilingdestheight;
-		faller->direction = 1; // Up!
-	}
-	else
-	{
-		faller->floordestheight = backsector->floorheight;
-		faller->ceilingdestheight = faller->floordestheight;
-		faller->direction = -1;
-	}
-
-	return 1;
-#undef speed
-#undef direction
-#undef floorwasheight
-#undef ceilingwasheight
-#undef floordestheight
-#undef ceilingdestheight
+	faller->destheight = backwards ? backsector->ceilingheight : backsector->floorheight;
+	faller->direction = backwards ? 1 : -1;
 }
 
 // Some other 3dfloor special things Tails 03-11-2002 (Search p_mobj.c for description)
 INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	player_t *player, fixed_t origalpha, boolean crumblereturn)
 {
-	elevator_t *elevator;
+	crumble_t *crumble;
 	sector_t *foundsec;
 	INT32 i;
 
@@ -3299,68 +2327,58 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	if (sec->floordata)
 		return 0;
 
-	if (sec->crumblestate > 1)
+	if (sec->crumblestate >= CRUMBLE_ACTIVATED)
 		return 0;
 
-	// create and initialize new elevator thinker
-	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
-	P_AddThinker(THINK_MAIN, &elevator->thinker);
-	elevator->thinker.function.acp1 = (actionf_p1)T_StartCrumble;
+	// create and initialize new crumble thinker
+	crumble = Z_Calloc(sizeof (*crumble), PU_LEVSPEC, NULL);
+	P_AddThinker(THINK_MAIN, &crumble->thinker);
+	crumble->thinker.function.acp1 = (actionf_p1)T_StartCrumble;
 
-	// Does this crumbler return?
-	if (crumblereturn)
-		elevator->type = elevateBounce;
-	else
-		elevator->type = elevateContinuous;
-
-	// set up the fields according to the type of elevator action
-	elevator->sector = sec;
-	elevator->speed = 0;
+	// set up the fields
+	crumble->sector = sec;
+	crumble->speed = 0;
 
 	if (player && player->mo && (player->mo->eflags & MFE_VERTICALFLIP))
 	{
-		elevator->direction = 1; // Up
-		elevator->floordestheight = 1;
+		crumble->direction = 1; // Up
+		crumble->flags |= CF_REVERSE;
 	}
 	else
-	{
-		elevator->direction = -1; // Down
-		elevator->floordestheight = 0;
-	}
+		crumble->direction = -1; // Down
 
-	elevator->floorwasheight = elevator->sector->floorheight;
-	elevator->ceilingwasheight = elevator->sector->ceilingheight;
-	elevator->distance = TICRATE; // Used for delay time
-	elevator->low = 0;
-	elevator->player = player;
-	elevator->origspeed = origalpha;
+	crumble->floorwasheight = crumble->sector->floorheight;
+	crumble->ceilingwasheight = crumble->sector->ceilingheight;
+	crumble->timer = TICRATE;
+	crumble->player = player;
+	crumble->origalpha = origalpha;
 
-	elevator->sourceline = rover->master;
+	crumble->sourceline = rover->master;
 
-	sec->floordata = elevator;
+	sec->floordata = crumble;
 
+	if (crumblereturn)
+		crumble->flags |= CF_RETURN;
 	if (floating)
-		elevator->high = 42;
-	else
-		elevator->high = 0;
+		crumble->flags |= CF_FLOATBOB;
 
-	elevator->sector->crumblestate = 2;
+	crumble->sector->crumblestate = CRUMBLE_ACTIVATED;
 
-	for (i = -1; (i = P_FindSectorFromTag(elevator->sourceline->tag, i)) >= 0 ;)
+	for (i = -1; (i = P_FindSectorFromTag(crumble->sourceline->tag, i)) >= 0 ;)
 	{
 		foundsec = &sectors[i];
 
-		P_SpawnMobj(foundsec->soundorg.x, foundsec->soundorg.y, elevator->direction == 1 ? elevator->sector->floorheight : elevator->sector->ceilingheight, MT_CRUMBLEOBJ);
+		P_SpawnMobj(foundsec->soundorg.x, foundsec->soundorg.y, crumble->direction == 1 ? crumble->sector->floorheight : crumble->sector->ceilingheight, MT_CRUMBLEOBJ);
 	}
 
 	return 1;
 }
 
-INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
+void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 {
 	sector_t *roversec = rover->master->frontsector;
 	fixed_t topheight = *rover->topheight;
-	levelspecthink_t *block;
+	mariothink_t *block;
 	mobj_t *thing;
 	fixed_t oldx = 0, oldy = 0, oldz = 0;
 
@@ -3368,7 +2386,7 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 	I_Assert(puncher->player != NULL);
 
 	if (roversec->floordata || roversec->ceilingdata)
-		return 0;
+		return;
 
 	if (!(rover->flags & FF_SOLID))
 		rover->flags |= (FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
@@ -3376,8 +2394,9 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 	// Find an item to pop out!
 	thing = SearchMarioNode(roversec->touching_thinglist);
 
-	// Found something!
-	if (thing)
+	if (!thing)
+		S_StartSound(puncher, sfx_mario1); // "Thunk!" sound - puncher is "close enough".
+	else // Found something!
 	{
 		const boolean itsamonitor = (thing->flags & MF_MONITOR) == MF_MONITOR;
 		// create and initialize new elevator thinker
@@ -3390,13 +2409,11 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 
 		// Set up the fields
 		block->sector = roversec;
-		block->vars[0] = sector->tag; // actionsector
-		block->vars[1] = 4*FRACUNIT; // speed
-		block->vars[2] = 1; // Up // direction
-		block->vars[3] = block->sector->floorheight; // floorwasheight
-		block->vars[4] = block->sector->ceilingheight; // ceilingwasheight
-		block->vars[5] = FRACUNIT; // distance
-		block->vars[6] = 1; // low
+		block->speed = 4*FRACUNIT;
+		block->direction = 1;
+		block->floorstartheight = block->sector->floorheight;
+		block->ceilingstartheight = block->sector->ceilingheight;
+		block->tag = (INT16)sector->tag;
 
 		if (itsamonitor)
 		{
@@ -3437,8 +2454,4 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 			P_SetThingPosition(thing);
 		}
 	}
-	else
-		S_StartSound(puncher, sfx_mario1); // "Thunk!" sound - puncher is "close enough".
-
-	return 1;
 }

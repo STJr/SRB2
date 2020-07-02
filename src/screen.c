@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -127,14 +127,12 @@ void SCR_SetDrawFuncs(void)
 #ifndef NOWATER
 		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_8;
 #endif
-#ifdef ESLOPE
 		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_8;
 		spanfuncs[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_8;
 #ifndef NOWATER
 		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_8;
 #endif
 		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_8;
-#endif
 
 		// Lactozilla: Non-powers-of-two
 		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_8;
@@ -145,14 +143,12 @@ void SCR_SetDrawFuncs(void)
 #ifndef NOWATER
 		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
 #endif
-#ifdef ESLOPE
 		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_8;
 #ifndef NOWATER
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_8;
 #endif
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_8;
-#endif
 
 #ifdef RUSEASM
 		if (R_ASM)
@@ -450,6 +446,20 @@ static int target_renderer = 0;
 void SCR_ActuallyChangeRenderer(void)
 {
 	setrenderneeded = target_renderer;
+
+#ifdef HWRENDER
+	// Well, it didn't even load anyway.
+	if ((vid_opengl_state == -1) && (setrenderneeded == render_opengl))
+	{
+		if (M_CheckParm("-nogl"))
+			CONS_Alert(CONS_ERROR, "OpenGL rendering was disabled!\n");
+		else
+			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
+		setrenderneeded = 0;
+		return;
+	}
+#endif
+
 	// setting the same renderer twice WILL crash your game, so let's not, please
 	if (rendermode == setrenderneeded)
 		setrenderneeded = 0;
@@ -464,7 +474,7 @@ void SCR_ChangeRenderer(void)
 	{
 		target_renderer = cv_renderer.value;
 #ifdef HWRENDER
-		if (M_CheckParm("-opengl"))
+		if (M_CheckParm("-opengl") && (vid_opengl_state == 1))
 			target_renderer = rendermode = render_opengl;
 		else
 #endif
@@ -516,6 +526,9 @@ void SCR_DisplayTicRate(void)
 	INT32 ticcntcolor = 0;
 	const INT32 h = vid.height-(8*vid.dupy);
 
+	if (gamestate == GS_NULL)
+		return;
+
 	for (i = lasttic + 1; i < TICRATE+lasttic && i < ontic; ++i)
 		fpsgraph[i % TICRATE] = false;
 
@@ -528,10 +541,16 @@ void SCR_DisplayTicRate(void)
 	if (totaltics <= TICRATE/2) ticcntcolor = V_REDMAP;
 	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
 
-	V_DrawString(vid.width-(72*vid.dupx), h,
-		V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
-	V_DrawString(vid.width-(40*vid.dupx), h,
-		ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d/%02u", totaltics, TICRATE));
+	if (cv_ticrate.value == 2) // compact counter
+		V_DrawString(vid.width-(16*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d", totaltics));
+	else if (cv_ticrate.value == 1) // full counter
+	{
+		V_DrawString(vid.width-(72*vid.dupx), h,
+			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
+		V_DrawString(vid.width-(40*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d/%02u", totaltics, TICRATE));
+	}
 
 	lasttic = ontic;
 }
@@ -602,4 +621,52 @@ void SCR_ClosedCaptions(void)
 		V_DrawRightAlignedString(BASEVIDWIDTH - 20, y, flags,
 			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
+}
+
+void SCR_DisplayMarathonInfo(void)
+{
+	INT32 flags = V_SNAPTOBOTTOM;
+	static tic_t entertic, oldentertics = 0, antisplice[2] = {48,0};
+	const char *str;
+#if 0 // eh, this probably isn't going to be a problem
+	if (((signed)marathontime) < 0)
+	{
+		flags |= V_REDMAP;
+		str = "No waiting out the clock to submit a bogus time.";
+	}
+	else
+#endif
+	{
+		entertic = I_GetTime();
+		if (gamecomplete)
+			flags |= V_YELLOWMAP;
+		else if (marathonmode & MA_INGAME)
+			; // see also G_Ticker
+		else if (marathonmode & MA_INIT)
+			marathonmode &= ~MA_INIT;
+		else
+			marathontime += entertic - oldentertics;
+
+		// Create a sequence of primes such that their LCM is nice and big.
+#define PRIMEV1 13
+#define PRIMEV2 17 // I can't believe it! I'm on TV!
+		antisplice[0] += (entertic - oldentertics)*PRIMEV2;
+		antisplice[0] %= PRIMEV1*((vid.width/vid.dupx)+1);
+		antisplice[1] += (entertic - oldentertics)*PRIMEV1;
+		antisplice[1] %= PRIMEV1*((vid.width/vid.dupx)+1);
+		str = va("%i:%02i:%02i.%02i",
+			G_TicsToHours(marathontime),
+			G_TicsToMinutes(marathontime, false),
+			G_TicsToSeconds(marathontime),
+			G_TicsToCentiseconds(marathontime));
+		oldentertics = entertic;
+	}
+	V_DrawFill((antisplice[0]/PRIMEV1)-1, BASEVIDHEIGHT-8, 1, 8, V_SNAPTOBOTTOM|V_SNAPTOLEFT);
+	V_DrawFill((antisplice[0]/PRIMEV1),   BASEVIDHEIGHT-8, 1, 8, V_SNAPTOBOTTOM|V_SNAPTOLEFT|31);
+	V_DrawFill(BASEVIDWIDTH-((antisplice[1]/PRIMEV1)-1), BASEVIDHEIGHT-8, 1, 8, V_SNAPTOBOTTOM|V_SNAPTORIGHT);
+	V_DrawFill(BASEVIDWIDTH-((antisplice[1]/PRIMEV1)),   BASEVIDHEIGHT-8, 1, 8, V_SNAPTOBOTTOM|V_SNAPTORIGHT|31);
+#undef PRIMEV1
+#undef PRIMEV2
+	V_DrawPromptBack(-8, cons_backcolor.value);
+	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-8, flags, str);
 }

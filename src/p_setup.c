@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,7 +27,7 @@
 #include "i_system.h"
 
 #include "r_data.h"
-#include "r_things.h"
+#include "r_things.h" // for R_AddSpriteDefs
 #include "r_patch.h"
 #include "r_sky.h"
 #include "r_draw.h"
@@ -57,9 +57,7 @@
 
 #include "filesrch.h" // refreshdirmenu
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h" // level title
-#endif
 
 #include "f_finale.h" // wipes
 
@@ -79,9 +77,7 @@
 #include "hardware/hw_model.h"
 #endif
 
-#ifdef ESLOPE
 #include "p_slopes.h"
-#endif
 
 #include "fastcmp.h" // textmap parsing
 
@@ -147,6 +143,133 @@ mapthing_t *deathmatchstarts[MAX_DM_STARTS];
 mapthing_t *playerstarts[MAXPLAYERS];
 mapthing_t *bluectfstarts[MAXPLAYERS];
 mapthing_t *redctfstarts[MAXPLAYERS];
+
+// Maintain waypoints
+mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
+UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
+
+void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint)
+{
+	waypoints[sequence][id] = waypoint;
+	if (id >= numwaypoints[sequence])
+		numwaypoints[sequence] = id + 1;
+}
+
+static void P_ResetWaypoints(void)
+{
+	UINT16 sequence, id;
+	for (sequence = 0; sequence < NUMWAYPOINTSEQUENCES; sequence++)
+	{
+		for (id = 0; id < numwaypoints[sequence]; id++)
+			waypoints[sequence][id] = NULL;
+
+		numwaypoints[sequence] = 0;
+	}
+}
+
+mobj_t *P_GetFirstWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][0];
+}
+
+mobj_t *P_GetLastWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][numwaypoints[sequence] - 1];
+}
+
+mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == 0)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = numwaypoints[sequence] - 1;
+	}
+	else
+		id--;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == numwaypoints[sequence] - 1)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = 0;
+	}
+	else
+		id++;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo)
+{
+	UINT8 wp;
+	mobj_t *mo2, *result = NULL;
+	fixed_t bestdist = 0;
+	fixed_t curdist;
+
+	for (wp = 0; wp < numwaypoints[sequence]; wp++)
+	{
+		mo2 = waypoints[sequence][wp];
+
+		if (!mo2)
+			continue;
+
+		curdist = P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z);
+
+		if (result && curdist > bestdist)
+			continue;
+
+		result = mo2;
+		bestdist = curdist;
+	}
+
+	return result;
+}
+
+// Return true if all waypoints are in the same location
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence)
+{
+	mobj_t *first, *waypoint;
+	UINT8 wp;
+
+	if (numwaypoints[sequence] <= 1)
+		return true;
+
+	first = waypoints[sequence][0];
+
+	for (wp = 1; wp < numwaypoints[sequence]; wp++)
+	{
+		waypoint = waypoints[sequence][wp];
+
+		if (!waypoint)
+			continue;
+
+		if (waypoint->x != first->x)
+			return false;
+
+		if (waypoint->y != first->y)
+			return false;
+
+		if (waypoint->z != first->z)
+			return false;
+	}
+
+	return true;
+}
+
 
 /** Logs an error about a map being corrupt, then terminate.
   * This allows reporting highly technical errors for usefulness, without
@@ -221,7 +344,11 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
+	mapheaderinfo[num]->marathonnext = 0;
 	mapheaderinfo[num]->startrings = 0;
+	mapheaderinfo[num]->sstimer = 90;
+	mapheaderinfo[num]->ssspheres = 1;
+	mapheaderinfo[num]->gravity = FRACUNIT/2;
 	mapheaderinfo[num]->keywords[0] = '\0';
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
@@ -697,47 +824,27 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer1, emer2, emer3;
-	INT32 timeout = 0; // keeps from getting stuck
+	INT32 emer[3], num[MAXHUNTEMERALDS], i, randomkey;
+	fixed_t x, y, z;
 
-	emer1 = emer2 = emer3 = 0;
+	for (i = 0; i < numhuntemeralds; i++)
+		num[i] = i;
 
-	//increment spawn numbers because zero is valid.
-	emer1 = (P_RandomKey(numhuntemeralds)) + 1;
-	while (timeout++ < 100)
+	for (i = 0; i < 3; i++)
 	{
-		emer2 = (P_RandomKey(numhuntemeralds)) + 1;
+		// generate random index, shuffle afterwards
+		randomkey = P_RandomKey(numhuntemeralds--);
+		emer[i] = num[randomkey];
+		num[randomkey] = num[numhuntemeralds];
+		num[numhuntemeralds] = emer[i];
 
-		if (emer2 != emer1)
-			break;
+		// spawn emerald
+		x = huntemeralds[emer[i]]->x<<FRACBITS;
+		y = huntemeralds[emer[i]]->y<<FRACBITS;
+		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer[i]], x, y);
+		P_SetMobjStateNF(P_SpawnMobj(x, y, z, MT_EMERHUNT),
+			mobjinfo[MT_EMERHUNT].spawnstate+i);
 	}
-
-	timeout = 0;
-	while (timeout++ < 100)
-	{
-		emer3 = (P_RandomKey(numhuntemeralds)) + 1;
-
-		if (emer3 != emer2 && emer3 != emer1)
-			break;
-	}
-
-	//decrement spawn values to the actual number because zero is valid.
-	if (emer1--)
-		P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
-			huntemeralds[emer1]->y<<FRACBITS,
-			huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
-
-	if (emer2--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
-			huntemeralds[emer2]->y<<FRACBITS,
-			huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+1);
-
-	if (emer3--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
-			huntemeralds[emer3]->y<<FRACBITS,
-			huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+2);
 }
 
 static void P_SpawnMapThings(boolean spawnemblems)
@@ -870,13 +977,12 @@ static void P_InitializeSector(sector_t *ss)
 	ss->camsec = -1;
 
 	ss->floorlightsec = ss->ceilinglightsec = -1;
-	ss->crumblestate = 0;
+	ss->crumblestate = CRUMBLE_NONE;
 
 	ss->touching_thinglist = NULL;
 
 	ss->linecount = 0;
 	ss->lines = NULL;
-	ss->tagline = NULL;
 
 	ss->ffloors = NULL;
 	ss->attached = NULL;
@@ -911,11 +1017,9 @@ static void P_InitializeSector(sector_t *ss)
 	ss->preciplist = NULL;
 	ss->touching_preciplist = NULL;
 
-#ifdef ESLOPE
 	ss->f_slope = NULL;
 	ss->c_slope = NULL;
 	ss->hasslope = false;
-#endif
 
 	ss->spawn_lightlevel = ss->lightlevel;
 
@@ -980,9 +1084,7 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->splats = NULL;
 #endif
 	ld->firsttag = ld->nexttag = -1;
-#ifdef POLYOBJECTS
 	ld->polyobj = NULL;
-#endif
 
 	ld->text = NULL;
 	ld->callcount = 0;
@@ -1187,10 +1289,14 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 9: // Mace parameters
 			case 14: // Bustable block parameters
 			case 15: // Fan particle spawner parameters
+			case 334: // Trigger linedef executor: Object dye - Continuous
+			case 335: // Trigger linedef executor: Object dye - Each time
+			case 336: // Trigger linedef executor: Object dye - Once
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 			case 461: // Spawns an object on the map based on texture offsets
+			case 463: // Colorizes an object
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -1892,10 +1998,8 @@ static void P_InitializeSeg(seg_t *seg)
 
 	seg->numlights = 0;
 	seg->rlights = NULL;
-#ifdef POLYOBJECTS
 	seg->polyseg = NULL;
 	seg->dontrenderme = false;
-#endif
 }
 
 static void P_LoadSegs(UINT8 *data)
@@ -2258,11 +2362,9 @@ static boolean P_LoadBlockMap(UINT8 *data, size_t count)
 	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 	blockmap = blockmaplump+4;
 
-#ifdef POLYOBJECTS
 	// haleyjd 2/22/06: setup polyobject blockmap
 	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	return true;
 }
 
@@ -2513,11 +2615,9 @@ static void P_CreateBlockMap(void)
 		blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 		blockmap = blockmaplump + 4;
 
-#ifdef POLYOBJECTS
 		// haleyjd 2/22/06: setup polyobject blockmap
 		count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 		polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	}
 }
 
@@ -3096,7 +3196,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !(players[i].spectator && players[i].quittime))
+		if (playeringame[i] && !(players[i].spectator || players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -3195,21 +3295,6 @@ static void P_InitCamera(void)
 		if ((splitscreen && cv_useranalog[1].value) || botingame)
 			CV_SetValue(&cv_analog[1], true);
 	}
-}
-
-static boolean CanSaveLevel(INT32 mapnum)
-{
-	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
-		return false;
-
-	if (G_IsSpecialStage(mapnum) // don't save in special stages
-		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
-		return false;
-
-	// Any levels that have the savegame flag can save normally.
-	// If the game is complete for this save slot, then any level can save!
-	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
-	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
 }
 
 static void P_RunSpecialStageWipe(void)
@@ -3374,7 +3459,7 @@ static void P_InitGametype(void)
 
 	if (G_TagGametype())
 		P_InitTagGametype();
-	else if (gametype == GT_RACE && server)
+	else if (((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE) && server)
 		CV_StealthSetValue(&cv_numlaps,
 		(cv_basenumlaps.value)
 			? cv_basenumlaps.value
@@ -3526,9 +3611,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
 
-#ifdef HAVE_BLUA
 	LUA_InvalidateLevel();
-#endif
 
 	for (ss = sectors; sectors+numsectors != ss; ss++)
 	{
@@ -3575,6 +3658,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_ResetSpawnpoints();
 
+	P_ResetWaypoints();
+
 	P_MapStart();
 
 	if (!P_LoadMapFromFile())
@@ -3584,9 +3669,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
-#ifdef ESLOPE
 	P_SpawnSlopes(fromnetsave);
-#endif
 
 	P_SpawnMapThings(!fromnetsave);
 	skyboxmo[0] = skyboxviewpnts[0];
@@ -3650,11 +3733,19 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_RunCachedActions();
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(gamemap))
-		G_SaveGame((UINT32)cursaveslot);
-
-	lastmaploaded = gamemap; // HAS to be set after saving!!
+	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
+	if (!titlemapinaction)
+	{
+		if (!lastmaploaded) // Start a new game?
+		{
+			// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
+			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
+			&& (!modifiedgame || savemoddata) && cursaveslot > 0)
+				G_SaveGame((UINT32)cursaveslot, gamemap);
+			// If you're looking for saving sp file progression (distinct from G_SaveGameOver), check G_DoCompleted.
+		}
+		lastmaploaded = gamemap; // HAS to be set after saving!!
+	}
 
 	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
@@ -3665,9 +3756,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
-#ifdef HAVE_BLUA
 		LUAh_MapLoad();
-#endif
 	}
 
 	// No render mode, stop here.
@@ -3786,12 +3875,12 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 {
 	UINT16 numlumps = *pnumlumps;
 	size_t i = *pi;
-	if (!stricmp(lumpinfo->name2, folName))
+	if (!stricmp(lumpinfo->fullname, folName))
 	{
 		lumpinfo++;
 		*start = ++i;
 		for (; i < numlumps; i++, lumpinfo++)
-			if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
+			if (strnicmp(lumpinfo->fullname, folName, strlen(folName)))
 				break;
 		lumpinfo--;
 		*end = i-- - *start;
@@ -3859,10 +3948,8 @@ boolean P_AddWadFile(const char *wadfilename)
 
 		// Update the detected resources.
 		// Note: ALWAYS load Lua scripts first, SOCs right after, and the remaining resources afterwards.
-#ifdef HAVE_BLUA
 //		if (luaNum) // Lua scripts.
 //			P_LoadLuaScrRange(wadnum, luaPos, luaNum);
-#endif
 //		if (socNum) // SOCs.
 //			P_LoadDehackRange(wadnum, socPos, socNum);
 		if (sfxNum) // Sounds. TODO: Function currently only updates already existing sounds, the rest is handled somewhere else.

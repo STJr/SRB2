@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -72,7 +72,7 @@ static FUNCMATH angle_t AngleAdj(const fixed_t fa, const fixed_t wf,
 	const angle_t adj = 0x77;
 	const boolean fan = fa < 0;
 	const fixed_t sl = FixedDiv(fa, wf*2);
-	const fixed_t lb = FixedRem(fa, wf*2);
+	const fixed_t lb = fa % (wf*2);
 	const fixed_t lo = (wf*2)-lb;
 
 	if (ra == 0)

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -56,7 +56,7 @@
 #include <errno.h>
 
 // Prototypes
-static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid);
+static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid);
 
 // Sender structure
 typedef struct filetx_s
@@ -76,8 +76,13 @@ typedef struct filetx_s
 typedef struct filetran_s
 {
 	filetx_t *txlist; // Linked list of all files for the node
+	UINT8 iteration;
+	UINT8 ackediteration;
 	UINT32 position; // The current position in the file
+	boolean *ackedfragments;
+	UINT32 ackedsize;
 	FILE *currentfile; // The file currently being sent/received
+	tic_t dontsenduntil;
 } filetran_t;
 static filetran_t transfer[MAXNETNODES];
 
@@ -87,12 +92,30 @@ static filetran_t transfer[MAXNETNODES];
 // Receiver structure
 INT32 fileneedednum; // Number of files needed to join the server
 fileneeded_t fileneeded[MAX_WADFILES]; // List of needed files
+static tic_t lasttimeackpacketsent = 0;
 char downloaddir[512] = "DOWNLOAD";
 
-#ifdef CLIENT_LOADINGSCREEN
+// For resuming failed downloads
+typedef struct
+{
+	char filename[MAX_WADPATH];
+	UINT8 md5sum[16];
+	boolean *receivedfragments;
+	UINT32 fragmentsize;
+	UINT32 currentsize;
+} pauseddownload_t;
+static pauseddownload_t *pauseddownload = NULL;
+
+#ifndef NONET
 // for cl loading screen
 INT32 lastfilenum = -1;
 #endif
+
+luafiletransfer_t *luafiletransfers = NULL;
+boolean waitingforluafiletransfer = false;
+boolean waitingforluafilecommand = false;
+char luafiledir[256 + 16] = "luafiles";
+
 
 /** Fills a serverinfo packet with information about wad files loaded.
   *
@@ -153,6 +176,7 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr)
 	for (i = 0; i < fileneedednum; i++)
 	{
 		fileneeded[i].status = FS_NOTFOUND; // We haven't even started looking for the file yet
+		fileneeded[i].justdownloaded = false;
 		filestatus = READUINT8(p); // The first byte is the file status
 		fileneeded[i].willsend = (UINT8)(filestatus >> 4);
 		fileneeded[i].totalsize = READUINT32(p); // The four next bytes are the file size
@@ -164,8 +188,13 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr)
 
 void CL_PrepareDownloadSaveGame(const char *tmpsave)
 {
+#ifndef NONET
+	lastfilenum = -1;
+#endif
+
 	fileneedednum = 1;
 	fileneeded[0].status = FS_REQUESTED;
+	fileneeded[0].justdownloaded = false;
 	fileneeded[0].totalsize = UINT32_MAX;
 	fileneeded[0].file = NULL;
 	memset(fileneeded[0].md5sum, 0, 16);
@@ -238,6 +267,31 @@ boolean CL_CheckDownloadable(void)
 	return false;
 }
 
+/** Returns true if a needed file transfer can be resumed
+  *
+  * \param file The needed file to resume the transfer for
+  * \return True if the transfer can be resumed
+  *
+  */
+static boolean CL_CanResumeDownload(fileneeded_t *file)
+{
+	return pauseddownload
+		&& !strcmp(pauseddownload->filename, file->filename) // Same name
+		&& !memcmp(pauseddownload->md5sum, file->md5sum, 16) // Same checksum
+		&& pauseddownload->fragmentsize == file->fragmentsize; // Same fragment size
+}
+
+void CL_AbortDownloadResume(void)
+{
+	if (!pauseddownload)
+		return;
+
+	free(pauseddownload->receivedfragments);
+	remove(pauseddownload->filename);
+	free(pauseddownload);
+	pauseddownload = NULL;
+}
+
 /** Sends requests for files in the ::fileneeded table with a status of
   * ::FS_NOTFOUND.
   *
@@ -245,7 +299,7 @@ boolean CL_CheckDownloadable(void)
   * \note Sends a PT_REQUESTFILE packet
   *
   */
-boolean CL_SendRequestFile(void)
+boolean CL_SendFileRequest(void)
 {
 	char *p;
 	INT32 i;
@@ -290,7 +344,7 @@ boolean CL_SendRequestFile(void)
 
 // get request filepak and put it on the send queue
 // returns false if a requested file was not found or cannot be sent
-boolean Got_RequestFilePak(INT32 node)
+boolean PT_RequestFile(INT32 node)
 {
 	char wad[MAX_WADPATH+1];
 	UINT8 *p = netbuffer->u.textcmd;
@@ -301,7 +355,7 @@ boolean Got_RequestFilePak(INT32 node)
 		if (id == 0xFF)
 			break;
 		READSTRINGN(p, wad, MAX_WADPATH);
-		if (!SV_SendFile(node, wad, id))
+		if (!AddFileToSendQueue(node, wad, id))
 		{
 			SV_AbortSendFiles(node);
 			return false; // don't read the rest of the files
@@ -448,6 +502,196 @@ void CL_LoadServerFiles(void)
 	}
 }
 
+void AddLuaFileTransfer(const char *filename, const char *mode)
+{
+	luafiletransfer_t **prevnext; // A pointer to the "next" field of the last transfer in the list
+	luafiletransfer_t *filetransfer;
+	static INT32 id;
+
+	// Find the last transfer in the list and set a pointer to its "next" field
+	prevnext = &luafiletransfers;
+	while (*prevnext)
+		prevnext = &((*prevnext)->next);
+
+	// Allocate file transfer information and append it to the transfer list
+	filetransfer = malloc(sizeof(luafiletransfer_t));
+	if (!filetransfer)
+		I_Error("AddLuaFileTransfer: Out of memory\n");
+	*prevnext = filetransfer;
+	filetransfer->next = NULL;
+
+	// Allocate the file name
+	filetransfer->filename = strdup(filename);
+	if (!filetransfer->filename)
+		I_Error("AddLuaFileTransfer: Out of memory\n");
+
+	// Create and allocate the real file name
+	if (server)
+		filetransfer->realfilename = strdup(va("%s" PATHSEP "%s",
+												luafiledir, filename));
+	else
+		filetransfer->realfilename = strdup(va("%s" PATHSEP "client" PATHSEP "$$$%d%d.tmp",
+												luafiledir, rand(), rand()));
+	if (!filetransfer->realfilename)
+		I_Error("AddLuaFileTransfer: Out of memory\n");
+
+	strlcpy(filetransfer->mode, mode, sizeof(filetransfer->mode));
+
+	// Only if there is no transfer already going on
+	if (server && filetransfer == luafiletransfers)
+		SV_PrepareSendLuaFile();
+	else
+		filetransfer->ongoing = false;
+
+	// Store the callback so it can be called once everyone has the file
+	filetransfer->id = id;
+	StoreLuaFileCallback(id);
+	id++;
+
+	if (waitingforluafiletransfer)
+	{
+		waitingforluafiletransfer = false;
+		CL_PrepareDownloadLuaFile();
+	}
+}
+
+static void SV_PrepareSendLuaFileToNextNode(void)
+{
+	INT32 i;
+	UINT8 success = 1;
+
+    // Find a client to send the file to
+	for (i = 1; i < MAXNETNODES; i++)
+		if (nodeingame[i] && luafiletransfers->nodestatus[i] == LFTNS_WAITING) // Node waiting
+		{
+			// Tell the client we're about to send them the file
+			netbuffer->packettype = PT_SENDINGLUAFILE;
+			if (!HSendPacket(i, true, 0, 0))
+				I_Error("Failed to send a PT_SENDINGLUAFILE packet\n"); // !!! Todo: Handle failure a bit better lol
+
+			luafiletransfers->nodestatus[i] = LFTNS_ASKED;
+
+			return;
+		}
+
+	// No client found, everyone has the file
+	// Send a net command with 1 as its first byte to indicate the file could be opened
+	SendNetXCmd(XD_LUAFILE, &success, 1);
+}
+
+void SV_PrepareSendLuaFile(void)
+{
+	char *binfilename;
+	INT32 i;
+
+	luafiletransfers->ongoing = true;
+
+	// Set status to "waiting" for everyone
+	for (i = 0; i < MAXNETNODES; i++)
+		luafiletransfers->nodestatus[i] = LFTNS_WAITING;
+
+	if (FIL_ReadFileOK(luafiletransfers->realfilename))
+	{
+		// If opening in text mode, convert all newlines to LF
+		if (!strchr(luafiletransfers->mode, 'b'))
+		{
+			binfilename = strdup(va("%s" PATHSEP "$$$%d%d.tmp",
+				luafiledir, rand(), rand()));
+			if (!binfilename)
+				I_Error("SV_PrepareSendLuaFile: Out of memory\n");
+
+			if (!FIL_ConvertTextFileToBinary(luafiletransfers->realfilename, binfilename))
+				I_Error("SV_PrepareSendLuaFile: Failed to convert file newlines\n");
+
+			// Use the temporary file instead
+			free(luafiletransfers->realfilename);
+			luafiletransfers->realfilename = binfilename;
+		}
+
+		SV_PrepareSendLuaFileToNextNode();
+	}
+	else
+	{
+		// Send a net command with 0 as its first byte to indicate the file couldn't be opened
+		UINT8 success = 0;
+		SendNetXCmd(XD_LUAFILE, &success, 1);
+	}
+}
+
+void SV_HandleLuaFileSent(UINT8 node)
+{
+	luafiletransfers->nodestatus[node] = LFTNS_SENT;
+	SV_PrepareSendLuaFileToNextNode();
+}
+
+void RemoveLuaFileTransfer(void)
+{
+	luafiletransfer_t *filetransfer = luafiletransfers;
+
+	// If it was a temporary file, delete it
+	if (server && !strchr(filetransfer->mode, 'b'))
+		remove(filetransfer->realfilename);
+
+	RemoveLuaFileCallback(filetransfer->id);
+
+	luafiletransfers = filetransfer->next;
+
+	free(filetransfer->filename);
+	free(filetransfer->realfilename);
+	free(filetransfer);
+}
+
+void RemoveAllLuaFileTransfers(void)
+{
+	while (luafiletransfers)
+		RemoveLuaFileTransfer();
+}
+
+void SV_AbortLuaFileTransfer(INT32 node)
+{
+	if (luafiletransfers
+	&& (luafiletransfers->nodestatus[node] == LFTNS_ASKED
+	||  luafiletransfers->nodestatus[node] == LFTNS_SENDING))
+	{
+		luafiletransfers->nodestatus[node] = LFTNS_WAITING;
+		SV_PrepareSendLuaFileToNextNode();
+	}
+}
+
+void CL_PrepareDownloadLuaFile(void)
+{
+	// If there is no transfer in the list, this normally means the server
+	// called io.open before us, so we have to wait until we call it too
+	if (!luafiletransfers)
+	{
+		waitingforluafiletransfer = true;
+		return;
+	}
+
+	if (luafiletransfers->ongoing)
+	{
+		waitingforluafilecommand = true;
+		return;
+	}
+
+	// Tell the server we are ready to receive the file
+	netbuffer->packettype = PT_ASKLUAFILE;
+	HSendPacket(servernode, true, 0, 0);
+
+	fileneedednum = 1;
+	fileneeded[0].status = FS_REQUESTED;
+	fileneeded[0].justdownloaded = false;
+	fileneeded[0].totalsize = UINT32_MAX;
+	fileneeded[0].file = NULL;
+	memset(fileneeded[0].md5sum, 0, 16);
+	strcpy(fileneeded[0].filename, luafiletransfers->realfilename);
+
+	// Make sure all directories in the file path exist
+	MakePathDirs(fileneeded[0].filename);
+
+	luafiletransfers->ongoing = true;
+}
+
 // Number of files to send
 // Little optimization to quickly test if there is a file in the queue
 static INT32 filestosend = 0;
@@ -456,11 +700,12 @@ static INT32 filestosend = 0;
   *
   * \param node The node to send the file to
   * \param filename The file to send
-  * \param fileid ???
-  * \sa SV_SendRam
+  * \param fileid The index of the file in the list of added files
+  * \sa AddRamToSendQueue
+  * \sa AddLuaFileToSendQueue
   *
   */
-static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
+static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
@@ -478,7 +723,7 @@ static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	// Allocate a file request and append it to the file list
 	p = *q = (filetx_t *)malloc(sizeof (filetx_t));
 	if (!p)
-		I_Error("SV_SendFile: No more memory\n");
+		I_Error("AddFileToSendQueue: No more memory\n");
 
 	// Initialise with zeros
 	memset(p, 0, sizeof (filetx_t));
@@ -486,7 +731,7 @@ static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	// Allocate the file name
 	p->id.filename = (char *)malloc(MAX_WADPATH);
 	if (!p->id.filename)
-		I_Error("SV_SendFile: No more memory\n");
+		I_Error("AddFileToSendQueue: No more memory\n");
 
 	// Set the file name and get rid of the path
 	strlcpy(p->id.filename, filename, MAX_WADPATH);
@@ -546,11 +791,12 @@ static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
   * \param data The memory block to send
   * \param size The size of the block in bytes
   * \param freemethod How to free the block after it has been sent
-  * \param fileid ???
-  * \sa SV_SendFile
+  * \param fileid The index of the file in the list of added files
+  * \sa AddFileToSendQueue
+  * \sa AddLuaFileToSendQueue
   *
   */
-void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UINT8 fileid)
+void AddRamToSendQueue(INT32 node, void *data, size_t size, freemethod_t freemethod, UINT8 fileid)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
@@ -563,7 +809,7 @@ void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UI
 	// Allocate a file request and append it to the file list
 	p = *q = (filetx_t *)malloc(sizeof (filetx_t));
 	if (!p)
-		I_Error("SV_SendRam: No more memory\n");
+		I_Error("AddRamToSendQueue: No more memory\n");
 
 	// Initialise with zeros
 	memset(p, 0, sizeof (filetx_t));
@@ -579,6 +825,52 @@ void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UI
 	filestosend++;
 }
 
+/** Adds a file requested by Lua to the file list for a node
+  *
+  * \param node The node to send the file to
+  * \param filename The file to send
+  * \sa AddFileToSendQueue
+  * \sa AddRamToSendQueue
+  *
+  */
+boolean AddLuaFileToSendQueue(INT32 node, const char *filename)
+{
+	filetx_t **q; // A pointer to the "next" field of the last file in the list
+	filetx_t *p; // The new file request
+	//INT32 i;
+	//char wadfilename[MAX_WADPATH];
+
+	luafiletransfers->nodestatus[node] = LFTNS_SENDING;
+
+	// Find the last file in the list and set a pointer to its "next" field
+	q = &transfer[node].txlist;
+	while (*q)
+		q = &((*q)->next);
+
+	// Allocate a file request and append it to the file list
+	p = *q = (filetx_t *)malloc(sizeof (filetx_t));
+	if (!p)
+		I_Error("AddLuaFileToSendQueue: No more memory\n");
+
+	// Initialise with zeros
+	memset(p, 0, sizeof (filetx_t));
+
+	// Allocate the file name
+	p->id.filename = (char *)malloc(MAX_WADPATH); // !!!
+	if (!p->id.filename)
+		I_Error("AddLuaFileToSendQueue: No more memory\n");
+
+	// Set the file name and get rid of the path
+	strlcpy(p->id.filename, filename, MAX_WADPATH); // !!!
+	//nameonly(p->id.filename);
+
+	DEBFILE(va("Sending Lua file %s to %d\n", filename, node));
+	p->ram = SF_FILE; // It's a file, we need to close it and free its name once we're done sending it
+	p->next = NULL; // End of list
+	filestosend++;
+	return true;
+}
+
 /** Stops sending a file for a node, and removes the file request from the list,
   * either because the file has been fully sent or because the node was disconnected
   *
@@ -589,7 +881,8 @@ static void SV_EndFileSend(INT32 node)
 {
 	filetx_t *p = transfer[node].txlist;
 
-	// Free the file request according to the freemethod parameter used with SV_SendFile/Ram
+	// Free the file request according to the freemethod
+	// parameter used with AddFileToSendQueue/AddRamToSendQueue
 	switch (p->ram)
 	{
 		case SF_FILE: // It's a file, close it and free its filename
@@ -614,43 +907,32 @@ static void SV_EndFileSend(INT32 node)
 
 	// Indicate that the transmission is over
 	transfer[node].currentfile = NULL;
+	if (transfer[node].ackedfragments)
+		free(transfer[node].ackedfragments);
+	transfer[node].ackedfragments = NULL;
 
 	filestosend--;
 }
 
 #define PACKETPERTIC net_bandwidth/(TICRATE*software_MAXPACKETLENGTH)
+#define FILEFRAGMENTSIZE (software_MAXPACKETLENGTH - (FILETXHEADER + BASEPACKETSIZE))
 
 /** Handles file transmission
   *
-  * \todo Use an acknowledging method more adapted to file transmission
-  *       The current download speed suffers from lack of ack packets,
-  *       especially when the one downloading has high latency
-  *
   */
-void SV_FileSendTicker(void)
+void FileSendTicker(void)
 {
 	static INT32 currentnode = 0;
 	filetx_pak *p;
-	size_t size;
+	size_t fragmentsize;
 	filetx_t *f;
 	INT32 packetsent, ram, i, j;
-	INT32 maxpacketsent;
 
 	if (!filestosend) // No file to send
 		return;
 
-	if (cv_downloadspeed.value) // New (and experimental) behavior
-	{
+	if (cv_downloadspeed.value) // New behavior
 		packetsent = cv_downloadspeed.value;
-		// Don't send more packets than we have free acks
-#ifndef NONET
-		maxpacketsent = Net_GetFreeAcks(false) - 5; // Let 5 extra acks just in case
-#else
-		maxpacketsent = 1;
-#endif
-		if (packetsent > maxpacketsent && maxpacketsent > 0) // Send at least one packet
-			packetsent = maxpacketsent;
-	}
 	else // Old behavior
 	{
 		packetsent = PACKETPERTIC;
@@ -667,11 +949,12 @@ void SV_FileSendTicker(void)
 			i = (i+1) % MAXNETNODES, j++)
 		{
 			if (transfer[i].txlist)
-				goto found;
+				break;
 		}
 		// no transfer to do
-		I_Error("filestosend=%d but no file to send found\n", filestosend);
-	found:
+		if (j >= MAXNETNODES)
+			I_Error("filestosend=%d but no file to send found\n", filestosend);
+
 		currentnode = (i+1) % MAXNETNODES;
 		f = transfer[i].txlist;
 		ram = f->ram;
@@ -705,48 +988,232 @@ void SV_FileSendTicker(void)
 			}
 			else // Sending RAM
 				transfer[i].currentfile = (FILE *)1; // Set currentfile to a non-null value to indicate that it is open
+
+			transfer[i].iteration = 1;
+			transfer[i].ackediteration = 0;
 			transfer[i].position = 0;
+			transfer[i].ackedsize = 0;
+
+			transfer[i].ackedfragments = calloc(f->size / FILEFRAGMENTSIZE + 1, sizeof(*transfer[i].ackedfragments));
+			if (!transfer[i].ackedfragments)
+				I_Error("FileSendTicker: No more memory\n");
+
+			transfer[i].dontsenduntil = 0;
+		}
+
+		// If the client hasn't acknowledged any fragment from the previous iteration,
+		// it is most likely because their acks haven't had enough time to reach the server
+		// yet, due to latency. In that case, we wait a little to avoid useless resend.
+		if (I_GetTime() < transfer[i].dontsenduntil)
+			continue;
+
+		// Find the first non-acknowledged fragment
+		while (transfer[i].ackedfragments[transfer[i].position / FILEFRAGMENTSIZE])
+		{
+			transfer[i].position += FILEFRAGMENTSIZE;
+			if (transfer[i].position >= f->size)
+			{
+				if (transfer[i].ackediteration < transfer[i].iteration)
+					transfer[i].dontsenduntil = I_GetTime() + TICRATE / 2;
+
+				transfer[i].position = 0;
+				transfer[i].iteration++;
+			}
 		}
 
 		// Build a packet containing a file fragment
 		p = &netbuffer->u.filetxpak;
-		size = software_MAXPACKETLENGTH - (FILETXHEADER + BASEPACKETSIZE);
-		if (f->size-transfer[i].position < size)
-			size = f->size-transfer[i].position;
+		fragmentsize = FILEFRAGMENTSIZE;
+		if (f->size-transfer[i].position < fragmentsize)
+			fragmentsize = f->size-transfer[i].position;
 		if (ram)
-			M_Memcpy(p->data, &f->id.ram[transfer[i].position], size);
-		else if (fread(p->data, 1, size, transfer[i].currentfile) != size)
-			I_Error("SV_FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(size), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
+			M_Memcpy(p->data, &f->id.ram[transfer[i].position], fragmentsize);
+		else
+		{
+			fseek(transfer[i].currentfile, transfer[i].position, SEEK_SET);
+
+			if (fread(p->data, 1, fragmentsize, transfer[i].currentfile) != fragmentsize)
+				I_Error("FileSendTicker: can't read %s byte on %s at %d because %s", sizeu1(fragmentsize), f->id.filename, transfer[i].position, M_FileError(transfer[i].currentfile));
+		}
+		p->iteration = transfer[i].iteration;
 		p->position = LONG(transfer[i].position);
-		// Put flag so receiver knows the total size
-		if (transfer[i].position + size == f->size)
-			p->position |= LONG(0x80000000);
 		p->fileid = f->fileid;
-		p->size = SHORT((UINT16)size);
+		p->filesize = LONG(f->size);
+		p->size = SHORT((UINT16)FILEFRAGMENTSIZE);
 
 		// Send the packet
-		if (HSendPacket(i, true, 0, FILETXHEADER + size)) // Reliable SEND
+		if (HSendPacket(i, false, 0, FILETXHEADER + fragmentsize)) // Don't use the default acknowledgement system
 		{ // Success
-			transfer[i].position = (UINT32)(transfer[i].position + size);
-			if (transfer[i].position == f->size) // Finish?
-				SV_EndFileSend(i);
+			transfer[i].position = (UINT32)(transfer[i].position + fragmentsize);
+			if (transfer[i].position >= f->size)
+			{
+				if (transfer[i].ackediteration < transfer[i].iteration)
+					transfer[i].dontsenduntil = I_GetTime() + TICRATE / 2;
+
+				transfer[i].position = 0;
+				transfer[i].iteration++;
+			}
 		}
 		else
 		{ // Not sent for some odd reason, retry at next call
-			if (!ram)
-				fseek(transfer[i].currentfile,transfer[i].position, SEEK_SET);
 			// Exit the while (can't send this one so why should i send the next?)
 			break;
 		}
 	}
 }
 
-void Got_Filetxpak(void)
+void PT_FileAck(void)
+{
+	fileack_pak *packet = &netbuffer->u.fileack;
+	INT32 node = doomcom->remotenode;
+	filetran_t *trans = &transfer[node];
+	INT32 i, j;
+
+	// Wrong file id? Ignore it, it's probably a late packet
+	if (!(trans->txlist && packet->fileid == trans->txlist->fileid))
+		return;
+
+	if (packet->numsegments * sizeof(*packet->segments) != doomcom->datalength - BASEPACKETSIZE - sizeof(*packet))
+	{
+		Net_CloseConnection(node);
+		return;
+	}
+
+	if (packet->iteration > trans->ackediteration)
+	{
+		trans->ackediteration = packet->iteration;
+		if (trans->ackediteration >= trans->iteration - 1)
+			trans->dontsenduntil = 0;
+	}
+
+	for (i = 0; i < packet->numsegments; i++)
+	{
+		fileacksegment_t *segment = &packet->segments[i];
+
+		for (j = 0; j < 32; j++)
+			if (LONG(segment->acks) & (1 << j))
+			{
+				if (LONG(segment->start) * FILEFRAGMENTSIZE >= trans->txlist->size)
+				{
+					Net_CloseConnection(node);
+					return;
+				}
+
+				if (!trans->ackedfragments[LONG(segment->start) + j])
+				{
+					trans->ackedfragments[LONG(segment->start) + j] = true;
+					trans->ackedsize += FILEFRAGMENTSIZE;
+
+					// If the last missing fragment was acked, finish!
+					if (trans->ackedsize == trans->txlist->size)
+					{
+						SV_EndFileSend(node);
+						return;
+					}
+				}
+			}
+	}
+}
+
+void PT_FileReceived(void)
+{
+	filetx_t *trans = transfer[doomcom->remotenode].txlist;
+
+	if (trans && netbuffer->u.filereceived == trans->fileid)
+		SV_EndFileSend(doomcom->remotenode);
+}
+
+static void SendAckPacket(fileack_pak *packet, UINT8 fileid)
+{
+	size_t packetsize;
+	INT32 i;
+
+	packetsize = sizeof(*packet) + packet->numsegments * sizeof(*packet->segments);
+
+	// Finalise the packet
+	packet->fileid = fileid;
+	for (i = 0; i < packet->numsegments; i++)
+	{
+		packet->segments[i].start = LONG(packet->segments[i].start);
+		packet->segments[i].acks = LONG(packet->segments[i].acks);
+	}
+
+	// Send the packet
+	netbuffer->packettype = PT_FILEACK;
+	M_Memcpy(&netbuffer->u.fileack, packet, packetsize);
+	HSendPacket(servernode, false, 0, packetsize);
+
+	// Clear the packet
+	memset(packet, 0, sizeof(*packet) + 512);
+}
+
+static void AddFragmentToAckPacket(fileack_pak *packet, UINT8 iteration, UINT32 fragmentpos, UINT8 fileid)
+{
+	fileacksegment_t *segment = &packet->segments[packet->numsegments - 1];
+
+	packet->iteration = max(packet->iteration, iteration);
+
+    if (packet->numsegments == 0
+		|| fragmentpos < segment->start
+		|| fragmentpos - segment->start >= 32)
+	{
+		// If the packet becomes too big, send it
+		if ((packet->numsegments + 1) * sizeof(*segment) > 512)
+			SendAckPacket(packet, fileid);
+
+		packet->numsegments++;
+		segment = &packet->segments[packet->numsegments - 1];
+		segment->start = fragmentpos;
+	}
+
+	// Set the bit that represents the fragment
+	segment->acks |= 1 << (fragmentpos - segment->start);
+}
+
+void FileReceiveTicker(void)
+{
+	INT32 i;
+
+	for (i = 0; i < fileneedednum; i++)
+	{
+		fileneeded_t *file = &fileneeded[i];
+
+		if (file->status == FS_DOWNLOADING)
+		{
+			if (lasttimeackpacketsent - I_GetTime() > TICRATE / 2)
+				SendAckPacket(file->ackpacket, i);
+
+			// When resuming a tranfer, start with telling
+			// the server what parts we already received
+			if (file->ackresendposition != UINT32_MAX && file->status == FS_DOWNLOADING)
+			{
+				// Acknowledge ~70 MB/s, whichs means the client sends ~18 KB/s
+				INT32 j;
+				for (j = 0; j < 2048; j++)
+				{
+					if (file->receivedfragments[file->ackresendposition])
+						AddFragmentToAckPacket(file->ackpacket, file->iteration, file->ackresendposition, i);
+
+					file->ackresendposition++;
+					if (file->ackresendposition * file->fragmentsize >= file->totalsize)
+					{
+						file->ackresendposition = UINT32_MAX;
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+
+void PT_FileFragment(void)
 {
 	INT32 filenum = netbuffer->u.filetxpak.fileid;
 	fileneeded_t *file = &fileneeded[filenum];
+	UINT32 fragmentpos = LONG(netbuffer->u.filetxpak.position);
+	UINT16 fragmentsize = SHORT(netbuffer->u.filetxpak.size);
+	UINT16 boundedfragmentsize = doomcom->datalength - BASEPACKETSIZE - sizeof(netbuffer->u.filetxpak);
 	char *filename;
-	static INT32 filetime = 0;
 
 	filename = va("%s", file->filename);
 	nameonly(filename);
@@ -771,43 +1238,105 @@ void Got_Filetxpak(void)
 	if (file->status == FS_REQUESTED)
 	{
 		if (file->file)
-			I_Error("Got_Filetxpak: already open file\n");
-		file->file = fopen(filename, "wb");
-		if (!file->file)
-			I_Error("Can't create file %s: %s", filename, strerror(errno));
-		CONS_Printf("\r%s...\n",filename);
-		file->currentsize = 0;
+			I_Error("PT_FileFragment: already open file\n");
+
 		file->status = FS_DOWNLOADING;
+		file->fragmentsize = fragmentsize;
+		file->iteration = 0;
+
+		file->ackpacket = calloc(1, sizeof(*file->ackpacket) + 512);
+		if (!file->ackpacket)
+			I_Error("FileSendTicker: No more memory\n");
+
+		if (CL_CanResumeDownload(file))
+		{
+			file->file = fopen(filename, "r+b");
+			if (!file->file)
+				I_Error("Can't reopen file %s: %s", filename, strerror(errno));
+			CONS_Printf("\r%s...\n", filename);
+
+			CONS_Printf("Resuming download...\n");
+			file->currentsize = pauseddownload->currentsize;
+			file->receivedfragments = pauseddownload->receivedfragments;
+			file->ackresendposition = 0;
+
+			free(pauseddownload);
+			pauseddownload = NULL;
+		}
+		else
+		{
+			CL_AbortDownloadResume();
+
+			file->file = fopen(filename, "wb");
+			if (!file->file)
+				I_Error("Can't create file %s: %s", filename, strerror(errno));
+
+			CONS_Printf("\r%s...\n",filename);
+
+			file->currentsize = 0;
+			file->totalsize = LONG(netbuffer->u.filetxpak.filesize);
+			file->ackresendposition = UINT32_MAX; // Only used for resumed downloads
+
+			file->receivedfragments = calloc(file->totalsize / fragmentsize + 1, sizeof(*file->receivedfragments));
+			if (!file->receivedfragments)
+				I_Error("FileSendTicker: No more memory\n");
+		}
+
+		lasttimeackpacketsent = I_GetTime();
 	}
 
 	if (file->status == FS_DOWNLOADING)
 	{
-		UINT32 pos = LONG(netbuffer->u.filetxpak.position);
-		UINT16 size = SHORT(netbuffer->u.filetxpak.size);
-		// Use a special trick to know when the file is complete (not always used)
-		// WARNING: file fragments can arrive out of order so don't stop yet!
-		if (pos & 0x80000000)
-		{
-			pos &= ~0x80000000;
-			file->totalsize = pos + size;
-		}
-		// We can receive packet in the wrong order, anyway all os support gaped file
-		fseek(file->file, pos, SEEK_SET);
-		if (fwrite(netbuffer->u.filetxpak.data,size,1,file->file) != 1)
-			I_Error("Can't write to %s: %s\n",filename, M_FileError(file->file));
-		file->currentsize += size;
+		if (fragmentpos >= file->totalsize)
+			I_Error("Invalid file fragment\n");
 
-		// Finished?
-		if (file->currentsize == file->totalsize)
+		file->iteration = max(file->iteration, netbuffer->u.filetxpak.iteration);
+
+		if (!file->receivedfragments[fragmentpos / fragmentsize]) // Not received yet
 		{
-			fclose(file->file);
-			file->file = NULL;
-			file->status = FS_FOUND;
-			CONS_Printf(M_GetText("Downloading %s...(done)\n"),
-				filename);
+			file->receivedfragments[fragmentpos / fragmentsize] = true;
+
+			// We can receive packets in the wrong order, anyway all OSes support gaped files
+			fseek(file->file, fragmentpos, SEEK_SET);
+			if (fragmentsize && fwrite(netbuffer->u.filetxpak.data, boundedfragmentsize, 1, file->file) != 1)
+				I_Error("Can't write to %s: %s\n",filename, M_FileError(file->file));
+			file->currentsize += boundedfragmentsize;
+
+			AddFragmentToAckPacket(file->ackpacket, file->iteration, fragmentpos / fragmentsize, filenum);
+
+			// Finished?
+			if (file->currentsize == file->totalsize)
+			{
+				fclose(file->file);
+				file->file = NULL;
+				free(file->receivedfragments);
+				free(file->ackpacket);
+				file->status = FS_FOUND;
+				file->justdownloaded = true;
+				CONS_Printf(M_GetText("Downloading %s...(done)\n"),
+					filename);
+
+				// Tell the server we have received the file
+				netbuffer->packettype = PT_FILERECEIVED;
+				netbuffer->u.filereceived = filenum;
+				HSendPacket(servernode, true, 0, 1);
+
+				if (luafiletransfers)
+				{
+					// Tell the server we have received the file
+					netbuffer->packettype = PT_HASLUAFILE;
+					HSendPacket(servernode, true, 0, 0);
+				}
+			}
+		}
+		else // Already received
+		{
+			// If they are sending us the fragment again, it's probably because
+			// they missed our previous ack, so we must re-acknowledge it
+			AddFragmentToAckPacket(file->ackpacket, file->iteration, fragmentpos / fragmentsize, filenum);
 		}
 	}
-	else
+	else if (!file->justdownloaded)
 	{
 		const char *s;
 		switch(file->status)
@@ -830,14 +1359,8 @@ void Got_Filetxpak(void)
 		}
 		I_Error("Received a file not requested (file id: %d, file status: %s)\n", filenum, s);
 	}
-	// Send ack back quickly
-	if (++filetime == 3)
-	{
-		Net_SendAcks(servernode);
-		filetime = 0;
-	}
 
-#ifdef CLIENT_LOADINGSCREEN
+#ifndef NONET
 	lastfilenum = filenum;
 #endif
 }
@@ -848,7 +1371,7 @@ void Got_Filetxpak(void)
  * \return True if the node is downloading a file
  *
  */
-boolean SV_SendingFile(INT32 node)
+boolean SendingFile(INT32 node)
 {
 	return transfer[node].txlist != NULL;
 }
@@ -877,12 +1400,62 @@ void CloseNetFile(void)
 		if (fileneeded[i].status == FS_DOWNLOADING && fileneeded[i].file)
 		{
 			fclose(fileneeded[i].file);
-			// File is not complete delete it
-			remove(fileneeded[i].filename);
-		}
+			free(fileneeded[i].ackpacket);
 
-	// Remove PT_FILEFRAGMENT from acknowledge list
-	Net_AbortPacketType(PT_FILEFRAGMENT);
+			if (!pauseddownload && i != 0) // 0 is either srb2.srb or the gamestate...
+			{
+				// Don't remove the file, save it for later in case we resume the download
+				pauseddownload = malloc(sizeof(*pauseddownload));
+				if (!pauseddownload)
+					I_Error("CloseNetFile: No more memory\n");
+
+				strcpy(pauseddownload->filename, fileneeded[i].filename);
+				memcpy(pauseddownload->md5sum, fileneeded[i].md5sum, 16);
+				pauseddownload->currentsize = fileneeded[i].currentsize;
+				pauseddownload->receivedfragments = fileneeded[i].receivedfragments;
+				pauseddownload->fragmentsize = fileneeded[i].fragmentsize;
+			}
+			else
+			{
+				free(fileneeded[i].receivedfragments);
+				// File is not complete delete it
+				remove(fileneeded[i].filename);
+			}
+		}
+}
+
+void Command_Downloads_f(void)
+{
+	INT32 node;
+
+	for (node = 0; node < MAXNETNODES; node++)
+		if (transfer[node].txlist
+		&& transfer[node].txlist->ram == SF_FILE) // Node is downloading a file?
+		{
+			const char *name = transfer[node].txlist->id.filename;
+			UINT32 position = transfer[node].ackedsize;
+			UINT32 size = transfer[node].txlist->size;
+			char ratecolor;
+
+			// Avoid division by zero errors
+			if (!size)
+				size = 1;
+
+			name = &name[strlen(name) - nameonlylength(name)];
+			switch (4 * (position - 1) / size)
+			{
+				case 0: ratecolor = '\x85'; break;
+				case 1: ratecolor = '\x87'; break;
+				case 2: ratecolor = '\x82'; break;
+				case 3: ratecolor = '\x83'; break;
+				default: ratecolor = '\x80';
+			}
+
+			CONS_Printf("%2d  %c%s  ", node, ratecolor, name); // Node and file name
+			CONS_Printf("\x80%uK\x84/\x80%uK ", position / 1024, size / 1024); // Progress in kB
+			CONS_Printf("\x80(%c%u%%\x80)  ", ratecolor, (UINT32)(100.0 * position / size)); // Progress in %
+			CONS_Printf("%s\n", I_GetNodeAddress(node)); // Address and newline
+		}
 }
 
 // Functions cut and pasted from Doomatic :)

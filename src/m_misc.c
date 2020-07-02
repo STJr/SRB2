@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -295,6 +295,44 @@ size_t FIL_ReadFileTag(char const *name, UINT8 **buffer, INT32 tag)
 
 	*buffer = buf;
 	return length;
+}
+
+/** Makes a copy of a text file with all newlines converted into LF newlines.
+  *
+  * \param textfilename The name of the source file
+  * \param binfilename The name of the destination file
+  */
+boolean FIL_ConvertTextFileToBinary(const char *textfilename, const char *binfilename)
+{
+	FILE *textfile;
+	FILE *binfile;
+	UINT8 buffer[1024];
+	size_t count;
+	boolean success;
+
+	textfile = fopen(textfilename, "r");
+	if (!textfile)
+		return false;
+
+	binfile = fopen(binfilename, "wb");
+	if (!binfile)
+	{
+		fclose(textfile);
+		return false;
+	}
+
+	do
+	{
+		count = fread(buffer, 1, sizeof(buffer), textfile);
+		fwrite(buffer, 1, count, binfile);
+	} while (count);
+
+	success = !(ferror(textfile) || ferror(binfile));
+
+	fclose(textfile);
+	fclose(binfile);
+
+	return success;
 }
 
 /** Check if the filename exists

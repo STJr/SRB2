@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -9,8 +9,6 @@
 //-----------------------------------------------------------------------------
 /// \file  lua_libs.h
 /// \brief libraries for Lua scripting
-
-#ifdef HAVE_BLUA
 
 extern lua_State *gL;
 
@@ -22,6 +20,8 @@ extern lua_State *gL;
 #define META_STATE "STATE_T*"
 #define META_MOBJINFO "MOBJINFO_T*"
 #define META_SFXINFO "SFXINFO_T*"
+#define META_SKINCOLOR "SKINCOLOR_T*"
+#define META_COLORRAMP "SKINCOLOR_T*RAMP"
 #define META_SPRITEINFO "SPRITEINFO_T*"
 #define META_PIVOTLIST "SPRITEFRAMEPIVOT_T[]"
 #define META_FRAMEPIVOT "SPRITEFRAMEPIVOT_T*"
@@ -45,11 +45,9 @@ extern lua_State *gL;
 #define META_SEG "SEG_T*"
 #define META_NODE "NODE_T*"
 #endif
-#ifdef ESLOPE
 #define META_SLOPE "PSLOPE_T*"
 #define META_VECTOR2 "VECTOR2_T"
 #define META_VECTOR3 "VECTOR3_T"
-#endif
 #define META_MAPHEADER "MAPHEADER_T*"
 
 #define META_CVAR "CONSVAR_T*"
@@ -88,5 +86,3 @@ int LUA_ThinkerLib(lua_State *L);
 int LUA_MapLib(lua_State *L);
 int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);
-
-#endif

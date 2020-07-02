@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -920,10 +920,8 @@ static inline void AM_drawWalls(void)
 {
 	size_t i;
 	static mline_t l;
-#ifdef ESLOPE
 	fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
 	fixed_t backf1 = 0, backf2 = 0, backc1 = 0, backc2 = 0; // back floor ceiling ends
-#endif
 
 	for (i = 0; i < numlines; i++)
 	{
@@ -931,13 +929,10 @@ static inline void AM_drawWalls(void)
 		l.a.y = lines[i].v1->y >> FRACTOMAPBITS;
 		l.b.x = lines[i].v2->x >> FRACTOMAPBITS;
 		l.b.y = lines[i].v2->y >> FRACTOMAPBITS;
-#ifdef ESLOPE
+
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
-		if (slope) { \
-			end1 = P_GetZAt(slope, lines[i].v1->x, lines[i].v1->y); \
-			end2 = P_GetZAt(slope, lines[i].v2->x, lines[i].v2->y); \
-		} else \
-			end1 = end2 = normalheight;
+		end1 = P_GetZAt(slope, lines[i].v1->x, lines[i].v1->y, normalheight); \
+		end2 = P_GetZAt(slope, lines[i].v2->x, lines[i].v2->y, normalheight);
 
 		SLOPEPARAMS(lines[i].frontsector->f_slope, frontf1, frontf2, lines[i].frontsector->floorheight)
 		SLOPEPARAMS(lines[i].frontsector->c_slope, frontc1, frontc2, lines[i].frontsector->ceilingheight)
@@ -946,7 +941,6 @@ static inline void AM_drawWalls(void)
 			SLOPEPARAMS(lines[i].backsector->c_slope, backc1,  backc2,  lines[i].backsector->ceilingheight)
 		}
 #undef SLOPEPARAMS
-#endif
 
 		if (!lines[i].backsector) // 1-sided
 		{
@@ -955,19 +949,11 @@ static inline void AM_drawWalls(void)
 			else
 				AM_drawMline(&l, WALLCOLORS);
 		}
-#ifdef ESLOPE
 		else if ((backf1 == backc1 && backf2 == backc2) // Back is thok barrier
 				 || (frontf1 == frontc1 && frontf2 == frontc2)) // Front is thok barrier
 		{
 			if (backf1 == backc1 && backf2 == backc2
 				&& frontf1 == frontc1 && frontf2 == frontc2) // BOTH are thok barriers
-#else
-		else if (lines[i].backsector->floorheight == lines[i].backsector->ceilingheight // Back is thok barrier
-				 || lines[i].frontsector->floorheight == lines[i].frontsector->ceilingheight) // Front is thok barrier
-		{
-			if (lines[i].backsector->floorheight == lines[i].backsector->ceilingheight
-				&& lines[i].frontsector->floorheight == lines[i].frontsector->ceilingheight) // BOTH are thok barriers
-#endif
 			{
 				if (lines[i].flags & ML_NOCLIMB)
 					AM_drawMline(&l, NOCLIMBTSWALLCOLORS);
@@ -985,20 +971,10 @@ static inline void AM_drawWalls(void)
 		else
 		{
 			if (lines[i].flags & ML_NOCLIMB) {
-#ifdef ESLOPE
 				if (backf1 != frontf1 || backf2 != frontf2) {
-#else
-				if (lines[i].backsector->floorheight
-						!= lines[i].frontsector->floorheight) {
-#endif
 					AM_drawMline(&l, NOCLIMBFDWALLCOLORS); // floor level change
 				}
-#ifdef ESLOPE
 				else if (backc1 != frontc1 || backc2 != frontc2) {
-#else
-				else if (lines[i].backsector->ceilingheight
-						!= lines[i].frontsector->ceilingheight) {
-#endif
 					AM_drawMline(&l, NOCLIMBCDWALLCOLORS); // ceiling level change
 				}
 				else
@@ -1006,20 +982,10 @@ static inline void AM_drawWalls(void)
 			}
 			else
 			{
-#ifdef ESLOPE
 				if (backf1 != frontf1 || backf2 != frontf2) {
-#else
-				if (lines[i].backsector->floorheight
-						!= lines[i].frontsector->floorheight) {
-#endif
 					AM_drawMline(&l, FDWALLCOLORS); // floor level change
 				}
-#ifdef ESLOPE
 				else if (backc1 != frontc1 || backc2 != frontc2) {
-#else
-				else if (lines[i].backsector->ceilingheight
-						!= lines[i].frontsector->ceilingheight) {
-#endif
 					AM_drawMline(&l, CDWALLCOLORS); // ceiling level change
 				}
 				else

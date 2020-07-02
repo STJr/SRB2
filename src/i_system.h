@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -45,6 +45,8 @@ UINT32 I_GetFreeMem(UINT32 *total);
 /**	\brief  Called by D_SRB2Loop, returns current time in tics.
 */
 tic_t I_GetTime(void);
+
+int I_GetTimeMicros(void);// provides microsecond counter for render stats
 
 /**	\brief	The I_Sleep function
 

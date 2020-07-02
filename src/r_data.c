@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -230,25 +230,31 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
+	INT16 fullalpha = (alpha - (0xFF - foreground.s.alpha));
 	if (style == AST_TRANSLUCENT)
 	{
-		if (alpha == 0)
+		if (fullalpha <= 0)
 			output.rgba = background.rgba;
-		else if (alpha == 0xFF)
-			output.rgba = foreground.rgba;
-		else if (alpha < 0xFF)
-		{
-			UINT8 beta = (0xFF - alpha);
-			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
-			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
-			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
-		}
-		// write foreground pixel alpha
-		// if there's no pixel in here
-		if (!background.rgba)
-			output.s.alpha = foreground.s.alpha;
 		else
-			output.s.alpha = 0xFF;
+		{
+			// don't go too high
+			if (fullalpha >= 0xFF)
+				fullalpha = 0xFF;
+			alpha = (UINT8)fullalpha;
+
+			// if the background pixel is empty,
+			// match software and don't blend anything
+			if (!background.s.alpha)
+				output.s.alpha = 0;
+			else
+			{
+				UINT8 beta = (0xFF - alpha);
+				output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+				output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+				output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+				output.s.alpha = 0xFF;
+			}
+		}
 		return output.rgba;
 	}
 #define clamp(c) max(min(c, 0xFF), 0x00);
@@ -716,14 +722,12 @@ Rloadflats (INT32 i, INT32 w)
 	}
 	else
 	{
-		texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
+		texstart = W_CheckNumForMarkerStartPwad("F_START", (UINT16)w, 0);
 		texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
 	}
 
 	if (!( texstart == INT16_MAX || texend == INT16_MAX ))
 	{
-		texstart++; // Do not count the first marker
-
 		// Work through each lump between the markers in the WAD.
 		for (j = 0; j < (texend - texstart); j++)
 		{
@@ -836,7 +840,7 @@ Rloadtextures (INT32 i, INT32 w)
 	}
 	else
 	{
-		texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0);
+		texstart = W_CheckNumForMarkerStartPwad(TX_START, (UINT16)w, 0);
 		texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
 		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 		if (texturesLumpPos != INT16_MAX)
@@ -845,8 +849,6 @@ Rloadtextures (INT32 i, INT32 w)
 
 	if (!( texstart == INT16_MAX || texend == INT16_MAX ))
 	{
-		texstart++; // Do not count the first marker
-
 		// Work through each lump between the markers in the WAD.
 		for (j = 0; j < (texend - texstart); j++)
 		{
@@ -953,14 +955,12 @@ void R_LoadTextures(void)
 		}
 		else
 		{
-			texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
+			texstart = W_CheckNumForMarkerStartPwad("F_START", (UINT16)w, 0);
 			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
 		}
 
 		if (!( texstart == INT16_MAX || texend == INT16_MAX ))
 		{
-			texstart++; // Do not count the first marker
-
 			// PK3s have subfolders, so we can't just make a simple sum
 			if (wadfiles[w]->type == RET_PK3)
 			{
@@ -993,14 +993,12 @@ void R_LoadTextures(void)
 		}
 		else
 		{
-			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0);
+			texstart = W_CheckNumForMarkerStartPwad(TX_START, (UINT16)w, 0);
 			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
 		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
 			continue;
-
-		texstart++; // Do not count the first marker
 
 		// PK3s have subfolders, so we can't just make a simple sum
 		if (wadfiles[w]->type == RET_PK3)
@@ -1587,9 +1585,9 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 		switch (wadfiles[i]->type)
 		{
 		case RET_WAD:
-			if ((start = W_CheckNumForNamePwad("F_START", (UINT16)i, 0)) == INT16_MAX)
+			if ((start = W_CheckNumForMarkerStartPwad("F_START", (UINT16)i, 0)) == INT16_MAX)
 			{
-				if ((start = W_CheckNumForNamePwad("FF_START", (UINT16)i, 0)) == INT16_MAX)
+				if ((start = W_CheckNumForMarkerStartPwad("FF_START", (UINT16)i, 0)) == INT16_MAX)
 					continue;
 				else if ((end = W_CheckNumForNamePwad("FF_END", (UINT16)i, start)) == INT16_MAX)
 					continue;

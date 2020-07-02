@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,7 +15,7 @@
 #include "i_sound.h"
 #include "sounds.h"
 #include "r_defs.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "z_zone.h"
 #include "w_wad.h"
 #include "lua_script.h"
@@ -527,7 +527,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k8a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Boing"},
   {"s3k8b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powerful hit"},
   {"s3k8c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Humming power"},
-  {"s3k8d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
+  {"s3k8d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "/"},
   {"s3k8e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Accelerating"},
   {"s3k8f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Opening"},
   {"s3k90",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Impact"},

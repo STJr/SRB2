@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -38,8 +38,20 @@ typedef INT32 fixed_t;
 /*!
   \brief convert fixed_t into floating number
 */
-#define FIXED_TO_FLOAT(x) (((float)(x)) / ((float)FRACUNIT))
-#define FLOAT_TO_FIXED(f) (fixed_t)((f) * ((float)FRACUNIT))
+
+FUNCMATH FUNCINLINE static ATTRINLINE float FixedToFloat(fixed_t x)
+{
+	return x / (float)FRACUNIT;
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FloatToFixed(float f)
+{
+	return (fixed_t)(f * FRACUNIT);
+}
+
+// for backwards compat
+#define FIXED_TO_FLOAT(x) FixedToFloat(x) // (((float)(x)) / ((float)FRACUNIT))
+#define FLOAT_TO_FIXED(f) FloatToFixed(f) // (fixed_t)((f) * ((float)FRACUNIT))
 
 
 #if defined (__WATCOMC__) && FRACBITS == 16
@@ -190,18 +202,6 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedDiv(fixed_t a, fixed_t b)
 		return (a^b) < 0 ? INT32_MIN : INT32_MAX;
 
 	return FixedDiv2(a, b);
-}
-
-/**	\brief	The FixedRem function
-
-	\param	x	fixed_t number
-	\param	y	fixed_t number
-
-	\return	 remainder of dividing x by y
-*/
-FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRem(fixed_t x, fixed_t y)
-{
-	return x % y;
 }
 
 /**	\brief	The FixedSqrt function

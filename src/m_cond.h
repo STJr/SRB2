@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -90,7 +90,7 @@ typedef struct
 	INT16 tag;       ///< Tag of emblem mapthing
 	INT16 level;     ///< Level on which this emblem can be found.
 	UINT8 sprite;    ///< emblem sprite to use, 0 - 25
-	UINT8 color;     ///< skincolor to use
+	UINT16 color;    ///< skincolor to use
 	INT32 var;       ///< If needed, specifies information on the target amount to achieve (or target skin)
 	char hint[110];  ///< Hint for emblem hints menu
 	UINT8 collected; ///< Do you have this emblem?
@@ -102,7 +102,7 @@ typedef struct
 	UINT8 conditionset;     ///< Condition set that awards this emblem.
 	UINT8 showconditionset; ///< Condition set that shows this emblem.
 	UINT8 sprite;           ///< emblem sprite to use, 0 - 25
-	UINT8 color;            ///< skincolor to use
+	UINT16 color;           ///< skincolor to use
 	UINT8 collected;        ///< Do you have this emblem?
 } extraemblem_t;
 
@@ -172,9 +172,9 @@ INT32 M_CountEmblems(void);
 
 // Emblem shit
 emblem_t *M_GetLevelEmblems(INT32 mapnum);
-skincolors_t M_GetEmblemColor(emblem_t *em);
+skincolornum_t M_GetEmblemColor(emblem_t *em);
 const char *M_GetEmblemPatch(emblem_t *em, boolean big);
-skincolors_t M_GetExtraEmblemColor(extraemblem_t *em);
+skincolornum_t M_GetExtraEmblemColor(extraemblem_t *em);
 const char *M_GetExtraEmblemPatch(extraemblem_t *em, boolean big);
 
 // If you're looking to compare stats for unlocks or what not, use these
