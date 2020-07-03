@@ -2933,7 +2933,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
 	ffloor_t *rover = NULL;
 	boolean bouncing;
-	boolean hitfloor;
+	boolean hitfloor = false;
 
 	if (thing->flags & MF_NOCLIPHEIGHT)
 		return true;
