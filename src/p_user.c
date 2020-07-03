@@ -7776,11 +7776,14 @@ void P_SpawnSkidDust(player_t *player, fixed_t radius, boolean sound)
 	mobj_t *mo = player->mo;
 	mobj_t *particle;
 
-	radius >>= FRACBITS;
-	if (radius)
-		particle = P_SpawnMobjFromMobj(mo, P_RandomRange(-radius, radius) << FRACBITS, P_RandomRange(-radius, radius) << FRACBITS, 0, MT_SPINDUST);
-	else
-		particle = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_SPINDUST);
+	particle = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_SPINDUST);
+	if (radius >>= FRACBITS)
+	{
+		P_UnsetThingPosition(particle);
+		particle->x += P_RandomRange(-radius, radius) << FRACBITS;
+		particle->y += P_RandomRange(-radius, radius) << FRACBITS;
+		P_SetThingPosition(particle);
+	}
 	particle->tics = 10;
 
 	particle->destscale = (2*mo->scale)/3;
