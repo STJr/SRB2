@@ -2615,7 +2615,7 @@ EXPORT void HWRAPI(CreateModelVBOs) (model_t *model)
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 
-static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, FSurfaceInfo *Surface)
+static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
 {
 	static GLRGBAFloat poly = {0,0,0,0};
 	static GLRGBAFloat tint = {0,0,0,0};
@@ -2708,12 +2708,13 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	pglEnable(GL_NORMALIZE);
 
 #ifdef USE_FTRANSFORM_MIRROR
-	// flipped is if the object is flipped
+	// flipped is if the object is vertically flipped
+	// hflipped is if the object is horizontally flipped
 	// pos->flip is if the screen is flipped vertically
 	// pos->mirror is if the screen is flipped horizontally
 	// XOR all the flips together to figure out what culling to use!
 	{
-		boolean reversecull = (flipped ^ pos->flip ^ pos->mirror);
+		boolean reversecull = (flipped ^ hflipped ^ pos->flip ^ pos->mirror);
 		if (reversecull)
 			pglCullFace(GL_FRONT);
 		else
@@ -2721,7 +2722,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	}
 #else
 	// pos->flip is if the screen is flipped too
-	if (flipped != pos->flip) // If either are active, but not both, invert the model's culling
+	if (flipped ^ hflipped ^ pos->flip) // If one or three of these are active, but not two, invert the model's culling
 	{
 		pglCullFace(GL_FRONT);
 	}
@@ -2736,6 +2737,8 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	pglTranslatef(pos->x, pos->z, pos->y);
 	if (flipped)
 		scaley = -scaley;
+	if (hflipped)
+		scalez = -scalez;
 
 #ifdef USE_FTRANSFORM_ANGLEZ
 	pglRotatef(pos->anglez, 0.0f, 0.0f, -1.0f); // rotate by slope from Kart
@@ -2882,9 +2885,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 // -----------------+
 // HWRAPI DrawModel : Draw a model
 // -----------------+
-EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, FSurfaceInfo *Surface)
+EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
 {
-	DrawModelEx(model, frameIndex, duration, tics, nextFrameIndex, pos, scale, flipped, Surface);
+	DrawModelEx(model, frameIndex, duration, tics, nextFrameIndex, pos, scale, flipped, hflipped, Surface);
 }
 
 // -----------------+
