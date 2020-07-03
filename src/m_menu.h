@@ -21,6 +21,9 @@
 #include "r_skins.h" // for SKINNAMESIZE
 #include "f_finale.h" // for ttmode_enum
 
+// Compatibility with old-style named NiGHTS replay files.
+#define OLDNREPLAYNAME
+
 //
 // MENUS
 //

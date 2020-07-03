@@ -2276,6 +2276,9 @@ void Nextmap_OnChange(void)
 {
 	char *leveltitle;
 	char tabase[256];
+#ifdef OLDNREPLAYNAME
+	char tabaseold[256];
+#endif
 	short i;
 	boolean active;
 
@@ -2300,11 +2303,17 @@ void Nextmap_OnChange(void)
 		SP_NightsAttackMenu[naghost].status = IT_DISABLED;
 
 		// Check if file exists, if not, disable REPLAY option
-		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
+		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
+
+#ifdef OLDNREPLAYNAME		
+		sprintf(tabaseold,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
+#endif	
+
 		for (i = 0; i < 4; i++) {
 			SP_NightsReplayMenu[i].status = IT_DISABLED;
 			SP_NightsGuestReplayMenu[i].status = IT_DISABLED;
 		}
+
 		if (FIL_FileExists(va("%s-score-best.lmp", tabase))) {
 			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
 			SP_NightsGuestReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
@@ -2320,16 +2329,37 @@ void Nextmap_OnChange(void)
 			SP_NightsGuestReplayMenu[2].status = IT_WHITESTRING|IT_CALL;
 			active = true;
 		}
-		if (FIL_FileExists(va("%s-guest.lmp", tabase))) {
+		if (FIL_FileExists(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value))))  {
 			SP_NightsReplayMenu[3].status = IT_WHITESTRING|IT_CALL;
 			SP_NightsGuestReplayMenu[3].status = IT_WHITESTRING|IT_CALL;
 			active = true;
 		}
+
+		// Old style name compatibility 
+#ifdef OLDNREPLAYNAME
+		if (FIL_FileExists(va("%s-score-best.lmp", tabaseold))) {
+			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
+			SP_NightsGuestReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
+			active = true;
+		}
+		if (FIL_FileExists(va("%s-time-best.lmp", tabaseold))) {
+			SP_NightsReplayMenu[1].status = IT_WHITESTRING|IT_CALL;
+			SP_NightsGuestReplayMenu[1].status = IT_WHITESTRING|IT_CALL;
+			active = true;
+		}
+		if (FIL_FileExists(va("%s-last.lmp", tabaseold))) {
+			SP_NightsReplayMenu[2].status = IT_WHITESTRING|IT_CALL;
+			SP_NightsGuestReplayMenu[2].status = IT_WHITESTRING|IT_CALL;
+			active = true;
+		}
+#endif
+
 		if (active) {
 			SP_NightsAttackMenu[naguest].status = IT_WHITESTRING|IT_SUBMENU;
 			SP_NightsAttackMenu[nareplay].status = IT_WHITESTRING|IT_SUBMENU;
 			SP_NightsAttackMenu[naghost].status = IT_WHITESTRING|IT_SUBMENU;
 		}
+
 		else if(itemOn == nareplay) // Reset lastOn so replay isn't still selected when not available.
 		{
 			currentMenu->lastOn = itemOn;
@@ -10126,6 +10156,8 @@ static void M_NightsAttack(INT32 choice)
 // Player has selected the "START" from the nights attack screen
 static void M_ChooseNightsAttack(INT32 choice)
 {
+	char *gpath;
+	const size_t glen = strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
 	char nameofdemo[256];
 	(void)choice;
 	emeralds = 0;
@@ -10136,14 +10168,18 @@ static void M_ChooseNightsAttack(INT32 choice)
 	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
 	I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
 
-	snprintf(nameofdemo, sizeof nameofdemo, "replay"PATHSEP"%s"PATHSEP"%s-last", timeattackfolder, G_BuildMapName(cv_nextmap.value));
+	if ((gpath = malloc(glen)) == NULL)
+		I_Error("Out of memory for replay filepath\n");
+
+	sprintf(gpath,"replay"PATHSEP"%s"PATHSEP"%s", timeattackfolder, G_BuildMapName(cv_nextmap.value));
+	snprintf(nameofdemo, sizeof nameofdemo, "%s-%s-last", gpath, skins[cv_chooseskin.value-1].name);
 
 	if (!cv_autorecord.value)
 		remove(va("%s"PATHSEP"%s.lmp", srb2home, nameofdemo));
 	else
 		G_RecordDemo(nameofdemo);
 
-	G_DeferedInitNew(false, G_BuildMapName(cv_nextmap.value), 0, false, false);
+	G_DeferedInitNew(false, G_BuildMapName(cv_nextmap.value), (UINT8)(cv_chooseskin.value-1), false, false);
 }
 
 // Player has selected the "START" from the time attack screen
@@ -10179,6 +10215,7 @@ static void M_ChooseTimeAttack(INT32 choice)
 static void M_ReplayTimeAttack(INT32 choice)
 {
 	const char *which;
+	char *demoname;
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_RECORD; // set modeattacking before G_DoPlayDemo so the map loader knows
 
@@ -10220,11 +10257,18 @@ static void M_ReplayTimeAttack(INT32 choice)
 			which = "last";
 			break;
 		case 3: // guest
-			which = "guest";
-			break;
+			G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
+			return;
 		}
-		// srb2/replay/main/map01-score-best.lmp
-		G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which));
+
+		demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
+
+#ifdef OLDNREPLAYNAME // Check for old style named NiGHTS replay if a new style replay doesn't exist.
+		if (!FIL_FileExists(demoname))
+			demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which);
+#endif
+
+		G_DoPlayDemo(demoname);
 	}
 }
 
@@ -10242,15 +10286,13 @@ static void M_EraseGuest(INT32 choice)
 	M_StartMessage(M_GetText("Guest replay data erased.\n"),NULL,MM_NOTHING);
 }
 
-static void M_OverwriteGuest(const char *which, boolean nights)
+static void M_OverwriteGuest(const char *which)
 {
 	char *rguest = Z_StrDup(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
 	UINT8 *buf;
 	size_t len;
-	if (!nights)
-		len = FIL_ReadFile(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which), &buf);
-	else
-		len = FIL_ReadFile(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which), &buf);
+	len = FIL_ReadFile(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which), &buf);
+
 	if (!len) {
 		return;
 	}
@@ -10271,25 +10313,25 @@ static void M_OverwriteGuest(const char *which, boolean nights)
 static void M_OverwriteGuest_Time(INT32 choice)
 {
 	(void)choice;
-	M_OverwriteGuest("time-best", currentMenu == &SP_NightsGuestReplayDef);
+	M_OverwriteGuest("time-best");
 }
 
 static void M_OverwriteGuest_Score(INT32 choice)
 {
 	(void)choice;
-	M_OverwriteGuest("score-best", currentMenu == &SP_NightsGuestReplayDef);
+	M_OverwriteGuest("score-best");
 }
 
 static void M_OverwriteGuest_Rings(INT32 choice)
 {
 	(void)choice;
-	M_OverwriteGuest("rings-best", false);
+	M_OverwriteGuest("rings-best");
 }
 
 static void M_OverwriteGuest_Last(INT32 choice)
 {
 	(void)choice;
-	M_OverwriteGuest("last", currentMenu == &SP_NightsGuestReplayDef);
+	M_OverwriteGuest("last");
 }
 
 static void M_SetGuestReplay(INT32 choice)
