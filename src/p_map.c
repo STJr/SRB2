@@ -3377,7 +3377,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 				slidemo->player->climbing = 5;
 				if (slidemo->player->powers[pw_super])
 				{
-					P_Earthquake(slidemo, slidemo, 256*slidemo->scale);
+					P_Earthquake(slidemo, slidemo, 256*FRACUNIT);
 					S_StartSound(slidemo, sfx_s3k49);
 				}
 			}

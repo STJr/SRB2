@@ -2357,7 +2357,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					player->mo->momy = ((player->mo->momy - player->cmomy)/2) + player->cmomy;
 					if (player->powers[pw_super])
 					{
-						P_Earthquake(player->mo, player->mo, 256*player->mo->scale);
+						P_Earthquake(player->mo, player->mo, 256*FRACUNIT);
 						S_StartSound(player->mo, sfx_s3k49);
 					}
 					else
@@ -8990,14 +8990,13 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 //
 // P_Earthquake
 // Used for Super Knuckles' landing - damages enemies within the given radius
-// If inflictor is grounded, only grounded enemies are hurt
 //
 void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 {
-	const fixed_t ns = radius/12;
+	const fixed_t scaledradius = FixedMul(radius, inflictor->scale);
+	const fixed_t ns = scaledradius/12;
 	mobj_t *mo;
 	angle_t fa;
-	thinker_t *think;
 	INT32 i;
 	boolean grounded = P_IsObjectOnGround(inflictor);
 
@@ -9023,44 +9022,12 @@ void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 	if (inflictor->player && P_IsLocalPlayer(inflictor->player))
 	{
 		quake.epicenter = NULL;
-		quake.intensity = 8*FRACUNIT;
+		quake.intensity = 8*inflictor->scale;
 		quake.time = 8;
-		quake.radius = radius;
+		quake.radius = scaledradius;
 	}
 
-	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
-	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-			continue;
-
-		mo = (mobj_t *)think;
-
-		if (grounded && !P_IsObjectOnGround(mo))
-			continue;
-
-		if (!(mo->flags & MF_SHOOTABLE) && !(mo->type == MT_EGGGUARD || mo->type == MT_MINUS))
-			continue;
-
-		if (mo->flags & MF_MONITOR)
-			continue; // Monitors cannot be 'nuked'.
-
-		if (mo->type == MT_PLAYER)
-			continue; // Don't hurt players
-
-		if (abs(inflictor->x - mo->x) > radius || abs(inflictor->y - mo->y) > radius || abs(inflictor->z - mo->z) > radius)
-			continue; // Workaround for possible integer overflow in the below -Red
-
-		if (P_AproxDistance(P_AproxDistance(inflictor->x - mo->x, inflictor->y - mo->y), inflictor->z - mo->z) > radius)
-			continue;
-
-		if (mo->type == MT_MINUS && !(mo->flags & (MF_SPECIAL|MF_SHOOTABLE)))
-			mo->flags = (mo->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
-
-		if (mo->type == MT_EGGGUARD && mo->tracer) //nuke Egg Guard's shield!
-			P_KillMobj(mo->tracer, inflictor, source, 0);
-
-		P_DamageMobj(mo, inflictor, source, 1, 0);
-	}
+	P_RadiusAttack(inflictor, source, radius, 0);
 }
 
 //
