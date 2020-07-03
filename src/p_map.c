@@ -3373,8 +3373,13 @@ static void PTR_GlideClimbTraverse(line_t *li)
 
 			if (!slidemo->player->climbing)
 			{
-				S_StartSound(slidemo->player->mo, sfx_s3k4a);
+				S_StartSound(slidemo, sfx_s3k4a);
 				slidemo->player->climbing = 5;
+				if (slidemo->player->powers[pw_super])
+				{
+					P_Earthquake(slidemo, slidemo, 256*slidemo->scale);
+					S_StartSound(slidemo, sfx_s3k49);
+				}
 			}
 
 			slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED);
