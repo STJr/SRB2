@@ -692,7 +692,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && !stoppedclock && --countdowntimer <= 0)
+		if (countdowntimer && G_PlatformGametype() && ((gametyperules & GTR_CAMPAIGN) || leveltime >= 4*TICRATE) && !stoppedclock && --countdowntimer <= 0)
 		{
 			countdowntimer = 0;
 			countdowntimeup = true;
@@ -755,6 +755,9 @@ void P_PreTicker(INT32 frames)
 
 	postimgtype = postimgtype2 = postimg_none;
 
+	if (marathonmode & MA_INGAME)
+		marathonmode |= MA_INIT;
+
 	for (framecnt = 0; framecnt < frames; ++framecnt)
 	{
 		P_MapStart();
@@ -799,4 +802,7 @@ void P_PreTicker(INT32 frames)
 
 		P_MapEnd();
 	}
+
+	if (marathonmode & MA_INGAME)
+		marathonmode &= ~MA_INIT;
 }

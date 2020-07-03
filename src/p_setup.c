@@ -344,6 +344,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
+	mapheaderinfo[num]->marathonnext = 0;
 	mapheaderinfo[num]->startrings = 0;
 	mapheaderinfo[num]->sstimer = 90;
 	mapheaderinfo[num]->ssspheres = 1;
@@ -3156,6 +3157,7 @@ static void P_LoadNightsGhosts(void)
 {
 	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
 	char *gpath = malloc(glen);
+	INT32 i;
 
 	if (!gpath)
 		return;
@@ -3163,16 +3165,43 @@ static void P_LoadNightsGhosts(void)
 	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
 
 	// Best Score ghost
-	if (cv_ghost_bestscore.value && FIL_FileExists(va("%s-score-best.lmp", gpath)))
-			G_AddGhost(va("%s-score-best.lmp", gpath));
+	if (cv_ghost_bestscore.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Best Time ghost
-	if (cv_ghost_besttime.value && FIL_FileExists(va("%s-time-best.lmp", gpath)))
-			G_AddGhost(va("%s-time-best.lmp", gpath));
+	if (cv_ghost_besttime.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Last ghost
-	if (cv_ghost_last.value && FIL_FileExists(va("%s-last.lmp", gpath)))
-		G_AddGhost(va("%s-last.lmp", gpath));
+	if (cv_ghost_last.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Guest ghost
 	if (cv_ghost_guest.value && FIL_FileExists(va("%s-guest.lmp", gpath)))
@@ -3294,21 +3323,6 @@ static void P_InitCamera(void)
 		if ((splitscreen && cv_useranalog[1].value) || botingame)
 			CV_SetValue(&cv_analog[1], true);
 	}
-}
-
-static boolean CanSaveLevel(INT32 mapnum)
-{
-	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
-		return false;
-
-	if (G_IsSpecialStage(mapnum) // don't save in special stages
-		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
-		return false;
-
-	// Any levels that have the savegame flag can save normally.
-	// If the game is complete for this save slot, then any level can save!
-	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
-	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
 }
 
 static void P_RunSpecialStageWipe(void)
@@ -3473,7 +3487,7 @@ static void P_InitGametype(void)
 
 	if (G_TagGametype())
 		P_InitTagGametype();
-	else if (gametype == GT_RACE && server)
+	else if (((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE) && server)
 		CV_StealthSetValue(&cv_numlaps,
 		(cv_basenumlaps.value)
 			? cv_basenumlaps.value
@@ -3747,11 +3761,19 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_RunCachedActions();
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(gamemap))
-		G_SaveGame((UINT32)cursaveslot);
-
-	lastmaploaded = gamemap; // HAS to be set after saving!!
+	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
+	if (!titlemapinaction)
+	{
+		if (!lastmaploaded) // Start a new game?
+		{
+			// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
+			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
+			&& (!modifiedgame || savemoddata) && cursaveslot > 0)
+				G_SaveGame((UINT32)cursaveslot, gamemap);
+			// If you're looking for saving sp file progression (distinct from G_SaveGameOver), check G_DoCompleted.
+		}
+		lastmaploaded = gamemap; // HAS to be set after saving!!
+	}
 
 	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.

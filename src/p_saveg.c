@@ -1294,8 +1294,9 @@ typedef enum
 	MD2_CEILINGROVER = 1<<10,
 	MD2_SLOPE        = 1<<11,
 	MD2_COLORIZED    = 1<<12,
-	MD2_ROLLANGLE    = 1<<13,
-	MD2_SHADOWSCALE  = 1<<14,
+	MD2_MIRRORED     = 1<<13,
+	MD2_ROLLANGLE    = 1<<14,
+	MD2_SHADOWSCALE  = 1<<15,
 } mobj_diff2_t;
 
 typedef enum
@@ -1500,6 +1501,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SLOPE;
 	if (mobj->colorized)
 		diff2 |= MD2_COLORIZED;
+	if (mobj->mirrored)
+		diff2 |= MD2_MIRRORED;
 	if (mobj->rollangle)
 		diff2 |= MD2_ROLLANGLE;
 	if (mobj->shadowscale)
@@ -1638,6 +1641,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT16(save_p, mobj->standingslope->id);
 	if (diff2 & MD2_COLORIZED)
 		WRITEUINT8(save_p, mobj->colorized);
+	if (diff2 & MD2_MIRRORED)
+		WRITEUINT8(save_p, mobj->mirrored);
 	if (diff2 & MD2_ROLLANGLE)
 		WRITEANGLE(save_p, mobj->rollangle);
 	if (diff2 & MD2_SHADOWSCALE)
@@ -2641,6 +2646,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->standingslope = P_SlopeById(READUINT16(save_p));
 	if (diff2 & MD2_COLORIZED)
 		mobj->colorized = READUINT8(save_p);
+	if (diff2 & MD2_MIRRORED)
+		mobj->mirrored = READUINT8(save_p);
 	if (diff2 & MD2_ROLLANGLE)
 		mobj->rollangle = READANGLE(save_p);
 	if (diff2 & MD2_SHADOWSCALE)
@@ -3785,16 +3792,15 @@ static void P_NetUnArchiveSpecials(void)
 // =======================================================================
 //          Misc
 // =======================================================================
-static inline void P_ArchiveMisc(void)
+static inline void P_ArchiveMisc(INT16 mapnum)
 {
+	//lastmapsaved = mapnum;
+	lastmaploaded = mapnum;
+
 	if (gamecomplete)
-		WRITEINT16(save_p, gamemap | 8192);
-	else
-		WRITEINT16(save_p, gamemap);
+		mapnum |= 8192;
 
-	//lastmapsaved = gamemap;
-	lastmaploaded = gamemap;
-
+	WRITEINT16(save_p, mapnum);
 	WRITEUINT16(save_p, emeralds+357);
 	WRITESTRINGN(save_p, timeattackfolder, sizeof(timeattackfolder));
 }
@@ -3808,10 +3814,10 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	if (mapoverride != 0)
 	{
 		gamemap = mapoverride;
-		gamecomplete = true;
+		gamecomplete = 1;
 	}
 	else
-		gamecomplete = false;
+		gamecomplete = 0;
 
 	// gamemap changed; we assume that its map header is always valid,
 	// so make it so
@@ -4035,9 +4041,9 @@ static inline boolean P_UnArchiveLuabanksAndConsistency(void)
 	return true;
 }
 
-void P_SaveGame(void)
+void P_SaveGame(INT16 mapnum)
 {
-	P_ArchiveMisc();
+	P_ArchiveMisc(mapnum);
 	P_ArchivePlayer();
 	P_ArchiveLuabanksAndConsistency();
 }

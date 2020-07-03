@@ -479,6 +479,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 // Things that used to be in dstrings.h
 #define SAVEGAMENAME "srb2sav"
 extern char savegamename[256];
+extern char liveeventbackup[256];
 
 // m_misc.h
 #ifdef GETTEXT
@@ -616,11 +617,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
 
-#ifndef NONET
-///	Display a connection screen on join attempts.
-#define CLIENT_LOADINGSCREEN
-#endif
-
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
 
@@ -638,16 +634,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
+/// OpenGL shaders
+#define GL_SHADERS
+
 /// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
 /// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
 #define SECTORSPECIALSAFTERTHINK
-
-/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
-/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
-/// on the bright side it fixes some weird issues with translucent walls
-/// \note	SRB2CB port.
-///      	SRB2CB itself ported this from PrBoom+
-#define NEWCLIP
 
 /// Cache patches in Lua in a way that renderer switching will work flawlessly.
 //#define LUA_PATCH_SAFETY

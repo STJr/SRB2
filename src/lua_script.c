@@ -167,7 +167,10 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushboolean(L, splitscreen);
 		return 1;
 	} else if (fastcmp(word,"gamecomplete")) {
-		lua_pushboolean(L, gamecomplete);
+		lua_pushboolean(L, (gamecomplete != 0));
+		return 1;
+	} else if (fastcmp(word,"marathonmode")) {
+		lua_pushinteger(L, marathonmode);
 		return 1;
 	} else if (fastcmp(word,"devparm")) {
 		lua_pushboolean(L, devparm);
@@ -196,6 +199,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
 		lua_pushinteger(L, spstage_start);
+		return 1;
+	} else if (fastcmp(word,"spmarathon_start")) {
+		lua_pushinteger(L, spmarathon_start);
 		return 1;
 	} else if (fastcmp(word,"sstage_start")) {
 		lua_pushinteger(L, sstage_start);
@@ -319,6 +325,12 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		if (!splitscreen || secondarydisplayplayer < 0 || !playeringame[secondarydisplayplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"isserver")) {
+		lua_pushboolean(L, server);
+		return 1;
+	} else if (fastcmp(word,"isdedicatedserver")) {
+		lua_pushboolean(L, dedicated);
 		return 1;
 	// end local player variables
 	} else if (fastcmp(word,"server")) {
