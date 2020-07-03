@@ -8271,7 +8271,6 @@ static void P_MovePlayer(player_t *player)
 			else
 			{
 				fixed_t newMagnitude, oldMagnitude = R_PointToDist2(momx, momy, 0, 0);
-				fixed_t accelfactor = 4*FRACUNIT - 3*FINECOSINE(((angle-moveangle) >> ANGLETOFINESHIFT) & FINEMASK);
 
 				if (mo->eflags & MFE_UNDERWATER)
 					speed = FixedMul((glidespeed>>1) + player->glidetime*750, scale);
