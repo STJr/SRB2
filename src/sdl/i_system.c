@@ -102,7 +102,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
-#if (defined (__unix__) && !defined (_MSDOS)) || defined (UNIXCOMMON)
+#if (defined (__unix__) && !defined (_MSDOS)) || (defined (UNIXCOMMON) && !defined(__APPLE__))
 #include <errno.h>
 #include <sys/wait.h>
 #define NEWSIGNALHANDLER
