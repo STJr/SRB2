@@ -9030,7 +9030,7 @@ void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 		quake.radius = scaledradius;
 	}
 
-	P_RadiusAttack(inflictor, source, radius, 0);
+	P_RadiusAttack(inflictor, source, radius, 0, false);
 }
 
 //

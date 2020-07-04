@@ -421,7 +421,7 @@ void P_DelPrecipSeclist(mprecipsecnode_t *node);
 void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y);
 void P_Initsecnode(void);
 
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype);
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype, boolean sightcheck);
 
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
