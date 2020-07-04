@@ -2823,14 +2823,22 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				P_HandleSlopeLanding(thing, tmfloorslope);
 
 			if (thing->momz <= 0)
+			{
 				thing->standingslope = tmfloorslope;
+				if (thing->momz == 0 && thing->player && !startingonground)
+					P_PlayerHitFloor(thing->player, true);
+			}
 		}
 		else if (thing->z+thing->height >= tmceilingz && (thing->eflags & MFE_VERTICALFLIP)) {
 			if (!startingonground && tmceilingslope)
 				P_HandleSlopeLanding(thing, tmceilingslope);
 
 			if (thing->momz >= 0)
+			{
 				thing->standingslope = tmceilingslope;
+				if (thing->momz == 0 && thing->player && !startingonground)
+					P_PlayerHitFloor(thing->player, true);
+			}
 		}
 	}
 	else // don't set standingslope if you're not going to clip against it
@@ -2924,6 +2932,8 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	ffloor_t *oldceilingrover = thing->ceilingrover;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
 	ffloor_t *rover = NULL;
+	boolean bouncing;
+	boolean hitfloor = false;
 
 	if (thing->flags & MF_NOCLIPHEIGHT)
 		return true;
@@ -2946,7 +2956,9 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (tmfloorz > oldfloorz+thing->height)
 		return true;
 
-	if (onfloor && !(thing->flags & MF_NOGRAVITY) && floormoved)
+	bouncing = thing->player && thing->state-states == S_PLAY_BOUNCE_LANDING && P_IsObjectOnGround(thing);
+
+	if ((onfloor || bouncing) && !(thing->flags & MF_NOGRAVITY) && floormoved)
 	{
 		rover = (thing->eflags & MFE_VERTICALFLIP) ? oldceilingrover : oldfloorrover;
 
@@ -2954,6 +2966,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 		// If ~FF_EXISTS, don't set mobj Z.
 		if (!rover || ((rover->flags & FF_EXISTS) && (rover->flags & FF_SOLID)))
 		{
+			hitfloor = bouncing;
 			if (thing->eflags & MFE_VERTICALFLIP)
 				thing->pmomz = thing->ceilingz - (thing->z + thing->height);
 			else
@@ -2978,7 +2991,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 			thing->z = thing->ceilingz - thing->height;
 	}
 
-	if (P_MobjFlip(thing)*(thing->z - oldz) > 0 && thing->player)
+	if ((P_MobjFlip(thing)*(thing->z - oldz) > 0 || hitfloor) && thing->player)
 		P_PlayerHitFloor(thing->player, !onfloor);
 
 	// debug: be sure it falls to the floor
