@@ -211,10 +211,16 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		return P_SetPlayerMobjState(mobj, S_PLAY_FALL);
 
 	// Catch swimming versus flying
-	if (state == S_PLAY_FLY && player->mo->eflags & MFE_UNDERWATER)
+	if ((state == S_PLAY_FLY || (state == S_PLAY_GLIDE && skins[player->skin].sprites[SPR2_SWIM].numframes))
+	&& player->mo->eflags & MFE_UNDERWATER && !player->skidtime)
 		return P_SetPlayerMobjState(player->mo, S_PLAY_SWIM);
 	else if (state == S_PLAY_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
-		return P_SetPlayerMobjState(player->mo, S_PLAY_FLY);
+	{
+		if (player->charability == CA_GLIDEANDCLIMB)
+			return P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
+		else
+			return P_SetPlayerMobjState(player->mo, S_PLAY_FLY);
+	}
 
 	// Catch SF_NOSUPERSPIN jumps for Supers
 	if (player->powers[pw_super] && (player->charflags & SF_NOSUPERSPIN))
@@ -874,7 +880,7 @@ void P_ExplodeMissile(mobj_t *mo)
 
 	if (mo->type == MT_DETON)
 	{
-		P_RadiusAttack(mo, mo, 96*FRACUNIT, 0);
+		P_RadiusAttack(mo, mo, 96*FRACUNIT, 0, true);
 
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);

@@ -50,6 +50,7 @@ typedef enum
 	SF_NONIGHTSROTATION = 1<<14, // Disable sprite rotation for NiGHTS
 	SF_NONIGHTSSUPER    = 1<<15, // Disable super colors for NiGHTS (if you have SF_SUPER)
 	SF_NOSUPERSPRITES   = 1<<16, // Don't use super sprites while super
+	SF_NOSUPERJUMPBOOST = 1<<17, // Disable the jump boost given while super (i.e. Knuckles)
 	// free up to and including 1<<31
 } skinflags_t;
 

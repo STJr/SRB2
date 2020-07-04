@@ -3858,7 +3858,7 @@ void A_Explode(mobj_t *actor)
 	if (LUA_CallAction("A_Explode", actor))
 		return;
 
-	P_RadiusAttack(actor, actor->target, actor->info->damage, locvar1);
+	P_RadiusAttack(actor, actor->target, actor->info->damage, locvar1, true);
 }
 
 // Function: A_BossDeath
@@ -5639,7 +5639,7 @@ void A_MinusPopup(mobj_t *actor)
 		P_SetObjectMomZ(rock, 3*FRACUNIT, false);
 		P_SetScale(rock, rock->scale/3);
 	}
-	P_RadiusAttack(actor, actor, 2*actor->radius, 0);
+	P_RadiusAttack(actor, actor, 2*actor->radius, 0, true);
 	if (actor->tracer)
 		P_DamageMobj(actor->tracer, actor, actor, 1, 0);
 
@@ -11034,7 +11034,7 @@ void A_VileAttack(mobj_t *actor)
 						actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						fire->z);
-		P_RadiusAttack(fire, actor, 70*FRACUNIT, 0);
+		P_RadiusAttack(fire, actor, 70*FRACUNIT, 0, true);
 	}
 	else
 	{
@@ -11079,7 +11079,7 @@ void A_VileAttack(mobj_t *actor)
 							actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							fire->z);
-			P_RadiusAttack(fire, actor, 70*FRACUNIT, 0);
+			P_RadiusAttack(fire, actor, 70*FRACUNIT, 0, true);
 		}
 	}
 
@@ -12315,7 +12315,7 @@ void A_MineExplode(mobj_t *actor)
 	quake.intensity = 8*FRACUNIT;
 	quake.time = TICRATE/3;
 
-	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT, DMG_CANHURTSELF);
+	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT, DMG_CANHURTSELF, true);
 	P_MobjCheckWater(actor);
 
 	{
@@ -13316,7 +13316,7 @@ void A_Boss5BombExplode(mobj_t *actor)
 	actor->flags2 = MF2_EXPLOSION;
 
 	if (actor->target)
-		P_RadiusAttack(actor, actor->target, 7*actor->radius, 0);
+		P_RadiusAttack(actor, actor->target, 7*actor->radius, 0, true);
 
 	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 2*actor->radius, 0, FRACUNIT, actor->scale);
 	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 3*actor->radius, FRACUNIT, FRACUNIT, actor->scale);

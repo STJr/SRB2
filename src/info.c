@@ -727,7 +727,7 @@ state_t states[NUMSTATES] =
 
 	// CA_GLIDEANDCLIMB
 	{SPR_PLAY, SPR2_GLID,                 2, {NULL}, 0,  0, S_PLAY_GLIDE}, // S_PLAY_GLIDE
-	{SPR_PLAY, SPR2_LAND,                 9, {NULL}, 0,  0, S_PLAY_STND},  // S_PLAY_GLIDE_LANDING
+	{SPR_PLAY, SPR2_LAND,                 7, {NULL}, 0,  0, S_PLAY_STND},  // S_PLAY_GLIDE_LANDING
 	{SPR_PLAY, SPR2_CLNG|FF_ANIMATE,     -1, {NULL}, 0,  4, S_NULL},       // S_PLAY_CLING
 	{SPR_PLAY, SPR2_CLMB,                 5, {NULL}, 0,  0, S_PLAY_CLIMB}, // S_PLAY_CLIMB
 
@@ -2933,11 +2933,11 @@ state_t states[NUMSTATES] =
 	{SPR_IVSP, FF_ANIMATE, 32, {NULL}, 31, 1, S_NULL},   // S_IVSP
 
 	// Super Sonic Spark
-	{SPR_SSPK, 0, 2, {NULL}, 0, 0, S_SSPK2}, // S_SSPK1
-	{SPR_SSPK, 1, 2, {NULL}, 0, 0, S_SSPK3}, // S_SSPK2
-	{SPR_SSPK, 2, 2, {NULL}, 0, 0, S_SSPK4}, // S_SSPK3
-	{SPR_SSPK, 1, 2, {NULL}, 0, 0, S_SSPK5}, // S_SSPK4
-	{SPR_SSPK, 0, 2, {NULL}, 0, 0, S_NULL},  // S_SSPK5
+	{SPR_SSPK,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_SSPK2}, // S_SSPK1
+	{SPR_SSPK, 1|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_SSPK3}, // S_SSPK2
+	{SPR_SSPK, 2|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_SSPK4}, // S_SSPK3
+	{SPR_SSPK, 1|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_SSPK5}, // S_SSPK4
+	{SPR_SSPK,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL},  // S_SSPK5
 
 	// Flicky-sized bubble
 	{SPR_FBUB, 0, -1, {NULL}, 0, 0, S_NULL}, // S_FLICKY_BUBBLE

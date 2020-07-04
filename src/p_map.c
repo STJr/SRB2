@@ -3391,8 +3391,13 @@ static void PTR_GlideClimbTraverse(line_t *li)
 
 			if (!slidemo->player->climbing)
 			{
-				S_StartSound(slidemo->player->mo, sfx_s3k4a);
+				S_StartSound(slidemo, sfx_s3k4a);
 				slidemo->player->climbing = 5;
+				if (slidemo->player->powers[pw_super])
+				{
+					P_Earthquake(slidemo, slidemo, 256*FRACUNIT);
+					S_StartSound(slidemo, sfx_s3k49);
+				}
 			}
 
 			slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED);
@@ -4028,6 +4033,7 @@ static fixed_t bombdamage;
 static mobj_t *bombsource;
 static mobj_t *bombspot;
 static UINT8 bombdamagetype;
+static boolean bombsightcheck;
 
 //
 // PIT_RadiusAttack
@@ -4041,10 +4047,16 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 	if (thing == bombspot) // ignore the bomb itself (Deton fix)
 		return true;
 
-	if ((thing->flags & (MF_MONITOR|MF_SHOOTABLE)) != MF_SHOOTABLE)
+	if (bombsource && thing->type == bombsource->type && !(bombdamagetype & DMG_CANHURTSELF)) // ignore the type of guys who dropped the bomb (Jetty-Syn Bomber or Skim can bomb eachother, but not themselves.)
 		return true;
 
-	 if (bombsource && thing->type == bombsource->type && !(bombdamagetype & DMG_CANHURTSELF)) // ignore the type of guys who dropped the bomb (Jetty-Syn Bomber or Skim can bomb eachother, but not themselves.)
+	if (thing->type == MT_MINUS && !(thing->flags & (MF_SPECIAL|MF_SHOOTABLE)) && !bombsightcheck)
+		thing->flags = (thing->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
+
+	if (thing->type == MT_EGGGUARD && thing->tracer) //nuke Egg Guard's shield!
+		P_KillMobj(thing->tracer, bombspot, bombsource, bombdamagetype);
+
+	if ((thing->flags & (MF_MONITOR|MF_SHOOTABLE)) != MF_SHOOTABLE)
 		return true;
 
 	dx = abs(thing->x - bombspot->x);
@@ -4066,7 +4078,7 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 	if (thing->ceilingz < bombspot->z && bombspot->floorz > thing->z)
 		return true;
 
-	if (P_CheckSight(thing, bombspot))
+	if (!bombsightcheck || P_CheckSight(thing, bombspot))
 	{	// must be in direct path
 		P_DamageMobj(thing, bombspot, bombsource, 1, bombdamagetype); // Tails 01-11-2001
 	}
@@ -4078,7 +4090,7 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 // P_RadiusAttack
 // Source is the creature that caused the explosion at spot.
 //
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype)
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype, boolean sightcheck)
 {
 	INT32 x, y;
 	INT32 xl, xh, yl, yh;
@@ -4096,6 +4108,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 dama
 	bombsource = source;
 	bombdamage = FixedMul(damagedist, spot->scale);
 	bombdamagetype = damagetype;
+	bombsightcheck = sightcheck;
 
 	for (y = yl; y <= yh; y++)
 		for (x = xl; x <= xh; x++)
