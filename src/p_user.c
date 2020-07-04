@@ -4410,7 +4410,8 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		{
 			player->mo->momz = 9*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
-			P_SetTarget(&player->mo->tracer->target, NULL);
+			if (!(player->mo->tracer->flags & MF_MISSILE)) // Missiles remember their owner!
+				P_SetTarget(&player->mo->tracer->target, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->powers[pw_carry] == CR_ROPEHANG)
@@ -12093,6 +12094,11 @@ void P_PlayerThink(player_t *player)
 		player->powers[pw_nocontrol]--;
 	else
 		player->powers[pw_nocontrol] = 0;
+
+	if (player->powers[pw_ignorelatch] & ((1<<15)-1) && player->powers[pw_ignorelatch] < UINT16_MAX)
+		player->powers[pw_ignorelatch]--;
+	else
+		player->powers[pw_ignorelatch] = 0;
 
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]

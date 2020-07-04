@@ -527,6 +527,8 @@ static void P_DoPterabyteCarry(player_t *player, mobj_t *ptera)
 {
 	if (player->powers[pw_carry] && player->powers[pw_carry] != CR_ROLLOUT)
 		return;
+	if (player->powers[pw_ignorelatch] & (1<<15))
+		return;
 	if (ptera->extravalue1 != 1)
 		return; // Not swooping
 	if (ptera->target != player->mo)
@@ -611,7 +613,8 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 
 	if (zdist <= sonic->mo->height + sonic->mo->scale // FixedMul(FRACUNIT, sonic->mo->scale), but scale == FRACUNIT by default
 		&& zdist > sonic->mo->height*2/3
-		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
+		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0
+		&& !(sonic->powers[pw_ignorelatch] & (1<<15)))
 	{
 		if (sonic-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog[1], false);
@@ -1002,6 +1005,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 		if ((thing->flags & MF_PUSHABLE) // not carrying a player
 			&& (tmthing->player->powers[pw_carry] == CR_NONE) // player is not already riding something
+			&& !(tmthing->player->powers[pw_ignorelatch] & (1<<15))
 			&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
 			&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
 			&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
@@ -1291,6 +1295,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (tmthing->type == MT_BLACKEGGMAN_MISSILE && thing->player
 			&& (thing->player->pflags & PF_JUMPED)
 			&& !thing->player->powers[pw_flashing]
+			&& !thing->player->powers[pw_ignorelatch]
 			&& thing->tracer != tmthing
 			&& tmthing->target != thing)
 		{

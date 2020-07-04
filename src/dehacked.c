@@ -9321,7 +9321,9 @@ static const char *const POWERS_LIST[] = {
 	//for dyes
 	"DYE",
 
-	"JUSTLAUNCHED"
+	"JUSTLAUNCHED",
+
+	"IGNORELATCH"
 };
 
 static const char *const HUDITEMS_LIST[] = {
