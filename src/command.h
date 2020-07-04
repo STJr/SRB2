@@ -197,9 +197,12 @@ void CV_AddValue(consvar_t *var, INT32 increment);
 void CV_SaveVariables(FILE *f);
 
 // load/save gamesate (load and save option and for network join in game)
-void CV_SaveNetVars(UINT8 **p);
+void CV_SaveVars(UINT8 **p, boolean in_demo);
+
+#define CV_SaveNetVars(p) CV_SaveVars(p, false)
 void CV_LoadNetVars(UINT8 **p);
 
+#define CV_SaveDemoVars(p) CV_SaveVars(p, true)
 void CV_LoadDemoVars(UINT8 **p);
 
 #ifdef OLD22DEMOCOMPAT

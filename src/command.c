@@ -1627,7 +1627,7 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 		Setvalue(cvar, svalue, stealth);
 }
 
-void CV_SaveNetVars(UINT8 **p)
+void CV_SaveVars(UINT8 **p, boolean in_demo)
 {
 	consvar_t *cvar;
 	UINT8 *count_p = *p;
@@ -1639,7 +1639,10 @@ void CV_SaveNetVars(UINT8 **p)
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
 		if ((cvar->flags & CV_NETVAR) && !CV_IsSetToDefault(cvar))
 		{
-			WRITEUINT16(*p, cvar->netid);
+			if (in_demo)
+				WRITESTRING(*p, cvar->name);
+			else
+				WRITEUINT16(*p, cvar->netid);
 			WRITESTRING(*p, cvar->string);
 			WRITEUINT8(*p, false);
 			++count;

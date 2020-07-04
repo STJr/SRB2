@@ -1525,7 +1525,7 @@ void G_BeginRecording(void)
 	}
 
 	// Save netvar data
-	CV_SaveNetVars(&demo_p);
+	CV_SaveDemoVars(&demo_p);
 
 	memset(&oldcmd,0,sizeof(oldcmd));
 	memset(&oldghost,0,sizeof(oldghost));
