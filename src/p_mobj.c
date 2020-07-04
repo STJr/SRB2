@@ -400,7 +400,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			if (skin)
 			{
-				spr2 = P_GetSkinSprite2(skin, (((player->powers[pw_super]) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK, mobj->player);
+				spr2 = P_GetSkinSprite2(skin, (((player->powers[pw_super] && !(player->charflags & SF_NOSUPERSPRITES)) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK, mobj->player);
 				numframes = skin->sprites[spr2].numframes;
 			}
 			else
@@ -9212,10 +9212,11 @@ static void P_DragonbomberThink(mobj_t *mobj)
 				mobj->angle += DRAGONTURNSPEED;
 			else
 			{
+				boolean flip = mobj->spawnpoint->options & MTF_OBJECTFLIP;
 				fixed_t vspeed = FixedMul(mobj->info->speed >> 3, mobj->scale);
 				fixed_t x = mobj->spawnpoint->x << FRACBITS;
 				fixed_t y = mobj->spawnpoint->y << FRACBITS;
-				fixed_t z = mobj->spawnpoint->z << FRACBITS;
+				fixed_t z = (flip ? P_GetSectorCeilingZAt : P_GetSectorFloorZAt)(R_PointInSubsector(x, y)->sector, x, y) + (flip ? -1 : 1)*(mobj->spawnpoint->z << FRACBITS);
 				angle_t diff = R_PointToAngle2(mobj->x, mobj->y, x, y) - mobj->angle;
 				if (diff > ANGLE_180)
 					mobj->angle -= DRAGONTURNSPEED;
