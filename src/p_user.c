@@ -5354,11 +5354,11 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						if (player->mo->eflags & MFE_UNDERWATER)
 						{
 							glidespeed >>= 1;
-							playerspeed >>= 1;
+							playerspeed = 2*playerspeed/3;
 							if (!(player->powers[pw_super] || player->powers[pw_sneakers]))
 							{
-								player->mo->momx = ((player->mo->momx - player->cmomx)/2) + player->cmomx;
-								player->mo->momy = ((player->mo->momy - player->cmomy)/2) + player->cmomy;
+								player->mo->momx = (2*(player->mo->momx - player->cmomx)/3) + player->cmomx;
+								player->mo->momy = (2*(player->mo->momy - player->cmomy)/3) + player->cmomy;
 							}
 						}
 
