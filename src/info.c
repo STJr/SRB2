@@ -969,30 +969,31 @@ state_t states[NUMSTATES] =
 	{SPR_CSPR, 1, 1, {A_CrushclawAim}, 50, 20, S_CDIAG1}, // S_CDIAG8
 
 	// Jet Jaw
-	{SPR_JJAW, 0, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM2},   // S_JETJAW_ROAM1
-	{SPR_JJAW, 0, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM3},   // S_JETJAW_ROAM2
-	{SPR_JJAW, 0, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM4},   // S_JETJAW_ROAM3
-	{SPR_JJAW, 0, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM5},   // S_JETJAW_ROAM4
-	{SPR_JJAW, 1, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM6},   // S_JETJAW_ROAM5
-	{SPR_JJAW, 1, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM7},   // S_JETJAW_ROAM6
-	{SPR_JJAW, 1, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM8},   // S_JETJAW_ROAM7
-	{SPR_JJAW, 1, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM1},   // S_JETJAW_ROAM8
-	{SPR_JJAW, 0, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP2},  // S_JETJAW_CHOMP1
-	{SPR_JJAW, 0, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP3},  // S_JETJAW_CHOMP2
-	{SPR_JJAW, 0, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP4},  // S_JETJAW_CHOMP3
-	{SPR_JJAW, 0, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP5},  // S_JETJAW_CHOMP4
-	{SPR_JJAW, 1, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP6},  // S_JETJAW_CHOMP5
-	{SPR_JJAW, 1, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP7},  // S_JETJAW_CHOMP6
-	{SPR_JJAW, 1, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP8},  // S_JETJAW_CHOMP7
-	{SPR_JJAW, 1, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP9},  // S_JETJAW_CHOMP8
-	{SPR_JJAW, 2, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP10}, // S_JETJAW_CHOMP9
-	{SPR_JJAW, 2, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP11}, // S_JETJAW_CHOMP10
-	{SPR_JJAW, 2, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP12}, // S_JETJAW_CHOMP11
-	{SPR_JJAW, 2, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP13}, // S_JETJAW_CHOMP12
-	{SPR_JJAW, 3, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP14}, // S_JETJAW_CHOMP13
-	{SPR_JJAW, 3, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP15}, // S_JETJAW_CHOMP14
-	{SPR_JJAW, 3, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP16}, // S_JETJAW_CHOMP15
-	{SPR_JJAW, 3, 1, {A_JetJawChomp}, 0, 0, S_JETJAW_CHOMP1},  // S_JETJAW_CHOMP16
+	{SPR_JJAW, 0, 1, {A_JetJawRoam},               0,               0,   S_JETJAW_ROAM2}, // S_JETJAW_ROAM1
+	{SPR_JJAW, 0, 1, {A_JetJawRoam},               0,               0,   S_JETJAW_ROAM3}, // S_JETJAW_ROAM2
+	{SPR_JJAW, 0, 1, {A_JetJawRoam},               0,               0,   S_JETJAW_ROAM4}, // S_JETJAW_ROAM3
+	{SPR_JJAW, 0, 1, {A_JetJawRoam},               0,               0,   S_JETJAW_ROAM5}, // S_JETJAW_ROAM4
+	{SPR_JJAW, 1, 1, {A_JetJawRoam},               0,               0,   S_JETJAW_ROAM6}, // S_JETJAW_ROAM5
+	{SPR_JJAW, 1, 1, {A_JetJawRoam},               0,               0,   S_JETJAW_ROAM7}, // S_JETJAW_ROAM6
+	{SPR_JJAW, 1, 1, {A_JetJawRoam},               0,               0,   S_JETJAW_ROAM8}, // S_JETJAW_ROAM7
+	{SPR_JJAW, 1, 1, {A_JetJawRoam},               0,               0,   S_JETJAW_ROAM1}, // S_JETJAW_ROAM8
+	{SPR_JJAW, 0, 1, {A_DualAction}, S_JETJAW_CHOMP16, S_JETJAW_SOUND,  S_JETJAW_CHOMP2}, // S_JETJAW_CHOMP1
+	{SPR_JJAW, 0, 1, {A_JetJawChomp},              0,               0,  S_JETJAW_CHOMP3}, // S_JETJAW_CHOMP2
+	{SPR_JJAW, 0, 1, {A_JetJawChomp},              0,               0,  S_JETJAW_CHOMP4}, // S_JETJAW_CHOMP3
+	{SPR_JJAW, 0, 1, {A_JetJawChomp},              0,               0,  S_JETJAW_CHOMP5}, // S_JETJAW_CHOMP4
+	{SPR_JJAW, 1, 1, {A_JetJawChomp},              0,               0,  S_JETJAW_CHOMP6}, // S_JETJAW_CHOMP5
+	{SPR_JJAW, 1, 1, {A_JetJawChomp},              0,               0,  S_JETJAW_CHOMP7}, // S_JETJAW_CHOMP6
+	{SPR_JJAW, 1, 1, {A_JetJawChomp},              0,               0,  S_JETJAW_CHOMP8}, // S_JETJAW_CHOMP7
+	{SPR_JJAW, 1, 1, {A_JetJawChomp},              0,               0,  S_JETJAW_CHOMP9}, // S_JETJAW_CHOMP8
+	{SPR_JJAW, 2, 1, {A_JetJawChomp},              0,               0, S_JETJAW_CHOMP10}, // S_JETJAW_CHOMP9
+	{SPR_JJAW, 2, 1, {A_JetJawChomp},              0,               0, S_JETJAW_CHOMP11}, // S_JETJAW_CHOMP10
+	{SPR_JJAW, 2, 1, {A_JetJawChomp},              0,               0, S_JETJAW_CHOMP12}, // S_JETJAW_CHOMP11
+	{SPR_JJAW, 2, 1, {A_JetJawChomp},              0,               0, S_JETJAW_CHOMP13}, // S_JETJAW_CHOMP12
+	{SPR_JJAW, 3, 1, {A_JetJawChomp},              0,               0, S_JETJAW_CHOMP14}, // S_JETJAW_CHOMP13
+	{SPR_JJAW, 3, 1, {A_JetJawChomp},              0,               0, S_JETJAW_CHOMP15}, // S_JETJAW_CHOMP14
+	{SPR_JJAW, 3, 1, {A_JetJawChomp},              0,               0, S_JETJAW_CHOMP16}, // S_JETJAW_CHOMP15
+	{SPR_JJAW, 3, 1, {A_JetJawChomp},              0,               0,  S_JETJAW_CHOMP1}, // S_JETJAW_CHOMP16
+	{SPR_JJAW, 0, 1, {A_PlayAttackSound},          0,               0,   S_JETJAW_SOUND}, // S_JETJAW_SOUND
 
 	// Snailer
 	{SPR_SNLR, 0, 1, {A_SnailerThink}, 0, 0, S_SNAILER1}, // S_SNAILER1
@@ -4582,7 +4583,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_JETJAW_CHOMP1,// seestate
 		sfx_None,       // seesound
 		4*TICRATE,      // reactiontime
-		sfx_None,       // attacksound
+		sfx_s1ab,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
 		sfx_None,       // painsound

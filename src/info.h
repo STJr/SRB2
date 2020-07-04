@@ -1189,6 +1189,7 @@ typedef enum state
 	S_JETJAW_CHOMP14,
 	S_JETJAW_CHOMP15,
 	S_JETJAW_CHOMP16,
+	S_JETJAW_SOUND,
 
 	// Snailer
 	S_SNAILER1,
