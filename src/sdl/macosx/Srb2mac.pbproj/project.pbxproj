@@ -1064,13 +1064,6 @@
 			path = ../../hardware/hw_drv.h;
 			refType = 2;
 		};
-		8417773B085A106C000C01D8 = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			name = hw_glide.h;
-			path = ../../hardware/hw_glide.h;
-			refType = 2;
-		};
 		8417773C085A106C000C01D8 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;

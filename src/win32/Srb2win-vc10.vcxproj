@@ -399,7 +399,6 @@
     <ClInclude Include="..\hardware\hw_defs.h" />
     <ClInclude Include="..\hardware\hw_dll.h" />
     <ClInclude Include="..\hardware\hw_drv.h" />
-    <ClInclude Include="..\hardware\hw_glide.h" />
     <ClInclude Include="..\hardware\hw_glob.h" />
     <ClInclude Include="..\hardware\hw_light.h" />
     <ClInclude Include="..\hardware\hw_main.h" />

@@ -20,14 +20,33 @@
 #endif
 
 #include "../doomdef.h"
-//THIS MUST DISAPPEAR!!!
-#include "hw_glide.h"
 #include "../screen.h"
 
 
 // ==========================================================================
 //                                                               TEXTURE INFO
 // ==========================================================================
+
+typedef unsigned long   FxU32;
+typedef long            FxI32;
+
+typedef FxI32 GrTextureFormat_t;
+#define GR_TEXFMT_ALPHA_8               0x2 /* (0..0xFF) alpha     */
+#define GR_TEXFMT_INTENSITY_8           0x3 /* (0..0xFF) intensity */
+#define GR_TEXFMT_ALPHA_INTENSITY_44    0x4
+#define GR_TEXFMT_P_8                   0x5 /* 8-bit palette */
+#define GR_TEXFMT_RGB_565               0xa
+#define GR_TEXFMT_ARGB_1555             0xb
+#define GR_TEXFMT_ARGB_4444             0xc
+#define GR_TEXFMT_ALPHA_INTENSITY_88    0xd
+#define GR_TEXFMT_AP_88                 0xe /* 8-bit alpha 8-bit palette */
+#define GR_RGBA                         0x6 // 32 bit RGBA !
+
+typedef struct
+{
+	GrTextureFormat_t format;
+	void              *data;
+} GrTexInfo;
 
 // grInfo.data holds the address of the graphics data cached in heap memory
 //                NULL if the texture is not in Doom heap cache.
