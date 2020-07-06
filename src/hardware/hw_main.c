@@ -770,16 +770,16 @@ FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
 {
 	switch (transtablenum)
 	{
-		case 0          : pSurf->FlatColor.s.alpha = 0x00;return  PF_Masked;
-		case tr_trans10 : pSurf->FlatColor.s.alpha = 0xe6;return  PF_Translucent;
-		case tr_trans20 : pSurf->FlatColor.s.alpha = 0xcc;return  PF_Translucent;
-		case tr_trans30 : pSurf->FlatColor.s.alpha = 0xb3;return  PF_Translucent;
-		case tr_trans40 : pSurf->FlatColor.s.alpha = 0x99;return  PF_Translucent;
-		case tr_trans50 : pSurf->FlatColor.s.alpha = 0x80;return  PF_Translucent;
-		case tr_trans60 : pSurf->FlatColor.s.alpha = 0x66;return  PF_Translucent;
-		case tr_trans70 : pSurf->FlatColor.s.alpha = 0x4c;return  PF_Translucent;
-		case tr_trans80 : pSurf->FlatColor.s.alpha = 0x33;return  PF_Translucent;
-		case tr_trans90 : pSurf->FlatColor.s.alpha = 0x19;return  PF_Translucent;
+		case 0          : pSurf->PolyColor.s.alpha = 0x00;return  PF_Masked;
+		case tr_trans10 : pSurf->PolyColor.s.alpha = 0xe6;return  PF_Translucent;
+		case tr_trans20 : pSurf->PolyColor.s.alpha = 0xcc;return  PF_Translucent;
+		case tr_trans30 : pSurf->PolyColor.s.alpha = 0xb3;return  PF_Translucent;
+		case tr_trans40 : pSurf->PolyColor.s.alpha = 0x99;return  PF_Translucent;
+		case tr_trans50 : pSurf->PolyColor.s.alpha = 0x80;return  PF_Translucent;
+		case tr_trans60 : pSurf->PolyColor.s.alpha = 0x66;return  PF_Translucent;
+		case tr_trans70 : pSurf->PolyColor.s.alpha = 0x4c;return  PF_Translucent;
+		case tr_trans80 : pSurf->PolyColor.s.alpha = 0x33;return  PF_Translucent;
+		case tr_trans90 : pSurf->PolyColor.s.alpha = 0x19;return  PF_Translucent;
 	}
 	return PF_Translucent;
 }
