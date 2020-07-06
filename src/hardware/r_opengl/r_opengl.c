@@ -1662,8 +1662,8 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 	w = pTexInfo->width;
 	h = pTexInfo->height;
 
-	if ((pTexInfo->format == GR_TEXFMT_P_8) ||
-		(pTexInfo->format == GR_TEXFMT_AP_88))
+	if ((pTexInfo->format == GL_TEXFMT_P_8) ||
+		(pTexInfo->format == GL_TEXFMT_AP_88))
 	{
 		const GLubyte *pImgData = (const GLubyte *)pTexInfo->data;
 		INT32 i, j;
@@ -1691,7 +1691,7 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 
 				pImgData++;
 
-				if (pTexInfo->format == GR_TEXFMT_AP_88)
+				if (pTexInfo->format == GL_TEXFMT_AP_88)
 				{
 					if (!(pTexInfo->flags & TF_CHROMAKEYED))
 						tex[w*j+i].s.alpha = *pImgData;
@@ -1701,13 +1701,13 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 			}
 		}
 	}
-	else if (pTexInfo->format == GR_RGBA)
+	else if (pTexInfo->format == GL_TEXFMT_RGBA)
 	{
 		// corona test : passed as ARGB 8888, which is not in glide formats
 		// Hurdler: not used for coronas anymore, just for dynamic lighting
 		ptex = pTexInfo->data;
 	}
-	else if (pTexInfo->format == GR_TEXFMT_ALPHA_INTENSITY_88)
+	else if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
 		const GLubyte *pImgData = (const GLubyte *)pTexInfo->data;
 		INT32 i, j;
@@ -1725,7 +1725,7 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 			}
 		}
 	}
-	else if (pTexInfo->format == GR_TEXFMT_ALPHA_8) // Used for fade masks
+	else if (pTexInfo->format == GL_TEXFMT_ALPHA_8) // Used for fade masks
 	{
 		const GLubyte *pImgData = (const GLubyte *)pTexInfo->data;
 		INT32 i, j;
@@ -1761,7 +1761,7 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
 	}
 
-	if (pTexInfo->format == GR_TEXFMT_ALPHA_INTENSITY_88)
+	if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
 		//pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		if (MipMap)
@@ -1782,7 +1782,7 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 				pglTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		}
 	}
-	else if (pTexInfo->format == GR_TEXFMT_ALPHA_8)
+	else if (pTexInfo->format == GL_TEXFMT_ALPHA_8)
 	{
 		//pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		if (MipMap)
@@ -2969,13 +2969,13 @@ EXPORT INT32  HWRAPI(GetTextureUsed) (void)
 		// follows format2bpp in hw_cache.c
 		int bpp = 1;
 		int format = tmp->format;
-		if (format == GR_RGBA)
+		if (format == GL_TEXFMT_RGBA)
 			bpp = 4;
-		else if (format == GR_TEXFMT_RGB_565
-			|| format == GR_TEXFMT_ARGB_1555
-			|| format == GR_TEXFMT_ARGB_4444
-			|| format == GR_TEXFMT_ALPHA_INTENSITY_88
-			|| format == GR_TEXFMT_AP_88)
+		else if (format == GL_TEXFMT_RGB_565
+			|| format == GL_TEXFMT_ARGB_1555
+			|| format == GL_TEXFMT_ARGB_4444
+			|| format == GL_TEXFMT_ALPHA_INTENSITY_88
+			|| format == GL_TEXFMT_AP_88)
 			bpp = 2;
 
 		// Add it up!

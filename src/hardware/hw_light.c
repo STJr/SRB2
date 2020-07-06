@@ -1245,7 +1245,7 @@ static void HWR_SetLight(void)
 					Data[i*128+j] = 0;
 			}
 		}
-		lightmappatch.mipmap->format = GR_TEXFMT_ALPHA_INTENSITY_88;
+		lightmappatch.mipmap->format = GL_TEXFMT_ALPHA_INTENSITY_88;
 
 		lightmappatch.width = 128;
 		lightmappatch.height = 128;

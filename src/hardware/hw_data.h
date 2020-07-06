@@ -27,30 +27,29 @@
 //                                                               TEXTURE INFO
 // ==========================================================================
 
-typedef unsigned long   FxU32;
-typedef long            FxI32;
-
-typedef FxI32 GrTextureFormat_t;
-#define GR_TEXFMT_ALPHA_8               0x2 /* (0..0xFF) alpha     */
-#define GR_TEXFMT_INTENSITY_8           0x3 /* (0..0xFF) intensity */
-#define GR_TEXFMT_ALPHA_INTENSITY_44    0x4
-#define GR_TEXFMT_P_8                   0x5 /* 8-bit palette */
-#define GR_TEXFMT_RGB_565               0xa
-#define GR_TEXFMT_ARGB_1555             0xb
-#define GR_TEXFMT_ARGB_4444             0xc
-#define GR_TEXFMT_ALPHA_INTENSITY_88    0xd
-#define GR_TEXFMT_AP_88                 0xe /* 8-bit alpha 8-bit palette */
-#define GR_RGBA                         0x6 // 32 bit RGBA !
+typedef enum GLTextureFormat_e
+{
+	GL_TEXFMT_ALPHA_8             = 0x2, /* (0..0xFF) alpha     */
+	GL_TEXFMT_INTENSITY_8         = 0x3, /* (0..0xFF) intensity */
+	GL_TEXFMT_ALPHA_INTENSITY_44  = 0x4,
+	GL_TEXFMT_P_8                 = 0x5, /* 8-bit palette */
+	GL_TEXFMT_RGBA                = 0x6, /* 32 bit RGBA! */
+	GL_TEXFMT_RGB_565             = 0xa,
+	GL_TEXFMT_ARGB_1555           = 0xb,
+	GL_TEXFMT_ARGB_4444           = 0xc,
+	GL_TEXFMT_ALPHA_INTENSITY_88  = 0xd,
+	GL_TEXFMT_AP_88               = 0xe, /* 8-bit alpha 8-bit palette */
+} GLTextureFormat_t;
 
 // data holds the address of the graphics data cached in heap memory
 //                NULL if the texture is not in Doom heap cache.
 struct GLMipmap_s
 {
 	//for TexDownloadMipMap
-	GrTextureFormat_t format;
+	GLTextureFormat_t format;
 	void              *data;
 
-	FxU32           flags;
+	UINT32          flags;
 	UINT16          height;
 	UINT16          width;
 	UINT32          downloaded;     // the dll driver have it in there cache ?
@@ -67,13 +66,13 @@ typedef struct GLMipmap_s GLMipmap_t;
 //
 // Doom texture info, as cached for hardware rendering
 //
-struct GLTexture_s
+struct GLMapTexture_s
 {
 	GLMipmap_t  mipmap;
 	float       scaleX;             //used for scaling textures on walls
 	float       scaleY;
 };
-typedef struct GLTexture_s GLTexture_t;
+typedef struct GLMapTexture_s GLMapTexture_t;
 
 
 // a cached patch as converted to hardware format, holding the original patch_t

@@ -1055,7 +1055,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 	fixed_t worldhighslope = 0, worldlowslope = 0;
 	fixed_t v1x, v1y, v2x, v2y;
 
-	GLTexture_t *grTex = NULL;
+	GLMapTexture_t *grTex = NULL;
 	float cliplow = 0.0f, cliphigh = 0.0f;
 	INT32 gr_midtexture;
 	fixed_t h, l; // 3D sides and 2s middle textures
@@ -5812,7 +5812,7 @@ void HWR_Startup(void)
 	}
 
 	if (rendermode == render_opengl)
-		textureformat = patchformat = GR_RGBA;
+		textureformat = patchformat = GL_TEXFMT_RGBA;
 
 	startupdone = true;
 }

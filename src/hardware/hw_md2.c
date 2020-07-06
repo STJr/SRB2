@@ -141,7 +141,7 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static GrTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_t *grpatch)
+static GLTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_t *grpatch)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -245,7 +245,7 @@ static GrTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_
 	fclose(png_FILE);
 	*w = (int)width;
 	*h = (int)height;
-	return GR_RGBA;
+	return GL_TEXFMT_RGBA;
 }
 #endif
 
@@ -271,7 +271,7 @@ typedef struct
 	UINT8 filler[54];
 } PcxHeader;
 
-static GrTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
+static GLTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
 	GLPatch_t *grpatch)
 {
 	PcxHeader header;
@@ -340,7 +340,7 @@ static GrTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
 		}
 	}
 	fclose(file);
-	return GR_RGBA;
+	return GL_TEXFMT_RGBA;
 }
 
 // -----------------+
@@ -686,7 +686,7 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 		// no wrap around, no chroma key
 		grmip->flags = 0;
 		// setup the texture info
-		grmip->format = GR_RGBA;
+		grmip->format = GL_TEXFMT_RGBA;
 	}
 
 	if (grmip->data)
