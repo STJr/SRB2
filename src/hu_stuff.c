@@ -177,7 +177,6 @@ void HU_LoadGraphics(void)
 
 	// minus for negative tallnums
 	tallminus          = HU_CachePatch("STTMINUS");
->>>>>>> 0a7f23e5e... Set up with the font system
 
 	// cache the crosshairs, don't bother to know which one is being used,
 	// just cache all 3, they're so small anyway.
