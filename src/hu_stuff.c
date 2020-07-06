@@ -257,16 +257,19 @@ void HU_Init(void)
 		PR   ("TNYFN");
 		REG;
 
-		ADIM (KART);
-		PR   ("MKFNT");
-		REG;
-
 		ADIM (LT);
 		PR   ("LTFNT");
 		REG;
 
 		ADIM (CRED);
 		PR   ("CRFNT");
+		REG;
+
+		ADIM (NT);
+		PR   ("NTFNT");
+		REG;
+
+		PR   ("NTFNO");
 		REG;
 
 		DIG  (1);
@@ -279,7 +282,9 @@ void HU_Init(void)
 		PR   ("NGTNUM");
 		REG;
 
-		PR   ("PINGN");
+		DIG (2);
+
+		PR   ("TTL");
 		REG;
 
 #undef  REG
