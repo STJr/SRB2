@@ -88,6 +88,7 @@ enum mobj_e {
 	mobj_cvmem,
 	mobj_standingslope,
 	mobj_colorized,
+	mobj_mirrored,
 	mobj_shadowscale
 };
 
@@ -156,6 +157,7 @@ static const char *const mobj_opt[] = {
 	"cvmem",
 	"standingslope",
 	"colorized",
+	"mirrored",
 	"shadowscale",
 	NULL};
 
@@ -394,6 +396,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_colorized:
 		lua_pushboolean(L, mo->colorized);
+		break;
+	case mobj_mirrored:
+		lua_pushboolean(L, mo->mirrored);
 		break;
 	case mobj_shadowscale:
 		lua_pushfixed(L, mo->shadowscale);
@@ -728,6 +733,9 @@ static int mobj_set(lua_State *L)
 		return NOSET;
 	case mobj_colorized:
 		mo->colorized = luaL_checkboolean(L, 3);
+		break;
+	case mobj_mirrored:
+		mo->mirrored = luaL_checkboolean(L, 3);
 		break;
 	case mobj_shadowscale:
 		mo->shadowscale = luaL_checkfixed(L, 3);

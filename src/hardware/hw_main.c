@@ -4613,6 +4613,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	unsigned rot;
 	UINT16 flip;
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
+	boolean mirrored = thing->mirrored;
+	boolean hflip = (!(thing->frame & FF_HORIZONTALFLIP) != !mirrored);
 
 	angle_t ang;
 	INT32 heightsec, phs;
@@ -4701,6 +4703,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 #endif
 
 	ang = R_PointToAngle (thing->x, thing->y) - mobjangle;
+	if (mirrored)
+		ang = InvAngle(ang);
 
 	if (sprframe->rotate == SRF_SINGLE)
 	{
@@ -4772,6 +4776,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		rightsin = FIXED_TO_FLOAT(FINESINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
 		rightcos = FIXED_TO_FLOAT(FINECOSINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
 	}
+
+	flip = !flip != !hflip;
 
 	if (flip)
 	{

@@ -1264,6 +1264,19 @@ static int lib_pElementalFire(lua_State *L)
 	return 0;
 }
 
+static int lib_pSpawnSkidDust(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	fixed_t radius = luaL_checkfixed(L, 2);
+	boolean sound = lua_optboolean(L, 3);
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_SpawnSkidDust(player, radius, sound);
+	return 0;
+}
+
 static int lib_pDoPlayerFinish(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -1348,6 +1361,19 @@ static int lib_pNukeEnemies(lua_State *L)
 	if (!inflictor || !source)
 		return LUA_ErrInvalid(L, "mobj_t");
 	P_NukeEnemies(inflictor, source, radius);
+	return 0;
+}
+
+static int lib_pEarthquake(lua_State *L)
+{
+	mobj_t *inflictor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	fixed_t radius = luaL_checkfixed(L, 3);
+	NOHUD
+	INLEVEL
+	if (!inflictor || !source)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_Earthquake(inflictor, source, radius);
 	return 0;
 }
 
@@ -1559,11 +1585,12 @@ static int lib_pRadiusAttack(lua_State *L)
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
 	fixed_t damagedist = luaL_checkfixed(L, 3);
 	UINT8 damagetype = luaL_optinteger(L, 4, 0);
+	boolean sightcheck = lua_opttrueboolean(L, 5);
 	NOHUD
 	INLEVEL
 	if (!spot || !source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	P_RadiusAttack(spot, source, damagedist, damagetype);
+	P_RadiusAttack(spot, source, damagedist, damagetype, sightcheck);
 	return 0;
 }
 
@@ -3267,6 +3294,7 @@ static luaL_Reg lib[] = {
 	{"P_DoBubbleBounce",lib_pDoBubbleBounce},
 	{"P_BlackOw",lib_pBlackOw},
 	{"P_ElementalFire",lib_pElementalFire},
+	{"P_SpawnSkidDust", lib_pSpawnSkidDust},
 	{"P_DoPlayerFinish",lib_pDoPlayerFinish},
 	{"P_DoPlayerExit",lib_pDoPlayerExit},
 	{"P_InstaThrust",lib_pInstaThrust},
@@ -3274,6 +3302,7 @@ static luaL_Reg lib[] = {
 	{"P_ReturnThrustY",lib_pReturnThrustY},
 	{"P_LookForEnemies",lib_pLookForEnemies},
 	{"P_NukeEnemies",lib_pNukeEnemies},
+	{"P_Earthquake",lib_pEarthquake},
 	{"P_HomingAttack",lib_pHomingAttack},
 	{"P_SuperReady",lib_pSuperReady},
 	{"P_DoJump",lib_pDoJump},

@@ -759,17 +759,18 @@ static menuitem_t SR_EmblemHintMenu[] =
 // Single Player Main
 static menuitem_t SP_MainMenu[] =
 {
+	// Note: If changing the positions here, also change them in M_SinglePlayerMenu()
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 76},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,               84},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,             92},
-	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Marathon Run",  M_Marathon,                100},
+	{IT_SECRET,                                 NULL, "Marathon Run",  M_Marathon,                100},
 	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,           108},
 	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Statistics",    M_Statistics,              116}
 };
 
 enum
 {
-	sploadgame,
+	spstartgame,
 	sprecordattack,
 	spnightsmode,
 	spmarathon,
@@ -2276,6 +2277,9 @@ void Nextmap_OnChange(void)
 {
 	char *leveltitle;
 	char tabase[256];
+#ifdef OLDNREPLAYNAME
+	char tabaseold[256];
+#endif
 	short i;
 	boolean active;
 
@@ -2300,11 +2304,17 @@ void Nextmap_OnChange(void)
 		SP_NightsAttackMenu[naghost].status = IT_DISABLED;
 
 		// Check if file exists, if not, disable REPLAY option
-		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
+		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
+
+#ifdef OLDNREPLAYNAME		
+		sprintf(tabaseold,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
+#endif	
+
 		for (i = 0; i < 4; i++) {
 			SP_NightsReplayMenu[i].status = IT_DISABLED;
 			SP_NightsGuestReplayMenu[i].status = IT_DISABLED;
 		}
+
 		if (FIL_FileExists(va("%s-score-best.lmp", tabase))) {
 			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
 			SP_NightsGuestReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
@@ -2320,16 +2330,37 @@ void Nextmap_OnChange(void)
 			SP_NightsGuestReplayMenu[2].status = IT_WHITESTRING|IT_CALL;
 			active = true;
 		}
-		if (FIL_FileExists(va("%s-guest.lmp", tabase))) {
+		if (FIL_FileExists(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value))))  {
 			SP_NightsReplayMenu[3].status = IT_WHITESTRING|IT_CALL;
 			SP_NightsGuestReplayMenu[3].status = IT_WHITESTRING|IT_CALL;
 			active = true;
 		}
+
+		// Old style name compatibility 
+#ifdef OLDNREPLAYNAME
+		if (FIL_FileExists(va("%s-score-best.lmp", tabaseold))) {
+			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
+			SP_NightsGuestReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
+			active = true;
+		}
+		if (FIL_FileExists(va("%s-time-best.lmp", tabaseold))) {
+			SP_NightsReplayMenu[1].status = IT_WHITESTRING|IT_CALL;
+			SP_NightsGuestReplayMenu[1].status = IT_WHITESTRING|IT_CALL;
+			active = true;
+		}
+		if (FIL_FileExists(va("%s-last.lmp", tabaseold))) {
+			SP_NightsReplayMenu[2].status = IT_WHITESTRING|IT_CALL;
+			SP_NightsGuestReplayMenu[2].status = IT_WHITESTRING|IT_CALL;
+			active = true;
+		}
+#endif
+
 		if (active) {
 			SP_NightsAttackMenu[naguest].status = IT_WHITESTRING|IT_SUBMENU;
 			SP_NightsAttackMenu[nareplay].status = IT_WHITESTRING|IT_SUBMENU;
 			SP_NightsAttackMenu[naghost].status = IT_WHITESTRING|IT_SUBMENU;
 		}
+
 		else if(itemOn == nareplay) // Reset lastOn so replay isn't still selected when not available.
 		{
 			currentMenu->lastOn = itemOn;
@@ -4404,7 +4435,7 @@ static void M_DrawGenericMenu(void)
 	}
 }
 
-const char *PlaystyleNames[4] = {"Legacy", "Standard", "Simple", "Old Analog??"};
+const char *PlaystyleNames[4] = {"Strafe", "Standard", "Simple", "Old Analog??"};
 const char *PlaystyleDesc[4] = {
 	// Legacy
 	"The play style used for\n"
@@ -8043,29 +8074,67 @@ static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
 
+
+	// Reset the item positions, to avoid them sinking farther down every time the menu is opened if one is unavailable
+	// Note that they're reset, not simply "not moved again", in case mid-game add-ons re-enable an option
+	SP_MainMenu[spstartgame]   .alphaKey = 76;
+	SP_MainMenu[sprecordattack].alphaKey = 84;
+	SP_MainMenu[spnightsmode]  .alphaKey = 92;
+	SP_MainMenu[spmarathon]    .alphaKey = 100;
+	//SP_MainMenu[sptutorial]  .alphaKey = 108; // Not needed
+	//SP_MainMenu[spstatistics].alphaKey = 116; // Not needed
+
+
 	levellistmode = LLM_RECORDATTACK;
 	if (M_GametypeHasLevels(-1))
 		SP_MainMenu[sprecordattack].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
-	else
-		SP_MainMenu[sprecordattack].status = IT_NOTHING|IT_DISABLED;
+	else // If Record Attack is nonexistent in the current add-on...
+	{
+		SP_MainMenu[sprecordattack].status = IT_NOTHING|IT_DISABLED; // ...hide and disable the Record Attack option...
+		SP_MainMenu[spstartgame].alphaKey += 8; // ...and lower Start Game by 8 pixels to close the gap
+	}
+
 
 	levellistmode = LLM_NIGHTSATTACK;
 	if (M_GametypeHasLevels(-1))
 		SP_MainMenu[spnightsmode].status = (M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
-	else
-		SP_MainMenu[spnightsmode].status = IT_NOTHING|IT_DISABLED;
+	else // If NiGHTS Mode is nonexistent in the current add-on...
+	{
+		SP_MainMenu[spnightsmode].status = IT_NOTHING|IT_DISABLED; // ...hide and disable the NiGHTS Mode option...
+		// ...and lower the above options' display positions by 8 pixels to close the gap
+		SP_MainMenu[spstartgame]   .alphaKey += 8;
+		SP_MainMenu[sprecordattack].alphaKey += 8;
+	}
 
-	SP_MainMenu[sptutorial].status = tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
 
 	// If the FIRST stage immediately leads to the ending, or itself (which gets converted to the title screen in G_DoCompleted for marathonmode only), there's no point in having this option on the menu. You should use Record Attack in that circumstance, although if marathonnext is set this behaviour can be overridden if you make some weird mod that requires multiple playthroughs of the same map in sequence and has some in-level mechanism to break the cycle.
-	if (!M_SecretUnlocked(SECRET_RECORDATTACK) // also if record attack is locked
-		|| (mapheaderinfo[spmarathon_start-1]
+	if (mapheaderinfo[spmarathon_start-1]
 		&& !mapheaderinfo[spmarathon_start-1]->marathonnext
 		&& (mapheaderinfo[spmarathon_start-1]->nextlevel == spmarathon_start
-			|| mapheaderinfo[spmarathon_start-1]->nextlevel >= 1100)))
-		SP_MainMenu[spmarathon].status = IT_NOTHING|IT_DISABLED;
-	else
-		SP_MainMenu[spmarathon].status = IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED;
+			|| mapheaderinfo[spmarathon_start-1]->nextlevel >= 1100))
+	{
+		SP_MainMenu[spmarathon].status = IT_NOTHING|IT_DISABLED; // Hide and disable the Marathon Run option...
+		// ...and lower the above options' display positions by 8 pixels to close the gap
+		SP_MainMenu[spstartgame]   .alphaKey += 8;
+		SP_MainMenu[sprecordattack].alphaKey += 8;
+		SP_MainMenu[spnightsmode]  .alphaKey += 8;
+	}
+	else // Otherwise, if Marathon Run is allowed and Record Attack is unlocked, unlock Marathon Run!
+		SP_MainMenu[spmarathon].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
+
+
+	if (tutorialmap) // If there's a tutorial available in the current add-on...
+		SP_MainMenu[sptutorial].status = IT_CALL | IT_STRING; // ...always unlock Tutorial
+	else // But if there's no tutorial available in the current add-on...
+	{
+		SP_MainMenu[sptutorial].status = IT_NOTHING|IT_DISABLED; // ...hide and disable the Tutorial option...
+		// ...and lower the above options' display positions by 8 pixels to close the gap
+		SP_MainMenu[spstartgame]   .alphaKey += 8;
+		SP_MainMenu[sprecordattack].alphaKey += 8;
+		SP_MainMenu[spnightsmode]  .alphaKey += 8;
+		SP_MainMenu[spmarathon]    .alphaKey += 8;
+	}
+
 
 	M_SetupNextMenu(&SP_MainDef);
 }
@@ -10126,6 +10195,8 @@ static void M_NightsAttack(INT32 choice)
 // Player has selected the "START" from the nights attack screen
 static void M_ChooseNightsAttack(INT32 choice)
 {
+	char *gpath;
+	const size_t glen = strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
 	char nameofdemo[256];
 	(void)choice;
 	emeralds = 0;
@@ -10136,14 +10207,18 @@ static void M_ChooseNightsAttack(INT32 choice)
 	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
 	I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
 
-	snprintf(nameofdemo, sizeof nameofdemo, "replay"PATHSEP"%s"PATHSEP"%s-last", timeattackfolder, G_BuildMapName(cv_nextmap.value));
+	if ((gpath = malloc(glen)) == NULL)
+		I_Error("Out of memory for replay filepath\n");
+
+	sprintf(gpath,"replay"PATHSEP"%s"PATHSEP"%s", timeattackfolder, G_BuildMapName(cv_nextmap.value));
+	snprintf(nameofdemo, sizeof nameofdemo, "%s-%s-last", gpath, skins[cv_chooseskin.value-1].name);
 
 	if (!cv_autorecord.value)
 		remove(va("%s"PATHSEP"%s.lmp", srb2home, nameofdemo));
 	else
 		G_RecordDemo(nameofdemo);
 
-	G_DeferedInitNew(false, G_BuildMapName(cv_nextmap.value), 0, false, false);
+	G_DeferedInitNew(false, G_BuildMapName(cv_nextmap.value), (UINT8)(cv_chooseskin.value-1), false, false);
 }
 
 // Player has selected the "START" from the time attack screen
@@ -10179,6 +10254,7 @@ static void M_ChooseTimeAttack(INT32 choice)
 static void M_ReplayTimeAttack(INT32 choice)
 {
 	const char *which;
+	char *demoname;
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_RECORD; // set modeattacking before G_DoPlayDemo so the map loader knows
 
@@ -10220,11 +10296,18 @@ static void M_ReplayTimeAttack(INT32 choice)
 			which = "last";
 			break;
 		case 3: // guest
-			which = "guest";
-			break;
+			G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
+			return;
 		}
-		// srb2/replay/main/map01-score-best.lmp
-		G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which));
+
+		demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
+
+#ifdef OLDNREPLAYNAME // Check for old style named NiGHTS replay if a new style replay doesn't exist.
+		if (!FIL_FileExists(demoname))
+			demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which);
+#endif
+
+		G_DoPlayDemo(demoname);
 	}
 }
 
@@ -10242,15 +10325,13 @@ static void M_EraseGuest(INT32 choice)
 	M_StartMessage(M_GetText("Guest replay data erased.\n"),NULL,MM_NOTHING);
 }
 
-static void M_OverwriteGuest(const char *which, boolean nights)
+static void M_OverwriteGuest(const char *which)
 {
 	char *rguest = Z_StrDup(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
 	UINT8 *buf;
 	size_t len;
-	if (!nights)
-		len = FIL_ReadFile(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which), &buf);
-	else
-		len = FIL_ReadFile(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which), &buf);
+	len = FIL_ReadFile(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which), &buf);
+
 	if (!len) {
 		return;
 	}
@@ -10271,25 +10352,25 @@ static void M_OverwriteGuest(const char *which, boolean nights)
 static void M_OverwriteGuest_Time(INT32 choice)
 {
 	(void)choice;
-	M_OverwriteGuest("time-best", currentMenu == &SP_NightsGuestReplayDef);
+	M_OverwriteGuest("time-best");
 }
 
 static void M_OverwriteGuest_Score(INT32 choice)
 {
 	(void)choice;
-	M_OverwriteGuest("score-best", currentMenu == &SP_NightsGuestReplayDef);
+	M_OverwriteGuest("score-best");
 }
 
 static void M_OverwriteGuest_Rings(INT32 choice)
 {
 	(void)choice;
-	M_OverwriteGuest("rings-best", false);
+	M_OverwriteGuest("rings-best");
 }
 
 static void M_OverwriteGuest_Last(INT32 choice)
 {
 	(void)choice;
-	M_OverwriteGuest("last", currentMenu == &SP_NightsGuestReplayDef);
+	M_OverwriteGuest("last");
 }
 
 static void M_SetGuestReplay(INT32 choice)

@@ -605,6 +605,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT], // SPR_GFZD
 	&lspr[NOLIGHT], // SPR_BRIC
 	&lspr[NOLIGHT], // SPR_WDDB
+	&lspr[NOLIGHT], // SPR_BRIR
+	&lspr[NOLIGHT], // SPR_BRIB
+	&lspr[NOLIGHT], // SPR_BRIY
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG

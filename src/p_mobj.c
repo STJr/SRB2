@@ -211,10 +211,16 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		return P_SetPlayerMobjState(mobj, S_PLAY_FALL);
 
 	// Catch swimming versus flying
-	if (state == S_PLAY_FLY && player->mo->eflags & MFE_UNDERWATER)
+	if ((state == S_PLAY_FLY || (state == S_PLAY_GLIDE && skins[player->skin].sprites[SPR2_SWIM].numframes))
+	&& player->mo->eflags & MFE_UNDERWATER && !player->skidtime)
 		return P_SetPlayerMobjState(player->mo, S_PLAY_SWIM);
 	else if (state == S_PLAY_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
-		return P_SetPlayerMobjState(player->mo, S_PLAY_FLY);
+	{
+		if (player->charability == CA_GLIDEANDCLIMB)
+			return P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
+		else
+			return P_SetPlayerMobjState(player->mo, S_PLAY_FLY);
+	}
 
 	// Catch SF_NOSUPERSPIN jumps for Supers
 	if (player->powers[pw_super] && (player->charflags & SF_NOSUPERSPIN))
@@ -394,7 +400,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			if (skin)
 			{
-				spr2 = P_GetSkinSprite2(skin, (((player->powers[pw_super]) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK, mobj->player);
+				spr2 = P_GetSkinSprite2(skin, (((player->powers[pw_super] && !(player->charflags & SF_NOSUPERSPRITES)) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK, mobj->player);
 				numframes = skin->sprites[spr2].numframes;
 			}
 			else
@@ -874,7 +880,7 @@ void P_ExplodeMissile(mobj_t *mo)
 
 	if (mo->type == MT_DETON)
 	{
-		P_RadiusAttack(mo, mo, 96*FRACUNIT, 0);
+		P_RadiusAttack(mo, mo, 96*FRACUNIT, 0, true);
 
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);
@@ -9205,10 +9211,11 @@ static void P_DragonbomberThink(mobj_t *mobj)
 				mobj->angle += DRAGONTURNSPEED;
 			else
 			{
+				boolean flip = mobj->spawnpoint->options & MTF_OBJECTFLIP;
 				fixed_t vspeed = FixedMul(mobj->info->speed >> 3, mobj->scale);
 				fixed_t x = mobj->spawnpoint->x << FRACBITS;
 				fixed_t y = mobj->spawnpoint->y << FRACBITS;
-				fixed_t z = mobj->spawnpoint->z << FRACBITS;
+				fixed_t z = (flip ? P_GetSectorCeilingZAt : P_GetSectorFloorZAt)(R_PointInSubsector(x, y)->sector, x, y) + (flip ? -1 : 1)*(mobj->spawnpoint->z << FRACBITS);
 				angle_t diff = R_PointToAngle2(mobj->x, mobj->y, x, y) - mobj->angle;
 				if (diff > ANGLE_180)
 					mobj->angle -= DRAGONTURNSPEED;
