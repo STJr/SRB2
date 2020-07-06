@@ -70,10 +70,6 @@
 extern FILE             *gllogstream;
 #endif
 
-#ifndef DRIVER_STRING
-#define DRIVER_STRING "HWRAPI Init(): SRB2 OpenGL renderer" // Tails
-#endif
-
 // ==========================================================================
 //                                                                     PROTOS
 // ==========================================================================
@@ -81,13 +77,11 @@ extern FILE             *gllogstream;
 boolean LoadGL(void);
 void *GetGLFunc(const char *proc);
 boolean SetupGLfunc(void);
-boolean SetupGLFunc13(void);
+void SetupGLFunc4(void);
 void Flush(void);
 INT32 isExtAvailable(const char *extension, const GLubyte *start);
-int SetupPixelFormat(INT32 WantColorBits, INT32 WantStencilBits, INT32 WantDepthBits);
 void SetModelView(GLint w, GLint h);
 void SetStates(void);
-FUNCMATH float byteasfloat(UINT8 fbyte);
 
 #ifndef GL_EXT_texture_filter_anisotropic
 #define GL_TEXTURE_MAX_ANISOTROPY_EXT     0x84FE
@@ -123,12 +117,15 @@ static PFNglEnableClientState pglEnableClientState;
 //                                                                     GLOBAL
 // ==========================================================================
 
-extern const GLubyte    *gl_extensions;
-extern RGBA_t           myPaletteData[];
-extern GLint            screen_width;
-extern GLint            screen_height;
-extern GLbyte           screen_depth;
-extern GLint            maximumAnisotropy;
+extern const GLubyte	*gl_version;
+extern const GLubyte	*gl_renderer;
+extern const GLubyte	*gl_extensions;
+
+extern RGBA_t			myPaletteData[];
+extern GLint			screen_width;
+extern GLint			screen_height;
+extern GLbyte			screen_depth;
+extern GLint			maximumAnisotropy;
 
 /**	\brief OpenGL flags for video driver
 */
